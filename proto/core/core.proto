@@ -594,6 +594,9 @@ service CoreService {
   // Returns OEE analytics by department.
   rpc AnalyzeOee(AnalyzeOeeRequest) returns (AnalyzeOeeResponse);
 
+  // Returns OEE by production week over a window, rolled up across departments.
+  rpc AnalyzeOeeTrend(AnalyzeOeeTrendRequest) returns (AnalyzeOeeTrendResponse);
+
   // AnalyzeScheduleAttainment measures actual production against the plan that was live.
   rpc AnalyzeScheduleAttainment(AnalyzeScheduleAttainmentRequest) returns (AnalyzeScheduleAttainmentResponse);
 

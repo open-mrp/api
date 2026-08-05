@@ -131,11 +131,11 @@ func isEmptyQueryExampleValue(v any) bool {
 func sampleQueryExampleForOpenAPIName(openAPIParam string) any {
 	base := strings.TrimSuffix(openAPIParam, "[]")
 	switch base {
-	case "start_date":
+	case "starts_at":
 		return apiresource.SampleFilterStartDateRFC3339
-	case "end_date":
+	case "ends_at":
 		return apiresource.SampleFilterEndDateRFC3339
-	case "cutoff_date":
+	case "cutoff_at":
 		return apiresource.SampleFilterEndDateRFC3339
 	case "as_of":
 		return apiresource.SampleFilterEndDateRFC3339
@@ -187,10 +187,6 @@ func sampleQueryExampleForOpenAPIName(openAPIParam string) any {
 		return []any{float64(200)}
 	case "status_code_classes":
 		return []any{float64(5)}
-	case "period_start":
-		return apiresource.SampleFilterStartDateRFC3339
-	case "period_end":
-		return apiresource.SampleFilterEndDateRFC3339
 	case "scope_codes":
 		return []any{"item"}
 	case "override_type_codes":

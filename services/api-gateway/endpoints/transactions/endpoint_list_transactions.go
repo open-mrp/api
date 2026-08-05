@@ -27,9 +27,9 @@ type ListTransactionsRequest struct {
 	// Filter by the account group each customer belongs to.
 	CustomerGroupIDs []string `query:"customer_group_ids"`
 	// Only include transactions created on or after this date (`YYYY-MM-DD`).
-	StartDate *string `query:"start_date"`
+	StartDate *string `query:"starts_at"`
 	// Only include transactions created before this date (`YYYY-MM-DD`).
-	EndDate *string `query:"end_date"`
+	EndDate *string `query:"ends_at"`
 }
 
 // TODO: stop returning TransactionSummary; return the full Transaction apiresource and use proper includes values to control expansion.

@@ -26,8 +26,8 @@ func TestScheduleAttainment_NoBaselineReportsNullNotZero(t *testing.T) {
 	t.Parallel()
 
 	result := analyzeAttainment(t, map[string]any{
-		"start_date": "2019-01-07T00:00:00Z",
-		"end_date":   "2019-02-04T00:00:00Z",
+		"starts_at": "2019-01-07T00:00:00Z",
+		"ends_at":   "2019-02-04T00:00:00Z",
 	})
 
 	assert.Equal(t, "no_baseline", jsonField(result, "baseline_status"),
@@ -47,21 +47,21 @@ func TestScheduleAttainment_RejectsInvertedPeriod(t *testing.T) {
 	t.Parallel()
 
 	status, body, err := apiClient.Put(scheduleAttainmentPath, map[string]any{
-		"start_date": "2026-08-01T00:00:00Z",
-		"end_date":   "2026-07-01T00:00:00Z",
+		"starts_at": "2026-08-01T00:00:00Z",
+		"ends_at":   "2026-07-01T00:00:00Z",
 	})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
-	assert.Contains(t, string(body), "end_date")
+	assert.Contains(t, string(body), "ends_at")
 }
 
 func TestScheduleAttainment_RejectsUnknownGroupBy(t *testing.T) {
 	t.Parallel()
 
 	status, body, err := apiClient.Put(scheduleAttainmentPath, map[string]any{
-		"start_date": "2026-07-01T00:00:00Z",
-		"end_date":   "2026-08-01T00:00:00Z",
-		"group_by":   "shift",
+		"starts_at": "2026-07-01T00:00:00Z",
+		"ends_at":   "2026-08-01T00:00:00Z",
+		"group_by":  "shift",
 	})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
@@ -75,9 +75,9 @@ func TestScheduleAttainment_GroupByDimensionsAllRespond(t *testing.T) {
 			t.Parallel()
 
 			result := analyzeAttainment(t, map[string]any{
-				"start_date": time.Now().UTC().AddDate(0, -2, 0).Format(time.RFC3339),
-				"end_date":   time.Now().UTC().Format(time.RFC3339),
-				"group_by":   groupBy,
+				"starts_at": time.Now().UTC().AddDate(0, -2, 0).Format(time.RFC3339),
+				"ends_at":   time.Now().UTC().Format(time.RFC3339),
+				"group_by":  groupBy,
 			})
 
 			assert.Equal(t, groupBy, jsonField(result, "group_by"),
@@ -105,9 +105,9 @@ func TestScheduleAttainment_MeasuresAgainstPublishedPlan(t *testing.T) {
 
 	// The window has to reach back before this version's horizon began. A schedule is only a baseline for weeks that started AFTER it was published, so the week it was published in is deliberately not measured against it.
 	result := analyzeAttainment(t, map[string]any{
-		"start_date": time.Now().UTC().AddDate(0, 0, -21).Format(time.RFC3339),
-		"end_date":   time.Now().UTC().AddDate(0, 0, 21).Format(time.RFC3339),
-		"group_by":   "week",
+		"starts_at": time.Now().UTC().AddDate(0, 0, -21).Format(time.RFC3339),
+		"ends_at":   time.Now().UTC().AddDate(0, 0, 21).Format(time.RFC3339),
+		"group_by":  "week",
 	})
 
 	assert.Equal(t, "measured", jsonField(result, "baseline_status"),
@@ -149,8 +149,8 @@ func TestScheduleAttainment_FrozenEditReducesAdherence(t *testing.T) {
 	requireStatus(t, 200, status, body)
 
 	result := analyzeAttainment(t, map[string]any{
-		"start_date": time.Now().UTC().AddDate(0, 0, -21).Format(time.RFC3339),
-		"end_date":   time.Now().UTC().AddDate(0, 0, 21).Format(time.RFC3339),
+		"starts_at": time.Now().UTC().AddDate(0, 0, -21).Format(time.RFC3339),
+		"ends_at":   time.Now().UTC().AddDate(0, 0, 21).Format(time.RFC3339),
 	})
 
 	adherence := jsonListData(result, "frozen_adherence")

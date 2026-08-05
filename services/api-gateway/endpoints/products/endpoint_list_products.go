@@ -28,9 +28,9 @@ type ListProductsRequest struct {
 	// Filter to products whose item carries at least one of these attributes.
 	AttributeIDs []string `query:"attribute_ids"`
 	// Start of creation date range.
-	StartDate *time.Time `query:"start_date"`
+	StartDate *time.Time `query:"starts_at"`
 	// End of creation date range.
-	EndDate *time.Time `query:"end_date"`
+	EndDate *time.Time `query:"ends_at"`
 	// Filter by customer portal visibility.
 	PortalVisibility *constants.CustomerPortalVisibility `query:"portal_visibility"`
 }

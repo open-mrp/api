@@ -601,6 +601,42 @@ func revenueForecastPointsFromProto(points []*pb.RevenueHistoryPointProto) []api
 	return result
 }
 
+func AnalyzeOeeTrendPresenter(resp *pb.AnalyzeOeeTrendResponse) *apiresource.AnalyzeOeeTrendResponse {
+	if resp == nil {
+		return &apiresource.AnalyzeOeeTrendResponse{
+			Object:  constants.ObjectTypeAnalyzeOeeTrendResponse,
+			Periods: apiresource.NewList([]apiresource.OeeTrendPeriod{}, apiresource.PageInfo{}),
+		}
+	}
+
+	periods := make([]apiresource.OeeTrendPeriod, len(resp.Periods))
+	for i, p := range resp.Periods {
+		periods[i] = apiresource.OeeTrendPeriod{
+			StartsAt:                grpcutil.TimestampToTime(p.StartsAt),
+			EndsAt:                  grpcutil.TimestampToTime(p.EndsAt),
+			GoodUnits:               p.GoodUnits,
+			WasteUnits:              p.WasteUnits,
+			SecondsUnits:            p.SecondsUnits,
+			StandardSecondsEarned:   p.StandardSecondsEarned,
+			ScheduledSeconds:        p.ScheduledSeconds,
+			RunTimeSeconds:          p.RunTimeSeconds,
+			AvailabilityLossSeconds: p.AvailabilityLossSeconds,
+			NotScheduledSeconds:     p.NotScheduledSeconds,
+			AvailabilityPct:         p.AvailabilityPct,
+			PerformancePct:          p.PerformancePct,
+			QualityPct:              p.QualityPct,
+			OeePct:                  p.OeePct,
+			MeasurementStatus:       oeeMeasurementStatus(p.HasDowntimeData),
+			DowntimeEventCount:      p.DowntimeEventCount,
+		}
+	}
+
+	return &apiresource.AnalyzeOeeTrendResponse{
+		Object:  constants.ObjectTypeAnalyzeOeeTrendResponse,
+		Periods: apiresource.NewList(periods, apiresource.PageInfo{}),
+	}
+}
+
 func AnalyzeOeePresenter(resp *pb.AnalyzeOeeResponse) *apiresource.AnalyzeOeeResponse {
 	if resp == nil {
 		return &apiresource.AnalyzeOeeResponse{

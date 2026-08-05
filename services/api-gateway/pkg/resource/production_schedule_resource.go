@@ -1,6 +1,7 @@
 package apiresource
 
 import (
+	"encoding/json"
 	"time"
 
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
@@ -669,10 +670,10 @@ type ProductionScheduleDeviation struct {
 	Machine *Entity `json:"machine"`
 	// The item whose campaign changed.
 	Item *Entity `json:"item"`
-	// Snapshot of the line before the change.
-	Before map[string]any `json:"before"`
-	// Snapshot of the line after the change.
-	After map[string]any `json:"after"`
+	// Snapshot of the line before the change, null when the change created it.
+	Before json.RawMessage `json:"before"`
+	// Snapshot of the line after the change, null when the change removed it.
+	After json.RawMessage `json:"after"`
 	// Signed change in planned units.
 	DeltaQuantity float64 `json:"delta_quantity"`
 	// Signed change in planned run hours.
@@ -714,8 +715,8 @@ var SampleProductionScheduleDeviation = &ProductionScheduleDeviation{
 	WeekIndex:          &sampleDeviationWeekIndex,
 	Machine:            NewEntity(SampleMachineID, constants.ObjectTypeMachine, &sampleReleasedMachineName, nil),
 	Item:               NewEntity(SampleItemID, constants.ObjectTypeItem, nil, &sampleScheduleSKU),
-	Before:             map[string]any{"planned_quantity": 600, "planned_lots": 10, "planned_run_hours": 5},
-	After:              map[string]any{"planned_quantity": 900, "planned_lots": 15, "planned_run_hours": 7.5},
+	Before:             json.RawMessage(`{"planned_quantity":600,"planned_lots":10,"planned_run_hours":5}`),
+	After:              json.RawMessage(`{"planned_quantity":900,"planned_lots":15,"planned_run_hours":7.5}`),
 	DeltaQuantity:      300,
 	DeltaRunHours:      2.5,
 	Reason:             &sampleDeviationReasonCode,

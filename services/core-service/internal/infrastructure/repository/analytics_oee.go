@@ -90,6 +90,65 @@ func (r *analyticsRepoImpl) GetOeeDowntimeByDepartment(ctx context.Context, para
 	return out, nil
 }
 
+// GetOeeTrendDepartmentDataByWeek returns unit counts and standard time earned per department per production week in the window.
+func (r *analyticsRepoImpl) GetOeeTrendDepartmentDataByWeek(ctx context.Context, params domain.GetOeeWindowParams) ([]domain.OeeTrendDepartmentWeekRow, *apierror.APIError) {
+	ctx, span := analyticsRepoTracer.Start(ctx, "repository.analytics.get_oee_trend_department_data_by_week")
+	defer span.End()
+
+	rows, err := r.queries.GetOeeTrendDepartmentDataByWeek(ctx, sqlc.GetOeeTrendDepartmentDataByWeekParams{
+		OwnerAccountID: params.AccountID,
+		StartDate:      toRequiredNullTime(params.StartDate),
+		EndDate:        toRequiredNullTime(params.EndDate),
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	out := make([]domain.OeeTrendDepartmentWeekRow, len(rows))
+	for i, row := range rows {
+		out[i] = domain.OeeTrendDepartmentWeekRow{
+			WeekStart:             row.WeekStartDate,
+			DepartmentID:          row.DepartmentID,
+			DepartmentName:        row.DepartmentName,
+			GoodUnits:             decimalToFloat64(row.GoodUnits),
+			WasteUnits:            decimalToFloat64(row.WasteUnits),
+			SecondsUnits:          decimalToFloat64(row.SecondsUnits),
+			StandardSecondsEarned: decimalToFloat64(row.StandardSecondsEarned),
+		}
+	}
+	return out, nil
+}
+
+// GetOeeTrendDowntimeIntervals returns logged downtime per department as raw intervals so the caller can split them across week buckets.
+func (r *analyticsRepoImpl) GetOeeTrendDowntimeIntervals(ctx context.Context, params domain.GetOeeWindowParams) ([]domain.OeeDowntimeIntervalRow, *apierror.APIError) {
+	ctx, span := analyticsRepoTracer.Start(ctx, "repository.analytics.get_oee_trend_downtime_intervals")
+	defer span.End()
+
+	rows, err := r.queries.GetOeeTrendDowntimeIntervals(ctx, sqlc.GetOeeTrendDowntimeIntervalsParams{
+		AccountID: params.AccountID,
+		StartDate: toRequiredNullTime(params.StartDate),
+		EndDate:   params.EndDate,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	out := make([]domain.OeeDowntimeIntervalRow, 0, len(rows))
+	for _, row := range rows {
+		// COALESCE guarantees an end, but a NULL here would otherwise become the zero time and turn one event into a window that swallows the whole trend.
+		if !row.EndedAt.Valid {
+			continue
+		}
+		out = append(out, domain.OeeDowntimeIntervalRow{
+			DepartmentID: row.DepartmentID,
+			OeeBucket:    row.OeeBucket,
+			StartedAt:    row.StartedAt,
+			EndedAt:      row.EndedAt.Time,
+		})
+	}
+	return out, nil
+}
+
 // CountMachinesByDepartment returns the number of machines per department for the account.
 func (r *analyticsRepoImpl) CountMachinesByDepartment(ctx context.Context, accountID string) ([]domain.DepartmentMachineCountRow, *apierror.APIError) {
 	ctx, span := analyticsRepoTracer.Start(ctx, "repository.analytics.count_machines_by_department")

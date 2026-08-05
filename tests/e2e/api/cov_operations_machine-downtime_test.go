@@ -697,8 +697,8 @@ func TestMachineDowntimeEvents_ListAndFilters(t *testing.T) {
 	t.Run("date window excludes events outside it", func(t *testing.T) {
 		// A window entirely in the future contains neither event.
 		status, body, err := apiClient.GetListRaw(machineDowntimeEventsPath, url.Values{
-			"start_date": {rfc3339(time.Now().UTC().Add(48 * time.Hour))},
-			"limit":      {"100"},
+			"starts_at": {rfc3339(time.Now().UTC().Add(48 * time.Hour))},
+			"limit":     {"100"},
 		})
 		require.NoError(t, err)
 		requireStatus(t, 200, status, body)

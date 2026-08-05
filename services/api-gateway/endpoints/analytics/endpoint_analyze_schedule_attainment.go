@@ -16,9 +16,9 @@ import (
 // AnalyzeScheduleAttainmentRequest is the request to measure production against plan.
 type AnalyzeScheduleAttainmentRequest struct {
 	// The start date for the analysis period.
-	StartDate time.Time `json:"start_date" validate:"required"`
+	StartDate time.Time `json:"starts_at" validate:"required"`
 	// The end date for the analysis period.
-	EndDate time.Time `json:"end_date" validate:"required"`
+	EndDate time.Time `json:"ends_at" validate:"required"`
 	// The dimension to break the results down by. Defaults to `week`.
 	GroupBy field.Optional[constants.AttainmentGroupBy] `json:"group_by,omitzero"`
 	// Only measure production on these machines.

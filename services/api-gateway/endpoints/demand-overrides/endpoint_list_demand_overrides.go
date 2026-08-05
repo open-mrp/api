@@ -22,10 +22,10 @@ type ListDemandOverridesRequest struct {
 	Adjustments []constants.DemandOverrideAdjustment `query:"adjustments"`
 	// Only return overrides in these activation states.
 	Statuses []constants.ActivationStatus `query:"statuses"`
-	// Only return overrides whose period ends on or after this timestamp, formatted as RFC3339.
-	PeriodStart *string `query:"period_start"`
-	// Only return overrides whose period starts on or before this timestamp, formatted as RFC3339.
-	PeriodEnd *string `query:"period_end"`
+	// The start of the window to match against. Only return overrides whose period ends on or after this timestamp, formatted as RFC3339.
+	PeriodStart *string `query:"starts_at"`
+	// The end of the window to match against. Only return overrides whose period starts on or before this timestamp, formatted as RFC3339.
+	PeriodEnd *string `query:"ends_at"`
 }
 
 // Returns a paginated list of demand overrides, most recently created first.

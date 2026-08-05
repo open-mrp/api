@@ -50,9 +50,9 @@ type ListCustomersRequest struct {
 	// Filter to customers with any address in this postal code (exact match).
 	PostalCode *string `query:"postal_code"`
 	// Filter to customers created at or after this timestamp (inclusive).
-	StartDate *time.Time `query:"start_date"`
+	StartDate *time.Time `query:"starts_at"`
 	// Filter to customers created at or before this timestamp (inclusive).
-	EndDate *time.Time `query:"end_date"`
+	EndDate *time.Time `query:"ends_at"`
 }
 
 // Returns a paginated list of customers for the current account.

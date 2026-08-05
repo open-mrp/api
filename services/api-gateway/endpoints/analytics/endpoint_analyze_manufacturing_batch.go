@@ -14,13 +14,13 @@ import (
 // AnalyzeManufacturingBatchRequest is the request to analyze manufacturing metrics with a comparison period.
 type AnalyzeManufacturingBatchRequest struct {
 	// The start date for the current analysis period.
-	StartDate time.Time `json:"start_date" validate:"required"`
+	StartDate time.Time `json:"starts_at" validate:"required"`
 	// The end date for the current analysis period.
-	EndDate time.Time `json:"end_date" validate:"required"`
+	EndDate time.Time `json:"ends_at" validate:"required"`
 	// The start date for the comparison period.
-	ComparisonStartDate time.Time `json:"comparison_start_date" validate:"required"`
+	ComparisonStartDate time.Time `json:"comparison_starts_at" validate:"required"`
 	// The end date for the comparison period.
-	ComparisonEndDate time.Time `json:"comparison_end_date" validate:"required"`
+	ComparisonEndDate time.Time `json:"comparison_ends_at" validate:"required"`
 	// Optional customer IDs to filter by.
 	CustomerIDs []string `json:"customer_ids,omitempty"`
 	// Optional product line IDs to filter by.

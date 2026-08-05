@@ -28,9 +28,9 @@ type ExportProductsRequest struct {
 	// A product matches when its product line has been granted to the customer directly, through the customer's account group, or through the account group used for the customer's pricing.
 	CustomerIDs []string `query:"customer_ids"`
 	// Start of creation date range.
-	StartDate *time.Time `query:"start_date"`
+	StartDate *time.Time `query:"starts_at"`
 	// End of creation date range.
-	EndDate *time.Time `query:"end_date"`
+	EndDate *time.Time `query:"ends_at"`
 }
 
 // Exports matching products as an Excel workbook.

@@ -20,9 +20,9 @@ type CreateSalesTargetRequest struct {
 	// Must be an active account user in your account.
 	SalesRepID string `path:"id" validate:"required"`
 	// Start of the period the target applies to (inclusive).
-	StartDate time.Time `json:"start_date"`
+	StartDate time.Time `json:"starts_at"`
 	// End of the period the target applies to.
-	EndDate time.Time `json:"end_date"`
+	EndDate time.Time `json:"ends_at"`
 	// The revenue goal for the period, as a decimal string (e.g. `50000.00`).
 	AmountValue string `json:"amount_value"`
 	// The unit the goal is denominated in, typically a currency unit.

@@ -43,8 +43,8 @@ func TestSalesTargets_ListResponseShape(t *testing.T) {
 	path := salesTargetsPathFor(userID)
 
 	createBody := map[string]any{
-		"start_date":     "2028-01-01T00:00:00Z",
-		"end_date":       "2028-03-31T00:00:00Z",
+		"starts_at":      "2028-01-01T00:00:00Z",
+		"ends_at":        "2028-03-31T00:00:00Z",
 		"amount_value":   "10000.00",
 		"amount_unit_id": SeedUnitID,
 	}
@@ -60,21 +60,28 @@ func TestSalesTargets_ListResponseShape(t *testing.T) {
 	assert.NotEmpty(t, jsonField(m, "created_at"))
 	assert.NotEmpty(t, jsonField(m, "updated_at"))
 
+	// The rep is a reference to an account user, not an inlined record: a partly-filled one used to serialize with zero timestamps that read as real values.
 	salesRep := jsonObject(m, "sales_rep")
-	require.NotNil(t, salesRep, "sales_rep should be a stub object")
+	require.NotNil(t, salesRep, "sales_rep should be an entity reference")
 	assert.NotEmpty(t, jsonField(salesRep, "id"))
-	assert.Equal(t, "user", jsonField(salesRep, "object"))
+	assert.Equal(t, "entity", jsonField(salesRep, "object"))
+	assert.Equal(t, "account_user", jsonField(salesRep, "type"))
 
 	amount := jsonObject(m, "amount")
 	require.NotNil(t, amount, "amount should be present")
 	assert.NotEmpty(t, jsonField(amount, "id"))
 	assert.Equal(t, "quantity", jsonField(amount, "object"))
 	assert.NotEmpty(t, jsonField(amount, "value"))
+	assert.NotEmpty(t, jsonField(amount, "display_value"), "a quantity renders its own value with the unit")
 
 	unit := jsonObject(amount, "unit")
 	require.NotNil(t, unit, "amount.unit should be present")
 	assert.NotEmpty(t, jsonField(unit, "id"))
 	assert.Equal(t, "unit", jsonField(unit, "object"))
+	assert.NotEmpty(t, jsonField(unit, "name"), "the unit is the whole record, not an id-only shell")
+	assert.NotEmpty(t, jsonField(unit, "abbreviation"))
+	assert.NotEmpty(t, jsonField(unit, "ratio_numerator"))
+	assertValidTimestamp(t, jsonField(unit, "created_at"), "unit.created_at")
 }
 
 func TestSalesTargets_CreateAndUpsert(t *testing.T) {
@@ -83,8 +90,8 @@ func TestSalesTargets_CreateAndUpsert(t *testing.T) {
 	path := salesTargetsPathFor(userID)
 
 	createBody := map[string]any{
-		"start_date":     "2027-01-01T00:00:00Z",
-		"end_date":       "2027-03-31T00:00:00Z",
+		"starts_at":      "2027-01-01T00:00:00Z",
+		"ends_at":        "2027-03-31T00:00:00Z",
 		"amount_value":   "50000.00",
 		"amount_unit_id": SeedUnitID,
 	}
@@ -106,8 +113,8 @@ func TestSalesTargets_CreateAndUpsert(t *testing.T) {
 	assert.Contains(t, jsonField(amount, "value"), "50000")
 
 	upsertBody := map[string]any{
-		"start_date":     "2027-04-01T00:00:00Z",
-		"end_date":       "2027-06-30T00:00:00Z",
+		"starts_at":      "2027-04-01T00:00:00Z",
+		"ends_at":        "2027-06-30T00:00:00Z",
 		"amount_value":   "75000.00",
 		"amount_unit_id": SeedUnitID,
 	}

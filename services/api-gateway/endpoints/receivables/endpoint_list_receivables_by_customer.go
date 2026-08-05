@@ -20,7 +20,7 @@ type ListReceivablesByCustomerRequest struct {
 	// Compute receivable balances as of this timestamp.
 	//
 	// Only invoices created before the cutoff are included, and only allocations made before the cutoff are subtracted from each remaining balance. When omitted, current balances are returned.
-	CutoffDate *time.Time `query:"cutoff_date"`
+	CutoffDate *time.Time `query:"cutoff_at"`
 }
 
 // Returns a paginated list of outstanding receivable entries for a single customer account, newest invoice first.

@@ -195,6 +195,35 @@ message AnalyzeOeeRequest {
 message AnalyzeOeeResponse {
   repeated OeeDepartmentProto departments = 1;
 }
+message AnalyzeOeeTrendRequest {
+  google.protobuf.Timestamp start_date = 1;
+  google.protobuf.Timestamp end_date = 2;
+  repeated string department_ids = 3;
+}
+// OeeTrendPeriodProto is one production week of OEE, rolled up across the departments
+// that had scheduled time in it.
+message OeeTrendPeriodProto {
+  google.protobuf.Timestamp starts_at = 1;
+  google.protobuf.Timestamp ends_at = 2;
+  double good_units = 3;
+  double waste_units = 4;
+  double seconds_units = 5;
+  double standard_seconds_earned = 6;
+  double scheduled_seconds = 7;
+  double run_time_seconds = 8;
+  double availability_loss_seconds = 9;
+  double not_scheduled_seconds = 10;
+  // Ratios are absent when their denominator is unknown, which is not the same as zero.
+  optional double availability_pct = 11;
+  optional double performance_pct = 12;
+  optional double quality_pct = 13;
+  optional double oee_pct = 14;
+  bool has_downtime_data = 15;
+  int64 downtime_event_count = 16;
+}
+message AnalyzeOeeTrendResponse {
+  repeated OeeTrendPeriodProto periods = 1;
+}
 message PaymentTermInfo {
   string id = 1;
   string name = 2;

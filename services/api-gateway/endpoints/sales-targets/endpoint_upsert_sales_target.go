@@ -26,11 +26,11 @@ type UpsertSalesTargetRequest struct {
 	// Start of the period the target applies to (inclusive).
 	//
 	// Only applied when creating a new target; the dates on an existing target are not changed.
-	StartDate time.Time `json:"start_date"`
+	StartDate time.Time `json:"starts_at"`
 	// End of the period the target applies to.
 	//
 	// Only applied when creating a new target; the dates on an existing target are not changed.
-	EndDate time.Time `json:"end_date"`
+	EndDate time.Time `json:"ends_at"`
 	// The revenue goal for the period, as a decimal string (e.g. `75000.00`).
 	//
 	// This is the only value an existing target accepts; everything else on it stays as it was.

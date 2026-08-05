@@ -52,8 +52,8 @@ func TestAnalyticsOee_PreservesLegacyShape(t *testing.T) {
 
 	start, end := oeeWindow()
 	resp := analyzeOee(t, map[string]any{
-		"start_date": rfc3339(start),
-		"end_date":   rfc3339(end),
+		"starts_at": rfc3339(start),
+		"ends_at":   rfc3339(end),
 	})
 
 	assert.Equal(t, "analyze_oee_response", jsonField(resp, "object"))
@@ -80,8 +80,8 @@ func TestAnalyticsOee_ExposesDowntimeFields(t *testing.T) {
 
 	start, end := oeeWindow()
 	resp := analyzeOee(t, map[string]any{
-		"start_date": rfc3339(start),
-		"end_date":   rfc3339(end),
+		"starts_at": rfc3339(start),
+		"ends_at":   rfc3339(end),
 	})
 
 	for _, raw := range jsonListData(resp, "departments") {
@@ -111,8 +111,8 @@ func TestAnalyticsOee_PerformanceIsStandardTimeOverRunTime(t *testing.T) {
 
 	start, end := oeeWindow()
 	resp := analyzeOee(t, map[string]any{
-		"start_date": rfc3339(start),
-		"end_date":   rfc3339(end),
+		"starts_at": rfc3339(start),
+		"ends_at":   rfc3339(end),
 	})
 
 	for _, raw := range jsonListData(resp, "departments") {
@@ -148,8 +148,8 @@ func TestAnalyticsOee_DerivesScheduledTimeFromSettings(t *testing.T) {
 
 	start, end := oeeWindow()
 	resp := analyzeOee(t, map[string]any{
-		"start_date": rfc3339(start),
-		"end_date":   rfc3339(end),
+		"starts_at": rfc3339(start),
+		"ends_at":   rfc3339(end),
 	})
 
 	departments := jsonListData(resp, "departments")
@@ -185,8 +185,8 @@ func TestAnalyticsOee_QualityComputedWithoutPlannedTime(t *testing.T) {
 
 	start, end := oeeWindow()
 	resp := analyzeOee(t, map[string]any{
-		"start_date": rfc3339(start),
-		"end_date":   rfc3339(end),
+		"starts_at": rfc3339(start),
+		"ends_at":   rfc3339(end),
 	})
 
 	for _, raw := range jsonListData(resp, "departments") {
@@ -216,8 +216,8 @@ func TestAnalyticsOee_LoggedDowntimeReducesAvailability(t *testing.T) {
 	end := time.Now().UTC()
 
 	baseline := analyzeOee(t, map[string]any{
-		"start_date":   rfc3339(start),
-		"end_date":     rfc3339(end),
+		"starts_at":    rfc3339(start),
+		"ends_at":      rfc3339(end),
 		"planned_time": []map[string]any{{"department_id": SeedDepartmentID, "planned_hours": 8}},
 	})
 	baselineDept := findOeeDepartment(baseline, SeedDepartmentID)
@@ -235,8 +235,8 @@ func TestAnalyticsOee_LoggedDowntimeReducesAvailability(t *testing.T) {
 	defer deleteDowntime(t, id)
 
 	after := analyzeOee(t, map[string]any{
-		"start_date":   rfc3339(start),
-		"end_date":     rfc3339(end),
+		"starts_at":    rfc3339(start),
+		"ends_at":      rfc3339(end),
 		"planned_time": []map[string]any{{"department_id": SeedDepartmentID, "planned_hours": 8}},
 	})
 
@@ -282,8 +282,8 @@ func TestAnalyticsOee_NotScheduledShrinksDenominatorNotAvailability(t *testing.T
 	defer deleteDowntime(t, id)
 
 	resp := analyzeOee(t, map[string]any{
-		"start_date":   rfc3339(start),
-		"end_date":     rfc3339(end),
+		"starts_at":    rfc3339(start),
+		"ends_at":      rfc3339(end),
 		"planned_time": planned,
 	})
 
@@ -312,8 +312,8 @@ func TestAnalyticsOee_ChangeoverCountsInBothPlaces(t *testing.T) {
 	defer deleteDowntime(t, id)
 
 	resp := analyzeOee(t, map[string]any{
-		"start_date":   rfc3339(start),
-		"end_date":     rfc3339(end),
+		"starts_at":    rfc3339(start),
+		"ends_at":      rfc3339(end),
 		"planned_time": []map[string]any{{"department_id": SeedDepartmentID, "planned_hours": 8}},
 	})
 
@@ -349,7 +349,7 @@ func TestAnalyticsOee_ClipsDowntimeToWindow(t *testing.T) {
 
 	// Measure the delta this one event contributes rather than the absolute total, so unrelated downtime in the same window cannot make this pass or fail spuriously.
 	before := analyzeOee(t, map[string]any{
-		"start_date": rfc3339(start), "end_date": rfc3339(end), "planned_time": planned,
+		"starts_at": rfc3339(start), "ends_at": rfc3339(end), "planned_time": planned,
 	})
 	var lossBefore float64
 	if dept := findOeeDepartment(before, SeedDepartmentID); dept != nil {
@@ -363,7 +363,7 @@ func TestAnalyticsOee_ClipsDowntimeToWindow(t *testing.T) {
 	defer deleteDowntime(t, id)
 
 	after := analyzeOee(t, map[string]any{
-		"start_date": rfc3339(start), "end_date": rfc3339(end), "planned_time": planned,
+		"starts_at": rfc3339(start), "ends_at": rfc3339(end), "planned_time": planned,
 	})
 
 	dept := findOeeDepartment(after, SeedDepartmentID)
@@ -389,8 +389,8 @@ func TestAnalyticsOee_DepartmentFilter(t *testing.T) {
 
 	start, end := oeeWindow()
 	resp := analyzeOee(t, map[string]any{
-		"start_date":     rfc3339(start),
-		"end_date":       rfc3339(end),
+		"starts_at":      rfc3339(start),
+		"ends_at":        rfc3339(end),
 		"department_ids": []string{SeedDepartmentID},
 	})
 
@@ -407,8 +407,8 @@ func TestAnalyticsOee_UnknownDepartmentReturnsEmpty(t *testing.T) {
 
 	start, end := oeeWindow()
 	resp := analyzeOee(t, map[string]any{
-		"start_date":     rfc3339(start),
-		"end_date":       rfc3339(end),
+		"starts_at":      rfc3339(start),
+		"ends_at":        rfc3339(end),
 		"department_ids": []string{"dp_00000000000000000000000000"},
 	})
 
@@ -422,7 +422,7 @@ func TestAnalyticsOee_RejectsMissingDates(t *testing.T) {
 	status, body, err := apiClient.Put(analyticsOeePath, map[string]any{})
 	require.NoError(t, err)
 	assert.Less(t, status, 500, "a missing date must be a client error, not a 5xx: %s", string(body))
-	assert.Equal(t, 400, status, "start_date and end_date are required, got %d: %s", status, string(body))
+	assert.Equal(t, 400, status, "starts_at and ends_at are required, got %d: %s", status, string(body))
 }
 
 // planned_time for a department that produced nothing must not invent a row or crash.
@@ -431,8 +431,8 @@ func TestAnalyticsOee_PlannedTimeForUnknownDepartmentIsHarmless(t *testing.T) {
 
 	start, end := oeeWindow()
 	resp := analyzeOee(t, map[string]any{
-		"start_date":   rfc3339(start),
-		"end_date":     rfc3339(end),
+		"starts_at":    rfc3339(start),
+		"ends_at":      rfc3339(end),
 		"planned_time": []map[string]any{{"department_id": "dp_00000000000000000000000000", "planned_hours": 40}},
 	})
 
@@ -450,8 +450,8 @@ func TestAnalyticsOee_ZeroPlannedHoursLeavesRatiosNull(t *testing.T) {
 
 	start, end := oeeWindow()
 	resp := analyzeOee(t, map[string]any{
-		"start_date":   rfc3339(start),
-		"end_date":     rfc3339(end),
+		"starts_at":    rfc3339(start),
+		"ends_at":      rfc3339(end),
 		"planned_time": []map[string]any{{"department_id": SeedDepartmentID, "planned_hours": 0}},
 	})
 

@@ -15,7 +15,7 @@ import (
 // This file closes e2e gaps for the catalog_items group (/v1/catalog/items)
 // documented in the catalog_items coverage task: not-found paths for the
 // three action endpoints, the category type-mismatch validation error, the
-// supplier_id / start_date / end_date list filters, the subassembly_filter
+// supplier_id / starts_at / ends_at list filters, the subassembly_filter
 // invalid-enum-value path, a direct attribute_ids filter check, and
 // Idempotency-Key header replay on the change-category action endpoint.
 //
@@ -173,7 +173,7 @@ func TestCovCatalogItems_ListItems_FilterBySupplier_NoResults(t *testing.T) {
 }
 
 // ──────────────────────────────────────────────
-// List — start_date / end_date filters
+// List — starts_at / ends_at filters
 // ──────────────────────────────────────────────
 //
 // ListItemsRequest.StartDate / EndDate are *time.Time (not *string like the
@@ -184,9 +184,9 @@ func TestCovCatalogItems_ListItems_FilterBySupplier_NoResults(t *testing.T) {
 
 func TestCovCatalogItems_ListItems_FilterByEndDate_ExcludesEverything(t *testing.T) {
 	t.Parallel()
-	// end_date is inclusive on created_at; nothing predates 2000.
+	// ends_at is inclusive on created_at; nothing predates 2000.
 	list, _, err := apiClient.GetList(itemsPath, url.Values{
-		"end_date": {"2000-01-01T00:00:00Z"},
+		"ends_at": {"2000-01-01T00:00:00Z"},
 	})
 	require.NoError(t, err)
 	assertEmptyListData(t, list.Data, "no items exist before 2000-01-01")
@@ -194,15 +194,15 @@ func TestCovCatalogItems_ListItems_FilterByEndDate_ExcludesEverything(t *testing
 
 func TestCovCatalogItems_ListItems_FilterByStartDate_ExcludesEverything(t *testing.T) {
 	t.Parallel()
-	// A far-future start_date (20 years out) is safely beyond every seeded
+	// A far-future starts_at (20 years out) is safely beyond every seeded
 	// and freshly-created item's created_at, including the +9y filter-coverage
 	// seed rows used elsewhere in the suite.
 	farFuture := time.Now().AddDate(20, 0, 0).Format(time.RFC3339)
 	list, _, err := apiClient.GetList(itemsPath, url.Values{
-		"start_date": {farFuture},
+		"starts_at": {farFuture},
 	})
 	require.NoError(t, err)
-	assertEmptyListData(t, list.Data, "a 20-years-out start_date should exclude every item")
+	assertEmptyListData(t, list.Data, "a 20-years-out starts_at should exclude every item")
 }
 
 // ──────────────────────────────────────────────

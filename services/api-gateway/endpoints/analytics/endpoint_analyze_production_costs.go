@@ -14,9 +14,9 @@ import (
 // AnalyzeProductionCostsRequest is the request to analyze production costs.
 type AnalyzeProductionCostsRequest struct {
 	// Optional start date for the analysis period.
-	StartDate *time.Time `json:"start_date,omitempty"`
+	StartDate *time.Time `json:"starts_at,omitempty"`
 	// Optional end date for the analysis period.
-	EndDate *time.Time `json:"end_date,omitempty"`
+	EndDate *time.Time `json:"ends_at,omitempty"`
 	// Optional item IDs to filter by.
 	ItemIDs []string `json:"item_ids,omitempty"`
 	// Optional product line IDs to filter by.

@@ -46,11 +46,11 @@ func (h *gRPCHandler) CreateSalesTarget(ctx context.Context, req *pb.CreateSales
 
 	startDate, err := time.Parse(time.RFC3339, req.StartDate)
 	if err != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewValidationErrorWithParam("Invalid date format for start_date.", "start_date"))
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewValidationErrorWithParam("Invalid date format for starts_at.", "starts_at"))
 	}
 	endDate, err := time.Parse(time.RFC3339, req.EndDate)
 	if err != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewValidationErrorWithParam("Invalid date format for end_date.", "end_date"))
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewValidationErrorWithParam("Invalid date format for ends_at.", "ends_at"))
 	}
 
 	target, apiErr := h.salesTargetSvc.CreateSalesTarget(ctx, domain.CreateSalesTargetParams{
@@ -76,11 +76,11 @@ func (h *gRPCHandler) UpsertSalesTarget(ctx context.Context, req *pb.UpsertSales
 
 	startDate, err := time.Parse(time.RFC3339, req.StartDate)
 	if err != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewValidationErrorWithParam("Invalid date format for start_date.", "start_date"))
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewValidationErrorWithParam("Invalid date format for starts_at.", "starts_at"))
 	}
 	endDate, err := time.Parse(time.RFC3339, req.EndDate)
 	if err != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewValidationErrorWithParam("Invalid date format for end_date.", "end_date"))
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewValidationErrorWithParam("Invalid date format for ends_at.", "ends_at"))
 	}
 
 	target, apiErr := h.salesTargetSvc.UpsertSalesTarget(ctx, domain.UpsertSalesTargetParams{
@@ -115,5 +115,15 @@ func salesTargetToProto(t *domain.SalesTarget) *pb.SalesTargetProto {
 		AmountId:     t.AmountID,
 		CreatedAt:    t.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:    t.UpdatedAt.Format(time.RFC3339),
+
+		AmountUnitName:              t.AmountUnitName,
+		AmountUnitAbbreviation:      t.AmountUnitAbbreviation,
+		AmountUnitType:              t.AmountUnitType,
+		AmountUnitRatioNumerator:    t.AmountUnitRatioNumerator,
+		AmountUnitRatioDenominator:  t.AmountUnitRatioDenominator,
+		AmountUnitOffsetNumerator:   t.AmountUnitOffsetNumerator,
+		AmountUnitOffsetDenominator: t.AmountUnitOffsetDenominator,
+		AmountUnitCreatedAt:         t.AmountUnitCreatedAt.Format(time.RFC3339),
+		AmountUnitUpdatedAt:         t.AmountUnitUpdatedAt.Format(time.RFC3339),
 	}
 }

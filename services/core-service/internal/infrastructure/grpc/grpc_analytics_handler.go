@@ -712,6 +712,49 @@ func (h *gRPCHandler) AnalyzeDemandForecast(ctx context.Context, req *pb.Analyze
 	}, nil
 }
 
+func (h *gRPCHandler) AnalyzeOeeTrend(ctx context.Context, req *pb.AnalyzeOeeTrendRequest) (*pb.AnalyzeOeeTrendResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	params := domain.AnalyzeOeeTrendParams{DepartmentIDs: req.DepartmentIds}
+	if req.StartDate != nil {
+		params.StartDate = req.StartDate.AsTime()
+	}
+	if req.EndDate != nil {
+		params.EndDate = req.EndDate.AsTime()
+	}
+
+	periods, apiErr := h.analyticsSvc.AnalyzeOeeTrend(ctx, params)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	pbPeriods := make([]*pb.OeeTrendPeriodProto, len(periods))
+	for i, p := range periods {
+		pbPeriods[i] = &pb.OeeTrendPeriodProto{
+			StartsAt:                timestamppb.New(p.StartsAt),
+			EndsAt:                  timestamppb.New(p.EndsAt),
+			GoodUnits:               p.GoodUnits,
+			WasteUnits:              p.WasteUnits,
+			SecondsUnits:            p.SecondsUnits,
+			StandardSecondsEarned:   p.StandardSecondsEarned,
+			ScheduledSeconds:        p.ScheduledSeconds,
+			RunTimeSeconds:          p.RunTimeSeconds,
+			AvailabilityLossSeconds: p.AvailabilityLossSeconds,
+			NotScheduledSeconds:     p.NotScheduledSeconds,
+			AvailabilityPct:         p.AvailabilityPct,
+			PerformancePct:          p.PerformancePct,
+			QualityPct:              p.QualityPct,
+			OeePct:                  p.OeePct,
+			HasDowntimeData:         p.HasDowntimeData,
+			DowntimeEventCount:      p.DowntimeEventCount,
+		}
+	}
+
+	return &pb.AnalyzeOeeTrendResponse{Periods: pbPeriods}, nil
+}
+
 func (h *gRPCHandler) AnalyzeOee(ctx context.Context, req *pb.AnalyzeOeeRequest) (*pb.AnalyzeOeeResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()

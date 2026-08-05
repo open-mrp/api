@@ -20,9 +20,9 @@ type ListSuppliersRequest struct {
 	// A supplier matches when it provides a material for one of the items, whether or not that material link is active.
 	ItemIDs []string `query:"item_ids"`
 	// Only return suppliers created at or after this timestamp.
-	StartDate *time.Time `query:"start_date"`
+	StartDate *time.Time `query:"starts_at"`
 	// Only return suppliers created at or before this timestamp.
-	EndDate *time.Time `query:"end_date"`
+	EndDate *time.Time `query:"ends_at"`
 }
 
 // TODO: stop returning SupplierSummary; return the full Supplier apiresource and use proper includes values to control expansion.

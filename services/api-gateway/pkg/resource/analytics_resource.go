@@ -628,6 +628,50 @@ type OeeDepartment struct {
 	Anomalies []constants.OeeAnomaly `json:"anomalies"`
 }
 
+// AnalyzeOeeTrendResponse represents the response from the OEE trend endpoint.
+type AnalyzeOeeTrendResponse struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=analyze_oee_trend_response"`
+	// One entry per production week in the requested window, oldest first.
+	Periods *List[OeeTrendPeriod] `json:"periods" validate:"required"`
+}
+
+// OeeTrendPeriod represents one production week of OEE, rolled up across the departments that had scheduled time in it. Departments with no scheduled time have no OEE and take no part in the roll-up, so their output is not counted here either.
+type OeeTrendPeriod struct {
+	// The first instant this period covers. Weeks start on Monday; the first and last periods of a window are clipped to the window itself.
+	StartsAt time.Time `json:"starts_at" validate:"required"`
+	// The instant this period ends, exclusive.
+	EndsAt time.Time `json:"ends_at" validate:"required"`
+	// The number of good units produced.
+	GoodUnits float64 `json:"good_units" validate:"required"`
+	// The number of waste units.
+	WasteUnits float64 `json:"waste_units" validate:"required"`
+	// The number of seconds units.
+	SecondsUnits float64 `json:"seconds_units" validate:"required"`
+	// The time this output should have taken at each production step's own labor rate: ideal cycle time multiplied by the units produced.
+	StandardSecondsEarned float64 `json:"standard_seconds_earned" validate:"required"`
+	// Planned time net of not-scheduled downtime, in seconds.
+	ScheduledSeconds float64 `json:"scheduled_seconds" validate:"required"`
+	// Scheduled time net of availability losses, in seconds.
+	RunTimeSeconds float64 `json:"run_time_seconds" validate:"required"`
+	// Logged downtime charged against availability, in seconds.
+	AvailabilityLossSeconds float64 `json:"availability_loss_seconds" validate:"required"`
+	// Time nobody planned to run, removed from the denominator rather than counted as a loss.
+	NotScheduledSeconds float64 `json:"not_scheduled_seconds" validate:"required"`
+	// Run time divided by scheduled time.
+	AvailabilityPct *float64 `json:"availability_pct"`
+	// Standard seconds earned divided by run time.
+	PerformancePct *float64 `json:"performance_pct"`
+	// Good units divided by total units produced.
+	QualityPct *float64 `json:"quality_pct"`
+	// Availability multiplied by performance multiplied by quality.
+	OeePct *float64 `json:"oee_pct"`
+	// Whether availability was measured from logged downtime or estimated from runtime.
+	MeasurementStatus constants.OeeMeasurementStatus `json:"measurement_status" validate:"required"`
+	// Number of downtime events overlapping this period.
+	DowntimeEventCount int64 `json:"downtime_event_count" validate:"required"`
+}
+
 // OeeDowntimeReason represents one reason's contribution to a department's downtime.
 type OeeDowntimeReason struct {
 	// Why the machine stopped.

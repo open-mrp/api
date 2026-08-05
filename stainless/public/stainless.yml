@@ -207,10 +207,13 @@ resources:
       analytics:
         methods:
           update_oee: put /v1/core/analytics/oee
+          update_oee_trend: put /v1/core/analytics/oee-trend
           update_schedule_attainment: put /v1/core/analytics/schedule-attainment
         models:
           analyze_oee_request: '#/components/schemas/AnalyzeOeeRequest'
           analyze_oee_response: '#/components/schemas/AnalyzeOeeResponse'
+          analyze_oee_trend_request: '#/components/schemas/AnalyzeOeeTrendRequest'
+          analyze_oee_trend_response: '#/components/schemas/AnalyzeOeeTrendResponse'
           analyze_schedule_attainment_request: '#/components/schemas/AnalyzeScheduleAttainmentRequest'
           analyze_schedule_attainment_response: '#/components/schemas/AnalyzeScheduleAttainmentResponse'
           attainment_bucket: '#/components/schemas/AttainmentBucket'
@@ -219,9 +222,11 @@ resources:
           list_frozen_adherence: '#/components/schemas/List_FrozenAdherence'
           list_oee_department: '#/components/schemas/List_OeeDepartment'
           list_oee_downtime_reason: '#/components/schemas/List_OeeDowntimeReason'
+          list_oee_trend_period: '#/components/schemas/List_OeeTrendPeriod'
           oee_department: '#/components/schemas/OeeDepartment'
           oee_department_planned_time: '#/components/schemas/OeeDepartmentPlannedTime'
           oee_downtime_reason: '#/components/schemas/OeeDowntimeReason'
+          oee_trend_period: '#/components/schemas/OeeTrendPeriod'
     models:
       entity: '#/components/schemas/Entity'
       list_entity: '#/components/schemas/List_Entity'

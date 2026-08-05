@@ -377,7 +377,7 @@ func (m *productionScheduleSvcImpl) ListProductionScheduleItemPolicies(ctx conte
 			OnHandGreige:            p.OnHandGreige,
 			AverageGreigeInventory:  p.AverageGreigeInventory,
 			MaxGreigeInventory:      p.MaxGreigeInventory,
-			ProjectedOnHand:         p.ProjectedOnHand,
+			ProjectedOnHand:         orEmptyFloats(p.ProjectedOnHand),
 			WeeksOfCover:            p.WeeksOfCover,
 			AnnualRunHours:          p.AnnualRunHours,
 			ABCClass:                abcClassPtrFrom(p.AbcClass),
@@ -641,21 +641,29 @@ func deviationFromProto(d *pb.ProductionScheduleDeviationInfo) apiresource.Produ
 		Actor:              resourceloaders.ActorRefFromID(d.ActorId),
 		CreatedAt:          grpcutil.TimestampToTime(d.CreatedAt),
 	}
-	out.Before = decodeSnapshot(d.BeforeJson)
-	out.After = decodeSnapshot(d.AfterJson)
+	out.Before = rawSnapshot(d.BeforeJson)
+	out.After = rawSnapshot(d.AfterJson)
 	return out
 }
 
-func decodeSnapshot(raw *string) map[string]any {
+// orEmptyFloats keeps a weekly series serializing as [] rather than null. An item the solver never projected has no weeks, which is an empty series — not a missing field.
+func orEmptyFloats(v []float64) []float64 {
+	if v == nil {
+		return []float64{}
+	}
+	return v
+}
+
+// rawSnapshot passes a stored snapshot through as JSON rather than decoding and re-encoding it, so the line shape is modelled once, on the line itself. An absent snapshot stays absent: a line the change created has no before, and one it removed has no after.
+func rawSnapshot(raw *string) json.RawMessage {
 	if raw == nil || *raw == "" {
 		return nil
 	}
-	var decoded map[string]any
-	if err := json.Unmarshal([]byte(*raw), &decoded); err != nil {
+	if !json.Valid([]byte(*raw)) {
 		// A malformed snapshot must not take the whole deviation list down with it — the deltas and the reason are the load-bearing parts.
 		return nil
 	}
-	return decoded
+	return json.RawMessage(*raw)
 }
 
 func (m *productionScheduleSvcImpl) CreateProductionScheduleLine(ctx context.Context, req *CreateProductionScheduleLineRequest) (*apiresource.ProductionScheduleLine, *apierror.APIError) {

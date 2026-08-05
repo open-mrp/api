@@ -44,23 +44,40 @@ func (q *Queries) CountSalesTargets(ctx context.Context, arg CountSalesTargetsPa
 const getSalesTarget = `-- name: GetSalesTarget :one
 SELECT t.id, t.start_date, t.end_date, t.sales_rep_id, t.account_id,
        t.amount_id, t.created_at, t.updated_at,
-       q.value AS amount_value, q.unit_id AS amount_unit_id
+       q.value AS amount_value, q.unit_id AS amount_unit_id,
+       u.name AS amount_unit_name, u.abbreviation AS amount_unit_abbreviation,
+       u.unit_dimension_code AS amount_unit_type,
+       u.ratio_numerator AS amount_unit_ratio_numerator,
+       u.ratio_denominator AS amount_unit_ratio_denominator,
+       u.offset_numerator AS amount_unit_offset_numerator,
+       u.offset_denominator AS amount_unit_offset_denominator,
+       u.created_at AS amount_unit_created_at, u.updated_at AS amount_unit_updated_at
 FROM target t
 INNER JOIN quantity q ON q.id = t.amount_id
+INNER JOIN unit u ON u.id = q.unit_id
 WHERE t.id = ?
 `
 
 type GetSalesTargetRow struct {
-	ID           string
-	StartDate    time.Time
-	EndDate      time.Time
-	SalesRepID   string
-	AccountID    string
-	AmountID     string
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
-	AmountValue  string
-	AmountUnitID string
+	ID                          string
+	StartDate                   time.Time
+	EndDate                     time.Time
+	SalesRepID                  string
+	AccountID                   string
+	AmountID                    string
+	CreatedAt                   time.Time
+	UpdatedAt                   time.Time
+	AmountValue                 string
+	AmountUnitID                string
+	AmountUnitName              string
+	AmountUnitAbbreviation      string
+	AmountUnitType              string
+	AmountUnitRatioNumerator    string
+	AmountUnitRatioDenominator  string
+	AmountUnitOffsetNumerator   string
+	AmountUnitOffsetDenominator string
+	AmountUnitCreatedAt         time.Time
+	AmountUnitUpdatedAt         time.Time
 }
 
 func (q *Queries) GetSalesTarget(ctx context.Context, id string) (GetSalesTargetRow, error) {
@@ -77,6 +94,15 @@ func (q *Queries) GetSalesTarget(ctx context.Context, id string) (GetSalesTarget
 		&i.UpdatedAt,
 		&i.AmountValue,
 		&i.AmountUnitID,
+		&i.AmountUnitName,
+		&i.AmountUnitAbbreviation,
+		&i.AmountUnitType,
+		&i.AmountUnitRatioNumerator,
+		&i.AmountUnitRatioDenominator,
+		&i.AmountUnitOffsetNumerator,
+		&i.AmountUnitOffsetDenominator,
+		&i.AmountUnitCreatedAt,
+		&i.AmountUnitUpdatedAt,
 	)
 	return i, err
 }
@@ -110,9 +136,17 @@ func (q *Queries) InsertSalesTarget(ctx context.Context, arg InsertSalesTargetPa
 const listSalesTargets = `-- name: ListSalesTargets :many
 SELECT t.id, t.start_date, t.end_date, t.sales_rep_id, t.account_id,
        t.amount_id, t.created_at, t.updated_at,
-       q.value AS amount_value, q.unit_id AS amount_unit_id
+       q.value AS amount_value, q.unit_id AS amount_unit_id,
+       u.name AS amount_unit_name, u.abbreviation AS amount_unit_abbreviation,
+       u.unit_dimension_code AS amount_unit_type,
+       u.ratio_numerator AS amount_unit_ratio_numerator,
+       u.ratio_denominator AS amount_unit_ratio_denominator,
+       u.offset_numerator AS amount_unit_offset_numerator,
+       u.offset_denominator AS amount_unit_offset_denominator,
+       u.created_at AS amount_unit_created_at, u.updated_at AS amount_unit_updated_at
 FROM target t
 INNER JOIN quantity q ON q.id = t.amount_id
+INNER JOIN unit u ON u.id = q.unit_id
 WHERE t.sales_rep_id = ? AND t.account_id = ?
 AND (
     ? IS NULL
@@ -132,16 +166,25 @@ type ListSalesTargetsParams struct {
 }
 
 type ListSalesTargetsRow struct {
-	ID           string
-	StartDate    time.Time
-	EndDate      time.Time
-	SalesRepID   string
-	AccountID    string
-	AmountID     string
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
-	AmountValue  string
-	AmountUnitID string
+	ID                          string
+	StartDate                   time.Time
+	EndDate                     time.Time
+	SalesRepID                  string
+	AccountID                   string
+	AmountID                    string
+	CreatedAt                   time.Time
+	UpdatedAt                   time.Time
+	AmountValue                 string
+	AmountUnitID                string
+	AmountUnitName              string
+	AmountUnitAbbreviation      string
+	AmountUnitType              string
+	AmountUnitRatioNumerator    string
+	AmountUnitRatioDenominator  string
+	AmountUnitOffsetNumerator   string
+	AmountUnitOffsetDenominator string
+	AmountUnitCreatedAt         time.Time
+	AmountUnitUpdatedAt         time.Time
 }
 
 func (q *Queries) ListSalesTargets(ctx context.Context, arg ListSalesTargetsParams) ([]ListSalesTargetsRow, error) {
@@ -172,6 +215,15 @@ func (q *Queries) ListSalesTargets(ctx context.Context, arg ListSalesTargetsPara
 			&i.UpdatedAt,
 			&i.AmountValue,
 			&i.AmountUnitID,
+			&i.AmountUnitName,
+			&i.AmountUnitAbbreviation,
+			&i.AmountUnitType,
+			&i.AmountUnitRatioNumerator,
+			&i.AmountUnitRatioDenominator,
+			&i.AmountUnitOffsetNumerator,
+			&i.AmountUnitOffsetDenominator,
+			&i.AmountUnitCreatedAt,
+			&i.AmountUnitUpdatedAt,
 		); err != nil {
 			return nil, err
 		}

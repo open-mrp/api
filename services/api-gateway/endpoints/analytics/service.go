@@ -32,6 +32,7 @@ type AnalyticsSvc interface {
 	AnalyzeNewCustomers(ctx context.Context, req *AnalyzeNewCustomersRequest) (*apiresource.AnalyzeNewCustomersResponse, *apierror.APIError)
 	AnalyzeDemandForecast(ctx context.Context, req *AnalyzeDemandForecastRequest) (*apiresource.AnalyzeDemandForecastResponse, *apierror.APIError)
 	AnalyzeOee(ctx context.Context, req *AnalyzeOeeRequest) (*apiresource.AnalyzeOeeResponse, *apierror.APIError)
+	AnalyzeOeeTrend(ctx context.Context, req *AnalyzeOeeTrendRequest) (*apiresource.AnalyzeOeeTrendResponse, *apierror.APIError)
 	AnalyzeScheduleAttainment(ctx context.Context, req *AnalyzeScheduleAttainmentRequest) (*apiresource.AnalyzeScheduleAttainmentResponse, *apierror.APIError)
 	AnalyzeWeeksOfSales(ctx context.Context, req *AnalyzeWeeksOfSalesRequest) (*apiresource.AnalyzeWeeksOfSalesResponse, *apierror.APIError)
 }
@@ -362,6 +363,25 @@ func (m *analyticsSvcImpl) AnalyzeOee(ctx context.Context, req *AnalyzeOeeReques
 	}
 
 	return AnalyzeOeePresenter(resp), nil
+}
+
+func (m *analyticsSvcImpl) AnalyzeOeeTrend(ctx context.Context, req *AnalyzeOeeTrendRequest) (*apiresource.AnalyzeOeeTrendResponse, *apierror.APIError) {
+	pbReq := &pb.AnalyzeOeeTrendRequest{
+		StartDate:     timestamppb.New(req.StartDate),
+		EndDate:       timestamppb.New(req.EndDate),
+		DepartmentIds: req.DepartmentIDs,
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, analyticsSvcTracer, "service.analytics.analyze_oee_trend", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.AnalyzeOeeTrendResponse, error) {
+			return m.coreClient.AnalyzeOeeTrend(ctx, pbReq, opts...)
+		})
+
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return AnalyzeOeeTrendPresenter(resp), nil
 }
 
 func (m *analyticsSvcImpl) AnalyzeWeeksOfSales(ctx context.Context, req *AnalyzeWeeksOfSalesRequest) (*apiresource.AnalyzeWeeksOfSalesResponse, *apierror.APIError) {

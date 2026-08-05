@@ -28,9 +28,9 @@ type ListItemsRequest struct {
 	// Only materials can have suppliers, so combining this with a `types` filter that excludes `material` returns nothing.
 	SupplierID *string `query:"supplier_id"`
 	// Filter to items created on or after this date.
-	StartDate *time.Time `query:"start_date"`
+	StartDate *time.Time `query:"starts_at"`
 	// Filter to items created on or before this date.
-	EndDate *time.Time `query:"end_date"`
+	EndDate *time.Time `query:"ends_at"`
 	// Restricts results based on where the item is produced in its production flow.
 	//
 	// - `all`: no restriction.

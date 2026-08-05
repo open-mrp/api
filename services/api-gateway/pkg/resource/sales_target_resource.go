@@ -20,10 +20,10 @@ type SalesTarget struct {
 	StartAt time.Time `json:"start_at" validate:"required"`
 	// End of the period this target applies to (e.g. the close of a quarter).
 	EndAt time.Time `json:"end_at" validate:"required"`
-	// The sales rep this target is assigned to.
+	// The sales rep this target is assigned to, referencing the account-user record the `/v1/identity/account-users` endpoints return.
 	//
-	// This is the rep's account-user record, identified by the same ID the `/v1/identity/account-users` endpoints return. Only the `id` is populated.
-	SalesRep *User `json:"sales_rep" expandable:"true"`
+	// A reference rather than the full record: it was tagged expandable but no include ever resolved it, so callers received an account user whose every field except the id was empty.
+	SalesRep *Entity `json:"sales_rep" validate:"required"`
 	// The revenue goal for the period, as a monetary quantity.
 	Amount *Quantity `json:"amount" validate:"required"`
 	// Creation timestamp.
@@ -37,7 +37,7 @@ var SampleSalesTarget = &SalesTarget{
 	Object:    constants.ObjectTypeSalesTarget,
 	StartAt:   timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	EndAt:     timeutil.TimestampToTime(sampleExpiresAtTimestamp),
-	SalesRep:  SampleUser,
+	SalesRep:  NewEntity(SampleAccountUserID, constants.ObjectTypeAccountUser, nil, nil),
 	Amount:    SampleQuantity,
 	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),

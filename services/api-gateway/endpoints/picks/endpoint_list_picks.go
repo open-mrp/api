@@ -33,9 +33,9 @@ type ListPicksRequest struct {
 	// Matches picks assigned to any of the given departments.
 	DepartmentIDs []string `query:"department_ids"`
 	// Only return picks created on or after this date (`YYYY-MM-DD`).
-	StartDate *string `query:"start_date"`
+	StartDate *string `query:"starts_at"`
 	// Only return picks created before this date (`YYYY-MM-DD`).
-	EndDate *string `query:"end_date"`
+	EndDate *string `query:"ends_at"`
 }
 
 // Returns a paginated list of picks, newest first.

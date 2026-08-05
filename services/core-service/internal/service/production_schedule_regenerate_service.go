@@ -46,7 +46,7 @@ func (s *productionScheduleSvcImpl) loadRegenerateTarget(
 	return schedule, nil
 }
 
-// solveForRegenerate re-solves using the version's own horizon and basis unless the caller overrides them.
+// solveForRegenerate re-solves using the version's own horizon and basis unless the caller overrides them. It returns the plan for the requested merge mode alongside the plan replace_all would apply, which are the same plan unless hand edits were pinned.
 //
 // The planning instant is NOT reused: a regenerate answers "what would the solver say now", and replaying the draft's original instant would silently answer a different question — demand overrides created since then would be filtered out as not-yet-effective, and the horizon would stay anchored to the day the draft was first generated no matter how stale that is.
 func (s *productionScheduleSvcImpl) solveForRegenerate(
@@ -54,7 +54,7 @@ func (s *productionScheduleSvcImpl) solveForRegenerate(
 	accountID string,
 	schedule *domain.ProductionSchedule,
 	params domain.RegenerateProductionScheduleParams,
-) (*scheduling.SolverOutput, *domain.EffectiveScheduleSettings, time.Time, *apierror.APIError) {
+) (*scheduling.SolverOutput, []scheduling.Campaign, *domain.EffectiveScheduleSettings, time.Time, *apierror.APIError) {
 	planningAsOf := time.Now().UTC()
 	if params.PlanningAsOf != nil && !params.PlanningAsOf.IsZero() {
 		planningAsOf = *params.PlanningAsOf
@@ -76,15 +76,24 @@ func (s *productionScheduleSvcImpl) solveForRegenerate(
 		var apiErr *apierror.APIError
 		pinned, apiErr = s.loadManualPins(ctx, accountID, schedule.ID, planningAsOf, horizonWeeks)
 		if apiErr != nil {
-			return nil, nil, time.Time{}, apiErr
+			return nil, nil, nil, time.Time{}, apiErr
 		}
 	}
 
-	output, effective, apiErr := s.solveFor(ctx, accountID, planningAsOf, horizonWeeks, demandBasis, pinned)
+	output, input, effective, apiErr := s.solveForWithInput(ctx, accountID, planningAsOf, horizonWeeks, demandBasis, pinned)
 	if apiErr != nil {
-		return nil, nil, time.Time{}, apiErr
+		return nil, nil, nil, time.Time{}, apiErr
 	}
-	return output, effective, planningAsOf, nil
+
+	// What replace_all would apply is the plan the solver reaches when it is NOT holding the hand edits in place. With pins, every hand edit is in the output because it was put there, so the pinned plan cannot answer what the destructive mode would cost. The second solve reuses the loaded input, so it costs no further reads.
+	replaceAllCampaigns := output.Campaigns
+	if len(pinned) > 0 {
+		unpinned := *input
+		unpinned.PinnedCampaigns = nil
+		replaceAllCampaigns = scheduling.Solve(unpinned).Campaigns
+	}
+
+	return output, replaceAllCampaigns, effective, planningAsOf, nil
 }
 
 // resolveMergeMode applies the default: hand edits are preserved unless the caller explicitly asks to replace them.
@@ -243,8 +252,8 @@ func diffCampaigns(
 	return out
 }
 
-// summarizePreview counts what the diff means for each merge mode.
-func summarizePreview(lines []domain.ScheduleDiffLine) domain.ScheduleRegeneratePreview {
+// summarizePreview counts what the diff means for each merge mode. discardedByReplaceAll is measured separately, against the plan the destructive mode would apply rather than against this diff.
+func summarizePreview(lines []domain.ScheduleDiffLine, discardedByReplaceAll int32) domain.ScheduleRegeneratePreview {
 	preview := domain.ScheduleRegeneratePreview{Lines: lines}
 
 	for _, line := range lines {
@@ -257,17 +266,41 @@ func summarizePreview(lines []domain.ScheduleDiffLine) domain.ScheduleRegenerate
 			preview.ChangedCount++
 		}
 
-		if !line.CurrentIsManual {
-			continue
-		}
-		preview.ManualLineCount++
-		// A hand edit is destroyed by replace_all whenever the fresh solve disagrees with it — either by not wanting the campaign at all, or by wanting a different quantity. A manual line the solver happens to agree with survives either way.
-		if line.ChangeCode == domain.ScheduleDiffRemoved || line.ChangeCode == domain.ScheduleDiffChanged {
-			preview.DiscardedManualCount++
+		if line.CurrentIsManual {
+			preview.ManualLineCount++
 		}
 	}
 
+	preview.DiscardedManualCount = discardedByReplaceAll
 	return preview
+}
+
+// countDiscardedByReplaceAll is the destructive mode's cost: how many hand-edited campaigns the fresh plan does not reproduce.
+//
+// It is measured against the plan replace_all would actually apply — the solve with no hand edits pinned into it. Measured against a preserve_manual solve the answer is always zero, because the pins put every hand edit in the plan, and the one number that exists to warn a planner about losing their work would quietly say there is nothing to lose.
+//
+// A hand edit survives only where the fresh plan independently asks for the same campaign at the same size; wanting a different quantity is still a lost edit. Lines are keyed the same way diffCampaigns keys them, so this can never exceed ManualLineCount.
+func countDiscardedByReplaceAll(existing []*domain.ProductionScheduleLine, replaceAllCampaigns []scheduling.Campaign, horizonStart time.Time) int32 {
+	proposed := make(map[campaignKey]float64, len(replaceAllCampaigns))
+	for _, c := range replaceAllCampaigns {
+		proposed[campaignKey{ItemID: c.ItemID, MachineID: c.MachineID, WeekIndex: safeconv.IntToInt32(c.WeekIndex)}] += c.Units
+	}
+
+	manualByKey := make(map[campaignKey]*domain.ProductionScheduleLine, len(existing))
+	for _, line := range existing {
+		if line.SourceCode != domain.ScheduleLineSourceManual {
+			continue
+		}
+		manualByKey[campaignKey{ItemID: line.ItemID, MachineID: line.MachineID, WeekIndex: safeconv.IntToInt32(scheduleLineWeekIndex(line.WeekStartDate, horizonStart))}] = line
+	}
+
+	var discarded int32
+	for key, line := range manualByKey {
+		if quantity, ok := proposed[key]; !ok || quantity != line.PlannedQuantity {
+			discarded++
+		}
+	}
+	return discarded
 }
 
 // PreviewRegenerateProductionSchedule says what a regenerate would change, without changing anything.
@@ -295,7 +328,7 @@ func (s *productionScheduleSvcImpl) PreviewRegenerateProductionSchedule(
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	output, effective, planningAsOf, apiErr := s.solveForRegenerate(ctx, accountID, schedule, params)
+	output, replaceAllCampaigns, effective, planningAsOf, apiErr := s.solveForRegenerate(ctx, accountID, schedule, params)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -315,7 +348,10 @@ func (s *productionScheduleSvcImpl) PreviewRegenerateProductionSchedule(
 
 	horizonStart := scheduleWeekStart(planningAsOf, effective.Settings.WeekStartDay)
 	preserveManual := resolveMergeMode(params.MergeMode) == domain.ScheduleMergeModePreserveManual
-	preview := summarizePreview(diffCampaigns(existing, output.Campaigns, skuByItemID, horizonStart, preserveManual))
+	preview := summarizePreview(
+		diffCampaigns(existing, output.Campaigns, skuByItemID, horizonStart, preserveManual),
+		countDiscardedByReplaceAll(existing, replaceAllCampaigns, horizonStart),
+	)
 	preview.ScheduleID = params.ScheduleID
 	preview.SolverVersion = output.SolverVersion
 	preview.PlanningAsOf = planningAsOf
@@ -360,7 +396,8 @@ func (s *productionScheduleSvcImpl) RegenerateProductionSchedule(
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	output, effective, planningAsOf, apiErr := s.solveForRegenerate(ctx, accountID, schedule, params)
+	// The replace_all counterfactual is a preview concern; applying a regenerate only needs the plan for the mode being applied.
+	output, _, effective, planningAsOf, apiErr := s.solveForRegenerate(ctx, accountID, schedule, params)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}

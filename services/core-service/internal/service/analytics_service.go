@@ -389,7 +389,7 @@ func (s *analyticsSvcImpl) GetDemandForecast(ctx context.Context, params domain.
 	return s.buildDemandForecast(ctx, params)
 }
 
-// AnalyzeOee computes Availability x Performance x Quality per department from planned time, logged downtime and batch-ticket scan intervals.
+// AnalyzeOee computes Availability x Performance x Quality per department from planned time, logged downtime and the ideal cycle times the period's output earned.
 func (s *analyticsSvcImpl) AnalyzeOee(ctx context.Context, params domain.AnalyzeOeeParams) ([]domain.OeeDepartment, *apierror.APIError) {
 	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.analyze_oee")
 	defer span.End()
@@ -409,6 +409,28 @@ func (s *analyticsSvcImpl) AnalyzeOee(ctx context.Context, params domain.Analyze
 	params.AccountID = identity.Target.AccountID
 
 	return s.buildOeeByDepartment(ctx, params)
+}
+
+// AnalyzeOeeTrend computes the same OEE terms per production week over a window, rolled up across departments.
+func (s *analyticsSvcImpl) AnalyzeOeeTrend(ctx context.Context, params domain.AnalyzeOeeTrendParams) ([]domain.OeeTrendPeriod, *apierror.APIError) {
+	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.analyze_oee_trend")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainMachineDowntime, types.ActionRead); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	params.AccountID = identity.Target.AccountID
+
+	return s.buildOeeTrend(ctx, params)
 }
 
 // AnalyzeWeeksOfSales returns on-hand inventory expressed as weeks of average sales per product line.
@@ -556,7 +578,7 @@ func (s *analyticsSvcImpl) AnalyzeScheduleAttainment(ctx context.Context, params
 	}
 
 	if params.EndDate.Before(params.StartDate) {
-		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("The period must end on or after it starts.", "end_date"))
+		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("The period must end on or after it starts.", "ends_at"))
 	}
 
 	params.AccountID = identity.Target.AccountID

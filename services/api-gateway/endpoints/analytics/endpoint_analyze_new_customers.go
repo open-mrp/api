@@ -14,9 +14,9 @@ import (
 // AnalyzeNewCustomersRequest is the request to analyze new customer acquisition.
 type AnalyzeNewCustomersRequest struct {
 	// The start date for the analysis period.
-	StartDate time.Time `json:"start_date" validate:"required"`
+	StartDate time.Time `json:"starts_at" validate:"required"`
 	// The end date for the analysis period.
-	EndDate time.Time `json:"end_date" validate:"required"`
+	EndDate time.Time `json:"ends_at" validate:"required"`
 	// Optional customer group IDs to filter by.
 	CustomerGroupIDs []string `json:"customer_group_ids,omitempty"`
 	// Optional sales rep IDs to filter by.

@@ -346,6 +346,39 @@ func (*AnalyzeOeeResponse) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleAnalyzeOeeResponse)
 }
 
+var sampleOeeTrendAvailabilityPct = 0.91
+var sampleOeeTrendPerformancePct = 0.84
+var sampleOeeTrendQualityPct = 0.98
+var sampleOeeTrendOeePct = sampleOeeTrendAvailabilityPct * sampleOeeTrendPerformancePct * sampleOeeTrendQualityPct
+
+var SampleAnalyzeOeeTrendResponse = &AnalyzeOeeTrendResponse{
+	Object: constants.ObjectTypeAnalyzeOeeTrendResponse,
+	Periods: NewList([]OeeTrendPeriod{
+		{
+			StartsAt:                SampleAnalyticsPeriodStart,
+			EndsAt:                  SampleAnalyticsPeriodEnd,
+			GoodUnits:               980,
+			WasteUnits:              20,
+			SecondsUnits:            5,
+			StandardSecondsEarned:   126000,
+			ScheduledSeconds:        165000,
+			RunTimeSeconds:          150150,
+			AvailabilityLossSeconds: 14850,
+			NotScheduledSeconds:     3600,
+			AvailabilityPct:         &sampleOeeTrendAvailabilityPct,
+			PerformancePct:          &sampleOeeTrendPerformancePct,
+			QualityPct:              &sampleOeeTrendQualityPct,
+			OeePct:                  &sampleOeeTrendOeePct,
+			MeasurementStatus:       constants.OeeMeasurementStatusMeasured,
+			DowntimeEventCount:      6,
+		},
+	}, PageInfo{}),
+}
+
+func (*AnalyzeOeeTrendResponse) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleAnalyzeOeeTrendResponse)
+}
+
 func (*AnalyzeWeeksOfSalesResponse) SchemaExample() any {
 	plName := SampleProductLineName
 	plEnt := NewEntity(SampleProductLineID, constants.ObjectTypeProductLine, &plName, nil)

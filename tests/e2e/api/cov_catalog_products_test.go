@@ -377,7 +377,7 @@ func TestCovCatalogProducts_ChangeProductLine_Idempotent(t *testing.T) {
 
 // ──────────────────────────────────────────────
 // List — dedicated filter tests: category_ids, attribute_ids, customer_ids,
-// start_date/end_date, portal_visibility
+// starts_at/ends_at, portal_visibility
 // ──────────────────────────────────────────────
 
 func TestCovCatalogProducts_List_FilterByCategoryIDs(t *testing.T) {
@@ -514,16 +514,16 @@ func TestCovCatalogProducts_List_FilterByDateRange(t *testing.T) {
 	require.NotEmpty(t, id)
 
 	inRange, _, err := apiClient.GetList(productsPath, url.Values{
-		"start_date": {"2020-01-01T00:00:00Z"},
-		"end_date":   {"2030-01-01T00:00:00Z"},
-		"limit":      {"1000"},
+		"starts_at": {"2020-01-01T00:00:00Z"},
+		"ends_at":   {"2030-01-01T00:00:00Z"},
+		"limit":     {"1000"},
 	})
 	require.NoError(t, err)
 	assert.True(t, covCatalogProductsListContainsID(inRange, id), "date range bracketing created_at should include the newly created product")
 
 	outOfRange, _, err := apiClient.GetList(productsPath, url.Values{
-		"start_date": {"2020-01-01T00:00:00Z"},
-		"end_date":   {"2020-06-01T00:00:00Z"},
+		"starts_at": {"2020-01-01T00:00:00Z"},
+		"ends_at":   {"2020-06-01T00:00:00Z"},
 	})
 	require.NoError(t, err)
 	assert.False(t, covCatalogProductsListContainsID(outOfRange, id), "date range before created_at should exclude the newly created product")
@@ -532,7 +532,7 @@ func TestCovCatalogProducts_List_FilterByDateRange(t *testing.T) {
 func TestCovCatalogProducts_List_MalformedStartDate(t *testing.T) {
 	t.Parallel()
 
-	status, body, err := apiClient.GetListRaw(productsPath, url.Values{"start_date": {"not-a-date"}})
+	status, body, err := apiClient.GetListRaw(productsPath, url.Values{"starts_at": {"not-a-date"}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 	requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")

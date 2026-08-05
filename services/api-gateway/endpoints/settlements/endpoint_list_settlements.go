@@ -19,11 +19,11 @@ type ListSettlementsRequest struct {
 	// Only return settlements that allocate to at least one of these invoices.
 	InvoiceIDs []string `query:"invoice_ids"`
 	// Only return settlements created on or after the start of this date (`YYYY-MM-DD`, UTC).
-	StartDate *string `query:"start_date"`
+	StartDate *string `query:"starts_at"`
 	// Only return settlements created up to the start of this date (`YYYY-MM-DD`, UTC).
 	//
 	// Settlements created later on that day are excluded, so pass the following day to cover a full day.
-	EndDate *string `query:"end_date"`
+	EndDate *string `query:"ends_at"`
 }
 
 // TODO: stop returning SettlementSummary; return the full Settlement apiresource and use proper includes values to control expansion.

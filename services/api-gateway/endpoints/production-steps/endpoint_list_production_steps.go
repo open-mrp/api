@@ -26,9 +26,9 @@ type ListProductionStepsRequest struct {
 	// Only return steps that feed directly into any of these downstream steps.
 	OutputStepIDs []string `query:"output_step_ids"`
 	// Only return steps created on or after this timestamp (inclusive).
-	StartDate *time.Time `query:"start_date"`
+	StartDate *time.Time `query:"starts_at"`
 	// Only return steps created on or before this timestamp (inclusive).
-	EndDate *time.Time `query:"end_date"`
+	EndDate *time.Time `query:"ends_at"`
 }
 
 // Returns a paginated list of production steps for the current account, newest first.

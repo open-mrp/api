@@ -15,9 +15,9 @@ import (
 type ListOpenCreditsRequest struct {
 	apiresource.PaginationRequest
 	// Only include transactions created on or after this date (`YYYY-MM-DD`).
-	StartDate *string `query:"start_date"`
+	StartDate *string `query:"starts_at"`
 	// Only include transactions created before this date (`YYYY-MM-DD`).
-	EndDate *string `query:"end_date"`
+	EndDate *string `query:"ends_at"`
 	// Filter by customer account IDs.
 	CustomerIDs []string `query:"customer_ids"`
 }

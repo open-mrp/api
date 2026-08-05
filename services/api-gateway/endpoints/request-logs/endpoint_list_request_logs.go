@@ -16,9 +16,9 @@ import (
 type ListRequestLogsRequest struct {
 	apiresource.PaginationRequest
 	// Restricts results to request logs on or after this timestamp.
-	StartDate *time.Time `query:"start_date"`
+	StartDate *time.Time `query:"starts_at"`
 	// Restricts results to request logs on or before this timestamp.
-	EndDate *time.Time `query:"end_date"`
+	EndDate *time.Time `query:"ends_at"`
 	// Filter by the HTTP method.
 	Methods []constants.HTTPMethod `query:"methods"`
 	// Filter by the HTTP status code.

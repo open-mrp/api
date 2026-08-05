@@ -18,7 +18,7 @@ type ExportReceivablesByCustomerRequest struct {
 	// Compute receivable balances as of this timestamp.
 	//
 	// Only invoices created before the cutoff are included, and only allocations made before the cutoff are subtracted from each remaining balance. When omitted, current balances are returned.
-	CutoffDate *time.Time `query:"cutoff_date"`
+	CutoffDate *time.Time `query:"cutoff_at"`
 }
 
 // Exports a single customer's outstanding receivable entries as a downloadable CSV file.

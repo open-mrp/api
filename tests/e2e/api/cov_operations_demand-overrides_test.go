@@ -342,8 +342,8 @@ func TestDemandOverrides_ListPeriodFilterMatchesOverlap(t *testing.T) {
 	inside := start.AddDate(0, 1, 0)
 
 	params := url.Values{}
-	params.Set("period_start", rfc3339(inside))
-	params.Set("period_end", rfc3339(inside.AddDate(0, 0, 1)))
+	params.Set("starts_at", rfc3339(inside))
+	params.Set("ends_at", rfc3339(inside.AddDate(0, 0, 1)))
 	params.Set("limit", "100")
 
 	status, body, err := apiClient.GetListRaw(demandOverridesPath, params)
@@ -361,8 +361,8 @@ func TestDemandOverrides_ListPeriodFilterMatchesOverlap(t *testing.T) {
 
 	// A window entirely before the period must not.
 	before := start.AddDate(-1, 0, 0)
-	params.Set("period_start", rfc3339(before))
-	params.Set("period_end", rfc3339(before.AddDate(0, 0, 1)))
+	params.Set("starts_at", rfc3339(before))
+	params.Set("ends_at", rfc3339(before.AddDate(0, 0, 1)))
 
 	status, body, err = apiClient.GetListRaw(demandOverridesPath, params)
 	require.NoError(t, err)

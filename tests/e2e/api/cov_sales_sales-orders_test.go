@@ -747,13 +747,13 @@ func TestCovSalesSalesOrders_ListStatusCodesUnknownReturnsEmpty(t *testing.T) {
 }
 
 // TestCovSalesSalesOrders_ListMalformedDateFiltersIgnoredNot5xx pins the
-// actual observed behavior for start_date/end_date, which are plain *string
+// actual observed behavior for starts_at/ends_at, which are plain *string
 // query params with no gateway-side date-format validation: a malformed
 // value is currently silently ignored (dropped from the filter) rather than
 // rejected with 400.
 func TestCovSalesSalesOrders_ListMalformedDateFiltersIgnoredNot5xx(t *testing.T) {
 	t.Parallel()
-	for _, param := range []string{"start_date", "end_date"} {
+	for _, param := range []string{"starts_at", "ends_at"} {
 		param := param
 		t.Run(param, func(t *testing.T) {
 			t.Parallel()

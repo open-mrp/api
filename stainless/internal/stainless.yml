@@ -361,6 +361,7 @@ resources:
           update_new_customers: put /v1/core/analytics/new-customers
           update_demand_forecast: put /v1/core/analytics/demand-forecast
           update_oee: put /v1/core/analytics/oee
+          update_oee_trend: put /v1/core/analytics/oee-trend
           update_schedule_attainment: put /v1/core/analytics/schedule-attainment
           retrieve_weeks_of_sales: get /v1/core/analytics/weeks-of-sales
         models:
@@ -385,6 +386,8 @@ resources:
           analyze_new_customers_response: '#/components/schemas/AnalyzeNewCustomersResponse'
           analyze_oee_request: '#/components/schemas/AnalyzeOeeRequest'
           analyze_oee_response: '#/components/schemas/AnalyzeOeeResponse'
+          analyze_oee_trend_request: '#/components/schemas/AnalyzeOeeTrendRequest'
+          analyze_oee_trend_response: '#/components/schemas/AnalyzeOeeTrendResponse'
           analyze_open_batches_request: '#/components/schemas/AnalyzeOpenBatchesRequest'
           analyze_open_batches_response: '#/components/schemas/AnalyzeOpenBatchesResponse'
           analyze_orders_request: '#/components/schemas/AnalyzeOrdersRequest'
@@ -415,12 +418,14 @@ resources:
           list_frozen_adherence: '#/components/schemas/List_FrozenAdherence'
           list_oee_department: '#/components/schemas/List_OeeDepartment'
           list_oee_downtime_reason: '#/components/schemas/List_OeeDowntimeReason'
+          list_oee_trend_period: '#/components/schemas/List_OeeTrendPeriod'
           manufacturing_metrics: '#/components/schemas/ManufacturingMetrics'
           material_analytics_entry: '#/components/schemas/MaterialAnalyticsEntry'
           new_customers_data: '#/components/schemas/NewCustomersData'
           oee_department: '#/components/schemas/OeeDepartment'
           oee_department_planned_time: '#/components/schemas/OeeDepartmentPlannedTime'
           oee_downtime_reason: '#/components/schemas/OeeDowntimeReason'
+          oee_trend_period: '#/components/schemas/OeeTrendPeriod'
           open_batch_summary: '#/components/schemas/OpenBatchSummary'
           order_entry: '#/components/schemas/OrderEntry'
           production_cost_item: '#/components/schemas/ProductionCostItem'

@@ -34,11 +34,11 @@ type ListInvoicesRequest struct {
 	// These are account user IDs, matching the `sales_rep` on the order.
 	SalesRepIDs []string `query:"sales_rep_ids"`
 	// Earliest invoice creation date to include, in `YYYY-MM-DD` format.
-	StartDate *string `query:"start_date"`
+	StartDate *string `query:"starts_at"`
 	// Latest invoice creation date to include, in `YYYY-MM-DD` format.
 	//
 	// Compared against the creation timestamp at the start of that day, so invoices created later on the end date itself are excluded; pass the following day to include them.
-	EndDate *string `query:"end_date"`
+	EndDate *string `query:"ends_at"`
 }
 
 // Returns a paginated list of invoices for the current account, newest first.

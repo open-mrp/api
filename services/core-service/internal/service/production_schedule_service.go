@@ -152,9 +152,22 @@ func (s *productionScheduleSvcImpl) solveFor(
 	demandBasis string,
 	pinnedCampaigns []scheduling.PinnedCampaign,
 ) (*scheduling.SolverOutput, *domain.EffectiveScheduleSettings, *apierror.APIError) {
+	output, _, effective, apiErr := s.solveForWithInput(ctx, accountID, planningAsOf, horizonWeeks, demandBasis, pinnedCampaigns)
+	return output, effective, apiErr
+}
+
+// solveForWithInput is solveFor, additionally handing back the assembled solver input so a caller that needs a second solve of the same plant can re-run the solver without paying for the input loads again. The regenerate preview uses it to solve the replace_all counterfactual.
+func (s *productionScheduleSvcImpl) solveForWithInput(
+	ctx context.Context,
+	accountID string,
+	planningAsOf time.Time,
+	horizonWeeks int,
+	demandBasis string,
+	pinnedCampaigns []scheduling.PinnedCampaign,
+) (*scheduling.SolverOutput, *scheduling.SolverInput, *domain.EffectiveScheduleSettings, *apierror.APIError) {
 	effective, apiErr := s.loadEffectiveSettings(ctx, accountID)
 	if apiErr != nil {
-		return nil, nil, apiErr
+		return nil, nil, nil, apiErr
 	}
 	if horizonWeeks > 0 {
 		effective.Settings.HorizonWeeks = horizonWeeks
@@ -177,13 +190,12 @@ func (s *productionScheduleSvcImpl) solveFor(
 		PinnedCampaigns:        pinnedCampaigns,
 	})
 	if apiErr != nil {
-		return nil, nil, apiErr
+		return nil, nil, nil, apiErr
 	}
 
 	output := scheduling.Solve(*input)
-	return &output, effective, nil
+	return &output, input, effective, nil
 }
-
 
 // loadEffectiveSettings returns the account's planning assumptions, falling back to code defaults for an account that has never configured scheduling. Callers always get usable settings rather than having to handle "not configured".
 //

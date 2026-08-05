@@ -14,9 +14,9 @@ import (
 // AnalyzeSalesRequest is the request to analyze sales data over a date range.
 type AnalyzeSalesRequest struct {
 	// The start date for the analysis period.
-	StartDate time.Time `json:"start_date" validate:"required"`
+	StartDate time.Time `json:"starts_at" validate:"required"`
 	// The end date for the analysis period.
-	EndDate time.Time `json:"end_date" validate:"required"`
+	EndDate time.Time `json:"ends_at" validate:"required"`
 	// Optional product line IDs to filter by.
 	ProductLineIDs []string `json:"product_line_ids,omitempty"`
 	// Optional customer IDs to filter by.

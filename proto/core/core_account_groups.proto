@@ -189,6 +189,16 @@ message SalesTargetProto {
   string amount_id = 8;
   string created_at = 9;
   string updated_at = 10;
+  // The amount's unit, so the gateway can render a quantity without a second lookup.
+  string amount_unit_name = 11;
+  string amount_unit_abbreviation = 12;
+  string amount_unit_type = 13;
+  string amount_unit_ratio_numerator = 14;
+  string amount_unit_ratio_denominator = 15;
+  string amount_unit_offset_numerator = 16;
+  string amount_unit_offset_denominator = 17;
+  string amount_unit_created_at = 18;
+  string amount_unit_updated_at = 19;
 }
 message ListSalesTargetsRequest {
   string sales_rep_id = 1;

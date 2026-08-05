@@ -17,9 +17,9 @@ type ListAllocationEntriesRequest struct {
 	// Filter by the underlying transaction's type code (`payment`, `credit_memo`, `adjustment`, or `rebate`).
 	TransactionType *string `query:"transaction_type"`
 	// Only include allocations created on or after this date (`YYYY-MM-DD`).
-	StartDate *string `query:"start_date"`
+	StartDate *string `query:"starts_at"`
 	// Only include allocations created before this date (`YYYY-MM-DD`).
-	EndDate *string `query:"end_date"`
+	EndDate *string `query:"ends_at"`
 }
 
 // Returns a paginated list of the individual applications of transaction money to invoices, newest first.

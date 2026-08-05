@@ -18,7 +18,7 @@ import (
 //     validation, 404s, idempotency, permission).
 //   - 7 ListCustomersRequest query params had no coverage at all: shipping_term_ids,
 //     payment_term_ids, freight_status_codes, carrier_ids, service_level_ids,
-//     parent_account_status, city/state/postal_code, start_date/end_date.
+//     parent_account_status, city/state/postal_code, starts_at/ends_at.
 //   - relationship_type was never asserted as anything but "standalone"; parent_account
 //     and child_accounts were never asserted non-nil with real nested data despite seed
 //     fixtures existing specifically for this; freight_preferences.service_level was
@@ -455,7 +455,7 @@ func TestCovSalesCustomers_ListFilterByCity_NoResults(t *testing.T) {
 }
 
 // ──────────────────────────────────────────────
-// List Filters — start_date / end_date
+// List Filters — starts_at / ends_at
 // ──────────────────────────────────────────────
 
 func TestCovSalesCustomers_ListFilterByDateRange(t *testing.T) {
@@ -467,28 +467,28 @@ func TestCovSalesCustomers_ListFilterByDateRange(t *testing.T) {
 
 	// Bracket: a wide window covering "now" must include the customer.
 	inRange, _, err := apiClient.GetList(customersPath, url.Values{
-		"start_date": {"2026-01-01T00:00:00Z"},
-		"end_date":   {"2030-01-01T00:00:00Z"},
-		"q":          {name},
+		"starts_at": {"2026-01-01T00:00:00Z"},
+		"ends_at":   {"2030-01-01T00:00:00Z"},
+		"q":         {name},
 	})
 	require.NoError(t, err)
 	assert.True(t, listContainsID(inRange, custID), "wide date range bracketing now should include the newly created customer")
 
-	// start_date in the far future must exclude it.
+	// starts_at in the far future must exclude it.
 	afterRange, _, err := apiClient.GetList(customersPath, url.Values{
-		"start_date": {"2030-01-01T00:00:00Z"},
-		"q":          {name},
+		"starts_at": {"2030-01-01T00:00:00Z"},
+		"q":         {name},
 	})
 	require.NoError(t, err)
-	assertEmptyListData(t, afterRange.Data, "start_date in the far future should exclude a customer created now")
+	assertEmptyListData(t, afterRange.Data, "starts_at in the far future should exclude a customer created now")
 
-	// end_date in the far past must exclude it.
+	// ends_at in the far past must exclude it.
 	beforeRange, _, err := apiClient.GetList(customersPath, url.Values{
-		"end_date": {"2020-01-01T00:00:00Z"},
-		"q":        {name},
+		"ends_at": {"2020-01-01T00:00:00Z"},
+		"q":       {name},
 	})
 	require.NoError(t, err)
-	assertEmptyListData(t, beforeRange.Data, "end_date in the far past should exclude a customer created now")
+	assertEmptyListData(t, beforeRange.Data, "ends_at in the far past should exclude a customer created now")
 }
 
 // ──────────────────────────────────────────────

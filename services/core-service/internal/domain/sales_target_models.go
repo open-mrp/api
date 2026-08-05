@@ -5,15 +5,25 @@ import "time"
 // SalesTarget represents a sales target for a user.
 type SalesTarget struct {
 	ID           string
-	StartDate    time.Time `audit:"start_date"`
-	EndDate      time.Time `audit:"end_date"`
+	StartDate    time.Time `audit:"starts_at"`
+	EndDate      time.Time `audit:"ends_at"`
 	SalesRepID   string    `audit:"sales_rep_id"`
 	AccountID    string
 	AmountID     string
 	AmountValue  string `audit:"amount_value"`
 	AmountUnitID string `audit:"amount_unit_id"`
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	// The amount's unit, carried alongside the id so the API can render a quantity without a second lookup.
+	AmountUnitName              string
+	AmountUnitAbbreviation      string
+	AmountUnitType              string
+	AmountUnitRatioNumerator    string
+	AmountUnitRatioDenominator  string
+	AmountUnitOffsetNumerator   string
+	AmountUnitOffsetDenominator string
+	AmountUnitCreatedAt         time.Time
+	AmountUnitUpdatedAt         time.Time
+	CreatedAt                   time.Time
+	UpdatedAt                   time.Time
 }
 
 // ListSalesTargetsParams are the parameters for listing sales targets.

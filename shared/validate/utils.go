@@ -497,7 +497,7 @@ func getFieldName(fieldErr validator.FieldError, structValue any) string {
 // Validator is a lightweight imperative validation helper for checks that cannot be expressed with struct tags (e.g. cross-field constraints, conditional logic). It collects named errors via AddError or Check and reports validity via Valid.
 //
 //	v := validate.New()
-//	v.Check(req.EndDate.After(req.StartDate), "end_date", "must be after start_date")
+//	v.Check(req.EndDate.After(req.StartDate), "ends_at", "must be after starts_at")
 //	if !v.Valid() { ... }
 type Validator struct {
 	// Errors maps field names to their first error message. Only the first error per field is stored to keep messages concise.

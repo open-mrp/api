@@ -60,8 +60,18 @@ func (r *salesTargetRepoImpl) List(ctx context.Context, params domain.ListSalesT
 			AmountID:     row.AmountID,
 			AmountValue:  row.AmountValue,
 			AmountUnitID: row.AmountUnitID,
-			CreatedAt:    row.CreatedAt,
-			UpdatedAt:    row.UpdatedAt,
+
+			AmountUnitName:              row.AmountUnitName,
+			AmountUnitAbbreviation:      row.AmountUnitAbbreviation,
+			AmountUnitType:              row.AmountUnitType,
+			AmountUnitRatioNumerator:    row.AmountUnitRatioNumerator,
+			AmountUnitRatioDenominator:  row.AmountUnitRatioDenominator,
+			AmountUnitOffsetNumerator:   row.AmountUnitOffsetNumerator,
+			AmountUnitOffsetDenominator: row.AmountUnitOffsetDenominator,
+			AmountUnitCreatedAt:         row.AmountUnitCreatedAt,
+			AmountUnitUpdatedAt:         row.AmountUnitUpdatedAt,
+			CreatedAt:                   row.CreatedAt,
+			UpdatedAt:                   row.UpdatedAt,
 		}
 	}
 
@@ -89,8 +99,18 @@ func (r *salesTargetRepoImpl) Get(ctx context.Context, targetID string) (*domain
 		AmountID:     row.AmountID,
 		AmountValue:  row.AmountValue,
 		AmountUnitID: row.AmountUnitID,
-		CreatedAt:    row.CreatedAt,
-		UpdatedAt:    row.UpdatedAt,
+
+		AmountUnitName:              row.AmountUnitName,
+		AmountUnitAbbreviation:      row.AmountUnitAbbreviation,
+		AmountUnitType:              row.AmountUnitType,
+		AmountUnitRatioNumerator:    row.AmountUnitRatioNumerator,
+		AmountUnitRatioDenominator:  row.AmountUnitRatioDenominator,
+		AmountUnitOffsetNumerator:   row.AmountUnitOffsetNumerator,
+		AmountUnitOffsetDenominator: row.AmountUnitOffsetDenominator,
+		AmountUnitCreatedAt:         row.AmountUnitCreatedAt,
+		AmountUnitUpdatedAt:         row.AmountUnitUpdatedAt,
+		CreatedAt:                   row.CreatedAt,
+		UpdatedAt:                   row.UpdatedAt,
 	}, nil
 }
 

@@ -28,7 +28,7 @@ type ReceivableEntry struct {
 	InvoicedAt time.Time `json:"invoiced_at" validate:"required"`
 	// Remaining unpaid balance on the invoice.
 	//
-	// Calculated as the invoiced total minus all transaction allocations applied to the invoice. When a `cutoff_date` is supplied to the listing endpoint, only allocations made before that date are subtracted.
+	// Calculated as the invoiced total minus all transaction allocations applied to the invoice. When a `cutoff_at` is supplied to the listing endpoint, only allocations made before that date are subtracted.
 	RemainingBalance string `json:"remaining_balance" validate:"required"`
 	// Whether the invoice has been paid in full.
 	//

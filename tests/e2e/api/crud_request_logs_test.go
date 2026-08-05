@@ -931,27 +931,27 @@ func TestRequestLogs_ListFilterByMinLatencyVerifiesThreshold(t *testing.T) {
 func TestRequestLogs_ListFilterByStartDateExcludesAll(t *testing.T) {
 	t.Parallel()
 	list, _, err := apiClient.GetList(requestLogsPath, url.Values{
-		"start_date": {"2099-01-01T00:00:00Z"},
-		"limit":      {"5"},
+		"starts_at": {"2099-01-01T00:00:00Z"},
+		"limit":     {"5"},
 	})
 	if err != nil {
 		t.Fatal("Request logs endpoint not accessible")
 		return
 	}
-	assertEmptyListData(t, list.Data, "start_date far in the future should exclude all logs")
+	assertEmptyListData(t, list.Data, "starts_at far in the future should exclude all logs")
 }
 
 func TestRequestLogs_ListFilterByEndDateExcludesAll(t *testing.T) {
 	t.Parallel()
 	list, _, err := apiClient.GetList(requestLogsPath, url.Values{
-		"end_date": {"2000-01-01T00:00:00Z"},
-		"limit":    {"5"},
+		"ends_at": {"2000-01-01T00:00:00Z"},
+		"limit":   {"5"},
 	})
 	if err != nil {
 		t.Fatal("Request logs endpoint not accessible")
 		return
 	}
-	assertEmptyListData(t, list.Data, "end_date far in the past should exclude all logs")
+	assertEmptyListData(t, list.Data, "ends_at far in the past should exclude all logs")
 }
 
 func TestRequestLogs_IncludeQueryParams(t *testing.T) {
@@ -1516,9 +1516,9 @@ func TestRequestLogs_FilterByStartDate_IncludesAndExcludes(t *testing.T) {
 	// Boundary between old (2023-01-01) and mid (2023-06-01): include mid + new.
 	list := fetchScopedRequestLogs(t, url.Values{
 		"normalized_routes": {SeedReqLogFilterDatesRoute},
-		"start_date":        {"2023-03-01T00:00:00Z"},
+		"starts_at":         {"2023-03-01T00:00:00Z"},
 	})
-	assert.Len(t, list.Data, 2, "scope + start_date=2023-03-01 should return the mid and new rows")
+	assert.Len(t, list.Data, 2, "scope + starts_at=2023-03-01 should return the mid and new rows")
 	assertRequestLogMembership(t, list.Data,
 		[]string{SeedReqLogFilterDateMid, SeedReqLogFilterDateNew},
 		[]string{SeedReqLogFilterDateOld})
@@ -1529,9 +1529,9 @@ func TestRequestLogs_FilterByEndDate_IncludesAndExcludes(t *testing.T) {
 	// Boundary between mid (2023-06-01) and new (2023-12-01): include old + mid.
 	list := fetchScopedRequestLogs(t, url.Values{
 		"normalized_routes": {SeedReqLogFilterDatesRoute},
-		"end_date":          {"2023-09-01T00:00:00Z"},
+		"ends_at":           {"2023-09-01T00:00:00Z"},
 	})
-	assert.Len(t, list.Data, 2, "scope + end_date=2023-09-01 should return the old and mid rows")
+	assert.Len(t, list.Data, 2, "scope + ends_at=2023-09-01 should return the old and mid rows")
 	assertRequestLogMembership(t, list.Data,
 		[]string{SeedReqLogFilterDateOld, SeedReqLogFilterDateMid},
 		[]string{SeedReqLogFilterDateNew})
@@ -1542,8 +1542,8 @@ func TestRequestLogs_FilterByDateRange_IncludesOnlyMiddle(t *testing.T) {
 	// start + end together bracket only the mid (2023-06-01) row.
 	list := fetchScopedRequestLogs(t, url.Values{
 		"normalized_routes": {SeedReqLogFilterDatesRoute},
-		"start_date":        {"2023-03-01T00:00:00Z"},
-		"end_date":          {"2023-09-01T00:00:00Z"},
+		"starts_at":         {"2023-03-01T00:00:00Z"},
+		"ends_at":           {"2023-09-01T00:00:00Z"},
 	})
 	assert.Len(t, list.Data, 1, "scope + [2023-03-01, 2023-09-01] should return only the mid row")
 	assertRequestLogMembership(t, list.Data,

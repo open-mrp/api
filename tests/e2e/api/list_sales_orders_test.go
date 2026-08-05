@@ -24,7 +24,7 @@ import (
 // Each test exercises a distinct code path of the list query: exact-match
 // search (the new behavior — exact on number/customer_po_number, no substring,
 // no customer name), the status_codes "all" wildcard, customer_group_ids, the
-// start_date/end_date range, the batched line_count path, and several filters
+// starts_at/ends_at range, the batched line_count path, and several filters
 // combined.
 //
 // Seed data lives in shared/db/seed/e2e/0016_e2e_filter_coverage.sql; the
@@ -112,12 +112,12 @@ func TestListSalesOrders_SearchRespectsCustomerFilter(t *testing.T) {
 
 func TestListSalesOrders_SearchRespectsDateFilter(t *testing.T) {
 	t.Parallel()
-	// end_date is inclusive on created_at; the PO order is nine years out, so an
-	// end_date in the past must exclude it even though q= matches exactly.
-	mismatched := url.Values{"q": {SeedSalesOrderPONumber}, "end_date": {"2000-01-01"}}
+	// ends_at is inclusive on created_at; the PO order is nine years out, so an
+	// ends_at in the past must exclude it even though q= matches exactly.
+	mismatched := url.Values{"q": {SeedSalesOrderPONumber}, "ends_at": {"2000-01-01"}}
 	list, _, err := apiClient.GetList(salesOrdersPath, mismatched)
 	require.NoError(t, err)
-	assertEmptyListData(t, list.Data, "search must not bypass the end_date filter")
+	assertEmptyListData(t, list.Data, "search must not bypass the ends_at filter")
 }
 
 // --- status_codes "all" wildcard ---
@@ -152,19 +152,19 @@ func TestListSalesOrders_FilterByCustomerGroupNoMatch(t *testing.T) {
 
 func TestListSalesOrders_StartDateExcludesOlderOrders(t *testing.T) {
 	t.Parallel()
-	// start_date is inclusive on created_at. With a far-future start_date only
+	// starts_at is inclusive on created_at. With a far-future starts_at only
 	// the nine-year-out seed orders qualify; the "now"-created seed order must
 	// be excluded.
-	params := url.Values{"start_date": {futureDate()}}
+	params := url.Values{"starts_at": {futureDate()}}
 	assertListContainsID(t, salesOrdersPath, params, SeedPOSalesOrderID)
 	assert.Nil(t, listFindByField(t, salesOrdersPath, params, "id", SeedSalesOrderID),
-		"a recent order must be excluded by a far-future start_date")
+		"a recent order must be excluded by a far-future starts_at")
 }
 
 func TestListSalesOrders_EndDateExcludesEverything(t *testing.T) {
 	t.Parallel()
-	// end_date is inclusive on created_at; nothing predates 2000.
-	list, _, err := apiClient.GetList(salesOrdersPath, url.Values{"end_date": {"2000-01-01"}})
+	// ends_at is inclusive on created_at; nothing predates 2000.
+	list, _, err := apiClient.GetList(salesOrdersPath, url.Values{"ends_at": {"2000-01-01"}})
 	require.NoError(t, err)
 	assertEmptyListData(t, list.Data, "no orders exist before 2000-01-01")
 }
@@ -192,13 +192,13 @@ func TestListSalesOrders_LineCountMatchesIncludedLines(t *testing.T) {
 
 func TestListSalesOrders_CombinedFilters(t *testing.T) {
 	t.Parallel()
-	// status_codes + customer_ids + start_date applied together: only the
+	// status_codes + customer_ids + starts_at applied together: only the
 	// far-future issued order for the seed customer qualifies. The internal
 	// order (different buyer) must not appear.
 	params := url.Values{
 		"status_codes": {"issued"},
 		"customer_ids": {SeedCustomerAccountID},
-		"start_date":   {futureDate()},
+		"starts_at":    {futureDate()},
 		"include":      {"customer"},
 	}
 

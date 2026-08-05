@@ -583,6 +583,61 @@ type OeeDowntimeRow struct {
 	EventCount      int64
 }
 
+// AnalyzeOeeTrendParams bounds an OEE trend read: the same window and department filter as AnalyzeOee, bucketed into production weeks.
+type AnalyzeOeeTrendParams struct {
+	AccountID     string
+	StartDate     time.Time
+	EndDate       time.Time
+	DepartmentIDs []string
+}
+
+// OeeTrendPeriod is one production week of OEE, rolled up across the departments that had scheduled time in it.
+//
+// The roll-up is weighted by seconds rather than averaged across departments: a room that ran an hour must not weigh as heavily as one that ran all week.
+type OeeTrendPeriod struct {
+	StartsAt time.Time
+	// EndsAt is exclusive, and is clipped to the requested window so the first and last weeks of a range report against the part of the week that was actually asked for.
+	EndsAt time.Time
+
+	GoodUnits             float64
+	WasteUnits            float64
+	SecondsUnits          float64
+	StandardSecondsEarned float64
+
+	ScheduledSeconds        float64
+	RunTimeSeconds          float64
+	AvailabilityLossSeconds float64
+	NotScheduledSeconds     float64
+
+	AvailabilityPct *float64
+	PerformancePct  *float64
+	QualityPct      *float64
+	OeePct          *float64
+
+	// HasDowntimeData is false when nothing was logged in this week, which makes its Availability an estimate rather than a measurement — the same distinction AnalyzeOee draws per department.
+	HasDowntimeData    bool
+	DowntimeEventCount int64
+}
+
+// OeeTrendDepartmentWeekRow is one department's output in one production week.
+type OeeTrendDepartmentWeekRow struct {
+	WeekStart             time.Time
+	DepartmentID          string
+	DepartmentName        string
+	GoodUnits             float64
+	WasteUnits            float64
+	SecondsUnits          float64
+	StandardSecondsEarned float64
+}
+
+// OeeDowntimeIntervalRow is one department's logged downtime window, unclipped: open events arrive already coalesced to now.
+type OeeDowntimeIntervalRow struct {
+	DepartmentID string
+	OeeBucket    string
+	StartedAt    time.Time
+	EndedAt      time.Time
+}
+
 // DepartmentMachineCountRow is the number of machines in one department, the scheduled-time denominator for OEE.
 type DepartmentMachineCountRow struct {
 	DepartmentID string

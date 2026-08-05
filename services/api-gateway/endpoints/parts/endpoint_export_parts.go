@@ -20,9 +20,9 @@ type ExportPartsRequest struct {
 	// Only return parts carrying at least one of these attributes.
 	AttributeIDs []string `query:"attribute_ids"`
 	// Only return parts created at or after this time.
-	StartDate *time.Time `query:"start_date"`
+	StartDate *time.Time `query:"starts_at"`
 	// Only return parts created at or before this time.
-	EndDate *time.Time `query:"end_date"`
+	EndDate *time.Time `query:"ends_at"`
 }
 
 // Exports the parts matching the given filters as an Excel workbook.

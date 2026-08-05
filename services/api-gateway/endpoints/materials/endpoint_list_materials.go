@@ -20,9 +20,9 @@ type ListMaterialsRequest struct {
 	// Filter to materials carrying any of these attributes.
 	AttributeIDs []string `query:"attribute_ids"`
 	// Filter to materials created on or after this date.
-	StartDate *time.Time `query:"start_date"`
+	StartDate *time.Time `query:"starts_at"`
 	// Filter to materials created on or before this date.
-	EndDate *time.Time `query:"end_date"`
+	EndDate *time.Time `query:"ends_at"`
 }
 
 // Returns a paginated list of materials, newest first.

@@ -101,6 +101,14 @@ func (*AnalyzeOeeRequest) SchemaExample() any {
 	})
 }
 
+func (*AnalyzeOeeTrendRequest) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(&AnalyzeOeeTrendRequest{
+		StartDate:     apiresource.SampleAnalyticsPeriodStart,
+		EndDate:       apiresource.SampleAnalyticsPeriodEnd,
+		DepartmentIDs: []string{apiresource.SampleDepartmentID},
+	})
+}
+
 func (*AnalyzeOpenBatchesRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(&AnalyzeOpenBatchesRequest{
 		ItemIDs:        []string{apiresource.SampleItemID},

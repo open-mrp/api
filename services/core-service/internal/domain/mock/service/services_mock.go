@@ -4247,6 +4247,21 @@ func (mr *MockAnalyticsSvcMockRecorder) AnalyzeOee(ctx, params any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AnalyzeOee", reflect.TypeOf((*MockAnalyticsSvc)(nil).AnalyzeOee), ctx, params)
 }
 
+// AnalyzeOeeTrend mocks base method.
+func (m *MockAnalyticsSvc) AnalyzeOeeTrend(ctx context.Context, params domain.AnalyzeOeeTrendParams) ([]domain.OeeTrendPeriod, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AnalyzeOeeTrend", ctx, params)
+	ret0, _ := ret[0].([]domain.OeeTrendPeriod)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// AnalyzeOeeTrend indicates an expected call of AnalyzeOeeTrend.
+func (mr *MockAnalyticsSvcMockRecorder) AnalyzeOeeTrend(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AnalyzeOeeTrend", reflect.TypeOf((*MockAnalyticsSvc)(nil).AnalyzeOeeTrend), ctx, params)
+}
+
 // AnalyzeOpenBatches mocks base method.
 func (m *MockAnalyticsSvc) AnalyzeOpenBatches(ctx context.Context, params domain.AnalyzeOpenBatchesParams) ([]domain.OpenBatchEntry, *apierror.APIError) {
 	m.ctrl.T.Helper()

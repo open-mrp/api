@@ -792,6 +792,7 @@ type AnalyticsSvc interface {
 	GetDemandForecast(ctx context.Context, params GetDemandForecastParams) (*DemandForecastResult, *apierror.APIError)
 	// AnalyzeOee computes Availability x Performance x Quality per department from planned time, logged downtime and batch-ticket scan intervals.
 	AnalyzeOee(ctx context.Context, params AnalyzeOeeParams) ([]OeeDepartment, *apierror.APIError)
+	AnalyzeOeeTrend(ctx context.Context, params AnalyzeOeeTrendParams) ([]OeeTrendPeriod, *apierror.APIError)
 
 	// AnalyzeScheduleAttainment measures actual production against the plan that was live at the time.
 	AnalyzeScheduleAttainment(ctx context.Context, params AnalyzeScheduleAttainmentParams) (*ScheduleAttainmentResult, *apierror.APIError)

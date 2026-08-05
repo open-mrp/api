@@ -23,11 +23,11 @@ type ListReceivingOrdersRequest struct {
 	// Filter to orders whose originating purchase order was placed with any of the given supplier account IDs.
 	SupplierIDs []string `query:"supplier_ids"`
 	// Only return orders created on or after this date (`YYYY-MM-DD`).
-	StartDate *string `query:"start_date"`
+	StartDate *string `query:"starts_at"`
 	// Only return orders created up to this date (`YYYY-MM-DD`).
 	//
 	// Compared against the start of the given day, so orders created later that same day are excluded.
-	EndDate *string `query:"end_date"`
+	EndDate *string `query:"ends_at"`
 }
 
 // Returns a paginated list of receiving orders for the current account, newest first.

@@ -122,6 +122,12 @@ func (m *salesTargetSvcImpl) UpsertSalesTarget(ctx context.Context, req *UpsertS
 	return &result, nil
 }
 
+// parseRFC3339 tolerates an unset timestamp rather than failing the whole read; the caller's own required-field validation is what surfaces a genuinely missing one.
+func parseRFC3339(v string) time.Time {
+	t, _ := time.Parse(time.RFC3339, v)
+	return t
+}
+
 func salesTargetFromProto(st *pb.SalesTargetProto) apiresource.SalesTarget {
 	if st == nil {
 		return apiresource.SalesTarget{}
@@ -135,17 +141,25 @@ func salesTargetFromProto(st *pb.SalesTargetProto) apiresource.SalesTarget {
 	return apiresource.SalesTarget{
 		ID:     st.Id,
 		Object: constants.ObjectTypeSalesTarget,
-		SalesRep: &apiresource.User{
-			ID:     st.SalesRepId,
-			Object: constants.ObjectTypeUser,
-		},
+		// A reference, not a stub record: the sales rep id identifies an account user, and a partially-filled AccountUser would serialize with zero timestamps that read as real values.
+		SalesRep: apiresource.NewEntity(st.SalesRepId, constants.ObjectTypeAccountUser, nil, nil),
 		Amount: &apiresource.Quantity{
-			ID:     st.AmountId,
-			Object: constants.ObjectTypeQuantity,
-			Value:  st.AmountValue,
+			ID:           st.AmountId,
+			Object:       constants.ObjectTypeQuantity,
+			Value:        apiresource.NormalizeQuantityValue(st.AmountValue, st.AmountUnitType),
+			DisplayValue: apiresource.FormatDisplayValue(st.AmountValue, st.AmountUnitAbbreviation, st.AmountUnitType),
 			Unit: &apiresource.Unit{
-				ID:     st.AmountUnitId,
-				Object: constants.ObjectTypeUnit,
+				ID:                st.AmountUnitId,
+				Object:            constants.ObjectTypeUnit,
+				Name:              st.AmountUnitName,
+				Abbreviation:      st.AmountUnitAbbreviation,
+				Type:              constants.UnitType(st.AmountUnitType),
+				RatioNumerator:    st.AmountUnitRatioNumerator,
+				RatioDenominator:  st.AmountUnitRatioDenominator,
+				OffsetNumerator:   st.AmountUnitOffsetNumerator,
+				OffsetDenominator: st.AmountUnitOffsetDenominator,
+				CreatedAt:         parseRFC3339(st.AmountUnitCreatedAt),
+				UpdatedAt:         parseRFC3339(st.AmountUnitUpdatedAt),
 			},
 		},
 		StartAt:   startAt,

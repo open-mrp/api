@@ -22,9 +22,9 @@ type ExportInventoryChangeLogsRequest struct {
 	// Changes that were recorded without a responsible user are excluded whenever this filter is set.
 	ChangedByUserIDs []string `query:"changed_by_user_ids"`
 	// Restricts results to change logs created on or after this timestamp.
-	StartDate *time.Time `query:"start_date"`
+	StartDate *time.Time `query:"starts_at"`
 	// Restricts results to change logs created on or before this timestamp.
-	EndDate *time.Time `query:"end_date"`
+	EndDate *time.Time `query:"ends_at"`
 }
 
 // Exports inventory change logs matching the provided filters as an Excel file.

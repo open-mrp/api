@@ -21,11 +21,11 @@ type ListPurchaseOrdersRequest struct {
 	// Filter to orders placed with any of these suppliers.
 	SupplierIDs []string `query:"supplier_ids"`
 	// Filter to orders created on or after this date, in `YYYY-MM-DD` format.
-	StartDate *string `query:"start_date"`
+	StartDate *string `query:"starts_at"`
 	// Filter to orders created up to this date, in `YYYY-MM-DD` format.
 	//
 	// Compared against the start of the given day, so orders created later that same day are excluded.
-	EndDate *string `query:"end_date"`
+	EndDate *string `query:"ends_at"`
 }
 
 // Returns a paginated list of purchase orders for the current account, newest first.

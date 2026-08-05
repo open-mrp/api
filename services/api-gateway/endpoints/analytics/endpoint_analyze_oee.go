@@ -14,9 +14,9 @@ import (
 // AnalyzeOeeRequest is the request to analyze Overall Equipment Effectiveness (OEE).
 type AnalyzeOeeRequest struct {
 	// The start date for the analysis period.
-	StartDate time.Time `json:"start_date" validate:"required"`
+	StartDate time.Time `json:"starts_at" validate:"required"`
 	// The end date for the analysis period.
-	EndDate time.Time `json:"end_date" validate:"required"`
+	EndDate time.Time `json:"ends_at" validate:"required"`
 	// Optional department IDs to filter by.
 	DepartmentIDs []string `json:"department_ids,omitzero"`
 	// Scheduled production time per department for the period. Availability, performance and OEE are only returned for departments this covers.

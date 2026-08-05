@@ -8893,6 +8893,36 @@ func (mr *MockAnalyticsRepoMockRecorder) GetOeeEstimatedRuntime(ctx, params any)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOeeEstimatedRuntime", reflect.TypeOf((*MockAnalyticsRepo)(nil).GetOeeEstimatedRuntime), ctx, params)
 }
 
+// GetOeeTrendDepartmentDataByWeek mocks base method.
+func (m *MockAnalyticsRepo) GetOeeTrendDepartmentDataByWeek(ctx context.Context, params domain.GetOeeWindowParams) ([]domain.OeeTrendDepartmentWeekRow, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetOeeTrendDepartmentDataByWeek", ctx, params)
+	ret0, _ := ret[0].([]domain.OeeTrendDepartmentWeekRow)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetOeeTrendDepartmentDataByWeek indicates an expected call of GetOeeTrendDepartmentDataByWeek.
+func (mr *MockAnalyticsRepoMockRecorder) GetOeeTrendDepartmentDataByWeek(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOeeTrendDepartmentDataByWeek", reflect.TypeOf((*MockAnalyticsRepo)(nil).GetOeeTrendDepartmentDataByWeek), ctx, params)
+}
+
+// GetOeeTrendDowntimeIntervals mocks base method.
+func (m *MockAnalyticsRepo) GetOeeTrendDowntimeIntervals(ctx context.Context, params domain.GetOeeWindowParams) ([]domain.OeeDowntimeIntervalRow, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetOeeTrendDowntimeIntervals", ctx, params)
+	ret0, _ := ret[0].([]domain.OeeDowntimeIntervalRow)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetOeeTrendDowntimeIntervals indicates an expected call of GetOeeTrendDowntimeIntervals.
+func (mr *MockAnalyticsRepoMockRecorder) GetOeeTrendDowntimeIntervals(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOeeTrendDowntimeIntervals", reflect.TypeOf((*MockAnalyticsRepo)(nil).GetOeeTrendDowntimeIntervals), ctx, params)
+}
+
 // GetOpenBatchEntries mocks base method.
 func (m *MockAnalyticsRepo) GetOpenBatchEntries(ctx context.Context, params domain.AnalyzeOpenBatchesParams) ([]domain.OpenBatchEntry, *apierror.APIError) {
 	m.ctrl.T.Helper()

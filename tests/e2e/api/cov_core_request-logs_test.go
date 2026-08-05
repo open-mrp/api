@@ -143,25 +143,25 @@ func TestCovCoreRequestLogs_GetResponseShape_RealID(t *testing.T) {
 func TestCovCoreRequestLogs_ListInvalidStartDate(t *testing.T) {
 	t.Parallel()
 
-	status, body, err := apiClient.GetListRaw(requestLogsPath, url.Values{"start_date": {"not-a-date"}})
+	status, body, err := apiClient.GetListRaw(requestLogsPath, url.Values{"starts_at": {"not-a-date"}})
 	require.NoError(t, err)
 	skipOnNonClientError(t, requestLogsPath, status)
 	requireStatus(t, 400, status, body)
 
 	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
-	assertErrorParam(t, errObj, "start_date")
+	assertErrorParam(t, errObj, "starts_at")
 }
 
 func TestCovCoreRequestLogs_ListInvalidEndDate(t *testing.T) {
 	t.Parallel()
 
-	status, body, err := apiClient.GetListRaw(requestLogsPath, url.Values{"end_date": {"not-a-date"}})
+	status, body, err := apiClient.GetListRaw(requestLogsPath, url.Values{"ends_at": {"not-a-date"}})
 	require.NoError(t, err)
 	skipOnNonClientError(t, requestLogsPath, status)
 	requireStatus(t, 400, status, body)
 
 	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
-	assertErrorParam(t, errObj, "end_date")
+	assertErrorParam(t, errObj, "ends_at")
 }
 
 func TestCovCoreRequestLogs_ListInvalidStatusCodes(t *testing.T) {

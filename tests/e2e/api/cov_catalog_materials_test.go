@@ -14,7 +14,7 @@ import (
 // This file closes the coverage gaps identified for catalog_materials (/v1/catalog/materials) on top of the extensive existing coverage in crud_materials_test.go and create_materials_test.go: list date-range filters, nonexistent-FK validation, duplicate-SKU conflicts, PATCH explicit-null rejection on Optional (non-Clearable) fields, delete-of-already-deleted, SKU max-length boundary, and the documented zero-value-collapses-to-null bug in order_point/lead_time.
 
 // ──────────────────────────────────────────────
-// --- List: start_date / end_date filters ---
+// --- List: starts_at / ends_at filters ---
 // ──────────────────────────────────────────────
 
 func TestCovCatalogMaterials_ListFilterByStartDate(t *testing.T) {
@@ -23,10 +23,10 @@ func TestCovCatalogMaterials_ListFilterByStartDate(t *testing.T) {
 	created := createAndCleanup(t, materialsPath, validMaterialBody(sku))
 	id := jsonField(created, "id")
 
-	// A start_date safely in the past should include the just-created material.
+	// A starts_at safely in the past should include the just-created material.
 	list, status, err := apiClient.GetList(materialsPath, url.Values{
-		"start_date": {"2020-01-01T00:00:00Z"},
-		"q":          {sku},
+		"starts_at": {"2020-01-01T00:00:00Z"},
+		"q":         {sku},
 	})
 	require.NoError(t, err)
 	require.Equal(t, 200, status)
@@ -36,12 +36,12 @@ func TestCovCatalogMaterials_ListFilterByStartDate(t *testing.T) {
 			found = true
 		}
 	}
-	assert.True(t, found, "material created after start_date should be included")
+	assert.True(t, found, "material created after starts_at should be included")
 
-	// A start_date in the future should exclude the material.
+	// A starts_at in the future should exclude the material.
 	list2, status2, err := apiClient.GetList(materialsPath, url.Values{
-		"start_date": {"2099-01-01T00:00:00Z"},
-		"q":          {sku},
+		"starts_at": {"2099-01-01T00:00:00Z"},
+		"q":         {sku},
 	})
 	require.NoError(t, err)
 	require.Equal(t, 200, status2)
@@ -54,10 +54,10 @@ func TestCovCatalogMaterials_ListFilterByEndDate(t *testing.T) {
 	created := createAndCleanup(t, materialsPath, validMaterialBody(sku))
 	id := jsonField(created, "id")
 
-	// An end_date safely in the future should include the just-created material.
+	// An ends_at safely in the future should include the just-created material.
 	list, status, err := apiClient.GetList(materialsPath, url.Values{
-		"end_date": {"2099-01-01T00:00:00Z"},
-		"q":        {sku},
+		"ends_at": {"2099-01-01T00:00:00Z"},
+		"q":       {sku},
 	})
 	require.NoError(t, err)
 	require.Equal(t, 200, status)
@@ -67,12 +67,12 @@ func TestCovCatalogMaterials_ListFilterByEndDate(t *testing.T) {
 			found = true
 		}
 	}
-	assert.True(t, found, "material created before end_date should be included")
+	assert.True(t, found, "material created before ends_at should be included")
 
-	// An end_date in the past should exclude the material.
+	// An ends_at in the past should exclude the material.
 	list2, status2, err := apiClient.GetList(materialsPath, url.Values{
-		"end_date": {"2020-01-01T00:00:00Z"},
-		"q":        {sku},
+		"ends_at": {"2020-01-01T00:00:00Z"},
+		"q":       {sku},
 	})
 	require.NoError(t, err)
 	require.Equal(t, 200, status2)
@@ -81,20 +81,20 @@ func TestCovCatalogMaterials_ListFilterByEndDate(t *testing.T) {
 
 func TestCovCatalogMaterials_ListFilterByStartDateMalformed(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(materialsPath, url.Values{"start_date": {"not-a-date"}})
+	status, body, err := apiClient.GetListRaw(materialsPath, url.Values{"starts_at": {"not-a-date"}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
-	assertErrorParam(t, errObj, "start_date")
+	assertErrorParam(t, errObj, "starts_at")
 }
 
 func TestCovCatalogMaterials_ListFilterByEndDateMalformed(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(materialsPath, url.Values{"end_date": {"not-a-date"}})
+	status, body, err := apiClient.GetListRaw(materialsPath, url.Values{"ends_at": {"not-a-date"}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
-	assertErrorParam(t, errObj, "end_date")
+	assertErrorParam(t, errObj, "ends_at")
 }
 
 // ──────────────────────────────────────────────

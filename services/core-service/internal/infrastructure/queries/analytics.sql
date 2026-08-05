@@ -1343,3 +1343,68 @@ FROM machine m
 WHERE m.account_id = sqlc.arg('account_id')
 AND m.department_id != ''
 GROUP BY m.department_id;
+
+-- GetOeeTrendDepartmentDataByWeek is GetOeeDepartmentData bucketed into production weeks, so one read covers a whole trend window instead of one round trip per week.
+--
+-- The week key is the Monday of the scan week, matching SumActualsByWeek: a trend that bucketed on Sunday would disagree with schedule attainment about which week a Monday-morning batch belongs to.
+-- name: GetOeeTrendDepartmentDataByWeek :many
+SELECT
+    DATE(DATE_SUB(b.scanned_at, INTERVAL WEEKDAY(b.scanned_at) DAY)) AS week_start_date,
+    COALESCE(d.id, 'unassigned') AS department_id,
+    COALESCE(d.name, 'Unassigned') AS department_name,
+    CAST(COALESCE(SUM(COALESCE(qf.value * (u_qf.ratio_numerator / u_qf.ratio_denominator), 0)), 0) AS DECIMAL(65,30)) AS good_units,
+    CAST(COALESCE(SUM(COALESCE(qw.value * (u_qw.ratio_numerator / u_qw.ratio_denominator), 0)), 0) AS DECIMAL(65,30)) AS waste_units,
+    CAST(COALESCE(SUM(COALESCE(qs.value * (u_qs.ratio_numerator / u_qs.ratio_denominator), 0)), 0) AS DECIMAL(65,30)) AS seconds_units,
+    CAST(COALESCE(SUM(
+        (
+            COALESCE(qf.value * (u_qf.ratio_numerator / u_qf.ratio_denominator), 0)
+            + COALESCE(qw.value * (u_qw.ratio_numerator / u_qw.ratio_denominator), 0)
+            + COALESCE(qs.value * (u_qs.ratio_numerator / u_qs.ratio_denominator), 0)
+        ) * COALESCE(
+            labor_time.value * CASE LOWER(TRIM(COALESCE(labor_time_unit.abbreviation, '')))
+                WHEN 'min' THEN 60
+                WHEN 'mins' THEN 60
+                WHEN 'minute' THEN 60
+                WHEN 'minutes' THEN 60
+                WHEN 'hr' THEN 3600
+                WHEN 'h' THEN 3600
+                WHEN 'hour' THEN 3600
+                WHEN 'hours' THEN 3600
+                ELSE 1
+            END,
+            0
+        )
+    ), 0) AS DECIMAL(65,30)) AS standard_seconds_earned
+FROM batch b
+LEFT JOIN quantity qf ON qf.id = b.quantity_id
+LEFT JOIN unit u_qf ON u_qf.id = qf.unit_id
+LEFT JOIN quantity qw ON qw.id = b.waste_quantity_id
+LEFT JOIN unit u_qw ON u_qw.id = qw.unit_id
+LEFT JOIN quantity qs ON qs.id = b.seconds_quantity_id
+LEFT JOIN unit u_qs ON u_qs.id = qs.unit_id
+LEFT JOIN scanning_station ss ON ss.id = b.scanning_station_id
+LEFT JOIN department d ON d.id = ss.department_id
+LEFT JOIN production_step ps ON ps.id = b.production_step_id
+LEFT JOIN rate labor_time ON labor_time.id = ps.labor_time_id
+LEFT JOIN unit labor_time_unit ON labor_time_unit.id = labor_time.numerator_unit_id
+WHERE b.account_id = sqlc.arg('owner_account_id')
+  AND b.scanned_at >= sqlc.arg('start_date')
+  AND b.scanned_at <= sqlc.arg('end_date')
+GROUP BY week_start_date, d.id, d.name;
+
+-- GetOeeTrendDowntimeIntervals lists logged downtime per department as raw intervals, unclipped (open events coalesce to now).
+--
+-- Aggregating in SQL the way GetOeeDowntimeByDepartment does would need a per-week clip, and an event that spans a week boundary belongs partly to each week. Splitting the interval in Go is exact and needs no calendar table.
+-- name: GetOeeTrendDowntimeIntervals :many
+SELECT
+    COALESCE(e.department_id, 'unassigned') AS department_id,
+    r.oee_bucket,
+    e.started_at,
+    COALESCE(e.ended_at, NOW(3)) AS ended_at
+FROM machine_downtime_event e
+JOIN machine_downtime_reason r ON r.code = e.reason_code
+WHERE e.account_id = sqlc.arg('account_id')
+  -- Overlap test rather than containment, matching GetOeeDowntimeByDepartment.
+  AND e.started_at <= sqlc.arg('end_date')
+  AND COALESCE(e.ended_at, NOW(3)) >= sqlc.arg('start_date')
+ORDER BY e.started_at;

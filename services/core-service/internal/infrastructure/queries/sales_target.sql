@@ -1,9 +1,17 @@
 -- name: ListSalesTargets :many
 SELECT t.id, t.start_date, t.end_date, t.sales_rep_id, t.account_id,
        t.amount_id, t.created_at, t.updated_at,
-       q.value AS amount_value, q.unit_id AS amount_unit_id
+       q.value AS amount_value, q.unit_id AS amount_unit_id,
+       u.name AS amount_unit_name, u.abbreviation AS amount_unit_abbreviation,
+       u.unit_dimension_code AS amount_unit_type,
+       u.ratio_numerator AS amount_unit_ratio_numerator,
+       u.ratio_denominator AS amount_unit_ratio_denominator,
+       u.offset_numerator AS amount_unit_offset_numerator,
+       u.offset_denominator AS amount_unit_offset_denominator,
+       u.created_at AS amount_unit_created_at, u.updated_at AS amount_unit_updated_at
 FROM target t
 INNER JOIN quantity q ON q.id = t.amount_id
+INNER JOIN unit u ON u.id = q.unit_id
 WHERE t.sales_rep_id = ? AND t.account_id = ?
 AND (
     sqlc.narg('search') IS NULL
@@ -27,9 +35,17 @@ AND (
 -- name: GetSalesTarget :one
 SELECT t.id, t.start_date, t.end_date, t.sales_rep_id, t.account_id,
        t.amount_id, t.created_at, t.updated_at,
-       q.value AS amount_value, q.unit_id AS amount_unit_id
+       q.value AS amount_value, q.unit_id AS amount_unit_id,
+       u.name AS amount_unit_name, u.abbreviation AS amount_unit_abbreviation,
+       u.unit_dimension_code AS amount_unit_type,
+       u.ratio_numerator AS amount_unit_ratio_numerator,
+       u.ratio_denominator AS amount_unit_ratio_denominator,
+       u.offset_numerator AS amount_unit_offset_numerator,
+       u.offset_denominator AS amount_unit_offset_denominator,
+       u.created_at AS amount_unit_created_at, u.updated_at AS amount_unit_updated_at
 FROM target t
 INNER JOIN quantity q ON q.id = t.amount_id
+INNER JOIN unit u ON u.id = q.unit_id
 WHERE t.id = ?;
 
 -- name: SalesTargetExists :one

@@ -16,9 +16,9 @@ import (
 type ListAuditEventsRequest struct {
 	apiresource.PaginationRequest
 	// Restricts results to audit events on or after this timestamp.
-	StartDate *time.Time `query:"start_date"`
+	StartDate *time.Time `query:"starts_at"`
 	// Restricts results to audit events on or before this timestamp.
-	EndDate *time.Time `query:"end_date"`
+	EndDate *time.Time `query:"ends_at"`
 	// Filter by the resource type of the audited entity.
 	//
 	// The full set of valid values is available from the List Audit Event Resource Types endpoint.

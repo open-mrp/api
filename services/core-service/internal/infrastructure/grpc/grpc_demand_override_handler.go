@@ -92,14 +92,14 @@ func (h *demandOverrideGRPCHandler) ListDemandOverrides(ctx context.Context, req
 	if req.PeriodStart != nil {
 		parsed, err := time.Parse(time.RFC3339, *req.PeriodStart)
 		if err != nil {
-			return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewValidationErrorWithParam("Invalid date format for period_start.", "period_start"))
+			return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewValidationErrorWithParam("Invalid date format for starts_at.", "starts_at"))
 		}
 		params.PeriodStart = &parsed
 	}
 	if req.PeriodEnd != nil {
 		parsed, err := time.Parse(time.RFC3339, *req.PeriodEnd)
 		if err != nil {
-			return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewValidationErrorWithParam("Invalid date format for period_end.", "period_end"))
+			return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewValidationErrorWithParam("Invalid date format for ends_at.", "ends_at"))
 		}
 		params.PeriodEnd = &parsed
 	}

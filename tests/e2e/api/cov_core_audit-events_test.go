@@ -13,7 +13,7 @@ import (
 // This file closes gaps in the otherwise-extensive coverage of the
 // audit-events group (auditEventsPath, declared in crud_audit_events_test.go):
 // GetByID 404, the never-asserted source_ip/idempotency_key/AuditFieldChange.object
-// fields, actor_types + start_date/end_date filters, cursor-based list
+// fields, actor_types + starts_at/ends_at filters, cursor-based list
 // pagination, and the list-level "account" include-isolation gap. See
 // tests/e2e/api/crud_audit_events_test.go for the primary suite (32 pre-existing
 // tests) and async_side_effects_test.go for cross-resource changes-field coverage
@@ -229,44 +229,44 @@ func TestCovCoreAuditEvents_FilterByInvalidActorTypeRejected(t *testing.T) {
 	requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
 }
 
-// --- start_date / end_date filters ---
+// --- starts_at / ends_at filters ---
 
 func TestCovCoreAuditEvents_FilterByStartDateExcludesAll(t *testing.T) {
 	t.Parallel()
 	list, _, err := apiClient.GetList(auditEventsPath, url.Values{
-		"start_date": {"2099-01-01T00:00:00Z"},
-		"limit":      {"5"},
+		"starts_at": {"2099-01-01T00:00:00Z"},
+		"limit":     {"5"},
 	})
 	require.NoError(t, err)
-	assertEmptyListData(t, list.Data, "start_date far in the future should exclude all audit events")
+	assertEmptyListData(t, list.Data, "starts_at far in the future should exclude all audit events")
 }
 
 func TestCovCoreAuditEvents_FilterByEndDateExcludesAll(t *testing.T) {
 	t.Parallel()
 	list, _, err := apiClient.GetList(auditEventsPath, url.Values{
-		"end_date": {"2000-01-01T00:00:00Z"},
-		"limit":    {"5"},
+		"ends_at": {"2000-01-01T00:00:00Z"},
+		"limit":   {"5"},
 	})
 	require.NoError(t, err)
-	assertEmptyListData(t, list.Data, "end_date far in the past should exclude all audit events")
+	assertEmptyListData(t, list.Data, "ends_at far in the past should exclude all audit events")
 }
 
 func TestCovCoreAuditEvents_FilterByStartDateMalformed(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(auditEventsPath, url.Values{"start_date": {"not-a-date"}})
+	status, body, err := apiClient.GetListRaw(auditEventsPath, url.Values{"starts_at": {"not-a-date"}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
-	assertErrorParam(t, errObj, "start_date")
+	assertErrorParam(t, errObj, "starts_at")
 }
 
 func TestCovCoreAuditEvents_FilterByEndDateMalformed(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(auditEventsPath, url.Values{"end_date": {"not-a-date"}})
+	status, body, err := apiClient.GetListRaw(auditEventsPath, url.Values{"ends_at": {"not-a-date"}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
-	assertErrorParam(t, errObj, "end_date")
+	assertErrorParam(t, errObj, "ends_at")
 }
 
 // --- limit boundary validation ---

@@ -109,14 +109,14 @@ func (h *machineDowntimeGRPCHandler) ListMachineDowntimeEvents(ctx context.Conte
 	if req.StartDate != nil {
 		parsed, err := time.Parse(time.RFC3339, *req.StartDate)
 		if err != nil {
-			return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewValidationErrorWithParam("Invalid date format for start_date.", "start_date"))
+			return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewValidationErrorWithParam("Invalid date format for starts_at.", "starts_at"))
 		}
 		params.StartDate = &parsed
 	}
 	if req.EndDate != nil {
 		parsed, err := time.Parse(time.RFC3339, *req.EndDate)
 		if err != nil {
-			return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewValidationErrorWithParam("Invalid date format for end_date.", "end_date"))
+			return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewValidationErrorWithParam("Invalid date format for ends_at.", "ends_at"))
 		}
 		params.EndDate = &parsed
 	}

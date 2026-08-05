@@ -25,9 +25,9 @@ type ListMachineDowntimeEventsRequest struct {
 	// Sending `false` is the same as leaving it out: both open and closed events come back.
 	Open bool `query:"open"`
 	// Only return events that started on or after this timestamp, formatted as RFC3339.
-	StartDate *string `query:"start_date"`
+	StartDate *string `query:"starts_at"`
 	// Only return events that started on or before this timestamp, formatted as RFC3339.
-	EndDate *string `query:"end_date"`
+	EndDate *string `query:"ends_at"`
 }
 
 // Returns a paginated list of machine downtime events, most recently started first.

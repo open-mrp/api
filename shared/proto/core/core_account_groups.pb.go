@@ -1960,19 +1960,29 @@ func (x *UpdateAccountUserPasswordRequest) GetNewPassword() string {
 }
 
 type SalesTargetProto struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	StartDate     string                 `protobuf:"bytes,2,opt,name=start_date,json=startDate,proto3" json:"start_date,omitempty"`
-	EndDate       string                 `protobuf:"bytes,3,opt,name=end_date,json=endDate,proto3" json:"end_date,omitempty"`
-	SalesRepId    string                 `protobuf:"bytes,4,opt,name=sales_rep_id,json=salesRepId,proto3" json:"sales_rep_id,omitempty"`
-	AccountId     string                 `protobuf:"bytes,5,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
-	AmountValue   string                 `protobuf:"bytes,6,opt,name=amount_value,json=amountValue,proto3" json:"amount_value,omitempty"`
-	AmountUnitId  string                 `protobuf:"bytes,7,opt,name=amount_unit_id,json=amountUnitId,proto3" json:"amount_unit_id,omitempty"`
-	AmountId      string                 `protobuf:"bytes,8,opt,name=amount_id,json=amountId,proto3" json:"amount_id,omitempty"`
-	CreatedAt     string                 `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     string                 `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	Id           string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	StartDate    string                 `protobuf:"bytes,2,opt,name=start_date,json=startDate,proto3" json:"start_date,omitempty"`
+	EndDate      string                 `protobuf:"bytes,3,opt,name=end_date,json=endDate,proto3" json:"end_date,omitempty"`
+	SalesRepId   string                 `protobuf:"bytes,4,opt,name=sales_rep_id,json=salesRepId,proto3" json:"sales_rep_id,omitempty"`
+	AccountId    string                 `protobuf:"bytes,5,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
+	AmountValue  string                 `protobuf:"bytes,6,opt,name=amount_value,json=amountValue,proto3" json:"amount_value,omitempty"`
+	AmountUnitId string                 `protobuf:"bytes,7,opt,name=amount_unit_id,json=amountUnitId,proto3" json:"amount_unit_id,omitempty"`
+	AmountId     string                 `protobuf:"bytes,8,opt,name=amount_id,json=amountId,proto3" json:"amount_id,omitempty"`
+	CreatedAt    string                 `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt    string                 `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	// The amount's unit, so the gateway can render a quantity without a second lookup.
+	AmountUnitName              string `protobuf:"bytes,11,opt,name=amount_unit_name,json=amountUnitName,proto3" json:"amount_unit_name,omitempty"`
+	AmountUnitAbbreviation      string `protobuf:"bytes,12,opt,name=amount_unit_abbreviation,json=amountUnitAbbreviation,proto3" json:"amount_unit_abbreviation,omitempty"`
+	AmountUnitType              string `protobuf:"bytes,13,opt,name=amount_unit_type,json=amountUnitType,proto3" json:"amount_unit_type,omitempty"`
+	AmountUnitRatioNumerator    string `protobuf:"bytes,14,opt,name=amount_unit_ratio_numerator,json=amountUnitRatioNumerator,proto3" json:"amount_unit_ratio_numerator,omitempty"`
+	AmountUnitRatioDenominator  string `protobuf:"bytes,15,opt,name=amount_unit_ratio_denominator,json=amountUnitRatioDenominator,proto3" json:"amount_unit_ratio_denominator,omitempty"`
+	AmountUnitOffsetNumerator   string `protobuf:"bytes,16,opt,name=amount_unit_offset_numerator,json=amountUnitOffsetNumerator,proto3" json:"amount_unit_offset_numerator,omitempty"`
+	AmountUnitOffsetDenominator string `protobuf:"bytes,17,opt,name=amount_unit_offset_denominator,json=amountUnitOffsetDenominator,proto3" json:"amount_unit_offset_denominator,omitempty"`
+	AmountUnitCreatedAt         string `protobuf:"bytes,18,opt,name=amount_unit_created_at,json=amountUnitCreatedAt,proto3" json:"amount_unit_created_at,omitempty"`
+	AmountUnitUpdatedAt         string `protobuf:"bytes,19,opt,name=amount_unit_updated_at,json=amountUnitUpdatedAt,proto3" json:"amount_unit_updated_at,omitempty"`
+	unknownFields               protoimpl.UnknownFields
+	sizeCache                   protoimpl.SizeCache
 }
 
 func (x *SalesTargetProto) Reset() {
@@ -2071,6 +2081,69 @@ func (x *SalesTargetProto) GetCreatedAt() string {
 func (x *SalesTargetProto) GetUpdatedAt() string {
 	if x != nil {
 		return x.UpdatedAt
+	}
+	return ""
+}
+
+func (x *SalesTargetProto) GetAmountUnitName() string {
+	if x != nil {
+		return x.AmountUnitName
+	}
+	return ""
+}
+
+func (x *SalesTargetProto) GetAmountUnitAbbreviation() string {
+	if x != nil {
+		return x.AmountUnitAbbreviation
+	}
+	return ""
+}
+
+func (x *SalesTargetProto) GetAmountUnitType() string {
+	if x != nil {
+		return x.AmountUnitType
+	}
+	return ""
+}
+
+func (x *SalesTargetProto) GetAmountUnitRatioNumerator() string {
+	if x != nil {
+		return x.AmountUnitRatioNumerator
+	}
+	return ""
+}
+
+func (x *SalesTargetProto) GetAmountUnitRatioDenominator() string {
+	if x != nil {
+		return x.AmountUnitRatioDenominator
+	}
+	return ""
+}
+
+func (x *SalesTargetProto) GetAmountUnitOffsetNumerator() string {
+	if x != nil {
+		return x.AmountUnitOffsetNumerator
+	}
+	return ""
+}
+
+func (x *SalesTargetProto) GetAmountUnitOffsetDenominator() string {
+	if x != nil {
+		return x.AmountUnitOffsetDenominator
+	}
+	return ""
+}
+
+func (x *SalesTargetProto) GetAmountUnitCreatedAt() string {
+	if x != nil {
+		return x.AmountUnitCreatedAt
+	}
+	return ""
+}
+
+func (x *SalesTargetProto) GetAmountUnitUpdatedAt() string {
+	if x != nil {
+		return x.AmountUnitUpdatedAt
 	}
 	return ""
 }
@@ -5818,7 +5891,7 @@ const file_core_core_account_groups_proto_rawDesc = "" +
 	" UpdateAccountUserPasswordRequest\x12&\n" +
 	"\x0faccount_user_id\x18\x01 \x01(\tR\raccountUserId\x12-\n" +
 	"\x12requester_password\x18\x02 \x01(\tR\x11requesterPassword\x12!\n" +
-	"\fnew_password\x18\x03 \x01(\tR\vnewPassword\"\xc1\x02\n" +
+	"\fnew_password\x18\x03 \x01(\tR\vnewPassword\"\xc1\x06\n" +
 	"\x10SalesTargetProto\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -5835,7 +5908,16 @@ const file_core_core_account_groups_proto_rawDesc = "" +
 	"created_at\x18\t \x01(\tR\tcreatedAt\x12\x1d\n" +
 	"\n" +
 	"updated_at\x18\n" +
-	" \x01(\tR\tupdatedAt\"\x8e\x01\n" +
+	" \x01(\tR\tupdatedAt\x12(\n" +
+	"\x10amount_unit_name\x18\v \x01(\tR\x0eamountUnitName\x128\n" +
+	"\x18amount_unit_abbreviation\x18\f \x01(\tR\x16amountUnitAbbreviation\x12(\n" +
+	"\x10amount_unit_type\x18\r \x01(\tR\x0eamountUnitType\x12=\n" +
+	"\x1bamount_unit_ratio_numerator\x18\x0e \x01(\tR\x18amountUnitRatioNumerator\x12A\n" +
+	"\x1damount_unit_ratio_denominator\x18\x0f \x01(\tR\x1aamountUnitRatioDenominator\x12?\n" +
+	"\x1camount_unit_offset_numerator\x18\x10 \x01(\tR\x19amountUnitOffsetNumerator\x12C\n" +
+	"\x1eamount_unit_offset_denominator\x18\x11 \x01(\tR\x1bamountUnitOffsetDenominator\x123\n" +
+	"\x16amount_unit_created_at\x18\x12 \x01(\tR\x13amountUnitCreatedAt\x123\n" +
+	"\x16amount_unit_updated_at\x18\x13 \x01(\tR\x13amountUnitUpdatedAt\"\x8e\x01\n" +
 	"\x17ListSalesTargetsRequest\x12 \n" +
 	"\fsales_rep_id\x18\x01 \x01(\tR\n" +
 	"salesRepId\x12\x19\n" +

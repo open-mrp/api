@@ -23,11 +23,11 @@ type ListProductionRunsRequest struct {
 	// Only return runs containing at least one batch that used any of these machines.
 	MachineIDs []string `query:"machine_ids"`
 	// Only return runs created on or after this date, formatted as `YYYY-MM-DD`.
-	StartDate *string `query:"start_date"`
+	StartDate *string `query:"starts_at"`
 	// Only return runs created before this date, formatted as `YYYY-MM-DD`.
 	//
 	// The cutoff is the start of the given day, so runs created during that day are not returned; pass the following day to include them.
-	EndDate *string `query:"end_date"`
+	EndDate *string `query:"ends_at"`
 }
 
 // Returns a paginated list of production runs, most recently created first.

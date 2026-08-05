@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.42.8](https://github.com/Augno/api/compare/v0.42.7...v0.42.8) (2026-08-05)
+
+
+### Bug Fixes
+
+* add AnalyzeOeeTrend API and related data structures ([#454](https://github.com/Augno/api/issues/454)) ([1b674e9](https://github.com/Augno/api/commit/1b674e92f23e5067d114998756a4c76e7f4736dd))
+
 ## [0.42.7](https://github.com/Augno/api/compare/v0.42.6...v0.42.7) (2026-08-04)
 
 

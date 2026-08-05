@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.42.9](https://github.com/Augno/api/compare/v0.42.8...v0.42.9) (2026-08-05)
+
+
+### Bug Fixes
+
+* add Stripe customer synchronization and update functionality ([#457](https://github.com/Augno/api/issues/457)) ([d76a0af](https://github.com/Augno/api/commit/d76a0affa3583590e78c39b93d816faed0215c18))
+* implement undo functionality for batch scans ([#456](https://github.com/Augno/api/issues/456)) ([38a2ec6](https://github.com/Augno/api/commit/38a2ec6c35433ddc4498153228f6d8092d799271))
+
 ## [0.42.8](https://github.com/Augno/api/compare/v0.42.7...v0.42.8) (2026-08-05)
 
 

@@ -65,6 +65,21 @@ func (r *productionRunQueryRepoImpl) CloseIfAllBatchesScannedOrDeleted(ctx conte
 	return nil
 }
 
+func (r *productionRunQueryRepoImpl) Reopen(ctx context.Context, accountID, id string) *apierror.APIError {
+	ctx, span := productionRunQueryRepoTracer.Start(ctx, "repository.production_run_query.reopen")
+	defer span.End()
+
+	err := r.queries.ReopenProductionRun(ctx, sqlc.ReopenProductionRunParams{
+		ID:        id,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	return nil
+}
+
 func (r *productionRunQueryRepoImpl) Create(ctx context.Context, id, responsibleUserID, number, accountID string) *apierror.APIError {
 	ctx, span := productionRunQueryRepoTracer.Start(ctx, "repository.production_run_query.create")
 	defer span.End()

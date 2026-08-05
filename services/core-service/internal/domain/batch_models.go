@@ -191,6 +191,31 @@ type InventorySnapshot struct {
 	AvailableToPromiseUnitAbbreviation string
 }
 
+// UndoBatchScanEvent is the outbox event payload for reversing the inventory a scan recorded against a batch that has just been deleted.
+//
+// The reversal itself is keyed off the batch: every row a scan writes carries it on `batch_id`, and those columns have no foreign key, so the tags outlive the batch row. What does not outlive it is the lineage — the flow edges go with the batch — so the seconds and waste the scan released reservations for are snapshotted here at delete time.
+type UndoBatchScanEvent struct {
+	BatchID           string `json:"batch_id"`
+	ScanningStationID string `json:"scanning_station_id,omitempty"`
+	ResponsibleUserID string `json:"responsible_user_id,omitempty"`
+	OrderID           string `json:"order_id,omitempty"`
+	ProducedItemID    string `json:"produced_item_id,omitempty"`
+	ShortfallMeasure  string `json:"shortfall_measure,omitempty"`
+	ShortfallUnitID   string `json:"shortfall_unit_id,omitempty"`
+}
+
+// LineageShortfall is the production run a batch belongs to and the scrap accumulated across its upstream lineage. A scan releases reservations for that scrap; undoing the scan puts the same amount back.
+type LineageShortfall struct {
+	ProductionRunID string
+	Seconds         decimal.Decimal
+	Waste           decimal.Decimal
+}
+
+// Total is the quantity that will never be produced, and so the quantity whose reservation moves.
+func (l LineageShortfall) Total() decimal.Decimal {
+	return l.Seconds.Add(l.Waste)
+}
+
 // ExecuteProductionStepEvent is the outbox event payload for executing a production step side-effect.
 type ExecuteProductionStepEvent struct {
 	ProductionStepID  string  `json:"production_step_id"`

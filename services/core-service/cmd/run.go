@@ -660,6 +660,11 @@ func Run(
 		return err
 	}
 
+	undoBatchScanConsumer := event.NewUndoBatchScanConsumer(rabbitmq, inboxRepo, repoFactory)
+	if err := undoBatchScanConsumer.Listen(ctx); err != nil {
+		return err
+	}
+
 	salesOrderCreatedConsumer := event.NewSalesOrderCreatedConsumer(rabbitmq, inboxRepo, hubspotSync)
 	if err := salesOrderCreatedConsumer.Listen(ctx); err != nil {
 		return err

@@ -331,6 +331,172 @@ func (r *inventoryMutationRepo) CreateInventoryChangeLog(ctx context.Context, pa
 	return nil
 }
 
+func (r *inventoryMutationRepo) CountAllocatedReceiptsForBatch(ctx context.Context, accountID, batchID string) (int64, *apierror.APIError) {
+	ctx, span := inventoryMutationRepoTracer.Start(ctx, "repository.inventory_mutation.count_allocated_receipts_for_batch")
+	defer span.End()
+
+	count, err := r.queries.CountAllocatedReceiptsForBatch(ctx, sqlc.CountAllocatedReceiptsForBatchParams{
+		BatchID:   sql.NullString{String: batchID, Valid: true},
+		AccountID: accountID,
+	})
+	if err != nil {
+		return 0, tracing.Trace(span, db.MapSQLError(err))
+	}
+
+	return count, nil
+}
+
+// ReverseInventoryForBatch removes the rows a scan wrote and hands back what they were holding.
+//
+// Current inventory is derived from the receipt and issue rows, so removing them is the correction —
+// nothing recalculates a stored level. An issue that came out of an order's reservation goes back to
+// `reserved` rather than being deleted; one issued against free stock is deleted outright.
+func (r *inventoryMutationRepo) ReverseInventoryForBatch(ctx context.Context, params domain.ReverseInventoryForBatchParams) ([]domain.InventoryReversalDelta, *apierror.APIError) {
+	ctx, span := inventoryMutationRepoTracer.Start(ctx, "repository.inventory_mutation.reverse_inventory_for_batch")
+	defer span.End()
+
+	batchID := sql.NullString{String: params.BatchID, Valid: true}
+
+	receipts, err := r.queries.FindReceiptsForBatchReversal(ctx, sqlc.FindReceiptsForBatchReversalParams{
+		BatchID:   batchID,
+		AccountID: params.AccountID,
+	})
+	if err != nil {
+		return nil, tracing.Trace(span, db.MapSQLError(err))
+	}
+
+	for _, receipt := range receipts {
+		if receipt.AllocationCount > 0 {
+			return nil, tracing.Trace(span, apierror.NewValidationError("Inventory produced by this batch has already been used and cannot be reversed."))
+		}
+	}
+
+	issues, err := r.queries.FindIssuesForBatchReversal(ctx, sqlc.FindIssuesForBatchReversalParams{
+		BatchID:   batchID,
+		AccountID: params.AccountID,
+	})
+	if err != nil {
+		return nil, tracing.Trace(span, db.MapSQLError(err))
+	}
+
+	if len(receipts) == 0 && len(issues) == 0 {
+		return nil, nil
+	}
+
+	issueIDs := make([]string, 0, len(issues))
+	for _, issue := range issues {
+		issueIDs = append(issueIDs, issue.ID)
+	}
+
+	// Dropping an allocation hands the quantity back to the receipt it came from.
+	if len(issueIDs) > 0 {
+		allocations, err := r.queries.FindAllocationsByIssueIDs(ctx, issueIDs)
+		if err != nil {
+			return nil, tracing.Trace(span, db.MapSQLError(err))
+		}
+
+		if len(allocations) > 0 {
+			allocationIDs := make([]string, 0, len(allocations))
+			quantityIDs := make([]string, 0, len(allocations)*2)
+			rateIDs := make([]string, 0, len(allocations))
+			receiptIDs := make([]string, 0, len(allocations))
+			for _, allocation := range allocations {
+				allocationIDs = append(allocationIDs, allocation.ID)
+				quantityIDs = append(quantityIDs, allocation.QuantityID, allocation.TotalCostID)
+				rateIDs = append(rateIDs, allocation.UnitCostID)
+				receiptIDs = append(receiptIDs, allocation.InventoryReceiptID)
+			}
+
+			if err := r.queries.DeleteAllocationsByIDs(ctx, allocationIDs); err != nil {
+				return nil, tracing.Trace(span, db.MapSQLError(err))
+			}
+			if err := r.queries.DeleteQuantitiesByIDs(ctx, quantityIDs); err != nil {
+				return nil, tracing.Trace(span, db.MapSQLError(err))
+			}
+			if err := r.queries.DeleteRatesByIDs(ctx, rateIDs); err != nil {
+				return nil, tracing.Trace(span, db.MapSQLError(err))
+			}
+			// Runs after the deletes so it weighs only the allocations that survived.
+			if err := r.queries.FreeReleasedReceipts(ctx, receiptIDs); err != nil {
+				return nil, tracing.Trace(span, db.MapSQLError(err))
+			}
+		}
+	}
+
+	var restoreIDs, deleteIssueIDs, deleteIssueQuantityIDs []string
+	for _, issue := range issues {
+		if issue.OrderID.Valid && issue.OrderID.String != "" {
+			restoreIDs = append(restoreIDs, issue.ID)
+			continue
+		}
+		deleteIssueIDs = append(deleteIssueIDs, issue.ID)
+		deleteIssueQuantityIDs = append(deleteIssueQuantityIDs, issue.QuantityID)
+	}
+
+	if len(restoreIDs) > 0 {
+		if err := r.queries.RestoreIssuesToReserved(ctx, restoreIDs); err != nil {
+			return nil, tracing.Trace(span, db.MapSQLError(err))
+		}
+	}
+
+	if len(deleteIssueIDs) > 0 {
+		if err := r.queries.DeleteInventoryIssuesByIDs(ctx, deleteIssueIDs); err != nil {
+			return nil, tracing.Trace(span, db.MapSQLError(err))
+		}
+		if err := r.queries.DeleteQuantitiesByIDs(ctx, deleteIssueQuantityIDs); err != nil {
+			return nil, tracing.Trace(span, db.MapSQLError(err))
+		}
+	}
+
+	if len(receipts) > 0 {
+		receiptIDs := make([]string, 0, len(receipts))
+		quantityIDs := make([]string, 0, len(receipts))
+		rateIDs := make([]string, 0, len(receipts))
+		for _, receipt := range receipts {
+			receiptIDs = append(receiptIDs, receipt.ID)
+			quantityIDs = append(quantityIDs, receipt.QuantityID)
+			rateIDs = append(rateIDs, receipt.UnitCostID)
+		}
+
+		if err := r.queries.DeleteInventoryReceiptsByIDs(ctx, receiptIDs); err != nil {
+			return nil, tracing.Trace(span, db.MapSQLError(err))
+		}
+		if err := r.queries.DeleteQuantitiesByIDs(ctx, quantityIDs); err != nil {
+			return nil, tracing.Trace(span, db.MapSQLError(err))
+		}
+		if err := r.queries.DeleteRatesByIDs(ctx, rateIDs); err != nil {
+			return nil, tracing.Trace(span, db.MapSQLError(err))
+		}
+	}
+
+	// One correction per reversed row, signed the opposite way from the scan.
+	deltas := make([]domain.InventoryReversalDelta, 0, len(receipts)+len(issues))
+	for _, receipt := range receipts {
+		measure, parseErr := decimal.NewFromString(receipt.QuantityValue)
+		if parseErr != nil {
+			return nil, tracing.Trace(span, apierror.NewInternalError(parseErr, "Invalid receipt quantity value."))
+		}
+		deltas = append(deltas, domain.InventoryReversalDelta{
+			ItemID:  receipt.ItemID,
+			Measure: measure.Neg(),
+			UnitID:  receipt.UnitID,
+		})
+	}
+	for _, issue := range issues {
+		measure, parseErr := decimal.NewFromString(issue.QuantityValue)
+		if parseErr != nil {
+			return nil, tracing.Trace(span, apierror.NewInternalError(parseErr, "Invalid issue quantity value."))
+		}
+		deltas = append(deltas, domain.InventoryReversalDelta{
+			ItemID:  issue.ItemID,
+			Measure: measure,
+			UnitID:  issue.UnitID,
+		})
+	}
+
+	return deltas, nil
+}
+
 func (r *inventoryMutationRepo) CreateQuantityForInventory(ctx context.Context, quantityID, value, unitID string) *apierror.APIError {
 	if err := r.queries.InsertQuantityForInventory(ctx, sqlc.InsertQuantityForInventoryParams{
 		ID:     quantityID,

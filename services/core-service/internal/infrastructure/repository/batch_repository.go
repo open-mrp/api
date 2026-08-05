@@ -1188,6 +1188,157 @@ func (r *batchRepoImpl) CloseIfFullyUsed(ctx context.Context, accountID string, 
 	return nil
 }
 
+func (r *batchRepoImpl) CountDownstreamBatches(ctx context.Context, batchID string) (int64, *apierror.APIError) {
+	ctx, span := batchRepoTracer.Start(ctx, "repository.batch.count_downstream_batches")
+	defer span.End()
+
+	count, err := r.queries.CountDownstreamBatches(ctx, batchID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return 0, tracing.Trace(span, apiErr)
+	}
+
+	return count, nil
+}
+
+func (r *batchRepoImpl) FindInputBatchIDs(ctx context.Context, batchID string) ([]string, *apierror.APIError) {
+	ctx, span := batchRepoTracer.Start(ctx, "repository.batch.find_input_batch_ids")
+	defer span.End()
+
+	ids, err := r.queries.GetBatchFlowIncoming(ctx, batchID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	return ids, nil
+}
+
+// FindLineageShortfall walks up the batch flow accumulating scrap. A split pushes seconds and waste
+// onto a parent that may have been scanned in an earlier round, so the scrap a scan accounts for is
+// the lineage's, not just this batch's.
+func (r *batchRepoImpl) FindLineageShortfall(ctx context.Context, batchID string) (*domain.LineageShortfall, *apierror.APIError) {
+	ctx, span := batchRepoTracer.Start(ctx, "repository.batch.find_lineage_shortfall")
+	defer span.End()
+
+	result := &domain.LineageShortfall{Seconds: decimal.Zero, Waste: decimal.Zero}
+	visited := make(map[string]bool)
+	queue := []string{batchID}
+
+	for len(queue) > 0 {
+		var toFetch []string
+		for _, id := range queue {
+			if !visited[id] {
+				visited[id] = true
+				toFetch = append(toFetch, id)
+			}
+		}
+		queue = nil
+		if len(toFetch) == 0 {
+			break
+		}
+
+		rows, err := r.queries.FindBatchProductionRunIDAncestry(ctx, toFetch)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+
+		for _, row := range rows {
+			if result.ProductionRunID == "" && row.ProductionRunID.Valid {
+				result.ProductionRunID = row.ProductionRunID.String
+			}
+
+			scrap, err := r.queries.GetBatchSecondsAndWaste(ctx, row.ID)
+			if err == nil {
+				if scrap.SecondsValue.Valid {
+					if value, parseErr := decimal.NewFromString(scrap.SecondsValue.String); parseErr == nil {
+						result.Seconds = result.Seconds.Add(value)
+					}
+				}
+				if scrap.WasteValue.Valid {
+					if value, parseErr := decimal.NewFromString(scrap.WasteValue.String); parseErr == nil {
+						result.Waste = result.Waste.Add(value)
+					}
+				}
+			}
+
+			if row.ParentID.Valid && row.ParentID.String != "" && !visited[row.ParentID.String] {
+				queue = append(queue, row.ParentID.String)
+			}
+		}
+	}
+
+	return result, nil
+}
+
+func (r *batchRepoImpl) Unscan(ctx context.Context, accountID, batchID string) (*domain.BaseBatch, *apierror.APIError) {
+	ctx, span := batchRepoTracer.Start(ctx, "repository.batch.unscan")
+	defer span.End()
+
+	err := r.queries.UnscanBatch(ctx, sqlc.UnscanBatchParams{
+		ID:        batchID,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	row, err := r.queries.GetBatchBase(ctx, sqlc.GetBatchBaseParams{
+		ID:        batchID,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	return mapBaseBatchRow(row), nil
+}
+
+func (r *batchRepoImpl) Reopen(ctx context.Context, accountID, batchID string) *apierror.APIError {
+	ctx, span := batchRepoTracer.Start(ctx, "repository.batch.reopen")
+	defer span.End()
+
+	err := r.queries.ReopenBatch(ctx, sqlc.ReopenBatchParams{
+		ID:        batchID,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	return nil
+}
+
+func (r *batchRepoImpl) ReopenIfNotFullyUsed(ctx context.Context, accountID string, batch domain.BaseBatch, producedUnit domain.LightUnit, productionStepID string) *apierror.APIError {
+	ctx, span := batchRepoTracer.Start(ctx, "repository.batch.reopen_if_not_fully_used")
+	defer span.End()
+
+	outputBatches, apiErr := r.FindOutputBatches(ctx, accountID, batch.ID)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	// Nothing consumes it any more, so there is no quantity math to do.
+	if len(outputBatches) == 0 {
+		return r.Reopen(ctx, accountID, batch.ID)
+	}
+
+	totalUsed := decimal.Zero
+	for _, ob := range outputBatches {
+		totalUsed = totalUsed.Add(ob.Quantity.Measure)
+		if ob.Seconds != nil {
+			totalUsed = totalUsed.Add(ob.Seconds.Measure)
+		}
+		if ob.Waste != nil {
+			totalUsed = totalUsed.Add(ob.Waste.Measure)
+		}
+	}
+
+	if batch.Quantity.Measure.Sub(totalUsed).GreaterThan(decimal.Zero) {
+		return r.Reopen(ctx, accountID, batch.ID)
+	}
+
+	return nil
+}
+
 func (r *batchRepoImpl) Delete(ctx context.Context, accountID, batchID string) (*domain.BaseBatch, *apierror.APIError) {
 	ctx, span := batchRepoTracer.Start(ctx, "repository.batch.delete")
 	defer span.End()

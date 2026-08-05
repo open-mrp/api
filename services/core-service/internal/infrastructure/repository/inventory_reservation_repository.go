@@ -25,6 +25,14 @@ func NewInventoryReservationRepo(queries *sqlc.Queries) domain.InventoryReservat
 }
 
 // CreateMaterialReservation creates a reserved inventory issue for a material demand linked to an order.
+// firstValidBatchID prefers the batch that consumed the reservation, falling back to whatever tag the reservation already carried.
+func firstValidBatchID(preferred, fallback sql.NullString) sql.NullString {
+	if preferred.Valid {
+		return preferred
+	}
+	return fallback
+}
+
 func (r *inventoryReservationRepo) CreateMaterialReservation(ctx context.Context, params domain.CreateMaterialReservationParams) *apierror.APIError {
 	ctx, span := tracing.StartSpan(ctx, inventoryReservationRepoTracer, "repository.inventory_reservation.create_material_reservation")
 	defer span.End()
@@ -153,6 +161,13 @@ func (r *inventoryReservationRepo) AllocateReservationsForConsumption(ctx contex
 
 	remainingToIssue := params.Measure
 
+	// Tagging the issues with the batch that consumed them is what makes the consumption reversible:
+	// deleting the batch looks its ledger rows up by this column.
+	producedBatchID := sql.NullString{}
+	if params.ProducedBatchID != "" {
+		producedBatchID = sql.NullString{String: params.ProducedBatchID, Valid: true}
+	}
+
 	for _, issue := range issues {
 		if remainingToIssue.LessThanOrEqual(decimal.Zero) {
 			break
@@ -179,7 +194,10 @@ func (r *inventoryReservationRepo) AllocateReservationsForConsumption(ctx contex
 
 		if take.Equal(available) {
 			// Full consumption: change status to open and allocate
-			if err := r.queries.UpdateInventoryIssueStatusToOpen(ctx, issue.ID); err != nil {
+			if err := r.queries.UpdateInventoryIssueStatusToOpen(ctx, sqlc.UpdateInventoryIssueStatusToOpenParams{
+				ID:      issue.ID,
+				BatchID: producedBatchID,
+			}); err != nil {
 				return nil, db.MapSQLError(err)
 			}
 			if apiErr := r.allocateOpenIssue(ctx, issue.ID, issueQty, params.AccountID, params.ItemID); apiErr != nil {
@@ -221,7 +239,7 @@ func (r *inventoryReservationRepo) AllocateReservationsForConsumption(ctx contex
 				QuantityID:        newQtyID,
 				StatusCode:        "open",
 				OrderID:           sql.NullString{String: params.OrderID, Valid: true},
-				BatchID:           issue.BatchID,
+				BatchID:           firstValidBatchID(producedBatchID, issue.BatchID),
 				StorageLocationID: issue.StorageLocationID,
 				LotID:             issue.LotID,
 			}); err != nil {

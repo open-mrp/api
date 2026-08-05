@@ -487,6 +487,18 @@ type BatchRepo interface {
 	CloseIfFullyUsed(ctx context.Context, accountID string, batch BaseBatch, producedUnit LightUnit, productionStepID string) *apierror.APIError
 	Delete(ctx context.Context, accountID, batchID string) (*BaseBatch, *apierror.APIError)
 	DeleteMany(ctx context.Context, accountID string, batchIDs []string) *apierror.APIError
+	// CountDownstreamBatches reports how many batches were fed by this one. A batch something downstream still feeds on cannot be undone.
+	CountDownstreamBatches(ctx context.Context, batchID string) (int64, *apierror.APIError)
+	// FindInputBatchIDs returns the batches that fed the given one.
+	FindInputBatchIDs(ctx context.Context, batchID string) ([]string, *apierror.APIError)
+	// FindLineageShortfall walks up a batch's lineage for the production run it belongs to and the seconds and waste accumulated along the way.
+	FindLineageShortfall(ctx context.Context, batchID string) (*LineageShortfall, *apierror.APIError)
+	// Unscan returns a batch to the state it was in before it was scanned, leaving the row in place so the production run that created it still holds that unit of work.
+	Unscan(ctx context.Context, accountID, batchID string) (*BaseBatch, *apierror.APIError)
+	// Reopen clears a batch's closed_at.
+	Reopen(ctx context.Context, accountID, batchID string) *apierror.APIError
+	// ReopenIfNotFullyUsed reopens a batch that is no longer fully consumed — the mirror of CloseIfFullyUsed, run after a downstream batch is deleted and the quantity it was holding comes back.
+	ReopenIfNotFullyUsed(ctx context.Context, accountID string, batch BaseBatch, producedUnit LightUnit, productionStepID string) *apierror.APIError
 }
 
 // ProductionStepQueryRepo provides read-only methods the batch service needs from production steps.
@@ -513,6 +525,8 @@ type ScanningStationQueryRepo interface {
 type ProductionRunQueryRepo interface {
 	Start(ctx context.Context, accountID, id string) *apierror.APIError
 	CloseIfAllBatchesScannedOrDeleted(ctx context.Context, accountID, id string) *apierror.APIError
+	// Reopen undoes a completion after one of the run's batches goes back to unscanned, clearing started_at as well when nothing in the run is scanned any more.
+	Reopen(ctx context.Context, accountID, id string) *apierror.APIError
 	Create(ctx context.Context, id, responsibleUserID, number, accountID string) *apierror.APIError
 	GetNextNumber(ctx context.Context, accountID string) (string, *apierror.APIError)
 }
@@ -656,6 +670,10 @@ type InventoryMutationRepo interface {
 	CreateQuantityForInventory(ctx context.Context, quantityID, value, unitID string) *apierror.APIError
 	// CreateRateForInventory creates a rate record for use in inventory operations.
 	CreateRateForInventory(ctx context.Context, rateID, value, numeratorUnitID, denominatorUnitID string) *apierror.APIError
+	// ReverseInventoryForBatch undoes every inventory movement a scan recorded against a batch and returns the corrections it made, so the caller can write the audit trail and re-run allocation. Refuses when the batch's output has already been drawn on, since reversing it would drive inventory negative.
+	ReverseInventoryForBatch(ctx context.Context, params ReverseInventoryForBatchParams) ([]InventoryReversalDelta, *apierror.APIError)
+	// CountAllocatedReceiptsForBatch reports how many of a batch's produced receipts have already been drawn against. Used as a pre-flight guard before a batch is deleted.
+	CountAllocatedReceiptsForBatch(ctx context.Context, accountID, batchID string) (int64, *apierror.APIError)
 }
 
 // OrderQueryRepo provides read-only queries for orders needed by the batch/production system.

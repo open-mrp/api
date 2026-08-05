@@ -321,12 +321,23 @@ func (q *Queries) InsertInventoryIssueForReservation(ctx context.Context, arg In
 
 const updateInventoryIssueStatusToOpen = `-- name: UpdateInventoryIssueStatusToOpen :exec
 UPDATE inventory_issue
-SET status_code = 'open', issued_at = NOW(3), updated_at = NOW(3)
+SET status_code = 'open',
+    issued_at = NOW(3),
+    batch_id = COALESCE(?, batch_id),
+    updated_at = NOW(3)
 WHERE id = ?
 `
 
-func (q *Queries) UpdateInventoryIssueStatusToOpen(ctx context.Context, id string) error {
-	_, err := q.db.ExecContext(ctx, updateInventoryIssueStatusToOpen, id)
+type UpdateInventoryIssueStatusToOpenParams struct {
+	BatchID sql.NullString
+	ID      string
+}
+
+// UpdateInventoryIssueStatusToOpen consumes a whole reservation in place. The batch that consumed it
+// is stamped on the row so deleting that batch can find the reservation and hand it back; COALESCE
+// keeps whatever tag the row already carried when no batch is supplied.
+func (q *Queries) UpdateInventoryIssueStatusToOpen(ctx context.Context, arg UpdateInventoryIssueStatusToOpenParams) error {
+	_, err := q.db.ExecContext(ctx, updateInventoryIssueStatusToOpen, arg.BatchID, arg.ID)
 	return err
 }
 

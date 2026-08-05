@@ -5527,6 +5527,21 @@ func (mr *MockBatchRepoMockRecorder) ConnectScanningStation(ctx, accountID, batc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ConnectScanningStation", reflect.TypeOf((*MockBatchRepo)(nil).ConnectScanningStation), ctx, accountID, batchID, scanningStationID)
 }
 
+// CountDownstreamBatches mocks base method.
+func (m *MockBatchRepo) CountDownstreamBatches(ctx context.Context, batchID string) (int64, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CountDownstreamBatches", ctx, batchID)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CountDownstreamBatches indicates an expected call of CountDownstreamBatches.
+func (mr *MockBatchRepoMockRecorder) CountDownstreamBatches(ctx, batchID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountDownstreamBatches", reflect.TypeOf((*MockBatchRepo)(nil).CountDownstreamBatches), ctx, batchID)
+}
+
 // Create mocks base method.
 func (m *MockBatchRepo) Create(ctx context.Context, id string, params domain.CreateBatchParams) (*domain.BaseBatch, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -5646,6 +5661,36 @@ func (mr *MockBatchRepoMockRecorder) FindFurthestRightBatchInFlow(ctx, accountID
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindFurthestRightBatchInFlow", reflect.TypeOf((*MockBatchRepo)(nil).FindFurthestRightBatchInFlow), ctx, accountID, batchID)
 }
 
+// FindInputBatchIDs mocks base method.
+func (m *MockBatchRepo) FindInputBatchIDs(ctx context.Context, batchID string) ([]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindInputBatchIDs", ctx, batchID)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// FindInputBatchIDs indicates an expected call of FindInputBatchIDs.
+func (mr *MockBatchRepoMockRecorder) FindInputBatchIDs(ctx, batchID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindInputBatchIDs", reflect.TypeOf((*MockBatchRepo)(nil).FindInputBatchIDs), ctx, batchID)
+}
+
+// FindLineageShortfall mocks base method.
+func (m *MockBatchRepo) FindLineageShortfall(ctx context.Context, batchID string) (*domain.LineageShortfall, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindLineageShortfall", ctx, batchID)
+	ret0, _ := ret[0].(*domain.LineageShortfall)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// FindLineageShortfall indicates an expected call of FindLineageShortfall.
+func (mr *MockBatchRepoMockRecorder) FindLineageShortfall(ctx, batchID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindLineageShortfall", reflect.TypeOf((*MockBatchRepo)(nil).FindLineageShortfall), ctx, batchID)
+}
+
 // FindNextAvailableBatchInFlow mocks base method.
 func (m *MockBatchRepo) FindNextAvailableBatchInFlow(ctx context.Context, accountID, batchID, productionStepID string) (*domain.BaseBatch, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -5718,6 +5763,49 @@ func (m *MockBatchRepo) MarkAsScanned(ctx context.Context, accountID, batchID st
 func (mr *MockBatchRepoMockRecorder) MarkAsScanned(ctx, accountID, batchID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkAsScanned", reflect.TypeOf((*MockBatchRepo)(nil).MarkAsScanned), ctx, accountID, batchID)
+}
+
+// Reopen mocks base method.
+func (m *MockBatchRepo) Reopen(ctx context.Context, accountID, batchID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Reopen", ctx, accountID, batchID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Reopen indicates an expected call of Reopen.
+func (mr *MockBatchRepoMockRecorder) Reopen(ctx, accountID, batchID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Reopen", reflect.TypeOf((*MockBatchRepo)(nil).Reopen), ctx, accountID, batchID)
+}
+
+// ReopenIfNotFullyUsed mocks base method.
+func (m *MockBatchRepo) ReopenIfNotFullyUsed(ctx context.Context, accountID string, batch domain.BaseBatch, producedUnit domain.LightUnit, productionStepID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReopenIfNotFullyUsed", ctx, accountID, batch, producedUnit, productionStepID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// ReopenIfNotFullyUsed indicates an expected call of ReopenIfNotFullyUsed.
+func (mr *MockBatchRepoMockRecorder) ReopenIfNotFullyUsed(ctx, accountID, batch, producedUnit, productionStepID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReopenIfNotFullyUsed", reflect.TypeOf((*MockBatchRepo)(nil).ReopenIfNotFullyUsed), ctx, accountID, batch, producedUnit, productionStepID)
+}
+
+// Unscan mocks base method.
+func (m *MockBatchRepo) Unscan(ctx context.Context, accountID, batchID string) (*domain.BaseBatch, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Unscan", ctx, accountID, batchID)
+	ret0, _ := ret[0].(*domain.BaseBatch)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Unscan indicates an expected call of Unscan.
+func (mr *MockBatchRepoMockRecorder) Unscan(ctx, accountID, batchID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unscan", reflect.TypeOf((*MockBatchRepo)(nil).Unscan), ctx, accountID, batchID)
 }
 
 // MockProductionStepQueryRepo is a mock of ProductionStepQueryRepo interface.
@@ -6013,6 +6101,20 @@ func (m *MockProductionRunQueryRepo) GetNextNumber(ctx context.Context, accountI
 func (mr *MockProductionRunQueryRepoMockRecorder) GetNextNumber(ctx, accountID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNextNumber", reflect.TypeOf((*MockProductionRunQueryRepo)(nil).GetNextNumber), ctx, accountID)
+}
+
+// Reopen mocks base method.
+func (m *MockProductionRunQueryRepo) Reopen(ctx context.Context, accountID, id string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Reopen", ctx, accountID, id)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Reopen indicates an expected call of Reopen.
+func (mr *MockProductionRunQueryRepoMockRecorder) Reopen(ctx, accountID, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Reopen", reflect.TypeOf((*MockProductionRunQueryRepo)(nil).Reopen), ctx, accountID, id)
 }
 
 // Start mocks base method.
@@ -7495,6 +7597,21 @@ func (m *MockInventoryMutationRepo) EXPECT() *MockInventoryMutationRepoMockRecor
 	return m.recorder
 }
 
+// CountAllocatedReceiptsForBatch mocks base method.
+func (m *MockInventoryMutationRepo) CountAllocatedReceiptsForBatch(ctx context.Context, accountID, batchID string) (int64, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CountAllocatedReceiptsForBatch", ctx, accountID, batchID)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CountAllocatedReceiptsForBatch indicates an expected call of CountAllocatedReceiptsForBatch.
+func (mr *MockInventoryMutationRepoMockRecorder) CountAllocatedReceiptsForBatch(ctx, accountID, batchID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountAllocatedReceiptsForBatch", reflect.TypeOf((*MockInventoryMutationRepo)(nil).CountAllocatedReceiptsForBatch), ctx, accountID, batchID)
+}
+
 // CreateInventoryChangeLog mocks base method.
 func (m *MockInventoryMutationRepo) CreateInventoryChangeLog(ctx context.Context, params domain.CreateInventoryChangeLogParams) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -7577,6 +7694,21 @@ func (m *MockInventoryMutationRepo) CreateRateForInventory(ctx context.Context, 
 func (mr *MockInventoryMutationRepoMockRecorder) CreateRateForInventory(ctx, rateID, value, numeratorUnitID, denominatorUnitID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateRateForInventory", reflect.TypeOf((*MockInventoryMutationRepo)(nil).CreateRateForInventory), ctx, rateID, value, numeratorUnitID, denominatorUnitID)
+}
+
+// ReverseInventoryForBatch mocks base method.
+func (m *MockInventoryMutationRepo) ReverseInventoryForBatch(ctx context.Context, params domain.ReverseInventoryForBatchParams) ([]domain.InventoryReversalDelta, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReverseInventoryForBatch", ctx, params)
+	ret0, _ := ret[0].([]domain.InventoryReversalDelta)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ReverseInventoryForBatch indicates an expected call of ReverseInventoryForBatch.
+func (mr *MockInventoryMutationRepoMockRecorder) ReverseInventoryForBatch(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReverseInventoryForBatch", reflect.TypeOf((*MockInventoryMutationRepo)(nil).ReverseInventoryForBatch), ctx, params)
 }
 
 // UpdateInventory mocks base method.

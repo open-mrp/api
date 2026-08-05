@@ -68,6 +68,9 @@ const (
 	// CoreCmdExecuteProductionStep is a command to execute production step side-effects (inventory updates, reservation management) after a batch mutation such as initialize, move, merge, or split.
 	CoreCmdExecuteProductionStep AmqpRoutingKey = "core.cmd.execute_production_step"
 
+	// CoreCmdUndoBatchScan is a command to reverse the inventory a scan recorded against a batch that has just been deleted: the receipts it produced, the issues it consumed, and the reservations it drew down. The delete itself is synchronous; this unwinds the ledger behind it.
+	CoreCmdUndoBatchScan AmqpRoutingKey = "core.cmd.undo_batch_scan"
+
 	// CoreCmdHubspotSyncPreview is a command to run the read-only matching pass of a HubSpot backfill job out-of-band so the triggering request returns immediately.
 	CoreCmdHubspotSyncPreview AmqpRoutingKey = "core.cmd.hubspot_sync_preview"
 

@@ -45,9 +45,15 @@ AND ii.status_code = 'reserved'
 GROUP BY ii.id, q.id, q.value, q.unit_id, ii.storage_location_id, ii.lot_id, ii.batch_id
 ORDER BY ii.created_at ASC;
 
+-- UpdateInventoryIssueStatusToOpen consumes a whole reservation in place. The batch that consumed it
+-- is stamped on the row so deleting that batch can find the reservation and hand it back; COALESCE
+-- keeps whatever tag the row already carried when no batch is supplied.
 -- name: UpdateInventoryIssueStatusToOpen :exec
 UPDATE inventory_issue
-SET status_code = 'open', issued_at = NOW(3), updated_at = NOW(3)
+SET status_code = 'open',
+    issued_at = NOW(3),
+    batch_id = COALESCE(sqlc.narg('batch_id'), batch_id),
+    updated_at = NOW(3)
 WHERE id = sqlc.arg('id');
 
 -- name: InsertInventoryIssueForReservation :exec

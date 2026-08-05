@@ -224,24 +224,24 @@ func (c *ExecuteProductionStepConsumer) handleProducedBatchShortfall(
 		return nil
 	}
 
-	// BFS up the batch lineage to find productionRunID and accumulate seconds/waste.
-	productionRunID, secondsSum, wasteSum, err := c.bfsForProductionRunAndShortfall(ctx, *evt.ProducedBatchID)
-	if err != nil {
-		return err
+	// Walk the batch lineage for the production run and the scrap accumulated along it.
+	lineage, apiErr := c.repos.NewBatchRepo().FindLineageShortfall(ctx, *evt.ProducedBatchID)
+	if apiErr != nil {
+		return apiErr
 	}
 
-	if productionRunID == "" {
+	if lineage.ProductionRunID == "" {
 		return nil
 	}
 
-	shortfall := secondsSum.Add(wasteSum)
+	shortfall := lineage.Total()
 	if shortfall.LessThanOrEqual(decimal.Zero) {
 		return nil
 	}
 
 	// Find the order for this production run.
 	orderQueryRepo := c.repos.NewOrderQueryRepo()
-	orderID, apiErr := orderQueryRepo.FindIDByProductionRun(ctx, accountID, productionRunID)
+	orderID, apiErr := orderQueryRepo.FindIDByProductionRun(ctx, accountID, lineage.ProductionRunID)
 	if apiErr != nil {
 		return apiErr
 	}
@@ -341,11 +341,12 @@ func (c *ExecuteProductionStepConsumer) handleConsumptionWithOrder(
 	reservationRepo := c.repos.NewInventoryReservationRepo()
 	absMeasure := consumedMeasure.Abs()
 	result, apiErr := reservationRepo.AllocateReservationsForConsumption(ctx, domain.ConsumptionAllocationParams{
-		OrderID:   *orderID,
-		AccountID: accountID,
-		ItemID:    consumption.ConsumedItem.ID,
-		Measure:   absMeasure,
-		UnitID:    consumedUnitID,
+		OrderID:         *orderID,
+		AccountID:       accountID,
+		ItemID:          consumption.ConsumedItem.ID,
+		Measure:         absMeasure,
+		UnitID:          consumedUnitID,
+		ProducedBatchID: *evt.ProducedBatchID,
 	})
 	if apiErr != nil {
 		return apiErr
@@ -410,61 +411,4 @@ func (c *ExecuteProductionStepConsumer) bfsForProductionRunID(ctx context.Contex
 	}
 
 	return "", nil
-}
-
-// bfsForProductionRunAndShortfall performs BFS up the batch lineage to find productionRunID and accumulate seconds/waste quantities.
-func (c *ExecuteProductionStepConsumer) bfsForProductionRunAndShortfall(
-	ctx context.Context, startBatchID string,
-) (productionRunID string, secondsSum, wasteSum decimal.Decimal, err error) {
-	secondsSum = decimal.Zero
-	wasteSum = decimal.Zero
-	visited := make(map[string]bool)
-	queue := []string{startBatchID}
-
-	for len(queue) > 0 {
-		currentBatch := queue
-		queue = nil
-
-		var toFetch []string
-		for _, id := range currentBatch {
-			if !visited[id] {
-				visited[id] = true
-				toFetch = append(toFetch, id)
-			}
-		}
-		if len(toFetch) == 0 {
-			break
-		}
-
-		rows, queryErr := c.queries.FindBatchProductionRunIDAncestry(ctx, toFetch)
-		if queryErr != nil {
-			err = queryErr
-			return
-		}
-
-		for _, row := range rows {
-			if productionRunID == "" && row.ProductionRunID.Valid && row.ProductionRunID.String != "" {
-				productionRunID = row.ProductionRunID.String
-			}
-
-			// Fetch seconds/waste for this batch.
-			swRow, swErr := c.queries.GetBatchSecondsAndWaste(ctx, row.ID)
-			if swErr == nil {
-				if swRow.SecondsValue.Valid {
-					val, _ := decimal.NewFromString(swRow.SecondsValue.String)
-					secondsSum = secondsSum.Add(val)
-				}
-				if swRow.WasteValue.Valid {
-					val, _ := decimal.NewFromString(swRow.WasteValue.String)
-					wasteSum = wasteSum.Add(val)
-				}
-			}
-
-			if row.ParentID.Valid && row.ParentID.String != "" && !visited[row.ParentID.String] {
-				queue = append(queue, row.ParentID.String)
-			}
-		}
-	}
-
-	return
 }

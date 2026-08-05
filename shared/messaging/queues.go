@@ -35,6 +35,9 @@ const (
 	// CoreCmdExecuteProductionStepQueue carries execute-production-step commands to the core-service. Messages on this queue trigger inventory updates and reservation management after batch mutations (initialize, move, merge, split).
 	CoreCmdExecuteProductionStepQueue = "core_cmd_execute_production_step"
 
+	// CoreCmdUndoBatchScanQueue carries undo-batch-scan commands to the core-service. Messages on this queue reverse the inventory a scan recorded against a deleted batch: receipts produced, issues consumed, and reservations drawn down.
+	CoreCmdUndoBatchScanQueue = "core_cmd_undo_batch_scan"
+
 	// CoreCmdGenerateProductionScheduleQueue carries a request to solve and persist one production schedule version. The cadence tick only enqueues onto this queue: a solve takes minutes on a real tenant, and doing it inside the scheduler lease would block every other account behind whichever one is currently solving.
 	CoreCmdGenerateProductionScheduleQueue = "core_cmd_generate_production_schedule"
 

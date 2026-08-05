@@ -1509,7 +1509,7 @@ func (suite *SalesOrderSvcTestSuite) TestCheckoutSalesOrder_Success() {
 			{ProductSKU: "DISCOUNT", QuantityValue: "1", UnitPriceValue: "-10.00"},
 		}, nil).Times(1)
 
-	// The buyer must already be a Stripe customer; the session bills to it (not a bare email).
+	// The buyer is already a Stripe customer; the session bills to it (not a bare email).
 	stripeCustomerID := "cus_123"
 	stripeEmail := "buyer@example.com"
 	suite.customerRepo.EXPECT().GetStripeCustomerID(gomock.Any(), "ac_test", "ac_buyer").
@@ -1562,6 +1562,142 @@ func (suite *SalesOrderSvcTestSuite) TestCheckoutSalesOrder_Success() {
 	result, apiErr := suite.svc.CheckoutSalesOrder(ctx, domain.CheckoutSalesOrderParams{
 		SalesOrderID: "or_1",
 		Email:        "buyer@example.com",
+	})
+	suite.Nil(apiErr)
+	suite.Equal("https://checkout.stripe.com/test", result.CheckoutURL)
+}
+
+// A buyer with no Stripe customer yet must have one created and linked during
+// checkout rather than the request failing: customer create/update never touches
+// Stripe, so every customer predating the account's Stripe integration would
+// otherwise be permanently uncheckoutable.
+func (suite *SalesOrderSvcTestSuite) TestCheckoutSalesOrder_CreatesStripeCustomerWhenMissing() {
+	ctx := salesOrderIdempotencyCtx(salesOrderInternalCtx("ac_test"), "/core.CoreService/CheckoutSalesOrder")
+
+	suite.expectIdempotencyStarted()
+
+	credsJSON, _ := json.Marshal(domain.StripeCredentials{PrivateKey: "sk_test_xxx"})
+	encrypted, err := crypto.EncryptAESGCM(credsJSON, suite.encryptionKey, []byte("ac_test"), "k1")
+	suite.Require().NoError(err)
+
+	suite.accountIntegrationRepo.EXPECT().
+		GetEncryptedCredentials(gomock.Any(), "ac_test", constants.IntegrationCodeStripe).
+		Return(encrypted, true, nil).Times(1)
+	suite.orderRepo.EXPECT().CheckPaymentStatus(gomock.Any(), "or_1").Return(false, nil).Times(1)
+	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
+		Return(&domain.SalesOrder{ID: "or_1", Number: "1001", BuyerAccountID: "ac_buyer"}, nil).Times(1)
+	suite.orderRepo.EXPECT().GetLines(gomock.Any(), "or_1").
+		Return([]*domain.SalesOrderLine{
+			{ProductSKU: "SKU-1", QuantityValue: "1", UnitPriceValue: "40.00"},
+		}, nil).Times(1)
+
+	suite.customerRepo.EXPECT().GetStripeCustomerID(gomock.Any(), "ac_test", "ac_buyer").
+		Return(nil, nil, nil).Times(1)
+
+	// The Stripe customer is created against the email stored on the customer
+	// record, not the (possibly one-off) address the link is being sent to.
+	storedEmail := "billing@buyer.example.com"
+	suite.customerRepo.EXPECT().GetCustomerEmail(gomock.Any(), "ac_buyer").
+		Return(&storedEmail, nil).Times(1)
+	suite.customerRepo.EXPECT().Get(gomock.Any(), "ac_test", "ac_buyer", nil).
+		Return(&domain.Customer{ID: "ac_buyer", Name: "Buyer Co", Number: "301064"}, nil).Times(1)
+
+	suite.checkoutFactory.EXPECT().Build("sk_test_xxx").Return(suite.checkoutClient).Times(1)
+	suite.checkoutClient.EXPECT().
+		CreateStripeCustomer(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, params domain.CreateStripeCustomerParams) (*domain.StripeCustomer, *apierror.APIError) {
+			suite.Equal(storedEmail, params.Email)
+			suite.Equal("Buyer Co", params.Name)
+			suite.Equal("301064", params.Number)
+			suite.Equal("ac_buyer", params.CustomerID)
+			return &domain.StripeCustomer{ID: "cus_new"}, nil
+		}).Times(1)
+
+	// The new Stripe customer must be persisted, or the next checkout creates a duplicate.
+	suite.customerRepo.EXPECT().
+		SetStripeCustomerID(gomock.Any(), "ac_test", "ac_buyer", "cus_new", storedEmail).
+		Return(nil).Times(1)
+
+	portalSlug := "acme"
+	suite.accountRepo.EXPECT().GetPortalSlug(gomock.Any(), "ac_test").Return(&portalSlug, nil).Times(1)
+
+	suite.checkoutClient.EXPECT().
+		CreateOneTimeCheckoutSession(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, params domain.CreateCheckoutSessionParams) (*domain.StripeCheckoutSession, *apierror.APIError) {
+			// The session bills to the customer just created.
+			suite.Equal("cus_new", params.StripeCustomerID)
+			suite.Empty(params.CustomerEmail)
+			return &domain.StripeCheckoutSession{URL: "https://checkout.stripe.com/test"}, nil
+		}).Times(1)
+
+	// The link still goes to the address supplied on the request.
+	suite.notifier.EXPECT().
+		PublishSendEmail(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, data messaging.EmailSendData) *apierror.APIError {
+			suite.Equal([]string{"ap@buyer.example.com"}, data.To)
+			return nil
+		}).Times(1)
+	suite.expectCacheSuccess()
+
+	result, apiErr := suite.svc.CheckoutSalesOrder(ctx, domain.CheckoutSalesOrderParams{
+		SalesOrderID: "or_1",
+		Email:        "ap@buyer.example.com",
+	})
+	suite.Nil(apiErr)
+	suite.Equal("https://checkout.stripe.com/test", result.CheckoutURL)
+}
+
+// With no email on the customer record, the request's address is what the Stripe
+// customer is created with — checkout must still succeed.
+func (suite *SalesOrderSvcTestSuite) TestCheckoutSalesOrder_CreatesStripeCustomerFromRequestEmail() {
+	ctx := salesOrderIdempotencyCtx(salesOrderInternalCtx("ac_test"), "/core.CoreService/CheckoutSalesOrder")
+
+	suite.expectIdempotencyStarted()
+
+	credsJSON, _ := json.Marshal(domain.StripeCredentials{PrivateKey: "sk_test_xxx"})
+	encrypted, err := crypto.EncryptAESGCM(credsJSON, suite.encryptionKey, []byte("ac_test"), "k1")
+	suite.Require().NoError(err)
+
+	suite.accountIntegrationRepo.EXPECT().
+		GetEncryptedCredentials(gomock.Any(), "ac_test", constants.IntegrationCodeStripe).
+		Return(encrypted, true, nil).Times(1)
+	suite.orderRepo.EXPECT().CheckPaymentStatus(gomock.Any(), "or_1").Return(false, nil).Times(1)
+	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
+		Return(&domain.SalesOrder{ID: "or_1", Number: "1001", BuyerAccountID: "ac_buyer"}, nil).Times(1)
+	suite.orderRepo.EXPECT().GetLines(gomock.Any(), "or_1").
+		Return([]*domain.SalesOrderLine{
+			{ProductSKU: "SKU-1", QuantityValue: "1", UnitPriceValue: "40.00"},
+		}, nil).Times(1)
+
+	suite.customerRepo.EXPECT().GetStripeCustomerID(gomock.Any(), "ac_test", "ac_buyer").
+		Return(nil, nil, nil).Times(1)
+	suite.customerRepo.EXPECT().GetCustomerEmail(gomock.Any(), "ac_buyer").
+		Return(nil, nil).Times(1)
+	suite.customerRepo.EXPECT().Get(gomock.Any(), "ac_test", "ac_buyer", nil).
+		Return(&domain.Customer{ID: "ac_buyer", Name: "Buyer Co", Number: "301064"}, nil).Times(1)
+
+	suite.checkoutFactory.EXPECT().Build("sk_test_xxx").Return(suite.checkoutClient).Times(1)
+	suite.checkoutClient.EXPECT().
+		CreateStripeCustomer(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, params domain.CreateStripeCustomerParams) (*domain.StripeCustomer, *apierror.APIError) {
+			suite.Equal("ap@buyer.example.com", params.Email)
+			return &domain.StripeCustomer{ID: "cus_new"}, nil
+		}).Times(1)
+	suite.customerRepo.EXPECT().
+		SetStripeCustomerID(gomock.Any(), "ac_test", "ac_buyer", "cus_new", "ap@buyer.example.com").
+		Return(nil).Times(1)
+
+	portalSlug := "acme"
+	suite.accountRepo.EXPECT().GetPortalSlug(gomock.Any(), "ac_test").Return(&portalSlug, nil).Times(1)
+	suite.checkoutClient.EXPECT().
+		CreateOneTimeCheckoutSession(gomock.Any(), gomock.Any()).
+		Return(&domain.StripeCheckoutSession{URL: "https://checkout.stripe.com/test"}, nil).Times(1)
+	suite.notifier.EXPECT().PublishSendEmail(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+	suite.expectCacheSuccess()
+
+	result, apiErr := suite.svc.CheckoutSalesOrder(ctx, domain.CheckoutSalesOrderParams{
+		SalesOrderID: "or_1",
+		Email:        "ap@buyer.example.com",
 	})
 	suite.Nil(apiErr)
 	suite.Equal("https://checkout.stripe.com/test", result.CheckoutURL)

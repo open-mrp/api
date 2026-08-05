@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"slices"
 	"strconv"
@@ -11,9 +12,11 @@ import (
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/audit"
 	"github.com/augno/api/shared/constants"
+	"github.com/augno/api/shared/contracts"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/id"
 	"github.com/augno/api/shared/idempotency"
+	"github.com/augno/api/shared/messaging"
 	"github.com/augno/api/shared/tracing"
 )
 
@@ -337,6 +340,14 @@ func (s *customerSvcImpl) CreateCustomer(ctx context.Context, params domain.Crea
 				return apiErr
 			}
 
+			// Only worth a message once there is an email to key the Stripe customer on;
+			// the first update that adds one enqueues the sync instead.
+			if result.Email != nil && *result.Email != "" {
+				if apiErr := enqueueStripeCustomerSync(txCtx, txSvc.repos, params.OwnerAccountID, result.ID); apiErr != nil {
+					return apiErr
+				}
+			}
+
 			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
 		})
 
@@ -538,6 +549,14 @@ func (s *customerSvcImpl) UpdateCustomer(ctx context.Context, params domain.Upda
 				Changes:      changes,
 			}); apiErr != nil {
 				return apiErr
+			}
+
+			// Only the fields Stripe holds are worth a round trip; the rest of a customer
+			// (terms, carriers, price groups) means nothing to it.
+			if stripeCustomerFieldsChanged(old, result) {
+				if apiErr := enqueueStripeCustomerSync(txCtx, txSvc.repos, params.OwnerAccountID, result.ID); apiErr != nil {
+					return apiErr
+				}
 			}
 
 			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
@@ -1335,4 +1354,47 @@ func customerAuditIncludes(userIncludes []string) []string {
 		}
 	}
 	return merged
+}
+
+// stripeCustomerFieldsChanged reports whether an update touched anything Stripe mirrors: the customer's email, name, or number.
+func stripeCustomerFieldsChanged(old, updated *domain.Customer) bool {
+	if old == nil || updated == nil {
+		return updated != nil
+	}
+	return !optStrEqual(old.Email, updated.Email) ||
+		old.Name != updated.Name ||
+		old.Number != updated.Number
+}
+
+// enqueueStripeCustomerSync writes the outbox command that mirrors a customer onto the account's connected Stripe integration.
+//
+// It is published inside the caller's transaction so the command commits with the customer row: a Stripe write that fails, or an account with no Stripe integration at all, must never fail or roll back the customer mutation itself. The consumer no-ops when the integration is absent, so this is published unconditionally rather than probing for one here.
+func enqueueStripeCustomerSync(ctx context.Context, repos domain.RepoFactory, ownerAccountID, customerAccountID string) *apierror.APIError {
+	payload, err := json.Marshal(domain.SyncStripeCustomerEvent{
+		OwnerAccountID:    ownerAccountID,
+		CustomerAccountID: customerAccountID,
+	})
+	if err != nil {
+		return apierror.NewInternalError(err, "Failed to marshal Stripe customer sync event.")
+	}
+
+	msg := contracts.AmqpMessage{Data: payload}
+	if identity, ok := appctx.GetIdentityFromContext(ctx); ok {
+		msg.Identity = identity
+	}
+	if requestID, ok := appctx.GetRequestID(ctx); ok {
+		msg.RequestID = requestID
+	}
+
+	if _, err := repos.NewOutboxRepo().Create(ctx, messaging.OutboxMessageInput{
+		ServiceName: "core-service",
+		MessageType: string(contracts.CoreCmdSyncStripeCustomer),
+		Destination: messaging.ApplicationExchange,
+		RoutingKey:  string(contracts.CoreCmdSyncStripeCustomer),
+		Payload:     msg,
+	}); err != nil {
+		return apierror.NewInternalError(err, "Failed to create outbox message for Stripe customer sync.")
+	}
+
+	return nil
 }

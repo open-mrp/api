@@ -23,6 +23,7 @@ import (
 	"github.com/augno/api/services/core-service/internal/infrastructure/vercel"
 	"github.com/augno/api/services/core-service/internal/mediator"
 	"github.com/augno/api/services/core-service/internal/service"
+	"github.com/augno/api/services/core-service/internal/stripesync"
 	s3client "github.com/augno/api/shared/cloud/s3"
 	"github.com/augno/api/shared/contracts"
 	"github.com/augno/api/shared/db"
@@ -272,6 +273,7 @@ func Run(
 	})
 
 	hubspotSync := hubspotsync.NewService(repoFactory, hubspotFactory, integrationEncryptionKey, hubspotsync.Config{})
+	stripeSync := stripesync.NewService(repoFactory, stripeCheckoutFactory, integrationEncryptionKey)
 	hubspotSyncSvc := service.NewHubspotSyncSvc(&service.HubspotSyncSvcConfig{
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
@@ -693,6 +695,11 @@ func Run(
 
 	hubspotSyncConsumer := event.NewHubspotSyncConsumer(rabbitmq, inboxRepo, hubspotSync)
 	if err := hubspotSyncConsumer.Listen(ctx); err != nil {
+		return err
+	}
+
+	syncStripeCustomerConsumer := event.NewSyncStripeCustomerConsumer(rabbitmq, inboxRepo, stripeSync)
+	if err := syncStripeCustomerConsumer.Listen(ctx); err != nil {
 		return err
 	}
 

@@ -38,6 +38,9 @@ const (
 	// CoreCmdUndoBatchScanQueue carries undo-batch-scan commands to the core-service. Messages on this queue reverse the inventory a scan recorded against a deleted batch: receipts produced, issues consumed, and reservations drawn down.
 	CoreCmdUndoBatchScanQueue = "core_cmd_undo_batch_scan"
 
+	// CoreCmdSyncStripeCustomerQueue carries sync-stripe-customer commands to the core-service, which creates or updates the customer's counterpart in the account's connected Stripe integration. Messages contain a SyncStripeCustomerEvent payload.
+	CoreCmdSyncStripeCustomerQueue = "core_cmd_sync_stripe_customer"
+
 	// CoreCmdGenerateProductionScheduleQueue carries a request to solve and persist one production schedule version. The cadence tick only enqueues onto this queue: a solve takes minutes on a real tenant, and doing it inside the scheduler lease would block every other account behind whichever one is currently solving.
 	CoreCmdGenerateProductionScheduleQueue = "core_cmd_generate_production_schedule"
 

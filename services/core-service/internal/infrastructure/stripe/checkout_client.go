@@ -188,6 +188,35 @@ func (c *checkoutClientImpl) CreateStripeCustomer(ctx context.Context, params do
 	}, nil
 }
 
+func (c *checkoutClientImpl) UpdateStripeCustomer(ctx context.Context, params domain.UpdateStripeCustomerParams) *apierror.APIError {
+	_, span := checkoutClientTracer.Start(ctx, "stripe_checkout_client.update_customer")
+	defer span.End()
+
+	custParams := &gostripe.CustomerParams{}
+	if params.Email != nil {
+		custParams.Email = gostripe.String(*params.Email)
+	}
+	if params.Name != nil {
+		custParams.Name = gostripe.String(*params.Name)
+	}
+	// Metadata is merged by Stripe, so sending only the number leaves customerID (written at creation) intact.
+	if params.Number != nil {
+		custParams.Metadata = map[string]string{"number": *params.Number}
+	}
+
+	savedKey := gostripe.Key
+	gostripe.Key = c.apiKey
+	_, err := customer.Update(params.StripeCustomerID, custParams)
+	gostripe.Key = savedKey
+
+	if err != nil {
+		span.RecordError(err)
+		return apierror.NewInternalError(err, fmt.Sprintf("Failed to update Stripe customer: %v", err))
+	}
+
+	return nil
+}
+
 func (c *checkoutClientImpl) ConstructWebhookEvent(payload []byte, signature, webhookSecret string) (*domain.StripeWebhookEvent, *domain.StripePaymentIntent, *apierror.APIError) {
 	// Vendors pin their own Stripe API version, which will rarely match the version this SDK expects, so the default version-equality check would reject nearly every per-account event. Only version-stable fields (id, metadata, amount, payment_method_types) are read from the payload, which makes ignoring the mismatch safe.
 	event, err := gostripe.ConstructEvent(payload, signature, webhookSecret, gostripe.WithIgnoreAPIVersionMismatch())

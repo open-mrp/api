@@ -670,6 +670,15 @@ func (r *rabbitMQ) setupExchangesAndQueues() error {
 		return err
 	}
 
+	// Core sync-stripe-customer command queue (handled by core-service)
+	if err := r.declareAndBindQueue(
+		CoreCmdSyncStripeCustomerQueue,
+		[]string{string(contracts.CoreCmdSyncStripeCustomer)},
+		ApplicationExchange,
+	); err != nil {
+		return err
+	}
+
 	// Production-schedule generation command queue (handled by core-service). Declared here so the queue exists before anything consumes it: a consumed-but-undeclared queue 404s and wedges every sibling consumer on the channel.
 	if err := r.declareAndBindQueue(
 		CoreCmdGenerateProductionScheduleQueue,

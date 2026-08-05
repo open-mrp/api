@@ -267,3 +267,13 @@ type FrequentlyOrderedProduct struct {
 	UnitAbbreviation *string
 	OrderCount       int32
 }
+
+// SyncStripeCustomerEvent is the outbox command payload for reconciling one customer with the account's connected Stripe integration.
+//
+// It carries identifiers only, never the field values that triggered it: the consumer re-reads the customer at handling time, so a burst of edits collapses into the same final state instead of racing stale snapshots onto Stripe in arbitrary delivery order.
+type SyncStripeCustomerEvent struct {
+	// OwnerAccountID is the merchant account whose Stripe integration is written to.
+	OwnerAccountID string `json:"owner_account_id"`
+	// CustomerAccountID is the counterparty account being synced.
+	CustomerAccountID string `json:"customer_account_id"`
+}

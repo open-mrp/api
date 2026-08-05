@@ -562,6 +562,20 @@ func (mr *MockStripeCheckoutClientMockRecorder) ListPayoutPaymentIntentIDs(ctx, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPayoutPaymentIntentIDs", reflect.TypeOf((*MockStripeCheckoutClient)(nil).ListPayoutPaymentIntentIDs), ctx, payoutID)
 }
 
+// UpdateStripeCustomer mocks base method.
+func (m *MockStripeCheckoutClient) UpdateStripeCustomer(ctx context.Context, params domain.UpdateStripeCustomerParams) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateStripeCustomer", ctx, params)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// UpdateStripeCustomer indicates an expected call of UpdateStripeCustomer.
+func (mr *MockStripeCheckoutClientMockRecorder) UpdateStripeCustomer(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateStripeCustomer", reflect.TypeOf((*MockStripeCheckoutClient)(nil).UpdateStripeCustomer), ctx, params)
+}
+
 // MockStripeCheckoutClientFactory is a mock of StripeCheckoutClientFactory interface.
 type MockStripeCheckoutClientFactory struct {
 	ctrl     *gomock.Controller

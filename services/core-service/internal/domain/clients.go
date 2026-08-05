@@ -126,6 +126,8 @@ type StripeCheckoutClient interface {
 	CreateOneTimeCheckoutSession(ctx context.Context, params CreateCheckoutSessionParams) (*StripeCheckoutSession, *apierror.APIError)
 	CreateEmbeddedCheckoutSession(ctx context.Context, params CreateEmbeddedCheckoutSessionParams) (*StripeEmbeddedCheckoutSession, *apierror.APIError)
 	CreateStripeCustomer(ctx context.Context, params CreateStripeCustomerParams) (*StripeCustomer, *apierror.APIError)
+	// UpdateStripeCustomer pushes changed customer details onto an existing Stripe customer. Nil fields are left untouched.
+	UpdateStripeCustomer(ctx context.Context, params UpdateStripeCustomerParams) *apierror.APIError
 	ConstructWebhookEvent(payload []byte, signature, webhookSecret string) (*StripeWebhookEvent, *StripePaymentIntent, *apierror.APIError)
 	// ListPayoutPaymentIntentIDs resolves the payment intent IDs whose charges fund the given payout, by walking the payout's balance transactions (called on payout.paid to stamp funds_received_at).
 	ListPayoutPaymentIntentIDs(ctx context.Context, payoutID string) ([]string, *apierror.APIError)

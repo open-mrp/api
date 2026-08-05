@@ -2215,17 +2215,57 @@ func (s *salesOrderSvcImpl) CheckoutSalesOrder(ctx context.Context, params domai
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to parse Stripe credentials."))
 		}
 
-		// Resolve the buyer's Stripe customer. Legacy requires the counterparty to
-		// already be a Stripe customer and bills the session to it
-		// (order.svc.ts:298-343 → stripe.ts createOneTimeCheckoutSession), rather than
-		// passing a bare customer_email — so the payment method can be saved onto the
-		// customer and the charge is attributed correctly.
-		stripeCustomerID, _, apiErr := s.repos.NewCustomerRepo().GetStripeCustomerID(ctx, params.AccountID, order.BuyerAccountID)
+		checkoutClient := s.checkoutClientFactory.Build(stripeCreds.PrivateKey)
+
+		// Resolve the buyer's Stripe customer, creating one on demand. The session is
+		// billed to a Stripe customer rather than a bare customer_email
+		// (order.svc.ts:298-343 → stripe.ts createOneTimeCheckoutSession) so the payment
+		// method can be saved onto the customer and the charge is attributed correctly.
+		// Legacy also created the customer during checkout when the counterparty did not
+		// have one yet; no internal flow backfills the link (customer create/update never
+		// touches Stripe), so failing here instead would strand every customer that
+		// predates the account's Stripe integration.
+		customerRepo := s.repos.NewCustomerRepo()
+		stripeCustomerID, _, apiErr := customerRepo.GetStripeCustomerID(ctx, params.AccountID, order.BuyerAccountID)
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 		if stripeCustomerID == nil || *stripeCustomerID == "" {
-			return nil, tracing.Trace(span, apierror.NewValidationError("Customer is not a Stripe customer."))
+			// Prefer the email stored on the customer record: params.Email is only the
+			// address this checkout link is being sent to, which may be a one-off
+			// contact rather than the customer's billing address.
+			storedEmail, apiErr := customerRepo.GetCustomerEmail(ctx, order.BuyerAccountID)
+			if apiErr != nil {
+				return nil, tracing.Trace(span, apiErr)
+			}
+			stripeEmail := params.Email
+			if storedEmail != nil && *storedEmail != "" {
+				stripeEmail = *storedEmail
+			}
+
+			customer, apiErr := customerRepo.Get(ctx, params.AccountID, order.BuyerAccountID, nil)
+			if apiErr != nil {
+				return nil, tracing.Trace(span, apiErr)
+			}
+
+			// Create the Stripe customer (foreign mutation) before the linking write.
+			stripeCust, apiErr := checkoutClient.CreateStripeCustomer(ctx, domain.CreateStripeCustomerParams{
+				Email:      stripeEmail,
+				Name:       customer.Name,
+				Number:     customer.Number,
+				CustomerID: order.BuyerAccountID,
+			})
+			if apiErr != nil {
+				return nil, tracing.Trace(span, apiErr)
+			}
+
+			if apiErr := s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderSvcImpl) *apierror.APIError {
+				return txSvc.repos.NewCustomerRepo().SetStripeCustomerID(txCtx, params.AccountID, order.BuyerAccountID, stripeCust.ID, stripeEmail)
+			}); apiErr != nil {
+				return nil, tracing.Trace(span, apiErr)
+			}
+
+			stripeCustomerID = &stripeCust.ID
 		}
 
 		// Charge a single aggregate line item for the order's net total — the sum of
@@ -2274,7 +2314,6 @@ func (s *salesOrderSvcImpl) CheckoutSalesOrder(ctx context.Context, params domai
 		cancelURL := orderPageURL + "?payment=cancelled"
 
 		// Create Stripe checkout session (foreign mutation)
-		checkoutClient := s.checkoutClientFactory.Build(stripeCreds.PrivateKey)
 		checkoutSession, apiErr := checkoutClient.CreateOneTimeCheckoutSession(ctx, domain.CreateCheckoutSessionParams{
 			StripeCustomerID: *stripeCustomerID,
 			LineItems:        checkoutItems,

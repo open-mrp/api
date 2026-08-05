@@ -28,6 +28,10 @@ func (s *stripeCheckoutClient) CreateStripeCustomer(_ context.Context, _ domain.
 	return &domain.StripeCustomer{ID: "cus_stub"}, nil
 }
 
+func (s *stripeCheckoutClient) UpdateStripeCustomer(_ context.Context, _ domain.UpdateStripeCustomerParams) *apierror.APIError {
+	return nil
+}
+
 func (s *stripeCheckoutClient) ConstructWebhookEvent(_ []byte, _, _ string) (*domain.StripeWebhookEvent, *domain.StripePaymentIntent, *apierror.APIError) {
 	return &domain.StripeWebhookEvent{}, &domain.StripePaymentIntent{}, nil
 }

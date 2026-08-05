@@ -71,6 +71,9 @@ const (
 	// CoreCmdUndoBatchScan is a command to reverse the inventory a scan recorded against a batch that has just been deleted: the receipts it produced, the issues it consumed, and the reservations it drew down. The delete itself is synchronous; this unwinds the ledger behind it.
 	CoreCmdUndoBatchScan AmqpRoutingKey = "core.cmd.undo_batch_scan"
 
+	// CoreCmdSyncStripeCustomer is a command to reconcile a customer with the account's connected Stripe integration: create the Stripe customer on first sync, or push a changed email/name/number onto the existing one. Published by customer create/update so a Stripe outage can never fail the mutation that triggered it.
+	CoreCmdSyncStripeCustomer AmqpRoutingKey = "core.cmd.sync_stripe_customer"
+
 	// CoreCmdHubspotSyncPreview is a command to run the read-only matching pass of a HubSpot backfill job out-of-band so the triggering request returns immediately.
 	CoreCmdHubspotSyncPreview AmqpRoutingKey = "core.cmd.hubspot_sync_preview"
 

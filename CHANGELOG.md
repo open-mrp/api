@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.43.0](https://github.com/Augno/api/compare/v0.42.9...v0.43.0) (2026-08-06)
+
+
+### Features
+
+* bulk operations  ([#453](https://github.com/Augno/api/issues/453)) ([dc84752](https://github.com/Augno/api/commit/dc84752e3ac09158c9debe6b4d26c8906fac44b7))
+
 ## [0.42.9](https://github.com/Augno/api/compare/v0.42.8...v0.42.9) (2026-08-05)
 
 

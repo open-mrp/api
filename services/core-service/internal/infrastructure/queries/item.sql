@@ -930,15 +930,15 @@ LEFT JOIN unit dvu ON dvu.id = rv.denominator_unit_id
 LEFT JOIN (
     SELECT
         ir.item_id,
-        SUM(q.value - COALESCE(alloc.allocated, 0)) AS on_hand
+        -- Correlated per receipt: a grouped derived table cannot take the item filter and so aggregates all of inventory_allocation on every call.
+        SUM(q.value - COALESCE((
+            SELECT SUM(aq.value)
+            FROM inventory_allocation ia
+            JOIN quantity aq ON aq.id = ia.quantity_id
+            WHERE ia.inventory_receipt_id = ir.id
+        ), 0)) AS on_hand
     FROM inventory_receipt ir
     JOIN quantity q ON q.id = ir.quantity_id
-    LEFT JOIN (
-        SELECT ia.inventory_receipt_id, SUM(q.value) AS allocated
-        FROM inventory_allocation ia
-        JOIN quantity q ON q.id = ia.quantity_id
-        GROUP BY ia.inventory_receipt_id
-    ) alloc ON alloc.inventory_receipt_id = ir.id
     WHERE ir.item_id = sqlc.arg('item_id')
         AND (ir.owner_account_id = sqlc.arg('account_id') OR ir.holder_account_id = sqlc.arg('account_id'))
         AND ir.status_code = 'available'
@@ -947,16 +947,20 @@ LEFT JOIN (
 LEFT JOIN (
     SELECT
         ii.item_id,
-        SUM(CASE WHEN ii.status_code = 'reserved' THEN q.value - COALESCE(alloc.allocated, 0) ELSE 0 END) AS reserved,
-        SUM(CASE WHEN ii.status_code = 'open' THEN q.value - COALESCE(alloc.allocated, 0) ELSE 0 END) AS short
+        SUM(CASE WHEN ii.status_code = 'reserved' THEN q.value - COALESCE((
+            SELECT SUM(aq.value)
+            FROM inventory_allocation ia
+            JOIN quantity aq ON aq.id = ia.quantity_id
+            WHERE ia.inventory_issue_id = ii.id
+        ), 0) ELSE 0 END) AS reserved,
+        SUM(CASE WHEN ii.status_code = 'open' THEN q.value - COALESCE((
+            SELECT SUM(aq.value)
+            FROM inventory_allocation ia
+            JOIN quantity aq ON aq.id = ia.quantity_id
+            WHERE ia.inventory_issue_id = ii.id
+        ), 0) ELSE 0 END) AS short
     FROM inventory_issue ii
     JOIN quantity q ON q.id = ii.quantity_id
-    LEFT JOIN (
-        SELECT ia.inventory_issue_id, SUM(q.value) AS allocated
-        FROM inventory_allocation ia
-        JOIN quantity q ON q.id = ia.quantity_id
-        GROUP BY ia.inventory_issue_id
-    ) alloc ON alloc.inventory_issue_id = ii.id
     WHERE ii.item_id = sqlc.arg('item_id')
         AND ii.account_id = sqlc.arg('account_id')
         AND ii.status_code IN ('reserved', 'open')

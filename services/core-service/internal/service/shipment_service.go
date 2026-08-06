@@ -7,6 +7,7 @@ import (
 	"slices"
 	"sort"
 	"strconv"
+	"sync"
 
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/services/core-service/internal/domain"
@@ -1215,9 +1216,35 @@ func (s *shipmentSvcImpl) RateShop(ctx context.Context, params domain.RateShopPa
 		}
 	}
 
-	// 6. For each carrier, fetch rates.
+	// 6. For each carrier, fetch rates. Each Shippo carrier costs a live rating round-trip, so they run concurrently and results are collected per carrier to keep ordering stable.
 	var allOptions []*domain.RateShopOption
-	for _, carrier := range carriers {
+	shippoRatesByCarrier := make([][]domain.ShippoRateOption, len(carriers))
+	var wg sync.WaitGroup
+
+	for i, carrier := range carriers {
+		if shippoClient == nil || carrier.ShippoCarrierAccountID == nil || *carrier.ShippoCarrierAccountID == "" {
+			continue
+		}
+
+		wg.Add(1)
+		go func(i int, carrierAccountID string) {
+			defer wg.Done()
+			rates, apiErr := shippoClient.FetchAllShippingRates(ctx, domain.FetchAllShippingRatesParams{
+				CarrierAccountObjectID: carrierAccountID,
+				FromAddress:            params.FromAddress,
+				ToAddress:              params.ToAddress,
+				Parcels:                params.Parcels,
+			})
+			if apiErr != nil {
+				// Skip carriers that fail to fetch rates.
+				return
+			}
+			shippoRatesByCarrier[i] = rates
+		}(i, *carrier.ShippoCarrierAccountID)
+	}
+	wg.Wait()
+
+	for i, carrier := range carriers {
 		if carrier.ShippoCarrierAccountID == nil || *carrier.ShippoCarrierAccountID == "" {
 			// Non-Shippo carrier: include each option with rate 0.
 			for _, opt := range carrier.ServiceLevels {
@@ -1237,20 +1264,8 @@ func (s *shipmentSvcImpl) RateShop(ctx context.Context, params domain.RateShopPa
 			continue
 		}
 
-		// Fetch all rates from Shippo for this carrier.
-		shippoRates, apiErr := shippoClient.FetchAllShippingRates(ctx, domain.FetchAllShippingRatesParams{
-			CarrierAccountObjectID: *carrier.ShippoCarrierAccountID,
-			FromAddress:            params.FromAddress,
-			ToAddress:              params.ToAddress,
-			Parcels:                params.Parcels,
-		})
-		if apiErr != nil {
-			// Skip carriers that fail to fetch rates.
-			continue
-		}
-
 		// Map Shippo rates to carrier options by matching service level token.
-		for _, shippoRate := range shippoRates {
+		for _, shippoRate := range shippoRatesByCarrier[i] {
 			for _, opt := range carrier.ServiceLevels {
 				if opt.ServiceLevelToken != nil && *opt.ServiceLevelToken == shippoRate.ServiceLevelToken {
 					allOptions = append(allOptions, &domain.RateShopOption{

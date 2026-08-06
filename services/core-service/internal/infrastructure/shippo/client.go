@@ -10,6 +10,8 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/augno/api/services/core-service/internal/domain"
 	apierror "github.com/augno/api/shared/errors"
@@ -20,9 +22,17 @@ const shippoBaseURL = "https://api.goshippo.com"
 
 var shippoTracer = tracing.GetTracer("core-service.shippo_client")
 
+// shippoRequestTimeout bounds a single Shippo call. Live rating is the slow path and
+// carriers occasionally stall; without a ceiling a hung call holds the request open.
+const shippoRequestTimeout = 15 * time.Second
+
 type clientImpl struct {
 	apiKey     string
 	httpClient *http.Client
+
+	// Rate shopping resolves a published-rate account per carrier off the same list. The client is per-request, so one fetch serves them all.
+	carrierAccountsOnce sync.Once
+	carrierAccounts     []CarrierAccount
 }
 
 // ClientFactory creates ShippoClient instances from API keys.
@@ -35,7 +45,7 @@ func NewClientFactory() *ClientFactory {
 func (f *ClientFactory) Build(apiKey string) domain.ShippoClient {
 	return &clientImpl{
 		apiKey:     apiKey,
-		httpClient: &http.Client{},
+		httpClient: &http.Client{Timeout: shippoRequestTimeout},
 	}
 }
 
@@ -526,52 +536,71 @@ func (c *clientImpl) createShipmentForRates(ctx context.Context, carrierAccountO
 
 // resolvePublishedRateCarrierAccountID maps a BYOA (bring-your-own-account) carrier account object ID to the carrier's Shippo default (published/retail) account object ID, mirroring Dashboard's resolvePublishedRateCarrierAccountId. BYOA accounts return the account's negotiated rates; customer-facing estimates should quote published rates instead. Best-effort: if the BYOA account cannot be read or no Shippo default account exists for that carrier, the original BYOA object ID is returned so a quote is still produced.
 func (c *clientImpl) resolvePublishedRateCarrierAccountID(ctx context.Context, byoaObjectID string) string {
-	byoa, apiErr := c.GetCarrierAccount(ctx, byoaObjectID)
-	if apiErr != nil {
-		return byoaObjectID
+	accounts := c.listCarrierAccounts(ctx)
+
+	carrier := carrierOf(accounts, byoaObjectID)
+	if carrier == "" {
+		// The account is past the page fetched above, so read it directly.
+		byoa, apiErr := c.GetCarrierAccount(ctx, byoaObjectID)
+		if apiErr != nil {
+			return byoaObjectID
+		}
+		carrier = byoa.Carrier
 	}
-	defaultAcct, apiErr := c.findDefaultCarrierAccount(ctx, byoa.Carrier)
-	if apiErr == nil && defaultAcct != nil && defaultAcct.ObjectID != "" {
-		return defaultAcct.ObjectID
+
+	if match := findDefaultCarrierAccount(accounts, carrier); match != nil && match.ObjectID != "" {
+		return match.ObjectID
 	}
 	return byoaObjectID
 }
 
-// findDefaultCarrierAccount returns Shippo's built-in default account for a carrier type (published/retail rates), preferring an active account. Returns nil when no default account exists for the carrier.
-func (c *clientImpl) findDefaultCarrierAccount(ctx context.Context, carrier string) (*domain.ShippoCarrierAccount, *apierror.APIError) {
-	resp, apiErr := c.doRequest(ctx, http.MethodGet, "/carrier_accounts/?results=100", nil)
-	if apiErr != nil {
-		return nil, apiErr
-	}
-	defer resp.Body.Close()
+// listCarrierAccounts returns the carrier accounts on this token, fetched once per client. Returns nil when the fetch fails; callers fall back to the account they were given.
+func (c *clientImpl) listCarrierAccounts(ctx context.Context) []CarrierAccount {
+	c.carrierAccountsOnce.Do(func() {
+		resp, apiErr := c.doRequest(ctx, http.MethodGet, "/carrier_accounts/?results=100", nil)
+		if apiErr != nil {
+			return
+		}
+		defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, nil
-	}
+		if resp.StatusCode != http.StatusOK {
+			return
+		}
 
-	var listResp CarrierAccountListResponse
-	if err := json.NewDecoder(resp.Body).Decode(&listResp); err != nil {
-		return nil, nil
-	}
+		var listResp CarrierAccountListResponse
+		if err := json.NewDecoder(resp.Body).Decode(&listResp); err != nil {
+			return
+		}
+		c.carrierAccounts = listResp.Results
+	})
+	return c.carrierAccounts
+}
 
+// carrierOf returns the carrier type of the named account, or "" when it is not in the list.
+func carrierOf(accounts []CarrierAccount, objectID string) string {
+	for i := range accounts {
+		if accounts[i].ObjectID == objectID {
+			return accounts[i].Carrier
+		}
+	}
+	return ""
+}
+
+// findDefaultCarrierAccount returns Shippo's built-in account for a carrier type (published/retail rates), preferring an active one. Returns nil when the carrier has no default account.
+func findDefaultCarrierAccount(accounts []CarrierAccount, carrier string) *CarrierAccount {
 	var match *CarrierAccount
-	for i := range listResp.Results {
-		a := &listResp.Results[i]
+	for i := range accounts {
+		a := &accounts[i]
 		if a.Carrier == carrier && a.IsShippoAccount {
 			if a.Active {
-				match = a
-				break
+				return a
 			}
 			if match == nil {
 				match = a
 			}
 		}
 	}
-
-	if match == nil {
-		return nil, nil
-	}
-	return mapCarrierAccount(match), nil
+	return match
 }
 
 func (c *clientImpl) FetchShippingRate(ctx context.Context, params domain.FetchShippingRateParams) (float64, *apierror.APIError) {

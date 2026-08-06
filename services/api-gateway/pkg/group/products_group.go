@@ -48,6 +48,7 @@ func (*ProductsEndpointGroup) Materialize(config *ProductsEndpointGroupConfig) *
 	changeProductLineEndpoint := apiendpoint.From(&productep.ChangeProductProductLineEndpoint{}).WithService(inner, productSvc)
 	validateEndpoint := apiendpoint.From(&productep.ValidateProductsEndpoint{}).WithService(inner, productSvc)
 	exportEndpoint := apiendpoint.From(&productep.ExportProductsEndpoint{}).WithService(inner, productSvc)
+	bulkUpsertEndpoint := apiendpoint.From(&productep.BulkUpsertProductsEndpoint{}).WithService(inner, productSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,
@@ -58,6 +59,7 @@ func (*ProductsEndpointGroup) Materialize(config *ProductsEndpointGroupConfig) *
 		changeProductLineEndpoint,
 		validateEndpoint,
 		exportEndpoint,
+		bulkUpsertEndpoint,
 	}
 
 	return &ProductsEndpointGroup{inner}

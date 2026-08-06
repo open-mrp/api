@@ -167,6 +167,34 @@ func (r *propertyRepoImpl) List(ctx context.Context, params domain.ListPropertie
 	return &domain.ListPropertiesResult{Properties: result, PageInfo: pageInfo}, nil
 }
 
+// reads one row past the export cap, so an oversized export is rejected, not truncated
+func (r *propertyRepoImpl) Export(ctx context.Context, params domain.ExportPropertiesParams) ([]*domain.Property, *apierror.APIError) {
+	ctx, span := propertyRepoTracer.Start(ctx, "repository.property.export")
+	defer span.End()
+
+	rows, err := r.queries.ExportProperties(ctx, sqlc.ExportPropertiesParams{
+		AccountID:   params.AccountID,
+		SearchQuery: buildPropertySearchParams(params.Query),
+		Limit:       exportQueryLimit,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	properties := make([]*domain.Property, len(rows))
+	for i, row := range rows {
+		properties[i] = &domain.Property{
+			ID:        row.ID,
+			Name:      row.Name,
+			AccountID: row.AccountID,
+			IsPublic:  row.IsPublic,
+			CreatedAt: row.CreatedAt,
+			UpdatedAt: row.UpdatedAt,
+		}
+	}
+	return properties, nil
+}
+
 func (r *propertyRepoImpl) Get(ctx context.Context, params domain.GetPropertyParams) (*domain.Property, *apierror.APIError) {
 	ctx, span := propertyRepoTracer.Start(ctx, "repository.property.get")
 	defer span.End()
@@ -259,6 +287,36 @@ func (r *propertyRepoImpl) ExistsByName(ctx context.Context, accountID, name str
 	}
 
 	return count > 0, nil
+}
+
+func (r *propertyRepoImpl) FindByNames(ctx context.Context, accountID string, names []string) ([]*domain.Property, *apierror.APIError) {
+	ctx, span := propertyRepoTracer.Start(ctx, "repository.property.find_by_names")
+	defer span.End()
+
+	if len(names) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.queries.FindPropertiesByNames(ctx, sqlc.FindPropertiesByNamesParams{
+		AccountID: accountID,
+		Names:     names,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	properties := make([]*domain.Property, len(rows))
+	for i, row := range rows {
+		properties[i] = &domain.Property{
+			ID:        row.ID,
+			Name:      row.Name,
+			AccountID: row.AccountID,
+			IsPublic:  row.IsPublic,
+			CreatedAt: row.CreatedAt,
+			UpdatedAt: row.UpdatedAt,
+		}
+	}
+	return properties, nil
 }
 
 func (r *propertyRepoImpl) IsInAccount(ctx context.Context, accountID, propertyID string) (bool, *apierror.APIError) {

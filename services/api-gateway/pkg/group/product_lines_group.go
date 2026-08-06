@@ -45,6 +45,8 @@ func (*ProductLinesEndpointGroup) Materialize(config *ProductLinesEndpointGroupC
 	createEndpoint := apiendpoint.From(&productlineep.CreateProductLineEndpoint{}).WithService(inner, productLineSvc)
 	updateEndpoint := apiendpoint.From(&productlineep.UpdateProductLineEndpoint{}).WithService(inner, productLineSvc)
 	deleteEndpoint := apiendpoint.From(&productlineep.DeleteProductLineEndpoint{}).WithService(inner, productLineSvc)
+	bulkUpsertEndpoint := apiendpoint.From(&productlineep.BulkUpsertProductLinesEndpoint{}).WithService(inner, productLineSvc)
+	exportEndpoint := apiendpoint.From(&productlineep.ExportProductLinesEndpoint{}).WithService(inner, productLineSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,
@@ -52,6 +54,8 @@ func (*ProductLinesEndpointGroup) Materialize(config *ProductLinesEndpointGroupC
 		createEndpoint,
 		updateEndpoint,
 		deleteEndpoint,
+		bulkUpsertEndpoint,
+		exportEndpoint,
 	}
 
 	return &ProductLinesEndpointGroup{inner}

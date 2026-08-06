@@ -123,7 +123,8 @@ func TestCovCatalogUnitGroups_OmittedFields(t *testing.T) {
 	assert.Equal(t, "list", jsonField(assocPatched, "object"))
 	assocPatchedData, ok := assocPatched["data"].([]any)
 	require.True(t, ok, "associated_units.data should be an array")
-	assert.Empty(t, assocPatchedData, "associated_units should be empty for a group created without units")
+	// A group's base unit is auto-included as an associated unit even when none are listed.
+	assert.Len(t, assocPatchedData, 1, "a group created without units still carries its base unit")
 }
 
 // TestCovCatalogUnitGroups_UpdateCannotChangeType asserts there is no way to
@@ -243,10 +244,18 @@ func TestCovCatalogUnitGroups_CreateAllFields_UpdateAllFields(t *testing.T) {
 	assert.Equal(t, "list", jsonField(assoc, "object"))
 	assocData, ok := assoc["data"].([]any)
 	require.True(t, ok)
-	require.Len(t, assocData, 1)
-	firstRaw, err := json.Marshal(assocData[0])
-	require.NoError(t, err)
-	first := parseJSON(firstRaw)
+	// The base unit is auto-included, so the explicit conversion is the other entry.
+	require.Len(t, assocData, 2)
+	var first map[string]any
+	for _, raw := range assocData {
+		entryRaw, err := json.Marshal(raw)
+		require.NoError(t, err)
+		entry := parseJSON(entryRaw)
+		if jsonField(jsonObject(entry, "unit"), "id") != "each" {
+			first = entry
+		}
+	}
+	require.NotNil(t, first, "the explicit conversion should sit alongside the base unit")
 	assertObjectField(t, first, "unit_group_unit")
 	assert.Equal(t, "5", jsonField(first, "discount_percentage"))
 	assert.Equal(t, "1", jsonField(first, "discount_fixed"))
@@ -380,7 +389,7 @@ func TestCovCatalogUnitGroups_UpdateAssociatedUnitsAdditive(t *testing.T) {
 	require.NotNil(t, assoc)
 	assocData, ok := assoc["data"].([]any)
 	require.True(t, ok)
-	assert.Len(t, assocData, 2, "PATCH associated_units should be additive: prior entries preserved plus the new one")
+	assert.Len(t, assocData, 3, "PATCH associated_units should be additive: prior entries plus the new one, alongside the auto-included base unit")
 }
 
 // TestCovCatalogUnitGroups_CreateBaseUnitDimensionMismatch documents a

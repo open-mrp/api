@@ -6,6 +6,9 @@ import (
 	"github.com/augno/api/shared/messaging"
 )
 
+// reads one row past the export cap, so an overflow is distinguishable from an exact fit
+const exportQueryLimit = domain.ExportRowLimit + 1
+
 type repoFactoryImpl struct {
 	queries *sqlc.Queries
 }
@@ -416,6 +419,10 @@ func (r *repoFactoryImpl) NewScanningStationRepo() domain.ScanningStationRepo {
 
 func (r *repoFactoryImpl) NewPricingRepo() domain.PricingRepo {
 	return NewPricingRepo(r.queries)
+}
+
+func (r *repoFactoryImpl) NewJobRepo() domain.JobRepo {
+	return NewJobRepo(r.queries)
 }
 
 func (r *repoFactoryImpl) NewPortalDomainRepo() domain.PortalDomainRepo {

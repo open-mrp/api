@@ -14,6 +14,7 @@ import (
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 )
 
 type testRequest struct {
@@ -25,6 +26,14 @@ type testRequest struct {
 type enumTestRequest struct {
 	Mode constants.AccountMode `json:"mode" validate:"required"`
 	Name string                `json:"name" validate:"required"`
+}
+
+type enumSliceItem struct {
+	Mode constants.AccountMode `json:"mode" validate:"required"`
+}
+
+type enumSliceRequest struct {
+	Items []enumSliceItem `json:"items" validate:"required,min=1,dive"`
 }
 
 func TestValidateEnumFields(t *testing.T) {
@@ -73,6 +82,74 @@ func TestValidateEnumFields(t *testing.T) {
 		err := ValidateEnumFields(req)
 		if err != nil {
 			t.Errorf("expected no error for non-enum field, got %v", err)
+		}
+	})
+
+	t.Run("Valid enum value inside slice element", func(t *testing.T) {
+		req := &enumSliceRequest{
+			Items: []enumSliceItem{
+				{Mode: constants.AccountModeProduction},
+				{Mode: constants.AccountModeSandbox},
+			},
+		}
+		err := ValidateEnumFields(req)
+		if err != nil {
+			t.Errorf("expected no error, got %v", err)
+		}
+	})
+
+	// A struct element's enum is left to the owning service: a bulk row's error has to
+	// name its row (machines[3].type), where a generic check could only say "type".
+	t.Run("Invalid enum inside a slice element is left to the service", func(t *testing.T) {
+		req := &enumSliceRequest{
+			Items: []enumSliceItem{
+				{Mode: constants.AccountModeProduction},
+				{Mode: constants.AccountMode("foo")},
+			},
+		}
+		if err := ValidateEnumFields(req); err != nil {
+			t.Errorf("expected the generic validator to skip slice elements, got %v", err)
+		}
+	})
+
+	t.Run("Empty slice is valid", func(t *testing.T) {
+		req := &enumSliceRequest{Items: []enumSliceItem{}}
+		err := ValidateEnumFields(req)
+		if err != nil {
+			t.Errorf("expected no error for empty slice, got %v", err)
+		}
+	})
+
+	type wrappedEnumRequest struct {
+		Clearable field.Clearable[constants.AccountMode] `json:"clearable,omitzero"`
+		Optional  field.Optional[constants.AccountMode]  `json:"optional,omitzero"`
+	}
+
+	t.Run("Clearable enum set to valid value passes", func(t *testing.T) {
+		req := &wrappedEnumRequest{Clearable: field.Set(constants.AccountModeProduction)}
+		if err := ValidateEnumFields(req); err != nil {
+			t.Errorf("expected no error, got %v", err)
+		}
+	})
+
+	t.Run("Clearable enum set to invalid value fails", func(t *testing.T) {
+		req := &wrappedEnumRequest{Clearable: field.Set(constants.AccountMode("bogus"))}
+		if err := ValidateEnumFields(req); err == nil {
+			t.Error("expected error for invalid clearable enum, got nil")
+		}
+	})
+
+	t.Run("Clearable enum set to empty string passes as a clear signal", func(t *testing.T) {
+		req := &wrappedEnumRequest{Clearable: field.Set(constants.AccountMode(""))}
+		if err := ValidateEnumFields(req); err != nil {
+			t.Errorf("expected empty clearable enum to be treated as a clear, got %v", err)
+		}
+	})
+
+	t.Run("Optional enum set to empty string fails", func(t *testing.T) {
+		req := &wrappedEnumRequest{Optional: field.Some(constants.AccountMode(""))}
+		if err := ValidateEnumFields(req); err == nil {
+			t.Error("expected error for empty optional enum, got nil")
 		}
 	})
 }

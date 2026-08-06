@@ -69,6 +69,51 @@ type DeletePropertyParams struct {
 	AccountID  string
 }
 
+// holds the fields for a single property in a bulk upsert
+type UpsertPropertyParams struct {
+	Name       string
+	Attributes []UpsertPropertyAttributeParams
+}
+
+// holds one selectable value in a bulk property upsert; an absent color is assigned
+type UpsertPropertyAttributeParams struct {
+	Value     string
+	ColorCode *string
+}
+
+// holds the input for a bulk upsert of properties
+type BulkUpsertPropertiesParams struct {
+	Properties []UpsertPropertyParams
+}
+
+// carries a bulk upsert row once normalized, so the job records a fully determined write
+type ResolvedUpsertPropertyRow struct {
+	Name       string
+	Attributes []ResolvedUpsertPropertyAttribute
+}
+
+// carries one selectable value, swatch settled
+type ResolvedUpsertPropertyAttribute struct {
+	Value     string
+	ColorCode string
+}
+
+// filters which properties land in an exported file
+type ExportPropertiesParams struct {
+	AccountID string
+	Query     *string
+}
+
+// AttributeTextMatch is an existing attribute matched by its text within an account,
+// with its owning property named. Used by bulk upsert to enforce the account-wide
+// attribute value uniqueness the manual create path enforces.
+type AttributeTextMatch struct {
+	ID           string
+	Text         string
+	PropertyID   string
+	PropertyName string
+}
+
 // CreateAttributeParams holds the parameters for creating an attribute.
 type CreateAttributeParams struct {
 	Value      string

@@ -16,6 +16,7 @@ import (
 	"github.com/augno/api/shared/audit"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/excel"
 	"github.com/augno/api/shared/id"
 	"github.com/augno/api/shared/idempotency"
 	"github.com/augno/api/shared/tracing"
@@ -896,8 +897,8 @@ func (s *itemSvcImpl) ChangeItemCategory(ctx context.Context, itemID, categoryID
 				return apiErr
 			}
 
-			// Get the base unit of the new category
-			baseUnitID, apiErr := txRepo.GetCategoryBaseUnitID(txCtx, categoryID)
+			// Get the base unit of the new category (type already validated above).
+			baseUnitID, _, apiErr := txRepo.GetCategoryBaseUnitID(txCtx, categoryID)
 			if apiErr != nil {
 				return apiErr
 			}
@@ -1313,9 +1314,76 @@ func (s *itemSvcImpl) BulkCreateItems(ctx context.Context, params domain.BulkCre
 	}
 }
 
-// bulkUpsertExistingItem updates an existing item in place during a bulk-create operation, matching Dashboard's updateExistingProduct behavior: writes the new description, product_line_id, category_id, and unit_value rate rather than erroring on duplicate SKU.
+// connects the given attributes to an item (additive)
+func attachItemAttributesInTx(txCtx context.Context, repos domain.RepoFactory, accountID, itemID string, attributeIDs []string) *apierror.APIError {
+	itemRepo := repos.NewItemRepo()
+	for _, attrID := range attributeIDs {
+		if attrID == "" {
+			continue
+		}
+		if apiErr := itemRepo.AddAttribute(txCtx, domain.AddItemAttributeParams{
+			AccountID:   accountID,
+			ItemID:      itemID,
+			AttributeID: attrID,
+		}); apiErr != nil {
+			return apiErr
+		}
+	}
+	return nil
+}
+
+// applyItemRatesInTx writes the unit_value / unit_cost rate values and units when
+// supplied, enforcing the currency-numerator / non-currency-denominator rule used by
+// the single create/update endpoints. Used by bulk update paths (create sets rates
+// directly when inserting them).
+func applyItemRatesInTx(txCtx context.Context, repos domain.RepoFactory, unitValueRateID, unitCostRateID string, unitPrice, unitCost *domain.CreateRateParams) *apierror.APIError {
+	unitRepo := repos.NewUnitRepo()
+	rateRepo := repos.NewRateRepo()
+
+	if unitPrice != nil {
+		if apiErr := ValidateCostRateUnits(txCtx, unitRepo, unitPrice.NumeratorUnitID, unitPrice.DenominatorUnitID, "unit_price"); apiErr != nil {
+			return apiErr
+		}
+		if _, apiErr := rateRepo.Update(txCtx, domain.UpdateRateParams{
+			RateID:            unitValueRateID,
+			Value:             &unitPrice.Value,
+			NumeratorUnitID:   &unitPrice.NumeratorUnitID,
+			DenominatorUnitID: &unitPrice.DenominatorUnitID,
+		}); apiErr != nil {
+			return apiErr
+		}
+	}
+
+	if unitCost != nil {
+		if apiErr := ValidateCostRateUnits(txCtx, unitRepo, unitCost.NumeratorUnitID, unitCost.DenominatorUnitID, "unit_cost"); apiErr != nil {
+			return apiErr
+		}
+		if _, apiErr := rateRepo.Update(txCtx, domain.UpdateRateParams{
+			RateID:            unitCostRateID,
+			Value:             &unitCost.Value,
+			NumeratorUnitID:   &unitCost.NumeratorUnitID,
+			DenominatorUnitID: &unitCost.DenominatorUnitID,
+		}); apiErr != nil {
+			return apiErr
+		}
+	}
+
+	return nil
+}
+
+// updates an existing item in place during a bulk-create, matching Dashboard's updateExistingProduct
+// behavior: writes description, product_line_id, category_id and the unit_value rate instead of erroring on a duplicate SKU.
 func (s *itemSvcImpl) bulkUpsertExistingItem(ctx context.Context, accountID, itemID, unitValueRateID string, input domain.BulkCreateItemInput) *apierror.APIError {
 	return s.withTx(ctx, func(txCtx context.Context, txSvc *itemSvcImpl) *apierror.APIError {
+		return txSvc.bulkUpsertExistingItemInTx(txCtx, accountID, itemID, unitValueRateID, input)
+	})
+}
+
+// bulkUpsertExistingItemInTx updates an existing item in place within an existing
+// transaction (description, category, product line, attributes).
+func (s *itemSvcImpl) bulkUpsertExistingItemInTx(txCtx context.Context, accountID, itemID, unitValueRateID string, input domain.BulkCreateItemInput) *apierror.APIError {
+	{
+		txSvc := s
 		txItemRepo := txSvc.repos.NewItemRepo()
 
 		// Description / notes / sku are handled via the generic item update.
@@ -1355,7 +1423,7 @@ func (s *itemSvcImpl) bulkUpsertExistingItem(ctx context.Context, accountID, ite
 			}); apiErr != nil {
 				return apiErr
 			}
-			baseUnitID, apiErr := txItemRepo.GetCategoryBaseUnitID(txCtx, input.ItemCategoryID)
+			baseUnitID, _, apiErr := txItemRepo.GetCategoryBaseUnitID(txCtx, input.ItemCategoryID)
 			if apiErr != nil {
 				return apiErr
 			}
@@ -1399,7 +1467,7 @@ func (s *itemSvcImpl) bulkUpsertExistingItem(ctx context.Context, accountID, ite
 		}
 
 		return nil
-	})
+	}
 }
 
 // bulkCreateSingleItem creates a single item within a bulk operation.
@@ -1425,10 +1493,14 @@ func (s *itemSvcImpl) bulkCreateSingleItem(ctx context.Context, accountID, itemT
 		return domain.BulkCreateItemResult{SKU: input.SKU, Success: true, ItemID: existingItemID}
 	}
 
-	// Get base unit for rates from category.
-	baseUnitID, apiErr := s.repos.NewItemRepo().GetCategoryBaseUnitID(ctx, input.ItemCategoryID)
+	// Get base unit for rates from category, and enforce the item-type/category-type
+	// rule (materials → material categories; parts and products → product categories).
+	baseUnitID, categoryTypeCode, apiErr := s.repos.NewItemRepo().GetCategoryBaseUnitID(ctx, input.ItemCategoryID)
 	if apiErr != nil {
 		return errResult(input.SKU, "Category not found.")
+	}
+	if !categoryTypeMatchesItem(itemType, categoryTypeCode) {
+		return errResult(input.SKU, "This category type cannot be assigned to this item type.")
 	}
 
 	// Generate IDs.
@@ -1470,12 +1542,23 @@ func (s *itemSvcImpl) bulkCreateSingleItem(ctx context.Context, accountID, itemT
 }
 
 func (s *itemSvcImpl) bulkCreateProduct(ctx context.Context, accountID, itemID, unitValueRateID, unitCostRateID, burnRateRateID, baseUnitID string, input domain.BulkCreateItemInput) *apierror.APIError {
+	return s.withTx(ctx, func(txCtx context.Context, txSvc *itemSvcImpl) *apierror.APIError {
+		return txSvc.bulkCreateProductInTx(txCtx, accountID, itemID, unitValueRateID, unitCostRateID, burnRateRateID, baseUnitID, decimal.Zero, input)
+	})
+}
+
+// bulkCreateProductInTx inserts a product-type item and its rates within an
+// existing transaction. The wrapper bulkCreateProduct opens its own tx; bulk
+// upsert calls this directly inside its batch tx. openingQty seeds the initial
+// on-hand inventory (zero for the bulk-create path).
+func (s *itemSvcImpl) bulkCreateProductInTx(txCtx context.Context, accountID, itemID, unitValueRateID, unitCostRateID, burnRateRateID, baseUnitID string, openingQty decimal.Decimal, input domain.BulkCreateItemInput) *apierror.APIError {
 	productID, apiErr := id.GenID(id.ProductIDPrefix, nil)
 	if apiErr != nil {
 		return apiErr
 	}
 
-	return s.withTx(ctx, func(txCtx context.Context, txSvc *itemSvcImpl) *apierror.APIError {
+	{
+		txSvc := s
 		txProductRepo := txSvc.repos.NewProductRepo()
 
 		// Insert rates.
@@ -1493,10 +1576,6 @@ func (s *itemSvcImpl) bulkCreateProduct(ctx context.Context, accountID, itemID, 
 		// (customer-facing by default; clients can toggle off after import if needed).
 		params := domain.CreateProductParams{
 			AccountID:       accountID,
-			ItemID:          itemID,
-			UnitValueRateID: unitValueRateID,
-			UnitCostRateID:  unitCostRateID,
-			BurnRateRateID:  burnRateRateID,
 			SKU:             input.SKU,
 			Description:     input.Description,
 			ProductTypeCode: "sale",
@@ -1504,7 +1583,16 @@ func (s *itemSvcImpl) bulkCreateProduct(ctx context.Context, accountID, itemID, 
 			CategoryID:      input.ItemCategoryID,
 			IsPortalReady:   true,
 		}
-		if apiErr := txProductRepo.InsertItem(txCtx, itemID, params); apiErr != nil {
+		if apiErr := txProductRepo.InsertItem(txCtx, domain.InsertProductItemParams{
+			ItemID:          itemID,
+			AccountID:       accountID,
+			SKU:             input.SKU,
+			Description:     input.Description,
+			CategoryID:      input.ItemCategoryID,
+			UnitValueRateID: unitValueRateID,
+			UnitCostRateID:  unitCostRateID,
+			BurnRateRateID:  burnRateRateID,
+		}); apiErr != nil {
 			return apiErr
 		}
 
@@ -1514,11 +1602,12 @@ func (s *itemSvcImpl) bulkCreateProduct(ctx context.Context, accountID, itemID, 
 		}
 
 		// Initialize inventory tracking to match the regular CreateProduct path.
+		// openingQty is zero for bulk-create; bulk-upsert may seed a starting on-hand.
 		txInvMutRepo := txSvc.repos.NewInventoryMutationRepo()
 		if apiErr := txInvMutRepo.CreateInventoryLog(txCtx, domain.CreateInventoryLogParams{
 			AccountID: accountID,
 			ItemID:    itemID,
-			Measure:   decimal.Zero,
+			Measure:   openingQty,
 			UnitID:    baseUnitID,
 		}); apiErr != nil {
 			return apiErr
@@ -1526,7 +1615,7 @@ func (s *itemSvcImpl) bulkCreateProduct(ctx context.Context, accountID, itemID, 
 		if apiErr := txInvMutRepo.CreateInventoryChangeLog(txCtx, domain.CreateInventoryChangeLogParams{
 			AccountID:  accountID,
 			ItemID:     itemID,
-			Measure:    decimal.Zero,
+			Measure:    openingQty,
 			UnitID:     baseUnitID,
 			ActionType: "user_action",
 		}); apiErr != nil {
@@ -1550,10 +1639,18 @@ func (s *itemSvcImpl) bulkCreateProduct(ctx context.Context, accountID, itemID, 
 			ResourceID:   itemID,
 			Changes:      changes,
 		})
-	})
+	}
 }
 
 func (s *itemSvcImpl) bulkCreateMaterial(ctx context.Context, accountID, itemID, unitValueRateID, unitCostRateID, burnRateRateID, baseUnitID string, input domain.BulkCreateItemInput) *apierror.APIError {
+	return s.withTx(ctx, func(txCtx context.Context, txSvc *itemSvcImpl) *apierror.APIError {
+		return txSvc.bulkCreateMaterialInTx(txCtx, accountID, itemID, unitValueRateID, unitCostRateID, burnRateRateID, baseUnitID, decimal.Zero, input)
+	})
+}
+
+// bulkCreateMaterialInTx inserts a material-type item within an existing transaction.
+// A non-zero openingQty seeds initial on-hand inventory (bulk upsert only).
+func (s *itemSvcImpl) bulkCreateMaterialInTx(txCtx context.Context, accountID, itemID, unitValueRateID, unitCostRateID, burnRateRateID, baseUnitID string, openingQty decimal.Decimal, input domain.BulkCreateItemInput) *apierror.APIError {
 	materialID, apiErr := id.GenID(id.MaterialIDPrefix, nil)
 	if apiErr != nil {
 		return apiErr
@@ -1569,7 +1666,8 @@ func (s *itemSvcImpl) bulkCreateMaterial(ctx context.Context, accountID, itemID,
 		return apiErr
 	}
 
-	return s.withTx(ctx, func(txCtx context.Context, txSvc *itemSvcImpl) *apierror.APIError {
+	{
+		txSvc := s
 		txMaterialRepo := txSvc.repos.NewMaterialRepo()
 
 		// Insert rates.
@@ -1584,19 +1682,16 @@ func (s *itemSvcImpl) bulkCreateMaterial(ctx context.Context, accountID, itemID,
 		}
 
 		// Insert item.
-		params := domain.CreateMaterialParams{
-			AccountID:       accountID,
+		if apiErr := txMaterialRepo.InsertItem(txCtx, domain.InsertMaterialItemParams{
 			ItemID:          itemID,
-			UnitValueRateID: unitValueRateID,
-			UnitCostRateID:  unitCostRateID,
-			BurnRateRateID:  burnRateRateID,
-			OrderPointID:    orderPointQtyID,
-			LeadTimeID:      leadTimeQtyID,
+			AccountID:       accountID,
 			SKU:             input.SKU,
 			Description:     input.Description,
 			CategoryID:      input.ItemCategoryID,
-		}
-		if apiErr := txMaterialRepo.InsertItem(txCtx, itemID, params); apiErr != nil {
+			UnitValueRateID: unitValueRateID,
+			UnitCostRateID:  unitCostRateID,
+			BurnRateRateID:  burnRateRateID,
+		}); apiErr != nil {
 			return apiErr
 		}
 
@@ -1609,7 +1704,11 @@ func (s *itemSvcImpl) bulkCreateMaterial(ctx context.Context, accountID, itemID,
 		}
 
 		// Insert material record.
-		if apiErr := txMaterialRepo.Create(txCtx, materialID, params); apiErr != nil {
+		if apiErr := txMaterialRepo.Create(txCtx, materialID, itemID, orderPointQtyID, leadTimeQtyID); apiErr != nil {
+			return apiErr
+		}
+
+		if apiErr := txSvc.seedOpeningInventoryInTx(txCtx, accountID, itemID, baseUnitID, openingQty); apiErr != nil {
 			return apiErr
 		}
 
@@ -1630,16 +1729,50 @@ func (s *itemSvcImpl) bulkCreateMaterial(ctx context.Context, accountID, itemID,
 			ResourceID:   itemID,
 			Changes:      changes,
 		})
+	}
+}
+
+// seedOpeningInventoryInTx records an opening on-hand inventory log + change log for a
+// newly created item. No-op when the quantity is zero, preserving the bulk-create
+// path's existing behavior (products already seed a zero log in their own helper).
+func (s *itemSvcImpl) seedOpeningInventoryInTx(txCtx context.Context, accountID, itemID, baseUnitID string, openingQty decimal.Decimal) *apierror.APIError {
+	if openingQty.IsZero() {
+		return nil
+	}
+	txInvMutRepo := s.repos.NewInventoryMutationRepo()
+	if apiErr := txInvMutRepo.CreateInventoryLog(txCtx, domain.CreateInventoryLogParams{
+		AccountID: accountID,
+		ItemID:    itemID,
+		Measure:   openingQty,
+		UnitID:    baseUnitID,
+	}); apiErr != nil {
+		return apiErr
+	}
+	return txInvMutRepo.CreateInventoryChangeLog(txCtx, domain.CreateInventoryChangeLogParams{
+		AccountID:  accountID,
+		ItemID:     itemID,
+		Measure:    openingQty,
+		UnitID:     baseUnitID,
+		ActionType: "user_action",
 	})
 }
 
 func (s *itemSvcImpl) bulkCreatePart(ctx context.Context, accountID, itemID, unitValueRateID, unitCostRateID, burnRateRateID, baseUnitID string, input domain.BulkCreateItemInput) *apierror.APIError {
+	return s.withTx(ctx, func(txCtx context.Context, txSvc *itemSvcImpl) *apierror.APIError {
+		return txSvc.bulkCreatePartInTx(txCtx, accountID, itemID, unitValueRateID, unitCostRateID, burnRateRateID, baseUnitID, decimal.Zero, input)
+	})
+}
+
+// bulkCreatePartInTx inserts a part-type item within an existing transaction.
+// A non-zero openingQty seeds initial on-hand inventory (bulk upsert only).
+func (s *itemSvcImpl) bulkCreatePartInTx(txCtx context.Context, accountID, itemID, unitValueRateID, unitCostRateID, burnRateRateID, baseUnitID string, openingQty decimal.Decimal, input domain.BulkCreateItemInput) *apierror.APIError {
 	partID, apiErr := id.GenID(id.PartIDPrefix, nil)
 	if apiErr != nil {
 		return apiErr
 	}
 
-	return s.withTx(ctx, func(txCtx context.Context, txSvc *itemSvcImpl) *apierror.APIError {
+	{
+		txSvc := s
 		txPartRepo := txSvc.repos.NewPartRepo()
 
 		// Insert rates.
@@ -1669,6 +1802,10 @@ func (s *itemSvcImpl) bulkCreatePart(ctx context.Context, accountID, itemID, uni
 			return apiErr
 		}
 
+		if apiErr := txSvc.seedOpeningInventoryInTx(txCtx, accountID, itemID, baseUnitID, openingQty); apiErr != nil {
+			return apiErr
+		}
+
 		createdItem, apiErr := txSvc.repos.NewItemRepo().Get(txCtx, domain.GetItemParams{
 			AccountID: accountID,
 			ItemID:    itemID,
@@ -1686,7 +1823,7 @@ func (s *itemSvcImpl) bulkCreatePart(ctx context.Context, accountID, itemID, uni
 			ResourceID:   itemID,
 			Changes:      changes,
 		})
-	})
+	}
 }
 
 // BulkReconcileItems reconciles inventory for multiple items by SKU.
@@ -1906,4 +2043,57 @@ func (s *itemSvcImpl) BulkReconcileItems(ctx context.Context, params domain.Bulk
 	default:
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
 	}
+}
+
+// --- Export ---
+
+// lists the fixed columns every item sheet carries; extra lands between the
+// category and the money columns, where a type's own fields read best
+func itemBaseColumns(extra ...excel.ColumnSpec) []excel.ColumnSpec {
+	columns := []excel.ColumnSpec{
+		{Header: "ID", Key: "id", Width: 24},
+		{Header: "SKU", Key: "sku", Width: 32},
+		{Header: "Description", Key: "description", Width: 32},
+		{Header: "Notes", Key: "notes", Width: 32},
+		{Header: "Category", Key: "category", Width: 18},
+	}
+	columns = append(columns, extra...)
+	// No unit columns beside these: the importer reads the account's currency and
+	// base unit itself, and an unrecognised header becomes a property.
+	return append(columns,
+		excel.ColumnSpec{Header: "Unit Price", Key: "unit_price", Width: 14},
+		excel.ColumnSpec{Header: "Unit Cost", Key: "unit_cost", Width: 14},
+	)
+}
+
+// fills the fixed item cells shared by the product, part and material sheets
+func addItemBaseCells(row excel.Row, rowID string, item *domain.Item) {
+	row["id"] = rowID
+	if item == nil {
+		return
+	}
+	row["sku"] = item.SKU
+	row["description"] = excel.Str(item.Description)
+	row["notes"] = excel.Str(item.Notes)
+	row["category"] = item.CategoryName
+	row["unit_price"] = rateValue(item.UnitValue)
+	row["unit_cost"] = rateValue(item.UnitCost)
+	addItemPropertyCells(row, item)
+}
+
+// reads a rate's amount, blank where the rate was never set
+func rateValue(rate *domain.Rate) string {
+	if rate == nil {
+		return ""
+	}
+	return decimalCell(rate.Value)
+}
+
+// reads a quantity's bare amount; the unit stays out of the cell because the
+// importer parses the number alone and supplies the unit itself
+func quantityValue(quantity *domain.Quantity) string {
+	if quantity == nil {
+		return ""
+	}
+	return decimalCell(quantity.Value)
 }

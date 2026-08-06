@@ -149,8 +149,11 @@ type ProductRepo interface {
 	ChangeProductLine(ctx context.Context, params ChangeProductProductLineParams) (*ProductFull, *apierror.APIError)
 	ValidateProducts(ctx context.Context, params ValidateProductsParams) (*ValidateProductsResult, *apierror.APIError)
 	ExistsBySKU(ctx context.Context, accountID, sku string, excludeItemID *string) (bool, *apierror.APIError)
+	// FindBySKUs batch-resolves existing products by SKU within the account, returning the
+	// product/item IDs and unit_value/unit_cost rate IDs needed to update them.
+	FindBySKUs(ctx context.Context, accountID string, skus []string) ([]*ProductSKUMatch, *apierror.APIError)
 	InsertRate(ctx context.Context, id, value, numeratorUnitID, denominatorUnitID string) *apierror.APIError
-	InsertItem(ctx context.Context, itemID string, params CreateProductParams) *apierror.APIError
+	InsertItem(ctx context.Context, params InsertProductItemParams) *apierror.APIError
 }
 
 type ItemRepo interface {
@@ -170,7 +173,14 @@ type ItemRepo interface {
 	UpdateRateUnits(ctx context.Context, accountID, itemID, newUnitID string) *apierror.APIError
 	UpdateMaterialOrderPointUnit(ctx context.Context, accountID, itemID, newUnitID string) *apierror.APIError
 	UpdateConsumptionProductionQuantityUnits(ctx context.Context, accountID, itemID, newUnitID string) *apierror.APIError
-	GetCategoryBaseUnitID(ctx context.Context, categoryID string) (string, *apierror.APIError)
+	// GetCategoryBaseUnitID resolves a category's base unit id and its category type
+	// code, so create paths can enforce item-type/category-type matching.
+	GetCategoryBaseUnitID(ctx context.Context, categoryID string) (string, string, *apierror.APIError)
+	// GetCategoryBaseUnitIDs batch-resolves category base unit ids and category type
+	// codes. Existing categories map to their ref (base unit id empty when the unit
+	// group has no base unit); missing categories are absent from the map. Used by
+	// bulk upsert category validation.
+	GetCategoryBaseUnitIDs(ctx context.Context, categoryIDs []string) (map[string]CategoryRef, *apierror.APIError)
 	ListConsumptionChangeLogsForBurnRate(ctx context.Context, accountID, itemID string) ([]BurnRateConsumptionLog, *apierror.APIError)
 	FetchItemsBySKU(ctx context.Context, accountID string, skus []string) ([]ItemSKUInfo, *apierror.APIError)
 	// FindBySKU returns the existing item's ID and its unit_value rate ID for the given SKU within the account. Returns (nil, nil, nil) when no match exists. Used by bulk upsert flows.
@@ -228,6 +238,7 @@ type RegistrationRepo interface {
 
 type UnitRepo interface {
 	List(ctx context.Context, params ListUnitsParams) (*ListUnitsResult, *apierror.APIError)
+	Export(ctx context.Context, params ExportUnitsParams) ([]*Unit, *apierror.APIError)
 	Get(ctx context.Context, params GetUnitParams) (*Unit, *apierror.APIError)
 	// GetCurrencyBaseUnitID returns the global currency base unit ID used as the numerator unit when building monetary price rates.
 	GetCurrencyBaseUnitID(ctx context.Context) (string, *apierror.APIError)
@@ -240,15 +251,21 @@ type UnitRepo interface {
 	ExistsByAbbreviation(ctx context.Context, accountID, abbreviation string, excludeID *string) (bool, *apierror.APIError)
 	FindByAbbreviations(ctx context.Context, accountID string, abbreviations []string) ([]*Unit, *apierror.APIError)
 	GetByIDs(ctx context.Context, accountID string, ids []string) ([]*Unit, *apierror.APIError)
+	FindByAbbreviationsOrNames(ctx context.Context, accountID string, abbreviations, names []string) ([]*Unit, *apierror.APIError)
 }
 
 type UnitGroupRepo interface {
 	List(ctx context.Context, params ListUnitGroupsParams) (*ListUnitGroupsResult, *apierror.APIError)
+	Export(ctx context.Context, params ExportUnitGroupsParams) ([]*UnitGroupFull, *apierror.APIError)
 	Get(ctx context.Context, params GetUnitGroupParams) (*UnitGroupFull, *apierror.APIError)
 	Create(ctx context.Context, id string, params CreateUnitGroupParams) (*UnitGroupFull, *apierror.APIError)
 	Update(ctx context.Context, params UpdateUnitGroupParams) (*UnitGroupFull, *apierror.APIError)
 	Delete(ctx context.Context, params DeleteUnitGroupParams) *apierror.APIError
+	Exists(ctx context.Context, params UnitGroupExistsParams) (bool, *apierror.APIError)
+	GetTypesByIDs(ctx context.Context, accountID string, ids []string) (map[string]string, *apierror.APIError)
 	ExistsByName(ctx context.Context, accountID, name string, excludeID *string) (bool, *apierror.APIError)
+	FindByNames(ctx context.Context, accountID string, names []string) ([]*UnitGroupFull, *apierror.APIError)
+	FindUnitsByGroupIDs(ctx context.Context, unitGroupIDs []string) ([]*UnitGroupUnit, *apierror.APIError)
 	UpsertUnitGroupUnit(ctx context.Context, id string, params UpsertUnitGroupUnitParams) (*UnitGroupUnit, *apierror.APIError)
 	DeleteUnitGroupUnit(ctx context.Context, params DeleteUnitGroupUnitParams) *apierror.APIError
 	DeleteAllUnitGroupUnits(ctx context.Context, accountID, unitGroupID string) *apierror.APIError
@@ -418,8 +435,10 @@ type PropertyRepo interface {
 	Update(ctx context.Context, params UpdatePropertyParams) (*Property, *apierror.APIError)
 	Delete(ctx context.Context, params DeletePropertyParams) *apierror.APIError
 	ExistsByName(ctx context.Context, accountID, name string, excludeID *string) (bool, *apierror.APIError)
+	FindByNames(ctx context.Context, accountID string, names []string) ([]*Property, *apierror.APIError)
 	IsInAccount(ctx context.Context, accountID, propertyID string) (bool, *apierror.APIError)
 	DeleteAttributesByPropertyID(ctx context.Context, propertyID, accountID string) *apierror.APIError
+	Export(ctx context.Context, params ExportPropertiesParams) ([]*Property, *apierror.APIError)
 }
 
 type AttributeRepo interface {
@@ -431,6 +450,7 @@ type AttributeRepo interface {
 	Update(ctx context.Context, params UpdateAttributeParams) (*Attribute, *apierror.APIError)
 	Delete(ctx context.Context, params DeleteAttributeParams) *apierror.APIError
 	ExistsByValueInAccount(ctx context.Context, accountID, value string, excludeID *string) (bool, *apierror.APIError)
+	FindByTextsInAccount(ctx context.Context, accountID string, texts []string) ([]*AttributeTextMatch, *apierror.APIError)
 	CountByProperty(ctx context.Context, propertyID, accountID string) (int64, *apierror.APIError)
 	ShiftOrdersUp(ctx context.Context, propertyID, accountID string, fromOrder int32) *apierror.APIError
 	ShiftOrdersDown(ctx context.Context, propertyID, accountID string, afterOrder int32) *apierror.APIError
@@ -504,6 +524,7 @@ type BatchRepo interface {
 // ProductionStepQueryRepo provides read-only methods the batch service needs from production steps.
 type ProductionStepQueryRepo interface {
 	Find(ctx context.Context, accountID, id string) (*ProductionStepDetail, *apierror.APIError)
+	Export(ctx context.Context, params ExportProductionStepsParams) ([]*ProductionStepExport, *apierror.APIError)
 	IsInAccount(ctx context.Context, accountID, id string) (bool, *apierror.APIError)
 	IsMultiPart(ctx context.Context, accountID, id string) (bool, *apierror.APIError)
 	IsLastStep(ctx context.Context, accountID, id string) (bool, *apierror.APIError)
@@ -534,12 +555,15 @@ type ProductionRunQueryRepo interface {
 // ProductionRunRepo provides full CRUD access for production run management.
 type ProductionRunRepo interface {
 	List(ctx context.Context, params ListProductionRunsParams) (*ListProductionRunsResult, *apierror.APIError)
+	Export(ctx context.Context, params ExportProductionRunsParams) ([]*ProductionRunExport, *apierror.APIError)
 	Get(ctx context.Context, params GetProductionRunParams) (*ProductionRun, *apierror.APIError)
 	Create(ctx context.Context, id string, params CreateProductionRunParams, number string) (*ProductionRun, *apierror.APIError)
 	Update(ctx context.Context, params UpdateProductionRunParams) (*ProductionRun, *apierror.APIError)
 	Delete(ctx context.Context, params DeleteProductionRunParams) *apierror.APIError
 	ExistsByNumber(ctx context.Context, accountID, number string, excludeID *string) (bool, *apierror.APIError)
 	GetNextNumber(ctx context.Context, accountID string) (string, *apierror.APIError)
+	// reserves count sequential numbers from a single locked read, for batch writes
+	GetNextNumbers(ctx context.Context, accountID string, count int) ([]string, *apierror.APIError)
 	IsCompleted(ctx context.Context, accountID, id string) (bool, *apierror.APIError)
 	DeleteBatchesByRun(ctx context.Context, accountID, productionRunID string) *apierror.APIError
 	FindOrderIDsByRun(ctx context.Context, accountID, productionRunID string) ([]string, *apierror.APIError)
@@ -557,6 +581,7 @@ type UnitGroupQueryRepo interface {
 // UnitQueryRepo provides read-only access to unit data.
 type UnitQueryRepo interface {
 	Find(ctx context.Context, accountID, id string) (*LightUnit, *apierror.APIError)
+	GetDimensionCodes(ctx context.Context, ids []string) (map[string]string, *apierror.APIError)
 }
 
 // InventoryQueryRepo provides read-only access to inventory data.
@@ -568,11 +593,13 @@ type InventoryQueryRepo interface {
 
 type ProductLineRepo interface {
 	List(ctx context.Context, params ListProductLinesParams) (*ListProductLinesResult, *apierror.APIError)
+	Export(ctx context.Context, params ExportProductLinesParams) ([]*ProductLineFull, *apierror.APIError)
 	Get(ctx context.Context, params GetProductLineParams) (*ProductLineFull, *apierror.APIError)
 	Create(ctx context.Context, id string, params CreateProductLineParams) (*ProductLineFull, *apierror.APIError)
 	Update(ctx context.Context, params UpdateProductLineParams) (*ProductLineFull, *apierror.APIError)
 	Delete(ctx context.Context, params DeleteProductLineParams) *apierror.APIError
 	ExistsByName(ctx context.Context, accountID, name string, excludeID *string) (bool, *apierror.APIError)
+	FindByNames(ctx context.Context, accountID string, names []string) ([]*ProductLineFull, *apierror.APIError)
 	GetUnitGroup(ctx context.Context, accountID, unitGroupID string, includes []string) (*ProductLineUnitGroup, *apierror.APIError)
 	GetByIDs(ctx context.Context, accountID string, ids []string) ([]*ProductLineFull, *apierror.APIError)
 	// IsUnitInGroup reports whether a unit can be used by a line on this unit group. A lot counted in a unit the line cannot express is not a lot anybody can act on.
@@ -588,12 +615,16 @@ type ProductLineRepo interface {
 
 type ItemCategoryRepo interface {
 	List(ctx context.Context, params ListItemCategoriesParams) (*ListItemCategoriesResult, *apierror.APIError)
+	Export(ctx context.Context, params ExportItemCategoriesParams) ([]*ItemCategoryFull, *apierror.APIError)
 	Get(ctx context.Context, params GetItemCategoryParams) (*ItemCategoryFull, *apierror.APIError)
 	Create(ctx context.Context, id string, params CreateItemCategoryParams) (*ItemCategoryFull, *apierror.APIError)
 	Update(ctx context.Context, params UpdateItemCategoryParams) (*ItemCategoryFull, *apierror.APIError)
+	UpdateWithUnitGroup(ctx context.Context, params UpdateItemCategoryWithUnitGroupParams) (*ItemCategoryFull, *apierror.APIError)
 	Delete(ctx context.Context, params DeleteItemCategoryParams) *apierror.APIError
 	IsInAccount(ctx context.Context, accountID, itemCategoryID string) (bool, *apierror.APIError)
+	FindByNames(ctx context.Context, accountID string, names []string) ([]*ItemCategoryFull, *apierror.APIError)
 	AddProperty(ctx context.Context, params AddItemCategoryPropertyParams) *apierror.APIError
+	UpsertProperty(ctx context.Context, itemCategoryID, propertyID string) *apierror.APIError
 	RemoveProperty(ctx context.Context, params RemoveItemCategoryPropertyParams) *apierror.APIError
 	ChangeUnitGroup(ctx context.Context, params ChangeItemCategoryUnitGroupParams) *apierror.APIError
 	GetByIDs(ctx context.Context, accountID string, ids []string) ([]*ItemCategoryFull, *apierror.APIError)
@@ -644,6 +675,12 @@ type ProductionStepRepo interface {
 	DeleteConsumptionsByStepID(ctx context.Context, stepID string) *apierror.APIError
 	DeleteProductionsByStepID(ctx context.Context, stepID string) *apierror.APIError
 	UpdateStepFull(ctx context.Context, id, accountID, levelingFactor, allowances string, scanningStationID *string) *apierror.APIError
+	// FindByNames resolves existing production steps by name (case-insensitive) in
+	// one query. Names must be pre-lowercased by the caller.
+	FindByNames(ctx context.Context, accountID string, names []string) ([]*ProductionStepBulkRow, *apierror.APIError)
+	// UpdateForBulkUpsert writes the full step row for a bulk upsert update; the rate
+	// IDs point at freshly inserted rate rows.
+	UpdateForBulkUpsert(ctx context.Context, params UpdateProductionStepForBulkUpsertParams) *apierror.APIError
 }
 
 // ProductionRepo provides CRUD access to production (output) data.
@@ -811,12 +848,23 @@ type MachineStatusRepo interface {
 
 type MachineRepo interface {
 	List(ctx context.Context, params ListMachinesParams) (*ListMachinesResult, *apierror.APIError)
+	// Export returns every matching machine up to params.Limit, unpaginated.
+	Export(ctx context.Context, params ExportMachinesParams) ([]*Machine, *apierror.APIError)
 	Get(ctx context.Context, params GetMachineParams) (*Machine, *apierror.APIError)
 	GetByIDs(ctx context.Context, accountID string, ids []string) ([]*Machine, *apierror.APIError)
 	Create(ctx context.Context, id string, params CreateMachineParams) (*Machine, *apierror.APIError)
 	Update(ctx context.Context, params UpdateMachineParams) (*Machine, *apierror.APIError)
 	Delete(ctx context.Context, params DeleteMachineParams) *apierror.APIError
 	ExistsByName(ctx context.Context, accountID, name string, excludeID *string) (bool, *apierror.APIError)
+	// FindByNames resolves existing machines by name (case-insensitive) in one query.
+	// Used by bulk upsert; names must be pre-lowercased by the caller.
+	FindByNames(ctx context.Context, accountID string, names []string) ([]*Machine, *apierror.APIError)
+	// ExistsBySerialNumber reports whether another machine in the account already
+	// uses the serial number (case-insensitive), optionally excluding one machine.
+	ExistsBySerialNumber(ctx context.Context, accountID, serialNumber string, excludeID *string) (bool, *apierror.APIError)
+	// FindBySerialNumbers resolves existing machines by serial number
+	// (case-insensitive) in one query.
+	FindBySerialNumbers(ctx context.Context, accountID string, serialNumbers []string) ([]*Machine, *apierror.APIError)
 }
 
 type ProductionScheduleRepo interface {
@@ -983,13 +1031,15 @@ type DemandOverrideRepo interface {
 
 type DepartmentRepo interface {
 	List(ctx context.Context, params ListDepartmentsParams) (*ListDepartmentsResult, *apierror.APIError)
+	Export(ctx context.Context, params ExportDepartmentsParams) ([]*Department, *apierror.APIError)
 	Get(ctx context.Context, params GetDepartmentParams) (*Department, *apierror.APIError)
 	GetByIDs(ctx context.Context, accountID string, ids []string) ([]*Department, *apierror.APIError)
 	Create(ctx context.Context, id string, params CreateDepartmentParams) (*Department, *apierror.APIError)
 	Update(ctx context.Context, params UpdateDepartmentParams) (*Department, *apierror.APIError)
 	Delete(ctx context.Context, params DeleteDepartmentParams) *apierror.APIError
 	ExistsByName(ctx context.Context, accountID, name string, excludeID *string) (bool, *apierror.APIError)
-	SetMachinesDepartmentID(ctx context.Context, departmentID string, machineIDs []string) *apierror.APIError
+	FindByNames(ctx context.Context, accountID string, names []string) ([]*Department, *apierror.APIError)
+	SetMachinesDepartmentID(ctx context.Context, departmentID, accountID string, machineIDs []string) *apierror.APIError
 	SetScanningStationsDepartmentID(ctx context.Context, departmentID, accountID string, scanningStationIDs []string) *apierror.APIError
 	InsertLaborRate(ctx context.Context, rateID string, params CreateRateParams) *apierror.APIError
 	UpdateLaborRate(ctx context.Context, rateID string, params CreateRateParams) *apierror.APIError
@@ -1046,14 +1096,17 @@ type MaterialRepo interface {
 	GetByID(ctx context.Context, params GetMaterialParams) (*Material, *apierror.APIError)
 	GetByItemID(ctx context.Context, accountID, itemID string) (*Material, *apierror.APIError)
 	GetByIDs(ctx context.Context, accountID string, ids []string) ([]*Material, *apierror.APIError)
-	Create(ctx context.Context, id string, params CreateMaterialParams) *apierror.APIError
+	Create(ctx context.Context, materialID, itemID, orderPointID, leadTimeID string) *apierror.APIError
 	Update(ctx context.Context, params UpdateMaterialParams) *apierror.APIError
 	DeleteByID(ctx context.Context, accountID, materialID string) *apierror.APIError
 	DeleteByItemID(ctx context.Context, accountID, itemID string) *apierror.APIError
 	InsertQuantity(ctx context.Context, id, value, unitID string) *apierror.APIError
 	UpdateQuantity(ctx context.Context, id, value, unitID string) *apierror.APIError
 	InsertRate(ctx context.Context, id, value, numeratorUnitID, denominatorUnitID string) *apierror.APIError
-	InsertItem(ctx context.Context, id string, params CreateMaterialParams) *apierror.APIError
+	InsertItem(ctx context.Context, params InsertMaterialItemParams) *apierror.APIError
+	// FindBySKUs batch-resolves existing materials by SKU within the account, returning the
+	// IDs needed to update them. Used by bulk upsert.
+	FindBySKUs(ctx context.Context, accountID string, skus []string) ([]*MaterialSKUMatch, *apierror.APIError)
 	UpdateItem(ctx context.Context, params UpdateMaterialParams) *apierror.APIError
 }
 
@@ -1227,6 +1280,9 @@ type PartRepo interface {
 	Export(ctx context.Context, params ExportPartsParams) ([]*Part, *apierror.APIError)
 	Delete(ctx context.Context, params DeletePartParams) *apierror.APIError
 	ExistsBySKU(ctx context.Context, accountID, sku string, excludeItemID *string) (bool, *apierror.APIError)
+	// FindBySKUs batch-resolves existing parts by SKU within the account, returning the
+	// part/item IDs and unit_value/unit_cost rate IDs needed to update them.
+	FindBySKUs(ctx context.Context, accountID string, skus []string) ([]*PartSKUMatch, *apierror.APIError)
 	InsertRate(ctx context.Context, id, value, numeratorUnitID, denominatorUnitID string) *apierror.APIError
 	InsertItem(ctx context.Context, itemID string, params CreatePartParams, unitValueID, burnRateID, unitCostID string) *apierror.APIError
 	TouchUpdatedAt(ctx context.Context, partID string) *apierror.APIError
@@ -1462,9 +1518,14 @@ type ScanningStationRepo interface {
 	Delete(ctx context.Context, params DeleteScanningStationParams) *apierror.APIError
 	ExistsByName(ctx context.Context, accountID, name string, excludeID *string) (bool, *apierror.APIError)
 	FindIDByName(ctx context.Context, accountID, name string) (*string, *apierror.APIError)
+	// FindByNames resolves existing scanning stations by name (case-insensitive) in
+	// one query. Names must be pre-lowercased by the caller.
+	FindByNames(ctx context.Context, accountID string, names []string) ([]*ScanningStation, *apierror.APIError)
 	ConnectProductionStepsByName(ctx context.Context, accountID, scanningStationID, name string) *apierror.APIError
 	IsInAccount(ctx context.Context, accountID, id string) (bool, *apierror.APIError)
 	FindType(ctx context.Context, accountID, id string) (string, *apierror.APIError)
+	// Export returns every matching station up to params.Limit, unpaginated.
+	Export(ctx context.Context, params ExportScanningStationsParams) ([]*ScanningStation, *apierror.APIError)
 }
 
 type ShippingCaseRepo interface {
@@ -1484,11 +1545,14 @@ type ShippingCaseRepo interface {
 
 type LocationRepo interface {
 	List(ctx context.Context, params ListLocationsParams) (*ListLocationsResult, *apierror.APIError)
+	Export(ctx context.Context, params ExportLocationsParams) ([]*Location, *apierror.APIError)
 	Get(ctx context.Context, params GetLocationParams) (*Location, *apierror.APIError)
 	GetByIDs(ctx context.Context, accountID string, ids []string) ([]*Location, *apierror.APIError)
 	Create(ctx context.Context, id string, params CreateLocationParams) (*Location, *apierror.APIError)
 	Update(ctx context.Context, params UpdateLocationParams) (*Location, *apierror.APIError)
 	Delete(ctx context.Context, params DeleteLocationParams) *apierror.APIError
+	FindByNames(ctx context.Context, accountID string, names []string) ([]*Location, *apierror.APIError)
+	LinkParent(ctx context.Context, accountID, childID, parentID string) *apierror.APIError
 	ListTypes(ctx context.Context, params ListLocationTypesParams) (*ListLocationTypesResult, *apierror.APIError)
 	GetType(ctx context.Context, idOrCode string) (*LocationType, *apierror.APIError)
 	IsInAccount(ctx context.Context, accountID, id string) (bool, *apierror.APIError)
@@ -1508,6 +1572,9 @@ type SupplierRepo interface {
 	Delete(ctx context.Context, ownerAccountID, supplierAccountID string) (*Supplier, *apierror.APIError)
 	BulkDelete(ctx context.Context, ownerAccountID string, supplierAccountIDs []string) *apierror.APIError
 	ExistsByNumber(ctx context.Context, ownerAccountID, number string, excludeID *string) (bool, *apierror.APIError)
+	// FindByNames resolves supplier display names to supplier account IDs within the
+	// owner account (case-insensitive). Used by bulk upsert to attach existing suppliers.
+	FindByNames(ctx context.Context, ownerAccountID string, names []string) ([]*SupplierNameMatch, *apierror.APIError)
 }
 
 type SysPropertyRepo interface {
@@ -1541,8 +1608,16 @@ type PricingRepo interface {
 	LoadPricingBundle(ctx context.Context, params LoadPricingBundleParams) (*PricingBundle, *apierror.APIError)
 }
 
-// PortalDomainRepo persists customer portal custom domains. The single-row getters return (nil, nil) when no matching row exists so callers can distinguish absence from failure.
-// PortalRegistrationSessionRepo persists a buyer's customer-portal registration session.
+type JobRepo interface {
+	Get(ctx context.Context, jobID, accountID string) (*Job, *apierror.APIError)
+	Create(ctx context.Context, params CreateJobRepositoryParams) *apierror.APIError
+	// returns the number of rows changed; the query guards on the terminal timestamps, so an
+	// already-settled job matches zero rows, which serializes a cancel against a completion.
+	Update(ctx context.Context, params UpdateJobRepositoryParams) (int64, *apierror.APIError)
+}
+
+// persists customer portal custom domains. The single-row getters return (nil, nil) when no matching row exists so callers can distinguish absence from failure.
+// persists a buyer's customer-portal registration session.
 type PortalRegistrationSessionRepo interface {
 	Create(ctx context.Context, typeID string, params CreatePortalRegistrationSessionParams) (*PortalRegistrationSession, *apierror.APIError)
 	GetByTypeID(ctx context.Context, typeID string) (*PortalRegistrationSession, *apierror.APIError)

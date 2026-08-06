@@ -7,6 +7,8 @@ import "google/protobuf/timestamp.proto";
 import "core/core_patch.proto";
 import "core/core_identity_context.proto";
 import "core/core_items.proto";
+import "core/core_fuzzy_identifiers.proto";
+import "core/core_async.proto";
 option go_package = "shared/proto/core;core";
 
 message CreateConsumptionRequest {
@@ -154,6 +156,12 @@ message ListScanningStationsResponse {
   repeated ScanningStationInfo scanning_stations = 1;
   PageInfo page_info = 2;
 }
+message ExportScanningStationsRequest {
+  optional string query = 1;
+}
+message ExportScanningStationsResponse {
+  JobInfo job = 1;
+}
 message GetScanningStationRequest {
   string id = 1;
   repeated string includes = 2;
@@ -178,8 +186,8 @@ message UpdateScanningStationRequest {
   string id = 1;
   optional string name = 2;
   optional StringPatch notes = 3;
-  optional string label_size_code = 4;
-  optional string label_type_code = 5;
+  optional StringPatch label_size_code = 4;
+  optional StringPatch label_type_code = 5;
   optional string operator_requirement = 6;
   repeated string includes = 7;
 }
@@ -188,6 +196,21 @@ message UpdateScanningStationResponse {
 }
 message DeleteScanningStationRequest {
   string id = 1;
+}
+message UpsertScanningStationInput {
+  string name = 1;
+  optional string notes = 2;
+  string type = 3;
+  string operator_requirement = 4;
+  ObjectIdentifier department = 5;
+  optional StringPatch label_size_code = 6;
+  optional StringPatch label_type_code = 7;
+}
+message BulkUpsertScanningStationsRequest {
+  repeated UpsertScanningStationInput scanning_stations = 1;
+}
+message BulkUpsertScanningStationsResponse {
+  JobInfo job = 1;
 }
 message ConnectProductionStepsByScanningStationRequest {
   string id = 1;
@@ -232,6 +255,12 @@ message ListLocationsRequest {
 message ListLocationsResponse {
   repeated LocationInfo locations = 1;
   PageInfo page_info = 2;
+}
+message ExportLocationsRequest {
+  optional string query = 1;
+}
+message ExportLocationsResponse {
+  JobInfo job = 1;
 }
 message GetLocationRequest {
   string id = 1;
@@ -285,6 +314,18 @@ message BatchGetLocationsByIDsRequest {
 }
 message BatchGetLocationsByIDsResponse {
   repeated LocationInfo locations = 1;
+}
+message BulkUpsertLocationInput {
+  string name = 1;
+  string type_code = 2;
+  ObjectIdentifier parent = 3;
+  repeated ObjectIdentifier children = 4;
+}
+message BulkUpsertLocationsRequest {
+  repeated BulkUpsertLocationInput locations = 1;
+}
+message BulkUpsertLocationsResponse {
+  JobInfo job = 1;
 }
 message SupplierSummaryProto {
   string id = 1;

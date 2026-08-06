@@ -29,6 +29,7 @@ const (
 	envAccountPhotosBucket        = "ACCOUNT_PHOTOS_BUCKET"
 	envUserPhotosBucket           = "USER_PHOTOS_BUCKET"
 	envShippingLabelsBucket       = "SHIPPING_LABELS_BUCKET"
+	envExportsBucket              = "EXPORTS_BUCKET"
 	envFrontendURL                = "FRONTEND_URL"
 	envAuthServiceURL             = "AUTH_SERVICE_URL"
 	envVercelAPIToken             = "VERCEL_API_TOKEN" // #nosec G101 - Env var name, not a credential
@@ -79,6 +80,10 @@ type config struct {
 	// Not enforced when PlatformMode is "test".
 	ShippingLabelsBucket string
 
+	// ExportsBucket (required) is the S3 bucket rendered exports are uploaded to.
+	// Not enforced when PlatformMode is "test".
+	ExportsBucket string
+
 	// FrontendURL (required) is the base URL of the frontend application, used for checkout return URLs.
 	FrontendURL string
 
@@ -124,6 +129,7 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		AccountPhotosBucket:        env.GetEnv(envAccountPhotosBucket, getenv),
 		UserPhotosBucket:           env.GetEnv(envUserPhotosBucket, getenv),
 		ShippingLabelsBucket:       env.GetEnv(envShippingLabelsBucket, getenv),
+		ExportsBucket:              env.GetEnv(envExportsBucket, getenv),
 		FrontendURL:                env.GetEnv(envFrontendURL, getenv),
 		AuthServiceURL:             env.GetEnv(envAuthServiceURL, getenv),
 		VercelAPIToken:             env.GetEnv(envVercelAPIToken, getenv),
@@ -181,6 +187,9 @@ func (c *config) validate() error {
 		}
 		if c.ShippingLabelsBucket == "" {
 			return fmt.Errorf("core-service: SHIPPING_LABELS_BUCKET is required")
+		}
+		if c.ExportsBucket == "" {
+			return fmt.Errorf("core-service: EXPORTS_BUCKET is required")
 		}
 	}
 

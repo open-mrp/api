@@ -346,6 +346,17 @@ resources:
         models:
           email_log: '#/components/schemas/EmailLog'
           list_email_log: '#/components/schemas/List_EmailLog'
+      jobs:
+        methods:
+          retrieve: get /v1/core/jobs/{id}
+          cancel: post /v1/core/jobs/{id}/cancel
+        models:
+          job: '#/components/schemas/Job'
+          job_export: '#/components/schemas/JobExport'
+          job_result: '#/components/schemas/JobResult'
+          quota_info: '#/components/schemas/QuotaInfo'
+          response_error: '#/components/schemas/ResponseError'
+          row_error: '#/components/schemas/RowError'
       analytics:
         methods:
           update_sales: put /v1/core/analytics/sales
@@ -909,7 +920,12 @@ resources:
           actions:
             methods:
               validate: put /v1/catalog/units/actions/validate
+              bulk_upsert: post /v1/catalog/units/actions/bulk-upsert
+              export: post /v1/catalog/units/actions/export
             models:
+              bulk_upsert_units_request: '#/components/schemas/BulkUpsertUnitsRequest'
+              export_units_request: '#/components/schemas/ExportUnitsRequest'
+              upsert_unit_input: '#/components/schemas/UpsertUnitInput'
               validate_units_request: '#/components/schemas/ValidateUnitsRequest'
               validate_units_response: '#/components/schemas/ValidateUnitsResponse'
         models:
@@ -933,6 +949,16 @@ resources:
             models:
               create_unit_group_unit_request: '#/components/schemas/CreateUnitGroupUnitRequest'
               update_unit_group_unit_request: '#/components/schemas/UpdateUnitGroupUnitRequest'
+          actions:
+            methods:
+              bulk_upsert: post /v1/catalog/unit-groups/actions/bulk-upsert
+              export: post /v1/catalog/unit-groups/actions/export
+            models:
+              bulk_upsert_unit_groups_request: '#/components/schemas/BulkUpsertUnitGroupsRequest'
+              export_unit_groups_request: '#/components/schemas/ExportUnitGroupsRequest'
+              unit_identifier: '#/components/schemas/UnitIdentifier'
+              upsert_unit_group_conversion_input: '#/components/schemas/UpsertUnitGroupConversionInput'
+              upsert_unit_group_input: '#/components/schemas/UpsertUnitGroupInput'
         models:
           create_unit_group_request: '#/components/schemas/CreateUnitGroupRequest'
           create_unit_group_unit_param: '#/components/schemas/CreateUnitGroupUnitParam'
@@ -956,6 +982,15 @@ resources:
             models:
               create_attribute_request: '#/components/schemas/CreateAttributeRequest'
               update_attribute_request: '#/components/schemas/UpdateAttributeRequest'
+          actions:
+            methods:
+              bulk_upsert: post /v1/catalog/properties/actions/bulk-upsert
+              export: post /v1/catalog/properties/actions/export
+            models:
+              bulk_upsert_properties_request: '#/components/schemas/BulkUpsertPropertiesRequest'
+              export_properties_request: '#/components/schemas/ExportPropertiesRequest'
+              upsert_property_attribute_input: '#/components/schemas/UpsertPropertyAttributeInput'
+              upsert_property_input: '#/components/schemas/UpsertPropertyInput'
         models:
           create_property_request: '#/components/schemas/CreatePropertyRequest'
           update_property_request: '#/components/schemas/UpdatePropertyRequest'
@@ -1019,6 +1054,15 @@ resources:
             methods:
               update: put /v1/catalog/item-categories/{id}/properties/{property_id}
               delete: delete /v1/catalog/item-categories/{id}/properties/{property_id}
+          actions:
+            methods:
+              bulk_upsert: post /v1/catalog/item-categories/actions/bulk-upsert
+              export: post /v1/catalog/item-categories/actions/export
+            models:
+              bulk_upsert_item_categories_request: '#/components/schemas/BulkUpsertItemCategoriesRequest'
+              export_item_categories_request: '#/components/schemas/ExportItemCategoriesRequest'
+              object_identifier: '#/components/schemas/ObjectIdentifier'
+              upsert_item_category_input: '#/components/schemas/UpsertItemCategoryInput'
         models:
           create_item_category_request: '#/components/schemas/CreateItemCategoryRequest'
           update_item_category_request: '#/components/schemas/UpdateItemCategoryRequest'
@@ -1032,7 +1076,13 @@ resources:
         subresources:
           actions:
             methods:
-              export: get /v1/catalog/materials/actions/export
+              export: post /v1/catalog/materials/actions/export
+              bulk_upsert: post /v1/catalog/materials/actions/bulk-upsert
+            models:
+              bulk_upsert_materials_request: '#/components/schemas/BulkUpsertMaterialsRequest'
+              export_materials_request: '#/components/schemas/ExportMaterialsRequest'
+              upsert_material_input: '#/components/schemas/UpsertMaterialInput'
+              upsert_material_property: '#/components/schemas/UpsertMaterialProperty'
         models:
           create_material_request: '#/components/schemas/CreateMaterialRequest'
           list_material: '#/components/schemas/List_Material'
@@ -1049,7 +1099,13 @@ resources:
         subresources:
           actions:
             methods:
-              export: get /v1/catalog/parts/actions/export
+              export: post /v1/catalog/parts/actions/export
+              bulk_upsert: post /v1/catalog/parts/actions/bulk-upsert
+            models:
+              bulk_upsert_parts_request: '#/components/schemas/BulkUpsertPartsRequest'
+              export_parts_request: '#/components/schemas/ExportPartsRequest'
+              upsert_part_input: '#/components/schemas/UpsertPartInput'
+              upsert_part_property: '#/components/schemas/UpsertPartProperty'
         models:
           create_part_request: '#/components/schemas/CreatePartRequest'
           list_part: '#/components/schemas/List_Part'
@@ -1062,6 +1118,15 @@ resources:
           create: post /v1/catalog/product-lines
           update: patch /v1/catalog/product-lines/{id}
           delete: delete /v1/catalog/product-lines/{id}
+        subresources:
+          actions:
+            methods:
+              bulk_upsert: post /v1/catalog/product-lines/actions/bulk-upsert
+              export: post /v1/catalog/product-lines/actions/export
+            models:
+              bulk_upsert_product_lines_request: '#/components/schemas/BulkUpsertProductLinesRequest'
+              export_product_lines_request: '#/components/schemas/ExportProductLinesRequest'
+              upsert_product_line_input: '#/components/schemas/UpsertProductLineInput'
         models:
           create_product_line_request: '#/components/schemas/CreateProductLineRequest'
           update_product_line_request: '#/components/schemas/UpdateProductLineRequest'
@@ -1077,8 +1142,13 @@ resources:
           actions:
             methods:
               validate: put /v1/catalog/products/actions/validate
-              export: get /v1/catalog/products/actions/export
+              export: post /v1/catalog/products/actions/export
+              bulk_upsert: post /v1/catalog/products/actions/bulk-upsert
             models:
+              bulk_upsert_products_request: '#/components/schemas/BulkUpsertProductsRequest'
+              export_products_request: '#/components/schemas/ExportProductsRequest'
+              upsert_product_input: '#/components/schemas/UpsertProductInput'
+              upsert_product_property: '#/components/schemas/UpsertProductProperty'
               validate_products_request: '#/components/schemas/ValidateProductsRequest'
               validate_products_response: '#/components/schemas/ValidateProductsResponse'
         models:
@@ -1655,6 +1725,15 @@ resources:
           update: patch /v1/operations/scanning-stations/{id}
           delete: delete /v1/operations/scanning-stations/{id}
           update_production_steps: put /v1/operations/scanning-stations/{id}/production-steps
+        subresources:
+          actions:
+            methods:
+              bulk_upsert: post /v1/operations/scanning-stations/actions/bulk-upsert
+              export: post /v1/operations/scanning-stations/actions/export
+            models:
+              bulk_upsert_scanning_stations_request: '#/components/schemas/BulkUpsertScanningStationsRequest'
+              export_scanning_stations_request: '#/components/schemas/ExportScanningStationsRequest'
+              upsert_scanning_station_input: '#/components/schemas/UpsertScanningStationInput'
         models:
           connect_production_steps_request: '#/components/schemas/ConnectProductionStepsRequest'
           create_scanning_station_request: '#/components/schemas/CreateScanningStationRequest'
@@ -1675,6 +1754,15 @@ resources:
           create: post /v1/operations/departments
           update: patch /v1/operations/departments/{id}
           delete: delete /v1/operations/departments/{id}
+        subresources:
+          actions:
+            methods:
+              bulk_upsert: post /v1/operations/departments/actions/bulk-upsert
+              export: post /v1/operations/departments/actions/export
+            models:
+              bulk_upsert_departments_request: '#/components/schemas/BulkUpsertDepartmentsRequest'
+              export_departments_request: '#/components/schemas/ExportDepartmentsRequest'
+              upsert_department_input: '#/components/schemas/UpsertDepartmentInput'
         models:
           create_department_request: '#/components/schemas/CreateDepartmentRequest'
           department_rate_input: '#/components/schemas/DepartmentRateInput'
@@ -1705,6 +1793,8 @@ resources:
           actions:
             methods:
               bulk_create: post /v1/operations/production-steps/actions/bulk-create
+              bulk_upsert: post /v1/operations/production-steps/actions/bulk-upsert
+              export: post /v1/operations/production-steps/actions/export
             models:
               bulk_create_consumption_input: '#/components/schemas/BulkCreateConsumptionInput'
               bulk_create_production_output_input: '#/components/schemas/BulkCreateProductionOutputInput'
@@ -1712,6 +1802,13 @@ resources:
               bulk_create_production_step_result: '#/components/schemas/BulkCreateProductionStepResult'
               bulk_create_production_steps_request: '#/components/schemas/BulkCreateProductionStepsRequest'
               bulk_create_production_steps_response: '#/components/schemas/BulkCreateProductionStepsResponse'
+              bulk_upsert_production_steps_request: '#/components/schemas/BulkUpsertProductionStepsRequest'
+              export_production_steps_request: '#/components/schemas/ExportProductionStepsRequest'
+              item_identifier: '#/components/schemas/ItemIdentifier'
+              upsert_production_step_input: '#/components/schemas/UpsertProductionStepInput'
+              upsert_rate_input: '#/components/schemas/UpsertRateInput'
+              upsert_step_consumption_input: '#/components/schemas/UpsertStepConsumptionInput'
+              upsert_step_production_input: '#/components/schemas/UpsertStepProductionInput'
         models:
           create_consumption_input: '#/components/schemas/CreateConsumptionInput'
           create_production_input: '#/components/schemas/CreateProductionInput'
@@ -1755,6 +1852,15 @@ resources:
           create: post /v1/operations/machines
           update: patch /v1/operations/machines/{id}
           delete: delete /v1/operations/machines/{id}
+        subresources:
+          actions:
+            methods:
+              bulk_upsert: post /v1/operations/machines/actions/bulk-upsert
+              export: post /v1/operations/machines/actions/export
+            models:
+              bulk_upsert_machines_request: '#/components/schemas/BulkUpsertMachinesRequest'
+              export_machines_request: '#/components/schemas/ExportMachinesRequest'
+              upsert_machine_input: '#/components/schemas/UpsertMachineInput'
         models:
           create_machine_request: '#/components/schemas/CreateMachineRequest'
           update_machine_request: '#/components/schemas/UpdateMachineRequest'
@@ -1815,6 +1921,15 @@ resources:
             models:
               add_batch_input_request: '#/components/schemas/AddBatchInputRequest'
               add_batches_to_production_run_request: '#/components/schemas/AddBatchesToProductionRunRequest'
+          actions:
+            methods:
+              bulk_create: post /v1/operations/production-runs/actions/bulk-create
+              export: post /v1/operations/production-runs/actions/export
+            models:
+              bulk_create_batch_input: '#/components/schemas/BulkCreateBatchInput'
+              bulk_create_production_run_input: '#/components/schemas/BulkCreateProductionRunInput'
+              bulk_create_production_runs_request: '#/components/schemas/BulkCreateProductionRunsRequest'
+              export_production_runs_request: '#/components/schemas/ExportProductionRunsRequest'
         models:
           create_production_run_request: '#/components/schemas/CreateProductionRunRequest'
           list_production_run: '#/components/schemas/List_ProductionRun'
@@ -1994,6 +2109,15 @@ resources:
           create: post /v1/operations/locations
           update: patch /v1/operations/locations/{id}
           delete: delete /v1/operations/locations/{id}
+        subresources:
+          actions:
+            methods:
+              bulk_upsert: post /v1/operations/locations/actions/bulk-upsert
+              export: post /v1/operations/locations/actions/export
+            models:
+              bulk_upsert_locations_request: '#/components/schemas/BulkUpsertLocationsRequest'
+              export_locations_request: '#/components/schemas/ExportLocationsRequest'
+              upsert_location_input: '#/components/schemas/UpsertLocationInput'
         models:
           create_location_request: '#/components/schemas/CreateLocationRequest'
           update_location_request: '#/components/schemas/UpdateLocationRequest'

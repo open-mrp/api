@@ -20,6 +20,22 @@ func validProductBody(sku string) map[string]any {
 	}
 }
 
+// TestProducts_Create_RejectsWrongCategoryType: products may only be created in
+// product categories; a material category is rejected.
+func TestProducts_Create_RejectsWrongCategoryType(t *testing.T) {
+	t.Parallel()
+
+	body := validProductBody(uniqueName("e2e-prod-wrongcat"))
+	body["category_id"] = SeedMaterialCategoryID // Yarn — a material category
+
+	status, respBody, err := apiClient.Post(productsPath, body, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 400, status, respBody)
+
+	errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
+	assertErrorParam(t, errObj, "category_id")
+}
+
 func TestProducts_Create_Basic_DefaultsRates(t *testing.T) {
 	t.Parallel()
 

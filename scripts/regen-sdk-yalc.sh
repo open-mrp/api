@@ -33,8 +33,8 @@ log() { printf '\n\033[1;34m==> %s\033[0m\n' "$1"; }
 command -v yalc >/dev/null 2>&1 || { echo "yalc not found on PATH (npm i -g yalc)." >&2; exit 1; }
 
 if [ "$SKIP_REGEN" -eq 0 ]; then
-  log "Regenerating the OpenAPI spec from the current api code"
-  make -C "$API_DIR" openapi
+  log "Regenerating the OpenAPI spec and Stainless config from the current api code"
+  make -C "$API_DIR" openapi-stainless
 
   # stlc refuses to run on a dirty tree and regenerates the whole repo from the spec +
   # Stainless config, so discarding local working-tree state in the SDK repo is safe and

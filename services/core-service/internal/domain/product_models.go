@@ -68,10 +68,6 @@ type GetProductFullParams struct {
 // CreateProductParams holds parameters for creating a new product.
 type CreateProductParams struct {
 	AccountID       string
-	ItemID          string // generated in service
-	UnitValueRateID string // generated in service
-	UnitCostRateID  string // generated in service
-	BurnRateRateID  string // generated in service
 	SKU             string
 	Description     *string
 	Notes           *string
@@ -87,6 +83,21 @@ type CreateProductParams struct {
 	Includes     []string
 }
 
+// InsertProductItemParams is the input for writing a product's item row. It carries
+// the service-generated IDs (item id + the three rate ids) alongside the item's
+// caller-provided fields, so the generated IDs stay out of CreateProductParams.
+type InsertProductItemParams struct {
+	ItemID          string
+	AccountID       string
+	SKU             string
+	Description     *string
+	Notes           *string
+	CategoryID      string
+	UnitValueRateID string
+	UnitCostRateID  string
+	BurnRateRateID  string
+}
+
 // UpdateProductParams holds parameters for partially updating a product.
 type UpdateProductParams struct {
 	AccountID     string
@@ -97,6 +108,54 @@ type UpdateProductParams struct {
 	IsPortalReady *bool
 	UnitPrice     *CreateRateParams
 	Includes      []string
+}
+
+// BulkUpsertProductsParams holds parameters for bulk upserting products, matched by SKU.
+type BulkUpsertProductsParams struct {
+	Products []UpsertProductParams
+}
+
+// UpsertProductParams is a single product to create or update in a bulk upsert. On
+// create all fields apply; on update sku/description/notes/portal/unit_price/unit_cost
+// and properties are applied (type, product line, and category are create-only, matching
+// the single update endpoint). Properties are additive.
+type UpsertProductParams struct {
+	SKU             string
+	ProductTypeCode string // create-only; defaults to "sale" when empty
+	Description     *string
+	Notes           *string
+	Category        ObjectIdentifier  // create-only
+	ProductLine     *ObjectIdentifier // create-only; optional
+	IsPortalReady   *bool
+	UnitPrice       *CreateRateParams
+	UnitCost        *CreateRateParams
+	// Properties are resolved to attributes (find-or-create by name + value) and attached.
+	Properties []UpsertItemPropertyParams
+}
+
+// ProductSKUMatch is an existing product keyed by SKU, with the IDs needed to update it.
+type ProductSKUMatch struct {
+	ProductID       string
+	ItemID          string
+	SKU             string
+	CategoryID      string
+	UnitValueRateID string
+	UnitCostRateID  string
+}
+
+// mirrors an upsert row with its category and product line resolved to ids. Property
+// names/values stay as written: they are found-or-created when the job runs.
+type ResolvedUpsertProductRow struct {
+	SKU             string
+	ProductTypeCode string
+	Description     *string
+	Notes           *string
+	CategoryID      string
+	ProductLineID   *string
+	IsPortalReady   *bool
+	UnitPrice       *CreateRateParams
+	UnitCost        *CreateRateParams
+	Properties      []UpsertItemPropertyParams
 }
 
 // DeleteProductParams holds parameters for soft-deleting a product.

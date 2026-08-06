@@ -441,21 +441,53 @@ func (r *materialRepoImpl) GetByItemID(ctx context.Context, accountID, itemID st
 	return material, nil
 }
 
-func (r *materialRepoImpl) Create(ctx context.Context, id string, params domain.CreateMaterialParams) *apierror.APIError {
+func (r *materialRepoImpl) Create(ctx context.Context, materialID, itemID, orderPointID, leadTimeID string) *apierror.APIError {
 	ctx, span := materialRepoTracer.Start(ctx, "repository.material.create")
 	defer span.End()
 
 	err := r.queries.CreateMaterial(ctx, sqlc.CreateMaterialParams{
-		ID:           id,
-		ItemID:       params.ItemID,
-		OrderPointID: params.OrderPointID,
-		LeadTimeID:   params.LeadTimeID,
+		ID:           materialID,
+		ItemID:       itemID,
+		OrderPointID: orderPointID,
+		LeadTimeID:   leadTimeID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
 
 	return nil
+}
+
+// FindBySKUs resolves existing materials by SKU within the account to the IDs needed
+// to update them. Used by bulk upsert.
+func (r *materialRepoImpl) FindBySKUs(ctx context.Context, accountID string, skus []string) ([]*domain.MaterialSKUMatch, *apierror.APIError) {
+	ctx, span := materialRepoTracer.Start(ctx, "repository.material.find_by_skus")
+	defer span.End()
+
+	if len(skus) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.queries.FindMaterialsBySKUs(ctx, sqlc.FindMaterialsBySKUsParams{
+		Skus:      skus,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	matches := make([]*domain.MaterialSKUMatch, len(rows))
+	for i, row := range rows {
+		matches[i] = &domain.MaterialSKUMatch{
+			MaterialID:      row.MaterialID,
+			ItemID:          row.ItemID,
+			SKU:             row.Sku,
+			CategoryID:      row.ItemCategoryID,
+			UnitValueRateID: row.UnitValueID,
+			UnitCostRateID:  row.UnitCostID,
+		}
+	}
+	return matches, nil
 }
 
 func (r *materialRepoImpl) Update(ctx context.Context, params domain.UpdateMaterialParams) *apierror.APIError {
@@ -555,12 +587,12 @@ func (r *materialRepoImpl) InsertRate(ctx context.Context, id, value, numeratorU
 	return nil
 }
 
-func (r *materialRepoImpl) InsertItem(ctx context.Context, id string, params domain.CreateMaterialParams) *apierror.APIError {
+func (r *materialRepoImpl) InsertItem(ctx context.Context, params domain.InsertMaterialItemParams) *apierror.APIError {
 	ctx, span := materialRepoTracer.Start(ctx, "repository.material.insert_item")
 	defer span.End()
 
 	err := r.queries.MaterialInsertItem(ctx, sqlc.MaterialInsertItemParams{
-		ID:             id,
+		ID:             params.ItemID,
 		Sku:            params.SKU,
 		Description:    toNullString(params.Description),
 		Notes:          toNullString(params.Notes),
@@ -640,6 +672,7 @@ func (r *materialRepoImpl) Export(ctx context.Context, params domain.ExportMater
 		AttributeIds:           attributeIDs,
 		StartDate:              startDate,
 		EndDate:                endDate,
+		Limit:                  exportQueryLimit,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)

@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+// Package core shared fuzzy reference messages: a request can point at an existing
+// entity by any one of several identifiers, and the server resolves it. An empty
+// field means unset; when more than one is set the documented precedence applies.
+package core;
+
+option go_package = "shared/proto/core;core";
+
+// UnitIdentifier identifies a unit by its id, name, or abbreviation. Precedence: id, then
+// name, then abbreviation.
+message UnitIdentifier {
+  string id = 1;
+  string name = 2;
+  string abbreviation = 3;
+}
+
+// ItemIdentifier identifies an item by its id or SKU. Precedence: id, then SKU.
+message ItemIdentifier {
+  string id = 1;
+  string sku = 2;
+}
+
+// ObjectIdentifier identifies an object by its id or name. Precedence: id, then name.
+message ObjectIdentifier {
+  string id = 1;
+  string name = 2;
+}
+

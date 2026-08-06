@@ -127,6 +127,96 @@ func mapStepConsumptionRow(row sqlc.GetProductionStepConsumptionsRow) (*domain.S
 	}, nil
 }
 
+func (r *productionStepQueryRepoImpl) Export(ctx context.Context, params domain.ExportProductionStepsParams) ([]*domain.ProductionStepExport, *apierror.APIError) {
+	ctx, span := productionStepQueryRepoTracer.Start(ctx, "repository.production_step.export")
+	defer span.End()
+
+	search := sql.NullString{}
+	if params.Query != nil && *params.Query != "" {
+		search = sql.NullString{String: "%" + db.EscapeLike(*params.Query) + "%", Valid: true}
+	}
+
+	rows, err := r.queries.ExportProductionSteps(ctx, sqlc.ExportProductionStepsParams{
+		AccountID:   params.AccountID,
+		SearchQuery: search,
+		Limit:       exportQueryLimit,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	steps := make([]*domain.ProductionStepExport, len(rows))
+	byID := make(map[string]*domain.ProductionStepExport, len(rows))
+	ids := make([]string, len(rows))
+	for i, row := range rows {
+		step := &domain.ProductionStepExport{
+			ID:                       row.ID,
+			Name:                     row.Name,
+			DepartmentName:           nullableString(row.DepartmentName),
+			ScanningStationName:      nullableString(row.ScanningStationName),
+			LaborRate:                nullableString(row.LaborRateValue),
+			LaborRateCurrencyUnit:    nullableString(row.LaborRateCurrencyUnit),
+			LaborRateTimeUnit:        nullableString(row.LaborRateTimeUnit),
+			LaborTime:                nullableString(row.LaborTimeValue),
+			LaborTimeUnit:            nullableString(row.LaborTimeUnit),
+			LaborTimePerUnit:         nullableString(row.LaborTimePerUnit),
+			OverheadRate:             nullableString(row.OverheadRateValue),
+			OverheadRateCurrencyUnit: nullableString(row.OverheadRateCurrencyUnit),
+			OverheadRateTimeUnit:     nullableString(row.OverheadRateTimeUnit),
+			Allowances:               row.Allowances,
+			LevelingFactor:           row.LevelingFactor,
+			Notes:                    nullableString(row.Notes),
+			ProducedItemSKU:          row.ProducedItemSku,
+			ProducedQuantity:         row.ProducedQuantityValue,
+			ProducedUnit:             row.ProducedUnitAbbreviation,
+		}
+		steps[i] = step
+		byID[row.ID] = step
+		ids[i] = row.ID
+	}
+
+	// The sheet lists each step's consumptions one per row, so they load in one
+	// extra query rather than one per step.
+	if len(ids) > 0 {
+		nullableIDs := make([]sql.NullString, len(ids))
+		for i, id := range ids {
+			nullableIDs[i] = sql.NullString{String: id, Valid: true}
+		}
+
+		consumptionRows, err := r.queries.ExportProductionStepConsumptions(ctx, nullableIDs)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		for _, cr := range consumptionRows {
+			if !cr.ProductionStepID.Valid {
+				continue
+			}
+			step, ok := byID[cr.ProductionStepID.String]
+			if !ok {
+				continue
+			}
+			step.Consumptions = append(step.Consumptions, domain.ProductionStepExportConsumption{
+				ItemSKU:       cr.ConsumedItemSku,
+				Quantity:      cr.ConsumedQuantityValue,
+				Unit:          cr.ConsumedUnitAbbreviation,
+				WasteQuantity: nullableString(cr.WasteQuantityValue),
+				WasteUnit:     nullableString(cr.WasteUnitAbbreviation),
+				Instructions:  nullableString(cr.Instructions),
+			})
+		}
+	}
+
+	return steps, nil
+}
+
+// unwraps a nullable column into an optional string
+func nullableString(v sql.NullString) *string {
+	if !v.Valid {
+		return nil
+	}
+	return &v.String
+}
+
 func (r *productionStepQueryRepoImpl) Find(ctx context.Context, accountID, id string) (*domain.ProductionStepDetail, *apierror.APIError) {
 	ctx, span := productionStepQueryRepoTracer.Start(ctx, "repository.production_step_query.find")
 	defer span.End()

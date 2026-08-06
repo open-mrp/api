@@ -377,6 +377,36 @@ func (r *partRepoImpl) Delete(ctx context.Context, params domain.DeletePartParam
 	return nil
 }
 
+func (r *partRepoImpl) FindBySKUs(ctx context.Context, accountID string, skus []string) ([]*domain.PartSKUMatch, *apierror.APIError) {
+	ctx, span := partRepoTracer.Start(ctx, "repository.part.find_by_skus")
+	defer span.End()
+
+	if len(skus) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.queries.FindPartsBySKUs(ctx, sqlc.FindPartsBySKUsParams{
+		Skus:      skus,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	matches := make([]*domain.PartSKUMatch, len(rows))
+	for i, row := range rows {
+		matches[i] = &domain.PartSKUMatch{
+			PartID:          row.PartID,
+			ItemID:          row.ItemID,
+			SKU:             row.Sku,
+			CategoryID:      row.ItemCategoryID,
+			UnitValueRateID: row.UnitValueID,
+			UnitCostRateID:  row.UnitCostID,
+		}
+	}
+	return matches, nil
+}
+
 func (r *partRepoImpl) ExistsBySKU(ctx context.Context, accountID, sku string, excludeItemID *string) (bool, *apierror.APIError) {
 	ctx, span := partRepoTracer.Start(ctx, "repository.part.exists_by_sku")
 	defer span.End()
@@ -492,6 +522,7 @@ func (r *partRepoImpl) Export(ctx context.Context, params domain.ExportPartsPara
 		AttributeIds:           attributeIDs,
 		StartDate:              startDate,
 		EndDate:                endDate,
+		Limit:                  exportQueryLimit,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)

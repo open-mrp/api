@@ -20,6 +20,7 @@ var unitGroupSvcTracer = tracing.GetTracer("core-service.unit_group_service")
 type unitGroupSvcImpl struct {
 	repos           domain.RepoFactory
 	mediatorFactory domain.MediatorFactory
+	jobSvcFactory   domain.JobSvcFactory
 	txManager       TransactionManager
 }
 
@@ -29,6 +30,9 @@ type UnitGroupSvcConfig struct {
 
 	// MediatorFactory (required) builds the mediators used by this service.
 	MediatorFactory domain.MediatorFactory
+
+	// JobSvcFactory (required) builds the job service the async bulk upsert records on.
+	JobSvcFactory domain.JobSvcFactory
 
 	// TxManager (required) wraps multi-step operations in database transactions.
 	TxManager TransactionManager
@@ -40,6 +44,9 @@ func (c *UnitGroupSvcConfig) validate() error {
 	}
 	if c.MediatorFactory == nil {
 		return fmt.Errorf("unit group service: mediator factory is required")
+	}
+	if c.JobSvcFactory == nil {
+		return fmt.Errorf("unit group service: job service factory is required")
 	}
 	if c.TxManager == nil {
 		return fmt.Errorf("unit group service: tx manager is required")
@@ -55,6 +62,7 @@ func NewUnitGroupSvc(config *UnitGroupSvcConfig) domain.UnitGroupSvc {
 	return &unitGroupSvcImpl{
 		repos:           config.Repos,
 		mediatorFactory: config.MediatorFactory,
+		jobSvcFactory:   config.JobSvcFactory,
 		txManager:       config.TxManager,
 	}
 }
@@ -72,6 +80,7 @@ func (s *unitGroupSvcImpl) withTx(ctx context.Context, fn func(context.Context, 
 		txSvc := &unitGroupSvcImpl{
 			repos:           f,
 			mediatorFactory: s.mediatorFactory,
+			jobSvcFactory:   s.jobSvcFactory,
 			txManager:       s.txManager,
 		}
 		return fn(txCtx, txSvc)
@@ -221,6 +230,7 @@ func (s *unitGroupSvcImpl) CreateUnitGroup(ctx context.Context, params domain.Cr
 			}
 
 			// Create unit conversions
+			writtenUnitIDs := make(map[string]struct{}, len(params.UnitConversions))
 			for _, uc := range params.UnitConversions {
 				ucID, apiErr := id.GenID(id.UnitGroupsUnitsIDPrefix, nil)
 				if apiErr != nil {
@@ -239,6 +249,12 @@ func (s *unitGroupSvcImpl) CreateUnitGroup(ctx context.Context, params domain.Cr
 				if apiErr != nil {
 					return apiErr
 				}
+				writtenUnitIDs[uc.UnitID] = struct{}{}
+			}
+
+			// The base unit is always an associated unit, even when not listed.
+			if apiErr := ensureBaseUnitInGroupInTx(txCtx, txSvc.repos, params.AccountID, unitGroupID, params.BaseUnitID, writtenUnitIDs); apiErr != nil {
+				return apiErr
 			}
 
 			// Re-fetch with conversions
@@ -347,6 +363,7 @@ func (s *unitGroupSvcImpl) UpdateUnitGroup(ctx context.Context, params domain.Up
 			}
 
 			// Validate the base unit shares the group's dimension when it is being changed.
+			// The group's type is immutable, so it is checked against the stored type.
 			if params.BaseUnitID != nil {
 				baseUnit, apiErr := txSvc.repos.NewUnitQueryRepo().Find(txCtx, params.AccountID, *params.BaseUnitID)
 				if apiErr != nil {
@@ -903,4 +920,29 @@ func (s *unitGroupSvcImpl) BatchGetUnitGroupUnitsByIDs(ctx context.Context, ids 
 		return nil, nil
 	}
 	return s.repos.NewUnitGroupRepo().GetUnitGroupUnitsByIDs(ctx, identity.Target.AccountID, ids)
+}
+
+func ensureBaseUnitInGroupInTx(txCtx context.Context, txRepos domain.RepoFactory, accountID, unitGroupID, baseUnitID string, writtenUnitIDs map[string]struct{}) *apierror.APIError {
+	if baseUnitID == "" {
+		return nil
+	}
+	if _, ok := writtenUnitIDs[baseUnitID]; ok {
+		return nil
+	}
+	uguID, apiErr := id.GenID(id.UnitGroupsUnitsIDPrefix, nil)
+	if apiErr != nil {
+		return apiErr
+	}
+	if _, apiErr := txRepos.NewUnitGroupRepo().UpsertUnitGroupUnit(txCtx, uguID, domain.UpsertUnitGroupUnitParams{
+		AccountID:          accountID,
+		UnitGroupID:        unitGroupID,
+		UnitGroupUnitID:    uguID,
+		UnitID:             baseUnitID,
+		DiscountPercentage: "0",
+		DiscountFixed:      "0",
+		IsVisible:          true,
+	}); apiErr != nil {
+		return apiErr
+	}
+	return nil
 }

@@ -7,6 +7,37 @@ import (
 )
 
 // ProductionRun represents a full production run domain model.
+// carries an export's filters — the list params without pagination, plus the cap
+// that keeps one request from building an unbounded workbook
+type ExportProductionRunsParams struct {
+	AccountID string
+	Query     *string
+	Limit     int32
+}
+
+// carries one run and its batches as the export sheet lays them out. The read
+// model has neither batches nor a sales order, so the export reads its own shape.
+type ProductionRunExport struct {
+	ID                  string
+	Number              string
+	ResponsibleUserName string
+	StartedAt           *time.Time
+	CompletedAt         *time.Time
+	OrderID             *string
+	Batches             []ProductionRunExportBatch
+}
+
+// carries one batch of an exported run, one sheet row each
+type ProductionRunExportBatch struct {
+	ID             string
+	ItemSKU        string
+	QuantityValue  string
+	QuantityUnit   string
+	DepartmentName *string
+	MachineNames   []string
+	ScannedAt      *time.Time
+}
+
 type ProductionRun struct {
 	ID                string
 	Number            string `audit:"number"`
@@ -102,6 +133,63 @@ type AddBatchInput struct {
 	Quantity          CreateQuantityParams
 	Seconds           *CreateQuantityParams
 	Waste             *CreateQuantityParams
+	ProductionStepID  *string
+	ScanningStationID *string
+}
+
+// BulkCreateBatchParams is a single batch in a bulk production run create, with the
+// item referenced by SKU (resolved server-side) and everything else by ID — all
+// validated server-side.
+type BulkCreateBatchParams struct {
+	Item             ItemIdentifier
+	QuantityValue    string
+	QuantityUnit     UnitIdentifier
+	SecondsValue     *string
+	SecondsUnit      *UnitIdentifier
+	WasteValue       *string
+	WasteUnit        *UnitIdentifier
+	ProductionStepID *string
+	ScanningStation  *ObjectIdentifier
+}
+
+// BulkCreateProductionRunParams is a single production run in a bulk create, owning
+// the batches created with it. The run number is auto-assigned sequentially.
+type BulkCreateProductionRunParams struct {
+	ResponsibleUserID string
+	Batches           []BulkCreateBatchParams
+}
+
+// BulkCreateProductionRunsParams holds the parameters for bulk creating production
+// runs with their batches.
+type BulkCreateProductionRunsParams struct {
+	ProductionRuns []BulkCreateProductionRunParams
+}
+
+// The BulkCreateProductionRunEvent* types below are resolved runs stored on the bulk
+// create job: every reference resolved to an ID, every quantity a validated decimal,
+// and the run and batch IDs pre-generated so redeliveries converge on the same rows.
+// The account comes from the identity restored with the message, not from the payload.
+//
+// They carry no JSON tags: the job_items payload is marshaled and unmarshaled by the
+// engine against these same types, and it is an internal column no client reads.
+
+// BulkCreateProductionRunEventRun is one resolved run stored on the bulk create job.
+type BulkCreateProductionRunEventRun struct {
+	ProductionRunID   string
+	ResponsibleUserID string
+	Batches           []BulkCreateProductionRunEventBatch
+}
+
+// BulkCreateProductionRunEventBatch is one batch in a bulk create event.
+type BulkCreateProductionRunEventBatch struct {
+	BatchID           string
+	ItemID            string
+	QuantityValue     string
+	QuantityUnitID    string
+	SecondsValue      *string
+	SecondsUnitID     *string
+	WasteValue        *string
+	WasteUnitID       *string
 	ProductionStepID  *string
 	ScanningStationID *string
 }

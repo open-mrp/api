@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/services/core-service/internal/domain"
@@ -21,6 +22,7 @@ var itemCategorySvcTracer = tracing.GetTracer("core-service.item_category_servic
 type itemCategorySvcImpl struct {
 	repos           domain.RepoFactory
 	mediatorFactory domain.MediatorFactory
+	jobSvcFactory   domain.JobSvcFactory
 	txManager       TransactionManager
 }
 
@@ -30,6 +32,9 @@ type ItemCategorySvcConfig struct {
 
 	// MediatorFactory (required) builds the mediators used by this service.
 	MediatorFactory domain.MediatorFactory
+
+	// JobSvcFactory (required) builds the job service the async bulk upsert records on.
+	JobSvcFactory domain.JobSvcFactory
 
 	// TxManager (required) wraps multi-step operations in database transactions.
 	TxManager TransactionManager
@@ -41,6 +46,9 @@ func (c *ItemCategorySvcConfig) validate() error {
 	}
 	if c.MediatorFactory == nil {
 		return fmt.Errorf("item category service: mediator factory is required")
+	}
+	if c.JobSvcFactory == nil {
+		return fmt.Errorf("item category service: job service factory is required")
 	}
 	if c.TxManager == nil {
 		return fmt.Errorf("item category service: tx manager is required")
@@ -56,6 +64,7 @@ func NewItemCategorySvc(config *ItemCategorySvcConfig) domain.ItemCategorySvc {
 	return &itemCategorySvcImpl{
 		repos:           config.Repos,
 		mediatorFactory: config.MediatorFactory,
+		jobSvcFactory:   config.JobSvcFactory,
 		txManager:       config.TxManager,
 	}
 }
@@ -98,6 +107,91 @@ func loadItemCategoryFullTx(ctx context.Context, txRepo domain.ItemCategoryRepo,
 	}
 	full.UnitGroup = ug
 	return full, nil
+}
+
+// linkRowPropertiesToCategoryInTx links each of a bulk-upsert row's properties to the
+// item's category (idempotent), so a newly-imported attribute renders in the
+// category-driven detail UI. Without this the attribute is attached to the item but its
+// property is not on the item's category, so the row never shows. propIDByName is the
+// map returned by resolvePropertyAttributesInTx. Shared by the per-type item bulk upserts.
+func linkRowPropertiesToCategoryInTx(txCtx context.Context, repos domain.RepoFactory, categoryID string, properties []domain.UpsertItemPropertyParams, propIDByName map[string]string) *apierror.APIError {
+	if categoryID == "" || len(properties) == 0 {
+		return nil
+	}
+	catRepo := repos.NewItemCategoryRepo()
+	seen := make(map[string]struct{}, len(properties))
+	for _, p := range properties {
+		if p.Name == "" {
+			continue
+		}
+		propID, ok := propIDByName[strings.ToLower(p.Name)]
+		if !ok || propID == "" {
+			continue
+		}
+		if _, dup := seen[propID]; dup {
+			continue
+		}
+		seen[propID] = struct{}{}
+		if apiErr := catRepo.UpsertProperty(txCtx, categoryID, propID); apiErr != nil {
+			return apiErr
+		}
+	}
+	return nil
+}
+
+// bulkCategoryRow pairs a bulk-upsert row index with the category it will be created
+// under, for up-front category validation.
+type bulkCategoryRow struct {
+	Index      int
+	CategoryID string
+}
+
+// validateBulkCreateCategoriesInTx verifies that every category referenced by a create
+// row has a base unit and has the category type the item type requires (materials →
+// material_category; parts and products → product_category), collecting ALL offences
+// into a single validation error instead of failing the batch with an opaque "Resource
+// not found." The identifiers carry category IDs already resolved by the caller. fieldName is
+// the request array name (e.g. "materials") and refField the input field (e.g.
+// "category"), together building params like "materials[2].category"; itemTypeCode is
+// the item type being upserted. Only create rows should be passed — category is
+// create-only on bulk upsert. Shared by the per-type item bulk upserts.
+func validateBulkCreateCategoriesInTx(txCtx context.Context, repos domain.RepoFactory, fieldName, refField, itemTypeCode string, identifiers []bulkCategoryRow) *apierror.APIError {
+	if len(identifiers) == 0 {
+		return nil
+	}
+
+	ids := make([]string, 0, len(identifiers))
+	seen := make(map[string]struct{}, len(identifiers))
+	for _, r := range identifiers {
+		if r.CategoryID == "" {
+			continue
+		}
+		if _, ok := seen[r.CategoryID]; ok {
+			continue
+		}
+		seen[r.CategoryID] = struct{}{}
+		ids = append(ids, r.CategoryID)
+	}
+
+	categories, apiErr := repos.NewItemRepo().GetCategoryBaseUnitIDs(txCtx, ids)
+	if apiErr != nil {
+		return apiErr
+	}
+
+	var rowErrs apierror.RowErrors
+	for _, r := range identifiers {
+		param := fmt.Sprintf("%s[%d].%s", fieldName, r.Index, refField)
+		switch category, exists := categories[r.CategoryID]; {
+		case r.CategoryID == "" || !exists:
+			rowErrs.AddValidation(r.Index, param, fmt.Sprintf("category %q was not found", r.CategoryID))
+		case !categoryTypeMatchesItem(itemTypeCode, category.ItemCategoryTypeCode):
+			rowErrs.AddValidation(r.Index, param, fmt.Sprintf("category %q is a %s and cannot be assigned to a %s", r.CategoryID, category.ItemCategoryTypeCode, itemTypeCode))
+		case category.BaseUnitID == "":
+			rowErrs.AddValidation(r.Index, param, fmt.Sprintf("category %q has no base unit; assign a base unit to its unit group", r.CategoryID))
+		}
+	}
+
+	return rowErrs.Summary("categories")
 }
 
 func (s *itemCategorySvcImpl) BatchGetItemCategoriesByIDs(ctx context.Context, ids []string) ([]*domain.ItemCategoryFull, *apierror.APIError) {

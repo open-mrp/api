@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"strings"
 
 	"github.com/augno/api/services/auth-service/pkg/types"
@@ -18,9 +19,29 @@ import (
 
 var unitSvcTracer = tracing.GetTracer("core-service.unit_service")
 
+// decimal(65,30) stores 30 fractional digits. The smallest representable non-zero
+// magnitude is 10⁻³⁰. MySQL rounds half-away-from-zero, so any value whose absolute
+// value is strictly less than 5×10⁻³¹ (half that unit) will be stored as zero.
+// TODO: this is dependant on the SQL data types for the denominators, if we change to ints this will need to be updated
+var decimal65x30RoundingThreshold = new(big.Rat).SetFrac(
+	big.NewInt(5),
+	new(big.Int).Exp(big.NewInt(10), big.NewInt(31), nil),
+)
+
+// isDenominatorZero reports whether s, when stored as MySQL decimal(65,30), would
+// round to exactly zero. Returns false for unparseable strings — left to DB validation.
+func isDenominatorZero(s string) bool {
+	r, ok := new(big.Rat).SetString(s)
+	if !ok {
+		return false
+	}
+	return new(big.Rat).Abs(r).Cmp(decimal65x30RoundingThreshold) < 0
+}
+
 type unitSvcImpl struct {
 	repos           domain.RepoFactory
 	mediatorFactory domain.MediatorFactory
+	jobSvcFactory   domain.JobSvcFactory
 	txManager       TransactionManager
 }
 
@@ -30,6 +51,9 @@ type UnitSvcConfig struct {
 
 	// MediatorFactory (required) builds the mediators used by this service.
 	MediatorFactory domain.MediatorFactory
+
+	// JobSvcFactory (required) builds the job service the async bulk upsert records on.
+	JobSvcFactory domain.JobSvcFactory
 
 	// TxManager (required) wraps multi-step operations in database transactions.
 	TxManager TransactionManager
@@ -41,6 +65,9 @@ func (c *UnitSvcConfig) validate() error {
 	}
 	if c.MediatorFactory == nil {
 		return fmt.Errorf("unit service: mediator factory is required")
+	}
+	if c.JobSvcFactory == nil {
+		return fmt.Errorf("unit service: job service factory is required")
 	}
 	if c.TxManager == nil {
 		return fmt.Errorf("unit service: tx manager is required")
@@ -56,6 +83,7 @@ func NewUnitSvc(config *UnitSvcConfig) domain.UnitSvc {
 	return &unitSvcImpl{
 		repos:           config.Repos,
 		mediatorFactory: config.MediatorFactory,
+		jobSvcFactory:   config.JobSvcFactory,
 		txManager:       config.TxManager,
 	}
 }
@@ -73,6 +101,7 @@ func (s *unitSvcImpl) withTx(ctx context.Context, fn func(context.Context, *unit
 		txSvc := &unitSvcImpl{
 			repos:           f,
 			mediatorFactory: s.mediatorFactory,
+			jobSvcFactory:   s.jobSvcFactory,
 			txManager:       s.txManager,
 		}
 		return fn(txCtx, txSvc)
@@ -156,12 +185,19 @@ func (s *unitSvcImpl) CreateUnit(ctx context.Context, params domain.CreateUnitPa
 		return nil, tracing.Trace(span, apiErr)
 	}
 
+	if isDenominatorZero(params.RatioDenominator) {
+		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("RatioDenominator must be non-zero.", "ratio_denominator"))
+	}
+	if isDenominatorZero(params.OffsetDenominator) {
+		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("OffsetDenominator must be non-zero.", "offset_denominator"))
+	}
+
 	unitID, apiErr := id.GenID(id.UnitIDPrefix, nil)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	params.AccountID = identity.Target.AccountID
+	accountID := identity.Target.AccountID
 
 	meds := s.mediators()
 
@@ -183,7 +219,7 @@ func (s *unitSvcImpl) CreateUnit(ctx context.Context, params domain.CreateUnitPa
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *unitSvcImpl) *apierror.APIError {
 			txRepo := txSvc.repos.NewUnitRepo()
 
-			exists, apiErr := txRepo.ExistsByName(txCtx, params.AccountID, params.Name, nil)
+			exists, apiErr := txRepo.ExistsByName(txCtx, accountID, params.Name, nil)
 			if apiErr != nil {
 				return apiErr
 			}
@@ -191,7 +227,7 @@ func (s *unitSvcImpl) CreateUnit(ctx context.Context, params domain.CreateUnitPa
 				return apierror.NewConflictErrorWithParam("A unit with this name already exists.", "name")
 			}
 
-			exists, apiErr = txRepo.ExistsByAbbreviation(txCtx, params.AccountID, params.Abbreviation, nil)
+			exists, apiErr = txRepo.ExistsByAbbreviation(txCtx, accountID, params.Abbreviation, nil)
 			if apiErr != nil {
 				return apiErr
 			}
@@ -199,6 +235,7 @@ func (s *unitSvcImpl) CreateUnit(ctx context.Context, params domain.CreateUnitPa
 				return apierror.NewConflictErrorWithParam("A unit with this abbreviation already exists.", "abbreviation")
 			}
 
+			params.AccountID = accountID
 			created, apiErr := txRepo.Create(txCtx, unitID, params)
 			if apiErr != nil {
 				return apiErr
@@ -253,6 +290,13 @@ func (s *unitSvcImpl) UpdateUnit(ctx context.Context, params domain.UpdateUnitPa
 	}
 	if apiErr := identity.CheckHasPermission(types.PermissionDomainUnits, types.ActionUpdate); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
+	}
+
+	if params.RatioDenominator != nil && isDenominatorZero(*params.RatioDenominator) {
+		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("RatioDenominator must be non-zero.", "ratio_denominator"))
+	}
+	if params.OffsetDenominator != nil && isDenominatorZero(*params.OffsetDenominator) {
+		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("OffsetDenominator must be non-zero.", "offset_denominator"))
 	}
 
 	params.AccountID = identity.Target.AccountID

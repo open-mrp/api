@@ -4,6 +4,8 @@ syntax = "proto3";
 package core;
 
 import "google/protobuf/timestamp.proto";
+import "core/core_fuzzy_identifiers.proto";
+import "core/core_async.proto";
 import "core/core_identity_context.proto";
 import "core/core_analytics.proto";
 import "core/core_accounts_carriers.proto";
@@ -121,6 +123,65 @@ message BulkCreateItemResult {
 }
 message BulkCreateItemsResponse {
   repeated BulkCreateItemResult results = 1;
+}
+message UpsertItemPropertyInput {
+  string name = 1;
+  string value = 2;
+}
+message UpsertPartInput {
+  string sku = 1;
+  optional string description = 2;
+  optional string notes = 3;
+  ObjectIdentifier category = 4;
+  // unit_price / unit_cost: numerator must be a currency unit, denominator the per-unit
+  // basis. CreateRateInput is defined in core_analytics.proto.
+  optional CreateRateInput unit_price = 5;
+  optional CreateRateInput unit_cost = 6;
+  repeated UpsertItemPropertyInput properties = 7;
+}
+message BulkUpsertPartsRequest {
+  repeated UpsertPartInput parts = 1;
+}
+message BulkUpsertPartsResponse {
+  JobInfo job = 1;
+}
+message UpsertProductInput {
+  string sku = 1;
+  optional string type = 2;
+  optional string description = 3;
+  optional string notes = 4;
+  ObjectIdentifier category = 5;
+  ObjectIdentifier product_line = 6;
+  optional bool is_portal_ready = 7;
+  optional CreateRateInput unit_price = 8;
+  optional CreateRateInput unit_cost = 9;
+  repeated UpsertItemPropertyInput properties = 10;
+}
+message BulkUpsertProductsRequest {
+  repeated UpsertProductInput products = 1;
+}
+message BulkUpsertProductsResponse {
+  JobInfo job = 1;
+}
+message UpsertMaterialInput {
+  string sku = 1;
+  optional string description = 2;
+  optional string notes = 3;
+  ObjectIdentifier category = 4;
+  // order_point / lead_time: QuantityInput is defined in core_analytics.proto.
+  optional QuantityInput order_point = 5;
+  optional QuantityInput lead_time = 6;
+  // unit_price / unit_cost: numerator must be a currency unit, denominator the per-unit
+  // basis. CreateRateInput is defined in core_analytics.proto.
+  optional CreateRateInput unit_price = 7;
+  optional CreateRateInput unit_cost = 8;
+  repeated UpsertItemPropertyInput properties = 9;
+}
+message BulkUpsertMaterialsRequest {
+  repeated UpsertMaterialInput materials = 1;
+}
+message BulkUpsertMaterialsResponse {
+  JobInfo job = 1;
 }
 message ChildAccountProto {
   string relation_id = 1;
@@ -357,6 +418,12 @@ message ListItemCategoriesResponse {
   repeated ItemCategoryInfo item_categories = 1;
   PageInfo page_info = 2;
 }
+message ExportItemCategoriesRequest {
+  optional string query = 1;
+}
+message ExportItemCategoriesResponse {
+  JobInfo job = 1;
+}
 message GetItemCategoryRequest {
   string id = 1;
   repeated string includes = 2;
@@ -396,6 +463,19 @@ message RemoveItemCategoryPropertyRequest {
 message ChangeItemCategoryUnitGroupRequest {
   string id = 1;
   string unit_group_id = 2;
+}
+message BulkUpsertItemCategoryInput {
+  string name = 1;
+  optional string notes = 2;
+  string type = 3;
+  ObjectIdentifier unit_group = 4;
+  repeated string property_names = 5;
+}
+message BulkUpsertItemCategoriesRequest {
+  repeated BulkUpsertItemCategoryInput item_categories = 1;
+}
+message BulkUpsertItemCategoriesResponse {
+  JobInfo job = 1;
 }
 message ConsumptionInfo {
   string id = 1;

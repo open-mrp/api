@@ -254,6 +254,9 @@ var typeRegistry = map[string]any{
 	"LabelTypeCode":                   LabelTypeCode(""),
 	"ProductTypeCode":                 ProductTypeCode(""),
 	"OperatorRequirement":             OperatorRequirement(""),
+	"JobStatus":                       JobStatus(""),
+	"JobType":                         JobType(""),
+	"JobResultAction":                 JobResultAction(""),
 }
 
 func TestAdherence_AllEnumTypesHaveIsValid(t *testing.T) {

@@ -125,6 +125,19 @@ func productionStepToProto(s *domain.ProductionStep) *pb.ProductionStepInfo {
 	return info
 }
 
+func (h *productionStepGRPCHandler) ExportProductionSteps(ctx context.Context, req *pb.ExportProductionStepsRequest) (*pb.ExportProductionStepsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	job, apiErr := h.productionStepSvc.ExportProductionSteps(ctx, domain.ExportProductionStepsParams{Query: req.Query})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.ExportProductionStepsResponse{Job: jobToProto(job)}, nil
+}
+
 func (h *productionStepGRPCHandler) ListProductionSteps(ctx context.Context, req *pb.ListProductionStepsRequest) (*pb.ListProductionStepsResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
@@ -294,6 +307,75 @@ func (h *productionStepGRPCHandler) GetProduction(ctx context.Context, req *pb.G
 	return &pb.GetProductionResponse{
 		Production: productionToProto(production),
 	}, nil
+}
+
+func (h *productionStepGRPCHandler) BulkUpsertProductionSteps(ctx context.Context, req *pb.BulkUpsertProductionStepsRequest) (*pb.BulkUpsertProductionStepsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	rateFromProto := func(r *pb.UpsertRateInput) domain.UpsertRateParams {
+		if r == nil {
+			return domain.UpsertRateParams{}
+		}
+		return domain.UpsertRateParams{
+			Value:           r.Value,
+			NumeratorUnit:   unitIdentifierFromProto(r.NumeratorUnit),
+			DenominatorUnit: unitIdentifierFromProto(r.DenominatorUnit),
+		}
+	}
+
+	steps := make([]domain.UpsertProductionStepParams, len(req.ProductionSteps))
+	for i, s := range req.ProductionSteps {
+		if s == nil {
+			return nil, contracts.NewMissingGRPCRequestDataError()
+		}
+
+		var production domain.UpsertProductionParams
+		if s.Production != nil {
+			production = domain.UpsertProductionParams{
+				Item:          itemIdentifierFromProto(s.Production.Item),
+				QuantityValue: s.Production.QuantityValue,
+				QuantityUnit:  unitIdentifierFromProto(s.Production.QuantityUnit),
+			}
+		}
+
+		consumptions := make([]domain.UpsertStepConsumptionParams, len(s.Consumptions))
+		for j, c := range s.Consumptions {
+			consumptions[j] = domain.UpsertStepConsumptionParams{
+				Item:               itemIdentifierFromProto(c.Item),
+				QuantityValue:      c.QuantityValue,
+				QuantityUnit:       unitIdentifierFromProto(c.QuantityUnit),
+				WasteQuantityValue: c.WasteQuantityValue,
+				WasteQuantityUnit:  unitIdentifierPtrFromProto(c.WasteQuantityUnit),
+				Instructions:       c.Instructions,
+			}
+		}
+
+		steps[i] = domain.UpsertProductionStepParams{
+			Name:            s.Name,
+			Notes:           s.Notes,
+			LevelingFactor:  s.LevelingFactor,
+			Allowances:      s.Allowances,
+			ScanningStation: objectIdentifierPtrFromProto(s.ScanningStation),
+			Department:      objectIdentifierPtrFromProto(s.Department),
+			LaborRate:       rateFromProto(s.LaborRate),
+			LaborTime:       rateFromProto(s.LaborTime),
+			OverheadRate:    rateFromProto(s.OverheadRate),
+			Production:      production,
+			Consumptions:    consumptions,
+		}
+	}
+
+	job, apiErr := h.productionStepSvc.BulkUpsertProductionSteps(ctx, domain.BulkUpsertProductionStepsParams{ProductionSteps: steps})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.BulkUpsertProductionStepsResponse{Job: jobToProto(job)}, nil
 }
 
 func (h *productionStepGRPCHandler) BulkCreateProductionSteps(ctx context.Context, req *pb.BulkCreateProductionStepsRequest) (*pb.BulkCreateProductionStepsResponse, error) {

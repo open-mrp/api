@@ -1,0 +1,95 @@
+syntax = "proto3";
+
+// Package core defines additional gRPC services for the core-service.
+// CoreJobService handles reads of the jobs that track asynchronous work.
+package core;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "shared/proto/core;core";
+
+service CoreJobService {
+  // GetJob returns a single job by its ID.
+  rpc GetJob(GetJobRequest) returns (GetJobResponse);
+
+  // CancelJob settles a job as cancelled. The job itself is not removed: it is returned carrying its new state.
+  rpc CancelJob(CancelJobRequest) returns (CancelJobResponse);
+
+}
+
+message GetJobRequest {
+  string id = 1;
+}
+
+message GetJobResponse {
+  JobInfo job = 1;
+}
+
+message CancelJobRequest {
+  string id = 1;
+}
+
+message CancelJobResponse {
+  JobInfo job = 1;
+}
+
+// JobInfo represents a job: the record of a piece of asynchronous work, from the request that raised it through to its outcome.
+message JobInfo {
+  string id = 1;
+  string type = 2;
+  string status = 3;
+  optional string created_by_id = 4;
+  optional string created_by_name = 5;
+  optional string created_by_username = 6;
+  optional string created_by_email = 7;
+  JobResultList results = 8;
+  JobErrorList errors = 9;
+  optional string error_summary = 10;
+  optional google.protobuf.Timestamp started_at = 11;
+  optional google.protobuf.Timestamp completed_at = 12;
+  optional google.protobuf.Timestamp failed_at = 13;
+  optional google.protobuf.Timestamp cancelled_at = 14;
+  google.protobuf.Timestamp created_at = 15;
+  google.protobuf.Timestamp updated_at = 16;
+  // Set only on a job whose work was rendering a file.
+  optional ExportInfo export = 17;
+}
+
+message JobResultList {
+  repeated JobResultInfo items = 1;
+}
+
+message JobResultInfo {
+  // Index is of the request row. a failure of the job as a whole has no index
+  int32 index = 1;
+  string id = 2;
+  // "created" or "updated".
+  string action = 3;
+  // SubResourceIds resources created alongside the row's own resource. eg:production run's batches. Empty otherwise.
+  repeated string sub_resource_ids = 4;
+}
+
+// JobErrorList wraps the errors for the same reason JobResultList wraps results.
+message JobErrorList {
+  repeated JobErrorInfo items = 1;
+}
+
+// JobErrorInfo is one failure.
+message JobErrorInfo {
+  // Index is of the request row. a failure of the job as a whole has no index
+  optional int32 index = 1;
+  // Error is the canonical client-facing error object as JSON — the same bytes a
+  // synchronous error response carries under its `error` key. It stays JSON rather
+  // than becoming proto fields because both sides already share the Go type that
+  // produces it (apierror.ResponseError), so there is nothing here to keep in sync.
+  string error = 2;
+}
+
+// Points an export job at its download. It rides on JobInfo, so a client learns one
+// shape for every export rather than one per resource.
+message ExportInfo {
+  // Fields 1-4 carried the file and its metadata before exports became jobs.
+  reserved 1, 2, 3, 4;
+  // Where to download the file.
+  string url = 5;
+}

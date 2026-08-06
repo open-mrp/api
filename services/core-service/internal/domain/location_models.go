@@ -8,6 +8,14 @@ import (
 )
 
 // Location represents a location within an account.
+// carries an export's filters — the list params without pagination, plus the cap
+// that keeps one request from building an unbounded workbook
+type ExportLocationsParams struct {
+	AccountID string
+	Query     *string
+	Limit     int32
+}
+
 type Location struct {
 	ID             string
 	Name           string  `audit:"name"`
@@ -101,4 +109,38 @@ type GetLocationTypeParams struct {
 type ListLocationTypesResult struct {
 	LocationTypes []*LocationType
 	PageInfo      pagination.PageInfo
+}
+
+type UpsertLocationParams struct {
+	Name     string
+	TypeCode string
+	// Parent references this location's parent by id or name. The parent may be another
+	// row in the same batch (referenced by name).
+	Parent *ObjectIdentifier
+	// Children references locations to re-parent under this one, by id or name. Each may be
+	// another row in the same batch (referenced by name).
+	Children []ObjectIdentifier
+}
+
+// LocationRef is a resolved parent/child reference in a bulk upsert. It points either at a
+// pre-existing location (ExistingID) or at another row in the same batch (BatchName — the
+// lowercased row name), which the write phase resolves to that row's id once every row has
+// been upserted. Exactly one field is set. No JSON tags: it round-trips job_items.
+type LocationRef struct {
+	ExistingID string
+	BatchName  string
+}
+
+// ResolvedUpsertLocationRow is a location upsert row after resolution: its parent and child
+// references resolved to either an existing location id or a same-batch row name. No JSON
+// tags: the engine round-trips job_items against this type and it is an internal column.
+type ResolvedUpsertLocationRow struct {
+	Name     string
+	TypeCode string
+	Parent   *LocationRef
+	Children []LocationRef
+}
+
+type BulkUpsertLocationsParams struct {
+	Locations []UpsertLocationParams
 }

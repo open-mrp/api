@@ -156,6 +156,37 @@ func freightPolicyToNullBool(p *constants.FreightPolicy) gosql.NullBool {
 	return gosql.NullBool{Bool: p.ToBool(), Valid: true}
 }
 
+func (r *productLineRepoImpl) Export(ctx context.Context, params domain.ExportProductLinesParams) ([]*domain.ProductLineFull, *apierror.APIError) {
+	ctx, span := productLineRepoTracer.Start(ctx, "repository.product_line.export")
+	defer span.End()
+
+	rows, err := r.queries.ExportProductLines(ctx, sqlc.ExportProductLinesParams{
+		AccountID:   gosql.NullString{String: params.AccountID, Valid: true},
+		SearchQuery: buildProductLineSearchParams(params.Query),
+		Limit:       exportQueryLimit,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	lines := make([]*domain.ProductLineFull, len(rows))
+	for i, row := range rows {
+		line := &domain.ProductLineFull{
+			ID:               row.ID,
+			Name:             row.Name,
+			CommissionPolicy: constants.CommissionPolicyFromBool(row.IsCommissionExempt),
+			FreightPolicy:    constants.FreightPolicyFromBool(row.IsFreightExempt),
+			CreatedAt:        row.CreatedAt,
+			UpdatedAt:        row.UpdatedAt,
+		}
+		if row.UnitGroupName.Valid {
+			line.UnitGroup = &domain.ProductLineUnitGroup{Name: row.UnitGroupName.String}
+		}
+		lines[i] = line
+	}
+	return lines, nil
+}
+
 func (r *productLineRepoImpl) List(ctx context.Context, params domain.ListProductLinesParams) (*domain.ListProductLinesResult, *apierror.APIError) {
 	ctx, span := productLineRepoTracer.Start(ctx, "repository.product_line.list")
 	defer span.End()
@@ -394,6 +425,56 @@ func (r *productLineRepoImpl) ExistsByName(ctx context.Context, accountID, name 
 		return false, tracing.Trace(span, apiErr)
 	}
 	return count > 0, nil
+}
+
+func (r *productLineRepoImpl) FindByNames(ctx context.Context, accountID string, names []string) ([]*domain.ProductLineFull, *apierror.APIError) {
+	ctx, span := productLineRepoTracer.Start(ctx, "repository.product_line.find_by_names")
+	defer span.End()
+
+	if len(names) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.queries.FindProductLinesByNames(ctx, sqlc.FindProductLinesByNamesParams{
+		Names:     names,
+		AccountID: gosql.NullString{String: accountID, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	out := make([]*domain.ProductLineFull, len(rows))
+	for i, row := range rows {
+		out[i] = mapFindProductLinesByNamesRow(row)
+	}
+	return out, nil
+}
+
+func mapFindProductLinesByNamesRow(row sqlc.FindProductLinesByNamesRow) *domain.ProductLineFull {
+	var accountID *string
+	if row.AccountID.Valid {
+		accountID = &row.AccountID.String
+	}
+	var description *string
+	if row.Description.Valid {
+		description = &row.Description.String
+	}
+	var notes *string
+	if row.Notes.Valid {
+		notes = &row.Notes.String
+	}
+	return &domain.ProductLineFull{
+		ID:               row.ID,
+		Name:             row.Name,
+		Description:      description,
+		Notes:            notes,
+		CommissionPolicy: constants.CommissionPolicyFromBool(row.IsCommissionExempt),
+		FreightPolicy:    constants.FreightPolicyFromBool(row.IsFreightExempt),
+		UnitGroupID:      row.UnitGroupID,
+		AccountID:        accountID,
+		CreatedAt:        row.CreatedAt,
+		UpdatedAt:        row.UpdatedAt,
+	}
 }
 
 func (r *productLineRepoImpl) GetUnitGroup(ctx context.Context, accountID, unitGroupID string, includes []string) (*domain.ProductLineUnitGroup, *apierror.APIError) {

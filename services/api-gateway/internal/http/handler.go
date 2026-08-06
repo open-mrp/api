@@ -696,8 +696,13 @@ func ValidateEnumFields(dst any) *apierror.APIError {
 
 		// Unwrap field.Optional[T]/field.Clearable[T] so the wrapped enum value is validated. These are structs with unexported fields, so without unwrapping the recursion below would skip them and the enum check would never run.
 		if field.IsOptionalType(ft) || field.IsClearableType(ft) {
+			isClearable := field.IsClearableType(ft)
 			inner, ok := unwrapEnumWrapper(fv)
 			if !ok {
+				continue
+			}
+			// An empty string on a Clearable is the clear signal, not a value to validate.
+			if isClearable && inner.Kind() == reflect.String && inner.String() == "" {
 				continue
 			}
 			fv = inner

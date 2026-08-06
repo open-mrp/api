@@ -129,17 +129,12 @@ func (h *gRPCHandler) ExportMaterials(ctx context.Context, req *pb.ExportMateria
 		params.EndDate = &t
 	}
 
-	materials, apiErr := h.materialSvc.ExportMaterials(ctx, params)
+	job, apiErr := h.materialSvc.ExportMaterials(ctx, params)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
-	pbMaterials := make([]*pb.MaterialInfo, len(materials))
-	for i, m := range materials {
-		pbMaterials[i] = materialToProto(m)
-	}
-
-	return &pb.ExportMaterialsResponse{Materials: pbMaterials}, nil
+	return &pb.ExportMaterialsResponse{Job: jobToProto(job)}, nil
 }
 
 func (h *gRPCHandler) GetMaterial(ctx context.Context, req *pb.GetMaterialRequest) (*pb.GetMaterialResponse, error) {
@@ -194,6 +189,41 @@ func (h *gRPCHandler) CreateMaterial(ctx context.Context, req *pb.CreateMaterial
 	return &pb.CreateMaterialResponse{
 		Material: materialToProto(material),
 	}, nil
+}
+
+func (h *gRPCHandler) BulkUpsertMaterials(ctx context.Context, req *pb.BulkUpsertMaterialsRequest) (*pb.BulkUpsertMaterialsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	materials := make([]domain.UpsertMaterialParams, len(req.Materials))
+	for i, m := range req.Materials {
+		props := make([]domain.UpsertItemPropertyParams, len(m.Properties))
+		for j, pr := range m.Properties {
+			props[j] = domain.UpsertItemPropertyParams{Name: pr.Name, Value: pr.Value}
+		}
+		materials[i] = domain.UpsertMaterialParams{
+			SKU:         m.Sku,
+			Description: m.Description,
+			Notes:       m.Notes,
+			Category:    objectIdentifierFromProto(m.Category),
+			OrderPoint:  protoToQuantityInput(m.OrderPoint),
+			LeadTime:    protoToQuantityInput(m.LeadTime),
+			UnitPrice:   protoToCreateRateInput(m.UnitPrice),
+			UnitCost:    protoToCreateRateInput(m.UnitCost),
+			Properties:  props,
+		}
+	}
+
+	job, apiErr := h.materialSvc.BulkUpsertMaterials(ctx, domain.BulkUpsertMaterialsParams{Materials: materials})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.BulkUpsertMaterialsResponse{Job: jobToProto(job)}, nil
 }
 
 func (h *gRPCHandler) UpdateMaterial(ctx context.Context, req *pb.UpdateMaterialRequest) (*pb.UpdateMaterialResponse, error) {

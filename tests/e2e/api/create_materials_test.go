@@ -22,7 +22,7 @@ const (
 func validMaterialBody(sku string) map[string]any {
 	return map[string]any{
 		"sku":         sku,
-		"category_id": SeedItemCategoryID,
+		"category_id": SeedMaterialCategoryID,
 	}
 }
 
@@ -104,6 +104,22 @@ func TestMaterials_Create_RejectsCurrencyDenominatorOnUnitPrice(t *testing.T) {
 
 	errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "unit_price.denominator_unit_id")
+}
+
+// TestMaterials_Create_RejectsWrongCategoryType: materials may only be created in
+// material categories; a product category is rejected.
+func TestMaterials_Create_RejectsWrongCategoryType(t *testing.T) {
+	t.Parallel()
+
+	body := validMaterialBody(uniqueName("e2e-mat-wrongcat"))
+	body["category_id"] = SeedItemCategoryID // Socks — a product category
+
+	status, respBody, err := apiClient.Post(materialsPath, body, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 400, status, respBody)
+
+	errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
+	assertErrorParam(t, errObj, "category_id")
 }
 
 func TestMaterials_Create_LinksAttributes(t *testing.T) {

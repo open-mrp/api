@@ -35,16 +35,20 @@ const (
 	// CoreCmdExecuteProductionStepQueue carries execute-production-step commands to the core-service. Messages on this queue trigger inventory updates and reservation management after batch mutations (initialize, move, merge, split).
 	CoreCmdExecuteProductionStepQueue = "core_cmd_execute_production_step"
 
-	// CoreCmdUndoBatchScanQueue carries undo-batch-scan commands to the core-service. Messages on this queue reverse the inventory a scan recorded against a deleted batch: receipts produced, issues consumed, and reservations drawn down.
+	// carries undo-batch-scan commands to the core-service, reversing the receipts, issues, and reservations a scan recorded against a deleted batch.
 	CoreCmdUndoBatchScanQueue = "core_cmd_undo_batch_scan"
 
 	// CoreCmdSyncStripeCustomerQueue carries sync-stripe-customer commands to the core-service, which creates or updates the customer's counterpart in the account's connected Stripe integration. Messages contain a SyncStripeCustomerEvent payload.
 	CoreCmdSyncStripeCustomerQueue = "core_cmd_sync_stripe_customer"
 
-	// CoreCmdGenerateProductionScheduleQueue carries a request to solve and persist one production schedule version. The cadence tick only enqueues onto this queue: a solve takes minutes on a real tenant, and doing it inside the scheduler lease would block every other account behind whichever one is currently solving.
+	// Async bulk operation command queues ("core_cmd_<slug>") are derived from their
+	// canonical identity — see BulkOperation.Queue in bulk_operations.go, the single source
+	// of truth for each operation's queue, routing key, and inbox handler key.
+
+	// carries a request to solve and persist one production schedule version. The cadence tick only enqueues onto this queue: a solve takes minutes on a real tenant, and doing it inside the scheduler lease would block every other account behind whichever one is currently solving.
 	CoreCmdGenerateProductionScheduleQueue = "core_cmd_generate_production_schedule"
 
-	// CoreEventSalesOrderCreatedQueue carries sales-order-created events back to the core-service for out-of-band processing (e.g. CRM sync). Messages on this queue contain a SalesOrderCreatedData payload.
+	// carries sales-order-created events back to the core-service for out-of-band processing (e.g. CRM sync). Messages on this queue contain a SalesOrderCreatedData payload.
 	CoreEventSalesOrderCreatedQueue = "core_event_sales_order_created"
 
 	// CoreEventSalesOrderShippingUpdatedQueue carries sales-order shipping-changed events back to the core-service, which re-syncs the order's shipment records' carrier / service level / ship-to. Messages contain a SalesOrderShippingUpdatedData payload.

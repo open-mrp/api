@@ -451,6 +451,14 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 		registry.RegisterGroup(productionRunsGroup.APIEndpointGroup)
 	}
 
+	// Jobs
+	jobsGroup := (&httpgroup.JobsEndpointGroup{}).Materialize(&httpgroup.JobsEndpointGroupConfig{
+		CoreClient: config.CoreClient,
+	})
+	if jobsGroup != nil {
+		registry.RegisterGroup(jobsGroup.APIEndpointGroup)
+	}
+
 	// Machine Downtime
 	machineDowntimeGroup := (&httpgroup.MachineDowntimeEndpointGroup{}).Materialize(&httpgroup.MachineDowntimeEndpointGroupConfig{
 		CoreClient: config.CoreClient,

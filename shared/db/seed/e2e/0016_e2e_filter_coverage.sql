@@ -66,16 +66,17 @@ INSERT IGNORE INTO rate (id, value, numerator_unit_id, denominator_unit_id, crea
     ('rt_01seedfcpart_uc00', '1.50',  'dollar', 'un_01seedpound00000000', NOW(), NOW()),
     ('rt_01seedfcpart_br00', '1.00',  'un_01seedpound00000000', 'un_01seedpound00000000', NOW(), NOW());
 
--- Product whose item is in the Yarn category.
+-- Product whose item is in the eBad category (a second product_category — products and
+-- parts may only use product categories, matching the API validation).
 INSERT IGNORE INTO item (id, sku, description, account_id, item_type_code, item_category_id, unit_value_id, unit_cost_id, burn_rate_id, created_at, updated_at) VALUES
-    ('it_01seedfcprodyarn00', 'FC-PROD-YARN', 'E2E filter coverage product (Yarn category)', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'product', 'itcg_01seedyarn0000000', 'rt_01seedfcprod_uv00', 'rt_01seedfcprod_uc00', 'rt_01seedfcprod_br00', NOW(), NOW());
+    ('it_01seedfcprodyarn00', 'FC-PROD-YARN', 'E2E filter coverage product (eBad category)', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'product', 'itcg_01seedebad0000000', 'rt_01seedfcprod_uv00', 'rt_01seedfcprod_uc00', 'rt_01seedfcprod_br00', NOW(), NOW());
 
 INSERT IGNORE INTO product (id, item_id, product_type_code, product_line_id, is_portal_ready, created_at, updated_at) VALUES
     ('pd_01seedfcprodyarn00', 'it_01seedfcprodyarn00', 'sale', 'pdln_01k0a735ype5e8nrhv1n5dhq1q', 1, NOW(), NOW());
 
--- Part whose item is in the Chemicals category.
+-- Part whose item is in the eBad category (parts may only use product categories).
 INSERT IGNORE INTO item (id, sku, description, account_id, item_type_code, item_category_id, unit_value_id, unit_cost_id, burn_rate_id, created_at, updated_at) VALUES
-    ('it_01seedfcpartchem00', 'FC-PART-CHEM', 'E2E filter coverage part (Chemicals category)', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'part', 'itcg_01seedchemicals00', 'rt_01seedfcpart_uv00', 'rt_01seedfcpart_uc00', 'rt_01seedfcpart_br00', NOW(), NOW());
+    ('it_01seedfcpartchem00', 'FC-PART-CHEM', 'E2E filter coverage part (eBad category)', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'part', 'itcg_01seedebad0000000', 'rt_01seedfcpart_uv00', 'rt_01seedfcpart_uc00', 'rt_01seedfcpart_br00', NOW(), NOW());
 
 INSERT IGNORE INTO part (id, item_id, created_at, updated_at) VALUES
     ('pt_01seedfcpartchem00', 'it_01seedfcpartchem00', NOW(), NOW());
@@ -178,6 +179,29 @@ INSERT IGNORE INTO transaction_allocation (id, transaction_id, amount_id, invoic
     -- stays top-of-feed for open-credits AND is linked for settlements/transaction_ids.
     ('txal_01seedfcalloc4', 'tx_01seedfctxn4_0000', 'qu_01seedfcal4_amt00', 'iv_01seedfcinv2a0000', 'sl_01seedfcsettl0000', NOW(), NOW());
 
+-- Production run + batches producing the first two filter-coverage catalog items
+-- (FC-PROD-YARN, FC-PART-CHEM) so the production-runs/item_ids array filter has
+-- runs linked to the top-of-feed item ids (runs match via batch.item_id).
+INSERT IGNORE INTO production_run (id, responsible_user_id, number, account_id, started_at, created_at, updated_at) VALUES
+    ('pnrn_01seedfcrun00000', 'us_1wjfmmbwg8l7', 'PR-FC-001', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW(), NOW());
+
+INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
+    ('qu_01seedfcbatch1_qty', 10, 'un_01seedpound00000000', NOW(), NOW()),
+    ('qu_01seedfcbatch2_qty', 10, 'un_01seedpound00000000', NOW(), NOW()),
+    ('qu_01seedfcbatch3_qty', 10, 'un_01seedpound00000000', NOW(), NOW()),
+    ('qu_01seedfcbatch4_qty', 10, 'un_01seedpound00000000', NOW(), NOW()),
+    ('qu_01seedfcbatch5_qty', 10, 'un_01seedpound00000000', NOW(), NOW());
+
+INSERT IGNORE INTO batch (id, account_id, item_id, quantity_id, scanning_station_id, production_step_id, production_run_id, created_at, updated_at) VALUES
+    ('bt_01seedfcbatch1_000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'it_01seedfcprodyarn00', 'qu_01seedfcbatch1_qty', 'sgsn_01k0a8201zegarjfsjaw5n7yfv', 'prs_01k0a51qxceydax5036pegvzzy', 'pnrn_01seedfcrun00000', NOW(), NOW()),
+    ('bt_01seedfcbatch2_000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'it_01seedfcpartchem00', 'qu_01seedfcbatch2_qty', 'sgsn_01k0a8201zegarjfsjaw5n7yfv', 'prs_01k0a575j3fqr97khk36v114nj', 'pnrn_01seedfcrun00000', NOW(), NOW()),
+    -- The first rows of /catalog/items (created_at DESC, id DESC) must all have batches
+    -- because production-runs/item_ids samples that feed: the far-future eBad item is
+    -- row 1, and the e2evol items sort next among the NOW()-cohort by id. Any new seed
+    -- item that outranks these must get a batch here too.
+    ('bt_01seedfcbatch3_000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'it_01seedfcebad000000', 'qu_01seedfcbatch3_qty', 'sgsn_01k0a8201zegarjfsjaw5n7yfv', 'prs_01k0a51qxceydax5036pegvzzy', 'pnrn_01seedfcrun00000', NOW(), NOW()),
+    ('bt_01seedfcbatch4_000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'it_e2evol2000000000', 'qu_01seedfcbatch4_qty', 'sgsn_01k0a8201zegarjfsjaw5n7yfv', 'prs_01k0a51qxceydax5036pegvzzy', 'pnrn_01seedfcrun00000', NOW(), NOW()),
+    ('bt_01seedfcbatch5_000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'it_e2evol1000000000', 'qu_01seedfcbatch5_qty', 'sgsn_01k0a8201zegarjfsjaw5n7yfv', 'prs_01k0a51qxceydax5036pegvzzy', 'pnrn_01seedfcrun00000', NOW(), NOW());
 -- Production run + batches linked to catalog item ids that
 -- production-runs/item_ids discovers from /v1/catalog/items (runs match via batch.item_id).
 -- FC-PROD-YARN / FC-PART-CHEM are filter-coverage rows; FC-EBAD-PROD is far-future in
@@ -194,7 +218,7 @@ INSERT IGNORE INTO rate (id, value, numerator_unit_id, denominator_unit_id, crea
     ('rt_01seedfcebad_br00', '1.00',  'un_01seedpair000000000', 'un_01seedpair000000000', NOW(), NOW());
 
 INSERT IGNORE INTO item (id, sku, description, account_id, item_type_code, item_category_id, unit_value_id, unit_cost_id, burn_rate_id, created_at, updated_at) VALUES
-    ('it_01seedfcebad000000', 'FC-EBAD-PROD', 'E2E filter coverage product (eBad product line)', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'product', 'itcg_01seedyarn0000000', 'rt_01seedfcebad_uv00', 'rt_01seedfcebad_uc00', 'rt_01seedfcebad_br00', DATE_ADD(NOW(), INTERVAL 9 YEAR), DATE_ADD(NOW(), INTERVAL 9 YEAR));
+    ('it_01seedfcebad000000', 'FC-EBAD-PROD', 'E2E filter coverage product (eBad product line)', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'product', 'itcg_01seedebad0000000', 'rt_01seedfcebad_uv00', 'rt_01seedfcebad_uc00', 'rt_01seedfcebad_br00', DATE_ADD(NOW(), INTERVAL 9 YEAR), DATE_ADD(NOW(), INTERVAL 9 YEAR));
 
 INSERT IGNORE INTO product (id, item_id, product_type_code, product_line_id, is_portal_ready, created_at, updated_at) VALUES
     ('pd_01seedfcebad000000', 'it_01seedfcebad000000', 'sale', 'pdln_01k0a735ypfjva933tg57wfx0t', 1, DATE_ADD(NOW(), INTERVAL 9 YEAR), DATE_ADD(NOW(), INTERVAL 9 YEAR));

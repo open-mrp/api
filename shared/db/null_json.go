@@ -16,7 +16,12 @@ func (n *NullableRawMessage) Scan(value any) error {
 	if !ok {
 		return fmt.Errorf("cannot scan %T into NullableRawMessage", value)
 	}
-	// The database/sql layer hands custom Scanners the driver's own buffer, which some drivers (notably go-sql-driver/mysql) reuse for the next read on the same pooled connection. Retaining it lets a concurrent query overwrite these bytes mid-flight, so the value must be copied to stay valid past this call.
+	// Copy, don't alias. database/sql hands a Scanner the driver's own buffer, which is
+	// only valid until the next row read — the mysql driver reuses it on the next query.
+	// Keeping the alias lets later DB activity on the same connection overwrite this
+	// value before it is used (e.g. a job's results scanned, then clobbered by the audit
+	// and outbox writes that follow, before the job is marshaled), which surfaces as
+	// non-deterministic "invalid character" JSON errors.
 	cp := make([]byte, len(b))
 	copy(cp, b)
 	*n = NullableRawMessage(cp)

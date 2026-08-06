@@ -69,6 +69,94 @@ func (q *Queries) DeleteScanningStation(ctx context.Context, arg DeleteScanningS
 	return q.db.ExecContext(ctx, deleteScanningStation, arg.ID, arg.AccountID)
 }
 
+const exportScanningStations = `-- name: ExportScanningStations :many
+SELECT
+    ss.id,
+    ss.name,
+    ss.notes,
+    ss.scanning_station_type_code,
+    ss.label_size_code,
+    ss.label_type_code,
+    ss.material_check_required,
+    ss.department_id,
+    d.name AS department_name,
+    ss.account_id,
+    ss.created_at,
+    ss.updated_at
+FROM scanning_station ss
+LEFT JOIN department d ON d.id = ss.department_id
+WHERE ss.account_id = ?
+AND (
+    ? IS NULL
+    OR ss.name LIKE ?
+)
+ORDER BY ss.created_at DESC, ss.id DESC
+LIMIT ?
+`
+
+type ExportScanningStationsParams struct {
+	AccountID   string
+	SearchQuery sql.NullString
+	Limit       int32
+}
+
+type ExportScanningStationsRow struct {
+	ID                      string
+	Name                    string
+	Notes                   sql.NullString
+	ScanningStationTypeCode string
+	LabelSizeCode           sql.NullString
+	LabelTypeCode           sql.NullString
+	MaterialCheckRequired   bool
+	DepartmentID            string
+	DepartmentName          sql.NullString
+	AccountID               string
+	CreatedAt               time.Time
+	UpdatedAt               time.Time
+}
+
+// Unpaginated by design; the caller passes a row cap as the limit.
+func (q *Queries) ExportScanningStations(ctx context.Context, arg ExportScanningStationsParams) ([]ExportScanningStationsRow, error) {
+	rows, err := q.db.QueryContext(ctx, exportScanningStations,
+		arg.AccountID,
+		arg.SearchQuery,
+		arg.SearchQuery,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ExportScanningStationsRow
+	for rows.Next() {
+		var i ExportScanningStationsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Notes,
+			&i.ScanningStationTypeCode,
+			&i.LabelSizeCode,
+			&i.LabelTypeCode,
+			&i.MaterialCheckRequired,
+			&i.DepartmentID,
+			&i.DepartmentName,
+			&i.AccountID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const findScanningStationIDByName = `-- name: FindScanningStationIDByName :one
 SELECT id FROM scanning_station
 WHERE name = ? AND account_id = ?
@@ -85,6 +173,101 @@ func (q *Queries) FindScanningStationIDByName(ctx context.Context, arg FindScann
 	var id string
 	err := row.Scan(&id)
 	return id, err
+}
+
+const findScanningStationsByNames = `-- name: FindScanningStationsByNames :many
+SELECT
+    ss.id,
+    ss.name,
+    ss.notes,
+    ss.scanning_station_type_code,
+    ss.label_size_code,
+    ss.label_type_code,
+    ss.material_check_required,
+    ss.department_id,
+    d.name AS department_name,
+    d.created_at AS department_created_at,
+    d.updated_at AS department_updated_at,
+    ss.account_id,
+    ss.created_at,
+    ss.updated_at
+FROM scanning_station ss
+LEFT JOIN department d ON d.id = ss.department_id
+WHERE ss.name IN (/*SLICE:names*/?)
+AND ss.account_id = ?
+`
+
+type FindScanningStationsByNamesParams struct {
+	Names     []string
+	AccountID string
+}
+
+type FindScanningStationsByNamesRow struct {
+	ID                      string
+	Name                    string
+	Notes                   sql.NullString
+	ScanningStationTypeCode string
+	LabelSizeCode           sql.NullString
+	LabelTypeCode           sql.NullString
+	MaterialCheckRequired   bool
+	DepartmentID            string
+	DepartmentName          sql.NullString
+	DepartmentCreatedAt     sql.NullTime
+	DepartmentUpdatedAt     sql.NullTime
+	AccountID               string
+	CreatedAt               time.Time
+	UpdatedAt               time.Time
+}
+
+// Names must be pre-lowercased by the caller; the utf8mb4_unicode_ci collation makes
+// the IN comparison case-insensitive, so lowercasing on both sides is not required.
+func (q *Queries) FindScanningStationsByNames(ctx context.Context, arg FindScanningStationsByNamesParams) ([]FindScanningStationsByNamesRow, error) {
+	query := findScanningStationsByNames
+	var queryParams []interface{}
+	if len(arg.Names) > 0 {
+		for _, v := range arg.Names {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:names*/?", strings.Repeat(",?", len(arg.Names))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:names*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FindScanningStationsByNamesRow
+	for rows.Next() {
+		var i FindScanningStationsByNamesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Notes,
+			&i.ScanningStationTypeCode,
+			&i.LabelSizeCode,
+			&i.LabelTypeCode,
+			&i.MaterialCheckRequired,
+			&i.DepartmentID,
+			&i.DepartmentName,
+			&i.DepartmentCreatedAt,
+			&i.DepartmentUpdatedAt,
+			&i.AccountID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getScanningStation = `-- name: GetScanningStation :one
@@ -269,10 +452,10 @@ INSERT INTO scanning_station (
     name,
     notes,
     scanning_station_type_code,
-    material_check_required,
-    department_id,
     label_size_code,
     label_type_code,
+    material_check_required,
+    department_id,
     account_id,
     created_at,
     updated_at
@@ -296,10 +479,10 @@ type InsertScanningStationParams struct {
 	Name                    string
 	Notes                   sql.NullString
 	ScanningStationTypeCode string
-	MaterialCheckRequired   bool
-	DepartmentID            string
 	LabelSizeCode           sql.NullString
 	LabelTypeCode           sql.NullString
+	MaterialCheckRequired   bool
+	DepartmentID            string
 	AccountID               string
 }
 
@@ -309,10 +492,10 @@ func (q *Queries) InsertScanningStation(ctx context.Context, arg InsertScanningS
 		arg.Name,
 		arg.Notes,
 		arg.ScanningStationTypeCode,
-		arg.MaterialCheckRequired,
-		arg.DepartmentID,
 		arg.LabelSizeCode,
 		arg.LabelTypeCode,
+		arg.MaterialCheckRequired,
+		arg.DepartmentID,
 		arg.AccountID,
 	)
 	return err
@@ -597,8 +780,8 @@ const updateScanningStation = `-- name: UpdateScanningStation :execresult
 UPDATE scanning_station SET
     name = COALESCE(?, name),
     notes = ?,
-    label_size_code = COALESCE(?, label_size_code),
-    label_type_code = COALESCE(?, label_type_code),
+    label_size_code = ?,
+    label_type_code = ?,
     material_check_required = COALESCE(?, material_check_required),
     updated_at = NOW(3)
 WHERE id = ?

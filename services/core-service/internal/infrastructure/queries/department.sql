@@ -35,9 +35,8 @@ ORDER BY name ASC;
 -- name: ListMachinesByDepartmentIDs :many
 SELECT m.id, m.name, m.serial_number, m.department_id, m.created_at, m.updated_at
 FROM machine m
-JOIN department d ON d.id = m.department_id
 WHERE m.department_id IN (sqlc.slice('department_ids'))
-AND d.account_id = sqlc.arg('account_id')
+AND m.account_id = sqlc.arg('account_id')
 ORDER BY m.name ASC;
 
 -- name: ListDepartmentsForward :many
@@ -181,6 +180,21 @@ SELECT COUNT(*) FROM department
 WHERE name = ? AND account_id = ?
 AND (sqlc.narg('exclude_id') IS NULL OR id != sqlc.narg('exclude_id'));
 
+-- name: FindDepartmentsByNames :many
+-- Names must be pre-lowercased by the caller; the utf8mb4_unicode_ci collation makes the IN
+-- comparison case-insensitive, so lowercasing on both sides is not required in SQL.
+SELECT
+    d.id,
+    d.name,
+    d.notes,
+    d.location_id,
+    d.account_id,
+    d.created_at,
+    d.updated_at
+FROM department d
+WHERE d.name IN (sqlc.slice('names'))
+AND d.account_id = sqlc.arg('account_id');
+
 -- name: ListScanningStationsByDepartmentID :many
 SELECT id, name, scanning_station_type_code, material_check_required, created_at, updated_at
 FROM scanning_station
@@ -191,21 +205,42 @@ ORDER BY name ASC;
 -- name: ListMachinesByDepartmentID :many
 SELECT m.id, m.name, m.serial_number, m.created_at, m.updated_at
 FROM machine m
-JOIN department d ON d.id = m.department_id
 WHERE m.department_id = sqlc.arg('department_id')
-AND d.account_id = sqlc.arg('account_id')
+AND m.account_id = sqlc.arg('account_id')
 ORDER BY m.name ASC;
 
 -- name: SetMachinesDepartmentID :exec
 UPDATE machine
 SET department_id = sqlc.arg('department_id')
-WHERE id IN (sqlc.slice('machine_ids'));
+WHERE id IN (sqlc.slice('machine_ids'))
+AND account_id = sqlc.arg('account_id');
 
 -- name: SetScanningStationsDepartmentID :exec
 UPDATE scanning_station
 SET department_id = sqlc.arg('department_id')
 WHERE id IN (sqlc.slice('scanning_station_ids'))
 AND account_id = sqlc.arg('account_id');
+
+-- name: ExportDepartments :many
+-- Unpaginated by design; the caller passes a row cap as the limit.
+SELECT
+    d.id,
+    d.name,
+    d.notes,
+    d.location_id,
+    sl.name AS location_name,
+    d.account_id,
+    d.created_at,
+    d.updated_at
+FROM department d
+LEFT JOIN storage_location sl ON sl.id = d.location_id
+WHERE d.account_id = sqlc.arg('account_id')
+AND (
+    sqlc.narg('search_query') IS NULL
+    OR d.name LIKE sqlc.narg('search_query')
+)
+ORDER BY d.created_at DESC, d.id DESC
+LIMIT ?;
 
 -- name: InsertRateForDepartment :exec
 INSERT INTO rate (

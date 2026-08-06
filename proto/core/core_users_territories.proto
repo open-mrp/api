@@ -4,10 +4,13 @@ syntax = "proto3";
 package core;
 
 import "google/protobuf/timestamp.proto";
+import "core/core_fuzzy_identifiers.proto";
 import "core/core_identity_context.proto";
 import "core/core_items.proto";
 import "core/core_consumption.proto";
 import "core/core_invoices.proto";
+import "core/core_async.proto";
+
 option go_package = "shared/proto/core;core";
 
 message GetCurrentUserResponse {
@@ -237,6 +240,12 @@ message ListDepartmentsResponse {
   repeated DepartmentInfo departments = 1;
   PageInfo page_info = 2;
 }
+message ExportDepartmentsRequest {
+  optional string query = 1;
+}
+message ExportDepartmentsResponse {
+  JobInfo job = 1;
+}
 message GetDepartmentRequest {
   string id = 1;
 }
@@ -269,6 +278,20 @@ message UpdateDepartmentResponse {
 }
 message DeleteDepartmentRequest {
   string id = 1;
+}
+// A single department in a bulk upsert, matched by name (case-insensitive) within
+// the account. The location is referenced by name and resolved server-side.
+// Machine / scanning-station attachment is not part of bulk upsert.
+message UpsertDepartmentInput {
+  string name = 1;
+  optional string notes = 2;
+  ObjectIdentifier location = 3;
+}
+message BulkUpsertDepartmentsRequest {
+  repeated UpsertDepartmentInput departments = 1;
+}
+message BulkUpsertDepartmentsResponse {
+  JobInfo job = 1;
 }
 // Batched read for the api-gateway resourcekit resolver.
 message BatchGetDepartmentsByIDsRequest {

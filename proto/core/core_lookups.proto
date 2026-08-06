@@ -6,9 +6,11 @@ package core;
 import "google/protobuf/timestamp.proto";
 import "core/core_patch.proto";
 import "core/core_identity_context.proto";
+import "core/core_async.proto";
 import "core/core_analytics.proto";
 import "core/core_accounts_carriers.proto";
 import "core/core_invoices.proto";
+import "core/core_fuzzy_identifiers.proto";
 option go_package = "shared/proto/core;core";
 
 message ListProductTypesResponse {
@@ -198,6 +200,12 @@ message ListUnitGroupsResponse {
   repeated UnitGroupInfo unit_groups = 1;
   PageInfo page_info = 2;
 }
+message ExportUnitGroupsRequest {
+  optional string query = 1;
+}
+message ExportUnitGroupsResponse {
+  JobInfo job = 1;
+}
 message GetUnitGroupRequest {
   string id = 1;
   repeated string includes = 2;
@@ -281,6 +289,25 @@ message BatchGetUnitGroupUnitsByIDsRequest {
 }
 message BatchGetUnitGroupUnitsByIDsResponse {
   repeated UnitGroupUnitInfo unit_group_units = 1;
+}
+message BulkUpsertUnitGroupConversionInput {
+  UnitIdentifier unit                = 1;
+  string discount_percentage  = 2;
+}
+message BulkUpsertUnitGroupInput {
+  string name                                                    = 1;
+  optional string notes                                          = 2;
+  string type                                                    = 3;
+  UnitIdentifier base_unit                                              = 4;
+  repeated BulkUpsertUnitGroupConversionInput unit_conversions   = 5;
+}
+message BulkUpsertUnitGroupsRequest {
+  repeated BulkUpsertUnitGroupInput unit_groups = 1;
+}
+message BulkUpsertUnitGroupsResponse {
+  // The raised job, returned as the canonical Job resource. The client polls it via the
+  // 202's Location header for the created/updated outcome.
+  JobInfo job = 1;
 }
 message ValidateUnitsRequest {
   map<string, string> unit_map = 1;

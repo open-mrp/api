@@ -174,6 +174,7 @@ ORDER BY
     END ASC,
     p.created_at DESC,
     p.id DESC
+LIMIT ?
 `
 
 type ExportProductsWithFiltersParams struct {
@@ -192,6 +193,7 @@ type ExportProductsWithFiltersParams struct {
 	EndDate                  sql.NullTime
 	SearchExact              interface{}
 	SearchPrefix             interface{}
+	Limit                    int32
 }
 
 type ExportProductsWithFiltersRow struct {
@@ -300,6 +302,7 @@ func (q *Queries) ExportProductsWithFilters(ctx context.Context, arg ExportProdu
 	queryParams = append(queryParams, arg.SearchExact)
 	queryParams = append(queryParams, arg.SearchPrefix)
 	queryParams = append(queryParams, arg.SearchPrefix)
+	queryParams = append(queryParams, arg.Limit)
 	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
@@ -338,6 +341,79 @@ func (q *Queries) ExportProductsWithFilters(ctx context.Context, arg ExportProdu
 			&i.ProductTypeCodeJoined,
 			&i.ProductTypeCreatedAt,
 			&i.ProductTypeUpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const findProductSKUMatches = `-- name: FindProductSKUMatches :many
+SELECT
+    p.id AS product_id,
+    p.item_id,
+    i.sku,
+    i.item_category_id,
+    i.unit_value_id,
+    i.unit_cost_id
+FROM product p
+JOIN item i ON i.id = p.item_id
+WHERE i.sku IN (/*SLICE:skus*/?)
+AND i.account_id = ?
+AND i.deleted_at IS NULL
+`
+
+type FindProductSKUMatchesParams struct {
+	Skus      []string
+	AccountID string
+}
+
+type FindProductSKUMatchesRow struct {
+	ProductID      string
+	ItemID         string
+	Sku            string
+	ItemCategoryID string
+	UnitValueID    string
+	UnitCostID     string
+}
+
+// Used by bulk upsert to resolve existing products (by SKU) to the IDs needed to update
+// them: product id, item id, and the unit_value / unit_cost rate ids. Lightweight
+// counterpart to FindProductsBySKUs (which fully hydrates products).
+func (q *Queries) FindProductSKUMatches(ctx context.Context, arg FindProductSKUMatchesParams) ([]FindProductSKUMatchesRow, error) {
+	query := findProductSKUMatches
+	var queryParams []interface{}
+	if len(arg.Skus) > 0 {
+		for _, v := range arg.Skus {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:skus*/?", strings.Repeat(",?", len(arg.Skus))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:skus*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FindProductSKUMatchesRow
+	for rows.Next() {
+		var i FindProductSKUMatchesRow
+		if err := rows.Scan(
+			&i.ProductID,
+			&i.ItemID,
+			&i.Sku,
+			&i.ItemCategoryID,
+			&i.UnitValueID,
+			&i.UnitCostID,
 		); err != nil {
 			return nil, err
 		}

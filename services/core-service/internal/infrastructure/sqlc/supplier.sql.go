@@ -183,6 +183,63 @@ func (q *Queries) DeleteSupplierRelation(ctx context.Context, arg DeleteSupplier
 	return err
 }
 
+const findSuppliersByNames = `-- name: FindSuppliersByNames :many
+SELECT
+    ar.counterparty_account_id AS account_id,
+    a.name AS account_name
+FROM account_relation ar
+INNER JOIN account a ON a.id = ar.counterparty_account_id
+WHERE ar.owner_account_id = ?
+  AND ar.account_relation_role_code = 'supplier'
+  AND a.name IN (/*SLICE:names*/?)
+`
+
+type FindSuppliersByNamesParams struct {
+	OwnerAccountID string
+	Names          []string
+}
+
+type FindSuppliersByNamesRow struct {
+	AccountID   string
+	AccountName string
+}
+
+// Used by bulk upsert to resolve supplier names to supplier account IDs within the
+// owner account. Match is case-insensitive via the column collation.
+func (q *Queries) FindSuppliersByNames(ctx context.Context, arg FindSuppliersByNamesParams) ([]FindSuppliersByNamesRow, error) {
+	query := findSuppliersByNames
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.OwnerAccountID)
+	if len(arg.Names) > 0 {
+		for _, v := range arg.Names {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:names*/?", strings.Repeat(",?", len(arg.Names))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:names*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FindSuppliersByNamesRow
+	for rows.Next() {
+		var i FindSuppliersByNamesRow
+		if err := rows.Scan(&i.AccountID, &i.AccountName); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getSupplier = `-- name: GetSupplier :one
 SELECT
     ar.id AS relation_id,

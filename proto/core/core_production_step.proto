@@ -5,12 +5,15 @@ package core;
 
 import "google/protobuf/timestamp.proto";
 import "core/core.proto";
+import "core/core_fuzzy_identifiers.proto";
+import "core/core_async.proto";
 
 option go_package = "shared/proto/core;core";
 
 service CoreProductionStepService {
   // ListProductionSteps returns a paginated list of production steps.
   rpc ListProductionSteps(ListProductionStepsRequest) returns (ListProductionStepsResponse);
+  rpc ExportProductionSteps(ExportProductionStepsRequest) returns (ExportProductionStepsResponse);
 
   // GetProductionStep returns a single production step by its ID.
   rpc GetProductionStep(GetProductionStepRequest) returns (GetProductionStepResponse);
@@ -32,6 +35,10 @@ service CoreProductionStepService {
 
   // BulkCreateProductionSteps creates multiple production steps in a single operation.
   rpc BulkCreateProductionSteps(BulkCreateProductionStepsRequest) returns (BulkCreateProductionStepsResponse);
+
+  // BulkUpsertProductionSteps creates or updates production steps in a single atomic
+  // transaction, matched by name (case-insensitive) within the account.
+  rpc BulkUpsertProductionSteps(BulkUpsertProductionStepsRequest) returns (BulkUpsertProductionStepsResponse);
 }
 
 // ProductionStepInfo represents a full production step with all nested data.
@@ -100,6 +107,13 @@ message ListProductionStepsRequest {
 message ListProductionStepsResponse {
   repeated ProductionStepInfo production_steps = 1;
   PageInfo page_info = 2;
+}
+
+message ExportProductionStepsRequest {
+  optional string query = 1;
+}
+message ExportProductionStepsResponse {
+  JobInfo job = 1;
 }
 
 // --- Get ---
@@ -235,4 +249,54 @@ message BulkCreateProductionStepResult {
 
 message BulkCreateProductionStepsResponse {
   repeated BulkCreateProductionStepResult results = 1;
+}
+
+// --- Bulk Upsert Production Steps ---
+
+message UpsertRateInput {
+  string value = 1;
+  UnitIdentifier numerator_unit = 2;
+  UnitIdentifier denominator_unit = 3;
+}
+
+message UpsertProductionInput {
+  ItemIdentifier item = 1;
+  string quantity_value = 2;
+  UnitIdentifier quantity_unit = 3;
+}
+
+message UpsertStepConsumptionInput {
+  ItemIdentifier item = 1;
+  string quantity_value = 2;
+  UnitIdentifier quantity_unit = 3;
+  optional string waste_quantity_value = 4;
+  UnitIdentifier waste_quantity_unit = 5;
+  optional string instructions = 6;
+}
+
+// Flow DAG edges are not part of the input: they are auto-derived from item flows
+// (a step consuming an item is linked under the steps producing it) after the batch
+// commits, mirroring single create.
+message UpsertProductionStepInput {
+  string name = 1;
+  optional string notes = 2;
+  optional string leveling_factor = 3;
+  optional string allowances = 4;
+  ObjectIdentifier scanning_station = 5;
+  ObjectIdentifier department = 6;
+  UpsertRateInput labor_rate = 7;
+  UpsertRateInput labor_time = 8;
+  UpsertRateInput overhead_rate = 9;
+  UpsertProductionInput production = 10;
+  repeated UpsertStepConsumptionInput consumptions = 11;
+}
+
+message BulkUpsertProductionStepsRequest {
+  repeated UpsertProductionStepInput production_steps = 1;
+}
+
+message BulkUpsertProductionStepsResponse {
+  // The raised job, returned as the canonical Job resource. The client polls it via
+  // the 202's Location header for the created/updated outcome.
+  JobInfo job = 1;
 }

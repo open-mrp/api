@@ -104,6 +104,156 @@ func (q *Queries) DisconnectLocationChildren(ctx context.Context, arg Disconnect
 	return err
 }
 
+const exportLocations = `-- name: ExportLocations :many
+SELECT
+    sl.id,
+    sl.name,
+    sl.storage_location_type_code AS type_code,
+    sl.parent_id,
+    p.name AS parent_name,
+    sl.created_at,
+    sl.updated_at
+FROM storage_location sl
+LEFT JOIN storage_location p ON p.id = sl.parent_id
+WHERE sl.account_id = ?
+AND (
+    ? IS NULL
+    OR sl.name LIKE ?
+)
+ORDER BY sl.created_at DESC, sl.id DESC
+LIMIT ?
+`
+
+type ExportLocationsParams struct {
+	AccountID   string
+	SearchQuery sql.NullString
+	Limit       int32
+}
+
+type ExportLocationsRow struct {
+	ID         string
+	Name       string
+	TypeCode   string
+	ParentID   sql.NullString
+	ParentName sql.NullString
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+}
+
+// Unpaginated by design; the caller passes a row cap as the limit.
+func (q *Queries) ExportLocations(ctx context.Context, arg ExportLocationsParams) ([]ExportLocationsRow, error) {
+	rows, err := q.db.QueryContext(ctx, exportLocations,
+		arg.AccountID,
+		arg.SearchQuery,
+		arg.SearchQuery,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ExportLocationsRow
+	for rows.Next() {
+		var i ExportLocationsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.TypeCode,
+			&i.ParentID,
+			&i.ParentName,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const findLocationsByNames = `-- name: FindLocationsByNames :many
+SELECT
+    sl.id,
+    sl.name,
+    sl.storage_location_type_code AS type_code,
+    sl.parent_id,
+    p.name AS parent_name,
+    p.storage_location_type_code AS parent_type_code,
+    sl.created_at,
+    sl.updated_at
+FROM storage_location sl
+LEFT JOIN storage_location p ON p.id = sl.parent_id
+WHERE sl.name IN (/*SLICE:names*/?)
+AND sl.account_id = ?
+`
+
+type FindLocationsByNamesParams struct {
+	Names     []string
+	AccountID string
+}
+
+type FindLocationsByNamesRow struct {
+	ID             string
+	Name           string
+	TypeCode       string
+	ParentID       sql.NullString
+	ParentName     sql.NullString
+	ParentTypeCode sql.NullString
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+// names must be pre-lowercased by the caller; the utf8mb4_unicode_ci collation makes the
+// IN comparison case-insensitive, so lowercasing on both sides is not required in SQL.
+func (q *Queries) FindLocationsByNames(ctx context.Context, arg FindLocationsByNamesParams) ([]FindLocationsByNamesRow, error) {
+	query := findLocationsByNames
+	var queryParams []interface{}
+	if len(arg.Names) > 0 {
+		for _, v := range arg.Names {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:names*/?", strings.Repeat(",?", len(arg.Names))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:names*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FindLocationsByNamesRow
+	for rows.Next() {
+		var i FindLocationsByNamesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.TypeCode,
+			&i.ParentID,
+			&i.ParentName,
+			&i.ParentTypeCode,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getLocation = `-- name: GetLocation :one
 SELECT
     sl.id,

@@ -693,6 +693,67 @@ func (r *productionStepRepoImpl) UpdateStepFull(ctx context.Context, id, account
 	return nil
 }
 
+func (r *productionStepRepoImpl) FindByNames(ctx context.Context, accountID string, names []string) ([]*domain.ProductionStepBulkRow, *apierror.APIError) {
+	ctx, span := productionStepRepoTracer.Start(ctx, "repository.production_step.find_by_names")
+	defer span.End()
+
+	rows, err := r.queries.FindProductionStepsByNames(ctx, sqlc.FindProductionStepsByNamesParams{
+		Names:     names,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	steps := make([]*domain.ProductionStepBulkRow, len(rows))
+	for i, row := range rows {
+		step := &domain.ProductionStepBulkRow{
+			ID:             row.ID,
+			Name:           row.Name,
+			LevelingFactor: row.LevelingFactor,
+			Allowances:     row.Allowances,
+			LaborRateID:    row.LaborRateID,
+			LaborTimeID:    row.LaborTimeID,
+			OverheadRateID: row.OverheadRateID,
+		}
+		if row.Notes.Valid {
+			step.Notes = &row.Notes.String
+		}
+		if row.ScanningStationID.Valid {
+			step.ScanningStationID = &row.ScanningStationID.String
+		}
+		if row.DepartmentID.Valid {
+			step.DepartmentID = &row.DepartmentID.String
+		}
+		steps[i] = step
+	}
+
+	return steps, nil
+}
+
+func (r *productionStepRepoImpl) UpdateForBulkUpsert(ctx context.Context, params domain.UpdateProductionStepForBulkUpsertParams) *apierror.APIError {
+	ctx, span := productionStepRepoTracer.Start(ctx, "repository.production_step.update_for_bulk_upsert")
+	defer span.End()
+
+	err := r.queries.UpdateProductionStepForBulkUpsert(ctx, sqlc.UpdateProductionStepForBulkUpsertParams{
+		ID:                params.ProductionStepID,
+		AccountID:         params.AccountID,
+		Name:              params.Name,
+		Notes:             ptrToNullString(params.Notes),
+		LevelingFactor:    params.LevelingFactor,
+		Allowances:        params.Allowances,
+		ScanningStationID: ptrToNullString(params.ScanningStationID),
+		LaborRateID:       params.LaborRateID,
+		LaborTimeID:       params.LaborTimeID,
+		OverheadRateID:    params.OverheadRateID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	return nil
+}
+
 func (r *productionStepRepoImpl) GetRate(ctx context.Context, rateID string) (*domain.ProductionStepRate, *apierror.APIError) {
 	// Rates are fetched as part of the full production step query — this is a fallback.
 	return nil, apierror.NewInternalError(nil, "GetRate not implemented as a standalone query; rates are fetched inline.")

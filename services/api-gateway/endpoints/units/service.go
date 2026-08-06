@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	jobep "github.com/augno/api/services/api-gateway/endpoints/jobs"
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
@@ -17,9 +18,11 @@ import (
 
 type UnitSvc interface {
 	ListUnits(ctx context.Context, req *ListUnitsRequest) (*apiresource.List[apiresource.Unit], *apierror.APIError)
+	ExportUnits(ctx context.Context, req *ExportUnitsRequest) (*apiresource.Job, *apierror.APIError)
 	GetUnit(ctx context.Context, req *RetrieveUnitRequest) (*apiresource.Unit, *apierror.APIError)
 	CreateUnit(ctx context.Context, req *CreateUnitRequest) (*apiresource.Unit, *apierror.APIError)
 	UpdateUnit(ctx context.Context, req *UpdateUnitRequest) (*apiresource.Unit, *apierror.APIError)
+	BulkUpsertUnits(ctx context.Context, req *BulkUpsertUnitsRequest) (*apiresource.Job, *apierror.APIError)
 	DeleteUnit(ctx context.Context, req *DeleteUnitRequest) (*apiresource.EmptyResource, *apierror.APIError)
 	ValidateUnits(ctx context.Context, req *ValidateUnitsRequest) (*apiresource.ValidateUnitsResponse, *apierror.APIError)
 }
@@ -50,6 +53,18 @@ func NewUnitSvc(config *UnitSvcConfig) UnitSvc {
 	return &unitSvcImpl{
 		coreClient: config.CoreClient,
 	}
+}
+
+func (m *unitSvcImpl) ExportUnits(ctx context.Context, req *ExportUnitsRequest) (*apiresource.Job, *apierror.APIError) {
+	resp, apiErr := grpcutil.CallRPC(ctx, unitSvcTracer, "service.units.export", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ExportUnitsResponse, error) {
+			return m.coreClient.ExportUnits(ctx, &pb.ExportUnitsRequest{Query: req.Query}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return jobep.JobFromProto(resp.GetJob()), nil
 }
 
 func (m *unitSvcImpl) ListUnits(ctx context.Context, req *ListUnitsRequest) (*apiresource.List[apiresource.Unit], *apierror.APIError) {
@@ -142,6 +157,33 @@ func (m *unitSvcImpl) UpdateUnit(ctx context.Context, req *UpdateUnitRequest) (*
 	}
 
 	return loadUnitByID(ctx, resp.Unit.Id)
+}
+
+func (m *unitSvcImpl) BulkUpsertUnits(ctx context.Context, req *BulkUpsertUnitsRequest) (*apiresource.Job, *apierror.APIError) {
+	units := make([]*pb.BulkUpsertUnitInput, 0, len(req.Units))
+	for _, u := range req.Units {
+		units = append(units, &pb.BulkUpsertUnitInput{
+			Name:              u.Name,
+			Abbreviation:      u.Abbreviation,
+			Type:              string(u.Type),
+			RatioNumerator:    u.RatioNumerator,
+			RatioDenominator:  u.RatioDenominator,
+			OffsetNumerator:   u.OffsetNumerator,
+			OffsetDenominator: u.OffsetDenominator,
+			IsBaseUnit:        u.IsBaseUnit,
+		})
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, unitSvcTracer, "service.units.bulk_upsert", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.BulkUpsertUnitsResponse, error) {
+			return m.coreClient.BulkUpsertUnits(ctx, &pb.BulkUpsertUnitsRequest{Units: units}, opts...)
+		})
+
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return jobep.JobFromProto(resp.GetJob()), nil
 }
 
 func (m *unitSvcImpl) DeleteUnit(ctx context.Context, req *DeleteUnitRequest) (*apiresource.EmptyResource, *apierror.APIError) {

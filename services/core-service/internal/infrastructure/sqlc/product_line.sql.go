@@ -60,6 +60,164 @@ func (q *Queries) DeleteProductLineDefaultLotQuantity(ctx context.Context, id st
 	return err
 }
 
+const exportProductLines = `-- name: ExportProductLines :many
+SELECT
+    pl.id,
+    pl.name,
+    pl.is_commission_exempt,
+    pl.is_freight_exempt,
+    ug.name AS unit_group_name,
+    pl.created_at,
+    pl.updated_at
+FROM product_line pl
+LEFT JOIN unit_group ug ON ug.id = pl.unit_group_id
+WHERE (pl.account_id = ? OR pl.account_id IS NULL)
+AND (
+    ? IS NULL
+    OR pl.name LIKE ?
+)
+ORDER BY pl.created_at DESC, pl.id DESC
+LIMIT ?
+`
+
+type ExportProductLinesParams struct {
+	AccountID   sql.NullString
+	SearchQuery sql.NullString
+	Limit       int32
+}
+
+type ExportProductLinesRow struct {
+	ID                 string
+	Name               string
+	IsCommissionExempt bool
+	IsFreightExempt    bool
+	UnitGroupName      sql.NullString
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+}
+
+// Unpaginated by design; the caller passes a row cap as the limit. System rows
+// (account_id IS NULL) are in scope, matching what the list endpoint returns.
+func (q *Queries) ExportProductLines(ctx context.Context, arg ExportProductLinesParams) ([]ExportProductLinesRow, error) {
+	rows, err := q.db.QueryContext(ctx, exportProductLines,
+		arg.AccountID,
+		arg.SearchQuery,
+		arg.SearchQuery,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ExportProductLinesRow
+	for rows.Next() {
+		var i ExportProductLinesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.IsCommissionExempt,
+			&i.IsFreightExempt,
+			&i.UnitGroupName,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const findProductLinesByNames = `-- name: FindProductLinesByNames :many
+SELECT
+    pl.id,
+    pl.name,
+    pl.description,
+    pl.notes,
+    pl.is_commission_exempt,
+    pl.is_freight_exempt,
+    pl.unit_group_id,
+    pl.account_id,
+    pl.created_at,
+    pl.updated_at
+FROM product_line pl
+WHERE pl.name IN (/*SLICE:names*/?)
+AND (pl.account_id = ? OR pl.account_id IS NULL)
+`
+
+type FindProductLinesByNamesParams struct {
+	Names     []string
+	AccountID sql.NullString
+}
+
+type FindProductLinesByNamesRow struct {
+	ID                 string
+	Name               string
+	Description        sql.NullString
+	Notes              sql.NullString
+	IsCommissionExempt bool
+	IsFreightExempt    bool
+	UnitGroupID        string
+	AccountID          sql.NullString
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+}
+
+// names must be pre-lowercased by the caller; the utf8mb4_unicode_ci collation makes the
+// IN comparison case-insensitive, so lowercasing on both sides is not required in SQL.
+// System product lines (account_id IS NULL) are included so the upsert can detect a
+// name collision with a platform-provided line and reject the modification.
+func (q *Queries) FindProductLinesByNames(ctx context.Context, arg FindProductLinesByNamesParams) ([]FindProductLinesByNamesRow, error) {
+	query := findProductLinesByNames
+	var queryParams []interface{}
+	if len(arg.Names) > 0 {
+		for _, v := range arg.Names {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:names*/?", strings.Repeat(",?", len(arg.Names))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:names*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FindProductLinesByNamesRow
+	for rows.Next() {
+		var i FindProductLinesByNamesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.Notes,
+			&i.IsCommissionExempt,
+			&i.IsFreightExempt,
+			&i.UnitGroupID,
+			&i.AccountID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getItemLotOverride = `-- name: GetItemLotOverride :one
 SELECT COALESCE(s.lot_multiple_units, 0) AS lot_multiple_units
 FROM production_schedule_item_setting s

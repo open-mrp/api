@@ -71,6 +71,21 @@ func (h *gRPCHandler) BatchGetScanningStationsByIDs(ctx context.Context, req *pb
 	}, nil
 }
 
+func (h *gRPCHandler) ExportScanningStations(ctx context.Context, req *pb.ExportScanningStationsRequest) (*pb.ExportScanningStationsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	job, apiErr := h.scanningStationSvc.ExportScanningStations(ctx, domain.ExportScanningStationsParams{
+		Query: req.Query,
+	})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.ExportScanningStationsResponse{Job: jobToProto(job)}, nil
+}
+
 func (h *gRPCHandler) ListScanningStations(ctx context.Context, req *pb.ListScanningStationsRequest) (*pb.ListScanningStationsResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
@@ -122,6 +137,25 @@ func (h *gRPCHandler) GetScanningStation(ctx context.Context, req *pb.GetScannin
 	}, nil
 }
 
+// nilLabelWhenEmpty treats an explicitly sent empty label code as absent — the empty
+// string is never a valid code, and spreadsheet-driven clients send "" for a blank
+// cell.
+func nilLabelWhenEmpty(s *string) *string {
+	if s != nil && *s == "" {
+		return nil
+	}
+	return s
+}
+
+// clearLabelWhenEmpty treats an explicitly set empty label code as a clear; see
+// nilLabelWhenEmpty.
+func clearLabelWhenEmpty(f field.Clearable[string]) field.Clearable[string] {
+	if v, ok := f.Value(); ok && v == "" {
+		return field.Clear[string]()
+	}
+	return f
+}
+
 func (h *gRPCHandler) CreateScanningStation(ctx context.Context, req *pb.CreateScanningStationRequest) (*pb.CreateScanningStationResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
@@ -134,10 +168,10 @@ func (h *gRPCHandler) CreateScanningStation(ctx context.Context, req *pb.CreateS
 		Name:                req.Name,
 		Notes:               req.Notes,
 		Type:                constants.ScanningStationType(req.Type),
+		LabelSizeCode:       nilLabelWhenEmpty(req.LabelSizeCode),
+		LabelTypeCode:       nilLabelWhenEmpty(req.LabelTypeCode),
 		OperatorRequirement: constants.OperatorRequirement(req.OperatorRequirement),
 		DepartmentID:        req.DepartmentId,
-		LabelSizeCode:       req.LabelSizeCode,
-		LabelTypeCode:       req.LabelTypeCode,
 		Includes:            req.Includes,
 	}
 
@@ -163,8 +197,8 @@ func (h *gRPCHandler) UpdateScanningStation(ctx context.Context, req *pb.UpdateS
 		ScanningStationID: req.Id,
 		Name:              req.Name,
 		Notes:             field.StringClearableFromProto(req.Notes),
-		LabelSizeCode:     req.LabelSizeCode,
-		LabelTypeCode:     req.LabelTypeCode,
+		LabelSizeCode:     clearLabelWhenEmpty(field.StringClearableFromProto(req.LabelSizeCode)),
+		LabelTypeCode:     clearLabelWhenEmpty(field.StringClearableFromProto(req.LabelTypeCode)),
 		OperatorRequirement: func() *constants.OperatorRequirement {
 			if req.OperatorRequirement == nil {
 				return nil
@@ -183,6 +217,38 @@ func (h *gRPCHandler) UpdateScanningStation(ctx context.Context, req *pb.UpdateS
 	return &pb.UpdateScanningStationResponse{
 		ScanningStation: scanningStationToProto(ss),
 	}, nil
+}
+
+func (h *gRPCHandler) BulkUpsertScanningStations(ctx context.Context, req *pb.BulkUpsertScanningStationsRequest) (*pb.BulkUpsertScanningStationsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	stations := make([]domain.UpsertScanningStationParams, len(req.ScanningStations))
+	for i, ss := range req.ScanningStations {
+		if ss == nil {
+			return nil, contracts.NewMissingGRPCRequestDataError()
+		}
+		stations[i] = domain.UpsertScanningStationParams{
+			Name:                ss.Name,
+			Notes:               ss.Notes,
+			Type:                constants.ScanningStationType(ss.Type),
+			LabelSizeCode:       clearLabelWhenEmpty(field.StringClearableFromProto(ss.LabelSizeCode)),
+			LabelTypeCode:       clearLabelWhenEmpty(field.StringClearableFromProto(ss.LabelTypeCode)),
+			OperatorRequirement: constants.OperatorRequirement(ss.OperatorRequirement),
+			Department:          objectIdentifierFromProto(ss.Department),
+		}
+	}
+
+	job, apiErr := h.scanningStationSvc.BulkUpsertScanningStations(ctx, domain.BulkUpsertScanningStationsParams{ScanningStations: stations})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.BulkUpsertScanningStationsResponse{Job: jobToProto(job)}, nil
 }
 
 func (h *gRPCHandler) DeleteScanningStation(ctx context.Context, req *pb.DeleteScanningStationRequest) (*emptypb.Empty, error) {

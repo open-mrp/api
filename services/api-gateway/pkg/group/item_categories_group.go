@@ -48,6 +48,8 @@ func (*ItemCategoriesEndpointGroup) Materialize(config *ItemCategoriesEndpointGr
 	addPropertyEndpoint := apiendpoint.From(&itemcategoryep.AddItemCategoryPropertyEndpoint{}).WithService(inner, itemCategorySvc)
 	removePropertyEndpoint := apiendpoint.From(&itemcategoryep.RemoveItemCategoryPropertyEndpoint{}).WithService(inner, itemCategorySvc)
 	changeUnitGroupEndpoint := apiendpoint.From(&itemcategoryep.ChangeItemCategoryUnitGroupEndpoint{}).WithService(inner, itemCategorySvc)
+	bulkUpsertEndpoint := apiendpoint.From(&itemcategoryep.BulkUpsertItemCategoriesEndpoint{}).WithService(inner, itemCategorySvc)
+	exportEndpoint := apiendpoint.From(&itemcategoryep.ExportItemCategoriesEndpoint{}).WithService(inner, itemCategorySvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,
@@ -58,6 +60,8 @@ func (*ItemCategoriesEndpointGroup) Materialize(config *ItemCategoriesEndpointGr
 		addPropertyEndpoint,
 		removePropertyEndpoint,
 		changeUnitGroupEndpoint,
+		bulkUpsertEndpoint,
+		exportEndpoint,
 	}
 
 	return &ItemCategoriesEndpointGroup{inner}

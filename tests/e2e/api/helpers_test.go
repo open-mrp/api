@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/augno/api/shared/id"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -434,11 +435,23 @@ func assertCreatedLocation(t *testing.T, header http.Header, id string) {
 		"Location header %q should contain the new resource id %q", location, id)
 }
 
-// assertIDFormat asserts the ID starts with the given prefix followed by "_".
-func assertIDFormat(t *testing.T, id, expectedPrefix string) {
+// mustGenID generates a well-formed ID with the given prefix via the real ID
+// generator. Use it for nonexistent-reference probes instead of hand-written fake
+// IDs, so tests never drift from the actual ID format.
+func mustGenID(t *testing.T, prefix id.IDPrefix) string {
 	t.Helper()
-	assert.True(t, strings.HasPrefix(id, expectedPrefix+"_"),
-		"id %q should start with %q", id, expectedPrefix+"_")
+	generated, apiErr := id.GenID(prefix, nil)
+	require.Nil(t, apiErr, "failed to generate id with prefix %q", prefix)
+	return generated
+}
+
+// assertIDFormat asserts the ID starts with the given prefix followed by "_". The
+// prefix should come from the shared/id prefix constants; untyped string literals
+// also convert.
+func assertIDFormat(t *testing.T, actualID string, expectedPrefix id.IDPrefix) {
+	t.Helper()
+	assert.True(t, strings.HasPrefix(actualID, string(expectedPrefix)+"_"),
+		"id %q should start with %q", actualID, string(expectedPrefix)+"_")
 }
 
 // assertValidTimestamp asserts the value is a valid RFC3339 timestamp.
@@ -624,8 +637,38 @@ func jsonArray(m map[string]any, key string) []any {
 	return arr
 }
 
-// jsonStringSlice extracts a JSON array of strings into a []string, skipping any
-// non-string elements.
+// reads a completed job's row-indexed `results` array into created and updated id slices,
+// in results order; each entry is {index, id, action, sub_resource_ids}.
+func jobResultIDs(job map[string]any) (created, updated []string) {
+	for _, raw := range jsonArray(job, "results") {
+		m, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		id, _ := m["id"].(string)
+		switch m["action"] {
+		case "created":
+			created = append(created, id)
+		case "updated":
+			updated = append(updated, id)
+		}
+	}
+	return created, updated
+}
+
+// reads a completed job's `results` array as raw entry maps, for asserting on an entry's
+// index/action/sub_resource_ids directly.
+func jobResults(job map[string]any) []map[string]any {
+	var out []map[string]any
+	for _, raw := range jsonArray(job, "results") {
+		if m, ok := raw.(map[string]any); ok {
+			out = append(out, m)
+		}
+	}
+	return out
+}
+
+// extracts a JSON array of strings into a []string, skipping any non-string elements.
 func jsonStringSlice(m map[string]any, key string) []string {
 	arr := jsonArray(m, key)
 	out := make([]string, 0, len(arr))
@@ -635,6 +678,19 @@ func jsonStringSlice(m map[string]any, key string) []string {
 		}
 	}
 	return out
+}
+
+// reads the canonical error object nested in one entry of a job's `errors` array,
+// shaped {"index": n, "error": {code, type, message, ...}}.
+func jobRowError(entry map[string]any) map[string]any {
+	obj, _ := entry["error"].(map[string]any)
+	return obj
+}
+
+// reads the public message from one entry of a job's `errors` array.
+func jobRowErrorMessage(entry map[string]any) string {
+	msg, _ := jobRowError(entry)["message"].(string)
+	return msg
 }
 
 // jsonListData extracts the "data" array from a List[T] field ({"object":"list","data":[...]}).

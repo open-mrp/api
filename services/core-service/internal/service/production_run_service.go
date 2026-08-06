@@ -21,6 +21,7 @@ var productionRunSvcTracer = tracing.GetTracer("core-service.production_run_serv
 type productionRunSvcImpl struct {
 	repos           domain.RepoFactory
 	mediatorFactory domain.MediatorFactory
+	jobSvcFactory   domain.JobSvcFactory
 	txManager       TransactionManager
 }
 
@@ -30,6 +31,10 @@ type ProductionRunSvcConfig struct {
 
 	// MediatorFactory (required) builds the mediators used by this service.
 	MediatorFactory domain.MediatorFactory
+
+	// JobSvcFactory (required) builds the job service used to raise and settle the
+	// jobs behind this service's asynchronous operations.
+	JobSvcFactory domain.JobSvcFactory
 
 	// TxManager (required) wraps multi-step operations in database transactions.
 	TxManager TransactionManager
@@ -41,6 +46,9 @@ func (c *ProductionRunSvcConfig) validate() error {
 	}
 	if c.MediatorFactory == nil {
 		return fmt.Errorf("production run service: mediator factory is required")
+	}
+	if c.JobSvcFactory == nil {
+		return fmt.Errorf("production run service: job service factory is required")
 	}
 	if c.TxManager == nil {
 		return fmt.Errorf("production run service: tx manager is required")
@@ -56,6 +64,7 @@ func NewProductionRunSvc(config *ProductionRunSvcConfig) domain.ProductionRunSvc
 	return &productionRunSvcImpl{
 		repos:           config.Repos,
 		mediatorFactory: config.MediatorFactory,
+		jobSvcFactory:   config.JobSvcFactory,
 		txManager:       config.TxManager,
 	}
 }
@@ -69,6 +78,7 @@ func (s *productionRunSvcImpl) withTx(ctx context.Context, fn func(context.Conte
 		txSvc := &productionRunSvcImpl{
 			repos:           f,
 			mediatorFactory: s.mediatorFactory,
+			jobSvcFactory:   s.jobSvcFactory,
 			txManager:       s.txManager,
 		}
 		return fn(txCtx, txSvc)

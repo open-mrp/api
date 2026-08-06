@@ -125,10 +125,12 @@ LEFT JOIN (
 WHERE i.account_id = ?
 AND i.deleted_at IS NULL
 ORDER BY i.sku ASC
+LIMIT ?
 `
 
 type ExportItemsWithInventoryParams struct {
 	AccountID string
+	Limit     int32
 }
 
 type ExportItemsWithInventoryRow struct {
@@ -147,7 +149,12 @@ type ExportItemsWithInventoryRow struct {
 }
 
 func (q *Queries) ExportItemsWithInventory(ctx context.Context, arg ExportItemsWithInventoryParams) ([]ExportItemsWithInventoryRow, error) {
-	rows, err := q.db.QueryContext(ctx, exportItemsWithInventory, arg.AccountID, arg.AccountID, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, exportItemsWithInventory,
+		arg.AccountID,
+		arg.AccountID,
+		arg.AccountID,
+		arg.Limit,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -266,22 +273,6 @@ func (q *Queries) FindItemBySKU(ctx context.Context, arg FindItemBySKUParams) (F
 	var i FindItemBySKURow
 	err := row.Scan(&i.ID, &i.UnitValueID)
 	return i, err
-}
-
-const getCategoryBaseUnitID = `-- name: GetCategoryBaseUnitID :one
-SELECT
-  ugu.unit_id AS base_unit_id
-FROM item_category ic
-JOIN unit_group_unit ugu ON ugu.unit_group_id = ic.unit_group_id
-JOIN unit u ON u.id = ugu.unit_id AND u.is_base_unit = true
-WHERE ic.id = ?
-`
-
-func (q *Queries) GetCategoryBaseUnitID(ctx context.Context, categoryID string) (string, error) {
-	row := q.db.QueryRowContext(ctx, getCategoryBaseUnitID, categoryID)
-	var base_unit_id string
-	err := row.Scan(&base_unit_id)
-	return base_unit_id, err
 }
 
 const getCostFlowStepConsumptions = `-- name: GetCostFlowStepConsumptions :many

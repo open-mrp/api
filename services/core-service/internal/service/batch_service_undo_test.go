@@ -17,6 +17,7 @@ import (
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/contracts"
+	"github.com/augno/api/shared/db"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/messaging"
 )
@@ -60,6 +61,10 @@ type undoStubTxManager struct {
 
 func (m *undoStubTxManager) WithTx(ctx context.Context, fn func(context.Context, domain.RepoFactory) *apierror.APIError) *apierror.APIError {
 	return fn(ctx, m.factory)
+}
+
+func (m *undoStubTxManager) WithTxSavepoint(ctx context.Context, fn func(context.Context, domain.RepoFactory, db.SavepointRunner) *apierror.APIError) *apierror.APIError {
+	return fn(ctx, m.factory, passthroughSavepoint{})
 }
 
 type BatchUndoTestSuite struct {

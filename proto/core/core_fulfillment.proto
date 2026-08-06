@@ -7,12 +7,17 @@ package core;
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";
 import "core/core.proto";
+import "core/core_fuzzy_identifiers.proto";
+import "core/core_async.proto";
 
 option go_package = "shared/proto/core;core";
 
 service CoreFulfillmentService {
   // ListMachines returns a paginated list of machines for the target account.
   rpc ListMachines(ListMachinesRequest) returns (ListMachinesResponse);
+
+  // ExportMachines renders the target account's machines as a spreadsheet.
+  rpc ExportMachines(ExportMachinesRequest) returns (ExportMachinesResponse);
 
   // GetMachine returns a single machine by its ID.
   rpc GetMachine(GetMachineRequest) returns (GetMachineResponse);
@@ -25,6 +30,9 @@ service CoreFulfillmentService {
 
   // UpdateMachine updates an existing machine's metadata.
   rpc UpdateMachine(UpdateMachineRequest) returns (UpdateMachineResponse);
+
+  // BulkUpsertMachines creates or updates machines matched by name.
+  rpc BulkUpsertMachines(BulkUpsertMachinesRequest) returns (BulkUpsertMachinesResponse);
 
   // DeleteMachine deletes a machine by its ID.
   rpc DeleteMachine(DeleteMachineRequest) returns (google.protobuf.Empty);
@@ -57,6 +65,13 @@ message ListMachinesRequest {
 message ListMachinesResponse {
   repeated MachineInfo machines = 1;
   PageInfo page_info = 2;
+}
+
+message ExportMachinesRequest {
+  optional string query = 1;
+}
+message ExportMachinesResponse {
+  JobInfo job = 1;
 }
 
 message GetMachineRequest {
@@ -94,6 +109,26 @@ message UpdateMachineResponse {
 
 message DeleteMachineRequest {
   string id = 1;
+}
+
+// A single machine in a bulk upsert, matched by name OR serial number
+// (case-insensitive) within the account. The department is referenced by name,
+// resolved server-side, and confirms matching intent: updates must state the
+// machine's current department, and a key matching a machine in a different
+// department is rejected as a collision.
+message UpsertMachineInput {
+  string name = 1;
+  string serial_number = 2;
+  optional string notes = 3;
+  ObjectIdentifier department = 4;
+}
+
+message BulkUpsertMachinesRequest {
+  repeated UpsertMachineInput machines = 1;
+}
+
+message BulkUpsertMachinesResponse {
+  JobInfo job = 1;
 }
 
 message BatchGetMachinesByIDsRequest {

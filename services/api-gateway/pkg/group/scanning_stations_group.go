@@ -46,6 +46,8 @@ func (*ScanningStationsEndpointGroup) Materialize(config *ScanningStationsEndpoi
 	updateEndpoint := apiendpoint.From(&scanningstationep.UpdateScanningStationEndpoint{}).WithService(inner, scanningStationSvc)
 	deleteEndpoint := apiendpoint.From(&scanningstationep.DeleteScanningStationEndpoint{}).WithService(inner, scanningStationSvc)
 	connectStepsEndpoint := apiendpoint.From(&scanningstationep.ConnectProductionStepsEndpoint{}).WithService(inner, scanningStationSvc)
+	bulkUpsertEndpoint := apiendpoint.From(&scanningstationep.BulkUpsertScanningStationsEndpoint{}).WithService(inner, scanningStationSvc)
+	exportEndpoint := apiendpoint.From(&scanningstationep.ExportScanningStationsEndpoint{}).WithService(inner, scanningStationSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,
@@ -54,6 +56,8 @@ func (*ScanningStationsEndpointGroup) Materialize(config *ScanningStationsEndpoi
 		updateEndpoint,
 		deleteEndpoint,
 		connectStepsEndpoint,
+		bulkUpsertEndpoint,
+		exportEndpoint,
 	}
 
 	return &ScanningStationsEndpointGroup{inner}

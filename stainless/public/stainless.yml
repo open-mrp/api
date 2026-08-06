@@ -204,6 +204,17 @@ resources:
         models:
           email_log: '#/components/schemas/EmailLog'
           list_email_log: '#/components/schemas/List_EmailLog'
+      jobs:
+        methods:
+          retrieve: get /v1/core/jobs/{id}
+          cancel: post /v1/core/jobs/{id}/cancel
+        models:
+          job: '#/components/schemas/Job'
+          job_export: '#/components/schemas/JobExport'
+          job_result: '#/components/schemas/JobResult'
+          quota_info: '#/components/schemas/QuotaInfo'
+          response_error: '#/components/schemas/ResponseError'
+          row_error: '#/components/schemas/RowError'
       analytics:
         methods:
           update_oee: put /v1/core/analytics/oee
@@ -239,6 +250,13 @@ resources:
           create: post /v1/catalog/units
           update: patch /v1/catalog/units/{id}
           delete: delete /v1/catalog/units/{id}
+        subresources:
+          actions:
+            methods:
+              bulk_upsert: post /v1/catalog/units/actions/bulk-upsert
+            models:
+              bulk_upsert_units_request: '#/components/schemas/BulkUpsertUnitsRequest'
+              upsert_unit_input: '#/components/schemas/UpsertUnitInput'
         models:
           create_unit_request: '#/components/schemas/CreateUnitRequest'
           list_unit: '#/components/schemas/List_Unit'
@@ -262,6 +280,14 @@ resources:
             models:
               create_unit_group_unit_request: '#/components/schemas/CreateUnitGroupUnitRequest'
               update_unit_group_unit_request: '#/components/schemas/UpdateUnitGroupUnitRequest'
+          actions:
+            methods:
+              bulk_upsert: post /v1/catalog/unit-groups/actions/bulk-upsert
+            models:
+              bulk_upsert_unit_groups_request: '#/components/schemas/BulkUpsertUnitGroupsRequest'
+              unit_identifier: '#/components/schemas/UnitIdentifier'
+              upsert_unit_group_conversion_input: '#/components/schemas/UpsertUnitGroupConversionInput'
+              upsert_unit_group_input: '#/components/schemas/UpsertUnitGroupInput'
         models:
           create_unit_group_request: '#/components/schemas/CreateUnitGroupRequest'
           create_unit_group_unit_param: '#/components/schemas/CreateUnitGroupUnitParam'
@@ -288,6 +314,13 @@ resources:
             models:
               create_attribute_request: '#/components/schemas/CreateAttributeRequest'
               update_attribute_request: '#/components/schemas/UpdateAttributeRequest'
+          actions:
+            methods:
+              bulk_upsert: post /v1/catalog/properties/actions/bulk-upsert
+            models:
+              bulk_upsert_properties_request: '#/components/schemas/BulkUpsertPropertiesRequest'
+              upsert_property_attribute_input: '#/components/schemas/UpsertPropertyAttributeInput'
+              upsert_property_input: '#/components/schemas/UpsertPropertyInput'
         models:
           attribute: '#/components/schemas/Attribute'
           create_property_request: '#/components/schemas/CreatePropertyRequest'
@@ -328,6 +361,13 @@ resources:
             methods:
               update: put /v1/catalog/item-categories/{id}/properties/{property_id}
               delete: delete /v1/catalog/item-categories/{id}/properties/{property_id}
+          actions:
+            methods:
+              bulk_upsert: post /v1/catalog/item-categories/actions/bulk-upsert
+            models:
+              bulk_upsert_item_categories_request: '#/components/schemas/BulkUpsertItemCategoriesRequest'
+              object_identifier: '#/components/schemas/ObjectIdentifier'
+              upsert_item_category_input: '#/components/schemas/UpsertItemCategoryInput'
         models:
           create_item_category_request: '#/components/schemas/CreateItemCategoryRequest'
           list_item_category: '#/components/schemas/List_ItemCategory'
@@ -339,6 +379,14 @@ resources:
           create: post /v1/catalog/materials
           update: patch /v1/catalog/materials/{id}
           delete: delete /v1/catalog/materials/{id}
+        subresources:
+          actions:
+            methods:
+              bulk_upsert: post /v1/catalog/materials/actions/bulk-upsert
+            models:
+              bulk_upsert_materials_request: '#/components/schemas/BulkUpsertMaterialsRequest'
+              upsert_material_input: '#/components/schemas/UpsertMaterialInput'
+              upsert_material_property: '#/components/schemas/UpsertMaterialProperty'
         models:
           create_material_request: '#/components/schemas/CreateMaterialRequest'
           list_material: '#/components/schemas/List_Material'
@@ -353,6 +401,14 @@ resources:
           create: post /v1/catalog/parts
           update: patch /v1/catalog/parts/{id}
           delete: delete /v1/catalog/parts/{id}
+        subresources:
+          actions:
+            methods:
+              bulk_upsert: post /v1/catalog/parts/actions/bulk-upsert
+            models:
+              bulk_upsert_parts_request: '#/components/schemas/BulkUpsertPartsRequest'
+              upsert_part_input: '#/components/schemas/UpsertPartInput'
+              upsert_part_property: '#/components/schemas/UpsertPartProperty'
         models:
           create_part_request: '#/components/schemas/CreatePartRequest'
           list_part: '#/components/schemas/List_Part'
@@ -365,6 +421,13 @@ resources:
           create: post /v1/catalog/product-lines
           update: patch /v1/catalog/product-lines/{id}
           delete: delete /v1/catalog/product-lines/{id}
+        subresources:
+          actions:
+            methods:
+              bulk_upsert: post /v1/catalog/product-lines/actions/bulk-upsert
+            models:
+              bulk_upsert_product_lines_request: '#/components/schemas/BulkUpsertProductLinesRequest'
+              upsert_product_line_input: '#/components/schemas/UpsertProductLineInput'
         models:
           create_product_line_request: '#/components/schemas/CreateProductLineRequest'
           list_product_line: '#/components/schemas/List_ProductLine'
@@ -379,6 +442,14 @@ resources:
           update: patch /v1/catalog/products/{id}
           delete: delete /v1/catalog/products/{id}
           change_product_line: put /v1/catalog/products/{id}/product-line/{product_line_id}
+        subresources:
+          actions:
+            methods:
+              bulk_upsert: post /v1/catalog/products/actions/bulk-upsert
+            models:
+              bulk_upsert_products_request: '#/components/schemas/BulkUpsertProductsRequest'
+              upsert_product_input: '#/components/schemas/UpsertProductInput'
+              upsert_product_property: '#/components/schemas/UpsertProductProperty'
         models:
           create_product_request: '#/components/schemas/CreateProductRequest'
           list_product: '#/components/schemas/List_Product'
@@ -1016,6 +1087,13 @@ resources:
           create: post /v1/operations/locations
           update: patch /v1/operations/locations/{id}
           delete: delete /v1/operations/locations/{id}
+        subresources:
+          actions:
+            methods:
+              bulk_upsert: post /v1/operations/locations/actions/bulk-upsert
+            models:
+              bulk_upsert_locations_request: '#/components/schemas/BulkUpsertLocationsRequest'
+              upsert_location_input: '#/components/schemas/UpsertLocationInput'
         models:
           create_location_request: '#/components/schemas/CreateLocationRequest'
           update_location_request: '#/components/schemas/UpdateLocationRequest'

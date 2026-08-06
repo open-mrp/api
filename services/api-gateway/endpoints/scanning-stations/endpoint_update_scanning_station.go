@@ -28,12 +28,16 @@ type UpdateScanningStationRequest struct {
 	// Send `null` to clear.
 	Notes field.Clearable[string] `json:"notes,omitzero"`
 	// Size of the labels printed at this station, given as width-by-height (for example, `1x1`).
-	LabelSizeCode field.Optional[constants.LabelSizeCode] `json:"label_size,omitzero"`
+	//
+	// Send `null` or an empty string to clear.
+	LabelSizeCode field.Clearable[constants.LabelSizeCode] `json:"label_size,omitzero"`
 	// Type of label printed at this station.
 	//
 	// - `tag`: a label attached to the physical product.
 	// - `traveler`: a routing sheet that accompanies the batch through every production step.
-	LabelTypeCode field.Optional[constants.LabelTypeCode] `json:"label_type,omitzero"`
+	//
+	// Send `null` or an empty string to clear.
+	LabelTypeCode field.Clearable[constants.LabelTypeCode] `json:"label_type,omitzero"`
 	// Whether operators must perform a material check at this station.
 	//
 	// - `none`: no additional operator check is required.
@@ -46,8 +50,8 @@ var sampleUpdateScanningStationNotes = "Relocated to the finishing area."
 var sampleUpdateScanningStationRequest = &UpdateScanningStationRequest{
 	Name:                field.Some(sampleUpdateScanningStationName),
 	Notes:               field.Set(sampleUpdateScanningStationNotes),
-	LabelSizeCode:       field.Some(constants.LabelSizeCodeOneByOne),
-	LabelTypeCode:       field.Some(constants.LabelTypeCodeTag),
+	LabelSizeCode:       field.Set(constants.LabelSizeCodeOneByOne),
+	LabelTypeCode:       field.Set(constants.LabelTypeCodeTag),
 	OperatorRequirement: field.Some(constants.OperatorRequirementMaterialCheck),
 }
 

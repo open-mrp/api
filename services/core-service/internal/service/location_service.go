@@ -20,6 +20,7 @@ var locationSvcTracer = tracing.GetTracer("core-service.location_service")
 type locationSvcImpl struct {
 	repos           domain.RepoFactory
 	mediatorFactory domain.MediatorFactory
+	jobSvcFactory   domain.JobSvcFactory
 	txManager       TransactionManager
 }
 
@@ -29,6 +30,9 @@ type LocationSvcConfig struct {
 
 	// MediatorFactory (required) builds the mediators used by this service.
 	MediatorFactory domain.MediatorFactory
+
+	// JobSvcFactory (required) builds the job service the async bulk upsert records on.
+	JobSvcFactory domain.JobSvcFactory
 
 	// TxManager (required) wraps multi-step operations in database transactions.
 	TxManager TransactionManager
@@ -40,6 +44,9 @@ func (c *LocationSvcConfig) validate() error {
 	}
 	if c.MediatorFactory == nil {
 		return fmt.Errorf("location service: mediator factory is required")
+	}
+	if c.JobSvcFactory == nil {
+		return fmt.Errorf("location service: job service factory is required")
 	}
 	if c.TxManager == nil {
 		return fmt.Errorf("location service: tx manager is required")
@@ -55,6 +62,7 @@ func NewLocationSvc(config *LocationSvcConfig) domain.LocationSvc {
 	return &locationSvcImpl{
 		repos:           config.Repos,
 		mediatorFactory: config.MediatorFactory,
+		jobSvcFactory:   config.JobSvcFactory,
 		txManager:       config.TxManager,
 	}
 }
@@ -72,6 +80,7 @@ func (s *locationSvcImpl) withTx(ctx context.Context, fn func(context.Context, *
 		txSvc := &locationSvcImpl{
 			repos:           f,
 			mediatorFactory: s.mediatorFactory,
+			jobSvcFactory:   s.jobSvcFactory,
 			txManager:       s.txManager,
 		}
 		return fn(txCtx, txSvc)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	jobep "github.com/augno/api/services/api-gateway/endpoints/jobs"
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
@@ -18,10 +19,12 @@ import (
 
 type ProductLineSvc interface {
 	ListProductLines(ctx context.Context, req *ListProductLinesRequest) (*apiresource.List[apiresource.ProductLine], *apierror.APIError)
+	ExportProductLines(ctx context.Context, req *ExportProductLinesRequest) (*apiresource.Job, *apierror.APIError)
 	GetProductLine(ctx context.Context, req *RetrieveProductLineRequest) (*apiresource.ProductLine, *apierror.APIError)
 	CreateProductLine(ctx context.Context, req *CreateProductLineRequest) (*apiresource.ProductLine, *apierror.APIError)
 	UpdateProductLine(ctx context.Context, req *UpdateProductLineRequest) (*apiresource.ProductLine, *apierror.APIError)
 	DeleteProductLine(ctx context.Context, req *DeleteProductLineRequest) (*apiresource.EmptyResource, *apierror.APIError)
+	BulkUpsertProductLines(ctx context.Context, req *BulkUpsertProductLinesRequest) (*apiresource.Job, *apierror.APIError)
 }
 
 type ProductLineSvcConfig struct {
@@ -50,6 +53,18 @@ func NewProductLineSvc(config *ProductLineSvcConfig) ProductLineSvc {
 	return &productLineSvcImpl{
 		coreClient: config.CoreClient,
 	}
+}
+
+func (m *productLineSvcImpl) ExportProductLines(ctx context.Context, req *ExportProductLinesRequest) (*apiresource.Job, *apierror.APIError) {
+	resp, apiErr := grpcutil.CallRPC(ctx, productLineSvcTracer, "service.product_lines.export", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ExportProductLinesResponse, error) {
+			return m.coreClient.ExportProductLines(ctx, &pb.ExportProductLinesRequest{Query: req.Query}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return jobep.JobFromProto(resp.GetJob()), nil
 }
 
 func (m *productLineSvcImpl) ListProductLines(ctx context.Context, req *ListProductLinesRequest) (*apiresource.List[apiresource.ProductLine], *apierror.APIError) {
@@ -157,7 +172,34 @@ func (m *productLineSvcImpl) DeleteProductLine(ctx context.Context, req *DeleteP
 	return &apiresource.EmptyResource{}, nil
 }
 
-// loadProductLineByID wraps the single-ID load pattern used after every mutation and for the retrieve endpoint.
+func (m *productLineSvcImpl) BulkUpsertProductLines(ctx context.Context, req *BulkUpsertProductLinesRequest) (*apiresource.Job, *apierror.APIError) {
+	inputs := make([]*pb.BulkUpsertProductLineInput, len(req.ProductLines))
+	for i, pl := range req.ProductLines {
+		inputs[i] = &pb.BulkUpsertProductLineInput{
+			Name:             pl.Name,
+			UnitGroup:        apirequest.ObjectIdentifierToProto(pl.UnitGroup),
+			CommissionPolicy: string(pl.CommissionPolicy),
+			FreightPolicy:    string(pl.FreightPolicy),
+		}
+	}
+
+	pbReq := &pb.BulkUpsertProductLinesRequest{
+		ProductLines: inputs,
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, productLineSvcTracer, "service.product-lines.bulk-upsert", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.BulkUpsertProductLinesResponse, error) {
+			return m.coreClient.BulkUpsertProductLines(ctx, pbReq, opts...)
+		})
+
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return jobep.JobFromProto(resp.GetJob()), nil
+}
+
+// wraps the single-ID load pattern used after every mutation and for the retrieve endpoint.
 func loadProductLineByID(ctx context.Context, id string) (*apiresource.ProductLine, *apierror.APIError) {
 	loaded, apiErr := resourceloaders.LoadProductLines(ctx, []string{id})
 	if apiErr != nil {

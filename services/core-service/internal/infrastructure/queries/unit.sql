@@ -223,3 +223,46 @@ LIMIT 1;
 SELECT id, unit_dimension_code
 FROM unit
 WHERE id IN (sqlc.slice('ids'));
+
+-- name: FindUnitsByAbbreviationsOrNames :many
+SELECT
+    unit.id,
+    unit.name,
+    unit.abbreviation,
+    unit.unit_dimension_code,
+    unit.ratio_numerator,
+    unit.ratio_denominator,
+    unit.offset_numerator,
+    unit.offset_denominator,
+    unit.is_base_unit,
+    unit.account_id,
+    unit.created_at,
+    unit.updated_at
+FROM unit
+WHERE (unit.abbreviation IN (sqlc.slice('abbreviations')) OR unit.name IN (sqlc.slice('names')))
+AND (unit.account_id = sqlc.arg('account_id') OR unit.account_id IS NULL);
+
+-- name: ExportUnits :many
+-- Unpaginated by design; the caller passes a row cap as the limit. System units
+-- (account_id IS NULL) are in scope, matching what the list endpoint returns.
+SELECT
+    unit.id,
+    unit.name,
+    unit.abbreviation,
+    unit.unit_dimension_code,
+    unit.ratio_numerator,
+    unit.ratio_denominator,
+    unit.offset_numerator,
+    unit.offset_denominator,
+    unit.is_base_unit,
+    unit.account_id,
+    unit.created_at,
+    unit.updated_at
+FROM unit
+WHERE (unit.account_id = sqlc.arg('account_id') OR unit.account_id IS NULL)
+AND (
+    sqlc.narg('search_query') IS NULL
+    OR unit.name LIKE sqlc.narg('search_query')
+)
+ORDER BY unit.created_at DESC, unit.id DESC
+LIMIT ?;

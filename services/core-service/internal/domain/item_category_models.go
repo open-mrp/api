@@ -24,7 +24,23 @@ func IsDefaultCategory(id string) bool {
 	}
 }
 
+// CategoryRef is the lightweight category lookup used by item create paths and bulk
+// upsert validation: the category's base unit and its type code (material_category /
+// product_category), which constrains which item types may use it.
+type CategoryRef struct {
+	BaseUnitID           string
+	ItemCategoryTypeCode string
+}
+
 // ItemCategoryFull represents a full item category with optional joined data.
+// carries an export's filters — the list params without pagination, plus the cap
+// that keeps one request from building an unbounded workbook
+type ExportItemCategoriesParams struct {
+	AccountID string
+	Query     *string
+	Limit     int32
+}
+
 type ItemCategoryFull struct {
 	ID                   string
 	Name                 string  `audit:"name"`
@@ -86,6 +102,7 @@ type GetItemCategoryParams struct {
 type CreateItemCategoryParams struct {
 	AccountID            string
 	Name                 string
+	Notes                *string
 	ItemCategoryTypeCode string
 	UnitGroupID          string
 	Includes             []string
@@ -97,6 +114,14 @@ type UpdateItemCategoryParams struct {
 	Name           *string
 	Notes          *string
 	Includes       []string
+}
+
+type UpdateItemCategoryWithUnitGroupParams struct {
+	AccountID      string
+	ItemCategoryID string
+	Name           *string
+	Notes          *string
+	UnitGroupID    string
 }
 
 type DeleteItemCategoryParams struct {
@@ -120,4 +145,32 @@ type ChangeItemCategoryUnitGroupParams struct {
 	AccountID      string
 	ItemCategoryID string
 	UnitGroupID    string
+}
+
+// UpsertItemCategoryParams holds the fields for a single location in a bulk upsert.
+type UpsertItemCategoryParams struct {
+	Name                 string
+	Notes                *string
+	ItemCategoryTypeCode string
+	UnitGroup            ObjectIdentifier
+	// PropertyNames is an optional list of property names to attach to this category.
+	// Properties are matched by name (case-insensitive) within the account; names not
+	// found are created automatically. Relations are additive — existing relations are
+	// not removed.
+	PropertyNames []string
+}
+
+// mirrors an upsert row with its unit group reference resolved to an id. Property names
+// stay as written: they are found-or-created when the job runs, so nothing to resolve.
+type ResolvedUpsertItemCategoryRow struct {
+	Name                 string
+	Notes                *string
+	ItemCategoryTypeCode string
+	UnitGroupID          string
+	PropertyNames        []string
+}
+
+// carries the rows of a bulk item category upsert
+type BulkUpsertItemCategoriesParams struct {
+	ItemCategories []UpsertItemCategoryParams
 }

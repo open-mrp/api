@@ -48,6 +48,8 @@ func (*ProductionStepsEndpointGroup) Materialize(config *ProductionStepsEndpoint
 	getProductionEndpoint := apiendpoint.From(&productionstepep.RetrieveProductionEndpoint{}).WithService(inner, productionStepSvc)
 	updateProductionEndpoint := apiendpoint.From(&productionstepep.UpdateProductionEndpoint{}).WithService(inner, productionStepSvc)
 	bulkCreateEndpoint := apiendpoint.From(&productionstepep.BulkCreateProductionStepsEndpoint{}).WithService(inner, productionStepSvc)
+	bulkUpsertEndpoint := apiendpoint.From(&productionstepep.BulkUpsertProductionStepsEndpoint{}).WithService(inner, productionStepSvc)
+	exportEndpoint := apiendpoint.From(&productionstepep.ExportProductionStepsEndpoint{}).WithService(inner, productionStepSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,
@@ -58,6 +60,8 @@ func (*ProductionStepsEndpointGroup) Materialize(config *ProductionStepsEndpoint
 		getProductionEndpoint,
 		updateProductionEndpoint,
 		bulkCreateEndpoint,
+		bulkUpsertEndpoint,
+		exportEndpoint,
 	}
 
 	return &ProductionStepsEndpointGroup{inner}

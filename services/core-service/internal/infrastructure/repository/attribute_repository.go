@@ -330,6 +330,34 @@ func (r *attributeRepoImpl) ExistsByValueInAccount(ctx context.Context, accountI
 	return count > 0, nil
 }
 
+func (r *attributeRepoImpl) FindByTextsInAccount(ctx context.Context, accountID string, texts []string) ([]*domain.AttributeTextMatch, *apierror.APIError) {
+	ctx, span := attributeRepoTracer.Start(ctx, "repository.attribute.find_by_texts_in_account")
+	defer span.End()
+
+	if len(texts) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.queries.FindAttributesByTextsInAccount(ctx, sqlc.FindAttributesByTextsInAccountParams{
+		AccountID: accountID,
+		Texts:     texts,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	matches := make([]*domain.AttributeTextMatch, len(rows))
+	for i, row := range rows {
+		matches[i] = &domain.AttributeTextMatch{
+			ID:           row.ID,
+			Text:         row.Text,
+			PropertyID:   row.PropertyID,
+			PropertyName: row.PropertyName,
+		}
+	}
+	return matches, nil
+}
+
 func (r *attributeRepoImpl) CountByProperty(ctx context.Context, propertyID, accountID string) (int64, *apierror.APIError) {
 	ctx, span := attributeRepoTracer.Start(ctx, "repository.attribute.count_by_property")
 	defer span.End()

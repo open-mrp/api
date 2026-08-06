@@ -111,6 +111,38 @@ func mapScanningStationBackwardRow(row sqlc.ListScanningStationsBackwardRow) *do
 	return ss
 }
 
+func mapFindScanningStationsByNamesRow(row sqlc.FindScanningStationsByNamesRow) *domain.ScanningStation {
+	ss := &domain.ScanningStation{
+		ID:                  row.ID,
+		Name:                row.Name,
+		Type:                constants.ScanningStationType(row.ScanningStationTypeCode),
+		OperatorRequirement: boolToOperatorRequirement(row.MaterialCheckRequired),
+		DepartmentID:        row.DepartmentID,
+		AccountID:           row.AccountID,
+		CreatedAt:           row.CreatedAt,
+		UpdatedAt:           row.UpdatedAt,
+	}
+	if row.Notes.Valid {
+		ss.Notes = &row.Notes.String
+	}
+	if row.LabelSizeCode.Valid {
+		ss.LabelSizeCode = &row.LabelSizeCode.String
+	}
+	if row.LabelTypeCode.Valid {
+		ss.LabelTypeCode = &row.LabelTypeCode.String
+	}
+	if row.DepartmentName.Valid {
+		ss.DepartmentName = row.DepartmentName.String
+	}
+	if row.DepartmentCreatedAt.Valid {
+		ss.DepartmentCreatedAt = &row.DepartmentCreatedAt.Time
+	}
+	if row.DepartmentUpdatedAt.Valid {
+		ss.DepartmentUpdatedAt = &row.DepartmentUpdatedAt.Time
+	}
+	return ss
+}
+
 func (r *scanningStationRepoImpl) List(ctx context.Context, params domain.ListScanningStationsParams) (*domain.ListScanningStationsResult, *apierror.APIError) {
 	ctx, span := scanningStationRepoTracer.Start(ctx, "repository.scanning_station.list")
 	defer span.End()
@@ -204,6 +236,52 @@ func (r *scanningStationRepoImpl) List(ctx context.Context, params domain.ListSc
 	}
 
 	return &domain.ListScanningStationsResult{ScanningStations: result, PageInfo: pageInfo}, nil
+}
+
+func (r *scanningStationRepoImpl) Export(ctx context.Context, params domain.ExportScanningStationsParams) ([]*domain.ScanningStation, *apierror.APIError) {
+	ctx, span := scanningStationRepoTracer.Start(ctx, "repository.scanning_station.export")
+	defer span.End()
+
+	rows, err := r.queries.ExportScanningStations(ctx, sqlc.ExportScanningStationsParams{
+		AccountID:   params.AccountID,
+		SearchQuery: ssBuildSearchParams(params.Query),
+		Limit:       exportQueryLimit,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	stations := make([]*domain.ScanningStation, len(rows))
+	for i, row := range rows {
+		stations[i] = mapExportScanningStationRow(row)
+	}
+	return stations, nil
+}
+
+func mapExportScanningStationRow(row sqlc.ExportScanningStationsRow) *domain.ScanningStation {
+	ss := &domain.ScanningStation{
+		ID:                  row.ID,
+		Name:                row.Name,
+		Type:                constants.ScanningStationType(row.ScanningStationTypeCode),
+		OperatorRequirement: boolToOperatorRequirement(row.MaterialCheckRequired),
+		DepartmentID:        row.DepartmentID,
+		AccountID:           row.AccountID,
+		CreatedAt:           row.CreatedAt,
+		UpdatedAt:           row.UpdatedAt,
+	}
+	if row.Notes.Valid {
+		ss.Notes = &row.Notes.String
+	}
+	if row.LabelSizeCode.Valid {
+		ss.LabelSizeCode = &row.LabelSizeCode.String
+	}
+	if row.LabelTypeCode.Valid {
+		ss.LabelTypeCode = &row.LabelTypeCode.String
+	}
+	if row.DepartmentName.Valid {
+		ss.DepartmentName = row.DepartmentName.String
+	}
+	return ss
 }
 
 func (r *scanningStationRepoImpl) Get(ctx context.Context, params domain.GetScanningStationParams) (*domain.ScanningStation, *apierror.APIError) {
@@ -349,10 +427,10 @@ func (r *scanningStationRepoImpl) Create(ctx context.Context, id string, params 
 		Name:                    params.Name,
 		Notes:                   toNullString(params.Notes),
 		ScanningStationTypeCode: string(params.Type),
-		MaterialCheckRequired:   operatorRequirementToBool(params.OperatorRequirement),
-		DepartmentID:            params.DepartmentID,
 		LabelSizeCode:           toNullString(params.LabelSizeCode),
 		LabelTypeCode:           toNullString(params.LabelTypeCode),
+		MaterialCheckRequired:   operatorRequirementToBool(params.OperatorRequirement),
+		DepartmentID:            params.DepartmentID,
 		AccountID:               params.AccountID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -371,8 +449,8 @@ func (r *scanningStationRepoImpl) Update(ctx context.Context, params domain.Upda
 		AccountID:     params.AccountID,
 		Name:          toNullString(params.Name),
 		Notes:         field.StringToNullString(params.Notes),
-		LabelSizeCode: toNullString(params.LabelSizeCode),
-		LabelTypeCode: toNullString(params.LabelTypeCode),
+		LabelSizeCode: field.StringToNullString(params.LabelSizeCode),
+		LabelTypeCode: field.StringToNullString(params.LabelTypeCode),
 		MaterialCheckRequired: toNullBool(func() *bool {
 			if params.OperatorRequirement == nil {
 				return nil
@@ -452,6 +530,26 @@ func (r *scanningStationRepoImpl) FindIDByName(ctx context.Context, accountID, n
 		}
 	}
 	return &id, nil
+}
+
+func (r *scanningStationRepoImpl) FindByNames(ctx context.Context, accountID string, names []string) ([]*domain.ScanningStation, *apierror.APIError) {
+	ctx, span := scanningStationRepoTracer.Start(ctx, "repository.scanning_station.find_by_names")
+	defer span.End()
+
+	rows, err := r.queries.FindScanningStationsByNames(ctx, sqlc.FindScanningStationsByNamesParams{
+		Names:     names,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	stations := make([]*domain.ScanningStation, len(rows))
+	for i, row := range rows {
+		stations[i] = mapFindScanningStationsByNamesRow(row)
+	}
+
+	return stations, nil
 }
 
 func (r *scanningStationRepoImpl) ConnectProductionStepsByName(ctx context.Context, accountID, scanningStationID, name string) *apierror.APIError {

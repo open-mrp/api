@@ -79,13 +79,13 @@ INSERT IGNORE INTO payment_term (id, name, account_id, created_at, updated_at) V
 -- Sandbox units (account-scoped, same as main but with _sandbox suffix)
 -- ============================================================
 INSERT IGNORE INTO unit (id, name, abbreviation, unit_dimension_code, account_id, ratio_numerator, ratio_denominator, offset_numerator, offset_denominator, is_base_unit, created_at, updated_at) VALUES
-    ('un_01seedsb_dozen00000', 'Dozen',  'dz',   'quantity', 'ac_sandbox_01k0a5smf9ekb8rqg12555zjqb', 12, 1, 0, 1, 0, NOW(), NOW()),
-    ('un_01seedsb_pair000000', 'Pair',   'pr',   'quantity', 'ac_sandbox_01k0a5smf9ekb8rqg12555zjqb', 2, 1, 0, 1, 0, NOW(), NOW()),
-    ('un_01seedsb_day0000000', 'Day',    'd',    'time',     'ac_sandbox_01k0a5smf9ekb8rqg12555zjqb', 24, 1, 0, 1, 0, NOW(), NOW()),
-    ('un_01seedsb_pound00000', 'Pound',  'lbs',  'mass',     'ac_sandbox_01k0a5smf9ekb8rqg12555zjqb', 45359237, 100000, 0, 1, 0, NOW(), NOW()),
-    ('un_01seedsb_minute0000', 'Minute', 'min',  'time',     'ac_sandbox_01k0a5smf9ekb8rqg12555zjqb', 1, 60, 0, 1, 0, NOW(), NOW()),
-    ('un_01seedsb_second0000', 'Second', 's',    'time',     'ac_sandbox_01k0a5smf9ekb8rqg12555zjqb', 1, 3600, 0, 1, 0, NOW(), NOW()),
-    ('un_01seedsb_grain00000', 'Grain',  'gr',   'mass',     'ac_sandbox_01k0a5smf9ekb8rqg12555zjqb', 6479891, 100000000, 0, 1, 0, NOW(), NOW());
+    ('un_01seedsb_dozen00000', 'Dozen Acc',  'dz',   'quantity', 'ac_sandbox_01k0a5smf9ekb8rqg12555zjqb', 12, 1, 0, 1, 0, NOW(), NOW()),
+    ('un_01seedsb_pair000000', 'Pair Acc',   'pr',   'quantity', 'ac_sandbox_01k0a5smf9ekb8rqg12555zjqb', 2, 1, 0, 1, 0, NOW(), NOW()),
+    ('un_01seedsb_day0000000', 'Day Acc',    'd',    'time',     'ac_sandbox_01k0a5smf9ekb8rqg12555zjqb', 24, 1, 0, 1, 0, NOW(), NOW()),
+    ('un_01seedsb_pound00000', 'Pound Acc',  'lbs',  'mass',     'ac_sandbox_01k0a5smf9ekb8rqg12555zjqb', 45359237, 100000, 0, 1, 0, NOW(), NOW()),
+    ('un_01seedsb_minute0000', 'Minute Acc', 'min',  'time',     'ac_sandbox_01k0a5smf9ekb8rqg12555zjqb', 1, 60, 0, 1, 0, NOW(), NOW()),
+    ('un_01seedsb_second0000', 'Second Acc', 's',    'time',     'ac_sandbox_01k0a5smf9ekb8rqg12555zjqb', 1, 3600, 0, 1, 0, NOW(), NOW()),
+    ('un_01seedsb_grain00000', 'Grain Acc',  'gr',   'mass',     'ac_sandbox_01k0a5smf9ekb8rqg12555zjqb', 6479891, 100000000, 0, 1, 0, NOW(), NOW());
 
 -- ============================================================
 -- Sandbox unit groups (account-scoped only: socks, sellableSocks, yarn, chemicals)

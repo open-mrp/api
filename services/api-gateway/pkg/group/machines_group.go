@@ -45,6 +45,8 @@ func (*MachinesEndpointGroup) Materialize(config *MachinesEndpointGroupConfig) *
 	createMachineEndpoint := apiendpoint.From(&machineep.CreateMachineEndpoint{}).WithService(inner, machineSvc)
 	updateMachineEndpoint := apiendpoint.From(&machineep.UpdateMachineEndpoint{}).WithService(inner, machineSvc)
 	deleteMachineEndpoint := apiendpoint.From(&machineep.DeleteMachineEndpoint{}).WithService(inner, machineSvc)
+	bulkUpsertMachinesEndpoint := apiendpoint.From(&machineep.BulkUpsertMachinesEndpoint{}).WithService(inner, machineSvc)
+	exportMachinesEndpoint := apiendpoint.From(&machineep.ExportMachinesEndpoint{}).WithService(inner, machineSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listMachinesEndpoint,
@@ -52,6 +54,8 @@ func (*MachinesEndpointGroup) Materialize(config *MachinesEndpointGroupConfig) *
 		createMachineEndpoint,
 		updateMachineEndpoint,
 		deleteMachineEndpoint,
+		bulkUpsertMachinesEndpoint,
+		exportMachinesEndpoint,
 	}
 
 	return &MachinesEndpointGroup{inner}

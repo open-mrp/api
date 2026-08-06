@@ -46,6 +46,7 @@ func (*MaterialsEndpointGroup) Materialize(config *MaterialsEndpointGroupConfig)
 	updateMaterialEndpoint := apiendpoint.From(&materialep.UpdateMaterialEndpoint{}).WithService(inner, materialSvc)
 	deleteMaterialEndpoint := apiendpoint.From(&materialep.DeleteMaterialEndpoint{}).WithService(inner, materialSvc)
 	exportMaterialsEndpoint := apiendpoint.From(&materialep.ExportMaterialsEndpoint{}).WithService(inner, materialSvc)
+	bulkUpsertMaterialsEndpoint := apiendpoint.From(&materialep.BulkUpsertMaterialsEndpoint{}).WithService(inner, materialSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listMaterialsEndpoint,
@@ -54,6 +55,7 @@ func (*MaterialsEndpointGroup) Materialize(config *MaterialsEndpointGroupConfig)
 		updateMaterialEndpoint,
 		deleteMaterialEndpoint,
 		exportMaterialsEndpoint,
+		bulkUpsertMaterialsEndpoint,
 	}
 
 	return &MaterialsEndpointGroup{inner}

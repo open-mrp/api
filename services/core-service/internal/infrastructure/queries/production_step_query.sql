@@ -480,6 +480,34 @@ SELECT id FROM production_step
 WHERE name = sqlc.arg('name') AND account_id = sqlc.arg('account_id')
 LIMIT 1;
 
+-- name: FindProductionStepsByNames :many
+-- Names must be pre-lowercased by the caller; the utf8mb4_unicode_ci collation makes
+-- the IN comparison case-insensitive, so lowercasing on both sides is not required.
+SELECT id, name, notes, leveling_factor, allowances,
+       scanning_station_id, department_id,
+       labor_rate_id, labor_time_id, overhead_rate_id,
+       created_at, updated_at
+FROM production_step
+WHERE name IN (sqlc.slice('names'))
+AND account_id = sqlc.arg('account_id');
+
+-- name: UpdateProductionStepForBulkUpsert :exec
+-- Bulk upsert writes the full step row: rates are re-pointed at freshly inserted rate
+-- rows (rate rows are never mutated in place), and notes / leveling factor /
+-- allowances / scanning station are pre-backfilled by the service when omitted.
+UPDATE production_step SET
+    name = sqlc.arg('name'),
+    notes = sqlc.narg('notes'),
+    leveling_factor = sqlc.arg('leveling_factor'),
+    allowances = sqlc.arg('allowances'),
+    scanning_station_id = sqlc.narg('scanning_station_id'),
+    labor_rate_id = sqlc.arg('labor_rate_id'),
+    labor_time_id = sqlc.arg('labor_time_id'),
+    overhead_rate_id = sqlc.arg('overhead_rate_id'),
+    updated_at = NOW(3)
+WHERE id = sqlc.arg('id')
+AND account_id = sqlc.arg('account_id');
+
 -- name: DeleteConsumptionQuantitiesByStepID :exec
 DELETE q FROM quantity q
 JOIN consumption c ON q.id = c.quantity_id OR q.id = c.waste_quantity_id
@@ -504,6 +532,74 @@ UPDATE production_step SET
     updated_at = NOW(3)
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');
+
+-- name: ExportProductionSteps :many
+-- Unpaginated by design; the caller passes a row cap as the limit. Search uses
+-- LIKE rather than the list's fulltext MATCH so a partial name still filters.
+SELECT
+    ps.id,
+    ps.name,
+    ps.notes,
+    ps.leveling_factor,
+    ps.allowances,
+    d.name AS department_name,
+    ss.name AS scanning_station_name,
+    pi.sku AS produced_item_sku,
+    pq.value AS produced_quantity_value,
+    pu.abbreviation AS produced_unit_abbreviation,
+    lr.value AS labor_rate_value,
+    lrnu.abbreviation AS labor_rate_currency_unit,
+    lrdu.abbreviation AS labor_rate_time_unit,
+    lt.value AS labor_time_value,
+    ltnu.abbreviation AS labor_time_unit,
+    ltdu.abbreviation AS labor_time_per_unit,
+    ohr.value AS overhead_rate_value,
+    ohrnu.abbreviation AS overhead_rate_currency_unit,
+    ohrdu.abbreviation AS overhead_rate_time_unit,
+    ps.created_at,
+    ps.updated_at
+FROM production_step ps
+JOIN production p ON p.production_step_id = ps.id
+JOIN item pi ON p.item_id = pi.id
+JOIN quantity pq ON p.quantity_id = pq.id
+JOIN unit pu ON pq.unit_id = pu.id
+LEFT JOIN department d ON ps.department_id = d.id
+LEFT JOIN scanning_station ss ON ps.scanning_station_id = ss.id
+LEFT JOIN rate lr ON ps.labor_rate_id = lr.id
+LEFT JOIN unit lrnu ON lr.numerator_unit_id = lrnu.id
+LEFT JOIN unit lrdu ON lr.denominator_unit_id = lrdu.id
+LEFT JOIN rate lt ON ps.labor_time_id = lt.id
+LEFT JOIN unit ltnu ON lt.numerator_unit_id = ltnu.id
+LEFT JOIN unit ltdu ON lt.denominator_unit_id = ltdu.id
+LEFT JOIN rate ohr ON ps.overhead_rate_id = ohr.id
+LEFT JOIN unit ohrnu ON ohr.numerator_unit_id = ohrnu.id
+LEFT JOIN unit ohrdu ON ohr.denominator_unit_id = ohrdu.id
+WHERE ps.account_id = sqlc.arg('account_id')
+AND (
+    sqlc.narg('search_query') IS NULL
+    OR ps.name LIKE sqlc.narg('search_query')
+)
+ORDER BY ps.created_at DESC, ps.id DESC
+LIMIT ?;
+
+-- name: ExportProductionStepConsumptions :many
+-- The consumptions of the given steps, one row each, for the step export.
+SELECT
+    c.production_step_id,
+    ci.sku AS consumed_item_sku,
+    cq.value AS consumed_quantity_value,
+    cu.abbreviation AS consumed_unit_abbreviation,
+    wq.value AS waste_quantity_value,
+    wu.abbreviation AS waste_unit_abbreviation,
+    c.instructions
+FROM consumption c
+JOIN item ci ON c.item_id = ci.id
+JOIN quantity cq ON c.quantity_id = cq.id
+JOIN unit cu ON cq.unit_id = cu.id
+LEFT JOIN quantity wq ON c.waste_quantity_id = wq.id
+LEFT JOIN unit wu ON wq.unit_id = wu.id
+WHERE c.production_step_id IN (sqlc.slice('production_step_ids'))
+ORDER BY c.production_step_id, c.created_at, c.id;
 
 -- name: GetProductionFlowStep :one
 -- Fetches a production step with all fields needed for flow display.

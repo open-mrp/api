@@ -6,6 +6,23 @@ JOIN rate r ON r.id = i.unit_value_id
 WHERE i.account_id = ? AND p.product_type_code = 'sale' AND i.sku LIKE ?
 LIMIT 20;
 
+-- name: FindProductSKUMatches :many
+-- Used by bulk upsert to resolve existing products (by SKU) to the IDs needed to update
+-- them: product id, item id, and the unit_value / unit_cost rate ids. Lightweight
+-- counterpart to FindProductsBySKUs (which fully hydrates products).
+SELECT
+    p.id AS product_id,
+    p.item_id,
+    i.sku,
+    i.item_category_id,
+    i.unit_value_id,
+    i.unit_cost_id
+FROM product p
+JOIN item i ON i.id = p.item_id
+WHERE i.sku IN (sqlc.slice('skus'))
+AND i.account_id = sqlc.arg('account_id')
+AND i.deleted_at IS NULL;
+
 -- name: GetAccountSystemProduct :one
 -- Fetches the account's system product (e.g. credit, shipping) along with
 -- the base unit of its item category, for use when synthesizing order lines.
@@ -1284,4 +1301,5 @@ ORDER BY
         ELSE 3
     END ASC,
     p.created_at DESC,
-    p.id DESC;
+    p.id DESC
+LIMIT ?;

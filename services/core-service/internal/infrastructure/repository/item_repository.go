@@ -834,6 +834,7 @@ func (r *itemRepoImpl) ExportWithInventory(ctx context.Context, accountID string
 
 	rows, err := r.queries.ExportItemsWithInventory(ctx, sqlc.ExportItemsWithInventoryParams{
 		AccountID: accountID,
+		Limit:     exportQueryLimit,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -1081,16 +1082,43 @@ func (r *itemRepoImpl) UpdateConsumptionProductionQuantityUnits(ctx context.Cont
 	return nil
 }
 
-func (r *itemRepoImpl) GetCategoryBaseUnitID(ctx context.Context, categoryID string) (string, *apierror.APIError) {
+func (r *itemRepoImpl) GetCategoryBaseUnitID(ctx context.Context, categoryID string) (string, string, *apierror.APIError) {
 	ctx, span := itemRepoTracer.Start(ctx, "repository.item.get_category_base_unit_id")
 	defer span.End()
 
-	baseUnitID, err := r.queries.GetCategoryBaseUnitID(ctx, categoryID)
+	row, err := r.queries.GetCategoryBaseUnitID(ctx, categoryID)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return "", tracing.Trace(span, apiErr)
+		return "", "", tracing.Trace(span, apiErr)
 	}
 
-	return baseUnitID, nil
+	return row.BaseUnitID, row.ItemCategoryTypeCode, nil
+}
+
+// GetCategoryBaseUnitIDs batch-resolves each category's base unit id and category type
+// code. The returned map contains an entry for every category that exists (base unit id
+// empty when the category's unit group has no base unit); categories that do not exist
+// are absent. Used by bulk upsert to validate create-row categories up front.
+func (r *itemRepoImpl) GetCategoryBaseUnitIDs(ctx context.Context, categoryIDs []string) (map[string]domain.CategoryRef, *apierror.APIError) {
+	ctx, span := itemRepoTracer.Start(ctx, "repository.item.get_category_base_unit_ids")
+	defer span.End()
+
+	if len(categoryIDs) == 0 {
+		return map[string]domain.CategoryRef{}, nil
+	}
+
+	rows, err := r.queries.GetCategoryBaseUnits(ctx, categoryIDs)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	out := make(map[string]domain.CategoryRef, len(rows))
+	for _, row := range rows {
+		out[row.CategoryID] = domain.CategoryRef{
+			BaseUnitID:           row.BaseUnitID,
+			ItemCategoryTypeCode: row.ItemCategoryTypeCode,
+		}
+	}
+	return out, nil
 }
 
 func (r *itemRepoImpl) FindBySKU(ctx context.Context, accountID, sku string) (*string, *string, *apierror.APIError) {

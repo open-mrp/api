@@ -179,6 +179,67 @@ func (r *locationRepoImpl) populateChildren(ctx context.Context, accountID strin
 	return nil
 }
 
+func (r *locationRepoImpl) Export(ctx context.Context, params domain.ExportLocationsParams) ([]*domain.Location, *apierror.APIError) {
+	ctx, span := locationRepoTracer.Start(ctx, "repository.location.export")
+	defer span.End()
+
+	rows, err := r.queries.ExportLocations(ctx, sqlc.ExportLocationsParams{
+		AccountID:   params.AccountID,
+		SearchQuery: buildLocationSearchParams(params.Query),
+		Limit:       exportQueryLimit,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	locations := make([]*domain.Location, len(rows))
+	parentIDs := make([]gosql.NullString, 0, len(rows))
+	for i, row := range rows {
+		loc := &domain.Location{
+			ID:        row.ID,
+			Name:      row.Name,
+			TypeCode:  row.TypeCode,
+			CreatedAt: row.CreatedAt,
+			UpdatedAt: row.UpdatedAt,
+		}
+		if row.ParentID.Valid {
+			loc.ParentID = &row.ParentID.String
+		}
+		if row.ParentName.Valid {
+			loc.ParentName = &row.ParentName.String
+		}
+		locations[i] = loc
+		parentIDs = append(parentIDs, gosql.NullString{String: row.ID, Valid: true})
+	}
+
+	// The sheet lists each location's children, so they load in one extra query.
+	if len(parentIDs) > 0 {
+		childRows, err := r.queries.ListLocationChildrenByParentIDs(ctx, sqlc.ListLocationChildrenByParentIDsParams{
+			ParentIds: parentIDs,
+			AccountID: params.AccountID,
+		})
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+
+		childrenByParent := make(map[string][]domain.LocationChild, len(parentIDs))
+		for _, cr := range childRows {
+			if cr.ParentID.Valid {
+				childrenByParent[cr.ParentID.String] = append(childrenByParent[cr.ParentID.String], domain.LocationChild{
+					ID:       cr.ID,
+					Name:     cr.Name,
+					TypeCode: cr.TypeCode,
+				})
+			}
+		}
+		for _, loc := range locations {
+			loc.Children = childrenByParent[loc.ID]
+		}
+	}
+
+	return locations, nil
+}
+
 func (r *locationRepoImpl) List(ctx context.Context, params domain.ListLocationsParams) (*domain.ListLocationsResult, *apierror.APIError) {
 	ctx, span := locationRepoTracer.Start(ctx, "repository.location.list")
 	defer span.End()
@@ -193,7 +254,7 @@ func (r *locationRepoImpl) List(ctx context.Context, params domain.ListLocations
 		}
 		cursorDir = &cur.Direction
 
-		if cur.Direction == pagination.DirectionBackward {
+		if *cursorDir == pagination.DirectionBackward {
 			rows, err := r.queries.ListLocationsBackward(ctx, sqlc.ListLocationsBackwardParams{
 				AccountID:       params.AccountID,
 				SearchQuery:     searchQuery,
@@ -383,6 +444,45 @@ func (r *locationRepoImpl) Delete(ctx context.Context, params domain.DeleteLocat
 		}
 	}
 
+	return nil
+}
+
+func (r *locationRepoImpl) FindByNames(ctx context.Context, accountID string, names []string) ([]*domain.Location, *apierror.APIError) {
+	ctx, span := locationRepoTracer.Start(ctx, "repository.location.find_by_names")
+	defer span.End()
+
+	rows, err := r.queries.FindLocationsByNames(ctx, sqlc.FindLocationsByNamesParams{
+		Names:     names,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	results := make([]*domain.Location, len(rows))
+	for i, row := range rows {
+		results[i] = mapLocationRow(
+			row.ID, row.Name, row.TypeCode,
+			row.ParentID, row.ParentName, row.ParentTypeCode,
+			row.CreatedAt, row.UpdatedAt,
+		)
+	}
+	return results, nil
+}
+
+func (r *locationRepoImpl) LinkParent(ctx context.Context, accountID, childID, parentID string) *apierror.APIError {
+	ctx, span := locationRepoTracer.Start(ctx, "repository.location.link_parent")
+	defer span.End()
+
+	if err := r.queries.ConnectLocationChildren(ctx, sqlc.ConnectLocationChildrenParams{
+		ParentID:  gosql.NullString{String: parentID, Valid: true},
+		ChildID:   childID,
+		AccountID: accountID,
+	}); err != nil {
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+	}
 	return nil
 }
 

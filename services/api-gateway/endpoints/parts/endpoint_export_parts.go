@@ -5,43 +5,51 @@ import (
 	"net/http"
 	"time"
 
-	httptransport "github.com/augno/api/services/api-gateway/internal/http"
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	"github.com/augno/api/services/auth-service/pkg/types"
+	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
+	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// Request to export parts as an Excel file.
+// Filters which parts land in the exported file.
 type ExportPartsRequest struct {
 	// Free-text search term matched against the part's SKU or description.
-	Query *string `query:"q"`
-	// Only return parts belonging to any of these item categories.
-	CategoryIDs []string `query:"category_ids"`
-	// Only return parts carrying at least one of these attributes.
-	AttributeIDs []string `query:"attribute_ids"`
-	// Only return parts created at or after this time.
-	StartDate *time.Time `query:"starts_at"`
-	// Only return parts created at or before this time.
-	EndDate *time.Time `query:"ends_at"`
+	Query *string `json:"q"`
+	// Filter to parts belonging to any of these item categories.
+	CategoryIDs []string `json:"category_ids"`
+	// Filter to parts carrying at least one of these attributes.
+	AttributeIDs []string `json:"attribute_ids"`
+	// Filter to parts created at or after this time.
+	StartDate *time.Time `json:"starts_at"`
+	// Filter to parts created at or before this time.
+	EndDate *time.Time `json:"ends_at"`
 }
 
-// Exports the parts matching the given filters as an Excel workbook.
-//
-// The workbook holds one row per part with its ID, SKU, description, category, and unit price and unit cost alongside the units they are quoted in, followed by one column for each property defined on the exported parts' categories. Every match is exported in a single file, so this endpoint is not paginated.
+var sampleExportPartsRequest = &ExportPartsRequest{}
+
+func (*ExportPartsRequest) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(sampleExportPartsRequest)
+}
+
+// Starts an export of every matching part and returns the job that tracks it.
 type ExportPartsEndpoint struct{}
 
-func (e *ExportPartsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportPartsRequest, *httptransport.FileDownload] {
-	return (&apiendpoint.APIEndpoint[*ExportPartsRequest, *httptransport.FileDownload]{
-		Title:               "Export Parts",
-		Method:              http.MethodGet,
-		ContentType:         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-		Route:               "/v1/catalog/parts/actions/export",
-		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
-		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainParts, Action: types.ActionRead}, {Domain: types.PermissionDomainCustomers, Action: types.ActionRead}, {Domain: types.PermissionDomainSuppliers, Action: types.ActionRead}},
-		Preview:             true,
-		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportPartsRequest) (*httptransport.FileDownload, *apierror.APIError) {
+func (e *ExportPartsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportPartsRequest, *apiresource.Job] {
+	return (&apiendpoint.APIEndpoint[*ExportPartsRequest, *apiresource.Job]{
+		Title:             "Export Parts",
+		Method:            http.MethodPost,
+		ContentType:       "application/json",
+		Route:             "/v1/catalog/parts/actions/export",
+		SuccessStatusCode: http.StatusAccepted,
+		Public:            false,
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeJob,
+		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportPartsRequest) (*apiresource.Job, *apierror.APIError) {
 			return svc.(PartSvc).ExportParts
+		},
+		LocationFunc: func(resp *apiresource.Job) string {
+			return "/v1/core/jobs/" + resp.ID
 		},
 	})
 }

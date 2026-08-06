@@ -505,6 +505,7 @@ var (
 
 	// Messaging-related prefix values
 	MessageIDPrefix                 = composePrefix(VocMessage)
+	JobIDPrefix                     = composePrefix(VocJob)
 	ConversationIDPrefix            = composePrefix(VocConversation)
 	ConversationParticipantIDPrefix = composePrefix(VocConversation, VocPart)
 	MessagingGroupIDPrefix          = composePrefix(VocConversation, VocGroup)

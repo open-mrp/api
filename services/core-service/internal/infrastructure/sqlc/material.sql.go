@@ -144,6 +144,7 @@ ORDER BY
     END ASC,
     m.created_at DESC,
     m.id DESC
+LIMIT ?
 `
 
 type ExportMaterialsWithFiltersParams struct {
@@ -157,6 +158,7 @@ type ExportMaterialsWithFiltersParams struct {
 	EndDate                sql.NullTime
 	SearchExact            interface{}
 	SearchPrefix           interface{}
+	Limit                  int32
 }
 
 type ExportMaterialsWithFiltersRow struct {
@@ -229,6 +231,7 @@ func (q *Queries) ExportMaterialsWithFilters(ctx context.Context, arg ExportMate
 	queryParams = append(queryParams, arg.SearchExact)
 	queryParams = append(queryParams, arg.SearchPrefix)
 	queryParams = append(queryParams, arg.SearchPrefix)
+	queryParams = append(queryParams, arg.Limit)
 	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
@@ -269,6 +272,78 @@ func (q *Queries) ExportMaterialsWithFilters(ctx context.Context, arg ExportMate
 			&i.LeadTimeUnitID,
 			&i.LeadTimeUnitAbbreviation,
 			&i.LeadTimeUnitType,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const findMaterialsBySKUs = `-- name: FindMaterialsBySKUs :many
+SELECT
+    m.id AS material_id,
+    m.item_id,
+    i.sku,
+    i.item_category_id,
+    i.unit_value_id,
+    i.unit_cost_id
+FROM material m
+JOIN item i ON i.id = m.item_id
+WHERE i.sku IN (/*SLICE:skus*/?)
+AND i.account_id = ?
+AND i.deleted_at IS NULL
+`
+
+type FindMaterialsBySKUsParams struct {
+	Skus      []string
+	AccountID string
+}
+
+type FindMaterialsBySKUsRow struct {
+	MaterialID     string
+	ItemID         string
+	Sku            string
+	ItemCategoryID string
+	UnitValueID    string
+	UnitCostID     string
+}
+
+// Used by bulk upsert to resolve existing materials (by SKU) to the IDs needed to update
+// them: material id, item id, and the unit_value / unit_cost rate ids.
+func (q *Queries) FindMaterialsBySKUs(ctx context.Context, arg FindMaterialsBySKUsParams) ([]FindMaterialsBySKUsRow, error) {
+	query := findMaterialsBySKUs
+	var queryParams []interface{}
+	if len(arg.Skus) > 0 {
+		for _, v := range arg.Skus {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:skus*/?", strings.Repeat(",?", len(arg.Skus))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:skus*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FindMaterialsBySKUsRow
+	for rows.Next() {
+		var i FindMaterialsBySKUsRow
+		if err := rows.Scan(
+			&i.MaterialID,
+			&i.ItemID,
+			&i.Sku,
+			&i.ItemCategoryID,
+			&i.UnitValueID,
+			&i.UnitCostID,
 		); err != nil {
 			return nil, err
 		}

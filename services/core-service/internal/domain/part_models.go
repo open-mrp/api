@@ -50,6 +50,47 @@ type DeletePartParams struct {
 	PartID    string
 }
 
+// BulkUpsertPartsParams holds parameters for bulk upserting parts, matched by SKU.
+type BulkUpsertPartsParams struct {
+	Parts []UpsertPartParams
+}
+
+// UpsertPartParams is a single part to create or update in a bulk upsert. On create
+// all fields apply; on update sku/description/notes/unit_price/unit_cost/properties
+// are applied (properties are additive).
+type UpsertPartParams struct {
+	SKU         string
+	Description *string
+	Notes       *string
+	Category    ObjectIdentifier // create-only
+	UnitPrice   *CreateRateParams
+	UnitCost    *CreateRateParams
+	// Properties are resolved to attributes (find-or-create by name + value) and attached.
+	Properties []UpsertItemPropertyParams
+}
+
+// PartSKUMatch is an existing part keyed by SKU, with the IDs needed to update it.
+type PartSKUMatch struct {
+	PartID          string
+	ItemID          string
+	SKU             string
+	CategoryID      string
+	UnitValueRateID string
+	UnitCostRateID  string
+}
+
+// mirrors an upsert row with its category reference resolved to an id. Property
+// names/values stay as written: they are found-or-created when the job runs.
+type ResolvedUpsertPartRow struct {
+	SKU         string
+	Description *string
+	Notes       *string
+	CategoryID  string
+	UnitPrice   *CreateRateParams
+	UnitCost    *CreateRateParams
+	Properties  []UpsertItemPropertyParams
+}
+
 type GetPartParams struct {
 	AccountID string
 	PartID    string

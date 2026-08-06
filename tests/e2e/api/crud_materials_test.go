@@ -186,7 +186,7 @@ func TestMaterials_OmittedFields(t *testing.T) {
 
 	t.Run("CreateMissingRequiredFields", func(t *testing.T) {
 		status, body, err := apiClient.Post(materialsPath, map[string]any{
-			"category_id": SeedItemCategoryID,
+			"category_id": SeedMaterialCategoryID,
 		}, newIdempotencyKey())
 		require.NoError(t, err)
 		assert.True(t, status == 400 || status == 422,

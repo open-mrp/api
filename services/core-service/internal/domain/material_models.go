@@ -51,23 +51,32 @@ type ListMaterialsResult struct {
 }
 
 type CreateMaterialParams struct {
+	AccountID    string
+	SKU          string
+	Description  *string
+	Notes        *string
+	CategoryID   string
+	OrderPoint   *QuantityInput
+	LeadTime     *QuantityInput
+	UnitPrice    *CreateRateParams
+	UnitCost     *CreateRateParams
+	AttributeIDs []string
+	Includes     []string
+}
+
+// InsertMaterialItemParams is the input for writing a material's item row. It carries
+// the service-generated IDs (item id + the three rate ids) alongside the item's
+// caller-provided fields, so the generated IDs stay out of CreateMaterialParams.
+type InsertMaterialItemParams struct {
+	ItemID          string
 	AccountID       string
-	ItemID          string // generated in service
-	UnitValueRateID string // generated in service
-	UnitCostRateID  string // generated in service
-	BurnRateRateID  string // generated in service
-	OrderPointID    string // generated in service
-	LeadTimeID      string // generated in service
 	SKU             string
 	Description     *string
 	Notes           *string
 	CategoryID      string
-	OrderPoint      *QuantityInput
-	LeadTime        *QuantityInput
-	UnitPrice       *CreateRateParams
-	UnitCost        *CreateRateParams
-	AttributeIDs    []string
-	Includes        []string
+	UnitValueRateID string
+	UnitCostRateID  string
+	BurnRateRateID  string
 }
 
 type UpdateMaterialParams struct {
@@ -87,4 +96,50 @@ type UpdateMaterialParams struct {
 type DeleteMaterialParams struct {
 	AccountID  string
 	MaterialID string
+}
+
+// BulkUpsertMaterialsParams holds parameters for bulk upserting materials, matched by SKU.
+type BulkUpsertMaterialsParams struct {
+	Materials []UpsertMaterialParams
+}
+
+// UpsertMaterialParams is a single material to create or update in a bulk upsert. On
+// create all fields apply; on update sku/description/notes/order_point/lead_time plus
+// unit_price/unit_cost and properties are applied (category is create-only, matching
+// the single update endpoint). Properties are additive.
+type UpsertMaterialParams struct {
+	SKU         string
+	Description *string
+	Notes       *string
+	Category    ObjectIdentifier // create-only
+	OrderPoint  *QuantityInput
+	LeadTime    *QuantityInput
+	UnitPrice   *CreateRateParams
+	UnitCost    *CreateRateParams
+	// Properties are resolved to attributes (find-or-create by name + value) and attached.
+	Properties []UpsertItemPropertyParams
+}
+
+// MaterialSKUMatch is an existing material keyed by SKU, with the IDs needed to update it.
+type MaterialSKUMatch struct {
+	MaterialID      string
+	ItemID          string
+	SKU             string
+	CategoryID      string
+	UnitValueRateID string
+	UnitCostRateID  string
+}
+
+// mirrors an upsert row with its category reference resolved to an id. Property
+// names/values stay as written: they are found-or-created when the job runs.
+type ResolvedUpsertMaterialRow struct {
+	SKU         string
+	Description *string
+	Notes       *string
+	CategoryID  string
+	OrderPoint  *QuantityInput
+	LeadTime    *QuantityInput
+	UnitPrice   *CreateRateParams
+	UnitCost    *CreateRateParams
+	Properties  []UpsertItemPropertyParams
 }

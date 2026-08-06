@@ -6,8 +6,10 @@ import (
 
 	"time"
 
+	jobep "github.com/augno/api/services/api-gateway/endpoints/jobs"
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
 	"github.com/augno/api/shared/constants"
@@ -20,6 +22,7 @@ import (
 
 type ProductionStepSvc interface {
 	ListProductionSteps(ctx context.Context, req *ListProductionStepsRequest) (*apiresource.List[apiresource.ProductionStep], *apierror.APIError)
+	ExportProductionSteps(ctx context.Context, req *ExportProductionStepsRequest) (*apiresource.Job, *apierror.APIError)
 	GetProductionStep(ctx context.Context, req *RetrieveProductionStepRequest) (*apiresource.ProductionStep, *apierror.APIError)
 	CreateProductionStep(ctx context.Context, req *CreateProductionStepRequest) (*apiresource.ProductionStep, *apierror.APIError)
 	UpdateProductionStep(ctx context.Context, req *UpdateProductionStepRequest) (*apiresource.ProductionStep, *apierror.APIError)
@@ -27,6 +30,7 @@ type ProductionStepSvc interface {
 	GetProduction(ctx context.Context, req *RetrieveProductionRequest) (*apiresource.ProductionOutput, *apierror.APIError)
 	UpdateProduction(ctx context.Context, req *UpdateProductionRequest) (*apiresource.ProductionOutput, *apierror.APIError)
 	BulkCreateProductionSteps(ctx context.Context, req *BulkCreateProductionStepsRequest) (*apiresource.BulkCreateProductionStepsResponse, *apierror.APIError)
+	BulkUpsertProductionSteps(ctx context.Context, req *BulkUpsertProductionStepsRequest) (*apiresource.Job, *apierror.APIError)
 }
 
 type ProductionStepSvcConfig struct {
@@ -54,6 +58,18 @@ func NewProductionStepSvc(config *ProductionStepSvcConfig) ProductionStepSvc {
 	return &productionStepSvcImpl{
 		coreClient: config.CoreClient,
 	}
+}
+
+func (m *productionStepSvcImpl) ExportProductionSteps(ctx context.Context, req *ExportProductionStepsRequest) (*apiresource.Job, *apierror.APIError) {
+	resp, apiErr := grpcutil.CallRPC(ctx, productionStepSvcTracer, "service.production_steps.export", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ExportProductionStepsResponse, error) {
+			return m.coreClient.ExportProductionSteps(ctx, &pb.ExportProductionStepsRequest{Query: req.Query}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return jobep.JobFromProto(resp.GetJob()), nil
 }
 
 func (m *productionStepSvcImpl) ListProductionSteps(ctx context.Context, req *ListProductionStepsRequest) (*apiresource.List[apiresource.ProductionStep], *apierror.APIError) {
@@ -256,6 +272,61 @@ func (m *productionStepSvcImpl) UpdateProduction(ctx context.Context, req *Updat
 	result := productionOutputFromProto(resp.Production)
 	stashProductionOutputMeta(meta, resp.Production)
 	return result, nil
+}
+
+func (m *productionStepSvcImpl) BulkUpsertProductionSteps(ctx context.Context, req *BulkUpsertProductionStepsRequest) (*apiresource.Job, *apierror.APIError) {
+	rateToProto := func(r UpsertRateInput) *pb.UpsertRateInput {
+		return &pb.UpsertRateInput{
+			Value:           r.Value,
+			NumeratorUnit:   apirequest.UnitIdentifierToProto(r.NumeratorUnit),
+			DenominatorUnit: apirequest.UnitIdentifierToProto(r.DenominatorUnit),
+		}
+	}
+
+	pbSteps := make([]*pb.UpsertProductionStepInput, len(req.ProductionSteps))
+	for i, step := range req.ProductionSteps {
+		production := &pb.UpsertProductionInput{
+			Item:          apirequest.ItemIdentifierToProto(step.Production.Item),
+			QuantityValue: step.Production.QuantityValue,
+			QuantityUnit:  apirequest.UnitIdentifierToProto(step.Production.QuantityUnit),
+		}
+
+		consumptions := make([]*pb.UpsertStepConsumptionInput, len(step.Consumptions))
+		for j, c := range step.Consumptions {
+			consumptions[j] = &pb.UpsertStepConsumptionInput{
+				Item:               apirequest.ItemIdentifierToProto(c.Item),
+				QuantityValue:      c.QuantityValue,
+				QuantityUnit:       apirequest.UnitIdentifierToProto(c.QuantityUnit),
+				WasteQuantityValue: c.WasteQuantityValue.Ptr(),
+				WasteQuantityUnit:  apirequest.OptionalUnitIdentifierToProto(c.WasteQuantityUnit),
+				Instructions:       c.Instructions.Ptr(),
+			}
+		}
+
+		pbSteps[i] = &pb.UpsertProductionStepInput{
+			Name:            step.Name,
+			Notes:           step.Notes.Ptr(),
+			LevelingFactor:  step.LevelingFactor.Ptr(),
+			Allowances:      step.Allowances.Ptr(),
+			ScanningStation: apirequest.OptionalObjectIdentifierToProto(step.ScanningStation),
+			Department:      apirequest.OptionalObjectIdentifierToProto(step.Department),
+			LaborRate:       rateToProto(step.LaborRate),
+			LaborTime:       rateToProto(step.LaborTime),
+			OverheadRate:    rateToProto(step.OverheadRate),
+			Production:      production,
+			Consumptions:    consumptions,
+		}
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, productionStepSvcTracer, "service.production_steps.bulk_upsert", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.BulkUpsertProductionStepsResponse, error) {
+			return m.coreClient.BulkUpsertProductionSteps(ctx, &pb.BulkUpsertProductionStepsRequest{ProductionSteps: pbSteps}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return jobep.JobFromProto(resp.GetJob()), nil
 }
 
 func (m *productionStepSvcImpl) BulkCreateProductionSteps(ctx context.Context, req *BulkCreateProductionStepsRequest) (*apiresource.BulkCreateProductionStepsResponse, *apierror.APIError) {

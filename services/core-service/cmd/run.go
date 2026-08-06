@@ -109,6 +109,10 @@ func Run(
 	defer authClient.Close()
 
 	mediatorFactory := mediator.NewMediatorFactory()
+
+	jobSvcFactory := service.NewJobSvcFactory()
+	jobSvc := jobSvcFactory.Build(repoFactory)
+
 	accountSvc := service.NewAccountSvc(&service.AccountSvcConfig{
 		RepoFactory:         repoFactory,
 		MediatorFactory:     mediatorFactory,
@@ -124,11 +128,13 @@ func Run(
 	unitSvc := service.NewUnitSvc(&service.UnitSvcConfig{
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
+		JobSvcFactory:   jobSvcFactory,
 		TxManager:       txManager,
 	})
 	unitGroupSvc := service.NewUnitGroupSvc(&service.UnitGroupSvcConfig{
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
+		JobSvcFactory:   jobSvcFactory,
 		TxManager:       txManager,
 	})
 	paymentTermSvc := service.NewPaymentTermSvc(&service.PaymentTermSvcConfig{
@@ -162,6 +168,7 @@ func Run(
 	productSvc := service.NewProductSvc(&service.ProductSvcConfig{
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
+		JobSvcFactory:   jobSvcFactory,
 		TxManager:       txManager,
 	})
 	addressSvc := service.NewAddressSvc(&service.AddressSvcConfig{
@@ -220,6 +227,7 @@ func Run(
 	propertySvc := service.NewPropertySvc(&service.PropertySvcConfig{
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
+		JobSvcFactory:   jobSvcFactory,
 		TxManager:       txManager,
 	})
 	attributeSvc := service.NewAttributeSvc(&service.AttributeSvcConfig{
@@ -311,6 +319,7 @@ func Run(
 	partSvc := service.NewPartSvc(&service.PartSvcConfig{
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
+		JobSvcFactory:   jobSvcFactory,
 		TxManager:       txManager,
 	})
 
@@ -329,12 +338,14 @@ func Run(
 	itemCategorySvc := service.NewItemCategorySvc(&service.ItemCategorySvcConfig{
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
+		JobSvcFactory:   jobSvcFactory,
 		TxManager:       txManager,
 	})
 
 	productLineSvc := service.NewProductLineSvc(&service.ProductLineSvcConfig{
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
+		JobSvcFactory:   jobSvcFactory,
 		TxManager:       txManager,
 	})
 
@@ -359,6 +370,7 @@ func Run(
 	productionStepSvc := service.NewProductionStepSvc(&service.ProductionStepSvcConfig{
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
+		JobSvcFactory:   jobSvcFactory,
 		TxManager:       txManager,
 	})
 
@@ -393,6 +405,7 @@ func Run(
 	machineSvc := service.NewMachineSvc(&service.MachineSvcConfig{
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
+		JobSvcFactory:   jobSvcFactory,
 		TxManager:       txManager,
 	})
 
@@ -401,6 +414,7 @@ func Run(
 	departmentSvc := service.NewDepartmentSvc(&service.DepartmentSvcConfig{
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
+		JobSvcFactory:   jobSvcFactory,
 		TxManager:       txManager,
 	})
 
@@ -497,6 +511,7 @@ func Run(
 	materialSvc := service.NewMaterialSvc(&service.MaterialSvcConfig{
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
+		JobSvcFactory:   jobSvcFactory,
 		TxManager:       txManager,
 	})
 
@@ -537,6 +552,7 @@ func Run(
 	productionRunSvc := service.NewProductionRunSvc(&service.ProductionRunSvcConfig{
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
+		JobSvcFactory:   jobSvcFactory,
 		TxManager:       txManager,
 	})
 
@@ -581,12 +597,14 @@ func Run(
 	locationSvc := service.NewLocationSvc(&service.LocationSvcConfig{
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
+		JobSvcFactory:   jobSvcFactory,
 		TxManager:       txManager,
 	})
 
 	scanningStationSvc := service.NewScanningStationSvc(&service.ScanningStationSvcConfig{
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
+		JobSvcFactory:   jobSvcFactory,
 		TxManager:       txManager,
 	})
 
@@ -667,6 +685,69 @@ func Run(
 		return err
 	}
 
+	// Every async bulk operation runs on the same generic consumer; the variance is data —
+	// the operation's canonical identity plus its executor. Add a row to register one.
+	bulkConsumers := []*event.BulkOperationConsumer{
+		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.BulkCreateProductionRuns, productionRunSvc.ExecuteBulkCreateProductionRuns),
+		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.BulkUpsertProductionSteps, productionStepSvc.ExecuteBulkUpsertProductionSteps),
+		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.BulkUpsertUnits, unitSvc.ExecuteBulkUpsertUnits),
+		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.BulkUpsertUnitGroups, unitGroupSvc.ExecuteBulkUpsertUnitGroups),
+		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.BulkUpsertLocations, locationSvc.ExecuteBulkUpsertLocations),
+		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.BulkUpsertDepartments, departmentSvc.ExecuteBulkUpsertDepartments),
+		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.BulkUpsertMachines, machineSvc.ExecuteBulkUpsertMachines),
+		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.BulkUpsertProductLines, productLineSvc.ExecuteBulkUpsertProductLines),
+		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.BulkUpsertScanningStations, scanningStationSvc.ExecuteBulkUpsertScanningStations),
+		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.BulkUpsertItemCategories, itemCategorySvc.ExecuteBulkUpsertItemCategories),
+		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.BulkUpsertParts, partSvc.ExecuteBulkUpsertParts),
+		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.BulkUpsertProducts, productSvc.ExecuteBulkUpsertProducts),
+		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.BulkUpsertMaterials, materialSvc.ExecuteBulkUpsertMaterials),
+		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.BulkUpsertProperties, propertySvc.ExecuteBulkUpsertProperties),
+	}
+	for _, bulkConsumer := range bulkConsumers {
+		if err := bulkConsumer.Listen(ctx); err != nil {
+			return err
+		}
+	}
+
+	// The reader signs links into the same bucket the runner uploads to, so both sides of
+	// an export agree on where its file lives.
+	exportDelivery := service.NewExportDelivery(s3Store, cfg.ExportsBucket)
+	exportSvc := service.NewExportSvc(&service.ExportSvcConfig{Delivery: exportDelivery})
+
+	// Each builder is a method on the service owning that resource.
+	exportBuilders := map[string]domain.ExportBuilder{
+		"units":             unitSvc.BuildExportUnits,
+		"unit_groups":       unitGroupSvc.BuildExportUnitGroups,
+		"product_lines":     productLineSvc.BuildExportProductLines,
+		"item_categories":   itemCategorySvc.BuildExportItemCategories,
+		"departments":       departmentSvc.BuildExportDepartments,
+		"locations":         locationSvc.BuildExportLocations,
+		"machines":          machineSvc.BuildExportMachines,
+		"scanning_stations": scanningStationSvc.BuildExportScanningStations,
+		"production_runs":   productionRunSvc.BuildExportProductionRuns,
+		"production_steps":  productionStepSvc.BuildExportProductionSteps,
+		"parts":             partSvc.BuildExportParts,
+		"products":          productSvc.BuildExportProducts,
+		"materials":         materialSvc.BuildExportMaterials,
+		"properties":        propertySvc.BuildExportProperties,
+	}
+
+	exportRunner := service.NewExportRunner(&service.ExportRunnerConfig{
+		Repos:         repoFactory,
+		JobSvcFactory: jobSvcFactory,
+		Delivery:      exportDelivery,
+		Builders:      exportBuilders,
+	})
+	exportConsumers := make([]*event.ExportConsumer, 0, len(messaging.ExportOperations))
+	for _, op := range messaging.ExportOperations {
+		exportConsumers = append(exportConsumers, event.NewExportConsumer(rabbitmq, inboxRepo, op, exportRunner.Render))
+	}
+	for _, exportConsumer := range exportConsumers {
+		if err := exportConsumer.Listen(ctx); err != nil {
+			return err
+		}
+	}
+
 	salesOrderCreatedConsumer := event.NewSalesOrderCreatedConsumer(rabbitmq, inboxRepo, hubspotSync)
 	if err := salesOrderCreatedConsumer.Listen(ctx); err != nil {
 		return err
@@ -729,6 +810,7 @@ func Run(
 	grpc.RegisterPickingService(srv, pickSvc, pickLineSvc)
 	grpc.RegisterReceivingService(srv, receivingOrderSvc, receivingOrderLineSvc)
 	grpc.RegisterProductionRunService(srv, productionRunSvc)
+	grpc.RegisterJobService(srv, jobSvc, exportSvc)
 	grpc.RegisterProductionStepService(srv, productionStepSvc, productionSvc)
 	grpc.RegisterMachineDowntimeService(srv, machineDowntimeSvc)
 	grpc.RegisterDemandOverrideService(srv, demandOverrideSvc)

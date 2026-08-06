@@ -93,10 +93,10 @@ INSERT INTO scanning_station (
     name,
     notes,
     scanning_station_type_code,
-    material_check_required,
-    department_id,
     label_size_code,
     label_type_code,
+    material_check_required,
+    department_id,
     account_id,
     created_at,
     updated_at
@@ -105,10 +105,10 @@ INSERT INTO scanning_station (
     sqlc.arg('name'),
     sqlc.narg('notes'),
     sqlc.arg('scanning_station_type_code'),
-    sqlc.arg('material_check_required'),
-    sqlc.arg('department_id'),
     sqlc.narg('label_size_code'),
     sqlc.narg('label_type_code'),
+    sqlc.arg('material_check_required'),
+    sqlc.arg('department_id'),
     sqlc.arg('account_id'),
     NOW(3),
     NOW(3)
@@ -119,12 +119,35 @@ SELECT COUNT(*) FROM scanning_station
 WHERE name = sqlc.arg('name') AND account_id = sqlc.arg('account_id')
 AND (sqlc.narg('exclude_id') IS NULL OR id != sqlc.narg('exclude_id'));
 
+-- name: FindScanningStationsByNames :many
+-- Names must be pre-lowercased by the caller; the utf8mb4_unicode_ci collation makes
+-- the IN comparison case-insensitive, so lowercasing on both sides is not required.
+SELECT
+    ss.id,
+    ss.name,
+    ss.notes,
+    ss.scanning_station_type_code,
+    ss.label_size_code,
+    ss.label_type_code,
+    ss.material_check_required,
+    ss.department_id,
+    d.name AS department_name,
+    d.created_at AS department_created_at,
+    d.updated_at AS department_updated_at,
+    ss.account_id,
+    ss.created_at,
+    ss.updated_at
+FROM scanning_station ss
+LEFT JOIN department d ON d.id = ss.department_id
+WHERE ss.name IN (sqlc.slice('names'))
+AND ss.account_id = sqlc.arg('account_id');
+
 -- name: UpdateScanningStation :execresult
 UPDATE scanning_station SET
     name = COALESCE(sqlc.narg('name'), name),
     notes = sqlc.narg('notes'),
-    label_size_code = COALESCE(sqlc.narg('label_size_code'), label_size_code),
-    label_type_code = COALESCE(sqlc.narg('label_type_code'), label_type_code),
+    label_size_code = sqlc.narg('label_size_code'),
+    label_type_code = sqlc.narg('label_type_code'),
     material_check_required = COALESCE(sqlc.narg('material_check_required'), material_check_required),
     updated_at = NOW(3)
 WHERE id = sqlc.arg('id')
@@ -175,3 +198,28 @@ FROM scanning_station ss
 LEFT JOIN department d ON d.id = ss.department_id
 WHERE ss.id IN (sqlc.slice('ids'))
 AND ss.account_id = sqlc.arg('account_id');
+
+-- name: ExportScanningStations :many
+-- Unpaginated by design; the caller passes a row cap as the limit.
+SELECT
+    ss.id,
+    ss.name,
+    ss.notes,
+    ss.scanning_station_type_code,
+    ss.label_size_code,
+    ss.label_type_code,
+    ss.material_check_required,
+    ss.department_id,
+    d.name AS department_name,
+    ss.account_id,
+    ss.created_at,
+    ss.updated_at
+FROM scanning_station ss
+LEFT JOIN department d ON d.id = ss.department_id
+WHERE ss.account_id = sqlc.arg('account_id')
+AND (
+    sqlc.narg('search_query') IS NULL
+    OR ss.name LIKE sqlc.narg('search_query')
+)
+ORDER BY ss.created_at DESC, ss.id DESC
+LIMIT ?;

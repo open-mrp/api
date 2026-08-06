@@ -265,6 +265,64 @@ func buildUnitTypeFilter(t *string) gosql.NullString {
 	return gosql.NullString{String: *t, Valid: true}
 }
 
+func (r *unitGroupRepoImpl) Export(ctx context.Context, params domain.ExportUnitGroupsParams) ([]*domain.UnitGroupFull, *apierror.APIError) {
+	ctx, span := unitGroupRepoTracer.Start(ctx, "repository.unit_group.export")
+	defer span.End()
+
+	rows, err := r.queries.ExportUnitGroups(ctx, sqlc.ExportUnitGroupsParams{
+		AccountID:   gosql.NullString{String: params.AccountID, Valid: true},
+		SearchQuery: buildUnitGroupSearchParams(params.Query),
+		Limit:       exportQueryLimit,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	groups := make([]*domain.UnitGroupFull, len(rows))
+	ids := make([]string, len(rows))
+	for i, row := range rows {
+		group := &domain.UnitGroupFull{
+			ID:   row.ID,
+			Name: row.Name,
+			Type: row.UnitTypeCode,
+			BaseUnit: domain.LightUnit{
+				ID:           row.BaseUnitID,
+				Name:         row.BaseUnitName,
+				Abbreviation: row.BaseUnitAbbreviation,
+			},
+			CreatedAt: row.CreatedAt,
+			UpdatedAt: row.UpdatedAt,
+		}
+		if row.Notes.Valid {
+			group.Notes = &row.Notes.String
+		}
+		if row.AccountID.Valid {
+			group.AccountID = &row.AccountID.String
+		}
+		groups[i] = group
+		ids[i] = row.ID
+	}
+
+	// The sheet lists each group's associated units one per row, so they load in
+	// one extra query.
+	if len(ids) > 0 {
+		unitRows, err := r.queries.ListUnitGroupUnitsByUnitGroupIDs(ctx, ids)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+
+		unitsByGroup := make(map[string][]*domain.UnitGroupUnit, len(ids))
+		for _, ur := range unitRows {
+			unitsByGroup[ur.UnitGroupID] = append(unitsByGroup[ur.UnitGroupID], mapUnitGroupUnitsByUnitGroupIDsRow(ur))
+		}
+		for _, group := range groups {
+			group.UnitConversions = unitsByGroup[group.ID]
+		}
+	}
+
+	return groups, nil
+}
+
 func (r *unitGroupRepoImpl) List(ctx context.Context, params domain.ListUnitGroupsParams) (*domain.ListUnitGroupsResult, *apierror.APIError) {
 	ctx, span := unitGroupRepoTracer.Start(ctx, "repository.unit_group.list")
 	defer span.End()
@@ -448,6 +506,44 @@ func (r *unitGroupRepoImpl) Delete(ctx context.Context, params domain.DeleteUnit
 	return nil
 }
 
+func (r *unitGroupRepoImpl) Exists(ctx context.Context, params domain.UnitGroupExistsParams) (bool, *apierror.APIError) {
+	ctx, span := unitGroupRepoTracer.Start(ctx, "repository.unit_group.Exists")
+	defer span.End()
+
+	exists, err := r.queries.UnitGroupExists(ctx, sqlc.UnitGroupExistsParams{
+		ID:        params.UnitGroupID,
+		AccountID: gosql.NullString{String: params.AccountID, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return false, tracing.Trace(span, apiErr)
+	}
+
+	return exists, nil
+}
+
+func (r *unitGroupRepoImpl) GetTypesByIDs(ctx context.Context, accountID string, ids []string) (map[string]string, *apierror.APIError) {
+	ctx, span := unitGroupRepoTracer.Start(ctx, "repository.unit_group.get_types_by_ids")
+	defer span.End()
+
+	if len(ids) == 0 {
+		return map[string]string{}, nil
+	}
+
+	rows, err := r.queries.GetUnitGroupTypesByIDs(ctx, sqlc.GetUnitGroupTypesByIDsParams{
+		Ids:       ids,
+		AccountID: gosql.NullString{String: accountID, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	types := make(map[string]string, len(rows))
+	for _, row := range rows {
+		types[row.ID] = row.UnitTypeCode
+	}
+	return types, nil
+}
+
 func (r *unitGroupRepoImpl) ExistsByName(ctx context.Context, accountID, name string, excludeID *string) (bool, *apierror.APIError) {
 	ctx, span := unitGroupRepoTracer.Start(ctx, "repository.unit_group.exists_by_name")
 	defer span.End()
@@ -571,7 +667,10 @@ func (r *unitGroupRepoImpl) DeleteAllUnitGroupUnits(ctx context.Context, account
 	ctx, span := unitGroupRepoTracer.Start(ctx, "repository.unit_group.delete_all_unit_group_units")
 	defer span.End()
 
-	if err := r.queries.DeleteAllUnitGroupUnits(ctx, unitGroupID); err != nil {
+	if err := r.queries.DeleteAllUnitGroupUnits(ctx, sqlc.DeleteAllUnitGroupUnitsParams{
+		UnitGroupID: unitGroupID,
+		AccountID:   gosql.NullString{String: accountID, Valid: true},
+	}); err != nil {
 		if apiErr := db.MapSQLError(err); apiErr != nil {
 			return tracing.Trace(span, apiErr)
 		}
@@ -637,6 +736,118 @@ func mapUnitGroupScopedRow(row sqlc.GetUnitGroupsByIDsScopedRow) *domain.UnitGro
 			AccountID:         baseUnitAccountID,
 			CreatedAt:         row.BaseUnitCreatedAt,
 			UpdatedAt:         row.BaseUnitUpdatedAt,
+		},
+		CreatedAt: row.CreatedAt,
+		UpdatedAt: row.UpdatedAt,
+	}
+}
+
+func (r *unitGroupRepoImpl) FindByNames(ctx context.Context, accountID string, names []string) ([]*domain.UnitGroupFull, *apierror.APIError) {
+	ctx, span := unitGroupRepoTracer.Start(ctx, "repository.unit_group.find_by_names")
+	defer span.End()
+
+	if len(names) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.queries.FindUnitGroupsByNames(ctx, sqlc.FindUnitGroupsByNamesParams{
+		Names:     names,
+		AccountID: gosql.NullString{String: accountID, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	out := make([]*domain.UnitGroupFull, len(rows))
+	for i, row := range rows {
+		out[i] = mapFindUnitGroupsByNamesRow(row)
+	}
+	return out, nil
+}
+
+func mapFindUnitGroupsByNamesRow(row sqlc.FindUnitGroupsByNamesRow) *domain.UnitGroupFull {
+	var accountID *string
+	if row.AccountID.Valid {
+		accountID = &row.AccountID.String
+	}
+	var notes *string
+	if row.Notes.Valid {
+		notes = &row.Notes.String
+	}
+	var baseUnitAccountID *string
+	if row.BaseUnitAccountID.Valid {
+		baseUnitAccountID = &row.BaseUnitAccountID.String
+	}
+	return &domain.UnitGroupFull{
+		ID:        row.ID,
+		Name:      row.Name,
+		Notes:     notes,
+		Type:      row.UnitTypeCode,
+		AccountID: accountID,
+		BaseUnit: domain.LightUnit{
+			ID:                row.BaseUnitID,
+			Name:              row.BaseUnitName,
+			Abbreviation:      row.BaseUnitAbbreviation,
+			Type:              row.BaseUnitType,
+			RatioNumerator:    row.BaseUnitRatioNumerator,
+			RatioDenominator:  row.BaseUnitRatioDenominator,
+			OffsetNumerator:   row.BaseUnitOffsetNumerator,
+			OffsetDenominator: row.BaseUnitOffsetDenominator,
+			IsBaseUnit:        row.BaseUnitIsBaseUnit,
+			AccountID:         baseUnitAccountID,
+			CreatedAt:         row.BaseUnitCreatedAt,
+			UpdatedAt:         row.BaseUnitUpdatedAt,
+		},
+		CreatedAt: row.CreatedAt,
+		UpdatedAt: row.UpdatedAt,
+	}
+}
+
+func (r *unitGroupRepoImpl) FindUnitsByGroupIDs(ctx context.Context, unitGroupIDs []string) ([]*domain.UnitGroupUnit, *apierror.APIError) {
+	ctx, span := unitGroupRepoTracer.Start(ctx, "repository.unit_group.find_units_by_group_ids")
+	defer span.End()
+
+	if len(unitGroupIDs) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.queries.FindUnitGroupUnitsByGroupIDs(ctx, unitGroupIDs)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	out := make([]*domain.UnitGroupUnit, len(rows))
+	for i, row := range rows {
+		out[i] = mapFindUnitGroupUnitsByGroupIDsRow(row)
+	}
+	return out, nil
+}
+
+func mapFindUnitGroupUnitsByGroupIDsRow(row sqlc.FindUnitGroupUnitsByGroupIDsRow) *domain.UnitGroupUnit {
+	var unitAccountID *string
+	if row.UnitAccountID.Valid {
+		unitAccountID = &row.UnitAccountID.String
+	}
+	return &domain.UnitGroupUnit{
+		ID:                 row.ID,
+		UnitID:             row.UnitID,
+		UnitGroupID:        row.UnitGroupID,
+		DiscountPercentage: row.DiscountPercentage,
+		DiscountFixed:      row.DiscountFixed,
+		IsVisible:          row.IsVisible,
+		Unit: domain.LightUnit{
+			ID:                row.UnitID,
+			Name:              row.UnitName,
+			Abbreviation:      row.UnitAbbreviation,
+			Type:              row.UnitType,
+			RatioNumerator:    row.UnitRatioNumerator,
+			RatioDenominator:  row.UnitRatioDenominator,
+			OffsetNumerator:   row.UnitOffsetNumerator,
+			OffsetDenominator: row.UnitOffsetDenominator,
+			IsBaseUnit:        row.UnitIsBaseUnit,
+			AccountID:         unitAccountID,
+			CreatedAt:         row.UnitCreatedAt,
+			UpdatedAt:         row.UnitUpdatedAt,
 		},
 		CreatedAt: row.CreatedAt,
 		UpdatedAt: row.UpdatedAt,

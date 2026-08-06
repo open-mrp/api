@@ -3,12 +3,10 @@ package productep
 import (
 	"context"
 	"fmt"
-	"time"
 
+	jobep "github.com/augno/api/services/api-gateway/endpoints/jobs"
 	"github.com/augno/api/services/api-gateway/internal/domain"
-	"github.com/augno/api/services/api-gateway/internal/export"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
-	httptransport "github.com/augno/api/services/api-gateway/internal/http"
 	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
@@ -39,11 +37,12 @@ type ProductSvc interface {
 	ListProducts(ctx context.Context, req *ListProductsRequest) (*apiresource.List[apiresource.Product], *apierror.APIError)
 	GetProduct(ctx context.Context, req *RetrieveProductRequest) (*apiresource.Product, *apierror.APIError)
 	CreateProduct(ctx context.Context, req *CreateProductRequest) (*apiresource.Product, *apierror.APIError)
+	BulkUpsertProducts(ctx context.Context, req *BulkUpsertProductsRequest) (*apiresource.Job, *apierror.APIError)
 	UpdateProduct(ctx context.Context, req *UpdateProductRequest) (*apiresource.Product, *apierror.APIError)
 	DeleteProduct(ctx context.Context, req *DeleteProductRequest) (*apiresource.Product, *apierror.APIError)
 	ChangeProductProductLine(ctx context.Context, req *ChangeProductProductLineRequest) (*apiresource.Product, *apierror.APIError)
 	ValidateProducts(ctx context.Context, req *ValidateProductsRequest) (*apiresource.ValidateProductsResponse, *apierror.APIError)
-	ExportProducts(ctx context.Context, req *ExportProductsRequest) (*httptransport.FileDownload, *apierror.APIError)
+	ExportProducts(ctx context.Context, req *ExportProductsRequest) (*apiresource.Job, *apierror.APIError)
 }
 
 type ProductSvcConfig struct {
@@ -159,6 +158,52 @@ func (m *productSvcImpl) CreateProduct(ctx context.Context, req *CreateProductRe
 	return loadProductByID(ctx, resp.Product.Id)
 }
 
+func (m *productSvcImpl) BulkUpsertProducts(ctx context.Context, req *BulkUpsertProductsRequest) (*apiresource.Job, *apierror.APIError) {
+	pbProducts := make([]*pb.UpsertProductInput, len(req.Products))
+	for i, p := range req.Products {
+		pbProps := make([]*pb.UpsertItemPropertyInput, len(p.Properties))
+		for j, pr := range p.Properties {
+			pbProps[j] = &pb.UpsertItemPropertyInput{Name: pr.Name, Value: pr.Value}
+		}
+
+		var typePtr *string
+		if t, ok := p.Type.Value(); ok {
+			s := string(t)
+			typePtr = &s
+		}
+		var isPortalReady *bool
+		if v, ok := p.PortalVisibility.Value(); ok {
+			b := v == constants.CustomerPortalVisibilityVisible
+			isPortalReady = &b
+		}
+
+		pbProducts[i] = &pb.UpsertProductInput{
+			Sku:           p.SKU,
+			Type:          typePtr,
+			Description:   p.Description.Ptr(),
+			Notes:         p.Notes.Ptr(),
+			Category:      apirequest.ObjectIdentifierToProto(p.Category),
+			ProductLine:   apirequest.OptionalObjectIdentifierToProto(p.ProductLine),
+			IsPortalReady: isPortalReady,
+			UnitPrice:     rateInputToProto(p.UnitPrice.Ptr()),
+			UnitCost:      rateInputToProto(p.UnitCost.Ptr()),
+			Properties:    pbProps,
+		}
+	}
+
+	pbReq := &pb.BulkUpsertProductsRequest{Products: pbProducts}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, productSvcTracer, "service.products.bulk_upsert", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.BulkUpsertProductsResponse, error) {
+			return m.coreClient.BulkUpsertProducts(ctx, pbReq, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return jobep.JobFromProto(resp.GetJob()), nil
+}
+
 func (m *productSvcImpl) UpdateProduct(ctx context.Context, req *UpdateProductRequest) (*apiresource.Product, *apierror.APIError) {
 	var isPortalReady *bool
 	if pv, ok := req.PortalVisibility.Value(); ok {
@@ -254,7 +299,7 @@ func (m *productSvcImpl) ValidateProducts(ctx context.Context, req *ValidateProd
 	return result, nil
 }
 
-func (m *productSvcImpl) ExportProducts(ctx context.Context, req *ExportProductsRequest) (*httptransport.FileDownload, *apierror.APIError) {
+func (m *productSvcImpl) ExportProducts(ctx context.Context, req *ExportProductsRequest) (*apiresource.Job, *apierror.APIError) {
 	pbReq := &pb.ExportProductsRequest{
 		Query:          req.Query,
 		CustomerIds:    req.CustomerIDs,
@@ -277,25 +322,7 @@ func (m *productSvcImpl) ExportProducts(ctx context.Context, req *ExportProducts
 		return nil, apiErr
 	}
 
-	products := make([]apiresource.Product, len(resp.Products))
-	for i, p := range resp.Products {
-		products[i] = ProductPresenter(p)
-	}
-
-	body, err := export.ProductsToExcel(products)
-	if err != nil {
-		return nil, apierror.NewInternalError(err, "Failed to build export file.")
-	}
-
-	// Generate filename with current date (e.g. products_2026-05-14.xlsx)
-	dateStr := time.Now().Format("2006-01-02")
-	filename := fmt.Sprintf("products_%s.xlsx", dateStr)
-
-	return &httptransport.FileDownload{
-		ContentType: export.ExcelContentType,
-		Filename:    filename,
-		Body:        body,
-	}, nil
+	return jobep.JobFromProto(resp.GetJob()), nil
 }
 
 func loadProductByID(ctx context.Context, id string) (*apiresource.Product, *apierror.APIError) {

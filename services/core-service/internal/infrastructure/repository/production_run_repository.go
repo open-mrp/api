@@ -63,6 +63,113 @@ func buildProductionRunListFilters(params domain.ListProductionRunsParams) (
 	return
 }
 
+func (r *productionRunRepoImpl) Export(ctx context.Context, params domain.ExportProductionRunsParams) ([]*domain.ProductionRunExport, *apierror.APIError) {
+	ctx, span := productionRunRepoTracer.Start(ctx, "repository.production_run.export")
+	defer span.End()
+
+	searchQuery, _ := buildProductionRunSearchParams(params.Query)
+	rows, err := r.queries.ExportProductionRuns(ctx, sqlc.ExportProductionRunsParams{
+		AccountID:   params.AccountID,
+		SearchQuery: searchQuery,
+		Limit:       exportQueryLimit,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	runs := make([]*domain.ProductionRunExport, len(rows))
+	byID := make(map[string]*domain.ProductionRunExport, len(rows))
+	ids := make([]string, len(rows))
+	for i, row := range rows {
+		run := &domain.ProductionRunExport{
+			ID:                  row.ID,
+			Number:              row.Number,
+			ResponsibleUserName: row.ResponsibleUserName,
+		}
+		if row.StartedAt.Valid {
+			run.StartedAt = &row.StartedAt.Time
+		}
+		if row.CompletedAt.Valid {
+			run.CompletedAt = &row.CompletedAt.Time
+		}
+		if row.OrderID.Valid {
+			run.OrderID = &row.OrderID.String
+		}
+		runs[i] = run
+		byID[row.ID] = run
+		ids[i] = row.ID
+	}
+
+	if len(ids) > 0 {
+		if apiErr := r.attachExportBatches(ctx, params.AccountID, ids, byID); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
+
+	return runs, nil
+}
+
+// loads the runs' batches and those batches' machines, two queries regardless of
+// how many runs or batches there are
+func (r *productionRunRepoImpl) attachExportBatches(ctx context.Context, accountID string, runIDs []string, byID map[string]*domain.ProductionRunExport) *apierror.APIError {
+	// production_run_id is nullable on batch, so the IN list is too.
+	nullableRunIDs := make([]gosql.NullString, len(runIDs))
+	for i, id := range runIDs {
+		nullableRunIDs[i] = gosql.NullString{String: id, Valid: true}
+	}
+
+	batchRows, err := r.queries.ExportProductionRunBatches(ctx, sqlc.ExportProductionRunBatchesParams{
+		ProductionRunIds: nullableRunIDs,
+		AccountID:        accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return apiErr
+	}
+	if len(batchRows) == 0 {
+		return nil
+	}
+
+	batchIDs := make([]string, len(batchRows))
+	for i, row := range batchRows {
+		batchIDs[i] = row.ID
+	}
+
+	machineRows, err := r.queries.ExportBatchMachines(ctx, batchIDs)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return apiErr
+	}
+	machinesByBatch := make(map[string][]string, len(batchIDs))
+	for _, mr := range machineRows {
+		machinesByBatch[mr.BatchID] = append(machinesByBatch[mr.BatchID], mr.Name)
+	}
+
+	for _, row := range batchRows {
+		if !row.ProductionRunID.Valid {
+			continue
+		}
+		run, ok := byID[row.ProductionRunID.String]
+		if !ok {
+			continue
+		}
+		batch := domain.ProductionRunExportBatch{
+			ID:            row.ID,
+			ItemSKU:       row.ItemSku,
+			QuantityValue: row.QuantityValue,
+			QuantityUnit:  row.QuantityUnitAbbreviation,
+			MachineNames:  machinesByBatch[row.ID],
+		}
+		if row.DepartmentName.Valid {
+			batch.DepartmentName = &row.DepartmentName.String
+		}
+		if row.ScannedAt.Valid {
+			batch.ScannedAt = &row.ScannedAt.Time
+		}
+		run.Batches = append(run.Batches, batch)
+	}
+
+	return nil
+}
+
 func (r *productionRunRepoImpl) List(ctx context.Context, params domain.ListProductionRunsParams) (*domain.ListProductionRunsResult, *apierror.APIError) {
 	ctx, span := productionRunRepoTracer.Start(ctx, "repository.production_run.list")
 	defer span.End()
@@ -364,42 +471,57 @@ func (r *productionRunRepoImpl) ExistsByNumber(ctx context.Context, accountID, n
 }
 
 func (r *productionRunRepoImpl) GetNextNumber(ctx context.Context, accountID string) (string, *apierror.APIError) {
-	ctx, span := productionRunRepoTracer.Start(ctx, "repository.production_run.get_next_number")
+	numbers, apiErr := r.GetNextNumbers(ctx, accountID, 1)
+	if apiErr != nil {
+		return "", apiErr
+	}
+	return numbers[0], nil
+}
+
+func (r *productionRunRepoImpl) GetNextNumbers(ctx context.Context, accountID string, count int) ([]string, *apierror.APIError) {
+	ctx, span := productionRunRepoTracer.Start(ctx, "repository.production_run.get_next_numbers")
 	defer span.End()
+
+	if count <= 0 {
+		return nil, nil
+	}
 
 	// Atomic rather than MAX(number)+1: two runs created at once — which releasing two
 	// weeks back to back does — read the same maximum and collide on the unique number.
 	seedID, apiErr := id.GenID(id.SysPropertyIDPrefix, nil)
 	if apiErr != nil {
-		return "", tracing.Trace(span, apiErr)
+		return nil, tracing.Trace(span, apiErr)
 	}
 	if err := r.queries.SeedProductionRunNumberCounter(ctx, sqlc.SeedProductionRunNumberCounterParams{
 		ID:        seedID,
 		AccountID: accountID,
 	}); err != nil {
 		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return "", tracing.Trace(span, apiErr)
+			return nil, tracing.Trace(span, apiErr)
 		}
 	}
 
-	allocID, apiErr := id.GenID(id.SysPropertyIDPrefix, nil)
-	if apiErr != nil {
-		return "", tracing.Trace(span, apiErr)
-	}
-	result, err := r.queries.AllocateNextProductionRunNumber(ctx, sqlc.AllocateNextProductionRunNumberParams{
-		ID:        allocID,
-		AccountID: accountID,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return "", tracing.Trace(span, apiErr)
-	}
+	numbers := make([]string, 0, count)
+	for range count {
+		allocID, apiErr := id.GenID(id.SysPropertyIDPrefix, nil)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		result, err := r.queries.AllocateNextProductionRunNumber(ctx, sqlc.AllocateNextProductionRunNumberParams{
+			ID:        allocID,
+			AccountID: accountID,
+		})
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 
-	nextNum, err := result.LastInsertId()
-	if err != nil {
-		return "", tracing.Trace(span, apierror.NewInternalError(err, "Could not read the allocated production run number."))
+		nextNum, err := result.LastInsertId()
+		if err != nil {
+			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Could not read the allocated production run number."))
+		}
+		numbers = append(numbers, fmt.Sprintf("%d", nextNum))
 	}
-
-	return fmt.Sprintf("%d", nextNum), nil
+	return numbers, nil
 }
 
 func (r *productionRunRepoImpl) IsCompleted(ctx context.Context, accountID, id string) (bool, *apierror.APIError) {

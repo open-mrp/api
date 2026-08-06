@@ -249,6 +249,21 @@ FROM unit_group_unit ugu
 JOIN unit u ON ugu.unit_id = u.id
 WHERE ugu.unit_group_id IN (sqlc.slice('unit_group_ids'));
 
+-- name: UnitGroupExists :one
+SELECT EXISTS(
+    SELECT 1 FROM unit_group ug
+    WHERE ug.id = sqlc.arg('id')
+    AND (ug.account_id = sqlc.arg('account_id') OR ug.account_id IS NULL)
+) AS does_exist;
+
+-- name: GetUnitGroupTypesByIDs :many
+SELECT
+    ug.id,
+    ug.unit_type_code
+FROM unit_group ug
+WHERE ug.id IN (sqlc.slice('ids'))
+AND (ug.account_id = sqlc.arg('account_id') OR ug.account_id IS NULL);
+
 -- name: InsertUnitGroup :exec
 INSERT INTO unit_group (
     id,
@@ -286,7 +301,8 @@ AND account_id = sqlc.arg('account_id');
 
 -- name: CountUnitGroupsByName :one
 SELECT COUNT(*) FROM unit_group
-WHERE name = ? AND (account_id = ? OR account_id IS NULL)
+WHERE name = sqlc.arg('name')
+AND account_id = sqlc.arg('account_id')
 AND (sqlc.narg('exclude_id') IS NULL OR id != sqlc.narg('exclude_id'));
 
 -- name: ListUnitGroupUnitsBase :many
@@ -328,6 +344,8 @@ JOIN unit u ON ugu.unit_id = u.id
 WHERE ugu.unit_group_id = sqlc.arg('unit_group_id');
 
 -- name: UpsertUnitGroupUnit :exec
+-- ON DUPLICATE KEY UPDATE preserves the existing row's id when (unit_group_id, unit_id) already
+-- exists. The caller must fetch by (unit_group_id, unit_id) to obtain the stable id.
 INSERT INTO unit_group_unit (
     id,
     unit_group_id,
@@ -392,14 +410,121 @@ JOIN unit u ON ugu.unit_id = u.id
 WHERE ugu.id = sqlc.arg('id')
 AND ugu.unit_group_id = sqlc.arg('unit_group_id');
 
+-- name: GetUnitGroupUnitByUnitIDAndGroupID :one
+SELECT
+    ugu.id,
+    ugu.unit_id,
+    ugu.unit_group_id,
+    ugu.discount_percentage,
+    ugu.discount_fixed,
+    ugu.is_visible,
+    ugu.created_at,
+    ugu.updated_at,
+    u.name AS unit_name,
+    u.abbreviation AS unit_abbreviation,
+    u.unit_dimension_code AS unit_type,
+    u.ratio_numerator AS unit_ratio_numerator,
+    u.ratio_denominator AS unit_ratio_denominator,
+    u.offset_numerator AS unit_offset_numerator,
+    u.offset_denominator AS unit_offset_denominator,
+    u.is_base_unit AS unit_is_base_unit,
+    u.created_at AS unit_created_at,
+    u.updated_at AS unit_updated_at,
+    u.account_id AS unit_account_id
+FROM unit_group_unit ugu
+JOIN unit u ON ugu.unit_id = u.id
+WHERE ugu.unit_group_id = sqlc.arg('unit_group_id')
+AND ugu.unit_id = sqlc.arg('unit_id');
+
 -- name: DeleteUnitGroupUnitByID :execresult
 DELETE FROM unit_group_unit
 WHERE id = sqlc.arg('id')
 AND unit_group_id = sqlc.arg('unit_group_id');
 
 -- name: DeleteAllUnitGroupUnits :exec
-DELETE FROM unit_group_unit
-WHERE unit_group_id = sqlc.arg('unit_group_id');
+DELETE ugu FROM unit_group_unit ugu
+JOIN unit_group ug ON ugu.unit_group_id = ug.id
+WHERE ug.id = sqlc.arg('unit_group_id')
+AND ug.account_id = sqlc.arg('account_id');
+
+-- name: FindUnitGroupUnitsByGroupIDs :many
+SELECT
+    ugu.id,
+    ugu.unit_id,
+    ugu.unit_group_id,
+    ugu.discount_percentage,
+    ugu.discount_fixed,
+    ugu.is_visible,
+    ugu.created_at,
+    ugu.updated_at,
+    u.name AS unit_name,
+    u.abbreviation AS unit_abbreviation,
+    u.unit_dimension_code AS unit_type,
+    u.ratio_numerator AS unit_ratio_numerator,
+    u.ratio_denominator AS unit_ratio_denominator,
+    u.offset_numerator AS unit_offset_numerator,
+    u.offset_denominator AS unit_offset_denominator,
+    u.is_base_unit AS unit_is_base_unit,
+    u.created_at AS unit_created_at,
+    u.updated_at AS unit_updated_at,
+    u.account_id AS unit_account_id
+FROM unit_group_unit ugu
+JOIN unit u ON ugu.unit_id = u.id
+WHERE ugu.unit_group_id IN (sqlc.slice('unit_group_ids'));
+
+-- name: FindUnitGroupsByNames :many
+SELECT
+    ug.id,
+    ug.name,
+    ug.notes,
+    ug.unit_type_code,
+    ug.base_unit_id,
+    u.name AS base_unit_name,
+    u.abbreviation AS base_unit_abbreviation,
+    u.unit_dimension_code AS base_unit_type,
+    u.ratio_numerator AS base_unit_ratio_numerator,
+    u.ratio_denominator AS base_unit_ratio_denominator,
+    u.offset_numerator AS base_unit_offset_numerator,
+    u.offset_denominator AS base_unit_offset_denominator,
+    u.is_base_unit AS base_unit_is_base_unit,
+    u.created_at AS base_unit_created_at,
+    u.updated_at AS base_unit_updated_at,
+    u.account_id AS base_unit_account_id,
+    ug.account_id,
+    ug.created_at,
+    ug.updated_at
+FROM unit_group ug
+JOIN unit u ON ug.base_unit_id = u.id
+-- names must be pre-lowercased by the caller; the utf8mb4_unicode_ci collation makes the
+-- IN comparison case-insensitive, so lowercasing on both sides is not required in SQL.
+-- System groups (account_id IS NULL) are included so bulk upsert can detect and reject
+-- attempts to modify them instead of silently shadow-creating an account-owned twin.
+WHERE ug.name IN (sqlc.slice('names'))
+AND (ug.account_id = sqlc.arg('account_id') OR ug.account_id IS NULL);
+
+-- name: ExportUnitGroups :many
+-- Unpaginated by design; the caller passes a row cap as the limit. System groups
+-- (account_id IS NULL) are in scope, matching what the list endpoint returns.
+SELECT
+    ug.id,
+    ug.name,
+    ug.notes,
+    ug.unit_type_code,
+    ug.base_unit_id,
+    u.name AS base_unit_name,
+    u.abbreviation AS base_unit_abbreviation,
+    ug.account_id,
+    ug.created_at,
+    ug.updated_at
+FROM unit_group ug
+JOIN unit u ON ug.base_unit_id = u.id
+WHERE (ug.account_id = sqlc.arg('account_id') OR ug.account_id IS NULL)
+AND (
+    sqlc.narg('search_query') IS NULL
+    OR ug.name LIKE sqlc.narg('search_query')
+)
+ORDER BY ug.created_at DESC, ug.id DESC
+LIMIT ?;
 
 -- CountUnitInGroup reports whether a unit belongs to a unit group, counting the group's
 -- base unit as a member: the base unit is implicit rather than a unit_group_unit row.

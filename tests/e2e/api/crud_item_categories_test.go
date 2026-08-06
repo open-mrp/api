@@ -700,3 +700,381 @@ func TestItemCategories_ChangeUnitGroupRejectsDifferentType(t *testing.T) {
 
 	apiClient.Delete(itemCategoriesPath + "/" + id)
 }
+
+// ==========================================================================
+// Bulk Upsert
+// ==========================================================================
+
+const itemCategoriesBulkUpsertPath = itemCategoriesPath + "/actions/bulk-upsert"
+
+// bulkUpsertICInput builds a minimal item category entry for bulk-upsert payloads.
+// The unit group is a fuzzy reference, so it is sent as an object keyed by id.
+func bulkUpsertICInput(name string, typeCode string, unitGroupID string) map[string]any {
+	return map[string]any{
+		"name":       name,
+		"type":       typeCode,
+		"unit_group": map[string]any{"id": unitGroupID},
+	}
+}
+
+func cleanupItemCategoryIDs(ids []string) {
+	for _, id := range ids {
+		if id != "" {
+			apiClient.Delete(itemCategoriesPath + "/" + id)
+		}
+	}
+}
+
+// posts a bulk upsert, requires the 202 job acknowledgment, and returns the completed job
+func bulkUpsertItemCategoriesJob(t *testing.T, rows ...map[string]any) map[string]any {
+	t.Helper()
+	status, body, err := apiClient.Post(itemCategoriesBulkUpsertPath, map[string]any{
+		"item_categories": rows,
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 202, status, body)
+
+	m := parseJSON(body)
+	assert.Equal(t, "job", jsonField(m, "object"), "202 returns the canonical job resource")
+	jobID := jsonField(m, "id")
+	require.NotEmpty(t, jobID, "202 must name the job to poll")
+
+	job := pollJobUntilTerminal(t, jobID)
+	require.Equal(t, "completed", jsonField(job, "status"), "job should complete: %v", job)
+	return job
+}
+
+// posts a bulk upsert, follows the job to completion, and returns the created/updated ids
+func bulkUpsertItemCategoryIDs(t *testing.T, rows ...map[string]any) (createdIDs, updatedIDs []string) {
+	t.Helper()
+	job := bulkUpsertItemCategoriesJob(t, rows...)
+	require.NotEmpty(t, jsonArray(job, "results"), "a completed job must carry results")
+	return jobResultIDs(job)
+}
+
+func TestItemCategories_BulkUpsert_AllCreates(t *testing.T) {
+	t.Parallel()
+	name1 := uniqueName("e2e-bulic-a")
+	name2 := uniqueName("e2e-bulic-b")
+
+	createdIDs, updatedIDs := bulkUpsertItemCategoryIDs(t,
+		bulkUpsertICInput(name1, "material_category", SeedUnitGroupID),
+		bulkUpsertICInput(name2, "product_category", SeedUnitGroupID),
+	)
+	defer cleanupItemCategoryIDs(createdIDs)
+
+	require.Len(t, createdIDs, 2, "should have 2 created IDs")
+	for _, id := range createdIDs {
+		assertIDFormat(t, id, "itcg")
+	}
+	assert.Empty(t, updatedIDs, "no updates expected")
+}
+
+func TestItemCategories_BulkUpsert_AllUpdates(t *testing.T) {
+	t.Parallel()
+	name := uniqueName("e2e-bulic-upd")
+
+	createdIDs, _ := bulkUpsertItemCategoryIDs(t, bulkUpsertICInput(name, "material_category", SeedUnitGroupID))
+	defer cleanupItemCategoryIDs(createdIDs)
+	require.Len(t, createdIDs, 1)
+	categoryID := createdIDs[0]
+
+	// Same name → matches, updates type
+	created, updated := bulkUpsertItemCategoryIDs(t, bulkUpsertICInput(name, "product_category", SeedUnitGroupID))
+	assert.Empty(t, created, "no creates expected on update")
+	require.Len(t, updated, 1, "should have 1 updated ID")
+	assert.Equal(t, categoryID, updated[0], "updated ID must match the originally created ID")
+}
+
+func TestItemCategories_BulkUpsert_MixedCreateAndUpdate(t *testing.T) {
+	t.Parallel()
+	existingName := uniqueName("e2e-bulic-mix-exist")
+	newName := uniqueName("e2e-bulic-mix-new")
+
+	seeded, _ := bulkUpsertItemCategoryIDs(t, bulkUpsertICInput(existingName, "material_category", SeedUnitGroupID))
+	defer cleanupItemCategoryIDs(seeded)
+
+	created, updated := bulkUpsertItemCategoryIDs(t,
+		bulkUpsertICInput(existingName, "material_category", SeedUnitGroupID),
+		bulkUpsertICInput(newName, "product_category", SeedUnitGroupID),
+	)
+	defer cleanupItemCategoryIDs(created)
+
+	assert.Len(t, created, 1, "one new item category created")
+	assert.Len(t, updated, 1, "one existing item category updated")
+}
+
+func TestItemCategories_BulkUpsert_ResponseShape(t *testing.T) {
+	t.Parallel()
+	name := uniqueName("e2e-bulic-shape")
+
+	job := bulkUpsertItemCategoriesJob(t, bulkUpsertICInput(name, "material_category", SeedUnitGroupID))
+	created, _ := jobResultIDs(job)
+	defer cleanupItemCategoryIDs(created)
+
+	assertObjectField(t, job, "job")
+	assert.Equal(t, "bulkupsert", jsonField(job, "type"))
+	_, hasResults := job["results"]
+	assert.True(t, hasResults, "job must have a results field")
+	_, hasErrors := job["errors"]
+	assert.True(t, hasErrors, "job must have an errors field")
+}
+
+func TestItemCategories_BulkUpsert_Idempotency(t *testing.T) {
+	t.Parallel()
+	name := uniqueName("e2e-bulic-idem")
+	idemKey := newIdempotencyKey()
+	payload := map[string]any{
+		"item_categories": []any{bulkUpsertICInput(name, "material_category", SeedUnitGroupID)},
+	}
+
+	status1, body1, err := apiClient.Post(itemCategoriesBulkUpsertPath, payload, idemKey)
+	require.NoError(t, err)
+	requireStatus(t, 202, status1, body1)
+
+	status2, body2, err := apiClient.Post(itemCategoriesBulkUpsertPath, payload, idemKey)
+	require.NoError(t, err)
+	requireStatus(t, 202, status2, body2)
+
+	jobID := jsonField(parseJSON(body1), "id")
+	assert.Equal(t, jobID, jsonField(parseJSON(body2), "id"), "a replay must hand back the same job")
+
+	created, _ := jobResultIDs(pollJobUntilTerminal(t, jobID))
+	defer cleanupItemCategoryIDs(created)
+	require.Len(t, created, 1)
+}
+
+func TestItemCategories_BulkUpsert_CreatedAppearsInList(t *testing.T) {
+	t.Parallel()
+	name := uniqueName("e2e-bulic-list")
+
+	ids, _ := bulkUpsertItemCategoryIDs(t, bulkUpsertICInput(name, "material_category", SeedUnitGroupID))
+	defer cleanupItemCategoryIDs(ids)
+	require.Len(t, ids, 1)
+	categoryID := ids[0]
+
+	// Fetch via GET by ID
+	getStatus, getBody, err := apiClient.GetListRaw(itemCategoriesPath+"/"+categoryID, nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, getStatus, getBody)
+
+	got := parseJSON(getBody)
+	assert.Equal(t, "item_category", jsonField(got, "object"))
+	assert.Equal(t, categoryID, jsonField(got, "id"))
+	assert.Equal(t, name, jsonField(got, "name"))
+}
+
+func TestItemCategories_BulkUpsert_UpdatePreservesID(t *testing.T) {
+	t.Parallel()
+	name := uniqueName("e2e-bulic-preserve-id")
+
+	createdIDs, _ := bulkUpsertItemCategoryIDs(t, bulkUpsertICInput(name, "material_category", SeedUnitGroupID))
+	defer cleanupItemCategoryIDs(createdIDs)
+	require.Len(t, createdIDs, 1)
+	originalID := createdIDs[0]
+
+	// Update with the same name. The incoming type differs deliberately: a category's
+	// type is immutable (changing it would strand existing items of the old type), so
+	// the update must preserve the stored type — mirroring how unit groups treat type.
+	_, updatedIDs := bulkUpsertItemCategoryIDs(t, bulkUpsertICInput(name, "product_category", SeedUnitGroupID))
+	require.Len(t, updatedIDs, 1)
+	assert.Equal(t, originalID, updatedIDs[0], "ID must be stable across updates")
+
+	// Verify the type was preserved, not overwritten.
+	getStatus, getBody, err := apiClient.GetListRaw(itemCategoriesPath+"/"+originalID, nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, getStatus, getBody)
+	got := parseJSON(getBody)
+	assert.Equal(t, "material_category", jsonField(got, "type"))
+}
+
+func TestItemCategories_BulkUpsert_CaseInsensitiveNameMatch(t *testing.T) {
+	t.Parallel()
+	name := uniqueName("e2e-bulic-case")
+
+	seeded, _ := bulkUpsertItemCategoryIDs(t, bulkUpsertICInput(strings.ToLower(name), "material_category", SeedUnitGroupID))
+	defer cleanupItemCategoryIDs(seeded)
+
+	// Upsert with uppercase name — should match the existing and update
+	created, updated := bulkUpsertItemCategoryIDs(t, bulkUpsertICInput(strings.ToUpper(name), "product_category", SeedUnitGroupID))
+	assert.Empty(t, created, "upper-case match should update, not create")
+	assert.Len(t, updated, 1, "should have 1 updated ID")
+}
+
+func TestItemCategories_BulkUpsert_UpdatePreservesOmittedNotes(t *testing.T) {
+	t.Parallel()
+	name := uniqueName("e2e-bulic-notes")
+	notes := "bulk notes should survive omitted update"
+	createInput := bulkUpsertICInput(name, "material_category", SeedUnitGroupID)
+	createInput["notes"] = notes
+
+	createdIDs, _ := bulkUpsertItemCategoryIDs(t, createInput)
+	defer cleanupItemCategoryIDs(createdIDs)
+	require.Len(t, createdIDs, 1)
+	categoryID := createdIDs[0]
+
+	_, updatedIDs := bulkUpsertItemCategoryIDs(t, bulkUpsertICInput(name, "product_category", SeedUnitGroupID))
+	require.Len(t, updatedIDs, 1)
+	assert.Equal(t, categoryID, updatedIDs[0])
+
+	getStatus, getBody, err := apiClient.GetListRaw(itemCategoriesPath+"/"+categoryID, nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, getStatus, getBody)
+	got := parseJSON(getBody)
+	assert.Equal(t, notes, jsonField(got, "notes"), "bulk update should preserve notes when notes is omitted")
+}
+
+// checks the same-unit-type rule, which needs the existing row: it runs in the execute
+// phase, so the job completes and the row lands in `errors` instead of failing the request
+func TestItemCategories_BulkUpsert_RejectsDifferentTypeUnitGroup(t *testing.T) {
+	t.Parallel()
+	name := uniqueName("e2e-bulic-ugtype")
+	differentTypeUnitGroupID := "ungp_01k0a51qxceydax5036pegvzzy"
+
+	createdIDs, _ := bulkUpsertItemCategoryIDs(t, bulkUpsertICInput(name, "material_category", SeedUnitGroupID))
+	defer cleanupItemCategoryIDs(createdIDs)
+	require.Len(t, createdIDs, 1)
+	categoryID := createdIDs[0]
+
+	job := bulkUpsertItemCategoriesJob(t, bulkUpsertICInput(name, "material_category", differentTypeUnitGroupID))
+	assert.Empty(t, jobResults(job), "an incompatible unit group must not be written")
+	rowErrs := jsonArray(job, "errors")
+	require.Len(t, rowErrs, 1, "the rejected row is recorded in errors")
+
+	getStatus, getBody, err := apiClient.GetListRaw(itemCategoriesPath+"/"+categoryID, url.Values{"include": {"unit_group"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, getStatus, getBody)
+	unitGroup := jsonObject(parseJSON(getBody), "unit_group")
+	require.NotNil(t, unitGroup, "unit_group should be present with ?include=unit_group")
+	assert.Equal(t, SeedUnitGroupID, jsonField(unitGroup, "id"), "unit group should remain unchanged after rejected bulk upsert")
+}
+
+// TestItemCategories_BulkUpsert_RejectsUnknownUnitGroup: the unit group is resolved for
+// every row before any write, so one that does not resolve fails as a row-indexed
+// validation error and the whole batch is atomic.
+func TestItemCategories_BulkUpsert_RejectsUnknownUnitGroup(t *testing.T) {
+	t.Parallel()
+	status, body, err := apiClient.Post(itemCategoriesBulkUpsertPath, map[string]any{
+		"item_categories": []any{
+			bulkUpsertICInput(uniqueName("e2e-bulic-ugok"), "material_category", SeedUnitGroupID),
+			bulkUpsertICInput(uniqueName("e2e-bulic-badug"), "material_category", "ungp_000000000000000000000000"),
+		},
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 400, status, body)
+	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
+	assertErrorParam(t, errObj, "item_categories[1].unit_group")
+}
+
+// TestItemCategories_BulkUpsert_ResolvesUnitGroupByName: the unit group is a fuzzy
+// reference — it resolves by name, not only by id.
+func TestItemCategories_BulkUpsert_ResolvesUnitGroupByName(t *testing.T) {
+	t.Parallel()
+	name := uniqueName("e2e-bulic-ugname")
+
+	created, _ := bulkUpsertItemCategoryIDs(t, map[string]any{
+		"name":       name,
+		"type":       "material_category",
+		"unit_group": map[string]any{"name": "socks"}, // by name, case-insensitive
+	})
+	defer cleanupItemCategoryIDs(created)
+	require.Len(t, created, 1)
+
+	getStatus, getBody, err := apiClient.GetListRaw(itemCategoriesPath+"/"+created[0], url.Values{"include": {"unit_group"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, getStatus, getBody)
+	unitGroup := jsonObject(parseJSON(getBody), "unit_group")
+	require.NotNil(t, unitGroup, "unit_group should be present with ?include=unit_group")
+	assert.Equal(t, SeedUnitGroupID, jsonField(unitGroup, "id"))
+}
+
+func TestItemCategories_BulkUpsert_EmptyList(t *testing.T) {
+	t.Parallel()
+	status, body, err := apiClient.Post(itemCategoriesBulkUpsertPath, map[string]any{
+		"item_categories": []any{},
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	assert.True(t, status == 400 || status == 422,
+		"empty list should return 400 or 422, got %d: %s", status, string(body))
+}
+
+func TestItemCategories_BulkUpsert_TooMany(t *testing.T) {
+	t.Parallel()
+	categories := make([]any, 1001)
+	for i := range categories {
+		categories[i] = bulkUpsertICInput(uniqueName("e2e-bulic"), "material_category", SeedUnitGroupID)
+	}
+	status, body, err := apiClient.Post(itemCategoriesBulkUpsertPath, map[string]any{"item_categories": categories}, newIdempotencyKey())
+	require.NoError(t, err)
+	assert.True(t, status == 400 || status == 422,
+		"1001 item categories should return 400 or 422, got %d: %s", status, string(body))
+}
+
+func TestItemCategories_BulkUpsert_DuplicateNameInRequest(t *testing.T) {
+	t.Parallel()
+	name := uniqueName("e2e-bulic-dupname")
+
+	status, body, err := apiClient.Post(itemCategoriesBulkUpsertPath, map[string]any{
+		"item_categories": []any{
+			bulkUpsertICInput(name, "material_category", SeedUnitGroupID),
+			bulkUpsertICInput(name, "product_category", SeedUnitGroupID),
+		},
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	assert.True(t, status == 400 || status == 422,
+		"duplicate name in request should return 400 or 422, got %d: %s", status, string(body))
+	errObj := requireErrorResponse(t, body, "validation_failed", "")
+	assertErrorParam(t, errObj, "item_categories[1].name")
+	assert.Contains(t, errObj["message"], "duplicate name")
+}
+
+func TestItemCategories_BulkUpsert_CaseInsensitiveDuplicateName(t *testing.T) {
+	t.Parallel()
+	name := uniqueName("e2e-bulic-cidup")
+
+	status, body, err := apiClient.Post(itemCategoriesBulkUpsertPath, map[string]any{
+		"item_categories": []any{
+			bulkUpsertICInput(strings.ToLower(name), "material_category", SeedUnitGroupID),
+			bulkUpsertICInput(strings.ToUpper(name), "product_category", SeedUnitGroupID),
+		},
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	assert.True(t, status == 400 || status == 422,
+		"case-insensitive duplicate name should return 400 or 422, got %d: %s", status, string(body))
+}
+
+func TestItemCategories_BulkUpsert_MissingName(t *testing.T) {
+	t.Parallel()
+	status, body, err := apiClient.Post(itemCategoriesBulkUpsertPath, map[string]any{
+		"item_categories": []any{
+			map[string]any{"type": "material_category", "unit_group": map[string]any{"id": SeedUnitGroupID}},
+		},
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	assert.True(t, status == 400 || status == 422,
+		"missing name should return 400 or 422, got %d: %s", status, string(body))
+}
+
+func TestItemCategories_BulkUpsert_MissingType(t *testing.T) {
+	t.Parallel()
+	status, body, err := apiClient.Post(itemCategoriesBulkUpsertPath, map[string]any{
+		"item_categories": []any{
+			map[string]any{"name": uniqueName("e2e-bulic-notype"), "unit_group": map[string]any{"id": SeedUnitGroupID}},
+		},
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	assert.True(t, status == 400 || status == 422,
+		"missing type should return 400 or 422, got %d: %s", status, string(body))
+}
+
+func TestItemCategories_BulkUpsert_MissingUnitGroup(t *testing.T) {
+	t.Parallel()
+	status, body, err := apiClient.Post(itemCategoriesBulkUpsertPath, map[string]any{
+		"item_categories": []any{
+			map[string]any{"name": uniqueName("e2e-bulic-noug"), "type": "material_category"},
+		},
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	assert.True(t, status == 400 || status == 422,
+		"missing unit_group should return 400 or 422, got %d: %s", status, string(body))
+}

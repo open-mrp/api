@@ -177,3 +177,17 @@ WHERE property_id = sqlc.arg('property_id')
 AND account_id = sqlc.arg('account_id')
 AND `order` > sqlc.arg('after_order')
 AND `order` <= sqlc.arg('up_to_order');
+
+-- name: FindAttributesByTextsInAccount :many
+-- Used by bulk upsert to enforce the account-wide attribute value uniqueness the
+-- manual create path enforces via ExistsByValueInAccount, in one batched lookup.
+-- Matching is case-insensitive via the column collation.
+SELECT
+    a.id,
+    a.text,
+    a.property_id,
+    p.name AS property_name
+FROM attribute a
+JOIN property p ON p.id = a.property_id
+WHERE a.account_id = sqlc.arg('account_id')
+AND a.text IN (sqlc.slice('texts'));

@@ -788,6 +788,19 @@ func unitToProto(u *domain.Unit) *pb.UnitInfo {
 	}
 }
 
+func (h *gRPCHandler) ExportUnits(ctx context.Context, req *pb.ExportUnitsRequest) (*pb.ExportUnitsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	job, apiErr := h.unitSvc.ExportUnits(ctx, domain.ExportUnitsParams{Query: req.Query})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.ExportUnitsResponse{Job: jobToProto(job)}, nil
+}
+
 func (h *gRPCHandler) ListUnits(ctx context.Context, req *pb.ListUnitsRequest) (*pb.ListUnitsResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
@@ -892,6 +905,36 @@ func (h *gRPCHandler) UpdateUnit(ctx context.Context, req *pb.UpdateUnitRequest)
 	return &pb.UpdateUnitResponse{
 		Unit: unitToProto(unit),
 	}, nil
+}
+
+func (h *gRPCHandler) BulkUpsertUnits(ctx context.Context, req *pb.BulkUpsertUnitsRequest) (*pb.BulkUpsertUnitsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	units := make([]domain.UpsertUnitParams, 0, len(req.Units))
+	for _, u := range req.Units {
+		units = append(units, domain.UpsertUnitParams{
+			Name:              u.Name,
+			Abbreviation:      u.Abbreviation,
+			UnitDimensionCode: u.Type,
+			RatioNumerator:    u.RatioNumerator,
+			RatioDenominator:  u.RatioDenominator,
+			OffsetNumerator:   u.OffsetNumerator,
+			OffsetDenominator: u.OffsetDenominator,
+			IsBaseUnit:        u.IsBaseUnit,
+		})
+	}
+
+	job, apiErr := h.unitSvc.BulkUpsertUnits(ctx, domain.BulkUpsertUnitsParams{Units: units})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.BulkUpsertUnitsResponse{Job: jobToProto(job)}, nil
 }
 
 func (h *gRPCHandler) DeleteUnit(ctx context.Context, req *pb.DeleteUnitRequest) (*emptypb.Empty, error) {

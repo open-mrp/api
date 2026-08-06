@@ -4,6 +4,7 @@ syntax = "proto3";
 package core;
 
 import "google/protobuf/timestamp.proto";
+import "core/core_async.proto";
 import "core/core_identity_context.proto";
 option go_package = "shared/proto/core;core";
 
@@ -179,6 +180,26 @@ message UpdatePropertyResponse {
 }
 message DeletePropertyRequest {
   string id = 1;
+}
+message BulkUpsertPropertyAttributeInput {
+  string value = 1;
+  optional string color_code = 2;
+}
+message BulkUpsertPropertyInput {
+  string name = 1;
+  repeated BulkUpsertPropertyAttributeInput attributes = 2;
+}
+message BulkUpsertPropertiesRequest {
+  repeated BulkUpsertPropertyInput properties = 1;
+}
+message BulkUpsertPropertiesResponse {
+  JobInfo job = 1;
+}
+message ExportPropertiesRequest {
+  optional string query = 1;
+}
+message ExportPropertiesResponse {
+  JobInfo job = 1;
 }
 message ListAttributesRequest {
   string property_id = 1;

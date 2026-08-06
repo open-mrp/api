@@ -108,17 +108,12 @@ func (h *gRPCHandler) ExportProducts(ctx context.Context, req *pb.ExportProducts
 		params.EndDate = &t
 	}
 
-	products, apiErr := h.productSvc.ExportProducts(ctx, params)
+	job, apiErr := h.productSvc.ExportProducts(ctx, params)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
-	pbProducts := make([]*pb.ProductFullInfo, len(products))
-	for i, p := range products {
-		pbProducts[i] = productFullToProto(p)
-	}
-
-	return &pb.ExportProductsResponse{Products: pbProducts}, nil
+	return &pb.ExportProductsResponse{Job: jobToProto(job)}, nil
 }
 
 func (h *gRPCHandler) GetProduct(ctx context.Context, req *pb.GetProductRequest) (*pb.GetProductResponse, error) {
@@ -178,6 +173,46 @@ func (h *gRPCHandler) CreateProduct(ctx context.Context, req *pb.CreateProductRe
 	return &pb.CreateProductResponse{
 		Product: productFullToProto(product),
 	}, nil
+}
+
+func (h *gRPCHandler) BulkUpsertProducts(ctx context.Context, req *pb.BulkUpsertProductsRequest) (*pb.BulkUpsertProductsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	products := make([]domain.UpsertProductParams, len(req.Products))
+	for i, p := range req.Products {
+		props := make([]domain.UpsertItemPropertyParams, len(p.Properties))
+		for j, pr := range p.Properties {
+			props[j] = domain.UpsertItemPropertyParams{Name: pr.Name, Value: pr.Value}
+		}
+		productType := ""
+		if p.Type != nil {
+			productType = *p.Type
+		}
+		products[i] = domain.UpsertProductParams{
+			SKU:             p.Sku,
+			ProductTypeCode: productType,
+			Description:     p.Description,
+			Notes:           p.Notes,
+			Category:        objectIdentifierFromProto(p.Category),
+			ProductLine:     objectIdentifierPtrFromProto(p.ProductLine),
+			IsPortalReady:   p.IsPortalReady,
+			UnitPrice:       protoToCreateRateInput(p.UnitPrice),
+			UnitCost:        protoToCreateRateInput(p.UnitCost),
+			Properties:      props,
+		}
+	}
+
+	job, apiErr := h.productSvc.BulkUpsertProducts(ctx, domain.BulkUpsertProductsParams{Products: products})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.BulkUpsertProductsResponse{Job: jobToProto(job)}, nil
 }
 
 func (h *gRPCHandler) UpdateProduct(ctx context.Context, req *pb.UpdateProductRequest) (*pb.UpdateProductResponse, error) {

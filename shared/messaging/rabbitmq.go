@@ -226,13 +226,11 @@ func (r *rabbitMQ) consume(ctx context.Context, queueName string, declareQueue f
 				}
 			}
 
-			err := r.Channel.Qos(
-				prefetch, // prefetchCount
-				0,        // prefetchSize
-				false,    // global
-			)
+			// Each consumer needs its own channel: concurrent Qos/Consume on a shared one
+			// corrupts the protocol stream, leaving ghost consumers that swallow deliveries.
+			ch, err := r.consumerChannel()
 			if err != nil {
-				slog.Error("Failed to set QoS, retrying", "queue", queueName, "error", err, "retry_delay", r.reconnectDelay)
+				slog.Error("Failed to open consumer channel, retrying", "queue", queueName, "error", err, "retry_delay", r.reconnectDelay)
 				select {
 				case <-ctx.Done():
 					return
@@ -241,7 +239,23 @@ func (r *rabbitMQ) consume(ctx context.Context, queueName string, declareQueue f
 				continue
 			}
 
-			msgs, err := r.Channel.Consume(
+			err = ch.Qos(
+				prefetch, // prefetchCount
+				0,        // prefetchSize
+				false,    // global
+			)
+			if err != nil {
+				slog.Error("Failed to set QoS, retrying", "queue", queueName, "error", err, "retry_delay", r.reconnectDelay)
+				_ = ch.Close()
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(r.reconnectDelay):
+				}
+				continue
+			}
+
+			msgs, err := ch.Consume(
 				queueName, // queue
 				"",        // consumer
 				false,     // auto-ack
@@ -252,6 +266,7 @@ func (r *rabbitMQ) consume(ctx context.Context, queueName string, declareQueue f
 			)
 			if err != nil {
 				slog.Error("Failed to start consume, retrying", "queue", queueName, "error", err, "retry_delay", r.reconnectDelay)
+				_ = ch.Close()
 				select {
 				case <-ctx.Done():
 					return
@@ -281,10 +296,12 @@ func (r *rabbitMQ) consume(ctx context.Context, queueName string, declareQueue f
 			select {
 			case <-ctx.Done():
 				slog.Info("Context cancelled, stopping consumer", "queue", queueName)
+				_ = ch.Close()
 				return
 			case <-workersDone:
 			}
 
+			_ = ch.Close()
 			slog.Info("Consumption loop ended, reconnecting", "queue", queueName)
 			select {
 			case <-ctx.Done():
@@ -395,7 +412,21 @@ func (r *rabbitMQ) publishWithReconnect(ctx context.Context, exchange, routingKe
 	return nil
 }
 
-// ensureChannel checks whether the connection and channel are still open and triggers a reconnect if either has been closed. The check is performed under the mutex to get a consistent snapshot of both conn and Channel state.
+// opens a dedicated channel for one consumer: the connection-wide Channel is for publishing,
+// and concurrent Qos/Consume commands on a single channel corrupt the protocol stream.
+func (r *rabbitMQ) consumerChannel() (*amqp.Channel, error) {
+	// Snapshot the connection under the lock but open the channel outside it: Channel() is a
+	// network round-trip and must not stall publishers waiting on mu.
+	r.mu.Lock()
+	conn := r.conn
+	r.mu.Unlock()
+	if conn == nil || conn.IsClosed() {
+		return nil, fmt.Errorf("connection is not ready")
+	}
+	return conn.Channel()
+}
+
+// checks whether the connection and channel are still open and triggers a reconnect if either has been closed. The check is performed under the mutex to get a consistent snapshot of both conn and Channel state.
 func (r *rabbitMQ) ensureChannel(ctx context.Context) error {
 	r.mu.Lock()
 	needsReconnect := r.conn == nil || r.conn.IsClosed() || r.Channel == nil || r.Channel.IsClosed()
@@ -677,6 +708,29 @@ func (r *rabbitMQ) setupExchangesAndQueues() error {
 		ApplicationExchange,
 	); err != nil {
 		return err
+	}
+
+	// Core async bulk operation command queues (handled by core-service). Each operation's
+	// queue and routing key derive from its canonical identity, so one loop covers them all.
+	for _, op := range BulkOperations {
+		if err := r.declareAndBindQueue(
+			op.Queue(),
+			[]string{string(op.RoutingKey())},
+			ApplicationExchange,
+		); err != nil {
+			return err
+		}
+	}
+
+	// Core async export command queues (handled by core-service), on the same terms.
+	for _, op := range ExportOperations {
+		if err := r.declareAndBindQueue(
+			op.Queue(),
+			[]string{string(op.RoutingKey())},
+			ApplicationExchange,
+		); err != nil {
+			return err
+		}
 	}
 
 	// Production-schedule generation command queue (handled by core-service). Declared here so the queue exists before anything consumes it: a consumed-but-undeclared queue 404s and wedges every sibling consumer on the channel.

@@ -1,6 +1,8 @@
 package field
 
-import pb "github.com/augno/api/shared/proto/core"
+import (
+	pb "github.com/augno/api/shared/proto/core"
+)
 
 // QuantityInput holds amount and unit for quantity patch fields.
 type QuantityInput struct {

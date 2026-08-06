@@ -14,7 +14,8 @@ import (
 
 const countUnitGroupsByName = `-- name: CountUnitGroupsByName :one
 SELECT COUNT(*) FROM unit_group
-WHERE name = ? AND (account_id = ? OR account_id IS NULL)
+WHERE name = ?
+AND account_id = ?
 AND (? IS NULL OR id != ?)
 `
 
@@ -58,12 +59,19 @@ func (q *Queries) CountUnitInGroup(ctx context.Context, arg CountUnitInGroupPara
 }
 
 const deleteAllUnitGroupUnits = `-- name: DeleteAllUnitGroupUnits :exec
-DELETE FROM unit_group_unit
-WHERE unit_group_id = ?
+DELETE ugu FROM unit_group_unit ugu
+JOIN unit_group ug ON ugu.unit_group_id = ug.id
+WHERE ug.id = ?
+AND ug.account_id = ?
 `
 
-func (q *Queries) DeleteAllUnitGroupUnits(ctx context.Context, unitGroupID string) error {
-	_, err := q.db.ExecContext(ctx, deleteAllUnitGroupUnits, unitGroupID)
+type DeleteAllUnitGroupUnitsParams struct {
+	UnitGroupID string
+	AccountID   sql.NullString
+}
+
+func (q *Queries) DeleteAllUnitGroupUnits(ctx context.Context, arg DeleteAllUnitGroupUnitsParams) error {
+	_, err := q.db.ExecContext(ctx, deleteAllUnitGroupUnits, arg.UnitGroupID, arg.AccountID)
 	return err
 }
 
@@ -95,6 +103,302 @@ type DeleteUnitGroupUnitByIDParams struct {
 
 func (q *Queries) DeleteUnitGroupUnitByID(ctx context.Context, arg DeleteUnitGroupUnitByIDParams) (sql.Result, error) {
 	return q.db.ExecContext(ctx, deleteUnitGroupUnitByID, arg.ID, arg.UnitGroupID)
+}
+
+const exportUnitGroups = `-- name: ExportUnitGroups :many
+SELECT
+    ug.id,
+    ug.name,
+    ug.notes,
+    ug.unit_type_code,
+    ug.base_unit_id,
+    u.name AS base_unit_name,
+    u.abbreviation AS base_unit_abbreviation,
+    ug.account_id,
+    ug.created_at,
+    ug.updated_at
+FROM unit_group ug
+JOIN unit u ON ug.base_unit_id = u.id
+WHERE (ug.account_id = ? OR ug.account_id IS NULL)
+AND (
+    ? IS NULL
+    OR ug.name LIKE ?
+)
+ORDER BY ug.created_at DESC, ug.id DESC
+LIMIT ?
+`
+
+type ExportUnitGroupsParams struct {
+	AccountID   sql.NullString
+	SearchQuery sql.NullString
+	Limit       int32
+}
+
+type ExportUnitGroupsRow struct {
+	ID                   string
+	Name                 string
+	Notes                sql.NullString
+	UnitTypeCode         string
+	BaseUnitID           string
+	BaseUnitName         string
+	BaseUnitAbbreviation string
+	AccountID            sql.NullString
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+}
+
+// Unpaginated by design; the caller passes a row cap as the limit. System groups
+// (account_id IS NULL) are in scope, matching what the list endpoint returns.
+func (q *Queries) ExportUnitGroups(ctx context.Context, arg ExportUnitGroupsParams) ([]ExportUnitGroupsRow, error) {
+	rows, err := q.db.QueryContext(ctx, exportUnitGroups,
+		arg.AccountID,
+		arg.SearchQuery,
+		arg.SearchQuery,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ExportUnitGroupsRow
+	for rows.Next() {
+		var i ExportUnitGroupsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Notes,
+			&i.UnitTypeCode,
+			&i.BaseUnitID,
+			&i.BaseUnitName,
+			&i.BaseUnitAbbreviation,
+			&i.AccountID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const findUnitGroupUnitsByGroupIDs = `-- name: FindUnitGroupUnitsByGroupIDs :many
+SELECT
+    ugu.id,
+    ugu.unit_id,
+    ugu.unit_group_id,
+    ugu.discount_percentage,
+    ugu.discount_fixed,
+    ugu.is_visible,
+    ugu.created_at,
+    ugu.updated_at,
+    u.name AS unit_name,
+    u.abbreviation AS unit_abbreviation,
+    u.unit_dimension_code AS unit_type,
+    u.ratio_numerator AS unit_ratio_numerator,
+    u.ratio_denominator AS unit_ratio_denominator,
+    u.offset_numerator AS unit_offset_numerator,
+    u.offset_denominator AS unit_offset_denominator,
+    u.is_base_unit AS unit_is_base_unit,
+    u.created_at AS unit_created_at,
+    u.updated_at AS unit_updated_at,
+    u.account_id AS unit_account_id
+FROM unit_group_unit ugu
+JOIN unit u ON ugu.unit_id = u.id
+WHERE ugu.unit_group_id IN (/*SLICE:unit_group_ids*/?)
+`
+
+type FindUnitGroupUnitsByGroupIDsRow struct {
+	ID                    string
+	UnitID                string
+	UnitGroupID           string
+	DiscountPercentage    string
+	DiscountFixed         string
+	IsVisible             bool
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
+	UnitName              string
+	UnitAbbreviation      string
+	UnitType              string
+	UnitRatioNumerator    string
+	UnitRatioDenominator  string
+	UnitOffsetNumerator   string
+	UnitOffsetDenominator string
+	UnitIsBaseUnit        bool
+	UnitCreatedAt         time.Time
+	UnitUpdatedAt         time.Time
+	UnitAccountID         sql.NullString
+}
+
+func (q *Queries) FindUnitGroupUnitsByGroupIDs(ctx context.Context, unitGroupIds []string) ([]FindUnitGroupUnitsByGroupIDsRow, error) {
+	query := findUnitGroupUnitsByGroupIDs
+	var queryParams []interface{}
+	if len(unitGroupIds) > 0 {
+		for _, v := range unitGroupIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:unit_group_ids*/?", strings.Repeat(",?", len(unitGroupIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:unit_group_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FindUnitGroupUnitsByGroupIDsRow
+	for rows.Next() {
+		var i FindUnitGroupUnitsByGroupIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.UnitID,
+			&i.UnitGroupID,
+			&i.DiscountPercentage,
+			&i.DiscountFixed,
+			&i.IsVisible,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.UnitName,
+			&i.UnitAbbreviation,
+			&i.UnitType,
+			&i.UnitRatioNumerator,
+			&i.UnitRatioDenominator,
+			&i.UnitOffsetNumerator,
+			&i.UnitOffsetDenominator,
+			&i.UnitIsBaseUnit,
+			&i.UnitCreatedAt,
+			&i.UnitUpdatedAt,
+			&i.UnitAccountID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const findUnitGroupsByNames = `-- name: FindUnitGroupsByNames :many
+SELECT
+    ug.id,
+    ug.name,
+    ug.notes,
+    ug.unit_type_code,
+    ug.base_unit_id,
+    u.name AS base_unit_name,
+    u.abbreviation AS base_unit_abbreviation,
+    u.unit_dimension_code AS base_unit_type,
+    u.ratio_numerator AS base_unit_ratio_numerator,
+    u.ratio_denominator AS base_unit_ratio_denominator,
+    u.offset_numerator AS base_unit_offset_numerator,
+    u.offset_denominator AS base_unit_offset_denominator,
+    u.is_base_unit AS base_unit_is_base_unit,
+    u.created_at AS base_unit_created_at,
+    u.updated_at AS base_unit_updated_at,
+    u.account_id AS base_unit_account_id,
+    ug.account_id,
+    ug.created_at,
+    ug.updated_at
+FROM unit_group ug
+JOIN unit u ON ug.base_unit_id = u.id
+WHERE ug.name IN (/*SLICE:names*/?)
+AND (ug.account_id = ? OR ug.account_id IS NULL)
+`
+
+type FindUnitGroupsByNamesParams struct {
+	Names     []string
+	AccountID sql.NullString
+}
+
+type FindUnitGroupsByNamesRow struct {
+	ID                        string
+	Name                      string
+	Notes                     sql.NullString
+	UnitTypeCode              string
+	BaseUnitID                string
+	BaseUnitName              string
+	BaseUnitAbbreviation      string
+	BaseUnitType              string
+	BaseUnitRatioNumerator    string
+	BaseUnitRatioDenominator  string
+	BaseUnitOffsetNumerator   string
+	BaseUnitOffsetDenominator string
+	BaseUnitIsBaseUnit        bool
+	BaseUnitCreatedAt         time.Time
+	BaseUnitUpdatedAt         time.Time
+	BaseUnitAccountID         sql.NullString
+	AccountID                 sql.NullString
+	CreatedAt                 time.Time
+	UpdatedAt                 time.Time
+}
+
+// names must be pre-lowercased by the caller; the utf8mb4_unicode_ci collation makes the
+// IN comparison case-insensitive, so lowercasing on both sides is not required in SQL.
+// System groups (account_id IS NULL) are included so bulk upsert can detect and reject
+// attempts to modify them instead of silently shadow-creating an account-owned twin.
+func (q *Queries) FindUnitGroupsByNames(ctx context.Context, arg FindUnitGroupsByNamesParams) ([]FindUnitGroupsByNamesRow, error) {
+	query := findUnitGroupsByNames
+	var queryParams []interface{}
+	if len(arg.Names) > 0 {
+		for _, v := range arg.Names {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:names*/?", strings.Repeat(",?", len(arg.Names))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:names*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FindUnitGroupsByNamesRow
+	for rows.Next() {
+		var i FindUnitGroupsByNamesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Notes,
+			&i.UnitTypeCode,
+			&i.BaseUnitID,
+			&i.BaseUnitName,
+			&i.BaseUnitAbbreviation,
+			&i.BaseUnitType,
+			&i.BaseUnitRatioNumerator,
+			&i.BaseUnitRatioDenominator,
+			&i.BaseUnitOffsetNumerator,
+			&i.BaseUnitOffsetDenominator,
+			&i.BaseUnitIsBaseUnit,
+			&i.BaseUnitCreatedAt,
+			&i.BaseUnitUpdatedAt,
+			&i.BaseUnitAccountID,
+			&i.AccountID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getUnitGroup = `-- name: GetUnitGroup :one
@@ -225,6 +529,59 @@ func (q *Queries) GetUnitGroupBase(ctx context.Context, arg GetUnitGroupBasePara
 	return i, err
 }
 
+const getUnitGroupTypesByIDs = `-- name: GetUnitGroupTypesByIDs :many
+SELECT
+    ug.id,
+    ug.unit_type_code
+FROM unit_group ug
+WHERE ug.id IN (/*SLICE:ids*/?)
+AND (ug.account_id = ? OR ug.account_id IS NULL)
+`
+
+type GetUnitGroupTypesByIDsParams struct {
+	Ids       []string
+	AccountID sql.NullString
+}
+
+type GetUnitGroupTypesByIDsRow struct {
+	ID           string
+	UnitTypeCode string
+}
+
+func (q *Queries) GetUnitGroupTypesByIDs(ctx context.Context, arg GetUnitGroupTypesByIDsParams) ([]GetUnitGroupTypesByIDsRow, error) {
+	query := getUnitGroupTypesByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetUnitGroupTypesByIDsRow
+	for rows.Next() {
+		var i GetUnitGroupTypesByIDsRow
+		if err := rows.Scan(&i.ID, &i.UnitTypeCode); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getUnitGroupUnit = `-- name: GetUnitGroupUnit :one
 SELECT
     ugu.id,
@@ -349,6 +706,87 @@ func (q *Queries) GetUnitGroupUnitBase(ctx context.Context, arg GetUnitGroupUnit
 		&i.IsVisible,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getUnitGroupUnitByUnitIDAndGroupID = `-- name: GetUnitGroupUnitByUnitIDAndGroupID :one
+SELECT
+    ugu.id,
+    ugu.unit_id,
+    ugu.unit_group_id,
+    ugu.discount_percentage,
+    ugu.discount_fixed,
+    ugu.is_visible,
+    ugu.created_at,
+    ugu.updated_at,
+    u.name AS unit_name,
+    u.abbreviation AS unit_abbreviation,
+    u.unit_dimension_code AS unit_type,
+    u.ratio_numerator AS unit_ratio_numerator,
+    u.ratio_denominator AS unit_ratio_denominator,
+    u.offset_numerator AS unit_offset_numerator,
+    u.offset_denominator AS unit_offset_denominator,
+    u.is_base_unit AS unit_is_base_unit,
+    u.created_at AS unit_created_at,
+    u.updated_at AS unit_updated_at,
+    u.account_id AS unit_account_id
+FROM unit_group_unit ugu
+JOIN unit u ON ugu.unit_id = u.id
+WHERE ugu.unit_group_id = ?
+AND ugu.unit_id = ?
+`
+
+type GetUnitGroupUnitByUnitIDAndGroupIDParams struct {
+	UnitGroupID string
+	UnitID      string
+}
+
+type GetUnitGroupUnitByUnitIDAndGroupIDRow struct {
+	ID                    string
+	UnitID                string
+	UnitGroupID           string
+	DiscountPercentage    string
+	DiscountFixed         string
+	IsVisible             bool
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
+	UnitName              string
+	UnitAbbreviation      string
+	UnitType              string
+	UnitRatioNumerator    string
+	UnitRatioDenominator  string
+	UnitOffsetNumerator   string
+	UnitOffsetDenominator string
+	UnitIsBaseUnit        bool
+	UnitCreatedAt         time.Time
+	UnitUpdatedAt         time.Time
+	UnitAccountID         sql.NullString
+}
+
+func (q *Queries) GetUnitGroupUnitByUnitIDAndGroupID(ctx context.Context, arg GetUnitGroupUnitByUnitIDAndGroupIDParams) (GetUnitGroupUnitByUnitIDAndGroupIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getUnitGroupUnitByUnitIDAndGroupID, arg.UnitGroupID, arg.UnitID)
+	var i GetUnitGroupUnitByUnitIDAndGroupIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.UnitID,
+		&i.UnitGroupID,
+		&i.DiscountPercentage,
+		&i.DiscountFixed,
+		&i.IsVisible,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.UnitName,
+		&i.UnitAbbreviation,
+		&i.UnitType,
+		&i.UnitRatioNumerator,
+		&i.UnitRatioDenominator,
+		&i.UnitOffsetNumerator,
+		&i.UnitOffsetDenominator,
+		&i.UnitIsBaseUnit,
+		&i.UnitCreatedAt,
+		&i.UnitUpdatedAt,
+		&i.UnitAccountID,
 	)
 	return i, err
 }
@@ -1343,6 +1781,26 @@ func (q *Queries) ListUnitGroupsForwardBase(ctx context.Context, arg ListUnitGro
 	return items, nil
 }
 
+const unitGroupExists = `-- name: UnitGroupExists :one
+SELECT EXISTS(
+    SELECT 1 FROM unit_group ug
+    WHERE ug.id = ?
+    AND (ug.account_id = ? OR ug.account_id IS NULL)
+) AS does_exist
+`
+
+type UnitGroupExistsParams struct {
+	ID        string
+	AccountID sql.NullString
+}
+
+func (q *Queries) UnitGroupExists(ctx context.Context, arg UnitGroupExistsParams) (bool, error) {
+	row := q.db.QueryRowContext(ctx, unitGroupExists, arg.ID, arg.AccountID)
+	var does_exist bool
+	err := row.Scan(&does_exist)
+	return does_exist, err
+}
+
 const updateUnitGroup = `-- name: UpdateUnitGroup :execresult
 UPDATE unit_group SET
     name = COALESCE(?, name),
@@ -1408,6 +1866,8 @@ type UpsertUnitGroupUnitParams struct {
 	IsVisible          bool
 }
 
+// ON DUPLICATE KEY UPDATE preserves the existing row's id when (unit_group_id, unit_id) already
+// exists. The caller must fetch by (unit_group_id, unit_id) to obtain the stable id.
 func (q *Queries) UpsertUnitGroupUnit(ctx context.Context, arg UpsertUnitGroupUnitParams) error {
 	_, err := q.db.ExecContext(ctx, upsertUnitGroupUnit,
 		arg.ID,

@@ -151,6 +151,23 @@ DELETE FROM storage_location
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');
 
+-- name: FindLocationsByNames :many
+SELECT
+    sl.id,
+    sl.name,
+    sl.storage_location_type_code AS type_code,
+    sl.parent_id,
+    p.name AS parent_name,
+    p.storage_location_type_code AS parent_type_code,
+    sl.created_at,
+    sl.updated_at
+FROM storage_location sl
+LEFT JOIN storage_location p ON p.id = sl.parent_id
+-- names must be pre-lowercased by the caller; the utf8mb4_unicode_ci collation makes the
+-- IN comparison case-insensitive, so lowercasing on both sides is not required in SQL.
+WHERE sl.name IN (sqlc.slice('names'))
+AND sl.account_id = sqlc.arg('account_id');
+
 -- name: CheckLocationInAccount :one
 SELECT EXISTS(
     SELECT 1 FROM storage_location
@@ -205,4 +222,24 @@ AND (
     OR (slt.created_at = sqlc.arg('cursor_created_at') AND slt.id > sqlc.arg('cursor_id'))
 )
 ORDER BY slt.created_at ASC, slt.id ASC
+LIMIT ?;
+
+-- name: ExportLocations :many
+-- Unpaginated by design; the caller passes a row cap as the limit.
+SELECT
+    sl.id,
+    sl.name,
+    sl.storage_location_type_code AS type_code,
+    sl.parent_id,
+    p.name AS parent_name,
+    sl.created_at,
+    sl.updated_at
+FROM storage_location sl
+LEFT JOIN storage_location p ON p.id = sl.parent_id
+WHERE sl.account_id = sqlc.arg('account_id')
+AND (
+    sqlc.narg('search_query') IS NULL
+    OR sl.name LIKE sqlc.narg('search_query')
+)
+ORDER BY sl.created_at DESC, sl.id DESC
 LIMIT ?;

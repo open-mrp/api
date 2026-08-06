@@ -71,6 +71,72 @@ func (q *Queries) DeleteAttribute(ctx context.Context, arg DeleteAttributeParams
 	return q.db.ExecContext(ctx, deleteAttribute, arg.ID, arg.PropertyID, arg.AccountID)
 }
 
+const findAttributesByTextsInAccount = `-- name: FindAttributesByTextsInAccount :many
+SELECT
+    a.id,
+    a.text,
+    a.property_id,
+    p.name AS property_name
+FROM attribute a
+JOIN property p ON p.id = a.property_id
+WHERE a.account_id = ?
+AND a.text IN (/*SLICE:texts*/?)
+`
+
+type FindAttributesByTextsInAccountParams struct {
+	AccountID string
+	Texts     []string
+}
+
+type FindAttributesByTextsInAccountRow struct {
+	ID           string
+	Text         string
+	PropertyID   string
+	PropertyName string
+}
+
+// Used by bulk upsert to enforce the account-wide attribute value uniqueness the
+// manual create path enforces via ExistsByValueInAccount, in one batched lookup.
+// Matching is case-insensitive via the column collation.
+func (q *Queries) FindAttributesByTextsInAccount(ctx context.Context, arg FindAttributesByTextsInAccountParams) ([]FindAttributesByTextsInAccountRow, error) {
+	query := findAttributesByTextsInAccount
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	if len(arg.Texts) > 0 {
+		for _, v := range arg.Texts {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:texts*/?", strings.Repeat(",?", len(arg.Texts))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:texts*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FindAttributesByTextsInAccountRow
+	for rows.Next() {
+		var i FindAttributesByTextsInAccountRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Text,
+			&i.PropertyID,
+			&i.PropertyName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getAttribute = `-- name: GetAttribute :one
 SELECT
     attribute.id,

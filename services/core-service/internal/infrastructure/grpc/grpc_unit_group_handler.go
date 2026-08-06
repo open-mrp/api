@@ -72,6 +72,19 @@ func unitGroupUnitToProto(u *domain.UnitGroupUnit) *pb.UnitGroupUnitInfo {
 	}
 }
 
+func (h *gRPCHandler) ExportUnitGroups(ctx context.Context, req *pb.ExportUnitGroupsRequest) (*pb.ExportUnitGroupsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	job, apiErr := h.unitGroupSvc.ExportUnitGroups(ctx, domain.ExportUnitGroupsParams{Query: req.Query})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.ExportUnitGroupsResponse{Job: jobToProto(job)}, nil
+}
+
 func (h *gRPCHandler) ListUnitGroups(ctx context.Context, req *pb.ListUnitGroupsRequest) (*pb.ListUnitGroupsResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
@@ -331,4 +344,38 @@ func (h *gRPCHandler) BatchGetUnitGroupUnitsByIDs(ctx context.Context, req *pb.B
 		pbUnits[i] = unitGroupUnitToProto(u)
 	}
 	return &pb.BatchGetUnitGroupUnitsByIDsResponse{UnitGroupUnits: pbUnits}, nil
+}
+
+func (h *gRPCHandler) BulkUpsertUnitGroups(ctx context.Context, req *pb.BulkUpsertUnitGroupsRequest) (*pb.BulkUpsertUnitGroupsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	unitGroups := make([]domain.UpsertUnitGroupParams, 0, len(req.UnitGroups))
+	for _, ug := range req.UnitGroups {
+		conversions := make([]domain.UpsertUnitConversionParams, 0, len(ug.UnitConversions))
+		for _, c := range ug.UnitConversions {
+			conversions = append(conversions, domain.UpsertUnitConversionParams{
+				Unit:               unitIdentifierFromProto(c.Unit),
+				DiscountPercentage: c.DiscountPercentage,
+			})
+		}
+		unitGroups = append(unitGroups, domain.UpsertUnitGroupParams{
+			Name:            ug.Name,
+			Notes:           ug.Notes,
+			Type:            ug.Type,
+			BaseUnit:        unitIdentifierFromProto(ug.BaseUnit),
+			UnitConversions: conversions,
+		})
+	}
+
+	job, apiErr := h.unitGroupSvc.BulkUpsertUnitGroups(ctx, domain.BulkUpsertUnitGroupsParams{UnitGroups: unitGroups})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.BulkUpsertUnitGroupsResponse{Job: jobToProto(job)}, nil
 }

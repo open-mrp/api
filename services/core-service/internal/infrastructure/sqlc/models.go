@@ -1059,8 +1059,8 @@ type Job struct {
 	JobItems     json.RawMessage
 	AccountID    sql.NullString
 	CreatedBy    sql.NullString
-	Results      json.RawMessage
-	Errors       json.RawMessage
+	Results      db.NullableRawMessage
+	Errors       db.NullableRawMessage
 	ErrorSummary sql.NullString
 	UpdatedAt    time.Time
 	CreatedAt    time.Time

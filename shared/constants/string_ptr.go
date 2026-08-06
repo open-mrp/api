@@ -128,3 +128,5 @@ func (m *CustomerRelationshipType) StringPtr() *string { return stringPtrEnum(m)
 func (m *EDIStatus) StringPtr() *string                { return stringPtrEnum(m) }
 func (m *EmailSendStatus) StringPtr() *string          { return stringPtrEnum(m) }
 func (m *RemovedResourceScope) StringPtr() *string     { return stringPtrEnum(m) }
+func (m *JobStatus) StringPtr() *string                { return stringPtrEnum(m) }
+func (m *JobType) StringPtr() *string                  { return stringPtrEnum(m) }

@@ -20,6 +20,7 @@ var machineSvcTracer = tracing.GetTracer("core-service.machine_service")
 type machineSvcImpl struct {
 	repos           domain.RepoFactory
 	mediatorFactory domain.MediatorFactory
+	jobSvcFactory   domain.JobSvcFactory
 	txManager       TransactionManager
 }
 
@@ -29,6 +30,9 @@ type MachineSvcConfig struct {
 
 	// MediatorFactory (required) builds the mediators used by this service.
 	MediatorFactory domain.MediatorFactory
+
+	// JobSvcFactory (required) builds the job service the async bulk upsert records on.
+	JobSvcFactory domain.JobSvcFactory
 
 	// TxManager (required) wraps multi-step operations in database transactions.
 	TxManager TransactionManager
@@ -40,6 +44,9 @@ func (c *MachineSvcConfig) validate() error {
 	}
 	if c.MediatorFactory == nil {
 		return fmt.Errorf("machine service: mediator factory is required")
+	}
+	if c.JobSvcFactory == nil {
+		return fmt.Errorf("machine service: job service factory is required")
 	}
 	if c.TxManager == nil {
 		return fmt.Errorf("machine service: tx manager is required")
@@ -55,6 +62,7 @@ func NewMachineSvc(config *MachineSvcConfig) domain.MachineSvc {
 	return &machineSvcImpl{
 		repos:           config.Repos,
 		mediatorFactory: config.MediatorFactory,
+		jobSvcFactory:   config.JobSvcFactory,
 		txManager:       config.TxManager,
 	}
 }
@@ -72,6 +80,7 @@ func (s *machineSvcImpl) withTx(ctx context.Context, fn func(context.Context, *m
 		txSvc := &machineSvcImpl{
 			repos:           f,
 			mediatorFactory: s.mediatorFactory,
+			jobSvcFactory:   s.jobSvcFactory,
 			txManager:       s.txManager,
 		}
 		return fn(txCtx, txSvc)
@@ -191,6 +200,14 @@ func (s *machineSvcImpl) CreateMachine(ctx context.Context, params domain.Create
 				return apierror.NewConflictErrorWithParam("A machine with this name already exists.", "name")
 			}
 
+			serialExists, apiErr := txMachineRepo.ExistsBySerialNumber(txCtx, params.AccountID, params.SerialNumber, nil)
+			if apiErr != nil {
+				return apiErr
+			}
+			if serialExists {
+				return apierror.NewConflictErrorWithParam("A machine with this serial number already exists.", "serial_number")
+			}
+
 			// Verify department belongs to account
 			_, apiErr = txSvc.repos.NewDepartmentRepo().Get(txCtx, domain.GetDepartmentParams{
 				AccountID:    params.AccountID,
@@ -285,6 +302,16 @@ func (s *machineSvcImpl) UpdateMachine(ctx context.Context, params domain.Update
 				}
 				if exists {
 					return apierror.NewConflictErrorWithParam("A machine with this name already exists.", "name")
+				}
+			}
+
+			if params.SerialNumber != nil {
+				serialExists, apiErr := txRepo.ExistsBySerialNumber(txCtx, params.AccountID, *params.SerialNumber, &params.MachineID)
+				if apiErr != nil {
+					return apiErr
+				}
+				if serialExists {
+					return apierror.NewConflictErrorWithParam("A machine with this serial number already exists.", "serial_number")
 				}
 			}
 

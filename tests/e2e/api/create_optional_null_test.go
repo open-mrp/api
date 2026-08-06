@@ -17,7 +17,7 @@ func TestCreateOptionalFieldExplicitNullRejected(t *testing.T) {
 		t.Parallel()
 		status, _, err := apiClient.Post("/v1/catalog/materials", map[string]any{
 			"sku":         uniqueName("e2e-mat-null"),
-			"category_id": SeedItemCategoryID,
+			"category_id": SeedMaterialCategoryID,
 			"description": nil,
 		}, newIdempotencyKey())
 		require.NoError(t, err)

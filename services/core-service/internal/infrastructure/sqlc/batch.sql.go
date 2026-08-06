@@ -102,6 +102,135 @@ func (q *Queries) DeleteBatchesMachinesByBatchID(ctx context.Context, batchID st
 	return err
 }
 
+const exportBatchMachines = `-- name: ExportBatchMachines :many
+SELECT
+    bm.A AS batch_id,
+    m.name
+FROM _batches_machines bm
+JOIN machine m ON bm.B = m.id
+WHERE bm.A IN (/*SLICE:batch_ids*/?)
+ORDER BY bm.A, m.name
+`
+
+type ExportBatchMachinesRow struct {
+	BatchID string
+	Name    string
+}
+
+// The bulk form of GetBatchMachines, so an export naming many batches' machines
+// does not issue one query per batch.
+func (q *Queries) ExportBatchMachines(ctx context.Context, batchIds []string) ([]ExportBatchMachinesRow, error) {
+	query := exportBatchMachines
+	var queryParams []interface{}
+	if len(batchIds) > 0 {
+		for _, v := range batchIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:batch_ids*/?", strings.Repeat(",?", len(batchIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:batch_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ExportBatchMachinesRow
+	for rows.Next() {
+		var i ExportBatchMachinesRow
+		if err := rows.Scan(&i.BatchID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const exportProductionRunBatches = `-- name: ExportProductionRunBatches :many
+SELECT
+    b.id,
+    b.production_run_id,
+    b.scanned_at,
+    i.sku AS item_sku,
+    q.value AS quantity_value,
+    qu.abbreviation AS quantity_unit_abbreviation,
+    d.name AS department_name
+FROM batch b
+JOIN item i ON b.item_id = i.id
+JOIN quantity q ON b.quantity_id = q.id
+JOIN unit qu ON q.unit_id = qu.id
+LEFT JOIN scanning_station ss ON b.scanning_station_id = ss.id
+LEFT JOIN department d ON ss.department_id = d.id
+WHERE b.production_run_id IN (/*SLICE:production_run_ids*/?)
+AND b.account_id = ?
+ORDER BY b.production_run_id, b.created_at, b.id
+`
+
+type ExportProductionRunBatchesParams struct {
+	ProductionRunIds []sql.NullString
+	AccountID        string
+}
+
+type ExportProductionRunBatchesRow struct {
+	ID                       string
+	ProductionRunID          sql.NullString
+	ScannedAt                sql.NullTime
+	ItemSku                  string
+	QuantityValue            string
+	QuantityUnitAbbreviation string
+	DepartmentName           sql.NullString
+}
+
+// The batches of the given runs, one row each, for the production run export.
+// Department comes via the scanning station, as it does on a batch read.
+func (q *Queries) ExportProductionRunBatches(ctx context.Context, arg ExportProductionRunBatchesParams) ([]ExportProductionRunBatchesRow, error) {
+	query := exportProductionRunBatches
+	var queryParams []interface{}
+	if len(arg.ProductionRunIds) > 0 {
+		for _, v := range arg.ProductionRunIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:production_run_ids*/?", strings.Repeat(",?", len(arg.ProductionRunIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:production_run_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ExportProductionRunBatchesRow
+	for rows.Next() {
+		var i ExportProductionRunBatchesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProductionRunID,
+			&i.ScannedAt,
+			&i.ItemSku,
+			&i.QuantityValue,
+			&i.QuantityUnitAbbreviation,
+			&i.DepartmentName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const findBatchProductionRunID = `-- name: FindBatchProductionRunID :one
 SELECT production_run_id FROM batch
 WHERE id = ? AND account_id = ?

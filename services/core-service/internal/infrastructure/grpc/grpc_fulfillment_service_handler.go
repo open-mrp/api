@@ -42,6 +42,19 @@ func machineToProto(m *domain.Machine) *pb.MachineInfo {
 	return info
 }
 
+func (h *fulfillmentGRPCHandler) ExportMachines(ctx context.Context, req *pb.ExportMachinesRequest) (*pb.ExportMachinesResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	job, apiErr := h.machineSvc.ExportMachines(ctx, domain.ExportMachinesParams{Query: req.Query})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.ExportMachinesResponse{Job: jobToProto(job)}, nil
+}
+
 func (h *fulfillmentGRPCHandler) ListMachines(ctx context.Context, req *pb.ListMachinesRequest) (*pb.ListMachinesResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
@@ -112,6 +125,32 @@ func (h *fulfillmentGRPCHandler) CreateMachine(ctx context.Context, req *pb.Crea
 	return &pb.CreateMachineResponse{
 		Machine: machineToProto(machine),
 	}, nil
+}
+
+func (h *fulfillmentGRPCHandler) BulkUpsertMachines(ctx context.Context, req *pb.BulkUpsertMachinesRequest) (*pb.BulkUpsertMachinesResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	machines := make([]domain.UpsertMachineParams, len(req.Machines))
+	for i, m := range req.Machines {
+		machines[i] = domain.UpsertMachineParams{
+			Name:         m.Name,
+			SerialNumber: m.SerialNumber,
+			Notes:        m.Notes,
+			Department:   objectIdentifierFromProto(m.Department),
+		}
+	}
+
+	job, apiErr := h.machineSvc.BulkUpsertMachines(ctx, domain.BulkUpsertMachinesParams{Machines: machines})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.BulkUpsertMachinesResponse{Job: jobToProto(job)}, nil
 }
 
 func (h *fulfillmentGRPCHandler) UpdateMachine(ctx context.Context, req *pb.UpdateMachineRequest) (*pb.UpdateMachineResponse, error) {

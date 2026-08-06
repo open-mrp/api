@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 
+	jobep "github.com/augno/api/services/api-gateway/endpoints/jobs"
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
+	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
@@ -17,6 +19,7 @@ import (
 
 type ItemCategorySvc interface {
 	ListItemCategories(ctx context.Context, req *ListItemCategoriesRequest) (*apiresource.List[apiresource.ItemCategory], *apierror.APIError)
+	ExportItemCategories(ctx context.Context, req *ExportItemCategoriesRequest) (*apiresource.Job, *apierror.APIError)
 	GetItemCategory(ctx context.Context, req *RetrieveItemCategoryRequest) (*apiresource.ItemCategory, *apierror.APIError)
 	CreateItemCategory(ctx context.Context, req *CreateItemCategoryRequest) (*apiresource.ItemCategory, *apierror.APIError)
 	UpdateItemCategory(ctx context.Context, req *UpdateItemCategoryRequest) (*apiresource.ItemCategory, *apierror.APIError)
@@ -24,6 +27,7 @@ type ItemCategorySvc interface {
 	AddItemCategoryProperty(ctx context.Context, req *AddItemCategoryPropertyRequest) (*apiresource.EmptyResource, *apierror.APIError)
 	RemoveItemCategoryProperty(ctx context.Context, req *RemoveItemCategoryPropertyRequest) (*apiresource.EmptyResource, *apierror.APIError)
 	ChangeItemCategoryUnitGroup(ctx context.Context, req *ChangeItemCategoryUnitGroupRequest) (*apiresource.EmptyResource, *apierror.APIError)
+	BulkUpsertItemCategories(ctx context.Context, req *BulkUpsertItemCategoriesRequest) (*apiresource.Job, *apierror.APIError)
 }
 
 type ItemCategorySvcConfig struct {
@@ -52,6 +56,18 @@ func NewItemCategorySvc(config *ItemCategorySvcConfig) ItemCategorySvc {
 	return &itemCategorySvcImpl{
 		coreClient: config.CoreClient,
 	}
+}
+
+func (m *itemCategorySvcImpl) ExportItemCategories(ctx context.Context, req *ExportItemCategoriesRequest) (*apiresource.Job, *apierror.APIError) {
+	resp, apiErr := grpcutil.CallRPC(ctx, itemCategorySvcTracer, "service.item_categories.export", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ExportItemCategoriesResponse, error) {
+			return m.coreClient.ExportItemCategories(ctx, &pb.ExportItemCategoriesRequest{Query: req.Query}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return jobep.JobFromProto(resp.GetJob()), nil
 }
 
 func (m *itemCategorySvcImpl) ListItemCategories(ctx context.Context, req *ListItemCategoriesRequest) (*apiresource.List[apiresource.ItemCategory], *apierror.APIError) {
@@ -211,4 +227,32 @@ func loadItemCategoryByID(ctx context.Context, id string) (*apiresource.ItemCate
 		return nil, apierror.NewResourceNotFoundError("Item category not found.")
 	}
 	return v.(*apiresource.ItemCategory), nil
+}
+
+func (m *itemCategorySvcImpl) BulkUpsertItemCategories(ctx context.Context, req *BulkUpsertItemCategoriesRequest) (*apiresource.Job, *apierror.APIError) {
+	inputs := make([]*pb.BulkUpsertItemCategoryInput, len(req.ItemCategories))
+	for i, ic := range req.ItemCategories {
+		inputs[i] = &pb.BulkUpsertItemCategoryInput{
+			Name:          ic.Name,
+			Notes:         ic.Notes,
+			Type:          string(ic.Type),
+			UnitGroup:     apirequest.ObjectIdentifierToProto(ic.UnitGroup),
+			PropertyNames: ic.PropertyNames,
+		}
+	}
+
+	pbReq := &pb.BulkUpsertItemCategoriesRequest{
+		ItemCategories: inputs,
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, itemCategorySvcTracer, "service.item-categories.bulk-upsert", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.BulkUpsertItemCategoriesResponse, error) {
+			return m.coreClient.BulkUpsertItemCategories(ctx, pbReq, opts...)
+		})
+
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return jobep.JobFromProto(resp.GetJob()), nil
 }

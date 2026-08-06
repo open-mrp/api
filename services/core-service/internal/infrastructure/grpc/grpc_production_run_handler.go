@@ -79,6 +79,19 @@ func productionRunSummaryToProto(pr *domain.ProductionRunSummary) *pb.Production
 	return info
 }
 
+func (h *productionRunGRPCHandler) ExportProductionRuns(ctx context.Context, req *pb.ExportProductionRunsRequest) (*pb.ExportProductionRunsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	job, apiErr := h.productionRunSvc.ExportProductionRuns(ctx, domain.ExportProductionRunsParams{Query: req.Query})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.ExportProductionRunsResponse{Job: jobToProto(job)}, nil
+}
+
 func (h *productionRunGRPCHandler) ListProductionRuns(ctx context.Context, req *pb.ListProductionRunsRequest) (*pb.ListProductionRunsResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
@@ -203,6 +216,47 @@ func (h *productionRunGRPCHandler) DeleteProductionRun(ctx context.Context, req 
 	}
 
 	return &emptypb.Empty{}, nil
+}
+
+func (h *productionRunGRPCHandler) BulkCreateProductionRuns(ctx context.Context, req *pb.BulkCreateProductionRunsRequest) (*pb.BulkCreateProductionRunsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	runs := make([]domain.BulkCreateProductionRunParams, len(req.ProductionRuns))
+	for i, r := range req.ProductionRuns {
+		if r == nil {
+			return nil, contracts.NewMissingGRPCRequestDataError()
+		}
+		batches := make([]domain.BulkCreateBatchParams, len(r.Batches))
+		for j, b := range r.Batches {
+			batches[j] = domain.BulkCreateBatchParams{
+				Item:             itemIdentifierFromProto(b.Item),
+				QuantityValue:    b.QuantityValue,
+				QuantityUnit:     unitIdentifierFromProto(b.QuantityUnit),
+				SecondsValue:     b.SecondsValue,
+				SecondsUnit:      unitIdentifierPtrFromProto(b.SecondsUnit),
+				WasteValue:       b.WasteValue,
+				WasteUnit:        unitIdentifierPtrFromProto(b.WasteUnit),
+				ProductionStepID: b.ProductionStepId,
+				ScanningStation:  objectIdentifierPtrFromProto(b.ScanningStation),
+			}
+		}
+		runs[i] = domain.BulkCreateProductionRunParams{
+			ResponsibleUserID: r.ResponsibleUserId,
+			Batches:           batches,
+		}
+	}
+
+	job, apiErr := h.productionRunSvc.BulkCreateProductionRuns(ctx, domain.BulkCreateProductionRunsParams{ProductionRuns: runs})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.BulkCreateProductionRunsResponse{Job: jobToProto(job)}, nil
 }
 
 func (h *productionRunGRPCHandler) AddBatchesToProductionRun(ctx context.Context, req *pb.AddBatchesToProductionRunRequest) (*pb.AddBatchesToProductionRunResponse, error) {

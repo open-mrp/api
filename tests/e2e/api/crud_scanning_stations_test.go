@@ -88,6 +88,8 @@ func TestScanningStations_CreateAndUpdateAllFields(t *testing.T) {
 		"type":                 "init_batch",
 		"notes":                "Create notes",
 		"operator_requirement": "material_check",
+		"label_size":           "1x1",
+		"label_type":           "tag",
 		"department_id":        SeedDepartmentID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -104,8 +106,8 @@ func TestScanningStations_CreateAndUpdateAllFields(t *testing.T) {
 	assert.Equal(t, "init_batch", jsonField(got, "type"))
 	assert.Equal(t, "Create notes", jsonField(got, "notes"))
 	assert.Equal(t, "material_check", jsonField(got, "operator_requirement"))
-	assertNilField(t, got, "label_size_code")
-	assertNilField(t, got, "label_type_code")
+	assert.Equal(t, "1x1", jsonField(got, "label_size"))
+	assert.Equal(t, "tag", jsonField(got, "label_type"))
 	assertNilField(t, got, "production_steps")
 	assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
@@ -128,12 +130,24 @@ func TestScanningStations_CreateAndUpdateAllFields(t *testing.T) {
 	assert.Equal(t, "Updated notes", jsonField(updated, "notes"))
 	assert.Equal(t, "none", jsonField(updated, "operator_requirement"))
 	assert.Equal(t, "init_batch", jsonField(updated, "type"), "type should be preserved")
-	assertNilField(t, updated, "label_size_code")
-	assertNilField(t, updated, "label_type_code")
+	assert.Equal(t, "1x1", jsonField(updated, "label_size"), "label_size should be preserved")
+	assert.Equal(t, "tag", jsonField(updated, "label_type"), "label_type should be preserved")
 	assertValidTimestamp(t, jsonField(updated, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(updated, "updated_at"), "updated_at")
 
 	assertNilField(t, updated, "department")
+
+	// ── UPDATE clearing the label codes — null and "" are both clear signals ──
+	clearStatus, clearBody, err := apiClient.Patch(scanningStationsPath+"/"+id, map[string]any{
+		"label_size": nil,
+		"label_type": "",
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, clearStatus, clearBody)
+	cleared := parseJSON(clearBody)
+	assertNilField(t, cleared, "label_size")
+	assertNilField(t, cleared, "label_type")
+	assert.Equal(t, "Updated notes", jsonField(cleared, "notes"), "omitted notes should be preserved")
 }
 
 func TestScanningStations_List(t *testing.T) {

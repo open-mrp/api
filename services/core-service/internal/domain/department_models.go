@@ -7,6 +7,14 @@ import (
 )
 
 // DepartmentScanningStation is a scanning station sub-resource attached to a department.
+// carries an export's filters — the list params without pagination, plus the cap
+// that keeps one request from building an unbounded workbook
+type ExportDepartmentsParams struct {
+	AccountID string
+	Query     *string
+	Limit     int32
+}
+
 type DepartmentScanningStation struct {
 	ID                  string
 	Name                string
@@ -87,4 +95,27 @@ type UpdateDepartmentParams struct {
 type DeleteDepartmentParams struct {
 	AccountID    string
 	DepartmentID string
+}
+
+// UpsertDepartmentParams is a single department in a bulk upsert, matched by name
+// (case-insensitive) within the account. The location is referenced by name and
+// resolved server-side. Machine / scanning-station attachment is not part of bulk
+// upsert — machines and stations reference their department at creation.
+type UpsertDepartmentParams struct {
+	Name     string
+	Notes    *string
+	Location *ObjectIdentifier
+}
+
+// BulkUpsertDepartmentsParams holds the parameters for bulk upserting departments.
+type BulkUpsertDepartmentsParams struct {
+	Departments []UpsertDepartmentParams
+}
+
+// ResolvedUpsertDepartmentRow is a department upsert row with its location reference resolved
+// to an id. No JSON tags: the engine round-trips job_items against this type, an internal column.
+type ResolvedUpsertDepartmentRow struct {
+	Name       string
+	Notes      *string
+	LocationID *string
 }

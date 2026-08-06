@@ -4,10 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	jobep "github.com/augno/api/services/api-gateway/endpoints/jobs"
 	"github.com/augno/api/services/api-gateway/internal/domain"
-	"github.com/augno/api/services/api-gateway/internal/export"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
-	httptransport "github.com/augno/api/services/api-gateway/internal/http"
 	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
@@ -33,9 +32,10 @@ type MaterialSvc interface {
 	ListMaterials(ctx context.Context, req *ListMaterialsRequest) (*apiresource.List[apiresource.Material], *apierror.APIError)
 	GetMaterial(ctx context.Context, req *RetrieveMaterialRequest) (*apiresource.Material, *apierror.APIError)
 	CreateMaterial(ctx context.Context, req *CreateMaterialRequest) (*apiresource.Material, *apierror.APIError)
+	BulkUpsertMaterials(ctx context.Context, req *BulkUpsertMaterialsRequest) (*apiresource.Job, *apierror.APIError)
 	UpdateMaterial(ctx context.Context, req *UpdateMaterialRequest) (*apiresource.Material, *apierror.APIError)
 	DeleteMaterial(ctx context.Context, req *DeleteMaterialRequest) (*apiresource.Material, *apierror.APIError)
-	ExportMaterials(ctx context.Context, req *ExportMaterialsRequest) (*httptransport.FileDownload, *apierror.APIError)
+	ExportMaterials(ctx context.Context, req *ExportMaterialsRequest) (*apiresource.Job, *apierror.APIError)
 }
 
 type MaterialSvcConfig struct {
@@ -134,6 +134,45 @@ func (m *materialSvcImpl) CreateMaterial(ctx context.Context, req *CreateMateria
 	return loadMaterialByID(ctx, resp.Material.Id)
 }
 
+func (m *materialSvcImpl) BulkUpsertMaterials(ctx context.Context, req *BulkUpsertMaterialsRequest) (*apiresource.Job, *apierror.APIError) {
+	pbMaterials := make([]*pb.UpsertMaterialInput, len(req.Materials))
+	for i, m := range req.Materials {
+		pbProps := make([]*pb.UpsertItemPropertyInput, len(m.Properties))
+		for j, pr := range m.Properties {
+			pbProps[j] = &pb.UpsertItemPropertyInput{Name: pr.Name, Value: pr.Value}
+		}
+
+		pbInput := &pb.UpsertMaterialInput{
+			Sku:         m.SKU,
+			Description: m.Description.Ptr(),
+			Notes:       m.Notes.Ptr(),
+			Category:    apirequest.ObjectIdentifierToProto(m.Category),
+			UnitPrice:   rateInputToProto(m.UnitPrice.Ptr()),
+			UnitCost:    rateInputToProto(m.UnitCost.Ptr()),
+			Properties:  pbProps,
+		}
+		if q, ok := m.OrderPoint.Value(); ok {
+			pbInput.OrderPoint = &pb.QuantityInput{Value: q.Value, UnitId: q.UnitID}
+		}
+		if q, ok := m.LeadTime.Value(); ok {
+			pbInput.LeadTime = &pb.QuantityInput{Value: q.Value, UnitId: q.UnitID}
+		}
+		pbMaterials[i] = pbInput
+	}
+
+	pbReq := &pb.BulkUpsertMaterialsRequest{Materials: pbMaterials}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, materialSvcTracer, "service.materials.bulk_upsert", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.BulkUpsertMaterialsResponse, error) {
+			return m.coreClient.BulkUpsertMaterials(ctx, pbReq, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return jobep.JobFromProto(resp.GetJob()), nil
+}
+
 func (m *materialSvcImpl) UpdateMaterial(ctx context.Context, req *UpdateMaterialRequest) (*apiresource.Material, *apierror.APIError) {
 	pbReq := &pb.UpdateMaterialRequest{
 		Id:                req.ItemID,
@@ -176,7 +215,7 @@ func (m *materialSvcImpl) DeleteMaterial(ctx context.Context, req *DeleteMateria
 	return result, nil
 }
 
-func (m *materialSvcImpl) ExportMaterials(ctx context.Context, req *ExportMaterialsRequest) (*httptransport.FileDownload, *apierror.APIError) {
+func (m *materialSvcImpl) ExportMaterials(ctx context.Context, req *ExportMaterialsRequest) (*apiresource.Job, *apierror.APIError) {
 	pbReq := &pb.ExportMaterialsRequest{
 		Query:        req.Query,
 		CategoryIds:  req.CategoryIDs,
@@ -197,21 +236,7 @@ func (m *materialSvcImpl) ExportMaterials(ctx context.Context, req *ExportMateri
 		return nil, apiErr
 	}
 
-	materials := make([]apiresource.Material, len(resp.Materials))
-	for i, mat := range resp.Materials {
-		materials[i] = MaterialPresenter(mat)
-	}
-
-	body, err := export.MaterialsToExcel(materials)
-	if err != nil {
-		return nil, apierror.NewInternalError(err, "Failed to build export file.")
-	}
-
-	return &httptransport.FileDownload{
-		ContentType: export.ExcelContentType,
-		Filename:    "materials.xlsx",
-		Body:        body,
-	}, nil
+	return jobep.JobFromProto(resp.GetJob()), nil
 }
 
 func loadMaterialByID(ctx context.Context, id string) (*apiresource.Material, *apierror.APIError) {

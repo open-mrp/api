@@ -12,20 +12,9 @@ import (
 
 const productionStepsPath = "/v1/operations/production-steps"
 
-func firstProductionStepID(t *testing.T) string {
-	t.Helper()
-	list, status, err := apiClient.GetList(productionStepsPath, nil)
-	require.NoError(t, err)
-	require.Equal(t, 200, status, "production steps list should return 200")
-	require.GreaterOrEqual(t, len(list.Data), 1, "at least one production step must be seeded")
-	id := DataItemField(list.Data[0], "id")
-	require.NotEmpty(t, id)
-	return id
-}
-
 func TestProductionSteps_ExpandableFieldsNullWithoutInclude(t *testing.T) {
 	t.Parallel()
-	id := firstProductionStepID(t)
+	id := SeedSewLargeProductionStepID
 
 	status, body, err := apiClient.GetListRaw(productionStepsPath+"/"+id, nil)
 	require.NoError(t, err)
@@ -43,7 +32,7 @@ func TestProductionSteps_ExpandableFieldsNullWithoutInclude(t *testing.T) {
 
 func TestProductionSteps_IncludeProduction(t *testing.T) {
 	t.Parallel()
-	id := firstProductionStepID(t)
+	id := SeedSewLargeProductionStepID
 
 	status, body, err := apiClient.GetListRaw(productionStepsPath+"/"+id, url.Values{"include": {"production"}})
 	require.NoError(t, err)
@@ -57,7 +46,7 @@ func TestProductionSteps_IncludeProduction(t *testing.T) {
 
 func TestProductionSteps_IncludeConsumptions(t *testing.T) {
 	t.Parallel()
-	id := firstProductionStepID(t)
+	id := SeedSewLargeProductionStepID
 
 	status, body, err := apiClient.GetListRaw(productionStepsPath+"/"+id, url.Values{"include": {"consumptions"}})
 	require.NoError(t, err)
@@ -69,7 +58,7 @@ func TestProductionSteps_IncludeConsumptions(t *testing.T) {
 
 func TestProductionSteps_IncludeMachines(t *testing.T) {
 	t.Parallel()
-	id := firstProductionStepID(t)
+	id := SeedSewLargeProductionStepID
 
 	status, body, err := apiClient.GetListRaw(productionStepsPath+"/"+id, url.Values{"include": {"machines"}})
 	require.NoError(t, err)

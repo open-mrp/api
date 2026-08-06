@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 
+	jobep "github.com/augno/api/services/api-gateway/endpoints/jobs"
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
+	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
@@ -17,9 +19,11 @@ import (
 
 type DepartmentSvc interface {
 	ListDepartments(ctx context.Context, req *ListDepartmentsRequest) (*apiresource.List[apiresource.Department], *apierror.APIError)
+	ExportDepartments(ctx context.Context, req *ExportDepartmentsRequest) (*apiresource.Job, *apierror.APIError)
 	GetDepartment(ctx context.Context, req *RetrieveDepartmentRequest) (*apiresource.Department, *apierror.APIError)
 	CreateDepartment(ctx context.Context, req *CreateDepartmentRequest) (*apiresource.Department, *apierror.APIError)
 	UpdateDepartment(ctx context.Context, req *UpdateDepartmentRequest) (*apiresource.Department, *apierror.APIError)
+	BulkUpsertDepartments(ctx context.Context, req *BulkUpsertDepartmentsRequest) (*apiresource.Job, *apierror.APIError)
 	DeleteDepartment(ctx context.Context, req *DeleteDepartmentRequest) (*apiresource.EmptyResource, *apierror.APIError)
 }
 
@@ -49,6 +53,18 @@ func NewDepartmentSvc(config *DepartmentSvcConfig) DepartmentSvc {
 	return &departmentSvcImpl{
 		coreClient: config.CoreClient,
 	}
+}
+
+func (m *departmentSvcImpl) ExportDepartments(ctx context.Context, req *ExportDepartmentsRequest) (*apiresource.Job, *apierror.APIError) {
+	resp, apiErr := grpcutil.CallRPC(ctx, departmentSvcTracer, "service.departments.export", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ExportDepartmentsResponse, error) {
+			return m.coreClient.ExportDepartments(ctx, &pb.ExportDepartmentsRequest{Query: req.Query}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return jobep.JobFromProto(resp.GetJob()), nil
 }
 
 func (m *departmentSvcImpl) ListDepartments(ctx context.Context, req *ListDepartmentsRequest) (*apiresource.List[apiresource.Department], *apierror.APIError) {
@@ -106,6 +122,27 @@ func (m *departmentSvcImpl) CreateDepartment(ctx context.Context, req *CreateDep
 	}
 
 	return loadDepartmentByID(ctx, resp.Department.Id)
+}
+
+func (m *departmentSvcImpl) BulkUpsertDepartments(ctx context.Context, req *BulkUpsertDepartmentsRequest) (*apiresource.Job, *apierror.APIError) {
+	pbDepartments := make([]*pb.UpsertDepartmentInput, len(req.Departments))
+	for i, d := range req.Departments {
+		pbDepartments[i] = &pb.UpsertDepartmentInput{
+			Name:     d.Name,
+			Notes:    d.Notes.Ptr(),
+			Location: apirequest.OptionalObjectIdentifierToProto(d.Location),
+		}
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, departmentSvcTracer, "service.departments.bulk_upsert", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.BulkUpsertDepartmentsResponse, error) {
+			return m.coreClient.BulkUpsertDepartments(ctx, &pb.BulkUpsertDepartmentsRequest{Departments: pbDepartments}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return jobep.JobFromProto(resp.GetJob()), nil
 }
 
 func (m *departmentSvcImpl) UpdateDepartment(ctx context.Context, req *UpdateDepartmentRequest) (*apiresource.Department, *apierror.APIError) {

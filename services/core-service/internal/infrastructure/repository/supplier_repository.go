@@ -366,6 +366,32 @@ func (r *supplierRepoImpl) BulkDelete(ctx context.Context, ownerAccountID string
 	return nil
 }
 
+func (r *supplierRepoImpl) FindByNames(ctx context.Context, ownerAccountID string, names []string) ([]*domain.SupplierNameMatch, *apierror.APIError) {
+	ctx, span := supplierRepoTracer.Start(ctx, "repository.supplier.find_by_names")
+	defer span.End()
+
+	if len(names) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.queries.FindSuppliersByNames(ctx, sqlc.FindSuppliersByNamesParams{
+		OwnerAccountID: ownerAccountID,
+		Names:          names,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	matches := make([]*domain.SupplierNameMatch, len(rows))
+	for i, row := range rows {
+		matches[i] = &domain.SupplierNameMatch{
+			AccountID: row.AccountID,
+			Name:      row.AccountName,
+		}
+	}
+	return matches, nil
+}
+
 func (r *supplierRepoImpl) ExistsByNumber(ctx context.Context, ownerAccountID, number string, excludeID *string) (bool, *apierror.APIError) {
 	ctx, span := supplierRepoTracer.Start(ctx, "repository.supplier.exists_by_number")
 	defer span.End()

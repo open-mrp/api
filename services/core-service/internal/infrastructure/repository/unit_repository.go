@@ -113,6 +113,47 @@ func mapBackwardRow(row sqlc.ListUnitsBackwardRow) *domain.Unit {
 	}
 }
 
+func (r *unitRepoImpl) Export(ctx context.Context, params domain.ExportUnitsParams) ([]*domain.Unit, *apierror.APIError) {
+	ctx, span := unitRepoTracer.Start(ctx, "repository.unit.export")
+	defer span.End()
+
+	search := gosql.NullString{}
+	if params.Query != nil && *params.Query != "" {
+		search = gosql.NullString{String: "%" + db.EscapeLike(*params.Query) + "%", Valid: true}
+	}
+
+	rows, err := r.queries.ExportUnits(ctx, sqlc.ExportUnitsParams{
+		AccountID:   gosql.NullString{String: params.AccountID, Valid: true},
+		SearchQuery: search,
+		Limit:       exportQueryLimit,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	units := make([]*domain.Unit, len(rows))
+	for i, row := range rows {
+		unit := &domain.Unit{
+			ID:                row.ID,
+			Name:              row.Name,
+			Abbreviation:      row.Abbreviation,
+			UnitDimensionCode: row.UnitDimensionCode,
+			RatioNumerator:    row.RatioNumerator,
+			RatioDenominator:  row.RatioDenominator,
+			OffsetNumerator:   row.OffsetNumerator,
+			OffsetDenominator: row.OffsetDenominator,
+			IsBaseUnit:        row.IsBaseUnit,
+			CreatedAt:         row.CreatedAt,
+			UpdatedAt:         row.UpdatedAt,
+		}
+		if row.AccountID.Valid {
+			unit.AccountID = &row.AccountID.String
+		}
+		units[i] = unit
+	}
+	return units, nil
+}
+
 func (r *unitRepoImpl) List(ctx context.Context, params domain.ListUnitsParams) (*domain.ListUnitsResult, *apierror.APIError) {
 	ctx, span := unitRepoTracer.Start(ctx, "repository.unit.list")
 	defer span.End()
@@ -445,4 +486,50 @@ func mapGetUnitsByIDsScopedRow(row sqlc.GetUnitsByIDsScopedRow) *domain.Unit {
 		CreatedAt:         row.CreatedAt,
 		UpdatedAt:         row.UpdatedAt,
 	}
+}
+
+func (r *unitRepoImpl) FindByAbbreviationsOrNames(ctx context.Context, accountID string, abbreviations, names []string) ([]*domain.Unit, *apierror.APIError) {
+	ctx, span := unitRepoTracer.Start(ctx, "repository.unit.get_by_abbreviations_or_names")
+	defer span.End()
+
+	lowerAbbreviations := make([]string, len(abbreviations))
+	for i, a := range abbreviations {
+		lowerAbbreviations[i] = strings.ToLower(a)
+	}
+	lowerNames := make([]string, len(names))
+	for i, a := range names {
+		lowerNames[i] = strings.ToLower(a)
+	}
+
+	rows, err := r.queries.FindUnitsByAbbreviationsOrNames(ctx, sqlc.FindUnitsByAbbreviationsOrNamesParams{
+		Abbreviations: lowerAbbreviations,
+		Names:         lowerNames,
+		AccountID:     gosql.NullString{String: accountID, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	out := make([]*domain.Unit, 0, len(rows))
+	for _, row := range rows {
+		var accID *string
+		if row.AccountID.Valid {
+			accID = &row.AccountID.String
+		}
+		out = append(out, &domain.Unit{
+			ID:                row.ID,
+			Name:              row.Name,
+			Abbreviation:      row.Abbreviation,
+			UnitDimensionCode: row.UnitDimensionCode,
+			RatioNumerator:    row.RatioNumerator,
+			RatioDenominator:  row.RatioDenominator,
+			OffsetNumerator:   row.OffsetNumerator,
+			OffsetDenominator: row.OffsetDenominator,
+			IsBaseUnit:        row.IsBaseUnit,
+			AccountID:         accID,
+			CreatedAt:         row.CreatedAt,
+			UpdatedAt:         row.UpdatedAt,
+		})
+	}
+	return out, nil
 }

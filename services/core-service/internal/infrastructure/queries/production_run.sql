@@ -216,8 +216,12 @@ AND account_id = sqlc.arg('account_id')
 AND status_code = 'reserved';
 
 -- name: GetNextProductionRunNumberFull :one
+-- FOR UPDATE serializes concurrent allocators per account: without it two
+-- transactions can read the same MAX and collide on the (account_id, number)
+-- unique key.
 SELECT COALESCE(MAX(CAST(number AS UNSIGNED)), 0) + 1 AS next_number
-FROM production_run WHERE account_id = sqlc.arg('account_id');
+FROM production_run WHERE account_id = sqlc.arg('account_id')
+FOR UPDATE;
 
 -- AllocateNextProductionRunNumber atomically reserves the next run number for the account
 -- and returns it via LAST_INSERT_ID.
@@ -260,3 +264,28 @@ SELECT b.closed_at
 FROM batch b
 WHERE b.id = sqlc.arg('id')
 AND b.account_id = sqlc.arg('account_id');
+
+-- name: ExportProductionRuns :many
+-- Unpaginated by design; the caller passes a row cap as the limit. The sales
+-- order is joined rather than counted, so a run without one still exports.
+SELECT
+    pr.id,
+    pr.number,
+    COALESCE(u.name, au.id, '') AS responsible_user_name,
+    pr.started_at,
+    pr.completed_at,
+    so.id AS order_id,
+    pr.created_at,
+    pr.updated_at
+FROM production_run pr
+LEFT JOIN account_user au ON au.account_id = pr.account_id AND (au.id = pr.responsible_user_id OR au.user_id = pr.responsible_user_id)
+LEFT JOIN user u ON u.id = au.user_id
+LEFT JOIN sales_order so ON so.production_run_id = pr.id AND so.owner_account_id = pr.account_id
+WHERE pr.account_id = sqlc.arg('account_id')
+AND (
+    sqlc.narg('search_query') IS NULL
+    OR pr.number LIKE sqlc.narg('search_query')
+)
+ORDER BY pr.created_at DESC, pr.id DESC
+LIMIT ?;
+

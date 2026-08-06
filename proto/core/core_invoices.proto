@@ -8,6 +8,8 @@ import "core/core_patch.proto";
 import "core/core_identity_context.proto";
 import "core/core_analytics.proto";
 import "core/core_accounts_carriers.proto";
+import "core/core_fuzzy_identifiers.proto";
+import "core/core_async.proto";
 option go_package = "shared/proto/core;core";
 
 message InvoiceLineInfo {
@@ -86,7 +88,7 @@ message ExportMaterialsRequest {
   optional google.protobuf.Timestamp end_date = 5;
 }
 message ExportMaterialsResponse {
-  repeated MaterialInfo materials = 1;
+  JobInfo job = 1;
 }
 message GetMaterialRequest {
   string id = 1;
@@ -232,7 +234,7 @@ message ExportPartsRequest {
   optional google.protobuf.Timestamp end_date = 5;
 }
 message ExportPartsResponse {
-  repeated PartInfo parts = 1;
+  JobInfo job = 1;
 }
 message GetPartRequest {
   string id = 1;
@@ -387,7 +389,7 @@ message ExportProductsRequest {
   optional google.protobuf.Timestamp end_date = 7;
 }
 message ExportProductsResponse {
-  repeated ProductFullInfo products = 1;
+  JobInfo job = 1;
 }
 message GetProductRequest {
   string id = 1;
@@ -491,6 +493,12 @@ message ListProductLinesResponse {
   repeated ProductLineInfo product_lines = 1;
   PageInfo page_info = 2;
 }
+message ExportProductLinesRequest {
+  optional string query = 1;
+}
+message ExportProductLinesResponse {
+  JobInfo job = 1;
+}
 message GetProductLineRequest {
   string id = 1;
   repeated string includes = 2;
@@ -530,6 +538,18 @@ message BatchGetProductLinesByIDsRequest {
 }
 message BatchGetProductLinesByIDsResponse {
   repeated ProductLineInfo product_lines = 1;
+}
+message BulkUpsertProductLineInput {
+  string name = 1;
+  ObjectIdentifier unit_group = 2;
+  string commission_policy = 3;
+  string freight_policy = 4;
+}
+message BulkUpsertProductLinesRequest {
+  repeated BulkUpsertProductLineInput product_lines = 1;
+}
+message BulkUpsertProductLinesResponse {
+  JobInfo job = 1;
 }
 message ProductTypeInfo {
   string id = 1;

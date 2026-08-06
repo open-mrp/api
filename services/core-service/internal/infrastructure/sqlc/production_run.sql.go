@@ -103,6 +103,85 @@ func (q *Queries) DeleteReservedInventoryIssuesByOrderID(ctx context.Context, ar
 	return err
 }
 
+const exportProductionRuns = `-- name: ExportProductionRuns :many
+SELECT
+    pr.id,
+    pr.number,
+    COALESCE(u.name, au.id, '') AS responsible_user_name,
+    pr.started_at,
+    pr.completed_at,
+    so.id AS order_id,
+    pr.created_at,
+    pr.updated_at
+FROM production_run pr
+LEFT JOIN account_user au ON au.account_id = pr.account_id AND (au.id = pr.responsible_user_id OR au.user_id = pr.responsible_user_id)
+LEFT JOIN user u ON u.id = au.user_id
+LEFT JOIN sales_order so ON so.production_run_id = pr.id AND so.owner_account_id = pr.account_id
+WHERE pr.account_id = ?
+AND (
+    ? IS NULL
+    OR pr.number LIKE ?
+)
+ORDER BY pr.created_at DESC, pr.id DESC
+LIMIT ?
+`
+
+type ExportProductionRunsParams struct {
+	AccountID   string
+	SearchQuery sql.NullString
+	Limit       int32
+}
+
+type ExportProductionRunsRow struct {
+	ID                  string
+	Number              string
+	ResponsibleUserName string
+	StartedAt           sql.NullTime
+	CompletedAt         sql.NullTime
+	OrderID             sql.NullString
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+}
+
+// Unpaginated by design; the caller passes a row cap as the limit. The sales
+// order is joined rather than counted, so a run without one still exports.
+func (q *Queries) ExportProductionRuns(ctx context.Context, arg ExportProductionRunsParams) ([]ExportProductionRunsRow, error) {
+	rows, err := q.db.QueryContext(ctx, exportProductionRuns,
+		arg.AccountID,
+		arg.SearchQuery,
+		arg.SearchQuery,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ExportProductionRunsRow
+	for rows.Next() {
+		var i ExportProductionRunsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Number,
+			&i.ResponsibleUserName,
+			&i.StartedAt,
+			&i.CompletedAt,
+			&i.OrderID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const findSalesOrderIDsByProductionRunID = `-- name: FindSalesOrderIDsByProductionRunID :many
 SELECT id FROM sales_order
 WHERE production_run_id = ?
@@ -199,8 +278,12 @@ func (q *Queries) GetBatchIDsByProductionRun(ctx context.Context, arg GetBatchID
 const getNextProductionRunNumberFull = `-- name: GetNextProductionRunNumberFull :one
 SELECT COALESCE(MAX(CAST(number AS UNSIGNED)), 0) + 1 AS next_number
 FROM production_run WHERE account_id = ?
+FOR UPDATE
 `
 
+// FOR UPDATE serializes concurrent allocators per account: without it two
+// transactions can read the same MAX and collide on the (account_id, number)
+// unique key.
 func (q *Queries) GetNextProductionRunNumberFull(ctx context.Context, accountID string) (int32, error) {
 	row := q.db.QueryRowContext(ctx, getNextProductionRunNumberFull, accountID)
 	var next_number int32

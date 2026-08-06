@@ -14,8 +14,7 @@ import (
 
 const countMachinesByName = `-- name: CountMachinesByName :one
 SELECT COUNT(*) FROM machine m
-JOIN department d ON d.id = m.department_id
-WHERE m.name = ? AND d.account_id = ?
+WHERE m.name = ? AND m.account_id = ?
 AND (? IS NULL OR m.id != ?)
 `
 
@@ -37,11 +36,34 @@ func (q *Queries) CountMachinesByName(ctx context.Context, arg CountMachinesByNa
 	return count, err
 }
 
+const countMachinesBySerialNumber = `-- name: CountMachinesBySerialNumber :one
+SELECT COUNT(*) FROM machine m
+WHERE m.serial_number = ? AND m.account_id = ?
+AND (? IS NULL OR m.id != ?)
+`
+
+type CountMachinesBySerialNumberParams struct {
+	SerialNumber string
+	AccountID    string
+	ExcludeID    sql.NullString
+}
+
+func (q *Queries) CountMachinesBySerialNumber(ctx context.Context, arg CountMachinesBySerialNumberParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countMachinesBySerialNumber,
+		arg.SerialNumber,
+		arg.AccountID,
+		arg.ExcludeID,
+		arg.ExcludeID,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const deleteMachine = `-- name: DeleteMachine :execresult
-DELETE m FROM machine m
-JOIN department d ON d.id = m.department_id
-WHERE m.id = ?
-AND d.account_id = ?
+DELETE FROM machine
+WHERE id = ?
+AND account_id = ?
 `
 
 type DeleteMachineParams struct {
@@ -51,6 +73,254 @@ type DeleteMachineParams struct {
 
 func (q *Queries) DeleteMachine(ctx context.Context, arg DeleteMachineParams) (sql.Result, error) {
 	return q.db.ExecContext(ctx, deleteMachine, arg.ID, arg.AccountID)
+}
+
+const exportMachines = `-- name: ExportMachines :many
+SELECT
+    m.id,
+    m.name,
+    m.serial_number,
+    m.notes,
+    m.department_id,
+    d.name AS department_name,
+    m.created_at,
+    m.updated_at
+FROM machine m
+JOIN department d ON d.id = m.department_id
+WHERE m.account_id = ?
+AND (
+    ? IS NULL
+    OR m.name LIKE ?
+)
+ORDER BY m.created_at DESC, m.id DESC
+LIMIT ?
+`
+
+type ExportMachinesParams struct {
+	AccountID   string
+	SearchQuery sql.NullString
+	Limit       int32
+}
+
+type ExportMachinesRow struct {
+	ID             string
+	Name           string
+	SerialNumber   string
+	Notes          sql.NullString
+	DepartmentID   string
+	DepartmentName string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+// Unpaginated by design; the caller passes a row cap as the limit.
+func (q *Queries) ExportMachines(ctx context.Context, arg ExportMachinesParams) ([]ExportMachinesRow, error) {
+	rows, err := q.db.QueryContext(ctx, exportMachines,
+		arg.AccountID,
+		arg.SearchQuery,
+		arg.SearchQuery,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ExportMachinesRow
+	for rows.Next() {
+		var i ExportMachinesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.SerialNumber,
+			&i.Notes,
+			&i.DepartmentID,
+			&i.DepartmentName,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const findMachinesByNames = `-- name: FindMachinesByNames :many
+SELECT
+    m.id,
+    m.name,
+    m.serial_number,
+    m.notes,
+    m.department_id,
+    d.name AS department_name,
+    d.created_at AS department_created_at,
+    d.updated_at AS department_updated_at,
+    m.production_step_id,
+    m.created_at,
+    m.updated_at
+FROM machine m
+JOIN department d ON d.id = m.department_id
+WHERE m.name IN (/*SLICE:names*/?)
+AND m.account_id = ?
+`
+
+type FindMachinesByNamesParams struct {
+	Names     []string
+	AccountID string
+}
+
+type FindMachinesByNamesRow struct {
+	ID                  string
+	Name                string
+	SerialNumber        string
+	Notes               sql.NullString
+	DepartmentID        string
+	DepartmentName      string
+	DepartmentCreatedAt time.Time
+	DepartmentUpdatedAt time.Time
+	ProductionStepID    sql.NullString
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+}
+
+// Names must be pre-lowercased by the caller; the utf8mb4_unicode_ci collation makes the IN
+// comparison case-insensitive, so lowercasing on both sides is not required in SQL.
+func (q *Queries) FindMachinesByNames(ctx context.Context, arg FindMachinesByNamesParams) ([]FindMachinesByNamesRow, error) {
+	query := findMachinesByNames
+	var queryParams []interface{}
+	if len(arg.Names) > 0 {
+		for _, v := range arg.Names {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:names*/?", strings.Repeat(",?", len(arg.Names))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:names*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FindMachinesByNamesRow
+	for rows.Next() {
+		var i FindMachinesByNamesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.SerialNumber,
+			&i.Notes,
+			&i.DepartmentID,
+			&i.DepartmentName,
+			&i.DepartmentCreatedAt,
+			&i.DepartmentUpdatedAt,
+			&i.ProductionStepID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const findMachinesBySerialNumbers = `-- name: FindMachinesBySerialNumbers :many
+SELECT
+    m.id,
+    m.name,
+    m.serial_number,
+    m.notes,
+    m.department_id,
+    d.name AS department_name,
+    d.created_at AS department_created_at,
+    d.updated_at AS department_updated_at,
+    m.production_step_id,
+    m.created_at,
+    m.updated_at
+FROM machine m
+JOIN department d ON d.id = m.department_id
+WHERE m.serial_number IN (/*SLICE:serial_numbers*/?)
+AND m.account_id = ?
+`
+
+type FindMachinesBySerialNumbersParams struct {
+	SerialNumbers []string
+	AccountID     string
+}
+
+type FindMachinesBySerialNumbersRow struct {
+	ID                  string
+	Name                string
+	SerialNumber        string
+	Notes               sql.NullString
+	DepartmentID        string
+	DepartmentName      string
+	DepartmentCreatedAt time.Time
+	DepartmentUpdatedAt time.Time
+	ProductionStepID    sql.NullString
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+}
+
+// Used by bulk upsert to enforce account-wide serial number uniqueness in one query.
+// Matching is case-insensitive via the column collation.
+func (q *Queries) FindMachinesBySerialNumbers(ctx context.Context, arg FindMachinesBySerialNumbersParams) ([]FindMachinesBySerialNumbersRow, error) {
+	query := findMachinesBySerialNumbers
+	var queryParams []interface{}
+	if len(arg.SerialNumbers) > 0 {
+		for _, v := range arg.SerialNumbers {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:serial_numbers*/?", strings.Repeat(",?", len(arg.SerialNumbers))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:serial_numbers*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FindMachinesBySerialNumbersRow
+	for rows.Next() {
+		var i FindMachinesBySerialNumbersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.SerialNumber,
+			&i.Notes,
+			&i.DepartmentID,
+			&i.DepartmentName,
+			&i.DepartmentCreatedAt,
+			&i.DepartmentUpdatedAt,
+			&i.ProductionStepID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getMachine = `-- name: GetMachine :one
@@ -69,7 +339,7 @@ SELECT
 FROM machine m
 JOIN department d ON d.id = m.department_id
 WHERE m.id = ?
-AND d.account_id = ?
+AND m.account_id = ?
 `
 
 type GetMachineParams struct {
@@ -126,7 +396,7 @@ SELECT
 FROM machine m
 JOIN department d ON d.id = m.department_id
 WHERE m.id IN (/*SLICE:ids*/?)
-AND d.account_id = ?
+AND m.account_id = ?
 `
 
 type GetMachinesByIDsParams struct {
@@ -242,9 +512,8 @@ func (q *Queries) InsertMachine(ctx context.Context, arg InsertMachineParams) er
 const listMachineIDsByProductionStep = `-- name: ListMachineIDsByProductionStep :many
 SELECT m.id
 FROM machine m
-JOIN department d ON d.id = m.department_id
 WHERE m.production_step_id = ?
-AND d.account_id = ?
+AND m.account_id = ?
 ORDER BY m.id
 `
 
@@ -291,7 +560,7 @@ SELECT
     m.updated_at
 FROM machine m
 JOIN department d ON d.id = m.department_id
-WHERE d.account_id = ?
+WHERE m.account_id = ?
 AND (
     ? IS NULL
     OR m.name LIKE ?
@@ -384,7 +653,7 @@ SELECT
     m.updated_at
 FROM machine m
 JOIN department d ON d.id = m.department_id
-WHERE d.account_id = ?
+WHERE m.account_id = ?
 AND (
     ? IS NULL
     OR m.name LIKE ?
@@ -466,14 +735,13 @@ func (q *Queries) ListMachinesForward(ctx context.Context, arg ListMachinesForwa
 
 const updateMachine = `-- name: UpdateMachine :execresult
 UPDATE machine m
-JOIN department d ON d.id = m.department_id
 SET
     m.name = COALESCE(?, m.name),
     m.serial_number = COALESCE(?, m.serial_number),
     m.notes = COALESCE(?, m.notes),
     m.updated_at = NOW(3)
 WHERE m.id = ?
-AND d.account_id = ?
+AND m.account_id = ?
 `
 
 type UpdateMachineParams struct {

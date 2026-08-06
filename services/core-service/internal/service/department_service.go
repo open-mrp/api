@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/services/core-service/internal/domain"
@@ -20,6 +21,7 @@ var departmentSvcTracer = tracing.GetTracer("core-service.department_service")
 type departmentSvcImpl struct {
 	repos           domain.RepoFactory
 	mediatorFactory domain.MediatorFactory
+	jobSvcFactory   domain.JobSvcFactory
 	txManager       TransactionManager
 }
 
@@ -29,6 +31,9 @@ type DepartmentSvcConfig struct {
 
 	// MediatorFactory (required) builds the mediators used by this service.
 	MediatorFactory domain.MediatorFactory
+
+	// JobSvcFactory (required) builds the job service the async bulk upsert records on.
+	JobSvcFactory domain.JobSvcFactory
 
 	// TxManager (required) wraps multi-step operations in database transactions.
 	TxManager TransactionManager
@@ -40,6 +45,9 @@ func (c *DepartmentSvcConfig) validate() error {
 	}
 	if c.MediatorFactory == nil {
 		return fmt.Errorf("department service: mediator factory is required")
+	}
+	if c.JobSvcFactory == nil {
+		return fmt.Errorf("department service: job service factory is required")
 	}
 	if c.TxManager == nil {
 		return fmt.Errorf("department service: tx manager is required")
@@ -55,6 +63,7 @@ func NewDepartmentSvc(config *DepartmentSvcConfig) domain.DepartmentSvc {
 	return &departmentSvcImpl{
 		repos:           config.Repos,
 		mediatorFactory: config.MediatorFactory,
+		jobSvcFactory:   config.JobSvcFactory,
 		txManager:       config.TxManager,
 	}
 }
@@ -72,6 +81,7 @@ func (s *departmentSvcImpl) withTx(ctx context.Context, fn func(context.Context,
 		txSvc := &departmentSvcImpl{
 			repos:           f,
 			mediatorFactory: s.mediatorFactory,
+			jobSvcFactory:   s.jobSvcFactory,
 			txManager:       s.txManager,
 		}
 		return fn(txCtx, txSvc)
@@ -197,7 +207,7 @@ func (s *departmentSvcImpl) CreateDepartment(ctx context.Context, params domain.
 			}
 
 			if len(params.MachineIDs) > 0 {
-				if apiErr := txRepo.SetMachinesDepartmentID(txCtx, departmentID, params.MachineIDs); apiErr != nil {
+				if apiErr := txRepo.SetMachinesDepartmentID(txCtx, departmentID, params.AccountID, params.MachineIDs); apiErr != nil {
 					return apiErr
 				}
 			}
@@ -332,7 +342,7 @@ func (s *departmentSvcImpl) UpdateDepartment(ctx context.Context, params domain.
 			}
 
 			if len(params.MachineIDs) > 0 {
-				if apiErr := txRepo.SetMachinesDepartmentID(txCtx, params.DepartmentID, params.MachineIDs); apiErr != nil {
+				if apiErr := txRepo.SetMachinesDepartmentID(txCtx, params.DepartmentID, params.AccountID, params.MachineIDs); apiErr != nil {
 					return apiErr
 				}
 			}
@@ -373,6 +383,77 @@ func (s *departmentSvcImpl) UpdateDepartment(ctx context.Context, params domain.
 	default:
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
 	}
+}
+
+// resolveDepartmentIdentifiersInTx resolves the department referenced by each bulk upsert row
+// to its ID. Each identifier matches by id, or failing that by name (case-insensitive, via the
+// account-scoped name unique key). Unknown identifiers are collected into a single validation
+// error with row-indexed params (e.g. "scanning_stations[2].department"). identifiers is
+// aligned with the request rows and rowsField names them. The returned map is keyed by
+// the identifier the row carried.
+func resolveDepartmentIdentifiersInTx(txCtx context.Context, repos domain.RepoFactory, accountID, rowsField string, identifiers []domain.ObjectIdentifier) (map[domain.ObjectIdentifier]string, *apierror.APIError) {
+	idSet, nameSet := map[string]struct{}{}, map[string]struct{}{}
+	var ids, names []string
+	for _, identifier := range identifiers {
+		switch {
+		case identifier.ID != "":
+			if addKey(idSet, identifier.ID) {
+				ids = append(ids, identifier.ID)
+			}
+		case identifier.Name != "":
+			if addKey(nameSet, strings.ToLower(identifier.Name)) {
+				names = append(names, identifier.Name)
+			}
+		}
+	}
+
+	validIDs := make(map[string]struct{})
+	if len(ids) > 0 {
+		departments, apiErr := repos.NewDepartmentRepo().GetByIDs(txCtx, accountID, ids)
+		if apiErr != nil {
+			return nil, apiErr
+		}
+		for _, d := range departments {
+			validIDs[d.ID] = struct{}{}
+		}
+	}
+	idByName := make(map[string]string)
+	if len(names) > 0 {
+		departments, apiErr := repos.NewDepartmentRepo().FindByNames(txCtx, accountID, names)
+		if apiErr != nil {
+			return nil, apiErr
+		}
+		for _, d := range departments {
+			idByName[strings.ToLower(d.Name)] = d.ID
+		}
+	}
+
+	idByIdentifier := make(map[domain.ObjectIdentifier]string, len(identifiers))
+	var rowErrs apierror.RowErrors
+	for i, identifier := range identifiers {
+		param := fmt.Sprintf("%s[%d].department", rowsField, i)
+		var resolvedID string
+		switch {
+		case identifier.ID != "":
+			if _, ok := validIDs[identifier.ID]; ok {
+				resolvedID = identifier.ID
+			}
+		case identifier.Name != "":
+			resolvedID = idByName[strings.ToLower(identifier.Name)]
+		default:
+			rowErrs.AddValidation(i, param, "a department id or name is required")
+			continue
+		}
+		if resolvedID == "" {
+			rowErrs.AddValidation(i, param, fmt.Sprintf("department %q was not found", objectIdentifierLabel(identifier.ID, identifier.Name)))
+			continue
+		}
+		idByIdentifier[identifier] = resolvedID
+	}
+	if apiErr := rowErrs.Summary("departments"); apiErr != nil {
+		return nil, apiErr
+	}
+	return idByIdentifier, nil
 }
 
 func (s *departmentSvcImpl) DeleteDepartment(ctx context.Context, departmentID string) *apierror.APIError {

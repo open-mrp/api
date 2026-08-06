@@ -103,6 +103,10 @@ service CoreService {
   // Returns units by ID for the api-gateway include resolver.
   rpc BatchGetUnitsByIDs(BatchGetUnitsByIDsRequest) returns (BatchGetUnitsByIDsResponse);
 
+  // Creates or updates multiple units for the account; units are matched by name & abbreviation.
+  rpc BulkUpsertUnits(BulkUpsertUnitsRequest) returns (BulkUpsertUnitsResponse);
+  rpc ExportUnits(ExportUnitsRequest) returns (ExportUnitsResponse);
+
   // Searches sale-type products by SKU pattern (used by agent-service).
   rpc SearchProducts(SearchProductsRequest) returns (SearchProductsResponse);
 
@@ -361,6 +365,12 @@ service CoreService {
   // Deletes a property and cascades to its attributes.
   rpc DeleteProperty(DeletePropertyRequest) returns (google.protobuf.Empty);
 
+  // Creates or updates multiple properties by name for the caller's account.
+  rpc BulkUpsertProperties(BulkUpsertPropertiesRequest) returns (BulkUpsertPropertiesResponse);
+
+  // Starts an export of every matching property and returns the job that tracks it.
+  rpc ExportProperties(ExportPropertiesRequest) returns (ExportPropertiesResponse);
+
   // Returns a paginated list of attributes for a property.
   rpc ListAttributes(ListAttributesRequest) returns (ListAttributesResponse);
 
@@ -472,6 +482,9 @@ service CoreService {
   rpc UpdateItemInventory(UpdateItemInventoryRequest) returns (UpdateItemInventoryResponse);
   // Creates multiple items in a single operation.
   rpc BulkCreateItems(BulkCreateItemsRequest) returns (BulkCreateItemsResponse);
+  rpc BulkUpsertParts(BulkUpsertPartsRequest) returns (BulkUpsertPartsResponse);
+  rpc BulkUpsertProducts(BulkUpsertProductsRequest) returns (BulkUpsertProductsResponse);
+  rpc BulkUpsertMaterials(BulkUpsertMaterialsRequest) returns (BulkUpsertMaterialsResponse);
   // Reconciles inventory for multiple items by SKU.
   rpc BulkReconcileItems(BulkReconcileItemsRequest) returns (BulkReconcileItemsResponse);
 
@@ -526,6 +539,8 @@ service CoreService {
   rpc RemoveItemCategoryProperty(RemoveItemCategoryPropertyRequest) returns (google.protobuf.Empty);
   // Changes the unit group of an item category and updates related rate units.
   rpc ChangeItemCategoryUnitGroup(ChangeItemCategoryUnitGroupRequest) returns (google.protobuf.Empty);
+  rpc BulkUpsertItemCategories(BulkUpsertItemCategoriesRequest) returns (BulkUpsertItemCategoriesResponse);
+  rpc ExportItemCategories(ExportItemCategoriesRequest) returns (ExportItemCategoriesResponse);
 
   // Returns products with full item data.
   rpc ListProductsFull(ListProductsFullRequest) returns (ListProductsFullResponse);
@@ -548,6 +563,9 @@ service CoreService {
   rpc DeleteProductLine(DeleteProductLineRequest) returns (google.protobuf.Empty);
   // Returns product lines by ID for the api-gateway include resolver.
   rpc BatchGetProductLinesByIDs(BatchGetProductLinesByIDsRequest) returns (BatchGetProductLinesByIDsResponse);
+  // Creates or updates multiple product lines for the account; matched by name.
+  rpc BulkUpsertProductLines(BulkUpsertProductLinesRequest) returns (BulkUpsertProductLinesResponse);
+  rpc ExportProductLines(ExportProductLinesRequest) returns (ExportProductLinesResponse);
 
   rpc GetConsumption(GetConsumptionRequest) returns (GetConsumptionResponse);
   rpc CreateConsumption(CreateConsumptionRequest) returns (CreateConsumptionResponse);
@@ -609,6 +627,8 @@ service CoreService {
   rpc UpdateDepartment(UpdateDepartmentRequest) returns (UpdateDepartmentResponse);
   rpc DeleteDepartment(DeleteDepartmentRequest) returns (google.protobuf.Empty);
   rpc BatchGetDepartmentsByIDs(BatchGetDepartmentsByIDsRequest) returns (BatchGetDepartmentsByIDsResponse);
+  rpc BulkUpsertDepartments(BulkUpsertDepartmentsRequest) returns (BulkUpsertDepartmentsResponse);
+  rpc ExportDepartments(ExportDepartmentsRequest) returns (ExportDepartmentsResponse);
 
   rpc ListEmailLogs(ListEmailLogsRequest) returns (ListEmailLogsResponse);
   rpc GetEmailLog(GetEmailLogRequest) returns (GetEmailLogResponse);
@@ -710,6 +730,9 @@ service CoreService {
   rpc BatchGetUnitGroupUnitsByIDs(BatchGetUnitGroupUnitsByIDsRequest) returns (BatchGetUnitGroupUnitsByIDsResponse);
   // Validates unit abbreviations and returns matching units.
   rpc ValidateUnits(ValidateUnitsRequest) returns (ValidateUnitsResponse);
+  // Creates or updates multiple unit groups for the account; groups are matched by name.
+  rpc BulkUpsertUnitGroups(BulkUpsertUnitGroupsRequest) returns (BulkUpsertUnitGroupsResponse);
+  rpc ExportUnitGroups(ExportUnitGroupsRequest) returns (ExportUnitGroupsResponse);
 
   rpc ListTransactions(ListTransactionsRequest) returns (ListTransactionsResponse);
   rpc GetTransaction(GetTransactionRequest) returns (GetTransactionResponse);
@@ -815,6 +838,8 @@ service CoreService {
   rpc DeleteScanningStation(DeleteScanningStationRequest) returns (google.protobuf.Empty);
   rpc ConnectProductionStepsByScanningStation(ConnectProductionStepsByScanningStationRequest) returns (google.protobuf.Empty);
   rpc BatchGetScanningStationsByIDs(BatchGetScanningStationsByIDsRequest) returns (BatchGetScanningStationsByIDsResponse);
+  rpc BulkUpsertScanningStations(BulkUpsertScanningStationsRequest) returns (BulkUpsertScanningStationsResponse);
+  rpc ExportScanningStations(ExportScanningStationsRequest) returns (ExportScanningStationsResponse);
 
   // Locations
 
@@ -826,6 +851,9 @@ service CoreService {
   rpc ListLocationTypes(ListLocationTypesRequest) returns (ListLocationTypesResponse);
   rpc GetLocationType(GetLocationTypeRequest) returns (GetLocationTypeResponse);
   rpc BatchGetLocationsByIDs(BatchGetLocationsByIDsRequest) returns (BatchGetLocationsByIDsResponse);
+  // Creates or updates multiple locations for the account; locations are matched by name.
+  rpc BulkUpsertLocations(BulkUpsertLocationsRequest) returns (BulkUpsertLocationsResponse);
+  rpc ExportLocations(ExportLocationsRequest) returns (ExportLocationsResponse);
 
   // Suppliers
 

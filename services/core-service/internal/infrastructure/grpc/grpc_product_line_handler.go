@@ -80,6 +80,19 @@ func productLineFullToProto(pl *domain.ProductLineFull) *pb.ProductLineInfo {
 	return info
 }
 
+func (h *gRPCHandler) ExportProductLines(ctx context.Context, req *pb.ExportProductLinesRequest) (*pb.ExportProductLinesResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	job, apiErr := h.productLineSvc.ExportProductLines(ctx, domain.ExportProductLinesParams{Query: req.Query})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.ExportProductLinesResponse{Job: jobToProto(job)}, nil
+}
+
 func (h *gRPCHandler) ListProductLines(ctx context.Context, req *pb.ListProductLinesRequest) (*pb.ListProductLinesResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
@@ -221,4 +234,32 @@ func (h *gRPCHandler) BatchGetProductLinesByIDs(ctx context.Context, req *pb.Bat
 		pbProductLines[i] = productLineFullToProto(pl)
 	}
 	return &pb.BatchGetProductLinesByIDsResponse{ProductLines: pbProductLines}, nil
+}
+
+func (h *gRPCHandler) BulkUpsertProductLines(ctx context.Context, req *pb.BulkUpsertProductLinesRequest) (*pb.BulkUpsertProductLinesResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	inputs := make([]domain.UpsertProductLineParams, len(req.ProductLines))
+	for i, pl := range req.ProductLines {
+		inputs[i] = domain.UpsertProductLineParams{
+			Name:             pl.Name,
+			UnitGroup:        objectIdentifierFromProto(pl.UnitGroup),
+			CommissionPolicy: constants.CommissionPolicy(pl.CommissionPolicy),
+			FreightPolicy:    constants.FreightPolicy(pl.FreightPolicy),
+		}
+	}
+
+	job, apiErr := h.productLineSvc.BulkUpsertProductLines(ctx, domain.BulkUpsertProductLinesParams{
+		ProductLines: inputs,
+	})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.BulkUpsertProductLinesResponse{Job: jobToProto(job)}, nil
 }

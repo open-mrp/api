@@ -14,6 +14,7 @@ import (
 	"github.com/augno/api/services/auth-service/internal/token"
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
+	"github.com/augno/api/shared/db"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/messaging"
 
@@ -41,6 +42,17 @@ type stubTxManager struct {
 
 func (m stubTxManager) WithTx(ctx context.Context, fn func(ctx context.Context, f domain.RepoFactory) *apierror.APIError) *apierror.APIError {
 	return fn(ctx, m.repoFactory)
+}
+
+func (m stubTxManager) WithTxSavepoint(ctx context.Context, fn func(ctx context.Context, f domain.RepoFactory, sp db.SavepointRunner) *apierror.APIError) *apierror.APIError {
+	return fn(ctx, m.repoFactory, passthroughSavepoint{})
+}
+
+// passthroughSavepoint runs each unit of work directly (the stubbed repos issue no SQL).
+type passthroughSavepoint struct{}
+
+func (passthroughSavepoint) Run(ctx context.Context, fn func(context.Context) *apierror.APIError) *apierror.APIError {
+	return fn(ctx)
 }
 
 type AuthSvcTestSuite struct {

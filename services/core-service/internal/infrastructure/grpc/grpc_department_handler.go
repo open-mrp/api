@@ -70,6 +70,19 @@ func departmentToProto(d *domain.Department) *pb.DepartmentInfo {
 	return info
 }
 
+func (h *gRPCHandler) ExportDepartments(ctx context.Context, req *pb.ExportDepartmentsRequest) (*pb.ExportDepartmentsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	job, apiErr := h.departmentSvc.ExportDepartments(ctx, domain.ExportDepartmentsParams{Query: req.Query})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.ExportDepartmentsResponse{Job: jobToProto(job)}, nil
+}
+
 func departmentRateParamsFromProto(in *pb.DepartmentRateInput) *domain.CreateRateParams {
 	if in == nil {
 		return nil
@@ -153,6 +166,31 @@ func (h *gRPCHandler) CreateDepartment(ctx context.Context, req *pb.CreateDepart
 	return &pb.CreateDepartmentResponse{
 		Department: departmentToProto(dept),
 	}, nil
+}
+
+func (h *gRPCHandler) BulkUpsertDepartments(ctx context.Context, req *pb.BulkUpsertDepartmentsRequest) (*pb.BulkUpsertDepartmentsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	departments := make([]domain.UpsertDepartmentParams, len(req.Departments))
+	for i, d := range req.Departments {
+		departments[i] = domain.UpsertDepartmentParams{
+			Name:     d.Name,
+			Notes:    d.Notes,
+			Location: objectIdentifierPtrFromProto(d.Location),
+		}
+	}
+
+	job, apiErr := h.departmentSvc.BulkUpsertDepartments(ctx, domain.BulkUpsertDepartmentsParams{Departments: departments})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.BulkUpsertDepartmentsResponse{Job: jobToProto(job)}, nil
 }
 
 func (h *gRPCHandler) UpdateDepartment(ctx context.Context, req *pb.UpdateDepartmentRequest) (*pb.UpdateDepartmentResponse, error) {

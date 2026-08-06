@@ -74,19 +74,23 @@ const (
 	// CoreCmdSyncStripeCustomer is a command to reconcile a customer with the account's connected Stripe integration: create the Stripe customer on first sync, or push a changed email/name/number onto the existing one. Published by customer create/update so a Stripe outage can never fail the mutation that triggered it.
 	CoreCmdSyncStripeCustomer AmqpRoutingKey = "core.cmd.sync_stripe_customer"
 
-	// CoreCmdHubspotSyncPreview is a command to run the read-only matching pass of a HubSpot backfill job out-of-band so the triggering request returns immediately.
+	// Async bulk operation command routing keys ("core.cmd.<slug>") are derived from their
+	// canonical identity in shared/messaging (messaging.BulkOperation.RoutingKey), the
+	// single source of truth for each operation's queue, routing key, and inbox handler.
+
+	// runs the read-only matching pass of a HubSpot backfill job out-of-band so the triggering request returns immediately.
 	CoreCmdHubspotSyncPreview AmqpRoutingKey = "core.cmd.hubspot_sync_preview"
 
-	// CoreCmdHubspotSyncExecute is a command to run the write phase of a reviewed HubSpot backfill job.
+	// runs the write phase of a reviewed HubSpot backfill job.
 	CoreCmdHubspotSyncExecute AmqpRoutingKey = "core.cmd.hubspot_sync_execute"
 
-	// CoreCmdGenerateProductionSchedule asks the core-service to solve and persist one production schedule version. Published by the generation cadence, which only enqueues: a solve takes minutes, and running it inside the scheduler lease would block every other account behind whichever one is solving.
+	// asks the core-service to solve and persist one production schedule version. Published by the generation cadence, which only enqueues: a solve takes minutes, and running it inside the scheduler lease would block every other account behind whichever one is solving.
 	CoreCmdGenerateProductionSchedule AmqpRoutingKey = "core.cmd.generate_production_schedule"
 
-	// CoreEventProductionSchedulePublished is an event indicating a schedule version was published and its first weeks frozen. Consumers notify the departments that now have a committed plan to work to.
+	// indicates a schedule version was published and its first weeks frozen. Consumers notify the departments that now have a committed plan to work to.
 	CoreEventProductionSchedulePublished AmqpRoutingKey = "core.event.production_schedule_published"
 
-	// CoreEventSalesOrderCreated is an event indicating a sales order was created. Consumers use it to run out-of-band side effects (e.g. syncing the order to a third-party CRM such as HubSpot) without blocking the create response.
+	// indicates a sales order was created. Consumers use it to run out-of-band side effects (e.g. syncing the order to a third-party CRM such as HubSpot) without blocking the create response.
 	CoreEventSalesOrderCreated AmqpRoutingKey = "core.event.sales_order_created"
 
 	// CoreEventSalesOrderShippingUpdated indicates a sales order's carrier, service level, or ship-to address changed. The core-service consumer re-syncs the order's existing shipment records to match, out-of-band from the update response.

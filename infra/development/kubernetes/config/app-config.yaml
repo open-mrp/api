@@ -10,6 +10,7 @@ data:
     ACCOUNT_PHOTOS_BUCKET: "augno-org-logos-dev-us-east-2"
     USER_PHOTOS_BUCKET: "augno-user-photos-dev-us-east-2"
     SHIPPING_LABELS_BUCKET: "augno-shipping-labels-dev-us-east-2"
+    EXPORTS_BUCKET: "augno-exports-dev-us-east-2"
     CHAT_BUCKET: "augno-chat-attachments-dev-us-east-2"
     # Inbound email bridge (dev). Pinned to us-east-1 (SES receiving region). The QUEUE_URL is printed
     # by the dev setup script (scripts/dev-email-bridge-setup.sh) — paste the real account id in.

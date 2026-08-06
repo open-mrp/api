@@ -22,6 +22,7 @@ var productSvcTracer = tracing.GetTracer("core-service.product_service")
 type productSvcImpl struct {
 	repos           domain.RepoFactory
 	mediatorFactory domain.MediatorFactory
+	jobSvcFactory   domain.JobSvcFactory
 	txManager       TransactionManager
 }
 
@@ -31,6 +32,9 @@ type ProductSvcConfig struct {
 
 	// MediatorFactory (required) builds the mediators used by this service.
 	MediatorFactory domain.MediatorFactory
+
+	// JobSvcFactory (required) builds the job service the async bulk upsert records on.
+	JobSvcFactory domain.JobSvcFactory
 
 	// TxManager (required) wraps multi-step operations in database transactions.
 	TxManager TransactionManager
@@ -42,6 +46,9 @@ func (c *ProductSvcConfig) validate() error {
 	}
 	if c.MediatorFactory == nil {
 		return fmt.Errorf("product service: mediator factory is required")
+	}
+	if c.JobSvcFactory == nil {
+		return fmt.Errorf("product service: job service factory is required")
 	}
 	if c.TxManager == nil {
 		return fmt.Errorf("product service: tx manager is required")
@@ -57,6 +64,7 @@ func NewProductSvc(config *ProductSvcConfig) domain.ProductSvc {
 	return &productSvcImpl{
 		repos:           config.Repos,
 		mediatorFactory: config.MediatorFactory,
+		jobSvcFactory:   config.JobSvcFactory,
 		txManager:       config.TxManager,
 	}
 }
@@ -74,6 +82,7 @@ func (s *productSvcImpl) withTx(ctx context.Context, fn func(context.Context, *p
 		txSvc := &productSvcImpl{
 			repos:           f,
 			mediatorFactory: s.mediatorFactory,
+			jobSvcFactory:   s.jobSvcFactory,
 			txManager:       s.txManager,
 		}
 		return fn(txCtx, txSvc)
@@ -198,44 +207,6 @@ func (s *productSvcImpl) ListProductsFull(ctx context.Context, params domain.Lis
 }
 
 // ExportProducts returns all matching products for export (no pagination).
-func (s *productSvcImpl) ExportProducts(ctx context.Context, params domain.ExportProductsParams) ([]*domain.ProductFull, *apierror.APIError) {
-	ctx, span := productSvcTracer.Start(ctx, "service.product.export")
-	defer span.End()
-
-	identity, ok := appctx.GetIdentityFromContext(ctx)
-	if !ok || identity == nil {
-		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
-	}
-	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	if apiErr := checkProductReadPermission(identity); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
-	}
-	if identity.IsExternalTarget() {
-		meds := s.mediators()
-		if apiErr := meds.ReadAccess.CheckCounterpartyReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-	}
-
-	if identity.IsCustomerUser() {
-		actorAccountID := identity.ActorAccountID()
-		if actorAccountID != nil {
-			params.CustomerIDs = []string{*actorAccountID}
-		}
-		isPortalReady := true
-		params.IsPortalReady = &isPortalReady
-	}
-
-	params.AccountID = identity.Target.AccountID
-
-	return s.repos.NewProductRepo().Export(ctx, params)
-}
-
 // GetProduct returns a single product by item ID.
 func (s *productSvcImpl) GetProduct(ctx context.Context, params domain.GetProductFullParams) (*domain.ProductFull, *apierror.APIError) {
 	ctx, span := productSvcTracer.Start(ctx, "service.product.get")
@@ -341,36 +312,7 @@ func (s *productSvcImpl) CreateProduct(ctx context.Context, params domain.Create
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	productID, apiErr := id.GenID(id.ProductIDPrefix, nil)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	itemID, apiErr := id.GenID(id.ItemIDPrefix, nil)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	unitValueRateID, apiErr := id.GenID(id.RateIDPrefix, nil)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	unitCostRateID, apiErr := id.GenID(id.RateIDPrefix, nil)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	burnRateRateID, apiErr := id.GenID(id.RateIDPrefix, nil)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
 	params.AccountID = identity.Target.AccountID
-	params.ItemID = itemID
-	params.UnitValueRateID = unitValueRateID
-	params.UnitCostRateID = unitCostRateID
-	params.BurnRateRateID = burnRateRateID
 
 	meds := s.mediators()
 
@@ -390,150 +332,11 @@ func (s *productSvcImpl) CreateProduct(ctx context.Context, params domain.Create
 	case domain.RecoveryPointStarted:
 		var result *domain.ProductFull
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *productSvcImpl) *apierror.APIError {
-			txProductRepo := txSvc.repos.NewProductRepo()
-			txItemRepo := txSvc.repos.NewItemRepo()
-
-			// Check SKU uniqueness.
-			exists, apiErr := txItemRepo.CheckSKUExists(txCtx, params.AccountID, params.SKU, "")
-			if apiErr != nil {
-				return apiErr
-			}
-			if exists {
-				return apierror.NewConflictErrorWithParam(fmt.Sprintf("An item with the SKU '%s' already exists.", params.SKU), "sku")
-			}
-
-			// Get base unit for rates from category.
-			baseUnitID, apiErr := txItemRepo.GetCategoryBaseUnitID(txCtx, params.CategoryID)
-			if apiErr != nil {
-				return apiErr
-			}
-
-			// Insert rates for item (unit_value, unit_cost, burn_rate). Caller-supplied inputs override the defaults; unit_price and unit_cost additionally enforce the currency-numerator / non-currency-denominator rule.
-			txUnitRepo := txSvc.repos.NewUnitRepo()
-
-			unitPriceValue, unitPriceNum, unitPriceDen := "0", baseUnitID, baseUnitID
-			if params.UnitPrice != nil {
-				if apiErr := ValidateCostRateUnits(txCtx, txUnitRepo, params.UnitPrice.NumeratorUnitID, params.UnitPrice.DenominatorUnitID, "unit_price"); apiErr != nil {
-					return apiErr
-				}
-				unitPriceValue = params.UnitPrice.Value
-				unitPriceNum = params.UnitPrice.NumeratorUnitID
-				unitPriceDen = params.UnitPrice.DenominatorUnitID
-			}
-			if apiErr := txProductRepo.InsertRate(txCtx, unitValueRateID, unitPriceValue, unitPriceNum, unitPriceDen); apiErr != nil {
-				return apiErr
-			}
-
-			unitCostValue, unitCostNum, unitCostDen := "0", baseUnitID, baseUnitID
-			if params.UnitCost != nil {
-				if apiErr := ValidateCostRateUnits(txCtx, txUnitRepo, params.UnitCost.NumeratorUnitID, params.UnitCost.DenominatorUnitID, "unit_cost"); apiErr != nil {
-					return apiErr
-				}
-				unitCostValue = params.UnitCost.Value
-				unitCostNum = params.UnitCost.NumeratorUnitID
-				unitCostDen = params.UnitCost.DenominatorUnitID
-			}
-			if apiErr := txProductRepo.InsertRate(txCtx, unitCostRateID, unitCostValue, unitCostNum, unitCostDen); apiErr != nil {
-				return apiErr
-			}
-
-			// Burn rate is always initialized to "0" per day; it is recomputed from inventory history by the burn-rate mediator.
-			if apiErr := txProductRepo.InsertRate(txCtx, burnRateRateID, "0", baseUnitID, "day"); apiErr != nil {
-				return apiErr
-			}
-
-			// Insert item.
-			if apiErr := txProductRepo.InsertItem(txCtx, itemID, params); apiErr != nil {
-				return apiErr
-			}
-
-			// Validate the referenced product line exists for the account before persisting so a bogus product_line_id is rejected instead of stored as a dangling reference.
-			if params.ProductLineID != nil && *params.ProductLineID != "" {
-				if _, apiErr := txSvc.repos.NewProductLineRepo().Get(txCtx, domain.GetProductLineParams{AccountID: params.AccountID, ProductLineID: *params.ProductLineID}); apiErr != nil {
-					return apiErr
-				}
-			}
-
-			// Insert product record.
-			created, apiErr := txProductRepo.Create(txCtx, productID, itemID, params)
+			created, apiErr := txSvc.createProductInTx(txCtx, params)
 			if apiErr != nil {
 				return apiErr
 			}
 			result = created
-
-			// Validate all caller-supplied attributes exist for the account before linking so bogus attribute_ids are rejected instead of silently dropped (and no orphaned join rows are created).
-			if len(params.AttributeIDs) > 0 {
-				found, apiErr := txSvc.repos.NewAttributeRepo().GetByIDs(txCtx, params.AccountID, params.AttributeIDs)
-				if apiErr != nil {
-					return apiErr
-				}
-				got := make(map[string]struct{}, len(found))
-				for _, a := range found {
-					got[a.ID] = struct{}{}
-				}
-				for _, attrID := range params.AttributeIDs {
-					if attrID == "" {
-						continue
-					}
-					if _, ok := got[attrID]; !ok {
-						return apierror.NewResourceNotFoundError("Attribute not found.")
-					}
-				}
-			}
-
-			// Link caller-supplied attributes to the new item (matches Dashboard behavior).
-			for _, attrID := range params.AttributeIDs {
-				if attrID == "" {
-					continue
-				}
-				if apiErr := txItemRepo.AddAttribute(txCtx, domain.AddItemAttributeParams{
-					AccountID:   params.AccountID,
-					ItemID:      itemID,
-					AttributeID: attrID,
-				}); apiErr != nil {
-					return apiErr
-				}
-			}
-
-			// Initialize inventory tracking with zero-quantity log and change log.
-			txInvMutRepo := txSvc.repos.NewInventoryMutationRepo()
-			zeroMeasure := decimal.Zero
-
-			if apiErr := txInvMutRepo.CreateInventoryLog(txCtx, domain.CreateInventoryLogParams{
-				AccountID: params.AccountID,
-				ItemID:    itemID,
-				Measure:   zeroMeasure,
-				UnitID:    baseUnitID,
-			}); apiErr != nil {
-				return apiErr
-			}
-
-			if apiErr := txInvMutRepo.CreateInventoryChangeLog(txCtx, domain.CreateInventoryChangeLogParams{
-				AccountID:  params.AccountID,
-				ItemID:     itemID,
-				Measure:    zeroMeasure,
-				UnitID:     baseUnitID,
-				ActionType: "user_action",
-			}); apiErr != nil {
-				return apiErr
-			}
-
-			changes := audit.ComputeChanges(nil, created)
-
-			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionCreate,
-				ResourceType: constants.ObjectTypeProduct,
-				ResourceID:   created.ID,
-				Changes:      changes,
-			}); apiErr != nil {
-				return apiErr
-			}
-
-			if apiErr := txSvc.attachProductIncludes(txCtx, result, params.AccountID, params.Includes); apiErr != nil {
-				return apiErr
-			}
-
 			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
 		})
 
@@ -546,6 +349,200 @@ func (s *productSvcImpl) CreateProduct(ctx context.Context, params domain.Create
 	default:
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
 	}
+}
+
+// createProductInTx inserts a product-type item, its rates, the product record,
+// attributes, and opening inventory within an existing transaction, returning the
+// fresh product. Shared by CreateProduct (single) and BulkUpsertProducts (batch); it
+// does not own the idempotency/permission envelope, and expects params.AccountID set.
+func (s *productSvcImpl) createProductInTx(txCtx context.Context, params domain.CreateProductParams) (*domain.ProductFull, *apierror.APIError) {
+	productID, apiErr := id.GenID(id.ProductIDPrefix, nil)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	itemID, apiErr := id.GenID(id.ItemIDPrefix, nil)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	unitValueRateID, apiErr := id.GenID(id.RateIDPrefix, nil)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	unitCostRateID, apiErr := id.GenID(id.RateIDPrefix, nil)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	burnRateRateID, apiErr := id.GenID(id.RateIDPrefix, nil)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	txProductRepo := s.repos.NewProductRepo()
+	txItemRepo := s.repos.NewItemRepo()
+
+	// Check SKU uniqueness.
+	exists, apiErr := txItemRepo.CheckSKUExists(txCtx, params.AccountID, params.SKU, "")
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	if exists {
+		return nil, apierror.NewConflictErrorWithParam(fmt.Sprintf("An item with the SKU '%s' already exists.", params.SKU), "sku")
+	}
+
+	// Get base unit for rates from category, and enforce that products only use product
+	// categories (same rule as the change-item-category endpoint).
+	baseUnitID, categoryTypeCode, apiErr := txItemRepo.GetCategoryBaseUnitID(txCtx, params.CategoryID)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	if !categoryTypeMatchesItem(string(constants.ItemTypeCodeProduct), categoryTypeCode) {
+		return nil, apierror.NewValidationErrorWithParam("This category type cannot be assigned to this item type.", "category_id")
+	}
+
+	// Insert rates for item (unit_value, unit_cost, burn_rate). Caller-supplied
+	// inputs override the defaults; unit_price and unit_cost additionally enforce
+	// the currency-numerator / non-currency-denominator rule.
+	txUnitRepo := s.repos.NewUnitRepo()
+
+	unitPriceValue, unitPriceNumID, unitPriceDenID := "0", baseUnitID, baseUnitID
+	if params.UnitPrice != nil {
+		if apiErr := ValidateCostRateUnits(txCtx, txUnitRepo, params.UnitPrice.NumeratorUnitID, params.UnitPrice.DenominatorUnitID, "unit_price"); apiErr != nil {
+			return nil, apiErr
+		}
+		unitPriceValue = params.UnitPrice.Value
+		unitPriceNumID = params.UnitPrice.NumeratorUnitID
+		unitPriceDenID = params.UnitPrice.DenominatorUnitID
+	}
+	if apiErr := txProductRepo.InsertRate(txCtx, unitValueRateID, unitPriceValue, unitPriceNumID, unitPriceDenID); apiErr != nil {
+		return nil, apiErr
+	}
+
+	unitCostValue, unitCostNumID, unitCostDenID := "0", baseUnitID, baseUnitID
+	if params.UnitCost != nil {
+		if apiErr := ValidateCostRateUnits(txCtx, txUnitRepo, params.UnitCost.NumeratorUnitID, params.UnitCost.DenominatorUnitID, "unit_cost"); apiErr != nil {
+			return nil, apiErr
+		}
+		unitCostValue = params.UnitCost.Value
+		unitCostNumID = params.UnitCost.NumeratorUnitID
+		unitCostDenID = params.UnitCost.DenominatorUnitID
+	}
+	if apiErr := txProductRepo.InsertRate(txCtx, unitCostRateID, unitCostValue, unitCostNumID, unitCostDenID); apiErr != nil {
+		return nil, apiErr
+	}
+
+	// Burn rate is always initialized to "0" per day; it is recomputed
+	// from inventory history by the burn-rate mediator.
+	if apiErr := txProductRepo.InsertRate(txCtx, burnRateRateID, "0", baseUnitID, "day"); apiErr != nil {
+		return nil, apiErr
+	}
+
+	// Insert item.
+	if apiErr := txProductRepo.InsertItem(txCtx, domain.InsertProductItemParams{
+		ItemID:          itemID,
+		AccountID:       params.AccountID,
+		SKU:             params.SKU,
+		Description:     params.Description,
+		Notes:           params.Notes,
+		CategoryID:      params.CategoryID,
+		UnitValueRateID: unitValueRateID,
+		UnitCostRateID:  unitCostRateID,
+		BurnRateRateID:  burnRateRateID,
+	}); apiErr != nil {
+		return nil, apiErr
+	}
+
+	// Checked before insert so an unknown product_line_id is rejected rather than stored
+	// as a dangling reference the read path then renders as null.
+	if params.ProductLineID != nil && *params.ProductLineID != "" {
+		if _, apiErr := s.repos.NewProductLineRepo().Get(txCtx, domain.GetProductLineParams{
+			AccountID:     params.AccountID,
+			ProductLineID: *params.ProductLineID,
+		}); apiErr != nil {
+			return nil, apiErr
+		}
+	}
+
+	// Insert product record.
+	created, apiErr := txProductRepo.Create(txCtx, productID, itemID, params)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	// Checked before linking so a bogus attribute_id is rejected rather than silently
+	// dropped, and no orphaned join rows are written.
+	if len(params.AttributeIDs) > 0 {
+		found, apiErr := s.repos.NewAttributeRepo().GetByIDs(txCtx, params.AccountID, params.AttributeIDs)
+		if apiErr != nil {
+			return nil, apiErr
+		}
+		got := make(map[string]struct{}, len(found))
+		for _, a := range found {
+			got[a.ID] = struct{}{}
+		}
+		for _, attrID := range params.AttributeIDs {
+			if attrID == "" {
+				continue
+			}
+			if _, ok := got[attrID]; !ok {
+				return nil, apierror.NewResourceNotFoundError("Attribute not found.")
+			}
+		}
+	}
+
+	// Link caller-supplied attributes to the new item (matches Dashboard behavior).
+	for _, attrID := range params.AttributeIDs {
+		if attrID == "" {
+			continue
+		}
+		if apiErr := txItemRepo.AddAttribute(txCtx, domain.AddItemAttributeParams{
+			AccountID:   params.AccountID,
+			ItemID:      itemID,
+			AttributeID: attrID,
+		}); apiErr != nil {
+			return nil, apiErr
+		}
+	}
+
+	// Initialize inventory tracking with zero-quantity log and change log.
+	txInvMutRepo := s.repos.NewInventoryMutationRepo()
+	zeroMeasure := decimal.Zero
+
+	if apiErr := txInvMutRepo.CreateInventoryLog(txCtx, domain.CreateInventoryLogParams{
+		AccountID: params.AccountID,
+		ItemID:    itemID,
+		Measure:   zeroMeasure,
+		UnitID:    baseUnitID,
+	}); apiErr != nil {
+		return nil, apiErr
+	}
+
+	if apiErr := txInvMutRepo.CreateInventoryChangeLog(txCtx, domain.CreateInventoryChangeLogParams{
+		AccountID:  params.AccountID,
+		ItemID:     itemID,
+		Measure:    zeroMeasure,
+		UnitID:     baseUnitID,
+		ActionType: "user_action",
+	}); apiErr != nil {
+		return nil, apiErr
+	}
+
+	changes := audit.ComputeChanges(nil, created)
+
+	if apiErr := audit.NewPublisher().Publish(txCtx, s.repos.NewOutboxRepo(), audit.EventData{
+		ServiceName:  domain.ServiceName,
+		Action:       constants.AuditActionCreate,
+		ResourceType: constants.ObjectTypeProduct,
+		ResourceID:   created.ID,
+		Changes:      changes,
+	}); apiErr != nil {
+		return nil, apiErr
+	}
+
+	if apiErr := s.attachProductIncludes(txCtx, created, params.AccountID, params.Includes); apiErr != nil {
+		return nil, apiErr
+	}
+
+	return created, nil
 }
 
 // UpdateProduct partially updates an existing product.
@@ -585,74 +582,11 @@ func (s *productSvcImpl) UpdateProduct(ctx context.Context, params domain.Update
 	case domain.RecoveryPointStarted:
 		var result *domain.ProductFull
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *productSvcImpl) *apierror.APIError {
-			txProductRepo := txSvc.repos.NewProductRepo()
-			txItemRepo := txSvc.repos.NewItemRepo()
-
-			// Fetch existing product before mutation for audit diff (same includes as the post-update fetch so include-only fields cannot produce false diffs).
-			old, apiErr := txProductRepo.Get(txCtx, domain.GetProductFullParams{
-				AccountID: params.AccountID,
-				ProductID: params.ProductID,
-				Includes:  params.Includes,
-			})
-			if apiErr != nil {
-				return apiErr
-			}
-
-			if old.Item != nil {
-				params.Description = params.Description.BackfillUnsetPtr(old.Item.Description)
-				params.Notes = params.Notes.BackfillUnsetPtr(old.Item.Notes)
-			}
-
-			// Check SKU uniqueness if being updated.
-			if params.SKU != nil {
-				exists, apiErr := txItemRepo.CheckSKUExists(txCtx, params.AccountID, *params.SKU, old.ItemID)
-				if apiErr != nil {
-					return apiErr
-				}
-				if exists {
-					return apierror.NewConflictErrorWithParam(fmt.Sprintf("An item with the SKU '%s' already exists.", *params.SKU), "sku")
-				}
-			}
-
-			txUnitRepo := txSvc.repos.NewUnitRepo()
-
-			if params.UnitPrice != nil {
-				if apiErr := ValidateCostRateUnits(txCtx, txUnitRepo, params.UnitPrice.NumeratorUnitID, params.UnitPrice.DenominatorUnitID, "unit_price"); apiErr != nil {
-					return apiErr
-				}
-				if old.Item == nil || old.Item.UnitValueID == "" {
-					return apierror.NewInvariantViolationError("Product item or unit value rate is missing.")
-				}
-				if apiErr := txItemRepo.UpdateRate(txCtx, old.Item.UnitValueID, *params.UnitPrice); apiErr != nil {
-					return apiErr
-				}
-			}
-
-			// Update product + item fields.
-			updated, apiErr := txProductRepo.Update(txCtx, params)
+			updated, apiErr := txSvc.updateProductInTx(txCtx, params)
 			if apiErr != nil {
 				return apiErr
 			}
 			result = updated
-
-			changes := audit.ComputeChanges(old, updated)
-			// Item-level fields (sku, description, notes) live on the joined item row; diff them the same way part updates do.
-			changes = append(changes, audit.ComputeChanges(old.Item, updated.Item)...)
-
-			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionUpdate,
-				ResourceType: constants.ObjectTypeProduct,
-				ResourceID:   updated.ID,
-				Changes:      changes,
-			}); apiErr != nil {
-				return apiErr
-			}
-
-			if apiErr := txSvc.attachProductIncludes(txCtx, result, params.AccountID, params.Includes); apiErr != nil {
-				return apiErr
-			}
-
 			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
 		})
 
@@ -665,6 +599,83 @@ func (s *productSvcImpl) UpdateProduct(ctx context.Context, params domain.Update
 	default:
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
 	}
+}
+
+// updateProductInTx updates a product's item fields (sku/description/notes), portal
+// readiness, and unit_price within an existing transaction, returning the fresh
+// product. Shared by UpdateProduct (single) and BulkUpsertProducts (batch); it does
+// not own the idempotency/permission envelope, and expects params.AccountID set.
+func (s *productSvcImpl) updateProductInTx(txCtx context.Context, params domain.UpdateProductParams) (*domain.ProductFull, *apierror.APIError) {
+	txProductRepo := s.repos.NewProductRepo()
+	txItemRepo := s.repos.NewItemRepo()
+
+	// Fetch existing product before mutation for audit diff (same includes as the
+	// post-update fetch so include-only fields cannot produce false diffs).
+	old, apiErr := txProductRepo.Get(txCtx, domain.GetProductFullParams{
+		AccountID: params.AccountID,
+		ProductID: params.ProductID,
+		Includes:  params.Includes,
+	})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	if old.Item != nil {
+		params.Description = params.Description.BackfillUnsetPtr(old.Item.Description)
+		params.Notes = params.Notes.BackfillUnsetPtr(old.Item.Notes)
+	}
+
+	// Check SKU uniqueness if being updated.
+	if params.SKU != nil {
+		exists, apiErr := txItemRepo.CheckSKUExists(txCtx, params.AccountID, *params.SKU, old.ItemID)
+		if apiErr != nil {
+			return nil, apiErr
+		}
+		if exists {
+			return nil, apierror.NewConflictErrorWithParam(fmt.Sprintf("An item with the SKU '%s' already exists.", *params.SKU), "sku")
+		}
+	}
+
+	txUnitRepo := s.repos.NewUnitRepo()
+
+	if params.UnitPrice != nil {
+		if apiErr := ValidateCostRateUnits(txCtx, txUnitRepo, params.UnitPrice.NumeratorUnitID, params.UnitPrice.DenominatorUnitID, "unit_price"); apiErr != nil {
+			return nil, apiErr
+		}
+		if old.Item == nil || old.Item.UnitValueID == "" {
+			return nil, apierror.NewInvariantViolationError("Product item or unit value rate is missing.")
+		}
+		if apiErr := txItemRepo.UpdateRate(txCtx, old.Item.UnitValueID, *params.UnitPrice); apiErr != nil {
+			return nil, apiErr
+		}
+	}
+
+	// Update product + item fields.
+	updated, apiErr := txProductRepo.Update(txCtx, params)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	changes := audit.ComputeChanges(old, updated)
+	// Item-level fields (sku, description, notes) live on the joined
+	// item row; diff them the same way part updates do.
+	changes = append(changes, audit.ComputeChanges(old.Item, updated.Item)...)
+
+	if apiErr := audit.NewPublisher().Publish(txCtx, s.repos.NewOutboxRepo(), audit.EventData{
+		ServiceName:  domain.ServiceName,
+		Action:       constants.AuditActionUpdate,
+		ResourceType: constants.ObjectTypeProduct,
+		ResourceID:   updated.ID,
+		Changes:      changes,
+	}); apiErr != nil {
+		return nil, apiErr
+	}
+
+	if apiErr := s.attachProductIncludes(txCtx, updated, params.AccountID, params.Includes); apiErr != nil {
+		return nil, apiErr
+	}
+
+	return updated, nil
 }
 
 // DeleteProduct soft-deletes a product by its product ID.

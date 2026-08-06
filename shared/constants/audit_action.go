@@ -8,6 +8,8 @@ const (
 	AuditActionCreate AuditAction = "create"
 	// AuditActionUpdate represents an update mutation.
 	AuditActionUpdate AuditAction = "update"
+	// AuditActionUpsert represents an upsert mutation.
+	AuditActionUpsert AuditAction = "upsert"
 	// AuditActionDelete represents a deletion mutation.
 	AuditActionDelete AuditAction = "delete"
 	// AuditActionRestore represents a restore mutation.
@@ -22,7 +24,7 @@ const (
 
 func (m AuditAction) IsValid() bool {
 	switch m {
-	case AuditActionCreate, AuditActionUpdate, AuditActionDelete,
+	case AuditActionCreate, AuditActionUpdate, AuditActionUpsert, AuditActionDelete,
 		AuditActionRestore, AuditActionArchive, AuditActionApprove, AuditActionDeny:
 		return true
 	default:
@@ -34,6 +36,7 @@ func (m AuditAction) EnumValues() []string {
 	return []string{
 		string(AuditActionCreate),
 		string(AuditActionUpdate),
+		string(AuditActionUpsert),
 		string(AuditActionDelete),
 		string(AuditActionRestore),
 		string(AuditActionArchive),

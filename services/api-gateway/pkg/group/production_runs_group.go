@@ -47,6 +47,8 @@ func (*ProductionRunsEndpointGroup) Materialize(config *ProductionRunsEndpointGr
 	deleteEndpoint := apiendpoint.From(&productionrunep.DeleteProductionRunEndpoint{}).WithService(inner, svc)
 	addBatchesEndpoint := apiendpoint.From(&productionrunep.AddBatchesToProductionRunEndpoint{}).WithService(inner, svc)
 	listBatchesEndpoint := apiendpoint.From(&productionrunep.ListBatchesByProductionRunEndpoint{}).WithService(inner, svc)
+	bulkCreateEndpoint := apiendpoint.From(&productionrunep.BulkCreateProductionRunsEndpoint{}).WithService(inner, svc)
+	exportEndpoint := apiendpoint.From(&productionrunep.ExportProductionRunsEndpoint{}).WithService(inner, svc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,
@@ -56,6 +58,8 @@ func (*ProductionRunsEndpointGroup) Materialize(config *ProductionRunsEndpointGr
 		deleteEndpoint,
 		addBatchesEndpoint,
 		listBatchesEndpoint,
+		bulkCreateEndpoint,
+		exportEndpoint,
 	}
 
 	return &ProductionRunsEndpointGroup{inner}

@@ -59,6 +59,19 @@ func locationTypeToProto(slt *domain.LocationType) *pb.LocationTypeInfo {
 	}
 }
 
+func (h *gRPCHandler) ExportLocations(ctx context.Context, req *pb.ExportLocationsRequest) (*pb.ExportLocationsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	job, apiErr := h.locationSvc.ExportLocations(ctx, domain.ExportLocationsParams{Query: req.Query})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.ExportLocationsResponse{Job: jobToProto(job)}, nil
+}
+
 func (h *gRPCHandler) ListLocations(ctx context.Context, req *pb.ListLocationsRequest) (*pb.ListLocationsResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
@@ -196,6 +209,38 @@ func (h *gRPCHandler) BatchGetLocationsByIDs(ctx context.Context, req *pb.BatchG
 	return &pb.BatchGetLocationsByIDsResponse{
 		Locations: locations,
 	}, nil
+}
+
+func (h *gRPCHandler) BulkUpsertLocations(ctx context.Context, req *pb.BulkUpsertLocationsRequest) (*pb.BulkUpsertLocationsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	locations := make([]domain.UpsertLocationParams, 0, len(req.Locations))
+	for _, loc := range req.Locations {
+		children := make([]domain.ObjectIdentifier, 0, len(loc.Children))
+		for _, c := range loc.Children {
+			if oi := objectIdentifierPtrFromProto(c); oi != nil {
+				children = append(children, *oi)
+			}
+		}
+		locations = append(locations, domain.UpsertLocationParams{
+			Name:     loc.Name,
+			TypeCode: loc.TypeCode,
+			Parent:   objectIdentifierPtrFromProto(loc.Parent),
+			Children: children,
+		})
+	}
+
+	job, apiErr := h.locationSvc.BulkUpsertLocations(ctx, domain.BulkUpsertLocationsParams{Locations: locations})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.BulkUpsertLocationsResponse{Job: jobToProto(job)}, nil
 }
 
 func (h *gRPCHandler) GetLocationType(ctx context.Context, req *pb.GetLocationTypeRequest) (*pb.GetLocationTypeResponse, error) {

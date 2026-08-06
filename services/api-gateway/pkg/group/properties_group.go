@@ -50,6 +50,8 @@ func (*PropertiesEndpointGroup) Materialize(config *PropertiesEndpointGroupConfi
 	createAttributeEndpoint := apiendpoint.From(&propertyep.CreateAttributeEndpoint{}).WithService(inner, propertySvc)
 	updateAttributeEndpoint := apiendpoint.From(&propertyep.UpdateAttributeEndpoint{}).WithService(inner, propertySvc)
 	deleteAttributeEndpoint := apiendpoint.From(&propertyep.DeleteAttributeEndpoint{}).WithService(inner, propertySvc)
+	bulkUpsertPropertiesEndpoint := apiendpoint.From(&propertyep.BulkUpsertPropertiesEndpoint{}).WithService(inner, propertySvc)
+	exportPropertiesEndpoint := apiendpoint.From(&propertyep.ExportPropertiesEndpoint{}).WithService(inner, propertySvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listPropertiesEndpoint,
@@ -62,6 +64,8 @@ func (*PropertiesEndpointGroup) Materialize(config *PropertiesEndpointGroupConfi
 		createAttributeEndpoint,
 		updateAttributeEndpoint,
 		deleteAttributeEndpoint,
+		bulkUpsertPropertiesEndpoint,
+		exportPropertiesEndpoint,
 	}
 
 	return &PropertiesEndpointGroup{inner}

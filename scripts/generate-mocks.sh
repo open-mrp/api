@@ -114,7 +114,13 @@ run_jobs() {
           fi
         fi
       done
-      pids=("${new_pids[@]}")
+      # bash 3.2 (the macOS default) treats "${empty[@]}" as an unbound variable under
+      # `set -u`, so an empty pool must be assigned explicitly rather than expanded.
+      if (( ${#new_pids[@]} > 0 )); then
+        pids=("${new_pids[@]}")
+      else
+        pids=()
+      fi
       if (( ${#pids[@]} >= MAX_JOBS )); then
         sleep 0.05
       fi
@@ -128,14 +134,17 @@ run_jobs() {
     pids+=("$!")
   done < "${job_file}"
 
-  # Wait for remaining jobs
-  for pid in "${pids[@]}"; do
-    if ! wait "${pid}"; then
-      failed=$((failed + 1))
-    else
-      completed=$((completed + 1))
-    fi
-  done
+  # Wait for remaining jobs. Guard the expansion: the pool is empty when the last batch
+  # drained inside the loop above, and bash 3.2 errors on "${empty[@]}" under `set -u`.
+  if (( ${#pids[@]} > 0 )); then
+    for pid in "${pids[@]}"; do
+      if ! wait "${pid}"; then
+        failed=$((failed + 1))
+      else
+        completed=$((completed + 1))
+      fi
+    done
+  fi
 
   rm -f "${job_file}"
 

@@ -22,6 +22,21 @@ func StringClearableToProto(f Clearable[string]) *pb.StringPatch {
 	return &pb.StringPatch{Clear: false, Value: &val}
 }
 
+// EnumClearableToProto converts a string-enum field to protobuf. Returns nil when
+// unset. An explicitly set empty value is treated as a clear — the empty string is
+// never a valid enum value, and spreadsheet-driven clients send "" for a blank cell.
+func EnumClearableToProto[T ~string](f Clearable[T]) *pb.StringPatch {
+	if f.IsUnset() {
+		return nil
+	}
+	val, _ := f.Value()
+	if f.IsClear() || val == "" {
+		return &pb.StringPatch{Clear: true}
+	}
+	s := string(val)
+	return &pb.StringPatch{Clear: false, Value: &s}
+}
+
 // StringClearableFromProto converts protobuf to a string field. Nil means unset.
 func StringClearableFromProto(p *pb.StringPatch) Clearable[string] {
 	if p == nil {

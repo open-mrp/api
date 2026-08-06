@@ -18,6 +18,18 @@ sql:
             go_type:
               import: "github.com/augno/api/shared/db"
               type: "NullableRawMessage"
+          # job.results and job.errors are nullable json: they are empty until the
+          # job settles. json.RawMessage cannot scan NULL — database/sql special
+          # cases *[]byte but not named types of it — so a freshly created job
+          # would fail to read back.
+          - column: "job.results"
+            go_type:
+              import: "github.com/augno/api/shared/db"
+              type: "NullableRawMessage"
+          - column: "job.errors"
+            go_type:
+              import: "github.com/augno/api/shared/db"
+              type: "NullableRawMessage"
           - column: "hubspot_sync_job.cursors"
             go_type:
               import: "github.com/augno/api/shared/db"

@@ -1046,7 +1046,8 @@ LEFT JOIN (
 ) inv ON inv.item_id = i.id
 WHERE i.account_id = sqlc.arg('account_id')
 AND i.deleted_at IS NULL
-ORDER BY i.sku ASC;
+ORDER BY i.sku ASC
+LIMIT ?;
 
 -- name: UpdateItem :exec
 UPDATE item SET
@@ -1136,14 +1137,6 @@ SET r.numerator_unit_id = sqlc.arg('new_unit_id')
 WHERE i.id = sqlc.arg('item_id')
 AND i.account_id = sqlc.arg('account_id')
 AND i.deleted_at IS NULL;
-
--- name: GetCategoryBaseUnitID :one
-SELECT
-  ugu.unit_id AS base_unit_id
-FROM item_category ic
-JOIN unit_group_unit ugu ON ugu.unit_group_id = ic.unit_group_id
-JOIN unit u ON u.id = ugu.unit_id AND u.is_base_unit = true
-WHERE ic.id = sqlc.arg('category_id');
 
 -- name: UpdateMaterialOrderPointUnit :exec
 UPDATE quantity q

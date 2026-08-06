@@ -252,6 +252,19 @@ type BulkCreateItemResult struct {
 	ItemID  *string
 }
 
+// UpsertItemPropertyParams is a (property name, value) pair resolved to an attribute.
+type UpsertItemPropertyParams struct {
+	Name  string
+	Value string
+}
+
+// SupplierNameMatch maps a supplier's display name to its account ID within the
+// owner account. Used by bulk upsert to resolve supplier names.
+type SupplierNameMatch struct {
+	AccountID string
+	Name      string
+}
+
 // BulkReconcileItemsParams holds parameters for bulk reconciling item inventory.
 type BulkReconcileItemsParams struct {
 	AccountID         string

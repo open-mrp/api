@@ -39,3 +39,23 @@ func (r *unitQueryRepoImpl) Find(ctx context.Context, accountID, id string) (*do
 		Type:         row.UnitDimensionCode,
 	}, nil
 }
+
+func (r *unitQueryRepoImpl) GetDimensionCodes(ctx context.Context, ids []string) (map[string]string, *apierror.APIError) {
+	ctx, span := unitQueryRepoTracer.Start(ctx, "repository.unit_query.get_dimension_codes")
+	defer span.End()
+
+	if len(ids) == 0 {
+		return map[string]string{}, nil
+	}
+
+	rows, err := r.queries.GetUnitDimensionCodes(ctx, ids)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	out := make(map[string]string, len(rows))
+	for _, row := range rows {
+		out[row.ID] = row.UnitDimensionCode
+	}
+	return out, nil
+}

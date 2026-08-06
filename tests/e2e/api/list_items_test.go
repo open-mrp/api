@@ -174,14 +174,15 @@ func TestListItems_FilterByCategoryWithPagination(t *testing.T) {
 	t.Parallel()
 
 	// Paginate over items this test owns (validMaterialBody puts them in
-	// SeedItemCategoryID), scoped by both the category filter and a unique q,
-	// verifying filters persist across cursor pages without interference from
-	// parallel tests mutating the shared category.
+	// SeedMaterialCategoryID — materials may only use material categories), scoped
+	// by both the category filter and a unique q, verifying filters persist across
+	// cursor pages without interference from parallel tests mutating the shared
+	// category.
 	prefix := uniqueName("e2e-item-catpg")
 	ids := createItemsViaMaterials(t, prefix, 2)
 
 	assertScopedCursorPagination(t, itemsPath, url.Values{
-		"category_ids": {SeedItemCategoryID},
+		"category_ids": {SeedMaterialCategoryID},
 		"q":            {prefix},
 	}, ids)
 }

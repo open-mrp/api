@@ -64,6 +64,19 @@ func itemCategoryFullToProto(ic *domain.ItemCategoryFull) *pb.ItemCategoryInfo {
 	return info
 }
 
+func (h *gRPCHandler) ExportItemCategories(ctx context.Context, req *pb.ExportItemCategoriesRequest) (*pb.ExportItemCategoriesResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	job, apiErr := h.itemCategorySvc.ExportItemCategories(ctx, domain.ExportItemCategoriesParams{Query: req.Query})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.ExportItemCategoriesResponse{Job: jobToProto(job)}, nil
+}
+
 func (h *gRPCHandler) ListItemCategories(ctx context.Context, req *pb.ListItemCategoriesRequest) (*pb.ListItemCategoriesResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
@@ -248,4 +261,33 @@ func (h *gRPCHandler) ChangeItemCategoryUnitGroup(ctx context.Context, req *pb.C
 	}
 
 	return &emptypb.Empty{}, nil
+}
+
+func (h *gRPCHandler) BulkUpsertItemCategories(ctx context.Context, req *pb.BulkUpsertItemCategoriesRequest) (*pb.BulkUpsertItemCategoriesResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	inputs := make([]domain.UpsertItemCategoryParams, len(req.ItemCategories))
+	for i, ic := range req.ItemCategories {
+		inputs[i] = domain.UpsertItemCategoryParams{
+			Name:                 ic.Name,
+			Notes:                ic.Notes,
+			ItemCategoryTypeCode: ic.Type,
+			UnitGroup:            objectIdentifierFromProto(ic.UnitGroup),
+			PropertyNames:        ic.PropertyNames,
+		}
+	}
+
+	job, apiErr := h.itemCategorySvc.BulkUpsertItemCategories(ctx, domain.BulkUpsertItemCategoriesParams{
+		ItemCategories: inputs,
+	})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.BulkUpsertItemCategoriesResponse{Job: jobToProto(job)}, nil
 }

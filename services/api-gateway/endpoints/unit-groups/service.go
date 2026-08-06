@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"strconv"
 
+	jobep "github.com/augno/api/services/api-gateway/endpoints/jobs"
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
+	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
@@ -21,6 +23,7 @@ import (
 
 type UnitGroupSvc interface {
 	ListUnitGroups(ctx context.Context, req *ListUnitGroupsRequest) (*apiresource.List[apiresource.UnitGroup], *apierror.APIError)
+	ExportUnitGroups(ctx context.Context, req *ExportUnitGroupsRequest) (*apiresource.Job, *apierror.APIError)
 	GetUnitGroup(ctx context.Context, req *RetrieveUnitGroupRequest) (*apiresource.UnitGroup, *apierror.APIError)
 	CreateUnitGroup(ctx context.Context, req *CreateUnitGroupRequest) (*apiresource.UnitGroup, *apierror.APIError)
 	UpdateUnitGroup(ctx context.Context, req *UpdateUnitGroupRequest) (*apiresource.UnitGroup, *apierror.APIError)
@@ -30,6 +33,7 @@ type UnitGroupSvc interface {
 	DeleteUnitGroupUnit(ctx context.Context, req *DeleteUnitGroupUnitRequest) (*apiresource.EmptyResource, *apierror.APIError)
 	ListUnitGroupUnits(ctx context.Context, req *ListUnitGroupUnitsRequest) (*apiresource.List[apiresource.UnitGroupUnit], *apierror.APIError)
 	GetUnitGroupUnit(ctx context.Context, req *RetrieveUnitGroupUnitRequest) (*apiresource.UnitGroupUnit, *apierror.APIError)
+	BulkUpsertUnitGroups(ctx context.Context, req *BulkUpsertUnitGroupsRequest) (*apiresource.Job, *apierror.APIError)
 }
 
 type UnitGroupSvcConfig struct {
@@ -58,6 +62,18 @@ func NewUnitGroupSvc(config *UnitGroupSvcConfig) UnitGroupSvc {
 	return &unitGroupSvcImpl{
 		coreClient: config.CoreClient,
 	}
+}
+
+func (m *unitGroupSvcImpl) ExportUnitGroups(ctx context.Context, req *ExportUnitGroupsRequest) (*apiresource.Job, *apierror.APIError) {
+	resp, apiErr := grpcutil.CallRPC(ctx, unitGroupSvcTracer, "service.unit_groups.export", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ExportUnitGroupsResponse, error) {
+			return m.coreClient.ExportUnitGroups(ctx, &pb.ExportUnitGroupsRequest{Query: req.Query}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return jobep.JobFromProto(resp.GetJob()), nil
 }
 
 func (m *unitGroupSvcImpl) ListUnitGroups(ctx context.Context, req *ListUnitGroupsRequest) (*apiresource.List[apiresource.UnitGroup], *apierror.APIError) {
@@ -349,4 +365,39 @@ func loadUnitGroupUnitByID(ctx context.Context, id string) (*apiresource.UnitGro
 		return nil, apierror.NewResourceNotFoundError("Unit group unit not found.")
 	}
 	return v.(*apiresource.UnitGroupUnit), nil
+}
+
+func (m *unitGroupSvcImpl) BulkUpsertUnitGroups(ctx context.Context, req *BulkUpsertUnitGroupsRequest) (*apiresource.Job, *apierror.APIError) {
+	unitGroups := make([]*pb.BulkUpsertUnitGroupInput, 0, len(req.UnitGroups))
+	for _, ug := range req.UnitGroups {
+		conversions := make([]*pb.BulkUpsertUnitGroupConversionInput, 0, len(ug.UnitConversions))
+		for _, c := range ug.UnitConversions {
+			discountPct := "1"
+			if c.DiscountPercentage != nil {
+				discountPct = strconv.FormatFloat(*c.DiscountPercentage, 'f', -1, 64)
+			}
+			conversions = append(conversions, &pb.BulkUpsertUnitGroupConversionInput{
+				Unit:               apirequest.UnitIdentifierToProto(c.Unit),
+				DiscountPercentage: discountPct,
+			})
+		}
+		unitGroups = append(unitGroups, &pb.BulkUpsertUnitGroupInput{
+			Name:            ug.Name,
+			Notes:           ug.Notes,
+			Type:            string(ug.Type),
+			BaseUnit:        apirequest.UnitIdentifierToProto(ug.BaseUnit),
+			UnitConversions: conversions,
+		})
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, unitGroupSvcTracer, "service.unit_groups.bulk_upsert", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.BulkUpsertUnitGroupsResponse, error) {
+			return m.coreClient.BulkUpsertUnitGroups(ctx, &pb.BulkUpsertUnitGroupsRequest{UnitGroups: unitGroups}, opts...)
+		})
+
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return jobep.JobFromProto(resp.GetJob()), nil
 }

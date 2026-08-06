@@ -20,6 +20,7 @@ func openAPIEndpointGroups() []apiendpoint.APIEndpointGroup {
 
 	coreClient := &grpcclient.CoreServiceClient{
 		Client: struct{ pbgrpc.CoreServiceClient }{},
+		Job:    struct{ pbgrpc.CoreJobServiceClient }{},
 		Sales:  struct{ pbgrpc.CoreSalesServiceClient }{},
 		Purchase: struct {
 			pbgrpc.CorePurchaseServiceClient
@@ -345,6 +346,9 @@ func openAPIEndpointGroups() []apiendpoint.APIEndpointGroup {
 			CoreClient: coreClient,
 		}).APIEndpointGroup,
 		*(&httpgroup.ProductionRunsEndpointGroup{}).Materialize(&httpgroup.ProductionRunsEndpointGroupConfig{
+			CoreClient: coreClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.JobsEndpointGroup{}).Materialize(&httpgroup.JobsEndpointGroupConfig{
 			CoreClient: coreClient,
 		}).APIEndpointGroup,
 		*(&httpgroup.MachineDowntimeEndpointGroup{}).Materialize(&httpgroup.MachineDowntimeEndpointGroupConfig{

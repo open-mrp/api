@@ -166,9 +166,12 @@ func buildOpenAPISpec(groups []apiendpoint.APIEndpointGroup, publicOnly bool, ve
 					for _, f := range flattenStructFields(reqType) {
 						// Handle Parameters
 						if header := f.Tag.Get("header"); header != "" {
-							desc := fmt.Sprintf("Header parameter: %s for %s", header, title)
-							if header == "Authorization" {
+							desc := getFieldDoc(reqType, f, docReader)
+							if desc == "" && header == "Authorization" {
 								desc = fmt.Sprintf("The authentication token (Bearer or Basic scheme) for %s", title)
+							}
+							if desc == "" {
+								desc = fmt.Sprintf("Header parameter: %s for %s", header, title)
 							}
 							operation.Parameters = append(operation.Parameters, Parameter{
 								Name:        header,

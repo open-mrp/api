@@ -7,12 +7,15 @@ package core;
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";
 import "core/core.proto";
+import "core/core_fuzzy_identifiers.proto";
+import "core/core_async.proto";
 
 option go_package = "shared/proto/core;core";
 
 service CoreProductionRunService {
   // ListProductionRuns returns a paginated list of production runs.
   rpc ListProductionRuns(ListProductionRunsRequest) returns (ListProductionRunsResponse);
+  rpc ExportProductionRuns(ExportProductionRunsRequest) returns (ExportProductionRunsResponse);
 
   // GetProductionRun returns a single production run by its ID.
   rpc GetProductionRun(GetProductionRunRequest) returns (GetProductionRunResponse);
@@ -31,6 +34,40 @@ service CoreProductionRunService {
 
   // ListBatchesByProductionRun returns all batches for a production run.
   rpc ListBatchesByProductionRun(ListBatchesByProductionRunRequest) returns (ListBatchesByProductionRunResponse);
+
+  // BulkCreateProductionRuns creates production runs with their batches in a single
+  // atomic transaction. Run numbers are auto-assigned sequentially.
+  rpc BulkCreateProductionRuns(BulkCreateProductionRunsRequest) returns (BulkCreateProductionRunsResponse);
+}
+
+// --- Bulk Create Production Runs ---
+
+message BulkCreateBatchInput {
+  ItemIdentifier item = 1;
+  string quantity_value = 2;
+  UnitIdentifier quantity_unit = 3;
+  optional string seconds_value = 4;
+  UnitIdentifier seconds_unit = 5;
+  optional string waste_value = 6;
+  UnitIdentifier waste_unit = 7;
+  optional string production_step_id = 8;
+  ObjectIdentifier scanning_station = 9;
+}
+
+message BulkCreateProductionRunInput {
+  string responsible_user_id = 1;
+  repeated BulkCreateBatchInput batches = 2;
+}
+
+message BulkCreateProductionRunsRequest {
+  repeated BulkCreateProductionRunInput production_runs = 1;
+}
+
+message BulkCreateProductionRunsResponse {
+  // The raised job, returned as the canonical Job resource. Its results already carry
+  // the pre-generated run and batch IDs; the client polls it via the 202's Location
+  // header for completion.
+  JobInfo job = 1;
 }
 
 // ProductionRunInfo represents a full production run resource.
@@ -79,6 +116,13 @@ message ListProductionRunsRequest {
 message ListProductionRunsResponse {
   repeated ProductionRunSummaryInfo production_runs = 1;
   PageInfo page_info = 2;
+}
+
+message ExportProductionRunsRequest {
+  optional string query = 1;
+}
+message ExportProductionRunsResponse {
+  JobInfo job = 1;
 }
 
 message GetProductionRunRequest {

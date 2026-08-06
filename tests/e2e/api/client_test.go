@@ -460,3 +460,34 @@ func DataItemField(item json.RawMessage, field string) string {
 	}
 	return s
 }
+
+// performs an authenticated GET that stops at a redirect instead of following it, so the
+// status and Location of a 303 can both be read. The default client follows one silently.
+func (c *Client) GetWithoutFollowingRedirects(path string) (int, string, []byte, error) {
+	req, err := http.NewRequest(http.MethodGet, c.baseURL+path, nil)
+	if err != nil {
+		return 0, "", nil, fmt.Errorf("creating request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	req.Header.Set("Augno-Account", c.accountID)
+	req.Header.Set("Augno-Version", c.apiVersion)
+	req.Header.Set("Accept", "application/json")
+
+	noFollow := &http.Client{
+		Timeout: c.httpClient.Timeout,
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+	resp, err := noFollow.Do(req)
+	if err != nil {
+		return 0, "", nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return resp.StatusCode, "", nil, err
+	}
+	return resp.StatusCode, resp.Header.Get("Location"), body, nil
+}

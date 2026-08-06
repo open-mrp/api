@@ -152,3 +152,49 @@ func (h *gRPCHandler) DeleteProperty(ctx context.Context, req *pb.DeleteProperty
 
 	return &emptypb.Empty{}, nil
 }
+
+func (h *gRPCHandler) BulkUpsertProperties(ctx context.Context, req *pb.BulkUpsertPropertiesRequest) (*pb.BulkUpsertPropertiesResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	inputs := make([]domain.UpsertPropertyParams, len(req.Properties))
+	for i, p := range req.Properties {
+		attributes := make([]domain.UpsertPropertyAttributeParams, len(p.Attributes))
+		for j, a := range p.Attributes {
+			attributes[j] = domain.UpsertPropertyAttributeParams{
+				Value:     a.Value,
+				ColorCode: a.ColorCode,
+			}
+		}
+		inputs[i] = domain.UpsertPropertyParams{
+			Name:       p.Name,
+			Attributes: attributes,
+		}
+	}
+
+	job, apiErr := h.propertySvc.BulkUpsertProperties(ctx, domain.BulkUpsertPropertiesParams{
+		Properties: inputs,
+	})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.BulkUpsertPropertiesResponse{Job: jobToProto(job)}, nil
+}
+
+func (h *gRPCHandler) ExportProperties(ctx context.Context, req *pb.ExportPropertiesRequest) (*pb.ExportPropertiesResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	job, apiErr := h.propertySvc.ExportProperties(ctx, domain.ExportPropertiesParams{Query: req.Query})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.ExportPropertiesResponse{Job: jobToProto(job)}, nil
+}

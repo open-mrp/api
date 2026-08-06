@@ -64,10 +64,14 @@ type APIEndpoint[TReq, TResp any] struct {
 	MinVersion       *version.APIVersion                       `json:"-" yaml:"-"`
 	// ObjectType identifies the API resource type this endpoint operates on. Used for version transformations. Only endpoints with an ObjectType get transformations applied.
 	ObjectType constants.ObjectType `json:"-" yaml:"-"`
-	// LocationFunc returns the Location header value for 201 Created responses.
+	// Returns the Location header value: the resource created on 201, or on 202 the job
+	// that tracks the accepted work and that the caller polls for its outcome.
 	LocationFunc func(TResp) string `json:"-" yaml:"-"`
 	// IncludeConfig declares which sub-objects can be expanded via the include query parameter. When nil, no include support is provided (zero overhead).
 	IncludeConfig *IncludeConfig `json:"-" yaml:"-"`
+	// (optional) Sets the response's Cache-Control header, for a body carrying something
+	// short-lived such as a signed URL.
+	CacheControl string `json:"-" yaml:"-"`
 
 	group               *APIEndpointGroup
 	service             any
@@ -416,8 +420,11 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 	}
 
 	var respondOpts []httptransport.RespondOption
-	if e.SuccessStatusCode == http.StatusCreated && e.LocationFunc != nil {
+	if e.LocationFunc != nil && (e.SuccessStatusCode == http.StatusCreated || e.SuccessStatusCode == http.StatusAccepted) {
 		respondOpts = append(respondOpts, httptransport.WithLocation(e.LocationFunc(resp)))
+	}
+	if e.CacheControl != "" {
+		respondOpts = append(respondOpts, httptransport.WithHeader("Cache-Control", e.CacheControl))
 	}
 
 	// File-download response (e.g. Excel export).

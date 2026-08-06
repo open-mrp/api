@@ -49,6 +49,14 @@ type ListScanningStationsResult struct {
 	PageInfo         pagination.PageInfo
 }
 
+// carries an export's filters — the list params without pagination, plus the cap
+// that keeps one request from building an unbounded workbook
+type ExportScanningStationsParams struct {
+	AccountID string
+	Query     *string
+	Limit     int32
+}
+
 type GetScanningStationParams struct {
 	AccountID         string
 	ScanningStationID string
@@ -60,10 +68,10 @@ type CreateScanningStationParams struct {
 	Name                string
 	Notes               *string
 	Type                constants.ScanningStationType
-	OperatorRequirement constants.OperatorRequirement
-	DepartmentID        string
 	LabelSizeCode       *string
 	LabelTypeCode       *string
+	OperatorRequirement constants.OperatorRequirement
+	DepartmentID        string
 	Includes            []string
 }
 
@@ -72,8 +80,8 @@ type UpdateScanningStationParams struct {
 	ScanningStationID   string
 	Name                *string
 	Notes               field.Clearable[string]
-	LabelSizeCode       *string
-	LabelTypeCode       *string
+	LabelSizeCode       field.Clearable[string]
+	LabelTypeCode       field.Clearable[string]
 	OperatorRequirement *constants.OperatorRequirement
 	Includes            []string
 }
@@ -81,6 +89,34 @@ type UpdateScanningStationParams struct {
 type DeleteScanningStationParams struct {
 	AccountID         string
 	ScanningStationID string
+}
+
+type UpsertScanningStationParams struct {
+	Name                string
+	Notes               *string
+	Type                constants.ScanningStationType
+	LabelSizeCode       field.Clearable[string]
+	LabelTypeCode       field.Clearable[string]
+	OperatorRequirement constants.OperatorRequirement
+	Department          ObjectIdentifier
+}
+
+type BulkUpsertScanningStationsParams struct {
+	ScanningStations []UpsertScanningStationParams
+}
+
+// ResolvedUpsertScanningStationRow is a scanning station upsert row with its department
+// reference resolved to an id. The engine round-trips job_items against this type, so it
+// carries no JSON tags — except the Clearable label fields, whose MarshalJSON errors on an
+// unset value and so require `omitzero` to be skipped.
+type ResolvedUpsertScanningStationRow struct {
+	Name                string
+	Notes               *string
+	Type                constants.ScanningStationType
+	LabelSizeCode       field.Clearable[string] `json:",omitzero"`
+	LabelTypeCode       field.Clearable[string] `json:",omitzero"`
+	OperatorRequirement constants.OperatorRequirement
+	DepartmentID        string
 }
 
 type ConnectProductionStepsByNameParams struct {

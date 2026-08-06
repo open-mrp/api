@@ -22,6 +22,7 @@ var productLineSvcTracer = tracing.GetTracer("core-service.product_line_service"
 type productLineSvcImpl struct {
 	repos           domain.RepoFactory
 	mediatorFactory domain.MediatorFactory
+	jobSvcFactory   domain.JobSvcFactory
 	txManager       TransactionManager
 }
 
@@ -31,6 +32,9 @@ type ProductLineSvcConfig struct {
 
 	// MediatorFactory (required) builds the mediators used by this service.
 	MediatorFactory domain.MediatorFactory
+
+	// JobSvcFactory (required) builds the job service the async bulk upsert records on.
+	JobSvcFactory domain.JobSvcFactory
 
 	// TxManager (required) wraps multi-step operations in database transactions.
 	TxManager TransactionManager
@@ -42,6 +46,9 @@ func (c *ProductLineSvcConfig) validate() error {
 	}
 	if c.MediatorFactory == nil {
 		return fmt.Errorf("product line service: mediator factory is required")
+	}
+	if c.JobSvcFactory == nil {
+		return fmt.Errorf("product line service: job service factory is required")
 	}
 	if c.TxManager == nil {
 		return fmt.Errorf("product line service: tx manager is required")
@@ -57,6 +64,7 @@ func NewProductLineSvc(config *ProductLineSvcConfig) domain.ProductLineSvc {
 	return &productLineSvcImpl{
 		repos:           config.Repos,
 		mediatorFactory: config.MediatorFactory,
+		jobSvcFactory:   config.JobSvcFactory,
 		txManager:       config.TxManager,
 	}
 }
@@ -74,6 +82,7 @@ func (s *productLineSvcImpl) withTx(ctx context.Context, fn func(context.Context
 		txSvc := &productLineSvcImpl{
 			repos:           f,
 			mediatorFactory: s.mediatorFactory,
+			jobSvcFactory:   s.jobSvcFactory,
 			txManager:       s.txManager,
 		}
 		return fn(txCtx, txSvc)

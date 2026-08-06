@@ -8,6 +8,14 @@ import (
 )
 
 // UnitGroupFull represents a full unit group with its base unit and conversions.
+// carries an export's filters — the list params without pagination, plus the cap
+// that keeps one request from building an unbounded workbook
+type ExportUnitGroupsParams struct {
+	AccountID string
+	Query     *string
+	Limit     int32
+}
+
 type UnitGroupFull struct {
 	ID              string
 	Name            string           `audit:"name"`
@@ -53,6 +61,12 @@ type GetUnitGroupParams struct {
 	Includes    []string
 }
 
+type UnitGroupExistsParams struct {
+	AccountID   string
+	UnitGroupID string
+}
+
+// CreateUnitGroupParams is the service-level params for creating a unit group with its initial conversions.
 type CreateUnitGroupParams struct {
 	AccountID       string
 	Name            string
@@ -63,6 +77,7 @@ type CreateUnitGroupParams struct {
 	Includes        []string
 }
 
+// CreateUnitGroupUnitParams describes a single unit conversion to attach to a group.
 type CreateUnitGroupUnitParams struct {
 	UnitID             string
 	DiscountPercentage string
@@ -70,6 +85,7 @@ type CreateUnitGroupUnitParams struct {
 	IsVisible          bool
 }
 
+// UpdateUnitGroupParams is the service-level params for updating a unit group and optionally upserting conversions.
 type UpdateUnitGroupParams struct {
 	AccountID       string
 	UnitGroupID     string
@@ -96,6 +112,43 @@ type UpsertUnitGroupUnitParams struct {
 	// IsVisibleProvided reports whether the caller supplied is_visible. When false, the upsert preserves the stored value on update (or defaults to true on create) rather than clobbering it to false.
 	IsVisibleProvided bool
 	Includes          []string
+}
+
+type UpsertUnitConversionParams struct {
+	Unit               UnitIdentifier
+	DiscountPercentage string
+}
+
+type UpsertUnitGroupParams struct {
+	Name            string
+	Notes           *string
+	Type            string
+	BaseUnit        UnitIdentifier
+	UnitConversions []UpsertUnitConversionParams
+}
+
+// ResolvedUnitGroupConversion is one conversion after resolution.
+type ResolvedUnitGroupConversion struct {
+	UnitID             string
+	DimensionCode      string
+	DiscountPercentage string
+}
+
+// ResolvedUpsertUnitGroupRow is a unit-group upsert row after resolution.
+type ResolvedUpsertUnitGroupRow struct {
+	Name       string
+	Notes      *string
+	Type       string
+	BaseUnitID string
+	// BaseUnitDimensionCode is the resolved base unit's dimension, carried so Write can
+	// check it against the group's (stored, immutable) type without a further lookup —
+	// exactly as the conversions do.
+	BaseUnitDimensionCode string
+	Conversions           []ResolvedUnitGroupConversion
+}
+
+type BulkUpsertUnitGroupsParams struct {
+	UnitGroups []UpsertUnitGroupParams
 }
 
 type DeleteUnitGroupUnitParams struct {

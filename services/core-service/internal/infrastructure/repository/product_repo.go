@@ -801,6 +801,36 @@ func (r *productRepoImpl) ValidateProducts(ctx context.Context, params domain.Va
 	return &domain.ValidateProductsResult{Products: products}, nil
 }
 
+func (r *productRepoImpl) FindBySKUs(ctx context.Context, accountID string, skus []string) ([]*domain.ProductSKUMatch, *apierror.APIError) {
+	ctx, span := productRepoTracer.Start(ctx, "repository.product.find_by_skus")
+	defer span.End()
+
+	if len(skus) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.queries.FindProductSKUMatches(ctx, sqlc.FindProductSKUMatchesParams{
+		Skus:      skus,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	matches := make([]*domain.ProductSKUMatch, len(rows))
+	for i, row := range rows {
+		matches[i] = &domain.ProductSKUMatch{
+			ProductID:       row.ProductID,
+			ItemID:          row.ItemID,
+			SKU:             row.Sku,
+			CategoryID:      row.ItemCategoryID,
+			UnitValueRateID: row.UnitValueID,
+			UnitCostRateID:  row.UnitCostID,
+		}
+	}
+	return matches, nil
+}
+
 func (r *productRepoImpl) ExistsBySKU(ctx context.Context, accountID, sku string, excludeItemID *string) (bool, *apierror.APIError) {
 	ctx, span := productRepoTracer.Start(ctx, "repository.product.exists_by_sku")
 	defer span.End()
@@ -900,6 +930,7 @@ func (r *productRepoImpl) Export(ctx context.Context, params domain.ExportProduc
 		IsPortalReady:            toNullBool(params.IsPortalReady),
 		StartDate:                startDate,
 		EndDate:                  endDate,
+		Limit:                    exportQueryLimit,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -918,12 +949,12 @@ func (r *productRepoImpl) Export(ctx context.Context, params domain.ExportProduc
 	return products, nil
 }
 
-func (r *productRepoImpl) InsertItem(ctx context.Context, itemID string, params domain.CreateProductParams) *apierror.APIError {
+func (r *productRepoImpl) InsertItem(ctx context.Context, params domain.InsertProductItemParams) *apierror.APIError {
 	ctx, span := productRepoTracer.Start(ctx, "repository.product.insert_item")
 	defer span.End()
 
 	err := r.queries.ProductInsertItem(ctx, sqlc.ProductInsertItemParams{
-		ID:             itemID,
+		ID:             params.ItemID,
 		Sku:            params.SKU,
 		Description:    toNullString(params.Description),
 		Notes:          toNullString(params.Notes),

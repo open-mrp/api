@@ -85,6 +85,143 @@ func (q *Queries) DeletePropertyAttributes(ctx context.Context, arg DeleteProper
 	return err
 }
 
+const exportProperties = `-- name: ExportProperties :many
+SELECT
+    property.id,
+    property.name,
+    property.account_id,
+    property.is_public,
+    property.created_at,
+    property.updated_at
+FROM property
+WHERE property.account_id = ?
+AND (
+    ? IS NULL
+    OR property.name LIKE ?
+)
+ORDER BY property.created_at DESC, property.id DESC
+LIMIT ?
+`
+
+type ExportPropertiesParams struct {
+	AccountID   string
+	SearchQuery sql.NullString
+	Limit       int32
+}
+
+type ExportPropertiesRow struct {
+	ID        string
+	Name      string
+	AccountID string
+	IsPublic  bool
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+// Unpaginated by design; the caller passes a row cap as the limit.
+func (q *Queries) ExportProperties(ctx context.Context, arg ExportPropertiesParams) ([]ExportPropertiesRow, error) {
+	rows, err := q.db.QueryContext(ctx, exportProperties,
+		arg.AccountID,
+		arg.SearchQuery,
+		arg.SearchQuery,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ExportPropertiesRow
+	for rows.Next() {
+		var i ExportPropertiesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.AccountID,
+			&i.IsPublic,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const findPropertiesByNames = `-- name: FindPropertiesByNames :many
+SELECT
+    property.id,
+    property.name,
+    property.account_id,
+    property.is_public,
+    property.created_at,
+    property.updated_at
+FROM property
+WHERE property.name IN (/*SLICE:names*/?)
+AND property.account_id = ?
+`
+
+type FindPropertiesByNamesParams struct {
+	Names     []string
+	AccountID string
+}
+
+type FindPropertiesByNamesRow struct {
+	ID        string
+	Name      string
+	AccountID string
+	IsPublic  bool
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func (q *Queries) FindPropertiesByNames(ctx context.Context, arg FindPropertiesByNamesParams) ([]FindPropertiesByNamesRow, error) {
+	query := findPropertiesByNames
+	var queryParams []interface{}
+	if len(arg.Names) > 0 {
+		for _, v := range arg.Names {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:names*/?", strings.Repeat(",?", len(arg.Names))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:names*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FindPropertiesByNamesRow
+	for rows.Next() {
+		var i FindPropertiesByNamesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.AccountID,
+			&i.IsPublic,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getPropertiesByIDs = `-- name: GetPropertiesByIDs :many
 SELECT
     property.id,

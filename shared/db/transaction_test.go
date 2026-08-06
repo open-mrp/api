@@ -162,3 +162,65 @@ func TestTransactionManager_WithTx_FactoryReceivesTxQueries(t *testing.T) {
 	assert.Equal(t, queries.txQueries, receivedQueries, "factory should receive the tx-bound queries")
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
+
+// A partial-success batch: one unit of work succeeds (SAVEPOINT then RELEASE) and one
+// fails (SAVEPOINT then ROLLBACK TO SAVEPOINT). The failing unit's error surfaces from
+// its Run, the transaction stays alive, and the outer WithTxSavepoint commits the rest.
+func TestTransactionManager_WithTxSavepoint_PartialSuccess(t *testing.T) {
+	t.Parallel()
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	mock.ExpectBegin()
+	mock.ExpectExec("SAVEPOINT sp1").WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectExec("RELEASE SAVEPOINT sp1").WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectExec("SAVEPOINT sp2").WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectExec("ROLLBACK TO SAVEPOINT sp2").WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectCommit()
+
+	queries := &mockQueries{db: db}
+	factoryCreate := func(q *mockQueries) *mockFactory { return &mockFactory{queries: q} }
+	txMgr := NewTransactionManager(db, queries, factoryCreate)
+
+	rowErr := apierror.NewValidationError("bad row")
+	var okErr, failErr *apierror.APIError
+	apiErr := txMgr.WithTxSavepoint(context.Background(), func(ctx context.Context, f *mockFactory, sp SavepointRunner) *apierror.APIError {
+		okErr = sp.Run(ctx, func(context.Context) *apierror.APIError { return nil })
+		failErr = sp.Run(ctx, func(context.Context) *apierror.APIError { return rowErr })
+		return nil
+	})
+
+	assert.Nil(t, apiErr, "the batch commits even though one unit failed")
+	assert.Nil(t, okErr)
+	assert.Same(t, rowErr, failErr, "the failing unit's error surfaces from its Run")
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+// If ROLLBACK TO SAVEPOINT itself fails the transaction is doomed, so Run surfaces an
+// internal error rather than the caller's, and the batch aborts.
+func TestTransactionManager_WithTxSavepoint_RollbackFailureAborts(t *testing.T) {
+	t.Parallel()
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	mock.ExpectBegin()
+	mock.ExpectExec("SAVEPOINT sp1").WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectExec("ROLLBACK TO SAVEPOINT sp1").WillReturnError(errors.New("connection lost"))
+	mock.ExpectRollback()
+
+	queries := &mockQueries{db: db}
+	factoryCreate := func(q *mockQueries) *mockFactory { return &mockFactory{queries: q} }
+	txMgr := NewTransactionManager(db, queries, factoryCreate)
+
+	apiErr := txMgr.WithTxSavepoint(context.Background(), func(ctx context.Context, f *mockFactory, sp SavepointRunner) *apierror.APIError {
+		return sp.Run(ctx, func(context.Context) *apierror.APIError {
+			return apierror.NewValidationError("bad row")
+		})
+	})
+
+	require.NotNil(t, apiErr)
+	assert.Equal(t, apierror.ErrorCodeInternalError, apiErr.Code)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}

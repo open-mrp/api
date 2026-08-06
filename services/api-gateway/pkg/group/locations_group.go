@@ -47,6 +47,8 @@ func (*LocationsEndpointGroup) Materialize(config *LocationsEndpointGroupConfig)
 	deleteLocationEndpoint := apiendpoint.From(&locationep.DeleteLocationEndpoint{}).WithService(inner, locationSvc)
 	listLocationTypesEndpoint := apiendpoint.From(&locationep.ListLocationTypesEndpoint{}).WithService(inner, locationSvc)
 	getLocationTypeEndpoint := apiendpoint.From(&locationep.RetrieveLocationTypeEndpoint{}).WithService(inner, locationSvc)
+	bulkUpsertLocationsEndpoint := apiendpoint.From(&locationep.BulkUpsertLocationsEndpoint{}).WithService(inner, locationSvc)
+	exportLocationsEndpoint := apiendpoint.From(&locationep.ExportLocationsEndpoint{}).WithService(inner, locationSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listLocationsEndpoint,
@@ -56,6 +58,8 @@ func (*LocationsEndpointGroup) Materialize(config *LocationsEndpointGroupConfig)
 		deleteLocationEndpoint,
 		listLocationTypesEndpoint,
 		getLocationTypeEndpoint,
+		bulkUpsertLocationsEndpoint,
+		exportLocationsEndpoint,
 	}
 
 	return &LocationsEndpointGroup{inner}

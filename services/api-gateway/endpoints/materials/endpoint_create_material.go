@@ -17,7 +17,7 @@ import (
 // A quantity, given as a decimal value and the unit it is measured in.
 type QuantityInputRequest struct {
 	// Decimal value of the quantity.
-	Value string `json:"value" validate:"required"`
+	Value string `json:"value" validate:"required" format:"decimal"`
 	// ID of the unit the value is expressed in.
 	UnitID string `json:"unit_id" validate:"required"`
 }

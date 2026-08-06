@@ -645,3 +645,205 @@ func TestProductLines_ListIncludeUnitGroup(t *testing.T) {
 	}
 	assert.True(t, found, "at least one list item should have a unit_group with ?include=unit_group")
 }
+
+// ==========================================================================
+// Bulk Upsert
+// ==========================================================================
+
+const productLinesBulkUpsertPath = productLinesPath + "/actions/bulk-upsert"
+
+// bulkUpsertPLInput builds a minimal product line entry for bulk-upsert payloads.
+// The unit group is a fuzzy reference, so it is sent as an object keyed by id.
+func bulkUpsertPLInput(name, unitGroupID, commissionPolicy, freightPolicy string) map[string]any {
+	return map[string]any{
+		"name":              name,
+		"unit_group":        map[string]any{"id": unitGroupID},
+		"commission_policy": commissionPolicy,
+		"freight_policy":    freightPolicy,
+	}
+}
+
+func cleanupProductLineIDs(ids []string) {
+	for _, id := range ids {
+		if id != "" {
+			apiClient.Delete(productLinesPath + "/" + id)
+		}
+	}
+}
+
+// bulkUpsertProductLines posts a bulk upsert of the given rows.
+func bulkUpsertProductLines(t *testing.T, rows ...map[string]any) (int, []byte) {
+	t.Helper()
+	items := make([]any, len(rows))
+	for i, r := range rows {
+		items[i] = r
+	}
+	status, body, err := apiClient.Post(productLinesBulkUpsertPath, map[string]any{"product_lines": items}, newIdempotencyKey())
+	require.NoError(t, err)
+	return status, body
+}
+
+// bulkUpsertProductLinesJob posts a bulk upsert, requires the 202 job acknowledgment, and
+// returns the completed job.
+func bulkUpsertProductLinesJob(t *testing.T, rows ...map[string]any) map[string]any {
+	t.Helper()
+	status, body := bulkUpsertProductLines(t, rows...)
+	requireStatus(t, 202, status, body)
+
+	m := parseJSON(body)
+	assert.Equal(t, "job", jsonField(m, "object"), "202 returns the canonical job resource")
+	jobID := jsonField(m, "id")
+	require.NotEmpty(t, jobID, "202 must name the job to poll")
+
+	job := pollJobUntilTerminal(t, jobID)
+	require.Equal(t, "completed", jsonField(job, "status"), "job should complete: %v", job)
+	return job
+}
+
+// bulkUpsertProductLineIDs posts a bulk upsert, follows the job to completion, and returns
+// the created/updated product line IDs from its results.
+func bulkUpsertProductLineIDs(t *testing.T, rows ...map[string]any) (createdIDs, updatedIDs []string) {
+	t.Helper()
+	job := bulkUpsertProductLinesJob(t, rows...)
+	require.NotEmpty(t, jsonArray(job, "results"), "a completed job must carry results")
+	return jobResultIDs(job)
+}
+
+func TestProductLines_BulkUpsert_AllCreates(t *testing.T) {
+	t.Parallel()
+	name1 := uniqueName("e2e-bulkpl-a")
+	name2 := uniqueName("e2e-bulkpl-b")
+
+	createdIDs, updatedIDs := bulkUpsertProductLineIDs(t,
+		bulkUpsertPLInput(name1, SeedUnitGroupID, "commission_applied", "billed_freight"),
+		bulkUpsertPLInput(name2, SeedUnitGroupID, "commission_exempt", "free_freight"),
+	)
+	defer cleanupProductLineIDs(createdIDs)
+
+	require.Len(t, createdIDs, 2, "should have 2 created IDs")
+	for _, id := range createdIDs {
+		assertIDFormat(t, id, "pdln")
+	}
+	assert.Empty(t, updatedIDs, "no updates expected")
+}
+
+func TestProductLines_BulkUpsert_AllUpdates(t *testing.T) {
+	t.Parallel()
+	name := uniqueName("e2e-bulkpl-upd")
+
+	// Create
+	createdIDs, _ := bulkUpsertProductLineIDs(t, bulkUpsertPLInput(name, SeedUnitGroupID, "commission_applied", "billed_freight"))
+	defer cleanupProductLineIDs(createdIDs)
+	require.Len(t, createdIDs, 1)
+	productLineID := createdIDs[0]
+
+	// Update (same name → matches, flips policies)
+	created, updated := bulkUpsertProductLineIDs(t, bulkUpsertPLInput(name, SeedUnitGroupID, "commission_exempt", "free_freight"))
+	assert.Empty(t, created, "no creates expected on update")
+	require.Len(t, updated, 1, "should have 1 updated ID")
+	assert.Equal(t, productLineID, updated[0], "updated ID must match the originally created ID")
+
+	// Verify the policy change persisted.
+	getStatus, getBody, err := apiClient.GetListRaw(productLinesPath+"/"+productLineID, nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, getStatus, getBody)
+	got := parseJSON(getBody)
+	assert.Equal(t, "commission_exempt", jsonField(got, "commission_policy"))
+	assert.Equal(t, "free_freight", jsonField(got, "freight_policy"))
+}
+
+func TestProductLines_BulkUpsert_MixedCreateAndUpdate(t *testing.T) {
+	t.Parallel()
+	existingName := uniqueName("e2e-bulkpl-mix-exist")
+	newName := uniqueName("e2e-bulkpl-mix-new")
+
+	// Seed existing
+	seeded, _ := bulkUpsertProductLineIDs(t, bulkUpsertPLInput(existingName, SeedUnitGroupID, "commission_applied", "billed_freight"))
+	defer cleanupProductLineIDs(seeded)
+
+	// Mix: update existing + create new
+	created, updated := bulkUpsertProductLineIDs(t,
+		bulkUpsertPLInput(existingName, SeedUnitGroupID, "commission_applied", "billed_freight"),
+		bulkUpsertPLInput(newName, SeedUnitGroupID, "commission_exempt", "free_freight"),
+	)
+	defer cleanupProductLineIDs(created)
+
+	assert.Len(t, created, 1, "one new product line created")
+	assert.Len(t, updated, 1, "one existing product line updated")
+}
+
+// TestProductLines_BulkUpsert_Idempotency: replaying the accept with the same idempotency
+// key returns the same job, so the work is enqueued once.
+func TestProductLines_BulkUpsert_Idempotency(t *testing.T) {
+	t.Parallel()
+	name := uniqueName("e2e-bulkpl-idem")
+	idemKey := newIdempotencyKey()
+	payload := map[string]any{
+		"product_lines": []any{bulkUpsertPLInput(name, SeedUnitGroupID, "commission_applied", "billed_freight")},
+	}
+
+	status1, body1, err := apiClient.Post(productLinesBulkUpsertPath, payload, idemKey)
+	require.NoError(t, err)
+	requireStatus(t, 202, status1, body1)
+	jobID := jsonField(parseJSON(body1), "id")
+	require.NotEmpty(t, jobID)
+
+	status2, body2, err := apiClient.Post(productLinesBulkUpsertPath, payload, idemKey)
+	require.NoError(t, err)
+	requireStatus(t, 202, status2, body2)
+	assert.Equal(t, jobID, jsonField(parseJSON(body2), "id"), "idempotent request must return the same job")
+
+	job := pollJobUntilTerminal(t, jobID)
+	require.Equal(t, "completed", jsonField(job, "status"))
+	created, _ := jobResultIDs(job)
+	defer cleanupProductLineIDs(created)
+	require.Len(t, created, 1)
+}
+
+func TestProductLines_BulkUpsert_DuplicateNameRejected(t *testing.T) {
+	t.Parallel()
+	name := uniqueName("e2e-bulkpl-dup")
+
+	status, body := bulkUpsertProductLines(t,
+		bulkUpsertPLInput(name, SeedUnitGroupID, "commission_applied", "billed_freight"),
+		bulkUpsertPLInput(name, SeedUnitGroupID, "commission_exempt", "free_freight"),
+	)
+	requireStatus(t, 400, status, body)
+}
+
+// TestProductLines_BulkUpsert_ResolvesUnitGroupByName: the unit group is a fuzzy
+// reference — it resolves by name, not only by id.
+func TestProductLines_BulkUpsert_ResolvesUnitGroupByName(t *testing.T) {
+	t.Parallel()
+	name := uniqueName("e2e-bulkpl-ugname")
+
+	createdIDs, _ := bulkUpsertProductLineIDs(t, map[string]any{
+		"name":              name,
+		"unit_group":        map[string]any{"name": "socks"}, // by name, case-insensitive
+		"commission_policy": "commission_applied",
+		"freight_policy":    "billed_freight",
+	})
+	defer cleanupProductLineIDs(createdIDs)
+	require.Len(t, createdIDs, 1)
+
+	getStatus, getBody, err := apiClient.GetListRaw(productLinesPath+"/"+createdIDs[0], url.Values{"include": {"unit_group"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, getStatus, getBody)
+	ug := jsonObject(parseJSON(getBody), "unit_group")
+	require.NotNil(t, ug, "unit_group should be populated with ?include=unit_group")
+	assert.Equal(t, SeedUnitGroupID, jsonField(ug, "id"))
+}
+
+// TestProductLines_BulkUpsert_RejectsUnknownUnitGroup: references resolve at accept, so an
+// unresolvable unit group is a synchronous 400 naming the offending row and no job is raised.
+func TestProductLines_BulkUpsert_RejectsUnknownUnitGroup(t *testing.T) {
+	t.Parallel()
+
+	status, body := bulkUpsertProductLines(t,
+		bulkUpsertPLInput(uniqueName("e2e-bulkpl-ugok"), SeedUnitGroupID, "commission_applied", "billed_freight"),
+		bulkUpsertPLInput(uniqueName("e2e-bulkpl-ugbad"), "ungp_does_not_exist_00000", "commission_exempt", "free_freight"),
+	)
+	requireStatus(t, 400, status, body)
+	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
+	assertErrorParam(t, errObj, "product_lines[1].unit_group")
+}

@@ -74,7 +74,7 @@ func (s *productionScheduleSvcImpl) resolveLineUnitID(
 		return "", apierror.NewValidationError("This item has no category, so the quantity to produce has no unit.")
 	}
 
-	unitID, apiErr := s.repos.NewItemRepo().GetCategoryBaseUnitID(ctx, item.ItemCategoryID)
+	unitID, _, apiErr := s.repos.NewItemRepo().GetCategoryBaseUnitID(ctx, item.ItemCategoryID)
 	if apiErr != nil {
 		return "", apiErr
 	}

@@ -193,6 +193,43 @@ type AccountPriceItemCategory struct {
 	UpdatedAt      time.Time
 }
 
+type AccountProductionScheduleSetting struct {
+	ID                             string
+	AccountID                      string
+	ConstraintDepartmentID         sql.NullString
+	PlanningHorizonWeeks           int32
+	FrozenWeeks                    int32
+	WeekStartDay                   int32
+	DemandWindowMonths             int32
+	ForecastHistoryMonths          int32
+	ForecastMonths                 int32
+	DemandBasisCode                string
+	ForecastZ                      string
+	ChangeoverAvgMinutes           string
+	ChangeoverMinMinutes           string
+	ChangeoverMaxMinutes           string
+	ChangeoverLaborRate            string
+	HoldingRatePct                 string
+	ServiceLevelZ                  string
+	FinishLeadTimeWeeks            string
+	DefaultConstraintLeadTimeWeeks string
+	MaxWeeksSupply                 string
+	MaxFlowDepth                   int32
+	ShiftsPerDay                   int32
+	HoursPerShift                  string
+	WorkDaysPerWeek                int32
+	WeeksPerYear                   int32
+	CapacityHeadroomPct            string
+	DefaultLotUnits                string
+	IsEnabled                      bool
+	GenerationCron                 sql.NullString
+	GenerationTimezone             string
+	AutoPublish                    bool
+	LastGeneratedAt                sql.NullTime
+	CreatedAt                      time.Time
+	UpdatedAt                      time.Time
+}
+
 type AccountRelation struct {
 	ID                       string
 	OwnerAccountID           string
@@ -397,6 +434,8 @@ type AuditEvent struct {
 	SourceIp         sql.NullString
 	OccurredAt       time.Time
 	CreatedAt        time.Time
+	RootResourceID   sql.NullString
+	RootResourceType sql.NullString
 }
 
 type Batch struct {
@@ -602,14 +641,43 @@ type DeliveryStatus struct {
 	UpdatedAt time.Time
 }
 
+type DemandOverride struct {
+	ID               string
+	AccountID        string
+	ScopeCode        string
+	ScopeRefID       string
+	PeriodStartDate  time.Time
+	PeriodEndDate    time.Time
+	OverrideTypeCode string
+	Value            string
+	UnitID           sql.NullString
+	ReasonCode       sql.NullString
+	Note             sql.NullString
+	CreatedByID      string
+	EffectiveFrom    time.Time
+	ExpiresAt        sql.NullTime
+	IsActive         bool
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+}
+
+type DemandOverrideType struct {
+	ID        string
+	Code      string
+	Name      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
 type Department struct {
-	ID         string
-	Name       string
-	Notes      sql.NullString
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
-	LocationID sql.NullString
-	AccountID  string
+	ID          string
+	Name        string
+	Notes       sql.NullString
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	LocationID  sql.NullString
+	AccountID   string
+	LaborRateID sql.NullString
 }
 
 type DepartmentsPick struct {
@@ -984,6 +1052,24 @@ type ItemType struct {
 	Code      string
 }
 
+type Job struct {
+	ID           int64
+	JobID        string
+	Type         string
+	JobItems     json.RawMessage
+	AccountID    sql.NullString
+	CreatedBy    sql.NullString
+	Results      json.RawMessage
+	Errors       json.RawMessage
+	ErrorSummary sql.NullString
+	UpdatedAt    time.Time
+	CreatedAt    time.Time
+	StartedAt    sql.NullTime
+	CancelledAt  sql.NullTime
+	CompletedAt  sql.NullTime
+	FailedAt     sql.NullTime
+}
+
 type JournalPosting struct {
 	ID                   string
 	AccountTransactionID string
@@ -1031,6 +1117,40 @@ type Machine struct {
 	ProductionStepID sql.NullString
 	SerialNumber     string
 	DepartmentID     string
+}
+
+type MachineDowntimeEvent struct {
+	ID               string
+	AccountID        string
+	MachineID        string
+	DepartmentID     sql.NullString
+	ProductionStepID sql.NullString
+	ReasonCode       string
+	StartedAt        time.Time
+	EndedAt          sql.NullTime
+	DurationSeconds  sql.NullInt32
+	ShiftDate        time.Time
+	ShiftCode        sql.NullString
+	ItemID           sql.NullString
+	ProductionRunID  sql.NullString
+	BatchID          sql.NullString
+	ScheduleLineID   sql.NullString
+	Note             sql.NullString
+	ReportedByID     string
+	SourceCode       string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+}
+
+type MachineDowntimeReason struct {
+	ID        string
+	Code      string
+	Name      string
+	OeeBucket string
+	IsPlanned bool
+	SortOrder int32
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 type Material struct {
@@ -1380,6 +1500,7 @@ type ProductLine struct {
 	UnitGroupID        string
 	IsCommissionExempt bool
 	IsFreightExempt    bool
+	DefaultLotID       sql.NullString
 }
 
 type ProductLineTarget struct {
@@ -1425,6 +1546,230 @@ type ProductionRun struct {
 	AccountID         string
 	CompletedAt       sql.NullTime
 	StartedAt         sql.NullTime
+}
+
+type ProductionSchedule struct {
+	ID                    string
+	AccountID             string
+	Version               int32
+	StatusCode            string
+	Name                  sql.NullString
+	PlanningAsOf          time.Time
+	HorizonStartDate      time.Time
+	HorizonEndDate        time.Time
+	HorizonWeeks          int32
+	FrozenWeeks           int32
+	FrozenThroughDate     sql.NullTime
+	DemandBasisCode       string
+	GenerationSourceCode  string
+	SolverVersion         string
+	SettingsSnapshot      json.RawMessage
+	Diagnostics           json.RawMessage
+	ErrorMessage          sql.NullString
+	FrozenLineCount       int32
+	FrozenPlannedQuantity string
+	GeneratedByID         sql.NullString
+	PublishedByID         sql.NullString
+	PublishedAt           sql.NullTime
+	SupersededByID        sql.NullString
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
+}
+
+type ProductionScheduleDerivedLine struct {
+	ID                   string
+	AccountID            string
+	ProductionScheduleID string
+	SourceLineID         string
+	ProductionStepID     string
+	DepartmentID         sql.NullString
+	ItemID               string
+	WeekIndex            int32
+	WeekStartDate        time.Time
+	Quantity             string
+	PlannedUnitID        sql.NullString
+	ExplosionDepth       int32
+	OffsetWeeks          int32
+	StatusCode           string
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+}
+
+type ProductionScheduleDeviation struct {
+	ID                       string
+	AccountID                string
+	ProductionScheduleID     string
+	ProductionScheduleLineID sql.NullString
+	DeviationTypeCode        string
+	IsFrozenWeek             bool
+	WeekIndex                sql.NullInt32
+	MachineID                sql.NullString
+	ItemID                   sql.NullString
+	BeforeJson               json.RawMessage
+	AfterJson                json.RawMessage
+	DeltaQuantity            string
+	DeltaRunHours            string
+	ReasonCode               sql.NullString
+	ReasonNote               sql.NullString
+	ActorID                  string
+	CreatedAt                time.Time
+}
+
+type ProductionScheduleFinishedPolicy struct {
+	ID                   string
+	AccountID            string
+	ProductionScheduleID string
+	ItemID               string
+	Sku                  string
+	GreigeItemID         string
+	GreigeSku            string
+	ProductLineID        sql.NullString
+	AnnualDemand         string
+	WeeklyDemand         string
+	SigmaWeekly          string
+	SafetyStock          string
+	ReorderPoint         string
+	OnHand               string
+	WeeksOfCover         string
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+}
+
+type ProductionScheduleItemPolicy struct {
+	ID                      string
+	AccountID               string
+	ProductionScheduleID    string
+	ItemID                  string
+	Sku                     string
+	ProductionStepID        sql.NullString
+	PrimaryMachineID        sql.NullString
+	AnnualDemand            string
+	WeeklyDemand            string
+	SecondsPerUnit          string
+	UnitCost                string
+	SetupCost               string
+	HoldingCost             string
+	EoqUnits                string
+	ConstraintLeadTimeWeeks string
+	FinishLeadTimeWeeks     string
+	SigmaWeeklyPooled       string
+	SigmaDownstreamSum      string
+	SafetyStockPrimary      string
+	SafetyStockDownstream   string
+	ReorderPoint            string
+	OrderUpTo               string
+	OnHandEchelon           string
+	OnHandGreige            string
+	AverageGreigeInventory  string
+	MaxGreigeInventory      string
+	WeeksOfCover            string
+	ProjectedOnHand         json.RawMessage
+	AnnualRunHours          string
+	AbcClass                sql.NullString
+	WasEoqCapped            bool
+	WasCapacityStarved      bool
+	CreatedAt               time.Time
+	UpdatedAt               time.Time
+	UnitID                  sql.NullString
+}
+
+type ProductionScheduleItemSetting struct {
+	ID                 string
+	AccountID          string
+	ItemID             string
+	IsExcluded         bool
+	MinLotUnits        sql.NullString
+	MaxLotUnits        sql.NullString
+	LotMultipleUnits   sql.NullString
+	FixedLeadTimeWeeks sql.NullString
+	ServiceLevelZ      sql.NullString
+	ManualEoqUnits     sql.NullString
+	AbcClassOverride   sql.NullString
+	PreferredMachineID sql.NullString
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+}
+
+type ProductionScheduleLine struct {
+	ID                       string
+	AccountID                string
+	ProductionScheduleID     string
+	WeekIndex                int32
+	WeekStartDate            time.Time
+	MachineID                string
+	ProductionStepID         sql.NullString
+	DepartmentID             sql.NullString
+	ItemID                   string
+	PlannedQuantity          string
+	PlannedUnitID            sql.NullString
+	PlannedLots              int32
+	PlannedRunHours          string
+	PlannedChangeoverMinutes string
+	SequenceIndex            int32
+	ProjectedOnHandBefore    string
+	ProjectedOnHandAfter     string
+	StatusCode               string
+	SourceCode               string
+	ReasonCode               sql.NullString
+	IsFrozen                 bool
+	ProductionRunID          sql.NullString
+	CreatedAt                time.Time
+	UpdatedAt                time.Time
+	PlannedLotUnits          string
+}
+
+type ProductionScheduleLineStatus struct {
+	ID        string
+	Code      string
+	Name      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type ProductionScheduleResourceSetting struct {
+	ID                   string
+	AccountID            string
+	ScopeCode            string
+	ScopeRefID           string
+	IsExcluded           bool
+	IsEnabled            bool
+	ShiftsPerDay         sql.NullInt32
+	HoursPerShift        sql.NullString
+	WorkDaysPerWeek      sql.NullInt32
+	CapacityHeadroomPct  sql.NullString
+	EfficiencyPct        sql.NullString
+	LeadTimeWeeks        sql.NullString
+	LeadTimeOffsetWeeks  string
+	ChangeoverAvgMinutes sql.NullString
+	ChangeoverMinMinutes sql.NullString
+	ChangeoverMaxMinutes sql.NullString
+	SortOrder            int32
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+}
+
+type ProductionScheduleStatus struct {
+	ID        string
+	Code      string
+	Name      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type ProductionShift struct {
+	ID              string
+	AccountID       string
+	DepartmentID    sql.NullString
+	Code            string
+	Name            string
+	StartTime       string
+	EndTime         string
+	CrossesMidnight bool
+	DaysOfWeek      string
+	IsActive        bool
+	SortOrder       int32
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 type ProductionStep struct {
@@ -1726,6 +2071,14 @@ type ScanningStationType struct {
 	CreatedAt time.Time
 	Name      string
 	Code      string
+	UpdatedAt time.Time
+}
+
+type ScheduleDeviationType struct {
+	ID        string
+	Code      string
+	Name      string
+	CreatedAt time.Time
 	UpdatedAt time.Time
 }
 

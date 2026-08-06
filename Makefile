@@ -1,4 +1,4 @@
-.PHONY: help dev sqlc proto buf-lint db-dump test test-verbose test-sql-prepare-smoke install-tools docs mocks lint gosec gosec-fast govet static-check check-format jaeger-tracing connect-minikube connect-eks version validate-openapi-specs httpie local-db local-db-down local-db-nuke setup teardown seed-core seed-user-photos seed-stripe teardown-stripe teardown-all-stripe fmt stripe-webhook stripe-webhook-account view-otel e2e-up e2e-up-ci e2e e2e-down fix-minikube-dns openapi openapi-quiet gen-agent-tools stainless openapi-stainless openapi-stainless-quiet generate generate-quiet install-stlc stlc-internal-sdk stlc-public-typescript-sdk stlc-public-python-sdk stlc-public-go-sdk stlc-public-sdks stlc-sdks sdk-yalc
+.PHONY: help dev sqlc proto buf-lint db-dump test test-e2e test-verbose test-sql-prepare-smoke install-tools install-ci-tools docs mocks lint gosec gosec-fast govet static-check check-format jaeger-tracing connect-minikube connect-eks version validate-openapi-specs httpie local-db local-db-cli local-db-down local-db-nuke setup teardown migrate-agent-db seed-agent-db seed-core seed-user-photos seed-stripe teardown-stripe teardown-all-stripe fmt stripe-webhook stripe-webhook-account view-otel e2e-up e2e-up-ci e2e e2e-down fix-minikube-dns openapi openapi-quiet gen-agent-tools stainless openapi-stainless openapi-stainless-quiet generate generate-quiet install-stlc stlc-internal-sdk stlc-public-typescript-sdk stlc-public-python-sdk stlc-public-go-sdk stlc-public-sdks stlc-sdks sdk-yalc
 
 # Include .env file if it exists (optional for CI)
 -include .env
@@ -10,6 +10,9 @@ export $(shell [ -f .env.test ] && sed 's/=.*//' .env.test || echo "")
 PROTO_DIR := proto
 PROTO_SRC := $(shell find $(PROTO_DIR) -name '*.proto' -print | sort)
 GO_OUT := .
+# Destination of the generated bindings (from each .proto's go_package). Contains
+# nothing but generated files, so `make proto` sweeps it clean before regenerating.
+PROTO_GEN_DIR := shared/proto
 MOCK_SCRIPT := ./scripts/generate-mocks.sh
 SQLC_SCRIPT := ./scripts/generate-sqlc.sh
 
@@ -22,7 +25,7 @@ tool-version = $(shell grep '$(1) ' tools/tool-versions | awk '{print $$2}')
 # Default target
 help: ## Show this help message
 	@echo "Available targets:"
-	@grep -E '^[a-zA-Z_-]+:.*## .*$$' Makefile | sort | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z0-9_-]+:.*## .*$$' Makefile | sort | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 	
 connect-minikube: ## Switch kubectl context to minikube
 	@kubectl config use-context minikube
@@ -125,6 +128,7 @@ sqlc: ## Generate code from SQL queries using sqlc. Usage: make sqlc [services]
 	@$(MAKE) fmt
 
 proto: ## Generate Go protobuf bindings
+	find $(PROTO_GEN_DIR) -name '*.pb.go' -delete
 	protoc \
 		--proto_path=$(PROTO_DIR) \
 		--go_out=$(GO_OUT) \
@@ -146,6 +150,9 @@ local-db: ## Start local databases, apply migrations, and seed data
 	else \
 		echo "\033[0;33m[WARN]\033[0m STRIPE_SECRET_KEY not set — skipping Stripe subscription seed. Run 'make seed-stripe' later."; \
 	fi
+
+local-db-cli: ## Open MySQL CLI to the local core database (uses DB_URL from .env)
+	@./scripts/local-db-cli.sh $(ARGS)
 
 local-db-down: ## Tear down local database containers (data preserved)
 	@docker compose down
@@ -301,7 +308,7 @@ e2e-up-ci: openapi-quiet ## Start the E2E stack using pre-built images (for CI)
 	@./scripts/setup-e2e-db.sh
 	@./scripts/run-quiet.sh "Starting E2E services" ./scripts/start-e2e-services.sh
 
-e2e: e2e-up ## Run API E2E tests against the full stack
+e2e: ## Run API E2E tests against the full stack
 	@echo "Running API E2E tests..."
 	@time ./scripts/run-e2e-tests.sh 600s
 

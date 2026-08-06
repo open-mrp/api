@@ -104,6 +104,7 @@ type RepoFactory interface {
 	NewLocationRepo() LocationRepo
 	NewScanningStationRepo() ScanningStationRepo
 	NewPricingRepo() PricingRepo
+	NewJobRepo() JobRepo
 	NewPortalDomainRepo() PortalDomainRepo
 	NewPortalRegistrationSessionRepo() PortalRegistrationSessionRepo
 }
@@ -121,4 +122,16 @@ type Mediators struct {
 // MediatorFactory builds mediators bound to a given repository factory (e.g., per transaction).
 type MediatorFactory interface {
 	Build(RepoFactory) Mediators
+}
+
+// JobSvcFactory builds the job service bound to a given repository factory, the same
+// way MediatorFactory does, and for the same reason.
+//
+// Settling a job is the checkpoint for the work it tracks, and a checkpoint commits
+// as part of its phase's transaction. That transaction is carried by the RepoFactory,
+// so settling a job inside one means holding a job service built from it — while the
+// same caller's marks outside the transaction need one built from the root factory.
+// A single injected JobSvc cannot be both.
+type JobSvcFactory interface {
+	Build(RepoFactory) JobSvc
 }

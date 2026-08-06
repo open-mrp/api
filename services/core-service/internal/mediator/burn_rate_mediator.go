@@ -68,7 +68,7 @@ func (m *burnRateMedImpl) RecalculateFromHistory(ctx context.Context, accountID,
 		return tracing.Trace(span, apiErr)
 	}
 
-	baseUnitID, apiErr := itemRepo.GetCategoryBaseUnitID(ctx, item.ItemCategoryID)
+	baseUnitID, _, apiErr := itemRepo.GetCategoryBaseUnitID(ctx, item.ItemCategoryID)
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}

@@ -51,6 +51,155 @@ func (q *Queries) DeleteDepartment(ctx context.Context, arg DeleteDepartmentPara
 	return q.db.ExecContext(ctx, deleteDepartment, arg.ID, arg.AccountID)
 }
 
+const exportDepartments = `-- name: ExportDepartments :many
+SELECT
+    d.id,
+    d.name,
+    d.notes,
+    d.location_id,
+    sl.name AS location_name,
+    d.account_id,
+    d.created_at,
+    d.updated_at
+FROM department d
+LEFT JOIN storage_location sl ON sl.id = d.location_id
+WHERE d.account_id = ?
+AND (
+    ? IS NULL
+    OR d.name LIKE ?
+)
+ORDER BY d.created_at DESC, d.id DESC
+LIMIT ?
+`
+
+type ExportDepartmentsParams struct {
+	AccountID   string
+	SearchQuery sql.NullString
+	Limit       int32
+}
+
+type ExportDepartmentsRow struct {
+	ID           string
+	Name         string
+	Notes        sql.NullString
+	LocationID   sql.NullString
+	LocationName sql.NullString
+	AccountID    string
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+}
+
+// Unpaginated by design; the caller passes a row cap as the limit.
+func (q *Queries) ExportDepartments(ctx context.Context, arg ExportDepartmentsParams) ([]ExportDepartmentsRow, error) {
+	rows, err := q.db.QueryContext(ctx, exportDepartments,
+		arg.AccountID,
+		arg.SearchQuery,
+		arg.SearchQuery,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ExportDepartmentsRow
+	for rows.Next() {
+		var i ExportDepartmentsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Notes,
+			&i.LocationID,
+			&i.LocationName,
+			&i.AccountID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const findDepartmentsByNames = `-- name: FindDepartmentsByNames :many
+SELECT
+    d.id,
+    d.name,
+    d.notes,
+    d.location_id,
+    d.account_id,
+    d.created_at,
+    d.updated_at
+FROM department d
+WHERE d.name IN (/*SLICE:names*/?)
+AND d.account_id = ?
+`
+
+type FindDepartmentsByNamesParams struct {
+	Names     []string
+	AccountID string
+}
+
+type FindDepartmentsByNamesRow struct {
+	ID         string
+	Name       string
+	Notes      sql.NullString
+	LocationID sql.NullString
+	AccountID  string
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+}
+
+// Names must be pre-lowercased by the caller; the utf8mb4_unicode_ci collation makes the IN
+// comparison case-insensitive, so lowercasing on both sides is not required in SQL.
+func (q *Queries) FindDepartmentsByNames(ctx context.Context, arg FindDepartmentsByNamesParams) ([]FindDepartmentsByNamesRow, error) {
+	query := findDepartmentsByNames
+	var queryParams []interface{}
+	if len(arg.Names) > 0 {
+		for _, v := range arg.Names {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:names*/?", strings.Repeat(",?", len(arg.Names))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:names*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FindDepartmentsByNamesRow
+	for rows.Next() {
+		var i FindDepartmentsByNamesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Notes,
+			&i.LocationID,
+			&i.AccountID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getDepartment = `-- name: GetDepartment :one
 SELECT
     d.id,
@@ -587,9 +736,8 @@ func (q *Queries) ListDepartmentsForward(ctx context.Context, arg ListDepartment
 const listMachinesByDepartmentID = `-- name: ListMachinesByDepartmentID :many
 SELECT m.id, m.name, m.serial_number, m.created_at, m.updated_at
 FROM machine m
-JOIN department d ON d.id = m.department_id
 WHERE m.department_id = ?
-AND d.account_id = ?
+AND m.account_id = ?
 ORDER BY m.name ASC
 `
 
@@ -638,9 +786,8 @@ func (q *Queries) ListMachinesByDepartmentID(ctx context.Context, arg ListMachin
 const listMachinesByDepartmentIDs = `-- name: ListMachinesByDepartmentIDs :many
 SELECT m.id, m.name, m.serial_number, m.department_id, m.created_at, m.updated_at
 FROM machine m
-JOIN department d ON d.id = m.department_id
 WHERE m.department_id IN (/*SLICE:department_ids*/?)
-AND d.account_id = ?
+AND m.account_id = ?
 ORDER BY m.name ASC
 `
 
@@ -820,11 +967,13 @@ const setMachinesDepartmentID = `-- name: SetMachinesDepartmentID :exec
 UPDATE machine
 SET department_id = ?
 WHERE id IN (/*SLICE:machine_ids*/?)
+AND account_id = ?
 `
 
 type SetMachinesDepartmentIDParams struct {
 	DepartmentID string
 	MachineIds   []string
+	AccountID    string
 }
 
 func (q *Queries) SetMachinesDepartmentID(ctx context.Context, arg SetMachinesDepartmentIDParams) error {
@@ -839,6 +988,7 @@ func (q *Queries) SetMachinesDepartmentID(ctx context.Context, arg SetMachinesDe
 	} else {
 		query = strings.Replace(query, "/*SLICE:machine_ids*/?", "NULL", 1)
 	}
+	queryParams = append(queryParams, arg.AccountID)
 	_, err := q.db.ExecContext(ctx, query, queryParams...)
 	return err
 }

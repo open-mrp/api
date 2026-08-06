@@ -59,6 +59,22 @@ WHERE p.id = sqlc.arg('part_id')
 AND i.account_id = sqlc.arg('account_id')
 AND i.deleted_at IS NULL;
 
+-- name: FindPartsBySKUs :many
+-- Used by bulk upsert to resolve existing parts (by SKU) to the IDs needed to update
+-- them: part id, item id, and the unit_value / unit_cost rate ids.
+SELECT
+    p.id AS part_id,
+    p.item_id,
+    i.sku,
+    i.item_category_id,
+    i.unit_value_id,
+    i.unit_cost_id
+FROM part p
+JOIN item i ON i.id = p.item_id
+WHERE i.sku IN (sqlc.slice('skus'))
+AND i.account_id = sqlc.arg('account_id')
+AND i.deleted_at IS NULL;
+
 -- name: GetPartsByIDs :many
 SELECT
     p.id,
@@ -380,4 +396,5 @@ ORDER BY
         ELSE 3
     END ASC,
     i.created_at DESC,
-    i.id DESC;
+    i.id DESC
+LIMIT ?;

@@ -13,6 +13,7 @@ import (
 	"github.com/augno/api/services/auth-service/internal/testutil"
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/appctx"
+	"github.com/augno/api/shared/db"
 	apierror "github.com/augno/api/shared/errors"
 
 	"github.com/stretchr/testify/assert"
@@ -225,6 +226,12 @@ func (m *trackingTxManager) WithTx(ctx context.Context, fn func(ctx context.Cont
 	}
 	m.CommitCalled = true
 	return nil
+}
+
+func (m *trackingTxManager) WithTxSavepoint(ctx context.Context, fn func(ctx context.Context, f domain.RepoFactory, sp db.SavepointRunner) *apierror.APIError) *apierror.APIError {
+	return m.WithTx(ctx, func(ctx context.Context, f domain.RepoFactory) *apierror.APIError {
+		return fn(ctx, f, passthroughSavepoint{})
+	})
 }
 
 func (m *trackingTxManager) Reset() {

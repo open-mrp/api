@@ -53,6 +53,39 @@ func (h *gRPCHandler) CreatePart(ctx context.Context, req *pb.CreatePartRequest)
 	}, nil
 }
 
+func (h *gRPCHandler) BulkUpsertParts(ctx context.Context, req *pb.BulkUpsertPartsRequest) (*pb.BulkUpsertPartsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	parts := make([]domain.UpsertPartParams, len(req.Parts))
+	for i, p := range req.Parts {
+		props := make([]domain.UpsertItemPropertyParams, len(p.Properties))
+		for j, pr := range p.Properties {
+			props[j] = domain.UpsertItemPropertyParams{Name: pr.Name, Value: pr.Value}
+		}
+		parts[i] = domain.UpsertPartParams{
+			SKU:         p.Sku,
+			Description: p.Description,
+			Notes:       p.Notes,
+			Category:    objectIdentifierFromProto(p.Category),
+			UnitPrice:   protoToCreateRateInput(p.UnitPrice),
+			UnitCost:    protoToCreateRateInput(p.UnitCost),
+			Properties:  props,
+		}
+	}
+
+	job, apiErr := h.partSvc.BulkUpsertParts(ctx, domain.BulkUpsertPartsParams{Parts: parts})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.BulkUpsertPartsResponse{Job: jobToProto(job)}, nil
+}
+
 func (h *gRPCHandler) GetPart(ctx context.Context, req *pb.GetPartRequest) (*pb.GetPartResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
@@ -134,17 +167,12 @@ func (h *gRPCHandler) ExportParts(ctx context.Context, req *pb.ExportPartsReques
 		params.EndDate = &t
 	}
 
-	parts, apiErr := h.partSvc.ExportParts(ctx, params)
+	job, apiErr := h.partSvc.ExportParts(ctx, params)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
-	pbParts := make([]*pb.PartInfo, len(parts))
-	for i, part := range parts {
-		pbParts[i] = partToProto(part)
-	}
-
-	return &pb.ExportPartsResponse{Parts: pbParts}, nil
+	return &pb.ExportPartsResponse{Job: jobToProto(job)}, nil
 }
 
 func (h *gRPCHandler) UpdatePart(ctx context.Context, req *pb.UpdatePartRequest) (*pb.UpdatePartResponse, error) {

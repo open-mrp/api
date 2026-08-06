@@ -30,6 +30,14 @@ type ListUnitsParams struct {
 	UnitGroupIDs []string
 }
 
+// carries an export's filters — the list params without pagination, plus the cap
+// that keeps one request from building an unbounded workbook
+type ExportUnitsParams struct {
+	AccountID string
+	Query     *string
+	Limit     int32
+}
+
 type ListUnitsResult struct {
 	Units    []*Unit
 	PageInfo pagination.PageInfo
@@ -38,6 +46,26 @@ type ListUnitsResult struct {
 type GetUnitParams struct {
 	AccountID string
 	UnitID    string
+}
+
+type UpsertUnitTxParams struct {
+	Unit    *UpsertUnitParams
+	OldUnit *Unit
+}
+
+type UpsertUnitParams struct {
+	Name              string
+	Abbreviation      string
+	UnitDimensionCode string
+	RatioNumerator    string
+	RatioDenominator  string
+	OffsetNumerator   string
+	OffsetDenominator string
+	IsBaseUnit        bool
+}
+
+type BulkUpsertUnitsParams struct {
+	Units []UpsertUnitParams
 }
 
 type CreateUnitParams struct {
@@ -77,4 +105,8 @@ type ValidateUnitsParams struct {
 // ValidateUnitsResult contains matched units keyed by the original map key.
 type ValidateUnitsResult struct {
 	Units map[string]*Unit
+}
+
+type UpsertUnitResult struct {
+	Unit *Unit
 }

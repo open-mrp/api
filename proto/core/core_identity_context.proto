@@ -5,6 +5,7 @@ package core;
 
 import "google/protobuf/timestamp.proto";
 import "core/core_patch.proto";
+import "core/core_async.proto";
 option go_package = "shared/proto/core;core";
 
 message GetAccountContextRequest {
@@ -307,6 +308,12 @@ message ListUnitsResponse {
   repeated UnitInfo units = 1;
   PageInfo page_info = 2;
 }
+message ExportUnitsRequest {
+  optional string query = 1;
+}
+message ExportUnitsResponse {
+  JobInfo job = 1;
+}
 message UnitInfo {
   string id = 1;
   string name = 2;
@@ -324,6 +331,24 @@ message UnitInfo {
   google.protobuf.Timestamp updated_at = 12;
   // Null for system units.
   optional string account_id = 13;
+}
+message BulkUpsertUnitInput {
+  string name               = 1;
+  string abbreviation       = 2;
+  string type               = 3;
+  string ratio_numerator    = 4;
+  string ratio_denominator  = 5;
+  string offset_numerator   = 6;
+  string offset_denominator = 7;
+  bool   is_base_unit       = 8;
+}
+message BulkUpsertUnitsRequest {
+  repeated BulkUpsertUnitInput units = 1;
+}
+message BulkUpsertUnitsResponse {
+  // The raised job, returned as the canonical Job resource. The client polls it via the
+  // 202's Location header for the created/updated outcome.
+  JobInfo job = 1;
 }
 message GetUnitRequest {
   string id = 1;

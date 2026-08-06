@@ -20,6 +20,7 @@ var scanningStationSvcTracer = tracing.GetTracer("core-service.scanning_station_
 type scanningStationSvcImpl struct {
 	repos           domain.RepoFactory
 	mediatorFactory domain.MediatorFactory
+	jobSvcFactory   domain.JobSvcFactory
 	txManager       TransactionManager
 }
 
@@ -29,6 +30,9 @@ type ScanningStationSvcConfig struct {
 
 	// MediatorFactory (required) builds the mediators used by this service.
 	MediatorFactory domain.MediatorFactory
+
+	// JobSvcFactory (required) builds the job service the async bulk upsert records on.
+	JobSvcFactory domain.JobSvcFactory
 
 	// TxManager (required) wraps multi-step operations in database transactions.
 	TxManager TransactionManager
@@ -40,6 +44,9 @@ func (c *ScanningStationSvcConfig) validate() error {
 	}
 	if c.MediatorFactory == nil {
 		return fmt.Errorf("scanning station service: mediator factory is required")
+	}
+	if c.JobSvcFactory == nil {
+		return fmt.Errorf("scanning station service: job service factory is required")
 	}
 	if c.TxManager == nil {
 		return fmt.Errorf("scanning station service: tx manager is required")
@@ -55,6 +62,7 @@ func NewScanningStationSvc(config *ScanningStationSvcConfig) domain.ScanningStat
 	return &scanningStationSvcImpl{
 		repos:           config.Repos,
 		mediatorFactory: config.MediatorFactory,
+		jobSvcFactory:   config.JobSvcFactory,
 		txManager:       config.TxManager,
 	}
 }
@@ -72,6 +80,7 @@ func (s *scanningStationSvcImpl) withTx(ctx context.Context, fn func(context.Con
 		txSvc := &scanningStationSvcImpl{
 			repos:           f,
 			mediatorFactory: s.mediatorFactory,
+			jobSvcFactory:   s.jobSvcFactory,
 			txManager:       s.txManager,
 		}
 		return fn(txCtx, txSvc)
@@ -295,6 +304,8 @@ func (s *scanningStationSvcImpl) UpdateScanningStation(ctx context.Context, para
 			}
 
 			params.Notes = params.Notes.BackfillUnsetPtr(old.Notes)
+			params.LabelSizeCode = params.LabelSizeCode.BackfillUnsetPtr(old.LabelSizeCode)
+			params.LabelTypeCode = params.LabelTypeCode.BackfillUnsetPtr(old.LabelTypeCode)
 
 			updated, apiErr := txRepo.Update(txCtx, params)
 			if apiErr != nil {

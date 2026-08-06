@@ -367,3 +367,27 @@ func TestMachines_CreateDuplicateName(t *testing.T) {
 
 	apiClient.Delete(machinesPath + "/" + id)
 }
+
+func TestMachines_CreateDuplicateSerialNumber(t *testing.T) {
+	t.Parallel()
+	serial := uniqueName("SN-dup")
+
+	status1, body1, err := apiClient.Post(machinesPath, map[string]any{
+		"name":          uniqueName("e2e-dup-serial-a"),
+		"serial_number": serial,
+		"department_id": SeedDepartmentID,
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status1, body1)
+	id := jsonField(parseJSON(body1), "id")
+
+	status2, body2, err := apiClient.Post(machinesPath, map[string]any{
+		"name":          uniqueName("e2e-dup-serial-b"),
+		"serial_number": serial,
+		"department_id": SeedDepartmentID,
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	assert.Equal(t, 409, status2, "Duplicate serial number should return 409: %s", string(body2))
+
+	apiClient.Delete(machinesPath + "/" + id)
+}

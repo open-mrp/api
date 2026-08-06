@@ -350,6 +350,38 @@ FROM _batches_machines bm
 JOIN machine m ON bm.B = m.id
 WHERE bm.A = sqlc.arg('batch_id');
 
+-- name: ExportBatchMachines :many
+-- The bulk form of GetBatchMachines, so an export naming many batches' machines
+-- does not issue one query per batch.
+SELECT
+    bm.A AS batch_id,
+    m.name
+FROM _batches_machines bm
+JOIN machine m ON bm.B = m.id
+WHERE bm.A IN (sqlc.slice('batch_ids'))
+ORDER BY bm.A, m.name;
+
+-- name: ExportProductionRunBatches :many
+-- The batches of the given runs, one row each, for the production run export.
+-- Department comes via the scanning station, as it does on a batch read.
+SELECT
+    b.id,
+    b.production_run_id,
+    b.scanned_at,
+    i.sku AS item_sku,
+    q.value AS quantity_value,
+    qu.abbreviation AS quantity_unit_abbreviation,
+    d.name AS department_name
+FROM batch b
+JOIN item i ON b.item_id = i.id
+JOIN quantity q ON b.quantity_id = q.id
+JOIN unit qu ON q.unit_id = qu.id
+LEFT JOIN scanning_station ss ON b.scanning_station_id = ss.id
+LEFT JOIN department d ON ss.department_id = d.id
+WHERE b.production_run_id IN (sqlc.slice('production_run_ids'))
+AND b.account_id = sqlc.arg('account_id')
+ORDER BY b.production_run_id, b.created_at, b.id;
+
 -- name: IsBatchInAccount :one
 SELECT COUNT(*) FROM batch WHERE id = sqlc.arg('id') AND account_id = sqlc.arg('account_id');
 

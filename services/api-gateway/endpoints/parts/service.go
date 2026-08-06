@@ -4,10 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	jobep "github.com/augno/api/services/api-gateway/endpoints/jobs"
 	"github.com/augno/api/services/api-gateway/internal/domain"
-	"github.com/augno/api/services/api-gateway/internal/export"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
-	httptransport "github.com/augno/api/services/api-gateway/internal/http"
 	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
@@ -34,9 +33,10 @@ type PartSvc interface {
 	ListParts(ctx context.Context, req *ListPartsRequest) (*apiresource.List[apiresource.Part], *apierror.APIError)
 	GetPart(ctx context.Context, req *RetrievePartRequest) (*apiresource.Part, *apierror.APIError)
 	CreatePart(ctx context.Context, req *CreatePartRequest) (*apiresource.Part, *apierror.APIError)
+	BulkUpsertParts(ctx context.Context, req *BulkUpsertPartsRequest) (*apiresource.Job, *apierror.APIError)
 	UpdatePart(ctx context.Context, req *UpdatePartRequest) (*apiresource.Part, *apierror.APIError)
 	DeletePart(ctx context.Context, req *DeletePartRequest) (*apiresource.Part, *apierror.APIError)
-	ExportParts(ctx context.Context, req *ExportPartsRequest) (*httptransport.FileDownload, *apierror.APIError)
+	ExportParts(ctx context.Context, req *ExportPartsRequest) (*apiresource.Job, *apierror.APIError)
 }
 
 type PartSvcConfig struct {
@@ -134,6 +134,37 @@ func (m *partSvcImpl) CreatePart(ctx context.Context, req *CreatePartRequest) (*
 	return loadPartByID(ctx, resp.Part.Id)
 }
 
+func (m *partSvcImpl) BulkUpsertParts(ctx context.Context, req *BulkUpsertPartsRequest) (*apiresource.Job, *apierror.APIError) {
+	pbParts := make([]*pb.UpsertPartInput, len(req.Parts))
+	for i, p := range req.Parts {
+		pbProps := make([]*pb.UpsertItemPropertyInput, len(p.Properties))
+		for j, pr := range p.Properties {
+			pbProps[j] = &pb.UpsertItemPropertyInput{Name: pr.Name, Value: pr.Value}
+		}
+		pbParts[i] = &pb.UpsertPartInput{
+			Sku:         p.SKU,
+			Description: p.Description.Ptr(),
+			Notes:       p.Notes.Ptr(),
+			Category:    apirequest.ObjectIdentifierToProto(p.Category),
+			UnitPrice:   rateInputToProto(p.UnitPrice.Ptr()),
+			UnitCost:    rateInputToProto(p.UnitCost.Ptr()),
+			Properties:  pbProps,
+		}
+	}
+
+	pbReq := &pb.BulkUpsertPartsRequest{Parts: pbParts}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, partSvcTracer, "service.parts.bulk_upsert", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.BulkUpsertPartsResponse, error) {
+			return m.coreClient.BulkUpsertParts(ctx, pbReq, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return jobep.JobFromProto(resp.GetJob()), nil
+}
+
 func (m *partSvcImpl) UpdatePart(ctx context.Context, req *UpdatePartRequest) (*apiresource.Part, *apierror.APIError) {
 	pbReq := &pb.UpdatePartRequest{
 		Id:          req.ItemID,
@@ -173,7 +204,7 @@ func (m *partSvcImpl) DeletePart(ctx context.Context, req *DeletePartRequest) (*
 	return result, nil
 }
 
-func (m *partSvcImpl) ExportParts(ctx context.Context, req *ExportPartsRequest) (*httptransport.FileDownload, *apierror.APIError) {
+func (m *partSvcImpl) ExportParts(ctx context.Context, req *ExportPartsRequest) (*apiresource.Job, *apierror.APIError) {
 	pbReq := &pb.ExportPartsRequest{
 		Query:        req.Query,
 		CategoryIds:  req.CategoryIDs,
@@ -194,21 +225,7 @@ func (m *partSvcImpl) ExportParts(ctx context.Context, req *ExportPartsRequest) 
 		return nil, apiErr
 	}
 
-	parts := make([]apiresource.Part, len(resp.Parts))
-	for i, p := range resp.Parts {
-		parts[i] = PartPresenter(p)
-	}
-
-	body, err := export.PartsToExcel(parts)
-	if err != nil {
-		return nil, apierror.NewInternalError(err, "Failed to build export file.")
-	}
-
-	return &httptransport.FileDownload{
-		ContentType: export.ExcelContentType,
-		Filename:    "parts.xlsx",
-		Body:        body,
-	}, nil
+	return jobep.JobFromProto(resp.GetJob()), nil
 }
 
 func loadPartByID(ctx context.Context, id string) (*apiresource.Part, *apierror.APIError) {

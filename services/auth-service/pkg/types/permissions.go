@@ -77,6 +77,7 @@ const (
 	PermissionDomainAdjustmentTypes               PermissionDomain = "adjustment_types"
 	PermissionDomainPriorities                    PermissionDomain = "priorities"
 	PermissionDomainProductTypes                  PermissionDomain = "product_types"
+	PermissionDomainJobs                          PermissionDomain = "jobs"
 	PermissionDomainMessaging                     PermissionDomain = "messaging"
 )
 

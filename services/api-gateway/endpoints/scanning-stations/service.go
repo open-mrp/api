@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 
+	jobep "github.com/augno/api/services/api-gateway/endpoints/jobs"
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
+	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
@@ -18,8 +20,10 @@ import (
 
 type ScanningStationSvc interface {
 	ListScanningStations(ctx context.Context, req *ListScanningStationsRequest) (*apiresource.List[apiresource.ScanningStation], *apierror.APIError)
+	ExportScanningStations(ctx context.Context, req *ExportScanningStationsRequest) (*apiresource.Job, *apierror.APIError)
 	GetScanningStation(ctx context.Context, req *RetrieveScanningStationRequest) (*apiresource.ScanningStation, *apierror.APIError)
 	CreateScanningStation(ctx context.Context, req *CreateScanningStationRequest) (*apiresource.ScanningStation, *apierror.APIError)
+	BulkUpsertScanningStations(ctx context.Context, req *BulkUpsertScanningStationsRequest) (*apiresource.Job, *apierror.APIError)
 	UpdateScanningStation(ctx context.Context, req *UpdateScanningStationRequest) (*apiresource.ScanningStation, *apierror.APIError)
 	DeleteScanningStation(ctx context.Context, req *DeleteScanningStationRequest) (*apiresource.EmptyResource, *apierror.APIError)
 	ConnectProductionSteps(ctx context.Context, req *ConnectProductionStepsRequest) (*apiresource.EmptyResource, *apierror.APIError)
@@ -51,6 +55,18 @@ func NewScanningStationSvc(config *ScanningStationSvcConfig) ScanningStationSvc 
 	return &scanningStationSvcImpl{
 		coreClient: config.CoreClient,
 	}
+}
+
+func (m *scanningStationSvcImpl) ExportScanningStations(ctx context.Context, req *ExportScanningStationsRequest) (*apiresource.Job, *apierror.APIError) {
+	resp, apiErr := grpcutil.CallRPC(ctx, scanningStationSvcTracer, "service.scanning_stations.export", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ExportScanningStationsResponse, error) {
+			return m.coreClient.ExportScanningStations(ctx, &pb.ExportScanningStationsRequest{Query: req.Query}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return jobep.JobFromProto(resp.GetJob()), nil
 }
 
 func loadScanningStationByID(ctx context.Context, id string) (*apiresource.ScanningStation, *apierror.APIError) {
@@ -138,13 +154,38 @@ func (m *scanningStationSvcImpl) CreateScanningStation(ctx context.Context, req 
 	return loadScanningStationByID(ctx, resp.ScanningStation.Id)
 }
 
+func (m *scanningStationSvcImpl) BulkUpsertScanningStations(ctx context.Context, req *BulkUpsertScanningStationsRequest) (*apiresource.Job, *apierror.APIError) {
+	pbStations := make([]*pb.UpsertScanningStationInput, len(req.ScanningStations))
+	for i, ss := range req.ScanningStations {
+		pbStations[i] = &pb.UpsertScanningStationInput{
+			Name:                ss.Name,
+			Notes:               ss.Notes.Ptr(),
+			Type:                string(ss.Type),
+			OperatorRequirement: string(ss.OperatorRequirement),
+			Department:          apirequest.ObjectIdentifierToProto(ss.Department),
+			LabelSizeCode:       field.EnumClearableToProto(ss.LabelSizeCode),
+			LabelTypeCode:       field.EnumClearableToProto(ss.LabelTypeCode),
+		}
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, scanningStationSvcTracer, "service.scanning_stations.bulk_upsert", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.BulkUpsertScanningStationsResponse, error) {
+			return m.coreClient.BulkUpsertScanningStations(ctx, &pb.BulkUpsertScanningStationsRequest{ScanningStations: pbStations}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return jobep.JobFromProto(resp.GetJob()), nil
+}
+
 func (m *scanningStationSvcImpl) UpdateScanningStation(ctx context.Context, req *UpdateScanningStationRequest) (*apiresource.ScanningStation, *apierror.APIError) {
 	pbReq := &pb.UpdateScanningStationRequest{
 		Id:            req.ScanningStationID,
 		Name:          req.Name.Ptr(),
 		Notes:         field.StringClearableToProto(req.Notes),
-		LabelSizeCode: req.LabelSizeCode.Ptr().StringPtr(),
-		LabelTypeCode: req.LabelTypeCode.Ptr().StringPtr(),
+		LabelSizeCode: field.EnumClearableToProto(req.LabelSizeCode),
+		LabelTypeCode: field.EnumClearableToProto(req.LabelTypeCode),
 		OperatorRequirement: func() *string {
 			if v, ok := req.OperatorRequirement.Value(); ok {
 				s := string(v)

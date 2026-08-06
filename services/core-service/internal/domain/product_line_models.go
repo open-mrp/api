@@ -69,6 +69,14 @@ type ListProductLinesParams struct {
 	Includes  []string
 }
 
+// carries an export's filters — the list params without pagination, plus the cap
+// that keeps one request from building an unbounded workbook
+type ExportProductLinesParams struct {
+	AccountID string
+	Query     *string
+	Limit     int32
+}
+
 type ListProductLinesResult struct {
 	ProductLines []*ProductLineFull
 	PageInfo     pagination.PageInfo
@@ -106,6 +114,29 @@ type UpdateProductLineParams struct {
 type DeleteProductLineParams struct {
 	AccountID     string
 	ProductLineID string
+}
+
+// UpsertProductLineParams holds the fields for a single product line in a bulk upsert.
+type UpsertProductLineParams struct {
+	Name             string
+	UnitGroup        ObjectIdentifier
+	CommissionPolicy constants.CommissionPolicy
+	FreightPolicy    constants.FreightPolicy
+}
+
+// BulkUpsertProductLinesParams is the input for a bulk upsert of product lines.
+type BulkUpsertProductLinesParams struct {
+	ProductLines []UpsertProductLineParams
+}
+
+// ResolvedUpsertProductLineRow is a product line upsert row with its unit group reference
+// resolved to an id. No JSON tags: the engine round-trips job_items against this type, an
+// internal column.
+type ResolvedUpsertProductLineRow struct {
+	Name             string
+	UnitGroupID      string
+	CommissionPolicy constants.CommissionPolicy
+	FreightPolicy    constants.FreightPolicy
 }
 
 // ItemLotDefault is the lot one item is made in, resolved through the whole chain.

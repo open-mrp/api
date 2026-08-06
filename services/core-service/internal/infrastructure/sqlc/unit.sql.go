@@ -84,6 +84,94 @@ func (q *Queries) DeleteUnitGroupUnitsByUnitID(ctx context.Context, unitID strin
 	return err
 }
 
+const exportUnits = `-- name: ExportUnits :many
+SELECT
+    unit.id,
+    unit.name,
+    unit.abbreviation,
+    unit.unit_dimension_code,
+    unit.ratio_numerator,
+    unit.ratio_denominator,
+    unit.offset_numerator,
+    unit.offset_denominator,
+    unit.is_base_unit,
+    unit.account_id,
+    unit.created_at,
+    unit.updated_at
+FROM unit
+WHERE (unit.account_id = ? OR unit.account_id IS NULL)
+AND (
+    ? IS NULL
+    OR unit.name LIKE ?
+)
+ORDER BY unit.created_at DESC, unit.id DESC
+LIMIT ?
+`
+
+type ExportUnitsParams struct {
+	AccountID   sql.NullString
+	SearchQuery sql.NullString
+	Limit       int32
+}
+
+type ExportUnitsRow struct {
+	ID                string
+	Name              string
+	Abbreviation      string
+	UnitDimensionCode string
+	RatioNumerator    string
+	RatioDenominator  string
+	OffsetNumerator   string
+	OffsetDenominator string
+	IsBaseUnit        bool
+	AccountID         sql.NullString
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+}
+
+// Unpaginated by design; the caller passes a row cap as the limit. System units
+// (account_id IS NULL) are in scope, matching what the list endpoint returns.
+func (q *Queries) ExportUnits(ctx context.Context, arg ExportUnitsParams) ([]ExportUnitsRow, error) {
+	rows, err := q.db.QueryContext(ctx, exportUnits,
+		arg.AccountID,
+		arg.SearchQuery,
+		arg.SearchQuery,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ExportUnitsRow
+	for rows.Next() {
+		var i ExportUnitsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Abbreviation,
+			&i.UnitDimensionCode,
+			&i.RatioNumerator,
+			&i.RatioDenominator,
+			&i.OffsetNumerator,
+			&i.OffsetDenominator,
+			&i.IsBaseUnit,
+			&i.AccountID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const findUnitsByAbbreviations = `-- name: FindUnitsByAbbreviations :many
 SELECT
     unit.id,
@@ -126,6 +214,101 @@ func (q *Queries) FindUnitsByAbbreviations(ctx context.Context, accountID sql.Nu
 	var items []FindUnitsByAbbreviationsRow
 	for rows.Next() {
 		var i FindUnitsByAbbreviationsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Abbreviation,
+			&i.UnitDimensionCode,
+			&i.RatioNumerator,
+			&i.RatioDenominator,
+			&i.OffsetNumerator,
+			&i.OffsetDenominator,
+			&i.IsBaseUnit,
+			&i.AccountID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const findUnitsByAbbreviationsOrNames = `-- name: FindUnitsByAbbreviationsOrNames :many
+SELECT
+    unit.id,
+    unit.name,
+    unit.abbreviation,
+    unit.unit_dimension_code,
+    unit.ratio_numerator,
+    unit.ratio_denominator,
+    unit.offset_numerator,
+    unit.offset_denominator,
+    unit.is_base_unit,
+    unit.account_id,
+    unit.created_at,
+    unit.updated_at
+FROM unit
+WHERE (unit.abbreviation IN (/*SLICE:abbreviations*/?) OR unit.name IN (/*SLICE:names*/?))
+AND (unit.account_id = ? OR unit.account_id IS NULL)
+`
+
+type FindUnitsByAbbreviationsOrNamesParams struct {
+	Abbreviations []string
+	Names         []string
+	AccountID     sql.NullString
+}
+
+type FindUnitsByAbbreviationsOrNamesRow struct {
+	ID                string
+	Name              string
+	Abbreviation      string
+	UnitDimensionCode string
+	RatioNumerator    string
+	RatioDenominator  string
+	OffsetNumerator   string
+	OffsetDenominator string
+	IsBaseUnit        bool
+	AccountID         sql.NullString
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+}
+
+func (q *Queries) FindUnitsByAbbreviationsOrNames(ctx context.Context, arg FindUnitsByAbbreviationsOrNamesParams) ([]FindUnitsByAbbreviationsOrNamesRow, error) {
+	query := findUnitsByAbbreviationsOrNames
+	var queryParams []interface{}
+	if len(arg.Abbreviations) > 0 {
+		for _, v := range arg.Abbreviations {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:abbreviations*/?", strings.Repeat(",?", len(arg.Abbreviations))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:abbreviations*/?", "NULL", 1)
+	}
+	if len(arg.Names) > 0 {
+		for _, v := range arg.Names {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:names*/?", strings.Repeat(",?", len(arg.Names))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:names*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FindUnitsByAbbreviationsOrNamesRow
+	for rows.Next() {
+		var i FindUnitsByAbbreviationsOrNamesRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,

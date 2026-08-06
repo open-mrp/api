@@ -107,3 +107,33 @@ AND (sqlc.narg('exclude_id') IS NULL OR id != sqlc.narg('exclude_id'));
 SELECT COUNT(*) FROM property
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');
+
+-- name: ExportProperties :many
+-- Unpaginated by design; the caller passes a row cap as the limit.
+SELECT
+    property.id,
+    property.name,
+    property.account_id,
+    property.is_public,
+    property.created_at,
+    property.updated_at
+FROM property
+WHERE property.account_id = sqlc.arg('account_id')
+AND (
+    sqlc.narg('search_query') IS NULL
+    OR property.name LIKE sqlc.narg('search_query')
+)
+ORDER BY property.created_at DESC, property.id DESC
+LIMIT ?;
+
+-- name: FindPropertiesByNames :many
+SELECT
+    property.id,
+    property.name,
+    property.account_id,
+    property.is_public,
+    property.created_at,
+    property.updated_at
+FROM property
+WHERE property.name IN (sqlc.slice('names'))
+AND property.account_id = sqlc.arg('account_id');

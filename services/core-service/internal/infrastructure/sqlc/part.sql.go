@@ -100,6 +100,7 @@ ORDER BY
     END ASC,
     i.created_at DESC,
     i.id DESC
+LIMIT ?
 `
 
 type ExportPartsWithFiltersParams struct {
@@ -113,6 +114,7 @@ type ExportPartsWithFiltersParams struct {
 	SearchQuery            sql.NullString
 	SearchExact            interface{}
 	SearchPrefix           interface{}
+	Limit                  int32
 }
 
 type ExportPartsWithFiltersRow struct {
@@ -175,6 +177,7 @@ func (q *Queries) ExportPartsWithFilters(ctx context.Context, arg ExportPartsWit
 	queryParams = append(queryParams, arg.SearchExact)
 	queryParams = append(queryParams, arg.SearchPrefix)
 	queryParams = append(queryParams, arg.SearchPrefix)
+	queryParams = append(queryParams, arg.Limit)
 	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
@@ -205,6 +208,78 @@ func (q *Queries) ExportPartsWithFilters(ctx context.Context, arg ExportPartsWit
 			&i.CategoryUnitGroupID,
 			&i.CategoryCreatedAt,
 			&i.CategoryUpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const findPartsBySKUs = `-- name: FindPartsBySKUs :many
+SELECT
+    p.id AS part_id,
+    p.item_id,
+    i.sku,
+    i.item_category_id,
+    i.unit_value_id,
+    i.unit_cost_id
+FROM part p
+JOIN item i ON i.id = p.item_id
+WHERE i.sku IN (/*SLICE:skus*/?)
+AND i.account_id = ?
+AND i.deleted_at IS NULL
+`
+
+type FindPartsBySKUsParams struct {
+	Skus      []string
+	AccountID string
+}
+
+type FindPartsBySKUsRow struct {
+	PartID         string
+	ItemID         string
+	Sku            string
+	ItemCategoryID string
+	UnitValueID    string
+	UnitCostID     string
+}
+
+// Used by bulk upsert to resolve existing parts (by SKU) to the IDs needed to update
+// them: part id, item id, and the unit_value / unit_cost rate ids.
+func (q *Queries) FindPartsBySKUs(ctx context.Context, arg FindPartsBySKUsParams) ([]FindPartsBySKUsRow, error) {
+	query := findPartsBySKUs
+	var queryParams []interface{}
+	if len(arg.Skus) > 0 {
+		for _, v := range arg.Skus {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:skus*/?", strings.Repeat(",?", len(arg.Skus))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:skus*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FindPartsBySKUsRow
+	for rows.Next() {
+		var i FindPartsBySKUsRow
+		if err := rows.Scan(
+			&i.PartID,
+			&i.ItemID,
+			&i.Sku,
+			&i.ItemCategoryID,
+			&i.UnitValueID,
+			&i.UnitCostID,
 		); err != nil {
 			return nil, err
 		}

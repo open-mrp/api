@@ -607,10 +607,11 @@ func (r APIErrorResponse) SchemaExample() any {
 	}
 }
 
-// ToResponseMap converts the APIError into an APIErrorResponse suitable for JSON serialization in HTTP responses. Only public fields are included.
-func (e *APIError) ToResponseMap() any {
+// renders the public fields as the canonical client-facing error object, so one embedded
+// in another payload (e.g. a job's per-row failures) reads the same as any error envelope
+func (e *APIError) ToResponseError() ResponseError {
 	if e == nil {
-		return APIErrorResponse{}
+		return ResponseError{}
 	}
 	resp := ResponseError{
 		Code:        e.Code,
@@ -627,7 +628,16 @@ func (e *APIError) ToResponseMap() any {
 	if e.Quota != nil {
 		resp.Quota = e.Quota
 	}
-	return APIErrorResponse{Error: resp}
+	return resp
+}
+
+// ToResponseMap converts the APIError into an APIErrorResponse suitable for JSON
+// serialization in HTTP responses. Only public fields are included.
+func (e *APIError) ToResponseMap() any {
+	if e == nil {
+		return APIErrorResponse{}
+	}
+	return APIErrorResponse{Error: e.ToResponseError()}
 }
 
 // GetHTTPStatusCode maps an ErrorCode to the appropriate HTTP status code. Used by the API gateway to set the response status when writing error responses.

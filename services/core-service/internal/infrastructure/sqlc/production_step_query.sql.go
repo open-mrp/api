@@ -130,6 +130,207 @@ func (q *Queries) ExistsProductionStepByName(ctx context.Context, arg ExistsProd
 	return count, err
 }
 
+const exportProductionStepConsumptions = `-- name: ExportProductionStepConsumptions :many
+SELECT
+    c.production_step_id,
+    ci.sku AS consumed_item_sku,
+    cq.value AS consumed_quantity_value,
+    cu.abbreviation AS consumed_unit_abbreviation,
+    wq.value AS waste_quantity_value,
+    wu.abbreviation AS waste_unit_abbreviation,
+    c.instructions
+FROM consumption c
+JOIN item ci ON c.item_id = ci.id
+JOIN quantity cq ON c.quantity_id = cq.id
+JOIN unit cu ON cq.unit_id = cu.id
+LEFT JOIN quantity wq ON c.waste_quantity_id = wq.id
+LEFT JOIN unit wu ON wq.unit_id = wu.id
+WHERE c.production_step_id IN (/*SLICE:production_step_ids*/?)
+ORDER BY c.production_step_id, c.created_at, c.id
+`
+
+type ExportProductionStepConsumptionsRow struct {
+	ProductionStepID         sql.NullString
+	ConsumedItemSku          string
+	ConsumedQuantityValue    string
+	ConsumedUnitAbbreviation string
+	WasteQuantityValue       sql.NullString
+	WasteUnitAbbreviation    sql.NullString
+	Instructions             sql.NullString
+}
+
+// The consumptions of the given steps, one row each, for the step export.
+func (q *Queries) ExportProductionStepConsumptions(ctx context.Context, productionStepIds []sql.NullString) ([]ExportProductionStepConsumptionsRow, error) {
+	query := exportProductionStepConsumptions
+	var queryParams []interface{}
+	if len(productionStepIds) > 0 {
+		for _, v := range productionStepIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:production_step_ids*/?", strings.Repeat(",?", len(productionStepIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:production_step_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ExportProductionStepConsumptionsRow
+	for rows.Next() {
+		var i ExportProductionStepConsumptionsRow
+		if err := rows.Scan(
+			&i.ProductionStepID,
+			&i.ConsumedItemSku,
+			&i.ConsumedQuantityValue,
+			&i.ConsumedUnitAbbreviation,
+			&i.WasteQuantityValue,
+			&i.WasteUnitAbbreviation,
+			&i.Instructions,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const exportProductionSteps = `-- name: ExportProductionSteps :many
+SELECT
+    ps.id,
+    ps.name,
+    ps.notes,
+    ps.leveling_factor,
+    ps.allowances,
+    d.name AS department_name,
+    ss.name AS scanning_station_name,
+    pi.sku AS produced_item_sku,
+    pq.value AS produced_quantity_value,
+    pu.abbreviation AS produced_unit_abbreviation,
+    lr.value AS labor_rate_value,
+    lrnu.abbreviation AS labor_rate_currency_unit,
+    lrdu.abbreviation AS labor_rate_time_unit,
+    lt.value AS labor_time_value,
+    ltnu.abbreviation AS labor_time_unit,
+    ltdu.abbreviation AS labor_time_per_unit,
+    ohr.value AS overhead_rate_value,
+    ohrnu.abbreviation AS overhead_rate_currency_unit,
+    ohrdu.abbreviation AS overhead_rate_time_unit,
+    ps.created_at,
+    ps.updated_at
+FROM production_step ps
+JOIN production p ON p.production_step_id = ps.id
+JOIN item pi ON p.item_id = pi.id
+JOIN quantity pq ON p.quantity_id = pq.id
+JOIN unit pu ON pq.unit_id = pu.id
+LEFT JOIN department d ON ps.department_id = d.id
+LEFT JOIN scanning_station ss ON ps.scanning_station_id = ss.id
+LEFT JOIN rate lr ON ps.labor_rate_id = lr.id
+LEFT JOIN unit lrnu ON lr.numerator_unit_id = lrnu.id
+LEFT JOIN unit lrdu ON lr.denominator_unit_id = lrdu.id
+LEFT JOIN rate lt ON ps.labor_time_id = lt.id
+LEFT JOIN unit ltnu ON lt.numerator_unit_id = ltnu.id
+LEFT JOIN unit ltdu ON lt.denominator_unit_id = ltdu.id
+LEFT JOIN rate ohr ON ps.overhead_rate_id = ohr.id
+LEFT JOIN unit ohrnu ON ohr.numerator_unit_id = ohrnu.id
+LEFT JOIN unit ohrdu ON ohr.denominator_unit_id = ohrdu.id
+WHERE ps.account_id = ?
+AND (
+    ? IS NULL
+    OR ps.name LIKE ?
+)
+ORDER BY ps.created_at DESC, ps.id DESC
+LIMIT ?
+`
+
+type ExportProductionStepsParams struct {
+	AccountID   string
+	SearchQuery sql.NullString
+	Limit       int32
+}
+
+type ExportProductionStepsRow struct {
+	ID                       string
+	Name                     string
+	Notes                    sql.NullString
+	LevelingFactor           string
+	Allowances               string
+	DepartmentName           sql.NullString
+	ScanningStationName      sql.NullString
+	ProducedItemSku          string
+	ProducedQuantityValue    string
+	ProducedUnitAbbreviation string
+	LaborRateValue           sql.NullString
+	LaborRateCurrencyUnit    sql.NullString
+	LaborRateTimeUnit        sql.NullString
+	LaborTimeValue           sql.NullString
+	LaborTimeUnit            sql.NullString
+	LaborTimePerUnit         sql.NullString
+	OverheadRateValue        sql.NullString
+	OverheadRateCurrencyUnit sql.NullString
+	OverheadRateTimeUnit     sql.NullString
+	CreatedAt                time.Time
+	UpdatedAt                time.Time
+}
+
+// Unpaginated by design; the caller passes a row cap as the limit. Search uses
+// LIKE rather than the list's fulltext MATCH so a partial name still filters.
+func (q *Queries) ExportProductionSteps(ctx context.Context, arg ExportProductionStepsParams) ([]ExportProductionStepsRow, error) {
+	rows, err := q.db.QueryContext(ctx, exportProductionSteps,
+		arg.AccountID,
+		arg.SearchQuery,
+		arg.SearchQuery,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ExportProductionStepsRow
+	for rows.Next() {
+		var i ExportProductionStepsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Notes,
+			&i.LevelingFactor,
+			&i.Allowances,
+			&i.DepartmentName,
+			&i.ScanningStationName,
+			&i.ProducedItemSku,
+			&i.ProducedQuantityValue,
+			&i.ProducedUnitAbbreviation,
+			&i.LaborRateValue,
+			&i.LaborRateCurrencyUnit,
+			&i.LaborRateTimeUnit,
+			&i.LaborTimeValue,
+			&i.LaborTimeUnit,
+			&i.LaborTimePerUnit,
+			&i.OverheadRateValue,
+			&i.OverheadRateCurrencyUnit,
+			&i.OverheadRateTimeUnit,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const findProducedItemIDByStep = `-- name: FindProducedItemIDByStep :one
 SELECT p.item_id FROM production p
 WHERE p.production_step_id = ?
@@ -179,6 +380,85 @@ func (q *Queries) FindProductionStepIDByName(ctx context.Context, arg FindProduc
 	var id string
 	err := row.Scan(&id)
 	return id, err
+}
+
+const findProductionStepsByNames = `-- name: FindProductionStepsByNames :many
+SELECT id, name, notes, leveling_factor, allowances,
+       scanning_station_id, department_id,
+       labor_rate_id, labor_time_id, overhead_rate_id,
+       created_at, updated_at
+FROM production_step
+WHERE name IN (/*SLICE:names*/?)
+AND account_id = ?
+`
+
+type FindProductionStepsByNamesParams struct {
+	Names     []string
+	AccountID string
+}
+
+type FindProductionStepsByNamesRow struct {
+	ID                string
+	Name              string
+	Notes             sql.NullString
+	LevelingFactor    string
+	Allowances        string
+	ScanningStationID sql.NullString
+	DepartmentID      sql.NullString
+	LaborRateID       string
+	LaborTimeID       string
+	OverheadRateID    string
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+}
+
+// Names must be pre-lowercased by the caller; the utf8mb4_unicode_ci collation makes
+// the IN comparison case-insensitive, so lowercasing on both sides is not required.
+func (q *Queries) FindProductionStepsByNames(ctx context.Context, arg FindProductionStepsByNamesParams) ([]FindProductionStepsByNamesRow, error) {
+	query := findProductionStepsByNames
+	var queryParams []interface{}
+	if len(arg.Names) > 0 {
+		for _, v := range arg.Names {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:names*/?", strings.Repeat(",?", len(arg.Names))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:names*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FindProductionStepsByNamesRow
+	for rows.Next() {
+		var i FindProductionStepsByNamesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Notes,
+			&i.LevelingFactor,
+			&i.Allowances,
+			&i.ScanningStationID,
+			&i.DepartmentID,
+			&i.LaborRateID,
+			&i.LaborTimeID,
+			&i.OverheadRateID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const findStepByScanningStationAndItem = `-- name: FindStepByScanningStationAndItem :one
@@ -1666,6 +1946,53 @@ func (q *Queries) UpdateProductionStepFields(ctx context.Context, arg UpdateProd
 		arg.ID,
 		arg.AccountID,
 	)
+}
+
+const updateProductionStepForBulkUpsert = `-- name: UpdateProductionStepForBulkUpsert :exec
+UPDATE production_step SET
+    name = ?,
+    notes = ?,
+    leveling_factor = ?,
+    allowances = ?,
+    scanning_station_id = ?,
+    labor_rate_id = ?,
+    labor_time_id = ?,
+    overhead_rate_id = ?,
+    updated_at = NOW(3)
+WHERE id = ?
+AND account_id = ?
+`
+
+type UpdateProductionStepForBulkUpsertParams struct {
+	Name              string
+	Notes             sql.NullString
+	LevelingFactor    string
+	Allowances        string
+	ScanningStationID sql.NullString
+	LaborRateID       string
+	LaborTimeID       string
+	OverheadRateID    string
+	ID                string
+	AccountID         string
+}
+
+// Bulk upsert writes the full step row: rates are re-pointed at freshly inserted rate
+// rows (rate rows are never mutated in place), and notes / leveling factor /
+// allowances / scanning station are pre-backfilled by the service when omitted.
+func (q *Queries) UpdateProductionStepForBulkUpsert(ctx context.Context, arg UpdateProductionStepForBulkUpsertParams) error {
+	_, err := q.db.ExecContext(ctx, updateProductionStepForBulkUpsert,
+		arg.Name,
+		arg.Notes,
+		arg.LevelingFactor,
+		arg.Allowances,
+		arg.ScanningStationID,
+		arg.LaborRateID,
+		arg.LaborTimeID,
+		arg.OverheadRateID,
+		arg.ID,
+		arg.AccountID,
+	)
+	return err
 }
 
 const updateProductionStepFull = `-- name: UpdateProductionStepFull :exec

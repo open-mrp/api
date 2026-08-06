@@ -109,5 +109,6 @@ func (s *itemSvcImpl) itemBaseUnitID(ctx context.Context, item *domain.Item) (st
 	if item.ItemCategoryID == "" {
 		return "", nil
 	}
-	return s.repos.NewItemRepo().GetCategoryBaseUnitID(ctx, item.ItemCategoryID)
+	unitID, _, apiErr := s.repos.NewItemRepo().GetCategoryBaseUnitID(ctx, item.ItemCategoryID)
+	return unitID, apiErr
 }

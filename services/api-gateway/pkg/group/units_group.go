@@ -46,6 +46,8 @@ func (*UnitsEndpointGroup) Materialize(config *UnitsEndpointGroupConfig) *UnitsE
 	updateUnitEndpoint := apiendpoint.From(&unitep.UpdateUnitEndpoint{}).WithService(inner, unitSvc)
 	deleteUnitEndpoint := apiendpoint.From(&unitep.DeleteUnitEndpoint{}).WithService(inner, unitSvc)
 	validateUnitsEndpoint := apiendpoint.From(&unitep.ValidateUnitsEndpoint{}).WithService(inner, unitSvc)
+	bulkUpsertUnitsEndpoint := apiendpoint.From(&unitep.BulkUpsertUnitsEndpoint{}).WithService(inner, unitSvc)
+	exportUnitsEndpoint := apiendpoint.From(&unitep.ExportUnitsEndpoint{}).WithService(inner, unitSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listUnitsEndpoint,
@@ -54,6 +56,8 @@ func (*UnitsEndpointGroup) Materialize(config *UnitsEndpointGroupConfig) *UnitsE
 		updateUnitEndpoint,
 		deleteUnitEndpoint,
 		validateUnitsEndpoint,
+		bulkUpsertUnitsEndpoint,
+		exportUnitsEndpoint,
 	}
 
 	return &UnitsEndpointGroup{inner}

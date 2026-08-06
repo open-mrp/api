@@ -11,6 +11,7 @@ const coreServiceName = "core-service"
 
 type CoreServiceClient struct {
 	Client             pb.CoreServiceClient
+	Job                pb.CoreJobServiceClient
 	Sales              pb.CoreSalesServiceClient
 	Purchase           pb.CorePurchaseServiceClient
 	Fulfillment        pb.CoreFulfillmentServiceClient
@@ -37,6 +38,7 @@ func NewCoreServiceClientWithURL(url string) (*CoreServiceClient, error) {
 	conn := grpcConn.Conn()
 	return &CoreServiceClient{
 		Client:             pb.NewCoreServiceClient(conn),
+		Job:                pb.NewCoreJobServiceClient(conn),
 		Sales:              pb.NewCoreSalesServiceClient(conn),
 		Purchase:           pb.NewCorePurchaseServiceClient(conn),
 		Fulfillment:        pb.NewCoreFulfillmentServiceClient(conn),

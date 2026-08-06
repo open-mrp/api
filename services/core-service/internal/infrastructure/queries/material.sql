@@ -382,6 +382,22 @@ INSERT INTO material (
     NOW(3)
 );
 
+-- name: FindMaterialsBySKUs :many
+-- Used by bulk upsert to resolve existing materials (by SKU) to the IDs needed to update
+-- them: material id, item id, and the unit_value / unit_cost rate ids.
+SELECT
+    m.id AS material_id,
+    m.item_id,
+    i.sku,
+    i.item_category_id,
+    i.unit_value_id,
+    i.unit_cost_id
+FROM material m
+JOIN item i ON i.id = m.item_id
+WHERE i.sku IN (sqlc.slice('skus'))
+AND i.account_id = sqlc.arg('account_id')
+AND i.deleted_at IS NULL;
+
 -- name: UpdateMaterial :execresult
 UPDATE material SET
     updated_at = NOW(3)
@@ -553,4 +569,5 @@ ORDER BY
         ELSE 3
     END ASC,
     m.created_at DESC,
-    m.id DESC;
+    m.id DESC
+LIMIT ?;

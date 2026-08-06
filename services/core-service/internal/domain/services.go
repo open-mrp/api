@@ -2,6 +2,7 @@ package domain
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/augno/api/services/core-service/internal/scheduling"
@@ -52,7 +53,11 @@ type UnitSvc interface {
 	// ListUnits returns a paginated list of units visible to the caller's account. Includes both account-specific and global (system) units.
 	ListUnits(ctx context.Context, params ListUnitsParams) (*ListUnitsResult, *apierror.APIError)
 
-	// GetUnit returns a single unit by ID. The unit must belong to the caller's account or be a system (global) unit.
+	ExportUnits(ctx context.Context, params ExportUnitsParams) (*Job, *apierror.APIError)
+	// renders the file an accepted export recorded.
+	BuildExportUnits(ctx context.Context, accountID string, filters json.RawMessage) (*Export, *apierror.APIError)
+
+	// returns a single unit by ID. The unit must belong to the caller's account or be a system (global) unit.
 	GetUnit(ctx context.Context, unitID string) (*Unit, *apierror.APIError)
 
 	// CreateUnit creates a new account-owned unit.
@@ -61,7 +66,12 @@ type UnitSvc interface {
 	// UpdateUnit partially updates an account-owned unit. System units cannot be updated.
 	UpdateUnit(ctx context.Context, params UpdateUnitParams) (*Unit, *apierror.APIError)
 
-	// DeleteUnit deletes an account-owned unit and cascades to unit_group_unit associations. System units cannot be deleted.
+	// validates and resolves synchronously, records the rows on a job, and returns the raised Job to poll
+	BulkUpsertUnits(ctx context.Context, params BulkUpsertUnitsParams) (*Job, *apierror.APIError)
+	// performs the writes for an enqueued bulk upsert; the message inbox makes delivery effectively-once
+	ExecuteBulkUpsertUnits(ctx context.Context, event BulkOperationJobEvent) *apierror.APIError
+
+	// deletes an account-owned unit and cascades to unit_group_unit associations. System units cannot be deleted.
 	DeleteUnit(ctx context.Context, unitID string) *apierror.APIError
 
 	// ValidateUnits validates unit abbreviations and returns matching units. Performs case-insensitive matching against both account and system units.
@@ -75,7 +85,11 @@ type UnitGroupSvc interface {
 	// ListUnitGroups returns a paginated list of unit groups visible to the caller's account. Includes both account-specific and system unit groups.
 	ListUnitGroups(ctx context.Context, params ListUnitGroupsParams) (*ListUnitGroupsResult, *apierror.APIError)
 
-	// GetUnitGroup returns a single unit group by ID with its unit conversions. Supports both internal and customer (cross-account) access.
+	ExportUnitGroups(ctx context.Context, params ExportUnitGroupsParams) (*Job, *apierror.APIError)
+	// renders the file an accepted export recorded.
+	BuildExportUnitGroups(ctx context.Context, accountID string, filters json.RawMessage) (*Export, *apierror.APIError)
+
+	// returns a single unit group by ID with its unit conversions. Supports both internal and customer (cross-account) access.
 	GetUnitGroup(ctx context.Context, params GetUnitGroupParams) (*UnitGroupFull, *apierror.APIError)
 
 	// CreateUnitGroup creates a new account-owned unit group with optional unit conversions. Idempotent via idempotency keys.
@@ -90,7 +104,12 @@ type UnitGroupSvc interface {
 	// UpsertUnitGroupUnit creates or updates a unit conversion within a unit group. The parent unit group must be account-owned.
 	UpsertUnitGroupUnit(ctx context.Context, params UpsertUnitGroupUnitParams) (*UnitGroupUnit, *apierror.APIError)
 
-	// DeleteUnitGroupUnit removes a unit conversion from a unit group. The parent unit group must be account-owned.
+	// validates and resolves synchronously, records the rows on a job, and returns the raised Job to poll
+	BulkUpsertUnitGroups(ctx context.Context, params BulkUpsertUnitGroupsParams) (*Job, *apierror.APIError)
+	// performs the writes for an enqueued bulk upsert; the message inbox makes delivery effectively-once
+	ExecuteBulkUpsertUnitGroups(ctx context.Context, event BulkOperationJobEvent) *apierror.APIError
+
+	// removes a unit conversion from a unit group. The parent unit group must be account-owned.
 	DeleteUnitGroupUnit(ctx context.Context, params DeleteUnitGroupUnitParams) *apierror.APIError
 
 	// ListUnitGroupUnits returns all unit conversions for a unit group.
@@ -358,6 +377,19 @@ type PropertySvc interface {
 
 	// BatchGetPropertiesByIDs returns properties matching the input IDs that belong to the caller's account. Always populates attributes.
 	BatchGetPropertiesByIDs(ctx context.Context, ids []string) ([]*Property, *apierror.APIError)
+
+	// BulkUpsertProperties accepts a bulk upsert and returns the job that tracks it.
+	// Properties are matched by name within the account.
+	BulkUpsertProperties(ctx context.Context, params BulkUpsertPropertiesParams) (*Job, *apierror.APIError)
+
+	// performs the writes for an enqueued bulk property upsert.
+	ExecuteBulkUpsertProperties(ctx context.Context, event BulkOperationJobEvent) *apierror.APIError
+
+	// ExportProperties accepts an export and returns the job that tracks it.
+	ExportProperties(ctx context.Context, params ExportPropertiesParams) (*Job, *apierror.APIError)
+
+	// BuildExportProperties renders the file an accepted export recorded.
+	BuildExportProperties(ctx context.Context, accountID string, filters json.RawMessage) (*Export, *apierror.APIError)
 }
 
 type AttributeSvc interface {
@@ -438,8 +470,10 @@ type ProductSvc interface {
 	// ListProductsFull returns a paginated list of products for the caller's account.
 	ListProductsFull(ctx context.Context, params ListProductsFullParams) (*ListProductsFullResult, *apierror.APIError)
 
-	// ExportProducts returns all matching products (no pagination) for export.
-	ExportProducts(ctx context.Context, params ExportProductsParams) ([]*ProductFull, *apierror.APIError)
+	// ExportProducts accepts an export and returns the job that tracks it.
+	ExportProducts(ctx context.Context, params ExportProductsParams) (*Job, *apierror.APIError)
+	// BuildExportProducts renders the file an accepted export recorded.
+	BuildExportProducts(ctx context.Context, accountID string, filters json.RawMessage) (*Export, *apierror.APIError)
 
 	// GetProduct returns a single product by item ID.
 	GetProduct(ctx context.Context, params GetProductFullParams) (*ProductFull, *apierror.APIError)
@@ -449,6 +483,13 @@ type ProductSvc interface {
 
 	// UpdateProduct partially updates an existing product.
 	UpdateProduct(ctx context.Context, params UpdateProductParams) (*ProductFull, *apierror.APIError)
+
+	// BulkUpsertProducts creates or updates multiple products in a single atomic
+	// operation, matched by SKU within the account.
+	BulkUpsertProducts(ctx context.Context, params BulkUpsertProductsParams) (*Job, *apierror.APIError)
+
+	// performs the writes for an enqueued bulk product upsert.
+	ExecuteBulkUpsertProducts(ctx context.Context, event BulkOperationJobEvent) *apierror.APIError
 
 	// DeleteProduct soft-deletes a product by its item ID.
 	DeleteProduct(ctx context.Context, params DeleteProductParams) (*ProductFull, *apierror.APIError)
@@ -677,6 +718,10 @@ type ItemCategorySvc interface {
 	// ListItemCategories returns a paginated list of item categories visible to the caller's account.
 	ListItemCategories(ctx context.Context, params ListItemCategoriesParams) (*ListItemCategoriesResult, *apierror.APIError)
 
+	ExportItemCategories(ctx context.Context, params ExportItemCategoriesParams) (*Job, *apierror.APIError)
+	// BuildExportItemCategories renders the file an accepted export recorded.
+	BuildExportItemCategories(ctx context.Context, accountID string, filters json.RawMessage) (*Export, *apierror.APIError)
+
 	// GetItemCategory returns a single item category by ID.
 	GetItemCategory(ctx context.Context, params GetItemCategoryParams) (*ItemCategoryFull, *apierror.APIError)
 
@@ -700,11 +745,22 @@ type ItemCategorySvc interface {
 
 	// BatchGetItemCategoriesByIDs returns item categories by ID for the api-gateway include resolver. Always populates properties and unit group with full tree.
 	BatchGetItemCategoriesByIDs(ctx context.Context, ids []string) ([]*ItemCategoryFull, *apierror.APIError)
+
+	// accepts a bulk upsert of item categories and returns the job that carries it out,
+	// matching by name (case-insensitive) within the caller's account.
+	BulkUpsertItemCategories(ctx context.Context, params BulkUpsertItemCategoriesParams) (*Job, *apierror.APIError)
+
+	// performs the writes for an enqueued bulk item category upsert.
+	ExecuteBulkUpsertItemCategories(ctx context.Context, event BulkOperationJobEvent) *apierror.APIError
 }
 
 type ProductLineSvc interface {
 	// ListProductLines returns a paginated list of product lines visible to the caller's account.
 	ListProductLines(ctx context.Context, params ListProductLinesParams) (*ListProductLinesResult, *apierror.APIError)
+
+	ExportProductLines(ctx context.Context, params ExportProductLinesParams) (*Job, *apierror.APIError)
+	// BuildExportProductLines renders the file an accepted export recorded.
+	BuildExportProductLines(ctx context.Context, accountID string, filters json.RawMessage) (*Export, *apierror.APIError)
 
 	// GetProductLine returns a single product line by ID.
 	GetProductLine(ctx context.Context, params GetProductLineParams) (*ProductLineFull, *apierror.APIError)
@@ -720,6 +776,12 @@ type ProductLineSvc interface {
 
 	// BatchGetProductLinesByIDs returns product lines by ID for the api-gateway include resolver.
 	BatchGetProductLinesByIDs(ctx context.Context, ids []string) ([]*ProductLineFull, *apierror.APIError)
+
+	// accepts a bulk upsert of product lines and returns the job to poll.
+	BulkUpsertProductLines(ctx context.Context, params BulkUpsertProductLinesParams) (*Job, *apierror.APIError)
+
+	// performs the writes for an enqueued bulk upsert.
+	ExecuteBulkUpsertProductLines(ctx context.Context, event BulkOperationJobEvent) *apierror.APIError
 }
 
 type ConsumptionSvc interface {
@@ -809,6 +871,11 @@ type MachineSvc interface {
 	// ListMachines returns a paginated list of machines for the caller's account.
 	ListMachines(ctx context.Context, params ListMachinesParams) (*ListMachinesResult, *apierror.APIError)
 
+	// ExportMachines accepts an export and returns the job that tracks it.
+	ExportMachines(ctx context.Context, params ExportMachinesParams) (*Job, *apierror.APIError)
+	// BuildExportMachines renders the file an accepted export recorded.
+	BuildExportMachines(ctx context.Context, accountID string, filters json.RawMessage) (*Export, *apierror.APIError)
+
 	// GetMachine returns a single machine by ID.
 	GetMachine(ctx context.Context, machineID string) (*Machine, *apierror.APIError)
 
@@ -817,6 +884,12 @@ type MachineSvc interface {
 
 	// UpdateMachine partially updates a machine.
 	UpdateMachine(ctx context.Context, params UpdateMachineParams) (*Machine, *apierror.APIError)
+
+	// accepts a bulk upsert of machines returns the job to poll.
+	BulkUpsertMachines(ctx context.Context, params BulkUpsertMachinesParams) (*Job, *apierror.APIError)
+
+	// performs the writes for an enqueued bulk upsert.
+	ExecuteBulkUpsertMachines(ctx context.Context, event BulkOperationJobEvent) *apierror.APIError
 
 	// DeleteMachine deletes a machine.
 	DeleteMachine(ctx context.Context, machineID string) *apierror.APIError
@@ -958,6 +1031,10 @@ type DepartmentSvc interface {
 	// ListDepartments returns a paginated list of departments for the caller's account.
 	ListDepartments(ctx context.Context, params ListDepartmentsParams) (*ListDepartmentsResult, *apierror.APIError)
 
+	ExportDepartments(ctx context.Context, params ExportDepartmentsParams) (*Job, *apierror.APIError)
+	// BuildExportDepartments renders the file an accepted export recorded.
+	BuildExportDepartments(ctx context.Context, accountID string, filters json.RawMessage) (*Export, *apierror.APIError)
+
 	// GetDepartment returns a single department by ID.
 	GetDepartment(ctx context.Context, departmentID string) (*Department, *apierror.APIError)
 
@@ -966,6 +1043,12 @@ type DepartmentSvc interface {
 
 	// UpdateDepartment partially updates a department.
 	UpdateDepartment(ctx context.Context, params UpdateDepartmentParams) (*Department, *apierror.APIError)
+
+	// BulkUpsertDepartments accepts a bulk upsert of departments and returns the job to poll.
+	BulkUpsertDepartments(ctx context.Context, params BulkUpsertDepartmentsParams) (*Job, *apierror.APIError)
+
+	// ExecuteBulkUpsertDepartments performs the writes for an enqueued bulk upsert.
+	ExecuteBulkUpsertDepartments(ctx context.Context, event BulkOperationJobEvent) *apierror.APIError
 
 	// DeleteDepartment deletes a department.
 	DeleteDepartment(ctx context.Context, departmentID string) *apierror.APIError
@@ -1199,11 +1282,20 @@ type PartSvc interface {
 	// ListParts returns a paginated list of parts for the caller's account.
 	ListParts(ctx context.Context, params ListPartsParams) (*ListPartsResult, *apierror.APIError)
 
-	// ExportParts returns all matching parts (no pagination) for export.
-	ExportParts(ctx context.Context, params ExportPartsParams) ([]*Part, *apierror.APIError)
+	// ExportParts accepts an export and returns the job that tracks it.
+	ExportParts(ctx context.Context, params ExportPartsParams) (*Job, *apierror.APIError)
+	// BuildExportParts renders the file an accepted export recorded.
+	BuildExportParts(ctx context.Context, accountID string, filters json.RawMessage) (*Export, *apierror.APIError)
 
 	// UpdatePart partially updates a part's item fields.
 	UpdatePart(ctx context.Context, params UpdatePartParams) (*Part, *apierror.APIError)
+
+	// accepts a bulk upsert of parts and returns the job that carries it out, matching by
+	// SKU within the account.
+	BulkUpsertParts(ctx context.Context, params BulkUpsertPartsParams) (*Job, *apierror.APIError)
+
+	// performs the writes for an enqueued bulk part upsert.
+	ExecuteBulkUpsertParts(ctx context.Context, event BulkOperationJobEvent) *apierror.APIError
 
 	// DeletePart soft-deletes a part by its item ID.
 	DeletePart(ctx context.Context, itemID string) (*Part, *apierror.APIError)
@@ -1216,8 +1308,10 @@ type MaterialSvc interface {
 	// ListMaterials returns a paginated list of materials for the caller's account.
 	ListMaterials(ctx context.Context, params ListMaterialsParams) (*ListMaterialsResult, *apierror.APIError)
 
-	// ExportMaterials returns all matching materials (no pagination) for export.
-	ExportMaterials(ctx context.Context, params ExportMaterialsParams) ([]*Material, *apierror.APIError)
+	// ExportMaterials accepts an export and returns the job that tracks it.
+	ExportMaterials(ctx context.Context, params ExportMaterialsParams) (*Job, *apierror.APIError)
+	// BuildExportMaterials renders the file an accepted export recorded.
+	BuildExportMaterials(ctx context.Context, accountID string, filters json.RawMessage) (*Export, *apierror.APIError)
 
 	// GetMaterial returns a single material by ID.
 	GetMaterial(ctx context.Context, params GetMaterialParams) (*Material, *apierror.APIError)
@@ -1227,6 +1321,12 @@ type MaterialSvc interface {
 
 	// UpdateMaterial partially updates a material.
 	UpdateMaterial(ctx context.Context, params UpdateMaterialParams) (*Material, *apierror.APIError)
+
+	// BulkUpsertMaterials creates or updates multiple materials in one atomic transaction, matched by SKU.
+	BulkUpsertMaterials(ctx context.Context, params BulkUpsertMaterialsParams) (*Job, *apierror.APIError)
+
+	// performs the writes for an enqueued bulk material upsert.
+	ExecuteBulkUpsertMaterials(ctx context.Context, event BulkOperationJobEvent) *apierror.APIError
 
 	// DeleteMaterial soft-deletes a material by its item ID.
 	DeleteMaterial(ctx context.Context, itemID string) (*Material, *apierror.APIError)
@@ -1344,17 +1444,35 @@ type ProductTypeSvc interface {
 
 type ProductionRunSvc interface {
 	ListProductionRuns(ctx context.Context, params ListProductionRunsParams) (*ListProductionRunsResult, *apierror.APIError)
+	ExportProductionRuns(ctx context.Context, params ExportProductionRunsParams) (*Job, *apierror.APIError)
+	// BuildExportProductionRuns renders the file an accepted export recorded.
+	BuildExportProductionRuns(ctx context.Context, accountID string, filters json.RawMessage) (*Export, *apierror.APIError)
 	GetProductionRun(ctx context.Context, params GetProductionRunParams) (*ProductionRun, *apierror.APIError)
 	CreateProductionRun(ctx context.Context, params CreateProductionRunParams) (*ProductionRun, *apierror.APIError)
 	UpdateProductionRun(ctx context.Context, params UpdateProductionRunParams) (*ProductionRun, *apierror.APIError)
 	DeleteProductionRun(ctx context.Context, params DeleteProductionRunParams) *apierror.APIError
 	AddBatchesToProductionRun(ctx context.Context, params AddBatchesToProductionRunParams) ([]*BaseBatch, *apierror.APIError)
 	ListBatchesByProductionRun(ctx context.Context, params ListBatchesByProductionRunParams) (*ListBatchesByProductionRunResult, *apierror.APIError)
+	// BulkCreateProductionRuns validates a bulk create request, resolves every
+	// reference, pre-generates the run and batch IDs, records the resolved payload
+	// and those IDs on a job row, and enqueues that job's ID via the message outbox.
+	// It returns the raised Job (already carrying the pre-generated IDs in its results);
+	// the runs themselves are created asynchronously by ExecuteBulkCreateProductionRuns.
+	BulkCreateProductionRuns(ctx context.Context, params BulkCreateProductionRunsParams) (*Job, *apierror.APIError)
+	// ExecuteBulkCreateProductionRuns loads the job named by the event, performs its
+	// writes in a single atomic transaction, and records the outcome on the job.
+	// Called by the bulk create consumer — exactly-once delivery is provided by the
+	// message inbox, so there is no idempotency envelope here.
+	ExecuteBulkCreateProductionRuns(ctx context.Context, event BulkOperationJobEvent) *apierror.APIError
 }
 
 type ProductionStepSvc interface {
 	// ListProductionSteps returns a paginated list of production steps.
 	ListProductionSteps(ctx context.Context, params ListProductionStepsParams) (*ListProductionStepsResult, *apierror.APIError)
+
+	ExportProductionSteps(ctx context.Context, params ExportProductionStepsParams) (*Job, *apierror.APIError)
+	// BuildExportProductionSteps renders the file an accepted export recorded.
+	BuildExportProductionSteps(ctx context.Context, accountID string, filters json.RawMessage) (*Export, *apierror.APIError)
 
 	// GetProductionStep returns a single production step by ID.
 	GetProductionStep(ctx context.Context, id string) (*ProductionStep, *apierror.APIError)
@@ -1370,6 +1488,12 @@ type ProductionStepSvc interface {
 
 	// BulkCreateProductionSteps creates multiple production steps in a single operation.
 	BulkCreateProductionSteps(ctx context.Context, params BulkCreateProductionStepsParams) ([]BulkCreateProductionStepResult, *apierror.APIError)
+
+	// BulkUpsertProductionSteps validates and resolves synchronously, records the
+	// resolved rows on a job, and returns the raised Job to poll. The steps are created
+	// or updated asynchronously by ExecuteBulkUpsertProductionSteps.
+	BulkUpsertProductionSteps(ctx context.Context, params BulkUpsertProductionStepsParams) (*Job, *apierror.APIError)
+	ExecuteBulkUpsertProductionSteps(ctx context.Context, event BulkOperationJobEvent) *apierror.APIError
 }
 
 type ProductionSvc interface {
@@ -1447,20 +1571,30 @@ type RegistrationFlowSvc interface {
 
 type ScanningStationSvc interface {
 	ListScanningStations(ctx context.Context, params ListScanningStationsParams) (*ListScanningStationsResult, *apierror.APIError)
+	ExportScanningStations(ctx context.Context, params ExportScanningStationsParams) (*Job, *apierror.APIError)
+	// BuildExportScanningStations renders the file an accepted export recorded.
+	BuildExportScanningStations(ctx context.Context, accountID string, filters json.RawMessage) (*Export, *apierror.APIError)
 	GetScanningStation(ctx context.Context, params GetScanningStationParams) (*ScanningStation, *apierror.APIError)
 	BatchGetScanningStationsByIDs(ctx context.Context, ids []string) ([]*ScanningStation, *apierror.APIError)
 	CreateScanningStation(ctx context.Context, params CreateScanningStationParams) (*ScanningStation, *apierror.APIError)
 	UpdateScanningStation(ctx context.Context, params UpdateScanningStationParams) (*ScanningStation, *apierror.APIError)
+	BulkUpsertScanningStations(ctx context.Context, params BulkUpsertScanningStationsParams) (*Job, *apierror.APIError)
+	ExecuteBulkUpsertScanningStations(ctx context.Context, event BulkOperationJobEvent) *apierror.APIError
 	DeleteScanningStation(ctx context.Context, scanningStationID string) *apierror.APIError
 	ConnectProductionStepsByName(ctx context.Context, params ConnectProductionStepsByNameParams) *apierror.APIError
 }
 
 type LocationSvc interface {
 	ListLocations(ctx context.Context, params ListLocationsParams) (*ListLocationsResult, *apierror.APIError)
+	ExportLocations(ctx context.Context, params ExportLocationsParams) (*Job, *apierror.APIError)
+	// BuildExportLocations renders the file an accepted export recorded.
+	BuildExportLocations(ctx context.Context, accountID string, filters json.RawMessage) (*Export, *apierror.APIError)
 	GetLocation(ctx context.Context, params GetLocationParams) (*Location, *apierror.APIError)
 	CreateLocation(ctx context.Context, params CreateLocationParams) (*Location, *apierror.APIError)
 	UpdateLocation(ctx context.Context, params UpdateLocationParams) (*Location, *apierror.APIError)
 	DeleteLocation(ctx context.Context, params DeleteLocationParams) *apierror.APIError
+	BulkUpsertLocations(ctx context.Context, params BulkUpsertLocationsParams) (*Job, *apierror.APIError)
+	ExecuteBulkUpsertLocations(ctx context.Context, event BulkOperationJobEvent) *apierror.APIError
 	ListLocationTypes(ctx context.Context, params ListLocationTypesParams) (*ListLocationTypesResult, *apierror.APIError)
 	GetLocationType(ctx context.Context, params GetLocationTypeParams) (*LocationType, *apierror.APIError)
 	BatchGetLocationsByIDs(ctx context.Context, ids []string) ([]*Location, *apierror.APIError)
@@ -1539,6 +1673,26 @@ type RoleSvc interface {
 
 type StripeWebhookSvc interface {
 	HandleAccountStripeWebhook(ctx context.Context, params HandleStripeWebhookParams) *apierror.APIError
+}
+
+// builds an export's file from the filters its job recorded
+type ExportBuilder func(ctx context.Context, accountID string, filters json.RawMessage) (*Export, *apierror.APIError)
+
+// serves the read side of an export. The job passed in was already read under permission,
+// so nothing here checks one.
+type ExportSvc interface {
+	DownloadURL(ctx context.Context, job *Job) (string, *apierror.APIError)
+}
+
+type JobSvc interface {
+	GetJob(ctx context.Context, jobID string) (*Job, *apierror.APIError)
+	GetJobForExecution(ctx context.Context, jobID string) (*Job, *apierror.APIError)
+	CreateJob(ctx context.Context, params CreateJobServiceParams) (*Job, *apierror.APIError)
+	UpdateJob(ctx context.Context, params UpdateJobServiceParams) (*Job, *apierror.APIError)
+	StartJob(ctx context.Context, params StartJobParams) (time.Time, *apierror.APIError)
+	CompleteJob(ctx context.Context, params CompleteJobParams) *apierror.APIError
+	FailJob(ctx context.Context, params FailJobParams)
+	CancelJob(ctx context.Context, params CancelJobParams) (*Job, *apierror.APIError)
 }
 
 type PortalDomainSvc interface {

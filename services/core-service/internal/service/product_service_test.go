@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"strconv"
 	"testing"
 
 	"github.com/augno/api/services/auth-service/pkg/types"
@@ -12,6 +13,7 @@ import (
 	repositorymock "github.com/augno/api/services/core-service/internal/domain/mock/repository"
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
+	"github.com/augno/api/shared/db"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/field"
 	"github.com/augno/api/shared/messaging"
@@ -35,6 +37,10 @@ type productStubTxManager struct {
 
 func (m *productStubTxManager) WithTx(ctx context.Context, fn func(context.Context, domain.RepoFactory) *apierror.APIError) *apierror.APIError {
 	return fn(ctx, m.factory)
+}
+
+func (m *productStubTxManager) WithTxSavepoint(ctx context.Context, fn func(context.Context, domain.RepoFactory, db.SavepointRunner) *apierror.APIError) *apierror.APIError {
+	return fn(ctx, m.factory, passthroughSavepoint{})
 }
 
 // --- Suite ---
@@ -91,6 +97,7 @@ func (s *ProductSvcTestSuite) SetupSuite() {
 	s.productSvc = NewProductSvc(&ProductSvcConfig{
 		Repos:           s.repoFactory,
 		MediatorFactory: s.mediatorFactory,
+		JobSvcFactory:   NewJobSvcFactory(),
 		TxManager:       &productStubTxManager{factory: s.repoFactory},
 	})
 }
@@ -266,7 +273,7 @@ func (s *ProductSvcTestSuite) TestCreateProduct_Success() {
 		Times(1)
 	s.itemRepo.EXPECT().
 		GetCategoryBaseUnitID(gomock.Any(), "cat_123").
-		Return("un_base", nil).
+		Return("un_base", string(constants.ItemCategoryTypeProduct), nil).
 		Times(1)
 
 	// unit_price and unit_cost validate their numerator/denominator dimensions.
@@ -291,12 +298,12 @@ func (s *ProductSvcTestSuite) TestCreateProduct_Success() {
 		Times(1)
 
 	s.productRepo.EXPECT().
-		InsertItem(gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(_ context.Context, itemID string, params domain.CreateProductParams) *apierror.APIError {
+		InsertItem(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, params domain.InsertProductItemParams) *apierror.APIError {
 			s.Equal("ac_test123", params.AccountID)
 			s.Equal("SKU-NEW", params.SKU)
 			s.Equal("cat_123", params.CategoryID)
-			s.NotEmpty(itemID)
+			s.NotEmpty(params.ItemID)
 			return nil
 		}).
 		Times(1)
@@ -372,13 +379,13 @@ func (s *ProductSvcTestSuite) TestCreateProduct_DefaultsRatesToZero() {
 
 	s.expectIdempotencyStarted()
 	s.itemRepo.EXPECT().CheckSKUExists(gomock.Any(), "ac_test123", "SKU-X", "").Return(false, nil).Times(1)
-	s.itemRepo.EXPECT().GetCategoryBaseUnitID(gomock.Any(), "cat_123").Return("un_base", nil).Times(1)
+	s.itemRepo.EXPECT().GetCategoryBaseUnitID(gomock.Any(), "cat_123").Return("un_base", string(constants.ItemCategoryTypeProduct), nil).Times(1)
 
 	// unit_value and unit_cost default to zero; burn_rate defaults to zero per day.
 	s.productRepo.EXPECT().InsertRate(gomock.Any(), gomock.Any(), "0", "un_base", "un_base").Return(nil).Times(2)
 	s.productRepo.EXPECT().InsertRate(gomock.Any(), gomock.Any(), "0", "un_base", "day").Return(nil).Times(1)
 
-	s.productRepo.EXPECT().InsertItem(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+	s.productRepo.EXPECT().InsertItem(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 	s.productRepo.EXPECT().
 		Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ context.Context, _, itemID string, _ domain.CreateProductParams) (*domain.ProductFull, *apierror.APIError) {
@@ -429,10 +436,10 @@ func (s *ProductSvcTestSuite) TestCreateProduct_SkipsBlankAttributeIDs() {
 
 	s.expectIdempotencyStarted()
 	s.itemRepo.EXPECT().CheckSKUExists(gomock.Any(), "ac_test123", "SKU-A", "").Return(false, nil).Times(1)
-	s.itemRepo.EXPECT().GetCategoryBaseUnitID(gomock.Any(), "cat_123").Return("un_base", nil).Times(1)
+	s.itemRepo.EXPECT().GetCategoryBaseUnitID(gomock.Any(), "cat_123").Return("un_base", string(constants.ItemCategoryTypeProduct), nil).Times(1)
 	s.productRepo.EXPECT().InsertRate(gomock.Any(), gomock.Any(), gomock.Any(), "un_base", "un_base").Return(nil).Times(2)
 	s.productRepo.EXPECT().InsertRate(gomock.Any(), gomock.Any(), gomock.Any(), "un_base", "day").Return(nil).Times(1)
-	s.productRepo.EXPECT().InsertItem(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+	s.productRepo.EXPECT().InsertItem(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 	s.productRepo.EXPECT().
 		Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ context.Context, _, itemID string, _ domain.CreateProductParams) (*domain.ProductFull, *apierror.APIError) {
@@ -477,7 +484,7 @@ func (s *ProductSvcTestSuite) TestCreateProduct_RejectsNonCurrencyNumeratorOnUni
 
 	s.expectIdempotencyStarted()
 	s.itemRepo.EXPECT().CheckSKUExists(gomock.Any(), "ac_test123", "SKU-X", "").Return(false, nil).Times(1)
-	s.itemRepo.EXPECT().GetCategoryBaseUnitID(gomock.Any(), "cat_123").Return("un_base", nil).Times(1)
+	s.itemRepo.EXPECT().GetCategoryBaseUnitID(gomock.Any(), "cat_123").Return("un_base", string(constants.ItemCategoryTypeProduct), nil).Times(1)
 
 	// unit_price validates first and passes.
 	s.unitRepo.EXPECT().
@@ -516,7 +523,7 @@ func (s *ProductSvcTestSuite) TestCreateProduct_RejectsCurrencyDenominatorOnUnit
 
 	s.expectIdempotencyStarted()
 	s.itemRepo.EXPECT().CheckSKUExists(gomock.Any(), "ac_test123", "SKU-Y", "").Return(false, nil).Times(1)
-	s.itemRepo.EXPECT().GetCategoryBaseUnitID(gomock.Any(), "cat_123").Return("un_base", nil).Times(1)
+	s.itemRepo.EXPECT().GetCategoryBaseUnitID(gomock.Any(), "cat_123").Return("un_base", string(constants.ItemCategoryTypeProduct), nil).Times(1)
 
 	// unit_price validation: denominator un_usd is currency → reject. No InsertRate called.
 	s.unitRepo.EXPECT().
@@ -1258,6 +1265,21 @@ func (s *ProductSvcTestSuite) TestListProductsFull_AttachesAttributesAndUnitGrou
 // ExportProducts
 // =============================================================================
 
+// renders the workbook the export consumer would build, for the account the caller is
+// acting for. The job machinery around it belongs to the engine.
+func (s *ProductSvcTestSuite) buildExport(ctx context.Context, params domain.ExportProductsParams) (*domain.Export, *apierror.APIError) {
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	s.Require().True(ok)
+	impl := s.productSvc.(*productSvcImpl)
+	spec := impl.exportSpec()
+	// Accept narrows before it stores, so the consumer builds from filters the
+	// caller could not have widened.
+	if spec.NarrowFilters != nil {
+		params = spec.NarrowFilters(identity, params)
+	}
+	return buildExport(ctx, s.repoFactory, spec, identity.Target.AccountID, params)
+}
+
 func (s *ProductSvcTestSuite) TestExportProducts_InternalActor_PassesParamsThrough() {
 	ctx := internalProductIdentityCtx("ac_test123")
 
@@ -1272,7 +1294,7 @@ func (s *ProductSvcTestSuite) TestExportProducts_InternalActor_PassesParamsThrou
 		}).
 		Times(1)
 
-	result, err := s.productSvc.ExportProducts(ctx, domain.ExportProductsParams{
+	result, err := s.buildExport(ctx, domain.ExportProductsParams{
 		CustomerIDs: customerIDs,
 	})
 
@@ -1282,11 +1304,6 @@ func (s *ProductSvcTestSuite) TestExportProducts_InternalActor_PassesParamsThrou
 
 func (s *ProductSvcTestSuite) TestExportProducts_CustomerActor_OverridesCustomerIDsAndPortalReady() {
 	ctx := customerProductIdentityCtx("ac_customer", "ac_owner")
-
-	s.readAccessMed.EXPECT().
-		CheckCounterpartyReadAccess(gomock.Any(), "ac_customer", "ac_owner").
-		Return(nil).
-		Times(1)
 
 	s.productRepo.EXPECT().
 		Export(gomock.Any(), gomock.AssignableToTypeOf(domain.ExportProductsParams{})).
@@ -1300,7 +1317,7 @@ func (s *ProductSvcTestSuite) TestExportProducts_CustomerActor_OverridesCustomer
 		}).
 		Times(1)
 
-	result, err := s.productSvc.ExportProducts(ctx, domain.ExportProductsParams{
+	result, err := s.buildExport(ctx, domain.ExportProductsParams{
 		CustomerIDs: []string{"ac_other_customer"}, // must be overridden
 	})
 
@@ -1463,4 +1480,43 @@ func (s *ProductSvcTestSuite) TestValidateProducts_ExternalTarget_ChecksCounterp
 	s.Nil(result)
 	s.NotNil(err)
 	s.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+}
+
+// --- BulkUpsertProducts validation guards (reject before idempotency / tx) ---
+
+func (s *ProductSvcTestSuite) TestBulkUpsertProducts_EmptyRejected() {
+	ctx := internalProductIdentityCtx("ac_test123")
+
+	result, err := s.productSvc.BulkUpsertProducts(ctx, domain.BulkUpsertProductsParams{Products: nil})
+
+	s.Nil(result)
+	s.NotNil(err)
+}
+
+func (s *ProductSvcTestSuite) TestBulkUpsertProducts_TooManyRejected() {
+	ctx := internalProductIdentityCtx("ac_test123")
+
+	products := make([]domain.UpsertProductParams, 1001)
+	for i := range products {
+		products[i] = domain.UpsertProductParams{SKU: "SKU-" + strconv.Itoa(i), Category: domain.ObjectIdentifier{ID: "cat_123"}}
+	}
+
+	result, err := s.productSvc.BulkUpsertProducts(ctx, domain.BulkUpsertProductsParams{Products: products})
+
+	s.Nil(result)
+	s.NotNil(err)
+}
+
+func (s *ProductSvcTestSuite) TestBulkUpsertProducts_DuplicateSKURejected() {
+	ctx := internalProductIdentityCtx("ac_test123")
+
+	result, err := s.productSvc.BulkUpsertProducts(ctx, domain.BulkUpsertProductsParams{
+		Products: []domain.UpsertProductParams{
+			{SKU: "SKU-DUP", Category: domain.ObjectIdentifier{ID: "cat_123"}},
+			{SKU: "SKU-DUP", Category: domain.ObjectIdentifier{ID: "cat_123"}},
+		},
+	})
+
+	s.Nil(result)
+	s.NotNil(err)
 }

@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 
+	jobep "github.com/augno/api/services/api-gateway/endpoints/jobs"
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
+	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
@@ -17,9 +19,11 @@ import (
 
 type MachineSvc interface {
 	ListMachines(ctx context.Context, req *ListMachinesRequest) (*apiresource.List[apiresource.Machine], *apierror.APIError)
+	ExportMachines(ctx context.Context, req *ExportMachinesRequest) (*apiresource.Job, *apierror.APIError)
 	GetMachine(ctx context.Context, req *RetrieveMachineRequest) (*apiresource.Machine, *apierror.APIError)
 	CreateMachine(ctx context.Context, req *CreateMachineRequest) (*apiresource.Machine, *apierror.APIError)
 	UpdateMachine(ctx context.Context, req *UpdateMachineRequest) (*apiresource.Machine, *apierror.APIError)
+	BulkUpsertMachines(ctx context.Context, req *BulkUpsertMachinesRequest) (*apiresource.Job, *apierror.APIError)
 	DeleteMachine(ctx context.Context, req *DeleteMachineRequest) (*apiresource.EmptyResource, *apierror.APIError)
 }
 
@@ -61,6 +65,18 @@ func loadMachineByID(ctx context.Context, id string) (*apiresource.Machine, *api
 		return nil, apierror.NewResourceNotFoundError("Machine not found.")
 	}
 	return v.(*apiresource.Machine), nil
+}
+
+func (m *machineSvcImpl) ExportMachines(ctx context.Context, req *ExportMachinesRequest) (*apiresource.Job, *apierror.APIError) {
+	resp, apiErr := grpcutil.CallRPC(ctx, machineSvcTracer, "service.machines.export", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ExportMachinesResponse, error) {
+			return m.coreClient.ExportMachines(ctx, &pb.ExportMachinesRequest{Query: req.Query}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return jobep.JobFromProto(resp.GetJob()), nil
 }
 
 func (m *machineSvcImpl) ListMachines(ctx context.Context, req *ListMachinesRequest) (*apiresource.List[apiresource.Machine], *apierror.APIError) {
@@ -121,6 +137,28 @@ func (m *machineSvcImpl) CreateMachine(ctx context.Context, req *CreateMachineRe
 	}
 
 	return loadMachineByID(ctx, resp.Machine.Id)
+}
+
+func (m *machineSvcImpl) BulkUpsertMachines(ctx context.Context, req *BulkUpsertMachinesRequest) (*apiresource.Job, *apierror.APIError) {
+	pbMachines := make([]*pb.UpsertMachineInput, len(req.Machines))
+	for i, machine := range req.Machines {
+		pbMachines[i] = &pb.UpsertMachineInput{
+			Name:         machine.Name,
+			SerialNumber: machine.SerialNumber,
+			Notes:        machine.Notes.Ptr(),
+			Department:   apirequest.ObjectIdentifierToProto(machine.Department),
+		}
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, machineSvcTracer, "service.machines.bulk_upsert", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.BulkUpsertMachinesResponse, error) {
+			return m.coreClient.BulkUpsertMachines(ctx, &pb.BulkUpsertMachinesRequest{Machines: pbMachines}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return jobep.JobFromProto(resp.GetJob()), nil
 }
 
 func (m *machineSvcImpl) UpdateMachine(ctx context.Context, req *UpdateMachineRequest) (*apiresource.Machine, *apierror.APIError) {

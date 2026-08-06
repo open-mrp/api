@@ -45,6 +45,8 @@ func (*DepartmentsEndpointGroup) Materialize(config *DepartmentsEndpointGroupCon
 	createDepartmentEndpoint := apiendpoint.From(&departmentep.CreateDepartmentEndpoint{}).WithService(inner, departmentSvc)
 	updateDepartmentEndpoint := apiendpoint.From(&departmentep.UpdateDepartmentEndpoint{}).WithService(inner, departmentSvc)
 	deleteDepartmentEndpoint := apiendpoint.From(&departmentep.DeleteDepartmentEndpoint{}).WithService(inner, departmentSvc)
+	bulkUpsertDepartmentsEndpoint := apiendpoint.From(&departmentep.BulkUpsertDepartmentsEndpoint{}).WithService(inner, departmentSvc)
+	exportDepartmentsEndpoint := apiendpoint.From(&departmentep.ExportDepartmentsEndpoint{}).WithService(inner, departmentSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listDepartmentsEndpoint,
@@ -52,6 +54,8 @@ func (*DepartmentsEndpointGroup) Materialize(config *DepartmentsEndpointGroupCon
 		createDepartmentEndpoint,
 		updateDepartmentEndpoint,
 		deleteDepartmentEndpoint,
+		bulkUpsertDepartmentsEndpoint,
+		exportDepartmentsEndpoint,
 	}
 
 	return &DepartmentsEndpointGroup{inner}

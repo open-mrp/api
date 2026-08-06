@@ -125,6 +125,241 @@ func (q *Queries) DeleteItemCategoryProperty(ctx context.Context, arg DeleteItem
 	return err
 }
 
+const exportItemCategories = `-- name: ExportItemCategories :many
+SELECT
+    ic.id,
+    ic.name,
+    ic.notes,
+    ic.item_category_type_code,
+    ic.unit_group_id,
+    ug.name AS unit_group_name,
+    ic.account_id,
+    ic.created_at,
+    ic.updated_at
+FROM item_category ic
+LEFT JOIN unit_group ug ON ug.id = ic.unit_group_id
+WHERE (ic.account_id = ? OR ic.account_id IS NULL)
+AND (
+    ? IS NULL
+    OR ic.name LIKE ?
+)
+ORDER BY ic.created_at DESC, ic.id DESC
+LIMIT ?
+`
+
+type ExportItemCategoriesParams struct {
+	AccountID   sql.NullString
+	SearchQuery sql.NullString
+	Limit       int32
+}
+
+type ExportItemCategoriesRow struct {
+	ID                   string
+	Name                 string
+	Notes                sql.NullString
+	ItemCategoryTypeCode string
+	UnitGroupID          string
+	UnitGroupName        sql.NullString
+	AccountID            sql.NullString
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+}
+
+// Unpaginated by design; the caller passes a row cap as the limit. System rows
+// (account_id IS NULL) are in scope, matching what the list endpoint returns.
+func (q *Queries) ExportItemCategories(ctx context.Context, arg ExportItemCategoriesParams) ([]ExportItemCategoriesRow, error) {
+	rows, err := q.db.QueryContext(ctx, exportItemCategories,
+		arg.AccountID,
+		arg.SearchQuery,
+		arg.SearchQuery,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ExportItemCategoriesRow
+	for rows.Next() {
+		var i ExportItemCategoriesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Notes,
+			&i.ItemCategoryTypeCode,
+			&i.UnitGroupID,
+			&i.UnitGroupName,
+			&i.AccountID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const findItemCategoriesByNames = `-- name: FindItemCategoriesByNames :many
+SELECT
+    ic.id,
+    ic.name,
+    ic.notes,
+    ic.item_category_type_code,
+    ic.unit_group_id,
+    ic.account_id,
+    ic.created_at,
+    ic.updated_at
+FROM item_category ic
+WHERE ic.name IN (/*SLICE:names*/?)
+AND (ic.account_id = ? OR ic.account_id IS NULL)
+`
+
+type FindItemCategoriesByNamesParams struct {
+	Names     []string
+	AccountID sql.NullString
+}
+
+type FindItemCategoriesByNamesRow struct {
+	ID                   string
+	Name                 string
+	Notes                sql.NullString
+	ItemCategoryTypeCode string
+	UnitGroupID          string
+	AccountID            sql.NullString
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+}
+
+func (q *Queries) FindItemCategoriesByNames(ctx context.Context, arg FindItemCategoriesByNamesParams) ([]FindItemCategoriesByNamesRow, error) {
+	query := findItemCategoriesByNames
+	var queryParams []interface{}
+	if len(arg.Names) > 0 {
+		for _, v := range arg.Names {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:names*/?", strings.Repeat(",?", len(arg.Names))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:names*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FindItemCategoriesByNamesRow
+	for rows.Next() {
+		var i FindItemCategoriesByNamesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Notes,
+			&i.ItemCategoryTypeCode,
+			&i.UnitGroupID,
+			&i.AccountID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getCategoryBaseUnitID = `-- name: GetCategoryBaseUnitID :one
+SELECT
+  ug.base_unit_id AS base_unit_id,
+  ic.item_category_type_code
+FROM item_category ic
+JOIN unit_group ug ON ug.id = ic.unit_group_id
+WHERE ic.id = ?
+`
+
+type GetCategoryBaseUnitIDRow struct {
+	BaseUnitID           string
+	ItemCategoryTypeCode string
+}
+
+// The base unit is the one configured on the category's unit group
+// (unit_group.base_unit_id), NOT a group member flagged is_base_unit — that flag
+// marks the canonical base of a unit type and is not what a group's base unit is.
+// Also returns the category type so create paths can enforce that materials only use
+// material categories and parts/products only product categories.
+func (q *Queries) GetCategoryBaseUnitID(ctx context.Context, categoryID string) (GetCategoryBaseUnitIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getCategoryBaseUnitID, categoryID)
+	var i GetCategoryBaseUnitIDRow
+	err := row.Scan(&i.BaseUnitID, &i.ItemCategoryTypeCode)
+	return i, err
+}
+
+const getCategoryBaseUnits = `-- name: GetCategoryBaseUnits :many
+SELECT
+  ic.id AS category_id,
+  ic.item_category_type_code,
+  ug.base_unit_id AS base_unit_id
+FROM item_category ic
+JOIN unit_group ug ON ug.id = ic.unit_group_id
+WHERE ic.id IN (/*SLICE:category_ids*/?)
+`
+
+type GetCategoryBaseUnitsRow struct {
+	CategoryID           string
+	ItemCategoryTypeCode string
+	BaseUnitID           string
+}
+
+// Batched counterpart to GetCategoryBaseUnitID used by bulk upsert to validate
+// create-row categories up front. Returns one row per category that exists, with its
+// unit group's base_unit_id and its category type (materials may only use
+// material_category; parts and products only product_category). Categories absent from
+// the result do not exist. Mirrors GetCategoryBaseUnitID (no account scope) so the
+// verdict matches the create path.
+func (q *Queries) GetCategoryBaseUnits(ctx context.Context, categoryIds []string) ([]GetCategoryBaseUnitsRow, error) {
+	query := getCategoryBaseUnits
+	var queryParams []interface{}
+	if len(categoryIds) > 0 {
+		for _, v := range categoryIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:category_ids*/?", strings.Repeat(",?", len(categoryIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:category_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetCategoryBaseUnitsRow
+	for rows.Next() {
+		var i GetCategoryBaseUnitsRow
+		if err := rows.Scan(&i.CategoryID, &i.ItemCategoryTypeCode, &i.BaseUnitID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getItemCategoriesByIDs = `-- name: GetItemCategoriesByIDs :many
 SELECT
     ic.id,
@@ -285,12 +520,14 @@ const insertItemCategory = `-- name: InsertItemCategory :exec
 INSERT INTO item_category (
     id,
     name,
+    notes,
     item_category_type_code,
     unit_group_id,
     account_id,
     created_at,
     updated_at
 ) VALUES (
+    ?,
     ?,
     ?,
     ?,
@@ -304,6 +541,7 @@ INSERT INTO item_category (
 type InsertItemCategoryParams struct {
 	ID                   string
 	Name                 string
+	Notes                sql.NullString
 	ItemCategoryTypeCode string
 	UnitGroupID          string
 	AccountID            sql.NullString
@@ -313,6 +551,7 @@ func (q *Queries) InsertItemCategory(ctx context.Context, arg InsertItemCategory
 	_, err := q.db.ExecContext(ctx, insertItemCategory,
 		arg.ID,
 		arg.Name,
+		arg.Notes,
 		arg.ItemCategoryTypeCode,
 		arg.UnitGroupID,
 		arg.AccountID,
@@ -619,8 +858,8 @@ func (q *Queries) ListItemCategoryPropertiesForCategories(ctx context.Context, i
 
 const updateItemCategory = `-- name: UpdateItemCategory :execresult
 UPDATE item_category SET
-    name = COALESCE(?, name),
-    notes = COALESCE(?, notes),
+    name       = COALESCE(?, name),
+    notes      = COALESCE(?, notes),
     updated_at = NOW(3)
 WHERE id = ?
 AND account_id = ?
@@ -658,4 +897,47 @@ type UpdateItemCategoryUnitGroupParams struct {
 
 func (q *Queries) UpdateItemCategoryUnitGroup(ctx context.Context, arg UpdateItemCategoryUnitGroupParams) (sql.Result, error) {
 	return q.db.ExecContext(ctx, updateItemCategoryUnitGroup, arg.UnitGroupID, arg.ID, arg.AccountID)
+}
+
+const updateItemCategoryWithUnitGroup = `-- name: UpdateItemCategoryWithUnitGroup :execresult
+UPDATE item_category SET
+    name          = COALESCE(?, name),
+    notes         = COALESCE(?, notes),
+    unit_group_id = ?,
+    updated_at    = NOW(3)
+WHERE id = ?
+AND account_id = ?
+`
+
+type UpdateItemCategoryWithUnitGroupParams struct {
+	Name        sql.NullString
+	Notes       sql.NullString
+	UnitGroupID string
+	ID          string
+	AccountID   sql.NullString
+}
+
+func (q *Queries) UpdateItemCategoryWithUnitGroup(ctx context.Context, arg UpdateItemCategoryWithUnitGroupParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, updateItemCategoryWithUnitGroup,
+		arg.Name,
+		arg.Notes,
+		arg.UnitGroupID,
+		arg.ID,
+		arg.AccountID,
+	)
+}
+
+const upsertItemCategoryProperty = `-- name: UpsertItemCategoryProperty :exec
+INSERT IGNORE INTO _item_categories_properties (A, B)
+VALUES (?, ?)
+`
+
+type UpsertItemCategoryPropertyParams struct {
+	ItemCategoryID string
+	PropertyID     string
+}
+
+func (q *Queries) UpsertItemCategoryProperty(ctx context.Context, arg UpsertItemCategoryPropertyParams) error {
+	_, err := q.db.ExecContext(ctx, upsertItemCategoryProperty, arg.ItemCategoryID, arg.PropertyID)
+	return err
 }

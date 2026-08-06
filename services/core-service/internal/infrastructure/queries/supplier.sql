@@ -123,6 +123,18 @@ WHERE ar.owner_account_id = sqlc.arg('owner_account_id')
     )
   );
 
+-- name: FindSuppliersByNames :many
+-- Used by bulk upsert to resolve supplier names to supplier account IDs within the
+-- owner account. Match is case-insensitive via the column collation.
+SELECT
+    ar.counterparty_account_id AS account_id,
+    a.name AS account_name
+FROM account_relation ar
+INNER JOIN account a ON a.id = ar.counterparty_account_id
+WHERE ar.owner_account_id = sqlc.arg('owner_account_id')
+  AND ar.account_relation_role_code = 'supplier'
+  AND a.name IN (sqlc.slice('names'));
+
 -- name: GetSupplier :one
 SELECT
     ar.id AS relation_id,

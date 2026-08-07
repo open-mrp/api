@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.44.2](https://github.com/Augno/api/compare/v0.44.1...v0.44.2) (2026-08-07)
+
+
+### Bug Fixes
+
+* remove duplicate entry for production_run_number in static types seed SQL ([712f398](https://github.com/Augno/api/commit/712f398cb9c9fabdc2d46303f2600dd3bf86af3e))
+
 ## [0.44.1](https://github.com/Augno/api/compare/v0.44.0...v0.44.1) (2026-08-07)
 
 

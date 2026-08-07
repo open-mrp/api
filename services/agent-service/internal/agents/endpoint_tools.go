@@ -46,11 +46,15 @@ type EndpointToolDescriptor struct {
 	RequiredRoleType string
 	// Group is the display group for the tool-selection UI (e.g. "Customers").
 	Group string
+	// ReadOnly mirrors the endpoint's own declaration that it computes an answer without changing anything despite not being a GET (a quote, a preview, an analytics query). Generated from the endpoint, never inferred here.
+	ReadOnly bool
 }
 
-// Mutating reports whether invoking this tool changes server state (anything other than a GET). Mutating endpoint-tools default to requiring human review.
+// Mutating reports whether invoking this tool changes server state.
+//
+// The method is the default answer, because a POST or PUT that writes nothing is the exception rather than the rule — but it is only the default. Quotes, previews and analytics take a request body and so cannot be GETs, and reporting those as mutating puts them in front of a merchant deciding which tools an agent may run unsupervised, next to the ones that actually create orders. The endpoint says which it is; this reads that.
 func (d EndpointToolDescriptor) Mutating() bool {
-	return d.Method != "GET"
+	return d.Method != "GET" && !d.ReadOnly
 }
 
 // SearchAPIToolsSlug is the meta-tool agents use to discover endpoint-tools on demand (progressive disclosure), instead of having all of them injected up front.

@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
@@ -90,6 +91,9 @@ type searchProvider struct {
 
 var searchSvcTracer = tracing.GetTracer("api-gateway.endpoints.search.service")
 
+// searchProviderTimeout bounds each per-type list RPC in the fan-out. Well under the default RPC deadline on purpose: a picker that takes ten seconds to populate has already lost the user, and a type that slow contributes nothing worth waiting for.
+const searchProviderTimeout = 5 * time.Second
+
 func NewSearchSvc(config *SearchSvcConfig) SearchSvc {
 	if err := config.validate(); err != nil {
 		panic(err)
@@ -152,13 +156,18 @@ func (m *searchSvcImpl) Search(ctx context.Context, req *SearchRequest) (*apires
 	}
 
 	// Fan out concurrently. A single type failing degrades to no results for that type rather than failing the whole search, so the picker stays usable.
+	//
+	// Providers are capped well below the default RPC deadline so a slow type degrades the same way one that errors does. Search backs an interactive picker: the slowest of nine concurrent list RPCs sets the latency the user feels, and a type that would need the full deadline is worth dropping rather than waiting for.
+	searchCtx, cancelSearch := context.WithTimeout(ctx, searchProviderTimeout)
+	defer cancelSearch()
+
 	results := make([][]apiresource.Entity, len(active))
 	var wg sync.WaitGroup
 	for i, p := range active {
 		wg.Add(1)
 		go func(i int, p searchProvider) {
 			defer wg.Done()
-			ents, apiErr := p.search(ctx, query, req.Limit, scope)
+			ents, apiErr := p.search(searchCtx, query, req.Limit, scope)
 			if apiErr != nil {
 				slog.WarnContext(ctx, "search provider failed", "type", string(p.objectType), "error", apiErr.Error())
 				return

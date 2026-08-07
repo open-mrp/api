@@ -54,6 +54,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/core/analytics/delivery-performance",
 		InputSchema:         "{\"properties\":{\"ends_at\":{\"description\":\"The end date for the analysis period.\",\"format\":\"date-time\",\"type\":\"string\"},\"granularity\":{\"description\":\"The period to break the results down by. Defaults to `week`.\",\"enum\":[\"day\",\"week\",\"month\"],\"type\":\"string\"},\"starts_at\":{\"description\":\"The start date for the analysis period.\",\"format\":\"date-time\",\"type\":\"string\"}},\"required\":[\"starts_at\",\"ends_at\"],\"type\":\"object\"}",
 		Group:               "Delivery Performance",
+		ReadOnly:            true,
 		RequiredPermissions: []string{"sales_orders:read"},
 		Params: []EndpointToolParam{
 			{Name: "ends_at", In: EndpointToolParamBody},
@@ -69,6 +70,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/core/analytics/schedule-attainment",
 		InputSchema:         "{\"properties\":{\"department_ids\":{\"description\":\"Only measure production in these departments.\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"ends_at\":{\"description\":\"The end date for the analysis period.\",\"format\":\"date-time\",\"type\":\"string\"},\"group_by\":{\"description\":\"The dimension to break the results down by. Defaults to `week`.\",\"enum\":[\"week\",\"machine\",\"department\",\"item\"],\"type\":\"string\"},\"machine_ids\":{\"description\":\"Only measure production on these machines.\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"starts_at\":{\"description\":\"The start date for the analysis period.\",\"format\":\"date-time\",\"type\":\"string\"}},\"required\":[\"starts_at\",\"ends_at\"],\"type\":\"object\"}",
 		Group:               "Schedule Attainment",
+		ReadOnly:            true,
 		RequiredPermissions: []string{"production_schedules:read"},
 		Params: []EndpointToolParam{
 			{Name: "department_ids", In: EndpointToolParamBody},
@@ -1044,6 +1046,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/sales/contacts/actions/find-by-email",
 		InputSchema:         "{\"properties\":{\"email\":{\"description\":\"The email address to look up.\",\"type\":\"string\"},\"include\":{\"description\":\"Sub-objects to expand in the response. These nested objects are returned as null by default; pass the field keys you need (e.g. \\\"parent_account\\\") to get their full objects inline. Expand to get authoritative data rather than inferring relationships from names.\",\"items\":{\"enum\":[\"account_user\",\"account_user.user\",\"account_user.role\",\"account_user.department\",\"account\"],\"type\":\"string\"},\"type\":\"array\"},\"relationships\":{\"description\":\"Restricts the results to matches whose relationship to your account is one of these.\\n\\nLeaving it out returns matches of every relationship.\",\"items\":{\"enum\":[\"customer\",\"supplier\",\"self\"],\"type\":\"string\"},\"type\":\"array\"}},\"required\":[\"email\"],\"type\":\"object\"}",
 		Group:               "Find By Email",
+		ReadOnly:            true,
 		RequiredPermissions: []string{"customers:read"},
 		Params: []EndpointToolParam{
 			{Name: "email", In: EndpointToolParamBody},
@@ -2273,6 +2276,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/operations/production-schedules/actions/preview",
 		InputSchema:         "{\"properties\":{\"demand_basis\":{\"description\":\"How future demand is derived, overriding the account's configured basis for this preview only.\\n\\n- `trailing_12`: demand is the trailing twelve months of orders.\\n- `seasonal_ema`: demand is a seasonal exponential moving average, which follows a season arriving early or late rather than flattening it.\",\"enum\":[\"trailing_12\",\"seasonal_ema\"],\"type\":\"string\"},\"horizon_weeks\":{\"description\":\"Number of weeks the plan should cover, overriding the account's configured horizon for this preview only.\",\"type\":\"integer\"},\"planning_as_of\":{\"description\":\"The instant to plan against, which is what stock, demand history and active demand overrides are read as of.\\n\\nLeft unset, the preview is solved against the moment the request arrives. The horizon starts on the account's configured week-start day on or before this instant, so backdating this shifts the whole week grid.\",\"format\":\"date-time\",\"type\":\"string\"}},\"type\":\"object\"}",
 		Group:               "Preview",
+		ReadOnly:            true,
 		RequiredPermissions: []string{"production_schedules:read"},
 		Params: []EndpointToolParam{
 			{Name: "demand_basis", In: EndpointToolParamBody},
@@ -2288,6 +2292,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/operations/production-schedules/{id}/actions/preview-regenerate",
 		InputSchema:         "{\"properties\":{\"demand_basis\":{\"description\":\"How future demand is derived, defaulting to the basis this version was solved with.\\n\\n- `trailing_12`: demand is the trailing twelve months of orders.\\n- `seasonal_ema`: demand is a seasonal exponential moving average, which follows a season arriving early or late rather than flattening it.\",\"enum\":[\"trailing_12\",\"seasonal_ema\"],\"type\":\"string\"},\"horizon_weeks\":{\"description\":\"Number of weeks the re-solve should cover, defaulting to the horizon this version already has.\",\"type\":\"integer\"},\"id\":{\"description\":\"ID of the production schedule.\",\"type\":\"string\"},\"planning_as_of\":{\"description\":\"The instant to plan against, which is what stock, demand history and active demand overrides are read as of.\\n\\nDefaults to now rather than to the instant the version was first generated, so a plain call answers \\\"what would the solver say today\\\". Because the horizon re-anchors to the week containing this instant, a campaign can appear under a different `week_index` than the one stored on the draft.\",\"format\":\"date-time\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"}",
 		Group:               "Production Schedules",
+		ReadOnly:            true,
 		RequiredPermissions: []string{"production_schedules:read"},
 		Params: []EndpointToolParam{
 			{Name: "demand_basis", In: EndpointToolParamBody},
@@ -2318,6 +2323,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate:       "/v1/operations/production-schedules/actions/quote-promise-date",
 		InputSchema:         "{\"properties\":{\"item_id\":{\"description\":\"Item being quoted.\",\"type\":\"string\"},\"quantity\":{\"description\":\"Quantity being quoted, in the item's own unit.\",\"type\":\"number\"}},\"required\":[\"item_id\",\"quantity\"],\"type\":\"object\"}",
 		Group:               "Quote Promise Date",
+		ReadOnly:            true,
 		RequiredPermissions: []string{"production_schedules:read"},
 		Params: []EndpointToolParam{
 			{Name: "item_id", In: EndpointToolParamBody},
@@ -3556,6 +3562,7 @@ var EndpointTools = []EndpointToolDescriptor{
 		RouteTemplate: "/v1/core/addresses/actions/validate",
 		InputSchema:   "{\"properties\":{\"address_line_1\":{\"description\":\"First line of the street address.\",\"type\":\"string\"},\"address_line_2\":{\"description\":\"Second line of the street address.\",\"type\":\"string\"},\"city\":{\"description\":\"City or locality.\",\"type\":\"string\"},\"country\":{\"description\":\"Two-letter country code, such as `US`.\\n\\nA full country name such as `United States` is recognized for a handful of common countries; send the two-letter code for anywhere else.\",\"type\":\"string\"},\"postal_code\":{\"description\":\"Postal or ZIP code.\",\"type\":\"string\"},\"state\":{\"description\":\"State or administrative area.\",\"type\":\"string\"}},\"required\":[\"address_line_1\",\"city\",\"state\",\"postal_code\",\"country\"],\"type\":\"object\"}",
 		Group:         "Validate",
+		ReadOnly:      true,
 		Params: []EndpointToolParam{
 			{Name: "address_line_1", In: EndpointToolParamBody},
 			{Name: "address_line_2", In: EndpointToolParamBody},

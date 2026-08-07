@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"slices"
 	"sort"
 	"strconv"
@@ -17,6 +18,7 @@ import (
 	"github.com/augno/api/shared/crypto"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/idempotency"
+	"github.com/augno/api/shared/timeutil"
 	"github.com/augno/api/shared/tracing"
 )
 
@@ -1217,6 +1219,11 @@ func (s *shipmentSvcImpl) RateShop(ctx context.Context, params domain.RateShopPa
 	}
 
 	// 6. For each carrier, fetch rates. Each Shippo carrier costs a live rating round-trip, so they run concurrently and results are collected per carrier to keep ordering stable.
+	//
+	// The fan-out gets a budget rather than the whole request deadline. Shippo stalls on individual carriers often enough to matter — rate shopping is the single slowest endpoint in the API — and a carrier that never answers used to hold the request until the caller's deadline killed it, throwing away the rates every other carrier had already returned. A carrier that runs out of budget is dropped exactly like one that errors.
+	rateCtx, cancelRates := timeutil.BudgetedContext(ctx, timeutil.FanOutReserve)
+	defer cancelRates()
+
 	var allOptions []*domain.RateShopOption
 	shippoRatesByCarrier := make([][]domain.ShippoRateOption, len(carriers))
 	var wg sync.WaitGroup
@@ -1229,14 +1236,15 @@ func (s *shipmentSvcImpl) RateShop(ctx context.Context, params domain.RateShopPa
 		wg.Add(1)
 		go func(i int, carrierAccountID string) {
 			defer wg.Done()
-			rates, apiErr := shippoClient.FetchAllShippingRates(ctx, domain.FetchAllShippingRatesParams{
+			rates, apiErr := shippoClient.FetchAllShippingRates(rateCtx, domain.FetchAllShippingRatesParams{
 				CarrierAccountObjectID: carrierAccountID,
 				FromAddress:            params.FromAddress,
 				ToAddress:              params.ToAddress,
 				Parcels:                params.Parcels,
 			})
 			if apiErr != nil {
-				// Skip carriers that fail to fetch rates.
+				// Skip carriers that fail to fetch rates, including those the budget above cut short.
+				slog.WarnContext(ctx, "rate shop: carrier returned no rates", "carrier_account_id", carrierAccountID, "error", apiErr.Error())
 				return
 			}
 			shippoRatesByCarrier[i] = rates

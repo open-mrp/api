@@ -48,6 +48,7 @@ func (e *QuotePromiseDateEndpoint) Materialize() *apiendpoint.APIEndpoint[*Quote
 		Public:            true,
 		Preview:           true,
 		AgentTool:         true,
+		ReadOnly:          true,
 		ObjectType:        constants.ObjectTypePromiseDateQuote,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainProductionSchedules, Action: types.ActionRead},

@@ -529,7 +529,7 @@ func NewMethodNotAllowedError(publicMessage string) *APIError {
 	return NewAPIError(ErrorCodeMethodNotAllowed, ErrorTypeInvalidRequest, publicMessage, "", WithDocURL(docURLMethodNotAllowed))
 }
 
-// NewRequestTimeoutError creates a 408 Request Timeout error. Marked as transient.
+// NewRequestTimeoutError creates a 504 Gateway Timeout error. The deadline was exceeded on our side, not the client's, so this is a server failure rather than a 408. Marked as transient.
 func NewRequestTimeoutError(internalMessage string) *APIError {
 	return NewAPIError(ErrorCodeRequestTimeout, ErrorTypeAPI, "Request timed out.", internalMessage, WithDocURL(docURLRequestTimeout))
 }
@@ -671,10 +671,8 @@ func GetHTTPStatusCode(code ErrorCode) int {
 		return http.StatusServiceUnavailable
 	case ErrorCodeExternalSvcError, ErrorCodeConnectionError:
 		return http.StatusBadGateway
-	case ErrorCodeTimeout:
+	case ErrorCodeTimeout, ErrorCodeRequestTimeout:
 		return http.StatusGatewayTimeout
-	case ErrorCodeRequestTimeout:
-		return http.StatusRequestTimeout
 	case ErrorCodeClientClosedRequest:
 		return 499
 	case ErrorCodeInternalError:

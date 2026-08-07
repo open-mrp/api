@@ -56,6 +56,7 @@ func (e *PreviewProductionScheduleEndpoint) Materialize() *apiendpoint.APIEndpoi
 		Public:     true,
 		Preview:    true,
 		AgentTool:  true,
+		ReadOnly:   true,
 		ObjectType: constants.ObjectTypeProductionSchedulePreview,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainProductionSchedules, Action: types.ActionRead},

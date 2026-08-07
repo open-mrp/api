@@ -3,6 +3,8 @@
 package api_test
 
 import (
+	"fmt"
+	"slices"
 	"testing"
 	"time"
 
@@ -98,16 +100,19 @@ func TestDeliveryPerformance_CountsACommittedOrder(t *testing.T) {
 	order := issueOrderForCustomer(t, customerID, nil)
 	require.NotEmpty(t, shipByDate(t, order), "the order must carry a commitment to be measured")
 
-	after := analyzeDelivery(t, deliveryWindow())
-	afterOverall, _ := after["overall"].(map[string]any)
-	afterCommitted, _ := afterOverall["committed_order_count"].(float64)
-
-	assert.Greater(t, afterCommitted, beforeCommitted,
-		"an issued order with a commitment must enter the measurement")
-
-	// It has not shipped, so it counts against on-time rather than being held back.
-	notShipped, _ := afterOverall["not_yet_shipped_count"].(float64)
-	assert.Positive(t, notShipped, "an unshipped committed order must be visible as unshipped")
+	// The window covers the whole account, and sibling tests issue and unissue their own committed orders throughout the run, so a single reading taken after ours can land below the baseline through no fault of the order just issued. The order added here stays committed for the rest of the test, so the count only has to clear the baseline once.
+	eventually(t, e2eAsyncWaitTimeout, e2eAsyncPollInterval, func() error {
+		afterOverall, _ := analyzeDelivery(t, deliveryWindow())["overall"].(map[string]any)
+		afterCommitted, _ := afterOverall["committed_order_count"].(float64)
+		if afterCommitted <= beforeCommitted {
+			return fmt.Errorf("an issued order with a commitment must enter the measurement: committed %v, was %v", afterCommitted, beforeCommitted)
+		}
+		// It has not shipped, so it counts against on-time rather than being held back.
+		if notShipped, _ := afterOverall["not_yet_shipped_count"].(float64); notShipped <= 0 {
+			return fmt.Errorf("an unshipped committed order must be visible as unshipped: not_yet_shipped_count %v", notShipped)
+		}
+		return nil
+	})
 }
 
 // Buckets are keyed by the date promised, not the date shipped: an order promised in
@@ -180,4 +185,258 @@ func TestDeliveryPerformance_ValidatesItsWindow(t *testing.T) {
 	require.NoError(t, err)
 	require.Less(t, status, 500, "must not 5xx: %s", string(body))
 	assert.Equal(t, 400, status, "a window that ends before it starts should be rejected: %s", string(body))
+}
+
+// The buckets and the overall figure are computed from one set of outcomes, so
+// they have to agree. A tile showing a total that its own breakdown does not add
+// up to is worse than either number alone.
+func TestDeliveryPerformance_PeriodsSumToOverall(t *testing.T) {
+	t.Parallel()
+
+	result := analyzeDelivery(t, deliveryWindow())
+	overall, ok := result["overall"].(map[string]any)
+	require.True(t, ok)
+
+	list, _ := result["periods"].(map[string]any)
+	data, _ := list["data"].([]any)
+
+	var committed, shipped, onTime, onTimeInFull, notShipped float64
+	for _, raw := range data {
+		period, ok := raw.(map[string]any)
+		require.True(t, ok)
+
+		periodCommitted, _ := period["committed_order_count"].(float64)
+		periodShipped, _ := period["shipped_order_count"].(float64)
+		periodOnTime, _ := period["on_time_order_count"].(float64)
+		periodOnTimeInFull, _ := period["on_time_in_full_count"].(float64)
+		periodNotShipped, _ := period["not_yet_shipped_count"].(float64)
+
+		// Each bucket is internally consistent on its own terms too.
+		assert.Equal(t, periodCommitted, periodShipped+periodNotShipped,
+			"every order due in a period either shipped or did not: %v", period)
+		assert.LessOrEqual(t, periodOnTime, periodShipped, "an order cannot be on time without shipping")
+		assert.LessOrEqual(t, periodOnTimeInFull, periodOnTime, "on-time-in-full is a subset of on-time")
+
+		// A bucket only exists because something was due in it.
+		assert.Positive(t, periodCommitted, "an empty period should not be reported at all: %v", period)
+
+		committed += periodCommitted
+		shipped += periodShipped
+		onTime += periodOnTime
+		onTimeInFull += periodOnTimeInFull
+		notShipped += periodNotShipped
+	}
+
+	assert.Equal(t, overall["committed_order_count"], committed, "the buckets must account for every due order")
+	assert.Equal(t, overall["shipped_order_count"], shipped)
+	assert.Equal(t, overall["on_time_order_count"], onTime)
+	assert.Equal(t, overall["on_time_in_full_count"], onTimeInFull)
+	assert.Equal(t, overall["not_yet_shipped_count"], notShipped)
+}
+
+// The rates are the counts, expressed as a share. A rate that drifts from its own
+// numerator is the failure this catches: the tile and the drill-down would tell
+// different stories about the same orders.
+func TestDeliveryPerformance_RatesFollowTheCounts(t *testing.T) {
+	t.Parallel()
+
+	// Its own commitment, so the window is never empty and the rates are always
+	// actually computed — a test that only checks arithmetic when the rest of the
+	// suite happens to have produced some proves nothing when run alone.
+	commitOneOrder(t, "e2e-delivery-rates")
+
+	result := analyzeDelivery(t, deliveryWindow())
+	overall, ok := result["overall"].(map[string]any)
+	require.True(t, ok)
+
+	committed, _ := overall["committed_order_count"].(float64)
+	require.Positive(t, committed, "the order issued above must be due inside the window")
+
+	onTime, _ := overall["on_time_order_count"].(float64)
+	onTimeInFull, _ := overall["on_time_in_full_count"].(float64)
+
+	onTimePct, ok := overall["on_time_pct"].(float64)
+	require.True(t, ok, "orders were due, so a rate must be reported: %v", overall["on_time_pct"])
+	assert.InDelta(t, onTime/committed*100, onTimePct, 0.01)
+
+	onTimeInFullPct, ok := overall["on_time_in_full_pct"].(float64)
+	require.True(t, ok)
+	assert.InDelta(t, onTimeInFull/committed*100, onTimeInFullPct, 0.01)
+
+	// Lateness is averaged over late orders only, so it is only reported when there
+	// were some — averaging it over every order would dilute a real problem.
+	late, _ := overall["late_order_count"].(float64)
+	if late == 0 {
+		assert.Nil(t, overall["average_days_late"], "with nothing late there is no lateness to average")
+	} else if averageLate, ok := overall["average_days_late"].(float64); ok {
+		assert.Positive(t, averageLate, "an order counted late is at least a day late")
+	}
+}
+
+// Omitting the granularity has to mean something definite. It means weeks, and the
+// buckets have to prove it by starting on Mondays — the same day the production
+// schedule buckets on, so a delivery week and a plan week name the same seven days.
+func TestDeliveryPerformance_DefaultsToWeeklyBuckets(t *testing.T) {
+	t.Parallel()
+
+	// The two calls are compared to each other, but the window they measure is live: sibling tests in this package issue and unissue orders throughout the run, and an order that loses its commitment between the calls takes its bucket with it. Retry until one pair of reads sees the same data, which is what the comparison is actually about. A genuine disagreement — a default of days rather than weeks — never converges, because day buckets and week buckets cannot coincide.
+	var implicitStarts []string
+	eventually(t, e2eAsyncWaitTimeout, e2eAsyncPollInterval, func() error {
+		implicit := analyzeDelivery(t, deliveryWindow())
+
+		explicitBody := deliveryWindow()
+		explicitBody["granularity"] = "week"
+		explicit := analyzeDelivery(t, explicitBody)
+
+		implicitStarts = periodStarts(t, implicit)
+		explicitStarts := periodStarts(t, explicit)
+		if !slices.Equal(implicitStarts, explicitStarts) {
+			return fmt.Errorf("omitting the granularity must mean the same thing as asking for weeks: got %v, want %v", implicitStarts, explicitStarts)
+		}
+		return nil
+	})
+
+	for _, start := range implicitStarts {
+		parsed, err := time.Parse(time.RFC3339, start)
+		require.NoError(t, err)
+		assert.Equal(t, time.Monday, parsed.UTC().Weekday(),
+			"a delivery week must start on the same day a plan week does: %s", start)
+	}
+}
+
+// Day and month buckets have to actually be days and months, or the picker changes
+// a label without changing the data behind it.
+func TestDeliveryPerformance_GranularityDecidesTheBucketBoundary(t *testing.T) {
+	t.Parallel()
+
+	t.Run("month buckets start on the first", func(t *testing.T) {
+		body := deliveryWindow()
+		body["granularity"] = "month"
+
+		for _, start := range periodStarts(t, analyzeDelivery(t, body)) {
+			parsed, err := time.Parse(time.RFC3339, start)
+			require.NoError(t, err)
+			assert.Equal(t, 1, parsed.UTC().Day(), "a month bucket starts on the first: %s", start)
+		}
+	})
+
+	t.Run("day buckets are never coarser than week buckets", func(t *testing.T) {
+		commitOneOrder(t, "e2e-delivery-buckets")
+
+		dayBody := deliveryWindow()
+		dayBody["granularity"] = "day"
+		weekBody := deliveryWindow()
+		weekBody["granularity"] = "week"
+
+		// The relation holds only between two readings of the same commitments; sibling tests unissue theirs between the calls, which can retire a whole day bucket and leave the day count short of the week count. Retry until both readings see one set of orders.
+		eventually(t, e2eAsyncWaitTimeout, e2eAsyncPollInterval, func() error {
+			days := len(periodStarts(t, analyzeDelivery(t, dayBody)))
+			weeks := len(periodStarts(t, analyzeDelivery(t, weekBody)))
+			if weeks == 0 {
+				return fmt.Errorf("the order issued above must land in some bucket")
+			}
+			if days < weeks {
+				return fmt.Errorf("the same commitments split by day cannot produce fewer buckets than by week: %d days, %d weeks", days, weeks)
+			}
+			return nil
+		})
+	})
+}
+
+func TestDeliveryPerformance_RejectsMalformedRequests(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name string
+		body map[string]any
+	}{
+		{"missing start", map[string]any{"ends_at": time.Now().UTC().Format(time.RFC3339)}},
+		{"missing end", map[string]any{"starts_at": time.Now().UTC().Format(time.RFC3339)}},
+		{"identical bounds", map[string]any{
+			"starts_at": "2026-01-01T00:00:00Z",
+			"ends_at":   "2026-01-01T00:00:00Z",
+		}},
+		{"unknown granularity", func() map[string]any {
+			body := deliveryWindow()
+			body["granularity"] = "fortnight"
+			return body
+		}()},
+		{"unparseable date", map[string]any{"starts_at": "last tuesday", "ends_at": "2026-01-01T00:00:00Z"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			status, body, err := apiClient.Put(deliveryPerformancePath, tc.body)
+			require.NoError(t, err)
+			require.Less(t, status, 500, "must not 5xx: %s", string(body))
+			assert.Equal(t, 400, status, "body: %s", string(body))
+		})
+	}
+
+	t.Run("unknown field", func(t *testing.T) {
+		body := deliveryWindow()
+		body[bogusE2EJSONField] = "x"
+
+		status, respBody, err := apiClient.Put(deliveryPerformancePath, body)
+		require.NoError(t, err)
+		assertJSONUnknownFieldRejected(t, "PUT", deliveryPerformancePath, status, respBody)
+	})
+}
+
+// One tenant's delivery record must not leak into another's. The account is taken
+// from the credential rather than the request, so this is measured: an order
+// committed in tenant A must not move a single one of tenant B's counts.
+func TestDeliveryPerformance_IsScopedToTheCallingTenant(t *testing.T) {
+	t.Parallel()
+	clientB := getTenantBClient()
+
+	analyzeAsB := func() map[string]any {
+		status, body, err := clientB.Put(deliveryPerformancePath, deliveryWindow())
+		require.NoError(t, err)
+		require.Less(t, status, 500, "must not 5xx: %s", string(body))
+		requireStatus(t, 200, status, body)
+
+		parsed := parseJSON(body)
+		assert.Equal(t, "analyze_delivery_performance_response", jsonField(parsed, "object"))
+		overall, ok := parsed["overall"].(map[string]any)
+		require.True(t, ok, "tenant B gets its own well-formed answer: %s", string(body))
+		return overall
+	}
+
+	before := analyzeAsB()
+
+	customerID := leadTimeCustomer(t, "e2e-delivery-tenant", ptrInt(30), "")
+	order := issueOrderForCustomer(t, customerID, nil)
+	require.NotEmpty(t, shipByDate(t, order), "precondition: tenant A committed to something in the window")
+
+	after := analyzeAsB()
+	for _, key := range []string{"committed_order_count", "shipped_order_count", "not_yet_shipped_count"} {
+		assert.Equal(t, before[key], after[key],
+			"a commitment made in tenant A must not appear in tenant B's %s", key)
+	}
+}
+
+// periodStarts pulls the bucket start dates out of a delivery-performance result.
+func periodStarts(t *testing.T, result map[string]any) []string {
+	t.Helper()
+
+	list, ok := result["periods"].(map[string]any)
+	require.True(t, ok, "periods must be a list resource: %v", result["periods"])
+	data, _ := list["data"].([]any)
+
+	out := make([]string, 0, len(data))
+	for _, raw := range data {
+		period, ok := raw.(map[string]any)
+		require.True(t, ok)
+		out = append(out, jsonField(period, "period_start"))
+	}
+	return out
+}
+
+// commitOneOrder issues an order carrying a ship-by commitment, so a delivery
+// window always has something due to measure.
+func commitOneOrder(t *testing.T, prefix string) {
+	t.Helper()
+
+	customerID := leadTimeCustomer(t, prefix, ptrInt(30), "")
+	order := issueOrderForCustomer(t, customerID, nil)
+	require.NotEmpty(t, shipByDate(t, order), "an issued order must carry the commitment being measured")
 }

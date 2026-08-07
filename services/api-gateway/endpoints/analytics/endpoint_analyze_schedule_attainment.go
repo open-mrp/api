@@ -46,6 +46,7 @@ func (e *AnalyzeScheduleAttainmentEndpoint) Materialize() *apiendpoint.APIEndpoi
 		Public:              true,
 		Preview:             true,
 		AgentTool:           true,
+		ReadOnly:            true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainProductionSchedules, Action: types.ActionRead}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeScheduleAttainmentRequest) (*apiresource.AnalyzeScheduleAttainmentResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeScheduleAttainment

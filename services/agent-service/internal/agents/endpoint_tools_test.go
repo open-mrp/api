@@ -3,6 +3,7 @@ package agents
 import (
 	"context"
 	"encoding/json"
+	"net/http"
 	"reflect"
 	"sort"
 	"strings"
@@ -446,5 +447,53 @@ func TestCatalogCoversPublicEndpoints(t *testing.T) {
 		t.Error("expected create_customer in catalog")
 	} else if !d.Mutating() {
 		t.Error("create_customer (POST) must be mutating")
+	}
+}
+
+// A POST or PUT that only computes an answer must not be reported as mutating. The flag is what a merchant reads when deciding which tools an agent may run without review, and a quote sitting next to create_sales_order under the same warning teaches them to ignore the warning.
+func TestMutating_ReadOnlyEndpointsAreNotMutating(t *testing.T) {
+	bySlug := map[string]EndpointToolDescriptor{}
+	for _, d := range EndpointTools {
+		bySlug[d.Slug] = d
+	}
+
+	// Every one of these takes a request body — a date window, a quantity, an address — so none of them can be a GET.
+	for _, slug := range []string{
+		"quote_promise_date",
+		"analyze_delivery_performance",
+		"analyze_schedule_attainment",
+		"preview_production_schedule",
+		"preview_production_schedule_regenerate",
+		"find_contact_by_email",
+		"validate_address",
+	} {
+		d, ok := bySlug[slug]
+		if !ok {
+			t.Errorf("expected %s in catalog", slug)
+			continue
+		}
+		if d.Method == http.MethodGet {
+			t.Errorf("%s is a GET, so it proves nothing about the read-only flag", slug)
+		}
+		if !d.ReadOnly {
+			t.Errorf("%s writes nothing and must be declared ReadOnly on its endpoint", slug)
+		}
+		if d.Mutating() {
+			t.Errorf("%s only computes an answer and must not be reported as mutating", slug)
+		}
+	}
+}
+
+// The default stays the safe one: an endpoint that says nothing about itself is treated as changing state, so a new write endpoint is gated without anyone having to remember to gate it.
+func TestMutating_DefaultsToChangingStateWithoutADeclaration(t *testing.T) {
+	d := EndpointToolDescriptor{Slug: "hypothetical_write", Method: http.MethodPost}
+	if !d.Mutating() {
+		t.Error("a POST that has not declared itself read-only must be treated as mutating")
+	}
+
+	// And a read-only declaration cannot make a GET more mutating than it was.
+	g := EndpointToolDescriptor{Slug: "hypothetical_read", Method: http.MethodGet}
+	if g.Mutating() {
+		t.Error("a GET is never mutating")
 	}
 }

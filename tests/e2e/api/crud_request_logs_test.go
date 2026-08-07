@@ -1131,9 +1131,9 @@ func TestRequestLogs_FilterByStatusCodes_IncludesAndExcludes(t *testing.T) {
 }
 
 // TestRequestLogs_FilterByStatusCodeClasses_IncludesAndExcludes covers the
-// status_code_classes filter, which matches a whole class via
-// FLOOR(status_code/100). Classes 2 and 4 select the 200 and 404 cohort rows and
-// exclude the 500 row.
+// status_code_classes filter, which matches a whole class as a half-open range on
+// status_code. Classes 2 and 4 select the 200 and 404 cohort rows and exclude the
+// 500 row.
 func TestRequestLogs_FilterByStatusCodeClasses_IncludesAndExcludes(t *testing.T) {
 	t.Parallel()
 	list := fetchScopedRequestLogs(t, url.Values{

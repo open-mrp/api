@@ -173,7 +173,9 @@ func writeFilterPredicates(sb *strings.Builder, args *[]any, f *domain.ListReque
 		}
 	}
 	if len(f.StatusCodes) > 0 || len(f.StatusCodeClasses) > 0 {
-		// Specific codes and whole classes are OR'd together (then AND'd with the rest of the filters): status_codes=401 + status_code_classes=5 matches 401 and any 5xx. Classes use FLOOR(status_code/100) so a class matches every code in its range, not just the curated ones the UI lists.
+		// Specific codes and whole classes are OR'd together (then AND'd with the rest of the filters): status_codes=401 + status_code_classes=5 matches 401 and any 5xx.
+		//
+		// A class is emitted as a half-open range on the bare column (5 → status_code >= 500 AND status_code < 600) rather than FLOOR(status_code / 100) = 5. The two select identical rows, but wrapping the column in an expression makes the predicate non-sargable: the optimizer cannot use the (scope, status_code, occurred_at DESC, id DESC) composite and falls back to walking the account's entire cursor index, residual-filtering every row. On the largest tenant that is a ~500k-row scan for a page of 25 — measured at the 10s deadline in production — against ~1k rows for the range form. The range keeps every code in the class, including ones the UI does not list.
 		sb.WriteString(" AND (")
 		if len(f.StatusCodes) > 0 {
 			sb.WriteString("rl.status_code IN (")
@@ -183,16 +185,12 @@ func writeFilterPredicates(sb *strings.Builder, args *[]any, f *domain.ListReque
 				*args = append(*args, sc)
 			}
 		}
-		if len(f.StatusCodeClasses) > 0 {
-			if len(f.StatusCodes) > 0 {
+		for i, c := range f.StatusCodeClasses {
+			if i > 0 || len(f.StatusCodes) > 0 {
 				sb.WriteString(" OR ")
 			}
-			sb.WriteString("FLOOR(rl.status_code / 100) IN (")
-			sb.WriteString(placeholders(len(f.StatusCodeClasses)))
-			sb.WriteString(")")
-			for _, c := range f.StatusCodeClasses {
-				*args = append(*args, c)
-			}
+			sb.WriteString("(rl.status_code >= ? AND rl.status_code < ?)")
+			*args = append(*args, c*100, (c+1)*100)
 		}
 		sb.WriteString(")")
 	}

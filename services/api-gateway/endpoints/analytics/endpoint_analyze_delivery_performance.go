@@ -44,6 +44,7 @@ func (e *AnalyzeDeliveryPerformanceEndpoint) Materialize() *apiendpoint.APIEndpo
 		Public:              true,
 		Preview:             true,
 		AgentTool:           true,
+		ReadOnly:            true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionRead}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeDeliveryPerformanceRequest) (*apiresource.AnalyzeDeliveryPerformanceResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeDeliveryPerformance

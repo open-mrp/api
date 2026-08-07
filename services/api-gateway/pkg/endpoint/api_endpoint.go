@@ -55,6 +55,12 @@ type APIEndpoint[TReq, TResp any] struct {
 	Preview           bool   `json:"-" yaml:"-"`
 	// AgentTool, when true, marks this endpoint for inclusion in the generated agent-tool catalog so agents can invoke it. Defaults to false; flagging an endpoint is the opt-in to expose it as an agent capability.
 	AgentTool bool `json:"-" yaml:"-"`
+	// ReadOnly declares that this endpoint computes an answer without changing anything, even though its method is not GET. Quotes, previews, validations and analytics all take a request body too large or too structured for a query string, so they are POST or PUT while writing nothing.
+	//
+	// Only set this where it is true of the whole request path, including anything downstream: an endpoint that emails a customer or calls a carrier's API has taken an externally-visible action even if it stores nothing. The default is the safe one — anything other than a GET is assumed to change state — so leaving this unset on a read-only endpoint only over-reports, while setting it wrongly would present a writing endpoint as safe to run unsupervised.
+	//
+	// Read by the agent-tool catalog, which surfaces it as the tool's `mutating` flag: that is what a merchant reads when deciding which tools an agent may run without review, so a quote that reports itself as mutating gets gated for no reason and dilutes the signal on the tools that genuinely need it.
+	ReadOnly bool `json:"-" yaml:"-"`
 	// RequiredPermissions declares the any-of permission set this endpoint requires, using typed domain/action constants (e.g. {types.PermissionDomainCustomers, types.ActionRead}) so typos are caught by the compiler. The gateway gate rejects callers who hold none of the listed permissions; holding one is enough to reach the handler. Agent tools and OpenAPI docs surface the same declaration.
 	RequiredPermissions types.AnyOfPermissions `json:"-" yaml:"-"`
 	// RequiredRoleType, when set, declares that the endpoint requires the caller to have a specific role type (e.g. constants.RoleTypeAdmin) rather than (or in addition to) a permission. The zero value means no role-type requirement.

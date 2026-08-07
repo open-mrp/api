@@ -35,6 +35,8 @@ type agentToolDescriptor struct {
 	RequiredPermissions []string
 	RequiredRoleType    string
 	Group               string
+	// ReadOnly is the endpoint's own declaration that it writes nothing despite not being a GET. Copied across rather than inferred from the method or the permissions it declares: emailing a customer needs only read permission and is very much an action.
+	ReadOnly bool
 }
 
 // generateAgentTools collects every endpoint that is public or flagged AgentTool, builds a self-contained input schema per endpoint, and writes the Go catalog (no DB seed).
@@ -108,6 +110,7 @@ func collectAgentToolDescriptors(groups []apiendpoint.APIEndpointGroup) []agentT
 				RequiredPermissions: explicitPermissions(spec),
 				RequiredRoleType:    requiredRoleType(spec),
 				Group:               groupName(deriveResource(route)),
+				ReadOnly:            spec.FieldByName("ReadOnly").Bool(),
 			})
 		}
 	}
@@ -439,6 +442,9 @@ func writeAgentToolsGo(descriptors []agentToolDescriptor) error {
 		fmt.Fprintf(&b, "\t\tRouteTemplate: %q,\n", d.RouteTemplate)
 		fmt.Fprintf(&b, "\t\tInputSchema:   %q,\n", string(d.InputSchema))
 		fmt.Fprintf(&b, "\t\tGroup:         %q,\n", d.Group)
+		if d.ReadOnly {
+			b.WriteString("\t\tReadOnly:      true,\n")
+		}
 		if d.RequiredRoleType != "" {
 			fmt.Fprintf(&b, "\t\tRequiredRoleType: %q,\n", d.RequiredRoleType)
 		}

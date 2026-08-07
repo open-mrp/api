@@ -1022,50 +1022,23 @@ func (q *Queries) GetCustomerStripeCustomerID(ctx context.Context, arg GetCustom
 }
 
 const getFrequentlyOrderedProducts = `-- name: GetFrequentlyOrderedProducts :many
-SELECT c.item_id, c.product_name, c.unit_id, c.unit_abbreviation, c.order_count
-FROM (
-    SELECT
-        fg.item_id AS item_id,
-        it.description AS product_name,
-        u.id AS unit_id,
-        u.abbreviation AS unit_abbreviation,
-        COUNT(*) AS order_count
-    FROM sales_order_line sol
-    JOIN sales_order so ON so.id = sol.sales_order_id
-    JOIN product fg ON fg.id = sol.product_id
-    JOIN item it ON it.id = fg.item_id
-    JOIN quantity q ON q.id = sol.quantity_id
-    JOIN unit u ON u.id = q.unit_id
-    WHERE so.owner_account_id = ?
-      AND so.buyer_account_id = ?
-      AND fg.product_type_code = 'sale'
-      AND fg.is_portal_ready = 1
-    GROUP BY fg.item_id, it.description, u.id, u.abbreviation
-) c
-WHERE NOT EXISTS (
-    SELECT 1
-    FROM (
-        SELECT
-            fg2.item_id AS item_id,
-            u2.id AS unit_id,
-            COUNT(*) AS order_count
-        FROM sales_order_line sol2
-        JOIN sales_order so2 ON so2.id = sol2.sales_order_id
-        JOIN product fg2 ON fg2.id = sol2.product_id
-        JOIN quantity q2 ON q2.id = sol2.quantity_id
-        JOIN unit u2 ON u2.id = q2.unit_id
-        WHERE so2.owner_account_id = ?
-          AND so2.buyer_account_id = ?
-          AND fg2.product_type_code = 'sale'
-          AND fg2.is_portal_ready = 1
-        GROUP BY fg2.item_id, u2.id
-    ) c2
-    WHERE c2.item_id = c.item_id
-      AND (c2.order_count > c.order_count
-           OR (c2.order_count = c.order_count AND c2.unit_id < c.unit_id))
-)
-ORDER BY c.order_count DESC
-LIMIT 12
+SELECT STRAIGHT_JOIN
+    fg.item_id AS item_id,
+    it.description AS product_name,
+    u.id AS unit_id,
+    u.abbreviation AS unit_abbreviation,
+    COUNT(*) AS order_count
+FROM sales_order so
+JOIN sales_order_line sol ON sol.sales_order_id = so.id
+JOIN product fg ON fg.id = sol.product_id
+JOIN item it ON it.id = fg.item_id
+JOIN quantity q ON q.id = sol.quantity_id
+JOIN unit u ON u.id = q.unit_id
+WHERE so.owner_account_id = ?
+  AND so.buyer_account_id = ?
+  AND fg.product_type_code = 'sale'
+  AND fg.is_portal_ready = 1
+GROUP BY fg.item_id, it.description, u.id, u.abbreviation
 `
 
 type GetFrequentlyOrderedProductsParams struct {
@@ -1081,22 +1054,30 @@ type GetFrequentlyOrderedProductsRow struct {
 	OrderCount       int64
 }
 
-// Greatest-n-per-group is expressed with a NOT EXISTS anti-join instead of a
-// ROW_NUMBER() window function on purpose: Vitess (PlanetScale) cannot plan a
-// window function inside a server-side prepared statement and fails the query
-// with "[BUG] unrecognized prepare statement". Because interpolateParams=false,
-// every sqlc query runs as a prepared statement, so the window-function form
-// worked on the vanilla MySQL used in dev/e2e but broke in production. The
-// anti-join keeps, per item, the (item, unit) row whose order_count is the
-// highest, breaking ties on the smallest unit_id so exactly one row survives
-// per item.
+// One row per (item, unit) the customer has ordered. Reducing that to one row per
+// item — the unit they order it in most — happens in Go.
+//
+// Greatest-n-per-group is not expressed here because neither SQL form is
+// affordable. A ROW_NUMBER() window function cannot be planned by Vitess
+// (PlanetScale) inside a server-side prepared statement and fails with "[BUG]
+// unrecognized prepare statement"; since interpolateParams=false makes every sqlc
+// query a prepared statement, that form worked on the vanilla MySQL used in
+// dev/e2e and broke in production. The NOT EXISTS anti-join that replaced it runs
+// this same aggregate a second time as its own derived table, so a customer with a
+// long order history paid for the scan twice and the endpoint reached the request
+// deadline. Picking the winner per item in Go costs one pass over a result set
+// bounded by the customer's catalog.
+//
+// STRAIGHT_JOIN forces sales_order to lead. Left to itself the optimizer drives
+// from product — a full scan, because product_type_code / is_portal_ready are the
+// only predicates it sees there — and fans every product out across its sales
+// order lines before reaching the one genuinely selective predicate, this
+// customer's orders, which it applies last and which throws away ~95% of the
+// rows. Leading with sales_order uses (owner_account_id, buyer_account_id) and
+// reduces to that customer's orders first, so every later join is an eq_ref on a
+// primary key: measured 0.6s warm against 21s for the optimizer's own order.
 func (q *Queries) GetFrequentlyOrderedProducts(ctx context.Context, arg GetFrequentlyOrderedProductsParams) ([]GetFrequentlyOrderedProductsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getFrequentlyOrderedProducts,
-		arg.OwnerAccountID,
-		arg.BuyerAccountID,
-		arg.OwnerAccountID,
-		arg.BuyerAccountID,
-	)
+	rows, err := q.db.QueryContext(ctx, getFrequentlyOrderedProducts, arg.OwnerAccountID, arg.BuyerAccountID)
 	if err != nil {
 		return nil, err
 	}

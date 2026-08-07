@@ -218,3 +218,108 @@ func createSellableItem(t *testing.T, sku string) string {
 	require.Len(t, list.Data, 1, "exactly one item should match the unique SKU %q", sku)
 	return DataItemField(list.Data[0], "id")
 }
+
+// Applying names its items explicitly, and everything else has to be left exactly
+// as it was. Adopting advice in bulk without saying what is being adopted is how a
+// plant changes what it builds by accident.
+func TestFulfillmentRecommendations_ApplyTouchesOnlyNamedItems(t *testing.T) {
+	t.Parallel()
+
+	targetID := createSellableItem(t, uniqueName("e2e-recommend-target"))
+	bystanderID := createSellableItem(t, uniqueName("e2e-recommend-bystander"))
+	t.Cleanup(func() { _, _, _ = apiClient.Delete(itemSettingsPath + "/" + targetID) })
+	t.Cleanup(func() { _, _, _ = apiClient.Delete(itemSettingsPath + "/" + bystanderID) })
+
+	status, body, err := apiClient.Post(recommendationsApplyPath,
+		map[string]any{"item_ids": []string{targetID}}, newIdempotencyKey())
+	require.NoError(t, err)
+	require.Less(t, status, 500, "apply must not 5xx: %s", string(body))
+	requireStatus(t, 200, status, body)
+
+	applied, ok := parseJSON(body)["data"].([]any)
+	require.True(t, ok)
+	require.Len(t, applied, 1, "only the named item should come back")
+	row, ok := applied[0].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, targetID, jsonField(jsonObject(row, "item"), "id"))
+
+	// The bystander has no override at all, which is the difference between "left
+	// alone" and "written with the same value".
+	bystanderStatus, _, err := apiClient.GetListRaw(itemSettingsPath+"/"+bystanderID, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 404, bystanderStatus,
+		"an item not named in the request must not have been given an override")
+}
+
+// Applying twice is the same as applying once: the advice is recomputed and the
+// item keeps one override rather than accumulating a second.
+func TestFulfillmentRecommendations_ApplyIsRepeatable(t *testing.T) {
+	t.Parallel()
+
+	itemID := createSellableItem(t, uniqueName("e2e-recommend-twice"))
+	t.Cleanup(func() { _, _, _ = apiClient.Delete(itemSettingsPath + "/" + itemID) })
+
+	apply := func() map[string]any {
+		status, body, err := apiClient.Post(recommendationsApplyPath,
+			map[string]any{"item_ids": []string{itemID}}, newIdempotencyKey())
+		require.NoError(t, err)
+		require.Less(t, status, 500, "apply must not 5xx: %s", string(body))
+		requireStatus(t, 200, status, body)
+
+		getStatus, getBody, err := apiClient.GetListRaw(itemSettingsPath+"/"+itemID, nil)
+		require.NoError(t, err)
+		requireStatus(t, 200, getStatus, getBody)
+		return parseJSON(getBody)
+	}
+
+	first := apply()
+	second := apply()
+
+	assert.Equal(t, jsonField(first, "id"), jsonField(second, "id"),
+		"the second apply must replace the override, not add another")
+	assert.Equal(t, jsonField(first, "fulfillment_policy"), jsonField(second, "fulfillment_policy"),
+		"the same demand must produce the same verdict")
+}
+
+// Applying is a write, so another tenant must not be able to aim it at an item it
+// does not own.
+func TestFulfillmentRecommendations_ApplyTenantIsolation(t *testing.T) {
+	t.Parallel()
+	clientB := getTenantBClient()
+
+	itemID := createSellableItem(t, uniqueName("e2e-recommend-tenant"))
+	t.Cleanup(func() { _, _, _ = apiClient.Delete(itemSettingsPath + "/" + itemID) })
+
+	status, body, err := clientB.Post(recommendationsApplyPath,
+		map[string]any{"item_ids": []string{itemID}}, newIdempotencyKey())
+	require.NoError(t, err)
+	require.Less(t, status, 500, "cross-tenant apply must not 5xx: %s", string(body))
+	assert.Contains(t, []int{400, 404}, status,
+		"tenant B must not apply advice to tenant A's item, got %d: %s", status, string(body))
+
+	getStatus, _, err := apiClient.GetListRaw(itemSettingsPath+"/"+itemID, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 404, getStatus, "and must not have written an override in tenant A")
+}
+
+// The recommendation list is per-account: another tenant's SKUs must not be
+// classified alongside this one's.
+func TestFulfillmentRecommendations_ListIsScopedToTheTenant(t *testing.T) {
+	t.Parallel()
+	clientB := getTenantBClient()
+
+	itemID := createSellableItem(t, uniqueName("e2e-recommend-scope"))
+	require.NotNil(t, findRecommendation(t, itemID), "precondition: tenant A classifies its own item")
+
+	status, body, err := clientB.GetListRaw(recommendationsPath, nil)
+	require.NoError(t, err)
+	require.Less(t, status, 500, "must not 5xx: %s", string(body))
+	requireStatus(t, 200, status, body)
+
+	for _, raw := range jsonArray(parseJSON(body), "data") {
+		row, ok := raw.(map[string]any)
+		require.True(t, ok)
+		assert.NotEqual(t, itemID, jsonField(jsonObject(row, "item"), "id"),
+			"tenant B must not be given advice about tenant A's SKU")
+	}
+}

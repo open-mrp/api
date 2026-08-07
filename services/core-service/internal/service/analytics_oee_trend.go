@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/augno/api/services/core-service/internal/domain"
@@ -26,24 +27,39 @@ func (s *analyticsSvcImpl) buildOeeTrend(ctx context.Context, params domain.Anal
 		EndDate:   params.EndDate,
 	}
 
-	outputRows, apiErr := repo.GetOeeTrendDepartmentDataByWeek(ctx, window)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
+	// The four reads share no inputs, and the scan aggregate over the window dominates the other three combined — running them in sequence spends the whole chart's latency budget waiting on one query while three idle round trips queue behind it. Errors are collected and the first non-nil is returned, so failure behaves exactly as it did when these ran in order.
+	var (
+		outputRows   []domain.OeeTrendDepartmentWeekRow
+		downtimeRows []domain.OeeDowntimeIntervalRow
+		settings     *domain.ProductionScheduleSettings
+		machineRows  []domain.DepartmentMachineCountRow
+		errs         [4]*apierror.APIError
+		wg           sync.WaitGroup
+	)
 
-	downtimeRows, apiErr := repo.GetOeeTrendDowntimeIntervals(ctx, window)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
+	wg.Add(4)
+	go func() {
+		defer wg.Done()
+		outputRows, errs[0] = repo.GetOeeTrendDepartmentDataByWeek(ctx, window)
+	}()
+	go func() {
+		defer wg.Done()
+		downtimeRows, errs[1] = repo.GetOeeTrendDowntimeIntervals(ctx, window)
+	}()
+	go func() {
+		defer wg.Done()
+		settings, errs[2] = s.repos.NewProductionScheduleRepo().GetSettings(ctx, params.AccountID)
+	}()
+	go func() {
+		defer wg.Done()
+		machineRows, errs[3] = repo.CountMachinesByDepartment(ctx, params.AccountID)
+	}()
+	wg.Wait()
 
-	settings, apiErr := s.repos.NewProductionScheduleRepo().GetSettings(ctx, params.AccountID)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	machineRows, apiErr := repo.CountMachinesByDepartment(ctx, params.AccountID)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+	for _, apiErr := range errs {
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 	}
 
 	deptFilter := make(map[string]bool, len(params.DepartmentIDs))

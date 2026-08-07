@@ -340,7 +340,7 @@ CREATE TABLE `account_group` (
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `default_lead_time_days` int DEFAULT NULL,
-  `fulfillment_policy_code` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `fulfillment_policy_code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `account_group_registration_flow_id_idx` (`registration_flow_id`),
   KEY `account_group_owner_account_id_idx` (`owner_account_id`),
@@ -465,7 +465,7 @@ CREATE TABLE `account_plan` (
   KEY `account_plan_plan_type_code_effective_at_idx` (`plan_type_code`,`effective_at`),
   KEY `account_plan_is_publicly_visible_created_at_id_idx` (`is_publicly_visible`,`created_at` DESC,`id` DESC),
   FULLTEXT KEY `account_plan_name_idx` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=91 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=97 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -484,7 +484,7 @@ CREATE TABLE `account_plan_feature` (
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
   UNIQUE KEY `account_plan_feature_account_plan_id_key_key` (`account_plan_id`,`key`)
-) ENGINE=InnoDB AUTO_INCREMENT=271 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=289 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -503,7 +503,7 @@ CREATE TABLE `account_plan_limit` (
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
   UNIQUE KEY `account_plan_limit_account_plan_id_key_key` (`account_plan_id`,`key`)
-) ENGINE=InnoDB AUTO_INCREMENT=361 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=385 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -630,7 +630,7 @@ CREATE TABLE `account_production_schedule_setting` (
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `default_customer_lead_time_days` int NOT NULL DEFAULT '30',
-  `default_fulfillment_policy_code` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'make_to_stock',
+  `default_fulfillment_policy_code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'make_to_stock',
   `recommendation_adi_threshold` decimal(8,4) NOT NULL DEFAULT '1.3200',
   `recommendation_concentration_pct` decimal(5,4) NOT NULL DEFAULT '0.8000',
   `recommendation_cv2_threshold` decimal(8,4) NOT NULL DEFAULT '0.4900',
@@ -681,7 +681,7 @@ CREATE TABLE `account_relation` (
   `carrier_billing_account` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `credit_limit_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `default_lead_time_days` int DEFAULT NULL,
-  `fulfillment_policy_code` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `fulfillment_policy_code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `account_relation_owner_account_id_counterparty_account_id_ac_key` (`owner_account_id`,`counterparty_account_id`,`account_relation_role_code`),
   UNIQUE KEY `account_relation_credit_limit_id_key` (`credit_limit_id`),
@@ -1000,7 +1000,7 @@ CREATE TABLE `api_key` (
   KEY `api_key_owner_account_id_expires_at_created_at_id_idx` (`owner_account_id`,`expires_at`,`created_at` DESC,`id` DESC),
   KEY `api_key_owner_account_id_created_at_id_idx` (`owner_account_id`,`created_at` DESC,`id` DESC),
   FULLTEXT KEY `api_key_name_idx` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=51 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=54 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1069,7 +1069,7 @@ CREATE TABLE `audit_event` (
   KEY `audit_event_account_id_resource_type_occurred_at_type_id_idx` (`account_id`,`resource_type`,`occurred_at` DESC,`type_id` DESC),
   KEY `audit_event_account_id_actor_id_occurred_at_type_id_idx` (`account_id`,`actor_id`,`occurred_at` DESC,`type_id` DESC),
   KEY `audit_event_root_idx` (`account_id`,`root_resource_type`,`root_resource_id`,`occurred_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=232 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=233 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1527,7 +1527,7 @@ CREATE TABLE `department` (
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `location_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `labor_rate_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `labor_rate_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `department_account_id_name_key` (`account_id`,`name`),
   UNIQUE KEY `department_labor_rate_id_key` (`labor_rate_id`),
@@ -1748,9 +1748,9 @@ DROP TABLE IF EXISTS `fulfillment_policy`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `fulfillment_policy` (
-  `id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `code` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
@@ -1918,7 +1918,7 @@ CREATE TABLE `idempotency_key` (
   KEY `idempotency_key_target_account_id_idx` (`target_account_id`),
   KEY `idempotency_key_lock_expires_at_idx` (`lock_expires_at`),
   KEY `idempotency_key_expires_at_idx` (`expires_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=534 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=536 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2270,14 +2270,14 @@ DROP TABLE IF EXISTS `job`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `job` (
   `id` bigint NOT NULL AUTO_INCREMENT,
-  `job_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `type` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `job_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `job_items` json NOT NULL,
-  `account_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `created_by` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `created_by` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `results` json DEFAULT NULL,
   `errors` json DEFAULT NULL,
-  `error_summary` text COLLATE utf8mb4_unicode_ci,
+  `error_summary` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   `created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   `started_at` datetime(6) DEFAULT NULL,
@@ -2591,7 +2591,7 @@ CREATE TABLE `message_inbox` (
   KEY `message_inbox_processed_at_idx` (`processed_at`),
   KEY `message_inbox_request_id_idx` (`request_id`),
   KEY `message_inbox_parent_message_id_idx` (`parent_message_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=150232 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=150288 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2630,7 +2630,7 @@ CREATE TABLE `message_outbox` (
   KEY `message_outbox_lock_expires_at_idx` (`lock_expires_at`),
   KEY `message_outbox_request_id_idx` (`request_id`),
   KEY `message_outbox_parent_message_id_idx` (`parent_message_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=151073 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=151129 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -3119,7 +3119,7 @@ CREATE TABLE `product_line` (
   `is_commission_exempt` tinyint(1) NOT NULL DEFAULT '0',
   `is_freight_exempt` tinyint(1) NOT NULL DEFAULT '0',
   `default_lot_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `fulfillment_policy_code` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `fulfillment_policy_code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `product_line_default_lot_id_key` (`default_lot_id`),
   UNIQUE KEY `product_line_account_id_name_key` (`account_id`,`name`),
@@ -3405,8 +3405,8 @@ CREATE TABLE `production_schedule_item_policy` (
   `unit_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `firm_demand_units` decimal(65,30) NOT NULL DEFAULT '0.000000000000000000000000000000',
   `forecast_demand_units` decimal(65,30) NOT NULL DEFAULT '0.000000000000000000000000000000',
-  `fulfillment_policy_code` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'make_to_stock',
-  `policy_source_code` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'account_default',
+  `fulfillment_policy_code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'make_to_stock',
+  `policy_source_code` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'account_default',
   PRIMARY KEY (`id`),
   UNIQUE KEY `prod_sched_item_policy_sched_item_key` (`production_schedule_id`,`item_id`),
   KEY `prod_sched_item_policy_sched_hours_idx` (`production_schedule_id`,`annual_run_hours` DESC,`id`),
@@ -3436,7 +3436,7 @@ CREATE TABLE `production_schedule_item_setting` (
   `preferred_machine_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-  `fulfillment_policy_code` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `fulfillment_policy_code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `prod_sched_item_setting_account_item_key` (`account_id`,`item_id`),
   KEY `prod_sched_item_setting_excluded_idx` (`account_id`,`is_excluded`)
@@ -3495,12 +3495,12 @@ DROP TABLE IF EXISTS `production_schedule_line_order`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `production_schedule_line_order` (
-  `id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `account_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `production_schedule_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `production_schedule_line_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `sales_order_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `sales_order_line_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `production_schedule_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `production_schedule_line_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `sales_order_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `sales_order_line_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `allocated_quantity` decimal(65,30) NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -3937,7 +3937,10 @@ CREATE TABLE `request_log` (
   KEY `request_log_client_ip_string_occurred_at_idx` (`client_ip_string`,`occurred_at` DESC),
   KEY `request_log_target_account_id_error_code_occurred_at_id_idx` (`target_account_id`,`error_code`,`occurred_at` DESC,`id` DESC),
   KEY `request_log_target_acct_normalized_route_occurred_at_idx` (`target_account_id`,`normalized_route`(128),`occurred_at` DESC,`id` DESC),
-  KEY `request_log_target_account_id_status_code_occurred_at_id_idx` (`target_account_id`,`status_code`,`occurred_at` DESC,`id` DESC)
+  KEY `request_log_target_account_id_status_code_occurred_at_id_idx` (`target_account_id`,`status_code`,`occurred_at` DESC,`id` DESC),
+  KEY `request_log_account_id_actor_id_occurred_at_id_idx` (`account_id`,`actor_id`,`occurred_at` DESC,`id` DESC),
+  KEY `request_log_account_id_status_code_occurred_at_id_idx` (`account_id`,`status_code`,`occurred_at` DESC,`id` DESC),
+  KEY `request_log_account_id_error_code_occurred_at_id_idx` (`account_id`,`error_code`,`occurred_at` DESC,`id` DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -4042,7 +4045,7 @@ CREATE TABLE `sales_order` (
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `lead_time_days` int DEFAULT NULL,
-  `lead_time_source_code` varchar(32) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `lead_time_source_code` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `ship_by_date` date DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `sales_order_owner_account_id_sales_order_type_code_number_key` (`owner_account_id`,`sales_order_type_code`,`number`),
@@ -4170,7 +4173,7 @@ CREATE TABLE `sandbox_account` (
   UNIQUE KEY `sandbox_account_type_id_key` (`type_id`),
   UNIQUE KEY `sandbox_account_account_id_key` (`account_id`),
   KEY `sandbox_account_owner_account_id_idx` (`owner_account_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=20 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -4271,7 +4274,7 @@ CREATE TABLE `service_idempotency_key` (
   KEY `service_idempotency_key_idempotency_key_idx` (`idempotency_key`),
   KEY `service_idempotency_key_lock_expires_at_idx` (`lock_expires_at`),
   KEY `service_idempotency_key_expires_at_idx` (`expires_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=199 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=201 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -4955,7 +4958,7 @@ CREATE TABLE `user` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-08-06 13:43:41
+-- Dump completed on 2026-08-07 10:38:05
 
 -- +goose Down
 

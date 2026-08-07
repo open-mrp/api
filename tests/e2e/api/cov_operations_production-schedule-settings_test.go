@@ -322,3 +322,120 @@ func TestScheduleResourceSettings_UpsertRejectsUnknownScope(t *testing.T) {
 	require.Less(t, status, 500, "must not 5xx: %s", string(body))
 	assert.Equal(t, 400, status)
 }
+
+// ──────────────────────────────────────────────
+// Ship-by and fulfillment defaults
+// ──────────────────────────────────────────────
+
+// The account default is the last resort in the ship-by chain, so it has to reach
+// an order that falls all the way through it. A setting nothing reads is a number
+// on a form.
+func TestScheduleSettings_DefaultLeadTimeDrivesTheChain(t *testing.T) {
+	original := claimScheduleSettings(t)
+
+	body := settingsWriteBody(original)
+	body["default_customer_lead_time_days"] = 37
+	updated := writeScheduleSettings(t, body)
+	assert.EqualValues(t, 37, updated["default_customer_lead_time_days"])
+
+	// Neither the customer nor its group says anything, so the account decides.
+	customerID := leadTimeCustomer(t, "e2e-settings-lt", nil, "")
+	order := issueOrderForCustomer(t, customerID, nil)
+
+	assert.Equal(t, "account", jsonField(order, "lead_time_source"))
+	assert.Equal(t, "37", jsonField(order, "lead_time_days"))
+	assert.Equal(t, expectedShipBy(t, order, 37), shipByDate(t, order))
+}
+
+// Zero is a real commitment — same-day shipping — and must be storable rather than
+// read as "unset" and quietly replaced by a default.
+func TestScheduleSettings_ZeroLeadTimeIsSameDay(t *testing.T) {
+	original := claimScheduleSettings(t)
+
+	body := settingsWriteBody(original)
+	body["default_customer_lead_time_days"] = 0
+	updated := writeScheduleSettings(t, body)
+	assert.EqualValues(t, 0, updated["default_customer_lead_time_days"])
+
+	customerID := leadTimeCustomer(t, "e2e-settings-lt-zero", nil, "")
+	order := issueOrderForCustomer(t, customerID, nil)
+
+	assert.Equal(t, "account", jsonField(order, "lead_time_source"))
+	assert.Equal(t, "0", jsonField(order, "lead_time_days"))
+	assert.Equal(t, expectedShipBy(t, order, 0), shipByDate(t, order),
+		"a zero lead time commits the order to shipping the day it was issued")
+}
+
+// The default policy is what a SKU falls back to when neither it nor its product
+// line says, so changing it has to change how such a SKU is reported as planned.
+func TestScheduleSettings_DefaultPolicyDrivesUnclassifiedItems(t *testing.T) {
+	original := claimScheduleSettings(t)
+
+	// Its own product, in no product line, so nothing above the account has an
+	// opinion about how it is built.
+	itemID := createSellableItem(t, uniqueName("e2e-settings-policy"))
+
+	for _, policy := range []string{"make_to_order", "make_to_stock"} {
+		body := settingsWriteBody(original)
+		body["default_fulfillment_policy"] = policy
+		updated := writeScheduleSettings(t, body)
+		require.Equal(t, policy, jsonField(updated, "default_fulfillment_policy"))
+
+		rec := findRecommendation(t, itemID)
+		require.NotNil(t, rec, "a sellable item should be classified")
+		assert.Equal(t, policy, jsonField(rec, "current_policy"),
+			"an item with no override and no line policy is planned on the account default")
+	}
+}
+
+// The whole set is validated together, so an assumption that contradicts another is
+// rejected rather than saved and left to produce a plan nobody intended.
+func TestScheduleSettings_RejectsContradictoryAssumptions(t *testing.T) {
+	original := claimScheduleSettings(t)
+
+	horizon, ok := original["planning_horizon_weeks"].(float64)
+	require.True(t, ok)
+
+	for _, tc := range []struct {
+		name   string
+		mutate func(map[string]any)
+	}{
+		{"frozen window longer than the horizon", func(b map[string]any) {
+			b["planning_horizon_weeks"] = horizon
+			b["frozen_weeks"] = horizon + 1
+		}},
+		{"minimum changeover above the maximum", func(b map[string]any) {
+			b["changeover_min_minutes"] = 120
+			b["changeover_max_minutes"] = 30
+		}},
+		{"negative default lead time", func(b map[string]any) {
+			b["default_customer_lead_time_days"] = -1
+		}},
+		{"lead time beyond ten years", func(b map[string]any) {
+			b["default_customer_lead_time_days"] = 3651
+		}},
+		{"unknown default policy", func(b map[string]any) {
+			b["default_fulfillment_policy"] = "make_to_vibes"
+		}},
+		{"week starting on the eighth day", func(b map[string]any) {
+			b["week_start_day"] = 7
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			body := settingsWriteBody(original)
+			tc.mutate(body)
+
+			status, respBody, err := apiClient.Put(scheduleSettingsPath, body)
+			require.NoError(t, err)
+			require.Less(t, status, 500, "a contradictory setting must be a 400, not a crash: %s", string(respBody))
+			assert.Equal(t, 400, status, "body: %s", string(respBody))
+		})
+	}
+
+	// None of that was saved: a rejected write must leave the account exactly as it
+	// was, or a merchant would have to guess which half landed.
+	after := readScheduleSettings(t)
+	assert.Equal(t, original["planning_horizon_weeks"], after["planning_horizon_weeks"])
+	assert.Equal(t, original["default_customer_lead_time_days"], after["default_customer_lead_time_days"])
+	assert.Equal(t, original["default_fulfillment_policy"], after["default_fulfillment_policy"])
+}

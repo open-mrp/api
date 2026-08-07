@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"cmp"
 	"context"
 	gosql "database/sql"
 	"fmt"
@@ -1189,6 +1190,9 @@ func (r *customerRepoImpl) DeletePriceGroups(ctx context.Context, relationID str
 	return nil
 }
 
+// frequentlyOrderedProductLimit caps how many products the reorder shortcut offers. Applied in Go rather than as a SQL LIMIT because the ranking it trims is decided in Go.
+const frequentlyOrderedProductLimit = 12
+
 func (r *customerRepoImpl) GetFrequentlyOrderedProducts(ctx context.Context, ownerAccountID, customerAccountID string) ([]*domain.FrequentlyOrderedProduct, *apierror.APIError) {
 	ctx, span := customerRepoTracer.Start(ctx, "repository.customer.frequently_ordered_products")
 	defer span.End()
@@ -1201,21 +1205,44 @@ func (r *customerRepoImpl) GetFrequentlyOrderedProducts(ctx context.Context, own
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	products := make([]*domain.FrequentlyOrderedProduct, len(rows))
-	for i, row := range rows {
+	// The query returns one row per (item, unit); keep the unit the customer orders each item in most, breaking ties on the smallest unit id so the choice is stable across calls.
+	best := make(map[string]*domain.FrequentlyOrderedProduct, len(rows))
+	for _, row := range rows {
 		productName := ""
 		if row.ProductName.Valid {
 			productName = row.ProductName.String
 		}
 		unitID := row.UnitID
 		unitAbbr := row.UnitAbbreviation
-		products[i] = &domain.FrequentlyOrderedProduct{
+		candidate := &domain.FrequentlyOrderedProduct{
 			ItemID:           row.ItemID,
 			ProductName:      productName,
 			UnitID:           &unitID,
 			UnitAbbreviation: &unitAbbr,
 			OrderCount:       safeconv.Int64ToInt32(row.OrderCount),
 		}
+
+		current, seen := best[row.ItemID]
+		if !seen || candidate.OrderCount > current.OrderCount ||
+			(candidate.OrderCount == current.OrderCount && unitID < *current.UnitID) {
+			best[row.ItemID] = candidate
+		}
+	}
+
+	products := make([]*domain.FrequentlyOrderedProduct, 0, len(best))
+	for _, p := range best {
+		products = append(products, p)
+	}
+	// Most-ordered first, item id breaking ties so equally-ordered products do not shuffle between calls (map iteration order alone would).
+	slices.SortFunc(products, func(a, b *domain.FrequentlyOrderedProduct) int {
+		if c := cmp.Compare(b.OrderCount, a.OrderCount); c != 0 {
+			return c
+		}
+		return cmp.Compare(a.ItemID, b.ItemID)
+	})
+
+	if len(products) > frequentlyOrderedProductLimit {
+		products = products[:frequentlyOrderedProductLimit]
 	}
 
 	return products, nil

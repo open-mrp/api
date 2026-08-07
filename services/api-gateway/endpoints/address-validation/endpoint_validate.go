@@ -58,6 +58,7 @@ func (e *ValidateAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*Valida
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
+		ReadOnly:          true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeValidatedAddress,
 		Extras:            apiendpoint.APIEndpointExtras{HideFromRequestLog: true},

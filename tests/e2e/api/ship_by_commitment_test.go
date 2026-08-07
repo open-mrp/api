@@ -423,3 +423,126 @@ func orderAppearsInFilteredList(t *testing.T, orderID string, filters url.Values
 }
 
 func ptrInt(v int) *int { return &v }
+
+// past_due is the backlog question: an order whose date has passed and which is
+// still owed. An order issued against a date already behind us has to appear in it,
+// or the queue a planner works from is empty while orders are late.
+func TestSalesOrders_PastDueFilterFindsALateOrder(t *testing.T) {
+	t.Parallel()
+
+	// Promised a week ago, so the commitment is already behind us the moment it is
+	// issued. The promised date beats the customer's standing lead time.
+	promised := time.Now().UTC().AddDate(0, 0, -7).Format("2006-01-02") + "T00:00:00Z"
+	customerID := leadTimeCustomer(t, "e2e-pastdue", ptrInt(30), "")
+	order := issueOrderForCustomer(t, customerID, map[string]any{"promised_at": promised})
+	orderID := jsonField(order, "id")
+	require.Equal(t, promised[:10], shipByDate(t, order), "precondition: the order is committed to a past date")
+
+	assert.True(t, orderAppearsInFilteredList(t, orderID, url.Values{"past_due": {"true"}}),
+		"an issued order past its ship-by date is past due")
+	assert.False(t, orderAppearsInFilteredList(t, orderID, url.Values{"past_due": {"false"}}),
+		"and must not also come back as not past due")
+
+	// Unissuing withdraws the promise, so there is nothing left to be late for.
+	status, body, err := apiClient.Put(salesOrdersPath+"/"+orderID+"/actions/unissue", nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	assert.False(t, orderAppearsInFilteredList(t, orderID, url.Values{"past_due": {"true"}}),
+		"an order pulled back off the book is no longer late")
+}
+
+// An order with no commitment cannot be answered either way, so it must not be
+// swept into the backlog by a filter that only knows about dates.
+func TestSalesOrders_PastDueExcludesAnUncommittedOrder(t *testing.T) {
+	t.Parallel()
+
+	customerID := leadTimeCustomer(t, "e2e-pastdue-estimate", ptrInt(30), "")
+	body := minimalSalesOrderCreateBody(t, customerID)
+
+	status, respBody, err := apiClient.Post(salesOrdersPath, body, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, respBody)
+	created := parseJSON(respBody)
+	orderID := jsonField(created, "id")
+	deleteOrder(t, orderID)
+	require.Equal(t, "estimate", jsonField(created, "status"), "precondition: nothing has been promised yet")
+	require.Empty(t, shipByDate(t, created))
+
+	assert.False(t, orderAppearsInFilteredList(t, orderID, url.Values{"past_due": {"true"}}),
+		"an estimate carries no promise, so it cannot be past due")
+}
+
+// past_due is a boolean, and a value that is not one is refused rather than
+// quietly read as false — which would answer a question about the backlog with the
+// whole order book.
+func TestSalesOrders_PastDueFilterValidatesItsInput(t *testing.T) {
+	t.Parallel()
+
+	status, body, err := apiClient.GetListRaw(salesOrdersPath, url.Values{"past_due": {"maybe"}})
+	require.NoError(t, err)
+	require.Less(t, status, 500, "a malformed filter must not 5xx: %s", string(body))
+	assert.Equal(t, 400, status, "body: %s", string(body))
+}
+
+// A ship-by bound that is not a date is currently ignored rather than rejected,
+// inherited from how starts_at/ends_at have always parsed: anything that does not
+// match a date layout produces no filter at all.
+//
+// Pinned rather than left implicit because the failure mode is silent — a client
+// sending a malformed date gets the unfiltered list back and reads it as an answer.
+// The day this is tightened into a 400 this test fails, which is the point: it
+// should be a deliberate change rather than one nobody noticed.
+func TestSalesOrders_MalformedShipByFilterIsIgnored(t *testing.T) {
+	t.Parallel()
+
+	customerID := leadTimeCustomer(t, "e2e-shipby-malformed", ptrInt(30), "")
+	order := issueOrderForCustomer(t, customerID, nil)
+	orderID := jsonField(order, "id")
+	require.NotEmpty(t, shipByDate(t, order))
+
+	for _, tc := range []struct {
+		name   string
+		params url.Values
+	}{
+		{"ship_by_after not a date", url.Values{"ship_by_after": {"last-tuesday"}}},
+		{"ship_by_before not a date", url.Values{"ship_by_before": {"2026-13-45"}}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			status, body, err := apiClient.GetListRaw(salesOrdersPath, tc.params)
+			require.NoError(t, err)
+			require.Less(t, status, 500, "a malformed filter must not 5xx: %s", string(body))
+			requireStatus(t, 200, status, body)
+
+			// Ignored, not applied: the order is still there, exactly as it would be with
+			// no filter at all.
+			assert.True(t, orderAppearsInFilteredList(t, orderID, tc.params),
+				"an unparseable bound narrows nothing, so the list comes back unfiltered")
+		})
+	}
+}
+
+// The two date bounds have to compose: a window that brackets a commitment
+// includes it, and one that excludes it on either side does not.
+func TestSalesOrders_ShipByFiltersCompose(t *testing.T) {
+	t.Parallel()
+
+	customerID := leadTimeCustomer(t, "e2e-shipby-window", ptrInt(30), "")
+	order := issueOrderForCustomer(t, customerID, nil)
+	orderID := jsonField(order, "id")
+	shipBy := shipByDate(t, order)
+	require.NotEmpty(t, shipBy)
+
+	parsed, err := time.Parse("2006-01-02", shipBy)
+	require.NoError(t, err)
+	weekBefore := parsed.AddDate(0, 0, -7).Format("2006-01-02")
+	weekAfter := parsed.AddDate(0, 0, 7).Format("2006-01-02")
+
+	assert.True(t, orderAppearsInFilteredList(t, orderID, url.Values{
+		"ship_by_after": {weekBefore}, "ship_by_before": {weekAfter},
+	}), "a window that brackets the commitment must include it")
+
+	assert.False(t, orderAppearsInFilteredList(t, orderID, url.Values{
+		"ship_by_after": {weekAfter}, "ship_by_before": {parsed.AddDate(0, 0, 14).Format("2006-01-02")},
+	}), "a window entirely after the commitment must not include it")
+}

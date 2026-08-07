@@ -44,6 +44,7 @@ func (e *FindContactByEmailEndpoint) Materialize() *apiendpoint.APIEndpoint[*Fin
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		AgentTool:         true,
+		ReadOnly:          true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainCustomers, Action: types.ActionRead},

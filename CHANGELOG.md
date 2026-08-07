@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.44.1](https://github.com/Augno/api/compare/v0.44.0...v0.44.1) (2026-08-07)
+
+
+### Bug Fixes
+
+* add e2e tests and fix issue where request timeouts were flagged as 408 rather than 500 ([#463](https://github.com/Augno/api/issues/463)) ([46b7aaf](https://github.com/Augno/api/commit/46b7aaf70d152a4096e4f8fb2a622f552e84dd8c))
+
 ## [0.44.0](https://github.com/Augno/api/compare/v0.43.0...v0.44.0) (2026-08-07)
 
 

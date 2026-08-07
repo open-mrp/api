@@ -93,6 +93,7 @@ var purgeTargets = []tableColumn{
 	{"demand_override", "account_id"},
 	{"machine_downtime_event", "account_id"},
 	{"production_schedule", "account_id"},
+	{"production_schedule_line_order", "account_id"},
 	{"production_schedule_line", "account_id"},
 	{"production_schedule_item_policy", "account_id"},
 	{"production_schedule_deviation", "account_id"},

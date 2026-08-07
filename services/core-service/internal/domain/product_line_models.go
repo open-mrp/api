@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/augno/api/shared/constants"
+	"github.com/augno/api/shared/field"
 	"github.com/augno/api/shared/pagination"
 )
 
@@ -38,9 +39,11 @@ type ProductLineFull struct {
 	DefaultLotID     *string `audit:"default_lot_id"`
 	DefaultLotValue  *string `audit:"default_lot_value"`
 	DefaultLotUnitID *string `audit:"default_lot_unit_id"`
-	AccountID        *string
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	// How products in this line are produced when they do not say for themselves; nil falls through to the account default.
+	FulfillmentPolicyCode *string `audit:"fulfillment_policy_code"`
+	AccountID             *string
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
 
 	// Expandable sub-resources (populated via includes)
 	UnitGroup *ProductLineUnitGroup
@@ -89,13 +92,14 @@ type GetProductLineParams struct {
 }
 
 type CreateProductLineParams struct {
-	AccountID        string
-	Name             string
-	UnitGroupID      string
-	CommissionPolicy constants.CommissionPolicy
-	FreightPolicy    constants.FreightPolicy
-	DefaultLot       *LotQuantityInput
-	Includes         []string
+	AccountID             string
+	Name                  string
+	UnitGroupID           string
+	CommissionPolicy      constants.CommissionPolicy
+	FreightPolicy         constants.FreightPolicy
+	DefaultLot            *LotQuantityInput
+	Includes              []string
+	FulfillmentPolicyCode *string
 }
 
 type UpdateProductLineParams struct {
@@ -107,8 +111,9 @@ type UpdateProductLineParams struct {
 	UnitGroupID      *string
 	DefaultLot       *LotQuantityInput
 	// ClearDefaultLot removes the line's lot convention entirely.
-	ClearDefaultLot bool
-	Includes        []string
+	ClearDefaultLot       bool
+	Includes              []string
+	FulfillmentPolicyCode field.Clearable[string]
 }
 
 type DeleteProductLineParams struct {

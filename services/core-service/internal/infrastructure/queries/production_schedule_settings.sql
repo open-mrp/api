@@ -16,6 +16,7 @@ INSERT INTO account_production_schedule_setting (
     default_constraint_lead_time_weeks, max_weeks_supply, max_flow_depth,
     shifts_per_day, hours_per_shift, work_days_per_week, weeks_per_year,
     capacity_headroom_pct, default_lot_units,
+    default_customer_lead_time_days, default_fulfillment_policy_code,
     is_enabled, generation_cron, generation_timezone, auto_publish,
     created_at, updated_at
 ) VALUES (
@@ -28,6 +29,7 @@ INSERT INTO account_production_schedule_setting (
     sqlc.arg('default_constraint_lead_time_weeks'), sqlc.arg('max_weeks_supply'), sqlc.arg('max_flow_depth'),
     sqlc.arg('shifts_per_day'), sqlc.arg('hours_per_shift'), sqlc.arg('work_days_per_week'), sqlc.arg('weeks_per_year'),
     sqlc.arg('capacity_headroom_pct'), sqlc.arg('default_lot_units'),
+    sqlc.arg('default_customer_lead_time_days'), sqlc.arg('default_fulfillment_policy_code'),
     sqlc.arg('is_enabled'), sqlc.narg('generation_cron'), sqlc.arg('generation_timezone'), sqlc.arg('auto_publish'),
     NOW(3), NOW(3)
 )
@@ -57,6 +59,8 @@ ON DUPLICATE KEY UPDATE
     weeks_per_year = VALUES(weeks_per_year),
     capacity_headroom_pct = VALUES(capacity_headroom_pct),
     default_lot_units = VALUES(default_lot_units),
+    default_customer_lead_time_days = VALUES(default_customer_lead_time_days),
+    default_fulfillment_policy_code = VALUES(default_fulfillment_policy_code),
     is_enabled = VALUES(is_enabled),
     generation_cron = VALUES(generation_cron),
     generation_timezone = VALUES(generation_timezone),
@@ -80,3 +84,60 @@ ON DUPLICATE KEY UPDATE
 -- name: DeleteProductionScheduleResourceSetting :execrows
 DELETE FROM production_schedule_resource_setting
 WHERE account_id = sqlc.arg('account_id') AND id = sqlc.arg('id');
+
+-- ListProductionScheduleItemSettings returns every per-item planning override in the account.
+--
+-- Kept distinct from GetProductionScheduleItemSettings, which the solver uses: that one reads only the columns a solve needs, and widening it would make every solve carry API-shaped data it never looks at.
+-- name: ListProductionScheduleItemSettings :many
+SELECT
+    s.id,
+    s.item_id,
+    i.sku,
+    s.is_excluded,
+    s.lot_multiple_units,
+    s.fulfillment_policy_code,
+    s.created_at,
+    s.updated_at
+FROM production_schedule_item_setting s
+JOIN item i ON i.id = s.item_id
+WHERE s.account_id = sqlc.arg('account_id')
+ORDER BY i.sku, s.item_id;
+
+-- GetProductionScheduleItemSetting returns one item's override.
+-- name: GetProductionScheduleItemSetting :one
+SELECT
+    s.id,
+    s.item_id,
+    i.sku,
+    s.is_excluded,
+    s.lot_multiple_units,
+    s.fulfillment_policy_code,
+    s.created_at,
+    s.updated_at
+FROM production_schedule_item_setting s
+JOIN item i ON i.id = s.item_id
+WHERE s.account_id = sqlc.arg('account_id')
+  AND s.item_id = sqlc.arg('item_id');
+
+-- UpsertProductionScheduleItemSetting writes one item's planning override.
+--
+-- Upsert rather than insert: an item has at most one override, and making a merchant delete before changing a value would be a worse contract than replacing it.
+-- name: UpsertProductionScheduleItemSetting :exec
+INSERT INTO production_schedule_item_setting (
+    id, account_id, item_id, is_excluded, lot_multiple_units, fulfillment_policy_code,
+    created_at, updated_at
+) VALUES (
+    sqlc.arg('id'), sqlc.arg('account_id'), sqlc.arg('item_id'),
+    sqlc.arg('is_excluded'), sqlc.narg('lot_multiple_units'), sqlc.narg('fulfillment_policy_code'),
+    NOW(3), NOW(3)
+)
+ON DUPLICATE KEY UPDATE
+    is_excluded = VALUES(is_excluded),
+    lot_multiple_units = VALUES(lot_multiple_units),
+    fulfillment_policy_code = VALUES(fulfillment_policy_code),
+    updated_at = NOW(3);
+
+-- DeleteProductionScheduleItemSetting removes one item's override, returning it to the defaults.
+-- name: DeleteProductionScheduleItemSetting :execrows
+DELETE FROM production_schedule_item_setting
+WHERE account_id = sqlc.arg('account_id') AND item_id = sqlc.arg('item_id');

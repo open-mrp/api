@@ -232,6 +232,14 @@ SELECT
     s.weeks_per_year,
     s.capacity_headroom_pct,
     s.default_lot_units,
+    s.default_customer_lead_time_days,
+    s.default_fulfillment_policy_code,
+    s.recommendation_dormant_months,
+    s.recommendation_concentration_pct,
+    s.recommendation_adi_threshold,
+    s.recommendation_cv2_threshold,
+    s.recommendation_slow_mover_cogs,
+    s.recommendation_high_value_unit_cost,
     -- The cadence and display columns are read by the settings API, which shares this query so there is one definition of "the merchant's assumptions".
     s.week_start_day,
     s.is_enabled,
@@ -249,7 +257,8 @@ WHERE s.account_id = sqlc.arg('account_id');
 SELECT
     s.item_id,
     s.is_excluded,
-    s.lot_multiple_units
+    s.lot_multiple_units,
+    s.fulfillment_policy_code
 FROM production_schedule_item_setting s
 WHERE s.account_id = sqlc.arg('account_id');
 
@@ -260,3 +269,102 @@ FROM department d
 JOIN rate r ON r.id = d.labor_rate_id
 WHERE d.account_id = sqlc.arg('account_id')
   AND d.id = sqlc.arg('department_id');
+
+-- GetOpenOrderRequirements returns the outstanding quantity on every issued, unshipped order line, with the date it is due to ship.
+--
+-- This is the order book the plan owes, as opposed to the history it forecasts from. Outstanding is ordered minus packed rather than ordered minus picked: a picked line is work in progress and still has to be produced if the stock is not there, while a packed one has left inventory. Estimates are excluded for the same reason GetPooledOrderDemandByProduct excludes them — an unissued quote is not demand — and non-sale lines (freight, credits) are excluded because they are not produced.
+--
+-- ship_by_date is nullable: orders issued before commitments were tracked carry none. They are returned anyway and dated by the caller, because dropping real demand silently is worse than dating it badly and saying so.
+-- name: GetOpenOrderRequirements :many
+SELECT
+    so.id AS sales_order_id,
+    so.number AS sales_order_number,
+    sol.id AS sales_order_line_id,
+    so.ship_by_date,
+    sol.product_id,
+    CAST(
+        q.value * (u.ratio_numerator / u.ratio_denominator)
+        - COALESCE((
+            SELECT SUM(plq.value * (plu.ratio_numerator / plu.ratio_denominator))
+            FROM pick_line pl
+            JOIN quantity plq ON plq.id = pl.quantity_id
+            JOIN unit plu ON plu.id = plq.unit_id
+            WHERE pl.sales_order_line_id = sol.id
+              AND pl.packed_at IS NOT NULL
+        ), 0)
+    AS DECIMAL(65,30)) AS outstanding_quantity
+FROM sales_order_line sol
+JOIN sales_order so ON so.id = sol.sales_order_id
+JOIN product p ON p.id = sol.product_id
+JOIN quantity q ON q.id = sol.quantity_id
+JOIN unit u ON u.id = q.unit_id
+WHERE so.owner_account_id = sqlc.arg('account_id')
+  AND so.sales_order_type_code = 'sales_order'
+  AND so.sales_order_status_code = 'issued'
+  AND p.product_type_code = 'sale'
+  AND sol.product_id IN (sqlc.slice('product_ids'))
+ORDER BY so.ship_by_date, so.id, sol.id;
+
+-- GetProductDemandByCustomer returns monthly sold quantity per product AND buyer, which is what the fulfillment recommendation measures customer concentration from.
+--
+-- Deliberately separate from GetPooledOrderDemandByProduct rather than a widening of it: the solve pools demand and never needs to know who bought, and carrying a customer dimension through every plan to serve a recommendation nobody asked for would make every solve heavier.
+-- name: GetProductDemandByCustomer :many
+SELECT
+    sol.product_id,
+    so.buyer_account_id,
+    YEAR(so.issued_at) AS demand_year,
+    MONTH(so.issued_at) AS demand_month,
+    CAST(COALESCE(SUM(q.value * (u.ratio_numerator / u.ratio_denominator)), 0) AS DECIMAL(65,30)) AS quantity
+FROM sales_order_line sol
+JOIN sales_order so ON so.id = sol.sales_order_id
+JOIN quantity q ON q.id = sol.quantity_id
+JOIN unit u ON u.id = q.unit_id
+WHERE so.owner_account_id = sqlc.arg('account_id')
+  AND so.sales_order_type_code = 'sales_order'
+  AND so.sales_order_status_code <> 'estimate'
+  AND so.issued_at IS NOT NULL
+  AND so.issued_at >= sqlc.arg('window_start')
+  AND so.issued_at <= sqlc.arg('window_end')
+  AND sol.product_id IN (sqlc.slice('product_ids'))
+GROUP BY sol.product_id, so.buyer_account_id, YEAR(so.issued_at), MONTH(so.issued_at)
+ORDER BY sol.product_id, so.buyer_account_id, demand_year, demand_month;
+
+-- GetCustomerFulfillmentProfiles returns every customer's lead time and stated policy, with the account group each falls back to.
+--
+-- The recommendation asks two things of a customer: how long they allow, and how they say they buy. Both resolve through the same chain an order's ship-by is stamped from, so the two cannot disagree about the same customer.
+-- name: GetCustomerFulfillmentProfiles :many
+SELECT
+    ar.counterparty_account_id AS customer_account_id,
+    COALESCE(NULLIF(ar.alias, ''), a.name) AS customer_name,
+    ar.default_lead_time_days AS customer_lead_time_days,
+    ag.default_lead_time_days AS account_group_lead_time_days,
+    ar.fulfillment_policy_code AS customer_policy,
+    ag.fulfillment_policy_code AS account_group_policy
+FROM account_relation ar
+JOIN account a ON a.id = ar.counterparty_account_id
+LEFT JOIN account_group ag ON ag.id = ar.account_group_id
+WHERE ar.owner_account_id = sqlc.arg('account_id')
+  AND ar.account_relation_role_code = 'customer'
+ORDER BY ar.counterparty_account_id;
+
+-- GetAllSellableProducts returns every product in the account with the item and line it carries. The candidate set for a fulfillment recommendation is everything that can be sold, since that is where policy is resolved.
+-- name: GetAllSellableProducts :many
+SELECT
+    p.id AS product_id,
+    p.item_id,
+    i.sku,
+    p.product_line_id
+FROM product p
+JOIN item i ON i.id = p.item_id
+WHERE i.account_id = sqlc.arg('account_id')
+ORDER BY i.sku, p.item_id;
+
+-- GetItemUnitCosts returns each item's standard unit cost, which prices the holding side of a make-or-stock decision.
+-- name: GetItemUnitCosts :many
+SELECT
+    i.id AS item_id,
+    r.value AS unit_cost
+FROM item i
+JOIN rate r ON r.id = i.unit_cost_id
+WHERE i.account_id = sqlc.arg('account_id')
+  AND i.id IN (sqlc.slice('item_ids'));

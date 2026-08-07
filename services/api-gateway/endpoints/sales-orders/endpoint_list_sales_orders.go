@@ -34,6 +34,14 @@ type ListSalesOrdersRequest struct {
 	//
 	// Compared against the creation timestamp at the start of that day, so orders created later on the end date itself are excluded; pass the following day to include them.
 	EndDate *string `query:"ends_at"`
+	// Earliest ship-by date to include, in `YYYY-MM-DD` format. Inclusive of the date itself.
+	ShipByAfter *string `query:"ship_by_after"`
+	// Latest ship-by date to include, in `YYYY-MM-DD` format. Inclusive of the date itself.
+	ShipByBefore *string `query:"ship_by_before"`
+	// Restricts results to orders that are, or are not, past their ship-by date.
+	//
+	// An order is past due when it is still `issued` and its ship-by date has passed. A fulfilled order that shipped late is not past due — it is delivered, and how late it was is a delivery-performance question rather than a backlog one.
+	PastDue *bool `query:"past_due"`
 }
 
 // Returns a paginated list of sales orders for the current account, newest first.

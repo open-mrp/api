@@ -34,9 +34,11 @@ const (
 	SeedAddressID      = "ad_01k09wnac0e1ar211e0sy0ba4g"
 
 	// Catalog
-	SeedProductLineID    = "pdln_01k0a735ype5e8nrhv1n5dhq1q"
-	SeedProductLineName  = "Socks"
-	SeedItemID           = "it_01k0a7100aeysrs9vxpeq14yxj"
+	SeedProductLineID   = "pdln_01k0a735ype5e8nrhv1n5dhq1q"
+	SeedProductLineName = "Socks"
+	SeedItemID          = "it_01k0a7100aeysrs9vxpeq14yxj"
+	// The greige item the constraint department plans, as opposed to the finished goods it becomes.
+	SeedGreigeItemID     = "it_01seedlknitem000000"
 	SeedItemSKU          = "SCK-001"
 	SeedItemDescription  = "Small white sock"
 	SeedItemCategoryID   = "itcg_01seedsocks000000"

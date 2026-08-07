@@ -39,6 +39,12 @@ type ProductionScheduleSettings struct {
 	CapacityHeadroomPct float64 `audit:"capacity_headroom_pct"`
 	DefaultLotUnits     float64 `audit:"default_lot_units"`
 
+	// DefaultCustomerLeadTimeDays is the last fallback in an order's ship-by chain, behind the customer and its account group.
+	DefaultCustomerLeadTimeDays int32 `audit:"default_customer_lead_time_days"`
+
+	// DefaultFulfillmentPolicyCode is how a SKU is produced when neither it nor its product line says.
+	DefaultFulfillmentPolicyCode string `audit:"default_fulfillment_policy_code"`
+
 	IsEnabled          bool    `audit:"is_enabled"`
 	GenerationCron     *string `audit:"generation_cron"`
 	GenerationTimezone string  `audit:"generation_timezone"`
@@ -77,4 +83,31 @@ type UpsertResourceSettingParams struct {
 	IsExcluded          bool
 	LeadTimeWeeks       *float64
 	LeadTimeOffsetWeeks float64
+}
+
+// ProductionScheduleItemPlanningSetting is one item's planning override as the API serves it.
+//
+// Distinct from ProductionScheduleItemSetting, which is the solver's narrower view of the same row: the solve needs the values, the API needs the identity and timestamps too.
+type ProductionScheduleItemPlanningSetting struct {
+	ID        string
+	AccountID string
+	ItemID    string
+	SKU       string
+
+	IsExcluded bool
+	// LotMultipleUnits overrides the lot this item is made in; nil leaves the lot chain alone.
+	LotMultipleUnits *float64
+	// FulfillmentPolicyCode overrides how this item is produced; nil falls through to its product line, then the account default.
+	FulfillmentPolicyCode *string
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type UpsertItemSettingParams struct {
+	AccountID             string
+	ItemID                string
+	IsExcluded            bool
+	LotMultipleUnits      *float64
+	FulfillmentPolicyCode *string
 }

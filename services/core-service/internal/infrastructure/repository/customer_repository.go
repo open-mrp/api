@@ -62,6 +62,20 @@ func nullBoolPtr(nb gosql.NullBool) *bool {
 	return nil
 }
 
+func boolToNullBool(v *bool) gosql.NullBool {
+	if v == nil {
+		return gosql.NullBool{}
+	}
+	return gosql.NullBool{Bool: *v, Valid: true}
+}
+
+func nullInt32Ptr(ni gosql.NullInt32) *int32 {
+	if ni.Valid {
+		return &ni.Int32
+	}
+	return nil
+}
+
 func nullShippingTermType(isFreightExempt, isCarrierRate gosql.NullBool) *constants.ShippingTermType {
 	if !isFreightExempt.Valid && !isCarrierRate.Valid {
 		return nil
@@ -150,6 +164,7 @@ func mapListCustomerForwardRow(row sqlc.ListCustomersForwardRow) *domain.Custome
 		IsParentAccount:                    row.IsParentAccount,
 		CommissionPolicy:                   constants.CommissionPolicy(row.CommissionStatusCode.String),
 		FreightPolicy:                      constants.FreightPolicy(row.FreightStatusCode.String),
+		DefaultLeadTimeDays:                nullInt32Ptr(row.DefaultLeadTimeDays),
 		Note:                               nullStringPtr(row.Notes),
 		Email:                              nullStringPtr(row.Email),
 		Phone:                              nullStringPtr(row.PhoneNumber),
@@ -260,6 +275,7 @@ func mapListCustomerBackwardRow(row sqlc.ListCustomersBackwardRow) *domain.Custo
 		IsParentAccount:                    row.IsParentAccount,
 		CommissionPolicy:                   constants.CommissionPolicy(row.CommissionStatusCode.String),
 		FreightPolicy:                      constants.FreightPolicy(row.FreightStatusCode.String),
+		DefaultLeadTimeDays:                nullInt32Ptr(row.DefaultLeadTimeDays),
 		Note:                               nullStringPtr(row.Notes),
 		Email:                              nullStringPtr(row.Email),
 		Phone:                              nullStringPtr(row.PhoneNumber),
@@ -710,6 +726,7 @@ func (r *customerRepoImpl) Get(ctx context.Context, ownerAccountID, customerAcco
 		IsParentAccount:                    row.IsParentAccount,
 		CommissionPolicy:                   constants.CommissionPolicy(row.CommissionStatusCode.String),
 		FreightPolicy:                      constants.FreightPolicy(row.FreightStatusCode.String),
+		DefaultLeadTimeDays:                nullInt32Ptr(row.DefaultLeadTimeDays),
 		Note:                               nullStringPtr(row.Notes),
 		Email:                              nullStringPtr(row.Email),
 		Phone:                              nullStringPtr(row.PhoneNumber),
@@ -940,6 +957,7 @@ func (r *customerRepoImpl) Create(ctx context.Context, accountID, relationID, br
 		DefaultBillingAddressID:  toNullString(params.BillToAddressID),
 		DefaultShippingAddressID: toNullString(params.ShipToAddressID),
 		CreditLimitID:            toNullString(params.CreditLimitID),
+		DefaultLeadTimeDays:      toNullInt32(params.DefaultLeadTimeDays),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -987,6 +1005,7 @@ func (r *customerRepoImpl) Update(ctx context.Context, relationID string, params
 		ShippingTermID:           stringToNullString(params.DefaultShippingTermID),
 		CarrierBillingType:       stringToNullString(params.CarrierBillingType),
 		CarrierBillingAccount:    field.StringToNullString(params.CarrierBillingAccount),
+		DefaultLeadTimeDays:      field.Int32ToNullInt32(params.DefaultLeadTimeDays),
 		DefaultBillingAddressID:  field.StringToNullString(params.BillToAddressID),
 		DefaultShippingAddressID: field.StringToNullString(params.ShipToAddressID),
 		CreditLimitID:            stringToNullString(params.CreditLimitID),

@@ -29,6 +29,11 @@ type Settings struct {
 	DefaultConstraintLeadTimeWeeks float64 `json:"default_constraint_lead_time_weeks"` // KNIT_LT_WEEKS_DEFAULT = 1.3
 	MaxWeeksSupply                 float64 `json:"max_weeks_supply"`                   // MAX_WEEKS_SUPPLY = 12
 	MaxFlowDepth                   int     `json:"max_flow_depth"`                     // MAX_FLOW_DEPTH = 10
+
+	// Fulfillment commitments
+	//
+	// DefaultCustomerLeadTimeDays is the last fallback in the ship-by chain, behind the customer and its account group. It lives with the planning assumptions because it is what a make-to-order promise is measured against: the date it produces has to be the same date the plan is solved to.
+	DefaultCustomerLeadTimeDays int `json:"default_customer_lead_time_days"`
 }
 
 // DefaultSettings mirrors the script's constants, with one deliberate exception: there is no growth multiplier. The script's GROWTH_MULT defaulted to 2, silently doubling all demand; that intent is now expressed as a demand override, which carries a reason and an author.
@@ -53,6 +58,7 @@ func DefaultSettings() Settings {
 		DefaultConstraintLeadTimeWeeks: 1.3,
 		MaxWeeksSupply:                 12,
 		MaxFlowDepth:                   10,
+		DefaultCustomerLeadTimeDays:    30,
 	}
 }
 

@@ -6,6 +6,7 @@ import (
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/contracts"
+	"github.com/augno/api/shared/field"
 	pb "github.com/augno/api/shared/proto/core"
 
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -26,13 +27,14 @@ func productLineFullToProto(pl *domain.ProductLineFull) *pb.ProductLineInfo {
 	}
 
 	info := &pb.ProductLineInfo{
-		Id:               pl.ID,
-		Name:             pl.Name,
-		CommissionPolicy: string(pl.CommissionPolicy),
-		FreightPolicy:    string(pl.FreightPolicy),
-		UnitGroupId:      pl.UnitGroupID,
-		CreatedAt:        timestamppb.New(pl.CreatedAt),
-		UpdatedAt:        timestamppb.New(pl.UpdatedAt),
+		Id:                    pl.ID,
+		Name:                  pl.Name,
+		CommissionPolicy:      string(pl.CommissionPolicy),
+		FreightPolicy:         string(pl.FreightPolicy),
+		UnitGroupId:           pl.UnitGroupID,
+		CreatedAt:             timestamppb.New(pl.CreatedAt),
+		UpdatedAt:             timestamppb.New(pl.UpdatedAt),
+		FulfillmentPolicyCode: pl.FulfillmentPolicyCode,
 	}
 
 	if pl.Description != nil {
@@ -159,7 +161,8 @@ func (h *gRPCHandler) CreateProductLine(ctx context.Context, req *pb.CreateProdu
 		FreightPolicy:    constants.FreightPolicy(req.FreightPolicy),
 		Includes:         req.Includes,
 
-		DefaultLot: lotInputFromPatch(req.DefaultLot),
+		DefaultLot:            lotInputFromPatch(req.DefaultLot),
+		FulfillmentPolicyCode: req.FulfillmentPolicyCode,
 	}
 
 	productLine, apiErr := h.productLineSvc.CreateProductLine(ctx, params)
@@ -186,8 +189,9 @@ func (h *gRPCHandler) UpdateProductLine(ctx context.Context, req *pb.UpdateProdu
 		UnitGroupID:   req.UnitGroupId,
 		Includes:      req.Includes,
 
-		DefaultLot:      lotInputFromPatch(req.DefaultLot),
-		ClearDefaultLot: req.DefaultLot != nil && req.DefaultLot.Clear,
+		DefaultLot:            lotInputFromPatch(req.DefaultLot),
+		ClearDefaultLot:       req.DefaultLot != nil && req.DefaultLot.Clear,
+		FulfillmentPolicyCode: field.StringClearableFromProto(req.FulfillmentPolicyCode),
 	}
 	if req.CommissionPolicy != nil {
 		cp := constants.CommissionPolicy(*req.CommissionPolicy)

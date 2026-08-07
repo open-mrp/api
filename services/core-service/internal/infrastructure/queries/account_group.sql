@@ -8,6 +8,7 @@ SELECT
     account_group.freight_status_code,
     account_group.account_group_type_code,
     account_group.registration_flow_id,
+    account_group.default_lead_time_days,
     account_group.created_at,
     account_group.updated_at
 FROM account_group
@@ -39,6 +40,7 @@ SELECT
     account_group.freight_status_code,
     account_group.account_group_type_code,
     account_group.registration_flow_id,
+    account_group.default_lead_time_days,
     account_group.created_at,
     account_group.updated_at
 FROM account_group
@@ -69,6 +71,7 @@ SELECT
     account_group.freight_status_code,
     account_group.account_group_type_code,
     account_group.registration_flow_id,
+    account_group.default_lead_time_days,
     account_group.created_at,
     account_group.updated_at
 FROM account_group
@@ -84,6 +87,7 @@ INSERT INTO account_group (
     commission_status_code,
     freight_status_code,
     account_group_type_code,
+    default_lead_time_days,
     created_at,
     updated_at
 ) VALUES (
@@ -94,6 +98,7 @@ INSERT INTO account_group (
     sqlc.arg('commission_status_code'),
     sqlc.arg('freight_status_code'),
     sqlc.arg('account_group_type_code'),
+    sqlc.narg('default_lead_time_days'),
     NOW(3),
     NOW(3)
 );
@@ -104,6 +109,7 @@ UPDATE account_group SET
     description = sqlc.narg('description'),
     commission_status_code = COALESCE(sqlc.narg('commission_status_code'), commission_status_code),
     freight_status_code = COALESCE(sqlc.narg('freight_status_code'), freight_status_code),
+    default_lead_time_days = sqlc.narg('default_lead_time_days'),
     updated_at = NOW(3)
 WHERE id = sqlc.arg('id')
 AND owner_account_id = sqlc.arg('owner_account_id');
@@ -125,6 +131,7 @@ SELECT
     account_group.freight_status_code,
     account_group.account_group_type_code,
     account_group.registration_flow_id,
+    account_group.default_lead_time_days,
     account_group.created_at,
     account_group.updated_at
 FROM account_group

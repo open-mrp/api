@@ -34,6 +34,7 @@ type AnalyticsSvc interface {
 	AnalyzeOee(ctx context.Context, req *AnalyzeOeeRequest) (*apiresource.AnalyzeOeeResponse, *apierror.APIError)
 	AnalyzeOeeTrend(ctx context.Context, req *AnalyzeOeeTrendRequest) (*apiresource.AnalyzeOeeTrendResponse, *apierror.APIError)
 	AnalyzeScheduleAttainment(ctx context.Context, req *AnalyzeScheduleAttainmentRequest) (*apiresource.AnalyzeScheduleAttainmentResponse, *apierror.APIError)
+	AnalyzeDeliveryPerformance(ctx context.Context, req *AnalyzeDeliveryPerformanceRequest) (*apiresource.AnalyzeDeliveryPerformanceResponse, *apierror.APIError)
 	AnalyzeWeeksOfSales(ctx context.Context, req *AnalyzeWeeksOfSalesRequest) (*apiresource.AnalyzeWeeksOfSalesResponse, *apierror.APIError)
 }
 
@@ -497,4 +498,74 @@ func groupByOrDefault(groupBy field.Optional[constants.AttainmentGroupBy]) strin
 		return string(value)
 	}
 	return string(constants.AttainmentGroupByWeek)
+}
+
+// deliveryPerformanceFromProto maps one period's delivery figures onto the API shape.
+func deliveryPerformanceFromProto(p *pb.DeliveryPerformanceProto) apiresource.DeliveryPerformance {
+	out := apiresource.DeliveryPerformance{
+		Object:                       constants.ObjectTypeDeliveryPerformance,
+		CommittedOrderCount:          p.CommittedOrderCount,
+		ShippedOrderCount:            p.ShippedOrderCount,
+		OnTimeOrderCount:             p.OnTimeOrderCount,
+		OnTimeInFullCount:            p.OnTimeInFullCount,
+		LateOrderCount:               p.LateOrderCount,
+		NotYetShippedCount:           p.NotYetShippedCount,
+		OnTimePct:                    p.OnTimePct,
+		OnTimeInFullPct:              p.OnTimeInFullPct,
+		AverageDaysLate:              p.AverageDaysLate,
+		AverageLeadTimeDays:          p.AverageLeadTimeDays,
+		AverageCommittedLeadTimeDays: p.AverageCommittedLeadTimeDays,
+	}
+	if p.PeriodStart != nil {
+		t := grpcutil.TimestampToTime(p.PeriodStart)
+		out.PeriodStart = &t
+	}
+	return out
+}
+
+func (m *analyticsSvcImpl) AnalyzeDeliveryPerformance(ctx context.Context, req *AnalyzeDeliveryPerformanceRequest) (*apiresource.AnalyzeDeliveryPerformanceResponse, *apierror.APIError) {
+	pbReq := &pb.AnalyzeDeliveryPerformanceRequest{
+		StartsAt: timestamppb.New(req.StartDate),
+		EndsAt:   timestamppb.New(req.EndDate),
+	}
+	if v, ok := req.Granularity.Value(); ok {
+		pbReq.Granularity = string(v)
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, analyticsSvcTracer, "service.analytics.analyze_delivery_performance", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.AnalyzeDeliveryPerformanceResponse, error) {
+			return m.coreClient.AnalyzeDeliveryPerformance(ctx, pbReq, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	periods := make([]apiresource.DeliveryPerformance, 0, len(resp.Periods))
+	for _, p := range resp.Periods {
+		periods = append(periods, deliveryPerformanceFromProto(p))
+	}
+
+	backlog := make([]apiresource.DeliveryBacklogBucket, 0, len(resp.Backlog))
+	for _, b := range resp.Backlog {
+		backlog = append(backlog, apiresource.DeliveryBacklogBucket{
+			Object:      constants.ObjectTypeDeliveryBacklogBucket,
+			Label:       b.Label,
+			MinDaysLate: b.MinDaysLate,
+			MaxDaysLate: b.MaxDaysLate,
+			OrderCount:  b.OrderCount,
+			Units:       b.Units,
+		})
+	}
+
+	out := &apiresource.AnalyzeDeliveryPerformanceResponse{
+		Object:                constants.ObjectTypeAnalyzeDeliveryPerformanceResponse,
+		Periods:               apiresource.NewList(periods, apiresource.PageInfo{}),
+		Backlog:               apiresource.NewList(backlog, apiresource.PageInfo{}),
+		UncommittedOrderCount: resp.UncommittedOrderCount,
+	}
+	if resp.Overall != nil {
+		overall := deliveryPerformanceFromProto(resp.Overall)
+		out.Overall = &overall
+	}
+	return out, nil
 }

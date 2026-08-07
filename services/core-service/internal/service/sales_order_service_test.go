@@ -65,6 +65,7 @@ type SalesOrderSvcTestSuite struct {
 	productionFlowRepo       *repositorymock.MockProductionFlowRepo
 	productionStepQueryRepo  *repositorymock.MockProductionStepQueryRepo
 	unitConversionRepo       *repositorymock.MockUnitConversionRepo
+	scheduleRepo             *repositorymock.MockProductionScheduleRepo
 
 	// Collaborators.
 	checkoutFactory *clientmock.MockStripeCheckoutClientFactory
@@ -113,6 +114,7 @@ func (suite *SalesOrderSvcTestSuite) SetupTest() {
 	suite.productionFlowRepo = repositorymock.NewMockProductionFlowRepo(suite.ctrl)
 	suite.productionStepQueryRepo = repositorymock.NewMockProductionStepQueryRepo(suite.ctrl)
 	suite.unitConversionRepo = repositorymock.NewMockUnitConversionRepo(suite.ctrl)
+	suite.scheduleRepo = repositorymock.NewMockProductionScheduleRepo(suite.ctrl)
 
 	suite.checkoutFactory = clientmock.NewMockStripeCheckoutClientFactory(suite.ctrl)
 	suite.checkoutClient = clientmock.NewMockStripeCheckoutClient(suite.ctrl)
@@ -131,6 +133,7 @@ func (suite *SalesOrderSvcTestSuite) SetupTest() {
 	suite.repoFactory.EXPECT().NewMaterialDemandRepo().Return(suite.materialDemandRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewOrderDiscountRepo().Return(suite.orderDiscountRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewSalesOrderRepo().Return(suite.orderRepo).AnyTimes()
+	suite.repoFactory.EXPECT().NewProductionScheduleRepo().Return(suite.scheduleRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewPricingRepo().Return(suite.pricingRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewSalesOrderLineRepo().Return(suite.lineRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewPickRepo().Return(suite.pickRepo).AnyTimes()
@@ -205,6 +208,16 @@ func salesOrderInternalCtx(accountID string) context.Context {
 			},
 		},
 	})
+}
+
+// expectShipByCommitmentStamp declares the reads and the write that issuing an order performs to stamp its ship-by commitment. The chain resolves to nothing here, so the account default decides; the tests that care which rule won live in internal/scheduling, where the resolution is a pure function.
+func (suite *SalesOrderSvcTestSuite) expectShipByCommitmentStamp(accountID, salesOrderID string) {
+	suite.orderRepo.EXPECT().GetCustomerLeadTimeChain(gomock.Any(), accountID, gomock.Any()).
+		Return(nil, nil).Times(1)
+	suite.scheduleRepo.EXPECT().GetSettings(gomock.Any(), accountID).
+		Return(&domain.ProductionScheduleSettings{DefaultCustomerLeadTimeDays: 30}, nil).Times(1)
+	suite.orderRepo.EXPECT().SetShipByCommitment(gomock.Any(), accountID, salesOrderID, gomock.Any()).
+		Return(nil).Times(1)
 }
 
 func salesOrderCustomerCtx(targetAccountID, customerAccountID string) context.Context {
@@ -1231,6 +1244,7 @@ func (suite *SalesOrderSvcTestSuite) TestChangeStatus_IssueFromEstimate_CreatesP
 	suite.orderRepo.EXPECT().
 		UpdateStatus(gomock.Any(), "ac_test", "or_1", "issued", gomock.Any(), (*time.Time)(nil)).
 		Return(nil).Times(1)
+	suite.expectShipByCommitmentStamp("ac_test", "or_1")
 	suite.orderRepo.EXPECT().CreatePick(gomock.Any(), gomock.Any(), "1001", "or_1", "ac_test").Return(nil).Times(1)
 
 	// Only sale lines (shipping / discount / credit are excluded by the repo).
@@ -1272,6 +1286,7 @@ func (suite *SalesOrderSvcTestSuite) TestChangeStatus_IssueWithoutItemID_SkipsIn
 	suite.orderRepo.EXPECT().
 		UpdateStatus(gomock.Any(), "ac_test", "or_1", "issued", gomock.Any(), (*time.Time)(nil)).
 		Return(nil).Times(1)
+	suite.expectShipByCommitmentStamp("ac_test", "or_1")
 	suite.orderRepo.EXPECT().CreatePick(gomock.Any(), gomock.Any(), "1001", "or_1", "ac_test").Return(nil).Times(1)
 
 	suite.orderRepo.EXPECT().GetSaleLinesForIssue(gomock.Any(), "or_1").
@@ -1326,6 +1341,8 @@ func (suite *SalesOrderSvcTestSuite) TestChangeStatus_Unissue_ReleasesInventory(
 	// Status back to estimate; issuedAt cleared.
 	suite.orderRepo.EXPECT().
 		UpdateStatus(gomock.Any(), "ac_test", "or_1", "estimate", (*time.Time)(nil), (*time.Time)(nil)).
+		Return(nil).Times(1)
+	suite.orderRepo.EXPECT().SetShipByCommitment(gomock.Any(), "ac_test", "or_1", (*domain.ShipByCommitment)(nil)).
 		Return(nil).Times(1)
 
 	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
@@ -1421,6 +1438,7 @@ func (suite *SalesOrderSvcTestSuite) TestChangeStatus_IssueWithSendEmailFiresNot
 	suite.orderRepo.EXPECT().
 		UpdateStatus(gomock.Any(), "ac_test", "or_1", "issued", gomock.Any(), (*time.Time)(nil)).
 		Return(nil).Times(1)
+	suite.expectShipByCommitmentStamp("ac_test", "or_1")
 	suite.orderRepo.EXPECT().CreatePick(gomock.Any(), gomock.Any(), "1001", "or_1", "ac_test").Return(nil).Times(1)
 	suite.orderRepo.EXPECT().GetSaleLinesForIssue(gomock.Any(), "or_1").Return(nil, nil).Times(1)
 	suite.orderRepo.EXPECT().DeleteReservedInventoryIssues(gomock.Any(), "ac_test", "or_1").Return(nil).Times(1)
@@ -1464,6 +1482,7 @@ func (suite *SalesOrderSvcTestSuite) TestChangeStatus_IssueWithoutSendEmailDoesN
 	suite.orderRepo.EXPECT().
 		UpdateStatus(gomock.Any(), "ac_test", "or_1", "issued", gomock.Any(), (*time.Time)(nil)).
 		Return(nil).Times(1)
+	suite.expectShipByCommitmentStamp("ac_test", "or_1")
 	suite.orderRepo.EXPECT().CreatePick(gomock.Any(), gomock.Any(), "1001", "or_1", "ac_test").Return(nil).Times(1)
 	suite.orderRepo.EXPECT().GetSaleLinesForIssue(gomock.Any(), "or_1").Return(nil, nil).Times(1)
 	suite.orderRepo.EXPECT().DeleteReservedInventoryIssues(gomock.Any(), "ac_test", "or_1").Return(nil).Times(1)

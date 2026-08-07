@@ -19,6 +19,17 @@ type SchedulePolicy struct {
 	Item *Entity `json:"item" validate:"required"`
 	// SKU of the item.
 	SKU string `json:"sku" validate:"required"`
+	// How this item was planned.
+	//
+	// - `make_to_stock`: built to the forecast, holding a safety stock against its variability.
+	// - `make_to_order`: built only against orders already on the book, holding no buffer, so its safety stocks and reorder point are all zero.
+	FulfillmentPolicy constants.FulfillmentPolicy `json:"fulfillment_policy"`
+	// Which rule decided that policy: the item itself, its product line, or the account default.
+	PolicySource constants.FulfillmentPolicySource `json:"policy_source"`
+	// Outstanding quantity the order book already owed for this item over the horizon.
+	FirmDemandUnits float64 `json:"firm_demand_units"`
+	// Quantity the forecast projected for the same window.
+	ForecastDemandUnits float64 `json:"forecast_demand_units"`
 	// Demand used for planning, annualized.
 	AnnualDemand float64 `json:"annual_demand"`
 	// Demand used for planning, per week.
@@ -145,6 +156,141 @@ type ScheduleDiagnostics struct {
 	AverageInputsAdded float64 `json:"average_inputs_added"`
 	// Every demand override that moved a number.
 	AppliedOverrides *List[ScheduleAppliedOverride] `json:"applied_overrides"`
+	// Outstanding order quantity this plan owes, expressed in the constraint item's own unit.
+	//
+	// Zero means nothing is on order and the plan is driven purely by the forecast.
+	FirmDemandUnits float64 `json:"firm_demand_units"`
+	// Open orders carrying no ship-by commitment, dated at the front of the horizon because they are issued and unshipped.
+	//
+	// A non-zero count means orders placed before commitments were tracked still need a ship-by date.
+	UndatedFirmOrderCount int32 `json:"undated_firm_order_count"`
+	// Planned items built only against the order book rather than to a forecast.
+	MakeToOrderItemCount int32 `json:"make_to_order_item_count"`
+	// Commitments this plan does not meet.
+	AtRiskOrders *List[ScheduleAtRiskOrder] `json:"at_risk_orders"`
+}
+
+// An order commitment the plan does not meet.
+type ScheduleAtRiskOrder struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=schedule_at_risk_order"`
+	// The order at risk.
+	SalesOrder *Entity `json:"sales_order" validate:"required"`
+	// The item that has to be produced to meet it.
+	Item *Entity `json:"item" validate:"required"`
+	// SKU of that item.
+	SKU string `json:"sku"`
+	// Outstanding quantity still owed.
+	Units float64 `json:"units"`
+	// Horizon week the constraint stage has to finish in for the order to ship on time.
+	DueWeek int32 `json:"due_week"`
+	// Why the commitment is at risk.
+	//
+	// - `past_due`: production needed to start before this plan begins.
+	// - `undated`: the order carries no ship-by commitment, so it is treated as owed now.
+	// - `short`: the plan projects less stock than the order needs in the week it is needed.
+	Reason constants.ScheduleAtRiskReason `json:"reason" validate:"required"`
+}
+
+// An order this schedule does not build in time, with the campaigns covering the part it does.
+type ScheduleOrderCoverage struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=schedule_order_coverage"`
+	// The order at risk.
+	SalesOrder *Entity `json:"sales_order" validate:"required"`
+	// The item that has to be produced to meet it.
+	Item *Entity `json:"item" validate:"required"`
+	// SKU of that item.
+	SKU string `json:"sku"`
+	// Quantity the plan does not build in time.
+	//
+	// Less than the whole order when the plan builds part of it — a mostly-built order is mostly built, and reporting the full quantity would read as a total miss.
+	UnitsAtRisk float64 `json:"units_at_risk"`
+	// Horizon week the constraint stage has to finish in for the order to ship on time.
+	DueWeek int32 `json:"due_week"`
+	// Why the commitment is at risk.
+	Reason constants.ScheduleAtRiskReason `json:"reason" validate:"required"`
+	// The date this order is contractually due to ship.
+	ShipByDate *time.Time `json:"ship_by_date"`
+	// Campaigns earmarked for this order, covering the part of it the plan does build.
+	CoveringLines *List[ScheduleOrderCoverageLine] `json:"covering_lines"`
+}
+
+// One campaign earmarked for an order.
+type ScheduleOrderCoverageLine struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=schedule_order_coverage_line"`
+	// The campaign.
+	ProductionScheduleLine *Entity `json:"production_schedule_line" validate:"required"`
+	// Horizon week it runs in.
+	WeekIndex int32 `json:"week_index"`
+	// The machine it runs on.
+	Machine *Entity `json:"machine" validate:"required"`
+	// Quantity of that campaign earmarked for this order.
+	AllocatedQuantity float64 `json:"allocated_quantity"`
+}
+
+// The earliest date the published plan could ship a quantity of an item.
+type PromiseDateQuote struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=promise_date_quote"`
+	// The item being quoted.
+	Item *Entity `json:"item" validate:"required"`
+	// The quantity being quoted.
+	Quantity float64 `json:"quantity"`
+	// Whether the published horizon can supply it at all.
+	//
+	// False means the plan as published runs out before it could cover this quantity. That is not the same as "never" — it is the honest limit of a plan that only runs so many weeks.
+	IsPromisable bool `json:"is_promisable"`
+	// Earliest date the quantity could ship, allowing for finishing after the constraint stage completes.
+	EarliestShipDate *time.Time `json:"earliest_ship_date"`
+	// Horizon week the constraint stage would complete in.
+	EarliestWeekIndex *int32 `json:"earliest_week_index"`
+	// The published version this was quoted from.
+	//
+	// Quoted from what the floor is working to rather than a fresh solve, and net of everything already promised to other orders.
+	ProductionSchedule *Entity `json:"production_schedule" validate:"required"`
+	// Version number of that schedule.
+	ProductionScheduleVersion int32 `json:"production_schedule_version"`
+}
+
+var sampleEarliestWeek = int32(4)
+var sampleEarliestShipDate = timeutil.TimestampToTime("2026-07-06T00:00:00Z")
+
+var SamplePromiseDateQuote = &PromiseDateQuote{
+	Object:                    constants.ObjectTypePromiseDateQuote,
+	Item:                      NewEntity(SampleItemID, constants.ObjectTypeItem, nil, &sampleScheduleSKU),
+	Quantity:                  1200,
+	IsPromisable:              true,
+	EarliestShipDate:          &sampleEarliestShipDate,
+	EarliestWeekIndex:         &sampleEarliestWeek,
+	ProductionSchedule:        NewEntity(SampleProductionScheduleID, constants.ObjectTypeProductionSchedule, nil, nil),
+	ProductionScheduleVersion: 7,
+}
+
+func (*PromiseDateQuote) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SamplePromiseDateQuote)
+}
+
+var SampleScheduleOrderCoverage = &ScheduleOrderCoverage{
+	Object:      constants.ObjectTypeScheduleOrderCoverage,
+	SalesOrder:  NewEntity(SampleSalesOrderID, constants.ObjectTypeSalesOrder, nil, nil),
+	Item:        NewEntity(SampleItemID, constants.ObjectTypeItem, nil, &sampleScheduleSKU),
+	SKU:         sampleScheduleSKU,
+	UnitsAtRisk: 200,
+	DueWeek:     0,
+	Reason:      constants.ScheduleAtRiskReasonPastDue,
+	CoveringLines: NewList([]ScheduleOrderCoverageLine{{
+		Object:                 constants.ObjectTypeScheduleOrderCoverageLine,
+		ProductionScheduleLine: NewEntity(SampleProductionScheduleLineID, constants.ObjectTypeProductionScheduleLine, nil, nil),
+		WeekIndex:              0,
+		Machine:                NewEntity(SampleMachineID, constants.ObjectTypeMachine, nil, nil),
+		AllocatedQuantity:      300,
+	}}, PageInfo{}),
+}
+
+func (*ScheduleOrderCoverage) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleScheduleOrderCoverage)
 }
 
 // A production plan produced by the scheduling solver.
@@ -183,6 +329,16 @@ var sampleAppliedOverride = ScheduleAppliedOverride{
 	Reason:     &sampleDemandOverrideReason,
 }
 
+var sampleScheduleAtRiskOrder = ScheduleAtRiskOrder{
+	Object:     constants.ObjectTypeScheduleAtRiskOrder,
+	SalesOrder: NewEntity(SampleSalesOrderID, constants.ObjectTypeSalesOrder, nil, nil),
+	Item:       NewEntity(SampleItemID, constants.ObjectTypeItem, nil, &sampleScheduleSKU),
+	SKU:        sampleScheduleSKU,
+	Units:      1800,
+	DueWeek:    0,
+	Reason:     constants.ScheduleAtRiskReasonPastDue,
+}
+
 var sampleScheduleDiagnostics = ScheduleDiagnostics{
 	EOQCappedSKUs:          []string{"MZ-GREIGE-QTR"},
 	UnschedulableSKUs:      []string{},
@@ -195,6 +351,10 @@ var sampleScheduleDiagnostics = ScheduleDiagnostics{
 	ChangeoverSlopeMinutes: 2.5,
 	AverageInputsAdded:     3.2,
 	AppliedOverrides:       NewList([]ScheduleAppliedOverride{sampleAppliedOverride}, PageInfo{}),
+	FirmDemandUnits:        12480,
+	UndatedFirmOrderCount:  0,
+	MakeToOrderItemCount:   2,
+	AtRiskOrders:           NewList([]ScheduleAtRiskOrder{sampleScheduleAtRiskOrder}, PageInfo{}),
 }
 
 var SampleProductionSchedulePreview = &ProductionSchedulePreview{
@@ -487,6 +647,17 @@ type ProductionScheduleItemPolicy struct {
 	ProductionSchedule *Entity `json:"production_schedule" validate:"required"`
 	// The item the policy is for.
 	Item *Entity `json:"item" validate:"required"`
+	// How this item was planned.
+	//
+	// - `make_to_stock`: built to the forecast, holding a safety stock against its variability.
+	// - `make_to_order`: built only against orders already on the book, holding no buffer, so its safety stocks and reorder point are all zero.
+	FulfillmentPolicy constants.FulfillmentPolicy `json:"fulfillment_policy"`
+	// Which rule decided that policy: the item itself, its product line, or the account default.
+	PolicySource constants.FulfillmentPolicySource `json:"policy_source"`
+	// Outstanding quantity the order book already owed for this item over the horizon.
+	FirmDemandUnits float64 `json:"firm_demand_units"`
+	// Quantity the forecast projected for the same window.
+	ForecastDemandUnits float64 `json:"forecast_demand_units"`
 	// SKU of the item.
 	SKU string `json:"sku" validate:"required"`
 	// Unit every quantity in this policy is counted in.

@@ -1,0 +1,425 @@
+//go:build e2e
+
+package api_test
+
+import (
+	"net/url"
+	"strconv"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+// Ship-by commitments: the lead-time chain (customer -> account group -> account),
+// the promised-date override, stamping at issue, clearing on unissue, and the
+// immutability rule that makes a commitment worth having.
+//
+// These deliberately do NOT touch the account-level default via the settings
+// endpoint. Settings are account-wide and a write would race every other test in
+// the package (cov_operations_production-schedule-settings_test.go serializes its
+// own writes behind planningMu for the same reason). The account level is covered
+// by reading whatever default is configured rather than by setting one.
+
+const customerLeadTimePathSuffix = "/lead-time"
+
+// leadTimeCustomer creates a customer with product-line access, optionally with its
+// own lead time and/or an account group.
+func leadTimeCustomer(t *testing.T, namePrefix string, leadTimeDays *int, accountGroupID string) string {
+	t.Helper()
+
+	body := validCustomerBody(uniqueName(namePrefix))
+	if leadTimeDays != nil {
+		body["lead_time_days"] = *leadTimeDays
+	}
+	if accountGroupID != "" {
+		body["customer_type_group_id"] = accountGroupID
+	}
+
+	status, respBody, err := apiClient.Post(customersPath, body, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, respBody)
+	customerID := jsonField(parseJSON(respBody), "id")
+	t.Cleanup(func() { _, _, _ = apiClient.Delete(customersPath + "/" + customerID) })
+
+	plStatus, plBody, err := apiClient.Post(productLineAccessPath, map[string]any{
+		"customer_id":      customerID,
+		"product_line_ids": []string{SeedProductLineID},
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, plStatus, plBody)
+
+	return customerID
+}
+
+// leadTimeAccountGroup creates an account group, optionally with its own lead time.
+func leadTimeAccountGroup(t *testing.T, namePrefix string, leadTimeDays *int) string {
+	t.Helper()
+
+	body := map[string]any{
+		"name": uniqueName(namePrefix),
+		"type": "type_group",
+	}
+	if leadTimeDays != nil {
+		body["default_lead_time_days"] = *leadTimeDays
+	}
+	created := createAndCleanup(t, accountGroupsPath, body)
+	return jsonField(created, "id")
+}
+
+// issueOrderForCustomer creates and issues an order, returning the issued order body.
+func issueOrderForCustomer(t *testing.T, customerID string, extra map[string]any) map[string]any {
+	t.Helper()
+
+	body := minimalSalesOrderCreateBody(t, customerID)
+	for k, v := range extra {
+		body[k] = v
+	}
+
+	status, respBody, err := apiClient.Post(salesOrdersPath, body, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, respBody)
+	orderID := jsonField(parseJSON(respBody), "id")
+	deleteOrder(t, orderID)
+
+	issueStatus, issueBody, err := apiClient.Put(salesOrdersPath+"/"+orderID+"/actions/issue", nil)
+	require.NoError(t, err)
+	require.Less(t, issueStatus, 500, "issue must not 5xx: %s", string(issueBody))
+	requireStatus(t, 200, issueStatus, issueBody)
+
+	return parseJSON(issueBody)
+}
+
+// expectedShipBy is the issue date plus n calendar days, formatted the way a DATE
+// column comes back.
+func expectedShipBy(t *testing.T, order map[string]any, days int) string {
+	t.Helper()
+	issuedAt := jsonField(order, "issued_at")
+	require.NotEmpty(t, issuedAt, "issued order must carry issued_at")
+	parsed, err := time.Parse(time.RFC3339, issuedAt)
+	require.NoError(t, err)
+	return parsed.UTC().AddDate(0, 0, days).Format("2006-01-02")
+}
+
+// shipByDate normalizes the ship_by_date field, which serializes as a timestamp.
+func shipByDate(t *testing.T, order map[string]any) string {
+	t.Helper()
+	raw := jsonField(order, "ship_by_date")
+	if raw == "" {
+		return ""
+	}
+	parsed, err := time.Parse(time.RFC3339, raw)
+	require.NoError(t, err, "ship_by_date should be RFC3339: %q", raw)
+	return parsed.UTC().Format("2006-01-02")
+}
+
+func TestShipByCommitment_CustomerLeadTimeWinsTheChain(t *testing.T) {
+	t.Parallel()
+
+	groupID := leadTimeAccountGroup(t, "e2e-shipby-grp", ptrInt(21))
+	customerID := leadTimeCustomer(t, "e2e-shipby-cust", ptrInt(14), groupID)
+
+	order := issueOrderForCustomer(t, customerID, nil)
+
+	assert.Equal(t, "customer", jsonField(order, "lead_time_source"))
+	assert.Equal(t, "14", jsonField(order, "lead_time_days"))
+	assert.Equal(t, expectedShipBy(t, order, 14), shipByDate(t, order))
+}
+
+func TestShipByCommitment_InheritsAccountGroupLeadTime(t *testing.T) {
+	t.Parallel()
+
+	groupID := leadTimeAccountGroup(t, "e2e-shipby-grp-inherit", ptrInt(21))
+	customerID := leadTimeCustomer(t, "e2e-shipby-cust-inherit", nil, groupID)
+
+	order := issueOrderForCustomer(t, customerID, nil)
+
+	assert.Equal(t, "account_group", jsonField(order, "lead_time_source"))
+	assert.Equal(t, "21", jsonField(order, "lead_time_days"))
+	assert.Equal(t, expectedShipBy(t, order, 21), shipByDate(t, order))
+}
+
+// With neither the customer nor its group configured, the account default applies.
+// The number itself is whatever the account is set to, so this asserts the source
+// and that the date is consistent with the days it reported, rather than pinning a
+// value another test could legitimately change.
+func TestShipByCommitment_FallsBackToAccountDefault(t *testing.T) {
+	t.Parallel()
+
+	groupID := leadTimeAccountGroup(t, "e2e-shipby-grp-none", nil)
+	customerID := leadTimeCustomer(t, "e2e-shipby-cust-none", nil, groupID)
+
+	order := issueOrderForCustomer(t, customerID, nil)
+
+	assert.Equal(t, "account", jsonField(order, "lead_time_source"))
+	days := jsonField(order, "lead_time_days")
+	require.NotEmpty(t, days, "an issued order must carry the days it committed to")
+
+	parsedDays, err := strconv.Atoi(days)
+	require.NoError(t, err)
+	assert.Equal(t, expectedShipBy(t, order, parsedDays), shipByDate(t, order))
+}
+
+// A promised date is a negotiation about one order, so it beats every standing rule
+// and records the span actually committed to rather than the customer's.
+func TestShipByCommitment_PromisedDateOverridesTheChain(t *testing.T) {
+	t.Parallel()
+
+	customerID := leadTimeCustomer(t, "e2e-shipby-promised", ptrInt(45), "")
+	promised := time.Now().UTC().AddDate(0, 0, 3).Format("2006-01-02") + "T00:00:00Z"
+
+	order := issueOrderForCustomer(t, customerID, map[string]any{"promised_at": promised})
+
+	assert.Equal(t, "manual", jsonField(order, "lead_time_source"))
+	assert.Equal(t, promised[:10], shipByDate(t, order))
+	assert.NotEqual(t, "45", jsonField(order, "lead_time_days"),
+		"the committed span should be the promised one, not the customer's standing rule")
+}
+
+// An order that is no longer issued carries no promise: leaving the commitment
+// behind would keep it in the past-due queue for a date nobody is working to.
+func TestShipByCommitment_UnissueClearsTheCommitment(t *testing.T) {
+	t.Parallel()
+
+	customerID := leadTimeCustomer(t, "e2e-shipby-unissue", ptrInt(10), "")
+	order := issueOrderForCustomer(t, customerID, nil)
+	orderID := jsonField(order, "id")
+	require.NotEmpty(t, shipByDate(t, order), "precondition: the issued order has a commitment")
+
+	status, body, err := apiClient.Put(salesOrdersPath+"/"+orderID+"/actions/unissue", nil)
+	require.NoError(t, err)
+	require.Less(t, status, 500, "unissue must not 5xx: %s", string(body))
+	requireStatus(t, 200, status, body)
+
+	after := parseJSON(body)
+	assert.Empty(t, shipByDate(t, after), "ship_by_date should be cleared")
+	assert.Empty(t, jsonField(after, "lead_time_days"))
+	assert.Empty(t, jsonField(after, "lead_time_source"))
+}
+
+// The rule the whole design rests on: a commitment is a fact about the moment it
+// was made. Renegotiating a customer must never rewrite what was already promised.
+func TestShipByCommitment_ChangingCustomerLeadTimeLeavesIssuedOrdersAlone(t *testing.T) {
+	t.Parallel()
+
+	customerID := leadTimeCustomer(t, "e2e-shipby-immutable", ptrInt(7), "")
+	order := issueOrderForCustomer(t, customerID, nil)
+	orderID := jsonField(order, "id")
+
+	originalShipBy := shipByDate(t, order)
+	require.NotEmpty(t, originalShipBy)
+	require.Equal(t, "7", jsonField(order, "lead_time_days"))
+
+	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+customerID,
+		map[string]any{"lead_time_days": 90}, newIdempotencyKey())
+	require.NoError(t, err)
+	require.Less(t, patchStatus, 500, "customer update must not 5xx: %s", string(patchBody))
+	requireStatus(t, 200, patchStatus, patchBody)
+
+	getStatus, getBody, err := apiClient.GetListRaw(salesOrdersPath+"/"+orderID, nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, getStatus, getBody)
+
+	after := parseJSON(getBody)
+	assert.Equal(t, originalShipBy, shipByDate(t, after),
+		"an existing commitment must not move when the customer's lead time changes")
+	assert.Equal(t, "7", jsonField(after, "lead_time_days"))
+	assert.Equal(t, "customer", jsonField(after, "lead_time_source"))
+}
+
+func TestCustomerLeadTime_ResolvesChainWithoutAnOrder(t *testing.T) {
+	t.Parallel()
+
+	t.Run("customer", func(t *testing.T) {
+		groupID := leadTimeAccountGroup(t, "e2e-lt-grp-a", ptrInt(21))
+		customerID := leadTimeCustomer(t, "e2e-lt-cust-a", ptrInt(5), groupID)
+
+		status, body, err := apiClient.GetListRaw(customersPath+"/"+customerID+customerLeadTimePathSuffix, nil)
+		require.NoError(t, err)
+		require.Less(t, status, 500, "lead-time lookup must not 5xx: %s", string(body))
+		requireStatus(t, 200, status, body)
+
+		got := parseJSON(body)
+		assert.Equal(t, "customer_lead_time", jsonField(got, "object"))
+		assert.Equal(t, "5", jsonField(got, "days"))
+		assert.Equal(t, "customer", jsonField(got, "source"))
+		assert.Nil(t, got["account_group"], "the group did not decide, so it should not be named")
+	})
+
+	t.Run("account_group", func(t *testing.T) {
+		groupID := leadTimeAccountGroup(t, "e2e-lt-grp-b", ptrInt(21))
+		customerID := leadTimeCustomer(t, "e2e-lt-cust-b", nil, groupID)
+
+		status, body, err := apiClient.GetListRaw(customersPath+"/"+customerID+customerLeadTimePathSuffix, nil)
+		require.NoError(t, err)
+		requireStatus(t, 200, status, body)
+
+		got := parseJSON(body)
+		assert.Equal(t, "21", jsonField(got, "days"))
+		assert.Equal(t, "account_group", jsonField(got, "source"))
+		group, ok := got["account_group"].(map[string]any)
+		require.True(t, ok, "the group that decided should be named: %s", string(body))
+		assert.Equal(t, groupID, jsonField(group, "id"))
+	})
+
+	t.Run("account", func(t *testing.T) {
+		groupID := leadTimeAccountGroup(t, "e2e-lt-grp-c", nil)
+		customerID := leadTimeCustomer(t, "e2e-lt-cust-c", nil, groupID)
+
+		status, body, err := apiClient.GetListRaw(customersPath+"/"+customerID+customerLeadTimePathSuffix, nil)
+		require.NoError(t, err)
+		requireStatus(t, 200, status, body)
+
+		got := parseJSON(body)
+		assert.Equal(t, "account", jsonField(got, "source"))
+		assert.NotEmpty(t, jsonField(got, "days"))
+	})
+
+	t.Run("unknown customer", func(t *testing.T) {
+		status, body, err := apiClient.GetListRaw(customersPath+"/ac_doesnotexist000/lead-time", nil)
+		require.NoError(t, err)
+		require.Less(t, status, 500, "an unknown customer must not 5xx: %s", string(body))
+		assert.Equal(t, 404, status, "body: %s", string(body))
+	})
+}
+
+// A cleared lead time hands the customer back to its group, rather than leaving the
+// old value in place or falling all the way through to the account.
+func TestCustomerLeadTime_ClearingReturnsCustomerToItsGroup(t *testing.T) {
+	t.Parallel()
+
+	groupID := leadTimeAccountGroup(t, "e2e-lt-clear-grp", ptrInt(21))
+	customerID := leadTimeCustomer(t, "e2e-lt-clear-cust", ptrInt(5), groupID)
+
+	status, body, err := apiClient.Patch(customersPath+"/"+customerID,
+		map[string]any{"lead_time_days": nil}, newIdempotencyKey())
+	require.NoError(t, err)
+	require.Less(t, status, 500, "clearing must not 5xx: %s", string(body))
+	requireStatus(t, 200, status, body)
+
+	getStatus, getBody, err := apiClient.GetListRaw(customersPath+"/"+customerID+customerLeadTimePathSuffix, nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, getStatus, getBody)
+
+	got := parseJSON(getBody)
+	assert.Equal(t, "account_group", jsonField(got, "source"))
+	assert.Equal(t, "21", jsonField(got, "days"))
+}
+
+// Omitting the field on an update must not be read as clearing it — that would wipe
+// a contractual lead time on any unrelated edit to the customer.
+func TestCustomerLeadTime_OmittingOnUpdatePreservesIt(t *testing.T) {
+	t.Parallel()
+
+	customerID := leadTimeCustomer(t, "e2e-lt-preserve", ptrInt(12), "")
+
+	status, body, err := apiClient.Patch(customersPath+"/"+customerID,
+		map[string]any{"note": "unrelated edit"}, newIdempotencyKey())
+	require.NoError(t, err)
+	require.Less(t, status, 500, "update must not 5xx: %s", string(body))
+	requireStatus(t, 200, status, body)
+
+	getStatus, getBody, err := apiClient.GetListRaw(customersPath+"/"+customerID+customerLeadTimePathSuffix, nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, getStatus, getBody)
+
+	got := parseJSON(getBody)
+	assert.Equal(t, "customer", jsonField(got, "source"))
+	assert.Equal(t, "12", jsonField(got, "days"))
+}
+
+// Zero is a real commitment — ship same day — and must not be mistaken for "unset"
+// and fall through to a laxer rule.
+func TestCustomerLeadTime_ZeroIsSameDayNotUnset(t *testing.T) {
+	t.Parallel()
+
+	groupID := leadTimeAccountGroup(t, "e2e-lt-zero-grp", ptrInt(30))
+	customerID := leadTimeCustomer(t, "e2e-lt-zero-cust", ptrInt(0), groupID)
+
+	status, body, err := apiClient.GetListRaw(customersPath+"/"+customerID+customerLeadTimePathSuffix, nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	got := parseJSON(body)
+	assert.Equal(t, "customer", jsonField(got, "source"))
+	assert.Equal(t, "0", jsonField(got, "days"))
+}
+
+func TestSalesOrders_ShipByFilters(t *testing.T) {
+	t.Parallel()
+
+	customerID := leadTimeCustomer(t, "e2e-shipby-filter", ptrInt(30), "")
+	order := issueOrderForCustomer(t, customerID, nil)
+	orderID := jsonField(order, "id")
+	shipBy := shipByDate(t, order)
+	require.NotEmpty(t, shipBy)
+
+	parsed, err := time.Parse("2006-01-02", shipBy)
+	require.NoError(t, err)
+	dayBefore := parsed.AddDate(0, 0, -1).Format("2006-01-02")
+	dayAfter := parsed.AddDate(0, 0, 1).Format("2006-01-02")
+
+	t.Run("ship_by_after includes its own date", func(t *testing.T) {
+		assert.True(t, orderAppearsInFilteredList(t, orderID, url.Values{"ship_by_after": {shipBy}}))
+	})
+
+	t.Run("ship_by_after excludes earlier commitments", func(t *testing.T) {
+		assert.False(t, orderAppearsInFilteredList(t, orderID, url.Values{"ship_by_after": {dayAfter}}))
+	})
+
+	t.Run("ship_by_before includes its own date", func(t *testing.T) {
+		assert.True(t, orderAppearsInFilteredList(t, orderID, url.Values{"ship_by_before": {shipBy}}))
+	})
+
+	t.Run("ship_by_before excludes later commitments", func(t *testing.T) {
+		assert.False(t, orderAppearsInFilteredList(t, orderID, url.Values{"ship_by_before": {dayBefore}}))
+	})
+
+	// The order is due 30 days out, so it is not past due and must be absent from
+	// past_due=true and present in past_due=false.
+	t.Run("past_due excludes an order still within its window", func(t *testing.T) {
+		assert.False(t, orderAppearsInFilteredList(t, orderID, url.Values{"past_due": {"true"}}))
+		assert.True(t, orderAppearsInFilteredList(t, orderID, url.Values{"past_due": {"false"}}))
+	})
+}
+
+// orderAppearsInFilteredList pages the sales-order list under the given filter,
+// looking for one order. Every page is walked rather than only the first, because a
+// parallel suite is creating and deleting orders throughout (see
+// [[project_list_hydration_race]]).
+func orderAppearsInFilteredList(t *testing.T, orderID string, filters url.Values) bool {
+	t.Helper()
+
+	params := url.Values{}
+	for k, v := range filters {
+		params[k] = v
+	}
+	params.Set("limit", "100")
+
+	for range 20 {
+		status, body, err := apiClient.GetListRaw(salesOrdersPath, params)
+		require.NoError(t, err)
+		require.Less(t, status, 500, "list must not 5xx: %s", string(body))
+		requireStatus(t, 200, status, body)
+
+		parsed := parseJSON(body)
+		data, _ := parsed["data"].([]any)
+		for _, raw := range data {
+			row, ok := raw.(map[string]any)
+			if ok && jsonField(row, "id") == orderID {
+				return true
+			}
+		}
+
+		pageInfo, _ := parsed["page_info"].(map[string]any)
+		next := jsonField(pageInfo, "next_cursor")
+		if next == "" {
+			return false
+		}
+		params.Set("cursor", next)
+	}
+	return false
+}
+
+func ptrInt(v int) *int { return &v }

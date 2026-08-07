@@ -72,6 +72,7 @@ type CustomerSvc interface {
 	DeleteCustomer(ctx context.Context, req *DeleteCustomerRequest) (*apiresource.EmptyResource, *apierror.APIError)
 	BulkDeleteCustomers(ctx context.Context, req *BulkDeleteCustomersRequest) (*apiresource.EmptyResource, *apierror.APIError)
 	GetFrequentlyOrderedProducts(ctx context.Context, req *GetFrequentlyOrderedProductsRequest) (*apiresource.List[apiresource.FrequentlyOrderedProduct], *apierror.APIError)
+	GetCustomerLeadTime(ctx context.Context, req *RetrieveCustomerLeadTimeRequest) (*apiresource.CustomerLeadTime, *apierror.APIError)
 	ListNotificationRecipients(ctx context.Context, req *ListNotificationRecipientsRequest) (*apiresource.List[apiresource.OrderNotificationRecipient], *apierror.APIError)
 	UpdateNotificationRecipients(ctx context.Context, req *UpdateNotificationRecipientsRequest) (*apiresource.List[apiresource.OrderNotificationRecipient], *apierror.APIError)
 	MergeCustomers(ctx context.Context, req *MergeCustomersRequest) (*apiresource.Customer, *apierror.APIError)
@@ -216,6 +217,7 @@ func (m *customerSvcImpl) CreateCustomer(ctx context.Context, req *CreateCustome
 		IsEdiEnabled:          ediStatusToBoolPtr(req.EDIStatus.Ptr()),
 		CommissionPolicy:      &commissionPolicyStr,
 		FreightPolicy:         &freightPolicyStr,
+		DefaultLeadTimeDays:   req.LeadTimeDays.Ptr(),
 		DefaultCarrierId:      &req.DefaultCarrierID,
 		DefaultServiceLevelId: req.DefaultServiceLevelID.Ptr(),
 		DefaultPaymentTermId:  &req.DefaultPaymentTermID,
@@ -477,6 +479,7 @@ func (m *customerSvcImpl) UpdateCustomer(ctx context.Context, req *UpdateCustome
 		IsEdiEnabled:             ediStatusToBoolPtr(req.EDIStatus.Ptr()),
 		CommissionPolicy:         req.CommissionPolicy.Ptr().StringPtr(),
 		FreightPolicy:            req.FreightPolicy.Ptr().StringPtr(),
+		DefaultLeadTimeDays:      field.Int32ClearableToProto(req.LeadTimeDays),
 		DefaultCarrierId:         req.DefaultCarrierID.Ptr(),
 		DefaultServiceLevelId:    field.StringClearableToProto(req.DefaultServiceLevelID),
 		DefaultPaymentTermId:     req.DefaultPaymentTermID.Ptr(),
@@ -710,7 +713,7 @@ func buildFreightPreferences(c *pb.CustomerProto) *apiresource.CustomerFreightPr
 }
 
 func buildDefaults(c *pb.CustomerProto) *apiresource.CustomerDefaults {
-	d := &apiresource.CustomerDefaults{Object: constants.ObjectTypeCustomerDefaults}
+	d := &apiresource.CustomerDefaults{Object: constants.ObjectTypeCustomerDefaults, LeadTimeDays: c.DefaultLeadTimeDays}
 
 	if c.DefaultPaymentTerm != nil {
 		ptStatus := constants.PaymentTermStatusInactive
@@ -858,4 +861,27 @@ func addressTypeFromDropShip(isDropShip bool) constants.AddressType {
 		return constants.AddressTypeDropShip
 	}
 	return constants.AddressTypeStandard
+}
+
+func (m *customerSvcImpl) GetCustomerLeadTime(ctx context.Context, req *RetrieveCustomerLeadTimeRequest) (*apiresource.CustomerLeadTime, *apierror.APIError) {
+	pbReq := &pb.GetCustomerLeadTimeRequest{Id: req.CustomerID}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, customerSvcTracer, "service.customers.get_lead_time", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetCustomerLeadTimeResponse, error) {
+			return m.coreClient.GetCustomerLeadTime(ctx, pbReq, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	out := &apiresource.CustomerLeadTime{
+		Object:   constants.ObjectTypeCustomerLeadTime,
+		Customer: apiresource.NewEntity(resp.CustomerId, constants.ObjectTypeCustomer, nil, nil),
+		Days:     resp.Days,
+		Source:   constants.LeadTimeSource(resp.Source),
+	}
+	if resp.AccountGroupId != nil {
+		out.AccountGroup = apiresource.NewEntity(*resp.AccountGroupId, constants.ObjectTypeAccountGroup, nil, nil)
+	}
+	return out, nil
 }

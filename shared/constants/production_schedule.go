@@ -688,3 +688,40 @@ func (s *MachineWorkStatus) StringPtr() *string {
 	value := string(*s)
 	return &value
 }
+
+// ScheduleLineReason is why the solver planned a campaign.
+type ScheduleLineReason string
+
+const (
+	// ScheduleLineReasonReorderPoint indicates the item's projected position fell below its statistical trigger.
+	ScheduleLineReasonReorderPoint ScheduleLineReason = "reorder_point"
+	// ScheduleLineReasonFirmOrder indicates the campaign exists to serve orders already on the book, not a forecast.
+	ScheduleLineReasonFirmOrder ScheduleLineReason = "firm_order"
+	// ScheduleLineReasonManual indicates the line was added or edited by hand.
+	ScheduleLineReasonManual ScheduleLineReason = "manual"
+)
+
+func (m ScheduleLineReason) IsValid() bool {
+	switch m {
+	case ScheduleLineReasonReorderPoint, ScheduleLineReasonFirmOrder, ScheduleLineReasonManual:
+		return true
+	default:
+		return false
+	}
+}
+
+func (m ScheduleLineReason) EnumValues() []string {
+	return []string{
+		string(ScheduleLineReasonReorderPoint),
+		string(ScheduleLineReasonFirmOrder),
+		string(ScheduleLineReasonManual),
+	}
+}
+
+func (m *ScheduleLineReason) StringPtr() *string {
+	if m == nil {
+		return nil
+	}
+	s := string(*m)
+	return &s
+}

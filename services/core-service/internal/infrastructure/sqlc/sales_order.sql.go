@@ -555,6 +555,46 @@ func (q *Queries) GetAccountOriginAddress(ctx context.Context, accountID string)
 	return i, err
 }
 
+const getCustomerLeadTimeChain = `-- name: GetCustomerLeadTimeChain :one
+SELECT
+    ar.id AS account_relation_id,
+    ar.account_group_id,
+    ar.default_lead_time_days AS customer_lead_time_days,
+    ag.default_lead_time_days AS account_group_lead_time_days
+FROM account_relation ar
+LEFT JOIN account_group ag ON ag.id = ar.account_group_id
+WHERE ar.owner_account_id = ?
+  AND ar.counterparty_account_id = ?
+  AND ar.account_relation_role_code = 'customer'
+`
+
+type GetCustomerLeadTimeChainParams struct {
+	AccountID      string
+	BuyerAccountID string
+}
+
+type GetCustomerLeadTimeChainRow struct {
+	AccountRelationID        string
+	AccountGroupID           sql.NullString
+	CustomerLeadTimeDays     sql.NullInt32
+	AccountGroupLeadTimeDays sql.NullInt32
+}
+
+// GetCustomerLeadTimeChain returns the lead times available to a buyer, most specific first.
+//
+// Both levels come back in one row because the chain is resolved as a whole: returning only the winner would leave the caller unable to say which rule applied, and the source is stamped onto the order alongside the date. A buyer with no customer relation yields no row, and the caller falls back to the account default.
+func (q *Queries) GetCustomerLeadTimeChain(ctx context.Context, arg GetCustomerLeadTimeChainParams) (GetCustomerLeadTimeChainRow, error) {
+	row := q.db.QueryRowContext(ctx, getCustomerLeadTimeChain, arg.AccountID, arg.BuyerAccountID)
+	var i GetCustomerLeadTimeChainRow
+	err := row.Scan(
+		&i.AccountRelationID,
+		&i.AccountGroupID,
+		&i.CustomerLeadTimeDays,
+		&i.AccountGroupLeadTimeDays,
+	)
+	return i, err
+}
+
 const getInvoiceIDsBySalesOrder = `-- name: GetInvoiceIDsBySalesOrder :many
 SELECT inv.id
 FROM invoice inv
@@ -745,6 +785,9 @@ SELECT
     so.first_ship_at,
     so.expired_at,
     so.promised_at,
+    so.ship_by_date,
+    so.lead_time_days,
+    so.lead_time_source_code,
     so.created_at,
     so.updated_at,
     -- Customer
@@ -882,6 +925,9 @@ type GetSalesOrderRow struct {
 	FirstShipAt                 sql.NullTime
 	ExpiredAt                   sql.NullTime
 	PromisedAt                  sql.NullTime
+	ShipByDate                  sql.NullTime
+	LeadTimeDays                sql.NullInt32
+	LeadTimeSourceCode          sql.NullString
 	CreatedAt                   time.Time
 	UpdatedAt                   time.Time
 	CustomerName                string
@@ -982,6 +1028,9 @@ func (q *Queries) GetSalesOrder(ctx context.Context, arg GetSalesOrderParams) (G
 		&i.FirstShipAt,
 		&i.ExpiredAt,
 		&i.PromisedAt,
+		&i.ShipByDate,
+		&i.LeadTimeDays,
+		&i.LeadTimeSourceCode,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.CustomerName,
@@ -1082,6 +1131,9 @@ SELECT
     so.first_ship_at,
     so.expired_at,
     so.promised_at,
+    so.ship_by_date,
+    so.lead_time_days,
+    so.lead_time_source_code,
     so.created_at,
     so.updated_at,
     -- Customer
@@ -1221,6 +1273,9 @@ type GetSalesOrderForCustomerRow struct {
 	FirstShipAt                 sql.NullTime
 	ExpiredAt                   sql.NullTime
 	PromisedAt                  sql.NullTime
+	ShipByDate                  sql.NullTime
+	LeadTimeDays                sql.NullInt32
+	LeadTimeSourceCode          sql.NullString
 	CreatedAt                   time.Time
 	UpdatedAt                   time.Time
 	CustomerName                string
@@ -1321,6 +1376,9 @@ func (q *Queries) GetSalesOrderForCustomer(ctx context.Context, arg GetSalesOrde
 		&i.FirstShipAt,
 		&i.ExpiredAt,
 		&i.PromisedAt,
+		&i.ShipByDate,
+		&i.LeadTimeDays,
+		&i.LeadTimeSourceCode,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.CustomerName,
@@ -2025,6 +2083,9 @@ SELECT STRAIGHT_JOIN
     so.first_ship_at,
     so.expired_at,
     so.promised_at,
+    so.ship_by_date,
+    so.lead_time_days,
+    so.lead_time_source_code,
     so.created_at,
     so.updated_at,
     -- Customer
@@ -2169,6 +2230,31 @@ AND (
     OR so.created_at <= ?
 )
 AND (
+    ? IS NULL
+    OR so.ship_by_date >= ?
+)
+AND (
+    ? IS NULL
+    OR so.ship_by_date <= ?
+)
+AND (
+    ? IS NULL
+    OR (
+        ? = TRUE
+        AND so.ship_by_date IS NOT NULL
+        AND so.ship_by_date < CURDATE()
+        AND so.sales_order_status_code = 'issued'
+    )
+    OR (
+        ? = FALSE
+        AND NOT (
+            so.ship_by_date IS NOT NULL
+            AND so.ship_by_date < CURDATE()
+            AND so.sales_order_status_code = 'issued'
+        )
+    )
+)
+AND (
     so.created_at > ?
     OR (so.created_at = ? AND so.id > ?)
 )
@@ -2193,6 +2279,9 @@ type ListSalesOrdersBackwardParams struct {
 	SalesRepIds                []sql.NullString
 	StartDate                  sql.NullTime
 	EndDate                    sql.NullTime
+	ShipByAfter                sql.NullTime
+	ShipByBefore               sql.NullTime
+	PastDue                    interface{}
 	CursorCreatedAt            time.Time
 	CursorID                   string
 	Limit                      int32
@@ -2226,6 +2315,9 @@ type ListSalesOrdersBackwardRow struct {
 	FirstShipAt                 sql.NullTime
 	ExpiredAt                   sql.NullTime
 	PromisedAt                  sql.NullTime
+	ShipByDate                  sql.NullTime
+	LeadTimeDays                sql.NullInt32
+	LeadTimeSourceCode          sql.NullString
 	CreatedAt                   time.Time
 	UpdatedAt                   time.Time
 	CustomerName                string
@@ -2301,6 +2393,7 @@ type ListSalesOrdersBackwardRow struct {
 // single-column sales_order_status_code index is the point — with a status filter the
 // optimizer otherwise picks it, reads every matching row, runs them all through the
 // joins, and filesorts the lot (~5s for large accounts even with LIMIT 10). Do not remove.
+// Past due is a fact about work still owed, so it is scoped to issued orders. A fulfilled order that shipped late is a delivery-performance question, not a backlog one, and leaving it here would make the queue never empty.
 func (q *Queries) ListSalesOrdersBackward(ctx context.Context, arg ListSalesOrdersBackwardParams) ([]ListSalesOrdersBackwardRow, error) {
 	query := listSalesOrdersBackward
 	var queryParams []interface{}
@@ -2365,6 +2458,13 @@ func (q *Queries) ListSalesOrdersBackward(ctx context.Context, arg ListSalesOrde
 	queryParams = append(queryParams, arg.StartDate)
 	queryParams = append(queryParams, arg.EndDate)
 	queryParams = append(queryParams, arg.EndDate)
+	queryParams = append(queryParams, arg.ShipByAfter)
+	queryParams = append(queryParams, arg.ShipByAfter)
+	queryParams = append(queryParams, arg.ShipByBefore)
+	queryParams = append(queryParams, arg.ShipByBefore)
+	queryParams = append(queryParams, arg.PastDue)
+	queryParams = append(queryParams, arg.PastDue)
+	queryParams = append(queryParams, arg.PastDue)
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
@@ -2405,6 +2505,9 @@ func (q *Queries) ListSalesOrdersBackward(ctx context.Context, arg ListSalesOrde
 			&i.FirstShipAt,
 			&i.ExpiredAt,
 			&i.PromisedAt,
+			&i.ShipByDate,
+			&i.LeadTimeDays,
+			&i.LeadTimeSourceCode,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.CustomerName,
@@ -2513,6 +2616,9 @@ SELECT STRAIGHT_JOIN
     so.first_ship_at,
     so.expired_at,
     so.promised_at,
+    so.ship_by_date,
+    so.lead_time_days,
+    so.lead_time_source_code,
     so.created_at,
     so.updated_at,
     -- Customer
@@ -2658,6 +2764,31 @@ AND (
 )
 AND (
     ? IS NULL
+    OR so.ship_by_date >= ?
+)
+AND (
+    ? IS NULL
+    OR so.ship_by_date <= ?
+)
+AND (
+    ? IS NULL
+    OR (
+        ? = TRUE
+        AND so.ship_by_date IS NOT NULL
+        AND so.ship_by_date < CURDATE()
+        AND so.sales_order_status_code = 'issued'
+    )
+    OR (
+        ? = FALSE
+        AND NOT (
+            so.ship_by_date IS NOT NULL
+            AND so.ship_by_date < CURDATE()
+            AND so.sales_order_status_code = 'issued'
+        )
+    )
+)
+AND (
+    ? IS NULL
     OR so.created_at < ?
     OR (so.created_at = ? AND so.id < ?)
 )
@@ -2682,6 +2813,9 @@ type ListSalesOrdersForwardParams struct {
 	SalesRepIds                []sql.NullString
 	StartDate                  sql.NullTime
 	EndDate                    sql.NullTime
+	ShipByAfter                sql.NullTime
+	ShipByBefore               sql.NullTime
+	PastDue                    interface{}
 	CursorCreatedAt            sql.NullTime
 	CursorID                   sql.NullString
 	Limit                      int32
@@ -2715,6 +2849,9 @@ type ListSalesOrdersForwardRow struct {
 	FirstShipAt                 sql.NullTime
 	ExpiredAt                   sql.NullTime
 	PromisedAt                  sql.NullTime
+	ShipByDate                  sql.NullTime
+	LeadTimeDays                sql.NullInt32
+	LeadTimeSourceCode          sql.NullString
 	CreatedAt                   time.Time
 	UpdatedAt                   time.Time
 	CustomerName                string
@@ -2793,6 +2930,7 @@ type ListSalesOrdersForwardRow struct {
 // single-column sales_order_status_code index is the point — with a status filter the
 // optimizer otherwise picks it, reads every matching row, runs them all through the
 // joins, and filesorts the lot (~5s for large accounts even with LIMIT 10). Do not remove.
+// Past due is a fact about work still owed, so it is scoped to issued orders. A fulfilled order that shipped late is a delivery-performance question, not a backlog one, and leaving it here would make the queue never empty.
 func (q *Queries) ListSalesOrdersForward(ctx context.Context, arg ListSalesOrdersForwardParams) ([]ListSalesOrdersForwardRow, error) {
 	query := listSalesOrdersForward
 	var queryParams []interface{}
@@ -2857,6 +2995,13 @@ func (q *Queries) ListSalesOrdersForward(ctx context.Context, arg ListSalesOrder
 	queryParams = append(queryParams, arg.StartDate)
 	queryParams = append(queryParams, arg.EndDate)
 	queryParams = append(queryParams, arg.EndDate)
+	queryParams = append(queryParams, arg.ShipByAfter)
+	queryParams = append(queryParams, arg.ShipByAfter)
+	queryParams = append(queryParams, arg.ShipByBefore)
+	queryParams = append(queryParams, arg.ShipByBefore)
+	queryParams = append(queryParams, arg.PastDue)
+	queryParams = append(queryParams, arg.PastDue)
+	queryParams = append(queryParams, arg.PastDue)
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorCreatedAt)
@@ -2898,6 +3043,9 @@ func (q *Queries) ListSalesOrdersForward(ctx context.Context, arg ListSalesOrder
 			&i.FirstShipAt,
 			&i.ExpiredAt,
 			&i.PromisedAt,
+			&i.ShipByDate,
+			&i.LeadTimeDays,
+			&i.LeadTimeSourceCode,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.CustomerName,
@@ -3094,6 +3242,31 @@ AND (
     ? IS NULL
     OR so.created_at <= ?
 )
+AND (
+    ? IS NULL
+    OR so.ship_by_date >= ?
+)
+AND (
+    ? IS NULL
+    OR so.ship_by_date <= ?
+)
+AND (
+    ? IS NULL
+    OR (
+        ? = TRUE
+        AND so.ship_by_date IS NOT NULL
+        AND so.ship_by_date < CURDATE()
+        AND so.sales_order_status_code = 'issued'
+    )
+    OR (
+        ? = FALSE
+        AND NOT (
+            so.ship_by_date IS NOT NULL
+            AND so.ship_by_date < CURDATE()
+            AND so.sales_order_status_code = 'issued'
+        )
+    )
+)
 ORDER BY so.created_at DESC, so.id DESC
 LIMIT ?
 `
@@ -3117,6 +3290,9 @@ type SearchSalesOrderIDsParams struct {
 	SalesRepIds                []sql.NullString
 	StartDate                  sql.NullTime
 	EndDate                    sql.NullTime
+	ShipByAfter                sql.NullTime
+	ShipByBefore               sql.NullTime
+	PastDue                    interface{}
 	Limit                      int32
 }
 
@@ -3138,6 +3314,7 @@ type SearchSalesOrderIDsRow struct {
 // them. The filters run against the handful of seeked rows, so they cost
 // nothing — the index seeks still drive. Returns the matching IDs newest-first;
 // the caller hydrates them.
+// Past due is a fact about work still owed, so it is scoped to issued orders. A fulfilled order that shipped late is a delivery-performance question, not a backlog one, and leaving it here would make the queue never empty.
 func (q *Queries) SearchSalesOrderIDs(ctx context.Context, arg SearchSalesOrderIDsParams) ([]SearchSalesOrderIDsRow, error) {
 	query := searchSalesOrderIDs
 	var queryParams []interface{}
@@ -3207,6 +3384,13 @@ func (q *Queries) SearchSalesOrderIDs(ctx context.Context, arg SearchSalesOrderI
 	queryParams = append(queryParams, arg.StartDate)
 	queryParams = append(queryParams, arg.EndDate)
 	queryParams = append(queryParams, arg.EndDate)
+	queryParams = append(queryParams, arg.ShipByAfter)
+	queryParams = append(queryParams, arg.ShipByAfter)
+	queryParams = append(queryParams, arg.ShipByBefore)
+	queryParams = append(queryParams, arg.ShipByBefore)
+	queryParams = append(queryParams, arg.PastDue)
+	queryParams = append(queryParams, arg.PastDue)
+	queryParams = append(queryParams, arg.PastDue)
 	queryParams = append(queryParams, arg.Limit)
 	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
@@ -3244,6 +3428,38 @@ type SetSalesOrderProductionRunIDParams struct {
 
 func (q *Queries) SetSalesOrderProductionRunID(ctx context.Context, arg SetSalesOrderProductionRunIDParams) error {
 	_, err := q.db.ExecContext(ctx, setSalesOrderProductionRunID, arg.ProductionRunID, arg.ID, arg.AccountID)
+	return err
+}
+
+const setSalesOrderShipByCommitment = `-- name: SetSalesOrderShipByCommitment :exec
+UPDATE sales_order SET
+    ship_by_date = ?,
+    lead_time_days = ?,
+    lead_time_source_code = ?,
+    updated_at = NOW(3)
+WHERE id = ?
+AND owner_account_id = ?
+`
+
+type SetSalesOrderShipByCommitmentParams struct {
+	ShipByDate         sql.NullTime
+	LeadTimeDays       sql.NullInt32
+	LeadTimeSourceCode sql.NullString
+	ID                 string
+	AccountID          string
+}
+
+// SetSalesOrderShipByCommitment stamps the resolved ship-by commitment onto an order.
+//
+// Written as its own statement rather than folded into UpdateSalesOrderStatus because a commitment is also re-stamped when a promised date changes on an order that is already issued, which is not a status change.
+func (q *Queries) SetSalesOrderShipByCommitment(ctx context.Context, arg SetSalesOrderShipByCommitmentParams) error {
+	_, err := q.db.ExecContext(ctx, setSalesOrderShipByCommitment,
+		arg.ShipByDate,
+		arg.LeadTimeDays,
+		arg.LeadTimeSourceCode,
+		arg.ID,
+		arg.AccountID,
+	)
 	return err
 }
 

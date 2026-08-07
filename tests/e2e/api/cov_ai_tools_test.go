@@ -181,7 +181,8 @@ func TestCovAiTools_ToolsSearchQCaseInsensitiveSubstring(t *testing.T) {
 
 	expectedSlugs := []string{
 		"create_customer", "delete_customer", "list_customers",
-		"merge_customers", "retrieve_customer", "update_customer",
+		"merge_customers", "retrieve_customer", "retrieve_customer_lead_time",
+		"update_customer",
 	}
 
 	for _, q := range []string{"customer", "CUSTOMER", "CuStOmEr"} {

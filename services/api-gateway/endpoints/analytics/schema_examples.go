@@ -159,3 +159,11 @@ func (*AnalyzeScheduleAttainmentRequest) SchemaExample() any {
 		GroupBy:   field.Some(constants.AttainmentGroupByWeek),
 	})
 }
+
+func (*AnalyzeDeliveryPerformanceRequest) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(&AnalyzeDeliveryPerformanceRequest{
+		StartDate:   apiresource.SampleAnalyticsPeriodStart,
+		EndDate:     apiresource.SampleAnalyticsPeriodEnd,
+		Granularity: field.Some(constants.DeliveryGranularityWeek),
+	})
+}

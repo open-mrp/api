@@ -131,6 +131,45 @@ type CustomerDefaults struct {
 	//
 	// Used when an order is created without a sales rep, unless the customer is commission-exempt. With no default set, the rep is resolved from the sales territory matching the order's ship-to postal code or state.
 	SalesRep *AccountUser `json:"sales_rep" expandable:"true"`
+	// Calendar days between an order being issued and it being due to ship.
+	//
+	// Sets each order's `ship_by_date` when it is issued. With none set here the customer inherits its account group's lead time, then the account default.
+	LeadTimeDays *int32 `json:"lead_time_days"`
+}
+
+// The ship-by lead time a new order for this customer would be committed to.
+type CustomerLeadTime struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=customer_lead_time"`
+	// The customer the lead time was resolved for.
+	Customer *Entity `json:"customer" validate:"required"`
+	// Calendar days between an order being issued and it being due to ship.
+	//
+	// `0` means same-day: an order issued today would be due to ship today.
+	Days int32 `json:"days"`
+	// Which rule in the chain produced this lead time.
+	//
+	// - `customer`: a lead time set on the customer itself.
+	// - `account_group`: inherited from the customer's account group.
+	// - `account`: the account-wide fallback.
+	//
+	// The shared `manual` value cannot appear here: it means a promised date was set on one specific order, which is a fact about that order rather than about the customer.
+	Source constants.LeadTimeSource `json:"source" validate:"required"`
+	// The account group the lead time was inherited from.
+	//
+	// Present only when `source` is `account_group`. A customer that belongs to a group but sets its own lead time inherited nothing.
+	AccountGroup *Entity `json:"account_group"`
+}
+
+var SampleCustomerLeadTime = &CustomerLeadTime{
+	Object:   constants.ObjectTypeCustomerLeadTime,
+	Customer: NewEntity(SampleCustomerID, constants.ObjectTypeCustomer, nil, nil),
+	Days:     30,
+	Source:   constants.LeadTimeSourceAccount,
+}
+
+func (*CustomerLeadTime) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleCustomerLeadTime)
 }
 
 // Customer notification settings.

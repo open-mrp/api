@@ -5,8 +5,10 @@ import (
 	"fmt"
 
 	"github.com/augno/api/services/core-service/internal/domain"
+	"github.com/augno/api/services/core-service/internal/scheduling"
 	"github.com/augno/api/shared/contracts"
 	pb "github.com/augno/api/shared/proto/core"
+	"github.com/augno/api/shared/safeconv"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -938,5 +940,67 @@ func (h *gRPCHandler) AnalyzeScheduleAttainment(ctx context.Context, req *pb.Ana
 		Totals:              attainmentBucketToProto(result.Totals),
 		FrozenAdherence:     adherence,
 		HasBaseline:         result.HasBaseline,
+	}, nil
+}
+
+func deliveryPerformanceToProto(p scheduling.DeliveryPerformance, includePeriod bool) *pb.DeliveryPerformanceProto {
+	out := &pb.DeliveryPerformanceProto{
+		CommittedOrderCount:          safeconv.IntToInt32(p.CommittedOrderCount),
+		ShippedOrderCount:            safeconv.IntToInt32(p.ShippedOrderCount),
+		OnTimeOrderCount:             safeconv.IntToInt32(p.OnTimeOrderCount),
+		OnTimeInFullCount:            safeconv.IntToInt32(p.OnTimeInFullCount),
+		LateOrderCount:               safeconv.IntToInt32(p.LateOrderCount),
+		NotYetShippedCount:           safeconv.IntToInt32(p.NotYetShippedCount),
+		OnTimePct:                    p.OnTimePct,
+		OnTimeInFullPct:              p.OnTimeInFullPct,
+		AverageDaysLate:              p.AverageDaysLate,
+		AverageLeadTimeDays:          p.AverageLeadTimeDays,
+		AverageCommittedLeadTimeDays: p.AverageCommittedLeadTimeDays,
+	}
+	if includePeriod && !p.PeriodStart.IsZero() {
+		out.PeriodStart = timestamppb.New(p.PeriodStart)
+	}
+	return out
+}
+
+func (h *gRPCHandler) AnalyzeDeliveryPerformance(ctx context.Context, req *pb.AnalyzeDeliveryPerformanceRequest) (*pb.AnalyzeDeliveryPerformanceResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	params := domain.AnalyzeDeliveryPerformanceParams{Granularity: req.Granularity}
+	if req.StartsAt != nil {
+		params.StartDate = req.StartsAt.AsTime()
+	}
+	if req.EndsAt != nil {
+		params.EndDate = req.EndsAt.AsTime()
+	}
+
+	result, apiErr := h.analyticsSvc.AnalyzeDeliveryPerformance(ctx, params)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	periods := make([]*pb.DeliveryPerformanceProto, 0, len(result.Periods))
+	for _, p := range result.Periods {
+		periods = append(periods, deliveryPerformanceToProto(p, true))
+	}
+
+	backlog := make([]*pb.DeliveryBacklogBucketProto, 0, len(result.Backlog))
+	for _, b := range result.Backlog {
+		backlog = append(backlog, &pb.DeliveryBacklogBucketProto{
+			Label:       b.Label,
+			MinDaysLate: safeconv.IntToInt32(b.MinDaysLate),
+			MaxDaysLate: safeconv.IntToInt32(b.MaxDaysLate),
+			OrderCount:  safeconv.IntToInt32(b.OrderCount),
+			Units:       b.Units,
+		})
+	}
+
+	return &pb.AnalyzeDeliveryPerformanceResponse{
+		Overall:               deliveryPerformanceToProto(result.Overall, false),
+		Periods:               periods,
+		Backlog:               backlog,
+		UncommittedOrderCount: safeconv.IntToInt32(result.UncommittedOrderCount),
 	}, nil
 }

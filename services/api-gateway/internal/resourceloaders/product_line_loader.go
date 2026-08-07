@@ -70,7 +70,7 @@ func buildProductLineDefaultLot(lot *pb.ProductLineDefaultLotInfo) *apiresource.
 }
 
 func productLineFromProto(pl *pb.ProductLineInfo) *apiresource.ProductLine {
-	return &apiresource.ProductLine{
+	out := &apiresource.ProductLine{
 		ID:               pl.Id,
 		Object:           constants.ObjectTypeProductLine,
 		Name:             pl.Name,
@@ -81,6 +81,11 @@ func productLineFromProto(pl *pb.ProductLineInfo) *apiresource.ProductLine {
 		CreatedAt:        grpcutil.TimestampToTime(pl.CreatedAt),
 		UpdatedAt:        grpcutil.TimestampToTime(pl.UpdatedAt),
 	}
+	if pl.FulfillmentPolicyCode != nil && *pl.FulfillmentPolicyCode != "" {
+		policy := constants.FulfillmentPolicy(*pl.FulfillmentPolicyCode)
+		out.FulfillmentPolicy = &policy
+	}
+	return out
 }
 
 func stashUnitGroupMeta(meta *resourcekit.LoadMeta, ug *apiresource.UnitGroup) {

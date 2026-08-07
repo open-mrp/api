@@ -825,6 +825,9 @@ type CustomerSvc interface {
 	// GetFrequentlyOrderedProducts returns the most frequently ordered products for a customer.
 	GetFrequentlyOrderedProducts(ctx context.Context, customerAccountID string) ([]*FrequentlyOrderedProduct, *apierror.APIError)
 
+	// GetCustomerLeadTime resolves the ship-by lead time a new order for this customer would be committed to.
+	GetCustomerLeadTime(ctx context.Context, customerAccountID string) (*CustomerLeadTime, *apierror.APIError)
+
 	// ListCustomerNotificationRecipients returns the default order-notification recipients configured for a customer relationship.
 	ListCustomerNotificationRecipients(ctx context.Context, customerAccountID string) ([]NotificationRecipient, *apierror.APIError)
 
@@ -858,6 +861,9 @@ type AnalyticsSvc interface {
 
 	// AnalyzeScheduleAttainment measures actual production against the plan that was live at the time.
 	AnalyzeScheduleAttainment(ctx context.Context, params AnalyzeScheduleAttainmentParams) (*ScheduleAttainmentResult, *apierror.APIError)
+
+	// AnalyzeDeliveryPerformance measures what was promised against what was shipped.
+	AnalyzeDeliveryPerformance(ctx context.Context, params AnalyzeDeliveryPerformanceParams) (*DeliveryPerformanceResult, *apierror.APIError)
 	// AnalyzeWeeksOfSales returns on-hand inventory expressed as weeks of average sales per product line.
 	AnalyzeWeeksOfSales(ctx context.Context, params AnalyzeWeeksOfSalesParams) (*WeeksOfSalesResult, *apierror.APIError)
 }
@@ -931,6 +937,30 @@ type ProductionScheduleSvc interface {
 
 	// UpdateProductionScheduleSettings replaces the merchant's planning assumptions.
 	UpdateProductionScheduleSettings(ctx context.Context, params UpdateProductionScheduleSettingsParams) (*ProductionScheduleSettings, *apierror.APIError)
+
+	// ListAtRiskOrders returns the commitments a version does not meet.
+	ListAtRiskOrders(ctx context.Context, scheduleID string) ([]*ScheduleOrderCoverage, *apierror.APIError)
+
+	// QuotePromiseDate says the earliest date the published plan could ship a quantity.
+	QuotePromiseDate(ctx context.Context, itemID string, quantity float64) (*PromiseDateQuote, *apierror.APIError)
+
+	// ListFulfillmentRecommendations works out which SKUs should be built to order and which to stock.
+	ListFulfillmentRecommendations(ctx context.Context) ([]*FulfillmentRecommendation, *apierror.APIError)
+
+	// ApplyFulfillmentRecommendations writes the recommended policy onto the named items.
+	ApplyFulfillmentRecommendations(ctx context.Context, itemIDs []string) ([]*FulfillmentRecommendation, *apierror.APIError)
+
+	// ListItemSettings returns every per-item planning override in the account.
+	ListItemSettings(ctx context.Context) ([]*ProductionScheduleItemPlanningSetting, *apierror.APIError)
+
+	// GetItemSetting returns one item's planning override.
+	GetItemSetting(ctx context.Context, itemID string) (*ProductionScheduleItemPlanningSetting, *apierror.APIError)
+
+	// UpsertItemSetting writes one item's planning override.
+	UpsertItemSetting(ctx context.Context, params UpsertItemSettingParams) (*ProductionScheduleItemPlanningSetting, *apierror.APIError)
+
+	// DeleteItemSetting removes one item's planning override.
+	DeleteItemSetting(ctx context.Context, itemID string) *apierror.APIError
 
 	// ListResourceSettings returns per-machine, per-department and per-step overrides.
 	ListResourceSettings(ctx context.Context) ([]*ProductionScheduleResourceSetting, *apierror.APIError)

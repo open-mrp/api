@@ -36,14 +36,15 @@ func LoadAccountGroups(ctx context.Context, ids []string) (map[string]any, *apie
 
 func accountGroupFromProto(ag *pb.AccountGroupInfo) *apiresource.AccountGroup {
 	return &apiresource.AccountGroup{
-		ID:               ag.Id,
-		Object:           constants.ObjectTypeAccountGroup,
-		Name:             ag.Name,
-		Description:      ag.Description,
-		CommissionPolicy: constants.CommissionPolicy(ag.CommissionPolicy),
-		FreightPolicy:    constants.FreightPolicy(ag.FreightPolicy),
-		Type:             constants.AccountGroupType(ag.Type),
-		CreatedAt:        grpcutil.TimestampToTime(ag.CreatedAt),
-		UpdatedAt:        grpcutil.TimestampToTime(ag.UpdatedAt),
+		ID:                  ag.Id,
+		Object:              constants.ObjectTypeAccountGroup,
+		Name:                ag.Name,
+		Description:         ag.Description,
+		CommissionPolicy:    constants.CommissionPolicy(ag.CommissionPolicy),
+		FreightPolicy:       constants.FreightPolicy(ag.FreightPolicy),
+		Type:                constants.AccountGroupType(ag.Type),
+		DefaultLeadTimeDays: ag.DefaultLeadTimeDays,
+		CreatedAt:           grpcutil.TimestampToTime(ag.CreatedAt),
+		UpdatedAt:           grpcutil.TimestampToTime(ag.UpdatedAt),
 	}
 }

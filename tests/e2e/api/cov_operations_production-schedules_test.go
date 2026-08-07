@@ -148,8 +148,23 @@ func TestProductionSchedulePreview_Deterministic(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 200, status2, second)
 
-	assert.JSONEq(t, string(first), string(second),
-		"the same planning input must produce an identical plan")
+	// The assumptions a solve was run under are fully determined by the request and the
+	// settings, so these must match exactly.
+	firstPlan, secondPlan := parseJSON(first), parseJSON(second)
+	assert.Equal(t, jsonField(firstPlan, "solver_version"), jsonField(secondPlan, "solver_version"))
+	assert.Equal(t, firstPlan["settings_snapshot"], secondPlan["settings_snapshot"],
+		"two solves seconds apart must have run under the same assumptions")
+
+	// The plan itself is deliberately NOT compared byte for byte any more. A solve now
+	// reads the open order book as well as history, and the suite issues and unissues
+	// orders in parallel throughout — so two solves seconds apart can legitimately see
+	// different demand and produce different campaigns. That is the point of planning
+	// against firm orders, not a defect.
+	//
+	// Byte-identity for a FIXED input is a stronger claim and is pinned where the input
+	// can be held still: TestSolve_Deterministic and TestBuildFirmSchedule_Deterministic
+	// each run 50 times over one fixture and compare exactly.
+	assert.NotEmpty(t, jsonField(secondPlan, "object"), "both solves must return a well-formed plan")
 }
 
 const productionSchedulesPath = "/v1/operations/production-schedules"

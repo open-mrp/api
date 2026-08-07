@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	gosql "database/sql"
+	"time"
 
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/services/core-service/internal/infrastructure/sqlc"
@@ -43,6 +44,8 @@ func defaultSettings(accountID string) *domain.ProductionScheduleSettings {
 		WeeksPerYear:                   safeconv.IntToInt32(d.WeeksPerYear),
 		CapacityHeadroomPct:            d.CapacityHeadroomPct,
 		DefaultLotUnits:                d.DefaultLotUnits,
+		DefaultCustomerLeadTimeDays:    safeconv.IntToInt32(d.DefaultCustomerLeadTimeDays),
+		DefaultFulfillmentPolicyCode:   scheduling.PolicyMakeToStock,
 		GenerationTimezone:             "UTC",
 		HasStoredSettings:              false,
 	}
@@ -87,6 +90,8 @@ func (r *productionScheduleRepoImpl) GetSettings(ctx context.Context, accountID 
 		WeeksPerYear:                   row.WeeksPerYear,
 		CapacityHeadroomPct:            decimalToFloat64(row.CapacityHeadroomPct),
 		DefaultLotUnits:                decimalToFloat64(row.DefaultLotUnits),
+		DefaultCustomerLeadTimeDays:    row.DefaultCustomerLeadTimeDays,
+		DefaultFulfillmentPolicyCode:   row.DefaultFulfillmentPolicyCode,
 		IsEnabled:                      row.IsEnabled,
 		GenerationTimezone:             row.GenerationTimezone,
 		AutoPublish:                    row.AutoPublish,
@@ -144,6 +149,8 @@ func (r *productionScheduleRepoImpl) UpsertSettings(ctx context.Context, s *doma
 		WeeksPerYear:                   s.WeeksPerYear,
 		CapacityHeadroomPct:            floatToDecimalString(s.CapacityHeadroomPct),
 		DefaultLotUnits:                floatToDecimalString(s.DefaultLotUnits),
+		DefaultCustomerLeadTimeDays:    s.DefaultCustomerLeadTimeDays,
+		DefaultFulfillmentPolicyCode:   s.DefaultFulfillmentPolicyCode,
 		IsEnabled:                      s.IsEnabled,
 		GenerationCron:                 dtNullString(s.GenerationCron),
 		GenerationTimezone:             s.GenerationTimezone,
@@ -219,4 +226,106 @@ func (r *productionScheduleRepoImpl) DeleteResourceSetting(ctx context.Context, 
 		return tracing.Trace(span, apierror.NewResourceNotFoundError("Production schedule resource setting not found."))
 	}
 	return nil
+}
+
+func mapItemPlanningSetting(id, itemID, sku string, isExcluded bool, lotMultiple, policy gosql.NullString, createdAt, updatedAt time.Time) *domain.ProductionScheduleItemPlanningSetting {
+	out := &domain.ProductionScheduleItemPlanningSetting{
+		ID:         id,
+		ItemID:     itemID,
+		SKU:        sku,
+		IsExcluded: isExcluded,
+		CreatedAt:  createdAt,
+		UpdatedAt:  updatedAt,
+	}
+	if lotMultiple.Valid {
+		v := decimalToFloat64(lotMultiple.String)
+		out.LotMultipleUnits = &v
+	}
+	if policy.Valid && policy.String != "" {
+		p := policy.String
+		out.FulfillmentPolicyCode = &p
+	}
+	return out
+}
+
+func (r *productionScheduleRepoImpl) ListItemSettings(ctx context.Context, accountID string) ([]*domain.ProductionScheduleItemPlanningSetting, *apierror.APIError) {
+	ctx, span := productionScheduleRepoTracer.Start(ctx, "repository.production_schedule.list_item_settings")
+	defer span.End()
+
+	rows, err := r.queries.ListProductionScheduleItemSettings(ctx, accountID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	out := make([]*domain.ProductionScheduleItemPlanningSetting, 0, len(rows))
+	for _, row := range rows {
+		setting := mapItemPlanningSetting(row.ID, row.ItemID, row.Sku, row.IsExcluded, row.LotMultipleUnits, row.FulfillmentPolicyCode, row.CreatedAt, row.UpdatedAt)
+		setting.AccountID = accountID
+		out = append(out, setting)
+	}
+	return out, nil
+}
+
+func (r *productionScheduleRepoImpl) GetItemSetting(ctx context.Context, accountID, itemID string) (*domain.ProductionScheduleItemPlanningSetting, *apierror.APIError) {
+	ctx, span := productionScheduleRepoTracer.Start(ctx, "repository.production_schedule.get_item_setting")
+	defer span.End()
+
+	row, err := r.queries.GetProductionScheduleItemSetting(ctx, sqlc.GetProductionScheduleItemSettingParams{
+		AccountID: accountID,
+		ItemID:    itemID,
+	})
+	if err == gosql.ErrNoRows {
+		// An item with no override is planned on the defaults, which is a normal state rather than a missing resource.
+		return nil, nil
+	}
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	setting := mapItemPlanningSetting(row.ID, row.ItemID, row.Sku, row.IsExcluded, row.LotMultipleUnits, row.FulfillmentPolicyCode, row.CreatedAt, row.UpdatedAt)
+	setting.AccountID = accountID
+	return setting, nil
+}
+
+func (r *productionScheduleRepoImpl) UpsertItemSetting(ctx context.Context, params domain.UpsertItemSettingParams) *apierror.APIError {
+	ctx, span := productionScheduleRepoTracer.Start(ctx, "repository.production_schedule.upsert_item_setting")
+	defer span.End()
+
+	// Only used when the row does not exist; the upsert keeps the stored id otherwise.
+	settingID, apiErr := id.GenID(id.ProductionScheduleItemSettingIDPrefix, nil)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	sqlParams := sqlc.UpsertProductionScheduleItemSettingParams{
+		ID:         settingID,
+		AccountID:  params.AccountID,
+		ItemID:     params.ItemID,
+		IsExcluded: params.IsExcluded,
+	}
+	if params.LotMultipleUnits != nil {
+		sqlParams.LotMultipleUnits = gosql.NullString{String: floatToDecimalString(*params.LotMultipleUnits), Valid: true}
+	}
+	if params.FulfillmentPolicyCode != nil {
+		sqlParams.FulfillmentPolicyCode = gosql.NullString{String: *params.FulfillmentPolicyCode, Valid: true}
+	}
+
+	if apiErr := db.MapSQLError(r.queries.UpsertProductionScheduleItemSetting(ctx, sqlParams)); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return nil
+}
+
+func (r *productionScheduleRepoImpl) DeleteItemSetting(ctx context.Context, accountID, itemID string) (bool, *apierror.APIError) {
+	ctx, span := productionScheduleRepoTracer.Start(ctx, "repository.production_schedule.delete_item_setting")
+	defer span.End()
+
+	rows, err := r.queries.DeleteProductionScheduleItemSetting(ctx, sqlc.DeleteProductionScheduleItemSettingParams{
+		AccountID: accountID,
+		ItemID:    itemID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return false, tracing.Trace(span, apiErr)
+	}
+	return rows > 0, nil
 }

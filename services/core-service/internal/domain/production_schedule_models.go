@@ -14,6 +14,8 @@ type ProductionScheduleItemSetting struct {
 	ItemID           string
 	IsExcluded       bool
 	LotMultipleUnits float64
+	// FulfillmentPolicyCode is an explicit per-item override; empty means the item inherits from its product line, then the account default.
+	FulfillmentPolicyCode string
 }
 
 // LoadSolverInputParams is everything needed to assemble a solve.
@@ -32,6 +34,9 @@ type LoadSolverInputParams struct {
 	ConstraintDepartmentID string
 
 	ItemSettings map[string]ProductionScheduleItemSetting
+
+	// DefaultFulfillmentPolicy is the last resort in the policy chain. Empty means make-to-stock.
+	DefaultFulfillmentPolicy string
 
 	// PinnedCampaigns are hand-edited campaigns already on the plan a regenerate is keeping; the solver plans around them.
 	PinnedCampaigns []scheduling.PinnedCampaign
@@ -102,6 +107,122 @@ type GetPooledOrderDemandParams struct {
 	ProductIDs  []string
 }
 
+// OpenOrderRequirementRow is one issued order line's outstanding quantity and the date it is due to ship.
+//
+// This is demand the plan owes rather than demand it forecasts. ShipByDate is nil for orders issued before commitments were tracked.
+type OpenOrderRequirementRow struct {
+	SalesOrderID     string
+	SalesOrderNumber string
+	SalesOrderLineID string
+	ProductID        string
+	ShipByDate       *time.Time
+	OutstandingQty   float64
+}
+
+// CustomerDemandRow is one product's sold quantity to one customer in one calendar month.
+type CustomerDemandRow struct {
+	ProductID      string
+	BuyerAccountID string
+	Year           int
+	Month          int
+	Quantity       float64
+}
+
+// ProductionScheduleLineOrder is one campaign's contribution to one order.
+type ProductionScheduleLineOrder struct {
+	ID                       string
+	ProductionScheduleLineID string
+	SalesOrderID             string
+	SalesOrderNumber         string
+	SalesOrderLineID         string
+	AllocatedQuantity        float64
+
+	// Denormalized from the line so a caller can read what is being built without a second round trip.
+	ItemID     string
+	SKU        string
+	WeekIndex  int32
+	MachineID  string
+	ShipByDate *time.Time
+}
+
+// CreateLineOrderParams is one link to write.
+type CreateLineOrderParams struct {
+	ProductionScheduleLineID string
+	SalesOrderID             string
+	SalesOrderLineID         string
+	AllocatedQuantity        float64
+}
+
+// AnalyzeDeliveryPerformanceParams scopes a delivery measurement to one account and window.
+type AnalyzeDeliveryPerformanceParams struct {
+	AccountID   string
+	StartDate   time.Time
+	EndDate     time.Time
+	Granularity string
+}
+
+// DeliveryPerformanceResult is the whole delivery picture for one window.
+type DeliveryPerformanceResult struct {
+	Overall scheduling.DeliveryPerformance
+	Periods []scheduling.DeliveryPerformance
+	Backlog []scheduling.BacklogBucket
+	// UncommittedOrderCount is issued orders in the window carrying no ship-by date, excluded from every rate above. Reported so the exclusion is visible rather than silent.
+	UncommittedOrderCount int
+}
+
+// ScheduleOrderCoverage is one order a version does not fully build in time, with the campaigns earmarked for the part it does.
+type ScheduleOrderCoverage struct {
+	SalesOrderID     string
+	SalesOrderNumber string
+	ItemID           string
+	SKU              string
+	UnitsAtRisk      float64
+	DueWeek          int
+	ReasonCode       string
+	ShipByDate       *time.Time
+	CoveringLines    []ScheduleOrderCoverageLine
+}
+
+// ScheduleOrderCoverageLine is one campaign earmarked for an order.
+type ScheduleOrderCoverageLine struct {
+	ProductionScheduleLineID string
+	WeekIndex                int32
+	MachineID                string
+	AllocatedQuantity        float64
+}
+
+// PromiseDateQuote is the earliest date the published plan could ship a quantity.
+type PromiseDateQuote struct {
+	ItemID   string
+	Quantity float64
+	// EarliestShipDate and EarliestWeekIndex are nil when the published horizon cannot supply the quantity at all.
+	EarliestShipDate  *time.Time
+	EarliestWeekIndex *int
+	IsPromisable      bool
+
+	ProductionScheduleID      string
+	ProductionScheduleVersion int32
+}
+
+// FulfillmentRecommendation is the engine's advice for one item, with the measurements behind it.
+type FulfillmentRecommendation struct {
+	scheduling.Recommendation
+	// ProductLineID is the line the item sells under, empty when it sells under none.
+	ProductLineID string
+	// MixedStreamShare is the percentage of this item's demand coming from customers whose own policy disagrees with the recommendation. A high share means the single-policy-per-SKU model is straining on this item.
+	MixedStreamShare float64
+}
+
+// CustomerFulfillmentProfile is how one customer buys: the time they allow and the policy they state, each already resolved through its own chain.
+type CustomerFulfillmentProfile struct {
+	CustomerAccountID string
+	CustomerName      string
+	// LeadTimeDays is resolved customer -> account group -> account, the same chain an order's ship-by is stamped from.
+	LeadTimeDays int
+	// FulfillmentPolicyCode is empty when neither the customer nor its group states one.
+	FulfillmentPolicyCode string
+}
+
 // PooledMonthlyDemandRow is one product's sold quantity for one calendar month.
 type PooledMonthlyDemandRow struct {
 	ProductID string
@@ -144,6 +265,10 @@ type ProductionScheduleSettingsRow struct {
 	MaxWeeksSupply                 float64
 	MaxFlowDepth                   int
 
+	DefaultCustomerLeadTimeDays  int
+	DefaultFulfillmentPolicyCode string
+	RecommendationThresholds     scheduling.RecommendationThresholds
+
 	DemandWindowMonths    int
 	ForecastHistoryMonths int
 	ForecastMonths        int
@@ -163,6 +288,12 @@ type EffectiveScheduleSettings struct {
 	ForecastZ              float64
 	ConstraintDepartmentID string
 	ItemSettings           map[string]ProductionScheduleItemSetting
+	// DefaultFulfillmentPolicy is the account-wide fallback for how a SKU is produced.
+	DefaultFulfillmentPolicy string
+	// RecommendationThresholds are the cut points the make-to-order recommendation is drawn against.
+	RecommendationThresholds scheduling.RecommendationThresholds
+	// DefaultCustomerLeadTimeDays is the last resort in a customer's ship-by chain.
+	DefaultCustomerLeadTimeDays int
 }
 
 // PreviewProductionScheduleParams drives the internal solve-only endpoint.
@@ -326,6 +457,12 @@ type ProductionScheduleItemPolicy struct {
 	ABCClass           *string
 	WasEOQCapped       bool
 	WasCapacityStarved bool
+
+	// The policy this SKU was solved under, the rule that decided it, and the split between what the order book already owed and what the forecast projected.
+	FulfillmentPolicyCode string
+	PolicySourceCode      string
+	FirmDemandUnits       float64
+	ForecastDemandUnits   float64
 
 	CreatedAt time.Time
 	UpdatedAt time.Time

@@ -32,6 +32,8 @@ type ProductionScheduleSvc interface {
 	ListProductionScheduleItemPolicies(ctx context.Context, req *ListProductionScheduleItemPoliciesRequest) (*apiresource.List[apiresource.ProductionScheduleItemPolicy], *apierror.APIError)
 	ListProductionScheduleFinishedPolicies(ctx context.Context, req *ListProductionScheduleFinishedPoliciesRequest) (*apiresource.List[apiresource.ProductionScheduleFinishedPolicy], *apierror.APIError)
 	ListProductionScheduleDerivedLines(ctx context.Context, req *ListProductionScheduleDerivedLinesRequest) (*apiresource.List[apiresource.ProductionScheduleDerivedLine], *apierror.APIError)
+	ListAtRiskOrders(ctx context.Context, req *ListAtRiskOrdersRequest) (*apiresource.List[apiresource.ScheduleOrderCoverage], *apierror.APIError)
+	QuotePromiseDate(ctx context.Context, req *QuotePromiseDateRequest) (*apiresource.PromiseDateQuote, *apierror.APIError)
 	ListScheduleDeviationTypes(ctx context.Context, req *ListScheduleDeviationTypesRequest) (*apiresource.List[apiresource.ScheduleDeviationType], *apierror.APIError)
 	ListProductionScheduleDeviations(ctx context.Context, req *ListProductionScheduleDeviationsRequest) (*apiresource.List[apiresource.ProductionScheduleDeviation], *apierror.APIError)
 	CreateProductionScheduleLine(ctx context.Context, req *CreateProductionScheduleLineRequest) (*apiresource.ProductionScheduleLine, *apierror.APIError)
@@ -141,6 +143,10 @@ func previewFromProto(resp *pb.PreviewProductionScheduleResponse) *apiresource.P
 			MaxGreigeInventory:      p.MaxGreigeInventory,
 			WeeksOfCover:            p.WeeksOfCover,
 			ABCClass:                abcClassPtr(p.AbcClass),
+			FulfillmentPolicy:       constants.FulfillmentPolicy(p.FulfillmentPolicyCode),
+			PolicySource:            constants.FulfillmentPolicySource(p.PolicySourceCode),
+			FirmDemandUnits:         p.FirmDemandUnits,
+			ForecastDemandUnits:     p.ForecastDemandUnits,
 			AnnualRunHours:          p.AnnualRunHours,
 		}
 	}
@@ -189,6 +195,28 @@ func previewFromProto(resp *pb.PreviewProductionScheduleResponse) *apiresource.P
 		diagnostics.MachinesWithoutStep = d.MachinesWithoutStep
 		diagnostics.ChangeoverSlopeMinutes = d.ChangeoverSlopeMinutes
 		diagnostics.AverageInputsAdded = d.AverageInputsAdded
+		diagnostics.FirmDemandUnits = d.FirmDemandUnits
+		diagnostics.UndatedFirmOrderCount = d.UndatedFirmOrderCount
+		diagnostics.MakeToOrderItemCount = d.MakeToOrderItemCount
+
+		for _, o := range d.AtRiskOrders {
+			order := apiresource.ScheduleAtRiskOrder{
+				Object:  constants.ObjectTypeScheduleAtRiskOrder,
+				SKU:     o.Sku,
+				Units:   o.Units,
+				DueWeek: o.DueWeek,
+				Reason:  constants.ScheduleAtRiskReason(o.Reason),
+			}
+			order.SalesOrder = entityRef(o.SalesOrderId, constants.ObjectTypeSalesOrder)
+			if o.SalesOrderNumber != "" && order.SalesOrder != nil {
+				order.SalesOrder = apiresource.NewEntity(o.SalesOrderId, constants.ObjectTypeSalesOrder, nil, &o.SalesOrderNumber)
+			}
+			if o.ItemId != "" {
+				label := o.Sku
+				order.Item = apiresource.NewEntity(o.ItemId, constants.ObjectTypeItem, nil, &label)
+			}
+			diagnostics.AtRiskOrders.Data = append(diagnostics.AtRiskOrders.Data, order)
+		}
 
 		for _, o := range d.AppliedOverrides {
 			diagnostics.AppliedOverrides.Data = append(diagnostics.AppliedOverrides.Data, apiresource.ScheduleAppliedOverride{
@@ -381,6 +409,10 @@ func (m *productionScheduleSvcImpl) ListProductionScheduleItemPolicies(ctx conte
 			WeeksOfCover:            p.WeeksOfCover,
 			AnnualRunHours:          p.AnnualRunHours,
 			ABCClass:                abcClassPtrFrom(p.AbcClass),
+			FulfillmentPolicy:       constants.FulfillmentPolicy(p.FulfillmentPolicyCode),
+			PolicySource:            constants.FulfillmentPolicySource(p.PolicySourceCode),
+			FirmDemandUnits:         p.FirmDemandUnits,
+			ForecastDemandUnits:     p.ForecastDemandUnits,
 			Constraints:             policyConstraints(p.WasEoqCapped, p.WasCapacityStarved),
 			CreatedAt:               grpcutil.TimestampToTime(p.CreatedAt),
 			UpdatedAt:               grpcutil.TimestampToTime(p.UpdatedAt),
@@ -452,6 +484,7 @@ func emptyScheduleDiagnostics() apiresource.ScheduleDiagnostics {
 		CapacityStarvedSKUs: []string{},
 		ItemsWithoutRunRate: []string{},
 		AppliedOverrides:    apiresource.NewList([]apiresource.ScheduleAppliedOverride{}, apiresource.PageInfo{}),
+		AtRiskOrders:        apiresource.NewList([]apiresource.ScheduleAtRiskOrder{}, apiresource.PageInfo{}),
 	}
 }
 
@@ -468,6 +501,10 @@ var scheduleDiagnosticsKeyAliases = map[string]string{
 	"ChangeoverSlopeMinutes": "changeover_slope_minutes",
 	"AverageInputsAdded":     "average_inputs_added",
 	"AppliedOverrides":       "applied_overrides",
+	"FirmDemandUnits":        "firm_demand_units",
+	"UndatedFirmOrderCount":  "undated_firm_order_count",
+	"MakeToOrderItemCount":   "make_to_order_item_count",
+	"AtRiskOrders":           "at_risk_orders",
 }
 
 var scheduleAppliedOverrideKeyAliases = map[string]string{
@@ -508,6 +545,8 @@ func decodeScheduleDiagnostics(raw string) apiresource.ScheduleDiagnostics {
 	remapJSONKeys(m, scheduleDiagnosticsKeyAliases)
 	overrides := decodeAppliedOverrides(m["applied_overrides"])
 	delete(m, "applied_overrides")
+	atRisk := decodeAtRiskOrders(m["at_risk_orders"])
+	delete(m, "at_risk_orders")
 	normalized, err := json.Marshal(m)
 	if err != nil {
 		return out
@@ -516,6 +555,7 @@ func decodeScheduleDiagnostics(raw string) apiresource.ScheduleDiagnostics {
 		out = emptyScheduleDiagnostics()
 	}
 	out.AppliedOverrides = apiresource.NewList(overrides, apiresource.PageInfo{})
+	out.AtRiskOrders = apiresource.NewList(atRisk, apiresource.PageInfo{})
 	if out.EOQCappedSKUs == nil {
 		out.EOQCappedSKUs = []string{}
 	}
@@ -1095,4 +1135,119 @@ func (m *productionScheduleSvcImpl) PreviewReleaseProductionScheduleWeek(ctx con
 		BlockedReason:         resp.BlockedReason,
 		ExistingProductionRun: entityRefPtr(resp.ExistingProductionRunId, constants.ObjectTypeProductionRun),
 	}, nil
+}
+
+// decodeAtRiskOrders converts the stored at-risk snapshot (flat sales_order_id/item_id keys) into the typed sub-object shape the API serves.
+//
+// A version solved before the order book existed carries no at_risk_orders key, which decodes to an empty list rather than null: a plan that met every commitment and a plan from before commitments were tracked both have nothing to act on, and should read the same.
+func decodeAtRiskOrders(raw any) []apiresource.ScheduleAtRiskOrder {
+	out := []apiresource.ScheduleAtRiskOrder{}
+	entries, ok := raw.([]any)
+	if !ok {
+		return out
+	}
+	for _, entry := range entries {
+		m, ok := entry.(map[string]any)
+		if !ok {
+			continue
+		}
+		normalized, err := json.Marshal(m)
+		if err != nil {
+			continue
+		}
+		var flat struct {
+			SalesOrderID     string  `json:"sales_order_id"`
+			SalesOrderNumber string  `json:"sales_order_number"`
+			ItemID           string  `json:"item_id"`
+			SKU              string  `json:"sku"`
+			Units            float64 `json:"units"`
+			DueWeek          int32   `json:"due_week"`
+			Reason           string  `json:"reason"`
+		}
+		if err := json.Unmarshal(normalized, &flat); err != nil {
+			continue
+		}
+		order := apiresource.ScheduleAtRiskOrder{
+			Object:  constants.ObjectTypeScheduleAtRiskOrder,
+			SKU:     flat.SKU,
+			Units:   flat.Units,
+			DueWeek: flat.DueWeek,
+			Reason:  constants.ScheduleAtRiskReason(flat.Reason),
+		}
+		order.SalesOrder = entityRef(flat.SalesOrderID, constants.ObjectTypeSalesOrder)
+		if flat.SalesOrderNumber != "" && order.SalesOrder != nil {
+			order.SalesOrder = apiresource.NewEntity(flat.SalesOrderID, constants.ObjectTypeSalesOrder, nil, &flat.SalesOrderNumber)
+		}
+		if flat.ItemID != "" {
+			label := flat.SKU
+			order.Item = apiresource.NewEntity(flat.ItemID, constants.ObjectTypeItem, nil, &label)
+		}
+		out = append(out, order)
+	}
+	return out
+}
+
+func (m *productionScheduleSvcImpl) ListAtRiskOrders(ctx context.Context, req *ListAtRiskOrdersRequest) (*apiresource.List[apiresource.ScheduleOrderCoverage], *apierror.APIError) {
+	resp, apiErr := grpcutil.CallRPC(ctx, productionScheduleEpSvcTracer, "service.production_schedule.list_at_risk_orders", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListProductionScheduleAtRiskOrdersResponse, error) {
+			return m.coreClient.ListProductionScheduleAtRiskOrders(ctx, &pb.ListProductionScheduleAtRiskOrdersRequest{ProductionScheduleId: req.ScheduleID}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	items := make([]apiresource.ScheduleOrderCoverage, 0, len(resp.Orders))
+	for _, o := range resp.Orders {
+		covering := make([]apiresource.ScheduleOrderCoverageLine, 0, len(o.CoveringLines))
+		for _, l := range o.CoveringLines {
+			covering = append(covering, apiresource.ScheduleOrderCoverageLine{
+				Object:                 constants.ObjectTypeScheduleOrderCoverageLine,
+				ProductionScheduleLine: entityRef(l.ProductionScheduleLineId, constants.ObjectTypeProductionScheduleLine),
+				WeekIndex:              l.WeekIndex,
+				Machine:                entityRef(l.MachineId, constants.ObjectTypeMachine),
+				AllocatedQuantity:      l.AllocatedQuantity,
+			})
+		}
+		row := apiresource.ScheduleOrderCoverage{
+			Object:        constants.ObjectTypeScheduleOrderCoverage,
+			SalesOrder:    apiresource.NewEntity(o.SalesOrderId, constants.ObjectTypeSalesOrder, nil, &o.SalesOrderNumber),
+			Item:          apiresource.NewEntity(o.ItemId, constants.ObjectTypeItem, nil, &o.Sku),
+			SKU:           o.Sku,
+			UnitsAtRisk:   o.UnitsAtRisk,
+			DueWeek:       o.DueWeek,
+			Reason:        constants.ScheduleAtRiskReason(o.ReasonCode),
+			CoveringLines: apiresource.NewList(covering, apiresource.PageInfo{}),
+		}
+		if o.ShipByDate != nil {
+			t := grpcutil.TimestampToTime(o.ShipByDate)
+			row.ShipByDate = &t
+		}
+		items = append(items, row)
+	}
+	return apiresource.NewList(items, apiresource.PageInfo{}), nil
+}
+
+func (m *productionScheduleSvcImpl) QuotePromiseDate(ctx context.Context, req *QuotePromiseDateRequest) (*apiresource.PromiseDateQuote, *apierror.APIError) {
+	resp, apiErr := grpcutil.CallRPC(ctx, productionScheduleEpSvcTracer, "service.production_schedule.quote_promise_date", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.QuotePromiseDateResponse, error) {
+			return m.coreClient.QuotePromiseDate(ctx, &pb.QuotePromiseDateRequest{ItemId: req.ItemID, Quantity: req.Quantity}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	out := &apiresource.PromiseDateQuote{
+		Object:                    constants.ObjectTypePromiseDateQuote,
+		Item:                      entityRef(resp.ItemId, constants.ObjectTypeItem),
+		Quantity:                  resp.Quantity,
+		IsPromisable:              resp.IsPromisable,
+		EarliestWeekIndex:         resp.EarliestWeekIndex,
+		ProductionSchedule:        entityRef(resp.ProductionScheduleId, constants.ObjectTypeProductionSchedule),
+		ProductionScheduleVersion: resp.ProductionScheduleVersion,
+	}
+	if resp.EarliestShipDate != nil {
+		t := grpcutil.TimestampToTime(resp.EarliestShipDate)
+		out.EarliestShipDate = &t
+	}
+	return out, nil
 }

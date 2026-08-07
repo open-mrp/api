@@ -39,6 +39,9 @@ type SalesOrder struct {
 	FirstShipAt           *time.Time             `audit:"first_ship_at"`
 	ExpiredAt             *time.Time             `audit:"expired_at"`
 	PromisedAt            *time.Time             `audit:"promised_at"`
+	ShipByDate            *time.Time             `audit:"ship_by_date"`
+	LeadTimeDays          *int32                 `audit:"lead_time_days"`
+	LeadTimeSourceCode    *string                `audit:"lead_time_source_code"`
 	CreatedAt             time.Time
 	UpdatedAt             time.Time
 
@@ -177,6 +180,9 @@ type ListSalesOrdersParams struct {
 	SalesRepIDs      []string
 	StartDate        *string
 	EndDate          *string
+	ShipByAfter      *string
+	ShipByBefore     *string
+	PastDue          *bool
 	AccountID        string
 	BuyerAccountID   *string
 	// Includes to expand (e.g. "lines"); inline-joined fields are always present.
@@ -342,4 +348,21 @@ type SalesOrderSaleLineForIssue struct {
 	ItemID         *string
 	QuantityValue  string
 	QuantityUnitID string
+}
+
+// CustomerLeadTimeChain is what a buyer's ship-by commitment can be resolved from, both levels together.
+//
+// Both are returned rather than only the winner because the source is stamped onto the order beside the date: an order has to be able to say which rule produced its commitment, not just what the commitment was.
+type CustomerLeadTimeChain struct {
+	AccountRelationID        string
+	AccountGroupID           *string
+	CustomerLeadTimeDays     *int
+	AccountGroupLeadTimeDays *int
+}
+
+// ShipByCommitment is the resolved promise stamped onto an order at issue.
+type ShipByCommitment struct {
+	ShipByDate   time.Time
+	LeadTimeDays int
+	SourceCode   string
 }

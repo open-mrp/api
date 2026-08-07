@@ -18,6 +18,9 @@ const SampleFilterStartDateRFC3339 = sampleCreatedAtTimestamp
 // SampleFilterEndDateRFC3339 is used in OpenAPI examples for date-range query parameters.
 const SampleFilterEndDateRFC3339 = sampleUpdatedAtTimestamp
 
+// SampleFilterDateOnly is used in OpenAPI examples for query parameters that take a plain calendar date rather than an instant.
+const SampleFilterDateOnly = sampleYear + "-" + sampleMonth + "-" + sampleDay
+
 // SampleAnalyticsPeriodStart is the canonical analytics range start for OpenAPI request examples.
 var SampleAnalyticsPeriodStart = timeutil.TimestampToTime(sampleCreatedAtTimestamp)
 

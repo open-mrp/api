@@ -352,6 +352,7 @@ var (
 	// Production-schedule prefix values
 	ProductionScheduleIDPrefix                = composePrefix(VocProduction, VocSchedule)
 	ProductionScheduleLineIDPrefix            = composePrefix(VocProduction, VocSchedule, VocLine)
+	ProductionScheduleLineOrderIDPrefix       = composePrefix(VocProduction, VocSchedule, VocLine, VocOrder)
 	ProductionScheduleItemPolicyIDPrefix      = composePrefix(VocProduction, VocSchedule, VocItem, VocPolicy)
 	ProductionScheduleFinishedPolicyIDPrefix  = composePrefix(VocProduction, VocSchedule, VocFinished, VocPolicy)
 	ProductionScheduleDeviationIDPrefix       = composePrefix(VocProduction, VocSchedule, VocDeviation)

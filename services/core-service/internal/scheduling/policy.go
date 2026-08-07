@@ -34,6 +34,13 @@ type ItemPolicy struct {
 	ReorderPoint float64
 	OrderUpTo    float64
 
+	// FulfillmentPolicy is how this item is produced, and PolicySource which rule decided. A make-to-order item holds no buffer and is built only against the order book.
+	FulfillmentPolicy string
+	PolicySource      string
+	// FirmDemandUnits is what the order book already owes over the horizon; ForecastDemandUnits is what the forecast projects for the same window. Split so a planner can see which drove a campaign.
+	FirmDemandUnits     float64
+	ForecastDemandUnits float64
+
 	OnHandEchelon float64
 	// OnHandGreige is the constraint stage on its own. The echelon figure is what the build decision is made against; this is what is actually in the greige store, which a pooled total cannot be decomposed back into.
 	OnHandGreige float64
@@ -108,6 +115,13 @@ type PolicyInput struct {
 	SigmaDownstreamSum float64
 	OnHandEchelon      float64
 	OnHandGreige       float64
+
+	// FulfillmentPolicy decides whether this item carries a statistical buffer at all. Empty means make-to-stock, so a caller that has not adopted policies gets the behaviour it had before they existed.
+	FulfillmentPolicy string
+	PolicySource      string
+	// FirmDemandUnits and ForecastDemandUnits are carried through onto the policy for reporting; neither changes the arithmetic.
+	FirmDemandUnits     float64
+	ForecastDemandUnits float64
 }
 
 // ComputePolicy derives the inventory policy for one item.
@@ -127,6 +141,10 @@ func ComputePolicy(in PolicyInput, s Settings) ItemPolicy {
 	p := ItemPolicy{
 		ItemID:              in.ItemID,
 		SKU:                 in.SKU,
+		FulfillmentPolicy:   policyOrDefault(in.FulfillmentPolicy),
+		PolicySource:        in.PolicySource,
+		FirmDemandUnits:     in.FirmDemandUnits,
+		ForecastDemandUnits: in.ForecastDemandUnits,
 		AnnualDemand:        in.AnnualDemand,
 		WeeklyDemand:        in.AnnualDemand / weeksPerYear,
 		SecondsPerUnit:      in.SecondsPerUnit,
@@ -152,14 +170,24 @@ func ComputePolicy(in PolicyInput, s Settings) ItemPolicy {
 		p.ConstraintLeadTimeWeeks = s.DefaultConstraintLeadTimeWeeks
 	}
 
-	p.SafetyStockPrimary = s.ServiceLevelZ * in.SigmaWeeklyPooled * math.Sqrt(p.ConstraintLeadTimeWeeks)
-	p.SafetyStockDownstream = s.ServiceLevelZ * in.SigmaDownstreamSum * math.Sqrt(s.FinishLeadTimeWeeks)
+	if p.FulfillmentPolicy == PolicyMakeToOrder {
+		// A make-to-order item is not buffered against demand variability, because it is not built until the demand exists. Its trigger is the dated order book over the lead time, which the sweep computes per week — a statistical reorder point would be a number nothing consults.
+		//
+		// OrderUpTo is zero for the same reason: the ceiling exists to stop a cheap item being built past its usefulness, and "what was ordered" is already that ceiling.
+		p.SafetyStockPrimary = 0
+		p.SafetyStockDownstream = 0
+		p.ReorderPoint = 0
+		p.OrderUpTo = 0
+	} else {
+		p.SafetyStockPrimary = s.ServiceLevelZ * in.SigmaWeeklyPooled * math.Sqrt(p.ConstraintLeadTimeWeeks)
+		p.SafetyStockDownstream = s.ServiceLevelZ * in.SigmaDownstreamSum * math.Sqrt(s.FinishLeadTimeWeeks)
 
-	p.ReorderPoint = p.WeeklyDemand*(p.ConstraintLeadTimeWeeks+s.FinishLeadTimeWeeks) +
-		p.SafetyStockPrimary + p.SafetyStockDownstream
+		p.ReorderPoint = p.WeeklyDemand*(p.ConstraintLeadTimeWeeks+s.FinishLeadTimeWeeks) +
+			p.SafetyStockPrimary + p.SafetyStockDownstream
 
-	// The "S" of the (s,S) policy: never build past this many weeks of supply, so a cheap-to-make item cannot crowd out one that is actually short.
-	p.OrderUpTo = s.MaxWeeksSupply * p.WeeklyDemand
+		// The "S" of the (s,S) policy: never build past this many weeks of supply, so a cheap-to-make item cannot crowd out one that is actually short.
+		p.OrderUpTo = s.MaxWeeksSupply * p.WeeklyDemand
+	}
 
 	// Greige-stage holding: the buffer is always there, and a campaign lands on top of it and drains, so the stage averages half a campaign above the buffer and peaks a whole one above it. This is the greige store's size, distinct from the echelon total the build decision uses.
 	p.AverageGreigeInventory = p.SafetyStockPrimary + p.EOQUnits/2
@@ -171,6 +199,17 @@ func ComputePolicy(in PolicyInput, s Settings) ItemPolicy {
 
 	return p
 }
+
+// policyOrDefault treats an unset policy as make-to-stock, so a caller that predates policies gets exactly the behaviour it had before them.
+func policyOrDefault(policy string) string {
+	if policy == "" {
+		return PolicyMakeToStock
+	}
+	return policy
+}
+
+// IsMakeToOrder reports whether this item is built only against the order book.
+func (p ItemPolicy) IsMakeToOrder() bool { return p.FulfillmentPolicy == PolicyMakeToOrder }
 
 // ClassifyABC assigns A/B/C by cumulative share of annual run hours: A up to 80%, B to 95%, C the tail. Mutates in place and returns the slice sorted by run hours descending, which is also the order the caller wants for display.
 //

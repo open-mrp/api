@@ -18,6 +18,7 @@ type Customer struct {
 	IsParentAccount                    bool                          `audit:"is_parent_account"`
 	CommissionPolicy                   constants.CommissionPolicy    `audit:"commission_policy"`
 	FreightPolicy                      constants.FreightPolicy       `audit:"freight_policy"`
+	DefaultLeadTimeDays                *int32                        `audit:"default_lead_time_days"`
 	Note                               *string                       `audit:"note"`
 	Email                              *string                       `audit:"email"`
 	Phone                              *string                       `audit:"phone"`
@@ -169,6 +170,7 @@ type CreateCustomerParams struct {
 	IsEdiEnabled          *bool
 	CommissionPolicy      *constants.CommissionPolicy
 	FreightPolicy         *constants.FreightPolicy
+	DefaultLeadTimeDays   *int32
 	DefaultCarrierID      *string
 	DefaultServiceLevelID *string
 	DefaultPaymentTermID  *string
@@ -241,6 +243,7 @@ type UpdateCustomerParams struct {
 	IsEdiEnabled             *bool
 	CommissionPolicy         *constants.CommissionPolicy
 	FreightPolicy            *constants.FreightPolicy
+	DefaultLeadTimeDays      field.Clearable[int32]
 	DefaultCarrierID         *string
 	DefaultServiceLevelID    field.Clearable[string]
 	DefaultPaymentTermID     *string
@@ -276,4 +279,13 @@ type SyncStripeCustomerEvent struct {
 	OwnerAccountID string `json:"owner_account_id"`
 	// CustomerAccountID is the counterparty account being synced.
 	CustomerAccountID string `json:"customer_account_id"`
+}
+
+// CustomerLeadTime is the ship-by commitment a new order for one customer would be given, and the rule that produced it.
+type CustomerLeadTime struct {
+	CustomerAccountID string
+	Days              int
+	SourceCode        string
+	// AccountGroupID is set only when the group is the rule that won.
+	AccountGroupID *string
 }

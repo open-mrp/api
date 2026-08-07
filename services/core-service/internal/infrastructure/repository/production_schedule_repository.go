@@ -180,6 +180,10 @@ func (r *productionScheduleRepoImpl) CreateItemPolicies(ctx context.Context, acc
 			AbcClass:                dtNullString(p.ABCClass),
 			WasEoqCapped:            p.WasEOQCapped,
 			WasCapacityStarved:      p.WasCapacityStarved,
+			FulfillmentPolicyCode:   p.FulfillmentPolicyCode,
+			PolicySourceCode:        p.PolicySourceCode,
+			FirmDemandUnits:         floatToDecimalString(p.FirmDemandUnits),
+			ForecastDemandUnits:     floatToDecimalString(p.ForecastDemandUnits),
 		})
 		if apiErr := db.MapSQLError(err); apiErr != nil {
 			return tracing.Trace(span, apiErr)
@@ -405,6 +409,10 @@ func (r *productionScheduleRepoImpl) ListItemPolicies(ctx context.Context, accou
 			AnnualRunHours:          decimalToFloat64(row.AnnualRunHours),
 			WasEOQCapped:            row.WasEoqCapped,
 			WasCapacityStarved:      row.WasCapacityStarved,
+			FulfillmentPolicyCode:   row.FulfillmentPolicyCode,
+			PolicySourceCode:        row.PolicySourceCode,
+			FirmDemandUnits:         decimalToFloat64(row.FirmDemandUnits),
+			ForecastDemandUnits:     decimalToFloat64(row.ForecastDemandUnits),
 			CreatedAt:               row.CreatedAt,
 			UpdatedAt:               row.UpdatedAt,
 		}
@@ -659,4 +667,75 @@ func unmarshalProjection(raw any) []float64 {
 		return nil
 	}
 	return out
+}
+
+// ReplaceLineOrders rewrites a version's campaign-to-order links.
+//
+// Wholesale rather than incremental: the links are a pure function of the plan and the order book, so a partial update could leave a campaign earmarked for an order that has since shipped.
+func (r *productionScheduleRepoImpl) ReplaceLineOrders(ctx context.Context, accountID, scheduleID string, links []domain.CreateLineOrderParams) *apierror.APIError {
+	ctx, span := productionScheduleRepoTracer.Start(ctx, "repository.production_schedule.replace_line_orders")
+	defer span.End()
+
+	if err := r.queries.DeleteProductionScheduleLineOrders(ctx, sqlc.DeleteProductionScheduleLineOrdersParams{
+		AccountID:            accountID,
+		ProductionScheduleID: scheduleID,
+	}); err != nil {
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+	}
+
+	for _, link := range links {
+		linkID, apiErr := id.GenID(id.ProductionScheduleLineOrderIDPrefix, nil)
+		if apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+		err := r.queries.CreateProductionScheduleLineOrder(ctx, sqlc.CreateProductionScheduleLineOrderParams{
+			ID:                       linkID,
+			AccountID:                accountID,
+			ProductionScheduleID:     scheduleID,
+			ProductionScheduleLineID: link.ProductionScheduleLineID,
+			SalesOrderID:             link.SalesOrderID,
+			SalesOrderLineID:         link.SalesOrderLineID,
+			AllocatedQuantity:        floatToDecimalString(link.AllocatedQuantity),
+		})
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+	}
+	return nil
+}
+
+func (r *productionScheduleRepoImpl) ListLineOrders(ctx context.Context, accountID, scheduleID string) ([]*domain.ProductionScheduleLineOrder, *apierror.APIError) {
+	ctx, span := productionScheduleRepoTracer.Start(ctx, "repository.production_schedule.list_line_orders")
+	defer span.End()
+
+	rows, err := r.queries.ListProductionScheduleLineOrders(ctx, sqlc.ListProductionScheduleLineOrdersParams{
+		AccountID:            accountID,
+		ProductionScheduleID: scheduleID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	out := make([]*domain.ProductionScheduleLineOrder, 0, len(rows))
+	for _, row := range rows {
+		link := &domain.ProductionScheduleLineOrder{
+			ID:                       row.ID,
+			ProductionScheduleLineID: row.ProductionScheduleLineID,
+			SalesOrderID:             row.SalesOrderID,
+			SalesOrderNumber:         row.SalesOrderNumber,
+			SalesOrderLineID:         row.SalesOrderLineID,
+			AllocatedQuantity:        decimalToFloat64(row.AllocatedQuantity),
+			ItemID:                   row.ItemID,
+			SKU:                      row.Sku,
+			WeekIndex:                row.WeekIndex,
+			MachineID:                row.MachineID,
+		}
+		if row.ShipByDate.Valid {
+			link.ShipByDate = &row.ShipByDate.Time
+		}
+		out = append(out, link)
+	}
+	return out, nil
 }

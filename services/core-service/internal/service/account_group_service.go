@@ -269,6 +269,7 @@ func (s *accountGroupSvcImpl) UpdateAccountGroup(ctx context.Context, params dom
 			}
 
 			params.Description = params.Description.BackfillUnsetPtr(old.Description)
+			params.DefaultLeadTimeDays = params.DefaultLeadTimeDays.BackfillUnsetPtr(old.DefaultLeadTimeDays)
 
 			if params.Name != nil {
 				exists, apiErr := txRepo.ExistsByName(txCtx, params.AccountID, *params.Name, &params.AccountGroupID)

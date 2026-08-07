@@ -12,6 +12,7 @@ import (
 	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/db"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 	idgen "github.com/augno/api/shared/id"
 	"github.com/augno/api/shared/pagination"
 	"github.com/augno/api/shared/tracing"
@@ -53,19 +54,20 @@ func mapProductLineForwardRow(row sqlc.ListProductLinesForwardRow) *domain.Produ
 	lotID, lotValue, lotUnitID := lotFieldsOf(row.DefaultLotID, row.DefaultLotValue, row.DefaultLotUnitID)
 
 	return &domain.ProductLineFull{
-		ID:               row.ID,
-		Name:             row.Name,
-		Description:      description,
-		Notes:            notes,
-		CommissionPolicy: constants.CommissionPolicyFromBool(row.IsCommissionExempt),
-		FreightPolicy:    constants.FreightPolicyFromBool(row.IsFreightExempt),
-		UnitGroupID:      row.UnitGroupID,
-		DefaultLotID:     lotID,
-		DefaultLotValue:  lotValue,
-		DefaultLotUnitID: lotUnitID,
-		AccountID:        accountID,
-		CreatedAt:        row.CreatedAt,
-		UpdatedAt:        row.UpdatedAt,
+		ID:                    row.ID,
+		Name:                  row.Name,
+		Description:           description,
+		Notes:                 notes,
+		CommissionPolicy:      constants.CommissionPolicyFromBool(row.IsCommissionExempt),
+		FreightPolicy:         constants.FreightPolicyFromBool(row.IsFreightExempt),
+		UnitGroupID:           row.UnitGroupID,
+		DefaultLotID:          lotID,
+		DefaultLotValue:       lotValue,
+		DefaultLotUnitID:      lotUnitID,
+		FulfillmentPolicyCode: nullStringToPtr(row.FulfillmentPolicyCode),
+		AccountID:             accountID,
+		CreatedAt:             row.CreatedAt,
+		UpdatedAt:             row.UpdatedAt,
 	}
 }
 
@@ -94,19 +96,20 @@ func mapProductLineBackwardRow(row sqlc.ListProductLinesBackwardRow) *domain.Pro
 	lotID, lotValue, lotUnitID := lotFieldsOf(row.DefaultLotID, row.DefaultLotValue, row.DefaultLotUnitID)
 
 	return &domain.ProductLineFull{
-		ID:               row.ID,
-		Name:             row.Name,
-		Description:      description,
-		Notes:            notes,
-		CommissionPolicy: constants.CommissionPolicyFromBool(row.IsCommissionExempt),
-		FreightPolicy:    constants.FreightPolicyFromBool(row.IsFreightExempt),
-		UnitGroupID:      row.UnitGroupID,
-		DefaultLotID:     lotID,
-		DefaultLotValue:  lotValue,
-		DefaultLotUnitID: lotUnitID,
-		AccountID:        accountID,
-		CreatedAt:        row.CreatedAt,
-		UpdatedAt:        row.UpdatedAt,
+		ID:                    row.ID,
+		Name:                  row.Name,
+		Description:           description,
+		Notes:                 notes,
+		CommissionPolicy:      constants.CommissionPolicyFromBool(row.IsCommissionExempt),
+		FreightPolicy:         constants.FreightPolicyFromBool(row.IsFreightExempt),
+		UnitGroupID:           row.UnitGroupID,
+		DefaultLotID:          lotID,
+		DefaultLotValue:       lotValue,
+		DefaultLotUnitID:      lotUnitID,
+		FulfillmentPolicyCode: nullStringToPtr(row.FulfillmentPolicyCode),
+		AccountID:             accountID,
+		CreatedAt:             row.CreatedAt,
+		UpdatedAt:             row.UpdatedAt,
 	}
 }
 
@@ -126,19 +129,20 @@ func mapGetProductLineRow(row sqlc.GetProductLineRow) *domain.ProductLineFull {
 	lotID, lotValue, lotUnitID := lotFieldsOf(row.DefaultLotID, row.DefaultLotValue, row.DefaultLotUnitID)
 
 	return &domain.ProductLineFull{
-		ID:               row.ID,
-		Name:             row.Name,
-		Description:      description,
-		Notes:            notes,
-		CommissionPolicy: constants.CommissionPolicyFromBool(row.IsCommissionExempt),
-		FreightPolicy:    constants.FreightPolicyFromBool(row.IsFreightExempt),
-		UnitGroupID:      row.UnitGroupID,
-		DefaultLotID:     lotID,
-		DefaultLotValue:  lotValue,
-		DefaultLotUnitID: lotUnitID,
-		AccountID:        accountID,
-		CreatedAt:        row.CreatedAt,
-		UpdatedAt:        row.UpdatedAt,
+		ID:                    row.ID,
+		Name:                  row.Name,
+		Description:           description,
+		Notes:                 notes,
+		CommissionPolicy:      constants.CommissionPolicyFromBool(row.IsCommissionExempt),
+		FreightPolicy:         constants.FreightPolicyFromBool(row.IsFreightExempt),
+		UnitGroupID:           row.UnitGroupID,
+		DefaultLotID:          lotID,
+		DefaultLotValue:       lotValue,
+		DefaultLotUnitID:      lotUnitID,
+		FulfillmentPolicyCode: nullStringToPtr(row.FulfillmentPolicyCode),
+		AccountID:             accountID,
+		CreatedAt:             row.CreatedAt,
+		UpdatedAt:             row.UpdatedAt,
 	}
 }
 
@@ -296,13 +300,14 @@ func (r *productLineRepoImpl) Create(ctx context.Context, id string, params doma
 	}
 
 	err := r.queries.InsertProductLine(ctx, sqlc.InsertProductLineParams{
-		ID:                 id,
-		Name:               params.Name,
-		IsCommissionExempt: params.CommissionPolicy.ToBool(),
-		IsFreightExempt:    params.FreightPolicy.ToBool(),
-		UnitGroupID:        params.UnitGroupID,
-		DefaultLotID:       lotID,
-		AccountID:          gosql.NullString{String: params.AccountID, Valid: true},
+		ID:                    id,
+		Name:                  params.Name,
+		IsCommissionExempt:    params.CommissionPolicy.ToBool(),
+		IsFreightExempt:       params.FreightPolicy.ToBool(),
+		UnitGroupID:           params.UnitGroupID,
+		DefaultLotID:          lotID,
+		FulfillmentPolicyCode: toNullString(params.FulfillmentPolicyCode),
+		AccountID:             gosql.NullString{String: params.AccountID, Valid: true},
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -365,14 +370,16 @@ func (r *productLineRepoImpl) Update(ctx context.Context, params domain.UpdatePr
 	}
 
 	result, err := r.queries.UpdateProductLine(ctx, sqlc.UpdateProductLineParams{
-		ID:                 params.ProductLineID,
-		AccountID:          gosql.NullString{String: params.AccountID, Valid: true},
-		Name:               toNullString(params.Name),
-		IsCommissionExempt: commissionPolicyToNullBool(params.CommissionPolicy),
-		IsFreightExempt:    freightPolicyToNullBool(params.FreightPolicy),
-		UnitGroupID:        toNullString(params.UnitGroupID),
-		DefaultLotID:       lotID,
-		ClearDefaultLot:    params.ClearDefaultLot,
+		ID:                     params.ProductLineID,
+		AccountID:              gosql.NullString{String: params.AccountID, Valid: true},
+		Name:                   toNullString(params.Name),
+		IsCommissionExempt:     commissionPolicyToNullBool(params.CommissionPolicy),
+		IsFreightExempt:        freightPolicyToNullBool(params.FreightPolicy),
+		UnitGroupID:            toNullString(params.UnitGroupID),
+		DefaultLotID:           lotID,
+		ClearDefaultLot:        params.ClearDefaultLot,
+		FulfillmentPolicyCode:  field.StringToNullString(params.FulfillmentPolicyCode),
+		ClearFulfillmentPolicy: params.FulfillmentPolicyCode.IsClear(),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -583,19 +590,20 @@ func mapGetProductLinesByIDsScopedRow(row sqlc.GetProductLinesByIDsScopedRow) *d
 	lotID, lotValue, lotUnitID := lotFieldsOf(row.DefaultLotID, row.DefaultLotValue, row.DefaultLotUnitID)
 
 	return &domain.ProductLineFull{
-		ID:               row.ID,
-		Name:             row.Name,
-		Description:      description,
-		Notes:            notes,
-		CommissionPolicy: constants.CommissionPolicyFromBool(row.IsCommissionExempt),
-		FreightPolicy:    constants.FreightPolicyFromBool(row.IsFreightExempt),
-		UnitGroupID:      row.UnitGroupID,
-		DefaultLotID:     lotID,
-		DefaultLotValue:  lotValue,
-		DefaultLotUnitID: lotUnitID,
-		AccountID:        accountID,
-		CreatedAt:        row.CreatedAt,
-		UpdatedAt:        row.UpdatedAt,
+		ID:                    row.ID,
+		Name:                  row.Name,
+		Description:           description,
+		Notes:                 notes,
+		CommissionPolicy:      constants.CommissionPolicyFromBool(row.IsCommissionExempt),
+		FreightPolicy:         constants.FreightPolicyFromBool(row.IsFreightExempt),
+		UnitGroupID:           row.UnitGroupID,
+		DefaultLotID:          lotID,
+		DefaultLotValue:       lotValue,
+		DefaultLotUnitID:      lotUnitID,
+		FulfillmentPolicyCode: nullStringToPtr(row.FulfillmentPolicyCode),
+		AccountID:             accountID,
+		CreatedAt:             row.CreatedAt,
+		UpdatedAt:             row.UpdatedAt,
 	}
 }
 

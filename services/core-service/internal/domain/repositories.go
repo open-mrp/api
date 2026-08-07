@@ -920,6 +920,20 @@ type ProductionScheduleRepo interface {
 
 	// Merchant-editable planning assumptions.
 	GetSettings(ctx context.Context, accountID string) (*ProductionScheduleSettings, *apierror.APIError)
+
+	// ReplaceLineOrders rewrites which campaigns are building which orders for one version.
+	ReplaceLineOrders(ctx context.Context, accountID, scheduleID string, links []CreateLineOrderParams) *apierror.APIError
+	// ListLineOrders returns which campaigns are building which orders for one version.
+	ListLineOrders(ctx context.Context, accountID, scheduleID string) ([]*ProductionScheduleLineOrder, *apierror.APIError)
+
+	// ListItemSettings returns every per-item planning override in the account.
+	ListItemSettings(ctx context.Context, accountID string) ([]*ProductionScheduleItemPlanningSetting, *apierror.APIError)
+	// GetItemSetting returns one item's override, or nil when it has none.
+	GetItemSetting(ctx context.Context, accountID, itemID string) (*ProductionScheduleItemPlanningSetting, *apierror.APIError)
+	// UpsertItemSetting writes one item's override.
+	UpsertItemSetting(ctx context.Context, params UpsertItemSettingParams) *apierror.APIError
+	// DeleteItemSetting removes one item's override; false when there was none.
+	DeleteItemSetting(ctx context.Context, accountID, itemID string) (bool, *apierror.APIError)
 	UpsertSettings(ctx context.Context, settings *ProductionScheduleSettings) *apierror.APIError
 	ListResourceSettings(ctx context.Context, accountID string) ([]*ProductionScheduleResourceSetting, *apierror.APIError)
 	UpsertResourceSetting(ctx context.Context, id string, params UpsertResourceSettingParams) *apierror.APIError
@@ -987,6 +1001,21 @@ type ProductionScheduleInputRepo interface {
 	// GetPooledOrderDemandByProduct returns monthly sold quantity per product inside the window.
 	GetPooledOrderDemandByProduct(ctx context.Context, params GetPooledOrderDemandParams) ([]PooledMonthlyDemandRow, *apierror.APIError)
 
+	// ListDeliveryOutcomes returns every order whose commitment came due inside the window, with what happened to it.
+	ListDeliveryOutcomes(ctx context.Context, accountID string, start, end time.Time) ([]scheduling.DeliveryOutcome, *apierror.APIError)
+
+	// CountUncommittedOrders counts issued orders in the window carrying no ship-by date.
+	CountUncommittedOrders(ctx context.Context, accountID string, start, end time.Time) (int, *apierror.APIError)
+
+	// GetOpenOrderRequirements returns the outstanding quantity on every issued, unshipped line for the given products.
+	GetOpenOrderRequirements(ctx context.Context, accountID string, productIDs []string) ([]OpenOrderRequirementRow, *apierror.APIError)
+
+	// GetProductDemandByCustomer returns monthly sold quantity per product and buyer, for measuring customer concentration.
+	GetProductDemandByCustomer(ctx context.Context, params GetPooledOrderDemandParams) ([]CustomerDemandRow, *apierror.APIError)
+
+	// GetCustomerFulfillmentProfiles returns every customer's resolved lead time and stated policy.
+	GetCustomerFulfillmentProfiles(ctx context.Context, accountID string, accountDefaultLeadTimeDays int) ([]CustomerFulfillmentProfile, *apierror.APIError)
+
 	// GetActiveDemandOverrides returns the demand overrides in force at the planning date.
 	GetActiveDemandOverrides(ctx context.Context, accountID string, asOf time.Time) ([]scheduling.DemandOverride, *apierror.APIError)
 
@@ -995,6 +1024,15 @@ type ProductionScheduleInputRepo interface {
 
 	// ListProductLineLotDefaults returns every product line in the account that has a lot convention.
 	ListProductLineLotDefaults(ctx context.Context, accountID string) ([]scheduling.ProductLineLot, *apierror.APIError)
+
+	// ListProductLineFulfillmentPolicies returns every product line in the account that sets a fulfillment policy, keyed by line id.
+	ListProductLineFulfillmentPolicies(ctx context.Context, accountID string) (map[string]string, *apierror.APIError)
+
+	// GetAllSellableProducts returns every product in the account, which is the candidate set for a fulfillment recommendation.
+	GetAllSellableProducts(ctx context.Context, accountID string) ([]SellableProductRow, *apierror.APIError)
+
+	// GetItemUnitCosts returns each item's unit cost, keyed by item id.
+	GetItemUnitCosts(ctx context.Context, accountID string, itemIDs []string) (map[string]float64, *apierror.APIError)
 
 	// ListItemProductLines maps items to the product line they sell under.
 	ListItemProductLines(ctx context.Context, accountID string, itemIDs []string) ([]ItemProductLineRow, *apierror.APIError)
@@ -1131,6 +1169,8 @@ type SalesOrderRepo interface {
 	Update(ctx context.Context, params UpdateSalesOrderParams) (*SalesOrder, *apierror.APIError)
 	Delete(ctx context.Context, accountID, salesOrderID string) *apierror.APIError
 	UpdateStatus(ctx context.Context, accountID, salesOrderID, statusCode string, issuedAt, completedAt *time.Time) *apierror.APIError
+	GetCustomerLeadTimeChain(ctx context.Context, accountID, buyerAccountID string) (*CustomerLeadTimeChain, *apierror.APIError)
+	SetShipByCommitment(ctx context.Context, accountID, salesOrderID string, commitment *ShipByCommitment) *apierror.APIError
 	IsOrderForCustomer(ctx context.Context, salesOrderID, buyerAccountID string) (bool, *apierror.APIError)
 	AreAllLineProductLinesCommissionExempt(ctx context.Context, productIDs []string) (bool, *apierror.APIError)
 	GetAccountOriginAddress(ctx context.Context, accountID string) (*ShippingAddress, *apierror.APIError)

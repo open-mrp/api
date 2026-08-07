@@ -288,3 +288,103 @@ func TestParity_PlanMatchesScript(t *testing.T) {
 		t.Errorf("%s week %d: Go planned %v units, script planned nothing", k.sku, k.week, c.Units)
 	}
 }
+
+// levelFixtureItems builds the fixture's levelling items, optionally attaching an order book.
+func levelFixtureItems(in *parityInput, s Settings, firm func(itemID string) []float64) []LevellingItem {
+	items := make([]LevellingItem, 0, len(in.Items))
+	for _, item := range in.Items {
+		eligible := make(map[string]bool, len(item.EligibleMachineIDs))
+		for _, id := range item.EligibleMachineIDs {
+			eligible[id] = true
+		}
+		lotUnits := item.LotUnits
+		if lotUnits <= 0 {
+			lotUnits = s.DefaultLotUnits
+		}
+		li := LevellingItem{
+			Policy: ComputePolicy(PolicyInput{
+				ItemID:                item.ItemID,
+				SKU:                   item.SKU,
+				AnnualDemand:          item.AnnualDemand,
+				SecondsPerUnit:        item.SecondsPerUnit,
+				UnitCost:              item.UnitCost,
+				OverheadRate:          item.ChangeoverRate - s.ChangeoverLaborRate,
+				MeasuredLeadTimeWeeks: item.MeasuredLeadTimeWeeks,
+				SigmaWeeklyPooled:     item.SigmaWeeklyPooled,
+				SigmaDownstreamSum:    item.SigmaDownstreamSum,
+				OnHandEchelon:         item.OnHandEchelon,
+			}, s),
+			EligibleMachineID: eligible,
+			LotUnits:          lotUnits,
+		}
+		if firm != nil {
+			li.FirmByWeek = firm(item.ItemID)
+		}
+		items = append(items, li)
+	}
+	return items
+}
+
+func fixtureMachines(in *parityInput) []Machine {
+	machines := make([]Machine, len(in.Machines))
+	for i, m := range in.Machines {
+		machines[i] = Machine{ID: m.ID, Name: m.Name}
+	}
+	return machines
+}
+
+// An account with nothing on order must get exactly the plan it got before the order book was ever read.
+//
+// TestParity_PlanMatchesScript is what proves equivalence to the pre-firm behaviour — it compares against a fixture captured from the original script, and it still builds its items without an order book. This pins the other half: that an order book which happens to be empty is indistinguishable from no order book at all, so the feature cannot perturb a forecast-only tenant.
+func TestParity_EmptyOrderBookLeavesThePlanByteIdentical(t *testing.T) {
+	in, _ := loadParityFixture(t)
+	s := settingsFromFixture(in)
+
+	without := Level(levelFixtureItems(in, s, nil), fixtureMachines(in), s, nil)
+	withEmpty := Level(levelFixtureItems(in, s, func(string) []float64 {
+		return make([]float64, s.HorizonWeeks)
+	}), fixtureMachines(in), s, nil)
+
+	wantJSON, err := json.Marshal(without)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	gotJSON, err := json.Marshal(withEmpty)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	if string(wantJSON) != string(gotJSON) {
+		t.Fatal("an all-zero order book changed the plan; forecast-only tenants must be untouched by firm demand")
+	}
+	if len(without.Campaigns) == 0 {
+		t.Fatal("fixture produced no campaigns, so this proves nothing")
+	}
+}
+
+// The other side of the guarantee: a real order book has to actually move the plan, or the phase shipped a no-op.
+//
+// A large order dated inside the horizon consumes the item faster than its forecast, so its projected position falls sooner and the sweep replenishes it earlier or more often.
+func TestParity_OrderBookPullsProductionForward(t *testing.T) {
+	in, _ := loadParityFixture(t)
+	s := settingsFromFixture(in)
+
+	// Load the whole book onto the first fixture item, in the middle of the horizon.
+	target := in.Items[0].ItemID
+	week := s.HorizonWeeks / 2
+
+	baseline := Level(levelFixtureItems(in, s, nil), fixtureMachines(in), s, nil)
+	loaded := Level(levelFixtureItems(in, s, func(itemID string) []float64 {
+		weeks := make([]float64, s.HorizonWeeks)
+		if itemID == target {
+			// An order an order of magnitude above the weekly rate, so the effect cannot be noise.
+			weeks[week] = in.Items[0].AnnualDemand
+		}
+		return weeks
+	}), fixtureMachines(in), s, nil)
+
+	if baseline.ProjectedOnHand[target][s.HorizonWeeks-1] <= loaded.ProjectedOnHand[target][s.HorizonWeeks-1] {
+		t.Fatalf("a large firm order left the projected position no lower: baseline %v, loaded %v",
+			baseline.ProjectedOnHand[target][s.HorizonWeeks-1],
+			loaded.ProjectedOnHand[target][s.HorizonWeeks-1])
+	}
+}

@@ -8,6 +8,7 @@ import (
 	"github.com/augno/api/shared/contracts"
 	"github.com/augno/api/shared/field"
 	pb "github.com/augno/api/shared/proto/core"
+	"github.com/augno/api/shared/safeconv"
 
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -79,6 +80,7 @@ func customerToProto(c *domain.Customer) *pb.CustomerProto {
 		ShipToAddress:         customerAddressToProto(c.ShipToAddress),
 		CreatedAt:             timestamppb.New(c.CreatedAt),
 		UpdatedAt:             timestamppb.New(c.UpdatedAt),
+		DefaultLeadTimeDays:   c.DefaultLeadTimeDays,
 	}
 
 	if c.CarrierBillingType != nil {
@@ -389,6 +391,7 @@ func (h *gRPCHandler) CreateCustomer(ctx context.Context, req *pb.CreateCustomer
 		IsEdiEnabled:          req.IsEdiEnabled,
 		CommissionPolicy:      optStringToCommissionPolicy(req.CommissionPolicy),
 		FreightPolicy:         optStringToFreightPolicy(req.FreightPolicy),
+		DefaultLeadTimeDays:   req.DefaultLeadTimeDays,
 		DefaultCarrierID:      req.DefaultCarrierId,
 		DefaultServiceLevelID: req.DefaultServiceLevelId,
 		DefaultPaymentTermID:  req.DefaultPaymentTermId,
@@ -441,6 +444,7 @@ func (h *gRPCHandler) UpdateCustomer(ctx context.Context, req *pb.UpdateCustomer
 		IsEdiEnabled:             req.IsEdiEnabled,
 		CommissionPolicy:         optStringToCommissionPolicy(req.CommissionPolicy),
 		FreightPolicy:            optStringToFreightPolicy(req.FreightPolicy),
+		DefaultLeadTimeDays:      field.Int32ClearableFromProto(req.DefaultLeadTimeDays),
 		DefaultCarrierID:         req.DefaultCarrierId,
 		DefaultServiceLevelID:    field.StringClearableFromProto(req.DefaultServiceLevelId),
 		DefaultPaymentTermID:     req.DefaultPaymentTermId,
@@ -506,6 +510,22 @@ func frequentlyOrderedProductToProto(p *domain.FrequentlyOrderedProduct) *pb.Fre
 		UnitAbbreviation: p.UnitAbbreviation,
 		OrderCount:       p.OrderCount,
 	}
+}
+
+func (h *gRPCHandler) GetCustomerLeadTime(ctx context.Context, req *pb.GetCustomerLeadTimeRequest) (*pb.GetCustomerLeadTimeResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	leadTime, apiErr := h.customerSvc.GetCustomerLeadTime(ctx, req.Id)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	return &pb.GetCustomerLeadTimeResponse{
+		CustomerId:     leadTime.CustomerAccountID,
+		Days:           safeconv.IntToInt32(leadTime.Days),
+		Source:         leadTime.SourceCode,
+		AccountGroupId: leadTime.AccountGroupID,
+	}, nil
 }
 
 func (h *gRPCHandler) GetFrequentlyOrderedProducts(ctx context.Context, req *pb.GetFrequentlyOrderedProductsRequest) (*pb.GetFrequentlyOrderedProductsResponse, error) {

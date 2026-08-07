@@ -476,6 +476,8 @@ message ProductLineInfo {
   // The lot products in this line are made in, as a quantity: the number and its unit are
   // one value, since 60 pairs and 60 eaches are different lots.
   optional ProductLineDefaultLotInfo default_lot = 12;
+  // How products in this line are produced when they do not say for themselves.
+  optional string fulfillment_policy_code = 13;
 }
 
 message ProductLineDefaultLotInfo {
@@ -513,6 +515,7 @@ message CreateProductLineRequest {
   string freight_policy = 4;
   repeated string includes = 5;
   optional QuantityPatch default_lot = 6;
+  optional string fulfillment_policy_code = 7;
 }
 message CreateProductLineResponse {
   ProductLineInfo product_line = 1;
@@ -525,6 +528,7 @@ message UpdateProductLineRequest {
   optional string unit_group_id = 5;
   repeated string includes = 6;
   optional QuantityPatch default_lot = 7;
+  optional StringPatch fulfillment_policy_code = 8;
 }
 message UpdateProductLineResponse {
   ProductLineInfo product_line = 1;

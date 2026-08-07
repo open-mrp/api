@@ -108,6 +108,9 @@ func (m *salesOrderSvcImpl) ListSalesOrders(ctx context.Context, req *ListSalesO
 		SalesRepIds:      req.SalesRepIDs,
 		StartDate:        req.StartDate,
 		EndDate:          req.EndDate,
+		ShipByAfter:      req.ShipByAfter,
+		ShipByBefore:     req.ShipByBefore,
+		PastDue:          req.PastDue,
 		// The list returns the full sales-order resource; ask the backend to
 		// expand only what the caller requested (inline fields always present).
 		Includes: withLinesForTotals(resourcekit.FilterIncludes(ctx, salesOrderIncludes...)),
@@ -659,6 +662,15 @@ func salesOrderDetailFromProto(info *pb.SalesOrderInfo) apiresource.SalesOrder {
 	if info.PromisedAt != nil {
 		t := grpcutil.TimestampToTime(info.PromisedAt)
 		d.PromisedAt = &t
+	}
+	if info.ShipByDate != nil {
+		t := grpcutil.TimestampToTime(info.ShipByDate)
+		d.ShipByDate = &t
+	}
+	d.LeadTimeDays = info.LeadTimeDays
+	if info.LeadTimeSourceCode != nil {
+		source := constants.LeadTimeSource(*info.LeadTimeSourceCode)
+		d.LeadTimeSource = &source
 	}
 
 	return d

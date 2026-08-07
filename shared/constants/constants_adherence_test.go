@@ -257,6 +257,13 @@ var typeRegistry = map[string]any{
 	"JobStatus":                       JobStatus(""),
 	"JobType":                         JobType(""),
 	"JobResultAction":                 JobResultAction(""),
+	"LeadTimeSource":                  LeadTimeSource(""),
+	"ScheduleAtRiskReason":            ScheduleAtRiskReason(""),
+	"FulfillmentPolicy":               FulfillmentPolicy(""),
+	"FulfillmentPolicySource":         FulfillmentPolicySource(""),
+	"ScheduleLineReason":              ScheduleLineReason(""),
+	"FulfillmentRecommendationReason": FulfillmentRecommendationReason(""),
+	"DeliveryGranularity":             DeliveryGranularity(""),
 }
 
 func TestAdherence_AllEnumTypesHaveIsValid(t *testing.T) {

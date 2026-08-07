@@ -113,3 +113,26 @@ func TimestampClearableFromProto(p *pb.TimestampPatch) Clearable[time.Time] {
 	}
 	return Set(p.Value.AsTime())
 }
+
+// Int32ClearableToProto converts an int32 clearable field to protobuf. Returns nil when unset.
+func Int32ClearableToProto(f Clearable[int32]) *pb.Int32Patch {
+	if f.IsUnset() {
+		return nil
+	}
+	if f.IsClear() {
+		return &pb.Int32Patch{Clear: true}
+	}
+	val, _ := f.Value()
+	return &pb.Int32Patch{Clear: false, Value: &val}
+}
+
+// Int32ClearableFromProto converts an int32 patch back to a clearable field.
+func Int32ClearableFromProto(p *pb.Int32Patch) Clearable[int32] {
+	if p == nil {
+		return Unset[int32]()
+	}
+	if p.Clear || p.Value == nil {
+		return Clear[int32]()
+	}
+	return Set(*p.Value)
+}

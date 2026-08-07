@@ -71,16 +71,18 @@ type AccountBranding struct {
 }
 
 type AccountGroup struct {
-	ID                   string
-	OwnerAccountID       string
-	Name                 string
-	Description          sql.NullString
-	CommissionStatusCode string
-	FreightStatusCode    string
-	AccountGroupTypeCode string
-	RegistrationFlowID   sql.NullString
-	UpdatedAt            time.Time
-	CreatedAt            time.Time
+	ID                    string
+	OwnerAccountID        string
+	Name                  string
+	Description           sql.NullString
+	CommissionStatusCode  string
+	FreightStatusCode     string
+	AccountGroupTypeCode  string
+	RegistrationFlowID    sql.NullString
+	UpdatedAt             time.Time
+	CreatedAt             time.Time
+	DefaultLeadTimeDays   sql.NullInt32
+	FulfillmentPolicyCode sql.NullString
 }
 
 type AccountGroupProductLine struct {
@@ -194,40 +196,48 @@ type AccountPriceItemCategory struct {
 }
 
 type AccountProductionScheduleSetting struct {
-	ID                             string
-	AccountID                      string
-	ConstraintDepartmentID         sql.NullString
-	PlanningHorizonWeeks           int32
-	FrozenWeeks                    int32
-	WeekStartDay                   int32
-	DemandWindowMonths             int32
-	ForecastHistoryMonths          int32
-	ForecastMonths                 int32
-	DemandBasisCode                string
-	ForecastZ                      string
-	ChangeoverAvgMinutes           string
-	ChangeoverMinMinutes           string
-	ChangeoverMaxMinutes           string
-	ChangeoverLaborRate            string
-	HoldingRatePct                 string
-	ServiceLevelZ                  string
-	FinishLeadTimeWeeks            string
-	DefaultConstraintLeadTimeWeeks string
-	MaxWeeksSupply                 string
-	MaxFlowDepth                   int32
-	ShiftsPerDay                   int32
-	HoursPerShift                  string
-	WorkDaysPerWeek                int32
-	WeeksPerYear                   int32
-	CapacityHeadroomPct            string
-	DefaultLotUnits                string
-	IsEnabled                      bool
-	GenerationCron                 sql.NullString
-	GenerationTimezone             string
-	AutoPublish                    bool
-	LastGeneratedAt                sql.NullTime
-	CreatedAt                      time.Time
-	UpdatedAt                      time.Time
+	ID                              string
+	AccountID                       string
+	ConstraintDepartmentID          sql.NullString
+	PlanningHorizonWeeks            int32
+	FrozenWeeks                     int32
+	WeekStartDay                    int32
+	DemandWindowMonths              int32
+	ForecastHistoryMonths           int32
+	ForecastMonths                  int32
+	DemandBasisCode                 string
+	ForecastZ                       string
+	ChangeoverAvgMinutes            string
+	ChangeoverMinMinutes            string
+	ChangeoverMaxMinutes            string
+	ChangeoverLaborRate             string
+	HoldingRatePct                  string
+	ServiceLevelZ                   string
+	FinishLeadTimeWeeks             string
+	DefaultConstraintLeadTimeWeeks  string
+	MaxWeeksSupply                  string
+	MaxFlowDepth                    int32
+	ShiftsPerDay                    int32
+	HoursPerShift                   string
+	WorkDaysPerWeek                 int32
+	WeeksPerYear                    int32
+	CapacityHeadroomPct             string
+	DefaultLotUnits                 string
+	IsEnabled                       bool
+	GenerationCron                  sql.NullString
+	GenerationTimezone              string
+	AutoPublish                     bool
+	LastGeneratedAt                 sql.NullTime
+	CreatedAt                       time.Time
+	UpdatedAt                       time.Time
+	DefaultCustomerLeadTimeDays     int32
+	DefaultFulfillmentPolicyCode    string
+	RecommendationAdiThreshold      string
+	RecommendationConcentrationPct  string
+	RecommendationCv2Threshold      string
+	RecommendationDormantMonths     int32
+	RecommendationHighValueUnitCost string
+	RecommendationSlowMoverCogs     string
 }
 
 type AccountRelation struct {
@@ -260,6 +270,8 @@ type AccountRelation struct {
 	CarrierBillingType       sql.NullString
 	CarrierBillingAccount    sql.NullString
 	CreditLimitID            sql.NullString
+	DefaultLeadTimeDays      sql.NullInt32
+	FulfillmentPolicyCode    sql.NullString
 }
 
 type AccountRelationNotificationPreference struct {
@@ -784,6 +796,14 @@ type ErrorLog struct {
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
 	AccountID         sql.NullString
+}
+
+type FulfillmentPolicy struct {
+	ID        string
+	Code      string
+	Name      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 type Geolocation struct {
@@ -1490,17 +1510,18 @@ type Product struct {
 }
 
 type ProductLine struct {
-	ID                 string
-	Name               string
-	Description        sql.NullString
-	Notes              sql.NullString
-	CreatedAt          time.Time
-	UpdatedAt          time.Time
-	AccountID          sql.NullString
-	UnitGroupID        string
-	IsCommissionExempt bool
-	IsFreightExempt    bool
-	DefaultLotID       sql.NullString
+	ID                    string
+	Name                  string
+	Description           sql.NullString
+	Notes                 sql.NullString
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
+	AccountID             sql.NullString
+	UnitGroupID           string
+	IsCommissionExempt    bool
+	IsFreightExempt       bool
+	DefaultLotID          sql.NullString
+	FulfillmentPolicyCode sql.NullString
 }
 
 type ProductLineTarget struct {
@@ -1671,23 +1692,28 @@ type ProductionScheduleItemPolicy struct {
 	CreatedAt               time.Time
 	UpdatedAt               time.Time
 	UnitID                  sql.NullString
+	FirmDemandUnits         string
+	ForecastDemandUnits     string
+	FulfillmentPolicyCode   string
+	PolicySourceCode        string
 }
 
 type ProductionScheduleItemSetting struct {
-	ID                 string
-	AccountID          string
-	ItemID             string
-	IsExcluded         bool
-	MinLotUnits        sql.NullString
-	MaxLotUnits        sql.NullString
-	LotMultipleUnits   sql.NullString
-	FixedLeadTimeWeeks sql.NullString
-	ServiceLevelZ      sql.NullString
-	ManualEoqUnits     sql.NullString
-	AbcClassOverride   sql.NullString
-	PreferredMachineID sql.NullString
-	CreatedAt          time.Time
-	UpdatedAt          time.Time
+	ID                    string
+	AccountID             string
+	ItemID                string
+	IsExcluded            bool
+	MinLotUnits           sql.NullString
+	MaxLotUnits           sql.NullString
+	LotMultipleUnits      sql.NullString
+	FixedLeadTimeWeeks    sql.NullString
+	ServiceLevelZ         sql.NullString
+	ManualEoqUnits        sql.NullString
+	AbcClassOverride      sql.NullString
+	PreferredMachineID    sql.NullString
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
+	FulfillmentPolicyCode sql.NullString
 }
 
 type ProductionScheduleLine struct {
@@ -1716,6 +1742,18 @@ type ProductionScheduleLine struct {
 	CreatedAt                time.Time
 	UpdatedAt                time.Time
 	PlannedLotUnits          string
+}
+
+type ProductionScheduleLineOrder struct {
+	ID                       string
+	AccountID                string
+	ProductionScheduleID     string
+	ProductionScheduleLineID string
+	SalesOrderID             string
+	SalesOrderLineID         string
+	AllocatedQuantity        string
+	CreatedAt                time.Time
+	UpdatedAt                time.Time
 }
 
 type ProductionScheduleLineStatus struct {
@@ -2009,6 +2047,9 @@ type SalesOrder struct {
 	PromisedAt            sql.NullTime
 	CreatedAt             time.Time
 	UpdatedAt             time.Time
+	LeadTimeDays          sql.NullInt32
+	LeadTimeSourceCode    sql.NullString
+	ShipByDate            sql.NullTime
 }
 
 type SalesOrderLine struct {

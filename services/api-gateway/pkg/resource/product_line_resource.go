@@ -54,6 +54,13 @@ type ProductLine struct {
 	//
 	// An item's own lot override still takes precedence over the line's. When the line has no lot convention, planning falls back to the lot of the line the item feeds into, and then to the account-wide default lot size.
 	DefaultLot *Quantity `json:"default_lot" expandable:"true"`
+	// How products in this line are produced when they do not say for themselves.
+	//
+	// - `make_to_stock`: built to the forecast, holding a safety stock against its variability.
+	// - `make_to_order`: built only against orders already on the book, holding no buffer.
+	//
+	// Null falls through to the account default.
+	FulfillmentPolicy *constants.FulfillmentPolicy `json:"fulfillment_policy"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last-updated timestamp.

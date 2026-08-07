@@ -308,6 +308,7 @@ INSERT INTO production_schedule_item_policy (
     on_hand_greige, average_greige_inventory, max_greige_inventory,
     weeks_of_cover, projected_on_hand, annual_run_hours,
     abc_class, was_eoq_capped, was_capacity_starved,
+    fulfillment_policy_code, policy_source_code, firm_demand_units, forecast_demand_units,
     created_at, updated_at
 ) VALUES (
     sqlc.arg('id'), sqlc.arg('account_id'), sqlc.arg('production_schedule_id'), sqlc.arg('item_id'), sqlc.arg('sku'),
@@ -321,6 +322,7 @@ INSERT INTO production_schedule_item_policy (
     sqlc.arg('on_hand_greige'), sqlc.arg('average_greige_inventory'), sqlc.arg('max_greige_inventory'),
     sqlc.arg('weeks_of_cover'), sqlc.narg('projected_on_hand'), sqlc.arg('annual_run_hours'),
     sqlc.narg('abc_class'), sqlc.arg('was_eoq_capped'), sqlc.arg('was_capacity_starved'),
+    sqlc.arg('fulfillment_policy_code'), sqlc.arg('policy_source_code'), sqlc.arg('firm_demand_units'), sqlc.arg('forecast_demand_units'),
     NOW(3), NOW(3)
 );
 
@@ -338,6 +340,10 @@ SELECT
     p.weekly_demand,
     p.seconds_per_unit,
     p.unit_cost,
+    p.fulfillment_policy_code,
+    p.policy_source_code,
+    p.firm_demand_units,
+    p.forecast_demand_units,
     p.setup_cost,
     p.holding_cost,
     p.eoq_units,
@@ -411,3 +417,42 @@ FROM production_schedule_finished_policy f
 WHERE f.account_id = sqlc.arg('account_id')
   AND f.production_schedule_id = sqlc.arg('production_schedule_id')
 ORDER BY f.greige_sku, f.sku, f.id;
+
+-- CreateProductionScheduleLineOrder links one campaign to one order it is building.
+-- name: CreateProductionScheduleLineOrder :exec
+INSERT INTO production_schedule_line_order (
+    id, account_id, production_schedule_id,
+    production_schedule_line_id, sales_order_id, sales_order_line_id,
+    allocated_quantity, created_at, updated_at
+) VALUES (
+    sqlc.arg('id'), sqlc.arg('account_id'), sqlc.arg('production_schedule_id'),
+    sqlc.arg('production_schedule_line_id'), sqlc.arg('sales_order_id'), sqlc.arg('sales_order_line_id'),
+    sqlc.arg('allocated_quantity'), NOW(3), NOW(3)
+);
+
+-- DeleteProductionScheduleLineOrders clears a version's links, so a re-solve replaces them wholesale rather than accumulating.
+-- name: DeleteProductionScheduleLineOrders :exec
+DELETE FROM production_schedule_line_order
+WHERE account_id = sqlc.arg('account_id') AND production_schedule_id = sqlc.arg('production_schedule_id');
+
+-- ListProductionScheduleLineOrders returns which campaigns are building which orders for one version.
+-- name: ListProductionScheduleLineOrders :many
+SELECT
+    lo.id,
+    lo.production_schedule_line_id,
+    lo.sales_order_id,
+    lo.sales_order_line_id,
+    lo.allocated_quantity,
+    so.number AS sales_order_number,
+    so.ship_by_date,
+    l.item_id,
+    l.week_index,
+    l.machine_id,
+    i.sku
+FROM production_schedule_line_order lo
+JOIN production_schedule_line l ON l.id = lo.production_schedule_line_id
+JOIN sales_order so ON so.id = lo.sales_order_id
+JOIN item i ON i.id = l.item_id
+WHERE lo.account_id = sqlc.arg('account_id')
+  AND lo.production_schedule_id = sqlc.arg('production_schedule_id')
+ORDER BY l.week_index, so.number, lo.id;

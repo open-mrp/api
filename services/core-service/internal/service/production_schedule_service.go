@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"sort"
 	"strings"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/services/core-service/internal/scheduling"
 	"github.com/augno/api/shared/appctx"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/id"
 	"github.com/augno/api/shared/idempotency"
@@ -124,16 +126,17 @@ func (s *productionScheduleSvcImpl) PreviewProductionSchedule(
 	}
 
 	input, apiErr := s.loadSolverInput(ctx, domain.LoadSolverInputParams{
-		AccountID:              accountID,
-		PlanningAsOf:           planningAsOf,
-		Settings:               effective.Settings,
-		DemandWindowMonths:     effective.DemandWindowMonths,
-		ForecastHistoryMonths:  effective.ForecastHistoryMonths,
-		ForecastMonths:         effective.ForecastMonths,
-		DemandBasisCode:        effective.DemandBasisCode,
-		ForecastZ:              effective.ForecastZ,
-		ConstraintDepartmentID: effective.ConstraintDepartmentID,
-		ItemSettings:           effective.ItemSettings,
+		AccountID:                accountID,
+		PlanningAsOf:             planningAsOf,
+		Settings:                 effective.Settings,
+		DemandWindowMonths:       effective.DemandWindowMonths,
+		ForecastHistoryMonths:    effective.ForecastHistoryMonths,
+		ForecastMonths:           effective.ForecastMonths,
+		DemandBasisCode:          effective.DemandBasisCode,
+		ForecastZ:                effective.ForecastZ,
+		ConstraintDepartmentID:   effective.ConstraintDepartmentID,
+		ItemSettings:             effective.ItemSettings,
+		DefaultFulfillmentPolicy: effective.DefaultFulfillmentPolicy,
 	})
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -177,17 +180,18 @@ func (s *productionScheduleSvcImpl) solveForWithInput(
 	}
 
 	input, apiErr := s.loadSolverInput(ctx, domain.LoadSolverInputParams{
-		AccountID:              accountID,
-		PlanningAsOf:           planningAsOf,
-		Settings:               effective.Settings,
-		DemandWindowMonths:     effective.DemandWindowMonths,
-		ForecastHistoryMonths:  effective.ForecastHistoryMonths,
-		ForecastMonths:         effective.ForecastMonths,
-		DemandBasisCode:        effective.DemandBasisCode,
-		ForecastZ:              effective.ForecastZ,
-		ConstraintDepartmentID: effective.ConstraintDepartmentID,
-		ItemSettings:           effective.ItemSettings,
-		PinnedCampaigns:        pinnedCampaigns,
+		AccountID:                accountID,
+		PlanningAsOf:             planningAsOf,
+		Settings:                 effective.Settings,
+		DemandWindowMonths:       effective.DemandWindowMonths,
+		ForecastHistoryMonths:    effective.ForecastHistoryMonths,
+		ForecastMonths:           effective.ForecastMonths,
+		DemandBasisCode:          effective.DemandBasisCode,
+		ForecastZ:                effective.ForecastZ,
+		ConstraintDepartmentID:   effective.ConstraintDepartmentID,
+		ItemSettings:             effective.ItemSettings,
+		DefaultFulfillmentPolicy: effective.DefaultFulfillmentPolicy,
+		PinnedCampaigns:          pinnedCampaigns,
 	})
 	if apiErr != nil {
 		return nil, nil, nil, apiErr
@@ -211,13 +215,16 @@ func (s *productionScheduleSvcImpl) loadEffectiveSettings(
 	defer span.End()
 
 	effective := &domain.EffectiveScheduleSettings{
-		Settings:              scheduling.DefaultSettings(),
-		DemandWindowMonths:    12,
-		ForecastHistoryMonths: 24,
-		ForecastMonths:        12,
-		DemandBasisCode:       scheduling.DemandBasisTrailing12,
-		ForecastZ:             1,
-		ItemSettings:          map[string]domain.ProductionScheduleItemSetting{},
+		Settings:                    scheduling.DefaultSettings(),
+		DemandWindowMonths:          12,
+		ForecastHistoryMonths:       24,
+		ForecastMonths:              12,
+		DemandBasisCode:             scheduling.DemandBasisTrailing12,
+		ForecastZ:                   1,
+		ItemSettings:                map[string]domain.ProductionScheduleItemSetting{},
+		DefaultFulfillmentPolicy:    scheduling.PolicyMakeToStock,
+		RecommendationThresholds:    scheduling.DefaultRecommendationThresholds(),
+		DefaultCustomerLeadTimeDays: scheduling.DefaultSettings().DefaultCustomerLeadTimeDays,
 	}
 
 	repo := s.repos.NewProductionScheduleInputRepo()
@@ -239,6 +246,7 @@ func (s *productionScheduleSvcImpl) loadEffectiveSettings(
 	effective.Settings.WeeksPerYear = row.WeeksPerYear
 	effective.Settings.CapacityHeadroomPct = row.CapacityHeadroomPct
 	effective.Settings.DefaultLotUnits = row.DefaultLotUnits
+	effective.Settings.DefaultCustomerLeadTimeDays = int(row.DefaultCustomerLeadTimeDays)
 	effective.Settings.ChangeoverAvgMinutes = row.ChangeoverAvgMinutes
 	effective.Settings.ChangeoverMinMinutes = row.ChangeoverMinMinutes
 	effective.Settings.ChangeoverMaxMinutes = row.ChangeoverMaxMinutes
@@ -256,6 +264,11 @@ func (s *productionScheduleSvcImpl) loadEffectiveSettings(
 	effective.DemandBasisCode = row.DemandBasisCode
 	effective.ForecastZ = row.ForecastZ
 	effective.ConstraintDepartmentID = row.ConstraintDepartmentID
+	if row.DefaultFulfillmentPolicyCode != "" {
+		effective.DefaultFulfillmentPolicy = row.DefaultFulfillmentPolicyCode
+	}
+	effective.RecommendationThresholds = row.RecommendationThresholds
+	effective.DefaultCustomerLeadTimeDays = row.DefaultCustomerLeadTimeDays
 
 	// The constraint department's own labor rate prices its changeovers; the account-wide setting above is only the fallback for departments that have none. Rates are conventionally $/hr, matching how the setting is expressed.
 	if effective.ConstraintDepartmentID != "" {
@@ -292,8 +305,10 @@ func (s *productionScheduleSvcImpl) loadSolverInput(
 	repo := s.repos.NewProductionScheduleInputRepo()
 
 	in := &scheduling.SolverInput{
-		AccountID:          params.AccountID,
-		PlanningAsOf:       params.PlanningAsOf,
+		AccountID:    params.AccountID,
+		PlanningAsOf: params.PlanningAsOf,
+		// The order book is dated against the same week boundary the plan is written to, so a requirement's due week and a campaign's week index mean the same thing.
+		HorizonStart:       scheduleWeekStart(params.PlanningAsOf, params.Settings.WeekStartDay),
 		Settings:           params.Settings,
 		DemandBasisCode:    params.DemandBasisCode,
 		ForecastZ:          params.ForecastZ,
@@ -308,6 +323,11 @@ func (s *productionScheduleSvcImpl) loadSolverInput(
 		LotDefaultByItem:   map[string]scheduling.LotDefault{},
 		ExcludedItemIDs:    map[string]bool{},
 		PinnedCampaigns:    params.PinnedCampaigns,
+
+		ItemPolicyOverrides:      map[string]string{},
+		ProductLineByItem:        map[string]string{},
+		PolicyByProductLine:      map[string]string{},
+		DefaultFulfillmentPolicy: params.DefaultFulfillmentPolicy,
 	}
 
 	// 1. The machines that constitute the constraint. The constraint is a department, not a list of machines: the knitting room sets the pace of the factory, and every machine in it is planned without anyone having to remember to opt one in.
@@ -686,6 +706,35 @@ func (s *productionScheduleSvcImpl) loadDemand(
 		byFinishedItem[itemID][monthStart] += row.Quantity
 	}
 
+	for itemID, setting := range params.ItemSettings {
+		if setting.FulfillmentPolicyCode != "" {
+			in.ItemPolicyOverrides[itemID] = setting.FulfillmentPolicyCode
+		}
+	}
+	for itemID, lineID := range productLineByItem {
+		in.ProductLineByItem[itemID] = lineID
+	}
+
+	linePolicies, apiErr := repo.ListProductLineFulfillmentPolicies(ctx, params.AccountID)
+	if apiErr != nil {
+		return apiErr
+	}
+	maps.Copy(in.PolicyByProductLine, linePolicies)
+
+	// A make-to-order finished good contributes nothing to its constraint item's forecast or to its pooled variability: it is built when it is ordered, and forecasting it as well would build it twice. Resolved here, before pooling, because pooling is where that contribution would otherwise be made.
+	forecastExcluded := map[string]bool{}
+	for finishedItemID := range byFinishedItem {
+		resolved := scheduling.ResolveFulfillmentPolicy(finishedItemID, scheduling.PolicyResolutionInput{
+			ItemOverrides:       in.ItemPolicyOverrides,
+			ProductLineByItem:   in.ProductLineByItem,
+			PolicyByProductLine: in.PolicyByProductLine,
+			AccountDefault:      in.DefaultFulfillmentPolicy,
+		})
+		if resolved.Policy == scheduling.PolicyMakeToOrder {
+			forecastExcluded[finishedItemID] = true
+		}
+	}
+
 	for _, constraintItemID := range itemIDs {
 		// The constraint item's own demand plus every finished good it becomes. One unit of finished good consumes one unit of the constraint item, matching the script's assumption.
 		contributors := append([]string{constraintItemID}, descendantItemsByItem[constraintItemID]...)
@@ -699,6 +748,10 @@ func (s *productionScheduleSvcImpl) loadDemand(
 		for _, contributorID := range contributors {
 			months := byFinishedItem[contributorID]
 			if len(months) == 0 {
+				continue
+			}
+			// Still listed as a downstream good below — the plan has to know what this greige becomes — but its history does not enter the forecast or the pooled sigma.
+			if forecastExcluded[contributorID] {
 				continue
 			}
 			for monthStart, quantity := range months {
@@ -728,6 +781,68 @@ func (s *productionScheduleSvcImpl) loadDemand(
 		if len(downstream) > 0 {
 			in.DownstreamByItem[constraintItemID] = downstream
 		}
+	}
+
+	return loadOpenOrderBook(ctx, repo, params, in, itemIDs, descendantItemsByItem, itemByProduct, nativeRatioOf)
+}
+
+// loadOpenOrderBook attaches the outstanding order book to the solve, pooled onto constraint items exactly the way historical demand is.
+//
+// It walks the same contributor sets and applies the same unit ratio, because the order book and the forecast are compared week by week during levelling: expressing them in different units would make the greater-of rule pick whichever happened to be scaled larger.
+func loadOpenOrderBook(
+	ctx context.Context,
+	repo domain.ProductionScheduleInputRepo,
+	params domain.LoadSolverInputParams,
+	in *scheduling.SolverInput,
+	itemIDs []string,
+	descendantItemsByItem map[string][]string,
+	itemByProduct map[string]string,
+	nativeRatioOf func(string) float64,
+) *apierror.APIError {
+	// A finished good reachable from two constraint items is claimed by the first, matching the first-wins attribution the echelon on-hand walk already uses. itemIDs is sorted, so the choice is stable.
+	constraintByContributor := map[string]string{}
+	for _, constraintItemID := range itemIDs {
+		for _, contributorID := range append([]string{constraintItemID}, descendantItemsByItem[constraintItemID]...) {
+			if _, claimed := constraintByContributor[contributorID]; !claimed {
+				constraintByContributor[contributorID] = constraintItemID
+			}
+		}
+	}
+
+	productIDs := make([]string, 0, len(itemByProduct))
+	for productID := range itemByProduct {
+		productIDs = append(productIDs, productID)
+	}
+	sort.Strings(productIDs)
+
+	rows, apiErr := repo.GetOpenOrderRequirements(ctx, params.AccountID, productIDs)
+	if apiErr != nil {
+		return apiErr
+	}
+
+	for _, row := range rows {
+		finishedItemID, ok := itemByProduct[row.ProductID]
+		if !ok {
+			continue
+		}
+		constraintItemID, ok := constraintByContributor[finishedItemID]
+		if !ok {
+			// Nothing in the plan produces this order. Dropping it is right: the alternative is putting work on a machine for a product it does not make.
+			continue
+		}
+		ratio := nativeRatioOf(constraintItemID)
+		if ratio == 0 {
+			continue
+		}
+		in.OpenOrders = append(in.OpenOrders, scheduling.OpenOrderLine{
+			SalesOrderID:     row.SalesOrderID,
+			SalesOrderNumber: row.SalesOrderNumber,
+			SalesOrderLineID: row.SalesOrderLineID,
+			FinishedItemID:   finishedItemID,
+			ConstraintItemID: constraintItemID,
+			Units:            row.OutstandingQty / ratio,
+			ShipByDate:       row.ShipByDate,
+		})
 	}
 
 	return nil
@@ -1055,6 +1170,11 @@ func (s *productionScheduleSvcImpl) writeSolvedPlan(ctx context.Context, params 
 		machineByID[machine.ID] = machine
 	}
 
+	policyByItem := make(map[string]string, len(output.Policies))
+	for _, p := range output.Policies {
+		policyByItem[p.ItemID] = p.FulfillmentPolicy
+	}
+
 	lines := make([]*domain.ProductionScheduleLine, 0, len(output.Campaigns))
 	for _, c := range output.Campaigns {
 		// A campaign a person edited and a regenerate is keeping already exists; writing the solver's answer for it too would leave two campaigns on one machine-item-week and double what the plan asks for.
@@ -1075,8 +1195,15 @@ func (s *productionScheduleSvcImpl) writeSolvedPlan(ctx context.Context, params 
 			}
 		}
 
+		// The reason names what put the campaign on the plan: an order already on the book, or a buffer running down. The column has existed since the schedule shipped and nothing has ever written it.
+		reason := string(constants.ScheduleLineReasonReorderPoint)
+		if policyByItem[c.ItemID] == scheduling.PolicyMakeToOrder {
+			reason = string(constants.ScheduleLineReasonFirmOrder)
+		}
+
 		lines = append(lines, &domain.ProductionScheduleLine{
 			ID:                   lineID,
+			ReasonCode:           &reason,
 			ProductionScheduleID: scheduleID,
 			WeekIndex:            safeconv.IntToInt32(c.WeekIndex),
 			WeekStartDate:        horizonStart.AddDate(0, 0, c.WeekIndex*7),
@@ -1100,6 +1227,11 @@ func (s *productionScheduleSvcImpl) writeSolvedPlan(ctx context.Context, params 
 		})
 	}
 	if apiErr := repo.CreateLines(ctx, params.AccountID, scheduleID, lines); apiErr != nil {
+		return apiErr
+	}
+
+	// Which campaign is building which order. Written in the same transaction as the lines it points at: a link to a campaign that does not exist is worse than no link, and the at-risk report is read from the same allocation, so the two can never disagree about whether an order is covered.
+	if apiErr := repo.ReplaceLineOrders(ctx, params.AccountID, scheduleID, buildLineOrderLinks(output.Allocations, lines)); apiErr != nil {
 		return apiErr
 	}
 
@@ -1146,6 +1278,10 @@ func (s *productionScheduleSvcImpl) writeSolvedPlan(ctx context.Context, params 
 			AnnualRunHours:          p.AnnualRunHours(),
 			WasEOQCapped:            capped[p.SKU],
 			WasCapacityStarved:      starved[p.SKU],
+			FulfillmentPolicyCode:   p.FulfillmentPolicy,
+			PolicySourceCode:        p.PolicySource,
+			FirmDemandUnits:         p.FirmDemandUnits,
+			ForecastDemandUnits:     p.ForecastDemandUnits,
 		}
 		if p.ABCClass != "" {
 			// The scheduling engine mirrors the TS reference implementation and emits uppercase classes; the API contract (constants.ABCClass) is lowercase, so normalize at the boundary before anything is stored or emitted.
@@ -1325,4 +1461,41 @@ func (s *productionScheduleSvcImpl) persistPlan(ctx context.Context, params pers
 		return nil, tracing.Trace(span, apiErr)
 	}
 	return stored, nil
+}
+
+// buildLineOrderLinks maps the solver's allocations onto the lines that were actually written.
+//
+// The solver identifies a campaign by (item, machine, week) because it has no line IDs; this resolves those back to the rows just persisted. A campaign the write skipped — one a regenerate is keeping by hand — has no line to point at, and its allocation is dropped rather than pointed at somebody else's.
+func buildLineOrderLinks(
+	allocations []scheduling.OrderAllocation,
+	lines []*domain.ProductionScheduleLine,
+) []domain.CreateLineOrderParams {
+	type slot struct {
+		itemID    string
+		machineID string
+		week      int32
+	}
+	lineBySlot := make(map[slot]string, len(lines))
+	for _, l := range lines {
+		lineBySlot[slot{itemID: l.ItemID, machineID: l.MachineID, week: l.WeekIndex}] = l.ID
+	}
+
+	out := make([]domain.CreateLineOrderParams, 0, len(allocations))
+	for _, a := range allocations {
+		lineID, ok := lineBySlot[slot{itemID: a.ItemID, machineID: a.CampaignMachineID, week: safeconv.IntToInt32(a.CampaignWeek)}]
+		if !ok {
+			continue
+		}
+		// The order line is what a shipment is measured against; without one the link cannot be reconciled later, so it is dropped rather than stored half-formed.
+		if a.SalesOrderLineID == "" {
+			continue
+		}
+		out = append(out, domain.CreateLineOrderParams{
+			ProductionScheduleLineID: lineID,
+			SalesOrderID:             a.SalesOrderID,
+			SalesOrderLineID:         a.SalesOrderLineID,
+			AllocatedQuantity:        a.Units,
+		})
+	}
+	return out
 }

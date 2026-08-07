@@ -1320,7 +1320,17 @@ INSERT IGNORE INTO production_schedule (
     'trailing_12', 'manual', 'v1',
     JSON_OBJECT('horizon_weeks', 13, 'frozen_weeks', 1, 'shifts_per_day', 2, 'hours_per_shift', 7,
                 'work_days_per_week', 5, 'capacity_headroom_pct', 0.9, 'default_lot_units', 60),
-    JSON_OBJECT('seeded', true),
+    -- Carries one at-risk order so the spec-driven list suites have a row to validate
+    -- against; a solved version writes this same shape from its allocation walk.
+    JSON_OBJECT('seeded', true,
+                'at_risk_orders', JSON_ARRAY(
+                    JSON_OBJECT('sales_order_id', 'or_01seedscheddemand00',
+                                'sales_order_number', 'E2E-SCHED-DEMAND',
+                                'item_id', 'it_01k0a7100aeysrs9vxpeq14yxj',
+                                'sku', 'SCK-001',
+                                'units', 80,
+                                'due_week', 0,
+                                'reason', 'past_due'))),
     NULL, NOW(3), NOW(3)
 );
 
@@ -1338,6 +1348,21 @@ INSERT IGNORE INTO production_schedule_line (
     0, 40.000000000000000000000000000000, 160.000000000000000000000000000000,
     'planned', 'solver', 0, NOW(3), NOW(3)
 );
+
+-- One campaign earmarked for that order, so `covering_lines` is populated rather than
+-- an empty list — a partly-covered order is what the report exists to distinguish.
+INSERT IGNORE INTO production_schedule_line_order (
+    id, account_id, production_schedule_id,
+    production_schedule_line_id, sales_order_id, sales_order_line_id,
+    allocated_quantity, created_at, updated_at
+)
+SELECT
+    'pnsclnor_01seede2elink', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'pnsc_01seede2eschedule',
+    'pnscln_01seede2eline01', 'or_01seedscheddemand00', sol.id,
+    40.000000000000000000000000000000, NOW(3), NOW(3)
+FROM sales_order_line sol
+WHERE sol.sales_order_id = 'or_01seedscheddemand00'
+LIMIT 1;
 
 INSERT IGNORE INTO production_schedule_item_policy (
     id, account_id, production_schedule_id, item_id, sku, primary_machine_id,
@@ -1390,6 +1415,20 @@ INSERT IGNORE INTO production_schedule_resource_setting (
 ) VALUES
     ('pnscrrsd_01seede2eoffset', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'production_step',
      'prs_01k0a56yc1e8wag6wexn4pp8t9', 0, 1, 1, 0, NOW(3), NOW(3));
+
+-- A per-item planning override, so the list endpoint has a row to serve. The
+-- spec-driven list suites assert every list endpoint returns at least one item,
+-- and only items that have been given an override ever appear here.
+--
+-- Deliberately make_to_stock, and deliberately on a yarn item no test mutates: this is
+-- a fixture the conformance suites read, so a test that set a policy on the same item
+-- would delete this row on cleanup and leave the list endpoint with nothing to serve.
+INSERT IGNORE INTO production_schedule_item_setting (
+    id, account_id, item_id, is_excluded, lot_multiple_units, fulfillment_policy_code,
+    created_at, updated_at
+) VALUES
+    ('pnscitsd_01seede2eitem0', 'ac_01k0a5smf9ekb8rqg12555zjqa',
+     'it_01seedyrn3item00000', 0, 60, 'make_to_stock', NOW(3), NOW(3));
 
 -- ============================================================
 -- DEMAND OVERRIDES (for /v1/operations/demand-overrides)

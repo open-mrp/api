@@ -551,6 +551,7 @@ SELECT
     ar.account_status_code AS status,
     ar.commission_status_code,
     ar.freight_status_code,
+    ar.default_lead_time_days,
     ar.carrier_billing_type,
     ar.carrier_billing_account,
     ar.stripe_customer_id,
@@ -677,6 +678,7 @@ type GetCustomerRow struct {
 	Status                                sql.NullString
 	CommissionStatusCode                  sql.NullString
 	FreightStatusCode                     sql.NullString
+	DefaultLeadTimeDays                   sql.NullInt32
 	CarrierBillingType                    sql.NullString
 	CarrierBillingAccount                 sql.NullString
 	StripeCustomerID                      sql.NullString
@@ -779,6 +781,7 @@ func (q *Queries) GetCustomer(ctx context.Context, arg GetCustomerParams) (GetCu
 		&i.Status,
 		&i.CommissionStatusCode,
 		&i.FreightStatusCode,
+		&i.DefaultLeadTimeDays,
 		&i.CarrierBillingType,
 		&i.CarrierBillingAccount,
 		&i.StripeCustomerID,
@@ -1274,7 +1277,7 @@ INSERT INTO account_relation (
     account_status_code, payment_term_id, account_group_id, priority_code,
     shipping_term_id, carrier_billing_type, carrier_billing_account,
     default_billing_address_id, default_shipping_address_id,
-    stripe_customer_id, stripe_email,
+    stripe_customer_id, stripe_email, default_lead_time_days,
     created_at, updated_at
 ) VALUES (
     ?, ?, ?, 'customer',
@@ -1284,7 +1287,7 @@ INSERT INTO account_relation (
     ?, ?, ?, ?,
     ?, ?, ?,
     ?, ?,
-    ?, ?,
+    ?, ?, ?,
     NOW(3), NOW(3)
 )
 `
@@ -1313,6 +1316,7 @@ type InsertAccountRelationParams struct {
 	DefaultShippingAddressID sql.NullString
 	StripeCustomerID         sql.NullString
 	StripeEmail              sql.NullString
+	DefaultLeadTimeDays      sql.NullInt32
 }
 
 func (q *Queries) InsertAccountRelation(ctx context.Context, arg InsertAccountRelationParams) error {
@@ -1340,6 +1344,7 @@ func (q *Queries) InsertAccountRelation(ctx context.Context, arg InsertAccountRe
 		arg.DefaultShippingAddressID,
 		arg.StripeCustomerID,
 		arg.StripeEmail,
+		arg.DefaultLeadTimeDays,
 	)
 	return err
 }
@@ -1433,7 +1438,7 @@ INSERT INTO account_relation (
     account_status_code, payment_term_id, account_group_id, priority_code,
     shipping_term_id, carrier_billing_type, carrier_billing_account,
     default_billing_address_id, default_shipping_address_id,
-    credit_limit_id,
+    credit_limit_id, default_lead_time_days,
     created_at, updated_at
 ) VALUES (
     ?, ?, ?, 'customer',
@@ -1443,7 +1448,7 @@ INSERT INTO account_relation (
     ?, ?, ?, ?,
     ?, ?, ?,
     ?, ?,
-    ?,
+    ?, ?,
     NOW(3), NOW(3)
 )
 `
@@ -1471,6 +1476,7 @@ type InsertCustomerRelationParams struct {
 	DefaultBillingAddressID  sql.NullString
 	DefaultShippingAddressID sql.NullString
 	CreditLimitID            sql.NullString
+	DefaultLeadTimeDays      sql.NullInt32
 }
 
 func (q *Queries) InsertCustomerRelation(ctx context.Context, arg InsertCustomerRelationParams) error {
@@ -1497,6 +1503,7 @@ func (q *Queries) InsertCustomerRelation(ctx context.Context, arg InsertCustomer
 		arg.DefaultBillingAddressID,
 		arg.DefaultShippingAddressID,
 		arg.CreditLimitID,
+		arg.DefaultLeadTimeDays,
 	)
 	return err
 }
@@ -1566,6 +1573,7 @@ SELECT
     ar.account_status_code AS status,
     ar.commission_status_code,
     ar.freight_status_code,
+    ar.default_lead_time_days,
     ar.carrier_billing_type,
     ar.carrier_billing_account,
     ar.stripe_customer_id,
@@ -1804,6 +1812,7 @@ type ListCustomersBackwardRow struct {
 	Status                                sql.NullString
 	CommissionStatusCode                  sql.NullString
 	FreightStatusCode                     sql.NullString
+	DefaultLeadTimeDays                   sql.NullInt32
 	CarrierBillingType                    sql.NullString
 	CarrierBillingAccount                 sql.NullString
 	StripeCustomerID                      sql.NullString
@@ -2031,6 +2040,7 @@ func (q *Queries) ListCustomersBackward(ctx context.Context, arg ListCustomersBa
 			&i.Status,
 			&i.CommissionStatusCode,
 			&i.FreightStatusCode,
+			&i.DefaultLeadTimeDays,
 			&i.CarrierBillingType,
 			&i.CarrierBillingAccount,
 			&i.StripeCustomerID,
@@ -2143,6 +2153,7 @@ SELECT
     ar.account_status_code AS status,
     ar.commission_status_code,
     ar.freight_status_code,
+    ar.default_lead_time_days,
     ar.carrier_billing_type,
     ar.carrier_billing_account,
     ar.stripe_customer_id,
@@ -2382,6 +2393,7 @@ type ListCustomersForwardRow struct {
 	Status                                sql.NullString
 	CommissionStatusCode                  sql.NullString
 	FreightStatusCode                     sql.NullString
+	DefaultLeadTimeDays                   sql.NullInt32
 	CarrierBillingType                    sql.NullString
 	CarrierBillingAccount                 sql.NullString
 	StripeCustomerID                      sql.NullString
@@ -2610,6 +2622,7 @@ func (q *Queries) ListCustomersForward(ctx context.Context, arg ListCustomersFor
 			&i.Status,
 			&i.CommissionStatusCode,
 			&i.FreightStatusCode,
+			&i.DefaultLeadTimeDays,
 			&i.CarrierBillingType,
 			&i.CarrierBillingAccount,
 			&i.StripeCustomerID,
@@ -3254,6 +3267,7 @@ UPDATE account_relation SET
     credit_limit_id = ?,
     stripe_customer_id = COALESCE(?, stripe_customer_id),
     stripe_email = COALESCE(?, stripe_email),
+    default_lead_time_days = ?,
     updated_at = NOW(3)
 WHERE id = ?
   AND owner_account_id = ?
@@ -3283,6 +3297,7 @@ type UpdateCustomerParams struct {
 	CreditLimitID            sql.NullString
 	StripeCustomerID         sql.NullString
 	StripeEmail              sql.NullString
+	DefaultLeadTimeDays      sql.NullInt32
 	ID                       string
 	OwnerAccountID           string
 }
@@ -3311,6 +3326,7 @@ func (q *Queries) UpdateCustomer(ctx context.Context, arg UpdateCustomerParams) 
 		arg.CreditLimitID,
 		arg.StripeCustomerID,
 		arg.StripeEmail,
+		arg.DefaultLeadTimeDays,
 		arg.ID,
 		arg.OwnerAccountID,
 	)

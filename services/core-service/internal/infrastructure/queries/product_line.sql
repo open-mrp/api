@@ -7,6 +7,7 @@ SELECT
     pl.is_commission_exempt,
     pl.is_freight_exempt,
     pl.unit_group_id,
+    pl.fulfillment_policy_code,
     dlq.id AS default_lot_id,
     dlq.value AS default_lot_value,
     dlq.unit_id AS default_lot_unit_id,
@@ -40,6 +41,7 @@ SELECT
     pl.is_commission_exempt,
     pl.is_freight_exempt,
     pl.unit_group_id,
+    pl.fulfillment_policy_code,
     dlq.id AS default_lot_id,
     dlq.value AS default_lot_value,
     dlq.unit_id AS default_lot_unit_id,
@@ -72,6 +74,7 @@ SELECT
     pl.is_commission_exempt,
     pl.is_freight_exempt,
     pl.unit_group_id,
+    pl.fulfillment_policy_code,
     dlq.id AS default_lot_id,
     dlq.value AS default_lot_value,
     dlq.unit_id AS default_lot_unit_id,
@@ -91,6 +94,7 @@ SELECT
     pl.is_commission_exempt,
     pl.is_freight_exempt,
     pl.unit_group_id,
+    pl.fulfillment_policy_code,
     dlq.id AS default_lot_id,
     dlq.value AS default_lot_value,
     dlq.unit_id AS default_lot_unit_id,
@@ -111,6 +115,7 @@ SELECT
     pl.is_commission_exempt,
     pl.is_freight_exempt,
     pl.unit_group_id,
+    pl.fulfillment_policy_code,
     dlq.id AS default_lot_id,
     dlq.value AS default_lot_value,
     dlq.unit_id AS default_lot_unit_id,
@@ -130,6 +135,7 @@ INSERT INTO product_line (
     is_freight_exempt,
     unit_group_id,
     default_lot_id,
+    fulfillment_policy_code,
     account_id,
     created_at,
     updated_at
@@ -140,6 +146,7 @@ INSERT INTO product_line (
     sqlc.arg('is_freight_exempt'),
     sqlc.arg('unit_group_id'),
     sqlc.narg('default_lot_id'),
+    sqlc.narg('fulfillment_policy_code'),
     sqlc.arg('account_id'),
     NOW(3),
     NOW(3)
@@ -153,6 +160,8 @@ UPDATE product_line SET
     unit_group_id = COALESCE(sqlc.narg('unit_group_id'), unit_group_id),
     -- Clearable rather than COALESCE-merged: removing a line's lot convention is a real edit, and a merge would make it unexpressible.
     default_lot_id = IF(sqlc.arg('clear_default_lot'), NULL, COALESCE(sqlc.narg('default_lot_id'), default_lot_id)),
+    -- Clearable for the same reason: returning a line to the account default is a real edit.
+    fulfillment_policy_code = IF(sqlc.arg('clear_fulfillment_policy'), NULL, COALESCE(sqlc.narg('fulfillment_policy_code'), fulfillment_policy_code)),
     updated_at = NOW(3)
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');
@@ -231,6 +240,18 @@ SELECT
 FROM product_line pl
 JOIN quantity dlq ON dlq.id = pl.default_lot_id
 WHERE (pl.account_id = sqlc.arg('account_id') OR pl.account_id IS NULL);
+
+-- ListProductLineFulfillmentPolicies returns every product line in the account that sets a fulfillment policy.
+--
+-- Separate from ListProductLineLotDefaults, which inner-joins the lot quantity: a line can set a policy without setting a lot convention, and sharing that query would silently drop its policy.
+-- name: ListProductLineFulfillmentPolicies :many
+SELECT
+    pl.id,
+    pl.fulfillment_policy_code
+FROM product_line pl
+WHERE (pl.account_id = sqlc.arg('account_id') OR pl.account_id IS NULL)
+  AND pl.fulfillment_policy_code IS NOT NULL
+ORDER BY pl.id;
 
 -- GetProductLineForItem resolves the product line an item sells under, which is where its lot convention comes from. Intermediate items — greige — have no product row and so return nothing; those inherit from what they become.
 -- name: GetProductLineForItem :one

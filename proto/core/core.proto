@@ -582,6 +582,8 @@ service CoreService {
   // Returns customers by ID for the api-gateway include resolver.
   rpc BatchGetCustomersByIDs(BatchGetCustomersByIDsRequest) returns (BatchGetCustomersByIDsResponse);
   rpc CreateCustomer(CreateCustomerRequest) returns (CreateCustomerResponse);
+  // Resolves the ship-by lead time a new order for this customer would be committed to.
+  rpc GetCustomerLeadTime(GetCustomerLeadTimeRequest) returns (GetCustomerLeadTimeResponse);
   // Deletes a customer and its associated relations.
   rpc DeleteCustomer(DeleteCustomerRequest) returns (google.protobuf.Empty);
   rpc BulkDeleteCustomers(BulkDeleteCustomersRequest) returns (google.protobuf.Empty);
@@ -617,6 +619,8 @@ service CoreService {
 
   // AnalyzeScheduleAttainment measures actual production against the plan that was live.
   rpc AnalyzeScheduleAttainment(AnalyzeScheduleAttainmentRequest) returns (AnalyzeScheduleAttainmentResponse);
+  // AnalyzeDeliveryPerformance measures what was promised against what was shipped.
+  rpc AnalyzeDeliveryPerformance(AnalyzeDeliveryPerformanceRequest) returns (AnalyzeDeliveryPerformanceResponse);
 
   rpc ListDeliveries(ListDeliveriesRequest) returns (ListDeliveriesResponse);
   rpc GetDelivery(GetDeliveryRequest) returns (GetDeliveryResponse);

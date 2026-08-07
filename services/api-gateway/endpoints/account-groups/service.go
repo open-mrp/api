@@ -95,11 +95,12 @@ func (m *accountGroupSvcImpl) CreateAccountGroup(ctx context.Context, req *Creat
 		freightPolicy = v
 	}
 	pbReq := &pb.CreateAccountGroupRequest{
-		Name:             req.Name,
-		Type:             string(req.Type),
-		CommissionPolicy: string(commissionPolicy),
-		FreightPolicy:    string(freightPolicy),
-		Description:      req.Description.Ptr(),
+		Name:                req.Name,
+		Type:                string(req.Type),
+		CommissionPolicy:    string(commissionPolicy),
+		FreightPolicy:       string(freightPolicy),
+		Description:         req.Description.Ptr(),
+		DefaultLeadTimeDays: req.DefaultLeadTimeDays.Ptr(),
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, accountGroupSvcTracer, "service.account_groups.create", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreateAccountGroupResponse, error) {
@@ -113,11 +114,12 @@ func (m *accountGroupSvcImpl) CreateAccountGroup(ctx context.Context, req *Creat
 
 func (m *accountGroupSvcImpl) UpdateAccountGroup(ctx context.Context, req *UpdateAccountGroupRequest) (*apiresource.AccountGroup, *apierror.APIError) {
 	pbReq := &pb.UpdateAccountGroupRequest{
-		Id:               req.AccountGroupID,
-		Name:             req.Name.Ptr(),
-		Description:      field.StringClearableToProto(req.Description),
-		CommissionPolicy: req.CommissionPolicy.Ptr().StringPtr(),
-		FreightPolicy:    req.FreightPolicy.Ptr().StringPtr(),
+		Id:                  req.AccountGroupID,
+		Name:                req.Name.Ptr(),
+		Description:         field.StringClearableToProto(req.Description),
+		CommissionPolicy:    req.CommissionPolicy.Ptr().StringPtr(),
+		FreightPolicy:       req.FreightPolicy.Ptr().StringPtr(),
+		DefaultLeadTimeDays: field.Int32ClearableToProto(req.DefaultLeadTimeDays),
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, accountGroupSvcTracer, "service.account_groups.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateAccountGroupResponse, error) {

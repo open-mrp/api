@@ -388,6 +388,10 @@ message SalesOrderInfo {
   double picked_completion = 101;
   double packed_completion = 102;
   double invoiced_completion = 103;
+  // The contractual ship-by commitment, stamped at issue and cleared on unissue.
+  optional google.protobuf.Timestamp ship_by_date = 104;
+  optional int32 lead_time_days = 105;
+  optional string lead_time_source_code = 106;
 }
 
 // SalesOrderLineInfo represents a sales order line.
@@ -454,6 +458,9 @@ message ListSalesOrdersRequest {
   optional string buyer_account_id = 13;
   // Includes to expand (e.g. "lines"); inline-joined fields are always present.
   repeated string includes = 14;
+  optional string ship_by_after = 15;
+  optional string ship_by_before = 16;
+  optional bool past_due = 17;
 }
 
 message ListSalesOrdersResponse {

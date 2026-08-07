@@ -36,6 +36,13 @@ type UpdateProductLineRequest struct {
 	//
 	// Sizes the campaigns a production schedule plans, and defaults the quantity when a batch is added to a production run. The unit is part of the value, since 60 pairs and 60 eaches are different lots, and it must belong to the line's unit group — the new one when `unit_group_id` changes in the same request. Send `null` to remove the line's lot convention, after which planning falls back to the lot of the line an item feeds into, and then to the account-wide default lot size.
 	DefaultLot field.Clearable[apirequest.QuantityInput] `json:"default_lot,omitzero"`
+	// How products in this line are produced when they do not say for themselves.
+	//
+	// - `make_to_stock`: built to the forecast, holding a safety stock against its variability.
+	// - `make_to_order`: built only against orders already on the book, holding no buffer.
+	//
+	// Clearing it returns the line's products to the account default.
+	FulfillmentPolicy field.Clearable[constants.FulfillmentPolicy] `json:"fulfillment_policy,omitzero"`
 	// ID of the unit group to associate with this product line.
 	//
 	// The unit group determines the set of units available to products in this product line. It must be a unit group your account owns or one of the shared system unit groups. A lot already stored on the line is not rechecked when the group changes, so send `default_lot` alongside to keep the two consistent.

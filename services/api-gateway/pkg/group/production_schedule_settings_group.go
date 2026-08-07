@@ -46,6 +46,12 @@ func (*ProductionScheduleSettingsEndpointGroup) Materialize(config *ProductionSc
 		apiendpoint.From(&productionschedulesettingsep.ListResourceSettingsEndpoint{}).WithService(inner, svc),
 		apiendpoint.From(&productionschedulesettingsep.UpsertResourceSettingEndpoint{}).WithService(inner, svc),
 		apiendpoint.From(&productionschedulesettingsep.DeleteResourceSettingEndpoint{}).WithService(inner, svc),
+		apiendpoint.From(&productionschedulesettingsep.ListItemSettingsEndpoint{}).WithService(inner, svc),
+		apiendpoint.From(&productionschedulesettingsep.RetrieveItemSettingEndpoint{}).WithService(inner, svc),
+		apiendpoint.From(&productionschedulesettingsep.UpsertItemSettingEndpoint{}).WithService(inner, svc),
+		apiendpoint.From(&productionschedulesettingsep.DeleteItemSettingEndpoint{}).WithService(inner, svc),
+		apiendpoint.From(&productionschedulesettingsep.ListFulfillmentRecommendationsEndpoint{}).WithService(inner, svc),
+		apiendpoint.From(&productionschedulesettingsep.ApplyFulfillmentRecommendationsEndpoint{}).WithService(inner, svc),
 	}
 
 	return &ProductionScheduleSettingsEndpointGroup{inner}

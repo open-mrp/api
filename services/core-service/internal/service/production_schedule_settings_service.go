@@ -52,6 +52,11 @@ func validateSettings(s domain.ProductionScheduleSettings) *apierror.APIError {
 		return apierror.NewValidationErrorWithParam("Maximum weeks of supply must be greater than zero.", "max_weeks_supply")
 	case s.WeekStartDay < 0 || s.WeekStartDay > 6:
 		return apierror.NewValidationErrorWithParam("The week start day must be between 0 and 6.", "week_start_day")
+	// Zero is allowed — same-day shipping is a real commitment — but a negative would date every order's ship-by before the order itself.
+	case s.DefaultCustomerLeadTimeDays < 0:
+		return apierror.NewValidationErrorWithParam("The default customer lead time cannot be negative.", "default_customer_lead_time_days")
+	case s.DefaultFulfillmentPolicyCode != "" && !constants.FulfillmentPolicy(s.DefaultFulfillmentPolicyCode).IsValid():
+		return apierror.NewValidationErrorWithParam("Unknown fulfillment policy.", "default_fulfillment_policy")
 	}
 
 	// A cadence with an unparseable cron would fail silently on every tick, and the merchant would see nothing rather than an error.
@@ -185,4 +190,108 @@ func (s *productionScheduleSvcImpl) DeleteResourceSetting(ctx context.Context, s
 	}
 
 	return s.repos.NewProductionScheduleRepo().DeleteResourceSetting(ctx, identity.Target.AccountID, settingID)
+}
+
+// ListItemSettings returns every per-item planning override in the account.
+func (s *productionScheduleSvcImpl) ListItemSettings(ctx context.Context) ([]*domain.ProductionScheduleItemPlanningSetting, *apierror.APIError) {
+	ctx, span := productionScheduleSvcTracer.Start(ctx, "service.production_schedule.list_item_settings")
+	defer span.End()
+
+	identity, apiErr := s.readIdentity(ctx)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainProductionSchedules, types.ActionRead); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return s.repos.NewProductionScheduleRepo().ListItemSettings(ctx, identity.Target.AccountID)
+}
+
+// GetItemSetting returns one item's override.
+func (s *productionScheduleSvcImpl) GetItemSetting(ctx context.Context, itemID string) (*domain.ProductionScheduleItemPlanningSetting, *apierror.APIError) {
+	ctx, span := productionScheduleSvcTracer.Start(ctx, "service.production_schedule.get_item_setting")
+	defer span.End()
+
+	identity, apiErr := s.readIdentity(ctx)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainProductionSchedules, types.ActionRead); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	setting, apiErr := s.repos.NewProductionScheduleRepo().GetItemSetting(ctx, identity.Target.AccountID, itemID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if setting == nil {
+		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("This item has no planning override."))
+	}
+	return setting, nil
+}
+
+// UpsertItemSetting writes one item's planning override.
+func (s *productionScheduleSvcImpl) UpsertItemSetting(ctx context.Context, params domain.UpsertItemSettingParams) (*domain.ProductionScheduleItemPlanningSetting, *apierror.APIError) {
+	ctx, span := productionScheduleSvcTracer.Start(ctx, "service.production_schedule.upsert_item_setting")
+	defer span.End()
+
+	identity, apiErr := s.writeIdentity(ctx, types.ActionUpdate)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	params.AccountID = identity.Target.AccountID
+
+	// An unknown policy would be stored and then silently ignored by the solver, leaving a merchant looking at a setting that does nothing.
+	if params.FulfillmentPolicyCode != nil {
+		if !constants.FulfillmentPolicy(*params.FulfillmentPolicyCode).IsValid() {
+			return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("Unknown fulfillment policy.", "fulfillment_policy"))
+		}
+	}
+	if params.LotMultipleUnits != nil && *params.LotMultipleUnits <= 0 {
+		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("The lot multiple must be greater than zero.", "lot_multiple_units"))
+	}
+
+	// A setting pointing at an item that does not exist would be invisible to the solver and unexplainable to whoever wrote it.
+	items, apiErr := s.repos.NewItemRepo().GetByIDs(ctx, params.AccountID, []string{params.ItemID})
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if len(items) == 0 {
+		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("Item not found.", "item_id"))
+	}
+
+	repo := s.repos.NewProductionScheduleRepo()
+	if apiErr := repo.UpsertItemSetting(ctx, params); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	setting, apiErr := repo.GetItemSetting(ctx, params.AccountID, params.ItemID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if setting == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("The item setting vanished immediately after being written."))
+	}
+	return setting, nil
+}
+
+// DeleteItemSetting removes one item's override, returning it to the defaults.
+func (s *productionScheduleSvcImpl) DeleteItemSetting(ctx context.Context, itemID string) *apierror.APIError {
+	ctx, span := productionScheduleSvcTracer.Start(ctx, "service.production_schedule.delete_item_setting")
+	defer span.End()
+
+	identity, apiErr := s.writeIdentity(ctx, types.ActionUpdate)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	// A delete that matched nothing is a 404: telling a caller their override is gone when it never existed hides a mistyped id.
+	deleted, apiErr := s.repos.NewProductionScheduleRepo().DeleteItemSetting(ctx, identity.Target.AccountID, itemID)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if !deleted {
+		return tracing.Trace(span, apierror.NewResourceNotFoundError("This item has no planning override."))
+	}
+	return nil
 }

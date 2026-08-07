@@ -38,6 +38,8 @@ type CreateAccountGroupRequest struct {
 	// - `free_freight`: customers within this group will not have to pay for freight.
 	// - `billed_freight`: freight will be applied to any order within this account group, unless overridden elsewhere.
 	FreightPolicy field.Optional[constants.FreightPolicy] `json:"freight_policy,omitzero" default:"billed_freight"`
+	// Calendar days between an order being issued and it being due to ship, inherited by every customer in this group that has not set its own.
+	DefaultLeadTimeDays field.Optional[int32] `json:"default_lead_time_days,omitzero" validate:"omitempty,gte=0,lte=3650"`
 	// Free-form description of the account group.
 	Description field.Optional[string] `json:"description,omitzero"`
 }

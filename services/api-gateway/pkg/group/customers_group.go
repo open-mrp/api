@@ -46,6 +46,7 @@ func (*CustomersEndpointGroup) Materialize(config *CustomersEndpointGroupConfig)
 	deleteEndpoint := apiendpoint.From(&customerep.DeleteCustomerEndpoint{}).WithService(inner, customerSvc)
 	bulkDeleteEndpoint := apiendpoint.From(&customerep.BulkDeleteCustomersEndpoint{}).WithService(inner, customerSvc)
 	frequentlyOrderedEndpoint := apiendpoint.From(&customerep.GetFrequentlyOrderedProductsEndpoint{}).WithService(inner, customerSvc)
+	leadTimeEndpoint := apiendpoint.From(&customerep.RetrieveCustomerLeadTimeEndpoint{}).WithService(inner, customerSvc)
 	listNotificationRecipientsEndpoint := apiendpoint.From(&customerep.ListNotificationRecipientsEndpoint{}).WithService(inner, customerSvc)
 	updateNotificationRecipientsEndpoint := apiendpoint.From(&customerep.UpdateNotificationRecipientsEndpoint{}).WithService(inner, customerSvc)
 	mergeEndpoint := apiendpoint.From(&customerep.MergeCustomersEndpoint{}).WithService(inner, customerSvc)
@@ -59,6 +60,7 @@ func (*CustomersEndpointGroup) Materialize(config *CustomersEndpointGroupConfig)
 		deleteEndpoint,
 		bulkDeleteEndpoint,
 		frequentlyOrderedEndpoint,
+		leadTimeEndpoint,
 		listNotificationRecipientsEndpoint,
 		updateNotificationRecipientsEndpoint,
 		mergeEndpoint,

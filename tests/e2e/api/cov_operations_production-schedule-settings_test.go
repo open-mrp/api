@@ -52,6 +52,10 @@ func settingsWriteBody(current map[string]any) map[string]any {
 		"default_constraint_lead_time_weeks", "max_weeks_supply", "max_flow_depth",
 		"shifts_per_day", "hours_per_shift", "work_days_per_week", "weeks_per_year",
 		"capacity_headroom_pct", "default_lot_units",
+		// The write is a whole-object replace, so every field the response carries has to
+		// be echoed back. Omitting one does not leave it alone — it resets it, which for
+		// the lead time means silently committing the account to same-day shipping.
+		"default_customer_lead_time_days", "default_fulfillment_policy",
 		"cadence_status", "generation_cron", "generation_timezone", "auto_publish_status",
 	} {
 		if value, ok := current[key]; ok && value != nil {

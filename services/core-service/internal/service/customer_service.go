@@ -436,6 +436,7 @@ func (s *customerSvcImpl) UpdateCustomer(ctx context.Context, params domain.Upda
 			params.CarrierBillingAccount = params.CarrierBillingAccount.BackfillUnsetPtr(old.CarrierBillingAccount)
 			params.BillToAddressID = params.BillToAddressID.BackfillUnsetPtr(old.BillToAddressID)
 			params.ShipToAddressID = params.ShipToAddressID.BackfillUnsetPtr(old.ShipToAddressID)
+			params.DefaultLeadTimeDays = params.DefaultLeadTimeDays.BackfillUnsetPtr(old.DefaultLeadTimeDays)
 
 			switch {
 			case params.CreditLimit.IsUnset():

@@ -33,6 +33,8 @@ type UpdateAccountGroupRequest struct {
 	// - `free_freight`: customers within this group will not have to pay for freight.
 	// - `billed_freight`: freight will be applied to any order within this account group, unless overridden elsewhere.
 	FreightPolicy field.Optional[constants.FreightPolicy] `json:"freight_policy,omitzero"`
+	// Calendar days between an order being issued and it being due to ship, inherited by every customer in this group that has not set its own. Clearing it returns the group's customers to the account default.
+	DefaultLeadTimeDays field.Clearable[int32] `json:"default_lead_time_days,omitzero" validate:"omitempty,gte=0,lte=3650"`
 }
 
 var sampleUpdateAccountGroupDescription = "Customers who buy in bulk at wholesale pricing."

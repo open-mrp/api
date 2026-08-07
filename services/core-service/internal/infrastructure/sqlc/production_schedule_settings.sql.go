@@ -8,7 +8,27 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"time"
 )
+
+const deleteProductionScheduleItemSetting = `-- name: DeleteProductionScheduleItemSetting :execrows
+DELETE FROM production_schedule_item_setting
+WHERE account_id = ? AND item_id = ?
+`
+
+type DeleteProductionScheduleItemSettingParams struct {
+	AccountID string
+	ItemID    string
+}
+
+// DeleteProductionScheduleItemSetting removes one item's override, returning it to the defaults.
+func (q *Queries) DeleteProductionScheduleItemSetting(ctx context.Context, arg DeleteProductionScheduleItemSettingParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteProductionScheduleItemSetting, arg.AccountID, arg.ItemID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
 
 const deleteProductionScheduleResourceSetting = `-- name: DeleteProductionScheduleResourceSetting :execrows
 DELETE FROM production_schedule_resource_setting
@@ -28,6 +48,117 @@ func (q *Queries) DeleteProductionScheduleResourceSetting(ctx context.Context, a
 	return result.RowsAffected()
 }
 
+const getProductionScheduleItemSetting = `-- name: GetProductionScheduleItemSetting :one
+SELECT
+    s.id,
+    s.item_id,
+    i.sku,
+    s.is_excluded,
+    s.lot_multiple_units,
+    s.fulfillment_policy_code,
+    s.created_at,
+    s.updated_at
+FROM production_schedule_item_setting s
+JOIN item i ON i.id = s.item_id
+WHERE s.account_id = ?
+  AND s.item_id = ?
+`
+
+type GetProductionScheduleItemSettingParams struct {
+	AccountID string
+	ItemID    string
+}
+
+type GetProductionScheduleItemSettingRow struct {
+	ID                    string
+	ItemID                string
+	Sku                   string
+	IsExcluded            bool
+	LotMultipleUnits      sql.NullString
+	FulfillmentPolicyCode sql.NullString
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
+}
+
+// GetProductionScheduleItemSetting returns one item's override.
+func (q *Queries) GetProductionScheduleItemSetting(ctx context.Context, arg GetProductionScheduleItemSettingParams) (GetProductionScheduleItemSettingRow, error) {
+	row := q.db.QueryRowContext(ctx, getProductionScheduleItemSetting, arg.AccountID, arg.ItemID)
+	var i GetProductionScheduleItemSettingRow
+	err := row.Scan(
+		&i.ID,
+		&i.ItemID,
+		&i.Sku,
+		&i.IsExcluded,
+		&i.LotMultipleUnits,
+		&i.FulfillmentPolicyCode,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const listProductionScheduleItemSettings = `-- name: ListProductionScheduleItemSettings :many
+SELECT
+    s.id,
+    s.item_id,
+    i.sku,
+    s.is_excluded,
+    s.lot_multiple_units,
+    s.fulfillment_policy_code,
+    s.created_at,
+    s.updated_at
+FROM production_schedule_item_setting s
+JOIN item i ON i.id = s.item_id
+WHERE s.account_id = ?
+ORDER BY i.sku, s.item_id
+`
+
+type ListProductionScheduleItemSettingsRow struct {
+	ID                    string
+	ItemID                string
+	Sku                   string
+	IsExcluded            bool
+	LotMultipleUnits      sql.NullString
+	FulfillmentPolicyCode sql.NullString
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
+}
+
+// ListProductionScheduleItemSettings returns every per-item planning override in the account.
+//
+// Kept distinct from GetProductionScheduleItemSettings, which the solver uses: that one reads only the columns a solve needs, and widening it would make every solve carry API-shaped data it never looks at.
+func (q *Queries) ListProductionScheduleItemSettings(ctx context.Context, accountID string) ([]ListProductionScheduleItemSettingsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listProductionScheduleItemSettings, accountID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListProductionScheduleItemSettingsRow
+	for rows.Next() {
+		var i ListProductionScheduleItemSettingsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ItemID,
+			&i.Sku,
+			&i.IsExcluded,
+			&i.LotMultipleUnits,
+			&i.FulfillmentPolicyCode,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const upsertAccountProductionScheduleSetting = `-- name: UpsertAccountProductionScheduleSetting :exec
 
 
@@ -41,6 +172,7 @@ INSERT INTO account_production_schedule_setting (
     default_constraint_lead_time_weeks, max_weeks_supply, max_flow_depth,
     shifts_per_day, hours_per_shift, work_days_per_week, weeks_per_year,
     capacity_headroom_pct, default_lot_units,
+    default_customer_lead_time_days, default_fulfillment_policy_code,
     is_enabled, generation_cron, generation_timezone, auto_publish,
     created_at, updated_at
 ) VALUES (
@@ -52,6 +184,7 @@ INSERT INTO account_production_schedule_setting (
     ?, ?, ?,
     ?, ?, ?,
     ?, ?, ?, ?,
+    ?, ?,
     ?, ?,
     ?, ?, ?, ?,
     NOW(3), NOW(3)
@@ -82,6 +215,8 @@ ON DUPLICATE KEY UPDATE
     weeks_per_year = VALUES(weeks_per_year),
     capacity_headroom_pct = VALUES(capacity_headroom_pct),
     default_lot_units = VALUES(default_lot_units),
+    default_customer_lead_time_days = VALUES(default_customer_lead_time_days),
+    default_fulfillment_policy_code = VALUES(default_fulfillment_policy_code),
     is_enabled = VALUES(is_enabled),
     generation_cron = VALUES(generation_cron),
     generation_timezone = VALUES(generation_timezone),
@@ -117,6 +252,8 @@ type UpsertAccountProductionScheduleSettingParams struct {
 	WeeksPerYear                   int32
 	CapacityHeadroomPct            string
 	DefaultLotUnits                string
+	DefaultCustomerLeadTimeDays    int32
+	DefaultFulfillmentPolicyCode   string
 	IsEnabled                      bool
 	GenerationCron                 sql.NullString
 	GenerationTimezone             string
@@ -157,10 +294,52 @@ func (q *Queries) UpsertAccountProductionScheduleSetting(ctx context.Context, ar
 		arg.WeeksPerYear,
 		arg.CapacityHeadroomPct,
 		arg.DefaultLotUnits,
+		arg.DefaultCustomerLeadTimeDays,
+		arg.DefaultFulfillmentPolicyCode,
 		arg.IsEnabled,
 		arg.GenerationCron,
 		arg.GenerationTimezone,
 		arg.AutoPublish,
+	)
+	return err
+}
+
+const upsertProductionScheduleItemSetting = `-- name: UpsertProductionScheduleItemSetting :exec
+INSERT INTO production_schedule_item_setting (
+    id, account_id, item_id, is_excluded, lot_multiple_units, fulfillment_policy_code,
+    created_at, updated_at
+) VALUES (
+    ?, ?, ?,
+    ?, ?, ?,
+    NOW(3), NOW(3)
+)
+ON DUPLICATE KEY UPDATE
+    is_excluded = VALUES(is_excluded),
+    lot_multiple_units = VALUES(lot_multiple_units),
+    fulfillment_policy_code = VALUES(fulfillment_policy_code),
+    updated_at = NOW(3)
+`
+
+type UpsertProductionScheduleItemSettingParams struct {
+	ID                    string
+	AccountID             string
+	ItemID                string
+	IsExcluded            bool
+	LotMultipleUnits      sql.NullString
+	FulfillmentPolicyCode sql.NullString
+}
+
+// UpsertProductionScheduleItemSetting writes one item's planning override.
+//
+// Upsert rather than insert: an item has at most one override, and making a merchant delete before changing a value would be a worse contract than replacing it.
+func (q *Queries) UpsertProductionScheduleItemSetting(ctx context.Context, arg UpsertProductionScheduleItemSettingParams) error {
+	_, err := q.db.ExecContext(ctx, upsertProductionScheduleItemSetting,
+		arg.ID,
+		arg.AccountID,
+		arg.ItemID,
+		arg.IsExcluded,
+		arg.LotMultipleUnits,
+		arg.FulfillmentPolicyCode,
 	)
 	return err
 }

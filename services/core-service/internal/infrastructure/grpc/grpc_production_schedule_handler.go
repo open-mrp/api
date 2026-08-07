@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"github.com/augno/api/services/core-service/internal/domain"
+	"github.com/augno/api/services/core-service/internal/scheduling"
 	"github.com/augno/api/shared/contracts"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/safeconv"
@@ -64,6 +65,10 @@ func (h *productionScheduleGRPCHandler) PreviewProductionSchedule(ctx context.Co
 			WeeksOfCover:            p.WeeksOfCover,
 			AbcClass:                p.ABCClass,
 			AnnualRunHours:          p.AnnualRunHours(),
+			FulfillmentPolicyCode:   p.FulfillmentPolicy,
+			PolicySourceCode:        p.PolicySource,
+			FirmDemandUnits:         p.FirmDemandUnits,
+			ForecastDemandUnits:     p.ForecastDemandUnits,
 		}
 	}
 
@@ -126,8 +131,29 @@ func (h *productionScheduleGRPCHandler) PreviewProductionSchedule(ctx context.Co
 			ChangeoverSlopeMinutes: out.Diagnostics.ChangeoverSlopeMinutes,
 			AverageInputsAdded:     out.Diagnostics.AverageInputsAdded,
 			AppliedOverrides:       appliedOverrides,
+			FirmDemandUnits:        out.Diagnostics.FirmDemandUnits,
+			UndatedFirmOrderCount:  safeconv.IntToInt32(out.Diagnostics.UndatedFirmOrderCount),
+			MakeToOrderItemCount:   safeconv.IntToInt32(out.Diagnostics.MakeToOrderItemCount),
+			AtRiskOrders:           scheduleAtRiskOrdersToProto(out.Diagnostics.AtRiskOrders),
 		},
 	}, nil
+}
+
+// scheduleAtRiskOrdersToProto maps the commitments the plan does not meet. Always a non-nil slice so an empty list serializes as [] rather than null.
+func scheduleAtRiskOrdersToProto(orders []scheduling.AtRiskOrder) []*pb.ScheduleAtRiskOrderProto {
+	out := make([]*pb.ScheduleAtRiskOrderProto, 0, len(orders))
+	for _, o := range orders {
+		out = append(out, &pb.ScheduleAtRiskOrderProto{
+			SalesOrderId:     o.SalesOrderID,
+			SalesOrderNumber: o.SalesOrderNumber,
+			ItemId:           o.ItemID,
+			Sku:              o.SKU,
+			Units:            o.Units,
+			DueWeek:          safeconv.IntToInt32(o.DueWeek),
+			Reason:           o.Reason,
+		})
+	}
+	return out
 }
 
 func scheduleToProto(s *domain.ProductionSchedule) *pb.ProductionScheduleInfo {
@@ -237,6 +263,10 @@ func scheduleItemPolicyToProto(p *domain.ProductionScheduleItemPolicy) *pb.Produ
 		WasCapacityStarved:      p.WasCapacityStarved,
 		CreatedAt:               timestamppb.New(p.CreatedAt),
 		UpdatedAt:               timestamppb.New(p.UpdatedAt),
+		FulfillmentPolicyCode:   p.FulfillmentPolicyCode,
+		PolicySourceCode:        p.PolicySourceCode,
+		FirmDemandUnits:         p.FirmDemandUnits,
+		ForecastDemandUnits:     p.ForecastDemandUnits,
 	}
 }
 
@@ -464,4 +494,68 @@ func (h *productionScheduleGRPCHandler) ListProductionScheduleFinishedPolicies(c
 		}
 	}
 	return &pb.ListProductionScheduleFinishedPoliciesResponse{Policies: out}, nil
+}
+
+func (h *productionScheduleGRPCHandler) ListProductionScheduleAtRiskOrders(ctx context.Context, req *pb.ListProductionScheduleAtRiskOrdersRequest) (*pb.ListProductionScheduleAtRiskOrdersResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	orders, apiErr := h.productionScheduleSvc.ListAtRiskOrders(ctx, req.ProductionScheduleId)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	out := make([]*pb.ScheduleOrderCoverageProto, 0, len(orders))
+	for _, o := range orders {
+		covering := make([]*pb.ScheduleOrderCoverageLineProto, 0, len(o.CoveringLines))
+		for _, l := range o.CoveringLines {
+			covering = append(covering, &pb.ScheduleOrderCoverageLineProto{
+				ProductionScheduleLineId: l.ProductionScheduleLineID,
+				WeekIndex:                l.WeekIndex,
+				MachineId:                l.MachineID,
+				AllocatedQuantity:        l.AllocatedQuantity,
+			})
+		}
+		row := &pb.ScheduleOrderCoverageProto{
+			SalesOrderId:     o.SalesOrderID,
+			SalesOrderNumber: o.SalesOrderNumber,
+			ItemId:           o.ItemID,
+			Sku:              o.SKU,
+			UnitsAtRisk:      o.UnitsAtRisk,
+			DueWeek:          safeconv.IntToInt32(o.DueWeek),
+			ReasonCode:       o.ReasonCode,
+			CoveringLines:    covering,
+		}
+		if o.ShipByDate != nil {
+			row.ShipByDate = timestamppb.New(*o.ShipByDate)
+		}
+		out = append(out, row)
+	}
+	return &pb.ListProductionScheduleAtRiskOrdersResponse{Orders: out}, nil
+}
+
+func (h *productionScheduleGRPCHandler) QuotePromiseDate(ctx context.Context, req *pb.QuotePromiseDateRequest) (*pb.QuotePromiseDateResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	quote, apiErr := h.productionScheduleSvc.QuotePromiseDate(ctx, req.ItemId, req.Quantity)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	resp := &pb.QuotePromiseDateResponse{
+		ItemId:                    quote.ItemID,
+		Quantity:                  quote.Quantity,
+		IsPromisable:              quote.IsPromisable,
+		ProductionScheduleId:      quote.ProductionScheduleID,
+		ProductionScheduleVersion: quote.ProductionScheduleVersion,
+	}
+	if quote.EarliestShipDate != nil {
+		resp.EarliestShipDate = timestamppb.New(*quote.EarliestShipDate)
+	}
+	if quote.EarliestWeekIndex != nil {
+		week := safeconv.IntToInt32(*quote.EarliestWeekIndex)
+		resp.EarliestWeekIndex = &week
+	}
+	return resp, nil
 }

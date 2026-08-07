@@ -380,6 +380,11 @@ func salesOrderToProto(o *domain.SalesOrder) *pb.SalesOrderInfo {
 	if o.PromisedAt != nil {
 		info.PromisedAt = timestamppb.New(*o.PromisedAt)
 	}
+	if o.ShipByDate != nil {
+		info.ShipByDate = timestamppb.New(*o.ShipByDate)
+	}
+	info.LeadTimeDays = o.LeadTimeDays
+	info.LeadTimeSourceCode = o.LeadTimeSourceCode
 
 	if o.CarrierIsPortalEnabled != nil {
 		info.CarrierIsPortalEnabled = o.CarrierIsPortalEnabled
@@ -484,6 +489,9 @@ func (h *salesGRPCHandler) ListSalesOrders(ctx context.Context, req *pb.ListSale
 		SalesRepIDs:      req.SalesRepIds,
 		StartDate:        req.StartDate,
 		EndDate:          req.EndDate,
+		ShipByAfter:      req.ShipByAfter,
+		ShipByBefore:     req.ShipByBefore,
+		PastDue:          req.PastDue,
 		BuyerAccountID:   req.BuyerAccountId,
 		Includes:         req.Includes,
 	}

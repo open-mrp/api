@@ -21,6 +21,12 @@ type ProductionScheduleSettingsSvc interface {
 	ListResourceSettings(ctx context.Context, req *ListResourceSettingsRequest) (*apiresource.List[apiresource.ProductionScheduleResourceSetting], *apierror.APIError)
 	UpsertResourceSetting(ctx context.Context, req *UpsertResourceSettingRequest) (*apiresource.ProductionScheduleResourceSetting, *apierror.APIError)
 	DeleteResourceSetting(ctx context.Context, req *DeleteResourceSettingRequest) (*apiresource.EmptyResource, *apierror.APIError)
+	ListItemSettings(ctx context.Context, req *ListItemSettingsRequest) (*apiresource.List[apiresource.ProductionScheduleItemSetting], *apierror.APIError)
+	GetItemSetting(ctx context.Context, req *RetrieveItemSettingRequest) (*apiresource.ProductionScheduleItemSetting, *apierror.APIError)
+	UpsertItemSetting(ctx context.Context, req *UpsertItemSettingRequest) (*apiresource.ProductionScheduleItemSetting, *apierror.APIError)
+	DeleteItemSetting(ctx context.Context, req *DeleteItemSettingRequest) (*apiresource.EmptyResource, *apierror.APIError)
+	ListFulfillmentRecommendations(ctx context.Context, req *ListFulfillmentRecommendationsRequest) (*apiresource.List[apiresource.FulfillmentRecommendation], *apierror.APIError)
+	ApplyFulfillmentRecommendations(ctx context.Context, req *ApplyFulfillmentRecommendationsRequest) (*apiresource.List[apiresource.FulfillmentRecommendation], *apierror.APIError)
 }
 
 type ProductionScheduleSettingsSvcConfig struct {
@@ -75,6 +81,8 @@ func settingsFromProto(info *pb.ProductionScheduleSettingsInfo) apiresource.Prod
 		WeeksPerYear:                   info.WeeksPerYear,
 		CapacityHeadroomPct:            info.CapacityHeadroomPct,
 		DefaultLotUnits:                info.DefaultLotUnits,
+		DefaultCustomerLeadTimeDays:    info.DefaultCustomerLeadTimeDays,
+		DefaultFulfillmentPolicy:       constants.FulfillmentPolicy(info.DefaultFulfillmentPolicyCode),
 		CadenceStatus:                  constants.ActivationStatusOf(info.IsEnabled),
 		GenerationCron:                 info.GenerationCron,
 		GenerationTimezone:             info.GenerationTimezone,
@@ -130,6 +138,8 @@ func (m *settingsSvcImpl) UpdateSettings(ctx context.Context, req *UpdateProduct
 			WeeksPerYear:                   req.WeeksPerYear,
 			CapacityHeadroomPct:            req.CapacityHeadroomPct,
 			DefaultLotUnits:                req.DefaultLotUnits,
+			DefaultCustomerLeadTimeDays:    req.DefaultCustomerLeadTimeDays,
+			DefaultFulfillmentPolicyCode:   string(req.DefaultFulfillmentPolicy),
 			IsEnabled:                      req.CadenceStatus == constants.ActivationStatusActive,
 			GenerationCron:                 req.GenerationCron.ValuePtr(),
 			GenerationTimezone:             req.GenerationTimezone,
@@ -225,4 +235,150 @@ func (m *settingsSvcImpl) DeleteResourceSetting(ctx context.Context, req *Delete
 		return nil, apiErr
 	}
 	return &apiresource.EmptyResource{}, nil
+}
+
+// itemSettingFromProto maps one item's planning overrides onto the API shape.
+func itemSettingFromProto(s *pb.ProductionScheduleItemSettingInfo) *apiresource.ProductionScheduleItemSetting {
+	if s == nil {
+		return nil
+	}
+	participation := constants.ParticipationStatusIncluded
+	if s.IsExcluded {
+		participation = constants.ParticipationStatusExcluded
+	}
+	out := &apiresource.ProductionScheduleItemSetting{
+		ID:                  s.Id,
+		Object:              constants.ObjectTypeProductionScheduleItemSetting,
+		Item:                apiresource.NewEntity(s.ItemId, constants.ObjectTypeItem, nil, &s.Sku),
+		ParticipationStatus: participation,
+		LotMultipleUnits:    s.LotMultipleUnits,
+		CreatedAt:           grpcutil.TimestampToTime(s.CreatedAt),
+		UpdatedAt:           grpcutil.TimestampToTime(s.UpdatedAt),
+	}
+	if s.FulfillmentPolicyCode != nil && *s.FulfillmentPolicyCode != "" {
+		policy := constants.FulfillmentPolicy(*s.FulfillmentPolicyCode)
+		out.FulfillmentPolicy = &policy
+	}
+	return out
+}
+
+func (m *settingsSvcImpl) ListItemSettings(ctx context.Context, _ *ListItemSettingsRequest) (*apiresource.List[apiresource.ProductionScheduleItemSetting], *apierror.APIError) {
+	resp, apiErr := grpcutil.CallRPC(ctx, settingsEpSvcTracer, "service.production_schedule_settings.list_item_settings", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListProductionScheduleItemSettingsResponse, error) {
+			return m.coreClient.ListProductionScheduleItemSettings(ctx, &pb.ListProductionScheduleItemSettingsRequest{}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	items := make([]apiresource.ProductionScheduleItemSetting, 0, len(resp.Settings))
+	for _, s := range resp.Settings {
+		if mapped := itemSettingFromProto(s); mapped != nil {
+			items = append(items, *mapped)
+		}
+	}
+	return apiresource.NewList(items, apiresource.PageInfo{}), nil
+}
+
+func (m *settingsSvcImpl) UpsertItemSetting(ctx context.Context, req *UpsertItemSettingRequest) (*apiresource.ProductionScheduleItemSetting, *apierror.APIError) {
+	pbReq := &pb.UpsertProductionScheduleItemSettingRequest{
+		ItemId:     req.ItemID,
+		IsExcluded: req.ParticipationStatus == constants.ParticipationStatusExcluded,
+	}
+	if v, ok := req.LotMultipleUnits.Value(); ok {
+		pbReq.LotMultipleUnits = &v
+	}
+	// A clear sends nothing, which is what returns the item to its product line's policy.
+	if v, ok := req.FulfillmentPolicy.Value(); ok {
+		policy := string(v)
+		pbReq.FulfillmentPolicyCode = &policy
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, settingsEpSvcTracer, "service.production_schedule_settings.upsert_item_setting", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ProductionScheduleItemSettingResponse, error) {
+			return m.coreClient.UpsertProductionScheduleItemSetting(ctx, pbReq, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	return itemSettingFromProto(resp.Setting), nil
+}
+
+func (m *settingsSvcImpl) DeleteItemSetting(ctx context.Context, req *DeleteItemSettingRequest) (*apiresource.EmptyResource, *apierror.APIError) {
+	_, apiErr := grpcutil.CallRPC(ctx, settingsEpSvcTracer, "service.production_schedule_settings.delete_item_setting", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+			return m.coreClient.DeleteProductionScheduleItemSetting(ctx, &pb.DeleteProductionScheduleItemSettingRequest{ItemId: req.ItemID}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	return &apiresource.EmptyResource{}, nil
+}
+
+// recommendationFromProto maps one item's fulfillment advice onto the API shape.
+func recommendationFromProto(r *pb.FulfillmentRecommendationInfo) apiresource.FulfillmentRecommendation {
+	out := apiresource.FulfillmentRecommendation{
+		Object:                     constants.ObjectTypeFulfillmentRecommendation,
+		Item:                       apiresource.NewEntity(r.ItemId, constants.ObjectTypeItem, nil, &r.Sku),
+		SKU:                        r.Sku,
+		CurrentPolicy:              constants.FulfillmentPolicy(r.CurrentPolicyCode),
+		RecommendedPolicy:          constants.FulfillmentPolicy(r.RecommendedPolicyCode),
+		Changes:                    r.Changes,
+		Reason:                     constants.FulfillmentRecommendationReason(r.ReasonCode),
+		AverageDemandInterval:      r.AverageDemandInterval,
+		CoefficientOfVariation:     r.CoefficientOfVariation,
+		TopCustomerSharePct:        r.TopCustomerSharePct,
+		TopCustomerName:            r.TopCustomerName,
+		DemandWeightedLeadTimeDays: r.DemandWeightedLeadTimeDays,
+		AnnualCOGS:                 r.AnnualCogs,
+		MonthsSinceLastSale:        r.MonthsSinceLastSale,
+		MixedStreamSharePct:        r.MixedStreamSharePct,
+	}
+	if r.ProductLineId != nil {
+		out.ProductLine = apiresource.NewEntity(*r.ProductLineId, constants.ObjectTypeProductLine, nil, nil)
+	}
+	return out
+}
+
+func (m *settingsSvcImpl) ListFulfillmentRecommendations(ctx context.Context, _ *ListFulfillmentRecommendationsRequest) (*apiresource.List[apiresource.FulfillmentRecommendation], *apierror.APIError) {
+	resp, apiErr := grpcutil.CallRPC(ctx, settingsEpSvcTracer, "service.production_schedule_settings.list_fulfillment_recommendations", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListFulfillmentRecommendationsResponse, error) {
+			return m.coreClient.ListFulfillmentRecommendations(ctx, &pb.ListFulfillmentRecommendationsRequest{}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	items := make([]apiresource.FulfillmentRecommendation, 0, len(resp.Recommendations))
+	for _, r := range resp.Recommendations {
+		items = append(items, recommendationFromProto(r))
+	}
+	return apiresource.NewList(items, apiresource.PageInfo{}), nil
+}
+
+func (m *settingsSvcImpl) ApplyFulfillmentRecommendations(ctx context.Context, req *ApplyFulfillmentRecommendationsRequest) (*apiresource.List[apiresource.FulfillmentRecommendation], *apierror.APIError) {
+	resp, apiErr := grpcutil.CallRPC(ctx, settingsEpSvcTracer, "service.production_schedule_settings.apply_fulfillment_recommendations", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListFulfillmentRecommendationsResponse, error) {
+			return m.coreClient.ApplyFulfillmentRecommendations(ctx, &pb.ApplyFulfillmentRecommendationsRequest{ItemIds: req.ItemIDs}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	items := make([]apiresource.FulfillmentRecommendation, 0, len(resp.Recommendations))
+	for _, r := range resp.Recommendations {
+		items = append(items, recommendationFromProto(r))
+	}
+	return apiresource.NewList(items, apiresource.PageInfo{}), nil
+}
+
+func (m *settingsSvcImpl) GetItemSetting(ctx context.Context, req *RetrieveItemSettingRequest) (*apiresource.ProductionScheduleItemSetting, *apierror.APIError) {
+	resp, apiErr := grpcutil.CallRPC(ctx, settingsEpSvcTracer, "service.production_schedule_settings.get_item_setting", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ProductionScheduleItemSettingResponse, error) {
+			return m.coreClient.GetProductionScheduleItemSetting(ctx, &pb.GetProductionScheduleItemSettingRequest{ItemId: req.ItemID}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	return itemSettingFromProto(resp.Setting), nil
 }

@@ -39,6 +39,14 @@ SELECT
     s.weeks_per_year,
     s.capacity_headroom_pct,
     s.default_lot_units,
+    s.default_customer_lead_time_days,
+    s.default_fulfillment_policy_code,
+    s.recommendation_dormant_months,
+    s.recommendation_concentration_pct,
+    s.recommendation_adi_threshold,
+    s.recommendation_cv2_threshold,
+    s.recommendation_slow_mover_cogs,
+    s.recommendation_high_value_unit_cost,
     -- The cadence and display columns are read by the settings API, which shares this query so there is one definition of "the merchant's assumptions".
     s.week_start_day,
     s.is_enabled,
@@ -53,39 +61,47 @@ WHERE s.account_id = ?
 `
 
 type GetAccountProductionScheduleSettingRow struct {
-	ID                             string
-	ConstraintDepartmentID         sql.NullString
-	PlanningHorizonWeeks           int32
-	FrozenWeeks                    int32
-	DemandWindowMonths             int32
-	ForecastHistoryMonths          int32
-	ForecastMonths                 int32
-	DemandBasisCode                string
-	ForecastZ                      string
-	ChangeoverAvgMinutes           string
-	ChangeoverMinMinutes           string
-	ChangeoverMaxMinutes           string
-	ChangeoverLaborRate            string
-	HoldingRatePct                 string
-	ServiceLevelZ                  string
-	FinishLeadTimeWeeks            string
-	DefaultConstraintLeadTimeWeeks string
-	MaxWeeksSupply                 string
-	MaxFlowDepth                   int32
-	ShiftsPerDay                   int32
-	HoursPerShift                  string
-	WorkDaysPerWeek                int32
-	WeeksPerYear                   int32
-	CapacityHeadroomPct            string
-	DefaultLotUnits                string
-	WeekStartDay                   int32
-	IsEnabled                      bool
-	GenerationCron                 sql.NullString
-	GenerationTimezone             string
-	AutoPublish                    bool
-	LastGeneratedAt                sql.NullTime
-	CreatedAt                      time.Time
-	UpdatedAt                      time.Time
+	ID                              string
+	ConstraintDepartmentID          sql.NullString
+	PlanningHorizonWeeks            int32
+	FrozenWeeks                     int32
+	DemandWindowMonths              int32
+	ForecastHistoryMonths           int32
+	ForecastMonths                  int32
+	DemandBasisCode                 string
+	ForecastZ                       string
+	ChangeoverAvgMinutes            string
+	ChangeoverMinMinutes            string
+	ChangeoverMaxMinutes            string
+	ChangeoverLaborRate             string
+	HoldingRatePct                  string
+	ServiceLevelZ                   string
+	FinishLeadTimeWeeks             string
+	DefaultConstraintLeadTimeWeeks  string
+	MaxWeeksSupply                  string
+	MaxFlowDepth                    int32
+	ShiftsPerDay                    int32
+	HoursPerShift                   string
+	WorkDaysPerWeek                 int32
+	WeeksPerYear                    int32
+	CapacityHeadroomPct             string
+	DefaultLotUnits                 string
+	DefaultCustomerLeadTimeDays     int32
+	DefaultFulfillmentPolicyCode    string
+	RecommendationDormantMonths     int32
+	RecommendationConcentrationPct  string
+	RecommendationAdiThreshold      string
+	RecommendationCv2Threshold      string
+	RecommendationSlowMoverCogs     string
+	RecommendationHighValueUnitCost string
+	WeekStartDay                    int32
+	IsEnabled                       bool
+	GenerationCron                  sql.NullString
+	GenerationTimezone              string
+	AutoPublish                     bool
+	LastGeneratedAt                 sql.NullTime
+	CreatedAt                       time.Time
+	UpdatedAt                       time.Time
 }
 
 // GetAccountProductionScheduleSetting returns the merchant's planning assumptions. Absent means the account has never configured scheduling, and the caller falls back to code defaults rather than refusing to plan.
@@ -118,6 +134,14 @@ func (q *Queries) GetAccountProductionScheduleSetting(ctx context.Context, accou
 		&i.WeeksPerYear,
 		&i.CapacityHeadroomPct,
 		&i.DefaultLotUnits,
+		&i.DefaultCustomerLeadTimeDays,
+		&i.DefaultFulfillmentPolicyCode,
+		&i.RecommendationDormantMonths,
+		&i.RecommendationConcentrationPct,
+		&i.RecommendationAdiThreshold,
+		&i.RecommendationCv2Threshold,
+		&i.RecommendationSlowMoverCogs,
+		&i.RecommendationHighValueUnitCost,
 		&i.WeekStartDay,
 		&i.IsEnabled,
 		&i.GenerationCron,
@@ -187,6 +211,54 @@ func (q *Queries) GetActiveDemandOverrides(ctx context.Context, arg GetActiveDem
 			&i.Value,
 			&i.ReasonCode,
 			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getAllSellableProducts = `-- name: GetAllSellableProducts :many
+SELECT
+    p.id AS product_id,
+    p.item_id,
+    i.sku,
+    p.product_line_id
+FROM product p
+JOIN item i ON i.id = p.item_id
+WHERE i.account_id = ?
+ORDER BY i.sku, p.item_id
+`
+
+type GetAllSellableProductsRow struct {
+	ProductID     string
+	ItemID        string
+	Sku           string
+	ProductLineID sql.NullString
+}
+
+// GetAllSellableProducts returns every product in the account with the item and line it carries. The candidate set for a fulfillment recommendation is everything that can be sold, since that is where policy is resolved.
+func (q *Queries) GetAllSellableProducts(ctx context.Context, accountID string) ([]GetAllSellableProductsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getAllSellableProducts, accountID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAllSellableProductsRow
+	for rows.Next() {
+		var i GetAllSellableProductsRow
+		if err := rows.Scan(
+			&i.ProductID,
+			&i.ItemID,
+			&i.Sku,
+			&i.ProductLineID,
 		); err != nil {
 			return nil, err
 		}
@@ -508,6 +580,64 @@ func (q *Queries) GetConstraintMachines(ctx context.Context, arg GetConstraintMa
 	return items, nil
 }
 
+const getCustomerFulfillmentProfiles = `-- name: GetCustomerFulfillmentProfiles :many
+SELECT
+    ar.counterparty_account_id AS customer_account_id,
+    COALESCE(NULLIF(ar.alias, ''), a.name) AS customer_name,
+    ar.default_lead_time_days AS customer_lead_time_days,
+    ag.default_lead_time_days AS account_group_lead_time_days,
+    ar.fulfillment_policy_code AS customer_policy,
+    ag.fulfillment_policy_code AS account_group_policy
+FROM account_relation ar
+JOIN account a ON a.id = ar.counterparty_account_id
+LEFT JOIN account_group ag ON ag.id = ar.account_group_id
+WHERE ar.owner_account_id = ?
+  AND ar.account_relation_role_code = 'customer'
+ORDER BY ar.counterparty_account_id
+`
+
+type GetCustomerFulfillmentProfilesRow struct {
+	CustomerAccountID        string
+	CustomerName             string
+	CustomerLeadTimeDays     sql.NullInt32
+	AccountGroupLeadTimeDays sql.NullInt32
+	CustomerPolicy           sql.NullString
+	AccountGroupPolicy       sql.NullString
+}
+
+// GetCustomerFulfillmentProfiles returns every customer's lead time and stated policy, with the account group each falls back to.
+//
+// The recommendation asks two things of a customer: how long they allow, and how they say they buy. Both resolve through the same chain an order's ship-by is stamped from, so the two cannot disagree about the same customer.
+func (q *Queries) GetCustomerFulfillmentProfiles(ctx context.Context, accountID string) ([]GetCustomerFulfillmentProfilesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getCustomerFulfillmentProfiles, accountID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetCustomerFulfillmentProfilesRow
+	for rows.Next() {
+		var i GetCustomerFulfillmentProfilesRow
+		if err := rows.Scan(
+			&i.CustomerAccountID,
+			&i.CustomerName,
+			&i.CustomerLeadTimeDays,
+			&i.AccountGroupLeadTimeDays,
+			&i.CustomerPolicy,
+			&i.AccountGroupPolicy,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getEchelonOnHand = `-- name: GetEchelonOnHand :many
 SELECT
     ir.item_id,
@@ -574,6 +704,61 @@ func (q *Queries) GetEchelonOnHand(ctx context.Context, arg GetEchelonOnHandPara
 	return items, nil
 }
 
+const getItemUnitCosts = `-- name: GetItemUnitCosts :many
+SELECT
+    i.id AS item_id,
+    r.value AS unit_cost
+FROM item i
+JOIN rate r ON r.id = i.unit_cost_id
+WHERE i.account_id = ?
+  AND i.id IN (/*SLICE:item_ids*/?)
+`
+
+type GetItemUnitCostsParams struct {
+	AccountID string
+	ItemIds   []string
+}
+
+type GetItemUnitCostsRow struct {
+	ItemID   string
+	UnitCost string
+}
+
+// GetItemUnitCosts returns each item's standard unit cost, which prices the holding side of a make-or-stock decision.
+func (q *Queries) GetItemUnitCosts(ctx context.Context, arg GetItemUnitCostsParams) ([]GetItemUnitCostsRow, error) {
+	query := getItemUnitCosts
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	if len(arg.ItemIds) > 0 {
+		for _, v := range arg.ItemIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetItemUnitCostsRow
+	for rows.Next() {
+		var i GetItemUnitCostsRow
+		if err := rows.Scan(&i.ItemID, &i.UnitCost); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getItemsForProductLines = `-- name: GetItemsForProductLines :many
 SELECT
     p.product_line_id,
@@ -617,6 +802,97 @@ func (q *Queries) GetItemsForProductLines(ctx context.Context, arg GetItemsForPr
 	for rows.Next() {
 		var i GetItemsForProductLinesRow
 		if err := rows.Scan(&i.ProductLineID, &i.ItemID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getOpenOrderRequirements = `-- name: GetOpenOrderRequirements :many
+SELECT
+    so.id AS sales_order_id,
+    so.number AS sales_order_number,
+    sol.id AS sales_order_line_id,
+    so.ship_by_date,
+    sol.product_id,
+    CAST(
+        q.value * (u.ratio_numerator / u.ratio_denominator)
+        - COALESCE((
+            SELECT SUM(plq.value * (plu.ratio_numerator / plu.ratio_denominator))
+            FROM pick_line pl
+            JOIN quantity plq ON plq.id = pl.quantity_id
+            JOIN unit plu ON plu.id = plq.unit_id
+            WHERE pl.sales_order_line_id = sol.id
+              AND pl.packed_at IS NOT NULL
+        ), 0)
+    AS DECIMAL(65,30)) AS outstanding_quantity
+FROM sales_order_line sol
+JOIN sales_order so ON so.id = sol.sales_order_id
+JOIN product p ON p.id = sol.product_id
+JOIN quantity q ON q.id = sol.quantity_id
+JOIN unit u ON u.id = q.unit_id
+WHERE so.owner_account_id = ?
+  AND so.sales_order_type_code = 'sales_order'
+  AND so.sales_order_status_code = 'issued'
+  AND p.product_type_code = 'sale'
+  AND sol.product_id IN (/*SLICE:product_ids*/?)
+ORDER BY so.ship_by_date, so.id, sol.id
+`
+
+type GetOpenOrderRequirementsParams struct {
+	AccountID  string
+	ProductIds []sql.NullString
+}
+
+type GetOpenOrderRequirementsRow struct {
+	SalesOrderID        string
+	SalesOrderNumber    string
+	SalesOrderLineID    string
+	ShipByDate          sql.NullTime
+	ProductID           sql.NullString
+	OutstandingQuantity string
+}
+
+// GetOpenOrderRequirements returns the outstanding quantity on every issued, unshipped order line, with the date it is due to ship.
+//
+// This is the order book the plan owes, as opposed to the history it forecasts from. Outstanding is ordered minus packed rather than ordered minus picked: a picked line is work in progress and still has to be produced if the stock is not there, while a packed one has left inventory. Estimates are excluded for the same reason GetPooledOrderDemandByProduct excludes them — an unissued quote is not demand — and non-sale lines (freight, credits) are excluded because they are not produced.
+//
+// ship_by_date is nullable: orders issued before commitments were tracked carry none. They are returned anyway and dated by the caller, because dropping real demand silently is worse than dating it badly and saying so.
+func (q *Queries) GetOpenOrderRequirements(ctx context.Context, arg GetOpenOrderRequirementsParams) ([]GetOpenOrderRequirementsRow, error) {
+	query := getOpenOrderRequirements
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	if len(arg.ProductIds) > 0 {
+		for _, v := range arg.ProductIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:product_ids*/?", strings.Repeat(",?", len(arg.ProductIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:product_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetOpenOrderRequirementsRow
+	for rows.Next() {
+		var i GetOpenOrderRequirementsRow
+		if err := rows.Scan(
+			&i.SalesOrderID,
+			&i.SalesOrderNumber,
+			&i.SalesOrderLineID,
+			&i.ShipByDate,
+			&i.ProductID,
+			&i.OutstandingQuantity,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -709,19 +985,103 @@ func (q *Queries) GetPooledOrderDemandByProduct(ctx context.Context, arg GetPool
 	return items, nil
 }
 
+const getProductDemandByCustomer = `-- name: GetProductDemandByCustomer :many
+SELECT
+    sol.product_id,
+    so.buyer_account_id,
+    YEAR(so.issued_at) AS demand_year,
+    MONTH(so.issued_at) AS demand_month,
+    CAST(COALESCE(SUM(q.value * (u.ratio_numerator / u.ratio_denominator)), 0) AS DECIMAL(65,30)) AS quantity
+FROM sales_order_line sol
+JOIN sales_order so ON so.id = sol.sales_order_id
+JOIN quantity q ON q.id = sol.quantity_id
+JOIN unit u ON u.id = q.unit_id
+WHERE so.owner_account_id = ?
+  AND so.sales_order_type_code = 'sales_order'
+  AND so.sales_order_status_code <> 'estimate'
+  AND so.issued_at IS NOT NULL
+  AND so.issued_at >= ?
+  AND so.issued_at <= ?
+  AND sol.product_id IN (/*SLICE:product_ids*/?)
+GROUP BY sol.product_id, so.buyer_account_id, YEAR(so.issued_at), MONTH(so.issued_at)
+ORDER BY sol.product_id, so.buyer_account_id, demand_year, demand_month
+`
+
+type GetProductDemandByCustomerParams struct {
+	AccountID   string
+	WindowStart sql.NullTime
+	WindowEnd   sql.NullTime
+	ProductIds  []sql.NullString
+}
+
+type GetProductDemandByCustomerRow struct {
+	ProductID      sql.NullString
+	BuyerAccountID string
+	DemandYear     int32
+	DemandMonth    int32
+	Quantity       string
+}
+
+// GetProductDemandByCustomer returns monthly sold quantity per product AND buyer, which is what the fulfillment recommendation measures customer concentration from.
+//
+// Deliberately separate from GetPooledOrderDemandByProduct rather than a widening of it: the solve pools demand and never needs to know who bought, and carrying a customer dimension through every plan to serve a recommendation nobody asked for would make every solve heavier.
+func (q *Queries) GetProductDemandByCustomer(ctx context.Context, arg GetProductDemandByCustomerParams) ([]GetProductDemandByCustomerRow, error) {
+	query := getProductDemandByCustomer
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.WindowStart)
+	queryParams = append(queryParams, arg.WindowEnd)
+	if len(arg.ProductIds) > 0 {
+		for _, v := range arg.ProductIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:product_ids*/?", strings.Repeat(",?", len(arg.ProductIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:product_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetProductDemandByCustomerRow
+	for rows.Next() {
+		var i GetProductDemandByCustomerRow
+		if err := rows.Scan(
+			&i.ProductID,
+			&i.BuyerAccountID,
+			&i.DemandYear,
+			&i.DemandMonth,
+			&i.Quantity,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getProductionScheduleItemSettings = `-- name: GetProductionScheduleItemSettings :many
 SELECT
     s.item_id,
     s.is_excluded,
-    s.lot_multiple_units
+    s.lot_multiple_units,
+    s.fulfillment_policy_code
 FROM production_schedule_item_setting s
 WHERE s.account_id = ?
 `
 
 type GetProductionScheduleItemSettingsRow struct {
-	ItemID           string
-	IsExcluded       bool
-	LotMultipleUnits sql.NullString
+	ItemID                string
+	IsExcluded            bool
+	LotMultipleUnits      sql.NullString
+	FulfillmentPolicyCode sql.NullString
 }
 
 // GetProductionScheduleItemSettings returns per-item planning overrides.
@@ -734,7 +1094,12 @@ func (q *Queries) GetProductionScheduleItemSettings(ctx context.Context, account
 	var items []GetProductionScheduleItemSettingsRow
 	for rows.Next() {
 		var i GetProductionScheduleItemSettingsRow
-		if err := rows.Scan(&i.ItemID, &i.IsExcluded, &i.LotMultipleUnits); err != nil {
+		if err := rows.Scan(
+			&i.ItemID,
+			&i.IsExcluded,
+			&i.LotMultipleUnits,
+			&i.FulfillmentPolicyCode,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

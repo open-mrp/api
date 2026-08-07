@@ -28,6 +28,11 @@ func ProductLinePresenter(pl *pb.ProductLineInfo, ownerAccount *apiresource.Acco
 		UpdatedAt:        grpcutil.TimestampToTime(pl.UpdatedAt),
 	}
 
+	if pl.FulfillmentPolicyCode != nil && *pl.FulfillmentPolicyCode != "" {
+		policy := constants.FulfillmentPolicy(*pl.FulfillmentPolicyCode)
+		result.FulfillmentPolicy = &policy
+	}
+
 	if pl.UnitGroup != nil {
 		ug := &apiresource.UnitGroup{
 			ID:        pl.UnitGroup.Id,

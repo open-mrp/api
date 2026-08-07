@@ -67,6 +67,67 @@ type LevellingItem struct {
 	LotUnits float64
 	// LotUnitID is what that granularity is counted in.
 	LotUnitID string
+	// FirmByWeek is the dated order book for this item, indexed by week. Nil when nothing is on order, which is the case the plan behaved as before this existed.
+	FirmByWeek []float64
+}
+
+// hasFirmDemand reports whether anything is on order for this item inside the horizon.
+func (i LevellingItem) hasFirmDemand() bool {
+	for _, units := range i.FirmByWeek {
+		if units > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// leadTimeWeeks is how far ahead a make-to-order item has to look: a decision made now becomes sellable stock only after the constraint stage and finishing have both run.
+func (i LevellingItem) leadTimeWeeks() int {
+	weeks := int(math.Ceil(i.Policy.ConstraintLeadTimeWeeks + i.Policy.FinishLeadTimeWeeks))
+	return max(weeks, 1)
+}
+
+// firmRequiredThrough is the order book this item owes from the given week through its lead time.
+//
+// This is the make-to-order reorder point, and it is the same idea as the statistical one: stock has to cover demand over the lead time. The difference is where the demand comes from — a forecast averaged over a year, or the dated orders already on the book.
+func (i LevellingItem) firmRequiredThrough(week int) float64 {
+	if len(i.FirmByWeek) == 0 {
+		return 0
+	}
+	var total float64
+	for w := week; w <= week+i.leadTimeWeeks() && w < len(i.FirmByWeek); w++ {
+		if w < 0 {
+			continue
+		}
+		total += i.FirmByWeek[w]
+	}
+	return total
+}
+
+// triggerForWeek is the position below which this item needs building in the given week.
+//
+// Make-to-stock uses the (s,S) trigger it always has: a constant, the lower of the reorder point and the order-up-to ceiling. Make-to-order recomputes each week from the dated order book, because there is no average to reduce it to — an item with nothing on order this week needs nothing, and the same item needs a full campaign the week an order lands inside its lead time.
+func (i LevellingItem) triggerForWeek(week int) float64 {
+	if i.Policy.IsMakeToOrder() {
+		return i.firmRequiredThrough(week)
+	}
+	return math.Min(i.Policy.ReorderPoint, i.Policy.OrderUpTo)
+}
+
+// demandForWeek is what the item actually consumes in one week: the greater of its forecast rate and the orders already on the book for that week.
+//
+// This is forecast consumption. An order inside the forecast is served BY the forecast rather than added to it — adding them would double-count the same demand, once as history repeating and once as the order that history predicted. Taking the greater means a week with no orders still plans for the average, and a week holding a large order plans for the order.
+//
+// With no order book this returns the weekly forecast unchanged, which is what keeps the plan byte-identical to the one produced before the order book existed.
+func (i LevellingItem) demandForWeek(week int) float64 {
+	forecast := i.Policy.WeeklyDemand
+	if week < 0 || week >= len(i.FirmByWeek) {
+		return forecast
+	}
+	if firm := i.FirmByWeek[week]; firm > forecast {
+		return firm
+	}
+	return forecast
 }
 
 // roundUpToLot rounds a quantity up to a whole number of lots, with a floor of one lot. Script: toDoffs = max(AVG_DOFF, ceil(q / AVG_DOFF) * AVG_DOFF).
@@ -111,11 +172,11 @@ func Level(items []LevellingItem, machines []Machine, s Settings, pinned []Pinne
 
 	capacityPerMachine := s.MachineWeeklyCapacityHours()
 
-	// Only items with real demand participate; a dead SKU should not consume capacity.
+	// Only items with real demand participate; a dead SKU should not consume capacity. Demand means either a forecast or orders already on the book — a make-to-order item has no forecast by construction, and filtering on the forecast alone would drop exactly the items this policy exists to build.
 	active := make([]LevellingItem, 0, len(sortedItems))
 	for _, item := range sortedItems {
 		result.ProjectedOnHand[item.Policy.ItemID] = make([]float64, s.HorizonWeeks)
-		if item.Policy.WeeklyDemand > 0 {
+		if item.Policy.WeeklyDemand > 0 || item.hasFirmDemand() {
 			active = append(active, item)
 		}
 	}
@@ -132,8 +193,8 @@ func Level(items []LevellingItem, machines []Machine, s Settings, pinned []Pinne
 	for _, item := range active {
 		id := item.Policy.ItemID
 
-		// Trigger at the lower of the reorder point and the order-up-to ceiling, so a slow mover with a huge statistical ROP is not built past its cap.
-		trig := math.Min(item.Policy.ReorderPoint, item.Policy.OrderUpTo)
+		// Trigger at the lower of the reorder point and the order-up-to ceiling, so a slow mover with a huge statistical ROP is not built past its cap. A make-to-order item recomputes this per week instead; the value cached here is only its week-zero position.
+		trig := item.triggerForWeek(0)
 		trigger[id] = trig
 
 		economic := roundUpToLot(item.Policy.EOQUnits, item.LotUnits)
@@ -188,15 +249,30 @@ func Level(items []LevellingItem, machines []Machine, s Settings, pinned []Pinne
 			delete(starved, skuByItem[pin.ItemID])
 		}
 
+		// Make-to-order triggers move with the order book, so they are recomputed each week rather than read from the constant above.
+		weekTrigger := make(map[string]float64, len(active))
+		for _, item := range active {
+			id := item.Policy.ItemID
+			if item.Policy.IsMakeToOrder() {
+				weekTrigger[id] = item.triggerForWeek(week)
+			} else {
+				weekTrigger[id] = trigger[id]
+			}
+		}
+
 		due := make([]LevellingItem, 0, len(active))
 		for _, item := range active {
-			if position[item.Policy.ItemID] < trigger[item.Policy.ItemID] {
+			if position[item.Policy.ItemID] < weekTrigger[item.Policy.ItemID] {
 				due = append(due, item)
 			}
 		}
 
-		// Most depleted relative to its reorder point goes first. Measuring the gap rather than the raw position keeps a high-volume item from always winning over a low-volume one that is closer to stocking out.
+		// A contractual promise outranks a statistical buffer when the two contend for the same machine-hour, so make-to-order candidates are served first. Within each group the rule is unchanged: most depleted relative to its reorder point goes first, because measuring the gap rather than the raw position keeps a high-volume item from always winning over a low-volume one that is closer to stocking out.
 		sort.SliceStable(due, func(i, j int) bool {
+			mtoI, mtoJ := due[i].Policy.IsMakeToOrder(), due[j].Policy.IsMakeToOrder()
+			if mtoI != mtoJ {
+				return mtoI
+			}
 			gapI := position[due[i].Policy.ItemID] - due[i].Policy.ReorderPoint
 			gapJ := position[due[j].Policy.ItemID] - due[j].Policy.ReorderPoint
 			if gapI != gapJ {
@@ -207,7 +283,18 @@ func Level(items []LevellingItem, machines []Machine, s Settings, pinned []Pinne
 
 		for _, item := range due {
 			id := item.Policy.ItemID
-			hours := campaignHours[id]
+
+			// A make-to-order campaign is sized to what is actually short, not to an economic lot: the economic quantity exists to amortize a setup across future demand, and there is no future demand to amortize against — only the order in front of it.
+			units := campaignUnits[id]
+			if item.Policy.IsMakeToOrder() {
+				shortfall := weekTrigger[id] - position[id]
+				if shortfall <= 0 {
+					continue
+				}
+				fits := maxLotsInCapacity(capacityPerMachine, item.Policy.SecondsPerUnit, item.LotUnits)
+				units = math.Min(roundUpToLot(shortfall, item.LotUnits), fits)
+			}
+			hours := units * item.Policy.SecondsPerUnit / 3600
 
 			var best *Machine
 			for i := range sortedMachines {
@@ -230,7 +317,6 @@ func Level(items []LevellingItem, machines []Machine, s Settings, pinned []Pinne
 				continue
 			}
 
-			units := campaignUnits[id]
 			lots := 0
 			if item.LotUnits > 0 {
 				lots = int(math.Round(units / item.LotUnits))
@@ -256,7 +342,7 @@ func Level(items []LevellingItem, machines []Machine, s Settings, pinned []Pinne
 		// Demand is drawn down AFTER the week's campaigns land. Doing it before would let an item dip below its trigger and be rebuilt in the same week, which double-counts a week of consumption across the horizon.
 		for _, item := range sortedItems {
 			id := item.Policy.ItemID
-			position[id] -= item.Policy.WeeklyDemand
+			position[id] -= item.demandForWeek(week)
 			result.ProjectedOnHand[id][week] = position[id]
 		}
 	}

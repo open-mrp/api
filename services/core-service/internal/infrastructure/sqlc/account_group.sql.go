@@ -149,6 +149,7 @@ SELECT
     account_group.freight_status_code,
     account_group.account_group_type_code,
     account_group.registration_flow_id,
+    account_group.default_lead_time_days,
     account_group.created_at,
     account_group.updated_at
 FROM account_group
@@ -170,6 +171,7 @@ type GetAccountGroupRow struct {
 	FreightStatusCode    string
 	AccountGroupTypeCode string
 	RegistrationFlowID   sql.NullString
+	DefaultLeadTimeDays  sql.NullInt32
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
 }
@@ -186,6 +188,7 @@ func (q *Queries) GetAccountGroup(ctx context.Context, arg GetAccountGroupParams
 		&i.FreightStatusCode,
 		&i.AccountGroupTypeCode,
 		&i.RegistrationFlowID,
+		&i.DefaultLeadTimeDays,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -202,6 +205,7 @@ SELECT
     account_group.freight_status_code,
     account_group.account_group_type_code,
     account_group.registration_flow_id,
+    account_group.default_lead_time_days,
     account_group.created_at,
     account_group.updated_at
 FROM account_group
@@ -223,6 +227,7 @@ type GetAccountGroupsByIDsRow struct {
 	FreightStatusCode    string
 	AccountGroupTypeCode string
 	RegistrationFlowID   sql.NullString
+	DefaultLeadTimeDays  sql.NullInt32
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
 }
@@ -258,6 +263,7 @@ func (q *Queries) GetAccountGroupsByIDs(ctx context.Context, arg GetAccountGroup
 			&i.FreightStatusCode,
 			&i.AccountGroupTypeCode,
 			&i.RegistrationFlowID,
+			&i.DefaultLeadTimeDays,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -283,9 +289,11 @@ INSERT INTO account_group (
     commission_status_code,
     freight_status_code,
     account_group_type_code,
+    default_lead_time_days,
     created_at,
     updated_at
 ) VALUES (
+    ?,
     ?,
     ?,
     ?,
@@ -306,6 +314,7 @@ type InsertAccountGroupParams struct {
 	CommissionStatusCode string
 	FreightStatusCode    string
 	AccountGroupTypeCode string
+	DefaultLeadTimeDays  sql.NullInt32
 }
 
 func (q *Queries) InsertAccountGroup(ctx context.Context, arg InsertAccountGroupParams) error {
@@ -317,6 +326,7 @@ func (q *Queries) InsertAccountGroup(ctx context.Context, arg InsertAccountGroup
 		arg.CommissionStatusCode,
 		arg.FreightStatusCode,
 		arg.AccountGroupTypeCode,
+		arg.DefaultLeadTimeDays,
 	)
 	return err
 }
@@ -331,6 +341,7 @@ SELECT
     account_group.freight_status_code,
     account_group.account_group_type_code,
     account_group.registration_flow_id,
+    account_group.default_lead_time_days,
     account_group.created_at,
     account_group.updated_at
 FROM account_group
@@ -370,6 +381,7 @@ type ListAccountGroupsBackwardRow struct {
 	FreightStatusCode    string
 	AccountGroupTypeCode string
 	RegistrationFlowID   sql.NullString
+	DefaultLeadTimeDays  sql.NullInt32
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
 }
@@ -403,6 +415,7 @@ func (q *Queries) ListAccountGroupsBackward(ctx context.Context, arg ListAccount
 			&i.FreightStatusCode,
 			&i.AccountGroupTypeCode,
 			&i.RegistrationFlowID,
+			&i.DefaultLeadTimeDays,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -429,6 +442,7 @@ SELECT
     account_group.freight_status_code,
     account_group.account_group_type_code,
     account_group.registration_flow_id,
+    account_group.default_lead_time_days,
     account_group.created_at,
     account_group.updated_at
 FROM account_group
@@ -469,6 +483,7 @@ type ListAccountGroupsForwardRow struct {
 	FreightStatusCode    string
 	AccountGroupTypeCode string
 	RegistrationFlowID   sql.NullString
+	DefaultLeadTimeDays  sql.NullInt32
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
 }
@@ -503,6 +518,7 @@ func (q *Queries) ListAccountGroupsForward(ctx context.Context, arg ListAccountG
 			&i.FreightStatusCode,
 			&i.AccountGroupTypeCode,
 			&i.RegistrationFlowID,
+			&i.DefaultLeadTimeDays,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -525,6 +541,7 @@ UPDATE account_group SET
     description = ?,
     commission_status_code = COALESCE(?, commission_status_code),
     freight_status_code = COALESCE(?, freight_status_code),
+    default_lead_time_days = ?,
     updated_at = NOW(3)
 WHERE id = ?
 AND owner_account_id = ?
@@ -535,6 +552,7 @@ type UpdateAccountGroupParams struct {
 	Description          sql.NullString
 	CommissionStatusCode sql.NullString
 	FreightStatusCode    sql.NullString
+	DefaultLeadTimeDays  sql.NullInt32
 	ID                   string
 	OwnerAccountID       string
 }
@@ -545,6 +563,7 @@ func (q *Queries) UpdateAccountGroup(ctx context.Context, arg UpdateAccountGroup
 		arg.Description,
 		arg.CommissionStatusCode,
 		arg.FreightStatusCode,
+		arg.DefaultLeadTimeDays,
 		arg.ID,
 		arg.OwnerAccountID,
 	)

@@ -274,6 +274,51 @@ func (r *productionScheduleInputRepoImpl) GetProductsForItems(
 }
 
 // GetPooledOrderDemandByProduct returns monthly sold quantity per product inside the window. Rows carrying no product cannot be attributed and are dropped.
+func (r *productionScheduleInputRepoImpl) GetOpenOrderRequirements(
+	ctx context.Context,
+	accountID string,
+	productIDs []string,
+) ([]domain.OpenOrderRequirementRow, *apierror.APIError) {
+	ctx, span := scheduleInputRepoTracer.Start(ctx, "repository.production_schedule_input.get_open_order_requirements")
+	defer span.End()
+
+	if len(productIDs) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.queries.GetOpenOrderRequirements(ctx, sqlc.GetOpenOrderRequirementsParams{
+		AccountID:  accountID,
+		ProductIds: scheduleNullStrings(productIDs),
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	out := make([]domain.OpenOrderRequirementRow, 0, len(rows))
+	for _, row := range rows {
+		if !row.ProductID.Valid {
+			continue
+		}
+		// A fully packed line owes nothing; an over-packed one owes less than nothing, which is not demand either.
+		outstanding := decimalToFloat64(row.OutstandingQuantity)
+		if outstanding <= 0 {
+			continue
+		}
+		req := domain.OpenOrderRequirementRow{
+			SalesOrderID:     row.SalesOrderID,
+			SalesOrderNumber: row.SalesOrderNumber,
+			SalesOrderLineID: row.SalesOrderLineID,
+			ProductID:        row.ProductID.String,
+			OutstandingQty:   outstanding,
+		}
+		if row.ShipByDate.Valid {
+			req.ShipByDate = &row.ShipByDate.Time
+		}
+		out = append(out, req)
+	}
+	return out, nil
+}
+
 func (r *productionScheduleInputRepoImpl) GetPooledOrderDemandByProduct(
 	ctx context.Context,
 	params domain.GetPooledOrderDemandParams,
@@ -445,15 +490,25 @@ func (r *productionScheduleInputRepoImpl) GetAccountScheduleSettings(
 	}
 
 	settings := &domain.ProductionScheduleSettingsRow{
-		PlanningHorizonWeeks:           int(row.PlanningHorizonWeeks),
-		FrozenWeeks:                    int(row.FrozenWeeks),
-		WeekStartDay:                   int(row.WeekStartDay),
-		ShiftsPerDay:                   int(row.ShiftsPerDay),
-		HoursPerShift:                  decimalToFloat64(row.HoursPerShift),
-		WorkDaysPerWeek:                int(row.WorkDaysPerWeek),
-		WeeksPerYear:                   int(row.WeeksPerYear),
-		CapacityHeadroomPct:            decimalToFloat64(row.CapacityHeadroomPct),
-		DefaultLotUnits:                decimalToFloat64(row.DefaultLotUnits),
+		PlanningHorizonWeeks:         int(row.PlanningHorizonWeeks),
+		FrozenWeeks:                  int(row.FrozenWeeks),
+		WeekStartDay:                 int(row.WeekStartDay),
+		ShiftsPerDay:                 int(row.ShiftsPerDay),
+		HoursPerShift:                decimalToFloat64(row.HoursPerShift),
+		WorkDaysPerWeek:              int(row.WorkDaysPerWeek),
+		WeeksPerYear:                 int(row.WeeksPerYear),
+		CapacityHeadroomPct:          decimalToFloat64(row.CapacityHeadroomPct),
+		DefaultLotUnits:              decimalToFloat64(row.DefaultLotUnits),
+		DefaultCustomerLeadTimeDays:  int(row.DefaultCustomerLeadTimeDays),
+		DefaultFulfillmentPolicyCode: row.DefaultFulfillmentPolicyCode,
+		RecommendationThresholds: scheduling.RecommendationThresholds{
+			DormantMonths:     int(row.RecommendationDormantMonths),
+			ConcentrationPct:  decimalToFloat64(row.RecommendationConcentrationPct),
+			ADIThreshold:      decimalToFloat64(row.RecommendationAdiThreshold),
+			CV2Threshold:      decimalToFloat64(row.RecommendationCv2Threshold),
+			SlowMoverCOGS:     decimalToFloat64(row.RecommendationSlowMoverCogs),
+			HighValueUnitCost: decimalToFloat64(row.RecommendationHighValueUnitCost),
+		},
 		ChangeoverAvgMinutes:           decimalToFloat64(row.ChangeoverAvgMinutes),
 		ChangeoverMinMinutes:           decimalToFloat64(row.ChangeoverMinMinutes),
 		ChangeoverMaxMinutes:           decimalToFloat64(row.ChangeoverMaxMinutes),
@@ -520,7 +575,31 @@ func (r *productionScheduleInputRepoImpl) ListScheduleItemSettings(
 		if item.LotMultipleUnits.Valid {
 			setting.LotMultipleUnits = decimalToFloat64(item.LotMultipleUnits.String)
 		}
+		if item.FulfillmentPolicyCode.Valid {
+			setting.FulfillmentPolicyCode = item.FulfillmentPolicyCode.String
+		}
 		out = append(out, setting)
+	}
+	return out, nil
+}
+
+func (r *productionScheduleInputRepoImpl) ListProductLineFulfillmentPolicies(
+	ctx context.Context,
+	accountID string,
+) (map[string]string, *apierror.APIError) {
+	ctx, span := scheduleInputRepoTracer.Start(ctx, "repository.production_schedule_input.list_product_line_policies")
+	defer span.End()
+
+	rows, err := r.queries.ListProductLineFulfillmentPolicies(ctx, gosql.NullString{String: accountID, Valid: true})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	out := make(map[string]string, len(rows))
+	for _, row := range rows {
+		if row.FulfillmentPolicyCode.Valid && row.FulfillmentPolicyCode.String != "" {
+			out[row.ID] = row.FulfillmentPolicyCode.String
+		}
 	}
 	return out, nil
 }
@@ -544,4 +623,186 @@ func scheduleNullStrings(values []string) []gosql.NullString {
 		out[i] = gosql.NullString{String: v, Valid: true}
 	}
 	return out
+}
+
+func (r *productionScheduleInputRepoImpl) GetProductDemandByCustomer(
+	ctx context.Context,
+	params domain.GetPooledOrderDemandParams,
+) ([]domain.CustomerDemandRow, *apierror.APIError) {
+	ctx, span := scheduleInputRepoTracer.Start(ctx, "repository.production_schedule_input.get_demand_by_customer")
+	defer span.End()
+
+	if len(params.ProductIDs) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.queries.GetProductDemandByCustomer(ctx, sqlc.GetProductDemandByCustomerParams{
+		AccountID:   params.AccountID,
+		WindowStart: gosql.NullTime{Time: params.WindowStart, Valid: true},
+		WindowEnd:   gosql.NullTime{Time: params.WindowEnd, Valid: true},
+		ProductIds:  scheduleNullStrings(params.ProductIDs),
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	out := make([]domain.CustomerDemandRow, 0, len(rows))
+	for _, row := range rows {
+		if !row.ProductID.Valid {
+			continue
+		}
+		out = append(out, domain.CustomerDemandRow{
+			ProductID:      row.ProductID.String,
+			BuyerAccountID: row.BuyerAccountID,
+			Year:           int(row.DemandYear),
+			Month:          int(row.DemandMonth),
+			Quantity:       decimalToFloat64(row.Quantity),
+		})
+	}
+	return out, nil
+}
+
+// GetCustomerFulfillmentProfiles resolves each customer's lead time and policy through the same chains an order and an item use, so a recommendation and a stamped commitment can never disagree about the same customer.
+func (r *productionScheduleInputRepoImpl) GetCustomerFulfillmentProfiles(
+	ctx context.Context,
+	accountID string,
+	accountDefaultLeadTimeDays int,
+) ([]domain.CustomerFulfillmentProfile, *apierror.APIError) {
+	ctx, span := scheduleInputRepoTracer.Start(ctx, "repository.production_schedule_input.get_customer_profiles")
+	defer span.End()
+
+	rows, err := r.queries.GetCustomerFulfillmentProfiles(ctx, accountID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	out := make([]domain.CustomerFulfillmentProfile, 0, len(rows))
+	for _, row := range rows {
+		profile := domain.CustomerFulfillmentProfile{
+			CustomerAccountID: row.CustomerAccountID,
+			CustomerName:      row.CustomerName,
+			LeadTimeDays:      accountDefaultLeadTimeDays,
+		}
+
+		in := scheduling.LeadTimeInput{AccountLeadTimeDays: &accountDefaultLeadTimeDays}
+		if row.CustomerLeadTimeDays.Valid {
+			days := int(row.CustomerLeadTimeDays.Int32)
+			in.CustomerLeadTimeDays = &days
+		}
+		if row.AccountGroupLeadTimeDays.Valid {
+			days := int(row.AccountGroupLeadTimeDays.Int32)
+			in.AccountGroupLeadTimeDays = &days
+		}
+		if days, _, ok := scheduling.ResolveLeadTime(in); ok {
+			profile.LeadTimeDays = days
+		}
+
+		// The policy chain is the customer's own, then its group's. There is no account-wide customer policy: the account default is about items, not about how people buy.
+		if row.CustomerPolicy.Valid && row.CustomerPolicy.String != "" {
+			profile.FulfillmentPolicyCode = row.CustomerPolicy.String
+		} else if row.AccountGroupPolicy.Valid && row.AccountGroupPolicy.String != "" {
+			profile.FulfillmentPolicyCode = row.AccountGroupPolicy.String
+		}
+
+		out = append(out, profile)
+	}
+	return out, nil
+}
+
+func (r *productionScheduleInputRepoImpl) GetAllSellableProducts(ctx context.Context, accountID string) ([]domain.SellableProductRow, *apierror.APIError) {
+	ctx, span := scheduleInputRepoTracer.Start(ctx, "repository.production_schedule_input.get_all_sellable_products")
+	defer span.End()
+
+	rows, err := r.queries.GetAllSellableProducts(ctx, accountID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	out := make([]domain.SellableProductRow, 0, len(rows))
+	for _, row := range rows {
+		item := domain.SellableProductRow{ProductID: row.ProductID, ItemID: row.ItemID, SKU: row.Sku}
+		if row.ProductLineID.Valid {
+			item.ProductLineID = &row.ProductLineID.String
+		}
+		out = append(out, item)
+	}
+	return out, nil
+}
+
+func (r *productionScheduleInputRepoImpl) GetItemUnitCosts(ctx context.Context, accountID string, itemIDs []string) (map[string]float64, *apierror.APIError) {
+	ctx, span := scheduleInputRepoTracer.Start(ctx, "repository.production_schedule_input.get_item_unit_costs")
+	defer span.End()
+
+	if len(itemIDs) == 0 {
+		return map[string]float64{}, nil
+	}
+
+	rows, err := r.queries.GetItemUnitCosts(ctx, sqlc.GetItemUnitCostsParams{
+		AccountID: accountID,
+		ItemIds:   itemIDs,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	out := make(map[string]float64, len(rows))
+	for _, row := range rows {
+		out[row.ItemID] = decimalToFloat64(row.UnitCost)
+	}
+	return out, nil
+}
+
+func (r *productionScheduleInputRepoImpl) ListDeliveryOutcomes(ctx context.Context, accountID string, start, end time.Time) ([]scheduling.DeliveryOutcome, *apierror.APIError) {
+	ctx, span := scheduleInputRepoTracer.Start(ctx, "repository.production_schedule_input.list_delivery_outcomes")
+	defer span.End()
+
+	rows, err := r.queries.ListDeliveryPerformanceOrders(ctx, sqlc.ListDeliveryPerformanceOrdersParams{
+		AccountID:   accountID,
+		WindowStart: gosql.NullTime{Time: start, Valid: true},
+		WindowEnd:   gosql.NullTime{Time: end, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	out := make([]scheduling.DeliveryOutcome, 0, len(rows))
+	for _, row := range rows {
+		if !row.ShipByDate.Valid {
+			continue
+		}
+		outcome := scheduling.DeliveryOutcome{
+			SalesOrderID:     row.SalesOrderID,
+			SalesOrderNumber: row.SalesOrderNumber,
+			BuyerAccountID:   row.BuyerAccountID,
+			ShipByDate:       row.ShipByDate.Time,
+			QuantityOrdered:  decimalToFloat64(row.QuantityOrdered),
+			QuantityPacked:   decimalToFloat64(row.QuantityPacked),
+		}
+		if row.IssuedAt.Valid {
+			outcome.IssuedAt = &row.IssuedAt.Time
+		}
+		if row.FirstShipAt.Valid {
+			outcome.FirstShipAt = &row.FirstShipAt.Time
+		}
+		if row.LeadTimeDays.Valid {
+			outcome.CommittedLeadTimeDays = int(row.LeadTimeDays.Int32)
+		}
+		out = append(out, outcome)
+	}
+	return out, nil
+}
+
+func (r *productionScheduleInputRepoImpl) CountUncommittedOrders(ctx context.Context, accountID string, start, end time.Time) (int, *apierror.APIError) {
+	ctx, span := scheduleInputRepoTracer.Start(ctx, "repository.production_schedule_input.count_uncommitted_orders")
+	defer span.End()
+
+	count, err := r.queries.CountUncommittedOrders(ctx, sqlc.CountUncommittedOrdersParams{
+		AccountID:   accountID,
+		WindowStart: gosql.NullTime{Time: start, Valid: true},
+		WindowEnd:   gosql.NullTime{Time: end, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return 0, tracing.Trace(span, apiErr)
+	}
+	return int(count), nil
 }

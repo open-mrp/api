@@ -161,6 +161,7 @@ INSERT INTO production_schedule_item_policy (
     on_hand_greige, average_greige_inventory, max_greige_inventory,
     weeks_of_cover, projected_on_hand, annual_run_hours,
     abc_class, was_eoq_capped, was_capacity_starved,
+    fulfillment_policy_code, policy_source_code, firm_demand_units, forecast_demand_units,
     created_at, updated_at
 ) VALUES (
     ?, ?, ?, ?, ?,
@@ -174,6 +175,7 @@ INSERT INTO production_schedule_item_policy (
     ?, ?, ?,
     ?, ?, ?,
     ?, ?, ?,
+    ?, ?, ?, ?,
     NOW(3), NOW(3)
 )
 `
@@ -212,6 +214,10 @@ type CreateProductionScheduleItemPolicyParams struct {
 	AbcClass                sql.NullString
 	WasEoqCapped            bool
 	WasCapacityStarved      bool
+	FulfillmentPolicyCode   string
+	PolicySourceCode        string
+	FirmDemandUnits         string
+	ForecastDemandUnits     string
 }
 
 func (q *Queries) CreateProductionScheduleItemPolicy(ctx context.Context, arg CreateProductionScheduleItemPolicyParams) error {
@@ -249,6 +255,10 @@ func (q *Queries) CreateProductionScheduleItemPolicy(ctx context.Context, arg Cr
 		arg.AbcClass,
 		arg.WasEoqCapped,
 		arg.WasCapacityStarved,
+		arg.FulfillmentPolicyCode,
+		arg.PolicySourceCode,
+		arg.FirmDemandUnits,
+		arg.ForecastDemandUnits,
 	)
 	return err
 }
@@ -328,6 +338,42 @@ func (q *Queries) CreateProductionScheduleLine(ctx context.Context, arg CreatePr
 	return err
 }
 
+const createProductionScheduleLineOrder = `-- name: CreateProductionScheduleLineOrder :exec
+INSERT INTO production_schedule_line_order (
+    id, account_id, production_schedule_id,
+    production_schedule_line_id, sales_order_id, sales_order_line_id,
+    allocated_quantity, created_at, updated_at
+) VALUES (
+    ?, ?, ?,
+    ?, ?, ?,
+    ?, NOW(3), NOW(3)
+)
+`
+
+type CreateProductionScheduleLineOrderParams struct {
+	ID                       string
+	AccountID                string
+	ProductionScheduleID     string
+	ProductionScheduleLineID string
+	SalesOrderID             string
+	SalesOrderLineID         string
+	AllocatedQuantity        string
+}
+
+// CreateProductionScheduleLineOrder links one campaign to one order it is building.
+func (q *Queries) CreateProductionScheduleLineOrder(ctx context.Context, arg CreateProductionScheduleLineOrderParams) error {
+	_, err := q.db.ExecContext(ctx, createProductionScheduleLineOrder,
+		arg.ID,
+		arg.AccountID,
+		arg.ProductionScheduleID,
+		arg.ProductionScheduleLineID,
+		arg.SalesOrderID,
+		arg.SalesOrderLineID,
+		arg.AllocatedQuantity,
+	)
+	return err
+}
+
 const deleteProductionSchedule = `-- name: DeleteProductionSchedule :exec
 DELETE FROM production_schedule
 WHERE account_id = ?
@@ -374,6 +420,22 @@ type DeleteProductionScheduleItemPoliciesParams struct {
 
 func (q *Queries) DeleteProductionScheduleItemPolicies(ctx context.Context, arg DeleteProductionScheduleItemPoliciesParams) error {
 	_, err := q.db.ExecContext(ctx, deleteProductionScheduleItemPolicies, arg.AccountID, arg.ProductionScheduleID)
+	return err
+}
+
+const deleteProductionScheduleLineOrders = `-- name: DeleteProductionScheduleLineOrders :exec
+DELETE FROM production_schedule_line_order
+WHERE account_id = ? AND production_schedule_id = ?
+`
+
+type DeleteProductionScheduleLineOrdersParams struct {
+	AccountID            string
+	ProductionScheduleID string
+}
+
+// DeleteProductionScheduleLineOrders clears a version's links, so a re-solve replaces them wholesale rather than accumulating.
+func (q *Queries) DeleteProductionScheduleLineOrders(ctx context.Context, arg DeleteProductionScheduleLineOrdersParams) error {
+	_, err := q.db.ExecContext(ctx, deleteProductionScheduleLineOrders, arg.AccountID, arg.ProductionScheduleID)
 	return err
 }
 
@@ -641,6 +703,10 @@ SELECT
     p.weekly_demand,
     p.seconds_per_unit,
     p.unit_cost,
+    p.fulfillment_policy_code,
+    p.policy_source_code,
+    p.firm_demand_units,
+    p.forecast_demand_units,
     p.setup_cost,
     p.holding_cost,
     p.eoq_units,
@@ -689,6 +755,10 @@ type ListProductionScheduleItemPoliciesRow struct {
 	WeeklyDemand            string
 	SecondsPerUnit          string
 	UnitCost                string
+	FulfillmentPolicyCode   string
+	PolicySourceCode        string
+	FirmDemandUnits         string
+	ForecastDemandUnits     string
 	SetupCost               string
 	HoldingCost             string
 	EoqUnits                string
@@ -736,6 +806,10 @@ func (q *Queries) ListProductionScheduleItemPolicies(ctx context.Context, arg Li
 			&i.WeeklyDemand,
 			&i.SecondsPerUnit,
 			&i.UnitCost,
+			&i.FulfillmentPolicyCode,
+			&i.PolicySourceCode,
+			&i.FirmDemandUnits,
+			&i.ForecastDemandUnits,
 			&i.SetupCost,
 			&i.HoldingCost,
 			&i.EoqUnits,
@@ -759,6 +833,83 @@ func (q *Queries) ListProductionScheduleItemPolicies(ctx context.Context, arg Li
 			&i.WasCapacityStarved,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listProductionScheduleLineOrders = `-- name: ListProductionScheduleLineOrders :many
+SELECT
+    lo.id,
+    lo.production_schedule_line_id,
+    lo.sales_order_id,
+    lo.sales_order_line_id,
+    lo.allocated_quantity,
+    so.number AS sales_order_number,
+    so.ship_by_date,
+    l.item_id,
+    l.week_index,
+    l.machine_id,
+    i.sku
+FROM production_schedule_line_order lo
+JOIN production_schedule_line l ON l.id = lo.production_schedule_line_id
+JOIN sales_order so ON so.id = lo.sales_order_id
+JOIN item i ON i.id = l.item_id
+WHERE lo.account_id = ?
+  AND lo.production_schedule_id = ?
+ORDER BY l.week_index, so.number, lo.id
+`
+
+type ListProductionScheduleLineOrdersParams struct {
+	AccountID            string
+	ProductionScheduleID string
+}
+
+type ListProductionScheduleLineOrdersRow struct {
+	ID                       string
+	ProductionScheduleLineID string
+	SalesOrderID             string
+	SalesOrderLineID         string
+	AllocatedQuantity        string
+	SalesOrderNumber         string
+	ShipByDate               sql.NullTime
+	ItemID                   string
+	WeekIndex                int32
+	MachineID                string
+	Sku                      string
+}
+
+// ListProductionScheduleLineOrders returns which campaigns are building which orders for one version.
+func (q *Queries) ListProductionScheduleLineOrders(ctx context.Context, arg ListProductionScheduleLineOrdersParams) ([]ListProductionScheduleLineOrdersRow, error) {
+	rows, err := q.db.QueryContext(ctx, listProductionScheduleLineOrders, arg.AccountID, arg.ProductionScheduleID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListProductionScheduleLineOrdersRow
+	for rows.Next() {
+		var i ListProductionScheduleLineOrdersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProductionScheduleLineID,
+			&i.SalesOrderID,
+			&i.SalesOrderLineID,
+			&i.AllocatedQuantity,
+			&i.SalesOrderNumber,
+			&i.ShipByDate,
+			&i.ItemID,
+			&i.WeekIndex,
+			&i.MachineID,
+			&i.Sku,
 		); err != nil {
 			return nil, err
 		}

@@ -41,6 +41,7 @@ func documentedAugnoIDs() map[string]struct{} {
 		apiresource.SampleProductionScheduleDeviationID:       {},
 		apiresource.SampleProductionScheduleDerivedLineID:     {},
 		apiresource.SampleProductionScheduleResourceSettingID: {},
+		apiresource.SampleProductionScheduleItemSettingID:     {},
 		apiresource.SampleProductionScheduleFinishedPolicyID:  {},
 		apiresource.SampleScheduleDeviationTypeID:             {},
 		apiresource.SampleAccountBrandingID:                   {},

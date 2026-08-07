@@ -96,6 +96,15 @@ type UpdateProductionScheduleSettingsRequest struct {
 	//
 	// The last resort in the lot-size chain: a lot set on the item, on its product line, or on the finished goods an intermediate item becomes all take precedence.
 	DefaultLotUnits float64 `json:"default_lot_units" validate:"required,gt=0"`
+	// Calendar days between an order being issued and it being due to ship.
+	//
+	// The last resort in the ship-by chain: a lead time set on the customer, or on the customer's account group, takes precedence. Zero commits the account to same-day shipping on every order that falls through to it, so this update replaces the whole settings object and omitting the field is not the same as leaving it alone.
+	DefaultCustomerLeadTimeDays int32 `json:"default_customer_lead_time_days" validate:"gte=0,lte=3650"`
+	// How a SKU is produced when neither it nor its product line says.
+	//
+	// - `make_to_stock`: built to the forecast, holding a safety stock against its variability.
+	// - `make_to_order`: built only against orders already on the book, holding no buffer.
+	DefaultFulfillmentPolicy constants.FulfillmentPolicy `json:"default_fulfillment_policy" validate:"required"`
 	// Whether schedules are generated automatically on a recurring cadence.
 	//
 	// While active, each due tick queues a new schedule version.
@@ -115,24 +124,26 @@ type UpdateProductionScheduleSettingsRequest struct {
 }
 
 var sampleUpdateSettingsRequest = &UpdateProductionScheduleSettingsRequest{
-	PlanningHorizonWeeks:  13,
-	FrozenWeeks:           1,
-	WeekStartDay:          1,
-	DemandWindowMonths:    12,
-	ForecastHistoryMonths: 24,
-	ForecastMonths:        12,
-	DemandBasis:           constants.ScheduleDemandBasisTrailing12,
-	MaxWeeksSupply:        12,
-	MaxFlowDepth:          10,
-	ShiftsPerDay:          2,
-	HoursPerShift:         7,
-	WorkDaysPerWeek:       5,
-	WeeksPerYear:          52,
-	CapacityHeadroomPct:   0.9,
-	DefaultLotUnits:       60,
-	CadenceStatus:         constants.ActivationStatusInactive,
-	GenerationTimezone:    "UTC",
-	AutoPublishStatus:     constants.ActivationStatusInactive,
+	PlanningHorizonWeeks:        13,
+	FrozenWeeks:                 1,
+	WeekStartDay:                1,
+	DemandWindowMonths:          12,
+	ForecastHistoryMonths:       24,
+	ForecastMonths:              12,
+	DemandBasis:                 constants.ScheduleDemandBasisTrailing12,
+	MaxWeeksSupply:              12,
+	MaxFlowDepth:                10,
+	ShiftsPerDay:                2,
+	HoursPerShift:               7,
+	WorkDaysPerWeek:             5,
+	WeeksPerYear:                52,
+	CapacityHeadroomPct:         0.9,
+	DefaultLotUnits:             60,
+	DefaultCustomerLeadTimeDays: 30,
+	DefaultFulfillmentPolicy:    constants.FulfillmentPolicyMakeToStock,
+	CadenceStatus:               constants.ActivationStatusInactive,
+	GenerationTimezone:          "UTC",
+	AutoPublishStatus:           constants.ActivationStatusInactive,
 }
 
 func (*UpdateProductionScheduleSettingsRequest) SchemaExample() any {

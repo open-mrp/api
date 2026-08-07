@@ -31,3 +31,8 @@ message TimestampPatch {
   bool clear = 1;
   optional google.protobuf.Timestamp value = 2;
 }
+
+message Int32Patch {
+  bool clear = 1;
+  optional int32 value = 2;
+}

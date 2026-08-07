@@ -374,6 +374,7 @@ resources:
           update_oee: put /v1/core/analytics/oee
           update_oee_trend: put /v1/core/analytics/oee-trend
           update_schedule_attainment: put /v1/core/analytics/schedule-attainment
+          update_delivery_performance: put /v1/core/analytics/delivery-performance
           retrieve_weeks_of_sales: get /v1/core/analytics/weeks-of-sales
         models:
           analytics_item: '#/components/schemas/AnalyticsItem'
@@ -383,6 +384,8 @@ resources:
           analytics_unit_group_unit: '#/components/schemas/AnalyticsUnitGroupUnit'
           analyze_deliveries_request: '#/components/schemas/AnalyzeDeliveriesRequest'
           analyze_deliveries_response: '#/components/schemas/AnalyzeDeliveriesResponse'
+          analyze_delivery_performance_request: '#/components/schemas/AnalyzeDeliveryPerformanceRequest'
+          analyze_delivery_performance_response: '#/components/schemas/AnalyzeDeliveryPerformanceResponse'
           analyze_demand_forecast_request: '#/components/schemas/AnalyzeDemandForecastRequest'
           analyze_demand_forecast_response: '#/components/schemas/AnalyzeDemandForecastResponse'
           analyze_inventory_receipts_request: '#/components/schemas/AnalyzeInventoryReceiptsRequest'
@@ -417,7 +420,9 @@ resources:
           coordinate: '#/components/schemas/Coordinate'
           cost_breakdown: '#/components/schemas/CostBreakdown'
           date_time_coordinate: '#/components/schemas/DateTimeCoordinate'
+          delivery_backlog_bucket: '#/components/schemas/DeliveryBacklogBucket'
           delivery_chart_data: '#/components/schemas/DeliveryChartData'
+          delivery_performance: '#/components/schemas/DeliveryPerformance'
           delivery_statistics: '#/components/schemas/DeliveryStatistics'
           demand_forecast_forecast_point: '#/components/schemas/DemandForecastForecastPoint'
           demand_forecast_point: '#/components/schemas/DemandForecastPoint'
@@ -425,6 +430,8 @@ resources:
           frozen_adherence: '#/components/schemas/FrozenAdherence'
           inventory_receipt_summary_entry: '#/components/schemas/InventoryReceiptSummaryEntry'
           list_attainment_bucket: '#/components/schemas/List_AttainmentBucket'
+          list_delivery_backlog_bucket: '#/components/schemas/List_DeliveryBacklogBucket'
+          list_delivery_performance: '#/components/schemas/List_DeliveryPerformance'
           list_demand_forecast_row: '#/components/schemas/List_DemandForecastRow'
           list_frozen_adherence: '#/components/schemas/List_FrozenAdherence'
           list_oee_department: '#/components/schemas/List_OeeDepartment'
@@ -544,6 +551,7 @@ resources:
           update: patch /v1/sales/customers/{id}
           delete: delete /v1/sales/customers/{id}
           retrieve_frequently_ordered_products: get /v1/sales/customers/{id}/frequently-ordered-products
+          retrieve_lead_time: get /v1/sales/customers/{id}/lead-time
         subresources:
           actions:
             methods:
@@ -570,6 +578,7 @@ resources:
           customer_contact_info: '#/components/schemas/CustomerContactInfo'
           customer_defaults: '#/components/schemas/CustomerDefaults'
           customer_freight_preferences: '#/components/schemas/CustomerFreightPreferences'
+          customer_lead_time: '#/components/schemas/CustomerLeadTime'
           customer_notification_preferences: '#/components/schemas/CustomerNotificationPreferences'
           frequently_ordered_product: '#/components/schemas/FrequentlyOrderedProduct'
           list_account_group: '#/components/schemas/List_AccountGroup'
@@ -1967,6 +1976,7 @@ resources:
           retrieve_item_policies: get /v1/operations/production-schedules/{id}/item-policies
           retrieve_finished_policies: get /v1/operations/production-schedules/{id}/finished-policies
           retrieve_derived_lines: get /v1/operations/production-schedules/{id}/derived-lines
+          retrieve_at_risk_orders: get /v1/operations/production-schedules/{id}/at-risk-orders
           retrieve_deviations: get /v1/operations/production-schedules/{id}/deviations
           retrieve_week_release_preview: get /v1/operations/production-schedules/{id}/week-release-preview
           delete: delete /v1/operations/production-schedules/{id}
@@ -1987,6 +1997,7 @@ resources:
               preview: put /v1/operations/production-schedules/actions/preview
               preview_regenerate: put /v1/operations/production-schedules/{id}/actions/preview-regenerate
               regenerate: put /v1/operations/production-schedules/{id}/actions/regenerate
+              quote_promise_date: post /v1/operations/production-schedules/actions/quote-promise-date
               publish: put /v1/operations/production-schedules/{id}/actions/publish
               release_week: post /v1/operations/production-schedules/{id}/actions/release-week
               archive: put /v1/operations/production-schedules/{id}/actions/archive
@@ -1999,6 +2010,8 @@ resources:
               preview_regenerate_production_schedule_request: '#/components/schemas/PreviewRegenerateProductionScheduleRequest'
               production_schedule_preview: '#/components/schemas/ProductionSchedulePreview'
               production_schedule_regenerate_preview: '#/components/schemas/ProductionScheduleRegeneratePreview'
+              promise_date_quote: '#/components/schemas/PromiseDateQuote'
+              quote_promise_date_request: '#/components/schemas/QuotePromiseDateRequest'
               regenerate_production_schedule_request: '#/components/schemas/RegenerateProductionScheduleRequest'
               release_production_schedule_week_request: '#/components/schemas/ReleaseProductionScheduleWeekRequest'
               release_schedule_week_result: '#/components/schemas/ReleaseScheduleWeekResult'
@@ -2016,6 +2029,9 @@ resources:
           list_release_schedule_batch: '#/components/schemas/List_ReleaseScheduleBatch'
           list_released_schedule_line: '#/components/schemas/List_ReleasedScheduleLine'
           list_schedule_applied_override: '#/components/schemas/List_ScheduleAppliedOverride'
+          list_schedule_at_risk_order: '#/components/schemas/List_ScheduleAtRiskOrder'
+          list_schedule_order_coverage: '#/components/schemas/List_ScheduleOrderCoverage'
+          list_schedule_order_coverage_line: '#/components/schemas/List_ScheduleOrderCoverageLine'
           production_schedule: '#/components/schemas/ProductionSchedule'
           production_schedule_derived_line: '#/components/schemas/ProductionScheduleDerivedLine'
           production_schedule_deviation: '#/components/schemas/ProductionScheduleDeviation'
@@ -2025,7 +2041,10 @@ resources:
           release_schedule_week_preview: '#/components/schemas/ReleaseScheduleWeekPreview'
           released_schedule_line: '#/components/schemas/ReleasedScheduleLine'
           schedule_applied_override: '#/components/schemas/ScheduleAppliedOverride'
+          schedule_at_risk_order: '#/components/schemas/ScheduleAtRiskOrder'
           schedule_diagnostics: '#/components/schemas/ScheduleDiagnostics'
+          schedule_order_coverage: '#/components/schemas/ScheduleOrderCoverage'
+          schedule_order_coverage_line: '#/components/schemas/ScheduleOrderCoverageLine'
       production_schedule_settings:
         methods:
           list: get /v1/operations/production-schedule-settings
@@ -2040,9 +2059,31 @@ resources:
               list_production_schedule_resource_setting: '#/components/schemas/List_ProductionScheduleResourceSetting'
               production_schedule_resource_setting: '#/components/schemas/ProductionScheduleResourceSetting'
               upsert_resource_setting_request: '#/components/schemas/UpsertResourceSettingRequest'
+          items:
+            methods:
+              list: get /v1/operations/production-schedule-settings/items
+              retrieve: get /v1/operations/production-schedule-settings/items/{item_id}
+              update: put /v1/operations/production-schedule-settings/items/{item_id}
+              delete: delete /v1/operations/production-schedule-settings/items/{item_id}
+            models:
+              list_production_schedule_item_setting: '#/components/schemas/List_ProductionScheduleItemSetting'
+              production_schedule_item_setting: '#/components/schemas/ProductionScheduleItemSetting'
+              upsert_item_setting_request: '#/components/schemas/UpsertItemSettingRequest'
         models:
           production_schedule_settings: '#/components/schemas/ProductionScheduleSettings'
           update_production_schedule_settings_request: '#/components/schemas/UpdateProductionScheduleSettingsRequest'
+      fulfillment_recommendations:
+        methods:
+          list: get /v1/operations/fulfillment-recommendations
+        subresources:
+          actions:
+            methods:
+              apply: post /v1/operations/fulfillment-recommendations/actions/apply
+            models:
+              apply_fulfillment_recommendations_request: '#/components/schemas/ApplyFulfillmentRecommendationsRequest'
+        models:
+          fulfillment_recommendation: '#/components/schemas/FulfillmentRecommendation'
+          list_fulfillment_recommendation: '#/components/schemas/List_FulfillmentRecommendation'
       purchase_orders:
         methods:
           list: get /v1/operations/purchase-orders

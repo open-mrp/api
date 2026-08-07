@@ -485,6 +485,8 @@ message CustomerProto {
   google.protobuf.Timestamp updated_at = 28;
   optional CustomerCreditLimitProto credit_limit = 29;
   repeated CustomerLightCustomerProto child_accounts = 30;
+  // Calendar days between an order being issued and it being due to ship, for this customer specifically.
+  optional int32 default_lead_time_days = 31;
 }
 message CustomerCarrierProto {
   string id = 1;
@@ -651,6 +653,7 @@ message CreateCustomerRequest {
   optional string credit_limit_value = 25;
   optional string credit_limit_unit_id = 26;
   repeated string includes = 27;
+  optional int32 default_lead_time_days = 28;
 }
 message CreateCustomerResponse {
   CustomerProto customer = 1;
@@ -682,10 +685,25 @@ message UpdateCustomerRequest {
   bool has_customer_price_group_ids = 24;
   optional QuantityPatch credit_limit = 25;
   repeated string includes = 26;
+  optional Int32Patch default_lead_time_days = 27;
 }
 message UpdateCustomerResponse {
   CustomerProto customer = 1;
 }
+message GetCustomerLeadTimeRequest {
+  string id = 1;
+}
+
+// GetCustomerLeadTimeResponse is the ship-by lead time a new order for this customer would
+// be committed to. source names which rule produced it; account_group_id is set only when
+// the group is the rule that won.
+message GetCustomerLeadTimeResponse {
+  string customer_id = 1;
+  int32 days = 2;
+  string source = 3;
+  optional string account_group_id = 4;
+}
+
 message DeleteCustomerRequest {
   string id = 1;
 }

@@ -29,15 +29,9 @@ func NewPickRepo(queries *sqlc.Queries) domain.PickRepo {
 func pickCreatedAt(p *domain.PickSummary) time.Time { return p.CreatedAt }
 func pickID(p *domain.PickSummary) string           { return p.ID }
 
+// parseDateFilter is parseDateString under the name the pick and shipment repositories already used. Kept as a one-liner rather than renamed at both call sites so the two date filters cannot drift apart again.
 func parseDateFilter(s *string) gosql.NullTime {
-	if s == nil || *s == "" {
-		return gosql.NullTime{}
-	}
-	t, err := time.Parse("2006-01-02", *s)
-	if err != nil {
-		return gosql.NullTime{}
-	}
-	return gosql.NullTime{Time: t, Valid: true}
+	return parseDateString(s)
 }
 
 func mapPickForwardRow(row sqlc.ListPicksForwardRow) *domain.PickSummary {

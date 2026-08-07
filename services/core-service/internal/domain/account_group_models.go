@@ -15,9 +15,11 @@ type AccountGroup struct {
 	CommissionPolicyCode string  `audit:"commission_policy_code"`
 	FreightPolicyCode    string  `audit:"freight_policy_code"`
 	AccountGroupTypeCode string  `audit:"account_group_type_code"`
-	RegistrationFlowID   *string
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
+	// DefaultLeadTimeDays is inherited by every customer in the group that has not set its own. Nil falls through to the account default.
+	DefaultLeadTimeDays *int32 `audit:"default_lead_time_days"`
+	RegistrationFlowID  *string
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
 }
 
 type ListAccountGroupsParams struct {
@@ -40,6 +42,7 @@ type CreateAccountGroupParams struct {
 	AccountGroupTypeCode string
 	CommissionPolicyCode string
 	FreightPolicyCode    string
+	DefaultLeadTimeDays  *int32
 }
 
 type UpdateAccountGroupParams struct {
@@ -49,6 +52,7 @@ type UpdateAccountGroupParams struct {
 	Description          field.Clearable[string]
 	CommissionPolicyCode *string
 	FreightPolicyCode    *string
+	DefaultLeadTimeDays  field.Clearable[int32]
 }
 
 type DeleteAccountGroupParams struct {

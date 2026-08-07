@@ -1572,14 +1572,15 @@ func (h *gRPCHandler) BatchGetPrioritiesByIDs(ctx context.Context, req *pb.Batch
 
 func accountGroupToProto(ag *domain.AccountGroup) *pb.AccountGroupInfo {
 	info := &pb.AccountGroupInfo{
-		Id:                 ag.ID,
-		Name:               ag.Name,
-		CommissionPolicy:   ag.CommissionPolicyCode,
-		FreightPolicy:      ag.FreightPolicyCode,
-		Type:               ag.AccountGroupTypeCode,
-		RegistrationFlowId: ag.RegistrationFlowID,
-		CreatedAt:          timestamppb.New(ag.CreatedAt),
-		UpdatedAt:          timestamppb.New(ag.UpdatedAt),
+		Id:                  ag.ID,
+		Name:                ag.Name,
+		CommissionPolicy:    ag.CommissionPolicyCode,
+		FreightPolicy:       ag.FreightPolicyCode,
+		Type:                ag.AccountGroupTypeCode,
+		RegistrationFlowId:  ag.RegistrationFlowID,
+		CreatedAt:           timestamppb.New(ag.CreatedAt),
+		UpdatedAt:           timestamppb.New(ag.UpdatedAt),
+		DefaultLeadTimeDays: ag.DefaultLeadTimeDays,
 	}
 	if ag.Description != nil {
 		info.Description = ag.Description
@@ -1664,6 +1665,7 @@ func (h *gRPCHandler) CreateAccountGroup(ctx context.Context, req *pb.CreateAcco
 		AccountGroupTypeCode: req.Type,
 		CommissionPolicyCode: req.CommissionPolicy,
 		FreightPolicyCode:    req.FreightPolicy,
+		DefaultLeadTimeDays:  req.DefaultLeadTimeDays,
 	}
 
 	accountGroup, apiErr := h.accountGroupSvc.CreateAccountGroup(ctx, params)
@@ -1690,6 +1692,7 @@ func (h *gRPCHandler) UpdateAccountGroup(ctx context.Context, req *pb.UpdateAcco
 		Description:          field.StringClearableFromProto(req.Description),
 		CommissionPolicyCode: req.CommissionPolicy,
 		FreightPolicyCode:    req.FreightPolicy,
+		DefaultLeadTimeDays:  field.Int32ClearableFromProto(req.DefaultLeadTimeDays),
 	}
 
 	accountGroup, apiErr := h.accountGroupSvc.UpdateAccountGroup(ctx, params)

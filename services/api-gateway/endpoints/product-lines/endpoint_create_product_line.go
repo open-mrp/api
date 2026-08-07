@@ -33,6 +33,11 @@ type CreateProductLineRequest struct {
 	//
 	// Sizes the campaigns a production schedule plans, and defaults the quantity when a batch is added to a production run. The unit is part of the value, since 60 pairs and 60 eaches are different lots, and it must belong to the unit group given by `unit_group_id`. The value must be greater than zero. Leave this out for a line with no lot convention, and planning falls back to the lot of the line an item feeds into, and then to the account-wide default lot size.
 	DefaultLot field.Optional[apirequest.QuantityInput] `json:"default_lot,omitzero"`
+	// How products in this line are produced when they do not say for themselves.
+	//
+	// - `make_to_stock`: built to the forecast, holding a safety stock against its variability.
+	// - `make_to_order`: built only against orders already on the book, holding no buffer.
+	FulfillmentPolicy field.Optional[constants.FulfillmentPolicy] `json:"fulfillment_policy,omitzero"`
 	// Default freight policy for products in this product line.
 	//
 	// - `free_freight`: these products do not incur a freight charge.

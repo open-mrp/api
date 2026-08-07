@@ -41,6 +41,7 @@ func mapAccountGroupRow(
 	description gosql.NullString,
 	commissionStatusCode, freightStatusCode, accountGroupTypeCode string,
 	registrationFlowID gosql.NullString,
+	defaultLeadTimeDays gosql.NullInt32,
 	createdAt, updatedAt time.Time,
 ) *domain.AccountGroup {
 	ag := &domain.AccountGroup{
@@ -59,6 +60,9 @@ func mapAccountGroupRow(
 	if registrationFlowID.Valid {
 		ag.RegistrationFlowID = &registrationFlowID.String
 	}
+	if defaultLeadTimeDays.Valid {
+		ag.DefaultLeadTimeDays = &defaultLeadTimeDays.Int32
+	}
 	return ag
 }
 
@@ -66,7 +70,7 @@ func mapForwardAccountGroupRow(row sqlc.ListAccountGroupsForwardRow) *domain.Acc
 	return mapAccountGroupRow(
 		row.ID, row.OwnerAccountID, row.Name, row.Description,
 		row.CommissionStatusCode, row.FreightStatusCode, row.AccountGroupTypeCode,
-		row.RegistrationFlowID, row.CreatedAt, row.UpdatedAt,
+		row.RegistrationFlowID, row.DefaultLeadTimeDays, row.CreatedAt, row.UpdatedAt,
 	)
 }
 
@@ -74,7 +78,7 @@ func mapBackwardAccountGroupRow(row sqlc.ListAccountGroupsBackwardRow) *domain.A
 	return mapAccountGroupRow(
 		row.ID, row.OwnerAccountID, row.Name, row.Description,
 		row.CommissionStatusCode, row.FreightStatusCode, row.AccountGroupTypeCode,
-		row.RegistrationFlowID, row.CreatedAt, row.UpdatedAt,
+		row.RegistrationFlowID, row.DefaultLeadTimeDays, row.CreatedAt, row.UpdatedAt,
 	)
 }
 
@@ -82,7 +86,7 @@ func mapGetAccountGroupRow(row sqlc.GetAccountGroupRow) *domain.AccountGroup {
 	return mapAccountGroupRow(
 		row.ID, row.OwnerAccountID, row.Name, row.Description,
 		row.CommissionStatusCode, row.FreightStatusCode, row.AccountGroupTypeCode,
-		row.RegistrationFlowID, row.CreatedAt, row.UpdatedAt,
+		row.RegistrationFlowID, row.DefaultLeadTimeDays, row.CreatedAt, row.UpdatedAt,
 	)
 }
 
@@ -90,7 +94,7 @@ func mapGetAccountGroupsByIDsRow(row sqlc.GetAccountGroupsByIDsRow) *domain.Acco
 	return mapAccountGroupRow(
 		row.ID, row.OwnerAccountID, row.Name, row.Description,
 		row.CommissionStatusCode, row.FreightStatusCode, row.AccountGroupTypeCode,
-		row.RegistrationFlowID, row.CreatedAt, row.UpdatedAt,
+		row.RegistrationFlowID, row.DefaultLeadTimeDays, row.CreatedAt, row.UpdatedAt,
 	)
 }
 
@@ -217,6 +221,7 @@ func (r *accountGroupRepoImpl) Create(ctx context.Context, id string, params dom
 		CommissionStatusCode: params.CommissionPolicyCode,
 		FreightStatusCode:    params.FreightPolicyCode,
 		AccountGroupTypeCode: params.AccountGroupTypeCode,
+		DefaultLeadTimeDays:  toNullInt32(params.DefaultLeadTimeDays),
 	})
 	if apiErr := db.MapSQLErrorWithDuplicateKeys(err, accountGroupDuplicateKeyMapping); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -236,6 +241,7 @@ func (r *accountGroupRepoImpl) Update(ctx context.Context, params domain.UpdateA
 		Description:          field.StringToNullString(params.Description),
 		CommissionStatusCode: toNullString(params.CommissionPolicyCode),
 		FreightStatusCode:    toNullString(params.FreightPolicyCode),
+		DefaultLeadTimeDays:  field.Int32ToNullInt32(params.DefaultLeadTimeDays),
 	})
 	if apiErr := db.MapSQLErrorWithDuplicateKeys(err, accountGroupDuplicateKeyMapping); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)

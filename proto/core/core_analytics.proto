@@ -504,6 +504,44 @@ message BatchGetAccountStatusesByIDsResponse {
   repeated AccountStatusInfo account_statuses = 1;
 }
 
+message AnalyzeDeliveryPerformanceRequest {
+  google.protobuf.Timestamp starts_at = 1;
+  google.protobuf.Timestamp ends_at = 2;
+  string granularity = 3;
+}
+
+// DeliveryPerformanceProto is one period's delivery picture, or the whole window's.
+// Ratios are absent rather than zero when nothing was due.
+message DeliveryPerformanceProto {
+  optional google.protobuf.Timestamp period_start = 1;
+  int32 committed_order_count = 2;
+  int32 shipped_order_count = 3;
+  int32 on_time_order_count = 4;
+  int32 on_time_in_full_count = 5;
+  int32 late_order_count = 6;
+  int32 not_yet_shipped_count = 7;
+  optional double on_time_pct = 8;
+  optional double on_time_in_full_pct = 9;
+  optional double average_days_late = 10;
+  optional double average_lead_time_days = 11;
+  optional double average_committed_lead_time_days = 12;
+}
+
+message DeliveryBacklogBucketProto {
+  string label = 1;
+  int32 min_days_late = 2;
+  int32 max_days_late = 3;
+  int32 order_count = 4;
+  double units = 5;
+}
+
+message AnalyzeDeliveryPerformanceResponse {
+  DeliveryPerformanceProto overall = 1;
+  repeated DeliveryPerformanceProto periods = 2;
+  repeated DeliveryBacklogBucketProto backlog = 3;
+  int32 uncommitted_order_count = 4;
+}
+
 message AnalyzeScheduleAttainmentRequest {
   google.protobuf.Timestamp start_date = 1;
   google.protobuf.Timestamp end_date = 2;

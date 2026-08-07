@@ -785,3 +785,109 @@ type AnalyzeScheduleAttainmentResponse struct {
 	// Whether the period had a plan to measure against. When `no_baseline`, every ratio is null and the period has no plan rather than a missed one.
 	BaselineStatus constants.AttainmentBaselineStatus `json:"baseline_status" validate:"required"`
 }
+
+// How reliably promised delivery dates were met.
+type AnalyzeDeliveryPerformanceResponse struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=analyze_delivery_performance_response"`
+	// The whole window as one figure.
+	Overall *DeliveryPerformance `json:"overall" validate:"required"`
+	// The same figures broken into periods, by the date each order was due.
+	Periods *List[DeliveryPerformance] `json:"periods" validate:"required"`
+	// Orders already past their promise and still unshipped, by how late they are.
+	Backlog *List[DeliveryBacklogBucket] `json:"backlog" validate:"required"`
+	// Issued orders in the window carrying no ship-by date, excluded from every rate above.
+	//
+	// Reported so the exclusion is visible: a delivery score computed over half the order book, silently, is worse than one that says which half. A non-zero count here means orders placed before commitments were tracked still need a ship-by date.
+	UncommittedOrderCount int32 `json:"uncommitted_order_count"`
+}
+
+// Delivery reliability for one period, or for a whole window.
+type DeliveryPerformance struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=delivery_performance"`
+	// First day of the period; absent on the overall figure.
+	PeriodStart *time.Time `json:"period_start"`
+	// Orders whose promised ship date fell in this period.
+	//
+	// This is the denominator for both rates below — orders that were due, not orders that shipped. Measuring against shipments only would let unshipped late orders disappear from the score.
+	CommittedOrderCount int32 `json:"committed_order_count"`
+	// How many of them have shipped at all.
+	ShippedOrderCount int32 `json:"shipped_order_count"`
+	// How many shipped on or before the promised date.
+	OnTimeOrderCount int32 `json:"on_time_order_count"`
+	// How many shipped on time and complete.
+	OnTimeInFullCount int32 `json:"on_time_in_full_count"`
+	// How many shipped late, plus those already past their date and still unshipped.
+	LateOrderCount int32 `json:"late_order_count"`
+	// How many due in this period have not shipped at all.
+	//
+	// These count against on-time: a promise not yet met is not a promise kept.
+	NotYetShippedCount int32 `json:"not_yet_shipped_count"`
+	// Share of due orders that shipped on time, as a percentage.
+	//
+	// Null rather than zero when nothing was due, so a quiet week does not render as total failure.
+	OnTimePct *float64 `json:"on_time_pct"`
+	// Share of due orders that shipped on time and complete, as a percentage.
+	OnTimeInFullPct *float64 `json:"on_time_in_full_pct"`
+	// Average days late, over late orders only.
+	//
+	// Averaging over every order would dilute a real problem into a number that looks fine.
+	AverageDaysLate *float64 `json:"average_days_late"`
+	// Average days from issue to first shipment, over orders that have shipped.
+	AverageLeadTimeDays *float64 `json:"average_lead_time_days"`
+	// Average lead time these orders were promised.
+	//
+	// The gap between this and `average_lead_time_days` is what a lead time is renegotiated on.
+	AverageCommittedLeadTimeDays *float64 `json:"average_committed_lead_time_days"`
+}
+
+// One age band of orders past their promise and still unshipped.
+type DeliveryBacklogBucket struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=delivery_backlog_bucket"`
+	// Name of the band.
+	Label string `json:"label"`
+	// Lower bound of the band in days late.
+	MinDaysLate int32 `json:"min_days_late"`
+	// Upper bound in days late; `0` means unbounded.
+	MaxDaysLate int32 `json:"max_days_late"`
+	// Orders in the band.
+	OrderCount int32 `json:"order_count"`
+	// Quantity still owed across them, which is what remains unpacked rather than what was ordered.
+	Units float64 `json:"units"`
+}
+
+var sampleOnTimePct = 92.31
+var sampleOnTimeInFullPct = 88.46
+var sampleAvgDaysLate = 4.5
+var sampleAvgLeadTime = 26.0
+var sampleAvgCommittedLeadTime = 30.0
+
+var SampleAnalyzeDeliveryPerformanceResponse = &AnalyzeDeliveryPerformanceResponse{
+	Object: constants.ObjectTypeAnalyzeDeliveryPerformanceResponse,
+	Overall: &DeliveryPerformance{
+		Object:                       constants.ObjectTypeDeliveryPerformance,
+		CommittedOrderCount:          26,
+		ShippedOrderCount:            24,
+		OnTimeOrderCount:             24,
+		OnTimeInFullCount:            23,
+		LateOrderCount:               2,
+		NotYetShippedCount:           2,
+		OnTimePct:                    &sampleOnTimePct,
+		OnTimeInFullPct:              &sampleOnTimeInFullPct,
+		AverageDaysLate:              &sampleAvgDaysLate,
+		AverageLeadTimeDays:          &sampleAvgLeadTime,
+		AverageCommittedLeadTimeDays: &sampleAvgCommittedLeadTime,
+	},
+	Periods: NewList([]DeliveryPerformance{}, PageInfo{}),
+	Backlog: NewList([]DeliveryBacklogBucket{{
+		Object:      constants.ObjectTypeDeliveryBacklogBucket,
+		Label:       "1_7_days",
+		MinDaysLate: 1,
+		MaxDaysLate: 7,
+		OrderCount:  2,
+		Units:       340,
+	}}, PageInfo{}),
+	UncommittedOrderCount: 0,
+}

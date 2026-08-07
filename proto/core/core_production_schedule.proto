@@ -60,6 +60,30 @@ service CoreProductionScheduleService {
   // DeleteProductionScheduleResourceSetting removes one per-resource override.
   rpc DeleteProductionScheduleResourceSetting(DeleteProductionScheduleResourceSettingRequest) returns (google.protobuf.Empty);
 
+  // ListFulfillmentRecommendations works out which SKUs should be built to order.
+  rpc ListFulfillmentRecommendations(ListFulfillmentRecommendationsRequest) returns (ListFulfillmentRecommendationsResponse);
+
+  // ApplyFulfillmentRecommendations writes the recommended policy onto the named items.
+  rpc ApplyFulfillmentRecommendations(ApplyFulfillmentRecommendationsRequest) returns (ListFulfillmentRecommendationsResponse);
+
+  // ListProductionScheduleItemSettings returns per-item planning overrides.
+  rpc ListProductionScheduleItemSettings(ListProductionScheduleItemSettingsRequest) returns (ListProductionScheduleItemSettingsResponse);
+
+  // GetProductionScheduleItemSetting returns one item's planning override.
+  rpc GetProductionScheduleItemSetting(GetProductionScheduleItemSettingRequest) returns (ProductionScheduleItemSettingResponse);
+
+  // UpsertProductionScheduleItemSetting writes one item's planning override.
+  rpc UpsertProductionScheduleItemSetting(UpsertProductionScheduleItemSettingRequest) returns (ProductionScheduleItemSettingResponse);
+
+  // DeleteProductionScheduleItemSetting removes one item's planning override.
+  rpc DeleteProductionScheduleItemSetting(DeleteProductionScheduleItemSettingRequest) returns (google.protobuf.Empty);
+
+  // ListProductionScheduleAtRiskOrders returns the commitments a version does not meet.
+  rpc ListProductionScheduleAtRiskOrders(ListProductionScheduleAtRiskOrdersRequest) returns (ListProductionScheduleAtRiskOrdersResponse);
+
+  // QuotePromiseDate says the earliest date the published plan could ship a quantity.
+  rpc QuotePromiseDate(QuotePromiseDateRequest) returns (QuotePromiseDateResponse);
+
   // ListProductionScheduleDerivedLines returns derived downstream department work.
   rpc ListProductionScheduleDerivedLines(ListProductionScheduleDerivedLinesRequest) returns (ListProductionScheduleDerivedLinesResponse);
 
@@ -193,6 +217,12 @@ message ProductionScheduleItemPolicyInfo {
   // The echelon position at the end of each horizon week. Weeks with no campaign are
   // what this explains: stock draining toward the reorder point.
   repeated double projected_on_hand = 33;
+  // How this item was planned, the rule that decided, and the split between what the
+  // order book owed and what the forecast projected.
+  string fulfillment_policy_code = 36;
+  string policy_source_code = 37;
+  double firm_demand_units = 38;
+  double forecast_demand_units = 39;
 }
 
 // ProductionScheduleFinishedPolicyInfo is one finished SKU's own inventory target — the
@@ -346,6 +376,12 @@ message SchedulePolicyProto {
   double on_hand_greige = 20;
   double average_greige_inventory = 21;
   double max_greige_inventory = 22;
+  // How this item was planned, the rule that decided, and the split between what the
+  // order book owed and what the forecast projected.
+  string fulfillment_policy_code = 23;
+  string policy_source_code = 24;
+  double firm_demand_units = 25;
+  double forecast_demand_units = 26;
 }
 
 // ScheduleCampaignProto is one planned production block.
@@ -392,6 +428,23 @@ message ScheduleDiagnosticsProto {
   int32 constraint_machine_count = 9;
   int32 measured_batch_count = 10;
   int32 machines_without_step = 11;
+  // The order book this plan owes, and the commitments it does not meet.
+  double firm_demand_units = 12;
+  int32 undated_firm_order_count = 13;
+  repeated ScheduleAtRiskOrderProto at_risk_orders = 14;
+  // How many planned items are built only against the order book.
+  int32 make_to_order_item_count = 15;
+}
+
+// ScheduleAtRiskOrderProto is a commitment the plan does not meet, with the reason.
+message ScheduleAtRiskOrderProto {
+  string sales_order_id = 1;
+  string sales_order_number = 2;
+  string item_id = 3;
+  string sku = 4;
+  double units = 5;
+  int32 due_week = 6;
+  string reason = 7;
 }
 
 message PreviewProductionScheduleResponse {
@@ -636,6 +689,122 @@ message ProductionScheduleSettingsInfo {
   bool has_stored_settings = 31;
   google.protobuf.Timestamp created_at = 32;
   google.protobuf.Timestamp updated_at = 33;
+  // The last fallback in an order's ship-by chain, behind the customer and its account group.
+  int32 default_customer_lead_time_days = 34;
+  string default_fulfillment_policy_code = 35;
+}
+
+// ProductionScheduleItemSettingInfo is one item's planning override.
+message ProductionScheduleItemSettingInfo {
+  string id = 1;
+  string item_id = 2;
+  string sku = 3;
+  bool is_excluded = 4;
+  optional double lot_multiple_units = 5;
+  optional string fulfillment_policy_code = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+// FulfillmentRecommendationInfo is the engine's advice for one item, with the
+// measurements behind it so a planner can disagree with the rule rather than only
+// with the answer.
+message FulfillmentRecommendationInfo {
+  string item_id = 1;
+  string sku = 2;
+  optional string product_line_id = 3;
+  string current_policy_code = 4;
+  string recommended_policy_code = 5;
+  string reason_code = 6;
+  bool changes = 7;
+  double average_demand_interval = 8;
+  double coefficient_of_variation = 9;
+  double top_customer_share_pct = 10;
+  optional string top_customer_name = 11;
+  double demand_weighted_lead_time_days = 12;
+  double annual_cogs = 13;
+  int32 months_since_last_sale = 14;
+  double mixed_stream_share_pct = 15;
+}
+
+message ListFulfillmentRecommendationsRequest {}
+
+message ListFulfillmentRecommendationsResponse {
+  repeated FulfillmentRecommendationInfo recommendations = 1;
+}
+
+message ApplyFulfillmentRecommendationsRequest {
+  repeated string item_ids = 1;
+}
+
+message ListProductionScheduleAtRiskOrdersRequest {
+  string production_schedule_id = 1;
+}
+
+// ScheduleOrderCoverageProto is one order the version does or does not build in time,
+// with the campaigns earmarked for it.
+message ScheduleOrderCoverageProto {
+  string sales_order_id = 1;
+  string sales_order_number = 2;
+  string item_id = 3;
+  string sku = 4;
+  double units_at_risk = 5;
+  int32 due_week = 6;
+  string reason_code = 7;
+  optional google.protobuf.Timestamp ship_by_date = 8;
+  repeated ScheduleOrderCoverageLineProto covering_lines = 9;
+}
+
+message ScheduleOrderCoverageLineProto {
+  string production_schedule_line_id = 1;
+  int32 week_index = 2;
+  string machine_id = 3;
+  double allocated_quantity = 4;
+}
+
+message ListProductionScheduleAtRiskOrdersResponse {
+  repeated ScheduleOrderCoverageProto orders = 1;
+}
+
+message QuotePromiseDateRequest {
+  string item_id = 1;
+  double quantity = 2;
+}
+
+message QuotePromiseDateResponse {
+  string item_id = 1;
+  double quantity = 2;
+  // Absent when the published horizon cannot supply the quantity at all.
+  optional google.protobuf.Timestamp earliest_ship_date = 3;
+  optional int32 earliest_week_index = 4;
+  bool is_promisable = 5;
+  string production_schedule_id = 6;
+  int32 production_schedule_version = 7;
+}
+
+message ListProductionScheduleItemSettingsRequest {}
+
+message ListProductionScheduleItemSettingsResponse {
+  repeated ProductionScheduleItemSettingInfo settings = 1;
+}
+
+message GetProductionScheduleItemSettingRequest {
+  string item_id = 1;
+}
+
+message UpsertProductionScheduleItemSettingRequest {
+  string item_id = 1;
+  bool is_excluded = 2;
+  optional double lot_multiple_units = 3;
+  optional string fulfillment_policy_code = 4;
+}
+
+message ProductionScheduleItemSettingResponse {
+  ProductionScheduleItemSettingInfo setting = 1;
+}
+
+message DeleteProductionScheduleItemSettingRequest {
+  string item_id = 1;
 }
 
 message GetProductionScheduleSettingsRequest {}

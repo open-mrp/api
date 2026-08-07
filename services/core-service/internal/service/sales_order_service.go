@@ -712,6 +712,9 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 			// backfill below rewrites omitted fields to the existing values.
 			shippingChanged := salesOrderShippingChanged(existing, params)
 
+			// Must also be decided before the backfill, which rewrites an omitted promised date to the existing one and would make every update look like a change.
+			promisedChanged := salesOrderPromisedAtChanged(existing, params)
+
 			// Non-nullable optional FKs: when the caller omits a field (nil), preserve the
 			// existing value. These cannot be cleared — an empty value would set an invalid
 			// FK, not null the column.
@@ -760,6 +763,13 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 				return apiErr
 			}
 			result = updated
+
+			// Renegotiating a date on a live order moves the commitment with it, and clearing one hands the order back to the customer's standing lead time. Only issued orders carry a commitment at all, so an estimate is left alone until it is issued.
+			if promisedChanged && updated.SalesOrderStatusCode == string(constants.SalesOrderStatusCodeIssued) && updated.IssuedAt != nil {
+				if apiErr := txSvc.stampShipByCommitment(txCtx, params.AccountID, updated, *updated.IssuedAt); apiErr != nil {
+					return apiErr
+				}
+			}
 
 			// Replace email contacts when the caller supplied lists (nil = leave alone)
 			if params.AcknowledgementEmailContacts != nil {
@@ -1021,6 +1031,11 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 				return apiErr
 			}
 
+			// Stamped inside the issue transaction: an order that is issued without its commitment would be a live promise nobody recorded, and the ship-by is what every downstream due-date read depends on.
+			if apiErr := txSvc.stampShipByCommitment(txCtx, params.AccountID, order, now); apiErr != nil {
+				return apiErr
+			}
+
 			// Create pick
 			pickID, apiErr := id.GenID(id.PickIDPrefix, nil)
 			if apiErr != nil {
@@ -1133,6 +1148,11 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 
 			// Update status and clear issuedAt
 			if apiErr := txRepo.UpdateStatus(txCtx, params.AccountID, params.SalesOrderID, "estimate", nil, nil); apiErr != nil {
+				return apiErr
+			}
+
+			// An order that is no longer issued carries no promise. Leaving the commitment behind would keep it in the past-due list and count it against on-time delivery for a ship date nobody is working to.
+			if apiErr := txRepo.SetShipByCommitment(txCtx, params.AccountID, params.SalesOrderID, nil); apiErr != nil {
 				return apiErr
 			}
 
@@ -1549,6 +1569,20 @@ func ptrStringChanged(a, b *string) bool {
 // salesOrderShippingChanged reports whether the update request changes the order's
 // carrier, service level, or ship-to address versus the existing order. It reads the
 // raw request params (before backfill), so an omitted field never counts as a change.
+// salesOrderPromisedAtChanged reports whether the caller actually moved the promised date, as opposed to omitting it. Must be called before the clearable backfill, which rewrites an omitted field to the existing value.
+func salesOrderPromisedAtChanged(existing *domain.SalesOrder, params domain.UpdateSalesOrderParams) bool {
+	if !params.PromisedAt.WasProvided() {
+		return false
+	}
+	if params.PromisedAt.IsClear() {
+		return existing.PromisedAt != nil
+	}
+	if v, ok := params.PromisedAt.Value(); ok {
+		return existing.PromisedAt == nil || !existing.PromisedAt.Equal(v)
+	}
+	return false
+}
+
 func salesOrderShippingChanged(existing *domain.SalesOrder, params domain.UpdateSalesOrderParams) bool {
 	if params.CarrierID != nil && ptrStringChanged(existing.CarrierID, params.CarrierID) {
 		return true

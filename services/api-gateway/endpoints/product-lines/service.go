@@ -11,6 +11,7 @@ import (
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -111,6 +112,10 @@ func (m *productLineSvcImpl) CreateProductLine(ctx context.Context, req *CreateP
 		CommissionPolicy: string(req.CommissionPolicy),
 		FreightPolicy:    string(req.FreightPolicy),
 	}
+	if policy, ok := req.FulfillmentPolicy.Value(); ok {
+		code := string(policy)
+		pbReq.FulfillmentPolicyCode = &code
+	}
 	if lot, ok := req.DefaultLot.Value(); ok {
 		pbReq.DefaultLot = &pb.QuantityPatch{Value: &lot.Value, UnitId: &lot.UnitID}
 	}
@@ -142,6 +147,7 @@ func (m *productLineSvcImpl) UpdateProductLine(ctx context.Context, req *UpdateP
 		pbReq.FreightPolicy = &s
 	}
 	pbReq.DefaultLot = apirequest.QuantityFieldToProto(req.DefaultLot)
+	pbReq.FulfillmentPolicyCode = field.EnumClearableToProto(req.FulfillmentPolicy)
 
 	resp, apiErr := grpcutil.CallRPC(ctx, productLineSvcTracer, "service.product-lines.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateProductLineResponse, error) {

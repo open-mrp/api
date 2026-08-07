@@ -281,3 +281,11 @@ INSERT IGNORE INTO demand_override_type (id, code, name, created_at, updated_at)
     ('deovtp_01seedabsolute0', 'absolute', 'Absolute', NOW(), NOW()),
     ('deovtp_01seeddeltaunit', 'delta_units', 'Delta Units', NOW(), NOW()),
     ('deovtp_01seeddeltapct0', 'delta_percent', 'Delta Percent', NOW(), NOW());
+
+-- fulfillment_policy (prefix: fupl)
+-- How a SKU is produced. make_to_stock builds to a forecast and holds a buffer;
+-- make_to_order contributes no forecast demand and no safety stock, so it is built
+-- only against orders already on the book.
+INSERT IGNORE INTO fulfillment_policy (id, code, name, created_at, updated_at) VALUES
+    ('fupl_01seedmaketostock', 'make_to_stock', 'Make to Stock', NOW(), NOW()),
+    ('fupl_01seedmaketoorder', 'make_to_order', 'Make to Order', NOW(), NOW());

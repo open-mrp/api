@@ -181,6 +181,14 @@ type SalesOrder struct {
 	ExpiredAt *time.Time `json:"expired_at"`
 	// Date promised to the customer for delivery, if one was committed.
 	PromisedAt *time.Time `json:"promised_at"`
+	// Date this order is contractually due to ship.
+	//
+	// Stamped when the order is issued, from the promised date if one was set, otherwise from the lead time on the customer, its account group, or the account. It is not recomputed afterwards, so renegotiating a customer's lead time leaves commitments already made where they are. Cleared if the order is unissued.
+	ShipByDate *time.Time `json:"ship_by_date"`
+	// Calendar days between issue and the ship-by date.
+	LeadTimeDays *int32 `json:"lead_time_days"`
+	// Which rule produced the ship-by date.
+	LeadTimeSource *constants.LeadTimeSource `json:"lead_time_source"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.

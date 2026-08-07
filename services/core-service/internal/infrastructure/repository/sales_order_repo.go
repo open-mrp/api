@@ -56,15 +56,21 @@ func buildSalesOrderSearchParams(query *string) gosql.NullString {
 	return gosql.NullString{String: *query, Valid: true}
 }
 
+// parseDateString parses a list endpoint's date filter, accepting either a plain calendar date or a full RFC3339 instant.
+//
+// Both are accepted because both are documented: these params are described as YYYY-MM-DD, while the OpenAPI examples for several of them are RFC3339, and a caller copying either one must get the filter they asked for. Accepting only the first meant an RFC3339 value parsed as nothing, and the filter was then dropped entirely — the endpoint answered a question nobody asked, with more rows rather than fewer.
+//
+// An unparseable value still yields no filter rather than an error, which is the pre-existing behaviour of every caller here; see parse_date_string_test.go for what that does and does not cover.
 func parseDateString(s *string) gosql.NullTime {
 	if s == nil || *s == "" {
 		return gosql.NullTime{}
 	}
-	t, err := time.Parse("2006-01-02", *s)
-	if err != nil {
-		return gosql.NullTime{}
+	for _, layout := range []string{"2006-01-02", time.RFC3339} {
+		if t, err := time.Parse(layout, *s); err == nil {
+			return gosql.NullTime{Time: t, Valid: true}
+		}
 	}
-	return gosql.NullTime{Time: t, Valid: true}
+	return gosql.NullTime{}
 }
 
 func buildSalesOrderListFilters(params domain.ListSalesOrdersParams) (
@@ -128,6 +134,9 @@ func (r *salesOrderRepoImpl) List(ctx context.Context, params domain.ListSalesOr
 
 	startDate := parseDateString(params.StartDate)
 	endDate := parseDateString(params.EndDate)
+	shipByAfter := parseDateString(params.ShipByAfter)
+	shipByBefore := parseDateString(params.ShipByBefore)
+	pastDue := boolToNullBool(params.PastDue)
 
 	includeStatusFilter, statusCodes,
 		includeItemFilter, itemIDs,
@@ -163,6 +172,9 @@ func (r *salesOrderRepoImpl) List(ctx context.Context, params domain.ListSalesOr
 				SalesRepIds:                salesRepIDs,
 				StartDate:                  startDate,
 				EndDate:                    endDate,
+				ShipByAfter:                shipByAfter,
+				ShipByBefore:               shipByBefore,
+				PastDue:                    pastDue,
 				CursorCreatedAt:            cur.OccurredAt,
 				CursorID:                   cur.ID,
 				Limit:                      params.Limit + 1,
@@ -199,6 +211,9 @@ func (r *salesOrderRepoImpl) List(ctx context.Context, params domain.ListSalesOr
 			SalesRepIds:                salesRepIDs,
 			StartDate:                  startDate,
 			EndDate:                    endDate,
+			ShipByAfter:                shipByAfter,
+			ShipByBefore:               shipByBefore,
+			PastDue:                    pastDue,
 			CursorCreatedAt:            gosql.NullTime{Time: cur.OccurredAt, Valid: true},
 			CursorID:                   gosql.NullString{String: cur.ID, Valid: true},
 			Limit:                      params.Limit + 1,
@@ -235,6 +250,9 @@ func (r *salesOrderRepoImpl) List(ctx context.Context, params domain.ListSalesOr
 		SalesRepIds:                salesRepIDs,
 		StartDate:                  startDate,
 		EndDate:                    endDate,
+		ShipByAfter:                shipByAfter,
+		ShipByBefore:               shipByBefore,
+		PastDue:                    pastDue,
 		Limit:                      params.Limit + 1,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -288,6 +306,9 @@ func (r *salesOrderRepoImpl) searchList(
 		SalesRepIds:                salesRepIDs,
 		StartDate:                  parseDateString(params.StartDate),
 		EndDate:                    parseDateString(params.EndDate),
+		ShipByAfter:                parseDateString(params.ShipByAfter),
+		ShipByBefore:               parseDateString(params.ShipByBefore),
+		PastDue:                    boolToNullBool(params.PastDue),
 		Limit:                      params.Limit + 1,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -604,6 +625,58 @@ func (r *salesOrderRepoImpl) UpdateStatus(ctx context.Context, accountID, salesO
 		return tracing.Trace(span, apiErr)
 	}
 
+	return nil
+}
+
+func (r *salesOrderRepoImpl) GetCustomerLeadTimeChain(ctx context.Context, accountID, buyerAccountID string) (*domain.CustomerLeadTimeChain, *apierror.APIError) {
+	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.get_customer_lead_time_chain")
+	defer span.End()
+
+	row, err := r.queries.GetCustomerLeadTimeChain(ctx, sqlc.GetCustomerLeadTimeChainParams{
+		AccountID:      accountID,
+		BuyerAccountID: buyerAccountID,
+	})
+	if errors.Is(err, gosql.ErrNoRows) {
+		// A buyer with no customer relation is not an error: the order still gets a commitment, from the account default.
+		return nil, nil
+	}
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	chain := &domain.CustomerLeadTimeChain{
+		AccountRelationID: row.AccountRelationID,
+		AccountGroupID:    nullStringToPtr(row.AccountGroupID),
+	}
+	if row.CustomerLeadTimeDays.Valid {
+		days := int(row.CustomerLeadTimeDays.Int32)
+		chain.CustomerLeadTimeDays = &days
+	}
+	if row.AccountGroupLeadTimeDays.Valid {
+		days := int(row.AccountGroupLeadTimeDays.Int32)
+		chain.AccountGroupLeadTimeDays = &days
+	}
+	return chain, nil
+}
+
+// SetShipByCommitment stamps or, with a nil commitment, clears an order's ship-by promise. Clearing is what unissue does: an order that is no longer issued carries no promise.
+func (r *salesOrderRepoImpl) SetShipByCommitment(ctx context.Context, accountID, salesOrderID string, commitment *domain.ShipByCommitment) *apierror.APIError {
+	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.set_ship_by_commitment")
+	defer span.End()
+
+	params := sqlc.SetSalesOrderShipByCommitmentParams{
+		ID:        salesOrderID,
+		AccountID: accountID,
+	}
+	if commitment != nil {
+		params.ShipByDate = gosql.NullTime{Time: commitment.ShipByDate, Valid: true}
+		params.LeadTimeDays = gosql.NullInt32{Int32: safeconv.IntToInt32(commitment.LeadTimeDays), Valid: true}
+		params.LeadTimeSourceCode = gosql.NullString{String: commitment.SourceCode, Valid: true}
+	}
+
+	if apiErr := db.MapSQLError(r.queries.SetSalesOrderShipByCommitment(ctx, params)); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
 	return nil
 }
 
@@ -1087,6 +1160,13 @@ func mapGetSalesOrderRow(row sqlc.GetSalesOrderRow) *domain.SalesOrder {
 	if row.PromisedAt.Valid {
 		so.PromisedAt = &row.PromisedAt.Time
 	}
+	if row.ShipByDate.Valid {
+		so.ShipByDate = &row.ShipByDate.Time
+	}
+	if row.LeadTimeDays.Valid {
+		so.LeadTimeDays = &row.LeadTimeDays.Int32
+	}
+	so.LeadTimeSourceCode = nullStringToPtr(row.LeadTimeSourceCode)
 
 	so.BillToName = nullStringToPtr(row.BillToName)
 	so.BillToIsDropShip = nullBoolPtr(row.BillToIsDropShip)
@@ -1212,6 +1292,13 @@ func mapGetSalesOrderForCustomerRow(row sqlc.GetSalesOrderForCustomerRow) *domai
 	if row.PromisedAt.Valid {
 		so.PromisedAt = &row.PromisedAt.Time
 	}
+	if row.ShipByDate.Valid {
+		so.ShipByDate = &row.ShipByDate.Time
+	}
+	if row.LeadTimeDays.Valid {
+		so.LeadTimeDays = &row.LeadTimeDays.Int32
+	}
+	so.LeadTimeSourceCode = nullStringToPtr(row.LeadTimeSourceCode)
 
 	so.BillToName = nullStringToPtr(row.BillToName)
 	so.BillToIsDropShip = nullBoolPtr(row.BillToIsDropShip)
@@ -1316,6 +1403,9 @@ type listSalesOrderRow struct {
 	FirstShipAt                 gosql.NullTime
 	ExpiredAt                   gosql.NullTime
 	PromisedAt                  gosql.NullTime
+	ShipByDate                  gosql.NullTime
+	LeadTimeDays                gosql.NullInt32
+	LeadTimeSourceCode          gosql.NullString
 	CreatedAt                   time.Time
 	UpdatedAt                   time.Time
 	CustomerName                string
@@ -1433,6 +1523,13 @@ func mapListSalesOrderRow(row listSalesOrderRow) *domain.SalesOrder {
 	if row.PromisedAt.Valid {
 		so.PromisedAt = &row.PromisedAt.Time
 	}
+	if row.ShipByDate.Valid {
+		so.ShipByDate = &row.ShipByDate.Time
+	}
+	if row.LeadTimeDays.Valid {
+		so.LeadTimeDays = &row.LeadTimeDays.Int32
+	}
+	so.LeadTimeSourceCode = nullStringToPtr(row.LeadTimeSourceCode)
 
 	so.BillToName = nullStringToPtr(row.BillToName)
 	so.BillToIsDropShip = nullBoolPtr(row.BillToIsDropShip)
@@ -1533,6 +1630,9 @@ func mapForwardSalesOrderRow(row sqlc.ListSalesOrdersForwardRow) *domain.SalesOr
 		FirstShipAt:                 row.FirstShipAt,
 		ExpiredAt:                   row.ExpiredAt,
 		PromisedAt:                  row.PromisedAt,
+		ShipByDate:                  row.ShipByDate,
+		LeadTimeDays:                row.LeadTimeDays,
+		LeadTimeSourceCode:          row.LeadTimeSourceCode,
 		CreatedAt:                   row.CreatedAt,
 		UpdatedAt:                   row.UpdatedAt,
 		CustomerName:                row.CustomerName,
@@ -1630,6 +1730,9 @@ func mapBackwardSalesOrderRow(row sqlc.ListSalesOrdersBackwardRow) *domain.Sales
 		FirstShipAt:                 row.FirstShipAt,
 		ExpiredAt:                   row.ExpiredAt,
 		PromisedAt:                  row.PromisedAt,
+		ShipByDate:                  row.ShipByDate,
+		LeadTimeDays:                row.LeadTimeDays,
+		LeadTimeSourceCode:          row.LeadTimeSourceCode,
 		CreatedAt:                   row.CreatedAt,
 		UpdatedAt:                   row.UpdatedAt,
 		CustomerName:                row.CustomerName,

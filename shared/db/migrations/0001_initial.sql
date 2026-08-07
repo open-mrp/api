@@ -1,10 +1,10 @@
 -- +goose Up
 
--- MySQL dump 10.13  Distrib 9.6.0, for macos26.2 (arm64)
+-- MySQL dump 10.13  Distrib 9.7.1, for macos26.4 (arm64)
 --
 -- Host: 127.0.0.1    Database: augno
 -- ------------------------------------------------------
--- Server version	8.4.11
+-- Server version	8.4.10
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -339,6 +339,8 @@ CREATE TABLE `account_group` (
   `registration_flow_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `default_lead_time_days` int DEFAULT NULL,
+  `fulfillment_policy_code` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `account_group_registration_flow_id_idx` (`registration_flow_id`),
   KEY `account_group_owner_account_id_idx` (`owner_account_id`),
@@ -627,6 +629,14 @@ CREATE TABLE `account_production_schedule_setting` (
   `last_generated_at` datetime(3) DEFAULT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `default_customer_lead_time_days` int NOT NULL DEFAULT '30',
+  `default_fulfillment_policy_code` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'make_to_stock',
+  `recommendation_adi_threshold` decimal(8,4) NOT NULL DEFAULT '1.3200',
+  `recommendation_concentration_pct` decimal(5,4) NOT NULL DEFAULT '0.8000',
+  `recommendation_cv2_threshold` decimal(8,4) NOT NULL DEFAULT '0.4900',
+  `recommendation_dormant_months` int NOT NULL DEFAULT '12',
+  `recommendation_high_value_unit_cost` decimal(18,6) NOT NULL DEFAULT '50.000000',
+  `recommendation_slow_mover_cogs` decimal(18,6) NOT NULL DEFAULT '5000.000000',
   PRIMARY KEY (`id`),
   UNIQUE KEY `account_production_schedule_setting_account_id_key` (`account_id`),
   KEY `acct_prod_sched_setting_enabled_cron_idx` (`is_enabled`,`generation_cron`)
@@ -670,6 +680,8 @@ CREATE TABLE `account_relation` (
   `carrier_billing_type` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `carrier_billing_account` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `credit_limit_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `default_lead_time_days` int DEFAULT NULL,
+  `fulfillment_policy_code` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `account_relation_owner_account_id_counterparty_account_id_ac_key` (`owner_account_id`,`counterparty_account_id`,`account_relation_role_code`),
   UNIQUE KEY `account_relation_credit_limit_id_key` (`credit_limit_id`),
@@ -1057,7 +1069,7 @@ CREATE TABLE `audit_event` (
   KEY `audit_event_account_id_resource_type_occurred_at_type_id_idx` (`account_id`,`resource_type`,`occurred_at` DESC,`type_id` DESC),
   KEY `audit_event_account_id_actor_id_occurred_at_type_id_idx` (`account_id`,`actor_id`,`occurred_at` DESC,`type_id` DESC),
   KEY `audit_event_root_idx` (`account_id`,`root_resource_type`,`root_resource_id`,`occurred_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=228 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=232 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1729,6 +1741,24 @@ CREATE TABLE `error_log` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `fulfillment_policy`
+--
+
+DROP TABLE IF EXISTS `fulfillment_policy`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `fulfillment_policy` (
+  `id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `code` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `fulfillment_policy_code_key` (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `geolocation`
 --
 
@@ -1888,7 +1918,7 @@ CREATE TABLE `idempotency_key` (
   KEY `idempotency_key_target_account_id_idx` (`target_account_id`),
   KEY `idempotency_key_lock_expires_at_idx` (`lock_expires_at`),
   KEY `idempotency_key_expires_at_idx` (`expires_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=529 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=534 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2561,7 +2591,7 @@ CREATE TABLE `message_inbox` (
   KEY `message_inbox_processed_at_idx` (`processed_at`),
   KEY `message_inbox_request_id_idx` (`request_id`),
   KEY `message_inbox_parent_message_id_idx` (`parent_message_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=150196 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=150232 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2600,7 +2630,7 @@ CREATE TABLE `message_outbox` (
   KEY `message_outbox_lock_expires_at_idx` (`lock_expires_at`),
   KEY `message_outbox_request_id_idx` (`request_id`),
   KEY `message_outbox_parent_message_id_idx` (`parent_message_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=151037 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=151073 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -3089,6 +3119,7 @@ CREATE TABLE `product_line` (
   `is_commission_exempt` tinyint(1) NOT NULL DEFAULT '0',
   `is_freight_exempt` tinyint(1) NOT NULL DEFAULT '0',
   `default_lot_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `fulfillment_policy_code` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `product_line_default_lot_id_key` (`default_lot_id`),
   UNIQUE KEY `product_line_account_id_name_key` (`account_id`,`name`),
@@ -3372,6 +3403,10 @@ CREATE TABLE `production_schedule_item_policy` (
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `unit_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `firm_demand_units` decimal(65,30) NOT NULL DEFAULT '0.000000000000000000000000000000',
+  `forecast_demand_units` decimal(65,30) NOT NULL DEFAULT '0.000000000000000000000000000000',
+  `fulfillment_policy_code` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'make_to_stock',
+  `policy_source_code` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'account_default',
   PRIMARY KEY (`id`),
   UNIQUE KEY `prod_sched_item_policy_sched_item_key` (`production_schedule_id`,`item_id`),
   KEY `prod_sched_item_policy_sched_hours_idx` (`production_schedule_id`,`annual_run_hours` DESC,`id`),
@@ -3401,6 +3436,7 @@ CREATE TABLE `production_schedule_item_setting` (
   `preferred_machine_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `fulfillment_policy_code` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `prod_sched_item_setting_account_item_key` (`account_id`,`item_id`),
   KEY `prod_sched_item_setting_excluded_idx` (`account_id`,`is_excluded`)
@@ -3448,6 +3484,30 @@ CREATE TABLE `production_schedule_line` (
   KEY `prod_sched_line_account_dept_week_idx` (`account_id`,`department_id`,`week_start_date`,`id`),
   KEY `prod_sched_line_account_item_week_idx` (`account_id`,`item_id`,`week_start_date`,`id`),
   KEY `prod_sched_line_production_run_idx` (`production_run_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `production_schedule_line_order`
+--
+
+DROP TABLE IF EXISTS `production_schedule_line_order`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `production_schedule_line_order` (
+  `id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `production_schedule_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `production_schedule_line_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `sales_order_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `sales_order_line_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `allocated_quantity` decimal(65,30) NOT NULL,
+  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`),
+  KEY `prod_sched_line_order_sched_order_idx` (`production_schedule_id`,`sales_order_id`,`id`),
+  KEY `prod_sched_line_order_line_idx` (`production_schedule_line_id`,`id`),
+  KEY `prod_sched_line_order_account_order_idx` (`account_id`,`sales_order_id`,`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -3981,6 +4041,9 @@ CREATE TABLE `sales_order` (
   `promised_at` datetime(3) DEFAULT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `lead_time_days` int DEFAULT NULL,
+  `lead_time_source_code` varchar(32) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `ship_by_date` date DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `sales_order_owner_account_id_sales_order_type_code_number_key` (`owner_account_id`,`sales_order_type_code`,`number`),
   KEY `sales_order_owner_account_id_idx` (`owner_account_id`),
@@ -4010,6 +4073,7 @@ CREATE TABLE `sales_order` (
   KEY `sales_order_owner_created_idx` (`owner_account_id`,`created_at` DESC,`id` DESC),
   KEY `sales_order_owner_customer_po_number_idx` (`owner_account_id`,`customer_po_number`),
   KEY `sales_order_owner_type_issued_idx` (`owner_account_id`,`sales_order_type_code`(50),`issued_at`),
+  KEY `sales_order_owner_status_ship_by_idx` (`owner_account_id`,`sales_order_status_code`,`ship_by_date`,`id`),
   FULLTEXT KEY `sales_order_number_idx` (`number`),
   FULLTEXT KEY `sales_order_customer_po_number_idx` (`customer_po_number`),
   FULLTEXT KEY `sales_order_number_customer_po_number_idx` (`number`,`customer_po_number`)
@@ -4891,7 +4955,7 @@ CREATE TABLE `user` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-08-01 11:59:55
+-- Dump completed on 2026-08-06 13:43:41
 
 -- +goose Down
 
@@ -4953,6 +5017,7 @@ DROP TABLE IF EXISTS `production_shift`;
 DROP TABLE IF EXISTS `production_schedule_status`;
 DROP TABLE IF EXISTS `production_schedule_resource_setting`;
 DROP TABLE IF EXISTS `production_schedule_line_status`;
+DROP TABLE IF EXISTS `production_schedule_line_order`;
 DROP TABLE IF EXISTS `production_schedule_line`;
 DROP TABLE IF EXISTS `production_schedule_item_setting`;
 DROP TABLE IF EXISTS `production_schedule_item_policy`;
@@ -5018,6 +5083,7 @@ DROP TABLE IF EXISTS `hubspot_sync_job`;
 DROP TABLE IF EXISTS `hubspot_company_review`;
 DROP TABLE IF EXISTS `hubspot_account_user_link`;
 DROP TABLE IF EXISTS `geolocation`;
+DROP TABLE IF EXISTS `fulfillment_policy`;
 DROP TABLE IF EXISTS `error_log`;
 DROP TABLE IF EXISTS `email_recipient`;
 DROP TABLE IF EXISTS `email_message`;

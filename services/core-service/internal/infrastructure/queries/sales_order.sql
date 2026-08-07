@@ -32,6 +32,9 @@ SELECT STRAIGHT_JOIN
     so.first_ship_at,
     so.expired_at,
     so.promised_at,
+    so.ship_by_date,
+    so.lead_time_days,
+    so.lead_time_source_code,
     so.created_at,
     so.updated_at,
     -- Customer
@@ -180,6 +183,32 @@ AND (
 AND (
     sqlc.narg('end_date') IS NULL
     OR so.created_at <= sqlc.narg('end_date')
+)
+AND (
+    sqlc.narg('ship_by_after') IS NULL
+    OR so.ship_by_date >= sqlc.narg('ship_by_after')
+)
+AND (
+    sqlc.narg('ship_by_before') IS NULL
+    OR so.ship_by_date <= sqlc.narg('ship_by_before')
+)
+-- Past due is a fact about work still owed, so it is scoped to issued orders. A fulfilled order that shipped late is a delivery-performance question, not a backlog one, and leaving it here would make the queue never empty.
+AND (
+    sqlc.narg('past_due') IS NULL
+    OR (
+        sqlc.narg('past_due') = TRUE
+        AND so.ship_by_date IS NOT NULL
+        AND so.ship_by_date < CURDATE()
+        AND so.sales_order_status_code = 'issued'
+    )
+    OR (
+        sqlc.narg('past_due') = FALSE
+        AND NOT (
+            so.ship_by_date IS NOT NULL
+            AND so.ship_by_date < CURDATE()
+            AND so.sales_order_status_code = 'issued'
+        )
+    )
 )
 AND (
     sqlc.narg('cursor_created_at') IS NULL
@@ -220,6 +249,9 @@ SELECT STRAIGHT_JOIN
     so.first_ship_at,
     so.expired_at,
     so.promised_at,
+    so.ship_by_date,
+    so.lead_time_days,
+    so.lead_time_source_code,
     so.created_at,
     so.updated_at,
     -- Customer
@@ -370,6 +402,32 @@ AND (
     OR so.created_at <= sqlc.narg('end_date')
 )
 AND (
+    sqlc.narg('ship_by_after') IS NULL
+    OR so.ship_by_date >= sqlc.narg('ship_by_after')
+)
+AND (
+    sqlc.narg('ship_by_before') IS NULL
+    OR so.ship_by_date <= sqlc.narg('ship_by_before')
+)
+-- Past due is a fact about work still owed, so it is scoped to issued orders. A fulfilled order that shipped late is a delivery-performance question, not a backlog one, and leaving it here would make the queue never empty.
+AND (
+    sqlc.narg('past_due') IS NULL
+    OR (
+        sqlc.narg('past_due') = TRUE
+        AND so.ship_by_date IS NOT NULL
+        AND so.ship_by_date < CURDATE()
+        AND so.sales_order_status_code = 'issued'
+    )
+    OR (
+        sqlc.narg('past_due') = FALSE
+        AND NOT (
+            so.ship_by_date IS NOT NULL
+            AND so.ship_by_date < CURDATE()
+            AND so.sales_order_status_code = 'issued'
+        )
+    )
+)
+AND (
     so.created_at > sqlc.arg('cursor_created_at')
     OR (so.created_at = sqlc.arg('cursor_created_at') AND so.id > sqlc.arg('cursor_id'))
 )
@@ -405,6 +463,9 @@ SELECT
     so.first_ship_at,
     so.expired_at,
     so.promised_at,
+    so.ship_by_date,
+    so.lead_time_days,
+    so.lead_time_source_code,
     so.created_at,
     so.updated_at,
     -- Customer
@@ -537,6 +598,9 @@ SELECT
     so.first_ship_at,
     so.expired_at,
     so.promised_at,
+    so.ship_by_date,
+    so.lead_time_days,
+    so.lead_time_source_code,
     so.created_at,
     so.updated_at,
     -- Customer
@@ -1097,6 +1161,32 @@ AND (
     sqlc.narg('end_date') IS NULL
     OR so.created_at <= sqlc.narg('end_date')
 )
+AND (
+    sqlc.narg('ship_by_after') IS NULL
+    OR so.ship_by_date >= sqlc.narg('ship_by_after')
+)
+AND (
+    sqlc.narg('ship_by_before') IS NULL
+    OR so.ship_by_date <= sqlc.narg('ship_by_before')
+)
+-- Past due is a fact about work still owed, so it is scoped to issued orders. A fulfilled order that shipped late is a delivery-performance question, not a backlog one, and leaving it here would make the queue never empty.
+AND (
+    sqlc.narg('past_due') IS NULL
+    OR (
+        sqlc.narg('past_due') = TRUE
+        AND so.ship_by_date IS NOT NULL
+        AND so.ship_by_date < CURDATE()
+        AND so.sales_order_status_code = 'issued'
+    )
+    OR (
+        sqlc.narg('past_due') = FALSE
+        AND NOT (
+            so.ship_by_date IS NOT NULL
+            AND so.ship_by_date < CURDATE()
+            AND so.sales_order_status_code = 'issued'
+        )
+    )
+)
 ORDER BY so.created_at DESC, so.id DESC
 LIMIT ?;
 
@@ -1217,3 +1307,30 @@ SELECT
     p.product_line_id AS product_line_id
 FROM product p
 WHERE p.id IN (sqlc.slice('product_ids'));
+
+-- GetCustomerLeadTimeChain returns the lead times available to a buyer, most specific first.
+--
+-- Both levels come back in one row because the chain is resolved as a whole: returning only the winner would leave the caller unable to say which rule applied, and the source is stamped onto the order alongside the date. A buyer with no customer relation yields no row, and the caller falls back to the account default.
+-- name: GetCustomerLeadTimeChain :one
+SELECT
+    ar.id AS account_relation_id,
+    ar.account_group_id,
+    ar.default_lead_time_days AS customer_lead_time_days,
+    ag.default_lead_time_days AS account_group_lead_time_days
+FROM account_relation ar
+LEFT JOIN account_group ag ON ag.id = ar.account_group_id
+WHERE ar.owner_account_id = sqlc.arg('account_id')
+  AND ar.counterparty_account_id = sqlc.arg('buyer_account_id')
+  AND ar.account_relation_role_code = 'customer';
+
+-- SetSalesOrderShipByCommitment stamps the resolved ship-by commitment onto an order.
+--
+-- Written as its own statement rather than folded into UpdateSalesOrderStatus because a commitment is also re-stamped when a promised date changes on an order that is already issued, which is not a status change.
+-- name: SetSalesOrderShipByCommitment :exec
+UPDATE sales_order SET
+    ship_by_date = sqlc.narg('ship_by_date'),
+    lead_time_days = sqlc.narg('lead_time_days'),
+    lead_time_source_code = sqlc.narg('lead_time_source_code'),
+    updated_at = NOW(3)
+WHERE id = sqlc.arg('id')
+AND owner_account_id = sqlc.arg('account_id');

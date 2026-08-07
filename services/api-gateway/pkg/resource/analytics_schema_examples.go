@@ -458,3 +458,7 @@ var SampleAnalyzeScheduleAttainmentResponse = &AnalyzeScheduleAttainmentResponse
 func (*AnalyzeScheduleAttainmentResponse) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleAnalyzeScheduleAttainmentResponse)
 }
+
+func (*AnalyzeDeliveryPerformanceResponse) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleAnalyzeDeliveryPerformanceResponse)
+}

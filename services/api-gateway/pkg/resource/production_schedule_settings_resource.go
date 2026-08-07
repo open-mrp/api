@@ -103,6 +103,16 @@ type ProductionScheduleSettings struct {
 	// The last resort in the lot-size chain: a lot set on the item, on its product line, or on the finished goods an intermediate item becomes all take precedence.
 	DefaultLotUnits float64 `json:"default_lot_units"`
 
+	// Calendar days between an order being issued and it being due to ship.
+	//
+	// The last resort in the ship-by chain: a lead time set on the customer, or on the customer's account group, takes precedence. Zero means same-day shipping.
+	DefaultCustomerLeadTimeDays int32 `json:"default_customer_lead_time_days"`
+	// How a SKU is produced when neither it nor its product line says.
+	//
+	// - `make_to_stock`: built to the forecast, holding a safety stock against its variability.
+	// - `make_to_order`: built only against orders already on the book, holding no buffer.
+	DefaultFulfillmentPolicy constants.FulfillmentPolicy `json:"default_fulfillment_policy" validate:"required"`
+
 	// Whether schedules are generated automatically on a recurring cadence.
 	//
 	// While active, each due tick queues a new schedule version; a generation cron expression is required for the cadence to be saved.
@@ -160,6 +170,8 @@ var SampleProductionScheduleSettings = &ProductionScheduleSettings{
 	WeeksPerYear:                   52,
 	CapacityHeadroomPct:            0.9,
 	DefaultLotUnits:                60,
+	DefaultCustomerLeadTimeDays:    30,
+	DefaultFulfillmentPolicy:       constants.FulfillmentPolicyMakeToStock,
 	CadenceStatus:                  constants.ActivationStatusActive,
 	GenerationCron:                 &sampleGenerationCron,
 	GenerationTimezone:             "America/New_York",
@@ -175,6 +187,7 @@ func (*ProductionScheduleSettings) SchemaExample() any {
 }
 
 const SampleProductionScheduleResourceSettingID = "pnscrrsd_hegthjeksw87"
+const SampleProductionScheduleItemSettingID = "pnscitsd_kw83nzq4mrt6"
 
 // A planning override for one machine, department or production step.
 //
@@ -199,6 +212,125 @@ type ProductionScheduleResourceSetting struct {
 	// Read when downstream department work is derived from the constraint plan, so it is the production-step override that shifts a plan: without an offset every step lands in the same week as the step feeding it, and the offsets along a chain of steps add up. A schedule is planned in whole weeks, so a fractional offset is truncated.
 	LeadTimeOffsetWeeks float64 `json:"lead_time_offset_weeks"`
 }
+
+// Planning overrides for one item, on top of the account-wide assumptions.
+type ProductionScheduleItemSetting struct {
+	// Item setting ID.
+	ID string `json:"id" validate:"required"`
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=production_schedule_item_setting"`
+	// The item these overrides apply to.
+	Item *Entity `json:"item" validate:"required"`
+	// Whether this item takes part in planning.
+	//
+	// An excluded item is left out of the plan entirely: no campaigns, no policy, no capacity.
+	ParticipationStatus constants.ParticipationStatus `json:"participation_status" validate:"required"`
+	// Units in one production lot for this item, overriding the lot its product line would supply.
+	LotMultipleUnits *float64 `json:"lot_multiple_units"`
+	// How this item is produced.
+	//
+	// - `make_to_stock`: built to the forecast, holding a safety stock against its variability.
+	// - `make_to_order`: built only against orders already on the book, holding no buffer.
+	//
+	// Null inherits from the item's product line, then from the account default.
+	FulfillmentPolicy *constants.FulfillmentPolicy `json:"fulfillment_policy"`
+	// Creation timestamp.
+	CreatedAt time.Time `json:"created_at" validate:"required"`
+	// Last updated timestamp.
+	UpdatedAt time.Time `json:"updated_at" validate:"required"`
+}
+
+// The engine's advice on how one SKU should be produced, with the measurements behind it.
+type FulfillmentRecommendation struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=fulfillment_recommendation"`
+	// The item the advice is about.
+	Item *Entity `json:"item" validate:"required"`
+	// SKU of that item.
+	SKU string `json:"sku"`
+	// The product line it sells under, when it sells under one.
+	ProductLine *Entity `json:"product_line"`
+	// How the item is planned today.
+	CurrentPolicy constants.FulfillmentPolicy `json:"current_policy" validate:"required"`
+	// How the engine thinks it should be planned.
+	RecommendedPolicy constants.FulfillmentPolicy `json:"recommended_policy" validate:"required"`
+	// Whether adopting the recommendation would change anything.
+	Changes bool `json:"changes"`
+	// The rule that decided.
+	//
+	// - `lead_time_infeasible`: customers are promised less time than production needs, so the stock has to exist before the order does. Checked first, because producing to order is not possible rather than not preferred.
+	// - `no_recent_demand`: nothing has sold for long enough that a buffer is dead stock.
+	// - `single_customer`: effectively one customer buys it, and that customer is served to order.
+	// - `lumpy_demand`: demand arrives rarely and in wildly different sizes, which is the shape a safety stock sizes worst.
+	// - `slow_moving_high_value`: expensive units, few sold — the buffer costs more than the service it buys.
+	// - `steady_demand`: regular enough to forecast, which is what stocking is for.
+	Reason constants.FulfillmentRecommendationReason `json:"reason" validate:"required"`
+	// Months observed divided by months with demand: 1 means it sells every month, 3 means once a quarter on average.
+	//
+	// Measured on monthly buckets, which cannot distinguish two orders in one month from one.
+	AverageDemandInterval float64 `json:"average_demand_interval"`
+	// Squared coefficient of variation over the months that had demand, measuring how uneven the quantities are.
+	CoefficientOfVariation float64 `json:"coefficient_of_variation"`
+	// The largest customer's share of this item's demand, as a percentage.
+	TopCustomerSharePct float64 `json:"top_customer_share_pct"`
+	// Name of that customer.
+	TopCustomerName *string `json:"top_customer_name"`
+	// Calendar days customers are promised on average, weighted by how much each buys.
+	DemandWeightedLeadTimeDays float64 `json:"demand_weighted_lead_time_days"`
+	// Annual cost of goods for this item: demand times unit cost.
+	AnnualCOGS float64 `json:"annual_cogs"`
+	// Months since anything last sold, capped at the observation window.
+	MonthsSinceLastSale int32 `json:"months_since_last_sale"`
+	// Percentage of demand from customers whose own stated policy disagrees with the recommendation.
+	//
+	// A policy is resolved per SKU, so an item sold to both a stocking distributor and a contract customer gets one answer either way. A high share here is the signal that the single answer is uncomfortable.
+	MixedStreamSharePct float64 `json:"mixed_stream_share_pct"`
+}
+
+var sampleTopCustomerName = "Contract Co"
+
+var SampleFulfillmentRecommendation = &FulfillmentRecommendation{
+	Object:                     constants.ObjectTypeFulfillmentRecommendation,
+	Item:                       NewEntity(SampleItemID, constants.ObjectTypeItem, nil, &sampleScheduleSettingsSKU),
+	SKU:                        sampleScheduleSettingsSKU,
+	ProductLine:                NewEntity(SampleProductLineID, constants.ObjectTypeProductLine, nil, nil),
+	CurrentPolicy:              constants.FulfillmentPolicyMakeToStock,
+	RecommendedPolicy:          constants.FulfillmentPolicyMakeToOrder,
+	Changes:                    true,
+	Reason:                     constants.FulfillmentRecommendationReasonLumpyDemand,
+	AverageDemandInterval:      3,
+	CoefficientOfVariation:     1.8,
+	TopCustomerSharePct:        95,
+	TopCustomerName:            &sampleTopCustomerName,
+	DemandWeightedLeadTimeDays: 90,
+	AnnualCOGS:                 4000,
+	MonthsSinceLastSale:        1,
+	MixedStreamSharePct:        95,
+}
+
+func (*FulfillmentRecommendation) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleFulfillmentRecommendation)
+}
+
+var sampleItemSettingLotMultiple = 60.0
+var sampleItemSettingPolicy = constants.FulfillmentPolicyMakeToOrder
+
+var SampleProductionScheduleItemSetting = &ProductionScheduleItemSetting{
+	ID:                  SampleProductionScheduleItemSettingID,
+	Object:              constants.ObjectTypeProductionScheduleItemSetting,
+	Item:                NewEntity(SampleItemID, constants.ObjectTypeItem, nil, &sampleScheduleSettingsSKU),
+	ParticipationStatus: constants.ParticipationStatusIncluded,
+	LotMultipleUnits:    &sampleItemSettingLotMultiple,
+	FulfillmentPolicy:   &sampleItemSettingPolicy,
+	CreatedAt:           timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:           timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+}
+
+func (*ProductionScheduleItemSetting) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleProductionScheduleItemSetting)
+}
+
+var sampleScheduleSettingsSKU = "LKN-001"
 
 var SampleProductionScheduleResourceSetting = &ProductionScheduleResourceSetting{
 	ID:                  SampleProductionScheduleResourceSettingID,

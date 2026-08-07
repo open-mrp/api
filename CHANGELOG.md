@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.44.0](https://github.com/Augno/api/compare/v0.43.0...v0.44.0) (2026-08-07)
+
+
+### Features
+
+* make to order ([#462](https://github.com/Augno/api/issues/462)) ([4807785](https://github.com/Augno/api/commit/4807785e05ccef13a1a61b1dce94af75524cee91))
+
+
+### Code Refactoring
+
+* optimize inventory queries and enhance Shippo client concurrency ([#460](https://github.com/Augno/api/issues/460)) ([46a4824](https://github.com/Augno/api/commit/46a482481749f5f5aa93fa4b552f0a06613e1b6e))
+
 ## [0.43.0](https://github.com/Augno/api/compare/v0.42.9...v0.43.0) (2026-08-06)
 
 

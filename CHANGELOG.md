@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.44.3](https://github.com/Augno/api/compare/v0.44.2...v0.44.3) (2026-08-10)
+
+
+### Bug Fixes
+
+* add sales order activity notifications to followers ([#466](https://github.com/Augno/api/issues/466)) ([fe6352f](https://github.com/Augno/api/commit/fe6352f678691eb20a8e392bbff70de5a15c1303))
+
 ## [0.44.2](https://github.com/Augno/api/compare/v0.44.1...v0.44.2) (2026-08-07)
 
 

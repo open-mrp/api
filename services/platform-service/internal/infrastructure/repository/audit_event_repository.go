@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/augno/api/services/platform-service/internal/domain"
@@ -69,10 +70,60 @@ func (r *auditEventRepoImpl) Create(ctx context.Context, event *domain.AuditEven
 		OccurredAt:       event.OccurredAt,
 	})
 	if err != nil {
+		// A duplicate type_id means this exact event was already persisted by a prior delivery attempt (the id is generated once at publish time). Treat it as success so crash-recovery retries can proceed to their remaining side effects instead of failing forever.
+		if db.IsDuplicateEntry(err) {
+			return nil
+		}
 		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to create audit event."))
 	}
 
 	return nil
+}
+
+func (r *auditEventRepoImpl) ListResourceUserActorIDs(ctx context.Context, accountID string, resourceType constants.ObjectType, resourceID string) ([]string, *apierror.APIError) {
+	ctx, span := auditEventRepoTracer.Start(ctx, "repository.audit_event.list_resource_user_actor_ids")
+	defer span.End()
+
+	actorIDs, err := r.db.ListResourceUserActorIDs(ctx, sqlc.ListResourceUserActorIDsParams{
+		AccountID:        accountID,
+		ResourceType:     string(resourceType),
+		ResourceID:       resourceID,
+		RootResourceType: db.NullString(string(resourceType)),
+		RootResourceID:   db.NullString(resourceID),
+	})
+	if err != nil {
+		return nil, tracing.Trace(span, db.MapSQLError(err))
+	}
+
+	return actorIDs, nil
+}
+
+func (r *auditEventRepoImpl) GetResourceCreateChanges(ctx context.Context, accountID string, resourceType constants.ObjectType, resourceID string) ([]domain.AuditFieldChange, *apierror.APIError) {
+	ctx, span := auditEventRepoTracer.Start(ctx, "repository.audit_event.get_resource_create_changes")
+	defer span.End()
+
+	changesRaw, err := r.db.GetResourceCreateChanges(ctx, sqlc.GetResourceCreateChangesParams{
+		AccountID:    accountID,
+		ResourceType: string(resourceType),
+		ResourceID:   resourceID,
+	})
+	if err != nil {
+		// No create event on record is a normal condition (e.g. the resource predates auditing), not an error.
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, tracing.Trace(span, db.MapSQLError(err))
+	}
+	if len(changesRaw) == 0 {
+		return nil, nil
+	}
+
+	var changes []domain.AuditFieldChange
+	if err := json.Unmarshal(changesRaw, &changes); err != nil {
+		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to decode audit event changes."))
+	}
+
+	return changes, nil
 }
 
 func (r *auditEventRepoImpl) FindByID(ctx context.Context, id string, callerAccountID string, includes []string) (*domain.AuditEventRead, *apierror.APIError) {

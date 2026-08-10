@@ -8,7 +8,10 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"strings"
+
+	"github.com/augno/api/shared/db"
 )
 
 const cleanupExpiredOutboxLocksByIDs = `-- name: CleanupExpiredOutboxLocksByIDs :execresult
@@ -31,6 +34,45 @@ func (q *Queries) CleanupExpiredOutboxLocksByIDs(ctx context.Context, ids []int6
 		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
 	}
 	return q.db.ExecContext(ctx, query, queryParams...)
+}
+
+const createOutboxMessage = `-- name: CreateOutboxMessage :execlastid
+INSERT INTO message_outbox (
+    message_id, service_name, message_type, destination, routing_key,
+    headers, payload, status, max_attempts, next_run_at, request_id, parent_message_id
+) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, NOW(3), ?, ?)
+`
+
+type CreateOutboxMessageParams struct {
+	MessageID       string
+	ServiceName     string
+	MessageType     string
+	Destination     string
+	RoutingKey      sql.NullString
+	Headers         db.NullableRawMessage
+	Payload         json.RawMessage
+	MaxAttempts     int32
+	RequestID       sql.NullString
+	ParentMessageID sql.NullString
+}
+
+func (q *Queries) CreateOutboxMessage(ctx context.Context, arg CreateOutboxMessageParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, createOutboxMessage,
+		arg.MessageID,
+		arg.ServiceName,
+		arg.MessageType,
+		arg.Destination,
+		arg.RoutingKey,
+		arg.Headers,
+		arg.Payload,
+		arg.MaxAttempts,
+		arg.RequestID,
+		arg.ParentMessageID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.LastInsertId()
 }
 
 const getLockedOutboxMessagesByIDs = `-- name: GetLockedOutboxMessagesByIDs :many

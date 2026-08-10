@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -18,6 +19,10 @@ type AuditEventRepo interface {
 	FindByID(ctx context.Context, id, targetAccountID string, includes []string) (*AuditEventRead, *apierror.APIError)
 	List(ctx context.Context, targetAccountID string, filter *ListAuditEventsFilter, includes []string) (*ListAuditEventsResult, *apierror.APIError)
 	BatchGetResourceCreators(ctx context.Context, callerAccountID, resourceType string, resourceIDs []string) ([]ResourceCreator, *apierror.APIError)
+	// ListResourceUserActorIDs returns the distinct user actors that have touched the resource's record tree (events on the resource itself or on children rooted at it). They form the follower set for resource-activity notifications.
+	ListResourceUserActorIDs(ctx context.Context, accountID string, resourceType constants.ObjectType, resourceID string) ([]string, *apierror.APIError)
+	// GetResourceCreateChanges returns the field changes recorded by the resource's create event (a snapshot of its audited fields at creation), or nil when no create event is on record.
+	GetResourceCreateChanges(ctx context.Context, accountID string, resourceType constants.ObjectType, resourceID string) ([]AuditFieldChange, *apierror.APIError)
 }
 
 type UpsertAndLockResult struct {

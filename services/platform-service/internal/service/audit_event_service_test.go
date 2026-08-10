@@ -12,6 +12,7 @@ import (
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/messaging"
 	"github.com/augno/api/shared/pagination"
 
 	"github.com/stretchr/testify/suite"
@@ -82,19 +83,36 @@ func noTargetAuditCtx() context.Context {
 // suite
 // ---------------------------------------------------------------------------
 
+// capturingOutboxRepo records enqueued outbox messages so tests can assert on the fan-out intents a service writes.
+type capturingOutboxRepo struct {
+	inputs []messaging.OutboxMessageInput
+	err    error
+}
+
+func (r *capturingOutboxRepo) Create(_ context.Context, input messaging.OutboxMessageInput) (int64, error) {
+	if r.err != nil {
+		return 0, r.err
+	}
+	r.inputs = append(r.inputs, input)
+	return int64(len(r.inputs)), nil
+}
+
 type AuditEventServiceTestSuite struct {
 	suite.Suite
 	ctrl           *gomock.Controller
 	auditEventRepo *repositorymock.MockAuditEventRepo
+	outbox         *capturingOutboxRepo
 	svc            domain.AuditEventSvc
 }
 
 func (s *AuditEventServiceTestSuite) SetupTest() {
 	s.ctrl = gomock.NewController(s.T())
 	s.auditEventRepo = repositorymock.NewMockAuditEventRepo(s.ctrl)
+	s.outbox = &capturingOutboxRepo{}
 
 	factory := factorymock.NewMockRepoFactory(s.ctrl)
 	factory.EXPECT().NewAuditEventRepo().Return(s.auditEventRepo).Times(1)
+	factory.EXPECT().NewOutboxRepo().Return(s.outbox).Times(1)
 
 	s.svc = NewAuditEventSvc(&AuditEventSvcConfig{Repos: factory})
 }

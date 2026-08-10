@@ -8,11 +8,68 @@ import (
 	"github.com/augno/api/services/platform-service/internal/infrastructure/sqlc"
 	"github.com/augno/api/shared/contracts"
 	"github.com/augno/api/shared/db"
+	"github.com/augno/api/shared/id"
 	"github.com/augno/api/shared/messaging"
 	"github.com/augno/api/shared/tracing"
 )
 
 var outboxRepoTracer = tracing.GetTracer("platform-service.outbox_repository")
+
+type outboxRepoImpl struct {
+	queries *sqlc.Queries
+}
+
+// NewOutboxRepo creates the producer-side outbox repository used by services to enqueue messages.
+func NewOutboxRepo(queries *sqlc.Queries) messaging.OutboxRepo {
+	return &outboxRepoImpl{queries: queries}
+}
+
+func (r *outboxRepoImpl) Create(ctx context.Context, input messaging.OutboxMessageInput) (int64, error) {
+	ctx, span := outboxRepoTracer.Start(ctx, "repository.outbox.create")
+	defer span.End()
+
+	length := id.IDLength22
+
+	messageID := input.MessageID
+	if messageID == "" {
+		genID, err := id.GenID(id.MessageIDPrefix, &length)
+		if err != nil {
+			span.RecordError(err)
+			return 0, err
+		}
+		messageID = genID
+	}
+
+	payloadJSON, err := json.Marshal(input.Payload)
+	if err != nil {
+		span.RecordError(err)
+		return 0, err
+	}
+
+	maxAttempts := input.MaxAttempts
+	if maxAttempts <= 0 {
+		maxAttempts = 25
+	}
+
+	result, err := r.queries.CreateOutboxMessage(ctx, sqlc.CreateOutboxMessageParams{
+		MessageID:       messageID,
+		ServiceName:     input.ServiceName,
+		MessageType:     input.MessageType,
+		Destination:     input.Destination,
+		RoutingKey:      db.NullString(input.RoutingKey),
+		Headers:         nil,
+		Payload:         payloadJSON,
+		MaxAttempts:     int32(maxAttempts), // #nosec G115 - small config value
+		RequestID:       db.NullString(input.Payload.RequestID),
+		ParentMessageID: db.NullString(input.Payload.ParentMessageID),
+	})
+	if err != nil {
+		span.RecordError(err)
+		return 0, err
+	}
+
+	return result, nil
+}
 
 type outboxEnqueuerRepoImpl struct {
 	dbPool  *sql.DB

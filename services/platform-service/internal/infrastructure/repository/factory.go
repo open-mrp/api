@@ -3,6 +3,7 @@ package repository
 import (
 	"github.com/augno/api/services/platform-service/internal/domain"
 	"github.com/augno/api/services/platform-service/internal/infrastructure/sqlc"
+	"github.com/augno/api/shared/messaging"
 )
 
 // repoFactoryImpl is the unexported concrete implementation used by the service.
@@ -20,4 +21,8 @@ func (f *repoFactoryImpl) NewRequestLogRepo() domain.RequestLogRepo {
 
 func (f *repoFactoryImpl) NewAuditEventRepo() domain.AuditEventRepo {
 	return NewAuditEventRepo(f.db)
+}
+
+func (f *repoFactoryImpl) NewOutboxRepo() messaging.OutboxRepo {
+	return NewOutboxRepo(f.db)
 }

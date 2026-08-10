@@ -311,6 +311,30 @@ func (q *Queries) FindAuditEventByID(ctx context.Context, arg FindAuditEventByID
 	return i, err
 }
 
+const getResourceCreateChanges = `-- name: GetResourceCreateChanges :one
+SELECT changes FROM audit_event
+WHERE account_id = ?
+  AND resource_type = ?
+  AND resource_id = ?
+  AND action = 'create'
+ORDER BY occurred_at ASC
+LIMIT 1
+`
+
+type GetResourceCreateChangesParams struct {
+	AccountID    string
+	ResourceType string
+	ResourceID   string
+}
+
+// The field changes recorded when the resource was created (a full snapshot of its audited fields). Lets consumers recover display attributes (e.g. an order number) without a cross-service lookup.
+func (q *Queries) GetResourceCreateChanges(ctx context.Context, arg GetResourceCreateChangesParams) (db.NullableRawMessage, error) {
+	row := q.db.QueryRowContext(ctx, getResourceCreateChanges, arg.AccountID, arg.ResourceType, arg.ResourceID)
+	var changes db.NullableRawMessage
+	err := row.Scan(&changes)
+	return changes, err
+}
+
 const listAuditEventsBackward = `-- name: ListAuditEventsBackward :many
 SELECT ae.type_id,
        ae.actor_id AS actor_id,
@@ -807,6 +831,59 @@ func (q *Queries) ListAuditEventsForward(ctx context.Context, arg ListAuditEvent
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listResourceUserActorIDs = `-- name: ListResourceUserActorIDs :many
+SELECT ae.actor_id FROM audit_event ae
+WHERE ae.account_id = ?
+  AND ae.identity_type = 'user'
+  AND ae.resource_type = ?
+  AND ae.resource_id = ?
+UNION
+SELECT rae.actor_id FROM audit_event rae
+WHERE rae.account_id = ?
+  AND rae.identity_type = 'user'
+  AND rae.root_resource_type = ?
+  AND rae.root_resource_id = ?
+`
+
+type ListResourceUserActorIDsParams struct {
+	AccountID        string
+	ResourceType     string
+	ResourceID       string
+	RootResourceType sql.NullString
+	RootResourceID   sql.NullString
+}
+
+// Distinct user actors who have touched a resource's record tree — the resource itself or any child event whose root points at it. They form the follower set for resource-activity notifications. The UNION arms each match a dedicated composite index (account_id+resource vs the root idx).
+func (q *Queries) ListResourceUserActorIDs(ctx context.Context, arg ListResourceUserActorIDsParams) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, listResourceUserActorIDs,
+		arg.AccountID,
+		arg.ResourceType,
+		arg.ResourceID,
+		arg.AccountID,
+		arg.RootResourceType,
+		arg.RootResourceID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var actor_id string
+		if err := rows.Scan(&actor_id); err != nil {
+			return nil, err
+		}
+		items = append(items, actor_id)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err

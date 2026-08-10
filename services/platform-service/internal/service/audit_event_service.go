@@ -9,6 +9,7 @@ import (
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/messaging"
 	"github.com/augno/api/shared/tracing"
 )
 
@@ -16,6 +17,7 @@ var auditEventSvcTracer = tracing.GetTracer("platform-service.audit_event_servic
 
 type auditEventSvcImpl struct {
 	auditEventRepo domain.AuditEventRepo
+	outboxRepo     messaging.OutboxRepo
 }
 
 type AuditEventSvcConfig struct {
@@ -37,6 +39,7 @@ func NewAuditEventSvc(config *AuditEventSvcConfig) domain.AuditEventSvc {
 
 	return &auditEventSvcImpl{
 		auditEventRepo: config.Repos.NewAuditEventRepo(),
+		outboxRepo:     config.Repos.NewOutboxRepo(),
 	}
 }
 
@@ -44,7 +47,12 @@ func (s *auditEventSvcImpl) SaveAuditEvent(ctx context.Context, event *domain.Au
 	ctx, span := auditEventSvcTracer.Start(ctx, "service.audit_event.save_audit_event")
 	defer span.End()
 
-	return s.auditEventRepo.Create(ctx, event)
+	if apiErr := s.auditEventRepo.Create(ctx, event); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	// Follower fan-out runs after the row is persisted so the acting user is registered as a follower before any later event is processed. Both steps are idempotent (duplicate-tolerant), so a retry after a partial failure completes the remainder.
+	return tracing.Trace(span, s.notifySalesOrderFollowers(ctx, event))
 }
 
 func (s *auditEventSvcImpl) BatchGetResourceCreators(ctx context.Context, resourceType string, resourceIDs []string) ([]domain.ResourceCreator, *apierror.APIError) {

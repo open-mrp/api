@@ -223,3 +223,27 @@ VALUES (
         ?
     );
 
+
+-- name: ListResourceUserActorIDs :many
+-- Distinct user actors who have touched a resource's record tree — the resource itself or any child event whose root points at it. They form the follower set for resource-activity notifications. The UNION arms each match a dedicated composite index (account_id+resource vs the root idx).
+SELECT ae.actor_id FROM audit_event ae
+WHERE ae.account_id = sqlc.arg('account_id')
+  AND ae.identity_type = 'user'
+  AND ae.resource_type = sqlc.arg('resource_type')
+  AND ae.resource_id = sqlc.arg('resource_id')
+UNION
+SELECT rae.actor_id FROM audit_event rae
+WHERE rae.account_id = sqlc.arg('account_id')
+  AND rae.identity_type = 'user'
+  AND rae.root_resource_type = sqlc.arg('root_resource_type')
+  AND rae.root_resource_id = sqlc.arg('root_resource_id');
+
+-- name: GetResourceCreateChanges :one
+-- The field changes recorded when the resource was created (a full snapshot of its audited fields). Lets consumers recover display attributes (e.g. an order number) without a cross-service lookup.
+SELECT changes FROM audit_event
+WHERE account_id = ?
+  AND resource_type = ?
+  AND resource_id = ?
+  AND action = 'create'
+ORDER BY occurred_at ASC
+LIMIT 1;

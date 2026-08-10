@@ -1,3 +1,9 @@
+-- name: CreateOutboxMessage :execlastid
+INSERT INTO message_outbox (
+    message_id, service_name, message_type, destination, routing_key,
+    headers, payload, status, max_attempts, next_run_at, request_id, parent_message_id
+) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, NOW(3), ?, ?);
+
 -- name: SelectOutboxMessageIDsForLock :many
 SELECT id FROM message_outbox
 WHERE status = 'pending'

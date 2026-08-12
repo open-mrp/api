@@ -225,9 +225,15 @@ func (r *productionScheduleInputRepoImpl) GetEchelonOnHand(
 	ctx, span := scheduleInputRepoTracer.Start(ctx, "repository.production_schedule_input.get_echelon_on_hand")
 	defer span.End()
 
-	rows, err := r.queries.GetEchelonOnHand(ctx, sqlc.GetEchelonOnHandParams{
-		AccountID: accountID,
-		ItemIds:   itemIDs,
+	// Pure read on the promise-quote hot path: a dropped connection (Vitess tablet failover) retries instead of surfacing a 500.
+	var rows []sqlc.GetEchelonOnHandRow
+	err := db.WithConnRetry(ctx, nil, "production_schedule_input.get_echelon_on_hand", func() error {
+		var queryErr error
+		rows, queryErr = r.queries.GetEchelonOnHand(ctx, sqlc.GetEchelonOnHandParams{
+			AccountID: accountID,
+			ItemIds:   itemIDs,
+		})
+		return queryErr
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)

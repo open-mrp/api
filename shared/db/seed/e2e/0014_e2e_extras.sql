@@ -230,6 +230,28 @@ INSERT IGNORE INTO carrier (id, code, name, account_id, created_at, updated_at) 
 INSERT IGNORE INTO carrier_option (id, code, name, carrier_id, account_id, created_at, updated_at) VALUES
     ('crop_01seedsysground000', 'ground', 'System Ground', 'syscar_01seedsysdefault', NULL, NOW(), NOW());
 
+-- ============================================================
+-- CARRIER TRANSIT FIXTURES
+-- ============================================================
+-- A carrier that can actually be rated. The seed 'delivery' carrier has no
+-- shippo_carrier_account_id, so the rate path short-circuits before reaching the
+-- stub and no lane is ever warmed -- which is why every pre-existing order test
+-- sees a ship-by date equal to its promised date. Transit coverage needs a
+-- carrier that gets as far as the carrier client.
+INSERT IGNORE INTO carrier (id, code, name, shippo_carrier_account_id, account_id, created_at, updated_at) VALUES
+    ('cr_01e2etransitcarrier', 'fedex', 'E2E Transit Carrier', 'shippoacct_e2e_transit', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
+
+-- The tokens match the ones the Shippo stub quotes, so a warm files its estimates
+-- against these rows. The last two carry no token on purpose: nothing the carrier
+-- returns can match them, which is how a service the carrier will not rate behaves
+-- (freight, will-call) and is the only way the service-level fallback is reachable.
+INSERT IGNORE INTO carrier_option (id, code, name, service_level_token, default_transit_days, carrier_id, account_id, created_at, updated_at) VALUES
+    ('crop_01e2etransitgrnd00', 'e2e_transit_ground', 'E2E Transit Ground', 'fedex_ground', NULL, 'cr_01e2etransitcarrier', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
+    ('crop_01e2etransit2day0', 'e2e_transit_2day', 'E2E Transit 2 Day', 'fedex_2_day', NULL, 'cr_01e2etransitcarrier', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
+    ('crop_01e2etransitovrn0', 'e2e_transit_overnight', 'E2E Transit Overnight', 'fedex_priority_overnight', NULL, 'cr_01e2etransitcarrier', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
+    ('crop_01e2etransitdflt0', 'e2e_transit_default', 'E2E Transit Unratable With Default', NULL, 5, 'cr_01e2etransitcarrier', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
+    ('crop_01e2etransitnone0', 'e2e_transit_none', 'E2E Transit Unratable No Default', NULL, NULL, 'cr_01e2etransitcarrier', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
+
 -- DELIVERIES are seeded after the PURCHASE ORDERS block below, because a
 -- delivery's sales_order_id references a purchase_order-type order (which is
 -- defined further down in this file).
@@ -340,7 +362,14 @@ UPDATE invoice SET is_paid_in_full = 1 WHERE id = 'iv_01seedsecondinvoice0' AND 
 -- ============================================================
 
 INSERT IGNORE INTO account_integration (id, account_id, integration_code, name, credentials_v2, is_active, created_at, updated_at) VALUES
-    ('acin_01seedintegration1', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'shippo', 'Shippo Integration', 'seed-placeholder-credentials', 1, NOW(), NOW()),
+    -- A real AES-GCM envelope rather than a placeholder, sealed with the e2e
+    -- INTEGRATION_ENCRYPTION_KEY and the account ID as additional authenticated
+    -- data. Anything that reaches a carrier decrypts these credentials first, so a
+    -- placeholder fails the whole rate path with "invalid envelope format". That
+    -- stayed invisible until a seeded carrier had a shippo_carrier_account_id, since
+    -- without one the rate path returns before it ever looks at credentials.
+    -- Plaintext: {"api_key":"shippo_test_e2e_stub_key"} — the stub ignores the value.
+    ('acin_01seedintegration1', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'shippo', 'Shippo Integration', 'enc_v1_kdev-key-1_1nnZlpr3AyXho51Hb4NX-Mx-eGSDG1qe091TxAKVl8-3RjsbB9Ts-MsFreA5mysTOx0FSVFE_zgyIZA7nIpWWiNK', 1, NOW(), NOW()),
     ('acin_01seedintegration2', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'quickbooks', 'QuickBooks Integration', 'seed-placeholder-credentials', 1, NOW(), NOW());
 
 -- ============================================================

@@ -59,6 +59,7 @@ func serviceLevelFromProto(sl *pb.ServiceLevelInfo) *apiresource.ServiceLevel {
 		ServiceLevelToken:        token,
 		CustomerPortalVisibility: visibility,
 		IsDefault:                sl.IsDefault,
+		DefaultTransitDays:       sl.DefaultTransitDays,
 		CreatedAt:                grpcutil.TimestampToTime(sl.CreatedAt),
 		UpdatedAt:                grpcutil.TimestampToTime(sl.UpdatedAt),
 	}

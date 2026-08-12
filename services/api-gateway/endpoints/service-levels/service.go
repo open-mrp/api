@@ -10,6 +10,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -100,11 +101,12 @@ func (m *serviceLevelSvcImpl) CreateServiceLevel(ctx context.Context, req *Creat
 		isPortalEnabled = v == constants.CustomerPortalVisibilityVisible
 	}
 	pbReq := &pb.CreateServiceLevelRequest{
-		CarrierId:       req.CarrierID,
-		Name:            req.Name,
-		Code:            req.Code,
-		IsPortalEnabled: isPortalEnabled,
-		IsDefault:       req.IsDefault,
+		CarrierId:          req.CarrierID,
+		Name:               req.Name,
+		Code:               req.Code,
+		IsPortalEnabled:    isPortalEnabled,
+		IsDefault:          req.IsDefault,
+		DefaultTransitDays: req.DefaultTransitDays.Ptr(),
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, serviceLevelSvcTracer, "service.service_levels.create", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreateServiceLevelResponse, error) {
@@ -123,12 +125,13 @@ func (m *serviceLevelSvcImpl) UpdateServiceLevel(ctx context.Context, req *Updat
 		isPortalEnabled = &enabled
 	}
 	pbReq := &pb.UpdateServiceLevelRequest{
-		CarrierId:       req.CarrierID,
-		Id:              req.ServiceLevelID,
-		Name:            req.Name.Ptr(),
-		Code:            req.Code.Ptr(),
-		IsPortalEnabled: isPortalEnabled,
-		IsDefault:       req.IsDefault.Ptr(),
+		CarrierId:          req.CarrierID,
+		Id:                 req.ServiceLevelID,
+		Name:               req.Name.Ptr(),
+		Code:               req.Code.Ptr(),
+		IsPortalEnabled:    isPortalEnabled,
+		IsDefault:          req.IsDefault.Ptr(),
+		DefaultTransitDays: field.Int32ClearableToProto(req.DefaultTransitDays),
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, serviceLevelSvcTracer, "service.service_levels.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateServiceLevelResponse, error) {

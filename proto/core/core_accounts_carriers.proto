@@ -6,6 +6,7 @@ package core;
 import "google/protobuf/timestamp.proto";
 import "core/core_async.proto";
 import "core/core_identity_context.proto";
+import "core/core_patch.proto";
 option go_package = "shared/proto/core;core";
 
 message GetStripeStatusResponse {
@@ -301,6 +302,8 @@ message ServiceLevelInfo {
   google.protobuf.Timestamp updated_at = 9;
   // The account ID that owns this service level. Null for system options.
   optional string account_id = 10;
+  // Fallback carrier transit for this service, used when no lane estimate has been cached.
+  optional int32 default_transit_days = 11;
 }
 message ListCarriersRequest {
   optional string cursor = 1;
@@ -416,6 +419,7 @@ message CreateServiceLevelRequest {
   optional string service_level_token = 4;
   bool is_portal_enabled = 5;
   bool is_default = 6;
+  optional int32 default_transit_days = 7;
 }
 message CreateServiceLevelResponse {
   ServiceLevelInfo service_level = 1;
@@ -427,6 +431,7 @@ message UpdateServiceLevelRequest {
   optional string code = 4;
   optional bool is_portal_enabled = 5;
   optional bool is_default = 6;
+  optional Int32Patch default_transit_days = 7;
 }
 message UpdateServiceLevelResponse {
   ServiceLevelInfo service_level = 1;

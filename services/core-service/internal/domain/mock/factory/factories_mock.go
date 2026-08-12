@@ -237,6 +237,20 @@ func (mr *MockRepoFactoryMockRecorder) NewCarrierRepo() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewCarrierRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewCarrierRepo))
 }
 
+// NewCarrierTransitEstimateRepo mocks base method.
+func (m *MockRepoFactory) NewCarrierTransitEstimateRepo() domain.CarrierTransitEstimateRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewCarrierTransitEstimateRepo")
+	ret0, _ := ret[0].(domain.CarrierTransitEstimateRepo)
+	return ret0
+}
+
+// NewCarrierTransitEstimateRepo indicates an expected call of NewCarrierTransitEstimateRepo.
+func (mr *MockRepoFactoryMockRecorder) NewCarrierTransitEstimateRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewCarrierTransitEstimateRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewCarrierTransitEstimateRepo))
+}
+
 // NewCatalogRepo mocks base method.
 func (m *MockRepoFactory) NewCatalogRepo() domain.CatalogRepo {
 	m.ctrl.T.Helper()

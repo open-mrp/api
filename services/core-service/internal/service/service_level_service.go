@@ -312,6 +312,9 @@ func (s *serviceLevelSvcImpl) UpdateServiceLevel(ctx context.Context, params dom
 				return apierror.NewAuthorizationError("This service level is owned by another account and cannot be updated.")
 			}
 
+			// The column is assigned rather than merged so an explicit null can clear it, which makes carrying the existing value forward the meaning of leaving the field out.
+			params.DefaultTransitDays = params.DefaultTransitDays.BackfillUnsetPtr(existing.DefaultTransitDays)
+
 			// Check code uniqueness if code is being changed
 			if params.Code != nil {
 				exists, apiErr := serviceLevelRepo.ExistsByCodeInCarrier(txCtx, params.CarrierID, *params.Code, &params.ServiceLevelID)

@@ -672,6 +672,11 @@ func salesOrderDetailFromProto(info *pb.SalesOrderInfo) apiresource.SalesOrder {
 		source := constants.LeadTimeSource(*info.LeadTimeSourceCode)
 		d.LeadTimeSource = &source
 	}
+	d.TransitDays = info.TransitDays
+	if info.TransitSourceCode != nil {
+		source := constants.TransitSource(*info.TransitSourceCode)
+		d.TransitSource = &source
+	}
 
 	return d
 }

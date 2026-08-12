@@ -35,6 +35,8 @@ SELECT STRAIGHT_JOIN
     so.ship_by_date,
     so.lead_time_days,
     so.lead_time_source_code,
+    so.transit_days,
+    so.transit_source_code,
     so.created_at,
     so.updated_at,
     -- Customer
@@ -252,6 +254,8 @@ SELECT STRAIGHT_JOIN
     so.ship_by_date,
     so.lead_time_days,
     so.lead_time_source_code,
+    so.transit_days,
+    so.transit_source_code,
     so.created_at,
     so.updated_at,
     -- Customer
@@ -466,6 +470,8 @@ SELECT
     so.ship_by_date,
     so.lead_time_days,
     so.lead_time_source_code,
+    so.transit_days,
+    so.transit_source_code,
     so.created_at,
     so.updated_at,
     -- Customer
@@ -601,6 +607,8 @@ SELECT
     so.ship_by_date,
     so.lead_time_days,
     so.lead_time_source_code,
+    so.transit_days,
+    so.transit_source_code,
     so.created_at,
     so.updated_at,
     -- Customer
@@ -1331,6 +1339,8 @@ UPDATE sales_order SET
     ship_by_date = sqlc.narg('ship_by_date'),
     lead_time_days = sqlc.narg('lead_time_days'),
     lead_time_source_code = sqlc.narg('lead_time_source_code'),
+    transit_days = sqlc.narg('transit_days'),
+    transit_source_code = sqlc.narg('transit_source_code'),
     updated_at = NOW(3)
 WHERE id = sqlc.arg('id')
 AND owner_account_id = sqlc.arg('account_id');

@@ -481,7 +481,7 @@ var assignableAttributeColors = []constants.Color{
 func attributeColorFor(propertyName, value string) string {
 	h := fnv.New32a()
 	_, _ = h.Write([]byte(strings.ToLower(propertyName) + "\x00" + strings.ToLower(value)))
-	return string(assignableAttributeColors[h.Sum32()%uint32(len(assignableAttributeColors))])
+	return string(assignableAttributeColors[h.Sum32()%uint32(len(assignableAttributeColors))]) // #nosec G115 -- fixed palette length
 }
 
 // findOrCreatePropertiesInTx is the single property bulk-upsert primitive: it finds the

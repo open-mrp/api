@@ -31,6 +31,10 @@ type ServiceLevel struct {
 	//
 	// Each carrier has at most one default; setting a new default clears the previous one. A default service level cannot be deleted until another service level takes its place or the flag is cleared.
 	IsDefault bool `json:"is_default"`
+	// Business days this service typically takes in transit, used to work an order's ship-by date back from a promised delivery date.
+	//
+	// A fallback for lanes the carrier has not quoted. Null means transit is unknown for this service rather than instant, so a ship-by date falls back to the promised delivery date itself.
+	DefaultTransitDays *int32 `json:"default_transit_days"`
 	// Provenance of this service level.
 	//
 	// System-owned service levels are platform-provided defaults that cannot be updated or deleted; account-owned service levels are custom to your account.
@@ -41,6 +45,8 @@ type ServiceLevel struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
+var sampleServiceLevelTransitDays = int32(3)
+
 var SampleServiceLevel = &ServiceLevel{
 	ID:                       SampleServiceLevelID,
 	Object:                   constants.ObjectTypeServiceLevel,
@@ -48,6 +54,7 @@ var SampleServiceLevel = &ServiceLevel{
 	ServiceLevelToken:        "fedex_ground",
 	CustomerPortalVisibility: constants.CustomerPortalVisibilityVisible,
 	IsDefault:                true,
+	DefaultTransitDays:       &sampleServiceLevelTransitDays,
 	Owner:                    SampleOwnerAccount,
 	CreatedAt:                timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:                timeutil.TimestampToTime(sampleUpdatedAtTimestamp),

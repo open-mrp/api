@@ -46,6 +46,7 @@ const (
 	VocEmail        = "em"
 	VocEnterprise   = "en"
 	VocError        = "er"
+	VocEstimate     = "es"
 	VocEvent        = "ev"
 	VocFormula      = "fm"
 	VocFreight      = "fr"
@@ -128,6 +129,7 @@ const (
 	VocTool         = "tl"
 	VocTerm         = "tm"
 	VocTransform    = "tf"
+	VocTransit      = "ts"
 	VocTier         = "tr"
 	VocTransaction  = "tx"
 	VocType         = "tp"
@@ -217,7 +219,8 @@ var (
 	BatchIDPrefix = composePrefix(VocBatch)
 
 	// Carrier-related prefix values
-	CarrierIDPrefix = composePrefix(VocCarrier)
+	CarrierIDPrefix                = composePrefix(VocCarrier)
+	CarrierTransitEstimateIDPrefix = composePrefix(VocCarrier, VocTransit, VocEstimate)
 
 	// Service level-related prefix values
 	ServiceLevelIDPrefix = composePrefix(VocService, VocLevel)

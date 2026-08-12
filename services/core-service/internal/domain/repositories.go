@@ -474,6 +474,13 @@ type CarrierRepo interface {
 	GetOptionsByIDs(ctx context.Context, accountID string, ids []string) ([]*ServiceLevel, *apierror.APIError)
 }
 
+type CarrierTransitEstimateRepo interface {
+	// Resolve returns both transit candidates for a lane in one round trip. A lane whose service level does not exist (or belongs to another account) resolves to nil rather than an error: the caller's fallback is to stamp no transit at all.
+	Resolve(ctx context.Context, accountID string, lane TransitLane) (*CarrierTransitCandidates, *apierror.APIError)
+	// Upsert writes a harvested estimate, leaving an operator-entered row for the same lane untouched.
+	Upsert(ctx context.Context, params UpsertTransitEstimateParams) *apierror.APIError
+}
+
 type ServiceLevelRepo interface {
 	List(ctx context.Context, params ListServiceLevelsParams) (*ListServiceLevelsResult, *apierror.APIError)
 	Get(ctx context.Context, accountID, serviceLevelID string) (*ServiceLevel, *apierror.APIError)

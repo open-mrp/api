@@ -490,15 +490,28 @@ WHERE stfsr.shipping_term_id = ?
 ORDER BY co.name ASC
 `
 
-func (q *Queries) ListFreeShippingCarrierOptionsByShippingTermID(ctx context.Context, shippingTermID string) ([]CarrierOption, error) {
+type ListFreeShippingCarrierOptionsByShippingTermIDRow struct {
+	ID                string
+	Code              string
+	Name              string
+	ServiceLevelToken sql.NullString
+	IsPortalEnabled   bool
+	IsDefault         bool
+	CarrierID         string
+	AccountID         sql.NullString
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+}
+
+func (q *Queries) ListFreeShippingCarrierOptionsByShippingTermID(ctx context.Context, shippingTermID string) ([]ListFreeShippingCarrierOptionsByShippingTermIDRow, error) {
 	rows, err := q.db.QueryContext(ctx, listFreeShippingCarrierOptionsByShippingTermID, shippingTermID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []CarrierOption
+	var items []ListFreeShippingCarrierOptionsByShippingTermIDRow
 	for rows.Next() {
-		var i CarrierOption
+		var i ListFreeShippingCarrierOptionsByShippingTermIDRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Code,

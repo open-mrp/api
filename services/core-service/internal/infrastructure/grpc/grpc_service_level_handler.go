@@ -5,6 +5,7 @@ import (
 
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/shared/contracts"
+	"github.com/augno/api/shared/field"
 	pb "github.com/augno/api/shared/proto/core"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -15,16 +16,17 @@ func serviceLevelToProto(o *domain.ServiceLevel) *pb.ServiceLevelInfo {
 		return nil
 	}
 	return &pb.ServiceLevelInfo{
-		Id:                o.ID,
-		Name:              o.Name,
-		Code:              o.Code,
-		ServiceLevelToken: o.ServiceLevelToken,
-		IsPortalEnabled:   o.IsPortalEnabled,
-		IsDefault:         o.IsDefault,
-		CarrierId:         o.CarrierID,
-		CreatedAt:         timestamppb.New(o.CreatedAt),
-		UpdatedAt:         timestamppb.New(o.UpdatedAt),
-		AccountId:         o.AccountID,
+		Id:                 o.ID,
+		Name:               o.Name,
+		Code:               o.Code,
+		ServiceLevelToken:  o.ServiceLevelToken,
+		IsPortalEnabled:    o.IsPortalEnabled,
+		IsDefault:          o.IsDefault,
+		CarrierId:          o.CarrierID,
+		CreatedAt:          timestamppb.New(o.CreatedAt),
+		UpdatedAt:          timestamppb.New(o.UpdatedAt),
+		AccountId:          o.AccountID,
+		DefaultTransitDays: o.DefaultTransitDays,
 	}
 }
 
@@ -85,12 +87,13 @@ func (h *gRPCHandler) CreateServiceLevel(ctx context.Context, req *pb.CreateServ
 	defer finalizeIdempotency()
 
 	params := domain.CreateServiceLevelParams{
-		CarrierID:         req.CarrierId,
-		Name:              req.Name,
-		Code:              req.Code,
-		ServiceLevelToken: req.ServiceLevelToken,
-		IsPortalEnabled:   req.GetIsPortalEnabled(),
-		IsDefault:         req.GetIsDefault(),
+		CarrierID:          req.CarrierId,
+		Name:               req.Name,
+		Code:               req.Code,
+		ServiceLevelToken:  req.ServiceLevelToken,
+		IsPortalEnabled:    req.GetIsPortalEnabled(),
+		IsDefault:          req.GetIsDefault(),
+		DefaultTransitDays: req.DefaultTransitDays,
 	}
 
 	serviceLevel, apiErr := h.serviceLevelSvc.CreateServiceLevel(ctx, params)
@@ -112,12 +115,13 @@ func (h *gRPCHandler) UpdateServiceLevel(ctx context.Context, req *pb.UpdateServ
 	defer finalizeIdempotency()
 
 	params := domain.UpdateServiceLevelParams{
-		ServiceLevelID:  req.Id,
-		CarrierID:       req.CarrierId,
-		Name:            req.Name,
-		Code:            req.Code,
-		IsPortalEnabled: req.IsPortalEnabled,
-		IsDefault:       req.IsDefault,
+		ServiceLevelID:     req.Id,
+		CarrierID:          req.CarrierId,
+		Name:               req.Name,
+		Code:               req.Code,
+		IsPortalEnabled:    req.IsPortalEnabled,
+		IsDefault:          req.IsDefault,
+		DefaultTransitDays: field.Int32ClearableFromProto(req.DefaultTransitDays),
 	}
 
 	serviceLevel, apiErr := h.serviceLevelSvc.UpdateServiceLevel(ctx, params)

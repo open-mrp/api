@@ -672,6 +672,10 @@ func (r *salesOrderRepoImpl) SetShipByCommitment(ctx context.Context, accountID,
 		params.ShipByDate = gosql.NullTime{Time: commitment.ShipByDate, Valid: true}
 		params.LeadTimeDays = gosql.NullInt32{Int32: safeconv.IntToInt32(commitment.LeadTimeDays), Valid: true}
 		params.LeadTimeSourceCode = gosql.NullString{String: commitment.SourceCode, Valid: true}
+		if commitment.TransitDays != nil {
+			params.TransitDays = gosql.NullInt32{Int32: safeconv.IntToInt32(*commitment.TransitDays), Valid: true}
+			params.TransitSourceCode = gosql.NullString{String: commitment.TransitSourceCode, Valid: true}
+		}
 	}
 
 	if apiErr := db.MapSQLError(r.queries.SetSalesOrderShipByCommitment(ctx, params)); apiErr != nil {
@@ -1167,6 +1171,10 @@ func mapGetSalesOrderRow(row sqlc.GetSalesOrderRow) *domain.SalesOrder {
 		so.LeadTimeDays = &row.LeadTimeDays.Int32
 	}
 	so.LeadTimeSourceCode = nullStringToPtr(row.LeadTimeSourceCode)
+	if row.TransitDays.Valid {
+		so.TransitDays = &row.TransitDays.Int32
+	}
+	so.TransitSourceCode = nullStringToPtr(row.TransitSourceCode)
 
 	so.BillToName = nullStringToPtr(row.BillToName)
 	so.BillToIsDropShip = nullBoolPtr(row.BillToIsDropShip)
@@ -1299,6 +1307,10 @@ func mapGetSalesOrderForCustomerRow(row sqlc.GetSalesOrderForCustomerRow) *domai
 		so.LeadTimeDays = &row.LeadTimeDays.Int32
 	}
 	so.LeadTimeSourceCode = nullStringToPtr(row.LeadTimeSourceCode)
+	if row.TransitDays.Valid {
+		so.TransitDays = &row.TransitDays.Int32
+	}
+	so.TransitSourceCode = nullStringToPtr(row.TransitSourceCode)
 
 	so.BillToName = nullStringToPtr(row.BillToName)
 	so.BillToIsDropShip = nullBoolPtr(row.BillToIsDropShip)
@@ -1406,6 +1418,8 @@ type listSalesOrderRow struct {
 	ShipByDate                  gosql.NullTime
 	LeadTimeDays                gosql.NullInt32
 	LeadTimeSourceCode          gosql.NullString
+	TransitDays                 gosql.NullInt32
+	TransitSourceCode           gosql.NullString
 	CreatedAt                   time.Time
 	UpdatedAt                   time.Time
 	CustomerName                string
@@ -1530,6 +1544,10 @@ func mapListSalesOrderRow(row listSalesOrderRow) *domain.SalesOrder {
 		so.LeadTimeDays = &row.LeadTimeDays.Int32
 	}
 	so.LeadTimeSourceCode = nullStringToPtr(row.LeadTimeSourceCode)
+	if row.TransitDays.Valid {
+		so.TransitDays = &row.TransitDays.Int32
+	}
+	so.TransitSourceCode = nullStringToPtr(row.TransitSourceCode)
 
 	so.BillToName = nullStringToPtr(row.BillToName)
 	so.BillToIsDropShip = nullBoolPtr(row.BillToIsDropShip)
@@ -1633,6 +1651,8 @@ func mapForwardSalesOrderRow(row sqlc.ListSalesOrdersForwardRow) *domain.SalesOr
 		ShipByDate:                  row.ShipByDate,
 		LeadTimeDays:                row.LeadTimeDays,
 		LeadTimeSourceCode:          row.LeadTimeSourceCode,
+		TransitDays:                 row.TransitDays,
+		TransitSourceCode:           row.TransitSourceCode,
 		CreatedAt:                   row.CreatedAt,
 		UpdatedAt:                   row.UpdatedAt,
 		CustomerName:                row.CustomerName,
@@ -1733,6 +1753,8 @@ func mapBackwardSalesOrderRow(row sqlc.ListSalesOrdersBackwardRow) *domain.Sales
 		ShipByDate:                  row.ShipByDate,
 		LeadTimeDays:                row.LeadTimeDays,
 		LeadTimeSourceCode:          row.LeadTimeSourceCode,
+		TransitDays:                 row.TransitDays,
+		TransitSourceCode:           row.TransitSourceCode,
 		CreatedAt:                   row.CreatedAt,
 		UpdatedAt:                   row.UpdatedAt,
 		CustomerName:                row.CustomerName,

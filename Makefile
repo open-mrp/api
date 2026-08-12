@@ -308,7 +308,7 @@ e2e-up-ci: openapi-quiet ## Start the E2E stack using pre-built images (for CI)
 	@./scripts/setup-e2e-db.sh
 	@./scripts/run-quiet.sh "Starting E2E services" ./scripts/start-e2e-services.sh
 
-e2e: ## Run API E2E tests against the full stack
+e2e: e2e-up ## Run API E2E tests against the full stack (brings the stack up first)
 	@echo "Running API E2E tests..."
 	@time ./scripts/run-e2e-tests.sh 600s
 

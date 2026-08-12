@@ -29,6 +29,10 @@ type CreateServiceLevelRequest struct {
 	//
 	// Each carrier has at most one default; setting this to `true` clears the carrier's existing default.
 	IsDefault bool `json:"is_default"`
+	// Business days this service typically takes in transit, used to work an order's ship-by date back from a promised delivery date.
+	//
+	// A fallback: when a carrier can rate the lane, the transit it quotes is used instead. Leave unset for carriers that can be rated, and set it for those that cannot (freight, will-call), where it is the only transit the system will have.
+	DefaultTransitDays field.Optional[int32] `json:"default_transit_days,omitzero" validate:"omitempty,gte=0,lte=365"`
 }
 
 var sampleCreateServiceLevelRequest = &CreateServiceLevelRequest{
@@ -36,6 +40,7 @@ var sampleCreateServiceLevelRequest = &CreateServiceLevelRequest{
 	Code:                     "ground",
 	CustomerPortalVisibility: field.Some(constants.CustomerPortalVisibilityVisible),
 	IsDefault:                false,
+	DefaultTransitDays:       field.Some(int32(3)),
 }
 
 func (*CreateServiceLevelRequest) SchemaExample() any {

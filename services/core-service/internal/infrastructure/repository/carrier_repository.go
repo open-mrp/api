@@ -434,16 +434,17 @@ func mapServiceLevelByIDRow(row sqlc.GetCarrierOptionsByIDsRow) *domain.ServiceL
 		serviceLevelToken = &row.ServiceLevelToken.String
 	}
 	return &domain.ServiceLevel{
-		ID:                row.ID,
-		Name:              row.Name,
-		Code:              row.Code,
-		ServiceLevelToken: serviceLevelToken,
-		IsPortalEnabled:   row.IsPortalEnabled,
-		IsDefault:         row.IsDefault,
-		CarrierID:         row.CarrierID,
-		AccountID:         accountID,
-		CreatedAt:         row.CreatedAt,
-		UpdatedAt:         row.UpdatedAt,
+		ID:                 row.ID,
+		Name:               row.Name,
+		Code:               row.Code,
+		ServiceLevelToken:  serviceLevelToken,
+		IsPortalEnabled:    row.IsPortalEnabled,
+		IsDefault:          row.IsDefault,
+		DefaultTransitDays: nullInt32Ptr(row.DefaultTransitDays),
+		CarrierID:          row.CarrierID,
+		AccountID:          accountID,
+		CreatedAt:          row.CreatedAt,
+		UpdatedAt:          row.UpdatedAt,
 	}
 }
 
@@ -476,15 +477,16 @@ func mapServiceLevelListByCarrierRow(row sqlc.ListCarrierOptionsByCarrierIDRow) 
 		serviceLevelToken = &row.ServiceLevelToken.String
 	}
 	return &domain.ServiceLevel{
-		ID:                row.ID,
-		Name:              row.Name,
-		Code:              row.Code,
-		ServiceLevelToken: serviceLevelToken,
-		IsPortalEnabled:   row.IsPortalEnabled,
-		IsDefault:         row.IsDefault,
-		CarrierID:         row.CarrierID,
-		AccountID:         accountID,
-		CreatedAt:         row.CreatedAt,
-		UpdatedAt:         row.UpdatedAt,
+		ID:                 row.ID,
+		Name:               row.Name,
+		Code:               row.Code,
+		ServiceLevelToken:  serviceLevelToken,
+		IsPortalEnabled:    row.IsPortalEnabled,
+		IsDefault:          row.IsDefault,
+		DefaultTransitDays: nullInt32Ptr(row.DefaultTransitDays),
+		CarrierID:          row.CarrierID,
+		AccountID:          accountID,
+		CreatedAt:          row.CreatedAt,
+		UpdatedAt:          row.UpdatedAt,
 	}
 }

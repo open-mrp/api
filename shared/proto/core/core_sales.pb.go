@@ -1488,8 +1488,11 @@ type SalesOrderInfo struct {
 	ShipByDate         *timestamppb.Timestamp `protobuf:"bytes,104,opt,name=ship_by_date,json=shipByDate,proto3,oneof" json:"ship_by_date,omitempty"`
 	LeadTimeDays       *int32                 `protobuf:"varint,105,opt,name=lead_time_days,json=leadTimeDays,proto3,oneof" json:"lead_time_days,omitempty"`
 	LeadTimeSourceCode *string                `protobuf:"bytes,106,opt,name=lead_time_source_code,json=leadTimeSourceCode,proto3,oneof" json:"lead_time_source_code,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// Carrier transit subtracted from a promised delivery date to reach ship_by_date.
+	TransitDays       *int32  `protobuf:"varint,107,opt,name=transit_days,json=transitDays,proto3,oneof" json:"transit_days,omitempty"`
+	TransitSourceCode *string `protobuf:"bytes,108,opt,name=transit_source_code,json=transitSourceCode,proto3,oneof" json:"transit_source_code,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *SalesOrderInfo) Reset() {
@@ -2246,6 +2249,20 @@ func (x *SalesOrderInfo) GetLeadTimeDays() int32 {
 func (x *SalesOrderInfo) GetLeadTimeSourceCode() string {
 	if x != nil && x.LeadTimeSourceCode != nil {
 		return *x.LeadTimeSourceCode
+	}
+	return ""
+}
+
+func (x *SalesOrderInfo) GetTransitDays() int32 {
+	if x != nil && x.TransitDays != nil {
+		return *x.TransitDays
+	}
+	return 0
+}
+
+func (x *SalesOrderInfo) GetTransitSourceCode() string {
+	if x != nil && x.TransitSourceCode != nil {
+		return *x.TransitSourceCode
 	}
 	return ""
 }
@@ -6459,7 +6476,7 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"&BatchGetSalesOrderStatusesByIDsRequest\x12\x10\n" +
 	"\x03ids\x18\x01 \x03(\tR\x03ids\"w\n" +
 	"'BatchGetSalesOrderStatusesByIDsResponse\x12L\n" +
-	"\x14sales_order_statuses\x18\x01 \x03(\v2\x1a.core.SalesOrderStatusInfoR\x12salesOrderStatuses\"\xb59\n" +
+	"\x14sales_order_statuses\x18\x01 \x03(\v2\x1a.core.SalesOrderStatusInfoR\x12salesOrderStatuses\"\xbb:\n" +
 	"\x0eSalesOrderInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x121\n" +
@@ -6581,7 +6598,9 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"\fship_by_date\x18h \x01(\v2\x1a.google.protobuf.TimestampHJR\n" +
 	"shipByDate\x88\x01\x01\x12)\n" +
 	"\x0elead_time_days\x18i \x01(\x05HKR\fleadTimeDays\x88\x01\x01\x126\n" +
-	"\x15lead_time_source_code\x18j \x01(\tHLR\x12leadTimeSourceCode\x88\x01\x01B\x15\n" +
+	"\x15lead_time_source_code\x18j \x01(\tHLR\x12leadTimeSourceCode\x88\x01\x01\x12&\n" +
+	"\ftransit_days\x18k \x01(\x05HMR\vtransitDays\x88\x01\x01\x123\n" +
+	"\x13transit_source_code\x18l \x01(\tHNR\x11transitSourceCode\x88\x01\x01B\x15\n" +
 	"\x13_customer_po_numberB\a\n" +
 	"\x05_noteB\x0f\n" +
 	"\r_bill_to_nameB\x18\n" +
@@ -6660,7 +6679,9 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"\x19_shipping_term_updated_atB\x0f\n" +
 	"\r_ship_by_dateB\x11\n" +
 	"\x0f_lead_time_daysB\x18\n" +
-	"\x16_lead_time_source_code\"\xa3\x10\n" +
+	"\x16_lead_time_source_codeB\x0f\n" +
+	"\r_transit_daysB\x16\n" +
+	"\x14_transit_source_code\"\xa3\x10\n" +
 	"\x12SalesOrderLineInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12(\n" +
 	"\x10line_item_number\x18\x02 \x01(\x05R\x0elineItemNumber\x12\x1f\n" +

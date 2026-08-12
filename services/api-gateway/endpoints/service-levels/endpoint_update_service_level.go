@@ -31,6 +31,10 @@ type UpdateServiceLevelRequest struct {
 	//
 	// Each carrier has at most one default; setting this to `true` clears the carrier's existing default.
 	IsDefault field.Optional[bool] `json:"is_default,omitzero"`
+	// Business days this service typically takes in transit, used to work an order's ship-by date back from a promised delivery date.
+	//
+	// A fallback: when a carrier can rate the lane, the transit it quotes is used instead. Set to null to remove it, which leaves transit unknown for lanes the carrier cannot rate.
+	DefaultTransitDays field.Clearable[int32] `json:"default_transit_days,omitzero" validate:"omitempty,gte=0,lte=365"`
 }
 
 var sampleUpdateServiceLevelName = "Express Shipping"

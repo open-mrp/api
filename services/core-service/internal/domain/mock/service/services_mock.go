@@ -4527,6 +4527,21 @@ func (mr *MockAnalyticsSvcMockRecorder) AnalyzeDeliveries(ctx, params any) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AnalyzeDeliveries", reflect.TypeOf((*MockAnalyticsSvc)(nil).AnalyzeDeliveries), ctx, params)
 }
 
+// AnalyzeDeliveryPerformance mocks base method.
+func (m *MockAnalyticsSvc) AnalyzeDeliveryPerformance(ctx context.Context, params domain.AnalyzeDeliveryPerformanceParams) (*domain.DeliveryPerformanceResult, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AnalyzeDeliveryPerformance", ctx, params)
+	ret0, _ := ret[0].(*domain.DeliveryPerformanceResult)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// AnalyzeDeliveryPerformance indicates an expected call of AnalyzeDeliveryPerformance.
+func (mr *MockAnalyticsSvcMockRecorder) AnalyzeDeliveryPerformance(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AnalyzeDeliveryPerformance", reflect.TypeOf((*MockAnalyticsSvc)(nil).AnalyzeDeliveryPerformance), ctx, params)
+}
+
 // AnalyzeInventoryReceipts mocks base method.
 func (m *MockAnalyticsSvc) AnalyzeInventoryReceipts(ctx context.Context, params domain.AnalyzeInventoryReceiptsParams) ([]domain.InventoryReceiptEntry, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -7098,6 +7113,20 @@ func (m *MockSalesOrderSvc) UpdateSalesOrder(ctx context.Context, params domain.
 func (mr *MockSalesOrderSvcMockRecorder) UpdateSalesOrder(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateSalesOrder", reflect.TypeOf((*MockSalesOrderSvc)(nil).UpdateSalesOrder), ctx, params)
+}
+
+// WarmForOrder mocks base method.
+func (m *MockSalesOrderSvc) WarmForOrder(ctx context.Context, accountID, salesOrderID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WarmForOrder", ctx, accountID, salesOrderID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// WarmForOrder indicates an expected call of WarmForOrder.
+func (mr *MockSalesOrderSvcMockRecorder) WarmForOrder(ctx, accountID, salesOrderID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WarmForOrder", reflect.TypeOf((*MockSalesOrderSvc)(nil).WarmForOrder), ctx, accountID, salesOrderID)
 }
 
 // MockSalesOrderLineSvc is a mock of SalesOrderLineSvc interface.

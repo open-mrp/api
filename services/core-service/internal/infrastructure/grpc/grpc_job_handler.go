@@ -10,6 +10,7 @@ import (
 	"github.com/augno/api/shared/contracts"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
+	"github.com/augno/api/shared/safeconv"
 
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -36,7 +37,7 @@ func jobResultsToProto(results []domain.RowResult) *pb.JobResultList {
 	items := make([]*pb.JobResultInfo, len(results))
 	for i, r := range results {
 		items[i] = &pb.JobResultInfo{
-			Index:          int32(r.Index),
+			Index:          safeconv.IntToInt32(r.Index),
 			Id:             r.ID,
 			Action:         string(r.Action),
 			SubResourceIds: r.SubResourceIDs,
@@ -55,7 +56,7 @@ func jobErrorsToProto(errs []apierror.RowError) *pb.JobErrorList {
 	for i, e := range errs {
 		item := &pb.JobErrorInfo{Error: marshalResponseError(e.Error)}
 		if e.Index != nil {
-			idx := int32(*e.Index)
+			idx := safeconv.IntToInt32(*e.Index)
 			item.Index = &idx
 		}
 		items[i] = item

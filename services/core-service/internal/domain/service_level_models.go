@@ -3,6 +3,7 @@ package domain
 import (
 	"time"
 
+	"github.com/augno/api/shared/field"
 	"github.com/augno/api/shared/pagination"
 )
 
@@ -13,10 +14,12 @@ type ServiceLevel struct {
 	ServiceLevelToken *string `audit:"service_level_token"`
 	IsPortalEnabled   bool    `audit:"is_portal_enabled"`
 	IsDefault         bool    `audit:"is_default"`
-	CarrierID         string
-	AccountID         *string
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
+	// DefaultTransitDays is the fallback transit for this service when no lane estimate has been cached, and the only source for carriers that cannot be rated.
+	DefaultTransitDays *int32 `audit:"default_transit_days"`
+	CarrierID          string
+	AccountID          *string
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 }
 
 type ListServiceLevelsParams struct {
@@ -33,13 +36,14 @@ type ListServiceLevelsResult struct {
 }
 
 type CreateServiceLevelParams struct {
-	AccountID         string
-	CarrierID         string
-	Name              string
-	Code              string
-	ServiceLevelToken *string
-	IsPortalEnabled   bool
-	IsDefault         bool
+	AccountID          string
+	CarrierID          string
+	Name               string
+	Code               string
+	ServiceLevelToken  *string
+	IsPortalEnabled    bool
+	IsDefault          bool
+	DefaultTransitDays *int32
 }
 
 type UpdateServiceLevelParams struct {
@@ -50,4 +54,6 @@ type UpdateServiceLevelParams struct {
 	Code            *string
 	IsPortalEnabled *bool
 	IsDefault       *bool
+	// DefaultTransitDays is assigned rather than merged, so the service backfills the existing value when the caller leaves it unset.
+	DefaultTransitDays field.Clearable[int32]
 }

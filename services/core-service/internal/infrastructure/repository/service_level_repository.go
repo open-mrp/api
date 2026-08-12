@@ -9,6 +9,7 @@ import (
 	"github.com/augno/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/augno/api/shared/db"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 	"github.com/augno/api/shared/pagination"
 	"github.com/augno/api/shared/tracing"
 )
@@ -36,16 +37,17 @@ func mapServiceLevelForwardRow(row sqlc.ListCarrierOptionsForwardRow) *domain.Se
 		serviceLevelToken = &row.ServiceLevelToken.String
 	}
 	return &domain.ServiceLevel{
-		ID:                row.ID,
-		Name:              row.Name,
-		Code:              row.Code,
-		ServiceLevelToken: serviceLevelToken,
-		IsPortalEnabled:   row.IsPortalEnabled,
-		IsDefault:         row.IsDefault,
-		CarrierID:         row.CarrierID,
-		AccountID:         accountID,
-		CreatedAt:         row.CreatedAt,
-		UpdatedAt:         row.UpdatedAt,
+		ID:                 row.ID,
+		Name:               row.Name,
+		Code:               row.Code,
+		ServiceLevelToken:  serviceLevelToken,
+		IsPortalEnabled:    row.IsPortalEnabled,
+		IsDefault:          row.IsDefault,
+		DefaultTransitDays: nullInt32Ptr(row.DefaultTransitDays),
+		CarrierID:          row.CarrierID,
+		AccountID:          accountID,
+		CreatedAt:          row.CreatedAt,
+		UpdatedAt:          row.UpdatedAt,
 	}
 }
 
@@ -59,16 +61,17 @@ func mapServiceLevelBackwardRow(row sqlc.ListCarrierOptionsBackwardRow) *domain.
 		serviceLevelToken = &row.ServiceLevelToken.String
 	}
 	return &domain.ServiceLevel{
-		ID:                row.ID,
-		Name:              row.Name,
-		Code:              row.Code,
-		ServiceLevelToken: serviceLevelToken,
-		IsPortalEnabled:   row.IsPortalEnabled,
-		IsDefault:         row.IsDefault,
-		CarrierID:         row.CarrierID,
-		AccountID:         accountID,
-		CreatedAt:         row.CreatedAt,
-		UpdatedAt:         row.UpdatedAt,
+		ID:                 row.ID,
+		Name:               row.Name,
+		Code:               row.Code,
+		ServiceLevelToken:  serviceLevelToken,
+		IsPortalEnabled:    row.IsPortalEnabled,
+		IsDefault:          row.IsDefault,
+		DefaultTransitDays: nullInt32Ptr(row.DefaultTransitDays),
+		CarrierID:          row.CarrierID,
+		AccountID:          accountID,
+		CreatedAt:          row.CreatedAt,
+		UpdatedAt:          row.UpdatedAt,
 	}
 }
 
@@ -82,16 +85,17 @@ func mapGetServiceLevelRow(row sqlc.GetCarrierOptionRow) *domain.ServiceLevel {
 		serviceLevelToken = &row.ServiceLevelToken.String
 	}
 	return &domain.ServiceLevel{
-		ID:                row.ID,
-		Name:              row.Name,
-		Code:              row.Code,
-		ServiceLevelToken: serviceLevelToken,
-		IsPortalEnabled:   row.IsPortalEnabled,
-		IsDefault:         row.IsDefault,
-		CarrierID:         row.CarrierID,
-		AccountID:         accountID,
-		CreatedAt:         row.CreatedAt,
-		UpdatedAt:         row.UpdatedAt,
+		ID:                 row.ID,
+		Name:               row.Name,
+		Code:               row.Code,
+		ServiceLevelToken:  serviceLevelToken,
+		IsPortalEnabled:    row.IsPortalEnabled,
+		IsDefault:          row.IsDefault,
+		DefaultTransitDays: nullInt32Ptr(row.DefaultTransitDays),
+		CarrierID:          row.CarrierID,
+		AccountID:          accountID,
+		CreatedAt:          row.CreatedAt,
+		UpdatedAt:          row.UpdatedAt,
 	}
 }
 
@@ -188,14 +192,15 @@ func (r *serviceLevelRepoImpl) Create(ctx context.Context, id string, params dom
 	defer span.End()
 
 	err := r.queries.InsertCarrierOption(ctx, sqlc.InsertCarrierOptionParams{
-		ID:                id,
-		Name:              params.Name,
-		Code:              params.Code,
-		ServiceLevelToken: toNullString(params.ServiceLevelToken),
-		IsPortalEnabled:   params.IsPortalEnabled,
-		IsDefault:         params.IsDefault,
-		CarrierID:         params.CarrierID,
-		AccountID:         gosql.NullString{String: params.AccountID, Valid: true},
+		ID:                 id,
+		Name:               params.Name,
+		Code:               params.Code,
+		ServiceLevelToken:  toNullString(params.ServiceLevelToken),
+		IsPortalEnabled:    params.IsPortalEnabled,
+		IsDefault:          params.IsDefault,
+		DefaultTransitDays: toNullInt32(params.DefaultTransitDays),
+		CarrierID:          params.CarrierID,
+		AccountID:          gosql.NullString{String: params.AccountID, Valid: true},
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -225,6 +230,8 @@ func (r *serviceLevelRepoImpl) Update(ctx context.Context, params domain.UpdateS
 		Code:            toNullString(params.Code),
 		IsPortalEnabled: isPortalEnabled,
 		IsDefault:       isDefault,
+		// Assigned rather than merged so it can be cleared; the service backfills the existing value when the caller omits the field.
+		DefaultTransitDays: field.Int32ToNullInt32(params.DefaultTransitDays),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)

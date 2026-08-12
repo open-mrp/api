@@ -42,6 +42,8 @@ type SalesOrder struct {
 	ShipByDate            *time.Time             `audit:"ship_by_date"`
 	LeadTimeDays          *int32                 `audit:"lead_time_days"`
 	LeadTimeSourceCode    *string                `audit:"lead_time_source_code"`
+	TransitDays           *int32                 `audit:"transit_days"`
+	TransitSourceCode     *string                `audit:"transit_source_code"`
 	CreatedAt             time.Time
 	UpdatedAt             time.Time
 
@@ -365,4 +367,8 @@ type ShipByCommitment struct {
 	ShipByDate   time.Time
 	LeadTimeDays int
 	SourceCode   string
+	// TransitDays is the carrier transit subtracted from a promised delivery date to get ShipByDate, nil when transit was unknown or the commitment came from a lead time.
+	TransitDays *int
+	// TransitSourceCode names where TransitDays came from, empty when TransitDays is nil.
+	TransitSourceCode string
 }

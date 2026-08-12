@@ -39,16 +39,28 @@ func (s *salesOrderSvcImpl) resolveShipByCommitment(ctx context.Context, account
 		in.AccountLeadTimeDays = &days
 	}
 
-	commitment, ok := scheduling.ResolveCommitment(issuedAt, order.PromisedAt, in)
+	// Only a promised delivery date has transit subtracted from it, so the lookup is skipped entirely otherwise. This runs inside the issue transaction, and resolving a lane costs an address read the lead-time branch would throw away.
+	var transit *scheduling.Transit
+	if order.PromisedAt != nil {
+		resolved, apiErr := s.resolveOrderTransit(ctx, accountID, order)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		transit = resolved
+	}
+
+	commitment, ok := scheduling.ResolveCommitment(issuedAt, order.PromisedAt, in, transit)
 	if !ok {
 		// Every level being unset is a misconfiguration rather than a normal state. Leaving the commitment unstamped is the honest outcome: an order with no ship-by date reads as uncommitted, where a fabricated one would read as a promise nobody made.
 		return nil, nil
 	}
 
 	return &domain.ShipByCommitment{
-		ShipByDate:   commitment.ShipByDate,
-		LeadTimeDays: commitment.LeadTimeDays,
-		SourceCode:   commitment.Source,
+		ShipByDate:        commitment.ShipByDate,
+		LeadTimeDays:      commitment.LeadTimeDays,
+		SourceCode:        commitment.Source,
+		TransitDays:       commitment.TransitDays,
+		TransitSourceCode: commitment.TransitSource,
 	}, nil
 }
 

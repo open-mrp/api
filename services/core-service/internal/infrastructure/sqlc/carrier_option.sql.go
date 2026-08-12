@@ -98,6 +98,7 @@ SELECT
     carrier_option.service_level_token,
     carrier_option.is_portal_enabled,
     carrier_option.is_default,
+    carrier_option.default_transit_days,
     carrier_option.carrier_id,
     carrier_option.account_id,
     carrier_option.created_at,
@@ -113,16 +114,17 @@ type GetCarrierOptionParams struct {
 }
 
 type GetCarrierOptionRow struct {
-	ID                string
-	Name              string
-	Code              string
-	ServiceLevelToken sql.NullString
-	IsPortalEnabled   bool
-	IsDefault         bool
-	CarrierID         string
-	AccountID         sql.NullString
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
+	ID                 string
+	Name               string
+	Code               string
+	ServiceLevelToken  sql.NullString
+	IsPortalEnabled    bool
+	IsDefault          bool
+	DefaultTransitDays sql.NullInt32
+	CarrierID          string
+	AccountID          sql.NullString
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 }
 
 func (q *Queries) GetCarrierOption(ctx context.Context, arg GetCarrierOptionParams) (GetCarrierOptionRow, error) {
@@ -135,6 +137,7 @@ func (q *Queries) GetCarrierOption(ctx context.Context, arg GetCarrierOptionPara
 		&i.ServiceLevelToken,
 		&i.IsPortalEnabled,
 		&i.IsDefault,
+		&i.DefaultTransitDays,
 		&i.CarrierID,
 		&i.AccountID,
 		&i.CreatedAt,
@@ -151,6 +154,7 @@ SELECT
     carrier_option.service_level_token,
     carrier_option.is_portal_enabled,
     carrier_option.is_default,
+    carrier_option.default_transit_days,
     carrier_option.carrier_id,
     carrier_option.account_id,
     carrier_option.created_at,
@@ -169,16 +173,17 @@ type GetCarrierOptionsByIDsParams struct {
 }
 
 type GetCarrierOptionsByIDsRow struct {
-	ID                string
-	Name              string
-	Code              string
-	ServiceLevelToken sql.NullString
-	IsPortalEnabled   bool
-	IsDefault         bool
-	CarrierID         string
-	AccountID         sql.NullString
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
+	ID                 string
+	Name               string
+	Code               string
+	ServiceLevelToken  sql.NullString
+	IsPortalEnabled    bool
+	IsDefault          bool
+	DefaultTransitDays sql.NullInt32
+	CarrierID          string
+	AccountID          sql.NullString
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 }
 
 // Returns carrier_options (service levels) matching the given IDs that the
@@ -212,6 +217,7 @@ func (q *Queries) GetCarrierOptionsByIDs(ctx context.Context, arg GetCarrierOpti
 			&i.ServiceLevelToken,
 			&i.IsPortalEnabled,
 			&i.IsDefault,
+			&i.DefaultTransitDays,
 			&i.CarrierID,
 			&i.AccountID,
 			&i.CreatedAt,
@@ -238,11 +244,13 @@ INSERT INTO carrier_option (
     service_level_token,
     is_portal_enabled,
     is_default,
+    default_transit_days,
     carrier_id,
     account_id,
     created_at,
     updated_at
 ) VALUES (
+    ?,
     ?,
     ?,
     ?,
@@ -257,14 +265,15 @@ INSERT INTO carrier_option (
 `
 
 type InsertCarrierOptionParams struct {
-	ID                string
-	Name              string
-	Code              string
-	ServiceLevelToken sql.NullString
-	IsPortalEnabled   bool
-	IsDefault         bool
-	CarrierID         string
-	AccountID         sql.NullString
+	ID                 string
+	Name               string
+	Code               string
+	ServiceLevelToken  sql.NullString
+	IsPortalEnabled    bool
+	IsDefault          bool
+	DefaultTransitDays sql.NullInt32
+	CarrierID          string
+	AccountID          sql.NullString
 }
 
 func (q *Queries) InsertCarrierOption(ctx context.Context, arg InsertCarrierOptionParams) error {
@@ -275,6 +284,7 @@ func (q *Queries) InsertCarrierOption(ctx context.Context, arg InsertCarrierOpti
 		arg.ServiceLevelToken,
 		arg.IsPortalEnabled,
 		arg.IsDefault,
+		arg.DefaultTransitDays,
 		arg.CarrierID,
 		arg.AccountID,
 	)
@@ -354,6 +364,7 @@ SELECT
     carrier_option.service_level_token,
     carrier_option.is_portal_enabled,
     carrier_option.is_default,
+    carrier_option.default_transit_days,
     carrier_option.carrier_id,
     carrier_option.account_id,
     carrier_option.created_at,
@@ -383,16 +394,17 @@ type ListCarrierOptionsBackwardParams struct {
 }
 
 type ListCarrierOptionsBackwardRow struct {
-	ID                string
-	Name              string
-	Code              string
-	ServiceLevelToken sql.NullString
-	IsPortalEnabled   bool
-	IsDefault         bool
-	CarrierID         string
-	AccountID         sql.NullString
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
+	ID                 string
+	Name               string
+	Code               string
+	ServiceLevelToken  sql.NullString
+	IsPortalEnabled    bool
+	IsDefault          bool
+	DefaultTransitDays sql.NullInt32
+	CarrierID          string
+	AccountID          sql.NullString
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 }
 
 func (q *Queries) ListCarrierOptionsBackward(ctx context.Context, arg ListCarrierOptionsBackwardParams) ([]ListCarrierOptionsBackwardRow, error) {
@@ -420,6 +432,7 @@ func (q *Queries) ListCarrierOptionsBackward(ctx context.Context, arg ListCarrie
 			&i.ServiceLevelToken,
 			&i.IsPortalEnabled,
 			&i.IsDefault,
+			&i.DefaultTransitDays,
 			&i.CarrierID,
 			&i.AccountID,
 			&i.CreatedAt,
@@ -446,6 +459,7 @@ SELECT
     carrier_option.service_level_token,
     carrier_option.is_portal_enabled,
     carrier_option.is_default,
+    carrier_option.default_transit_days,
     carrier_option.carrier_id,
     carrier_option.account_id,
     carrier_option.created_at,
@@ -461,16 +475,17 @@ type ListCarrierOptionsByCarrierIDParams struct {
 }
 
 type ListCarrierOptionsByCarrierIDRow struct {
-	ID                string
-	Name              string
-	Code              string
-	ServiceLevelToken sql.NullString
-	IsPortalEnabled   bool
-	IsDefault         bool
-	CarrierID         string
-	AccountID         sql.NullString
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
+	ID                 string
+	Name               string
+	Code               string
+	ServiceLevelToken  sql.NullString
+	IsPortalEnabled    bool
+	IsDefault          bool
+	DefaultTransitDays sql.NullInt32
+	CarrierID          string
+	AccountID          sql.NullString
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 }
 
 func (q *Queries) ListCarrierOptionsByCarrierID(ctx context.Context, arg ListCarrierOptionsByCarrierIDParams) ([]ListCarrierOptionsByCarrierIDRow, error) {
@@ -489,6 +504,7 @@ func (q *Queries) ListCarrierOptionsByCarrierID(ctx context.Context, arg ListCar
 			&i.ServiceLevelToken,
 			&i.IsPortalEnabled,
 			&i.IsDefault,
+			&i.DefaultTransitDays,
 			&i.CarrierID,
 			&i.AccountID,
 			&i.CreatedAt,
@@ -515,6 +531,7 @@ SELECT
     carrier_option.service_level_token,
     carrier_option.is_portal_enabled,
     carrier_option.is_default,
+    carrier_option.default_transit_days,
     carrier_option.carrier_id,
     carrier_option.account_id,
     carrier_option.created_at,
@@ -545,16 +562,17 @@ type ListCarrierOptionsForwardParams struct {
 }
 
 type ListCarrierOptionsForwardRow struct {
-	ID                string
-	Name              string
-	Code              string
-	ServiceLevelToken sql.NullString
-	IsPortalEnabled   bool
-	IsDefault         bool
-	CarrierID         string
-	AccountID         sql.NullString
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
+	ID                 string
+	Name               string
+	Code               string
+	ServiceLevelToken  sql.NullString
+	IsPortalEnabled    bool
+	IsDefault          bool
+	DefaultTransitDays sql.NullInt32
+	CarrierID          string
+	AccountID          sql.NullString
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 }
 
 func (q *Queries) ListCarrierOptionsForward(ctx context.Context, arg ListCarrierOptionsForwardParams) ([]ListCarrierOptionsForwardRow, error) {
@@ -583,6 +601,7 @@ func (q *Queries) ListCarrierOptionsForward(ctx context.Context, arg ListCarrier
 			&i.ServiceLevelToken,
 			&i.IsPortalEnabled,
 			&i.IsDefault,
+			&i.DefaultTransitDays,
 			&i.CarrierID,
 			&i.AccountID,
 			&i.CreatedAt,
@@ -607,18 +626,20 @@ UPDATE carrier_option SET
     code = COALESCE(?, code),
     is_portal_enabled = COALESCE(?, is_portal_enabled),
     is_default = COALESCE(?, is_default),
+    default_transit_days = ?,
     updated_at = NOW(3)
 WHERE id = ?
 AND account_id = ?
 `
 
 type UpdateCarrierOptionParams struct {
-	Name            sql.NullString
-	Code            sql.NullString
-	IsPortalEnabled sql.NullBool
-	IsDefault       sql.NullBool
-	ID              string
-	AccountID       sql.NullString
+	Name               sql.NullString
+	Code               sql.NullString
+	IsPortalEnabled    sql.NullBool
+	IsDefault          sql.NullBool
+	DefaultTransitDays sql.NullInt32
+	ID                 string
+	AccountID          sql.NullString
 }
 
 func (q *Queries) UpdateCarrierOption(ctx context.Context, arg UpdateCarrierOptionParams) (sql.Result, error) {
@@ -627,6 +648,7 @@ func (q *Queries) UpdateCarrierOption(ctx context.Context, arg UpdateCarrierOpti
 		arg.Code,
 		arg.IsPortalEnabled,
 		arg.IsDefault,
+		arg.DefaultTransitDays,
 		arg.ID,
 		arg.AccountID,
 	)

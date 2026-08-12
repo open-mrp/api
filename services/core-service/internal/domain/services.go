@@ -1231,6 +1231,9 @@ type VolumeDiscountSvc interface {
 }
 
 type SalesOrderSvc interface {
+	// TransitWarmer is embedded so the order-event consumers can drive lane warming through the same service that reads the cache back when a commitment is stamped.
+	TransitWarmer
+
 	// ListSalesOrders returns a paginated list of sales orders for the caller's account. Supports customer actor access via BuyerAccountID filter.
 	ListSalesOrders(ctx context.Context, params ListSalesOrdersParams) (*ListSalesOrdersResult, *apierror.APIError)
 

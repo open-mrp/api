@@ -258,6 +258,8 @@ var typeRegistry = map[string]any{
 	"JobType":                         JobType(""),
 	"JobResultAction":                 JobResultAction(""),
 	"LeadTimeSource":                  LeadTimeSource(""),
+	"TransitSource":                   TransitSource(""),
+	"TransitEstimateSource":           TransitEstimateSource(""),
 	"ScheduleAtRiskReason":            ScheduleAtRiskReason(""),
 	"FulfillmentPolicy":               FulfillmentPolicy(""),
 	"FulfillmentPolicySource":         FulfillmentPolicySource(""),

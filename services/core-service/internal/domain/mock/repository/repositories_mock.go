@@ -5443,6 +5443,59 @@ func (mr *MockCarrierRepoMockRecorder) Update(ctx, params any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockCarrierRepo)(nil).Update), ctx, params)
 }
 
+// MockCarrierTransitEstimateRepo is a mock of CarrierTransitEstimateRepo interface.
+type MockCarrierTransitEstimateRepo struct {
+	ctrl     *gomock.Controller
+	recorder *MockCarrierTransitEstimateRepoMockRecorder
+	isgomock struct{}
+}
+
+// MockCarrierTransitEstimateRepoMockRecorder is the mock recorder for MockCarrierTransitEstimateRepo.
+type MockCarrierTransitEstimateRepoMockRecorder struct {
+	mock *MockCarrierTransitEstimateRepo
+}
+
+// NewMockCarrierTransitEstimateRepo creates a new mock instance.
+func NewMockCarrierTransitEstimateRepo(ctrl *gomock.Controller) *MockCarrierTransitEstimateRepo {
+	mock := &MockCarrierTransitEstimateRepo{ctrl: ctrl}
+	mock.recorder = &MockCarrierTransitEstimateRepoMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockCarrierTransitEstimateRepo) EXPECT() *MockCarrierTransitEstimateRepoMockRecorder {
+	return m.recorder
+}
+
+// Resolve mocks base method.
+func (m *MockCarrierTransitEstimateRepo) Resolve(ctx context.Context, accountID string, lane domain.TransitLane) (*domain.CarrierTransitCandidates, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Resolve", ctx, accountID, lane)
+	ret0, _ := ret[0].(*domain.CarrierTransitCandidates)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Resolve indicates an expected call of Resolve.
+func (mr *MockCarrierTransitEstimateRepoMockRecorder) Resolve(ctx, accountID, lane any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Resolve", reflect.TypeOf((*MockCarrierTransitEstimateRepo)(nil).Resolve), ctx, accountID, lane)
+}
+
+// Upsert mocks base method.
+func (m *MockCarrierTransitEstimateRepo) Upsert(ctx context.Context, params domain.UpsertTransitEstimateParams) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Upsert", ctx, params)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Upsert indicates an expected call of Upsert.
+func (mr *MockCarrierTransitEstimateRepoMockRecorder) Upsert(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upsert", reflect.TypeOf((*MockCarrierTransitEstimateRepo)(nil).Upsert), ctx, params)
+}
+
 // MockServiceLevelRepo is a mock of ServiceLevelRepo interface.
 type MockServiceLevelRepo struct {
 	ctrl     *gomock.Controller
@@ -10707,6 +10760,21 @@ func (mr *MockProductionScheduleInputRepoMockRecorder) CountConstraintMachinesWi
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountConstraintMachinesWithoutStep", reflect.TypeOf((*MockProductionScheduleInputRepo)(nil).CountConstraintMachinesWithoutStep), ctx, accountID, departmentID)
 }
 
+// CountUncommittedOrders mocks base method.
+func (m *MockProductionScheduleInputRepo) CountUncommittedOrders(ctx context.Context, accountID string, start, end time.Time) (int, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CountUncommittedOrders", ctx, accountID, start, end)
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CountUncommittedOrders indicates an expected call of CountUncommittedOrders.
+func (mr *MockProductionScheduleInputRepoMockRecorder) CountUncommittedOrders(ctx, accountID, start, end any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountUncommittedOrders", reflect.TypeOf((*MockProductionScheduleInputRepo)(nil).CountUncommittedOrders), ctx, accountID, start, end)
+}
+
 // GetAccountScheduleSettings mocks base method.
 func (m *MockProductionScheduleInputRepo) GetAccountScheduleSettings(ctx context.Context, accountID string) (*domain.ProductionScheduleSettingsRow, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -10960,6 +11028,21 @@ func (m *MockProductionScheduleInputRepo) GetStepConsumptionItems(ctx context.Co
 func (mr *MockProductionScheduleInputRepoMockRecorder) GetStepConsumptionItems(ctx, stepIDs any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStepConsumptionItems", reflect.TypeOf((*MockProductionScheduleInputRepo)(nil).GetStepConsumptionItems), ctx, stepIDs)
+}
+
+// ListDeliveryOutcomes mocks base method.
+func (m *MockProductionScheduleInputRepo) ListDeliveryOutcomes(ctx context.Context, accountID string, start, end time.Time) ([]scheduling.DeliveryOutcome, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDeliveryOutcomes", ctx, accountID, start, end)
+	ret0, _ := ret[0].([]scheduling.DeliveryOutcome)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListDeliveryOutcomes indicates an expected call of ListDeliveryOutcomes.
+func (mr *MockProductionScheduleInputRepoMockRecorder) ListDeliveryOutcomes(ctx, accountID, start, end any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeliveryOutcomes", reflect.TypeOf((*MockProductionScheduleInputRepo)(nil).ListDeliveryOutcomes), ctx, accountID, start, end)
 }
 
 // ListItemProductLines mocks base method.

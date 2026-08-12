@@ -70,7 +70,7 @@ func TestResolveCommitment_AddsCalendarDaysToTheIssueDate(t *testing.T) {
 
 	issued := time.Date(2026, time.August, 6, 17, 42, 3, 0, time.UTC)
 
-	got, ok := ResolveCommitment(issued, nil, LeadTimeInput{AccountLeadTimeDays: new(30)})
+	got, ok := ResolveCommitment(issued, nil, LeadTimeInput{AccountLeadTimeDays: new(30)}, nil)
 	if !ok {
 		t.Fatal("expected a commitment")
 	}
@@ -92,8 +92,8 @@ func TestResolveCommitment_TruncatesToTheDay(t *testing.T) {
 	late := time.Date(2026, time.August, 6, 23, 59, 59, 0, time.UTC)
 	in := LeadTimeInput{AccountLeadTimeDays: new(7)}
 
-	first, _ := ResolveCommitment(early, nil, in)
-	second, _ := ResolveCommitment(late, nil, in)
+	first, _ := ResolveCommitment(early, nil, in, nil)
+	second, _ := ResolveCommitment(late, nil, in, nil)
 
 	if !first.ShipByDate.Equal(second.ShipByDate) {
 		t.Fatalf("same-day orders got different ship-by dates: %s vs %s", first.ShipByDate, second.ShipByDate)
@@ -109,7 +109,7 @@ func TestResolveCommitment_PromisedDateWinsEveryRule(t *testing.T) {
 	got, ok := ResolveCommitment(issued, &promised, LeadTimeInput{
 		CustomerLeadTimeDays: new(3),
 		AccountLeadTimeDays:  new(30),
-	})
+	}, nil)
 	if !ok {
 		t.Fatal("expected a commitment")
 	}
@@ -132,7 +132,7 @@ func TestResolveCommitment_PromiseBeforeIssueIsRecordedNegative(t *testing.T) {
 	issued := time.Date(2026, time.August, 6, 12, 0, 0, 0, time.UTC)
 	promised := time.Date(2026, time.August, 1, 0, 0, 0, 0, time.UTC)
 
-	got, ok := ResolveCommitment(issued, &promised, LeadTimeInput{AccountLeadTimeDays: new(30)})
+	got, ok := ResolveCommitment(issued, &promised, LeadTimeInput{AccountLeadTimeDays: new(30)}, nil)
 	if !ok || got.LeadTimeDays != -5 {
 		t.Fatalf("got (%d, %v), want (-5, true)", got.LeadTimeDays, ok)
 	}
@@ -145,7 +145,7 @@ func TestResolveCommitment_NormalizesToUTC(t *testing.T) {
 	eastern := time.FixedZone("EST", -5*60*60)
 	issued := time.Date(2026, time.August, 6, 20, 0, 0, 0, eastern)
 
-	got, ok := ResolveCommitment(issued, nil, LeadTimeInput{AccountLeadTimeDays: new(1)})
+	got, ok := ResolveCommitment(issued, nil, LeadTimeInput{AccountLeadTimeDays: new(1)}, nil)
 	if !ok {
 		t.Fatal("expected a commitment")
 	}
@@ -159,7 +159,93 @@ func TestResolveCommitment_NothingConfigured(t *testing.T) {
 	t.Parallel()
 
 	issued := time.Date(2026, time.August, 6, 12, 0, 0, 0, time.UTC)
-	if _, ok := ResolveCommitment(issued, nil, LeadTimeInput{}); ok {
+	if _, ok := ResolveCommitment(issued, nil, LeadTimeInput{}, nil); ok {
 		t.Fatal("expected no commitment when every level is unset")
+	}
+}
+
+// The inversion: a promised date is when the customer expects delivery, so the order has to leave early enough for the carrier to cover the lane.
+func TestResolveCommitment_PromisedDateIsDeliveryLessTransit(t *testing.T) {
+	t.Parallel()
+
+	issued := time.Date(2026, time.August, 6, 12, 0, 0, 0, time.UTC)
+	promised := time.Date(2026, time.September, 7, 0, 0, 0, 0, time.UTC) // Monday
+
+	got, ok := ResolveCommitment(issued, &promised, LeadTimeInput{AccountLeadTimeDays: new(30)},
+		&Transit{Days: 3, Source: "carrier_lane"})
+	if !ok {
+		t.Fatal("expected a commitment")
+	}
+
+	// Three business days back from Monday the 7th is Wednesday the 2nd.
+	if want := time.Date(2026, time.September, 2, 0, 0, 0, 0, time.UTC); !got.ShipByDate.Equal(want) {
+		t.Fatalf("ship-by = %s, want %s", got.ShipByDate.Format(time.DateOnly), want.Format(time.DateOnly))
+	}
+	if got.TransitDays == nil || *got.TransitDays != 3 || got.TransitSource != "carrier_lane" {
+		t.Fatalf("transit = (%v, %q), want (3, carrier_lane)", got.TransitDays, got.TransitSource)
+	}
+	if got.Source != LeadTimeSourceManual {
+		t.Fatalf("source = %q, want manual", got.Source)
+	}
+	// The committed span is measured to the ship-by, not to the delivery date: it is how long the shop has to build.
+	if got.LeadTimeDays != 27 {
+		t.Fatalf("lead time = %d, want 27", got.LeadTimeDays)
+	}
+}
+
+// An unknown lane must not be guessed at. Falling back to the promised date is what the system did before transit existed, and it is visibly wrong rather than quietly wrong.
+func TestResolveCommitment_UnknownTransitLeavesPromisedDateIntact(t *testing.T) {
+	t.Parallel()
+
+	issued := time.Date(2026, time.August, 6, 12, 0, 0, 0, time.UTC)
+	promised := time.Date(2026, time.September, 7, 0, 0, 0, 0, time.UTC)
+
+	got, ok := ResolveCommitment(issued, &promised, LeadTimeInput{AccountLeadTimeDays: new(30)}, nil)
+	if !ok {
+		t.Fatal("expected a commitment")
+	}
+	if !got.ShipByDate.Equal(promised) {
+		t.Fatalf("ship-by = %s, want the promised date %s", got.ShipByDate.Format(time.DateOnly), promised.Format(time.DateOnly))
+	}
+	if got.TransitDays != nil || got.TransitSource != "" {
+		t.Fatalf("transit = (%v, %q), want unset", got.TransitDays, got.TransitSource)
+	}
+}
+
+// A configured lead time is already a ship lead time. Subtracting transit from it would deduct the same journey twice and pull every defaulted order forward for no reason.
+func TestResolveCommitment_LeadTimeBranchIgnoresTransit(t *testing.T) {
+	t.Parallel()
+
+	issued := time.Date(2026, time.August, 6, 12, 0, 0, 0, time.UTC)
+
+	withTransit, ok := ResolveCommitment(issued, nil, LeadTimeInput{AccountLeadTimeDays: new(30)},
+		&Transit{Days: 5, Source: "carrier_lane"})
+	if !ok {
+		t.Fatal("expected a commitment")
+	}
+	without, _ := ResolveCommitment(issued, nil, LeadTimeInput{AccountLeadTimeDays: new(30)}, nil)
+
+	if !withTransit.ShipByDate.Equal(without.ShipByDate) {
+		t.Fatalf("transit moved a lead-time commitment: %s vs %s", withTransit.ShipByDate, without.ShipByDate)
+	}
+	if withTransit.TransitDays != nil {
+		t.Fatalf("transit = %v, want unset on the lead-time branch", withTransit.TransitDays)
+	}
+}
+
+// Zero is a real answer (a same-day or will-call lane), distinct from unknown: it stamps a source, so the commitment can still say where it came from.
+func TestResolveCommitment_ZeroTransitIsRecorded(t *testing.T) {
+	t.Parallel()
+
+	issued := time.Date(2026, time.August, 6, 12, 0, 0, 0, time.UTC)
+	promised := time.Date(2026, time.September, 7, 0, 0, 0, 0, time.UTC)
+
+	got, _ := ResolveCommitment(issued, &promised, LeadTimeInput{}, &Transit{Days: 0, Source: "service_level"})
+
+	if !got.ShipByDate.Equal(promised) {
+		t.Fatalf("ship-by = %s, want %s", got.ShipByDate.Format(time.DateOnly), promised.Format(time.DateOnly))
+	}
+	if got.TransitDays == nil || *got.TransitDays != 0 || got.TransitSource != "service_level" {
+		t.Fatalf("transit = (%v, %q), want (0, service_level)", got.TransitDays, got.TransitSource)
 	}
 }

@@ -492,16 +492,32 @@ type Carrier struct {
 }
 
 type CarrierOption struct {
-	ID                string
-	Code              string
-	Name              string
-	ServiceLevelToken sql.NullString
-	IsPortalEnabled   bool
-	IsDefault         bool
-	CarrierID         string
-	AccountID         sql.NullString
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
+	ID                 string
+	Code               string
+	Name               string
+	ServiceLevelToken  sql.NullString
+	IsPortalEnabled    bool
+	IsDefault          bool
+	CarrierID          string
+	AccountID          sql.NullString
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	DefaultTransitDays sql.NullInt32
+}
+
+type CarrierTransitEstimate struct {
+	ID              string
+	AccountID       string
+	CarrierOptionID string
+	OriginCountry   string
+	OriginPostal    string
+	DestCountry     string
+	DestPostal      string
+	TransitDays     int32
+	SourceCode      string
+	RefreshedAt     time.Time
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 type ChangeLog struct {
@@ -2050,6 +2066,8 @@ type SalesOrder struct {
 	LeadTimeDays          sql.NullInt32
 	LeadTimeSourceCode    sql.NullString
 	ShipByDate            sql.NullTime
+	TransitDays           sql.NullInt32
+	TransitSourceCode     sql.NullString
 }
 
 type SalesOrderLine struct {

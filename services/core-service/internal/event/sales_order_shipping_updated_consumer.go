@@ -23,6 +23,7 @@ type SalesOrderShippingUpdatedConsumer struct {
 	rabbitmq      messaging.MessageBroker
 	inboxConsumer *messaging.InboxConsumer
 	repos         domain.RepoFactory
+	transitWarmer domain.TransitWarmer
 	tracer        trace.Tracer
 }
 
@@ -30,11 +31,13 @@ func NewSalesOrderShippingUpdatedConsumer(
 	rabbitmq messaging.MessageBroker,
 	inboxRepo messaging.InboxRepo,
 	repos domain.RepoFactory,
+	transitWarmer domain.TransitWarmer,
 ) *SalesOrderShippingUpdatedConsumer {
 	return &SalesOrderShippingUpdatedConsumer{
 		rabbitmq:      rabbitmq,
 		inboxConsumer: messaging.NewInboxConsumer(inboxRepo, "core-service"),
 		repos:         repos,
+		transitWarmer: transitWarmer,
 		tracer:        tracing.GetTracer("core-service.sales_order_shipping_updated_consumer"),
 	}
 }
@@ -90,6 +93,9 @@ func (c *SalesOrderShippingUpdatedConsumer) handleMessage(ctx context.Context, m
 		return nil
 	}
 
+	// The carrier, service level or ship-to just moved, which is exactly what a transit lane is keyed on, so the order's old lane no longer describes it. Warming here is what keeps a lane ready for orders whose carrier is chosen after create rather than during it.
+	c.warmTransit(ctx, data.AccountID, data.SalesOrderID)
+
 	// Shipments require a carrier; if the order has none there is nothing to cascade.
 	if order.CarrierID == nil {
 		return nil
@@ -110,4 +116,14 @@ func (c *SalesOrderShippingUpdatedConsumer) handleMessage(ctx context.Context, m
 		return nil
 	}
 	return nil
+}
+
+// warmTransit refreshes the cached carrier transit for the order's current lane. Failures are swallowed for the same reason as on create: the estimate is a cache with a fallback, and retrying the message would redo the shipment sync below to refill it.
+func (c *SalesOrderShippingUpdatedConsumer) warmTransit(ctx context.Context, accountID, salesOrderID string) {
+	if c.transitWarmer == nil {
+		return
+	}
+	if apiErr := c.transitWarmer.WarmForOrder(ctx, accountID, salesOrderID); apiErr != nil {
+		log.Printf("[sales_order_shipping_updated] transit warm failed for order %s (account %s): %v", salesOrderID, accountID, apiErr)
+	}
 }

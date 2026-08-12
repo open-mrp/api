@@ -788,6 +788,8 @@ SELECT
     so.ship_by_date,
     so.lead_time_days,
     so.lead_time_source_code,
+    so.transit_days,
+    so.transit_source_code,
     so.created_at,
     so.updated_at,
     -- Customer
@@ -928,6 +930,8 @@ type GetSalesOrderRow struct {
 	ShipByDate                  sql.NullTime
 	LeadTimeDays                sql.NullInt32
 	LeadTimeSourceCode          sql.NullString
+	TransitDays                 sql.NullInt32
+	TransitSourceCode           sql.NullString
 	CreatedAt                   time.Time
 	UpdatedAt                   time.Time
 	CustomerName                string
@@ -1031,6 +1035,8 @@ func (q *Queries) GetSalesOrder(ctx context.Context, arg GetSalesOrderParams) (G
 		&i.ShipByDate,
 		&i.LeadTimeDays,
 		&i.LeadTimeSourceCode,
+		&i.TransitDays,
+		&i.TransitSourceCode,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.CustomerName,
@@ -1134,6 +1140,8 @@ SELECT
     so.ship_by_date,
     so.lead_time_days,
     so.lead_time_source_code,
+    so.transit_days,
+    so.transit_source_code,
     so.created_at,
     so.updated_at,
     -- Customer
@@ -1276,6 +1284,8 @@ type GetSalesOrderForCustomerRow struct {
 	ShipByDate                  sql.NullTime
 	LeadTimeDays                sql.NullInt32
 	LeadTimeSourceCode          sql.NullString
+	TransitDays                 sql.NullInt32
+	TransitSourceCode           sql.NullString
 	CreatedAt                   time.Time
 	UpdatedAt                   time.Time
 	CustomerName                string
@@ -1379,6 +1389,8 @@ func (q *Queries) GetSalesOrderForCustomer(ctx context.Context, arg GetSalesOrde
 		&i.ShipByDate,
 		&i.LeadTimeDays,
 		&i.LeadTimeSourceCode,
+		&i.TransitDays,
+		&i.TransitSourceCode,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.CustomerName,
@@ -2086,6 +2098,8 @@ SELECT STRAIGHT_JOIN
     so.ship_by_date,
     so.lead_time_days,
     so.lead_time_source_code,
+    so.transit_days,
+    so.transit_source_code,
     so.created_at,
     so.updated_at,
     -- Customer
@@ -2318,6 +2332,8 @@ type ListSalesOrdersBackwardRow struct {
 	ShipByDate                  sql.NullTime
 	LeadTimeDays                sql.NullInt32
 	LeadTimeSourceCode          sql.NullString
+	TransitDays                 sql.NullInt32
+	TransitSourceCode           sql.NullString
 	CreatedAt                   time.Time
 	UpdatedAt                   time.Time
 	CustomerName                string
@@ -2508,6 +2524,8 @@ func (q *Queries) ListSalesOrdersBackward(ctx context.Context, arg ListSalesOrde
 			&i.ShipByDate,
 			&i.LeadTimeDays,
 			&i.LeadTimeSourceCode,
+			&i.TransitDays,
+			&i.TransitSourceCode,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.CustomerName,
@@ -2619,6 +2637,8 @@ SELECT STRAIGHT_JOIN
     so.ship_by_date,
     so.lead_time_days,
     so.lead_time_source_code,
+    so.transit_days,
+    so.transit_source_code,
     so.created_at,
     so.updated_at,
     -- Customer
@@ -2852,6 +2872,8 @@ type ListSalesOrdersForwardRow struct {
 	ShipByDate                  sql.NullTime
 	LeadTimeDays                sql.NullInt32
 	LeadTimeSourceCode          sql.NullString
+	TransitDays                 sql.NullInt32
+	TransitSourceCode           sql.NullString
 	CreatedAt                   time.Time
 	UpdatedAt                   time.Time
 	CustomerName                string
@@ -3046,6 +3068,8 @@ func (q *Queries) ListSalesOrdersForward(ctx context.Context, arg ListSalesOrder
 			&i.ShipByDate,
 			&i.LeadTimeDays,
 			&i.LeadTimeSourceCode,
+			&i.TransitDays,
+			&i.TransitSourceCode,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.CustomerName,
@@ -3436,6 +3460,8 @@ UPDATE sales_order SET
     ship_by_date = ?,
     lead_time_days = ?,
     lead_time_source_code = ?,
+    transit_days = ?,
+    transit_source_code = ?,
     updated_at = NOW(3)
 WHERE id = ?
 AND owner_account_id = ?
@@ -3445,6 +3471,8 @@ type SetSalesOrderShipByCommitmentParams struct {
 	ShipByDate         sql.NullTime
 	LeadTimeDays       sql.NullInt32
 	LeadTimeSourceCode sql.NullString
+	TransitDays        sql.NullInt32
+	TransitSourceCode  sql.NullString
 	ID                 string
 	AccountID          string
 }
@@ -3457,6 +3485,8 @@ func (q *Queries) SetSalesOrderShipByCommitment(ctx context.Context, arg SetSale
 		arg.ShipByDate,
 		arg.LeadTimeDays,
 		arg.LeadTimeSourceCode,
+		arg.TransitDays,
+		arg.TransitSourceCode,
 		arg.ID,
 		arg.AccountID,
 	)

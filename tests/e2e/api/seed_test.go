@@ -325,6 +325,18 @@ const (
 	SeedSystemCarrierID      = "syscar_01seedsysdefault"
 	SeedSystemServiceLevelID = "crop_01seedsysground000"
 
+	// Carrier transit fixtures (0014_e2e_extras.sql). Unlike SeedCarrierID this carrier
+	// has a Shippo account, so rating reaches the stub and lanes actually warm.
+	SeedTransitCarrierID = "cr_01e2etransitcarrier"
+	// Rated by the stub: ground 3 days, 2-day 2 days, overnight 1 day.
+	SeedTransitGroundServiceLevelID    = "crop_01e2etransitgrnd00"
+	SeedTransitTwoDayServiceLevelID    = "crop_01e2etransit2day0"
+	SeedTransitOvernightServiceLevelID = "crop_01e2etransitovrn0"
+	// No service level token, so no quote can ever match: the only transit these can
+	// produce is the service level's own default (5 days), or none at all.
+	SeedTransitDefaultOnlyServiceLevelID = "crop_01e2etransitdflt0"
+	SeedTransitNoTransitServiceLevelID   = "crop_01e2etransitnone0"
+
 	// System
 	SeedSysPropertyID = "sypp_01seedtxnumber000"
 

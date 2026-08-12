@@ -392,6 +392,9 @@ message SalesOrderInfo {
   optional google.protobuf.Timestamp ship_by_date = 104;
   optional int32 lead_time_days = 105;
   optional string lead_time_source_code = 106;
+  // Carrier transit subtracted from a promised delivery date to reach ship_by_date.
+  optional int32 transit_days = 107;
+  optional string transit_source_code = 108;
 }
 
 // SalesOrderLineInfo represents a sales order line.

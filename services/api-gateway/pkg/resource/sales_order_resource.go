@@ -183,12 +183,20 @@ type SalesOrder struct {
 	PromisedAt *time.Time `json:"promised_at"`
 	// Date this order is contractually due to ship.
 	//
-	// Stamped when the order is issued, from the promised date if one was set, otherwise from the lead time on the customer, its account group, or the account. It is not recomputed afterwards, so renegotiating a customer's lead time leaves commitments already made where they are. Cleared if the order is unissued.
+	// Stamped when the order is issued. With a promised delivery date, this is that date less the carrier's transit for the order's lane, counted in business days — the day the order has to leave to arrive when promised. Otherwise it comes from the lead time on the customer, its account group, or the account.
+	//
+	// It is not recomputed afterwards, so neither renegotiating a customer's lead time nor a later carrier estimate moves commitments already made. Cleared if the order is unissued.
 	ShipByDate *time.Time `json:"ship_by_date"`
 	// Calendar days between issue and the ship-by date.
 	LeadTimeDays *int32 `json:"lead_time_days"`
 	// Which rule produced the ship-by date.
 	LeadTimeSource *constants.LeadTimeSource `json:"lead_time_source"`
+	// Business days the carrier needs to cover this order's lane, subtracted from the promised delivery date to reach the ship-by date.
+	//
+	// Only set when a delivery date was promised and the lane could be priced. Without it the ship-by date falls back to the promised date itself.
+	TransitDays *int32 `json:"transit_days"`
+	// Where the transit estimate came from.
+	TransitSource *constants.TransitSource `json:"transit_source"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.

@@ -385,6 +385,8 @@ func salesOrderToProto(o *domain.SalesOrder) *pb.SalesOrderInfo {
 	}
 	info.LeadTimeDays = o.LeadTimeDays
 	info.LeadTimeSourceCode = o.LeadTimeSourceCode
+	info.TransitDays = o.TransitDays
+	info.TransitSourceCode = o.TransitSourceCode
 
 	if o.CarrierIsPortalEnabled != nil {
 		info.CarrierIsPortalEnabled = o.CarrierIsPortalEnabled

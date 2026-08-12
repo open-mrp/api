@@ -748,7 +748,7 @@ func Run(
 		}
 	}
 
-	salesOrderCreatedConsumer := event.NewSalesOrderCreatedConsumer(rabbitmq, inboxRepo, hubspotSync)
+	salesOrderCreatedConsumer := event.NewSalesOrderCreatedConsumer(rabbitmq, inboxRepo, hubspotSync, salesOrderSvc)
 	if err := salesOrderCreatedConsumer.Listen(ctx); err != nil {
 		return err
 	}
@@ -769,7 +769,7 @@ func Run(
 	}
 	defer scheduleCadence.Stop()
 
-	salesOrderShippingUpdatedConsumer := event.NewSalesOrderShippingUpdatedConsumer(rabbitmq, inboxRepo, repoFactory)
+	salesOrderShippingUpdatedConsumer := event.NewSalesOrderShippingUpdatedConsumer(rabbitmq, inboxRepo, repoFactory, salesOrderSvc)
 	if err := salesOrderShippingUpdatedConsumer.Listen(ctx); err != nil {
 		return err
 	}

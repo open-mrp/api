@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.44.5](https://github.com/Augno/api/compare/v0.44.4...v0.44.5) (2026-08-12)
+
+
+### Bug Fixes
+
+* add default transit days to service levels and sales orders ([#470](https://github.com/Augno/api/issues/470)) ([2154c23](https://github.com/Augno/api/commit/2154c23de8629009f93226181dd732b42d72034d))
+
 ## [0.44.4](https://github.com/Augno/api/compare/v0.44.3...v0.44.4) (2026-08-12)
 
 

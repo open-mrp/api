@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.44.4](https://github.com/Augno/api/compare/v0.44.3...v0.44.4) (2026-08-12)
+
+
+### Bug Fixes
+
+* retry transient connection drops in GetEchelonOnHand ([#468](https://github.com/Augno/api/issues/468)) ([7b45201](https://github.com/Augno/api/commit/7b45201a4ab4856847716ea0056fa6b4b69fb501))
+
 ## [0.44.3](https://github.com/Augno/api/compare/v0.44.2...v0.44.3) (2026-08-10)
 
 

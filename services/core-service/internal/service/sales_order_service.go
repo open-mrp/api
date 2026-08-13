@@ -1364,7 +1364,7 @@ func (s *salesOrderSvcImpl) sendOrderAcknowledgementEmail(ctx context.Context, a
 	// email rather than blocking the acknowledgement.
 	if pdfBytes, err := buildOrderAcknowledgementPDF(data); err == nil {
 		encoded := base64.StdEncoding.EncodeToString(pdfBytes)
-		filename := "order-acknowledgement-" + data.OrderNumber + ".pdf"
+		filename := ackAttachmentFilename(data.OrderNumber, data.CustomerPO)
 		contentType := "application/pdf"
 		emailData.AttachmentData = &encoded
 		emailData.AttachmentFilename = &filename

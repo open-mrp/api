@@ -326,6 +326,36 @@ func formatQty(qty decimal.Decimal, unitAbbr string) string {
 	return out
 }
 
+// ackAttachmentFilename names the emailed acknowledgement PDF, tagging the customer's
+// PO number when the order has one so the customer can file it against their PO.
+func ackAttachmentFilename(orderNumber, customerPO string) string {
+	name := "order-acknowledgement-" + orderNumber
+	if po := filenameSafe(customerPO); po != "" {
+		name += "-PO-" + po
+	}
+	return name + ".pdf"
+}
+
+// filenameSafe reduces free text (e.g. a customer PO number) to a token safe in an
+// attachment filename; runs of unsafe characters collapse to a single "-".
+func filenameSafe(s string) string {
+	var b strings.Builder
+	pendingDash := false
+	for _, r := range s {
+		safe := r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || r == '.' || r == '_'
+		if !safe {
+			pendingDash = b.Len() > 0
+			continue
+		}
+		if pendingDash {
+			b.WriteByte('-')
+			pendingDash = false
+		}
+		b.WriteRune(r)
+	}
+	return strings.Trim(b.String(), ".-")
+}
+
 func nonEmpty(vals ...string) []string {
 	out := make([]string, 0, len(vals))
 	for _, v := range vals {

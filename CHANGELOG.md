@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.45.0](https://github.com/Augno/api/compare/v0.44.5...v0.45.0) (2026-08-13)
+
+
+### Features
+
+* show customer PO number in order acknowledgement email ([#474](https://github.com/Augno/api/issues/474)) ([abac4a0](https://github.com/Augno/api/commit/abac4a0d8f3c3d12184c4861bbf4976a40e70a0b))
+
+
+### Bug Fixes
+
+* make hubspot sync easier to manage ([#472](https://github.com/Augno/api/issues/472)) ([cff1527](https://github.com/Augno/api/commit/cff15271fd8d33cc60dab381b8de3fc63d08a4f5))
+
 ## [0.44.5](https://github.com/Augno/api/compare/v0.44.4...v0.44.5) (2026-08-12)
 
 

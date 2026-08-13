@@ -53,6 +53,29 @@ func TestRenderOrderCheckoutIncludesCheckoutURL(t *testing.T) {
 	require.NotContains(t, body, "ZgotmplZ")
 }
 
+// The Customer PO row only renders when the order carries a PO number, so a blank PO doesn't leave an empty labeled row.
+func TestRenderOrderAcknowledgementCustomerPO(t *testing.T) {
+	renderer, apiErr := NewTemplateRenderer()
+	require.Nil(t, apiErr)
+
+	params := map[string]any{
+		"account_name": "Comme Cardiovascular",
+		"order_number": "23124",
+		"order_date":   "8/13/2026",
+		"order_total":  "$150.00",
+		"customer_po":  "PO-4521",
+	}
+	body, apiErr := renderer.RenderTemplate(context.Background(), constants.EmailTemplateOrderAcknowledgement, params)
+	require.Nil(t, apiErr)
+	require.Contains(t, body, "Customer PO")
+	require.Contains(t, body, "PO-4521")
+
+	params["customer_po"] = ""
+	body, apiErr = renderer.RenderTemplate(context.Background(), constants.EmailTemplateOrderAcknowledgement, params)
+	require.Nil(t, apiErr)
+	require.NotContains(t, body, "Customer PO")
+}
+
 // The Stripe checkout URL carries a query string of escaped fragments; html/template must keep it intact inside href.
 func TestRenderOrderCheckoutPreservesEscapedQueryString(t *testing.T) {
 	renderer, apiErr := NewTemplateRenderer()

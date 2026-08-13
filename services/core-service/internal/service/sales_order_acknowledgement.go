@@ -191,6 +191,7 @@ func (d ackData) emailParams() map[string]any {
 		"account_name":      d.AccountName,
 		"logo_url":          d.LogoURL,
 		"order_number":      d.OrderNumber,
+		"customer_po":       d.CustomerPO,
 		"order_date":        d.OrderDateShort,
 		"order_total":       d.OrderTotal,
 		"has_ship_to":       d.HasShipTo,

@@ -33,6 +33,7 @@
                                 <p style="margin: 0 0 8px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #8a94a6;">Order Summary</p>
                                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size: 0.82rem; font-weight: 700; color: #1a2233;">
                                     <tr><td style="padding: 3px 0;">Order Number</td><td style="padding: 3px 0; text-align: right;">{{.order_number}}</td></tr>
+                                    {{if .customer_po}}<tr><td style="padding: 3px 0;">Customer PO</td><td style="padding: 3px 0; text-align: right;">{{.customer_po}}</td></tr>{{end}}
                                     <tr><td style="padding: 3px 0;">Order Date</td><td style="padding: 3px 0; text-align: right;">{{.order_date}}</td></tr>
                                     <tr><td style="padding: 3px 0;">Order Total</td><td style="padding: 3px 0; text-align: right;">{{.order_total}}</td></tr>
                                 </table>

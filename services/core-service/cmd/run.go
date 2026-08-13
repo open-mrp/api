@@ -285,6 +285,7 @@ func Run(
 	hubspotSyncSvc := service.NewHubspotSyncSvc(&service.HubspotSyncSvcConfig{
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
+		JobSvcFactory:   jobSvcFactory,
 		TxManager:       txManager,
 		Publisher:       event.NewOutboxHubspotSyncPublisher(),
 	})
@@ -702,6 +703,7 @@ func Run(
 		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.BulkUpsertProducts, productSvc.ExecuteBulkUpsertProducts),
 		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.BulkUpsertMaterials, materialSvc.ExecuteBulkUpsertMaterials),
 		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.BulkUpsertProperties, propertySvc.ExecuteBulkUpsertProperties),
+		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.BulkResolveHubspotCompanyReviews, hubspotSyncSvc.ExecuteBulkResolveReviews),
 	}
 	for _, bulkConsumer := range bulkConsumers {
 		if err := bulkConsumer.Listen(ctx); err != nil {
@@ -716,20 +718,21 @@ func Run(
 
 	// Each builder is a method on the service owning that resource.
 	exportBuilders := map[string]domain.ExportBuilder{
-		"units":             unitSvc.BuildExportUnits,
-		"unit_groups":       unitGroupSvc.BuildExportUnitGroups,
-		"product_lines":     productLineSvc.BuildExportProductLines,
-		"item_categories":   itemCategorySvc.BuildExportItemCategories,
-		"departments":       departmentSvc.BuildExportDepartments,
-		"locations":         locationSvc.BuildExportLocations,
-		"machines":          machineSvc.BuildExportMachines,
-		"scanning_stations": scanningStationSvc.BuildExportScanningStations,
-		"production_runs":   productionRunSvc.BuildExportProductionRuns,
-		"production_steps":  productionStepSvc.BuildExportProductionSteps,
-		"parts":             partSvc.BuildExportParts,
-		"products":          productSvc.BuildExportProducts,
-		"materials":         materialSvc.BuildExportMaterials,
-		"properties":        propertySvc.BuildExportProperties,
+		"units":                   unitSvc.BuildExportUnits,
+		"unit_groups":             unitGroupSvc.BuildExportUnitGroups,
+		"product_lines":           productLineSvc.BuildExportProductLines,
+		"item_categories":         itemCategorySvc.BuildExportItemCategories,
+		"departments":             departmentSvc.BuildExportDepartments,
+		"locations":               locationSvc.BuildExportLocations,
+		"machines":                machineSvc.BuildExportMachines,
+		"scanning_stations":       scanningStationSvc.BuildExportScanningStations,
+		"production_runs":         productionRunSvc.BuildExportProductionRuns,
+		"production_steps":        productionStepSvc.BuildExportProductionSteps,
+		"parts":                   partSvc.BuildExportParts,
+		"products":                productSvc.BuildExportProducts,
+		"materials":               materialSvc.BuildExportMaterials,
+		"properties":              propertySvc.BuildExportProperties,
+		"hubspot_company_reviews": hubspotSyncSvc.BuildExportHubspotCompanyReviews,
 	}
 
 	exportRunner := service.NewExportRunner(&service.ExportRunnerConfig{

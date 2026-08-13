@@ -110,10 +110,13 @@ func (s *service) RunPreview(ctx context.Context, accountID, jobID string) *apie
 					return tracing.Trace(span, s.failJob(ctx, accountID, jobID, apierror.NewInternalError(err, "Failed to encode HubSpot company candidates.")))
 				}
 				if _, apiErr := syncRepo.CreateReview(ctx, domain.CreateHubspotCompanyReviewParams{
-					JobID:            jobID,
-					AccountID:        accountID,
-					AugnoCustomerID:  customer.ID,
-					CustomerName:     customer.Name,
+					JobID:           jobID,
+					AccountID:       accountID,
+					AugnoCustomerID: customer.ID,
+					CustomerName:    customer.Name,
+					// Snapshotted rather than joined on read: resolving a match is guesswork without the customer's own email and website, and a review outlives edits to the customer it was raised for.
+					CustomerEmail:    customer.Email,
+					CustomerURL:      customer.URL,
 					CandidateMatches: candidatesJSON,
 					Status:           ReviewStatusPending,
 				}); apiErr != nil {

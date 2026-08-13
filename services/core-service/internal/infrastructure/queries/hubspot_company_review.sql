@@ -5,6 +5,8 @@ INSERT INTO hubspot_company_review (
     account_id,
     augno_customer_id,
     customer_name,
+    customer_email,
+    customer_url,
     candidate_matches,
     status,
     created_at,
@@ -15,6 +17,8 @@ INSERT INTO hubspot_company_review (
     sqlc.arg('account_id'),
     sqlc.arg('augno_customer_id'),
     sqlc.arg('customer_name'),
+    sqlc.narg('customer_email'),
+    sqlc.narg('customer_url'),
     sqlc.narg('candidate_matches'),
     sqlc.arg('status'),
     NOW(3),
@@ -28,6 +32,8 @@ SELECT
     account_id,
     augno_customer_id,
     customer_name,
+    customer_email,
+    customer_url,
     candidate_matches,
     status,
     resolution,
@@ -45,6 +51,8 @@ SELECT
     account_id,
     augno_customer_id,
     customer_name,
+    customer_email,
+    customer_url,
     candidate_matches,
     status,
     resolution,
@@ -58,6 +66,25 @@ AND (
     OR status = sqlc.narg('status')
 )
 ORDER BY created_at ASC, id ASC;
+
+-- name: GetHubspotCompanyReviewsByIDs :many
+SELECT
+    id,
+    job_id,
+    account_id,
+    augno_customer_id,
+    customer_name,
+    customer_email,
+    customer_url,
+    candidate_matches,
+    status,
+    resolution,
+    resolved_hubspot_id,
+    created_at,
+    updated_at
+FROM hubspot_company_review
+WHERE account_id = sqlc.arg('account_id')
+AND id IN (sqlc.slice('ids'));
 
 -- name: CountPendingHubspotCompanyReviews :one
 SELECT COUNT(*)

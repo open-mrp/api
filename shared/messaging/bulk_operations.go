@@ -41,6 +41,8 @@ const (
 	BulkUpsertProducts         BulkOperation = "bulk_upsert_products"
 	BulkUpsertMaterials        BulkOperation = "bulk_upsert_materials"
 	BulkUpsertProperties       BulkOperation = "bulk_upsert_properties"
+	// BulkResolveHubspotCompanyReviews applies many company-match decisions at once, the path a reviewed spreadsheet comes back through.
+	BulkResolveHubspotCompanyReviews BulkOperation = "bulk_resolve_hubspot_company_reviews"
 )
 
 // lists every registered bulk operation; the rabbitmq bindings declare a queue per entry
@@ -60,4 +62,5 @@ var BulkOperations = []BulkOperation{
 	BulkUpsertProducts,
 	BulkUpsertMaterials,
 	BulkUpsertProperties,
+	BulkResolveHubspotCompanyReviews,
 }

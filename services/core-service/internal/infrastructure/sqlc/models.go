@@ -854,6 +854,8 @@ type HubspotCompanyReview struct {
 	AccountID         string
 	AugnoCustomerID   string
 	CustomerName      string
+	CustomerEmail     sql.NullString
+	CustomerUrl       sql.NullString
 	CandidateMatches  db.NullableRawMessage
 	Status            string
 	Resolution        sql.NullString

@@ -410,6 +410,8 @@ type HubspotSyncRepo interface {
 
 	CreateReview(ctx context.Context, params CreateHubspotCompanyReviewParams) (*HubspotCompanyReview, *apierror.APIError)
 	GetReview(ctx context.Context, accountID, id string) (*HubspotCompanyReview, *apierror.APIError)
+	// GetReviewsByIDs reads many reviews at once, so a bulk resolution can validate every id it was handed in a single round trip.
+	GetReviewsByIDs(ctx context.Context, accountID string, ids []string) ([]*HubspotCompanyReview, *apierror.APIError)
 	ListReviewsForJob(ctx context.Context, jobID string, status *string) ([]*HubspotCompanyReview, *apierror.APIError)
 	CountPendingReviews(ctx context.Context, jobID string) (int64, *apierror.APIError)
 	ResolveReview(ctx context.Context, params ResolveHubspotCompanyReviewParams) *apierror.APIError

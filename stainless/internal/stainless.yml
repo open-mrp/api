@@ -891,7 +891,12 @@ resources:
                         methods:
                           link: post /v1/settings/integrations/hubspot/sync/{id}/company-reviews/{review_id}/actions/link
                           skip: post /v1/settings/integrations/hubspot/sync/{id}/company-reviews/{review_id}/actions/skip
+                          bulk_resolve: post /v1/settings/integrations/hubspot/sync/{id}/company-reviews/actions/bulk-resolve
+                          export: post /v1/settings/integrations/hubspot/sync/{id}/company-reviews/actions/export
                         models:
+                          bulk_resolve_hubspot_company_reviews_request: '#/components/schemas/BulkResolveHubspotCompanyReviewsRequest'
+                          export_hubspot_company_reviews_request: '#/components/schemas/ExportHubspotCompanyReviewsRequest'
+                          hubspot_company_review_resolution_input: '#/components/schemas/HubspotCompanyReviewResolutionInput'
                           link_hubspot_company_review_request: '#/components/schemas/LinkHubspotCompanyReviewRequest'
                     models:
                       hubspot_company_candidate: '#/components/schemas/HubspotCompanyCandidate'

@@ -264,8 +264,11 @@ type HubspotCompanyReviewInfo struct {
 	ResolvedHubspotId    *string                `protobuf:"bytes,8,opt,name=resolved_hubspot_id,json=resolvedHubspotId,proto3,oneof" json:"resolved_hubspot_id,omitempty"`
 	CreatedAt            *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt            *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	// Snapshot of the customer's contact details, taken when the review was raised.
+	CustomerEmail *string `protobuf:"bytes,11,opt,name=customer_email,json=customerEmail,proto3,oneof" json:"customer_email,omitempty"`
+	CustomerUrl   *string `protobuf:"bytes,12,opt,name=customer_url,json=customerUrl,proto3,oneof" json:"customer_url,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *HubspotCompanyReviewInfo) Reset() {
@@ -366,6 +369,20 @@ func (x *HubspotCompanyReviewInfo) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
+}
+
+func (x *HubspotCompanyReviewInfo) GetCustomerEmail() string {
+	if x != nil && x.CustomerEmail != nil {
+		return *x.CustomerEmail
+	}
+	return ""
+}
+
+func (x *HubspotCompanyReviewInfo) GetCustomerUrl() string {
+	if x != nil && x.CustomerUrl != nil {
+		return *x.CustomerUrl
+	}
+	return ""
 }
 
 type StartHubspotBackfillRequest struct {
@@ -745,6 +762,259 @@ func (x *HubspotCompanyReviewResponse) GetReview() *HubspotCompanyReviewInfo {
 	return nil
 }
 
+type BulkResolveHubspotCompanyReviewsRequest struct {
+	state         protoimpl.MessageState            `protogen:"open.v1"`
+	JobId         string                            `protobuf:"bytes,1,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
+	Reviews       []*HubspotCompanyReviewResolution `protobuf:"bytes,2,rep,name=reviews,proto3" json:"reviews,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BulkResolveHubspotCompanyReviewsRequest) Reset() {
+	*x = BulkResolveHubspotCompanyReviewsRequest{}
+	mi := &file_core_core_hubspot_sync_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BulkResolveHubspotCompanyReviewsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BulkResolveHubspotCompanyReviewsRequest) ProtoMessage() {}
+
+func (x *BulkResolveHubspotCompanyReviewsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_hubspot_sync_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BulkResolveHubspotCompanyReviewsRequest.ProtoReflect.Descriptor instead.
+func (*BulkResolveHubspotCompanyReviewsRequest) Descriptor() ([]byte, []int) {
+	return file_core_core_hubspot_sync_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *BulkResolveHubspotCompanyReviewsRequest) GetJobId() string {
+	if x != nil {
+		return x.JobId
+	}
+	return ""
+}
+
+func (x *BulkResolveHubspotCompanyReviewsRequest) GetReviews() []*HubspotCompanyReviewResolution {
+	if x != nil {
+		return x.Reviews
+	}
+	return nil
+}
+
+type HubspotCompanyReviewResolution struct {
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	ReviewId string                 `protobuf:"bytes,1,opt,name=review_id,json=reviewId,proto3" json:"review_id,omitempty"`
+	// One of: link, create_new, skip.
+	Action            string  `protobuf:"bytes,2,opt,name=action,proto3" json:"action,omitempty"`
+	ResolvedHubspotId *string `protobuf:"bytes,3,opt,name=resolved_hubspot_id,json=resolvedHubspotId,proto3,oneof" json:"resolved_hubspot_id,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *HubspotCompanyReviewResolution) Reset() {
+	*x = HubspotCompanyReviewResolution{}
+	mi := &file_core_core_hubspot_sync_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HubspotCompanyReviewResolution) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HubspotCompanyReviewResolution) ProtoMessage() {}
+
+func (x *HubspotCompanyReviewResolution) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_hubspot_sync_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HubspotCompanyReviewResolution.ProtoReflect.Descriptor instead.
+func (*HubspotCompanyReviewResolution) Descriptor() ([]byte, []int) {
+	return file_core_core_hubspot_sync_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *HubspotCompanyReviewResolution) GetReviewId() string {
+	if x != nil {
+		return x.ReviewId
+	}
+	return ""
+}
+
+func (x *HubspotCompanyReviewResolution) GetAction() string {
+	if x != nil {
+		return x.Action
+	}
+	return ""
+}
+
+func (x *HubspotCompanyReviewResolution) GetResolvedHubspotId() string {
+	if x != nil && x.ResolvedHubspotId != nil {
+		return *x.ResolvedHubspotId
+	}
+	return ""
+}
+
+type BulkResolveHubspotCompanyReviewsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Job           *JobInfo               `protobuf:"bytes,1,opt,name=job,proto3" json:"job,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BulkResolveHubspotCompanyReviewsResponse) Reset() {
+	*x = BulkResolveHubspotCompanyReviewsResponse{}
+	mi := &file_core_core_hubspot_sync_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BulkResolveHubspotCompanyReviewsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BulkResolveHubspotCompanyReviewsResponse) ProtoMessage() {}
+
+func (x *BulkResolveHubspotCompanyReviewsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_hubspot_sync_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BulkResolveHubspotCompanyReviewsResponse.ProtoReflect.Descriptor instead.
+func (*BulkResolveHubspotCompanyReviewsResponse) Descriptor() ([]byte, []int) {
+	return file_core_core_hubspot_sync_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *BulkResolveHubspotCompanyReviewsResponse) GetJob() *JobInfo {
+	if x != nil {
+		return x.Job
+	}
+	return nil
+}
+
+type ExportHubspotCompanyReviewsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	JobId         string                 `protobuf:"bytes,1,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
+	Status        *string                `protobuf:"bytes,2,opt,name=status,proto3,oneof" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExportHubspotCompanyReviewsRequest) Reset() {
+	*x = ExportHubspotCompanyReviewsRequest{}
+	mi := &file_core_core_hubspot_sync_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExportHubspotCompanyReviewsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExportHubspotCompanyReviewsRequest) ProtoMessage() {}
+
+func (x *ExportHubspotCompanyReviewsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_hubspot_sync_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExportHubspotCompanyReviewsRequest.ProtoReflect.Descriptor instead.
+func (*ExportHubspotCompanyReviewsRequest) Descriptor() ([]byte, []int) {
+	return file_core_core_hubspot_sync_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *ExportHubspotCompanyReviewsRequest) GetJobId() string {
+	if x != nil {
+		return x.JobId
+	}
+	return ""
+}
+
+func (x *ExportHubspotCompanyReviewsRequest) GetStatus() string {
+	if x != nil && x.Status != nil {
+		return *x.Status
+	}
+	return ""
+}
+
+type ExportHubspotCompanyReviewsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Job           *JobInfo               `protobuf:"bytes,1,opt,name=job,proto3" json:"job,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExportHubspotCompanyReviewsResponse) Reset() {
+	*x = ExportHubspotCompanyReviewsResponse{}
+	mi := &file_core_core_hubspot_sync_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExportHubspotCompanyReviewsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExportHubspotCompanyReviewsResponse) ProtoMessage() {}
+
+func (x *ExportHubspotCompanyReviewsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_hubspot_sync_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExportHubspotCompanyReviewsResponse.ProtoReflect.Descriptor instead.
+func (*ExportHubspotCompanyReviewsResponse) Descriptor() ([]byte, []int) {
+	return file_core_core_hubspot_sync_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *ExportHubspotCompanyReviewsResponse) GetJob() *JobInfo {
+	if x != nil {
+		return x.Job
+	}
+	return nil
+}
+
 type ExecuteHubspotSyncRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -754,7 +1024,7 @@ type ExecuteHubspotSyncRequest struct {
 
 func (x *ExecuteHubspotSyncRequest) Reset() {
 	*x = ExecuteHubspotSyncRequest{}
-	mi := &file_core_core_hubspot_sync_proto_msgTypes[11]
+	mi := &file_core_core_hubspot_sync_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -766,7 +1036,7 @@ func (x *ExecuteHubspotSyncRequest) String() string {
 func (*ExecuteHubspotSyncRequest) ProtoMessage() {}
 
 func (x *ExecuteHubspotSyncRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_hubspot_sync_proto_msgTypes[11]
+	mi := &file_core_core_hubspot_sync_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -779,7 +1049,7 @@ func (x *ExecuteHubspotSyncRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExecuteHubspotSyncRequest.ProtoReflect.Descriptor instead.
 func (*ExecuteHubspotSyncRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_hubspot_sync_proto_rawDescGZIP(), []int{11}
+	return file_core_core_hubspot_sync_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ExecuteHubspotSyncRequest) GetId() string {
@@ -798,7 +1068,7 @@ type CancelHubspotSyncRequest struct {
 
 func (x *CancelHubspotSyncRequest) Reset() {
 	*x = CancelHubspotSyncRequest{}
-	mi := &file_core_core_hubspot_sync_proto_msgTypes[12]
+	mi := &file_core_core_hubspot_sync_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -810,7 +1080,7 @@ func (x *CancelHubspotSyncRequest) String() string {
 func (*CancelHubspotSyncRequest) ProtoMessage() {}
 
 func (x *CancelHubspotSyncRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_hubspot_sync_proto_msgTypes[12]
+	mi := &file_core_core_hubspot_sync_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -823,7 +1093,7 @@ func (x *CancelHubspotSyncRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelHubspotSyncRequest.ProtoReflect.Descriptor instead.
 func (*CancelHubspotSyncRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_hubspot_sync_proto_rawDescGZIP(), []int{12}
+	return file_core_core_hubspot_sync_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *CancelHubspotSyncRequest) GetId() string {
@@ -845,7 +1115,7 @@ type ListHubspotSyncRecordsRequest struct {
 
 func (x *ListHubspotSyncRecordsRequest) Reset() {
 	*x = ListHubspotSyncRecordsRequest{}
-	mi := &file_core_core_hubspot_sync_proto_msgTypes[13]
+	mi := &file_core_core_hubspot_sync_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -857,7 +1127,7 @@ func (x *ListHubspotSyncRecordsRequest) String() string {
 func (*ListHubspotSyncRecordsRequest) ProtoMessage() {}
 
 func (x *ListHubspotSyncRecordsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_hubspot_sync_proto_msgTypes[13]
+	mi := &file_core_core_hubspot_sync_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -870,7 +1140,7 @@ func (x *ListHubspotSyncRecordsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListHubspotSyncRecordsRequest.ProtoReflect.Descriptor instead.
 func (*ListHubspotSyncRecordsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_hubspot_sync_proto_rawDescGZIP(), []int{13}
+	return file_core_core_hubspot_sync_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ListHubspotSyncRecordsRequest) GetAugnoType() string {
@@ -904,7 +1174,7 @@ type ListHubspotSyncRecordsResponse struct {
 
 func (x *ListHubspotSyncRecordsResponse) Reset() {
 	*x = ListHubspotSyncRecordsResponse{}
-	mi := &file_core_core_hubspot_sync_proto_msgTypes[14]
+	mi := &file_core_core_hubspot_sync_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -916,7 +1186,7 @@ func (x *ListHubspotSyncRecordsResponse) String() string {
 func (*ListHubspotSyncRecordsResponse) ProtoMessage() {}
 
 func (x *ListHubspotSyncRecordsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_hubspot_sync_proto_msgTypes[14]
+	mi := &file_core_core_hubspot_sync_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -929,7 +1199,7 @@ func (x *ListHubspotSyncRecordsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListHubspotSyncRecordsResponse.ProtoReflect.Descriptor instead.
 func (*ListHubspotSyncRecordsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_hubspot_sync_proto_rawDescGZIP(), []int{14}
+	return file_core_core_hubspot_sync_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ListHubspotSyncRecordsResponse) GetRecords() []*HubspotSyncRecordInfo {
@@ -950,7 +1220,7 @@ var File_core_core_hubspot_sync_proto protoreflect.FileDescriptor
 
 const file_core_core_hubspot_sync_proto_rawDesc = "" +
 	"\n" +
-	"\x1ccore/core_hubspot_sync.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a core/core_identity_context.proto\"\xc5\x03\n" +
+	"\x1ccore/core_hubspot_sync.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a core/core_identity_context.proto\x1a\x15core/core_async.proto\"\xc5\x03\n" +
 	"\x15HubspotSyncRecordInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -990,7 +1260,7 @@ const file_core_core_hubspot_sync_proto_rawDesc = "" +
 	"\x11_golive_cutoff_atB\r\n" +
 	"\v_last_errorB\r\n" +
 	"\v_started_atB\x0f\n" +
-	"\r_completed_atJ\x04\b\x03\x10\x04R\adry_run\"\xd7\x03\n" +
+	"\r_completed_atJ\x04\b\x03\x10\x04R\adry_run\"\xcf\x04\n" +
 	"\x18HubspotCompanyReviewInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x15\n" +
 	"\x06job_id\x18\x02 \x01(\tR\x05jobId\x12*\n" +
@@ -1006,9 +1276,13 @@ const file_core_core_hubspot_sync_proto_rawDesc = "" +
 	"created_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\r\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12*\n" +
+	"\x0ecustomer_email\x18\v \x01(\tH\x02R\rcustomerEmail\x88\x01\x01\x12&\n" +
+	"\fcustomer_url\x18\f \x01(\tH\x03R\vcustomerUrl\x88\x01\x01B\r\n" +
 	"\v_resolutionB\x16\n" +
-	"\x14_resolved_hubspot_id\"\x8c\x01\n" +
+	"\x14_resolved_hubspot_idB\x11\n" +
+	"\x0f_customer_emailB\x0f\n" +
+	"\r_customer_url\"\x8c\x01\n" +
 	"\x1bStartHubspotBackfillRequest\x12I\n" +
 	"\x10golive_cutoff_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\x0egoliveCutoffAt\x88\x01\x01B\x13\n" +
 	"\x11_golive_cutoff_atJ\x04\b\x01\x10\x02R\adry_run\"!\n" +
@@ -1030,7 +1304,23 @@ const file_core_core_hubspot_sync_proto_rawDesc = "" +
 	"\x13resolved_hubspot_id\x18\x04 \x01(\tH\x00R\x11resolvedHubspotId\x88\x01\x01B\x16\n" +
 	"\x14_resolved_hubspot_id\"V\n" +
 	"\x1cHubspotCompanyReviewResponse\x126\n" +
-	"\x06review\x18\x01 \x01(\v2\x1e.core.HubspotCompanyReviewInfoR\x06review\"+\n" +
+	"\x06review\x18\x01 \x01(\v2\x1e.core.HubspotCompanyReviewInfoR\x06review\"\x80\x01\n" +
+	"'BulkResolveHubspotCompanyReviewsRequest\x12\x15\n" +
+	"\x06job_id\x18\x01 \x01(\tR\x05jobId\x12>\n" +
+	"\areviews\x18\x02 \x03(\v2$.core.HubspotCompanyReviewResolutionR\areviews\"\xa2\x01\n" +
+	"\x1eHubspotCompanyReviewResolution\x12\x1b\n" +
+	"\treview_id\x18\x01 \x01(\tR\breviewId\x12\x16\n" +
+	"\x06action\x18\x02 \x01(\tR\x06action\x123\n" +
+	"\x13resolved_hubspot_id\x18\x03 \x01(\tH\x00R\x11resolvedHubspotId\x88\x01\x01B\x16\n" +
+	"\x14_resolved_hubspot_id\"K\n" +
+	"(BulkResolveHubspotCompanyReviewsResponse\x12\x1f\n" +
+	"\x03job\x18\x01 \x01(\v2\r.core.JobInfoR\x03job\"c\n" +
+	"\"ExportHubspotCompanyReviewsRequest\x12\x15\n" +
+	"\x06job_id\x18\x01 \x01(\tR\x05jobId\x12\x1b\n" +
+	"\x06status\x18\x02 \x01(\tH\x00R\x06status\x88\x01\x01B\t\n" +
+	"\a_status\"F\n" +
+	"#ExportHubspotCompanyReviewsResponse\x12\x1f\n" +
+	"\x03job\x18\x01 \x01(\v2\r.core.JobInfoR\x03job\"+\n" +
 	"\x19ExecuteHubspotSyncRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"*\n" +
 	"\x18CancelHubspotSyncRequest\x12\x0e\n" +
@@ -1043,13 +1333,15 @@ const file_core_core_hubspot_sync_proto_rawDesc = "" +
 	"\a_cursor\"\x84\x01\n" +
 	"\x1eListHubspotSyncRecordsResponse\x125\n" +
 	"\arecords\x18\x01 \x03(\v2\x1b.core.HubspotSyncRecordInfoR\arecords\x12+\n" +
-	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo2\x8d\x06\n" +
+	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo2\x85\b\n" +
 	"\x16CoreHubspotSyncService\x12W\n" +
 	"\x14StartHubspotBackfill\x12!.core.StartHubspotBackfillRequest\x1a\x1c.core.HubspotSyncJobResponse\x12_\n" +
 	"\x18GetCurrentHubspotSyncJob\x12%.core.GetCurrentHubspotSyncJobRequest\x1a\x1c.core.HubspotSyncJobResponse\x12Q\n" +
 	"\x11GetHubspotSyncJob\x12\x1e.core.GetHubspotSyncJobRequest\x1a\x1c.core.HubspotSyncJobResponse\x12l\n" +
 	"\x19ListHubspotCompanyReviews\x12&.core.ListHubspotCompanyReviewsRequest\x1a'.core.ListHubspotCompanyReviewsResponse\x12k\n" +
-	"\x1bResolveHubspotCompanyReview\x12(.core.ResolveHubspotCompanyReviewRequest\x1a\".core.HubspotCompanyReviewResponse\x12S\n" +
+	"\x1bResolveHubspotCompanyReview\x12(.core.ResolveHubspotCompanyReviewRequest\x1a\".core.HubspotCompanyReviewResponse\x12\x81\x01\n" +
+	" BulkResolveHubspotCompanyReviews\x12-.core.BulkResolveHubspotCompanyReviewsRequest\x1a..core.BulkResolveHubspotCompanyReviewsResponse\x12r\n" +
+	"\x1bExportHubspotCompanyReviews\x12(.core.ExportHubspotCompanyReviewsRequest\x1a).core.ExportHubspotCompanyReviewsResponse\x12S\n" +
 	"\x12ExecuteHubspotSync\x12\x1f.core.ExecuteHubspotSyncRequest\x1a\x1c.core.HubspotSyncJobResponse\x12Q\n" +
 	"\x11CancelHubspotSync\x12\x1e.core.CancelHubspotSyncRequest\x1a\x1c.core.HubspotSyncJobResponse\x12c\n" +
 	"\x16ListHubspotSyncRecords\x12#.core.ListHubspotSyncRecordsRequest\x1a$.core.ListHubspotSyncRecordsResponseB\x18Z\x16shared/proto/core;coreb\x06proto3"
@@ -1066,64 +1358,77 @@ func file_core_core_hubspot_sync_proto_rawDescGZIP() []byte {
 	return file_core_core_hubspot_sync_proto_rawDescData
 }
 
-var file_core_core_hubspot_sync_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_core_core_hubspot_sync_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_core_core_hubspot_sync_proto_goTypes = []any{
-	(*HubspotSyncRecordInfo)(nil),              // 0: core.HubspotSyncRecordInfo
-	(*HubspotSyncJobInfo)(nil),                 // 1: core.HubspotSyncJobInfo
-	(*HubspotCompanyReviewInfo)(nil),           // 2: core.HubspotCompanyReviewInfo
-	(*StartHubspotBackfillRequest)(nil),        // 3: core.StartHubspotBackfillRequest
-	(*GetCurrentHubspotSyncJobRequest)(nil),    // 4: core.GetCurrentHubspotSyncJobRequest
-	(*GetHubspotSyncJobRequest)(nil),           // 5: core.GetHubspotSyncJobRequest
-	(*HubspotSyncJobResponse)(nil),             // 6: core.HubspotSyncJobResponse
-	(*ListHubspotCompanyReviewsRequest)(nil),   // 7: core.ListHubspotCompanyReviewsRequest
-	(*ListHubspotCompanyReviewsResponse)(nil),  // 8: core.ListHubspotCompanyReviewsResponse
-	(*ResolveHubspotCompanyReviewRequest)(nil), // 9: core.ResolveHubspotCompanyReviewRequest
-	(*HubspotCompanyReviewResponse)(nil),       // 10: core.HubspotCompanyReviewResponse
-	(*ExecuteHubspotSyncRequest)(nil),          // 11: core.ExecuteHubspotSyncRequest
-	(*CancelHubspotSyncRequest)(nil),           // 12: core.CancelHubspotSyncRequest
-	(*ListHubspotSyncRecordsRequest)(nil),      // 13: core.ListHubspotSyncRecordsRequest
-	(*ListHubspotSyncRecordsResponse)(nil),     // 14: core.ListHubspotSyncRecordsResponse
-	(*timestamppb.Timestamp)(nil),              // 15: google.protobuf.Timestamp
-	(*PageInfo)(nil),                           // 16: core.PageInfo
+	(*HubspotSyncRecordInfo)(nil),                    // 0: core.HubspotSyncRecordInfo
+	(*HubspotSyncJobInfo)(nil),                       // 1: core.HubspotSyncJobInfo
+	(*HubspotCompanyReviewInfo)(nil),                 // 2: core.HubspotCompanyReviewInfo
+	(*StartHubspotBackfillRequest)(nil),              // 3: core.StartHubspotBackfillRequest
+	(*GetCurrentHubspotSyncJobRequest)(nil),          // 4: core.GetCurrentHubspotSyncJobRequest
+	(*GetHubspotSyncJobRequest)(nil),                 // 5: core.GetHubspotSyncJobRequest
+	(*HubspotSyncJobResponse)(nil),                   // 6: core.HubspotSyncJobResponse
+	(*ListHubspotCompanyReviewsRequest)(nil),         // 7: core.ListHubspotCompanyReviewsRequest
+	(*ListHubspotCompanyReviewsResponse)(nil),        // 8: core.ListHubspotCompanyReviewsResponse
+	(*ResolveHubspotCompanyReviewRequest)(nil),       // 9: core.ResolveHubspotCompanyReviewRequest
+	(*HubspotCompanyReviewResponse)(nil),             // 10: core.HubspotCompanyReviewResponse
+	(*BulkResolveHubspotCompanyReviewsRequest)(nil),  // 11: core.BulkResolveHubspotCompanyReviewsRequest
+	(*HubspotCompanyReviewResolution)(nil),           // 12: core.HubspotCompanyReviewResolution
+	(*BulkResolveHubspotCompanyReviewsResponse)(nil), // 13: core.BulkResolveHubspotCompanyReviewsResponse
+	(*ExportHubspotCompanyReviewsRequest)(nil),       // 14: core.ExportHubspotCompanyReviewsRequest
+	(*ExportHubspotCompanyReviewsResponse)(nil),      // 15: core.ExportHubspotCompanyReviewsResponse
+	(*ExecuteHubspotSyncRequest)(nil),                // 16: core.ExecuteHubspotSyncRequest
+	(*CancelHubspotSyncRequest)(nil),                 // 17: core.CancelHubspotSyncRequest
+	(*ListHubspotSyncRecordsRequest)(nil),            // 18: core.ListHubspotSyncRecordsRequest
+	(*ListHubspotSyncRecordsResponse)(nil),           // 19: core.ListHubspotSyncRecordsResponse
+	(*timestamppb.Timestamp)(nil),                    // 20: google.protobuf.Timestamp
+	(*JobInfo)(nil),                                  // 21: core.JobInfo
+	(*PageInfo)(nil),                                 // 22: core.PageInfo
 }
 var file_core_core_hubspot_sync_proto_depIdxs = []int32{
-	15, // 0: core.HubspotSyncRecordInfo.last_synced_at:type_name -> google.protobuf.Timestamp
-	15, // 1: core.HubspotSyncRecordInfo.created_at:type_name -> google.protobuf.Timestamp
-	15, // 2: core.HubspotSyncRecordInfo.updated_at:type_name -> google.protobuf.Timestamp
-	15, // 3: core.HubspotSyncJobInfo.golive_cutoff_at:type_name -> google.protobuf.Timestamp
-	15, // 4: core.HubspotSyncJobInfo.started_at:type_name -> google.protobuf.Timestamp
-	15, // 5: core.HubspotSyncJobInfo.completed_at:type_name -> google.protobuf.Timestamp
-	15, // 6: core.HubspotSyncJobInfo.created_at:type_name -> google.protobuf.Timestamp
-	15, // 7: core.HubspotSyncJobInfo.updated_at:type_name -> google.protobuf.Timestamp
-	15, // 8: core.HubspotCompanyReviewInfo.created_at:type_name -> google.protobuf.Timestamp
-	15, // 9: core.HubspotCompanyReviewInfo.updated_at:type_name -> google.protobuf.Timestamp
-	15, // 10: core.StartHubspotBackfillRequest.golive_cutoff_at:type_name -> google.protobuf.Timestamp
+	20, // 0: core.HubspotSyncRecordInfo.last_synced_at:type_name -> google.protobuf.Timestamp
+	20, // 1: core.HubspotSyncRecordInfo.created_at:type_name -> google.protobuf.Timestamp
+	20, // 2: core.HubspotSyncRecordInfo.updated_at:type_name -> google.protobuf.Timestamp
+	20, // 3: core.HubspotSyncJobInfo.golive_cutoff_at:type_name -> google.protobuf.Timestamp
+	20, // 4: core.HubspotSyncJobInfo.started_at:type_name -> google.protobuf.Timestamp
+	20, // 5: core.HubspotSyncJobInfo.completed_at:type_name -> google.protobuf.Timestamp
+	20, // 6: core.HubspotSyncJobInfo.created_at:type_name -> google.protobuf.Timestamp
+	20, // 7: core.HubspotSyncJobInfo.updated_at:type_name -> google.protobuf.Timestamp
+	20, // 8: core.HubspotCompanyReviewInfo.created_at:type_name -> google.protobuf.Timestamp
+	20, // 9: core.HubspotCompanyReviewInfo.updated_at:type_name -> google.protobuf.Timestamp
+	20, // 10: core.StartHubspotBackfillRequest.golive_cutoff_at:type_name -> google.protobuf.Timestamp
 	1,  // 11: core.HubspotSyncJobResponse.job:type_name -> core.HubspotSyncJobInfo
 	2,  // 12: core.ListHubspotCompanyReviewsResponse.reviews:type_name -> core.HubspotCompanyReviewInfo
 	2,  // 13: core.HubspotCompanyReviewResponse.review:type_name -> core.HubspotCompanyReviewInfo
-	0,  // 14: core.ListHubspotSyncRecordsResponse.records:type_name -> core.HubspotSyncRecordInfo
-	16, // 15: core.ListHubspotSyncRecordsResponse.page_info:type_name -> core.PageInfo
-	3,  // 16: core.CoreHubspotSyncService.StartHubspotBackfill:input_type -> core.StartHubspotBackfillRequest
-	4,  // 17: core.CoreHubspotSyncService.GetCurrentHubspotSyncJob:input_type -> core.GetCurrentHubspotSyncJobRequest
-	5,  // 18: core.CoreHubspotSyncService.GetHubspotSyncJob:input_type -> core.GetHubspotSyncJobRequest
-	7,  // 19: core.CoreHubspotSyncService.ListHubspotCompanyReviews:input_type -> core.ListHubspotCompanyReviewsRequest
-	9,  // 20: core.CoreHubspotSyncService.ResolveHubspotCompanyReview:input_type -> core.ResolveHubspotCompanyReviewRequest
-	11, // 21: core.CoreHubspotSyncService.ExecuteHubspotSync:input_type -> core.ExecuteHubspotSyncRequest
-	12, // 22: core.CoreHubspotSyncService.CancelHubspotSync:input_type -> core.CancelHubspotSyncRequest
-	13, // 23: core.CoreHubspotSyncService.ListHubspotSyncRecords:input_type -> core.ListHubspotSyncRecordsRequest
-	6,  // 24: core.CoreHubspotSyncService.StartHubspotBackfill:output_type -> core.HubspotSyncJobResponse
-	6,  // 25: core.CoreHubspotSyncService.GetCurrentHubspotSyncJob:output_type -> core.HubspotSyncJobResponse
-	6,  // 26: core.CoreHubspotSyncService.GetHubspotSyncJob:output_type -> core.HubspotSyncJobResponse
-	8,  // 27: core.CoreHubspotSyncService.ListHubspotCompanyReviews:output_type -> core.ListHubspotCompanyReviewsResponse
-	10, // 28: core.CoreHubspotSyncService.ResolveHubspotCompanyReview:output_type -> core.HubspotCompanyReviewResponse
-	6,  // 29: core.CoreHubspotSyncService.ExecuteHubspotSync:output_type -> core.HubspotSyncJobResponse
-	6,  // 30: core.CoreHubspotSyncService.CancelHubspotSync:output_type -> core.HubspotSyncJobResponse
-	14, // 31: core.CoreHubspotSyncService.ListHubspotSyncRecords:output_type -> core.ListHubspotSyncRecordsResponse
-	24, // [24:32] is the sub-list for method output_type
-	16, // [16:24] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	12, // 14: core.BulkResolveHubspotCompanyReviewsRequest.reviews:type_name -> core.HubspotCompanyReviewResolution
+	21, // 15: core.BulkResolveHubspotCompanyReviewsResponse.job:type_name -> core.JobInfo
+	21, // 16: core.ExportHubspotCompanyReviewsResponse.job:type_name -> core.JobInfo
+	0,  // 17: core.ListHubspotSyncRecordsResponse.records:type_name -> core.HubspotSyncRecordInfo
+	22, // 18: core.ListHubspotSyncRecordsResponse.page_info:type_name -> core.PageInfo
+	3,  // 19: core.CoreHubspotSyncService.StartHubspotBackfill:input_type -> core.StartHubspotBackfillRequest
+	4,  // 20: core.CoreHubspotSyncService.GetCurrentHubspotSyncJob:input_type -> core.GetCurrentHubspotSyncJobRequest
+	5,  // 21: core.CoreHubspotSyncService.GetHubspotSyncJob:input_type -> core.GetHubspotSyncJobRequest
+	7,  // 22: core.CoreHubspotSyncService.ListHubspotCompanyReviews:input_type -> core.ListHubspotCompanyReviewsRequest
+	9,  // 23: core.CoreHubspotSyncService.ResolveHubspotCompanyReview:input_type -> core.ResolveHubspotCompanyReviewRequest
+	11, // 24: core.CoreHubspotSyncService.BulkResolveHubspotCompanyReviews:input_type -> core.BulkResolveHubspotCompanyReviewsRequest
+	14, // 25: core.CoreHubspotSyncService.ExportHubspotCompanyReviews:input_type -> core.ExportHubspotCompanyReviewsRequest
+	16, // 26: core.CoreHubspotSyncService.ExecuteHubspotSync:input_type -> core.ExecuteHubspotSyncRequest
+	17, // 27: core.CoreHubspotSyncService.CancelHubspotSync:input_type -> core.CancelHubspotSyncRequest
+	18, // 28: core.CoreHubspotSyncService.ListHubspotSyncRecords:input_type -> core.ListHubspotSyncRecordsRequest
+	6,  // 29: core.CoreHubspotSyncService.StartHubspotBackfill:output_type -> core.HubspotSyncJobResponse
+	6,  // 30: core.CoreHubspotSyncService.GetCurrentHubspotSyncJob:output_type -> core.HubspotSyncJobResponse
+	6,  // 31: core.CoreHubspotSyncService.GetHubspotSyncJob:output_type -> core.HubspotSyncJobResponse
+	8,  // 32: core.CoreHubspotSyncService.ListHubspotCompanyReviews:output_type -> core.ListHubspotCompanyReviewsResponse
+	10, // 33: core.CoreHubspotSyncService.ResolveHubspotCompanyReview:output_type -> core.HubspotCompanyReviewResponse
+	13, // 34: core.CoreHubspotSyncService.BulkResolveHubspotCompanyReviews:output_type -> core.BulkResolveHubspotCompanyReviewsResponse
+	15, // 35: core.CoreHubspotSyncService.ExportHubspotCompanyReviews:output_type -> core.ExportHubspotCompanyReviewsResponse
+	6,  // 36: core.CoreHubspotSyncService.ExecuteHubspotSync:output_type -> core.HubspotSyncJobResponse
+	6,  // 37: core.CoreHubspotSyncService.CancelHubspotSync:output_type -> core.HubspotSyncJobResponse
+	19, // 38: core.CoreHubspotSyncService.ListHubspotSyncRecords:output_type -> core.ListHubspotSyncRecordsResponse
+	29, // [29:39] is the sub-list for method output_type
+	19, // [19:29] is the sub-list for method input_type
+	19, // [19:19] is the sub-list for extension type_name
+	19, // [19:19] is the sub-list for extension extendee
+	0,  // [0:19] is the sub-list for field type_name
 }
 
 func init() { file_core_core_hubspot_sync_proto_init() }
@@ -1132,20 +1437,23 @@ func file_core_core_hubspot_sync_proto_init() {
 		return
 	}
 	file_core_core_identity_context_proto_init()
+	file_core_core_async_proto_init()
 	file_core_core_hubspot_sync_proto_msgTypes[0].OneofWrappers = []any{}
 	file_core_core_hubspot_sync_proto_msgTypes[1].OneofWrappers = []any{}
 	file_core_core_hubspot_sync_proto_msgTypes[2].OneofWrappers = []any{}
 	file_core_core_hubspot_sync_proto_msgTypes[3].OneofWrappers = []any{}
 	file_core_core_hubspot_sync_proto_msgTypes[7].OneofWrappers = []any{}
 	file_core_core_hubspot_sync_proto_msgTypes[9].OneofWrappers = []any{}
-	file_core_core_hubspot_sync_proto_msgTypes[13].OneofWrappers = []any{}
+	file_core_core_hubspot_sync_proto_msgTypes[12].OneofWrappers = []any{}
+	file_core_core_hubspot_sync_proto_msgTypes[14].OneofWrappers = []any{}
+	file_core_core_hubspot_sync_proto_msgTypes[18].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_core_hubspot_sync_proto_rawDesc), len(file_core_core_hubspot_sync_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   15,
+			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

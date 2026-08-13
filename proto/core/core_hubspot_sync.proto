@@ -5,6 +5,7 @@ package core;
 
 import "google/protobuf/timestamp.proto";
 import "core/core_identity_context.proto";
+import "core/core_async.proto";
 
 option go_package = "shared/proto/core;core";
 
@@ -19,6 +20,10 @@ service CoreHubspotSyncService {
   rpc ListHubspotCompanyReviews(ListHubspotCompanyReviewsRequest) returns (ListHubspotCompanyReviewsResponse);
   // ResolveHubspotCompanyReview records a human resolution (link / create_new / skip) for one review.
   rpc ResolveHubspotCompanyReview(ResolveHubspotCompanyReviewRequest) returns (HubspotCompanyReviewResponse);
+  // BulkResolveHubspotCompanyReviews records many resolutions as one async job.
+  rpc BulkResolveHubspotCompanyReviews(BulkResolveHubspotCompanyReviewsRequest) returns (BulkResolveHubspotCompanyReviewsResponse);
+  // ExportHubspotCompanyReviews accepts an export of a job's review queue.
+  rpc ExportHubspotCompanyReviews(ExportHubspotCompanyReviewsRequest) returns (ExportHubspotCompanyReviewsResponse);
   // ExecuteHubspotSync kicks off the write phase for a reviewed job.
   rpc ExecuteHubspotSync(ExecuteHubspotSyncRequest) returns (HubspotSyncJobResponse);
   // CancelHubspotSync force-fails an in-flight job so the account can start a new one.
@@ -69,6 +74,9 @@ message HubspotCompanyReviewInfo {
   optional string resolved_hubspot_id = 8;
   google.protobuf.Timestamp created_at = 9;
   google.protobuf.Timestamp updated_at = 10;
+  // Snapshot of the customer's contact details, taken when the review was raised.
+  optional string customer_email = 11;
+  optional string customer_url = 12;
 }
 
 message StartHubspotBackfillRequest {
@@ -106,6 +114,31 @@ message ResolveHubspotCompanyReviewRequest {
 
 message HubspotCompanyReviewResponse {
   HubspotCompanyReviewInfo review = 1;
+}
+
+message BulkResolveHubspotCompanyReviewsRequest {
+  string job_id = 1;
+  repeated HubspotCompanyReviewResolution reviews = 2;
+}
+
+message HubspotCompanyReviewResolution {
+  string review_id = 1;
+  // One of: link, create_new, skip.
+  string action = 2;
+  optional string resolved_hubspot_id = 3;
+}
+
+message BulkResolveHubspotCompanyReviewsResponse {
+  JobInfo job = 1;
+}
+
+message ExportHubspotCompanyReviewsRequest {
+  string job_id = 1;
+  optional string status = 2;
+}
+
+message ExportHubspotCompanyReviewsResponse {
+  JobInfo job = 1;
 }
 
 message ExecuteHubspotSyncRequest {

@@ -19,6 +19,14 @@ type HubspotSyncSvc interface {
 	// ListRecords returns what the sync has actually written to HubSpot for the caller's account — the mapping the engine keeps, which is otherwise invisible.
 	ListRecords(ctx context.Context, params ListHubspotSyncRecordsParams) (*ListHubspotSyncRecordsResult, *apierror.APIError)
 	ResolveReview(ctx context.Context, params ResolveHubspotReviewParams) (*HubspotCompanyReview, *apierror.APIError)
+	// BulkResolveReviews records many decisions as one async job, so a reviewed spreadsheet applies in a single request instead of one per row.
+	BulkResolveReviews(ctx context.Context, params BulkResolveHubspotReviewsParams) (*Job, *apierror.APIError)
+	// ExecuteBulkResolveReviews performs the writes for an enqueued bulk resolution.
+	ExecuteBulkResolveReviews(ctx context.Context, event BulkOperationJobEvent) *apierror.APIError
+	// ExportReviews accepts an export of a job's review queue and returns the job that tracks it.
+	ExportReviews(ctx context.Context, params ExportHubspotCompanyReviewsParams) (*Job, *apierror.APIError)
+	// BuildExportHubspotCompanyReviews renders the file an accepted export recorded.
+	BuildExportHubspotCompanyReviews(ctx context.Context, accountID string, filters json.RawMessage) (*Export, *apierror.APIError)
 	StartExecute(ctx context.Context, jobID string) (*HubspotSyncJob, *apierror.APIError)
 	// CancelJob force-fails an in-flight job, releasing the account to start a new backfill after a worker died without recording an outcome.
 	CancelJob(ctx context.Context, jobID string) (*HubspotSyncJob, *apierror.APIError)
@@ -34,6 +42,26 @@ type ResolveHubspotReviewParams struct {
 	ReviewID          string
 	Action            string
 	ResolvedHubspotID *string
+}
+
+// BulkResolveHubspotReviewsParams resolves many company reviews in one job, the path a spreadsheet of decisions comes back through.
+type BulkResolveHubspotReviewsParams struct {
+	JobID   string
+	Reviews []ResolveHubspotReviewParams
+}
+
+// ResolvedBulkHubspotReviewRow is one decision after the accept phase has confirmed the review exists on the job. Stored on the job, so it carries only settled values.
+type ResolvedBulkHubspotReviewRow struct {
+	ReviewID          string
+	Status            string
+	Resolution        *string
+	ResolvedHubspotID *string
+}
+
+// ExportHubspotCompanyReviewsParams filters which of a job's reviews land in the exported file. There is no account field: the export engine narrows to the caller's account, and the job's own ownership check is what scopes the rows.
+type ExportHubspotCompanyReviewsParams struct {
+	JobID  string
+	Status *string
 }
 
 // HubspotSyncJob is one backfill/reconciliation run for an account. See the hubspot_sync_job table and the hubspotsync package for the state machine.
@@ -112,11 +140,14 @@ type UpsertHubspotSyncRecordParams struct {
 
 // HubspotCompanyReview is one customer that needs human resolution before the backfill can create/link its HubSpot company.
 type HubspotCompanyReview struct {
-	ID                string
-	JobID             string `audit:"job_id"`
-	AccountID         string `audit:"account_id"`
-	AugnoCustomerID   string `audit:"augno_customer_id"`
-	CustomerName      string `audit:"customer_name"`
+	ID              string
+	JobID           string `audit:"job_id"`
+	AccountID       string `audit:"account_id"`
+	AugnoCustomerID string `audit:"augno_customer_id"`
+	CustomerName    string `audit:"customer_name"`
+	// CustomerEmail and CustomerURL snapshot the customer's contact details at preview time, so a reviewer resolving a match has what they need to identify the company without a second lookup.
+	CustomerEmail     *string `audit:"customer_email"`
+	CustomerURL       *string `audit:"customer_url"`
 	CandidateMatches  json.RawMessage
 	Status            string  `audit:"status"`
 	Resolution        *string `audit:"resolution"`
@@ -130,6 +161,8 @@ type CreateHubspotCompanyReviewParams struct {
 	AccountID        string
 	AugnoCustomerID  string
 	CustomerName     string
+	CustomerEmail    *string
+	CustomerURL      *string
 	CandidateMatches json.RawMessage
 	Status           string
 }

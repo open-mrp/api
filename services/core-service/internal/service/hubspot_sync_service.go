@@ -26,6 +26,8 @@ type HubspotSyncSvcConfig struct {
 	Repos domain.RepoFactory
 	// MediatorFactory (required) builds the idempotency mediator that gives mutations recovery-point semantics.
 	MediatorFactory domain.MediatorFactory
+	// JobSvcFactory (required) builds the job service the async bulk-resolve and export operations record their work on.
+	JobSvcFactory domain.JobSvcFactory
 	// TxManager (required) opens the transactions that commit a job/review mutation atomically with its outbox command and audit event.
 	TxManager TransactionManager
 	// Publisher (required) writes the preview/execute commands to the outbox.
@@ -39,6 +41,9 @@ func (c *HubspotSyncSvcConfig) validate() error {
 	if c.MediatorFactory == nil {
 		return fmt.Errorf("hubspot sync service: MediatorFactory is required")
 	}
+	if c.JobSvcFactory == nil {
+		return fmt.Errorf("hubspot sync service: JobSvcFactory is required")
+	}
 	if c.TxManager == nil {
 		return fmt.Errorf("hubspot sync service: TxManager is required")
 	}
@@ -51,6 +56,7 @@ func (c *HubspotSyncSvcConfig) validate() error {
 type hubspotSyncSvcImpl struct {
 	repos           domain.RepoFactory
 	mediatorFactory domain.MediatorFactory
+	jobSvcFactory   domain.JobSvcFactory
 	txManager       TransactionManager
 	publisher       domain.HubspotSyncPublisher
 }
@@ -62,6 +68,7 @@ func NewHubspotSyncSvc(config *HubspotSyncSvcConfig) domain.HubspotSyncSvc {
 	return &hubspotSyncSvcImpl{
 		repos:           config.Repos,
 		mediatorFactory: config.MediatorFactory,
+		jobSvcFactory:   config.JobSvcFactory,
 		txManager:       config.TxManager,
 		publisher:       config.Publisher,
 	}

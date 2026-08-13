@@ -47,6 +47,8 @@ func (*HubspotSyncEndpointGroup) Materialize(config *HubspotSyncEndpointGroupCon
 	linkReviewEndpoint := apiendpoint.From(&hubspotsyncep.LinkHubspotCompanyReviewEndpoint{}).WithService(inner, svc)
 	createNewReviewEndpoint := apiendpoint.From(&hubspotsyncep.CreateNewHubspotCompanyReviewEndpoint{}).WithService(inner, svc)
 	skipReviewEndpoint := apiendpoint.From(&hubspotsyncep.SkipHubspotCompanyReviewEndpoint{}).WithService(inner, svc)
+	bulkResolveReviewsEndpoint := apiendpoint.From(&hubspotsyncep.BulkResolveHubspotCompanyReviewsEndpoint{}).WithService(inner, svc)
+	exportReviewsEndpoint := apiendpoint.From(&hubspotsyncep.ExportHubspotCompanyReviewsEndpoint{}).WithService(inner, svc)
 	executeEndpoint := apiendpoint.From(&hubspotsyncep.ExecuteHubspotSyncEndpoint{}).WithService(inner, svc)
 	cancelEndpoint := apiendpoint.From(&hubspotsyncep.CancelHubspotSyncEndpoint{}).WithService(inner, svc)
 	listRecordsEndpoint := apiendpoint.From(&hubspotsyncep.ListHubspotSyncRecordsEndpoint{}).WithService(inner, svc)
@@ -59,6 +61,8 @@ func (*HubspotSyncEndpointGroup) Materialize(config *HubspotSyncEndpointGroupCon
 		linkReviewEndpoint,
 		createNewReviewEndpoint,
 		skipReviewEndpoint,
+		bulkResolveReviewsEndpoint,
+		exportReviewsEndpoint,
 		executeEndpoint,
 		cancelEndpoint,
 		listRecordsEndpoint,

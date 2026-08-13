@@ -95,6 +95,45 @@ func (h *hubspotSyncGRPCHandler) ResolveHubspotCompanyReview(ctx context.Context
 	return &pb.HubspotCompanyReviewResponse{Review: hubspotCompanyReviewToProto(review)}, nil
 }
 
+func (h *hubspotSyncGRPCHandler) BulkResolveHubspotCompanyReviews(ctx context.Context, req *pb.BulkResolveHubspotCompanyReviewsRequest) (*pb.BulkResolveHubspotCompanyReviewsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	reviews := make([]domain.ResolveHubspotReviewParams, len(req.Reviews))
+	for i, review := range req.Reviews {
+		reviews[i] = domain.ResolveHubspotReviewParams{
+			ReviewID:          review.ReviewId,
+			Action:            review.Action,
+			ResolvedHubspotID: review.ResolvedHubspotId,
+		}
+	}
+
+	job, apiErr := h.svc.BulkResolveReviews(ctx, domain.BulkResolveHubspotReviewsParams{JobID: req.JobId, Reviews: reviews})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	return &pb.BulkResolveHubspotCompanyReviewsResponse{Job: jobToProto(job)}, nil
+}
+
+func (h *hubspotSyncGRPCHandler) ExportHubspotCompanyReviews(ctx context.Context, req *pb.ExportHubspotCompanyReviewsRequest) (*pb.ExportHubspotCompanyReviewsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	job, apiErr := h.svc.ExportReviews(ctx, domain.ExportHubspotCompanyReviewsParams{JobID: req.JobId, Status: req.Status})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	return &pb.ExportHubspotCompanyReviewsResponse{Job: jobToProto(job)}, nil
+}
+
 func (h *hubspotSyncGRPCHandler) ExecuteHubspotSync(ctx context.Context, req *pb.ExecuteHubspotSyncRequest) (*pb.HubspotSyncJobResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
@@ -199,6 +238,8 @@ func hubspotCompanyReviewToProto(review *domain.HubspotCompanyReview) *pb.Hubspo
 		JobId:                review.JobID,
 		AugnoCustomerId:      review.AugnoCustomerID,
 		CustomerName:         review.CustomerName,
+		CustomerEmail:        review.CustomerEmail,
+		CustomerUrl:          review.CustomerURL,
 		CandidateMatchesJson: string(review.CandidateMatches),
 		Status:               review.Status,
 		Resolution:           review.Resolution,

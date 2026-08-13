@@ -4613,6 +4613,21 @@ func (mr *MockHubspotSyncRepoMockRecorder) GetReview(ctx, accountID, id any) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetReview", reflect.TypeOf((*MockHubspotSyncRepo)(nil).GetReview), ctx, accountID, id)
 }
 
+// GetReviewsByIDs mocks base method.
+func (m *MockHubspotSyncRepo) GetReviewsByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.HubspotCompanyReview, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetReviewsByIDs", ctx, accountID, ids)
+	ret0, _ := ret[0].([]*domain.HubspotCompanyReview)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetReviewsByIDs indicates an expected call of GetReviewsByIDs.
+func (mr *MockHubspotSyncRepoMockRecorder) GetReviewsByIDs(ctx, accountID, ids any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetReviewsByIDs", reflect.TypeOf((*MockHubspotSyncRepo)(nil).GetReviewsByIDs), ctx, accountID, ids)
+}
+
 // ListRecords mocks base method.
 func (m *MockHubspotSyncRepo) ListRecords(ctx context.Context, params domain.ListHubspotSyncRecordsParams) (*domain.ListHubspotSyncRecordsResult, *apierror.APIError) {
 	m.ctrl.T.Helper()

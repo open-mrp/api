@@ -209,6 +209,91 @@ func TestHubspotSync_ReadThenResolve(t *testing.T) {
 			"the resolved review no longer appears under status=pending")
 	})
 
+	t.Run("bulk-resolve-rejects-bad-rows-synchronously", func(t *testing.T) {
+		// Structural and reference failures are decided in the accept phase, so a bad
+		// spreadsheet comes back as a row-indexed 400 rather than a job the caller has
+		// to poll to discover was pointless.
+		path := fmt.Sprintf("%s/%s/company-reviews/actions/bulk-resolve", hubspotSyncPath, SeedHubspotSyncJobID)
+
+		for name, payload := range map[string]map[string]any{
+			"unknown action": {"reviews": []any{
+				map[string]any{"review_id": SeedHubspotCompanyReviewID, "action": "merge"},
+			}},
+			"link with no company id": {"reviews": []any{
+				map[string]any{"review_id": SeedHubspotCompanyReviewID, "action": "link"},
+			}},
+			"unknown review": {"reviews": []any{
+				map[string]any{"review_id": "igrv_doesnotexist0000", "action": "skip"},
+			}},
+			"same review twice": {"reviews": []any{
+				map[string]any{"review_id": SeedHubspotCompanyReviewID, "action": "skip"},
+				map[string]any{"review_id": SeedHubspotCompanyReviewID, "action": "create_new"},
+			}},
+			"no rows": {"reviews": []any{}},
+		} {
+			status, body, err := apiClient.Post(path, payload, newIdempotencyKey())
+			require.NoError(t, err)
+			require.Equal(t, 400, status, "%s should be rejected synchronously: %s", name, string(body))
+			requireErrorResponse(t, body, "", "invalid_request_error")
+		}
+	})
+
+	t.Run("bulk-resolve-rejects-another-jobs-review", func(t *testing.T) {
+		// The route names the sync the caller was authorized against, so a review from
+		// a different job must not be reachable through it even within the account.
+		path := fmt.Sprintf("%s/%s/company-reviews/actions/bulk-resolve", hubspotSyncPath, "igjb_doesnotexist0000")
+		status, body, err := apiClient.Post(path, map[string]any{"reviews": []any{
+			map[string]any{"review_id": SeedHubspotCompanyReviewID, "action": "skip"},
+		}}, newIdempotencyKey())
+		require.NoError(t, err)
+		assert.Contains(t, []int{400, 404}, status,
+			"resolving the seed review through another job must not succeed: %s", string(body))
+	})
+
+	t.Run("bulk-resolve-applies-decisions", func(t *testing.T) {
+		// Re-resolving an already-resolved review is deliberate: the outcome is the same
+		// on every run, which keeps this suite re-run tolerant against the shared seed.
+		path := fmt.Sprintf("%s/%s/company-reviews/actions/bulk-resolve", hubspotSyncPath, SeedHubspotSyncJobID)
+		status, body, err := apiClient.Post(path, map[string]any{"reviews": []any{
+			map[string]any{"review_id": SeedHubspotCompanyReviewID, "action": "link", "resolved_hubspot_id": "hs_company_1001"},
+		}}, newIdempotencyKey())
+		require.NoError(t, err)
+		requireStatus(t, 202, status, body)
+
+		accepted := parseJSON(body)
+		assert.Equal(t, "job", jsonField(accepted, "object"), "202 returns the canonical job resource")
+		jobID := jsonField(accepted, "id")
+		require.NotEmpty(t, jobID, "202 must name the job to poll")
+
+		job := pollJobUntilTerminal(t, jobID)
+		require.Equal(t, "completed", jsonField(job, "status"), "the bulk resolution should complete: %v", job)
+		assert.Empty(t, jsonArray(job, "errors"), "a valid decision should not land in the job's errors")
+		require.NotEmpty(t, jsonArray(job, "results"), "a completed job must carry results")
+
+		review := hubspotReviewByID(t, apiClient, SeedHubspotSyncJobID, SeedHubspotCompanyReviewID, "")
+		require.NotNil(t, review)
+		assert.Equal(t, "resolved", jsonField(review, "status"))
+		assert.Equal(t, "link", jsonField(review, "resolution"))
+		assert.Equal(t, "hs_company_1001", jsonField(review, "resolved_hubspot_id"))
+	})
+
+	t.Run("export-reviews-produces-a-file", func(t *testing.T) {
+		path := fmt.Sprintf("%s/%s/company-reviews/actions/export", hubspotSyncPath, SeedHubspotSyncJobID)
+		job := completedExportJob(t, path, nil)
+		export, ok := job["export"].(map[string]any)
+		require.True(t, ok, "a completed export must carry its download: %v", job)
+		assert.NotEmpty(t, export["url"], "the export names a downloadable file")
+	})
+
+	t.Run("export-reviews-cross-account-isolation", func(t *testing.T) {
+		tenantB := apiClient.WithBearerToken(SeedTenantBAPIKey, SeedTenantBAccountID)
+		path := fmt.Sprintf("%s/%s/company-reviews/actions/export", hubspotSyncPath, SeedHubspotSyncJobID)
+		status, body, err := tenantB.Post(path, map[string]any{}, newIdempotencyKey())
+		require.NoError(t, err)
+		assert.NotEqual(t, 202, status,
+			"another tenant must not export the seed account's review queue: %s", string(body))
+	})
+
 	t.Run("execute-after-reviews-resolved", func(t *testing.T) {
 		job, _ := getHubspotJob(t, apiClient, SeedHubspotSyncJobID)
 		jobStatus := jsonField(job, "status")

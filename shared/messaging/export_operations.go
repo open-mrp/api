@@ -27,20 +27,21 @@ func (o ExportOperation) String() string {
 
 // The canonical export operations
 const (
-	ExportUnits            ExportOperation = "export_units"
-	ExportUnitGroups       ExportOperation = "export_unit_groups"
-	ExportProductLines     ExportOperation = "export_product_lines"
-	ExportItemCategories   ExportOperation = "export_item_categories"
-	ExportDepartments      ExportOperation = "export_departments"
-	ExportLocations        ExportOperation = "export_locations"
-	ExportMachines         ExportOperation = "export_machines"
-	ExportScanningStations ExportOperation = "export_scanning_stations"
-	ExportProductionRuns   ExportOperation = "export_production_runs"
-	ExportProductionSteps  ExportOperation = "export_production_steps"
-	ExportParts            ExportOperation = "export_parts"
-	ExportProducts         ExportOperation = "export_products"
-	ExportMaterials        ExportOperation = "export_materials"
-	ExportProperties       ExportOperation = "export_properties"
+	ExportUnits                 ExportOperation = "export_units"
+	ExportUnitGroups            ExportOperation = "export_unit_groups"
+	ExportProductLines          ExportOperation = "export_product_lines"
+	ExportItemCategories        ExportOperation = "export_item_categories"
+	ExportDepartments           ExportOperation = "export_departments"
+	ExportLocations             ExportOperation = "export_locations"
+	ExportMachines              ExportOperation = "export_machines"
+	ExportScanningStations      ExportOperation = "export_scanning_stations"
+	ExportProductionRuns        ExportOperation = "export_production_runs"
+	ExportProductionSteps       ExportOperation = "export_production_steps"
+	ExportParts                 ExportOperation = "export_parts"
+	ExportProducts              ExportOperation = "export_products"
+	ExportMaterials             ExportOperation = "export_materials"
+	ExportProperties            ExportOperation = "export_properties"
+	ExportHubspotCompanyReviews ExportOperation = "export_hubspot_company_reviews"
 )
 
 // lists every registered export; the rabbitmq bindings declare a queue per entry and the
@@ -60,6 +61,7 @@ var ExportOperations = []ExportOperation{
 	ExportProducts,
 	ExportMaterials,
 	ExportProperties,
+	ExportHubspotCompanyReviews,
 }
 
 // finds the export command for a resource slug, an export being named for its resource.

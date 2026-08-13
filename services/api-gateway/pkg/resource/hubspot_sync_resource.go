@@ -112,6 +112,12 @@ type HubspotCompanyReview struct {
 	Job *HubspotSyncJob `json:"job" validate:"required"`
 	// The Augno customer account being matched.
 	Customer *Customer `json:"customer" validate:"required"`
+	// The customer's email address as it stood when the review was raised.
+	//
+	// Snapshotted on the review rather than read from the customer, because matching a company means comparing what Augno held at match time against what HubSpot holds — a later edit to the customer must not silently change what a reviewer is deciding on.
+	CustomerEmail *string `json:"customer_email"`
+	// The customer's website as it stood when the review was raised — the field the domain match was derived from.
+	CustomerURL *string `json:"customer_url"`
 	// Candidate HubSpot companies the customer might match.
 	//
 	// These are the matches that made the customer ambiguous: either several HubSpot companies share its web domain, or it matched only by company name.

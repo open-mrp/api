@@ -22,14 +22,16 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	CoreHubspotSyncService_StartHubspotBackfill_FullMethodName        = "/core.CoreHubspotSyncService/StartHubspotBackfill"
-	CoreHubspotSyncService_GetCurrentHubspotSyncJob_FullMethodName    = "/core.CoreHubspotSyncService/GetCurrentHubspotSyncJob"
-	CoreHubspotSyncService_GetHubspotSyncJob_FullMethodName           = "/core.CoreHubspotSyncService/GetHubspotSyncJob"
-	CoreHubspotSyncService_ListHubspotCompanyReviews_FullMethodName   = "/core.CoreHubspotSyncService/ListHubspotCompanyReviews"
-	CoreHubspotSyncService_ResolveHubspotCompanyReview_FullMethodName = "/core.CoreHubspotSyncService/ResolveHubspotCompanyReview"
-	CoreHubspotSyncService_ExecuteHubspotSync_FullMethodName          = "/core.CoreHubspotSyncService/ExecuteHubspotSync"
-	CoreHubspotSyncService_CancelHubspotSync_FullMethodName           = "/core.CoreHubspotSyncService/CancelHubspotSync"
-	CoreHubspotSyncService_ListHubspotSyncRecords_FullMethodName      = "/core.CoreHubspotSyncService/ListHubspotSyncRecords"
+	CoreHubspotSyncService_StartHubspotBackfill_FullMethodName             = "/core.CoreHubspotSyncService/StartHubspotBackfill"
+	CoreHubspotSyncService_GetCurrentHubspotSyncJob_FullMethodName         = "/core.CoreHubspotSyncService/GetCurrentHubspotSyncJob"
+	CoreHubspotSyncService_GetHubspotSyncJob_FullMethodName                = "/core.CoreHubspotSyncService/GetHubspotSyncJob"
+	CoreHubspotSyncService_ListHubspotCompanyReviews_FullMethodName        = "/core.CoreHubspotSyncService/ListHubspotCompanyReviews"
+	CoreHubspotSyncService_ResolveHubspotCompanyReview_FullMethodName      = "/core.CoreHubspotSyncService/ResolveHubspotCompanyReview"
+	CoreHubspotSyncService_BulkResolveHubspotCompanyReviews_FullMethodName = "/core.CoreHubspotSyncService/BulkResolveHubspotCompanyReviews"
+	CoreHubspotSyncService_ExportHubspotCompanyReviews_FullMethodName      = "/core.CoreHubspotSyncService/ExportHubspotCompanyReviews"
+	CoreHubspotSyncService_ExecuteHubspotSync_FullMethodName               = "/core.CoreHubspotSyncService/ExecuteHubspotSync"
+	CoreHubspotSyncService_CancelHubspotSync_FullMethodName                = "/core.CoreHubspotSyncService/CancelHubspotSync"
+	CoreHubspotSyncService_ListHubspotSyncRecords_FullMethodName           = "/core.CoreHubspotSyncService/ListHubspotSyncRecords"
 )
 
 // CoreHubspotSyncServiceClient is the client API for CoreHubspotSyncService service.
@@ -46,6 +48,10 @@ type CoreHubspotSyncServiceClient interface {
 	ListHubspotCompanyReviews(ctx context.Context, in *ListHubspotCompanyReviewsRequest, opts ...grpc.CallOption) (*ListHubspotCompanyReviewsResponse, error)
 	// ResolveHubspotCompanyReview records a human resolution (link / create_new / skip) for one review.
 	ResolveHubspotCompanyReview(ctx context.Context, in *ResolveHubspotCompanyReviewRequest, opts ...grpc.CallOption) (*HubspotCompanyReviewResponse, error)
+	// BulkResolveHubspotCompanyReviews records many resolutions as one async job.
+	BulkResolveHubspotCompanyReviews(ctx context.Context, in *BulkResolveHubspotCompanyReviewsRequest, opts ...grpc.CallOption) (*BulkResolveHubspotCompanyReviewsResponse, error)
+	// ExportHubspotCompanyReviews accepts an export of a job's review queue.
+	ExportHubspotCompanyReviews(ctx context.Context, in *ExportHubspotCompanyReviewsRequest, opts ...grpc.CallOption) (*ExportHubspotCompanyReviewsResponse, error)
 	// ExecuteHubspotSync kicks off the write phase for a reviewed job.
 	ExecuteHubspotSync(ctx context.Context, in *ExecuteHubspotSyncRequest, opts ...grpc.CallOption) (*HubspotSyncJobResponse, error)
 	// CancelHubspotSync force-fails an in-flight job so the account can start a new one.
@@ -112,6 +118,26 @@ func (c *coreHubspotSyncServiceClient) ResolveHubspotCompanyReview(ctx context.C
 	return out, nil
 }
 
+func (c *coreHubspotSyncServiceClient) BulkResolveHubspotCompanyReviews(ctx context.Context, in *BulkResolveHubspotCompanyReviewsRequest, opts ...grpc.CallOption) (*BulkResolveHubspotCompanyReviewsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BulkResolveHubspotCompanyReviewsResponse)
+	err := c.cc.Invoke(ctx, CoreHubspotSyncService_BulkResolveHubspotCompanyReviews_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreHubspotSyncServiceClient) ExportHubspotCompanyReviews(ctx context.Context, in *ExportHubspotCompanyReviewsRequest, opts ...grpc.CallOption) (*ExportHubspotCompanyReviewsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ExportHubspotCompanyReviewsResponse)
+	err := c.cc.Invoke(ctx, CoreHubspotSyncService_ExportHubspotCompanyReviews_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *coreHubspotSyncServiceClient) ExecuteHubspotSync(ctx context.Context, in *ExecuteHubspotSyncRequest, opts ...grpc.CallOption) (*HubspotSyncJobResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(HubspotSyncJobResponse)
@@ -156,6 +182,10 @@ type CoreHubspotSyncServiceServer interface {
 	ListHubspotCompanyReviews(context.Context, *ListHubspotCompanyReviewsRequest) (*ListHubspotCompanyReviewsResponse, error)
 	// ResolveHubspotCompanyReview records a human resolution (link / create_new / skip) for one review.
 	ResolveHubspotCompanyReview(context.Context, *ResolveHubspotCompanyReviewRequest) (*HubspotCompanyReviewResponse, error)
+	// BulkResolveHubspotCompanyReviews records many resolutions as one async job.
+	BulkResolveHubspotCompanyReviews(context.Context, *BulkResolveHubspotCompanyReviewsRequest) (*BulkResolveHubspotCompanyReviewsResponse, error)
+	// ExportHubspotCompanyReviews accepts an export of a job's review queue.
+	ExportHubspotCompanyReviews(context.Context, *ExportHubspotCompanyReviewsRequest) (*ExportHubspotCompanyReviewsResponse, error)
 	// ExecuteHubspotSync kicks off the write phase for a reviewed job.
 	ExecuteHubspotSync(context.Context, *ExecuteHubspotSyncRequest) (*HubspotSyncJobResponse, error)
 	// CancelHubspotSync force-fails an in-flight job so the account can start a new one.
@@ -186,6 +216,12 @@ func (UnimplementedCoreHubspotSyncServiceServer) ListHubspotCompanyReviews(conte
 }
 func (UnimplementedCoreHubspotSyncServiceServer) ResolveHubspotCompanyReview(context.Context, *ResolveHubspotCompanyReviewRequest) (*HubspotCompanyReviewResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ResolveHubspotCompanyReview not implemented")
+}
+func (UnimplementedCoreHubspotSyncServiceServer) BulkResolveHubspotCompanyReviews(context.Context, *BulkResolveHubspotCompanyReviewsRequest) (*BulkResolveHubspotCompanyReviewsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method BulkResolveHubspotCompanyReviews not implemented")
+}
+func (UnimplementedCoreHubspotSyncServiceServer) ExportHubspotCompanyReviews(context.Context, *ExportHubspotCompanyReviewsRequest) (*ExportHubspotCompanyReviewsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ExportHubspotCompanyReviews not implemented")
 }
 func (UnimplementedCoreHubspotSyncServiceServer) ExecuteHubspotSync(context.Context, *ExecuteHubspotSyncRequest) (*HubspotSyncJobResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ExecuteHubspotSync not implemented")
@@ -308,6 +344,42 @@ func _CoreHubspotSyncService_ResolveHubspotCompanyReview_Handler(srv interface{}
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CoreHubspotSyncService_BulkResolveHubspotCompanyReviews_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BulkResolveHubspotCompanyReviewsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreHubspotSyncServiceServer).BulkResolveHubspotCompanyReviews(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreHubspotSyncService_BulkResolveHubspotCompanyReviews_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreHubspotSyncServiceServer).BulkResolveHubspotCompanyReviews(ctx, req.(*BulkResolveHubspotCompanyReviewsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreHubspotSyncService_ExportHubspotCompanyReviews_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExportHubspotCompanyReviewsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreHubspotSyncServiceServer).ExportHubspotCompanyReviews(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreHubspotSyncService_ExportHubspotCompanyReviews_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreHubspotSyncServiceServer).ExportHubspotCompanyReviews(ctx, req.(*ExportHubspotCompanyReviewsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CoreHubspotSyncService_ExecuteHubspotSync_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ExecuteHubspotSyncRequest)
 	if err := dec(in); err != nil {
@@ -388,6 +460,14 @@ var CoreHubspotSyncService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ResolveHubspotCompanyReview",
 			Handler:    _CoreHubspotSyncService_ResolveHubspotCompanyReview_Handler,
+		},
+		{
+			MethodName: "BulkResolveHubspotCompanyReviews",
+			Handler:    _CoreHubspotSyncService_BulkResolveHubspotCompanyReviews_Handler,
+		},
+		{
+			MethodName: "ExportHubspotCompanyReviews",
+			Handler:    _CoreHubspotSyncService_ExportHubspotCompanyReviews_Handler,
 		},
 		{
 			MethodName: "ExecuteHubspotSync",

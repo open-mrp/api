@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
 
 	"github.com/augno/api/shared/db"
 )
@@ -33,6 +34,8 @@ SELECT
     account_id,
     augno_customer_id,
     customer_name,
+    customer_email,
+    customer_url,
     candidate_matches,
     status,
     resolution,
@@ -58,6 +61,8 @@ func (q *Queries) GetHubspotCompanyReview(ctx context.Context, arg GetHubspotCom
 		&i.AccountID,
 		&i.AugnoCustomerID,
 		&i.CustomerName,
+		&i.CustomerEmail,
+		&i.CustomerUrl,
 		&i.CandidateMatches,
 		&i.Status,
 		&i.Resolution,
@@ -68,6 +73,79 @@ func (q *Queries) GetHubspotCompanyReview(ctx context.Context, arg GetHubspotCom
 	return i, err
 }
 
+const getHubspotCompanyReviewsByIDs = `-- name: GetHubspotCompanyReviewsByIDs :many
+SELECT
+    id,
+    job_id,
+    account_id,
+    augno_customer_id,
+    customer_name,
+    customer_email,
+    customer_url,
+    candidate_matches,
+    status,
+    resolution,
+    resolved_hubspot_id,
+    created_at,
+    updated_at
+FROM hubspot_company_review
+WHERE account_id = ?
+AND id IN (/*SLICE:ids*/?)
+`
+
+type GetHubspotCompanyReviewsByIDsParams struct {
+	AccountID string
+	Ids       []string
+}
+
+func (q *Queries) GetHubspotCompanyReviewsByIDs(ctx context.Context, arg GetHubspotCompanyReviewsByIDsParams) ([]HubspotCompanyReview, error) {
+	query := getHubspotCompanyReviewsByIDs
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []HubspotCompanyReview
+	for rows.Next() {
+		var i HubspotCompanyReview
+		if err := rows.Scan(
+			&i.ID,
+			&i.JobID,
+			&i.AccountID,
+			&i.AugnoCustomerID,
+			&i.CustomerName,
+			&i.CustomerEmail,
+			&i.CustomerUrl,
+			&i.CandidateMatches,
+			&i.Status,
+			&i.Resolution,
+			&i.ResolvedHubspotID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const insertHubspotCompanyReview = `-- name: InsertHubspotCompanyReview :exec
 INSERT INTO hubspot_company_review (
     id,
@@ -75,11 +153,15 @@ INSERT INTO hubspot_company_review (
     account_id,
     augno_customer_id,
     customer_name,
+    customer_email,
+    customer_url,
     candidate_matches,
     status,
     created_at,
     updated_at
 ) VALUES (
+    ?,
+    ?,
     ?,
     ?,
     ?,
@@ -98,6 +180,8 @@ type InsertHubspotCompanyReviewParams struct {
 	AccountID        string
 	AugnoCustomerID  string
 	CustomerName     string
+	CustomerEmail    sql.NullString
+	CustomerUrl      sql.NullString
 	CandidateMatches db.NullableRawMessage
 	Status           string
 }
@@ -109,6 +193,8 @@ func (q *Queries) InsertHubspotCompanyReview(ctx context.Context, arg InsertHubs
 		arg.AccountID,
 		arg.AugnoCustomerID,
 		arg.CustomerName,
+		arg.CustomerEmail,
+		arg.CustomerUrl,
 		arg.CandidateMatches,
 		arg.Status,
 	)
@@ -122,6 +208,8 @@ SELECT
     account_id,
     augno_customer_id,
     customer_name,
+    customer_email,
+    customer_url,
     candidate_matches,
     status,
     resolution,
@@ -157,6 +245,8 @@ func (q *Queries) ListHubspotCompanyReviewsForJob(ctx context.Context, arg ListH
 			&i.AccountID,
 			&i.AugnoCustomerID,
 			&i.CustomerName,
+			&i.CustomerEmail,
+			&i.CustomerUrl,
 			&i.CandidateMatches,
 			&i.Status,
 			&i.Resolution,

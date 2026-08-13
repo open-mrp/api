@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	jobep "github.com/augno/api/services/api-gateway/endpoints/jobs"
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
@@ -29,6 +30,8 @@ type HubspotSyncSvc interface {
 	LinkCompanyReview(ctx context.Context, req *LinkHubspotCompanyReviewRequest) (*apiresource.HubspotCompanyReview, *apierror.APIError)
 	CreateNewCompanyReview(ctx context.Context, req *CreateNewHubspotCompanyReviewRequest) (*apiresource.HubspotCompanyReview, *apierror.APIError)
 	SkipCompanyReview(ctx context.Context, req *SkipHubspotCompanyReviewRequest) (*apiresource.HubspotCompanyReview, *apierror.APIError)
+	BulkResolveCompanyReviews(ctx context.Context, req *BulkResolveHubspotCompanyReviewsRequest) (*apiresource.Job, *apierror.APIError)
+	ExportCompanyReviews(ctx context.Context, req *ExportHubspotCompanyReviewsRequest) (*apiresource.Job, *apierror.APIError)
 	ExecuteSync(ctx context.Context, req *ExecuteHubspotSyncRequest) (*apiresource.HubspotSyncJob, *apierror.APIError)
 }
 
@@ -171,6 +174,37 @@ func (m *hubspotSyncSvcImpl) resolveCompanyReview(ctx context.Context, jobID, re
 	return hubspotCompanyReviewFromProto(resp.Review), nil
 }
 
+func (m *hubspotSyncSvcImpl) BulkResolveCompanyReviews(ctx context.Context, req *BulkResolveHubspotCompanyReviewsRequest) (*apiresource.Job, *apierror.APIError) {
+	reviews := make([]*pb.HubspotCompanyReviewResolution, len(req.Reviews))
+	for i, review := range req.Reviews {
+		reviews[i] = &pb.HubspotCompanyReviewResolution{
+			ReviewId:          review.ReviewID,
+			Action:            string(review.Action),
+			ResolvedHubspotId: review.ResolvedHubspotID,
+		}
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, hubspotSyncSvcTracer, "service.hubspot-sync.bulk_resolve_reviews", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.BulkResolveHubspotCompanyReviewsResponse, error) {
+			return m.coreClient.BulkResolveHubspotCompanyReviews(ctx, &pb.BulkResolveHubspotCompanyReviewsRequest{JobId: req.JobID, Reviews: reviews}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	return jobep.JobFromProto(resp.GetJob()), nil
+}
+
+func (m *hubspotSyncSvcImpl) ExportCompanyReviews(ctx context.Context, req *ExportHubspotCompanyReviewsRequest) (*apiresource.Job, *apierror.APIError) {
+	resp, apiErr := grpcutil.CallRPC(ctx, hubspotSyncSvcTracer, "service.hubspot-sync.export_reviews", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ExportHubspotCompanyReviewsResponse, error) {
+			return m.coreClient.ExportHubspotCompanyReviews(ctx, &pb.ExportHubspotCompanyReviewsRequest{JobId: req.JobID, Status: req.Status.StringPtr()}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	return jobep.JobFromProto(resp.GetJob()), nil
+}
+
 func (m *hubspotSyncSvcImpl) ExecuteSync(ctx context.Context, req *ExecuteHubspotSyncRequest) (*apiresource.HubspotSyncJob, *apierror.APIError) {
 	resp, apiErr := grpcutil.CallRPC(ctx, hubspotSyncSvcTracer, "service.hubspot-sync.execute", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.HubspotSyncJobResponse, error) {
@@ -229,10 +263,12 @@ func hubspotCompanyReviewFromProto(p *pb.HubspotCompanyReviewInfo) *apiresource.
 		candidates[i].Object = constants.ObjectTypeHubspotCompanyCandidate
 	}
 	return &apiresource.HubspotCompanyReview{
-		ID:                p.Id,
-		Object:            constants.ObjectTypeHubspotCompanyReview,
+		ID:     p.Id,
+		Object: constants.ObjectTypeHubspotCompanyReview,
 		Job:               &apiresource.HubspotSyncJob{ID: p.JobId, Object: constants.ObjectTypeHubspotSyncJob},
 		Customer:          &apiresource.Customer{ID: p.AugnoCustomerId, Object: constants.ObjectTypeCustomer, Name: p.CustomerName},
+		CustomerEmail:     p.CustomerEmail,
+		CustomerURL:       p.CustomerUrl,
 		Candidates:        apiresource.NewList(candidates, apiresource.PageInfo{}),
 		Status:            constants.HubspotCompanyReviewStatus(p.Status),
 		Resolution:        p.Resolution,

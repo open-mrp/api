@@ -18,6 +18,7 @@ func (m *AccountIntegrationStatus) StringPtr() *string {
 }
 func (m *HubspotSyncJobStatus) StringPtr() *string       { return stringPtrEnum(m) }
 func (m *HubspotCompanyReviewStatus) StringPtr() *string { return stringPtrEnum(m) }
+func (m *HubspotCompanyReviewAction) StringPtr() *string { return stringPtrEnum(m) }
 func (m *AccountRelationNotificationType) StringPtr() *string {
 	return stringPtrEnum(m)
 }

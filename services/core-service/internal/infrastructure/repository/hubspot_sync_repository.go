@@ -232,6 +232,8 @@ func (r *hubspotSyncRepoImpl) CreateReview(ctx context.Context, params domain.Cr
 		AccountID:        params.AccountID,
 		AugnoCustomerID:  params.AugnoCustomerID,
 		CustomerName:     params.CustomerName,
+		CustomerEmail:    db.NullStringPtr(params.CustomerEmail),
+		CustomerUrl:      db.NullStringPtr(params.CustomerURL),
 		CandidateMatches: db.NullableRawMessage(params.CandidateMatches),
 		Status:           params.Status,
 	}); err != nil {
@@ -250,6 +252,26 @@ func (r *hubspotSyncRepoImpl) GetReview(ctx context.Context, accountID, reviewID
 		return nil, tracing.Trace(span, db.MapSQLError(err))
 	}
 	return mapReview(row), nil
+}
+
+// GetReviewsByIDs reads the named reviews in one round trip. Ids that do not exist (or belong to another account) are simply absent from the result — the caller decides what a miss means.
+func (r *hubspotSyncRepoImpl) GetReviewsByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.HubspotCompanyReview, *apierror.APIError) {
+	ctx, span := hubspotSyncRepoTracer.Start(ctx, "repository.hubspot_sync.get_reviews_by_ids")
+	defer span.End()
+
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.queries.GetHubspotCompanyReviewsByIDs(ctx, sqlc.GetHubspotCompanyReviewsByIDsParams{AccountID: accountID, Ids: ids})
+	if err != nil {
+		return nil, tracing.Trace(span, db.MapSQLError(err))
+	}
+	reviews := make([]*domain.HubspotCompanyReview, len(rows))
+	for i, row := range rows {
+		reviews[i] = mapReview(sqlc.HubspotCompanyReview(row))
+	}
+	return reviews, nil
 }
 
 func (r *hubspotSyncRepoImpl) ListReviewsForJob(ctx context.Context, jobID string, status *string) ([]*domain.HubspotCompanyReview, *apierror.APIError) {
@@ -322,6 +344,8 @@ func mapReview(row sqlc.HubspotCompanyReview) *domain.HubspotCompanyReview {
 		AccountID:         row.AccountID,
 		AugnoCustomerID:   row.AugnoCustomerID,
 		CustomerName:      row.CustomerName,
+		CustomerEmail:     db.StringFromNullString(row.CustomerEmail),
+		CustomerURL:       db.StringFromNullString(row.CustomerUrl),
 		CandidateMatches:  json.RawMessage(row.CandidateMatches),
 		Status:            row.Status,
 		Resolution:        db.StringFromNullString(row.Resolution),

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.46.1](https://github.com/Augno/api/compare/v0.46.0...v0.46.1) (2026-08-14)
+
+
+### Bug Fixes
+
+* expose Content-Disposition header in CORS middleware for file downloads ([8253c6c](https://github.com/Augno/api/commit/8253c6c49dab68bf6a0ac60ea8472547885578a3))
+
 ## [0.46.0](https://github.com/Augno/api/compare/v0.45.0...v0.46.0) (2026-08-14)
 
 

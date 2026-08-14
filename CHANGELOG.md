@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.46.2](https://github.com/Augno/api/compare/v0.46.1...v0.46.2) (2026-08-14)
+
+
+### Bug Fixes
+
+* scale pricing analytics, fix margin cost basis, unify quote rates on computed_rate ([#479](https://github.com/Augno/api/issues/479)) ([277bbac](https://github.com/Augno/api/commit/277bbac0951fe85c2789706a95ce9b97e4b94e32))
+
 ## [0.46.1](https://github.com/Augno/api/compare/v0.46.0...v0.46.1) (2026-08-14)
 
 

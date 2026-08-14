@@ -394,6 +394,29 @@ func TestPriceListExport_ReturnsAPDF(t *testing.T) {
 	assert.Greater(t, len(resp.Body), 1000, "a price list with a title page should not be nearly empty")
 }
 
+// The browser can only read the download filename when the gateway names Content-Disposition in Access-Control-Expose-Headers. Without it the dashboard falls back to a generic .xlsx name and saves the PDF under an extension that refuses to open, which no same-origin test can catch.
+func TestPriceListExport_ExposesFilenameHeaderCrossOrigin(t *testing.T) {
+	t.Parallel()
+
+	req, err := http.NewRequest(http.MethodGet,
+		apiClient.baseURL+priceListPath+"?customer_id="+SeedCustomerAccountID, nil)
+	require.NoError(t, err)
+	req.Header.Set("Origin", "http://localhost:4200")
+	req.Header.Set("Authorization", "Bearer "+apiClient.apiKey)
+	req.Header.Set("Augno-Account", apiClient.accountID)
+	req.Header.Set("Augno-Version", apiClient.apiVersion)
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	assert.Contains(t, resp.Header.Get("Access-Control-Expose-Headers"), "Content-Disposition",
+		"the filename header must be readable cross-origin")
+	assert.Contains(t, resp.Header.Get("Content-Disposition"), ".pdf",
+		"the download must be named as a PDF")
+}
+
 func TestPriceListExport_RequiresACustomer(t *testing.T) {
 	t.Parallel()
 

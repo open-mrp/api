@@ -27,7 +27,8 @@ func CORSMiddleware() func(http.HandlerFunc) http.HandlerFunc {
 					"X-Stainless-Arch, X-Stainless-Lang, X-Stainless-OS, X-Stainless-Package-Version, X-Stainless-Read-Timeout, "+
 					"X-Stainless-Retry-Count, X-Stainless-Runtime, X-Stainless-Runtime-Version, X-Stainless-Timeout",
 			)
-			w.Header().Set("Access-Control-Expose-Headers", "RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset, Request-Id, Augno-Version")
+			// Content-Disposition is not a CORS-safelisted response header, so a browser drops it unless it is named here. File-download endpoints put the filename there, and without it the client falls back to a generic default and saves a PDF as .xlsx.
+			w.Header().Set("Access-Control-Expose-Headers", "RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset, Request-Id, Augno-Version, Content-Disposition")
 			w.Header().Set("Access-Control-Max-Age", "86400") // 24 hours
 
 			// Handle preflight requests

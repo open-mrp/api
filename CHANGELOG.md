@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.46.0](https://github.com/Augno/api/compare/v0.45.0...v0.46.0) (2026-08-14)
+
+
+### Features
+
+* add customer pricing and realized margins analysis endpoints ([#477](https://github.com/Augno/api/issues/477)) ([9fe3aed](https://github.com/Augno/api/commit/9fe3aed1d23a1fd92aab7f5a4f063e2c4c608a0f))
+
+
+### Bug Fixes
+
+* include customer PO number in order acknowledgement attachment filename ([#475](https://github.com/Augno/api/issues/475)) ([03262fd](https://github.com/Augno/api/commit/03262fd6faeefce16e6202bffa9b550d4033e2dd))
+
 ## [0.45.0](https://github.com/Augno/api/compare/v0.44.5...v0.45.0) (2026-08-13)
 
 

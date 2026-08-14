@@ -167,3 +167,24 @@ func (*AnalyzeDeliveryPerformanceRequest) SchemaExample() any {
 		Granularity: field.Some(constants.DeliveryGranularityWeek),
 	})
 }
+
+func (*AnalyzeCustomerPricingRequest) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(&AnalyzeCustomerPricingRequest{
+		CustomerIDs:       []string{apiresource.SampleCustomerID},
+		CustomerGroupIDs:  []string{apiresource.SampleAccountGroupID},
+		TargetGrossMargin: field.Some("0.30"),
+		OutlierTolerance:  field.Some("0.15"),
+	})
+}
+
+func (*AnalyzeRealizedMarginsRequest) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(&AnalyzeRealizedMarginsRequest{
+		StartDate:         apiresource.SampleAnalyticsPeriodStart,
+		EndDate:           apiresource.SampleAnalyticsPeriodEnd,
+		CustomerIDs:       []string{apiresource.SampleCustomerID},
+		CustomerGroupIDs:  []string{apiresource.SampleAccountGroupID},
+		ProductLineIDs:    []string{apiresource.SampleProductLineID},
+		TargetGrossMargin: field.Some("0.30"),
+		OutlierTolerance:  field.Some("0.15"),
+	})
+}

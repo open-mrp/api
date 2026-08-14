@@ -376,12 +376,17 @@ resources:
           update_schedule_attainment: put /v1/core/analytics/schedule-attainment
           update_delivery_performance: put /v1/core/analytics/delivery-performance
           retrieve_weeks_of_sales: get /v1/core/analytics/weeks-of-sales
+          update_customer_pricing: put /v1/core/analytics/customer-pricing
+          update_realized_margins: put /v1/core/analytics/realized-margins
         models:
+          account_group: '#/components/schemas/AccountGroup'
           analytics_item: '#/components/schemas/AnalyticsItem'
           analytics_lot: '#/components/schemas/AnalyticsLot'
           analytics_rate: '#/components/schemas/AnalyticsRate'
           analytics_unit_group: '#/components/schemas/AnalyticsUnitGroup'
           analytics_unit_group_unit: '#/components/schemas/AnalyticsUnitGroupUnit'
+          analyze_customer_pricing_request: '#/components/schemas/AnalyzeCustomerPricingRequest'
+          analyze_customer_pricing_response: '#/components/schemas/AnalyzeCustomerPricingResponse'
           analyze_deliveries_request: '#/components/schemas/AnalyzeDeliveriesRequest'
           analyze_deliveries_response: '#/components/schemas/AnalyzeDeliveriesResponse'
           analyze_delivery_performance_request: '#/components/schemas/AnalyzeDeliveryPerformanceRequest'
@@ -410,15 +415,27 @@ resources:
           analyze_production_costs_response: '#/components/schemas/AnalyzeProductionCostsResponse'
           analyze_quarterly_orders_request: '#/components/schemas/AnalyzeQuarterlyOrdersRequest'
           analyze_quarterly_orders_response: '#/components/schemas/AnalyzeQuarterlyOrdersResponse'
+          analyze_realized_margins_request: '#/components/schemas/AnalyzeRealizedMarginsRequest'
+          analyze_realized_margins_response: '#/components/schemas/AnalyzeRealizedMarginsResponse'
           analyze_sales_request: '#/components/schemas/AnalyzeSalesRequest'
           analyze_sales_response: '#/components/schemas/AnalyzeSalesResponse'
           analyze_schedule_attainment_request: '#/components/schemas/AnalyzeScheduleAttainmentRequest'
           analyze_schedule_attainment_response: '#/components/schemas/AnalyzeScheduleAttainmentResponse'
           analyze_weeks_of_sales_response: '#/components/schemas/AnalyzeWeeksOfSalesResponse'
           attainment_bucket: '#/components/schemas/AttainmentBucket'
+          carrier: '#/components/schemas/Carrier'
           chart_data: '#/components/schemas/ChartData'
+          computed_quantity: '#/components/schemas/ComputedQuantity'
+          computed_rate: '#/components/schemas/ComputedRate'
           coordinate: '#/components/schemas/Coordinate'
           cost_breakdown: '#/components/schemas/CostBreakdown'
+          customer: '#/components/schemas/Customer'
+          customer_contact_info: '#/components/schemas/CustomerContactInfo'
+          customer_defaults: '#/components/schemas/CustomerDefaults'
+          customer_freight_preferences: '#/components/schemas/CustomerFreightPreferences'
+          customer_notification_preferences: '#/components/schemas/CustomerNotificationPreferences'
+          customer_pricing_finding: '#/components/schemas/CustomerPricingFinding'
+          customer_pricing_summary: '#/components/schemas/CustomerPricingSummary'
           date_time_coordinate: '#/components/schemas/DateTimeCoordinate'
           delivery_backlog_bucket: '#/components/schemas/DeliveryBacklogBucket'
           delivery_chart_data: '#/components/schemas/DeliveryChartData'
@@ -429,7 +446,10 @@ resources:
           demand_forecast_row: '#/components/schemas/DemandForecastRow'
           frozen_adherence: '#/components/schemas/FrozenAdherence'
           inventory_receipt_summary_entry: '#/components/schemas/InventoryReceiptSummaryEntry'
+          list_account_group: '#/components/schemas/List_AccountGroup'
           list_attainment_bucket: '#/components/schemas/List_AttainmentBucket'
+          list_customer: '#/components/schemas/List_Customer'
+          list_customer_pricing_finding: '#/components/schemas/List_CustomerPricingFinding'
           list_delivery_backlog_bucket: '#/components/schemas/List_DeliveryBacklogBucket'
           list_delivery_performance: '#/components/schemas/List_DeliveryPerformance'
           list_demand_forecast_row: '#/components/schemas/List_DemandForecastRow'
@@ -437,6 +457,8 @@ resources:
           list_oee_department: '#/components/schemas/List_OeeDepartment'
           list_oee_downtime_reason: '#/components/schemas/List_OeeDowntimeReason'
           list_oee_trend_period: '#/components/schemas/List_OeeTrendPeriod'
+          list_realized_margin_finding: '#/components/schemas/List_RealizedMarginFinding'
+          list_service_level: '#/components/schemas/List_ServiceLevel'
           manufacturing_metrics: '#/components/schemas/ManufacturingMetrics'
           material_analytics_entry: '#/components/schemas/MaterialAnalyticsEntry'
           new_customers_data: '#/components/schemas/NewCustomersData'
@@ -446,9 +468,16 @@ resources:
           oee_trend_period: '#/components/schemas/OeeTrendPeriod'
           open_batch_summary: '#/components/schemas/OpenBatchSummary'
           order_entry: '#/components/schemas/OrderEntry'
+          payment_term: '#/components/schemas/PaymentTerm'
+          priority: '#/components/schemas/Priority'
+          product_line: '#/components/schemas/ProductLine'
           production_cost_item: '#/components/schemas/ProductionCostItem'
+          realized_margin_finding: '#/components/schemas/RealizedMarginFinding'
+          realized_margin_summary: '#/components/schemas/RealizedMarginSummary'
           revenue_forecast_point: '#/components/schemas/RevenueForecastPoint'
           sales_entry: '#/components/schemas/SalesEntry'
+          service_level: '#/components/schemas/ServiceLevel'
+          shipping_term: '#/components/schemas/ShippingTerm'
           weeks_of_sales_item: '#/components/schemas/WeeksOfSalesItem'
       actions:
         methods:
@@ -570,27 +599,13 @@ resources:
               order_notification_recipient: '#/components/schemas/OrderNotificationRecipient'
               update_notification_recipients_request: '#/components/schemas/UpdateNotificationRecipientsRequest'
         models:
-          account_group: '#/components/schemas/AccountGroup'
           address_input: '#/components/schemas/AddressInput'
-          carrier: '#/components/schemas/Carrier'
           create_customer_request: '#/components/schemas/CreateCustomerRequest'
-          customer: '#/components/schemas/Customer'
-          customer_contact_info: '#/components/schemas/CustomerContactInfo'
-          customer_defaults: '#/components/schemas/CustomerDefaults'
-          customer_freight_preferences: '#/components/schemas/CustomerFreightPreferences'
           customer_lead_time: '#/components/schemas/CustomerLeadTime'
-          customer_notification_preferences: '#/components/schemas/CustomerNotificationPreferences'
           frequently_ordered_product: '#/components/schemas/FrequentlyOrderedProduct'
-          list_account_group: '#/components/schemas/List_AccountGroup'
-          list_customer: '#/components/schemas/List_Customer'
           list_frequently_ordered_product: '#/components/schemas/List_FrequentlyOrderedProduct'
-          list_service_level: '#/components/schemas/List_ServiceLevel'
-          payment_term: '#/components/schemas/PaymentTerm'
-          priority: '#/components/schemas/Priority'
           quantity_input: '#/components/schemas/QuantityInput'
           register_customer_request: '#/components/schemas/RegisterCustomerRequest'
-          service_level: '#/components/schemas/ServiceLevel'
-          shipping_term: '#/components/schemas/ShippingTerm'
           update_customer_request: '#/components/schemas/UpdateCustomerRequest'
       account_groups:
         methods:
@@ -609,12 +624,17 @@ resources:
           create: post /v1/sales/account-prices
           update: patch /v1/sales/account-prices/{id}
           delete: delete /v1/sales/account-prices/{id}
+        subresources:
+          actions:
+            methods:
+              export_price_list: get /v1/sales/account-prices/actions/export-price-list
+            models:
+              file_download: '#/components/schemas/FileDownload'
         models:
           account_price: '#/components/schemas/AccountPrice'
           create_account_price_request: '#/components/schemas/CreateAccountPriceRequest'
           list_account_price: '#/components/schemas/List_AccountPrice'
           list_item_category: '#/components/schemas/List_ItemCategory'
-          product_line: '#/components/schemas/ProductLine'
           update_account_price_request: '#/components/schemas/UpdateAccountPriceRequest'
       addresses:
         methods:
@@ -1037,7 +1057,6 @@ resources:
               bulk_reconcile_item_input: '#/components/schemas/BulkReconcileItemInput'
               bulk_reconcile_items_request: '#/components/schemas/BulkReconcileItemsRequest'
               bulk_reconcile_items_response: '#/components/schemas/BulkReconcileItemsResponse'
-              file_download: '#/components/schemas/FileDownload'
               list_reconcile_error_result: '#/components/schemas/List_ReconcileErrorResult'
               list_reconciled_item_result: '#/components/schemas/List_ReconciledItemResult'
               list_skipped_item_result: '#/components/schemas/List_SkippedItemResult'

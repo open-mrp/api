@@ -56,6 +56,8 @@ func (*AnalyticsEndpointGroup) Materialize(config *AnalyticsEndpointGroupConfig)
 	analyzeScheduleAttainmentEndpoint := apiendpoint.From(&analyticsep.AnalyzeScheduleAttainmentEndpoint{}).WithService(inner, analyticsSvc)
 	analyzeDeliveryPerformanceEndpoint := apiendpoint.From(&analyticsep.AnalyzeDeliveryPerformanceEndpoint{}).WithService(inner, analyticsSvc)
 	analyzeWeeksOfSalesEndpoint := apiendpoint.From(&analyticsep.AnalyzeWeeksOfSalesEndpoint{}).WithService(inner, analyticsSvc)
+	analyzeCustomerPricingEndpoint := apiendpoint.From(&analyticsep.AnalyzeCustomerPricingEndpoint{}).WithService(inner, analyticsSvc)
+	analyzeRealizedMarginsEndpoint := apiendpoint.From(&analyticsep.AnalyzeRealizedMarginsEndpoint{}).WithService(inner, analyticsSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		analyzeSalesEndpoint,
@@ -75,6 +77,8 @@ func (*AnalyticsEndpointGroup) Materialize(config *AnalyticsEndpointGroupConfig)
 		analyzeScheduleAttainmentEndpoint,
 		analyzeDeliveryPerformanceEndpoint,
 		analyzeWeeksOfSalesEndpoint,
+		analyzeCustomerPricingEndpoint,
+		analyzeRealizedMarginsEndpoint,
 	}
 
 	return &AnalyticsEndpointGroup{inner}

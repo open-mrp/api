@@ -4,6 +4,27 @@ import "github.com/augno/api/shared/constants"
 
 func init() {
 	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeCustomerPricingFinding,
+		Fields: []IncludeFieldDef{
+			{Key: "customer", ObjectType: constants.ObjectTypeCustomer},
+			{Key: "product_line", ObjectType: constants.ObjectTypeProductLine},
+			{Key: "attributes", ObjectType: constants.ObjectTypeAttribute},
+			{Key: "unit_price.numerator_unit", ObjectType: constants.ObjectTypeUnit},
+			{Key: "unit_price.denominator_unit", ObjectType: constants.ObjectTypeUnit},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeRealizedMarginFinding,
+		Fields: []IncludeFieldDef{
+			{Key: "customer", ObjectType: constants.ObjectTypeCustomer},
+			{Key: "customer_group", ObjectType: constants.ObjectTypeAccountGroup},
+			{Key: "item", ObjectType: constants.ObjectTypeItem},
+			{Key: "product_line", ObjectType: constants.ObjectTypeProductLine},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
 		ObjectType: constants.ObjectTypeRole,
 		Fields: []IncludeFieldDef{
 			{Key: "owner", ObjectType: constants.ObjectTypeOwner},

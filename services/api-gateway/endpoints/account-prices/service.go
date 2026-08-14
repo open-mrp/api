@@ -3,9 +3,12 @@ package accountpriceep
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	httptransport "github.com/augno/api/services/api-gateway/internal/http"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
 	"github.com/augno/api/shared/constants"
@@ -22,15 +25,20 @@ type AccountPriceSvc interface {
 	CreateAccountPrice(ctx context.Context, req *CreateAccountPriceRequest) (*apiresource.AccountPrice, *apierror.APIError)
 	UpdateAccountPrice(ctx context.Context, req *UpdateAccountPriceRequest) (*apiresource.AccountPrice, *apierror.APIError)
 	DeleteAccountPrice(ctx context.Context, req *DeleteAccountPriceRequest) (*apiresource.EmptyResource, *apierror.APIError)
+	ExportCustomerPriceList(ctx context.Context, req *ExportCustomerPriceListRequest) (*httptransport.FileDownload, *apierror.APIError)
 }
 
 type AccountPriceSvcConfig struct {
 	// CoreClient (required) is the core-service gRPC client.
 	CoreClient pb.CoreServiceClient
+	// SalesClient (required) is the core-service sales gRPC client, used by the price
+	// list export to quote prices through the same engine that prices sales orders.
+	SalesClient pb.CoreSalesServiceClient
 }
 
 type accountPriceSvcImpl struct {
-	coreClient pb.CoreServiceClient
+	coreClient  pb.CoreServiceClient
+	salesClient pb.CoreSalesServiceClient
 }
 
 var accountPriceSvcTracer = tracing.GetTracer("api-gateway.endpoints.account_prices.service")
@@ -38,6 +46,9 @@ var accountPriceSvcTracer = tracing.GetTracer("api-gateway.endpoints.account_pri
 func (c *AccountPriceSvcConfig) validate() error {
 	if c.CoreClient == nil {
 		return fmt.Errorf("account price endpoint service: core client is required")
+	}
+	if c.SalesClient == nil {
+		return fmt.Errorf("account price endpoint service: sales client is required")
 	}
 	return nil
 }
@@ -48,7 +59,8 @@ func NewAccountPriceSvc(config *AccountPriceSvcConfig) AccountPriceSvc {
 	}
 
 	return &accountPriceSvcImpl{
-		coreClient: config.CoreClient,
+		coreClient:  config.CoreClient,
+		salesClient: config.SalesClient,
 	}
 }
 
@@ -299,4 +311,43 @@ func stashAccountPriceMeta(meta *resourcekit.LoadMeta, ap *pb.AccountPriceInfo) 
 		}
 	}
 	meta.Set(constants.ObjectTypeAccountPrice, ap.Id, "attributes", apiresource.NewList(attributes, apiresource.PageInfo{}))
+}
+
+// ExportCustomerPriceList renders the customer's price list as a PDF.
+func (m *accountPriceSvcImpl) ExportCustomerPriceList(ctx context.Context, req *ExportCustomerPriceListRequest) (*httptransport.FileDownload, *apierror.APIError) {
+	doc, apiErr := m.buildCustomerPriceList(ctx, req.CustomerID, time.Now().UTC())
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	body, err := buildPriceListPDF(*doc)
+	if err != nil {
+		return nil, apierror.NewInternalError(err, "Failed to build the price list.")
+	}
+
+	return &httptransport.FileDownload{
+		ContentType: "application/pdf",
+		Filename:    priceListFilename(doc.CustomerName, doc.DateLong),
+		Body:        body,
+	}, nil
+}
+
+// priceListFilename names the download after the customer and the date it reflects,
+// since these get filed and emailed on.
+func priceListFilename(customerName, dateLong string) string {
+	name := strings.TrimSpace(customerName)
+	if name == "" {
+		name = "customer"
+	}
+	safe := strings.Map(func(r rune) rune {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9':
+			return r
+		case r == ' ', r == '-', r == '_':
+			return '-'
+		default:
+			return -1
+		}
+	}, name+" "+dateLong)
+	return strings.Trim(safe, "-") + "-price-list.pdf"
 }

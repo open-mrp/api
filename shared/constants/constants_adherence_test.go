@@ -104,6 +104,10 @@ func parseEnumTypes(t *testing.T) []enumTypeInfo {
 // typeRegistry maps type names to a zero-value instance that can be used for
 // reflection-based method calls.
 var typeRegistry = map[string]any{
+	// Pricing analysis.
+	"PricingFindingReason": PricingFindingReason(""),
+	"AccountPriceOrigin":   AccountPriceOrigin(""),
+
 	// Production scheduling.
 	"ProductionScheduleStatus":     ProductionScheduleStatus(""),
 	"ProductionScheduleLineStatus": ProductionScheduleLineStatus(""),

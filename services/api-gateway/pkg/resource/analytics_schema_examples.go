@@ -462,3 +462,99 @@ func (*AnalyzeScheduleAttainmentResponse) SchemaExample() any {
 func (*AnalyzeDeliveryPerformanceResponse) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleAnalyzeDeliveryPerformanceResponse)
 }
+
+var (
+	samplePricingBelowPeer    = "0.3200"
+	samplePricingGrossMargin  = "0.1800"
+	sampleRealizedBelowPeer   = "0.2500"
+	sampleRealizedGrossMargin = "0.2100"
+)
+
+var SampleCustomerPricingFinding = &CustomerPricingFinding{
+	ID:             SampleAccountPriceID + ":" + SampleCustomerID,
+	Object:         constants.ObjectTypeCustomerPricingFinding,
+	AccountPriceID: SampleAccountPriceID,
+	Reason:         constants.PricingFindingReasonBelowPeerMedianAndTargetMargin,
+	Origin:         constants.AccountPriceOriginDirect,
+	UnitPrice: &ComputedRate{
+		Object:       constants.ObjectTypeComputedRate,
+		Value:        "8.5000",
+		DisplayValue: "$8.50 / " + SampleUnitAbbreviation,
+	},
+	PeerMedianPrice: &ComputedRate{
+		Object:       constants.ObjectTypeComputedRate,
+		Value:        "12.5000",
+		DisplayValue: "$12.50 / " + SampleUnitAbbreviation,
+	},
+	BelowPeerMedianFraction: &samplePricingBelowPeer,
+	GrossMargin:             &samplePricingGrossMargin,
+}
+
+var SampleAnalyzeCustomerPricingResponse = &AnalyzeCustomerPricingResponse{
+	Object:   constants.ObjectTypeAnalyzeCustomerPricingResponse,
+	Findings: NewList([]CustomerPricingFinding{*SampleCustomerPricingFinding}, PageInfo{}),
+	Summary: CustomerPricingSummary{
+		Object:                 constants.ObjectTypeCustomerPricingSummary,
+		PricesAnalyzed:         412,
+		BelowPeerMedianCount:   18,
+		BelowTargetMarginCount: 7,
+		MarginNotAssessedCount: 22,
+		Notes:                  []string{},
+	},
+}
+
+func (*AnalyzeCustomerPricingResponse) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleAnalyzeCustomerPricingResponse)
+}
+
+var SampleRealizedMarginFinding = &RealizedMarginFinding{
+	ID:     SampleCustomerID + ":" + SampleItemID,
+	Object: constants.ObjectTypeRealizedMarginFinding,
+	Reason: constants.PricingFindingReasonBelowTargetMargin,
+	QuantityInvoiced: &ComputedQuantity{
+		Object:       constants.ObjectTypeComputedQuantity,
+		Value:        "1200",
+		DisplayValue: "1,200 " + SampleUnitAbbreviation,
+	},
+	Revenue: &ComputedQuantity{
+		Object:       constants.ObjectTypeComputedQuantity,
+		Value:        "16200.00",
+		DisplayValue: "16,200.00",
+	},
+	Cost: &ComputedQuantity{
+		Object:       constants.ObjectTypeComputedQuantity,
+		Value:        "12800.00",
+		DisplayValue: "12,800.00",
+	},
+	AverageUnitPrice: &ComputedRate{
+		Object:       constants.ObjectTypeComputedRate,
+		Value:        "13.5000",
+		DisplayValue: "$13.50 / " + SampleUnitAbbreviation,
+	},
+	PeerMedianPrice: &ComputedRate{
+		Object:       constants.ObjectTypeComputedRate,
+		Value:        "18.0000",
+		DisplayValue: "$18.00 / " + SampleUnitAbbreviation,
+	},
+	LineCount:               14,
+	BelowPeerMedianFraction: &sampleRealizedBelowPeer,
+	GrossMargin:             &sampleRealizedGrossMargin,
+}
+
+var SampleAnalyzeRealizedMarginsResponse = &AnalyzeRealizedMarginsResponse{
+	Object:   constants.ObjectTypeAnalyzeRealizedMarginsResponse,
+	Findings: NewList([]RealizedMarginFinding{*SampleRealizedMarginFinding}, PageInfo{}),
+	Summary: RealizedMarginSummary{
+		Object:                 constants.ObjectTypeRealizedMarginSummary,
+		LinesAnalyzed:          9840,
+		RelationshipsAnalyzed:  1260,
+		BelowPeerMedianCount:   31,
+		BelowTargetMarginCount: 12,
+		MarginNotAssessedCount: 48,
+		Notes:                  []string{},
+	},
+}
+
+func (*AnalyzeRealizedMarginsResponse) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleAnalyzeRealizedMarginsResponse)
+}

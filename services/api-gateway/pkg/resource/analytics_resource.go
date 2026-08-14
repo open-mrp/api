@@ -891,3 +891,121 @@ var SampleAnalyzeDeliveryPerformanceResponse = &AnalyzeDeliveryPerformanceRespon
 	}}, PageInfo{}),
 	UncommittedOrderCount: 0,
 }
+
+// CustomerPricingFinding is one contracted price flagged by the pricing analysis.
+type CustomerPricingFinding struct {
+	// Identifier for this finding, stable for the same price and customer across runs.
+	//
+	// One contracted price produces one finding per customer it reaches, so the price's own ID is not unique across findings.
+	ID string `json:"id" validate:"required"`
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=customer_pricing_finding"`
+	// ID of the contracted price behind this finding, which is where it has to be changed.
+	AccountPriceID string `json:"account_price_id" validate:"required"`
+	// Why this price was flagged.
+	Reason constants.PricingFindingReason `json:"reason" validate:"required"`
+	// How the customer comes to receive this price.
+	Origin constants.AccountPriceOrigin `json:"origin" validate:"required"`
+	// The customer receiving the price.
+	Customer *Customer `json:"customer" expandable:"true"`
+	// The product line the price applies to.
+	ProductLine *ProductLine `json:"product_line" expandable:"true"`
+	// The attributes narrowing the price; empty when it covers the whole product line.
+	Attributes *List[Attribute] `json:"attributes" expandable:"true"`
+	// The contracted price.
+	UnitPrice *ComputedRate `json:"unit_price" validate:"required"`
+	// Median contracted price across every customer with a price for the same product line, attributes and per-unit basis. Null when no other customer has a comparable price.
+	PeerMedianPrice *ComputedRate `json:"peer_median_price"`
+	// How far below the peer median this price sits, as a fraction between 0 and 1. Null when there is no peer median.
+	BelowPeerMedianFraction *string `json:"below_peer_median_fraction" format:"decimal"`
+	// Gross margin at this price, as a fraction between 0 and 1. Null when no comparable cost could be established.
+	GrossMargin *string `json:"gross_margin" format:"decimal"`
+}
+
+// CustomerPricingSummary reports the shape of the analysis behind the findings.
+type CustomerPricingSummary struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=customer_pricing_summary"`
+	// Contracted prices examined.
+	PricesAnalyzed int `json:"prices_analyzed"`
+	// Prices flagged for sitting below the peer median.
+	BelowPeerMedianCount int `json:"below_peer_median_count"`
+	// Prices flagged for failing the target gross margin.
+	BelowTargetMarginCount int `json:"below_target_margin_count"`
+	// Prices whose margin could not be checked because no comparable cost was available.
+	MarginNotAssessedCount int `json:"margin_not_assessed_count"`
+	// Anything the analysis had to leave out, so the result never overstates its own coverage.
+	Notes []string `json:"notes"`
+}
+
+// AnalyzeCustomerPricingResponse represents the response from the customer pricing analysis.
+type AnalyzeCustomerPricingResponse struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=analyze_customer_pricing_response"`
+	// The flagged prices, worst first.
+	Findings *List[CustomerPricingFinding] `json:"findings" validate:"required"`
+	// What the analysis covered.
+	Summary CustomerPricingSummary `json:"summary" validate:"required"`
+}
+
+// RealizedMarginFinding is one customer/SKU trading relationship flagged by the realized margin analysis.
+type RealizedMarginFinding struct {
+	// Identifier for this finding, stable for the same customer and item across runs.
+	ID string `json:"id" validate:"required"`
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=realized_margin_finding"`
+	// Why this trading relationship was flagged.
+	Reason constants.PricingFindingReason `json:"reason" validate:"required"`
+	// The customer that was charged.
+	Customer *Customer `json:"customer" expandable:"true"`
+	// The customer group the customer belongs to.
+	CustomerGroup *AccountGroup `json:"customer_group" expandable:"true"`
+	// The item that was sold.
+	Item *Item `json:"item" expandable:"true"`
+	// The product line the item belongs to.
+	ProductLine *ProductLine `json:"product_line" expandable:"true"`
+	// Quantity invoiced over the window.
+	QuantityInvoiced *ComputedQuantity `json:"quantity_invoiced" validate:"required"`
+	// Revenue invoiced over the window.
+	Revenue *ComputedQuantity `json:"revenue" validate:"required"`
+	// Cost of goods for the quantity invoiced.
+	Cost *ComputedQuantity `json:"cost" validate:"required"`
+	// Revenue divided by quantity: the price actually achieved across the window.
+	AverageUnitPrice *ComputedRate `json:"average_unit_price" validate:"required"`
+	// Median achieved price for this item across every customer that bought it. Null when no other customer bought it.
+	PeerMedianPrice *ComputedRate `json:"peer_median_price"`
+	// Number of invoiced lines behind these totals.
+	LineCount int `json:"line_count"`
+	// How far below the peer median this customer's achieved price sits, as a fraction between 0 and 1. Null when there is no peer median.
+	BelowPeerMedianFraction *string `json:"below_peer_median_fraction" format:"decimal"`
+	// Realized gross margin, as a fraction between 0 and 1. Null when no cost was captured on the lines.
+	GrossMargin *string `json:"gross_margin" format:"decimal"`
+}
+
+// RealizedMarginSummary reports the shape of the analysis behind the findings.
+type RealizedMarginSummary struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=realized_margin_summary"`
+	// Invoiced lines examined.
+	LinesAnalyzed int `json:"lines_analyzed"`
+	// Customer and SKU pairs examined.
+	RelationshipsAnalyzed int `json:"relationships_analyzed"`
+	// Relationships flagged for an achieved price below the peer median.
+	BelowPeerMedianCount int `json:"below_peer_median_count"`
+	// Relationships flagged for failing the target gross margin.
+	BelowTargetMarginCount int `json:"below_target_margin_count"`
+	// Relationships whose margin could not be checked because no cost was captured.
+	MarginNotAssessedCount int `json:"margin_not_assessed_count"`
+	// Anything the analysis had to leave out, so the result never overstates its own coverage.
+	Notes []string `json:"notes"`
+}
+
+// AnalyzeRealizedMarginsResponse represents the response from the realized margin analysis.
+type AnalyzeRealizedMarginsResponse struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=analyze_realized_margins_response"`
+	// The flagged relationships, most money at stake first.
+	Findings *List[RealizedMarginFinding] `json:"findings" validate:"required"`
+	// What the analysis covered.
+	Summary RealizedMarginSummary `json:"summary" validate:"required"`
+}

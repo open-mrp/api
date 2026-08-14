@@ -869,6 +869,7 @@ resources:
         models:
           checkout_sales_order_request: '#/components/schemas/CheckoutSalesOrderRequest'
           checkout_sales_order_response: '#/components/schemas/CheckoutSalesOrderResponse'
+          computed_rate: '#/components/schemas/ComputedRate'
           create_sales_order_line_input: '#/components/schemas/CreateSalesOrderLineInput'
           create_sales_order_request: '#/components/schemas/CreateSalesOrderRequest'
           created_by: '#/components/schemas/CreatedBy'
@@ -888,7 +889,6 @@ resources:
           sales_order: '#/components/schemas/SalesOrder'
           sales_order_email_contact_input: '#/components/schemas/SalesOrderEmailContactInput'
           sales_order_line: '#/components/schemas/SalesOrderLine'
-          sales_order_quote_rate: '#/components/schemas/SalesOrderQuoteRate'
           sales_order_related: '#/components/schemas/SalesOrderRelated'
           sales_order_stage_total: '#/components/schemas/SalesOrderStageTotal'
           sales_order_status: '#/components/schemas/SalesOrderStatus'

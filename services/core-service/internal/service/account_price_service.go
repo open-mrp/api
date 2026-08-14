@@ -20,7 +20,18 @@ var accountPriceSvcTracer = tracing.GetTracer("core-service.account_price_servic
 type accountPriceSvcImpl struct {
 	repos           domain.RepoFactory
 	mediatorFactory domain.MediatorFactory
+	jobSvcFactory   domain.JobSvcFactory
 	txManager       TransactionManager
+}
+
+// asyncBulkDeps hands the export engine the plumbing it runs on.
+func (s *accountPriceSvcImpl) asyncBulkDeps() asyncBulkDeps {
+	return asyncBulkDeps{
+		repos:           s.repos,
+		mediatorFactory: s.mediatorFactory,
+		jobSvcFactory:   s.jobSvcFactory,
+		txManager:       s.txManager,
+	}
 }
 
 type AccountPriceSvcConfig struct {
@@ -29,6 +40,9 @@ type AccountPriceSvcConfig struct {
 
 	// MediatorFactory (required) builds the mediators used by this service.
 	MediatorFactory domain.MediatorFactory
+
+	// JobSvcFactory (required) builds the job service the async price-list export records on.
+	JobSvcFactory domain.JobSvcFactory
 
 	// TxManager (required) wraps multi-step operations in database transactions.
 	TxManager TransactionManager
@@ -40,6 +54,9 @@ func (c *AccountPriceSvcConfig) validate() error {
 	}
 	if c.MediatorFactory == nil {
 		return fmt.Errorf("account price service: mediator factory is required")
+	}
+	if c.JobSvcFactory == nil {
+		return fmt.Errorf("account price service: job service factory is required")
 	}
 	if c.TxManager == nil {
 		return fmt.Errorf("account price service: tx manager is required")
@@ -55,6 +72,7 @@ func NewAccountPriceSvc(config *AccountPriceSvcConfig) domain.AccountPriceSvc {
 	return &accountPriceSvcImpl{
 		repos:           config.Repos,
 		mediatorFactory: config.MediatorFactory,
+		jobSvcFactory:   config.JobSvcFactory,
 		txManager:       config.TxManager,
 	}
 }

@@ -74,6 +74,9 @@ type exportSpec[TRow, TFilters any] struct {
 	// Slug names the resource in the span, snake_case so it groups with the
 	// entity's other spans rather than reading as prose.
 	Slug string
+	// Ext is the file's extension, for an export whose builder does not render a
+	// spreadsheet. Empty means xlsx, which is what every column-driven export is.
+	Ext string
 
 	Columns []excel.ColumnSpec
 	// ColumnsFor derives the columns from the fetched rows, for a resource whose
@@ -97,8 +100,8 @@ type exportSpec[TRow, TFilters any] struct {
 
 // names the object an export job's file is stored under. Derived rather than recorded:
 // every part is already on the job, so the worker and the reader agree without storage.
-func exportObjectKey(accountID, slug, jobID string, startedAt time.Time) string {
-	return "exports/" + accountID + "/" + slug + "/" + jobID + "/" + excel.Filename(slug, startedAt)
+func exportObjectKey(accountID, slug, jobID string, startedAt time.Time, ext string) string {
+	return "exports/" + accountID + "/" + slug + "/" + jobID + "/" + excel.FilenameWithExt(slug, startedAt, ext)
 }
 
 // records on the job what to build. The slug rides along because the download endpoint
@@ -106,6 +109,10 @@ func exportObjectKey(accountID, slug, jobID string, startedAt time.Time) string 
 type exportJobPayload struct {
 	Slug    string          `json:"slug"`
 	Filters json.RawMessage `json:"filters"`
+	// Ext is the file's extension, which forms the end of the object key and therefore
+	// the name the browser saves. Absent on payloads written before non-spreadsheet
+	// exports existed, and those files were uploaded as .xlsx — so empty means xlsx.
+	Ext string `json:"ext,omitempty"`
 }
 
 // adapts one resource's spec into the builder the download endpoint calls, decoding the
@@ -164,7 +171,7 @@ func enqueueExport[TRow, TFilters any](
 	if err != nil {
 		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to marshal export filters."))
 	}
-	jobItems, err := json.Marshal(exportJobPayload{Slug: spec.Slug, Filters: rawFilters})
+	jobItems, err := json.Marshal(exportJobPayload{Slug: spec.Slug, Filters: rawFilters, Ext: spec.Ext})
 	if err != nil {
 		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to marshal export filters."))
 	}

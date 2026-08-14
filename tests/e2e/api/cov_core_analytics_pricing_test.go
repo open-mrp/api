@@ -3,7 +3,6 @@
 package api_test
 
 import (
-	"bytes"
 	"net/http"
 	"net/url"
 	"testing"
@@ -380,58 +379,38 @@ func TestAnalyticsRealizedMargins_RejectsUnknownInclude(t *testing.T) {
 // Price list export
 // ──────────────────────────────────────────────
 
-func TestPriceListExport_ReturnsAPDF(t *testing.T) {
+// Pricing a whole catalog runs in the background, so the export accepts a job and the file arrives when it finishes. The object is downloaded straight from storage, which is why its key — not a response header — has to carry the .pdf name.
+func TestPriceListExport_ProducesAPDF(t *testing.T) {
 	t.Parallel()
 
-	resp, err := apiClient.GetFull(priceListPath, url.Values{"customer_id": {SeedCustomerAccountID}})
-	require.NoError(t, err)
-	require.Less(t, resp.StatusCode, 500, "the price list must not 5xx: %s", string(resp.Body))
-	requireStatus(t, http.StatusOK, resp.StatusCode, resp.Body)
+	job := completedExportJob(t, priceListPath, map[string]any{"customer_id": SeedCustomerAccountID})
 
-	assertResponseHeader(t, resp.Header, "Content-Type", "application/pdf")
-	assertResponseHeaderPresent(t, resp.Header, "Content-Disposition")
-	assert.True(t, bytes.HasPrefix(resp.Body, []byte("%PDF-")), "body must be a PDF, got %q", string(resp.Body[:min(16, len(resp.Body))]))
-	assert.Greater(t, len(resp.Body), 1000, "a price list with a title page should not be nearly empty")
-}
-
-// The browser can only read the download filename when the gateway names Content-Disposition in Access-Control-Expose-Headers. Without it the dashboard falls back to a generic .xlsx name and saves the PDF under an extension that refuses to open, which no same-origin test can catch.
-func TestPriceListExport_ExposesFilenameHeaderCrossOrigin(t *testing.T) {
-	t.Parallel()
-
-	req, err := http.NewRequest(http.MethodGet,
-		apiClient.baseURL+priceListPath+"?customer_id="+SeedCustomerAccountID, nil)
-	require.NoError(t, err)
-	req.Header.Set("Origin", "http://localhost:4200")
-	req.Header.Set("Authorization", "Bearer "+apiClient.apiKey)
-	req.Header.Set("Augno-Account", apiClient.accountID)
-	req.Header.Set("Augno-Version", apiClient.apiVersion)
-
-	resp, err := http.DefaultClient.Do(req)
-	require.NoError(t, err)
-	defer resp.Body.Close()
-	require.Equal(t, http.StatusOK, resp.StatusCode)
-
-	assert.Contains(t, resp.Header.Get("Access-Control-Expose-Headers"), "Content-Disposition",
-		"the filename header must be readable cross-origin")
-	assert.Contains(t, resp.Header.Get("Content-Disposition"), ".pdf",
-		"the download must be named as a PDF")
+	// Reaching "completed" is the assertion: the job only settles once the worker has
+	// loaded the customer's catalog, priced it against one pricing bundle, rendered the
+	// PDF and durably stored it. The file itself is out of reach — test mode's object
+	// store discards the bytes and hands back a fixed URL — so the .pdf naming is
+	// pinned by TestExportObjectKey_ExtensionFollowsTheFormat instead.
+	export := jsonObject(job, "export")
+	require.NotNil(t, export, "a completed export job names its file")
+	assert.NotEmpty(t, jsonField(export, "url"), "the finished job must carry a download URL")
 }
 
 func TestPriceListExport_RequiresACustomer(t *testing.T) {
 	t.Parallel()
 
-	status, body, err := apiClient.GetListRaw(priceListPath, nil)
+	status, body, err := apiClient.Post(priceListPath, map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "a missing customer is a client error: %s", string(body))
 	assert.Equal(t, http.StatusBadRequest, status, "body: %s", string(body))
 }
 
-func TestPriceListExport_UnknownCustomerIsNotFound(t *testing.T) {
+// The accept only records which customer to price, so an unknown one surfaces when the worker runs rather than rejecting the request.
+func TestPriceListExport_UnknownCustomerIsAccepted(t *testing.T) {
 	t.Parallel()
 
 	missing := mustGenID(t, id.AccountIDPrefix)
-	status, body, err := apiClient.GetListRaw(priceListPath, url.Values{"customer_id": {missing}})
+	status, body, err := apiClient.Post(priceListPath, map[string]any{"customer_id": missing}, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, status, 500, "an unknown customer must not 5xx: %s", string(body))
-	assert.Equal(t, http.StatusNotFound, status, "body: %s", string(body))
+	assert.Equal(t, http.StatusAccepted, status, "body: %s", string(body))
 }

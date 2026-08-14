@@ -320,6 +320,12 @@ type AdjustmentTypeSvc interface {
 }
 
 type AccountPriceSvc interface {
+	// ExportPriceList accepts a price-list export for one customer and returns the job tracking it. Pricing a whole catalog is far too slow to hold a request open for, so the document is rendered by the export worker.
+	ExportPriceList(ctx context.Context, params ExportPriceListParams) (*Job, *apierror.APIError)
+
+	// BuildExportPriceList renders the PDF an accepted price-list export recorded.
+	BuildExportPriceList(ctx context.Context, accountID string, filters json.RawMessage) (*Export, *apierror.APIError)
+
 	// ListAccountPrices returns a paginated list of account prices for the caller's account. Customer actors can only see prices where they are the recipient.
 	ListAccountPrices(ctx context.Context, params ListAccountPricesParams) (*ListAccountPricesResult, *apierror.APIError)
 
@@ -843,6 +849,12 @@ type CustomerSvc interface {
 
 type AnalyticsSvc interface {
 	AnalyzeSales(ctx context.Context, params AnalyzeSalesParams) ([]SalesEntry, *apierror.APIError)
+
+	// AnalyzeRealizedMargins rolls invoiced lines up to one row per customer and SKU and flags those priced below their peers or under target margin.
+	AnalyzeRealizedMargins(ctx context.Context, params AnalyzeRealizedMarginsParams) (*RealizedMarginAnalysis, *apierror.APIError)
+
+	// AnalyzeCustomerPricing sweeps every contracted price and flags those below their peers or under target margin.
+	AnalyzeCustomerPricing(ctx context.Context, params AnalyzeCustomerPricingParams) (*CustomerPricingAnalysis, *apierror.APIError)
 	AnalyzeOpenBatches(ctx context.Context, params AnalyzeOpenBatchesParams) ([]OpenBatchEntry, *apierror.APIError)
 	AnalyzeProductionCosts(ctx context.Context, params AnalyzeProductionCostsParams) ([]ProductionCostEntry, *apierror.APIError)
 	AnalyzeDeliveries(ctx context.Context, params AnalyzeDeliveriesParams) (*DeliveryAnalyticsResult, *apierror.APIError)

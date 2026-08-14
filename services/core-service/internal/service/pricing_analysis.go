@@ -1,4 +1,4 @@
-package analyticsep
+package service
 
 import (
 	"sort"
@@ -148,18 +148,6 @@ func pricingPeerMedians(candidates []pricingCandidate) map[pricingPeerGroup]deci
 		medians[group] = medianOf(values)
 	}
 	return medians
-}
-
-func medianOf(values []decimal.Decimal) decimal.Decimal {
-	sorted := make([]decimal.Decimal, len(values))
-	copy(sorted, values)
-	sort.SliceStable(sorted, func(i, j int) bool { return sorted[i].LessThan(sorted[j]) })
-
-	mid := len(sorted) / 2
-	if len(sorted)%2 == 1 {
-		return sorted[mid]
-	}
-	return sorted[mid-1].Add(sorted[mid]).Div(decimal.NewFromInt(2))
 }
 
 // productMatchesPrice mirrors the engine's account-price matching: the price applies when the product is on its line and carries every attribute the price names. Kept in step with selectAccountPrice in sales_order_pricing.go.

@@ -46,31 +46,7 @@ type QuotedSalesOrderLine struct {
 	// The product priced.
 	Product *apiresource.Product `json:"product"`
 	// Calculated unit price.
-	UnitPrice *SalesOrderQuoteRate `json:"unit_price"`
-}
-
-// A per-unit rate on a sales-order quote.
-//
-// A lightweight, unpersisted variant of a rate: it carries no ID or timestamps because a quote is computed on demand and never stored.
-type SalesOrderQuoteRate struct {
-	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=sales_order_quote_rate"`
-	// Decimal value of the rate, expressed as the amount of the numerator unit per one denominator unit.
-	Value string `json:"value" validate:"required" format:"decimal"`
-	// Unit of the rate's numerator (e.g. the currency of a price).
-	NumeratorUnit *apiresource.Unit `json:"numerator_unit"`
-	// Unit of the rate's denominator (the per-unit basis).
-	DenominatorUnit *apiresource.Unit `json:"denominator_unit"`
-}
-
-// newSalesOrderQuoteRate builds a quote rate from a value and its fully presented numerator/denominator units.
-func newSalesOrderQuoteRate(value string, numeratorUnit, denominatorUnit *apiresource.Unit) *SalesOrderQuoteRate {
-	return &SalesOrderQuoteRate{
-		Object:          constants.ObjectTypeSalesOrderQuoteRate,
-		Value:           value,
-		NumeratorUnit:   numeratorUnit,
-		DenominatorUnit: denominatorUnit,
-	}
+	UnitPrice *apiresource.ComputedRate `json:"unit_price"`
 }
 
 var sampleQuoteSalesOrderPricesRequest = &QuoteSalesOrderPricesRequest{
@@ -96,7 +72,7 @@ var sampleQuoteSalesOrderPricesResponse = &QuoteSalesOrderPricesResponse{
 		{
 			Object:    constants.ObjectTypeSalesOrderPriceQuoteLine,
 			Product:   apiresource.SampleProduct,
-			UnitPrice: newSalesOrderQuoteRate("25.00", apiresource.SampleUnit, apiresource.SampleUnit),
+			UnitPrice: apiresource.NewComputedRate("25.00", apiresource.SampleUnit, apiresource.SampleUnit),
 		},
 	}, apiresource.PageInfo{}),
 }

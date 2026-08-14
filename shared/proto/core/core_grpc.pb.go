@@ -116,6 +116,7 @@ const (
 	CoreService_CreateAccountPrice_FullMethodName                         = "/core.CoreService/CreateAccountPrice"
 	CoreService_UpdateAccountPrice_FullMethodName                         = "/core.CoreService/UpdateAccountPrice"
 	CoreService_DeleteAccountPrice_FullMethodName                         = "/core.CoreService/DeleteAccountPrice"
+	CoreService_ExportPriceList_FullMethodName                            = "/core.CoreService/ExportPriceList"
 	CoreService_ListAccountIntegrations_FullMethodName                    = "/core.CoreService/ListAccountIntegrations"
 	CoreService_CreateAccountIntegration_FullMethodName                   = "/core.CoreService/CreateAccountIntegration"
 	CoreService_UpdateAccountIntegration_FullMethodName                   = "/core.CoreService/UpdateAccountIntegration"
@@ -252,6 +253,8 @@ const (
 	CoreService_UpdateCustomer_FullMethodName                             = "/core.CoreService/UpdateCustomer"
 	CoreService_MergeCustomers_FullMethodName                             = "/core.CoreService/MergeCustomers"
 	CoreService_AnalyzeSales_FullMethodName                               = "/core.CoreService/AnalyzeSales"
+	CoreService_AnalyzeRealizedMargins_FullMethodName                     = "/core.CoreService/AnalyzeRealizedMargins"
+	CoreService_AnalyzeCustomerPricing_FullMethodName                     = "/core.CoreService/AnalyzeCustomerPricing"
 	CoreService_AnalyzeProductionCosts_FullMethodName                     = "/core.CoreService/AnalyzeProductionCosts"
 	CoreService_AnalyzeDeliveries_FullMethodName                          = "/core.CoreService/AnalyzeDeliveries"
 	CoreService_AnalyzeManufacturing_FullMethodName                       = "/core.CoreService/AnalyzeManufacturing"
@@ -610,6 +613,8 @@ type CoreServiceClient interface {
 	UpdateAccountPrice(ctx context.Context, in *UpdateAccountPriceRequest, opts ...grpc.CallOption) (*UpdateAccountPriceResponse, error)
 	// Deletes an account price and its associated rate, categories, and attributes.
 	DeleteAccountPrice(ctx context.Context, in *DeleteAccountPriceRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// ExportPriceList accepts a customer's price list export and returns the job tracking it.
+	ExportPriceList(ctx context.Context, in *ExportPriceListRequest, opts ...grpc.CallOption) (*ExportPriceListResponse, error)
 	// Returns a paginated list of account integrations (credentials excluded).
 	ListAccountIntegrations(ctx context.Context, in *ListAccountIntegrationsRequest, opts ...grpc.CallOption) (*ListAccountIntegrationsResponse, error)
 	// Creates or upserts an integration; updates existing if same code exists.
@@ -852,6 +857,10 @@ type CoreServiceClient interface {
 	// Merges source customers into a target customer.
 	MergeCustomers(ctx context.Context, in *MergeCustomersRequest, opts ...grpc.CallOption) (*MergeCustomersResponse, error)
 	AnalyzeSales(ctx context.Context, in *AnalyzeSalesRequest, opts ...grpc.CallOption) (*AnalyzeSalesResponse, error)
+	// AnalyzeRealizedMargins rolls invoiced lines up to one row per customer and SKU and flags the ones priced below their peers or under target margin. Aggregated here because the raw lines are far too many to ship.
+	AnalyzeRealizedMargins(ctx context.Context, in *AnalyzeRealizedMarginsRequest, opts ...grpc.CallOption) (*AnalyzeRealizedMarginsResponse, error)
+	// AnalyzeCustomerPricing sweeps every contracted price and flags those below their peers or under target margin. Swept here because it reads the prices, the customers and the catalog end to end.
+	AnalyzeCustomerPricing(ctx context.Context, in *AnalyzeCustomerPricingRequest, opts ...grpc.CallOption) (*AnalyzeCustomerPricingResponse, error)
 	AnalyzeProductionCosts(ctx context.Context, in *AnalyzeProductionCostsRequest, opts ...grpc.CallOption) (*AnalyzeProductionCostsResponse, error)
 	AnalyzeDeliveries(ctx context.Context, in *AnalyzeDeliveriesRequest, opts ...grpc.CallOption) (*AnalyzeDeliveriesResponse, error)
 	AnalyzeManufacturing(ctx context.Context, in *AnalyzeManufacturingRequest, opts ...grpc.CallOption) (*AnalyzeManufacturingResponse, error)
@@ -1967,6 +1976,16 @@ func (c *coreServiceClient) DeleteAccountPrice(ctx context.Context, in *DeleteAc
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, CoreService_DeleteAccountPrice_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) ExportPriceList(ctx context.Context, in *ExportPriceListRequest, opts ...grpc.CallOption) (*ExportPriceListResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ExportPriceListResponse)
+	err := c.cc.Invoke(ctx, CoreService_ExportPriceList_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -3327,6 +3346,26 @@ func (c *coreServiceClient) AnalyzeSales(ctx context.Context, in *AnalyzeSalesRe
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(AnalyzeSalesResponse)
 	err := c.cc.Invoke(ctx, CoreService_AnalyzeSales_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) AnalyzeRealizedMargins(ctx context.Context, in *AnalyzeRealizedMarginsRequest, opts ...grpc.CallOption) (*AnalyzeRealizedMarginsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AnalyzeRealizedMarginsResponse)
+	err := c.cc.Invoke(ctx, CoreService_AnalyzeRealizedMargins_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) AnalyzeCustomerPricing(ctx context.Context, in *AnalyzeCustomerPricingRequest, opts ...grpc.CallOption) (*AnalyzeCustomerPricingResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AnalyzeCustomerPricingResponse)
+	err := c.cc.Invoke(ctx, CoreService_AnalyzeCustomerPricing_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -5246,6 +5285,8 @@ type CoreServiceServer interface {
 	UpdateAccountPrice(context.Context, *UpdateAccountPriceRequest) (*UpdateAccountPriceResponse, error)
 	// Deletes an account price and its associated rate, categories, and attributes.
 	DeleteAccountPrice(context.Context, *DeleteAccountPriceRequest) (*emptypb.Empty, error)
+	// ExportPriceList accepts a customer's price list export and returns the job tracking it.
+	ExportPriceList(context.Context, *ExportPriceListRequest) (*ExportPriceListResponse, error)
 	// Returns a paginated list of account integrations (credentials excluded).
 	ListAccountIntegrations(context.Context, *ListAccountIntegrationsRequest) (*ListAccountIntegrationsResponse, error)
 	// Creates or upserts an integration; updates existing if same code exists.
@@ -5488,6 +5529,10 @@ type CoreServiceServer interface {
 	// Merges source customers into a target customer.
 	MergeCustomers(context.Context, *MergeCustomersRequest) (*MergeCustomersResponse, error)
 	AnalyzeSales(context.Context, *AnalyzeSalesRequest) (*AnalyzeSalesResponse, error)
+	// AnalyzeRealizedMargins rolls invoiced lines up to one row per customer and SKU and flags the ones priced below their peers or under target margin. Aggregated here because the raw lines are far too many to ship.
+	AnalyzeRealizedMargins(context.Context, *AnalyzeRealizedMarginsRequest) (*AnalyzeRealizedMarginsResponse, error)
+	// AnalyzeCustomerPricing sweeps every contracted price and flags those below their peers or under target margin. Swept here because it reads the prices, the customers and the catalog end to end.
+	AnalyzeCustomerPricing(context.Context, *AnalyzeCustomerPricingRequest) (*AnalyzeCustomerPricingResponse, error)
 	AnalyzeProductionCosts(context.Context, *AnalyzeProductionCostsRequest) (*AnalyzeProductionCostsResponse, error)
 	AnalyzeDeliveries(context.Context, *AnalyzeDeliveriesRequest) (*AnalyzeDeliveriesResponse, error)
 	AnalyzeManufacturing(context.Context, *AnalyzeManufacturingRequest) (*AnalyzeManufacturingResponse, error)
@@ -5986,6 +6031,9 @@ func (UnimplementedCoreServiceServer) UpdateAccountPrice(context.Context, *Updat
 func (UnimplementedCoreServiceServer) DeleteAccountPrice(context.Context, *DeleteAccountPriceRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteAccountPrice not implemented")
 }
+func (UnimplementedCoreServiceServer) ExportPriceList(context.Context, *ExportPriceListRequest) (*ExportPriceListResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ExportPriceList not implemented")
+}
 func (UnimplementedCoreServiceServer) ListAccountIntegrations(context.Context, *ListAccountIntegrationsRequest) (*ListAccountIntegrationsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListAccountIntegrations not implemented")
 }
@@ -6393,6 +6441,12 @@ func (UnimplementedCoreServiceServer) MergeCustomers(context.Context, *MergeCust
 }
 func (UnimplementedCoreServiceServer) AnalyzeSales(context.Context, *AnalyzeSalesRequest) (*AnalyzeSalesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AnalyzeSales not implemented")
+}
+func (UnimplementedCoreServiceServer) AnalyzeRealizedMargins(context.Context, *AnalyzeRealizedMarginsRequest) (*AnalyzeRealizedMarginsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AnalyzeRealizedMargins not implemented")
+}
+func (UnimplementedCoreServiceServer) AnalyzeCustomerPricing(context.Context, *AnalyzeCustomerPricingRequest) (*AnalyzeCustomerPricingResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AnalyzeCustomerPricing not implemented")
 }
 func (UnimplementedCoreServiceServer) AnalyzeProductionCosts(context.Context, *AnalyzeProductionCostsRequest) (*AnalyzeProductionCostsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AnalyzeProductionCosts not implemented")
@@ -8532,6 +8586,24 @@ func _CoreService_DeleteAccountPrice_Handler(srv interface{}, ctx context.Contex
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CoreServiceServer).DeleteAccountPrice(ctx, req.(*DeleteAccountPriceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_ExportPriceList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExportPriceListRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).ExportPriceList(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_ExportPriceList_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).ExportPriceList(ctx, req.(*ExportPriceListRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -10980,6 +11052,42 @@ func _CoreService_AnalyzeSales_Handler(srv interface{}, ctx context.Context, dec
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CoreServiceServer).AnalyzeSales(ctx, req.(*AnalyzeSalesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_AnalyzeRealizedMargins_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AnalyzeRealizedMarginsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).AnalyzeRealizedMargins(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_AnalyzeRealizedMargins_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).AnalyzeRealizedMargins(ctx, req.(*AnalyzeRealizedMarginsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_AnalyzeCustomerPricing_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AnalyzeCustomerPricingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).AnalyzeCustomerPricing(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_AnalyzeCustomerPricing_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).AnalyzeCustomerPricing(ctx, req.(*AnalyzeCustomerPricingRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -14462,6 +14570,10 @@ var CoreService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _CoreService_DeleteAccountPrice_Handler,
 		},
 		{
+			MethodName: "ExportPriceList",
+			Handler:    _CoreService_ExportPriceList_Handler,
+		},
+		{
 			MethodName: "ListAccountIntegrations",
 			Handler:    _CoreService_ListAccountIntegrations_Handler,
 		},
@@ -15004,6 +15116,14 @@ var CoreService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AnalyzeSales",
 			Handler:    _CoreService_AnalyzeSales_Handler,
+		},
+		{
+			MethodName: "AnalyzeRealizedMargins",
+			Handler:    _CoreService_AnalyzeRealizedMargins_Handler,
+		},
+		{
+			MethodName: "AnalyzeCustomerPricing",
+			Handler:    _CoreService_AnalyzeCustomerPricing_Handler,
 		},
 		{
 			MethodName: "AnalyzeProductionCosts",

@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -533,6 +534,17 @@ func extractRootObjectTyped(root map[string]any, wantObject string) []map[string
 	return nil
 }
 
+// extractListedField pulls the rows out of a list nested under a response field, for endpoints whose includes land on the rows rather than on the response itself.
+func extractListedField(root map[string]any, field string) []map[string]any {
+	out := make([]map[string]any, 0)
+	for _, raw := range jsonListData(root, field) {
+		if row, ok := raw.(map[string]any); ok {
+			out = append(out, row)
+		}
+	}
+	return out
+}
+
 func TestIncludes_GetFixtureCoverage(t *testing.T) {
 	t.Parallel()
 
@@ -708,6 +720,29 @@ var includesPutScenarioByOperationID = map[string]putIncludeScenario{
 			st, body, err := apiClient.Put(path, map[string]any{"status_change": "unissue", "send_email": false})
 			require.NoError(t, err)
 			requireStatus(t, 200, st, body)
+		},
+	},
+	// The analytics sweeps take no path parameters and return their findings as a nested list, so the includes land on the rows.
+	"analyze-customer-pricing": {
+		pathValues: map[string]string{},
+		buildBody: func(_ string) map[string]any {
+			return map[string]any{}
+		},
+		extractTargets: func(root map[string]any) []map[string]any {
+			return extractListedField(root, "findings")
+		},
+	},
+	"analyze-realized-margins": {
+		pathValues: map[string]string{},
+		buildBody: func(_ string) map[string]any {
+			end := time.Now().UTC()
+			return map[string]any{
+				"starts_at": rfc3339(end.AddDate(-2, 0, 0)),
+				"ends_at":   rfc3339(end),
+			}
+		},
+		extractTargets: func(root map[string]any) []map[string]any {
+			return extractListedField(root, "findings")
 		},
 	},
 	"update-agent-status": {

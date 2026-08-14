@@ -23,12 +23,12 @@ type QuoteSalesOrderFreightResponse struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=sales_order_freight_quote"`
 	// Estimated freight unit price.
-	UnitPrice *SalesOrderQuoteRate `json:"unit_price"`
+	UnitPrice *apiresource.ComputedRate `json:"unit_price"`
 }
 
 var sampleQuoteSalesOrderFreightResponse = &QuoteSalesOrderFreightResponse{
 	Object:    constants.ObjectTypeSalesOrderFreightQuote,
-	UnitPrice: newSalesOrderQuoteRate("24.50", apiresource.SampleCurrencyUnit, apiresource.SampleEachUnit),
+	UnitPrice: apiresource.NewComputedRate("24.50", apiresource.SampleCurrencyUnit, apiresource.SampleEachUnit),
 }
 
 func (*QuoteSalesOrderFreightResponse) SchemaExample() any {

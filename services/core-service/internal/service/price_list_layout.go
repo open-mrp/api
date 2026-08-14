@@ -1,4 +1,4 @@
-package accountpriceep
+package service
 
 import (
 	"sort"

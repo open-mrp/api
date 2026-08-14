@@ -1,6 +1,8 @@
 package apiresource
 
 import (
+	"github.com/shopspring/decimal"
+
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	"github.com/augno/api/shared/constants"
 )
@@ -21,6 +23,42 @@ type ComputedRate struct {
 	DenominatorUnit *Unit `json:"denominator_unit" expandable:"true"`
 	// Human-readable formatted value (e.g. "$25.50 / pr").
 	DisplayValue string `json:"display_value" validate:"required"`
+}
+
+// FormatRateDisplay renders a rate the way a person reads it, e.g. "$25.50 / pr". Either abbreviation may be empty, in which case that half is simply left off.
+func FormatRateDisplay(value, numeratorAbbr, denominatorAbbr string) string {
+	amount, err := decimal.NewFromString(value)
+	if err != nil {
+		amount = decimal.Zero
+	}
+	display := amount.StringFixed(2)
+	if numeratorAbbr != "" {
+		display = numeratorAbbr + display
+	}
+	if denominatorAbbr != "" {
+		display += " / " + denominatorAbbr
+	}
+	return display
+}
+
+// NewComputedRate builds a computed rate with its units already attached, for the endpoints that resolve units eagerly rather than behind an include.
+//
+// The value is carried through exactly as the caller computed it. A quoted price has to equal the price the order will actually charge, and rounding it here to a fixed number of places would make the two disagree by a cent; callers that want a normalized scale apply it themselves.
+func NewComputedRate(value string, numeratorUnit, denominatorUnit *Unit) *ComputedRate {
+	var numeratorAbbr, denominatorAbbr string
+	if numeratorUnit != nil {
+		numeratorAbbr = numeratorUnit.Abbreviation
+	}
+	if denominatorUnit != nil {
+		denominatorAbbr = denominatorUnit.Abbreviation
+	}
+	return &ComputedRate{
+		Object:          constants.ObjectTypeComputedRate,
+		Value:           value,
+		NumeratorUnit:   numeratorUnit,
+		DenominatorUnit: denominatorUnit,
+		DisplayValue:    FormatRateDisplay(value, numeratorAbbr, denominatorAbbr),
+	}
 }
 
 var SampleComputedRate = &ComputedRate{

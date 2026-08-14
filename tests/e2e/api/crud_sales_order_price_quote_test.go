@@ -69,7 +69,7 @@ func quoteUnitPriceAt(t *testing.T, respBody []byte, idx int) float64 {
 
 func TestQuoteSalesOrderPrices_FullyPresentsUnits(t *testing.T) {
 	t.Parallel()
-	// A line item's unit_price shares the sales_order_quote_rate shape with quote-freight: its
+	// A line item's unit_price shares the computed_rate shape with quote-freight: its
 	// numerator/denominator units must come back fully presented, not as bare {id, object}.
 	body := map[string]any{
 		"buyer_account_id": SeedCustomerAccountID,

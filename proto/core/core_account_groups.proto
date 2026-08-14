@@ -6,6 +6,7 @@ package core;
 import "google/protobuf/timestamp.proto";
 import "core/core_patch.proto";
 import "core/core_identity_context.proto";
+import "core/core_async.proto";
 option go_package = "shared/proto/core;core";
 
 message AccountGroupInfo {
@@ -298,6 +299,14 @@ message AccountPriceAttributeInfo {
   google.protobuf.Timestamp created_at = 4;
   google.protobuf.Timestamp updated_at = 5;
 }
+message ExportPriceListRequest {
+  string customer_account_id = 1;
+}
+
+message ExportPriceListResponse {
+  JobInfo job = 1;
+}
+
 message ListAccountPricesRequest {
   optional string cursor = 1;
   int32 limit = 2;

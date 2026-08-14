@@ -216,3 +216,18 @@ func (h *gRPCHandler) DeleteAccountPrice(ctx context.Context, req *pb.DeleteAcco
 
 	return &emptypb.Empty{}, nil
 }
+
+func (h *gRPCHandler) ExportPriceList(ctx context.Context, req *pb.ExportPriceListRequest) (*pb.ExportPriceListResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	job, apiErr := h.accountPriceSvc.ExportPriceList(ctx, domain.ExportPriceListParams{
+		CustomerAccountID: req.CustomerAccountId,
+	})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.ExportPriceListResponse{Job: jobToProto(job)}, nil
+}

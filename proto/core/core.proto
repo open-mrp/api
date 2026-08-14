@@ -290,6 +290,9 @@ service CoreService {
   // Deletes an account price and its associated rate, categories, and attributes.
   rpc DeleteAccountPrice(DeleteAccountPriceRequest) returns (google.protobuf.Empty);
 
+  // ExportPriceList accepts a customer's price list export and returns the job tracking it.
+  rpc ExportPriceList(ExportPriceListRequest) returns (ExportPriceListResponse);
+
   // Returns a paginated list of account integrations (credentials excluded).
   rpc ListAccountIntegrations(ListAccountIntegrationsRequest) returns (ListAccountIntegrationsResponse);
 
@@ -600,6 +603,12 @@ service CoreService {
   // --- Analytics RPCs ---
 
   rpc AnalyzeSales(AnalyzeSalesRequest) returns (AnalyzeSalesResponse);
+
+  // AnalyzeRealizedMargins rolls invoiced lines up to one row per customer and SKU and flags the ones priced below their peers or under target margin. Aggregated here because the raw lines are far too many to ship.
+  rpc AnalyzeRealizedMargins(AnalyzeRealizedMarginsRequest) returns (AnalyzeRealizedMarginsResponse);
+
+  // AnalyzeCustomerPricing sweeps every contracted price and flags those below their peers or under target margin. Swept here because it reads the prices, the customers and the catalog end to end.
+  rpc AnalyzeCustomerPricing(AnalyzeCustomerPricingRequest) returns (AnalyzeCustomerPricingResponse);
   rpc AnalyzeProductionCosts(AnalyzeProductionCostsRequest) returns (AnalyzeProductionCostsResponse);
   rpc AnalyzeDeliveries(AnalyzeDeliveriesRequest) returns (AnalyzeDeliveriesResponse);
   rpc AnalyzeManufacturing(AnalyzeManufacturingRequest) returns (AnalyzeManufacturingResponse);

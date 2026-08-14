@@ -4,13 +4,12 @@ import (
 	"context"
 	"testing"
 
-	"github.com/shopspring/decimal"
-
 	// Registers the finding definitions whose sub-fields this file exercises.
 	_ "github.com/augno/api/services/api-gateway/internal/resourceregistry"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
 	"github.com/augno/api/shared/constants"
+	pb "github.com/augno/api/shared/proto/core"
 )
 
 // These tests close the loop between the two halves of the include system that are written in different packages and can silently drift apart: the presenter stashes foreign keys under string keys, and the registry's ExtractIDs reads them back under string keys. A typo on either side produces no error — the relation just serializes as null forever — so the round trip is asserted rather than assumed.
@@ -34,31 +33,35 @@ func configuredFindingForIncludes(t *testing.T) (context.Context, *apiresource.C
 	t.Helper()
 	ctx := resourcekit.WithLoadMeta(context.Background())
 
-	candidates := []pricingCandidate{{
-		CustomerID:        "acc_buyer",
-		CustomerName:      "Acme",
-		AccountPriceID:    "acpr_1",
-		ProductLineID:     "pl_1",
-		AttributeKey:      "at_1,at_2",
-		AttributeIDs:      []string{"at_1", "at_2"},
-		NumeratorUnitID:   "un_usd",
-		NumeratorUnitAbbr: "$",
-		DenominatorUnit:   "un_pair",
-		DenominatorLabel:  "pr",
-		Value:             dec("8.00"),
-		UnitCost:          dec("7.60"),
-		HasUnitCost:       true,
-	}}
-	findings := analyzePricing(candidates, dec("0.30"), dec("0.15"))
-	if len(findings) != 1 {
-		t.Fatalf("expected the fixture to produce one finding, got %d", len(findings))
-	}
-
-	resp := presentPricingAnalysis(ctx, candidates, findings, nil)
-	if resp.Findings == nil || len(resp.Findings.Data) != 1 {
+	// The sweep runs in core-service now, so the presenter is exercised against the
+	// flagged row it actually receives.
+	out := presentCustomerPricing(ctx, configuredPricingResponse(nil, nil))
+	if out.Findings == nil || len(out.Findings.Data) != 1 {
 		t.Fatal("presenter produced no finding")
 	}
-	return ctx, &resp.Findings.Data[0]
+	return ctx, &out.Findings.Data[0]
+}
+
+// configuredPricingResponse is one flagged price as core-service reports it.
+func configuredPricingResponse(peerMedian, fraction *string) *pb.AnalyzeCustomerPricingResponse {
+	return &pb.AnalyzeCustomerPricingResponse{
+		PricesAnalyzed: 1,
+		Findings: []*pb.CustomerPricingFindingProto{{
+			AccountPriceId:          "acpr_1",
+			CustomerId:              "acc_buyer",
+			ProductLineId:           "pl_1",
+			AttributeIds:            []string{"at_1", "at_2"},
+			UnitPrice:               "8.00",
+			NumeratorUnitId:         "un_usd",
+			NumeratorUnitAbbr:       "$",
+			DenominatorUnitId:       "un_pair",
+			DenominatorAbbr:         "pr",
+			PeerMedianPrice:         peerMedian,
+			BelowPeerMedianFraction: fraction,
+			Origin:                  string(constants.AccountPriceOriginDirect),
+			Reason:                  string(constants.PricingFindingReasonBelowTargetMargin),
+		}},
+	}
 }
 
 // The presenter must leave expandable fields nil; anything it assigned would be serialized verbatim, since nothing strips them back out.
@@ -134,14 +137,10 @@ func TestPricingFindingIncludes_AttributesRoundTrip(t *testing.T) {
 // A unit loaded for the price attaches to every rate on the finding, so the peer median is labelled on the same basis as the price it is compared against.
 func TestPricingFindingIncludes_UnitAttachesToEveryRate(t *testing.T) {
 	ctx := resourcekit.WithLoadMeta(context.Background())
-	candidates := []pricingCandidate{
-		{CustomerID: "a", CustomerName: "A", AccountPriceID: "acpr_a", ProductLineID: "pl_1", DenominatorUnit: "un_pair", DenominatorLabel: "pr", NumeratorUnitID: "un_usd", NumeratorUnitAbbr: "$", Value: dec("6.00")},
-		{CustomerID: "b", CustomerName: "B", AccountPriceID: "acpr_b", ProductLineID: "pl_1", DenominatorUnit: "un_pair", DenominatorLabel: "pr", NumeratorUnitID: "un_usd", NumeratorUnitAbbr: "$", Value: dec("10.00")},
-		{CustomerID: "c", CustomerName: "C", AccountPriceID: "acpr_c", ProductLineID: "pl_1", DenominatorUnit: "un_pair", DenominatorLabel: "pr", NumeratorUnitID: "un_usd", NumeratorUnitAbbr: "$", Value: dec("10.00")},
-	}
-	findings := analyzePricing(candidates, decimal.Zero, dec("0.15"))
-	resp := presentPricingAnalysis(ctx, candidates, findings, nil)
-	finding := &resp.Findings.Data[0]
+	median := "10.0000"
+	fraction := "0.2000"
+	out := presentCustomerPricing(ctx, configuredPricingResponse(&median, &fraction))
+	finding := &out.Findings.Data[0]
 	if finding.PeerMedianPrice == nil {
 		t.Fatal("expected the flagged finding to carry a peer median")
 	}
@@ -165,29 +164,35 @@ func realizedFindingForIncludes(t *testing.T) (context.Context, *apiresource.Rea
 	t.Helper()
 	ctx := resourcekit.WithLoadMeta(context.Background())
 
-	lines := []realizedLine{{
-		CustomerID:      "acc_buyer",
-		CustomerName:    "Acme",
-		CustomerGroupID: "acgp_1",
-		ItemID:          "it_1",
-		SKU:             "SKU-1",
-		ProductLineID:   "pl_1",
-		UnitAbbr:        "pr",
-		Quantity:        dec("100"),
-		Revenue:         dec("1000.00"),
-		Cost:            dec("900.00"),
-	}}
-	aggregates := aggregateRealizedLines(lines)
-	findings := analyzeRealizedMargins(aggregates, dec("0.30"), dec("0.15"))
-	if len(findings) != 1 {
-		t.Fatalf("expected one finding, got %d", len(findings))
+	// The roll-up happens in core-service now, so the presenter is exercised against
+	// the aggregated row it actually receives.
+	median := "12.0000"
+	fraction := "0.1667"
+	resp := &pb.AnalyzeRealizedMarginsResponse{
+		LinesAnalyzed:         1,
+		RelationshipsAnalyzed: 1,
+		Findings: []*pb.RealizedMarginFindingProto{{
+			CustomerId:              "acc_buyer",
+			CustomerGroupId:         "acgp_1",
+			ItemId:                  "it_1",
+			ProductLineId:           "pl_1",
+			UnitAbbreviation:        "pr",
+			QuantityInvoiced:        "100",
+			Revenue:                 "1000.00",
+			Cost:                    "900.00",
+			AverageUnitPrice:        "10.00",
+			PeerMedianPrice:         &median,
+			BelowPeerMedianFraction: &fraction,
+			LineCount:               1,
+			Reason:                  string(constants.PricingFindingReasonBelowTargetMargin),
+		}},
 	}
 
-	resp := presentRealizedMargins(ctx, len(lines), aggregates, findings, nil)
-	if resp.Findings == nil || len(resp.Findings.Data) != 1 {
+	out := presentRealizedMargins(ctx, resp)
+	if out.Findings == nil || len(out.Findings.Data) != 1 {
 		t.Fatal("presenter produced no finding")
 	}
-	return ctx, &resp.Findings.Data[0]
+	return ctx, &out.Findings.Data[0]
 }
 
 func TestRealizedMarginFindingIncludes_RoundTrip(t *testing.T) {

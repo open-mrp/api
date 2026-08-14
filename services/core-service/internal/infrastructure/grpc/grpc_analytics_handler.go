@@ -1004,3 +1004,96 @@ func (h *gRPCHandler) AnalyzeDeliveryPerformance(ctx context.Context, req *pb.An
 		UncommittedOrderCount: safeconv.IntToInt32(result.UncommittedOrderCount),
 	}, nil
 }
+
+func (h *gRPCHandler) AnalyzeRealizedMargins(ctx context.Context, req *pb.AnalyzeRealizedMarginsRequest) (*pb.AnalyzeRealizedMarginsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	result, apiErr := h.analyticsSvc.AnalyzeRealizedMargins(ctx, domain.AnalyzeRealizedMarginsParams{
+		StartDate:         req.StartDate.AsTime(),
+		EndDate:           req.EndDate.AsTime(),
+		CustomerIDs:       req.CustomerIds,
+		CustomerGroupIDs:  req.CustomerGroupIds,
+		ProductLineIDs:    req.ProductLineIds,
+		TargetGrossMargin: req.TargetGrossMargin,
+		OutlierTolerance:  req.OutlierTolerance,
+	})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	findings := make([]*pb.RealizedMarginFindingProto, len(result.Findings))
+	for i, f := range result.Findings {
+		findings[i] = &pb.RealizedMarginFindingProto{
+			CustomerId:              f.CustomerID,
+			CustomerGroupId:         f.CustomerGroupID,
+			ItemId:                  f.ItemID,
+			ProductLineId:           f.ProductLineID,
+			UnitAbbreviation:        f.UnitAbbreviation,
+			QuantityInvoiced:        f.QuantityInvoiced,
+			Revenue:                 f.Revenue,
+			Cost:                    f.Cost,
+			AverageUnitPrice:        f.AverageUnitPrice,
+			PeerMedianPrice:         f.PeerMedianPrice,
+			BelowPeerMedianFraction: f.BelowPeerMedianFraction,
+			GrossMargin:             f.GrossMargin,
+			LineCount:               safeconv.IntToInt32(f.LineCount),
+			Reason:                  f.Reason,
+		}
+	}
+
+	return &pb.AnalyzeRealizedMarginsResponse{
+		Findings:               findings,
+		LinesAnalyzed:          safeconv.IntToInt32(result.LinesAnalyzed),
+		RelationshipsAnalyzed:  safeconv.IntToInt32(result.RelationshipsAnalyzed),
+		BelowPeerMedianCount:   safeconv.IntToInt32(result.BelowPeerMedianCount),
+		BelowTargetMarginCount: safeconv.IntToInt32(result.BelowTargetMarginCount),
+		MarginNotAssessedCount: safeconv.IntToInt32(result.MarginNotAssessedCount),
+	}, nil
+}
+
+func (h *gRPCHandler) AnalyzeCustomerPricing(ctx context.Context, req *pb.AnalyzeCustomerPricingRequest) (*pb.AnalyzeCustomerPricingResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	result, apiErr := h.analyticsSvc.AnalyzeCustomerPricing(ctx, domain.AnalyzeCustomerPricingParams{
+		CustomerIDs:       req.CustomerIds,
+		CustomerGroupIDs:  req.CustomerGroupIds,
+		TargetGrossMargin: req.TargetGrossMargin,
+		OutlierTolerance:  req.OutlierTolerance,
+	})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	findings := make([]*pb.CustomerPricingFindingProto, len(result.Findings))
+	for i, f := range result.Findings {
+		findings[i] = &pb.CustomerPricingFindingProto{
+			AccountPriceId:          f.AccountPriceID,
+			CustomerId:              f.CustomerID,
+			ProductLineId:           f.ProductLineID,
+			AttributeIds:            f.AttributeIDs,
+			UnitPrice:               f.UnitPrice,
+			NumeratorUnitId:         f.NumeratorUnitID,
+			NumeratorUnitAbbr:       f.NumeratorUnitAbbr,
+			DenominatorUnitId:       f.DenominatorUnitID,
+			DenominatorAbbr:         f.DenominatorAbbr,
+			PeerMedianPrice:         f.PeerMedianPrice,
+			BelowPeerMedianFraction: f.BelowPeerMedianFraction,
+			GrossMargin:             f.GrossMargin,
+			Origin:                  f.Origin,
+			Reason:                  f.Reason,
+		}
+	}
+
+	return &pb.AnalyzeCustomerPricingResponse{
+		Findings:               findings,
+		PricesAnalyzed:         safeconv.IntToInt32(result.PricesAnalyzed),
+		BelowPeerMedianCount:   safeconv.IntToInt32(result.BelowPeerMedianCount),
+		BelowTargetMarginCount: safeconv.IntToInt32(result.BelowTargetMarginCount),
+		MarginNotAssessedCount: safeconv.IntToInt32(result.MarginNotAssessedCount),
+		Notes:                  result.Notes,
+	}, nil
+}

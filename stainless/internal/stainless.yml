@@ -627,9 +627,9 @@ resources:
         subresources:
           actions:
             methods:
-              export_price_list: get /v1/sales/account-prices/actions/export-price-list
+              export_price_list: post /v1/sales/account-prices/actions/export-price-list
             models:
-              file_download: '#/components/schemas/FileDownload'
+              export_price_list_request: '#/components/schemas/ExportPriceListRequest'
         models:
           account_price: '#/components/schemas/AccountPrice'
           create_account_price_request: '#/components/schemas/CreateAccountPriceRequest'
@@ -805,7 +805,6 @@ resources:
           sales_order: '#/components/schemas/SalesOrder'
           sales_order_email_contact_input: '#/components/schemas/SalesOrderEmailContactInput'
           sales_order_line: '#/components/schemas/SalesOrderLine'
-          sales_order_quote_rate: '#/components/schemas/SalesOrderQuoteRate'
           sales_order_related: '#/components/schemas/SalesOrderRelated'
           sales_order_stage_total: '#/components/schemas/SalesOrderStageTotal'
           sales_order_status: '#/components/schemas/SalesOrderStatus'
@@ -1057,6 +1056,7 @@ resources:
               bulk_reconcile_item_input: '#/components/schemas/BulkReconcileItemInput'
               bulk_reconcile_items_request: '#/components/schemas/BulkReconcileItemsRequest'
               bulk_reconcile_items_response: '#/components/schemas/BulkReconcileItemsResponse'
+              file_download: '#/components/schemas/FileDownload'
               list_reconcile_error_result: '#/components/schemas/List_ReconcileErrorResult'
               list_reconciled_item_result: '#/components/schemas/List_ReconciledItemResult'
               list_skipped_item_result: '#/components/schemas/List_SkippedItemResult'

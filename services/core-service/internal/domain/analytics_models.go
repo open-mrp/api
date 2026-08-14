@@ -643,3 +643,80 @@ type DepartmentMachineCountRow struct {
 	DepartmentID string
 	MachineCount int64
 }
+
+// AnalyzeRealizedMarginsParams filters the realized-margin audit.
+type AnalyzeRealizedMarginsParams struct {
+	StartDate time.Time
+	EndDate   time.Time
+	// CustomerIDs and CustomerGroupIDs narrow the reported findings, not the peer benchmark: a customer must be compared against everyone who bought the SKU, including those the caller did not ask about.
+	CustomerIDs       []string
+	CustomerGroupIDs  []string
+	ProductLineIDs    []string
+	TargetGrossMargin *string
+	OutlierTolerance  *string
+}
+
+// RealizedMarginFinding is one customer/SKU trading relationship flagged by the audit.
+type RealizedMarginFinding struct {
+	CustomerID              string
+	CustomerGroupID         string
+	ItemID                  string
+	ProductLineID           string
+	UnitAbbreviation        string
+	QuantityInvoiced        string
+	Revenue                 string
+	Cost                    string
+	AverageUnitPrice        string
+	PeerMedianPrice         *string
+	BelowPeerMedianFraction *string
+	GrossMargin             *string
+	LineCount               int
+	Reason                  string
+}
+
+// RealizedMarginAnalysis is the rolled-up result: one row per flagged customer and SKU, plus what the sweep covered.
+type RealizedMarginAnalysis struct {
+	Findings               []RealizedMarginFinding
+	LinesAnalyzed          int
+	RelationshipsAnalyzed  int
+	BelowPeerMedianCount   int
+	BelowTargetMarginCount int
+	MarginNotAssessedCount int
+}
+
+// AnalyzeCustomerPricingParams filters the contracted-pricing audit.
+type AnalyzeCustomerPricingParams struct {
+	// CustomerIDs and CustomerGroupIDs narrow the reported findings, not the peer benchmark: a price must be compared against every comparable price, including those the caller did not ask about.
+	CustomerIDs       []string
+	CustomerGroupIDs  []string
+	TargetGrossMargin *string
+	OutlierTolerance  *string
+}
+
+// CustomerPricingFinding is one contracted price flagged by the audit.
+type CustomerPricingFinding struct {
+	AccountPriceID          string
+	CustomerID              string
+	ProductLineID           string
+	AttributeIDs            []string
+	UnitPrice               string
+	NumeratorUnitID         string
+	NumeratorUnitAbbr       string
+	DenominatorUnitID       string
+	DenominatorAbbr         string
+	PeerMedianPrice         *string
+	BelowPeerMedianFraction *string
+	GrossMargin             *string
+	Origin                  string
+	Reason                  string
+}
+
+// CustomerPricingAnalysis is the swept result: the flagged prices plus what the sweep covered.
+type CustomerPricingAnalysis struct {
+	Findings               []CustomerPricingFinding
+	PricesAnalyzed         int
+	BelowPeerMedianCount   int
+	BelowTargetMarginCount int
+	MarginNotAssessedCount int
+	Notes                  []string
+}

@@ -1,4 +1,4 @@
-package analyticsep
+package service
 
 import (
 	"sort"
@@ -162,6 +162,19 @@ func realizedSeverity(finding realizedFinding, targetMargin decimal.Decimal) dec
 		severity = severity.Add(finding.PeerMedianPrice.Sub(finding.AveragePrice).Mul(finding.Quantity))
 	}
 	return severity
+}
+
+// medianOf is the middle value of a set. Median rather than mean throughout this analysis: one deeply discounted customer should not drag a benchmark down and thereby hide itself.
+func medianOf(values []decimal.Decimal) decimal.Decimal {
+	sorted := make([]decimal.Decimal, len(values))
+	copy(sorted, values)
+	sort.SliceStable(sorted, func(i, j int) bool { return sorted[i].LessThan(sorted[j]) })
+
+	mid := len(sorted) / 2
+	if len(sorted)%2 == 1 {
+		return sorted[mid]
+	}
+	return sorted[mid-1].Add(sorted[mid]).Div(decimal.NewFromInt(2))
 }
 
 // realizedPeerMedians is the median achieved price per SKU across customers.

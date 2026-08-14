@@ -180,9 +180,9 @@ func TestCovAiTools_ToolsSearchQCaseInsensitiveSubstring(t *testing.T) {
 	t.Parallel()
 
 	expectedSlugs := []string{
-		"create_customer", "delete_customer", "list_customers",
-		"merge_customers", "retrieve_customer", "retrieve_customer_lead_time",
-		"update_customer",
+		"analyze_customer_pricing", "create_customer", "delete_customer",
+		"list_customers", "merge_customers", "retrieve_customer",
+		"retrieve_customer_lead_time", "update_customer",
 	}
 
 	for _, q := range []string{"customer", "CUSTOMER", "CuStOmEr"} {
@@ -527,11 +527,20 @@ func TestCovAiTools_ToolGroupsSearchQMatchesGroupName(t *testing.T) {
 	list, status, err := apiClient.GetList(toolGroupsPath, url.Values{"q": {"customer"}})
 	require.NoError(t, err)
 	require.Equal(t, 200, status)
-	require.Len(t, list.Data, 1)
-	group := parseJSON(list.Data[0])
-	assert.Equal(t, "tgrp_api_customers", jsonField(group, "id"))
-	assert.Equal(t, "Customers", jsonField(group, "name"))
-	assert.Equal(t, "api_customers", jsonField(group, "slug"))
+
+	type groupRow struct{ id, name, slug string }
+	want := []groupRow{
+		{"tgrp_api_customer_pricing", "Customer Pricing", "api_customer_pricing"},
+		{"tgrp_api_customers", "Customers", "api_customers"},
+	}
+	require.Len(t, list.Data, len(want))
+
+	got := make([]groupRow, 0, len(list.Data))
+	for _, raw := range list.Data {
+		group := parseJSON(raw)
+		got = append(got, groupRow{jsonField(group, "id"), jsonField(group, "name"), jsonField(group, "slug")})
+	}
+	assert.ElementsMatch(t, want, got)
 }
 
 func TestCovAiTools_ToolGroupsSearchNoResults(t *testing.T) {

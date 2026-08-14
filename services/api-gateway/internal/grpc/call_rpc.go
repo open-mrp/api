@@ -18,6 +18,8 @@ import (
 const (
 	PasswordOperationTimeout = 15 * time.Second
 	BillingOperationTimeout  = 30 * time.Second
+	// AnalyticsOperationTimeout covers the sweeps that read a whole collection — every contracted price, every invoiced line in a window — rather than one record. It sits just under the server's write timeout so the caller gets the API's own timeout error instead of a truncated response.
+	AnalyticsOperationTimeout = 25 * time.Second
 )
 
 // RPCOption configures the behavior of [CallRPC]. Use the With* functions in this package to obtain option values.

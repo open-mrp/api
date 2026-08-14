@@ -1,18 +1,6 @@
-package analyticsep
+package service
 
-import (
-	"testing"
-
-	"github.com/shopspring/decimal"
-)
-
-func dec(s string) decimal.Decimal {
-	d, err := decimal.NewFromString(s)
-	if err != nil {
-		panic(err)
-	}
-	return d
-}
+import "testing"
 
 func candidate(name, line, attrs, price string) pricingCandidate {
 	return pricingCandidate{

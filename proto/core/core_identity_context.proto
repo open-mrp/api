@@ -731,6 +731,75 @@ message MergeCustomersRequest {
 message MergeCustomersResponse {
   CustomerProto customer = 1;
 }
+message AnalyzeCustomerPricingRequest {
+  repeated string customer_ids = 1;
+  repeated string customer_group_ids = 2;
+  optional string target_gross_margin = 3;
+  optional string outlier_tolerance = 4;
+}
+
+message CustomerPricingFindingProto {
+  string account_price_id = 1;
+  string customer_id = 2;
+  string product_line_id = 3;
+  repeated string attribute_ids = 4;
+  string unit_price = 5;
+  string numerator_unit_id = 6;
+  string numerator_unit_abbr = 7;
+  string denominator_unit_id = 8;
+  string denominator_abbr = 9;
+  optional string peer_median_price = 10;
+  optional string below_peer_median_fraction = 11;
+  optional string gross_margin = 12;
+  string origin = 13;
+  string reason = 14;
+}
+
+message AnalyzeCustomerPricingResponse {
+  repeated CustomerPricingFindingProto findings = 1;
+  int32 prices_analyzed = 2;
+  int32 below_peer_median_count = 3;
+  int32 below_target_margin_count = 4;
+  int32 margin_not_assessed_count = 5;
+  repeated string notes = 6;
+}
+
+message AnalyzeRealizedMarginsRequest {
+  google.protobuf.Timestamp start_date = 1;
+  google.protobuf.Timestamp end_date = 2;
+  repeated string customer_ids = 3;
+  repeated string customer_group_ids = 4;
+  repeated string product_line_ids = 5;
+  optional string target_gross_margin = 6;
+  optional string outlier_tolerance = 7;
+}
+
+message RealizedMarginFindingProto {
+  string customer_id = 1;
+  string customer_group_id = 2;
+  string item_id = 3;
+  string product_line_id = 4;
+  string unit_abbreviation = 5;
+  string quantity_invoiced = 6;
+  string revenue = 7;
+  string cost = 8;
+  string average_unit_price = 9;
+  optional string peer_median_price = 10;
+  optional string below_peer_median_fraction = 11;
+  optional string gross_margin = 12;
+  int32 line_count = 13;
+  string reason = 14;
+}
+
+message AnalyzeRealizedMarginsResponse {
+  repeated RealizedMarginFindingProto findings = 1;
+  int32 lines_analyzed = 2;
+  int32 relationships_analyzed = 3;
+  int32 below_peer_median_count = 4;
+  int32 below_target_margin_count = 5;
+  int32 margin_not_assessed_count = 6;
+}
+
 message AnalyzeSalesRequest {
   google.protobuf.Timestamp start_date = 1;
   google.protobuf.Timestamp end_date = 2;

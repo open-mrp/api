@@ -1,4 +1,4 @@
-package analyticsep
+package service
 
 import (
 	"testing"
@@ -6,7 +6,15 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func line(customer, item, qty, revenue, cost string) realizedLine {
+func dec(s string) decimal.Decimal {
+	d, err := decimal.NewFromString(s)
+	if err != nil {
+		panic(err)
+	}
+	return d
+}
+
+func realizedTestLine(customer, item, qty, revenue, cost string) realizedLine {
 	return realizedLine{
 		CustomerID:   customer,
 		CustomerName: customer,
@@ -21,8 +29,8 @@ func line(customer, item, qty, revenue, cost string) realizedLine {
 // Several invoiced lines for the same customer and SKU roll into one achieved price, weighted by quantity rather than averaged per line.
 func TestAggregateRealizedLines_WeightsByQuantity(t *testing.T) {
 	lines := []realizedLine{
-		line("acme", "it_1", "10", "100.00", "50.00"),
-		line("acme", "it_1", "90", "450.00", "270.00"),
+		realizedTestLine("acme", "it_1", "10", "100.00", "50.00"),
+		realizedTestLine("acme", "it_1", "90", "450.00", "270.00"),
 	}
 
 	aggregates := aggregateRealizedLines(lines)
@@ -41,10 +49,10 @@ func TestAggregateRealizedLines_WeightsByQuantity(t *testing.T) {
 // A customer achieving far less per unit than others on the same SKU is flagged.
 func TestAnalyzeRealizedMargins_FlagsPeerOutlier(t *testing.T) {
 	aggregates := aggregateRealizedLines([]realizedLine{
-		line("a", "it_1", "10", "100.00", "10.00"),
-		line("b", "it_1", "10", "100.00", "10.00"),
-		line("c", "it_1", "10", "100.00", "10.00"),
-		line("cheap", "it_1", "10", "50.00", "10.00"),
+		realizedTestLine("a", "it_1", "10", "100.00", "10.00"),
+		realizedTestLine("b", "it_1", "10", "100.00", "10.00"),
+		realizedTestLine("c", "it_1", "10", "100.00", "10.00"),
+		realizedTestLine("cheap", "it_1", "10", "50.00", "10.00"),
 	})
 
 	findings := analyzeRealizedMargins(aggregates, dec("0"), dec("0.15"))
@@ -62,10 +70,10 @@ func TestAnalyzeRealizedMargins_FlagsPeerOutlier(t *testing.T) {
 // Different SKUs are separate benchmarks.
 func TestAnalyzeRealizedMargins_PeerGroupsAreScopedBySKU(t *testing.T) {
 	aggregates := aggregateRealizedLines([]realizedLine{
-		line("a", "it_expensive", "1", "100.00", "10.00"),
-		line("b", "it_expensive", "1", "100.00", "10.00"),
-		line("a", "it_cheap", "1", "5.00", "1.00"),
-		line("b", "it_cheap", "1", "5.00", "1.00"),
+		realizedTestLine("a", "it_expensive", "1", "100.00", "10.00"),
+		realizedTestLine("b", "it_expensive", "1", "100.00", "10.00"),
+		realizedTestLine("a", "it_cheap", "1", "5.00", "1.00"),
+		realizedTestLine("b", "it_cheap", "1", "5.00", "1.00"),
 	})
 
 	findings := analyzeRealizedMargins(aggregates, dec("0"), dec("0.15"))
@@ -76,8 +84,8 @@ func TestAnalyzeRealizedMargins_PeerGroupsAreScopedBySKU(t *testing.T) {
 
 func TestAnalyzeRealizedMargins_FlagsBelowTargetMargin(t *testing.T) {
 	aggregates := aggregateRealizedLines([]realizedLine{
-		line("a", "it_1", "10", "100.00", "85.00"),
-		line("b", "it_1", "10", "100.00", "85.00"),
+		realizedTestLine("a", "it_1", "10", "100.00", "85.00"),
+		realizedTestLine("b", "it_1", "10", "100.00", "85.00"),
 	})
 
 	findings := analyzeRealizedMargins(aggregates, dec("0.30"), dec("0.15"))
@@ -92,8 +100,8 @@ func TestAnalyzeRealizedMargins_FlagsBelowTargetMargin(t *testing.T) {
 // A line with no captured cost must not read as a 100% margin.
 func TestAnalyzeRealizedMargins_ZeroCostIsNotFullMargin(t *testing.T) {
 	aggregates := aggregateRealizedLines([]realizedLine{
-		line("a", "it_1", "10", "100.00", "0"),
-		line("b", "it_1", "10", "100.00", "0"),
+		realizedTestLine("a", "it_1", "10", "100.00", "0"),
+		realizedTestLine("b", "it_1", "10", "100.00", "0"),
 	})
 
 	findings := analyzeRealizedMargins(aggregates, dec("0.30"), dec("0.15"))
@@ -110,8 +118,8 @@ func TestAnalyzeRealizedMargins_ZeroCostIsNotFullMargin(t *testing.T) {
 // Ranking is by money at stake, so a thin margin on a big account outranks a worse percentage on a tiny one.
 func TestAnalyzeRealizedMargins_RanksByMoneyAtStake(t *testing.T) {
 	aggregates := aggregateRealizedLines([]realizedLine{
-		line("small-but-awful", "it_1", "1", "10.00", "9.90"),
-		line("big-and-thin", "it_2", "10000", "100000.00", "80000.00"),
+		realizedTestLine("small-but-awful", "it_1", "1", "10.00", "9.90"),
+		realizedTestLine("big-and-thin", "it_2", "10000", "100000.00", "80000.00"),
 	})
 
 	findings := analyzeRealizedMargins(aggregates, dec("0.30"), dec("0.15"))
@@ -124,7 +132,7 @@ func TestAnalyzeRealizedMargins_RanksByMoneyAtStake(t *testing.T) {
 }
 
 func TestRealizedPeerMedians_IgnoresSingleBuyer(t *testing.T) {
-	aggregates := aggregateRealizedLines([]realizedLine{line("solo", "it_1", "1", "1.00", "0.10")})
+	aggregates := aggregateRealizedLines([]realizedLine{realizedTestLine("solo", "it_1", "1", "1.00", "0.10")})
 	if _, ok := realizedPeerMedians(aggregates)["it_1"]; ok {
 		t.Error("a single buyer should not produce a peer median")
 	}

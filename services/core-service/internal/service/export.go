@@ -96,7 +96,7 @@ func exportKeyFor(job *domain.Job) (string, *apierror.APIError) {
 	if err := json.Unmarshal(job.JobItems, &payload); err != nil {
 		return "", apierror.NewInternalError(err, "Job items are not an export payload.")
 	}
-	return exportObjectKey(*job.AccountID, payload.Slug, job.ID, *job.StartedAt), nil
+	return exportObjectKey(*job.AccountID, payload.Slug, job.ID, *job.StartedAt, payload.Ext), nil
 }
 
 // --- Worker ---
@@ -181,7 +181,7 @@ func (r *ExportRunner) Render(ctx context.Context, event domain.BulkOperationJob
 		return tracing.Trace(span, apiErr)
 	}
 
-	key := exportObjectKey(accountID, payload.Slug, job.ID, startedAt)
+	key := exportObjectKey(accountID, payload.Slug, job.ID, startedAt, payload.Ext)
 	if apiErr := r.delivery.Upload(ctx, key, export.Body, export.ContentType); apiErr != nil {
 		jobs.FailJob(ctx, domain.FailJobParams{JobID: job.ID, ApiErr: apiErr})
 		return tracing.Trace(span, apiErr)

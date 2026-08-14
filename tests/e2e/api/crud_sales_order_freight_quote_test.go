@@ -43,7 +43,7 @@ func TestQuoteSalesOrderFreight_FullyPresentsUnits(t *testing.T) {
 
 	unitPrice := jsonObject(resp, "unit_price")
 	require.NotNil(t, unitPrice, "the freight quote carries a unit_price")
-	assert.Equal(t, "sales_order_quote_rate", jsonField(unitPrice, "object"))
+	assert.Equal(t, "computed_rate", jsonField(unitPrice, "object"))
 	assert.NotEmpty(t, jsonField(unitPrice, "value"), "the rate carries a value")
 
 	// Both units of the rate must be fully presented, not bare {id, object} refs.

@@ -46,7 +46,7 @@ func (*AccountPricesEndpointGroup) Materialize(config *AccountPricesEndpointGrou
 	createAccountPriceEndpoint := apiendpoint.From(&accountpriceep.CreateAccountPriceEndpoint{}).WithService(inner, accountPriceSvc)
 	updateAccountPriceEndpoint := apiendpoint.From(&accountpriceep.UpdateAccountPriceEndpoint{}).WithService(inner, accountPriceSvc)
 	deleteAccountPriceEndpoint := apiendpoint.From(&accountpriceep.DeleteAccountPriceEndpoint{}).WithService(inner, accountPriceSvc)
-	exportCustomerPriceListEndpoint := apiendpoint.From(&accountpriceep.ExportCustomerPriceListEndpoint{}).WithService(inner, accountPriceSvc)
+	exportPriceListEndpoint := apiendpoint.From(&accountpriceep.ExportPriceListEndpoint{}).WithService(inner, accountPriceSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listAccountPricesEndpoint,
@@ -54,7 +54,7 @@ func (*AccountPricesEndpointGroup) Materialize(config *AccountPricesEndpointGrou
 		createAccountPriceEndpoint,
 		updateAccountPriceEndpoint,
 		deleteAccountPriceEndpoint,
-		exportCustomerPriceListEndpoint,
+		exportPriceListEndpoint,
 	}
 
 	return &AccountPricesEndpointGroup{inner}

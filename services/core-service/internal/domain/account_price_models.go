@@ -108,3 +108,8 @@ type UpdateAccountPriceParams struct {
 	CategoryIDs           *[]string
 	AttributeIDs          *[]string
 }
+
+// ExportPriceListParams names the customer whose price list is being exported.
+type ExportPriceListParams struct {
+	CustomerAccountID string
+}

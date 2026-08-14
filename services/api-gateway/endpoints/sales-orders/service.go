@@ -408,7 +408,7 @@ func (m *salesOrderSvcImpl) QuoteSalesOrderPrices(ctx context.Context, req *Quot
 		out[i] = QuotedSalesOrderLine{
 			Object:    constants.ObjectTypeSalesOrderPriceQuoteLine,
 			Product:   products[l.ProductId],
-			UnitPrice: newSalesOrderQuoteRate(l.UnitPriceValue, units[l.UnitPriceNumeratorUnitId], units[l.UnitPriceDenominatorUnitId]),
+			UnitPrice: apiresource.NewComputedRate(l.UnitPriceValue, units[l.UnitPriceNumeratorUnitId], units[l.UnitPriceDenominatorUnitId]),
 		}
 	}
 
@@ -500,7 +500,7 @@ func (m *salesOrderSvcImpl) QuoteSalesOrderFreight(ctx context.Context, req *Quo
 
 	return &QuoteSalesOrderFreightResponse{
 		Object:    constants.ObjectTypeSalesOrderFreightQuote,
-		UnitPrice: newSalesOrderQuoteRate(resp.UnitPriceValue, units[resp.UnitPriceNumeratorUnitId], units[resp.UnitPriceDenominatorUnitId]),
+		UnitPrice: apiresource.NewComputedRate(resp.UnitPriceValue, units[resp.UnitPriceNumeratorUnitId], units[resp.UnitPriceDenominatorUnitId]),
 	}, nil
 }
 

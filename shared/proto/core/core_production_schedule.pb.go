@@ -5159,6 +5159,7 @@ type FulfillmentRecommendationInfo struct {
 	AnnualCogs                 float64                `protobuf:"fixed64,13,opt,name=annual_cogs,json=annualCogs,proto3" json:"annual_cogs,omitempty"`
 	MonthsSinceLastSale        int32                  `protobuf:"varint,14,opt,name=months_since_last_sale,json=monthsSinceLastSale,proto3" json:"months_since_last_sale,omitempty"`
 	MixedStreamSharePct        float64                `protobuf:"fixed64,15,opt,name=mixed_stream_share_pct,json=mixedStreamSharePct,proto3" json:"mixed_stream_share_pct,omitempty"`
+	Description                *string                `protobuf:"bytes,16,opt,name=description,proto3,oneof" json:"description,omitempty"`
 	unknownFields              protoimpl.UnknownFields
 	sizeCache                  protoimpl.SizeCache
 }
@@ -5296,6 +5297,13 @@ func (x *FulfillmentRecommendationInfo) GetMixedStreamSharePct() float64 {
 		return x.MixedStreamSharePct
 	}
 	return 0
+}
+
+func (x *FulfillmentRecommendationInfo) GetDescription() string {
+	if x != nil && x.Description != nil {
+		return *x.Description
+	}
+	return ""
 }
 
 type ListFulfillmentRecommendationsRequest struct {
@@ -7177,7 +7185,7 @@ const file_core_core_production_schedule_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x15\n" +
 	"\x13_lot_multiple_unitsB\x1a\n" +
-	"\x18_fulfillment_policy_code\"\xeb\x05\n" +
+	"\x18_fulfillment_policy_code\"\xa2\x06\n" +
 	"\x1dFulfillmentRecommendationInfo\x12\x17\n" +
 	"\aitem_id\x18\x01 \x01(\tR\x06itemId\x12\x10\n" +
 	"\x03sku\x18\x02 \x01(\tR\x03sku\x12+\n" +
@@ -7196,9 +7204,11 @@ const file_core_core_production_schedule_proto_rawDesc = "" +
 	"\vannual_cogs\x18\r \x01(\x01R\n" +
 	"annualCogs\x123\n" +
 	"\x16months_since_last_sale\x18\x0e \x01(\x05R\x13monthsSinceLastSale\x123\n" +
-	"\x16mixed_stream_share_pct\x18\x0f \x01(\x01R\x13mixedStreamSharePctB\x12\n" +
+	"\x16mixed_stream_share_pct\x18\x0f \x01(\x01R\x13mixedStreamSharePct\x12%\n" +
+	"\vdescription\x18\x10 \x01(\tH\x02R\vdescription\x88\x01\x01B\x12\n" +
 	"\x10_product_line_idB\x14\n" +
-	"\x12_top_customer_name\"'\n" +
+	"\x12_top_customer_nameB\x0e\n" +
+	"\f_description\"'\n" +
 	"%ListFulfillmentRecommendationsRequest\"w\n" +
 	"&ListFulfillmentRecommendationsResponse\x12M\n" +
 	"\x0frecommendations\x18\x01 \x03(\v2#.core.FulfillmentRecommendationInfoR\x0frecommendations\"C\n" +

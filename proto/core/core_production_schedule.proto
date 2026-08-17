@@ -725,6 +725,7 @@ message FulfillmentRecommendationInfo {
   double annual_cogs = 13;
   int32 months_since_last_sale = 14;
   double mixed_stream_share_pct = 15;
+  optional string description = 16;
 }
 
 message ListFulfillmentRecommendationsRequest {}

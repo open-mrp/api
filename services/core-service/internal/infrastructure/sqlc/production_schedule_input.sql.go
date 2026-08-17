@@ -230,10 +230,12 @@ SELECT
     p.id AS product_id,
     p.item_id,
     i.sku,
+    i.description,
     p.product_line_id
 FROM product p
 JOIN item i ON i.id = p.item_id
 WHERE i.account_id = ?
+  AND p.product_type_code = 'sale'
 ORDER BY i.sku, p.item_id
 `
 
@@ -241,10 +243,12 @@ type GetAllSellableProductsRow struct {
 	ProductID     string
 	ItemID        string
 	Sku           string
+	Description   sql.NullString
 	ProductLineID sql.NullString
 }
 
 // GetAllSellableProducts returns every product in the account with the item and line it carries. The candidate set for a fulfillment recommendation is everything that can be sold, since that is where policy is resolved.
+// Restricted to the 'sale' product type: tax, shipping, credit, return and service products are billing constructs that are never manufactured, so advising a fulfillment policy for them is advice about nothing.
 func (q *Queries) GetAllSellableProducts(ctx context.Context, accountID string) ([]GetAllSellableProductsRow, error) {
 	rows, err := q.db.QueryContext(ctx, getAllSellableProducts, accountID)
 	if err != nil {
@@ -258,6 +262,7 @@ func (q *Queries) GetAllSellableProducts(ctx context.Context, accountID string) 
 			&i.ProductID,
 			&i.ItemID,
 			&i.Sku,
+			&i.Description,
 			&i.ProductLineID,
 		); err != nil {
 			return nil, err

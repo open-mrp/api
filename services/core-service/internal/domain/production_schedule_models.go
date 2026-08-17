@@ -95,6 +95,8 @@ type SellableProductRow struct {
 	ProductID string
 	ItemID    string
 	SKU       string
+	// Description is nil when the item was never given one, which a SKU-only row still reads fine without.
+	Description *string
 	// ProductLineID is nil when the product sells under no line.
 	ProductLineID *string
 }
@@ -226,6 +228,8 @@ type PromiseDateQuote struct {
 // FulfillmentRecommendation is the engine's advice for one item, with the measurements behind it.
 type FulfillmentRecommendation struct {
 	scheduling.Recommendation
+	// Description is the item's own description, carried for display only — a SKU alone does not tell a planner what they are deciding about. Empty when the item has none.
+	Description string
 	// ProductLineID is the line the item sells under, empty when it sells under none.
 	ProductLineID string
 	// MixedStreamShare is the percentage of this item's demand coming from customers whose own policy disagrees with the recommendation. A high share means the single-policy-per-SKU model is straining on this item.

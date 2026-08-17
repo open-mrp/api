@@ -319,7 +319,7 @@ func (m *settingsSvcImpl) DeleteItemSetting(ctx context.Context, req *DeleteItem
 func recommendationFromProto(r *pb.FulfillmentRecommendationInfo) apiresource.FulfillmentRecommendation {
 	out := apiresource.FulfillmentRecommendation{
 		Object:                     constants.ObjectTypeFulfillmentRecommendation,
-		Item:                       apiresource.NewEntity(r.ItemId, constants.ObjectTypeItem, nil, &r.Sku),
+		Item:                       apiresource.NewEntity(r.ItemId, constants.ObjectTypeItem, r.Description, &r.Sku),
 		SKU:                        r.Sku,
 		CurrentPolicy:              constants.FulfillmentPolicy(r.CurrentPolicyCode),
 		RecommendedPolicy:          constants.FulfillmentPolicy(r.RecommendedPolicyCode),

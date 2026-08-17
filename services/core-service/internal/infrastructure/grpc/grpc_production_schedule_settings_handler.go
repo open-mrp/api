@@ -266,6 +266,9 @@ func fulfillmentRecommendationToProto(r *domain.FulfillmentRecommendation) *pb.F
 		MonthsSinceLastSale:        safeconv.IntToInt32(r.MonthsSinceLastSale),
 		MixedStreamSharePct:        r.MixedStreamShare,
 	}
+	if r.Description != "" {
+		info.Description = &r.Description
+	}
 	if r.ProductLineID != "" {
 		info.ProductLineId = &r.ProductLineID
 	}

@@ -348,15 +348,18 @@ WHERE ar.owner_account_id = sqlc.arg('account_id')
 ORDER BY ar.counterparty_account_id;
 
 -- GetAllSellableProducts returns every product in the account with the item and line it carries. The candidate set for a fulfillment recommendation is everything that can be sold, since that is where policy is resolved.
+-- Restricted to the 'sale' product type: tax, shipping, credit, return and service products are billing constructs that are never manufactured, so advising a fulfillment policy for them is advice about nothing.
 -- name: GetAllSellableProducts :many
 SELECT
     p.id AS product_id,
     p.item_id,
     i.sku,
+    i.description,
     p.product_line_id
 FROM product p
 JOIN item i ON i.id = p.item_id
 WHERE i.account_id = sqlc.arg('account_id')
+  AND p.product_type_code = 'sale'
 ORDER BY i.sku, p.item_id;
 
 -- GetItemUnitCosts returns each item's standard unit cost, which prices the holding side of a make-or-stock decision.

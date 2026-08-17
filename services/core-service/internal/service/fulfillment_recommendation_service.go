@@ -54,11 +54,15 @@ func (s *productionScheduleSvcImpl) ListFulfillmentRecommendations(ctx context.C
 	productIDs := make([]string, 0, len(products))
 	itemByProduct := make(map[string]string, len(products))
 	skuByItem := make(map[string]string, len(products))
+	descriptionByItem := make(map[string]string, len(products))
 	lineByItem := make(map[string]string, len(products))
 	for _, p := range products {
 		productIDs = append(productIDs, p.ProductID)
 		itemByProduct[p.ProductID] = p.ItemID
 		skuByItem[p.ItemID] = p.SKU
+		if p.Description != nil {
+			descriptionByItem[p.ItemID] = *p.Description
+		}
 		if p.ProductLineID != nil {
 			lineByItem[p.ItemID] = *p.ProductLineID
 		}
@@ -122,6 +126,7 @@ func (s *productionScheduleSvcImpl) ListFulfillmentRecommendations(ctx context.C
 		rec := scheduling.RecommendPolicy(in.input, settings.RecommendationThresholds)
 		out = append(out, &domain.FulfillmentRecommendation{
 			Recommendation:   rec,
+			Description:      descriptionByItem[in.input.ItemID],
 			ProductLineID:    lineByItem[in.input.ItemID],
 			MixedStreamShare: scheduling.MixedStreamShare(in.input.Customers, rec.RecommendedPolicy),
 		})

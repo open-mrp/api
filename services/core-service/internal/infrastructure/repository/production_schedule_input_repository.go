@@ -727,6 +727,9 @@ func (r *productionScheduleInputRepoImpl) GetAllSellableProducts(ctx context.Con
 	out := make([]domain.SellableProductRow, 0, len(rows))
 	for _, row := range rows {
 		item := domain.SellableProductRow{ProductID: row.ProductID, ItemID: row.ItemID, SKU: row.Sku}
+		if row.Description.Valid {
+			item.Description = &row.Description.String
+		}
 		if row.ProductLineID.Valid {
 			item.ProductLineID = &row.ProductLineID.String
 		}

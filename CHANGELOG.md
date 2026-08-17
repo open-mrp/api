@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.48.2](https://github.com/Augno/api/compare/v0.48.1...v0.48.2) (2026-08-17)
+
+
+### Bug Fixes
+
+* bound unbounded derived-table aggregates across the query layer ([#487](https://github.com/Augno/api/issues/487)) ([9210d1c](https://github.com/Augno/api/commit/9210d1c7991da502c58ed717d2e5d3f6a0da06d8))
+
 ## [0.48.1](https://github.com/Augno/api/compare/v0.48.0...v0.48.1) (2026-08-17)
 
 

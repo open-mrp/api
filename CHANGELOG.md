@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.48.1](https://github.com/Augno/api/compare/v0.48.0...v0.48.1) (2026-08-17)
+
+
+### Bug Fixes
+
+* improve comments and SQL query structure in sales order and production schedule resources ([1c75c2d](https://github.com/Augno/api/commit/1c75c2d3f972113342b2bf5e3c53cc36c6e50892))
+
 ## [0.48.0](https://github.com/Augno/api/compare/v0.47.0...v0.48.0) (2026-08-17)
 
 

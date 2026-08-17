@@ -374,7 +374,7 @@ func (suite *PropertySvcTestSuite) TestWriteBulkUpsertProperties_ValueOwnedByAno
 
 	suite.Nil(err)
 	suite.Require().Len(rowErrs, 1)
-	suite.Equal(0, *rowErrs[0].Index)
+	suite.Equal(0, rowErrs[0].Index)
 	suite.Equal("properties[0].attributes[0].value", *rowErrs[0].Error.Param)
 	suite.Equal([]string{"pp_size3"}, created)
 }
@@ -414,7 +414,7 @@ func (suite *PropertySvcTestSuite) TestWriteBulkUpsertProperties_CreateErrorFail
 
 	suite.Nil(err)
 	suite.Require().Len(rowErrs, 1)
-	suite.Equal(0, *rowErrs[0].Index)
+	suite.Equal(0, rowErrs[0].Index)
 	suite.Equal([]string{"pp_size4"}, created)
 }
 

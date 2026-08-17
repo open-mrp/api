@@ -407,10 +407,23 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 				}
 			}
 
+			roleType := ""
+			if params.RoleID != nil {
+				resolvedRole, apiErr := txRoleRepo.Get(txCtx, *params.RoleID, params.AccountID)
+				if apiErr != nil {
+					return apiErr
+				}
+				roleType = resolvedRole.RoleType
+			}
+			eligible, apiErr := resolveCommissionEligibility(roleType, params.IsCommissionEligible, false)
+			if apiErr != nil {
+				return apiErr
+			}
+
 			// Re-adding a previously soft-removed member: the removed row retains the UNIQUE (user_id, account_id) key, so a fresh INSERT would collide. Reactivate that row in place and treat it as the created link instead.
 			reactivated := false
 			if existingUser != nil {
-				reactivatedID, reErr := txAccountUserRepo.ReactivateRemovedAccountUser(txCtx, params.AccountID, userID, params.RoleID, params.DepartmentID)
+				reactivatedID, reErr := txAccountUserRepo.ReactivateRemovedAccountUser(txCtx, params.AccountID, userID, params.RoleID, params.DepartmentID, eligible)
 				if reErr == nil {
 					accountUserID = reactivatedID
 					reactivated = true
@@ -421,7 +434,7 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 
 			// Create the account_user link when there was no removed link to reactivate.
 			if !reactivated {
-				if apiErr := txAccountUserRepo.Create(txCtx, accountUserID, params.AccountID, userID, params.RoleID, params.DepartmentID); apiErr != nil {
+				if apiErr := txAccountUserRepo.Create(txCtx, accountUserID, params.AccountID, userID, params.RoleID, params.DepartmentID, eligible); apiErr != nil {
 					return apiErr
 				}
 			}
@@ -674,7 +687,27 @@ func (s *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, params domai
 				}
 			}
 
-			if apiErr := txAccountUserRepo.Update(txCtx, params.AccountUserID, roleID, departmentID); apiErr != nil {
+			roleType := ""
+			if old.RoleType != nil {
+				roleType = *old.RoleType
+			}
+			if params.RoleID.IsSet() {
+				if roleID != nil && *roleID != "" {
+					resolvedRole, apiErr := txSvc.repos.NewRoleRepo().Get(txCtx, *roleID, params.AccountID)
+					if apiErr != nil {
+						return apiErr
+					}
+					roleType = resolvedRole.RoleType
+				} else {
+					roleType = ""
+				}
+			}
+			eligible, apiErr := resolveCommissionEligibility(roleType, params.IsCommissionEligible.Ptr(), old.IsCommissionEligible)
+			if apiErr != nil {
+				return apiErr
+			}
+
+			if apiErr := txAccountUserRepo.Update(txCtx, params.AccountUserID, roleID, departmentID, eligible); apiErr != nil {
 				return apiErr
 			}
 
@@ -1064,6 +1097,26 @@ func (s *accountUserSvcImpl) BatchGetAccountUsersByIDs(ctx context.Context, ids 
 		item.ImageURL = s.resolveImageURL(ctx, identity.Target.AccountID, item.UserID, item.ImageURL != nil)
 	}
 	return users, nil
+}
+
+func resolveCommissionEligibility(roleType string, requested *bool, current bool) (bool, *apierror.APIError) {
+	switch constants.RoleType(roleType) {
+	case constants.RoleTypeSalesRep:
+		if requested != nil && !*requested {
+			return false, apierror.NewValidationErrorWithParam("Sales rep users are always eligible for commission.", "is_commission_eligible")
+		}
+		return true, nil
+	case constants.RoleTypeScanner, constants.RoleTypeAgent:
+		if requested != nil && *requested {
+			return false, apierror.NewValidationErrorWithParam("Scanning station and agent users cannot be eligible for commission.", "is_commission_eligible")
+		}
+		return false, nil
+	default:
+		if requested != nil {
+			return *requested, nil
+		}
+		return current, nil
+	}
 }
 
 // checkAccountUserReadPermission checks the appropriate read permission based on the target context. Internal actors targeting a customer account need customers:read; supplier account needs suppliers:read; own account needs team:read.

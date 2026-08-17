@@ -37,6 +37,10 @@ type CreateAccountUserRequest struct {
 	//
 	// The department must already exist in the account you are acting in.
 	DepartmentID field.Optional[string] `json:"department_id,omitzero"`
+	// Whether the user can be assigned as a sales representative on orders, territories, and targets.
+	//
+	// Defaults to false. Forced true for the `sales_rep` role type and rejected for scanner and agent roles.
+	IsCommissionEligible field.Optional[bool] `json:"is_commission_eligible,omitzero"`
 	// Notification preference toggles for the new user.
 	//
 	// Only applies when creating a user in another account you manage (cross-account); ignored when creating a user in your own account.

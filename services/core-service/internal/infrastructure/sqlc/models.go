@@ -316,15 +316,16 @@ type AccountStatus struct {
 }
 
 type AccountUser struct {
-	ID           string
-	UserID       string
-	DepartmentID sql.NullString
-	LastUsedAt   sql.NullTime
-	StatusCode   string
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
-	RoleID       sql.NullString
-	AccountID    string
+	ID                   string
+	UserID               string
+	DepartmentID         sql.NullString
+	LastUsedAt           sql.NullTime
+	IsCommissionEligible bool
+	StatusCode           string
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+	RoleID               sql.NullString
+	AccountID            string
 }
 
 type ActionType struct {
@@ -1097,7 +1098,9 @@ type Job struct {
 	JobItems     json.RawMessage
 	AccountID    sql.NullString
 	CreatedBy    sql.NullString
+	ResourceType sql.NullString
 	Results      db.NullableRawMessage
+	Error        db.NullableRawMessage
 	Errors       db.NullableRawMessage
 	ErrorSummary sql.NullString
 	UpdatedAt    time.Time

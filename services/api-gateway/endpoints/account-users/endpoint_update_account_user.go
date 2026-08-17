@@ -35,6 +35,10 @@ type UpdateAccountUserRequest struct {
 	//
 	// Set to `null` to clear the department. The department must already exist in the account.
 	DepartmentID field.Clearable[string] `json:"department_id,omitzero" validate:"omitempty"`
+	// Whether the user can be assigned as a sales representative on orders, territories, and targets.
+	//
+	// Forced true for the `sales_rep` role type and rejected for scanner and agent roles. Cannot be turned off while the user stays on a `sales_rep` role.
+	IsCommissionEligible field.Optional[bool] `json:"is_commission_eligible,omitzero"`
 	// Notification preference toggles to apply.
 	//
 	// Only allowed when updating a user in another account you manage (cross-account); rejected otherwise. Notification types omitted from the list are left unchanged.

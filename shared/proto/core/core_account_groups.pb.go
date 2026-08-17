@@ -759,8 +759,10 @@ type AccountUserDetail struct {
 	UpdatedAt           *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	DepartmentCreatedAt *timestamppb.Timestamp `protobuf:"bytes,17,opt,name=department_created_at,json=departmentCreatedAt,proto3,oneof" json:"department_created_at,omitempty"`
 	DepartmentUpdatedAt *timestamppb.Timestamp `protobuf:"bytes,18,opt,name=department_updated_at,json=departmentUpdatedAt,proto3,oneof" json:"department_updated_at,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	// Independent of the sales_rep role type, which still scopes analytics and hides cost.
+	IsCommissionEligible bool `protobuf:"varint,19,opt,name=is_commission_eligible,json=isCommissionEligible,proto3" json:"is_commission_eligible,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *AccountUserDetail) Reset() {
@@ -917,6 +919,13 @@ func (x *AccountUserDetail) GetDepartmentUpdatedAt() *timestamppb.Timestamp {
 		return x.DepartmentUpdatedAt
 	}
 	return nil
+}
+
+func (x *AccountUserDetail) GetIsCommissionEligible() bool {
+	if x != nil {
+		return x.IsCommissionEligible
+	}
+	return false
 }
 
 // A default order-notification recipient input: the account user id and the notification types to configure for them.
@@ -1210,15 +1219,16 @@ func (x *UpdateCustomerNotificationRecipientsResponse) GetRecipients() []*Custom
 }
 
 type ListAccountUsersRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Cursor         *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
-	Limit          int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
-	Query          *string                `protobuf:"bytes,3,opt,name=query,proto3,oneof" json:"query,omitempty"`
-	RoleType       *string                `protobuf:"bytes,4,opt,name=role_type,json=roleType,proto3,oneof" json:"role_type,omitempty"`
-	IncludeRemoved bool                   `protobuf:"varint,5,opt,name=include_removed,json=includeRemoved,proto3" json:"include_removed,omitempty"`
-	Includes       []string               `protobuf:"bytes,6,rep,name=includes,proto3" json:"includes,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	Cursor               *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
+	Limit                int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	Query                *string                `protobuf:"bytes,3,opt,name=query,proto3,oneof" json:"query,omitempty"`
+	RoleType             *string                `protobuf:"bytes,4,opt,name=role_type,json=roleType,proto3,oneof" json:"role_type,omitempty"`
+	IncludeRemoved       bool                   `protobuf:"varint,5,opt,name=include_removed,json=includeRemoved,proto3" json:"include_removed,omitempty"`
+	Includes             []string               `protobuf:"bytes,6,rep,name=includes,proto3" json:"includes,omitempty"`
+	IsCommissionEligible *bool                  `protobuf:"varint,7,opt,name=is_commission_eligible,json=isCommissionEligible,proto3,oneof" json:"is_commission_eligible,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *ListAccountUsersRequest) Reset() {
@@ -1291,6 +1301,13 @@ func (x *ListAccountUsersRequest) GetIncludes() []string {
 		return x.Includes
 	}
 	return nil
+}
+
+func (x *ListAccountUsersRequest) GetIsCommissionEligible() bool {
+	if x != nil && x.IsCommissionEligible != nil {
+		return *x.IsCommissionEligible
+	}
+	return false
 }
 
 type ListAccountUsersResponse struct {
@@ -1510,6 +1527,7 @@ type CreateAccountUserRequest struct {
 	RoleId                  *string                       `protobuf:"bytes,5,opt,name=role_id,json=roleId,proto3,oneof" json:"role_id,omitempty"`
 	DepartmentId            *string                       `protobuf:"bytes,6,opt,name=department_id,json=departmentId,proto3,oneof" json:"department_id,omitempty"`
 	NotificationPreferences []*NotificationPreferenceItem `protobuf:"bytes,8,rep,name=notification_preferences,json=notificationPreferences,proto3" json:"notification_preferences,omitempty"`
+	IsCommissionEligible    *bool                         `protobuf:"varint,9,opt,name=is_commission_eligible,json=isCommissionEligible,proto3,oneof" json:"is_commission_eligible,omitempty"`
 	unknownFields           protoimpl.UnknownFields
 	sizeCache               protoimpl.SizeCache
 }
@@ -1593,6 +1611,13 @@ func (x *CreateAccountUserRequest) GetNotificationPreferences() []*NotificationP
 	return nil
 }
 
+func (x *CreateAccountUserRequest) GetIsCommissionEligible() bool {
+	if x != nil && x.IsCommissionEligible != nil {
+		return *x.IsCommissionEligible
+	}
+	return false
+}
+
 type CreateAccountUserResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AccountUser   *AccountUserDetail     `protobuf:"bytes,1,opt,name=account_user,json=accountUser,proto3" json:"account_user,omitempty"`
@@ -1648,6 +1673,7 @@ type UpdateAccountUserRequest struct {
 	// When non-empty, replaces the toggle state of the listed preferences.
 	NotificationPreferences []*NotificationPreferenceItem `protobuf:"bytes,7,rep,name=notification_preferences,json=notificationPreferences,proto3" json:"notification_preferences,omitempty"`
 	Includes                []string                      `protobuf:"bytes,8,rep,name=includes,proto3" json:"includes,omitempty"`
+	IsCommissionEligible    *bool                         `protobuf:"varint,9,opt,name=is_commission_eligible,json=isCommissionEligible,proto3,oneof" json:"is_commission_eligible,omitempty"`
 	unknownFields           protoimpl.UnknownFields
 	sizeCache               protoimpl.SizeCache
 }
@@ -1736,6 +1762,13 @@ func (x *UpdateAccountUserRequest) GetIncludes() []string {
 		return x.Includes
 	}
 	return nil
+}
+
+func (x *UpdateAccountUserRequest) GetIsCommissionEligible() bool {
+	if x != nil && x.IsCommissionEligible != nil {
+		return *x.IsCommissionEligible
+	}
+	return false
 }
 
 type UpdateAccountUserResponse struct {
@@ -5878,7 +5911,7 @@ const file_core_core_account_groups_proto_rawDesc = "" +
 	"!BatchGetAccountGroupsByIDsRequest\x12\x10\n" +
 	"\x03ids\x18\x01 \x03(\tR\x03ids\"c\n" +
 	"\"BatchGetAccountGroupsByIDsResponse\x12=\n" +
-	"\x0eaccount_groups\x18\x01 \x03(\v2\x16.core.AccountGroupInfoR\raccountGroups\"\xe7\a\n" +
+	"\x0eaccount_groups\x18\x01 \x03(\v2\x16.core.AccountGroupInfoR\raccountGroups\"\x9d\b\n" +
 	"\x11AccountUserDetail\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x17\n" +
@@ -5903,7 +5936,8 @@ const file_core_core_account_groups_proto_rawDesc = "" +
 	"updated_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12S\n" +
 	"\x15department_created_at\x18\x11 \x01(\v2\x1a.google.protobuf.TimestampH\n" +
 	"R\x13departmentCreatedAt\x88\x01\x01\x12S\n" +
-	"\x15department_updated_at\x18\x12 \x01(\v2\x1a.google.protobuf.TimestampH\vR\x13departmentUpdatedAt\x88\x01\x01B\a\n" +
+	"\x15department_updated_at\x18\x12 \x01(\v2\x1a.google.protobuf.TimestampH\vR\x13departmentUpdatedAt\x88\x01\x01\x124\n" +
+	"\x16is_commission_eligible\x18\x13 \x01(\bR\x14isCommissionEligibleB\a\n" +
 	"\x05_nameB\b\n" +
 	"\x06_emailB\v\n" +
 	"\t_usernameB\f\n" +
@@ -5941,18 +5975,20 @@ const file_core_core_account_groups_proto_rawDesc = "" +
 	",UpdateCustomerNotificationRecipientsResponse\x12H\n" +
 	"\n" +
 	"recipients\x18\x01 \x03(\v2(.core.CustomerNotificationRecipientProtoR\n" +
-	"recipients\"\xf1\x01\n" +
+	"recipients\"\xc7\x02\n" +
 	"\x17ListAccountUsersRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
 	"\x05query\x18\x03 \x01(\tH\x01R\x05query\x88\x01\x01\x12 \n" +
 	"\trole_type\x18\x04 \x01(\tH\x02R\broleType\x88\x01\x01\x12'\n" +
 	"\x0finclude_removed\x18\x05 \x01(\bR\x0eincludeRemoved\x12\x1a\n" +
-	"\bincludes\x18\x06 \x03(\tR\bincludesB\t\n" +
+	"\bincludes\x18\x06 \x03(\tR\bincludes\x129\n" +
+	"\x16is_commission_eligible\x18\a \x01(\bH\x03R\x14isCommissionEligible\x88\x01\x01B\t\n" +
 	"\a_cursorB\b\n" +
 	"\x06_queryB\f\n" +
 	"\n" +
-	"_role_type\"\xa6\x01\n" +
+	"_role_typeB\x19\n" +
+	"\x17_is_commission_eligible\"\xa6\x01\n" +
 	"\x18ListAccountUsersResponse\x12<\n" +
 	"\raccount_users\x18\x01 \x03(\v2\x17.core.AccountUserDetailR\faccountUsers\x12+\n" +
 	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\x12\x1f\n" +
@@ -5965,7 +6001,7 @@ const file_core_core_account_groups_proto_rawDesc = "" +
 	"\faccount_user\x18\x01 \x01(\v2\x17.core.AccountUserDetailR\vaccountUser\"l\n" +
 	"\x1aNotificationPreferenceItem\x124\n" +
 	"\x16notification_type_code\x18\x01 \x01(\tR\x14notificationTypeCode\x12\x18\n" +
-	"\aenabled\x18\x02 \x01(\bR\aenabled\"\x94\x03\n" +
+	"\aenabled\x18\x02 \x01(\bR\aenabled\"\xea\x03\n" +
 	"\x18CreateAccountUserRequest\x12\x17\n" +
 	"\x04name\x18\x01 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x19\n" +
 	"\x05email\x18\x02 \x01(\tH\x01R\x05email\x88\x01\x01\x12\x1f\n" +
@@ -5973,16 +6009,18 @@ const file_core_core_account_groups_proto_rawDesc = "" +
 	"\bpassword\x18\x04 \x01(\tH\x03R\bpassword\x88\x01\x01\x12\x1c\n" +
 	"\arole_id\x18\x05 \x01(\tH\x04R\x06roleId\x88\x01\x01\x12(\n" +
 	"\rdepartment_id\x18\x06 \x01(\tH\x05R\fdepartmentId\x88\x01\x01\x12[\n" +
-	"\x18notification_preferences\x18\b \x03(\v2 .core.NotificationPreferenceItemR\x17notificationPreferencesB\a\n" +
+	"\x18notification_preferences\x18\b \x03(\v2 .core.NotificationPreferenceItemR\x17notificationPreferences\x129\n" +
+	"\x16is_commission_eligible\x18\t \x01(\bH\x06R\x14isCommissionEligible\x88\x01\x01B\a\n" +
 	"\x05_nameB\b\n" +
 	"\x06_emailB\v\n" +
 	"\t_usernameB\v\n" +
 	"\t_passwordB\n" +
 	"\n" +
 	"\b_role_idB\x10\n" +
-	"\x0e_department_idJ\x04\b\a\x10\bR\fis_sales_rep\"W\n" +
+	"\x0e_department_idB\x19\n" +
+	"\x17_is_commission_eligibleJ\x04\b\a\x10\bR\fis_sales_rep\"W\n" +
 	"\x19CreateAccountUserResponse\x12:\n" +
-	"\faccount_user\x18\x01 \x01(\v2\x17.core.AccountUserDetailR\vaccountUser\"\xbc\x03\n" +
+	"\faccount_user\x18\x01 \x01(\v2\x17.core.AccountUserDetailR\vaccountUser\"\x92\x04\n" +
 	"\x18UpdateAccountUserRequest\x12&\n" +
 	"\x0faccount_user_id\x18\x01 \x01(\tR\raccountUserId\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x19\n" +
@@ -5991,13 +6029,15 @@ const file_core_core_account_groups_proto_rawDesc = "" +
 	"\arole_id\x18\x05 \x01(\v2\x11.core.StringPatchH\x03R\x06roleId\x88\x01\x01\x12;\n" +
 	"\rdepartment_id\x18\x06 \x01(\v2\x11.core.StringPatchH\x04R\fdepartmentId\x88\x01\x01\x12[\n" +
 	"\x18notification_preferences\x18\a \x03(\v2 .core.NotificationPreferenceItemR\x17notificationPreferences\x12\x1a\n" +
-	"\bincludes\x18\b \x03(\tR\bincludesB\a\n" +
+	"\bincludes\x18\b \x03(\tR\bincludes\x129\n" +
+	"\x16is_commission_eligible\x18\t \x01(\bH\x05R\x14isCommissionEligible\x88\x01\x01B\a\n" +
 	"\x05_nameB\b\n" +
 	"\x06_emailB\v\n" +
 	"\t_usernameB\n" +
 	"\n" +
 	"\b_role_idB\x10\n" +
-	"\x0e_department_id\"W\n" +
+	"\x0e_department_idB\x19\n" +
+	"\x17_is_commission_eligible\"W\n" +
 	"\x19UpdateAccountUserResponse\x12:\n" +
 	"\faccount_user\x18\x01 \x01(\v2\x17.core.AccountUserDetailR\vaccountUser\"4\n" +
 	" BatchGetAccountUsersByIDsRequest\x12\x10\n" +

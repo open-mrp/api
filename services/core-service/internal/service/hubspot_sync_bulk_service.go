@@ -182,6 +182,7 @@ func writeBulkResolveReviews(txCtx context.Context, txRepos domain.RepoFactory, 
 func (s *hubspotSyncSvcImpl) bulkResolveSpec() bulkOperationSpec[bulkResolveReviewInput, domain.ResolvedBulkHubspotReviewRow] {
 	return bulkOperationSpec[bulkResolveReviewInput, domain.ResolvedBulkHubspotReviewRow]{
 		JobType:          constants.JobTypeBulkUpsert,
+		ResourceType:     constants.ObjectTypeHubspotCompanyReview,
 		RoutingKey:       messaging.BulkResolveHubspotCompanyReviews.RoutingKey(),
 		PermissionDomain: types.PermissionDomainIntegrations,
 		Actions:          []types.Action{types.ActionUpdate},
@@ -254,6 +255,7 @@ func (s *hubspotSyncSvcImpl) exportSpec() exportSpec[*domain.HubspotCompanyRevie
 		PermissionDomain: types.PermissionDomainIntegrations,
 		Name:             "HubSpot Company Reviews",
 		Slug:             "hubspot_company_reviews",
+		ResourceType:     constants.ObjectTypeHubspotCompanyReview,
 		Columns:          hubspotCompanyReviewExportColumns,
 
 		Fetch: func(ctx context.Context, repos domain.RepoFactory, accountID string, filters domain.ExportHubspotCompanyReviewsParams) ([]*domain.HubspotCompanyReview, *apierror.APIError) {

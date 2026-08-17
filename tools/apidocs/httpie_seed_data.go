@@ -11,7 +11,7 @@ type httpieVariable struct {
 var v2Variables = []httpieVariable{
 	{Name: "host", Value: "localhost:8081"},
 	{Name: "version", Value: "v1"},
-	{Name: "api-version", Value: "1.0.forge-preview.2"},
+	{Name: "api-version", Value: "1.0.forge-preview.3"},
 	{Name: "api-key", Value: "aug_sk_prod_u6Xh5ZpaUruMAU12EPAs4z_rSA4zJM5NbRqAtalvXMoRWOUPohFKJtX7ZUFUOp36IVwdiUCZu", IsSecret: true},
 	{Name: "act-id", Value: "ac_01k0a5smf9ekb8rqg12555zjqa"},
 	{Name: "user-id", Value: "us_1wjfmmbwg8l7"},

@@ -54,17 +54,17 @@ func bulkRunRow() map[string]any {
 
 // bulkCreatedRuns reads the pre-generated runs a bulk-create 202 carries. The 202 body
 // is the canonical job resource; a create records its pre-generated ids on the job's
-// row-indexed results at accept, so each entry is {index, id, action, sub_resource_ids}
-// — a run's sub-resources being its batches.
-func bulkCreatedRuns(body []byte) []any {
-	return jsonArray(parseJSON(body), "results")
+// row-indexed results at accept, so each entry names the run it will create and, as its
+// sub-resources, that run's batches.
+func bulkCreatedRuns(body []byte) []map[string]any {
+	return jobResults(parseJSON(body))
 }
 
 // cleanupBulkCreatedRuns deletes every run in a bulk-create response.
 func cleanupBulkCreatedRuns(body []byte) {
-	for _, raw := range bulkCreatedRuns(body) {
-		if run, ok := raw.(map[string]any); ok {
-			if runID := jsonField(run, "id"); runID != "" {
+	for _, run := range bulkCreatedRuns(body) {
+		{
+			if runID := jobResultResourceID(run); runID != "" {
 				apiClient.Delete(productionRunsPath + "/" + runID)
 			}
 		}
@@ -104,17 +104,13 @@ func TestProductionRuns_BulkCreate_AllCreates(t *testing.T) {
 	// The acknowledgment carries the pre-generated IDs; the runs appear
 	// asynchronously with distinct sequential numbers.
 	numbers := map[string]struct{}{}
-	for _, raw := range runs {
-		run, ok := raw.(map[string]any)
-		require.True(t, ok)
-		runID := jsonField(run, "id")
+	for _, run := range runs {
+		runID := jobResultResourceID(run)
 		assertIDFormat(t, runID, id.ProductionRunIDPrefix)
 
-		batchIDs := jsonArray(run, "sub_resource_ids")
+		batchIDs := jobResultSubResourceIDs(run)
 		require.Len(t, batchIDs, 1)
-		batchID, ok := batchIDs[0].(string)
-		require.True(t, ok)
-		assertIDFormat(t, batchID, id.BatchIDPrefix)
+		assertIDFormat(t, batchIDs[0], id.BatchIDPrefix)
 
 		created := waitForRun(t, runID)
 		number := jsonField(created, "number")
@@ -152,10 +148,8 @@ func TestProductionRuns_BulkCreate_CreateWithAllFields(t *testing.T) {
 
 	runs := bulkCreatedRuns(body)
 	require.Len(t, runs, 1)
-	run, ok := runs[0].(map[string]any)
-	require.True(t, ok)
-	runID := jsonField(run, "id")
-	require.Len(t, jsonArray(run, "sub_resource_ids"), 2)
+	runID := jobResultResourceID(runs[0])
+	require.Len(t, jobResultSubResourceIDs(runs[0]), 2)
 
 	waitForRun(t, runID)
 	eventually(t, e2eAsyncWaitTimeout, e2eAsyncPollInterval, func() error {
@@ -271,9 +265,7 @@ func TestProductionRuns_BulkCreate_ResolvesUnitByNameAndAbbreviation(t *testing.
 
 	runs := bulkCreatedRuns(body)
 	require.Len(t, runs, 1)
-	run, ok := runs[0].(map[string]any)
-	require.True(t, ok)
-	waitForRun(t, jsonField(run, "id"))
+	waitForRun(t, jobResultResourceID(runs[0]))
 }
 
 func TestProductionRuns_BulkCreate_RejectsUnknownStep(t *testing.T) {
@@ -326,9 +318,7 @@ func TestProductionRuns_BulkCreate_ResolvesStationByName(t *testing.T) {
 
 	runs := bulkCreatedRuns(body)
 	require.Len(t, runs, 1)
-	run, ok := runs[0].(map[string]any)
-	require.True(t, ok)
-	waitForRun(t, jsonField(run, "id"))
+	waitForRun(t, jobResultResourceID(runs[0]))
 }
 
 func TestProductionRuns_BulkCreate_RejectsUnknownResponsibleUser(t *testing.T) {

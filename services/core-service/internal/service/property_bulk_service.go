@@ -320,6 +320,7 @@ func publishPropertyAudit(txCtx context.Context, txRepos domain.RepoFactory, act
 func (s *propertySvcImpl) bulkUpsertSpec() bulkOperationSpec[domain.UpsertPropertyParams, domain.ResolvedUpsertPropertyRow] {
 	return bulkOperationSpec[domain.UpsertPropertyParams, domain.ResolvedUpsertPropertyRow]{
 		JobType:          constants.JobTypeBulkUpsert,
+		ResourceType:     constants.ObjectTypeProperty,
 		RoutingKey:       messaging.BulkUpsertProperties.RoutingKey(),
 		PermissionDomain: types.PermissionDomainProperties,
 		Actions:          []types.Action{types.ActionCreate, types.ActionUpdate},
@@ -351,6 +352,7 @@ func (s *propertySvcImpl) exportSpec() exportSpec[*domain.Property, domain.Expor
 		PermissionDomain: types.PermissionDomainProperties,
 		Name:             "Properties",
 		Slug:             "properties",
+		ResourceType:     constants.ObjectTypeProperty,
 		Columns: []excel.ColumnSpec{
 			{Header: "ID", Key: "id", Width: 20},
 			{Header: "Name", Key: "name", Width: 28},

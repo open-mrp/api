@@ -153,6 +153,7 @@ const (
 	SeedAccountUserID       = "acus_s83fjhyfmqen"
 	SeedAdmin2AccountUserID = "acus_2ndadmin000"  // Mike Johnson (us_2ndadmin0000, Admin) in SeedAccountID
 	SeedAccountUser2ID      = "acus_ubdx4zebgl6p" // Sarah Martinez (us_6p7460uuwibz, Sales Rep) in SeedAccountID
+	SeedJobID               = "jb_01seedincludejob0"
 
 	// Batches, sales targets, integrations (seeded in 0014_e2e_extras.sql)
 	SeedBatchID              = "bt_01seedbatch1_0000000"
@@ -568,6 +569,7 @@ var pathSpecificIDSeeds = map[string]string{
 	"/v1/auth/api-keys/":                    SeedAPIKeyID,
 	"/v1/core/audit-events/":                SeedAuditEventID,
 	"/v1/core/email-logs/":                  SeedEmailLogID1,
+	"/v1/core/jobs/":                        SeedJobID,
 	"/v1/core/sandboxes/":                   SeedSandboxID,
 	"/v1/operations/inventory-change-logs/": SeedInventoryChangeLogID,
 	"/v1/operations/receiving-orders/{receiving_order_id}/lines/": SeedReceivingOrderLineID,

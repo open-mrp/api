@@ -37,6 +37,10 @@ func (e *ExportUnitGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Expor
 		Public:            false,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeJob,
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeJob,
+			Fields:     []string{"created_by", "created_by.role"},
+		}),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportUnitGroupsRequest) (*apiresource.Job, *apierror.APIError) {
 			return svc.(UnitGroupSvc).ExportUnitGroups
 		},

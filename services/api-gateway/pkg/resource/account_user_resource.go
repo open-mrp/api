@@ -28,6 +28,10 @@ type AccountUser struct {
 	Department *Department `json:"department" expandable:"true"`
 	// The underlying user profile, shared across every account this person belongs to.
 	User *User `json:"user" expandable:"true"`
+	// Whether this user can be assigned as a sales representative on orders, territories, and targets.
+	//
+	// Independent of the `sales_rep` role type, which still scopes analytics and hides cost. Users with the `sales_rep` role are always eligible.
+	IsCommissionEligible bool `json:"is_commission_eligible" validate:"required"`
 	// When the user last accessed this account.
 	LastUsedAt *time.Time `json:"last_used_at"`
 	// When the account user was created.
@@ -39,15 +43,16 @@ type AccountUser struct {
 const SampleAccountUserID = "acus_e5zu8bde0z3h"
 
 var SampleAccountUser = &AccountUser{
-	ID:         SampleAccountUserID,
-	Object:     constants.ObjectTypeAccountUser,
-	Status:     constants.AccountUserStatusActive,
-	Role:       SampleRole,
-	Department: SampleDepartment,
-	User:       SampleUser,
-	LastUsedAt: new(timeutil.TimestampToTime(sampleUpdatedAtTimestamp)),
-	CreatedAt:  timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:  timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:                   SampleAccountUserID,
+	Object:               constants.ObjectTypeAccountUser,
+	Status:               constants.AccountUserStatusActive,
+	Role:                 SampleRole,
+	Department:           SampleDepartment,
+	User:                 SampleUser,
+	IsCommissionEligible: false,
+	LastUsedAt:           new(timeutil.TimestampToTime(sampleUpdatedAtTimestamp)),
+	CreatedAt:            timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:            timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*AccountUser) SchemaExample() any {

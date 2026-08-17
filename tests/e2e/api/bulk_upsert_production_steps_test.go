@@ -65,7 +65,7 @@ func acceptBulkUpsertSteps(t *testing.T, steps ...map[string]any) (createdIDs, u
 	job := pollJobUntilTerminal(t, jobID)
 	require.Equal(t, "completed", jsonField(job, "status"), "job should complete: %v", job)
 
-	require.NotEmpty(t, jsonArray(job, "results"), "a completed job must carry results")
+	require.NotEmpty(t, jobResults(job), "a completed job must carry results")
 	return jobResultIDs(job)
 }
 
@@ -83,17 +83,6 @@ func acceptBulkUpsertStepsJob(t *testing.T, steps ...map[string]any) map[string]
 	job := pollJobUntilTerminal(t, jobID)
 	require.Equal(t, "completed", jsonField(job, "status"), "job should complete: %v", job)
 	return job
-}
-
-// stepJobErrors reads the per-row failures a completed bulk-upsert job recorded.
-func stepJobErrors(job map[string]any) []map[string]any {
-	var out []map[string]any
-	for _, raw := range jsonArray(job, "errors") {
-		if m, ok := raw.(map[string]any); ok {
-			out = append(out, m)
-		}
-	}
-	return out
 }
 
 func cleanupStepIDs(ids ...string) {
@@ -385,7 +374,7 @@ func TestProductionSteps_BulkUpsert_RejectsAddingDepartmentToStepWithoutOne(t *t
 	row := bulkStepRow(name)
 	row["department"] = refName(seedDepartmentName)
 	job := acceptBulkUpsertStepsJob(t, row)
-	rowErrs := stepJobErrors(job)
+	rowErrs := jobErrors(job)
 	require.Len(t, rowErrs, 1, "the rejected row is recorded in errors")
 	msg := jobRowErrorMessage(rowErrs[0])
 	assert.Contains(t, msg, "department")
@@ -406,7 +395,7 @@ func TestProductionSteps_BulkUpsert_RejectsDepartmentChange(t *testing.T) {
 	row := bulkStepRow(name)
 	row["department"] = refName("Washing")
 	job := acceptBulkUpsertStepsJob(t, row)
-	rowErrs := stepJobErrors(job)
+	rowErrs := jobErrors(job)
 	require.Len(t, rowErrs, 1)
 	msg := jobRowErrorMessage(rowErrs[0])
 	assert.Contains(t, msg, "department")

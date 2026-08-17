@@ -43,7 +43,7 @@ type ExplosionCampaign struct {
 	StepID string
 }
 
-// DerivedLine is work implied for a downstream department by a constraint campaign.
+// DerivedLine is work a constraint campaign implies for a department — the constraint step's own work at depth 0, and everything downstream of it below that.
 type DerivedLine struct {
 	SourceLineID   string
 	ProductionStep string
@@ -53,11 +53,11 @@ type DerivedLine struct {
 	// WeekIndex is the constraint week plus the accumulated lead-time offset.
 	WeekIndex int
 	Quantity  float64
-	// Depth is how many steps downstream of the constraint this work sits, which is what a readiness chip keys off.
+	// Depth is how many steps downstream of the constraint this work sits, which is what a readiness chip keys off. Zero is the constraint step itself.
 	Depth int
 }
 
-// Explode walks the production-step graph downstream of each constraint campaign and returns the work each department has to do as a result.
+// Explode walks the production-step graph from each constraint campaign and returns the work each department has to do as a result.
 //
 // Two properties matter more than the traversal itself:
 //
@@ -131,6 +131,21 @@ func explodeOne(
 	}}
 
 	var out []DerivedLine
+
+	// The constraint's own work is work. Emitting only what follows it meant a plant with nothing configured downstream of its constraint got an empty work list while its machines were fully booked — the plan was there, the page just refused to say so. The campaign quantity is already this step's output, so no yield applies to it.
+	if step, ok := steps[campaign.StepID]; ok {
+		out = append(out, DerivedLine{
+			SourceLineID:   campaign.LineID,
+			ProductionStep: campaign.StepID,
+			DepartmentID:   step.DepartmentID,
+			ItemID:         campaign.ItemID,
+			SKU:            campaign.SKU,
+			WeekIndex:      campaign.WeekIndex,
+			Quantity:       campaign.Quantity,
+			Depth:          0,
+		})
+	}
+
 	for len(queue) > 0 {
 		current := queue[0]
 		queue = queue[1:]

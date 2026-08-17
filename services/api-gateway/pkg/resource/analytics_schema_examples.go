@@ -448,11 +448,14 @@ var SampleAnalyzeScheduleAttainmentResponse = &AnalyzeScheduleAttainmentResponse
 			DeviatedLines:         1,
 			AddedLines:            0,
 			AbsDeltaUnits:         252,
+			OffPlanLines:          1,
+			OffPlanQuantity:       147,
 			LineAdherencePct:      &sampleLineAdherencePct,
 			UnitsAdherencePct:     &sampleUnitsAdherencePct,
 		},
 	}, PageInfo{}),
-	BaselineStatus: constants.AttainmentBaselineStatusMeasured,
+	BaselineStatus:        constants.AttainmentBaselineStatusMeasured,
+	ScheduledMachineCount: 2,
 }
 
 func (*AnalyzeScheduleAttainmentResponse) SchemaExample() any {

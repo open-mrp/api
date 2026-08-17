@@ -207,6 +207,7 @@ func (s *productSvcImpl) writeBulkUpsertProducts(txCtx context.Context, txRepos 
 func (s *productSvcImpl) bulkUpsertSpec() bulkOperationSpec[domain.UpsertProductParams, domain.ResolvedUpsertProductRow] {
 	return bulkOperationSpec[domain.UpsertProductParams, domain.ResolvedUpsertProductRow]{
 		JobType:          constants.JobTypeBulkUpsert,
+		ResourceType:     constants.ObjectTypeProduct,
 		RoutingKey:       messaging.BulkUpsertProducts.RoutingKey(),
 		PermissionDomain: types.PermissionDomainItems,
 		Actions:          []types.Action{types.ActionCreate, types.ActionUpdate},
@@ -238,6 +239,7 @@ func (s *productSvcImpl) exportSpec() exportSpec[*domain.ProductFull, domain.Exp
 		ExternalAccess:  externalCounterparty,
 		Name:            "Products",
 		Slug:            "products",
+		ResourceType:    constants.ObjectTypeProduct,
 
 		ColumnsFor: func(products []*domain.ProductFull) []excel.ColumnSpec {
 			base := itemBaseColumns(

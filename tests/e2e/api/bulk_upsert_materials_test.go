@@ -58,7 +58,7 @@ func bulkUpsertMaterialsJob(t *testing.T, materials ...map[string]any) map[strin
 func bulkUpsertMaterialIDs(t *testing.T, materials ...map[string]any) (createdIDs, updatedIDs []string) {
 	t.Helper()
 	job := bulkUpsertMaterialsJob(t, materials...)
-	require.NotEmpty(t, jsonArray(job, "results"), "a completed job must carry results")
+	require.NotEmpty(t, jobResults(job), "a completed job must carry results")
 	return jobResultIDs(job)
 }
 
@@ -135,8 +135,8 @@ func TestMaterials_BulkUpsert_RejectsInvalidRateUnit(t *testing.T) {
 			"denominator_unit_id": currencyUnitID, // must not be currency
 		},
 	})
-	assert.Empty(t, jobResults(job), "a bad rate unit must not be written")
-	require.Len(t, jsonArray(job, "errors"), 1, "the rejected row is recorded in errors")
+	assert.Empty(t, jobWrittenResults(job), "a bad rate unit must not be written")
+	require.Len(t, jobErrors(job), 1, "the rejected row is recorded in errors")
 }
 
 func TestMaterials_BulkUpsert_RejectsDuplicateSKUInRequest(t *testing.T) {
@@ -170,8 +170,8 @@ func TestMaterials_BulkUpsert_RejectsCrossTypeSKUConflict(t *testing.T) {
 	t.Cleanup(func() { apiClient.Delete(productsPath + "/" + productID) })
 
 	job := bulkUpsertMaterialsJob(t, map[string]any{"sku": sku, "category": map[string]any{"id": SeedMaterialCategoryID}})
-	assert.Empty(t, jobResults(job), "a conflicting SKU must not be written")
-	require.Len(t, jsonArray(job, "errors"), 1, "the conflicting row is recorded in errors")
+	assert.Empty(t, jobWrittenResults(job), "a conflicting SKU must not be written")
+	require.Len(t, jobErrors(job), 1, "the conflicting row is recorded in errors")
 }
 
 func TestMaterials_BulkUpsert_EmptyRejected(t *testing.T) {
@@ -254,7 +254,7 @@ func TestMaterials_BulkUpsert_RejectsDuplicateAttributeValueAcrossProperties(t *
 	requireStatus(t, 202, status, body)
 	job := pollJobUntilTerminal(t, jsonField(parseJSON(body), "id"))
 	assert.Equal(t, "failed", jsonField(job, "status"))
-	assert.Empty(t, jobResults(job))
+	assert.Empty(t, jobWrittenResults(job))
 
 	// Value already existing under a different property from a prior import.
 	existingValue := uniqueName("e2e-bup-mat-exval")

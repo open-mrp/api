@@ -52,7 +52,7 @@ func bulkUpsertPartsJob(t *testing.T, parts ...map[string]any) map[string]any {
 func bulkUpsertPartIDs(t *testing.T, parts ...map[string]any) (createdIDs, updatedIDs []string) {
 	t.Helper()
 	job := bulkUpsertPartsJob(t, parts...)
-	require.NotEmpty(t, jsonArray(job, "results"), "a completed job must carry results")
+	require.NotEmpty(t, jobResults(job), "a completed job must carry results")
 	return jobResultIDs(job)
 }
 
@@ -118,8 +118,8 @@ func TestParts_BulkUpsert_RejectsInvalidRateUnit(t *testing.T) {
 			"denominator_unit_id": nonCurrencyUnitID,
 		},
 	})
-	assert.Empty(t, jobResults(job), "a bad rate unit must not be written")
-	rowErrs := jsonArray(job, "errors")
+	assert.Empty(t, jobWrittenResults(job), "a bad rate unit must not be written")
+	rowErrs := jobErrors(job)
 	require.Len(t, rowErrs, 1, "the rejected row is recorded in errors")
 }
 
@@ -155,8 +155,8 @@ func TestParts_BulkUpsert_RejectsCrossTypeSKUConflict(t *testing.T) {
 	t.Cleanup(func() { apiClient.Delete(productsPath + "/" + productID) })
 
 	job := bulkUpsertPartsJob(t, map[string]any{"sku": sku, "category": map[string]any{"id": SeedItemCategoryID}})
-	assert.Empty(t, jobResults(job), "a conflicting SKU must not be written")
-	require.Len(t, jsonArray(job, "errors"), 1, "the conflicting row is recorded in errors")
+	assert.Empty(t, jobWrittenResults(job), "a conflicting SKU must not be written")
+	require.Len(t, jobErrors(job), 1, "the conflicting row is recorded in errors")
 }
 
 func TestParts_BulkUpsert_EmptyRejected(t *testing.T) {

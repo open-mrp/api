@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sort"
 	"time"
 
 	"github.com/augno/api/services/auth-service/pkg/types"
@@ -18,9 +19,11 @@ import (
 
 var jobSvcTracer = tracing.GetTracer("core-service.job_service")
 
-// Caps the row errors a job carries. A bulk request takes up to 1000 rows and the job is
-// polled in a loop, so an unbounded list would ride every response.
-const maxRowErrors = 25
+// Caps the row outcomes a job carries. A bulk request takes up to 1000 rows and the job
+// is polled in a loop, so an unbounded list would ride every response. Failed rows are
+// kept ahead of written ones when the cap bites: an id the client can re-read is worth
+// less than the reason a row was rejected.
+const maxRowResults = 100
 
 type jobSvcImpl struct {
 	repos domain.RepoFactory
@@ -120,12 +123,13 @@ func (s *jobSvcImpl) CreateJob(ctx context.Context, params domain.CreateJobServi
 	repo := s.repos.NewJobRepo()
 
 	if apiErr := repo.Create(ctx, domain.CreateJobRepositoryParams{
-		JobID:       jobID,
-		JobItems:    params.JobItems,
-		Type:        params.Type,
-		AccountID:   accountID,
-		CreatedByID: params.CreatedByID,
-		Results:     params.Results,
+		JobID:        jobID,
+		JobItems:     params.JobItems,
+		Type:         params.Type,
+		ResourceType: params.ResourceType,
+		AccountID:    accountID,
+		CreatedByID:  params.CreatedByID,
+		Results:      params.Results,
 	}); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -189,13 +193,13 @@ func (s *jobSvcImpl) UpdateJob(ctx context.Context, params domain.UpdateJobServi
 		return nil, tracing.Trace(span, apierror.NewValidationError("This job has already finished and can no longer be modified."))
 	}
 
-	rowErrors, errorSummary := capRowErrors(params.Errors, params.ErrorSummary)
+	results, truncated := capRowResults(params.Results)
 	repoParams := domain.UpdateJobRepositoryParams{
-		JobID:        params.JobID,
-		AccountID:    accountID,
-		Results:      params.Results,
-		Errors:       rowErrors,
-		ErrorSummary: errorSummary,
+		JobID:            params.JobID,
+		AccountID:        accountID,
+		Results:          results,
+		ResultsTruncated: truncated,
+		Error:            params.Error,
 	}
 	if apiErr := stampTransition(&repoParams, params.Status, time.Now().UTC()); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -232,17 +236,34 @@ func (s *jobSvcImpl) UpdateJob(ctx context.Context, params domain.UpdateJobServi
 	return updated, nil
 }
 
-// trims the failures to maxRowErrors, naming the full count in the summary so a truncated
-// list cannot read as every row that failed. An existing summary is more useful, so it wins.
-func capRowErrors(errs []apierror.RowError, summary *string) ([]apierror.RowError, *string) {
-	if len(errs) <= maxRowErrors {
-		return errs, summary
+// trims the outcomes to maxRowResults, reporting the trim so a truncated list cannot read
+// as every row that was submitted. Failed rows are retained first, then written ones, and
+// what survives is put back in index order — the cut changes how many rows the job
+// reports, never the order they are read in.
+func capRowResults(results []domain.RowResult) ([]domain.RowResult, bool) {
+	if len(results) <= maxRowResults {
+		return results, false
 	}
-	if summary == nil {
-		s := fmt.Sprintf("%d rows failed; the first %d are listed.", len(errs), maxRowErrors)
-		summary = &s
+
+	kept := make([]domain.RowResult, 0, maxRowResults)
+	for _, r := range results {
+		if r.Failed() {
+			kept = append(kept, r)
+		}
 	}
-	return errs[:maxRowErrors], summary
+	if len(kept) > maxRowResults {
+		kept = kept[:maxRowResults]
+	}
+	for _, r := range results {
+		if len(kept) == maxRowResults {
+			break
+		}
+		if !r.Failed() {
+			kept = append(kept, r)
+		}
+	}
+	sort.SliceStable(kept, func(i, j int) bool { return kept[i].Index < kept[j].Index })
+	return kept, true
 }
 
 // stampTransition sets the one lifecycle timestamp that a transition to status
@@ -292,24 +313,8 @@ func (s *jobSvcImpl) CompleteJob(ctx context.Context, params domain.CompleteJobP
 		JobID:   params.JobID,
 		Status:  constants.JobStatusCompleted,
 		Results: params.Results,
-		Errors:  params.Errors,
 	})
 	return apiErr
-}
-
-// failureReason renders the err into the reason stored on the job. The stored
-// reason is part of a record the client reads back, so it takes the public message.
-// Error() is the internal one — empty for a validation error, and full of internals
-// for an internal error — so it is only ever the fallback. The internal detail stays
-// on the caller's log line and span.
-func failureReason(err *apierror.APIError) string {
-	if err == nil {
-		return ""
-	}
-	if err.PublicMessage != "" {
-		return err.PublicMessage
-	}
-	return err.Error()
 }
 
 func (s *jobSvcImpl) FailJob(ctx context.Context, params domain.FailJobParams) {
@@ -318,12 +323,12 @@ func (s *jobSvcImpl) FailJob(ctx context.Context, params domain.FailJobParams) {
 		Status: constants.JobStatusFailed,
 	}
 
-	if reason := failureReason(params.ApiErr); reason != "" {
-		update.ErrorSummary = &reason
-		// The errors array is the per-item detail an executor that fails item by
-		// item fills in, so a whole-job failure records the same entry shape —
-		// exactly one, with no index because it names no row.
-		update.Errors = []apierror.RowError{apierror.NewBatchError(params.ApiErr)}
+	// A whole-job failure names no row, so it settles on the job rather than in its
+	// results. ToResponseError renders the client-facing view — the internal detail stays
+	// on the caller's log line and span.
+	if params.ApiErr != nil {
+		responseErr := params.ApiErr.ToResponseError()
+		update.Error = &responseErr
 	}
 
 	if _, apiErr := s.UpdateJob(ctx, update); apiErr != nil {

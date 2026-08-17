@@ -1124,19 +1124,8 @@ func bulkUpsertUnitGroupsJob(t *testing.T, groups ...map[string]any) map[string]
 func bulkUpsertUnitGroups(t *testing.T, groups ...map[string]any) (createdIDs, updatedIDs []string) {
 	t.Helper()
 	job := bulkUpsertUnitGroupsJob(t, groups...)
-	require.NotEmpty(t, jsonArray(job, "results"), "a completed job must carry results")
+	require.NotEmpty(t, jobResults(job), "a completed job must carry results")
 	return jobResultIDs(job)
-}
-
-// ugJobErrors reads the per-row failures a completed bulk-upsert job recorded.
-func ugJobErrors(job map[string]any) []map[string]any {
-	var out []map[string]any
-	for _, raw := range jsonArray(job, "errors") {
-		if m, ok := raw.(map[string]any); ok {
-			out = append(out, m)
-		}
-	}
-	return out
 }
 
 func TestUnitGroups_BulkUpsert_AllCreates(t *testing.T) {
@@ -1234,7 +1223,7 @@ func TestUnitGroups_BulkUpsert_ResponseShape(t *testing.T) {
 	require.Len(t, ids, 1)
 	entry := jobResults(job)[0]
 	assert.Equal(t, float64(0), entry["index"])
-	assert.Equal(t, "created", entry["action"])
+	assert.Equal(t, "created", entry["status"])
 	assertIDFormat(t, ids[0], "ungp")
 	defer cleanupUnitGroupIDs([]string{ids[0]})
 }
@@ -1552,12 +1541,12 @@ func TestUnitGroups_BulkUpsert_TypeMismatch(t *testing.T) {
 		},
 	})
 
-	rowErrs := ugJobErrors(job)
+	rowErrs := jobErrors(job)
 	require.Len(t, rowErrs, 1, "the mismatched conversion is recorded in errors")
 	msg := jobRowErrorMessage(rowErrs[0])
 	assert.Contains(t, msg, "Unit type does not match")
 	// Nothing was created — the whole row rolled back on its savepoint.
-	assert.Empty(t, jsonArray(job, "results"), "nothing was created")
+	assert.Empty(t, jobWrittenResults(job), "nothing was created")
 }
 
 func TestUnitGroups_BulkUpsert_BaseUnitTypeMismatch(t *testing.T) {
@@ -1571,11 +1560,11 @@ func TestUnitGroups_BulkUpsert_BaseUnitTypeMismatch(t *testing.T) {
 		"base_unit": map[string]any{"id": "each"},
 	})
 
-	rowErrs := ugJobErrors(job)
+	rowErrs := jobErrors(job)
 	require.Len(t, rowErrs, 1, "the mismatched base unit is recorded in errors")
 	msg := jobRowErrorMessage(rowErrs[0])
 	assert.Contains(t, msg, "Base unit type does not match")
-	assert.Empty(t, jsonArray(job, "results"), "nothing was created")
+	assert.Empty(t, jobWrittenResults(job), "nothing was created")
 }
 
 func TestUnitGroups_BulkUpsert_SystemGroupNotModifiable(t *testing.T) {
@@ -1591,11 +1580,11 @@ func TestUnitGroups_BulkUpsert_SystemGroupNotModifiable(t *testing.T) {
 		"base_unit": map[string]any{"id": "second"},
 	})
 
-	rowErrs := ugJobErrors(job)
+	rowErrs := jobErrors(job)
 	require.Len(t, rowErrs, 1, "the system-group modification is recorded in errors")
 	msg := jobRowErrorMessage(rowErrs[0])
 	assert.Contains(t, msg, "cannot be modified")
-	assert.Empty(t, jsonArray(job, "results"), "nothing was created")
+	assert.Empty(t, jobWrittenResults(job), "nothing was created")
 }
 
 // Partial success: a batch mixing a valid new group with a row whose conversion is of the
@@ -1623,7 +1612,7 @@ func TestUnitGroups_BulkUpsert_PartialSuccess(t *testing.T) {
 	defer cleanupUnitGroupIDs([]string{created[0]})
 	assert.Equal(t, float64(0), jobResults(job)[0]["index"], "the surviving result names request row 0")
 
-	rowErrs := ugJobErrors(job)
+	rowErrs := jobErrors(job)
 	require.Len(t, rowErrs, 1, "the bad row is recorded")
 	assert.Equal(t, float64(1), rowErrs[0]["index"], "the failure names row index 1")
 }

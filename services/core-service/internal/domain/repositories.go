@@ -64,10 +64,10 @@ type AccountUserRepo interface {
 	List(ctx context.Context, params ListAccountUsersParams) (*ListAccountUsersResult, *apierror.APIError)
 	GetDetail(ctx context.Context, accountID, userID string, includes []string) (*AccountUserDetail, *apierror.APIError)
 	GetDetailByAccountAndID(ctx context.Context, accountID, accountUserID string, includes []string) (*AccountUserDetail, *apierror.APIError)
-	Create(ctx context.Context, id, accountID, userID string, roleID, departmentID *string) *apierror.APIError
-	Update(ctx context.Context, accountUserID string, roleID, departmentID *string) *apierror.APIError
+	Create(ctx context.Context, id, accountID, userID string, roleID, departmentID *string, isCommissionEligible bool) *apierror.APIError
+	Update(ctx context.Context, accountUserID string, roleID, departmentID *string, isCommissionEligible bool) *apierror.APIError
 	// ReactivateRemovedAccountUser reactivates a previously soft-removed link for (accountID, userID), setting its role/department, and returns the reactivated account_user id. Returns resource_not_found when no removed link exists.
-	ReactivateRemovedAccountUser(ctx context.Context, accountID, userID string, roleID, departmentID *string) (string, *apierror.APIError)
+	ReactivateRemovedAccountUser(ctx context.Context, accountID, userID string, roleID, departmentID *string, isCommissionEligible bool) (string, *apierror.APIError)
 	SoftDelete(ctx context.Context, accountUserID string) *apierror.APIError
 	UpdateStatus(ctx context.Context, accountUserID string, status constants.AccountUserStatus) *apierror.APIError
 	CountByRoleID(ctx context.Context, accountID, roleID string) (int64, *apierror.APIError)

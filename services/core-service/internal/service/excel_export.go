@@ -74,6 +74,10 @@ type exportSpec[TRow, TFilters any] struct {
 	// Slug names the resource in the span, snake_case so it groups with the
 	// entity's other spans rather than reading as prose.
 	Slug string
+	// ResourceType is the object type the file lists. It rides on the job, which is
+	// otherwise silent about what an export was of: its results are empty, because an
+	// export produces a file rather than resources.
+	ResourceType constants.ObjectType
 	// Ext is the file's extension, for an export whose builder does not render a
 	// spreadsheet. Empty means xlsx, which is what every column-driven export is.
 	Ext string
@@ -196,14 +200,15 @@ func enqueueExport[TRow, TFilters any](
 		return cached.Data, cached.Error
 
 	case domain.RecoveryPointStarted:
-		createdByID := exportCreatedByID(ctx, deps, accountID, identity)
+		createdByID := jobCreatedByID(ctx, deps.repos, accountID, identity)
 
 		var raisedJob *domain.Job
 		apiErr = deps.txManager.WithTx(ctx, func(txCtx context.Context, txRepos domain.RepoFactory) *apierror.APIError {
 			job, apiErr := deps.jobs(txRepos).CreateJob(txCtx, domain.CreateJobServiceParams{
-				JobItems:    jobItems,
-				Type:        constants.JobTypeExport,
-				CreatedByID: createdByID,
+				JobItems:     jobItems,
+				Type:         constants.JobTypeExport,
+				ResourceType: spec.ResourceType,
+				CreatedByID:  createdByID,
 			})
 			if apiErr != nil {
 				return apiErr
@@ -289,19 +294,6 @@ func buildExport[TRow, TFilters any](
 		// Resource rows, not sheet rows: a grouped export writes one row per child.
 		RowCount: int32(len(rows)), // #nosec G115 - a sheet cannot hold more rows than an int32
 	}, nil
-}
-
-// resolves the acting account user, best effort: not every actor is one, and the
-// attribution is advisory, so an actor that does not resolve leaves it unset.
-func exportCreatedByID(ctx context.Context, deps asyncBulkDeps, accountID string, identity *types.Identity) *string {
-	if identity.Actor == nil || identity.Actor.ID == "" {
-		return nil
-	}
-	resolvedID, err := deps.repos.NewAccountUserRepo().ResolveAccountUserID(ctx, accountID, identity.Actor.ID)
-	if err != nil {
-		return nil
-	}
-	return &resolvedID
 }
 
 // settles on the read-permission check this resource authorizes against

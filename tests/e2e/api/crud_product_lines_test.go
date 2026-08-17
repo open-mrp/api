@@ -705,7 +705,7 @@ func bulkUpsertProductLinesJob(t *testing.T, rows ...map[string]any) map[string]
 func bulkUpsertProductLineIDs(t *testing.T, rows ...map[string]any) (createdIDs, updatedIDs []string) {
 	t.Helper()
 	job := bulkUpsertProductLinesJob(t, rows...)
-	require.NotEmpty(t, jsonArray(job, "results"), "a completed job must carry results")
+	require.NotEmpty(t, jobResults(job), "a completed job must carry results")
 	return jobResultIDs(job)
 }
 

@@ -31,6 +31,10 @@ func (e *CancelJobEndpoint) Materialize() *apiendpoint.APIEndpoint[*CancelJobReq
 		Public:     true,
 		Preview:    true,
 		ObjectType: constants.ObjectTypeJob,
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeJob,
+			Fields:     []string{"created_by", "created_by.role"},
+		}),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CancelJobRequest) (*apiresource.Job, *apierror.APIError) {
 			return svc.(JobSvc).CancelJob
 		},

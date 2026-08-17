@@ -19,12 +19,13 @@ func (h *gRPCHandler) ListAccountUsers(ctx context.Context, req *pb.ListAccountU
 	}
 
 	result, apiErr := h.accountUserSvc.ListAccountUsers(ctx, domain.ListAccountUsersParams{
-		Cursor:         req.Cursor,
-		Limit:          req.Limit,
-		Query:          req.Query,
-		RoleType:       req.RoleType,
-		IncludeRemoved: req.IncludeRemoved,
-		Includes:       req.Includes,
+		Cursor:               req.Cursor,
+		Limit:                req.Limit,
+		Query:                req.Query,
+		RoleType:             req.RoleType,
+		IsCommissionEligible: req.IsCommissionEligible,
+		IncludeRemoved:       req.IncludeRemoved,
+		Includes:             req.Includes,
 	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
@@ -77,6 +78,7 @@ func (h *gRPCHandler) CreateAccountUser(ctx context.Context, req *pb.CreateAccou
 		Password:                req.Password,
 		RoleID:                  req.RoleId,
 		DepartmentID:            req.DepartmentId,
+		IsCommissionEligible:    req.IsCommissionEligible,
 		NotificationPreferences: notificationPrefsToDomain(req.NotificationPreferences),
 	})
 	if apiErr != nil {
@@ -109,6 +111,7 @@ func (h *gRPCHandler) UpdateAccountUser(ctx context.Context, req *pb.UpdateAccou
 		Username:                req.Username,
 		RoleID:                  field.StringClearableFromProto(req.RoleId),
 		DepartmentID:            field.StringClearableFromProto(req.DepartmentId),
+		IsCommissionEligible:    field.SomePtr(req.IsCommissionEligible),
 		NotificationPreferences: prefs,
 	}, req.Includes)
 	if apiErr != nil {
@@ -166,21 +169,22 @@ func accountUserDetailToProto(d *domain.AccountUserDetail) *pb.AccountUserDetail
 	}
 
 	proto := &pb.AccountUserDetail{
-		Id:             d.ID,
-		UserId:         d.UserID,
-		Name:           d.Name,
-		Email:          d.Email,
-		Username:       d.Username,
-		ImageUrl:       d.ImageURL,
-		EmailVerified:  d.EmailVerified,
-		RoleId:         d.RoleID,
-		RoleName:       d.RoleName,
-		RoleTypeCode:   d.RoleType,
-		DepartmentId:   d.DepartmentID,
-		DepartmentName: d.DepartmentName,
-		StatusCode:     string(d.StatusCode),
-		CreatedAt:      timestamppb.New(d.CreatedAt),
-		UpdatedAt:      timestamppb.New(d.UpdatedAt),
+		Id:                   d.ID,
+		UserId:               d.UserID,
+		Name:                 d.Name,
+		Email:                d.Email,
+		Username:             d.Username,
+		ImageUrl:             d.ImageURL,
+		EmailVerified:        d.EmailVerified,
+		RoleId:               d.RoleID,
+		RoleName:             d.RoleName,
+		RoleTypeCode:         d.RoleType,
+		DepartmentId:         d.DepartmentID,
+		DepartmentName:       d.DepartmentName,
+		StatusCode:           string(d.StatusCode),
+		IsCommissionEligible: d.IsCommissionEligible,
+		CreatedAt:            timestamppb.New(d.CreatedAt),
+		UpdatedAt:            timestamppb.New(d.UpdatedAt),
 	}
 
 	if d.LastUsedAt != nil {

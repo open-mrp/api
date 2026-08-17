@@ -68,19 +68,8 @@ func bulkUpsertMachinesJob(t *testing.T, machines ...map[string]any) map[string]
 func bulkUpsertMachineIDs(t *testing.T, machines ...map[string]any) (createdIDs, updatedIDs []string) {
 	t.Helper()
 	job := bulkUpsertMachinesJob(t, machines...)
-	require.NotEmpty(t, jsonArray(job, "results"), "a completed job must carry results")
+	require.NotEmpty(t, jobResults(job), "a completed job must carry results")
 	return jobResultIDs(job)
-}
-
-// machineJobErrors reads the per-row failures a completed bulk-upsert job recorded.
-func machineJobErrors(job map[string]any) []map[string]any {
-	var out []map[string]any
-	for _, raw := range jsonArray(job, "errors") {
-		if m, ok := raw.(map[string]any); ok {
-			out = append(out, m)
-		}
-	}
-	return out
 }
 
 func TestMachines_BulkUpsert_AllCreates(t *testing.T) {
@@ -229,8 +218,8 @@ func TestMachines_BulkUpsert_RejectsNameCollisionAcrossDepartments(t *testing.T)
 		"serial_number": uniqueName("sn-other"),
 		"department":    map[string]any{"name": "Washing"},
 	})
-	assert.Empty(t, jobResults(job), "the colliding row must not be written")
-	errs := machineJobErrors(job)
+	assert.Empty(t, jobWrittenResults(job), "the colliding row must not be written")
+	errs := jobErrors(job)
 	require.Len(t, errs, 1)
 	assert.Equal(t, "name", jsonField(jobRowError(errs[0]), "param"))
 }
@@ -252,8 +241,8 @@ func TestMachines_BulkUpsert_RejectsSerialCollisionAcrossDepartments(t *testing.
 		"serial_number": serial,
 		"department":    map[string]any{"name": "Washing"},
 	})
-	assert.Empty(t, jobResults(job), "the colliding row must not be written")
-	errs := machineJobErrors(job)
+	assert.Empty(t, jobWrittenResults(job), "the colliding row must not be written")
+	errs := jobErrors(job)
 	require.Len(t, errs, 1)
 	assert.Equal(t, "serial_number", jsonField(jobRowError(errs[0]), "param"))
 }
@@ -276,8 +265,8 @@ func TestMachines_BulkUpsert_RejectsDepartmentMove(t *testing.T) {
 		"serial_number": serial,
 		"department":    map[string]any{"name": "Washing"},
 	})
-	assert.Empty(t, jobResults(job), "an illegal move must not be written")
-	errs := machineJobErrors(job)
+	assert.Empty(t, jobWrittenResults(job), "an illegal move must not be written")
+	errs := jobErrors(job)
 	require.Len(t, errs, 1)
 	assert.Equal(t, "department", jsonField(jobRowError(errs[0]), "param"))
 }
@@ -301,8 +290,8 @@ func TestMachines_BulkUpsert_RejectsAmbiguousNameAndSerial(t *testing.T) {
 		"serial_number": serialB,
 		"department":    map[string]any{"name": seedDepartmentName},
 	})
-	assert.Empty(t, jobResults(job), "an ambiguous row must not be written")
-	errs := machineJobErrors(job)
+	assert.Empty(t, jobWrittenResults(job), "an ambiguous row must not be written")
+	errs := jobErrors(job)
 	require.Len(t, errs, 1)
 	assert.Equal(t, "name, serial_number", jsonField(jobRowError(errs[0]), "param"))
 }

@@ -46,9 +46,12 @@ type FrozenAdherence struct {
 	// FrozenPlannedQuantity is the quantity captured at publish, never recomputed, so the denominator cannot drift as lines are added later.
 	FrozenPlannedQuantity float64
 
-	DeviatedLines   int64
-	AddedLines      int64
-	AbsDeltaUnits   float64
+	DeviatedLines int64
+	AddedLines    int64
+	AbsDeltaUnits float64
+	// OffPlanLines counts campaigns the floor ran inside the frozen window on a scheduled machine that the frozen plan never called for. Working around a commitment breaks it as surely as editing it does, so it scores the same way.
+	OffPlanLines    int64
+	OffPlanQuantity float64
 	LineAdherence   *float64
 	UnitsAdherence  *float64
 	FrozenThroughAt *time.Time
@@ -136,6 +139,9 @@ type ScheduleAttainmentResult struct {
 
 	Buckets []AttainmentBucket
 	Totals  AttainmentBucket
+
+	// ScheduledMachineCount is how many machines the plan asked for over the window. Every figure above covers those machines only, so this is what says how wide the measurement was.
+	ScheduledMachineCount int64
 
 	FrozenAdherence []FrozenAdherence
 	// HasBaseline is false when nothing was ever published over the window. Every ratio is nil in that case, and the caller should say "no plan" rather than "0%".

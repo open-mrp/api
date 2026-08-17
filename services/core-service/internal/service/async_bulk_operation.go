@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"sort"
 
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/services/core-service/internal/domain"
@@ -36,25 +37,27 @@ func (d asyncBulkDeps) jobs(repos domain.RepoFactory) domain.JobSvc {
 	return d.jobSvcFactory.Build(repos)
 }
 
-// BulkWriteResult is what an entity's Write returns: the job's results (the rows that
-// succeeded) and, separately, its errors (the rows that failed), plus the flat list of
-// written ids for AfterCommit. Both are domain values — encoding them is the
-// repository's job, so nothing here serializes. Errors is nil when every row succeeded;
-// Results is empty-but-non-nil when the write ran and nothing succeeded, which is how
-// that is distinguished from a job that has recorded no results at all.
+// BulkWriteResult is what an entity's Write returns: the rows that succeeded and,
+// separately, the rows that failed, plus the flat list of written ids for AfterCommit.
+// The two are merged into the job's single row-indexed result list by the engine. Both
+// are domain values — encoding them is the repository's job, so nothing here serializes.
+// Errors is nil when every row succeeded; Results is empty-but-non-nil when the write
+// ran and nothing succeeded, which is how that is distinguished from a job that has
+// recorded no results at all.
 type BulkWriteResult struct {
 	Results    []domain.RowResult
 	Errors     []apierror.RowError
 	WrittenIDs []string
 }
 
-// records a row that succeeded, as a create or an update
+// records a row that succeeded, as a create or an update. The object type is stamped by
+// the engine from the spec, so no caller has to repeat what it is writing.
 func newRowResult(index int, id string, isCreate bool) domain.RowResult {
-	action := constants.JobResultActionUpdated
+	status := constants.JobResultStatusUpdated
 	if isCreate {
-		action = constants.JobResultActionCreated
+		status = constants.JobResultStatusCreated
 	}
-	return domain.RowResult{Index: index, ID: id, Action: action}
+	return domain.RowResult{Index: index, ID: id, Status: status}
 }
 
 // flattens the ids produced across a Write's results, for AfterCommit
@@ -64,6 +67,38 @@ func resultIDs(results []domain.RowResult) []string {
 		ids[i] = r.ID
 	}
 	return ids
+}
+
+// stamps the object type the operation writes onto every row it produced. The engine
+// knows it once, from the spec, rather than every Write hook repeating it.
+func stampResourceType(results []domain.RowResult, resourceType constants.ObjectType) []domain.RowResult {
+	for i := range results {
+		if results[i].ResourceType == "" && !results[i].Failed() {
+			results[i].ResourceType = resourceType
+		}
+	}
+	return results
+}
+
+// merges the rows that succeeded with the rows that failed into the job's single
+// row-indexed list, ordered by index. Every submitted row lands in exactly one entry, so
+// a client reads one list to learn what became of its request rather than zipping two.
+func mergeRowOutcomes(results []domain.RowResult, errs []apierror.RowError) []domain.RowResult {
+	if len(errs) == 0 {
+		return results
+	}
+	merged := make([]domain.RowResult, 0, len(results)+len(errs))
+	merged = append(merged, results...)
+	for _, e := range errs {
+		rowErr := e.Error
+		merged = append(merged, domain.RowResult{
+			Index:  e.Index,
+			Status: constants.JobResultStatusFailed,
+			Error:  &rowErr,
+		})
+	}
+	sort.SliceStable(merged, func(i, j int) bool { return merged[i].Index < merged[j].Index })
+	return merged
 }
 
 // bulkOperationSpec is everything an entity provides to run a bulk operation — create
@@ -83,6 +118,10 @@ func resultIDs(results []domain.RowResult) []string {
 type bulkOperationSpec[TInput, TResolved any] struct {
 	// JobType tags the job so a polled job says what it did.
 	JobType constants.JobType
+	// ResourceType is the object type this operation writes. It rides on the job, so a
+	// job that produced no results still says what it was for, and it is stamped onto
+	// every result row so each id in the outcome names its own kind.
+	ResourceType constants.ObjectType
 	// RoutingKey is the command the accept phase enqueues and the consumer binds.
 	RoutingKey contracts.AmqpRoutingKey
 	// PermissionDomain is the domain checked in the accept phase.
@@ -193,18 +232,10 @@ func enqueueBulkOperation[TInput, TResolved any](
 		// results when the work runs.
 		var acceptResults []domain.RowResult
 		if spec.AcceptResults != nil {
-			acceptResults = spec.AcceptResults(resolved)
+			acceptResults = stampResourceType(spec.AcceptResults(resolved), spec.ResourceType)
 		}
 
-		// Attribute the job to the acting account user, best effort: not every actor
-		// is one (an API key is not), and the attribution is advisory, so an actor that
-		// does not resolve leaves it unset rather than failing the request.
-		var createdByID *string
-		if identity.Actor != nil && identity.Actor.ID != "" {
-			if resolvedID, resolveErr := deps.repos.NewAccountUserRepo().ResolveAccountUserID(ctx, accountID, identity.Actor.ID); resolveErr == nil {
-				createdByID = &resolvedID
-			}
-		}
+		createdByID := jobCreatedByID(ctx, deps.repos, accountID, identity)
 
 		var raisedJob *domain.Job
 		apiErr = deps.txManager.WithTx(ctx, func(txCtx context.Context, txRepos domain.RepoFactory) *apierror.APIError {
@@ -213,10 +244,11 @@ func enqueueBulkOperation[TInput, TResolved any](
 			// constant size no matter how many rows were submitted, and the client has
 			// something to poll for the outcome.
 			job, apiErr := deps.jobs(txRepos).CreateJob(txCtx, domain.CreateJobServiceParams{
-				JobItems:    jobItems,
-				Type:        spec.JobType,
-				CreatedByID: createdByID,
-				Results:     acceptResults,
+				JobItems:     jobItems,
+				Type:         spec.JobType,
+				ResourceType: spec.ResourceType,
+				CreatedByID:  createdByID,
+				Results:      acceptResults,
 			})
 			if apiErr != nil {
 				return apiErr
@@ -254,6 +286,19 @@ func enqueueBulkOperation[TInput, TResolved any](
 	default:
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
 	}
+}
+
+// jobCreatedByID attributes a job to the caller. A user is stored as their account_user
+// id so created_by.role can resolve; an API key or agent is stored as its own id.
+func jobCreatedByID(ctx context.Context, repos domain.RepoFactory, accountID string, identity *types.Identity) *string {
+	if identity.Actor == nil || identity.Actor.ID == "" {
+		return nil
+	}
+	id := identity.Actor.ID
+	if resolvedID, err := repos.NewAccountUserRepo().ResolveAccountUserID(ctx, accountID, id); err == nil {
+		return &resolvedID
+	}
+	return &id
 }
 
 // executeBulkOperation is the execute phase, called by the entity's consumer. It loads
@@ -313,10 +358,11 @@ func executeBulkOperation[TInput, TResolved any](
 		writeResult = res
 
 		// Settled through the transactional service, so the written rows and the record of
-		// what happened — successes in results, per-row failures in errors — commit
+		// what happened — one entry per submitted row, written or rejected — commit
 		// together or not at all. A partly-failed batch still completes: Write only errors
 		// on an infrastructure failure that should roll the whole batch back.
-		return deps.jobs(txRepos).CompleteJob(txCtx, domain.CompleteJobParams{JobID: job.ID, Results: res.Results, Errors: res.Errors})
+		outcomes := mergeRowOutcomes(stampResourceType(res.Results, spec.ResourceType), res.Errors)
+		return deps.jobs(txRepos).CompleteJob(txCtx, domain.CompleteJobParams{JobID: job.ID, Results: outcomes})
 	})
 	if apiErr != nil {
 		deps.jobs(deps.repos).FailJob(ctx, domain.FailJobParams{JobID: job.ID, ApiErr: apiErr})

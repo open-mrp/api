@@ -206,6 +206,7 @@ func upsertScanningStationInTx(txCtx context.Context, txRepos domain.RepoFactory
 func (s *scanningStationSvcImpl) bulkUpsertSpec() bulkOperationSpec[domain.UpsertScanningStationParams, domain.ResolvedUpsertScanningStationRow] {
 	return bulkOperationSpec[domain.UpsertScanningStationParams, domain.ResolvedUpsertScanningStationRow]{
 		JobType:          constants.JobTypeBulkUpsert,
+		ResourceType:     constants.ObjectTypeScanningStation,
 		RoutingKey:       messaging.BulkUpsertScanningStations.RoutingKey(),
 		PermissionDomain: types.PermissionDomainScanningStations,
 		Actions:          []types.Action{types.ActionCreate, types.ActionUpdate},
@@ -251,6 +252,7 @@ func (s *scanningStationSvcImpl) exportSpec() exportSpec[*domain.ScanningStation
 		PermissionDomain: types.PermissionDomainScanningStations,
 		Name:             "Scanning Stations",
 		Slug:             "scanning_stations",
+		ResourceType:     constants.ObjectTypeScanningStation,
 		Columns:          append([]excel.ColumnSpec{{Header: "ID", Key: "id", Width: 24}}, scanningStationTemplateColumns...),
 
 		Fetch: func(ctx context.Context, repos domain.RepoFactory, accountID string, filters domain.ExportScanningStationsParams) ([]*domain.ScanningStation, *apierror.APIError) {

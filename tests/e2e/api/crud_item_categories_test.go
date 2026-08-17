@@ -748,7 +748,7 @@ func bulkUpsertItemCategoriesJob(t *testing.T, rows ...map[string]any) map[strin
 func bulkUpsertItemCategoryIDs(t *testing.T, rows ...map[string]any) (createdIDs, updatedIDs []string) {
 	t.Helper()
 	job := bulkUpsertItemCategoriesJob(t, rows...)
-	require.NotEmpty(t, jsonArray(job, "results"), "a completed job must carry results")
+	require.NotEmpty(t, jobResults(job), "a completed job must carry results")
 	return jobResultIDs(job)
 }
 
@@ -813,11 +813,16 @@ func TestItemCategories_BulkUpsert_ResponseShape(t *testing.T) {
 	defer cleanupItemCategoryIDs(created)
 
 	assertObjectField(t, job, "job")
-	assert.Equal(t, "bulkupsert", jsonField(job, "type"))
+	assert.Equal(t, "bulk_upsert", jsonField(job, "type"))
+	assert.Equal(t, "item_category", jsonField(job, "resource_type"), "the job must say what it operated on")
 	_, hasResults := job["results"]
 	assert.True(t, hasResults, "job must have a results field")
+	_, hasError := job["error"]
+	assert.True(t, hasError, "job must have an error field")
+	assert.Nil(t, job["error"], "a job that completed did not fail as a whole")
+	// Every row lands in results now; the separate errors array is gone.
 	_, hasErrors := job["errors"]
-	assert.True(t, hasErrors, "job must have an errors field")
+	assert.False(t, hasErrors, "row failures belong in results, not a separate errors array")
 }
 
 func TestItemCategories_BulkUpsert_Idempotency(t *testing.T) {
@@ -937,8 +942,8 @@ func TestItemCategories_BulkUpsert_RejectsDifferentTypeUnitGroup(t *testing.T) {
 	categoryID := createdIDs[0]
 
 	job := bulkUpsertItemCategoriesJob(t, bulkUpsertICInput(name, "material_category", differentTypeUnitGroupID))
-	assert.Empty(t, jobResults(job), "an incompatible unit group must not be written")
-	rowErrs := jsonArray(job, "errors")
+	assert.Empty(t, jobWrittenResults(job), "an incompatible unit group must not be written")
+	rowErrs := jobErrors(job)
 	require.Len(t, rowErrs, 1, "the rejected row is recorded in errors")
 
 	getStatus, getBody, err := apiClient.GetListRaw(itemCategoriesPath+"/"+categoryID, url.Values{"include": {"unit_group"}})

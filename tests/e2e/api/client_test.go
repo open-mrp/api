@@ -20,7 +20,7 @@ type Response struct {
 	Header     http.Header
 }
 
-const defaultAPIVersion = "1.0.forge-preview.2"
+const defaultAPIVersion = "1.0.forge-preview.3"
 
 // Client is an HTTP client for the Augno API configured with authentication.
 type Client struct {

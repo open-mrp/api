@@ -58,11 +58,12 @@ func NewAccountUserSvc(config *AccountUserSvcConfig) AccountUserSvc {
 
 func (m *accountUserSvcImpl) ListAccountUsers(ctx context.Context, req *ListAccountUsersRequest) (*apiresource.List[apiresource.AccountUser], *apierror.APIError) {
 	pbReq := &pb.ListAccountUsersRequest{
-		Cursor:         req.Cursor,
-		Limit:          req.Limit,
-		Query:          req.Query,
-		RoleType:       req.RoleType.StringPtr(),
-		IncludeRemoved: removedScopeIncludesRemoved(req.RemovedScope),
+		Cursor:               req.Cursor,
+		Limit:                req.Limit,
+		Query:                req.Query,
+		RoleType:             req.RoleType.StringPtr(),
+		IsCommissionEligible: req.IsCommissionEligible,
+		IncludeRemoved:       removedScopeIncludesRemoved(req.RemovedScope),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, accountUserSvcTracer, "service.account_users.list", domain.ServiceName,
@@ -102,6 +103,7 @@ func (m *accountUserSvcImpl) CreateAccountUser(ctx context.Context, req *CreateA
 		Password:                req.Password.Ptr(),
 		RoleId:                  req.RoleID.Ptr(),
 		DepartmentId:            req.DepartmentID.Ptr(),
+		IsCommissionEligible:    req.IsCommissionEligible.Ptr(),
 		NotificationPreferences: toProtoNotificationPrefs(req.Preferences),
 	}
 
@@ -124,6 +126,7 @@ func (m *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, req *UpdateA
 		Username:                req.Username.Ptr(),
 		RoleId:                  field.StringClearableToProto(req.RoleID),
 		DepartmentId:            field.StringClearableToProto(req.DepartmentID),
+		IsCommissionEligible:    req.IsCommissionEligible.Ptr(),
 		NotificationPreferences: toProtoNotificationPrefs(req.Preferences),
 	}
 

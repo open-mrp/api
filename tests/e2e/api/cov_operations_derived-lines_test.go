@@ -61,8 +61,8 @@ func TestDerivedLines_GeneratedFromTheConstraintPlan(t *testing.T) {
 
 		depth, ok := row["explosion_depth"].(float64)
 		require.True(t, ok)
-		assert.GreaterOrEqual(t, depth, float64(1),
-			"the constraint itself is depth 0; derived work starts at 1")
+		// Depth 0 is the constraint's own work, which the list carries so a plant with nothing configured downstream still sees what it scheduled.
+		assert.GreaterOrEqual(t, depth, float64(0))
 	}
 }
 

@@ -579,6 +579,8 @@ message FrozenAdherenceInfo {
   optional double line_adherence_pct = 8;
   optional double units_adherence_pct = 9;
   optional google.protobuf.Timestamp frozen_through_date = 10;
+  int64 off_plan_lines = 11;
+  double off_plan_quantity = 12;
 }
 
 message AnalyzeScheduleAttainmentResponse {
@@ -590,4 +592,5 @@ message AnalyzeScheduleAttainmentResponse {
   AttainmentBucketInfo totals = 6;
   repeated FrozenAdherenceInfo frozen_adherence = 7;
   bool has_baseline = 8;
+  int64 scheduled_machine_count = 9;
 }

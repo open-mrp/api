@@ -326,6 +326,7 @@ func writeBulkUpsertLocations(txCtx context.Context, txRepos domain.RepoFactory,
 func (s *locationSvcImpl) bulkUpsertSpec() bulkOperationSpec[domain.UpsertLocationParams, domain.ResolvedUpsertLocationRow] {
 	return bulkOperationSpec[domain.UpsertLocationParams, domain.ResolvedUpsertLocationRow]{
 		JobType:          constants.JobTypeBulkUpsert,
+		ResourceType:     constants.ObjectTypeLocation,
 		RoutingKey:       messaging.BulkUpsertLocations.RoutingKey(),
 		PermissionDomain: types.PermissionDomainLocations,
 		Actions:          []types.Action{types.ActionCreate, types.ActionUpdate},
@@ -361,6 +362,7 @@ func (s *locationSvcImpl) exportSpec() exportSpec[*domain.Location, domain.Expor
 		PermissionDomain: types.PermissionDomainLocations,
 		Name:             "Storage Locations",
 		Slug:             "locations",
+		ResourceType:     constants.ObjectTypeLocation,
 		Columns: []excel.ColumnSpec{
 			{Header: "ID", Key: "id", Width: 6},
 			{Header: "Name", Key: "name", Width: 25},

@@ -263,8 +263,8 @@ func hubspotCompanyReviewFromProto(p *pb.HubspotCompanyReviewInfo) *apiresource.
 		candidates[i].Object = constants.ObjectTypeHubspotCompanyCandidate
 	}
 	return &apiresource.HubspotCompanyReview{
-		ID:     p.Id,
-		Object: constants.ObjectTypeHubspotCompanyReview,
+		ID:                p.Id,
+		Object:            constants.ObjectTypeHubspotCompanyReview,
 		Job:               &apiresource.HubspotSyncJob{ID: p.JobId, Object: constants.ObjectTypeHubspotSyncJob},
 		Customer:          &apiresource.Customer{ID: p.AugnoCustomerId, Object: constants.ObjectTypeCustomer, Name: p.CustomerName},
 		CustomerEmail:     p.CustomerEmail,

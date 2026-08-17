@@ -204,25 +204,29 @@ func (x *CancelJobResponse) GetJob() *JobInfo {
 
 // JobInfo represents a job: the record of a piece of asynchronous work, from the request that raised it through to its outcome.
 type JobInfo struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Type              string                 `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
-	Status            string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
-	CreatedById       *string                `protobuf:"bytes,4,opt,name=created_by_id,json=createdById,proto3,oneof" json:"created_by_id,omitempty"`
-	CreatedByName     *string                `protobuf:"bytes,5,opt,name=created_by_name,json=createdByName,proto3,oneof" json:"created_by_name,omitempty"`
-	CreatedByUsername *string                `protobuf:"bytes,6,opt,name=created_by_username,json=createdByUsername,proto3,oneof" json:"created_by_username,omitempty"`
-	CreatedByEmail    *string                `protobuf:"bytes,7,opt,name=created_by_email,json=createdByEmail,proto3,oneof" json:"created_by_email,omitempty"`
-	Results           *JobResultList         `protobuf:"bytes,8,opt,name=results,proto3" json:"results,omitempty"`
-	Errors            *JobErrorList          `protobuf:"bytes,9,opt,name=errors,proto3" json:"errors,omitempty"`
-	ErrorSummary      *string                `protobuf:"bytes,10,opt,name=error_summary,json=errorSummary,proto3,oneof" json:"error_summary,omitempty"`
-	StartedAt         *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=started_at,json=startedAt,proto3,oneof" json:"started_at,omitempty"`
-	CompletedAt       *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=completed_at,json=completedAt,proto3,oneof" json:"completed_at,omitempty"`
-	FailedAt          *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=failed_at,json=failedAt,proto3,oneof" json:"failed_at,omitempty"`
-	CancelledAt       *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=cancelled_at,json=cancelledAt,proto3,oneof" json:"cancelled_at,omitempty"`
-	CreatedAt         *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt         *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Id          string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Type        string                 `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
+	Status      string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
+	CreatedById *string                `protobuf:"bytes,4,opt,name=created_by_id,json=createdById,proto3,oneof" json:"created_by_id,omitempty"`
+	Results     *JobResultList         `protobuf:"bytes,8,opt,name=results,proto3" json:"results,omitempty"`
+	StartedAt   *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=started_at,json=startedAt,proto3,oneof" json:"started_at,omitempty"`
+	CompletedAt *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=completed_at,json=completedAt,proto3,oneof" json:"completed_at,omitempty"`
+	FailedAt    *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=failed_at,json=failedAt,proto3,oneof" json:"failed_at,omitempty"`
+	CancelledAt *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=cancelled_at,json=cancelledAt,proto3,oneof" json:"cancelled_at,omitempty"`
+	CreatedAt   *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt   *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	// Set only on a job whose work was rendering a file.
-	Export        *ExportInfo `protobuf:"bytes,17,opt,name=export,proto3,oneof" json:"export,omitempty"`
+	Export *ExportInfo `protobuf:"bytes,17,opt,name=export,proto3,oneof" json:"export,omitempty"`
+	// Error is the failure that sank the job as a whole, as the canonical client-facing
+	// error object in JSON — the same bytes a synchronous error response carries under its
+	// `error` key. It stays JSON rather than becoming proto fields because both sides
+	// already share the Go type that produces it (apierror.ResponseError), so there is
+	// nothing here to keep in sync. A row that failed carries its own on the result.
+	Error *string `protobuf:"bytes,18,opt,name=error,proto3,oneof" json:"error,omitempty"`
+	// ResourceType is the object type the job operates on, e.g. "production_run". It says
+	// what a job that produced no results was for, which `type` — a verb — cannot.
+	ResourceType  *string `protobuf:"bytes,19,opt,name=resource_type,json=resourceType,proto3,oneof" json:"resource_type,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -285,46 +289,11 @@ func (x *JobInfo) GetCreatedById() string {
 	return ""
 }
 
-func (x *JobInfo) GetCreatedByName() string {
-	if x != nil && x.CreatedByName != nil {
-		return *x.CreatedByName
-	}
-	return ""
-}
-
-func (x *JobInfo) GetCreatedByUsername() string {
-	if x != nil && x.CreatedByUsername != nil {
-		return *x.CreatedByUsername
-	}
-	return ""
-}
-
-func (x *JobInfo) GetCreatedByEmail() string {
-	if x != nil && x.CreatedByEmail != nil {
-		return *x.CreatedByEmail
-	}
-	return ""
-}
-
 func (x *JobInfo) GetResults() *JobResultList {
 	if x != nil {
 		return x.Results
 	}
 	return nil
-}
-
-func (x *JobInfo) GetErrors() *JobErrorList {
-	if x != nil {
-		return x.Errors
-	}
-	return nil
-}
-
-func (x *JobInfo) GetErrorSummary() string {
-	if x != nil && x.ErrorSummary != nil {
-		return *x.ErrorSummary
-	}
-	return ""
 }
 
 func (x *JobInfo) GetStartedAt() *timestamppb.Timestamp {
@@ -376,9 +345,25 @@ func (x *JobInfo) GetExport() *ExportInfo {
 	return nil
 }
 
+func (x *JobInfo) GetError() string {
+	if x != nil && x.Error != nil {
+		return *x.Error
+	}
+	return ""
+}
+
+func (x *JobInfo) GetResourceType() string {
+	if x != nil && x.ResourceType != nil {
+		return *x.ResourceType
+	}
+	return ""
+}
+
 type JobResultList struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Items         []*JobResultInfo       `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Items []*JobResultInfo       `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	// Truncated reports that the executor recorded more rows than the list carries.
+	Truncated     bool `protobuf:"varint,2,opt,name=truncated,proto3" json:"truncated,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -420,17 +405,33 @@ func (x *JobResultList) GetItems() []*JobResultInfo {
 	return nil
 }
 
+func (x *JobResultList) GetTruncated() bool {
+	if x != nil {
+		return x.Truncated
+	}
+	return false
+}
+
+// JobResultInfo is what became of one row of the request: the resource it produced, or
+// the error it was rejected with.
 type JobResultInfo struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Index is of the request row. a failure of the job as a whole has no index
-	Index int32  `protobuf:"varint,1,opt,name=index,proto3" json:"index,omitempty"`
-	Id    string `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
-	// "created" or "updated".
-	Action string `protobuf:"bytes,3,opt,name=action,proto3" json:"action,omitempty"`
-	// SubResourceIds resources created alongside the row's own resource. eg:production run's batches. Empty otherwise.
-	SubResourceIds []string `protobuf:"bytes,4,rep,name=sub_resource_ids,json=subResourceIds,proto3" json:"sub_resource_ids,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Index is the zero-based row of the request this result names.
+	Index int32 `protobuf:"varint,1,opt,name=index,proto3" json:"index,omitempty"`
+	// Id of the resource the row produced. Empty when the row failed.
+	Id string `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	// "created", "updated" or "failed".
+	Status string `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
+	// ResourceType is the object type of id, e.g. "product". Empty when the row failed.
+	ResourceType string `protobuf:"bytes,5,opt,name=resource_type,json=resourceType,proto3" json:"resource_type,omitempty"`
+	// SubResources are resources produced alongside the row's own, e.g. a production run's
+	// batches. Empty for operations that produce none.
+	SubResources []*JobSubResourceInfo `protobuf:"bytes,6,rep,name=sub_resources,json=subResources,proto3" json:"sub_resources,omitempty"`
+	// Error is why the row was rejected, in the same JSON form as JobInfo.error. Empty
+	// unless status is "failed".
+	Error         string `protobuf:"bytes,7,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *JobResultInfo) Reset() {
@@ -477,42 +478,58 @@ func (x *JobResultInfo) GetId() string {
 	return ""
 }
 
-func (x *JobResultInfo) GetAction() string {
+func (x *JobResultInfo) GetStatus() string {
 	if x != nil {
-		return x.Action
+		return x.Status
 	}
 	return ""
 }
 
-func (x *JobResultInfo) GetSubResourceIds() []string {
+func (x *JobResultInfo) GetResourceType() string {
 	if x != nil {
-		return x.SubResourceIds
+		return x.ResourceType
+	}
+	return ""
+}
+
+func (x *JobResultInfo) GetSubResources() []*JobSubResourceInfo {
+	if x != nil {
+		return x.SubResources
 	}
 	return nil
 }
 
-// JobErrorList wraps the errors for the same reason JobResultList wraps results.
-type JobErrorList struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Items         []*JobErrorInfo        `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+func (x *JobResultInfo) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+// JobSubResourceInfo is one resource produced alongside a result row's own.
+type JobSubResourceInfo struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// ResourceType is the object type of id, e.g. "batch".
+	ResourceType  string `protobuf:"bytes,2,opt,name=resource_type,json=resourceType,proto3" json:"resource_type,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *JobErrorList) Reset() {
-	*x = JobErrorList{}
+func (x *JobSubResourceInfo) Reset() {
+	*x = JobSubResourceInfo{}
 	mi := &file_core_core_async_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *JobErrorList) String() string {
+func (x *JobSubResourceInfo) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*JobErrorList) ProtoMessage() {}
+func (*JobSubResourceInfo) ProtoMessage() {}
 
-func (x *JobErrorList) ProtoReflect() protoreflect.Message {
+func (x *JobSubResourceInfo) ProtoReflect() protoreflect.Message {
 	mi := &file_core_core_async_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -524,72 +541,21 @@ func (x *JobErrorList) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use JobErrorList.ProtoReflect.Descriptor instead.
-func (*JobErrorList) Descriptor() ([]byte, []int) {
+// Deprecated: Use JobSubResourceInfo.ProtoReflect.Descriptor instead.
+func (*JobSubResourceInfo) Descriptor() ([]byte, []int) {
 	return file_core_core_async_proto_rawDescGZIP(), []int{7}
 }
 
-func (x *JobErrorList) GetItems() []*JobErrorInfo {
+func (x *JobSubResourceInfo) GetId() string {
 	if x != nil {
-		return x.Items
+		return x.Id
 	}
-	return nil
+	return ""
 }
 
-// JobErrorInfo is one failure.
-type JobErrorInfo struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Index is of the request row. a failure of the job as a whole has no index
-	Index *int32 `protobuf:"varint,1,opt,name=index,proto3,oneof" json:"index,omitempty"`
-	// Error is the canonical client-facing error object as JSON — the same bytes a
-	// synchronous error response carries under its `error` key. It stays JSON rather
-	// than becoming proto fields because both sides already share the Go type that
-	// produces it (apierror.ResponseError), so there is nothing here to keep in sync.
-	Error         string `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *JobErrorInfo) Reset() {
-	*x = JobErrorInfo{}
-	mi := &file_core_core_async_proto_msgTypes[8]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *JobErrorInfo) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*JobErrorInfo) ProtoMessage() {}
-
-func (x *JobErrorInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_async_proto_msgTypes[8]
+func (x *JobSubResourceInfo) GetResourceType() string {
 	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use JobErrorInfo.ProtoReflect.Descriptor instead.
-func (*JobErrorInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_async_proto_rawDescGZIP(), []int{8}
-}
-
-func (x *JobErrorInfo) GetIndex() int32 {
-	if x != nil && x.Index != nil {
-		return *x.Index
-	}
-	return 0
-}
-
-func (x *JobErrorInfo) GetError() string {
-	if x != nil {
-		return x.Error
+		return x.ResourceType
 	}
 	return ""
 }
@@ -606,7 +572,7 @@ type ExportInfo struct {
 
 func (x *ExportInfo) Reset() {
 	*x = ExportInfo{}
-	mi := &file_core_core_async_proto_msgTypes[9]
+	mi := &file_core_core_async_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -618,7 +584,7 @@ func (x *ExportInfo) String() string {
 func (*ExportInfo) ProtoMessage() {}
 
 func (x *ExportInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_async_proto_msgTypes[9]
+	mi := &file_core_core_async_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -631,7 +597,7 @@ func (x *ExportInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportInfo.ProtoReflect.Descriptor instead.
 func (*ExportInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_async_proto_rawDescGZIP(), []int{9}
+	return file_core_core_async_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ExportInfo) GetUrl() string {
@@ -653,53 +619,49 @@ const file_core_core_async_proto_rawDesc = "" +
 	"\x10CancelJobRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"4\n" +
 	"\x11CancelJobResponse\x12\x1f\n" +
-	"\x03job\x18\x01 \x01(\v2\r.core.JobInfoR\x03job\"\xde\a\n" +
+	"\x03job\x18\x01 \x01(\v2\r.core.JobInfoR\x03job\"\xa3\x06\n" +
 	"\aJobInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04type\x18\x02 \x01(\tR\x04type\x12\x16\n" +
 	"\x06status\x18\x03 \x01(\tR\x06status\x12'\n" +
-	"\rcreated_by_id\x18\x04 \x01(\tH\x00R\vcreatedById\x88\x01\x01\x12+\n" +
-	"\x0fcreated_by_name\x18\x05 \x01(\tH\x01R\rcreatedByName\x88\x01\x01\x123\n" +
-	"\x13created_by_username\x18\x06 \x01(\tH\x02R\x11createdByUsername\x88\x01\x01\x12-\n" +
-	"\x10created_by_email\x18\a \x01(\tH\x03R\x0ecreatedByEmail\x88\x01\x01\x12-\n" +
-	"\aresults\x18\b \x01(\v2\x13.core.JobResultListR\aresults\x12*\n" +
-	"\x06errors\x18\t \x01(\v2\x12.core.JobErrorListR\x06errors\x12(\n" +
-	"\rerror_summary\x18\n" +
-	" \x01(\tH\x04R\ferrorSummary\x88\x01\x01\x12>\n" +
+	"\rcreated_by_id\x18\x04 \x01(\tH\x00R\vcreatedById\x88\x01\x01\x12-\n" +
+	"\aresults\x18\b \x01(\v2\x13.core.JobResultListR\aresults\x12>\n" +
 	"\n" +
-	"started_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampH\x05R\tstartedAt\x88\x01\x01\x12B\n" +
-	"\fcompleted_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampH\x06R\vcompletedAt\x88\x01\x01\x12<\n" +
-	"\tfailed_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampH\aR\bfailedAt\x88\x01\x01\x12B\n" +
-	"\fcancelled_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampH\bR\vcancelledAt\x88\x01\x01\x129\n" +
+	"started_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampH\x01R\tstartedAt\x88\x01\x01\x12B\n" +
+	"\fcompleted_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampH\x02R\vcompletedAt\x88\x01\x01\x12<\n" +
+	"\tfailed_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampH\x03R\bfailedAt\x88\x01\x01\x12B\n" +
+	"\fcancelled_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampH\x04R\vcancelledAt\x88\x01\x01\x129\n" +
 	"\n" +
 	"created_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12-\n" +
-	"\x06export\x18\x11 \x01(\v2\x10.core.ExportInfoH\tR\x06export\x88\x01\x01B\x10\n" +
-	"\x0e_created_by_idB\x12\n" +
-	"\x10_created_by_nameB\x16\n" +
-	"\x14_created_by_usernameB\x13\n" +
-	"\x11_created_by_emailB\x10\n" +
-	"\x0e_error_summaryB\r\n" +
+	"\x06export\x18\x11 \x01(\v2\x10.core.ExportInfoH\x05R\x06export\x88\x01\x01\x12\x19\n" +
+	"\x05error\x18\x12 \x01(\tH\x06R\x05error\x88\x01\x01\x12(\n" +
+	"\rresource_type\x18\x13 \x01(\tH\aR\fresourceType\x88\x01\x01B\x10\n" +
+	"\x0e_created_by_idB\r\n" +
 	"\v_started_atB\x0f\n" +
 	"\r_completed_atB\f\n" +
 	"\n" +
 	"_failed_atB\x0f\n" +
 	"\r_cancelled_atB\t\n" +
-	"\a_export\":\n" +
+	"\a_exportB\b\n" +
+	"\x06_errorB\x10\n" +
+	"\x0e_resource_typeJ\x04\b\x05\x10\x06J\x04\b\x06\x10\aJ\x04\b\a\x10\bJ\x04\b\t\x10\n" +
+	"J\x04\b\n" +
+	"\x10\v\"X\n" +
 	"\rJobResultList\x12)\n" +
-	"\x05items\x18\x01 \x03(\v2\x13.core.JobResultInfoR\x05items\"w\n" +
+	"\x05items\x18\x01 \x03(\v2\x13.core.JobResultInfoR\x05items\x12\x1c\n" +
+	"\ttruncated\x18\x02 \x01(\bR\ttruncated\"\xcd\x01\n" +
 	"\rJobResultInfo\x12\x14\n" +
 	"\x05index\x18\x01 \x01(\x05R\x05index\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\tR\x02id\x12\x16\n" +
-	"\x06action\x18\x03 \x01(\tR\x06action\x12(\n" +
-	"\x10sub_resource_ids\x18\x04 \x03(\tR\x0esubResourceIds\"8\n" +
-	"\fJobErrorList\x12(\n" +
-	"\x05items\x18\x01 \x03(\v2\x12.core.JobErrorInfoR\x05items\"I\n" +
-	"\fJobErrorInfo\x12\x19\n" +
-	"\x05index\x18\x01 \x01(\x05H\x00R\x05index\x88\x01\x01\x12\x14\n" +
-	"\x05error\x18\x02 \x01(\tR\x05errorB\b\n" +
-	"\x06_index\"6\n" +
+	"\x06status\x18\x03 \x01(\tR\x06status\x12#\n" +
+	"\rresource_type\x18\x05 \x01(\tR\fresourceType\x12=\n" +
+	"\rsub_resources\x18\x06 \x03(\v2\x18.core.JobSubResourceInfoR\fsubResources\x12\x14\n" +
+	"\x05error\x18\a \x01(\tR\x05errorJ\x04\b\x04\x10\x05\"I\n" +
+	"\x12JobSubResourceInfo\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12#\n" +
+	"\rresource_type\x18\x02 \x01(\tR\fresourceType\"6\n" +
 	"\n" +
 	"ExportInfo\x12\x10\n" +
 	"\x03url\x18\x05 \x01(\tR\x03urlJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03J\x04\b\x03\x10\x04J\x04\b\x04\x10\x052\x83\x01\n" +
@@ -719,7 +681,7 @@ func file_core_core_async_proto_rawDescGZIP() []byte {
 	return file_core_core_async_proto_rawDescData
 }
 
-var file_core_core_async_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_core_core_async_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_core_core_async_proto_goTypes = []any{
 	(*GetJobRequest)(nil),         // 0: core.GetJobRequest
 	(*GetJobResponse)(nil),        // 1: core.GetJobResponse
@@ -728,34 +690,32 @@ var file_core_core_async_proto_goTypes = []any{
 	(*JobInfo)(nil),               // 4: core.JobInfo
 	(*JobResultList)(nil),         // 5: core.JobResultList
 	(*JobResultInfo)(nil),         // 6: core.JobResultInfo
-	(*JobErrorList)(nil),          // 7: core.JobErrorList
-	(*JobErrorInfo)(nil),          // 8: core.JobErrorInfo
-	(*ExportInfo)(nil),            // 9: core.ExportInfo
-	(*timestamppb.Timestamp)(nil), // 10: google.protobuf.Timestamp
+	(*JobSubResourceInfo)(nil),    // 7: core.JobSubResourceInfo
+	(*ExportInfo)(nil),            // 8: core.ExportInfo
+	(*timestamppb.Timestamp)(nil), // 9: google.protobuf.Timestamp
 }
 var file_core_core_async_proto_depIdxs = []int32{
 	4,  // 0: core.GetJobResponse.job:type_name -> core.JobInfo
 	4,  // 1: core.CancelJobResponse.job:type_name -> core.JobInfo
 	5,  // 2: core.JobInfo.results:type_name -> core.JobResultList
-	7,  // 3: core.JobInfo.errors:type_name -> core.JobErrorList
-	10, // 4: core.JobInfo.started_at:type_name -> google.protobuf.Timestamp
-	10, // 5: core.JobInfo.completed_at:type_name -> google.protobuf.Timestamp
-	10, // 6: core.JobInfo.failed_at:type_name -> google.protobuf.Timestamp
-	10, // 7: core.JobInfo.cancelled_at:type_name -> google.protobuf.Timestamp
-	10, // 8: core.JobInfo.created_at:type_name -> google.protobuf.Timestamp
-	10, // 9: core.JobInfo.updated_at:type_name -> google.protobuf.Timestamp
-	9,  // 10: core.JobInfo.export:type_name -> core.ExportInfo
-	6,  // 11: core.JobResultList.items:type_name -> core.JobResultInfo
-	8,  // 12: core.JobErrorList.items:type_name -> core.JobErrorInfo
-	0,  // 13: core.CoreJobService.GetJob:input_type -> core.GetJobRequest
-	2,  // 14: core.CoreJobService.CancelJob:input_type -> core.CancelJobRequest
-	1,  // 15: core.CoreJobService.GetJob:output_type -> core.GetJobResponse
-	3,  // 16: core.CoreJobService.CancelJob:output_type -> core.CancelJobResponse
-	15, // [15:17] is the sub-list for method output_type
-	13, // [13:15] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	9,  // 3: core.JobInfo.started_at:type_name -> google.protobuf.Timestamp
+	9,  // 4: core.JobInfo.completed_at:type_name -> google.protobuf.Timestamp
+	9,  // 5: core.JobInfo.failed_at:type_name -> google.protobuf.Timestamp
+	9,  // 6: core.JobInfo.cancelled_at:type_name -> google.protobuf.Timestamp
+	9,  // 7: core.JobInfo.created_at:type_name -> google.protobuf.Timestamp
+	9,  // 8: core.JobInfo.updated_at:type_name -> google.protobuf.Timestamp
+	8,  // 9: core.JobInfo.export:type_name -> core.ExportInfo
+	6,  // 10: core.JobResultList.items:type_name -> core.JobResultInfo
+	7,  // 11: core.JobResultInfo.sub_resources:type_name -> core.JobSubResourceInfo
+	0,  // 12: core.CoreJobService.GetJob:input_type -> core.GetJobRequest
+	2,  // 13: core.CoreJobService.CancelJob:input_type -> core.CancelJobRequest
+	1,  // 14: core.CoreJobService.GetJob:output_type -> core.GetJobResponse
+	3,  // 15: core.CoreJobService.CancelJob:output_type -> core.CancelJobResponse
+	14, // [14:16] is the sub-list for method output_type
+	12, // [12:14] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_core_core_async_proto_init() }
@@ -764,14 +724,13 @@ func file_core_core_async_proto_init() {
 		return
 	}
 	file_core_core_async_proto_msgTypes[4].OneofWrappers = []any{}
-	file_core_core_async_proto_msgTypes[8].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_core_async_proto_rawDesc), len(file_core_core_async_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   10,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

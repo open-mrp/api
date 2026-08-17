@@ -34,7 +34,7 @@ client_settings:
   # info.version by `make stainless` (see tools/apidocs/stainless.go).
   default_headers:
     Augno-Version:
-      value: "1.0.forge-preview.2"
+      value: "1.0.forge-preview.3"
       version_header: true
   bearer_token_refresh:
     method: PUT
@@ -354,9 +354,9 @@ resources:
           job: '#/components/schemas/Job'
           job_export: '#/components/schemas/JobExport'
           job_result: '#/components/schemas/JobResult'
+          list_job_result: '#/components/schemas/List_JobResult'
           quota_info: '#/components/schemas/QuotaInfo'
           response_error: '#/components/schemas/ResponseError'
-          row_error: '#/components/schemas/RowError'
       analytics:
         methods:
           update_sales: put /v1/core/analytics/sales

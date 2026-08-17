@@ -6142,6 +6142,8 @@ type FrozenAdherenceInfo struct {
 	LineAdherencePct      *float64               `protobuf:"fixed64,8,opt,name=line_adherence_pct,json=lineAdherencePct,proto3,oneof" json:"line_adherence_pct,omitempty"`
 	UnitsAdherencePct     *float64               `protobuf:"fixed64,9,opt,name=units_adherence_pct,json=unitsAdherencePct,proto3,oneof" json:"units_adherence_pct,omitempty"`
 	FrozenThroughDate     *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=frozen_through_date,json=frozenThroughDate,proto3,oneof" json:"frozen_through_date,omitempty"`
+	OffPlanLines          int64                  `protobuf:"varint,11,opt,name=off_plan_lines,json=offPlanLines,proto3" json:"off_plan_lines,omitempty"`
+	OffPlanQuantity       float64                `protobuf:"fixed64,12,opt,name=off_plan_quantity,json=offPlanQuantity,proto3" json:"off_plan_quantity,omitempty"`
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
@@ -6246,18 +6248,33 @@ func (x *FrozenAdherenceInfo) GetFrozenThroughDate() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *FrozenAdherenceInfo) GetOffPlanLines() int64 {
+	if x != nil {
+		return x.OffPlanLines
+	}
+	return 0
+}
+
+func (x *FrozenAdherenceInfo) GetOffPlanQuantity() float64 {
+	if x != nil {
+		return x.OffPlanQuantity
+	}
+	return 0
+}
+
 type AnalyzeScheduleAttainmentResponse struct {
-	state               protoimpl.MessageState  `protogen:"open.v1"`
-	StartDate           *timestamppb.Timestamp  `protobuf:"bytes,1,opt,name=start_date,json=startDate,proto3" json:"start_date,omitempty"`
-	EndDate             *timestamppb.Timestamp  `protobuf:"bytes,2,opt,name=end_date,json=endDate,proto3" json:"end_date,omitempty"`
-	GroupBy             string                  `protobuf:"bytes,3,opt,name=group_by,json=groupBy,proto3" json:"group_by,omitempty"`
-	BaselineScheduleIds []string                `protobuf:"bytes,4,rep,name=baseline_schedule_ids,json=baselineScheduleIds,proto3" json:"baseline_schedule_ids,omitempty"`
-	Buckets             []*AttainmentBucketInfo `protobuf:"bytes,5,rep,name=buckets,proto3" json:"buckets,omitempty"`
-	Totals              *AttainmentBucketInfo   `protobuf:"bytes,6,opt,name=totals,proto3" json:"totals,omitempty"`
-	FrozenAdherence     []*FrozenAdherenceInfo  `protobuf:"bytes,7,rep,name=frozen_adherence,json=frozenAdherence,proto3" json:"frozen_adherence,omitempty"`
-	HasBaseline         bool                    `protobuf:"varint,8,opt,name=has_baseline,json=hasBaseline,proto3" json:"has_baseline,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	state                 protoimpl.MessageState  `protogen:"open.v1"`
+	StartDate             *timestamppb.Timestamp  `protobuf:"bytes,1,opt,name=start_date,json=startDate,proto3" json:"start_date,omitempty"`
+	EndDate               *timestamppb.Timestamp  `protobuf:"bytes,2,opt,name=end_date,json=endDate,proto3" json:"end_date,omitempty"`
+	GroupBy               string                  `protobuf:"bytes,3,opt,name=group_by,json=groupBy,proto3" json:"group_by,omitempty"`
+	BaselineScheduleIds   []string                `protobuf:"bytes,4,rep,name=baseline_schedule_ids,json=baselineScheduleIds,proto3" json:"baseline_schedule_ids,omitempty"`
+	Buckets               []*AttainmentBucketInfo `protobuf:"bytes,5,rep,name=buckets,proto3" json:"buckets,omitempty"`
+	Totals                *AttainmentBucketInfo   `protobuf:"bytes,6,opt,name=totals,proto3" json:"totals,omitempty"`
+	FrozenAdherence       []*FrozenAdherenceInfo  `protobuf:"bytes,7,rep,name=frozen_adherence,json=frozenAdherence,proto3" json:"frozen_adherence,omitempty"`
+	HasBaseline           bool                    `protobuf:"varint,8,opt,name=has_baseline,json=hasBaseline,proto3" json:"has_baseline,omitempty"`
+	ScheduledMachineCount int64                   `protobuf:"varint,9,opt,name=scheduled_machine_count,json=scheduledMachineCount,proto3" json:"scheduled_machine_count,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *AnalyzeScheduleAttainmentResponse) Reset() {
@@ -6344,6 +6361,13 @@ func (x *AnalyzeScheduleAttainmentResponse) GetHasBaseline() bool {
 		return x.HasBaseline
 	}
 	return false
+}
+
+func (x *AnalyzeScheduleAttainmentResponse) GetScheduledMachineCount() int64 {
+	if x != nil {
+		return x.ScheduledMachineCount
+	}
+	return 0
 }
 
 var File_core_core_analytics_proto protoreflect.FileDescriptor
@@ -6931,7 +6955,7 @@ const file_core_core_analytics_proto_rawDesc = "" +
 	"\x10output_ratio_pct\x18\r \x01(\x01H\x02R\x0eoutputRatioPct\x88\x01\x01B\x12\n" +
 	"\x10_week_start_dateB\x11\n" +
 	"\x0f_attainment_pctB\x13\n" +
-	"\x11_output_ratio_pct\"\xa4\x04\n" +
+	"\x11_output_ratio_pct\"\xf6\x04\n" +
 	"\x13FrozenAdherenceInfo\x12\x1f\n" +
 	"\vschedule_id\x18\x01 \x01(\tR\n" +
 	"scheduleId\x12\x18\n" +
@@ -6945,10 +6969,12 @@ const file_core_core_analytics_proto_rawDesc = "" +
 	"\x12line_adherence_pct\x18\b \x01(\x01H\x00R\x10lineAdherencePct\x88\x01\x01\x123\n" +
 	"\x13units_adherence_pct\x18\t \x01(\x01H\x01R\x11unitsAdherencePct\x88\x01\x01\x12O\n" +
 	"\x13frozen_through_date\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampH\x02R\x11frozenThroughDate\x88\x01\x01B\x15\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampH\x02R\x11frozenThroughDate\x88\x01\x01\x12$\n" +
+	"\x0eoff_plan_lines\x18\v \x01(\x03R\foffPlanLines\x12*\n" +
+	"\x11off_plan_quantity\x18\f \x01(\x01R\x0foffPlanQuantityB\x15\n" +
 	"\x13_line_adherence_pctB\x16\n" +
 	"\x14_units_adherence_pctB\x16\n" +
-	"\x14_frozen_through_date\"\xb7\x03\n" +
+	"\x14_frozen_through_date\"\xef\x03\n" +
 	"!AnalyzeScheduleAttainmentResponse\x129\n" +
 	"\n" +
 	"start_date\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\tstartDate\x125\n" +
@@ -6958,7 +6984,8 @@ const file_core_core_analytics_proto_rawDesc = "" +
 	"\abuckets\x18\x05 \x03(\v2\x1a.core.AttainmentBucketInfoR\abuckets\x122\n" +
 	"\x06totals\x18\x06 \x01(\v2\x1a.core.AttainmentBucketInfoR\x06totals\x12D\n" +
 	"\x10frozen_adherence\x18\a \x03(\v2\x19.core.FrozenAdherenceInfoR\x0ffrozenAdherence\x12!\n" +
-	"\fhas_baseline\x18\b \x01(\bR\vhasBaselineB\x18Z\x16shared/proto/core;coreb\x06proto3"
+	"\fhas_baseline\x18\b \x01(\bR\vhasBaseline\x126\n" +
+	"\x17scheduled_machine_count\x18\t \x01(\x03R\x15scheduledMachineCountB\x18Z\x16shared/proto/core;coreb\x06proto3"
 
 var (
 	file_core_core_analytics_proto_rawDescOnce sync.Once

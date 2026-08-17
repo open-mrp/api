@@ -66,19 +66,8 @@ func bulkUpsertScanningStationsJob(t *testing.T, stations ...map[string]any) map
 func bulkUpsertScanningStationIDs(t *testing.T, stations ...map[string]any) (createdIDs, updatedIDs []string) {
 	t.Helper()
 	job := bulkUpsertScanningStationsJob(t, stations...)
-	require.NotEmpty(t, jsonArray(job, "results"), "a completed job must carry results")
+	require.NotEmpty(t, jobResults(job), "a completed job must carry results")
 	return jobResultIDs(job)
-}
-
-// scanningStationJobErrors reads the per-row failures a completed bulk-upsert job recorded.
-func scanningStationJobErrors(job map[string]any) []map[string]any {
-	var out []map[string]any
-	for _, raw := range jsonArray(job, "errors") {
-		if m, ok := raw.(map[string]any); ok {
-			out = append(out, m)
-		}
-	}
-	return out
 }
 
 func TestScanningStations_BulkUpsert_AllCreates(t *testing.T) {
@@ -192,8 +181,8 @@ func TestScanningStations_BulkUpsert_RejectsDepartmentMove(t *testing.T) {
 	row := bulkStationRow(name)
 	row["department"] = map[string]any{"name": "Washing"}
 	job := bulkUpsertScanningStationsJob(t, row)
-	assert.Empty(t, jobResults(job), "an immutable-department move must not be written")
-	errs := scanningStationJobErrors(job)
+	assert.Empty(t, jobWrittenResults(job), "an immutable-department move must not be written")
+	errs := jobErrors(job)
 	require.Len(t, errs, 1)
 	assert.Equal(t, "department", jsonField(jobRowError(errs[0]), "param"))
 }
@@ -210,8 +199,8 @@ func TestScanningStations_BulkUpsert_RejectsTypeChange(t *testing.T) {
 	row := bulkStationRow(name)
 	row["type"] = "split_batch"
 	job := bulkUpsertScanningStationsJob(t, row)
-	assert.Empty(t, jobResults(job), "an immutable-type change must not be written")
-	errs := scanningStationJobErrors(job)
+	assert.Empty(t, jobWrittenResults(job), "an immutable-type change must not be written")
+	errs := jobErrors(job)
 	require.Len(t, errs, 1)
 	assert.Equal(t, "type", jsonField(jobRowError(errs[0]), "param"))
 }

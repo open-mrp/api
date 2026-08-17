@@ -62,7 +62,7 @@ func acceptBulkUpsertUnits(t *testing.T, units ...map[string]any) string {
 func bulkUpsertUnits(t *testing.T, units ...map[string]any) (createdIDs, updatedIDs []string) {
 	t.Helper()
 	job := bulkUpsertUnitsJob(t, units...)
-	require.NotEmpty(t, jsonArray(job, "results"), "a completed job must carry results")
+	require.NotEmpty(t, jobResults(job), "a completed job must carry results")
 	return jobResultIDs(job)
 }
 
@@ -74,17 +74,6 @@ func bulkUpsertUnitsJob(t *testing.T, units ...map[string]any) map[string]any {
 	job := pollJobUntilTerminal(t, acceptBulkUpsertUnits(t, units...))
 	require.Equal(t, "completed", jsonField(job, "status"), "job should complete: %v", job)
 	return job
-}
-
-// unitJobErrors reads the per-row failures a completed bulk-upsert job recorded.
-func unitJobErrors(job map[string]any) []map[string]any {
-	var out []map[string]any
-	for _, raw := range jsonArray(job, "errors") {
-		if m, ok := raw.(map[string]any); ok {
-			out = append(out, m)
-		}
-	}
-	return out
 }
 
 // --- List ---
@@ -354,7 +343,7 @@ func TestUnits_BulkUpsert_ResponseShape(t *testing.T) {
 	require.Len(t, createdIDs, 1)
 	entry := jobResults(job)[0]
 	assert.Equal(t, float64(0), entry["index"], "the result names request row 0")
-	assert.Equal(t, "created", entry["action"])
+	assert.Equal(t, "created", entry["status"])
 	assertIDFormat(t, createdIDs[0], "un")
 	defer cleanupUnitIDs([]string{createdIDs[0]})
 }
@@ -539,7 +528,7 @@ func TestUnits_BulkUpsert_NameAndAbbrConflict(t *testing.T) {
 		"is_base_unit":       false,
 	})
 
-	rowErrs := unitJobErrors(job)
+	rowErrs := jobErrors(job)
 	require.Len(t, rowErrs, 1, "the conflicting row is recorded in errors")
 	msg := jobRowErrorMessage(rowErrs[0])
 	assert.Contains(t, msg, name1)
@@ -558,7 +547,7 @@ func TestUnits_BulkUpsert_DimensionCodeImmutable(t *testing.T) {
 	// Changing the dimension code is rejected against the existing row: accepted (202),
 	// recorded as a per-row failure on the completed job.
 	job := bulkUpsertUnitsJob(t, upsertUnitInput(name, abbr, "mass"))
-	rowErrs := unitJobErrors(job)
+	rowErrs := jobErrors(job)
 	require.Len(t, rowErrs, 1)
 	msg := jobRowErrorMessage(rowErrs[0])
 	assert.Contains(t, msg, "immutable")
@@ -585,7 +574,7 @@ func TestUnits_BulkUpsert_IsBaseUnitImmutable(t *testing.T) {
 		"offset_denominator": "1",
 		"is_base_unit":       true,
 	})
-	rowErrs := unitJobErrors(job)
+	rowErrs := jobErrors(job)
 	require.Len(t, rowErrs, 1)
 	msg := jobRowErrorMessage(rowErrs[0])
 	assert.Contains(t, msg, "IsBaseUnit")
@@ -614,7 +603,7 @@ func TestUnits_BulkUpsert_PartialSuccess(t *testing.T) {
 	defer cleanupUnitIDs([]string{created[0]})
 	assert.Equal(t, float64(0), jobResults(job)[0]["index"], "the surviving result names request row 0")
 
-	rowErrs := unitJobErrors(job)
+	rowErrs := jobErrors(job)
 	require.Len(t, rowErrs, 1, "the bad row is recorded")
 	assert.Equal(t, float64(1), rowErrs[0]["index"], "the failure names the second row")
 	code, _ := jobRowError(rowErrs[0])["code"].(string)

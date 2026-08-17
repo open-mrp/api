@@ -51,6 +51,8 @@ func TestAccountUsers_ListResponseShape(t *testing.T) {
 		assert.NotEmpty(t, jsonField(m, "status"))
 		assert.NotEmpty(t, jsonField(m, "created_at"))
 		assert.NotEmpty(t, jsonField(m, "updated_at"))
+		_, ok := m["is_commission_eligible"].(bool)
+		assert.True(t, ok, "is_commission_eligible must always be present as a bool")
 	}
 }
 
@@ -318,6 +320,7 @@ func TestAccountUsers_CreateAndUpdateAllFields(t *testing.T) {
 	updRole := jsonObject(updated, "role")
 	require.NotNil(t, updRole, "role should be updated")
 	assert.Equal(t, SeedSalesRepRoleID, jsonField(updRole, "id"))
+	assert.Equal(t, true, updated["is_commission_eligible"])
 
 	// Department should be preserved
 	updDept := jsonObject(updated, "department")
@@ -704,6 +707,7 @@ func TestAccountUsers_OmittedFields(t *testing.T) {
 			assert.False(t, present, "%s should not be exposed on the account_user resource", key)
 		}
 		assertNilField(t, got, "last_used_at")
+		assert.Equal(t, false, got["is_commission_eligible"])
 		assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
 		assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
 
@@ -781,4 +785,68 @@ func TestAccountUsers_OmittedFields(t *testing.T) {
 		require.NotNil(t, dept, "department should be preserved")
 		assert.Equal(t, SeedDepartmentID, jsonField(dept, "id"))
 	})
+}
+
+func TestAccountUsers_CommissionEligibleOnCustomRole(t *testing.T) {
+	t.Parallel()
+
+	roleStatus, roleBody, err := apiClient.Post(rolesPath, map[string]any{
+		"name":        uniqueName("e2e-au-comm-role"),
+		"permissions": []string{"customers:read"},
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, roleStatus, roleBody)
+	roleID := jsonField(parseJSON(roleBody), "id")
+	require.NotEmpty(t, roleID)
+	defer apiClient.Delete(rolesPath + "/" + roleID)
+
+	name := uniqueName("e2e-au-comm")
+	email := name + "@e2e-test.augno.com"
+	createStatus, createBody, err := apiClient.Post(accountUsersPath, map[string]any{
+		"name":                   name,
+		"email":                  email,
+		"role_id":                roleID,
+		"is_commission_eligible": true,
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, createStatus, createBody)
+
+	created := parseJSON(createBody)
+	id := jsonField(created, "id")
+	require.NotEmpty(t, id)
+	defer removeAccountUser(id)
+	assert.Equal(t, true, created["is_commission_eligible"])
+
+	assertListContainsID(t, accountUsersPath, url.Values{"is_commission_eligible": {"true"}}, id)
+	assert.Nil(t, listFindByField(t, accountUsersPath, url.Values{"role_type": {"sales_rep"}}, "id", id),
+		"commission-eligible custom-role user must not appear in role_type=sales_rep")
+	assert.Nil(t, listFindByField(t, accountUsersPath, url.Values{"is_commission_eligible": {"false"}}, "id", id))
+}
+
+func TestAccountUsers_SalesRepForcesCommissionEligible(t *testing.T) {
+	t.Parallel()
+
+	name := uniqueName("e2e-au-srep-comm")
+	email := name + "@e2e-test.augno.com"
+	createStatus, createBody, err := apiClient.Post(accountUsersPath, map[string]any{
+		"name":    name,
+		"email":   email,
+		"role_id": SeedSalesRepRoleID,
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, createStatus, createBody)
+
+	created := parseJSON(createBody)
+	id := jsonField(created, "id")
+	require.NotEmpty(t, id)
+	defer removeAccountUser(id)
+	assert.Equal(t, true, created["is_commission_eligible"])
+
+	patchStatus, patchBody, err := apiClient.Patch(accountUsersPath+"/"+id, map[string]any{
+		"is_commission_eligible": false,
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 400, patchStatus, patchBody)
+	errObj := requireErrorResponse(t, patchBody, "validation_failed", "invalid_request_error")
+	assertErrorParam(t, errObj, "is_commission_eligible")
 }

@@ -35,16 +35,15 @@ message CancelJobResponse {
 
 // JobInfo represents a job: the record of a piece of asynchronous work, from the request that raised it through to its outcome.
 message JobInfo {
+  // 5-7 carried the creator's name, username and email, denormalized off account_user.
+  // The gateway resolves the actor from created_by_id instead. 9 and 10 carried a
+  // separate error list and one-line summary, both folded into results and error.
+  reserved 5, 6, 7, 9, 10;
   string id = 1;
   string type = 2;
   string status = 3;
   optional string created_by_id = 4;
-  optional string created_by_name = 5;
-  optional string created_by_username = 6;
-  optional string created_by_email = 7;
   JobResultList results = 8;
-  JobErrorList errors = 9;
-  optional string error_summary = 10;
   optional google.protobuf.Timestamp started_at = 11;
   optional google.protobuf.Timestamp completed_at = 12;
   optional google.protobuf.Timestamp failed_at = 13;
@@ -53,36 +52,49 @@ message JobInfo {
   google.protobuf.Timestamp updated_at = 16;
   // Set only on a job whose work was rendering a file.
   optional ExportInfo export = 17;
+  // Error is the failure that sank the job as a whole, as the canonical client-facing
+  // error object in JSON — the same bytes a synchronous error response carries under its
+  // `error` key. It stays JSON rather than becoming proto fields because both sides
+  // already share the Go type that produces it (apierror.ResponseError), so there is
+  // nothing here to keep in sync. A row that failed carries its own on the result.
+  optional string error = 18;
+  // ResourceType is the object type the job operates on, e.g. "production_run". It says
+  // what a job that produced no results was for, which `type` — a verb — cannot.
+  optional string resource_type = 19;
 }
 
 message JobResultList {
   repeated JobResultInfo items = 1;
+  // Truncated reports that the executor recorded more rows than the list carries.
+  bool truncated = 2;
 }
 
+// JobResultInfo is what became of one row of the request: the resource it produced, or
+// the error it was rejected with.
 message JobResultInfo {
-  // Index is of the request row. a failure of the job as a whole has no index
+  // 4 carried the sub-resources as bare ids, before they gained their object types.
+  reserved 4;
+  // Index is the zero-based row of the request this result names.
   int32 index = 1;
+  // Id of the resource the row produced. Empty when the row failed.
   string id = 2;
-  // "created" or "updated".
-  string action = 3;
-  // SubResourceIds resources created alongside the row's own resource. eg:production run's batches. Empty otherwise.
-  repeated string sub_resource_ids = 4;
+  // "created", "updated" or "failed".
+  string status = 3;
+  // ResourceType is the object type of id, e.g. "product". Empty when the row failed.
+  string resource_type = 5;
+  // SubResources are resources produced alongside the row's own, e.g. a production run's
+  // batches. Empty for operations that produce none.
+  repeated JobSubResourceInfo sub_resources = 6;
+  // Error is why the row was rejected, in the same JSON form as JobInfo.error. Empty
+  // unless status is "failed".
+  string error = 7;
 }
 
-// JobErrorList wraps the errors for the same reason JobResultList wraps results.
-message JobErrorList {
-  repeated JobErrorInfo items = 1;
-}
-
-// JobErrorInfo is one failure.
-message JobErrorInfo {
-  // Index is of the request row. a failure of the job as a whole has no index
-  optional int32 index = 1;
-  // Error is the canonical client-facing error object as JSON — the same bytes a
-  // synchronous error response carries under its `error` key. It stays JSON rather
-  // than becoming proto fields because both sides already share the Go type that
-  // produces it (apierror.ResponseError), so there is nothing here to keep in sync.
-  string error = 2;
+// JobSubResourceInfo is one resource produced alongside a result row's own.
+message JobSubResourceInfo {
+  string id = 1;
+  // ResourceType is the object type of id, e.g. "batch".
+  string resource_type = 2;
 }
 
 // Points an export job at its download. It rides on JobInfo, so a client learns one

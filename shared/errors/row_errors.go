@@ -2,28 +2,19 @@ package apierror
 
 import "strings"
 
-// pairs one row of a bulk request with the failure it produced; a failure of the request
-// as a whole carries no index
+// pairs one row of a bulk request with the failure it produced. Internal to the services
+// that run bulk work: the API reports a row's failure on the job result for that row, so
+// this never reaches the wire.
 type RowError struct {
-	// Zero-based row of the request this failure names. Absent for a failure of the whole request.
-	Index *int `json:"index,omitzero"`
+	// Zero-based row of the request this failure names.
+	Index int
 	// What went wrong — the same error object a synchronous error response carries.
-	Error ResponseError `json:"error" validate:"required"`
-}
-
-// returns a representative instance for OpenAPI documentation generation
-func (r RowError) SchemaExample() any {
-	return RowError{Index: new(2), Error: ResponseError{}.SchemaExample().(ResponseError)}
+	Error ResponseError
 }
 
 // records a row that failed, carrying the canonical client-facing error object
 func NewRowError(index int, apiErr *APIError) RowError {
-	return RowError{Index: &index, Error: apiErr.ToResponseError()}
-}
-
-// records a failure that belongs to no single row, such as one that sinks the whole batch
-func NewBatchError(apiErr *APIError) RowError {
-	return RowError{Error: apiErr.ToResponseError()}
+	return RowError{Index: index, Error: apiErr.ToResponseError()}
 }
 
 // collects the failures found across a bulk request's rows, keeping each one whole
@@ -46,7 +37,7 @@ func (e *RowErrors) Any() bool {
 	return len(e.entries) > 0
 }
 
-// hands back the collected failures, the same shape a job records
+// hands back the collected failures
 func (e *RowErrors) Entries() []RowError {
 	return e.entries
 }

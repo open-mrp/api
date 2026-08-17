@@ -364,7 +364,7 @@ func (suite *JobSvcSystemSurfaceTestSuite) TestCompleteJob_RecordsResults() {
 	var captured domain.UpdateJobRepositoryParams
 	suite.expectTransition(jobID, accountID, nil, &captured)
 
-	results := []domain.RowResult{{Index: 0, ID: "pr_1", Action: constants.JobResultActionCreated}}
+	results := []domain.RowResult{{Index: 0, ID: "pr_1", Status: constants.JobResultStatusCreated, ResourceType: constants.ObjectTypeProductionRun}}
 
 	apiErr := suite.jobSvc.CompleteJob(ctx, domain.CompleteJobParams{
 		JobID:   jobID,
@@ -500,14 +500,13 @@ func (suite *JobSvcSystemSurfaceTestSuite) TestFailJob_RecordsAReadableReason() 
 			suite.jobSvc.FailJob(ctx, domain.FailJobParams{JobID: jobID, ApiErr: tc.cause})
 
 			suite.NotNil(captured.FailedAt)
-			suite.NotNil(captured.ErrorSummary)
-			suite.Equal(tc.want, *captured.ErrorSummary)
-			suite.NotContains(*captured.ErrorSummary, "connection refused")
-			// A whole-job failure records the same entry shape row failures use — one
-			// entry wrapping the cause's canonical ResponseError, with no index. The
-			// internals must not survive the rendering.
-			suite.Equal([]apierror.RowError{{Error: tc.cause.ToResponseError()}}, captured.Errors)
-			suite.NotContains(string(marshalJSON(captured.Errors)), "connection refused")
+			// A whole-job failure names no row, so it settles on the job as the cause's
+			// canonical ResponseError. The internals must not survive the rendering.
+			suite.Require().NotNil(captured.Error)
+			suite.Equal(tc.want, captured.Error.Message)
+			suite.NotContains(string(marshalJSON(captured.Error)), "connection refused")
+			// It is the job that failed, not any one row, so no row is invented for it.
+			suite.Empty(captured.Results)
 		})
 	}
 }
@@ -532,42 +531,60 @@ func (suite *JobSvcSystemSurfaceTestSuite) TestFailJob_LeavesTheJobRetryable() {
 	suite.False(failed.IsTerminal())
 }
 
-// A thousand-row batch that fails wholesale must not put a thousand entries on a job the
-// client polls in a loop. The count survives on the summary so the list cannot mislead.
-func (suite *JobSvcSystemSurfaceTestSuite) TestCompleteJob_CapsTheRowErrorsItRecords() {
+// A thousand-row batch must not put a thousand entries on a job the client polls in a
+// loop. The record says it was trimmed, so a short list cannot read as the whole story.
+func (suite *JobSvcSystemSurfaceTestSuite) TestCompleteJob_CapsTheRowResultsItRecords() {
 	accountID := genTestID(suite.T(), id.AccountIDPrefix)
 	ctx := jobActorCtx(suite.T(), accountID, nil)
 	jobID := genTestID(suite.T(), id.JobIDPrefix)
 
-	rowErrors := make([]apierror.RowError, 0, 1000)
+	// Failures sit at the end of the request, behind more written rows than the cap
+	// allows, so a naive head-of-list trim would drop every one of them.
+	results := make([]domain.RowResult, 0, 1000)
 	for i := range 1000 {
-		rowErrors = append(rowErrors, apierror.NewRowError(i, apierror.NewValidationError("bad row")))
+		row := domain.RowResult{Index: i, ID: "pr_1", Status: constants.JobResultStatusCreated}
+		if i >= 990 {
+			responseErr := apierror.NewValidationError("bad row").ToResponseError()
+			row = domain.RowResult{Index: i, Status: constants.JobResultStatusFailed, Error: &responseErr}
+		}
+		results = append(results, row)
 	}
 
 	var captured domain.UpdateJobRepositoryParams
 	suite.expectTransition(jobID, accountID, nil, &captured)
 
-	suite.Require().Nil(suite.jobSvc.CompleteJob(ctx, domain.CompleteJobParams{JobID: jobID, Errors: rowErrors}))
+	suite.Require().Nil(suite.jobSvc.CompleteJob(ctx, domain.CompleteJobParams{JobID: jobID, Results: results}))
 
-	suite.Len(captured.Errors, maxRowErrors)
-	suite.Equal(0, *captured.Errors[0].Index, "the kept entries are the first rows, not an arbitrary slice")
-	suite.Require().NotNil(captured.ErrorSummary)
-	suite.Contains(*captured.ErrorSummary, "1000 rows failed")
+	suite.Len(captured.Results, maxRowResults)
+	suite.True(captured.ResultsTruncated, "a trimmed record must say so")
+
+	// Every failure survives the cut — the reason a row was rejected is worth more than
+	// an id the client can re-read — and what is kept stays in request order.
+	var failedCount int
+	for i, r := range captured.Results {
+		if r.Failed() {
+			failedCount++
+		}
+		if i > 0 && captured.Results[i-1].Index >= r.Index {
+			suite.Failf("the kept rows must stay in index order", "%d then %d", captured.Results[i-1].Index, r.Index)
+		}
+	}
+	suite.Equal(10, failedCount)
 }
 
 // A batch inside the cap is recorded whole, and says nothing it does not need to.
-func (suite *JobSvcSystemSurfaceTestSuite) TestCompleteJob_KeepsEveryErrorUnderTheCap() {
+func (suite *JobSvcSystemSurfaceTestSuite) TestCompleteJob_KeepsEveryRowUnderTheCap() {
 	accountID := genTestID(suite.T(), id.AccountIDPrefix)
 	ctx := jobActorCtx(suite.T(), accountID, nil)
 	jobID := genTestID(suite.T(), id.JobIDPrefix)
 
-	rowErrors := []apierror.RowError{apierror.NewRowError(0, apierror.NewValidationError("bad row"))}
+	results := []domain.RowResult{{Index: 0, ID: "pr_1", Status: constants.JobResultStatusCreated}}
 
 	var captured domain.UpdateJobRepositoryParams
 	suite.expectTransition(jobID, accountID, nil, &captured)
 
-	suite.Require().Nil(suite.jobSvc.CompleteJob(ctx, domain.CompleteJobParams{JobID: jobID, Errors: rowErrors}))
+	suite.Require().Nil(suite.jobSvc.CompleteJob(ctx, domain.CompleteJobParams{JobID: jobID, Results: results}))
 
-	suite.Equal(rowErrors, captured.Errors)
-	suite.Nil(captured.ErrorSummary)
+	suite.Equal(results, captured.Results)
+	suite.False(captured.ResultsTruncated)
 }

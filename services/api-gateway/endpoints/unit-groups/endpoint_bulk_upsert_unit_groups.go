@@ -77,6 +77,10 @@ func (e *BulkUpsertUnitGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*B
 		Public:            true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeJob,
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeJob,
+			Fields:     []string{"created_by", "created_by.role"},
+		}),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkUpsertUnitGroupsRequest) (*apiresource.Job, *apierror.APIError) {
 			return svc.(UnitGroupSvc).BulkUpsertUnitGroups
 		},

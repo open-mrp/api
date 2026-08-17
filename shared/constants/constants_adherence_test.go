@@ -261,7 +261,7 @@ var typeRegistry = map[string]any{
 	"OperatorRequirement":             OperatorRequirement(""),
 	"JobStatus":                       JobStatus(""),
 	"JobType":                         JobType(""),
-	"JobResultAction":                 JobResultAction(""),
+	"JobResultStatus":                 JobResultStatus(""),
 	"LeadTimeSource":                  LeadTimeSource(""),
 	"TransitSource":                   TransitSource(""),
 	"TransitEstimateSource":           TransitEstimateSource(""),

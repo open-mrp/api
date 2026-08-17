@@ -159,6 +159,7 @@ func resolveBulkRunIdentifiers(ctx context.Context, repos domain.RepoFactory, ac
 func (s *productionRunSvcImpl) bulkCreateSpec() bulkOperationSpec[domain.BulkCreateProductionRunParams, domain.BulkCreateProductionRunEventRun] {
 	return bulkOperationSpec[domain.BulkCreateProductionRunParams, domain.BulkCreateProductionRunEventRun]{
 		JobType:          constants.JobTypeBulkCreate,
+		ResourceType:     constants.ObjectTypeProductionRun,
 		RoutingKey:       messaging.BulkCreateProductionRuns.RoutingKey(),
 		PermissionDomain: types.PermissionDomainProductionRuns,
 		Actions:          []types.Action{types.ActionCreate},
@@ -312,6 +313,7 @@ func (s *productionRunSvcImpl) exportSpec() exportSpec[*domain.ProductionRunExpo
 		PermissionDomain: types.PermissionDomainProductionRuns,
 		Name:             "Production Runs",
 		Slug:             "production_runs",
+		ResourceType:     constants.ObjectTypeProductionRun,
 		Columns: []excel.ColumnSpec{
 			{Header: "ID", Key: "id", Width: 24},
 			{Header: "Number", Key: "number", Width: 18},
@@ -380,7 +382,7 @@ func derefStringOrEmpty(s *string) string {
 // the row's sub-resources
 func runRowResult(index int, runID string, batchIDs []string) domain.RowResult {
 	r := newRowResult(index, runID, true)
-	r.SubResourceIDs = batchIDs
+	r.SubResources = domain.NewSubResourceRefs(constants.ObjectTypeBatch, batchIDs)
 	return r
 }
 

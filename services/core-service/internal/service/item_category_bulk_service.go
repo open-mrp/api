@@ -260,6 +260,7 @@ func upsertItemCategoryInTx(txCtx context.Context, txRepos domain.RepoFactory, a
 func (s *itemCategorySvcImpl) bulkUpsertSpec() bulkOperationSpec[domain.UpsertItemCategoryParams, domain.ResolvedUpsertItemCategoryRow] {
 	return bulkOperationSpec[domain.UpsertItemCategoryParams, domain.ResolvedUpsertItemCategoryRow]{
 		JobType:          constants.JobTypeBulkUpsert,
+		ResourceType:     constants.ObjectTypeItemCategory,
 		RoutingKey:       messaging.BulkUpsertItemCategories.RoutingKey(),
 		PermissionDomain: types.PermissionDomainCategories,
 		Actions:          []types.Action{types.ActionCreate, types.ActionUpdate},
@@ -294,6 +295,7 @@ func (s *itemCategorySvcImpl) exportSpec() exportSpec[*domain.ItemCategoryFull, 
 		PermissionDomain: types.PermissionDomainCategories,
 		Name:             "Categories",
 		Slug:             "item_categories",
+		ResourceType:     constants.ObjectTypeItemCategory,
 		Columns: []excel.ColumnSpec{
 			{Header: "ID", Key: "id", Width: 28},
 			{Header: "Name", Key: "name", Width: 28},

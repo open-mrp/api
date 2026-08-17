@@ -95,6 +95,7 @@ SELECT
     au.department_id,
     au.status_code,
     au.last_used_at,
+    au.is_commission_eligible,
     au.created_at,
     au.updated_at
 FROM account_user au
@@ -105,6 +106,7 @@ WHERE au.account_id = ?
         sqlc.narg(role_type) IS NULL
         OR EXISTS (SELECT 1 FROM role r WHERE r.id = au.role_id AND r.role_type_code = sqlc.narg(role_type))
     )
+    AND (sqlc.narg(is_commission_eligible) IS NULL OR au.is_commission_eligible = sqlc.narg(is_commission_eligible))
     AND (sqlc.narg(query) IS NULL OR (
         MATCH(u.name) AGAINST(sqlc.narg(query) IN BOOLEAN MODE)
         OR u.username LIKE CONCAT('%', sqlc.narg(query_like), '%')
@@ -131,6 +133,7 @@ SELECT
     au.department_id,
     au.status_code,
     au.last_used_at,
+    au.is_commission_eligible,
     au.created_at,
     au.updated_at
 FROM account_user au
@@ -141,6 +144,7 @@ WHERE au.account_id = ?
         sqlc.narg(role_type) IS NULL
         OR EXISTS (SELECT 1 FROM role r WHERE r.id = au.role_id AND r.role_type_code = sqlc.narg(role_type))
     )
+    AND (sqlc.narg(is_commission_eligible) IS NULL OR au.is_commission_eligible = sqlc.narg(is_commission_eligible))
     AND (sqlc.narg(query) IS NULL OR (
         MATCH(u.name) AGAINST(sqlc.narg(query) IN BOOLEAN MODE)
         OR u.username LIKE CONCAT('%', sqlc.narg(query_like), '%')
@@ -171,6 +175,7 @@ SELECT
     d.updated_at AS department_updated_at,
     au.status_code,
     au.last_used_at,
+    au.is_commission_eligible,
     au.created_at,
     au.updated_at
 FROM account_user au
@@ -180,6 +185,7 @@ LEFT JOIN department d ON au.department_id = d.id
 WHERE au.account_id = ?
     AND (CASE WHEN sqlc.arg(include_removed) = true THEN true ELSE au.status_code != 'removed' END)
     AND (CASE WHEN sqlc.narg(role_type) IS NOT NULL THEN r.role_type_code = sqlc.narg(role_type) ELSE true END)
+    AND (sqlc.narg(is_commission_eligible) IS NULL OR au.is_commission_eligible = sqlc.narg(is_commission_eligible))
     AND (sqlc.narg(query) IS NULL OR (
         MATCH(u.name) AGAINST(sqlc.narg(query) IN BOOLEAN MODE)
         OR u.username LIKE CONCAT('%', sqlc.narg(query_like), '%')
@@ -213,6 +219,7 @@ SELECT
     d.updated_at AS department_updated_at,
     au.status_code,
     au.last_used_at,
+    au.is_commission_eligible,
     au.created_at,
     au.updated_at
 FROM account_user au
@@ -222,6 +229,7 @@ LEFT JOIN department d ON au.department_id = d.id
 WHERE au.account_id = ?
     AND (CASE WHEN sqlc.arg(include_removed) = true THEN true ELSE au.status_code != 'removed' END)
     AND (CASE WHEN sqlc.narg(role_type) IS NOT NULL THEN r.role_type_code = sqlc.narg(role_type) ELSE true END)
+    AND (sqlc.narg(is_commission_eligible) IS NULL OR au.is_commission_eligible = sqlc.narg(is_commission_eligible))
     AND (sqlc.narg(query) IS NULL OR (
         MATCH(u.name) AGAINST(sqlc.narg(query) IN BOOLEAN MODE)
         OR u.username LIKE CONCAT('%', sqlc.narg(query_like), '%')
@@ -246,6 +254,7 @@ WHERE au.account_id = ?
         sqlc.narg(role_type) IS NULL
         OR EXISTS (SELECT 1 FROM role r WHERE r.id = au.role_id AND r.role_type_code = sqlc.narg(role_type))
     )
+    AND (sqlc.narg(is_commission_eligible) IS NULL OR au.is_commission_eligible = sqlc.narg(is_commission_eligible))
     AND (sqlc.narg(query) IS NULL OR (
         MATCH(u.name) AGAINST(sqlc.narg(query) IN BOOLEAN MODE)
         OR u.username LIKE CONCAT('%', sqlc.narg(query_like), '%')
@@ -265,6 +274,7 @@ SELECT
     au.department_id,
     au.status_code,
     au.last_used_at,
+    au.is_commission_eligible,
     au.created_at,
     au.updated_at
 FROM account_user au
@@ -290,6 +300,7 @@ SELECT
     d.updated_at AS department_updated_at,
     au.status_code,
     au.last_used_at,
+    au.is_commission_eligible,
     au.created_at,
     au.updated_at
 FROM account_user au
@@ -317,6 +328,7 @@ SELECT
     d.updated_at AS department_updated_at,
     au.status_code,
     au.last_used_at,
+    au.is_commission_eligible,
     au.created_at,
     au.updated_at
 FROM account_user au
@@ -343,6 +355,7 @@ SELECT
     d.updated_at AS department_updated_at,
     au.status_code,
     au.last_used_at,
+    au.is_commission_eligible,
     au.created_at,
     au.updated_at
 FROM account_user au
@@ -374,6 +387,7 @@ SELECT
     au.department_id,
     au.status_code,
     au.last_used_at,
+    au.is_commission_eligible,
     au.created_at,
     au.updated_at
 FROM account_user au
@@ -382,13 +396,14 @@ WHERE au.id IN (sqlc.slice('ids'))
 AND au.account_id = sqlc.arg('account_id');
 
 -- name: InsertAccountUser :exec
-INSERT INTO account_user (id, account_id, user_id, role_id, department_id, status_code, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, NOW(3), NOW(3));
+INSERT INTO account_user (id, account_id, user_id, role_id, department_id, is_commission_eligible, status_code, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3));
 
 -- name: UpdateAccountUserRoleAndDepartment :exec
 UPDATE account_user
 SET role_id = sqlc.narg(role_id),
     department_id = sqlc.narg(department_id),
+    is_commission_eligible = sqlc.arg(is_commission_eligible),
     updated_at = NOW(3)
 WHERE id = ?;
 
@@ -403,6 +418,7 @@ UPDATE account_user
 SET status_code = 'active',
     role_id = sqlc.narg(role_id),
     department_id = sqlc.narg(department_id),
+    is_commission_eligible = sqlc.arg(is_commission_eligible),
     updated_at = NOW(3)
 WHERE account_id = ? AND user_id = ? AND status_code = 'removed';
 

@@ -27,41 +27,32 @@ func RegisterJobService(server *grpc.Server, jobSvc domain.JobSvc, exportSvc dom
 	pb.RegisterCoreJobServiceServer(server, &jobGRPCHandler{jobSvc: jobSvc, exportSvc: exportSvc})
 }
 
-// jobResultsToProto maps the job's results onto the wire. A nil list stays unset —
+// jobResultsToProto maps the job's row outcomes onto the wire. A nil list stays unset —
 // the job has recorded no results — while an empty one is sent as a present, empty
 // list, which is how "ran and wrote nothing" survives the crossing.
-func jobResultsToProto(results []domain.RowResult) *pb.JobResultList {
+func jobResultsToProto(results []domain.RowResult, truncated bool) *pb.JobResultList {
 	if results == nil {
 		return nil
 	}
 	items := make([]*pb.JobResultInfo, len(results))
 	for i, r := range results {
-		items[i] = &pb.JobResultInfo{
-			Index:          safeconv.IntToInt32(r.Index),
-			Id:             r.ID,
-			Action:         string(r.Action),
-			SubResourceIds: r.SubResourceIDs,
+		subs := make([]*pb.JobSubResourceInfo, len(r.SubResources))
+		for j, s := range r.SubResources {
+			subs[j] = &pb.JobSubResourceInfo{Id: s.ID, ResourceType: string(s.ResourceType)}
 		}
-	}
-	return &pb.JobResultList{Items: items}
-}
-
-// jobErrorsToProto maps the job's errors onto the wire, following the same nil/empty
-// rule as jobResultsToProto.
-func jobErrorsToProto(errs []apierror.RowError) *pb.JobErrorList {
-	if errs == nil {
-		return nil
-	}
-	items := make([]*pb.JobErrorInfo, len(errs))
-	for i, e := range errs {
-		item := &pb.JobErrorInfo{Error: marshalResponseError(e.Error)}
-		if e.Index != nil {
-			idx := safeconv.IntToInt32(*e.Index)
-			item.Index = &idx
+		item := &pb.JobResultInfo{
+			Index:        safeconv.IntToInt32(r.Index),
+			Id:           r.ID,
+			Status:       string(r.Status),
+			ResourceType: string(r.ResourceType),
+			SubResources: subs,
+		}
+		if r.Error != nil {
+			item.Error = marshalResponseError(*r.Error)
 		}
 		items[i] = item
 	}
-	return &pb.JobErrorList{Items: items}
+	return &pb.JobResultList{Items: items, Truncated: truncated}
 }
 
 // marshalResponseError renders the canonical client-facing error object for the wire.
@@ -86,19 +77,14 @@ func optionalTimestampToProto(t *time.Time) *timestamppb.Timestamp {
 }
 
 func jobToProto(job *domain.Job) *pb.JobInfo {
-	return &pb.JobInfo{
+	info := &pb.JobInfo{
 		Id:     job.ID,
 		Type:   string(job.Type),
 		Status: string(job.Status()),
 
-		CreatedById:       job.CreatedByID,
-		CreatedByName:     job.CreatedByName,
-		CreatedByUsername: job.CreatedByUsername,
-		CreatedByEmail:    job.CreatedByEmail,
+		CreatedById: job.CreatedByID,
 
-		Results:      jobResultsToProto(job.Results),
-		Errors:       jobErrorsToProto(job.Errors),
-		ErrorSummary: job.ErrorSummary,
+		Results: jobResultsToProto(job.Results, job.ResultsTruncated),
 
 		StartedAt:   optionalTimestampToProto(job.StartedAt),
 		CompletedAt: optionalTimestampToProto(job.CompletedAt),
@@ -107,6 +93,17 @@ func jobToProto(job *domain.Job) *pb.JobInfo {
 		CreatedAt:   timestamppb.New(job.CreatedAt),
 		UpdatedAt:   timestamppb.New(job.UpdatedAt),
 	}
+
+	if job.ResourceType != "" {
+		resourceType := string(job.ResourceType)
+		info.ResourceType = &resourceType
+	}
+	if job.Error != nil {
+		jobError := marshalResponseError(*job.Error)
+		info.Error = &jobError
+	}
+
+	return info
 }
 
 func (h *jobGRPCHandler) GetJob(ctx context.Context, req *pb.GetJobRequest) (*pb.GetJobResponse, error) {

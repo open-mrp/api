@@ -495,6 +495,13 @@ func init() {
 	})
 
 	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeJob,
+		Fields: []IncludeFieldDef{
+			{Key: "created_by", ObjectType: constants.ObjectTypeActor},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
 		ObjectType: constants.ObjectTypePick,
 		Fields: []IncludeFieldDef{
 			{Key: "sales_order", ObjectType: constants.ObjectTypeSalesOrder},

@@ -622,7 +622,7 @@ func (suite *ProductionRunBulkCreateTestSuite) TestBulkCreateProductionRuns_Reco
 	// what will be created.
 	jobRuns := result.Results
 	suite.Equal(jobRuns[0].ID, storedRuns[0].ProductionRunID)
-	suite.Equal(jobRuns[0].SubResourceIDs[0], storedRuns[0].Batches[0].BatchID)
+	suite.Equal(jobRuns[0].SubResources[0].ID, storedRuns[0].Batches[0].BatchID)
 }
 
 // --- ExecuteBulkCreateProductionRuns (consumer side) ---
@@ -750,16 +750,16 @@ func (suite *ProductionRunBulkCreateTestSuite) TestExecuteBulkCreateProductionRu
 		return calls, suite.executeJob(jobID, event.AccountID)
 	}
 
-	// assertRunRecordedAsFailed checks the single run was recorded in the job's errors
-	// (not created) and the job still completed.
+	// assertRunRecordedAsFailed checks the single run was recorded as a failed row (not
+	// created) and the job still completed.
 	assertRunRecordedAsFailed := func(calls jobLifecycleCalls, err *apierror.APIError) {
 		suite.Nil(err, "a per-row write failure is recorded, not propagated")
 		suite.Equal([]string{"start", "complete"}, calls.order)
 		results := calls.completed[0].Results
-		suite.Empty(results, "the failed run is not reported as created")
-		rowErrs := calls.completed[0].Errors
-		suite.Len(rowErrs, 1)
-		suite.Equal(0, rowErrIndex(rowErrs[0]))
+		suite.Len(results, 1)
+		suite.Equal(0, results[0].Index)
+		suite.Equal(constants.JobResultStatusFailed, results[0].Status)
+		suite.Empty(results[0].ID, "the failed run is not reported as created")
 	}
 
 	for depth, failingStage := range stages {
@@ -895,7 +895,11 @@ func (suite *ProductionRunBulkCreateTestSuite) TestExecuteBulkCreateProductionRu
 		results := calls.completed[0].Results
 		suite.Len(results, 1)
 		suite.Equal(event.Runs[0].ProductionRunID, results[0].ID)
-		suite.Equal([]string{event.Runs[0].Batches[0].BatchID}, results[0].SubResourceIDs)
+		suite.Equal(constants.ObjectTypeProductionRun, results[0].ResourceType)
+		suite.Equal(
+			[]domain.SubResourceRef{{ResourceType: constants.ObjectTypeBatch, ID: event.Runs[0].Batches[0].BatchID}},
+			results[0].SubResources,
+		)
 	})
 
 	// A row that fails to write is recorded in the job's errors and the job still
@@ -924,10 +928,10 @@ func (suite *ProductionRunBulkCreateTestSuite) TestExecuteBulkCreateProductionRu
 		suite.Equal([]string{"start", "complete"}, calls.order)
 
 		results := calls.completed[0].Results
-		suite.Empty(results)
-		rowErrs := calls.completed[0].Errors
-		suite.Len(rowErrs, 1)
-		suite.Equal("write failed", rowErrMessage(rowErrs[0]))
+		suite.Len(results, 1)
+		suite.Equal(constants.JobResultStatusFailed, results[0].Status)
+		suite.Require().NotNil(results[0].Error)
+		suite.Equal("write failed", results[0].Error.Message)
 	})
 
 	// The batch's numbers come from one locked read, so an allocation failure leaves no

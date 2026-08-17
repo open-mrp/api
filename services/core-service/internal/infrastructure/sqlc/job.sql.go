@@ -18,27 +18,20 @@ const getJob = `-- name: GetJob :one
 SELECT
     j.job_id AS id,
     j.type,
+    j.resource_type,
     j.account_id,
     j.created_by,
-    u.name AS created_by_name,
-    u.username AS created_by_username,
-    u.email AS created_by_email,
     j.job_items,
     j.results,
+    j.error,
     j.errors,
-    j.error_summary,
     j.started_at,
     j.completed_at,
-    j.failed_at, 
+    j.failed_at,
     j.cancelled_at,
     j.created_at,
     j.updated_at
 FROM job j
-LEFT JOIN account_user au
-    ON au.id = j.created_by
-    AND au.account_id = j.account_id
-LEFT JOIN ` + "`" + `user` + "`" + ` u
-    ON u.id = au.user_id
 WHERE j.job_id = ?
 AND j.account_id = ?
 `
@@ -49,40 +42,37 @@ type GetJobParams struct {
 }
 
 type GetJobRow struct {
-	ID                string
-	Type              string
-	AccountID         sql.NullString
-	CreatedBy         sql.NullString
-	CreatedByName     sql.NullString
-	CreatedByUsername sql.NullString
-	CreatedByEmail    sql.NullString
-	JobItems          json.RawMessage
-	Results           db.NullableRawMessage
-	Errors            db.NullableRawMessage
-	ErrorSummary      sql.NullString
-	StartedAt         sql.NullTime
-	CompletedAt       sql.NullTime
-	FailedAt          sql.NullTime
-	CancelledAt       sql.NullTime
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
+	ID           string
+	Type         string
+	ResourceType sql.NullString
+	AccountID    sql.NullString
+	CreatedBy    sql.NullString
+	JobItems     json.RawMessage
+	Results      db.NullableRawMessage
+	Error        db.NullableRawMessage
+	Errors       db.NullableRawMessage
+	StartedAt    sql.NullTime
+	CompletedAt  sql.NullTime
+	FailedAt     sql.NullTime
+	CancelledAt  sql.NullTime
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
+// The creator is a bare identity-actor id. The gateway turns it into an actor only when the caller expands created_by, so this read carries no join for it.
 func (q *Queries) GetJob(ctx context.Context, arg GetJobParams) (GetJobRow, error) {
 	row := q.db.QueryRowContext(ctx, getJob, arg.ID, arg.AccountID)
 	var i GetJobRow
 	err := row.Scan(
 		&i.ID,
 		&i.Type,
+		&i.ResourceType,
 		&i.AccountID,
 		&i.CreatedBy,
-		&i.CreatedByName,
-		&i.CreatedByUsername,
-		&i.CreatedByEmail,
 		&i.JobItems,
 		&i.Results,
+		&i.Error,
 		&i.Errors,
-		&i.ErrorSummary,
 		&i.StartedAt,
 		&i.CompletedAt,
 		&i.FailedAt,
@@ -97,6 +87,7 @@ const insertJob = `-- name: InsertJob :exec
 INSERT INTO job (
     job_id,
     type,
+    resource_type,
     account_id,
     created_by,
     job_items,
@@ -110,24 +101,27 @@ INSERT INTO job (
     ?,
     ?,
     ?,
+    ?,
     NOW(3),
     NOW(3)
 )
 `
 
 type InsertJobParams struct {
-	ID        string
-	Type      string
-	AccountID sql.NullString
-	CreatedBy sql.NullString
-	JobItems  json.RawMessage
-	Results   db.NullableRawMessage
+	ID           string
+	Type         string
+	ResourceType sql.NullString
+	AccountID    sql.NullString
+	CreatedBy    sql.NullString
+	JobItems     json.RawMessage
+	Results      db.NullableRawMessage
 }
 
 func (q *Queries) InsertJob(ctx context.Context, arg InsertJobParams) error {
 	_, err := q.db.ExecContext(ctx, insertJob,
 		arg.ID,
 		arg.Type,
+		arg.ResourceType,
 		arg.AccountID,
 		arg.CreatedBy,
 		arg.JobItems,
@@ -142,9 +136,10 @@ SELECT
     j.type,
     j.account_id,
     j.created_by,
+    j.resource_type,
     j.results,
+    j.error,
     j.errors,
-    j.error_summary,
     j.started_at,
     j.completed_at,
     j.failed_at, 
@@ -173,9 +168,10 @@ type ListJobsBackwardRow struct {
 	Type         string
 	AccountID    sql.NullString
 	CreatedBy    sql.NullString
+	ResourceType sql.NullString
 	Results      db.NullableRawMessage
+	Error        db.NullableRawMessage
 	Errors       db.NullableRawMessage
-	ErrorSummary sql.NullString
 	StartedAt    sql.NullTime
 	CompletedAt  sql.NullTime
 	FailedAt     sql.NullTime
@@ -204,9 +200,10 @@ func (q *Queries) ListJobsBackward(ctx context.Context, arg ListJobsBackwardPara
 			&i.Type,
 			&i.AccountID,
 			&i.CreatedBy,
+			&i.ResourceType,
 			&i.Results,
+			&i.Error,
 			&i.Errors,
-			&i.ErrorSummary,
 			&i.StartedAt,
 			&i.CompletedAt,
 			&i.FailedAt,
@@ -233,9 +230,10 @@ SELECT
     j.type,
     j.account_id,
     j.created_by,
+    j.resource_type,
     j.results,
+    j.error,
     j.errors,
-    j.error_summary,
     j.started_at,
     j.completed_at,
     j.failed_at, 
@@ -265,9 +263,10 @@ type ListJobsForwardRow struct {
 	Type         string
 	AccountID    sql.NullString
 	CreatedBy    sql.NullString
+	ResourceType sql.NullString
 	Results      db.NullableRawMessage
+	Error        db.NullableRawMessage
 	Errors       db.NullableRawMessage
-	ErrorSummary sql.NullString
 	StartedAt    sql.NullTime
 	CompletedAt  sql.NullTime
 	FailedAt     sql.NullTime
@@ -297,9 +296,10 @@ func (q *Queries) ListJobsForward(ctx context.Context, arg ListJobsForwardParams
 			&i.Type,
 			&i.AccountID,
 			&i.CreatedBy,
+			&i.ResourceType,
 			&i.Results,
+			&i.Error,
 			&i.Errors,
-			&i.ErrorSummary,
 			&i.StartedAt,
 			&i.CompletedAt,
 			&i.FailedAt,
@@ -323,8 +323,7 @@ func (q *Queries) ListJobsForward(ctx context.Context, arg ListJobsForwardParams
 const updateJob = `-- name: UpdateJob :execrows
 UPDATE job SET
     results = COALESCE(?, results),
-    errors = COALESCE(?, errors),
-    error_summary = COALESCE(?, error_summary),
+    error = COALESCE(?, error),
     started_at = COALESCE(?, started_at),
     completed_at = COALESCE(?, completed_at),
     failed_at = COALESCE(?, failed_at),
@@ -337,15 +336,14 @@ AND cancelled_at IS NULL
 `
 
 type UpdateJobParams struct {
-	Results      db.NullableRawMessage
-	Errors       db.NullableRawMessage
-	ErrorSummary sql.NullString
-	StartedAt    sql.NullTime
-	CompletedAt  sql.NullTime
-	FailedAt     sql.NullTime
-	CancelledAt  sql.NullTime
-	ID           string
-	AccountID    sql.NullString
+	Results     db.NullableRawMessage
+	Error       db.NullableRawMessage
+	StartedAt   sql.NullTime
+	CompletedAt sql.NullTime
+	FailedAt    sql.NullTime
+	CancelledAt sql.NullTime
+	ID          string
+	AccountID   sql.NullString
 }
 
 // The terminal timestamps guard the update so a job that already settled matches no
@@ -353,8 +351,7 @@ type UpdateJobParams struct {
 func (q *Queries) UpdateJob(ctx context.Context, arg UpdateJobParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, updateJob,
 		arg.Results,
-		arg.Errors,
-		arg.ErrorSummary,
+		arg.Error,
 		arg.StartedAt,
 		arg.CompletedAt,
 		arg.FailedAt,

@@ -55,7 +55,7 @@ func bulkUpsertDepartmentsJob(t *testing.T, departments ...map[string]any) map[s
 func bulkUpsertDepartmentIDs(t *testing.T, departments ...map[string]any) (createdIDs, updatedIDs []string) {
 	t.Helper()
 	job := bulkUpsertDepartmentsJob(t, departments...)
-	require.NotEmpty(t, jsonArray(job, "results"), "a completed job must carry results")
+	require.NotEmpty(t, jobResults(job), "a completed job must carry results")
 	return jobResultIDs(job)
 }
 

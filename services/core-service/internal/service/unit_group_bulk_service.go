@@ -331,6 +331,7 @@ func resolveBulkUpsertUnitGroupRows(ctx context.Context, repos domain.RepoFactor
 func (s *unitGroupSvcImpl) bulkUpsertSpec() bulkOperationSpec[domain.UpsertUnitGroupParams, domain.ResolvedUpsertUnitGroupRow] {
 	return bulkOperationSpec[domain.UpsertUnitGroupParams, domain.ResolvedUpsertUnitGroupRow]{
 		JobType:          constants.JobTypeBulkUpsert,
+		ResourceType:     constants.ObjectTypeUnitGroup,
 		RoutingKey:       messaging.BulkUpsertUnitGroups.RoutingKey(),
 		PermissionDomain: types.PermissionDomainUnitGroups,
 		Actions:          []types.Action{types.ActionCreate, types.ActionUpdate},
@@ -367,6 +368,7 @@ func (s *unitGroupSvcImpl) exportSpec() exportSpec[*domain.UnitGroupFull, domain
 		PermissionDomain: types.PermissionDomainUnitGroups,
 		Name:             "Unit Groups",
 		Slug:             "unit_groups",
+		ResourceType:     constants.ObjectTypeUnitGroup,
 		Columns: []excel.ColumnSpec{
 			{Header: "ID", Key: "id", Width: 6},
 			{Header: "Name", Key: "name", Width: 22},

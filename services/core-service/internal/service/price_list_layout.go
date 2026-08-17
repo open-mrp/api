@@ -11,8 +11,9 @@ type priceListTier struct {
 	Label string
 	// Quantity the price was quoted at.
 	Quantity string
-	// Unit the quantity is expressed in.
+	// Unit the quantity is expressed in, which is also the unit the price under it is per.
 	UnitID           string
+	UnitName         string
 	UnitAbbreviation string
 }
 

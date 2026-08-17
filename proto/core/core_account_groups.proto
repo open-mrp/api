@@ -89,6 +89,8 @@ message AccountUserDetail {
   google.protobuf.Timestamp updated_at = 16;
   optional google.protobuf.Timestamp department_created_at = 17;
   optional google.protobuf.Timestamp department_updated_at = 18;
+  // Independent of the sales_rep role type, which still scopes analytics and hides cost.
+  bool is_commission_eligible = 19;
 }
 
 // A default order-notification recipient input: the account user id and the notification types to configure for them.
@@ -121,6 +123,7 @@ message ListAccountUsersRequest {
   optional string role_type = 4;
   bool include_removed = 5;
   repeated string includes = 6;
+  optional bool is_commission_eligible = 7;
 }
 message ListAccountUsersResponse {
   repeated AccountUserDetail account_users = 1;
@@ -148,6 +151,7 @@ message CreateAccountUserRequest {
   optional string role_id = 5;
   optional string department_id = 6;
   repeated NotificationPreferenceItem notification_preferences = 8;
+  optional bool is_commission_eligible = 9;
 }
 message CreateAccountUserResponse {
   AccountUserDetail account_user = 1;
@@ -162,6 +166,7 @@ message UpdateAccountUserRequest {
   // When non-empty, replaces the toggle state of the listed preferences.
   repeated NotificationPreferenceItem notification_preferences = 7;
   repeated string includes = 8;
+  optional bool is_commission_eligible = 9;
 }
 message UpdateAccountUserResponse {
   AccountUserDetail account_user = 1;

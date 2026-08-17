@@ -267,8 +267,8 @@ func TestHubspotSync_ReadThenResolve(t *testing.T) {
 
 		job := pollJobUntilTerminal(t, jobID)
 		require.Equal(t, "completed", jsonField(job, "status"), "the bulk resolution should complete: %v", job)
-		assert.Empty(t, jsonArray(job, "errors"), "a valid decision should not land in the job's errors")
-		require.NotEmpty(t, jsonArray(job, "results"), "a completed job must carry results")
+		assert.Empty(t, jobErrors(job), "a valid decision should not land in the job's errors")
+		require.NotEmpty(t, jobResults(job), "a completed job must carry results")
 
 		review := hubspotReviewByID(t, apiClient, SeedHubspotSyncJobID, SeedHubspotCompanyReviewID, "")
 		require.NotNil(t, review)

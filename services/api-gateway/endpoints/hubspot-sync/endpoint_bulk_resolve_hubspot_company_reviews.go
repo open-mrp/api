@@ -53,14 +53,18 @@ type BulkResolveHubspotCompanyReviewsEndpoint struct{}
 
 func (e *BulkResolveHubspotCompanyReviewsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkResolveHubspotCompanyReviewsRequest, *apiresource.Job] {
 	return (&apiendpoint.APIEndpoint[*BulkResolveHubspotCompanyReviewsRequest, *apiresource.Job]{
-		Title:               "Bulk Resolve HubSpot Company Reviews",
-		Method:              http.MethodPost,
-		ContentType:         "application/json",
-		Route:               "/v1/settings/integrations/hubspot/sync/{id}/company-reviews/actions/bulk-resolve",
-		SuccessStatusCode:   http.StatusAccepted,
-		Public:              false,
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeJob,
+		Title:             "Bulk Resolve HubSpot Company Reviews",
+		Method:            http.MethodPost,
+		ContentType:       "application/json",
+		Route:             "/v1/settings/integrations/hubspot/sync/{id}/company-reviews/actions/bulk-resolve",
+		SuccessStatusCode: http.StatusAccepted,
+		Public:            false,
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeJob,
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeJob,
+			Fields:     []string{"created_by", "created_by.role"},
+		}),
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainIntegrations, Action: types.ActionUpdate}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkResolveHubspotCompanyReviewsRequest) (*apiresource.Job, *apierror.APIError) {
 			return svc.(HubspotSyncSvc).BulkResolveCompanyReviews

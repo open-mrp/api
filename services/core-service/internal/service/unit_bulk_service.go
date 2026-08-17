@@ -154,6 +154,7 @@ func validateBulkUpsertUnitRows(rows []domain.UpsertUnitParams) *apierror.APIErr
 func (s *unitSvcImpl) bulkUpsertSpec() bulkOperationSpec[domain.UpsertUnitParams, domain.UpsertUnitParams] {
 	return bulkOperationSpec[domain.UpsertUnitParams, domain.UpsertUnitParams]{
 		JobType:          constants.JobTypeBulkUpsert,
+		ResourceType:     constants.ObjectTypeUnit,
 		RoutingKey:       messaging.BulkUpsertUnits.RoutingKey(),
 		PermissionDomain: types.PermissionDomainUnits,
 		Actions:          []types.Action{types.ActionCreate, types.ActionUpdate},
@@ -206,6 +207,7 @@ func (s *unitSvcImpl) exportSpec() exportSpec[*domain.Unit, domain.ExportUnitsPa
 		PermissionDomain: types.PermissionDomainUnits,
 		Name:             "Units",
 		Slug:             "units",
+		ResourceType:     constants.ObjectTypeUnit,
 		Columns:          columns,
 
 		Fetch: func(ctx context.Context, repos domain.RepoFactory, accountID string, filters domain.ExportUnitsParams) ([]*domain.Unit, *apierror.APIError) {

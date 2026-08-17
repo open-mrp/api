@@ -754,6 +754,12 @@ type FrozenAdherence struct {
 	AddedLines int64 `json:"added_lines"`
 	// Total absolute unit change across frozen-week deviations.
 	AbsDeltaUnits float64 `json:"abs_delta_units"`
+	// Campaigns the floor ran inside the frozen window that the frozen plan never called for, counted per machine-week-SKU.
+	//
+	// Working around a commitment breaks it as surely as editing it does, so this scores alongside the hand edits rather than beside them.
+	OffPlanLines int64 `json:"off_plan_lines"`
+	// Units behind those off-plan campaigns.
+	OffPlanQuantity float64 `json:"off_plan_quantity"`
 	// Share of frozen campaigns that survived untouched. Null when nothing was frozen.
 	LineAdherencePct *float64 `json:"line_adherence_pct"`
 	// Share of frozen units that survived untouched. Null when nothing was frozen.
@@ -784,6 +790,10 @@ type AnalyzeScheduleAttainmentResponse struct {
 	FrozenAdherence *List[FrozenAdherence] `json:"frozen_adherence"`
 	// Whether the period had a plan to measure against. When `no_baseline`, every ratio is null and the period has no plan rather than a missed one.
 	BaselineStatus constants.AttainmentBaselineStatus `json:"baseline_status" validate:"required"`
+	// Machines the plan asked for over this window.
+	//
+	// Every figure in this response covers those machines only. Production scanned onto a machine no published version scheduled is excluded outright, so the score measures the plan that was made rather than the whole plant against it.
+	ScheduledMachineCount int64 `json:"scheduled_machine_count"`
 }
 
 // How reliably promised delivery dates were met.

@@ -104,6 +104,10 @@ func (s *analyticsSvcImpl) buildScheduleAttainment(ctx context.Context, params d
 	planned := map[plannedKey]*attainmentAccumulator{}
 	departmentByKey := map[plannedKey]string{}
 	usedBaselines := map[string]*domain.AttainmentBaselineRow{}
+	// Every machine the plan asked for anywhere in the window. Actuals are read through this set, so the score covers the machines that were scheduled and nothing else: a plant that schedules two knitting machines and scans a hundred other work centres was otherwise measuring the whole factory against a plan that only ever covered two of it.
+	//
+	// Window-wide rather than per week on purpose. A scheduled machine that was given no work in some week is idle by plan, so what it ran that week is unplanned output — which is the signal. Scoping per week would hide that production entirely instead.
+	scheduledMachines := map[string]bool{}
 
 	for i := range baselines {
 		b := &baselines[i]
@@ -133,6 +137,7 @@ func (s *analyticsSvcImpl) buildScheduleAttainment(ctx context.Context, params d
 			}
 
 			usedBaselines[b.ScheduleID] = b
+			scheduledMachines[row.MachineID] = true
 
 			key := plannedKey{week: week, machine: row.MachineID, item: row.ItemID}
 			acc := planned[key]
@@ -167,6 +172,9 @@ func (s *analyticsSvcImpl) buildScheduleAttainment(ctx context.Context, params d
 		if !passesFilter(machineFilter, machineID) {
 			continue
 		}
+		if !scheduledMachines[machineID] {
+			continue
+		}
 		departmentID := ""
 		if row.DepartmentID != nil {
 			departmentID = *row.DepartmentID
@@ -193,6 +201,23 @@ func (s *analyticsSvcImpl) buildScheduleAttainment(ctx context.Context, params d
 		if acc.planned <= 0 {
 			acc.unplanned += actual
 		}
+	}
+
+	// Work the floor ran inside a frozen window that the frozen plan never asked for.
+	//
+	// Counted per (week, machine, item) tuple rather than per scan, so a campaign someone ran across four doffs is one breach of the commitment rather than four. A frozen week is a promise about what the scheduled machines would run; scanning something else onto them breaks it exactly as a hand edit does, so both land in the same score.
+	offPlanLines := map[string]int64{}
+	offPlanUnits := map[string]float64{}
+	for _, acc := range planned {
+		if acc.planned > 0 || acc.actual <= 0 || acc.week == nil {
+			continue
+		}
+		baseline := baselineFor(baselines, *acc.week, now)
+		if baseline == nil || baseline.FrozenThroughDate == nil || acc.week.After(*baseline.FrozenThroughDate) {
+			continue
+		}
+		offPlanLines[baseline.ScheduleID]++
+		offPlanUnits[baseline.ScheduleID] += acc.actual
 	}
 
 	// Fold the match-level tuples up into whichever dimension the caller asked for.
@@ -264,6 +289,7 @@ func (s *analyticsSvcImpl) buildScheduleAttainment(ctx context.Context, params d
 		result.Buckets = append(result.Buckets, toBucket(k, labels[k], acc))
 	}
 	result.Totals = toBucket("total", "Total", &totals)
+	result.ScheduledMachineCount = int64(len(scheduledMachines))
 
 	for id := range usedBaselines {
 		result.BaselineScheduleIDs = append(result.BaselineScheduleIDs, id)
@@ -284,7 +310,7 @@ func (s *analyticsSvcImpl) buildScheduleAttainment(ctx context.Context, params d
 	sort.Strings(allIDs)
 
 	if len(allIDs) > 0 {
-		adherence, apiErr := frozenAdherence(ctx, repo, params.AccountID, allIDs, allBaselines)
+		adherence, apiErr := frozenAdherence(ctx, repo, params.AccountID, allIDs, allBaselines, offPlanLines, offPlanUnits)
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
@@ -371,12 +397,15 @@ func resolveBucketLabels(
 	return nil
 }
 
+// frozenAdherence scores how much of each published commitment survived its frozen week, counting both the hand edits recorded as deviations and the work the floor ran that the frozen plan never called for.
 func frozenAdherence(
 	ctx context.Context,
 	repo domain.ScheduleAttainmentRepo,
 	accountID string,
 	scheduleIDs []string,
 	baselines map[string]*domain.AttainmentBaselineRow,
+	offPlanLines map[string]int64,
+	offPlanUnits map[string]float64,
 ) ([]domain.FrozenAdherence, *apierror.APIError) {
 	rows, apiErr := repo.CountDeviationsForBaselines(ctx, accountID, scheduleIDs)
 	if apiErr != nil {
@@ -401,6 +430,8 @@ func frozenAdherence(
 		frozenLines := float64(baseline.FrozenLineCount)
 		frozenUnits := baseline.FrozenPlannedQuantity
 
+		offPlan := float64(offPlanLines[id])
+
 		entry := domain.FrozenAdherence{
 			ScheduleID:            id,
 			Version:               baseline.Version,
@@ -409,18 +440,20 @@ func frozenAdherence(
 			DeviatedLines:         int64(deviated),
 			AddedLines:            int64(added),
 			AbsDeltaUnits:         counts.AbsDeltaQuantity,
+			OffPlanLines:          offPlanLines[id],
+			OffPlanQuantity:       offPlanUnits[id],
 		}
 		if baseline.FrozenThroughDate != nil {
 			entry.FrozenThroughAt = baseline.FrozenThroughDate
 		}
 
-		// Added lines sit in BOTH the numerator and the denominator: a line that was never committed to still counts against adherence, but it also enlarges what the week turned out to contain, so it cannot push the ratio below zero.
-		if denominator := frozenLines + added; denominator > 0 {
-			value := (1 - (deviated+added)/denominator) * 100
+		// Added and off-plan lines sit in BOTH the numerator and the denominator: neither was ever committed to, so each counts against adherence, but each also enlarges what the week turned out to contain, so they cannot push the ratio below zero.
+		if denominator := frozenLines + added + offPlan; denominator > 0 {
+			value := (1 - (deviated+added+offPlan)/denominator) * 100
 			entry.LineAdherence = &value
 		}
 		if frozenUnits > 0 {
-			value := (1 - entry.AbsDeltaUnits/frozenUnits) * 100
+			value := (1 - (entry.AbsDeltaUnits+entry.OffPlanQuantity)/frozenUnits) * 100
 			entry.UnitsAdherence = &value
 		}
 

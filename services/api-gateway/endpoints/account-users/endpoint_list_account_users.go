@@ -22,6 +22,10 @@ type ListAccountUsersRequest struct {
 	// - `sales_rep`: sales representatives.
 	// - `agent`: automated agents.
 	RoleType *constants.RoleType `query:"role_type"`
+	// Filter by commission eligibility.
+	//
+	// Exact match on the column. Pass `true` to list users who can be assigned as sales representatives, including dedicated `sales_rep` users.
+	IsCommissionEligible *bool `query:"is_commission_eligible"`
 	// Controls whether removed (soft-deleted) account users appear in the list.
 	//
 	// Removed users are left out unless you pass `included`, so a user removed with the remove action disappears from the default listing.

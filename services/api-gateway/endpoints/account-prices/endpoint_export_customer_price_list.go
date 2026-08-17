@@ -44,6 +44,10 @@ func (e *ExportPriceListEndpoint) Materialize() *apiendpoint.APIEndpoint[*Export
 		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeJob,
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeJob,
+			Fields:     []string{"created_by", "created_by.role"},
+		}),
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainDiscounts, Action: types.ActionRead},
 		},

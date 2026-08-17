@@ -33,14 +33,18 @@ type ExportHubspotCompanyReviewsEndpoint struct{}
 
 func (e *ExportHubspotCompanyReviewsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportHubspotCompanyReviewsRequest, *apiresource.Job] {
 	return (&apiendpoint.APIEndpoint[*ExportHubspotCompanyReviewsRequest, *apiresource.Job]{
-		Title:               "Export HubSpot Company Reviews",
-		Method:              http.MethodPost,
-		ContentType:         "application/json",
-		Route:               "/v1/settings/integrations/hubspot/sync/{id}/company-reviews/actions/export",
-		SuccessStatusCode:   http.StatusAccepted,
-		Public:              false,
-		Preview:             true,
-		ObjectType:          constants.ObjectTypeJob,
+		Title:             "Export HubSpot Company Reviews",
+		Method:            http.MethodPost,
+		ContentType:       "application/json",
+		Route:             "/v1/settings/integrations/hubspot/sync/{id}/company-reviews/actions/export",
+		SuccessStatusCode: http.StatusAccepted,
+		Public:            false,
+		Preview:           true,
+		ObjectType:        constants.ObjectTypeJob,
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeJob,
+			Fields:     []string{"created_by", "created_by.role"},
+		}),
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainIntegrations, Action: types.ActionRead}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportHubspotCompanyReviewsRequest) (*apiresource.Job, *apierror.APIError) {
 			return svc.(HubspotSyncSvc).ExportCompanyReviews

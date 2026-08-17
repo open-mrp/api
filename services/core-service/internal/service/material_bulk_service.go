@@ -181,6 +181,7 @@ func (s *materialSvcImpl) writeBulkUpsertMaterials(txCtx context.Context, txRepo
 func (s *materialSvcImpl) bulkUpsertSpec() bulkOperationSpec[domain.UpsertMaterialParams, domain.ResolvedUpsertMaterialRow] {
 	return bulkOperationSpec[domain.UpsertMaterialParams, domain.ResolvedUpsertMaterialRow]{
 		JobType:          constants.JobTypeBulkUpsert,
+		ResourceType:     constants.ObjectTypeMaterial,
 		RoutingKey:       messaging.BulkUpsertMaterials.RoutingKey(),
 		PermissionDomain: types.PermissionDomainMaterials,
 		Actions:          []types.Action{types.ActionCreate, types.ActionUpdate},
@@ -212,6 +213,7 @@ func (s *materialSvcImpl) exportSpec() exportSpec[*domain.Material, domain.Expor
 		ExternalAccess:  externalDirect,
 		Name:            "Materials",
 		Slug:            "materials",
+		ResourceType:    constants.ObjectTypeMaterial,
 
 		ColumnsFor: func(materials []*domain.Material) []excel.ColumnSpec {
 			base := itemBaseColumns(

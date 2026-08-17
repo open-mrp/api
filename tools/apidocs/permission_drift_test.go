@@ -266,6 +266,9 @@ var unverifiableEndpoints = map[string]string{
 
 	"list_adjustment_types": "external-exempt global lookup: checkAdjustmentTypeReadPermission requires adjustment_types:read for internal actors but exempts external actors; declaring it would false-reject those readers at the gate",
 
+	"export_customer_price_list": "variable-domain export gate: ExportPriceList -> enqueueExport -> authorizeExport -> exportSpec.checkPermission(), which closes over spec.PermissionDomain (discounts) and calls CheckHasPermission(domainName, ActionRead); the domain is a variable, so the literal matcher cannot resolve it. Endpoint declares discounts:read, matching the spec",
+	"analyze_realized_margins":   "service call-chain indirection: AnalyzeRealizedMargins delegates the read to AnalyzeSales, which checks CheckIsInternalActor + invoices:read; the guard folds in check*Permission helpers but does not follow service-to-service calls. Endpoint declares invoices:read, matching AnalyzeSales",
+
 	"search": "gateway per-type dynamic gate: Search loops its providers calling identity.CheckHasPermission(domain, read) per resource type and only includes types the caller can read; endpoint declares the {sales_orders,purchase_orders,invoices,customers,items,shipments,messaging,agents}:read OR-set; no downstream name-matched handler to verify against",
 
 	"activate_account_user": "gateway private-helper indirection: ActivateAccountUser -> transitionAccountUserStatus -> coreClient.UpdateAccountUserStatus -> checkAccountUserWritePermission; endpoint declares the {team,customers,suppliers} OR-set",

@@ -31,6 +31,10 @@ func (e *RetrieveJobEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveJo
 		Public:     true,
 		Preview:    true,
 		ObjectType: constants.ObjectTypeJob,
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeJob,
+			Fields:     []string{"created_by", "created_by.role"},
+		}),
 		// A completed export's link is a bearer credential, so nothing may hold on to it.
 		CacheControl: "no-store",
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveJobRequest) (*apiresource.Job, *apierror.APIError) {

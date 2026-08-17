@@ -11,7 +11,9 @@ import (
 
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/services/core-service/internal/domain"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/safeconv"
 )
 
 // maxPriceListTierColumns bounds how many volume breaks become price columns. Past this the table stops being readable, and the ones dropped are disclosed on the title page rather than silently omitted.
@@ -28,6 +30,7 @@ func (s *accountPriceSvcImpl) priceListExportSpec() exportSpec[*domain.ProductFu
 		PermissionDomain: types.PermissionDomainDiscounts,
 		Name:             "Price List",
 		Slug:             "price_list",
+		ResourceType:     constants.ObjectTypeProduct,
 		Ext:              "pdf",
 	}
 }
@@ -40,8 +43,6 @@ func (s *accountPriceSvcImpl) ExportPriceList(ctx context.Context, params domain
 }
 
 // BuildExportPriceList renders the PDF an accepted export recorded.
-//
-// Every price here comes from the same engine that prices a sales order, so the document cannot drift from what the customer is actually charged. The pricing bundle is loaded once for the whole catalog and every product priced against it in memory — the alternative, one priced batch per request, is what made this too slow to run synchronously.
 func (s *accountPriceSvcImpl) BuildExportPriceList(ctx context.Context, accountID string, raw json.RawMessage) (*domain.Export, *apierror.APIError) {
 	var filters priceListExportFilters
 	if err := json.Unmarshal(raw, &filters); err != nil {
@@ -51,11 +52,27 @@ func (s *accountPriceSvcImpl) BuildExportPriceList(ctx context.Context, accountI
 		return nil, apierror.NewInvariantViolationError("A price list export is missing its customer.")
 	}
 
+	doc, rows, apiErr := s.buildPriceListDocument(ctx, accountID, filters)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	body, err := buildPriceListPDF(doc)
+	if err != nil {
+		return nil, apierror.NewInternalError(err, "Failed to render the price list.")
+	}
+	return &domain.Export{ContentType: "application/pdf", Body: body, RowCount: rows}, nil
+}
+
+// buildPriceListDocument gathers everything the document states, and how many products it covers.
+//
+// Every price here comes from the same engine that prices a sales order, so the document cannot drift from what the customer is actually charged. The pricing bundle is loaded once for the whole catalog and every product priced against it in memory — the alternative, one priced batch per request, is what made this too slow to run synchronously.
+func (s *accountPriceSvcImpl) buildPriceListDocument(ctx context.Context, accountID string, filters priceListExportFilters) (priceListDocument, int32, *apierror.APIError) {
 	doc := priceListDocument{DateLong: time.Now().UTC().Format("January 2, 2006")}
 
 	customer, apiErr := s.repos.NewCustomerRepo().Get(ctx, accountID, filters.CustomerAccountID, nil)
 	if apiErr != nil {
-		return nil, apiErr
+		return doc, 0, apiErr
 	}
 	doc.CustomerName = customer.Name
 	if customer.DefaultPaymentTermName != nil {
@@ -79,21 +96,20 @@ func (s *accountPriceSvcImpl) BuildExportPriceList(ctx context.Context, accountI
 		CustomerIDs: []string{filters.CustomerAccountID},
 	})
 	if apiErr != nil {
-		return nil, apiErr
+		return doc, 0, apiErr
 	}
 	products = priceListSellableProducts(products)
 	if len(products) == 0 {
 		doc.Notes = []string{"No products are currently available to this customer."}
-		body, err := buildPriceListPDF(doc)
-		if err != nil {
-			return nil, apierror.NewInternalError(err, "Failed to render the price list.")
-		}
-		return &domain.Export{ContentType: "application/pdf", Body: body}, nil
+		return doc, 0, nil
+	}
+	if apiErr := s.hydratePriceListUnitGroups(ctx, accountID, products); apiErr != nil {
+		return doc, 0, apiErr
 	}
 
 	propertyNames, apiErr := s.priceListPropertyNames(ctx, accountID, products)
 	if apiErr != nil {
-		return nil, apiErr
+		return doc, 0, apiErr
 	}
 
 	bundle, apiErr := s.repos.NewPricingRepo().LoadPricingBundle(ctx, domain.LoadPricingBundleParams{
@@ -103,7 +119,7 @@ func (s *accountPriceSvcImpl) BuildExportPriceList(ctx context.Context, accountI
 		OrderedUnitIDs: priceListBaseUnitIDs(products),
 	})
 	if apiErr != nil {
-		return nil, apiErr
+		return doc, 0, apiErr
 	}
 
 	tiers, dropped := priceListTiersFromBundle(bundle, products)
@@ -112,12 +128,7 @@ func (s *accountPriceSvcImpl) BuildExportPriceList(ctx context.Context, accountI
 	}
 
 	doc.Lines = assemblePriceListLines(products, priceListPrices(bundle, products, tiers), propertyNames, tiers)
-
-	body, err := buildPriceListPDF(doc)
-	if err != nil {
-		return nil, apierror.NewInternalError(err, "Failed to render the price list.")
-	}
-	return &domain.Export{ContentType: "application/pdf", Body: body, RowCount: int32(len(products))}, nil
+	return doc, safeconv.IntToInt32(len(products)), nil
 }
 
 // priceListSellableProducts drops products with no product line: they can never match an account price or a line-scoped discount, and have no unit group to price against.
@@ -129,6 +140,29 @@ func priceListSellableProducts(products []*domain.ProductFull) []*domain.Product
 		}
 	}
 	return out
+}
+
+// hydratePriceListUnitGroups attaches each product line's unit group, resolved once per group rather than once per line.
+//
+// The product export stitches the line but not its units, and without them the document has no pack to quote, no base unit to price against and no name for the cost column.
+func (s *accountPriceSvcImpl) hydratePriceListUnitGroups(ctx context.Context, accountID string, products []*domain.ProductFull) *apierror.APIError {
+	repo := s.repos.NewProductLineRepo()
+	groups := make(map[string]*domain.ProductLineUnitGroup)
+	for _, product := range products {
+		unitGroupID := product.ProductLine.UnitGroupID
+		if unitGroupID == "" {
+			continue
+		}
+		if _, loaded := groups[unitGroupID]; !loaded {
+			group, apiErr := repo.GetUnitGroup(ctx, accountID, unitGroupID, []string{"unit_group.base_unit", "unit_group.associated_units"})
+			if apiErr != nil {
+				return apiErr
+			}
+			groups[unitGroupID] = group
+		}
+		product.ProductLine.UnitGroup = groups[unitGroupID]
+	}
+	return nil
 }
 
 func priceListProductIDs(products []*domain.ProductFull) []string {
@@ -192,11 +226,10 @@ func (s *accountPriceSvcImpl) priceListPropertyNames(ctx context.Context, accoun
 	return names, nil
 }
 
-// priceListTiersFromBundle builds the candidate price columns: quantity 1, then each distinct volume-discount threshold the customer can reach. The bundle already filtered the discounts to this buyer, so no scoping is re-derived here.
-// priceListUnitAbbreviation reads a unit's abbreviation off the catalog, since the pricing bundle carries only conversion factors and not display names.
-func priceListUnitAbbreviation(products []*domain.ProductFull, unitID string) string {
+// priceListUnit reads a unit off the catalog, since the pricing bundle carries only conversion factors and not the names a column has to be headed with.
+func priceListUnit(products []*domain.ProductFull, unitID string) *domain.LightUnit {
 	if unitID == "" {
-		return ""
+		return nil
 	}
 	for _, product := range products {
 		group := product.ProductLine.UnitGroup
@@ -204,25 +237,26 @@ func priceListUnitAbbreviation(products []*domain.ProductFull, unitID string) st
 			continue
 		}
 		if group.BaseUnit != nil && group.BaseUnit.ID == unitID {
-			return group.BaseUnit.Abbreviation
+			return group.BaseUnit
 		}
 		for _, associated := range group.AssociatedUnits {
 			if associated.Unit.ID == unitID {
-				return associated.Unit.Abbreviation
+				return &associated.Unit
 			}
 		}
 	}
-	return ""
+	return nil
 }
 
+// priceListTiersFromBundle builds the candidate price columns: quantity 1, then each distinct volume-discount threshold the customer can reach. The bundle already filtered the discounts to this buyer, so no scoping is re-derived here.
 func priceListTiersFromBundle(bundle *domain.PricingBundle, products []*domain.ProductFull) ([]priceListTier, int) {
-	baseUnitID, baseUnitAbbr := priceListDominantBaseUnit(bundle, products)
-	tiers := []priceListTier{{Label: "1+", Quantity: "1", UnitID: baseUnitID, UnitAbbreviation: baseUnitAbbr}}
+	baseUnitID := priceListDominantBaseUnit(products)
+	tiers := []priceListTier{priceListTierFor("1", baseUnitID, priceListUnit(products, baseUnitID))}
 
 	type candidate struct {
 		quantity decimal.Decimal
 		unitID   string
-		unitAbbr string
+		unit     *domain.LightUnit
 	}
 	seen := make(map[string]struct{})
 	candidates := make([]candidate, 0)
@@ -231,7 +265,7 @@ func priceListTiersFromBundle(bundle *domain.PricingBundle, products []*domain.P
 			continue
 		}
 		unitID := discount.AcceptableUnitIDs[0]
-		abbr := priceListUnitAbbreviation(products, unitID)
+		unit := priceListUnit(products, unitID)
 		for _, tier := range discount.Tiers {
 			threshold, err := decimal.NewFromString(tier.Threshold)
 			if err != nil || threshold.LessThanOrEqual(decimal.NewFromInt(1)) {
@@ -242,7 +276,7 @@ func priceListTiersFromBundle(bundle *domain.PricingBundle, products []*domain.P
 				continue
 			}
 			seen[key] = struct{}{}
-			candidates = append(candidates, candidate{quantity: threshold, unitID: unitID, unitAbbr: abbr})
+			candidates = append(candidates, candidate{quantity: threshold, unitID: unitID, unit: unit})
 		}
 	}
 
@@ -254,18 +288,13 @@ func priceListTiersFromBundle(bundle *domain.PricingBundle, products []*domain.P
 		candidates = candidates[:maxPriceListTierColumns-1]
 	}
 	for _, c := range candidates {
-		tiers = append(tiers, priceListTier{
-			Label:            c.quantity.String() + "+ " + c.unitAbbr,
-			Quantity:         c.quantity.String(),
-			UnitID:           c.unitID,
-			UnitAbbreviation: c.unitAbbr,
-		})
+		tiers = append(tiers, priceListTierFor(c.quantity.String(), c.unitID, c.unit))
 	}
 	return tiers, dropped
 }
 
 // priceListDominantBaseUnit picks the per-unit basis most of the catalog is priced on, used for the quantity-1 column.
-func priceListDominantBaseUnit(bundle *domain.PricingBundle, products []*domain.ProductFull) (string, string) {
+func priceListDominantBaseUnit(products []*domain.ProductFull) string {
 	counts := make(map[string]int)
 	for _, product := range products {
 		if id := priceListBaseUnitID(product); id != "" {
@@ -278,7 +307,18 @@ func priceListDominantBaseUnit(bundle *domain.PricingBundle, products []*domain.
 			bestID, bestCount = id, count
 		}
 	}
-	return bestID, priceListUnitAbbreviation(products, bestID)
+	return bestID
+}
+
+// priceListTierFor labels one price column. The quantity is what the price was quoted at; the unit is what the price under it is per, which is what the column has to say so a number without a basis is never printed.
+func priceListTierFor(quantity, unitID string, unit *domain.LightUnit) priceListTier {
+	tier := priceListTier{Label: quantity + "+", Quantity: quantity, UnitID: unitID}
+	if unit != nil {
+		tier.UnitName = unit.Name
+		tier.UnitAbbreviation = unit.Abbreviation
+		tier.Label = quantity + "+ " + unit.Abbreviation
+	}
+	return tier
 }
 
 // priceListPrices prices every product at every tier against a bundle that was loaded once.

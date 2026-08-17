@@ -477,7 +477,7 @@ func (suite *ItemCategorySvcTestSuite) TestWriteBulkUpsertItemCategories_UpsertP
 	suite.Empty(created)
 	suite.Empty(updated)
 	suite.Len(rowErrs, 1)
-	suite.Equal(0, *rowErrs[0].Index)
+	suite.Equal(0, rowErrs[0].Index)
 }
 
 func (suite *ItemCategorySvcTestSuite) TestWriteBulkUpsertItemCategories_NilPropertyNames_SkipsPropertyResolve() {

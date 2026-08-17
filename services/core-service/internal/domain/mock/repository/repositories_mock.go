@@ -573,17 +573,17 @@ func (mr *MockAccountUserRepoMockRecorder) CountByRoleID(ctx, accountID, roleID 
 }
 
 // Create mocks base method.
-func (m *MockAccountUserRepo) Create(ctx context.Context, id, accountID, userID string, roleID, departmentID *string) *apierror.APIError {
+func (m *MockAccountUserRepo) Create(ctx context.Context, id, accountID, userID string, roleID, departmentID *string, isCommissionEligible bool) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", ctx, id, accountID, userID, roleID, departmentID)
+	ret := m.ctrl.Call(m, "Create", ctx, id, accountID, userID, roleID, departmentID, isCommissionEligible)
 	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockAccountUserRepoMockRecorder) Create(ctx, id, accountID, userID, roleID, departmentID any) *gomock.Call {
+func (mr *MockAccountUserRepoMockRecorder) Create(ctx, id, accountID, userID, roleID, departmentID, isCommissionEligible any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockAccountUserRepo)(nil).Create), ctx, id, accountID, userID, roleID, departmentID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockAccountUserRepo)(nil).Create), ctx, id, accountID, userID, roleID, departmentID, isCommissionEligible)
 }
 
 // DeactivateExcept mocks base method.
@@ -780,18 +780,18 @@ func (mr *MockAccountUserRepoMockRecorder) MarkUsedByAccountAndUser(ctx, account
 }
 
 // ReactivateRemovedAccountUser mocks base method.
-func (m *MockAccountUserRepo) ReactivateRemovedAccountUser(ctx context.Context, accountID, userID string, roleID, departmentID *string) (string, *apierror.APIError) {
+func (m *MockAccountUserRepo) ReactivateRemovedAccountUser(ctx context.Context, accountID, userID string, roleID, departmentID *string, isCommissionEligible bool) (string, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReactivateRemovedAccountUser", ctx, accountID, userID, roleID, departmentID)
+	ret := m.ctrl.Call(m, "ReactivateRemovedAccountUser", ctx, accountID, userID, roleID, departmentID, isCommissionEligible)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // ReactivateRemovedAccountUser indicates an expected call of ReactivateRemovedAccountUser.
-func (mr *MockAccountUserRepoMockRecorder) ReactivateRemovedAccountUser(ctx, accountID, userID, roleID, departmentID any) *gomock.Call {
+func (mr *MockAccountUserRepoMockRecorder) ReactivateRemovedAccountUser(ctx, accountID, userID, roleID, departmentID, isCommissionEligible any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReactivateRemovedAccountUser", reflect.TypeOf((*MockAccountUserRepo)(nil).ReactivateRemovedAccountUser), ctx, accountID, userID, roleID, departmentID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReactivateRemovedAccountUser", reflect.TypeOf((*MockAccountUserRepo)(nil).ReactivateRemovedAccountUser), ctx, accountID, userID, roleID, departmentID, isCommissionEligible)
 }
 
 // ReactivateUsers mocks base method.
@@ -853,17 +853,17 @@ func (mr *MockAccountUserRepoMockRecorder) SoftDelete(ctx, accountUserID any) *g
 }
 
 // Update mocks base method.
-func (m *MockAccountUserRepo) Update(ctx context.Context, accountUserID string, roleID, departmentID *string) *apierror.APIError {
+func (m *MockAccountUserRepo) Update(ctx context.Context, accountUserID string, roleID, departmentID *string, isCommissionEligible bool) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Update", ctx, accountUserID, roleID, departmentID)
+	ret := m.ctrl.Call(m, "Update", ctx, accountUserID, roleID, departmentID, isCommissionEligible)
 	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockAccountUserRepoMockRecorder) Update(ctx, accountUserID, roleID, departmentID any) *gomock.Call {
+func (mr *MockAccountUserRepoMockRecorder) Update(ctx, accountUserID, roleID, departmentID, isCommissionEligible any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockAccountUserRepo)(nil).Update), ctx, accountUserID, roleID, departmentID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockAccountUserRepo)(nil).Update), ctx, accountUserID, roleID, departmentID, isCommissionEligible)
 }
 
 // UpdateLastUsedAt mocks base method.

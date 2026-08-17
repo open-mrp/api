@@ -9,31 +9,60 @@ import (
 )
 
 type Job struct {
-	ID                string
-	Type              constants.JobType
-	AccountID         *string
-	CreatedByID       *string
-	CreatedByName     *string
-	CreatedByUsername *string
-	CreatedByEmail    *string
-	JobItems          json.RawMessage
-	Results           []RowResult
-	Errors            []apierror.RowError
-	ErrorSummary      *string
-	StartedAt         *time.Time
-	CompletedAt       *time.Time
-	FailedAt          *time.Time
-	CancelledAt       *time.Time
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
+	ID           string
+	Type         constants.JobType
+	ResourceType constants.ObjectType
+	AccountID    *string
+	CreatedByID  *string
+	JobItems     json.RawMessage
+	Results      []RowResult
+	// ResultsTruncated reports that the executor produced more rows than Results carries.
+	ResultsTruncated bool
+	// Error is the failure that sank the job as a whole. A row that failed carries its
+	// own on its RowResult instead.
+	Error       *apierror.ResponseError
+	StartedAt   *time.Time
+	CompletedAt *time.Time
+	FailedAt    *time.Time
+	CancelledAt *time.Time
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
-// names what one row of a bulk request produced
+// names what became of one row of a bulk request: the resource it produced, or the
+// error it was rejected with. Exactly one of ID/Error is set, per Status.
 type RowResult struct {
-	Index          int
-	ID             string
-	Action         constants.JobResultAction
-	SubResourceIDs []string
+	Index        int
+	Status       constants.JobResultStatus
+	ResourceType constants.ObjectType
+	ID           string
+	SubResources []SubResourceRef
+	Error        *apierror.ResponseError
+}
+
+// references one resource produced alongside a result row's own — a production run's
+// batches, say.
+type SubResourceRef struct {
+	ResourceType constants.ObjectType
+	ID           string
+}
+
+// NewSubResourceRefs tags a run of ids produced by one row with the object type they
+// all share, which is every case that has come up: a row's sub-resources are siblings.
+func NewSubResourceRefs(resourceType constants.ObjectType, ids []string) []SubResourceRef {
+	if len(ids) == 0 {
+		return nil
+	}
+	refs := make([]SubResourceRef, len(ids))
+	for i, id := range ids {
+		refs[i] = SubResourceRef{ResourceType: resourceType, ID: id}
+	}
+	return refs
+}
+
+// Failed reports whether the row was rejected rather than written.
+func (r RowResult) Failed() bool {
+	return r.Status == constants.JobResultStatusFailed
 }
 
 func (j *Job) Status() constants.JobStatus {
@@ -61,39 +90,40 @@ func (j *Job) IsTerminal() bool {
 }
 
 type CreateJobServiceParams struct {
-	Type        constants.JobType
-	JobItems    json.RawMessage
-	CreatedByID *string
-	Results     []RowResult
+	Type         constants.JobType
+	ResourceType constants.ObjectType
+	JobItems     json.RawMessage
+	CreatedByID  *string
+	Results      []RowResult
 }
 
 type CreateJobRepositoryParams struct {
-	JobID       string
-	JobItems    json.RawMessage
-	Type        constants.JobType
-	AccountID   string
-	CreatedByID *string
-	Results     []RowResult
+	JobID        string
+	JobItems     json.RawMessage
+	Type         constants.JobType
+	ResourceType constants.ObjectType
+	AccountID    string
+	CreatedByID  *string
+	Results      []RowResult
 }
 
 type UpdateJobServiceParams struct {
-	JobID        string
-	Status       constants.JobStatus
-	Results      []RowResult
-	Errors       []apierror.RowError
-	ErrorSummary *string
+	JobID   string
+	Status  constants.JobStatus
+	Results []RowResult
+	Error   *apierror.ResponseError
 }
 
 type UpdateJobRepositoryParams struct {
-	JobID        string
-	AccountID    string
-	Results      []RowResult
-	Errors       []apierror.RowError
-	ErrorSummary *string
-	StartedAt    *time.Time
-	CompletedAt  *time.Time
-	FailedAt     *time.Time
-	CancelledAt  *time.Time
+	JobID            string
+	AccountID        string
+	Results          []RowResult
+	ResultsTruncated bool
+	Error            *apierror.ResponseError
+	StartedAt        *time.Time
+	CompletedAt      *time.Time
+	FailedAt         *time.Time
+	CancelledAt      *time.Time
 }
 
 type StartJobParams struct {
@@ -103,7 +133,6 @@ type StartJobParams struct {
 type CompleteJobParams struct {
 	JobID   string
 	Results []RowResult
-	Errors  []apierror.RowError
 }
 
 type FailJobParams struct {

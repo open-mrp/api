@@ -637,16 +637,12 @@ func jsonArray(m map[string]any, key string) []any {
 	return arr
 }
 
-// reads a completed job's row-indexed `results` array into created and updated id slices,
-// in results order; each entry is {index, id, action, sub_resource_ids}.
+// reads a completed job's row-indexed results into created and updated id slices, in
+// results order. A rejected row names no resource, so it lands in neither.
 func jobResultIDs(job map[string]any) (created, updated []string) {
-	for _, raw := range jsonArray(job, "results") {
-		m, ok := raw.(map[string]any)
-		if !ok {
-			continue
-		}
-		id, _ := m["id"].(string)
-		switch m["action"] {
+	for _, m := range jobResults(job) {
+		id := jobResultResourceID(m)
+		switch m["status"] {
 		case "created":
 			created = append(created, id)
 		case "updated":
@@ -656,13 +652,56 @@ func jobResultIDs(job map[string]any) (created, updated []string) {
 	return created, updated
 }
 
-// reads a completed job's `results` array as raw entry maps, for asserting on an entry's
-// index/action/sub_resource_ids directly.
+// reads a job's `results` list as raw entry maps, for asserting on an entry's
+// index/status/resource/sub_resources directly. Every submitted row appears exactly
+// once, written or rejected.
 func jobResults(job map[string]any) []map[string]any {
 	var out []map[string]any
-	for _, raw := range jsonArray(job, "results") {
+	for _, raw := range jsonListData(job, "results") {
 		if m, ok := raw.(map[string]any); ok {
 			out = append(out, m)
+		}
+	}
+	return out
+}
+
+// picks the written rows out of a job's results — the entries that produced a resource.
+func jobWrittenResults(job map[string]any) []map[string]any {
+	var out []map[string]any
+	for _, m := range jobResults(job) {
+		if m["status"] != "failed" {
+			out = append(out, m)
+		}
+	}
+	return out
+}
+
+// picks the rejected rows out of a job's results — the entries carrying an error.
+func jobErrors(job map[string]any) []map[string]any {
+	var out []map[string]any
+	for _, m := range jobResults(job) {
+		if m["status"] == "failed" {
+			out = append(out, m)
+		}
+	}
+	return out
+}
+
+// reads the id of the resource one result row produced, "" when the row failed.
+func jobResultResourceID(entry map[string]any) string {
+	resource, _ := entry["resource"].(map[string]any)
+	id, _ := resource["id"].(string)
+	return id
+}
+
+// reads the ids of the resources produced alongside one result row's own.
+func jobResultSubResourceIDs(entry map[string]any) []string {
+	var out []string
+	for _, raw := range jsonListData(entry, "sub_resources") {
+		if m, ok := raw.(map[string]any); ok {
+			if id, ok := m["id"].(string); ok {
+				out = append(out, id)
+			}
 		}
 	}
 	return out
@@ -680,16 +719,23 @@ func jsonStringSlice(m map[string]any, key string) []string {
 	return out
 }
 
-// reads the canonical error object nested in one entry of a job's `errors` array,
-// shaped {"index": n, "error": {code, type, message, ...}}.
+// reads the canonical error object a rejected result row carries.
 func jobRowError(entry map[string]any) map[string]any {
 	obj, _ := entry["error"].(map[string]any)
 	return obj
 }
 
-// reads the public message from one entry of a job's `errors` array.
+// reads the public message off a rejected result row.
 func jobRowErrorMessage(entry map[string]any) string {
 	msg, _ := jobRowError(entry)["message"].(string)
+	return msg
+}
+
+// reads the public message of the failure that sank the job as a whole, "" when the job
+// itself did not fail. A row rejected on its own merits does not set this.
+func jobErrorMessage(job map[string]any) string {
+	obj, _ := job["error"].(map[string]any)
+	msg, _ := obj["message"].(string)
 	return msg
 }
 

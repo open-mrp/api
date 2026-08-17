@@ -80,11 +80,12 @@ func LoadAccountUserNames(ctx context.Context, ids []string) (map[string]Account
 
 func accountUserFromProto(au *pb.AccountUserDetail) *apiresource.AccountUser {
 	return &apiresource.AccountUser{
-		ID:         au.Id,
-		Object:     constants.ObjectTypeAccountUser,
-		Status:     constants.AccountUserStatus(au.StatusCode),
-		LastUsedAt: grpcutil.TimestampToTimePtr(au.LastUsedAt),
-		CreatedAt:  grpcutil.TimestampToTime(au.CreatedAt),
-		UpdatedAt:  grpcutil.TimestampToTime(au.UpdatedAt),
+		ID:                   au.Id,
+		Object:               constants.ObjectTypeAccountUser,
+		Status:               constants.AccountUserStatus(au.StatusCode),
+		IsCommissionEligible: au.IsCommissionEligible,
+		LastUsedAt:           grpcutil.TimestampToTimePtr(au.LastUsedAt),
+		CreatedAt:            grpcutil.TimestampToTime(au.CreatedAt),
+		UpdatedAt:            grpcutil.TimestampToTime(au.UpdatedAt),
 	}
 }

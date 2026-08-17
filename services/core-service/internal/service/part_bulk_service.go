@@ -173,6 +173,7 @@ func (s *partSvcImpl) writeBulkUpsertParts(txCtx context.Context, txRepos domain
 func (s *partSvcImpl) bulkUpsertSpec() bulkOperationSpec[domain.UpsertPartParams, domain.ResolvedUpsertPartRow] {
 	return bulkOperationSpec[domain.UpsertPartParams, domain.ResolvedUpsertPartRow]{
 		JobType:          constants.JobTypeBulkUpsert,
+		ResourceType:     constants.ObjectTypePart,
 		RoutingKey:       messaging.BulkUpsertParts.RoutingKey(),
 		PermissionDomain: types.PermissionDomainParts,
 		Actions:          []types.Action{types.ActionCreate, types.ActionUpdate},
@@ -204,6 +205,7 @@ func (s *partSvcImpl) exportSpec() exportSpec[*domain.Part, domain.ExportPartsPa
 		ExternalAccess:  externalDirect,
 		Name:            "Parts",
 		Slug:            "parts",
+		ResourceType:    constants.ObjectTypePart,
 
 		ColumnsFor: func(parts []*domain.Part) []excel.ColumnSpec {
 			return append(itemBaseColumns(), itemPropertyColumns(partItems(parts))...)

@@ -14,7 +14,7 @@ import (
 // (profile fields hoisted onto the account_user, user as an entity reference)
 // even though the backend now serves the 1.0.forge-preview.2 shape.
 
-const previousAPIVersion = "1.0.forge-preview.1"
+const preview1APIVersion = "1.0.forge-preview.1"
 
 func assertPreview1AccountUserShape(t *testing.T, m map[string]any) {
 	t.Helper()
@@ -41,7 +41,7 @@ func assertPreview1AccountUserShape(t *testing.T, m map[string]any) {
 
 func TestVersionCompat_AccountUsers_Get(t *testing.T) {
 	t.Parallel()
-	oldClient := apiClient.WithAPIVersion(previousAPIVersion)
+	oldClient := apiClient.WithAPIVersion(preview1APIVersion)
 
 	status, body, err := oldClient.GetListRaw(accountUsersPath+"/"+SeedAccountUserID, nil)
 	require.NoError(t, err)
@@ -59,7 +59,7 @@ func TestVersionCompat_AccountUsers_Get(t *testing.T) {
 
 func TestVersionCompat_AccountUsers_List(t *testing.T) {
 	t.Parallel()
-	oldClient := apiClient.WithAPIVersion(previousAPIVersion)
+	oldClient := apiClient.WithAPIVersion(preview1APIVersion)
 
 	list, _, err := oldClient.GetList(accountUsersPath, nil)
 	require.NoError(t, err)
@@ -74,7 +74,7 @@ func TestVersionCompat_AccountUsers_List(t *testing.T) {
 
 func TestVersionCompat_AccountUsers_CreateAndPatch(t *testing.T) {
 	t.Parallel()
-	oldClient := apiClient.WithAPIVersion(previousAPIVersion)
+	oldClient := apiClient.WithAPIVersion(preview1APIVersion)
 
 	name := uniqueName("e2e-vc-acuser")
 	email := name + "@e2e-test.augno.com"

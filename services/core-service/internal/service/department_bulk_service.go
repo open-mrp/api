@@ -194,6 +194,7 @@ func upsertDepartmentInTx(txCtx context.Context, txRepos domain.RepoFactory, acc
 func (s *departmentSvcImpl) bulkUpsertSpec() bulkOperationSpec[domain.UpsertDepartmentParams, domain.ResolvedUpsertDepartmentRow] {
 	return bulkOperationSpec[domain.UpsertDepartmentParams, domain.ResolvedUpsertDepartmentRow]{
 		JobType:          constants.JobTypeBulkUpsert,
+		ResourceType:     constants.ObjectTypeDepartment,
 		RoutingKey:       messaging.BulkUpsertDepartments.RoutingKey(),
 		PermissionDomain: types.PermissionDomainDepartments,
 		Actions:          []types.Action{types.ActionCreate, types.ActionUpdate},
@@ -226,6 +227,7 @@ func (s *departmentSvcImpl) exportSpec() exportSpec[*domain.Department, domain.E
 		PermissionDomain: types.PermissionDomainDepartments,
 		Name:             "Departments",
 		Slug:             "departments",
+		ResourceType:     constants.ObjectTypeDepartment,
 		Columns: []excel.ColumnSpec{
 			{Header: "ID", Key: "id", Width: 24},
 			{Header: "Name", Key: "name", Width: 28},

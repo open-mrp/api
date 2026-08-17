@@ -2,6 +2,7 @@ package service
 
 import (
 	"bytes"
+	"sort"
 	"strings"
 
 	"github.com/go-pdf/fpdf"
@@ -13,8 +14,22 @@ const (
 	plPageRight    = 195.0
 	plPageBottom   = 282.0
 	plContentWidth = plPageRight - plPageLeft
-	plRowHeight    = 5.0
-	plHeaderHeight = 6.5
+	// plLineHeight is one line of wrapped cell text; plRowHeight is what a single-line row therefore costs.
+	plLineHeight    = 3.2
+	plCellPadding   = 1.8
+	plRowHeight     = plLineHeight + plCellPadding
+	plHeaderHeight  = 6.5
+	plBodyFontSize  = 6.5
+	plPriceFontSize = 7.5
+	// plCellMargin is the horizontal space fpdf keeps inside a cell (1mm per side), which is what wrapping and width measurement have to leave free.
+	plCellMargin = 2.0
+	// plColumnSlack keeps a content-sized column off its longest value.
+	plColumnSlack = 2.5
+	// Bounds on the content-sized columns. The minimum keeps a narrow column legible; the maximum stops one long attribute value from eating the table.
+	plMinColumnWidth = 11.0
+	plMaxColumnWidth = 45.0
+	// plMinInfoWidth is the floor for the product information column, which is the one column that is expected to wrap.
+	plMinInfoWidth = 42.0
 )
 
 // priceListDocument is everything the renderer needs; the caller has already priced and grouped the catalog.
@@ -35,6 +50,34 @@ type priceListDocument struct {
 type priceListRenderer struct {
 	pdf *fpdf.Fpdf
 	tr  func(string) string
+}
+
+// plCell is one drawn cell: its text already wrapped and encoded, and how many rows it swallows. A span of 0 means the cell above swallowed this row.
+type plCell struct {
+	Lines []string
+	Span  int
+	Align string
+	Style string
+	Size  float64
+}
+
+// plColumn is one resolved column: how its body cells are drawn, and how wide the column ended up.
+type plColumn struct {
+	Header string
+	Width  float64
+	Align  string
+	Style  string
+	Size   float64
+}
+
+// plTable is a section resolved to geometry: final column widths, wrapped cells and the height every row needs.
+type plTable struct {
+	Columns      []plColumn
+	Header       []plCell
+	HeaderHeight float64
+	// Cells is indexed [row][column].
+	Cells   [][]plCell
+	Heights []float64
 }
 
 // buildPriceListPDF renders the customer price list: a title page, then one section per group of SKUs that share a price, with repeated attribute values merged vertically the way a printed price list reads.
@@ -124,12 +167,14 @@ func (r *priceListRenderer) productLineHeader(line priceListLine) {
 
 // section renders one table, breaking across pages when it runs out of room. A run of merged cells interrupted by a page break is closed at the bottom and reopened with its value repeated at the top of the next page.
 func (r *priceListRenderer) section(line priceListLine, section priceListSection) {
-	widths, headers := plColumns(line, section)
+	table := r.buildTable(line, section)
+	if len(table.Cells) == 0 {
+		return
+	}
 
-	rows := section.Rows
 	first := true
-	for len(rows) > 0 {
-		if r.pdf.GetY()+plHeaderHeight+plRowHeight*2 > plPageBottom {
+	for start := 0; start < len(table.Cells); {
+		if r.pdf.GetY()+table.HeaderHeight+table.Heights[start] > plPageBottom {
 			r.pdf.AddPage()
 			r.productLineHeader(line)
 			first = true
@@ -138,17 +183,21 @@ func (r *priceListRenderer) section(line priceListLine, section priceListSection
 		if first && section.Heading != "" {
 			r.sectionHeading(section.Heading)
 		}
-		r.tableHeader(widths, headers)
+		r.tableHeader(table)
 
-		fit := min(int((plPageBottom-r.pdf.GetY())/plRowHeight), len(rows))
-		if fit <= 0 {
-			fit = 1
+		// At least one row per page, even where it cannot fit: an unbreakable row that always defers would loop forever.
+		end := start
+		for y := r.pdf.GetY(); end < len(table.Cells) && (end == start || y+table.Heights[end] <= plPageBottom); end++ {
+			y += table.Heights[end]
 		}
-		r.tableRows(widths, section, rows[:fit])
-		rows = rows[fit:]
+		if end < len(table.Cells) {
+			table.splitAt(end)
+		}
+		r.tableRows(table, start, end)
+		start = end
 		first = false
 
-		if len(rows) > 0 {
+		if start < len(table.Cells) {
 			r.pdf.AddPage()
 			r.productLineHeader(line)
 		}
@@ -162,140 +211,349 @@ func (r *priceListRenderer) sectionHeading(heading string) {
 	r.pdf.CellFormat(plContentWidth, plHeaderHeight, r.tr(" "+heading), "1", 1, "L", true, 0, "")
 }
 
-// plColumns lays out the table: one column per varying attribute, then the catalog number, description and pack, then one column per surviving volume tier.
-func plColumns(line priceListLine, section priceListSection) ([]float64, []string) {
-	headers := make([]string, 0, len(section.Columns)+3+len(section.Tiers))
-	headers = append(headers, section.Columns...)
-	headers = append(headers, "Catalog #", "Product Information", "Packing")
-	for _, tier := range section.Tiers {
-		label := line.BaseUnitName + " Cost"
-		if len(section.Tiers) > 1 {
-			label = tier.Label
+// buildTable resolves a section into drawable geometry: the columns and their widths, every cell wrapped to the width it landed on, and the row heights that wrapping implies.
+func (r *priceListRenderer) buildTable(line priceListLine, section priceListSection) *plTable {
+	columns := plTableColumns(line, section)
+	texts := plTableTexts(section)
+	spans := plTableSpans(section)
+	r.resolveColumnWidths(columns, texts, plInfoColumn(section))
+
+	table := &plTable{Columns: columns, Cells: make([][]plCell, len(texts)), Heights: make([]float64, len(texts))}
+
+	table.Header = make([]plCell, len(columns))
+	for c, column := range columns {
+		lines := make([]string, 0, 2)
+		for part := range strings.SplitSeq(strings.ToUpper(column.Header), "\n") {
+			lines = append(lines, r.wrap(part, column.Width, "B", plBodyFontSize)...)
 		}
-		headers = append(headers, label)
+		table.Header[c] = plCell{Lines: lines, Span: 1, Align: "C", Style: "B", Size: plBodyFontSize}
 	}
+	table.HeaderHeight = max(plHeaderHeight, plCellHeight(plMaxCellLines(table.Header)))
 
-	attrWidth := 0.0
-	if len(section.Columns) > 0 {
-		attrWidth = 20.0
+	for i := range texts {
+		table.Cells[i] = make([]plCell, len(columns))
+		table.Heights[i] = plRowHeight
+		for c, column := range columns {
+			span := spans[i][c]
+			if span == 0 {
+				continue
+			}
+			table.Cells[i][c] = plCell{
+				Lines: r.wrap(texts[i][c], column.Width, column.Style, column.Size),
+				Span:  span,
+				Align: column.Align,
+				Style: column.Style,
+				Size:  column.Size,
+			}
+		}
 	}
-	priceWidth := 22.0
-	remaining := max(plContentWidth-attrWidth*float64(len(section.Columns))-priceWidth*float64(len(section.Tiers)), 70.0)
-	catalogWidth := remaining * 0.26
-	packWidth := remaining * 0.34
-	infoWidth := remaining - catalogWidth - packWidth
-
-	widths := make([]float64, 0, len(headers))
-	for range section.Columns {
-		widths = append(widths, attrWidth)
-	}
-	widths = append(widths, catalogWidth, infoWidth, packWidth)
-	for range section.Tiers {
-		widths = append(widths, priceWidth)
-	}
-	return widths, headers
+	table.growRowsToFitCells()
+	return table
 }
 
-func (r *priceListRenderer) tableHeader(widths []float64, headers []string) {
-	r.pdf.SetFont("Helvetica", "B", 6.5)
-	r.pdf.SetFillColor(248, 248, 248)
-	for i, header := range headers {
-		r.pdf.CellFormat(widths[i], plHeaderHeight, r.fit(strings.ToUpper(header), widths[i]), "1", 0, "C", true, 0, "")
+// plTableColumns names the table: one column per varying attribute, then the catalog number, description and pack, then one column per surviving volume tier.
+func plTableColumns(line priceListLine, section priceListSection) []plColumn {
+	columns := make([]plColumn, 0, len(section.Columns)+3+len(section.Tiers))
+	for _, name := range section.Columns {
+		columns = append(columns, plColumn{Header: name, Align: "C", Size: plBodyFontSize})
 	}
-	r.pdf.Ln(-1)
+	columns = append(columns,
+		plColumn{Header: "Catalog #", Align: "C", Size: plBodyFontSize},
+		plColumn{Header: "Product Information", Align: "L", Size: plBodyFontSize},
+		plColumn{Header: "Packing", Align: "C", Size: plBodyFontSize},
+	)
+	for _, tier := range section.Tiers {
+		columns = append(columns, plColumn{Header: plCostHeader(line, section, tier), Align: "C", Style: "B", Size: plPriceFontSize})
+	}
+	return columns
 }
 
-// tableRows draws one page's worth of rows, merging vertically repeated attribute, description, pack and price cells into single tall cells.
-func (r *priceListRenderer) tableRows(widths []float64, section priceListSection, rows []priceListRow) {
-	attrCount := len(section.Columns)
+// plCostHeader heads a price column with the unit its price is per, because a price list quotes a bare number and the reader has no other way to know whether it buys a pair or a carton. Volume columns carry the break they apply at above it — the quantity a price is quoted at and the unit it is charged in are not the same thing, and a column that shows only the break invites reading the price as the price of the break.
+func plCostHeader(line priceListLine, section priceListSection, tier priceListTier) string {
+	// A tier with no unit of its own was priced against each product's own base unit, which within one product line is this line's.
+	unit := tier.UnitName
+	if unit == "" {
+		unit = line.BaseUnitName
+	}
 
-	attrValues := make([][]string, len(rows))
-	descriptions := make([]string, len(rows))
-	packs := make([]string, len(rows))
-	for i, row := range rows {
-		attrValues[i] = row.Values
+	header := "Cost"
+	if unit != "" {
+		header = "Cost Per " + unit
+	}
+	if len(section.Tiers) > 1 {
+		header = tier.Label + "\n" + header
+	}
+	return header
+}
+
+// plInfoColumn is the index of the product information column, the one column allowed to absorb whatever width the others leave.
+func plInfoColumn(section priceListSection) int {
+	return len(section.Columns) + 1
+}
+
+// plTableTexts flattens a section's rows into the table's column order.
+func plTableTexts(section priceListSection) [][]string {
+	attributes := len(section.Columns)
+	texts := make([][]string, len(section.Rows))
+	for i, row := range section.Rows {
+		cells := make([]string, attributes+3+len(section.Tiers))
+		copy(cells, row.Values)
+		cells[attributes] = row.SKU
+		cells[attributes+1] = row.Description
+		cells[attributes+2] = row.Packing
+		for t := range section.Tiers {
+			if t < len(row.Prices) {
+				cells[attributes+3+t] = row.Prices[t]
+			}
+		}
+		texts[i] = cells
+	}
+	return texts
+}
+
+// plTableSpans computes every column's vertical merges: attributes nest, description, pack and each price column merge on their own, and the catalog number never merges because it is what makes a row a row.
+func plTableSpans(section priceListSection) [][]int {
+	attributes := len(section.Columns)
+	width := attributes + 3 + len(section.Tiers)
+
+	spans := make([][]int, len(section.Rows))
+	for i := range spans {
+		spans[i] = make([]int, width)
+		spans[i][attributes] = 1
+	}
+
+	attributeValues := make([][]string, len(section.Rows))
+	descriptions := make([]string, len(section.Rows))
+	packs := make([]string, len(section.Rows))
+	for i, row := range section.Rows {
+		attributeValues[i] = row.Values
 		descriptions[i] = row.Description
 		packs[i] = row.Packing
 	}
-	attrSpans := mergeSpansNested(attrValues, attrCount)
-	descriptionSpans := mergeSpans(descriptions)
-	packSpans := mergeSpans(packs)
 
-	priceSpans := make([][]int, len(section.Tiers))
+	for i, nested := range mergeSpansNested(attributeValues, attributes) {
+		copy(spans[i], nested)
+	}
+	for i, span := range mergeSpans(descriptions) {
+		spans[i][attributes+1] = span
+	}
+	for i, span := range mergeSpans(packs) {
+		spans[i][attributes+2] = span
+	}
 	for t := range section.Tiers {
-		column := make([]string, len(rows))
-		for i, row := range rows {
+		column := make([]string, len(section.Rows))
+		for i, row := range section.Rows {
 			if t < len(row.Prices) {
 				column[i] = row.Prices[t]
 			}
 		}
-		priceSpans[t] = mergeSpans(column)
+		for i, span := range mergeSpans(column) {
+			spans[i][attributes+3+t] = span
+		}
+	}
+	return spans
+}
+
+// resolveColumnWidths sizes every column to its own content and hands the slack to the product information column, which is the one column whose text is long enough to be worth wrapping. When the natural widths overflow the page the surplus comes off the information column first, and only then off the rest.
+func (r *priceListRenderer) resolveColumnWidths(columns []plColumn, texts [][]string, info int) {
+	total := 0.0
+	for c := range columns {
+		natural := 0.0
+		// A header that names its own lines is measured a line at a time; measuring it whole would size the column to a width it never draws at.
+		for part := range strings.SplitSeq(strings.ToUpper(columns[c].Header), "\n") {
+			natural = max(natural, r.measure(part, "B", plBodyFontSize))
+		}
+		r.pdf.SetFont("Helvetica", columns[c].Style, columns[c].Size)
+		for _, row := range texts {
+			natural = max(natural, r.pdf.GetStringWidth(r.tr(row[c])))
+		}
+		natural += plCellMargin + plColumnSlack
+		if c == info {
+			natural = max(natural, plMinInfoWidth)
+		} else {
+			natural = min(max(natural, plMinColumnWidth), plMaxColumnWidth)
+		}
+		columns[c].Width = natural
+		total += natural
 	}
 
-	top := r.pdf.GetY()
-	for i, row := range rows {
-		y := top + float64(i)*plRowHeight
+	switch {
+	case total < plContentWidth:
+		columns[info].Width += plContentWidth - total
+	case total > plContentWidth:
+		// Shrink the information column down to its floor first, then take what is still owed proportionally from the columns that are sized to fit.
+		overflow := total - plContentWidth
+		reclaimed := min(overflow, columns[info].Width-plMinInfoWidth)
+		columns[info].Width -= reclaimed
+		overflow -= reclaimed
+		if overflow <= 0 {
+			return
+		}
+		others := total - reclaimed - columns[info].Width
+		if others <= 0 {
+			return
+		}
+		for c := range columns {
+			if c == info {
+				continue
+			}
+			columns[c].Width -= overflow * columns[c].Width / others
+		}
+	}
+}
+
+func (r *priceListRenderer) measure(text, style string, size float64) float64 {
+	if text == "" {
+		return 0
+	}
+	r.pdf.SetFont("Helvetica", style, size)
+	return r.pdf.GetStringWidth(r.tr(text))
+}
+
+// wrap encodes text into the font's cp1252 and breaks it into the lines it takes at this width.
+func (r *priceListRenderer) wrap(text string, width float64, style string, size float64) []string {
+	if text == "" {
+		return nil
+	}
+	r.pdf.SetFont("Helvetica", style, size)
+	chunks := r.pdf.SplitLines([]byte(r.tr(text)), width)
+	lines := make([]string, 0, len(chunks))
+	for _, chunk := range chunks {
+		lines = append(lines, string(chunk))
+	}
+	return lines
+}
+
+func plCellHeight(lines int) float64 {
+	return max(1, float64(lines))*plLineHeight + plCellPadding
+}
+
+// plLinesThatFit inverts plCellHeight. It rounds rather than truncates because a height built by summing line heights lands a hair under its own line count in binary — truncating there drops the last line of a cell that was measured to fit exactly.
+func plLinesThatFit(height float64) int {
+	return max(1, int((height-plCellPadding)/plLineHeight+0.001))
+}
+
+func plMaxCellLines(cells []plCell) int {
+	longest := 1
+	for _, cell := range cells {
+		longest = max(longest, len(cell.Lines))
+	}
+	return longest
+}
+
+// growRowsToFitCells raises row heights until every cell has room for its wrapped text, spreading a merged cell's requirement across the rows it spans. Shortest spans are settled first so a merged cell only claims the height its rows still lack.
+func (t *plTable) growRowsToFitCells() {
+	type need struct {
+		row, span int
+		height    float64
+	}
+	needs := make([]need, 0)
+	for i := range t.Cells {
+		for _, cell := range t.Cells[i] {
+			if cell.Span > 0 && len(cell.Lines) > 1 {
+				needs = append(needs, need{row: i, span: cell.Span, height: plCellHeight(len(cell.Lines))})
+			}
+		}
+	}
+	sort.SliceStable(needs, func(i, j int) bool { return needs[i].span < needs[j].span })
+
+	for _, n := range needs {
+		available := 0.0
+		for _, height := range t.Heights[n.row : n.row+n.span] {
+			available += height
+		}
+		if n.height <= available {
+			continue
+		}
+		for row := n.row; row < n.row+n.span; row++ {
+			t.Heights[row] += (n.height - available) / float64(n.span)
+		}
+	}
+}
+
+// splitAt closes every merged run that straddles the row, reopening it at that row so the part carried onto the next page repeats its value.
+func (t *plTable) splitAt(row int) {
+	for c := range t.Columns {
+		if t.Cells[row][c].Span > 0 {
+			continue
+		}
+		start := row - 1
+		for start >= 0 && t.Cells[start][c].Span == 0 {
+			start--
+		}
+		if start < 0 {
+			continue
+		}
+		open := t.Cells[start][c]
+		t.Cells[start][c].Span = row - start
+		open.Span = start + open.Span - row
+		t.Cells[row][c] = open
+	}
+}
+
+// tableRows draws the rows in [start, end); no merged run crosses either bound.
+func (r *priceListRenderer) tableRows(table *plTable, start, end int) {
+	y := r.pdf.GetY()
+	for i := start; i < end; i++ {
 		x := plPageLeft
-
-		r.pdf.SetFont("Helvetica", "", 6.5)
-		for c := range attrCount {
-			if span := attrSpans[i][c]; span > 0 {
-				r.mergedCell(x, y, widths[c], plRowHeight*float64(span), row.Values[c], "C")
-			}
-			x += widths[c]
-		}
-
-		r.mergedCell(x, y, widths[attrCount], plRowHeight, row.SKU, "C")
-		x += widths[attrCount]
-
-		if span := descriptionSpans[i]; span > 0 {
-			r.mergedCell(x, y, widths[attrCount+1], plRowHeight*float64(span), row.Description, "L")
-		}
-		x += widths[attrCount+1]
-
-		if span := packSpans[i]; span > 0 {
-			r.mergedCell(x, y, widths[attrCount+2], plRowHeight*float64(span), row.Packing, "C")
-		}
-		x += widths[attrCount+2]
-
-		for t := range section.Tiers {
-			width := widths[attrCount+3+t]
-			if span := priceSpans[t][i]; span > 0 {
-				value := ""
-				if t < len(row.Prices) {
-					value = row.Prices[t]
+		for c, column := range table.Columns {
+			if cell := table.Cells[i][c]; cell.Span > 0 {
+				height := 0.0
+				for _, rowHeight := range table.Heights[i : i+cell.Span] {
+					height += rowHeight
 				}
-				r.pdf.SetFont("Helvetica", "B", 7.5)
-				r.mergedCell(x, y, width, plRowHeight*float64(span), value, "C")
-				r.pdf.SetFont("Helvetica", "", 6.5)
+				r.drawCell(x, y, column.Width, height, cell, false)
 			}
-			x += width
+			x += column.Width
 		}
+		y += table.Heights[i]
 	}
-	r.pdf.SetXY(plPageLeft, top+float64(len(rows))*plRowHeight)
+	r.pdf.SetXY(plPageLeft, y)
 }
 
-// mergedCell draws one bordered cell of arbitrary height with its text vertically centered.
-func (r *priceListRenderer) mergedCell(x, y, w, h float64, text, align string) {
-	r.pdf.Rect(x, y, w, h, "D")
-	r.pdf.SetXY(x, y+(h-plRowHeight)/2)
-	r.pdf.CellFormat(w, plRowHeight, r.fit(text, w), "", 0, align, false, 0, "")
+func (r *priceListRenderer) tableHeader(table *plTable) {
+	r.pdf.SetFillColor(248, 248, 248)
+	x, y := plPageLeft, r.pdf.GetY()
+	for c, column := range table.Columns {
+		r.drawCell(x, y, column.Width, table.HeaderHeight, table.Header[c], true)
+		x += column.Width
+	}
+	r.pdf.SetXY(plPageLeft, y+table.HeaderHeight)
 }
 
-// fit translates text into the font's encoding and trims it to the cell width. Rows are a fixed height and must not wrap, so overlong values are cut — by rune, since cutting mid-sequence would corrupt the character.
-func (r *priceListRenderer) fit(text string, width float64) string {
-	encoded := r.tr(text)
-	padded := width - 2
-	if r.pdf.GetStringWidth(encoded) <= padded {
-		return encoded
+// drawCell draws one bordered cell of arbitrary height with its wrapped text vertically centered. Text is clipped to the lines that fit, which only bites where a page break left a reopened merge shorter than the run it came from.
+func (r *priceListRenderer) drawCell(x, y, width, height float64, cell plCell, fill bool) {
+	style := "D"
+	if fill {
+		style = "FD"
 	}
-	runes := []rune(text)
-	for len(runes) > 1 {
-		runes = runes[:len(runes)-1]
-		candidate := r.tr(string(runes) + "...")
-		if r.pdf.GetStringWidth(candidate) <= padded {
-			return candidate
+	r.pdf.Rect(x, y, width, height, style)
+	if len(cell.Lines) == 0 {
+		return
+	}
+
+	r.pdf.SetFont("Helvetica", cell.Style, cell.Size)
+	lines := cell.Lines
+	if fits := plLinesThatFit(height); len(lines) > fits {
+		lines = append([]string{}, lines[:fits]...)
+		lines[fits-1] = r.clip(lines[fits-1], width)
+	}
+
+	top := y + (height-float64(len(lines))*plLineHeight)/2
+	for i, line := range lines {
+		r.pdf.SetXY(x, top+float64(i)*plLineHeight)
+		r.pdf.CellFormat(width, plLineHeight, line, "", 0, cell.Align, false, 0, "")
+	}
+}
+
+// clip trims text to the cell width and marks it as cut. It trims by byte because the text has already been encoded to the font's cp1252, where every character is one byte — trimming the runes of a cp1252 string would corrupt anything above ASCII.
+func (r *priceListRenderer) clip(text string, width float64) string {
+	padded := width - plCellMargin
+	for len(text) > 0 {
+		if r.pdf.GetStringWidth(text+"...") <= padded {
+			return text + "..."
 		}
+		text = text[:len(text)-1]
 	}
-	return r.tr(string(runes))
+	return ""
 }

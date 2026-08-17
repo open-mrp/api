@@ -28,14 +28,18 @@ func knitSewPackFlow() ExplosionInput {
 func TestExplode_WalksDownstreamAndAccumulatesOffsets(t *testing.T) {
 	got := Explode(knitSewPackFlow())
 
-	if len(got) != 2 {
-		t.Fatalf("expected 2 derived lines (sew, pack), got %d: %+v", len(got), got)
+	if len(got) != 3 {
+		t.Fatalf("expected 3 derived lines (knit, sew, pack), got %d: %+v", len(got), got)
 	}
 
-	sew, pack := got[0], got[1]
+	knit, sew, pack := got[0], got[1], got[2]
+
+	if knit.ProductionStep != "prs_knit" || knit.Depth != 0 || knit.WeekIndex != 0 {
+		t.Errorf("first derived line = %+v, want the constraint step itself at depth 0 in its own week", knit)
+	}
 
 	if sew.ProductionStep != "prs_sew" || sew.DepartmentID != "dp_sew" {
-		t.Errorf("first derived line = %+v, want the sew step", sew)
+		t.Errorf("second derived line = %+v, want the sew step", sew)
 	}
 	if sew.WeekIndex != 1 {
 		t.Errorf("sew week = %d, want 1 — one week after the constraint campaign", sew.WeekIndex)
@@ -60,16 +64,40 @@ func TestExplode_AppliesYieldLossDownstream(t *testing.T) {
 	in.Steps["prs_sew"] = sew
 
 	got := Explode(in)
-	if len(got) != 2 {
-		t.Fatalf("expected 2 derived lines, got %d", len(got))
+	if len(got) != 3 {
+		t.Fatalf("expected 3 derived lines, got %d", len(got))
 	}
 
-	if got[0].Quantity != 900 {
-		t.Errorf("sew quantity = %v, want 900 — a 10%% loss at sew", got[0].Quantity)
+	// The constraint step is what the plan already committed to, so no yield applies to it.
+	if got[0].Quantity != 1000 {
+		t.Errorf("knit quantity = %v, want 1000 — the constraint campaign is the plan's own figure", got[0].Quantity)
+	}
+	if got[1].Quantity != 900 {
+		t.Errorf("sew quantity = %v, want 900 — a 10%% loss at sew", got[1].Quantity)
 	}
 	// The loss compounds: pack sees what sew actually produced, not what knit started with.
-	if got[1].Quantity != 900 {
-		t.Errorf("pack quantity = %v, want 900 — downstream inherits the upstream loss", got[1].Quantity)
+	if got[2].Quantity != 900 {
+		t.Errorf("pack quantity = %v, want 900 — downstream inherits the upstream loss", got[2].Quantity)
+	}
+}
+
+// A plant whose constraint has nothing configured downstream of it still has scheduled work, and the work list is the surface that has to show it.
+func TestExplode_ConstraintOnlyFlowStillProducesWork(t *testing.T) {
+	got := Explode(ExplosionInput{
+		Campaigns: []ExplosionCampaign{{
+			LineID: "pnscln_1", ItemID: "it_knit", SKU: "KNIT-1",
+			MachineID: "mc_51", WeekIndex: 2, Quantity: 600, StepID: "prs_knit",
+		}},
+		Steps: map[string]StepInfo{
+			"prs_knit": {StepID: "prs_knit", DepartmentID: "dp_knit", Name: "Knit", YieldRatio: 1},
+		},
+	})
+
+	if len(got) != 1 {
+		t.Fatalf("expected the constraint campaign itself, got %d lines: %+v", len(got), got)
+	}
+	if got[0].WeekIndex != 2 || got[0].Quantity != 600 || got[0].DepartmentID != "dp_knit" {
+		t.Errorf("derived line = %+v, want the campaign as-planned in its own department", got[0])
 	}
 }
 
@@ -81,8 +109,8 @@ func TestExplode_ZeroYieldTreatedAsNoLoss(t *testing.T) {
 	in.Steps["prs_sew"] = sew
 
 	got := Explode(in)
-	if got[0].Quantity != 1000 {
-		t.Errorf("sew quantity = %v, want 1000 — an unset yield must not zero the plan", got[0].Quantity)
+	if got[1].Quantity != 1000 {
+		t.Errorf("sew quantity = %v, want 1000 — an unset yield must not zero the plan", got[1].Quantity)
 	}
 }
 

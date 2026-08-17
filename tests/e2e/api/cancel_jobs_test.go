@@ -28,8 +28,8 @@ func TestJobs_Cancel_RejectedAfterCompletion(t *testing.T) {
 	job := pollJobUntilTerminal(t, jobID)
 	require.Equal(t, "completed", jsonField(job, "status"))
 
-	if created := jsonArray(jsonObject(job, "results"), "created_ids"); len(created) == 1 {
-		defer cleanupUnitIDs([]string{created[0].(string)})
+	if created, _ := jobResultIDs(job); len(created) == 1 {
+		defer cleanupUnitIDs(created)
 	}
 
 	status, body, err := apiClient.Post(jobsPath+"/"+jobID+"/cancel", nil, "")
@@ -64,12 +64,9 @@ func TestJobs_Cancel_CancelledJobWritesNothing(t *testing.T) {
 	status := jsonField(job, "status")
 
 	// Clean up anything created regardless of which side won the race.
-	created := jsonArray(jsonObject(job, "results"), "created_ids")
+	created, _ := jobResultIDs(job)
 	if len(created) > 0 {
-		ids := make([]string, 0, len(created))
-		for _, c := range created {
-			ids = append(ids, c.(string))
-		}
+		ids := append([]string{}, created...)
 		defer cleanupUnitIDs(ids)
 	}
 

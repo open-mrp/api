@@ -32,14 +32,12 @@ func TestJobRepo_Get_ReadsAJobWhoseJSONColumnsAreNull(t *testing.T) {
 	now := time.Now().UTC()
 	mock.ExpectQuery("SELECT").
 		WillReturnRows(sqlmock.NewRows([]string{
-			"id", "type", "account_id", "created_by",
-			"created_by_name", "created_by_username", "created_by_email",
-			"job_items", "results", "errors", "error_summary",
+			"id", "type", "resource_type", "account_id", "created_by",
+			"job_items", "results", "error", "errors",
 			"started_at", "completed_at", "failed_at", "cancelled_at",
 			"created_at", "updated_at",
 		}).AddRow(
-			"jo_test", "bulkcreate", "ac_test", nil,
-			nil, nil, nil,
+			"jo_test", "bulk_create", "production_run", "ac_test", nil,
 			[]byte(`{"runs":[]}`), nil, nil, nil,
 			nil, nil, nil, nil,
 			now, now,
@@ -57,20 +55,20 @@ func TestJobRepo_Get_ReadsAJobWhoseJSONColumnsAreNull(t *testing.T) {
 	if job.Results != nil {
 		t.Errorf("expected no results on an unsettled job, got %v", job.Results)
 	}
-	if job.Errors != nil {
-		t.Errorf("expected no errors on an unsettled job, got %v", job.Errors)
+	if job.Error != nil {
+		t.Errorf("expected no error on an unsettled job, got %v", job.Error)
 	}
 	if string(job.JobItems) != `{"runs":[]}` {
 		t.Errorf("job items should survive the read, got %q", string(job.JobItems))
 	}
 }
 
-// Encoding the results and errors lists is the repository's job — the layers above it
-// hand over domain values — so this pins the JSON those columns actually hold and the
-// decode back out of it. The empty-but-present results list is the case that matters:
-// it has to stay distinguishable from NULL, because it is how a job that ran and wrote
-// nothing differs from one that has not recorded results at all.
-func TestJobRepo_Get_DecodesResultsAndErrors(t *testing.T) {
+// Encoding the row outcomes is the repository's job — the layers above it hand over
+// domain values — so this pins the JSON that column actually holds and the decode back
+// out of it. The empty-but-present list is the case that matters: it has to stay
+// distinguishable from NULL, because it is how a job that ran and wrote nothing differs
+// from one that has not recorded results at all.
+func TestJobRepo_Get_DecodesRowOutcomes(t *testing.T) {
 	t.Parallel()
 
 	db, mock, err := sqlmock.New()
@@ -82,17 +80,15 @@ func TestJobRepo_Get_DecodesResultsAndErrors(t *testing.T) {
 	now := time.Now().UTC()
 	mock.ExpectQuery("SELECT").
 		WillReturnRows(sqlmock.NewRows([]string{
-			"id", "type", "account_id", "created_by",
-			"created_by_name", "created_by_username", "created_by_email",
-			"job_items", "results", "errors", "error_summary",
+			"id", "type", "resource_type", "account_id", "created_by",
+			"job_items", "results", "error", "errors",
 			"started_at", "completed_at", "failed_at", "cancelled_at",
 			"created_at", "updated_at",
 		}).AddRow(
-			"jo_test", "bulkupsert", "ac_test", nil,
-			nil, nil, nil,
+			"jo_test", "bulk_upsert", "unit", "ac_test", nil,
 			[]byte(`{}`),
-			[]byte(`[{"Index":0,"ID":"un_1","Action":"created","SubResourceIDs":["ba_1"]}]`),
-			[]byte(`[{"Index":1,"Error":{"code":"validation_failed","type":"invalid_request_error","message":"bad row","param":"name","doc_url":null,"is_transient":false,"quota":null,"request_log_url":null}}]`),
+			[]byte(`{"rows":[{"index":0,"status":"created","resource_type":"unit","id":"un_1","sub_resources":[{"resource_type":"batch","id":"ba_1"}]},{"index":1,"status":"failed","error":{"code":"validation_failed","type":"invalid_request_error","message":"bad row","param":"name"}}],"truncated":true}`),
+			[]byte(`{"code":"internal_error","type":"api_error","message":"the whole batch fell over"}`),
 			nil,
 			nil, nil, nil, nil,
 			now, now,
@@ -105,26 +101,93 @@ func TestJobRepo_Get_DecodesResultsAndErrors(t *testing.T) {
 		t.Fatalf("expected the job to read back, got: %v", apiErr)
 	}
 
-	if len(job.Results) != 1 {
-		t.Fatalf("expected one result, got %v", job.Results)
+	if job.ResourceType != constants.ObjectTypeUnit {
+		t.Errorf("resource type did not decode: %q", job.ResourceType)
 	}
-	got := job.Results[0]
-	if got.Index != 0 || got.ID != "un_1" || got.Action != constants.JobResultActionCreated {
-		t.Errorf("result did not decode: %+v", got)
+	if !job.ResultsTruncated {
+		t.Error("a trimmed record must read back as trimmed")
 	}
-	if len(got.SubResourceIDs) != 1 || got.SubResourceIDs[0] != "ba_1" {
-		t.Errorf("sub-resource ids did not decode: %+v", got.SubResourceIDs)
+	if len(job.Results) != 2 {
+		t.Fatalf("expected both rows, got %v", job.Results)
 	}
 
-	if len(job.Errors) != 1 {
-		t.Fatalf("expected one error entry, got %v", job.Errors)
+	written := job.Results[0]
+	if written.Index != 0 || written.ID != "un_1" || written.Status != constants.JobResultStatusCreated {
+		t.Errorf("written row did not decode: %+v", written)
 	}
-	gotErr := job.Errors[0]
-	if gotErr.Index == nil || *gotErr.Index != 1 {
-		t.Errorf("error index did not decode: %+v", gotErr.Index)
+	if written.ResourceType != constants.ObjectTypeUnit {
+		t.Errorf("the row must name what it produced: %+v", written)
 	}
-	if gotErr.Error.Code != apierror.ErrorCodeValidationFailed || gotErr.Error.Message != "bad row" {
-		t.Errorf("error object did not decode: %+v", gotErr.Error)
+	if len(written.SubResources) != 1 || written.SubResources[0].ID != "ba_1" || written.SubResources[0].ResourceType != constants.ObjectTypeBatch {
+		t.Errorf("sub-resources did not decode: %+v", written.SubResources)
+	}
+
+	failed := job.Results[1]
+	if failed.Index != 1 || failed.Status != constants.JobResultStatusFailed {
+		t.Errorf("rejected row did not decode: %+v", failed)
+	}
+	if failed.Error == nil || failed.Error.Code != apierror.ErrorCodeValidationFailed || failed.Error.Message != "bad row" {
+		t.Errorf("the row's error did not decode: %+v", failed.Error)
+	}
+	// A row's own failure never doubles as the job's — the two are different scopes.
+	if job.Error == nil || job.Error.Message != "the whole batch fell over" {
+		t.Errorf("the whole-job error did not decode: %+v", job.Error)
+	}
+}
+
+// A job raised before the outcomes merged stored its written rows as a bare array and
+// its failures in a separate column. Those settle within minutes, so this only has to
+// cover the ones in flight across the deploy — but for those, one entry per submitted
+// row still has to come back. Delete with the legacy decode it drives.
+func TestJobRepo_Get_FoldsALegacyJobsSeparateErrorsIntoItsRows(t *testing.T) {
+	t.Parallel()
+
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	now := time.Now().UTC()
+	mock.ExpectQuery("SELECT").
+		WillReturnRows(sqlmock.NewRows([]string{
+			"id", "type", "resource_type", "account_id", "created_by",
+			"job_items", "results", "error", "errors",
+			"started_at", "completed_at", "failed_at", "cancelled_at",
+			"created_at", "updated_at",
+		}).AddRow(
+			"jo_test", "bulkupsert", "unit", "ac_test", nil,
+			[]byte(`{}`),
+			[]byte(`[{"Index":0,"ID":"un_1","Action":"created","SubResourceIDs":["ba_1"]}]`),
+			nil,
+			[]byte(`[{"index":1,"error":{"code":"validation_failed","type":"invalid_request_error","message":"bad row","param":"name"}},{"error":{"code":"internal_error","type":"api_error","message":"the whole batch fell over"}}]`),
+			nil, nil, nil, nil,
+			now, now,
+		))
+
+	repo := NewJobRepo(sqlc.New(db))
+
+	job, apiErr := repo.Get(context.Background(), "jo_test", "ac_test")
+	if apiErr != nil {
+		t.Fatalf("expected the legacy job to read back, got: %v", apiErr)
+	}
+
+	if len(job.Results) != 2 {
+		t.Fatalf("the legacy errors must fold in as rows, got %v", job.Results)
+	}
+	if job.Results[0].Status != constants.JobResultStatusCreated || job.Results[0].ID != "un_1" {
+		t.Errorf("the legacy action must become the row's status: %+v", job.Results[0])
+	}
+	// The legacy row named only ids, so the kind comes from the job's own resource type.
+	if len(job.Results[0].SubResources) != 1 || job.Results[0].SubResources[0].ResourceType != constants.ObjectTypeUnit {
+		t.Errorf("legacy sub-resources did not decode: %+v", job.Results[0].SubResources)
+	}
+	if job.Results[1].Index != 1 || job.Results[1].Status != constants.JobResultStatusFailed {
+		t.Errorf("the legacy row error must become a failed row: %+v", job.Results[1])
+	}
+	// The index-less legacy entry named no row, so it settles on the job.
+	if job.Error == nil || job.Error.Message != "the whole batch fell over" {
+		t.Errorf("the legacy batch error must become the job's error: %+v", job.Error)
 	}
 }
 
@@ -191,7 +254,7 @@ func TestJobRepo_Update_EncodesAnEmptyResultsListDistinctlyFromNone(t *testing.T
 		{
 			name:    "an empty list records an empty array",
 			results: []domain.RowResult{},
-			want:    []byte(`[]`),
+			want:    []byte(`{"rows":[],"truncated":false}`),
 		},
 	}
 
@@ -206,7 +269,7 @@ func TestJobRepo_Update_EncodesAnEmptyResultsListDistinctlyFromNone(t *testing.T
 			defer db.Close()
 
 			mock.ExpectExec("UPDATE").
-				WithArgs(tc.want, nil, nil, nil, sqlmock.AnyArg(), nil, nil, "jo_test", "ac_test").
+				WithArgs(tc.want, nil, nil, sqlmock.AnyArg(), nil, nil, "jo_test", "ac_test").
 				WillReturnResult(sqlmock.NewResult(0, 1))
 
 			repo := NewJobRepo(sqlc.New(db))

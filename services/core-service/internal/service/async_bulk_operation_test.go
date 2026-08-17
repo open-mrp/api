@@ -12,6 +12,7 @@ import (
 	mediatormock "github.com/augno/api/services/core-service/internal/domain/mock/mediator"
 	repositorymock "github.com/augno/api/services/core-service/internal/domain/mock/repository"
 	servicemock "github.com/augno/api/services/core-service/internal/domain/mock/service"
+	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/db"
 	apierror "github.com/augno/api/shared/errors"
@@ -27,10 +28,10 @@ import (
 // the JSON of the column they land in is the repository's business.
 func splitJobResults(results []domain.RowResult) (created, updated []string) {
 	for _, r := range results {
-		switch r.Action {
-		case constants.JobResultActionCreated:
+		switch r.Status {
+		case constants.JobResultStatusCreated:
 			created = append(created, r.ID)
-		case constants.JobResultActionUpdated:
+		case constants.JobResultStatusUpdated:
 			updated = append(updated, r.ID)
 		}
 	}
@@ -106,6 +107,7 @@ func fakeSpec(
 ) bulkOperationSpec[fakeRow, fakeRow] {
 	return bulkOperationSpec[fakeRow, fakeRow]{
 		JobType:          constants.JobTypeBulkUpsert,
+		ResourceType:     constants.ObjectTypeProductionStep,
 		RoutingKey:       "core.cmd.fake",
 		PermissionDomain: types.PermissionDomainProductionSteps,
 		Actions:          []types.Action{types.ActionCreate, types.ActionUpdate},
@@ -187,6 +189,49 @@ func (suite *AsyncBulkEngineTestSuite) TestEnqueue_RecordsResolvedRowsOnAJob() {
 	var stored []fakeRow
 	suite.NoError(json.Unmarshal(recorded.JobItems, &stored))
 	suite.Equal(rows, stored)
+}
+
+// An API key is not an account user, so attribution falls through to the key's own id
+// rather than leaving created_by empty — retrieve-job expands it as an actor.
+func (suite *AsyncBulkEngineTestSuite) TestEnqueue_AttributesAnAPIKeyAsCreatedBy() {
+	accountID := genTestID(suite.T(), id.AccountIDPrefix)
+	jobID := genTestID(suite.T(), id.JobIDPrefix)
+	actorID := genTestID(suite.T(), id.APIKeyIDPrefix)
+	roleCode := string(constants.RoleTypeAdmin)
+	ctx := appctx.WithIdentity(context.Background(), &types.Identity{
+		Type:   types.IdentityActorTypeAPIKey,
+		Target: &types.IdentityTarget{AccountID: accountID},
+		Actor: &types.IdentityActor{
+			RelationType: types.IdentityRelationTypeInternal,
+			ID:           actorID,
+			AccountID:    &accountID,
+			RoleType:     &roleCode,
+			Permissions:  map[string]bool{"production_steps:create": true, "production_steps:update": true},
+		},
+	})
+
+	suite.accountUserRepo.EXPECT().
+		ResolveAccountUserID(gomock.Any(), accountID, actorID).
+		Return("", apierror.NewResourceNotFoundError("not an account user")).
+		Times(1)
+	suite.startedKey()
+
+	var recorded domain.CreateJobServiceParams
+	suite.jobSvc.EXPECT().
+		CreateJob(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, params domain.CreateJobServiceParams) (*domain.Job, *apierror.APIError) {
+			recorded = params
+			return &domain.Job{ID: jobID}, nil
+		}).
+		Times(1)
+	suite.idempotencyMed.EXPECT().CacheSuccessResponse(gomock.Any(), "idk_fake", gomock.Any()).Return(nil).Times(1)
+
+	ack, apiErr := enqueueBulkOperation(ctx, suite.deps, fakeSpec(nil, nil, nil, nil, nil, nil, nil), []fakeRow{{Name: "a"}})
+
+	suite.Nil(apiErr)
+	suite.NotNil(ack)
+	suite.Require().NotNil(recorded.CreatedByID)
+	suite.Equal(actorID, *recorded.CreatedByID)
 }
 
 // A validation error stops the accept phase before any job is raised.
@@ -276,12 +321,10 @@ func (suite *AsyncBulkEngineTestSuite) TestExecute_WritesRowsThenCompletesWithRe
 		}).Times(1)
 
 	var completeResults []domain.RowResult
-	var completeErrors []apierror.RowError
 	suite.jobSvc.EXPECT().CompleteJob(gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ context.Context, params domain.CompleteJobParams) *apierror.APIError {
 			order = append(order, "complete")
 			completeResults = params.Results
-			completeErrors = params.Errors
 			return nil
 		}).Times(1)
 
@@ -298,7 +341,7 @@ func (suite *AsyncBulkEngineTestSuite) TestExecute_WritesRowsThenCompletesWithRe
 	created, updated := splitJobResults(completeResults)
 	suite.Equal([]string{"cr_1"}, created)
 	suite.Equal([]string{"up_1"}, updated)
-	suite.Nil(completeErrors, "no row failed, so errors stays null")
+	suite.Empty(failedRows(completeResults), "no row failed, so every entry names a resource")
 	// AfterCommit sees every written id.
 	suite.ElementsMatch([]string{"cr_1", "up_1"}, afterSeen)
 }
@@ -328,12 +371,10 @@ func (suite *AsyncBulkEngineTestSuite) TestExecute_AfterCommitFailureLeavesTheJo
 	suite.Nil(apiErr, "a post-commit side effect must not fail the job or redeliver the message")
 }
 
-// rowErrIndex reads an entry's row index, -1 when absent (a whole-job failure).
+// rowErrIndex reads an entry's row index. Every collected failure names one now — a
+// failure that names no row settles on the job instead of among its rows.
 func rowErrIndex(e apierror.RowError) int {
-	if e.Index == nil {
-		return -1
-	}
-	return *e.Index
+	return e.Index
 }
 
 // rowErrMessage reads an entry's public message.
@@ -341,9 +382,20 @@ func rowErrMessage(e apierror.RowError) string {
 	return e.Error.Message
 }
 
-// Partial success: a batch with some failed rows still completes — the write records the
-// successes in results and the per-row failures in the job's errors field, and the job
-// is completed (not failed).
+// failedRows picks the rejected entries out of a job's row outcomes.
+func failedRows(results []domain.RowResult) []domain.RowResult {
+	var out []domain.RowResult
+	for _, r := range results {
+		if r.Failed() {
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
+// Partial success: a batch with some failed rows still completes. The engine merges the
+// write's successes and failures into the job's one row-indexed list, in request order,
+// and the job is completed (not failed).
 func (suite *AsyncBulkEngineTestSuite) TestExecute_PartialFailureCompletesWithErrors() {
 	accountID := genTestID(suite.T(), id.AccountIDPrefix)
 	jobID := genTestID(suite.T(), id.JobIDPrefix)
@@ -352,10 +404,10 @@ func (suite *AsyncBulkEngineTestSuite) TestExecute_PartialFailureCompletesWithEr
 	suite.loadJob(jobID, accountID, []fakeRow{{Name: "a"}, {Name: "b"}}, nil)
 	suite.jobSvc.EXPECT().StartJob(gomock.Any(), gomock.Any()).Return(time.Now(), nil).Times(1)
 
-	var completeErrors []apierror.RowError
+	var completeResults []domain.RowResult
 	suite.jobSvc.EXPECT().CompleteJob(gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ context.Context, params domain.CompleteJobParams) *apierror.APIError {
-			completeErrors = params.Errors
+			completeResults = params.Results
 			return nil
 		}).Times(1)
 	// No FailJob is stubbed: a partly-failed batch must complete, not fail.
@@ -366,9 +418,21 @@ func (suite *AsyncBulkEngineTestSuite) TestExecute_PartialFailureCompletesWithEr
 	apiErr := executeBulkOperation(ctx, suite.deps, spec, domain.BulkOperationJobEvent{JobID: jobID})
 
 	suite.Nil(apiErr)
-	suite.Len(completeErrors, 1)
-	suite.Equal(1, rowErrIndex(completeErrors[0]))
-	suite.Equal("row b failed", rowErrMessage(completeErrors[0]))
+	// Every submitted row is accounted for in the one list, ordered by index.
+	suite.Len(completeResults, 2)
+	suite.Equal(0, completeResults[0].Index)
+	suite.Equal(constants.JobResultStatusCreated, completeResults[0].Status)
+	// The engine stamps what the operation writes onto the rows that wrote.
+	suite.Equal(constants.ObjectTypeProductionStep, completeResults[0].ResourceType)
+
+	failed := failedRows(completeResults)
+	suite.Len(failed, 1)
+	suite.Equal(1, failed[0].Index)
+	suite.Require().NotNil(failed[0].Error)
+	suite.Equal("row b failed", failed[0].Error.Message)
+	// A rejected row wrote nothing, so it names no resource.
+	suite.Empty(failed[0].ID)
+	suite.Empty(failed[0].ResourceType)
 }
 
 // A write failure fails the job and surfaces the cause; the failure mark is written

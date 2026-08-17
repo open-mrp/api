@@ -5,9 +5,9 @@ type JobType string
 
 const (
 	// JobTypeBulkCreate indicates the job is a bulk creation of an object.
-	JobTypeBulkCreate JobType = "bulkcreate"
+	JobTypeBulkCreate JobType = "bulk_create"
 	// JobTypeBulkUpsert indicates the job is a bulk upsert of an object.
-	JobTypeBulkUpsert JobType = "bulkupsert"
+	JobTypeBulkUpsert JobType = "bulk_upsert"
 	// JobTypeExport indicates the job renders a resource as a downloadable file.
 	JobTypeExport JobType = "export"
 )

@@ -754,19 +754,8 @@ func bulkUpsertLocationsJob(t *testing.T, locations ...map[string]any) map[strin
 func bulkUpsertLocations(t *testing.T, locations ...map[string]any) (createdIDs, updatedIDs []string) {
 	t.Helper()
 	job := bulkUpsertLocationsJob(t, locations...)
-	require.NotEmpty(t, jsonArray(job, "results"), "a completed job must carry results")
+	require.NotEmpty(t, jobResults(job), "a completed job must carry results")
 	return jobResultIDs(job)
-}
-
-// locJobErrors reads the per-row failures a completed bulk-upsert job recorded.
-func locJobErrors(job map[string]any) []map[string]any {
-	var out []map[string]any
-	for _, raw := range jsonArray(job, "errors") {
-		if m, ok := raw.(map[string]any); ok {
-			out = append(out, m)
-		}
-	}
-	return out
 }
 
 func TestLocations_BulkUpsert_AllCreates(t *testing.T) {
@@ -858,7 +847,7 @@ func TestLocations_BulkUpsert_ResponseShape(t *testing.T) {
 	require.Len(t, ids, 1)
 	entry := jobResults(job)[0]
 	assert.Equal(t, float64(0), entry["index"])
-	assert.Equal(t, "created", entry["action"])
+	assert.Equal(t, "created", entry["status"])
 	assertIDFormat(t, ids[0], "lc")
 	defer cleanupLocationIDs([]string{ids[0]})
 }

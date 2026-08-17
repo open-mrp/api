@@ -924,6 +924,8 @@ func (h *gRPCHandler) AnalyzeScheduleAttainment(ctx context.Context, req *pb.Ana
 			AbsDeltaUnits:         a.AbsDeltaUnits,
 			LineAdherencePct:      a.LineAdherence,
 			UnitsAdherencePct:     a.UnitsAdherence,
+			OffPlanLines:          a.OffPlanLines,
+			OffPlanQuantity:       a.OffPlanQuantity,
 		}
 		if a.FrozenThroughAt != nil {
 			entry.FrozenThroughDate = timestamppb.New(*a.FrozenThroughAt)
@@ -932,14 +934,15 @@ func (h *gRPCHandler) AnalyzeScheduleAttainment(ctx context.Context, req *pb.Ana
 	}
 
 	return &pb.AnalyzeScheduleAttainmentResponse{
-		StartDate:           timestamppb.New(result.StartDate),
-		EndDate:             timestamppb.New(result.EndDate),
-		GroupBy:             result.GroupBy,
-		BaselineScheduleIds: result.BaselineScheduleIDs,
-		Buckets:             buckets,
-		Totals:              attainmentBucketToProto(result.Totals),
-		FrozenAdherence:     adherence,
-		HasBaseline:         result.HasBaseline,
+		StartDate:             timestamppb.New(result.StartDate),
+		EndDate:               timestamppb.New(result.EndDate),
+		GroupBy:               result.GroupBy,
+		BaselineScheduleIds:   result.BaselineScheduleIDs,
+		Buckets:               buckets,
+		Totals:                attainmentBucketToProto(result.Totals),
+		FrozenAdherence:       adherence,
+		HasBaseline:           result.HasBaseline,
+		ScheduledMachineCount: result.ScheduledMachineCount,
 	}, nil
 }
 

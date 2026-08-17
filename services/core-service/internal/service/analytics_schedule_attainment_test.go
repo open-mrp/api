@@ -1,10 +1,12 @@
 package service
 
 import (
+	"context"
 	"testing"
 	"time"
 
 	"github.com/augno/api/services/core-service/internal/domain"
+	apierror "github.com/augno/api/shared/errors"
 )
 
 func mustDate(t *testing.T, value string) time.Time {
@@ -213,5 +215,61 @@ func TestBaselineFor_CompletedWeekStillRefusesALaterPublish(t *testing.T) {
 	got := baselineFor(baselines, week, now)
 	if got == nil || got.ScheduleID != "pnsc_original" {
 		t.Errorf("baseline = %v, want pnsc_original — a finished week keeps the plan it was worked to", got)
+	}
+}
+
+// offPlanRepo answers the one call frozenAdherence makes, so the adherence arithmetic can be tested without a database.
+type offPlanRepo struct {
+	domain.ScheduleAttainmentRepo
+	rows []domain.AttainmentDeviationRow
+}
+
+func (r offPlanRepo) CountDeviationsForBaselines(_ context.Context, _ string, _ []string) ([]domain.AttainmentDeviationRow, *apierror.APIError) {
+	return r.rows, nil
+}
+
+func TestFrozenAdherence_OffPlanWorkCountsAgainstTheCommitment(t *testing.T) {
+	frozenThrough := mustDate(t, "2026-08-16T00:00:00Z")
+	baselines := map[string]*domain.AttainmentBaselineRow{
+		"pnsc_1": {
+			ScheduleID:            "pnsc_1",
+			Version:               1,
+			FrozenLineCount:       8,
+			FrozenPlannedQuantity: 4000,
+			FrozenThroughDate:     &frozenThrough,
+		},
+	}
+	repo := offPlanRepo{rows: []domain.AttainmentDeviationRow{{
+		ProductionScheduleID: "pnsc_1",
+		DeviationCount:       1,
+		AddedCount:           0,
+		AbsDeltaQuantity:     0,
+	}}}
+
+	clean, apiErr := frozenAdherence(context.Background(), repo, "acc_1", []string{"pnsc_1"}, baselines, nil, nil)
+	if apiErr != nil {
+		t.Fatalf("frozenAdherence: %v", apiErr)
+	}
+	if clean[0].LineAdherence == nil || *clean[0].LineAdherence != 87.5 {
+		t.Fatalf("adherence with one hand edit = %v, want 87.5", clean[0].LineAdherence)
+	}
+
+	// Two campaigns the floor ran that the frozen plan never asked for: 1 - (1+2)/(8+2).
+	fouled, apiErr := frozenAdherence(
+		context.Background(), repo, "acc_1", []string{"pnsc_1"}, baselines,
+		map[string]int64{"pnsc_1": 2}, map[string]float64{"pnsc_1": 400},
+	)
+	if apiErr != nil {
+		t.Fatalf("frozenAdherence: %v", apiErr)
+	}
+	if fouled[0].OffPlanLines != 2 || fouled[0].OffPlanQuantity != 400 {
+		t.Errorf("off-plan figures = %d lines / %v units, want 2 / 400", fouled[0].OffPlanLines, fouled[0].OffPlanQuantity)
+	}
+	if fouled[0].LineAdherence == nil || *fouled[0].LineAdherence != 70 {
+		t.Errorf("adherence with two off-plan campaigns = %v, want 70", fouled[0].LineAdherence)
+	}
+	// Off-plan units are a breach in units too: 1 - 400/4000.
+	if fouled[0].UnitsAdherence == nil || *fouled[0].UnitsAdherence != 90 {
+		t.Errorf("units adherence = %v, want 90", fouled[0].UnitsAdherence)
 	}
 }

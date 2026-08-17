@@ -466,6 +466,8 @@ func scheduleAttainmentFromProto(resp *pb.AnalyzeScheduleAttainmentResponse) *ap
 			AbsDeltaUnits:         a.AbsDeltaUnits,
 			LineAdherencePct:      a.LineAdherencePct,
 			UnitsAdherencePct:     a.UnitsAdherencePct,
+			OffPlanLines:          a.OffPlanLines,
+			OffPlanQuantity:       a.OffPlanQuantity,
 		}
 		entry.FrozenThroughDate = grpcutil.TimestampToTimePtr(a.FrozenThroughDate)
 		adherence[i] = entry
@@ -482,15 +484,16 @@ func scheduleAttainmentFromProto(resp *pb.AnalyzeScheduleAttainmentResponse) *ap
 	}
 
 	return &apiresource.AnalyzeScheduleAttainmentResponse{
-		Object:            constants.ObjectTypeAnalyzeScheduleAttainmentResponse,
-		StartDate:         grpcutil.TimestampToTime(resp.StartDate),
-		EndDate:           grpcutil.TimestampToTime(resp.EndDate),
-		GroupBy:           constants.AttainmentGroupBy(resp.GroupBy),
-		BaselineSchedules: apiresource.NewList(baselineSchedules, apiresource.PageInfo{}),
-		Buckets:           apiresource.NewList(buckets, apiresource.PageInfo{}),
-		Totals:            attainmentBucketFromProto(resp.Totals),
-		FrozenAdherence:   apiresource.NewList(adherence, apiresource.PageInfo{}),
-		BaselineStatus:    baselineStatus,
+		Object:                constants.ObjectTypeAnalyzeScheduleAttainmentResponse,
+		StartDate:             grpcutil.TimestampToTime(resp.StartDate),
+		EndDate:               grpcutil.TimestampToTime(resp.EndDate),
+		GroupBy:               constants.AttainmentGroupBy(resp.GroupBy),
+		BaselineSchedules:     apiresource.NewList(baselineSchedules, apiresource.PageInfo{}),
+		Buckets:               apiresource.NewList(buckets, apiresource.PageInfo{}),
+		Totals:                attainmentBucketFromProto(resp.Totals),
+		FrozenAdherence:       apiresource.NewList(adherence, apiresource.PageInfo{}),
+		BaselineStatus:        baselineStatus,
+		ScheduledMachineCount: resp.ScheduledMachineCount,
 	}
 }
 

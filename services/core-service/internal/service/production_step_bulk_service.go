@@ -358,6 +358,7 @@ func resolveBulkUpsertStepRows(ctx context.Context, repos domain.RepoFactory, ac
 func (s *productionStepSvcImpl) bulkUpsertSpec() bulkOperationSpec[domain.UpsertProductionStepParams, domain.ResolvedUpsertStepRow] {
 	return bulkOperationSpec[domain.UpsertProductionStepParams, domain.ResolvedUpsertStepRow]{
 		JobType:          constants.JobTypeBulkUpsert,
+		ResourceType:     constants.ObjectTypeProductionStep,
 		RoutingKey:       messaging.BulkUpsertProductionSteps.RoutingKey(),
 		PermissionDomain: types.PermissionDomainProductionSteps,
 		Actions:          []types.Action{types.ActionCreate, types.ActionUpdate},
@@ -451,6 +452,7 @@ func (s *productionStepSvcImpl) exportSpec() exportSpec[*domain.ProductionStepEx
 		PermissionDomain: types.PermissionDomainProductionSteps,
 		Name:             "Production Steps",
 		Slug:             "production_steps",
+		ResourceType:     constants.ObjectTypeProductionStep,
 		Columns:          productionStepColumns,
 
 		Fetch: func(ctx context.Context, repos domain.RepoFactory, accountID string, filters domain.ExportProductionStepsParams) ([]*domain.ProductionStepExport, *apierror.APIError) {

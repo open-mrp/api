@@ -247,6 +247,7 @@ func upsertMachineInTx(txCtx context.Context, txRepos domain.RepoFactory, accoun
 func (s *machineSvcImpl) bulkUpsertSpec() bulkOperationSpec[domain.UpsertMachineParams, domain.ResolvedUpsertMachineRow] {
 	return bulkOperationSpec[domain.UpsertMachineParams, domain.ResolvedUpsertMachineRow]{
 		JobType:          constants.JobTypeBulkUpsert,
+		ResourceType:     constants.ObjectTypeMachine,
 		RoutingKey:       messaging.BulkUpsertMachines.RoutingKey(),
 		PermissionDomain: types.PermissionDomainMachines,
 		Actions:          []types.Action{types.ActionCreate, types.ActionUpdate},
@@ -290,6 +291,7 @@ func (s *machineSvcImpl) exportSpec() exportSpec[*domain.Machine, domain.ExportM
 		PermissionDomain: types.PermissionDomainMachines,
 		Name:             "Machines",
 		Slug:             "machines",
+		ResourceType:     constants.ObjectTypeMachine,
 		Columns:          append([]excel.ColumnSpec{{Header: "ID", Key: "id", Width: 24}}, machineTemplateColumns...),
 
 		Fetch: func(ctx context.Context, repos domain.RepoFactory, accountID string, filters domain.ExportMachinesParams) ([]*domain.Machine, *apierror.APIError) {

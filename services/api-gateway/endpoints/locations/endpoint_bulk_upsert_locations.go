@@ -59,6 +59,10 @@ func (e *BulkUpsertLocationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Bu
 		Public:            true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeJob,
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeJob,
+			Fields:     []string{"created_by", "created_by.role"},
+		}),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkUpsertLocationsRequest) (*apiresource.Job, *apierror.APIError) {
 			return svc.(LocationSvc).BulkUpsertLocations
 		},

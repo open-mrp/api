@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
 	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/id"
 )
@@ -81,6 +82,7 @@ func HydrateIdentityActorNames(ctx context.Context, actors []*apiresource.Actor)
 		}
 	}
 
+	meta := resourcekit.GetLoadMeta(ctx)
 	for _, a := range actors {
 		if a == nil {
 			continue
@@ -107,6 +109,9 @@ func HydrateIdentityActorNames(ctx context.Context, actors []*apiresource.Actor)
 				if n.ImageURL != nil {
 					a.AvatarURL = n.ImageURL
 				}
+				if n.RoleID != nil {
+					meta.Set(constants.ObjectTypeActor, a.ID, "role_id", *n.RoleID)
+				}
 			}
 		case constants.ActorTypeAPIKey:
 			if k, ok := apiKeys[a.ID].(*apiresource.APIKey); ok {
@@ -117,6 +122,9 @@ func HydrateIdentityActorNames(ctx context.Context, actors []*apiresource.Actor)
 				if k.RedactedValue != "" && a.Handle == nil {
 					handle := k.RedactedValue
 					a.Handle = &handle
+				}
+				if roleID, ok := meta.GetString(constants.ObjectTypeAPIKey, a.ID, "role_id"); ok {
+					meta.Set(constants.ObjectTypeActor, a.ID, "role_id", roleID)
 				}
 			}
 		case constants.ActorTypeAgent:

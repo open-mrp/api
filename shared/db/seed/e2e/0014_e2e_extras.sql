@@ -1531,3 +1531,24 @@ INSERT IGNORE INTO production_schedule_derived_line (
      'prs_01k0a57f3dfsmtzc8txbq43eth', 'dp_01k0a5r01yfx3sj1vy9qgv3dc0', 'it_01k0a7100aeysrs9vxpeq14yxj',
      3, DATE(NOW(3) - INTERVAL WEEKDAY(NOW(3)) DAY) + INTERVAL 3 WEEK, 120.000000000000000000000000000000, NULL,
      2, 2, 'planned', NOW(3), NOW(3));
+
+-- ============================================================
+-- JOB (for GET /v1/core/jobs/{id} include coverage)
+-- ============================================================
+-- A completed bulk upsert attributed to the seeded admin account user so retrieve-job's created_by / created_by.role includes have a fixture.
+INSERT IGNORE INTO job (
+    job_id, type, resource_type, account_id, created_by, job_items, results,
+    started_at, completed_at, created_at, updated_at
+) VALUES (
+    'jb_01seedincludejob0',
+    'bulk_upsert',
+    'unit',
+    'ac_01k0a5smf9ekb8rqg12555zjqa',
+    'acus_s83fjhyfmqen',
+    '[]',
+    '{"rows":[{"index":0,"status":"created","resource_type":"unit","id":"un_01seedpair000000000"}],"truncated":false}',
+    NOW(3) - INTERVAL 1 MINUTE,
+    NOW(3),
+    NOW(3) - INTERVAL 1 MINUTE,
+    NOW(3)
+);

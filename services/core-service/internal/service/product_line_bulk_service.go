@@ -191,6 +191,7 @@ func upsertProductLineInTx(txCtx context.Context, txRepos domain.RepoFactory, ac
 func (s *productLineSvcImpl) bulkUpsertSpec() bulkOperationSpec[domain.UpsertProductLineParams, domain.ResolvedUpsertProductLineRow] {
 	return bulkOperationSpec[domain.UpsertProductLineParams, domain.ResolvedUpsertProductLineRow]{
 		JobType:          constants.JobTypeBulkUpsert,
+		ResourceType:     constants.ObjectTypeProductLine,
 		RoutingKey:       messaging.BulkUpsertProductLines.RoutingKey(),
 		PermissionDomain: types.PermissionDomainProductLines,
 		Actions:          []types.Action{types.ActionCreate, types.ActionUpdate},
@@ -232,6 +233,7 @@ func (s *productLineSvcImpl) exportSpec() exportSpec[*domain.ProductLineFull, do
 		PermissionDomain: types.PermissionDomainProductLines,
 		Name:             "Product Lines",
 		Slug:             "product_lines",
+		ResourceType:     constants.ObjectTypeProductLine,
 		Columns:          productLineTemplateColumns,
 
 		Fetch: func(ctx context.Context, repos domain.RepoFactory, accountID string, filters domain.ExportProductLinesParams) ([]*domain.ProductLineFull, *apierror.APIError) {

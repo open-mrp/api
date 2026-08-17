@@ -21,11 +21,11 @@ type ListProductionScheduleDerivedLinesRequest struct {
 	WeekIndex *int32 `query:"week_index"`
 }
 
-// Returns the downstream department work implied by a schedule's constraint plan.
+// Returns the department work implied by a schedule's constraint plan.
 //
 // The solver schedules only the constraint; every other department's work is derived from it by walking the production-step graph, applying each step's lead-time offset and yield. That makes this the work list a supervisor reads, rather than a second plan someone has to maintain.
 //
-// `explosion_depth` is how many steps downstream the work sits, which is what a readiness indicator keys off. Work whose derived week falls past the schedule's horizon is still returned — a department needs to see it coming.
+// `explosion_depth` is how many steps downstream the work sits, which is what a readiness indicator keys off. Depth 0 is the constraint's own campaigns, so a plant with nothing configured downstream of its constraint still gets the work it actually scheduled. Work whose derived week falls past the schedule's horizon is still returned — a department needs to see it coming.
 type ListProductionScheduleDerivedLinesEndpoint struct{}
 
 func (e *ListProductionScheduleDerivedLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListProductionScheduleDerivedLinesRequest, *apiresource.List[apiresource.ProductionScheduleDerivedLine]] {

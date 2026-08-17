@@ -642,17 +642,17 @@ const getEchelonOnHand = `-- name: GetEchelonOnHand :many
 SELECT
     ir.item_id,
     CAST(COALESCE(SUM(
-        (q.value - COALESCE(alloc.allocated, 0)) * (u.ratio_numerator / u.ratio_denominator)
+        -- Correlated per receipt: a grouped derived table cannot take the account and item filters and so aggregates all of inventory_allocation on every call.
+        (q.value - COALESCE((
+            SELECT SUM(aq.value)
+            FROM inventory_allocation ia
+            JOIN quantity aq ON aq.id = ia.quantity_id
+            WHERE ia.inventory_receipt_id = ir.id
+        ), 0)) * (u.ratio_numerator / u.ratio_denominator)
     ), 0) AS DECIMAL(65,30)) AS on_hand
 FROM inventory_receipt ir
 JOIN quantity q ON q.id = ir.quantity_id
 JOIN unit u ON u.id = q.unit_id
-LEFT JOIN (
-    SELECT ia.inventory_receipt_id, SUM(aq.value) AS allocated
-    FROM inventory_allocation ia
-    JOIN quantity aq ON aq.id = ia.quantity_id
-    GROUP BY ia.inventory_receipt_id
-) alloc ON alloc.inventory_receipt_id = ir.id
 WHERE ir.owner_account_id = ?
   AND ir.status_code = 'available'
   AND ir.item_id IN (/*SLICE:item_ids*/?)

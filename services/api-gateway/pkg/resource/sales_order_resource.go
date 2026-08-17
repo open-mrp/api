@@ -65,7 +65,7 @@ type SalesOrderStageTotal struct {
 type SalesOrderTotals struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=sales_order_totals"`
-	// Total ordered amount as a decimal string (unit price times quantity ordered).
+	// Total ordered amount as a decimal string (unit price x quantity ordered).
 	//
 	// This is the baseline the stage completions are measured against.
 	Ordered string `json:"ordered" validate:"required" format:"decimal"`

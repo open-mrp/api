@@ -61,16 +61,16 @@ DELETE FROM inventory_allocation WHERE id IN (sqlc.slice('ids'));
 -- name: FreeReleasedReceipts :exec
 UPDATE inventory_receipt ir
 JOIN quantity q ON q.id = ir.quantity_id
-LEFT JOIN (
-    SELECT ia.inventory_receipt_id, SUM(CAST(aq.value AS DECIMAL(65,30))) AS allocated
-    FROM inventory_allocation ia
-    JOIN quantity aq ON aq.id = ia.quantity_id
-    GROUP BY ia.inventory_receipt_id
-) alloc ON alloc.inventory_receipt_id = ir.id
 SET ir.status_code = 'available', ir.updated_at = NOW(3)
 WHERE ir.id IN (sqlc.slice('ids'))
 AND ir.status_code <> 'available'
-AND COALESCE(alloc.allocated, 0) < CAST(q.value AS DECIMAL(65,30));
+-- Correlated per receipt: a grouped derived table cannot take the id filter and so aggregates all of inventory_allocation while the update holds its locks.
+AND COALESCE((
+    SELECT SUM(CAST(aq.value AS DECIMAL(65,30)))
+    FROM inventory_allocation ia
+    JOIN quantity aq ON aq.id = ia.quantity_id
+    WHERE ia.inventory_receipt_id = ir.id
+), 0) < CAST(q.value AS DECIMAL(65,30));
 
 -- RestoreIssuesToReserved hands an order-linked issue back to the reservation it came out of. The
 -- batch tag goes with it: the row is no longer anything the scan owns.

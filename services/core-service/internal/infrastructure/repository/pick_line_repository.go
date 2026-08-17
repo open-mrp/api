@@ -89,7 +89,7 @@ func (r *pickLineRepoImpl) PickRemainingQuantity(ctx context.Context, pickLineID
 	ctx, span := pickLineRepoTracer.Start(ctx, "repository.pick_line.pick_remaining_quantity")
 	defer span.End()
 
-	if err := r.queries.PickRemainingQuantityForLine(ctx, pickLineID); err != nil {
+	if err := r.queries.PickRemainingQuantityForLine(ctx, sqlc.PickRemainingQuantityForLineParams{PickLineID: pickLineID}); err != nil {
 		return tracing.Trace(span, db.MapSQLError(err))
 	}
 

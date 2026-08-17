@@ -246,7 +246,16 @@ SELECT
     i.sku AS item_name,
     i.id AS item_id,
     b.scanning_station_id,
-    SUM(q.value - COALESCE(out_totals.out_sum, 0)) AS total_count,
+    SUM(q.value - COALESCE((
+        -- A batch's outputs are the downstream (A) side of _batch_flow rows where it is the upstream (B) batch, per the Prisma orientation of the table.
+        --
+        -- Correlated per batch: a grouped derived table cannot take the account filter and so aggregates the whole flow graph on every call.
+        SELECT SUM(oq.value)
+        FROM _batch_flow bf
+        JOIN batch ob ON bf.A = ob.id
+        JOIN quantity oq ON ob.quantity_id = oq.id
+        WHERE bf.B = b.id
+    ), 0)) AS total_count,
     qu.abbreviation AS unit_abbreviation
 FROM batch b
 JOIN item i ON b.item_id = i.id
@@ -254,14 +263,6 @@ JOIN quantity q ON b.quantity_id = q.id
 JOIN unit qu ON q.unit_id = qu.id
 LEFT JOIN scanning_station ss ON b.scanning_station_id = ss.id
 LEFT JOIN department d ON ss.department_id = d.id
-LEFT JOIN (
-    -- A batch's outputs are the downstream (A) side of _batch_flow rows where it is the upstream (B) batch, per the Prisma orientation of the table.
-    SELECT bf.B AS batch_id, SUM(oq.value) AS out_sum
-    FROM _batch_flow bf
-    JOIN batch ob ON bf.A = ob.id
-    JOIN quantity oq ON ob.quantity_id = oq.id
-    GROUP BY bf.B
-) out_totals ON out_totals.batch_id = b.id
 WHERE b.account_id = sqlc.arg('account_id')
 AND b.closed_at IS NULL
 AND b.scanned_at IS NOT NULL

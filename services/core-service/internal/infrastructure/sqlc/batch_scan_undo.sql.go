@@ -326,21 +326,21 @@ func (q *Queries) FindReceiptsForBatchReversal(ctx context.Context, arg FindRece
 const freeReleasedReceipts = `-- name: FreeReleasedReceipts :exec
 UPDATE inventory_receipt ir
 JOIN quantity q ON q.id = ir.quantity_id
-LEFT JOIN (
-    SELECT ia.inventory_receipt_id, SUM(CAST(aq.value AS DECIMAL(65,30))) AS allocated
-    FROM inventory_allocation ia
-    JOIN quantity aq ON aq.id = ia.quantity_id
-    GROUP BY ia.inventory_receipt_id
-) alloc ON alloc.inventory_receipt_id = ir.id
 SET ir.status_code = 'available', ir.updated_at = NOW(3)
 WHERE ir.id IN (/*SLICE:ids*/?)
 AND ir.status_code <> 'available'
-AND COALESCE(alloc.allocated, 0) < CAST(q.value AS DECIMAL(65,30))
+AND COALESCE((
+    SELECT SUM(CAST(aq.value AS DECIMAL(65,30)))
+    FROM inventory_allocation ia
+    JOIN quantity aq ON aq.id = ia.quantity_id
+    WHERE ia.inventory_receipt_id = ir.id
+), 0) < CAST(q.value AS DECIMAL(65,30))
 `
 
 // FreeReleasedReceipts returns receipts to `available` once the allocations that closed them out are
 // gone. Run after the allocations are deleted: the join sees only the surviving ones, so a receipt
 // another issue still fills stays as it was.
+// Correlated per receipt: a grouped derived table cannot take the id filter and so aggregates all of inventory_allocation while the update holds its locks.
 func (q *Queries) FreeReleasedReceipts(ctx context.Context, ids []string) error {
 	query := freeReleasedReceipts
 	var queryParams []interface{}

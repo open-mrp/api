@@ -434,7 +434,7 @@ func (r *pickRepoImpl) PickAllLines(ctx context.Context, pickID string) *apierro
 	ctx, span := pickRepoTracer.Start(ctx, "repository.pick.pick_all_lines")
 	defer span.End()
 
-	if err := r.queries.PickAllLines(ctx, pickID); err != nil {
+	if err := r.queries.PickAllLines(ctx, sqlc.PickAllLinesParams{PickID: pickID}); err != nil {
 		return tracing.Trace(span, db.MapSQLError(err))
 	}
 	return nil

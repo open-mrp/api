@@ -132,7 +132,13 @@ SELECT
     tm.name AS transaction_method,
     adjt.name AS adjustment_type,
     COALESCE(au_user.username, '') AS responsible_user_name,
-    COALESCE(alloc_sum.allocated_amount, 0) AS allocated_amount
+    COALESCE((
+        -- Correlated per transaction: a grouped derived table cannot take the account filter and so aggregates every allocation in the database to return one page.
+        SELECT SUM(q2.value)
+        FROM transaction_allocation ta2
+        JOIN quantity q2 ON q2.id = ta2.amount_id
+        WHERE ta2.transaction_id = t.id
+    ), 0) AS allocated_amount
 FROM `transaction` t
 JOIN quantity q ON q.id = t.amount_id
 JOIN account cust_acct ON cust_acct.id = t.customer_account_id
@@ -144,12 +150,6 @@ LEFT JOIN transaction_method tm ON tm.code = t.transaction_method_code
 LEFT JOIN adjustment_type adjt ON adjt.code = t.adjustment_type_code
 LEFT JOIN account_user au ON au.id = t.responsible_user_id
 LEFT JOIN `user` au_user ON au_user.id = au.user_id
-LEFT JOIN (
-    SELECT ta2.transaction_id, SUM(q2.value) AS allocated_amount
-    FROM transaction_allocation ta2
-    JOIN quantity q2 ON q2.id = ta2.amount_id
-    GROUP BY ta2.transaction_id
-) alloc_sum ON alloc_sum.transaction_id = t.id
 WHERE t.account_id = sqlc.arg('account_id')
 AND t.is_fully_allocated = false
 AND (sqlc.arg('include_customer_filter') = false OR t.customer_account_id IN (sqlc.slice('customer_ids')))

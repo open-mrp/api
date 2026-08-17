@@ -661,6 +661,14 @@ LEFT JOIN (
     FROM invoice_line il
     JOIN quantity q_in ON q_in.id = il.quantity_id
     JOIN unit u_in ON u_in.id = q_in.unit_id
+    -- Restrict the aggregate to the tenant's own issued orders: without this the derived table groups every invoice_line in the database on every call, since the outer account filter cannot reach a grouped derived table.
+    WHERE il.sales_order_line_id IN (
+        SELECT sol2.id
+        FROM sales_order_line sol2
+        JOIN sales_order so2 ON so2.id = sol2.sales_order_id
+        WHERE so2.owner_account_id = sqlc.arg('owner_account_id')
+          AND so2.sales_order_status_code = 'issued'
+    )
     GROUP BY il.sales_order_line_id
 ) inv ON inv.line_id = sol.id
 -- prices and units
@@ -1015,6 +1023,13 @@ LEFT JOIN (
     SELECT ia.inventory_receipt_id, SUM(CAST(aq.value AS DECIMAL(65,30))) AS total_allocated
     FROM inventory_allocation ia
     JOIN quantity aq ON aq.id = ia.quantity_id
+    -- Restrict the aggregate to the tenant's own available receipts: without this the derived table groups all of inventory_allocation on every call, since the outer account filter cannot reach a grouped derived table.
+    WHERE ia.inventory_receipt_id IN (
+        SELECT ir2.id
+        FROM inventory_receipt ir2
+        WHERE (ir2.owner_account_id = sqlc.arg('requesting_account_id') OR ir2.holder_account_id = sqlc.arg('requesting_account_id'))
+          AND ir2.status_code = 'available'
+    )
     GROUP BY ia.inventory_receipt_id
 ) alloc_sum ON alloc_sum.inventory_receipt_id = ir.id
 WHERE (ir.owner_account_id = sqlc.arg('requesting_account_id') OR ir.holder_account_id = sqlc.arg('requesting_account_id'))
@@ -1243,17 +1258,17 @@ WHERE ugu.unit_group_id IN (sqlc.slice('unit_group_ids'));
 SELECT
     ir.item_id,
     SUM(GREATEST(
-        CAST(ir_q.value AS DECIMAL(65,30)) - COALESCE(alloc_sum.total_allocated, 0),
+        -- Correlated per receipt: a grouped derived table cannot take the account and item filters and so aggregates all of inventory_allocation on every call.
+        CAST(ir_q.value AS DECIMAL(65,30)) - COALESCE((
+            SELECT SUM(CAST(aq.value AS DECIMAL(65,30)))
+            FROM inventory_allocation ia
+            JOIN quantity aq ON aq.id = ia.quantity_id
+            WHERE ia.inventory_receipt_id = ir.id
+        ), 0),
         0
     )) AS remaining_quantity
 FROM inventory_receipt ir
 JOIN quantity ir_q ON ir_q.id = ir.quantity_id
-LEFT JOIN (
-    SELECT ia.inventory_receipt_id, SUM(CAST(aq.value AS DECIMAL(65,30))) AS total_allocated
-    FROM inventory_allocation ia
-    JOIN quantity aq ON aq.id = ia.quantity_id
-    GROUP BY ia.inventory_receipt_id
-) alloc_sum ON alloc_sum.inventory_receipt_id = ir.id
 WHERE (ir.owner_account_id = sqlc.arg('account_id') OR ir.holder_account_id = sqlc.arg('account_id'))
   AND ir.item_id IN (sqlc.slice('item_ids'))
   AND ir.status_code = 'available'
@@ -1263,17 +1278,17 @@ GROUP BY ir.item_id;
 SELECT
     ii.item_id,
     SUM(GREATEST(
-        CAST(ii_q.value AS DECIMAL(65,30)) - COALESCE(alloc_sum.total_allocated, 0),
+        -- Correlated per issue: a grouped derived table cannot take the account and item filters and so aggregates all of inventory_allocation on every call.
+        CAST(ii_q.value AS DECIMAL(65,30)) - COALESCE((
+            SELECT SUM(CAST(aq.value AS DECIMAL(65,30)))
+            FROM inventory_allocation ia
+            JOIN quantity aq ON aq.id = ia.quantity_id
+            WHERE ia.inventory_issue_id = ii.id
+        ), 0),
         0
     )) AS remaining_quantity
 FROM inventory_issue ii
 JOIN quantity ii_q ON ii_q.id = ii.quantity_id
-LEFT JOIN (
-    SELECT ia.inventory_issue_id, SUM(CAST(aq.value AS DECIMAL(65,30))) AS total_allocated
-    FROM inventory_allocation ia
-    JOIN quantity aq ON aq.id = ia.quantity_id
-    GROUP BY ia.inventory_issue_id
-) alloc_sum ON alloc_sum.inventory_issue_id = ii.id
 WHERE ii.account_id = sqlc.arg('account_id')
   AND ii.item_id IN (sqlc.slice('item_ids'))
   AND ii.status_code = 'reserved'
@@ -1283,17 +1298,17 @@ GROUP BY ii.item_id;
 SELECT
     ii.item_id,
     SUM(GREATEST(
-        CAST(ii_q.value AS DECIMAL(65,30)) - COALESCE(alloc_sum.total_allocated, 0),
+        -- Correlated per issue: a grouped derived table cannot take the account and item filters and so aggregates all of inventory_allocation on every call.
+        CAST(ii_q.value AS DECIMAL(65,30)) - COALESCE((
+            SELECT SUM(CAST(aq.value AS DECIMAL(65,30)))
+            FROM inventory_allocation ia
+            JOIN quantity aq ON aq.id = ia.quantity_id
+            WHERE ia.inventory_issue_id = ii.id
+        ), 0),
         0
     )) AS remaining_quantity
 FROM inventory_issue ii
 JOIN quantity ii_q ON ii_q.id = ii.quantity_id
-LEFT JOIN (
-    SELECT ia.inventory_issue_id, SUM(CAST(aq.value AS DECIMAL(65,30))) AS total_allocated
-    FROM inventory_allocation ia
-    JOIN quantity aq ON aq.id = ia.quantity_id
-    GROUP BY ia.inventory_issue_id
-) alloc_sum ON alloc_sum.inventory_issue_id = ii.id
 WHERE ii.account_id = sqlc.arg('account_id')
   AND ii.item_id IN (sqlc.slice('item_ids'))
   AND ii.status_code = 'open'

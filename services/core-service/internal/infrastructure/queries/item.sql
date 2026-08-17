@@ -1035,15 +1035,15 @@ JOIN rate rv ON rv.id = i.unit_value_id
 LEFT JOIN (
     SELECT
         ir.item_id,
-        SUM(q.value - COALESCE(alloc.allocated, 0)) AS on_hand
+        -- Correlated per receipt: a grouped derived table cannot take the account filter and so aggregates all of inventory_allocation on every call.
+        SUM(q.value - COALESCE((
+            SELECT SUM(qa.value)
+            FROM inventory_allocation ia
+            JOIN quantity qa ON qa.id = ia.quantity_id
+            WHERE ia.inventory_receipt_id = ir.id
+        ), 0)) AS on_hand
     FROM inventory_receipt ir
     JOIN quantity q ON q.id = ir.quantity_id
-    LEFT JOIN (
-        SELECT ia.inventory_receipt_id, SUM(qa.value) AS allocated
-        FROM inventory_allocation ia
-        JOIN quantity qa ON qa.id = ia.quantity_id
-        GROUP BY ia.inventory_receipt_id
-    ) alloc ON alloc.inventory_receipt_id = ir.id
     WHERE ir.status_code = 'available'
     AND (ir.owner_account_id = sqlc.arg('account_id') OR ir.holder_account_id = sqlc.arg('account_id'))
     GROUP BY ir.item_id

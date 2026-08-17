@@ -12,10 +12,7 @@ import (
 
 // The make-to-order endpoints an agent is allowed to reach.
 //
-// Flagging an endpoint as an agent tool is what puts it in the catalog agents are
-// granted from; an endpoint that quietly falls out of the catalog stops being
-// reachable without anything failing. The split matters as much as the presence:
-// reading the plan is a tool, and changing what a factory builds is not.
+// Flagging an endpoint as an agent tool is what puts it in the catalog agents are granted from; an endpoint that quietly falls out of the catalog stops being reachable without anything failing. Reading the plan and changing it are both tools, so what separates them is the mutating flag rather than presence: that flag and the declared permission are the whole of what a merchant has to decide which of these an agent may run unsupervised.
 
 // The read endpoints of this feature are exposed as agent tools, gated on the
 // permission their endpoint declares, and none of them is reported as mutating.
@@ -66,10 +63,8 @@ func TestMakeToOrderTools_WritingToolsStillReportMutating(t *testing.T) {
 	}
 }
 
-// Writing a planning override changes what the floor builds next cycle, so those
-// endpoints are deliberately not agent tools — an agent can read the advice and
-// report it, and a person adopts it.
-func TestMakeToOrderTools_WriteEndpointsAreNotExposed(t *testing.T) {
+// Writing a planning override changes what the floor builds next cycle, and an agent is allowed to do it. What keeps that safe is not withholding the tool but reporting it honestly: each of these is gated on the same update permission a person needs, and each reports itself as mutating, which is what puts it behind review for agents configured to require it.
+func TestMakeToOrderTools_WriteEndpointsAreExposed(t *testing.T) {
 	t.Parallel()
 
 	catalog := agentToolCatalog(t)
@@ -80,9 +75,13 @@ func TestMakeToOrderTools_WriteEndpointsAreNotExposed(t *testing.T) {
 		"apply_fulfillment_recommendations",
 		"update_production_schedule_settings",
 	} {
-		_, ok := catalog[slug]
-		assert.False(t, ok,
-			"%s changes how a factory plans and must not be reachable as an agent tool", slug)
+		tool, ok := catalog[slug]
+		require.True(t, ok, "%s must be in the tool catalog, or agents cannot be granted it", slug)
+
+		assert.Equal(t, true, tool["mutating"],
+			"%s changes how a factory plans and must be reported as mutating", slug)
+		assert.Contains(t, jsonStringSlice(tool, "required_permissions"), "production_schedules:update",
+			"%s must be gated on the permission its endpoint declares", slug)
 	}
 }
 

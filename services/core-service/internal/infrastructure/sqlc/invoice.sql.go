@@ -583,7 +583,15 @@ SELECT
     ar.payment_term_id AS customer_payment_term_id,
     addr.id AS billing_address_id,
     addr.name AS billing_address_name,
-    COALESCE(totals.total_invoiced, 0) AS total_invoiced
+    COALESCE((
+        -- Correlated per invoice: a grouped derived table cannot take the account filter and so aggregates every invoice_line in the database to return one page.
+        SELECT SUM(q2.value * r2.value)
+        FROM invoice_line il2
+        JOIN quantity q2 ON q2.id = il2.quantity_id
+        JOIN sales_order_line sol2 ON sol2.id = il2.sales_order_line_id
+        JOIN rate r2 ON r2.id = sol2.unit_price_id
+        WHERE il2.invoice_id = inv.id
+    ), 0) AS total_invoiced
 FROM invoice inv
 JOIN sales_order so ON inv.sales_order_id = so.id
 JOIN account_relation ar ON ar.owner_account_id = inv.account_id
@@ -592,16 +600,6 @@ JOIN account_relation ar ON ar.owner_account_id = inv.account_id
 JOIN account buyer ON buyer.id = so.buyer_account_id
 LEFT JOIN account_relation par ON par.id = ar.parent_account_relation_id
 LEFT JOIN address addr ON addr.id = so.billing_address_id
-LEFT JOIN (
-    SELECT
-        il2.invoice_id,
-        SUM(q.value * r.value) AS total_invoiced
-    FROM invoice_line il2
-    JOIN quantity q ON q.id = il2.quantity_id
-    JOIN sales_order_line sol ON sol.id = il2.sales_order_line_id
-    JOIN rate r ON r.id = sol.unit_price_id
-    GROUP BY il2.invoice_id
-) totals ON totals.invoice_id = inv.id
 WHERE inv.account_id = ?
 AND inv.is_paid_in_full = false
 AND inv.is_over_paid = false
@@ -737,7 +735,15 @@ SELECT
     ar.payment_term_id AS customer_payment_term_id,
     addr.id AS billing_address_id,
     addr.name AS billing_address_name,
-    COALESCE(totals.total_invoiced, 0) AS total_invoiced
+    COALESCE((
+        -- Correlated per invoice: a grouped derived table cannot take the account filter and so aggregates every invoice_line in the database to return one page.
+        SELECT SUM(q2.value * r2.value)
+        FROM invoice_line il2
+        JOIN quantity q2 ON q2.id = il2.quantity_id
+        JOIN sales_order_line sol2 ON sol2.id = il2.sales_order_line_id
+        JOIN rate r2 ON r2.id = sol2.unit_price_id
+        WHERE il2.invoice_id = inv.id
+    ), 0) AS total_invoiced
 FROM invoice inv
 JOIN sales_order so ON inv.sales_order_id = so.id
 JOIN account_relation ar ON ar.owner_account_id = inv.account_id
@@ -746,16 +752,6 @@ JOIN account_relation ar ON ar.owner_account_id = inv.account_id
 JOIN account buyer ON buyer.id = so.buyer_account_id
 LEFT JOIN account_relation par ON par.id = ar.parent_account_relation_id
 LEFT JOIN address addr ON addr.id = so.billing_address_id
-LEFT JOIN (
-    SELECT
-        il2.invoice_id,
-        SUM(q.value * r.value) AS total_invoiced
-    FROM invoice_line il2
-    JOIN quantity q ON q.id = il2.quantity_id
-    JOIN sales_order_line sol ON sol.id = il2.sales_order_line_id
-    JOIN rate r ON r.id = sol.unit_price_id
-    GROUP BY il2.invoice_id
-) totals ON totals.invoice_id = inv.id
 WHERE inv.account_id = ?
 AND inv.is_paid_in_full = false
 AND inv.is_over_paid = false
@@ -907,7 +903,15 @@ SELECT
     pt.name AS payment_term_name,
     pt.is_active AS payment_term_is_active,
     COUNT(il.id) AS line_count,
-    COALESCE(totals.total_invoiced, 0) AS total_invoiced,
+    COALESCE((
+        -- Correlated per invoice: a grouped derived table cannot take the account filter and so aggregates every invoice_line in the database to return one page.
+        SELECT SUM(q2.value * r2.value)
+        FROM invoice_line il2
+        JOIN quantity q2 ON q2.id = il2.quantity_id
+        JOIN sales_order_line sol2 ON sol2.id = il2.sales_order_line_id
+        JOIN rate r2 ON r2.id = sol2.unit_price_id
+        WHERE il2.invoice_id = inv.id
+    ), 0) AS total_invoiced,
     CASE WHEN EXISTS (
         SELECT 1 FROM order_email_contact oec
         WHERE oec.sales_order_id = so.id
@@ -924,16 +928,6 @@ JOIN address addr ON addr.id = inv.billing_address_id
 JOIN geolocation geo ON geo.id = addr.geolocation_id
 LEFT JOIN payment_term pt ON pt.id = so.payment_term_id
 LEFT JOIN invoice_line il ON il.invoice_id = inv.id
-LEFT JOIN (
-    SELECT
-        il2.invoice_id,
-        SUM(q.value * r.value) AS total_invoiced
-    FROM invoice_line il2
-    JOIN quantity q ON q.id = il2.quantity_id
-    JOIN sales_order_line sol ON sol.id = il2.sales_order_line_id
-    JOIN rate r ON r.id = sol.unit_price_id
-    GROUP BY il2.invoice_id
-) totals ON totals.invoice_id = inv.id
 WHERE inv.account_id = ?
 AND (
     ? IS NULL
@@ -994,7 +988,7 @@ GROUP BY inv.id, inv.number, inv.note, inv.is_paid_in_full, inv.is_edi_sent, inv
     inv.created_at, inv.updated_at, so.id, so.number, so.priority_code,
     buyer.id, buyer.name, ar.external_number, ar.account_status_code, ar.commission_status_code, ar.is_edi_enabled,
     sh.id, addr.id, addr.name, geo.street_line_1, geo.street_line_2, geo.locality, geo.state,
-    geo.postal_code, geo.country, pt.id, pt.name, totals.total_invoiced
+    geo.postal_code, geo.country, pt.id, pt.name
 ORDER BY inv.created_at ASC, inv.id ASC
 LIMIT ?
 `
@@ -1207,7 +1201,15 @@ SELECT
     pt.name AS payment_term_name,
     pt.is_active AS payment_term_is_active,
     COUNT(il.id) AS line_count,
-    COALESCE(totals.total_invoiced, 0) AS total_invoiced,
+    COALESCE((
+        -- Correlated per invoice: a grouped derived table cannot take the account filter and so aggregates every invoice_line in the database to return one page.
+        SELECT SUM(q2.value * r2.value)
+        FROM invoice_line il2
+        JOIN quantity q2 ON q2.id = il2.quantity_id
+        JOIN sales_order_line sol2 ON sol2.id = il2.sales_order_line_id
+        JOIN rate r2 ON r2.id = sol2.unit_price_id
+        WHERE il2.invoice_id = inv.id
+    ), 0) AS total_invoiced,
     CASE WHEN EXISTS (
         SELECT 1 FROM order_email_contact oec
         WHERE oec.sales_order_id = so.id
@@ -1224,16 +1226,6 @@ JOIN address addr ON addr.id = inv.billing_address_id
 JOIN geolocation geo ON geo.id = addr.geolocation_id
 LEFT JOIN payment_term pt ON pt.id = so.payment_term_id
 LEFT JOIN invoice_line il ON il.invoice_id = inv.id
-LEFT JOIN (
-    SELECT
-        il2.invoice_id,
-        SUM(q.value * r.value) AS total_invoiced
-    FROM invoice_line il2
-    JOIN quantity q ON q.id = il2.quantity_id
-    JOIN sales_order_line sol ON sol.id = il2.sales_order_line_id
-    JOIN rate r ON r.id = sol.unit_price_id
-    GROUP BY il2.invoice_id
-) totals ON totals.invoice_id = inv.id
 WHERE inv.account_id = ?
 AND (
     ? IS NULL
@@ -1295,7 +1287,7 @@ GROUP BY inv.id, inv.number, inv.note, inv.is_paid_in_full, inv.is_edi_sent, inv
     inv.created_at, inv.updated_at, so.id, so.number, so.priority_code,
     buyer.id, buyer.name, ar.external_number, ar.account_status_code, ar.commission_status_code, ar.is_edi_enabled,
     sh.id, addr.id, addr.name, geo.street_line_1, geo.street_line_2, geo.locality, geo.state,
-    geo.postal_code, geo.country, pt.id, pt.name, totals.total_invoiced
+    geo.postal_code, geo.country, pt.id, pt.name
 ORDER BY inv.created_at DESC, inv.id DESC
 LIMIT ?
 `

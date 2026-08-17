@@ -1545,6 +1545,12 @@ LEFT JOIN (
         SUM(q_sum.value) AS total_picked_value
     FROM pick_line pl_sum
     JOIN quantity q_sum ON q_sum.id = pl_sum.quantity_id
+    -- Restrict the aggregate to this pick's own lines: without this the derived table groups every pick_line in the database while the update holds its locks. It stays a derived table rather than a correlated subquery because ` + "`" + `quantity` + "`" + ` is the table being updated.
+    WHERE pl_sum.sales_order_line_id IN (
+        SELECT pl_scope.sales_order_line_id
+        FROM pick_line pl_scope
+        WHERE pl_scope.pick_id = ?
+    )
     GROUP BY pl_sum.sales_order_line_id
 ) picked ON picked.sales_order_line_id = pl.sales_order_line_id
 SET q.value = GREATEST(0, sol_q.value - GREATEST(COALESCE(picked.total_picked_value, 0) - q.value, 0)),
@@ -1553,8 +1559,12 @@ WHERE pl.pick_id = ?
 AND pl.packed_at IS NULL
 `
 
-func (q *Queries) PickAllLines(ctx context.Context, pickID string) error {
-	_, err := q.db.ExecContext(ctx, pickAllLines, pickID)
+type PickAllLinesParams struct {
+	PickID string
+}
+
+func (q *Queries) PickAllLines(ctx context.Context, arg PickAllLinesParams) error {
+	_, err := q.db.ExecContext(ctx, pickAllLines, arg.PickID, arg.PickID)
 	return err
 }
 
@@ -1569,6 +1579,12 @@ LEFT JOIN (
         SUM(q_sum.value) AS total_picked_value
     FROM pick_line pl_sum
     JOIN quantity q_sum ON q_sum.id = pl_sum.quantity_id
+    -- Restrict the aggregate to the line being picked: without this the derived table groups every pick_line in the database while the update holds its locks. It stays a derived table rather than a correlated subquery because ` + "`" + `quantity` + "`" + ` is the table being updated.
+    WHERE pl_sum.sales_order_line_id IN (
+        SELECT pl_scope.sales_order_line_id
+        FROM pick_line pl_scope
+        WHERE pl_scope.id = ?
+    )
     GROUP BY pl_sum.sales_order_line_id
 ) picked ON picked.sales_order_line_id = pl.sales_order_line_id
 SET q.value = GREATEST(0, sol_q.value - COALESCE(picked.total_picked_value, 0)),
@@ -1577,8 +1593,12 @@ WHERE pl.id = ?
 AND pl.packed_at IS NULL
 `
 
-func (q *Queries) PickRemainingQuantityForLine(ctx context.Context, pickLineID string) error {
-	_, err := q.db.ExecContext(ctx, pickRemainingQuantityForLine, pickLineID)
+type PickRemainingQuantityForLineParams struct {
+	PickLineID string
+}
+
+func (q *Queries) PickRemainingQuantityForLine(ctx context.Context, arg PickRemainingQuantityForLineParams) error {
+	_, err := q.db.ExecContext(ctx, pickRemainingQuantityForLine, arg.PickLineID, arg.PickLineID)
 	return err
 }
 

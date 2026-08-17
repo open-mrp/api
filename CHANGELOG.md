@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.47.0](https://github.com/Augno/api/compare/v0.46.2...v0.47.0) (2026-08-17)
+
+
+### Features
+
+* refactor job apiresources, improve manufacturing analytics ([#481](https://github.com/Augno/api/issues/481)) ([5efb194](https://github.com/Augno/api/commit/5efb194592702926a649044678d7ecc7c70e87cd))
+
 ## [0.46.2](https://github.com/Augno/api/compare/v0.46.1...v0.46.2) (2026-08-14)
 
 

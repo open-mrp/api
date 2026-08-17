@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.48.3](https://github.com/Augno/api/compare/v0.48.2...v0.48.3) (2026-08-17)
+
+
+### Bug Fixes
+
+* add description field to FulfillmentRecommendationInfo and update related services ([3127d72](https://github.com/Augno/api/commit/3127d721dcf13dda9643668de7128b6127dee4c4))
+* ensure items are not deleted in production schedule queries ([62531a8](https://github.com/Augno/api/commit/62531a83bea701263ed00c64ebba7cecf18b3e2a))
+
 ## [0.48.2](https://github.com/Augno/api/compare/v0.48.1...v0.48.2) (2026-08-17)
 
 

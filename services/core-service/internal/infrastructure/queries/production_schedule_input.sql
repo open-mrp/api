@@ -359,6 +359,7 @@ SELECT
 FROM product p
 JOIN item i ON i.id = p.item_id
 WHERE i.account_id = sqlc.arg('account_id')
+  AND i.deleted_at IS NULL
   AND p.product_type_code = 'sale'
 ORDER BY i.sku, p.item_id;
 

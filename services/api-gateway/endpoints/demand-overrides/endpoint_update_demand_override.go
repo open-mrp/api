@@ -80,6 +80,7 @@ func (e *UpdateDemandOverrideEndpoint) Materialize() *apiendpoint.APIEndpoint[*U
 		Route:             "/v1/operations/demand-overrides/{id}",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeDemandOverride,
 		RequiredPermissions: []types.Permission{

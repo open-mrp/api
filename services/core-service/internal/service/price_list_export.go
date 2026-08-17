@@ -11,6 +11,7 @@ import (
 
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/services/core-service/internal/domain"
+	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/safeconv"
@@ -37,6 +38,13 @@ func (s *accountPriceSvcImpl) priceListExportSpec() exportSpec[*domain.ProductFu
 
 // ExportPriceList accepts a price-list export: it records the customer on a job and returns it to poll. Nothing is rendered here — pricing a whole catalog is far too slow to hold a request open for.
 func (s *accountPriceSvcImpl) ExportPriceList(ctx context.Context, params domain.ExportPriceListParams) (*domain.Job, *apierror.APIError) {
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, apierror.NewInvariantViolationError("Identity not found in context.")
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainDiscounts, types.ActionRead); apiErr != nil {
+		return nil, apiErr
+	}
 	return enqueueExport(ctx, s.asyncBulkDeps(), s.priceListExportSpec(), priceListExportFilters{
 		CustomerAccountID: params.CustomerAccountID,
 	})

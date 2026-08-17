@@ -42,6 +42,7 @@ func (e *ReorderSalesOrderLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		Route:             "/v1/sales/sales-orders/{id}/lines/actions/reorder",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainCustomers, Action: types.ActionUpdate},

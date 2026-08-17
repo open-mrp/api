@@ -508,6 +508,10 @@ message AnalyzeDeliveryPerformanceRequest {
   google.protobuf.Timestamp starts_at = 1;
   google.protobuf.Timestamp ends_at = 2;
   string granularity = 3;
+  repeated string customer_ids = 4;
+  repeated string customer_group_ids = 5;
+  repeated string product_line_ids = 6;
+  repeated string sales_rep_ids = 7;
 }
 
 // DeliveryPerformanceProto is one period's delivery picture, or the whole window's.
@@ -535,11 +539,33 @@ message DeliveryBacklogBucketProto {
   double units = 5;
 }
 
+// DeliveryLatenessBucketProto is one band of how far the window's misses missed by.
+message DeliveryLatenessBucketProto {
+  string label = 1;
+  int32 min_days_late = 2;
+  int32 max_days_late = 3;
+  int32 order_count = 4;
+  int32 shipped_count = 5;
+  double units = 6;
+}
+
+// DeliveryBreakdownProto is delivery performance for one slice of the order book.
+message DeliveryBreakdownProto {
+  string key = 1;
+  string label = 2;
+  DeliveryPerformanceProto performance = 3;
+}
+
 message AnalyzeDeliveryPerformanceResponse {
   DeliveryPerformanceProto overall = 1;
   repeated DeliveryPerformanceProto periods = 2;
   repeated DeliveryBacklogBucketProto backlog = 3;
   int32 uncommitted_order_count = 4;
+  repeated DeliveryLatenessBucketProto lateness = 5;
+  repeated DeliveryBreakdownProto by_customer = 6;
+  repeated DeliveryBreakdownProto by_customer_group = 7;
+  repeated DeliveryBreakdownProto by_product_line = 8;
+  repeated DeliveryBreakdownProto by_commitment_source = 9;
 }
 
 message AnalyzeScheduleAttainmentRequest {

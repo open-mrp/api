@@ -110,8 +110,9 @@ func AllowedToolGroups(allowed map[string]bool) []string {
 func SearchEndpointTools(query string, allowed map[string]bool, limit int) []EndpointToolDescriptor {
 	terms := tokenize(query)
 	type scored struct {
-		d     EndpointToolDescriptor
-		score int
+		d       EndpointToolDescriptor
+		score   int
+		unnamed int
 	}
 	var matches []scored
 	for _, d := range EndpointTools {
@@ -123,11 +124,14 @@ func SearchEndpointTools(query string, allowed map[string]bool, limit int) []End
 		if len(terms) > 0 && score == 0 {
 			continue
 		}
-		matches = append(matches, scored{d: d, score: score})
+		matches = append(matches, scored{d: d, score: score, unnamed: unnamedSegments(d, terms)})
 	}
 	sort.SliceStable(matches, func(i, j int) bool {
 		if matches[i].score != matches[j].score {
 			return matches[i].score > matches[j].score
+		}
+		if matches[i].unnamed != matches[j].unnamed {
+			return matches[i].unnamed < matches[j].unnamed
 		}
 		return matches[i].d.Slug < matches[j].d.Slug
 	})
@@ -185,6 +189,20 @@ func scoreTool(d EndpointToolDescriptor, terms []string) int {
 
 func containsSegment(segments []string, term string) bool {
 	return slices.Contains(segments, term)
+}
+
+// unnamedSegments counts the slug segments the query never mentions, breaking ties between tools that scored the same because the caller happened to name every term they have in common. "create a sales order" scores create_sales_order and create_production_run_from_sales_order identically — each matches all three terms on a slug segment — but the latter carries three segments nobody asked for, and is a different operation that merely starts from a sales order. Fewer leftovers means the tool IS what was asked for rather than something containing it, so the plain alphabetical tie-break must not be what decides this.
+func unnamedSegments(d EndpointToolDescriptor, terms []string) int {
+	count := 0
+	for seg := range strings.SplitSeq(strings.ToLower(d.Slug), "_") {
+		named := slices.ContainsFunc(terms, func(t string) bool {
+			return strings.Contains(seg, t) || fuzzy.AnyTypo(t, []string{seg})
+		})
+		if !named {
+			count++
+		}
+	}
+	return count
 }
 
 func tokenize(s string) []string {

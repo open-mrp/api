@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -29,8 +30,15 @@ func (e *RetrieveJobEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveJo
 		SuccessStatusCode: http.StatusOK,
 		// Public: the polling companion for every async operation, including the public bulk endpoints whose 202 Location points here.
 		Public:     true,
+		AgentTool:  true,
 		Preview:    true,
 		ObjectType: constants.ObjectTypeJob,
+		// The OR-set checkJobReadPermission enforces: jobs:read for an internal actor reading its own account, customers:read / suppliers:read when the target is an external account.
+		RequiredPermissions: []types.Permission{
+			{Domain: types.PermissionDomainJobs, Action: types.ActionRead},
+			{Domain: types.PermissionDomainCustomers, Action: types.ActionRead},
+			{Domain: types.PermissionDomainSuppliers, Action: types.ActionRead},
+		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeJob,
 			Fields:     []string{"created_by", "created_by.role"},

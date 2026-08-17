@@ -100,6 +100,7 @@ func (e *CreateDemandOverrideEndpoint) Materialize() *apiendpoint.APIEndpoint[*C
 		Route:             "/v1/operations/demand-overrides",
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeDemandOverride,
 		RequiredPermissions: []types.Permission{

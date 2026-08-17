@@ -27,6 +27,7 @@ func (e *ListPortalDomainsEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		Route:               "/v1/settings/portal-domains",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              true,
+		AgentTool:           true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypePortalDomain,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainAccount, Action: types.ActionRead}},

@@ -30,6 +30,7 @@ func (e *CreateProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cr
 		Route:               "/v1/sales/sales-orders/{id}/actions/create-production-run",
 		SuccessStatusCode:   http.StatusCreated,
 		Public:              true,
+		AgentTool:           true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeProductionRun,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainProductionRuns, Action: types.ActionCreate}},

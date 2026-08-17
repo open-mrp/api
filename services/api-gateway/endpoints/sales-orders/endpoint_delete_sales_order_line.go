@@ -31,6 +31,7 @@ func (e *DeleteSalesOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*D
 		Route:             "/v1/sales/sales-orders/{id}/lines/{line_id}",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainCustomers, Action: types.ActionUpdate},

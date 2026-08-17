@@ -27,6 +27,7 @@ func (e *ListEmailDomainsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListE
 		Route:               "/v1/messaging/email-domains",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              true,
+		AgentTool:           true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeEmailDomain,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMessaging, Action: types.ActionRead}},

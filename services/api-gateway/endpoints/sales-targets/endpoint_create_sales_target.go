@@ -53,6 +53,7 @@ func (e *CreateSalesTargetEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		Route:             "/v1/sales/account-users/{id}/sales-targets",
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeSalesTarget,
 		RequiredPermissions: []types.Permission{

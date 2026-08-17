@@ -28,6 +28,7 @@ func (e *GetEmailInboxEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetEmail
 		Route:               "/v1/messaging/email-inboxes/{id}",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              true,
+		AgentTool:           true,
 		Preview:             true,
 		ObjectType:          constants.ObjectTypeEmailInbox,
 		IncludeConfig:       emailInboxIncludeConfig(),

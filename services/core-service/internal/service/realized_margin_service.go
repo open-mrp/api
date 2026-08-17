@@ -5,7 +5,9 @@ import (
 
 	"github.com/shopspring/decimal"
 
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/services/core-service/internal/domain"
+	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/tracing"
 )
@@ -16,6 +18,17 @@ import (
 func (s *analyticsSvcImpl) AnalyzeRealizedMargins(ctx context.Context, params domain.AnalyzeRealizedMarginsParams) (*domain.RealizedMarginAnalysis, *apierror.APIError) {
 	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.analyze_realized_margins")
 	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainInvoices, types.ActionRead); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 
 	targetMargin, apiErr := parseAnalysisFraction(params.TargetGrossMargin, "0.30", "target_gross_margin")
 	if apiErr != nil {

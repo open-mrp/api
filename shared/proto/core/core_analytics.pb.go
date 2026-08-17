@@ -5575,12 +5575,16 @@ func (x *BatchGetAccountStatusesByIDsResponse) GetAccountStatuses() []*AccountSt
 }
 
 type AnalyzeDeliveryPerformanceRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	StartsAt      *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=starts_at,json=startsAt,proto3" json:"starts_at,omitempty"`
-	EndsAt        *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=ends_at,json=endsAt,proto3" json:"ends_at,omitempty"`
-	Granularity   string                 `protobuf:"bytes,3,opt,name=granularity,proto3" json:"granularity,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	StartsAt         *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=starts_at,json=startsAt,proto3" json:"starts_at,omitempty"`
+	EndsAt           *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=ends_at,json=endsAt,proto3" json:"ends_at,omitempty"`
+	Granularity      string                 `protobuf:"bytes,3,opt,name=granularity,proto3" json:"granularity,omitempty"`
+	CustomerIds      []string               `protobuf:"bytes,4,rep,name=customer_ids,json=customerIds,proto3" json:"customer_ids,omitempty"`
+	CustomerGroupIds []string               `protobuf:"bytes,5,rep,name=customer_group_ids,json=customerGroupIds,proto3" json:"customer_group_ids,omitempty"`
+	ProductLineIds   []string               `protobuf:"bytes,6,rep,name=product_line_ids,json=productLineIds,proto3" json:"product_line_ids,omitempty"`
+	SalesRepIds      []string               `protobuf:"bytes,7,rep,name=sales_rep_ids,json=salesRepIds,proto3" json:"sales_rep_ids,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *AnalyzeDeliveryPerformanceRequest) Reset() {
@@ -5632,6 +5636,34 @@ func (x *AnalyzeDeliveryPerformanceRequest) GetGranularity() string {
 		return x.Granularity
 	}
 	return ""
+}
+
+func (x *AnalyzeDeliveryPerformanceRequest) GetCustomerIds() []string {
+	if x != nil {
+		return x.CustomerIds
+	}
+	return nil
+}
+
+func (x *AnalyzeDeliveryPerformanceRequest) GetCustomerGroupIds() []string {
+	if x != nil {
+		return x.CustomerGroupIds
+	}
+	return nil
+}
+
+func (x *AnalyzeDeliveryPerformanceRequest) GetProductLineIds() []string {
+	if x != nil {
+		return x.ProductLineIds
+	}
+	return nil
+}
+
+func (x *AnalyzeDeliveryPerformanceRequest) GetSalesRepIds() []string {
+	if x != nil {
+		return x.SalesRepIds
+	}
+	return nil
 }
 
 // DeliveryPerformanceProto is one period's delivery picture, or the whole window's.
@@ -5844,19 +5876,170 @@ func (x *DeliveryBacklogBucketProto) GetUnits() float64 {
 	return 0
 }
 
+// DeliveryLatenessBucketProto is one band of how far the window's misses missed by.
+type DeliveryLatenessBucketProto struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Label         string                 `protobuf:"bytes,1,opt,name=label,proto3" json:"label,omitempty"`
+	MinDaysLate   int32                  `protobuf:"varint,2,opt,name=min_days_late,json=minDaysLate,proto3" json:"min_days_late,omitempty"`
+	MaxDaysLate   int32                  `protobuf:"varint,3,opt,name=max_days_late,json=maxDaysLate,proto3" json:"max_days_late,omitempty"`
+	OrderCount    int32                  `protobuf:"varint,4,opt,name=order_count,json=orderCount,proto3" json:"order_count,omitempty"`
+	ShippedCount  int32                  `protobuf:"varint,5,opt,name=shipped_count,json=shippedCount,proto3" json:"shipped_count,omitempty"`
+	Units         float64                `protobuf:"fixed64,6,opt,name=units,proto3" json:"units,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeliveryLatenessBucketProto) Reset() {
+	*x = DeliveryLatenessBucketProto{}
+	mi := &file_core_core_analytics_proto_msgTypes[89]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeliveryLatenessBucketProto) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeliveryLatenessBucketProto) ProtoMessage() {}
+
+func (x *DeliveryLatenessBucketProto) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_analytics_proto_msgTypes[89]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeliveryLatenessBucketProto.ProtoReflect.Descriptor instead.
+func (*DeliveryLatenessBucketProto) Descriptor() ([]byte, []int) {
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{89}
+}
+
+func (x *DeliveryLatenessBucketProto) GetLabel() string {
+	if x != nil {
+		return x.Label
+	}
+	return ""
+}
+
+func (x *DeliveryLatenessBucketProto) GetMinDaysLate() int32 {
+	if x != nil {
+		return x.MinDaysLate
+	}
+	return 0
+}
+
+func (x *DeliveryLatenessBucketProto) GetMaxDaysLate() int32 {
+	if x != nil {
+		return x.MaxDaysLate
+	}
+	return 0
+}
+
+func (x *DeliveryLatenessBucketProto) GetOrderCount() int32 {
+	if x != nil {
+		return x.OrderCount
+	}
+	return 0
+}
+
+func (x *DeliveryLatenessBucketProto) GetShippedCount() int32 {
+	if x != nil {
+		return x.ShippedCount
+	}
+	return 0
+}
+
+func (x *DeliveryLatenessBucketProto) GetUnits() float64 {
+	if x != nil {
+		return x.Units
+	}
+	return 0
+}
+
+// DeliveryBreakdownProto is delivery performance for one slice of the order book.
+type DeliveryBreakdownProto struct {
+	state         protoimpl.MessageState    `protogen:"open.v1"`
+	Key           string                    `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	Label         string                    `protobuf:"bytes,2,opt,name=label,proto3" json:"label,omitempty"`
+	Performance   *DeliveryPerformanceProto `protobuf:"bytes,3,opt,name=performance,proto3" json:"performance,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeliveryBreakdownProto) Reset() {
+	*x = DeliveryBreakdownProto{}
+	mi := &file_core_core_analytics_proto_msgTypes[90]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeliveryBreakdownProto) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeliveryBreakdownProto) ProtoMessage() {}
+
+func (x *DeliveryBreakdownProto) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_analytics_proto_msgTypes[90]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeliveryBreakdownProto.ProtoReflect.Descriptor instead.
+func (*DeliveryBreakdownProto) Descriptor() ([]byte, []int) {
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{90}
+}
+
+func (x *DeliveryBreakdownProto) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+func (x *DeliveryBreakdownProto) GetLabel() string {
+	if x != nil {
+		return x.Label
+	}
+	return ""
+}
+
+func (x *DeliveryBreakdownProto) GetPerformance() *DeliveryPerformanceProto {
+	if x != nil {
+		return x.Performance
+	}
+	return nil
+}
+
 type AnalyzeDeliveryPerformanceResponse struct {
-	state                 protoimpl.MessageState        `protogen:"open.v1"`
-	Overall               *DeliveryPerformanceProto     `protobuf:"bytes,1,opt,name=overall,proto3" json:"overall,omitempty"`
-	Periods               []*DeliveryPerformanceProto   `protobuf:"bytes,2,rep,name=periods,proto3" json:"periods,omitempty"`
-	Backlog               []*DeliveryBacklogBucketProto `protobuf:"bytes,3,rep,name=backlog,proto3" json:"backlog,omitempty"`
-	UncommittedOrderCount int32                         `protobuf:"varint,4,opt,name=uncommitted_order_count,json=uncommittedOrderCount,proto3" json:"uncommitted_order_count,omitempty"`
+	state                 protoimpl.MessageState         `protogen:"open.v1"`
+	Overall               *DeliveryPerformanceProto      `protobuf:"bytes,1,opt,name=overall,proto3" json:"overall,omitempty"`
+	Periods               []*DeliveryPerformanceProto    `protobuf:"bytes,2,rep,name=periods,proto3" json:"periods,omitempty"`
+	Backlog               []*DeliveryBacklogBucketProto  `protobuf:"bytes,3,rep,name=backlog,proto3" json:"backlog,omitempty"`
+	UncommittedOrderCount int32                          `protobuf:"varint,4,opt,name=uncommitted_order_count,json=uncommittedOrderCount,proto3" json:"uncommitted_order_count,omitempty"`
+	Lateness              []*DeliveryLatenessBucketProto `protobuf:"bytes,5,rep,name=lateness,proto3" json:"lateness,omitempty"`
+	ByCustomer            []*DeliveryBreakdownProto      `protobuf:"bytes,6,rep,name=by_customer,json=byCustomer,proto3" json:"by_customer,omitempty"`
+	ByCustomerGroup       []*DeliveryBreakdownProto      `protobuf:"bytes,7,rep,name=by_customer_group,json=byCustomerGroup,proto3" json:"by_customer_group,omitempty"`
+	ByProductLine         []*DeliveryBreakdownProto      `protobuf:"bytes,8,rep,name=by_product_line,json=byProductLine,proto3" json:"by_product_line,omitempty"`
+	ByCommitmentSource    []*DeliveryBreakdownProto      `protobuf:"bytes,9,rep,name=by_commitment_source,json=byCommitmentSource,proto3" json:"by_commitment_source,omitempty"`
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
 
 func (x *AnalyzeDeliveryPerformanceResponse) Reset() {
 	*x = AnalyzeDeliveryPerformanceResponse{}
-	mi := &file_core_core_analytics_proto_msgTypes[89]
+	mi := &file_core_core_analytics_proto_msgTypes[91]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5868,7 +6051,7 @@ func (x *AnalyzeDeliveryPerformanceResponse) String() string {
 func (*AnalyzeDeliveryPerformanceResponse) ProtoMessage() {}
 
 func (x *AnalyzeDeliveryPerformanceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[89]
+	mi := &file_core_core_analytics_proto_msgTypes[91]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5881,7 +6064,7 @@ func (x *AnalyzeDeliveryPerformanceResponse) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use AnalyzeDeliveryPerformanceResponse.ProtoReflect.Descriptor instead.
 func (*AnalyzeDeliveryPerformanceResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{89}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{91}
 }
 
 func (x *AnalyzeDeliveryPerformanceResponse) GetOverall() *DeliveryPerformanceProto {
@@ -5912,6 +6095,41 @@ func (x *AnalyzeDeliveryPerformanceResponse) GetUncommittedOrderCount() int32 {
 	return 0
 }
 
+func (x *AnalyzeDeliveryPerformanceResponse) GetLateness() []*DeliveryLatenessBucketProto {
+	if x != nil {
+		return x.Lateness
+	}
+	return nil
+}
+
+func (x *AnalyzeDeliveryPerformanceResponse) GetByCustomer() []*DeliveryBreakdownProto {
+	if x != nil {
+		return x.ByCustomer
+	}
+	return nil
+}
+
+func (x *AnalyzeDeliveryPerformanceResponse) GetByCustomerGroup() []*DeliveryBreakdownProto {
+	if x != nil {
+		return x.ByCustomerGroup
+	}
+	return nil
+}
+
+func (x *AnalyzeDeliveryPerformanceResponse) GetByProductLine() []*DeliveryBreakdownProto {
+	if x != nil {
+		return x.ByProductLine
+	}
+	return nil
+}
+
+func (x *AnalyzeDeliveryPerformanceResponse) GetByCommitmentSource() []*DeliveryBreakdownProto {
+	if x != nil {
+		return x.ByCommitmentSource
+	}
+	return nil
+}
+
 type AnalyzeScheduleAttainmentRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	StartDate     *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=start_date,json=startDate,proto3" json:"start_date,omitempty"`
@@ -5925,7 +6143,7 @@ type AnalyzeScheduleAttainmentRequest struct {
 
 func (x *AnalyzeScheduleAttainmentRequest) Reset() {
 	*x = AnalyzeScheduleAttainmentRequest{}
-	mi := &file_core_core_analytics_proto_msgTypes[90]
+	mi := &file_core_core_analytics_proto_msgTypes[92]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5937,7 +6155,7 @@ func (x *AnalyzeScheduleAttainmentRequest) String() string {
 func (*AnalyzeScheduleAttainmentRequest) ProtoMessage() {}
 
 func (x *AnalyzeScheduleAttainmentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[90]
+	mi := &file_core_core_analytics_proto_msgTypes[92]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5950,7 +6168,7 @@ func (x *AnalyzeScheduleAttainmentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnalyzeScheduleAttainmentRequest.ProtoReflect.Descriptor instead.
 func (*AnalyzeScheduleAttainmentRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{90}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{92}
 }
 
 func (x *AnalyzeScheduleAttainmentRequest) GetStartDate() *timestamppb.Timestamp {
@@ -6011,7 +6229,7 @@ type AttainmentBucketInfo struct {
 
 func (x *AttainmentBucketInfo) Reset() {
 	*x = AttainmentBucketInfo{}
-	mi := &file_core_core_analytics_proto_msgTypes[91]
+	mi := &file_core_core_analytics_proto_msgTypes[93]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6023,7 +6241,7 @@ func (x *AttainmentBucketInfo) String() string {
 func (*AttainmentBucketInfo) ProtoMessage() {}
 
 func (x *AttainmentBucketInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[91]
+	mi := &file_core_core_analytics_proto_msgTypes[93]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6036,7 +6254,7 @@ func (x *AttainmentBucketInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AttainmentBucketInfo.ProtoReflect.Descriptor instead.
 func (*AttainmentBucketInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{91}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{93}
 }
 
 func (x *AttainmentBucketInfo) GetKey() string {
@@ -6150,7 +6368,7 @@ type FrozenAdherenceInfo struct {
 
 func (x *FrozenAdherenceInfo) Reset() {
 	*x = FrozenAdherenceInfo{}
-	mi := &file_core_core_analytics_proto_msgTypes[92]
+	mi := &file_core_core_analytics_proto_msgTypes[94]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6162,7 +6380,7 @@ func (x *FrozenAdherenceInfo) String() string {
 func (*FrozenAdherenceInfo) ProtoMessage() {}
 
 func (x *FrozenAdherenceInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[92]
+	mi := &file_core_core_analytics_proto_msgTypes[94]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6175,7 +6393,7 @@ func (x *FrozenAdherenceInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FrozenAdherenceInfo.ProtoReflect.Descriptor instead.
 func (*FrozenAdherenceInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{92}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{94}
 }
 
 func (x *FrozenAdherenceInfo) GetScheduleId() string {
@@ -6279,7 +6497,7 @@ type AnalyzeScheduleAttainmentResponse struct {
 
 func (x *AnalyzeScheduleAttainmentResponse) Reset() {
 	*x = AnalyzeScheduleAttainmentResponse{}
-	mi := &file_core_core_analytics_proto_msgTypes[93]
+	mi := &file_core_core_analytics_proto_msgTypes[95]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6291,7 +6509,7 @@ func (x *AnalyzeScheduleAttainmentResponse) String() string {
 func (*AnalyzeScheduleAttainmentResponse) ProtoMessage() {}
 
 func (x *AnalyzeScheduleAttainmentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_analytics_proto_msgTypes[93]
+	mi := &file_core_core_analytics_proto_msgTypes[95]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6304,7 +6522,7 @@ func (x *AnalyzeScheduleAttainmentResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use AnalyzeScheduleAttainmentResponse.ProtoReflect.Descriptor instead.
 func (*AnalyzeScheduleAttainmentResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_analytics_proto_rawDescGZIP(), []int{93}
+	return file_core_core_analytics_proto_rawDescGZIP(), []int{95}
 }
 
 func (x *AnalyzeScheduleAttainmentResponse) GetStartDate() *timestamppb.Timestamp {
@@ -6892,11 +7110,15 @@ const file_core_core_analytics_proto_rawDesc = "" +
 	"#BatchGetAccountStatusesByIDsRequest\x12\x10\n" +
 	"\x03ids\x18\x01 \x03(\tR\x03ids\"j\n" +
 	"$BatchGetAccountStatusesByIDsResponse\x12B\n" +
-	"\x10account_statuses\x18\x01 \x03(\v2\x17.core.AccountStatusInfoR\x0faccountStatuses\"\xb3\x01\n" +
+	"\x10account_statuses\x18\x01 \x03(\v2\x17.core.AccountStatusInfoR\x0faccountStatuses\"\xd2\x02\n" +
 	"!AnalyzeDeliveryPerformanceRequest\x127\n" +
 	"\tstarts_at\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\bstartsAt\x123\n" +
 	"\aends_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\x06endsAt\x12 \n" +
-	"\vgranularity\x18\x03 \x01(\tR\vgranularity\"\x9f\x06\n" +
+	"\vgranularity\x18\x03 \x01(\tR\vgranularity\x12!\n" +
+	"\fcustomer_ids\x18\x04 \x03(\tR\vcustomerIds\x12,\n" +
+	"\x12customer_group_ids\x18\x05 \x03(\tR\x10customerGroupIds\x12(\n" +
+	"\x10product_line_ids\x18\x06 \x03(\tR\x0eproductLineIds\x12\"\n" +
+	"\rsales_rep_ids\x18\a \x03(\tR\vsalesRepIds\"\x9f\x06\n" +
 	"\x18DeliveryPerformanceProto\x12B\n" +
 	"\fperiod_start\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\vperiodStart\x88\x01\x01\x122\n" +
 	"\x15committed_order_count\x18\x02 \x01(\x05R\x13committedOrderCount\x12.\n" +
@@ -6923,12 +7145,30 @@ const file_core_core_analytics_proto_rawDesc = "" +
 	"\rmax_days_late\x18\x03 \x01(\x05R\vmaxDaysLate\x12\x1f\n" +
 	"\vorder_count\x18\x04 \x01(\x05R\n" +
 	"orderCount\x12\x14\n" +
-	"\x05units\x18\x05 \x01(\x01R\x05units\"\x8c\x02\n" +
+	"\x05units\x18\x05 \x01(\x01R\x05units\"\xd7\x01\n" +
+	"\x1bDeliveryLatenessBucketProto\x12\x14\n" +
+	"\x05label\x18\x01 \x01(\tR\x05label\x12\"\n" +
+	"\rmin_days_late\x18\x02 \x01(\x05R\vminDaysLate\x12\"\n" +
+	"\rmax_days_late\x18\x03 \x01(\x05R\vmaxDaysLate\x12\x1f\n" +
+	"\vorder_count\x18\x04 \x01(\x05R\n" +
+	"orderCount\x12#\n" +
+	"\rshipped_count\x18\x05 \x01(\x05R\fshippedCount\x12\x14\n" +
+	"\x05units\x18\x06 \x01(\x01R\x05units\"\x82\x01\n" +
+	"\x16DeliveryBreakdownProto\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05label\x18\x02 \x01(\tR\x05label\x12@\n" +
+	"\vperformance\x18\x03 \x01(\v2\x1e.core.DeliveryPerformanceProtoR\vperformance\"\xea\x04\n" +
 	"\"AnalyzeDeliveryPerformanceResponse\x128\n" +
 	"\aoverall\x18\x01 \x01(\v2\x1e.core.DeliveryPerformanceProtoR\aoverall\x128\n" +
 	"\aperiods\x18\x02 \x03(\v2\x1e.core.DeliveryPerformanceProtoR\aperiods\x12:\n" +
 	"\abacklog\x18\x03 \x03(\v2 .core.DeliveryBacklogBucketProtoR\abacklog\x126\n" +
-	"\x17uncommitted_order_count\x18\x04 \x01(\x05R\x15uncommittedOrderCount\"\xf7\x01\n" +
+	"\x17uncommitted_order_count\x18\x04 \x01(\x05R\x15uncommittedOrderCount\x12=\n" +
+	"\blateness\x18\x05 \x03(\v2!.core.DeliveryLatenessBucketProtoR\blateness\x12=\n" +
+	"\vby_customer\x18\x06 \x03(\v2\x1c.core.DeliveryBreakdownProtoR\n" +
+	"byCustomer\x12H\n" +
+	"\x11by_customer_group\x18\a \x03(\v2\x1c.core.DeliveryBreakdownProtoR\x0fbyCustomerGroup\x12D\n" +
+	"\x0fby_product_line\x18\b \x03(\v2\x1c.core.DeliveryBreakdownProtoR\rbyProductLine\x12N\n" +
+	"\x14by_commitment_source\x18\t \x03(\v2\x1c.core.DeliveryBreakdownProtoR\x12byCommitmentSource\"\xf7\x01\n" +
 	" AnalyzeScheduleAttainmentRequest\x129\n" +
 	"\n" +
 	"start_date\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\tstartDate\x125\n" +
@@ -6999,7 +7239,7 @@ func file_core_core_analytics_proto_rawDescGZIP() []byte {
 	return file_core_core_analytics_proto_rawDescData
 }
 
-var file_core_core_analytics_proto_msgTypes = make([]protoimpl.MessageInfo, 95)
+var file_core_core_analytics_proto_msgTypes = make([]protoimpl.MessageInfo, 97)
 var file_core_core_analytics_proto_goTypes = []any{
 	(*QuarterlyDataProto)(nil),                   // 0: core.QuarterlyDataProto
 	(*AnalyzeQuarterlyOrdersResponse)(nil),       // 1: core.AnalyzeQuarterlyOrdersResponse
@@ -7090,52 +7330,54 @@ var file_core_core_analytics_proto_goTypes = []any{
 	(*AnalyzeDeliveryPerformanceRequest)(nil),    // 86: core.AnalyzeDeliveryPerformanceRequest
 	(*DeliveryPerformanceProto)(nil),             // 87: core.DeliveryPerformanceProto
 	(*DeliveryBacklogBucketProto)(nil),           // 88: core.DeliveryBacklogBucketProto
-	(*AnalyzeDeliveryPerformanceResponse)(nil),   // 89: core.AnalyzeDeliveryPerformanceResponse
-	(*AnalyzeScheduleAttainmentRequest)(nil),     // 90: core.AnalyzeScheduleAttainmentRequest
-	(*AttainmentBucketInfo)(nil),                 // 91: core.AttainmentBucketInfo
-	(*FrozenAdherenceInfo)(nil),                  // 92: core.FrozenAdherenceInfo
-	(*AnalyzeScheduleAttainmentResponse)(nil),    // 93: core.AnalyzeScheduleAttainmentResponse
-	nil,                           // 94: core.AnalyzeQuarterlyOrdersResponse.DataEntry
-	(*BaseQuantity)(nil),          // 95: core.BaseQuantity
-	(*BasicInfoProto)(nil),        // 96: core.BasicInfoProto
-	(*timestamppb.Timestamp)(nil), // 97: google.protobuf.Timestamp
-	(*PageInfo)(nil),              // 98: core.PageInfo
-	(*UnitInfo)(nil),              // 99: core.UnitInfo
-	(*ServiceLevelInfo)(nil),      // 100: core.ServiceLevelInfo
-	(*QuantityPatch)(nil),         // 101: core.QuantityPatch
-	(*StringListPatch)(nil),       // 102: core.StringListPatch
-	(*StringPatch)(nil),           // 103: core.StringPatch
+	(*DeliveryLatenessBucketProto)(nil),          // 89: core.DeliveryLatenessBucketProto
+	(*DeliveryBreakdownProto)(nil),               // 90: core.DeliveryBreakdownProto
+	(*AnalyzeDeliveryPerformanceResponse)(nil),   // 91: core.AnalyzeDeliveryPerformanceResponse
+	(*AnalyzeScheduleAttainmentRequest)(nil),     // 92: core.AnalyzeScheduleAttainmentRequest
+	(*AttainmentBucketInfo)(nil),                 // 93: core.AttainmentBucketInfo
+	(*FrozenAdherenceInfo)(nil),                  // 94: core.FrozenAdherenceInfo
+	(*AnalyzeScheduleAttainmentResponse)(nil),    // 95: core.AnalyzeScheduleAttainmentResponse
+	nil,                           // 96: core.AnalyzeQuarterlyOrdersResponse.DataEntry
+	(*BaseQuantity)(nil),          // 97: core.BaseQuantity
+	(*BasicInfoProto)(nil),        // 98: core.BasicInfoProto
+	(*timestamppb.Timestamp)(nil), // 99: google.protobuf.Timestamp
+	(*PageInfo)(nil),              // 100: core.PageInfo
+	(*UnitInfo)(nil),              // 101: core.UnitInfo
+	(*ServiceLevelInfo)(nil),      // 102: core.ServiceLevelInfo
+	(*QuantityPatch)(nil),         // 103: core.QuantityPatch
+	(*StringListPatch)(nil),       // 104: core.StringListPatch
+	(*StringPatch)(nil),           // 105: core.StringPatch
 }
 var file_core_core_analytics_proto_depIdxs = []int32{
-	94,  // 0: core.AnalyzeQuarterlyOrdersResponse.data:type_name -> core.AnalyzeQuarterlyOrdersResponse.DataEntry
+	96,  // 0: core.AnalyzeQuarterlyOrdersResponse.data:type_name -> core.AnalyzeQuarterlyOrdersResponse.DataEntry
 	3,   // 1: core.AnalyticsUnitGroup.units:type_name -> core.AnalyticsUnitGroupUnitProto
-	95,  // 2: core.MaterialAnalyticsEntryProto.quantity_in_inventory:type_name -> core.BaseQuantity
-	95,  // 3: core.MaterialAnalyticsEntryProto.quantity_in_demand:type_name -> core.BaseQuantity
-	95,  // 4: core.MaterialAnalyticsEntryProto.order_point:type_name -> core.BaseQuantity
-	95,  // 5: core.MaterialAnalyticsEntryProto.lead_time:type_name -> core.BaseQuantity
+	97,  // 2: core.MaterialAnalyticsEntryProto.quantity_in_inventory:type_name -> core.BaseQuantity
+	97,  // 3: core.MaterialAnalyticsEntryProto.quantity_in_demand:type_name -> core.BaseQuantity
+	97,  // 4: core.MaterialAnalyticsEntryProto.order_point:type_name -> core.BaseQuantity
+	97,  // 5: core.MaterialAnalyticsEntryProto.lead_time:type_name -> core.BaseQuantity
 	4,   // 6: core.MaterialAnalyticsEntryProto.unit_group:type_name -> core.AnalyticsUnitGroup
 	5,   // 7: core.AnalyzeMaterialsResponse.entries:type_name -> core.MaterialAnalyticsEntryProto
-	95,  // 8: core.AnalyticsRateProto.numerator:type_name -> core.BaseQuantity
-	95,  // 9: core.AnalyticsRateProto.denominator:type_name -> core.BaseQuantity
+	97,  // 8: core.AnalyticsRateProto.numerator:type_name -> core.BaseQuantity
+	97,  // 9: core.AnalyticsRateProto.denominator:type_name -> core.BaseQuantity
 	8,   // 10: core.InventoryReceiptEntryProto.item:type_name -> core.LightItemProto
-	96,  // 11: core.InventoryReceiptEntryProto.owner_account:type_name -> core.BasicInfoProto
-	96,  // 12: core.InventoryReceiptEntryProto.holder_account:type_name -> core.BasicInfoProto
-	95,  // 13: core.InventoryReceiptEntryProto.remaining_quantity:type_name -> core.BaseQuantity
+	98,  // 11: core.InventoryReceiptEntryProto.owner_account:type_name -> core.BasicInfoProto
+	98,  // 12: core.InventoryReceiptEntryProto.holder_account:type_name -> core.BasicInfoProto
+	97,  // 13: core.InventoryReceiptEntryProto.remaining_quantity:type_name -> core.BaseQuantity
 	10,  // 14: core.InventoryReceiptEntryProto.weighted_average_unit_cost:type_name -> core.AnalyticsRateProto
-	97,  // 15: core.InventoryReceiptEntryProto.oldest_receipt_at:type_name -> google.protobuf.Timestamp
-	97,  // 16: core.InventoryReceiptEntryProto.newest_receipt_at:type_name -> google.protobuf.Timestamp
-	96,  // 17: core.InventoryReceiptEntryProto.location:type_name -> core.BasicInfoProto
+	99,  // 15: core.InventoryReceiptEntryProto.oldest_receipt_at:type_name -> google.protobuf.Timestamp
+	99,  // 16: core.InventoryReceiptEntryProto.newest_receipt_at:type_name -> google.protobuf.Timestamp
+	98,  // 17: core.InventoryReceiptEntryProto.location:type_name -> core.BasicInfoProto
 	9,   // 18: core.InventoryReceiptEntryProto.lot:type_name -> core.AnalyticsLotProto
-	95,  // 19: core.InventoryReceiptEntryProto.inventory_value:type_name -> core.BaseQuantity
+	97,  // 19: core.InventoryReceiptEntryProto.inventory_value:type_name -> core.BaseQuantity
 	11,  // 20: core.AnalyzeInventoryReceiptsResponse.entries:type_name -> core.InventoryReceiptEntryProto
-	97,  // 21: core.DateTimeCoordinateProto.x:type_name -> google.protobuf.Timestamp
+	99,  // 21: core.DateTimeCoordinateProto.x:type_name -> google.protobuf.Timestamp
 	13,  // 22: core.NewCustomersChartDataProto.data:type_name -> core.DateTimeCoordinateProto
-	97,  // 23: core.AnalyzeNewCustomersRequest.start_date:type_name -> google.protobuf.Timestamp
-	97,  // 24: core.AnalyzeNewCustomersRequest.end_date:type_name -> google.protobuf.Timestamp
+	99,  // 23: core.AnalyzeNewCustomersRequest.start_date:type_name -> google.protobuf.Timestamp
+	99,  // 24: core.AnalyzeNewCustomersRequest.end_date:type_name -> google.protobuf.Timestamp
 	14,  // 25: core.AnalyzeNewCustomersResponse.new_customers:type_name -> core.NewCustomersChartDataProto
-	97,  // 26: core.DemandHistoryPointProto.date:type_name -> google.protobuf.Timestamp
-	97,  // 27: core.DemandForecastPointProto.date:type_name -> google.protobuf.Timestamp
-	97,  // 28: core.RevenueHistoryPointProto.date:type_name -> google.protobuf.Timestamp
+	99,  // 26: core.DemandHistoryPointProto.date:type_name -> google.protobuf.Timestamp
+	99,  // 27: core.DemandForecastPointProto.date:type_name -> google.protobuf.Timestamp
+	99,  // 28: core.RevenueHistoryPointProto.date:type_name -> google.protobuf.Timestamp
 	17,  // 29: core.DemandForecastRowProto.history:type_name -> core.DemandHistoryPointProto
 	18,  // 30: core.DemandForecastRowProto.forecast:type_name -> core.DemandForecastPointProto
 	19,  // 31: core.DemandForecastRowProto.revenue_history:type_name -> core.RevenueHistoryPointProto
@@ -7144,84 +7386,90 @@ var file_core_core_analytics_proto_depIdxs = []int32{
 	18,  // 34: core.DemandForecastRowProto.sales_forecast:type_name -> core.DemandForecastPointProto
 	20,  // 35: core.AnalyzeDemandForecastResponse.rows:type_name -> core.DemandForecastRowProto
 	23,  // 36: core.OeeDepartmentProto.downtime_breakdown:type_name -> core.OeeDowntimeReasonProto
-	97,  // 37: core.AnalyzeOeeRequest.start_date:type_name -> google.protobuf.Timestamp
-	97,  // 38: core.AnalyzeOeeRequest.end_date:type_name -> google.protobuf.Timestamp
+	99,  // 37: core.AnalyzeOeeRequest.start_date:type_name -> google.protobuf.Timestamp
+	99,  // 38: core.AnalyzeOeeRequest.end_date:type_name -> google.protobuf.Timestamp
 	25,  // 39: core.AnalyzeOeeRequest.planned_time:type_name -> core.OeeDepartmentPlannedTimeProto
 	24,  // 40: core.AnalyzeOeeResponse.departments:type_name -> core.OeeDepartmentProto
-	97,  // 41: core.AnalyzeOeeTrendRequest.start_date:type_name -> google.protobuf.Timestamp
-	97,  // 42: core.AnalyzeOeeTrendRequest.end_date:type_name -> google.protobuf.Timestamp
-	97,  // 43: core.OeeTrendPeriodProto.starts_at:type_name -> google.protobuf.Timestamp
-	97,  // 44: core.OeeTrendPeriodProto.ends_at:type_name -> google.protobuf.Timestamp
+	99,  // 41: core.AnalyzeOeeTrendRequest.start_date:type_name -> google.protobuf.Timestamp
+	99,  // 42: core.AnalyzeOeeTrendRequest.end_date:type_name -> google.protobuf.Timestamp
+	99,  // 43: core.OeeTrendPeriodProto.starts_at:type_name -> google.protobuf.Timestamp
+	99,  // 44: core.OeeTrendPeriodProto.ends_at:type_name -> google.protobuf.Timestamp
 	29,  // 45: core.AnalyzeOeeTrendResponse.periods:type_name -> core.OeeTrendPeriodProto
-	97,  // 46: core.PaymentTermInfo.created_at:type_name -> google.protobuf.Timestamp
-	97,  // 47: core.PaymentTermInfo.updated_at:type_name -> google.protobuf.Timestamp
+	99,  // 46: core.PaymentTermInfo.created_at:type_name -> google.protobuf.Timestamp
+	99,  // 47: core.PaymentTermInfo.updated_at:type_name -> google.protobuf.Timestamp
 	31,  // 48: core.ListPaymentTermsResponse.payment_terms:type_name -> core.PaymentTermInfo
-	98,  // 49: core.ListPaymentTermsResponse.page_info:type_name -> core.PageInfo
+	100, // 49: core.ListPaymentTermsResponse.page_info:type_name -> core.PageInfo
 	31,  // 50: core.GetPaymentTermResponse.payment_term:type_name -> core.PaymentTermInfo
 	31,  // 51: core.CreatePaymentTermResponse.payment_term:type_name -> core.PaymentTermInfo
 	31,  // 52: core.UpdatePaymentTermResponse.payment_term:type_name -> core.PaymentTermInfo
 	31,  // 53: core.BatchGetPaymentTermsByIDsResponse.payment_terms:type_name -> core.PaymentTermInfo
-	97,  // 54: core.QuantityInfo.created_at:type_name -> google.protobuf.Timestamp
-	97,  // 55: core.QuantityInfo.updated_at:type_name -> google.protobuf.Timestamp
-	99,  // 56: core.QuantityInfo.unit_detail:type_name -> core.UnitInfo
+	99,  // 54: core.QuantityInfo.created_at:type_name -> google.protobuf.Timestamp
+	99,  // 55: core.QuantityInfo.updated_at:type_name -> google.protobuf.Timestamp
+	101, // 56: core.QuantityInfo.unit_detail:type_name -> core.UnitInfo
 	43,  // 57: core.ShippingTermInfo.flat_rate:type_name -> core.QuantityInfo
 	43,  // 58: core.ShippingTermInfo.minimum_order_value:type_name -> core.QuantityInfo
-	100, // 59: core.ShippingTermInfo.free_shipping_service_levels:type_name -> core.ServiceLevelInfo
-	97,  // 60: core.ShippingTermInfo.created_at:type_name -> google.protobuf.Timestamp
-	97,  // 61: core.ShippingTermInfo.updated_at:type_name -> google.protobuf.Timestamp
+	102, // 59: core.ShippingTermInfo.free_shipping_service_levels:type_name -> core.ServiceLevelInfo
+	99,  // 60: core.ShippingTermInfo.created_at:type_name -> google.protobuf.Timestamp
+	99,  // 61: core.ShippingTermInfo.updated_at:type_name -> google.protobuf.Timestamp
 	44,  // 62: core.ListShippingTermsResponse.shipping_terms:type_name -> core.ShippingTermInfo
-	98,  // 63: core.ListShippingTermsResponse.page_info:type_name -> core.PageInfo
+	100, // 63: core.ListShippingTermsResponse.page_info:type_name -> core.PageInfo
 	44,  // 64: core.GetShippingTermResponse.shipping_term:type_name -> core.ShippingTermInfo
 	49,  // 65: core.CreateShippingTermRequest.flat_rate:type_name -> core.QuantityInput
 	49,  // 66: core.CreateShippingTermRequest.minimum_order_value:type_name -> core.QuantityInput
 	44,  // 67: core.CreateShippingTermResponse.shipping_term:type_name -> core.ShippingTermInfo
-	101, // 68: core.UpdateShippingTermRequest.flat_rate:type_name -> core.QuantityPatch
-	101, // 69: core.UpdateShippingTermRequest.minimum_order_value:type_name -> core.QuantityPatch
-	102, // 70: core.UpdateShippingTermRequest.free_shipping_service_level_ids:type_name -> core.StringListPatch
+	103, // 68: core.UpdateShippingTermRequest.flat_rate:type_name -> core.QuantityPatch
+	103, // 69: core.UpdateShippingTermRequest.minimum_order_value:type_name -> core.QuantityPatch
+	104, // 70: core.UpdateShippingTermRequest.free_shipping_service_level_ids:type_name -> core.StringListPatch
 	44,  // 71: core.UpdateShippingTermResponse.shipping_term:type_name -> core.ShippingTermInfo
 	44,  // 72: core.BatchGetShippingTermsByIDsResponse.shipping_terms:type_name -> core.ShippingTermInfo
 	58,  // 73: core.AddressInfo.geolocation:type_name -> core.GeolocationInfo
-	97,  // 74: core.AddressInfo.created_at:type_name -> google.protobuf.Timestamp
-	97,  // 75: core.AddressInfo.updated_at:type_name -> google.protobuf.Timestamp
+	99,  // 74: core.AddressInfo.created_at:type_name -> google.protobuf.Timestamp
+	99,  // 75: core.AddressInfo.updated_at:type_name -> google.protobuf.Timestamp
 	59,  // 76: core.GetAddressResponse.address:type_name -> core.AddressInfo
 	59,  // 77: core.ListAddressesResponse.addresses:type_name -> core.AddressInfo
-	98,  // 78: core.ListAddressesResponse.page_info:type_name -> core.PageInfo
+	100, // 78: core.ListAddressesResponse.page_info:type_name -> core.PageInfo
 	59,  // 79: core.CreateAddressResponse.address:type_name -> core.AddressInfo
-	103, // 80: core.UpdateAddressRequest.phone:type_name -> core.StringPatch
-	103, // 81: core.UpdateAddressRequest.email:type_name -> core.StringPatch
-	103, // 82: core.UpdateAddressRequest.street_line_2:type_name -> core.StringPatch
+	105, // 80: core.UpdateAddressRequest.phone:type_name -> core.StringPatch
+	105, // 81: core.UpdateAddressRequest.email:type_name -> core.StringPatch
+	105, // 82: core.UpdateAddressRequest.street_line_2:type_name -> core.StringPatch
 	59,  // 83: core.UpdateAddressResponse.address:type_name -> core.AddressInfo
 	59,  // 84: core.BatchGetAddressesByIDsResponse.addresses:type_name -> core.AddressInfo
 	72,  // 85: core.AutocompleteAddressResponse.suggestions:type_name -> core.AddressSuggestion
 	75,  // 86: core.GetAddressDetailsResponse.address:type_name -> core.AddressComponentsInfo
 	75,  // 87: core.ValidateAddressResponse.components:type_name -> core.AddressComponentsInfo
-	97,  // 88: core.AccountStatusInfo.created_at:type_name -> google.protobuf.Timestamp
-	97,  // 89: core.AccountStatusInfo.updated_at:type_name -> google.protobuf.Timestamp
+	99,  // 88: core.AccountStatusInfo.created_at:type_name -> google.protobuf.Timestamp
+	99,  // 89: core.AccountStatusInfo.updated_at:type_name -> google.protobuf.Timestamp
 	79,  // 90: core.ListAccountStatusesResponse.account_statuses:type_name -> core.AccountStatusInfo
-	98,  // 91: core.ListAccountStatusesResponse.page_info:type_name -> core.PageInfo
+	100, // 91: core.ListAccountStatusesResponse.page_info:type_name -> core.PageInfo
 	79,  // 92: core.GetAccountStatusResponse.account_status:type_name -> core.AccountStatusInfo
 	79,  // 93: core.BatchGetAccountStatusesByIDsResponse.account_statuses:type_name -> core.AccountStatusInfo
-	97,  // 94: core.AnalyzeDeliveryPerformanceRequest.starts_at:type_name -> google.protobuf.Timestamp
-	97,  // 95: core.AnalyzeDeliveryPerformanceRequest.ends_at:type_name -> google.protobuf.Timestamp
-	97,  // 96: core.DeliveryPerformanceProto.period_start:type_name -> google.protobuf.Timestamp
-	87,  // 97: core.AnalyzeDeliveryPerformanceResponse.overall:type_name -> core.DeliveryPerformanceProto
-	87,  // 98: core.AnalyzeDeliveryPerformanceResponse.periods:type_name -> core.DeliveryPerformanceProto
-	88,  // 99: core.AnalyzeDeliveryPerformanceResponse.backlog:type_name -> core.DeliveryBacklogBucketProto
-	97,  // 100: core.AnalyzeScheduleAttainmentRequest.start_date:type_name -> google.protobuf.Timestamp
-	97,  // 101: core.AnalyzeScheduleAttainmentRequest.end_date:type_name -> google.protobuf.Timestamp
-	97,  // 102: core.AttainmentBucketInfo.week_start_date:type_name -> google.protobuf.Timestamp
-	97,  // 103: core.FrozenAdherenceInfo.frozen_through_date:type_name -> google.protobuf.Timestamp
-	97,  // 104: core.AnalyzeScheduleAttainmentResponse.start_date:type_name -> google.protobuf.Timestamp
-	97,  // 105: core.AnalyzeScheduleAttainmentResponse.end_date:type_name -> google.protobuf.Timestamp
-	91,  // 106: core.AnalyzeScheduleAttainmentResponse.buckets:type_name -> core.AttainmentBucketInfo
-	91,  // 107: core.AnalyzeScheduleAttainmentResponse.totals:type_name -> core.AttainmentBucketInfo
-	92,  // 108: core.AnalyzeScheduleAttainmentResponse.frozen_adherence:type_name -> core.FrozenAdherenceInfo
-	0,   // 109: core.AnalyzeQuarterlyOrdersResponse.DataEntry.value:type_name -> core.QuarterlyDataProto
-	110, // [110:110] is the sub-list for method output_type
-	110, // [110:110] is the sub-list for method input_type
-	110, // [110:110] is the sub-list for extension type_name
-	110, // [110:110] is the sub-list for extension extendee
-	0,   // [0:110] is the sub-list for field type_name
+	99,  // 94: core.AnalyzeDeliveryPerformanceRequest.starts_at:type_name -> google.protobuf.Timestamp
+	99,  // 95: core.AnalyzeDeliveryPerformanceRequest.ends_at:type_name -> google.protobuf.Timestamp
+	99,  // 96: core.DeliveryPerformanceProto.period_start:type_name -> google.protobuf.Timestamp
+	87,  // 97: core.DeliveryBreakdownProto.performance:type_name -> core.DeliveryPerformanceProto
+	87,  // 98: core.AnalyzeDeliveryPerformanceResponse.overall:type_name -> core.DeliveryPerformanceProto
+	87,  // 99: core.AnalyzeDeliveryPerformanceResponse.periods:type_name -> core.DeliveryPerformanceProto
+	88,  // 100: core.AnalyzeDeliveryPerformanceResponse.backlog:type_name -> core.DeliveryBacklogBucketProto
+	89,  // 101: core.AnalyzeDeliveryPerformanceResponse.lateness:type_name -> core.DeliveryLatenessBucketProto
+	90,  // 102: core.AnalyzeDeliveryPerformanceResponse.by_customer:type_name -> core.DeliveryBreakdownProto
+	90,  // 103: core.AnalyzeDeliveryPerformanceResponse.by_customer_group:type_name -> core.DeliveryBreakdownProto
+	90,  // 104: core.AnalyzeDeliveryPerformanceResponse.by_product_line:type_name -> core.DeliveryBreakdownProto
+	90,  // 105: core.AnalyzeDeliveryPerformanceResponse.by_commitment_source:type_name -> core.DeliveryBreakdownProto
+	99,  // 106: core.AnalyzeScheduleAttainmentRequest.start_date:type_name -> google.protobuf.Timestamp
+	99,  // 107: core.AnalyzeScheduleAttainmentRequest.end_date:type_name -> google.protobuf.Timestamp
+	99,  // 108: core.AttainmentBucketInfo.week_start_date:type_name -> google.protobuf.Timestamp
+	99,  // 109: core.FrozenAdherenceInfo.frozen_through_date:type_name -> google.protobuf.Timestamp
+	99,  // 110: core.AnalyzeScheduleAttainmentResponse.start_date:type_name -> google.protobuf.Timestamp
+	99,  // 111: core.AnalyzeScheduleAttainmentResponse.end_date:type_name -> google.protobuf.Timestamp
+	93,  // 112: core.AnalyzeScheduleAttainmentResponse.buckets:type_name -> core.AttainmentBucketInfo
+	93,  // 113: core.AnalyzeScheduleAttainmentResponse.totals:type_name -> core.AttainmentBucketInfo
+	94,  // 114: core.AnalyzeScheduleAttainmentResponse.frozen_adherence:type_name -> core.FrozenAdherenceInfo
+	0,   // 115: core.AnalyzeQuarterlyOrdersResponse.DataEntry.value:type_name -> core.QuarterlyDataProto
+	116, // [116:116] is the sub-list for method output_type
+	116, // [116:116] is the sub-list for method input_type
+	116, // [116:116] is the sub-list for extension type_name
+	116, // [116:116] is the sub-list for extension extendee
+	0,   // [0:116] is the sub-list for field type_name
 }
 
 func init() { file_core_core_analytics_proto_init() }
@@ -7255,15 +7503,15 @@ func file_core_core_analytics_proto_init() {
 	file_core_core_analytics_proto_msgTypes[78].OneofWrappers = []any{}
 	file_core_core_analytics_proto_msgTypes[80].OneofWrappers = []any{}
 	file_core_core_analytics_proto_msgTypes[87].OneofWrappers = []any{}
-	file_core_core_analytics_proto_msgTypes[91].OneofWrappers = []any{}
-	file_core_core_analytics_proto_msgTypes[92].OneofWrappers = []any{}
+	file_core_core_analytics_proto_msgTypes[93].OneofWrappers = []any{}
+	file_core_core_analytics_proto_msgTypes[94].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_core_analytics_proto_rawDesc), len(file_core_core_analytics_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   95,
+			NumMessages:   97,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

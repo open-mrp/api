@@ -29,6 +29,7 @@ func (e *DeleteDepartmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*Delet
 		Route:             "/v1/operations/departments/{id}",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteDepartmentRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(DepartmentSvc).DeleteDepartment

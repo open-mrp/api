@@ -21,6 +21,14 @@ type AnalyzeDeliveryPerformanceRequest struct {
 	EndDate time.Time `json:"ends_at" validate:"required"`
 	// The period to break the results down by. Defaults to `week`.
 	Granularity field.Optional[constants.DeliveryGranularity] `json:"granularity,omitzero"`
+	// Only measure orders bought by these customers. Their child accounts are included, matching how the sales analytics resolve a customer.
+	CustomerIDs []string `json:"customer_ids,omitempty"`
+	// Only measure orders whose customer sits in these groups.
+	CustomerGroupIDs []string `json:"customer_group_ids,omitempty"`
+	// Only measure orders containing at least one line in these product lines.
+	ProductLineIDs []string `json:"product_line_ids,omitempty"`
+	// Only measure orders owned by these sales reps.
+	SalesRepIDs []string `json:"sales_rep_ids,omitempty"`
 }
 
 // Returns how reliably promised delivery dates were met.
@@ -32,6 +40,10 @@ type AnalyzeDeliveryPerformanceRequest struct {
 // Only orders carrying a ship-by commitment participate. An order with no commitment cannot be late, and counting it as on time would inflate the rate with orders nobody promised anything about — `uncommitted_order_count` says how many were excluded, so the gap is visible rather than silent.
 //
 // Every rate is null rather than zero when nothing was due, and average lateness is measured over late orders only.
+//
+// The same window is also returned sliced by customer, customer group, product line, and the rule each ship-by date came from — each ordered worst-first, and each derived from the same set of orders as the headline so a drilldown always adds up to it. `by_product_line` is the one exception to that: an order spanning two lines is counted under both, because a late order is late for every line on it.
+//
+// Every filter is empty-means-all and they combine with AND. They narrow `uncommitted_order_count` too, so the excluded count always describes the same slice of the order book the rates do.
 type AnalyzeDeliveryPerformanceEndpoint struct{}
 
 func (e *AnalyzeDeliveryPerformanceEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeDeliveryPerformanceRequest, *apiresource.AnalyzeDeliveryPerformanceResponse] {

@@ -971,7 +971,15 @@ func (h *gRPCHandler) AnalyzeDeliveryPerformance(ctx context.Context, req *pb.An
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	params := domain.AnalyzeDeliveryPerformanceParams{Granularity: req.Granularity}
+	params := domain.AnalyzeDeliveryPerformanceParams{
+		Granularity: req.Granularity,
+		DeliveryFilters: domain.DeliveryFilters{
+			CustomerIDs:      req.CustomerIds,
+			CustomerGroupIDs: req.CustomerGroupIds,
+			ProductLineIDs:   req.ProductLineIds,
+			SalesRepIDs:      req.SalesRepIds,
+		},
+	}
 	if req.StartsAt != nil {
 		params.StartDate = req.StartsAt.AsTime()
 	}
@@ -1000,12 +1008,42 @@ func (h *gRPCHandler) AnalyzeDeliveryPerformance(ctx context.Context, req *pb.An
 		})
 	}
 
+	lateness := make([]*pb.DeliveryLatenessBucketProto, 0, len(result.Lateness))
+	for _, b := range result.Lateness {
+		lateness = append(lateness, &pb.DeliveryLatenessBucketProto{
+			Label:        b.Label,
+			MinDaysLate:  safeconv.IntToInt32(b.MinDaysLate),
+			MaxDaysLate:  safeconv.IntToInt32(b.MaxDaysLate),
+			OrderCount:   safeconv.IntToInt32(b.OrderCount),
+			ShippedCount: safeconv.IntToInt32(b.ShippedCount),
+			Units:        b.Units,
+		})
+	}
+
 	return &pb.AnalyzeDeliveryPerformanceResponse{
 		Overall:               deliveryPerformanceToProto(result.Overall, false),
 		Periods:               periods,
 		Backlog:               backlog,
+		Lateness:              lateness,
+		ByCustomer:            deliveryBreakdownsToProto(result.ByCustomer),
+		ByCustomerGroup:       deliveryBreakdownsToProto(result.ByCustomerGroup),
+		ByProductLine:         deliveryBreakdownsToProto(result.ByProductLine),
+		ByCommitmentSource:    deliveryBreakdownsToProto(result.ByCommitmentSource),
 		UncommittedOrderCount: safeconv.IntToInt32(result.UncommittedOrderCount),
 	}, nil
+}
+
+// deliveryBreakdownsToProto maps one dimension's rows. The period start is never included: a breakdown row is a whole window, not a period inside it.
+func deliveryBreakdownsToProto(rows []scheduling.DeliveryBreakdown) []*pb.DeliveryBreakdownProto {
+	out := make([]*pb.DeliveryBreakdownProto, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, &pb.DeliveryBreakdownProto{
+			Key:         row.Key,
+			Label:       row.Label,
+			Performance: deliveryPerformanceToProto(row.DeliveryPerformance, false),
+		})
+	}
+	return out
 }
 
 func (h *gRPCHandler) AnalyzeRealizedMargins(ctx context.Context, req *pb.AnalyzeRealizedMarginsRequest) (*pb.AnalyzeRealizedMarginsResponse, error) {

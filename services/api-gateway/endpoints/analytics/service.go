@@ -528,10 +528,32 @@ func deliveryPerformanceFromProto(p *pb.DeliveryPerformanceProto) apiresource.De
 	return out
 }
 
+// deliveryBreakdownsFromProto maps one dimension's rows, preserving the worst-first order core-service sorted them into.
+func deliveryBreakdownsFromProto(rows []*pb.DeliveryBreakdownProto) *apiresource.List[apiresource.DeliveryBreakdown] {
+	out := make([]apiresource.DeliveryBreakdown, 0, len(rows))
+	for _, row := range rows {
+		entry := apiresource.DeliveryBreakdown{
+			Object: constants.ObjectTypeDeliveryBreakdown,
+			Key:    row.Key,
+			Label:  row.Label,
+		}
+		if row.Performance != nil {
+			performance := deliveryPerformanceFromProto(row.Performance)
+			entry.Performance = &performance
+		}
+		out = append(out, entry)
+	}
+	return apiresource.NewList(out, apiresource.PageInfo{})
+}
+
 func (m *analyticsSvcImpl) AnalyzeDeliveryPerformance(ctx context.Context, req *AnalyzeDeliveryPerformanceRequest) (*apiresource.AnalyzeDeliveryPerformanceResponse, *apierror.APIError) {
 	pbReq := &pb.AnalyzeDeliveryPerformanceRequest{
-		StartsAt: timestamppb.New(req.StartDate),
-		EndsAt:   timestamppb.New(req.EndDate),
+		StartsAt:         timestamppb.New(req.StartDate),
+		EndsAt:           timestamppb.New(req.EndDate),
+		CustomerIds:      req.CustomerIDs,
+		CustomerGroupIds: req.CustomerGroupIDs,
+		ProductLineIds:   req.ProductLineIDs,
+		SalesRepIds:      req.SalesRepIDs,
 	}
 	if v, ok := req.Granularity.Value(); ok {
 		pbReq.Granularity = string(v)
@@ -562,10 +584,28 @@ func (m *analyticsSvcImpl) AnalyzeDeliveryPerformance(ctx context.Context, req *
 		})
 	}
 
+	lateness := make([]apiresource.DeliveryLatenessBucket, 0, len(resp.Lateness))
+	for _, b := range resp.Lateness {
+		lateness = append(lateness, apiresource.DeliveryLatenessBucket{
+			Object:       constants.ObjectTypeDeliveryLatenessBucket,
+			Label:        b.Label,
+			MinDaysLate:  b.MinDaysLate,
+			MaxDaysLate:  b.MaxDaysLate,
+			OrderCount:   b.OrderCount,
+			ShippedCount: b.ShippedCount,
+			Units:        b.Units,
+		})
+	}
+
 	out := &apiresource.AnalyzeDeliveryPerformanceResponse{
 		Object:                constants.ObjectTypeAnalyzeDeliveryPerformanceResponse,
 		Periods:               apiresource.NewList(periods, apiresource.PageInfo{}),
 		Backlog:               apiresource.NewList(backlog, apiresource.PageInfo{}),
+		Lateness:              apiresource.NewList(lateness, apiresource.PageInfo{}),
+		ByCustomer:            deliveryBreakdownsFromProto(resp.ByCustomer),
+		ByCustomerGroup:       deliveryBreakdownsFromProto(resp.ByCustomerGroup),
+		ByProductLine:         deliveryBreakdownsFromProto(resp.ByProductLine),
+		ByCommitmentSource:    deliveryBreakdownsFromProto(resp.ByCommitmentSource),
 		UncommittedOrderCount: resp.UncommittedOrderCount,
 	}
 	if resp.Overall != nil {

@@ -41,6 +41,7 @@ func (e *IssueSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*IssueS
 		Route:               "/v1/sales/sales-orders/{id}/actions/issue",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              true,
+		AgentTool:           true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionUpdate}},
 		ObjectType:          constants.ObjectTypeSalesOrder,

@@ -1010,11 +1010,11 @@ type ProductionScheduleInputRepo interface {
 	// GetPooledOrderDemandByProduct returns monthly sold quantity per product inside the window.
 	GetPooledOrderDemandByProduct(ctx context.Context, params GetPooledOrderDemandParams) ([]PooledMonthlyDemandRow, *apierror.APIError)
 
-	// ListDeliveryOutcomes returns every order whose commitment came due inside the window, with what happened to it.
-	ListDeliveryOutcomes(ctx context.Context, accountID string, start, end time.Time) ([]scheduling.DeliveryOutcome, *apierror.APIError)
+	// ListDeliveryOutcomes returns every order whose commitment came due inside the window, with what happened to it, narrowed by the given filters.
+	ListDeliveryOutcomes(ctx context.Context, accountID string, start, end time.Time, filters DeliveryFilters) ([]scheduling.DeliveryOutcome, *apierror.APIError)
 
-	// CountUncommittedOrders counts issued orders in the window carrying no ship-by date.
-	CountUncommittedOrders(ctx context.Context, accountID string, start, end time.Time) (int, *apierror.APIError)
+	// CountUncommittedOrders counts issued orders in the window carrying no ship-by date, under the same filters, so the excluded count describes the same slice the rates do.
+	CountUncommittedOrders(ctx context.Context, accountID string, start, end time.Time, filters DeliveryFilters) (int, *apierror.APIError)
 
 	// GetOpenOrderRequirements returns the outstanding quantity on every issued, unshipped line for the given products.
 	GetOpenOrderRequirements(ctx context.Context, accountID string, productIDs []string) ([]OpenOrderRequirementRow, *apierror.APIError)

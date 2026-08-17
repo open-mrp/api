@@ -227,3 +227,103 @@ func TestAnalyzeBacklogAging_OwesTheRemainder(t *testing.T) {
 	}
 	t.Fatal("expected a 1-7 day bucket")
 }
+
+// The distribution is what tells "everything slips a day" from "four orders are two months late". An average reports those two identically, and they are opposite problems.
+func TestAnalyzeLatenessDistribution_SeparatesNearMissesFromDisasters(t *testing.T) {
+	t.Parallel()
+
+	outcomes := []DeliveryOutcome{
+		// On time — never appears in any band.
+		{ShipByDate: day(10), FirstShipAt: dayPtr(10)},
+		// Two days late, shipped.
+		{ShipByDate: day(10), FirstShipAt: dayPtr(12), QuantityOrdered: 100, QuantityPacked: 100},
+		// Six days late, shipped short: 40 units still owed.
+		{ShipByDate: day(10), FirstShipAt: dayPtr(16), QuantityOrdered: 100, QuantityPacked: 60},
+		// Never shipped and 40 days past due as of the 20th of the following month.
+		{ShipByDate: day(1).AddDate(0, -1, 0), QuantityOrdered: 200},
+	}
+
+	bands := AnalyzeLatenessDistribution(outcomes, deliveryAsOf)
+
+	byLabel := map[string]LatenessBucket{}
+	for _, b := range bands {
+		byLabel[b.Label] = b
+	}
+
+	if got := byLabel["1_3_days"]; got.OrderCount != 1 || got.ShippedCount != 1 {
+		t.Errorf("1-3 day band = %+v, want one order, shipped", got)
+	}
+	if got := byLabel["4_7_days"]; got.OrderCount != 1 || got.Units != 40 {
+		t.Errorf("4-7 day band = %+v, want one order owing 40 units", got)
+	}
+	// A shipped order still counts as a miss, but its units are no longer owed.
+	if got := byLabel["8_30_days"]; got.OrderCount != 0 {
+		t.Errorf("8-30 day band = %+v, want nothing", got)
+	}
+	if got := byLabel["over_30_days"]; got.OrderCount != 1 || got.ShippedCount != 0 || got.Units != 200 {
+		t.Errorf("over-30 band = %+v, want one unshipped order owing 200", got)
+	}
+}
+
+func TestAnalyzeDeliveryBreakdown_OrdersWorstFirst(t *testing.T) {
+	t.Parallel()
+
+	outcomes := []DeliveryOutcome{
+		{BuyerAccountID: "acc_good", CustomerName: "Good", ShipByDate: day(10), FirstShipAt: dayPtr(10)},
+		{BuyerAccountID: "acc_good", CustomerName: "Good", ShipByDate: day(11), FirstShipAt: dayPtr(11)},
+		{BuyerAccountID: "acc_bad", CustomerName: "Bad", ShipByDate: day(10), FirstShipAt: dayPtr(18)},
+	}
+
+	rows := AnalyzeDeliveryBreakdown(outcomes, deliveryAsOf, ByCustomer)
+
+	if len(rows) != 2 {
+		t.Fatalf("expected one row per customer, got %d", len(rows))
+	}
+	// The point of a breakdown is to put the row that needs a conversation first.
+	if rows[0].Label != "Bad" {
+		t.Errorf("first row = %q, want Bad — breakdowns lead with the worst offender", rows[0].Label)
+	}
+	if rows[0].LateOrderCount != 1 || rows[1].LateOrderCount != 0 {
+		t.Errorf("late counts = %d / %d, want 1 / 0", rows[0].LateOrderCount, rows[1].LateOrderCount)
+	}
+	if rows[1].OnTimePct == nil || *rows[1].OnTimePct != 100 {
+		t.Errorf("the clean customer's on-time = %v, want 100", rows[1].OnTimePct)
+	}
+}
+
+// A late order is late for every product line on it, so it is counted under each rather than attributed to whichever line happened to be first.
+func TestAnalyzeDeliveryBreakdown_ProductLinesFanOut(t *testing.T) {
+	t.Parallel()
+
+	outcomes := []DeliveryOutcome{{
+		ShipByDate:   day(10),
+		FirstShipAt:  dayPtr(18),
+		ProductLines: []ProductLineRef{{ID: "pl_1", Name: "Greige"}, {ID: "pl_2", Name: "Finished"}},
+	}}
+
+	rows := AnalyzeDeliveryBreakdown(outcomes, deliveryAsOf, ByProductLine)
+
+	if len(rows) != 2 {
+		t.Fatalf("expected the order under both of its lines, got %d rows", len(rows))
+	}
+	for _, row := range rows {
+		if row.CommittedOrderCount != 1 || row.LateOrderCount != 1 {
+			t.Errorf("row %q = %+v, want the order counted as one late commitment", row.Label, row.DeliveryPerformance)
+		}
+	}
+}
+
+// Orders with no value for a dimension are kept, not dropped: an order with no sales rep is exactly the one nobody is watching.
+func TestAnalyzeDeliveryBreakdown_KeepsUnassigned(t *testing.T) {
+	t.Parallel()
+
+	rows := AnalyzeDeliveryBreakdown(
+		[]DeliveryOutcome{{ShipByDate: day(10), FirstShipAt: dayPtr(18)}},
+		deliveryAsOf,
+		ByCustomerGroup,
+	)
+
+	if len(rows) != 1 || rows[0].Label != UnassignedLabel {
+		t.Fatalf("rows = %+v, want a single Unassigned row", rows)
+	}
+}

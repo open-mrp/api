@@ -10776,18 +10776,18 @@ func (mr *MockProductionScheduleInputRepoMockRecorder) CountConstraintMachinesWi
 }
 
 // CountUncommittedOrders mocks base method.
-func (m *MockProductionScheduleInputRepo) CountUncommittedOrders(ctx context.Context, accountID string, start, end time.Time) (int, *apierror.APIError) {
+func (m *MockProductionScheduleInputRepo) CountUncommittedOrders(ctx context.Context, accountID string, start, end time.Time, filters domain.DeliveryFilters) (int, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CountUncommittedOrders", ctx, accountID, start, end)
+	ret := m.ctrl.Call(m, "CountUncommittedOrders", ctx, accountID, start, end, filters)
 	ret0, _ := ret[0].(int)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // CountUncommittedOrders indicates an expected call of CountUncommittedOrders.
-func (mr *MockProductionScheduleInputRepoMockRecorder) CountUncommittedOrders(ctx, accountID, start, end any) *gomock.Call {
+func (mr *MockProductionScheduleInputRepoMockRecorder) CountUncommittedOrders(ctx, accountID, start, end, filters any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountUncommittedOrders", reflect.TypeOf((*MockProductionScheduleInputRepo)(nil).CountUncommittedOrders), ctx, accountID, start, end)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountUncommittedOrders", reflect.TypeOf((*MockProductionScheduleInputRepo)(nil).CountUncommittedOrders), ctx, accountID, start, end, filters)
 }
 
 // GetAccountScheduleSettings mocks base method.
@@ -11046,18 +11046,18 @@ func (mr *MockProductionScheduleInputRepoMockRecorder) GetStepConsumptionItems(c
 }
 
 // ListDeliveryOutcomes mocks base method.
-func (m *MockProductionScheduleInputRepo) ListDeliveryOutcomes(ctx context.Context, accountID string, start, end time.Time) ([]scheduling.DeliveryOutcome, *apierror.APIError) {
+func (m *MockProductionScheduleInputRepo) ListDeliveryOutcomes(ctx context.Context, accountID string, start, end time.Time, filters domain.DeliveryFilters) ([]scheduling.DeliveryOutcome, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListDeliveryOutcomes", ctx, accountID, start, end)
+	ret := m.ctrl.Call(m, "ListDeliveryOutcomes", ctx, accountID, start, end, filters)
 	ret0, _ := ret[0].([]scheduling.DeliveryOutcome)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // ListDeliveryOutcomes indicates an expected call of ListDeliveryOutcomes.
-func (mr *MockProductionScheduleInputRepoMockRecorder) ListDeliveryOutcomes(ctx, accountID, start, end any) *gomock.Call {
+func (mr *MockProductionScheduleInputRepoMockRecorder) ListDeliveryOutcomes(ctx, accountID, start, end, filters any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeliveryOutcomes", reflect.TypeOf((*MockProductionScheduleInputRepo)(nil).ListDeliveryOutcomes), ctx, accountID, start, end)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeliveryOutcomes", reflect.TypeOf((*MockProductionScheduleInputRepo)(nil).ListDeliveryOutcomes), ctx, accountID, start, end, filters)
 }
 
 // ListItemProductLines mocks base method.

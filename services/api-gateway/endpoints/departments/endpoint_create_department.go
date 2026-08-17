@@ -70,6 +70,7 @@ func (e *CreateDepartmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*Creat
 		Route:             "/v1/operations/departments",
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateDepartmentRequest) (*apiresource.Department, *apierror.APIError) {
 			return svc.(DepartmentSvc).CreateDepartment

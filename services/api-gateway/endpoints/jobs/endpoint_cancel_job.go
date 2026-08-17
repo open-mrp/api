@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -29,8 +30,11 @@ func (e *CancelJobEndpoint) Materialize() *apiendpoint.APIEndpoint[*CancelJobReq
 		SuccessStatusCode: http.StatusOK,
 		// Public, alongside the retrieve endpoint: a consumer that starts and polls a public async operation can also cancel it.
 		Public:     true,
+		AgentTool:  true,
 		Preview:    true,
 		ObjectType: constants.ObjectTypeJob,
+		// What CancelJob enforces downstream. Undeclared, the coarse gate let every authenticated caller through to a 403 raised in the service.
+		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainJobs, Action: types.ActionDelete}},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeJob,
 			Fields:     []string{"created_by", "created_by.role"},

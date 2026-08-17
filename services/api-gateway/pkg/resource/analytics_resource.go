@@ -806,10 +806,54 @@ type AnalyzeDeliveryPerformanceResponse struct {
 	Periods *List[DeliveryPerformance] `json:"periods" validate:"required"`
 	// Orders already past their promise and still unshipped, by how late they are.
 	Backlog *List[DeliveryBacklogBucket] `json:"backlog" validate:"required"`
+	// Every miss in the window banded by how far it missed by, shipped and unshipped alike.
+	//
+	// The companion to `average_days_late`, which cannot tell "everything slips a day" from "most orders are fine and four are two months late". Those are opposite problems with opposite fixes, and one mean reports them identically.
+	Lateness *List[DeliveryLatenessBucket] `json:"lateness" validate:"required"`
+	// The same window by customer, worst first.
+	ByCustomer *List[DeliveryBreakdown] `json:"by_customer" validate:"required"`
+	// The same window by customer group, worst first.
+	ByCustomerGroup *List[DeliveryBreakdown] `json:"by_customer_group" validate:"required"`
+	// The same window by product line, worst first. An order spanning two lines is counted under both — a late order is late for every line on it — so these counts sum to more than the overall total.
+	ByProductLine *List[DeliveryBreakdown] `json:"by_product_line" validate:"required"`
+	// The same window by which rule produced each ship-by date: an explicitly promised date, the customer's lead time, their group's, or the account default.
+	//
+	// This is what says how much of the score rests on a default nobody deliberately set. A plant whose on-time rate is carried by `account`-sourced commitments is measuring itself against a number it invented.
+	ByCommitmentSource *List[DeliveryBreakdown] `json:"by_commitment_source" validate:"required"`
 	// Issued orders in the window carrying no ship-by date, excluded from every rate above.
 	//
 	// Reported so the exclusion is visible: a delivery score computed over half the order book, silently, is worse than one that says which half. A non-zero count here means orders placed before commitments were tracked still need a ship-by date.
 	UncommittedOrderCount int32 `json:"uncommitted_order_count"`
+}
+
+// Delivery performance for one slice of the order book.
+type DeliveryBreakdown struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=delivery_breakdown"`
+	// Identifier of the slice — a customer, customer group, product line, or commitment source. Empty when the dimension is unset on the orders in it.
+	Key string `json:"key"`
+	// Display name for the slice.
+	Label string `json:"label"`
+	// The delivery figures for it, on the same shape as the overall window.
+	Performance *DeliveryPerformance `json:"performance" validate:"required"`
+}
+
+// One band of how far the window's misses missed by.
+type DeliveryLatenessBucket struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=delivery_lateness_bucket"`
+	// Name of the band.
+	Label string `json:"label"`
+	// Lower bound of the band in days late.
+	MinDaysLate int32 `json:"min_days_late"`
+	// Upper bound in days late; `0` means unbounded.
+	MaxDaysLate int32 `json:"max_days_late"`
+	// Orders in the band, shipped and unshipped.
+	OrderCount int32 `json:"order_count"`
+	// How many of them have since shipped. The remainder are still owed, and are the same orders `backlog` counts.
+	ShippedCount int32 `json:"shipped_count"`
+	// Quantity still unpacked across the band's orders.
+	Units float64 `json:"units"`
 }
 
 // Delivery reliability for one period, or for a whole window.
@@ -899,7 +943,43 @@ var SampleAnalyzeDeliveryPerformanceResponse = &AnalyzeDeliveryPerformanceRespon
 		OrderCount:  2,
 		Units:       340,
 	}}, PageInfo{}),
+	Lateness: NewList([]DeliveryLatenessBucket{{
+		Object:       constants.ObjectTypeDeliveryLatenessBucket,
+		Label:        "1_3_days",
+		MinDaysLate:  1,
+		MaxDaysLate:  3,
+		OrderCount:   2,
+		ShippedCount: 0,
+		Units:        340,
+	}}, PageInfo{}),
+	ByCustomer: NewList([]DeliveryBreakdown{{
+		Object:      constants.ObjectTypeDeliveryBreakdown,
+		Key:         SampleCustomerID,
+		Label:       "Northwind Textiles",
+		Performance: sampleDeliveryBreakdownPerformance,
+	}}, PageInfo{}),
+	ByCustomerGroup: NewList([]DeliveryBreakdown{}, PageInfo{}),
+	ByProductLine:   NewList([]DeliveryBreakdown{}, PageInfo{}),
+	ByCommitmentSource: NewList([]DeliveryBreakdown{{
+		Object:      constants.ObjectTypeDeliveryBreakdown,
+		Key:         string(constants.LeadTimeSourceCustomer),
+		Label:       string(constants.LeadTimeSourceCustomer),
+		Performance: sampleDeliveryBreakdownPerformance,
+	}}, PageInfo{}),
 	UncommittedOrderCount: 0,
+}
+
+var sampleDeliveryBreakdownPerformance = &DeliveryPerformance{
+	Object:              constants.ObjectTypeDeliveryPerformance,
+	CommittedOrderCount: 6,
+	ShippedOrderCount:   5,
+	OnTimeOrderCount:    4,
+	OnTimeInFullCount:   4,
+	LateOrderCount:      2,
+	NotYetShippedCount:  1,
+	OnTimePct:           &sampleOnTimePct,
+	OnTimeInFullPct:     &sampleOnTimeInFullPct,
+	AverageDaysLate:     &sampleAvgDaysLate,
 }
 
 // CustomerPricingFinding is one contracted price flagged by the pricing analysis.

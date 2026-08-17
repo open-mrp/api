@@ -758,17 +758,87 @@ func (r *productionScheduleInputRepoImpl) GetItemUnitCosts(ctx context.Context, 
 	return out, nil
 }
 
-func (r *productionScheduleInputRepoImpl) ListDeliveryOutcomes(ctx context.Context, accountID string, start, end time.Time) ([]scheduling.DeliveryOutcome, *apierror.APIError) {
+// deliveryFilterArgs turns the empty-means-all domain filters into the include-flag plus slice pairs the queries take.
+//
+// An empty slice is safe: sqlc rewrites it to `IN (NULL)`, and the `include_x = false` half of the OR short-circuits before that is ever evaluated.
+type deliveryFilterArgs struct {
+	includeCustomer      bool
+	customerIDs          []string
+	includeCustomerGroup bool
+	customerGroupIDs     []gosql.NullString
+	includeProductLine   bool
+	productLineIDs       []gosql.NullString
+	includeSalesRep      bool
+	salesRepIDs          []gosql.NullString
+}
+
+func buildDeliveryFilterArgs(filters domain.DeliveryFilters) deliveryFilterArgs {
+	// The columns behind these three are nullable, so sqlc types their slices as NullString.
+	nullable := func(ids []string) []gosql.NullString {
+		out := make([]gosql.NullString, 0, len(ids))
+		for _, id := range ids {
+			out = append(out, gosql.NullString{String: id, Valid: true})
+		}
+		return out
+	}
+	return deliveryFilterArgs{
+		includeCustomer:      len(filters.CustomerIDs) > 0,
+		customerIDs:          filters.CustomerIDs,
+		includeCustomerGroup: len(filters.CustomerGroupIDs) > 0,
+		customerGroupIDs:     nullable(filters.CustomerGroupIDs),
+		includeProductLine:   len(filters.ProductLineIDs) > 0,
+		productLineIDs:       nullable(filters.ProductLineIDs),
+		includeSalesRep:      len(filters.SalesRepIDs) > 0,
+		salesRepIDs:          nullable(filters.SalesRepIDs),
+	}
+}
+
+func (r *productionScheduleInputRepoImpl) ListDeliveryOutcomes(ctx context.Context, accountID string, start, end time.Time, filters domain.DeliveryFilters) ([]scheduling.DeliveryOutcome, *apierror.APIError) {
 	ctx, span := scheduleInputRepoTracer.Start(ctx, "repository.production_schedule_input.list_delivery_outcomes")
 	defer span.End()
 
+	args := buildDeliveryFilterArgs(filters)
+
 	rows, err := r.queries.ListDeliveryPerformanceOrders(ctx, sqlc.ListDeliveryPerformanceOrdersParams{
-		AccountID:   accountID,
-		WindowStart: gosql.NullTime{Time: start, Valid: true},
-		WindowEnd:   gosql.NullTime{Time: end, Valid: true},
+		AccountID:                  accountID,
+		WindowStart:                gosql.NullTime{Time: start, Valid: true},
+		WindowEnd:                  gosql.NullTime{Time: end, Valid: true},
+		IncludeSalesRepFilter:      args.includeSalesRep,
+		SalesRepIds:                args.salesRepIDs,
+		IncludeProductLineFilter:   args.includeProductLine,
+		ProductLineIds:             args.productLineIDs,
+		IncludeCustomerGroupFilter: args.includeCustomerGroup,
+		CustomerGroupIds:           args.customerGroupIDs,
+		IncludeCustomerFilter:      args.includeCustomer,
+		CustomerIds:                args.customerIDs,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
+	}
+
+	lineRows, err := r.queries.ListDeliveryOrderProductLines(ctx, sqlc.ListDeliveryOrderProductLinesParams{
+		AccountID:                  accountID,
+		WindowStart:                gosql.NullTime{Time: start, Valid: true},
+		WindowEnd:                  gosql.NullTime{Time: end, Valid: true},
+		IncludeSalesRepFilter:      args.includeSalesRep,
+		SalesRepIds:                args.salesRepIDs,
+		IncludeProductLineFilter:   args.includeProductLine,
+		ProductLineIds:             args.productLineIDs,
+		IncludeCustomerGroupFilter: args.includeCustomerGroup,
+		CustomerGroupIds:           args.customerGroupIDs,
+		IncludeCustomerFilter:      args.includeCustomer,
+		CustomerIds:                args.customerIDs,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	productLines := map[string][]scheduling.ProductLineRef{}
+	for _, row := range lineRows {
+		productLines[row.SalesOrderID] = append(productLines[row.SalesOrderID], scheduling.ProductLineRef{
+			ID:   nullSQLString(row.ProductLineID),
+			Name: row.ProductLineName,
+		})
 	}
 
 	out := make([]scheduling.DeliveryOutcome, 0, len(rows))
@@ -777,12 +847,18 @@ func (r *productionScheduleInputRepoImpl) ListDeliveryOutcomes(ctx context.Conte
 			continue
 		}
 		outcome := scheduling.DeliveryOutcome{
-			SalesOrderID:     row.SalesOrderID,
-			SalesOrderNumber: row.SalesOrderNumber,
-			BuyerAccountID:   row.BuyerAccountID,
-			ShipByDate:       row.ShipByDate.Time,
-			QuantityOrdered:  decimalToFloat64(row.QuantityOrdered),
-			QuantityPacked:   decimalToFloat64(row.QuantityPacked),
+			SalesOrderID:      row.SalesOrderID,
+			SalesOrderNumber:  row.SalesOrderNumber,
+			BuyerAccountID:    row.BuyerAccountID,
+			CustomerName:      nullSQLString(row.CustomerName),
+			CustomerGroupID:   nullSQLString(row.CustomerGroupID),
+			CustomerGroupName: nullSQLString(row.CustomerGroupName),
+			SalesRepID:        nullSQLString(row.SalesRepID),
+			ProductLines:      productLines[row.SalesOrderID],
+			ShipByDate:        row.ShipByDate.Time,
+			QuantityOrdered:   decimalToFloat64(row.QuantityOrdered),
+			QuantityPacked:    decimalToFloat64(row.QuantityPacked),
+			CommitmentSource:  nullSQLString(row.LeadTimeSourceCode),
 		}
 		if row.IssuedAt.Valid {
 			outcome.IssuedAt = &row.IssuedAt.Time
@@ -798,14 +874,24 @@ func (r *productionScheduleInputRepoImpl) ListDeliveryOutcomes(ctx context.Conte
 	return out, nil
 }
 
-func (r *productionScheduleInputRepoImpl) CountUncommittedOrders(ctx context.Context, accountID string, start, end time.Time) (int, *apierror.APIError) {
+func (r *productionScheduleInputRepoImpl) CountUncommittedOrders(ctx context.Context, accountID string, start, end time.Time, filters domain.DeliveryFilters) (int, *apierror.APIError) {
 	ctx, span := scheduleInputRepoTracer.Start(ctx, "repository.production_schedule_input.count_uncommitted_orders")
 	defer span.End()
 
+	args := buildDeliveryFilterArgs(filters)
+
 	count, err := r.queries.CountUncommittedOrders(ctx, sqlc.CountUncommittedOrdersParams{
-		AccountID:   accountID,
-		WindowStart: gosql.NullTime{Time: start, Valid: true},
-		WindowEnd:   gosql.NullTime{Time: end, Valid: true},
+		AccountID:                  accountID,
+		WindowStart:                gosql.NullTime{Time: start, Valid: true},
+		WindowEnd:                  gosql.NullTime{Time: end, Valid: true},
+		IncludeSalesRepFilter:      args.includeSalesRep,
+		SalesRepIds:                args.salesRepIDs,
+		IncludeProductLineFilter:   args.includeProductLine,
+		ProductLineIds:             args.productLineIDs,
+		IncludeCustomerGroupFilter: args.includeCustomerGroup,
+		CustomerGroupIds:           args.customerGroupIDs,
+		IncludeCustomerFilter:      args.includeCustomer,
+		CustomerIds:                args.customerIDs,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return 0, tracing.Trace(span, apiErr)

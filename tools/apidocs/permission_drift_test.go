@@ -253,6 +253,14 @@ func parseGatewayHandlerTargets(t *testing.T, root string) map[string]map[string
 //     account_user via recipient()/actor() with no literal CheckHasPermission.
 //   - gateway loader indirection: the gateway handler loads the resource via a
 //     resourceloader batch-get instead of the name-matched downstream RPC.
+//   - service scope-helper indirection: the service function delegates to a private
+//     scope helper (writeIdentity, portalDomainScope) that is not named
+//     check<Entity>Permission, and often passes the action as a variable rather than
+//     a literal, so neither the helper-follow nor the literal regex can see it.
+//     Enforcement is real and the endpoint declares the matching permission.
+//   - conditional admin gate: the handler calls CheckIsAdmin only on a branch (an
+//     already-completed or shipped order), so the guard's flat "requires admin" read
+//     is wrong. Declaring RequiredRoleType admin would false-reject the ordinary case.
 var unverifiableEndpoints = map[string]string{
 	"validate":                 "public-by-design: ValidateAddress calls Google Address Validation with no tenant identity (pre-auth utility)",
 	"list_address_suggestions": "public-by-design: AutocompleteAddress calls Google Places with no tenant identity (pre-auth utility)",
@@ -307,6 +315,31 @@ var unverifiableEndpoints = map[string]string{
 	"unread_summary":        "gateway-gated recipient auth: GetUnreadSummary scopes to actor(); gateway declares messaging:read",
 
 	"retrieve_memory": "gateway loader indirection: GetMemory -> resourceloaders.LoadAgentMemories (BatchGetAgentMemoriesByIDs), not GetAgentMemory RPC; endpoint declares agent_memories:read",
+
+	"list_email_domains": "gateway-gated account-scoped auth: ListDomains resolves the target account via accountID() and scopes the read to it, with no permission check; gateway declares messaging:read",
+	"get_email_domain":   "gateway-gated account-scoped auth: GetDomain resolves the target account via accountID() and scopes the read to it, with no permission check; gateway declares messaging:read",
+	"list_email_inboxes": "gateway-gated account-scoped auth: ListInboxes resolves the target account via accountID() and scopes the read to it, with no permission check; gateway declares messaging:read",
+	"get_email_inbox":    "gateway-gated account-scoped auth: GetInbox resolves the target account via accountID() and scopes the read to it, with no permission check; gateway declares messaging:read",
+
+	"list_portal_domains": "service scope-helper indirection: ListPortalDomains -> portalDomainReadScope -> portalDomainScope, which checks CheckIsInternalActor + account:<action> with the action as a variable; endpoint declares account:read",
+	"get_portal_domain":   "service scope-helper indirection: GetPortalDomain -> portalDomainReadScope -> portalDomainScope, which checks CheckIsInternalActor + account:<action> with the action as a variable; endpoint declares account:read",
+
+	"update_production_schedule_settings":         "service scope-helper indirection: writeIdentity(ctx, ActionUpdate) checks CheckIsInternalActor + production_schedules:<action>; endpoint declares production_schedules:update",
+	"upsert_production_schedule_item_setting":     "service scope-helper indirection: writeIdentity(ctx, ActionUpdate); endpoint declares production_schedules:update",
+	"delete_production_schedule_item_setting":     "service scope-helper indirection: writeIdentity(ctx, ActionUpdate); endpoint declares production_schedules:update",
+	"upsert_production_schedule_resource_setting": "service scope-helper indirection: writeIdentity(ctx, ActionUpdate); endpoint declares production_schedules:update",
+	"delete_production_schedule_resource_setting": "service scope-helper indirection: writeIdentity(ctx, ActionUpdate); endpoint declares production_schedules:update",
+	"apply_fulfillment_recommendations":           "service scope-helper indirection: writeIdentity(ctx, ActionUpdate); endpoint declares production_schedules:update",
+	"create_production_schedule_line":             "service scope-helper indirection: writeIdentity(ctx, ActionUpdate); endpoint declares production_schedules:update",
+	"update_production_schedule_line":             "service scope-helper indirection: writeIdentity(ctx, ActionUpdate); endpoint declares production_schedules:update",
+	"delete_production_schedule_line":             "service scope-helper indirection: writeIdentity(ctx, ActionUpdate); endpoint declares production_schedules:update",
+
+	"issue_sales_order":   "gateway private-helper indirection: IssueSalesOrder -> changeSalesOrderStatus -> coreClient.ChangeSalesOrderStatus, which checks CheckIsInternalActor + sales_orders:update; endpoint declares sales_orders:update",
+	"unissue_sales_order": "gateway private-helper indirection: UnissueSalesOrder -> changeSalesOrderStatus -> coreClient.ChangeSalesOrderStatus; endpoint declares sales_orders:update",
+	"close_sales_order":   "gateway private-helper indirection: CloseSalesOrder -> changeSalesOrderStatus -> coreClient.ChangeSalesOrderStatus; endpoint declares sales_orders:update",
+	"open_sales_order":    "gateway private-helper indirection: OpenSalesOrder -> changeSalesOrderStatus -> coreClient.ChangeSalesOrderStatus; endpoint declares sales_orders:update",
+
+	"delete_sales_order_line": "conditional admin gate: DeleteSalesOrderLine calls CheckIsAdmin only when the order is completed or has a shipped shipment; the ordinary path needs only the declared customers:update, so RequiredRoleType admin would false-reject it",
 
 	"list_announcements":          "gateway-gated recipient auth: ListAnnouncements uses recipient(); gateway declares messaging:read",
 	"retrieve_announcement":       "gateway-gated recipient auth: GetAnnouncement uses recipient(); gateway declares messaging:read",

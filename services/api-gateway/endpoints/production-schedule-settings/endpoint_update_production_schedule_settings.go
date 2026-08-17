@@ -167,6 +167,7 @@ func (e *UpdateProductionScheduleSettingsEndpoint) Materialize() *apiendpoint.AP
 		Route:             "/v1/operations/production-schedule-settings",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeProductionScheduleSettings,
 		RequiredPermissions: []types.Permission{

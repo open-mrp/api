@@ -28,6 +28,7 @@ func (e *RetrieveDepartmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 		Route:             "/v1/operations/departments/{id}",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveDepartmentRequest) (*apiresource.Department, *apierror.APIError) {
 			return svc.(DepartmentSvc).GetDepartment

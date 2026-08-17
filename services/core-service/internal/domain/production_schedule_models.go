@@ -153,12 +153,22 @@ type CreateLineOrderParams struct {
 	AllocatedQuantity        float64
 }
 
-// AnalyzeDeliveryPerformanceParams scopes a delivery measurement to one account and window.
+// AnalyzeDeliveryPerformanceParams scopes a delivery measurement to one account, window and slice of the order book.
 type AnalyzeDeliveryPerformanceParams struct {
 	AccountID   string
 	StartDate   time.Time
 	EndDate     time.Time
 	Granularity string
+
+	DeliveryFilters
+}
+
+// DeliveryFilters narrows a delivery measurement to part of the order book. Every filter is empty-means-all, and they combine with AND.
+type DeliveryFilters struct {
+	CustomerIDs      []string
+	CustomerGroupIDs []string
+	ProductLineIDs   []string
+	SalesRepIDs      []string
 }
 
 // DeliveryPerformanceResult is the whole delivery picture for one window.
@@ -166,6 +176,15 @@ type DeliveryPerformanceResult struct {
 	Overall scheduling.DeliveryPerformance
 	Periods []scheduling.DeliveryPerformance
 	Backlog []scheduling.BacklogBucket
+	// Lateness bands every miss by how far it missed by. An average cannot tell "everything slips a day" from "four orders are two months late", and those are opposite problems.
+	Lateness []scheduling.LatenessBucket
+
+	// The same window sliced four ways. Each is ordered worst-first, so the row that needs a conversation is the first one.
+	ByCustomer         []scheduling.DeliveryBreakdown
+	ByCustomerGroup    []scheduling.DeliveryBreakdown
+	ByProductLine      []scheduling.DeliveryBreakdown
+	ByCommitmentSource []scheduling.DeliveryBreakdown
+
 	// UncommittedOrderCount is issued orders in the window carrying no ship-by date, excluded from every rate above. Reported so the exclusion is visible rather than silent.
 	UncommittedOrderCount int
 }

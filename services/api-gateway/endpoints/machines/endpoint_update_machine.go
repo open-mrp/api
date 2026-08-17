@@ -51,6 +51,7 @@ func (e *UpdateMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateMa
 		Route:             "/v1/operations/machines/{id}",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeMachine,
 		RequiredPermissions: []types.Permission{

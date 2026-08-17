@@ -29,6 +29,7 @@ func (e *DeleteMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteMa
 		Route:             "/v1/operations/machines/{id}",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainMachines, Action: types.ActionDelete},

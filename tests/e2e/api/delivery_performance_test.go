@@ -58,7 +58,7 @@ func TestDeliveryPerformance_ShapeAndArithmetic(t *testing.T) {
 	assert.Equal(t, committed, shipped+notShipped,
 		"every due order either shipped or did not")
 
-	for _, key := range []string{"periods", "backlog"} {
+	for _, key := range []string{"periods", "backlog", "lateness", "by_customer", "by_customer_group", "by_product_line", "by_commitment_source"} {
 		list, ok := result[key].(map[string]any)
 		require.True(t, ok, "%s must be a list resource, not null: %v", key, result[key])
 		_, ok = list["data"].([]any)
@@ -439,4 +439,90 @@ func commitOneOrder(t *testing.T, prefix string) {
 	customerID := leadTimeCustomer(t, prefix, ptrInt(30), "")
 	order := issueOrderForCustomer(t, customerID, nil)
 	require.NotEmpty(t, shipByDate(t, order), "an issued order must carry the commitment being measured")
+}
+
+// The lateness bands are the companion to the average: an average cannot tell a day of slippage from a month of it, so the bands must always be present even at zero.
+func TestDeliveryPerformance_LatenessBandsAlwaysPresent(t *testing.T) {
+	t.Parallel()
+
+	result := analyzeDelivery(t, deliveryWindow())
+	list, _ := result["lateness"].(map[string]any)
+	data, _ := list["data"].([]any)
+
+	labels := map[string]bool{}
+	for _, raw := range data {
+		bucket, ok := raw.(map[string]any)
+		require.True(t, ok)
+		assert.Equal(t, "delivery_lateness_bucket", jsonField(bucket, "object"))
+		labels[jsonField(bucket, "label")] = true
+
+		count, _ := bucket["order_count"].(float64)
+		shipped, _ := bucket["shipped_count"].(float64)
+		assert.GreaterOrEqual(t, count, float64(0))
+		// A band's shipped orders are a subset of its orders; the remainder are what the backlog still owes.
+		assert.LessOrEqual(t, shipped, count, "a band cannot have shipped more orders than it holds")
+	}
+
+	for _, want := range []string{"1_3_days", "4_7_days", "8_30_days", "over_30_days"} {
+		assert.True(t, labels[want], "the %s band must always be present, even at zero", want)
+	}
+}
+
+// A breakdown that does not add up to the headline is worse than no breakdown: it makes every drilldown suspect.
+func TestDeliveryPerformance_BreakdownsReconcileWithOverall(t *testing.T) {
+	t.Parallel()
+
+	result := analyzeDelivery(t, deliveryWindow())
+	overall, ok := result["overall"].(map[string]any)
+	require.True(t, ok)
+	committed, _ := overall["committed_order_count"].(float64)
+
+	// Product lines are deliberately excluded: an order spanning two lines is counted under both, so that dimension sums to more than the total.
+	for _, key := range []string{"by_customer", "by_customer_group", "by_commitment_source"} {
+		list, ok := result[key].(map[string]any)
+		require.True(t, ok, "%s must be a list resource: %v", key, result[key])
+		data, _ := list["data"].([]any)
+
+		var sum float64
+		var previousLate float64 = -1
+		for _, raw := range data {
+			row, ok := raw.(map[string]any)
+			require.True(t, ok)
+			assert.Equal(t, "delivery_breakdown", jsonField(row, "object"))
+
+			performance, ok := row["performance"].(map[string]any)
+			require.True(t, ok, "every breakdown row carries its figures: %v", row)
+			rowCommitted, _ := performance["committed_order_count"].(float64)
+			sum += rowCommitted
+
+			// Worst-first ordering is what makes the table readable without sorting it.
+			rowLate, _ := performance["late_order_count"].(float64)
+			if previousLate >= 0 {
+				assert.LessOrEqual(t, rowLate, previousLate, "%s must be ordered worst-first", key)
+			}
+			previousLate = rowLate
+		}
+
+		assert.Equal(t, committed, sum, "%s must account for every order the overall figure counted", key)
+	}
+}
+
+// An unknown id is a filter matching nothing, not an error — and it must narrow the excluded count too, or a filtered rate would sit beside an account-wide exclusion.
+func TestDeliveryPerformance_FiltersNarrowTheMeasuredSet(t *testing.T) {
+	t.Parallel()
+
+	body := deliveryWindow()
+	body["customer_ids"] = []string{"acc_definitely_not_a_real_customer"}
+
+	result := analyzeDelivery(t, body)
+
+	overall, ok := result["overall"].(map[string]any)
+	require.True(t, ok)
+	committed, _ := overall["committed_order_count"].(float64)
+	assert.Equal(t, float64(0), committed, "a filter matching no customer measures no orders")
+	assert.Nil(t, overall["on_time_pct"], "no orders due means no rate, not 0%")
+
+	uncommitted, _ := result["uncommitted_order_count"].(float64)
+	assert.Equal(t, float64(0), uncommitted,
+		"the excluded count has to describe the same slice the rates do")
 }

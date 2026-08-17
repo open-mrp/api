@@ -101,6 +101,7 @@ func (e *UpdateSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Updat
 		Route:             "/v1/sales/sales-orders/{id}",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeSalesOrder,
 		RequiredPermissions: []types.Permission{

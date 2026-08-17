@@ -74,6 +74,7 @@ func (e *UpdateProductionScheduleLineEndpoint) Materialize() *apiendpoint.APIEnd
 		Route:             "/v1/operations/production-schedules/{id}/lines/{line_id}",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeProductionScheduleLine,
 		RequiredPermissions: []types.Permission{

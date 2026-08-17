@@ -57,6 +57,7 @@ func (e *CreateSalesOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*C
 		Route:             "/v1/sales/sales-orders/{id}/lines",
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeSalesOrderLine,
 		RequiredPermissions: []types.Permission{

@@ -37,6 +37,7 @@ func (e *OpenSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*OpenSal
 		Route:               "/v1/sales/sales-orders/{id}/actions/open",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              true,
+		AgentTool:           true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainSalesOrders, Action: types.ActionUpdate}},
 		ObjectType:          constants.ObjectTypeSalesOrder,

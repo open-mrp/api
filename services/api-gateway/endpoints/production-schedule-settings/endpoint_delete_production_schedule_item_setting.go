@@ -30,6 +30,7 @@ func (e *DeleteItemSettingEndpoint) Materialize() *apiendpoint.APIEndpoint[*Dele
 		Route:             "/v1/operations/production-schedule-settings/items/{item_id}",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeProductionScheduleItemSetting,
 		RequiredPermissions: []types.Permission{

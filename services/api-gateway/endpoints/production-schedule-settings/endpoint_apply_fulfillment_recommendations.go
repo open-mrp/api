@@ -43,6 +43,7 @@ func (e *ApplyFulfillmentRecommendationsEndpoint) Materialize() *apiendpoint.API
 		Route:             "/v1/operations/fulfillment-recommendations/actions/apply",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeFulfillmentRecommendation,
 		RequiredPermissions: []types.Permission{

@@ -29,6 +29,7 @@ func (e *ListMachinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMachi
 		Route:             "/v1/operations/machines",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeMachine,
 		RequiredPermissions: []types.Permission{

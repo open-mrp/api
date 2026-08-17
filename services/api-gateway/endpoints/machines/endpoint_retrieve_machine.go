@@ -28,6 +28,7 @@ func (e *RetrieveMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retrie
 		Route:             "/v1/operations/machines/{id}",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeMachine,
 		RequiredPermissions: []types.Permission{

@@ -29,6 +29,7 @@ func (e *ListDepartmentsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListDe
 		Route:             "/v1/operations/departments",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListDepartmentsRequest) (*apiresource.List[apiresource.Department], *apierror.APIError) {
 			return svc.(DepartmentSvc).ListDepartments

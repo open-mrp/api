@@ -94,6 +94,8 @@ func (e *QuoteSalesOrderPricesEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		Route:             "/v1/sales/sales-orders/price-quote",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
+		AgentTool:         true,
+		ReadOnly:          true,
 		Preview:           true,
 		Extras:            apiendpoint.APIEndpointExtras{HideFromRequestLog: true},
 		RequiredPermissions: []types.Permission{

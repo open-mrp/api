@@ -36,6 +36,8 @@ func (e *AnalyzeOeeTrendEndpoint) Materialize() *apiendpoint.APIEndpoint[*Analyz
 		ContentType:         "application/json",
 		SuccessStatusCode:   http.StatusOK,
 		Public:              true,
+		AgentTool:           true,
+		ReadOnly:            true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainMachineDowntime, Action: types.ActionRead}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeOeeTrendRequest) (*apiresource.AnalyzeOeeTrendResponse, *apierror.APIError) {

@@ -37,23 +37,30 @@ func (s *analyticsSvcImpl) AnalyzeDeliveryPerformance(ctx context.Context, param
 	accountID := identity.Target.AccountID
 
 	repo := s.repos.NewProductionScheduleInputRepo()
-	outcomes, apiErr := repo.ListDeliveryOutcomes(ctx, accountID, params.StartDate, params.EndDate)
+	outcomes, apiErr := repo.ListDeliveryOutcomes(ctx, accountID, params.StartDate, params.EndDate, params.DeliveryFilters)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	uncommitted, apiErr := repo.CountUncommittedOrders(ctx, accountID, params.StartDate, params.EndDate)
+	uncommitted, apiErr := repo.CountUncommittedOrders(ctx, accountID, params.StartDate, params.EndDate, params.DeliveryFilters)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
+	// One read of the clock for every derived figure, so a breakdown and the total it belongs to can never disagree about which orders are late right now.
 	asOf := time.Now().UTC()
 	periods, overall := scheduling.AnalyzeDeliveryPerformance(outcomes, deliveryBucketer(params.Granularity), asOf)
 
 	return &domain.DeliveryPerformanceResult{
-		Overall:               overall,
-		Periods:               periods,
-		Backlog:               scheduling.AnalyzeBacklogAging(outcomes, asOf),
+		Overall:  overall,
+		Periods:  periods,
+		Backlog:  scheduling.AnalyzeBacklogAging(outcomes, asOf),
+		Lateness: scheduling.AnalyzeLatenessDistribution(outcomes, asOf),
+		// Every breakdown is the same set of outcomes sliced a different way rather than re-read per dimension: four queries would let four numbers disagree, and the whole point of a drilldown is that it adds up to the headline.
+		ByCustomer:            scheduling.AnalyzeDeliveryBreakdown(outcomes, asOf, scheduling.ByCustomer),
+		ByCustomerGroup:       scheduling.AnalyzeDeliveryBreakdown(outcomes, asOf, scheduling.ByCustomerGroup),
+		ByProductLine:         scheduling.AnalyzeDeliveryBreakdown(outcomes, asOf, scheduling.ByProductLine),
+		ByCommitmentSource:    scheduling.AnalyzeDeliveryBreakdown(outcomes, asOf, scheduling.ByCommitmentSource),
 		UncommittedOrderCount: uncommitted,
 	}, nil
 }

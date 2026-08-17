@@ -30,6 +30,7 @@ func (e *DeleteResourceSettingEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		Route:             "/v1/operations/production-schedule-settings/resources/{id}",
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeProductionScheduleResourceSetting,
 		RequiredPermissions: []types.Permission{

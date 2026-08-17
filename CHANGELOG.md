@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.48.0](https://github.com/Augno/api/compare/v0.47.0...v0.48.0) (2026-08-17)
+
+
+### Features
+
+* enhance delivery performance analysis with additional filters and breakdowns ([#483](https://github.com/Augno/api/issues/483)) ([8700fa4](https://github.com/Augno/api/commit/8700fa40ab1bd9d8f16674782eb2dbf48cce377d))
+
 ## [0.47.0](https://github.com/Augno/api/compare/v0.46.2...v0.47.0) (2026-08-17)
 
 

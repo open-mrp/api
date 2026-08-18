@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.49.0](https://github.com/Augno/api/compare/v0.48.4...v0.49.0) (2026-08-18)
+
+
+### Features
+
+* ship account prices, order discounts and volume discounts endpoints ([#493](https://github.com/Augno/api/issues/493)) ([0e499d2](https://github.com/Augno/api/commit/0e499d244466cc5261e268528c5aa5647708b8b2))
+
 ## [0.48.4](https://github.com/Augno/api/compare/v0.48.3...v0.48.4) (2026-08-18)
 
 

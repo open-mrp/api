@@ -183,7 +183,7 @@ func (*HubspotSyncJob) SchemaExample() any {
 var SampleHubspotCompanyReview = &HubspotCompanyReview{
 	ID:       SampleHubspotCompanyReviewID,
 	Object:   constants.ObjectTypeHubspotCompanyReview,
-	Job:      &HubspotSyncJob{ID: SampleHubspotSyncJobID, Object: constants.ObjectTypeHubspotSyncJob},
+	Job:      SampleHubspotSyncJob,
 	Customer: SampleCustomer,
 	Candidates: NewList([]HubspotCompanyCandidate{
 		{Object: constants.ObjectTypeHubspotCompanyCandidate, HubspotID: "12345", Name: "Acme Manufacturing", Domain: "acme.com"},

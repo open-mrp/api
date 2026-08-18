@@ -257,16 +257,13 @@ var SampleShipment = &Shipment{
 	Customer:             SampleCustomer,
 	Freight:              SampleFreight,
 	ShippingAddress:      SampleAddress,
-	ShippedBy: &AccountUser{
-		ID:     SampleAccountUserID,
-		Object: constants.ObjectTypeAccountUser,
-	},
-	Invoice:       sampleShipmentInvoice,
-	Pick:          SamplePick,
-	Lines:         NewList([]ShipmentLine{*SampleShipmentLine}, PageInfo{}),
-	ShippingCases: NewList([]ShippingCaseDetail{sampleShippingCaseDetail}, PageInfo{}),
-	CreatedAt:     timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:     timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ShippedBy:            SampleAccountUser,
+	Invoice:              sampleShipmentInvoice,
+	Pick:                 SamplePick,
+	Lines:                NewList([]ShipmentLine{*SampleShipmentLine}, PageInfo{}),
+	ShippingCases:        NewList([]ShippingCaseDetail{sampleShippingCaseDetail}, PageInfo{}),
+	CreatedAt:            timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:            timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*Shipment) SchemaExample() any {

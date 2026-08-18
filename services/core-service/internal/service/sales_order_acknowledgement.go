@@ -10,12 +10,16 @@ import (
 	_ "image/gif"  // register GIF decoder for image.Decode
 	_ "image/jpeg" // register JPEG decoder for image.Decode
 	"image/png"
+	"encoding/base64"
 	"io"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/augno/api/services/core-service/internal/domain"
+	"github.com/augno/api/shared/constants"
+	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/messaging"
 	"github.com/augno/api/shared/ptrutil"
 	"github.com/augno/api/shared/textutil"
 	"github.com/shopspring/decimal"

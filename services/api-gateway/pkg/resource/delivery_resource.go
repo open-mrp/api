@@ -116,13 +116,9 @@ type DeliveryLine struct {
 }
 
 var SampleDeliveryLine = &DeliveryLine{
-	ID:     SampleDeliveryLineID,
-	Object: constants.ObjectTypeDeliveryLine,
-	Item: &Item{
-		ID:     SampleItemID,
-		Object: constants.ObjectTypeItem,
-		SKU:    SampleItemSKU,
-	},
+	ID:         SampleDeliveryLineID,
+	Object:     constants.ObjectTypeDeliveryLine,
+	Item:       SampleItem,
 	Quantity:   SampleQuantity,
 	UnitCost:   SampleRate,
 	Location:   SampleLocation,

@@ -249,13 +249,9 @@ type OpenBatchSummary struct {
 }
 
 var SampleOpenBatchSummary = &OpenBatchSummary{
-	Object:         constants.ObjectTypeOpenBatchSummary,
-	DepartmentName: "Production",
-	Item: &Item{
-		ID:     SampleItemID,
-		Object: constants.ObjectTypeItem,
-		SKU:    SampleItemSKU,
-	},
+	Object:          constants.ObjectTypeOpenBatchSummary,
+	DepartmentName:  "Production",
+	Item:            SampleItem,
 	ScanningStation: SampleScanningStation,
 	Count:           "5.000000000000000000000000000000",
 	Unit:            "kg",

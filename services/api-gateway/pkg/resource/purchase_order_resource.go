@@ -49,12 +49,9 @@ type EmailContact struct {
 }
 
 var SampleEmailContact = &EmailContact{
-	ID:     SampleEmailContactID,
-	Object: constants.ObjectTypeEmailContact,
-	AccountUser: &AccountUser{
-		ID:     SampleAccountUserID,
-		Object: constants.ObjectTypeAccountUser,
-	},
+	ID:          SampleEmailContactID,
+	Object:      constants.ObjectTypeEmailContact,
+	AccountUser: SampleAccountUser,
 }
 
 func (*EmailContact) SchemaExample() any {

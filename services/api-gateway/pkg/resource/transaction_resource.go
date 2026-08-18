@@ -126,11 +126,8 @@ var SampleTransactionDetail = &TransactionDetail{
 		DisplayValue: "$500.00",
 		Unit:         newSampleUnit("US Dollar", "$", constants.UnitTypeCurrency),
 	},
-	Customer: nil,
-	ResponsibleUser: &AccountUser{
-		ID:     SampleAccountUserID,
-		Object: constants.ObjectTypeAccountUser,
-	},
+	Customer:          nil,
+	ResponsibleUser:   SampleAccountUser,
 	Note:              &sampleTransactionNote,
 	TransactionType:   SampleTransactionType,
 	TransactionMethod: SampleTransactionMethod,

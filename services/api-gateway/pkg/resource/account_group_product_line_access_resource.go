@@ -40,15 +40,9 @@ var SampleAccountGroupProductLineAccess = &AccountGroupProductLineAccess{
 		CreatedAt:        timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 		UpdatedAt:        timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 	},
-	ProductLines: NewList([]ProductLine{
-		{
-			ID:     SampleProductLineID,
-			Object: constants.ObjectTypeProductLine,
-			Name:   SampleProductLineName,
-		},
-	}, PageInfo{}),
-	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ProductLines: NewList([]ProductLine{*SampleProductLine}, PageInfo{}),
+	CreatedAt:    timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:    timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*AccountGroupProductLineAccess) SchemaExample() any {

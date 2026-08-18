@@ -29,17 +29,11 @@ type CustomerProductLineAccess struct {
 }
 
 var SampleCustomerProductLineAccess = &CustomerProductLineAccess{
-	Object:   constants.ObjectTypeCustomerProductLineAccess,
-	Customer: SampleCustomer,
-	ProductLines: NewList([]ProductLine{
-		{
-			ID:     SampleProductLineID,
-			Object: constants.ObjectTypeProductLine,
-			Name:   SampleProductLineName,
-		},
-	}, PageInfo{}),
-	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	Object:       constants.ObjectTypeCustomerProductLineAccess,
+	Customer:     SampleCustomer,
+	ProductLines: NewList([]ProductLine{*SampleProductLine}, PageInfo{}),
+	CreatedAt:    timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:    timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*CustomerProductLineAccess) SchemaExample() any {

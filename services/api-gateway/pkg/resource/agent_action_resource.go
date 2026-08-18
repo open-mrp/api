@@ -69,13 +69,20 @@ type AgentAction struct {
 }
 
 var SampleAgentAction = &AgentAction{
-	ID:                SampleAgentActionID,
-	Object:            constants.ObjectTypeAgentAction,
-	Tool:              constants.ToolReadDoc,
-	Status:            constants.AgentActionStatusExecuted,
-	Label:             new("Read Doc"),
-	Description:       new("Read the Augno documentation page on creating sales orders."),
-	Run:               &AgentRun{ID: SampleAgentRunID, Object: constants.ObjectTypeAgentRun},
+	ID:          SampleAgentActionID,
+	Object:      constants.ObjectTypeAgentAction,
+	Tool:        constants.ToolReadDoc,
+	Status:      constants.AgentActionStatusExecuted,
+	Label:       new("Read Doc"),
+	Description: new("Read the Augno documentation page on creating sales orders."),
+	Run: &AgentRun{
+		ID:          SampleAgentRunID,
+		Object:      constants.ObjectTypeAgentRun,
+		TriggerType: constants.AgentTriggerTypeManual,
+		Status:      constants.AgentRunStatusCompleted,
+		CreatedAt:   timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+		UpdatedAt:   timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	},
 	Input:             json.RawMessage(`{"path":"/api/sales-orders/create"}`),
 	Output:            json.RawMessage(`{"title":"Create a sales order","url":"https://docs.augno.com/api/sales-orders/create"}`),
 	ReviewRequirement: constants.ReviewRequirementNotRequired,

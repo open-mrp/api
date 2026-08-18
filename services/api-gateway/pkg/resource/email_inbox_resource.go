@@ -67,11 +67,11 @@ var (
 var SampleEmailInbox = &EmailInbox{
 	ID:                 SampleEmailInboxID,
 	Object:             constants.ObjectTypeEmailInbox,
-	EmailDomain:        &EmailDomain{ID: SampleEmailDomainID, Object: constants.ObjectTypeEmailDomain},
+	EmailDomain:        SampleEmailDomain,
 	Address:            "support@acme.com",
 	FromName:           &sampleEmailInboxFromName,
 	Status:             "active",
-	AgentConfig:        &AgentDefinition{ID: SampleAgentDefinitionID, Object: constants.ObjectTypeAgentDefinition},
+	AgentConfig:        SampleAgentDefinition,
 	AgentTriggerPolicy: &sampleEmailInboxTriggerPolicy,
 	CreatedAt:          timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:          timeutil.TimestampToTime(sampleUpdatedAtTimestamp),

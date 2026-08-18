@@ -254,12 +254,8 @@ type FrequentlyOrderedProduct struct {
 }
 
 var SampleFrequentlyOrderedProduct = &FrequentlyOrderedProduct{
-	Object: constants.ObjectTypeFrequentlyOrderedProduct,
-	Item: &Item{
-		ID:     SampleItemID,
-		Object: constants.ObjectTypeItem,
-		SKU:    SampleItemSKU,
-	},
+	Object:     constants.ObjectTypeFrequentlyOrderedProduct,
+	Item:       SampleItem,
 	Unit:       newSampleUnit(SampleUnitName, SampleUnitAbbreviation, constants.UnitTypeMass),
 	OrderCount: 42,
 }

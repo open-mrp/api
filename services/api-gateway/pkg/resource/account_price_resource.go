@@ -50,22 +50,10 @@ var SampleAccountPrice = &AccountPrice{
 	RecipientAccount: SampleCustomer,
 	ProductLine:      SampleProductLine,
 	Rate:             SampleRate,
-	Categories: NewList([]ItemCategory{
-		{
-			ID:     SampleItemCategoryID,
-			Object: constants.ObjectTypeItemCategory,
-			Name:   SampleItemCategoryName,
-		},
-	}, PageInfo{}),
-	Attributes: NewList([]Attribute{
-		{
-			ID:     SampleAttributeID,
-			Object: constants.ObjectTypeAttribute,
-			Value:  SampleAttributeValue,
-		},
-	}, PageInfo{}),
-	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	Categories:       NewList([]ItemCategory{*SampleItemCategory}, PageInfo{}),
+	Attributes:       NewList([]Attribute{*SampleAttribute}, PageInfo{}),
+	CreatedAt:        timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:        timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*AccountPrice) SchemaExample() any {

@@ -364,6 +364,8 @@ var SampleProductionSchedulePreview = &ProductionSchedulePreview{
 	Policies: NewList([]SchedulePolicy{{
 		Item:                    NewEntity(SampleItemID, constants.ObjectTypeItem, nil, &sampleScheduleSKU),
 		SKU:                     sampleScheduleSKU,
+		FulfillmentPolicy:       constants.FulfillmentPolicyMakeToStock,
+		PolicySource:            constants.FulfillmentPolicySourceProductLine,
 		AnnualDemand:            5200,
 		WeeklyDemand:            100,
 		SecondsPerUnit:          30,
@@ -742,6 +744,8 @@ var SampleProductionScheduleItemPolicy = &ProductionScheduleItemPolicy{
 	Object:                  constants.ObjectTypeProductionScheduleItemPolicy,
 	ProductionSchedule:      NewEntity(SampleProductionScheduleID, constants.ObjectTypeProductionSchedule, nil, nil),
 	Item:                    NewEntity(SampleItemID, constants.ObjectTypeItem, nil, &sampleScheduleSKU),
+	FulfillmentPolicy:       constants.FulfillmentPolicyMakeToStock,
+	PolicySource:            constants.FulfillmentPolicySourceProductLine,
 	SKU:                     sampleScheduleSKU,
 	Unit:                    NewEntity(SampleUnitID, constants.ObjectTypeUnit, &samplePlannedUnitName, nil),
 	UnitAbbreviation:        &samplePlannedUnitAbbreviation,

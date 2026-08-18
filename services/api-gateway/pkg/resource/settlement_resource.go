@@ -38,17 +38,14 @@ type Settlement struct {
 var sampleSettlementNote = "Applied customer payment across open invoices."
 
 var SampleSettlement = &Settlement{
-	ID:     SampleSettlementID,
-	Object: constants.ObjectTypeSettlement,
-	Number: "1",
-	Note:   &sampleSettlementNote,
-	ResponsibleUser: &AccountUser{
-		ID:     SampleAccountUserID,
-		Object: constants.ObjectTypeAccountUser,
-	},
-	Allocations: NewList([]TransactionAllocation{*SampleTransactionAllocation2}, PageInfo{}),
-	CreatedAt:   timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:   timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:              SampleSettlementID,
+	Object:          constants.ObjectTypeSettlement,
+	Number:          "1",
+	Note:            &sampleSettlementNote,
+	ResponsibleUser: SampleAccountUser,
+	Allocations:     NewList([]TransactionAllocation{*SampleTransactionAllocation2}, PageInfo{}),
+	CreatedAt:       timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:       timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*Settlement) SchemaExample() any {

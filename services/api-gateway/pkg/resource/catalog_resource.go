@@ -95,12 +95,8 @@ var SampleCatalogAttribute = &CatalogAttribute{
 }
 
 var SampleCatalogProduct = &CatalogProduct{
-	Object: constants.ObjectTypeCatalogProduct,
-	Item: &Item{
-		ID:     SampleItemID,
-		Object: constants.ObjectTypeItem,
-		SKU:    SampleItemSKU,
-	},
+	Object:      constants.ObjectTypeCatalogProduct,
+	Item:        SampleItem,
 	Description: "Hex Bolt M10x30 Zinc",
 	Attributes:  NewList([]CatalogAttribute{*SampleCatalogAttribute}, PageInfo{}),
 }

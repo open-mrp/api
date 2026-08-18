@@ -37,12 +37,8 @@ type ReceivableEntry struct {
 }
 
 var SampleReceivableEntry = ReceivableEntry{
-	Object: constants.ObjectTypeReceivableEntry,
-	Invoice: &Invoice{
-		ID:     SampleInvoiceID,
-		Object: constants.ObjectTypeInvoice,
-		Number: "INV-001",
-	},
+	Object:           constants.ObjectTypeReceivableEntry,
+	Invoice:          SampleInvoice,
 	Customer:         SampleCustomer,
 	PONumber:         nil,
 	InvoicedAt:       timeutil.TimestampToTime(sampleCreatedAtTimestamp),

@@ -162,23 +162,13 @@ func (*ConversationParticipant) SchemaExample() any {
 }
 
 var SampleConversation = &Conversation{
-	ID:        SampleConversationID,
-	Object:    constants.ObjectTypeConversation,
-	Type:      constants.ConversationTypeDM,
-	Audience:  constants.ConversationAudienceInternal,
-	Status:    constants.ConversationStatusActive,
-	LegalHold: constants.LegalHoldStatusReleased,
-	Participants: NewList([]ConversationParticipant{
-		{
-			ID:            SampleConversationParticipantID,
-			Object:        constants.ObjectTypeConversationParticipant,
-			Type:          constants.ParticipantTypeUser,
-			Actor:         NewActor(SampleAccountUserID, constants.ActorTypeUser, new("Jie Yan"), nil),
-			Role:          constants.ParticipantRoleMember,
-			Membership:    constants.ParticipantMembershipActive,
-			Notifications: constants.ParticipantNotificationsUnmuted,
-		},
-	}, PageInfo{}),
+	ID:            SampleConversationID,
+	Object:        constants.ObjectTypeConversation,
+	Type:          constants.ConversationTypeDM,
+	Audience:      constants.ConversationAudienceInternal,
+	Status:        constants.ConversationStatusActive,
+	LegalHold:     constants.LegalHoldStatusReleased,
+	Participants:  NewList([]ConversationParticipant{*SampleConversationParticipant}, PageInfo{}),
 	Unread:        2,
 	LastMessageAt: timeutil.TimestampToTimePtr(sampleUpdatedAtTimestamp),
 	LastMessage: &Message{

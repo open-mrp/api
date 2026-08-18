@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.49.1](https://github.com/Augno/api/compare/v0.49.0...v0.49.1) (2026-08-18)
+
+
+### Bug Fixes
+
+* bug in sales order ack ([48e3cb9](https://github.com/Augno/api/commit/48e3cb950de5d2c7416262ad3168ebdfa673ff26))
+* issue where constants were not being properly populated in api resource examples ([1c8097d](https://github.com/Augno/api/commit/1c8097d48dfac6c19018fdd649c8b3833ae480fd))
+
 ## [0.49.0](https://github.com/Augno/api/compare/v0.48.4...v0.49.0) (2026-08-18)
 
 

@@ -682,7 +682,11 @@ message UpdateSalesOrderLineRequest {
   optional string product_id = 3;
   optional string item_id = 4;
   optional string product_sku = 5;
-  optional string product_description = 6;
+  // Clearable: the line's description is the only per-order override a caller can remove
+  // outright, so it carries a patch rather than a plain optional. Field 6 held the old
+  // `optional string` and is reserved so a mid-roll deploy can't decode one as the other.
+  reserved 6;
+  StringPatch product_description = 16;
   optional string quantity_value = 7;
   optional string quantity_unit_id = 8;
   optional string unit_price_value = 9;

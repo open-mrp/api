@@ -4279,6 +4279,21 @@ func (mr *MockAccountPriceRepoMockRecorder) List(ctx, params any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockAccountPriceRepo)(nil).List), ctx, params)
 }
 
+// ResolveRecipientAccountIDs mocks base method.
+func (m *MockAccountPriceRepo) ResolveRecipientAccountIDs(ctx context.Context, ownerAccountID, customerAccountID string) ([]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ResolveRecipientAccountIDs", ctx, ownerAccountID, customerAccountID)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ResolveRecipientAccountIDs indicates an expected call of ResolveRecipientAccountIDs.
+func (mr *MockAccountPriceRepoMockRecorder) ResolveRecipientAccountIDs(ctx, ownerAccountID, customerAccountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveRecipientAccountIDs", reflect.TypeOf((*MockAccountPriceRepo)(nil).ResolveRecipientAccountIDs), ctx, ownerAccountID, customerAccountID)
+}
+
 // Update mocks base method.
 func (m *MockAccountPriceRepo) Update(ctx context.Context, params domain.UpdateAccountPriceParams) (*domain.AccountPrice, *apierror.APIError) {
 	m.ctrl.T.Helper()

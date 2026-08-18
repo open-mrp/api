@@ -30,7 +30,8 @@ func (e *DeleteAccountPriceEndpoint) Materialize() *apiendpoint.APIEndpoint[*Del
 		Route:             "/v1/sales/account-prices/{id}",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainDiscounts, Action: types.ActionDelete},

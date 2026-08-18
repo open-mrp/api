@@ -34,14 +34,14 @@ type CreateOrderDiscountRequest struct {
 	//
 	// - `percentage`: the order total is reduced by the fraction in `percentage`.
 	// - `amount`: the order total is reduced by the flat amount in `amount`.
-	DiscountType string `json:"discount_type" validate:"required,max=255"`
+	DiscountType constants.OrderDiscountType `json:"discount_type" validate:"required"`
 }
 
 var sampleCreateOrderDiscountRequest = &CreateOrderDiscountRequest{
 	Name:         "10% Off",
 	Code:         "SAVE10",
-	Percentage:   field.Some("10.000000000000000000000000000000"),
-	DiscountType: "percentage",
+	Percentage:   field.Some("0.1"),
+	DiscountType: constants.OrderDiscountTypePercentage,
 }
 
 func (*CreateOrderDiscountRequest) SchemaExample() any {
@@ -60,7 +60,8 @@ func (e *CreateOrderDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cr
 		ContentType:       "application/json",
 		Route:             "/v1/sales/order-discounts",
 		SuccessStatusCode: http.StatusCreated,
-		Public:            false,
+		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeOrderDiscount,
 		RequiredPermissions: []types.Permission{

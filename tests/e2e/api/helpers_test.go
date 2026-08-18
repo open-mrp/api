@@ -595,6 +595,16 @@ func createAPIKeyAndCleanup(t *testing.T, name string) map[string]any {
 	return parsed
 }
 
+// mustGet fetches a resource by path and requires a 200, returning the raw body. Used to
+// re-read after a write so an assertion covers what was persisted rather than the echo.
+func mustGet(t *testing.T, path string) []byte {
+	t.Helper()
+	status, body, err := apiClient.GetListRaw(path, nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	return body
+}
+
 // eventually polls fn until it returns nil or timeout elapses. Each failure sleeps
 // interval before the next attempt. On deadline expiry it fails the test with the
 // last error from fn (use e2eAsyncWaitTimeout / e2eAsyncPollInterval for async pipelines).

@@ -60,3 +60,51 @@ func TestUpdateSalesOrder_ClearableFieldSemantics(t *testing.T) {
 	got = retrieve()
 	assert.Equal(t, "new note", got["note"])
 }
+
+// The line PATCH applies the same contract to the line's own snapshot of the product.
+// product_description is the field the order UI edits inline, so both halves matter: an
+// unrelated line edit must not wipe it, and an empty string must actually stick — a
+// repository that folded "" back into "leave unchanged" would silently restore the old
+// text the next time the order is read.
+func TestUpdateSalesOrderLine_ProductDescriptionSemantics(t *testing.T) {
+	t.Parallel()
+
+	orderID := createLifecycleOrder(t)
+	lineID := orderSaleLineID(t, orderID)
+	linePath := salesOrdersPath + "/" + orderID + "/lines/" + lineID
+
+	description := func() any {
+		t.Helper()
+		got := getSalesOrder(t, orderID, url.Values{"include": {"lines"}})
+		lines := jsonObject(got, "lines")
+		require.NotNil(t, lines, "lines present with ?include=lines")
+		for _, raw := range jsonArray(lines, "data") {
+			line, ok := raw.(map[string]any)
+			require.True(t, ok)
+			if jsonField(line, "id") == lineID {
+				return line["product_description"]
+			}
+		}
+		require.FailNow(t, "updated line missing from the order")
+		return nil
+	}
+
+	patchLine := func(body map[string]any) {
+		t.Helper()
+		status, b, err := apiClient.Patch(linePath, body, newIdempotencyKey())
+		require.NoError(t, err)
+		requireStatus(t, 200, status, b)
+	}
+
+	// value → set.
+	patchLine(map[string]any{"product_description": "Hand-written line note"})
+	assert.Equal(t, "Hand-written line note", description())
+
+	// omitted → left unchanged by an unrelated field's update.
+	patchLine(map[string]any{"quantity": map[string]any{"value": "4", "unit_id": SeedUnitID}})
+	assert.Equal(t, "Hand-written line note", description(), "an omitted description must be left unchanged")
+
+	// empty string → a literal empty value, not a no-op.
+	patchLine(map[string]any{"product_description": ""})
+	assert.Equal(t, "", description(), "an empty string must clear the line's description")
+}

@@ -88,7 +88,7 @@ func (m *orderDiscountSvcImpl) CreateOrderDiscount(ctx context.Context, req *Cre
 		Code:         req.Code,
 		Percentage:   req.Percentage.Ptr(),
 		Amount:       req.Amount.Ptr(),
-		DiscountType: req.DiscountType,
+		DiscountType: string(req.DiscountType),
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, orderDiscountSvcTracer, "service.order_discounts.create", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreateOrderDiscountResponse, error) {
@@ -107,7 +107,7 @@ func (m *orderDiscountSvcImpl) UpdateOrderDiscount(ctx context.Context, req *Upd
 		Code:         req.Code.Ptr(),
 		Percentage:   req.Percentage.Ptr(),
 		Amount:       req.Amount.Ptr(),
-		DiscountType: req.DiscountType.Ptr(),
+		DiscountType: req.DiscountType.Ptr().StringPtr(),
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, orderDiscountSvcTracer, "service.order_discounts.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateOrderDiscountResponse, error) {

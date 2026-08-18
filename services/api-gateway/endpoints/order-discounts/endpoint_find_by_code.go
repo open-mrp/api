@@ -49,7 +49,8 @@ func (e *FindOrderDiscountByCodeEndpoint) Materialize() *apiendpoint.APIEndpoint
 		ContentType:       "application/json",
 		Route:             "/v1/sales/order-discounts/actions/find-by-code",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainDiscounts, Action: types.ActionRead},

@@ -78,9 +78,27 @@ type Customer struct {
 }
 ```
 
-### 4. Shared input fragments (`pkg/request/*`: `AddressInput`, `QuantityInput`, …)
+### 4. Shared input fragments (`pkg/request/*`: `AddressInput`, `QuantityInput`, `RateInput`, …)
 
 These are create-style building blocks embedded in other requests. They follow the **create** rules (`field.Optional` for optional, value + `required` for mandatory).
+
+**Compose them; do not inline their parts.** A value that already has a shared input fragment MUST be taken as that fragment, not flattened into sibling scalar fields. A rate is `rate: RateInput`, never `rate_value` + `rate_numerator_unit_id` + `rate_denominator_unit_id`; an amount with a unit is `credit_limit: QuantityInput`, never `credit_limit_value` + `credit_limit_unit_id`.
+
+```go
+// Good — one field, one concept.
+Rate apirequest.RateInput `json:"rate" validate:"required"`
+
+// Bad — the same concept smeared across three fields.
+RateValue             string `json:"rate_value" validate:"required"`
+RateNumeratorUnitID   string `json:"rate_numerator_unit_id" validate:"required"`
+RateDenominatorUnitID string `json:"rate_denominator_unit_id" validate:"required"`
+```
+
+Inlining costs real things: the OpenAPI schema loses the shared `$ref` (so SDKs emit three loose strings instead of one reusable type), the prefix has to be repeated in every doc comment, and nothing stops a caller sending a value without its units. A fragment is also the natural unit of partial update — on PATCH use `field.Optional[apirequest.RateInput]`, which makes "replace the whole rate" the only representable operation and removes the question of what a value without units means.
+
+Reach for a fragment whenever the concept is *value + the unit that gives it meaning*. Where a decimal is genuinely unitless — a volume-discount tier `threshold`, which is compared in whatever unit the discount already declares, or a `discount_percentage`, which is a bare multiplier — a plain `string` with `format:"decimal"` is correct, and wrapping it in a `QuantityInput` would invent a unit the resource does not store.
+
+Add a new fragment to `pkg/request/` when a value + unit pairing shows up in a second request; a one-off stays local.
 
 ---
 
@@ -175,6 +193,10 @@ You never set `required`/`nullable` by hand — the generator reads the type + t
 **PATCH, settable but not clearable:** `field.Optional[T]` + `json:"x,omitzero"`. Read with `.Ptr()`/`.Value()`.
 
 **PATCH, clearable (nullable column):** `*field.Clearable[T]` + `json:"x,omitzero"`. Map with the `field.*ClearablePtrToProto` helpers; in core-service use `field.Clearable`/backfill. `make openapi`.
+
+**Value that carries a unit:** the shared fragment — `apirequest.RateInput` / `QuantityInput` / `AddressInput` — not its parts as sibling scalars. On PATCH, `field.Optional[apirequest.RateInput]` (replaced whole).
+
+**Field with a fixed set of values:** the `constants.X` type, never `string`. (See `constants-enum-patterns.md`.)
 
 **Response, nullable:** `*T`, **no** omit tag. (See `api-resource-conventions.md`.)
 

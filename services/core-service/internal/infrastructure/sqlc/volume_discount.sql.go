@@ -1446,7 +1446,7 @@ const updateVolumeDiscount = `-- name: UpdateVolumeDiscount :execresult
 UPDATE quantity_discount
 SET
     name = COALESCE(?, name),
-    updated_at = NOW()
+    updated_at = NOW(3)
 WHERE id = ?
 AND account_id = ?
 `

@@ -656,7 +656,9 @@ func (q *Queries) UpdateQuantityUnitByID(ctx context.Context, arg UpdateQuantity
 const updateSalesOrderLine = `-- name: UpdateSalesOrderLine :exec
 UPDATE sales_order_line SET
     product_sku = COALESCE(?, product_sku),
-    product_description = COALESCE(?, product_description),
+    -- Clearable (no COALESCE): the service backfills an omitted description from the
+    -- existing row, so NULL here is an explicit clear rather than "leave alone".
+    product_description = ?,
     product_id = COALESCE(?, product_id),
     item_id = COALESCE(?, item_id),
     edi_line_item_id = COALESCE(?, edi_line_item_id),

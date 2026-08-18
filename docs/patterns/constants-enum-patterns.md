@@ -78,6 +78,24 @@ Type constants.UnitType `json:"type" validate:"required"`
 
 Fields that are plain `string` (not backed by a constant type) may still use e.g. examples in their comments to aid readability.
 
+## Use the Constant Type in Requests, Not `string`
+
+A request field whose valid values are a fixed set MUST be typed as the `constants.X` enum, never as a bare `string` with a length validator. The gateway runs `httptransport.ValidateEnumFields` on every decoded request before `validate.Validate`, so the constant type alone produces value validation, the OpenAPI `enum` list, and a real union type in the generated SDKs.
+
+```go
+// Good — validated, self-documenting, and emitted as an enum in the SDKs.
+DiscountType constants.OrderDiscountType `json:"discount_type" validate:"required"`
+
+// Bad — accepts "banana", documents nothing, and the SDK emits a bare string.
+DiscountType string `json:"discount_type" validate:"required,max=255"`
+```
+
+Note what the tags do and don't do here. `validate:"required"` still earns its place — it rejects the field being *omitted*. A `max=` length cap does not: the enum check already constrains the value to a known member, so a length bound is dead weight. On PATCH the same rule holds through the wrapper, as `field.Optional[constants.X]` — `ValidateEnumFields` unwraps `field.Optional`/`field.Clearable`, so no `validate` tag is needed for the value itself.
+
+Convert at the proto boundary, not in the request struct: `string(req.DiscountType)` for a required field, `req.DiscountType.Ptr().StringPtr()` for a `field.Optional`. Keeping the typed value all the way to the edge of the gateway is what lets the compiler catch a mismatched enum.
+
+Per [Comment Conventions](#comment-conventions) above, don't list the values in the doc comment — the generated reference already has them.
+
 ## Cross-Service vs Service-Local
 
 | Location | Use case |

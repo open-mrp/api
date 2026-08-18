@@ -892,7 +892,7 @@ func (h *salesGRPCHandler) UpdateSalesOrderLine(ctx context.Context, req *pb.Upd
 		ProductID:                  req.ProductId,
 		ItemID:                     req.ItemId,
 		ProductSKU:                 req.ProductSku,
-		ProductDescription:         req.ProductDescription,
+		ProductDescription:         field.StringClearableFromProto(req.ProductDescription),
 		QuantityValue:              req.QuantityValue,
 		QuantityUnitID:             req.QuantityUnitId,
 		UnitPriceValue:             req.UnitPriceValue,

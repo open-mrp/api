@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
+	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
@@ -20,12 +21,10 @@ type CreateAccountPriceRequest struct {
 	RecipientAccountID string `json:"recipient_account_id" validate:"required"`
 	// ID of the product line whose products this price applies to.
 	ProductLineID string `json:"product_line_id" validate:"required"`
-	// The price the recipient pays, as a decimal string.
-	RateValue string `json:"rate_value" validate:"required"`
-	// ID of the unit for the rate's numerator, typically a currency unit.
-	RateNumeratorUnitID string `json:"rate_numerator_unit_id" validate:"required"`
-	// ID of the unit for the rate's denominator — the quantity unit being priced.
-	RateDenominatorUnitID string `json:"rate_denominator_unit_id" validate:"required"`
+	// The price the recipient pays.
+	//
+	// The numerator unit is typically a currency and the denominator is the quantity unit being priced, so a matching order line takes both its unit price and its price units from this rate exactly as entered.
+	Rate apirequest.RateInput `json:"rate" validate:"required"`
 	// Item category IDs to record on this price.
 	//
 	// Order pricing matches an account price on its product line and attributes only, so categories recorded here do not narrow which products the price applies to.
@@ -37,13 +36,15 @@ type CreateAccountPriceRequest struct {
 }
 
 var sampleCreateAccountPriceRequest = &CreateAccountPriceRequest{
-	RecipientAccountID:    apiresource.SampleAccountID,
-	ProductLineID:         apiresource.SampleProductLineID,
-	RateValue:             apiresource.SampleRateValue,
-	RateNumeratorUnitID:   apiresource.SampleUnitID,
-	RateDenominatorUnitID: apiresource.SampleUnitID,
-	CategoryIDs:           []string{apiresource.SampleItemCategoryID},
-	AttributeIDs:          []string{apiresource.SampleAttributeID},
+	RecipientAccountID: apiresource.SampleAccountID,
+	ProductLineID:      apiresource.SampleProductLineID,
+	Rate: apirequest.RateInput{
+		Value:             apiresource.SampleRateValue,
+		NumeratorUnitID:   apiresource.SampleUnitID,
+		DenominatorUnitID: apiresource.SampleUnitID,
+	},
+	CategoryIDs:  []string{apiresource.SampleItemCategoryID},
+	AttributeIDs: []string{apiresource.SampleAttributeID},
 }
 
 func (*CreateAccountPriceRequest) SchemaExample() any {
@@ -62,7 +63,8 @@ func (e *CreateAccountPriceEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 		ContentType:       "application/json",
 		Route:             "/v1/sales/account-prices",
 		SuccessStatusCode: http.StatusCreated,
-		Public:            false,
+		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeAccountPrice,
 		RequiredPermissions: []types.Permission{

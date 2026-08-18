@@ -58,8 +58,8 @@ JOIN unit nu ON r.numerator_unit_id = nu.id
 JOIN unit du ON r.denominator_unit_id = du.id
 WHERE ap.owner_account_id = sqlc.arg('owner_account_id')
 AND (
-    sqlc.narg('recipient_account_id') IS NULL
-    OR ap.recipient_account_id = sqlc.narg('recipient_account_id')
+    sqlc.arg('include_recipient_filter') = false
+    OR ap.recipient_account_id IN (sqlc.slice('recipient_account_ids'))
 )
 AND (
     sqlc.narg('search_query') IS NULL
@@ -134,8 +134,8 @@ JOIN unit nu ON r.numerator_unit_id = nu.id
 JOIN unit du ON r.denominator_unit_id = du.id
 WHERE ap.owner_account_id = sqlc.arg('owner_account_id')
 AND (
-    sqlc.narg('recipient_account_id') IS NULL
-    OR ap.recipient_account_id = sqlc.narg('recipient_account_id')
+    sqlc.arg('include_recipient_filter') = false
+    OR ap.recipient_account_id IN (sqlc.slice('recipient_account_ids'))
 )
 AND (
     sqlc.narg('search_query') IS NULL

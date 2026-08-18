@@ -375,6 +375,8 @@ type AdjustmentTypeRepo interface {
 
 type AccountPriceRepo interface {
 	List(ctx context.Context, params ListAccountPricesParams) (*ListAccountPricesResult, *apierror.APIError)
+	// ResolveRecipientAccountIDs returns the customer plus its parent account, if it has one.
+	ResolveRecipientAccountIDs(ctx context.Context, ownerAccountID, customerAccountID string) ([]string, *apierror.APIError)
 	Get(ctx context.Context, accountID, accountPriceID string) (*AccountPrice, *apierror.APIError)
 	Create(ctx context.Context, accountPriceID, rateID string, params CreateAccountPriceParams) (*AccountPrice, *apierror.APIError)
 	Update(ctx context.Context, params UpdateAccountPriceParams) (*AccountPrice, *apierror.APIError)

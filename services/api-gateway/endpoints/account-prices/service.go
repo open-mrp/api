@@ -113,9 +113,9 @@ func (m *accountPriceSvcImpl) CreateAccountPrice(ctx context.Context, req *Creat
 	pbReq := &pb.CreateAccountPriceRequest{
 		RecipientAccountId:    req.RecipientAccountID,
 		ProductLineId:         req.ProductLineID,
-		RateValue:             req.RateValue,
-		RateNumeratorUnitId:   req.RateNumeratorUnitID,
-		RateDenominatorUnitId: req.RateDenominatorUnitID,
+		RateValue:             req.Rate.Value,
+		RateNumeratorUnitId:   req.Rate.NumeratorUnitID,
+		RateDenominatorUnitId: req.Rate.DenominatorUnitID,
 		CategoryIds:           req.CategoryIDs,
 		AttributeIds:          req.AttributeIDs,
 	}
@@ -137,12 +137,16 @@ func (m *accountPriceSvcImpl) CreateAccountPrice(ctx context.Context, req *Creat
 
 func (m *accountPriceSvcImpl) UpdateAccountPrice(ctx context.Context, req *UpdateAccountPriceRequest) (*apiresource.AccountPrice, *apierror.APIError) {
 	pbReq := &pb.UpdateAccountPriceRequest{
-		Id:                    req.AccountPriceID,
-		RecipientAccountId:    req.RecipientAccountID.Ptr(),
-		ProductLineId:         req.ProductLineID.Ptr(),
-		RateValue:             req.RateValue.Ptr(),
-		RateNumeratorUnitId:   req.RateNumeratorUnitID.Ptr(),
-		RateDenominatorUnitId: req.RateDenominatorUnitID.Ptr(),
+		Id:                 req.AccountPriceID,
+		RecipientAccountId: req.RecipientAccountID.Ptr(),
+		ProductLineId:      req.ProductLineID.Ptr(),
+	}
+
+	// The rate is replaced whole, so its three columns move together or not at all.
+	if rate, ok := req.Rate.Value(); ok {
+		pbReq.RateValue = &rate.Value
+		pbReq.RateNumeratorUnitId = &rate.NumeratorUnitID
+		pbReq.RateDenominatorUnitId = &rate.DenominatorUnitID
 	}
 
 	if v, ok := req.CategoryIDs.Value(); ok {

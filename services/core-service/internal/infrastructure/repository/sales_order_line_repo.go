@@ -9,6 +9,7 @@ import (
 	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/db"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 	"github.com/augno/api/shared/id"
 	"github.com/augno/api/shared/safeconv"
 	"github.com/augno/api/shared/tracing"
@@ -189,7 +190,7 @@ func (r *salesOrderLineRepoImpl) Update(ctx context.Context, params domain.Updat
 	// Update basic sales order line fields
 	err := r.queries.UpdateSalesOrderLine(ctx, sqlc.UpdateSalesOrderLineParams{
 		ProductSku:         toNullString(params.ProductSKU),
-		ProductDescription: toNullString(params.ProductDescription),
+		ProductDescription: field.StringToNullString(params.ProductDescription),
 		ProductID:          toNullString(params.ProductID),
 		ItemID:             toNullString(params.ItemID),
 		EdiLineItemID:      toNullString(params.EdiLineItemID),

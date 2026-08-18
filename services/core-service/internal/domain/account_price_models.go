@@ -74,11 +74,14 @@ type AccountPriceAttribute struct {
 }
 
 type ListAccountPricesParams struct {
-	AccountID          string
-	Cursor             *string
-	Limit              int32
-	Query              *string
-	RecipientAccountID *string
+	AccountID string
+	Cursor    *string
+	Limit     int32
+	Query     *string
+	// RecipientAccountIDs, when non-empty, restricts results to prices offered to one of
+	// these accounts. The service expands a requested customer into that customer plus its
+	// parent, since a price on the parent applies to orders its children place.
+	RecipientAccountIDs []string
 }
 
 type ListAccountPricesResult struct {

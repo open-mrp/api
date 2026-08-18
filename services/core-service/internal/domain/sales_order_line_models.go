@@ -2,6 +2,8 @@ package domain
 
 import (
 	"time"
+
+	"github.com/augno/api/shared/field"
 )
 
 // SalesOrderLine represents a sales order line domain model.
@@ -71,13 +73,14 @@ type CreateSalesOrderLineParams struct {
 
 // UpdateSalesOrderLineParams holds the parameters for updating a sales order line.
 type UpdateSalesOrderLineParams struct {
-	SalesOrderLineID           string
-	SalesOrderID               string
-	AccountID                  string
-	ProductID                  *string
-	ItemID                     *string
-	ProductSKU                 *string
-	ProductDescription         *string
+	SalesOrderLineID string
+	SalesOrderID     string
+	AccountID        string
+	ProductID        *string
+	ItemID           *string
+	ProductSKU       *string
+	// Clearable: omitting it keeps the line's current description, an explicit clear removes it.
+	ProductDescription         field.Clearable[string]
 	QuantityValue              *string
 	QuantityUnitID             *string
 	UnitPriceValue             *string

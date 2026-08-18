@@ -581,20 +581,18 @@ func (r *volumeDiscountRepoImpl) Update(ctx context.Context, params domain.Updat
 	defer span.End()
 
 	// Update base record
-	result, err := r.queries.UpdateVolumeDiscount(ctx, sqlc.UpdateVolumeDiscountParams{
+	// Rows-affected is deliberately not read as an existence check. MySQL reports rows
+	// *changed*, not matched, so an update that only touches tiers or scopes — leaving
+	// name untouched and landing on the same second as the last write — reports zero and
+	// would be misread as a missing discount. The caller establishes existence with a Get
+	// in this same transaction.
+	_, err := r.queries.UpdateVolumeDiscount(ctx, sqlc.UpdateVolumeDiscountParams{
 		Name:      toNullStringForVD(params.Name),
 		ID:        params.VolumeDiscountID,
 		AccountID: params.AccountID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
-	}
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to check rows affected."))
-	}
-	if rowsAffected == 0 {
-		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Volume discount not found."))
 	}
 
 	// Upsert tiers if provided

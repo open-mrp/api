@@ -48,7 +48,7 @@ type UpdateVolumeDiscountRequest struct {
 	// The full set of tiers for this discount.
 	//
 	// Only applied when `has_tiers` is `true`. Tiers with an `id` are updated, tiers without an `id` are created, and existing tiers not present in the list are deleted.
-	Tiers []UpdateVolumeDiscountTierInput `json:"tiers,omitzero"`
+	Tiers []UpdateVolumeDiscountTierInput `json:"tiers,omitzero" validate:"omitempty,dive"`
 	// Account group IDs to set as customer groups.
 	//
 	// Only applied when `has_customer_groups` is `true`, in which case they replace the existing set entirely.
@@ -115,7 +115,8 @@ func (e *UpdateVolumeDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*U
 		Route:             "/v1/sales/volume-discounts/{id}",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainDiscounts, Action: types.ActionUpdate},
@@ -124,5 +125,9 @@ func (e *UpdateVolumeDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*U
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateVolumeDiscountRequest) (*apiresource.VolumeDiscount, *apierror.APIError) {
 			return svc.(VolumeDiscountSvc).UpdateVolumeDiscount
 		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeVolumeDiscount,
+			Fields:     []string{"customer_groups", "product_lines", "categories", "attributes", "acceptable_units"},
+		}),
 	})
 }

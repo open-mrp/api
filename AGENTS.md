@@ -2,6 +2,61 @@
 
 This file provides guidance when working with code in this repository.
 
+## Read the Patterns Docs First (non-negotiable)
+
+`docs/patterns/` is the normative spec for this codebase, not background reading. Code that contradicts a pattern doc is wrong even if it compiles, passes tests, and looks like the file next to it — neighboring code may predate the doc.
+
+**Before writing a line of code, open the docs for the layers you are about to touch.** Do not infer conventions by copying a nearby file; a plausible-looking imitation of the wrong pattern is the single most common failure mode in this repo, and it gets caught in review rather than by the compiler. If a doc and existing code disagree, the doc wins — follow the doc and flag the drift.
+
+| If you are... | Read first (in `docs/patterns/`) |
+|---|---|
+| Changing **any** existing public request/response shape or behavior | `api-versioning-patterns.md` — and see the breaking-change rule below |
+| Adding or changing an endpoint's request/response shape | `api-resource-conventions.md`, `nullable-field-patterns.md` |
+| Writing a service, mediator, repository, or transaction | `architecture-patterns.md` |
+| Touching identity, permissions, or actor checks | `authentication-patterns.md`, `authorization-check-patterns.md` |
+| Adding or changing a list endpoint, filter, or sort | `performant-list-endpoint-patterns.md` |
+| Adding a domain model, mock, or entry point | `domain-layer-patterns.md` |
+| Emitting or changing audit events | `audit-event-patterns.md` |
+| Adding a new entity or ID prefix | `entity-id-patterns.md` |
+| Adding or changing an enum | `constants-enum-patterns.md` |
+| Writing or fixing e2e tests | `e2e-test-patterns.md` |
+| Writing or editing any comment | `comment-conventions.md` |
+| Changing config structs | `config-patterns.md` |
+| Touching logging or tracing | `canonical-log-patterns.md` |
+| Touching production step graphs | `production-step-graph-patterns.md` |
+
+Read the doc **before** you write, not after review. Reading the section you need is enough; you do not have to read a doc end to end.
+
+**Self-check before reporting work as done:** name the pattern docs that govern the files you changed, re-read the relevant sections, and confirm each rule actually holds in your diff. "I didn't know that doc existed" is not an acceptable outcome — the table above is the index, and `important-patterns.md` is the short list of rules that apply everywhere.
+
+## Breaking Changes Require a New API Version (non-negotiable)
+
+**Any breaking change to the public API requires a new API version plus a version transformer that preserves the old shape.** A client pinned to a supported `Augno-Version` must keep receiving byte-compatible request and response shapes for as long as that version is supported. Shipping a shape change without a transformer silently breaks every pinned consumer — that is never an acceptable trade for a smaller diff, and it is not something to "follow up on later."
+
+Breaking — needs a new version **and** a transformer:
+
+- Removing or renaming a request or response field.
+- Changing a field's type, format, nullability, or enum value set.
+- Moving previously-unconditional data behind an `?include=` key.
+- Changing a default, a status code, an error `type`/`param`, or pagination semantics.
+- Tightening validation so a previously-accepted body is now rejected.
+- Changing the meaning of an existing field or parameter, even at an identical shape.
+
+Not breaking — ships straight on `Latest`: new endpoints, new **response** fields, new **optional** request fields or query parameters, new include keys, new values on a field documented as an open enum, and bug fixes where the documented contract was always the fixed behavior.
+
+**When in doubt, treat it as breaking.** An unnecessary transformer costs little; a silently broken consumer costs a lot.
+
+The backend only ever speaks `Latest` — no version conditionals anywhere below the gateway edge. Older versions exist purely as edge transformations in `services/api-gateway/internal/versiontransforms/`. A shape-changing change is not complete until all of these ship with it:
+
+1. The new version declared in `shared/version/version.go` (constant added, prepended to `Supported`, `Latest` repointed) with `version_test.go` updated.
+2. The transformer(s), `FromVersion` = new and `ToVersion` = previous, with unit tests covering single, list, nested, and data-missing payloads.
+3. `ObjectType` declared on **every** endpoint that returns or accepts the changed resource — an endpoint without it is invisible to the transformer chain and leaks the new shape.
+4. `ForcedIncludes` wherever the old shape needs data the new shape gates behind an include.
+5. Version-compat e2e tests (`tests/e2e/api/version_compat_<resource>_test.go`) pinned to the previous version.
+6. `make openapi` re-run and the regenerated spec committed.
+
+Transformers reshape real data and **never** fabricate values, and a transformer is immutable once its `ToVersion` has shipped. `docs/patterns/api-versioning-patterns.md` is the full checklist — follow it, don't approximate it.
+
 ## Build & Development Commands
 
 ```bash
@@ -85,7 +140,7 @@ To add/modify schema:
 - Do not create README files, examples, or comments unless explicitly requested
 - **Comments: never hard-wrap a prose paragraph across multiple `//` lines** — one paragraph is one physical line (let the editor soft-wrap). Distinct paragraphs get a blank `//` separator; numbered/TODO lists may use one line per item. Internal doc comments explain business intent, side effects, ordering/transactionality, idempotency, and failure modes — not the mechanics. See `docs/patterns/comment-conventions.md`.
 - **Commits must follow the Conventional Commits conventions in `README.md` (the "Committing" section).** release-please parses these prefixes (feat:, fix:, feat!:, etc.) to calculate the next version — a non-conforming prefix is ignored, so the change won't make it into a Release PR and no release gets cut.
-- Review `/docs` to see all important patterns and conventions.
+- Review `docs/patterns/` for the conventions governing whatever you are touching — see the routing table at the top of this file. These are requirements, not suggestions.
 
 ## End-to-end (e2e) tests
 
@@ -342,16 +397,20 @@ rather than:
 
 8. New endpoints should be added to the openapi spec generator.
 9. Sensitive HTTP request or response fields that must not appear verbatim in persisted request logs should be tagged `sensitive:"true"` on the corresponding struct field (`shared/redact` redacts logged JSON at the gateway). Omit entire request-log rows via `Extras.SkipRequestLogging` when logging the request is unacceptable.
+10. Any breaking change to an existing public request or response shape requires a new API version plus a transformer in `services/api-gateway/internal/versiontransforms/`. See the non-negotiable section at the top of this file and `docs/patterns/api-versioning-patterns.md`.
+11. **`_parent_child_production_steps` column order is fixed**: **`A` = downstream step, `B` = upstream (parent)** — matches Prisma/dashboard. Never revert queries or seeds to "`A` = parent." See `docs/patterns/production-step-graph-patterns.md`.
 
-## Detailed Reference Docs
+## Reference Doc Index
 
-For deeper dives, review the following docs:
+The complete index of `docs/patterns/`. The routing table at the top of this file maps tasks to the docs you must read before writing code; this is the full set, including docs no routing row calls out.
 
+- `docs/patterns/important-patterns.md` — the short list of rules that apply to every change, regardless of layer
 - `docs/patterns/api-resource-conventions.md` — API resource field conventions (object field, no omitempty, sub-objects, expandable relations, include system, list responses, sample data)
 - `docs/patterns/nullable-field-patterns.md` — **Request** field tags and nullability: `field.Optional[T]` vs. `*field.Clearable[T]` vs. value types, `omitzero` rule, the absent/null/value three-state model, the gateway null/blank-rejection pipeline, and proto/OpenAPI mapping
 - `docs/patterns/api-versioning-patterns.md` — API version scheme, the no-breaking-changes contract, gateway-edge transformers (`versiontransforms/`), forced includes, and the version deprecation/removal process
 - `docs/patterns/architecture-patterns.md` — Layered architecture (services, mediators, repositories, transaction management, idempotency, error handling, tracing)
 - `docs/patterns/authentication-patterns.md` — Identity model, authorization checks, permission model, actor types
+- `docs/patterns/authorization-check-patterns.md` — Cross-account authorization: actor vs. target account, `TargetRelationType`, and which permission domain applies when a merchant targets a customer or supplier
 - `docs/patterns/domain-layer-patterns.md` — Domain directory structure, standard files, mock generation, entry point pattern
 - `docs/patterns/audit-event-patterns.md` — Publishing audit events from services, outbox usage, `audit` struct tags on domain models for field-level diffs
 - `docs/patterns/entity-id-patterns.md` — ID format, vocabulary codes, composable prefixes, adding new entities
@@ -359,7 +418,10 @@ For deeper dives, review the following docs:
 - `docs/patterns/config-patterns.md` — Config struct conventions (WithDefaults, validate, constructor pattern)
 - `docs/patterns/canonical-log-patterns.md` — Canonical log lines, interceptor chain, tracing fields
 - `docs/patterns/e2e-test-patterns.md` — E2E test conventions (CRUD lifecycle, field assertions, omitted fields, expandable fields, helpers, checklist)
+- `docs/patterns/performant-list-endpoint-patterns.md` — Keyset list queries, selective-filter composite indexes, and how to add a user-facing list filter without a table scan
 - `docs/patterns/production-step-graph-patterns.md` — `_parent_child_production_steps`: **`A` = downstream, `B` = upstream** (Prisma-aligned); flow SQL and seeds must stay consistent
 - `docs/patterns/main-delegates-to-run-pattern.md` — main() → Run() delegation pattern
 - `docs/patterns/comment-conventions.md` — internal-code comment style: one paragraph per physical line (no hard-wrapping), what doc comments must convey (intent/side effects/idempotency/failure modes), config-field optionality docs, actionable TODOs
 - `docs/api-migration-instructions.md` — Dashboard API → Go API migration context
+- `docs/migration-checklist.md` — Per-endpoint checklist for the dashboard → Go migration
+- `docs/stlc-sdk-codegen.md` — Stainless SDK codegen: regeneration flow, config, and release

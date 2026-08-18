@@ -29,7 +29,8 @@ func (e *ListOrderDiscountsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Lis
 		ContentType:       "application/json",
 		Route:             "/v1/sales/order-discounts",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeOrderDiscount,
 		RequiredPermissions: []types.Permission{

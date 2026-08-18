@@ -195,7 +195,7 @@ VALUES (sqlc.arg('id'), sqlc.arg('name'), sqlc.arg('account_id'), NOW(), NOW());
 UPDATE quantity_discount
 SET
     name = COALESCE(sqlc.narg('name'), name),
-    updated_at = NOW()
+    updated_at = NOW(3)
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');
 

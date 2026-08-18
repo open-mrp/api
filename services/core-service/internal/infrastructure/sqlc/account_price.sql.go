@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 )
 
@@ -468,8 +469,8 @@ JOIN unit nu ON r.numerator_unit_id = nu.id
 JOIN unit du ON r.denominator_unit_id = du.id
 WHERE ap.owner_account_id = ?
 AND (
-    ? IS NULL
-    OR ap.recipient_account_id = ?
+    ? = false
+    OR ap.recipient_account_id IN (/*SLICE:recipient_account_ids*/?)
 )
 AND (
     ? IS NULL
@@ -485,12 +486,13 @@ LIMIT ?
 `
 
 type ListAccountPricesBackwardParams struct {
-	OwnerAccountID     string
-	RecipientAccountID sql.NullString
-	SearchQuery        sql.NullString
-	CursorCreatedAt    time.Time
-	CursorID           string
-	Limit              int32
+	OwnerAccountID         string
+	IncludeRecipientFilter interface{}
+	RecipientAccountIds    []string
+	SearchQuery            sql.NullString
+	CursorCreatedAt        time.Time
+	CursorID               string
+	Limit                  int32
 }
 
 type ListAccountPricesBackwardRow struct {
@@ -540,18 +542,26 @@ type ListAccountPricesBackwardRow struct {
 }
 
 func (q *Queries) ListAccountPricesBackward(ctx context.Context, arg ListAccountPricesBackwardParams) ([]ListAccountPricesBackwardRow, error) {
-	rows, err := q.db.QueryContext(ctx, listAccountPricesBackward,
-		arg.OwnerAccountID,
-		arg.RecipientAccountID,
-		arg.RecipientAccountID,
-		arg.SearchQuery,
-		arg.SearchQuery,
-		arg.SearchQuery,
-		arg.CursorCreatedAt,
-		arg.CursorCreatedAt,
-		arg.CursorID,
-		arg.Limit,
-	)
+	query := listAccountPricesBackward
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.OwnerAccountID)
+	queryParams = append(queryParams, arg.IncludeRecipientFilter)
+	if len(arg.RecipientAccountIds) > 0 {
+		for _, v := range arg.RecipientAccountIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:recipient_account_ids*/?", strings.Repeat(",?", len(arg.RecipientAccountIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:recipient_account_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.CursorCreatedAt)
+	queryParams = append(queryParams, arg.CursorCreatedAt)
+	queryParams = append(queryParams, arg.CursorID)
+	queryParams = append(queryParams, arg.Limit)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -677,8 +687,8 @@ JOIN unit nu ON r.numerator_unit_id = nu.id
 JOIN unit du ON r.denominator_unit_id = du.id
 WHERE ap.owner_account_id = ?
 AND (
-    ? IS NULL
-    OR ap.recipient_account_id = ?
+    ? = false
+    OR ap.recipient_account_id IN (/*SLICE:recipient_account_ids*/?)
 )
 AND (
     ? IS NULL
@@ -695,12 +705,13 @@ LIMIT ?
 `
 
 type ListAccountPricesForwardParams struct {
-	OwnerAccountID     string
-	RecipientAccountID sql.NullString
-	SearchQuery        sql.NullString
-	CursorCreatedAt    sql.NullTime
-	CursorID           sql.NullString
-	Limit              int32
+	OwnerAccountID         string
+	IncludeRecipientFilter interface{}
+	RecipientAccountIds    []string
+	SearchQuery            sql.NullString
+	CursorCreatedAt        sql.NullTime
+	CursorID               sql.NullString
+	Limit                  int32
 }
 
 type ListAccountPricesForwardRow struct {
@@ -750,19 +761,27 @@ type ListAccountPricesForwardRow struct {
 }
 
 func (q *Queries) ListAccountPricesForward(ctx context.Context, arg ListAccountPricesForwardParams) ([]ListAccountPricesForwardRow, error) {
-	rows, err := q.db.QueryContext(ctx, listAccountPricesForward,
-		arg.OwnerAccountID,
-		arg.RecipientAccountID,
-		arg.RecipientAccountID,
-		arg.SearchQuery,
-		arg.SearchQuery,
-		arg.SearchQuery,
-		arg.CursorCreatedAt,
-		arg.CursorCreatedAt,
-		arg.CursorCreatedAt,
-		arg.CursorID,
-		arg.Limit,
-	)
+	query := listAccountPricesForward
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.OwnerAccountID)
+	queryParams = append(queryParams, arg.IncludeRecipientFilter)
+	if len(arg.RecipientAccountIds) > 0 {
+		for _, v := range arg.RecipientAccountIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:recipient_account_ids*/?", strings.Repeat(",?", len(arg.RecipientAccountIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:recipient_account_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.CursorCreatedAt)
+	queryParams = append(queryParams, arg.CursorCreatedAt)
+	queryParams = append(queryParams, arg.CursorCreatedAt)
+	queryParams = append(queryParams, arg.CursorID)
+	queryParams = append(queryParams, arg.Limit)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}

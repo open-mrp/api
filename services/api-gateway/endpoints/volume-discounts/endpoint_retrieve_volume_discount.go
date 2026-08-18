@@ -27,7 +27,8 @@ func (e *RetrieveVolumeDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		Route:             "/v1/sales/volume-discounts/{id}",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainDiscounts, Action: types.ActionRead},

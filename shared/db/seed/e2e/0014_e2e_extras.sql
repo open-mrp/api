@@ -317,7 +317,7 @@ INSERT IGNORE INTO sandbox_account (type_id, owner_account_id, account_id, creat
 -- ============================================================
 
 INSERT IGNORE INTO order_discount (id, name, code, percentage, value, discount_type_code, account_id, created_at, updated_at) VALUES
-    ('ords_01seedfixed5discount', '$5 Off', 'FIXED5', 0, 5, 'fixed', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
+    ('ords_01seedfixed5discount', '$5 Off', 'FIXED5', 0, 5, 'amount', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
 
 -- ============================================================
 -- SECOND ACCOUNT PRICE (for pagination)

@@ -38,7 +38,7 @@ type UpdateOrderDiscountRequest struct {
 	// - `amount`: the order total is reduced by the flat amount in `amount`.
 	//
 	// Switching the type does not move the stored figure across, so send the matching `percentage` or `amount` in the same request or the discount will take nothing off.
-	DiscountType field.Optional[string] `json:"discount_type,omitzero" validate:"omitempty,max=255"`
+	DiscountType field.Optional[constants.OrderDiscountType] `json:"discount_type,omitzero"`
 }
 
 var sampleUpdateOrderDiscountRequest = &UpdateOrderDiscountRequest{
@@ -62,7 +62,8 @@ func (e *UpdateOrderDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*Up
 		Route:             "/v1/sales/order-discounts/{id}",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeOrderDiscount,
 		RequiredPermissions: []types.Permission{

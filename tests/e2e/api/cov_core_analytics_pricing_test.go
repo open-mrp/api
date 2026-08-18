@@ -46,11 +46,13 @@ func analyzeRealizedMargins(t *testing.T, params url.Values, body map[string]any
 func createSeededAccountPrice(t *testing.T, rateValue string) string {
 	t.Helper()
 	status, body, err := apiClient.Post(accountPricesPath, map[string]any{
-		"recipient_account_id":     SeedCustomerAccountID,
-		"product_line_id":          SeedProductLineID,
-		"rate_value":               rateValue,
-		"rate_numerator_unit_id":   seedCurrencyUnitID,
-		"rate_denominator_unit_id": SeedUnitID,
+		"recipient_account_id": SeedCustomerAccountID,
+		"product_line_id":      SeedProductLineID,
+		"rate": map[string]any{
+			"value":               rateValue,
+			"numerator_unit_id":   seedCurrencyUnitID,
+			"denominator_unit_id": SeedUnitID,
+		},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, http.StatusCreated, status, body)

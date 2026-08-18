@@ -23,7 +23,7 @@ type UpdateSalesOrderLineRequest struct {
 	// SKU recorded on the line.
 	ProductSKU field.Optional[string] `json:"product_sku,omitzero" validate:"omitempty,max=255"`
 	// Description recorded on the line.
-	ProductDescription field.Optional[string] `json:"product_description,omitzero"`
+	ProductDescription field.Clearable[string] `json:"product_description,omitzero"`
 	// New quantity ordered on the line.
 	Quantity field.Optional[apirequest.QuantityInput] `json:"quantity,omitzero" validate:"omitempty"`
 	// Price charged per unit.

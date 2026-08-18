@@ -15,12 +15,14 @@ import (
 type ListAccountPricesRequest struct {
 	apiresource.PaginationRequest
 	// Filters results to prices whose recipient is this customer account.
+	//
+	// A child account also matches the prices recorded against its parent, since those price its orders too.
 	RecipientAccountID *string `query:"recipient_account_id"`
 }
 
 // Returns a paginated list of account prices, newest first.
 //
-// The search term matches the recipient customer's name or their customer number. Customer portal users always see only the prices where their own account is the recipient, whatever `recipient_account_id` is set to.
+// The search term matches the recipient customer's name or their customer number. Customer portal users always see only the prices that apply to their own account, whatever `recipient_account_id` is set to.
 type ListAccountPricesEndpoint struct{}
 
 func (e *ListAccountPricesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAccountPricesRequest, *apiresource.List[apiresource.AccountPrice]] {
@@ -30,7 +32,8 @@ func (e *ListAccountPricesEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		ContentType:       "application/json",
 		Route:             "/v1/sales/account-prices",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeAccountPrice,
 		RequiredPermissions: []types.Permission{
@@ -41,5 +44,9 @@ func (e *ListAccountPricesEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAccountPricesRequest) (*apiresource.List[apiresource.AccountPrice], *apierror.APIError) {
 			return svc.(AccountPriceSvc).ListAccountPrices
 		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeAccountPrice,
+			Fields:     []string{"recipient_account", "product_line", "categories", "attributes"},
+		}),
 	})
 }

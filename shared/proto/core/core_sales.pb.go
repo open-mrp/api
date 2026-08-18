@@ -4485,7 +4485,7 @@ type UpdateSalesOrderLineRequest struct {
 	ProductId                  *string                `protobuf:"bytes,3,opt,name=product_id,json=productId,proto3,oneof" json:"product_id,omitempty"`
 	ItemId                     *string                `protobuf:"bytes,4,opt,name=item_id,json=itemId,proto3,oneof" json:"item_id,omitempty"`
 	ProductSku                 *string                `protobuf:"bytes,5,opt,name=product_sku,json=productSku,proto3,oneof" json:"product_sku,omitempty"`
-	ProductDescription         *string                `protobuf:"bytes,6,opt,name=product_description,json=productDescription,proto3,oneof" json:"product_description,omitempty"`
+	ProductDescription         *StringPatch           `protobuf:"bytes,16,opt,name=product_description,json=productDescription,proto3" json:"product_description,omitempty"`
 	QuantityValue              *string                `protobuf:"bytes,7,opt,name=quantity_value,json=quantityValue,proto3,oneof" json:"quantity_value,omitempty"`
 	QuantityUnitId             *string                `protobuf:"bytes,8,opt,name=quantity_unit_id,json=quantityUnitId,proto3,oneof" json:"quantity_unit_id,omitempty"`
 	UnitPriceValue             *string                `protobuf:"bytes,9,opt,name=unit_price_value,json=unitPriceValue,proto3,oneof" json:"unit_price_value,omitempty"`
@@ -4564,11 +4564,11 @@ func (x *UpdateSalesOrderLineRequest) GetProductSku() string {
 	return ""
 }
 
-func (x *UpdateSalesOrderLineRequest) GetProductDescription() string {
-	if x != nil && x.ProductDescription != nil {
-		return *x.ProductDescription
+func (x *UpdateSalesOrderLineRequest) GetProductDescription() *StringPatch {
+	if x != nil {
+		return x.ProductDescription
 	}
-	return ""
+	return nil
 }
 
 func (x *UpdateSalesOrderLineRequest) GetQuantityValue() string {
@@ -6950,7 +6950,7 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"\x1e_unit_cost_denominator_unit_idB\x13\n" +
 	"\x11_edi_line_item_id\"b\n" +
 	"\x1cCreateSalesOrderLineResponse\x12B\n" +
-	"\x10sales_order_line\x18\x01 \x01(\v2\x18.core.SalesOrderLineInfoR\x0esalesOrderLine\"\x9d\b\n" +
+	"\x10sales_order_line\x18\x01 \x01(\v2\x18.core.SalesOrderLineInfoR\x0esalesOrderLine\"\x99\b\n" +
 	"\x1bUpdateSalesOrderLineRequest\x12$\n" +
 	"\x0esales_order_id\x18\x01 \x01(\tR\fsalesOrderId\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\tR\x02id\x12\"\n" +
@@ -6958,24 +6958,23 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"product_id\x18\x03 \x01(\tH\x00R\tproductId\x88\x01\x01\x12\x1c\n" +
 	"\aitem_id\x18\x04 \x01(\tH\x01R\x06itemId\x88\x01\x01\x12$\n" +
 	"\vproduct_sku\x18\x05 \x01(\tH\x02R\n" +
-	"productSku\x88\x01\x01\x124\n" +
-	"\x13product_description\x18\x06 \x01(\tH\x03R\x12productDescription\x88\x01\x01\x12*\n" +
-	"\x0equantity_value\x18\a \x01(\tH\x04R\rquantityValue\x88\x01\x01\x12-\n" +
-	"\x10quantity_unit_id\x18\b \x01(\tH\x05R\x0equantityUnitId\x88\x01\x01\x12-\n" +
-	"\x10unit_price_value\x18\t \x01(\tH\x06R\x0eunitPriceValue\x88\x01\x01\x12C\n" +
+	"productSku\x88\x01\x01\x12B\n" +
+	"\x13product_description\x18\x10 \x01(\v2\x11.core.StringPatchR\x12productDescription\x12*\n" +
+	"\x0equantity_value\x18\a \x01(\tH\x03R\rquantityValue\x88\x01\x01\x12-\n" +
+	"\x10quantity_unit_id\x18\b \x01(\tH\x04R\x0equantityUnitId\x88\x01\x01\x12-\n" +
+	"\x10unit_price_value\x18\t \x01(\tH\x05R\x0eunitPriceValue\x88\x01\x01\x12C\n" +
 	"\x1cunit_price_numerator_unit_id\x18\n" +
-	" \x01(\tH\aR\x18unitPriceNumeratorUnitId\x88\x01\x01\x12G\n" +
-	"\x1eunit_price_denominator_unit_id\x18\v \x01(\tH\bR\x1aunitPriceDenominatorUnitId\x88\x01\x01\x12+\n" +
-	"\x0funit_cost_value\x18\f \x01(\tH\tR\runitCostValue\x88\x01\x01\x12A\n" +
-	"\x1bunit_cost_numerator_unit_id\x18\r \x01(\tH\n" +
-	"R\x17unitCostNumeratorUnitId\x88\x01\x01\x12E\n" +
-	"\x1dunit_cost_denominator_unit_id\x18\x0e \x01(\tH\vR\x19unitCostDenominatorUnitId\x88\x01\x01\x12,\n" +
-	"\x10edi_line_item_id\x18\x0f \x01(\tH\fR\rediLineItemId\x88\x01\x01B\r\n" +
+	" \x01(\tH\x06R\x18unitPriceNumeratorUnitId\x88\x01\x01\x12G\n" +
+	"\x1eunit_price_denominator_unit_id\x18\v \x01(\tH\aR\x1aunitPriceDenominatorUnitId\x88\x01\x01\x12+\n" +
+	"\x0funit_cost_value\x18\f \x01(\tH\bR\runitCostValue\x88\x01\x01\x12A\n" +
+	"\x1bunit_cost_numerator_unit_id\x18\r \x01(\tH\tR\x17unitCostNumeratorUnitId\x88\x01\x01\x12E\n" +
+	"\x1dunit_cost_denominator_unit_id\x18\x0e \x01(\tH\n" +
+	"R\x19unitCostDenominatorUnitId\x88\x01\x01\x12,\n" +
+	"\x10edi_line_item_id\x18\x0f \x01(\tH\vR\rediLineItemId\x88\x01\x01B\r\n" +
 	"\v_product_idB\n" +
 	"\n" +
 	"\b_item_idB\x0e\n" +
-	"\f_product_skuB\x16\n" +
-	"\x14_product_descriptionB\x11\n" +
+	"\f_product_skuB\x11\n" +
 	"\x0f_quantity_valueB\x13\n" +
 	"\x11_quantity_unit_idB\x13\n" +
 	"\x11_unit_price_valueB\x1f\n" +
@@ -6984,7 +6983,7 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"\x10_unit_cost_valueB\x1e\n" +
 	"\x1c_unit_cost_numerator_unit_idB \n" +
 	"\x1e_unit_cost_denominator_unit_idB\x13\n" +
-	"\x11_edi_line_item_id\"b\n" +
+	"\x11_edi_line_item_idJ\x04\b\x06\x10\a\"b\n" +
 	"\x1cUpdateSalesOrderLineResponse\x12B\n" +
 	"\x10sales_order_line\x18\x01 \x01(\v2\x18.core.SalesOrderLineInfoR\x0esalesOrderLine\"S\n" +
 	"\x1bDeleteSalesOrderLineRequest\x12$\n" +
@@ -7372,106 +7371,107 @@ var file_core_core_sales_proto_depIdxs = []int32{
 	45,  // 65: core.QuoteSalesOrderLinePricesResponse.lines:type_name -> core.SalesOrderLineQuote
 	82,  // 66: core.CreateSalesOrderProductionRunResponse.production_run:type_name -> core.ProductionRunInfo
 	25,  // 67: core.CreateSalesOrderLineResponse.sales_order_line:type_name -> core.SalesOrderLineInfo
-	25,  // 68: core.UpdateSalesOrderLineResponse.sales_order_line:type_name -> core.SalesOrderLineInfo
-	25,  // 69: core.ReorderSalesOrderLinesResponse.lines:type_name -> core.SalesOrderLineInfo
-	78,  // 70: core.VolumeDiscountTierInfo.created_at:type_name -> google.protobuf.Timestamp
-	78,  // 71: core.VolumeDiscountTierInfo.updated_at:type_name -> google.protobuf.Timestamp
-	78,  // 72: core.VolumeDiscountCustomerGroupInfo.created_at:type_name -> google.protobuf.Timestamp
-	78,  // 73: core.VolumeDiscountCustomerGroupInfo.updated_at:type_name -> google.protobuf.Timestamp
-	78,  // 74: core.VolumeDiscountProductLineInfo.created_at:type_name -> google.protobuf.Timestamp
-	78,  // 75: core.VolumeDiscountProductLineInfo.updated_at:type_name -> google.protobuf.Timestamp
-	78,  // 76: core.VolumeDiscountCategoryInfo.created_at:type_name -> google.protobuf.Timestamp
-	78,  // 77: core.VolumeDiscountCategoryInfo.updated_at:type_name -> google.protobuf.Timestamp
-	78,  // 78: core.VolumeDiscountAttributeInfo.created_at:type_name -> google.protobuf.Timestamp
-	78,  // 79: core.VolumeDiscountAttributeInfo.updated_at:type_name -> google.protobuf.Timestamp
-	78,  // 80: core.VolumeDiscountUnitInfo.created_at:type_name -> google.protobuf.Timestamp
-	78,  // 81: core.VolumeDiscountUnitInfo.updated_at:type_name -> google.protobuf.Timestamp
-	58,  // 82: core.VolumeDiscountInfo.tiers:type_name -> core.VolumeDiscountTierInfo
-	59,  // 83: core.VolumeDiscountInfo.customer_groups:type_name -> core.VolumeDiscountCustomerGroupInfo
-	60,  // 84: core.VolumeDiscountInfo.product_lines:type_name -> core.VolumeDiscountProductLineInfo
-	61,  // 85: core.VolumeDiscountInfo.categories:type_name -> core.VolumeDiscountCategoryInfo
-	62,  // 86: core.VolumeDiscountInfo.attributes:type_name -> core.VolumeDiscountAttributeInfo
-	63,  // 87: core.VolumeDiscountInfo.acceptable_units:type_name -> core.VolumeDiscountUnitInfo
-	78,  // 88: core.VolumeDiscountInfo.created_at:type_name -> google.protobuf.Timestamp
-	78,  // 89: core.VolumeDiscountInfo.updated_at:type_name -> google.protobuf.Timestamp
-	64,  // 90: core.ListVolumeDiscountsResponse.volume_discounts:type_name -> core.VolumeDiscountInfo
-	79,  // 91: core.ListVolumeDiscountsResponse.page_info:type_name -> core.PageInfo
-	64,  // 92: core.GetVolumeDiscountResponse.volume_discount:type_name -> core.VolumeDiscountInfo
-	69,  // 93: core.CreateVolumeDiscountRequest.tiers:type_name -> core.CreateVolumeDiscountTierInput
-	64,  // 94: core.CreateVolumeDiscountResponse.volume_discount:type_name -> core.VolumeDiscountInfo
-	72,  // 95: core.UpdateVolumeDiscountRequest.tiers:type_name -> core.UpdateVolumeDiscountTierInput
-	64,  // 96: core.UpdateVolumeDiscountResponse.volume_discount:type_name -> core.VolumeDiscountInfo
-	4,   // 97: core.CoreSalesService.ListOrderDiscounts:input_type -> core.ListOrderDiscountsRequest
-	6,   // 98: core.CoreSalesService.GetOrderDiscount:input_type -> core.GetOrderDiscountRequest
-	8,   // 99: core.CoreSalesService.CreateOrderDiscount:input_type -> core.CreateOrderDiscountRequest
-	10,  // 100: core.CoreSalesService.UpdateOrderDiscount:input_type -> core.UpdateOrderDiscountRequest
-	12,  // 101: core.CoreSalesService.DeleteOrderDiscount:input_type -> core.DeleteOrderDiscountRequest
-	14,  // 102: core.CoreSalesService.FindOrderDiscountByCode:input_type -> core.FindOrderDiscountByCodeRequest
-	16,  // 103: core.CoreSalesService.BatchGetOrderDiscountsByIDs:input_type -> core.BatchGetOrderDiscountsByIDsRequest
-	18,  // 104: core.CoreSalesService.ListSalesOrderStatuses:input_type -> core.ListSalesOrderStatusesRequest
-	22,  // 105: core.CoreSalesService.BatchGetSalesOrderStatusesByIDs:input_type -> core.BatchGetSalesOrderStatusesByIDsRequest
-	26,  // 106: core.CoreSalesService.ListSalesOrders:input_type -> core.ListSalesOrdersRequest
-	28,  // 107: core.CoreSalesService.GetSalesOrder:input_type -> core.GetSalesOrderRequest
-	20,  // 108: core.CoreSalesService.BatchGetSalesOrdersByIDs:input_type -> core.BatchGetSalesOrdersByIDsRequest
-	30,  // 109: core.CoreSalesService.CreateSalesOrder:input_type -> core.CreateSalesOrderRequest
-	34,  // 110: core.CoreSalesService.UpdateSalesOrder:input_type -> core.UpdateSalesOrderRequest
-	37,  // 111: core.CoreSalesService.DeleteSalesOrder:input_type -> core.DeleteSalesOrderRequest
-	38,  // 112: core.CoreSalesService.BulkDeleteSalesOrders:input_type -> core.BulkDeleteSalesOrdersRequest
-	39,  // 113: core.CoreSalesService.ChangeSalesOrderStatus:input_type -> core.ChangeSalesOrderStatusRequest
-	41,  // 114: core.CoreSalesService.CheckoutSalesOrder:input_type -> core.CheckoutSalesOrderRequest
-	44,  // 115: core.CoreSalesService.QuoteSalesOrderLinePrices:input_type -> core.QuoteSalesOrderLinePricesRequest
-	47,  // 116: core.CoreSalesService.QuoteSalesOrderFreight:input_type -> core.QuoteSalesOrderFreightRequest
-	49,  // 117: core.CoreSalesService.CreateSalesOrderProductionRun:input_type -> core.CreateSalesOrderProductionRunRequest
-	51,  // 118: core.CoreSalesService.CreateSalesOrderLine:input_type -> core.CreateSalesOrderLineRequest
-	65,  // 119: core.CoreSalesService.ListVolumeDiscounts:input_type -> core.ListVolumeDiscountsRequest
-	67,  // 120: core.CoreSalesService.GetVolumeDiscount:input_type -> core.GetVolumeDiscountRequest
-	70,  // 121: core.CoreSalesService.CreateVolumeDiscount:input_type -> core.CreateVolumeDiscountRequest
-	73,  // 122: core.CoreSalesService.UpdateVolumeDiscount:input_type -> core.UpdateVolumeDiscountRequest
-	75,  // 123: core.CoreSalesService.DeleteVolumeDiscount:input_type -> core.DeleteVolumeDiscountRequest
-	53,  // 124: core.CoreSalesService.UpdateSalesOrderLine:input_type -> core.UpdateSalesOrderLineRequest
-	55,  // 125: core.CoreSalesService.DeleteSalesOrderLine:input_type -> core.DeleteSalesOrderLineRequest
-	56,  // 126: core.CoreSalesService.ReorderSalesOrderLines:input_type -> core.ReorderSalesOrderLinesRequest
-	76,  // 127: core.CoreSalesService.CreateCustomerCheckoutSession:input_type -> core.CreateCustomerCheckoutSessionRequest
-	0,   // 128: core.CoreSalesService.RecordOrderPayment:input_type -> core.RecordOrderPaymentRequest
-	1,   // 129: core.CoreSalesService.ProcessAccountStripeWebhook:input_type -> core.ProcessAccountStripeWebhookRequest
-	5,   // 130: core.CoreSalesService.ListOrderDiscounts:output_type -> core.ListOrderDiscountsResponse
-	7,   // 131: core.CoreSalesService.GetOrderDiscount:output_type -> core.GetOrderDiscountResponse
-	9,   // 132: core.CoreSalesService.CreateOrderDiscount:output_type -> core.CreateOrderDiscountResponse
-	11,  // 133: core.CoreSalesService.UpdateOrderDiscount:output_type -> core.UpdateOrderDiscountResponse
-	13,  // 134: core.CoreSalesService.DeleteOrderDiscount:output_type -> core.DeleteOrderDiscountResponse
-	15,  // 135: core.CoreSalesService.FindOrderDiscountByCode:output_type -> core.FindOrderDiscountByCodeResponse
-	17,  // 136: core.CoreSalesService.BatchGetOrderDiscountsByIDs:output_type -> core.BatchGetOrderDiscountsByIDsResponse
-	19,  // 137: core.CoreSalesService.ListSalesOrderStatuses:output_type -> core.ListSalesOrderStatusesResponse
-	23,  // 138: core.CoreSalesService.BatchGetSalesOrderStatusesByIDs:output_type -> core.BatchGetSalesOrderStatusesByIDsResponse
-	27,  // 139: core.CoreSalesService.ListSalesOrders:output_type -> core.ListSalesOrdersResponse
-	29,  // 140: core.CoreSalesService.GetSalesOrder:output_type -> core.GetSalesOrderResponse
-	21,  // 141: core.CoreSalesService.BatchGetSalesOrdersByIDs:output_type -> core.BatchGetSalesOrdersByIDsResponse
-	33,  // 142: core.CoreSalesService.CreateSalesOrder:output_type -> core.CreateSalesOrderResponse
-	36,  // 143: core.CoreSalesService.UpdateSalesOrder:output_type -> core.UpdateSalesOrderResponse
-	83,  // 144: core.CoreSalesService.DeleteSalesOrder:output_type -> google.protobuf.Empty
-	83,  // 145: core.CoreSalesService.BulkDeleteSalesOrders:output_type -> google.protobuf.Empty
-	40,  // 146: core.CoreSalesService.ChangeSalesOrderStatus:output_type -> core.ChangeSalesOrderStatusResponse
-	42,  // 147: core.CoreSalesService.CheckoutSalesOrder:output_type -> core.CheckoutSalesOrderResponse
-	46,  // 148: core.CoreSalesService.QuoteSalesOrderLinePrices:output_type -> core.QuoteSalesOrderLinePricesResponse
-	48,  // 149: core.CoreSalesService.QuoteSalesOrderFreight:output_type -> core.QuoteSalesOrderFreightResponse
-	50,  // 150: core.CoreSalesService.CreateSalesOrderProductionRun:output_type -> core.CreateSalesOrderProductionRunResponse
-	52,  // 151: core.CoreSalesService.CreateSalesOrderLine:output_type -> core.CreateSalesOrderLineResponse
-	66,  // 152: core.CoreSalesService.ListVolumeDiscounts:output_type -> core.ListVolumeDiscountsResponse
-	68,  // 153: core.CoreSalesService.GetVolumeDiscount:output_type -> core.GetVolumeDiscountResponse
-	71,  // 154: core.CoreSalesService.CreateVolumeDiscount:output_type -> core.CreateVolumeDiscountResponse
-	74,  // 155: core.CoreSalesService.UpdateVolumeDiscount:output_type -> core.UpdateVolumeDiscountResponse
-	83,  // 156: core.CoreSalesService.DeleteVolumeDiscount:output_type -> google.protobuf.Empty
-	54,  // 157: core.CoreSalesService.UpdateSalesOrderLine:output_type -> core.UpdateSalesOrderLineResponse
-	83,  // 158: core.CoreSalesService.DeleteSalesOrderLine:output_type -> google.protobuf.Empty
-	57,  // 159: core.CoreSalesService.ReorderSalesOrderLines:output_type -> core.ReorderSalesOrderLinesResponse
-	77,  // 160: core.CoreSalesService.CreateCustomerCheckoutSession:output_type -> core.CreateCustomerCheckoutSessionResponse
-	83,  // 161: core.CoreSalesService.RecordOrderPayment:output_type -> google.protobuf.Empty
-	83,  // 162: core.CoreSalesService.ProcessAccountStripeWebhook:output_type -> google.protobuf.Empty
-	130, // [130:163] is the sub-list for method output_type
-	97,  // [97:130] is the sub-list for method input_type
-	97,  // [97:97] is the sub-list for extension type_name
-	97,  // [97:97] is the sub-list for extension extendee
-	0,   // [0:97] is the sub-list for field type_name
+	80,  // 68: core.UpdateSalesOrderLineRequest.product_description:type_name -> core.StringPatch
+	25,  // 69: core.UpdateSalesOrderLineResponse.sales_order_line:type_name -> core.SalesOrderLineInfo
+	25,  // 70: core.ReorderSalesOrderLinesResponse.lines:type_name -> core.SalesOrderLineInfo
+	78,  // 71: core.VolumeDiscountTierInfo.created_at:type_name -> google.protobuf.Timestamp
+	78,  // 72: core.VolumeDiscountTierInfo.updated_at:type_name -> google.protobuf.Timestamp
+	78,  // 73: core.VolumeDiscountCustomerGroupInfo.created_at:type_name -> google.protobuf.Timestamp
+	78,  // 74: core.VolumeDiscountCustomerGroupInfo.updated_at:type_name -> google.protobuf.Timestamp
+	78,  // 75: core.VolumeDiscountProductLineInfo.created_at:type_name -> google.protobuf.Timestamp
+	78,  // 76: core.VolumeDiscountProductLineInfo.updated_at:type_name -> google.protobuf.Timestamp
+	78,  // 77: core.VolumeDiscountCategoryInfo.created_at:type_name -> google.protobuf.Timestamp
+	78,  // 78: core.VolumeDiscountCategoryInfo.updated_at:type_name -> google.protobuf.Timestamp
+	78,  // 79: core.VolumeDiscountAttributeInfo.created_at:type_name -> google.protobuf.Timestamp
+	78,  // 80: core.VolumeDiscountAttributeInfo.updated_at:type_name -> google.protobuf.Timestamp
+	78,  // 81: core.VolumeDiscountUnitInfo.created_at:type_name -> google.protobuf.Timestamp
+	78,  // 82: core.VolumeDiscountUnitInfo.updated_at:type_name -> google.protobuf.Timestamp
+	58,  // 83: core.VolumeDiscountInfo.tiers:type_name -> core.VolumeDiscountTierInfo
+	59,  // 84: core.VolumeDiscountInfo.customer_groups:type_name -> core.VolumeDiscountCustomerGroupInfo
+	60,  // 85: core.VolumeDiscountInfo.product_lines:type_name -> core.VolumeDiscountProductLineInfo
+	61,  // 86: core.VolumeDiscountInfo.categories:type_name -> core.VolumeDiscountCategoryInfo
+	62,  // 87: core.VolumeDiscountInfo.attributes:type_name -> core.VolumeDiscountAttributeInfo
+	63,  // 88: core.VolumeDiscountInfo.acceptable_units:type_name -> core.VolumeDiscountUnitInfo
+	78,  // 89: core.VolumeDiscountInfo.created_at:type_name -> google.protobuf.Timestamp
+	78,  // 90: core.VolumeDiscountInfo.updated_at:type_name -> google.protobuf.Timestamp
+	64,  // 91: core.ListVolumeDiscountsResponse.volume_discounts:type_name -> core.VolumeDiscountInfo
+	79,  // 92: core.ListVolumeDiscountsResponse.page_info:type_name -> core.PageInfo
+	64,  // 93: core.GetVolumeDiscountResponse.volume_discount:type_name -> core.VolumeDiscountInfo
+	69,  // 94: core.CreateVolumeDiscountRequest.tiers:type_name -> core.CreateVolumeDiscountTierInput
+	64,  // 95: core.CreateVolumeDiscountResponse.volume_discount:type_name -> core.VolumeDiscountInfo
+	72,  // 96: core.UpdateVolumeDiscountRequest.tiers:type_name -> core.UpdateVolumeDiscountTierInput
+	64,  // 97: core.UpdateVolumeDiscountResponse.volume_discount:type_name -> core.VolumeDiscountInfo
+	4,   // 98: core.CoreSalesService.ListOrderDiscounts:input_type -> core.ListOrderDiscountsRequest
+	6,   // 99: core.CoreSalesService.GetOrderDiscount:input_type -> core.GetOrderDiscountRequest
+	8,   // 100: core.CoreSalesService.CreateOrderDiscount:input_type -> core.CreateOrderDiscountRequest
+	10,  // 101: core.CoreSalesService.UpdateOrderDiscount:input_type -> core.UpdateOrderDiscountRequest
+	12,  // 102: core.CoreSalesService.DeleteOrderDiscount:input_type -> core.DeleteOrderDiscountRequest
+	14,  // 103: core.CoreSalesService.FindOrderDiscountByCode:input_type -> core.FindOrderDiscountByCodeRequest
+	16,  // 104: core.CoreSalesService.BatchGetOrderDiscountsByIDs:input_type -> core.BatchGetOrderDiscountsByIDsRequest
+	18,  // 105: core.CoreSalesService.ListSalesOrderStatuses:input_type -> core.ListSalesOrderStatusesRequest
+	22,  // 106: core.CoreSalesService.BatchGetSalesOrderStatusesByIDs:input_type -> core.BatchGetSalesOrderStatusesByIDsRequest
+	26,  // 107: core.CoreSalesService.ListSalesOrders:input_type -> core.ListSalesOrdersRequest
+	28,  // 108: core.CoreSalesService.GetSalesOrder:input_type -> core.GetSalesOrderRequest
+	20,  // 109: core.CoreSalesService.BatchGetSalesOrdersByIDs:input_type -> core.BatchGetSalesOrdersByIDsRequest
+	30,  // 110: core.CoreSalesService.CreateSalesOrder:input_type -> core.CreateSalesOrderRequest
+	34,  // 111: core.CoreSalesService.UpdateSalesOrder:input_type -> core.UpdateSalesOrderRequest
+	37,  // 112: core.CoreSalesService.DeleteSalesOrder:input_type -> core.DeleteSalesOrderRequest
+	38,  // 113: core.CoreSalesService.BulkDeleteSalesOrders:input_type -> core.BulkDeleteSalesOrdersRequest
+	39,  // 114: core.CoreSalesService.ChangeSalesOrderStatus:input_type -> core.ChangeSalesOrderStatusRequest
+	41,  // 115: core.CoreSalesService.CheckoutSalesOrder:input_type -> core.CheckoutSalesOrderRequest
+	44,  // 116: core.CoreSalesService.QuoteSalesOrderLinePrices:input_type -> core.QuoteSalesOrderLinePricesRequest
+	47,  // 117: core.CoreSalesService.QuoteSalesOrderFreight:input_type -> core.QuoteSalesOrderFreightRequest
+	49,  // 118: core.CoreSalesService.CreateSalesOrderProductionRun:input_type -> core.CreateSalesOrderProductionRunRequest
+	51,  // 119: core.CoreSalesService.CreateSalesOrderLine:input_type -> core.CreateSalesOrderLineRequest
+	65,  // 120: core.CoreSalesService.ListVolumeDiscounts:input_type -> core.ListVolumeDiscountsRequest
+	67,  // 121: core.CoreSalesService.GetVolumeDiscount:input_type -> core.GetVolumeDiscountRequest
+	70,  // 122: core.CoreSalesService.CreateVolumeDiscount:input_type -> core.CreateVolumeDiscountRequest
+	73,  // 123: core.CoreSalesService.UpdateVolumeDiscount:input_type -> core.UpdateVolumeDiscountRequest
+	75,  // 124: core.CoreSalesService.DeleteVolumeDiscount:input_type -> core.DeleteVolumeDiscountRequest
+	53,  // 125: core.CoreSalesService.UpdateSalesOrderLine:input_type -> core.UpdateSalesOrderLineRequest
+	55,  // 126: core.CoreSalesService.DeleteSalesOrderLine:input_type -> core.DeleteSalesOrderLineRequest
+	56,  // 127: core.CoreSalesService.ReorderSalesOrderLines:input_type -> core.ReorderSalesOrderLinesRequest
+	76,  // 128: core.CoreSalesService.CreateCustomerCheckoutSession:input_type -> core.CreateCustomerCheckoutSessionRequest
+	0,   // 129: core.CoreSalesService.RecordOrderPayment:input_type -> core.RecordOrderPaymentRequest
+	1,   // 130: core.CoreSalesService.ProcessAccountStripeWebhook:input_type -> core.ProcessAccountStripeWebhookRequest
+	5,   // 131: core.CoreSalesService.ListOrderDiscounts:output_type -> core.ListOrderDiscountsResponse
+	7,   // 132: core.CoreSalesService.GetOrderDiscount:output_type -> core.GetOrderDiscountResponse
+	9,   // 133: core.CoreSalesService.CreateOrderDiscount:output_type -> core.CreateOrderDiscountResponse
+	11,  // 134: core.CoreSalesService.UpdateOrderDiscount:output_type -> core.UpdateOrderDiscountResponse
+	13,  // 135: core.CoreSalesService.DeleteOrderDiscount:output_type -> core.DeleteOrderDiscountResponse
+	15,  // 136: core.CoreSalesService.FindOrderDiscountByCode:output_type -> core.FindOrderDiscountByCodeResponse
+	17,  // 137: core.CoreSalesService.BatchGetOrderDiscountsByIDs:output_type -> core.BatchGetOrderDiscountsByIDsResponse
+	19,  // 138: core.CoreSalesService.ListSalesOrderStatuses:output_type -> core.ListSalesOrderStatusesResponse
+	23,  // 139: core.CoreSalesService.BatchGetSalesOrderStatusesByIDs:output_type -> core.BatchGetSalesOrderStatusesByIDsResponse
+	27,  // 140: core.CoreSalesService.ListSalesOrders:output_type -> core.ListSalesOrdersResponse
+	29,  // 141: core.CoreSalesService.GetSalesOrder:output_type -> core.GetSalesOrderResponse
+	21,  // 142: core.CoreSalesService.BatchGetSalesOrdersByIDs:output_type -> core.BatchGetSalesOrdersByIDsResponse
+	33,  // 143: core.CoreSalesService.CreateSalesOrder:output_type -> core.CreateSalesOrderResponse
+	36,  // 144: core.CoreSalesService.UpdateSalesOrder:output_type -> core.UpdateSalesOrderResponse
+	83,  // 145: core.CoreSalesService.DeleteSalesOrder:output_type -> google.protobuf.Empty
+	83,  // 146: core.CoreSalesService.BulkDeleteSalesOrders:output_type -> google.protobuf.Empty
+	40,  // 147: core.CoreSalesService.ChangeSalesOrderStatus:output_type -> core.ChangeSalesOrderStatusResponse
+	42,  // 148: core.CoreSalesService.CheckoutSalesOrder:output_type -> core.CheckoutSalesOrderResponse
+	46,  // 149: core.CoreSalesService.QuoteSalesOrderLinePrices:output_type -> core.QuoteSalesOrderLinePricesResponse
+	48,  // 150: core.CoreSalesService.QuoteSalesOrderFreight:output_type -> core.QuoteSalesOrderFreightResponse
+	50,  // 151: core.CoreSalesService.CreateSalesOrderProductionRun:output_type -> core.CreateSalesOrderProductionRunResponse
+	52,  // 152: core.CoreSalesService.CreateSalesOrderLine:output_type -> core.CreateSalesOrderLineResponse
+	66,  // 153: core.CoreSalesService.ListVolumeDiscounts:output_type -> core.ListVolumeDiscountsResponse
+	68,  // 154: core.CoreSalesService.GetVolumeDiscount:output_type -> core.GetVolumeDiscountResponse
+	71,  // 155: core.CoreSalesService.CreateVolumeDiscount:output_type -> core.CreateVolumeDiscountResponse
+	74,  // 156: core.CoreSalesService.UpdateVolumeDiscount:output_type -> core.UpdateVolumeDiscountResponse
+	83,  // 157: core.CoreSalesService.DeleteVolumeDiscount:output_type -> google.protobuf.Empty
+	54,  // 158: core.CoreSalesService.UpdateSalesOrderLine:output_type -> core.UpdateSalesOrderLineResponse
+	83,  // 159: core.CoreSalesService.DeleteSalesOrderLine:output_type -> google.protobuf.Empty
+	57,  // 160: core.CoreSalesService.ReorderSalesOrderLines:output_type -> core.ReorderSalesOrderLinesResponse
+	77,  // 161: core.CoreSalesService.CreateCustomerCheckoutSession:output_type -> core.CreateCustomerCheckoutSessionResponse
+	83,  // 162: core.CoreSalesService.RecordOrderPayment:output_type -> google.protobuf.Empty
+	83,  // 163: core.CoreSalesService.ProcessAccountStripeWebhook:output_type -> google.protobuf.Empty
+	131, // [131:164] is the sub-list for method output_type
+	98,  // [98:131] is the sub-list for method input_type
+	98,  // [98:98] is the sub-list for extension type_name
+	98,  // [98:98] is the sub-list for extension extendee
+	0,   // [0:98] is the sub-list for field type_name
 }
 
 func init() { file_core_core_sales_proto_init() }

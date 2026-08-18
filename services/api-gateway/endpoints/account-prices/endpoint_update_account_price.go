@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
+	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
@@ -21,12 +22,10 @@ type UpdateAccountPriceRequest struct {
 	RecipientAccountID field.Optional[string] `json:"recipient_account_id,omitzero" validate:"omitempty"`
 	// ID of the product line whose products this price applies to.
 	ProductLineID field.Optional[string] `json:"product_line_id,omitzero" validate:"omitempty"`
-	// The price the recipient pays, as a decimal string.
-	RateValue field.Optional[string] `json:"rate_value,omitzero"`
-	// ID of the unit for the rate's numerator, typically a currency unit.
-	RateNumeratorUnitID field.Optional[string] `json:"rate_numerator_unit_id,omitzero" validate:"omitempty"`
-	// ID of the unit for the rate's denominator — the quantity unit being priced.
-	RateDenominatorUnitID field.Optional[string] `json:"rate_denominator_unit_id,omitzero" validate:"omitempty"`
+	// The price the recipient pays.
+	//
+	// Supplied whole: send the value together with both units, since the rate is replaced rather than merged field by field.
+	Rate field.Optional[apirequest.RateInput] `json:"rate,omitzero"`
 	// Item category IDs to record on this price.
 	//
 	// When provided, replaces the existing set of categories entirely; an empty list removes them all. Categories are recorded only — they do not narrow which products the price applies to.
@@ -38,7 +37,11 @@ type UpdateAccountPriceRequest struct {
 }
 
 var sampleUpdateAccountPriceRequest = &UpdateAccountPriceRequest{
-	RateValue: field.Some("30.000000000000000000000000000000"),
+	Rate: field.Some(apirequest.RateInput{
+		Value:             "30.000000000000000000000000000000",
+		NumeratorUnitID:   apiresource.SampleUnitID,
+		DenominatorUnitID: apiresource.SampleUnitID,
+	}),
 }
 
 func (*UpdateAccountPriceRequest) SchemaExample() any {
@@ -59,7 +62,8 @@ func (e *UpdateAccountPriceEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upd
 		Route:             "/v1/sales/account-prices/{id}",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeAccountPrice,
 		RequiredPermissions: []types.Permission{

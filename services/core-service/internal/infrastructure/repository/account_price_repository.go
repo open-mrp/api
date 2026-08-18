@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	gosql "database/sql"
+	"errors"
 	"time"
 
 	"github.com/augno/api/services/core-service/internal/domain"
@@ -222,11 +223,43 @@ func (r *accountPriceRepoImpl) fetchCategoriesAndAttributes(ctx context.Context,
 	return nil
 }
 
-func buildRecipientFilter(recipientAccountID *string) gosql.NullString {
-	if recipientAccountID == nil || *recipientAccountID == "" {
-		return gosql.NullString{}
+// ResolveRecipientAccountIDs expands a customer into the set of accounts whose prices reach
+// it: itself, plus its parent when it is a child account. A price recorded against a parent
+// applies to orders its children place, so filtering on the customer alone would hide prices
+// that in fact price their orders.
+func (r *accountPriceRepoImpl) ResolveRecipientAccountIDs(ctx context.Context, ownerAccountID, customerAccountID string) ([]string, *apierror.APIError) {
+	ctx, span := accountPriceRepoTracer.Start(ctx, "repository.account_price.resolve_recipient_account_ids")
+	defer span.End()
+
+	ids := []string{customerAccountID}
+
+	parentID, err := r.queries.GetBuyerParentAccountID(ctx, sqlc.GetBuyerParentAccountIDParams{
+		OwnerAccountID:    ownerAccountID,
+		CustomerAccountID: customerAccountID,
+	})
+	switch {
+	case err == nil:
+		if parentID != "" && parentID != customerAccountID {
+			ids = append(ids, parentID)
+		}
+	case errors.Is(err, gosql.ErrNoRows):
+		// Standalone or parent account; only its own prices apply.
+	default:
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 	}
-	return gosql.NullString{String: *recipientAccountID, Valid: true}
+
+	return ids, nil
+}
+
+// sqlc renders an empty IN list as invalid SQL, so the flag carries "no filter" and the
+// slice is only read when it is set.
+func buildRecipientFilter(recipientAccountIDs []string) (bool, []string) {
+	if len(recipientAccountIDs) == 0 {
+		return false, []string{""}
+	}
+	return true, recipientAccountIDs
 }
 
 func buildAccountPriceSearchParams(query *string) gosql.NullString {
@@ -240,7 +273,7 @@ func (r *accountPriceRepoImpl) List(ctx context.Context, params domain.ListAccou
 	ctx, span := accountPriceRepoTracer.Start(ctx, "repository.account_price.list")
 	defer span.End()
 
-	recipientFilter := buildRecipientFilter(params.RecipientAccountID)
+	includeRecipientFilter, recipientAccountIDs := buildRecipientFilter(params.RecipientAccountIDs)
 	searchQuery := buildAccountPriceSearchParams(params.Query)
 
 	var cursorDir *pagination.Direction
@@ -254,12 +287,13 @@ func (r *accountPriceRepoImpl) List(ctx context.Context, params domain.ListAccou
 
 		if cur.Direction == pagination.DirectionBackward {
 			rows, err := r.queries.ListAccountPricesBackward(ctx, sqlc.ListAccountPricesBackwardParams{
-				OwnerAccountID:     params.AccountID,
-				RecipientAccountID: recipientFilter,
-				SearchQuery:        searchQuery,
-				CursorCreatedAt:    cur.OccurredAt,
-				CursorID:           cur.ID,
-				Limit:              params.Limit + 1,
+				OwnerAccountID:         params.AccountID,
+				IncludeRecipientFilter: includeRecipientFilter,
+				RecipientAccountIds:    recipientAccountIDs,
+				SearchQuery:            searchQuery,
+				CursorCreatedAt:        cur.OccurredAt,
+				CursorID:               cur.ID,
+				Limit:                  params.Limit + 1,
 			})
 			if apiErr := db.MapSQLError(err); apiErr != nil {
 				return nil, tracing.Trace(span, apiErr)
@@ -277,12 +311,13 @@ func (r *accountPriceRepoImpl) List(ctx context.Context, params domain.ListAccou
 
 		// Forward with cursor
 		rows, err := r.queries.ListAccountPricesForward(ctx, sqlc.ListAccountPricesForwardParams{
-			OwnerAccountID:     params.AccountID,
-			RecipientAccountID: recipientFilter,
-			SearchQuery:        searchQuery,
-			CursorCreatedAt:    gosql.NullTime{Time: cur.OccurredAt, Valid: true},
-			CursorID:           gosql.NullString{String: cur.ID, Valid: true},
-			Limit:              params.Limit + 1,
+			OwnerAccountID:         params.AccountID,
+			IncludeRecipientFilter: includeRecipientFilter,
+			RecipientAccountIds:    recipientAccountIDs,
+			SearchQuery:            searchQuery,
+			CursorCreatedAt:        gosql.NullTime{Time: cur.OccurredAt, Valid: true},
+			CursorID:               gosql.NullString{String: cur.ID, Valid: true},
+			Limit:                  params.Limit + 1,
 		})
 		if apiErr := db.MapSQLError(err); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
@@ -300,10 +335,11 @@ func (r *accountPriceRepoImpl) List(ctx context.Context, params domain.ListAccou
 
 	// No cursor — first page
 	rows, err := r.queries.ListAccountPricesForward(ctx, sqlc.ListAccountPricesForwardParams{
-		OwnerAccountID:     params.AccountID,
-		RecipientAccountID: recipientFilter,
-		SearchQuery:        searchQuery,
-		Limit:              params.Limit + 1,
+		OwnerAccountID:         params.AccountID,
+		IncludeRecipientFilter: includeRecipientFilter,
+		RecipientAccountIds:    recipientAccountIDs,
+		SearchQuery:            searchQuery,
+		Limit:                  params.Limit + 1,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)

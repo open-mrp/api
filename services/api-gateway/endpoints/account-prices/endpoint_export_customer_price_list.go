@@ -40,7 +40,7 @@ func (e *ExportPriceListEndpoint) Materialize() *apiendpoint.APIEndpoint[*Export
 		ContentType:       "application/json",
 		Route:             "/v1/sales/account-prices/actions/export-price-list",
 		SuccessStatusCode: http.StatusAccepted,
-		Public:            false,
+		Public:            true,
 		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeJob,

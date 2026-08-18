@@ -1030,3 +1030,181 @@ func TestUnitGroups_RequestLogs(t *testing.T) {
 
 	expectRequestLog(t, "POST", "201", unitGroupsPath)
 }
+
+// ── Discounts (account prices, volume discounts, order discounts) ──────────
+//
+// These three resources are agent-invocable and publicly documented, so every
+// mutation an agent or an integration can make has to leave a trail. The tests
+// assert the full create/update/delete cycle rather than just create, and read
+// the field-level changes so a resource whose domain struct lost its `audit`
+// tags (which would silently drop the update event, since Publish skips an
+// update with no changes and no metadata) fails here.
+
+func TestAccountPrices_AuditEvents(t *testing.T) {
+	t.Parallel()
+	created := createAndCleanup(t, accountPricesPath, map[string]any{
+		"recipient_account_id": SeedCustomerAccountID,
+		"product_line_id":      SeedProductLineID,
+		"rate": map[string]any{
+			"value":               "13.13",
+			"numerator_unit_id":   e2eCurrencyUnitID,
+			"denominator_unit_id": SeedUnitID,
+		},
+	})
+	priceID := jsonField(created, "id")
+
+	createdEvent := expectAuditEventWithChanges(t, priceID, "account_price", "create")
+	rateCreate, ok := changeForField(jsonListData(createdEvent, "changes"), "rate_value")
+	require.True(t, ok, "create audit event should record the rate value")
+	assertNilField(t, rateCreate, "old_value")
+	assertDecimalEquals(t, 13.13, jsonField(rateCreate, "new_value"), "audited new rate_value")
+
+	patchStatus, patchBody, err := apiClient.Patch(accountPricesPath+"/"+priceID, map[string]any{
+		"rate": map[string]any{
+			"value":               "14.14",
+			"numerator_unit_id":   e2eCurrencyUnitID,
+			"denominator_unit_id": SeedUnitID,
+		},
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, patchStatus, patchBody)
+
+	updatedEvent := expectAuditEventWithChanges(t, priceID, "account_price", "update")
+	rateUpdate, ok := changeForField(jsonListData(updatedEvent, "changes"), "rate_value")
+	require.True(t, ok, "update audit event should record the rate change")
+	assertDecimalEquals(t, 13.13, jsonField(rateUpdate, "old_value"), "audited old rate_value")
+	assertDecimalEquals(t, 14.14, jsonField(rateUpdate, "new_value"), "audited new rate_value")
+
+	delStatus, delBody, err := apiClient.Delete(accountPricesPath + "/" + priceID)
+	require.NoError(t, err)
+	requireStatus(t, 200, delStatus, delBody)
+
+	deletedEvent := expectAuditEventWithChanges(t, priceID, "account_price", "delete")
+	rateDelete, ok := changeForField(jsonListData(deletedEvent, "changes"), "rate_value")
+	require.True(t, ok, "delete audit event should record the rate that was removed")
+	assertDecimalEquals(t, 14.14, jsonField(rateDelete, "old_value"), "audited removed rate_value")
+}
+
+// Account-price associations are loaded unconditionally by the repository rather than
+// from the request's includes, so this pins that a categories-only edit is audited — the
+// same class of gap that made a scope-only volume-discount edit invisible.
+func TestAccountPrices_AuditRecordsCategoryOnlyChange(t *testing.T) {
+	t.Parallel()
+	created := createAndCleanup(t, accountPricesPath, map[string]any{
+		"recipient_account_id": SeedCustomerAccountID,
+		"product_line_id":      SeedProductLineID,
+		"rate": map[string]any{
+			"value":               "15.15",
+			"numerator_unit_id":   e2eCurrencyUnitID,
+			"denominator_unit_id": SeedUnitID,
+		},
+	})
+	priceID := jsonField(created, "id")
+	expectAuditEvent(t, priceID, "account_price", "create")
+
+	patchStatus, patchBody, err := apiClient.Patch(accountPricesPath+"/"+priceID,
+		map[string]any{"category_ids": []string{SeedItemCategoryID}}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, patchStatus, patchBody)
+
+	updatedEvent := expectAuditEventWithChanges(t, priceID, "account_price", "update")
+	_, ok := changeForField(jsonListData(updatedEvent, "changes"), "categories")
+	assert.True(t, ok, "adding a category to a price should be audited")
+}
+
+func TestVolumeDiscounts_AuditEvents(t *testing.T) {
+	t.Parallel()
+	name := uniqueName("e2e-quds-audit")
+	created := createAndCleanup(t, volumeDiscountsPath, map[string]any{
+		"name":  name,
+		"tiers": []map[string]any{{"name": "Tier 1", "discount_percentage": "0.05", "threshold": "100"}},
+	})
+	discountID := jsonField(created, "id")
+
+	createdEvent := expectAuditEventWithChanges(t, discountID, "volume_discount", "create")
+	nameCreate, ok := changeForField(jsonListData(createdEvent, "changes"), "name")
+	require.True(t, ok, "create audit event should record the name")
+	assertNilField(t, nameCreate, "old_value")
+	assert.Equal(t, name, jsonField(nameCreate, "new_value"))
+
+	renamed := uniqueName("e2e-quds-audit-u")
+	patchStatus, patchBody, err := apiClient.Patch(volumeDiscountsPath+"/"+discountID,
+		map[string]any{"name": renamed}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, patchStatus, patchBody)
+
+	updatedEvent := expectAuditEventWithChanges(t, discountID, "volume_discount", "update")
+	nameUpdate, ok := changeForField(jsonListData(updatedEvent, "changes"), "name")
+	require.True(t, ok, "update audit event should record the name change")
+	assert.Equal(t, name, jsonField(nameUpdate, "old_value"))
+	assert.Equal(t, renamed, jsonField(nameUpdate, "new_value"))
+
+	delStatus, delBody, err := apiClient.Delete(volumeDiscountsPath + "/" + discountID)
+	require.NoError(t, err)
+	requireStatus(t, 200, delStatus, delBody)
+
+	deletedEvent := expectAuditEventWithChanges(t, discountID, "volume_discount", "delete")
+	assert.NotEmpty(t, jsonListData(deletedEvent, "changes"), "delete audit event should record the removed values")
+}
+
+// A scope-only change carries no name diff, so this pins that the tier and
+// customer-group edits agents can make are still audited rather than skipped as
+// an empty update.
+func TestVolumeDiscounts_AuditRecordsScopeOnlyChange(t *testing.T) {
+	t.Parallel()
+	created := createAndCleanup(t, volumeDiscountsPath, map[string]any{
+		"name":  uniqueName("e2e-quds-audit-scope"),
+		"tiers": []map[string]any{{"name": "Tier 1", "discount_percentage": "0.05", "threshold": "100"}},
+	})
+	discountID := jsonField(created, "id")
+	expectAuditEvent(t, discountID, "volume_discount", "create")
+
+	patchStatus, patchBody, err := apiClient.Patch(volumeDiscountsPath+"/"+discountID, map[string]any{
+		"has_customer_groups": true,
+		"customer_group_ids":  []string{SeedCustomerGroupID},
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, patchStatus, patchBody)
+
+	updatedEvent := expectAuditEventWithChanges(t, discountID, "volume_discount", "update")
+	_, ok := changeForField(jsonListData(updatedEvent, "changes"), "customer_groups")
+	assert.True(t, ok, "scoping a discount to a customer group should be audited")
+}
+
+func TestOrderDiscounts_AuditEvents(t *testing.T) {
+	t.Parallel()
+	name := uniqueName("e2e-ords-audit")
+	created := createAndCleanup(t, orderDiscountsPath, map[string]any{
+		"name":          name,
+		"code":          uniqueName("E2EAUDIT"),
+		"discount_type": "percentage",
+		"percentage":    "0.1",
+	})
+	discountID := jsonField(created, "id")
+
+	createdEvent := expectAuditEventWithChanges(t, discountID, "order_discount", "create")
+	nameCreate, ok := changeForField(jsonListData(createdEvent, "changes"), "name")
+	require.True(t, ok, "create audit event should record the name")
+	assertNilField(t, nameCreate, "old_value")
+	assert.Equal(t, name, jsonField(nameCreate, "new_value"))
+
+	patchStatus, patchBody, err := apiClient.Patch(orderDiscountsPath+"/"+discountID,
+		map[string]any{"discount_type": "amount", "amount": "7.00"}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, patchStatus, patchBody)
+
+	updatedEvent := expectAuditEventWithChanges(t, discountID, "order_discount", "update")
+	typeUpdate, ok := changeForField(jsonListData(updatedEvent, "changes"), "discount_type_code")
+	require.True(t, ok, "switching the discount type should be audited")
+	assert.Equal(t, "percentage", jsonField(typeUpdate, "old_value"))
+	assert.Equal(t, "amount", jsonField(typeUpdate, "new_value"))
+
+	delStatus, delBody, err := apiClient.Delete(orderDiscountsPath + "/" + discountID)
+	require.NoError(t, err)
+	requireStatus(t, 200, delStatus, delBody)
+
+	deletedEvent := expectAuditEventWithChanges(t, discountID, "order_discount", "delete")
+	nameDelete, ok := changeForField(jsonListData(deletedEvent, "changes"), "name")
+	require.True(t, ok, "delete audit event should record the name that was removed")
+	assert.Equal(t, name, jsonField(nameDelete, "old_value"))
+}

@@ -639,6 +639,7 @@ resources:
           create_account_price_request: '#/components/schemas/CreateAccountPriceRequest'
           list_account_price: '#/components/schemas/List_AccountPrice'
           list_item_category: '#/components/schemas/List_ItemCategory'
+          rate_input: '#/components/schemas/RateInput'
           update_account_price_request: '#/components/schemas/UpdateAccountPriceRequest'
       addresses:
         methods:
@@ -804,7 +805,6 @@ resources:
           quote_sales_order_prices_request: '#/components/schemas/QuoteSalesOrderPricesRequest'
           quote_sales_order_prices_response: '#/components/schemas/QuoteSalesOrderPricesResponse'
           quoted_sales_order_line: '#/components/schemas/QuotedSalesOrderLine'
-          rate_input: '#/components/schemas/RateInput'
           record: '#/components/schemas/Record'
           sales_order: '#/components/schemas/SalesOrder'
           sales_order_email_contact_input: '#/components/schemas/SalesOrderEmailContactInput'

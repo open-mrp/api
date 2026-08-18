@@ -76,7 +76,9 @@ INSERT INTO sales_order_line (
 -- name: UpdateSalesOrderLine :exec
 UPDATE sales_order_line SET
     product_sku = COALESCE(sqlc.narg('product_sku'), product_sku),
-    product_description = COALESCE(sqlc.narg('product_description'), product_description),
+    -- Clearable (no COALESCE): the service backfills an omitted description from the
+    -- existing row, so NULL here is an explicit clear rather than "leave alone".
+    product_description = sqlc.narg('product_description'),
     product_id = COALESCE(sqlc.narg('product_id'), product_id),
     item_id = COALESCE(sqlc.narg('item_id'), item_id),
     edi_line_item_id = COALESCE(sqlc.narg('edi_line_item_id'), edi_line_item_id),

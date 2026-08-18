@@ -453,6 +453,11 @@ func (s *salesOrderLineSvcImpl) UpdateSalesOrderLine(ctx context.Context, params
 				return apiErr
 			}
 
+			// The description column is written without COALESCE so a clear can reach it, which
+			// makes an omitted field indistinguishable from a clear by the time it gets to SQL.
+			// Backfill it from the existing line to restore the three-state contract.
+			params.ProductDescription = params.ProductDescription.BackfillUnsetPtr(old.ProductDescription)
+
 			updated, apiErr := txLineRepo.Update(txCtx, params)
 			if apiErr != nil {
 				return apiErr

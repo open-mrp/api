@@ -756,6 +756,36 @@ resources:
           create_account_group_request: '#/components/schemas/CreateAccountGroupRequest'
           list_account_group: '#/components/schemas/List_AccountGroup'
           update_account_group_request: '#/components/schemas/UpdateAccountGroupRequest'
+      account_prices:
+        methods:
+          list: get /v1/sales/account-prices
+          retrieve: get /v1/sales/account-prices/{id}
+          create: post /v1/sales/account-prices
+          update: patch /v1/sales/account-prices/{id}
+          delete: delete /v1/sales/account-prices/{id}
+        subresources:
+          actions:
+            methods:
+              export_price_list: post /v1/sales/account-prices/actions/export-price-list
+            models:
+              export_price_list_request: '#/components/schemas/ExportPriceListRequest'
+        models:
+          account_price: '#/components/schemas/AccountPrice'
+          carrier: '#/components/schemas/Carrier'
+          create_account_price_request: '#/components/schemas/CreateAccountPriceRequest'
+          customer: '#/components/schemas/Customer'
+          customer_contact_info: '#/components/schemas/CustomerContactInfo'
+          customer_defaults: '#/components/schemas/CustomerDefaults'
+          customer_freight_preferences: '#/components/schemas/CustomerFreightPreferences'
+          customer_notification_preferences: '#/components/schemas/CustomerNotificationPreferences'
+          list_account_price: '#/components/schemas/List_AccountPrice'
+          list_customer: '#/components/schemas/List_Customer'
+          list_service_level: '#/components/schemas/List_ServiceLevel'
+          payment_term: '#/components/schemas/PaymentTerm'
+          priority: '#/components/schemas/Priority'
+          service_level: '#/components/schemas/ServiceLevel'
+          shipping_term: '#/components/schemas/ShippingTerm'
+          update_account_price_request: '#/components/schemas/UpdateAccountPriceRequest'
       addresses:
         methods:
           list: get /v1/sales/addresses
@@ -792,7 +822,6 @@ resources:
           retrieve: get /v1/sales/priorities/{id}
         models:
           list_priority: '#/components/schemas/List_Priority'
-          priority: '#/components/schemas/Priority'
       customers:
         methods:
           list: get /v1/sales/customers
@@ -808,19 +837,8 @@ resources:
             models:
               merge_customers_request: '#/components/schemas/MergeCustomersRequest'
         models:
-          carrier: '#/components/schemas/Carrier'
           create_customer_request: '#/components/schemas/CreateCustomerRequest'
-          customer: '#/components/schemas/Customer'
-          customer_contact_info: '#/components/schemas/CustomerContactInfo'
-          customer_defaults: '#/components/schemas/CustomerDefaults'
-          customer_freight_preferences: '#/components/schemas/CustomerFreightPreferences'
           customer_lead_time: '#/components/schemas/CustomerLeadTime'
-          customer_notification_preferences: '#/components/schemas/CustomerNotificationPreferences'
-          list_customer: '#/components/schemas/List_Customer'
-          list_service_level: '#/components/schemas/List_ServiceLevel'
-          payment_term: '#/components/schemas/PaymentTerm'
-          service_level: '#/components/schemas/ServiceLevel'
-          shipping_term: '#/components/schemas/ShippingTerm'
           update_customer_request: '#/components/schemas/UpdateCustomerRequest'
       contacts:
         subresources:
@@ -831,6 +849,24 @@ resources:
               contact_match: '#/components/schemas/ContactMatch'
               find_contact_by_email_request: '#/components/schemas/FindContactByEmailRequest'
               list_contact_match: '#/components/schemas/List_ContactMatch'
+      order_discounts:
+        methods:
+          list: get /v1/sales/order-discounts
+          retrieve: get /v1/sales/order-discounts/{id}
+          create: post /v1/sales/order-discounts
+          update: patch /v1/sales/order-discounts/{id}
+          delete: delete /v1/sales/order-discounts/{id}
+        subresources:
+          actions:
+            methods:
+              find_by_code: post /v1/sales/order-discounts/actions/find-by-code
+            models:
+              find_order_discount_by_code_request: '#/components/schemas/FindOrderDiscountByCodeRequest'
+        models:
+          create_order_discount_request: '#/components/schemas/CreateOrderDiscountRequest'
+          list_order_discount: '#/components/schemas/List_OrderDiscount'
+          order_discount: '#/components/schemas/OrderDiscount'
+          update_order_discount_request: '#/components/schemas/UpdateOrderDiscountRequest'
       sales_orders:
         methods:
           retrieve_statuses: get /v1/sales/sales-orders/statuses
@@ -884,7 +920,6 @@ resources:
           list_sales_order_line: '#/components/schemas/List_SalesOrderLine'
           list_sales_order_status: '#/components/schemas/List_SalesOrderStatus'
           order_contact: '#/components/schemas/OrderContact'
-          order_discount: '#/components/schemas/OrderDiscount'
           quote_sales_order_line_input: '#/components/schemas/QuoteSalesOrderLineInput'
           quote_sales_order_prices_request: '#/components/schemas/QuoteSalesOrderPricesRequest'
           quote_sales_order_prices_response: '#/components/schemas/QuoteSalesOrderPricesResponse'
@@ -898,6 +933,22 @@ resources:
           sales_order_status: '#/components/schemas/SalesOrderStatus'
           sales_order_totals: '#/components/schemas/SalesOrderTotals'
           update_sales_order_request: '#/components/schemas/UpdateSalesOrderRequest'
+      volume_discounts:
+        methods:
+          list: get /v1/sales/volume-discounts
+          retrieve: get /v1/sales/volume-discounts/{id}
+          create: post /v1/sales/volume-discounts
+          update: patch /v1/sales/volume-discounts/{id}
+          delete: delete /v1/sales/volume-discounts/{id}
+        models:
+          create_volume_discount_request: '#/components/schemas/CreateVolumeDiscountRequest'
+          create_volume_discount_tier_input: '#/components/schemas/CreateVolumeDiscountTierInput'
+          list_volume_discount: '#/components/schemas/List_VolumeDiscount'
+          list_volume_discount_tier: '#/components/schemas/List_VolumeDiscountTier'
+          update_volume_discount_request: '#/components/schemas/UpdateVolumeDiscountRequest'
+          update_volume_discount_tier_input: '#/components/schemas/UpdateVolumeDiscountTierInput'
+          volume_discount: '#/components/schemas/VolumeDiscount'
+          volume_discount_tier: '#/components/schemas/VolumeDiscountTier'
   finance:
     methods:
       retrieve_transaction_types: get /v1/finance/transaction-types

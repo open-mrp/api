@@ -58,6 +58,23 @@ func getSalesOrder(t *testing.T, orderID string, params url.Values) map[string]a
 	return parseJSON(body)
 }
 
+// getSalesOrderLine re-reads one line through the order's ?include=lines. There is no
+// GET for a single line, so this is how a PATCH is confirmed against what was persisted
+// rather than against the response the PATCH echoed back.
+func getSalesOrderLine(t *testing.T, orderID, lineID string) map[string]any {
+	t.Helper()
+	order := getSalesOrder(t, orderID, url.Values{"include": {"lines"}})
+	for _, entry := range jsonListData(order, "lines") {
+		line, ok := entry.(map[string]any)
+		require.True(t, ok, "each line should be an object")
+		if jsonField(line, "id") == lineID {
+			return line
+		}
+	}
+	require.FailNow(t, "line not found on order", "line %s missing from order %s", lineID, orderID)
+	return nil
+}
+
 // requireClientError asserts a 4xx (client) response — never a 5xx, which per the
 // project rule must be treated as a backend bug, not a business rejection.
 func requireClientError(t *testing.T, status int, body []byte) {
@@ -263,9 +280,10 @@ func TestSalesOrder_Lines_CreateUpdateDelete(t *testing.T) {
 
 	// Create an additional line.
 	lineBody := map[string]any{
-		"product_id":  SeedProductID,
-		"product_sku": "E2E-LINE-SKU",
-		"quantity":    map[string]any{"value": "3", "unit_id": SeedUnitID},
+		"product_id":          SeedProductID,
+		"product_sku":         "E2E-LINE-SKU",
+		"product_description": "Original line description",
+		"quantity":            map[string]any{"value": "3", "unit_id": SeedUnitID},
 		"unit_price": map[string]any{
 			"value":               "12.50",
 			"numerator_unit_id":   e2eCurrencyUnitID,
@@ -275,7 +293,9 @@ func TestSalesOrder_Lines_CreateUpdateDelete(t *testing.T) {
 	status, body, err := apiClient.Post(salesOrdersPath+"/"+orderID+"/lines", lineBody, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
-	lineID := jsonField(parseJSON(body), "id")
+	created := parseJSON(body)
+	lineID := jsonField(created, "id")
+	assert.Equal(t, "Original line description", jsonField(created, "product_description"))
 	assert.EqualValues(t, 3, getSalesOrder(t, orderID, nil)["line_count"], "creating a line increments line_count")
 
 	// Update the line's quantity (v2 nested Quantity input shape).
@@ -283,6 +303,28 @@ func TestSalesOrder_Lines_CreateUpdateDelete(t *testing.T) {
 		map[string]any{"quantity": map[string]any{"value": "5", "unit_id": SeedUnitID}}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
+	assert.Equal(t, "Original line description", jsonField(parseJSON(body), "product_description"),
+		"an omitted product_description leaves the existing text alone")
+
+	// Set the description to new text.
+	status, body, err = apiClient.Patch(salesOrdersPath+"/"+orderID+"/lines/"+lineID,
+		map[string]any{"product_description": "Revised line description"}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	assert.Equal(t, "Revised line description", jsonField(parseJSON(body), "product_description"))
+	assert.Equal(t, "Revised line description", jsonField(getSalesOrderLine(t, orderID, lineID), "product_description"),
+		"the new description is persisted, not just echoed")
+
+	// Clear it. product_description is Clearable, and clearing has to reach the column as
+	// an empty string: the update statement reads NULL as "leave this column alone", so a
+	// clear that collapsed to NULL would silently keep the old text.
+	status, body, err = apiClient.Patch(salesOrdersPath+"/"+orderID+"/lines/"+lineID,
+		map[string]any{"product_description": nil}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	assert.Empty(t, jsonField(parseJSON(body), "product_description"), "an explicit null clears the description")
+	assert.Empty(t, jsonField(getSalesOrderLine(t, orderID, lineID), "product_description"),
+		"the cleared description is persisted, not silently reverted to the old text")
 
 	// Delete the line.
 	status, body, err = apiClient.Delete(salesOrdersPath + "/" + orderID + "/lines/" + lineID)

@@ -17,6 +17,11 @@ import (
 
 var volumeDiscountSvcTracer = tracing.GetTracer("core-service.volume_discount_service")
 
+// auditVolumeDiscountIncludes is every association the domain model tags for audit. The
+// audit snapshots are always loaded with all of them so the recorded diff is the same
+// whatever the caller passed in `?include=`.
+var auditVolumeDiscountIncludes = []string{"customer_groups", "product_lines", "categories", "attributes", "acceptable_units"}
+
 type volumeDiscountSvcImpl struct {
 	repos           domain.RepoFactory
 	mediatorFactory domain.MediatorFactory
@@ -226,6 +231,15 @@ func (s *volumeDiscountSvcImpl) CreateVolumeDiscount(ctx context.Context, params
 			}
 			result = created
 
+			created, apiErr = txRepo.Get(txCtx, domain.GetVolumeDiscountParams{
+				AccountID:        params.AccountID,
+				VolumeDiscountID: created.ID,
+				Includes:         auditVolumeDiscountIncludes,
+			})
+			if apiErr != nil {
+				return apiErr
+			}
+
 			changes := audit.ComputeChanges(nil, created)
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
@@ -313,6 +327,7 @@ func (s *volumeDiscountSvcImpl) UpdateVolumeDiscount(ctx context.Context, params
 			old, apiErr := txRepo.Get(txCtx, domain.GetVolumeDiscountParams{
 				AccountID:        params.AccountID,
 				VolumeDiscountID: params.VolumeDiscountID,
+				Includes:         auditVolumeDiscountIncludes,
 			})
 			if apiErr != nil {
 				return apiErr
@@ -334,7 +349,21 @@ func (s *volumeDiscountSvcImpl) UpdateVolumeDiscount(ctx context.Context, params
 			}
 			result = updated
 
-			changes := audit.ComputeChanges(old, updated)
+			// Diffed against a snapshot loaded with the same includes as `old`, not against
+			// `updated` — the repository only hydrates the associations the caller asked for,
+			// so diffing the response would make the audit trail depend on the request's
+			// `?include=`: a scope-only change would record nothing, and a no-op change would
+			// look like the scope was just added.
+			audited, apiErr := txRepo.Get(txCtx, domain.GetVolumeDiscountParams{
+				AccountID:        params.AccountID,
+				VolumeDiscountID: params.VolumeDiscountID,
+				Includes:         auditVolumeDiscountIncludes,
+			})
+			if apiErr != nil {
+				return apiErr
+			}
+
+			changes := audit.ComputeChanges(old, audited)
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:  domain.ServiceName,

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/services/core-service/internal/domain"
@@ -133,22 +134,37 @@ func (s *accountPriceSvcImpl) ListAccountPrices(ctx context.Context, params doma
 
 	params.AccountID = identity.Target.AccountID
 
+	repo := s.repos.NewAccountPriceRepo()
+
+	// A portal user sees their own prices whatever they asked for; an internal caller sees
+	// the customer they filtered on. Either way the customer is expanded to include its
+	// parent, whose prices also price that customer's orders.
+	requestedRecipientID := ""
 	if identity.IsCustomerUser() {
-		customerAccountID := *identity.Actor.AccountID
-		params.RecipientAccountID = &customerAccountID
+		requestedRecipientID = *identity.Actor.AccountID
+	} else if len(params.RecipientAccountIDs) > 0 {
+		requestedRecipientID = params.RecipientAccountIDs[0]
 	}
 
-	return s.repos.NewAccountPriceRepo().List(ctx, params)
+	if requestedRecipientID != "" {
+		recipientIDs, apiErr := repo.ResolveRecipientAccountIDs(ctx, params.AccountID, requestedRecipientID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		params.RecipientAccountIDs = recipientIDs
+	}
+
+	return repo.List(ctx, params)
 }
 
 // GetAccountPrice retrieves a single account price by ID, scoped to the caller's account.
-// Customer actors can only see prices where they are the recipient.
+// Customer actors can only see prices whose recipient is their own account or its parent.
 //
 // 1. Extract and validate the caller's identity via CheckIsAssignedActor.
 // 2. For internal actors, require discounts:read permission.
 // 3. Require the Augno-Account header.
 // 4. Fetch the account price from the repository.
-// 5. For customer actors, verify the price's recipient matches their own account.
+// 5. For customer actors, verify the price's recipient is their own account or its parent.
 func (s *accountPriceSvcImpl) GetAccountPrice(ctx context.Context, accountPriceID string) (*domain.AccountPrice, *apierror.APIError) {
 	ctx, span := accountPriceSvcTracer.Start(ctx, "service.account_price.get")
 	defer span.End()
@@ -176,14 +192,21 @@ func (s *accountPriceSvcImpl) GetAccountPrice(ctx context.Context, accountPriceI
 		}
 	}
 
-	accountPrice, apiErr := s.repos.NewAccountPriceRepo().Get(ctx, identity.Target.AccountID, accountPriceID)
+	repo := s.repos.NewAccountPriceRepo()
+
+	accountPrice, apiErr := repo.Get(ctx, identity.Target.AccountID, accountPriceID)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
+	// Matched against the customer's parent as well as itself, so that the prices a portal
+	// user can list are the same ones they can open.
 	if identity.IsCustomerUser() {
-		customerAccountID := *identity.Actor.AccountID
-		if accountPrice.RecipientAccountID != customerAccountID {
+		recipientIDs, apiErr := repo.ResolveRecipientAccountIDs(ctx, identity.Target.AccountID, *identity.Actor.AccountID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		if !slices.Contains(recipientIDs, accountPrice.RecipientAccountID) {
 			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Account price not found."))
 		}
 	}

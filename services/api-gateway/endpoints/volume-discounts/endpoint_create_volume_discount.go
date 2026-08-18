@@ -38,7 +38,7 @@ type CreateVolumeDiscountRequest struct {
 	// Must be unique within the account.
 	Name string `json:"name" validate:"required,max=255"`
 	// Tiers for this volume discount.
-	Tiers []CreateVolumeDiscountTierInput `json:"tiers" validate:"required"`
+	Tiers []CreateVolumeDiscountTierInput `json:"tiers" validate:"required,dive"`
 	// Account group IDs to scope the discount to specific customer groups.
 	//
 	// When empty, all customers qualify. A discount scoped to a group the buyer belongs to is preferred over an unscoped one when both could apply to the same order line.
@@ -90,7 +90,8 @@ func (e *CreateVolumeDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*C
 		ContentType:       "application/json",
 		Route:             "/v1/sales/volume-discounts",
 		SuccessStatusCode: http.StatusCreated,
-		Public:            false,
+		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainDiscounts, Action: types.ActionCreate},
@@ -102,5 +103,9 @@ func (e *CreateVolumeDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*C
 		LocationFunc: func(resp *apiresource.VolumeDiscount) string {
 			return "/v1/sales/volume-discounts/" + resp.ID
 		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeVolumeDiscount,
+			Fields:     []string{"customer_groups", "product_lines", "categories", "attributes", "acceptable_units"},
+		}),
 	})
 }

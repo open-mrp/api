@@ -573,7 +573,7 @@ func (m *salesOrderSvcImpl) UpdateSalesOrderLine(ctx context.Context, req *Updat
 		SalesOrderId:       req.SalesOrderID,
 		Id:                 req.SalesOrderLineID,
 		ProductSku:         req.ProductSKU.Ptr(),
-		ProductDescription: req.ProductDescription.Ptr(),
+		ProductDescription: field.StringClearableToProto(req.ProductDescription),
 	}
 	if v, ok := req.Quantity.Value(); ok {
 		pbReq.QuantityValue = &v.Value

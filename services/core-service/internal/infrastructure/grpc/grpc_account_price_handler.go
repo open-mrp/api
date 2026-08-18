@@ -98,10 +98,12 @@ func (h *gRPCHandler) ListAccountPrices(ctx context.Context, req *pb.ListAccount
 	}
 
 	params := domain.ListAccountPricesParams{
-		Cursor:             req.Cursor,
-		Limit:              req.Limit,
-		Query:              req.Query,
-		RecipientAccountID: req.RecipientAccountId,
+		Cursor: req.Cursor,
+		Limit:  req.Limit,
+		Query:  req.Query,
+	}
+	if req.RecipientAccountId != nil && *req.RecipientAccountId != "" {
+		params.RecipientAccountIDs = []string{*req.RecipientAccountId}
 	}
 
 	result, apiErr := h.accountPriceSvc.ListAccountPrices(ctx, params)

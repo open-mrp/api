@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.49.2](https://github.com/Augno/api/compare/v0.49.1...v0.49.2) (2026-08-18)
+
+
+### Bug Fixes
+
+* add email record endpoint and update memory category handling ([#496](https://github.com/Augno/api/issues/496)) ([6c39336](https://github.com/Augno/api/commit/6c39336c696d1802ad823496dacb0bf2df1bbe54))
+
 ## [0.49.1](https://github.com/Augno/api/compare/v0.49.0...v0.49.1) (2026-08-18)
 
 

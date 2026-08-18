@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -1297,84 +1296,24 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 	return updatedOrder, nil
 }
 
-// portalRegisterLink returns the customer-portal registration URL for the account, or "" when the account has no customer portal configured. A verified custom portal domain is targeted directly; otherwise the slug-prefixed frontend URL is used. Best-effort: lookup failures yield "".
-func (s *salesOrderSvcImpl) portalRegisterLink(ctx context.Context, accountID string) string {
-	// Path mirrors the frontend's FrontendPaths.register ("/auth/register").
-	const registerPath = "/auth/register"
-	if domain, _ := s.repos.NewPortalDomainRepo().GetByAccountID(ctx, accountID); domain != nil && domain.Status == constants.PortalDomainStatusVerified {
-		return "https://" + domain.Domain + registerPath
-	}
-	slug, _ := s.repos.NewAccountRepo().GetPortalSlug(ctx, accountID)
-	if slug != nil && strings.TrimSpace(*slug) != "" && s.frontendURL != "" {
-		return fmt.Sprintf("%s/%s%s", s.frontendURL, *slug, registerPath)
-	}
-	return ""
-}
-
 // sendOrderAcknowledgementEmail publishes the order-acknowledgement email to the contacts configured for the order and marks the order as acknowledged. No-ops if there are no recipients or the notification publisher is not configured.
 func (s *salesOrderSvcImpl) sendOrderAcknowledgementEmail(ctx context.Context, accountID, salesOrderID string) *apierror.APIError {
 	if s.notificationPublisher == nil {
 		return nil
 	}
 
-	repo := s.repos.NewSalesOrderRepo()
-	recipients, apiErr := repo.GetAcknowledgementRecipients(ctx, salesOrderID)
+	emailData, apiErr := buildOrderAcknowledgementEmail(ctx, s.repos, s.frontendURL, accountID, salesOrderID)
 	if apiErr != nil {
 		return apiErr
 	}
-	if len(recipients) == 0 {
+	if emailData == nil {
 		return nil
-	}
-
-	order, apiErr := repo.Get(ctx, accountID, salesOrderID)
-	if apiErr != nil {
-		return apiErr
-	}
-	lines, apiErr := repo.GetLines(ctx, salesOrderID)
-	if apiErr != nil {
-		return apiErr
-	}
-
-	// The seller's branding (logo, contact) and origin address power the email
-	// letterhead/footer and the PDF letterhead. Both are best-effort: the
-	// acknowledgement still sends with a blank letterhead if either lookup fails.
-	account, _ := s.repos.NewAccountRepo().GetByID(ctx, accountID)
-	originAddr, _ := repo.GetAccountOriginAddress(ctx, accountID)
-
-	data := buildOrderAcknowledgementData(order, lines, account, originAddr)
-	// The acknowledgement recipients are shown as contact emails under Bill To.
-	data.ContactEmails = recipients
-	// Gate the "Order Online" CTA on the account having a customer portal.
-	data.OrderOnlineLink = s.portalRegisterLink(ctx, accountID)
-	// Fetch the logo bytes for the PDF letterhead (best-effort; the email uses the URL).
-	if data.LogoURL != "" {
-		data.LogoImageType, data.LogoImage = fetchAckLogoImage(ctx, data.LogoURL)
-	}
-
-	emailData := messaging.EmailSendData{
-		To:         recipients,
-		Subject:    fmt.Sprintf("Sales Order %s", data.OrderNumber),
-		TemplateID: constants.EmailTemplateOrderAcknowledgement,
-		Params:     data.emailParams(),
-		AccountID:  &accountID,
-	}
-
-	// Attach the generated order-acknowledgement PDF, matching legacy (which attached a
-	// rendered PDF of the order). A PDF failure degrades gracefully to an attachment-free
-	// email rather than blocking the acknowledgement.
-	if pdfBytes, err := buildOrderAcknowledgementPDF(data); err == nil {
-		encoded := base64.StdEncoding.EncodeToString(pdfBytes)
-		filename := ackAttachmentFilename(data.OrderNumber, data.CustomerPO)
-		contentType := "application/pdf"
-		emailData.AttachmentData = &encoded
-		emailData.AttachmentFilename = &filename
-		emailData.AttachmentContentType = &contentType
 	}
 
 	return s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderSvcImpl) *apierror.APIError {
 		// The outbox publisher reads the RepoFactory from the context; inject it before publishing.
 		pubCtx := event.WithRepos(txCtx, txSvc.repos)
-		if apiErr := s.notificationPublisher.PublishSendEmail(pubCtx, emailData); apiErr != nil {
+		if apiErr := s.notificationPublisher.PublishSendEmail(pubCtx, *emailData); apiErr != nil {
 			return apiErr
 		}
 		return txSvc.repos.NewSalesOrderRepo().MarkAcknowledgementSent(txCtx, accountID, salesOrderID)

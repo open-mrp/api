@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"fmt"
 	"image"
 	"image/color"
@@ -10,7 +11,6 @@ import (
 	_ "image/gif"  // register GIF decoder for image.Decode
 	_ "image/jpeg" // register JPEG decoder for image.Decode
 	"image/png"
-	"encoding/base64"
 	"io"
 	"net/http"
 	"strings"
@@ -210,6 +210,80 @@ func (d ackData) emailParams() map[string]any {
 		"customer_number":   d.CustomerNumber,
 		"order_online_link": d.OrderOnlineLink,
 	}
+}
+
+// buildOrderAcknowledgementEmail assembles the order-acknowledgement email — the rendered template params plus the generated PDF attachment — for an order. Returns (nil, nil) when the order has no acknowledgement recipients so callers can no-op instead of sending. Shared by the automatic send on issue and the manual resend, so both produce an identical email.
+func buildOrderAcknowledgementEmail(ctx context.Context, repos domain.RepoFactory, frontendURL, accountID, salesOrderID string) (*messaging.EmailSendData, *apierror.APIError) {
+	repo := repos.NewSalesOrderRepo()
+
+	recipients, apiErr := repo.GetAcknowledgementRecipients(ctx, salesOrderID)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	if len(recipients) == 0 {
+		return nil, nil
+	}
+
+	order, apiErr := repo.Get(ctx, accountID, salesOrderID)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	lines, apiErr := repo.GetLines(ctx, salesOrderID)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	// The seller's branding (logo, contact) and origin address power the email
+	// letterhead/footer and the PDF letterhead. Both are best-effort: the
+	// acknowledgement still sends with a blank letterhead if either lookup fails.
+	account, _ := repos.NewAccountRepo().GetByID(ctx, accountID)
+	originAddr, _ := repo.GetAccountOriginAddress(ctx, accountID)
+
+	data := buildOrderAcknowledgementData(order, lines, account, originAddr)
+	// The acknowledgement recipients are shown as contact emails under Bill To.
+	data.ContactEmails = recipients
+	// Gate the "Order Online" CTA on the account having a customer portal.
+	data.OrderOnlineLink = portalRegisterLink(ctx, repos, frontendURL, accountID)
+	// Fetch the logo bytes for the PDF letterhead (best-effort; the email uses the URL).
+	if data.LogoURL != "" {
+		data.LogoImageType, data.LogoImage = fetchAckLogoImage(ctx, data.LogoURL)
+	}
+
+	emailData := &messaging.EmailSendData{
+		To:         recipients,
+		Subject:    fmt.Sprintf("Sales Order %s", data.OrderNumber),
+		TemplateID: constants.EmailTemplateOrderAcknowledgement,
+		Params:     data.emailParams(),
+		AccountID:  &accountID,
+	}
+
+	// Attach the generated order-acknowledgement PDF, matching legacy (which attached a
+	// rendered PDF of the order). A PDF failure degrades gracefully to an attachment-free
+	// email rather than blocking the acknowledgement.
+	if pdfBytes, err := buildOrderAcknowledgementPDF(data); err == nil {
+		encoded := base64.StdEncoding.EncodeToString(pdfBytes)
+		filename := ackAttachmentFilename(data.OrderNumber, data.CustomerPO)
+		contentType := "application/pdf"
+		emailData.AttachmentData = &encoded
+		emailData.AttachmentFilename = &filename
+		emailData.AttachmentContentType = &contentType
+	}
+
+	return emailData, nil
+}
+
+// portalRegisterLink returns the customer-portal registration URL for the account, or "" when the account has no customer portal configured. A verified custom portal domain is targeted directly; otherwise the slug-prefixed frontend URL is used. Best-effort: lookup failures yield "".
+func portalRegisterLink(ctx context.Context, repos domain.RepoFactory, frontendURL, accountID string) string {
+	// Path mirrors the frontend's FrontendPaths.register ("/auth/register").
+	const registerPath = "/auth/register"
+	if portalDomain, _ := repos.NewPortalDomainRepo().GetByAccountID(ctx, accountID); portalDomain != nil && portalDomain.Status == constants.PortalDomainStatusVerified {
+		return "https://" + portalDomain.Domain + registerPath
+	}
+	slug, _ := repos.NewAccountRepo().GetPortalSlug(ctx, accountID)
+	if slug != nil && strings.TrimSpace(*slug) != "" && frontendURL != "" {
+		return fmt.Sprintf("%s/%s%s", frontendURL, *slug, registerPath)
+	}
+	return ""
 }
 
 // fetchAckLogoImage downloads the account logo and normalizes it to PNG bytes for

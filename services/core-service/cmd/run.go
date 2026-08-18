@@ -594,6 +594,7 @@ func Run(
 		MediatorFactory:       mediatorFactory,
 		TxManager:             txManager,
 		NotificationPublisher: notificationPublisher,
+		FrontendURL:           cfg.FrontendURL,
 	})
 
 	locationSvc := service.NewLocationSvc(&service.LocationSvcConfig{

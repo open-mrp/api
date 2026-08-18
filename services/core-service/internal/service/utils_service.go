@@ -27,6 +27,7 @@ type utilsSvcImpl struct {
 	mediatorFactory       domain.MediatorFactory
 	txManager             TransactionManager
 	notificationPublisher domain.NotificationPublisher
+	frontendURL           string
 }
 
 // UtilsSvcConfig holds the dependencies for the utils service.
@@ -42,6 +43,9 @@ type UtilsSvcConfig struct {
 
 	// NotificationPublisher (required) publishes notification messages to the outbox.
 	NotificationPublisher domain.NotificationPublisher
+
+	// FrontendURL (optional; default: "") is the dashboard base URL used in links. It is not validated at construction.
+	FrontendURL string
 }
 
 func (c *UtilsSvcConfig) validate() error {
@@ -71,6 +75,7 @@ func NewUtilsSvc(config *UtilsSvcConfig) domain.UtilsSvc {
 		mediatorFactory:       config.MediatorFactory,
 		txManager:             config.TxManager,
 		notificationPublisher: config.NotificationPublisher,
+		frontendURL:           config.FrontendURL,
 	}
 }
 
@@ -85,6 +90,7 @@ func (s *utilsSvcImpl) withTx(ctx context.Context, fn func(context.Context, *uti
 			mediatorFactory:       s.mediatorFactory,
 			txManager:             s.txManager,
 			notificationPublisher: s.notificationPublisher,
+			frontendURL:           s.frontendURL,
 		}
 		return fn(txCtx, txSvc)
 	})
@@ -339,22 +345,14 @@ func (s *utilsSvcImpl) emailInvoice(ctx context.Context, span trace.Span, invoic
 }
 
 func (s *utilsSvcImpl) emailSalesOrder(ctx context.Context, span trace.Span, salesOrderID, accountID string, meds domain.Mediators, idempotencyKey *domain.IdempotencyKey) *apierror.APIError {
-	salesOrderRepo := s.repos.NewSalesOrderRepo()
-
-	// Fetch the sales order.
-	order, apiErr := salesOrderRepo.Get(ctx, accountID, salesOrderID)
-	if apiErr != nil {
-		return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, tracing.Trace(span, apiErr))
-	}
-
-	// Fetch recipient emails.
-	recipients, apiErr := salesOrderRepo.GetAcknowledgementRecipients(ctx, salesOrderID)
+	// Built by the same assembler the automatic send-on-issue uses, so a manual resend delivers an identical acknowledgement (line items, letterhead, PDF attachment).
+	emailData, apiErr := buildOrderAcknowledgementEmail(ctx, s.repos, s.frontendURL, accountID, salesOrderID)
 	if apiErr != nil {
 		return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, tracing.Trace(span, apiErr))
 	}
 
 	// If no recipients, return early.
-	if len(recipients) == 0 {
+	if emailData == nil {
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *utilsSvcImpl) *apierror.APIError {
 			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, &struct{}{})
 		})
@@ -364,30 +362,11 @@ func (s *utilsSvcImpl) emailSalesOrder(ctx context.Context, span trace.Span, sal
 		return nil
 	}
 
-	// Fetch account name for email.
-	accountName, apiErr := s.repos.NewAccountRepo().GetName(ctx, accountID)
-	if apiErr != nil {
-		return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, tracing.Trace(span, apiErr))
-	}
-
-	subject := fmt.Sprintf("Sales Order %s", order.Number)
-
-	emailData := messaging.EmailSendData{
-		To:         recipients,
-		Subject:    subject,
-		TemplateID: constants.EmailTemplateOrderAcknowledgement,
-		Params: map[string]any{
-			"order_number": order.Number,
-			"account_name": accountName,
-		},
-		AccountID: &accountID,
-	}
-
 	// Publish email and mark as sent inside a transaction.
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *utilsSvcImpl) *apierror.APIError {
 		txCtx = event.WithRepos(txCtx, txSvc.repos)
 
-		if apiErr := txSvc.notificationPublisher.PublishSendEmail(txCtx, emailData); apiErr != nil {
+		if apiErr := txSvc.notificationPublisher.PublishSendEmail(txCtx, *emailData); apiErr != nil {
 			return apiErr
 		}
 

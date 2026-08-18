@@ -45,7 +45,7 @@ func AgentMemoryFromProto(m *agentpb.AgentMemoryInfo) *apiresource.AgentMemory {
 	memory := &apiresource.AgentMemory{
 		ID:         m.Id,
 		Object:     constants.ObjectTypeAgentMemory,
-		Category:   m.Category,
+		Category:   constants.AgentMemoryCategory(m.Category),
 		Content:    m.Content,
 		Entity:     agentMemoryEntityFromProto(m.EntityType, m.EntityId),
 		Importance: m.Importance,

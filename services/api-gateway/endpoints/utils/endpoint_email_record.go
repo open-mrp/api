@@ -8,6 +8,7 @@ import (
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/services/auth-service/pkg/types"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -20,12 +21,12 @@ type EmailRecordRequest struct {
 	// - `invoice`: emails the invoice to the contacts on its sales order that are set to receive invoice emails.
 	// - `sales_order`: sends an order acknowledgement to the order's acknowledgement recipients.
 	// - `purchase_order`: sends the purchase order submission to the order's submission recipients.
-	Type string `json:"type" validate:"required"`
+	Type constants.EmailRecordType `json:"type" validate:"required"`
 }
 
 var sampleEmailRecordRequest = &EmailRecordRequest{
 	ID:   apiresource.SampleInvoiceID,
-	Type: "invoice",
+	Type: constants.EmailRecordTypeInvoice,
 }
 
 func (*EmailRecordRequest) SchemaExample() any {
@@ -44,7 +45,8 @@ func (e *EmailRecordEndpoint) Materialize() *apiendpoint.APIEndpoint[*EmailRecor
 		Route:             "/v1/core/actions/email-record",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusAccepted,
-		Public:            false,
+		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainInvoices, Action: types.ActionRead},

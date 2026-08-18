@@ -21,7 +21,7 @@ type CreateMemoryRequest struct {
 	// - `preference`: how someone likes things done, such as a customer who always wants express shipping.
 	// - `fact`: a durable detail worth remembering about the account or one of its records, such as a customer's typical order size.
 	// - `instruction`: standing guidance for agents to follow, such as always confirming freight before issuing an order.
-	Category string `json:"category" validate:"required,oneof=preference fact instruction"`
+	Category constants.AgentMemoryCategory `json:"category" validate:"required"`
 	// The information to remember, written as plain text for an agent to read.
 	Content string `json:"content" validate:"required"`
 	// Arbitrary metadata as JSON.
@@ -45,7 +45,7 @@ type CreateMemoryRequest struct {
 }
 
 var sampleCreateMemoryRequest = &CreateMemoryRequest{
-	Category:   "preference",
+	Category:   constants.AgentMemoryCategoryPreference,
 	Content:    "Customer prefers express shipping on all orders.",
 	Metadata:   json.RawMessage(`{"source": "support_ticket"}`),
 	Importance: field.Some(0.8),

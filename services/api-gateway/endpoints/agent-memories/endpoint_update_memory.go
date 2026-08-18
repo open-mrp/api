@@ -23,7 +23,7 @@ type UpdateMemoryRequest struct {
 	// - `preference`: how someone likes things done, such as a customer who always wants express shipping.
 	// - `fact`: a durable detail worth remembering about the account or one of its records, such as a customer's typical order size.
 	// - `instruction`: standing guidance for agents to follow, such as always confirming freight before issuing an order.
-	Category field.Optional[string] `json:"category,omitzero" validate:"omitempty,oneof=preference fact instruction"`
+	Category field.Optional[constants.AgentMemoryCategory] `json:"category,omitzero"`
 	// The information to remember, written as plain text for an agent to read.
 	Content field.Optional[string] `json:"content,omitzero"`
 	// Arbitrary metadata as JSON.

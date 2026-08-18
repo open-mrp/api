@@ -20,7 +20,7 @@ type ListInvoicesRequest struct {
 	// - `paid`: only invoices marked paid in full.
 	// - `unpaid`: only invoices that are neither paid in full nor overpaid, including invoices carrying partial payments.
 	// - `overpaid`: only invoices whose applied payments exceed the invoiced amount.
-	Status *string `query:"status" validate:"omitempty,oneof=all paid unpaid overpaid"`
+	Status *constants.InvoiceListStatus `query:"status"`
 	// Restricts results to invoices with at least one line billing any of these items.
 	ItemIDs []string `query:"item_ids"`
 	// Restricts results to invoices billed to any of these customers.

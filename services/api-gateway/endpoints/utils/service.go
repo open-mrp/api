@@ -91,11 +91,11 @@ func (m *utilsSvcImpl) CheckDuplicate(ctx context.Context, req *CheckDuplicateRe
 func (m *utilsSvcImpl) EmailRecord(ctx context.Context, req *EmailRecordRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 	var pbType pb.EmailRecordType
 	switch req.Type {
-	case "invoice":
+	case constants.EmailRecordTypeInvoice:
 		pbType = pb.EmailRecordType_EMAIL_RECORD_TYPE_INVOICE
-	case "sales_order":
+	case constants.EmailRecordTypeSalesOrder:
 		pbType = pb.EmailRecordType_EMAIL_RECORD_TYPE_SALES_ORDER
-	case "purchase_order":
+	case constants.EmailRecordTypePurchaseOrder:
 		pbType = pb.EmailRecordType_EMAIL_RECORD_TYPE_PURCHASE_ORDER
 	default:
 		return nil, apierror.NewValidationErrorWithParam("Invalid email record type. Must be one of: invoice, sales_order, purchase_order.", "type")

@@ -54,7 +54,7 @@ func (m *deliverySvcImpl) ListDeliveries(ctx context.Context, req *ListDeliverie
 		Cursor:      req.Cursor,
 		Limit:       req.Limit,
 		Query:       req.Query,
-		Status:      req.Status,
+		Status:      req.Status.StringPtr(),
 		ItemIds:     req.ItemIDs,
 		SupplierIds: req.SupplierIDs,
 		// Ask the backend to expand lines when requested (purchase_order is

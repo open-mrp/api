@@ -17,7 +17,7 @@ import (
 type ListMemoriesRequest struct {
 	apiresource.PaginationRequest
 	// Filter to memories with this exact category (e.g. `preference`, `fact`).
-	Category *string `query:"category"`
+	Category *constants.AgentMemoryCategory `query:"category"`
 	// Filter to memories scoped to this entity type (e.g. `customer`, `product`).
 	EntityType *string `query:"entity_type"`
 }
@@ -25,7 +25,7 @@ type ListMemoriesRequest struct {
 var _ contracts.DocumentedType = (*ListMemoriesRequest)(nil)
 
 func (*ListMemoriesRequest) SchemaExample() any {
-	category := "preference"
+	category := constants.AgentMemoryCategoryPreference
 	entityType := "customer"
 	m := apiexample.ValidateAndMarshalToMap(&ListMemoriesRequest{
 		PaginationRequest: apiresource.PaginationRequest{},

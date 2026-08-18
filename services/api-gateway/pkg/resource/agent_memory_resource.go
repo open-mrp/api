@@ -22,7 +22,7 @@ type AgentMemory struct {
 	// - `preference`: how someone likes things done, such as a customer who always wants express shipping.
 	// - `fact`: a durable detail worth remembering about the account or one of its records, such as a customer's typical order size.
 	// - `instruction`: standing guidance for agents to follow, such as always confirming freight before issuing an order.
-	Category string `json:"category" validate:"required"`
+	Category constants.AgentMemoryCategory `json:"category" validate:"required"`
 	// The information itself, written as plain text for an agent to read.
 	Content string `json:"content" validate:"required"`
 	// Arbitrary metadata as JSON.
@@ -46,7 +46,7 @@ type AgentMemory struct {
 var SampleAgentMemory = &AgentMemory{
 	ID:         SampleAgentMemoryID,
 	Object:     constants.ObjectTypeAgentMemory,
-	Category:   "preference",
+	Category:   constants.AgentMemoryCategoryPreference,
 	Content:    "Customer prefers express shipping for all orders.",
 	Metadata:   json.RawMessage(`{}`),
 	Entity:     SampleCustomerEntity,

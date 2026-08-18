@@ -17,7 +17,7 @@ type ListDeliveriesRequest struct {
 	// Filter by delivery status.
 	//
 	// Deliveries where nothing was accepted into inventory are hidden unless you ask for `rejected` or `all`.
-	Status *string `query:"status" default:"accepted" validate:"omitempty,oneof=all accepted rejected"`
+	Status *constants.DeliveryListStatus `query:"status" default:"accepted"`
 	// Filter to deliveries with at least one line for any of the given item IDs.
 	ItemIDs []string `query:"item_ids"`
 	// Filter to deliveries whose purchase order is with any of the given supplier account IDs.

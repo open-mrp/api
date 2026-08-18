@@ -56,7 +56,7 @@ func (m *agentMemorySvcImpl) ListMemories(ctx context.Context, req *ListMemories
 		pbReq.Query = req.Query
 	}
 	if req.Category != nil {
-		pbReq.Category = *req.Category
+		pbReq.Category = string(*req.Category)
 	}
 	if req.EntityType != nil {
 		pbReq.EntityType = *req.EntityType
@@ -95,7 +95,7 @@ func (m *agentMemorySvcImpl) GetMemory(ctx context.Context, req *RetrieveMemoryR
 
 func (m *agentMemorySvcImpl) CreateMemory(ctx context.Context, req *CreateMemoryRequest) (*apiresource.AgentMemory, *apierror.APIError) {
 	pbReq := &pb.CreateAgentMemoryRequest{
-		Category: req.Category,
+		Category: string(req.Category),
 		Content:  req.Content,
 	}
 	if v, ok := req.Importance.Value(); ok {
@@ -128,7 +128,7 @@ func (m *agentMemorySvcImpl) UpdateMemory(ctx context.Context, req *UpdateMemory
 		Id: req.ID,
 	}
 	if v, ok := req.Category.Value(); ok {
-		pbReq.Category = &v
+		pbReq.Category = v.StringPtr()
 	}
 	if v, ok := req.Content.Value(); ok {
 		pbReq.Content = &v

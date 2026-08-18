@@ -40,7 +40,27 @@ WHERE au.account_id = ?
         ? IS NULL
         OR EXISTS (SELECT 1 FROM role r WHERE r.id = au.role_id AND r.role_type_code = ?)
     )
-    AND (? IS NULL OR au.is_commission_eligible = ?)
+    AND (
+        ? IS NULL
+        OR (
+            ? = true
+            AND (
+                au.is_commission_eligible = true
+                OR EXISTS (
+                    SELECT 1 FROM role r_comm
+                    WHERE r_comm.id = au.role_id AND r_comm.role_type_code = 'sales_rep'
+                )
+            )
+        )
+        OR (
+            ? = false
+            AND au.is_commission_eligible = false
+            AND NOT EXISTS (
+                SELECT 1 FROM role r_comm
+                WHERE r_comm.id = au.role_id AND r_comm.role_type_code = 'sales_rep'
+            )
+        )
+    )
     AND (? IS NULL OR (
         MATCH(u.name) AGAINST(? IN BOOLEAN MODE)
         OR u.username LIKE CONCAT('%', ?, '%')
@@ -52,7 +72,7 @@ type CountAccountUsersFilteredParams struct {
 	AccountID            string
 	IncludeRemoved       interface{}
 	RoleType             sql.NullString
-	IsCommissionEligible sql.NullBool
+	IsCommissionEligible interface{}
 	Query                sql.NullString
 	QueryLike            interface{}
 }
@@ -63,6 +83,7 @@ func (q *Queries) CountAccountUsersFiltered(ctx context.Context, arg CountAccoun
 		arg.IncludeRemoved,
 		arg.RoleType,
 		arg.RoleType,
+		arg.IsCommissionEligible,
 		arg.IsCommissionEligible,
 		arg.IsCommissionEligible,
 		arg.Query,
@@ -881,7 +902,18 @@ LEFT JOIN department d ON au.department_id = d.id
 WHERE au.account_id = ?
     AND (CASE WHEN ? = true THEN true ELSE au.status_code != 'removed' END)
     AND (CASE WHEN ? IS NOT NULL THEN r.role_type_code = ? ELSE true END)
-    AND (? IS NULL OR au.is_commission_eligible = ?)
+    AND (
+        ? IS NULL
+        OR (
+            ? = true
+            AND (au.is_commission_eligible = true OR r.role_type_code = 'sales_rep')
+        )
+        OR (
+            ? = false
+            AND au.is_commission_eligible = false
+            AND (r.role_type_code IS NULL OR r.role_type_code <> 'sales_rep')
+        )
+    )
     AND (? IS NULL OR (
         MATCH(u.name) AGAINST(? IN BOOLEAN MODE)
         OR u.username LIKE CONCAT('%', ?, '%')
@@ -901,7 +933,7 @@ type ListAccountUsersBackwardParams struct {
 	AccountID            string
 	IncludeRemoved       interface{}
 	RoleType             sql.NullString
-	IsCommissionEligible sql.NullBool
+	IsCommissionEligible interface{}
 	Query                sql.NullString
 	QueryLike            interface{}
 	CursorCreatedAt      time.Time
@@ -937,6 +969,7 @@ func (q *Queries) ListAccountUsersBackward(ctx context.Context, arg ListAccountU
 		arg.IncludeRemoved,
 		arg.RoleType,
 		arg.RoleType,
+		arg.IsCommissionEligible,
 		arg.IsCommissionEligible,
 		arg.IsCommissionEligible,
 		arg.Query,
@@ -1015,7 +1048,27 @@ WHERE au.account_id = ?
         ? IS NULL
         OR EXISTS (SELECT 1 FROM role r WHERE r.id = au.role_id AND r.role_type_code = ?)
     )
-    AND (? IS NULL OR au.is_commission_eligible = ?)
+    AND (
+        ? IS NULL
+        OR (
+            ? = true
+            AND (
+                au.is_commission_eligible = true
+                OR EXISTS (
+                    SELECT 1 FROM role r_comm
+                    WHERE r_comm.id = au.role_id AND r_comm.role_type_code = 'sales_rep'
+                )
+            )
+        )
+        OR (
+            ? = false
+            AND au.is_commission_eligible = false
+            AND NOT EXISTS (
+                SELECT 1 FROM role r_comm
+                WHERE r_comm.id = au.role_id AND r_comm.role_type_code = 'sales_rep'
+            )
+        )
+    )
     AND (? IS NULL OR (
         MATCH(u.name) AGAINST(? IN BOOLEAN MODE)
         OR u.username LIKE CONCAT('%', ?, '%')
@@ -1033,7 +1086,7 @@ type ListAccountUsersBackwardBaseParams struct {
 	AccountID            string
 	IncludeRemoved       interface{}
 	RoleType             sql.NullString
-	IsCommissionEligible sql.NullBool
+	IsCommissionEligible interface{}
 	Query                sql.NullString
 	QueryLike            interface{}
 	CursorCreatedAt      time.Time
@@ -1064,6 +1117,7 @@ func (q *Queries) ListAccountUsersBackwardBase(ctx context.Context, arg ListAcco
 		arg.IncludeRemoved,
 		arg.RoleType,
 		arg.RoleType,
+		arg.IsCommissionEligible,
 		arg.IsCommissionEligible,
 		arg.IsCommissionEligible,
 		arg.Query,
@@ -1139,7 +1193,18 @@ LEFT JOIN department d ON au.department_id = d.id
 WHERE au.account_id = ?
     AND (CASE WHEN ? = true THEN true ELSE au.status_code != 'removed' END)
     AND (CASE WHEN ? IS NOT NULL THEN r.role_type_code = ? ELSE true END)
-    AND (? IS NULL OR au.is_commission_eligible = ?)
+    AND (
+        ? IS NULL
+        OR (
+            ? = true
+            AND (au.is_commission_eligible = true OR r.role_type_code = 'sales_rep')
+        )
+        OR (
+            ? = false
+            AND au.is_commission_eligible = false
+            AND (r.role_type_code IS NULL OR r.role_type_code <> 'sales_rep')
+        )
+    )
     AND (? IS NULL OR (
         MATCH(u.name) AGAINST(? IN BOOLEAN MODE)
         OR u.username LIKE CONCAT('%', ?, '%')
@@ -1160,7 +1225,7 @@ type ListAccountUsersForwardParams struct {
 	AccountID            string
 	IncludeRemoved       interface{}
 	RoleType             sql.NullString
-	IsCommissionEligible sql.NullBool
+	IsCommissionEligible interface{}
 	Query                sql.NullString
 	QueryLike            interface{}
 	CursorCreatedAt      sql.NullTime
@@ -1196,6 +1261,7 @@ func (q *Queries) ListAccountUsersForward(ctx context.Context, arg ListAccountUs
 		arg.IncludeRemoved,
 		arg.RoleType,
 		arg.RoleType,
+		arg.IsCommissionEligible,
 		arg.IsCommissionEligible,
 		arg.IsCommissionEligible,
 		arg.Query,
@@ -1275,7 +1341,27 @@ WHERE au.account_id = ?
         ? IS NULL
         OR EXISTS (SELECT 1 FROM role r WHERE r.id = au.role_id AND r.role_type_code = ?)
     )
-    AND (? IS NULL OR au.is_commission_eligible = ?)
+    AND (
+        ? IS NULL
+        OR (
+            ? = true
+            AND (
+                au.is_commission_eligible = true
+                OR EXISTS (
+                    SELECT 1 FROM role r_comm
+                    WHERE r_comm.id = au.role_id AND r_comm.role_type_code = 'sales_rep'
+                )
+            )
+        )
+        OR (
+            ? = false
+            AND au.is_commission_eligible = false
+            AND NOT EXISTS (
+                SELECT 1 FROM role r_comm
+                WHERE r_comm.id = au.role_id AND r_comm.role_type_code = 'sales_rep'
+            )
+        )
+    )
     AND (? IS NULL OR (
         MATCH(u.name) AGAINST(? IN BOOLEAN MODE)
         OR u.username LIKE CONCAT('%', ?, '%')
@@ -1294,7 +1380,7 @@ type ListAccountUsersForwardBaseParams struct {
 	AccountID            string
 	IncludeRemoved       interface{}
 	RoleType             sql.NullString
-	IsCommissionEligible sql.NullBool
+	IsCommissionEligible interface{}
 	Query                sql.NullString
 	QueryLike            interface{}
 	CursorCreatedAt      sql.NullTime
@@ -1325,6 +1411,7 @@ func (q *Queries) ListAccountUsersForwardBase(ctx context.Context, arg ListAccou
 		arg.IncludeRemoved,
 		arg.RoleType,
 		arg.RoleType,
+		arg.IsCommissionEligible,
 		arg.IsCommissionEligible,
 		arg.IsCommissionEligible,
 		arg.Query,

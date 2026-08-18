@@ -5,73 +5,73 @@
 SET @password_hash = '$2a$10$w68CrxLdi9fdVttqNZMAZesPa2dJlsUrGNy39boKJXz81hyvX0m6y';
 
 -- Permissions (using PermissionDomains values as both id and code)
--- All permissions default to the 'admin' permission group
+-- Group assignments mirror domainToGroup in dashboard/packages/scripts/src/updatePermissions.ts, the script that syncs deployed databases
 INSERT IGNORE INTO permission (id, code, name, permission_group_code, created_at, updated_at) VALUES
     ('self', 'self', 'Self', 'self', NOW(), NOW()),
     ('messaging', 'messaging', 'Messaging', 'self', NOW(), NOW()),
     ('alerts', 'alerts', 'Alerts', 'self', NOW(), NOW()),
-    ('deliveries', 'deliveries', 'Deliveries', 'admin', NOW(), NOW()),
+    ('deliveries', 'deliveries', 'Deliveries', 'shipping', NOW(), NOW()),
     ('locations', 'locations', 'Locations', 'inventory', NOW(), NOW()),
-    ('settlements', 'settlements', 'Settlements', 'admin', NOW(), NOW()),
-    ('transactions', 'transactions', 'Transactions', 'admin', NOW(), NOW()),
-    ('batches', 'batches', 'Batches', 'admin', NOW(), NOW()),
-    ('carriers', 'carriers', 'Carriers', 'admin', NOW(), NOW()),
-    ('customer_groups', 'customer_groups', 'Customer Groups', 'admin', NOW(), NOW()),
-    ('customers', 'customers', 'Customers', 'admin', NOW(), NOW()),
-    ('contacts', 'contacts', 'Contacts', 'admin', NOW(), NOW()),
-    ('department_picks', 'department_picks', 'Department Picks', 'admin', NOW(), NOW()),
-    ('departments', 'departments', 'Departments', 'admin', NOW(), NOW()),
-    ('discounts', 'discounts', 'Discounts', 'admin', NOW(), NOW()),
-    ('edi_locations', 'edi_locations', 'Edi Locations', 'admin', NOW(), NOW()),
-    ('edi_runs', 'edi_runs', 'Edi Runs', 'admin', NOW(), NOW()),
-    ('email_logs', 'email_logs', 'Email Logs', 'admin', NOW(), NOW()),
-    ('error_logs', 'error_logs', 'Error Logs', 'admin', NOW(), NOW()),
-    ('products', 'products', 'Products', 'admin', NOW(), NOW()),
-    ('inventory', 'inventory', 'Inventory', 'admin', NOW(), NOW()),
-    ('inventory_change_logs', 'inventory_change_logs', 'Inventory Change Logs', 'admin', NOW(), NOW()),
-    ('inventory_logs', 'inventory_logs', 'Inventory Logs', 'admin', NOW(), NOW()),
-    ('invoices', 'invoices', 'Invoices', 'admin', NOW(), NOW()),
-    ('item_categories', 'item_categories', 'Item Categories', 'admin', NOW(), NOW()),
+    ('settlements', 'settlements', 'Settlements', 'payments', NOW(), NOW()),
+    ('transactions', 'transactions', 'Transactions', 'payments', NOW(), NOW()),
+    ('batches', 'batches', 'Batches', 'production', NOW(), NOW()),
+    ('carriers', 'carriers', 'Carriers', 'shipping', NOW(), NOW()),
+    ('customer_groups', 'customer_groups', 'Customer Groups', 'customers', NOW(), NOW()),
+    ('customers', 'customers', 'Customers', 'customers', NOW(), NOW()),
+    ('contacts', 'contacts', 'Contacts', 'customers', NOW(), NOW()),
+    ('department_picks', 'department_picks', 'Department Picks', 'picking', NOW(), NOW()),
+    ('departments', 'departments', 'Departments', 'departments', NOW(), NOW()),
+    ('discounts', 'discounts', 'Discounts', 'pricing', NOW(), NOW()),
+    ('edi_locations', 'edi_locations', 'Edi Locations', 'edi', NOW(), NOW()),
+    ('edi_runs', 'edi_runs', 'Edi Runs', 'edi', NOW(), NOW()),
+    ('email_logs', 'email_logs', 'Email Logs', 'logs', NOW(), NOW()),
+    ('error_logs', 'error_logs', 'Error Logs', 'logs', NOW(), NOW()),
+    ('products', 'products', 'Products', 'products', NOW(), NOW()),
+    ('inventory', 'inventory', 'Inventory', 'inventory', NOW(), NOW()),
+    ('inventory_change_logs', 'inventory_change_logs', 'Inventory Change Logs', 'logs', NOW(), NOW()),
+    ('inventory_logs', 'inventory_logs', 'Inventory Logs', 'logs', NOW(), NOW()),
+    ('invoices', 'invoices', 'Invoices', 'invoices', NOW(), NOW()),
+    ('item_categories', 'item_categories', 'Item Categories', 'items', NOW(), NOW()),
     ('jobs', 'jobs', 'Jobs', 'admin', NOW(), NOW()),
-    ('machines', 'machines', 'Machines', 'admin', NOW(), NOW()),
-    ('machine_downtime', 'machine_downtime', 'Machine Downtime', 'admin', NOW(), NOW()),
-    ('production_schedules', 'production_schedules', 'Production Schedules', 'admin', NOW(), NOW()),
-    ('demand_overrides', 'demand_overrides', 'Demand Overrides', 'admin', NOW(), NOW()),
-    ('materials', 'materials', 'Materials', 'admin', NOW(), NOW()),
+    ('machines', 'machines', 'Machines', 'production', NOW(), NOW()),
+    ('machine_downtime', 'machine_downtime', 'Machine Downtime', 'production', NOW(), NOW()),
+    ('production_schedules', 'production_schedules', 'Production Schedules', 'production', NOW(), NOW()),
+    ('demand_overrides', 'demand_overrides', 'Demand Overrides', 'production', NOW(), NOW()),
+    ('materials', 'materials', 'Materials', 'items', NOW(), NOW()),
     ('accounts', 'accounts', 'Accounts', 'admin', NOW(), NOW()),
-    ('payment_terms', 'payment_terms', 'Payment Terms', 'admin', NOW(), NOW()),
+    ('payment_terms', 'payment_terms', 'Payment Terms', 'payments', NOW(), NOW()),
     ('permissions', 'permissions', 'Permissions', 'admin', NOW(), NOW()),
-    ('parts', 'parts', 'Parts', 'admin', NOW(), NOW()),
-    ('picks', 'picks', 'Picks', 'admin', NOW(), NOW()),
-    ('receiving_orders', 'receiving_orders', 'Receiving Orders', 'admin', NOW(), NOW()),
-    ('product_groups', 'product_groups', 'Product Groups', 'admin', NOW(), NOW()),
-    ('items', 'items', 'Items', 'admin', NOW(), NOW()),
-    ('production_runs', 'production_runs', 'Production Runs', 'admin', NOW(), NOW()),
-    ('production_step_transformations', 'production_step_transformations', 'Production Step Transformations', 'admin', NOW(), NOW()),
-    ('production_steps', 'production_steps', 'Production Steps', 'admin', NOW(), NOW()),
-    ('product_lines', 'product_lines', 'Product Lines', 'admin', NOW(), NOW()),
-    ('product_variations', 'product_variations', 'Product Variations', 'admin', NOW(), NOW()),
-    ('properties', 'properties', 'Properties', 'admin', NOW(), NOW()),
-    ('purchase_orders', 'purchase_orders', 'Purchase Orders', 'admin', NOW(), NOW()),
-    ('suppliers', 'suppliers', 'Suppliers', 'admin', NOW(), NOW()),
-    ('receiving', 'receiving', 'Receiving', 'admin', NOW(), NOW()),
-    ('relevant_products', 'relevant_products', 'Relevant Products', 'admin', NOW(), NOW()),
+    ('parts', 'parts', 'Parts', 'items', NOW(), NOW()),
+    ('picks', 'picks', 'Picks', 'picking', NOW(), NOW()),
+    ('receiving_orders', 'receiving_orders', 'Receiving Orders', 'purchasing', NOW(), NOW()),
+    ('product_groups', 'product_groups', 'Product Groups', 'products', NOW(), NOW()),
+    ('items', 'items', 'Items', 'items', NOW(), NOW()),
+    ('production_runs', 'production_runs', 'Production Runs', 'production', NOW(), NOW()),
+    ('production_step_transformations', 'production_step_transformations', 'Production Step Transformations', 'production', NOW(), NOW()),
+    ('production_steps', 'production_steps', 'Production Steps', 'production', NOW(), NOW()),
+    ('product_lines', 'product_lines', 'Product Lines', 'products', NOW(), NOW()),
+    ('product_variations', 'product_variations', 'Product Variations', 'products', NOW(), NOW()),
+    ('properties', 'properties', 'Properties', 'items', NOW(), NOW()),
+    ('purchase_orders', 'purchase_orders', 'Purchase Orders', 'purchasing', NOW(), NOW()),
+    ('suppliers', 'suppliers', 'Suppliers', 'purchasing', NOW(), NOW()),
+    ('receiving', 'receiving', 'Receiving', 'purchasing', NOW(), NOW()),
+    ('relevant_products', 'relevant_products', 'Relevant Products', 'products', NOW(), NOW()),
     ('roles', 'roles', 'Roles', 'admin', NOW(), NOW()),
-    ('sales_orders', 'sales_orders', 'Sales Orders', 'admin', NOW(), NOW()),
-    ('sales_rep_territories', 'sales_rep_territories', 'Sales Rep Territories', 'admin', NOW(), NOW()),
-    ('sales_targets', 'sales_targets', 'Sales Targets', 'admin', NOW(), NOW()),
-    ('scanners', 'scanners', 'Scanners', 'admin', NOW(), NOW()),
-    ('scanning_error_logs', 'scanning_error_logs', 'Scanning Error Logs', 'admin', NOW(), NOW()),
-    ('shifts', 'shifts', 'Shifts', 'admin', NOW(), NOW()),
-    ('shipments', 'shipments', 'Shipments', 'admin', NOW(), NOW()),
-    ('shipping_cases', 'shipping_cases', 'Shipping Cases', 'admin', NOW(), NOW()),
-    ('shipping_terms', 'shipping_terms', 'Shipping Terms', 'admin', NOW(), NOW()),
-    ('supplies', 'supplies', 'Supplies', 'admin', NOW(), NOW()),
+    ('sales_orders', 'sales_orders', 'Sales Orders', 'sales_orders', NOW(), NOW()),
+    ('sales_rep_territories', 'sales_rep_territories', 'Sales Rep Territories', 'sales_reps', NOW(), NOW()),
+    ('sales_targets', 'sales_targets', 'Sales Targets', 'sales_reps', NOW(), NOW()),
+    ('scanners', 'scanners', 'Scanners', 'scanning', NOW(), NOW()),
+    ('scanning_error_logs', 'scanning_error_logs', 'Scanning Error Logs', 'scanning', NOW(), NOW()),
+    ('shifts', 'shifts', 'Shifts', 'production', NOW(), NOW()),
+    ('shipments', 'shipments', 'Shipments', 'shipping', NOW(), NOW()),
+    ('shipping_cases', 'shipping_cases', 'Shipping Cases', 'shipping', NOW(), NOW()),
+    ('shipping_terms', 'shipping_terms', 'Shipping Terms', 'shipping', NOW(), NOW()),
+    ('supplies', 'supplies', 'Supplies', 'items', NOW(), NOW()),
     ('system_properties', 'system_properties', 'System Properties', 'admin', NOW(), NOW()),
-    ('team', 'team', 'Team', 'admin', NOW(), NOW()),
-    ('units', 'units', 'Units', 'admin', NOW(), NOW()),
-    ('unit_groups', 'unit_groups', 'Unit Groups', 'admin', NOW(), NOW()),
-    ('request_logs', 'request_logs', 'Request Logs', 'admin', NOW(), NOW()),
+    ('team', 'team', 'Team', 'teams', NOW(), NOW()),
+    ('units', 'units', 'Units', 'units', NOW(), NOW()),
+    ('unit_groups', 'unit_groups', 'Unit Groups', 'units', NOW(), NOW()),
+    ('request_logs', 'request_logs', 'Request Logs', 'logs', NOW(), NOW()),
     ('audit_events', 'audit_events', 'Audit Events', 'admin', NOW(), NOW()),
     ('sandboxes', 'sandboxes', 'Sandboxes', 'admin', NOW(), NOW()),
     ('api_keys', 'api_keys', 'Api Keys', 'admin', NOW(), NOW()),
@@ -169,10 +169,11 @@ INSERT IGNORE INTO role_permission (id, role_id, permission_code, `create`, `rea
     ('rlpm_01seedadm_agentm0', 'rl_mtg88e6u6fbu', 'agent_memories', 1, 1, 1, 1, NOW(), NOW()),
     ('rlpm_01seedadm_alerts0', 'rl_mtg88e6u6fbu', 'alerts', 1, 1, 1, 1, NOW(), NOW());
 
--- Sales Rep role permissions (sales_orders + receive/manage own notifications)
+-- Sales Rep role permissions (sales_orders + receive/manage own notifications). jobs:read is the baseline every non-admin role needs to poll the 202 of any async operation; updatePermissions.ts grants it the same way in deployed databases.
 INSERT IGNORE INTO role_permission (id, role_id, permission_code, `create`, `read`, `update`, `delete`, created_at, updated_at) VALUES
     ('rlpm_01seedsrep_salord', 'rl_hh6mrlkv08n8', 'sales_orders', 1, 1, 1, 1, NOW(), NOW()),
-    ('rlpm_01seedsrep_msg000', 'rl_hh6mrlkv08n8', 'messaging', 1, 1, 1, 1, NOW(), NOW());
+    ('rlpm_01seedsrep_msg000', 'rl_hh6mrlkv08n8', 'messaging', 1, 1, 1, 1, NOW(), NOW()),
+    ('rlpm_01seedsrep_jobs00', 'rl_hh6mrlkv08n8', 'jobs', 0, 1, 0, 0, NOW(), NOW());
 
 -- Scanner role permissions
 INSERT IGNORE INTO role_permission (id, role_id, permission_code, `create`, `read`, `update`, `delete`, created_at, updated_at) VALUES
@@ -181,7 +182,8 @@ INSERT IGNORE INTO role_permission (id, role_id, permission_code, `create`, `rea
     ('rlpm_01seedscnr_invent', 'rl_scanner', 'inventory', 0, 1, 1, 0, NOW(), NOW()),
     ('rlpm_01seedscnr_invchl', 'rl_scanner', 'inventory_change_logs', 0, 1, 0, 0, NOW(), NOW()),
     ('rlpm_01seedscnr_invlog', 'rl_scanner', 'inventory_logs', 0, 1, 0, 0, NOW(), NOW()),
-    ('rlpm_01seedscnr_self00', 'rl_scanner', 'self', 0, 1, 0, 0, NOW(), NOW());
+    ('rlpm_01seedscnr_self00', 'rl_scanner', 'self', 0, 1, 0, 0, NOW(), NOW()),
+    ('rlpm_01seedscnr_jobs00', 'rl_scanner', 'jobs', 0, 1, 0, 0, NOW(), NOW());
 
 -- Global Customer role (assigned to customer-portal users). Global (account_id
 -- NULL), role_type 'user', resolved by its fixed id (constants.GlobalCustomerRoleID).
@@ -223,7 +225,8 @@ INSERT IGNORE INTO user (id, name, username, email, hashed_password, email_verif
     ('us_1wjfmmbwg8l7', 'John Doe', 'jdoe', 'dane@augno.com', @password_hash, NOW(), '/v1/core/users/us_1wjfmmbwg8l7/photo', NOW(), NOW()),
     ('us_2ndadmin0000', 'Mike Johnson', 'mjohnson', 'mjohnson@augno.com', @password_hash, NOW(), '/v1/core/users/us_2ndadmin0000/photo', NOW(), NOW()),
     ('us_6p7460uuwibz', 'Sarah Martinez', 'user2', 'user2@augno.com', @password_hash, NOW(), '/v1/core/users/us_6p7460uuwibz/photo', NOW(), NOW()),
-    ('us_fltactor3', 'Filter Test User 3', 'ftuser3', 'ftuser3@augno.com', @password_hash, NOW(), NULL, NOW(), NOW());
+    ('us_fltactor3', 'Filter Test User 3', 'ftuser3', 'ftuser3@augno.com', @password_hash, NOW(), NULL, NOW(), NOW()),
+    ('us_e2esrep0flag000', 'E2E Sales Rep Stale Flag', 'e2esrep0flag', 'e2e-srep-noflag@test.augno.com', @password_hash, NOW(), NULL, NOW(), NOW());
 
 -- Account-user associations. The admin account-user (SeedAccountUserID) is
 -- pinned to the Knitting department so `?include=department` resolves on the
@@ -232,7 +235,8 @@ INSERT IGNORE INTO account_user (id, user_id, role_id, account_id, department_id
     ('acus_s83fjhyfmqen', 'us_1wjfmmbwg8l7', 'rl_mtg88e6u6fbu', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'dp_01k0a5r01yfx3sj1vy9qgv3dc0', 0, NOW(), NOW(), NOW()),
     ('acus_2ndadmin000', 'us_2ndadmin0000', 'rl_mtg88e6u6fbu', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'dp_01k0a5r01yfx3sj1vy9qgv3dc0', 0, NOW(), NOW(), NOW()),
     ('acus_ubdx4zebgl6p', 'us_6p7460uuwibz', 'rl_hh6mrlkv08n8', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'dp_01k0a5r01yfx3sj1vy9qgv3dc0', 1, NOW(), NOW(), NOW()),
-    ('acus_fltactor300', 'us_fltactor3', 'rl_hh6mrlkv08n8', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'dp_01k0a5r01yfx3sj1vy9qgv3dc0', 1, NOW(), NOW(), NOW());
+    ('acus_fltactor300', 'us_fltactor3', 'rl_hh6mrlkv08n8', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'dp_01k0a5r01yfx3sj1vy9qgv3dc0', 1, NOW(), NOW(), NOW()),
+    ('acus_e2esrep0flag00', 'us_e2esrep0flag000', 'rl_hh6mrlkv08n8', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'dp_01k0a5r01yfx3sj1vy9qgv3dc0', 0, NOW(), NOW(), NOW());
 
 -- API keys
 -- HMAC computed as: createHmac('sha256', 'pepper').update(secret).digest()

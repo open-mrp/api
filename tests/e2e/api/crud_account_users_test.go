@@ -850,3 +850,11 @@ func TestAccountUsers_SalesRepForcesCommissionEligible(t *testing.T) {
 	errObj := requireErrorResponse(t, patchBody, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "is_commission_eligible")
 }
+
+func TestAccountUsers_CommissionEligibleFilterIncludesSalesRepRole(t *testing.T) {
+	t.Parallel()
+
+	assertListContainsID(t, accountUsersPath, url.Values{"role_type": {"sales_rep"}}, SeedSalesRepStaleFlagAccountUserID)
+	assertListContainsID(t, accountUsersPath, url.Values{"is_commission_eligible": {"true"}}, SeedSalesRepStaleFlagAccountUserID)
+	assert.Nil(t, listFindByField(t, accountUsersPath, url.Values{"is_commission_eligible": {"false"}}, "id", SeedSalesRepStaleFlagAccountUserID))
+}

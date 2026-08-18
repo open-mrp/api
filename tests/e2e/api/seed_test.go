@@ -152,7 +152,8 @@ const (
 	SeedAPIKeyID            = "apky_pajbskcck3cabxajdh8h8"
 	SeedAccountUserID       = "acus_s83fjhyfmqen"
 	SeedAdmin2AccountUserID = "acus_2ndadmin000"  // Mike Johnson (us_2ndadmin0000, Admin) in SeedAccountID
-	SeedAccountUser2ID      = "acus_ubdx4zebgl6p" // Sarah Martinez (us_6p7460uuwibz, Sales Rep) in SeedAccountID
+	SeedAccountUser2ID              = "acus_ubdx4zebgl6p" // Sarah Martinez (us_6p7460uuwibz, Sales Rep) in SeedAccountID
+	SeedSalesRepStaleFlagAccountUserID = "acus_e2esrep0flag00" // sales_rep role with is_commission_eligible=0 (pre-backfill shape)
 	SeedJobID               = "jb_01seedincludejob0"
 
 	// Batches, sales targets, integrations (seeded in 0014_e2e_extras.sql)

@@ -320,12 +320,12 @@ type AccountUser struct {
 	UserID               string
 	DepartmentID         sql.NullString
 	LastUsedAt           sql.NullTime
-	IsCommissionEligible bool
 	StatusCode           string
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
 	RoleID               sql.NullString
 	AccountID            string
+	IsCommissionEligible bool
 }
 
 type ActionType struct {
@@ -1098,9 +1098,7 @@ type Job struct {
 	JobItems     json.RawMessage
 	AccountID    sql.NullString
 	CreatedBy    sql.NullString
-	ResourceType sql.NullString
 	Results      db.NullableRawMessage
-	Error        db.NullableRawMessage
 	Errors       db.NullableRawMessage
 	ErrorSummary sql.NullString
 	UpdatedAt    time.Time
@@ -1109,6 +1107,8 @@ type Job struct {
 	CancelledAt  sql.NullTime
 	CompletedAt  sql.NullTime
 	FailedAt     sql.NullTime
+	Error        db.NullableRawMessage
+	ResourceType sql.NullString
 }
 
 type JournalPosting struct {

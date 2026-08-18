@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.48.4](https://github.com/Augno/api/compare/v0.48.3...v0.48.4) (2026-08-18)
+
+
+### Bug Fixes
+
+* update commission eligibility logic in account user queries and models ([#490](https://github.com/Augno/api/issues/490)) ([87952a0](https://github.com/Augno/api/commit/87952a0efa163d87e3737131523b57afe32f1da4))
+
 ## [0.48.3](https://github.com/Augno/api/compare/v0.48.2...v0.48.3) (2026-08-17)
 
 

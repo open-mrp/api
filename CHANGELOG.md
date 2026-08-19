@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.49.5](https://github.com/Augno/api/compare/v0.49.4...v0.49.5) (2026-08-19)
+
+
+### Bug Fixes
+
+* scanning inventory loss, duplicate allocations, and inverted unit conversion ([#502](https://github.com/Augno/api/issues/502)) ([87900e7](https://github.com/Augno/api/commit/87900e789558b026e7fc5914d66e27172b167c24))
+
 ## [0.49.4](https://github.com/Augno/api/compare/v0.49.3...v0.49.4) (2026-08-19)
 
 

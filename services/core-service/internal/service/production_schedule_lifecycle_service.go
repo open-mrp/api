@@ -478,6 +478,11 @@ func (s *productionScheduleSvcImpl) updateProductionScheduleLineTx(
 			return apierror.NewResourceNotFoundError("Schedule line not found.")
 		}
 
+		// A campaign builds something by definition. Zeroing one would leave a job on the plan that produces nothing while still holding its machine hours, its lots and its slot against a regenerate — the plan would read as busy for work nobody is doing.
+		if params.Quantity != nil && *params.Quantity <= 0 {
+			return apierror.NewValidationErrorWithParam("A campaign must build at least one unit. Delete the campaign to take it off the plan.", "quantity")
+		}
+
 		before := snapshotLine(existing)
 
 		// The frozen test uses the week the line is in NOW and the week it is moving to: dragging a campaign out of the frozen week is as much a broken commitment as changing it in place.
@@ -514,6 +519,25 @@ func (s *productionScheduleSvcImpl) updateProductionScheduleLineTx(
 				MachineID: *params.MachineID,
 			}); apiErr != nil {
 				return apierror.NewValidationErrorWithParam("Unknown machine.", "machine_id")
+			}
+		}
+
+		// Machine time and lot count follow the quantity unless the caller prices the campaign itself. Left alone, a resized campaign keeps the hours it was originally sized at, and the week's utilisation — the number a planner resizes a campaign against — goes on reporting work that is no longer planned.
+		if params.Quantity != nil {
+			if params.RunHours == nil {
+				runHours, apiErr := txSvc.estimatedRunHours(txCtx, accountID, params.ScheduleID, existing.ItemID, *params.Quantity)
+				if apiErr != nil {
+					return apiErr
+				}
+				// An item this version holds no rate for estimates to zero, which would throw away a rate somebody set by hand. Scaling what is on the line keeps it in proportion instead.
+				if runHours == 0 && existing.PlannedRunHours > 0 && existing.PlannedQuantity > 0 {
+					runHours = existing.PlannedRunHours * *params.Quantity / existing.PlannedQuantity
+				}
+				repoParams.PlannedRunHours = &runHours
+			}
+			if params.Lots == nil && existing.PlannedLotUnits > 0 {
+				lots := int32(math.Round(*params.Quantity / existing.PlannedLotUnits))
+				repoParams.PlannedLots = &lots
 			}
 		}
 

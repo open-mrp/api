@@ -27,8 +27,8 @@ type UpdateProductionScheduleLineRequest struct {
 	MachineID field.Optional[string] `json:"machine_id,omitzero"`
 	// Units to build over the campaign.
 	//
-	// Changing this does not re-derive `lots` or `run_hours` — send those alongside it when they should follow, or the campaign will keep claiming its old share of machine time.
-	Quantity field.Optional[float64] `json:"quantity,omitzero" validate:"omitempty,gte=0"`
+	// Changing this re-derives `lots` and `run_hours` from the rate and lot size this version was solved with, so the campaign never keeps claiming its old share of machine time; send either alongside it to override what is derived. A campaign builds something by definition, so use delete rather than a quantity of zero to take it off the plan.
+	Quantity field.Optional[float64] `json:"quantity,omitzero" validate:"omitempty,gt=0"`
 	// How many lots the quantity is built in.
 	//
 	// What a release actually splits batches by is the lot size the campaign was planned at, which this does not change.

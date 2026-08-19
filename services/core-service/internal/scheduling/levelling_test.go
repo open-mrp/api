@@ -420,6 +420,26 @@ func TestLevel_PinnedCampaignRaisesPositionSoSolverBuildsLess(t *testing.T) {
 	}
 }
 
+// A campaign building nothing is not a campaign. A zero-unit pin must not hold the slot
+// it sits in, or the plan leaves the machine-week empty for work that will never run.
+func TestLevel_ZeroUnitPinDoesNotHoldItsSlot(t *testing.T) {
+	t.Parallel()
+
+	s := testSettings()
+	pins := []PinnedCampaign{{ItemID: "it_A", MachineID: "mc_1", WeekIndex: 0, Units: 0}}
+	got := Level([]LevellingItem{item("A", 10, 600, 0, 600)}, []Machine{{ID: "mc_1", Name: "1"}}, s, pins)
+
+	var placed bool
+	for _, c := range got.Campaigns {
+		if c.SKU == "A" && c.WeekIndex == 0 && c.MachineID == "mc_1" {
+			placed = true
+		}
+	}
+	if !placed {
+		t.Errorf("the zero-unit pin blocked the slot: %+v", got.Campaigns)
+	}
+}
+
 // A pinned campaign's run time occupies its machine, so another item that needs the
 // same week must go elsewhere — or wait.
 func TestLevel_PinnedCampaignConsumesCapacity(t *testing.T) {

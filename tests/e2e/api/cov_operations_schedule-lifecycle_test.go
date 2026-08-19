@@ -3,6 +3,7 @@
 package api_test
 
 import (
+	"math"
 	"net/url"
 	"strconv"
 	"sync"
@@ -693,6 +694,56 @@ func TestScheduleLifecycle_AddedLineIsPricedInConstraintTime(t *testing.T) {
 	lots, ok := line["planned_lots"].(float64)
 	require.True(t, ok)
 	assert.Positive(t, lots)
+}
+
+// Resizing a campaign has to reprice it. A campaign that keeps the hours it was first sized at makes the week's utilisation report work that is no longer planned.
+func TestScheduleLifecycle_ResizingALineRepricesIt(t *testing.T) {
+	t.Parallel()
+
+	schedule := ownedSchedule(t, uniqueName("e2e-resize-reprice"))
+	scheduleID := jsonField(schedule, "id")
+
+	itemID, machineID, secondsPerUnit := plannedItem(t, scheduleID)
+
+	line := addLine(t, scheduleID, map[string]any{
+		"week_index": 6,
+		"item_id":    itemID,
+		"machine_id": machineID,
+		"quantity":   600,
+	})
+	lineID := jsonField(line, "id")
+	lotUnits, ok := line["planned_lot_units"].(float64)
+	require.True(t, ok)
+
+	status, body, err := apiClient.Patch(schedulePath(scheduleID)+"/lines/"+lineID,
+		map[string]any{"quantity": 300}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	updated := parseJSON(body)
+	runHours, ok := updated["planned_run_hours"].(float64)
+	require.True(t, ok)
+	assert.InDelta(t, 300*secondsPerUnit/3600, runHours, 0.01,
+		"halving the quantity must halve the machine time the campaign claims")
+
+	lots, ok := updated["planned_lots"].(float64)
+	require.True(t, ok)
+	assert.InDelta(t, math.Round(300/lotUnits), lots, 0.001, "the lot count follows the quantity too")
+}
+
+// A campaign builds something by definition; zero is a campaign being removed, and the plan has to say so rather than keep a job that produces nothing while holding its machine time.
+func TestScheduleLifecycle_ZeroQuantityIsRejected(t *testing.T) {
+	t.Parallel()
+
+	schedule := ownedSchedule(t, uniqueName("e2e-zero-quantity"))
+	scheduleID := jsonField(schedule, "id")
+	line := addLine(t, scheduleID, nil)
+	lineID := jsonField(line, "id")
+
+	status, body, err := apiClient.Patch(schedulePath(scheduleID)+"/lines/"+lineID,
+		map[string]any{"quantity": 0}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 400, status, body)
 }
 
 // Overriding an empty slot is a create, and the plan has to show it in that week afterwards rather than only in the deviation log.

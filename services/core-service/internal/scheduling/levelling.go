@@ -232,6 +232,10 @@ func Level(items []LevellingItem, machines []Machine, s Settings, pinned []Pinne
 		if pin.WeekIndex < 0 || pin.WeekIndex >= s.HorizonWeeks {
 			continue
 		}
+		// A campaign building nothing is not a campaign. Honouring it would hold its slot against the sweep, so the plan would leave a machine-week empty for work that was never going to happen.
+		if pin.Units <= 0 {
+			continue
+		}
 		if _, known := secondsPerUnit[pin.ItemID]; !known {
 			continue
 		}
@@ -293,6 +297,9 @@ func Level(items []LevellingItem, machines []Machine, s Settings, pinned []Pinne
 				}
 				fits := maxLotsInCapacity(capacityPerMachine, item.Policy.SecondsPerUnit, item.LotUnits)
 				units = math.Min(roundUpToLot(shortfall, item.LotUnits), fits)
+			}
+			if units <= 0 {
+				continue
 			}
 			hours := units * item.Policy.SecondsPerUnit / 3600
 

@@ -3096,6 +3096,21 @@ func (mr *MockItemSvcMockRecorder) ListItems(ctx, params any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListItems", reflect.TypeOf((*MockItemSvc)(nil).ListItems), ctx, params)
 }
 
+// RecomputeItemCosts mocks base method.
+func (m *MockItemSvc) RecomputeItemCosts(ctx context.Context, accountID, itemID string) (*domain.ItemCosts, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RecomputeItemCosts", ctx, accountID, itemID)
+	ret0, _ := ret[0].(*domain.ItemCosts)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// RecomputeItemCosts indicates an expected call of RecomputeItemCosts.
+func (mr *MockItemSvcMockRecorder) RecomputeItemCosts(ctx, accountID, itemID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecomputeItemCosts", reflect.TypeOf((*MockItemSvc)(nil).RecomputeItemCosts), ctx, accountID, itemID)
+}
+
 // RemoveItemAttribute mocks base method.
 func (m *MockItemSvc) RemoveItemAttribute(ctx context.Context, itemID, attributeID string, includes []string) (*domain.Item, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -5340,6 +5355,21 @@ func (m *MockProductionScheduleSvc) ListProductionScheduleFinishedPolicies(ctx c
 func (mr *MockProductionScheduleSvcMockRecorder) ListProductionScheduleFinishedPolicies(ctx, scheduleID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListProductionScheduleFinishedPolicies", reflect.TypeOf((*MockProductionScheduleSvc)(nil).ListProductionScheduleFinishedPolicies), ctx, scheduleID)
+}
+
+// ListProductionScheduleFinishingLines mocks base method.
+func (m *MockProductionScheduleSvc) ListProductionScheduleFinishingLines(ctx context.Context, params domain.ListProductionScheduleFinishingLinesParams) ([]*domain.ProductionScheduleFinishingLine, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListProductionScheduleFinishingLines", ctx, params)
+	ret0, _ := ret[0].([]*domain.ProductionScheduleFinishingLine)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListProductionScheduleFinishingLines indicates an expected call of ListProductionScheduleFinishingLines.
+func (mr *MockProductionScheduleSvcMockRecorder) ListProductionScheduleFinishingLines(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListProductionScheduleFinishingLines", reflect.TypeOf((*MockProductionScheduleSvc)(nil).ListProductionScheduleFinishingLines), ctx, params)
 }
 
 // ListProductionScheduleItemPolicies mocks base method.

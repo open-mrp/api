@@ -526,6 +526,9 @@ type ItemSvc interface {
 	// GetItemCosts returns production cost breakdown for an item.
 	GetItemCosts(ctx context.Context, itemID string) (*ItemCosts, *apierror.APIError)
 
+	// RecomputeItemCosts is GetItemCosts for callers that have no request identity to authorize — event consumers restating costs after an input moved. The account is named rather than read off the caller.
+	RecomputeItemCosts(ctx context.Context, accountID, itemID string) (*ItemCosts, *apierror.APIError)
+
 	// GetItemTrends returns historical trend data for an item.
 	GetItemTrends(ctx context.Context, itemID string, trendType string) (*ItemTrends, *apierror.APIError)
 

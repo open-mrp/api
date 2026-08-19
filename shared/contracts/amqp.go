@@ -99,6 +99,17 @@ const (
 	// CoreEventCustomerRegistered indicates a buyer completed registration on a seller's customer portal (a brand-new customer account or a new login joining an existing one). The notification-service consumer notifies the seller's customer-service support-route group so they can follow up.
 	CoreEventCustomerRegistered AmqpRoutingKey = "core.event.customer_registered"
 
+	// CoreEventInventoryReceived states that stock of an item became available. Allocation is one reaction to it: an issue that went short because the shelf could not cover it is filled the moment what it was waiting for arrives, rather than at whatever hour a sweep happens to run.
+	CoreEventInventoryReceived AmqpRoutingKey = "core.event.inventory_received"
+
+	// CoreEventItemCostBasisChanged states that something an item's cost is derived from moved — the unit cost of a material, or the make-up of a production step. Costing reacts by recomputing every item downstream of the change, since a cost is only as current as the inputs it was last calculated from.
+	CoreEventItemCostBasisChanged AmqpRoutingKey = "core.event.item_cost_basis_changed"
+
+	// CoreEventBatchScanned states that a batch was scanned at a station: the unit of work exists and carries the measures the operator recorded. It says nothing about what should follow, so a subscriber that wants to move inventory, credit the schedule, or notify a department binds its own queue and decides for itself.
+	//
+	// This supersedes CoreCmdExecuteProductionStep, which named one particular reaction and therefore needed a second message to carry seconds and waste. The scan is a single fact, so it is published once and its subscribers derive the rest.
+	CoreEventBatchScanned AmqpRoutingKey = "core.event.batch_scanned"
+
 	// Logging
 
 	// LoggingEventRequestLogged is an event that indicates that a request has been logged.

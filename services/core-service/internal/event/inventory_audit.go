@@ -8,12 +8,16 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-func (c *ExecuteProductionStepConsumer) updateInventoryWithAudit(
+// updateInventoryWithAudit moves inventory and records the movement on the audit trail. Takes the
+// repo factory rather than hanging off a consumer so the batch-scanned and execute-production-step
+// consumers share one implementation while the latter is being retired.
+func updateInventoryWithAudit(
 	ctx context.Context,
+	repos domain.RepoFactory,
 	accountID string,
 	params domain.InventoryUpdateParams,
 ) *apierror.APIError {
-	inventoryRepo := c.repos.NewInventoryMutationRepo()
+	inventoryRepo := repos.NewInventoryMutationRepo()
 	if apiErr := inventoryRepo.UpdateInventory(ctx, params); apiErr != nil {
 		return apiErr
 	}
@@ -26,7 +30,7 @@ func (c *ExecuteProductionStepConsumer) updateInventoryWithAudit(
 
 	mediator.RecordInventoryAuditTrailOrLog(
 		ctx,
-		c.repos,
+		repos,
 		accountID,
 		params.ItemID,
 		params.Measure,
@@ -36,4 +40,12 @@ func (c *ExecuteProductionStepConsumer) updateInventoryWithAudit(
 		params.ResponsibleUserID,
 	)
 	return nil
+}
+
+func (c *ExecuteProductionStepConsumer) updateInventoryWithAudit(
+	ctx context.Context,
+	accountID string,
+	params domain.InventoryUpdateParams,
+) *apierror.APIError {
+	return updateInventoryWithAudit(ctx, c.repos, accountID, params)
 }

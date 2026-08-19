@@ -1883,6 +1883,21 @@ func (mr *MockItemRepoMockRecorder) FindBySKU(ctx, accountID, sku any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindBySKU", reflect.TypeOf((*MockItemRepo)(nil).FindBySKU), ctx, accountID, sku)
 }
 
+// FindItemsProducedFromConsumed mocks base method.
+func (m *MockItemRepo) FindItemsProducedFromConsumed(ctx context.Context, accountID string, itemIDs []string) ([]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindItemsProducedFromConsumed", ctx, accountID, itemIDs)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// FindItemsProducedFromConsumed indicates an expected call of FindItemsProducedFromConsumed.
+func (mr *MockItemRepoMockRecorder) FindItemsProducedFromConsumed(ctx, accountID, itemIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindItemsProducedFromConsumed", reflect.TypeOf((*MockItemRepo)(nil).FindItemsProducedFromConsumed), ctx, accountID, itemIDs)
+}
+
 // Get mocks base method.
 func (m *MockItemRepo) Get(ctx context.Context, params domain.GetItemParams) (*domain.Item, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -11239,6 +11254,36 @@ func (m *MockProductionScheduleInputRepo) GetEchelonOnHand(ctx context.Context, 
 func (mr *MockProductionScheduleInputRepoMockRecorder) GetEchelonOnHand(ctx, accountID, itemIDs any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEchelonOnHand", reflect.TypeOf((*MockProductionScheduleInputRepo)(nil).GetEchelonOnHand), ctx, accountID, itemIDs)
+}
+
+// GetFinishingBatchMeasurements mocks base method.
+func (m *MockProductionScheduleInputRepo) GetFinishingBatchMeasurements(ctx context.Context, params domain.GetFinishingBatchMeasurementsParams) ([]domain.FinishingBatchRow, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetFinishingBatchMeasurements", ctx, params)
+	ret0, _ := ret[0].([]domain.FinishingBatchRow)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetFinishingBatchMeasurements indicates an expected call of GetFinishingBatchMeasurements.
+func (mr *MockProductionScheduleInputRepoMockRecorder) GetFinishingBatchMeasurements(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFinishingBatchMeasurements", reflect.TypeOf((*MockProductionScheduleInputRepo)(nil).GetFinishingBatchMeasurements), ctx, params)
+}
+
+// GetFinishingMachines mocks base method.
+func (m *MockProductionScheduleInputRepo) GetFinishingMachines(ctx context.Context, accountID, constraintDepartmentID string) ([]scheduling.Machine, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetFinishingMachines", ctx, accountID, constraintDepartmentID)
+	ret0, _ := ret[0].([]scheduling.Machine)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetFinishingMachines indicates an expected call of GetFinishingMachines.
+func (mr *MockProductionScheduleInputRepoMockRecorder) GetFinishingMachines(ctx, accountID, constraintDepartmentID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFinishingMachines", reflect.TypeOf((*MockProductionScheduleInputRepo)(nil).GetFinishingMachines), ctx, accountID, constraintDepartmentID)
 }
 
 // GetItemUnitCosts mocks base method.

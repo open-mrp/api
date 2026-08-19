@@ -1241,3 +1241,23 @@ func formatDecimal(v any) string {
 		return fmt.Sprintf("%v", val)
 	}
 }
+
+// FindItemsProducedFromConsumed returns the items produced by every step consuming any of the given
+// ones. Callers walk it a generation at a time; see the query for why the whole walk is not one trip.
+func (r *itemRepoImpl) FindItemsProducedFromConsumed(ctx context.Context, accountID string, itemIDs []string) ([]string, *apierror.APIError) {
+	ctx, span := itemRepoTracer.Start(ctx, "repository.item.find_items_produced_from_consumed")
+	defer span.End()
+
+	if len(itemIDs) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.queries.FindItemsProducedFromConsumed(ctx, sqlc.FindItemsProducedFromConsumedParams{
+		ItemIds:   itemIDs,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return rows, nil
+}

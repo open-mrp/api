@@ -33,7 +33,21 @@ const (
 	CoreCmdSeedSandboxQueue = "core_cmd_seed_sandbox"
 
 	// CoreCmdExecuteProductionStepQueue carries execute-production-step commands to the core-service. Messages on this queue trigger inventory updates and reservation management after batch mutations (initialize, move, merge, split).
+	//
+	// Superseded by CoreEventBatchScannedInventoryQueue. Kept so commands already enqueued when the
+	// switch happens still drain; delete once it has been empty across a deploy.
 	CoreCmdExecuteProductionStepQueue = "core_cmd_execute_production_step"
+
+	// CoreEventInventoryReceivedAllocationQueue carries inventory-received events to the core-service consumer that offers the new stock to whatever demand went short waiting for it.
+	CoreEventInventoryReceivedAllocationQueue = "core_event_inventory_received_allocation"
+
+	// CoreEventItemCostBasisChangedQueue carries cost-basis-changed events to the core-service consumer that recomputes the cost of every item downstream of the change.
+	CoreEventItemCostBasisChangedQueue = "core_event_item_cost_basis_changed_costing"
+
+	// CoreEventBatchScannedInventoryQueue carries batch-scanned events to the core-service consumer that moves inventory: the produced receipt, the reservations seconds and waste release, and the material consumption.
+	//
+	// The queue is named for what its consumer does, not for the event, because a topic exchange gives every bound queue its own copy while consumers sharing a queue compete for messages. A second reaction to the same scan — crediting schedule attainment, say — binds CoreEventBatchScanned on a queue of its own and both run.
+	CoreEventBatchScannedInventoryQueue = "core_event_batch_scanned_inventory"
 
 	// carries undo-batch-scan commands to the core-service, reversing the receipts, issues, and reservations a scan recorded against a deleted batch.
 	CoreCmdUndoBatchScanQueue = "core_cmd_undo_batch_scan"

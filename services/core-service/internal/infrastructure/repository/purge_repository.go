@@ -74,7 +74,7 @@ var purgeTargets = []tableColumn{
 	{"transaction", "account_id"},
 	{"unit", "account_id"},
 	{"unit_group", "account_id"},
-	// Messaging substrate (in-app notifications, announcements, chat). announcement uses a nullable account_id (NULL = platform-wide), so this only removes account-scoped rows.
+	// Messaging substrate (in-app notifications, announcements, chat). announcement uses a nullable account_id (NULL = platform-wide), so this only removes account-scoped rows. A scheduled message is a message row with scheduled_for set, not a table of its own.
 	{"announcement", "account_id"},
 	{"conversation", "account_id"},
 	{"conversation_dm_key", "account_id"},
@@ -84,7 +84,6 @@ var purgeTargets = []tableColumn{
 	{"messaging_block", "account_id"},
 	{"notification", "account_id"},
 	{"notification_preference", "account_id"},
-	{"scheduled_message", "account_id"},
 	// Production scheduling. The lookup tables (machine_downtime_reason, demand_override_type) are global, not account-scoped, so they are deliberately absent.
 	{"account_production_schedule_setting", "account_id"},
 	{"production_schedule_resource_setting", "account_id"},

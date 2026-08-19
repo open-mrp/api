@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -240,5 +241,52 @@ func TestLoggingMiddleware_PublicEndpoint_NoRouter(t *testing.T) {
 	}
 	if !saver.savedRL.PublicEndpoint {
 		t.Error("Expected PublicEndpoint to default to true when no router is provided")
+	}
+}
+
+func TestLoggingMiddleware_TruncatedResponse_StoresPlaceholder(t *testing.T) {
+	t.Parallel()
+	logger := log.New(io.Discard, "", 0)
+	saver := &stubSaver{}
+
+	// A handler that dies mid-write leaves the body cut off mid-token; response_body_json would reject it.
+	truncated := `{"object":"list","data":[{"id":"itm_1","name":"unterminat`
+
+	handler := LoggingMiddleware(logger, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(truncated))
+	}, saver, nil, 0)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	if saver.savedRL == nil || saver.savedRL.ResponseJSON == nil {
+		t.Fatal("expected response json in saved log")
+	}
+	if want := fmt.Sprintf(`{"_invalid_json":true,"_original_size":%d}`, len(truncated)); *saver.savedRL.ResponseJSON != want {
+		t.Fatalf("response json = %q want %q", *saver.savedRL.ResponseJSON, want)
+	}
+}
+
+func TestLoggingMiddleware_ValidResponse_StoredVerbatim(t *testing.T) {
+	t.Parallel()
+	logger := log.New(io.Discard, "", 0)
+	saver := &stubSaver{}
+
+	handler := LoggingMiddleware(logger, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"object":"item","id":"itm_1"}`))
+	}, saver, nil, 0)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	if saver.savedRL == nil || saver.savedRL.ResponseJSON == nil {
+		t.Fatal("expected response json in saved log")
+	}
+	if want := `{"object":"item","id":"itm_1"}`; *saver.savedRL.ResponseJSON != want {
+		t.Fatalf("response json = %q want %q", *saver.savedRL.ResponseJSON, want)
 	}
 }

@@ -187,7 +187,20 @@ func (s *itemSvcImpl) GetItemCosts(ctx context.Context, itemID string) (*domain.
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	accountID := identity.Target.AccountID
+	return s.RecomputeItemCosts(ctx, identity.Target.AccountID, itemID)
+}
+
+// RecomputeItemCosts is GetItemCosts with the account named rather than read off the caller.
+//
+// Costing is also driven by events now — a material's price moving restates every part built from it
+// — and a consumer has no caller to authorize. Rather than have it mint an identity that would
+// satisfy the checks above, which is authorization theatre and would let a bug reach another
+// tenant's data with a forged actor, the account travels on the event and is passed in here. The
+// permission gate stays where a request enters.
+func (s *itemSvcImpl) RecomputeItemCosts(ctx context.Context, accountID, itemID string) (*domain.ItemCosts, *apierror.APIError) {
+	ctx, span := itemSvcTracer.Start(ctx, "service.item.recompute_costs")
+	defer span.End()
+
 	flowRepo := s.repos.NewProductionFlowRepo()
 	itemRepo := s.repos.NewItemRepo()
 

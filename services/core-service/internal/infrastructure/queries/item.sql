@@ -1181,3 +1181,20 @@ JOIN unit_group ug ON ic.unit_group_id = ug.id
 WHERE i.account_id = sqlc.arg('account_id')
   AND i.sku IN (sqlc.slice('skus'))
   AND i.deleted_at IS NULL;
+
+-- FindItemsProducedFromConsumed returns the items produced by every step that consumes any of the
+-- given ones — one generation outwards in the cost graph.
+--
+-- The edge is a production step: a step consumes some items and produces one, so what it produces
+-- depends on everything it consumes. Callers walk this a generation at a time to find everything
+-- downstream of a change, which costs one query per level of the bill of materials rather than one
+-- per item found. Expressing the whole walk as a recursive CTE would be a single round trip, but
+-- sqlc cannot parse the self-reference.
+-- name: FindItemsProducedFromConsumed :many
+SELECT DISTINCT p.item_id
+FROM consumption c
+JOIN production p ON p.production_step_id = c.production_step_id
+JOIN item i ON i.id = p.item_id
+WHERE c.item_id IN (sqlc.slice('item_ids'))
+  AND i.account_id = sqlc.arg('account_id')
+  AND i.deleted_at IS NULL;

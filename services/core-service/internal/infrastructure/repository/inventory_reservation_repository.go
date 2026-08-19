@@ -178,17 +178,17 @@ func (r *inventoryReservationRepo) AllocateReservationsForConsumption(ctx contex
 			return nil, apierror.NewInternalError(parseErr, "Invalid issue quantity value.")
 		}
 
-		// Parse allocated sum (COALESCE returns interface{})
-		allocatedSum := decimal.Zero
-		if issue.AllocatedSum != nil {
-			if allocStr, ok := issue.AllocatedSum.([]byte); ok {
-				allocatedSum, _ = decimal.NewFromString(string(allocStr))
-			}
+		// SUM() over a DECIMAL comes back as interface{}; decimalToString covers every shape the driver
+		// may hand back. Reading it as []byte alone left allocatedSum at zero for any other type, which
+		// reads as "nothing allocated yet" and allocates the issue a second time.
+		allocatedSum, allocParseErr := decimal.NewFromString(decimalToString(issue.AllocatedSum))
+		if allocParseErr != nil {
+			return nil, apierror.NewInternalError(allocParseErr, "Invalid allocated sum for issue.")
 		}
 
 		available := issueQty.Sub(allocatedSum)
 		take := decimal.Min(available, remainingToIssue)
-		if take.IsZero() {
+		if take.LessThanOrEqual(decimal.Zero) {
 			continue
 		}
 
@@ -200,7 +200,9 @@ func (r *inventoryReservationRepo) AllocateReservationsForConsumption(ctx contex
 			}); err != nil {
 				return nil, db.MapSQLError(err)
 			}
-			if apiErr := r.allocateOpenIssue(ctx, issue.ID, issueQty, params.AccountID, params.ItemID); apiErr != nil {
+			// take, not issueQty: the portion already allocated has been drawn from receipts once
+			// already, and re-issuing the whole quantity consumes it a second time.
+			if apiErr := r.allocateOpenIssue(ctx, issue.ID, take, params.AccountID, params.ItemID); apiErr != nil {
 				return nil, apiErr
 			}
 		} else {
@@ -260,6 +262,39 @@ func (r *inventoryReservationRepo) AllocateReservationsForConsumption(ctx contex
 	}, nil
 }
 
+// allocatedSumsByReceipt returns how much each of the given receipts has already been drawn down.
+//
+// A receipt with no allocations is absent from the result rather than zero; the zero value of the map
+// is what the caller wants for it anyway. An unhandled driver type used to leave the sum at zero,
+// which reads as "untouched" and let a receipt be drawn twice, so an unparseable value is an error
+// here rather than a default.
+func (r *inventoryReservationRepo) allocatedSumsByReceipt(ctx context.Context, receipts []sqlc.FindReceiptsForAllocationRow) (map[string]decimal.Decimal, *apierror.APIError) {
+	sums := make(map[string]decimal.Decimal, len(receipts))
+	if len(receipts) == 0 {
+		return sums, nil
+	}
+
+	ids := make([]string, 0, len(receipts))
+	for _, receipt := range receipts {
+		ids = append(ids, receipt.ID)
+	}
+
+	rows, err := r.queries.GetAllocationSumsForReceipts(ctx, ids)
+	if err != nil {
+		return nil, db.MapSQLError(err)
+	}
+
+	for _, row := range rows {
+		allocated, parseErr := decimal.NewFromString(decimalToString(row.TotalAllocated))
+		if parseErr != nil {
+			return nil, apierror.NewInternalError(parseErr, "Invalid allocated sum for receipt.")
+		}
+		sums[row.InventoryReceiptID] = allocated
+	}
+
+	return sums, nil
+}
+
 // allocateOpenIssue performs FIFO allocation of an open issue against available receipts.
 func (r *inventoryReservationRepo) allocateOpenIssue(ctx context.Context, issueID string, issueQty decimal.Decimal, accountID, itemID string) *apierror.APIError {
 	receipts, err := r.queries.FindReceiptsForAllocation(ctx, sqlc.FindReceiptsForAllocationParams{
@@ -272,6 +307,13 @@ func (r *inventoryReservationRepo) allocateOpenIssue(ctx context.Context, issueI
 
 	remaining := issueQty
 
+	// One aggregate for the whole candidate set. Asking per receipt put a round trip inside the walk
+	// below, which an item whose older receipts are all full pays for on every allocation.
+	allocatedByReceipt, apiErr := r.allocatedSumsByReceipt(ctx, receipts)
+	if apiErr != nil {
+		return apiErr
+	}
+
 	for _, receipt := range receipts {
 		if remaining.LessThanOrEqual(decimal.Zero) {
 			break
@@ -282,21 +324,11 @@ func (r *inventoryReservationRepo) allocateOpenIssue(ctx context.Context, issueI
 			return apierror.NewInternalError(parseErr, "Invalid receipt quantity value.")
 		}
 
-		// Get already-allocated sum for this receipt
-		allocatedRaw, err := r.queries.GetAllocationSumForReceipt(ctx, receipt.ID)
-		if err != nil {
-			return db.MapSQLError(err)
-		}
-		allocatedSum := decimal.Zero
-		if allocatedRaw != nil {
-			if allocBytes, ok := allocatedRaw.([]byte); ok {
-				allocatedSum, _ = decimal.NewFromString(string(allocBytes))
-			}
-		}
-
-		available := receiptQty.Sub(allocatedSum)
+		available := receiptQty.Sub(allocatedByReceipt[receipt.ID])
 		take := decimal.Min(available, remaining)
-		if take.IsZero() {
+		// A receipt that is already over-allocated leaves available negative. IsZero let that through,
+		// writing a negative allocation and growing `remaining` — so the issue drew more than it asked for.
+		if take.LessThanOrEqual(decimal.Zero) {
 			continue
 		}
 

@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
 )
 
 const deleteInventoryIssueByID = `-- name: DeleteInventoryIssueByID :exec
@@ -40,6 +41,7 @@ WHERE ir.owner_account_id = ?
 AND ir.item_id = ?
 AND ir.status_code = 'available'
 ORDER BY ir.received_at ASC
+FOR UPDATE
 `
 
 type FindReceiptsForAllocationParams struct {
@@ -54,6 +56,13 @@ type FindReceiptsForAllocationRow struct {
 	UnitID        string
 }
 
+// FindReceiptsForAllocation lists the receipts an issue may draw from, oldest first.
+//
+// FOR UPDATE holds the candidates until the allocating transaction commits. The caller decides how
+// much a receipt has left by reading its allocations and subtracting, so without the lock two
+// consumptions of the same item both saw the same receipt as free and each allocated the whole of
+// it — consuming stock that was never used. Only `available` receipts are candidates, so the lock
+// covers the few rows actually in play rather than the item's whole receipt history.
 func (q *Queries) FindReceiptsForAllocation(ctx context.Context, arg FindReceiptsForAllocationParams) ([]FindReceiptsForAllocationRow, error) {
 	rows, err := q.db.QueryContext(ctx, findReceiptsForAllocation, arg.AccountID, arg.ItemID)
 	if err != nil {
@@ -230,6 +239,56 @@ func (q *Queries) GetAllocationSumForReceipt(ctx context.Context, receiptID stri
 	var total_allocated interface{}
 	err := row.Scan(&total_allocated)
 	return total_allocated, err
+}
+
+const getAllocationSumsForReceipts = `-- name: GetAllocationSumsForReceipts :many
+SELECT ia.inventory_receipt_id, COALESCE(SUM(CAST(q.value AS DECIMAL(65,30))), 0) AS total_allocated
+FROM inventory_allocation ia
+JOIN quantity q ON q.id = ia.quantity_id
+WHERE ia.inventory_receipt_id IN (/*SLICE:receipt_ids*/?)
+GROUP BY ia.inventory_receipt_id
+`
+
+type GetAllocationSumsForReceiptsRow struct {
+	InventoryReceiptID string
+	TotalAllocated     interface{}
+}
+
+// GetAllocationSumsForReceipts answers for a whole candidate set at once. Allocation walks receipts
+// oldest first and needs each one's drawn-down total; asking per receipt put a round trip inside that
+// loop, so an item with a long tail of open receipts cost a query apiece to find most of them full.
+// Receipts with no allocations are absent rather than zero — the caller treats a missing row as zero.
+func (q *Queries) GetAllocationSumsForReceipts(ctx context.Context, receiptIds []string) ([]GetAllocationSumsForReceiptsRow, error) {
+	query := getAllocationSumsForReceipts
+	var queryParams []interface{}
+	if len(receiptIds) > 0 {
+		for _, v := range receiptIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:receipt_ids*/?", strings.Repeat(",?", len(receiptIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:receipt_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAllocationSumsForReceiptsRow
+	for rows.Next() {
+		var i GetAllocationSumsForReceiptsRow
+		if err := rows.Scan(&i.InventoryReceiptID, &i.TotalAllocated); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const insertInventoryAllocation = `-- name: InsertInventoryAllocation :exec

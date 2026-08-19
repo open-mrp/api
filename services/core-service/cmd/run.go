@@ -693,8 +693,23 @@ func Run(
 		return err
 	}
 
-	execStepConsumer := event.NewExecuteProductionStepConsumer(rabbitmq, inboxRepo, queries, repoFactory)
+	execStepConsumer := event.NewExecuteProductionStepConsumer(rabbitmq, inboxRepo, queries, repoFactory, txManager)
 	if err := execStepConsumer.Listen(ctx); err != nil {
+		return err
+	}
+
+	batchScannedConsumer := event.NewBatchScannedConsumer(rabbitmq, inboxRepo, repoFactory, txManager)
+	if err := batchScannedConsumer.Listen(ctx); err != nil {
+		return err
+	}
+
+	inventoryReceivedConsumer := event.NewInventoryReceivedConsumer(rabbitmq, inboxRepo, repoFactory, txManager)
+	if err := inventoryReceivedConsumer.Listen(ctx); err != nil {
+		return err
+	}
+
+	costBasisConsumer := event.NewItemCostBasisChangedConsumer(rabbitmq, inboxRepo, repoFactory, itemSvc)
+	if err := costBasisConsumer.Listen(ctx); err != nil {
 		return err
 	}
 

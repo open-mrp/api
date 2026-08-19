@@ -3,6 +3,8 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
+	"fmt"
 	"slices"
 	"time"
 
@@ -25,23 +27,31 @@ func NewRequestLogRepo(db *sqlc.Queries) domain.RequestLogRepo {
 	return &requestLogRepoImpl{db: db}
 }
 
+// jsonColumn keeps a malformed payload from failing the insert. MySQL rejects the whole row when a JSON column gets an unparseable document, and because the request log arrives over the inbox that means endless retries on a message that can never succeed — one truncated response body costs the log row, the message, and a permanently stuck inbox record. Substitute the size so the log still shows something happened.
+func jsonColumn(s string) db.NullableRawMessage {
+	if !json.Valid([]byte(s)) {
+		return db.NullableRawMessage(fmt.Sprintf(`{"_invalid_json":true,"_original_size":%d}`, len(s)))
+	}
+	return db.NullableRawMessage(s)
+}
+
 func (r *requestLogRepoImpl) Create(ctx context.Context, rl *domain.RequestLog) *apierror.APIError {
 	ctx, span := requestLogRepoTracer.Start(ctx, "repository.request_log.create")
 	defer span.End()
 
 	var queryJSON db.NullableRawMessage
 	if rl.QueryJSON != nil && *rl.QueryJSON != "" {
-		queryJSON = db.NullableRawMessage(*rl.QueryJSON)
+		queryJSON = jsonColumn(*rl.QueryJSON)
 	}
 
 	bodyJSON := db.NullableRawMessage("{}")
 	if rl.BodyJSON != nil && *rl.BodyJSON != "" {
-		bodyJSON = db.NullableRawMessage(*rl.BodyJSON)
+		bodyJSON = jsonColumn(*rl.BodyJSON)
 	}
 
 	responseJSON := db.NullableRawMessage("{}")
 	if rl.ResponseJSON != nil && *rl.ResponseJSON != "" {
-		responseJSON = db.NullableRawMessage(*rl.ResponseJSON)
+		responseJSON = jsonColumn(*rl.ResponseJSON)
 	}
 
 	statusCode := rl.StatusCode

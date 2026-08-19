@@ -692,6 +692,33 @@ func (r *rabbitMQ) setupExchangesAndQueues() error {
 		return err
 	}
 
+	// Allocation's reaction to stock arriving (handled by core-service)
+	if err := r.declareAndBindQueue(
+		CoreEventInventoryReceivedAllocationQueue,
+		[]string{string(contracts.CoreEventInventoryReceived)},
+		ApplicationExchange,
+	); err != nil {
+		return err
+	}
+
+	// Costing's reaction to an item's cost basis moving (handled by core-service)
+	if err := r.declareAndBindQueue(
+		CoreEventItemCostBasisChangedQueue,
+		[]string{string(contracts.CoreEventItemCostBasisChanged)},
+		ApplicationExchange,
+	); err != nil {
+		return err
+	}
+
+	// Inventory's reaction to a batch scan (handled by core-service)
+	if err := r.declareAndBindQueue(
+		CoreEventBatchScannedInventoryQueue,
+		[]string{string(contracts.CoreEventBatchScanned)},
+		ApplicationExchange,
+	); err != nil {
+		return err
+	}
+
 	// Core undo batch scan command queue (handled by core-service)
 	if err := r.declareAndBindQueue(
 		CoreCmdUndoBatchScanQueue,

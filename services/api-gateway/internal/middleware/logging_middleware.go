@@ -167,7 +167,11 @@ func LoggingMiddleware(logger *log.Logger, next http.HandlerFunc, saver saver, r
 						}
 					}
 					if len(respBytes) > 0 {
+						// A handler that dies mid-write (client disconnect, panic after the first flush) leaves the captured body cut off mid-token. response_body_json is a JSON column, so storing it as-is fails the insert and loses the whole request log; keep the row and record the size instead.
 						s := string(respBytes)
+						if !json.Valid(respBytes) {
+							s = fmt.Sprintf(`{"_invalid_json":true,"_original_size":%d}`, len(respBytes))
+						}
 						requestLog.ResponseJSON = &s
 					}
 				} else {

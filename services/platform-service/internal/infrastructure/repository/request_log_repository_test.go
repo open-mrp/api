@@ -2,6 +2,7 @@ package repository
 
 import (
 	"database/sql"
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -354,5 +355,29 @@ func TestMapRowToRequestLogRead_BasicFields(t *testing.T) {
 	}
 	if rl.ErrorCode == nil || *rl.ErrorCode != "not_found" {
 		t.Errorf("expected ErrorCode 'not_found', got %v", rl.ErrorCode)
+	}
+}
+
+func TestJSONColumn_ValidPayloadPassesThrough(t *testing.T) {
+	t.Parallel()
+
+	const payload = `{"object":"item","id":"itm_1"}`
+	if got := string(jsonColumn(payload)); got != payload {
+		t.Fatalf("jsonColumn = %q want %q", got, payload)
+	}
+}
+
+func TestJSONColumn_MalformedPayloadBecomesPlaceholder(t *testing.T) {
+	t.Parallel()
+
+	// A response captured from a connection that died mid-write; MySQL would reject the whole insert.
+	const truncated = `{"object":"list","data":[{"id":"itm_1","name":"unterminat`
+	got := string(jsonColumn(truncated))
+
+	if !json.Valid([]byte(got)) {
+		t.Fatalf("jsonColumn produced invalid JSON: %q", got)
+	}
+	if want := `{"_invalid_json":true,"_original_size":57}`; got != want {
+		t.Fatalf("jsonColumn = %q want %q", got, want)
 	}
 }

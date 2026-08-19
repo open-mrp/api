@@ -161,6 +161,8 @@ type ItemRepo interface {
 	GetByIDs(ctx context.Context, accountID string, ids []string) ([]*Item, *apierror.APIError)
 	GetInventory(ctx context.Context, accountID, itemID string) (*ItemInventory, *apierror.APIError)
 	GetCostFlowConsumptions(ctx context.Context, stepID string) ([]CostFlowConsumption, *apierror.APIError)
+	// FindItemsProducedFromConsumed returns the items produced by every step that consumes any of the given ones — one generation outwards in the cost graph.
+	FindItemsProducedFromConsumed(ctx context.Context, accountID string, itemIDs []string) ([]string, *apierror.APIError)
 	UpdateUnitCost(ctx context.Context, accountID, itemID string, cost decimal.Decimal, denominatorUnitID string) *apierror.APIError
 	GetTrends(ctx context.Context, accountID, itemID, trendType string) (*ItemTrends, *apierror.APIError)
 	ExportWithInventory(ctx context.Context, accountID string) (*ExportItemsResult, *apierror.APIError)

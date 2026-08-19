@@ -77,6 +77,13 @@ INSERT INTO inventory_issue (
     NOW(3)
 );
 
+-- FindReceiptsForAllocation lists the receipts an issue may draw from, oldest first.
+--
+-- FOR UPDATE holds the candidates until the allocating transaction commits. The caller decides how
+-- much a receipt has left by reading its allocations and subtracting, so without the lock two
+-- consumptions of the same item both saw the same receipt as free and each allocated the whole of
+-- it — consuming stock that was never used. Only `available` receipts are candidates, so the lock
+-- covers the few rows actually in play rather than the item's whole receipt history.
 -- name: FindReceiptsForAllocation :many
 SELECT
     ir.id,
@@ -88,13 +95,25 @@ JOIN quantity q ON q.id = ir.quantity_id
 WHERE ir.owner_account_id = sqlc.arg('account_id')
 AND ir.item_id = sqlc.arg('item_id')
 AND ir.status_code = 'available'
-ORDER BY ir.received_at ASC;
+ORDER BY ir.received_at ASC
+FOR UPDATE;
 
 -- name: GetAllocationSumForReceipt :one
 SELECT COALESCE(SUM(CAST(q.value AS DECIMAL(65,30))), 0) AS total_allocated
 FROM inventory_allocation ia
 JOIN quantity q ON q.id = ia.quantity_id
 WHERE ia.inventory_receipt_id = sqlc.arg('receipt_id');
+
+-- GetAllocationSumsForReceipts answers for a whole candidate set at once. Allocation walks receipts
+-- oldest first and needs each one's drawn-down total; asking per receipt put a round trip inside that
+-- loop, so an item with a long tail of open receipts cost a query apiece to find most of them full.
+-- Receipts with no allocations are absent rather than zero — the caller treats a missing row as zero.
+-- name: GetAllocationSumsForReceipts :many
+SELECT ia.inventory_receipt_id, COALESCE(SUM(CAST(q.value AS DECIMAL(65,30))), 0) AS total_allocated
+FROM inventory_allocation ia
+JOIN quantity q ON q.id = ia.quantity_id
+WHERE ia.inventory_receipt_id IN (sqlc.slice('receipt_ids'))
+GROUP BY ia.inventory_receipt_id;
 
 -- name: InsertInventoryAllocation :exec
 INSERT INTO inventory_allocation (

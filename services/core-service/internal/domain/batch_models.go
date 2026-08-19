@@ -216,7 +216,99 @@ func (l LineageShortfall) Total() decimal.Decimal {
 	return l.Seconds.Add(l.Waste)
 }
 
+// InventoryReceivedEvent states that stock of an item became available.
+//
+// Allocation is one reaction: an issue that went short because the shelf could not cover it is
+// filled when what it was waiting for arrives, rather than whenever a nightly sweep next runs.
+type InventoryReceivedEvent struct {
+	AccountID string `json:"account_id"`
+	// ItemIDs are the items whose stock moved. Carried as a set because one cause — a scan, a
+	// receipt against a purchase order — usually moves several at once, and a message per item would
+	// multiply the round trips without changing what gets done.
+	ItemIDs []string `json:"item_ids"`
+	// Reason names what moved the stock, for tracing rather than for logic.
+	Reason string `json:"reason,omitempty"`
+}
+
+// ItemCostBasisChangedEvent states that something an item's cost is derived from has moved: the unit
+// cost of a material, or the make-up of a production step.
+//
+// It names the item at the point of change, not the items that need recomputing. Which those are is
+// a property of the production graph at the moment the event is handled, and the publisher has no
+// business knowing it.
+type ItemCostBasisChangedEvent struct {
+	AccountID string `json:"account_id"`
+	// ItemID is where the change happened: the material whose cost moved, or the item produced by
+	// the step that was edited.
+	ItemID string `json:"item_id"`
+	Reason string `json:"reason,omitempty"`
+}
+
+// BatchScannedEvent states what an operator recorded at a station. It is the fact the scan happened,
+// not an instruction, so it carries the measures and leaves every subscriber to decide what follows.
+//
+// Seconds and waste travel with the scan rather than in a message of their own. The command this
+// replaces could only describe one effect at a time, so a batch with scrap needed a second message
+// with produce_inventory=false, and the two could be processed apart — leaving the receipt credited
+// and the reservation it should have released still standing. Here one message carries the whole
+// scan, and its subscriber commits both halves together or neither.
+type BatchScannedEvent struct {
+	// AccountID owns the batch. Carried on the payload as well as the identity so a subscriber that
+	// re-publishes or replays the event does not depend on the envelope surviving intact.
+	AccountID string `json:"account_id"`
+	// BatchID is the batch the operator scanned, and the tag every ledger row written in reaction
+	// carries, which is what lets an undo find them again.
+	BatchID string `json:"batch_id"`
+
+	ProductionStepID  string `json:"production_step_id"`
+	ScanningStationID string `json:"scanning_station_id"`
+	// ItemID is what the batch is of, used to confirm the step still produces what was scanned.
+	ItemID string `json:"item_id"`
+
+	// Measure and UnitID are what the operator recorded, in the unit they recorded it in. Conversion
+	// into the step's production unit belongs to the subscriber, which knows the step.
+	Measure string `json:"measure"`
+	UnitID  string `json:"unit_id"`
+
+	// SecondsMeasure and WasteMeasure are in the same unit as Measure. Empty means none.
+	SecondsMeasure string `json:"seconds_measure,omitempty"`
+	WasteMeasure   string `json:"waste_measure,omitempty"`
+
+	ResponsibleUserID *string `json:"responsible_user_id,omitempty"`
+
+	// ScannedAt is when the operator scanned, not when the event was published or handled. Receipts
+	// are dated from it so a message that waits in the queue still lands on the day it happened.
+	ScannedAt time.Time `json:"scanned_at"`
+}
+
+// SecondsDecimal returns the seconds measure, treating an absent value as zero.
+func (e BatchScannedEvent) SecondsDecimal() (decimal.Decimal, error) {
+	return optionalMeasure(e.SecondsMeasure)
+}
+
+// WasteDecimal returns the waste measure, treating an absent value as zero.
+func (e BatchScannedEvent) WasteDecimal() (decimal.Decimal, error) {
+	return optionalMeasure(e.WasteMeasure)
+}
+
+func optionalMeasure(raw string) (decimal.Decimal, error) {
+	if raw == "" {
+		return decimal.Zero, nil
+	}
+	return decimal.NewFromString(raw)
+}
+
 // ExecuteProductionStepEvent is the outbox event payload for executing a production step side-effect.
+//
+// Superseded by BatchScannedEvent, which states the scan as a fact and lets any number of consumers
+// react, rather than naming one reaction and needing a second message to carry seconds and waste.
+// Not marked deprecated because the Go batch service still has nothing else to publish.
+//
+// TODO: migrate batch_service.go's enqueueExecuteProductionStep to publish BatchScannedEvent. The
+// mapping is not one-to-one: the pairs of calls that follow a scrapped batch — one with
+// ProduceInventory true, one false carrying the seconds and waste — collapse into a single event
+// with those measures on it. Once nothing publishes this, the type, its queue and
+// ExecuteProductionStepConsumer can all go.
 type ExecuteProductionStepEvent struct {
 	ProductionStepID  string  `json:"production_step_id"`
 	ScanningStationID string  `json:"scanning_station_id"`

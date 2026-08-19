@@ -10,6 +10,8 @@ import (
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/augno/api/shared/contracts"
+	"github.com/augno/api/shared/db"
+	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/messaging"
 	"github.com/augno/api/shared/tracing"
 
@@ -24,6 +26,7 @@ type ExecuteProductionStepConsumer struct {
 	inboxConsumer *messaging.InboxConsumer
 	queries       *sqlc.Queries
 	repos         domain.RepoFactory
+	txManager     db.TransactionManager[*sqlc.Queries, domain.RepoFactory]
 	tracer        trace.Tracer
 }
 
@@ -32,12 +35,14 @@ func NewExecuteProductionStepConsumer(
 	inboxRepo messaging.InboxRepo,
 	queries *sqlc.Queries,
 	repos domain.RepoFactory,
+	txManager db.TransactionManager[*sqlc.Queries, domain.RepoFactory],
 ) *ExecuteProductionStepConsumer {
 	return &ExecuteProductionStepConsumer{
 		rabbitmq:      rabbitmq,
 		inboxConsumer: messaging.NewInboxConsumer(inboxRepo, "core-service"),
 		queries:       queries,
 		repos:         repos,
+		txManager:     txManager,
 		tracer:        tracing.GetTracer("core-service.execute_production_step_consumer"),
 	}
 }
@@ -100,10 +105,34 @@ func (c *ExecuteProductionStepConsumer) handleMessage(ctx context.Context, msg a
 	return c.executeProductionStep(ctx, accountID, evt)
 }
 
-// executeProductionStep implements the core logic ported from dashboard/apps/api/src/repositories/production-step.repo.ts:1142-1434.
+// executeProductionStep runs the whole step in one transaction.
+//
+// The delivery is retried with backoff on failure and replayed from the top, and none of the ledger
+// writes below are individually idempotent: a step that failed after allocating drew the same receipts
+// again on the retry, consuming stock that was never used. Committing the step as a unit means a
+// failure leaves nothing behind for the replay to duplicate.
+func (c *ExecuteProductionStepConsumer) executeProductionStep(ctx context.Context, accountID string, evt domain.ExecuteProductionStepEvent) error {
+	apiErr := c.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
+		txConsumer := &ExecuteProductionStepConsumer{
+			rabbitmq:      c.rabbitmq,
+			inboxConsumer: c.inboxConsumer,
+			queries:       c.queries,
+			repos:         f,
+			txManager:     c.txManager,
+			tracer:        c.tracer,
+		}
+		return txConsumer.executeProductionStepTx(txCtx, accountID, evt)
+	})
+	if apiErr != nil {
+		return apiErr
+	}
+	return nil
+}
+
+// executeProductionStepTx implements the core logic ported from dashboard/apps/api/src/repositories/production-step.repo.ts:1142-1434.
 //
 // Since batch service events always use partUsageType=produced and undo=false, this consumer only implements that path.
-func (c *ExecuteProductionStepConsumer) executeProductionStep(ctx context.Context, accountID string, evt domain.ExecuteProductionStepEvent) error {
+func (c *ExecuteProductionStepConsumer) executeProductionStepTx(ctx context.Context, accountID string, evt domain.ExecuteProductionStepEvent) *apierror.APIError {
 	stepRepo := c.repos.NewProductionStepQueryRepo()
 	unitConvRepo := c.repos.NewUnitConversionRepo()
 
@@ -118,7 +147,7 @@ func (c *ExecuteProductionStepConsumer) executeProductionStep(ctx context.Contex
 	batchMeasure, err := decimal.NewFromString(evt.BatchMeasure)
 	if err != nil {
 		log.Printf("[execute_production_step] Failed to parse batch measure %q: %v", evt.BatchMeasure, err)
-		return err
+		return apierror.NewInternalError(err, "Invalid batch measure.")
 	}
 
 	// 3. Calculate execution multiplier by production.
@@ -219,7 +248,7 @@ func (c *ExecuteProductionStepConsumer) handleProducedBatchShortfall(
 	step *domain.ProductionStepDetail,
 	producedMeasure decimal.Decimal,
 	producedUnitID string,
-) error {
+) *apierror.APIError {
 	if evt.ProducedBatchID == nil {
 		return nil
 	}
@@ -287,7 +316,7 @@ func (c *ExecuteProductionStepConsumer) handleConsumptionWithOrder(
 	consumption domain.StepConsumption,
 	consumedMeasure decimal.Decimal,
 	consumedUnitID string,
-) error {
+) *apierror.APIError {
 	// BFS to find productionRunID.
 	productionRunID, err := c.bfsForProductionRunID(ctx, *evt.ProducedBatchID)
 	if err != nil {
@@ -374,7 +403,7 @@ func (c *ExecuteProductionStepConsumer) handleConsumptionWithOrder(
 }
 
 // bfsForProductionRunID performs BFS up the batch lineage to find a productionRunID.
-func (c *ExecuteProductionStepConsumer) bfsForProductionRunID(ctx context.Context, startBatchID string) (string, error) {
+func (c *ExecuteProductionStepConsumer) bfsForProductionRunID(ctx context.Context, startBatchID string) (string, *apierror.APIError) {
 	visited := make(map[string]bool)
 	queue := []string{startBatchID}
 
@@ -397,7 +426,7 @@ func (c *ExecuteProductionStepConsumer) bfsForProductionRunID(ctx context.Contex
 
 		rows, err := c.queries.FindBatchProductionRunIDAncestry(ctx, toFetch)
 		if err != nil {
-			return "", err
+			return "", db.MapSQLError(err)
 		}
 
 		for _, row := range rows {

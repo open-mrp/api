@@ -275,6 +275,63 @@ func (q *Queries) FindItemBySKU(ctx context.Context, arg FindItemBySKUParams) (F
 	return i, err
 }
 
+const findItemsProducedFromConsumed = `-- name: FindItemsProducedFromConsumed :many
+SELECT DISTINCT p.item_id
+FROM consumption c
+JOIN production p ON p.production_step_id = c.production_step_id
+JOIN item i ON i.id = p.item_id
+WHERE c.item_id IN (/*SLICE:item_ids*/?)
+  AND i.account_id = ?
+  AND i.deleted_at IS NULL
+`
+
+type FindItemsProducedFromConsumedParams struct {
+	ItemIds   []string
+	AccountID string
+}
+
+// FindItemsProducedFromConsumed returns the items produced by every step that consumes any of the
+// given ones — one generation outwards in the cost graph.
+//
+// The edge is a production step: a step consumes some items and produces one, so what it produces
+// depends on everything it consumes. Callers walk this a generation at a time to find everything
+// downstream of a change, which costs one query per level of the bill of materials rather than one
+// per item found. Expressing the whole walk as a recursive CTE would be a single round trip, but
+// sqlc cannot parse the self-reference.
+func (q *Queries) FindItemsProducedFromConsumed(ctx context.Context, arg FindItemsProducedFromConsumedParams) ([]string, error) {
+	query := findItemsProducedFromConsumed
+	var queryParams []interface{}
+	if len(arg.ItemIds) > 0 {
+		for _, v := range arg.ItemIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var item_id string
+		if err := rows.Scan(&item_id); err != nil {
+			return nil, err
+		}
+		items = append(items, item_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getCostFlowStepConsumptions = `-- name: GetCostFlowStepConsumptions :many
 SELECT
     ci.item_type_code AS consumed_item_type,

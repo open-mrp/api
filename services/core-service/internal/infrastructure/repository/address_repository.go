@@ -40,6 +40,8 @@ func mapAddressRow(
 	country string,
 	googlePlaceID gosql.NullString,
 	latitude, longitude gosql.NullFloat64,
+	timezone gosql.NullString,
+	receiveCalendarID gosql.NullString,
 ) *domain.Address {
 	addr := &domain.Address{
 		ID:         id,
@@ -84,6 +86,12 @@ func mapAddressRow(
 	if longitude.Valid {
 		addr.Geolocation.Longitude = &longitude.Float64
 	}
+	if timezone.Valid {
+		addr.Geolocation.Timezone = &timezone.String
+	}
+	if receiveCalendarID.Valid {
+		addr.ReceiveCalendarID = &receiveCalendarID.String
+	}
 
 	return addr
 }
@@ -93,7 +101,7 @@ func mapForwardAddressRow(row sqlc.ListAddressesForwardRow) *domain.Address {
 		row.ID, row.Name, row.Phone, row.Email, row.IsDropShip,
 		row.CreatedAt, row.UpdatedAt,
 		row.GeolocationID, row.StreetLine1, row.StreetLine2, row.Locality, row.State, row.PostalCode,
-		row.Country, row.GooglePlaceID, row.Latitude, row.Longitude,
+		row.Country, row.GooglePlaceID, row.Latitude, row.Longitude, row.Timezone, row.ReceiveCalendarID,
 	)
 }
 
@@ -102,7 +110,7 @@ func mapBackwardAddressRow(row sqlc.ListAddressesBackwardRow) *domain.Address {
 		row.ID, row.Name, row.Phone, row.Email, row.IsDropShip,
 		row.CreatedAt, row.UpdatedAt,
 		row.GeolocationID, row.StreetLine1, row.StreetLine2, row.Locality, row.State, row.PostalCode,
-		row.Country, row.GooglePlaceID, row.Latitude, row.Longitude,
+		row.Country, row.GooglePlaceID, row.Latitude, row.Longitude, row.Timezone, row.ReceiveCalendarID,
 	)
 }
 
@@ -111,7 +119,7 @@ func mapGetAddressRow(row sqlc.GetAddressRow) *domain.Address {
 		row.ID, row.Name, row.Phone, row.Email, row.IsDropShip,
 		row.CreatedAt, row.UpdatedAt,
 		row.GeolocationID, row.StreetLine1, row.StreetLine2, row.Locality, row.State, row.PostalCode,
-		row.Country, row.GooglePlaceID, row.Latitude, row.Longitude,
+		row.Country, row.GooglePlaceID, row.Latitude, row.Longitude, row.Timezone, row.ReceiveCalendarID,
 	)
 }
 
@@ -120,7 +128,7 @@ func mapGetAddressesByIDsRow(row sqlc.GetAddressesByIDsRow) *domain.Address {
 		row.ID, row.Name, row.Phone, row.Email, row.IsDropShip,
 		row.CreatedAt, row.UpdatedAt,
 		row.GeolocationID, row.StreetLine1, row.StreetLine2, row.Locality, row.State, row.PostalCode,
-		row.Country, row.GooglePlaceID, row.Latitude, row.Longitude,
+		row.Country, row.GooglePlaceID, row.Latitude, row.Longitude, row.Timezone, row.ReceiveCalendarID,
 	)
 }
 
@@ -145,7 +153,7 @@ func (r *addressRepoImpl) List(ctx context.Context, params domain.ListAddressesP
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
-			return nil, apierror.NewValidationError("Invalid pagination cursor.")
+			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
 		}
 		cursorDir = &cur.Direction
 
@@ -265,12 +273,13 @@ func (r *addressRepoImpl) Create(ctx context.Context, addressID, geolocationID, 
 
 	// Insert address
 	if err := r.queries.InsertAddress(ctx, sqlc.InsertAddressParams{
-		ID:            addressID,
-		Name:          params.Name,
-		Phone:         toNullString(params.Phone),
-		Email:         toNullString(params.Email),
-		IsDropShip:    params.IsDropShip,
-		GeolocationID: geolocationID,
+		ID:                addressID,
+		Name:              params.Name,
+		Phone:             toNullString(params.Phone),
+		Email:             toNullString(params.Email),
+		IsDropShip:        params.IsDropShip,
+		ReceiveCalendarID: toNullString(params.ReceiveCalendarID),
+		GeolocationID:     geolocationID,
 	}); err != nil {
 		if apiErr := db.MapSQLError(err); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
@@ -299,11 +308,12 @@ func (r *addressRepoImpl) Update(ctx context.Context, params domain.UpdateAddres
 	defer span.End()
 
 	result, err := r.queries.UpdateAddress(ctx, sqlc.UpdateAddressParams{
-		ID:         params.AddressID,
-		Name:       toNullString(params.Name),
-		Phone:      field.StringToNullString(params.Phone),
-		Email:      field.StringToNullString(params.Email),
-		IsDropShip: toNullBool(params.IsDropShip),
+		ID:                params.AddressID,
+		Name:              toNullString(params.Name),
+		Phone:             field.StringToNullString(params.Phone),
+		Email:             field.StringToNullString(params.Email),
+		IsDropShip:        toNullBool(params.IsDropShip),
+		ReceiveCalendarID: toNullString(params.ReceiveCalendarID),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)

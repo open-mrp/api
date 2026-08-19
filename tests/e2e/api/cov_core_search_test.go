@@ -525,7 +525,7 @@ func TestCovCoreSearch_Validation_QTooLong(t *testing.T) {
 	status, body, err := apiClient.GetListRaw(covCoreSearchPath, url.Values{"q": {string(tooLong)}})
 	require.NoError(t, err)
 	assert.Equal(t, 400, status, "501-char q should be rejected, got %d: %s", status, string(body))
-	requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
+	requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
 }
 
 // TestCovCoreSearch_Validation_TypesInvalid_KnownButUnsupportedObjectType

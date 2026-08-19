@@ -133,11 +133,7 @@ func TestCovCatalogProducts_Create_NonexistentProductLineID(t *testing.T) {
 		"nonexistent product_line_id should be rejected with 400/404, got %d: %s", status, string(respBody))
 }
 
-// TestCovCatalogProducts_Create_NonexistentAttributeID is the attribute_ids analogue of
-// TestCovCatalogProducts_Create_NonexistentProductLineID. SUSPECTED BACKEND BUG: the live
-// stack currently returns 201 and silently creates the item with zero linked attributes
-// (the AddAttribute call against the `_item_attributes` join table succeeds unconditionally
-// because that table also has no FK constraint). Expected to be RED until fixed.
+// TestCovCatalogProducts_Create_NonexistentAttributeID is the attribute_ids analogue of TestCovCatalogProducts_Create_NonexistentProductLineID. The `_item_attributes` join table has no FK constraint either, so an unchecked id would be stored as a silent orphan join row.
 func TestCovCatalogProducts_Create_NonexistentAttributeID(t *testing.T) {
 	t.Parallel()
 
@@ -156,6 +152,22 @@ func TestCovCatalogProducts_Create_NonexistentAttributeID(t *testing.T) {
 
 	assert.True(t, status == 400 || status == 404,
 		"nonexistent attribute_ids entry should be rejected with 400/404, got %d: %s", status, string(respBody))
+}
+
+// TestCovCatalogProducts_Create_AttributeOutsideCategoryProperties covers the category gate on attribute_ids: an attribute may only be linked to a product whose category carries the attribute's property. SeedAttributeID belongs to the Color property, and the category here carries no properties at all.
+func TestCovCatalogProducts_Create_AttributeOutsideCategoryProperties(t *testing.T) {
+	t.Parallel()
+
+	body := validProductBody(uniqueName("e2e-cov-prod-attrcat"))
+	body["category_id"] = SeedPropertylessItemCategoryID
+	body["attribute_ids"] = []string{SeedAttributeID}
+
+	status, respBody, err := apiClient.Post(productsPath, body, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 400, status, respBody)
+
+	errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
+	assertErrorParam(t, errObj, "attribute_ids")
 }
 
 // ──────────────────────────────────────────────
@@ -425,16 +437,7 @@ func TestCovCatalogProducts_List_FilterByAttributeIDs(t *testing.T) {
 func TestCovCatalogProducts_List_FilterByAttributeIDs_NoResults(t *testing.T) {
 	t.Parallel()
 
-	// Use a fake attribute id that nothing in the suite ever joins against.
-	// The obvious all-zeros sentinel (at_00000000000000000000000000) is
-	// poisoned: TestCovCatalogProducts_Create_NonexistentAttributeID (and the
-	// item add-attribute coverage) create items/products with that exact
-	// nonexistent attribute_id, and because create does not validate attribute
-	// existence those requests leave orphaned _item_attributes join rows
-	// (A = at_0000...) that this list filter then correctly matches. The filter
-	// itself is behaving correctly — it returns products that genuinely carry a
-	// join row for the requested id — so this no-results probe just needs an id
-	// no other test ever references.
+	// Any id nothing in the suite ever joins against works as a no-results probe.
 	list, _, err := apiClient.GetList(productsPath, url.Values{
 		"attribute_ids": {"at_prod9noattr7filter0match55"},
 	})

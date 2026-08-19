@@ -333,7 +333,7 @@ func TestCovMessagingNotifications_ListInvalidCategoryRejected(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
-	assertErrorParam(t, errObj, "Category")
+	assertErrorParam(t, errObj, "category")
 }
 
 func TestCovMessagingNotifications_ListInvalidStatusRejected(t *testing.T) {
@@ -344,7 +344,7 @@ func TestCovMessagingNotifications_ListInvalidStatusRejected(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
-	assertErrorParam(t, errObj, "Status")
+	assertErrorParam(t, errObj, "status")
 }
 
 // TestCovMessagingNotifications_ListInvalidSenderTypeIsSilentNoMatch documents

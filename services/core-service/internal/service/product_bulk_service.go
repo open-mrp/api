@@ -151,10 +151,11 @@ func (s *productSvcImpl) writeBulkUpsertProducts(txCtx context.Context, txRepos 
 				if apiErr := applyItemRatesInTx(spCtx, txRepos, old.UnitValueRateID, old.UnitCostRateID, row.UnitPrice, row.UnitCost); apiErr != nil {
 					return apiErr
 				}
-				if apiErr := attachItemAttributesInTx(spCtx, txRepos, accountID, old.ItemID, attrIDs); apiErr != nil {
+				// Precedes the attribute link, which rejects an attribute whose property the category does not carry yet.
+				if apiErr := linkRowPropertiesToCategoryInTx(spCtx, txRepos, old.CategoryID, row.Properties, propIDByName); apiErr != nil {
 					return apiErr
 				}
-				if apiErr := linkRowPropertiesToCategoryInTx(spCtx, txRepos, old.CategoryID, row.Properties, propIDByName); apiErr != nil {
+				if apiErr := attachItemAttributesInTx(spCtx, txRepos, accountID, old.CategoryID, old.ItemID, attrIDs); apiErr != nil {
 					return apiErr
 				}
 				upsertedID = old.ProductID
@@ -168,6 +169,10 @@ func (s *productSvcImpl) writeBulkUpsertProducts(txCtx context.Context, txRepos 
 			isPortalReady := false
 			if row.IsPortalReady != nil {
 				isPortalReady = *row.IsPortalReady
+			}
+			// Precedes the attribute link, which rejects an attribute whose property the category does not carry yet.
+			if apiErr := linkRowPropertiesToCategoryInTx(spCtx, txRepos, row.CategoryID, row.Properties, propIDByName); apiErr != nil {
+				return apiErr
 			}
 			created, apiErr := txSvc.createProductInTx(spCtx, domain.CreateProductParams{
 				AccountID:       accountID,
@@ -183,9 +188,6 @@ func (s *productSvcImpl) writeBulkUpsertProducts(txCtx context.Context, txRepos 
 				AttributeIDs:    attrIDs,
 			})
 			if apiErr != nil {
-				return apiErr
-			}
-			if apiErr := linkRowPropertiesToCategoryInTx(spCtx, txRepos, row.CategoryID, row.Properties, propIDByName); apiErr != nil {
 				return apiErr
 			}
 			upsertedID = created.ID

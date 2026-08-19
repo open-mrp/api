@@ -120,7 +120,7 @@ func (r *sandboxAccountRepoImpl) listBase(ctx context.Context, span trace.Span, 
 	if cursor != nil {
 		cur, err := pagination.DecodeCursor(*cursor)
 		if err != nil {
-			return nil, apierror.NewValidationError("Invalid pagination cursor.")
+			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
 		}
 		cursorDir = &cur.Direction
 
@@ -186,7 +186,7 @@ func (r *sandboxAccountRepoImpl) listWithOwner(ctx context.Context, span trace.S
 	if cursor != nil {
 		cur, err := pagination.DecodeCursor(*cursor)
 		if err != nil {
-			return nil, apierror.NewValidationError("Invalid pagination cursor.")
+			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
 		}
 		cursorDir = &cur.Direction
 

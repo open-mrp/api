@@ -541,7 +541,7 @@ func TestCovAiRuns_List_LimitOutOfRange(t *testing.T) {
 		status, body, err := apiClient.GetListRaw(agentRunsPath, url.Values{"limit": {limit}})
 		require.NoError(t, err)
 		requireStatus(t, 400, status, body)
-		requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
+		requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
 	}
 }
 

@@ -18,6 +18,8 @@ type ChangeItemCategoryRequest struct {
 	// ID of the category to move the item to.
 	//
 	// The category's type has to suit the item: a material can only move to a material category, and a product or part can only move to a product category. Anything else fails validation.
+	//
+	// The category also has to carry the properties of every attribute the item already has, since the move keeps those attributes. Unlink the offending attributes, or add their properties to the target category, before moving the item.
 	CategoryID string `path:"category_id" validate:"required"`
 }
 

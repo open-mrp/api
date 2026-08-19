@@ -112,7 +112,7 @@ func TestCovSalesPriorities_List_InvalidLimitZero(t *testing.T) {
 	got := parseJSON(body)
 	errObj := jsonObject(got, "error")
 	require.NotNil(t, errObj, "400 response should contain an error object")
-	assert.Equal(t, "invalid_format", jsonField(errObj, "code"))
+	assert.Equal(t, "parameter_invalid", jsonField(errObj, "code"))
 }
 
 func TestCovSalesPriorities_List_InvalidLimitNegative(t *testing.T) {
@@ -124,7 +124,7 @@ func TestCovSalesPriorities_List_InvalidLimitNegative(t *testing.T) {
 	got := parseJSON(body)
 	errObj := jsonObject(got, "error")
 	require.NotNil(t, errObj, "400 response should contain an error object")
-	assert.Equal(t, "invalid_format", jsonField(errObj, "code"))
+	assert.Equal(t, "parameter_invalid", jsonField(errObj, "code"))
 }
 
 func TestCovSalesPriorities_List_InvalidLimitTooLarge(t *testing.T) {
@@ -136,7 +136,7 @@ func TestCovSalesPriorities_List_InvalidLimitTooLarge(t *testing.T) {
 	got := parseJSON(body)
 	errObj := jsonObject(got, "error")
 	require.NotNil(t, errObj, "400 response should contain an error object")
-	assert.Equal(t, "invalid_format", jsonField(errObj, "code"))
+	assert.Equal(t, "parameter_invalid", jsonField(errObj, "code"))
 }
 
 func TestCovSalesPriorities_List_LimitMaxAllowed(t *testing.T) {
@@ -173,7 +173,7 @@ func TestCovSalesPriorities_List_QueryTooLong(t *testing.T) {
 	got := parseJSON(body)
 	errObj := jsonObject(got, "error")
 	require.NotNil(t, errObj, "400 response should contain an error object")
-	assert.Equal(t, "invalid_format", jsonField(errObj, "code"))
+	assert.Equal(t, "parameter_invalid", jsonField(errObj, "code"))
 }
 
 func TestCovSalesPriorities_List_QueryAtMaxLengthAllowed(t *testing.T) {

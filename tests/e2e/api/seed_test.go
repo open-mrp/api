@@ -7,12 +7,15 @@ import "strings"
 // Seed data constants from shared/db/seed/ and tools/apidocs/httpie_seed_data.go.
 // These are IDs and values known to exist after seeding.
 const (
-	SeedAPIKey      = "aug_sk_prod_u6Xh5ZpaUruMAU12EPAs4z_rSA4zJM5NbRqAtalvXMoRWOUPohFKJtX7ZUFUOp36IVwdiUCZu"
-	SeedAccountID   = "ac_01k0a5smf9ekb8rqg12555zjqa"
-	SeedAccountSlug = "acme-inc" // account_portal.slug owned by SeedAccountID (registration account_slug tests)
-	SeedUserID      = "us_1wjfmmbwg8l7"
-	SeedAdmin2ID    = "us_2ndadmin0000" // Mike Johnson, second Admin in SeedAccountID
-	SeedUser2ID     = "us_6p7460uuwibz"
+	SeedAPIKey = "aug_sk_prod_u6Xh5ZpaUruMAU12EPAs4z_rSA4zJM5NbRqAtalvXMoRWOUPohFKJtX7ZUFUOp36IVwdiUCZu"
+	// The signature the e2e Stripe stub accepts; anything else is refused, so both webhook
+	// branches are reachable. Mirrors stub.StubWebhookSignature in billing-service.
+	StubStripeSignature = "t=0,v1=e2e-stub-signature"
+	SeedAccountID       = "ac_01k0a5smf9ekb8rqg12555zjqa"
+	SeedAccountSlug     = "acme-inc" // account_portal.slug owned by SeedAccountID (registration account_slug tests)
+	SeedUserID          = "us_1wjfmmbwg8l7"
+	SeedAdmin2ID        = "us_2ndadmin0000" // Mike Johnson, second Admin in SeedAccountID
+	SeedUser2ID         = "us_6p7460uuwibz"
 
 	// Customers
 	SeedCustomerAccountID  = "ac_01k09wm2fgevdsc344gpbcj30f"
@@ -37,6 +40,8 @@ const (
 	SeedProductLineID   = "pdln_01k0a735ype5e8nrhv1n5dhq1q"
 	SeedProductLineName = "Socks"
 	SeedItemID          = "it_01k0a7100aeysrs9vxpeq14yxj"
+	// A purchased material: no production flow produces it, so it has no cost breakdown to compute.
+	SeedPurchasedItemID = "it_01seedbox1item00000"
 	// The greige item the constraint department plans, as opposed to the finished goods it becomes.
 	SeedGreigeItemID     = "it_01seedlknitem000000"
 	SeedItemSKU          = "SCK-001"
@@ -45,9 +50,13 @@ const (
 	SeedItemCategoryName = "Socks"
 	SeedProductID        = "pd_01k0a65nx2e2crfxrvryyxnmdh"
 	SeedProductTypeID    = "pdtp_01seedsale00000000"
+	// A paid plan, for the proration and plan-switch paths.
+	SeedProPlanID = "acpl_01seed000pro000plan00000"
 
 	// PUT include walkers (tests/e2e/api/meta_includes_test.go): isolated fixtures for mutate-then-include coverage.
-	SeedIncludePutAlternateItemCategoryID   = "itcg_01seedshipping000"
+	SeedIncludePutAlternateItemCategoryID = "itcg_01seedshipping000"
+	// A product category carrying no properties at all, which makes every attribute out of bounds for an item in it. The category gate needs a pairing that is genuinely invalid, and the other product categories all carry Color — the property SeedAttributeID belongs to.
+	SeedPropertylessItemCategoryID          = "itcg_01seedebad0000000"
 	SeedIncludePutProductLineChangeTargetID = "pdln_01gf7a8200ef99y3gj77z4q25z"
 	SeedIncludePutChangeCategoryItemID      = "it_01seed_putinc_chgcat00"
 	SeedIncludePutAddAttributeItemID        = "it_01seed_putinc_attradd0"
@@ -116,7 +125,10 @@ const (
 	SeedSknItemSKU         = "SKN" // Small Knitted Sock — initial subassembly (root step: Knit Small Sock)
 	SeedLsnItemSKU         = "LSN" // Large Sewn Sock — downstream part (produced by Sew Large Sock, which has Knit as parent)
 	SeedConsumptionID      = "cp_01seedcons_kl_yarn1"
-	SeedProductionID       = "pn_01seedprod_knitlg00"
+	// Item and unit the seeded consumptions use, so a new consumption lands in the same unit group.
+	SeedConsumedItemID    = "it_01seedyrn1item00000"
+	SeedConsumptionUnitID = "un_01seedpound00000000"
+	SeedProductionID      = "pn_01seedprod_knitlg00"
 
 	// Orders
 	SeedSalesOrderID     = "or_01k0a8bs2yejxbsvqhrx4drkq1" // ORD-001: issued, $50 partial settlement allocation -> partially_paid
@@ -141,6 +153,9 @@ const (
 	SeedPickLineID           = "pkln_01seediss_ln1_0000"
 	SeedReceivingOrderLineID = "rcln_01seedrecvln1_0000"
 	SeedInvoiceID            = "iv_01k09wnac0e1ar211e0sy0ba4g"
+	// An invoice that exists only to be settled against. Allocating money changes the owning
+	// order's payment status, so settlement tests must not touch an invoice another test asserts on.
+	SeedSettlementInvoiceID = "iv_01seedsettleinv000"
 	// Purchase order (sales_order row, type=purchase_order; seeded in 0014_e2e_extras.sql).
 	SeedPurchaseOrderID     = "or_01seedpurchord1_000"
 	SeedPurchaseOrderNumber = "PO-001"
@@ -164,7 +179,12 @@ const (
 	// HubSpot sync (0014_e2e_extras.sql): one review_pending job with one
 	// pending company review, so the hubspot-sync read endpoints resolve their
 	// {id}/{review_id} path params and the company-reviews list returns an item.
-	SeedHubspotSyncJobID       = "igjb_01seedhubspotjob1"
+	SeedHubspotSyncJobID = "igjb_01seedhubspotjob1"
+	// An older in-flight job, reserved for the cancel path so cancelling it cannot disturb the
+	// review/resolve tests that depend on the job above staying review_pending and current.
+	SeedHubspotCancelJobID = "igjb_01seedhscancel01"
+	// A finished job, so the "only an in-flight sync can be cancelled" rejection is reachable.
+	SeedHubspotCompletedJobID  = "igjb_01seedhsdone001"
 	SeedHubspotCompanyReviewID = "igrv_01seedhubspotrev1"
 	SeedHubspotSyncRecordID    = "igrd_01seedhubspotrec1"
 
@@ -323,6 +343,12 @@ const (
 	SeedShippingTermID       = "prepaid_billed"
 	SeedCustomShippingTermID = "shtm_01seedcustflat000" // account-owned, seeded in 0014_e2e_extras.sql
 	SeedCarrierID            = "delivery"
+	// A carrier with a Shippo account behind it, so the OAuth and service-level sync paths
+	// have something to talk to. SeedCarrierID deliberately has none.
+	SeedShippoCarrierID = "cr_01e2etransitcarrier"
+	// A second Shippo-backed carrier, for service-level sync only. Syncing replaces a carrier's
+	// service levels, so doing it to the transit carrier would delete the levels ship-by quotes against.
+	SeedSyncCarrierID        = "cr_01e2esynccarrier00"
 	SeedServiceLevelID       = "crop_01seedground000000"
 	SeedSystemCarrierID      = "syscar_01seedsysdefault"
 	SeedSystemServiceLevelID = "crop_01seedsysground000"
@@ -330,6 +356,10 @@ const (
 	// Carrier transit fixtures (0014_e2e_extras.sql). Unlike SeedCarrierID this carrier
 	// has a Shippo account, so rating reaches the stub and lanes actually warm.
 	SeedTransitCarrierID = "cr_01e2etransitcarrier"
+
+	// Operating calendar fixtures (0014_e2e_extras.sql). Neither is a default and nothing links to them, so they exist purely for the generic contract suites and cannot move any ship-by date.
+	SeedOperatingCalendarID        = "occd_01e2eshipcal00000"
+	SeedOperatingCalendarClosureID = "occdcn_01e2eclosure000"
 	// Rated by the stub: ground 3 days, 2-day 2 days, overnight 1 day.
 	SeedTransitGroundServiceLevelID    = "crop_01e2etransitgrnd00"
 	SeedTransitTwoDayServiceLevelID    = "crop_01e2etransit2day0"
@@ -441,11 +471,14 @@ const (
 	// Tenant B (seeded in 0015_tenant_b_e2e.sql) — used for tenant isolation tests
 	SeedTenantBAccountID = "ac_tenant2_e2e_isolati"
 	SeedTenantBAPIKey    = "aug_sk_prod_TenantBKeyForE2eTests1_TenantBSecretForE2eIsolationTestingPurpose12didR71"
+	// Tenant B's only account user, needed wherever a write must name who is responsible.
+	SeedTenantBAccountUserID = "acus_tenant2_e2e_admin"
 )
 
 // pathParamSeeds maps path parameter names to seed IDs.
 // Used to substitute path parameters in OpenAPI paths like /v1/catalog/properties/{property_id}/attributes.
 var pathParamSeeds = map[string]string{
+	"closure_id":         SeedOperatingCalendarClosureID,
 	"property_id":        SeedPropertyID,
 	"product_line_id":    SeedProductLineID,
 	"category_id":        SeedItemCategoryID, // PUT change-item-category (/items/{id}/category/{category_id})
@@ -507,6 +540,7 @@ var pathSpecificIDSeeds = map[string]string{
 	"/v1/operations/machine-downtime-events/": SeedMachineDowntimeEventID,
 	"/v1/operations/production-schedules/":    SeedProductionScheduleID,
 	"/v1/operations/demand-overrides/":        SeedDemandOverrideID,
+	"/v1/operations/operating-calendars/":     SeedOperatingCalendarID,
 	"/v1/sales/account-users/":                SeedAccountUserID,
 	"/v1/sales/priorities/":                   SeedPriorityID,
 

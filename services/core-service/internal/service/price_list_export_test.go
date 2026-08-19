@@ -83,10 +83,11 @@ func TestBuildPriceListDocument_ResolvesTheUnitsTheProductExportLeavesOff(t *tes
 		Return(&domain.ProductLineUnitGroup{
 			ID:         "ungr_1",
 			BaseUnitID: "unit_pair",
-			BaseUnit:   &domain.LightUnit{ID: "unit_pair", Name: "Pair", Abbreviation: "pr", IsBaseUnit: true},
+			BaseUnit:   &domain.LightUnit{ID: "unit_pair", Name: "Pair", Abbreviation: "pr", RatioNumerator: "2", RatioDenominator: "1"},
 			AssociatedUnits: []*domain.UnitGroupUnit{
-				{IsVisible: true, Unit: domain.LightUnit{ID: "unit_pair", Name: "Pair", IsBaseUnit: true, RatioNumerator: "1", RatioDenominator: "1"}},
-				{IsVisible: true, Unit: domain.LightUnit{ID: "unit_carton", Name: "Carton", RatioNumerator: "10", RatioDenominator: "1"}},
+				{IsVisible: true, Unit: domain.LightUnit{ID: "unit_each", Name: "Each", IsBaseUnit: true, RatioNumerator: "1", RatioDenominator: "1"}},
+				{IsVisible: true, Unit: domain.LightUnit{ID: "unit_pair", Name: "Pair", RatioNumerator: "2", RatioDenominator: "1"}},
+				{IsVisible: true, Unit: domain.LightUnit{ID: "unit_carton", Name: "Carton", RatioNumerator: "20", RatioDenominator: "1"}},
 			},
 		}, nil).
 		Times(1)
@@ -155,5 +156,60 @@ func TestPriceListExportSpec_DeclaresPDF(t *testing.T) {
 	}
 	if spec.Slug != "price_list" {
 		t.Errorf("Slug = %q, want price_list", spec.Slug)
+	}
+}
+
+// Unit ratios are stored against the base of the dimension (Each), not against the base of the group, and unit.is_base_unit marks the former. Reading either as the latter produced "20 Carton (10 pr)s Per Carton (10 pr)" on a line whose base unit is the carton it ships in — the group's own base unit picked as its pack, multiplied by its ratio to Each.
+func TestPriceListPacking_MeasuresThePackAgainstTheGroupsBaseUnit(t *testing.T) {
+	cases := []struct {
+		name  string
+		group *domain.ProductLineUnitGroup
+		want  string
+	}{
+		{
+			name: "a pack above the base unit counts base units",
+			group: &domain.ProductLineUnitGroup{
+				BaseUnitID: "unit_pair",
+				BaseUnit:   &domain.LightUnit{ID: "unit_pair", Name: "Pair", RatioNumerator: "2", RatioDenominator: "1"},
+				AssociatedUnits: []*domain.UnitGroupUnit{
+					{IsVisible: true, Unit: domain.LightUnit{ID: "unit_each", Name: "Each", IsBaseUnit: true, RatioNumerator: "1", RatioDenominator: "1"}},
+					{IsVisible: true, Unit: domain.LightUnit{ID: "unit_pair", Name: "Pair", RatioNumerator: "2", RatioDenominator: "1"}},
+					{IsVisible: true, Unit: domain.LightUnit{ID: "unit_dozen", Name: "Dozen", RatioNumerator: "12", RatioDenominator: "1"}},
+				},
+			},
+			want: "6 Pairs Per Dozen",
+		},
+		{
+			name: "a base unit that is already the pack names itself",
+			group: &domain.ProductLineUnitGroup{
+				BaseUnitID: "unit_carton",
+				BaseUnit:   &domain.LightUnit{ID: "unit_carton", Name: "Carton (10 pr)", RatioNumerator: "20", RatioDenominator: "1"},
+				AssociatedUnits: []*domain.UnitGroupUnit{
+					{IsVisible: true, Unit: domain.LightUnit{ID: "unit_each", Name: "Each", IsBaseUnit: true, RatioNumerator: "1", RatioDenominator: "1"}},
+					{IsVisible: true, Unit: domain.LightUnit{ID: "unit_carton", Name: "Carton (10 pr)", RatioNumerator: "20", RatioDenominator: "1"}},
+				},
+			},
+			want: "Carton (10 pr)",
+		},
+		{
+			name: "an invisible pack is not offered",
+			group: &domain.ProductLineUnitGroup{
+				BaseUnitID: "unit_pair",
+				BaseUnit:   &domain.LightUnit{ID: "unit_pair", Name: "Pair", RatioNumerator: "2", RatioDenominator: "1"},
+				AssociatedUnits: []*domain.UnitGroupUnit{
+					{IsVisible: true, Unit: domain.LightUnit{ID: "unit_pair", Name: "Pair", RatioNumerator: "2", RatioDenominator: "1"}},
+					{IsVisible: false, Unit: domain.LightUnit{ID: "unit_dozen", Name: "Dozen", RatioNumerator: "12", RatioDenominator: "1"}},
+				},
+			},
+			want: "Pair",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := priceListPacking(tc.group); got != tc.want {
+				t.Errorf("priceListPacking = %q, want %q", got, tc.want)
+			}
+		})
 	}
 }

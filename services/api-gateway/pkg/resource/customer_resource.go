@@ -135,6 +135,10 @@ type CustomerDefaults struct {
 	//
 	// Sets each order's `ship_by_date` when it is issued. With none set here the customer inherits its account group's lead time, then the account default.
 	LeadTimeDays *int32 `json:"lead_time_days"`
+	// The operating calendar naming the days this customer's dock accepts freight.
+	//
+	// A promised delivery date is worked back from a day the customer can actually receive on. With none set here the customer inherits its account group's calendar, then the account default, then Monday to Friday.
+	ReceiveCalendarID *string `json:"receive_calendar_id"`
 }
 
 // The ship-by lead time a new order for this customer would be committed to.

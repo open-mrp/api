@@ -32,19 +32,13 @@ DELETE FROM transaction_allocation WHERE transaction_id = sqlc.arg('transaction_
 -- name: DeleteTransactionQuantity :exec
 DELETE FROM quantity WHERE id = sqlc.arg('id');
 
--- name: GetNextTransactionNumber :one
-SELECT COALESCE(
-    (SELECT MAX(CAST(sp.value AS UNSIGNED)) + 1
-     FROM sys_property sp
-     WHERE sp.account_id = sqlc.arg('account_id')
-     AND sp.sys_property_type_code = 'transaction_number'),
-    1
-) AS next_number;
-
--- name: UpsertTransactionNumber :exec
+-- name: AllocateNextTransactionNumber :execresult
+-- Atomically reserves the next transaction number for the account and returns it via LAST_INSERT_ID.
+-- See AllocateNextOrderNumber: the row lock on the per-account counter is what stops two concurrent
+-- payments from being recorded under the same number.
 INSERT INTO sys_property (id, account_id, sys_property_type_code, value, created_at, updated_at)
-VALUES (sqlc.arg('id'), sqlc.arg('account_id'), 'transaction_number', sqlc.arg('value'), NOW(3), NOW(3))
-ON DUPLICATE KEY UPDATE value = sqlc.arg('value'), updated_at = NOW(3);
+VALUES (sqlc.arg('id'), sqlc.arg('account_id'), 'transaction_number', LAST_INSERT_ID(1), NOW(3), NOW(3))
+ON DUPLICATE KEY UPDATE value = LAST_INSERT_ID(value + 1), updated_at = NOW(3);
 
 -- name: IsDuplicateTransactionNumber :one
 SELECT COUNT(*) AS cnt FROM transaction

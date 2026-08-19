@@ -217,6 +217,7 @@ INSERT INTO sales_order (
     priority_code, sales_rep_id, shipping_term_id,
     sales_order_status_code, sales_order_type_code,
     payment_term_id, order_discount_id, promised_at,
+    lead_time_override_days, ship_by_override_date,
     buyer_account_id, seller_account_id, owner_account_id,
     created_at, updated_at
 ) VALUES (
@@ -227,6 +228,7 @@ INSERT INTO sales_order (
     -- sales_order_type_code is a storage discriminator; this endpoint only creates sales orders.
     ?, 'sales_order',
     ?, ?, ?,
+    ?, ?,
     ?, ?, ?,
     NOW(3), NOW(3)
 )
@@ -250,6 +252,8 @@ type CreateSalesOrderParams struct {
 	PaymentTermID         sql.NullString
 	OrderDiscountID       sql.NullString
 	PromisedAt            sql.NullTime
+	LeadTimeOverrideDays  sql.NullInt32
+	ShipByOverrideDate    sql.NullTime
 	BuyerAccountID        string
 	SellerAccountID       string
 	OwnerAccountID        string
@@ -274,6 +278,8 @@ func (q *Queries) CreateSalesOrder(ctx context.Context, arg CreateSalesOrderPara
 		arg.PaymentTermID,
 		arg.OrderDiscountID,
 		arg.PromisedAt,
+		arg.LeadTimeOverrideDays,
+		arg.ShipByOverrideDate,
 		arg.BuyerAccountID,
 		arg.SellerAccountID,
 		arg.OwnerAccountID,
@@ -790,6 +796,10 @@ SELECT
     so.lead_time_source_code,
     so.transit_days,
     so.transit_source_code,
+    so.lead_time_override_days,
+    so.ship_by_override_date,
+    so.ship_by_cutoff_at,
+    so.calendar_adjustment_days,
     so.created_at,
     so.updated_at,
     -- Customer
@@ -932,6 +942,10 @@ type GetSalesOrderRow struct {
 	LeadTimeSourceCode          sql.NullString
 	TransitDays                 sql.NullInt32
 	TransitSourceCode           sql.NullString
+	LeadTimeOverrideDays        sql.NullInt32
+	ShipByOverrideDate          sql.NullTime
+	ShipByCutoffAt              sql.NullTime
+	CalendarAdjustmentDays      sql.NullInt32
 	CreatedAt                   time.Time
 	UpdatedAt                   time.Time
 	CustomerName                string
@@ -1037,6 +1051,10 @@ func (q *Queries) GetSalesOrder(ctx context.Context, arg GetSalesOrderParams) (G
 		&i.LeadTimeSourceCode,
 		&i.TransitDays,
 		&i.TransitSourceCode,
+		&i.LeadTimeOverrideDays,
+		&i.ShipByOverrideDate,
+		&i.ShipByCutoffAt,
+		&i.CalendarAdjustmentDays,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.CustomerName,
@@ -1142,6 +1160,10 @@ SELECT
     so.lead_time_source_code,
     so.transit_days,
     so.transit_source_code,
+    so.lead_time_override_days,
+    so.ship_by_override_date,
+    so.ship_by_cutoff_at,
+    so.calendar_adjustment_days,
     so.created_at,
     so.updated_at,
     -- Customer
@@ -1286,6 +1308,10 @@ type GetSalesOrderForCustomerRow struct {
 	LeadTimeSourceCode          sql.NullString
 	TransitDays                 sql.NullInt32
 	TransitSourceCode           sql.NullString
+	LeadTimeOverrideDays        sql.NullInt32
+	ShipByOverrideDate          sql.NullTime
+	ShipByCutoffAt              sql.NullTime
+	CalendarAdjustmentDays      sql.NullInt32
 	CreatedAt                   time.Time
 	UpdatedAt                   time.Time
 	CustomerName                string
@@ -1391,6 +1417,10 @@ func (q *Queries) GetSalesOrderForCustomer(ctx context.Context, arg GetSalesOrde
 		&i.LeadTimeSourceCode,
 		&i.TransitDays,
 		&i.TransitSourceCode,
+		&i.LeadTimeOverrideDays,
+		&i.ShipByOverrideDate,
+		&i.ShipByCutoffAt,
+		&i.CalendarAdjustmentDays,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.CustomerName,
@@ -2100,6 +2130,10 @@ SELECT STRAIGHT_JOIN
     so.lead_time_source_code,
     so.transit_days,
     so.transit_source_code,
+    so.lead_time_override_days,
+    so.ship_by_override_date,
+    so.ship_by_cutoff_at,
+    so.calendar_adjustment_days,
     so.created_at,
     so.updated_at,
     -- Customer
@@ -2334,6 +2368,10 @@ type ListSalesOrdersBackwardRow struct {
 	LeadTimeSourceCode          sql.NullString
 	TransitDays                 sql.NullInt32
 	TransitSourceCode           sql.NullString
+	LeadTimeOverrideDays        sql.NullInt32
+	ShipByOverrideDate          sql.NullTime
+	ShipByCutoffAt              sql.NullTime
+	CalendarAdjustmentDays      sql.NullInt32
 	CreatedAt                   time.Time
 	UpdatedAt                   time.Time
 	CustomerName                string
@@ -2526,6 +2564,10 @@ func (q *Queries) ListSalesOrdersBackward(ctx context.Context, arg ListSalesOrde
 			&i.LeadTimeSourceCode,
 			&i.TransitDays,
 			&i.TransitSourceCode,
+			&i.LeadTimeOverrideDays,
+			&i.ShipByOverrideDate,
+			&i.ShipByCutoffAt,
+			&i.CalendarAdjustmentDays,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.CustomerName,
@@ -2639,6 +2681,10 @@ SELECT STRAIGHT_JOIN
     so.lead_time_source_code,
     so.transit_days,
     so.transit_source_code,
+    so.lead_time_override_days,
+    so.ship_by_override_date,
+    so.ship_by_cutoff_at,
+    so.calendar_adjustment_days,
     so.created_at,
     so.updated_at,
     -- Customer
@@ -2874,6 +2920,10 @@ type ListSalesOrdersForwardRow struct {
 	LeadTimeSourceCode          sql.NullString
 	TransitDays                 sql.NullInt32
 	TransitSourceCode           sql.NullString
+	LeadTimeOverrideDays        sql.NullInt32
+	ShipByOverrideDate          sql.NullTime
+	ShipByCutoffAt              sql.NullTime
+	CalendarAdjustmentDays      sql.NullInt32
 	CreatedAt                   time.Time
 	UpdatedAt                   time.Time
 	CustomerName                string
@@ -3070,6 +3120,10 @@ func (q *Queries) ListSalesOrdersForward(ctx context.Context, arg ListSalesOrder
 			&i.LeadTimeSourceCode,
 			&i.TransitDays,
 			&i.TransitSourceCode,
+			&i.LeadTimeOverrideDays,
+			&i.ShipByOverrideDate,
+			&i.ShipByCutoffAt,
+			&i.CalendarAdjustmentDays,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.CustomerName,
@@ -3462,19 +3516,23 @@ UPDATE sales_order SET
     lead_time_source_code = ?,
     transit_days = ?,
     transit_source_code = ?,
+    ship_by_cutoff_at = ?,
+    calendar_adjustment_days = ?,
     updated_at = NOW(3)
 WHERE id = ?
 AND owner_account_id = ?
 `
 
 type SetSalesOrderShipByCommitmentParams struct {
-	ShipByDate         sql.NullTime
-	LeadTimeDays       sql.NullInt32
-	LeadTimeSourceCode sql.NullString
-	TransitDays        sql.NullInt32
-	TransitSourceCode  sql.NullString
-	ID                 string
-	AccountID          string
+	ShipByDate             sql.NullTime
+	LeadTimeDays           sql.NullInt32
+	LeadTimeSourceCode     sql.NullString
+	TransitDays            sql.NullInt32
+	TransitSourceCode      sql.NullString
+	ShipByCutoffAt         sql.NullTime
+	CalendarAdjustmentDays sql.NullInt32
+	ID                     string
+	AccountID              string
 }
 
 // SetSalesOrderShipByCommitment stamps the resolved ship-by commitment onto an order.
@@ -3487,6 +3545,8 @@ func (q *Queries) SetSalesOrderShipByCommitment(ctx context.Context, arg SetSale
 		arg.LeadTimeSourceCode,
 		arg.TransitDays,
 		arg.TransitSourceCode,
+		arg.ShipByCutoffAt,
+		arg.CalendarAdjustmentDays,
 		arg.ID,
 		arg.AccountID,
 	)
@@ -3511,6 +3571,8 @@ UPDATE sales_order SET
     order_discount_id = ?,
     is_acknowledgment_sent = COALESCE(?, is_acknowledgment_sent),
     promised_at = ?,
+    lead_time_override_days = ?,
+    ship_by_override_date = ?,
     buyer_account_id = ?,
     billing_address_id = COALESCE(?, billing_address_id),
     shipping_address_id = COALESCE(?, shipping_address_id),
@@ -3534,6 +3596,8 @@ type UpdateSalesOrderParams struct {
 	OrderDiscountID       sql.NullString
 	IsAcknowledgmentSent  sql.NullBool
 	PromisedAt            sql.NullTime
+	LeadTimeOverrideDays  sql.NullInt32
+	ShipByOverrideDate    sql.NullTime
 	BuyerAccountID        sql.NullString
 	BillingAddressID      sql.NullString
 	ShippingAddressID     sql.NullString
@@ -3557,6 +3621,8 @@ func (q *Queries) UpdateSalesOrder(ctx context.Context, arg UpdateSalesOrderPara
 		arg.OrderDiscountID,
 		arg.IsAcknowledgmentSent,
 		arg.PromisedAt,
+		arg.LeadTimeOverrideDays,
+		arg.ShipByOverrideDate,
 		arg.BuyerAccountID,
 		arg.BillingAddressID,
 		arg.ShippingAddressID,

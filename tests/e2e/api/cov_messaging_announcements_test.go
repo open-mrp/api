@@ -220,13 +220,13 @@ func TestCovMessagingAnnouncements_ListLimitValidation(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
-	assertErrorParam(t, errObj, "Limit")
+	assertErrorParam(t, errObj, "limit")
 
 	status, body, err = user.GetListRaw(announcementsPath, url.Values{"limit": {"1001"}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 	errObj = requireErrorResponse(t, body, "", "invalid_request_error")
-	assertErrorParam(t, errObj, "Limit")
+	assertErrorParam(t, errObj, "limit")
 
 	// Boundary values remain valid.
 	status, _, err = user.GetListRaw(announcementsPath, url.Values{"limit": {"1"}})
@@ -250,7 +250,7 @@ func TestCovMessagingAnnouncements_ListQueryLengthValidation(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
-	assertErrorParam(t, errObj, "Query")
+	assertErrorParam(t, errObj, "q")
 
 	// Exactly at the boundary (500 chars) remains valid, even though (per the no-op gap above) it does not actually filter anything.
 	atLimit := tooLong[:500]

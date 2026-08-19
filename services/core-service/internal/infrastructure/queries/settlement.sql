@@ -197,19 +197,14 @@ WHERE account_id = sqlc.arg('account_id')
 AND number = sqlc.arg('number')
 AND (sqlc.narg('exclude_id') IS NULL OR id != sqlc.narg('exclude_id'));
 
--- name: GetNextSettlementNumber :one
-SELECT COALESCE(
-    (SELECT MAX(CAST(sp.value AS UNSIGNED)) + 1
-     FROM sys_property sp
-     WHERE sp.account_id = sqlc.arg('account_id')
-     AND sp.sys_property_type_code = 'settlement_number'),
-    1
-) AS next_number;
-
--- name: UpdateNextSettlementNumber :exec
+-- name: AllocateNextSettlementNumber :execresult
+-- Atomically reserves the next settlement number for the account and returns it via LAST_INSERT_ID.
+-- The single upsert holds a row lock on the per-account counter, so concurrent creates serialize
+-- and never collide on the same number (the old read-MAX-then-write pattern raced). Read the reserved
+-- number back with the statement result's LastInsertId().
 INSERT INTO sys_property (id, account_id, sys_property_type_code, value, created_at, updated_at)
-VALUES (sqlc.arg('id'), sqlc.arg('account_id'), 'settlement_number', sqlc.arg('value'), NOW(3), NOW(3))
-ON DUPLICATE KEY UPDATE value = sqlc.arg('value'), updated_at = NOW(3);
+VALUES (sqlc.arg('id'), sqlc.arg('account_id'), 'settlement_number', LAST_INSERT_ID(1), NOW(3), NOW(3))
+ON DUPLICATE KEY UPDATE value = LAST_INSERT_ID(value + 1), updated_at = NOW(3);
 
 -- name: GetSettlementAllocationTransactionIDs :many
 SELECT DISTINCT ta.transaction_id

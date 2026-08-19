@@ -56,6 +56,7 @@ type ProductSvcTestSuite struct {
 	deletedRecordRepo   *repositorymock.MockDeletedRecordRepo
 	accountRelationRepo *repositorymock.MockAccountRelationRepo
 	attributeRepo       *repositorymock.MockAttributeRepo
+	itemCategoryRepo    *repositorymock.MockItemCategoryRepo
 	unitRepo            *repositorymock.MockUnitRepo
 	repoFactory         *factorymock.MockRepoFactory
 	mediatorFactory     *factorymock.MockMediatorFactory
@@ -73,6 +74,7 @@ func (s *ProductSvcTestSuite) SetupSuite() {
 	s.deletedRecordRepo = repositorymock.NewMockDeletedRecordRepo(s.ctrl)
 	s.accountRelationRepo = repositorymock.NewMockAccountRelationRepo(s.ctrl)
 	s.attributeRepo = repositorymock.NewMockAttributeRepo(s.ctrl)
+	s.itemCategoryRepo = repositorymock.NewMockItemCategoryRepo(s.ctrl)
 	s.unitRepo = repositorymock.NewMockUnitRepo(s.ctrl)
 
 	s.repoFactory = factorymock.NewMockRepoFactory(s.ctrl)
@@ -83,6 +85,7 @@ func (s *ProductSvcTestSuite) SetupSuite() {
 	s.repoFactory.EXPECT().NewDeletedRecordRepo().Return(s.deletedRecordRepo).AnyTimes()
 	s.repoFactory.EXPECT().NewAccountRelationRepo().Return(s.accountRelationRepo).AnyTimes()
 	s.repoFactory.EXPECT().NewAttributeRepo().Return(s.attributeRepo).AnyTimes()
+	s.repoFactory.EXPECT().NewItemCategoryRepo().Return(s.itemCategoryRepo).AnyTimes()
 	s.repoFactory.EXPECT().NewUnitRepo().Return(s.unitRepo).AnyTimes()
 	s.repoFactory.EXPECT().NewOutboxRepo().Return(&productStubOutboxRepo{}).AnyTimes()
 
@@ -315,10 +318,14 @@ func (s *ProductSvcTestSuite) TestCreateProduct_Success() {
 		}).
 		Times(1)
 
-	// Both attributes are existence-checked in the account scope before linking.
+	// Both attributes are checked against the account and the category's properties before linking.
 	s.attributeRepo.EXPECT().
 		GetByIDs(gomock.Any(), "ac_test123", []string{"attr_red", "attr_large"}).
-		Return([]*domain.Attribute{{ID: "attr_red"}, {ID: "attr_large"}}, nil).
+		Return([]*domain.Attribute{{ID: "attr_red", PropertyID: "prop_color"}, {ID: "attr_large", PropertyID: "prop_size"}}, nil).
+		Times(1)
+	s.itemCategoryRepo.EXPECT().
+		GetProperties(gomock.Any(), "cat_123").
+		Return([]*domain.ItemCategoryProperty{{ID: "prop_color"}, {ID: "prop_size"}}, nil).
 		Times(1)
 
 	// Two attributes supplied → two AddAttribute calls, in order.
@@ -407,6 +414,48 @@ func (s *ProductSvcTestSuite) TestCreateProduct_DefaultsRatesToZero() {
 	s.NotNil(result)
 }
 
+func (s *ProductSvcTestSuite) TestCreateProduct_AttributeOutsideCategoryProperties_Rejected() {
+	ctx := productIdempotencyCtx(internalProductIdentityCtx("ac_test123"))
+
+	s.expectIdempotencyStarted()
+	s.itemRepo.EXPECT().CheckSKUExists(gomock.Any(), "ac_test123", "SKU-BAD-ATTR", "").Return(false, nil).Times(1)
+	s.itemRepo.EXPECT().GetCategoryBaseUnitID(gomock.Any(), "cat_123").Return("un_base", string(constants.ItemCategoryTypeProduct), nil).Times(1)
+	s.productRepo.EXPECT().InsertRate(gomock.Any(), gomock.Any(), gomock.Any(), "un_base", "un_base").Return(nil).Times(2)
+	s.productRepo.EXPECT().InsertRate(gomock.Any(), gomock.Any(), gomock.Any(), "un_base", "day").Return(nil).Times(1)
+	s.productRepo.EXPECT().InsertItem(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+	s.productRepo.EXPECT().
+		Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _, itemID string, _ domain.CreateProductParams) (*domain.ProductFull, *apierror.APIError) {
+			return s.createdProduct(itemID), nil
+		}).
+		Times(1)
+
+	// The attribute exists in the account but hangs off a property the category doesn't carry.
+	s.attributeRepo.EXPECT().
+		GetByIDs(gomock.Any(), "ac_test123", []string{"attr_red"}).
+		Return([]*domain.Attribute{{ID: "attr_red", Value: "Red", PropertyID: "prop_color"}}, nil).
+		Times(1)
+	s.itemCategoryRepo.EXPECT().
+		GetProperties(gomock.Any(), "cat_123").
+		Return([]*domain.ItemCategoryProperty{{ID: "prop_size"}}, nil).
+		Times(1)
+
+	// No AddAttribute and no inventory seeding expected — the tx must roll back.
+	s.expectCacheError()
+
+	result, err := s.productSvc.CreateProduct(ctx, domain.CreateProductParams{
+		SKU:             "SKU-BAD-ATTR",
+		ProductTypeCode: "sale",
+		CategoryID:      "cat_123",
+		AttributeIDs:    []string{"attr_red"},
+	})
+
+	s.Nil(result)
+	s.NotNil(err)
+	s.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	s.Equal("attribute_ids", err.Param)
+}
+
 func (s *ProductSvcTestSuite) TestCreateProduct_DuplicateSKU_Conflict() {
 	ctx := productIdempotencyCtx(internalProductIdentityCtx("ac_test123"))
 
@@ -447,11 +496,14 @@ func (s *ProductSvcTestSuite) TestCreateProduct_SkipsBlankAttributeIDs() {
 		}).
 		Times(1)
 
-	// Blank ids are ignored by the existence check; only the non-blank one is
-	// validated and then linked.
+	// Blank ids are dropped before validation; only the non-blank one is validated and then linked.
 	s.attributeRepo.EXPECT().
-		GetByIDs(gomock.Any(), "ac_test123", []string{"", "attr_only", ""}).
-		Return([]*domain.Attribute{{ID: "attr_only"}}, nil).
+		GetByIDs(gomock.Any(), "ac_test123", []string{"attr_only"}).
+		Return([]*domain.Attribute{{ID: "attr_only", PropertyID: "prop_color"}}, nil).
+		Times(1)
+	s.itemCategoryRepo.EXPECT().
+		GetProperties(gomock.Any(), "cat_123").
+		Return([]*domain.ItemCategoryProperty{{ID: "prop_color"}}, nil).
 		Times(1)
 
 	// Only the single non-blank attribute should be linked.

@@ -81,6 +81,7 @@ func customerToProto(c *domain.Customer) *pb.CustomerProto {
 		CreatedAt:             timestamppb.New(c.CreatedAt),
 		UpdatedAt:             timestamppb.New(c.UpdatedAt),
 		DefaultLeadTimeDays:   c.DefaultLeadTimeDays,
+		ReceiveCalendarId:     c.ReceiveCalendarID,
 	}
 
 	if c.CarrierBillingType != nil {
@@ -392,6 +393,7 @@ func (h *gRPCHandler) CreateCustomer(ctx context.Context, req *pb.CreateCustomer
 		CommissionPolicy:      optStringToCommissionPolicy(req.CommissionPolicy),
 		FreightPolicy:         optStringToFreightPolicy(req.FreightPolicy),
 		DefaultLeadTimeDays:   req.DefaultLeadTimeDays,
+		ReceiveCalendarID:     req.ReceiveCalendarId,
 		DefaultCarrierID:      req.DefaultCarrierId,
 		DefaultServiceLevelID: req.DefaultServiceLevelId,
 		DefaultPaymentTermID:  req.DefaultPaymentTermId,
@@ -445,6 +447,7 @@ func (h *gRPCHandler) UpdateCustomer(ctx context.Context, req *pb.UpdateCustomer
 		CommissionPolicy:         optStringToCommissionPolicy(req.CommissionPolicy),
 		FreightPolicy:            optStringToFreightPolicy(req.FreightPolicy),
 		DefaultLeadTimeDays:      field.Int32ClearableFromProto(req.DefaultLeadTimeDays),
+		ReceiveCalendarID:        field.StringClearableFromProto(req.ReceiveCalendarId),
 		DefaultCarrierID:         req.DefaultCarrierId,
 		DefaultServiceLevelID:    field.StringClearableFromProto(req.DefaultServiceLevelId),
 		DefaultPaymentTermID:     req.DefaultPaymentTermId,

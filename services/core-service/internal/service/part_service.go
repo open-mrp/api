@@ -325,17 +325,8 @@ func (s *partSvcImpl) createPartInTx(txCtx context.Context, params domain.Create
 	}
 
 	// Link caller-supplied attributes to the new item (matches Dashboard behavior).
-	for _, attrID := range params.AttributeIDs {
-		if attrID == "" {
-			continue
-		}
-		if apiErr := txItemRepo.AddAttribute(txCtx, domain.AddItemAttributeParams{
-			AccountID:   params.AccountID,
-			ItemID:      itemID,
-			AttributeID: attrID,
-		}); apiErr != nil {
-			return nil, apiErr
-		}
+	if apiErr := attachItemAttributesInTx(txCtx, s.repos, params.AccountID, params.CategoryID, itemID, params.AttributeIDs); apiErr != nil {
+		return nil, apiErr
 	}
 
 	result, apiErr := txPartRepo.Get(txCtx, domain.GetPartParams{AccountID: params.AccountID, PartID: created.ID, Includes: params.Includes})

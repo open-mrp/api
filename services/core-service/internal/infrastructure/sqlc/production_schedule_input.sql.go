@@ -41,6 +41,8 @@ SELECT
     s.default_lot_units,
     s.default_customer_lead_time_days,
     s.default_fulfillment_policy_code,
+    s.ship_calendar_id,
+    s.receive_calendar_id,
     s.recommendation_dormant_months,
     s.recommendation_concentration_pct,
     s.recommendation_adi_threshold,
@@ -88,6 +90,8 @@ type GetAccountProductionScheduleSettingRow struct {
 	DefaultLotUnits                 string
 	DefaultCustomerLeadTimeDays     int32
 	DefaultFulfillmentPolicyCode    string
+	ShipCalendarID                  sql.NullString
+	ReceiveCalendarID               sql.NullString
 	RecommendationDormantMonths     int32
 	RecommendationConcentrationPct  string
 	RecommendationAdiThreshold      string
@@ -136,6 +140,8 @@ func (q *Queries) GetAccountProductionScheduleSetting(ctx context.Context, accou
 		&i.DefaultLotUnits,
 		&i.DefaultCustomerLeadTimeDays,
 		&i.DefaultFulfillmentPolicyCode,
+		&i.ShipCalendarID,
+		&i.ReceiveCalendarID,
 		&i.RecommendationDormantMonths,
 		&i.RecommendationConcentrationPct,
 		&i.RecommendationAdiThreshold,

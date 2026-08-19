@@ -36,16 +36,28 @@ func (r *productionScheduleRepoImpl) NextVersion(ctx context.Context, accountID 
 	ctx, span := productionScheduleRepoTracer.Start(ctx, "repository.production_schedule.next_version")
 	defer span.End()
 
-	seedID, apiErr := id.GenID(id.SysPropertyIDPrefix, nil)
-	if apiErr != nil {
+	// Seeding aggregates over the account's schedules, which takes shared locks across them —
+	// ahead of the insert this same transaction is about to make into that table. Two planners
+	// generating at once deadlocked on that every time, so the seed is skipped once the counter
+	// exists, which is after the account's first generation. Two callers racing the first one
+	// both seed, and the upsert below makes that a no-op for the loser.
+	seeded, err := r.queries.ProductionScheduleVersionCounterExists(ctx, accountID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return 0, tracing.Trace(span, apiErr)
 	}
-	if err := r.queries.SeedProductionScheduleVersionCounter(ctx, sqlc.SeedProductionScheduleVersionCounterParams{
-		ID:        seedID,
-		AccountID: accountID,
-	}); err != nil {
-		if apiErr := db.MapSQLError(err); apiErr != nil {
+
+	if !seeded {
+		seedID, apiErr := id.GenID(id.SysPropertyIDPrefix, nil)
+		if apiErr != nil {
 			return 0, tracing.Trace(span, apiErr)
+		}
+		if err := r.queries.SeedProductionScheduleVersionCounter(ctx, sqlc.SeedProductionScheduleVersionCounterParams{
+			ID:        seedID,
+			AccountID: accountID,
+		}); err != nil {
+			if apiErr := db.MapSQLError(err); apiErr != nil {
+				return 0, tracing.Trace(span, apiErr)
+			}
 		}
 	}
 
@@ -235,7 +247,7 @@ func (r *productionScheduleRepoImpl) List(ctx context.Context, params domain.Lis
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
-			return nil, apierror.NewValidationError("Invalid pagination cursor.")
+			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
 		}
 		cursorDir = &cur.Direction
 

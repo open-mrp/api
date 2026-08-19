@@ -622,21 +622,19 @@ func TestCovCatalogUnits_DeleteAlreadyDeleted(t *testing.T) {
 
 // --- List query params ---
 
-// TestCovCatalogUnits_ListInvalidTypeFilter documents the observed behavior
-// of an invalid `type` query filter value: it is rejected with 400 via the
-// same reflection-based enum validation used for request bodies. Note the
-// error.param is the Go struct field name ("Type"), not the query tag
-// ("type") — this matches the established convention for query-param enum
-// validation elsewhere in the codebase (e.g. TestCovFinanceTransactionMethods
-// asserts "Limit"/"Query" for its query params), so it is not flagged as a
-// units-specific bug here.
+// TestCovCatalogUnits_ListInvalidTypeFilter checks that an unrecognized `type` filter is
+// rejected with 400 and named by the query parameter the caller sent.
+//
+// This test previously asserted the Go struct field name ("Type"), on the reasoning that other
+// query-param errors did the same and it was therefore the convention. It was not: the enum
+// validator read only the `json` tag, so every query-only field fell back to its Go name.
 func TestCovCatalogUnits_ListInvalidTypeFilter(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.GetListRaw(unitsPath, url.Values{"type": {"not_a_type"}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
-	assertErrorParam(t, errObj, "Type")
+	assertErrorParam(t, errObj, "type")
 }
 
 // TestCovCatalogUnits_ListUnitGroupIDsNonexistent verifies a nonexistent

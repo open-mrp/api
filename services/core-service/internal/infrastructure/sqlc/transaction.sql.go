@@ -12,6 +12,24 @@ import (
 	"time"
 )
 
+const allocateNextTransactionNumber = `-- name: AllocateNextTransactionNumber :execresult
+INSERT INTO sys_property (id, account_id, sys_property_type_code, value, created_at, updated_at)
+VALUES (?, ?, 'transaction_number', LAST_INSERT_ID(1), NOW(3), NOW(3))
+ON DUPLICATE KEY UPDATE value = LAST_INSERT_ID(value + 1), updated_at = NOW(3)
+`
+
+type AllocateNextTransactionNumberParams struct {
+	ID        string
+	AccountID string
+}
+
+// Atomically reserves the next transaction number for the account and returns it via LAST_INSERT_ID.
+// See AllocateNextOrderNumber: the row lock on the per-account counter is what stops two concurrent
+// payments from being recorded under the same number.
+func (q *Queries) AllocateNextTransactionNumber(ctx context.Context, arg AllocateNextTransactionNumberParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, allocateNextTransactionNumber, arg.ID, arg.AccountID)
+}
+
 const countAccountTransactions = `-- name: CountAccountTransactions :one
 SELECT COUNT(*) AS cnt
 FROM transaction t
@@ -398,23 +416,6 @@ func (q *Queries) GetDollarUnitIDForTransaction(ctx context.Context) (string, er
 	var id string
 	err := row.Scan(&id)
 	return id, err
-}
-
-const getNextTransactionNumber = `-- name: GetNextTransactionNumber :one
-SELECT COALESCE(
-    (SELECT MAX(CAST(sp.value AS UNSIGNED)) + 1
-     FROM sys_property sp
-     WHERE sp.account_id = ?
-     AND sp.sys_property_type_code = 'transaction_number'),
-    1
-) AS next_number
-`
-
-func (q *Queries) GetNextTransactionNumber(ctx context.Context, accountID string) (interface{}, error) {
-	row := q.db.QueryRowContext(ctx, getNextTransactionNumber, accountID)
-	var next_number interface{}
-	err := row.Scan(&next_number)
-	return next_number, err
 }
 
 const getTransactionAllocations = `-- name: GetTransactionAllocations :many
@@ -1571,27 +1572,5 @@ type UpdateTransactionQuantityParams struct {
 
 func (q *Queries) UpdateTransactionQuantity(ctx context.Context, arg UpdateTransactionQuantityParams) error {
 	_, err := q.db.ExecContext(ctx, updateTransactionQuantity, arg.Value, arg.ID)
-	return err
-}
-
-const upsertTransactionNumber = `-- name: UpsertTransactionNumber :exec
-INSERT INTO sys_property (id, account_id, sys_property_type_code, value, created_at, updated_at)
-VALUES (?, ?, 'transaction_number', ?, NOW(3), NOW(3))
-ON DUPLICATE KEY UPDATE value = ?, updated_at = NOW(3)
-`
-
-type UpsertTransactionNumberParams struct {
-	ID        string
-	AccountID string
-	Value     int32
-}
-
-func (q *Queries) UpsertTransactionNumber(ctx context.Context, arg UpsertTransactionNumberParams) error {
-	_, err := q.db.ExecContext(ctx, upsertTransactionNumber,
-		arg.ID,
-		arg.AccountID,
-		arg.Value,
-		arg.Value,
-	)
 	return err
 }

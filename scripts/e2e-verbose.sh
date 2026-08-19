@@ -58,7 +58,7 @@ fi
 
 # ---------------------------------------------------------------------------
 hr "3/5  Start databases + message broker (live, --wait)"
-compose up -d --wait mysql-e2e postgres-e2e rabbitmq
+compose up -d --wait mysql-e2e postgres-e2e rabbitmq minio-e2e
 
 hr "3b   Migrate + seed E2E databases"
 ./scripts/setup-e2e-db.sh

@@ -85,7 +85,7 @@ func TestBuildAgentToolDefsGatesSearchTool(t *testing.T) {
 
 	// No endpoint grant: the search meta-tool is NOT exposed, and no endpoint
 	// tools are injected up front.
-	defs, _ := s.buildAgentToolDefs(nil, map[string]bool{}, nil)
+	defs, _ := s.buildAgentToolDefs(nil, map[string]bool{}, nil, false)
 	for _, d := range defs {
 		if d.Name == agents.SearchAPIToolsSlug {
 			t.Error("search_api_tools must not be exposed without a grant")
@@ -97,7 +97,7 @@ func TestBuildAgentToolDefsGatesSearchTool(t *testing.T) {
 	allowed := map[string]bool{"list_customers": true, "create_customer": true}
 	// The agent's per-agent override gates create_customer for review but leaves list_customers open.
 	endpointReview := map[string]bool{"create_customer": true}
-	defs, review := s.buildAgentToolDefs(nil, allowed, endpointReview)
+	defs, review := s.buildAgentToolDefs(nil, allowed, endpointReview, false)
 	hasSearch := false
 	for _, d := range defs {
 		if d.Name == agents.SearchAPIToolsSlug {
@@ -118,5 +118,39 @@ func TestBuildAgentToolDefsGatesSearchTool(t *testing.T) {
 	}
 	if review["list_customers"] {
 		t.Error("list_customers should default to no review when absent from the override")
+	}
+}
+
+// TestBuildAgentToolDefsExposesFindAppPageOnChatRuns: linking a page is part of writing a chat reply, so
+// the tool is added to every chat run rather than granted per agent — an existing agent has no grant for
+// it and would otherwise never be able to link a page.
+func TestBuildAgentToolDefsExposesFindAppPageOnChatRuns(t *testing.T) {
+	reg := agents.NewToolHandlerRegistry()
+	agents.RegisterTools(reg)
+	s := &runnerSvc{toolRegistry: reg}
+	slug := agents.FindAppPageSlug
+
+	defs, _ := s.buildAgentToolDefs(nil, map[string]bool{}, nil, false)
+	for _, d := range defs {
+		if d.Name == slug {
+			t.Error("find_app_page must not be exposed on a non-chat run")
+		}
+	}
+
+	defs, review := s.buildAgentToolDefs(nil, map[string]bool{}, nil, true)
+	found := false
+	for _, d := range defs {
+		if d.Name == slug {
+			found = true
+			if len(d.InputSchema) == 0 {
+				t.Error("find_app_page exposed without an input schema")
+			}
+		}
+	}
+	if !found {
+		t.Error("find_app_page must be exposed on a chat run, with no grant needed")
+	}
+	if review[slug] {
+		t.Error("a read-only page lookup must not require approval")
 	}
 }

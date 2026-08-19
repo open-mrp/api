@@ -468,39 +468,9 @@ func (s *productSvcImpl) createProductInTx(txCtx context.Context, params domain.
 		return nil, apiErr
 	}
 
-	// Checked before linking so a bogus attribute_id is rejected rather than silently
-	// dropped, and no orphaned join rows are written.
-	if len(params.AttributeIDs) > 0 {
-		found, apiErr := s.repos.NewAttributeRepo().GetByIDs(txCtx, params.AccountID, params.AttributeIDs)
-		if apiErr != nil {
-			return nil, apiErr
-		}
-		got := make(map[string]struct{}, len(found))
-		for _, a := range found {
-			got[a.ID] = struct{}{}
-		}
-		for _, attrID := range params.AttributeIDs {
-			if attrID == "" {
-				continue
-			}
-			if _, ok := got[attrID]; !ok {
-				return nil, apierror.NewResourceNotFoundError("Attribute not found.")
-			}
-		}
-	}
-
 	// Link caller-supplied attributes to the new item (matches Dashboard behavior).
-	for _, attrID := range params.AttributeIDs {
-		if attrID == "" {
-			continue
-		}
-		if apiErr := txItemRepo.AddAttribute(txCtx, domain.AddItemAttributeParams{
-			AccountID:   params.AccountID,
-			ItemID:      itemID,
-			AttributeID: attrID,
-		}); apiErr != nil {
-			return nil, apiErr
-		}
+	if apiErr := attachItemAttributesInTx(txCtx, s.repos, params.AccountID, params.CategoryID, itemID, params.AttributeIDs); apiErr != nil {
+		return nil, apiErr
 	}
 
 	// Initialize inventory tracking with zero-quantity log and change log.

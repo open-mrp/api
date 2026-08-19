@@ -20,10 +20,12 @@ import (
 	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/crypto"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 	"github.com/augno/api/shared/id"
 	"github.com/augno/api/shared/idempotency"
 	"github.com/augno/api/shared/messaging"
 	"github.com/augno/api/shared/ptrutil"
+	"github.com/augno/api/shared/safeconv"
 	"github.com/augno/api/shared/textutil"
 	"github.com/augno/api/shared/tracing"
 )
@@ -40,6 +42,7 @@ type salesOrderSvcImpl struct {
 	shippoFactory         domain.ShippoClientFactory
 	encryptionKey         []byte
 	frontendURL           string
+	branding              BrandingAssets
 }
 
 type SalesOrderSvcConfig struct {
@@ -69,6 +72,9 @@ type SalesOrderSvcConfig struct {
 
 	// FrontendURL (optional; default: "") is the dashboard base URL used in links. It is not validated at construction.
 	FrontendURL string
+
+	// Branding (optional) resolves the merchant logo for the acknowledgement email and PDF letterhead. Omitted, both fall back to a text-only letterhead.
+	Branding BrandingAssets
 }
 
 func (c *SalesOrderSvcConfig) validate() error {
@@ -99,6 +105,7 @@ func NewSalesOrderSvc(config *SalesOrderSvcConfig) domain.SalesOrderSvc {
 		shippoFactory:         config.ShippoFactory,
 		encryptionKey:         config.EncryptionKey,
 		frontendURL:           config.FrontendURL,
+		branding:              config.Branding,
 	}
 }
 
@@ -347,6 +354,10 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 		return nil, tracing.Trace(span, apiErr)
 	}
 
+	if apiErr := validateCommitmentBasisExclusive(params.PromisedAt, params.LeadTimeOverrideDays, params.ShipByOverrideDate); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
 	// Authorization: internal users need sales_orders:create; a customer entering an
 	// order on the portal may self-create only for their own account AND must hold
 	// purchase_orders:create (to them the order is a purchase — see the Customer
@@ -530,6 +541,8 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 				PaymentTermID:         params.PaymentTermID,
 				OrderDiscountID:       params.OrderDiscountID,
 				PromisedAt:            params.PromisedAt,
+				LeadTimeOverrideDays:  params.LeadTimeOverrideDays,
+				ShipByOverrideDate:    params.ShipByOverrideDate,
 			}
 
 			_, apiErr = txOrderRepo.Create(txCtx, orderID, createParams)
@@ -711,8 +724,8 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 			// backfill below rewrites omitted fields to the existing values.
 			shippingChanged := salesOrderShippingChanged(existing, params)
 
-			// Must also be decided before the backfill, which rewrites an omitted promised date to the existing one and would make every update look like a change.
-			promisedChanged := salesOrderPromisedAtChanged(existing, params)
+			// Must also be decided before the backfill, which rewrites an omitted basis to the existing one and would make every update look like a change.
+			basisChanged := salesOrderCommitmentBasisChanged(existing, params)
 
 			// Non-nullable optional FKs: when the caller omits a field (nil), preserve the
 			// existing value. These cannot be cleared — an empty value would set an invalid
@@ -742,6 +755,17 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 			params.SalesRepID = params.SalesRepID.BackfillUnsetPtr(existing.SalesRepID)
 			params.OrderDiscountID = params.OrderDiscountID.BackfillUnsetPtr(existing.OrderDiscountID)
 			params.PromisedAt = params.PromisedAt.BackfillUnsetPtr(existing.PromisedAt)
+			params.LeadTimeOverrideDays = params.LeadTimeOverrideDays.BackfillUnsetPtr(int32PtrFromInt(existing.LeadTimeOverrideDays))
+			params.ShipByOverrideDate = params.ShipByOverrideDate.BackfillUnsetPtr(existing.ShipByOverrideDate)
+
+			// Checked after the backfill so it sees what the order will actually hold, not just what this request named: setting a lead-time override on an order that already carries a promised date is the conflict, whether or not both arrived together.
+			if apiErr := validateCommitmentBasisExclusive(
+				clearablePtr[time.Time](params.PromisedAt),
+				clearablePtr[int32](params.LeadTimeOverrideDays),
+				clearablePtr[time.Time](params.ShipByOverrideDate),
+			); apiErr != nil {
+				return apiErr
+			}
 
 			// Validate order number uniqueness if being updated
 			if params.Number != nil {
@@ -764,7 +788,7 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 			result = updated
 
 			// Renegotiating a date on a live order moves the commitment with it, and clearing one hands the order back to the customer's standing lead time. Only issued orders carry a commitment at all, so an estimate is left alone until it is issued.
-			if promisedChanged && updated.SalesOrderStatusCode == string(constants.SalesOrderStatusCodeIssued) && updated.IssuedAt != nil {
+			if basisChanged && updated.SalesOrderStatusCode == string(constants.SalesOrderStatusCodeIssued) && updated.IssuedAt != nil {
 				if apiErr := txSvc.stampShipByCommitment(txCtx, params.AccountID, updated, *updated.IssuedAt); apiErr != nil {
 					return apiErr
 				}
@@ -1302,7 +1326,7 @@ func (s *salesOrderSvcImpl) sendOrderAcknowledgementEmail(ctx context.Context, a
 		return nil
 	}
 
-	emailData, apiErr := buildOrderAcknowledgementEmail(ctx, s.repos, s.frontendURL, accountID, salesOrderID)
+	emailData, apiErr := buildOrderAcknowledgementEmail(ctx, s.repos, s.branding, s.frontendURL, accountID, salesOrderID)
 	if apiErr != nil {
 		return apiErr
 	}
@@ -1520,6 +1544,69 @@ func salesOrderPromisedAtChanged(existing *domain.SalesOrder, params domain.Upda
 		return existing.PromisedAt == nil || !existing.PromisedAt.Equal(v)
 	}
 	return false
+}
+
+// salesOrderCommitmentBasisChanged reports whether the caller moved any of the three commitment bases, as opposed to omitting them. Must be called before the clearable backfill, which rewrites an omitted field to the existing value.
+//
+// Any of the three re-stamps the commitment, because all three answer the same question: switching an order from a promised date to a lead time changes when it is due to ship just as much as moving the date would.
+func salesOrderCommitmentBasisChanged(existing *domain.SalesOrder, params domain.UpdateSalesOrderParams) bool {
+	if salesOrderPromisedAtChanged(existing, params) {
+		return true
+	}
+	if params.ShipByOverrideDate.WasProvided() {
+		if params.ShipByOverrideDate.IsClear() {
+			return existing.ShipByOverrideDate != nil
+		}
+		if v, ok := params.ShipByOverrideDate.Value(); ok {
+			return existing.ShipByOverrideDate == nil || !existing.ShipByOverrideDate.Equal(v)
+		}
+	}
+	if params.LeadTimeOverrideDays.WasProvided() {
+		if params.LeadTimeOverrideDays.IsClear() {
+			return existing.LeadTimeOverrideDays != nil
+		}
+		if v, ok := params.LeadTimeOverrideDays.Value(); ok {
+			return existing.LeadTimeOverrideDays == nil || safeconv.IntToInt32(*existing.LeadTimeOverrideDays) != v
+		}
+	}
+	return false
+}
+
+// validateCommitmentBasisExclusive rejects an order that names more than one commitment basis.
+//
+// The three are alternative answers to the same question — when is this order due to ship — and combining them has no meaning: a promised delivery date and a pinned ship date cannot both be the thing being promised. Rejecting is better than picking a winner, because any precedence rule silently gives the caller a date they did not ask for.
+func validateCommitmentBasisExclusive(promisedAt *time.Time, leadTimeOverrideDays *int32, shipByOverrideDate *time.Time) *apierror.APIError {
+	named := make([]string, 0, 3)
+	if promisedAt != nil {
+		named = append(named, "promised_at")
+	}
+	if leadTimeOverrideDays != nil {
+		named = append(named, "lead_time_override_days")
+	}
+	if shipByOverrideDate != nil {
+		named = append(named, "ship_by_override_date")
+	}
+	if len(named) <= 1 {
+		return nil
+	}
+	return apierror.NewValidationError(fmt.Sprintf("An order can commit to only one of %s. Clear the others to use a different basis.", strings.Join(named, ", ")))
+}
+
+// int32PtrFromInt narrows a stored override for comparison against the patch type the API speaks.
+func int32PtrFromInt(v *int) *int32 {
+	if v == nil {
+		return nil
+	}
+	narrowed := safeconv.IntToInt32(*v)
+	return &narrowed
+}
+
+// clearablePtr flattens a resolved clearable to the value it will be written as, so exclusivity is judged on the order's post-update state.
+func clearablePtr[T any](c field.Clearable[T]) *T {
+	if v, ok := c.Value(); ok {
+		return &v
+	}
+	return nil
 }
 
 func salesOrderShippingChanged(existing *domain.SalesOrder, params domain.UpdateSalesOrderParams) bool {
@@ -2071,6 +2158,7 @@ func shippingAddressFromDomain(a *domain.Address) domain.ShippingAddress {
 		out.State = ptrutil.Deref(a.Geolocation.State)
 		out.Zip = ptrutil.Deref(a.Geolocation.PostalCode)
 		out.Country = a.Geolocation.Country
+		out.Timezone = a.Geolocation.Timezone
 	}
 	return out
 }

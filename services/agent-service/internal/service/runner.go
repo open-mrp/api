@@ -400,7 +400,7 @@ func (s *runnerSvc) ExecuteRun(ctx context.Context, runID, configID, accountID, 
 
 	// Resolve the agent's endpoint-tool grant and build the up-front tool list (linked + built-in + search meta-tool) and review map.
 	allowedEndpointTools := resolveAllowedEndpointTools(agentCfg.EndpointToolSlugs)
-	toolDefs, requireReviewBySlug := s.buildAgentToolDefs(linkedTools, allowedEndpointTools, agentCfg.EndpointToolReview)
+	toolDefs, requireReviewBySlug := s.buildAgentToolDefs(linkedTools, allowedEndpointTools, agentCfg.EndpointToolReview, isChatRun(run))
 
 	// Resolve temperature
 	temperature := 0.0
@@ -669,8 +669,12 @@ func truncateString(s string, maxLen int) string {
 	return s[:maxLen] + "..."
 }
 
-// chatResourceLinkPreamble instructs a chat-triggered agent to link the records it looks up so they render as clickable in-app links in the conversation. The `augno:<object>/<id>` form is resolved client-side to the correct shell-aware route, so the agent never has to know real URLs — it just copies the `object` and `id` it already sees in tool results.
-const chatResourceLinkPreamble = `When you reference a specific record you looked up (sales order, purchase order, invoice, customer, or product), link to it so the user can open it. Write the link in markdown as [<label>](augno:<object>/<id>), taking <object> and <id> verbatim from that record's "object" and "id" fields in the tool result and using its human-readable number or name as <label>. For example, a sales order {"id":"so_abc","object":"sales_order","number":"SO-1042"} becomes [SO-1042](augno:sales_order/so_abc). Link each record the first time you mention it. Only link records you actually retrieved — never guess or invent an id.`
+// chatResourceLinkPreamble instructs a chat-triggered agent to link the records and pages it talks about so they render as clickable in-app links. Both forms are resolved client-side to the correct shell-aware route, so the agent never has to know real URLs: for a record it copies the `object` and `id` it already sees in tool results, and for a page it takes the key from find_app_page. Deliberately names no specific record types — every object type with a detail page in the dashboard is linkable (see shared/appnav), and listing a few here previously taught agents that only those few were.
+const chatResourceLinkPreamble = `Link the things you mention so the user can open them.
+
+For a RECORD you looked up, write [<label>](augno:<object>/<id>), taking <object> and <id> verbatim from that record's "object" and "id" fields in the tool result and using its human-readable number or name as <label>. For example a sales order {"id":"so_abc","object":"sales_order","number":"SO-1042"} becomes [SO-1042](augno:sales_order/so_abc). This works for every kind of record, not just orders. Link each record the first time you mention it, and only ones you actually retrieved — never guess or invent an id.
+
+For a PAGE of the app — a list, a settings screen, wherever something is managed — call the find_app_page tool and write the link exactly as it gives it to you, in the form [<page name>](augno:page/<key>). Do this instead of describing a menu path or writing a URL: you do not know this app's URLs, and a guessed one is a dead link. When you tell someone where to do something, link the page.`
 
 // chatReplyDeliveryPreamble tells a chat-triggered agent how its output reaches the conversation, so it
 // stops trying to "post" or "send" messages through generic API tools and stalling on a conversation id
@@ -1284,7 +1288,12 @@ func (s *runnerSvc) runAgentLoop(
 				slog.Info("Tool execution blocked — requires human approval",
 					"run_id", run.ID, "tool", tc.Name)
 
-				blockedMeta, _ := json.Marshal(map[string]any{"tool_use_id": tc.ID, "tool_name": tc.Name, "input": tc.Input, "blocked": true})
+				// A structured description of the pending change, resolved here (where the gateway client and agent identity are in hand) rather than in the reviewing client: the approval UI cannot read the target record on the agent's behalf, and the raw input alone doesn't say which record is affected or what it holds today.
+				blockedFields := map[string]any{"tool_use_id": tc.ID, "tool_name": tc.Name, "input": tc.Input, "blocked": true}
+				if preview := agents.BuildActionPreview(ctx, tc.Name, tc.Input, runCtx); preview != nil {
+					blockedFields["preview"] = preview
+				}
+				blockedMeta, _ := json.Marshal(blockedFields)
 				s.emitEvent(ctx, run.ID, accountID, seq, "tool_blocked", tc.Name+" blocked", new(blockedMsg), nil, nil, blockedMeta)
 
 				toolResultMsg.ToolResults = append(toolResultMsg.ToolResults, llm.ToolResultBlock{
@@ -1816,7 +1825,7 @@ func (s *runnerSvc) ContinueRun(ctx context.Context, runID, accountID, message s
 
 	// Resolve the agent's endpoint-tool grant and build the up-front tool list and review map.
 	allowedEndpointTools := resolveAllowedEndpointTools(agentCfg.EndpointToolSlugs)
-	toolDefs, requireReviewBySlug := s.buildAgentToolDefs(linkedTools, allowedEndpointTools, agentCfg.EndpointToolReview)
+	toolDefs, requireReviewBySlug := s.buildAgentToolDefs(linkedTools, allowedEndpointTools, agentCfg.EndpointToolReview, isChatRun(run))
 
 	// Resolve temperature
 	temperature := 0.0
@@ -2876,8 +2885,8 @@ func resolveAllowedEndpointTools(slugs []string) map[string]bool {
 	return allowed
 }
 
-// buildAgentToolDefs assembles the tools an agent run exposes up front and the per-tool require-review map. Up-front tools are the agent's explicitly-linked DB tools (hand-crafted), its linked built-in tools, and — only when the agent has been granted endpoint-tools — the search_api_tools meta-tool. The endpoint-tools themselves are NOT injected here; the agent discovers them on demand via search (progressive disclosure) and the runner reveals matches into the live tool list. allowedEndpointTools is the agent's resolved grant; each granted endpoint-tool is gated only when endpointReview marks its slug true (default off, mirroring linked built-in tools), so gating applies once it is revealed and called.
-func (s *runnerSvc) buildAgentToolDefs(linkedTools []sqlc.ListToolsByAgentDefinitionIDRow, allowedEndpointTools map[string]bool, endpointReview map[string]bool) ([]llm.ToolDefinition, map[string]bool) {
+// buildAgentToolDefs assembles the tools an agent run exposes up front and the per-tool require-review map. Up-front tools are the agent's explicitly-linked DB tools (hand-crafted), its linked built-in tools, — only when the agent has been granted endpoint-tools — the search_api_tools meta-tool, and on a chat run find_app_page. That last one is added to every chat run rather than granted per agent: linking a page is part of how a chat reply is written, not a capability a merchant chooses to hand out, and gating it behind a grant would leave every existing agent unable to link. The endpoint-tools themselves are NOT injected here; the agent discovers them on demand via search (progressive disclosure) and the runner reveals matches into the live tool list. allowedEndpointTools is the agent's resolved grant; each granted endpoint-tool is gated only when endpointReview marks its slug true (default off, mirroring linked built-in tools), so gating applies once it is revealed and called.
+func (s *runnerSvc) buildAgentToolDefs(linkedTools []sqlc.ListToolsByAgentDefinitionIDRow, allowedEndpointTools map[string]bool, endpointReview map[string]bool, chatRun bool) ([]llm.ToolDefinition, map[string]bool) {
 	requireReviewBySlug := make(map[string]bool, len(linkedTools)+len(allowedEndpointTools))
 
 	// Linked tools are built-in tools, granted by slug. Their description and input schema come from the code catalog (agents.BuiltinTools), not the database.
@@ -2919,6 +2928,22 @@ func (s *runnerSvc) buildAgentToolDefs(linkedTools []sqlc.ListToolsByAgentDefini
 			Description: agents.SearchAPIToolsDescription,
 			InputSchema: json.RawMessage(agents.SearchAPIToolsInputSchema),
 		})
+	}
+
+	// Page lookup, chat runs only: it exists to make a reply's "here's where you do that" a real link,
+	// which only matters where a human reads the reply. Read-only, so it never needs review.
+	if chatRun {
+		slug := agents.FindAppPageSlug
+		if _, set := requireReviewBySlug[slug]; !set {
+			requireReviewBySlug[slug] = false
+		}
+		if !slices.ContainsFunc(toolDefs, func(td llm.ToolDefinition) bool { return td.Name == slug }) {
+			toolDefs = append(toolDefs, llm.ToolDefinition{
+				Name:        slug,
+				Description: agents.FindAppPageDescription,
+				InputSchema: json.RawMessage(agents.FindAppPageInputSchema),
+			})
+		}
 	}
 
 	return toolDefs, requireReviewBySlug

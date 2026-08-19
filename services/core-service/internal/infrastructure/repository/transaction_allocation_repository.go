@@ -64,7 +64,7 @@ func (r *transactionAllocationRepoImpl) ListEntries(ctx context.Context, params 
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
-			return nil, apierror.NewValidationError("Invalid pagination cursor.")
+			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
 		}
 		cursorDir = &cur.Direction
 
@@ -293,7 +293,7 @@ func (r *transactionAllocationRepoImpl) ListOpenCredits(ctx context.Context, par
 	if params.Cursor != nil && *params.Cursor != "" {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
-			return nil, tracing.Trace(span, apierror.NewValidationError("Invalid pagination cursor."))
+			return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor"))
 		}
 		cursorCreatedAt = gosql.NullTime{Time: cur.OccurredAt, Valid: true}
 		cursorID = gosql.NullString{String: cur.ID, Valid: true}

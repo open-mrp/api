@@ -185,17 +185,6 @@ func (q *Queries) ExistsPortalSlug(ctx context.Context, arg ExistsPortalSlugPara
 	return slug_exists, err
 }
 
-const getAccountBrandingByAccountID = `-- name: GetAccountBrandingByAccountID :one
-SELECT logo_url FROM account_branding WHERE owner_account_id = ?
-`
-
-func (q *Queries) GetAccountBrandingByAccountID(ctx context.Context, ownerAccountID string) (sql.NullString, error) {
-	row := q.db.QueryRowContext(ctx, getAccountBrandingByAccountID, ownerAccountID)
-	var logo_url sql.NullString
-	err := row.Scan(&logo_url)
-	return logo_url, err
-}
-
 const getAccountBrandingFaviconKey = `-- name: GetAccountBrandingFaviconKey :one
 SELECT favicon_url FROM account_branding WHERE owner_account_id = ?
 `

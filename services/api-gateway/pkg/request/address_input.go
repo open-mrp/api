@@ -21,6 +21,8 @@ type AddressInput struct {
 	// - `standard`: a normal shipping or billing address.
 	// - `drop_ship`: an address an order is shipped to directly, typically a third party or end customer rather than the account itself.
 	Type field.Optional[constants.AddressType] `json:"type,omitzero" default:"standard"`
+	// The operating calendar naming the days this dock accepts freight, overriding the customer's own.
+	ReceiveCalendarID field.Optional[string] `json:"receive_calendar_id,omitzero" validate:"omitempty"`
 	// First line of the street address.
 	StreetLine1 field.Optional[string] `json:"street_line_1,omitzero" validate:"omitempty,max=255"`
 	// Second line of the street address.

@@ -55,6 +55,39 @@ func TestCovCatalogItems_ChangeCategory_TypeMismatch(t *testing.T) {
 		"a rejected type-mismatch change-category request must not mutate the item's category")
 }
 
+// TestCovCatalogItems_ChangeCategory_StrandsAttribute covers the attribute guard on a category move: the move keeps the item's attributes, so a target category that doesn't carry their properties is rejected rather than left holding an attribute it can't describe. Shipping carries no properties at all, and the product created here carries the seeded Color attribute.
+func TestCovCatalogItems_ChangeCategory_StrandsAttribute(t *testing.T) {
+	t.Parallel()
+
+	body := validProductBody(uniqueName("e2e-covitems-movestrand"))
+	body["attribute_ids"] = []string{SeedAttributeID}
+	created := createAndCleanup(t, productsPath, body)
+	productID := jsonField(created, "id")
+	require.NotEmpty(t, productID)
+
+	getStatus, getBody, err := apiClient.GetListRaw(productsPath+"/"+productID, url.Values{"include": {"item"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, getStatus, getBody)
+	itemID := jsonField(jsonObject(parseJSON(getBody), "item"), "id")
+	require.NotEmpty(t, itemID)
+
+	// Moved to a category carrying no properties, so the Color attribute already on the item would be stranded. Moving to another Color-carrying category is a legal move and would not exercise the gate.
+	status, respBody, err := apiClient.Put(itemsPath+"/"+itemID+"/category/"+SeedPropertylessItemCategoryID, nil)
+	require.NoError(t, err)
+	requireStatus(t, 400, status, respBody)
+
+	errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
+	assertErrorParam(t, errObj, "category_id")
+
+	// The rejected move must leave the item where it was.
+	checkStatus, checkBody, err := apiClient.GetListRaw(itemsPath+"/"+itemID, url.Values{"include": {"category"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, checkStatus, checkBody)
+	cat := jsonObject(parseJSON(checkBody), "category")
+	require.NotNil(t, cat)
+	assert.Equal(t, SeedItemCategoryID, jsonField(cat, "id"), "a rejected change-category request must not mutate the item's category")
+}
+
 // TestCovCatalogItems_Get_NotFound covers GET /v1/catalog/items/{id} for a
 // syntactically valid but nonexistent item id.
 func TestCovCatalogItems_Get_NotFound(t *testing.T) {
@@ -116,16 +149,7 @@ func TestCovCatalogItems_RemoveAttribute_ItemNotFound(t *testing.T) {
 	requireErrorResponse(t, body, "resource_not_found", "invalid_request_error")
 }
 
-// TestCovCatalogItems_AddAttribute_NonexistentAttributeID exercises
-// AddItemAttribute with a syntactically valid but nonexistent attribute id.
-//
-// prodBugSuspect: the `_item_attributes` join table has no FK constraint on
-// attribute_id, and AddItemAttribute's INSERT does not check the attribute
-// row exists first, so the request succeeds with 200 instead of 404. The
-// join row is written, but since the attribute itself doesn't exist,
-// ?include=attributes (which joins through the attribute table) comes back
-// empty rather than surfacing the bogus id. This is confirmed live below;
-// per policy this is asserted as observed (not papered over) and flagged.
+// TestCovCatalogItems_AddAttribute_NonexistentAttributeID exercises AddItemAttribute with a syntactically valid but nonexistent attribute id. The `_item_attributes` join table has no FK constraint on attribute_id, so the id is checked in the account scope before the row is written; without that check the request would write an orphaned join row that never surfaces via ?include=attributes.
 func TestCovCatalogItems_AddAttribute_NonexistentAttributeID(t *testing.T) {
 	t.Parallel()
 	_, itemID := newProductItemIDs(t, "e2e-covitems-badattr")
@@ -136,19 +160,32 @@ func TestCovCatalogItems_AddAttribute_NonexistentAttributeID(t *testing.T) {
 		nil,
 	)
 	require.NoError(t, err)
-	// BUG (see comment above): this "should" be a 404 resource_not_found, but
-	// the live behavior is 200 with an orphaned _item_attributes row that
-	// never surfaces via ?include=attributes because the attribute row itself
-	// doesn't exist to join against.
-	requireStatus(t, 200, status, body)
+	requireStatus(t, 404, status, body)
+	requireErrorResponse(t, body, "resource_not_found", "invalid_request_error")
+}
 
-	got := parseJSON(body)
-	attrs := jsonObject(got, "attributes")
-	require.NotNil(t, attrs, "attributes should be present with ?include=attributes")
-	data := jsonArray(attrs, "data")
-	assert.Empty(t, data,
-		"BUG: AddItemAttribute accepted a nonexistent attribute_id with 200 instead of 404; "+
-			"the resulting join row is orphaned and never appears via ?include=attributes")
+// TestCovCatalogItems_AddAttribute_PropertyNotOnCategory covers the category gate: an attribute may only be assigned to an item whose category carries the attribute's property. SeedAttributeID belongs to the Color property, and the category here carries no properties at all — every other product category in the seed carries Color, so pairing against one of those would be a legal assignment rather than the rejection this is testing.
+func TestCovCatalogItems_AddAttribute_PropertyNotOnCategory(t *testing.T) {
+	t.Parallel()
+
+	body := validProductBody(uniqueName("e2e-covitems-attrcat"))
+	body["category_id"] = SeedPropertylessItemCategoryID
+	created := createAndCleanup(t, productsPath, body)
+	productID := jsonField(created, "id")
+	require.NotEmpty(t, productID)
+
+	getStatus, getBody, err := apiClient.GetListRaw(productsPath+"/"+productID, url.Values{"include": {"item"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, getStatus, getBody)
+	itemID := jsonField(jsonObject(parseJSON(getBody), "item"), "id")
+	require.NotEmpty(t, itemID)
+
+	status, respBody, err := apiClient.Put(itemsPath+"/"+itemID+"/attributes/"+SeedAttributeID, nil)
+	require.NoError(t, err)
+	requireStatus(t, 400, status, respBody)
+
+	errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
+	assertErrorParam(t, errObj, "attribute_id")
 }
 
 // ──────────────────────────────────────────────
@@ -220,16 +257,7 @@ func TestCovCatalogItems_ListItems_FilterByAttribute(t *testing.T) {
 
 func TestCovCatalogItems_ListItems_FilterByAttribute_NoResults(t *testing.T) {
 	t.Parallel()
-	// Use a fake attribute id that no other test references. The obvious
-	// all-zeros sentinel (at_00000000000000000000000000) is deliberately
-	// poisoned by cov_catalog_products_test.go, which creates products with
-	// that exact nonexistent attribute_id; because item/product create does
-	// not validate attribute existence, those requests leave orphaned
-	// _item_attributes join rows (A = at_0000...) that the list filter then
-	// correctly matches — making the all-zeros id a false "no results" probe.
-	// The list filter itself is behaving correctly here (it returns items that
-	// genuinely carry a join row for the requested id); this test only needs
-	// an id that nothing in the suite ever joins against.
+	// Any id nothing in the suite ever joins against works; this one is kept distinct from the all-zeros sentinel other catalog tests probe with.
 	list, _, err := apiClient.GetList(itemsPath, url.Values{
 		"attribute_ids": {"at_7h3q9k2m4n6p8r1s5t0v2wxyz3"},
 	})
@@ -258,7 +286,7 @@ func TestCovCatalogItems_ListItems_SubassemblyFilterInvalidValue(t *testing.T) {
 	requireStatus(t, 400, status, body)
 
 	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
-	assertErrorParam(t, errObj, "SubassemblyFilter")
+	assertErrorParam(t, errObj, "subassembly_filter")
 }
 
 // ──────────────────────────────────────────────

@@ -1274,6 +1274,9 @@ type SalesOrderSvc interface {
 	// QuoteSalesOrderFreight re-estimates an existing order's freight charge from its current ship-to, carrier, service level, and lines, without mutating the order.
 	QuoteSalesOrderFreight(ctx context.Context, params QuoteSalesOrderFreightParams) (*SalesOrderFreightQuote, *apierror.APIError)
 
+	// QuoteSalesOrderCommitment previews the ship-by date a set of commitment inputs would produce, running the same resolution the issue path runs so the two cannot disagree. Returns nil when no rule produces a date.
+	QuoteSalesOrderCommitment(ctx context.Context, params QuoteCommitmentParams) (*ShipByCommitment, *apierror.APIError)
+
 	// CreateSalesOrderProductionRun creates a production run from a sales order.
 	CreateSalesOrderProductionRun(ctx context.Context, params CreateSalesOrderProductionRunParams) (*CreateSalesOrderProductionRunResult, *apierror.APIError)
 
@@ -1774,4 +1777,19 @@ type CreateAccountParams struct {
 	PlanCode             string
 	StripeCustomerID     string
 	StripeSubscriptionID string
+}
+
+// OperatingCalendarSvc manages the day-sets a ship-by commitment is resolved against.
+//
+// Internal-only throughout: a customer has no business seeing which days their supplier's plant runs, and the calendars are account configuration rather than anything about a particular order.
+type OperatingCalendarSvc interface {
+	ListOperatingCalendars(ctx context.Context, kindCode *string) ([]OperatingCalendar, *apierror.APIError)
+	GetOperatingCalendar(ctx context.Context, calendarID string) (*OperatingCalendar, *apierror.APIError)
+	CreateOperatingCalendar(ctx context.Context, params CreateOperatingCalendarParams) (*OperatingCalendar, *apierror.APIError)
+	UpdateOperatingCalendar(ctx context.Context, params UpdateOperatingCalendarParams) (*OperatingCalendar, *apierror.APIError)
+	// DeleteOperatingCalendar refuses while anything still references the calendar, rather than silently returning every affected customer to Monday-to-Friday.
+	DeleteOperatingCalendar(ctx context.Context, calendarID string) *apierror.APIError
+	ListOperatingCalendarClosures(ctx context.Context, calendarID string, from, to *time.Time) ([]OperatingCalendarClosure, *apierror.APIError)
+	CreateOperatingCalendarClosure(ctx context.Context, calendarID string, closedOn time.Time, name string) (*OperatingCalendarClosure, *apierror.APIError)
+	DeleteOperatingCalendarClosure(ctx context.Context, closureID string) *apierror.APIError
 }

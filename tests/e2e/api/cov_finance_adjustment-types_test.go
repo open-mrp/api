@@ -268,7 +268,7 @@ func TestCovFinanceAdjustmentTypes_LimitZeroRejected(t *testing.T) {
 	status, body, err := apiClient.GetListRaw(covFinanceAdjustmentTypesPath, url.Values{"limit": {"0"}})
 	require.NoError(t, err)
 	assert.Equal(t, 400, status, "limit=0 should be rejected with 400, got %d: %s", status, string(body))
-	requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
+	requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
 }
 
 func TestCovFinanceAdjustmentTypes_LimitNegativeRejected(t *testing.T) {
@@ -276,7 +276,7 @@ func TestCovFinanceAdjustmentTypes_LimitNegativeRejected(t *testing.T) {
 	status, body, err := apiClient.GetListRaw(covFinanceAdjustmentTypesPath, url.Values{"limit": {"-1"}})
 	require.NoError(t, err)
 	assert.Equal(t, 400, status, "limit=-1 should be rejected with 400, got %d: %s", status, string(body))
-	requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
+	requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
 }
 
 func TestCovFinanceAdjustmentTypes_LimitOverMaxRejected(t *testing.T) {
@@ -284,7 +284,7 @@ func TestCovFinanceAdjustmentTypes_LimitOverMaxRejected(t *testing.T) {
 	status, body, err := apiClient.GetListRaw(covFinanceAdjustmentTypesPath, url.Values{"limit": {"1001"}})
 	require.NoError(t, err)
 	assert.Equal(t, 400, status, "limit=1001 should be rejected with 400, got %d: %s", status, string(body))
-	requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
+	requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
 }
 
 func TestCovFinanceAdjustmentTypes_LimitNonNumericRejected(t *testing.T) {

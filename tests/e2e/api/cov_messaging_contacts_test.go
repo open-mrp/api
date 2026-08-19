@@ -231,8 +231,8 @@ func TestCovMessagingContacts_LimitValidation(t *testing.T) {
 			status, body, err := apiClient.GetListRaw(covMessagingContactsPath, url.Values{"limit": {tc.limit}})
 			require.NoError(t, err)
 			requireStatus(t, 400, status, body)
-			errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
-			assertErrorParam(t, errObj, "Limit")
+			errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+			assertErrorParam(t, errObj, "limit")
 		})
 	}
 }
@@ -258,8 +258,8 @@ func TestCovMessagingContacts_QueryTooLong(t *testing.T) {
 	status, body, err := apiClient.GetListRaw(covMessagingContactsPath, url.Values{"q": {strings.Repeat("x", 501)}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
-	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
-	assertErrorParam(t, errObj, "Query")
+	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	assertErrorParam(t, errObj, "q")
 }
 
 // TestCovMessagingContacts_CursorAcceptedButInert asserts an arbitrary,

@@ -106,6 +106,16 @@ func (s *productionFlowSvcImpl) GetProductionFlow(ctx context.Context, itemID st
 	accountID := identity.Target.AccountID
 	flowRepo := s.repos.NewProductionFlowRepo()
 
+	// An item with no flow legitimately has an empty one — a purchased material is bought, not
+	// made. An item that does not exist is a different answer entirely, and without this read
+	// the two are identical, so a mistyped or another account's item ID reads as "no steps".
+	if _, apiErr := s.repos.NewItemRepo().Get(ctx, domain.GetItemParams{
+		AccountID: accountID,
+		ItemID:    itemID,
+	}); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
 	// Find the step(s) that produce this item.
 	initialStepIDs, apiErr := flowRepo.FindStepsByProducedItem(ctx, accountID, itemID)
 	if apiErr != nil {

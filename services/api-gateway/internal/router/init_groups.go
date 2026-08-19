@@ -491,6 +491,14 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 		registry.RegisterGroup(scheduleSettingsGroup.APIEndpointGroup)
 	}
 
+	// Operating Calendars
+	operatingCalendarsGroup := (&httpgroup.OperatingCalendarsEndpointGroup{}).Materialize(&httpgroup.OperatingCalendarsEndpointGroupConfig{
+		CoreClient: config.CoreClient,
+	})
+	if operatingCalendarsGroup != nil {
+		registry.RegisterGroup(operatingCalendarsGroup.APIEndpointGroup)
+	}
+
 	// Demand Overrides
 	demandOverridesGroup := (&httpgroup.DemandOverridesEndpointGroup{}).Materialize(&httpgroup.DemandOverridesEndpointGroupConfig{
 		CoreClient: config.CoreClient,

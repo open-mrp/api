@@ -275,9 +275,24 @@ func (s *userSvcImpl) UploadUserPhoto(ctx context.Context, userID string, file [
 		return tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
 	}
 
-	key := identity.Target.AccountID + "/" + userID + ".png"
-	apiErr := s.s3Client.Upload(ctx, s.userPhotosBucket, key, bytes.NewReader(file), contentType)
+	accountUserRepo := s.repos.NewAccountUserRepo()
+
+	// The permission above only says the caller may manage users in their own account; it says
+	// nothing about whether this user is one of them. Without this, any account could repoint
+	// any user's photo at an image of its choosing.
+	if _, apiErr := accountUserRepo.FindByAccountAndUserID(ctx, userID, identity.Target.AccountID); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	// The photo belongs to the user, not to the account that happened to upload it, so the key
+	// is derived the same way on both sides. Deriving it from the calling account instead meant
+	// a user who belongs to two accounts could upload a photo the read path never looked for.
+	key, apiErr := s.userPhotoKey(ctx, userID)
 	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	if apiErr := s.s3Client.Upload(ctx, s.userPhotosBucket, key, bytes.NewReader(file), contentType); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
 
@@ -288,6 +303,22 @@ func (s *userSvcImpl) UploadUserPhoto(ctx context.Context, userID string, file [
 	}
 
 	return nil
+}
+
+// userPhotoKey is where a user's photo lives, derived identically by the upload and the read.
+// A user may belong to several accounts but has only one photo, so the account in the key is
+// incidental — it just has to be the same one every time, or an upload lands somewhere the
+// read never looks. Returns an empty key for a user who belongs to no account.
+func (s *userSvcImpl) userPhotoKey(ctx context.Context, userID string) (string, *apierror.APIError) {
+	accountID, apiErr := s.repos.NewAccountUserRepo().FindFirstAccountIDByUserID(ctx, userID)
+	if apiErr != nil {
+		return "", apiErr
+	}
+	if accountID == "" {
+		return "", nil
+	}
+
+	return accountID + "/" + userID + ".png", nil
 }
 
 func (s *userSvcImpl) GetUserPhotoURL(ctx context.Context, userID string) (*string, *apierror.APIError) {
@@ -309,16 +340,23 @@ func (s *userSvcImpl) GetUserPhotoURL(ctx context.Context, userID string) (*stri
 		}
 	}
 
+	// Same membership check as the upload path: a photo URL is a link to a person's face, and
+	// resolving one for a user in another tenancy is not a read this caller is entitled to.
 	accountUserRepo := s.repos.NewAccountUserRepo()
-	accountID, apiErr := accountUserRepo.FindFirstAccountIDByUserID(ctx, userID)
+	if identity.Actor == nil || identity.Actor.ID != userID {
+		if _, apiErr := accountUserRepo.FindByAccountAndUserID(ctx, userID, identity.Target.AccountID); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
+
+	key, apiErr := s.userPhotoKey(ctx, userID)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if accountID == "" {
+	if key == "" {
 		return nil, nil
 	}
 
-	key := accountID + "/" + userID + ".png"
 	exists, _ := s.s3Client.FileExists(ctx, s.userPhotosBucket, key)
 	if !exists {
 		return nil, nil

@@ -126,7 +126,7 @@ func (r *apiKeyRepoImpl) List(ctx context.Context, input domain.APIKeyListRepoIn
 	if input.Cursor != nil {
 		cur, err := pagination.DecodeCursor(*input.Cursor)
 		if err != nil {
-			return nil, apierror.NewValidationError("Invalid pagination cursor.")
+			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
 		}
 		cursorDir = &cur.Direction
 

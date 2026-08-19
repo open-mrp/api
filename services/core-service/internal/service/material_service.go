@@ -352,17 +352,8 @@ func (s *materialSvcImpl) createMaterialInTx(txCtx context.Context, params domai
 	}
 
 	// Link caller-supplied attributes to the new item (matches Dashboard behavior).
-	for _, attrID := range params.AttributeIDs {
-		if attrID == "" {
-			continue
-		}
-		if apiErr := txItemRepo.AddAttribute(txCtx, domain.AddItemAttributeParams{
-			AccountID:   params.AccountID,
-			ItemID:      itemID,
-			AttributeID: attrID,
-		}); apiErr != nil {
-			return nil, apiErr
-		}
+	if apiErr := attachItemAttributesInTx(txCtx, s.repos, params.AccountID, params.CategoryID, itemID, params.AttributeIDs); apiErr != nil {
+		return nil, apiErr
 	}
 
 	// Insert order point quantity.

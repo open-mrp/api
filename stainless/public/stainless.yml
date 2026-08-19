@@ -891,11 +891,15 @@ resources:
               close: put /v1/sales/sales-orders/{id}/actions/close
               open: put /v1/sales/sales-orders/{id}/actions/open
               quote_freight: post /v1/sales/sales-orders/{id}/actions/quote-freight
+              quote_commitment: post /v1/sales/sales-orders/actions/quote-commitment
               create_production_run: post /v1/sales/sales-orders/{id}/actions/create-production-run
             models:
               bulk_delete_sales_orders_request: '#/components/schemas/BulkDeleteSalesOrdersRequest'
+              commitment_quote_step: '#/components/schemas/CommitmentQuoteStep'
               issue_sales_order_request: '#/components/schemas/IssueSalesOrderRequest'
               production_run: '#/components/schemas/ProductionRun'
+              quote_sales_order_commitment_request: '#/components/schemas/QuoteSalesOrderCommitmentRequest'
+              quote_sales_order_commitment_response: '#/components/schemas/QuoteSalesOrderCommitmentResponse'
               quote_sales_order_freight_response: '#/components/schemas/QuoteSalesOrderFreightResponse'
           lines:
             methods:
@@ -1181,6 +1185,28 @@ resources:
         models:
           fulfillment_recommendation: '#/components/schemas/FulfillmentRecommendation'
           list_fulfillment_recommendation: '#/components/schemas/List_FulfillmentRecommendation'
+      operating_calendars:
+        methods:
+          list: get /v1/operations/operating-calendars
+          retrieve: get /v1/operations/operating-calendars/{id}
+          create: post /v1/operations/operating-calendars
+          update: patch /v1/operations/operating-calendars/{id}
+          delete: delete /v1/operations/operating-calendars/{id}
+        subresources:
+          closures:
+            methods:
+              list: get /v1/operations/operating-calendars/{id}/closures
+              create: post /v1/operations/operating-calendars/{id}/closures
+              delete: delete /v1/operations/operating-calendars/{id}/closures/{closure_id}
+            models:
+              create_operating_calendar_closure_request: '#/components/schemas/CreateOperatingCalendarClosureRequest'
+              list_operating_calendar_closure: '#/components/schemas/List_OperatingCalendarClosure'
+              operating_calendar_closure: '#/components/schemas/OperatingCalendarClosure'
+        models:
+          create_operating_calendar_request: '#/components/schemas/CreateOperatingCalendarRequest'
+          list_operating_calendar: '#/components/schemas/List_OperatingCalendar'
+          operating_calendar: '#/components/schemas/OperatingCalendar'
+          update_operating_calendar_request: '#/components/schemas/UpdateOperatingCalendarRequest'
       locations:
         methods:
           list: get /v1/operations/locations

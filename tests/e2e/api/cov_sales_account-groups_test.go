@@ -470,5 +470,5 @@ func TestCovSalesAccountGroups_ListInvalidTypeFilter(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
-	assertErrorParam(t, errObj, "Type")
+	assertErrorParam(t, errObj, "type")
 }

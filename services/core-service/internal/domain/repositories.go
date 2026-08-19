@@ -31,7 +31,6 @@ type AccountRepo interface {
 	GetAgentSpendingCap(ctx context.Context, accountID string) (*int64, *apierror.APIError)
 	HasActiveBillingPlan(ctx context.Context, accountID string) (bool, *apierror.APIError)
 	GetName(ctx context.Context, accountID string) (string, *apierror.APIError)
-	GetBrandingLogoURL(ctx context.Context, accountID string) (*string, *apierror.APIError)
 	GetPortalSlug(ctx context.Context, accountID string) (*string, *apierror.APIError)
 	GetByID(ctx context.Context, accountID string) (*Account, *apierror.APIError)
 	// GetByIDs returns accounts matching the given IDs. Caller authorization is enforced at the service layer.
@@ -485,6 +484,32 @@ type CarrierTransitEstimateRepo interface {
 	Upsert(ctx context.Context, params UpsertTransitEstimateParams) *apierror.APIError
 }
 
+// OperatingCalendarRepo reads and writes the day-sets a commitment is resolved against.
+type OperatingCalendarRepo interface {
+	Get(ctx context.Context, accountID, calendarID string) (*OperatingCalendar, *apierror.APIError)
+	GetByCode(ctx context.Context, accountID, code string) (*OperatingCalendar, *apierror.APIError)
+	List(ctx context.Context, params ListOperatingCalendarsParams) ([]OperatingCalendar, *apierror.APIError)
+	// ResolveShip returns the calendar the account tenders freight on, preferring an explicitly configured one over the account default. Nil means none is configured, and the caller falls back to Monday-to-Friday.
+	ResolveShip(ctx context.Context, accountID string) (*OperatingCalendar, *apierror.APIError)
+	// ResolveReceive walks address -> customer -> customer's group -> account setting -> account default in one query. Nil means none is configured anywhere on the chain.
+	ResolveReceive(ctx context.Context, query ReceiveCalendarQuery) (*OperatingCalendar, *apierror.APIError)
+	// ListClosures returns closures for a set of calendars inside a bounded window, keyed by calendar ID.
+	ListClosures(ctx context.Context, query ClosureWindowQuery) (map[string][]OperatingCalendarClosure, *apierror.APIError)
+	Create(ctx context.Context, params CreateOperatingCalendarParams) *apierror.APIError
+	Update(ctx context.Context, params UpdateOperatingCalendarParams) *apierror.APIError
+	// ClearDefault demotes every other calendar of the same kind, so exactly one default survives per kind.
+	ClearDefault(ctx context.Context, accountID, kindCode, keepID string) *apierror.APIError
+	// Delete is a soft delete: an issued order's commitment was resolved against this calendar, and a hard delete would orphan the links that explain it.
+	Delete(ctx context.Context, accountID, calendarID string) *apierror.APIError
+	CountReferences(ctx context.Context, accountID, calendarID string) (*OperatingCalendarReferences, *apierror.APIError)
+	GetClosure(ctx context.Context, accountID, closureID string) (*OperatingCalendarClosure, *apierror.APIError)
+	// GetClosureByDate reads a closure back by the key it is unique on, so a re-closed date returns the row that was already there rather than a discarded ID.
+	GetClosureByDate(ctx context.Context, accountID, calendarID string, closedOn time.Time) (*OperatingCalendarClosure, *apierror.APIError)
+	// UpsertClosures is idempotent, so re-seeding a year neither duplicates a closure nor renames one an operator has relabelled.
+	UpsertClosures(ctx context.Context, closures []UpsertClosureParams) *apierror.APIError
+	DeleteClosure(ctx context.Context, accountID, closureID string) *apierror.APIError
+}
+
 type ServiceLevelRepo interface {
 	List(ctx context.Context, params ListServiceLevelsParams) (*ListServiceLevelsResult, *apierror.APIError)
 	Get(ctx context.Context, accountID, serviceLevelID string) (*ServiceLevel, *apierror.APIError)
@@ -782,8 +807,8 @@ type CustomerRepo interface {
 	BulkDelete(ctx context.Context, ownerAccountID string, customerIDs []string) *apierror.APIError
 	IsCommissionExempt(ctx context.Context, ownerAccountID, customerAccountID string) (bool, *apierror.APIError)
 	ExistsByNumber(ctx context.Context, ownerAccountID, number string, excludeID *string) (bool, *apierror.APIError)
-	GetNextCustomerNumber(ctx context.Context, accountID string) (int64, *apierror.APIError)
-	UpdateNextCustomerNumber(ctx context.Context, sysPropertyID, accountID string, value string) *apierror.APIError
+	// AllocateNextCustomerNumber reserves the account's next customer number in one locked statement, so two registrations landing together cannot be handed the same one.
+	AllocateNextCustomerNumber(ctx context.Context, sysPropertyID, accountID string) (int64, *apierror.APIError)
 	InsertPriceGroup(ctx context.Context, id, relationID, groupID string) *apierror.APIError
 	DeletePriceGroups(ctx context.Context, relationID string) *apierror.APIError
 	GetFrequentlyOrderedProducts(ctx context.Context, ownerAccountID, customerAccountID string) ([]*FrequentlyOrderedProduct, *apierror.APIError)
@@ -1448,8 +1473,8 @@ type SettlementRepo interface {
 	DeleteAllocations(ctx context.Context, settlementID string) ([]*TransactionAllocation, *apierror.APIError)
 	GetAllocationTransactionIDs(ctx context.Context, settlementID string) ([]string, *apierror.APIError)
 	GetAllocationInvoiceIDs(ctx context.Context, settlementID string) ([]string, *apierror.APIError)
-	GetNextSettlementNumber(ctx context.Context, accountID string) (int64, *apierror.APIError)
-	UpdateNextSettlementNumber(ctx context.Context, sysPropertyID, accountID string, value int64) *apierror.APIError
+	// AllocateNextSettlementNumber reserves the account's next settlement number in one locked statement.
+	AllocateNextSettlementNumber(ctx context.Context, sysPropertyID, accountID string) (int64, *apierror.APIError)
 	GetDollarUnitID(ctx context.Context) (string, *apierror.APIError)
 	DeleteOrphanedAdjustmentTransactions(ctx context.Context, settlementID string) *apierror.APIError
 	UpdateTransactionsFullyAllocated(ctx context.Context, transactionIDs []string, isFullyAllocated bool) *apierror.APIError
@@ -1525,8 +1550,8 @@ type RegistrationFlowRepo interface {
 type CustomerRegistrationRepo interface {
 	FindCustomerAccountByExternalNumber(ctx context.Context, ownerAccountID, externalNumber string) (string, *apierror.APIError)
 	CreateAccountUserLink(ctx context.Context, linkID, accountID, userID string) *apierror.APIError
-	GetNextCustomerNumber(ctx context.Context, accountID string) (int64, *apierror.APIError)
-	UpdateNextCustomerNumber(ctx context.Context, sysPropertyID, accountID string, value int64) *apierror.APIError
+	// AllocateNextCustomerNumber reserves the account's next customer number in one locked statement.
+	AllocateNextCustomerNumber(ctx context.Context, sysPropertyID, accountID string) (int64, *apierror.APIError)
 	CreateNewCustomerAccount(ctx context.Context, params CreateNewCustomerAccountParams) (string, *apierror.APIError)
 	GetUserEmailByID(ctx context.Context, userID string) (string, *apierror.APIError)
 }
@@ -1657,6 +1682,8 @@ type TerritoryRepo interface {
 type PricingRepo interface {
 	// LoadPricingBundle fetches, in a small number of queries, all product list prices, unit conversion data, unit-group discounts, account-price overrides (for the buyer and its parent account), and applicable volume discounts.
 	LoadPricingBundle(ctx context.Context, params LoadPricingBundleParams) (*PricingBundle, *apierror.APIError)
+	// ProductQuantityUnits returns, per product, the set of unit IDs its unit group allows a quantity to be expressed in. Products the account does not own are absent, which the caller reports as an unknown product rather than as an unusable unit.
+	ProductQuantityUnits(ctx context.Context, accountID string, productIDs []string) (map[string]map[string]struct{}, *apierror.APIError)
 }
 
 type JobRepo interface {

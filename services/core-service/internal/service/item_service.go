@@ -473,7 +473,17 @@ func (s *itemSvcImpl) GetItemTrends(ctx context.Context, itemID string, trendTyp
 		))
 	}
 
-	return s.repos.NewItemRepo().GetTrends(ctx, identity.Target.AccountID, itemID, trendType)
+	itemRepo := s.repos.NewItemRepo()
+
+	// An item with nothing logged and an item that does not exist both produce an empty series, so without this read the endpoint would answer for another account's item ID as readily as for a real one of your own.
+	if _, apiErr := itemRepo.Get(ctx, domain.GetItemParams{
+		AccountID: identity.Target.AccountID,
+		ItemID:    itemID,
+	}); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	return itemRepo.GetTrends(ctx, identity.Target.AccountID, itemID, trendType)
 }
 
 // ExportItems returns all items with on-hand inventory for the caller's account.
@@ -672,6 +682,10 @@ func (s *itemSvcImpl) AddItemAttribute(ctx context.Context, itemID, attributeID 
 				Includes:  auditIncs,
 			})
 			if apiErr != nil {
+				return apiErr
+			}
+
+			if apiErr := validateAttributesForCategory(txCtx, txSvc.repos, accountID, old.ItemCategoryID, []string{attributeID}, "attribute_id"); apiErr != nil {
 				return apiErr
 			}
 
@@ -894,6 +908,9 @@ func (s *itemSvcImpl) ChangeItemCategory(ctx context.Context, itemID, categoryID
 				return apiErr
 			}
 			if apiErr := validateChangeItemCategoryTypes(itemForValidation, category); apiErr != nil {
+				return apiErr
+			}
+			if apiErr := validateCategoryCarriesItemAttributes(txCtx, txSvc.repos, itemForValidation, categoryID, "category_id"); apiErr != nil {
 				return apiErr
 			}
 
@@ -1314,13 +1331,24 @@ func (s *itemSvcImpl) BulkCreateItems(ctx context.Context, params domain.BulkCre
 	}
 }
 
-// connects the given attributes to an item (additive)
-func attachItemAttributesInTx(txCtx context.Context, repos domain.RepoFactory, accountID, itemID string, attributeIDs []string) *apierror.APIError {
-	itemRepo := repos.NewItemRepo()
+// connects the given attributes to an item (additive), rejecting any the account doesn't own or whose property the item's category doesn't carry
+func attachItemAttributesInTx(txCtx context.Context, repos domain.RepoFactory, accountID, categoryID, itemID string, attributeIDs []string) *apierror.APIError {
+	ids := make([]string, 0, len(attributeIDs))
 	for _, attrID := range attributeIDs {
-		if attrID == "" {
-			continue
+		if attrID != "" {
+			ids = append(ids, attrID)
 		}
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+
+	if apiErr := validateAttributesForCategory(txCtx, repos, accountID, categoryID, ids, "attribute_ids"); apiErr != nil {
+		return apiErr
+	}
+
+	itemRepo := repos.NewItemRepo()
+	for _, attrID := range ids {
 		if apiErr := itemRepo.AddAttribute(txCtx, domain.AddItemAttributeParams{
 			AccountID:   accountID,
 			ItemID:      itemID,
@@ -1329,6 +1357,73 @@ func attachItemAttributesInTx(txCtx context.Context, repos domain.RepoFactory, a
 			return apiErr
 		}
 	}
+	return nil
+}
+
+// validateAttributesForCategory rejects attributes the account doesn't own, and ones whose property is not linked to the item category they would be attached under. The category's properties are what the catalog offers as the item's describable axes, and an item's attributes are read back straight off the join table, so an attribute from an unrelated property would render on the item as a value of a property the item is not supposed to have.
+func validateAttributesForCategory(ctx context.Context, repos domain.RepoFactory, accountID, categoryID string, attributeIDs []string, param string) *apierror.APIError {
+	if len(attributeIDs) == 0 {
+		return nil
+	}
+
+	attributes, apiErr := repos.NewAttributeRepo().GetByIDs(ctx, accountID, attributeIDs)
+	if apiErr != nil {
+		return apiErr
+	}
+	byID := make(map[string]*domain.Attribute, len(attributes))
+	for _, attr := range attributes {
+		byID[attr.ID] = attr
+	}
+
+	linked, apiErr := categoryPropertyIDs(ctx, repos, categoryID)
+	if apiErr != nil {
+		return apiErr
+	}
+
+	for _, attrID := range attributeIDs {
+		attr, ok := byID[attrID]
+		if !ok {
+			return apierror.NewResourceNotFoundError("Attribute not found.")
+		}
+		if _, ok := linked[attr.PropertyID]; !ok {
+			return apierror.NewValidationErrorWithParam(fmt.Sprintf("Attribute %q is not available on this item's category; link its property to the category first.", attr.Value), param)
+		}
+	}
+
+	return nil
+}
+
+// categoryPropertyIDs returns the set of property ids the category carries.
+func categoryPropertyIDs(ctx context.Context, repos domain.RepoFactory, categoryID string) (map[string]struct{}, *apierror.APIError) {
+	properties, apiErr := repos.NewItemCategoryRepo().GetProperties(ctx, categoryID)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	linked := make(map[string]struct{}, len(properties))
+	for _, property := range properties {
+		linked[property.ID] = struct{}{}
+	}
+	return linked, nil
+}
+
+// validateCategoryCarriesItemAttributes rejects a move to a category that doesn't carry the properties of the attributes already on the item. The move leaves those links in place, so permitting it would open the back door to exactly the state validateAttributesForCategory refuses to create at link time.
+func validateCategoryCarriesItemAttributes(ctx context.Context, repos domain.RepoFactory, item *domain.Item, categoryID, param string) *apierror.APIError {
+	// Re-assigning the item's own category is a documented no-op, and it strands nothing even when the item predates this rule.
+	if len(item.Attributes) == 0 || item.ItemCategoryID == categoryID {
+		return nil
+	}
+
+	linked, apiErr := categoryPropertyIDs(ctx, repos, categoryID)
+	if apiErr != nil {
+		return apiErr
+	}
+
+	for _, attr := range item.Attributes {
+		if _, ok := linked[attr.PropertyID]; !ok {
+			return apierror.NewValidationErrorWithParam(fmt.Sprintf("The item carries the attribute %q, whose property the target category does not have; unlink the attribute or add its property to the category first.", attr.Value), param)
+		}
+	}
+
 	return nil
 }
 
@@ -1402,6 +1497,7 @@ func (s *itemSvcImpl) bulkUpsertExistingItemInTx(txCtx context.Context, accountI
 			item, apiErr := txItemRepo.Get(txCtx, domain.GetItemParams{
 				AccountID: accountID,
 				ItemID:    itemID,
+				Includes:  []string{"attributes"},
 			})
 			if apiErr != nil {
 				return apiErr
@@ -1414,6 +1510,9 @@ func (s *itemSvcImpl) bulkUpsertExistingItemInTx(txCtx context.Context, accountI
 				return apiErr
 			}
 			if apiErr := validateChangeItemCategoryTypes(item, category); apiErr != nil {
+				return apiErr
+			}
+			if apiErr := validateCategoryCarriesItemAttributes(txCtx, txSvc.repos, item, input.ItemCategoryID, "item_category_id"); apiErr != nil {
 				return apiErr
 			}
 			if apiErr := txItemRepo.ChangeCategory(txCtx, domain.ChangeItemCategoryParams{
@@ -1452,17 +1551,19 @@ func (s *itemSvcImpl) bulkUpsertExistingItemInTx(txCtx context.Context, accountI
 		// Replace attributes when supplied: clears existing, then re-adds from input.
 		// Matches Dashboard's updateExistingProduct attribute handling.
 		if len(input.AttributeIDs) > 0 {
-			for _, attrID := range input.AttributeIDs {
-				if attrID == "" {
-					continue
-				}
-				if apiErr := txItemRepo.AddAttribute(txCtx, domain.AddItemAttributeParams{
-					AccountID:   accountID,
-					ItemID:      itemID,
-					AttributeID: attrID,
-				}); apiErr != nil {
+			categoryID := input.ItemCategoryID
+			if categoryID == "" {
+				item, apiErr := txItemRepo.Get(txCtx, domain.GetItemParams{
+					AccountID: accountID,
+					ItemID:    itemID,
+				})
+				if apiErr != nil {
 					return apiErr
 				}
+				categoryID = item.ItemCategoryID
+			}
+			if apiErr := attachItemAttributesInTx(txCtx, txSvc.repos, accountID, categoryID, itemID, input.AttributeIDs); apiErr != nil {
+				return apiErr
 			}
 		}
 

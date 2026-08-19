@@ -61,7 +61,8 @@ func selectTransit(candidates *domain.CarrierTransitCandidates) *scheduling.Tran
 // resolveOrderTransit works out how long the carrier needs for an order's lane, or nil when that cannot be known.
 //
 // Every miss along the way is a nil rather than an error. An order with no service level, an account with no ship-from, a lane nobody has quoted and a service level with no default are all ordinary states, and the commitment they produce — ship-by equal to the promised date — is exactly the behaviour that predates transit.
-func (s *salesOrderSvcImpl) resolveOrderTransit(ctx context.Context, accountID string, order *domain.SalesOrder) (*scheduling.Transit, *apierror.APIError) {
+// The destination is passed in rather than read here because the commitment path needs the same address for the customer's timezone, and reading it twice inside the issue transaction would cost a seek for nothing.
+func (s *salesOrderSvcImpl) resolveOrderTransit(ctx context.Context, accountID string, order *domain.SalesOrder, dest domain.ShippingAddress) (*scheduling.Transit, *apierror.APIError) {
 	ctx, span := transitSvcTracer.Start(ctx, "service.transit.resolve_order_transit")
 	defer span.End()
 
@@ -75,11 +76,6 @@ func (s *salesOrderSvcImpl) resolveOrderTransit(ctx context.Context, accountID s
 	}
 	if origin == nil {
 		return nil, nil
-	}
-
-	dest, apiErr := s.resolveOrderAddress(ctx, s.repos.NewAddressRepo(), accountID, order.BuyerAccountID, order.ShippingAddressID)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
 	}
 
 	lane := buildTransitLane(*order.ServiceLevelID, *origin, dest)

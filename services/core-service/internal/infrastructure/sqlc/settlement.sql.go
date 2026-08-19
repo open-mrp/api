@@ -12,6 +12,25 @@ import (
 	"time"
 )
 
+const allocateNextSettlementNumber = `-- name: AllocateNextSettlementNumber :execresult
+INSERT INTO sys_property (id, account_id, sys_property_type_code, value, created_at, updated_at)
+VALUES (?, ?, 'settlement_number', LAST_INSERT_ID(1), NOW(3), NOW(3))
+ON DUPLICATE KEY UPDATE value = LAST_INSERT_ID(value + 1), updated_at = NOW(3)
+`
+
+type AllocateNextSettlementNumberParams struct {
+	ID        string
+	AccountID string
+}
+
+// Atomically reserves the next settlement number for the account and returns it via LAST_INSERT_ID.
+// The single upsert holds a row lock on the per-account counter, so concurrent creates serialize
+// and never collide on the same number (the old read-MAX-then-write pattern raced). Read the reserved
+// number back with the statement result's LastInsertId().
+func (q *Queries) AllocateNextSettlementNumber(ctx context.Context, arg AllocateNextSettlementNumberParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, allocateNextSettlementNumber, arg.ID, arg.AccountID)
+}
+
 const checkSettlementNumberDuplicate = `-- name: CheckSettlementNumberDuplicate :one
 SELECT COUNT(*) > 0 AS result
 FROM settlement
@@ -245,23 +264,6 @@ func (q *Queries) GetDollarUnitID(ctx context.Context) (string, error) {
 	var id string
 	err := row.Scan(&id)
 	return id, err
-}
-
-const getNextSettlementNumber = `-- name: GetNextSettlementNumber :one
-SELECT COALESCE(
-    (SELECT MAX(CAST(sp.value AS UNSIGNED)) + 1
-     FROM sys_property sp
-     WHERE sp.account_id = ?
-     AND sp.sys_property_type_code = 'settlement_number'),
-    1
-) AS next_number
-`
-
-func (q *Queries) GetNextSettlementNumber(ctx context.Context, accountID string) (interface{}, error) {
-	row := q.db.QueryRowContext(ctx, getNextSettlementNumber, accountID)
-	var next_number interface{}
-	err := row.Scan(&next_number)
-	return next_number, err
 }
 
 const getSettlement = `-- name: GetSettlement :one
@@ -825,28 +827,6 @@ type UpdateInvoicePaymentStatusParams struct {
 
 func (q *Queries) UpdateInvoicePaymentStatus(ctx context.Context, arg UpdateInvoicePaymentStatusParams) error {
 	_, err := q.db.ExecContext(ctx, updateInvoicePaymentStatus, arg.IsPaidInFull, arg.IsOverPaid, arg.ID)
-	return err
-}
-
-const updateNextSettlementNumber = `-- name: UpdateNextSettlementNumber :exec
-INSERT INTO sys_property (id, account_id, sys_property_type_code, value, created_at, updated_at)
-VALUES (?, ?, 'settlement_number', ?, NOW(3), NOW(3))
-ON DUPLICATE KEY UPDATE value = ?, updated_at = NOW(3)
-`
-
-type UpdateNextSettlementNumberParams struct {
-	ID        string
-	AccountID string
-	Value     int32
-}
-
-func (q *Queries) UpdateNextSettlementNumber(ctx context.Context, arg UpdateNextSettlementNumberParams) error {
-	_, err := q.db.ExecContext(ctx, updateNextSettlementNumber,
-		arg.ID,
-		arg.AccountID,
-		arg.Value,
-		arg.Value,
-	)
 	return err
 }
 

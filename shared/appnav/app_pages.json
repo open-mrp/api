@@ -1,0 +1,1263 @@
+{
+  "pages": [
+    {
+      "key": "account",
+      "title": "Account",
+      "path": "/dashboard/account",
+      "section": "Settings",
+      "subsection": "Account",
+      "shells": [
+        "user",
+        "customer"
+      ]
+    },
+    {
+      "key": "account-management",
+      "title": "Settlements",
+      "path": "/dashboard/account-management",
+      "section": "Finance",
+      "subsection": "Receivables",
+      "shells": [
+        "user"
+      ],
+      "record_type": "settlement"
+    },
+    {
+      "key": "accounts-receivable",
+      "title": "Accounts Receivable",
+      "path": "/dashboard/accounts-receivable",
+      "section": "Finance",
+      "subsection": "Receivables",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "key": "agents/configs",
+      "title": "Agents",
+      "path": "/dashboard/agents/configs",
+      "section": "AI Agents",
+      "subsection": "Management",
+      "shells": [
+        "user"
+      ],
+      "record_type": "agent_definition"
+    },
+    {
+      "key": "agents/memories",
+      "title": "Memories",
+      "path": "/dashboard/agents/memories",
+      "section": "AI Agents",
+      "subsection": "Data",
+      "shells": [
+        "user"
+      ],
+      "record_type": "agent_memory"
+    },
+    {
+      "key": "agents/overview",
+      "title": "Overview",
+      "path": "/dashboard/agents/overview",
+      "section": "AI Agents",
+      "subsection": "Overview",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "key": "agents/runs",
+      "title": "Agent Runs",
+      "path": "/dashboard/agents/runs",
+      "section": "AI Agents",
+      "subsection": "Management",
+      "shells": [
+        "user"
+      ],
+      "record_type": "agent_run"
+    },
+    {
+      "key": "audit-events",
+      "title": "Audit Events",
+      "path": "/dashboard/audit-events",
+      "section": "Settings",
+      "subsection": "Logs",
+      "shells": [
+        "user"
+      ],
+      "record_type": "audit_event"
+    },
+    {
+      "key": "batch-flow",
+      "title": "Batch Flow",
+      "path": "/dashboard/batch-flow",
+      "section": "Operations",
+      "subsection": "Scanning & Batches",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "key": "carriers",
+      "title": "Carriers",
+      "path": "/dashboard/carriers",
+      "section": "Logistics",
+      "subsection": "Shipping & Picking",
+      "shells": [
+        "user"
+      ],
+      "record_type": "carrier"
+    },
+    {
+      "key": "catalog",
+      "title": "Catalog",
+      "path": "/dashboard/catalog",
+      "section": "Products & Inventory",
+      "subsection": "Products",
+      "shells": [
+        "user"
+      ],
+      "record_type": "item"
+    },
+    {
+      "key": "categories",
+      "title": "Categories",
+      "path": "/dashboard/categories",
+      "section": "Products & Inventory",
+      "subsection": "Items & Categories",
+      "shells": [
+        "user"
+      ],
+      "record_type": "item_category"
+    },
+    {
+      "key": "customer-groups",
+      "title": "Customer Groups",
+      "path": "/dashboard/customer-groups",
+      "section": "Sales",
+      "subsection": "Customers",
+      "shells": [
+        "user"
+      ],
+      "record_type": "account_group"
+    },
+    {
+      "key": "customer-prices",
+      "title": "Customer Prices",
+      "path": "/dashboard/customer-prices",
+      "section": "Sales",
+      "subsection": "Pricing",
+      "shells": [
+        "user"
+      ],
+      "record_type": "account_price"
+    },
+    {
+      "key": "customer-registration-flows",
+      "title": "Registration Flows",
+      "path": "/dashboard/customer-registration-flows",
+      "section": "Sales",
+      "subsection": "Customers",
+      "shells": [
+        "user"
+      ],
+      "record_type": "registration_flow"
+    },
+    {
+      "key": "customers",
+      "title": "Customers",
+      "path": "/dashboard/customers",
+      "section": "Sales",
+      "subsection": "Customers",
+      "shells": [
+        "user"
+      ],
+      "record_type": "customer"
+    },
+    {
+      "key": "dc-locations",
+      "title": "DC Locations",
+      "path": "/dashboard/dc-locations",
+      "section": "Logistics",
+      "subsection": "EDI",
+      "shells": [
+        "user"
+      ],
+      "record_type": "dc_location"
+    },
+    {
+      "key": "deliveries",
+      "title": "Deliveries",
+      "path": "/dashboard/deliveries",
+      "section": "Logistics",
+      "subsection": "Purchasing",
+      "shells": [
+        "user"
+      ],
+      "record_type": "delivery"
+    },
+    {
+      "key": "delivery-analytics",
+      "title": "Delivery",
+      "path": "/dashboard/delivery-analytics",
+      "section": "Reports & Data",
+      "subsection": "Sales",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "key": "demand-forecast",
+      "title": "Demand Forecast",
+      "path": "/dashboard/demand-forecast",
+      "section": "Reports & Data",
+      "subsection": "Inventory",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "key": "demand-overrides",
+      "title": "Demand Overrides",
+      "path": "/dashboard/demand-overrides",
+      "section": "Operations",
+      "subsection": "Manufacturing",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "key": "departments",
+      "title": "Departments",
+      "path": "/dashboard/departments",
+      "section": "Operations",
+      "subsection": "Departments & Machines",
+      "shells": [
+        "user"
+      ],
+      "record_type": "department"
+    },
+    {
+      "key": "edi-runs",
+      "title": "EDI Runs",
+      "path": "/dashboard/edi-runs",
+      "section": "Logistics",
+      "subsection": "EDI",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "key": "email-logs",
+      "title": "Email Activity",
+      "path": "/dashboard/email-logs",
+      "section": "Settings",
+      "subsection": "Logs",
+      "shells": [
+        "user"
+      ],
+      "record_type": "email_log"
+    },
+    {
+      "key": "fulfillment-policies",
+      "title": "Make to Order",
+      "path": "/dashboard/fulfillment-policies",
+      "section": "Operations",
+      "subsection": "Manufacturing",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "key": "hubspot-sync",
+      "title": "HubSpot Sync",
+      "path": "/dashboard/hubspot-sync",
+      "section": "Settings",
+      "subsection": "Integrations",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "key": "inbox",
+      "title": "Inbox",
+      "path": "/dashboard/inbox",
+      "section": "Home",
+      "subsection": "Overview",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "key": "inventory",
+      "title": "Inventory",
+      "path": "/dashboard/inventory",
+      "section": "Inventory",
+      "shells": [
+        "customer"
+      ]
+    },
+    {
+      "key": "inventory-logs",
+      "title": "Inventory Activity",
+      "path": "/dashboard/inventory-logs",
+      "section": "Products & Inventory",
+      "subsection": "Inventory",
+      "shells": [
+        "user"
+      ],
+      "record_type": "inventory_change_log"
+    },
+    {
+      "key": "inventory-receipts",
+      "title": "Inventory Receipts",
+      "path": "/dashboard/inventory-receipts",
+      "section": "Products & Inventory",
+      "subsection": "Inventory",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "key": "invoices",
+      "title": "Invoices",
+      "path": "/dashboard/invoices",
+      "section": "Sales",
+      "subsection": "Orders",
+      "shells": [
+        "user"
+      ],
+      "record_type": "invoice"
+    },
+    {
+      "key": "machine-downtime",
+      "title": "Machine Downtime",
+      "path": "/dashboard/machine-downtime",
+      "section": "Operations",
+      "subsection": "Manufacturing",
+      "shells": [
+        "user"
+      ],
+      "record_type": "machine_downtime_event"
+    },
+    {
+      "key": "machine-status",
+      "title": "Machine Status",
+      "path": "/dashboard/machine-status",
+      "section": "Operations",
+      "subsection": "Manufacturing",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "key": "machines",
+      "title": "Machines",
+      "path": "/dashboard/machines",
+      "section": "Operations",
+      "subsection": "Departments & Machines",
+      "shells": [
+        "user"
+      ],
+      "record_type": "machine"
+    },
+    {
+      "key": "manufacturing-analytics",
+      "title": "Manufacturing",
+      "path": "/dashboard/manufacturing-analytics",
+      "section": "Reports & Data",
+      "subsection": "Manufacturing",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "key": "material-analytics",
+      "title": "Material Demand",
+      "path": "/dashboard/material-analytics",
+      "section": "Reports & Data",
+      "subsection": "Inventory",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "key": "materials",
+      "title": "Materials",
+      "path": "/dashboard/materials",
+      "section": "Products & Inventory",
+      "subsection": "Items & Categories",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "key": "messages",
+      "title": "Messages",
+      "path": "/dashboard/messages",
+      "section": "Home",
+      "subsection": "Overview",
+      "shells": [
+        "user",
+        "customer"
+      ]
+    },
+    {
+      "key": "notifications",
+      "title": "Notifications",
+      "path": "/dashboard/notifications",
+      "section": "Home",
+      "subsection": "Overview",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "key": "notifications/preferences",
+      "title": "Notification Preferences",
+      "path": "/dashboard/notifications/preferences",
+      "section": "Settings",
+      "subsection": "Account",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "key": "open-batches",
+      "title": "Open Batches",
+      "path": "/dashboard/open-batches",
+      "section": "Reports & Data",
+      "subsection": "Inventory",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "key": "open-credits",
+      "title": "Open Credits",
+      "path": "/dashboard/open-credits",
+      "section": "Finance",
+      "subsection": "Receivables",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "key": "order-analytics",
+      "title": "Sales",
+      "path": "/dashboard/order-analytics",
+      "section": "Reports & Data",
+      "subsection": "Sales",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "key": "order-data",
+      "title": "Order Data",
+      "path": "/dashboard/order-data",
+      "section": "Reports & Data",
+      "subsection": "Sales",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "key": "order-discounts",
+      "title": "Discount Codes",
+      "path": "/dashboard/order-discounts",
+      "section": "Sales",
+      "subsection": "Pricing",
+      "shells": [
+        "user"
+      ],
+      "record_type": "order_discount"
+    },
+    {
+      "key": "overview",
+      "title": "Overview",
+      "path": "/dashboard",
+      "section": "Home",
+      "subsection": "Overview",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "key": "parts",
+      "title": "Parts",
+      "path": "/dashboard/parts",
+      "section": "Products & Inventory",
+      "subsection": "Items & Categories",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "key": "payment-terms",
+      "title": "Payment Terms",
+      "path": "/dashboard/payment-terms",
+      "section": "Sales",
+      "subsection": "Pricing",
+      "shells": [
+        "user"
+      ],
+      "record_type": "payment_term"
+    },
+    {
+      "key": "payments-data",
+      "title": "Payment Data",
+      "path": "/dashboard/payments-data",
+      "section": "Finance",
+      "subsection": "Receivables",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "key": "picking",
+      "title": "Picking",
+      "path": "/dashboard/picking",
+      "section": "Logistics",
+      "subsection": "Shipping & Picking",
+      "shells": [
+        "user"
+      ],
+      "record_type": "pick"
+    },
+    {
+      "key": "pricing-analysis",
+      "title": "Pricing",
+      "path": "/dashboard/pricing-analysis",
+      "section": "Reports & Data",
+      "subsection": "Sales",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "key": "product-lines",
+      "title": "Product Lines",
+      "path": "/dashboard/product-lines",
+      "section": "Products & Inventory",
+      "subsection": "Products",
+      "shells": [
+        "user"
+      ],
+      "record_type": "product_line"
+    },
+    {
+      "key": "production-costs",
+      "title": "Production Costs",
+      "path": "/dashboard/production-costs",
+      "section": "Reports & Data",
+      "subsection": "Manufacturing",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "key": "production-flow",
+      "title": "Production Flow",
+      "path": "/dashboard/production-flow",
+      "section": "Operations",
+      "subsection": "Manufacturing",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "key": "production-runs",
+      "title": "Production Runs",
+      "path": "/dashboard/production-runs",
+      "section": "Operations",
+      "subsection": "Manufacturing",
+      "shells": [
+        "user"
+      ],
+      "record_type": "production_run"
+    },
+    {
+      "key": "production-schedule-settings",
+      "title": "Schedule Planning",
+      "path": "/dashboard/production-schedule-settings",
+      "section": "Settings",
+      "subsection": "Production",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "key": "production-schedules",
+      "title": "Production Schedules",
+      "path": "/dashboard/production-schedules",
+      "section": "Operations",
+      "subsection": "Manufacturing",
+      "shells": [
+        "user"
+      ],
+      "record_type": "production_schedule"
+    },
+    {
+      "key": "production-schedules/work-list",
+      "title": "Work List",
+      "path": "/dashboard/production-schedules/work-list",
+      "section": "Operations",
+      "subsection": "Manufacturing",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "key": "production-steps",
+      "title": "Production Steps",
+      "path": "/dashboard/production-steps",
+      "section": "Operations",
+      "subsection": "Manufacturing",
+      "shells": [
+        "user"
+      ],
+      "record_type": "production_step"
+    },
+    {
+      "key": "products",
+      "title": "Products",
+      "path": "/dashboard/products",
+      "section": "Products & Inventory",
+      "subsection": "Products",
+      "shells": [
+        "user"
+      ],
+      "record_type": "product"
+    },
+    {
+      "key": "products-on-order",
+      "title": "Products on Order",
+      "path": "/dashboard/products-on-order",
+      "section": "Reports & Data",
+      "subsection": "Sales",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "key": "purchase-orders",
+      "title": "Purchase Orders",
+      "path": "/dashboard/purchase-orders",
+      "section": "Logistics",
+      "subsection": "Purchasing",
+      "shells": [
+        "user"
+      ],
+      "record_type": "purchase_order"
+    },
+    {
+      "key": "purchase-orders/open-detail",
+      "title": "Open PO Detail",
+      "path": "/dashboard/purchase-orders/open-detail",
+      "section": "Logistics",
+      "subsection": "Purchasing",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "key": "quarterly-orders",
+      "title": "Quarterly Orders",
+      "path": "/dashboard/quarterly-orders",
+      "section": "Reports & Data",
+      "subsection": "Sales",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "key": "receiving-orders",
+      "title": "Receiving Orders",
+      "path": "/dashboard/receiving-orders",
+      "section": "Logistics",
+      "subsection": "Purchasing",
+      "shells": [
+        "user"
+      ],
+      "record_type": "receiving_order"
+    },
+    {
+      "key": "reconcile",
+      "title": "Reconcile Inventory",
+      "path": "/dashboard/reconcile",
+      "section": "Products & Inventory",
+      "subsection": "Inventory",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "key": "relevant-products",
+      "title": "Relevant Products",
+      "path": "/dashboard/relevant-products",
+      "section": "Sales",
+      "subsection": "Customers",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "key": "request-logs",
+      "title": "Request Logs",
+      "path": "/dashboard/request-logs",
+      "section": "Settings",
+      "subsection": "Logs",
+      "shells": [
+        "user"
+      ],
+      "record_type": "request_log"
+    },
+    {
+      "key": "roles",
+      "title": "Roles",
+      "path": "/dashboard/roles",
+      "section": "Settings",
+      "subsection": "Account",
+      "shells": [
+        "user"
+      ],
+      "record_type": "role"
+    },
+    {
+      "key": "sales-orders",
+      "title": "Sales Orders",
+      "path": "/dashboard/sales-orders",
+      "section": "Sales",
+      "subsection": "Orders",
+      "shells": [
+        "user",
+        "customer"
+      ],
+      "record_type": "sales_order"
+    },
+    {
+      "key": "sales-targets",
+      "title": "Sales Targets",
+      "path": "/dashboard/sales-targets",
+      "section": "Sales",
+      "subsection": "Customers",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "key": "sandboxes",
+      "title": "Sandboxes",
+      "path": "/dashboard/sandboxes",
+      "section": "Settings",
+      "subsection": "Account",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "key": "scanning-stations",
+      "title": "Scanning Stations",
+      "path": "/dashboard/scanning-stations",
+      "section": "Operations",
+      "subsection": "Scanning & Batches",
+      "shells": [
+        "user"
+      ],
+      "record_type": "scanning_station"
+    },
+    {
+      "key": "shipping",
+      "title": "Shipments",
+      "path": "/dashboard/shipping",
+      "section": "Logistics",
+      "subsection": "Shipping & Picking",
+      "shells": [
+        "user"
+      ],
+      "record_type": "shipment"
+    },
+    {
+      "key": "shipping-terms",
+      "title": "Shipping Terms",
+      "path": "/dashboard/shipping-terms",
+      "section": "Logistics",
+      "subsection": "Shipping & Picking",
+      "shells": [
+        "user"
+      ],
+      "record_type": "shipping_term"
+    },
+    {
+      "key": "storage-locations",
+      "title": "Storage Locations",
+      "path": "/dashboard/storage-locations",
+      "section": "Products & Inventory",
+      "subsection": "Inventory",
+      "shells": [
+        "user"
+      ],
+      "record_type": "location"
+    },
+    {
+      "key": "suppliers",
+      "title": "Suppliers",
+      "path": "/dashboard/suppliers",
+      "section": "Logistics",
+      "subsection": "Purchasing",
+      "shells": [
+        "user"
+      ],
+      "record_type": "supplier"
+    },
+    {
+      "key": "system-properties",
+      "title": "System Properties",
+      "path": "/dashboard/system-properties",
+      "section": "Settings",
+      "subsection": "System Properties",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "key": "team",
+      "title": "Team",
+      "path": "/dashboard/team",
+      "section": "Settings",
+      "subsection": "Account",
+      "shells": [
+        "user"
+      ],
+      "record_type": "account_user"
+    },
+    {
+      "key": "territories",
+      "title": "Sales Rep Territories",
+      "path": "/dashboard/territories",
+      "section": "Sales",
+      "subsection": "Customers",
+      "shells": [
+        "user"
+      ],
+      "record_type": "territory"
+    },
+    {
+      "key": "transactions",
+      "title": "Transactions",
+      "path": "/dashboard/transactions",
+      "section": "Finance",
+      "subsection": "Receivables",
+      "shells": [
+        "user"
+      ],
+      "record_type": "transaction"
+    },
+    {
+      "key": "units-of-measure/groups",
+      "title": "Unit Groups",
+      "path": "/dashboard/units-of-measure/groups",
+      "section": "Products & Inventory",
+      "subsection": "Items & Categories",
+      "shells": [
+        "user"
+      ],
+      "record_type": "unit_group"
+    },
+    {
+      "key": "units-of-measure/units",
+      "title": "Units",
+      "path": "/dashboard/units-of-measure/units",
+      "section": "Products & Inventory",
+      "subsection": "Items & Categories",
+      "shells": [
+        "user"
+      ],
+      "record_type": "unit"
+    },
+    {
+      "key": "volume-discounts",
+      "title": "Volume Discounts",
+      "path": "/dashboard/volume-discounts",
+      "section": "Sales",
+      "subsection": "Pricing",
+      "shells": [
+        "user"
+      ],
+      "record_type": "volume_discount"
+    },
+    {
+      "key": "weeks-of-sales",
+      "title": "Weeks of Sales",
+      "path": "/dashboard/weeks-of-sales",
+      "section": "Reports & Data",
+      "subsection": "Inventory",
+      "shells": [
+        "user"
+      ]
+    }
+  ],
+  "records": [
+    {
+      "type": "account_group",
+      "page_key": "customer-groups",
+      "detail_base": "/dashboard/customer-groups",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "account_price",
+      "page_key": "customer-prices",
+      "detail_base": "/dashboard/customer-prices",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "account_user",
+      "page_key": "team",
+      "detail_base": "/dashboard/team",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "agent_definition",
+      "page_key": "agents/configs",
+      "detail_base": "/dashboard/agents/configs",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "agent_memory",
+      "page_key": "agents/memories",
+      "detail_base": "/dashboard/agents/memories",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "agent_run",
+      "page_key": "agents/runs",
+      "detail_base": "/dashboard/agents/runs",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "audit_event",
+      "page_key": "audit-events",
+      "detail_base": "/dashboard/audit-events",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "carrier",
+      "page_key": "carriers",
+      "detail_base": "/dashboard/carriers",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "customer",
+      "page_key": "customers",
+      "detail_base": "/dashboard/customers",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "dc_location",
+      "page_key": "dc-locations",
+      "detail_base": "/dashboard/dc-locations",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "delivery",
+      "page_key": "deliveries",
+      "detail_base": "/dashboard/deliveries",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "department",
+      "page_key": "departments",
+      "detail_base": "/dashboard/departments",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "email_log",
+      "page_key": "email-logs",
+      "detail_base": "/dashboard/email-logs",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "inventory_change_log",
+      "page_key": "inventory-logs",
+      "detail_base": "/dashboard/inventory-logs",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "invoice",
+      "page_key": "invoices",
+      "detail_base": "/dashboard/invoices",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "item",
+      "page_key": "catalog",
+      "detail_base": "/dashboard/catalog",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "item_category",
+      "page_key": "categories",
+      "detail_base": "/dashboard/categories",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "location",
+      "page_key": "storage-locations",
+      "detail_base": "/dashboard/storage-locations",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "machine",
+      "page_key": "machines",
+      "detail_base": "/dashboard/machines",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "machine_downtime_event",
+      "page_key": "machine-downtime",
+      "detail_base": "/dashboard/machine-downtime",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "order_discount",
+      "page_key": "order-discounts",
+      "detail_base": "/dashboard/order-discounts",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "payment_term",
+      "page_key": "payment-terms",
+      "detail_base": "/dashboard/payment-terms",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "pick",
+      "page_key": "picking",
+      "detail_base": "/dashboard/picking",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "product",
+      "page_key": "products",
+      "detail_base": "/dashboard/products",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "product_line",
+      "page_key": "product-lines",
+      "detail_base": "/dashboard/product-lines",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "production_run",
+      "page_key": "production-runs",
+      "detail_base": "/dashboard/production-runs",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "production_schedule",
+      "page_key": "production-schedules",
+      "detail_base": "/dashboard/production-schedules",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "production_step",
+      "page_key": "production-steps",
+      "detail_base": "/dashboard/production-steps",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "purchase_order",
+      "page_key": "purchase-orders",
+      "detail_base": "/dashboard/purchase-orders",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "receiving_order",
+      "page_key": "receiving-orders",
+      "detail_base": "/dashboard/receiving-orders",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "registration_flow",
+      "page_key": "customer-registration-flows",
+      "detail_base": "/dashboard/customer-registration-flows",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "request_log",
+      "page_key": "request-logs",
+      "detail_base": "/dashboard/request-logs",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "role",
+      "page_key": "roles",
+      "detail_base": "/dashboard/roles",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "sales_order",
+      "page_key": "sales-orders",
+      "detail_base": "/dashboard/sales-orders",
+      "shells": [
+        "user",
+        "customer"
+      ]
+    },
+    {
+      "type": "scanning_station",
+      "page_key": "scanning-stations",
+      "detail_base": "/dashboard/scanning-stations",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "settlement",
+      "page_key": "account-management",
+      "detail_base": "/dashboard/account-management",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "shipment",
+      "page_key": "shipping",
+      "detail_base": "/dashboard/shipping",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "shipping_term",
+      "page_key": "shipping-terms",
+      "detail_base": "/dashboard/shipping-terms",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "supplier",
+      "page_key": "suppliers",
+      "detail_base": "/dashboard/suppliers",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "territory",
+      "page_key": "territories",
+      "detail_base": "/dashboard/territories",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "transaction",
+      "page_key": "transactions",
+      "detail_base": "/dashboard/transactions",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "unit",
+      "page_key": "units-of-measure/units",
+      "detail_base": "/dashboard/units-of-measure/units",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "unit_group",
+      "page_key": "units-of-measure/groups",
+      "detail_base": "/dashboard/units-of-measure/groups",
+      "shells": [
+        "user"
+      ]
+    },
+    {
+      "type": "volume_discount",
+      "page_key": "volume-discounts",
+      "detail_base": "/dashboard/volume-discounts",
+      "shells": [
+        "user"
+      ]
+    }
+  ],
+  "skipped_detail_routes": [
+    "batch-flow",
+    "materials",
+    "parts",
+    "relevant-products/customer-groups",
+    "relevant-products/customers"
+  ],
+  "unmapped_detail_routes": []
+}

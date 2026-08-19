@@ -48,7 +48,7 @@ func NewSalesTargetSvc(config *SalesTargetSvcConfig) SalesTargetSvc {
 
 func (m *salesTargetSvcImpl) ListSalesTargets(ctx context.Context, req *ListSalesTargetsRequest) (*apiresource.List[apiresource.SalesTarget], *apierror.APIError) {
 	if req.Cursor != nil && *req.Cursor != "" {
-		return nil, apierror.NewValidationError("Invalid pagination cursor.")
+		return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
 	}
 
 	pbReq := &pb.ListSalesTargetsRequest{

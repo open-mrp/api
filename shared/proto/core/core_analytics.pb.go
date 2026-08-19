@@ -3929,17 +3929,19 @@ func (x *GeolocationInfo) GetLongitude() float64 {
 }
 
 type AddressInfo struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Phone         *string                `protobuf:"bytes,3,opt,name=phone,proto3,oneof" json:"phone,omitempty"`
-	Email         *string                `protobuf:"bytes,4,opt,name=email,proto3,oneof" json:"email,omitempty"`
-	IsDropShip    bool                   `protobuf:"varint,5,opt,name=is_drop_ship,json=isDropShip,proto3" json:"is_drop_ship,omitempty"`
-	Geolocation   *GeolocationInfo       `protobuf:"bytes,6,opt,name=geolocation,proto3" json:"geolocation,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	Id         string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name       string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Phone      *string                `protobuf:"bytes,3,opt,name=phone,proto3,oneof" json:"phone,omitempty"`
+	Email      *string                `protobuf:"bytes,4,opt,name=email,proto3,oneof" json:"email,omitempty"`
+	IsDropShip bool                   `protobuf:"varint,5,opt,name=is_drop_ship,json=isDropShip,proto3" json:"is_drop_ship,omitempty"`
+	// The days this dock accepts freight, overriding the customer's own calendar.
+	ReceiveCalendarId *string                `protobuf:"bytes,9,opt,name=receive_calendar_id,json=receiveCalendarId,proto3,oneof" json:"receive_calendar_id,omitempty"`
+	Geolocation       *GeolocationInfo       `protobuf:"bytes,6,opt,name=geolocation,proto3" json:"geolocation,omitempty"`
+	CreatedAt         *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt         *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *AddressInfo) Reset() {
@@ -4005,6 +4007,13 @@ func (x *AddressInfo) GetIsDropShip() bool {
 		return x.IsDropShip
 	}
 	return false
+}
+
+func (x *AddressInfo) GetReceiveCalendarId() string {
+	if x != nil && x.ReceiveCalendarId != nil {
+		return *x.ReceiveCalendarId
+	}
+	return ""
 }
 
 func (x *AddressInfo) GetGeolocation() *GeolocationInfo {
@@ -4237,19 +4246,20 @@ func (x *ListAddressesResponse) GetPageInfo() *PageInfo {
 }
 
 type CreateAddressRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Phone         *string                `protobuf:"bytes,2,opt,name=phone,proto3,oneof" json:"phone,omitempty"`
-	Email         *string                `protobuf:"bytes,3,opt,name=email,proto3,oneof" json:"email,omitempty"`
-	IsDropShip    bool                   `protobuf:"varint,4,opt,name=is_drop_ship,json=isDropShip,proto3" json:"is_drop_ship,omitempty"`
-	StreetLine_1  *string                `protobuf:"bytes,5,opt,name=street_line_1,json=streetLine1,proto3,oneof" json:"street_line_1,omitempty"`
-	StreetLine_2  *string                `protobuf:"bytes,6,opt,name=street_line_2,json=streetLine2,proto3,oneof" json:"street_line_2,omitempty"`
-	Locality      *string                `protobuf:"bytes,7,opt,name=locality,proto3,oneof" json:"locality,omitempty"`
-	State         *string                `protobuf:"bytes,8,opt,name=state,proto3,oneof" json:"state,omitempty"`
-	PostalCode    *string                `protobuf:"bytes,9,opt,name=postal_code,json=postalCode,proto3,oneof" json:"postal_code,omitempty"`
-	Country       string                 `protobuf:"bytes,10,opt,name=country,proto3" json:"country,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Name              string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Phone             *string                `protobuf:"bytes,2,opt,name=phone,proto3,oneof" json:"phone,omitempty"`
+	Email             *string                `protobuf:"bytes,3,opt,name=email,proto3,oneof" json:"email,omitempty"`
+	IsDropShip        bool                   `protobuf:"varint,4,opt,name=is_drop_ship,json=isDropShip,proto3" json:"is_drop_ship,omitempty"`
+	ReceiveCalendarId *string                `protobuf:"bytes,11,opt,name=receive_calendar_id,json=receiveCalendarId,proto3,oneof" json:"receive_calendar_id,omitempty"`
+	StreetLine_1      *string                `protobuf:"bytes,5,opt,name=street_line_1,json=streetLine1,proto3,oneof" json:"street_line_1,omitempty"`
+	StreetLine_2      *string                `protobuf:"bytes,6,opt,name=street_line_2,json=streetLine2,proto3,oneof" json:"street_line_2,omitempty"`
+	Locality          *string                `protobuf:"bytes,7,opt,name=locality,proto3,oneof" json:"locality,omitempty"`
+	State             *string                `protobuf:"bytes,8,opt,name=state,proto3,oneof" json:"state,omitempty"`
+	PostalCode        *string                `protobuf:"bytes,9,opt,name=postal_code,json=postalCode,proto3,oneof" json:"postal_code,omitempty"`
+	Country           string                 `protobuf:"bytes,10,opt,name=country,proto3" json:"country,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *CreateAddressRequest) Reset() {
@@ -4308,6 +4318,13 @@ func (x *CreateAddressRequest) GetIsDropShip() bool {
 		return x.IsDropShip
 	}
 	return false
+}
+
+func (x *CreateAddressRequest) GetReceiveCalendarId() string {
+	if x != nil && x.ReceiveCalendarId != nil {
+		return *x.ReceiveCalendarId
+	}
+	return ""
 }
 
 func (x *CreateAddressRequest) GetStreetLine_1() string {
@@ -4397,20 +4414,21 @@ func (x *CreateAddressResponse) GetAddress() *AddressInfo {
 }
 
 type UpdateAddressRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
-	Phone         *StringPatch           `protobuf:"bytes,3,opt,name=phone,proto3,oneof" json:"phone,omitempty"`
-	Email         *StringPatch           `protobuf:"bytes,4,opt,name=email,proto3,oneof" json:"email,omitempty"`
-	IsDropShip    *bool                  `protobuf:"varint,5,opt,name=is_drop_ship,json=isDropShip,proto3,oneof" json:"is_drop_ship,omitempty"`
-	StreetLine_1  *string                `protobuf:"bytes,6,opt,name=street_line_1,json=streetLine1,proto3,oneof" json:"street_line_1,omitempty"`
-	StreetLine_2  *StringPatch           `protobuf:"bytes,7,opt,name=street_line_2,json=streetLine2,proto3,oneof" json:"street_line_2,omitempty"`
-	Locality      *string                `protobuf:"bytes,8,opt,name=locality,proto3,oneof" json:"locality,omitempty"`
-	State         *string                `protobuf:"bytes,9,opt,name=state,proto3,oneof" json:"state,omitempty"`
-	PostalCode    *string                `protobuf:"bytes,10,opt,name=postal_code,json=postalCode,proto3,oneof" json:"postal_code,omitempty"`
-	Country       *string                `protobuf:"bytes,11,opt,name=country,proto3,oneof" json:"country,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name              *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
+	Phone             *StringPatch           `protobuf:"bytes,3,opt,name=phone,proto3,oneof" json:"phone,omitempty"`
+	Email             *StringPatch           `protobuf:"bytes,4,opt,name=email,proto3,oneof" json:"email,omitempty"`
+	IsDropShip        *bool                  `protobuf:"varint,5,opt,name=is_drop_ship,json=isDropShip,proto3,oneof" json:"is_drop_ship,omitempty"`
+	ReceiveCalendarId *StringPatch           `protobuf:"bytes,12,opt,name=receive_calendar_id,json=receiveCalendarId,proto3" json:"receive_calendar_id,omitempty"`
+	StreetLine_1      *string                `protobuf:"bytes,6,opt,name=street_line_1,json=streetLine1,proto3,oneof" json:"street_line_1,omitempty"`
+	StreetLine_2      *StringPatch           `protobuf:"bytes,7,opt,name=street_line_2,json=streetLine2,proto3,oneof" json:"street_line_2,omitempty"`
+	Locality          *string                `protobuf:"bytes,8,opt,name=locality,proto3,oneof" json:"locality,omitempty"`
+	State             *string                `protobuf:"bytes,9,opt,name=state,proto3,oneof" json:"state,omitempty"`
+	PostalCode        *string                `protobuf:"bytes,10,opt,name=postal_code,json=postalCode,proto3,oneof" json:"postal_code,omitempty"`
+	Country           *string                `protobuf:"bytes,11,opt,name=country,proto3,oneof" json:"country,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *UpdateAddressRequest) Reset() {
@@ -4476,6 +4494,13 @@ func (x *UpdateAddressRequest) GetIsDropShip() bool {
 		return *x.IsDropShip
 	}
 	return false
+}
+
+func (x *UpdateAddressRequest) GetReceiveCalendarId() *StringPatch {
+	if x != nil {
+		return x.ReceiveCalendarId
+	}
+	return nil
 }
 
 func (x *UpdateAddressRequest) GetStreetLine_1() string {
@@ -6950,21 +6975,23 @@ const file_core_core_analytics_proto_rawDesc = "" +
 	"\x10_google_place_idB\v\n" +
 	"\t_latitudeB\f\n" +
 	"\n" +
-	"_longitude\"\xcc\x02\n" +
+	"_longitude\"\x99\x03\n" +
 	"\vAddressInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x19\n" +
 	"\x05phone\x18\x03 \x01(\tH\x00R\x05phone\x88\x01\x01\x12\x19\n" +
 	"\x05email\x18\x04 \x01(\tH\x01R\x05email\x88\x01\x01\x12 \n" +
 	"\fis_drop_ship\x18\x05 \x01(\bR\n" +
-	"isDropShip\x127\n" +
+	"isDropShip\x123\n" +
+	"\x13receive_calendar_id\x18\t \x01(\tH\x02R\x11receiveCalendarId\x88\x01\x01\x127\n" +
 	"\vgeolocation\x18\x06 \x01(\v2\x15.core.GeolocationInfoR\vgeolocation\x129\n" +
 	"\n" +
 	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\b\n" +
 	"\x06_phoneB\b\n" +
-	"\x06_email\"#\n" +
+	"\x06_emailB\x16\n" +
+	"\x14_receive_calendar_id\"#\n" +
 	"\x11GetAddressRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"A\n" +
 	"\x12GetAddressResponse\x12+\n" +
@@ -6980,37 +7007,40 @@ const file_core_core_analytics_proto_rawDesc = "" +
 	"_drop_ship\"u\n" +
 	"\x15ListAddressesResponse\x12/\n" +
 	"\taddresses\x18\x01 \x03(\v2\x11.core.AddressInfoR\taddresses\x12+\n" +
-	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"\xaf\x03\n" +
+	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"\xfc\x03\n" +
 	"\x14CreateAddressRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x19\n" +
 	"\x05phone\x18\x02 \x01(\tH\x00R\x05phone\x88\x01\x01\x12\x19\n" +
 	"\x05email\x18\x03 \x01(\tH\x01R\x05email\x88\x01\x01\x12 \n" +
 	"\fis_drop_ship\x18\x04 \x01(\bR\n" +
-	"isDropShip\x12'\n" +
-	"\rstreet_line_1\x18\x05 \x01(\tH\x02R\vstreetLine1\x88\x01\x01\x12'\n" +
-	"\rstreet_line_2\x18\x06 \x01(\tH\x03R\vstreetLine2\x88\x01\x01\x12\x1f\n" +
-	"\blocality\x18\a \x01(\tH\x04R\blocality\x88\x01\x01\x12\x19\n" +
-	"\x05state\x18\b \x01(\tH\x05R\x05state\x88\x01\x01\x12$\n" +
-	"\vpostal_code\x18\t \x01(\tH\x06R\n" +
+	"isDropShip\x123\n" +
+	"\x13receive_calendar_id\x18\v \x01(\tH\x02R\x11receiveCalendarId\x88\x01\x01\x12'\n" +
+	"\rstreet_line_1\x18\x05 \x01(\tH\x03R\vstreetLine1\x88\x01\x01\x12'\n" +
+	"\rstreet_line_2\x18\x06 \x01(\tH\x04R\vstreetLine2\x88\x01\x01\x12\x1f\n" +
+	"\blocality\x18\a \x01(\tH\x05R\blocality\x88\x01\x01\x12\x19\n" +
+	"\x05state\x18\b \x01(\tH\x06R\x05state\x88\x01\x01\x12$\n" +
+	"\vpostal_code\x18\t \x01(\tH\aR\n" +
 	"postalCode\x88\x01\x01\x12\x18\n" +
 	"\acountry\x18\n" +
 	" \x01(\tR\acountryB\b\n" +
 	"\x06_phoneB\b\n" +
-	"\x06_emailB\x10\n" +
+	"\x06_emailB\x16\n" +
+	"\x14_receive_calendar_idB\x10\n" +
 	"\x0e_street_line_1B\x10\n" +
 	"\x0e_street_line_2B\v\n" +
 	"\t_localityB\b\n" +
 	"\x06_stateB\x0e\n" +
 	"\f_postal_code\"D\n" +
 	"\x15CreateAddressResponse\x12+\n" +
-	"\aaddress\x18\x01 \x01(\v2\x11.core.AddressInfoR\aaddress\"\xad\x04\n" +
+	"\aaddress\x18\x01 \x01(\v2\x11.core.AddressInfoR\aaddress\"\xf0\x04\n" +
 	"\x14UpdateAddressRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12,\n" +
 	"\x05phone\x18\x03 \x01(\v2\x11.core.StringPatchH\x01R\x05phone\x88\x01\x01\x12,\n" +
 	"\x05email\x18\x04 \x01(\v2\x11.core.StringPatchH\x02R\x05email\x88\x01\x01\x12%\n" +
 	"\fis_drop_ship\x18\x05 \x01(\bH\x03R\n" +
-	"isDropShip\x88\x01\x01\x12'\n" +
+	"isDropShip\x88\x01\x01\x12A\n" +
+	"\x13receive_calendar_id\x18\f \x01(\v2\x11.core.StringPatchR\x11receiveCalendarId\x12'\n" +
 	"\rstreet_line_1\x18\x06 \x01(\tH\x04R\vstreetLine1\x88\x01\x01\x12:\n" +
 	"\rstreet_line_2\x18\a \x01(\v2\x11.core.StringPatchH\x05R\vstreetLine2\x88\x01\x01\x12\x1f\n" +
 	"\blocality\x18\b \x01(\tH\x06R\blocality\x88\x01\x01\x12\x19\n" +
@@ -7431,45 +7461,46 @@ var file_core_core_analytics_proto_depIdxs = []int32{
 	59,  // 79: core.CreateAddressResponse.address:type_name -> core.AddressInfo
 	105, // 80: core.UpdateAddressRequest.phone:type_name -> core.StringPatch
 	105, // 81: core.UpdateAddressRequest.email:type_name -> core.StringPatch
-	105, // 82: core.UpdateAddressRequest.street_line_2:type_name -> core.StringPatch
-	59,  // 83: core.UpdateAddressResponse.address:type_name -> core.AddressInfo
-	59,  // 84: core.BatchGetAddressesByIDsResponse.addresses:type_name -> core.AddressInfo
-	72,  // 85: core.AutocompleteAddressResponse.suggestions:type_name -> core.AddressSuggestion
-	75,  // 86: core.GetAddressDetailsResponse.address:type_name -> core.AddressComponentsInfo
-	75,  // 87: core.ValidateAddressResponse.components:type_name -> core.AddressComponentsInfo
-	99,  // 88: core.AccountStatusInfo.created_at:type_name -> google.protobuf.Timestamp
-	99,  // 89: core.AccountStatusInfo.updated_at:type_name -> google.protobuf.Timestamp
-	79,  // 90: core.ListAccountStatusesResponse.account_statuses:type_name -> core.AccountStatusInfo
-	100, // 91: core.ListAccountStatusesResponse.page_info:type_name -> core.PageInfo
-	79,  // 92: core.GetAccountStatusResponse.account_status:type_name -> core.AccountStatusInfo
-	79,  // 93: core.BatchGetAccountStatusesByIDsResponse.account_statuses:type_name -> core.AccountStatusInfo
-	99,  // 94: core.AnalyzeDeliveryPerformanceRequest.starts_at:type_name -> google.protobuf.Timestamp
-	99,  // 95: core.AnalyzeDeliveryPerformanceRequest.ends_at:type_name -> google.protobuf.Timestamp
-	99,  // 96: core.DeliveryPerformanceProto.period_start:type_name -> google.protobuf.Timestamp
-	87,  // 97: core.DeliveryBreakdownProto.performance:type_name -> core.DeliveryPerformanceProto
-	87,  // 98: core.AnalyzeDeliveryPerformanceResponse.overall:type_name -> core.DeliveryPerformanceProto
-	87,  // 99: core.AnalyzeDeliveryPerformanceResponse.periods:type_name -> core.DeliveryPerformanceProto
-	88,  // 100: core.AnalyzeDeliveryPerformanceResponse.backlog:type_name -> core.DeliveryBacklogBucketProto
-	89,  // 101: core.AnalyzeDeliveryPerformanceResponse.lateness:type_name -> core.DeliveryLatenessBucketProto
-	90,  // 102: core.AnalyzeDeliveryPerformanceResponse.by_customer:type_name -> core.DeliveryBreakdownProto
-	90,  // 103: core.AnalyzeDeliveryPerformanceResponse.by_customer_group:type_name -> core.DeliveryBreakdownProto
-	90,  // 104: core.AnalyzeDeliveryPerformanceResponse.by_product_line:type_name -> core.DeliveryBreakdownProto
-	90,  // 105: core.AnalyzeDeliveryPerformanceResponse.by_commitment_source:type_name -> core.DeliveryBreakdownProto
-	99,  // 106: core.AnalyzeScheduleAttainmentRequest.start_date:type_name -> google.protobuf.Timestamp
-	99,  // 107: core.AnalyzeScheduleAttainmentRequest.end_date:type_name -> google.protobuf.Timestamp
-	99,  // 108: core.AttainmentBucketInfo.week_start_date:type_name -> google.protobuf.Timestamp
-	99,  // 109: core.FrozenAdherenceInfo.frozen_through_date:type_name -> google.protobuf.Timestamp
-	99,  // 110: core.AnalyzeScheduleAttainmentResponse.start_date:type_name -> google.protobuf.Timestamp
-	99,  // 111: core.AnalyzeScheduleAttainmentResponse.end_date:type_name -> google.protobuf.Timestamp
-	93,  // 112: core.AnalyzeScheduleAttainmentResponse.buckets:type_name -> core.AttainmentBucketInfo
-	93,  // 113: core.AnalyzeScheduleAttainmentResponse.totals:type_name -> core.AttainmentBucketInfo
-	94,  // 114: core.AnalyzeScheduleAttainmentResponse.frozen_adherence:type_name -> core.FrozenAdherenceInfo
-	0,   // 115: core.AnalyzeQuarterlyOrdersResponse.DataEntry.value:type_name -> core.QuarterlyDataProto
-	116, // [116:116] is the sub-list for method output_type
-	116, // [116:116] is the sub-list for method input_type
-	116, // [116:116] is the sub-list for extension type_name
-	116, // [116:116] is the sub-list for extension extendee
-	0,   // [0:116] is the sub-list for field type_name
+	105, // 82: core.UpdateAddressRequest.receive_calendar_id:type_name -> core.StringPatch
+	105, // 83: core.UpdateAddressRequest.street_line_2:type_name -> core.StringPatch
+	59,  // 84: core.UpdateAddressResponse.address:type_name -> core.AddressInfo
+	59,  // 85: core.BatchGetAddressesByIDsResponse.addresses:type_name -> core.AddressInfo
+	72,  // 86: core.AutocompleteAddressResponse.suggestions:type_name -> core.AddressSuggestion
+	75,  // 87: core.GetAddressDetailsResponse.address:type_name -> core.AddressComponentsInfo
+	75,  // 88: core.ValidateAddressResponse.components:type_name -> core.AddressComponentsInfo
+	99,  // 89: core.AccountStatusInfo.created_at:type_name -> google.protobuf.Timestamp
+	99,  // 90: core.AccountStatusInfo.updated_at:type_name -> google.protobuf.Timestamp
+	79,  // 91: core.ListAccountStatusesResponse.account_statuses:type_name -> core.AccountStatusInfo
+	100, // 92: core.ListAccountStatusesResponse.page_info:type_name -> core.PageInfo
+	79,  // 93: core.GetAccountStatusResponse.account_status:type_name -> core.AccountStatusInfo
+	79,  // 94: core.BatchGetAccountStatusesByIDsResponse.account_statuses:type_name -> core.AccountStatusInfo
+	99,  // 95: core.AnalyzeDeliveryPerformanceRequest.starts_at:type_name -> google.protobuf.Timestamp
+	99,  // 96: core.AnalyzeDeliveryPerformanceRequest.ends_at:type_name -> google.protobuf.Timestamp
+	99,  // 97: core.DeliveryPerformanceProto.period_start:type_name -> google.protobuf.Timestamp
+	87,  // 98: core.DeliveryBreakdownProto.performance:type_name -> core.DeliveryPerformanceProto
+	87,  // 99: core.AnalyzeDeliveryPerformanceResponse.overall:type_name -> core.DeliveryPerformanceProto
+	87,  // 100: core.AnalyzeDeliveryPerformanceResponse.periods:type_name -> core.DeliveryPerformanceProto
+	88,  // 101: core.AnalyzeDeliveryPerformanceResponse.backlog:type_name -> core.DeliveryBacklogBucketProto
+	89,  // 102: core.AnalyzeDeliveryPerformanceResponse.lateness:type_name -> core.DeliveryLatenessBucketProto
+	90,  // 103: core.AnalyzeDeliveryPerformanceResponse.by_customer:type_name -> core.DeliveryBreakdownProto
+	90,  // 104: core.AnalyzeDeliveryPerformanceResponse.by_customer_group:type_name -> core.DeliveryBreakdownProto
+	90,  // 105: core.AnalyzeDeliveryPerformanceResponse.by_product_line:type_name -> core.DeliveryBreakdownProto
+	90,  // 106: core.AnalyzeDeliveryPerformanceResponse.by_commitment_source:type_name -> core.DeliveryBreakdownProto
+	99,  // 107: core.AnalyzeScheduleAttainmentRequest.start_date:type_name -> google.protobuf.Timestamp
+	99,  // 108: core.AnalyzeScheduleAttainmentRequest.end_date:type_name -> google.protobuf.Timestamp
+	99,  // 109: core.AttainmentBucketInfo.week_start_date:type_name -> google.protobuf.Timestamp
+	99,  // 110: core.FrozenAdherenceInfo.frozen_through_date:type_name -> google.protobuf.Timestamp
+	99,  // 111: core.AnalyzeScheduleAttainmentResponse.start_date:type_name -> google.protobuf.Timestamp
+	99,  // 112: core.AnalyzeScheduleAttainmentResponse.end_date:type_name -> google.protobuf.Timestamp
+	93,  // 113: core.AnalyzeScheduleAttainmentResponse.buckets:type_name -> core.AttainmentBucketInfo
+	93,  // 114: core.AnalyzeScheduleAttainmentResponse.totals:type_name -> core.AttainmentBucketInfo
+	94,  // 115: core.AnalyzeScheduleAttainmentResponse.frozen_adherence:type_name -> core.FrozenAdherenceInfo
+	0,   // 116: core.AnalyzeQuarterlyOrdersResponse.DataEntry.value:type_name -> core.QuarterlyDataProto
+	117, // [117:117] is the sub-list for method output_type
+	117, // [117:117] is the sub-list for method input_type
+	117, // [117:117] is the sub-list for extension type_name
+	117, // [117:117] is the sub-list for extension extendee
+	0,   // [0:117] is the sub-list for field type_name
 }
 
 func init() { file_core_core_analytics_proto_init() }

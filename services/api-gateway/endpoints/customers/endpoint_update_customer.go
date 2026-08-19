@@ -57,6 +57,8 @@ type UpdateCustomerRequest struct {
 	//
 	// Sets each order's `ship_by_date` when it is issued. Leave unset to inherit the customer's account group lead time, then the account default.
 	LeadTimeDays field.Clearable[int32] `json:"lead_time_days,omitzero" validate:"omitempty,gte=0,lte=3650"`
+	// The operating calendar naming the days this customer's dock accepts freight. Clearing it returns the customer to their group's calendar, then the account default.
+	ReceiveCalendarID field.Clearable[string] `json:"receive_calendar_id,omitzero" validate:"omitempty"`
 	// ID of the carrier used on this customer's orders when the order does not specify one.
 	DefaultCarrierID field.Optional[string] `json:"default_carrier_id,omitzero" validate:"omitempty"`
 	// ID of the carrier service level used when an order takes its carrier from this customer's default.

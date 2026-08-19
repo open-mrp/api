@@ -611,7 +611,8 @@ func (s *pickSvcImpl) PackPick(ctx context.Context, pickID string, shipmentCaseC
 				if apiErr := txRepo.CreateQuantity(txCtx, freightAmountID, "0", "dollar"); apiErr != nil {
 					return apiErr
 				}
-				if apiErr := txRepo.CreateQuantity(txCtx, freightWeightID, "0", "lb"); apiErr != nil {
+				// "pound" is the unit's ID; "lb" is its abbreviation and matches no unit row. Writing the abbreviation left every packed case pointing at a unit that does not exist, which the shipping-case query then joined against and found nothing.
+				if apiErr := txRepo.CreateQuantity(txCtx, freightWeightID, "0", "pound"); apiErr != nil {
 					return apiErr
 				}
 
@@ -707,6 +708,11 @@ func (s *pickSvcImpl) GetPickShipments(ctx context.Context, params domain.GetPic
 	}
 
 	params.AccountID = identity.Target.AccountID
+
+	// The shipment list is derived through the pick's sales order, so a pick that does not exist produces the same empty list as a real pick that has shipped nothing. Reading the pick first makes the two answerable apart, and stops the endpoint reporting on an ID belonging to another account.
+	if _, apiErr := s.repos.NewPickRepo().Get(ctx, params.AccountID, params.PickID); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 
 	return s.repos.NewPickRepo().GetShipmentNumbers(ctx, params)
 }

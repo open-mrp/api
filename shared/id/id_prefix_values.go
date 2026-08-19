@@ -28,9 +28,11 @@ const (
 	VocCommission   = "cm"
 	VocConsumption  = "cp"
 	VocCarrier      = "cr"
+	VocCalendar     = "cd"
 	VocCase         = "cs"
 	VocContact      = "ct"
 	VocCustomer     = "cu"
+	VocClosure      = "cn"
 	VocConversion   = "ce"
 	VocCategory     = "cg"
 	VocDC           = "dc"
@@ -80,6 +82,7 @@ const (
 	VocNotification = "nf"
 	VocOrganization = "og"
 	VocOnboarding   = "ob"
+	VocOperating    = "oc"
 	VocOption       = "op"
 	VocOrder        = "or"
 	VocOutbox       = "ox"
@@ -221,6 +224,10 @@ var (
 	// Carrier-related prefix values
 	CarrierIDPrefix                = composePrefix(VocCarrier)
 	CarrierTransitEstimateIDPrefix = composePrefix(VocCarrier, VocTransit, VocEstimate)
+
+	// Operating calendar-related prefix values
+	OperatingCalendarIDPrefix        = composePrefix(VocOperating, VocCalendar)
+	OperatingCalendarClosureIDPrefix = composePrefix(VocOperating, VocCalendar, VocClosure)
 
 	// Service level-related prefix values
 	ServiceLevelIDPrefix = composePrefix(VocService, VocLevel)

@@ -84,8 +84,12 @@ func Run(
 	}
 	defer enqueuer.Stop()
 
+	// Test mode normally stubs object storage out, but an upload that never stores anything
+	// cannot tell you whether the read path looks where the write path put it. When the e2e
+	// stack points at a local S3-compatible server, use the real client so those round trips
+	// are actually exercised.
 	var s3Store s3client.ObjectStore
-	if cfg.PlatformMode.IsTest() {
+	if cfg.PlatformMode.IsTest() && !s3client.HasEndpointOverride() {
 		s3Store = &s3client.StubClient{}
 	} else {
 		s3, apiErr := s3client.NewClient(ctx, cfg.AWSRegion)
@@ -109,6 +113,9 @@ func Run(
 	defer authClient.Close()
 
 	mediatorFactory := mediator.NewMediatorFactory()
+
+	// Branding logos are stored as object keys in the same bucket the upload endpoint writes to, so every document that prints one signs or reads it from here.
+	brandingAssets := service.NewBrandingAssets(s3Store, cfg.AccountPhotosBucket)
 
 	jobSvcFactory := service.NewJobSvcFactory()
 	jobSvc := jobSvcFactory.Build(repoFactory)
@@ -203,6 +210,7 @@ func Run(
 		BillingPublisher:      billingPublisher,
 		S3Client:              s3Store,
 		UserPhotosBucket:      cfg.UserPhotosBucket,
+		Branding:              brandingAssets,
 		PlatformMode:          cfg.PlatformMode,
 	})
 	accountPriceSvc := service.NewAccountPriceSvc(&service.AccountPriceSvcConfig{
@@ -210,6 +218,7 @@ func Run(
 		MediatorFactory: mediatorFactory,
 		JobSvcFactory:   jobSvcFactory,
 		TxManager:       txManager,
+		Branding:        brandingAssets,
 	})
 	salesTargetSvc := service.NewSalesTargetSvc(&service.SalesTargetSvcConfig{
 		Repos:           repoFactory,
@@ -464,6 +473,7 @@ func Run(
 		ShippoFactory:         shippoFactory,
 		EncryptionKey:         integrationEncryptionKey,
 		FrontendURL:           cfg.FrontendURL,
+		Branding:              brandingAssets,
 	})
 
 	salesOrderLineSvc := service.NewSalesOrderLineSvc(&service.SalesOrderLineSvcConfig{
@@ -565,6 +575,10 @@ func Run(
 		Enqueuer:        event.NewOutboxProductionScheduleEnqueuer(),
 	})
 
+	operatingCalendarSvc := service.NewOperatingCalendarSvc(&service.OperatingCalendarSvcConfig{
+		Repos: repoFactory,
+	})
+
 	machineDowntimeSvc := service.NewMachineDowntimeSvc(&service.MachineDowntimeSvcConfig{
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
@@ -595,6 +609,7 @@ func Run(
 		TxManager:             txManager,
 		NotificationPublisher: notificationPublisher,
 		FrontendURL:           cfg.FrontendURL,
+		Branding:              brandingAssets,
 	})
 
 	locationSvc := service.NewLocationSvc(&service.LocationSvcConfig{
@@ -820,7 +835,7 @@ func Run(
 	grpc.RegisterProductionStepService(srv, productionStepSvc, productionSvc)
 	grpc.RegisterMachineDowntimeService(srv, machineDowntimeSvc)
 	grpc.RegisterDemandOverrideService(srv, demandOverrideSvc)
-	grpc.RegisterProductionScheduleService(srv, productionScheduleSvc)
+	grpc.RegisterProductionScheduleService(srv, productionScheduleSvc, operatingCalendarSvc)
 	grpc.RegisterHubspotSyncService(srv, hubspotSyncSvc)
 	grpc.RegisterMeasureService(srv, measureSvc)
 	grpc.RegisterUtilsService(srv, utilsSvc)

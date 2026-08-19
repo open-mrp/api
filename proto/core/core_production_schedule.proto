@@ -116,6 +116,98 @@ service CoreProductionScheduleService {
 
   // DeleteProductionSchedule removes a draft version.
   rpc DeleteProductionSchedule(DeleteProductionScheduleRequest) returns (google.protobuf.Empty);
+
+  // Operating calendars: the days a plant tenders freight and a customer's dock accepts it,
+  // which every ship-by commitment is resolved against. They live on this service because the
+  // account settings that select them are the same settings the solver is configured with.
+  rpc ListOperatingCalendars(ListOperatingCalendarsRequest) returns (ListOperatingCalendarsResponse);
+  rpc GetOperatingCalendar(GetOperatingCalendarRequest) returns (OperatingCalendarInfo);
+  rpc CreateOperatingCalendar(CreateOperatingCalendarRequest) returns (OperatingCalendarInfo);
+  rpc UpdateOperatingCalendar(UpdateOperatingCalendarRequest) returns (OperatingCalendarInfo);
+  rpc DeleteOperatingCalendar(DeleteOperatingCalendarRequest) returns (google.protobuf.Empty);
+  rpc ListOperatingCalendarClosures(ListOperatingCalendarClosuresRequest) returns (ListOperatingCalendarClosuresResponse);
+  rpc CreateOperatingCalendarClosure(CreateOperatingCalendarClosureRequest) returns (OperatingCalendarClosureInfo);
+  rpc DeleteOperatingCalendarClosure(DeleteOperatingCalendarClosureRequest) returns (google.protobuf.Empty);
+}
+
+message OperatingCalendarInfo {
+  string id = 1;
+  string account_id = 2;
+  string code = 3;
+  string name = 4;
+  string kind_code = 5;
+  string days_of_week = 6;
+  optional string cutoff_at = 7;
+  optional string timezone = 8;
+  bool is_default = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+}
+
+message OperatingCalendarClosureInfo {
+  string id = 1;
+  string operating_calendar_id = 2;
+  google.protobuf.Timestamp closed_on = 3;
+  string name = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+message ListOperatingCalendarsRequest {
+  optional string kind_code = 1;
+}
+
+message ListOperatingCalendarsResponse {
+  repeated OperatingCalendarInfo calendars = 1;
+}
+
+message GetOperatingCalendarRequest {
+  string id = 1;
+}
+
+message CreateOperatingCalendarRequest {
+  string code = 1;
+  string name = 2;
+  string kind_code = 3;
+  string days_of_week = 4;
+  optional string cutoff_at = 5;
+  optional string timezone = 6;
+  bool is_default = 7;
+}
+
+message UpdateOperatingCalendarRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string days_of_week = 3;
+  StringPatch cutoff_at = 4;
+  StringPatch timezone = 5;
+  optional bool is_default = 6;
+}
+
+message DeleteOperatingCalendarRequest {
+  string id = 1;
+}
+
+message ListOperatingCalendarClosuresRequest {
+  string operating_calendar_id = 1;
+  // Bounded window. Both default to a year either side of today rather than returning
+  // everything, since a calendar accumulates closures indefinitely.
+  optional google.protobuf.Timestamp from_date = 2;
+  optional google.protobuf.Timestamp to_date = 3;
+}
+
+message ListOperatingCalendarClosuresResponse {
+  repeated OperatingCalendarClosureInfo closures = 1;
+}
+
+message CreateOperatingCalendarClosureRequest {
+  string operating_calendar_id = 1;
+  google.protobuf.Timestamp closed_on = 2;
+  string name = 3;
+}
+
+message DeleteOperatingCalendarClosureRequest {
+  string id = 1;
 }
 
 // ProductionScheduleInfo is one persisted version of the plan.
@@ -692,6 +784,10 @@ message ProductionScheduleSettingsInfo {
   // The last fallback in an order's ship-by chain, behind the customer and its account group.
   int32 default_customer_lead_time_days = 34;
   string default_fulfillment_policy_code = 35;
+  // The account-wide operating calendars, behind the per-customer and per-address links and
+  // ahead of a plain Monday-to-Friday week.
+  optional string ship_calendar_id = 36;
+  optional string receive_calendar_id = 37;
 }
 
 // ProductionScheduleItemSettingInfo is one item's planning override.

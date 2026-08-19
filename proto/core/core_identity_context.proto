@@ -487,6 +487,8 @@ message CustomerProto {
   repeated CustomerLightCustomerProto child_accounts = 30;
   // Calendar days between an order being issued and it being due to ship, for this customer specifically.
   optional int32 default_lead_time_days = 31;
+  // The days this customer's dock accepts freight. Sits in the same chain as the lead time above.
+  optional string receive_calendar_id = 32;
 }
 message CustomerCarrierProto {
   string id = 1;
@@ -654,6 +656,7 @@ message CreateCustomerRequest {
   optional string credit_limit_unit_id = 26;
   repeated string includes = 27;
   optional int32 default_lead_time_days = 28;
+  optional string receive_calendar_id = 29;
 }
 message CreateCustomerResponse {
   CustomerProto customer = 1;
@@ -686,6 +689,7 @@ message UpdateCustomerRequest {
   optional QuantityPatch credit_limit = 25;
   repeated string includes = 26;
   optional Int32Patch default_lead_time_days = 27;
+  StringPatch receive_calendar_id = 30;
 }
 message UpdateCustomerResponse {
   CustomerProto customer = 1;

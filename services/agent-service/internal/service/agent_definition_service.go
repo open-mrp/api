@@ -778,7 +778,7 @@ func (s *agentDefSvcImpl) ListAvailableTools(ctx context.Context, params domain.
 			}
 
 			if gIdx == -1 {
-				return nil, nil, apierror.NewValidationError("Invalid pagination cursor.")
+				return nil, nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
 			}
 
 			if gIdx+1 < len(domainGroups) {
@@ -805,7 +805,7 @@ func (s *agentDefSvcImpl) ListAvailableTools(ctx context.Context, params domain.
 			}
 
 			if idx == -1 {
-				return nil, nil, apierror.NewValidationError("Invalid pagination cursor.")
+				return nil, nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
 			}
 
 			if idx+1 < len(results) {

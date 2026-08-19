@@ -366,6 +366,9 @@ func openAPIEndpointGroups() []apiendpoint.APIEndpointGroup {
 		*(&httpgroup.ProductionScheduleSettingsEndpointGroup{}).Materialize(&httpgroup.ProductionScheduleSettingsEndpointGroupConfig{
 			CoreClient: coreClient,
 		}).APIEndpointGroup,
+		*(&httpgroup.OperatingCalendarsEndpointGroup{}).Materialize(&httpgroup.OperatingCalendarsEndpointGroupConfig{
+			CoreClient: coreClient,
+		}).APIEndpointGroup,
 		*(&httpgroup.VolumeDiscountsEndpointGroup{}).Materialize(&httpgroup.VolumeDiscountsEndpointGroupConfig{
 			CoreClient: coreClient,
 		}).APIEndpointGroup,

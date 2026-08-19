@@ -657,8 +657,11 @@ func tryContextPathMap(ctx context.Context) map[string]string {
 }
 
 // enumParamName resolves the public parameter name for an enum field, preferring the json tag (request body) then the query tag (query parameter), falling back to the exported Go field name. Query-param structs tag fields with `query:"..."`, so without this the reported param would be the Go field name (e.g. "Status" instead of "statuses").
+// enumParamName is the name the caller used for a field, taken from whichever tag describes how
+// they sent it. Falling through to the Go field name puts an identifier in the error that the
+// caller has never seen and cannot map back to anything they wrote.
 func enumParamName(sf reflect.StructField) string {
-	for _, tag := range []string{"json", "query"} {
+	for _, tag := range []string{"json", "query", "path", "header", "form", "cookie"} {
 		if v := sf.Tag.Get(tag); v != "" && v != "-" {
 			if name := strings.Split(v, ",")[0]; name != "" {
 				return name
@@ -802,14 +805,9 @@ func ValidateEnumFields(dst any) *apierror.APIError {
 		}
 
 		if !isValid {
-			jsonTag := sf.Tag.Get("json")
-			fieldName := sf.Name
-			if jsonTag != "" && jsonTag != "-" {
-				parts := strings.Split(jsonTag, ",")
-				if parts[0] != "" {
-					fieldName = parts[0]
-				}
-			}
+			// Read every tag, not just json: a scalar enum is as often a query filter as a body
+			// field, and naming it "Type" instead of "type" told the caller nothing.
+			fieldName := enumParamName(sf)
 			return apierror.NewParameterInvalidError(
 				fmt.Sprintf("Field '%s' must be one of: %s", fieldName, strings.Join(allowedValues, ", ")),
 				fieldName,

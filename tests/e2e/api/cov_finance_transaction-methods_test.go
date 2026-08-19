@@ -195,8 +195,8 @@ func TestCovFinanceTransactionMethods_InvalidLimit(t *testing.T) {
 			status, body, err := apiClient.GetListRaw(covFinanceTransactionMethodsPath, url.Values{"limit": {tc.limit}})
 			require.NoError(t, err)
 			requireStatus(t, 400, status, body)
-			errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
-			assertErrorParam(t, errObj, "Limit")
+			errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+			assertErrorParam(t, errObj, "limit")
 		})
 	}
 }
@@ -207,6 +207,6 @@ func TestCovFinanceTransactionMethods_QueryTooLong(t *testing.T) {
 	status, body, err := apiClient.GetListRaw(covFinanceTransactionMethodsPath, url.Values{"q": {strings.Repeat("a", 501)}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
-	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
-	assertErrorParam(t, errObj, "Query")
+	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	assertErrorParam(t, errObj, "q")
 }

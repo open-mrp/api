@@ -303,3 +303,64 @@ func keys(m map[string]struct{}) []string {
 	}
 	return out
 }
+
+// ProductQuantityUnits maps each product to the units its unit group allows.
+//
+// Two queries regardless of how many lines an order carries, which is what makes it usable inside a create transaction. It reuses the pricing queries rather than adding parallel ones so there is a single definition of "which unit group governs this product" — the product line's when it has one, the item category's otherwise.
+func (r *pricingRepoImpl) ProductQuantityUnits(ctx context.Context, accountID string, productIDs []string) (map[string]map[string]struct{}, *apierror.APIError) {
+	ctx, span := pricingRepoTracer.Start(ctx, "repository.pricing.product_quantity_units")
+	defer span.End()
+
+	if len(productIDs) == 0 {
+		return map[string]map[string]struct{}{}, nil
+	}
+
+	products, err := r.queries.GetPricingProductsByIDs(ctx, sqlc.GetPricingProductsByIDsParams{
+		ProductIds: productIDs,
+		AccountID:  accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	groupByProduct := make(map[string]string, len(products))
+	groupIDSet := make(map[string]struct{})
+	for _, p := range products {
+		groupID := p.CategoryUnitGroupID
+		if p.ProductLineUnitGroupID.Valid && p.ProductLineUnitGroupID.String != "" {
+			groupID = p.ProductLineUnitGroupID.String
+		}
+		if groupID == "" {
+			continue
+		}
+		groupByProduct[p.ProductID] = groupID
+		groupIDSet[groupID] = struct{}{}
+	}
+
+	groupIDs := make([]string, 0, len(groupIDSet))
+	for id := range groupIDSet {
+		groupIDs = append(groupIDs, id)
+	}
+
+	unitsByGroup := make(map[string]map[string]struct{}, len(groupIDs))
+	if len(groupIDs) > 0 {
+		rows, err := r.queries.GetPricingUnitGroupUnits(ctx, groupIDs)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		for _, row := range rows {
+			inner, ok := unitsByGroup[row.UnitGroupID]
+			if !ok {
+				inner = make(map[string]struct{})
+				unitsByGroup[row.UnitGroupID] = inner
+			}
+			inner[row.UnitID] = struct{}{}
+		}
+	}
+
+	out := make(map[string]map[string]struct{}, len(groupByProduct))
+	for productID, groupID := range groupByProduct {
+		out[productID] = unitsByGroup[groupID]
+	}
+	return out, nil
+}

@@ -1,4 +1,4 @@
-.PHONY: help dev sqlc proto buf-lint db-dump test test-e2e test-verbose test-sql-prepare-smoke install-tools install-ci-tools docs mocks lint gosec gosec-fast govet static-check check-format jaeger-tracing connect-minikube connect-eks version validate-openapi-specs httpie local-db local-db-cli local-db-down local-db-nuke setup teardown migrate-agent-db seed-agent-db seed-core seed-user-photos seed-stripe teardown-stripe teardown-all-stripe fmt stripe-webhook stripe-webhook-account view-otel e2e-up e2e-up-ci e2e e2e-down fix-minikube-dns openapi openapi-quiet gen-agent-tools stainless openapi-stainless openapi-stainless-quiet generate generate-quiet install-stlc stlc-internal-sdk stlc-public-typescript-sdk stlc-public-python-sdk stlc-public-go-sdk stlc-public-sdks stlc-sdks sdk-yalc
+.PHONY: help dev sqlc proto buf-lint db-dump test test-e2e tx-audit test-verbose test-sql-prepare-smoke install-tools install-ci-tools docs mocks lint gosec gosec-fast govet static-check check-format jaeger-tracing connect-minikube connect-eks version validate-openapi-specs httpie local-db local-db-cli local-db-down local-db-nuke setup teardown migrate-agent-db seed-agent-db seed-core seed-user-photos seed-stripe teardown-stripe teardown-all-stripe fmt stripe-webhook stripe-webhook-account view-otel e2e-up e2e-up-ci e2e e2e-down fix-minikube-dns openapi openapi-quiet gen-agent-tools stainless openapi-stainless openapi-stainless-quiet generate generate-quiet install-stlc stlc-internal-sdk stlc-public-typescript-sdk stlc-public-python-sdk stlc-public-go-sdk stlc-public-sdks stlc-sdks sdk-yalc
 
 # Include .env file if it exists (optional for CI)
 -include .env
@@ -240,7 +240,11 @@ install-ci-tools: ## Install minimum tools for CI
 mocks: ## Generate mocks. Usage: make mocks [services]
 	@$(MOCK_SCRIPT) $(ARGS)
 
-lint: gosec static-check ## Run gosec + staticcheck
+lint: gosec static-check tx-audit ## Run gosec + staticcheck + transaction-callback audit
+
+tx-audit: ## Check that database transaction callbacks are safe to re-run after a deadlock
+	@echo "Auditing transaction callbacks..."
+	@cd tools && GOTOOLCHAIN=go1.26.2 go run ./txaudit --root ..
 
 gosec: ## Run gosec (all rules)
 	@echo "Running gosec..."
@@ -299,12 +303,12 @@ view-otel: ## Open Jaeger UI via port-forward
 
 e2e-up: openapi-quiet ## Start the E2E stack (isolated services + seeded DBs)
 	@./scripts/run-quiet.sh "Building E2E service images" docker compose -f docker-compose.e2e.yml build --parallel
-	@./scripts/run-quiet.sh "Starting E2E databases" docker compose -f docker-compose.e2e.yml up -d --wait mysql-e2e postgres-e2e rabbitmq
+	@./scripts/run-quiet.sh "Starting E2E databases" docker compose -f docker-compose.e2e.yml up -d --wait mysql-e2e postgres-e2e rabbitmq minio-e2e
 	@./scripts/setup-e2e-db.sh
 	@./scripts/run-quiet.sh "Starting E2E services" ./scripts/start-e2e-services.sh
 
 e2e-up-ci: openapi-quiet ## Start the E2E stack using pre-built images (for CI)
-	@./scripts/run-quiet.sh "Starting E2E databases" docker compose -f docker-compose.e2e.yml up -d --wait mysql-e2e postgres-e2e rabbitmq
+	@./scripts/run-quiet.sh "Starting E2E databases" docker compose -f docker-compose.e2e.yml up -d --wait mysql-e2e postgres-e2e rabbitmq minio-e2e
 	@./scripts/setup-e2e-db.sh
 	@./scripts/run-quiet.sh "Starting E2E services" ./scripts/start-e2e-services.sh
 

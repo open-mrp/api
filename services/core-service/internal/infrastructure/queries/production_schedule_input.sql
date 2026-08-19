@@ -234,6 +234,8 @@ SELECT
     s.default_lot_units,
     s.default_customer_lead_time_days,
     s.default_fulfillment_policy_code,
+    s.ship_calendar_id,
+    s.receive_calendar_id,
     s.recommendation_dormant_months,
     s.recommendation_concentration_pct,
     s.recommendation_adi_threshold,

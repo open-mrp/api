@@ -30,6 +30,10 @@ type Client struct {
 	apiVersion string
 	httpClient *http.Client
 	retries    int
+	// cookies, when set, authenticate the request in place of the Authorization
+	// header. The gateway rejects a request carrying both, so the two are
+	// mutually exclusive rather than additive.
+	cookies []*http.Cookie
 }
 
 // NewClient creates a new API client.
@@ -59,6 +63,33 @@ func (c *Client) WithAPIVersion(version string) *Client {
 	return clone
 }
 
+// WithCookies returns a new Client that authenticates with session cookies from a
+// login response instead of the Authorization header. Access tokens are refused in
+// the header by design, so cookies are the only way to act as a user rather than as
+// an API key.
+func (c *Client) WithCookies(cookies []*http.Cookie, accountID string) *Client {
+	clone := NewClient(c.baseURL, "", accountID)
+	clone.apiVersion = c.apiVersion
+	clone.cookies = cookies
+	return clone
+}
+
+// applyAuth sets the credentials and the standard headers on a request. The
+// gateway treats an Authorization header and cookies arriving together as
+// ambiguous and rejects the request, so exactly one is sent.
+func (c *Client) applyAuth(req *http.Request) {
+	if len(c.cookies) > 0 {
+		for _, ck := range c.cookies {
+			req.AddCookie(ck)
+		}
+	} else {
+		req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	}
+	req.Header.Set("Augno-Account", c.accountID)
+	req.Header.Set("Augno-Version", c.apiVersion)
+	req.Header.Set("Accept", "application/json")
+}
+
 // WithBearerToken returns a new Client that authenticates with the given bearer
 // token (e.g. a user access token obtained from login) against accountID. Used
 // to exercise endpoints that require a user identity rather than an API key. In
@@ -81,10 +112,7 @@ func (c *Client) Get(path string, params url.Values) (*http.Response, error) {
 			return nil, fmt.Errorf("creating request: %w", err)
 		}
 
-		req.Header.Set("Authorization", "Bearer "+c.apiKey)
-		req.Header.Set("Augno-Account", c.accountID)
-		req.Header.Set("Augno-Version", c.apiVersion)
-		req.Header.Set("Accept", "application/json")
+		c.applyAuth(req)
 
 		resp, err := c.httpClient.Do(req)
 		if err != nil {
@@ -274,10 +302,7 @@ func (c *Client) DoFull(method, path string, body any, idempotencyKey string) (*
 			return nil, fmt.Errorf("creating request: %w", err)
 		}
 
-		req.Header.Set("Authorization", "Bearer "+c.apiKey)
-		req.Header.Set("Augno-Account", c.accountID)
-		req.Header.Set("Augno-Version", c.apiVersion)
-		req.Header.Set("Accept", "application/json")
+		c.applyAuth(req)
 		if body != nil {
 			req.Header.Set("Content-Type", "application/json")
 		}
@@ -337,6 +362,61 @@ func (c *Client) Put(path string, body any) (int, []byte, error) {
 	return c.Do(http.MethodPut, path, body, "")
 }
 
+// PostSigned performs an unauthenticated POST with a verbatim body and a Stripe-Signature
+// header. Webhooks carry no API key — the signature is the credential — so this deliberately
+// sends neither an Authorization header nor an account.
+func (c *Client) PostSigned(path, signature string, body []byte) (int, []byte, error) {
+	req, err := http.NewRequest(http.MethodPost, c.baseURL+path, bytes.NewReader(body))
+	if err != nil {
+		return 0, nil, fmt.Errorf("creating request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	if signature != "" {
+		req.Header.Set("Stripe-Signature", signature)
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return 0, nil, err
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return resp.StatusCode, nil, fmt.Errorf("reading response body: %w", err)
+	}
+
+	return resp.StatusCode, respBody, nil
+}
+
+// PutBytes performs an authenticated PUT whose body is sent verbatim under the given
+// content type. Upload endpoints read the raw request body rather than JSON, so the bytes
+// must not be marshalled on the way out.
+func (c *Client) PutBytes(path, contentType string, body []byte) (int, []byte, error) {
+	req, err := http.NewRequest(http.MethodPut, c.baseURL+path, bytes.NewReader(body))
+	if err != nil {
+		return 0, nil, fmt.Errorf("creating request: %w", err)
+	}
+
+	c.applyAuth(req)
+	req.Header.Set("Content-Type", contentType)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return 0, nil, err
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return resp.StatusCode, nil, fmt.Errorf("reading response body: %w", err)
+	}
+
+	return resp.StatusCode, respBody, nil
+}
+
 // PutRaw performs PUT with optional query params (same pattern as GET with query encoding).
 func (c *Client) PutRaw(path string, params url.Values, body any) (int, []byte, error) {
 	u := c.baseURL + path
@@ -359,10 +439,7 @@ func (c *Client) PutRaw(path string, params url.Values, body any) (int, []byte, 
 			return 0, nil, fmt.Errorf("creating request: %w", err)
 		}
 
-		req.Header.Set("Authorization", "Bearer "+c.apiKey)
-		req.Header.Set("Augno-Account", c.accountID)
-		req.Header.Set("Augno-Version", c.apiVersion)
-		req.Header.Set("Accept", "application/json")
+		c.applyAuth(req)
 		if body != nil {
 			req.Header.Set("Content-Type", "application/json")
 		}
@@ -468,10 +545,7 @@ func (c *Client) GetWithoutFollowingRedirects(path string) (int, string, []byte,
 	if err != nil {
 		return 0, "", nil, fmt.Errorf("creating request: %w", err)
 	}
-	req.Header.Set("Authorization", "Bearer "+c.apiKey)
-	req.Header.Set("Augno-Account", c.accountID)
-	req.Header.Set("Augno-Version", c.apiVersion)
-	req.Header.Set("Accept", "application/json")
+	c.applyAuth(req)
 
 	noFollow := &http.Client{
 		Timeout: c.httpClient.Timeout,

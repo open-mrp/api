@@ -100,16 +100,17 @@ func (m *addressSvcImpl) GetAddress(ctx context.Context, req *RetrieveAddressReq
 
 func (m *addressSvcImpl) CreateAddress(ctx context.Context, req *apirequest.AddressInput) (*apiresource.Address, *apierror.APIError) {
 	pbReq := &pb.CreateAddressRequest{
-		Name:         req.Name,
-		Phone:        req.Phone.Ptr(),
-		Email:        req.Email.Ptr(),
-		IsDropShip:   addressTypeToDropShip(req.Type.Ptr()),
-		StreetLine_1: req.StreetLine1.Ptr(),
-		StreetLine_2: req.StreetLine2.Ptr(),
-		Locality:     req.Locality.Ptr(),
-		State:        req.State.Ptr(),
-		PostalCode:   req.PostalCode.Ptr(),
-		Country:      req.Country,
+		Name:              req.Name,
+		Phone:             req.Phone.Ptr(),
+		Email:             req.Email.Ptr(),
+		IsDropShip:        addressTypeToDropShip(req.Type.Ptr()),
+		ReceiveCalendarId: req.ReceiveCalendarID.Ptr(),
+		StreetLine_1:      req.StreetLine1.Ptr(),
+		StreetLine_2:      req.StreetLine2.Ptr(),
+		Locality:          req.Locality.Ptr(),
+		State:             req.State.Ptr(),
+		PostalCode:        req.PostalCode.Ptr(),
+		Country:           req.Country,
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, addressSvcTracer, "service.addresses.create", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreateAddressResponse, error) {
@@ -123,17 +124,18 @@ func (m *addressSvcImpl) CreateAddress(ctx context.Context, req *apirequest.Addr
 
 func (m *addressSvcImpl) UpdateAddress(ctx context.Context, req *UpdateAddressRequest) (*apiresource.Address, *apierror.APIError) {
 	pbReq := &pb.UpdateAddressRequest{
-		Id:           req.AddressID,
-		Name:         req.Name.Ptr(),
-		Phone:        field.StringClearableToProto(req.Phone),
-		Email:        field.StringClearableToProto(req.Email),
-		IsDropShip:   addressTypeToDropShipPtr(req.Type.Ptr()),
-		StreetLine_1: req.StreetLine1.Ptr(),
-		StreetLine_2: field.StringClearableToProto(req.StreetLine2),
-		Locality:     req.Locality.Ptr(),
-		State:        req.State.Ptr(),
-		PostalCode:   req.PostalCode.Ptr(),
-		Country:      req.Country.Ptr(),
+		Id:                req.AddressID,
+		Name:              req.Name.Ptr(),
+		Phone:             field.StringClearableToProto(req.Phone),
+		Email:             field.StringClearableToProto(req.Email),
+		IsDropShip:        addressTypeToDropShipPtr(req.Type.Ptr()),
+		ReceiveCalendarId: field.StringClearableToProto(req.ReceiveCalendarID),
+		StreetLine_1:      req.StreetLine1.Ptr(),
+		StreetLine_2:      field.StringClearableToProto(req.StreetLine2),
+		Locality:          req.Locality.Ptr(),
+		State:             req.State.Ptr(),
+		PostalCode:        req.PostalCode.Ptr(),
+		Country:           req.Country.Ptr(),
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, addressSvcTracer, "service.addresses.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateAddressResponse, error) {

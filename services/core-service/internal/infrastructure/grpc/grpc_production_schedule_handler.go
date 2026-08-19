@@ -17,6 +17,8 @@ type productionScheduleGRPCHandler struct {
 	pb.UnimplementedCoreProductionScheduleServiceServer
 
 	productionScheduleSvc domain.ProductionScheduleSvc
+	// Operating calendars ride on this service because the settings that select them are the same settings the solver is configured with.
+	operatingCalendarSvc domain.OperatingCalendarSvc
 }
 
 func (h *productionScheduleGRPCHandler) PreviewProductionSchedule(ctx context.Context, req *pb.PreviewProductionScheduleRequest) (*pb.PreviewProductionScheduleResponse, error) {

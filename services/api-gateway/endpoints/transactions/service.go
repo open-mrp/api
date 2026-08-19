@@ -294,7 +294,7 @@ func (m *transactionSvcImpl) ListTransactionTypes(ctx context.Context, req *List
 	}
 
 	if req.Cursor != nil && *req.Cursor != "" {
-		return nil, apierror.NewValidationError("Invalid pagination cursor.")
+		return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
 	}
 
 	results := staticTransactionTypes
@@ -324,7 +324,7 @@ func (m *transactionSvcImpl) ListTransactionMethods(ctx context.Context, req *Li
 	}
 
 	if req.Cursor != nil && *req.Cursor != "" {
-		return nil, apierror.NewValidationError("Invalid pagination cursor.")
+		return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
 	}
 
 	results := staticTransactionMethods

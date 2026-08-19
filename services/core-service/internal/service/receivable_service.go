@@ -150,6 +150,13 @@ func (s *receivableSvcImpl) ExportReceivablesByCustomer(ctx context.Context, par
 
 	accountID := identity.Target.AccountID
 
+	// A customer with nothing outstanding and a customer that does not exist both produce an
+	// empty ledger. Without this read the export answers for any account ID at all, and a
+	// finance team cannot tell an empty statement from one addressed to the wrong company.
+	if _, apiErr := s.repos.NewCustomerRepo().Get(ctx, accountID, params.CustomerAccountID, nil); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
 	return s.repos.NewReceivableRepo().ListAllByCustomer(ctx, accountID, params.CustomerAccountID, params.CutoffDate)
 }
 

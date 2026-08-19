@@ -873,11 +873,11 @@ func TestCovMessagingConversations_List_InvalidEnumFilters(t *testing.T) {
 		params    url.Values
 		wantParam string
 	}{
-		{"type", url.Values{"type": {"bogus"}}, "Type"},
-		{"audience", url.Values{"audience": {"bogus"}}, "Audience"},
-		{"status", url.Values{"status": {"bogus"}}, "Status"},
-		{"workflow_status", url.Values{"workflow_status": {"bogus"}}, "WorkflowStatus"},
-		{"topic_resource_type", url.Values{"topic_resource_type": {"bogus"}}, "TopicResourceType"},
+		{"type", url.Values{"type": {"bogus"}}, "type"},
+		{"audience", url.Values{"audience": {"bogus"}}, "audience"},
+		{"status", url.Values{"status": {"bogus"}}, "status"},
+		{"workflow_status", url.Values{"workflow_status": {"bogus"}}, "workflow_status"},
+		{"topic_resource_type", url.Values{"topic_resource_type": {"bogus"}}, "topic_resource_type"},
 	}
 	for _, tc := range cases {
 		tc := tc

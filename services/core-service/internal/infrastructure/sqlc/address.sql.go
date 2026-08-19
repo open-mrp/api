@@ -135,6 +135,7 @@ SELECT
     a.phone,
     a.email,
     a.is_drop_ship,
+    a.receive_calendar_id,
     a.created_at,
     a.updated_at,
     g.id AS geolocation_id,
@@ -146,7 +147,8 @@ SELECT
     g.country,
     g.google_place_id,
     g.latitude,
-    g.longitude
+    g.longitude,
+    g.timezone
 FROM address a
 JOIN geolocation g ON a.geolocation_id = g.id
 JOIN account_address aa ON aa.address_id = a.id
@@ -160,23 +162,25 @@ type GetAddressParams struct {
 }
 
 type GetAddressRow struct {
-	ID            string
-	Name          string
-	Phone         sql.NullString
-	Email         sql.NullString
-	IsDropShip    bool
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
-	GeolocationID string
-	StreetLine1   sql.NullString
-	StreetLine2   sql.NullString
-	Locality      sql.NullString
-	State         sql.NullString
-	PostalCode    sql.NullString
-	Country       string
-	GooglePlaceID sql.NullString
-	Latitude      sql.NullFloat64
-	Longitude     sql.NullFloat64
+	ID                string
+	Name              string
+	Phone             sql.NullString
+	Email             sql.NullString
+	IsDropShip        bool
+	ReceiveCalendarID sql.NullString
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	GeolocationID     string
+	StreetLine1       sql.NullString
+	StreetLine2       sql.NullString
+	Locality          sql.NullString
+	State             sql.NullString
+	PostalCode        sql.NullString
+	Country           string
+	GooglePlaceID     sql.NullString
+	Latitude          sql.NullFloat64
+	Longitude         sql.NullFloat64
+	Timezone          sql.NullString
 }
 
 func (q *Queries) GetAddress(ctx context.Context, arg GetAddressParams) (GetAddressRow, error) {
@@ -188,6 +192,7 @@ func (q *Queries) GetAddress(ctx context.Context, arg GetAddressParams) (GetAddr
 		&i.Phone,
 		&i.Email,
 		&i.IsDropShip,
+		&i.ReceiveCalendarID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.GeolocationID,
@@ -200,6 +205,7 @@ func (q *Queries) GetAddress(ctx context.Context, arg GetAddressParams) (GetAddr
 		&i.GooglePlaceID,
 		&i.Latitude,
 		&i.Longitude,
+		&i.Timezone,
 	)
 	return i, err
 }
@@ -211,6 +217,7 @@ SELECT
     a.phone,
     a.email,
     a.is_drop_ship,
+    a.receive_calendar_id,
     a.created_at,
     a.updated_at,
     g.id AS geolocation_id,
@@ -222,7 +229,8 @@ SELECT
     g.country,
     g.google_place_id,
     g.latitude,
-    g.longitude
+    g.longitude,
+    g.timezone
 FROM address a
 JOIN geolocation g ON a.geolocation_id = g.id
 JOIN account_address aa ON aa.address_id = a.id
@@ -236,23 +244,25 @@ type GetAddressesByIDsParams struct {
 }
 
 type GetAddressesByIDsRow struct {
-	ID            string
-	Name          string
-	Phone         sql.NullString
-	Email         sql.NullString
-	IsDropShip    bool
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
-	GeolocationID string
-	StreetLine1   sql.NullString
-	StreetLine2   sql.NullString
-	Locality      sql.NullString
-	State         sql.NullString
-	PostalCode    sql.NullString
-	Country       string
-	GooglePlaceID sql.NullString
-	Latitude      sql.NullFloat64
-	Longitude     sql.NullFloat64
+	ID                string
+	Name              string
+	Phone             sql.NullString
+	Email             sql.NullString
+	IsDropShip        bool
+	ReceiveCalendarID sql.NullString
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	GeolocationID     string
+	StreetLine1       sql.NullString
+	StreetLine2       sql.NullString
+	Locality          sql.NullString
+	State             sql.NullString
+	PostalCode        sql.NullString
+	Country           string
+	GooglePlaceID     sql.NullString
+	Latitude          sql.NullFloat64
+	Longitude         sql.NullFloat64
+	Timezone          sql.NullString
 }
 
 // Returns addresses matching the given IDs that belong to the caller's
@@ -284,6 +294,7 @@ func (q *Queries) GetAddressesByIDs(ctx context.Context, arg GetAddressesByIDsPa
 			&i.Phone,
 			&i.Email,
 			&i.IsDropShip,
+			&i.ReceiveCalendarID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.GeolocationID,
@@ -296,6 +307,7 @@ func (q *Queries) GetAddressesByIDs(ctx context.Context, arg GetAddressesByIDsPa
 			&i.GooglePlaceID,
 			&i.Latitude,
 			&i.Longitude,
+			&i.Timezone,
 		); err != nil {
 			return nil, err
 		}
@@ -355,10 +367,12 @@ INSERT INTO address (
     phone,
     email,
     is_drop_ship,
+    receive_calendar_id,
     geolocation_id,
     created_at,
     updated_at
 ) VALUES (
+    ?,
     ?,
     ?,
     ?,
@@ -371,12 +385,13 @@ INSERT INTO address (
 `
 
 type InsertAddressParams struct {
-	ID            string
-	Name          string
-	Phone         sql.NullString
-	Email         sql.NullString
-	IsDropShip    bool
-	GeolocationID string
+	ID                string
+	Name              string
+	Phone             sql.NullString
+	Email             sql.NullString
+	IsDropShip        bool
+	ReceiveCalendarID sql.NullString
+	GeolocationID     string
 }
 
 func (q *Queries) InsertAddress(ctx context.Context, arg InsertAddressParams) error {
@@ -386,6 +401,7 @@ func (q *Queries) InsertAddress(ctx context.Context, arg InsertAddressParams) er
 		arg.Phone,
 		arg.Email,
 		arg.IsDropShip,
+		arg.ReceiveCalendarID,
 		arg.GeolocationID,
 	)
 	return err
@@ -449,6 +465,7 @@ SELECT
     a.phone,
     a.email,
     a.is_drop_ship,
+    a.receive_calendar_id,
     a.created_at,
     a.updated_at,
     g.id AS geolocation_id,
@@ -460,7 +477,8 @@ SELECT
     g.country,
     g.google_place_id,
     g.latitude,
-    g.longitude
+    g.longitude,
+    g.timezone
 FROM address a
 JOIN geolocation g ON a.geolocation_id = g.id
 JOIN account_address aa ON aa.address_id = a.id
@@ -497,23 +515,25 @@ type ListAddressesBackwardParams struct {
 }
 
 type ListAddressesBackwardRow struct {
-	ID            string
-	Name          string
-	Phone         sql.NullString
-	Email         sql.NullString
-	IsDropShip    bool
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
-	GeolocationID string
-	StreetLine1   sql.NullString
-	StreetLine2   sql.NullString
-	Locality      sql.NullString
-	State         sql.NullString
-	PostalCode    sql.NullString
-	Country       string
-	GooglePlaceID sql.NullString
-	Latitude      sql.NullFloat64
-	Longitude     sql.NullFloat64
+	ID                string
+	Name              string
+	Phone             sql.NullString
+	Email             sql.NullString
+	IsDropShip        bool
+	ReceiveCalendarID sql.NullString
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	GeolocationID     string
+	StreetLine1       sql.NullString
+	StreetLine2       sql.NullString
+	Locality          sql.NullString
+	State             sql.NullString
+	PostalCode        sql.NullString
+	Country           string
+	GooglePlaceID     sql.NullString
+	Latitude          sql.NullFloat64
+	Longitude         sql.NullFloat64
+	Timezone          sql.NullString
 }
 
 func (q *Queries) ListAddressesBackward(ctx context.Context, arg ListAddressesBackwardParams) ([]ListAddressesBackwardRow, error) {
@@ -547,6 +567,7 @@ func (q *Queries) ListAddressesBackward(ctx context.Context, arg ListAddressesBa
 			&i.Phone,
 			&i.Email,
 			&i.IsDropShip,
+			&i.ReceiveCalendarID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.GeolocationID,
@@ -559,6 +580,7 @@ func (q *Queries) ListAddressesBackward(ctx context.Context, arg ListAddressesBa
 			&i.GooglePlaceID,
 			&i.Latitude,
 			&i.Longitude,
+			&i.Timezone,
 		); err != nil {
 			return nil, err
 		}
@@ -580,6 +602,7 @@ SELECT
     a.phone,
     a.email,
     a.is_drop_ship,
+    a.receive_calendar_id,
     a.created_at,
     a.updated_at,
     g.id AS geolocation_id,
@@ -591,7 +614,8 @@ SELECT
     g.country,
     g.google_place_id,
     g.latitude,
-    g.longitude
+    g.longitude,
+    g.timezone
 FROM address a
 JOIN geolocation g ON a.geolocation_id = g.id
 JOIN account_address aa ON aa.address_id = a.id
@@ -629,23 +653,25 @@ type ListAddressesForwardParams struct {
 }
 
 type ListAddressesForwardRow struct {
-	ID            string
-	Name          string
-	Phone         sql.NullString
-	Email         sql.NullString
-	IsDropShip    bool
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
-	GeolocationID string
-	StreetLine1   sql.NullString
-	StreetLine2   sql.NullString
-	Locality      sql.NullString
-	State         sql.NullString
-	PostalCode    sql.NullString
-	Country       string
-	GooglePlaceID sql.NullString
-	Latitude      sql.NullFloat64
-	Longitude     sql.NullFloat64
+	ID                string
+	Name              string
+	Phone             sql.NullString
+	Email             sql.NullString
+	IsDropShip        bool
+	ReceiveCalendarID sql.NullString
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	GeolocationID     string
+	StreetLine1       sql.NullString
+	StreetLine2       sql.NullString
+	Locality          sql.NullString
+	State             sql.NullString
+	PostalCode        sql.NullString
+	Country           string
+	GooglePlaceID     sql.NullString
+	Latitude          sql.NullFloat64
+	Longitude         sql.NullFloat64
+	Timezone          sql.NullString
 }
 
 func (q *Queries) ListAddressesForward(ctx context.Context, arg ListAddressesForwardParams) ([]ListAddressesForwardRow, error) {
@@ -680,6 +706,7 @@ func (q *Queries) ListAddressesForward(ctx context.Context, arg ListAddressesFor
 			&i.Phone,
 			&i.Email,
 			&i.IsDropShip,
+			&i.ReceiveCalendarID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.GeolocationID,
@@ -692,6 +719,7 @@ func (q *Queries) ListAddressesForward(ctx context.Context, arg ListAddressesFor
 			&i.GooglePlaceID,
 			&i.Latitude,
 			&i.Longitude,
+			&i.Timezone,
 		); err != nil {
 			return nil, err
 		}
@@ -757,16 +785,18 @@ UPDATE address SET
     phone = ?,
     email = ?,
     is_drop_ship = COALESCE(?, is_drop_ship),
+    receive_calendar_id = ?,
     updated_at = NOW(3)
 WHERE id = ?
 `
 
 type UpdateAddressParams struct {
-	Name       sql.NullString
-	Phone      sql.NullString
-	Email      sql.NullString
-	IsDropShip sql.NullBool
-	ID         string
+	Name              sql.NullString
+	Phone             sql.NullString
+	Email             sql.NullString
+	IsDropShip        sql.NullBool
+	ReceiveCalendarID sql.NullString
+	ID                string
 }
 
 func (q *Queries) UpdateAddress(ctx context.Context, arg UpdateAddressParams) (sql.Result, error) {
@@ -775,6 +805,7 @@ func (q *Queries) UpdateAddress(ctx context.Context, arg UpdateAddressParams) (s
 		arg.Phone,
 		arg.Email,
 		arg.IsDropShip,
+		arg.ReceiveCalendarID,
 		arg.ID,
 	)
 }

@@ -10,13 +10,17 @@ const (
 	LeadTimeSourceAccountGroup LeadTimeSource = "account_group"
 	// LeadTimeSourceAccount is the account-wide default, the last fallback in the chain.
 	LeadTimeSourceAccount LeadTimeSource = "account"
-	// LeadTimeSourceManual is an explicitly promised date, which overrides every rule.
+	// LeadTimeSourceManual is an explicitly promised delivery date, which overrides every rule. Named before the other two per-order bases existed; it means the promised date specifically, not "somebody set this by hand".
 	LeadTimeSourceManual LeadTimeSource = "manual"
+	// LeadTimeSourceOrderLeadTime is a lead time set on one order, replacing the standing customer chain.
+	LeadTimeSourceOrderLeadTime LeadTimeSource = "order_lead_time"
+	// LeadTimeSourceOrderShipBy is a ship date pinned on one order, bypassing transit and the receiving calendar.
+	LeadTimeSourceOrderShipBy LeadTimeSource = "order_ship_by"
 )
 
 func (m LeadTimeSource) IsValid() bool {
 	switch m {
-	case LeadTimeSourceCustomer, LeadTimeSourceAccountGroup, LeadTimeSourceAccount, LeadTimeSourceManual:
+	case LeadTimeSourceCustomer, LeadTimeSourceAccountGroup, LeadTimeSourceAccount, LeadTimeSourceManual, LeadTimeSourceOrderLeadTime, LeadTimeSourceOrderShipBy:
 		return true
 	default:
 		return false
@@ -29,6 +33,8 @@ func (m LeadTimeSource) EnumValues() []string {
 		string(LeadTimeSourceAccountGroup),
 		string(LeadTimeSourceAccount),
 		string(LeadTimeSourceManual),
+		string(LeadTimeSourceOrderLeadTime),
+		string(LeadTimeSourceOrderShipBy),
 	}
 }
 

@@ -31,6 +31,7 @@ type accountUserSvcImpl struct {
 	billingPublisher      domain.BillingPublisher
 	s3Client              s3client.ObjectStore
 	userPhotosBucket      string
+	branding              BrandingAssets
 }
 
 type AccountUserSvcConfig struct {
@@ -54,6 +55,9 @@ type AccountUserSvcConfig struct {
 
 	// UserPhotosBucket (required outside test mode) is the S3 bucket for user photos. Validation skips this requirement when PlatformMode is test.
 	UserPhotosBucket string
+
+	// Branding (optional) resolves the merchant logo for the branded portal welcome email. Omitted, the email renders unbranded.
+	Branding BrandingAssets
 
 	// PlatformMode (required) gates test-only relaxations; in test mode UserPhotosBucket is not required.
 	PlatformMode constants.PlatformMode
@@ -97,6 +101,7 @@ func NewAccountUserSvc(config *AccountUserSvcConfig) domain.AccountUserSvc {
 		billingPublisher:      config.BillingPublisher,
 		s3Client:              config.S3Client,
 		userPhotosBucket:      config.UserPhotosBucket,
+		branding:              config.Branding,
 	}
 }
 
@@ -113,6 +118,7 @@ func (s *accountUserSvcImpl) withTx(ctx context.Context, fn func(context.Context
 			notificationPublisher: s.notificationPublisher,
 			billingPublisher:      s.billingPublisher,
 			s3Client:              s.s3Client,
+			branding:              s.branding,
 			userPhotosBucket:      s.userPhotosBucket,
 		}
 		return fn(txCtx, txSvc)
@@ -499,13 +505,14 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 					actorAccountID := *identity.ActorAccountID()
 					txAccountRepo := txSvc.repos.NewAccountRepo()
 					accountName, _ := txAccountRepo.GetName(txCtx, actorAccountID)
-					logoURL, _ := txAccountRepo.GetBrandingLogoURL(txCtx, actorAccountID)
+					logoRef, _ := txAccountRepo.GetBrandingLogoKey(txCtx, actorAccountID)
 					slug, _ := txAccountRepo.GetPortalSlug(txCtx, actorAccountID)
 
 					emailParams["AccountName"] = accountName
 					emailParams["IsBranded"] = true
-					if logoURL != nil {
-						emailParams["LogoURL"] = *logoURL
+					// The stored value is an object key, so it has to be signed before it can be an <img src>.
+					if logoURL := txSvc.branding.LogoURL(txCtx, ptrutil.Deref(logoRef)); logoURL != "" {
+						emailParams["LogoURL"] = logoURL
 					}
 					// A verified custom portal domain serves the portal without the slug path prefix, so the login link targets the custom domain directly and drops the slug segment. Best-effort: fall back to the slug-prefixed dashboard link on any lookup failure.
 					portalDomain, _ := txSvc.repos.NewPortalDomainRepo().GetByAccountID(txCtx, actorAccountID)

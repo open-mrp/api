@@ -154,39 +154,20 @@ func TestCovCatalogParts_CreateNonexistentUnitCostUnit(t *testing.T) {
 }
 
 // ──────────────────────────────────────────────
-// Part — Nonexistent attribute_ids (prodBugSuspect #1)
+// Part — Nonexistent attribute_ids
 // ──────────────────────────────────────────────
 
-// TestCovCatalogParts_CreateWithNonexistentAttributeIDDoesNotError documents current
-// production behavior: CreatePart calls txItemRepo.AddAttribute directly with
-// caller-supplied attribute IDs with no existence check, and the underlying
-// _item_attributes join table has no FK constraint on either column. A bogus
-// attribute_ids entry is silently accepted (201) rather than rejected. This is
-// flagged as prodBugSuspect #1 in the catalog_parts coverage review (silent
-// orphan join row, arguably worse than a clean validation error) but is not
-// fixed here per task instructions. This test only pins down the observable
-// contract: no 5xx, and the bogus id does not surface in item.attributes.
-func TestCovCatalogParts_CreateWithNonexistentAttributeIDDoesNotError(t *testing.T) {
+// TestCovCatalogParts_CreateWithNonexistentAttributeIDRejected covers the create-side attribute check. The _item_attributes join table has no FK constraint on either column, so an unchecked id would be accepted as a silent orphan join row instead of a clean client error.
+func TestCovCatalogParts_CreateWithNonexistentAttributeIDRejected(t *testing.T) {
 	t.Parallel()
 
 	body := validPartBody(uniqueName("e2e-cov-part-badattr"))
 	body["attribute_ids"] = []string{"at_nonexistent00000000"}
 
-	resp, err := apiClient.PostFull(partsPath+"?include=item.attributes", body, newIdempotencyKey())
+	status, respBody, err := apiClient.Post(partsPath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, resp.StatusCode, resp.Body)
-
-	got := parseJSON(resp.Body)
-	id := jsonField(got, "id")
-	require.NotEmpty(t, id)
-	t.Cleanup(func() { apiClient.Delete(partsPath + "/" + id) })
-
-	item := jsonObject(got, "item")
-	require.NotNil(t, item)
-	attrsObj := jsonObject(item, "attributes")
-	require.NotNil(t, attrsObj, "item.attributes should be a list object even when the only supplied id was bogus")
-	data := jsonArray(attrsObj, "data")
-	assert.Empty(t, data, "a nonexistent attribute id must not surface as a linked attribute")
+	requireStatus(t, 404, status, respBody)
+	requireErrorResponse(t, respBody, "resource_not_found", "invalid_request_error")
 }
 
 // ──────────────────────────────────────────────

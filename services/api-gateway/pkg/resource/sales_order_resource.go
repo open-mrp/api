@@ -181,12 +181,26 @@ type SalesOrder struct {
 	ExpiredAt *time.Time `json:"expired_at"`
 	// Date promised to the customer for delivery, if one was committed.
 	PromisedAt *time.Time `json:"promised_at"`
+	// Days between issue and the ship-by date, set on this order alone in place of the customer's standing lead time.
+	LeadTimeOverrideDays *int32 `json:"lead_time_override_days"`
+	// The ship date pinned on this order, bypassing transit and the customer's receiving days.
+	ShipByOverrideDate *time.Time `json:"ship_by_override_date"`
 	// Date this order is contractually due to ship.
 	//
-	// Stamped when the order is issued. With a promised delivery date, this is that date less the carrier's transit for the order's lane, counted in business days — the day the order has to leave to arrive when promised. Otherwise it comes from the lead time on the customer, its account group, or the account.
+	// Stamped when the order is issued. With a promised delivery date, this is that date less the carrier's transit for the order's lane and less any day the customer cannot receive on — the day the order has to leave to arrive when promised. Otherwise it comes from a lead time, whether this order's own or the one on the customer, its account group, or the account.
 	//
-	// It is not recomputed afterwards, so neither renegotiating a customer's lead time nor a later carrier estimate moves commitments already made. Cleared if the order is unissued.
+	// Always a day the plant actually ships on, whichever rule produced it.
+	//
+	// It is not recomputed afterwards, so neither renegotiating a customer's lead time, nor a later carrier estimate, nor a holiday added to a calendar moves commitments already made. Cleared if the order is unissued.
 	ShipByDate *time.Time `json:"ship_by_date"`
+	// The ship-by date at the plant's pickup cutoff — the moment freight has to be tendered by, not just the day.
+	//
+	// Only set when the account's shipping calendar carries a cutoff time.
+	ShipByCutoffAt *time.Time `json:"ship_by_cutoff_at"`
+	// Days the customer's receiving calendar and the plant's shipping calendar pulled the ship-by date back, beyond what carrier transit accounted for.
+	//
+	// Zero means every date along the way already fell on an open day. This is what explains a ship-by date that is earlier than transit alone would suggest.
+	CalendarAdjustmentDays *int32 `json:"calendar_adjustment_days"`
 	// Calendar days between issue and the ship-by date.
 	LeadTimeDays *int32 `json:"lead_time_days"`
 	// Which rule produced the ship-by date.

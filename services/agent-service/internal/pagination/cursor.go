@@ -17,7 +17,7 @@ func ParseOptionalStringCursor(raw *string) (cursorID string, cursorDir *sharedp
 		return "", nil, apierror.NewParameterInvalidError("Invalid pagination cursor.", "cursor")
 	}
 	if cur.Direction == sharedpagination.DirectionBackward {
-		return "", nil, apierror.NewValidationError("Invalid pagination cursor.")
+		return "", nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
 	}
 
 	dir := cur.Direction

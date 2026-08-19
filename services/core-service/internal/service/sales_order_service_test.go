@@ -66,6 +66,7 @@ type SalesOrderSvcTestSuite struct {
 	productionStepQueryRepo  *repositorymock.MockProductionStepQueryRepo
 	unitConversionRepo       *repositorymock.MockUnitConversionRepo
 	scheduleRepo             *repositorymock.MockProductionScheduleRepo
+	calendarRepo             *repositorymock.MockOperatingCalendarRepo
 
 	// Collaborators.
 	checkoutFactory *clientmock.MockStripeCheckoutClientFactory
@@ -106,6 +107,7 @@ func (suite *SalesOrderSvcTestSuite) SetupTest() {
 	suite.territoryRepo = repositorymock.NewMockTerritoryRepo(suite.ctrl)
 	suite.unitRepo = repositorymock.NewMockUnitRepo(suite.ctrl)
 	suite.carrierRepo = repositorymock.NewMockCarrierRepo(suite.ctrl)
+	suite.calendarRepo = repositorymock.NewMockOperatingCalendarRepo(suite.ctrl)
 	suite.serviceLevelRepo = repositorymock.NewMockServiceLevelRepo(suite.ctrl)
 	suite.shippingTermRepo = repositorymock.NewMockShippingTermRepo(suite.ctrl)
 	suite.paymentTermRepo = repositorymock.NewMockPaymentTermRepo(suite.ctrl)
@@ -134,6 +136,7 @@ func (suite *SalesOrderSvcTestSuite) SetupTest() {
 	suite.repoFactory.EXPECT().NewOrderDiscountRepo().Return(suite.orderDiscountRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewSalesOrderRepo().Return(suite.orderRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewProductionScheduleRepo().Return(suite.scheduleRepo).AnyTimes()
+	suite.repoFactory.EXPECT().NewOperatingCalendarRepo().Return(suite.calendarRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewPricingRepo().Return(suite.pricingRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewSalesOrderLineRepo().Return(suite.lineRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewPickRepo().Return(suite.pickRepo).AnyTimes()
@@ -214,8 +217,13 @@ func salesOrderInternalCtx(accountID string) context.Context {
 func (suite *SalesOrderSvcTestSuite) expectShipByCommitmentStamp(accountID, salesOrderID string) {
 	suite.orderRepo.EXPECT().GetCustomerLeadTimeChain(gomock.Any(), accountID, gomock.Any()).
 		Return(nil, nil).Times(1)
+	// GetSettings is read twice: once for the account's default lead time, once for the zone the calendars fall back to.
 	suite.scheduleRepo.EXPECT().GetSettings(gomock.Any(), accountID).
-		Return(&domain.ProductionScheduleSettings{DefaultCustomerLeadTimeDays: 30}, nil).Times(1)
+		Return(&domain.ProductionScheduleSettings{DefaultCustomerLeadTimeDays: 30}, nil).AnyTimes()
+	// No calendars configured, so all three parties fall back to Monday-to-Friday with nothing closed — the behaviour these tests were written against.
+	suite.calendarRepo.EXPECT().ResolveShip(gomock.Any(), accountID).Return(nil, nil).AnyTimes()
+	suite.calendarRepo.EXPECT().ResolveReceive(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+	suite.calendarRepo.EXPECT().ListClosures(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 	suite.orderRepo.EXPECT().SetShipByCommitment(gomock.Any(), accountID, salesOrderID, gomock.Any()).
 		Return(nil).Times(1)
 }

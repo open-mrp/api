@@ -383,6 +383,22 @@ INSERT IGNORE INTO hubspot_sync_job (id, account_id, status, dry_run, counts, cr
      '{"customers_total":120,"companies_confident":80,"companies_ambiguous":12,"companies_to_create":28,"contacts_with_email":95}',
      NOW(), NOW());
 
+-- Two older jobs for the same account, so the cancel endpoint has both a job it can stop and a
+-- finished one it must refuse — without consuming the review_pending job above, which the
+-- read/resolve tests depend on and which a cancel could not be undone from.
+--
+-- Both are backdated: "current sync" is the newest job by created_at, so the job above has to
+-- stay newer than these or those tests would start seeing one of them instead.
+INSERT IGNORE INTO hubspot_sync_job (id, account_id, status, dry_run, counts, created_at, updated_at) VALUES
+    ('igjb_01seedhscancel01', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'review_pending', 1,
+     '{"customers_total":3,"companies_confident":3,"companies_ambiguous":0,"companies_to_create":0,"contacts_with_email":3}',
+     DATE_SUB(NOW(), INTERVAL 2 DAY), DATE_SUB(NOW(), INTERVAL 2 DAY));
+
+INSERT IGNORE INTO hubspot_sync_job (id, account_id, status, dry_run, counts, completed_at, created_at, updated_at) VALUES
+    ('igjb_01seedhsdone001', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'completed', 1,
+     '{"customers_total":1,"companies_confident":1,"companies_ambiguous":0,"companies_to_create":0,"contacts_with_email":1}',
+     DATE_SUB(NOW(), INTERVAL 3 DAY), DATE_SUB(NOW(), INTERVAL 3 DAY), DATE_SUB(NOW(), INTERVAL 3 DAY));
+
 INSERT IGNORE INTO hubspot_company_review (id, job_id, account_id, augno_customer_id, customer_name, candidate_matches, status, created_at, updated_at) VALUES
     ('igrv_01seedhubspotrev1', 'igjb_01seedhubspotjob1', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k09wm2fgevdsc344gpbcj30f', 'E2E Review Customer',
      '[{"hubspot_id":"hs_company_1001","name":"Acme Co","domain":"acme.example"}]', 'pending', NOW(), NOW());
@@ -1552,3 +1568,52 @@ INSERT IGNORE INTO job (
     NOW(3) - INTERVAL 1 MINUTE,
     NOW(3)
 );
+
+-- ============================================================
+-- OPERATING CALENDARS (fixtures for the generic contract suites)
+-- ============================================================
+-- Deliberately not defaults and deliberately unlinked, so nothing resolves against them.
+-- A default calendar here would put its closures into every ship-by date in the suite and
+-- make the commitment tests depend on which holidays happen to fall near the run date.
+INSERT IGNORE INTO operating_calendar (
+    id, account_id, code, name, operating_calendar_kind_code,
+    days_of_week, cutoff_at, timezone, is_default, created_at, updated_at
+) VALUES
+    ('occd_01e2eshipcal00000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'e2e_ship', 'E2E shipping days', 'ship', '1111000', '15:00', 'America/Chicago', 0, NOW(3), NOW(3)),
+    ('occd_01e2erecvcal00000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'e2e_receive', 'E2E receiving days', 'receive', '1111100', NULL, NULL, 0, NOW(3), NOW(3));
+
+-- Relative to the seed date so it always falls inside the default listing window, which is a
+-- year either side of today. The date is free to be near-term because nothing resolves against
+-- this calendar: it is neither a default nor linked to any address, customer, group, or setting.
+INSERT IGNORE INTO operating_calendar_closure (
+    id, account_id, operating_calendar_id, closed_on, name, created_at, updated_at
+) VALUES
+    ('occdcn_01e2eclosure000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'occd_01e2eshipcal00000', DATE_ADD(CURDATE(), INTERVAL 30 DAY), 'E2E fixture closure', NOW(3), NOW(3));
+
+
+-- ============================================================
+-- SETTLEMENT SANDBOX (an order + invoice that exist only to be
+-- settled against)
+-- ============================================================
+--
+-- Settlement tests allocate money against an invoice, which changes its order's payment status
+-- while they run. Pointing them at a shared invoice made an unrelated payment-status assertion
+-- flap depending on which test happened to be mid-flight, so they get an invoice of their own
+-- that nothing else asserts on.
+
+INSERT IGNORE INTO sales_order (id, number, sales_order_status_code, sales_order_type_code, priority_code, carrier_id, billing_address_id, shipping_address_id, buyer_account_id, seller_account_id, owner_account_id, payment_term_id, shipping_term_id, issued_at, created_at, updated_at) VALUES
+    ('or_01seedsettleorder0', 'ORD-SETTLE-SANDBOX', 'issued', 'sales_order', 'normal', 'will_call', 'ad_01k09wnac0e1ar211e0sy0ba4g', 'ad_01k09wnpvrea0awz7vem2j8j7g', 'ac_01k09wm2fgevdsc344gpbcj30f', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'pytm_01seednet3000000', 'prepaid_billed', DATE_SUB(NOW(), INTERVAL 6 DAY), DATE_SUB(NOW(), INTERVAL 6 DAY), DATE_SUB(NOW(), INTERVAL 6 DAY));
+
+INSERT IGNORE INTO invoice (id, number, is_paid_in_full, sales_order_id, billing_address_id, account_id, created_at, updated_at) VALUES
+    ('iv_01seedsettleinv000', 'INV-SETTLE-SANDBOX', 0, 'or_01seedsettleorder0', 'ad_01k09wnac0e1ar211e0sy0ba4g', 'ac_01k0a5smf9ekb8rqg12555zjqa', DATE_SUB(NOW(), INTERVAL 6 DAY), DATE_SUB(NOW(), INTERVAL 6 DAY));
+
+-- ============================================================
+-- A SECOND SHIPPO-BACKED CARRIER (for service-level sync)
+-- ============================================================
+--
+-- Syncing service levels replaces them with whatever the carrier reports, so running it against
+-- the transit carrier deleted the levels the ship-by tests quote against. This carrier exists
+-- purely to be synced.
+
+INSERT IGNORE INTO carrier (id, name, code, account_id, shippo_carrier_account_id, is_portal_enabled, created_at, updated_at) VALUES
+    ('cr_01e2esynccarrier00', 'E2E Sync Carrier', 'fedex', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'shippoacct_e2e_sync', 0, NOW(), NOW());

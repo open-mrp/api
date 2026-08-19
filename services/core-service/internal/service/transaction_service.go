@@ -177,8 +177,18 @@ func (s *transactionSvcImpl) CreateTransaction(ctx context.Context, params domai
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *transactionSvcImpl) *apierror.APIError {
 			txRepo := txSvc.repos.NewTransactionRepo()
 
-			// Auto-populate responsible user from identity if not explicitly provided.
+			// Auto-populate responsible user from identity if not explicitly provided. Only a
+			// person can be held responsible, so an API key or agent has to name one — and must
+			// be told which field is missing rather than handed a bare not-found for the
+			// account user its actor ID was never going to match.
 			if params.ResponsibleUserID == nil {
+				if !identity.HasUserActor() {
+					return apierror.NewValidationErrorWithParam(
+						"A responsible user is required when the caller is not a user.",
+						"responsible_user_id",
+					)
+				}
+
 				accountUserRepo := txSvc.repos.NewAccountUserRepo()
 				accountUser, apiErr := accountUserRepo.FindByAccountAndUserID(txCtx, identity.Actor.ID, params.AccountID)
 				if apiErr != nil {

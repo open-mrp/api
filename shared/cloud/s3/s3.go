@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"os"
 	"time"
 
 	apierror "github.com/augno/api/shared/errors"
@@ -41,6 +42,19 @@ type Client struct {
 	presigner *s3.PresignClient
 }
 
+// endpointEnvVar points the client at an S3-compatible server instead of AWS. It exists so
+// the e2e stack can run against a local MinIO: without it, every upload path is either
+// untestable or silently skipped, and the code that stores a photo or an export is exactly
+// the code most likely to be wrong in a way nothing else notices.
+//
+// Unset in every deployed environment, where the real AWS endpoint is resolved from the region.
+const endpointEnvVar = "S3_ENDPOINT_URL"
+
+// HasEndpointOverride reports whether an S3-compatible endpoint is configured in place of AWS.
+func HasEndpointOverride() bool {
+	return os.Getenv(endpointEnvVar) != ""
+}
+
 // NewClient creates a new S3 client using the given AWS region.
 //
 // The EC2 IMDS credential provider is disabled: pods receive credentials via IRSA (web identity token), never the node instance role, and IMDS is unreachable from pods anyway (the node hop limit is pinned to 1 as MCP hardening). Leaving IMDS in the credential chain makes credential resolution block for the full request deadline (~5s) on every call when no other provider is configured, rather than failing fast.
@@ -53,7 +67,17 @@ func NewClient(ctx context.Context, region string) (*Client, *apierror.APIError)
 		return nil, apierror.NewInternalError(err, "Failed to load AWS configuration for S3.")
 	}
 
-	client := s3.NewFromConfig(cfg)
+	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
+		endpoint := os.Getenv(endpointEnvVar)
+		if endpoint == "" {
+			return
+		}
+
+		// A local server has no per-bucket DNS, so the bucket has to travel in the path.
+		o.BaseEndpoint = aws.String(endpoint)
+		o.UsePathStyle = true
+	})
+
 	return &Client{
 		client:    client,
 		presigner: s3.NewPresignClient(client),

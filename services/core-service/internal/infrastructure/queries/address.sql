@@ -5,6 +5,7 @@ SELECT
     a.phone,
     a.email,
     a.is_drop_ship,
+    a.receive_calendar_id,
     a.created_at,
     a.updated_at,
     g.id AS geolocation_id,
@@ -16,7 +17,8 @@ SELECT
     g.country,
     g.google_place_id,
     g.latitude,
-    g.longitude
+    g.longitude,
+    g.timezone
 FROM address a
 JOIN geolocation g ON a.geolocation_id = g.id
 JOIN account_address aa ON aa.address_id = a.id
@@ -50,6 +52,7 @@ SELECT
     a.phone,
     a.email,
     a.is_drop_ship,
+    a.receive_calendar_id,
     a.created_at,
     a.updated_at,
     g.id AS geolocation_id,
@@ -61,7 +64,8 @@ SELECT
     g.country,
     g.google_place_id,
     g.latitude,
-    g.longitude
+    g.longitude,
+    g.timezone
 FROM address a
 JOIN geolocation g ON a.geolocation_id = g.id
 JOIN account_address aa ON aa.address_id = a.id
@@ -94,6 +98,7 @@ SELECT
     a.phone,
     a.email,
     a.is_drop_ship,
+    a.receive_calendar_id,
     a.created_at,
     a.updated_at,
     g.id AS geolocation_id,
@@ -105,7 +110,8 @@ SELECT
     g.country,
     g.google_place_id,
     g.latitude,
-    g.longitude
+    g.longitude,
+    g.timezone
 FROM address a
 JOIN geolocation g ON a.geolocation_id = g.id
 JOIN account_address aa ON aa.address_id = a.id
@@ -122,6 +128,7 @@ SELECT
     a.phone,
     a.email,
     a.is_drop_ship,
+    a.receive_calendar_id,
     a.created_at,
     a.updated_at,
     g.id AS geolocation_id,
@@ -133,7 +140,8 @@ SELECT
     g.country,
     g.google_place_id,
     g.latitude,
-    g.longitude
+    g.longitude,
+    g.timezone
 FROM address a
 JOIN geolocation g ON a.geolocation_id = g.id
 JOIN account_address aa ON aa.address_id = a.id
@@ -172,6 +180,7 @@ INSERT INTO address (
     phone,
     email,
     is_drop_ship,
+    receive_calendar_id,
     geolocation_id,
     created_at,
     updated_at
@@ -181,6 +190,7 @@ INSERT INTO address (
     sqlc.narg('phone'),
     sqlc.narg('email'),
     sqlc.arg('is_drop_ship'),
+    sqlc.narg('receive_calendar_id'),
     sqlc.arg('geolocation_id'),
     NOW(3),
     NOW(3)
@@ -207,6 +217,7 @@ UPDATE address SET
     phone = sqlc.narg('phone'),
     email = sqlc.narg('email'),
     is_drop_ship = COALESCE(sqlc.narg('is_drop_ship'), is_drop_ship),
+    receive_calendar_id = sqlc.narg('receive_calendar_id'),
     updated_at = NOW(3)
 WHERE id = sqlc.arg('id');
 

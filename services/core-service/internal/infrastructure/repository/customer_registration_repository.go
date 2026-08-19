@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	gosql "database/sql"
-	"fmt"
 
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/services/core-service/internal/infrastructure/sqlc"
@@ -11,7 +10,6 @@ import (
 	"github.com/augno/api/shared/db"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/id"
-	"github.com/augno/api/shared/safeconv"
 	"github.com/augno/api/shared/tracing"
 )
 
@@ -59,46 +57,24 @@ func (r *customerRegistrationRepoImpl) CreateAccountUserLink(ctx context.Context
 	return nil
 }
 
-func (r *customerRegistrationRepoImpl) GetNextCustomerNumber(ctx context.Context, accountID string) (int64, *apierror.APIError) {
-	ctx, span := customerRegistrationRepoTracer.Start(ctx, "repository.customer_registration.get_next_customer_number")
+func (r *customerRegistrationRepoImpl) AllocateNextCustomerNumber(ctx context.Context, sysPropertyID, accountID string) (int64, *apierror.APIError) {
+	ctx, span := customerRegistrationRepoTracer.Start(ctx, "repository.customer_registration.allocate_next_customer_number")
 	defer span.End()
 
-	raw, err := r.queries.GetNextCustomerNumber(ctx, accountID)
+	res, err := r.queries.AllocateNextCustomerNumber(ctx, sqlc.AllocateNextCustomerNumberParams{
+		ID:        sysPropertyID,
+		AccountID: accountID,
+	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return 0, tracing.Trace(span, apiErr)
 	}
 
-	// COALESCE returns interface{} — convert to int64
-	switch v := raw.(type) {
-	case int64:
-		return v, nil
-	case float64:
-		return int64(v), nil
-	case []uint8:
-		var n int64
-		for _, b := range v {
-			n = n*10 + int64(b-'0')
-		}
-		return n, nil
-	default:
-		return 0, tracing.Trace(span, apierror.NewInternalError(fmt.Errorf("unexpected type %T for customer number", raw), "Failed to parse customer number."))
-	}
-}
-
-func (r *customerRegistrationRepoImpl) UpdateNextCustomerNumber(ctx context.Context, sysPropertyID, accountID string, value int64) *apierror.APIError {
-	ctx, span := customerRegistrationRepoTracer.Start(ctx, "repository.customer_registration.update_next_customer_number")
-	defer span.End()
-
-	err := r.queries.UpdateNextCustomerNumber(ctx, sqlc.UpdateNextCustomerNumberParams{
-		ID:        sysPropertyID,
-		AccountID: accountID,
-		Value:     safeconv.Int64ToInt32(value),
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return tracing.Trace(span, apiErr)
+	number, err := res.LastInsertId()
+	if err != nil {
+		return 0, tracing.Trace(span, apierror.NewInternalError(err, "Failed to read the reserved customer number."))
 	}
 
-	return nil
+	return number, nil
 }
 
 func (r *customerRegistrationRepoImpl) CreateNewCustomerAccount(ctx context.Context, params domain.CreateNewCustomerAccountParams) (string, *apierror.APIError) {

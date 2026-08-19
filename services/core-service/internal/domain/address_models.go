@@ -19,18 +19,22 @@ type Geolocation struct {
 	GooglePlaceID *string  `audit:"google_place_id"`
 	Latitude      *float64 `audit:"latitude"`
 	Longitude     *float64 `audit:"longitude"`
+	// Timezone is the IANA zone resolved from country and state on write. Nil means it has not been resolved yet, and readers fall back to deriving it.
+	Timezone *string `audit:"timezone"`
 }
 
 // Address represents an address with its associated geolocation.
 type Address struct {
-	ID          string
-	Name        string       `audit:"name"`
-	Phone       *string      `audit:"phone"`
-	Email       *string      `audit:"email"`
-	IsDropShip  bool         `audit:"is_drop_ship"`
-	Geolocation *Geolocation `audit:"geolocation"`
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID         string
+	Name       string  `audit:"name"`
+	Phone      *string `audit:"phone"`
+	Email      *string `audit:"email"`
+	IsDropShip bool    `audit:"is_drop_ship"`
+	// ReceiveCalendarID names the days this dock accepts freight, overriding the customer's own calendar. Set when one of a customer's sites keeps different days from the rest.
+	ReceiveCalendarID *string      `audit:"receive_calendar_id"`
+	Geolocation       *Geolocation `audit:"geolocation"`
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
 }
 
 // ListAddressesParams contains the parameters for listing addresses.
@@ -56,33 +60,35 @@ type GetAddressParams struct {
 
 // CreateAddressParams contains the parameters for creating an address.
 type CreateAddressParams struct {
-	AccountID   string
-	Name        string
-	Phone       *string
-	Email       *string
-	IsDropShip  bool
-	StreetLine1 *string
-	StreetLine2 *string
-	Locality    *string
-	State       *string
-	PostalCode  *string
-	Country     string
+	AccountID         string
+	Name              string
+	Phone             *string
+	Email             *string
+	IsDropShip        bool
+	ReceiveCalendarID *string
+	StreetLine1       *string
+	StreetLine2       *string
+	Locality          *string
+	State             *string
+	PostalCode        *string
+	Country           string
 }
 
 // UpdateAddressParams contains the parameters for updating an address.
 type UpdateAddressParams struct {
-	AccountID   string
-	AddressID   string
-	Name        *string
-	Phone       field.Clearable[string]
-	Email       field.Clearable[string]
-	IsDropShip  *bool
-	StreetLine1 *string
-	StreetLine2 field.Clearable[string]
-	Locality    *string
-	State       *string
-	PostalCode  *string
-	Country     *string
+	AccountID         string
+	AddressID         string
+	Name              *string
+	Phone             field.Clearable[string]
+	Email             field.Clearable[string]
+	IsDropShip        *bool
+	ReceiveCalendarID *string
+	StreetLine1       *string
+	StreetLine2       field.Clearable[string]
+	Locality          *string
+	State             *string
+	PostalCode        *string
+	Country           *string
 }
 
 // DeleteAddressParams contains the parameters for deleting an address.

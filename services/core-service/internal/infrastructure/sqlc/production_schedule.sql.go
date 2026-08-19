@@ -1348,6 +1348,24 @@ func (q *Queries) ListProductionSchedulesForward(ctx context.Context, arg ListPr
 	return items, nil
 }
 
+const productionScheduleVersionCounterExists = `-- name: ProductionScheduleVersionCounterExists :one
+SELECT EXISTS (
+    SELECT 1 FROM sys_property
+    WHERE account_id = ?
+    AND sys_property_type_code = 'production_schedule_version'
+) AS counter_exists
+`
+
+// ProductionScheduleVersionCounterExists reports whether the account's counter has been primed.
+// A point lookup on the unique key, so the seed below — which scans the account's schedules —
+// runs once in an account's lifetime rather than on every generation.
+func (q *Queries) ProductionScheduleVersionCounterExists(ctx context.Context, accountID string) (bool, error) {
+	row := q.db.QueryRowContext(ctx, productionScheduleVersionCounterExists, accountID)
+	var counter_exists bool
+	err := row.Scan(&counter_exists)
+	return counter_exists, err
+}
+
 const seedProductionScheduleVersionCounter = `-- name: SeedProductionScheduleVersionCounter :exec
 INSERT INTO sys_property (id, account_id, sys_property_type_code, value, created_at, updated_at)
 SELECT ?, ?, 'production_schedule_version',
@@ -1363,6 +1381,11 @@ type SeedProductionScheduleVersionCounterParams struct {
 }
 
 // SeedProductionScheduleVersionCounter primes the counter from existing rows the first time an account allocates, so a database that already has versions does not restart numbering at 1.
+//
+// INSERT ... SELECT takes shared locks over the production_schedule rows it aggregates. Running
+// it on every generation put those range locks ahead of the insert the same transaction was
+// about to make into that table, so two planners generating at once deadlocked reliably. Guard
+// it with the existence check above and the hot path touches only the counter row.
 func (q *Queries) SeedProductionScheduleVersionCounter(ctx context.Context, arg SeedProductionScheduleVersionCounterParams) error {
 	_, err := q.db.ExecContext(ctx, seedProductionScheduleVersionCounter, arg.ID, arg.AccountID, arg.AccountID)
 	return err

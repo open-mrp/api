@@ -443,14 +443,35 @@ func getFieldMetadata(fieldErr validator.FieldError, structValue any) fieldMetad
 		rv = rv.Elem()
 	}
 
-	rt := rv.Type()
+	if meta, found := lookupFieldMetadata(rv.Type(), fieldName); found {
+		return meta
+	}
+
+	return fieldMetadata{name: fieldName, source: "field"}
+}
+
+// lookupFieldMetadata finds a field by its Go name, descending into embedded structs.
+//
+// Request structs embed shared ones — every list request embeds PaginationRequest for `limit`,
+// `cursor`, and `q`. Searching only the outer type left those reported by their Go field name
+// ("Field 'Limit' must be at least 1"), naming an identifier the caller has never seen instead
+// of the query parameter they actually sent.
+func lookupFieldMetadata(rt reflect.Type, fieldName string) (fieldMetadata, bool) {
+	if rt.Kind() == reflect.Pointer {
+		rt = rt.Elem()
+	}
+	if rt.Kind() != reflect.Struct {
+		return fieldMetadata{}, false
+	}
+
+	var embedded []reflect.Type
 
 	for field := range rt.Fields() {
 		if field.Name == fieldName {
 			if jsonTag := field.Tag.Get("json"); jsonTag != "" {
 				jsonName := strings.Split(jsonTag, ",")[0]
 				if jsonName != "" && jsonName != "-" {
-					return fieldMetadata{name: jsonName, source: "field"}
+					return fieldMetadata{name: jsonName, source: "field"}, true
 				}
 			}
 
@@ -459,16 +480,28 @@ func getFieldMetadata(fieldErr validator.FieldError, structValue any) fieldMetad
 				if tagValue := field.Tag.Get(tagName); tagValue != "" {
 					tagNameValue := strings.Split(tagValue, ",")[0]
 					if tagNameValue != "" && tagNameValue != "-" {
-						return fieldMetadata{name: tagNameValue, source: tagName}
+						return fieldMetadata{name: tagNameValue, source: tagName}, true
 					}
 				}
 			}
 
-			return fieldMetadata{name: fieldName, source: "field"}
+			return fieldMetadata{name: fieldName, source: "field"}, true
+		}
+
+		if field.Anonymous {
+			embedded = append(embedded, field.Type)
 		}
 	}
 
-	return fieldMetadata{name: fieldName, source: "field"}
+	// Outer fields win over embedded ones, matching Go's own shadowing rules, so the embedded
+	// types are only searched once the outer struct has been ruled out.
+	for _, et := range embedded {
+		if meta, found := lookupFieldMetadata(et, fieldName); found {
+			return meta, true
+		}
+	}
+
+	return fieldMetadata{}, false
 }
 
 // formatSource converts an internal source identifier ("query", "path", etc.) into the human-readable prefix used in error messages (e.g. "Query parameter", "Path parameter"). The default "field" source maps to "Field".

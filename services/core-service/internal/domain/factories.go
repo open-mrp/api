@@ -31,6 +31,7 @@ type RepoFactory interface {
 	NewAttributeRepo() AttributeRepo
 	NewCarrierRepo() CarrierRepo
 	NewCarrierTransitEstimateRepo() CarrierTransitEstimateRepo
+	NewOperatingCalendarRepo() OperatingCalendarRepo
 	NewServiceLevelRepo() ServiceLevelRepo
 	NewItemRepo() ItemRepo
 	NewItemCategoryRepo() ItemCategoryRepo

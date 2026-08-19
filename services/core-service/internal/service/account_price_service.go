@@ -23,6 +23,7 @@ type accountPriceSvcImpl struct {
 	mediatorFactory domain.MediatorFactory
 	jobSvcFactory   domain.JobSvcFactory
 	txManager       TransactionManager
+	branding        BrandingAssets
 }
 
 // asyncBulkDeps hands the export engine the plumbing it runs on.
@@ -47,6 +48,9 @@ type AccountPriceSvcConfig struct {
 
 	// TxManager (required) wraps multi-step operations in database transactions.
 	TxManager TransactionManager
+
+	// Branding (optional) reads the merchant logo onto the price list's title page. Omitted, the document prints a text-only letterhead.
+	Branding BrandingAssets
 }
 
 func (c *AccountPriceSvcConfig) validate() error {
@@ -75,6 +79,7 @@ func NewAccountPriceSvc(config *AccountPriceSvcConfig) domain.AccountPriceSvc {
 		mediatorFactory: config.MediatorFactory,
 		jobSvcFactory:   config.JobSvcFactory,
 		txManager:       config.TxManager,
+		branding:        config.Branding,
 	}
 }
 
@@ -92,6 +97,7 @@ func (s *accountPriceSvcImpl) withTx(ctx context.Context, fn func(context.Contex
 			repos:           f,
 			mediatorFactory: s.mediatorFactory,
 			txManager:       s.txManager,
+			branding:        s.branding,
 		}
 		return fn(txCtx, txSvc)
 	})

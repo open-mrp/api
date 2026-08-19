@@ -58,6 +58,14 @@ const (
 	CoreProductionScheduleService_PreviewReleaseProductionScheduleWeek_FullMethodName    = "/core.CoreProductionScheduleService/PreviewReleaseProductionScheduleWeek"
 	CoreProductionScheduleService_ArchiveProductionSchedule_FullMethodName               = "/core.CoreProductionScheduleService/ArchiveProductionSchedule"
 	CoreProductionScheduleService_DeleteProductionSchedule_FullMethodName                = "/core.CoreProductionScheduleService/DeleteProductionSchedule"
+	CoreProductionScheduleService_ListOperatingCalendars_FullMethodName                  = "/core.CoreProductionScheduleService/ListOperatingCalendars"
+	CoreProductionScheduleService_GetOperatingCalendar_FullMethodName                    = "/core.CoreProductionScheduleService/GetOperatingCalendar"
+	CoreProductionScheduleService_CreateOperatingCalendar_FullMethodName                 = "/core.CoreProductionScheduleService/CreateOperatingCalendar"
+	CoreProductionScheduleService_UpdateOperatingCalendar_FullMethodName                 = "/core.CoreProductionScheduleService/UpdateOperatingCalendar"
+	CoreProductionScheduleService_DeleteOperatingCalendar_FullMethodName                 = "/core.CoreProductionScheduleService/DeleteOperatingCalendar"
+	CoreProductionScheduleService_ListOperatingCalendarClosures_FullMethodName           = "/core.CoreProductionScheduleService/ListOperatingCalendarClosures"
+	CoreProductionScheduleService_CreateOperatingCalendarClosure_FullMethodName          = "/core.CoreProductionScheduleService/CreateOperatingCalendarClosure"
+	CoreProductionScheduleService_DeleteOperatingCalendarClosure_FullMethodName          = "/core.CoreProductionScheduleService/DeleteOperatingCalendarClosure"
 )
 
 // CoreProductionScheduleServiceClient is the client API for CoreProductionScheduleService service.
@@ -134,6 +142,17 @@ type CoreProductionScheduleServiceClient interface {
 	ArchiveProductionSchedule(ctx context.Context, in *ArchiveProductionScheduleRequest, opts ...grpc.CallOption) (*ArchiveProductionScheduleResponse, error)
 	// DeleteProductionSchedule removes a draft version.
 	DeleteProductionSchedule(ctx context.Context, in *DeleteProductionScheduleRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Operating calendars: the days a plant tenders freight and a customer's dock accepts it,
+	// which every ship-by commitment is resolved against. They live on this service because the
+	// account settings that select them are the same settings the solver is configured with.
+	ListOperatingCalendars(ctx context.Context, in *ListOperatingCalendarsRequest, opts ...grpc.CallOption) (*ListOperatingCalendarsResponse, error)
+	GetOperatingCalendar(ctx context.Context, in *GetOperatingCalendarRequest, opts ...grpc.CallOption) (*OperatingCalendarInfo, error)
+	CreateOperatingCalendar(ctx context.Context, in *CreateOperatingCalendarRequest, opts ...grpc.CallOption) (*OperatingCalendarInfo, error)
+	UpdateOperatingCalendar(ctx context.Context, in *UpdateOperatingCalendarRequest, opts ...grpc.CallOption) (*OperatingCalendarInfo, error)
+	DeleteOperatingCalendar(ctx context.Context, in *DeleteOperatingCalendarRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	ListOperatingCalendarClosures(ctx context.Context, in *ListOperatingCalendarClosuresRequest, opts ...grpc.CallOption) (*ListOperatingCalendarClosuresResponse, error)
+	CreateOperatingCalendarClosure(ctx context.Context, in *CreateOperatingCalendarClosureRequest, opts ...grpc.CallOption) (*OperatingCalendarClosureInfo, error)
+	DeleteOperatingCalendarClosure(ctx context.Context, in *DeleteOperatingCalendarClosureRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type coreProductionScheduleServiceClient struct {
@@ -484,6 +503,86 @@ func (c *coreProductionScheduleServiceClient) DeleteProductionSchedule(ctx conte
 	return out, nil
 }
 
+func (c *coreProductionScheduleServiceClient) ListOperatingCalendars(ctx context.Context, in *ListOperatingCalendarsRequest, opts ...grpc.CallOption) (*ListOperatingCalendarsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListOperatingCalendarsResponse)
+	err := c.cc.Invoke(ctx, CoreProductionScheduleService_ListOperatingCalendars_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreProductionScheduleServiceClient) GetOperatingCalendar(ctx context.Context, in *GetOperatingCalendarRequest, opts ...grpc.CallOption) (*OperatingCalendarInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(OperatingCalendarInfo)
+	err := c.cc.Invoke(ctx, CoreProductionScheduleService_GetOperatingCalendar_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreProductionScheduleServiceClient) CreateOperatingCalendar(ctx context.Context, in *CreateOperatingCalendarRequest, opts ...grpc.CallOption) (*OperatingCalendarInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(OperatingCalendarInfo)
+	err := c.cc.Invoke(ctx, CoreProductionScheduleService_CreateOperatingCalendar_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreProductionScheduleServiceClient) UpdateOperatingCalendar(ctx context.Context, in *UpdateOperatingCalendarRequest, opts ...grpc.CallOption) (*OperatingCalendarInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(OperatingCalendarInfo)
+	err := c.cc.Invoke(ctx, CoreProductionScheduleService_UpdateOperatingCalendar_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreProductionScheduleServiceClient) DeleteOperatingCalendar(ctx context.Context, in *DeleteOperatingCalendarRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, CoreProductionScheduleService_DeleteOperatingCalendar_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreProductionScheduleServiceClient) ListOperatingCalendarClosures(ctx context.Context, in *ListOperatingCalendarClosuresRequest, opts ...grpc.CallOption) (*ListOperatingCalendarClosuresResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListOperatingCalendarClosuresResponse)
+	err := c.cc.Invoke(ctx, CoreProductionScheduleService_ListOperatingCalendarClosures_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreProductionScheduleServiceClient) CreateOperatingCalendarClosure(ctx context.Context, in *CreateOperatingCalendarClosureRequest, opts ...grpc.CallOption) (*OperatingCalendarClosureInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(OperatingCalendarClosureInfo)
+	err := c.cc.Invoke(ctx, CoreProductionScheduleService_CreateOperatingCalendarClosure_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreProductionScheduleServiceClient) DeleteOperatingCalendarClosure(ctx context.Context, in *DeleteOperatingCalendarClosureRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, CoreProductionScheduleService_DeleteOperatingCalendarClosure_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CoreProductionScheduleServiceServer is the server API for CoreProductionScheduleService service.
 // All implementations must embed UnimplementedCoreProductionScheduleServiceServer
 // for forward compatibility.
@@ -558,6 +657,17 @@ type CoreProductionScheduleServiceServer interface {
 	ArchiveProductionSchedule(context.Context, *ArchiveProductionScheduleRequest) (*ArchiveProductionScheduleResponse, error)
 	// DeleteProductionSchedule removes a draft version.
 	DeleteProductionSchedule(context.Context, *DeleteProductionScheduleRequest) (*emptypb.Empty, error)
+	// Operating calendars: the days a plant tenders freight and a customer's dock accepts it,
+	// which every ship-by commitment is resolved against. They live on this service because the
+	// account settings that select them are the same settings the solver is configured with.
+	ListOperatingCalendars(context.Context, *ListOperatingCalendarsRequest) (*ListOperatingCalendarsResponse, error)
+	GetOperatingCalendar(context.Context, *GetOperatingCalendarRequest) (*OperatingCalendarInfo, error)
+	CreateOperatingCalendar(context.Context, *CreateOperatingCalendarRequest) (*OperatingCalendarInfo, error)
+	UpdateOperatingCalendar(context.Context, *UpdateOperatingCalendarRequest) (*OperatingCalendarInfo, error)
+	DeleteOperatingCalendar(context.Context, *DeleteOperatingCalendarRequest) (*emptypb.Empty, error)
+	ListOperatingCalendarClosures(context.Context, *ListOperatingCalendarClosuresRequest) (*ListOperatingCalendarClosuresResponse, error)
+	CreateOperatingCalendarClosure(context.Context, *CreateOperatingCalendarClosureRequest) (*OperatingCalendarClosureInfo, error)
+	DeleteOperatingCalendarClosure(context.Context, *DeleteOperatingCalendarClosureRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedCoreProductionScheduleServiceServer()
 }
 
@@ -669,6 +779,30 @@ func (UnimplementedCoreProductionScheduleServiceServer) ArchiveProductionSchedul
 }
 func (UnimplementedCoreProductionScheduleServiceServer) DeleteProductionSchedule(context.Context, *DeleteProductionScheduleRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteProductionSchedule not implemented")
+}
+func (UnimplementedCoreProductionScheduleServiceServer) ListOperatingCalendars(context.Context, *ListOperatingCalendarsRequest) (*ListOperatingCalendarsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListOperatingCalendars not implemented")
+}
+func (UnimplementedCoreProductionScheduleServiceServer) GetOperatingCalendar(context.Context, *GetOperatingCalendarRequest) (*OperatingCalendarInfo, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetOperatingCalendar not implemented")
+}
+func (UnimplementedCoreProductionScheduleServiceServer) CreateOperatingCalendar(context.Context, *CreateOperatingCalendarRequest) (*OperatingCalendarInfo, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateOperatingCalendar not implemented")
+}
+func (UnimplementedCoreProductionScheduleServiceServer) UpdateOperatingCalendar(context.Context, *UpdateOperatingCalendarRequest) (*OperatingCalendarInfo, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateOperatingCalendar not implemented")
+}
+func (UnimplementedCoreProductionScheduleServiceServer) DeleteOperatingCalendar(context.Context, *DeleteOperatingCalendarRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteOperatingCalendar not implemented")
+}
+func (UnimplementedCoreProductionScheduleServiceServer) ListOperatingCalendarClosures(context.Context, *ListOperatingCalendarClosuresRequest) (*ListOperatingCalendarClosuresResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListOperatingCalendarClosures not implemented")
+}
+func (UnimplementedCoreProductionScheduleServiceServer) CreateOperatingCalendarClosure(context.Context, *CreateOperatingCalendarClosureRequest) (*OperatingCalendarClosureInfo, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateOperatingCalendarClosure not implemented")
+}
+func (UnimplementedCoreProductionScheduleServiceServer) DeleteOperatingCalendarClosure(context.Context, *DeleteOperatingCalendarClosureRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteOperatingCalendarClosure not implemented")
 }
 func (UnimplementedCoreProductionScheduleServiceServer) mustEmbedUnimplementedCoreProductionScheduleServiceServer() {
 }
@@ -1304,6 +1438,150 @@ func _CoreProductionScheduleService_DeleteProductionSchedule_Handler(srv interfa
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CoreProductionScheduleService_ListOperatingCalendars_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListOperatingCalendarsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreProductionScheduleServiceServer).ListOperatingCalendars(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreProductionScheduleService_ListOperatingCalendars_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreProductionScheduleServiceServer).ListOperatingCalendars(ctx, req.(*ListOperatingCalendarsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreProductionScheduleService_GetOperatingCalendar_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetOperatingCalendarRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreProductionScheduleServiceServer).GetOperatingCalendar(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreProductionScheduleService_GetOperatingCalendar_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreProductionScheduleServiceServer).GetOperatingCalendar(ctx, req.(*GetOperatingCalendarRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreProductionScheduleService_CreateOperatingCalendar_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateOperatingCalendarRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreProductionScheduleServiceServer).CreateOperatingCalendar(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreProductionScheduleService_CreateOperatingCalendar_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreProductionScheduleServiceServer).CreateOperatingCalendar(ctx, req.(*CreateOperatingCalendarRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreProductionScheduleService_UpdateOperatingCalendar_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateOperatingCalendarRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreProductionScheduleServiceServer).UpdateOperatingCalendar(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreProductionScheduleService_UpdateOperatingCalendar_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreProductionScheduleServiceServer).UpdateOperatingCalendar(ctx, req.(*UpdateOperatingCalendarRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreProductionScheduleService_DeleteOperatingCalendar_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteOperatingCalendarRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreProductionScheduleServiceServer).DeleteOperatingCalendar(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreProductionScheduleService_DeleteOperatingCalendar_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreProductionScheduleServiceServer).DeleteOperatingCalendar(ctx, req.(*DeleteOperatingCalendarRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreProductionScheduleService_ListOperatingCalendarClosures_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListOperatingCalendarClosuresRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreProductionScheduleServiceServer).ListOperatingCalendarClosures(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreProductionScheduleService_ListOperatingCalendarClosures_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreProductionScheduleServiceServer).ListOperatingCalendarClosures(ctx, req.(*ListOperatingCalendarClosuresRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreProductionScheduleService_CreateOperatingCalendarClosure_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateOperatingCalendarClosureRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreProductionScheduleServiceServer).CreateOperatingCalendarClosure(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreProductionScheduleService_CreateOperatingCalendarClosure_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreProductionScheduleServiceServer).CreateOperatingCalendarClosure(ctx, req.(*CreateOperatingCalendarClosureRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreProductionScheduleService_DeleteOperatingCalendarClosure_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteOperatingCalendarClosureRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreProductionScheduleServiceServer).DeleteOperatingCalendarClosure(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreProductionScheduleService_DeleteOperatingCalendarClosure_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreProductionScheduleServiceServer).DeleteOperatingCalendarClosure(ctx, req.(*DeleteOperatingCalendarClosureRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CoreProductionScheduleService_ServiceDesc is the grpc.ServiceDesc for CoreProductionScheduleService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1446,6 +1724,38 @@ var CoreProductionScheduleService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteProductionSchedule",
 			Handler:    _CoreProductionScheduleService_DeleteProductionSchedule_Handler,
+		},
+		{
+			MethodName: "ListOperatingCalendars",
+			Handler:    _CoreProductionScheduleService_ListOperatingCalendars_Handler,
+		},
+		{
+			MethodName: "GetOperatingCalendar",
+			Handler:    _CoreProductionScheduleService_GetOperatingCalendar_Handler,
+		},
+		{
+			MethodName: "CreateOperatingCalendar",
+			Handler:    _CoreProductionScheduleService_CreateOperatingCalendar_Handler,
+		},
+		{
+			MethodName: "UpdateOperatingCalendar",
+			Handler:    _CoreProductionScheduleService_UpdateOperatingCalendar_Handler,
+		},
+		{
+			MethodName: "DeleteOperatingCalendar",
+			Handler:    _CoreProductionScheduleService_DeleteOperatingCalendar_Handler,
+		},
+		{
+			MethodName: "ListOperatingCalendarClosures",
+			Handler:    _CoreProductionScheduleService_ListOperatingCalendarClosures_Handler,
+		},
+		{
+			MethodName: "CreateOperatingCalendarClosure",
+			Handler:    _CoreProductionScheduleService_CreateOperatingCalendarClosure_Handler,
+		},
+		{
+			MethodName: "DeleteOperatingCalendarClosure",
+			Handler:    _CoreProductionScheduleService_DeleteOperatingCalendarClosure_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

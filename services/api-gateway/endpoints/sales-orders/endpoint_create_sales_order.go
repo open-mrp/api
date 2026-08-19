@@ -59,7 +59,17 @@ type CreateSalesOrderRequest struct {
 	// The discount is realized as an extra negative-priced line on the order rather than as a separate total.
 	OrderDiscountID field.Optional[string] `json:"order_discount_id,omitzero" validate:"omitempty"`
 	// Date delivery is promised to the customer.
+	//
+	// The order's ship-by date is worked back from this: the goods have to reach the customer on a day they receive, so transit and both operating calendars are subtracted from it. Mutually exclusive with lead_time_override_days and ship_by_override_date.
 	PromisedAt field.Optional[time.Time] `json:"promised_at,omitzero"`
+	// Days between this order being issued and it being due to ship, replacing the customer's standing lead time for this order alone.
+	//
+	// Already a ship lead time, so no carrier transit is subtracted from it. Mutually exclusive with promised_at and ship_by_override_date.
+	LeadTimeOverrideDays field.Optional[int32] `json:"lead_time_override_days,omitzero" validate:"omitempty,gte=0,lte=3650"`
+	// The exact date the order is due to ship, bypassing transit and the customer's receiving days.
+	//
+	// Still moved back to the nearest earlier day the plant ships on, since a date nobody can ship on is not a deadline. Mutually exclusive with promised_at and lead_time_override_days.
+	ShipByOverrideDate field.Optional[time.Time] `json:"ship_by_override_date,omitzero"`
 	// Bill-to address ID.
 	//
 	// Must reference an existing address on the order's owner or buyer account.

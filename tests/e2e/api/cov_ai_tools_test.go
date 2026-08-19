@@ -228,8 +228,8 @@ func TestCovAiTools_ToolsQueryTooLong(t *testing.T) {
 	status, body, err := apiClient.GetListRaw(aiToolsPath, url.Values{"q": {strings.Repeat("a", 501)}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
-	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
-	assertErrorParam(t, errObj, "Query")
+	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	assertErrorParam(t, errObj, "q")
 }
 
 // ──────────────────────────────────────────────
@@ -255,8 +255,8 @@ func TestCovAiTools_ToolsLimitValidation(t *testing.T) {
 			status, body, err := apiClient.GetListRaw(aiToolsPath, url.Values{"limit": {tc.limit}})
 			require.NoError(t, err)
 			requireStatus(t, 400, status, body)
-			errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
-			assertErrorParam(t, errObj, "Limit")
+			errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+			assertErrorParam(t, errObj, "limit")
 		})
 	}
 }
@@ -558,8 +558,8 @@ func TestCovAiTools_ToolGroupsQueryTooLong(t *testing.T) {
 	status, body, err := apiClient.GetListRaw(toolGroupsPath, url.Values{"q": {strings.Repeat("a", 501)}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
-	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
-	assertErrorParam(t, errObj, "Query")
+	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	assertErrorParam(t, errObj, "q")
 }
 
 // ──────────────────────────────────────────────
@@ -585,8 +585,8 @@ func TestCovAiTools_ToolGroupsLimitValidation(t *testing.T) {
 			status, body, err := apiClient.GetListRaw(toolGroupsPath, url.Values{"limit": {tc.limit}})
 			require.NoError(t, err)
 			requireStatus(t, 400, status, body)
-			errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
-			assertErrorParam(t, errObj, "Limit")
+			errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+			assertErrorParam(t, errObj, "limit")
 		})
 	}
 }

@@ -17,6 +17,7 @@ INSERT INTO account_production_schedule_setting (
     shifts_per_day, hours_per_shift, work_days_per_week, weeks_per_year,
     capacity_headroom_pct, default_lot_units,
     default_customer_lead_time_days, default_fulfillment_policy_code,
+    ship_calendar_id, receive_calendar_id,
     is_enabled, generation_cron, generation_timezone, auto_publish,
     created_at, updated_at
 ) VALUES (
@@ -30,6 +31,7 @@ INSERT INTO account_production_schedule_setting (
     sqlc.arg('shifts_per_day'), sqlc.arg('hours_per_shift'), sqlc.arg('work_days_per_week'), sqlc.arg('weeks_per_year'),
     sqlc.arg('capacity_headroom_pct'), sqlc.arg('default_lot_units'),
     sqlc.arg('default_customer_lead_time_days'), sqlc.arg('default_fulfillment_policy_code'),
+    sqlc.narg('ship_calendar_id'), sqlc.narg('receive_calendar_id'),
     sqlc.arg('is_enabled'), sqlc.narg('generation_cron'), sqlc.arg('generation_timezone'), sqlc.arg('auto_publish'),
     NOW(3), NOW(3)
 )
@@ -60,6 +62,8 @@ ON DUPLICATE KEY UPDATE
     capacity_headroom_pct = VALUES(capacity_headroom_pct),
     default_lot_units = VALUES(default_lot_units),
     default_customer_lead_time_days = VALUES(default_customer_lead_time_days),
+    ship_calendar_id = VALUES(ship_calendar_id),
+    receive_calendar_id = VALUES(receive_calendar_id),
     default_fulfillment_policy_code = VALUES(default_fulfillment_policy_code),
     is_enabled = VALUES(is_enabled),
     generation_cron = VALUES(generation_cron),

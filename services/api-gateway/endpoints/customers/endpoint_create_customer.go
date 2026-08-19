@@ -55,6 +55,10 @@ type CreateCustomerRequest struct {
 	//
 	// Sets each order's `ship_by_date` when it is issued. Leave unset to inherit the customer's account group lead time, then the account default.
 	LeadTimeDays field.Optional[int32] `json:"lead_time_days,omitzero" validate:"omitempty,gte=0,lte=3650"`
+	// The operating calendar naming the days this customer's dock accepts freight.
+	//
+	// Sits in the same chain as lead_time_days: leaving it unset falls through to the customer's group, then the account default, then Monday to Friday. A promised delivery date is never worked back from a day nobody is there to receive on.
+	ReceiveCalendarID field.Optional[string] `json:"receive_calendar_id,omitzero" validate:"omitempty"`
 	// ID of the carrier used on this customer's orders when the order does not specify one.
 	DefaultCarrierID string `json:"default_carrier_id" validate:"required"`
 	// ID of the carrier service level used when an order takes its carrier from this customer's default.

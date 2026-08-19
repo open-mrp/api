@@ -592,6 +592,17 @@ func (s *billingSvcImpl) RequestEnterpriseUpgrade(ctx context.Context, input dom
 	ctx, span := tracing.StartSpan(ctx, billingSvcTracer, "service.billing.request_enterprise_upgrade")
 	defer span.End()
 
+	// The inquiry is a request for a salesperson to contact a person, and it carries that
+	// person's name and email. An API key names nobody, so the actor lookup below would
+	// otherwise fail as a bare not-found that says nothing about why.
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckHasUserActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
 	repo := s.repos.NewAccountUsageRepo()
 
 	accountName, planCode, apiErr := repo.GetAccountNameAndPlanCode(ctx, input.AccountID)

@@ -136,7 +136,7 @@ func TestCovSalesAccountStatuses_LimitZeroRejected(t *testing.T) {
 	status, body, err := apiClient.GetListRaw(accountStatusesPath, url.Values{"limit": {"0"}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
-	requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
+	requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
 }
 
 func TestCovSalesAccountStatuses_LimitNegativeRejected(t *testing.T) {
@@ -144,7 +144,7 @@ func TestCovSalesAccountStatuses_LimitNegativeRejected(t *testing.T) {
 	status, body, err := apiClient.GetListRaw(accountStatusesPath, url.Values{"limit": {"-1"}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
-	requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
+	requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
 }
 
 func TestCovSalesAccountStatuses_LimitTooLargeRejected(t *testing.T) {
@@ -152,7 +152,7 @@ func TestCovSalesAccountStatuses_LimitTooLargeRejected(t *testing.T) {
 	status, body, err := apiClient.GetListRaw(accountStatusesPath, url.Values{"limit": {"1001"}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
-	requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
+	requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
 }
 
 func TestCovSalesAccountStatuses_LimitNonNumericRejected(t *testing.T) {
@@ -176,7 +176,7 @@ func TestCovSalesAccountStatuses_QueryTooLongRejected(t *testing.T) {
 	status, body, err := apiClient.GetListRaw(accountStatusesPath, url.Values{"q": {longQ}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
-	requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
+	requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
 }
 
 func TestCovSalesAccountStatuses_UnknownQueryParamRejected(t *testing.T) {

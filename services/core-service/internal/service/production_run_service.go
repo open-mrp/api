@@ -480,13 +480,19 @@ func (s *productionRunSvcImpl) AddBatchesToProductionRun(ctx context.Context, pa
 			batchRepo := txSvc.repos.NewBatchRepo()
 			prRepo := txSvc.repos.NewProductionRunRepo()
 
+			// Accumulated inside the transaction and published to `results` only once it has
+			// been built. Appending to the outer slice directly would double the batches if the
+			// transaction were ever run twice, and the caller would be told it created each one
+			// of them.
+			created := make([]*domain.BaseBatch, 0, len(params.Batches))
+
 			for _, input := range params.Batches {
 				batchID, apiErr := id.GenID(id.BatchIDPrefix, nil)
 				if apiErr != nil {
 					return apiErr
 				}
 
-				created, apiErr := batchRepo.Create(txCtx, batchID, domain.CreateBatchParams{
+				batch, apiErr := batchRepo.Create(txCtx, batchID, domain.CreateBatchParams{
 					AccountID:         params.AccountID,
 					ItemID:            input.ItemID,
 					Quantity:          input.Quantity,
@@ -503,10 +509,12 @@ func (s *productionRunSvcImpl) AddBatchesToProductionRun(ctx context.Context, pa
 				if apiErr := prRepo.SetBatchProductionRunID(txCtx, params.AccountID, batchID, params.ProductionRunID); apiErr != nil {
 					return apiErr
 				}
-				created.ProductionRunID = &params.ProductionRunID
+				batch.ProductionRunID = &params.ProductionRunID
 
-				results = append(results, created)
+				created = append(created, batch)
 			}
+
+			results = created
 
 			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, results)
 		})

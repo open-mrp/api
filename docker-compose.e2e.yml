@@ -1,4 +1,42 @@
 services:
+  # An S3-compatible store so the upload and export paths run for real in e2e. Without it the
+  # only way to exercise a photo upload is to point at AWS, so those endpoints went untested.
+  minio-e2e:
+    image: minio/minio:latest
+    container_name: augno-minio-e2e
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: e2eaccesskey
+      MINIO_ROOT_PASSWORD: e2esecretkey
+      # Uploads request SSE-S3, which MinIO refuses unless it has a key to encrypt with.
+      # Supplying one keeps the production upload path unchanged rather than making the code
+      # skip encryption when it happens to be talking to a test server.
+      MINIO_KMS_SECRET_KEY: "e2e-key:eEVCcnhtcWZ5bHpaU2hEdWJRUEhzS3RWd05qWGFHZEM="
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - e2e
+
+  # Creates the buckets the services expect and exits. Services wait on it completing.
+  minio-e2e-init:
+    image: minio/mc:latest
+    container_name: augno-minio-init-e2e
+    depends_on:
+      minio-e2e:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set e2e http://minio-e2e:9000 e2eaccesskey e2esecretkey &&
+      for b in augno-account-photos augno-user-photos augno-shipping-labels augno-exports augno-chat-attachments augno-inbound-email; do
+        mc mb --ignore-existing e2e/$$b;
+      done
+      "
+    networks:
+      - e2e
+
   mysql-e2e:
     image: mysql:8
     container_name: augno-mysql-e2e
@@ -102,11 +140,21 @@ services:
       INTEGRATION_ENCRYPTION_KEY_ID: dev-key-1
       FRONTEND_URL: http://localhost:4200
       AUTH_SERVICE_URL: auth-service:9092
+      S3_ENDPOINT_URL: http://minio-e2e:9000
+      AWS_REGION: us-east-2
+      AWS_ACCESS_KEY_ID: e2eaccesskey
+      AWS_SECRET_ACCESS_KEY: e2esecretkey
+      ACCOUNT_PHOTOS_BUCKET: augno-account-photos
+      USER_PHOTOS_BUCKET: augno-user-photos
+      SHIPPING_LABELS_BUCKET: augno-shipping-labels
+      EXPORTS_BUCKET: augno-exports
     depends_on:
       mysql-e2e:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      minio-e2e-init:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "sh", "-c", "nc -z localhost 9092 || exit 1"]
       interval: 5s
@@ -191,6 +239,10 @@ services:
         SERVICE_NAME: billing-service
     container_name: augno-billing-service-e2e
     environment:
+      # Handed to the browser so Stripe.js can mount the card form. Not a credential — a
+      # publishable key is public by design — but the setup-billing response declares it
+      # required, so leaving it unset makes that response violate its own contract.
+      STRIPE_PUBLISHABLE_KEY: pk_test_e2e_stub
       PLATFORM: test
       PORT: "9092"
       DB_URL: root:Testing123!@tcp(mysql-e2e:3306)/augno?parseTime=true

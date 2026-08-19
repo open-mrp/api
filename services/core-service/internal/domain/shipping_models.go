@@ -50,6 +50,8 @@ type ShippingAddress struct {
 	Country string
 	Phone   *string
 	Email   *string
+	// Timezone is the stored IANA zone for this address, nil when it has not been resolved. Carried so a commitment can read a promised delivery instant as a local date rather than a UTC one.
+	Timezone *string
 }
 
 // IsEmpty reports whether no meaningful address was provided, so callers can fall back to a resolved origin.

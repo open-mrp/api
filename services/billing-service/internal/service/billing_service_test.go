@@ -81,6 +81,23 @@ func testIdentityCtx() context.Context {
 	return appctx.WithIdentity(context.Background(), &authtypes.Identity{Type: authtypes.IdentityActorTypeUser})
 }
 
+// testUserActorCtx carries a fully populated user actor, for the paths that need to know which
+// person is acting rather than merely that the caller is authenticated.
+func testUserActorCtx() context.Context {
+	return appctx.WithIdentity(context.Background(), &authtypes.Identity{
+		Type:  authtypes.IdentityActorTypeUser,
+		Actor: &authtypes.IdentityActor{ID: "usr_1"},
+	})
+}
+
+// testAPIKeyActorCtx carries an API-key actor, which names no person.
+func testAPIKeyActorCtx() context.Context {
+	return appctx.WithIdentity(context.Background(), &authtypes.Identity{
+		Type:  authtypes.IdentityActorTypeAPIKey,
+		Actor: &authtypes.IdentityActor{ID: "apky_1"},
+	})
+}
+
 // expectIdempotency sets up the standard idempotency expectations for a mutating method:
 // UpsertIdempotencyKey returns a fresh key at RecoveryPointStarted, and
 // CacheSuccessResponse / SetResponse succeed.
@@ -772,9 +789,22 @@ func (s *BillingSvcTestSuite) TestRequestEnterpriseUpgrade_HappyPath() {
 	s.accountUsageRepo.EXPECT().GetUserEmailByID(anyCtx, "usr_1").Return("john@test.com", nil, nil)
 	s.notificationClient.EXPECT().SendEnterpriseRequest(anyCtx, "acct_1", "Test Corp", "pro Plan", "John Doe", "john@test.com").Return(nil)
 
-	result, apiErr := s.billingSvc.RequestEnterpriseUpgrade(context.Background(), input)
+	result, apiErr := s.billingSvc.RequestEnterpriseUpgrade(testUserActorCtx(), input)
 	s.Nil(apiErr)
 	s.True(result.Success)
+}
+
+// The inquiry carries the requester's name and email to sales, so a caller that names no person
+// is refused up front rather than failing later on a user lookup that was never going to match.
+func (s *BillingSvcTestSuite) TestRequestEnterpriseUpgrade_APIKeyIsRefused() {
+	_, apiErr := s.billingSvc.RequestEnterpriseUpgrade(testAPIKeyActorCtx(), domain.RequestEnterpriseUpgradeInput{
+		AccountID: "acct_1",
+		ActorID:   "apky_1",
+		ActorName: "A Key",
+	})
+
+	s.NotNil(apiErr)
+	s.Contains(apiErr.PublicMessage, "must be a user")
 }
 
 // --- SubscribeToPricingPlan recoverability tests ---

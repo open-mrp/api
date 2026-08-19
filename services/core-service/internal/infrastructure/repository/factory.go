@@ -125,6 +125,10 @@ func (r *repoFactoryImpl) NewCarrierRepo() domain.CarrierRepo {
 	return NewCarrierRepo(r.queries)
 }
 
+func (r *repoFactoryImpl) NewOperatingCalendarRepo() domain.OperatingCalendarRepo {
+	return NewOperatingCalendarRepo(r.queries)
+}
+
 func (r *repoFactoryImpl) NewCarrierTransitEstimateRepo() domain.CarrierTransitEstimateRepo {
 	return NewCarrierTransitEstimateRepo(r.queries)
 }

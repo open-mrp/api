@@ -2,8 +2,13 @@ package db
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"encoding/binary"
 	"fmt"
+	"log/slog"
+	"math"
+	"time"
 
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -20,6 +25,18 @@ type SavepointRunner interface {
 	Run(ctx context.Context, fn func(ctx context.Context) *apierror.APIError) *apierror.APIError
 }
 
+// TransactionManager runs a unit of work in a database transaction.
+//
+// A transaction that InnoDB picks as a deadlock victim is re-run, so callbacks must be safe to
+// execute more than once. In practice that means a callback may only write to the database:
+// its writes are rolled back with the transaction, so a second run starts from the same state
+// the first one did. Anything that escapes the database does not get undone — an HTTP call to
+// a payment provider, a message published straight to the broker, a value appended to a slice
+// declared outside the callback — and would happen twice.
+//
+// That is why events are written to the outbox rather than published inline, and why results
+// are assembled inside the callback and handed out at the end. `make tx-audit` checks these
+// rules across the codebase.
 type TransactionManager[Q TxQuerier[Q], F any] interface {
 	WithTx(ctx context.Context, fn func(ctx context.Context, f F) *apierror.APIError) *apierror.APIError
 	// WithTxSavepoint is WithTx plus a SavepointRunner over the same transaction, for
@@ -27,6 +44,26 @@ type TransactionManager[Q TxQuerier[Q], F any] interface {
 	// commit together at the end, and a mid-batch crash rolls the whole thing back.
 	WithTxSavepoint(ctx context.Context, fn func(ctx context.Context, f F, sp SavepointRunner) *apierror.APIError) *apierror.APIError
 }
+
+const (
+	// deadlockMaxAttempts bounds how many times a transaction is re-run after being chosen as a
+	// deadlock victim. Two transactions deadlocking resolve on the first retry, because the one
+	// that survived has committed by then. Needing more than this means sustained contention,
+	// which re-running cannot fix — better to surface it than to keep holding the request open.
+	deadlockMaxAttempts = 3
+
+	// deadlockBaseBackoff is the wait before the first retry, doubling thereafter.
+	//
+	// InnoDB detects a deadlock and rolls the victim back immediately, so there is nothing to
+	// wait for — the pause exists only to stagger the retry away from whatever else is
+	// contending for the same rows. Milliseconds, not the seconds a network retry would use:
+	// the request deadline is still ticking, and the work itself takes longer than the wait.
+	deadlockBaseBackoff = 5 * time.Millisecond
+
+	// deadlockBackoffJitter spreads each wait by ±40% so two victims of the same deadlock do
+	// not wake together and collide again.
+	deadlockBackoffJitter = 0.4
+)
 
 type transactionManagerImpl[Q TxQuerier[Q], F any] struct {
 	db            *sql.DB
@@ -50,48 +87,116 @@ func (m *transactionManagerImpl[Q, F]) WithTx(
 	ctx context.Context,
 	fn func(ctx context.Context, f F) *apierror.APIError,
 ) *apierror.APIError {
-	tx, err := m.db.BeginTx(ctx, nil)
-	if err != nil {
-		return apierror.NewInternalError(err, "failed to begin transaction")
-	}
-	defer tx.Rollback()
-
-	qTx := m.queries.WithTx(tx)
-	factory := m.factoryCreate(qTx)
-
-	if apiErr := fn(ctx, factory); apiErr != nil {
-		return apiErr
-	}
-
-	if err := tx.Commit(); err != nil {
-		return apierror.NewInternalError(err, "failed to commit transaction")
-	}
-
-	return nil
+	return m.run(ctx, func(ctx context.Context, _ *sql.Tx, f F) *apierror.APIError {
+		return fn(ctx, f)
+	})
 }
 
 func (m *transactionManagerImpl[Q, F]) WithTxSavepoint(
 	ctx context.Context,
 	fn func(ctx context.Context, f F, sp SavepointRunner) *apierror.APIError,
 ) *apierror.APIError {
+	return m.run(ctx, func(ctx context.Context, tx *sql.Tx, f F) *apierror.APIError {
+		return fn(ctx, f, &savepointRunner{tx: tx})
+	})
+}
+
+// run executes fn in a transaction, re-running it when the database rolls it back as a deadlock
+// victim.
+//
+// A deadlock is not a failure of the work — it is the database arbitrating between two
+// transactions that wanted the same rows in a different order, and the loser is asked to try
+// again. It rolls the victim back completely, so the retry starts from the same state the first
+// attempt did. Surfacing it instead would make every caller implement this loop, and a 500 for
+// a condition resolved in five milliseconds is not an answer worth giving.
+func (m *transactionManagerImpl[Q, F]) run(
+	ctx context.Context,
+	fn func(ctx context.Context, tx *sql.Tx, f F) *apierror.APIError,
+) *apierror.APIError {
+	for attempt := 0; ; attempt++ {
+		apiErr, deadlocked := m.attempt(ctx, fn)
+		if apiErr == nil || !deadlocked || attempt >= deadlockMaxAttempts-1 {
+			if deadlocked && apiErr != nil {
+				slog.WarnContext(ctx, "transaction abandoned after repeated deadlocks",
+					"attempts", attempt+1,
+					"error", apiErr.Error(),
+				)
+			}
+			return apiErr
+		}
+
+		// A retry that outlives the caller's deadline helps nobody, and the deadlock is the
+		// more useful thing to report than the cancellation that followed it.
+		if !sleepFor(ctx, deadlockBackoff(attempt)) {
+			return apiErr
+		}
+
+		// Logged rather than swallowed: retries hide contention, and a path that deadlocks
+		// constantly needs its lock ordering fixed, not its symptoms absorbed.
+		slog.WarnContext(ctx, "retrying transaction after deadlock", "attempt", attempt+1)
+	}
+}
+
+// attempt runs fn once in its own transaction and reports whether it failed to a deadlock. It is
+// a separate function so the rollback is deferred per attempt rather than accumulating across
+// the retry loop.
+func (m *transactionManagerImpl[Q, F]) attempt(
+	ctx context.Context,
+	fn func(ctx context.Context, tx *sql.Tx, f F) *apierror.APIError,
+) (*apierror.APIError, bool) {
 	tx, err := m.db.BeginTx(ctx, nil)
 	if err != nil {
-		return apierror.NewInternalError(err, "failed to begin transaction")
+		return apierror.NewInternalError(err, "failed to begin transaction"), IsDeadlock(err)
 	}
 	defer tx.Rollback()
 
 	qTx := m.queries.WithTx(tx)
 	factory := m.factoryCreate(qTx)
 
-	if apiErr := fn(ctx, factory, &savepointRunner{tx: tx}); apiErr != nil {
-		return apiErr
+	if apiErr := fn(ctx, tx, factory); apiErr != nil {
+		// MapSQLError keeps the driver error underneath, so the deadlock is still visible
+		// through the APIError the repository layer returned.
+		return apiErr, IsDeadlock(apiErr)
 	}
 
+	// Committing is where a deadlock most often surfaces, since that is when InnoDB resolves
+	// the locks the transaction has been holding.
 	if err := tx.Commit(); err != nil {
-		return apierror.NewInternalError(err, "failed to commit transaction")
+		return apierror.NewInternalError(err, "failed to commit transaction"), IsDeadlock(err)
 	}
 
-	return nil
+	return nil, false
+}
+
+// deadlockBackoff returns the wait before the given retry: an exponential base with symmetric
+// jitter, so two transactions that deadlocked with each other separate rather than collide again.
+func deadlockBackoff(attempt int) time.Duration {
+	base := float64(deadlockBaseBackoff) * math.Pow(2, float64(attempt))
+	return time.Duration(base * (1 + deadlockBackoffJitter*(randFraction()*2-1)))
+}
+
+// randFraction returns a random value in [0, 1). It reads from crypto/rand to avoid math/rand's
+// global lock on a path every write transaction can reach; a failed read yields the midpoint,
+// which costs a little jitter rather than panicking inside a transaction.
+func randFraction() float64 {
+	var b [8]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		return 0.5
+	}
+	return float64(binary.BigEndian.Uint64(b[:])>>11) / (1 << 53)
+}
+
+// sleepFor waits for d, reporting false if the context ended first.
+func sleepFor(ctx context.Context, d time.Duration) bool {
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+
+	select {
+	case <-timer.C:
+		return true
+	case <-ctx.Done():
+		return false
+	}
 }
 
 // savepointRunner issues named SAVEPOINTs on one transaction. Names are per-runner

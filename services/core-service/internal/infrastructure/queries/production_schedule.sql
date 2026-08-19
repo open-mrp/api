@@ -10,7 +10,22 @@ INSERT INTO sys_property (id, account_id, sys_property_type_code, value, created
 VALUES (sqlc.arg('id'), sqlc.arg('account_id'), 'production_schedule_version', LAST_INSERT_ID(1), NOW(3), NOW(3))
 ON DUPLICATE KEY UPDATE value = LAST_INSERT_ID(value + 1), updated_at = NOW(3);
 
+-- ProductionScheduleVersionCounterExists reports whether the account's counter has been primed.
+-- A point lookup on the unique key, so the seed below — which scans the account's schedules —
+-- runs once in an account's lifetime rather than on every generation.
+-- name: ProductionScheduleVersionCounterExists :one
+SELECT EXISTS (
+    SELECT 1 FROM sys_property
+    WHERE account_id = sqlc.arg('account_id')
+    AND sys_property_type_code = 'production_schedule_version'
+) AS counter_exists;
+
 -- SeedProductionScheduleVersionCounter primes the counter from existing rows the first time an account allocates, so a database that already has versions does not restart numbering at 1.
+--
+-- INSERT ... SELECT takes shared locks over the production_schedule rows it aggregates. Running
+-- it on every generation put those range locks ahead of the insert the same transaction was
+-- about to make into that table, so two planners generating at once deadlocked reliably. Guard
+-- it with the existence check above and the hot path touches only the counter row.
 -- name: SeedProductionScheduleVersionCounter :exec
 INSERT INTO sys_property (id, account_id, sys_property_type_code, value, created_at, updated_at)
 SELECT sqlc.arg('id'), sqlc.arg('account_id'), 'production_schedule_version',

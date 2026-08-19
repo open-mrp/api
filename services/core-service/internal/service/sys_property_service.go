@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/services/core-service/internal/domain"
@@ -234,6 +235,16 @@ func (s *sysPropertySvcImpl) GetLatestSysPropertyValue(ctx context.Context, type
 	}
 	if apiErr := identity.CheckHasPermission(types.PermissionDomainSystemProperties, types.ActionUpdate); apiErr != nil {
 		return "", tracing.Trace(span, apiErr)
+	}
+
+	// This read initializes a counter it does not find, so an unrecognized code would be
+	// written straight through to a foreign key that has no such row — surfacing as a
+	// "resource already exists" conflict, which tells the caller nothing about the typo.
+	if !typeCode.IsValid() {
+		return "", tracing.Trace(span, apierror.NewValidationErrorWithParam(
+			"Unknown system property type. Supported values: "+strings.Join(constants.SysPropertyTypeCode("").EnumValues(), ", "),
+			"type_code",
+		))
 	}
 
 	accountID := identity.Target.AccountID

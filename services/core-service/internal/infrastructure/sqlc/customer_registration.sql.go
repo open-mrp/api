@@ -10,6 +10,23 @@ import (
 	"database/sql"
 )
 
+const allocateNextCustomerNumber = `-- name: AllocateNextCustomerNumber :execresult
+INSERT INTO sys_property (id, account_id, sys_property_type_code, value, created_at, updated_at)
+VALUES (?, ?, 'customer_number', LAST_INSERT_ID(1), NOW(3), NOW(3))
+ON DUPLICATE KEY UPDATE value = LAST_INSERT_ID(value + 1), updated_at = NOW(3)
+`
+
+type AllocateNextCustomerNumberParams struct {
+	ID        string
+	AccountID string
+}
+
+// Atomically reserves the next customer number for the account and returns it via LAST_INSERT_ID.
+// See AllocateNextOrderNumber: two people registering at once used to be handed the same number.
+func (q *Queries) AllocateNextCustomerNumber(ctx context.Context, arg AllocateNextCustomerNumberParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, allocateNextCustomerNumber, arg.ID, arg.AccountID)
+}
+
 const findCustomerAccountByExternalNumber = `-- name: FindCustomerAccountByExternalNumber :one
 SELECT
     a.id
@@ -31,23 +48,6 @@ func (q *Queries) FindCustomerAccountByExternalNumber(ctx context.Context, arg F
 	var id string
 	err := row.Scan(&id)
 	return id, err
-}
-
-const getNextCustomerNumber = `-- name: GetNextCustomerNumber :one
-SELECT COALESCE(
-    (SELECT MAX(CAST(sp.value AS UNSIGNED)) + 1
-     FROM sys_property sp
-     WHERE sp.account_id = ?
-     AND sp.sys_property_type_code = 'customer_number'),
-    1
-) AS next_number
-`
-
-func (q *Queries) GetNextCustomerNumber(ctx context.Context, accountID string) (interface{}, error) {
-	row := q.db.QueryRowContext(ctx, getNextCustomerNumber, accountID)
-	var next_number interface{}
-	err := row.Scan(&next_number)
-	return next_number, err
 }
 
 const getUserEmailByID = `-- name: GetUserEmailByID :one
@@ -251,28 +251,6 @@ func (q *Queries) InsertGeolocationForCustomer(ctx context.Context, arg InsertGe
 		arg.State,
 		arg.PostalCode,
 		arg.Country,
-	)
-	return err
-}
-
-const updateNextCustomerNumber = `-- name: UpdateNextCustomerNumber :exec
-INSERT INTO sys_property (id, account_id, sys_property_type_code, value, created_at, updated_at)
-VALUES (?, ?, 'customer_number', ?, NOW(3), NOW(3))
-ON DUPLICATE KEY UPDATE value = ?, updated_at = NOW(3)
-`
-
-type UpdateNextCustomerNumberParams struct {
-	ID        string
-	AccountID string
-	Value     int32
-}
-
-func (q *Queries) UpdateNextCustomerNumber(ctx context.Context, arg UpdateNextCustomerNumberParams) error {
-	_, err := q.db.ExecContext(ctx, updateNextCustomerNumber,
-		arg.ID,
-		arg.AccountID,
-		arg.Value,
-		arg.Value,
 	)
 	return err
 }

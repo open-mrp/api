@@ -166,6 +166,10 @@ func (s *settlementSvcImpl) CreateSettlement(ctx context.Context, params domain.
 	}
 	params.ResponsibleUserID = resolvedID
 
+	if apiErr := validateSettlementAllocations(ctx, s.repos, params.AccountID, params.Allocations); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
 	meds := s.mediators()
 
 	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
@@ -186,23 +190,19 @@ func (s *settlementSvcImpl) CreateSettlement(ctx context.Context, params domain.
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *settlementSvcImpl) *apierror.APIError {
 			txRepo := txSvc.repos.NewSettlementRepo()
 
-			// Generate settlement number
-			nextNumber, apiErr := txRepo.GetNextSettlementNumber(txCtx, params.AccountID)
-			if apiErr != nil {
-				return apiErr
-			}
-			number := strconv.FormatInt(nextNumber, 10)
-
-			// Generate sys property ID for upsert
 			sysPropertyID, apiErr := id.GenID(id.SysPropertyIDPrefix, nil)
 			if apiErr != nil {
 				return apiErr
 			}
 
-			// Update the next number
-			if apiErr := txRepo.UpdateNextSettlementNumber(txCtx, sysPropertyID, params.AccountID, nextNumber); apiErr != nil {
+			// Reserve the number in one locked statement. Reading the current value and
+			// writing back a successor let two settlements created at the same moment take
+			// the same number, which is what a customer sees on the remittance.
+			nextNumber, apiErr := txRepo.AllocateNextSettlementNumber(txCtx, sysPropertyID, params.AccountID)
+			if apiErr != nil {
 				return apiErr
 			}
+			number := strconv.FormatInt(nextNumber, 10)
 
 			// Insert the settlement
 			if apiErr := txRepo.InsertSettlement(txCtx, settlementID, number, params); apiErr != nil {

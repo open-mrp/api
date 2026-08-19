@@ -341,10 +341,12 @@ CREATE TABLE `account_group` (
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `default_lead_time_days` int DEFAULT NULL,
   `fulfillment_policy_code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `receive_calendar_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `account_group_registration_flow_id_idx` (`registration_flow_id`),
   KEY `account_group_owner_account_id_idx` (`owner_account_id`),
   KEY `account_group_account_group_type_code_idx` (`account_group_type_code`),
+  KEY `account_group_receive_calendar_id_idx` (`receive_calendar_id`),
   FULLTEXT KEY `account_group_name_idx` (`name`),
   FULLTEXT KEY `account_group_description_idx` (`description`),
   FULLTEXT KEY `account_group_name_description_idx` (`name`,`description`)
@@ -637,9 +639,13 @@ CREATE TABLE `account_production_schedule_setting` (
   `recommendation_dormant_months` int NOT NULL DEFAULT '12',
   `recommendation_high_value_unit_cost` decimal(18,6) NOT NULL DEFAULT '50.000000',
   `recommendation_slow_mover_cogs` decimal(18,6) NOT NULL DEFAULT '5000.000000',
+  `receive_calendar_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `ship_calendar_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `account_production_schedule_setting_account_id_key` (`account_id`),
-  KEY `acct_prod_sched_setting_enabled_cron_idx` (`is_enabled`,`generation_cron`)
+  KEY `acct_prod_sched_setting_enabled_cron_idx` (`is_enabled`,`generation_cron`),
+  KEY `account_production_schedule_setting_ship_calendar_id_idx` (`ship_calendar_id`),
+  KEY `account_production_schedule_setting_receive_calendar_id_idx` (`receive_calendar_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -682,6 +688,7 @@ CREATE TABLE `account_relation` (
   `credit_limit_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `default_lead_time_days` int DEFAULT NULL,
   `fulfillment_policy_code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `receive_calendar_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `account_relation_owner_account_id_counterparty_account_id_ac_key` (`owner_account_id`,`counterparty_account_id`,`account_relation_role_code`),
   UNIQUE KEY `account_relation_credit_limit_id_key` (`credit_limit_id`),
@@ -701,6 +708,7 @@ CREATE TABLE `account_relation` (
   KEY `account_relation_owner_role_status_created_idx` (`owner_account_id`,`account_relation_role_code`(50),`account_status_code`,`created_at` DESC,`counterparty_account_id` DESC),
   KEY `account_relation_owner_role_group_created_idx` (`owner_account_id`,`account_relation_role_code`(50),`account_group_id`,`created_at` DESC,`counterparty_account_id` DESC),
   KEY `account_relation_owner_role_rep_created_idx` (`owner_account_id`,`account_relation_role_code`(50),`default_sales_rep_id`,`created_at` DESC,`counterparty_account_id` DESC),
+  KEY `account_relation_receive_calendar_id_idx` (`receive_calendar_id`),
   FULLTEXT KEY `account_relation_alias_idx` (`alias`),
   FULLTEXT KEY `account_relation_notes_idx` (`notes`),
   FULLTEXT KEY `account_relation_alias_notes_idx` (`alias`,`notes`)
@@ -865,8 +873,10 @@ CREATE TABLE `address` (
   `geolocation_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `receive_calendar_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `address_geolocation_id_idx` (`geolocation_id`),
+  KEY `address_receive_calendar_id_idx` (`receive_calendar_id`),
   FULLTEXT KEY `address_name_idx` (`name`),
   FULLTEXT KEY `address_phone_idx` (`phone`),
   FULLTEXT KEY `address_email_idx` (`email`),
@@ -1807,6 +1817,7 @@ CREATE TABLE `geolocation` (
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `latitude` double DEFAULT NULL,
   `longitude` double DEFAULT NULL,
+  `timezone` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `geolocation_google_place_id_key` (`google_place_id`),
   FULLTEXT KEY `geolocation_street_line_1_street_line_2_locality_state_posta_idx` (`street_line_1`,`street_line_2`,`locality`,`state`,`postal_code`,`country`)
@@ -2849,6 +2860,53 @@ CREATE TABLE `onboarding_status` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `onboarding_status_code_key` (`code`),
   FULLTEXT KEY `onboarding_status_name_idx` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `operating_calendar`
+--
+
+DROP TABLE IF EXISTS `operating_calendar`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `operating_calendar` (
+  `id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `code` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `operating_calendar_kind_code` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `days_of_week` varchar(7) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '1111100',
+  `cutoff_at` varchar(8) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `timezone` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `is_default` tinyint(1) NOT NULL DEFAULT '0',
+  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `deleted_at` datetime(3) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `operating_calendar_account_id_code_key` (`account_id`,`code`),
+  KEY `operating_calendar_account_kind_default_idx` (`account_id`,`operating_calendar_kind_code`,`is_default`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `operating_calendar_closure`
+--
+
+DROP TABLE IF EXISTS `operating_calendar_closure`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `operating_calendar_closure` (
+  `id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `operating_calendar_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `closed_on` date NOT NULL,
+  `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `operating_calendar_closure_uq` (`operating_calendar_id`,`closed_on`),
+  KEY `operating_calendar_closure_account_date_idx` (`account_id`,`closed_on`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -4081,6 +4139,10 @@ CREATE TABLE `sales_order` (
   `ship_by_date` date DEFAULT NULL,
   `transit_days` int DEFAULT NULL,
   `transit_source_code` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `calendar_adjustment_days` int DEFAULT NULL,
+  `lead_time_override_days` int DEFAULT NULL,
+  `ship_by_cutoff_at` datetime(3) DEFAULT NULL,
+  `ship_by_override_date` date DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `sales_order_owner_account_id_sales_order_type_code_number_key` (`owner_account_id`,`sales_order_type_code`,`number`),
   KEY `sales_order_owner_account_id_idx` (`owner_account_id`),
@@ -4992,7 +5054,7 @@ CREATE TABLE `user` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-08-17 12:08:35
+-- Dump completed on 2026-08-18 13:33:39
 
 -- +goose Down
 
@@ -5080,6 +5142,8 @@ DROP TABLE IF EXISTS `part`;
 DROP TABLE IF EXISTS `order_payment_intent`;
 DROP TABLE IF EXISTS `order_email_contact`;
 DROP TABLE IF EXISTS `order_discount`;
+DROP TABLE IF EXISTS `operating_calendar_closure`;
+DROP TABLE IF EXISTS `operating_calendar`;
 DROP TABLE IF EXISTS `onboarding_status`;
 DROP TABLE IF EXISTS `notification_preference`;
 DROP TABLE IF EXISTS `notification`;

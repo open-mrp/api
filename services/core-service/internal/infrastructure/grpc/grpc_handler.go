@@ -240,9 +240,10 @@ func RegisterProductionRunService(server *grpc.Server, productionRunSvc domain.P
 	pb.RegisterCoreProductionRunServiceServer(server, productionRunHandler)
 }
 
-func RegisterProductionScheduleService(server *grpc.Server, productionScheduleSvc domain.ProductionScheduleSvc) {
+func RegisterProductionScheduleService(server *grpc.Server, productionScheduleSvc domain.ProductionScheduleSvc, operatingCalendarSvc domain.OperatingCalendarSvc) {
 	handler := &productionScheduleGRPCHandler{
 		productionScheduleSvc: productionScheduleSvc,
+		operatingCalendarSvc:  operatingCalendarSvc,
 	}
 	pb.RegisterCoreProductionScheduleServiceServer(server, handler)
 }
@@ -1758,14 +1759,15 @@ func addressToProto(a *domain.Address) *pb.AddressInfo {
 		return nil
 	}
 	return &pb.AddressInfo{
-		Id:          a.ID,
-		Name:        a.Name,
-		Phone:       a.Phone,
-		Email:       a.Email,
-		IsDropShip:  a.IsDropShip,
-		Geolocation: geolocationToProto(a.Geolocation),
-		CreatedAt:   timestamppb.New(a.CreatedAt),
-		UpdatedAt:   timestamppb.New(a.UpdatedAt),
+		Id:                a.ID,
+		Name:              a.Name,
+		Phone:             a.Phone,
+		Email:             a.Email,
+		IsDropShip:        a.IsDropShip,
+		ReceiveCalendarId: a.ReceiveCalendarID,
+		Geolocation:       geolocationToProto(a.Geolocation),
+		CreatedAt:         timestamppb.New(a.CreatedAt),
+		UpdatedAt:         timestamppb.New(a.UpdatedAt),
 	}
 }
 
@@ -1858,16 +1860,17 @@ func (h *gRPCHandler) CreateAddress(ctx context.Context, req *pb.CreateAddressRe
 	defer finalizeIdempotency()
 
 	params := domain.CreateAddressParams{
-		Name:        req.Name,
-		Phone:       req.Phone,
-		Email:       req.Email,
-		IsDropShip:  req.IsDropShip,
-		StreetLine1: req.StreetLine_1,
-		StreetLine2: req.StreetLine_2,
-		Locality:    req.Locality,
-		State:       req.State,
-		PostalCode:  req.PostalCode,
-		Country:     req.Country,
+		Name:              req.Name,
+		Phone:             req.Phone,
+		Email:             req.Email,
+		IsDropShip:        req.IsDropShip,
+		ReceiveCalendarID: req.ReceiveCalendarId,
+		StreetLine1:       req.StreetLine_1,
+		StreetLine2:       req.StreetLine_2,
+		Locality:          req.Locality,
+		State:             req.State,
+		PostalCode:        req.PostalCode,
+		Country:           req.Country,
 	}
 
 	address, apiErr := h.addressSvc.CreateAddress(ctx, params)
@@ -1889,17 +1892,18 @@ func (h *gRPCHandler) UpdateAddress(ctx context.Context, req *pb.UpdateAddressRe
 	defer finalizeIdempotency()
 
 	params := domain.UpdateAddressParams{
-		AddressID:   req.Id,
-		Name:        req.Name,
-		Phone:       field.StringClearableFromProto(req.Phone),
-		Email:       field.StringClearableFromProto(req.Email),
-		IsDropShip:  req.IsDropShip,
-		StreetLine1: req.StreetLine_1,
-		StreetLine2: field.StringClearableFromProto(req.StreetLine_2),
-		Locality:    req.Locality,
-		State:       req.State,
-		PostalCode:  req.PostalCode,
-		Country:     req.Country,
+		AddressID:         req.Id,
+		Name:              req.Name,
+		Phone:             field.StringClearableFromProto(req.Phone),
+		Email:             field.StringClearableFromProto(req.Email),
+		IsDropShip:        req.IsDropShip,
+		ReceiveCalendarID: field.StringClearableFromProto(req.ReceiveCalendarId).ValuePtr(),
+		StreetLine1:       req.StreetLine_1,
+		StreetLine2:       field.StringClearableFromProto(req.StreetLine_2),
+		Locality:          req.Locality,
+		State:             req.State,
+		PostalCode:        req.PostalCode,
+		Country:           req.Country,
 	}
 
 	address, apiErr := h.addressSvc.UpdateAddress(ctx, params)

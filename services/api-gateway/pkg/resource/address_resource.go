@@ -48,6 +48,10 @@ type Address struct {
 	// - `standard`: a normal shipping or billing address.
 	// - `drop_ship`: an address an order is shipped to directly, typically a third party or end customer rather than the account itself.
 	Type constants.AddressType `json:"type" validate:"required"`
+	// The operating calendar naming the days this dock accepts freight.
+	//
+	// The most specific link in the receiving chain: set it when one of a customer's sites keeps different days from the rest. Null falls through to the customer, then their group, then the account default.
+	ReceiveCalendarID *string `json:"receive_calendar_id"`
 	// Street-level location details for the address.
 	Geolocation *Geolocation `json:"geolocation" validate:"required"`
 	// Creation timestamp.

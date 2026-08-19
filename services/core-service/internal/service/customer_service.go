@@ -237,20 +237,18 @@ func (s *customerSvcImpl) CreateCustomer(ctx context.Context, params domain.Crea
 					return apierror.NewConflictErrorWithParam("A customer with this number already exists.", "number")
 				}
 			} else {
-				// Auto-generate the next customer number.
-				nextNum, apiErr := txCustomerRepo.GetNextCustomerNumber(txCtx, params.OwnerAccountID)
-				if apiErr != nil {
-					return apiErr
-				}
-				customerNumber = strconv.FormatInt(nextNum, 10)
-
+				// Auto-generate the next customer number, reserved in one locked statement so
+				// two customers created at the same moment cannot be given the same one.
 				sysPropertyID, apiErr := id.GenID(id.SysPropertyIDPrefix, nil)
 				if apiErr != nil {
 					return apiErr
 				}
-				if apiErr := txCustomerRepo.UpdateNextCustomerNumber(txCtx, sysPropertyID, params.OwnerAccountID, customerNumber); apiErr != nil {
+
+				nextNum, apiErr := txCustomerRepo.AllocateNextCustomerNumber(txCtx, sysPropertyID, params.OwnerAccountID)
+				if apiErr != nil {
 					return apiErr
 				}
+				customerNumber = strconv.FormatInt(nextNum, 10)
 			}
 
 			// Create inline bill-to address.
@@ -781,6 +779,13 @@ func (s *customerSvcImpl) GetFrequentlyOrderedProducts(ctx context.Context, cust
 	}
 
 	ownerAccountID := identity.Target.AccountID
+
+	// A customer who has ordered nothing and an account that is not a customer at all both
+	// produce an empty list, so without this read the endpoint answers for any account ID —
+	// including one belonging to another seller.
+	if _, apiErr := s.repos.NewCustomerRepo().Get(ctx, ownerAccountID, customerAccountID, nil); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 
 	return s.repos.NewCustomerRepo().GetFrequentlyOrderedProducts(ctx, ownerAccountID, customerAccountID)
 }

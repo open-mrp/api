@@ -384,6 +384,8 @@ LEFT JOIN (
         FROM pick_line pl_scope
         WHERE pl_scope.id = sqlc.arg('pick_line_id')
     )
+    -- The line being picked is excluded from its own outstanding calculation. Counting it would subtract what it already holds, so picking an already-picked line set it back to zero — a second click wiping a picker's work rather than doing nothing.
+    AND pl_sum.id != sqlc.arg('pick_line_id')
     GROUP BY pl_sum.sales_order_line_id
 ) picked ON picked.sales_order_line_id = pl.sales_order_line_id
 SET q.value = GREATEST(0, sol_q.value - COALESCE(picked.total_picked_value, 0)),

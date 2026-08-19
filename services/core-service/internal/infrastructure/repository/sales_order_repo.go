@@ -150,7 +150,7 @@ func (r *salesOrderRepoImpl) List(ctx context.Context, params domain.ListSalesOr
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
-			return nil, apierror.NewValidationError("Invalid pagination cursor.")
+			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
 		}
 		cursorDir = &cur.Direction
 
@@ -515,6 +515,14 @@ func (r *salesOrderRepoImpl) Create(ctx context.Context, soID string, params dom
 	if params.PromisedAt != nil {
 		promisedAtNull = gosql.NullTime{Time: *params.PromisedAt, Valid: true}
 	}
+	shipByOverrideNull := gosql.NullTime{}
+	if params.ShipByOverrideDate != nil {
+		shipByOverrideNull = gosql.NullTime{Time: *params.ShipByOverrideDate, Valid: true}
+	}
+	leadTimeOverrideNull := gosql.NullInt32{}
+	if params.LeadTimeOverrideDays != nil {
+		leadTimeOverrideNull = gosql.NullInt32{Int32: *params.LeadTimeOverrideDays, Valid: true}
+	}
 
 	err := r.queries.CreateSalesOrder(ctx, sqlc.CreateSalesOrderParams{
 		ID:                    soID,
@@ -534,6 +542,8 @@ func (r *salesOrderRepoImpl) Create(ctx context.Context, soID string, params dom
 		PaymentTermID:         toNullString(params.PaymentTermID),
 		OrderDiscountID:       toNullString(params.OrderDiscountID),
 		PromisedAt:            promisedAtNull,
+		LeadTimeOverrideDays:  leadTimeOverrideNull,
+		ShipByOverrideDate:    shipByOverrideNull,
 		BuyerAccountID:        params.BuyerAccountID,
 		SellerAccountID:       params.SellerAccountID,
 		OwnerAccountID:        params.OwnerAccountID,
@@ -551,6 +561,15 @@ func (r *salesOrderRepoImpl) Update(ctx context.Context, params domain.UpdateSal
 
 	// Clearable[time.Time]: Set → value, Clear (or unset) → NULL. The service backfills
 	// unset from the existing order first, so an omitted field never reaches here as unset.
+	shipByOverrideNull := gosql.NullTime{}
+	if v, ok := params.ShipByOverrideDate.Value(); ok {
+		shipByOverrideNull = gosql.NullTime{Time: v, Valid: true}
+	}
+	leadTimeOverrideNull := gosql.NullInt32{}
+	if v, ok := params.LeadTimeOverrideDays.Value(); ok {
+		leadTimeOverrideNull = gosql.NullInt32{Int32: v, Valid: true}
+	}
+
 	promisedAtNull := gosql.NullTime{}
 	if v, ok := params.PromisedAt.Value(); ok {
 		promisedAtNull = gosql.NullTime{Time: v, Valid: true}
@@ -573,6 +592,8 @@ func (r *salesOrderRepoImpl) Update(ctx context.Context, params domain.UpdateSal
 		ShippingTermID:       toNullString(params.ShippingTermID),
 		PaymentTermID:        toNullString(params.PaymentTermID),
 		IsAcknowledgmentSent: toNullBool(params.IsAcknowledgmentSent),
+		LeadTimeOverrideDays: leadTimeOverrideNull,
+		ShipByOverrideDate:   shipByOverrideNull,
 		BuyerAccountID:       toNullString(params.BuyerAccountID),
 		BillingAddressID:     toNullString(params.BillingAddressID),
 		ShippingAddressID:    toNullString(params.ShippingAddressID),
@@ -676,6 +697,10 @@ func (r *salesOrderRepoImpl) SetShipByCommitment(ctx context.Context, accountID,
 			params.TransitDays = gosql.NullInt32{Int32: safeconv.IntToInt32(*commitment.TransitDays), Valid: true}
 			params.TransitSourceCode = gosql.NullString{String: commitment.TransitSourceCode, Valid: true}
 		}
+		if commitment.ShipByCutoffAt != nil {
+			params.ShipByCutoffAt = gosql.NullTime{Time: *commitment.ShipByCutoffAt, Valid: true}
+		}
+		params.CalendarAdjustmentDays = gosql.NullInt32{Int32: safeconv.IntToInt32(commitment.CalendarAdjustmentDays), Valid: true}
 	}
 
 	if apiErr := db.MapSQLError(r.queries.SetSalesOrderShipByCommitment(ctx, params)); apiErr != nil {
@@ -1175,6 +1200,19 @@ func mapGetSalesOrderRow(row sqlc.GetSalesOrderRow) *domain.SalesOrder {
 		so.TransitDays = &row.TransitDays.Int32
 	}
 	so.TransitSourceCode = nullStringToPtr(row.TransitSourceCode)
+	if row.LeadTimeOverrideDays.Valid {
+		days := int(row.LeadTimeOverrideDays.Int32)
+		so.LeadTimeOverrideDays = &days
+	}
+	if row.ShipByOverrideDate.Valid {
+		so.ShipByOverrideDate = &row.ShipByOverrideDate.Time
+	}
+	if row.ShipByCutoffAt.Valid {
+		so.ShipByCutoffAt = &row.ShipByCutoffAt.Time
+	}
+	if row.CalendarAdjustmentDays.Valid {
+		so.CalendarAdjustmentDays = &row.CalendarAdjustmentDays.Int32
+	}
 
 	so.BillToName = nullStringToPtr(row.BillToName)
 	so.BillToIsDropShip = nullBoolPtr(row.BillToIsDropShip)
@@ -1311,6 +1349,19 @@ func mapGetSalesOrderForCustomerRow(row sqlc.GetSalesOrderForCustomerRow) *domai
 		so.TransitDays = &row.TransitDays.Int32
 	}
 	so.TransitSourceCode = nullStringToPtr(row.TransitSourceCode)
+	if row.LeadTimeOverrideDays.Valid {
+		days := int(row.LeadTimeOverrideDays.Int32)
+		so.LeadTimeOverrideDays = &days
+	}
+	if row.ShipByOverrideDate.Valid {
+		so.ShipByOverrideDate = &row.ShipByOverrideDate.Time
+	}
+	if row.ShipByCutoffAt.Valid {
+		so.ShipByCutoffAt = &row.ShipByCutoffAt.Time
+	}
+	if row.CalendarAdjustmentDays.Valid {
+		so.CalendarAdjustmentDays = &row.CalendarAdjustmentDays.Int32
+	}
 
 	so.BillToName = nullStringToPtr(row.BillToName)
 	so.BillToIsDropShip = nullBoolPtr(row.BillToIsDropShip)
@@ -1420,6 +1471,10 @@ type listSalesOrderRow struct {
 	LeadTimeSourceCode          gosql.NullString
 	TransitDays                 gosql.NullInt32
 	TransitSourceCode           gosql.NullString
+	LeadTimeOverrideDays        gosql.NullInt32
+	ShipByOverrideDate          gosql.NullTime
+	ShipByCutoffAt              gosql.NullTime
+	CalendarAdjustmentDays      gosql.NullInt32
 	CreatedAt                   time.Time
 	UpdatedAt                   time.Time
 	CustomerName                string
@@ -1548,6 +1603,19 @@ func mapListSalesOrderRow(row listSalesOrderRow) *domain.SalesOrder {
 		so.TransitDays = &row.TransitDays.Int32
 	}
 	so.TransitSourceCode = nullStringToPtr(row.TransitSourceCode)
+	if row.LeadTimeOverrideDays.Valid {
+		days := int(row.LeadTimeOverrideDays.Int32)
+		so.LeadTimeOverrideDays = &days
+	}
+	if row.ShipByOverrideDate.Valid {
+		so.ShipByOverrideDate = &row.ShipByOverrideDate.Time
+	}
+	if row.ShipByCutoffAt.Valid {
+		so.ShipByCutoffAt = &row.ShipByCutoffAt.Time
+	}
+	if row.CalendarAdjustmentDays.Valid {
+		so.CalendarAdjustmentDays = &row.CalendarAdjustmentDays.Int32
+	}
 
 	so.BillToName = nullStringToPtr(row.BillToName)
 	so.BillToIsDropShip = nullBoolPtr(row.BillToIsDropShip)
@@ -1653,6 +1721,10 @@ func mapForwardSalesOrderRow(row sqlc.ListSalesOrdersForwardRow) *domain.SalesOr
 		LeadTimeSourceCode:          row.LeadTimeSourceCode,
 		TransitDays:                 row.TransitDays,
 		TransitSourceCode:           row.TransitSourceCode,
+		LeadTimeOverrideDays:        row.LeadTimeOverrideDays,
+		ShipByOverrideDate:          row.ShipByOverrideDate,
+		ShipByCutoffAt:              row.ShipByCutoffAt,
+		CalendarAdjustmentDays:      row.CalendarAdjustmentDays,
 		CreatedAt:                   row.CreatedAt,
 		UpdatedAt:                   row.UpdatedAt,
 		CustomerName:                row.CustomerName,
@@ -1755,6 +1827,10 @@ func mapBackwardSalesOrderRow(row sqlc.ListSalesOrdersBackwardRow) *domain.Sales
 		LeadTimeSourceCode:          row.LeadTimeSourceCode,
 		TransitDays:                 row.TransitDays,
 		TransitSourceCode:           row.TransitSourceCode,
+		LeadTimeOverrideDays:        row.LeadTimeOverrideDays,
+		ShipByOverrideDate:          row.ShipByOverrideDate,
+		ShipByCutoffAt:              row.ShipByCutoffAt,
+		CalendarAdjustmentDays:      row.CalendarAdjustmentDays,
 		CreatedAt:                   row.CreatedAt,
 		UpdatedAt:                   row.UpdatedAt,
 		CustomerName:                row.CustomerName,

@@ -12,8 +12,10 @@ import (
 
 // AnalyzeWeeksOfSalesRequest is the request to analyze weeks of sales.
 type AnalyzeWeeksOfSalesRequest struct {
-	// The number of weeks to use for the sales period. Defaults to 4, minimum 1.
-	PeriodInWeeks *int32 `query:"period_in_weeks"`
+	// The number of weeks to use for the sales period. Defaults to 4.
+	//
+	// A period is a divisor of demand, so zero and negative values are rejected rather than quietly substituted with the default — a caller who asked for an impossible period should be told, not handed the answer to a different question.
+	PeriodInWeeks *int32 `query:"period_in_weeks" validate:"omitempty,min=1,max=520"`
 }
 
 // Returns weeks-of-sales metrics per product line, including on-hand quantity, average weekly sales, and weeks of inventory remaining.

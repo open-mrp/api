@@ -188,9 +188,6 @@ WHERE account_plan_id = ?;
 -- name: GetAccountNameByID :one
 SELECT name FROM account WHERE id = ?;
 
--- name: GetAccountBrandingByAccountID :one
-SELECT logo_url FROM account_branding WHERE owner_account_id = ?;
-
 -- name: GetAccountPortalSlugByAccountID :one
 SELECT slug FROM account_portal WHERE owner_account_id = ?;
 

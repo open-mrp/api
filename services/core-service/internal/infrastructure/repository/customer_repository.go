@@ -4,7 +4,6 @@ import (
 	"cmp"
 	"context"
 	gosql "database/sql"
-	"fmt"
 	"slices"
 	"time"
 
@@ -166,6 +165,7 @@ func mapListCustomerForwardRow(row sqlc.ListCustomersForwardRow) *domain.Custome
 		CommissionPolicy:                   constants.CommissionPolicy(row.CommissionStatusCode.String),
 		FreightPolicy:                      constants.FreightPolicy(row.FreightStatusCode.String),
 		DefaultLeadTimeDays:                nullInt32Ptr(row.DefaultLeadTimeDays),
+		ReceiveCalendarID:                  nullStringToPtr(row.ReceiveCalendarID),
 		Note:                               nullStringPtr(row.Notes),
 		Email:                              nullStringPtr(row.Email),
 		Phone:                              nullStringPtr(row.PhoneNumber),
@@ -277,6 +277,7 @@ func mapListCustomerBackwardRow(row sqlc.ListCustomersBackwardRow) *domain.Custo
 		CommissionPolicy:                   constants.CommissionPolicy(row.CommissionStatusCode.String),
 		FreightPolicy:                      constants.FreightPolicy(row.FreightStatusCode.String),
 		DefaultLeadTimeDays:                nullInt32Ptr(row.DefaultLeadTimeDays),
+		ReceiveCalendarID:                  nullStringToPtr(row.ReceiveCalendarID),
 		Note:                               nullStringPtr(row.Notes),
 		Email:                              nullStringPtr(row.Email),
 		Phone:                              nullStringPtr(row.PhoneNumber),
@@ -402,7 +403,7 @@ func (r *customerRepoImpl) List(ctx context.Context, params domain.ListCustomers
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
-			return nil, apierror.NewValidationError("Invalid pagination cursor.")
+			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
 		}
 		cursorDir = &cur.Direction
 
@@ -728,6 +729,7 @@ func (r *customerRepoImpl) Get(ctx context.Context, ownerAccountID, customerAcco
 		CommissionPolicy:                   constants.CommissionPolicy(row.CommissionStatusCode.String),
 		FreightPolicy:                      constants.FreightPolicy(row.FreightStatusCode.String),
 		DefaultLeadTimeDays:                nullInt32Ptr(row.DefaultLeadTimeDays),
+		ReceiveCalendarID:                  nullStringToPtr(row.ReceiveCalendarID),
 		Note:                               nullStringPtr(row.Notes),
 		Email:                              nullStringPtr(row.Email),
 		Phone:                              nullStringPtr(row.PhoneNumber),
@@ -959,6 +961,7 @@ func (r *customerRepoImpl) Create(ctx context.Context, accountID, relationID, br
 		DefaultShippingAddressID: toNullString(params.ShipToAddressID),
 		CreditLimitID:            toNullString(params.CreditLimitID),
 		DefaultLeadTimeDays:      toNullInt32(params.DefaultLeadTimeDays),
+		ReceiveCalendarID:        toNullString(params.ReceiveCalendarID),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -1007,6 +1010,7 @@ func (r *customerRepoImpl) Update(ctx context.Context, relationID string, params
 		CarrierBillingType:       stringToNullString(params.CarrierBillingType),
 		CarrierBillingAccount:    field.StringToNullString(params.CarrierBillingAccount),
 		DefaultLeadTimeDays:      field.Int32ToNullInt32(params.DefaultLeadTimeDays),
+		ReceiveCalendarID:        field.StringToNullString(params.ReceiveCalendarID),
 		DefaultBillingAddressID:  field.StringToNullString(params.BillToAddressID),
 		DefaultShippingAddressID: field.StringToNullString(params.ShipToAddressID),
 		CreditLimitID:            stringToNullString(params.CreditLimitID),
@@ -1115,51 +1119,24 @@ func (r *customerRepoImpl) ExistsByNumber(ctx context.Context, ownerAccountID, n
 	return exists, nil
 }
 
-func (r *customerRepoImpl) GetNextCustomerNumber(ctx context.Context, accountID string) (int64, *apierror.APIError) {
-	ctx, span := customerRepoTracer.Start(ctx, "repository.customer.get_next_number")
+func (r *customerRepoImpl) AllocateNextCustomerNumber(ctx context.Context, sysPropertyID, accountID string) (int64, *apierror.APIError) {
+	ctx, span := customerRepoTracer.Start(ctx, "repository.customer.allocate_next_number")
 	defer span.End()
 
-	raw, err := r.queries.GetNextCustomerNumber(ctx, accountID)
+	res, err := r.queries.AllocateNextCustomerNumber(ctx, sqlc.AllocateNextCustomerNumberParams{
+		ID:        sysPropertyID,
+		AccountID: accountID,
+	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return 0, tracing.Trace(span, apiErr)
 	}
 
-	switch v := raw.(type) {
-	case int64:
-		return v, nil
-	case float64:
-		return int64(v), nil
-	case []uint8:
-		var n int64
-		for _, b := range v {
-			n = n*10 + int64(b-'0')
-		}
-		return n, nil
-	default:
-		return 0, tracing.Trace(span, apierror.NewInternalError(fmt.Errorf("unexpected type %T for customer number", raw), "Failed to parse customer number."))
-	}
-}
-
-func (r *customerRepoImpl) UpdateNextCustomerNumber(ctx context.Context, sysPropertyID, accountID string, value string) *apierror.APIError {
-	ctx, span := customerRepoTracer.Start(ctx, "repository.customer.update_next_number")
-	defer span.End()
-
-	// Parse string to int32 for the sqlc query.
-	var intVal int32
-	for _, c := range value {
-		intVal = intVal*10 + int32(c-'0')
+	number, err := res.LastInsertId()
+	if err != nil {
+		return 0, tracing.Trace(span, apierror.NewInternalError(err, "Failed to read the reserved customer number."))
 	}
 
-	err := r.queries.UpdateNextCustomerNumber(ctx, sqlc.UpdateNextCustomerNumberParams{
-		ID:        sysPropertyID,
-		AccountID: accountID,
-		Value:     intVal,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-
-	return nil
+	return number, nil
 }
 
 func (r *customerRepoImpl) InsertPriceGroup(ctx context.Context, id, relationID, groupID string) *apierror.APIError {

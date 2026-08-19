@@ -4,7 +4,6 @@ import (
 	"context"
 	gosql "database/sql"
 	"errors"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -169,58 +168,28 @@ func (r *transactionRepoImpl) FetchAndIncrementTransactionNumber(ctx context.Con
 	ctx, span := transactionRepoTracer.Start(ctx, "repository.transaction.fetch_and_increment_number")
 	defer span.End()
 
-	// Get the next transaction number.
-	nextNumberRaw, err := r.queries.GetNextTransactionNumber(ctx, accountID)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return "", tracing.Trace(span, apiErr)
-	}
-
-	// The COALESCE returns interface{} — convert to int.
-	var nextNumber int64
-	switch v := nextNumberRaw.(type) {
-	case int64:
-		nextNumber = v
-	case []byte:
-		n, parseErr := strconv.ParseInt(string(v), 10, 64)
-		if parseErr != nil {
-			return "", tracing.Trace(span, apierror.NewInternalError(parseErr, "Failed to parse transaction number."))
-		}
-		nextNumber = n
-	default:
-		return "", tracing.Trace(span, apierror.NewInvariantViolationError(fmt.Sprintf("Unexpected type for transaction number: %T", v)))
-	}
-
-	number := fmt.Sprintf("%d", nextNumber)
-
-	// Check for duplicate and increment if needed.
-	cnt, err := r.queries.IsDuplicateTransactionNumber(ctx, sqlc.IsDuplicateTransactionNumberParams{
-		AccountID: accountID,
-		Number:    number,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return "", tracing.Trace(span, apiErr)
-	}
-	if cnt > 0 {
-		nextNumber++
-		number = fmt.Sprintf("%d", nextNumber)
-	}
-
-	// Upsert the transaction number in sys_property.
 	sysPropertyID, apiErr := id.GenID(id.SysPropertyIDPrefix, nil)
 	if apiErr != nil {
 		return "", tracing.Trace(span, apiErr)
 	}
 
-	err = r.queries.UpsertTransactionNumber(ctx, sqlc.UpsertTransactionNumberParams{
+	// One statement reserves the number under a row lock. The previous read-then-write pair
+	// let two payments recorded at the same moment be assigned the same number, and the
+	// duplicate check that followed could not see a number the other request had not written yet.
+	res, err := r.queries.AllocateNextTransactionNumber(ctx, sqlc.AllocateNextTransactionNumberParams{
 		ID:        sysPropertyID,
 		AccountID: accountID,
-		Value:     safeconv.Int64ToInt32(nextNumber),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return "", tracing.Trace(span, apiErr)
 	}
 
-	return number, nil
+	number, err := res.LastInsertId()
+	if err != nil {
+		return "", tracing.Trace(span, apierror.NewInternalError(err, "Failed to read the reserved transaction number."))
+	}
+
+	return strconv.FormatInt(number, 10), nil
 }
 
 func transactionCreatedAt(d *domain.TransactionSummary) time.Time { return d.CreatedAt }
@@ -270,7 +239,7 @@ func (r *transactionRepoImpl) List(ctx context.Context, params domain.ListTransa
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
-			return nil, apierror.NewValidationError("Invalid pagination cursor.")
+			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
 		}
 		cursorDir = &cur.Direction
 
@@ -706,7 +675,7 @@ func (r *transactionRepoImpl) ListByCustomer(ctx context.Context, params domain.
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
-			return nil, apierror.NewValidationError("Invalid pagination cursor.")
+			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
 		}
 		cursorDir = &cur.Direction
 

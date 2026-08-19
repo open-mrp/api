@@ -58,6 +58,7 @@ type SalesOrderSvc interface {
 	CheckoutSalesOrder(ctx context.Context, req *CheckoutSalesOrderRequest) (*CheckoutSalesOrderResponse, *apierror.APIError)
 	QuoteSalesOrderPrices(ctx context.Context, req *QuoteSalesOrderPricesRequest) (*QuoteSalesOrderPricesResponse, *apierror.APIError)
 	QuoteSalesOrderFreight(ctx context.Context, req *QuoteSalesOrderFreightRequest) (*QuoteSalesOrderFreightResponse, *apierror.APIError)
+	QuoteSalesOrderCommitment(ctx context.Context, req *QuoteSalesOrderCommitmentRequest) (*QuoteSalesOrderCommitmentResponse, *apierror.APIError)
 	CreateSalesOrderProductionRun(ctx context.Context, req *CreateProductionRunRequest) (*apiresource.ProductionRun, *apierror.APIError)
 	CreateSalesOrderLine(ctx context.Context, req *CreateSalesOrderLineRequest) (*apiresource.SalesOrderLine, *apierror.APIError)
 	UpdateSalesOrderLine(ctx context.Context, req *UpdateSalesOrderLineRequest) (*apiresource.SalesOrderLine, *apierror.APIError)
@@ -206,6 +207,10 @@ func (m *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, req *CreateSal
 	if v, ok := req.PromisedAt.Value(); ok {
 		pbReq.PromisedAt = timestamppb.New(v)
 	}
+	pbReq.LeadTimeOverrideDays = req.LeadTimeOverrideDays.Ptr()
+	if v, ok := req.ShipByOverrideDate.Value(); ok {
+		pbReq.ShipByOverrideDate = timestamppb.New(v)
+	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, salesOrderEpSvcTracer, "service.sales_orders.create", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreateSalesOrderResponse, error) {
@@ -244,6 +249,8 @@ func (m *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, req *UpdateSal
 		SalesRepId:            field.StringClearableToProto(req.SalesRepID),
 		OrderDiscountId:       field.StringClearableToProto(req.OrderDiscountID),
 		PromisedAt:            field.TimestampClearableToProto(req.PromisedAt),
+		LeadTimeOverrideDays:  field.Int32ClearableToProto(req.LeadTimeOverrideDays),
+		ShipByOverrideDate:    field.TimestampClearableToProto(req.ShipByOverrideDate),
 		// Non-nullable optional fields → *string (set or leave; not clearable).
 		CarrierId:                    req.CarrierID.Ptr(),
 		PriorityCode:                 req.PriorityCode.Ptr(),
@@ -504,6 +511,67 @@ func (m *salesOrderSvcImpl) QuoteSalesOrderFreight(ctx context.Context, req *Quo
 	}, nil
 }
 
+func (m *salesOrderSvcImpl) QuoteSalesOrderCommitment(ctx context.Context, req *QuoteSalesOrderCommitmentRequest) (*QuoteSalesOrderCommitmentResponse, *apierror.APIError) {
+	pbReq := &pb.QuoteSalesOrderCommitmentRequest{
+		Id:                   req.SalesOrderID.Ptr(),
+		BuyerAccountId:       req.BuyerAccountID.Ptr(),
+		ShipToAddressId:      req.ShipToAddressID.Ptr(),
+		CarrierId:            req.CarrierID.Ptr(),
+		ServiceLevelId:       req.ServiceLevelID.Ptr(),
+		LeadTimeOverrideDays: req.LeadTimeOverrideDays.Ptr(),
+	}
+	if v, ok := req.IssuedAt.Value(); ok {
+		pbReq.IssuedAt = timestamppb.New(v)
+	}
+	if v, ok := req.PromisedAt.Value(); ok {
+		pbReq.PromisedAt = timestamppb.New(v)
+	}
+	if v, ok := req.ShipByOverrideDate.Value(); ok {
+		pbReq.ShipByOverrideDate = timestamppb.New(v)
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, salesOrderEpSvcTracer, "service.sales_orders.quote_commitment", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.QuoteSalesOrderCommitmentResponse, error) {
+			return m.coreClient.QuoteSalesOrderCommitment(ctx, pbReq, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	out := &QuoteSalesOrderCommitmentResponse{
+		Object:                 constants.ObjectTypeSalesOrderCommitmentQuote,
+		LeadTimeDays:           resp.LeadTimeDays,
+		TransitDays:            resp.TransitDays,
+		CalendarAdjustmentDays: resp.CalendarAdjustmentDays,
+		Steps:                  []apiresource.CommitmentQuoteStep{},
+	}
+	if resp.ShipByDate != nil {
+		t := grpcutil.TimestampToTime(resp.ShipByDate)
+		out.ShipByDate = &t
+	}
+	if resp.ShipByCutoffAt != nil {
+		t := grpcutil.TimestampToTime(resp.ShipByCutoffAt)
+		out.ShipByCutoffAt = &t
+	}
+	if resp.LeadTimeSourceCode != nil {
+		source := constants.LeadTimeSource(*resp.LeadTimeSourceCode)
+		out.LeadTimeSource = &source
+	}
+	if resp.TransitSourceCode != nil {
+		source := constants.TransitSource(*resp.TransitSourceCode)
+		out.TransitSource = &source
+	}
+	for _, step := range resp.Steps {
+		out.Steps = append(out.Steps, apiresource.CommitmentQuoteStep{
+			Code:      constants.CommitmentStep(step.Code),
+			Date:      grpcutil.TimestampToTime(step.Date),
+			DaysMoved: step.DaysMoved,
+			Detail:    stepDetailOrNil(step.Detail),
+		})
+	}
+	return out, nil
+}
+
 func (m *salesOrderSvcImpl) CreateSalesOrderProductionRun(ctx context.Context, req *CreateProductionRunRequest) (*apiresource.ProductionRun, *apierror.APIError) {
 	pbReq := &pb.CreateSalesOrderProductionRunRequest{Id: req.SalesOrderID}
 
@@ -677,6 +745,16 @@ func salesOrderDetailFromProto(info *pb.SalesOrderInfo) apiresource.SalesOrder {
 		source := constants.TransitSource(*info.TransitSourceCode)
 		d.TransitSource = &source
 	}
+	d.LeadTimeOverrideDays = info.LeadTimeOverrideDays
+	if info.ShipByOverrideDate != nil {
+		t := grpcutil.TimestampToTime(info.ShipByOverrideDate)
+		d.ShipByOverrideDate = &t
+	}
+	if info.ShipByCutoffAt != nil {
+		t := grpcutil.TimestampToTime(info.ShipByCutoffAt)
+		d.ShipByCutoffAt = &t
+	}
+	d.CalendarAdjustmentDays = info.CalendarAdjustmentDays
 
 	return d
 }
@@ -1208,4 +1286,12 @@ func buildSOAddressFromProto(
 	addr.Geolocation = geo
 
 	return addr
+}
+
+// stepDetailOrNil keeps a rule that takes no parameter distinguishable from one whose parameter happens to be empty.
+func stepDetailOrNil(detail string) *string {
+	if detail == "" {
+		return nil
+	}
+	return &detail
 }

@@ -119,6 +119,8 @@ var pathParamToSampleID = map[string]string{
 
 // fieldNameSampleIDs maps request struct field names to sample IDs when they do not follow the Sample{FieldName} constant naming convention.
 var fieldNameSampleIDs = map[string]string{
+	"OperatingCalendarID":  apiresource.SampleOperatingCalendarID,
+	"ClosureID":            apiresource.SampleOperatingCalendarClosureID,
 	"APIKeyID":             apiresource.SampleAPIKeyID,
 	"UserID":               apiresource.SampleUserID,
 	"AccountID":            apiresource.SampleAccountID,

@@ -167,7 +167,12 @@ func TestShipByCommitment_PromisedDateOverridesTheChain(t *testing.T) {
 	t.Parallel()
 
 	customerID := leadTimeCustomer(t, "e2e-shipby-promised", ptrInt(45), "")
-	promised := time.Now().UTC().AddDate(0, 0, 3).Format("2006-01-02") + "T00:00:00Z"
+	// Landed on a weekday so the date is unchanged by the receiving calendar. A promise to deliver at a weekend resolves back to the Friday, which is correct but would make this test about the calendar rather than about the promise beating the standing rule. That case has its own coverage in commitment_basis_test.go.
+	promisedDay := time.Now().UTC().AddDate(0, 0, 3)
+	for promisedDay.Weekday() == time.Saturday || promisedDay.Weekday() == time.Sunday {
+		promisedDay = promisedDay.AddDate(0, 0, 1)
+	}
+	promised := promisedDay.Format("2006-01-02") + "T00:00:00Z"
 
 	order := issueOrderForCustomer(t, customerID, map[string]any{"promised_at": promised})
 

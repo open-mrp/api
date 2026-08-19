@@ -14,15 +14,19 @@ const purchaseOrdersPath = "/v1/operations/purchase-orders"
 
 // firstPurchaseOrderID returns the id of the first purchase order in seed data.
 // Fails loudly if no PO is seeded so missing fixtures surface rather than skip.
+// firstPurchaseOrderID returns a purchase order these read tests can rely on being there.
+//
+// It used to take whichever order the list returned first, which made it whatever a parallel
+// test had most recently created — and those are deleted on cleanup, so the read that followed
+// could 404 on an order that existed when the list was built.
 func firstPurchaseOrderID(t *testing.T) string {
 	t.Helper()
-	list, status, err := apiClient.GetList(purchaseOrdersPath, nil)
+
+	status, body, err := apiClient.GetListRaw(purchaseOrdersPath+"/"+SeedPurchaseOrderID, nil)
 	require.NoError(t, err)
-	require.Equal(t, 200, status, "purchase orders list should return 200")
-	require.GreaterOrEqual(t, len(list.Data), 1, "at least one purchase order must be seeded")
-	id := DataItemField(list.Data[0], "id")
-	require.NotEmpty(t, id)
-	return id
+	requireStatus(t, 200, status, body)
+
+	return SeedPurchaseOrderID
 }
 
 // ──────────────────────────────────────────────

@@ -103,6 +103,14 @@ func (s *purchaseOrderLineSvcImpl) CreatePurchaseOrderLine(ctx context.Context, 
 
 	params.AccountID = identity.Target.AccountID
 
+	// The same check the create path runs, so a line added afterwards cannot record a quantity in a unit the product is not measured in.
+	if apiErr := validatePurchaseOrderLineUnits(ctx, s.repos, params.AccountID, []domain.CreatePurchaseOrderLineInput{{
+		ProductID:      params.ProductID,
+		QuantityUnitID: params.QuantityUnitID,
+	}}, "quantity_unit_id"); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
 	meds := s.mediators()
 
 	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)

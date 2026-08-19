@@ -111,7 +111,7 @@ func TestCovCatalogMaterials_ListFilterByNonexistentCategoryID(t *testing.T) {
 
 func TestCovCatalogMaterials_ListFilterByNonexistentAttributeID(t *testing.T) {
 	t.Parallel()
-	// Use a per-run-unique attribute id rather than a fixed sentinel. The create-side "silently ignored" path (see TestCovCatalogMaterials_CreateNonexistentAttributeIDSilentlyIgnored) persists whatever bogus attribute id it is given as a dangling _item_attributes link row, so a shared constant like "at_00000000000000000" gets legitimately matched by this filter once that sibling test has run. A unique id can never collide with a persisted link.
+	// A per-run-unique id can never collide with a link some other test persisted.
 	bogusAttrID := "at_" + strings.ReplaceAll(newIdempotencyKey(), "-", "")
 	list, status, err := apiClient.GetList(materialsPath, url.Values{"attribute_ids": {bogusAttrID}})
 	require.NoError(t, err)
@@ -290,8 +290,8 @@ func TestCovCatalogMaterials_UpdateNonexistentOrderPointUnitID(t *testing.T) {
 		"nonexistent order_point.unit_id on update should be a clean client error, got %d: %s", status, string(respBody))
 }
 
-// TestCovCatalogMaterials_CreateNonexistentAttributeIDSilentlyIgnored documents the currently-observed behavior: a nonexistent attribute_ids entry does not cause the create to fail, and no attribute is linked (the bogus id is silently dropped). This is not a 5xx and matches the task's "unclear (may 500 or silently ignore)" note being resolved to "silently ignore" — asserted so a regression to a raw 500 is caught.
-func TestCovCatalogMaterials_CreateNonexistentAttributeIDSilentlyIgnored(t *testing.T) {
+// TestCovCatalogMaterials_CreateNonexistentAttributeIDRejected covers the create-side attribute check: a nonexistent attribute_ids entry is a clean client error, not a 5xx and not a silently-dropped id.
+func TestCovCatalogMaterials_CreateNonexistentAttributeIDRejected(t *testing.T) {
 	t.Parallel()
 	body := validMaterialBody(uniqueName("e2e-mat-badattr"))
 	body["attribute_ids"] = []string{"at_00000000000000000"}
@@ -299,21 +299,8 @@ func TestCovCatalogMaterials_CreateNonexistentAttributeIDSilentlyIgnored(t *test
 	status, respBody, err := apiClient.Post(materialsPath, body, newIdempotencyKey())
 	require.NoError(t, err)
 	require.NotEqual(t, 500, status, "nonexistent attribute_ids entry must not 500 (body: %s)", string(respBody))
-	requireStatus(t, 201, status, respBody)
-
-	got := parseJSON(respBody)
-	id := jsonField(got, "id")
-	require.NotEmpty(t, id)
-	defer apiClient.Delete(materialsPath + "/" + id)
-
-	itemStatus, itemBody, err := apiClient.GetListRaw(materialsPath+"/"+id, url.Values{"include": {"item.attributes"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, itemStatus, itemBody)
-	item := jsonObject(parseJSON(itemBody), "item")
-	require.NotNil(t, item)
-	attrs := jsonObject(item, "attributes")
-	require.NotNil(t, attrs, "item.attributes should still be a list object")
-	assert.Empty(t, jsonArray(attrs, "data"), "nonexistent attribute id should not be linked")
+	requireStatus(t, 404, status, respBody)
+	requireErrorResponse(t, respBody, "resource_not_found", "invalid_request_error")
 }
 
 // ──────────────────────────────────────────────

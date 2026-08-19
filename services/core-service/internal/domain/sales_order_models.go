@@ -44,8 +44,14 @@ type SalesOrder struct {
 	LeadTimeSourceCode    *string                `audit:"lead_time_source_code"`
 	TransitDays           *int32                 `audit:"transit_days"`
 	TransitSourceCode     *string                `audit:"transit_source_code"`
-	CreatedAt             time.Time
-	UpdatedAt             time.Time
+	// LeadTimeOverrideDays and ShipByOverrideDate are the two per-order commitment bases beside PromisedAt. At most one of the three is ever set; the write path rejects more.
+	LeadTimeOverrideDays *int       `audit:"lead_time_override_days"`
+	ShipByOverrideDate   *time.Time `audit:"ship_by_override_date"`
+	// ShipByCutoffAt is ShipByDate at the plant's pickup cutoff, and CalendarAdjustmentDays how many days the receiving and shipping calendars pulled the date back beyond transit. Both stamped with the commitment so an edited calendar cannot rewrite the explanation of a promise already made.
+	ShipByCutoffAt         *time.Time `audit:"ship_by_cutoff_at"`
+	CalendarAdjustmentDays *int32     `audit:"calendar_adjustment_days"`
+	CreatedAt              time.Time
+	UpdatedAt              time.Time
 
 	// Joined customer details
 	CustomerName             string
@@ -228,6 +234,9 @@ type CreateSalesOrderParams struct {
 	PaymentTermID         *string
 	OrderDiscountID       *string
 	PromisedAt            *time.Time
+	// LeadTimeOverrideDays and ShipByOverrideDate are the alternatives to PromisedAt. At most one of the three may be set; the service rejects more.
+	LeadTimeOverrideDays *int32
+	ShipByOverrideDate   *time.Time
 	// Existing bill-to / ship-to address IDs the order references. The addresses must belong to the order's owner or buyer account (matching Dashboard, which only accepts address IDs — addresses are persisted separately).
 	BillToAddressID string
 	ShipToAddressID string
@@ -286,6 +295,9 @@ type UpdateSalesOrderParams struct {
 	SalesRepID            field.Clearable[string]
 	OrderDiscountID       field.Clearable[string]
 	PromisedAt            field.Clearable[time.Time]
+	// LeadTimeOverrideDays and ShipByOverrideDate are the alternatives to PromisedAt. Clearing one to set another in the same request is how a caller switches basis.
+	LeadTimeOverrideDays field.Clearable[int32]
+	ShipByOverrideDate   field.Clearable[time.Time]
 	// When non-nil, replaces the acknowledgement email contacts on the order. Empty slice clears all contacts; nil leaves existing contacts untouched.
 	AcknowledgementEmailContacts *[]SalesOrderEmailContactInput
 	// When non-nil, replaces the invoice email contacts on the order. Empty slice clears all contacts; nil leaves existing contacts untouched.
@@ -371,4 +383,36 @@ type ShipByCommitment struct {
 	TransitDays *int
 	// TransitSourceCode names where TransitDays came from, empty when TransitDays is nil.
 	TransitSourceCode string
+	// ShipByCutoffAt is ShipByDate at the plant's pickup cutoff, nil when the ship calendar carries no cutoff.
+	ShipByCutoffAt *time.Time
+	// CalendarAdjustmentDays is how many days the receiving and shipping calendars pulled ShipByDate back beyond transit.
+	CalendarAdjustmentDays int
+	// Steps is the ordered derivation, one entry per rule that touched the date. Computed rather than stored: it explains a commitment to whoever is looking at it now, where the stamped scalars are what the commitment itself is made of.
+	Steps []CommitmentStep
+}
+
+// CommitmentStep is one rule's contribution to a ship-by date.
+type CommitmentStep struct {
+	Code      string
+	Date      time.Time
+	DaysMoved int
+	Detail    string
+}
+
+// QuoteCommitmentParams previews what a set of inputs would commit to, without writing anything.
+//
+// SalesOrderID and the loose fields are alternatives: an existing order supplies its own customer, address and carrier, while the order-entry form has none of that saved yet and passes them directly. The bases apply either way, so a form can preview a change to an order it has not saved.
+type QuoteCommitmentParams struct {
+	AccountID    string
+	SalesOrderID *string
+
+	BuyerAccountID  *string
+	ShipToAddressID *string
+	CarrierID       *string
+	ServiceLevelID  *string
+	IssuedAt        *time.Time
+
+	PromisedAt           *time.Time
+	LeadTimeOverrideDays *int32
+	ShipByOverrideDate   *time.Time
 }

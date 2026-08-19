@@ -1,0 +1,60 @@
+package fixture
+
+// Fixture for txaudit's own test. Stored as .txt so it is not compiled with the tool.
+
+type factory struct{}
+
+type svc struct {
+	txManager     manager
+	stripeClient  stripe
+	notifications chan string
+}
+
+type manager interface {
+	WithTx(ctx any, fn func(ctx any, f factory) error) error
+}
+
+type stripe interface{ Charge(string) error }
+
+func (s *svc) accumulates() error {
+	var results []string
+	return s.txManager.WithTx(nil, func(ctx any, f factory) error {
+		for _, v := range []string{"a", "b"} {
+			results = append(results, v)
+		}
+		return nil
+	})
+}
+
+func (s *svc) callsOutside() error {
+	return s.txManager.WithTx(nil, func(ctx any, f factory) error {
+		return s.stripeClient.Charge("cus_1")
+	})
+}
+
+func (s *svc) spawns() error {
+	return s.txManager.WithTx(nil, func(ctx any, f factory) error {
+		go func() { _ = 1 }()
+		return nil
+	})
+}
+
+func (s *svc) sends() error {
+	return s.txManager.WithTx(nil, func(ctx any, f factory) error {
+		s.notifications <- "done"
+		return nil
+	})
+}
+
+func (s *svc) isFine() error {
+	var out []string
+	return s.txManager.WithTx(nil, func(ctx any, f factory) error {
+		// Built inside and assigned out once: a retry replaces it rather than doubling it.
+		acc := make([]string, 0, 2)
+		for _, v := range []string{"a", "b"} {
+			acc = append(acc, v)
+		}
+		out = acc
+		return nil
+	})
+}

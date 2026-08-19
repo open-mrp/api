@@ -44,6 +44,7 @@ const (
 	CoreSalesService_CheckoutSalesOrder_FullMethodName              = "/core.CoreSalesService/CheckoutSalesOrder"
 	CoreSalesService_QuoteSalesOrderLinePrices_FullMethodName       = "/core.CoreSalesService/QuoteSalesOrderLinePrices"
 	CoreSalesService_QuoteSalesOrderFreight_FullMethodName          = "/core.CoreSalesService/QuoteSalesOrderFreight"
+	CoreSalesService_QuoteSalesOrderCommitment_FullMethodName       = "/core.CoreSalesService/QuoteSalesOrderCommitment"
 	CoreSalesService_CreateSalesOrderProductionRun_FullMethodName   = "/core.CoreSalesService/CreateSalesOrderProductionRun"
 	CoreSalesService_CreateSalesOrderLine_FullMethodName            = "/core.CoreSalesService/CreateSalesOrderLine"
 	CoreSalesService_ListVolumeDiscounts_FullMethodName             = "/core.CoreSalesService/ListVolumeDiscounts"
@@ -105,6 +106,10 @@ type CoreSalesServiceClient interface {
 	// QuoteSalesOrderFreight re-estimates the freight (shipping) charge for an existing
 	// order from its current ship-to, carrier, service level, and lines, without mutating it.
 	QuoteSalesOrderFreight(ctx context.Context, in *QuoteSalesOrderFreightRequest, opts ...grpc.CallOption) (*QuoteSalesOrderFreightResponse, error)
+	// QuoteSalesOrderCommitment previews the ship-by date a set of commitment inputs would
+	// produce, without creating or mutating anything. Serves the order-entry form, which has
+	// no order to ask about yet.
+	QuoteSalesOrderCommitment(ctx context.Context, in *QuoteSalesOrderCommitmentRequest, opts ...grpc.CallOption) (*QuoteSalesOrderCommitmentResponse, error)
 	// CreateSalesOrderProductionRun creates a production run from a sales order.
 	CreateSalesOrderProductionRun(ctx context.Context, in *CreateSalesOrderProductionRunRequest, opts ...grpc.CallOption) (*CreateSalesOrderProductionRunResponse, error)
 	// CreateSalesOrderLine creates a new line on a sales order.
@@ -345,6 +350,16 @@ func (c *coreSalesServiceClient) QuoteSalesOrderFreight(ctx context.Context, in 
 	return out, nil
 }
 
+func (c *coreSalesServiceClient) QuoteSalesOrderCommitment(ctx context.Context, in *QuoteSalesOrderCommitmentRequest, opts ...grpc.CallOption) (*QuoteSalesOrderCommitmentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QuoteSalesOrderCommitmentResponse)
+	err := c.cc.Invoke(ctx, CoreSalesService_QuoteSalesOrderCommitment_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *coreSalesServiceClient) CreateSalesOrderProductionRun(ctx context.Context, in *CreateSalesOrderProductionRunRequest, opts ...grpc.CallOption) (*CreateSalesOrderProductionRunResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateSalesOrderProductionRunResponse)
@@ -521,6 +536,10 @@ type CoreSalesServiceServer interface {
 	// QuoteSalesOrderFreight re-estimates the freight (shipping) charge for an existing
 	// order from its current ship-to, carrier, service level, and lines, without mutating it.
 	QuoteSalesOrderFreight(context.Context, *QuoteSalesOrderFreightRequest) (*QuoteSalesOrderFreightResponse, error)
+	// QuoteSalesOrderCommitment previews the ship-by date a set of commitment inputs would
+	// produce, without creating or mutating anything. Serves the order-entry form, which has
+	// no order to ask about yet.
+	QuoteSalesOrderCommitment(context.Context, *QuoteSalesOrderCommitmentRequest) (*QuoteSalesOrderCommitmentResponse, error)
 	// CreateSalesOrderProductionRun creates a production run from a sales order.
 	CreateSalesOrderProductionRun(context.Context, *CreateSalesOrderProductionRunRequest) (*CreateSalesOrderProductionRunResponse, error)
 	// CreateSalesOrderLine creates a new line on a sales order.
@@ -620,6 +639,9 @@ func (UnimplementedCoreSalesServiceServer) QuoteSalesOrderLinePrices(context.Con
 }
 func (UnimplementedCoreSalesServiceServer) QuoteSalesOrderFreight(context.Context, *QuoteSalesOrderFreightRequest) (*QuoteSalesOrderFreightResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method QuoteSalesOrderFreight not implemented")
+}
+func (UnimplementedCoreSalesServiceServer) QuoteSalesOrderCommitment(context.Context, *QuoteSalesOrderCommitmentRequest) (*QuoteSalesOrderCommitmentResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method QuoteSalesOrderCommitment not implemented")
 }
 func (UnimplementedCoreSalesServiceServer) CreateSalesOrderProductionRun(context.Context, *CreateSalesOrderProductionRunRequest) (*CreateSalesOrderProductionRunResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateSalesOrderProductionRun not implemented")
@@ -1041,6 +1063,24 @@ func _CoreSalesService_QuoteSalesOrderFreight_Handler(srv interface{}, ctx conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CoreSalesService_QuoteSalesOrderCommitment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QuoteSalesOrderCommitmentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreSalesServiceServer).QuoteSalesOrderCommitment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreSalesService_QuoteSalesOrderCommitment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreSalesServiceServer).QuoteSalesOrderCommitment(ctx, req.(*QuoteSalesOrderCommitmentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CoreSalesService_CreateSalesOrderProductionRun_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateSalesOrderProductionRunRequest)
 	if err := dec(in); err != nil {
@@ -1361,6 +1401,10 @@ var CoreSalesService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "QuoteSalesOrderFreight",
 			Handler:    _CoreSalesService_QuoteSalesOrderFreight_Handler,
+		},
+		{
+			MethodName: "QuoteSalesOrderCommitment",
+			Handler:    _CoreSalesService_QuoteSalesOrderCommitment_Handler,
 		},
 		{
 			MethodName: "CreateSalesOrderProductionRun",

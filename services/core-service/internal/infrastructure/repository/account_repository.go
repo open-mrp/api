@@ -277,25 +277,6 @@ func (r *accountRepoImpl) GetName(ctx context.Context, accountID string) (string
 	return name, nil
 }
 
-func (r *accountRepoImpl) GetBrandingLogoURL(ctx context.Context, accountID string) (*string, *apierror.APIError) {
-	ctx, span := accountRepoTracer.Start(ctx, "repository.account.get_branding_logo_url")
-	defer span.End()
-
-	result, err := r.queries.GetAccountBrandingByAccountID(ctx, accountID)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
-			return nil, nil
-		}
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	if !result.Valid {
-		return nil, nil
-	}
-
-	return &result.String, nil
-}
-
 func (r *accountRepoImpl) GetPortalSlug(ctx context.Context, accountID string) (*string, *apierror.APIError) {
 	ctx, span := accountRepoTracer.Start(ctx, "repository.account.get_portal_slug")
 	defer span.End()

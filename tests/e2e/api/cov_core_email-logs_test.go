@@ -100,7 +100,7 @@ func TestCovCoreEmailLogs_InvalidLimit_Zero(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 400, statusCode, "GET %s?limit=0 should return 400, got %d: %s", emailLogsPath, statusCode, string(body))
 	if statusCode == 400 {
-		requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
+		requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
 	}
 }
 
@@ -111,7 +111,7 @@ func TestCovCoreEmailLogs_InvalidLimit_Negative(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 400, statusCode, "GET %s?limit=-1 should return 400, got %d: %s", emailLogsPath, statusCode, string(body))
 	if statusCode == 400 {
-		requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
+		requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
 	}
 }
 
@@ -123,7 +123,7 @@ func TestCovCoreEmailLogs_InvalidLimit_TooLarge(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 400, statusCode, "GET %s?limit=1001 should return 400, got %d: %s", emailLogsPath, statusCode, string(body))
 	if statusCode == 400 {
-		requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
+		requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
 	}
 }
 
@@ -148,7 +148,7 @@ func TestCovCoreEmailLogs_QueryTooLong(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 400, statusCode, "GET %s?q=<501 chars> should return 400, got %d: %s", emailLogsPath, statusCode, string(body))
 	if statusCode == 400 {
-		requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
+		requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
 	}
 }
 

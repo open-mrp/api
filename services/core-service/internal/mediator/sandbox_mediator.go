@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"time"
 
+	"github.com/augno/api/services/core-service/internal/calendarseed"
 	"github.com/augno/api/services/core-service/internal/domain"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/id"
@@ -128,6 +130,11 @@ func (m *sandboxMedImpl) Create(ctx context.Context, ownerAccountID, userID, nam
 
 	if brandErr := regRepo.CreateAccountBranding(ctx, accountID); brandErr != nil {
 		return nil, tracing.Trace(span, brandErr)
+	}
+
+	// A sandbox is where people try the product, so it has to resolve dates the same way production does.
+	if seedErr := calendarseed.Seed(ctx, m.repos, accountID, time.Now()); seedErr != nil {
+		return nil, tracing.Trace(span, seedErr)
 	}
 
 	sandboxRepo := m.repos.NewSandboxAccountRepo()

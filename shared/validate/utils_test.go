@@ -763,3 +763,57 @@ func TestValidateEnumTagDoesNotPanic(t *testing.T) {
 		t.Fatalf("expected the enum tag to be a no-op for unrecognized values, got: %v", err)
 	}
 }
+
+// embeddedPaginationTestStruct mirrors the shape of every list request: the paging parameters
+// live on an embedded struct, not on the request itself.
+type embeddedPaginationTestStruct struct {
+	embeddedPagingTestFields
+	Status string `query:"status"`
+}
+
+type embeddedPagingTestFields struct {
+	Limit int `query:"limit" validate:"omitempty,min=1,max=1000"`
+}
+
+// A caller sees query parameters, not Go field names. Reporting "Field 'Limit'" named an
+// identifier they had never sent and put the wrong value in the error's `param`, leaving a
+// client with nothing to highlight.
+func TestValidate_NamesEmbeddedFieldsByTheirQueryParameter(t *testing.T) {
+	t.Parallel()
+
+	err := Validate(&embeddedPaginationTestStruct{embeddedPagingTestFields: embeddedPagingTestFields{Limit: -1}})
+	if err == nil {
+		t.Fatal("expected validation to fail")
+	}
+
+	if !strings.Contains(err.PublicMessage, "'limit'") {
+		t.Errorf("expected the message to name the query parameter, got: %s", err.PublicMessage)
+	}
+	if strings.Contains(err.PublicMessage, "'Limit'") {
+		t.Errorf("the Go field name must not reach the caller, got: %s", err.PublicMessage)
+	}
+	if !strings.Contains(err.PublicMessage, "Query parameter") {
+		t.Errorf("expected the message to say where the value came from, got: %s", err.PublicMessage)
+	}
+	if err.Param != "limit" {
+		t.Errorf("expected param 'limit' so a client can highlight the input, got: %q", err.Param)
+	}
+}
+
+// An outer field of the same name shadows the embedded one, exactly as it does in Go.
+func TestValidate_OuterFieldsShadowEmbeddedOnes(t *testing.T) {
+	t.Parallel()
+
+	type shadowing struct {
+		embeddedPagingTestFields
+		Limit int `query:"page_size" validate:"omitempty,min=1"`
+	}
+
+	err := Validate(&shadowing{Limit: -1})
+	if err == nil {
+		t.Fatal("expected validation to fail")
+	}
+	if !strings.Contains(err.PublicMessage, "'page_size'") {
+		t.Errorf("expected the outer field's tag to win, got: %s", err.PublicMessage)
+	}
+}

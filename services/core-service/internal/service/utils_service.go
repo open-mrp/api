@@ -28,6 +28,7 @@ type utilsSvcImpl struct {
 	txManager             TransactionManager
 	notificationPublisher domain.NotificationPublisher
 	frontendURL           string
+	branding              BrandingAssets
 }
 
 // UtilsSvcConfig holds the dependencies for the utils service.
@@ -46,6 +47,9 @@ type UtilsSvcConfig struct {
 
 	// FrontendURL (optional; default: "") is the dashboard base URL used in links. It is not validated at construction.
 	FrontendURL string
+
+	// Branding (optional) resolves the merchant logo for the acknowledgement email and PDF letterhead. Omitted, both fall back to a text-only letterhead.
+	Branding BrandingAssets
 }
 
 func (c *UtilsSvcConfig) validate() error {
@@ -76,6 +80,7 @@ func NewUtilsSvc(config *UtilsSvcConfig) domain.UtilsSvc {
 		txManager:             config.TxManager,
 		notificationPublisher: config.NotificationPublisher,
 		frontendURL:           config.FrontendURL,
+		branding:              config.Branding,
 	}
 }
 
@@ -91,6 +96,7 @@ func (s *utilsSvcImpl) withTx(ctx context.Context, fn func(context.Context, *uti
 			txManager:             s.txManager,
 			notificationPublisher: s.notificationPublisher,
 			frontendURL:           s.frontendURL,
+			branding:              s.branding,
 		}
 		return fn(txCtx, txSvc)
 	})
@@ -346,7 +352,7 @@ func (s *utilsSvcImpl) emailInvoice(ctx context.Context, span trace.Span, invoic
 
 func (s *utilsSvcImpl) emailSalesOrder(ctx context.Context, span trace.Span, salesOrderID, accountID string, meds domain.Mediators, idempotencyKey *domain.IdempotencyKey) *apierror.APIError {
 	// Built by the same assembler the automatic send-on-issue uses, so a manual resend delivers an identical acknowledgement (line items, letterhead, PDF attachment).
-	emailData, apiErr := buildOrderAcknowledgementEmail(ctx, s.repos, s.frontendURL, accountID, salesOrderID)
+	emailData, apiErr := buildOrderAcknowledgementEmail(ctx, s.repos, s.branding, s.frontendURL, accountID, salesOrderID)
 	if apiErr != nil {
 		return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, tracing.Trace(span, apiErr))
 	}

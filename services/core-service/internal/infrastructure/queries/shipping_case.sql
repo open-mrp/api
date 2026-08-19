@@ -143,6 +143,12 @@ SELECT
     fwu.created_at AS freight_weight_unit_created_at,
     fwu.updated_at AS freight_weight_unit_updated_at
 FROM shipping_case sc
+-- Inner joins: every column here is a NOT NULL reference on shipping_case, so a case whose
+-- freight or carrier does not resolve is a broken row rather than an ordinary one. Note the
+-- consequence if one ever does dangle — the case disappears from its shipment entirely rather
+-- than listing with empty freight, and a case that cannot be listed cannot be labelled,
+-- shipped, or deleted either. Packing once wrote a unit abbreviation where a unit ID belongs,
+-- and every packed case was invisible until that was fixed.
 JOIN quantity fa ON sc.freight_amount_id = fa.id
 JOIN unit fau ON fa.unit_id = fau.id
 JOIN quantity fw ON sc.freight_weight_id = fw.id

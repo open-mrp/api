@@ -239,13 +239,7 @@ func forwardBaseline(series []MonthlyDemand, asOf time.Time, basisCode string, f
 			forecastMonths = 12
 		}
 
-		observations := make([]forecast.Observation, 0, len(series))
-		for _, m := range series {
-			if m.MonthStart.After(lastComplete) {
-				continue // never forecast from a partial month
-			}
-			observations = append(observations, forecast.Observation{MonthStart: m.MonthStart, Value: m.Quantity})
-		}
+		observations := completeObservations(series, lastComplete)
 
 		if len(observations) > 0 {
 			points := forecast.SeasonalEMA(observations, lastComplete, forecastMonths, zScore)
@@ -346,6 +340,33 @@ func monthsBetween(start, end time.Time) []time.Time {
 
 func monthStartOf(t time.Time) time.Time {
 	return time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.UTC)
+}
+
+// completeObservations turns a possibly-sparse series into the dense run of complete months the forecaster expects, ending at lastComplete.
+//
+// Gaps are filled with zero rather than skipped: a month with no orders is a month of no demand, and leaving it out would let the level float above what actually sold. The analytics endpoint fills the same way, and the two must agree about the same demand.
+func completeObservations(series []MonthlyDemand, lastComplete time.Time) []forecast.Observation {
+	byMonth := make(map[time.Time]float64, len(series))
+	var first time.Time
+	for _, m := range series {
+		start := monthStartOf(m.MonthStart)
+		if start.After(lastComplete) {
+			continue // never forecast from a partial month
+		}
+		byMonth[start] += m.Quantity
+		if first.IsZero() || start.Before(first) {
+			first = start
+		}
+	}
+	if first.IsZero() {
+		return nil
+	}
+
+	var out []forecast.Observation
+	for cursor := first; !cursor.After(lastComplete); cursor = cursor.AddDate(0, 1, 0) {
+		out = append(out, forecast.Observation{MonthStart: cursor, Value: byMonth[cursor]})
+	}
+	return out
 }
 
 func sortedSeries(series []MonthlyDemand) []MonthlyDemand {

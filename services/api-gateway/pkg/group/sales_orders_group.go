@@ -53,6 +53,7 @@ func (*SalesOrdersEndpointGroup) Materialize(config *SalesOrdersEndpointGroupCon
 	checkoutEndpoint := apiendpoint.From(&salesorderep.CheckoutSalesOrderEndpoint{}).WithService(inner, svc)
 	quotePricesEndpoint := apiendpoint.From(&salesorderep.QuoteSalesOrderPricesEndpoint{}).WithService(inner, svc)
 	quoteFreightEndpoint := apiendpoint.From(&salesorderep.QuoteSalesOrderFreightEndpoint{}).WithService(inner, svc)
+	quoteCommitmentEndpoint := apiendpoint.From(&salesorderep.QuoteSalesOrderCommitmentEndpoint{}).WithService(inner, svc)
 	createProductionRunEndpoint := apiendpoint.From(&salesorderep.CreateProductionRunEndpoint{}).WithService(inner, svc)
 	createLineEndpoint := apiendpoint.From(&salesorderep.CreateSalesOrderLineEndpoint{}).WithService(inner, svc)
 	updateLineEndpoint := apiendpoint.From(&salesorderep.UpdateSalesOrderLineEndpoint{}).WithService(inner, svc)
@@ -73,6 +74,7 @@ func (*SalesOrdersEndpointGroup) Materialize(config *SalesOrdersEndpointGroupCon
 		checkoutEndpoint,
 		quotePricesEndpoint,
 		quoteFreightEndpoint,
+		quoteCommitmentEndpoint,
 		createProductionRunEndpoint,
 		createLineEndpoint,
 		updateLineEndpoint,

@@ -94,7 +94,7 @@ func (s *accountPriceSvcImpl) buildPriceListDocument(ctx context.Context, accoun
 	if account, _ := s.repos.NewAccountRepo().GetByID(ctx, accountID); account != nil {
 		doc.MerchantName = account.Name
 		if account.Branding != nil && account.Branding.LogoURL != nil {
-			doc.LogoImageType, doc.LogoImage = fetchAckLogoImage(ctx, *account.Branding.LogoURL)
+			doc.LogoImageType, doc.LogoImage = s.branding.LogoImage(ctx, *account.Branding.LogoURL)
 		}
 	}
 
@@ -432,33 +432,35 @@ func assemblePriceListLines(
 	return lines
 }
 
-// priceListPacking describes how a line is sold, e.g. "10 Pairs Per Carton", from the largest visible non-base unit in its unit group.
+// priceListPacking describes how a line is sold, e.g. "10 Pairs Per Carton", from the largest visible unit above the group's base unit. Unit ratios are stored against the dimension base (Each), not against the group's base unit, so they are re-expressed against it. A group whose base unit is already the pack it ships in has nothing to multiply and names the unit alone.
 func priceListPacking(group *domain.ProductLineUnitGroup) string {
 	if group == nil || group.BaseUnit == nil {
 		return ""
 	}
+	baseRatio := priceListUnitRatio(group.BaseUnit.RatioNumerator, group.BaseUnit.RatioDenominator)
 	best := decimal.NewFromInt(1)
 	bestName := ""
 	for _, associated := range group.AssociatedUnits {
 		unit := associated.Unit
-		if !associated.IsVisible || unit.IsBaseUnit {
+		// Skipped by identity, not by unit.IsBaseUnit: that flag marks the base of the dimension (Each), which is often not the base of this group.
+		if !associated.IsVisible || unit.ID == group.BaseUnitID {
 			continue
 		}
-		ratio := priceListUnitRatio(unit.RatioNumerator, unit.RatioDenominator)
+		ratio := priceListUnitRatio(unit.RatioNumerator, unit.RatioDenominator).Div(baseRatio)
 		if ratio.GreaterThan(best) {
 			best = ratio
 			bestName = unit.Name
 		}
 	}
 	if bestName == "" {
-		return ""
+		return group.BaseUnit.Name
 	}
 	return fmt.Sprintf("%s %s Per %s", best.String(), pluralizeUnit(group.BaseUnit.Name), bestName)
 }
 
 func priceListUnitRatio(numerator, denominator string) decimal.Decimal {
 	n, err := decimal.NewFromString(numerator)
-	if err != nil {
+	if err != nil || n.IsZero() {
 		return decimal.NewFromInt(1)
 	}
 	d, err := decimal.NewFromString(denominator)
@@ -468,8 +470,9 @@ func priceListUnitRatio(numerator, denominator string) decimal.Decimal {
 	return n.Div(d)
 }
 
+// A unit name that already carries its own qualifier — "Carton (10 pr)" — reads worse with an "s" welded onto the bracket, so those are left alone.
 func pluralizeUnit(word string) string {
-	if word == "" || word[len(word)-1] == 's' {
+	if word == "" || word[len(word)-1] == 's' || word[len(word)-1] == ')' {
 		return word
 	}
 	return word + "s"

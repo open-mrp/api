@@ -1,20 +1,10 @@
 package service
 
 import (
-	"bytes"
 	"context"
 	"encoding/base64"
 	"fmt"
-	"image"
-	"image/color"
-	"image/draw"
-	_ "image/gif"  // register GIF decoder for image.Decode
-	_ "image/jpeg" // register JPEG decoder for image.Decode
-	"image/png"
-	"io"
-	"net/http"
 	"strings"
-	"time"
 
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/shared/constants"
@@ -23,7 +13,6 @@ import (
 	"github.com/augno/api/shared/ptrutil"
 	"github.com/augno/api/shared/textutil"
 	"github.com/shopspring/decimal"
-	_ "golang.org/x/image/webp" // register WEBP decoder (account logos are often .webp)
 )
 
 // ackAddress is a rendered address block for the acknowledgement email/PDF.
@@ -213,7 +202,7 @@ func (d ackData) emailParams() map[string]any {
 }
 
 // buildOrderAcknowledgementEmail assembles the order-acknowledgement email — the rendered template params plus the generated PDF attachment — for an order. Returns (nil, nil) when the order has no acknowledgement recipients so callers can no-op instead of sending. Shared by the automatic send on issue and the manual resend, so both produce an identical email.
-func buildOrderAcknowledgementEmail(ctx context.Context, repos domain.RepoFactory, frontendURL, accountID, salesOrderID string) (*messaging.EmailSendData, *apierror.APIError) {
+func buildOrderAcknowledgementEmail(ctx context.Context, repos domain.RepoFactory, branding BrandingAssets, frontendURL, accountID, salesOrderID string) (*messaging.EmailSendData, *apierror.APIError) {
 	repo := repos.NewSalesOrderRepo()
 
 	recipients, apiErr := repo.GetAcknowledgementRecipients(ctx, salesOrderID)
@@ -244,9 +233,10 @@ func buildOrderAcknowledgementEmail(ctx context.Context, repos domain.RepoFactor
 	data.ContactEmails = recipients
 	// Gate the "Order Online" CTA on the account having a customer portal.
 	data.OrderOnlineLink = portalRegisterLink(ctx, repos, frontendURL, accountID)
-	// Fetch the logo bytes for the PDF letterhead (best-effort; the email uses the URL).
+	// The stored branding value is an object key, so it has to be signed for the email and read for the PDF. Both are best-effort.
 	if data.LogoURL != "" {
-		data.LogoImageType, data.LogoImage = fetchAckLogoImage(ctx, data.LogoURL)
+		data.LogoImageType, data.LogoImage = branding.LogoImage(ctx, data.LogoURL)
+		data.LogoURL = branding.LogoURL(ctx, data.LogoURL)
 	}
 
 	emailData := &messaging.EmailSendData{
@@ -284,52 +274,6 @@ func portalRegisterLink(ctx context.Context, repos domain.RepoFactory, frontendU
 		return fmt.Sprintf("%s/%s%s", frontendURL, *slug, registerPath)
 	}
 	return ""
-}
-
-// fetchAckLogoImage downloads the account logo and normalizes it to PNG bytes for
-// embedding in the PDF (the email references the URL directly). It decodes any
-// supported source format — PNG, JPEG, GIF, or WEBP (account logos are commonly
-// .webp, which fpdf cannot embed directly) — and re-encodes to PNG. Best-effort:
-// any failure (network, timeout, non-200, undecodable) returns ("", nil) and the
-// PDF falls back to a text-only letterhead.
-func fetchAckLogoImage(ctx context.Context, url string) (imageType string, data []byte) {
-	if strings.TrimSpace(url) == "" {
-		return "", nil
-	}
-	ctx, cancel := context.WithTimeout(ctx, 4*time.Second)
-	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return "", nil
-	}
-	resp, err := http.DefaultClient.Do(req) // #nosec G704 -- URL from account branding logo stored server-side
-
-	if err != nil {
-		return "", nil
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return "", nil
-	}
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 5<<20))
-	if err != nil || len(body) == 0 {
-		return "", nil
-	}
-	img, _, err := image.Decode(bytes.NewReader(body))
-	if err != nil {
-		return "", nil
-	}
-	// Flatten any transparency onto white before encoding: fpdf renders alpha PNGs
-	// unreliably (logos come out faint/washed-out), and the PDF background is white.
-	bounds := img.Bounds()
-	flat := image.NewRGBA(bounds)
-	draw.Draw(flat, bounds, image.NewUniform(color.White), image.Point{}, draw.Src)
-	draw.Draw(flat, bounds, img, bounds.Min, draw.Over)
-	var out bytes.Buffer
-	if err := png.Encode(&out, flat); err != nil {
-		return "", nil
-	}
-	return "PNG", out.Bytes()
 }
 
 func accountDisplayName(account *domain.Account, fallback string) string {

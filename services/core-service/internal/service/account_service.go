@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/augno/api/services/auth-service/pkg/types"
+	"github.com/augno/api/services/core-service/internal/calendarseed"
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/audit"
@@ -606,6 +607,11 @@ func (s *accountSvcImpl) CompleteRegistration(ctx context.Context, input domain.
 			return apiErr
 		}
 
+		// 4d. Seed the shipping and receiving calendars, so the account's first order is not committed to a Saturday or a federal holiday.
+		if apiErr := calendarseed.Seed(txCtx, f, accountID, time.Now()); apiErr != nil {
+			return apiErr
+		}
+
 		// 5. Create sandbox account (reuses same mediator logic as the create-sandbox endpoint)
 		sandboxName := input.AccountData.AccountName + " Sandbox"
 		meds := s.mediatorFactory.Build(f)
@@ -801,7 +807,12 @@ func (s *accountSvcImpl) GetAccount(ctx context.Context, accountID string) (*dom
 		return nil, tracing.Trace(span, apierror.NewAuthorizationError("You can only access your own account."))
 	}
 
-	return s.accountRepo.GetByID(ctx, accountID)
+	account, apiErr := s.accountRepo.GetByID(ctx, accountID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	s.signBranding(ctx, account)
+	return account, nil
 }
 
 // BatchGetAccountsByIDs returns accounts matching the input IDs that the caller is authorized to read. The caller can always read their own target account, plus any requested account they have an account_relation to (customer/supplier), so relationship-scoped includes (e.g. ContactMatch.account for a customer/supplier match) hydrate cross-account. IDs the caller neither owns nor relates to are silently dropped (matching the "missing IDs are absent" loader contract used by the api-gateway resourcekit resolver).
@@ -841,7 +852,23 @@ func (s *accountSvcImpl) BatchGetAccountsByIDs(ctx context.Context, ids []string
 	if len(allowed) == 0 {
 		return nil, nil
 	}
-	return s.accountRepo.GetByIDs(ctx, allowed)
+	accounts, apiErr := s.accountRepo.GetByIDs(ctx, allowed)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	for _, account := range accounts {
+		s.signBranding(ctx, account)
+	}
+	return accounts, nil
+}
+
+// signBranding replaces an account's stored branding asset keys with presigned URLs in place. The column holds the object key the upload wrote, so a resource that hands it out unsigned advertises a URL field carrying something no client can load.
+func (s *accountSvcImpl) signBranding(ctx context.Context, account *domain.Account) {
+	if account == nil || account.Branding == nil {
+		return
+	}
+	account.Branding.LogoURL = s.presignedBrandingURL(ctx, account.Branding.LogoURL)
+	account.Branding.FaviconURL = s.presignedBrandingURL(ctx, account.Branding.FaviconURL)
 }
 
 // presignedBrandingURL converts a stored branding asset S3 key (logo or favicon) into a presigned download URL. Branding must still render without the asset, so it returns nil (best-effort) when there is no key or signing fails, and passes through values that are already absolute URLs.
@@ -957,6 +984,8 @@ func (s *accountSvcImpl) UpdateAccount(ctx context.Context, params domain.Update
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
+		// Signed on the way out, not before caching: a replay hours later must not hand back a link that expired with the original response.
+		s.signBranding(ctx, cached.Data)
 		return cached.Data, cached.Error
 
 	case domain.RecoveryPointStarted:
@@ -1020,6 +1049,7 @@ func (s *accountSvcImpl) UpdateAccount(ctx context.Context, params domain.Update
 			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
 		}
 
+		s.signBranding(ctx, result)
 		return result, nil
 
 	default:

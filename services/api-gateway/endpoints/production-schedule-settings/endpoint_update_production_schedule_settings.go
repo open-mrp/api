@@ -100,6 +100,11 @@ type UpdateProductionScheduleSettingsRequest struct {
 	//
 	// The last resort in the ship-by chain: a lead time set on the customer, or on the customer's account group, takes precedence. Zero commits the account to same-day shipping on every order that falls through to it, so this update replaces the whole settings object and omitting the field is not the same as leaving it alone.
 	DefaultCustomerLeadTimeDays int32 `json:"default_customer_lead_time_days" validate:"gte=0,lte=3650"`
+	// The operating calendar naming the days this account's plant tenders freight, and the one naming the days a customer's dock accepts it.
+	//
+	// These are the account-wide fallbacks: an address or a customer with its own calendar overrides them, and an account with neither set falls back to a Monday-to-Friday week with no closures.
+	ShipCalendarID    field.Clearable[string] `json:"ship_calendar_id,omitzero" validate:"omitempty"`
+	ReceiveCalendarID field.Clearable[string] `json:"receive_calendar_id,omitzero" validate:"omitempty"`
 	// How a SKU is produced when neither it nor its product line says.
 	//
 	// - `make_to_stock`: built to the forecast, holding a safety stock against its variability.

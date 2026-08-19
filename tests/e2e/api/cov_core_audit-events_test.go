@@ -276,8 +276,8 @@ func TestCovCoreAuditEvents_ListLimitTooLow(t *testing.T) {
 	status, body, err := apiClient.GetListRaw(auditEventsPath, url.Values{"limit": {"0"}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
-	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
-	assertErrorParam(t, errObj, "Limit")
+	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	assertErrorParam(t, errObj, "limit")
 }
 
 func TestCovCoreAuditEvents_ListLimitTooHigh(t *testing.T) {
@@ -285,6 +285,6 @@ func TestCovCoreAuditEvents_ListLimitTooHigh(t *testing.T) {
 	status, body, err := apiClient.GetListRaw(auditEventsPath, url.Values{"limit": {"1001"}})
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
-	errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
-	assertErrorParam(t, errObj, "Limit")
+	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	assertErrorParam(t, errObj, "limit")
 }

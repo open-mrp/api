@@ -196,6 +196,19 @@ func (s *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, params d
 
 	params.AccountID = identity.Target.AccountID
 
+	// The supplier has to actually be one of this account's suppliers. Without the check any account ID is accepted, so an order can be placed against a customer — or an account in another tenancy — and the order then names a counterparty nobody agreed to buy from. Checked before the idempotency key is taken, so a rejected request is not remembered as an attempt.
+	if _, apiErr := s.repos.NewSupplierRepo().Get(ctx, domain.GetSupplierParams{
+		OwnerAccountID: params.AccountID,
+		SupplierID:     params.SupplierAccountID,
+	}); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	// Checked here rather than inside the transaction so a bad unit is refused before an order number is taken and an idempotency key is spent.
+	if apiErr := validatePurchaseOrderLineUnits(ctx, s.repos, params.AccountID, params.Lines, "quantity_unit_id"); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
 	meds := s.mediators()
 
 	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)

@@ -75,6 +75,11 @@ service CoreSalesService {
   // order from its current ship-to, carrier, service level, and lines, without mutating it.
   rpc QuoteSalesOrderFreight(QuoteSalesOrderFreightRequest) returns (QuoteSalesOrderFreightResponse);
 
+  // QuoteSalesOrderCommitment previews the ship-by date a set of commitment inputs would
+  // produce, without creating or mutating anything. Serves the order-entry form, which has
+  // no order to ask about yet.
+  rpc QuoteSalesOrderCommitment(QuoteSalesOrderCommitmentRequest) returns (QuoteSalesOrderCommitmentResponse);
+
   // CreateSalesOrderProductionRun creates a production run from a sales order.
   rpc CreateSalesOrderProductionRun(CreateSalesOrderProductionRunRequest) returns (CreateSalesOrderProductionRunResponse);
 
@@ -395,6 +400,15 @@ message SalesOrderInfo {
   // Carrier transit subtracted from a promised delivery date to reach ship_by_date.
   optional int32 transit_days = 107;
   optional string transit_source_code = 108;
+
+  // The two per-order commitment bases beside promised_at. At most one of the three is ever set.
+  optional int32 lead_time_override_days = 109;
+  optional google.protobuf.Timestamp ship_by_override_date = 110;
+
+  // ship_by_cutoff_at is ship_by_date at the plant's pickup cutoff, and calendar_adjustment_days
+  // how many days the receiving and shipping calendars pulled the date back beyond transit.
+  optional google.protobuf.Timestamp ship_by_cutoff_at = 111;
+  optional int32 calendar_adjustment_days = 112;
 }
 
 // SalesOrderLineInfo represents a sales order line.
@@ -514,6 +528,10 @@ message CreateSalesOrderRequest {
   // the order's owner or buyer account.
   string bill_to_address_id = 33;
   string ship_to_address_id = 34;
+
+  // Alternatives to promised_at, mutually exclusive with it and with each other.
+  optional int32 lead_time_override_days = 35;
+  optional google.protobuf.Timestamp ship_by_override_date = 36;
 }
 
 message SalesOrderEmailContactInput {
@@ -566,6 +584,10 @@ message UpdateSalesOrderRequest {
   optional string number = 27;
   optional bool is_acknowledgment_sent = 28;
   TimestampPatch promised_at = 29;
+  // Alternatives to promised_at. Clearing one to set another in the same request is how a
+  // caller switches basis; setting two at once is rejected.
+  Int32Patch lead_time_override_days = 36;
+  TimestampPatch ship_by_override_date = 37;
   optional string customer_id = 30;
   // When set, replaces the acknowledgement email contacts on the order.
   // An empty list clears all acknowledgement contacts; nil/unset leaves existing contacts untouched.
@@ -645,6 +667,43 @@ message QuoteSalesOrderFreightResponse {
   string unit_price_value = 1;
   string unit_price_numerator_unit_id = 2;
   string unit_price_denominator_unit_id = 3;
+}
+
+message QuoteSalesOrderCommitmentRequest {
+  // When set, the preview runs against a saved order and every other field is ignored
+  // except the bases, which override what the order carries. Otherwise the preview is
+  // assembled from the fields below, which is what the create form uses.
+  optional string id = 1;
+
+  optional string buyer_account_id = 2;
+  optional string ship_to_address_id = 3;
+  optional string carrier_id = 4;
+  optional string service_level_id = 5;
+  // Defaults to now. An order built today but issued next week commits to next week's date.
+  optional google.protobuf.Timestamp issued_at = 6;
+
+  // At most one may be set.
+  optional google.protobuf.Timestamp promised_at = 7;
+  optional int32 lead_time_override_days = 8;
+  optional google.protobuf.Timestamp ship_by_override_date = 9;
+}
+
+message CommitmentQuoteStep {
+  string code = 1;
+  google.protobuf.Timestamp date = 2;
+  int32 days_moved = 3;
+  string detail = 4;
+}
+
+message QuoteSalesOrderCommitmentResponse {
+  optional google.protobuf.Timestamp ship_by_date = 1;
+  optional google.protobuf.Timestamp ship_by_cutoff_at = 2;
+  optional int32 lead_time_days = 3;
+  optional string lead_time_source_code = 4;
+  optional int32 transit_days = 5;
+  optional string transit_source_code = 6;
+  int32 calendar_adjustment_days = 7;
+  repeated CommitmentQuoteStep steps = 8;
 }
 
 message CreateSalesOrderProductionRunRequest {

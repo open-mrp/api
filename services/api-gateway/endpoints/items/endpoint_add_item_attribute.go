@@ -21,6 +21,8 @@ type AddItemAttributeRequest struct {
 
 // Assigns an attribute to an item and returns the updated item.
 //
+// The attribute's property must be one the item's category carries, so link the property to the category before assigning any of its attributes.
+//
 // Adding an attribute the item already carries succeeds and changes nothing, so the call is safe to repeat.
 type AddItemAttributeEndpoint struct{}
 

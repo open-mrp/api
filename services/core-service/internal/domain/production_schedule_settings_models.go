@@ -41,6 +41,9 @@ type ProductionScheduleSettings struct {
 
 	// DefaultCustomerLeadTimeDays is the last fallback in an order's ship-by chain, behind the customer and its account group.
 	DefaultCustomerLeadTimeDays int32 `audit:"default_customer_lead_time_days"`
+	// ShipCalendarID and ReceiveCalendarID are the account-wide fallbacks behind the per-customer and per-address links, and the last stop before Monday to Friday. They sit with the planning assumptions because they answer the same question the lead time does — when can this order actually leave.
+	ShipCalendarID    *string `audit:"ship_calendar_id"`
+	ReceiveCalendarID *string `audit:"receive_calendar_id"`
 
 	// DefaultFulfillmentPolicyCode is how a SKU is produced when neither it nor its product line says.
 	DefaultFulfillmentPolicyCode string `audit:"default_fulfillment_policy_code"`

@@ -369,6 +369,8 @@ message AddressInfo {
   optional string phone = 3;
   optional string email = 4;
   bool is_drop_ship = 5;
+  // The days this dock accepts freight, overriding the customer's own calendar.
+  optional string receive_calendar_id = 9;
   GeolocationInfo geolocation = 6;
   google.protobuf.Timestamp created_at = 7;
   google.protobuf.Timestamp updated_at = 8;
@@ -394,6 +396,7 @@ message CreateAddressRequest {
   optional string phone = 2;
   optional string email = 3;
   bool is_drop_ship = 4;
+  optional string receive_calendar_id = 11;
   optional string street_line_1 = 5;
   optional string street_line_2 = 6;
   optional string locality = 7;
@@ -410,6 +413,7 @@ message UpdateAddressRequest {
   optional StringPatch phone = 3;
   optional StringPatch email = 4;
   optional bool is_drop_ship = 5;
+  StringPatch receive_calendar_id = 12;
   optional string street_line_1 = 6;
   optional StringPatch street_line_2 = 7;
   optional string locality = 8;

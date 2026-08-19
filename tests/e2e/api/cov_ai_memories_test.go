@@ -204,7 +204,8 @@ func TestCovAiMemories_OmittedFields(t *testing.T) {
 		}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 400, status, body)
-		errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
+		// The category enum is checked before the required-field rule, so an omitted category surfaces as an invalid value rather than a missing one. Still a 400 naming the same param.
+		errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
 		assertErrorParam(t, errObj, "category")
 	})
 
@@ -350,11 +351,10 @@ func TestCovAiMemories_ListCategoryFilter(t *testing.T) {
 	}
 	assert.True(t, found, "category=instruction filter should include the created memory")
 
-	// A category value that no row has returns an empty list, not an error.
-	empty, status, err := apiClient.GetList(agentMemoriesPath, url.Values{"category": {"zzzznocategory99999"}})
+	// A category outside the enum is rejected rather than filtered to nothing: the value cannot match any row, so accepting it would only ever return an empty list that looks like real data.
+	status, body, err := apiClient.GetListRaw(agentMemoriesPath, url.Values{"category": {"zzzznocategory99999"}})
 	require.NoError(t, err)
-	assert.Equal(t, 200, status)
-	assertEmptyListData(t, empty.Data)
+	requireStatus(t, 400, status, body)
 }
 
 func TestCovAiMemories_ListEntityTypeFilter(t *testing.T) {

@@ -7116,6 +7116,21 @@ func (mr *MockSalesOrderSvcMockRecorder) ProcessAccountStripeWebhook(ctx, accoun
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProcessAccountStripeWebhook", reflect.TypeOf((*MockSalesOrderSvc)(nil).ProcessAccountStripeWebhook), ctx, accountID, rawPayload, signature)
 }
 
+// QuoteSalesOrderCommitment mocks base method.
+func (m *MockSalesOrderSvc) QuoteSalesOrderCommitment(ctx context.Context, params domain.QuoteCommitmentParams) (*domain.ShipByCommitment, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "QuoteSalesOrderCommitment", ctx, params)
+	ret0, _ := ret[0].(*domain.ShipByCommitment)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// QuoteSalesOrderCommitment indicates an expected call of QuoteSalesOrderCommitment.
+func (mr *MockSalesOrderSvcMockRecorder) QuoteSalesOrderCommitment(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QuoteSalesOrderCommitment", reflect.TypeOf((*MockSalesOrderSvc)(nil).QuoteSalesOrderCommitment), ctx, params)
+}
+
 // QuoteSalesOrderFreight mocks base method.
 func (m *MockSalesOrderSvc) QuoteSalesOrderFreight(ctx context.Context, params domain.QuoteSalesOrderFreightParams) (*domain.SalesOrderFreightQuote, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -11104,4 +11119,146 @@ func (m *MockPortalRegistrationSessionSvc) UpdateSession(ctx context.Context, pa
 func (mr *MockPortalRegistrationSessionSvcMockRecorder) UpdateSession(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateSession", reflect.TypeOf((*MockPortalRegistrationSessionSvc)(nil).UpdateSession), ctx, params)
+}
+
+// MockOperatingCalendarSvc is a mock of OperatingCalendarSvc interface.
+type MockOperatingCalendarSvc struct {
+	ctrl     *gomock.Controller
+	recorder *MockOperatingCalendarSvcMockRecorder
+	isgomock struct{}
+}
+
+// MockOperatingCalendarSvcMockRecorder is the mock recorder for MockOperatingCalendarSvc.
+type MockOperatingCalendarSvcMockRecorder struct {
+	mock *MockOperatingCalendarSvc
+}
+
+// NewMockOperatingCalendarSvc creates a new mock instance.
+func NewMockOperatingCalendarSvc(ctrl *gomock.Controller) *MockOperatingCalendarSvc {
+	mock := &MockOperatingCalendarSvc{ctrl: ctrl}
+	mock.recorder = &MockOperatingCalendarSvcMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockOperatingCalendarSvc) EXPECT() *MockOperatingCalendarSvcMockRecorder {
+	return m.recorder
+}
+
+// CreateOperatingCalendar mocks base method.
+func (m *MockOperatingCalendarSvc) CreateOperatingCalendar(ctx context.Context, params domain.CreateOperatingCalendarParams) (*domain.OperatingCalendar, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateOperatingCalendar", ctx, params)
+	ret0, _ := ret[0].(*domain.OperatingCalendar)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CreateOperatingCalendar indicates an expected call of CreateOperatingCalendar.
+func (mr *MockOperatingCalendarSvcMockRecorder) CreateOperatingCalendar(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOperatingCalendar", reflect.TypeOf((*MockOperatingCalendarSvc)(nil).CreateOperatingCalendar), ctx, params)
+}
+
+// CreateOperatingCalendarClosure mocks base method.
+func (m *MockOperatingCalendarSvc) CreateOperatingCalendarClosure(ctx context.Context, calendarID string, closedOn time.Time, name string) (*domain.OperatingCalendarClosure, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateOperatingCalendarClosure", ctx, calendarID, closedOn, name)
+	ret0, _ := ret[0].(*domain.OperatingCalendarClosure)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CreateOperatingCalendarClosure indicates an expected call of CreateOperatingCalendarClosure.
+func (mr *MockOperatingCalendarSvcMockRecorder) CreateOperatingCalendarClosure(ctx, calendarID, closedOn, name any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOperatingCalendarClosure", reflect.TypeOf((*MockOperatingCalendarSvc)(nil).CreateOperatingCalendarClosure), ctx, calendarID, closedOn, name)
+}
+
+// DeleteOperatingCalendar mocks base method.
+func (m *MockOperatingCalendarSvc) DeleteOperatingCalendar(ctx context.Context, calendarID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteOperatingCalendar", ctx, calendarID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// DeleteOperatingCalendar indicates an expected call of DeleteOperatingCalendar.
+func (mr *MockOperatingCalendarSvcMockRecorder) DeleteOperatingCalendar(ctx, calendarID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteOperatingCalendar", reflect.TypeOf((*MockOperatingCalendarSvc)(nil).DeleteOperatingCalendar), ctx, calendarID)
+}
+
+// DeleteOperatingCalendarClosure mocks base method.
+func (m *MockOperatingCalendarSvc) DeleteOperatingCalendarClosure(ctx context.Context, closureID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteOperatingCalendarClosure", ctx, closureID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// DeleteOperatingCalendarClosure indicates an expected call of DeleteOperatingCalendarClosure.
+func (mr *MockOperatingCalendarSvcMockRecorder) DeleteOperatingCalendarClosure(ctx, closureID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteOperatingCalendarClosure", reflect.TypeOf((*MockOperatingCalendarSvc)(nil).DeleteOperatingCalendarClosure), ctx, closureID)
+}
+
+// GetOperatingCalendar mocks base method.
+func (m *MockOperatingCalendarSvc) GetOperatingCalendar(ctx context.Context, calendarID string) (*domain.OperatingCalendar, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetOperatingCalendar", ctx, calendarID)
+	ret0, _ := ret[0].(*domain.OperatingCalendar)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetOperatingCalendar indicates an expected call of GetOperatingCalendar.
+func (mr *MockOperatingCalendarSvcMockRecorder) GetOperatingCalendar(ctx, calendarID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOperatingCalendar", reflect.TypeOf((*MockOperatingCalendarSvc)(nil).GetOperatingCalendar), ctx, calendarID)
+}
+
+// ListOperatingCalendarClosures mocks base method.
+func (m *MockOperatingCalendarSvc) ListOperatingCalendarClosures(ctx context.Context, calendarID string, from, to *time.Time) ([]domain.OperatingCalendarClosure, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListOperatingCalendarClosures", ctx, calendarID, from, to)
+	ret0, _ := ret[0].([]domain.OperatingCalendarClosure)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListOperatingCalendarClosures indicates an expected call of ListOperatingCalendarClosures.
+func (mr *MockOperatingCalendarSvcMockRecorder) ListOperatingCalendarClosures(ctx, calendarID, from, to any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListOperatingCalendarClosures", reflect.TypeOf((*MockOperatingCalendarSvc)(nil).ListOperatingCalendarClosures), ctx, calendarID, from, to)
+}
+
+// ListOperatingCalendars mocks base method.
+func (m *MockOperatingCalendarSvc) ListOperatingCalendars(ctx context.Context, kindCode *string) ([]domain.OperatingCalendar, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListOperatingCalendars", ctx, kindCode)
+	ret0, _ := ret[0].([]domain.OperatingCalendar)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListOperatingCalendars indicates an expected call of ListOperatingCalendars.
+func (mr *MockOperatingCalendarSvcMockRecorder) ListOperatingCalendars(ctx, kindCode any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListOperatingCalendars", reflect.TypeOf((*MockOperatingCalendarSvc)(nil).ListOperatingCalendars), ctx, kindCode)
+}
+
+// UpdateOperatingCalendar mocks base method.
+func (m *MockOperatingCalendarSvc) UpdateOperatingCalendar(ctx context.Context, params domain.UpdateOperatingCalendarParams) (*domain.OperatingCalendar, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateOperatingCalendar", ctx, params)
+	ret0, _ := ret[0].(*domain.OperatingCalendar)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// UpdateOperatingCalendar indicates an expected call of UpdateOperatingCalendar.
+func (mr *MockOperatingCalendarSvcMockRecorder) UpdateOperatingCalendar(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateOperatingCalendar", reflect.TypeOf((*MockOperatingCalendarSvc)(nil).UpdateOperatingCalendar), ctx, params)
 }

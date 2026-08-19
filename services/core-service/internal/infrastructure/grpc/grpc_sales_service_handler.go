@@ -7,6 +7,7 @@ import (
 	"github.com/augno/api/shared/contracts"
 	"github.com/augno/api/shared/field"
 	pb "github.com/augno/api/shared/proto/core"
+	"github.com/augno/api/shared/safeconv"
 
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -387,6 +388,17 @@ func salesOrderToProto(o *domain.SalesOrder) *pb.SalesOrderInfo {
 	info.LeadTimeSourceCode = o.LeadTimeSourceCode
 	info.TransitDays = o.TransitDays
 	info.TransitSourceCode = o.TransitSourceCode
+	if o.LeadTimeOverrideDays != nil {
+		days := safeconv.IntToInt32(*o.LeadTimeOverrideDays)
+		info.LeadTimeOverrideDays = &days
+	}
+	if o.ShipByOverrideDate != nil {
+		info.ShipByOverrideDate = timestamppb.New(*o.ShipByOverrideDate)
+	}
+	if o.ShipByCutoffAt != nil {
+		info.ShipByCutoffAt = timestamppb.New(*o.ShipByCutoffAt)
+	}
+	info.CalendarAdjustmentDays = o.CalendarAdjustmentDays
 
 	if o.CarrierIsPortalEnabled != nil {
 		info.CarrierIsPortalEnabled = o.CarrierIsPortalEnabled
@@ -634,6 +646,11 @@ func (h *salesGRPCHandler) CreateSalesOrder(ctx context.Context, req *pb.CreateS
 		t := req.PromisedAt.AsTime()
 		params.PromisedAt = &t
 	}
+	params.LeadTimeOverrideDays = req.LeadTimeOverrideDays
+	if req.ShipByOverrideDate != nil {
+		t := req.ShipByOverrideDate.AsTime()
+		params.ShipByOverrideDate = &t
+	}
 
 	order, apiErr := h.salesOrderSvc.CreateSalesOrder(ctx, params)
 	if apiErr != nil {
@@ -674,6 +691,8 @@ func (h *salesGRPCHandler) UpdateSalesOrder(ctx context.Context, req *pb.UpdateS
 		SalesRepID:            field.StringClearableFromProto(req.SalesRepId),
 		OrderDiscountID:       field.StringClearableFromProto(req.OrderDiscountId),
 		PromisedAt:            field.TimestampClearableFromProto(req.PromisedAt),
+		LeadTimeOverrideDays:  field.Int32ClearableFromProto(req.LeadTimeOverrideDays),
+		ShipByOverrideDate:    field.TimestampClearableFromProto(req.ShipByOverrideDate),
 	}
 
 	if list := req.AcknowledgementEmailContacts; list != nil {
@@ -821,6 +840,65 @@ func (h *salesGRPCHandler) QuoteSalesOrderFreight(ctx context.Context, req *pb.Q
 		UnitPriceNumeratorUnitId:   quote.UnitPrice.NumeratorUnitID,
 		UnitPriceDenominatorUnitId: quote.UnitPrice.DenominatorUnitID,
 	}, nil
+}
+
+func (h *salesGRPCHandler) QuoteSalesOrderCommitment(ctx context.Context, req *pb.QuoteSalesOrderCommitmentRequest) (*pb.QuoteSalesOrderCommitmentResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	params := domain.QuoteCommitmentParams{
+		SalesOrderID:         req.Id,
+		BuyerAccountID:       req.BuyerAccountId,
+		ShipToAddressID:      req.ShipToAddressId,
+		CarrierID:            req.CarrierId,
+		ServiceLevelID:       req.ServiceLevelId,
+		LeadTimeOverrideDays: req.LeadTimeOverrideDays,
+	}
+	if req.IssuedAt != nil {
+		t := req.IssuedAt.AsTime()
+		params.IssuedAt = &t
+	}
+	if req.PromisedAt != nil {
+		t := req.PromisedAt.AsTime()
+		params.PromisedAt = &t
+	}
+	if req.ShipByOverrideDate != nil {
+		t := req.ShipByOverrideDate.AsTime()
+		params.ShipByOverrideDate = &t
+	}
+
+	commitment, apiErr := h.salesOrderSvc.QuoteSalesOrderCommitment(ctx, params)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	// No resolvable rule is an empty quote rather than an error: the form shows the same nothing the order would have been issued with.
+	if commitment == nil {
+		return &pb.QuoteSalesOrderCommitmentResponse{}, nil
+	}
+
+	out := &pb.QuoteSalesOrderCommitmentResponse{
+		ShipByDate:             timestamppb.New(commitment.ShipByDate),
+		LeadTimeDays:           int32Ptr(safeconv.IntToInt32(commitment.LeadTimeDays)),
+		LeadTimeSourceCode:     &commitment.SourceCode,
+		CalendarAdjustmentDays: safeconv.IntToInt32(commitment.CalendarAdjustmentDays),
+	}
+	if commitment.ShipByCutoffAt != nil {
+		out.ShipByCutoffAt = timestamppb.New(*commitment.ShipByCutoffAt)
+	}
+	if commitment.TransitDays != nil {
+		out.TransitDays = int32Ptr(safeconv.IntToInt32(*commitment.TransitDays))
+		out.TransitSourceCode = &commitment.TransitSourceCode
+	}
+	for _, step := range commitment.Steps {
+		out.Steps = append(out.Steps, &pb.CommitmentQuoteStep{
+			Code:      step.Code,
+			Date:      timestamppb.New(step.Date),
+			DaysMoved: safeconv.IntToInt32(step.DaysMoved),
+			Detail:    step.Detail,
+		})
+	}
+	return out, nil
 }
 
 func (h *salesGRPCHandler) CreateSalesOrderProductionRun(ctx context.Context, req *pb.CreateSalesOrderProductionRunRequest) (*pb.CreateSalesOrderProductionRunResponse, error) {
@@ -1028,3 +1106,5 @@ func (h *salesGRPCHandler) BatchGetSalesOrderStatusesByIDs(ctx context.Context, 
 	}
 	return &pb.BatchGetSalesOrderStatusesByIDsResponse{SalesOrderStatuses: pbStatuses}, nil
 }
+
+func int32Ptr(v int32) *int32 { return &v }

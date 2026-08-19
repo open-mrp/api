@@ -187,7 +187,7 @@ func (r *productionRunRepoImpl) List(ctx context.Context, params domain.ListProd
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
-			return nil, apierror.NewValidationError("Invalid pagination cursor.")
+			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
 		}
 		cursorDir = &cur.Direction
 
@@ -801,7 +801,7 @@ func paginateBatchesForProductionRun(batches []*domain.Batch, params domain.List
 	if params.Cursor != nil && *params.Cursor != "" {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
-			return nil, pagination.PageInfo{}, apierror.NewValidationError("Invalid pagination cursor.")
+			return nil, pagination.PageInfo{}, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
 		}
 		cursorDir = &cur.Direction
 		found := false

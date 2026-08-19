@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/augno/api/services/auth-service/pkg/types"
@@ -509,26 +510,23 @@ func (s *registrationFlowSvcImpl) registerNewCustomer(
 		return tracing.Trace(span, apiErr)
 	}
 
-	// Get next customer number
-	nextNum, apiErr := customerRepo.GetNextCustomerNumber(ctx, ownerAccountID)
-	if apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-
-	customerNumber := fmt.Sprintf("%d", nextNum)
-
 	sysPropertyID, apiErr := id.GenID(id.SysPropertyIDPrefix, nil)
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
 
+	var customerNumber string
+
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *registrationFlowSvcImpl) *apierror.APIError {
 		txRepo := txSvc.repos.NewCustomerRegistrationRepo()
 
-		// Update customer number counter
-		if apiErr := txRepo.UpdateNextCustomerNumber(txCtx, sysPropertyID, ownerAccountID, nextNum); apiErr != nil {
+		// Reserve the number inside the transaction. Two people completing registration at
+		// the same moment used to read the same counter and both be given that number.
+		nextNum, apiErr := txRepo.AllocateNextCustomerNumber(txCtx, sysPropertyID, ownerAccountID)
+		if apiErr != nil {
 			return apiErr
 		}
+		customerNumber = strconv.FormatInt(nextNum, 10)
 
 		// Create the customer account with all associated entities
 		addressParams := domain.CustomerRegistrationAddressParams{

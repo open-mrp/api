@@ -224,7 +224,7 @@ func (r *auditEventRepoImpl) List(ctx context.Context, callerAccountID string, f
 	if filter.Cursor != nil {
 		decoded, err := pagination.DecodeStringCursor(*filter.Cursor)
 		if err != nil {
-			return nil, apierror.NewValidationError("Invalid pagination cursor.")
+			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
 		}
 		cursorDir = &decoded.Direction
 		cur = &decoded

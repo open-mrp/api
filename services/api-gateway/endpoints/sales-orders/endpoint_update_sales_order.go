@@ -59,6 +59,10 @@ type UpdateSalesOrderRequest struct {
 	AcknowledgmentStatus field.Optional[constants.AcknowledgmentStatus] `json:"acknowledgment_status,omitzero" validate:"omitempty"`
 	// Date delivery is promised to the customer.
 	PromisedAt field.Clearable[time.Time] `json:"promised_at,omitzero"`
+	// Days between this order being issued and it being due to ship, replacing the customer's standing lead time for this order alone. Mutually exclusive with promised_at and ship_by_override_date; clear one to switch to another.
+	LeadTimeOverrideDays field.Clearable[int32] `json:"lead_time_override_days,omitzero" validate:"omitempty,gte=0,lte=3650"`
+	// The exact date the order is due to ship, bypassing transit and the customer's receiving days. Mutually exclusive with promised_at and lead_time_override_days.
+	ShipByOverrideDate field.Clearable[time.Time] `json:"ship_by_override_date,omitzero"`
 	// Moves the order to a different customer account.
 	//
 	// Existing lines keep the prices they were created with; they are not re-priced against the new customer.

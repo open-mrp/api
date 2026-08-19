@@ -21,6 +21,7 @@ type SandboxMedTestSuite struct {
 	accountUserRepo    *repositorymock.MockAccountUserRepo
 	sandboxAccountRepo *repositorymock.MockSandboxAccountRepo
 	registrationRepo   *repositorymock.MockRegistrationRepo
+	calendarRepo       *repositorymock.MockOperatingCalendarRepo
 	repoFactory        *factorymock.MockRepoFactory
 	ctrl               *gomock.Controller
 }
@@ -31,11 +32,18 @@ func (suite *SandboxMedTestSuite) SetupSuite() {
 	suite.accountUserRepo = repositorymock.NewMockAccountUserRepo(suite.ctrl)
 	suite.sandboxAccountRepo = repositorymock.NewMockSandboxAccountRepo(suite.ctrl)
 	suite.registrationRepo = repositorymock.NewMockRegistrationRepo(suite.ctrl)
+	suite.calendarRepo = repositorymock.NewMockOperatingCalendarRepo(suite.ctrl)
 	suite.repoFactory = factorymock.NewMockRepoFactory(suite.ctrl)
 	suite.repoFactory.EXPECT().NewAccountRepo().Return(suite.accountRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewAccountUserRepo().Return(suite.accountUserRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewSandboxAccountRepo().Return(suite.sandboxAccountRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewRegistrationRepo().Return(suite.registrationRepo).AnyTimes()
+	suite.repoFactory.EXPECT().NewOperatingCalendarRepo().Return(suite.calendarRepo).AnyTimes()
+
+	// Provisioning seeds a sandbox's shipping and receiving calendars. What it writes is covered in internal/calendarseed; here it only has to not be a surprise.
+	suite.calendarRepo.EXPECT().GetByCode(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+	suite.calendarRepo.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+	suite.calendarRepo.EXPECT().UpsertClosures(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
 	suite.sandboxMed = NewSandboxMed(&SandboxMedConfig{
 		Repos: suite.repoFactory,

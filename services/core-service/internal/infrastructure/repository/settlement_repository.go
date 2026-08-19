@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	gosql "database/sql"
-	"fmt"
 	"strings"
 	"time"
 
@@ -73,7 +72,7 @@ func (r *settlementRepoImpl) List(ctx context.Context, params domain.ListSettlem
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
-			return nil, apierror.NewValidationError("Invalid pagination cursor.")
+			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
 		}
 		cursorDir = &cur.Direction
 
@@ -500,45 +499,24 @@ func (r *settlementRepoImpl) GetAllocationInvoiceIDs(ctx context.Context, settle
 	return ids, nil
 }
 
-func (r *settlementRepoImpl) GetNextSettlementNumber(ctx context.Context, accountID string) (int64, *apierror.APIError) {
-	ctx, span := settlementRepoTracer.Start(ctx, "repository.settlement.get_next_number")
+func (r *settlementRepoImpl) AllocateNextSettlementNumber(ctx context.Context, sysPropertyID, accountID string) (int64, *apierror.APIError) {
+	ctx, span := settlementRepoTracer.Start(ctx, "repository.settlement.allocate_next_number")
 	defer span.End()
 
-	next, err := r.queries.GetNextSettlementNumber(ctx, accountID)
+	res, err := r.queries.AllocateNextSettlementNumber(ctx, sqlc.AllocateNextSettlementNumberParams{
+		ID:        sysPropertyID,
+		AccountID: accountID,
+	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return 0, tracing.Trace(span, apiErr)
 	}
-	switch v := next.(type) {
-	case int64:
-		return v, nil
-	case int32:
-		return int64(v), nil
-	case float64:
-		return int64(v), nil
-	case []uint8:
-		var n int64
-		for _, b := range v {
-			n = n*10 + int64(b-'0')
-		}
-		return n, nil
-	default:
-		return 0, tracing.Trace(span, apierror.NewInternalError(fmt.Errorf("unexpected type %T for settlement number", next), "Failed to parse settlement number."))
-	}
-}
 
-func (r *settlementRepoImpl) UpdateNextSettlementNumber(ctx context.Context, sysPropertyID, accountID string, value int64) *apierror.APIError {
-	ctx, span := settlementRepoTracer.Start(ctx, "repository.settlement.update_next_number")
-	defer span.End()
-
-	err := r.queries.UpdateNextSettlementNumber(ctx, sqlc.UpdateNextSettlementNumberParams{
-		ID:        sysPropertyID,
-		AccountID: accountID,
-		Value:     safeconv.Int64ToInt32(value),
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return tracing.Trace(span, apiErr)
+	number, err := res.LastInsertId()
+	if err != nil {
+		return 0, tracing.Trace(span, apierror.NewInternalError(err, "Failed to read the reserved settlement number."))
 	}
-	return nil
+
+	return number, nil
 }
 
 func (r *settlementRepoImpl) DeleteOrphanedAdjustmentTransactions(ctx context.Context, settlementID string) *apierror.APIError {

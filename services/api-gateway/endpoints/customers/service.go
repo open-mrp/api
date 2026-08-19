@@ -218,6 +218,7 @@ func (m *customerSvcImpl) CreateCustomer(ctx context.Context, req *CreateCustome
 		CommissionPolicy:      &commissionPolicyStr,
 		FreightPolicy:         &freightPolicyStr,
 		DefaultLeadTimeDays:   req.LeadTimeDays.Ptr(),
+		ReceiveCalendarId:     req.ReceiveCalendarID.Ptr(),
 		DefaultCarrierId:      &req.DefaultCarrierID,
 		DefaultServiceLevelId: req.DefaultServiceLevelID.Ptr(),
 		DefaultPaymentTermId:  &req.DefaultPaymentTermID,
@@ -480,6 +481,7 @@ func (m *customerSvcImpl) UpdateCustomer(ctx context.Context, req *UpdateCustome
 		CommissionPolicy:         req.CommissionPolicy.Ptr().StringPtr(),
 		FreightPolicy:            req.FreightPolicy.Ptr().StringPtr(),
 		DefaultLeadTimeDays:      field.Int32ClearableToProto(req.LeadTimeDays),
+		ReceiveCalendarId:        field.StringClearableToProto(req.ReceiveCalendarID),
 		DefaultCarrierId:         req.DefaultCarrierID.Ptr(),
 		DefaultServiceLevelId:    field.StringClearableToProto(req.DefaultServiceLevelID),
 		DefaultPaymentTermId:     req.DefaultPaymentTermID.Ptr(),
@@ -713,7 +715,7 @@ func buildFreightPreferences(c *pb.CustomerProto) *apiresource.CustomerFreightPr
 }
 
 func buildDefaults(c *pb.CustomerProto) *apiresource.CustomerDefaults {
-	d := &apiresource.CustomerDefaults{Object: constants.ObjectTypeCustomerDefaults, LeadTimeDays: c.DefaultLeadTimeDays}
+	d := &apiresource.CustomerDefaults{Object: constants.ObjectTypeCustomerDefaults, LeadTimeDays: c.DefaultLeadTimeDays, ReceiveCalendarID: c.ReceiveCalendarId}
 
 	if c.DefaultPaymentTerm != nil {
 		ptStatus := constants.PaymentTermStatusInactive

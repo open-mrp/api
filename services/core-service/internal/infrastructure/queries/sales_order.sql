@@ -37,6 +37,10 @@ SELECT STRAIGHT_JOIN
     so.lead_time_source_code,
     so.transit_days,
     so.transit_source_code,
+    so.lead_time_override_days,
+    so.ship_by_override_date,
+    so.ship_by_cutoff_at,
+    so.calendar_adjustment_days,
     so.created_at,
     so.updated_at,
     -- Customer
@@ -256,6 +260,10 @@ SELECT STRAIGHT_JOIN
     so.lead_time_source_code,
     so.transit_days,
     so.transit_source_code,
+    so.lead_time_override_days,
+    so.ship_by_override_date,
+    so.ship_by_cutoff_at,
+    so.calendar_adjustment_days,
     so.created_at,
     so.updated_at,
     -- Customer
@@ -472,6 +480,10 @@ SELECT
     so.lead_time_source_code,
     so.transit_days,
     so.transit_source_code,
+    so.lead_time_override_days,
+    so.ship_by_override_date,
+    so.ship_by_cutoff_at,
+    so.calendar_adjustment_days,
     so.created_at,
     so.updated_at,
     -- Customer
@@ -609,6 +621,10 @@ SELECT
     so.lead_time_source_code,
     so.transit_days,
     so.transit_source_code,
+    so.lead_time_override_days,
+    so.ship_by_override_date,
+    so.ship_by_cutoff_at,
+    so.calendar_adjustment_days,
     so.created_at,
     so.updated_at,
     -- Customer
@@ -783,6 +799,7 @@ INSERT INTO sales_order (
     priority_code, sales_rep_id, shipping_term_id,
     sales_order_status_code, sales_order_type_code,
     payment_term_id, order_discount_id, promised_at,
+    lead_time_override_days, ship_by_override_date,
     buyer_account_id, seller_account_id, owner_account_id,
     created_at, updated_at
 ) VALUES (
@@ -793,6 +810,7 @@ INSERT INTO sales_order (
     -- sales_order_type_code is a storage discriminator; this endpoint only creates sales orders.
     sqlc.arg('sales_order_status_code'), 'sales_order',
     sqlc.narg('payment_term_id'), sqlc.narg('order_discount_id'), sqlc.narg('promised_at'),
+    sqlc.narg('lead_time_override_days'), sqlc.narg('ship_by_override_date'),
     sqlc.arg('buyer_account_id'), sqlc.arg('seller_account_id'), sqlc.arg('owner_account_id'),
     NOW(3), NOW(3)
 );
@@ -815,6 +833,8 @@ UPDATE sales_order SET
     order_discount_id = sqlc.narg('order_discount_id'),
     is_acknowledgment_sent = COALESCE(sqlc.narg('is_acknowledgment_sent'), is_acknowledgment_sent),
     promised_at = sqlc.narg('promised_at'),
+    lead_time_override_days = sqlc.narg('lead_time_override_days'),
+    ship_by_override_date = sqlc.narg('ship_by_override_date'),
     buyer_account_id = sqlc.narg('buyer_account_id'),
     billing_address_id = COALESCE(sqlc.narg('billing_address_id'), billing_address_id),
     shipping_address_id = COALESCE(sqlc.narg('shipping_address_id'), shipping_address_id),
@@ -1341,6 +1361,8 @@ UPDATE sales_order SET
     lead_time_source_code = sqlc.narg('lead_time_source_code'),
     transit_days = sqlc.narg('transit_days'),
     transit_source_code = sqlc.narg('transit_source_code'),
+    ship_by_cutoff_at = sqlc.narg('ship_by_cutoff_at'),
+    calendar_adjustment_days = sqlc.narg('calendar_adjustment_days'),
     updated_at = NOW(3)
 WHERE id = sqlc.arg('id')
 AND owner_account_id = sqlc.arg('account_id');

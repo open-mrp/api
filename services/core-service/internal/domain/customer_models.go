@@ -10,15 +10,17 @@ import (
 
 // Customer represents a full customer record from the database.
 type Customer struct {
-	ID                                 string
-	Name                               string                        `audit:"name"`
-	Number                             string                        `audit:"number"`
-	Status                             constants.AccountStatusCode   `audit:"status"`
-	IsEdiEnabled                       bool                          `audit:"is_edi_enabled"`
-	IsParentAccount                    bool                          `audit:"is_parent_account"`
-	CommissionPolicy                   constants.CommissionPolicy    `audit:"commission_policy"`
-	FreightPolicy                      constants.FreightPolicy       `audit:"freight_policy"`
-	DefaultLeadTimeDays                *int32                        `audit:"default_lead_time_days"`
+	ID                  string
+	Name                string                      `audit:"name"`
+	Number              string                      `audit:"number"`
+	Status              constants.AccountStatusCode `audit:"status"`
+	IsEdiEnabled        bool                        `audit:"is_edi_enabled"`
+	IsParentAccount     bool                        `audit:"is_parent_account"`
+	CommissionPolicy    constants.CommissionPolicy  `audit:"commission_policy"`
+	FreightPolicy       constants.FreightPolicy     `audit:"freight_policy"`
+	DefaultLeadTimeDays *int32                      `audit:"default_lead_time_days"`
+	// ReceiveCalendarID is the days this customer's dock accepts freight, in the same chain as the lead time above.
+	ReceiveCalendarID                  *string                       `audit:"receive_calendar_id"`
 	Note                               *string                       `audit:"note"`
 	Email                              *string                       `audit:"email"`
 	Phone                              *string                       `audit:"phone"`
@@ -171,6 +173,7 @@ type CreateCustomerParams struct {
 	CommissionPolicy      *constants.CommissionPolicy
 	FreightPolicy         *constants.FreightPolicy
 	DefaultLeadTimeDays   *int32
+	ReceiveCalendarID     *string
 	DefaultCarrierID      *string
 	DefaultServiceLevelID *string
 	DefaultPaymentTermID  *string
@@ -244,6 +247,7 @@ type UpdateCustomerParams struct {
 	CommissionPolicy         *constants.CommissionPolicy
 	FreightPolicy            *constants.FreightPolicy
 	DefaultLeadTimeDays      field.Clearable[int32]
+	ReceiveCalendarID        field.Clearable[string]
 	DefaultCarrierID         *string
 	DefaultServiceLevelID    field.Clearable[string]
 	DefaultPaymentTermID     *string

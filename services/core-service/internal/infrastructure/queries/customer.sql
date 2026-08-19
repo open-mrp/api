@@ -10,6 +10,7 @@ SELECT
     ar.commission_status_code,
     ar.freight_status_code,
     ar.default_lead_time_days,
+    ar.receive_calendar_id,
     ar.carrier_billing_type,
     ar.carrier_billing_account,
     ar.stripe_customer_id,
@@ -215,6 +216,7 @@ SELECT
     ar.commission_status_code,
     ar.freight_status_code,
     ar.default_lead_time_days,
+    ar.receive_calendar_id,
     ar.carrier_billing_type,
     ar.carrier_billing_account,
     ar.stripe_customer_id,
@@ -525,6 +527,7 @@ SELECT
     ar.commission_status_code,
     ar.freight_status_code,
     ar.default_lead_time_days,
+    ar.receive_calendar_id,
     ar.carrier_billing_type,
     ar.carrier_billing_account,
     ar.stripe_customer_id,
@@ -664,7 +667,7 @@ INSERT INTO account_relation (
     account_status_code, payment_term_id, account_group_id, priority_code,
     shipping_term_id, carrier_billing_type, carrier_billing_account,
     default_billing_address_id, default_shipping_address_id,
-    stripe_customer_id, stripe_email, default_lead_time_days,
+    stripe_customer_id, stripe_email, default_lead_time_days, receive_calendar_id,
     created_at, updated_at
 ) VALUES (
     sqlc.arg('id'), sqlc.arg('owner_account_id'), sqlc.arg('counterparty_account_id'), 'customer',
@@ -674,7 +677,7 @@ INSERT INTO account_relation (
     sqlc.arg('account_status_code'), sqlc.narg('payment_term_id'), sqlc.narg('account_group_id'), sqlc.narg('priority_code'),
     sqlc.narg('shipping_term_id'), sqlc.narg('carrier_billing_type'), sqlc.narg('carrier_billing_account'),
     sqlc.narg('default_billing_address_id'), sqlc.narg('default_shipping_address_id'),
-    sqlc.narg('stripe_customer_id'), sqlc.narg('stripe_email'), sqlc.narg('default_lead_time_days'),
+    sqlc.narg('stripe_customer_id'), sqlc.narg('stripe_email'), sqlc.narg('default_lead_time_days'), sqlc.narg('receive_calendar_id'),
     NOW(3), NOW(3)
 );
 
@@ -703,6 +706,7 @@ UPDATE account_relation SET
     stripe_customer_id = COALESCE(sqlc.narg('stripe_customer_id'), stripe_customer_id),
     stripe_email = COALESCE(sqlc.narg('stripe_email'), stripe_email),
     default_lead_time_days = sqlc.narg('default_lead_time_days'),
+    receive_calendar_id = sqlc.narg('receive_calendar_id'),
     updated_at = NOW(3)
 WHERE id = sqlc.arg('id')
   AND owner_account_id = sqlc.arg('owner_account_id')
@@ -740,7 +744,7 @@ INSERT INTO account_relation (
     account_status_code, payment_term_id, account_group_id, priority_code,
     shipping_term_id, carrier_billing_type, carrier_billing_account,
     default_billing_address_id, default_shipping_address_id,
-    credit_limit_id, default_lead_time_days,
+    credit_limit_id, default_lead_time_days, receive_calendar_id,
     created_at, updated_at
 ) VALUES (
     sqlc.arg('id'), sqlc.arg('owner_account_id'), sqlc.arg('counterparty_account_id'), 'customer',
@@ -750,7 +754,7 @@ INSERT INTO account_relation (
     sqlc.arg('account_status_code'), sqlc.narg('payment_term_id'), sqlc.narg('account_group_id'), sqlc.narg('priority_code'),
     sqlc.narg('shipping_term_id'), sqlc.narg('carrier_billing_type'), sqlc.narg('carrier_billing_account'),
     sqlc.narg('default_billing_address_id'), sqlc.narg('default_shipping_address_id'),
-    sqlc.narg('credit_limit_id'), sqlc.narg('default_lead_time_days'),
+    sqlc.narg('credit_limit_id'), sqlc.narg('default_lead_time_days'), sqlc.narg('receive_calendar_id'),
     NOW(3), NOW(3)
 );
 

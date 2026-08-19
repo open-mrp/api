@@ -353,6 +353,12 @@ type ListShippingCasesByShipmentRow struct {
 	FreightWeightUnitUpdatedAt         time.Time
 }
 
+// Inner joins: every column here is a NOT NULL reference on shipping_case, so a case whose
+// freight or carrier does not resolve is a broken row rather than an ordinary one. Note the
+// consequence if one ever does dangle — the case disappears from its shipment entirely rather
+// than listing with empty freight, and a case that cannot be listed cannot be labelled,
+// shipped, or deleted either. Packing once wrote a unit abbreviation where a unit ID belongs,
+// and every packed case was invisible until that was fixed.
 func (q *Queries) ListShippingCasesByShipment(ctx context.Context, shipmentID string) ([]ListShippingCasesByShipmentRow, error) {
 	rows, err := q.db.QueryContext(ctx, listShippingCasesByShipment, shipmentID)
 	if err != nil {

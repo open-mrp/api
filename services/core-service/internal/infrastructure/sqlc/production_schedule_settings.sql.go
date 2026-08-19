@@ -173,6 +173,7 @@ INSERT INTO account_production_schedule_setting (
     shifts_per_day, hours_per_shift, work_days_per_week, weeks_per_year,
     capacity_headroom_pct, default_lot_units,
     default_customer_lead_time_days, default_fulfillment_policy_code,
+    ship_calendar_id, receive_calendar_id,
     is_enabled, generation_cron, generation_timezone, auto_publish,
     created_at, updated_at
 ) VALUES (
@@ -184,6 +185,7 @@ INSERT INTO account_production_schedule_setting (
     ?, ?, ?,
     ?, ?, ?,
     ?, ?, ?, ?,
+    ?, ?,
     ?, ?,
     ?, ?,
     ?, ?, ?, ?,
@@ -216,6 +218,8 @@ ON DUPLICATE KEY UPDATE
     capacity_headroom_pct = VALUES(capacity_headroom_pct),
     default_lot_units = VALUES(default_lot_units),
     default_customer_lead_time_days = VALUES(default_customer_lead_time_days),
+    ship_calendar_id = VALUES(ship_calendar_id),
+    receive_calendar_id = VALUES(receive_calendar_id),
     default_fulfillment_policy_code = VALUES(default_fulfillment_policy_code),
     is_enabled = VALUES(is_enabled),
     generation_cron = VALUES(generation_cron),
@@ -254,6 +258,8 @@ type UpsertAccountProductionScheduleSettingParams struct {
 	DefaultLotUnits                string
 	DefaultCustomerLeadTimeDays    int32
 	DefaultFulfillmentPolicyCode   string
+	ShipCalendarID                 sql.NullString
+	ReceiveCalendarID              sql.NullString
 	IsEnabled                      bool
 	GenerationCron                 sql.NullString
 	GenerationTimezone             string
@@ -296,6 +302,8 @@ func (q *Queries) UpsertAccountProductionScheduleSetting(ctx context.Context, ar
 		arg.DefaultLotUnits,
 		arg.DefaultCustomerLeadTimeDays,
 		arg.DefaultFulfillmentPolicyCode,
+		arg.ShipCalendarID,
+		arg.ReceiveCalendarID,
 		arg.IsEnabled,
 		arg.GenerationCron,
 		arg.GenerationTimezone,

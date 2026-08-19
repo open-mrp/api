@@ -40,15 +40,16 @@ func addressFromProto(a *pb.AddressInfo) *apiresource.Address {
 		addressType = constants.AddressTypeDropShip
 	}
 	return &apiresource.Address{
-		ID:          a.Id,
-		Object:      constants.ObjectTypeAddress,
-		Name:        a.Name,
-		Phone:       a.Phone,
-		Email:       a.Email,
-		Type:        addressType,
-		Geolocation: geolocationFromProto(a.Geolocation),
-		CreatedAt:   grpcutil.TimestampToTime(a.CreatedAt),
-		UpdatedAt:   grpcutil.TimestampToTime(a.UpdatedAt),
+		ID:                a.Id,
+		Object:            constants.ObjectTypeAddress,
+		Name:              a.Name,
+		Phone:             a.Phone,
+		Email:             a.Email,
+		Type:              addressType,
+		ReceiveCalendarID: a.ReceiveCalendarId,
+		Geolocation:       geolocationFromProto(a.Geolocation),
+		CreatedAt:         grpcutil.TimestampToTime(a.CreatedAt),
+		UpdatedAt:         grpcutil.TimestampToTime(a.UpdatedAt),
 	}
 }
 

@@ -83,6 +83,7 @@ type AccountGroup struct {
 	CreatedAt             time.Time
 	DefaultLeadTimeDays   sql.NullInt32
 	FulfillmentPolicyCode sql.NullString
+	ReceiveCalendarID     sql.NullString
 }
 
 type AccountGroupProductLine struct {
@@ -238,6 +239,8 @@ type AccountProductionScheduleSetting struct {
 	RecommendationDormantMonths     int32
 	RecommendationHighValueUnitCost string
 	RecommendationSlowMoverCogs     string
+	ReceiveCalendarID               sql.NullString
+	ShipCalendarID                  sql.NullString
 }
 
 type AccountRelation struct {
@@ -272,6 +275,7 @@ type AccountRelation struct {
 	CreditLimitID            sql.NullString
 	DefaultLeadTimeDays      sql.NullInt32
 	FulfillmentPolicyCode    sql.NullString
+	ReceiveCalendarID        sql.NullString
 }
 
 type AccountRelationNotificationPreference struct {
@@ -337,14 +341,15 @@ type ActionType struct {
 }
 
 type Address struct {
-	ID            string
-	Name          string
-	Phone         sql.NullString
-	Email         sql.NullString
-	IsDropShip    bool
-	GeolocationID string
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
+	ID                string
+	Name              string
+	Phone             sql.NullString
+	Email             sql.NullString
+	IsDropShip        bool
+	GeolocationID     string
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	ReceiveCalendarID sql.NullString
 }
 
 type AdjustmentType struct {
@@ -837,6 +842,7 @@ type Geolocation struct {
 	UpdatedAt      time.Time
 	Latitude       sql.NullFloat64
 	Longitude      sql.NullFloat64
+	Timezone       sql.NullString
 }
 
 type HubspotAccountUserLink struct {
@@ -1389,6 +1395,31 @@ type OnboardingStatus struct {
 	Code      string
 	CreatedAt time.Time
 	UpdatedAt time.Time
+}
+
+type OperatingCalendar struct {
+	ID                        string
+	AccountID                 string
+	Code                      string
+	Name                      string
+	OperatingCalendarKindCode string
+	DaysOfWeek                string
+	CutoffAt                  sql.NullString
+	Timezone                  sql.NullString
+	IsDefault                 bool
+	CreatedAt                 time.Time
+	UpdatedAt                 time.Time
+	DeletedAt                 sql.NullTime
+}
+
+type OperatingCalendarClosure struct {
+	ID                  string
+	AccountID           string
+	OperatingCalendarID string
+	ClosedOn            time.Time
+	Name                string
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
 }
 
 type OrderDiscount struct {
@@ -2039,40 +2070,44 @@ type RoleType struct {
 }
 
 type SalesOrder struct {
-	ID                    string
-	BillingAddressID      string
-	ShippingAddressID     string
-	CustomerPoNumber      sql.NullString
-	Note                  sql.NullString
-	Number                string
-	IsAcknowledgmentSent  bool
-	CarrierID             sql.NullString
-	CarrierOptionID       sql.NullString
-	CarrierBillingType    sql.NullString
-	CarrierBillingAccount sql.NullString
-	PriorityCode          string
-	SalesRepID            sql.NullString
-	ShippingTermID        sql.NullString
-	SalesOrderStatusCode  string
-	SalesOrderTypeCode    string
-	PaymentTermID         sql.NullString
-	ProductionRunID       sql.NullString
-	OrderDiscountID       sql.NullString
-	BuyerAccountID        string
-	SellerAccountID       string
-	OwnerAccountID        string
-	CompletedAt           sql.NullTime
-	ExpiredAt             sql.NullTime
-	FirstShipAt           sql.NullTime
-	IssuedAt              sql.NullTime
-	PromisedAt            sql.NullTime
-	CreatedAt             time.Time
-	UpdatedAt             time.Time
-	LeadTimeDays          sql.NullInt32
-	LeadTimeSourceCode    sql.NullString
-	ShipByDate            sql.NullTime
-	TransitDays           sql.NullInt32
-	TransitSourceCode     sql.NullString
+	ID                     string
+	BillingAddressID       string
+	ShippingAddressID      string
+	CustomerPoNumber       sql.NullString
+	Note                   sql.NullString
+	Number                 string
+	IsAcknowledgmentSent   bool
+	CarrierID              sql.NullString
+	CarrierOptionID        sql.NullString
+	CarrierBillingType     sql.NullString
+	CarrierBillingAccount  sql.NullString
+	PriorityCode           string
+	SalesRepID             sql.NullString
+	ShippingTermID         sql.NullString
+	SalesOrderStatusCode   string
+	SalesOrderTypeCode     string
+	PaymentTermID          sql.NullString
+	ProductionRunID        sql.NullString
+	OrderDiscountID        sql.NullString
+	BuyerAccountID         string
+	SellerAccountID        string
+	OwnerAccountID         string
+	CompletedAt            sql.NullTime
+	ExpiredAt              sql.NullTime
+	FirstShipAt            sql.NullTime
+	IssuedAt               sql.NullTime
+	PromisedAt             sql.NullTime
+	CreatedAt              time.Time
+	UpdatedAt              time.Time
+	LeadTimeDays           sql.NullInt32
+	LeadTimeSourceCode     sql.NullString
+	ShipByDate             sql.NullTime
+	TransitDays            sql.NullInt32
+	TransitSourceCode      sql.NullString
+	CalendarAdjustmentDays sql.NullInt32
+	LeadTimeOverrideDays   sql.NullInt32
+	ShipByCutoffAt         sql.NullTime
+	ShipByOverrideDate     sql.NullTime
 }
 
 type SalesOrderLine struct {

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.49.4](https://github.com/Augno/api/compare/v0.49.3...v0.49.4) (2026-08-19)
+
+
+### Bug Fixes
+
+* production scheduling and customer lead time features ([#500](https://github.com/Augno/api/issues/500)) ([fb0226a](https://github.com/Augno/api/commit/fb0226aef1addd6e38a391975c4af6d04c62b6c1))
+
 ## [0.49.3](https://github.com/Augno/api/compare/v0.49.2...v0.49.3) (2026-08-19)
 
 

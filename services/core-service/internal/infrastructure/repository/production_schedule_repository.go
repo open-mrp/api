@@ -465,6 +465,26 @@ func (r *productionScheduleRepoImpl) Delete(ctx context.Context, accountID, sche
 			return tracing.Trace(span, apiErr)
 		}
 	}
+	// The three children that arrived after this function was written and were never added to it. The comment above claimed they were already removed; they were not, and a deleted draft was leaving its finished targets, its department work and its finishing plan behind with no header to reach them by.
+	if apiErr := r.DeleteFinishingLines(ctx, accountID, scheduleID); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if err := r.queries.DeleteProductionScheduleFinishedPolicies(ctx, sqlc.DeleteProductionScheduleFinishedPoliciesParams{
+		AccountID:            accountID,
+		ProductionScheduleID: scheduleID,
+	}); err != nil {
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+	}
+	if err := r.queries.DeleteProductionScheduleDerivedLines(ctx, sqlc.DeleteProductionScheduleDerivedLinesParams{
+		AccountID:            accountID,
+		ProductionScheduleID: scheduleID,
+	}); err != nil {
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+	}
 
 	err := r.queries.DeleteProductionSchedule(ctx, sqlc.DeleteProductionScheduleParams{
 		AccountID: accountID,
@@ -748,6 +768,122 @@ func (r *productionScheduleRepoImpl) ListLineOrders(ctx context.Context, account
 			link.ShipByDate = &row.ShipByDate.Time
 		}
 		out = append(out, link)
+	}
+	return out, nil
+}
+
+// ReplaceFinishingLines rewrites a version's stage-two plan.
+//
+// Delete then insert, never patch. The finished mix is a pure function of the knit plan, the order book and each SKU's position, so a partial update could leave a week holding lines for a campaign the re-solve no longer produces — which reads as work nobody asked for and is exactly the failure the regenerate path exists to avoid.
+func (r *productionScheduleRepoImpl) ReplaceFinishingLines(ctx context.Context, accountID, scheduleID string, lines []*domain.ProductionScheduleFinishingLine) *apierror.APIError {
+	ctx, span := productionScheduleRepoTracer.Start(ctx, "repository.production_schedule.replace_finishing_lines")
+	defer span.End()
+
+	if apiErr := r.DeleteFinishingLines(ctx, accountID, scheduleID); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	for _, line := range lines {
+		if err := r.queries.CreateProductionScheduleFinishingLine(ctx, sqlc.CreateProductionScheduleFinishingLineParams{
+			ID:                    line.ID,
+			AccountID:             accountID,
+			ProductionScheduleID:  scheduleID,
+			WeekIndex:             line.WeekIndex,
+			WeekStartDate:         line.WeekStartDate,
+			ItemID:                line.ItemID,
+			Sku:                   line.SKU,
+			GreigeItemID:          line.GreigeItemID,
+			GreigeSku:             line.GreigeSKU,
+			DepartmentID:          dtNullString(line.DepartmentID),
+			ProductionStepID:      dtNullString(line.ProductionStepID),
+			PlannedQuantity:       floatToDecimalString(line.PlannedQuantity),
+			PlannedUnitID:         dtNullString(line.PlannedUnitID),
+			PlannedLots:           line.PlannedLots,
+			PlannedLotUnits:       floatToDecimalString(line.PlannedLotUnits),
+			PlannedRunHours:       floatToDecimalString(line.PlannedRunHours),
+			GreigeConsumed:        floatToDecimalString(line.GreigeConsumed),
+			FirmUnits:             floatToDecimalString(line.FirmUnits),
+			ProjectedOnHandBefore: floatToDecimalString(line.ProjectedOnHandBefore),
+			ProjectedOnHandAfter:  floatToDecimalString(line.ProjectedOnHandAfter),
+			StatusCode:            line.StatusCode,
+			SourceCode:            line.SourceCode,
+			IsFrozen:              line.IsFrozen,
+		}); err != nil {
+			if apiErr := db.MapSQLError(err); apiErr != nil {
+				return tracing.Trace(span, apiErr)
+			}
+		}
+	}
+
+	return nil
+}
+
+func (r *productionScheduleRepoImpl) DeleteFinishingLines(ctx context.Context, accountID, scheduleID string) *apierror.APIError {
+	ctx, span := productionScheduleRepoTracer.Start(ctx, "repository.production_schedule.delete_finishing_lines")
+	defer span.End()
+
+	if err := r.queries.DeleteProductionScheduleFinishingLines(ctx, sqlc.DeleteProductionScheduleFinishingLinesParams{
+		AccountID:            accountID,
+		ProductionScheduleID: scheduleID,
+	}); err != nil {
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+	}
+	return nil
+}
+
+func (r *productionScheduleRepoImpl) ListFinishingLines(ctx context.Context, params domain.ListProductionScheduleFinishingLinesParams) ([]*domain.ProductionScheduleFinishingLine, *apierror.APIError) {
+	ctx, span := productionScheduleRepoTracer.Start(ctx, "repository.production_schedule.list_finishing_lines")
+	defer span.End()
+
+	args := sqlc.ListProductionScheduleFinishingLinesParams{
+		AccountID:            params.AccountID,
+		ProductionScheduleID: params.ScheduleID,
+	}
+	if params.WeekIndex != nil {
+		args.WeekIndex = gosql.NullInt32{Int32: *params.WeekIndex, Valid: true}
+	}
+	if params.ItemID != nil && *params.ItemID != "" {
+		args.ItemID = gosql.NullString{String: *params.ItemID, Valid: true}
+	}
+
+	rows, err := r.queries.ListProductionScheduleFinishingLines(ctx, args)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	out := make([]*domain.ProductionScheduleFinishingLine, 0, len(rows))
+	for _, row := range rows {
+		line := &domain.ProductionScheduleFinishingLine{
+			ID:                      row.ID,
+			AccountID:               params.AccountID,
+			ProductionScheduleID:    row.ProductionScheduleID,
+			WeekIndex:               row.WeekIndex,
+			WeekStartDate:           row.WeekStartDate,
+			ItemID:                  row.ItemID,
+			SKU:                     row.Sku,
+			GreigeItemID:            row.GreigeItemID,
+			GreigeSKU:               row.GreigeSku,
+			DepartmentID:            nullStringPtr(row.DepartmentID),
+			ProductionStepID:        nullStringPtr(row.ProductionStepID),
+			PlannedQuantity:         decimalToFloat64(row.PlannedQuantity),
+			PlannedUnitID:           nullStringPtr(row.PlannedUnitID),
+			PlannedUnitAbbreviation: nullStringPtr(row.PlannedUnitAbbreviation),
+			PlannedLots:             row.PlannedLots,
+			PlannedLotUnits:         decimalToFloat64(row.PlannedLotUnits),
+			PlannedRunHours:         decimalToFloat64(row.PlannedRunHours),
+			GreigeConsumed:          decimalToFloat64(row.GreigeConsumed),
+			FirmUnits:               decimalToFloat64(row.FirmUnits),
+			ProjectedOnHandBefore:   decimalToFloat64(row.ProjectedOnHandBefore),
+			ProjectedOnHandAfter:    decimalToFloat64(row.ProjectedOnHandAfter),
+			StatusCode:              row.StatusCode,
+			SourceCode:              row.SourceCode,
+			IsFrozen:                row.IsFrozen,
+			CreatedAt:               row.CreatedAt,
+			UpdatedAt:               row.UpdatedAt,
+		}
+		out = append(out, line)
 	}
 	return out, nil
 }

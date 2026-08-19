@@ -1042,6 +1042,7 @@ func TestUnitGroups_RequestLogs(t *testing.T) {
 
 func TestAccountPrices_AuditEvents(t *testing.T) {
 	t.Parallel()
+	lockPricingWrite(t)
 	created := createAndCleanup(t, accountPricesPath, map[string]any{
 		"recipient_account_id": SeedCustomerAccountID,
 		"product_line_id":      SeedProductLineID,
@@ -1090,6 +1091,7 @@ func TestAccountPrices_AuditEvents(t *testing.T) {
 // same class of gap that made a scope-only volume-discount edit invisible.
 func TestAccountPrices_AuditRecordsCategoryOnlyChange(t *testing.T) {
 	t.Parallel()
+	lockPricingWrite(t)
 	created := createAndCleanup(t, accountPricesPath, map[string]any{
 		"recipient_account_id": SeedCustomerAccountID,
 		"product_line_id":      SeedProductLineID,

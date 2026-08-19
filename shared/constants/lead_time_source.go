@@ -6,6 +6,8 @@ type LeadTimeSource string
 const (
 	// LeadTimeSourceCustomer is the customer's own default lead time.
 	LeadTimeSourceCustomer LeadTimeSource = "customer"
+	// LeadTimeSourceParentCustomer is the lead time inherited from the customer's parent account.
+	LeadTimeSourceParentCustomer LeadTimeSource = "parent_customer"
 	// LeadTimeSourceAccountGroup is the lead time inherited from the customer's account group.
 	LeadTimeSourceAccountGroup LeadTimeSource = "account_group"
 	// LeadTimeSourceAccount is the account-wide default, the last fallback in the chain.
@@ -20,7 +22,7 @@ const (
 
 func (m LeadTimeSource) IsValid() bool {
 	switch m {
-	case LeadTimeSourceCustomer, LeadTimeSourceAccountGroup, LeadTimeSourceAccount, LeadTimeSourceManual, LeadTimeSourceOrderLeadTime, LeadTimeSourceOrderShipBy:
+	case LeadTimeSourceCustomer, LeadTimeSourceParentCustomer, LeadTimeSourceAccountGroup, LeadTimeSourceAccount, LeadTimeSourceManual, LeadTimeSourceOrderLeadTime, LeadTimeSourceOrderShipBy:
 		return true
 	default:
 		return false
@@ -30,6 +32,7 @@ func (m LeadTimeSource) IsValid() bool {
 func (m LeadTimeSource) EnumValues() []string {
 	return []string{
 		string(LeadTimeSourceCustomer),
+		string(LeadTimeSourceParentCustomer),
 		string(LeadTimeSourceAccountGroup),
 		string(LeadTimeSourceAccount),
 		string(LeadTimeSourceManual),

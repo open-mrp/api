@@ -683,8 +683,12 @@ type CreateMachineDowntimeEventRequest struct {
 	BatchId         *string                `protobuf:"bytes,7,opt,name=batch_id,json=batchId,proto3,oneof" json:"batch_id,omitempty"`
 	Note            *string                `protobuf:"bytes,8,opt,name=note,proto3,oneof" json:"note,omitempty"`
 	SourceCode      *string                `protobuf:"bytes,9,opt,name=source_code,json=sourceCode,proto3,oneof" json:"source_code,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// How long the machine was down, as a value in a unit of time. An alternative
+	// to ended_at, which the server derives from it; sending both is rejected.
+	DurationValue  *string `protobuf:"bytes,10,opt,name=duration_value,json=durationValue,proto3,oneof" json:"duration_value,omitempty"`
+	DurationUnitId *string `protobuf:"bytes,11,opt,name=duration_unit_id,json=durationUnitId,proto3,oneof" json:"duration_unit_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *CreateMachineDowntimeEventRequest) Reset() {
@@ -780,6 +784,20 @@ func (x *CreateMachineDowntimeEventRequest) GetSourceCode() string {
 	return ""
 }
 
+func (x *CreateMachineDowntimeEventRequest) GetDurationValue() string {
+	if x != nil && x.DurationValue != nil {
+		return *x.DurationValue
+	}
+	return ""
+}
+
+func (x *CreateMachineDowntimeEventRequest) GetDurationUnitId() string {
+	if x != nil && x.DurationUnitId != nil {
+		return *x.DurationUnitId
+	}
+	return ""
+}
+
 type CreateMachineDowntimeEventResponse struct {
 	state         protoimpl.MessageState    `protogen:"open.v1"`
 	Event         *MachineDowntimeEventInfo `protobuf:"bytes,1,opt,name=event,proto3" json:"event,omitempty"`
@@ -835,8 +853,14 @@ type UpdateMachineDowntimeEventRequest struct {
 	ProductionRunId *StringPatch    `protobuf:"bytes,7,opt,name=production_run_id,json=productionRunId,proto3" json:"production_run_id,omitempty"`
 	BatchId         *StringPatch    `protobuf:"bytes,8,opt,name=batch_id,json=batchId,proto3" json:"batch_id,omitempty"`
 	Note            *StringPatch    `protobuf:"bytes,9,opt,name=note,proto3" json:"note,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Moving an event to another machine re-resolves its department and step from
+	// the new machine, so the stoppage lands on the right room's availability.
+	MachineId *string `protobuf:"bytes,10,opt,name=machine_id,json=machineId,proto3,oneof" json:"machine_id,omitempty"`
+	// Setting a duration recomputes ended_at from the start; clearing it reopens
+	// the event the same way clearing ended_at does.
+	Duration      *QuantityPatch `protobuf:"bytes,11,opt,name=duration,proto3" json:"duration,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateMachineDowntimeEventRequest) Reset() {
@@ -921,6 +945,20 @@ func (x *UpdateMachineDowntimeEventRequest) GetBatchId() *StringPatch {
 func (x *UpdateMachineDowntimeEventRequest) GetNote() *StringPatch {
 	if x != nil {
 		return x.Note
+	}
+	return nil
+}
+
+func (x *UpdateMachineDowntimeEventRequest) GetMachineId() string {
+	if x != nil && x.MachineId != nil {
+		return *x.MachineId
+	}
+	return ""
+}
+
+func (x *UpdateMachineDowntimeEventRequest) GetDuration() *QuantityPatch {
+	if x != nil {
+		return x.Duration
 	}
 	return nil
 }
@@ -1193,7 +1231,7 @@ const file_core_core_machine_downtime_proto_rawDesc = "" +
 	"\x1eGetMachineDowntimeEventRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"W\n" +
 	"\x1fGetMachineDowntimeEventResponse\x124\n" +
-	"\x05event\x18\x01 \x01(\v2\x1e.core.MachineDowntimeEventInfoR\x05event\"\xdd\x03\n" +
+	"\x05event\x18\x01 \x01(\v2\x1e.core.MachineDowntimeEventInfoR\x05event\"\xe0\x04\n" +
 	"!CreateMachineDowntimeEventRequest\x12\x1d\n" +
 	"\n" +
 	"machine_id\x18\x01 \x01(\tR\tmachineId\x12\x1f\n" +
@@ -1207,16 +1245,21 @@ const file_core_core_machine_downtime_proto_rawDesc = "" +
 	"\bbatch_id\x18\a \x01(\tH\x03R\abatchId\x88\x01\x01\x12\x17\n" +
 	"\x04note\x18\b \x01(\tH\x04R\x04note\x88\x01\x01\x12$\n" +
 	"\vsource_code\x18\t \x01(\tH\x05R\n" +
-	"sourceCode\x88\x01\x01B\v\n" +
+	"sourceCode\x88\x01\x01\x12*\n" +
+	"\x0eduration_value\x18\n" +
+	" \x01(\tH\x06R\rdurationValue\x88\x01\x01\x12-\n" +
+	"\x10duration_unit_id\x18\v \x01(\tH\aR\x0edurationUnitId\x88\x01\x01B\v\n" +
 	"\t_ended_atB\n" +
 	"\n" +
 	"\b_item_idB\x14\n" +
 	"\x12_production_run_idB\v\n" +
 	"\t_batch_idB\a\n" +
 	"\x05_noteB\x0e\n" +
-	"\f_source_code\"Z\n" +
+	"\f_source_codeB\x11\n" +
+	"\x0f_duration_valueB\x13\n" +
+	"\x11_duration_unit_id\"Z\n" +
 	"\"CreateMachineDowntimeEventResponse\x124\n" +
-	"\x05event\x18\x01 \x01(\v2\x1e.core.MachineDowntimeEventInfoR\x05event\"\xa9\x03\n" +
+	"\x05event\x18\x01 \x01(\v2\x1e.core.MachineDowntimeEventInfoR\x05event\"\x8d\x04\n" +
 	"!UpdateMachineDowntimeEventRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12$\n" +
 	"\vreason_code\x18\x02 \x01(\tH\x00R\n" +
@@ -1227,9 +1270,14 @@ const file_core_core_machine_downtime_proto_rawDesc = "" +
 	"\aitem_id\x18\x06 \x01(\v2\x11.core.StringPatchR\x06itemId\x12=\n" +
 	"\x11production_run_id\x18\a \x01(\v2\x11.core.StringPatchR\x0fproductionRunId\x12,\n" +
 	"\bbatch_id\x18\b \x01(\v2\x11.core.StringPatchR\abatchId\x12%\n" +
-	"\x04note\x18\t \x01(\v2\x11.core.StringPatchR\x04noteB\x0e\n" +
+	"\x04note\x18\t \x01(\v2\x11.core.StringPatchR\x04note\x12\"\n" +
+	"\n" +
+	"machine_id\x18\n" +
+	" \x01(\tH\x02R\tmachineId\x88\x01\x01\x12/\n" +
+	"\bduration\x18\v \x01(\v2\x13.core.QuantityPatchR\bdurationB\x0e\n" +
 	"\f_reason_codeB\r\n" +
-	"\v_started_at\"Z\n" +
+	"\v_started_atB\r\n" +
+	"\v_machine_id\"Z\n" +
 	"\"UpdateMachineDowntimeEventResponse\x124\n" +
 	"\x05event\x18\x01 \x01(\v2\x1e.core.MachineDowntimeEventInfoR\x05event\"3\n" +
 	"!DeleteMachineDowntimeEventRequest\x12\x0e\n" +
@@ -1280,7 +1328,8 @@ var file_core_core_machine_downtime_proto_goTypes = []any{
 	(*PageInfo)(nil),                                   // 16: core.PageInfo
 	(*TimestampPatch)(nil),                             // 17: core.TimestampPatch
 	(*StringPatch)(nil),                                // 18: core.StringPatch
-	(*emptypb.Empty)(nil),                              // 19: google.protobuf.Empty
+	(*QuantityPatch)(nil),                              // 19: core.QuantityPatch
+	(*emptypb.Empty)(nil),                              // 20: google.protobuf.Empty
 }
 var file_core_core_machine_downtime_proto_depIdxs = []int32{
 	15, // 0: core.MachineDowntimeReasonInfo.created_at:type_name -> google.protobuf.Timestamp
@@ -1303,27 +1352,28 @@ var file_core_core_machine_downtime_proto_depIdxs = []int32{
 	18, // 17: core.UpdateMachineDowntimeEventRequest.production_run_id:type_name -> core.StringPatch
 	18, // 18: core.UpdateMachineDowntimeEventRequest.batch_id:type_name -> core.StringPatch
 	18, // 19: core.UpdateMachineDowntimeEventRequest.note:type_name -> core.StringPatch
-	1,  // 20: core.UpdateMachineDowntimeEventResponse.event:type_name -> core.MachineDowntimeEventInfo
-	1,  // 21: core.BatchGetMachineDowntimeEventsByIDsResponse.events:type_name -> core.MachineDowntimeEventInfo
-	2,  // 22: core.CoreMachineDowntimeService.ListMachineDowntimeReasons:input_type -> core.ListMachineDowntimeReasonsRequest
-	4,  // 23: core.CoreMachineDowntimeService.ListMachineDowntimeEvents:input_type -> core.ListMachineDowntimeEventsRequest
-	6,  // 24: core.CoreMachineDowntimeService.GetMachineDowntimeEvent:input_type -> core.GetMachineDowntimeEventRequest
-	8,  // 25: core.CoreMachineDowntimeService.CreateMachineDowntimeEvent:input_type -> core.CreateMachineDowntimeEventRequest
-	10, // 26: core.CoreMachineDowntimeService.UpdateMachineDowntimeEvent:input_type -> core.UpdateMachineDowntimeEventRequest
-	12, // 27: core.CoreMachineDowntimeService.DeleteMachineDowntimeEvent:input_type -> core.DeleteMachineDowntimeEventRequest
-	13, // 28: core.CoreMachineDowntimeService.BatchGetMachineDowntimeEventsByIDs:input_type -> core.BatchGetMachineDowntimeEventsByIDsRequest
-	3,  // 29: core.CoreMachineDowntimeService.ListMachineDowntimeReasons:output_type -> core.ListMachineDowntimeReasonsResponse
-	5,  // 30: core.CoreMachineDowntimeService.ListMachineDowntimeEvents:output_type -> core.ListMachineDowntimeEventsResponse
-	7,  // 31: core.CoreMachineDowntimeService.GetMachineDowntimeEvent:output_type -> core.GetMachineDowntimeEventResponse
-	9,  // 32: core.CoreMachineDowntimeService.CreateMachineDowntimeEvent:output_type -> core.CreateMachineDowntimeEventResponse
-	11, // 33: core.CoreMachineDowntimeService.UpdateMachineDowntimeEvent:output_type -> core.UpdateMachineDowntimeEventResponse
-	19, // 34: core.CoreMachineDowntimeService.DeleteMachineDowntimeEvent:output_type -> google.protobuf.Empty
-	14, // 35: core.CoreMachineDowntimeService.BatchGetMachineDowntimeEventsByIDs:output_type -> core.BatchGetMachineDowntimeEventsByIDsResponse
-	29, // [29:36] is the sub-list for method output_type
-	22, // [22:29] is the sub-list for method input_type
-	22, // [22:22] is the sub-list for extension type_name
-	22, // [22:22] is the sub-list for extension extendee
-	0,  // [0:22] is the sub-list for field type_name
+	19, // 20: core.UpdateMachineDowntimeEventRequest.duration:type_name -> core.QuantityPatch
+	1,  // 21: core.UpdateMachineDowntimeEventResponse.event:type_name -> core.MachineDowntimeEventInfo
+	1,  // 22: core.BatchGetMachineDowntimeEventsByIDsResponse.events:type_name -> core.MachineDowntimeEventInfo
+	2,  // 23: core.CoreMachineDowntimeService.ListMachineDowntimeReasons:input_type -> core.ListMachineDowntimeReasonsRequest
+	4,  // 24: core.CoreMachineDowntimeService.ListMachineDowntimeEvents:input_type -> core.ListMachineDowntimeEventsRequest
+	6,  // 25: core.CoreMachineDowntimeService.GetMachineDowntimeEvent:input_type -> core.GetMachineDowntimeEventRequest
+	8,  // 26: core.CoreMachineDowntimeService.CreateMachineDowntimeEvent:input_type -> core.CreateMachineDowntimeEventRequest
+	10, // 27: core.CoreMachineDowntimeService.UpdateMachineDowntimeEvent:input_type -> core.UpdateMachineDowntimeEventRequest
+	12, // 28: core.CoreMachineDowntimeService.DeleteMachineDowntimeEvent:input_type -> core.DeleteMachineDowntimeEventRequest
+	13, // 29: core.CoreMachineDowntimeService.BatchGetMachineDowntimeEventsByIDs:input_type -> core.BatchGetMachineDowntimeEventsByIDsRequest
+	3,  // 30: core.CoreMachineDowntimeService.ListMachineDowntimeReasons:output_type -> core.ListMachineDowntimeReasonsResponse
+	5,  // 31: core.CoreMachineDowntimeService.ListMachineDowntimeEvents:output_type -> core.ListMachineDowntimeEventsResponse
+	7,  // 32: core.CoreMachineDowntimeService.GetMachineDowntimeEvent:output_type -> core.GetMachineDowntimeEventResponse
+	9,  // 33: core.CoreMachineDowntimeService.CreateMachineDowntimeEvent:output_type -> core.CreateMachineDowntimeEventResponse
+	11, // 34: core.CoreMachineDowntimeService.UpdateMachineDowntimeEvent:output_type -> core.UpdateMachineDowntimeEventResponse
+	20, // 35: core.CoreMachineDowntimeService.DeleteMachineDowntimeEvent:output_type -> google.protobuf.Empty
+	14, // 36: core.CoreMachineDowntimeService.BatchGetMachineDowntimeEventsByIDs:output_type -> core.BatchGetMachineDowntimeEventsByIDsResponse
+	30, // [30:37] is the sub-list for method output_type
+	23, // [23:30] is the sub-list for method input_type
+	23, // [23:23] is the sub-list for extension type_name
+	23, // [23:23] is the sub-list for extension extendee
+	0,  // [0:23] is the sub-list for field type_name
 }
 
 func init() { file_core_core_machine_downtime_proto_init() }

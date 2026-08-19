@@ -137,6 +137,112 @@ func (r *productionScheduleInputRepoImpl) GetConstraintBatchMeasurements(
 	return out, nil
 }
 
+// GetFinishingMachines returns every machine outside the constraint department.
+//
+// The second stage is the complement of the constraint, not a list of its own: a department added to the plant belongs to stage two the day it exists, without anyone revisiting settings.
+func (r *productionScheduleInputRepoImpl) GetFinishingMachines(
+	ctx context.Context,
+	accountID, constraintDepartmentID string,
+) ([]scheduling.Machine, *apierror.APIError) {
+	ctx, span := scheduleInputRepoTracer.Start(ctx, "repository.production_schedule_input.get_finishing_machines")
+	defer span.End()
+
+	rows, err := r.queries.GetFinishingMachines(ctx, sqlc.GetFinishingMachinesParams{
+		AccountID:              accountID,
+		ConstraintDepartmentID: constraintDepartmentID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	var machines []scheduling.Machine
+	for _, m := range rows {
+		machines = append(machines, scheduling.Machine{ID: m.ID, Name: m.Name})
+	}
+	return machines, nil
+}
+
+// GetFinishingBatchMeasurements returns the second stage's production history for the given finished goods.
+func (r *productionScheduleInputRepoImpl) GetFinishingBatchMeasurements(
+	ctx context.Context,
+	params domain.GetFinishingBatchMeasurementsParams,
+) ([]domain.FinishingBatchRow, *apierror.APIError) {
+	ctx, span := scheduleInputRepoTracer.Start(ctx, "repository.production_schedule_input.get_finishing_batch_measurements")
+	defer span.End()
+
+	if len(params.ItemIDs) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.queries.GetFinishingBatchMeasurements(ctx, sqlc.GetFinishingBatchMeasurementsParams{
+		AccountID:              params.AccountID,
+		WindowStart:            gosql.NullTime{Time: params.WindowStart, Valid: true},
+		WindowEnd:              gosql.NullTime{Time: params.WindowEnd, Valid: true},
+		ItemIds:                params.ItemIDs,
+		ConstraintDepartmentID: gosql.NullString{String: params.ConstraintDepartmentID, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	out := make([]domain.FinishingBatchRow, 0, len(rows))
+	for _, row := range rows {
+		measurement := scheduling.BatchMeasurement{
+			BatchID:     row.BatchID,
+			ItemID:      row.ItemID,
+			SKU:         row.Sku,
+			MachineID:   row.MachineID,
+			MachineName: row.MachineName,
+		}
+		if row.ScannedAt.Valid {
+			measurement.ScannedAt = row.ScannedAt.Time
+		}
+		if row.QuantityValue.Valid {
+			measurement.Quantity = decimalToFloat64(row.QuantityValue.String) * scheduleUnitRatio(row.RatioNumerator, row.RatioDenominator)
+		}
+		if row.ProductionStepID.Valid {
+			measurement.ProductionStepID = row.ProductionStepID.String
+		}
+		if row.UnitCost.Valid {
+			measurement.UnitCost = decimalToFloat64(row.UnitCost.String)
+		}
+		if row.LaborTimeValue.Valid {
+			measurement.LaborTimeValue = decimalToFloat64(row.LaborTimeValue.String)
+		}
+		if row.LaborTimeUnit.Valid {
+			measurement.LaborTimeUnit = row.LaborTimeUnit.String
+		}
+		if row.LaborRate.Valid {
+			measurement.LaborRate = decimalToFloat64(row.LaborRate.String)
+		}
+		if row.OverheadRate.Valid {
+			measurement.OverheadRate = decimalToFloat64(row.OverheadRate.String)
+		}
+		if row.RunCreatedAt.Valid {
+			runCreatedAt := row.RunCreatedAt.Time
+			measurement.RunCreatedAt = &runCreatedAt
+		}
+
+		batchRow := domain.FinishingBatchRow{Measurement: measurement}
+		if row.QuantityUnitID.Valid {
+			quantityUnitID := row.QuantityUnitID.String
+			batchRow.QuantityUnitID = &quantityUnitID
+			batchRow.QuantityUnitRatio = scheduleUnitRatio(row.RatioNumerator, row.RatioDenominator)
+		}
+		if row.ProductionStepID.Valid {
+			productionStepID := row.ProductionStepID.String
+			batchRow.ProductionStepID = &productionStepID
+		}
+		// COALESCE makes this a plain string, so an empty one is the absence rather than a NULL.
+		if row.StepDepartmentID != "" {
+			departmentID := row.StepDepartmentID
+			batchRow.StepDepartmentID = &departmentID
+		}
+		out = append(out, batchRow)
+	}
+	return out, nil
+}
+
 // GetStepConsumptionItems returns the input items each production step consumes. Rows carrying no step cannot be attributed and are dropped.
 func (r *productionScheduleInputRepoImpl) GetStepConsumptionItems(
 	ctx context.Context,
@@ -694,6 +800,10 @@ func (r *productionScheduleInputRepoImpl) GetCustomerFulfillmentProfiles(
 		if row.CustomerLeadTimeDays.Valid {
 			days := int(row.CustomerLeadTimeDays.Int32)
 			in.CustomerLeadTimeDays = &days
+		}
+		if row.ParentCustomerLeadTimeDays.Valid {
+			days := int(row.ParentCustomerLeadTimeDays.Int32)
+			in.ParentCustomerLeadTimeDays = &days
 		}
 		if row.AccountGroupLeadTimeDays.Valid {
 			days := int(row.AccountGroupLeadTimeDays.Int32)

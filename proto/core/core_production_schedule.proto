@@ -45,6 +45,10 @@ service CoreProductionScheduleService {
   // the pooled constraint buffers.
   rpc ListProductionScheduleFinishedPolicies(ListProductionScheduleFinishedPoliciesRequest) returns (ListProductionScheduleFinishedPoliciesResponse);
 
+  // ListProductionScheduleFinishingLines returns stage two: how many of which finished
+  // good to make from the knitted parts, week by week.
+  rpc ListProductionScheduleFinishingLines(ListProductionScheduleFinishingLinesRequest) returns (ListProductionScheduleFinishingLinesResponse);
+
   // GetProductionScheduleSettings returns the merchant's planning assumptions.
   rpc GetProductionScheduleSettings(GetProductionScheduleSettingsRequest) returns (GetProductionScheduleSettingsResponse);
 
@@ -338,6 +342,46 @@ message ProductionScheduleFinishedPolicyInfo {
   google.protobuf.Timestamp updated_at = 16;
 }
 
+// ProductionScheduleFinishingLineInfo is one finished good's build in one week: the
+// second stage of the plan, which decides the mix the pooled greige campaign left open.
+message ProductionScheduleFinishingLineInfo {
+  string id = 1;
+  string production_schedule_id = 2;
+  int32 week_index = 3;
+  google.protobuf.Timestamp week_start_date = 4;
+  string item_id = 5;
+  string sku = 6;
+  string greige_item_id = 7;
+  string greige_sku = 8;
+  optional string department_id = 9;
+  optional string production_step_id = 10;
+  double planned_quantity = 11;
+  optional string planned_unit_id = 12;
+  optional string planned_unit_abbreviation = 13;
+  int32 planned_lots = 14;
+  double planned_lot_units = 15;
+  double planned_run_hours = 16;
+  double greige_consumed = 17;
+  double firm_units = 18;
+  double projected_on_hand_before = 19;
+  double projected_on_hand_after = 20;
+  string status_code = 21;
+  string source_code = 22;
+  bool is_frozen = 23;
+  google.protobuf.Timestamp created_at = 24;
+  google.protobuf.Timestamp updated_at = 25;
+}
+
+message ListProductionScheduleFinishingLinesRequest {
+  string production_schedule_id = 1;
+  optional int32 week_index = 2;
+  optional string item_id = 3;
+}
+
+message ListProductionScheduleFinishingLinesResponse {
+  repeated ProductionScheduleFinishingLineInfo lines = 1;
+}
+
 message ListProductionScheduleFinishedPoliciesRequest {
   string production_schedule_id = 1;
 }
@@ -526,6 +570,24 @@ message ScheduleDiagnosticsProto {
   repeated ScheduleAtRiskOrderProto at_risk_orders = 14;
   // How many planned items are built only against the order book.
   int32 make_to_order_item_count = 15;
+  // How the second stage — the rest of the factory — fared against this plan.
+  ScheduleFinishingDiagnosticsProto finishing = 16;
+  int32 finishing_machine_count = 17;
+  bool finishing_capacity_is_estimated = 18;
+}
+
+// ScheduleFinishingDiagnosticsProto is stage two's account of itself. The two starvation
+// lists are kept apart because they call for opposite responses: knit more, or find hours.
+message ScheduleFinishingDiagnosticsProto {
+  double weekly_capacity_hours = 1;
+  repeated double planned_hours_by_week = 2;
+  repeated double utilisation_by_week = 3;
+  repeated string greige_starved_skus = 4;
+  repeated string capacity_starved_skus = 5;
+  repeated string items_without_run_rate = 6;
+  double unused_greige_units = 7;
+  double total_planned_units = 8;
+  int32 line_count = 9;
 }
 
 // ScheduleAtRiskOrderProto is a commitment the plan does not meet, with the reason.
@@ -651,6 +713,9 @@ message ReleaseProductionScheduleWeekRequest {
   int32 week_index = 2;
   string responsible_user_id = 3;
   optional string scanning_station_id = 4;
+  // Issue the whole week as new tickets instead of moving an earlier week's
+  // unworked doffs into this run.
+  bool skip_carry_forward = 5;
 }
 
 // ReleaseScheduleLineBatchInfo is one batch the release would create, or did.
@@ -659,6 +724,9 @@ message ReleaseScheduleLineBatchInfo {
   string sku = 2;
   double quantity = 3;
   optional string batch_id = 4;
+  // The number of the run this ticket came off when the batch already existed.
+  // Absent means the release creates it new.
+  optional string carried_forward_from = 5;
 }
 
 // ReleasedScheduleLineInfo is one campaign and the lots it broke into.
@@ -673,6 +741,7 @@ message ReleasedScheduleLineInfo {
   int32 batch_count = 8;
   repeated ReleaseScheduleLineBatchInfo batches = 9;
   optional string unit = 10;
+  double carried_forward_quantity = 11;
 }
 
 message ReleaseProductionScheduleWeekResponse {
@@ -683,11 +752,13 @@ message ReleaseProductionScheduleWeekResponse {
   int32 batch_count = 5;
   double total_quantity = 6;
   repeated ReleasedScheduleLineInfo lines = 7;
+  int32 carried_forward_batch_count = 8;
 }
 
 message PreviewReleaseProductionScheduleWeekRequest {
   string id = 1;
   int32 week_index = 2;
+  bool skip_carry_forward = 3;
 }
 
 // ReleaseProductionScheduleWeekPreviewResponse is what a release would do, with nothing
@@ -702,6 +773,7 @@ message ReleaseProductionScheduleWeekPreviewResponse {
   bool is_releasable = 7;
   optional string blocked_reason = 8;
   optional string existing_production_run_id = 9;
+  int32 carried_forward_batch_count = 10;
 }
 
 message ArchiveProductionScheduleRequest {

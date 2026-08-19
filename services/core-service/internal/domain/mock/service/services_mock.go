@@ -5448,18 +5448,18 @@ func (mr *MockProductionScheduleSvcMockRecorder) PreviewRegenerateProductionSche
 }
 
 // PreviewReleaseProductionScheduleWeek mocks base method.
-func (m *MockProductionScheduleSvc) PreviewReleaseProductionScheduleWeek(ctx context.Context, scheduleID string, weekIndex int32) (*domain.ReleaseScheduleWeekPreview, *apierror.APIError) {
+func (m *MockProductionScheduleSvc) PreviewReleaseProductionScheduleWeek(ctx context.Context, scheduleID string, weekIndex int32, skipCarryForward bool) (*domain.ReleaseScheduleWeekPreview, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PreviewReleaseProductionScheduleWeek", ctx, scheduleID, weekIndex)
+	ret := m.ctrl.Call(m, "PreviewReleaseProductionScheduleWeek", ctx, scheduleID, weekIndex, skipCarryForward)
 	ret0, _ := ret[0].(*domain.ReleaseScheduleWeekPreview)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // PreviewReleaseProductionScheduleWeek indicates an expected call of PreviewReleaseProductionScheduleWeek.
-func (mr *MockProductionScheduleSvcMockRecorder) PreviewReleaseProductionScheduleWeek(ctx, scheduleID, weekIndex any) *gomock.Call {
+func (mr *MockProductionScheduleSvcMockRecorder) PreviewReleaseProductionScheduleWeek(ctx, scheduleID, weekIndex, skipCarryForward any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreviewReleaseProductionScheduleWeek", reflect.TypeOf((*MockProductionScheduleSvc)(nil).PreviewReleaseProductionScheduleWeek), ctx, scheduleID, weekIndex)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreviewReleaseProductionScheduleWeek", reflect.TypeOf((*MockProductionScheduleSvc)(nil).PreviewReleaseProductionScheduleWeek), ctx, scheduleID, weekIndex, skipCarryForward)
 }
 
 // PublishProductionSchedule mocks base method.

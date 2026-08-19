@@ -693,3 +693,60 @@ func (r *productLineRepoImpl) GetDownstreamProductLineLot(ctx context.Context, a
 	}
 	return nil, nil
 }
+
+// GetFlowProductLineLot inherits a lot by walking what an item is configured to become.
+//
+// GetDownstreamProductLineLot answers the same question from the last plan's greige decomposition, which is better — it is demand-weighted — but it only exists once a schedule has been generated and only covers items that plan reached. This is the fallback for everything else: an intermediate item that has never been produced, or an account that has never run the solver. Without it every such item falls through to the account-wide default, which is how a factory that has carefully set 60 pairs on its sock line ends up batching greige in a number nobody chose.
+//
+// Breadth-first, so the nearest thing the item becomes wins over something four steps further on. Within a level the lowest product line id wins, because there is no demand to weigh with and the lot must not be what makes the same item batch differently between two page loads.
+func (r *productLineRepoImpl) GetFlowProductLineLot(ctx context.Context, accountID, itemID string, maxDepth int) (*domain.ProductLineLotDefault, *apierror.APIError) {
+	ctx, span := productLineRepoTracer.Start(ctx, "repository.product_line.get_flow_lot")
+	defer span.End()
+
+	// A production graph can hold rework loops, so the walk both bounds its depth and refuses to revisit an item.
+	visited := map[string]bool{itemID: true}
+	frontier := []string{itemID}
+
+	for depth := 0; depth < maxDepth && len(frontier) > 0; depth++ {
+		next, err := r.queries.ListDownstreamItemsForItems(ctx, sqlc.ListDownstreamItemsForItemsParams{
+			AccountID: accountID,
+			ItemIds:   frontier,
+		})
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+
+		frontier = frontier[:0]
+		for _, downstreamID := range next {
+			if visited[downstreamID] {
+				continue
+			}
+			visited[downstreamID] = true
+			frontier = append(frontier, downstreamID)
+		}
+		if len(frontier) == 0 {
+			return nil, nil
+		}
+
+		rows, err := r.queries.ListProductLineLotsForItems(ctx, sqlc.ListProductLineLotsForItemsParams{
+			AccountID: accountID,
+			ItemIds:   frontier,
+		})
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		for _, row := range rows {
+			quantity, err := strconv.ParseFloat(row.DefaultLotValue, 64)
+			if err != nil || quantity <= 0 {
+				continue
+			}
+			return &domain.ProductLineLotDefault{
+				ProductLineID: row.ProductLineID,
+				Quantity:      quantity,
+				UnitID:        row.DefaultLotUnitID,
+			}, nil
+		}
+	}
+
+	return nil, nil
+}

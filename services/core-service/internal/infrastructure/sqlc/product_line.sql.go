@@ -644,6 +644,60 @@ func (q *Queries) InsertProductLineDefaultLotQuantity(ctx context.Context, arg I
 	return err
 }
 
+const listDownstreamItemsForItems = `-- name: ListDownstreamItemsForItems :many
+SELECT DISTINCT p.item_id
+FROM consumption c
+JOIN production_step ps ON ps.id = c.production_step_id
+JOIN production p ON p.production_step_id = ps.id
+JOIN item i ON i.id = p.item_id
+WHERE ps.account_id = ?
+AND c.item_id IN (/*SLICE:item_ids*/?)
+AND i.deleted_at IS NULL
+ORDER BY p.item_id
+`
+
+type ListDownstreamItemsForItemsParams struct {
+	AccountID string
+	ItemIds   []string
+}
+
+// ListDownstreamItemsForItems is one step of "what do these items become", read from the production flow rather than from batch history.
+//
+// The flow is configuration: it answers the question for an item that has never been made, which is exactly the item a planner is adding the first batch of. Walking it a level at a time keeps the whole traversal to one query per depth no matter how wide the frontier is.
+func (q *Queries) ListDownstreamItemsForItems(ctx context.Context, arg ListDownstreamItemsForItemsParams) ([]string, error) {
+	query := listDownstreamItemsForItems
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	if len(arg.ItemIds) > 0 {
+		for _, v := range arg.ItemIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var item_id string
+		if err := rows.Scan(&item_id); err != nil {
+			return nil, err
+		}
+		items = append(items, item_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listItemProductLines = `-- name: ListItemProductLines :many
 SELECT
     i.id AS item_id,
@@ -772,6 +826,75 @@ func (q *Queries) ListProductLineLotDefaults(ctx context.Context, accountID sql.
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
+			&i.DefaultLotValue,
+			&i.DefaultLotUnitID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listProductLineLotsForItems = `-- name: ListProductLineLotsForItems :many
+SELECT
+    i.id AS item_id,
+    pl.id AS product_line_id,
+    dlq.value AS default_lot_value,
+    dlq.unit_id AS default_lot_unit_id
+FROM item i
+JOIN product p ON p.item_id = i.id
+JOIN product_line pl ON pl.id = p.product_line_id
+JOIN quantity dlq ON dlq.id = pl.default_lot_id
+WHERE i.account_id = ?
+AND i.id IN (/*SLICE:item_ids*/?)
+ORDER BY pl.id, i.id
+`
+
+type ListProductLineLotsForItemsParams struct {
+	AccountID string
+	ItemIds   []string
+}
+
+type ListProductLineLotsForItemsRow struct {
+	ItemID           string
+	ProductLineID    string
+	DefaultLotValue  string
+	DefaultLotUnitID string
+}
+
+// ListProductLineLotsForItems reads the lot convention of whatever line each of these items sells under.
+//
+// The batch form of GetProductLineForItem, for resolving a whole frontier of downstream items at once. Ordered by line so a tie between two lines resolves the same way on every call — an unstable lot would make the same item batch differently from one page load to the next.
+func (q *Queries) ListProductLineLotsForItems(ctx context.Context, arg ListProductLineLotsForItemsParams) ([]ListProductLineLotsForItemsRow, error) {
+	query := listProductLineLotsForItems
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	if len(arg.ItemIds) > 0 {
+		for _, v := range arg.ItemIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListProductLineLotsForItemsRow
+	for rows.Next() {
+		var i ListProductLineLotsForItemsRow
+		if err := rows.Scan(
+			&i.ItemID,
+			&i.ProductLineID,
 			&i.DefaultLotValue,
 			&i.DefaultLotUnitID,
 		); err != nil {

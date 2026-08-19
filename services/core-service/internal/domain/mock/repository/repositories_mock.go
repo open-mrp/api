@@ -6257,6 +6257,20 @@ func (mr *MockBatchRepoMockRecorder) MarkAsScanned(ctx, accountID, batchID any) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkAsScanned", reflect.TypeOf((*MockBatchRepo)(nil).MarkAsScanned), ctx, accountID, batchID)
 }
 
+// ReassignMachine mocks base method.
+func (m *MockBatchRepo) ReassignMachine(ctx context.Context, accountID, batchID, machineID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReassignMachine", ctx, accountID, batchID, machineID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// ReassignMachine indicates an expected call of ReassignMachine.
+func (mr *MockBatchRepoMockRecorder) ReassignMachine(ctx, accountID, batchID, machineID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReassignMachine", reflect.TypeOf((*MockBatchRepo)(nil).ReassignMachine), ctx, accountID, batchID, machineID)
+}
+
 // Reopen mocks base method.
 func (m *MockBatchRepo) Reopen(ctx context.Context, accountID, batchID string) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -7200,6 +7214,21 @@ func (m *MockProductLineRepo) GetDownstreamProductLineLot(ctx context.Context, a
 func (mr *MockProductLineRepoMockRecorder) GetDownstreamProductLineLot(ctx, accountID, itemID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDownstreamProductLineLot", reflect.TypeOf((*MockProductLineRepo)(nil).GetDownstreamProductLineLot), ctx, accountID, itemID)
+}
+
+// GetFlowProductLineLot mocks base method.
+func (m *MockProductLineRepo) GetFlowProductLineLot(ctx context.Context, accountID, itemID string, maxDepth int) (*domain.ProductLineLotDefault, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetFlowProductLineLot", ctx, accountID, itemID, maxDepth)
+	ret0, _ := ret[0].(*domain.ProductLineLotDefault)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetFlowProductLineLot indicates an expected call of GetFlowProductLineLot.
+func (mr *MockProductLineRepoMockRecorder) GetFlowProductLineLot(ctx, accountID, itemID, maxDepth any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFlowProductLineLot", reflect.TypeOf((*MockProductLineRepo)(nil).GetFlowProductLineLot), ctx, accountID, itemID, maxDepth)
 }
 
 // GetItemLotOverride mocks base method.
@@ -10211,6 +10240,20 @@ func (mr *MockProductionScheduleRepoMockRecorder) Delete(ctx, accountID, schedul
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockProductionScheduleRepo)(nil).Delete), ctx, accountID, scheduleID)
 }
 
+// DeleteFinishingLines mocks base method.
+func (m *MockProductionScheduleRepo) DeleteFinishingLines(ctx context.Context, accountID, scheduleID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteFinishingLines", ctx, accountID, scheduleID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// DeleteFinishingLines indicates an expected call of DeleteFinishingLines.
+func (mr *MockProductionScheduleRepoMockRecorder) DeleteFinishingLines(ctx, accountID, scheduleID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteFinishingLines", reflect.TypeOf((*MockProductionScheduleRepo)(nil).DeleteFinishingLines), ctx, accountID, scheduleID)
+}
+
 // DeleteItemPolicies mocks base method.
 func (m *MockProductionScheduleRepo) DeleteItemPolicies(ctx context.Context, accountID, scheduleID string) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -10400,6 +10443,21 @@ func (mr *MockProductionScheduleRepoMockRecorder) List(ctx, params any) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockProductionScheduleRepo)(nil).List), ctx, params)
 }
 
+// ListCarryForwardBatches mocks base method.
+func (m *MockProductionScheduleRepo) ListCarryForwardBatches(ctx context.Context, params domain.ListCarryForwardBatchesParams) ([]*domain.CarryForwardBatch, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListCarryForwardBatches", ctx, params)
+	ret0, _ := ret[0].([]*domain.CarryForwardBatch)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListCarryForwardBatches indicates an expected call of ListCarryForwardBatches.
+func (mr *MockProductionScheduleRepoMockRecorder) ListCarryForwardBatches(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCarryForwardBatches", reflect.TypeOf((*MockProductionScheduleRepo)(nil).ListCarryForwardBatches), ctx, params)
+}
+
 // ListDerivedLines mocks base method.
 func (m *MockProductionScheduleRepo) ListDerivedLines(ctx context.Context, params domain.ListDerivedLinesParams) ([]*domain.ProductionScheduleDerivedLine, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -10443,6 +10501,21 @@ func (m *MockProductionScheduleRepo) ListFinishedPolicies(ctx context.Context, a
 func (mr *MockProductionScheduleRepoMockRecorder) ListFinishedPolicies(ctx, accountID, scheduleID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListFinishedPolicies", reflect.TypeOf((*MockProductionScheduleRepo)(nil).ListFinishedPolicies), ctx, accountID, scheduleID)
+}
+
+// ListFinishingLines mocks base method.
+func (m *MockProductionScheduleRepo) ListFinishingLines(ctx context.Context, params domain.ListProductionScheduleFinishingLinesParams) ([]*domain.ProductionScheduleFinishingLine, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListFinishingLines", ctx, params)
+	ret0, _ := ret[0].([]*domain.ProductionScheduleFinishingLine)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListFinishingLines indicates an expected call of ListFinishingLines.
+func (mr *MockProductionScheduleRepoMockRecorder) ListFinishingLines(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListFinishingLines", reflect.TypeOf((*MockProductionScheduleRepo)(nil).ListFinishingLines), ctx, params)
 }
 
 // ListGenerationCadences mocks base method.
@@ -10692,6 +10765,20 @@ func (m *MockProductionScheduleRepo) ReplaceFinishedPolicies(ctx context.Context
 func (mr *MockProductionScheduleRepoMockRecorder) ReplaceFinishedPolicies(ctx, accountID, scheduleID, policies any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReplaceFinishedPolicies", reflect.TypeOf((*MockProductionScheduleRepo)(nil).ReplaceFinishedPolicies), ctx, accountID, scheduleID, policies)
+}
+
+// ReplaceFinishingLines mocks base method.
+func (m *MockProductionScheduleRepo) ReplaceFinishingLines(ctx context.Context, accountID, scheduleID string, lines []*domain.ProductionScheduleFinishingLine) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReplaceFinishingLines", ctx, accountID, scheduleID, lines)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// ReplaceFinishingLines indicates an expected call of ReplaceFinishingLines.
+func (mr *MockProductionScheduleRepoMockRecorder) ReplaceFinishingLines(ctx, accountID, scheduleID, lines any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReplaceFinishingLines", reflect.TypeOf((*MockProductionScheduleRepo)(nil).ReplaceFinishingLines), ctx, accountID, scheduleID, lines)
 }
 
 // ReplaceLineOrders mocks base method.

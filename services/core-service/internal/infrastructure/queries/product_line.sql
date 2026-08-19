@@ -327,3 +327,34 @@ DELETE FROM quantity WHERE id = sqlc.arg('id');
 SELECT pl.default_lot_id FROM product_line pl
 WHERE pl.id = sqlc.arg('id')
 AND pl.account_id = sqlc.arg('account_id');
+
+-- ListDownstreamItemsForItems is one step of "what do these items become", read from the production flow rather than from batch history.
+--
+-- The flow is configuration: it answers the question for an item that has never been made, which is exactly the item a planner is adding the first batch of. Walking it a level at a time keeps the whole traversal to one query per depth no matter how wide the frontier is.
+-- name: ListDownstreamItemsForItems :many
+SELECT DISTINCT p.item_id
+FROM consumption c
+JOIN production_step ps ON ps.id = c.production_step_id
+JOIN production p ON p.production_step_id = ps.id
+JOIN item i ON i.id = p.item_id
+WHERE ps.account_id = sqlc.arg('account_id')
+AND c.item_id IN (sqlc.slice('item_ids'))
+AND i.deleted_at IS NULL
+ORDER BY p.item_id;
+
+-- ListProductLineLotsForItems reads the lot convention of whatever line each of these items sells under.
+--
+-- The batch form of GetProductLineForItem, for resolving a whole frontier of downstream items at once. Ordered by line so a tie between two lines resolves the same way on every call — an unstable lot would make the same item batch differently from one page load to the next.
+-- name: ListProductLineLotsForItems :many
+SELECT
+    i.id AS item_id,
+    pl.id AS product_line_id,
+    dlq.value AS default_lot_value,
+    dlq.unit_id AS default_lot_unit_id
+FROM item i
+JOIN product p ON p.item_id = i.id
+JOIN product_line pl ON pl.id = p.product_line_id
+JOIN quantity dlq ON dlq.id = pl.default_lot_id
+WHERE i.account_id = sqlc.arg('account_id')
+AND i.id IN (sqlc.slice('item_ids'))
+ORDER BY pl.id, i.id;

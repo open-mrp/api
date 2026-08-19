@@ -13,6 +13,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -31,6 +32,7 @@ type ProductionScheduleSvc interface {
 	ListProductionScheduleLines(ctx context.Context, req *ListProductionScheduleLinesRequest) (*apiresource.List[apiresource.ProductionScheduleLine], *apierror.APIError)
 	ListProductionScheduleItemPolicies(ctx context.Context, req *ListProductionScheduleItemPoliciesRequest) (*apiresource.List[apiresource.ProductionScheduleItemPolicy], *apierror.APIError)
 	ListProductionScheduleFinishedPolicies(ctx context.Context, req *ListProductionScheduleFinishedPoliciesRequest) (*apiresource.List[apiresource.ProductionScheduleFinishedPolicy], *apierror.APIError)
+	ListProductionScheduleFinishingLines(ctx context.Context, req *ListProductionScheduleFinishingLinesRequest) (*apiresource.List[apiresource.ProductionScheduleFinishingLine], *apierror.APIError)
 	ListProductionScheduleDerivedLines(ctx context.Context, req *ListProductionScheduleDerivedLinesRequest) (*apiresource.List[apiresource.ProductionScheduleDerivedLine], *apierror.APIError)
 	ListAtRiskOrders(ctx context.Context, req *ListAtRiskOrdersRequest) (*apiresource.List[apiresource.ScheduleOrderCoverage], *apierror.APIError)
 	QuotePromiseDate(ctx context.Context, req *QuotePromiseDateRequest) (*apiresource.PromiseDateQuote, *apierror.APIError)
@@ -198,6 +200,21 @@ func previewFromProto(resp *pb.PreviewProductionScheduleResponse) *apiresource.P
 		diagnostics.FirmDemandUnits = d.FirmDemandUnits
 		diagnostics.UndatedFirmOrderCount = d.UndatedFirmOrderCount
 		diagnostics.MakeToOrderItemCount = d.MakeToOrderItemCount
+		diagnostics.FinishingMachineCount = d.FinishingMachineCount
+		diagnostics.FinishingCapacityIsEstimated = d.FinishingCapacityIsEstimated
+		if f := d.Finishing; f != nil {
+			diagnostics.Finishing = apiresource.ScheduleFinishingDiagnostics{
+				WeeklyCapacityHours: f.WeeklyCapacityHours,
+				PlannedHoursByWeek:  nonNilFloats(f.PlannedHoursByWeek),
+				UtilisationByWeek:   nonNilFloats(f.UtilisationByWeek),
+				GreigeStarvedSKUs:   nonNilStrings(f.GreigeStarvedSkus),
+				CapacityStarvedSKUs: nonNilStrings(f.CapacityStarvedSkus),
+				ItemsWithoutRunRate: nonNilStrings(f.ItemsWithoutRunRate),
+				UnusedGreigeUnits:   f.UnusedGreigeUnits,
+				TotalPlannedUnits:   f.TotalPlannedUnits,
+				LineCount:           f.LineCount,
+			}
+		}
 
 		for _, o := range d.AtRiskOrders {
 			order := apiresource.ScheduleAtRiskOrder{
@@ -485,6 +502,33 @@ func emptyScheduleDiagnostics() apiresource.ScheduleDiagnostics {
 		ItemsWithoutRunRate: []string{},
 		AppliedOverrides:    apiresource.NewList([]apiresource.ScheduleAppliedOverride{}, apiresource.PageInfo{}),
 		AtRiskOrders:        apiresource.NewList([]apiresource.ScheduleAtRiskOrder{}, apiresource.PageInfo{}),
+		Finishing:           emptyScheduleFinishingDiagnostics(),
+	}
+}
+
+// nonNilFloats and nonNilStrings keep a diagnostics collection serializing as [] rather than null, so a caller mapping over it never has to guard.
+func nonNilFloats(v []float64) []float64 {
+	if v == nil {
+		return []float64{}
+	}
+	return v
+}
+
+func nonNilStrings(v []string) []string {
+	if v == nil {
+		return []string{}
+	}
+	return v
+}
+
+// emptyScheduleFinishingDiagnostics keeps the second stage's lists serializing as [] rather than null, for the same reason the rest of the diagnostics do: a caller mapping over "what could not be made" should get an empty list, not a null it has to guard.
+func emptyScheduleFinishingDiagnostics() apiresource.ScheduleFinishingDiagnostics {
+	return apiresource.ScheduleFinishingDiagnostics{
+		PlannedHoursByWeek:  []float64{},
+		UtilisationByWeek:   []float64{},
+		GreigeStarvedSKUs:   []string{},
+		CapacityStarvedSKUs: []string{},
+		ItemsWithoutRunRate: []string{},
 	}
 }
 
@@ -568,6 +612,12 @@ func decodeScheduleDiagnostics(raw string) apiresource.ScheduleDiagnostics {
 	if out.ItemsWithoutRunRate == nil {
 		out.ItemsWithoutRunRate = []string{}
 	}
+	// A version generated before the second stage existed has no finishing block at all, so its lists decode as nil. They read the same as an empty stage, which is what a plan with nothing to finish is.
+	out.Finishing.PlannedHoursByWeek = nonNilFloats(out.Finishing.PlannedHoursByWeek)
+	out.Finishing.UtilisationByWeek = nonNilFloats(out.Finishing.UtilisationByWeek)
+	out.Finishing.GreigeStarvedSKUs = nonNilStrings(out.Finishing.GreigeStarvedSKUs)
+	out.Finishing.CapacityStarvedSKUs = nonNilStrings(out.Finishing.CapacityStarvedSKUs)
+	out.Finishing.ItemsWithoutRunRate = nonNilStrings(out.Finishing.ItemsWithoutRunRate)
 	return out
 }
 
@@ -1043,27 +1093,89 @@ func (m *productionScheduleSvcImpl) ListProductionScheduleFinishedPolicies(ctx c
 	}, nil
 }
 
+func (m *productionScheduleSvcImpl) ListProductionScheduleFinishingLines(ctx context.Context, req *ListProductionScheduleFinishingLinesRequest) (*apiresource.List[apiresource.ProductionScheduleFinishingLine], *apierror.APIError) {
+	pbReq := &pb.ListProductionScheduleFinishingLinesRequest{
+		ProductionScheduleId: req.ProductionScheduleID,
+		WeekIndex:            req.WeekIndex,
+		ItemId:               req.ItemID,
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, productionScheduleEpSvcTracer, "service.production_schedules.list_finishing_lines", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListProductionScheduleFinishingLinesResponse, error) {
+			return m.coreClient.ListProductionScheduleFinishingLines(ctx, pbReq, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	lines := make([]apiresource.ProductionScheduleFinishingLine, len(resp.Lines))
+	for i, l := range resp.Lines {
+		lines[i] = apiresource.ProductionScheduleFinishingLine{
+			ID:                    l.Id,
+			Object:                constants.ObjectTypeProductionScheduleFinishingLine,
+			ProductionSchedule:    entityRef(l.ProductionScheduleId, constants.ObjectTypeProductionSchedule),
+			WeekIndex:             l.WeekIndex,
+			WeekStartDate:         grpcutil.TimestampToTime(l.WeekStartDate),
+			Item:                  entityRef(l.ItemId, constants.ObjectTypeItem),
+			SKU:                   l.Sku,
+			GreigeItem:            entityRef(l.GreigeItemId, constants.ObjectTypeItem),
+			GreigeSKU:             l.GreigeSku,
+			Department:            entityRefPtr(l.DepartmentId, constants.ObjectTypeDepartment),
+			ProductionStep:        entityRefPtr(l.ProductionStepId, constants.ObjectTypeProductionStep),
+			PlannedQuantity:       l.PlannedQuantity,
+			Unit:                  l.PlannedUnitAbbreviation,
+			PlannedLots:           l.PlannedLots,
+			PlannedLotUnits:       l.PlannedLotUnits,
+			PlannedRunHours:       l.PlannedRunHours,
+			GreigeConsumed:        l.GreigeConsumed,
+			FirmUnits:             l.FirmUnits,
+			ProjectedOnHandBefore: l.ProjectedOnHandBefore,
+			ProjectedOnHandAfter:  l.ProjectedOnHandAfter,
+			Status:                constants.ProductionScheduleLineStatus(l.StatusCode),
+			Source:                constants.ScheduleLineSource(l.SourceCode),
+			IsFrozen:              l.IsFrozen,
+			CreatedAt:             grpcutil.TimestampToTime(l.CreatedAt),
+			UpdatedAt:             grpcutil.TimestampToTime(l.UpdatedAt),
+		}
+	}
+
+	return &apiresource.List[apiresource.ProductionScheduleFinishingLine]{
+		Object: constants.ObjectTypeList,
+		Data:   lines,
+	}, nil
+}
+
+// boolOrFalse reads an optional flag, where omitting it means the default behaviour rather than a third state.
+func boolOrFalse(f field.Optional[bool]) bool {
+	if v := f.Ptr(); v != nil {
+		return *v
+	}
+	return false
+}
+
 func releasedLineFromProto(info *pb.ReleasedScheduleLineInfo) apiresource.ReleasedScheduleLine {
 	batches := make([]apiresource.ReleaseScheduleBatch, 0, len(info.Batches))
 	for _, b := range info.Batches {
 		batches = append(batches, apiresource.ReleaseScheduleBatch{
-			Item:     entityRef(b.ItemId, constants.ObjectTypeItem),
-			SKU:      b.Sku,
-			Quantity: b.Quantity,
-			Batch:    entityRefPtr(b.BatchId, constants.ObjectTypeBatch),
+			Item:               entityRef(b.ItemId, constants.ObjectTypeItem),
+			SKU:                b.Sku,
+			Quantity:           b.Quantity,
+			Batch:              entityRefPtr(b.BatchId, constants.ObjectTypeBatch),
+			CarriedForwardFrom: b.CarriedForwardFrom,
 		})
 	}
 
 	return apiresource.ReleasedScheduleLine{
-		Line:            entityRef(info.ProductionScheduleLineId, constants.ObjectTypeProductionScheduleLine),
-		Item:            entityRef(info.ItemId, constants.ObjectTypeItem),
-		SKU:             info.Sku,
-		Machine:         apiresource.NewEntity(info.MachineId, constants.ObjectTypeMachine, info.MachineName, nil),
-		PlannedQuantity: info.PlannedQuantity,
-		LotUnits:        info.LotUnits,
-		Unit:            info.Unit,
-		BatchCount:      info.BatchCount,
-		Batches:         apiresource.NewList(batches, apiresource.PageInfo{}),
+		Line:                   entityRef(info.ProductionScheduleLineId, constants.ObjectTypeProductionScheduleLine),
+		Item:                   entityRef(info.ItemId, constants.ObjectTypeItem),
+		SKU:                    info.Sku,
+		Machine:                apiresource.NewEntity(info.MachineId, constants.ObjectTypeMachine, info.MachineName, nil),
+		PlannedQuantity:        info.PlannedQuantity,
+		LotUnits:               info.LotUnits,
+		Unit:                   info.Unit,
+		BatchCount:             info.BatchCount,
+		CarriedForwardQuantity: info.CarriedForwardQuantity,
+		Batches:                apiresource.NewList(batches, apiresource.PageInfo{}),
 	}
 }
 
@@ -1081,6 +1193,7 @@ func (m *productionScheduleSvcImpl) ReleaseProductionScheduleWeek(ctx context.Co
 		Id:                req.ProductionScheduleID,
 		WeekIndex:         req.WeekIndex,
 		ResponsibleUserId: req.ResponsibleUserID,
+		SkipCarryForward:  boolOrFalse(req.SkipCarryForward),
 	}
 	pbReq.ScanningStationId = req.ScanningStationID.Ptr()
 
@@ -1093,13 +1206,14 @@ func (m *productionScheduleSvcImpl) ReleaseProductionScheduleWeek(ctx context.Co
 	}
 
 	result := &apiresource.ReleaseScheduleWeekResult{
-		Object:            constants.ObjectTypeProductionScheduleWeekRelease,
-		WeekIndex:         resp.WeekIndex,
-		WeekStartDate:     grpcutil.TimestampToTime(resp.WeekStartDate),
-		ReleasedLineCount: resp.ReleasedLineCount,
-		BatchCount:        resp.BatchCount,
-		TotalQuantity:     resp.TotalQuantity,
-		Lines:             apiresource.NewList(releasedLinesFromProto(resp.Lines), apiresource.PageInfo{}),
+		Object:                   constants.ObjectTypeProductionScheduleWeekRelease,
+		WeekIndex:                resp.WeekIndex,
+		WeekStartDate:            grpcutil.TimestampToTime(resp.WeekStartDate),
+		ReleasedLineCount:        resp.ReleasedLineCount,
+		BatchCount:               resp.BatchCount,
+		CarriedForwardBatchCount: resp.CarriedForwardBatchCount,
+		TotalQuantity:            resp.TotalQuantity,
+		Lines:                    apiresource.NewList(releasedLinesFromProto(resp.Lines), apiresource.PageInfo{}),
 	}
 	if resp.ProductionRun != nil {
 		run := productionrunep.ProductionRunFromProto(resp.ProductionRun)
@@ -1111,8 +1225,9 @@ func (m *productionScheduleSvcImpl) ReleaseProductionScheduleWeek(ctx context.Co
 
 func (m *productionScheduleSvcImpl) PreviewReleaseProductionScheduleWeek(ctx context.Context, req *PreviewReleaseProductionScheduleWeekRequest) (*apiresource.ReleaseScheduleWeekPreview, *apierror.APIError) {
 	pbReq := &pb.PreviewReleaseProductionScheduleWeekRequest{
-		Id:        req.ProductionScheduleID,
-		WeekIndex: req.WeekIndex,
+		Id:               req.ProductionScheduleID,
+		WeekIndex:        req.WeekIndex,
+		SkipCarryForward: req.SkipCarryForward,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, productionScheduleEpSvcTracer, "service.production_schedule.preview_release_week", domain.ServiceName,
@@ -1124,16 +1239,17 @@ func (m *productionScheduleSvcImpl) PreviewReleaseProductionScheduleWeek(ctx con
 	}
 
 	return &apiresource.ReleaseScheduleWeekPreview{
-		Object:                constants.ObjectTypeProductionScheduleWeekReleasePreview,
-		WeekIndex:             resp.WeekIndex,
-		WeekStartDate:         grpcutil.TimestampToTime(resp.WeekStartDate),
-		LineCount:             resp.LineCount,
-		BatchCount:            resp.BatchCount,
-		TotalQuantity:         resp.TotalQuantity,
-		Lines:                 apiresource.NewList(releasedLinesFromProto(resp.Lines), apiresource.PageInfo{}),
-		IsReleasable:          resp.IsReleasable,
-		BlockedReason:         resp.BlockedReason,
-		ExistingProductionRun: entityRefPtr(resp.ExistingProductionRunId, constants.ObjectTypeProductionRun),
+		Object:                   constants.ObjectTypeProductionScheduleWeekReleasePreview,
+		WeekIndex:                resp.WeekIndex,
+		WeekStartDate:            grpcutil.TimestampToTime(resp.WeekStartDate),
+		LineCount:                resp.LineCount,
+		BatchCount:               resp.BatchCount,
+		CarriedForwardBatchCount: resp.CarriedForwardBatchCount,
+		TotalQuantity:            resp.TotalQuantity,
+		Lines:                    apiresource.NewList(releasedLinesFromProto(resp.Lines), apiresource.PageInfo{}),
+		IsReleasable:             resp.IsReleasable,
+		BlockedReason:            resp.BlockedReason,
+		ExistingProductionRun:    entityRefPtr(resp.ExistingProductionRunId, constants.ObjectTypeProductionRun),
 	}, nil
 }
 

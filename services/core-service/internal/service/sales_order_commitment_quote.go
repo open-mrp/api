@@ -46,7 +46,7 @@ func (s *salesOrderSvcImpl) QuoteSalesOrderCommitment(ctx context.Context, param
 		issuedAt = *params.IssuedAt
 	}
 
-	commitment, apiErr := s.resolveShipByCommitment(ctx, params.AccountID, order, issuedAt)
+	commitment, apiErr := s.resolveShipByCommitment(ctx, params.AccountID, order, issuedAt, commitmentOptions{EstimateArrival: true})
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}

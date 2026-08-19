@@ -26,6 +26,8 @@ type UnitFactors struct {
 	OffsetNum  decimal.Decimal
 	OffsetDen  decimal.Decimal
 	IsBaseUnit bool
+	// DimensionCode is what the unit measures, so a caller that needs a duration can reject a unit that measures socks.
+	DimensionCode string
 }
 
 // ToBase converts a measure in this unit to its dimension's base measure.

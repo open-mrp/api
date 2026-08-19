@@ -203,3 +203,76 @@ func TestDefaultCalendar_MatchesTheWeekendOnlyRuleItReplaced(t *testing.T) {
 		}
 	}
 }
+
+func TestSnapForward_MovesOntoTheNextOpenDay(t *testing.T) {
+	t.Parallel()
+
+	cal := mustCalendar(t, "1111100")
+
+	got, moved, ok := cal.SnapForward(onDay(2026, time.August, 22))
+	if !ok {
+		t.Fatal("expected a snap to resolve")
+	}
+	if want := onDay(2026, time.August, 24); !got.Equal(want) {
+		t.Fatalf("got %s, want %s", got.Format(time.DateOnly), want.Format(time.DateOnly))
+	}
+	if moved != 2 {
+		t.Fatalf("got %d days moved, want 2", moved)
+	}
+}
+
+func TestSnapForward_LeavesAnOpenDayAlone(t *testing.T) {
+	t.Parallel()
+
+	cal := mustCalendar(t, "1111100")
+
+	got, moved, ok := cal.SnapForward(onDay(2026, time.August, 21))
+	if !ok {
+		t.Fatal("expected a snap to resolve")
+	}
+	if want := onDay(2026, time.August, 21); !got.Equal(want) || moved != 0 {
+		t.Fatalf("got %s moved %d, want %s moved 0", got.Format(time.DateOnly), moved, want.Format(time.DateOnly))
+	}
+}
+
+func TestAddDays_CountsOnlyDaysTheCarrierMoves(t *testing.T) {
+	t.Parallel()
+
+	cal := mustCalendar(t, "1111100")
+
+	got, ok := cal.AddDays(onDay(2026, time.August, 20), 3)
+	if !ok {
+		t.Fatal("expected the walk to resolve")
+	}
+	if want := onDay(2026, time.August, 25); !got.Equal(want) {
+		t.Fatalf("got %s, want %s", got.Format(time.DateOnly), want.Format(time.DateOnly))
+	}
+}
+
+func TestAddDays_SkipsAClosure(t *testing.T) {
+	t.Parallel()
+
+	cal := mustCalendar(t, "1111100", onDay(2026, time.August, 21))
+
+	got, ok := cal.AddDays(onDay(2026, time.August, 20), 1)
+	if !ok {
+		t.Fatal("expected the walk to resolve")
+	}
+	if want := onDay(2026, time.August, 24); !got.Equal(want) {
+		t.Fatalf("got %s, want %s", got.Format(time.DateOnly), want.Format(time.DateOnly))
+	}
+}
+
+func TestAddDays_NoTransitStaysPut(t *testing.T) {
+	t.Parallel()
+
+	cal := mustCalendar(t, "1111100")
+
+	got, ok := cal.AddDays(onDay(2026, time.August, 22), 0)
+	if !ok {
+		t.Fatal("expected the walk to resolve")
+	}
+	if want := onDay(2026, time.August, 22); !got.Equal(want) {
+		t.Fatalf("got %s, want %s", got.Format(time.DateOnly), want.Format(time.DateOnly))
+	}
+}

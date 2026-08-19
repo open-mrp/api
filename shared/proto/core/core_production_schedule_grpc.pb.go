@@ -34,6 +34,7 @@ const (
 	CoreProductionScheduleService_ListProductionScheduleLines_FullMethodName             = "/core.CoreProductionScheduleService/ListProductionScheduleLines"
 	CoreProductionScheduleService_ListProductionScheduleItemPolicies_FullMethodName      = "/core.CoreProductionScheduleService/ListProductionScheduleItemPolicies"
 	CoreProductionScheduleService_ListProductionScheduleFinishedPolicies_FullMethodName  = "/core.CoreProductionScheduleService/ListProductionScheduleFinishedPolicies"
+	CoreProductionScheduleService_ListProductionScheduleFinishingLines_FullMethodName    = "/core.CoreProductionScheduleService/ListProductionScheduleFinishingLines"
 	CoreProductionScheduleService_GetProductionScheduleSettings_FullMethodName           = "/core.CoreProductionScheduleService/GetProductionScheduleSettings"
 	CoreProductionScheduleService_UpdateProductionScheduleSettings_FullMethodName        = "/core.CoreProductionScheduleService/UpdateProductionScheduleSettings"
 	CoreProductionScheduleService_ListProductionScheduleResourceSettings_FullMethodName  = "/core.CoreProductionScheduleService/ListProductionScheduleResourceSettings"
@@ -94,6 +95,9 @@ type CoreProductionScheduleServiceClient interface {
 	// ListProductionScheduleFinishedPolicies returns the per-finished-SKU decomposition of
 	// the pooled constraint buffers.
 	ListProductionScheduleFinishedPolicies(ctx context.Context, in *ListProductionScheduleFinishedPoliciesRequest, opts ...grpc.CallOption) (*ListProductionScheduleFinishedPoliciesResponse, error)
+	// ListProductionScheduleFinishingLines returns stage two: how many of which finished
+	// good to make from the knitted parts, week by week.
+	ListProductionScheduleFinishingLines(ctx context.Context, in *ListProductionScheduleFinishingLinesRequest, opts ...grpc.CallOption) (*ListProductionScheduleFinishingLinesResponse, error)
 	// GetProductionScheduleSettings returns the merchant's planning assumptions.
 	GetProductionScheduleSettings(ctx context.Context, in *GetProductionScheduleSettingsRequest, opts ...grpc.CallOption) (*GetProductionScheduleSettingsResponse, error)
 	// UpdateProductionScheduleSettings replaces the merchant's planning assumptions.
@@ -257,6 +261,16 @@ func (c *coreProductionScheduleServiceClient) ListProductionScheduleFinishedPoli
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListProductionScheduleFinishedPoliciesResponse)
 	err := c.cc.Invoke(ctx, CoreProductionScheduleService_ListProductionScheduleFinishedPolicies_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreProductionScheduleServiceClient) ListProductionScheduleFinishingLines(ctx context.Context, in *ListProductionScheduleFinishingLinesRequest, opts ...grpc.CallOption) (*ListProductionScheduleFinishingLinesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListProductionScheduleFinishingLinesResponse)
+	err := c.cc.Invoke(ctx, CoreProductionScheduleService_ListProductionScheduleFinishingLines_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -609,6 +623,9 @@ type CoreProductionScheduleServiceServer interface {
 	// ListProductionScheduleFinishedPolicies returns the per-finished-SKU decomposition of
 	// the pooled constraint buffers.
 	ListProductionScheduleFinishedPolicies(context.Context, *ListProductionScheduleFinishedPoliciesRequest) (*ListProductionScheduleFinishedPoliciesResponse, error)
+	// ListProductionScheduleFinishingLines returns stage two: how many of which finished
+	// good to make from the knitted parts, week by week.
+	ListProductionScheduleFinishingLines(context.Context, *ListProductionScheduleFinishingLinesRequest) (*ListProductionScheduleFinishingLinesResponse, error)
 	// GetProductionScheduleSettings returns the merchant's planning assumptions.
 	GetProductionScheduleSettings(context.Context, *GetProductionScheduleSettingsRequest) (*GetProductionScheduleSettingsResponse, error)
 	// UpdateProductionScheduleSettings replaces the merchant's planning assumptions.
@@ -707,6 +724,9 @@ func (UnimplementedCoreProductionScheduleServiceServer) ListProductionScheduleIt
 }
 func (UnimplementedCoreProductionScheduleServiceServer) ListProductionScheduleFinishedPolicies(context.Context, *ListProductionScheduleFinishedPoliciesRequest) (*ListProductionScheduleFinishedPoliciesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListProductionScheduleFinishedPolicies not implemented")
+}
+func (UnimplementedCoreProductionScheduleServiceServer) ListProductionScheduleFinishingLines(context.Context, *ListProductionScheduleFinishingLinesRequest) (*ListProductionScheduleFinishingLinesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListProductionScheduleFinishingLines not implemented")
 }
 func (UnimplementedCoreProductionScheduleServiceServer) GetProductionScheduleSettings(context.Context, *GetProductionScheduleSettingsRequest) (*GetProductionScheduleSettingsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetProductionScheduleSettings not implemented")
@@ -1002,6 +1022,24 @@ func _CoreProductionScheduleService_ListProductionScheduleFinishedPolicies_Handl
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CoreProductionScheduleServiceServer).ListProductionScheduleFinishedPolicies(ctx, req.(*ListProductionScheduleFinishedPoliciesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreProductionScheduleService_ListProductionScheduleFinishingLines_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListProductionScheduleFinishingLinesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreProductionScheduleServiceServer).ListProductionScheduleFinishingLines(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreProductionScheduleService_ListProductionScheduleFinishingLines_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreProductionScheduleServiceServer).ListProductionScheduleFinishingLines(ctx, req.(*ListProductionScheduleFinishingLinesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1628,6 +1666,10 @@ var CoreProductionScheduleService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListProductionScheduleFinishedPolicies",
 			Handler:    _CoreProductionScheduleService_ListProductionScheduleFinishedPolicies_Handler,
+		},
+		{
+			MethodName: "ListProductionScheduleFinishingLines",
+			Handler:    _CoreProductionScheduleService_ListProductionScheduleFinishingLines_Handler,
 		},
 		{
 			MethodName: "GetProductionScheduleSettings",

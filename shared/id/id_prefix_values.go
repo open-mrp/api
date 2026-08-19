@@ -365,6 +365,7 @@ var (
 	ProductionScheduleLineOrderIDPrefix       = composePrefix(VocProduction, VocSchedule, VocLine, VocOrder)
 	ProductionScheduleItemPolicyIDPrefix      = composePrefix(VocProduction, VocSchedule, VocItem, VocPolicy)
 	ProductionScheduleFinishedPolicyIDPrefix  = composePrefix(VocProduction, VocSchedule, VocFinished, VocPolicy)
+	ProductionScheduleFinishingLineIDPrefix   = composePrefix(VocProduction, VocSchedule, VocFinished, VocLine)
 	ProductionScheduleDeviationIDPrefix       = composePrefix(VocProduction, VocSchedule, VocDeviation)
 	ScheduleDeviationTypeIDPrefix             = composePrefix(VocProduction, VocSchedule, VocDeviation, VocType)
 	ProductionScheduleDerivedLineIDPrefix     = composePrefix(VocProduction, VocSchedule, VocDerived)

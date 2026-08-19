@@ -266,10 +266,14 @@ func releasedLineToProto(l domain.ReleasedScheduleLine) *pb.ReleasedScheduleLine
 			Sku:      b.SKU,
 			Quantity: b.Quantity,
 		}
-		// Empty on a preview, where no batch has been written yet.
+		// Empty on a preview of a batch that would be created; a carried-forward ticket already exists and names itself even there.
 		if b.BatchID != "" {
 			batchID := b.BatchID
 			info.BatchId = &batchID
+		}
+		if b.CarriedForwardFrom != "" {
+			from := b.CarriedForwardFrom
+			info.CarriedForwardFrom = &from
 		}
 		batches = append(batches, info)
 	}
@@ -285,6 +289,7 @@ func releasedLineToProto(l domain.ReleasedScheduleLine) *pb.ReleasedScheduleLine
 		Unit:                     unitOrNil(l.Unit),
 		BatchCount:               safeconv.IntToInt32(len(l.Batches)),
 		Batches:                  batches,
+		CarriedForwardQuantity:   l.CarriedForwardQuantity,
 	}
 }
 
@@ -309,19 +314,21 @@ func (h *productionScheduleGRPCHandler) ReleaseProductionScheduleWeek(ctx contex
 		WeekIndex:            req.WeekIndex,
 		ResponsibleUserID:    req.ResponsibleUserId,
 		ScanningStationID:    req.ScanningStationId,
+		SkipCarryForward:     req.SkipCarryForward,
 	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
 	return &pb.ReleaseProductionScheduleWeekResponse{
-		ProductionRun:     productionRunToProto(result.ProductionRun),
-		WeekIndex:         result.WeekIndex,
-		WeekStartDate:     timestamppb.New(result.WeekStartDate),
-		ReleasedLineCount: result.ReleasedLineCount,
-		BatchCount:        result.BatchCount,
-		TotalQuantity:     result.TotalQuantity,
-		Lines:             releasedLinesToProto(result.Lines),
+		ProductionRun:            productionRunToProto(result.ProductionRun),
+		WeekIndex:                result.WeekIndex,
+		WeekStartDate:            timestamppb.New(result.WeekStartDate),
+		ReleasedLineCount:        result.ReleasedLineCount,
+		BatchCount:               result.BatchCount,
+		CarriedForwardBatchCount: result.CarriedForwardBatchCount,
+		TotalQuantity:            result.TotalQuantity,
+		Lines:                    releasedLinesToProto(result.Lines),
 	}, nil
 }
 
@@ -330,20 +337,21 @@ func (h *productionScheduleGRPCHandler) PreviewReleaseProductionScheduleWeek(ctx
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	preview, apiErr := h.productionScheduleSvc.PreviewReleaseProductionScheduleWeek(ctx, req.Id, req.WeekIndex)
+	preview, apiErr := h.productionScheduleSvc.PreviewReleaseProductionScheduleWeek(ctx, req.Id, req.WeekIndex, req.SkipCarryForward)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
 	return &pb.ReleaseProductionScheduleWeekPreviewResponse{
-		WeekIndex:               preview.WeekIndex,
-		WeekStartDate:           timestamppb.New(preview.WeekStartDate),
-		LineCount:               preview.LineCount,
-		BatchCount:              preview.BatchCount,
-		TotalQuantity:           preview.TotalQuantity,
-		Lines:                   releasedLinesToProto(preview.Lines),
-		IsReleasable:            preview.IsReleasable,
-		BlockedReason:           preview.BlockedReason,
-		ExistingProductionRunId: preview.ExistingProductionRunID,
+		WeekIndex:                preview.WeekIndex,
+		WeekStartDate:            timestamppb.New(preview.WeekStartDate),
+		LineCount:                preview.LineCount,
+		BatchCount:               preview.BatchCount,
+		CarriedForwardBatchCount: preview.CarriedForwardBatchCount,
+		TotalQuantity:            preview.TotalQuantity,
+		Lines:                    releasedLinesToProto(preview.Lines),
+		IsReleasable:             preview.IsReleasable,
+		BlockedReason:            preview.BlockedReason,
+		ExistingProductionRunId:  preview.ExistingProductionRunID,
 	}, nil
 }

@@ -504,3 +504,45 @@ func (r *productionScheduleRepoImpl) UnreleaseLinesForRun(ctx context.Context, a
 	}
 	return nil
 }
+
+// maxCarryForwardCandidates bounds the scan for unworked tickets. A campaign that could absorb more than this many carried doffs is a lot-size mistake, and the release already refuses to create that many.
+const maxCarryForwardCandidates = 500
+
+func (r *productionScheduleRepoImpl) ListCarryForwardBatches(ctx context.Context, params domain.ListCarryForwardBatchesParams) ([]*domain.CarryForwardBatch, *apierror.APIError) {
+	ctx, span := productionScheduleRepoTracer.Start(ctx, "repository.production_schedule.list_carry_forward_batches")
+	defer span.End()
+
+	limit := params.Limit
+	if limit <= 0 || limit > maxCarryForwardCandidates {
+		limit = maxCarryForwardCandidates
+	}
+
+	rows, err := r.queries.ListCarryForwardBatchesForItem(ctx, sqlc.ListCarryForwardBatchesForItemParams{
+		AccountID:     params.AccountID,
+		ItemID:        params.ItemID,
+		WeekStartDate: params.WeekStartDate,
+		Limit:         limit,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	out := make([]*domain.CarryForwardBatch, 0, len(rows))
+	for _, row := range rows {
+		batch := &domain.CarryForwardBatch{
+			BatchID:             row.ID,
+			ProductionRunNumber: row.ProductionRunNumber,
+			Quantity:            decimalToFloat64(row.QuantityValue),
+			UnitID:              row.QuantityUnitID,
+		}
+		if row.ProductionRunID.Valid {
+			batch.ProductionRunID = row.ProductionRunID.String
+		}
+		if row.ProductionStepID.Valid {
+			stepID := row.ProductionStepID.String
+			batch.ProductionStepID = &stepID
+		}
+		out = append(out, batch)
+	}
+	return out, nil
+}

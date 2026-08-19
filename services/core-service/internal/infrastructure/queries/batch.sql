@@ -339,6 +339,12 @@ DELETE FROM _batch_flow WHERE A = sqlc.arg('batch_id') OR B = sqlc.arg('batch_id
 -- name: DeleteBatchesMachinesByBatchID :exec
 DELETE FROM _batches_machines WHERE A = sqlc.arg('batch_id');
 
+-- UnlinkBatchMachinesExcept drops every machine link on a batch other than the one it should now have.
+--
+-- Used when a ticket is moved to a campaign on a different machine. Attainment attributes production through this table, so leaving the old link would credit a machine the work is no longer assigned to.
+-- name: UnlinkBatchMachinesExcept :exec
+DELETE FROM _batches_machines WHERE A = sqlc.arg('batch_id') AND B != sqlc.arg('machine_id');
+
 -- name: FindBatchProductionRunID :one
 SELECT production_run_id FROM batch
 WHERE id = sqlc.arg('id') AND account_id = sqlc.arg('account_id');

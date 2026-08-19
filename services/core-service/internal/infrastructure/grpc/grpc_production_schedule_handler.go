@@ -137,8 +137,39 @@ func (h *productionScheduleGRPCHandler) PreviewProductionSchedule(ctx context.Co
 			UndatedFirmOrderCount:  safeconv.IntToInt32(out.Diagnostics.UndatedFirmOrderCount),
 			MakeToOrderItemCount:   safeconv.IntToInt32(out.Diagnostics.MakeToOrderItemCount),
 			AtRiskOrders:           scheduleAtRiskOrdersToProto(out.Diagnostics.AtRiskOrders),
+			// The preview does not persist a plan, but it does solve both stages, so it reports both. A preview whose second stage read as empty would be worse than one that omitted it — it would look like a finding rather than an omission.
+			Finishing:                    scheduleFinishingDiagnosticsToProto(out.Diagnostics.Finishing),
+			FinishingMachineCount:        safeconv.IntToInt32(out.Diagnostics.FinishingMachineCount),
+			FinishingCapacityIsEstimated: out.Diagnostics.FinishingCapacityIsEstimated,
 		},
 	}, nil
+}
+
+// scheduleFinishingDiagnosticsToProto maps stage two's account of itself, with every collection non-nil so an empty stage serializes as [] rather than null.
+func scheduleFinishingDiagnosticsToProto(d scheduling.FinishingDiagnostics) *pb.ScheduleFinishingDiagnosticsProto {
+	nonNilFloats := func(v []float64) []float64 {
+		if v == nil {
+			return []float64{}
+		}
+		return v
+	}
+	nonNilStrings := func(v []string) []string {
+		if v == nil {
+			return []string{}
+		}
+		return v
+	}
+	return &pb.ScheduleFinishingDiagnosticsProto{
+		WeeklyCapacityHours: d.WeeklyCapacityHours,
+		PlannedHoursByWeek:  nonNilFloats(d.PlannedHoursByWeek),
+		UtilisationByWeek:   nonNilFloats(d.UtilisationByWeek),
+		GreigeStarvedSkus:   nonNilStrings(d.GreigeStarvedSKUs),
+		CapacityStarvedSkus: nonNilStrings(d.CapacityStarvedSKUs),
+		ItemsWithoutRunRate: nonNilStrings(d.ItemsWithoutRunRate),
+		UnusedGreigeUnits:   d.UnusedGreigeUnits,
+		TotalPlannedUnits:   d.TotalPlannedUnits,
+		LineCount:           safeconv.IntToInt32(d.LineCount),
+	}
 }
 
 // scheduleAtRiskOrdersToProto maps the commitments the plan does not meet. Always a non-nil slice so an empty list serializes as [] rather than null.
@@ -462,6 +493,53 @@ func (h *productionScheduleGRPCHandler) ListProductionScheduleItemPolicies(ctx c
 		out[i] = scheduleItemPolicyToProto(p)
 	}
 	return &pb.ListProductionScheduleItemPoliciesResponse{Policies: out}, nil
+}
+
+func (h *productionScheduleGRPCHandler) ListProductionScheduleFinishingLines(ctx context.Context, req *pb.ListProductionScheduleFinishingLinesRequest) (*pb.ListProductionScheduleFinishingLinesResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	lines, apiErr := h.productionScheduleSvc.ListProductionScheduleFinishingLines(ctx, domain.ListProductionScheduleFinishingLinesParams{
+		ScheduleID: req.ProductionScheduleId,
+		WeekIndex:  req.WeekIndex,
+		ItemID:     req.ItemId,
+	})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	out := make([]*pb.ProductionScheduleFinishingLineInfo, len(lines))
+	for i, l := range lines {
+		out[i] = &pb.ProductionScheduleFinishingLineInfo{
+			Id:                      l.ID,
+			ProductionScheduleId:    l.ProductionScheduleID,
+			WeekIndex:               l.WeekIndex,
+			WeekStartDate:           timestamppb.New(l.WeekStartDate),
+			ItemId:                  l.ItemID,
+			Sku:                     l.SKU,
+			GreigeItemId:            l.GreigeItemID,
+			GreigeSku:               l.GreigeSKU,
+			DepartmentId:            l.DepartmentID,
+			ProductionStepId:        l.ProductionStepID,
+			PlannedQuantity:         l.PlannedQuantity,
+			PlannedUnitId:           l.PlannedUnitID,
+			PlannedUnitAbbreviation: l.PlannedUnitAbbreviation,
+			PlannedLots:             l.PlannedLots,
+			PlannedLotUnits:         l.PlannedLotUnits,
+			PlannedRunHours:         l.PlannedRunHours,
+			GreigeConsumed:          l.GreigeConsumed,
+			FirmUnits:               l.FirmUnits,
+			ProjectedOnHandBefore:   l.ProjectedOnHandBefore,
+			ProjectedOnHandAfter:    l.ProjectedOnHandAfter,
+			StatusCode:              l.StatusCode,
+			SourceCode:              l.SourceCode,
+			IsFrozen:                l.IsFrozen,
+			CreatedAt:               timestamppb.New(l.CreatedAt),
+			UpdatedAt:               timestamppb.New(l.UpdatedAt),
+		}
+	}
+	return &pb.ListProductionScheduleFinishingLinesResponse{Lines: out}, nil
 }
 
 func (h *productionScheduleGRPCHandler) ListProductionScheduleFinishedPolicies(ctx context.Context, req *pb.ListProductionScheduleFinishedPoliciesRequest) (*pb.ListProductionScheduleFinishedPoliciesResponse, error) {

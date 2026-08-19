@@ -345,12 +345,21 @@ func (s *productionScheduleSvcImpl) createProductionScheduleLineTx(
 			IsFrozen:   frozen,
 		}
 		// A hand-added campaign runs in the same lots as a solved one. Without this it would release to the floor as a single undifferentiated batch, however large.
-		settings, apiErr := repo.GetSettings(txCtx, accountID)
+		//
+		// Resolved through the item's own lot chain rather than straight off the account default, so a line whose product line knits in sixties is planned in sixties. Falling to the account default here was how a campaign could be released in a lot size nobody had configured for that item.
+		itemUnitID, apiErr := txSvc.itemCountingUnitID(txCtx, accountID, params.ItemID)
 		if apiErr != nil {
 			return apiErr
 		}
-		if settings != nil && settings.DefaultLotUnits > 0 {
-			line.PlannedLotUnits = settings.DefaultLotUnits
+		lot, apiErr := resolveItemLotDefault(txCtx, txSvc.repos, accountID, params.ItemID, itemUnitID)
+		if apiErr != nil {
+			return apiErr
+		}
+		if lot != nil && lot.Quantity > 0 {
+			line.PlannedLotUnits = lot.Quantity
+			if lot.UnitID != "" {
+				line.PlannedUnitID = &lot.UnitID
+			}
 		}
 
 		if params.Lots != nil {
@@ -834,4 +843,22 @@ func (s *productionScheduleSvcImpl) DeleteProductionSchedule(ctx context.Context
 	}
 
 	return nil
+}
+
+// itemCountingUnitID is the unit an item is counted in, from its category's unit group.
+//
+// Empty rather than an error when the item has no category or the category no base unit: a lot with no unit is still a usable lot size, and the release resolves the unit again from the item before it writes a batch.
+func (s *productionScheduleSvcImpl) itemCountingUnitID(ctx context.Context, accountID, itemID string) (string, *apierror.APIError) {
+	item, apiErr := s.repos.NewItemRepo().Get(ctx, domain.GetItemParams{AccountID: accountID, ItemID: itemID})
+	if apiErr != nil {
+		return "", apiErr
+	}
+	if item.ItemCategoryID == "" {
+		return "", nil
+	}
+	unitID, _, apiErr := s.repos.NewItemRepo().GetCategoryBaseUnitID(ctx, item.ItemCategoryID)
+	if apiErr != nil {
+		return "", apiErr
+	}
+	return unitID, nil
 }

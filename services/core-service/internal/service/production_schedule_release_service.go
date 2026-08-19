@@ -32,6 +32,7 @@ type releasePlan struct {
 	weekStartDate time.Time
 	lines         []releaseLinePlan
 	batchCount    int32
+	carriedCount  int32
 	totalQuantity float64
 	// blockedReason is set when the week cannot be released. The plan is still returned so a preview can show what *would* have been created alongside the reason.
 	blockedReason           *string
@@ -44,8 +45,23 @@ type releaseLinePlan struct {
 	machineName *string
 	lotUnits    float64
 	unitID      string
-	lots        []float64
+	// lots are the batches this release would create, after whatever an earlier week already issued has been counted against the campaign.
+	lots []float64
+	// carried are tickets an earlier week issued for this item and the floor never worked. They are moved into the new run rather than reprinted.
+	carried []domain.CarryForwardBatch
 }
+
+// carriedQuantity is how much of a campaign is already covered by printed tickets.
+func (p releaseLinePlan) carriedQuantity() float64 {
+	var total float64
+	for _, batch := range p.carried {
+		total += batch.Quantity
+	}
+	return total
+}
+
+// carryForwardEpsilon absorbs the float noise a subtraction chain leaves behind, so a campaign fully covered by carried tickets does not trail a batch of a millionth of a unit — the same tolerance SplitIntoLots applies.
+const carryForwardEpsilon = 1e-6
 
 // resolveLineUnitID decides what unit a released batch is counted in.
 //
@@ -93,6 +109,7 @@ func (s *productionScheduleSvcImpl) buildReleasePlan(
 	ctx context.Context,
 	accountID, scheduleID string,
 	weekIndex int32,
+	skipCarryForward bool,
 ) (*releasePlan, *apierror.APIError) {
 	repo := s.repos.NewProductionScheduleRepo()
 
@@ -162,6 +179,9 @@ func (s *productionScheduleSvcImpl) buildReleasePlan(
 	}
 
 	unitByItem := map[string]string{}
+	// Candidates are read once per item and claimed as they are taken, so two campaigns splitting one item across two machines cannot both move the same ticket.
+	candidatesByItem := map[string][]*domain.CarryForwardBatch{}
+	claimed := map[string]bool{}
 
 	for _, line := range lines {
 		if line.StatusCode == string(constants.ProductionScheduleLineStatusCancelled) {
@@ -171,11 +191,25 @@ func (s *productionScheduleSvcImpl) buildReleasePlan(
 			continue
 		}
 
-		lots := scheduling.SplitIntoLots(line.PlannedQuantity, line.PlannedLotUnits)
-		if len(lots) > scheduling.MaxLotsPerCampaign {
+		// Tickets an earlier week issued and nobody worked cover part of this campaign already. They are counted against it before it is split, so the release creates batches only for what is genuinely not yet on the floor.
+		carried, apiErr := s.claimCarryForwardBatches(ctx, accountID, line, plan.weekStartDate, skipCarryForward, candidatesByItem, claimed)
+		if apiErr != nil {
+			return nil, apiErr
+		}
+
+		remaining := line.PlannedQuantity
+		for _, batch := range carried {
+			remaining -= batch.Quantity
+		}
+		if remaining < carryForwardEpsilon {
+			remaining = 0
+		}
+
+		lots := scheduling.SplitIntoLots(remaining, line.PlannedLotUnits)
+		if len(lots)+len(carried) > scheduling.MaxLotsPerCampaign {
 			return nil, apierror.NewValidationError(fmt.Sprintf(
 				"Releasing %s would create %d batches for one campaign, which is more than the %d allowed. Check the lot size on this item.",
-				skuOrItem(skuByItem, line.ItemID), len(lots), scheduling.MaxLotsPerCampaign))
+				skuOrItem(skuByItem, line.ItemID), len(lots)+len(carried), scheduling.MaxLotsPerCampaign))
 		}
 
 		// Resolved while planning rather than while writing, so a missing unit blocks the preview too instead of failing halfway through a release.
@@ -190,13 +224,15 @@ func (s *productionScheduleSvcImpl) buildReleasePlan(
 			lotUnits: line.PlannedLotUnits,
 			unitID:   unitID,
 			lots:     lots,
+			carried:  carried,
 		}
 		if name, ok := nameByMachine[line.MachineID]; ok {
 			linePlan.machineName = &name
 		}
 
 		plan.lines = append(plan.lines, linePlan)
-		plan.batchCount += safeconv.IntToInt32(len(lots))
+		plan.batchCount += safeconv.IntToInt32(len(lots) + len(carried))
+		plan.carriedCount += safeconv.IntToInt32(len(carried))
 		plan.totalQuantity += line.PlannedQuantity
 	}
 
@@ -216,6 +252,59 @@ func (s *productionScheduleSvcImpl) buildReleasePlan(
 	return plan, nil
 }
 
+// claimCarryForwardBatches takes as many of an item's unworked tickets as this campaign can absorb, and marks them taken.
+//
+// Taking stops as soon as the campaign is covered, so a ticket beyond what this week asks for is left on the run holding it rather than pulled into a week that has no work for it. The last ticket taken may overshoot: a printed 60-doff covering a 50-unit shortfall is still one ticket, and splitting it would mean reprinting the very thing this exists to avoid.
+func (s *productionScheduleSvcImpl) claimCarryForwardBatches(
+	ctx context.Context,
+	accountID string,
+	line *domain.ProductionScheduleLine,
+	weekStartDate time.Time,
+	skipCarryForward bool,
+	candidatesByItem map[string][]*domain.CarryForwardBatch,
+	claimed map[string]bool,
+) ([]domain.CarryForwardBatch, *apierror.APIError) {
+	if skipCarryForward {
+		return nil, nil
+	}
+
+	candidates, ok := candidatesByItem[line.ItemID]
+	if !ok {
+		var apiErr *apierror.APIError
+		candidates, apiErr = s.repos.NewProductionScheduleRepo().ListCarryForwardBatches(ctx, domain.ListCarryForwardBatchesParams{
+			AccountID:     accountID,
+			ItemID:        line.ItemID,
+			WeekStartDate: weekStartDate,
+		})
+		if apiErr != nil {
+			return nil, apiErr
+		}
+		candidatesByItem[line.ItemID] = candidates
+	}
+
+	return takeCarryForwardBatches(candidates, line.PlannedQuantity, claimed), nil
+}
+
+// takeCarryForwardBatches is the choosing itself, separated from the fetching so the rule can be tested without a database.
+//
+// Taking stops as soon as the campaign is covered, so a ticket beyond what this week asks for stays on the run holding it. The last ticket taken may overshoot: a printed 60-doff covering a 50-unit shortfall is still one ticket, and splitting it would mean reprinting the very thing this exists to avoid.
+func takeCarryForwardBatches(candidates []*domain.CarryForwardBatch, plannedQuantity float64, claimed map[string]bool) []domain.CarryForwardBatch {
+	var carried []domain.CarryForwardBatch
+	remaining := plannedQuantity
+	for _, candidate := range candidates {
+		if remaining < carryForwardEpsilon {
+			break
+		}
+		if candidate == nil || candidate.Quantity <= 0 || claimed[candidate.BatchID] {
+			continue
+		}
+		claimed[candidate.BatchID] = true
+		carried = append(carried, *candidate)
+		remaining -= candidate.Quantity
+	}
+	return carried
+}
+
 func skuOrItem(skuByItem map[string]string, itemID string) string {
 	if sku, ok := skuByItem[itemID]; ok && sku != "" {
 		return sku
@@ -230,7 +319,17 @@ func strPtr(v string) *string {
 func (p *releasePlan) toDomainLines() []domain.ReleasedScheduleLine {
 	out := make([]domain.ReleasedScheduleLine, 0, len(p.lines))
 	for _, linePlan := range p.lines {
-		batches := make([]domain.ReleaseBatch, 0, len(linePlan.lots))
+		batches := make([]domain.ReleaseBatch, 0, len(linePlan.lots)+len(linePlan.carried))
+		// Carried tickets lead: they are the doffs already on the floor, and a supervisor reading the confirmation needs to see what they are being asked to reuse before what they are being asked to print.
+		for _, batch := range linePlan.carried {
+			batches = append(batches, domain.ReleaseBatch{
+				ItemID:             linePlan.line.ItemID,
+				SKU:                linePlan.sku,
+				Quantity:           batch.Quantity,
+				BatchID:            batch.BatchID,
+				CarriedForwardFrom: batch.ProductionRunNumber,
+			})
+		}
 		for _, quantity := range linePlan.lots {
 			batches = append(batches, domain.ReleaseBatch{
 				ItemID:   linePlan.line.ItemID,
@@ -247,6 +346,7 @@ func (p *releasePlan) toDomainLines() []domain.ReleasedScheduleLine {
 			PlannedQuantity:          linePlan.line.PlannedQuantity,
 			LotUnits:                 linePlan.lotUnits,
 			Unit:                     unitAbbreviationOf(linePlan.line),
+			CarriedForwardQuantity:   linePlan.carriedQuantity(),
 			Batches:                  batches,
 		})
 	}
@@ -266,6 +366,7 @@ func (s *productionScheduleSvcImpl) PreviewReleaseProductionScheduleWeek(
 	ctx context.Context,
 	scheduleID string,
 	weekIndex int32,
+	skipCarryForward bool,
 ) (*domain.ReleaseScheduleWeekPreview, *apierror.APIError) {
 	ctx, span := productionScheduleSvcTracer.Start(ctx, "service.production_schedule.preview_release_week")
 	defer span.End()
@@ -282,21 +383,22 @@ func (s *productionScheduleSvcImpl) PreviewReleaseProductionScheduleWeek(
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	plan, apiErr := s.buildReleasePlan(ctx, identity.Target.AccountID, scheduleID, weekIndex)
+	plan, apiErr := s.buildReleasePlan(ctx, identity.Target.AccountID, scheduleID, weekIndex, skipCarryForward)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
 	return &domain.ReleaseScheduleWeekPreview{
-		WeekIndex:               weekIndex,
-		WeekStartDate:           plan.weekStartDate,
-		LineCount:               safeconv.IntToInt32(len(plan.lines)),
-		BatchCount:              plan.batchCount,
-		TotalQuantity:           plan.totalQuantity,
-		Lines:                   plan.toDomainLines(),
-		IsReleasable:            plan.blockedReason == nil,
-		BlockedReason:           plan.blockedReason,
-		ExistingProductionRunID: plan.existingProductionRunID,
+		WeekIndex:                weekIndex,
+		WeekStartDate:            plan.weekStartDate,
+		LineCount:                safeconv.IntToInt32(len(plan.lines)),
+		BatchCount:               plan.batchCount,
+		CarriedForwardBatchCount: plan.carriedCount,
+		TotalQuantity:            plan.totalQuantity,
+		Lines:                    plan.toDomainLines(),
+		IsReleasable:             plan.blockedReason == nil,
+		BlockedReason:            plan.blockedReason,
+		ExistingProductionRunID:  plan.existingProductionRunID,
 	}, nil
 }
 
@@ -358,7 +460,7 @@ func (s *productionScheduleSvcImpl) releaseProductionScheduleWeekTx(
 	var result *domain.ReleaseScheduleWeekResult
 	apiErr := s.withTx(ctx, func(txCtx context.Context, txSvc *productionScheduleSvcImpl) *apierror.APIError {
 		// Built inside the transaction so the already-released check and the writes that depend on it see the same snapshot.
-		plan, apiErr := txSvc.buildReleasePlan(txCtx, accountID, params.ProductionScheduleID, params.WeekIndex)
+		plan, apiErr := txSvc.buildReleasePlan(txCtx, accountID, params.ProductionScheduleID, params.WeekIndex, params.SkipCarryForward)
 		if apiErr != nil {
 			return apiErr
 		}
@@ -398,11 +500,39 @@ func (s *productionScheduleSvcImpl) releaseProductionScheduleWeekTx(
 
 		batchRepo := txSvc.repos.NewBatchRepo()
 		releasedLines := make([]domain.ReleasedScheduleLine, 0, len(plan.lines))
-		var batchCount int32
+		var batchCount, carriedCount int32
 
 		for _, linePlan := range plan.lines {
 			line := linePlan.line
-			batches := make([]domain.ReleaseBatch, 0, len(linePlan.lots))
+			batches := make([]domain.ReleaseBatch, 0, len(linePlan.lots)+len(linePlan.carried))
+
+			// A carried ticket is moved, not remade. Its id, its number and the paper on the floor all stay as they are; only what it belongs to changes.
+			for _, carried := range linePlan.carried {
+				if apiErr := runRepo.SetBatchProductionRunID(txCtx, accountID, carried.BatchID, runID); apiErr != nil {
+					return apiErr
+				}
+				if line.ProductionStepID != nil && *line.ProductionStepID != "" {
+					if apiErr := batchRepo.ConnectProductionStep(txCtx, accountID, carried.BatchID, *line.ProductionStepID); apiErr != nil {
+						return apiErr
+					}
+				}
+				// The campaign that absorbed this ticket may run on a different machine from the one that was going to. Attainment attributes production through the batch-machine link, so it follows the work.
+				if line.MachineID != "" {
+					if apiErr := batchRepo.ReassignMachine(txCtx, accountID, carried.BatchID, line.MachineID); apiErr != nil {
+						return apiErr
+					}
+				}
+
+				batches = append(batches, domain.ReleaseBatch{
+					ItemID:             line.ItemID,
+					SKU:                linePlan.sku,
+					Quantity:           carried.Quantity,
+					BatchID:            carried.BatchID,
+					CarriedForwardFrom: carried.ProductionRunNumber,
+				})
+				batchCount++
+				carriedCount++
+			}
 
 			for _, quantity := range linePlan.lots {
 				batchID, apiErr := id.GenID(id.BatchIDPrefix, nil)
@@ -459,18 +589,20 @@ func (s *productionScheduleSvcImpl) releaseProductionScheduleWeekTx(
 				PlannedQuantity:          line.PlannedQuantity,
 				LotUnits:                 linePlan.lotUnits,
 				Unit:                     unitAbbreviationOf(line),
+				CarriedForwardQuantity:   linePlan.carriedQuantity(),
 				Batches:                  batches,
 			})
 		}
 
 		result = &domain.ReleaseScheduleWeekResult{
-			ProductionRun:     run,
-			WeekIndex:         params.WeekIndex,
-			WeekStartDate:     plan.weekStartDate,
-			ReleasedLineCount: safeconv.IntToInt32(len(releasedLines)),
-			BatchCount:        batchCount,
-			TotalQuantity:     plan.totalQuantity,
-			Lines:             releasedLines,
+			ProductionRun:            run,
+			WeekIndex:                params.WeekIndex,
+			WeekStartDate:            plan.weekStartDate,
+			ReleasedLineCount:        safeconv.IntToInt32(len(releasedLines)),
+			BatchCount:               batchCount,
+			CarriedForwardBatchCount: carriedCount,
+			TotalQuantity:            plan.totalQuantity,
+			Lines:                    releasedLines,
 		}
 
 		// Audited against the schedule rather than the run: the question this record answers later is "who committed this week to the floor", and the run is the consequence, not the subject. The changes are computed values with no struct snapshot behind them, so they are built with NewFieldChange rather than ComputeChanges (which only reads audit-tagged struct fields).
@@ -484,6 +616,7 @@ func (s *productionScheduleSvcImpl) releaseProductionScheduleWeekTx(
 				audit.NewFieldChange("production_run_id", nil, runID),
 				audit.NewFieldChange("released_line_count", nil, len(releasedLines)),
 				audit.NewFieldChange("released_batch_count", nil, batchCount),
+				audit.NewFieldChange("carried_forward_batch_count", nil, carriedCount),
 			},
 		}); apiErr != nil {
 			return apiErr

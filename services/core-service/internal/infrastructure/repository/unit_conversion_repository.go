@@ -128,11 +128,12 @@ func (r *unitConversionRepo) GetUnitFactors(ctx context.Context, accountID strin
 	}
 	for _, row := range rows {
 		out[row.ID] = domain.UnitFactors{
-			RatioNum:   parseDecimalOrZero(row.RatioNumerator),
-			RatioDen:   parseDecimalOrZero(row.RatioDenominator),
-			OffsetNum:  parseDecimalOrZero(row.OffsetNumerator),
-			OffsetDen:  parseDecimalOrZero(row.OffsetDenominator),
-			IsBaseUnit: row.IsBaseUnit,
+			RatioNum:      parseDecimalOrZero(row.RatioNumerator),
+			RatioDen:      parseDecimalOrZero(row.RatioDenominator),
+			OffsetNum:     parseDecimalOrZero(row.OffsetNumerator),
+			OffsetDen:     parseDecimalOrZero(row.OffsetDenominator),
+			IsBaseUnit:    row.IsBaseUnit,
+			DimensionCode: row.UnitDimensionCode,
 		}
 	}
 	return out, nil

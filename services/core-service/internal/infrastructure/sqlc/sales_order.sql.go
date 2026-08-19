@@ -566,8 +566,12 @@ SELECT
     ar.id AS account_relation_id,
     ar.account_group_id,
     ar.default_lead_time_days AS customer_lead_time_days,
+    par.counterparty_account_id AS parent_customer_account_id,
+    par.default_lead_time_days AS parent_customer_lead_time_days,
     ag.default_lead_time_days AS account_group_lead_time_days
 FROM account_relation ar
+LEFT JOIN account_relation par ON par.id = ar.parent_account_relation_id
+    AND par.owner_account_id = ar.owner_account_id
 LEFT JOIN account_group ag ON ag.id = ar.account_group_id
 WHERE ar.owner_account_id = ?
   AND ar.counterparty_account_id = ?
@@ -580,15 +584,19 @@ type GetCustomerLeadTimeChainParams struct {
 }
 
 type GetCustomerLeadTimeChainRow struct {
-	AccountRelationID        string
-	AccountGroupID           sql.NullString
-	CustomerLeadTimeDays     sql.NullInt32
-	AccountGroupLeadTimeDays sql.NullInt32
+	AccountRelationID          string
+	AccountGroupID             sql.NullString
+	CustomerLeadTimeDays       sql.NullInt32
+	ParentCustomerAccountID    sql.NullString
+	ParentCustomerLeadTimeDays sql.NullInt32
+	AccountGroupLeadTimeDays   sql.NullInt32
 }
 
 // GetCustomerLeadTimeChain returns the lead times available to a buyer, most specific first.
 //
-// Both levels come back in one row because the chain is resolved as a whole: returning only the winner would leave the caller unable to say which rule applied, and the source is stamped onto the order alongside the date. A buyer with no customer relation yields no row, and the caller falls back to the account default.
+// Every level comes back in one row because the chain is resolved as a whole: returning only the winner would leave the caller unable to say which rule applied, and the source is stamped onto the order alongside the date. A buyer with no customer relation yields no row, and the caller falls back to the account default.
+//
+// The parent is joined one level, the same depth a child inherits its parent's prices at. A grandparent's lead time does not reach through an intermediate parent.
 func (q *Queries) GetCustomerLeadTimeChain(ctx context.Context, arg GetCustomerLeadTimeChainParams) (GetCustomerLeadTimeChainRow, error) {
 	row := q.db.QueryRowContext(ctx, getCustomerLeadTimeChain, arg.AccountID, arg.BuyerAccountID)
 	var i GetCustomerLeadTimeChainRow
@@ -596,6 +604,8 @@ func (q *Queries) GetCustomerLeadTimeChain(ctx context.Context, arg GetCustomerL
 		&i.AccountRelationID,
 		&i.AccountGroupID,
 		&i.CustomerLeadTimeDays,
+		&i.ParentCustomerAccountID,
+		&i.ParentCustomerLeadTimeDays,
 		&i.AccountGroupLeadTimeDays,
 	)
 	return i, err

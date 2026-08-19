@@ -902,6 +902,10 @@ func (q *Queries) ListMachineDowntimeReasons(ctx context.Context) ([]MachineDown
 const updateMachineDowntimeEvent = `-- name: UpdateMachineDowntimeEvent :exec
 UPDATE machine_downtime_event
 SET
+    -- The machine, and with it the department and step the stoppage is charged to, so a mis-logged event can be moved rather than deleted and re-entered.
+    machine_id = ?,
+    department_id = ?,
+    production_step_id = ?,
     reason_code = ?,
     started_at = ?,
     ended_at = ?,
@@ -919,23 +923,29 @@ AND id = ?
 `
 
 type UpdateMachineDowntimeEventParams struct {
-	ReasonCode      string
-	StartedAt       time.Time
-	EndedAt         sql.NullTime
-	DurationSeconds sql.NullInt32
-	ShiftDate       time.Time
-	ShiftCode       sql.NullString
-	ItemID          sql.NullString
-	ProductionRunID sql.NullString
-	BatchID         sql.NullString
-	ScheduleLineID  sql.NullString
-	Note            sql.NullString
-	AccountID       string
-	ID              string
+	MachineID        string
+	DepartmentID     sql.NullString
+	ProductionStepID sql.NullString
+	ReasonCode       string
+	StartedAt        time.Time
+	EndedAt          sql.NullTime
+	DurationSeconds  sql.NullInt32
+	ShiftDate        time.Time
+	ShiftCode        sql.NullString
+	ItemID           sql.NullString
+	ProductionRunID  sql.NullString
+	BatchID          sql.NullString
+	ScheduleLineID   sql.NullString
+	Note             sql.NullString
+	AccountID        string
+	ID               string
 }
 
 func (q *Queries) UpdateMachineDowntimeEvent(ctx context.Context, arg UpdateMachineDowntimeEventParams) error {
 	_, err := q.db.ExecContext(ctx, updateMachineDowntimeEvent,
+		arg.MachineID,
+		arg.DepartmentID,
+		arg.ProductionStepID,
 		arg.ReasonCode,
 		arg.StartedAt,
 		arg.EndedAt,

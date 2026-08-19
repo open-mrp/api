@@ -27,6 +27,10 @@ type ReleaseProductionScheduleWeekRequest struct {
 	//
 	// Applied to every batch this release creates, across all machines in the week.
 	ScanningStationID field.Optional[string] `json:"scanning_station_id,omitzero"`
+	// Issue the whole week as new batches, leaving an earlier week's unworked lots where they are.
+	//
+	// Off unless you ask for it: reprinting a ticket the floor is already holding is exactly what carrying work forward exists to prevent, so it takes a deliberate choice to do it.
+	SkipCarryForward field.Optional[bool] `json:"skip_carry_forward,omitzero"`
 }
 
 var sampleReleaseProductionScheduleWeekRequest = &ReleaseProductionScheduleWeekRequest{
@@ -45,6 +49,8 @@ func (*ReleaseProductionScheduleWeekRequest) SchemaExample() any {
 // The release is atomic. A run holding half a week's batches is worse than no run, because the missing half looks like work nobody was asked to do and attainment would count it as unplanned production.
 //
 // Releasing the same week twice fails rather than creating a second run. Each released line records the run now carrying it, and a line that is already released is never re-pointed.
+//
+// Lots an earlier week already issued are carried forward rather than reissued. When a week fell short, the next plan asks for the shortfall — and the batches covering it are usually already printed and sitting on the floor. Those tickets are moved into this run and counted against the campaign, so only the genuinely new work is created. `carried_forward_batch_count` says how many arrived that way, and each one names the run it came off. Send `skip_carry_forward` to issue the whole week new instead.
 //
 // Cancelled campaigns and campaigns planned at zero are left behind rather than released. A week that would produce an implausible number of batches is rejected outright, since that is far more likely to be a misconfigured lot size than a real week's work.
 type ReleaseProductionScheduleWeekEndpoint struct{}

@@ -3451,6 +3451,47 @@ CREATE TABLE `production_schedule_finished_policy` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `production_schedule_finishing_line`
+--
+
+DROP TABLE IF EXISTS `production_schedule_finishing_line`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `production_schedule_finishing_line` (
+  `id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `account_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `production_schedule_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `week_index` int NOT NULL,
+  `week_start_date` date NOT NULL,
+  `item_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `sku` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `greige_item_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `greige_sku` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `department_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `production_step_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `planned_quantity` decimal(65,30) NOT NULL,
+  `planned_unit_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `planned_lots` int NOT NULL DEFAULT '0',
+  `planned_lot_units` decimal(18,6) NOT NULL DEFAULT '0.000000',
+  `planned_run_hours` decimal(14,4) NOT NULL DEFAULT '0.0000',
+  `greige_consumed` decimal(65,30) NOT NULL DEFAULT '0.000000000000000000000000000000',
+  `firm_units` decimal(65,30) NOT NULL DEFAULT '0.000000000000000000000000000000',
+  `projected_on_hand_before` decimal(65,30) NOT NULL DEFAULT '0.000000000000000000000000000000',
+  `projected_on_hand_after` decimal(65,30) NOT NULL DEFAULT '0.000000000000000000000000000000',
+  `status_code` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `source_code` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `is_frozen` tinyint(1) NOT NULL DEFAULT '0',
+  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`),
+  KEY `prod_sched_fin_line_sched_week_idx` (`production_schedule_id`,`week_start_date`,`sku`,`id`),
+  KEY `prod_sched_fin_line_sched_item_idx` (`production_schedule_id`,`item_id`,`week_start_date`,`id`),
+  KEY `prod_sched_fin_line_sched_greige_idx` (`production_schedule_id`,`greige_item_id`,`week_start_date`,`id`),
+  KEY `prod_sched_fin_line_account_dept_week_idx` (`account_id`,`department_id`,`week_start_date`,`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `production_schedule_item_policy`
 --
 
@@ -5054,7 +5095,7 @@ CREATE TABLE `user` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-08-18 13:33:39
+-- Dump completed on 2026-08-19 12:33:54
 
 -- +goose Down
 
@@ -5120,6 +5161,7 @@ DROP TABLE IF EXISTS `production_schedule_line_order`;
 DROP TABLE IF EXISTS `production_schedule_line`;
 DROP TABLE IF EXISTS `production_schedule_item_setting`;
 DROP TABLE IF EXISTS `production_schedule_item_policy`;
+DROP TABLE IF EXISTS `production_schedule_finishing_line`;
 DROP TABLE IF EXISTS `production_schedule_finished_policy`;
 DROP TABLE IF EXISTS `production_schedule_deviation`;
 DROP TABLE IF EXISTS `production_schedule_derived_line`;

@@ -176,6 +176,7 @@ func (h *machineDowntimeGRPCHandler) CreateMachineDowntimeEvent(ctx context.Cont
 		BatchID:         req.BatchId,
 		Note:            req.Note,
 		SourceCode:      req.SourceCode,
+		Duration:        downtimeDurationFromProto(req.DurationValue, req.DurationUnitId),
 	}
 
 	event, apiErr := h.machineDowntimeSvc.CreateDowntimeEvent(ctx, params)
@@ -203,6 +204,8 @@ func (h *machineDowntimeGRPCHandler) UpdateMachineDowntimeEvent(ctx context.Cont
 		ProductionRunID: field.StringClearableFromProto(req.ProductionRunId),
 		BatchID:         field.StringClearableFromProto(req.BatchId),
 		Note:            field.StringClearableFromProto(req.Note),
+		MachineID:       req.MachineId,
+		Duration:        downtimeDurationClearableFromProto(req.Duration),
 	}
 
 	event, apiErr := h.machineDowntimeSvc.UpdateDowntimeEvent(ctx, params)
@@ -241,4 +244,26 @@ func (h *machineDowntimeGRPCHandler) BatchGetMachineDowntimeEventsByIDs(ctx cont
 	}
 
 	return &pb.BatchGetMachineDowntimeEventsByIDsResponse{Events: out}, nil
+}
+
+// downtimeDurationFromProto reads the flat value/unit pair a create sends. Half a quantity is not a duration, so a value without its unit is dropped rather than defaulted to seconds.
+func downtimeDurationFromProto(value, unitID *string) *domain.DowntimeDurationInput {
+	if value == nil || unitID == nil || *value == "" || *unitID == "" {
+		return nil
+	}
+	return &domain.DowntimeDurationInput{Value: *value, UnitID: *unitID}
+}
+
+// downtimeDurationClearableFromProto maps the update's QuantityPatch, where clear means "reopen this event" for the same reason a cleared ended_at does.
+func downtimeDurationClearableFromProto(patch *pb.QuantityPatch) field.Clearable[domain.DowntimeDurationInput] {
+	if patch == nil {
+		return field.Unset[domain.DowntimeDurationInput]()
+	}
+	if patch.Clear {
+		return field.Clear[domain.DowntimeDurationInput]()
+	}
+	if patch.Value == nil || patch.UnitId == nil {
+		return field.Unset[domain.DowntimeDurationInput]()
+	}
+	return field.Set(domain.DowntimeDurationInput{Value: *patch.Value, UnitID: *patch.UnitId})
 }

@@ -29,6 +29,7 @@ var (
 	sampleCommitmentTransitSource  = constants.TransitSourceCarrierLane
 	sampleStepTransitDetail        = string(constants.TransitSourceCarrierLane)
 	sampleStepCutoffDetail         = "15:00"
+	sampleCommitmentArrivalDate    = time.Date(2026, time.August, 25, 0, 0, 0, 0, time.UTC)
 )
 
 // The sample walks one lane end to end: a Saturday delivery promised to a customer who receives Monday to Friday, shipped by a plant that tenders Monday to Thursday with a 3pm pickup.
@@ -39,6 +40,9 @@ func SampleCommitmentLeadTimeSource() *constants.LeadTimeSource {
 	return &sampleCommitmentLeadTimeSource
 }
 func SampleCommitmentTransitDays() *int32 { return &sampleCommitmentTransitDays }
+func SampleCommitmentEstimatedDeliveryDate() *time.Time {
+	return &sampleCommitmentArrivalDate
+}
 func SampleCommitmentTransitSource() *constants.TransitSource {
 	return &sampleCommitmentTransitSource
 }

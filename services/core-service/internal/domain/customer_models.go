@@ -292,4 +292,6 @@ type CustomerLeadTime struct {
 	SourceCode        string
 	// AccountGroupID is set only when the group is the rule that won.
 	AccountGroupID *string
+	// ParentCustomerAccountID is set only when the parent account is the rule that won.
+	ParentCustomerAccountID *string
 }

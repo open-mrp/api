@@ -55,6 +55,25 @@ type SolverInput struct {
 	DemandBasisCode string
 	ForecastZ       float64
 	ForecastMonths  int
+
+	// Stage two: the rest of the factory. Empty means the plan stops at the constraint, which is how it behaved before the finishing stage existed.
+	//
+	// FinishingMachines is every machine outside the constraint department; their count is what the second stage's weekly capacity is derived from, so hiring a shift onto a new machine changes the plan the way it changes the plant.
+	FinishingMachines []Machine
+	// FinishingBatches is production history for the finished goods, measured anywhere outside the constraint department. It is where the second stage's run rates come from.
+	FinishingBatches []BatchMeasurement
+	// FinishingRateScaleByItem converts a finished good's measured seconds-per-unit into the unit the plan is denominated in — the greige's. A sock scanned in eaches and knitted in pairs finishes at twice its per-each rate per planned unit.
+	FinishingRateScaleByItem map[string]float64
+	// FinishingStepByItem is where each finished good is made, denormalized onto its plan line so a department rollup needs no join.
+	FinishingStepByItem map[string]FinishingStep
+	// FinishingLotByItem is the lot each finished good is made in. Absent means the SKU is planned unlotted.
+	FinishingLotByItem map[string]LotDefault
+}
+
+// FinishingStep is where a finished good is made, as the second stage's history records it.
+type FinishingStep struct {
+	ProductionStepID string
+	DepartmentID     string
 }
 
 // SolverOutput is the plan plus everything needed to explain it.
@@ -71,6 +90,11 @@ type SolverOutput struct {
 
 	// Allocations say which campaign is building which order. Written alongside the plan so "what is this campaign for" and "is my order covered" are two readings of one answer.
 	Allocations []OrderAllocation
+
+	// FinishingLines are stage two: how many of which finished good to make from the knitted parts, week by week. Empty when the plant has no second stage configured.
+	FinishingLines []FinishingLine
+	// FinishingProjectedOnHand[itemID][weekIndex] is a finished SKU's own position at the end of that week, which the pooled greige projection cannot answer.
+	FinishingProjectedOnHand map[string][]float64
 
 	Diagnostics Diagnostics
 }
@@ -100,6 +124,13 @@ type Diagnostics struct {
 	MeasuredBatchCount     int `json:"measured_batch_count"`
 	// MachinesWithoutStep have no production step, so their campaigns derive no downstream department work.
 	MachinesWithoutStep int `json:"machines_without_step"`
+
+	// Finishing is stage two's own account of itself: what it could not make, and why.
+	Finishing FinishingDiagnostics `json:"finishing"`
+	// FinishingMachineCount is how many machines the second stage was sized from. Zero means its capacity was estimated from the shift pattern alone.
+	FinishingMachineCount int `json:"finishing_machine_count"`
+	// FinishingCapacityIsEstimated says the plant has no machines outside the constraint department, so stage two was sized as a single notional resource rather than counted. A levelled plan against a guessed capacity is worth flagging as such.
+	FinishingCapacityIsEstimated bool `json:"finishing_capacity_is_estimated"`
 }
 
 // AtRiskOrder is a commitment the plan does not meet, with the reason it does not.
@@ -273,6 +304,141 @@ func Solve(in SolverInput) SolverOutput {
 	out.Allocations = allocation.Allocations
 	out.Diagnostics.AtRiskOrders = findAtRiskOrders(firm, allocation, skuByItem)
 
+	// Stage two runs against the plan stage one just produced, not against a forecast of it. Solving the two independently would let the finishing plan draw greige the knitting plan never makes.
+	finishing := LevelFinishing(buildFinishingInput(in, out))
+	out.FinishingLines = finishing.Lines
+	out.FinishingProjectedOnHand = finishing.ProjectedOnHand
+	out.Diagnostics.Finishing = finishing.Diagnostics
+	out.Diagnostics.FinishingMachineCount = len(in.FinishingMachines)
+	out.Diagnostics.FinishingCapacityIsEstimated = len(in.FinishingMachines) == 0
+
+	return out
+}
+
+// FinishingSupplyLagWeeks is how long stage-one output waits before stage two can work it.
+//
+// One week, and the reason is arithmetic rather than physical: a campaign planned in week w is
+// produced across that week, so treating it as available to finishing in the same week would let the
+// plan finish greige that is still on the needles. A configurable lag was considered and dropped —
+// it would be a second knob over a lag the week granularity already fixes.
+const FinishingSupplyLagWeeks = 1
+
+// buildFinishingInput turns the constraint plan into stage two's supply, and the finished-goods policies into its demand.
+//
+// This is the seam between the two schedules, and everything load-bearing about the two-stage model
+// lives here: campaigns become dated greige arrivals, the pooled family policy becomes one target per
+// finished SKU, and the order book is read at the SKU it was actually placed for rather than at the
+// greige it was pooled onto.
+func buildFinishingInput(in SolverInput, out SolverOutput) FinishingInput {
+	capacityPerMachine := in.Settings.MachineWeeklyCapacityHours()
+	capacity := float64(len(in.FinishingMachines)) * capacityPerMachine
+	if len(in.FinishingMachines) == 0 {
+		// A plant with no machines outside the constraint still has a second stage — it just has not been modelled machine by machine. Sizing it as one notional resource keeps the plan usable, and the diagnostic says the number was estimated rather than counted.
+		capacity = capacityPerMachine
+	}
+
+	finishing := FinishingInput{
+		Settings:            in.Settings,
+		WeeklyCapacityHours: capacity,
+		GreigeOnHand:        map[string]float64{},
+	}
+
+	// What is already knitted and waiting when the horizon opens. Without it the first weeks read as starved while the greige store sits full.
+	for itemID, quantity := range in.GreigeOnHandByItem {
+		if quantity > 0 {
+			finishing.GreigeOnHand[itemID] = quantity
+		}
+	}
+
+	for _, campaign := range out.Campaigns {
+		finishing.Supply = append(finishing.Supply, FinishingSupply{
+			GreigeItemID: campaign.ItemID,
+			WeekIndex:    campaign.WeekIndex + FinishingSupplyLagWeeks,
+			Quantity:     campaign.Units,
+		})
+	}
+
+	// Deterministic supply order. The sweep sums arrivals into a map so order does not change the plan, but a stable slice keeps a diff between two versions readable.
+	sort.SliceStable(finishing.Supply, func(i, j int) bool {
+		if finishing.Supply[i].WeekIndex != finishing.Supply[j].WeekIndex {
+			return finishing.Supply[i].WeekIndex < finishing.Supply[j].WeekIndex
+		}
+		return finishing.Supply[i].GreigeItemID < finishing.Supply[j].GreigeItemID
+	})
+
+	rates := map[string]float64{}
+	for _, m := range MeasureItems(in.FinishingBatches) {
+		rates[m.ItemID] = m.SecondsPerUnit
+	}
+
+	// The order book at the SKU it was placed for. Stage one pools these onto the greige to decide how much to knit; stage two needs them un-pooled, because which colourway was ordered is exactly what it has to decide.
+	firmByFinishedItem := firmDemandByFinishedItem(in)
+
+	for _, policy := range out.FinishedPolicies {
+		item := FinishingItem{
+			ItemID:        policy.ItemID,
+			SKU:           policy.SKU,
+			GreigeItemID:  policy.GreigeItemID,
+			GreigeSKU:     policy.GreigeSKU,
+			ProductLineID: policy.ProductLineID,
+			WeeklyDemand:  policy.WeeklyDemand,
+			OnHand:        policy.OnHand,
+			ReorderPoint:  policy.ReorderPoint,
+			SafetyStock:   policy.SafetyStock,
+			FirmByWeek:    firmByFinishedItem[policy.ItemID],
+		}
+
+		// A rate measured per finished unit has to be expressed per planned unit, because the whole plan is denominated in the greige's unit. Without the scale, a SKU scanned in eaches and knitted in pairs would be costed at half the hours it really takes.
+		item.SecondsPerUnit = rates[policy.ItemID]
+		if scale, ok := in.FinishingRateScaleByItem[policy.ItemID]; ok && scale > 0 {
+			item.SecondsPerUnit *= scale
+		}
+
+		// Where the SKU is made rides along on the line. It changes nothing about what the sweep decides — the second stage is one pool — but a plan that cannot say which room a job belongs to is not a plan a supervisor can work.
+		if step, ok := in.FinishingStepByItem[policy.ItemID]; ok {
+			item.ProductionStepID = step.ProductionStepID
+			item.DepartmentID = step.DepartmentID
+		}
+		if lot, ok := in.FinishingLotByItem[policy.ItemID]; ok && lot.Quantity > 0 {
+			item.LotUnits = lot.Quantity
+			item.LotUnitID = lot.UnitID
+		}
+
+		finishing.Items = append(finishing.Items, item)
+	}
+
+	return finishing
+}
+
+// firmDemandByFinishedItem re-reads the order book at the finished SKU, dated the same way stage one dates it.
+//
+// BuildFirmSchedule pools onto the constraint item and offsets by the finishing lead time, because a
+// greige campaign has to finish before the finishing stage can start. Stage two is that finishing
+// stage, so its requirements sit at the promise week itself rather than a lead time earlier.
+func firmDemandByFinishedItem(in SolverInput) map[string][]float64 {
+	out := map[string][]float64{}
+	if in.Settings.HorizonWeeks <= 0 {
+		return out
+	}
+
+	for _, line := range in.OpenOrders {
+		if line.FinishedItemID == "" || line.Units <= 0 {
+			continue
+		}
+		week := 0
+		if line.ShipByDate != nil {
+			week = weeksBetween(in.HorizonStart, *line.ShipByDate)
+		}
+		// An order already due is owed now, not never; clamping to week zero is what makes it visible rather than silently dropped.
+		week = max(week, 0)
+		if week >= in.Settings.HorizonWeeks {
+			continue
+		}
+		if out[line.FinishedItemID] == nil {
+			out[line.FinishedItemID] = make([]float64, in.Settings.HorizonWeeks)
+		}
+		out[line.FinishedItemID][week] += line.Units
+	}
 	return out
 }
 

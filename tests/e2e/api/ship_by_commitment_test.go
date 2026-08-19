@@ -256,7 +256,8 @@ func TestCustomerLeadTime_ResolvesChainWithoutAnOrder(t *testing.T) {
 		groupID := leadTimeAccountGroup(t, "e2e-lt-grp-b", ptrInt(21))
 		customerID := leadTimeCustomer(t, "e2e-lt-cust-b", nil, groupID)
 
-		status, body, err := apiClient.GetListRaw(customersPath+"/"+customerID+customerLeadTimePathSuffix, nil)
+		// The group is an expandable sub-object, so the resolution names it only when asked to.
+		status, body, err := apiClient.GetListRaw(customersPath+"/"+customerID+customerLeadTimePathSuffix+"?include=account_group", nil)
 		require.NoError(t, err)
 		requireStatus(t, 200, status, body)
 

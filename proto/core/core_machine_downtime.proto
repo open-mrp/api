@@ -116,6 +116,10 @@ message CreateMachineDowntimeEventRequest {
   optional string batch_id = 7;
   optional string note = 8;
   optional string source_code = 9;
+  // How long the machine was down, as a value in a unit of time. An alternative
+  // to ended_at, which the server derives from it; sending both is rejected.
+  optional string duration_value = 10;
+  optional string duration_unit_id = 11;
 }
 
 message CreateMachineDowntimeEventResponse {
@@ -132,6 +136,12 @@ message UpdateMachineDowntimeEventRequest {
   StringPatch production_run_id = 7;
   StringPatch batch_id = 8;
   StringPatch note = 9;
+  // Moving an event to another machine re-resolves its department and step from
+  // the new machine, so the stoppage lands on the right room's availability.
+  optional string machine_id = 10;
+  // Setting a duration recomputes ended_at from the start; clearing it reopens
+  // the event the same way clearing ended_at does.
+  QuantityPatch duration = 11;
 }
 
 message UpdateMachineDowntimeEventResponse {

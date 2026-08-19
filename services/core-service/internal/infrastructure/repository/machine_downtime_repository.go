@@ -357,19 +357,22 @@ func (r *machineDowntimeRepoImpl) Update(ctx context.Context, event *domain.Mach
 	defer span.End()
 
 	err := r.queries.UpdateMachineDowntimeEvent(ctx, sqlc.UpdateMachineDowntimeEventParams{
-		AccountID:       event.AccountID,
-		ID:              event.ID,
-		ReasonCode:      event.ReasonCode,
-		StartedAt:       event.StartedAt,
-		EndedAt:         db.NullTimePtr(event.EndedAt),
-		DurationSeconds: dtNullInt32(event.DurationSeconds),
-		ShiftDate:       event.ShiftDate,
-		ShiftCode:       dtNullString(event.ShiftCode),
-		ItemID:          dtNullString(event.ItemID),
-		ProductionRunID: dtNullString(event.ProductionRunID),
-		BatchID:         dtNullString(event.BatchID),
-		ScheduleLineID:  dtNullString(event.ScheduleLineID),
-		Note:            dtNullString(event.Note),
+		AccountID:        event.AccountID,
+		ID:               event.ID,
+		MachineID:        event.MachineID,
+		DepartmentID:     dtNullString(event.DepartmentID),
+		ProductionStepID: dtNullString(event.ProductionStepID),
+		ReasonCode:       event.ReasonCode,
+		StartedAt:        event.StartedAt,
+		EndedAt:          db.NullTimePtr(event.EndedAt),
+		DurationSeconds:  dtNullInt32(event.DurationSeconds),
+		ShiftDate:        event.ShiftDate,
+		ShiftCode:        dtNullString(event.ShiftCode),
+		ItemID:           dtNullString(event.ItemID),
+		ProductionRunID:  dtNullString(event.ProductionRunID),
+		BatchID:          dtNullString(event.BatchID),
+		ScheduleLineID:   dtNullString(event.ScheduleLineID),
+		Note:             dtNullString(event.Note),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)

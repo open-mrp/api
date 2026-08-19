@@ -1307,6 +1307,33 @@ func (r *batchRepoImpl) Reopen(ctx context.Context, accountID, batchID string) *
 	return nil
 }
 
+// ReassignMachine makes one machine the batch's only machine.
+//
+// The link is written before the stale ones are dropped, so a batch is never momentarily attributable to nothing. Attainment reads production through this table, and a gap would be a window where the work belonged to no machine at all.
+func (r *batchRepoImpl) ReassignMachine(ctx context.Context, accountID, batchID, machineID string) *apierror.APIError {
+	ctx, span := batchRepoTracer.Start(ctx, "repository.batch.reassign_machine")
+	defer span.End()
+
+	if err := r.queries.LinkBatchMachine(ctx, sqlc.LinkBatchMachineParams{
+		BatchID:   batchID,
+		MachineID: machineID,
+	}); err != nil {
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+	}
+
+	err := r.queries.UnlinkBatchMachinesExcept(ctx, sqlc.UnlinkBatchMachinesExceptParams{
+		BatchID:   batchID,
+		MachineID: machineID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	return nil
+}
+
 func (r *batchRepoImpl) ReopenIfNotFullyUsed(ctx context.Context, accountID string, batch domain.BaseBatch, producedUnit domain.LightUnit, productionStepID string) *apierror.APIError {
 	ctx, span := batchRepoTracer.Start(ctx, "repository.batch.reopen_if_not_fully_used")
 	defer span.End()

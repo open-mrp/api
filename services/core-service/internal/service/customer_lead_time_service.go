@@ -49,8 +49,9 @@ func (s *customerSvcImpl) GetCustomerLeadTime(ctx context.Context, customerAccou
 	}
 
 	in := scheduling.LeadTimeInput{
-		CustomerLeadTimeDays:     chain.CustomerLeadTimeDays,
-		AccountGroupLeadTimeDays: chain.AccountGroupLeadTimeDays,
+		CustomerLeadTimeDays:       chain.CustomerLeadTimeDays,
+		ParentCustomerLeadTimeDays: chain.ParentCustomerLeadTimeDays,
+		AccountGroupLeadTimeDays:   chain.AccountGroupLeadTimeDays,
 	}
 	if settings != nil {
 		days := int(settings.DefaultCustomerLeadTimeDays)
@@ -67,8 +68,11 @@ func (s *customerSvcImpl) GetCustomerLeadTime(ctx context.Context, customerAccou
 		Days:              days,
 		SourceCode:        source,
 	}
-	// Named only when the group is what actually decided; a customer that belongs to a group but overrides it did not inherit anything.
-	if source == scheduling.LeadTimeSourceAccountGroup {
+	// Each is named only when it is what actually decided; a customer that has a parent or a group but overrides it did not inherit anything.
+	switch source {
+	case scheduling.LeadTimeSourceParentCustomer:
+		out.ParentCustomerAccountID = chain.ParentCustomerAccountID
+	case scheduling.LeadTimeSourceAccountGroup:
 		out.AccountGroupID = chain.AccountGroupID
 	}
 	return out, nil

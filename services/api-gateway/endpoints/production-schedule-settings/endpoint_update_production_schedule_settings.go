@@ -98,7 +98,7 @@ type UpdateProductionScheduleSettingsRequest struct {
 	DefaultLotUnits float64 `json:"default_lot_units" validate:"required,gt=0"`
 	// Calendar days between an order being issued and it being due to ship.
 	//
-	// The last resort in the ship-by chain: a lead time set on the customer, or on the customer's account group, takes precedence. Zero commits the account to same-day shipping on every order that falls through to it, so this update replaces the whole settings object and omitting the field is not the same as leaving it alone.
+	// The last resort in the ship-by chain: a lead time set on the customer, on its parent account, or on the customer's account group takes precedence. Zero commits the account to same-day shipping on every order that falls through to it, so this update replaces the whole settings object and omitting the field is not the same as leaving it alone.
 	DefaultCustomerLeadTimeDays int32 `json:"default_customer_lead_time_days" validate:"gte=0,lte=3650"`
 	// The operating calendar naming the days this account's plant tenders freight, and the one naming the days a customer's dock accepts it.
 	//

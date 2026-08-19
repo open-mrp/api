@@ -7,6 +7,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
+	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
@@ -30,6 +31,10 @@ type CreateMachineDowntimeEventRequest struct {
 	//
 	// Omit it while the machine is still down; that leaves the event open, and the duration is filled in once the event is closed. It must be later than `started_at`.
 	EndedAt field.Optional[time.Time] `json:"ended_at,omitzero"`
+	// How long the machine was down, counted in a unit of time.
+	//
+	// The end time is derived from `started_at` plus this. Send either send `ended_at` or `duration`. The unit must measure time.
+	Duration field.Optional[apirequest.QuantityInput] `json:"duration,omitzero"`
 	// ID of the item the machine was running when it stopped.
 	ItemID field.Optional[string] `json:"item_id,omitzero"`
 	// ID of the production run in progress when the machine stopped.
@@ -58,7 +63,7 @@ func (*CreateMachineDowntimeEventRequest) SchemaExample() any {
 
 // Logs a machine downtime event.
 //
-// Omit `ended_at` while the machine is still down. A machine can only have one open event at a time, so logging a second open stoppage against a machine that is already down is rejected until the first is closed.
+// Give the stoppage an end either as `ended_at` or as a `duration` counted in a unit of time — sending both is rejected. Omit `ended_at` while the machine is still down. A machine can only have one open event at a time, so logging a second open stoppage against a machine that is already down is rejected until the first is closed.
 //
 // The department is taken from the machine, the business day is taken from `started_at`, the event is attributed to the credentials that made the request, and the duration is calculated when the event is closed.
 type CreateMachineDowntimeEventEndpoint struct{}

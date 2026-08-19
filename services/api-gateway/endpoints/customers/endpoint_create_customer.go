@@ -53,7 +53,7 @@ type CreateCustomerRequest struct {
 	FreightPolicy field.Optional[constants.FreightPolicy] `json:"freight_policy,omitzero" default:"billed_freight"`
 	// Calendar days between an order being issued and it being due to ship.
 	//
-	// Sets each order's `ship_by_date` when it is issued. Leave unset to inherit the customer's account group lead time, then the account default.
+	// Sets each order's `ship_by_date` when it is issued. Leave unset to inherit the parent account's lead time, then the customer's account group lead time, then the account default.
 	LeadTimeDays field.Optional[int32] `json:"lead_time_days,omitzero" validate:"omitempty,gte=0,lte=3650"`
 	// The operating calendar naming the days this customer's dock accepts freight.
 	//

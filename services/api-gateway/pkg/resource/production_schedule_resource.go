@@ -168,6 +168,40 @@ type ScheduleDiagnostics struct {
 	MakeToOrderItemCount int32 `json:"make_to_order_item_count"`
 	// Commitments this plan does not meet.
 	AtRiskOrders *List[ScheduleAtRiskOrder] `json:"at_risk_orders"`
+	// How the second stage — the rest of the factory — fared against the plan the constraint produced.
+	Finishing ScheduleFinishingDiagnostics `json:"finishing"`
+	// Machines outside the constraint department that the second stage was sized from.
+	//
+	// Zero means its capacity was estimated from the shift pattern alone rather than counted.
+	FinishingMachineCount int32 `json:"finishing_machine_count"`
+	// Whether the second stage's capacity was estimated rather than counted from machines.
+	FinishingCapacityIsEstimated bool `json:"finishing_capacity_is_estimated"`
+}
+
+// How the second stage fared: what it could not make, and which of the two things it ran out of.
+//
+// The two starvation lists are the point of planning in two stages at all. A finished good held back for want of greige is a knitting problem — knit more of it, or knit it sooner — and one held back for want of hours is a finishing problem: another shift, or a different mix. A single "short" list would throw that distinction away, and it is the only thing this model knows that a one-stage plan does not.
+type ScheduleFinishingDiagnostics struct {
+	// Hours the second stage can work in one week.
+	WeeklyCapacityHours float64 `json:"weekly_capacity_hours"`
+	// Hours the plan asks of it, week by week.
+	PlannedHoursByWeek []float64 `json:"planned_hours_by_week"`
+	// Those hours as a fraction of capacity, week by week.
+	UtilisationByWeek []float64 `json:"utilisation_by_week"`
+	// Finished goods that wanted building across the whole horizon and never had greige to build from.
+	GreigeStarvedSKUs []string `json:"greige_starved_skus"`
+	// Finished goods that had greige and never had hours.
+	CapacityStarvedSKUs []string `json:"capacity_starved_skus"`
+	// Finished goods with no measured finishing rate, which cannot be levelled because the hours they cost are unknown.
+	ItemsWithoutRunRate []string `json:"items_without_run_rate"`
+	// Constraint output the horizon never converts into anything.
+	//
+	// A large figure means the two stages are planned against different demand, which is worth looking at rather than leaving as an unexplained pile of greige.
+	UnusedGreigeUnits float64 `json:"unused_greige_units"`
+	// Total finished units the stage plans across the horizon.
+	TotalPlannedUnits float64 `json:"total_planned_units"`
+	// How many finishing lines the plan holds.
+	LineCount int32 `json:"line_count"`
 }
 
 // An order commitment the plan does not meet.
@@ -1146,6 +1180,102 @@ func (*ProductionScheduleFinishedPolicy) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleProductionScheduleFinishedPolicy)
 }
 
+const SampleProductionScheduleFinishingLineID = "pnscfiln_8dq4mv71pzko"
+
+// One finished good's build in one week: the second stage of the plan.
+//
+// The constraint plan says how much greige to knit and deliberately does not say what to turn it into — a family's demand is pooled onto the greige precisely so the buffer can sit at the undifferentiated stage. These lines are where that pooling is undone: how many of which finished good to make from the knitted parts, decided against each SKU's own stock position, its own orders, and the hours the rest of the factory has that week.
+//
+// Quantities are counted in the constraint item's unit, so `greige_consumed` and the knit plan's `planned_quantity` are directly comparable. That is what lets the two stages be reconciled rather than merely read side by side.
+type ProductionScheduleFinishingLine struct {
+	// Finishing line ID.
+	ID string `json:"id" validate:"required"`
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=production_schedule_finishing_line"`
+	// The schedule version this belongs to.
+	ProductionSchedule *Entity `json:"production_schedule" validate:"required"`
+	// Zero-based week offset from the start of the horizon.
+	WeekIndex int32 `json:"week_index"`
+	// First day of the week this is planned in.
+	WeekStartDate time.Time `json:"week_starts_at" validate:"required"`
+	// The finished good to make.
+	Item *Entity `json:"item" validate:"required"`
+	// SKU of the finished good, as it stood when the plan was generated.
+	SKU string `json:"sku" validate:"required"`
+	// The constraint item it is made from.
+	GreigeItem *Entity `json:"greige_item" validate:"required"`
+	// SKU of that constraint item.
+	GreigeSKU string `json:"greige_sku" validate:"required"`
+	// The department that does the work.
+	//
+	// Absent for a finished good nobody has ever scanned a finishing step for, which means the plan knows what to make but not yet where.
+	Department *Entity `json:"department"`
+	// The production step the work runs at.
+	ProductionStep *Entity `json:"production_step"`
+	// Units of the finished good to make.
+	PlannedQuantity float64 `json:"planned_quantity"`
+	// Abbreviation of the unit everything on this line is counted in.
+	Unit *string `json:"unit"`
+	// How many lots the quantity breaks into.
+	PlannedLots int32 `json:"planned_lots"`
+	// Units in one lot.
+	PlannedLotUnits float64 `json:"planned_lot_units"`
+	// Hours of the second stage's capacity this line consumes.
+	PlannedRunHours float64 `json:"planned_run_hours"`
+	// Units of the constraint item this takes out of the greige buffer.
+	//
+	// Equal to `planned_quantity` unless a finishing yield loss means a finished unit costs more than one knitted one.
+	GreigeConsumed float64 `json:"greige_consumed"`
+	// How much of the week's draw on this SKU is an order rather than a forecast.
+	FirmUnits float64 `json:"firm_units"`
+	// This SKU's own projected stock before the line lands.
+	ProjectedOnHandBefore float64 `json:"projected_on_hand_before"`
+	// And after it lands.
+	ProjectedOnHandAfter float64 `json:"projected_on_hand_after"`
+	// Where the line stands.
+	Status constants.ProductionScheduleLineStatus `json:"status" validate:"required"`
+	// Whether the solver produced this line or a person did.
+	Source constants.ScheduleLineSource `json:"source" validate:"required"`
+	// Whether the line sits inside the published frozen window.
+	IsFrozen bool `json:"is_frozen"`
+	// Creation timestamp.
+	CreatedAt time.Time `json:"created_at" validate:"required"`
+	// Last updated timestamp.
+	UpdatedAt time.Time `json:"updated_at" validate:"required"`
+}
+
+var sampleFinishingUnit = "pr"
+
+var SampleProductionScheduleFinishingLine = &ProductionScheduleFinishingLine{
+	ID:                    SampleProductionScheduleFinishingLineID,
+	Object:                constants.ObjectTypeProductionScheduleFinishingLine,
+	ProductionSchedule:    NewEntity(SampleProductionScheduleID, constants.ObjectTypeProductionSchedule, nil, nil),
+	WeekIndex:             2,
+	WeekStartDate:         timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	Item:                  NewEntity(SampleItemID, constants.ObjectTypeItem, nil, nil),
+	SKU:                   "MZ-CREW-BLK-L",
+	GreigeItem:            NewEntity(SampleItemID, constants.ObjectTypeItem, nil, nil),
+	GreigeSKU:             "MZ-GREIGE-CREW",
+	Department:            NewEntity(SampleDepartmentID, constants.ObjectTypeDepartment, nil, nil),
+	PlannedQuantity:       240,
+	Unit:                  &sampleFinishingUnit,
+	PlannedLots:           4,
+	PlannedLotUnits:       60,
+	PlannedRunHours:       19.2,
+	GreigeConsumed:        240,
+	FirmUnits:             120,
+	ProjectedOnHandBefore: 180,
+	ProjectedOnHandAfter:  420,
+	Status:                constants.ProductionScheduleLineStatusPlanned,
+	Source:                constants.ScheduleLineSourceSolver,
+	CreatedAt:             timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:             timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+}
+
+func (*ProductionScheduleFinishingLine) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleProductionScheduleFinishingLine)
+}
+
 // One batch a release created, or would create: a single lot off one planned campaign.
 type ReleaseScheduleBatch struct {
 	// The item the batch produces.
@@ -1158,8 +1288,12 @@ type ReleaseScheduleBatch struct {
 	Quantity float64 `json:"quantity"`
 	// The batch this lot was created as.
 	//
-	// A preview writes nothing, so it names no batch.
+	// A preview names a batch only when the lot is one that already exists and is being moved.
 	Batch *Entity `json:"batch"`
+	// The number of the run this ticket came off, when the batch already existed.
+	//
+	// Present on a lot carried forward from an earlier week that the floor never worked. The ticket is already printed and on the floor, so the release moves it into the new run rather than issuing a replacement.
+	CarriedForwardFrom *string `json:"carried_forward_from"`
 }
 
 // One planned campaign and the lots it broke into.
@@ -1182,7 +1316,9 @@ type ReleasedScheduleLine struct {
 	Unit *string `json:"unit"`
 	// How many batches the campaign broke into.
 	BatchCount int32 `json:"batch_count"`
-	// The individual lots, in run order.
+	// How much of `planned_quantity` is covered by tickets an earlier week already issued.
+	CarriedForwardQuantity float64 `json:"carried_forward_quantity"`
+	// The individual lots, carried-forward tickets first and then the new ones, in run order.
 	Batches *List[ReleaseScheduleBatch] `json:"batches"`
 }
 
@@ -1200,8 +1336,12 @@ type ReleaseScheduleWeekResult struct {
 	WeekStartDate time.Time `json:"week_starts_at" validate:"required"`
 	// How many campaigns were released.
 	ReleasedLineCount int32 `json:"released_line_count"`
-	// How many batches were created across all campaigns.
+	// How many batches the run holds across all campaigns, created and carried forward together.
 	BatchCount int32 `json:"batch_count"`
+	// How many of `batch_count` were moved off an earlier run rather than created.
+	//
+	// Tickets for these are already printed and on the floor.
+	CarriedForwardBatchCount int32 `json:"carried_forward_batch_count"`
 	// Total units released.
 	TotalQuantity float64 `json:"total_quantity"`
 	// The campaigns released, each with its lots.
@@ -1255,8 +1395,10 @@ type ReleaseScheduleWeekPreview struct {
 	WeekStartDate time.Time `json:"week_starts_at" validate:"required"`
 	// How many campaigns would be released.
 	LineCount int32 `json:"line_count"`
-	// How many batches would be created.
+	// How many batches the run would hold, created and carried forward together.
 	BatchCount int32 `json:"batch_count"`
+	// How many of `batch_count` would be moved off an earlier run rather than created.
+	CarriedForwardBatchCount int32 `json:"carried_forward_batch_count"`
 	// Total units that would be released.
 	TotalQuantity float64 `json:"total_quantity"`
 	// The campaigns that would be released, each with its lots.

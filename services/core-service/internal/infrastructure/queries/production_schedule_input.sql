@@ -333,17 +333,20 @@ ORDER BY sol.product_id, so.buyer_account_id, demand_year, demand_month;
 
 -- GetCustomerFulfillmentProfiles returns every customer's lead time and stated policy, with the account group each falls back to.
 --
--- The recommendation asks two things of a customer: how long they allow, and how they say they buy. Both resolve through the same chain an order's ship-by is stamped from, so the two cannot disagree about the same customer.
+-- The recommendation asks two things of a customer: how long they allow, and how they say they buy. Both resolve through the same chain an order's ship-by is stamped from, so the two cannot disagree about the same customer — including the parent account a child inherits its lead time from.
 -- name: GetCustomerFulfillmentProfiles :many
 SELECT
     ar.counterparty_account_id AS customer_account_id,
     COALESCE(NULLIF(ar.alias, ''), a.name) AS customer_name,
     ar.default_lead_time_days AS customer_lead_time_days,
+    par.default_lead_time_days AS parent_customer_lead_time_days,
     ag.default_lead_time_days AS account_group_lead_time_days,
     ar.fulfillment_policy_code AS customer_policy,
     ag.fulfillment_policy_code AS account_group_policy
 FROM account_relation ar
 JOIN account a ON a.id = ar.counterparty_account_id
+LEFT JOIN account_relation par ON par.id = ar.parent_account_relation_id
+    AND par.owner_account_id = ar.owner_account_id
 LEFT JOIN account_group ag ON ag.id = ar.account_group_id
 WHERE ar.owner_account_id = sqlc.arg('account_id')
   AND ar.account_relation_role_code = 'customer'
@@ -374,3 +377,73 @@ FROM item i
 JOIN rate r ON r.id = i.unit_cost_id
 WHERE i.account_id = sqlc.arg('account_id')
   AND i.id IN (sqlc.slice('item_ids'));
+
+-- Stage two: the rest of the factory.
+--
+-- The constraint is a department; everything else is the second stage. That is the whole selection rule, and it is deliberately the complement of GetConstraintMachines rather than a second list to maintain — a department added to the plant belongs to stage two the day it exists, without anyone revisiting settings.
+
+-- GetFinishingMachines returns every machine outside the constraint department.
+--
+-- Capacity is counted from these rather than configured, so hiring a shift onto a new machine changes the plan the way it changes the plant. The same exclusion row that takes a knitting machine out of the plan takes a finishing one out too.
+-- name: GetFinishingMachines :many
+SELECT
+    m.id,
+    m.name,
+    m.department_id,
+    m.production_step_id
+FROM machine m
+LEFT JOIN production_schedule_resource_setting rs
+    ON rs.scope_ref_id = m.id
+   AND rs.scope_code = 'machine'
+   AND rs.account_id = sqlc.arg('account_id')
+WHERE m.account_id = sqlc.arg('account_id')
+  AND (m.department_id IS NULL OR m.department_id != sqlc.arg('constraint_department_id'))
+  AND COALESCE(rs.is_excluded, 0) = 0
+  AND COALESCE(rs.is_enabled, 1) = 1
+ORDER BY m.name, m.id;
+
+-- GetFinishingBatchMeasurements returns one row per historical batch produced outside the constraint department, which is what the second stage's run rates are measured from.
+--
+-- The mirror of GetConstraintBatchMeasurements, and it excludes constraint-department steps for the same reason that one includes only them: a knitting scan recorded against a finishing machine is not a measurement of finishing, and letting it in would size the department's hours against the wrong operation. The step's own department is also carried out, so a finished good's line can name the room that makes it without a second query.
+-- name: GetFinishingBatchMeasurements :many
+SELECT
+    b.id AS batch_id,
+    b.item_id,
+    i.sku,
+    b.scanned_at,
+    q.value AS quantity_value,
+    u.abbreviation AS quantity_unit,
+    q.unit_id AS quantity_unit_id,
+    u.ratio_numerator,
+    u.ratio_denominator,
+    b.production_step_id,
+    COALESCE(ps.department_id, ss.department_id) AS step_department_id,
+    bm.B AS machine_id,
+    mc.name AS machine_name,
+    cost_rate.value AS unit_cost,
+    labor_time.value AS labor_time_value,
+    labor_time_unit.abbreviation AS labor_time_unit,
+    labor_rate.value AS labor_rate,
+    overhead_rate.value AS overhead_rate,
+    pr.created_at AS run_created_at
+FROM batch b
+JOIN _batches_machines bm ON bm.A = b.id
+JOIN machine mc ON mc.id = bm.B
+JOIN item i ON i.id = b.item_id
+LEFT JOIN quantity q ON q.id = b.quantity_id
+LEFT JOIN unit u ON u.id = q.unit_id
+LEFT JOIN rate cost_rate ON cost_rate.id = i.unit_cost_id
+LEFT JOIN production_step ps ON ps.id = b.production_step_id
+LEFT JOIN scanning_station ss ON ss.id = ps.scanning_station_id
+LEFT JOIN rate labor_time ON labor_time.id = ps.labor_time_id
+LEFT JOIN unit labor_time_unit ON labor_time_unit.id = labor_time.numerator_unit_id
+LEFT JOIN rate labor_rate ON labor_rate.id = ps.labor_rate_id
+LEFT JOIN rate overhead_rate ON overhead_rate.id = ps.overhead_rate_id
+LEFT JOIN production_run pr ON pr.id = b.production_run_id
+WHERE b.account_id = sqlc.arg('account_id')
+  AND b.scanned_at IS NOT NULL
+  AND b.scanned_at >= sqlc.arg('window_start')
+  AND b.scanned_at <= sqlc.arg('window_end')
+  AND b.item_id IN (sqlc.slice('item_ids'))
+  AND COALESCE(ps.department_id, ss.department_id, '') != sqlc.arg('constraint_department_id')
+ORDER BY b.item_id, b.scanned_at, b.id;

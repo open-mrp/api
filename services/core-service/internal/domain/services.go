@@ -943,6 +943,8 @@ type ProductionScheduleSvc interface {
 	ListProductionScheduleItemPolicies(ctx context.Context, scheduleID string) ([]*ProductionScheduleItemPolicy, *apierror.APIError)
 	// ListProductionScheduleFinishedPolicies returns the per-finished-SKU decomposition of a version's pooled constraint buffers.
 	ListProductionScheduleFinishedPolicies(ctx context.Context, scheduleID string) ([]*ProductionScheduleFinishedPolicy, *apierror.APIError)
+	// ListProductionScheduleFinishingLines returns stage two: how many of which finished good to make from the knitted parts.
+	ListProductionScheduleFinishingLines(ctx context.Context, params ListProductionScheduleFinishingLinesParams) ([]*ProductionScheduleFinishingLine, *apierror.APIError)
 
 	// GetProductionScheduleSettings returns the merchant's planning assumptions, falling back to code defaults when nothing has been saved.
 	GetProductionScheduleSettings(ctx context.Context) (*ProductionScheduleSettings, *apierror.APIError)
@@ -1014,7 +1016,7 @@ type ProductionScheduleSvc interface {
 	ReleaseProductionScheduleWeek(ctx context.Context, params ReleaseScheduleWeekParams) (*ReleaseScheduleWeekResult, *apierror.APIError)
 
 	// PreviewReleaseProductionScheduleWeek says what releasing a week would create, without creating it.
-	PreviewReleaseProductionScheduleWeek(ctx context.Context, scheduleID string, weekIndex int32) (*ReleaseScheduleWeekPreview, *apierror.APIError)
+	PreviewReleaseProductionScheduleWeek(ctx context.Context, scheduleID string, weekIndex int32, skipCarryForward bool) (*ReleaseScheduleWeekPreview, *apierror.APIError)
 
 	// ArchiveProductionSchedule retires a version without deleting its history.
 	ArchiveProductionSchedule(ctx context.Context, scheduleID string) (*ProductionSchedule, *apierror.APIError)

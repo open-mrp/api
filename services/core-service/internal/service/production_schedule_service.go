@@ -493,7 +493,12 @@ func (s *productionScheduleSvcImpl) loadSolverInput(
 		}
 	}
 
-	// 10. What lot each planned item is made in, resolved once through the whole chain.
+	// 10. Stage two: the rest of the factory, which decides how many of which finished good to make from what stage one knits.
+	if apiErr := s.loadFinishingInput(ctx, repo, params, in, nativeRatioOf); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	// 11. What lot each planned item is made in, resolved once through the whole chain.
 	//
 	// This runs last because it depends on the downstream map built in step 8: greige is not sold and has no product line, so it takes its lot from the finished goods it becomes.
 	lotInput, apiErr := s.loadLotResolutionInput(ctx, repo, params.AccountID, in, unitByItem)
@@ -507,6 +512,114 @@ func (s *productionScheduleSvcImpl) loadSolverInput(
 	}
 
 	return in, nil
+}
+
+// loadFinishingInput loads everything stage two needs: the machines outside the constraint, the production history that gives them run rates, and where each finished good is made.
+//
+// Everything here is best-effort. A plant that has never scanned a finishing step still gets a knit plan; it gets a finishing plan with every SKU reported as unrateable, which is a diagnosis rather than a failure. Refusing to solve at all because the second stage is unmeasured would take away the plan that does work.
+func (s *productionScheduleSvcImpl) loadFinishingInput(
+	ctx context.Context,
+	repo domain.ProductionScheduleInputRepo,
+	params domain.LoadSolverInputParams,
+	in *scheduling.SolverInput,
+	nativeRatioOf func(itemID string) float64,
+) *apierror.APIError {
+	in.FinishingRateScaleByItem = map[string]float64{}
+	in.FinishingStepByItem = map[string]scheduling.FinishingStep{}
+	in.FinishingLotByItem = map[string]scheduling.LotDefault{}
+
+	machines, apiErr := repo.GetFinishingMachines(ctx, params.AccountID, params.ConstraintDepartmentID)
+	if apiErr != nil {
+		return apiErr
+	}
+	in.FinishingMachines = machines
+
+	// Which greige each finished good comes from, so its rate can be expressed in the unit the plan is denominated in.
+	greigeByFinished := map[string]string{}
+	finishedItemIDs := map[string]bool{}
+	for greigeItemID, finishedGoods := range in.DownstreamByItem {
+		for _, finished := range finishedGoods {
+			if finished.ItemID == "" {
+				continue
+			}
+			finishedItemIDs[finished.ItemID] = true
+			if _, taken := greigeByFinished[finished.ItemID]; !taken {
+				// First wins, matching how the genealogy walk attributes a descendant reachable from two constraint items.
+				greigeByFinished[finished.ItemID] = greigeItemID
+			}
+		}
+	}
+	if len(finishedItemIDs) == 0 {
+		return nil
+	}
+
+	windowStart := params.PlanningAsOf.AddDate(0, -params.DemandWindowMonths, 0)
+	batchRows, apiErr := repo.GetFinishingBatchMeasurements(ctx, domain.GetFinishingBatchMeasurementsParams{
+		AccountID:              params.AccountID,
+		WindowStart:            windowStart,
+		WindowEnd:              params.PlanningAsOf,
+		ItemIDs:                scheduleSortedKeys(finishedItemIDs),
+		ConstraintDepartmentID: params.ConstraintDepartmentID,
+	})
+	if apiErr != nil {
+		return apiErr
+	}
+
+	finishedRatio := map[string]float64{}
+	finishedUnitID := map[string]string{}
+	for _, row := range batchRows {
+		itemID := row.Measurement.ItemID
+		if row.QuantityUnitRatio > 0 {
+			finishedRatio[itemID] = row.QuantityUnitRatio
+		}
+		if row.QuantityUnitID != nil && *row.QuantityUnitID != "" {
+			finishedUnitID[itemID] = *row.QuantityUnitID
+		}
+		// The last step a finished good was scanned at is where it is made. Rows arrive ordered by scan time, so this settles on the most recent one, which is the room to put the work in front of today.
+		if row.ProductionStepID != nil && *row.ProductionStepID != "" {
+			step := scheduling.FinishingStep{ProductionStepID: *row.ProductionStepID}
+			if row.StepDepartmentID != nil {
+				step.DepartmentID = *row.StepDepartmentID
+			}
+			in.FinishingStepByItem[itemID] = step
+		}
+		in.FinishingBatches = append(in.FinishingBatches, row.Measurement)
+	}
+
+	// Batch quantities arrive normalized to base units; bring each back into its own scan unit, the same correction the constraint history gets.
+	for i := range in.FinishingBatches {
+		if ratio, ok := finishedRatio[in.FinishingBatches[i].ItemID]; ok && ratio > 0 {
+			in.FinishingBatches[i].Quantity /= ratio
+		}
+	}
+
+	// The plan is denominated in the greige's scan unit. A finished good measured in its own unit has to be rescaled, or a sock scanned in eaches and knitted in pairs is costed at half the hours it takes.
+	for itemID := range finishedItemIDs {
+		greigeItemID, ok := greigeByFinished[itemID]
+		if !ok {
+			continue
+		}
+		fgRatio, ok := finishedRatio[itemID]
+		if !ok || fgRatio <= 0 {
+			continue
+		}
+		if scale := nativeRatioOf(greigeItemID) / fgRatio; scale > 0 {
+			in.FinishingRateScaleByItem[itemID] = scale
+		}
+	}
+
+	// The lot a finished good is made in, through the same chain the constraint items use. A finished good is sellable, so its own product line answers in one step where greige needs the downstream walk.
+	lotInput, apiErr := s.loadLotResolutionInput(ctx, repo, params.AccountID, in, finishedUnitID)
+	if apiErr != nil {
+		return apiErr
+	}
+	for itemID := range finishedItemIDs {
+		if lot, ok := scheduling.ResolveLotDefault(itemID, lotInput); ok {
+			in.FinishingLotByItem[itemID] = lot
+		}
+	}
+
+	return nil
 }
 
 // loadLotResolutionInput gathers the product-line lot conventions and the item-to-line mapping the resolution chain needs.
@@ -1063,6 +1176,24 @@ func (s *productionScheduleSvcImpl) ListProductionScheduleFinishedPolicies(ctx c
 	return s.repos.NewProductionScheduleRepo().ListFinishedPolicies(ctx, identity.Target.AccountID, scheduleID)
 }
 
+// ListProductionScheduleFinishingLines returns stage two: how many of which finished good to make from the knitted parts.
+func (s *productionScheduleSvcImpl) ListProductionScheduleFinishingLines(ctx context.Context, params domain.ListProductionScheduleFinishingLinesParams) ([]*domain.ProductionScheduleFinishingLine, *apierror.APIError) {
+	ctx, span := productionScheduleSvcTracer.Start(ctx, "service.production_schedule.list_finishing_lines")
+	defer span.End()
+
+	identity, apiErr := s.readIdentity(ctx)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	// The permission check is repeated here rather than left to readIdentity alone because the drift guard matches literal checks per handler; a check reachable only through a helper reads as an unprotected endpoint.
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainProductionSchedules, types.ActionRead); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	params.AccountID = identity.Target.AccountID
+	return s.repos.NewProductionScheduleRepo().ListFinishingLines(ctx, params)
+}
+
 // readIdentity is the shared read gate for every schedule query.
 func (s *productionScheduleSvcImpl) readIdentity(ctx context.Context) (*types.Identity, *apierror.APIError) {
 	identity, ok := appctx.GetIdentityFromContext(ctx)
@@ -1331,8 +1462,65 @@ func (s *productionScheduleSvcImpl) writeSolvedPlan(ctx context.Context, params 
 		return apiErr
 	}
 
+	// Stage two, written in the same transaction as the stage-one plan it draws from. A version holding a knit plan with no finishing plan reads as "nothing to finish" rather than as a half-written record, which is the worse of the two failures.
+	if apiErr := s.writeFinishingPlan(ctx, params); apiErr != nil {
+		return apiErr
+	}
+
 	// Department work is derived inside the same transaction as the plan it follows from. Deriving afterwards would leave a window where a schedule exists but the departments downstream of it have nothing to do.
 	return s.deriveDepartmentWork(ctx, params.AccountID, scheduleID)
+}
+
+// writeFinishingPlan persists stage two: how many of which finished good to make from the knitted parts.
+//
+// Rewritten wholesale rather than patched, like the item policies: the mix is a pure function of the knit plan, the order book and each SKU's position, so a partial update could leave a week holding a line for a campaign the re-solve no longer produces.
+func (s *productionScheduleSvcImpl) writeFinishingPlan(ctx context.Context, params writeSolvedPlanParams) *apierror.APIError {
+	repo := s.repos.NewProductionScheduleRepo()
+
+	lines := make([]*domain.ProductionScheduleFinishingLine, 0, len(params.Output.FinishingLines))
+	for _, f := range params.Output.FinishingLines {
+		lineID, apiErr := id.GenID(id.ProductionScheduleFinishingLineIDPrefix, nil)
+		if apiErr != nil {
+			return apiErr
+		}
+
+		line := &domain.ProductionScheduleFinishingLine{
+			ID:                    lineID,
+			ProductionScheduleID:  params.ScheduleID,
+			WeekIndex:             safeconv.IntToInt32(f.WeekIndex),
+			WeekStartDate:         params.HorizonStart.AddDate(0, 0, f.WeekIndex*7),
+			ItemID:                f.ItemID,
+			SKU:                   f.SKU,
+			GreigeItemID:          f.GreigeItemID,
+			GreigeSKU:             f.GreigeSKU,
+			PlannedQuantity:       f.Quantity,
+			PlannedUnitID:         lotUnitIDOf(f.LotUnitID),
+			PlannedLots:           safeconv.IntToInt32(f.Lots),
+			PlannedLotUnits:       f.LotUnits,
+			PlannedRunHours:       f.RunHours,
+			GreigeConsumed:        f.GreigeConsumed,
+			FirmUnits:             f.FirmUnits,
+			ProjectedOnHandBefore: f.ProjectedOnHandBefore,
+			ProjectedOnHandAfter:  f.ProjectedOnHandAfter,
+			StatusCode:            domain.ScheduleLineStatusPlanned,
+			SourceCode:            domain.ScheduleLineSourceSolver,
+			// Nothing is frozen until publish; a draft is entirely editable.
+			IsFrozen: false,
+		}
+		// Where the SKU is made, denormalized so a department rollup needs no join. Absent for a finished good nobody has scanned a finishing step for, which is a data gap rather than a reason to drop the line.
+		if f.ProductionStepID != "" {
+			stepID := f.ProductionStepID
+			line.ProductionStepID = &stepID
+		}
+		if f.DepartmentID != "" {
+			departmentID := f.DepartmentID
+			line.DepartmentID = &departmentID
+		}
+
+		lines = append(lines, line)
+	}
+
+	return repo.ReplaceFinishingLines(ctx, params.AccountID, params.ScheduleID, lines)
 }
 
 // persistPlanParams drives the one shared solve-and-write path.

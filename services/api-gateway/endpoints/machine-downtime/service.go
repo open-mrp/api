@@ -7,6 +7,7 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
+	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
 	"github.com/augno/api/shared/constants"
@@ -137,6 +138,10 @@ func (m *machineDowntimeSvcImpl) CreateDowntimeEvent(ctx context.Context, req *C
 	if endedAt := req.EndedAt.Ptr(); endedAt != nil {
 		pbReq.EndedAt = timestamppb.New(*endedAt)
 	}
+	if duration := req.Duration.Ptr(); duration != nil {
+		pbReq.DurationValue = &duration.Value
+		pbReq.DurationUnitId = &duration.UnitID
+	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, machineDowntimeEpSvcTracer, "service.machine_downtime.create", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreateMachineDowntimeEventResponse, error) {
@@ -162,6 +167,8 @@ func (m *machineDowntimeSvcImpl) UpdateDowntimeEvent(ctx context.Context, req *U
 		ProductionRunId: field.StringClearableToProto(req.ProductionRunID),
 		BatchId:         field.StringClearableToProto(req.BatchID),
 		Note:            field.StringClearableToProto(req.Note),
+		MachineId:       req.MachineID.Ptr(),
+		Duration:        apirequest.QuantityFieldToProto(req.Duration),
 	}
 	if startedAt := req.StartedAt.Ptr(); startedAt != nil {
 		pbReq.StartedAt = timestamppb.New(*startedAt)

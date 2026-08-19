@@ -98,6 +98,9 @@ var purgeTargets = []tableColumn{
 	{"production_schedule_item_policy", "account_id"},
 	{"production_schedule_deviation", "account_id"},
 	{"production_schedule_derived_line", "account_id"},
+	{"production_schedule_finishing_line", "account_id"},
+	// Missed when the finished-goods decomposition landed: a purge that left these behind would leave one account's SKU targets attached to a schedule id that no longer exists.
+	{"production_schedule_finished_policy", "account_id"},
 }
 
 type PurgeRepo struct {

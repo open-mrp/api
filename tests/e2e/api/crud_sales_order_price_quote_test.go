@@ -69,6 +69,7 @@ func quoteUnitPriceAt(t *testing.T, respBody []byte, idx int) float64 {
 
 func TestQuoteSalesOrderPrices_FullyPresentsUnits(t *testing.T) {
 	t.Parallel()
+	lockPricingRead(t)
 	// A line item's unit_price shares the computed_rate shape with quote-freight: its
 	// numerator/denominator units must come back fully presented, not as bare {id, object}.
 	body := map[string]any{
@@ -87,6 +88,7 @@ func TestQuoteSalesOrderPrices_FullyPresentsUnits(t *testing.T) {
 
 func TestQuoteSalesOrderPrices_FullyPresentsUnitsWhenDiscountChangesUnit(t *testing.T) {
 	t.Parallel()
+	lockPricingRead(t)
 	// The unit a line's price is quoted in depends on the discount that wins: customer2's
 	// per-pair account price (18.45/pair) beats the volume discount and is returned in its
 	// native per-pair unit — NOT the ordered carton unit. That discount-driven denominator
@@ -114,6 +116,7 @@ func TestQuoteSalesOrderPrices_FullyPresentsUnitsWhenDiscountChangesUnit(t *test
 
 func TestQuoteSalesOrderPrices_ListPriceWhenNoContract(t *testing.T) {
 	t.Parallel()
+	lockPricingRead(t)
 	// SCK-002 has no beige attribute, so the beige-gated account price does not apply →
 	// the customer pays the product's list price (10/pair).
 	body := map[string]any{
@@ -128,6 +131,7 @@ func TestQuoteSalesOrderPrices_ListPriceWhenNoContract(t *testing.T) {
 
 func TestQuoteSalesOrderPrices_ConvertsListPriceToOrderedUnit(t *testing.T) {
 	t.Parallel()
+	lockPricingRead(t)
 	// Ordered in dozens: the per-pair list price (10) converts to the ordered unit.
 	// 1 dozen = 6 pairs, so 10/pair → 60/dozen.
 	body := map[string]any{
@@ -142,6 +146,7 @@ func TestQuoteSalesOrderPrices_ConvertsListPriceToOrderedUnit(t *testing.T) {
 
 func TestQuoteSalesOrderPrices_AppliesAttributeGatedAccountPrice(t *testing.T) {
 	t.Parallel()
+	lockPricingRead(t)
 	// The beige sock carries the beige attribute, so the beige-gated account price
 	// (8.5/pair) applies — beating list price. Fails if product attributes aren't loaded
 	// (regression guard for the _item_attributes A/B column orientation).
@@ -157,6 +162,7 @@ func TestQuoteSalesOrderPrices_AppliesAttributeGatedAccountPrice(t *testing.T) {
 
 func TestQuoteSalesOrderPrices_AttributeGateDiscriminatesInOneBatch(t *testing.T) {
 	t.Parallel()
+	lockPricingRead(t)
 	// One request, two products for the same customer: the beige one gets the gated
 	// account price (8.5), the non-beige one falls through to list price (10). This pins both
 	// the attribute gating AND the positional (request-order) response mapping.
@@ -181,6 +187,7 @@ func TestQuoteSalesOrderPrices_AttributeGateDiscriminatesInOneBatch(t *testing.T
 
 func TestQuoteSalesOrderPrices_UngatedAccountPriceForOtherRecipient(t *testing.T) {
 	t.Parallel()
+	lockPricingRead(t)
 	// A different customer (customer2) has an ungated account price (7.5/pair) on the same
 	// product line, so even SCK-002 gets it. Confirms account prices are scoped to
 	// the buyer.
@@ -196,6 +203,7 @@ func TestQuoteSalesOrderPrices_UngatedAccountPriceForOtherRecipient(t *testing.T
 
 func TestQuoteSalesOrderPrices_CustomerMayQuoteOwnAccount(t *testing.T) {
 	t.Parallel()
+	lockPricingRead(t)
 	// A customer portal actor may quote prices for its own account.
 	portal := getCustomerPortalClient()
 	body := map[string]any{
@@ -210,6 +218,7 @@ func TestQuoteSalesOrderPrices_CustomerMayQuoteOwnAccount(t *testing.T) {
 
 func TestQuoteSalesOrderPrices_VolumeDiscountTiers(t *testing.T) {
 	t.Parallel()
+	lockPricingRead(t)
 	// Multiplicative tier ladder off the 359.40/carton base: each example carton quantity
 	// meets a different set of thresholds (0 / 4 / 7 / 10).
 	cases := []struct {
@@ -224,6 +233,8 @@ func TestQuoteSalesOrderPrices_VolumeDiscountTiers(t *testing.T) {
 	for _, c := range cases {
 		c := c
 		t.Run(c.cartons+"ct", func(t *testing.T) {
+			// No lock here: the parent holds the shared side until every parallel subtest has
+			// finished, and RLock is not reentrant once a writer is waiting.
 			t.Parallel()
 			body := map[string]any{
 				"buyer_account_id": SeedCustomerAccountID,
@@ -239,6 +250,7 @@ func TestQuoteSalesOrderPrices_VolumeDiscountTiers(t *testing.T) {
 
 func TestQuoteSalesOrderPrices_VolumeDiscountSumsAcrossMatchingProducts(t *testing.T) {
 	t.Parallel()
+	lockPricingRead(t)
 	// 6 cartons of product A + 5 of product B (both on the volume line) sum to 11 cartons,
 	// so the top tier (299.50/carton) applies to BOTH lines.
 	body := map[string]any{
@@ -257,6 +269,7 @@ func TestQuoteSalesOrderPrices_VolumeDiscountSumsAcrossMatchingProducts(t *testi
 
 func TestQuoteSalesOrderPrices_AccountPriceBeatsVolumeDiscount(t *testing.T) {
 	t.Parallel()
+	lockPricingRead(t)
 	// customer2 has a per-pair account price (18.45/pair) on the volume line; it overrides
 	// the volume discount regardless of quantity, and is returned in its native per-pair unit.
 	body := map[string]any{

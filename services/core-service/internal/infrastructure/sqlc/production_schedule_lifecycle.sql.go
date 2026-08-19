@@ -265,6 +265,96 @@ func (q *Queries) GetProductionScheduleLine(ctx context.Context, arg GetProducti
 	return i, err
 }
 
+const listCarryForwardBatchesForItem = `-- name: ListCarryForwardBatchesForItem :many
+SELECT
+    b.id,
+    b.production_run_id,
+    b.production_step_id,
+    b.created_at,
+    q.value AS quantity_value,
+    q.unit_id AS quantity_unit_id,
+    pr.number AS production_run_number
+FROM batch b
+JOIN quantity q ON q.id = b.quantity_id
+JOIN production_run pr ON pr.id = b.production_run_id
+WHERE b.account_id = ?
+AND b.item_id = ?
+AND b.scanned_at IS NULL
+AND b.closed_at IS NULL
+AND b.production_run_id IN (
+    SELECT DISTINCT l.production_run_id
+    FROM production_schedule_line l
+    WHERE l.account_id = ?
+    AND l.item_id = ?
+    AND l.production_run_id IS NOT NULL
+    AND l.week_start_date < ?
+)
+ORDER BY b.created_at ASC, b.id ASC
+LIMIT ?
+`
+
+type ListCarryForwardBatchesForItemParams struct {
+	AccountID     string
+	ItemID        string
+	WeekStartDate time.Time
+	Limit         int32
+}
+
+type ListCarryForwardBatchesForItemRow struct {
+	ID                  string
+	ProductionRunID     sql.NullString
+	ProductionStepID    sql.NullString
+	CreatedAt           time.Time
+	QuantityValue       string
+	QuantityUnitID      string
+	ProductionRunNumber string
+}
+
+// ListCarryForwardBatchesForItem finds tickets an earlier week issued for an item that the floor never got to.
+//
+// The plan already knows the week fell short — next week's quantity is smaller because the inventory it expected never arrived. What it cannot know is that the doffs it would issue for that shortfall are doffs somebody has already printed. Moving those tickets into the new run is what stops the floor being handed a second copy of work it is already holding.
+//
+// Only batches a schedule release created are eligible: the run has to be linked to a campaign of a week that has already begun. A hand-built run is somebody's own work and is never raided, and a run for a week still ahead of this one is not late — it has simply not been worked yet.
+//
+// Unscanned and unclosed is what "never got to" means. A scanned batch is production that happened, and a closed one has left the floor.
+func (q *Queries) ListCarryForwardBatchesForItem(ctx context.Context, arg ListCarryForwardBatchesForItemParams) ([]ListCarryForwardBatchesForItemRow, error) {
+	rows, err := q.db.QueryContext(ctx, listCarryForwardBatchesForItem,
+		arg.AccountID,
+		arg.ItemID,
+		arg.AccountID,
+		arg.ItemID,
+		arg.WeekStartDate,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListCarryForwardBatchesForItemRow
+	for rows.Next() {
+		var i ListCarryForwardBatchesForItemRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProductionRunID,
+			&i.ProductionStepID,
+			&i.CreatedAt,
+			&i.QuantityValue,
+			&i.QuantityUnitID,
+			&i.ProductionRunNumber,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listProductionScheduleDeviationsBackward = `-- name: ListProductionScheduleDeviationsBackward :many
 SELECT
     d.id,

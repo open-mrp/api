@@ -63,6 +63,28 @@ type ConstraintBatchRow struct {
 	ProductionStepID *string
 }
 
+// GetFinishingBatchMeasurementsParams asks for the second stage's production history: scans of the given finished goods anywhere outside the constraint department.
+type GetFinishingBatchMeasurementsParams struct {
+	AccountID   string
+	WindowStart time.Time
+	WindowEnd   time.Time
+	// ItemIDs are the finished goods to measure. Scoped by item rather than by machine because a finished good passes through several rooms and the plan needs its whole cost, not one room's share.
+	ItemIDs []string
+	// ConstraintDepartmentID is excluded: a knitting scan recorded against a finishing machine is not a measurement of finishing.
+	ConstraintDepartmentID string
+}
+
+// FinishingBatchRow is one historical second-stage batch, plus the scan metadata the input assembly needs alongside the measurement.
+type FinishingBatchRow struct {
+	Measurement scheduling.BatchMeasurement
+	// QuantityUnitID and QuantityUnitRatio are the unit the finished good is scanned in. The plan is denominated in the greige's unit, so a SKU scanned in a different one has its rate converted rather than taken at face value.
+	QuantityUnitID    *string
+	QuantityUnitRatio float64
+	ProductionStepID  *string
+	// StepDepartmentID is the room the step belongs to, carried out so a finishing line can name where it runs without a second query.
+	StepDepartmentID *string
+}
+
 // StepConsumptionRow is one input item a production step consumes.
 type StepConsumptionRow struct {
 	ProductionStepID string
@@ -582,6 +604,57 @@ type ScheduleRegeneratePreview struct {
 // ProductionScheduleFinishedPolicy is one finished SKU's own inventory target, snapshotted per version.
 //
 // The greige policy pools every finished good a constraint item feeds into one echelon figure, which is the right basis for deciding whether to build. These rows are what that pooling hides: per-SKU demand, per-SKU variability, and a buffer sized against the finishing lead time rather than the constraint's.
+// ProductionScheduleFinishingLine is one finished good's build in one week: stage two of the plan.
+//
+// Stage one plans the constraint and pools a family's demand into one greige campaign; this is where that pooling is undone, against each finished SKU's own position, its own orders and the hours the rest of the factory has. Which is to say: this is the row that answers "how many of which finished good do we make from what was knitted".
+type ProductionScheduleFinishingLine struct {
+	ID                   string
+	AccountID            string
+	ProductionScheduleID string
+
+	WeekIndex     int32
+	WeekStartDate time.Time
+
+	ItemID       string
+	SKU          string
+	GreigeItemID string
+	GreigeSKU    string
+	// DepartmentID and ProductionStepID are denormalized from the finishing step so a department rollup needs no join.
+	DepartmentID     *string
+	ProductionStepID *string
+
+	PlannedQuantity float64
+	PlannedUnitID   *string
+	// PlannedUnitAbbreviation is joined on read. "240" is not an instruction until it says 240 of what.
+	PlannedUnitAbbreviation *string
+	PlannedLots             int32
+	PlannedLotUnits         float64
+	PlannedRunHours         float64
+
+	// GreigeConsumed is what the line takes out of the stage-one buffer. Stored rather than derived, because a finishing yield loss makes it differ from PlannedQuantity and the two stages reconciling is the whole point.
+	GreigeConsumed float64
+	// FirmUnits is how much of the week's draw is an order rather than a forecast.
+	FirmUnits float64
+
+	ProjectedOnHandBefore float64
+	ProjectedOnHandAfter  float64
+
+	StatusCode string
+	SourceCode string
+	IsFrozen   bool
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+// ListProductionScheduleFinishingLinesParams narrows a version's finishing plan to one week or one finished SKU.
+type ListProductionScheduleFinishingLinesParams struct {
+	AccountID  string
+	ScheduleID string
+	WeekIndex  *int32
+	ItemID     *string
+}
+
 type ProductionScheduleFinishedPolicy struct {
 	ID                   string
 	AccountID            string

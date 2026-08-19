@@ -34,13 +34,16 @@ func TestIncludes_PopulateNestedResources(t *testing.T) {
 		t.Run(ep.OperationID, func(t *testing.T) {
 			t.Parallel()
 
-			path, query, ok := resolveGetScenario(ep)
+			_, _, ok := resolveGetScenario(ep, "")
 			require.True(t, ok, "resolveGetScenario(%s) operationId=%s", ep.Path, ep.OperationID)
 
 			for _, include := range ep.IncludeEnum {
 				include := include
 				t.Run(include, func(t *testing.T) {
 					t.Parallel()
+
+					path, query, ok := resolveGetScenario(ep, include)
+					require.True(t, ok, "resolveGetScenario(%s) operationId=%s include=%s", ep.Path, ep.OperationID, include)
 
 					status, body, err := apiClient.GetListRaw(path, withIncludeQuery(query, include))
 					require.NoError(t, err, "GET %s?include=%s failed", path, include)
@@ -313,7 +316,9 @@ type IncludeGetEndpoint struct {
 
 type includeGetScenario struct {
 	pathValues map[string]string
-	query      url.Values
+	// pathValuesByInclude overrides pathValues for one include key, for a resource whose includes are mutually exclusive and so cannot all populate off one row.
+	pathValuesByInclude map[string]map[string]string
+	query               url.Values
 }
 
 // HasParam reports whether the endpoint accepts a given query parameter.
@@ -324,7 +329,18 @@ func (e *IncludeGetEndpoint) ResolvePath() (string, bool) {
 	return adapter.ResolvePath()
 }
 
-var includeGetScenarioByOperationID = map[string]includeGetScenario{}
+var includeGetScenarioByOperationID = map[string]includeGetScenario{
+	// A resolved lead time names only the rule that decided it, so no one customer can
+	// populate both includes: a location under a head office names its parent, and one
+	// under a head office that set nothing names its group. Both are seeded in
+	// 0014_e2e_extras.sql and are read-only.
+	"retrieve-customer-lead-time": {
+		pathValuesByInclude: map[string]map[string]string{
+			"parent_customer": {"id": "ac_01e2eltchild000001"},
+			"account_group":   {"id": "ac_01e2eltchild000004"},
+		},
+	},
+}
 
 // excludedIncludePaths lists path prefixes skipped by the includes coverage
 // test because the standard e2e API key can't exercise them (internal-admin-
@@ -436,17 +452,24 @@ func withIncludeQuery(base url.Values, include string) url.Values {
 	return out
 }
 
-func resolveGetScenario(ep IncludeGetEndpoint) (string, url.Values, bool) {
+// resolveGetScenario picks the row an endpoint's includes are exercised against. The include
+// key is passed because a resource whose includes are mutually exclusive needs a different row
+// for each one; pass an empty string to resolve the endpoint without naming an include.
+func resolveGetScenario(ep IncludeGetEndpoint, include string) (string, url.Values, bool) {
 	scenario, ok := includeGetScenarioByOperationID[ep.OperationID]
 	if !ok {
 		path, resolved := ep.ResolvePath()
 		return path, nil, resolved
 	}
-	if scenario.pathValues == nil {
+	pathValues := scenario.pathValues
+	if vals, ok := scenario.pathValuesByInclude[include]; ok {
+		pathValues = vals
+	}
+	if pathValues == nil {
 		path, resolved := ep.ResolvePath()
 		return path, cloneQuery(scenario.query), resolved
 	}
-	path, resolved := substituteIncludePath(ep.Path, ep.PathParams, scenario.pathValues)
+	path, resolved := substituteIncludePath(ep.Path, ep.PathParams, pathValues)
 	return path, cloneQuery(scenario.query), resolved
 }
 
@@ -553,7 +576,7 @@ func TestIncludes_GetFixtureCoverage(t *testing.T) {
 
 	var unresolved []string
 	for _, ep := range endpoints {
-		path, _, ok := resolveGetScenario(ep)
+		path, _, ok := resolveGetScenario(ep, "")
 		if !ok || path == "" {
 			unresolved = append(unresolved, fmt.Sprintf("%s %s", ep.OperationID, ep.Path))
 		}
@@ -595,7 +618,7 @@ func TestIncludes_ExpandableFieldsCollapseWithoutInclude(t *testing.T) {
 		t.Run(ep.OperationID, func(t *testing.T) {
 			t.Parallel()
 
-			path, query, ok := resolveGetScenario(ep)
+			path, query, ok := resolveGetScenario(ep, "")
 			require.True(t, ok, "resolveGetScenario(%s) operationId=%s", ep.Path, ep.OperationID)
 
 			status, body, err := apiClient.GetListRaw(path, query)

@@ -50,10 +50,14 @@ type QuoteSalesOrderCommitmentResponse struct {
 	LeadTimeDays *int32 `json:"lead_time_days"`
 	// Which rule produced the date.
 	LeadTimeSource *constants.LeadTimeSource `json:"lead_time_source"`
-	// Days the carrier needs to cover the lane. Null when the lane has never been quoted and the service level carries no default.
+	// Days the carrier needs to cover the lane. Null when the lane has never been quoted and the service level carries no default, or when no service level was supplied to quote one on.
 	TransitDays *int32 `json:"transit_days"`
 	// Where the transit estimate came from.
 	TransitSource *constants.TransitSource `json:"transit_source"`
+	// When freight leaving on the ship-by date would reach the customer: transit walked forward from it and landed on a day their dock receives. Null whenever `transit_days` is, since an arrival with no journey behind it would just be the ship date wearing a different name.
+	//
+	// Reported for every basis, including the ones that do not use transit to decide the ship-by date. An order committed on a lead time has the same journey ahead of it; it simply was not worked backwards from.
+	EstimatedDeliveryDate *time.Time `json:"estimated_delivery_date"`
 	// Days the receiving and shipping calendars pulled the date back, beyond what transit accounted for.
 	CalendarAdjustmentDays int32 `json:"calendar_adjustment_days"`
 	// The derivation in order, one entry per rule that moved the date.
@@ -80,6 +84,7 @@ var sampleQuoteSalesOrderCommitmentResponse = &QuoteSalesOrderCommitmentResponse
 	LeadTimeSource:         apiresource.SampleCommitmentLeadTimeSource(),
 	TransitDays:            apiresource.SampleCommitmentTransitDays(),
 	TransitSource:          apiresource.SampleCommitmentTransitSource(),
+	EstimatedDeliveryDate:  apiresource.SampleCommitmentEstimatedDeliveryDate(),
 	CalendarAdjustmentDays: 2,
 	Steps:                  apiresource.SampleCommitmentQuoteSteps(),
 }

@@ -524,10 +524,11 @@ func (h *gRPCHandler) GetCustomerLeadTime(ctx context.Context, req *pb.GetCustom
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 	return &pb.GetCustomerLeadTimeResponse{
-		CustomerId:     leadTime.CustomerAccountID,
-		Days:           safeconv.IntToInt32(leadTime.Days),
-		Source:         leadTime.SourceCode,
-		AccountGroupId: leadTime.AccountGroupID,
+		CustomerId:       leadTime.CustomerAccountID,
+		Days:             safeconv.IntToInt32(leadTime.Days),
+		Source:           leadTime.SourceCode,
+		AccountGroupId:   leadTime.AccountGroupID,
+		ParentCustomerId: leadTime.ParentCustomerAccountID,
 	}, nil
 }
 

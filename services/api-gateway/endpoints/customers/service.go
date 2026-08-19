@@ -882,8 +882,13 @@ func (m *customerSvcImpl) GetCustomerLeadTime(ctx context.Context, req *Retrieve
 		Days:     resp.Days,
 		Source:   constants.LeadTimeSource(resp.Source),
 	}
-	if resp.AccountGroupId != nil {
-		out.AccountGroup = apiresource.NewEntity(*resp.AccountGroupId, constants.ObjectTypeAccountGroup, nil, nil)
+	// The winning rule's id is loader-side metadata rather than a public field: the `account_group` and `parent_customer` includes resolve it into the nested resource, keyed by the customer the lead time was resolved for. Only one is ever set — whichever rule decided — so an include the source did not produce stays null.
+	meta := resourcekit.GetLoadMeta(ctx)
+	if resp.AccountGroupId != nil && *resp.AccountGroupId != "" {
+		meta.Set(constants.ObjectTypeCustomerLeadTime, resp.CustomerId, "account_group_id", *resp.AccountGroupId)
+	}
+	if resp.ParentCustomerId != nil && *resp.ParentCustomerId != "" {
+		meta.Set(constants.ObjectTypeCustomerLeadTime, resp.CustomerId, "parent_customer_id", *resp.ParentCustomerId)
 	}
 	return out, nil
 }

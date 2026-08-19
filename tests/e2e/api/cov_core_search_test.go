@@ -191,11 +191,23 @@ func TestCovCoreSearch_EntityFields_MessagingContact(t *testing.T) {
 	})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, nil)
-	require.Len(t, list.Data, 1, "q=Doe&types=messaging_contact should surface only John Doe")
+	require.NotEmpty(t, list.Data, "q=Doe&types=messaging_contact must surface the seeded contact")
 
-	row := parseJSON(list.Data[0])
+	// The seeded hit is picked out of the results rather than assumed to be the only one.
+	// Search is account-wide, and a test running alongside this one that adds a user to the
+	// acting account can put a second "Doe" in the directory — which says nothing about the
+	// field shape this test exists to pin.
+	var row map[string]any
+	for _, raw := range list.Data {
+		candidate := parseJSON(raw)
+		if jsonField(candidate, "id") == SeedAccountUserID {
+			row = candidate
+			break
+		}
+	}
+	require.NotNil(t, row, "the seeded contact must be among the hits: %v", list.Data)
+
 	assertIDFormat(t, jsonField(row, "id"), "acus")
-	assert.Equal(t, SeedAccountUserID, jsonField(row, "id"))
 	assertObjectField(t, row, "entity")
 	assert.Equal(t, "messaging_contact", jsonField(row, "type"))
 	assert.Equal(t, "John Doe", jsonField(row, "name"))

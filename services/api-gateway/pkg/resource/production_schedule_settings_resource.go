@@ -105,7 +105,7 @@ type ProductionScheduleSettings struct {
 
 	// Calendar days between an order being issued and it being due to ship.
 	//
-	// The last resort in the ship-by chain: a lead time set on the customer, or on the customer's account group, takes precedence. Zero means same-day shipping.
+	// The last resort in the ship-by chain: a lead time set on the customer, on its parent account, or on the customer's account group takes precedence. Zero means same-day shipping.
 	DefaultCustomerLeadTimeDays int32 `json:"default_customer_lead_time_days"`
 	// The account-wide operating calendars: the days the plant tenders freight, and the days a customer's dock accepts it.
 	//

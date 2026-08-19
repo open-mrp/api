@@ -364,14 +364,17 @@ type SalesOrderSaleLineForIssue struct {
 	QuantityUnitID string
 }
 
-// CustomerLeadTimeChain is what a buyer's ship-by commitment can be resolved from, both levels together.
+// CustomerLeadTimeChain is what a buyer's ship-by commitment can be resolved from, every level together.
 //
-// Both are returned rather than only the winner because the source is stamped onto the order beside the date: an order has to be able to say which rule produced its commitment, not just what the commitment was.
+// All of them are returned rather than only the winner because the source is stamped onto the order beside the date: an order has to be able to say which rule produced its commitment, not just what the commitment was.
 type CustomerLeadTimeChain struct {
-	AccountRelationID        string
-	AccountGroupID           *string
-	CustomerLeadTimeDays     *int
-	AccountGroupLeadTimeDays *int
+	AccountRelationID string
+	AccountGroupID    *string
+	// ParentCustomerAccountID is the buyer's parent account, set whether or not the parent carries a lead time.
+	ParentCustomerAccountID    *string
+	CustomerLeadTimeDays       *int
+	ParentCustomerLeadTimeDays *int
+	AccountGroupLeadTimeDays   *int
 }
 
 // ShipByCommitment is the resolved promise stamped onto an order at issue.
@@ -387,6 +390,7 @@ type ShipByCommitment struct {
 	ShipByCutoffAt *time.Time
 	// CalendarAdjustmentDays is how many days the receiving and shipping calendars pulled ShipByDate back beyond transit.
 	CalendarAdjustmentDays int
+	EstimatedDeliveryDate  *time.Time
 	// Steps is the ordered derivation, one entry per rule that touched the date. Computed rather than stored: it explains a commitment to whoever is looking at it now, where the stamped scalars are what the commitment itself is made of.
 	Steps []CommitmentStep
 }

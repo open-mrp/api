@@ -136,6 +136,10 @@ LIMIT 1;
 -- name: UpdateMachineDowntimeEvent :exec
 UPDATE machine_downtime_event
 SET
+    -- The machine, and with it the department and step the stoppage is charged to, so a mis-logged event can be moved rather than deleted and re-entered.
+    machine_id = sqlc.arg('machine_id'),
+    department_id = sqlc.narg('department_id'),
+    production_step_id = sqlc.narg('production_step_id'),
     reason_code = sqlc.arg('reason_code'),
     started_at = sqlc.arg('started_at'),
     ended_at = sqlc.narg('ended_at'),

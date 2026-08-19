@@ -146,6 +146,7 @@ func TestAnalyticsCustomerPricing_SummaryIsSelfConsistent(t *testing.T) {
 
 // A price far below its peers on the same product line and per-unit basis must be flagged. Two prices are created so the peer group has a median at all — a lone contracted price is its own median and can never be an outlier.
 func TestAnalyticsCustomerPricing_FlagsPriceFarBelowPeers(t *testing.T) {
+	lockPricingWrite(t)
 	createSeededAccountPrice(t, "500.00")
 	outlierID := createSeededAccountPrice(t, "0.01")
 
@@ -175,6 +176,7 @@ func TestAnalyticsCustomerPricing_FlagsPriceFarBelowPeers(t *testing.T) {
 
 // The response models flags as one enum rather than a pair of booleans, so the wire format must never carry the old boolean fields.
 func TestAnalyticsCustomerPricing_UsesEnumNotBooleans(t *testing.T) {
+	lockPricingWrite(t)
 	createSeededAccountPrice(t, "500.00")
 	outlierID := createSeededAccountPrice(t, "0.01")
 
@@ -194,6 +196,7 @@ func TestAnalyticsCustomerPricing_UsesEnumNotBooleans(t *testing.T) {
 
 // A price recorded against a parent account also prices its children's orders, so auditing customer by customer would miss them. Each reached customer gets its own finding, marked by where the price actually lives.
 func TestAnalyticsCustomerPricing_FansOutToChildAccounts(t *testing.T) {
+	lockPricingWrite(t)
 	createSeededAccountPrice(t, "500.00")
 	outlierID := createSeededAccountPrice(t, "0.01")
 
@@ -231,6 +234,7 @@ func TestAnalyticsCustomerPricing_FansOutToChildAccounts(t *testing.T) {
 
 // Relations are ids on the wire only when asked for; unexpanded they are null, and the customer never leaks as an inlined name.
 func TestAnalyticsCustomerPricing_RelationsAreNullWithoutInclude(t *testing.T) {
+	lockPricingWrite(t)
 	createSeededAccountPrice(t, "500.00")
 	outlierID := createSeededAccountPrice(t, "0.01")
 
@@ -247,6 +251,7 @@ func TestAnalyticsCustomerPricing_RelationsAreNullWithoutInclude(t *testing.T) {
 }
 
 func TestAnalyticsCustomerPricing_ExpandsCustomerAndProductLine(t *testing.T) {
+	lockPricingWrite(t)
 	createSeededAccountPrice(t, "500.00")
 	outlierID := createSeededAccountPrice(t, "0.01")
 

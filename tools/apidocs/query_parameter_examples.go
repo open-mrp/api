@@ -169,6 +169,11 @@ func sampleQueryExampleForOpenAPIName(openAPIParam string) any {
 		return "shipped"
 	case "recipient_account_id":
 		return apiresource.SampleAccountID
+	case "week_index":
+		// Mid-horizon rather than zero: a zero example reads as "unset" in a filter and would not show that the parameter narrows anything.
+		return 2
+	case "item_id":
+		return apiresource.SampleItemID
 	case "supplier_id":
 		return apiresource.SampleSupplierID
 	case "assignee_resource_id":

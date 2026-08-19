@@ -147,15 +147,40 @@ type ReleaseScheduleWeekParams struct {
 	WeekIndex            int32
 	ResponsibleUserID    string
 	ScanningStationID    *string
+	// SkipCarryForward issues the whole week as new tickets, leaving an earlier week's unworked doffs where they are. Off by default: reprinting a ticket the floor is already holding is the failure this exists to prevent, and a planner has to ask for it deliberately.
+	SkipCarryForward bool
 }
 
-// ReleaseBatch is one batch a release creates: a single lot off one campaign.
+// ReleaseBatch is one batch a release puts into the run: a single lot off one campaign.
 type ReleaseBatch struct {
 	ItemID   string
 	SKU      string
 	Quantity float64
-	// BatchID is empty on a preview, where nothing has been written yet.
+	// BatchID is empty on a preview of a batch that would be created; a carried-forward batch already exists and names itself even in a preview.
 	BatchID string
+	// CarriedForwardFrom is the number of the run this ticket came off when the batch already existed. Empty means the release creates it new.
+	//
+	// This is what the confirmation is really telling a planner: these doffs are already printed and on the floor, so nobody needs to print them again.
+	CarriedForwardFrom string
+}
+
+// CarryForwardBatch is an unworked ticket an earlier week issued, and a candidate to be moved into the run being released.
+type CarryForwardBatch struct {
+	BatchID             string
+	ProductionRunID     string
+	ProductionRunNumber string
+	ProductionStepID    *string
+	Quantity            float64
+	UnitID              string
+}
+
+// ListCarryForwardBatchesParams asks for one item's unworked tickets from weeks that have already begun.
+type ListCarryForwardBatchesParams struct {
+	AccountID string
+	ItemID    string
+	// WeekStartDate is the week being released. Only runs from weeks strictly before it are eligible: a week still ahead has not been missed, it simply has not been worked.
+	WeekStartDate time.Time
+	Limit         int32
 }
 
 // ReleasedScheduleLine is one campaign and the lots it broke into.
@@ -168,8 +193,10 @@ type ReleasedScheduleLine struct {
 	PlannedQuantity          float64
 	LotUnits                 float64
 	// Unit is what the quantity and the lot are counted in. "6 × 60" on a release confirmation is not an instruction until it says 6 × 60 of what.
-	Unit    string
-	Batches []ReleaseBatch
+	Unit string
+	// CarriedForwardQuantity is how much of PlannedQuantity is covered by tickets an earlier week already issued.
+	CarriedForwardQuantity float64
+	Batches                []ReleaseBatch
 }
 
 // ReleaseScheduleWeekResult is the run a release produced, and what went into it.
@@ -179,21 +206,25 @@ type ReleaseScheduleWeekResult struct {
 	WeekStartDate     time.Time
 	ReleasedLineCount int32
 	BatchCount        int32
-	TotalQuantity     float64
-	Lines             []ReleasedScheduleLine
+	// CarriedForwardBatchCount is how many of BatchCount were moved off an earlier run rather than created. Tickets for these are already printed.
+	CarriedForwardBatchCount int32
+	TotalQuantity            float64
+	Lines                    []ReleasedScheduleLine
 }
 
 // ReleaseScheduleWeekPreview is what a release would do, with nothing written.
 //
 // A preview is not just a courtesy here: a release creates a numbered run and dozens of batch rows, and undoing that by hand is real work. IsReleasable is false when the week is empty or already released, and BlockedReason says which.
 type ReleaseScheduleWeekPreview struct {
-	WeekIndex               int32
-	WeekStartDate           time.Time
-	LineCount               int32
-	BatchCount              int32
-	TotalQuantity           float64
-	Lines                   []ReleasedScheduleLine
-	IsReleasable            bool
-	BlockedReason           *string
-	ExistingProductionRunID *string
+	WeekIndex     int32
+	WeekStartDate time.Time
+	LineCount     int32
+	BatchCount    int32
+	// CarriedForwardBatchCount is how many of BatchCount would be moved off an earlier run rather than created new.
+	CarriedForwardBatchCount int32
+	TotalQuantity            float64
+	Lines                    []ReleasedScheduleLine
+	IsReleasable             bool
+	BlockedReason            *string
+	ExistingProductionRunID  *string
 }

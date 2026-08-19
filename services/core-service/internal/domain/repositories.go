@@ -553,6 +553,8 @@ type BatchRepo interface {
 	Unscan(ctx context.Context, accountID, batchID string) (*BaseBatch, *apierror.APIError)
 	// Reopen clears a batch's closed_at.
 	Reopen(ctx context.Context, accountID, batchID string) *apierror.APIError
+	// ReassignMachine points a batch at one machine and drops any other machine link it had, for a ticket moved to a campaign running somewhere else.
+	ReassignMachine(ctx context.Context, accountID, batchID, machineID string) *apierror.APIError
 	// ReopenIfNotFullyUsed reopens a batch that is no longer fully consumed — the mirror of CloseIfFullyUsed, run after a downstream batch is deleted and the quantity it was holding comes back.
 	ReopenIfNotFullyUsed(ctx context.Context, accountID string, batch BaseBatch, producedUnit LightUnit, productionStepID string) *apierror.APIError
 }
@@ -647,6 +649,8 @@ type ProductLineRepo interface {
 	GetProductLineLotForItem(ctx context.Context, accountID, itemID string) (*ProductLineLotDefault, *apierror.APIError)
 	// GetDownstreamProductLineLot returns the convention an intermediate item inherits from what it becomes, highest-demand line first.
 	GetDownstreamProductLineLot(ctx context.Context, accountID, itemID string) (*ProductLineLotDefault, *apierror.APIError)
+	// GetFlowProductLineLot walks the production flow from an intermediate item to the first thing it becomes that has a lot convention. It answers for an item that has never been produced, which the demand-weighted lookup cannot.
+	GetFlowProductLineLot(ctx context.Context, accountID, itemID string, maxDepth int) (*ProductLineLotDefault, *apierror.APIError)
 }
 
 type ItemCategoryRepo interface {
@@ -911,6 +915,10 @@ type ProductionScheduleRepo interface {
 	// ReplaceFinishedPolicies rewrites a version's finished-goods targets — the per-SKU decomposition of the pooled greige buffers.
 	ReplaceFinishedPolicies(ctx context.Context, accountID, scheduleID string, policies []*ProductionScheduleFinishedPolicy) *apierror.APIError
 	ListFinishedPolicies(ctx context.Context, accountID, scheduleID string) ([]*ProductionScheduleFinishedPolicy, *apierror.APIError)
+	// ReplaceFinishingLines rewrites a version's stage-two plan. Wholesale rather than patched: the finished mix is a pure function of the knit plan, the order book and each SKU's position, so a partial update could leave a week holding lines for a campaign the re-solve no longer produces.
+	ReplaceFinishingLines(ctx context.Context, accountID, scheduleID string, lines []*ProductionScheduleFinishingLine) *apierror.APIError
+	ListFinishingLines(ctx context.Context, params ListProductionScheduleFinishingLinesParams) ([]*ProductionScheduleFinishingLine, *apierror.APIError)
+	DeleteFinishingLines(ctx context.Context, accountID, scheduleID string) *apierror.APIError
 	// DeleteItemPolicies clears a version's policy snapshot. A regenerate re-solves the same version, and the snapshot describes one solve rather than an accumulation.
 	DeleteItemPolicies(ctx context.Context, accountID, scheduleID string) *apierror.APIError
 	Get(ctx context.Context, params GetProductionScheduleParams) (*ProductionSchedule, *apierror.APIError)
@@ -943,6 +951,8 @@ type ProductionScheduleRepo interface {
 	UnreleaseLinesForRun(ctx context.Context, accountID, productionRunID string) *apierror.APIError
 	// MarkLineReleased links a campaign to the run now carrying it. It is a no-op on a line that is already released, so a racing double release cannot re-point work.
 	MarkLineReleased(ctx context.Context, accountID, lineID, productionRunID string) *apierror.APIError
+	// ListCarryForwardBatches returns an item's unworked tickets from weeks that have already begun, oldest first, so a release can move them rather than print their replacements.
+	ListCarryForwardBatches(ctx context.Context, params ListCarryForwardBatchesParams) ([]*CarryForwardBatch, *apierror.APIError)
 
 	// Generation cadence.
 	ListGenerationCadences(ctx context.Context) ([]GenerationCadence, *apierror.APIError)
@@ -1018,6 +1028,10 @@ type ProductionScheduleInputRepo interface {
 
 	// GetConstraintBatchMeasurements returns one row per historical batch produced on the given machines inside the window.
 	GetConstraintBatchMeasurements(ctx context.Context, params GetConstraintBatchMeasurementsParams) ([]ConstraintBatchRow, *apierror.APIError)
+	// GetFinishingMachines returns every machine outside the constraint department — the second stage, selected as the complement of the constraint rather than as a list of its own.
+	GetFinishingMachines(ctx context.Context, accountID, constraintDepartmentID string) ([]scheduling.Machine, *apierror.APIError)
+	// GetFinishingBatchMeasurements returns the second stage's production history for the given finished goods, which is what its run rates are measured from.
+	GetFinishingBatchMeasurements(ctx context.Context, params GetFinishingBatchMeasurementsParams) ([]FinishingBatchRow, *apierror.APIError)
 
 	// GetStepConsumptionItems returns the input items each production step consumes.
 	GetStepConsumptionItems(ctx context.Context, stepIDs []string) ([]StepConsumptionRow, *apierror.APIError)

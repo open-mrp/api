@@ -704,6 +704,7 @@ message QuoteSalesOrderCommitmentResponse {
   optional string transit_source_code = 6;
   int32 calendar_adjustment_days = 7;
   repeated CommitmentQuoteStep steps = 8;
+  optional google.protobuf.Timestamp estimated_delivery_date = 9;
 }
 
 message CreateSalesOrderProductionRunRequest {

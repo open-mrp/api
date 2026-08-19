@@ -8,12 +8,13 @@ import (
 
 // Lead-time sources, aliased from the shared enum so the engine cannot drift from the API contract.
 const (
-	LeadTimeSourceCustomer      = string(constants.LeadTimeSourceCustomer)
-	LeadTimeSourceAccountGroup  = string(constants.LeadTimeSourceAccountGroup)
-	LeadTimeSourceAccount       = string(constants.LeadTimeSourceAccount)
-	LeadTimeSourceManual        = string(constants.LeadTimeSourceManual)
-	LeadTimeSourceOrderLeadTime = string(constants.LeadTimeSourceOrderLeadTime)
-	LeadTimeSourceOrderShipBy   = string(constants.LeadTimeSourceOrderShipBy)
+	LeadTimeSourceCustomer       = string(constants.LeadTimeSourceCustomer)
+	LeadTimeSourceParentCustomer = string(constants.LeadTimeSourceParentCustomer)
+	LeadTimeSourceAccountGroup   = string(constants.LeadTimeSourceAccountGroup)
+	LeadTimeSourceAccount        = string(constants.LeadTimeSourceAccount)
+	LeadTimeSourceManual         = string(constants.LeadTimeSourceManual)
+	LeadTimeSourceOrderLeadTime  = string(constants.LeadTimeSourceOrderLeadTime)
+	LeadTimeSourceOrderShipBy    = string(constants.LeadTimeSourceOrderShipBy)
 )
 
 // Commitment step codes, naming which rule moved a date. Aliased for the same reason as the sources.
@@ -115,6 +116,8 @@ func DefaultCalendars() Calendars {
 type LeadTimeInput struct {
 	// CustomerLeadTimeDays is the customer's own commitment, from account_relation.
 	CustomerLeadTimeDays *int
+	// ParentCustomerLeadTimeDays is the parent account's commitment, inherited by every child that has not set its own. One level: the parent's own parent is not consulted, matching how a child inherits its parent's prices.
+	ParentCustomerLeadTimeDays *int
 	// AccountGroupLeadTimeDays is inherited by every customer in the group that has not set its own.
 	AccountGroupLeadTimeDays *int
 	// AccountLeadTimeDays is the account-wide default, the last fallback.
@@ -123,7 +126,9 @@ type LeadTimeInput struct {
 
 // ResolveLeadTime picks the number of days and names the rule that produced it.
 //
-// The chain, most specific first: the customer, then the customer's account group, then the account default. Returns false only when nothing in the chain holds a usable value, which is a misconfiguration rather than a normal state — the account default is not nullable.
+// The chain, most specific first: the customer, then its parent account, then the customer's account group, then the account default. Returns false only when nothing in the chain holds a usable value, which is a misconfiguration rather than a normal state — the account default is not nullable.
+//
+// The parent outranks the group because it is the narrower statement: a group is a segment somebody sorted customers into, while a parent is the head office that negotiated the terms every one of its locations buys on. Putting the group first would mean a lead time set on a head office silently failed to reach exactly the grouped locations it was set for.
 //
 // A negative value is skipped rather than honoured. It can only arrive from a hand-written database row (the write path rejects it), and a commitment that falls before the order was placed is worse than falling through to the next rule.
 func ResolveLeadTime(in LeadTimeInput) (days int, source string, ok bool) {
@@ -132,6 +137,7 @@ func ResolveLeadTime(in LeadTimeInput) (days int, source string, ok bool) {
 		source string
 	}{
 		{in.CustomerLeadTimeDays, LeadTimeSourceCustomer},
+		{in.ParentCustomerLeadTimeDays, LeadTimeSourceParentCustomer},
 		{in.AccountGroupLeadTimeDays, LeadTimeSourceAccountGroup},
 		{in.AccountLeadTimeDays, LeadTimeSourceAccount},
 	} {
@@ -203,6 +209,21 @@ func resolvePromisedCommitment(issueDate, promisedAt time.Time, transit *Transit
 	}
 
 	return finishCommitment(issueDate, shipBy, LeadTimeSourceManual, transit, cals, steps)
+}
+
+func EstimateArrival(shipBy time.Time, transit *Transit, cals Calendars) (time.Time, bool) {
+	if transit == nil {
+		return time.Time{}, false
+	}
+	arrival, ok := cals.Carrier.AddDays(shipBy, transit.Days)
+	if !ok {
+		return time.Time{}, false
+	}
+	arrival, _, ok = cals.Receive.SnapForward(arrival)
+	if !ok {
+		return time.Time{}, false
+	}
+	return arrival, true
 }
 
 // finishCommitment snaps a candidate ship date onto a day the plant ships, stamps the pickup cutoff, and assembles the record.

@@ -5,16 +5,26 @@ import (
 	"time"
 )
 
-func TestResolveLeadTime_PrefersCustomerOverGroupOverAccount(t *testing.T) {
+func TestResolveLeadTime_PrefersCustomerOverParentOverGroupOverAccount(t *testing.T) {
 	t.Parallel()
 
 	days, source, ok := ResolveLeadTime(LeadTimeInput{
-		CustomerLeadTimeDays:     new(14),
-		AccountGroupLeadTimeDays: new(21),
-		AccountLeadTimeDays:      new(30),
+		CustomerLeadTimeDays:       new(14),
+		ParentCustomerLeadTimeDays: new(18),
+		AccountGroupLeadTimeDays:   new(21),
+		AccountLeadTimeDays:        new(30),
 	})
 	if !ok || days != 14 || source != LeadTimeSourceCustomer {
 		t.Fatalf("got (%d, %q, %v), want (14, customer, true)", days, source, ok)
+	}
+
+	days, source, ok = ResolveLeadTime(LeadTimeInput{
+		ParentCustomerLeadTimeDays: new(18),
+		AccountGroupLeadTimeDays:   new(21),
+		AccountLeadTimeDays:        new(30),
+	})
+	if !ok || days != 18 || source != LeadTimeSourceParentCustomer {
+		t.Fatalf("got (%d, %q, %v), want (18, parent_customer, true)", days, source, ok)
 	}
 
 	days, source, ok = ResolveLeadTime(LeadTimeInput{
@@ -28,6 +38,20 @@ func TestResolveLeadTime_PrefersCustomerOverGroupOverAccount(t *testing.T) {
 	days, source, ok = ResolveLeadTime(LeadTimeInput{AccountLeadTimeDays: new(30)})
 	if !ok || days != 30 || source != LeadTimeSourceAccount {
 		t.Fatalf("got (%d, %q, %v), want (30, account, true)", days, source, ok)
+	}
+}
+
+// A head office that ships same-day commits its locations to same-day. Zero has to survive the parent rung for the same reason it survives the customer's own: it is a promise, not an absence.
+func TestResolveLeadTime_ParentZeroIsAnAnswer(t *testing.T) {
+	t.Parallel()
+
+	days, source, ok := ResolveLeadTime(LeadTimeInput{
+		ParentCustomerLeadTimeDays: new(0),
+		AccountGroupLeadTimeDays:   new(21),
+		AccountLeadTimeDays:        new(30),
+	})
+	if !ok || days != 0 || source != LeadTimeSourceParentCustomer {
+		t.Fatalf("got (%d, %q, %v), want (0, parent_customer, true)", days, source, ok)
 	}
 }
 

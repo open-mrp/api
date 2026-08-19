@@ -561,6 +561,10 @@ func (m *salesOrderSvcImpl) QuoteSalesOrderCommitment(ctx context.Context, req *
 		source := constants.TransitSource(*resp.TransitSourceCode)
 		out.TransitSource = &source
 	}
+	if resp.EstimatedDeliveryDate != nil {
+		t := grpcutil.TimestampToTime(resp.EstimatedDeliveryDate)
+		out.EstimatedDeliveryDate = &t
+	}
 	for _, step := range resp.Steps {
 		out.Steps = append(out.Steps, apiresource.CommitmentQuoteStep{
 			Code:      constants.CommitmentStep(step.Code),

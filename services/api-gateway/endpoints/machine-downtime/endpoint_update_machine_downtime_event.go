@@ -7,6 +7,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
+	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
@@ -18,6 +19,10 @@ import (
 type UpdateMachineDowntimeEventRequest struct {
 	// ID of the downtime event to update.
 	MachineDowntimeEventID string `path:"id" validate:"required"`
+	// ID of the machine that stopped.
+	//
+	// Moving an event to another machine re-resolves the department it is charged to, so past availability changes for both rooms. Rejected when the destination machine already has an open stoppage and this one is open too.
+	MachineID field.Optional[string] `json:"machine_id,omitzero"`
 	// Why the machine stopped.
 	//
 	// Reclassifying a stoppage moves it to the OEE term the new reason charges, so past availability figures change with it.
@@ -30,6 +35,10 @@ type UpdateMachineDowntimeEventRequest struct {
 	//
 	// Setting it closes the event and records the duration. Send null to reopen an event that was closed by mistake, which is rejected if the machine has since had another stoppage logged that is still open.
 	EndedAt field.Clearable[time.Time] `json:"ended_at,omitzero"`
+	// How long the machine was down, counted in a unit of time.
+	//
+	// Restates the end as a length of time from the start, so it is applied against `started_at` as this request leaves it. Send this or `ended_at`, never both. Send null to reopen the event.
+	Duration field.Clearable[apirequest.QuantityInput] `json:"duration,omitzero"`
 	// ID of the item the machine was running when it stopped.
 	//
 	// Send null to detach the item.
@@ -59,7 +68,7 @@ func (*UpdateMachineDowntimeEventRequest) SchemaExample() any {
 
 // Closes or corrects a machine downtime event.
 //
-// Only the fields provided in the request are changed. Setting `ended_at` closes the event and calculates its duration; sending it as null reopens an event closed by mistake, which is rejected when the machine already has another open stoppage. The machine an event belongs to cannot be changed.
+// Only the fields provided in the request are changed. Setting `ended_at` — or a `duration`, which says the same thing as a length of time from the start — closes the event and calculates how long it lasted; sending either as null reopens an event closed by mistake, which is rejected when the machine already has another open stoppage. Moving the event to another machine re-resolves the department the stoppage is charged to.
 type UpdateMachineDowntimeEventEndpoint struct{}
 
 func (e *UpdateMachineDowntimeEventEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateMachineDowntimeEventRequest, *apiresource.MachineDowntimeEvent] {

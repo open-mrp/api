@@ -666,12 +666,17 @@ func (r *salesOrderRepoImpl) GetCustomerLeadTimeChain(ctx context.Context, accou
 	}
 
 	chain := &domain.CustomerLeadTimeChain{
-		AccountRelationID: row.AccountRelationID,
-		AccountGroupID:    nullStringToPtr(row.AccountGroupID),
+		AccountRelationID:       row.AccountRelationID,
+		AccountGroupID:          nullStringToPtr(row.AccountGroupID),
+		ParentCustomerAccountID: nullStringToPtr(row.ParentCustomerAccountID),
 	}
 	if row.CustomerLeadTimeDays.Valid {
 		days := int(row.CustomerLeadTimeDays.Int32)
 		chain.CustomerLeadTimeDays = &days
+	}
+	if row.ParentCustomerLeadTimeDays.Valid {
+		days := int(row.ParentCustomerLeadTimeDays.Int32)
+		chain.ParentCustomerLeadTimeDays = &days
 	}
 	if row.AccountGroupLeadTimeDays.Valid {
 		days := int(row.AccountGroupLeadTimeDays.Int32)

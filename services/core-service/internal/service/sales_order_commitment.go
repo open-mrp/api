@@ -10,10 +10,14 @@ import (
 	"github.com/augno/api/shared/tracing"
 )
 
-// resolveShipByCommitment works out when an order is due to ship, from the customer, its account group, or the account default, and says which of the three decided.
+type commitmentOptions struct {
+	EstimateArrival bool
+}
+
+// resolveShipByCommitment works out when an order is due to ship, from the customer, its parent account, its account group, or the account default, and says which of the four decided.
 //
 // The engine is pure and lives in internal/scheduling beside the rest of the planning maths; this only gathers its inputs. Both this and a make-to-order plan have to agree on what a promise means, and two implementations of one chain would eventually disagree.
-func (s *salesOrderSvcImpl) resolveShipByCommitment(ctx context.Context, accountID string, order *domain.SalesOrder, issuedAt time.Time) (*domain.ShipByCommitment, *apierror.APIError) {
+func (s *salesOrderSvcImpl) resolveShipByCommitment(ctx context.Context, accountID string, order *domain.SalesOrder, issuedAt time.Time, opts commitmentOptions) (*domain.ShipByCommitment, *apierror.APIError) {
 	ctx, span := salesOrderSvcTracer.Start(ctx, "service.sales_order.resolve_ship_by_commitment")
 	defer span.End()
 
@@ -26,6 +30,7 @@ func (s *salesOrderSvcImpl) resolveShipByCommitment(ctx context.Context, account
 	}
 	if chain != nil {
 		in.CustomerLeadTimeDays = chain.CustomerLeadTimeDays
+		in.ParentCustomerLeadTimeDays = chain.ParentCustomerLeadTimeDays
 		in.AccountGroupLeadTimeDays = chain.AccountGroupLeadTimeDays
 	}
 
@@ -41,9 +46,9 @@ func (s *salesOrderSvcImpl) resolveShipByCommitment(ctx context.Context, account
 
 	basis := salesOrderCommitmentBasis(order)
 
-	// The ship-to address is read once, and only for a promised delivery date — the only basis transit applies to. Every other basis skips both lookups entirely, which matters because this runs inside the issue transaction.
 	var transit *scheduling.Transit
-	if basis.PromisedAt != nil {
+	switch {
+	case basis.PromisedAt != nil:
 		dest, apiErr := s.resolveOrderAddress(ctx, s.repos.NewAddressRepo(), accountID, order.BuyerAccountID, order.ShippingAddressID)
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
@@ -51,6 +56,13 @@ func (s *salesOrderSvcImpl) resolveShipByCommitment(ctx context.Context, account
 		transit, apiErr = s.resolveOrderTransit(ctx, accountID, order, dest)
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
+		}
+
+	case opts.EstimateArrival && order.ShippingAddressID != "" && order.ServiceLevelID != nil && *order.ServiceLevelID != "":
+		if dest, apiErr := s.resolveOrderAddress(ctx, s.repos.NewAddressRepo(), accountID, order.BuyerAccountID, order.ShippingAddressID); apiErr == nil {
+			if resolved, apiErr := s.resolveOrderTransit(ctx, accountID, order, dest); apiErr == nil {
+				transit = resolved
+			}
 		}
 	}
 
@@ -66,7 +78,7 @@ func (s *salesOrderSvcImpl) resolveShipByCommitment(ctx context.Context, account
 		return nil, nil
 	}
 
-	return &domain.ShipByCommitment{
+	out := &domain.ShipByCommitment{
 		ShipByDate:             commitment.ShipByDate,
 		LeadTimeDays:           commitment.LeadTimeDays,
 		SourceCode:             commitment.Source,
@@ -75,7 +87,18 @@ func (s *salesOrderSvcImpl) resolveShipByCommitment(ctx context.Context, account
 		ShipByCutoffAt:         commitment.ShipByCutoffAt,
 		CalendarAdjustmentDays: commitment.CalendarAdjustmentDays,
 		Steps:                  commitmentSteps(commitment.Steps),
-	}, nil
+	}
+
+	if opts.EstimateArrival && transit != nil {
+		days := transit.Days
+		out.TransitDays = &days
+		out.TransitSourceCode = transit.Source
+		if arrival, ok := scheduling.EstimateArrival(commitment.ShipByDate, transit, cals); ok {
+			out.EstimatedDeliveryDate = &arrival
+		}
+	}
+
+	return out, nil
 }
 
 // commitmentSteps carries the engine's derivation across the domain boundary, so a caller can explain a date without importing the planning engine.
@@ -103,7 +126,7 @@ func salesOrderCommitmentBasis(order *domain.SalesOrder) scheduling.CommitmentBa
 
 // stampShipByCommitment resolves and writes an order's commitment. Called on issue, and again whenever a promised date moves on an order that is already issued.
 func (s *salesOrderSvcImpl) stampShipByCommitment(ctx context.Context, accountID string, order *domain.SalesOrder, issuedAt time.Time) *apierror.APIError {
-	commitment, apiErr := s.resolveShipByCommitment(ctx, accountID, order, issuedAt)
+	commitment, apiErr := s.resolveShipByCommitment(ctx, accountID, order, issuedAt, commitmentOptions{})
 	if apiErr != nil {
 		return apiErr
 	}

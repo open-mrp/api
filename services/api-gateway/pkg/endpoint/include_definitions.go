@@ -240,6 +240,14 @@ func init() {
 	})
 
 	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeCustomerLeadTime,
+		Fields: []IncludeFieldDef{
+			{Key: "account_group", ObjectType: constants.ObjectTypeAccountGroup},
+			{Key: "parent_customer", ObjectType: constants.ObjectTypeCustomer},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
 		ObjectType: constants.ObjectTypeInventoryItem,
 		Fields: []IncludeFieldDef{
 			{Key: "quantity", ObjectType: constants.ObjectTypeQuantity},

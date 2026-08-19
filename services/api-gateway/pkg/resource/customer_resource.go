@@ -133,7 +133,7 @@ type CustomerDefaults struct {
 	SalesRep *AccountUser `json:"sales_rep" expandable:"true"`
 	// Calendar days between an order being issued and it being due to ship.
 	//
-	// Sets each order's `ship_by_date` when it is issued. With none set here the customer inherits its account group's lead time, then the account default.
+	// Sets each order's `ship_by_date` when it is issued. With none set here the customer inherits its parent account's lead time, then its account group's, then the account default.
 	LeadTimeDays *int32 `json:"lead_time_days"`
 	// The operating calendar naming the days this customer's dock accepts freight.
 	//
@@ -154,6 +154,7 @@ type CustomerLeadTime struct {
 	// Which rule in the chain produced this lead time.
 	//
 	// - `customer`: a lead time set on the customer itself.
+	// - `parent_customer`: inherited from the customer's parent account.
 	// - `account_group`: inherited from the customer's account group.
 	// - `account`: the account-wide fallback.
 	//
@@ -162,7 +163,11 @@ type CustomerLeadTime struct {
 	// The account group the lead time was inherited from.
 	//
 	// Present only when `source` is `account_group`. A customer that belongs to a group but sets its own lead time inherited nothing.
-	AccountGroup *Entity `json:"account_group"`
+	AccountGroup *AccountGroup `json:"account_group" expandable:"true"`
+	// The parent customer the lead time was inherited from.
+	//
+	// Present only when `source` is `parent_customer`. A customer that has a parent but sets its own lead time inherited nothing.
+	ParentCustomer *Customer `json:"parent_customer" expandable:"true"`
 }
 
 var SampleCustomerLeadTime = &CustomerLeadTime{

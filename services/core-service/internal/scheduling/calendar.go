@@ -101,6 +101,30 @@ func (c Calendar) SnapBack(d time.Time) (snapped time.Time, moved int, ok bool) 
 	return time.Time{}, 0, false
 }
 
+func (c Calendar) SnapForward(d time.Time) (snapped time.Time, moved int, ok bool) {
+	day := dateOnlyUTC(d)
+	for walked := range snapBackLimit {
+		if c.IsOpen(day) {
+			return day, walked, true
+		}
+		day = day.AddDate(0, 0, 1)
+	}
+	return time.Time{}, 0, false
+}
+
+func (c Calendar) AddDays(from time.Time, n int) (time.Time, bool) {
+	day := dateOnlyUTC(from)
+	for range n {
+		day = day.AddDate(0, 0, 1)
+		snappedDay, _, ok := c.SnapForward(day)
+		if !ok {
+			return time.Time{}, false
+		}
+		day = snappedDay
+	}
+	return day, true
+}
+
 // SubtractDays walks back n open days from a date.
 //
 // Carriers quote transit in the days they actually move freight: a service quoted at three days and handed over on a Thursday delivers the following Tuesday, not Sunday. Counting calendar days instead would put every ship-by date up to two days late in exactly the cases that matter, since a week has more weekday-crossing lanes than not — and the same holds for a holiday the carrier's network is down.

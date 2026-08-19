@@ -148,6 +148,85 @@ func (q *Queries) CreateProductionScheduleFinishedPolicy(ctx context.Context, ar
 	return err
 }
 
+const createProductionScheduleFinishingLine = `-- name: CreateProductionScheduleFinishingLine :exec
+INSERT INTO production_schedule_finishing_line (
+    id, account_id, production_schedule_id,
+    week_index, week_start_date,
+    item_id, sku, greige_item_id, greige_sku,
+    department_id, production_step_id,
+    planned_quantity, planned_unit_id, planned_lots, planned_lot_units, planned_run_hours,
+    greige_consumed, firm_units,
+    projected_on_hand_before, projected_on_hand_after,
+    status_code, source_code, is_frozen,
+    created_at, updated_at
+) VALUES (
+    ?, ?, ?,
+    ?, ?,
+    ?, ?, ?, ?,
+    ?, ?,
+    ?, ?, ?, ?, ?,
+    ?, ?,
+    ?, ?,
+    ?, ?, ?,
+    NOW(3), NOW(3)
+)
+`
+
+type CreateProductionScheduleFinishingLineParams struct {
+	ID                    string
+	AccountID             string
+	ProductionScheduleID  string
+	WeekIndex             int32
+	WeekStartDate         time.Time
+	ItemID                string
+	Sku                   string
+	GreigeItemID          string
+	GreigeSku             string
+	DepartmentID          sql.NullString
+	ProductionStepID      sql.NullString
+	PlannedQuantity       string
+	PlannedUnitID         sql.NullString
+	PlannedLots           int32
+	PlannedLotUnits       string
+	PlannedRunHours       string
+	GreigeConsumed        string
+	FirmUnits             string
+	ProjectedOnHandBefore string
+	ProjectedOnHandAfter  string
+	StatusCode            string
+	SourceCode            string
+	IsFrozen              bool
+}
+
+func (q *Queries) CreateProductionScheduleFinishingLine(ctx context.Context, arg CreateProductionScheduleFinishingLineParams) error {
+	_, err := q.db.ExecContext(ctx, createProductionScheduleFinishingLine,
+		arg.ID,
+		arg.AccountID,
+		arg.ProductionScheduleID,
+		arg.WeekIndex,
+		arg.WeekStartDate,
+		arg.ItemID,
+		arg.Sku,
+		arg.GreigeItemID,
+		arg.GreigeSku,
+		arg.DepartmentID,
+		arg.ProductionStepID,
+		arg.PlannedQuantity,
+		arg.PlannedUnitID,
+		arg.PlannedLots,
+		arg.PlannedLotUnits,
+		arg.PlannedRunHours,
+		arg.GreigeConsumed,
+		arg.FirmUnits,
+		arg.ProjectedOnHandBefore,
+		arg.ProjectedOnHandAfter,
+		arg.StatusCode,
+		arg.SourceCode,
+		arg.IsFrozen,
+	)
+	return err
+}
+
 const createProductionScheduleItemPolicy = `-- name: CreateProductionScheduleItemPolicy :exec
 INSERT INTO production_schedule_item_policy (
     id, account_id, production_schedule_id, item_id, sku,
@@ -404,6 +483,25 @@ type DeleteProductionScheduleFinishedPoliciesParams struct {
 // Finished-goods policy: the per-SKU decomposition of the pooled greige echelon.
 func (q *Queries) DeleteProductionScheduleFinishedPolicies(ctx context.Context, arg DeleteProductionScheduleFinishedPoliciesParams) error {
 	_, err := q.db.ExecContext(ctx, deleteProductionScheduleFinishedPolicies, arg.AccountID, arg.ProductionScheduleID)
+	return err
+}
+
+const deleteProductionScheduleFinishingLines = `-- name: DeleteProductionScheduleFinishingLines :exec
+
+DELETE FROM production_schedule_finishing_line
+WHERE account_id = ? AND production_schedule_id = ?
+`
+
+type DeleteProductionScheduleFinishingLinesParams struct {
+	AccountID            string
+	ProductionScheduleID string
+}
+
+// The finishing plan: stage two, which decides how many of which finished good to make from the knitted parts.
+//
+// Written wholesale on every solve like the rest of the plan, never patched. The mix is a pure function of the knit plan, the order book and each SKU's position, so a partial update could leave a week holding lines for a campaign the re-solve no longer produces.
+func (q *Queries) DeleteProductionScheduleFinishingLines(ctx context.Context, arg DeleteProductionScheduleFinishingLinesParams) error {
+	_, err := q.db.ExecContext(ctx, deleteProductionScheduleFinishingLines, arg.AccountID, arg.ProductionScheduleID)
 	return err
 }
 
@@ -673,6 +771,136 @@ func (q *Queries) ListProductionScheduleFinishedPolicies(ctx context.Context, ar
 			&i.ReorderPoint,
 			&i.OnHand,
 			&i.WeeksOfCover,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listProductionScheduleFinishingLines = `-- name: ListProductionScheduleFinishingLines :many
+SELECT
+    f.id,
+    f.production_schedule_id,
+    f.week_index,
+    f.week_start_date,
+    f.item_id,
+    f.sku,
+    f.greige_item_id,
+    f.greige_sku,
+    f.department_id,
+    f.production_step_id,
+    f.planned_quantity,
+    f.planned_unit_id,
+    u.abbreviation AS planned_unit_abbreviation,
+    f.planned_lots,
+    f.planned_lot_units,
+    f.planned_run_hours,
+    f.greige_consumed,
+    f.firm_units,
+    f.projected_on_hand_before,
+    f.projected_on_hand_after,
+    f.status_code,
+    f.source_code,
+    f.is_frozen,
+    f.created_at,
+    f.updated_at
+FROM production_schedule_finishing_line f
+LEFT JOIN unit u ON u.id = f.planned_unit_id
+WHERE f.account_id = ?
+  AND f.production_schedule_id = ?
+  AND (? IS NULL OR f.week_index = ?)
+  AND (? IS NULL OR f.item_id = ?)
+ORDER BY f.week_start_date, f.sku, f.id
+`
+
+type ListProductionScheduleFinishingLinesParams struct {
+	AccountID            string
+	ProductionScheduleID string
+	WeekIndex            sql.NullInt32
+	ItemID               sql.NullString
+}
+
+type ListProductionScheduleFinishingLinesRow struct {
+	ID                      string
+	ProductionScheduleID    string
+	WeekIndex               int32
+	WeekStartDate           time.Time
+	ItemID                  string
+	Sku                     string
+	GreigeItemID            string
+	GreigeSku               string
+	DepartmentID            sql.NullString
+	ProductionStepID        sql.NullString
+	PlannedQuantity         string
+	PlannedUnitID           sql.NullString
+	PlannedUnitAbbreviation sql.NullString
+	PlannedLots             int32
+	PlannedLotUnits         string
+	PlannedRunHours         string
+	GreigeConsumed          string
+	FirmUnits               string
+	ProjectedOnHandBefore   string
+	ProjectedOnHandAfter    string
+	StatusCode              string
+	SourceCode              string
+	IsFrozen                bool
+	CreatedAt               time.Time
+	UpdatedAt               time.Time
+}
+
+// ListProductionScheduleFinishingLines returns a version's finishing plan, forward in time.
+//
+// Ordered to match prod_sched_fin_line_sched_week_idx so the read is an index walk rather than a filesort, which matters because this is one row per finished SKU per week rather than one per SKU.
+func (q *Queries) ListProductionScheduleFinishingLines(ctx context.Context, arg ListProductionScheduleFinishingLinesParams) ([]ListProductionScheduleFinishingLinesRow, error) {
+	rows, err := q.db.QueryContext(ctx, listProductionScheduleFinishingLines,
+		arg.AccountID,
+		arg.ProductionScheduleID,
+		arg.WeekIndex,
+		arg.WeekIndex,
+		arg.ItemID,
+		arg.ItemID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListProductionScheduleFinishingLinesRow
+	for rows.Next() {
+		var i ListProductionScheduleFinishingLinesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProductionScheduleID,
+			&i.WeekIndex,
+			&i.WeekStartDate,
+			&i.ItemID,
+			&i.Sku,
+			&i.GreigeItemID,
+			&i.GreigeSku,
+			&i.DepartmentID,
+			&i.ProductionStepID,
+			&i.PlannedQuantity,
+			&i.PlannedUnitID,
+			&i.PlannedUnitAbbreviation,
+			&i.PlannedLots,
+			&i.PlannedLotUnits,
+			&i.PlannedRunHours,
+			&i.GreigeConsumed,
+			&i.FirmUnits,
+			&i.ProjectedOnHandBefore,
+			&i.ProjectedOnHandAfter,
+			&i.StatusCode,
+			&i.SourceCode,
+			&i.IsFrozen,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {

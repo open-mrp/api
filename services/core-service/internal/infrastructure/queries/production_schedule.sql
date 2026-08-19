@@ -471,3 +471,72 @@ JOIN item i ON i.id = l.item_id
 WHERE lo.account_id = sqlc.arg('account_id')
   AND lo.production_schedule_id = sqlc.arg('production_schedule_id')
 ORDER BY l.week_index, so.number, lo.id;
+
+-- The finishing plan: stage two, which decides how many of which finished good to make from the knitted parts.
+--
+-- Written wholesale on every solve like the rest of the plan, never patched. The mix is a pure function of the knit plan, the order book and each SKU's position, so a partial update could leave a week holding lines for a campaign the re-solve no longer produces.
+
+-- name: DeleteProductionScheduleFinishingLines :exec
+DELETE FROM production_schedule_finishing_line
+WHERE account_id = sqlc.arg('account_id') AND production_schedule_id = sqlc.arg('production_schedule_id');
+
+-- name: CreateProductionScheduleFinishingLine :exec
+INSERT INTO production_schedule_finishing_line (
+    id, account_id, production_schedule_id,
+    week_index, week_start_date,
+    item_id, sku, greige_item_id, greige_sku,
+    department_id, production_step_id,
+    planned_quantity, planned_unit_id, planned_lots, planned_lot_units, planned_run_hours,
+    greige_consumed, firm_units,
+    projected_on_hand_before, projected_on_hand_after,
+    status_code, source_code, is_frozen,
+    created_at, updated_at
+) VALUES (
+    sqlc.arg('id'), sqlc.arg('account_id'), sqlc.arg('production_schedule_id'),
+    sqlc.arg('week_index'), sqlc.arg('week_start_date'),
+    sqlc.arg('item_id'), sqlc.arg('sku'), sqlc.arg('greige_item_id'), sqlc.arg('greige_sku'),
+    sqlc.narg('department_id'), sqlc.narg('production_step_id'),
+    sqlc.arg('planned_quantity'), sqlc.narg('planned_unit_id'), sqlc.arg('planned_lots'), sqlc.arg('planned_lot_units'), sqlc.arg('planned_run_hours'),
+    sqlc.arg('greige_consumed'), sqlc.arg('firm_units'),
+    sqlc.arg('projected_on_hand_before'), sqlc.arg('projected_on_hand_after'),
+    sqlc.arg('status_code'), sqlc.arg('source_code'), sqlc.arg('is_frozen'),
+    NOW(3), NOW(3)
+);
+
+-- ListProductionScheduleFinishingLines returns a version's finishing plan, forward in time.
+--
+-- Ordered to match prod_sched_fin_line_sched_week_idx so the read is an index walk rather than a filesort, which matters because this is one row per finished SKU per week rather than one per SKU.
+-- name: ListProductionScheduleFinishingLines :many
+SELECT
+    f.id,
+    f.production_schedule_id,
+    f.week_index,
+    f.week_start_date,
+    f.item_id,
+    f.sku,
+    f.greige_item_id,
+    f.greige_sku,
+    f.department_id,
+    f.production_step_id,
+    f.planned_quantity,
+    f.planned_unit_id,
+    u.abbreviation AS planned_unit_abbreviation,
+    f.planned_lots,
+    f.planned_lot_units,
+    f.planned_run_hours,
+    f.greige_consumed,
+    f.firm_units,
+    f.projected_on_hand_before,
+    f.projected_on_hand_after,
+    f.status_code,
+    f.source_code,
+    f.is_frozen,
+    f.created_at,
+    f.updated_at
+FROM production_schedule_finishing_line f
+LEFT JOIN unit u ON u.id = f.planned_unit_id
+WHERE f.account_id = sqlc.arg('account_id')
+  AND f.production_schedule_id = sqlc.arg('production_schedule_id')
+  AND (sqlc.narg('week_index') IS NULL OR f.week_index = sqlc.narg('week_index'))
+  AND (sqlc.narg('item_id') IS NULL OR f.item_id = sqlc.narg('item_id'))
+ORDER BY f.week_start_date, f.sku, f.id;

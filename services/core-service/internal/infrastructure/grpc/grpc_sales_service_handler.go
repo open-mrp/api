@@ -890,6 +890,9 @@ func (h *salesGRPCHandler) QuoteSalesOrderCommitment(ctx context.Context, req *p
 		out.TransitDays = int32Ptr(safeconv.IntToInt32(*commitment.TransitDays))
 		out.TransitSourceCode = &commitment.TransitSourceCode
 	}
+	if commitment.EstimatedDeliveryDate != nil {
+		out.EstimatedDeliveryDate = timestamppb.New(*commitment.EstimatedDeliveryDate)
+	}
 	for _, step := range commitment.Steps {
 		out.Steps = append(out.Steps, &pb.CommitmentQuoteStep{
 			Code:      step.Code,

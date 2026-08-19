@@ -42,7 +42,7 @@ type AccountGroup struct {
 	// - `free_freight`: customers within this group will not have to pay for freight.
 	// - `billed_freight`: freight will be applied to any order within this account group, unless overridden elsewhere.
 	FreightPolicy constants.FreightPolicy `json:"freight_policy" validate:"required"`
-	// Calendar days between an order being issued and it being due to ship, inherited by every customer in this group that has not set its own.
+	// Calendar days between an order being issued and it being due to ship, inherited by every customer in this group that has neither set its own nor inherited one from a parent account.
 	DefaultLeadTimeDays *int32 `json:"default_lead_time_days"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

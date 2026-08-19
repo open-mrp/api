@@ -1708,6 +1708,34 @@ type ProductionScheduleFinishedPolicy struct {
 	UpdatedAt            time.Time
 }
 
+type ProductionScheduleFinishingLine struct {
+	ID                    string
+	AccountID             string
+	ProductionScheduleID  string
+	WeekIndex             int32
+	WeekStartDate         time.Time
+	ItemID                string
+	Sku                   string
+	GreigeItemID          string
+	GreigeSku             string
+	DepartmentID          sql.NullString
+	ProductionStepID      sql.NullString
+	PlannedQuantity       string
+	PlannedUnitID         sql.NullString
+	PlannedLots           int32
+	PlannedLotUnits       string
+	PlannedRunHours       string
+	GreigeConsumed        string
+	FirmUnits             string
+	ProjectedOnHandBefore string
+	ProjectedOnHandAfter  string
+	StatusCode            string
+	SourceCode            string
+	IsFrozen              bool
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
+}
+
 type ProductionScheduleItemPolicy struct {
 	ID                      string
 	AccountID               string

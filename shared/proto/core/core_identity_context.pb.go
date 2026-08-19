@@ -7430,16 +7430,17 @@ func (x *GetCustomerLeadTimeRequest) GetId() string {
 }
 
 // GetCustomerLeadTimeResponse is the ship-by lead time a new order for this customer would
-// be committed to. source names which rule produced it; account_group_id is set only when
-// the group is the rule that won.
+// be committed to. source names which rule produced it; account_group_id and
+// parent_customer_id are each set only when that level is the rule that won.
 type GetCustomerLeadTimeResponse struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	CustomerId     string                 `protobuf:"bytes,1,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
-	Days           int32                  `protobuf:"varint,2,opt,name=days,proto3" json:"days,omitempty"`
-	Source         string                 `protobuf:"bytes,3,opt,name=source,proto3" json:"source,omitempty"`
-	AccountGroupId *string                `protobuf:"bytes,4,opt,name=account_group_id,json=accountGroupId,proto3,oneof" json:"account_group_id,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	CustomerId       string                 `protobuf:"bytes,1,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
+	Days             int32                  `protobuf:"varint,2,opt,name=days,proto3" json:"days,omitempty"`
+	Source           string                 `protobuf:"bytes,3,opt,name=source,proto3" json:"source,omitempty"`
+	AccountGroupId   *string                `protobuf:"bytes,4,opt,name=account_group_id,json=accountGroupId,proto3,oneof" json:"account_group_id,omitempty"`
+	ParentCustomerId *string                `protobuf:"bytes,5,opt,name=parent_customer_id,json=parentCustomerId,proto3,oneof" json:"parent_customer_id,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *GetCustomerLeadTimeResponse) Reset() {
@@ -7496,6 +7497,13 @@ func (x *GetCustomerLeadTimeResponse) GetSource() string {
 func (x *GetCustomerLeadTimeResponse) GetAccountGroupId() string {
 	if x != nil && x.AccountGroupId != nil {
 		return *x.AccountGroupId
+	}
+	return ""
+}
+
+func (x *GetCustomerLeadTimeResponse) GetParentCustomerId() string {
+	if x != nil && x.ParentCustomerId != nil {
+		return *x.ParentCustomerId
 	}
 	return ""
 }
@@ -11581,14 +11589,16 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\x16UpdateCustomerResponse\x12/\n" +
 	"\bcustomer\x18\x01 \x01(\v2\x13.core.CustomerProtoR\bcustomer\",\n" +
 	"\x1aGetCustomerLeadTimeRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\xae\x01\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\xf8\x01\n" +
 	"\x1bGetCustomerLeadTimeResponse\x12\x1f\n" +
 	"\vcustomer_id\x18\x01 \x01(\tR\n" +
 	"customerId\x12\x12\n" +
 	"\x04days\x18\x02 \x01(\x05R\x04days\x12\x16\n" +
 	"\x06source\x18\x03 \x01(\tR\x06source\x12-\n" +
-	"\x10account_group_id\x18\x04 \x01(\tH\x00R\x0eaccountGroupId\x88\x01\x01B\x13\n" +
-	"\x11_account_group_id\"'\n" +
+	"\x10account_group_id\x18\x04 \x01(\tH\x00R\x0eaccountGroupId\x88\x01\x01\x121\n" +
+	"\x12parent_customer_id\x18\x05 \x01(\tH\x01R\x10parentCustomerId\x88\x01\x01B\x13\n" +
+	"\x11_account_group_idB\x15\n" +
+	"\x13_parent_customer_id\"'\n" +
 	"\x15DeleteCustomerRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"?\n" +
 	"\x1aBulkDeleteCustomersRequest\x12!\n" +

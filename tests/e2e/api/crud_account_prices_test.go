@@ -5,6 +5,7 @@ package api_test
 import (
 	"net/url"
 	"strconv"
+	"sync"
 	"testing"
 
 	"github.com/augno/api/shared/id"
@@ -13,6 +14,32 @@ import (
 )
 
 const accountPricesPath = "/v1/sales/account-prices"
+
+// pricingMu keeps account-price writes off the same clock as any price quote.
+//
+// A quote resolves the whole pricing chain for a buyer at the moment it is asked, so a test that
+// records a price for the seeded customer on the seeded product line silently re-prices every quote
+// running alongside it — the quote tests pin exact figures against seeded contracts, and a stray
+// 15.15 from an audit fixture reads as a pricing bug rather than as a fixture collision.
+//
+// Quotes take the read side and run concurrently with each other; only a price write is exclusive.
+// Same shape as planningMu, for the same reason: shared account-wide state that a read cannot be
+// made independent of.
+var pricingMu sync.RWMutex
+
+// lockPricingWrite holds the exclusive side for the rest of the test.
+func lockPricingWrite(t *testing.T) {
+	t.Helper()
+	pricingMu.Lock()
+	t.Cleanup(pricingMu.Unlock)
+}
+
+// lockPricingRead holds the shared side for the rest of the test.
+func lockPricingRead(t *testing.T) {
+	t.Helper()
+	pricingMu.RLock()
+	t.Cleanup(pricingMu.RUnlock)
+}
 
 // assertDecimalEquals compares an API decimal string numerically. Decimals come back at
 // full scale ("33.330000000000000000000000000000"), so a string compare against the value
@@ -171,6 +198,7 @@ func TestAccountPrices_ListExpandableNullWithoutInclude(t *testing.T) {
 // any third recipient would be a leak.
 func TestAccountPrices_ListFilterByRecipientAccount(t *testing.T) {
 	t.Parallel()
+	lockPricingWrite(t)
 	created := createAccountPrice(t, SeedCustomerAccountID, "11.11")
 
 	list, _, err := apiClient.GetList(accountPricesPath, url.Values{
@@ -199,6 +227,7 @@ func TestAccountPrices_ListFilterByRecipientAccount(t *testing.T) {
 // the house account (SeedAccountID), so a price on the house account must appear here.
 func TestAccountPrices_ListFilterByChildIncludesParentPrices(t *testing.T) {
 	t.Parallel()
+	lockPricingWrite(t)
 	parentPrice := createAccountPrice(t, SeedAccountID, "22.22")
 
 	list, _, err := apiClient.GetList(accountPricesPath, url.Values{
@@ -238,6 +267,7 @@ func createAccountPrice(t *testing.T, recipientAccountID, rateValue string) map[
 
 func TestAccountPrices_CreateAllFieldsAndResponseShape(t *testing.T) {
 	t.Parallel()
+	lockPricingWrite(t)
 
 	resp, err := apiClient.PostFull(accountPricesPath+"?include=recipient_account&include=product_line&include=categories&include=attributes", map[string]any{
 		"recipient_account_id": SeedCustomerAccountID,
@@ -349,6 +379,7 @@ func TestAccountPrices_CreateRejectsUnknownField(t *testing.T) {
 
 func TestAccountPrices_CreateIdempotent(t *testing.T) {
 	t.Parallel()
+	lockPricingWrite(t)
 	idemKey := newIdempotencyKey()
 	body := map[string]any{
 		"recipient_account_id": SeedCustomerAccountID,
@@ -379,6 +410,7 @@ func TestAccountPrices_CreateIdempotent(t *testing.T) {
 
 func TestAccountPrices_UpdateReplacesRateWhole(t *testing.T) {
 	t.Parallel()
+	lockPricingWrite(t)
 	created := createAccountPrice(t, SeedCustomerAccountID, "55.55")
 	priceID := jsonField(created, "id")
 
@@ -405,6 +437,7 @@ func TestAccountPrices_UpdateReplacesRateWhole(t *testing.T) {
 
 func TestAccountPrices_UpdateOmittedFieldsUnchanged(t *testing.T) {
 	t.Parallel()
+	lockPricingWrite(t)
 	created := createAccountPrice(t, SeedCustomerAccountID, "77.77")
 	priceID := jsonField(created, "id")
 
@@ -426,6 +459,7 @@ func TestAccountPrices_UpdateOmittedFieldsUnchanged(t *testing.T) {
 // list clears it — the behaviour the details form depends on.
 func TestAccountPrices_UpdateReplacesCategoriesAndAttributes(t *testing.T) {
 	t.Parallel()
+	lockPricingWrite(t)
 	created := createAndCleanup(t, accountPricesPath, map[string]any{
 		"recipient_account_id": SeedCustomerAccountID,
 		"product_line_id":      SeedProductLineID,
@@ -472,6 +506,7 @@ func TestAccountPrices_UpdateNonexistentReturns404(t *testing.T) {
 
 func TestAccountPrices_DeleteRemovesPrice(t *testing.T) {
 	t.Parallel()
+	lockPricingWrite(t)
 	created := createAccountPrice(t, SeedCustomerAccountID, "99.99")
 	priceID := jsonField(created, "id")
 

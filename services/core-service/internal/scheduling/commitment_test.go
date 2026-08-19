@@ -301,3 +301,47 @@ func TestResolveCommitment_IndefinitelyClosedPlantCommitsToNothing(t *testing.T)
 		t.Fatal("expected no commitment rather than a date the plant cannot ship on")
 	}
 }
+
+func TestEstimateArrival_WalksTransitForwardOntoAReceivingDay(t *testing.T) {
+	t.Parallel()
+
+	cals := Calendars{
+		Receive: mustCalendar(t, "1111100"),
+		Carrier: mustCalendar(t, "1111100"),
+		Ship:    mustCalendar(t, "1111000"),
+	}
+
+	got, ok := EstimateArrival(onDay(2026, time.August, 20), &Transit{Days: 3, Source: LeadTimeSourceManual}, cals)
+	if !ok {
+		t.Fatal("expected an arrival to resolve")
+	}
+	if want := onDay(2026, time.August, 25); !got.Equal(want) {
+		t.Fatalf("got %s, want %s", got.Format(time.DateOnly), want.Format(time.DateOnly))
+	}
+}
+
+func TestEstimateArrival_MovesOntoADayTheDockReceives(t *testing.T) {
+	t.Parallel()
+
+	cals := Calendars{
+		Receive: mustCalendar(t, "1111000"),
+		Carrier: mustCalendar(t, "1111100"),
+		Ship:    mustCalendar(t, "1111100"),
+	}
+
+	got, ok := EstimateArrival(onDay(2026, time.August, 20), &Transit{Days: 1}, cals)
+	if !ok {
+		t.Fatal("expected an arrival to resolve")
+	}
+	if want := onDay(2026, time.August, 24); !got.Equal(want) {
+		t.Fatalf("got %s, want %s", got.Format(time.DateOnly), want.Format(time.DateOnly))
+	}
+}
+
+func TestEstimateArrival_UnknownTransitHasNoArrival(t *testing.T) {
+	t.Parallel()
+
+	if _, ok := EstimateArrival(onDay(2026, time.August, 20), nil, DefaultCalendars()); ok {
+		t.Fatal("expected no arrival when transit is unknown")
+	}
+}

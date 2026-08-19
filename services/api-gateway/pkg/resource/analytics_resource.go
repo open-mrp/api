@@ -816,7 +816,7 @@ type AnalyzeDeliveryPerformanceResponse struct {
 	ByCustomerGroup *List[DeliveryBreakdown] `json:"by_customer_group" validate:"required"`
 	// The same window by product line, worst first. An order spanning two lines is counted under both — a late order is late for every line on it — so these counts sum to more than the overall total.
 	ByProductLine *List[DeliveryBreakdown] `json:"by_product_line" validate:"required"`
-	// The same window by which rule produced each ship-by date: an explicitly promised date, the customer's lead time, their group's, or the account default.
+	// The same window by which rule produced each ship-by date: an explicitly promised date, the customer's lead time, their parent's, their group's, or the account default.
 	//
 	// This is what says how much of the score rests on a default nobody deliberately set. A plant whose on-time rate is carried by `account`-sourced commitments is measuring itself against a number it invented.
 	ByCommitmentSource *List[DeliveryBreakdown] `json:"by_commitment_source" validate:"required"`

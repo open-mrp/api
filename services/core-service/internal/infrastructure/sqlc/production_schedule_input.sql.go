@@ -597,11 +597,14 @@ SELECT
     ar.counterparty_account_id AS customer_account_id,
     COALESCE(NULLIF(ar.alias, ''), a.name) AS customer_name,
     ar.default_lead_time_days AS customer_lead_time_days,
+    par.default_lead_time_days AS parent_customer_lead_time_days,
     ag.default_lead_time_days AS account_group_lead_time_days,
     ar.fulfillment_policy_code AS customer_policy,
     ag.fulfillment_policy_code AS account_group_policy
 FROM account_relation ar
 JOIN account a ON a.id = ar.counterparty_account_id
+LEFT JOIN account_relation par ON par.id = ar.parent_account_relation_id
+    AND par.owner_account_id = ar.owner_account_id
 LEFT JOIN account_group ag ON ag.id = ar.account_group_id
 WHERE ar.owner_account_id = ?
   AND ar.account_relation_role_code = 'customer'
@@ -609,17 +612,18 @@ ORDER BY ar.counterparty_account_id
 `
 
 type GetCustomerFulfillmentProfilesRow struct {
-	CustomerAccountID        string
-	CustomerName             string
-	CustomerLeadTimeDays     sql.NullInt32
-	AccountGroupLeadTimeDays sql.NullInt32
-	CustomerPolicy           sql.NullString
-	AccountGroupPolicy       sql.NullString
+	CustomerAccountID          string
+	CustomerName               string
+	CustomerLeadTimeDays       sql.NullInt32
+	ParentCustomerLeadTimeDays sql.NullInt32
+	AccountGroupLeadTimeDays   sql.NullInt32
+	CustomerPolicy             sql.NullString
+	AccountGroupPolicy         sql.NullString
 }
 
 // GetCustomerFulfillmentProfiles returns every customer's lead time and stated policy, with the account group each falls back to.
 //
-// The recommendation asks two things of a customer: how long they allow, and how they say they buy. Both resolve through the same chain an order's ship-by is stamped from, so the two cannot disagree about the same customer.
+// The recommendation asks two things of a customer: how long they allow, and how they say they buy. Both resolve through the same chain an order's ship-by is stamped from, so the two cannot disagree about the same customer — including the parent account a child inherits its lead time from.
 func (q *Queries) GetCustomerFulfillmentProfiles(ctx context.Context, accountID string) ([]GetCustomerFulfillmentProfilesRow, error) {
 	rows, err := q.db.QueryContext(ctx, getCustomerFulfillmentProfiles, accountID)
 	if err != nil {
@@ -633,6 +637,7 @@ func (q *Queries) GetCustomerFulfillmentProfiles(ctx context.Context, accountID 
 			&i.CustomerAccountID,
 			&i.CustomerName,
 			&i.CustomerLeadTimeDays,
+			&i.ParentCustomerLeadTimeDays,
 			&i.AccountGroupLeadTimeDays,
 			&i.CustomerPolicy,
 			&i.AccountGroupPolicy,
@@ -703,6 +708,205 @@ func (q *Queries) GetEchelonOnHand(ctx context.Context, arg GetEchelonOnHandPara
 	for rows.Next() {
 		var i GetEchelonOnHandRow
 		if err := rows.Scan(&i.ItemID, &i.OnHand); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getFinishingBatchMeasurements = `-- name: GetFinishingBatchMeasurements :many
+SELECT
+    b.id AS batch_id,
+    b.item_id,
+    i.sku,
+    b.scanned_at,
+    q.value AS quantity_value,
+    u.abbreviation AS quantity_unit,
+    q.unit_id AS quantity_unit_id,
+    u.ratio_numerator,
+    u.ratio_denominator,
+    b.production_step_id,
+    COALESCE(ps.department_id, ss.department_id) AS step_department_id,
+    bm.B AS machine_id,
+    mc.name AS machine_name,
+    cost_rate.value AS unit_cost,
+    labor_time.value AS labor_time_value,
+    labor_time_unit.abbreviation AS labor_time_unit,
+    labor_rate.value AS labor_rate,
+    overhead_rate.value AS overhead_rate,
+    pr.created_at AS run_created_at
+FROM batch b
+JOIN _batches_machines bm ON bm.A = b.id
+JOIN machine mc ON mc.id = bm.B
+JOIN item i ON i.id = b.item_id
+LEFT JOIN quantity q ON q.id = b.quantity_id
+LEFT JOIN unit u ON u.id = q.unit_id
+LEFT JOIN rate cost_rate ON cost_rate.id = i.unit_cost_id
+LEFT JOIN production_step ps ON ps.id = b.production_step_id
+LEFT JOIN scanning_station ss ON ss.id = ps.scanning_station_id
+LEFT JOIN rate labor_time ON labor_time.id = ps.labor_time_id
+LEFT JOIN unit labor_time_unit ON labor_time_unit.id = labor_time.numerator_unit_id
+LEFT JOIN rate labor_rate ON labor_rate.id = ps.labor_rate_id
+LEFT JOIN rate overhead_rate ON overhead_rate.id = ps.overhead_rate_id
+LEFT JOIN production_run pr ON pr.id = b.production_run_id
+WHERE b.account_id = ?
+  AND b.scanned_at IS NOT NULL
+  AND b.scanned_at >= ?
+  AND b.scanned_at <= ?
+  AND b.item_id IN (/*SLICE:item_ids*/?)
+  AND COALESCE(ps.department_id, ss.department_id, '') != ?
+ORDER BY b.item_id, b.scanned_at, b.id
+`
+
+type GetFinishingBatchMeasurementsParams struct {
+	AccountID              string
+	WindowStart            sql.NullTime
+	WindowEnd              sql.NullTime
+	ItemIds                []string
+	ConstraintDepartmentID sql.NullString
+}
+
+type GetFinishingBatchMeasurementsRow struct {
+	BatchID          string
+	ItemID           string
+	Sku              string
+	ScannedAt        sql.NullTime
+	QuantityValue    sql.NullString
+	QuantityUnit     sql.NullString
+	QuantityUnitID   sql.NullString
+	RatioNumerator   sql.NullString
+	RatioDenominator sql.NullString
+	ProductionStepID sql.NullString
+	StepDepartmentID string
+	MachineID        string
+	MachineName      string
+	UnitCost         sql.NullString
+	LaborTimeValue   sql.NullString
+	LaborTimeUnit    sql.NullString
+	LaborRate        sql.NullString
+	OverheadRate     sql.NullString
+	RunCreatedAt     sql.NullTime
+}
+
+// GetFinishingBatchMeasurements returns one row per historical batch produced outside the constraint department, which is what the second stage's run rates are measured from.
+//
+// The mirror of GetConstraintBatchMeasurements, and it excludes constraint-department steps for the same reason that one includes only them: a knitting scan recorded against a finishing machine is not a measurement of finishing, and letting it in would size the department's hours against the wrong operation. The step's own department is also carried out, so a finished good's line can name the room that makes it without a second query.
+func (q *Queries) GetFinishingBatchMeasurements(ctx context.Context, arg GetFinishingBatchMeasurementsParams) ([]GetFinishingBatchMeasurementsRow, error) {
+	query := getFinishingBatchMeasurements
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.WindowStart)
+	queryParams = append(queryParams, arg.WindowEnd)
+	if len(arg.ItemIds) > 0 {
+		for _, v := range arg.ItemIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.ConstraintDepartmentID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetFinishingBatchMeasurementsRow
+	for rows.Next() {
+		var i GetFinishingBatchMeasurementsRow
+		if err := rows.Scan(
+			&i.BatchID,
+			&i.ItemID,
+			&i.Sku,
+			&i.ScannedAt,
+			&i.QuantityValue,
+			&i.QuantityUnit,
+			&i.QuantityUnitID,
+			&i.RatioNumerator,
+			&i.RatioDenominator,
+			&i.ProductionStepID,
+			&i.StepDepartmentID,
+			&i.MachineID,
+			&i.MachineName,
+			&i.UnitCost,
+			&i.LaborTimeValue,
+			&i.LaborTimeUnit,
+			&i.LaborRate,
+			&i.OverheadRate,
+			&i.RunCreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getFinishingMachines = `-- name: GetFinishingMachines :many
+
+SELECT
+    m.id,
+    m.name,
+    m.department_id,
+    m.production_step_id
+FROM machine m
+LEFT JOIN production_schedule_resource_setting rs
+    ON rs.scope_ref_id = m.id
+   AND rs.scope_code = 'machine'
+   AND rs.account_id = ?
+WHERE m.account_id = ?
+  AND (m.department_id IS NULL OR m.department_id != ?)
+  AND COALESCE(rs.is_excluded, 0) = 0
+  AND COALESCE(rs.is_enabled, 1) = 1
+ORDER BY m.name, m.id
+`
+
+type GetFinishingMachinesParams struct {
+	AccountID              string
+	ConstraintDepartmentID string
+}
+
+type GetFinishingMachinesRow struct {
+	ID               string
+	Name             string
+	DepartmentID     string
+	ProductionStepID sql.NullString
+}
+
+// Stage two: the rest of the factory.
+//
+// The constraint is a department; everything else is the second stage. That is the whole selection rule, and it is deliberately the complement of GetConstraintMachines rather than a second list to maintain — a department added to the plant belongs to stage two the day it exists, without anyone revisiting settings.
+// GetFinishingMachines returns every machine outside the constraint department.
+//
+// Capacity is counted from these rather than configured, so hiring a shift onto a new machine changes the plan the way it changes the plant. The same exclusion row that takes a knitting machine out of the plan takes a finishing one out too.
+func (q *Queries) GetFinishingMachines(ctx context.Context, arg GetFinishingMachinesParams) ([]GetFinishingMachinesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getFinishingMachines, arg.AccountID, arg.AccountID, arg.ConstraintDepartmentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetFinishingMachinesRow
+	for rows.Next() {
+		var i GetFinishingMachinesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.DepartmentID,
+			&i.ProductionStepID,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

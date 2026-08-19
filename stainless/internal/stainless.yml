@@ -2007,6 +2007,7 @@ resources:
           retrieve: get /v1/operations/production-schedules/{id}
           retrieve_item_policies: get /v1/operations/production-schedules/{id}/item-policies
           retrieve_finished_policies: get /v1/operations/production-schedules/{id}/finished-policies
+          retrieve_finishing_lines: get /v1/operations/production-schedules/{id}/finishing-lines
           retrieve_derived_lines: get /v1/operations/production-schedules/{id}/derived-lines
           retrieve_at_risk_orders: get /v1/operations/production-schedules/{id}/at-risk-orders
           retrieve_deviations: get /v1/operations/production-schedules/{id}/deviations
@@ -2057,6 +2058,7 @@ resources:
           list_production_schedule_derived_line: '#/components/schemas/List_ProductionScheduleDerivedLine'
           list_production_schedule_deviation: '#/components/schemas/List_ProductionScheduleDeviation'
           list_production_schedule_finished_policy: '#/components/schemas/List_ProductionScheduleFinishedPolicy'
+          list_production_schedule_finishing_line: '#/components/schemas/List_ProductionScheduleFinishingLine'
           list_production_schedule_item_policy: '#/components/schemas/List_ProductionScheduleItemPolicy'
           list_release_schedule_batch: '#/components/schemas/List_ReleaseScheduleBatch'
           list_released_schedule_line: '#/components/schemas/List_ReleasedScheduleLine'
@@ -2068,6 +2070,7 @@ resources:
           production_schedule_derived_line: '#/components/schemas/ProductionScheduleDerivedLine'
           production_schedule_deviation: '#/components/schemas/ProductionScheduleDeviation'
           production_schedule_finished_policy: '#/components/schemas/ProductionScheduleFinishedPolicy'
+          production_schedule_finishing_line: '#/components/schemas/ProductionScheduleFinishingLine'
           production_schedule_item_policy: '#/components/schemas/ProductionScheduleItemPolicy'
           release_schedule_batch: '#/components/schemas/ReleaseScheduleBatch'
           release_schedule_week_preview: '#/components/schemas/ReleaseScheduleWeekPreview'
@@ -2075,6 +2078,7 @@ resources:
           schedule_applied_override: '#/components/schemas/ScheduleAppliedOverride'
           schedule_at_risk_order: '#/components/schemas/ScheduleAtRiskOrder'
           schedule_diagnostics: '#/components/schemas/ScheduleDiagnostics'
+          schedule_finishing_diagnostics: '#/components/schemas/ScheduleFinishingDiagnostics'
           schedule_order_coverage: '#/components/schemas/ScheduleOrderCoverage'
           schedule_order_coverage_line: '#/components/schemas/ScheduleOrderCoverageLine'
       production_schedule_settings:

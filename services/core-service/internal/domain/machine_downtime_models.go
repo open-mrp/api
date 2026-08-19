@@ -99,11 +99,13 @@ type GetMachineDowntimeEventParams struct {
 }
 
 type CreateMachineDowntimeEventParams struct {
-	AccountID       string
-	MachineID       string
-	ReasonCode      string
-	StartedAt       time.Time
-	EndedAt         *time.Time
+	AccountID  string
+	MachineID  string
+	ReasonCode string
+	StartedAt  time.Time
+	EndedAt    *time.Time
+	// Duration is an alternative way of saying when the stoppage ended: the end is derived from the start plus this. Supplying both is rejected rather than reconciled, because the two disagreeing is a caller bug and picking a winner would hide it.
+	Duration        *DowntimeDurationInput
 	ItemID          *string
 	ProductionRunID *string
 	BatchID         *string
@@ -112,13 +114,25 @@ type CreateMachineDowntimeEventParams struct {
 	ReportedByID    string
 }
 
+// DowntimeDurationInput is how long a machine was down on its way in: a decimal string and the unit of time it counts.
+//
+// Carried as a quantity rather than a minute count so an operator can say "two days" without doing the arithmetic, and so the unit the number was entered in is the one that gets validated.
+type DowntimeDurationInput struct {
+	Value  string
+	UnitID string
+}
+
 type UpdateMachineDowntimeEventParams struct {
 	AccountID  string
 	EventID    string
 	ReasonCode *string
 	StartedAt  *time.Time
+	// MachineID moves the stoppage to another machine, re-resolving the department and step it is charged to. Correcting the machine is the one thing a mis-logged event most often needs, and deleting and re-logging would lose the record of who reported it and when.
+	MachineID *string
 	// The nullable columns are Clearable: unset leaves the column unchanged, clear nulls it. Clearing EndedAt reopens an event closed by mistake.
-	EndedAt         field.Clearable[time.Time]
+	EndedAt field.Clearable[time.Time]
+	// Duration restates the end as a length of time from the start. Clearing it reopens the event, the same as clearing EndedAt.
+	Duration        field.Clearable[DowntimeDurationInput]
 	ItemID          field.Clearable[string]
 	ProductionRunID field.Clearable[string]
 	BatchID         field.Clearable[string]

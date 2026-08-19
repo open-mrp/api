@@ -699,13 +699,14 @@ message GetCustomerLeadTimeRequest {
 }
 
 // GetCustomerLeadTimeResponse is the ship-by lead time a new order for this customer would
-// be committed to. source names which rule produced it; account_group_id is set only when
-// the group is the rule that won.
+// be committed to. source names which rule produced it; account_group_id and
+// parent_customer_id are each set only when that level is the rule that won.
 message GetCustomerLeadTimeResponse {
   string customer_id = 1;
   int32 days = 2;
   string source = 3;
   optional string account_group_id = 4;
+  optional string parent_customer_id = 5;
 }
 
 message DeleteCustomerRequest {

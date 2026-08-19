@@ -3,7 +3,10 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
+
+	"github.com/shopspring/decimal"
 
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/services/core-service/internal/domain"
@@ -94,6 +97,47 @@ func downtimeDuration(startedAt time.Time, endedAt *time.Time) *int32 {
 	}
 	seconds := int32(endedAt.Sub(startedAt).Seconds())
 	return &seconds
+}
+
+// maxDowntimeDuration bounds a single stoppage. A machine down for a year is a mistyped unit — "90" entered against days rather than minutes — and storing it would drag every availability figure it touches down with it.
+const maxDowntimeDuration = 365 * 24 * time.Hour
+
+// resolveDowntimeEnd turns a duration into the moment the machine started running again.
+//
+// The unit has to measure time. Accepting any unit would let a lot size be sent as a duration and silently become a number of seconds, which is exactly the class of error carrying the unit is meant to make impossible.
+func (s *machineDowntimeSvcImpl) resolveDowntimeEnd(ctx context.Context, accountID string, startedAt time.Time, duration domain.DowntimeDurationInput) (*time.Time, *apierror.APIError) {
+	value, err := decimal.NewFromString(strings.TrimSpace(duration.Value))
+	if err != nil {
+		return nil, apierror.NewValidationErrorWithParam("The downtime duration is not a number.", "duration")
+	}
+	if value.LessThanOrEqual(decimal.Zero) {
+		return nil, apierror.NewValidationErrorWithParam("The downtime duration must be greater than zero.", "duration")
+	}
+
+	factors, apiErr := s.repos.NewUnitConversionRepo().GetUnitFactors(ctx, accountID, []string{duration.UnitID})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	unit, ok := factors[duration.UnitID]
+	if !ok {
+		return nil, apierror.NewValidationErrorWithParam("Unknown unit for the downtime duration.", "duration")
+	}
+	if unit.DimensionCode != string(constants.UnitTypeTime) {
+		return nil, apierror.NewValidationErrorWithParam("The downtime duration must be expressed in a unit of time.", "duration")
+	}
+
+	// Seconds is the base unit of the time dimension, which is also what the event stores its duration in.
+	seconds := unit.ToBase(value)
+	if seconds.LessThanOrEqual(decimal.Zero) {
+		return nil, apierror.NewValidationErrorWithParam("The downtime duration must be greater than zero.", "duration")
+	}
+	elapsed := time.Duration(seconds.InexactFloat64() * float64(time.Second))
+	if elapsed > maxDowntimeDuration {
+		return nil, apierror.NewValidationErrorWithParam("The downtime duration is longer than a year. Check the unit.", "duration")
+	}
+
+	endedAt := startedAt.Add(elapsed)
+	return &endedAt, nil
 }
 
 func validateDowntimeWindow(startedAt time.Time, endedAt *time.Time) *apierror.APIError {
@@ -214,6 +258,20 @@ func (s *machineDowntimeSvcImpl) CreateDowntimeEvent(ctx context.Context, params
 		return nil, tracing.Trace(span, apiErr)
 	}
 
+	params.AccountID = identity.Target.AccountID
+
+	// A duration is the other way of saying when the stoppage ended, so it is resolved into one before anything downstream sees the event.
+	if params.Duration != nil {
+		if params.EndedAt != nil {
+			return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("Send either an end time or a duration, not both.", "duration"))
+		}
+		endedAt, apiErr := s.resolveDowntimeEnd(ctx, params.AccountID, params.StartedAt, *params.Duration)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		params.EndedAt = endedAt
+	}
+
 	if apiErr := validateDowntimeWindow(params.StartedAt, params.EndedAt); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -222,8 +280,6 @@ func (s *machineDowntimeSvcImpl) CreateDowntimeEvent(ctx context.Context, params
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-
-	params.AccountID = identity.Target.AccountID
 	if params.ReportedByID == "" && identity.Actor != nil {
 		params.ReportedByID = identity.Actor.ID
 	}
@@ -391,10 +447,39 @@ func (s *machineDowntimeSvcImpl) UpdateDowntimeEvent(ctx context.Context, params
 				existing.StartedAt = *params.StartedAt
 				existing.ShiftDate = downtimeShiftDate(*params.StartedAt)
 			}
+			// Moving the event re-resolves the department and step from the new machine. Leaving the old ones would charge the stoppage to a room the machine is not in, which is the drilldown OEE is read through.
+			if params.MachineID != nil && *params.MachineID != existing.MachineID {
+				machine, apiErr := txSvc.repos.NewMachineRepo().Get(txCtx, domain.GetMachineParams{
+					AccountID: accountID,
+					MachineID: *params.MachineID,
+				})
+				if apiErr != nil {
+					return apiErr
+				}
+				existing.MachineID = machine.ID
+				existing.DepartmentID = machine.DepartmentID
+				existing.ProductionStepID = machine.ProductionStepID
+			}
 			// A cleared EndedAt reopens an event closed by mistake; clear has to be distinguishable from unset because an unset EndedAt means "leave unchanged". The other Clearable fields null their columns for the same reason.
 			if params.EndedAt.IsClear() {
 				existing.EndedAt = nil
 			} else if endedAt := params.EndedAt.ValuePtr(); endedAt != nil {
+				existing.EndedAt = endedAt
+			}
+			// A duration restates the end relative to the start, so it is applied after any new start and refuses to compete with an end time sent in the same request.
+			if params.Duration.IsClear() {
+				if params.EndedAt.WasProvided() {
+					return apierror.NewValidationErrorWithParam("Send either an end time or a duration, not both.", "duration")
+				}
+				existing.EndedAt = nil
+			} else if duration := params.Duration.ValuePtr(); duration != nil {
+				if params.EndedAt.WasProvided() {
+					return apierror.NewValidationErrorWithParam("Send either an end time or a duration, not both.", "duration")
+				}
+				endedAt, apiErr := txSvc.resolveDowntimeEnd(txCtx, accountID, existing.StartedAt, *duration)
+				if apiErr != nil {
+					return apiErr
+				}
 				existing.EndedAt = endedAt
 			}
 			if params.ItemID.IsClear() {
@@ -423,14 +508,14 @@ func (s *machineDowntimeSvcImpl) UpdateDowntimeEvent(ctx context.Context, params
 			}
 			existing.DurationSeconds = downtimeDuration(existing.StartedAt, existing.EndedAt)
 
-			// Reopening this event must not collide with another open event on the machine.
-			if old.EndedAt != nil && existing.EndedAt == nil {
+			// An open event must be the only open event on its machine — whether it got there by being reopened or by being moved onto a machine that is already down. Two would double-count the same wall-clock window and drive Availability below zero.
+			if existing.EndedAt == nil && (old.EndedAt != nil || existing.MachineID != old.MachineID) {
 				open, apiErr := downtimeRepo.GetOpenForMachine(txCtx, accountID, existing.MachineID)
 				if apiErr != nil {
 					return apiErr
 				}
 				if open != nil && open.ID != existing.ID {
-					return apierror.NewConflictErrorWithParam("This machine already has an open downtime event.", "ended_at")
+					return apierror.NewConflictErrorWithParam("This machine already has an open downtime event.", "machine_id")
 				}
 			}
 

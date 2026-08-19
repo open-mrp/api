@@ -1312,6 +1312,15 @@ INSERT IGNORE INTO batch (id, account_id, item_id, quantity_id, scanning_station
 INSERT IGNORE INTO _batch_flow (A, B) VALUES
     ('bt_01seedschedfg000000', 'bt_01seedbatch1_0000000');
 
+-- The finished good's own machine link, which is what gives the SECOND stage a run rate.
+--
+-- Stage two measures how long finishing takes by joining batch -> _batches_machines -> machine
+-- exactly as stage one does, but scoped to steps outside the constraint department. Without this
+-- link SCK-001 has no measured finishing rate, so the finishing plan reports it as unrateable and
+-- schedules nothing — which made the finishing e2e assertions pass vacuously.
+INSERT IGNORE INTO _batches_machines (A, B) VALUES
+    ('bt_01seedschedfg000000', 'mc_01seedsewlgmachine0');
+
 -- Backdated demand for the scheduling solver.
 --
 -- Trailing-12 demand deliberately excludes the current partial month, so an order
@@ -1449,6 +1458,34 @@ INSERT IGNORE INTO production_schedule_finished_policy (
     'it_01k0a7100aeysrs9vxpeq14yxj', 'E2E-SEED-SKU',
     2600.000000000000000000000000000000, 50.000000000000000000000000000000, 12.000000000000000000000000000000,
     20.000000000000000000000000000000, 320.000000000000000000000000000000, 120.000000000000000000000000000000, 2.4000,
+    NOW(3), NOW(3)
+);
+
+-- Stage two on the fixture version: how many of which finished good to make from the knit.
+--
+-- Generated-only in real life, but the spec-driven suites resolve their {id} from the seed rather
+-- than from anything a test creates, so a version with no finishing lines makes the generic list
+-- validation fail with "no data" rather than exercise the shape.
+INSERT IGNORE INTO production_schedule_finishing_line (
+    id, account_id, production_schedule_id,
+    week_index, week_start_date,
+    item_id, sku, greige_item_id, greige_sku,
+    department_id, production_step_id,
+    planned_quantity, planned_unit_id, planned_lots, planned_lot_units, planned_run_hours,
+    greige_consumed, firm_units,
+    projected_on_hand_before, projected_on_hand_after,
+    status_code, source_code, is_frozen,
+    created_at, updated_at
+) VALUES (
+    'pnscfiln_01seede2efinish', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'pnsc_01seede2eschedule',
+    2, DATE(NOW(3) - INTERVAL WEEKDAY(NOW(3)) DAY) + INTERVAL 2 WEEK,
+    'it_01k0a7100aeysrs9vxpeq14yxj', 'E2E-SEED-FG-SKU',
+    'it_01k0a7100aeysrs9vxpeq14yxj', 'E2E-SEED-SKU',
+    'dp_01k0a5r01yek6v7xnt0mxzzz8m', 'prs_01k0a56yc1e8wag6wexn4pp8t9',
+    120.000000000000000000000000000000, 'un_01seedpair000000000', 2, 60.000000, 10.0000,
+    120.000000000000000000000000000000, 40.000000000000000000000000000000,
+    100.000000000000000000000000000000, 220.000000000000000000000000000000,
+    'planned', 'solver', 0,
     NOW(3), NOW(3)
 );
 
@@ -1617,3 +1654,77 @@ INSERT IGNORE INTO invoice (id, number, is_paid_in_full, sales_order_id, billing
 
 INSERT IGNORE INTO carrier (id, name, code, account_id, shippo_carrier_account_id, is_portal_enabled, created_at, updated_at) VALUES
     ('cr_01e2esynccarrier00', 'E2E Sync Carrier', 'fedex', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'shippoacct_e2e_sync', 0, NOW(), NOW());
+
+-- ============================================================
+-- PARENT-CUSTOMER LEAD-TIME HIERARCHY
+-- ============================================================
+--
+-- A head office with locations beneath it, seeded rather than built through the API:
+-- linking a child under a parent customer requires acting as the parent account, which
+-- an API key never is. Every row here is read-only for the tests that use it, so the
+-- four resolutions below stay stable however often the suite runs.
+
+INSERT IGNORE INTO account_group (id, owner_account_id, name, account_group_type_code, commission_status_code, freight_status_code, default_lead_time_days, created_at, updated_at) VALUES
+    ('acgp_01e2eltgroup00001', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'E2E Lead Time Group', 'type_group', 'commission_applied', 'billed_freight', 21, NOW(), NOW());
+
+INSERT IGNORE INTO account (id, name, account_type_code, onboarding_status_code, account_plan_id, created_at, updated_at) VALUES
+    ('ac_01e2eltparent00001', 'E2E Lead Time Head Office', 'company', 'unclaimed', 'acpl_01seed000free00plan000000', NOW(), NOW()),
+    ('ac_01e2eltparent00002', 'E2E Lead Time Head Office (No Lead Time)', 'company', 'unclaimed', 'acpl_01seed000free00plan000000', NOW(), NOW()),
+    ('ac_01e2eltchild000001', 'E2E Lead Time Location A', 'company', 'unclaimed', 'acpl_01seed000free00plan000000', NOW(), NOW()),
+    ('ac_01e2eltchild000002', 'E2E Lead Time Location B', 'company', 'unclaimed', 'acpl_01seed000free00plan000000', NOW(), NOW()),
+    ('ac_01e2eltchild000003', 'E2E Lead Time Location C', 'company', 'unclaimed', 'acpl_01seed000free00plan000000', NOW(), NOW()),
+    ('ac_01e2eltchild000004', 'E2E Lead Time Location D', 'company', 'unclaimed', 'acpl_01seed000free00plan000000', NOW(), NOW());
+
+-- The parents. The second carries no lead time of its own, which is what proves a parent
+-- that has set nothing does not shadow the group its children belong to.
+INSERT IGNORE INTO account_relation (id, owner_account_id, counterparty_account_id, account_relation_role_code, external_number, is_edi_enabled, priority_code, account_status_code, commission_status_code, freight_status_code, shipping_term_id, payment_term_id, default_lead_time_days, created_at, updated_at) VALUES
+    ('acre_01e2eltparent001', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01e2eltparent00001', 'customer', 'E2E-LT-PARENT-1', 0, 'normal', 'normal', 'commission_applied', 'billed_freight', 'prepaid_billed', 'pytm_01seednet3000000', 13, NOW(), NOW()),
+    ('acre_01e2eltparent002', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01e2eltparent00002', 'customer', 'E2E-LT-PARENT-2', 0, 'normal', 'normal', 'commission_applied', 'billed_freight', 'prepaid_billed', 'pytm_01seednet3000000', NULL, NOW(), NOW());
+
+-- The locations: one inheriting, one overriding, one grouped under a parent that decides,
+-- and one grouped under a parent that does not.
+INSERT IGNORE INTO account_relation (id, owner_account_id, counterparty_account_id, account_relation_role_code, external_number, is_edi_enabled, priority_code, account_status_code, commission_status_code, freight_status_code, shipping_term_id, payment_term_id, account_group_id, parent_account_relation_id, default_lead_time_days, created_at, updated_at) VALUES
+    ('acre_01e2eltchild0001', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01e2eltchild000001', 'customer', 'E2E-LT-CHILD-1', 0, 'normal', 'normal', 'commission_applied', 'billed_freight', 'prepaid_billed', 'pytm_01seednet3000000', NULL, 'acre_01e2eltparent001', NULL, NOW(), NOW()),
+    ('acre_01e2eltchild0002', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01e2eltchild000002', 'customer', 'E2E-LT-CHILD-2', 0, 'normal', 'normal', 'commission_applied', 'billed_freight', 'prepaid_billed', 'pytm_01seednet3000000', NULL, 'acre_01e2eltparent001', 5, NOW(), NOW()),
+    ('acre_01e2eltchild0003', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01e2eltchild000003', 'customer', 'E2E-LT-CHILD-3', 0, 'normal', 'normal', 'commission_applied', 'billed_freight', 'prepaid_billed', 'pytm_01seednet3000000', 'acgp_01e2eltgroup00001', 'acre_01e2eltparent001', NULL, NOW(), NOW()),
+    ('acre_01e2eltchild0004', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01e2eltchild000004', 'customer', 'E2E-LT-CHILD-4', 0, 'normal', 'normal', 'commission_applied', 'billed_freight', 'prepaid_billed', 'pytm_01seednet3000000', 'acgp_01e2eltgroup00001', 'acre_01e2eltparent002', NULL, NOW(), NOW());
+
+-- Location A can be sold to, so an order issued for it stamps the commitment its parent decided.
+INSERT IGNORE INTO account_relation_product_line (id, account_relation_id, product_line_id, created_at, updated_at) VALUES
+    ('acrepdln_01e2eltchd1', 'acre_01e2eltchild0001', 'pdln_01k0a735ype5e8nrhv1n5dhq1q', NOW(), NOW());
+
+-- The rest of the lead-time relations can be sold to as well.
+--
+-- Not for their own tests, which only care about the lead-time chain, but because they are
+-- customers and TestArrayFilters_UnionExclusion samples the customers feed to exercise the
+-- catalog's customer_ids filter: it takes the first two customers the list returns and requires
+-- each to match items. A customer with no product-line access matches none, so the first
+-- lead-time relation to reach the front of that list turns a real filter test red.
+--
+-- Catalog access is independent of the lead-time chain — it touches neither
+-- default_lead_time_days nor the account group — so these rows cannot move what those tests
+-- resolve. See [[project_array_filter_seed_coverage]] for the same cascade hitting tx4 and eBad.
+INSERT IGNORE INTO account_relation_product_line (id, account_relation_id, product_line_id, created_at, updated_at) VALUES
+    ('acrepdln_01e2eltprt1', 'acre_01e2eltparent001', 'pdln_01k0a735ype5e8nrhv1n5dhq1q', NOW(), NOW()),
+    ('acrepdln_01e2eltprt2', 'acre_01e2eltparent002', 'pdln_01k0a735ype5e8nrhv1n5dhq1q', NOW(), NOW()),
+    ('acrepdln_01e2eltchd2', 'acre_01e2eltchild0002', 'pdln_01k0a735ype5e8nrhv1n5dhq1q', NOW(), NOW()),
+    ('acrepdln_01e2eltchd3', 'acre_01e2eltchild0003', 'pdln_01k0a735ype5e8nrhv1n5dhq1q', NOW(), NOW()),
+    ('acrepdln_01e2eltchd4', 'acre_01e2eltchild0004', 'pdln_01k0a735ype5e8nrhv1n5dhq1q', NOW(), NOW());
+
+-- A third head office, reserved for the test that sets and clears a lead time through the
+-- API. It starts with none so the write path is what puts one there, and nothing else
+-- resolves this pair — a shared fixture would flap depending on which test was mid-flight.
+INSERT IGNORE INTO account (id, name, account_type_code, onboarding_status_code, account_plan_id, created_at, updated_at) VALUES
+    ('ac_01e2eltparent00003', 'E2E Lead Time Head Office (Mutable)', 'company', 'unclaimed', 'acpl_01seed000free00plan000000', NOW(), NOW()),
+    ('ac_01e2eltchild000005', 'E2E Lead Time Location E', 'company', 'unclaimed', 'acpl_01seed000free00plan000000', NOW(), NOW());
+
+INSERT IGNORE INTO account_relation (id, owner_account_id, counterparty_account_id, account_relation_role_code, external_number, is_edi_enabled, priority_code, account_status_code, commission_status_code, freight_status_code, shipping_term_id, payment_term_id, default_lead_time_days, created_at, updated_at) VALUES
+    ('acre_01e2eltparent003', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01e2eltparent00003', 'customer', 'E2E-LT-PARENT-3', 0, 'normal', 'normal', 'commission_applied', 'billed_freight', 'prepaid_billed', 'pytm_01seednet3000000', NULL, NOW(), NOW());
+
+INSERT IGNORE INTO account_relation (id, owner_account_id, counterparty_account_id, account_relation_role_code, external_number, is_edi_enabled, priority_code, account_status_code, commission_status_code, freight_status_code, shipping_term_id, payment_term_id, account_group_id, parent_account_relation_id, default_lead_time_days, created_at, updated_at) VALUES
+    ('acre_01e2eltchild0005', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01e2eltchild000005', 'customer', 'E2E-LT-CHILD-5', 0, 'normal', 'normal', 'commission_applied', 'billed_freight', 'prepaid_billed', 'pytm_01seednet3000000', 'acgp_01e2eltgroup00001', 'acre_01e2eltparent003', NULL, NOW(), NOW());
+
+-- Both of these are customers too, so they need catalog access for the same reason as above.
+INSERT IGNORE INTO account_relation_product_line (id, account_relation_id, product_line_id, created_at, updated_at) VALUES
+    ('acrepdln_01e2eltprt3', 'acre_01e2eltparent003', 'pdln_01k0a735ype5e8nrhv1n5dhq1q', NOW(), NOW()),
+    ('acrepdln_01e2eltchd5', 'acre_01e2eltchild0005', 'pdln_01k0a735ype5e8nrhv1n5dhq1q', NOW(), NOW());

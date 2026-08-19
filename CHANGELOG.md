@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.49.3](https://github.com/Augno/api/compare/v0.49.2...v0.49.3) (2026-08-19)
+
+
+### Bug Fixes
+
+* ship by dates do not respect operation days of the factory ([#498](https://github.com/Augno/api/issues/498)) ([7739234](https://github.com/Augno/api/commit/773923475072087acbc57a09ddd7fefd43e6ebc5))
+* update production schedule line logic to enforce campaign constraints ([ab6680c](https://github.com/Augno/api/commit/ab6680cc9041a713bd174203ab23ba3620c3d8b4))
+
 ## [0.49.2](https://github.com/Augno/api/compare/v0.49.1...v0.49.2) (2026-08-18)
 
 

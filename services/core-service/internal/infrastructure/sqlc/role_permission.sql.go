@@ -20,43 +20,43 @@ func (q *Queries) DeleteRolePermissionsByRoleID(ctx context.Context, roleID stri
 	return err
 }
 
-const findRolePermissionStrings = `-- name: FindRolePermissionStrings :many
-SELECT CONCAT(role_permission.permission_code, ':create') as permission_string
-FROM role_permission WHERE role_permission.role_id = ? AND role_permission.` + "`" + `create` + "`" + ` = 1
-UNION ALL
-SELECT CONCAT(role_permission.permission_code, ':read')
-FROM role_permission WHERE role_permission.role_id = ? AND role_permission.` + "`" + `read` + "`" + ` = 1
-UNION ALL
-SELECT CONCAT(role_permission.permission_code, ':update')
-FROM role_permission WHERE role_permission.role_id = ? AND role_permission.` + "`" + `update` + "`" + ` = 1
-UNION ALL
-SELECT CONCAT(role_permission.permission_code, ':delete')
-FROM role_permission WHERE role_permission.role_id = ? AND role_permission.` + "`" + `delete` + "`" + ` = 1
-ORDER BY 1
+const findRolePermissionFlags = `-- name: FindRolePermissionFlags :many
+SELECT permission_code, ` + "`" + `create` + "`" + `, ` + "`" + `read` + "`" + `, ` + "`" + `update` + "`" + `, ` + "`" + `delete` + "`" + `
+FROM role_permission
+WHERE role_id = ?
 `
 
-type FindRolePermissionStringsParams struct {
-	RoleID string
+type FindRolePermissionFlagsRow struct {
+	PermissionCode string
+	Create         bool
+	Read           bool
+	Update         bool
+	Delete         bool
 }
 
-func (q *Queries) FindRolePermissionStrings(ctx context.Context, arg FindRolePermissionStringsParams) ([]string, error) {
-	rows, err := q.db.QueryContext(ctx, findRolePermissionStrings,
-		arg.RoleID,
-		arg.RoleID,
-		arg.RoleID,
-		arg.RoleID,
-	)
+// One scan of the role's permissions; the caller expands each row into its `code:verb`
+// strings. The UNION ALL of four filtered SELECTs this replaced scanned
+// role_permission_role_id_idx once per verb and filesorted the result, reading 4x the rows
+// on every authorized request.
+func (q *Queries) FindRolePermissionFlags(ctx context.Context, roleID string) ([]FindRolePermissionFlagsRow, error) {
+	rows, err := q.db.QueryContext(ctx, findRolePermissionFlags, roleID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []string
+	var items []FindRolePermissionFlagsRow
 	for rows.Next() {
-		var permission_string string
-		if err := rows.Scan(&permission_string); err != nil {
+		var i FindRolePermissionFlagsRow
+		if err := rows.Scan(
+			&i.PermissionCode,
+			&i.Create,
+			&i.Read,
+			&i.Update,
+			&i.Delete,
+		); err != nil {
 			return nil, err
 		}
-		items = append(items, permission_string)
+		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err

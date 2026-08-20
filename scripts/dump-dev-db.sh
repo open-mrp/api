@@ -52,17 +52,29 @@ print_status "Dumping schema (no data) to temporary file..."
 # goose_db_version is goose's own bookkeeping table. Goose creates it itself before
 # running anything, so a migration that also creates it is at best redundant and at
 # worst conflicts on a fresh database.
+# --skip-comments drops the banner, the per-table "Table structure for" headers and the
+# trailing "Dump completed on" timestamp: they carry the dumping client's version and the
+# wall clock, so every regeneration churns the diff even when the schema is identical.
 if ! mysqldump "${MYSQL_AUTH[@]}" \
     "$DATABASE" \
     --no-data \
     --triggers \
     --single-transaction \
+    --skip-comments \
+    --skip-set-charset \
     --ignore-table="$DATABASE.goose_db_version" \
     > "$TEMP_SCHEMA_FILE" 2>/dev/null; then
     print_error "Error creating schema dump"
     rm -f "$TEMP_SCHEMA_FILE"
     exit 1
 fi
+
+# Drop mysqldump's version-gated session SET statements for the same reason: their version
+# guards move with the client (utf8 -> utf8mb4, 40101 -> 50503). None of them are load-bearing
+# for a schema-only load; the schema carries no foreign keys, so create order is free.
+# The pattern is deliberately narrow so /*!50003 CREATE ... TRIGGER */ bodies survive.
+grep -vE '^/\*![0-9]+ SET .*\*/;$' "$TEMP_SCHEMA_FILE" | cat -s > "$TEMP_SCHEMA_FILE.clean"
+mv "$TEMP_SCHEMA_FILE.clean" "$TEMP_SCHEMA_FILE"
 
 # Generate DROP TABLE statements for Down migration (reverse order)
 print_status "Generating DROP TABLE statements for down migration..."
@@ -94,7 +106,7 @@ print_status "Writing Goose migration to $OUTPUT_FILE..."
 } > "$OUTPUT_FILE"
 
 # Cleanup
-rm -f "$TEMP_SCHEMA_FILE" "$TEMP_DROP_FILE"
+rm -f "$TEMP_SCHEMA_FILE" "$TEMP_SCHEMA_FILE.clean" "$TEMP_DROP_FILE"
 
 print_status "Goose migration created successfully: $OUTPUT_FILE"
 print_status "File size: $(du -h "$OUTPUT_FILE" | cut -f1)"

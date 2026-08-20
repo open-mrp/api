@@ -1,29 +1,6 @@
 -- +goose Up
 
--- MySQL dump 10.13  Distrib 9.7.1, for macos26.4 (arm64)
---
--- Host: 127.0.0.1    Database: augno
--- ------------------------------------------------------
--- Server version	8.4.10
-
-/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
-/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!50503 SET NAMES utf8mb4 */;
-/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
-/*!40103 SET TIME_ZONE='+00:00' */;
-/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
-/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
-/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
-/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
-
---
--- Table structure for table `InventoryIssueStatus`
---
-
 DROP TABLE IF EXISTS `InventoryIssueStatus`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `InventoryIssueStatus` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -33,195 +10,91 @@ CREATE TABLE `InventoryIssueStatus` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `InventoryIssueStatus_code_key` (`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `_batch_flow`
---
-
 DROP TABLE IF EXISTS `_batch_flow`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `_batch_flow` (
   `A` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `B` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   UNIQUE KEY `_batch_flow_AB_unique` (`A`,`B`),
   KEY `_batch_flow_B_index` (`B`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `_batches_machines`
---
-
 DROP TABLE IF EXISTS `_batches_machines`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `_batches_machines` (
   `A` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `B` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   UNIQUE KEY `_batches_machines_AB_unique` (`A`,`B`),
   KEY `_batches_machines_B_index` (`B`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `_departments_picks`
---
-
 DROP TABLE IF EXISTS `_departments_picks`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `_departments_picks` (
   `A` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `B` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   UNIQUE KEY `_departments_picks_AB_unique` (`A`,`B`),
   KEY `_departments_picks_B_index` (`B`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `_item_attributes`
---
-
 DROP TABLE IF EXISTS `_item_attributes`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `_item_attributes` (
   `A` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `B` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   UNIQUE KEY `_item_attributes_AB_unique` (`A`,`B`),
   KEY `_item_attributes_B_index` (`B`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `_item_categories_properties`
---
-
 DROP TABLE IF EXISTS `_item_categories_properties`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `_item_categories_properties` (
   `A` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `B` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   UNIQUE KEY `_item_categories_properties_AB_unique` (`A`,`B`),
   KEY `_item_categories_properties_B_index` (`B`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `_item_categories_quantity_discounts`
---
-
 DROP TABLE IF EXISTS `_item_categories_quantity_discounts`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `_item_categories_quantity_discounts` (
   `A` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `B` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   UNIQUE KEY `_item_categories_quantity_discounts_AB_unique` (`A`,`B`),
   KEY `_item_categories_quantity_discounts_B_index` (`B`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `_parent_child_production_steps`
---
-
 DROP TABLE IF EXISTS `_parent_child_production_steps`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `_parent_child_production_steps` (
   `A` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `B` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   UNIQUE KEY `_parent_child_production_steps_AB_unique` (`A`,`B`),
   KEY `_parent_child_production_steps_B_index` (`B`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `_payment_terms_registration_flows`
---
-
 DROP TABLE IF EXISTS `_payment_terms_registration_flows`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `_payment_terms_registration_flows` (
   `A` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `B` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   UNIQUE KEY `_payment_terms_registration_flows_AB_unique` (`A`,`B`),
   KEY `_payment_terms_registration_flows_B_index` (`B`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `_product_lines_quantity_discounts`
---
-
 DROP TABLE IF EXISTS `_product_lines_quantity_discounts`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `_product_lines_quantity_discounts` (
   `A` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `B` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   UNIQUE KEY `_product_lines_quantity_discounts_AB_unique` (`A`,`B`),
   KEY `_product_lines_quantity_discounts_B_index` (`B`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `_quantity_discounts_attributes`
---
-
 DROP TABLE IF EXISTS `_quantity_discounts_attributes`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `_quantity_discounts_attributes` (
   `A` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `B` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   UNIQUE KEY `_quantity_discounts_attributes_AB_unique` (`A`,`B`),
   KEY `_quantity_discounts_attributes_B_index` (`B`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `_quantity_discounts_units`
---
-
 DROP TABLE IF EXISTS `_quantity_discounts_units`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `_quantity_discounts_units` (
   `A` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `B` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   UNIQUE KEY `_quantity_discounts_units_AB_unique` (`A`,`B`),
   KEY `_quantity_discounts_units_B_index` (`B`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `_registration_flows_shipping_terms`
---
-
 DROP TABLE IF EXISTS `_registration_flows_shipping_terms`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `_registration_flows_shipping_terms` (
   `A` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `B` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   UNIQUE KEY `_registration_flows_shipping_terms_AB_unique` (`A`,`B`),
   KEY `_registration_flows_shipping_terms_B_index` (`B`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `account`
---
-
 DROP TABLE IF EXISTS `account`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `account` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -245,15 +118,7 @@ CREATE TABLE `account` (
   KEY `account_onboarding_status_code_idx` (`onboarding_status_code`),
   FULLTEXT KEY `account_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `account_address`
---
-
 DROP TABLE IF EXISTS `account_address`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `account_address` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -264,15 +129,7 @@ CREATE TABLE `account_address` (
   UNIQUE KEY `account_address_account_id_address_id_key` (`account_id`,`address_id`),
   KEY `account_address_address_id_idx` (`address_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `account_billing`
---
-
 DROP TABLE IF EXISTS `account_billing`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `account_billing` (
   `id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_plan_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -292,15 +149,7 @@ CREATE TABLE `account_billing` (
   KEY `account_billing_account_plan_id_idx` (`account_plan_id`),
   KEY `account_billing_internal_stripe_customer_id_idx` (`internal_stripe_customer_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `account_branding`
---
-
 DROP TABLE IF EXISTS `account_branding`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `account_branding` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `owner_account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -319,15 +168,7 @@ CREATE TABLE `account_branding` (
   UNIQUE KEY `account_branding_owner_account_id_key` (`owner_account_id`),
   FULLTEXT KEY `account_branding_support_email_idx` (`support_email`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `account_group`
---
-
 DROP TABLE IF EXISTS `account_group`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `account_group` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `owner_account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -351,15 +192,7 @@ CREATE TABLE `account_group` (
   FULLTEXT KEY `account_group_description_idx` (`description`),
   FULLTEXT KEY `account_group_name_description_idx` (`name`,`description`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `account_group_product_line`
---
-
 DROP TABLE IF EXISTS `account_group_product_line`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `account_group_product_line` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_group_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -370,15 +203,7 @@ CREATE TABLE `account_group_product_line` (
   UNIQUE KEY `account_group_product_line_account_group_id_product_line_id_key` (`account_group_id`,`product_line_id`),
   KEY `account_group_product_line_product_line_id_idx` (`product_line_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `account_group_quantity_discount`
---
-
 DROP TABLE IF EXISTS `account_group_quantity_discount`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `account_group_quantity_discount` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_group_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -389,15 +214,7 @@ CREATE TABLE `account_group_quantity_discount` (
   UNIQUE KEY `account_group_quantity_discount_account_group_id_quantity_di_key` (`account_group_id`,`quantity_discount_id`),
   KEY `account_group_quantity_discount_quantity_discount_id_idx` (`quantity_discount_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `account_integration`
---
-
 DROP TABLE IF EXISTS `account_integration`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `account_integration` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -413,15 +230,7 @@ CREATE TABLE `account_integration` (
   KEY `account_integration_is_active_idx` (`is_active`),
   FULLTEXT KEY `account_integration_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `account_inventory_setting`
---
-
 DROP TABLE IF EXISTS `account_inventory_setting`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `account_inventory_setting` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -432,15 +241,7 @@ CREATE TABLE `account_inventory_setting` (
   UNIQUE KEY `account_inventory_setting_account_id_key` (`account_id`),
   KEY `account_inventory_setting_inventory_policy_code_idx` (`inventory_policy_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `account_plan`
---
-
 DROP TABLE IF EXISTS `account_plan`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `account_plan` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `type_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -468,15 +269,7 @@ CREATE TABLE `account_plan` (
   KEY `account_plan_is_publicly_visible_created_at_id_idx` (`is_publicly_visible`,`created_at` DESC,`id` DESC),
   FULLTEXT KEY `account_plan_name_idx` (`name`)
 ) ENGINE=InnoDB AUTO_INCREMENT=139 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `account_plan_feature`
---
-
 DROP TABLE IF EXISTS `account_plan_feature`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `account_plan_feature` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `account_plan_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -487,15 +280,7 @@ CREATE TABLE `account_plan_feature` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `account_plan_feature_account_plan_id_key_key` (`account_plan_id`,`key`)
 ) ENGINE=InnoDB AUTO_INCREMENT=415 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `account_plan_limit`
---
-
 DROP TABLE IF EXISTS `account_plan_limit`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `account_plan_limit` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `account_plan_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -506,15 +291,7 @@ CREATE TABLE `account_plan_limit` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `account_plan_limit_account_plan_id_key_key` (`account_plan_id`,`key`)
 ) ENGINE=InnoDB AUTO_INCREMENT=553 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `account_portal`
---
-
 DROP TABLE IF EXISTS `account_portal`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `account_portal` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `owner_account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -525,15 +302,7 @@ CREATE TABLE `account_portal` (
   UNIQUE KEY `account_portal_owner_account_id_key` (`owner_account_id`),
   UNIQUE KEY `account_portal_slug_key` (`slug`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `account_price`
---
-
 DROP TABLE IF EXISTS `account_price`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `account_price` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -549,15 +318,7 @@ CREATE TABLE `account_price` (
   KEY `account_price_product_line_id_idx` (`product_line_id`),
   KEY `account_price_owner_recipient_created_idx` (`owner_account_id`,`recipient_account_id`,`created_at` DESC,`id` DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `account_price_attribute`
---
-
 DROP TABLE IF EXISTS `account_price_attribute`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `account_price_attribute` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_price_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -568,15 +329,7 @@ CREATE TABLE `account_price_attribute` (
   UNIQUE KEY `account_price_attribute_account_price_id_attribute_id_key` (`account_price_id`,`attribute_id`),
   KEY `account_price_attribute_attribute_id_idx` (`attribute_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `account_price_item_category`
---
-
 DROP TABLE IF EXISTS `account_price_item_category`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `account_price_item_category` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_price_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -587,15 +340,7 @@ CREATE TABLE `account_price_item_category` (
   UNIQUE KEY `account_price_item_category_account_price_id_item_category_i_key` (`account_price_id`,`item_category_id`),
   KEY `account_price_item_category_item_category_id_idx` (`item_category_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `account_production_schedule_setting`
---
-
 DROP TABLE IF EXISTS `account_production_schedule_setting`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `account_production_schedule_setting` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -647,15 +392,7 @@ CREATE TABLE `account_production_schedule_setting` (
   KEY `account_production_schedule_setting_ship_calendar_id_idx` (`ship_calendar_id`),
   KEY `account_production_schedule_setting_receive_calendar_id_idx` (`receive_calendar_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `account_relation`
---
-
 DROP TABLE IF EXISTS `account_relation`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `account_relation` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `owner_account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -713,15 +450,7 @@ CREATE TABLE `account_relation` (
   FULLTEXT KEY `account_relation_notes_idx` (`notes`),
   FULLTEXT KEY `account_relation_alias_notes_idx` (`alias`,`notes`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `account_relation_notification_preference`
---
-
 DROP TABLE IF EXISTS `account_relation_notification_preference`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `account_relation_notification_preference` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_relation_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -734,15 +463,7 @@ CREATE TABLE `account_relation_notification_preference` (
   KEY `account_relation_notification_preference_notification_type_c_idx` (`notification_type_code`),
   KEY `account_relation_notification_preference_recipient_account_u_idx` (`recipient_account_user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `account_relation_notification_type`
---
-
 DROP TABLE IF EXISTS `account_relation_notification_type`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `account_relation_notification_type` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -752,15 +473,7 @@ CREATE TABLE `account_relation_notification_type` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `account_relation_notification_type_code_key` (`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `account_relation_price_group`
---
-
 DROP TABLE IF EXISTS `account_relation_price_group`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `account_relation_price_group` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_relation_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -771,15 +484,7 @@ CREATE TABLE `account_relation_price_group` (
   UNIQUE KEY `account_relation_price_group_account_relation_id_account_gro_key` (`account_relation_id`,`account_group_id`),
   KEY `account_relation_price_group_account_group_id_idx` (`account_group_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `account_relation_product_line`
---
-
 DROP TABLE IF EXISTS `account_relation_product_line`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `account_relation_product_line` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_relation_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -790,15 +495,7 @@ CREATE TABLE `account_relation_product_line` (
   UNIQUE KEY `account_relation_product_line_account_relation_id_product_li_key` (`account_relation_id`,`product_line_id`),
   KEY `account_relation_product_line_product_line_id_idx` (`product_line_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `account_status`
---
-
 DROP TABLE IF EXISTS `account_status`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `account_status` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -809,15 +506,7 @@ CREATE TABLE `account_status` (
   UNIQUE KEY `account_status_code_key` (`code`),
   FULLTEXT KEY `account_status_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `account_user`
---
-
 DROP TABLE IF EXISTS `account_user`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `account_user` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `user_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -836,15 +525,7 @@ CREATE TABLE `account_user` (
   KEY `account_user_status_code_idx` (`status_code`),
   KEY `account_user_account_id_status_code_created_at_id_idx` (`account_id`,`status_code`,`created_at` DESC,`id` DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `action_type`
---
-
 DROP TABLE IF EXISTS `action_type`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `action_type` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -855,15 +536,7 @@ CREATE TABLE `action_type` (
   UNIQUE KEY `action_type_code_key` (`code`),
   FULLTEXT KEY `action_type_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `address`
---
-
 DROP TABLE IF EXISTS `address`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `address` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -883,15 +556,7 @@ CREATE TABLE `address` (
   FULLTEXT KEY `address_name_phone_idx` (`name`,`phone`),
   FULLTEXT KEY `address_name_email_idx` (`name`,`email`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `adjustment_type`
---
-
 DROP TABLE IF EXISTS `adjustment_type`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `adjustment_type` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -902,15 +567,7 @@ CREATE TABLE `adjustment_type` (
   UNIQUE KEY `adjustment_type_code_key` (`code`),
   FULLTEXT KEY `adjustment_type_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `agent_token_billing`
---
-
 DROP TABLE IF EXISTS `agent_token_billing`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `agent_token_billing` (
   `id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -927,15 +584,7 @@ CREATE TABLE `agent_token_billing` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `agent_token_billing_account_id_period_start_key` (`account_id`,`period_start`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `announcement`
---
-
 DROP TABLE IF EXISTS `announcement`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `announcement` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `scope` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -958,15 +607,7 @@ CREATE TABLE `announcement` (
   KEY `announcement_scope_window_idx` (`scope`,`account_id`,`publish_at`,`expires_at`),
   KEY `announcement_expires_idx` (`expires_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `announcement_receipt`
---
-
 DROP TABLE IF EXISTS `announcement_receipt`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `announcement_receipt` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `announcement_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -978,15 +619,7 @@ CREATE TABLE `announcement_receipt` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `anrc_ann_user_uq` (`announcement_id`,`account_user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `api_key`
---
-
 DROP TABLE IF EXISTS `api_key`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `api_key` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `type_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1012,15 +645,7 @@ CREATE TABLE `api_key` (
   KEY `api_key_owner_account_id_created_at_id_idx` (`owner_account_id`,`created_at` DESC,`id` DESC),
   FULLTEXT KEY `api_key_name_idx` (`name`)
 ) ENGINE=InnoDB AUTO_INCREMENT=75 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `attribute`
---
-
 DROP TABLE IF EXISTS `attribute`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `attribute` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `text` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1037,15 +662,7 @@ CREATE TABLE `attribute` (
   KEY `attribute_account_id_idx` (`account_id`),
   FULLTEXT KEY `attribute_text_idx` (`text`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `audit_event`
---
-
 DROP TABLE IF EXISTS `audit_event`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `audit_event` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `type_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1081,15 +698,7 @@ CREATE TABLE `audit_event` (
   KEY `audit_event_account_id_actor_id_occurred_at_type_id_idx` (`account_id`,`actor_id`,`occurred_at` DESC,`type_id` DESC),
   KEY `audit_event_root_idx` (`account_id`,`root_resource_type`,`root_resource_id`,`occurred_at`)
 ) ENGINE=InnoDB AUTO_INCREMENT=234 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `batch`
---
-
 DROP TABLE IF EXISTS `batch`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `batch` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -1119,15 +728,7 @@ CREATE TABLE `batch` (
   KEY `batch_account_id_scanning_station_id_scanned_at_id_idx` (`account_id`,`scanning_station_id`,`scanned_at` DESC,`id` DESC),
   KEY `batch_account_run_item_idx` (`account_id`,`production_run_id`,`item_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `carrier`
---
-
 DROP TABLE IF EXISTS `carrier`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `carrier` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `code` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -1146,15 +747,7 @@ CREATE TABLE `carrier` (
   FULLTEXT KEY `carrier_description_idx` (`description`),
   FULLTEXT KEY `carrier_name_description_idx` (`name`,`description`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `carrier_option`
---
-
 DROP TABLE IF EXISTS `carrier_option`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `carrier_option` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1174,15 +767,7 @@ CREATE TABLE `carrier_option` (
   FULLTEXT KEY `carrier_option_code_idx` (`code`),
   FULLTEXT KEY `carrier_option_name_code_idx` (`name`,`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `carrier_transit_estimate`
---
-
 DROP TABLE IF EXISTS `carrier_transit_estimate`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `carrier_transit_estimate` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1200,15 +785,7 @@ CREATE TABLE `carrier_transit_estimate` (
   UNIQUE KEY `carrier_transit_estimate_lane_uq` (`account_id`,`carrier_option_id`,`origin_country`,`origin_postal`,`dest_country`,`dest_postal`),
   KEY `carrier_transit_estimate_carrier_option_id_idx` (`carrier_option_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `change_log`
---
-
 DROP TABLE IF EXISTS `change_log`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `change_log` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -1226,15 +803,7 @@ CREATE TABLE `change_log` (
   KEY `change_log_action_type_code_idx` (`action_type_code`),
   FULLTEXT KEY `change_log_description_idx` (`description`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `color`
---
-
 DROP TABLE IF EXISTS `color`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `color` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -1247,15 +816,7 @@ CREATE TABLE `color` (
   UNIQUE KEY `color_code_key` (`code`),
   FULLTEXT KEY `color_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `consumption`
---
-
 DROP TABLE IF EXISTS `consumption`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `consumption` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -1271,15 +832,7 @@ CREATE TABLE `consumption` (
   KEY `consumption_production_step_id_idx` (`production_step_id`),
   KEY `consumption_item_id_idx` (`item_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `conversation`
---
-
 DROP TABLE IF EXISTS `conversation`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `conversation` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1310,30 +863,14 @@ CREATE TABLE `conversation` (
   KEY `conversation_inbox_idx` (`account_id`,`audience`,`is_archived`,`last_message_at` DESC,`id` DESC),
   KEY `conversation_group_idx` (`account_id`,`group_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `conversation_dm_key`
---
-
 DROP TABLE IF EXISTS `conversation_dm_key`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `conversation_dm_key` (
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `dm_key` varchar(383) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `conversation_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   PRIMARY KEY (`account_id`,`dm_key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `conversation_link`
---
-
 DROP TABLE IF EXISTS `conversation_link`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `conversation_link` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1346,15 +883,7 @@ CREATE TABLE `conversation_link` (
   UNIQUE KEY `cvlk_conv_resource_uq` (`conversation_id`,`resource_type`,`resource_id`),
   KEY `cvlk_resource_idx` (`account_id`,`resource_type`,`resource_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `conversation_participant`
---
-
 DROP TABLE IF EXISTS `conversation_participant`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `conversation_participant` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `conversation_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1385,15 +914,7 @@ CREATE TABLE `conversation_participant` (
   KEY `cvpt_conv_membership_idx` (`conversation_id`,`membership`),
   KEY `cvpt_relation_membership_idx` (`relation_account_id`,`membership`,`conversation_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `dc_location`
---
-
 DROP TABLE IF EXISTS `dc_location`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `dc_location` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `location` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1406,15 +927,7 @@ CREATE TABLE `dc_location` (
   KEY `dc_location_owner_account_id_idx` (`owner_account_id`),
   FULLTEXT KEY `dc_location_location_idx` (`location`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `deleted_record`
---
-
 DROP TABLE IF EXISTS `deleted_record`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `deleted_record` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `deleted_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -1425,15 +938,7 @@ CREATE TABLE `deleted_record` (
   KEY `deleted_record_resource_type_resource_id_idx` (`resource_type`,`resource_id`),
   KEY `deleted_record_deleted_at_idx` (`deleted_at`)
 ) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `delivery`
---
-
 DROP TABLE IF EXISTS `delivery`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `delivery` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `number` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1451,15 +956,7 @@ CREATE TABLE `delivery` (
   KEY `delivery_account_id_delivery_status_code_created_at_id_idx` (`account_id`,`delivery_status_code`,`created_at` DESC,`id` DESC),
   FULLTEXT KEY `delivery_number_idx` (`number`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `delivery_line`
---
-
 DROP TABLE IF EXISTS `delivery_line`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `delivery_line` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `delivery_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1480,15 +977,7 @@ CREATE TABLE `delivery_line` (
   KEY `delivery_line_storage_location_id_idx` (`storage_location_id`),
   KEY `delivery_line_lot_id_idx` (`lot_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `delivery_status`
---
-
 DROP TABLE IF EXISTS `delivery_status`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `delivery_status` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1498,15 +987,7 @@ CREATE TABLE `delivery_status` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `delivery_status_code_key` (`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `demand_override`
---
-
 DROP TABLE IF EXISTS `demand_override`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `demand_override` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1530,15 +1011,7 @@ CREATE TABLE `demand_override` (
   KEY `demand_override_account_scope_period_idx` (`account_id`,`scope_code`,`scope_ref_id`,`period_start_date`),
   KEY `demand_override_account_active_period_idx` (`account_id`,`is_active`,`period_start_date`,`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `demand_override_type`
---
-
 DROP TABLE IF EXISTS `demand_override_type`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `demand_override_type` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1548,15 +1021,7 @@ CREATE TABLE `demand_override_type` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `demand_override_type_code_key` (`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `department`
---
-
 DROP TABLE IF EXISTS `department`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `department` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1572,15 +1037,7 @@ CREATE TABLE `department` (
   KEY `department_location_id_idx` (`location_id`),
   FULLTEXT KEY `department_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `doc_api_key`
---
-
 DROP TABLE IF EXISTS `doc_api_key`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `doc_api_key` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `type_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1594,15 +1051,7 @@ CREATE TABLE `doc_api_key` (
   UNIQUE KEY `doc_api_key_api_key_id_key` (`api_key_id`),
   UNIQUE KEY `doc_api_key_owner_account_id_key` (`owner_account_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `edi_run`
---
-
 DROP TABLE IF EXISTS `edi_run`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `edi_run` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `completed_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -1615,15 +1064,7 @@ CREATE TABLE `edi_run` (
   KEY `edi_run_account_id_idx` (`account_id`),
   KEY `edi_run_account_id_has_succeeded_completed_at_id_idx` (`account_id`,`has_succeeded`,`completed_at` DESC,`id` DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `email_domain`
---
-
 DROP TABLE IF EXISTS `email_domain`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `email_domain` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1637,15 +1078,7 @@ CREATE TABLE `email_domain` (
   UNIQUE KEY `email_domain_domain_uq` (`domain`),
   KEY `email_domain_account_idx` (`account_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `email_inbox`
---
-
 DROP TABLE IF EXISTS `email_inbox`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `email_inbox` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1664,15 +1097,7 @@ CREATE TABLE `email_inbox` (
   KEY `email_inbox_account_idx` (`account_id`),
   KEY `email_inbox_domain_idx` (`email_domain_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `email_log`
---
-
 DROP TABLE IF EXISTS `email_log`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `email_log` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `has_sent` tinyint(1) NOT NULL DEFAULT '0',
@@ -1689,15 +1114,7 @@ CREATE TABLE `email_log` (
   KEY `email_log_ses_message_id_idx` (`ses_message_id`),
   FULLTEXT KEY `email_log_subject_idx` (`subject`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `email_message`
---
-
 DROP TABLE IF EXISTS `email_message`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `email_message` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1722,15 +1139,7 @@ CREATE TABLE `email_message` (
   KEY `email_message_in_reply_to_idx` (`in_reply_to`),
   KEY `email_message_message_idx` (`message_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `email_recipient`
---
-
 DROP TABLE IF EXISTS `email_recipient`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `email_recipient` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `email` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1741,15 +1150,7 @@ CREATE TABLE `email_recipient` (
   KEY `email_recipient_email_log_id_idx` (`email_log_id`),
   FULLTEXT KEY `email_recipient_email_idx` (`email`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `error_log`
---
-
 DROP TABLE IF EXISTS `error_log`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `error_log` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `affected_user_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -1776,15 +1177,7 @@ CREATE TABLE `error_log` (
   FULLTEXT KEY `error_log_name_private_message_idx` (`name`,`private_message`),
   FULLTEXT KEY `error_log_name_public_message_private_message_idx` (`name`,`public_message`,`private_message`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `fulfillment_policy`
---
-
 DROP TABLE IF EXISTS `fulfillment_policy`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `fulfillment_policy` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1794,15 +1187,7 @@ CREATE TABLE `fulfillment_policy` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `fulfillment_policy_code_key` (`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `geolocation`
---
-
 DROP TABLE IF EXISTS `geolocation`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `geolocation` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `street_line_1` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -1822,15 +1207,7 @@ CREATE TABLE `geolocation` (
   UNIQUE KEY `geolocation_google_place_id_key` (`google_place_id`),
   FULLTEXT KEY `geolocation_street_line_1_street_line_2_locality_state_posta_idx` (`street_line_1`,`street_line_2`,`locality`,`state`,`postal_code`,`country`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `hubspot_account_user_link`
---
-
 DROP TABLE IF EXISTS `hubspot_account_user_link`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `hubspot_account_user_link` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_user_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1843,15 +1220,7 @@ CREATE TABLE `hubspot_account_user_link` (
   UNIQUE KEY `hubspot_account_user_link_owner_account_id_customer_account__key` (`owner_account_id`,`customer_account_id`,`account_user_id`),
   KEY `hubspot_account_user_link_hubspot_contact_id_idx` (`hubspot_contact_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `hubspot_company_review`
---
-
 DROP TABLE IF EXISTS `hubspot_company_review`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `hubspot_company_review` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `job_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1870,15 +1239,7 @@ CREATE TABLE `hubspot_company_review` (
   UNIQUE KEY `hubspot_company_review_job_id_augno_customer_id_key` (`job_id`,`augno_customer_id`),
   KEY `hubspot_company_review_job_id_status_idx` (`job_id`,`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `hubspot_sync_job`
---
-
 DROP TABLE IF EXISTS `hubspot_sync_job`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `hubspot_sync_job` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1895,15 +1256,7 @@ CREATE TABLE `hubspot_sync_job` (
   PRIMARY KEY (`id`),
   KEY `hubspot_sync_job_account_id_status_idx` (`account_id`,`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `hubspot_sync_record`
---
-
 DROP TABLE IF EXISTS `hubspot_sync_record`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `hubspot_sync_record` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1920,15 +1273,7 @@ CREATE TABLE `hubspot_sync_record` (
   UNIQUE KEY `hubspot_sync_record_account_id_augno_type_augno_id_key` (`account_id`,`augno_type`,`augno_id`),
   KEY `hubspot_sync_record_account_id_hubspot_type_hubspot_id_idx` (`account_id`,`hubspot_type`,`hubspot_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `idempotency_key`
---
-
 DROP TABLE IF EXISTS `idempotency_key`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `idempotency_key` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `type_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1960,15 +1305,7 @@ CREATE TABLE `idempotency_key` (
   KEY `idempotency_key_lock_expires_at_idx` (`lock_expires_at`),
   KEY `idempotency_key_expires_at_idx` (`expires_at`)
 ) ENGINE=InnoDB AUTO_INCREMENT=541 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `inventory_allocation`
---
-
 DROP TABLE IF EXISTS `inventory_allocation`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `inventory_allocation` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `inventory_receipt_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1985,15 +1322,7 @@ CREATE TABLE `inventory_allocation` (
   KEY `inventory_allocation_inventory_receipt_id_idx` (`inventory_receipt_id`),
   KEY `inventory_allocation_inventory_issue_id_idx` (`inventory_issue_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `inventory_change_log`
---
-
 DROP TABLE IF EXISTS `inventory_change_log`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `inventory_change_log` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `item_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2019,15 +1348,7 @@ CREATE TABLE `inventory_change_log` (
   KEY `inventory_change_log_acct_station_created_idx` (`account_id`,`scanning_station_id`,`created_at` DESC,`id` DESC),
   KEY `inventory_change_log_account_created_idx` (`account_id`,`created_at` DESC,`id` DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `inventory_issue`
---
-
 DROP TABLE IF EXISTS `inventory_issue`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `inventory_issue` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2051,15 +1372,7 @@ CREATE TABLE `inventory_issue` (
   KEY `inventory_issue_lot_id_idx` (`lot_id`),
   KEY `inventory_issue_batch_id_idx` (`batch_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `inventory_log`
---
-
 DROP TABLE IF EXISTS `inventory_log`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `inventory_log` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `item_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2073,15 +1386,7 @@ CREATE TABLE `inventory_log` (
   KEY `inventory_log_account_id_idx` (`account_id`),
   KEY `inventory_log_created_at_idx` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `inventory_policy_type`
---
-
 DROP TABLE IF EXISTS `inventory_policy_type`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `inventory_policy_type` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2091,15 +1396,7 @@ CREATE TABLE `inventory_policy_type` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `inventory_policy_type_code_key` (`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `inventory_receipt`
---
-
 DROP TABLE IF EXISTS `inventory_receipt`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `inventory_receipt` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `owner_account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2129,15 +1426,7 @@ CREATE TABLE `inventory_receipt` (
   KEY `inventory_receipt_order_id_idx` (`order_id`),
   KEY `inventory_receipt_batch_id_idx` (`batch_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `inventory_receipt_status`
---
-
 DROP TABLE IF EXISTS `inventory_receipt_status`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `inventory_receipt_status` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2147,15 +1436,7 @@ CREATE TABLE `inventory_receipt_status` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `inventory_receipt_status_code_key` (`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `invoice`
---
-
 DROP TABLE IF EXISTS `invoice`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `invoice` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `number` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2178,15 +1459,7 @@ CREATE TABLE `invoice` (
   FULLTEXT KEY `invoice_note_idx` (`note`),
   FULLTEXT KEY `invoice_number_note_idx` (`number`,`note`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `invoice_line`
---
-
 DROP TABLE IF EXISTS `invoice_line`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `invoice_line` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `invoice_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2200,15 +1473,7 @@ CREATE TABLE `invoice_line` (
   KEY `invoice_line_sales_order_line_id_idx` (`sales_order_line_id`),
   KEY `invoice_line_invoice_id_sales_order_line_id_idx` (`invoice_id`,`sales_order_line_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `item`
---
-
 DROP TABLE IF EXISTS `item`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `item` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `sku` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2239,15 +1504,7 @@ CREATE TABLE `item` (
   FULLTEXT KEY `item_description_idx` (`description`),
   FULLTEXT KEY `item_sku_description_idx` (`sku`,`description`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `item_category`
---
-
 DROP TABLE IF EXISTS `item_category`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `item_category` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2263,15 +1520,7 @@ CREATE TABLE `item_category` (
   KEY `item_category_item_category_type_code_idx` (`item_category_type_code`),
   FULLTEXT KEY `item_category_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `item_category_type`
---
-
 DROP TABLE IF EXISTS `item_category_type`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `item_category_type` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -2282,15 +1531,7 @@ CREATE TABLE `item_category_type` (
   UNIQUE KEY `item_category_type_code_key` (`code`),
   FULLTEXT KEY `item_category_type_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `item_type`
---
-
 DROP TABLE IF EXISTS `item_type`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `item_type` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -2301,15 +1542,7 @@ CREATE TABLE `item_type` (
   UNIQUE KEY `item_type_code_key` (`code`),
   FULLTEXT KEY `item_type_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `job`
---
-
 DROP TABLE IF EXISTS `job`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `job` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `job_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2332,15 +1565,7 @@ CREATE TABLE `job` (
   KEY `job_job_id_idx` (`job_id`),
   KEY `job_account_id_created_by_idx` (`account_id`,`created_by`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `journal_posting`
---
-
 DROP TABLE IF EXISTS `journal_posting`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `journal_posting` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_transaction_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2354,15 +1579,7 @@ CREATE TABLE `journal_posting` (
   KEY `journal_posting_account_transaction_id_idx` (`account_transaction_id`),
   KEY `journal_posting_account_id_idx` (`account_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `label_size`
---
-
 DROP TABLE IF EXISTS `label_size`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `label_size` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2373,15 +1590,7 @@ CREATE TABLE `label_size` (
   UNIQUE KEY `label_size_code_key` (`code`),
   FULLTEXT KEY `label_size_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `label_type`
---
-
 DROP TABLE IF EXISTS `label_type`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `label_type` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2392,15 +1601,7 @@ CREATE TABLE `label_type` (
   UNIQUE KEY `label_type_code_key` (`code`),
   FULLTEXT KEY `label_type_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `lot`
---
-
 DROP TABLE IF EXISTS `lot`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `lot` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2416,15 +1617,7 @@ CREATE TABLE `lot` (
   KEY `lot_expires_at_idx` (`expires_at`),
   FULLTEXT KEY `lot_lot_number_idx` (`lot_number`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `machine`
---
-
 DROP TABLE IF EXISTS `machine`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `machine` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2441,15 +1634,7 @@ CREATE TABLE `machine` (
   KEY `machine_production_step_id_idx` (`production_step_id`),
   FULLTEXT KEY `machine_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `machine_downtime_event`
---
-
 DROP TABLE IF EXISTS `machine_downtime_event`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `machine_downtime_event` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2479,15 +1664,7 @@ CREATE TABLE `machine_downtime_event` (
   KEY `machine_downtime_open_idx` (`account_id`,`machine_id`,`ended_at`),
   KEY `machine_downtime_account_ended_started_idx` (`account_id`,`ended_at`,`started_at` DESC,`id` DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `machine_downtime_reason`
---
-
 DROP TABLE IF EXISTS `machine_downtime_reason`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `machine_downtime_reason` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2500,15 +1677,7 @@ CREATE TABLE `machine_downtime_reason` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `machine_downtime_reason_code_key` (`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `material`
---
-
 DROP TABLE IF EXISTS `material`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `material` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -2521,15 +1690,7 @@ CREATE TABLE `material` (
   UNIQUE KEY `material_order_point_id_key` (`order_point_id`),
   UNIQUE KEY `material_lead_time_id_key` (`lead_time_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `message`
---
-
 DROP TABLE IF EXISTS `message`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `message` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `conversation_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2577,15 +1738,7 @@ CREATE TABLE `message` (
   KEY `message_conv_status_idx` (`conversation_id`,`status`),
   KEY `message_acct_status_sched_idx` (`account_id`,`status`,`scheduled_for`,`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `message_attachment`
---
-
 DROP TABLE IF EXISTS `message_attachment`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `message_attachment` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `message_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2607,15 +1760,7 @@ CREATE TABLE `message_attachment` (
   KEY `mgah_message_idx` (`message_id`),
   KEY `mgah_purge_idx` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `message_inbox`
---
-
 DROP TABLE IF EXISTS `message_inbox`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `message_inbox` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `message_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2636,15 +1781,7 @@ CREATE TABLE `message_inbox` (
   KEY `message_inbox_request_id_idx` (`request_id`),
   KEY `message_inbox_parent_message_id_idx` (`parent_message_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=150944 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `message_outbox`
---
-
 DROP TABLE IF EXISTS `message_outbox`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `message_outbox` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `message_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2675,15 +1812,7 @@ CREATE TABLE `message_outbox` (
   KEY `message_outbox_request_id_idx` (`request_id`),
   KEY `message_outbox_parent_message_id_idx` (`parent_message_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=151785 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `message_receipt`
---
-
 DROP TABLE IF EXISTS `message_receipt`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `message_receipt` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `message_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2697,15 +1826,7 @@ CREATE TABLE `message_receipt` (
   UNIQUE KEY `mgrc_msg_user_uq` (`message_id`,`account_user_id`),
   KEY `mgrc_user_idx` (`account_user_id`,`read_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `messaging_block`
---
-
 DROP TABLE IF EXISTS `messaging_block`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `messaging_block` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2716,15 +1837,7 @@ CREATE TABLE `messaging_block` (
   UNIQUE KEY `msgblock_pair_uq` (`blocker_account_user_id`,`blocked_account_user_id`),
   KEY `msgblock_account_idx` (`account_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `messaging_group`
---
-
 DROP TABLE IF EXISTS `messaging_group`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `messaging_group` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2735,15 +1848,7 @@ CREATE TABLE `messaging_group` (
   PRIMARY KEY (`id`),
   KEY `messaging_group_account_idx` (`account_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `messaging_group_member`
---
-
 DROP TABLE IF EXISTS `messaging_group_member`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `messaging_group_member` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `group_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2757,15 +1862,7 @@ CREATE TABLE `messaging_group_member` (
   UNIQUE KEY `mggm_group_agent_uq` (`group_id`,`agent_config_id`),
   KEY `mggm_group_idx` (`group_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `messaging_report`
---
-
 DROP TABLE IF EXISTS `messaging_report`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `messaging_report` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2778,15 +1875,7 @@ CREATE TABLE `messaging_report` (
   KEY `msgreport_conv_idx` (`conversation_id`),
   KEY `msgreport_account_idx` (`account_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `notification`
---
-
 DROP TABLE IF EXISTS `notification`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `notification` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2820,15 +1909,7 @@ CREATE TABLE `notification` (
   KEY `notification_purge_idx` (`created_at`,`read_at`,`dismissed_at`),
   KEY `nf_recipient_conversation_idx` (`recipient_account_user_id`,`conversation_id`,`dismissed_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `notification_preference`
---
-
 DROP TABLE IF EXISTS `notification_preference`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `notification_preference` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2843,15 +1924,7 @@ CREATE TABLE `notification_preference` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `nfpf_user_category_uq` (`account_user_id`,`category`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `onboarding_status`
---
-
 DROP TABLE IF EXISTS `onboarding_status`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `onboarding_status` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2862,15 +1935,7 @@ CREATE TABLE `onboarding_status` (
   UNIQUE KEY `onboarding_status_code_key` (`code`),
   FULLTEXT KEY `onboarding_status_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `operating_calendar`
---
-
 DROP TABLE IF EXISTS `operating_calendar`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `operating_calendar` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2888,15 +1953,7 @@ CREATE TABLE `operating_calendar` (
   UNIQUE KEY `operating_calendar_account_id_code_key` (`account_id`,`code`),
   KEY `operating_calendar_account_kind_default_idx` (`account_id`,`operating_calendar_kind_code`,`is_default`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `operating_calendar_closure`
---
-
 DROP TABLE IF EXISTS `operating_calendar_closure`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `operating_calendar_closure` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2909,15 +1966,7 @@ CREATE TABLE `operating_calendar_closure` (
   UNIQUE KEY `operating_calendar_closure_uq` (`operating_calendar_id`,`closed_on`),
   KEY `operating_calendar_closure_account_date_idx` (`account_id`,`closed_on`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `order_discount`
---
-
 DROP TABLE IF EXISTS `order_discount`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `order_discount` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2935,15 +1984,7 @@ CREATE TABLE `order_discount` (
   FULLTEXT KEY `order_discount_name_idx` (`name`),
   FULLTEXT KEY `order_discount_code_fulltext_idx` (`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `order_email_contact`
---
-
 DROP TABLE IF EXISTS `order_email_contact`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `order_email_contact` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `sales_order_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2956,15 +1997,7 @@ CREATE TABLE `order_email_contact` (
   KEY `order_email_contact_notification_type_code_idx` (`notification_type_code`),
   KEY `order_email_contact_account_user_id_idx` (`account_user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `order_payment_intent`
---
-
 DROP TABLE IF EXISTS `order_payment_intent`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `order_payment_intent` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `payment_intent_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -2974,15 +2007,7 @@ CREATE TABLE `order_payment_intent` (
   PRIMARY KEY (`id`),
   KEY `order_payment_intent_sales_order_id_idx` (`sales_order_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `part`
---
-
 DROP TABLE IF EXISTS `part`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `part` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -2991,15 +2016,7 @@ CREATE TABLE `part` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `part_item_id_key` (`item_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `payment_term`
---
-
 DROP TABLE IF EXISTS `payment_term`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `payment_term` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `is_active` tinyint(1) NOT NULL DEFAULT '1',
@@ -3011,15 +2028,7 @@ CREATE TABLE `payment_term` (
   KEY `payment_term_account_id_idx` (`account_id`),
   FULLTEXT KEY `payment_term_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `permission`
---
-
 DROP TABLE IF EXISTS `permission`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `permission` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3033,15 +2042,7 @@ CREATE TABLE `permission` (
   KEY `permission_permission_group_code_idx` (`permission_group_code`),
   FULLTEXT KEY `permission_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `permission_group`
---
-
 DROP TABLE IF EXISTS `permission_group`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `permission_group` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3053,15 +2054,7 @@ CREATE TABLE `permission_group` (
   UNIQUE KEY `permission_group_code_key` (`code`),
   FULLTEXT KEY `permission_group_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `pick`
---
-
 DROP TABLE IF EXISTS `pick`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `pick` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `number` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3076,15 +2069,7 @@ CREATE TABLE `pick` (
   KEY `pick_account_created_idx` (`account_id`,`created_at` DESC,`id` DESC),
   FULLTEXT KEY `pick_number_idx` (`number`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `pick_line`
---
-
 DROP TABLE IF EXISTS `pick_line`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `pick_line` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `pick_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3098,15 +2083,7 @@ CREATE TABLE `pick_line` (
   KEY `pick_line_pick_id_idx` (`pick_id`),
   KEY `pick_line_sales_order_line_id_idx` (`sales_order_line_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `portal_domain`
---
-
 DROP TABLE IF EXISTS `portal_domain`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `portal_domain` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3120,15 +2097,7 @@ CREATE TABLE `portal_domain` (
   UNIQUE KEY `portal_domain_domain_uq` (`domain`),
   UNIQUE KEY `portal_domain_account_uq` (`account_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `portal_registration_session`
---
-
 DROP TABLE IF EXISTS `portal_registration_session`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `portal_registration_session` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `type_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3148,15 +2117,7 @@ CREATE TABLE `portal_registration_session` (
   KEY `portal_registration_session_seller_account_id_idx` (`seller_account_id`),
   KEY `portal_registration_session_user_id_seller_account_id_comple_idx` (`user_id`,`seller_account_id`,`completed_at`,`created_at` DESC,`id` DESC)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `priority`
---
-
 DROP TABLE IF EXISTS `priority`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `priority` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3167,15 +2128,7 @@ CREATE TABLE `priority` (
   UNIQUE KEY `priority_code_key` (`code`),
   FULLTEXT KEY `priority_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `product`
---
-
 DROP TABLE IF EXISTS `product`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `product` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -3189,15 +2142,7 @@ CREATE TABLE `product` (
   KEY `product_product_line_id_idx` (`product_line_id`),
   KEY `product_product_type_code_idx` (`product_type_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `product_line`
---
-
 DROP TABLE IF EXISTS `product_line`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `product_line` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3220,15 +2165,7 @@ CREATE TABLE `product_line` (
   FULLTEXT KEY `product_line_description_idx` (`description`),
   FULLTEXT KEY `product_line_name_description_idx` (`name`,`description`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `product_line_target`
---
-
 DROP TABLE IF EXISTS `product_line_target`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `product_line_target` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `start_date` datetime(3) NOT NULL,
@@ -3245,15 +2182,7 @@ CREATE TABLE `product_line_target` (
   KEY `product_line_target_product_line_id_idx` (`product_line_id`),
   KEY `product_line_target_account_id_idx` (`account_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `product_type`
---
-
 DROP TABLE IF EXISTS `product_type`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `product_type` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3264,15 +2193,7 @@ CREATE TABLE `product_type` (
   UNIQUE KEY `product_type_code_key` (`code`),
   FULLTEXT KEY `product_type_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `production`
---
-
 DROP TABLE IF EXISTS `production`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `production` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -3285,15 +2206,7 @@ CREATE TABLE `production` (
   KEY `production_item_id_idx` (`item_id`),
   KEY `production_production_step_id_idx` (`production_step_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `production_run`
---
-
 DROP TABLE IF EXISTS `production_run`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `production_run` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `responsible_user_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3309,15 +2222,7 @@ CREATE TABLE `production_run` (
   KEY `production_run_account_id_idx` (`account_id`),
   FULLTEXT KEY `production_run_number_idx` (`number`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `production_schedule`
---
-
 DROP TABLE IF EXISTS `production_schedule`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `production_schedule` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3351,15 +2256,7 @@ CREATE TABLE `production_schedule` (
   KEY `production_schedule_account_status_horizon_idx` (`account_id`,`status_code`,`horizon_start_date` DESC,`id` DESC),
   KEY `production_schedule_account_published_idx` (`account_id`,`published_at` DESC,`id` DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `production_schedule_derived_line`
---
-
 DROP TABLE IF EXISTS `production_schedule_derived_line`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `production_schedule_derived_line` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3384,15 +2281,7 @@ CREATE TABLE `production_schedule_derived_line` (
   KEY `prod_sched_derived_source_line_idx` (`source_line_id`),
   KEY `prod_sched_derived_sched_week_depth_idx` (`production_schedule_id`,`week_start_date`,`explosion_depth`,`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `production_schedule_deviation`
---
-
 DROP TABLE IF EXISTS `production_schedule_deviation`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `production_schedule_deviation` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3417,15 +2306,7 @@ CREATE TABLE `production_schedule_deviation` (
   KEY `prod_sched_dev_line_idx` (`production_schedule_line_id`),
   KEY `prod_sched_dev_sched_frozen_idx` (`production_schedule_id`,`is_frozen_week`,`created_at` DESC,`id` DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `production_schedule_finished_policy`
---
-
 DROP TABLE IF EXISTS `production_schedule_finished_policy`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `production_schedule_finished_policy` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3449,15 +2330,7 @@ CREATE TABLE `production_schedule_finished_policy` (
   KEY `prod_sched_fin_policy_sched_greige_idx` (`production_schedule_id`,`greige_item_id`,`sku`),
   KEY `prod_sched_fin_policy_account_item_idx` (`account_id`,`item_id`,`created_at` DESC,`id` DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `production_schedule_finishing_line`
---
-
 DROP TABLE IF EXISTS `production_schedule_finishing_line`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `production_schedule_finishing_line` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3490,15 +2363,7 @@ CREATE TABLE `production_schedule_finishing_line` (
   KEY `prod_sched_fin_line_sched_greige_idx` (`production_schedule_id`,`greige_item_id`,`week_start_date`,`id`),
   KEY `prod_sched_fin_line_account_dept_week_idx` (`account_id`,`department_id`,`week_start_date`,`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `production_schedule_item_policy`
---
-
 DROP TABLE IF EXISTS `production_schedule_item_policy`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `production_schedule_item_policy` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3544,15 +2409,7 @@ CREATE TABLE `production_schedule_item_policy` (
   KEY `prod_sched_item_policy_sched_hours_idx` (`production_schedule_id`,`annual_run_hours` DESC,`id`),
   KEY `prod_sched_item_policy_account_item_idx` (`account_id`,`item_id`,`created_at` DESC,`id` DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `production_schedule_item_setting`
---
-
 DROP TABLE IF EXISTS `production_schedule_item_setting`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `production_schedule_item_setting` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3573,15 +2430,7 @@ CREATE TABLE `production_schedule_item_setting` (
   UNIQUE KEY `prod_sched_item_setting_account_item_key` (`account_id`,`item_id`),
   KEY `prod_sched_item_setting_excluded_idx` (`account_id`,`is_excluded`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `production_schedule_line`
---
-
 DROP TABLE IF EXISTS `production_schedule_line`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `production_schedule_line` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3617,15 +2466,7 @@ CREATE TABLE `production_schedule_line` (
   KEY `prod_sched_line_account_item_week_idx` (`account_id`,`item_id`,`week_start_date`,`id`),
   KEY `prod_sched_line_production_run_idx` (`production_run_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `production_schedule_line_order`
---
-
 DROP TABLE IF EXISTS `production_schedule_line_order`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `production_schedule_line_order` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3641,15 +2482,7 @@ CREATE TABLE `production_schedule_line_order` (
   KEY `prod_sched_line_order_line_idx` (`production_schedule_line_id`,`id`),
   KEY `prod_sched_line_order_account_order_idx` (`account_id`,`sales_order_id`,`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `production_schedule_line_status`
---
-
 DROP TABLE IF EXISTS `production_schedule_line_status`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `production_schedule_line_status` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3659,15 +2492,7 @@ CREATE TABLE `production_schedule_line_status` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `production_schedule_line_status_code_key` (`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `production_schedule_resource_setting`
---
-
 DROP TABLE IF EXISTS `production_schedule_resource_setting`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `production_schedule_resource_setting` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3692,15 +2517,7 @@ CREATE TABLE `production_schedule_resource_setting` (
   UNIQUE KEY `prod_sched_resource_scope_key` (`account_id`,`scope_code`,`scope_ref_id`),
   KEY `prod_sched_resource_excluded_idx` (`account_id`,`is_excluded`,`scope_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `production_schedule_status`
---
-
 DROP TABLE IF EXISTS `production_schedule_status`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `production_schedule_status` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3710,15 +2527,7 @@ CREATE TABLE `production_schedule_status` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `production_schedule_status_code_key` (`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `production_shift`
---
-
 DROP TABLE IF EXISTS `production_shift`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `production_shift` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3737,15 +2546,7 @@ CREATE TABLE `production_shift` (
   KEY `production_shift_account_active_code_idx` (`account_id`,`is_active`,`code`),
   KEY `production_shift_account_dept_idx` (`account_id`,`department_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `production_step`
---
-
 DROP TABLE IF EXISTS `production_step`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `production_step` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3770,15 +2571,7 @@ CREATE TABLE `production_step` (
   KEY `production_step_account_id_scanning_station_id_created_at_id_idx` (`account_id`,`scanning_station_id`,`created_at` DESC,`id` DESC),
   FULLTEXT KEY `production_step_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `property`
---
-
 DROP TABLE IF EXISTS `property`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `property` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3790,15 +2583,7 @@ CREATE TABLE `property` (
   UNIQUE KEY `property_account_id_name_key` (`account_id`,`name`),
   FULLTEXT KEY `property_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `quantity`
---
-
 DROP TABLE IF EXISTS `quantity`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `quantity` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `value` decimal(65,30) NOT NULL,
@@ -3808,15 +2593,7 @@ CREATE TABLE `quantity` (
   PRIMARY KEY (`id`),
   KEY `quantity_unit_id_idx` (`unit_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `quantity_discount`
---
-
 DROP TABLE IF EXISTS `quantity_discount`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `quantity_discount` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3827,15 +2604,7 @@ CREATE TABLE `quantity_discount` (
   KEY `quantity_discount_account_id_idx` (`account_id`),
   FULLTEXT KEY `quantity_discount_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `quantity_discount_tier`
---
-
 DROP TABLE IF EXISTS `quantity_discount_tier`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `quantity_discount_tier` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `discount_percentage` decimal(65,30) NOT NULL DEFAULT '0.000000000000000000000000000000',
@@ -3850,15 +2619,7 @@ CREATE TABLE `quantity_discount_tier` (
   KEY `quantity_discount_tier_quantity_discount_id_idx` (`quantity_discount_id`),
   FULLTEXT KEY `quantity_discount_tier_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `rate`
---
-
 DROP TABLE IF EXISTS `rate`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `rate` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `value` decimal(65,30) NOT NULL,
@@ -3870,15 +2631,7 @@ CREATE TABLE `rate` (
   KEY `rate_numerator_unit_id_idx` (`numerator_unit_id`),
   KEY `rate_denominator_unit_id_idx` (`denominator_unit_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `receiving_order`
---
-
 DROP TABLE IF EXISTS `receiving_order`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `receiving_order` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `number` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3892,15 +2645,7 @@ CREATE TABLE `receiving_order` (
   KEY `receiving_order_account_id_idx` (`account_id`),
   FULLTEXT KEY `receiving_order_number_idx` (`number`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `receiving_order_line`
---
-
 DROP TABLE IF EXISTS `receiving_order_line`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `receiving_order_line` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `receiving_order_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3914,15 +2659,7 @@ CREATE TABLE `receiving_order_line` (
   KEY `receiving_order_line_receiving_order_id_idx` (`receiving_order_id`),
   KEY `receiving_order_line_sales_order_line_id_idx` (`sales_order_line_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `refresh_token`
---
-
 DROP TABLE IF EXISTS `refresh_token`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `refresh_token` (
   `token` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `user_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3933,15 +2670,7 @@ CREATE TABLE `refresh_token` (
   PRIMARY KEY (`token`),
   KEY `refresh_token_user_id_idx` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `registration_flow`
---
-
 DROP TABLE IF EXISTS `registration_flow`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `registration_flow` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3952,15 +2681,7 @@ CREATE TABLE `registration_flow` (
   KEY `registration_flow_account_id_idx` (`account_id`),
   FULLTEXT KEY `registration_flow_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `registration_queue`
---
-
 DROP TABLE IF EXISTS `registration_queue`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `registration_queue` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `email` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3976,15 +2697,7 @@ CREATE TABLE `registration_queue` (
   KEY `registration_queue_plan_code_idx` (`plan_code`),
   KEY `registration_queue_contacted_idx` (`contacted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `registration_session`
---
-
 DROP TABLE IF EXISTS `registration_session`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `registration_session` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `type_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -4013,15 +2726,7 @@ CREATE TABLE `registration_session` (
   KEY `registration_session_stripe_customer_id_idx` (`stripe_customer_id`),
   KEY `registration_session_user_id_completed_at_created_at_id_idx` (`user_id`,`completed_at`,`created_at` DESC,`id` DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `request_log`
---
-
 DROP TABLE IF EXISTS `request_log`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `request_log` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `method` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -4074,15 +2779,7 @@ CREATE TABLE `request_log` (
   KEY `request_log_account_id_status_code_occurred_at_id_idx` (`account_id`,`status_code`,`occurred_at` DESC,`id` DESC),
   KEY `request_log_account_id_error_code_occurred_at_id_idx` (`account_id`,`error_code`,`occurred_at` DESC,`id` DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `role`
---
-
 DROP TABLE IF EXISTS `role`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `role` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -4095,15 +2792,7 @@ CREATE TABLE `role` (
   KEY `role_role_type_code_idx` (`role_type_code`),
   FULLTEXT KEY `role_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `role_permission`
---
-
 DROP TABLE IF EXISTS `role_permission`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `role_permission` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `create` tinyint(1) NOT NULL DEFAULT '0',
@@ -4118,15 +2807,7 @@ CREATE TABLE `role_permission` (
   KEY `role_permission_permission_code_idx` (`permission_code`),
   KEY `role_permission_role_id_idx` (`role_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `role_type`
---
-
 DROP TABLE IF EXISTS `role_type`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `role_type` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -4137,15 +2818,7 @@ CREATE TABLE `role_type` (
   UNIQUE KEY `role_type_code_key` (`code`),
   FULLTEXT KEY `role_type_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `sales_order`
---
-
 DROP TABLE IF EXISTS `sales_order`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `sales_order` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `billing_address_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -4219,15 +2892,7 @@ CREATE TABLE `sales_order` (
   FULLTEXT KEY `sales_order_customer_po_number_idx` (`customer_po_number`),
   FULLTEXT KEY `sales_order_number_customer_po_number_idx` (`number`,`customer_po_number`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `sales_order_line`
---
-
 DROP TABLE IF EXISTS `sales_order_line`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `sales_order_line` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `product_sku` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -4253,15 +2918,7 @@ CREATE TABLE `sales_order_line` (
   FULLTEXT KEY `sales_order_line_product_description_idx` (`product_description`),
   FULLTEXT KEY `sales_order_line_product_sku_product_description_idx` (`product_sku`,`product_description`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `sales_order_status`
---
-
 DROP TABLE IF EXISTS `sales_order_status`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `sales_order_status` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -4272,15 +2929,7 @@ CREATE TABLE `sales_order_status` (
   UNIQUE KEY `sales_order_status_code_key` (`code`),
   FULLTEXT KEY `sales_order_status_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `sales_order_type`
---
-
 DROP TABLE IF EXISTS `sales_order_type`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `sales_order_type` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -4291,15 +2940,7 @@ CREATE TABLE `sales_order_type` (
   UNIQUE KEY `sales_order_type_code_key` (`code`),
   FULLTEXT KEY `sales_order_type_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `sandbox_account`
---
-
 DROP TABLE IF EXISTS `sandbox_account`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `sandbox_account` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `type_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -4312,15 +2953,7 @@ CREATE TABLE `sandbox_account` (
   UNIQUE KEY `sandbox_account_account_id_key` (`account_id`),
   KEY `sandbox_account_owner_account_id_idx` (`owner_account_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=28 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `scanning_station`
---
-
 DROP TABLE IF EXISTS `scanning_station`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `scanning_station` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -4341,15 +2974,7 @@ CREATE TABLE `scanning_station` (
   KEY `scanning_station_label_type_code_idx` (`label_type_code`),
   FULLTEXT KEY `scanning_station_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `scanning_station_type`
---
-
 DROP TABLE IF EXISTS `scanning_station_type`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `scanning_station_type` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -4360,15 +2985,7 @@ CREATE TABLE `scanning_station_type` (
   UNIQUE KEY `scanning_station_type_code_key` (`code`),
   FULLTEXT KEY `scanning_station_type_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `schedule_deviation_type`
---
-
 DROP TABLE IF EXISTS `schedule_deviation_type`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `schedule_deviation_type` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -4378,15 +2995,7 @@ CREATE TABLE `schedule_deviation_type` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `schedule_deviation_type_code_key` (`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `service_idempotency_key`
---
-
 DROP TABLE IF EXISTS `service_idempotency_key`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `service_idempotency_key` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `type_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -4413,15 +3022,7 @@ CREATE TABLE `service_idempotency_key` (
   KEY `service_idempotency_key_lock_expires_at_idx` (`lock_expires_at`),
   KEY `service_idempotency_key_expires_at_idx` (`expires_at`)
 ) ENGINE=InnoDB AUTO_INCREMENT=205 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `settlement`
---
-
 DROP TABLE IF EXISTS `settlement`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `settlement` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `responsible_user_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -4438,15 +3039,7 @@ CREATE TABLE `settlement` (
   FULLTEXT KEY `settlement_note_idx` (`note`),
   FULLTEXT KEY `settlement_number_note_idx` (`number`,`note`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `shipment`
---
-
 DROP TABLE IF EXISTS `shipment`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `shipment` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `bill_of_lading` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -4484,15 +3077,7 @@ CREATE TABLE `shipment` (
   FULLTEXT KEY `shipment_number_bill_of_lading_idx` (`number`,`bill_of_lading`),
   FULLTEXT KEY `shipment_number_master_tracking_number_idx` (`number`,`master_tracking_number`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `shipment_line`
---
-
 DROP TABLE IF EXISTS `shipment_line`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `shipment_line` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `shipment_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -4506,15 +3091,7 @@ CREATE TABLE `shipment_line` (
   KEY `shipment_line_sales_order_line_id_idx` (`sales_order_line_id`),
   KEY `shipment_line_created_at_idx` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `shipment_status`
---
-
 DROP TABLE IF EXISTS `shipment_status`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `shipment_status` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -4525,15 +3102,7 @@ CREATE TABLE `shipment_status` (
   UNIQUE KEY `shipment_status_code_key` (`code`),
   FULLTEXT KEY `shipment_status_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `shipping_case`
---
-
 DROP TABLE IF EXISTS `shipping_case`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `shipping_case` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `number` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -4564,15 +3133,7 @@ CREATE TABLE `shipping_case` (
   FULLTEXT KEY `shipping_case_sscc_tracking_number_idx` (`sscc`,`tracking_number`),
   FULLTEXT KEY `shipping_case_number_sscc_tracking_number_idx` (`number`,`sscc`,`tracking_number`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `shipping_term`
---
-
 DROP TABLE IF EXISTS `shipping_term`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `shipping_term` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -4589,15 +3150,7 @@ CREATE TABLE `shipping_term` (
   KEY `shipping_term_account_id_idx` (`account_id`),
   FULLTEXT KEY `shipping_term_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `shipping_term_free_shipping_rule`
---
-
 DROP TABLE IF EXISTS `shipping_term_free_shipping_rule`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `shipping_term_free_shipping_rule` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `shipping_term_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -4607,15 +3160,7 @@ CREATE TABLE `shipping_term_free_shipping_rule` (
   UNIQUE KEY `shipping_term_free_shipping_rule_shipping_term_id_carrier_op_key` (`shipping_term_id`,`carrier_option_id`),
   KEY `shipping_term_free_shipping_rule_carrier_option_id_idx` (`carrier_option_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `storage_location`
---
-
 DROP TABLE IF EXISTS `storage_location`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `storage_location` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -4632,15 +3177,7 @@ CREATE TABLE `storage_location` (
   KEY `storage_location_parent_id_idx` (`parent_id`),
   FULLTEXT KEY `storage_location_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `storage_location_type`
---
-
 DROP TABLE IF EXISTS `storage_location_type`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `storage_location_type` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -4651,15 +3188,7 @@ CREATE TABLE `storage_location_type` (
   UNIQUE KEY `storage_location_type_code_key` (`code`),
   FULLTEXT KEY `storage_location_type_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `stripe_event_log`
---
-
 DROP TABLE IF EXISTS `stripe_event_log`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `stripe_event_log` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `event_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -4673,15 +3202,7 @@ CREATE TABLE `stripe_event_log` (
   KEY `stripe_event_log_event_type_idx` (`event_type`),
   KEY `stripe_event_log_object_id_idx` (`object_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `supplier_material`
---
-
 DROP TABLE IF EXISTS `supplier_material`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `supplier_material` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `material_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -4700,15 +3221,7 @@ CREATE TABLE `supplier_material` (
   FULLTEXT KEY `supplier_material_supplier_description_idx` (`supplier_description`),
   FULLTEXT KEY `supplier_material_supplier_part_number_supplier_description_idx` (`supplier_part_number`,`supplier_description`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `support_route`
---
-
 DROP TABLE IF EXISTS `support_route`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `support_route` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -4719,15 +3232,7 @@ CREATE TABLE `support_route` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `support_route_scope_uq` (`account_id`,`relation_account_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `sys_property`
---
-
 DROP TABLE IF EXISTS `sys_property`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `sys_property` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `sys_property_type_code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -4740,15 +3245,7 @@ CREATE TABLE `sys_property` (
   KEY `sys_property_account_id_idx` (`account_id`),
   KEY `sys_property_sys_property_type_code_idx` (`sys_property_type_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `sys_property_type`
---
-
 DROP TABLE IF EXISTS `sys_property_type`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `sys_property_type` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -4759,15 +3256,7 @@ CREATE TABLE `sys_property_type` (
   UNIQUE KEY `sys_property_type_code_key` (`code`),
   FULLTEXT KEY `sys_property_type_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `target`
---
-
 DROP TABLE IF EXISTS `target`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `target` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `start_date` datetime(3) NOT NULL,
@@ -4782,15 +3271,7 @@ CREATE TABLE `target` (
   KEY `target_sales_rep_id_idx` (`sales_rep_id`),
   KEY `target_account_id_idx` (`account_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `task_leases`
---
-
 DROP TABLE IF EXISTS `task_leases`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `task_leases` (
   `name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `holder` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -4799,15 +3280,7 @@ CREATE TABLE `task_leases` (
   PRIMARY KEY (`name`),
   KEY `task_leases_expires_at_idx` (`expires_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `territory`
---
-
 DROP TABLE IF EXISTS `territory`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `territory` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `start_zipcode` int DEFAULT NULL,
@@ -4824,15 +3297,7 @@ CREATE TABLE `territory` (
   KEY `territory_account_id_idx` (`account_id`),
   FULLTEXT KEY `territory_state_idx` (`state`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `token_pack_purchase`
---
-
 DROP TABLE IF EXISTS `token_pack_purchase`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `token_pack_purchase` (
   `id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -4849,15 +3314,7 @@ CREATE TABLE `token_pack_purchase` (
   KEY `token_pack_purchase_status_idx` (`status`),
   KEY `token_pack_purchase_account_id_status_idx` (`account_id`,`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `transaction`
---
-
 DROP TABLE IF EXISTS `transaction`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `transaction` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `customer_account_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -4891,15 +3348,7 @@ CREATE TABLE `transaction` (
   FULLTEXT KEY `transaction_note_idx` (`note`),
   FULLTEXT KEY `transaction_number_note_idx` (`number`,`note`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `transaction_allocation`
---
-
 DROP TABLE IF EXISTS `transaction_allocation`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `transaction_allocation` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `transaction_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -4917,15 +3366,7 @@ CREATE TABLE `transaction_allocation` (
   KEY `transaction_allocation_created_at_idx` (`created_at`),
   KEY `transaction_allocation_transaction_id_created_at_id_idx` (`transaction_id`,`created_at` DESC,`id` DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `transaction_method`
---
-
 DROP TABLE IF EXISTS `transaction_method`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `transaction_method` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -4936,15 +3377,7 @@ CREATE TABLE `transaction_method` (
   UNIQUE KEY `transaction_method_code_key` (`code`),
   FULLTEXT KEY `transaction_method_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `transaction_type`
---
-
 DROP TABLE IF EXISTS `transaction_type`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `transaction_type` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -4956,15 +3389,7 @@ CREATE TABLE `transaction_type` (
   UNIQUE KEY `transaction_type_code_key` (`code`),
   FULLTEXT KEY `transaction_type_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `unit`
---
-
 DROP TABLE IF EXISTS `unit`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `unit` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -4987,15 +3412,7 @@ CREATE TABLE `unit` (
   FULLTEXT KEY `unit_abbreviation_idx` (`abbreviation`),
   FULLTEXT KEY `unit_name_abbreviation_idx` (`name`,`abbreviation`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `unit_group`
---
-
 DROP TABLE IF EXISTS `unit_group`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `unit_group` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -5012,15 +3429,7 @@ CREATE TABLE `unit_group` (
   KEY `unit_group_unit_type_code_idx` (`unit_type_code`),
   FULLTEXT KEY `unit_group_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `unit_group_unit`
---
-
 DROP TABLE IF EXISTS `unit_group_unit`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `unit_group_unit` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -5034,15 +3443,7 @@ CREATE TABLE `unit_group_unit` (
   UNIQUE KEY `unit_group_unit_unit_id_unit_group_id_key` (`unit_id`,`unit_group_id`),
   KEY `unit_group_unit_unit_group_id_idx` (`unit_group_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `unit_type`
---
-
 DROP TABLE IF EXISTS `unit_type`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `unit_type` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -5053,15 +3454,7 @@ CREATE TABLE `unit_type` (
   UNIQUE KEY `unit_type_code_key` (`code`),
   FULLTEXT KEY `unit_type_name_idx` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `user`
---
-
 DROP TABLE IF EXISTS `user`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `user` (
   `id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `email` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -5085,18 +3478,7 @@ CREATE TABLE `user` (
   FULLTEXT KEY `user_username_email_idx` (`username`,`email`),
   FULLTEXT KEY `user_name_username_email_idx` (`name`,`username`,`email`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
-/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
-/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
-/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
-/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
-
--- Dump completed on 2026-08-20 14:07:56
 
 -- +goose Down
 

@@ -348,21 +348,40 @@ resources:
         methods:
           list: get /v1/catalog/items
           retrieve: get /v1/catalog/items/{id}
-          retrieve_inventory: get /v1/catalog/items/{id}/inventory
           retrieve_lot_default: get /v1/catalog/items/{id}/lot-default
           change_category: put /v1/catalog/items/{id}/category/{category_id}
         subresources:
+          inventory:
+            methods:
+              list: get /v1/catalog/items/{id}/inventory
+              update: patch /v1/catalog/items/{id}/inventory
+            models:
+              computed_quantity: '#/components/schemas/ComputedQuantity'
+              item_inventory: '#/components/schemas/ItemInventory'
+              quantity_input: '#/components/schemas/QuantityInput'
+              update_item_inventory_request: '#/components/schemas/UpdateItemInventoryRequest'
           attributes:
             methods:
               update: put /v1/catalog/items/{id}/attributes/{attribute_id}
               delete: delete /v1/catalog/items/{id}/attributes/{attribute_id}
+          actions:
+            methods:
+              bulk_reconcile: post /v1/catalog/items/actions/bulk-reconcile
+            models:
+              bulk_reconcile_item_input: '#/components/schemas/BulkReconcileItemInput'
+              bulk_reconcile_items_request: '#/components/schemas/BulkReconcileItemsRequest'
+              bulk_reconcile_items_response: '#/components/schemas/BulkReconcileItemsResponse'
+              list_reconcile_error_result: '#/components/schemas/List_ReconcileErrorResult'
+              list_reconciled_item_result: '#/components/schemas/List_ReconciledItemResult'
+              list_skipped_item_result: '#/components/schemas/List_SkippedItemResult'
+              reconcile_error_result: '#/components/schemas/ReconcileErrorResult'
+              reconciled_item_result: '#/components/schemas/ReconciledItemResult'
+              skipped_item_result: '#/components/schemas/SkippedItemResult'
         models:
           item: '#/components/schemas/Item'
           item_category: '#/components/schemas/ItemCategory'
-          item_inventory: '#/components/schemas/ItemInventory'
           item_lot_default: '#/components/schemas/ItemLotDefault'
           list_item: '#/components/schemas/List_Item'
-          quantity: '#/components/schemas/Quantity'
           rate: '#/components/schemas/Rate'
       item_categories:
         methods:
@@ -407,6 +426,7 @@ resources:
           create_material_request: '#/components/schemas/CreateMaterialRequest'
           list_material: '#/components/schemas/List_Material'
           material: '#/components/schemas/Material'
+          quantity: '#/components/schemas/Quantity'
           quantity_input_request: '#/components/schemas/QuantityInputRequest'
           rate_input: '#/components/schemas/RateInput'
           update_material_request: '#/components/schemas/UpdateMaterialRequest'
@@ -448,7 +468,6 @@ resources:
           create_product_line_request: '#/components/schemas/CreateProductLineRequest'
           list_product_line: '#/components/schemas/List_ProductLine'
           product_line: '#/components/schemas/ProductLine'
-          quantity_input: '#/components/schemas/QuantityInput'
           update_product_line_request: '#/components/schemas/UpdateProductLineRequest'
       products:
         methods:

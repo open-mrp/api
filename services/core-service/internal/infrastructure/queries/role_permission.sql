@@ -1,16 +1,11 @@
--- name: FindRolePermissionStrings :many
-SELECT CONCAT(role_permission.permission_code, ':create') as permission_string
-FROM role_permission WHERE role_permission.role_id = sqlc.arg('role_id') AND role_permission.`create` = 1
-UNION ALL
-SELECT CONCAT(role_permission.permission_code, ':read')
-FROM role_permission WHERE role_permission.role_id = sqlc.arg('role_id') AND role_permission.`read` = 1
-UNION ALL
-SELECT CONCAT(role_permission.permission_code, ':update')
-FROM role_permission WHERE role_permission.role_id = sqlc.arg('role_id') AND role_permission.`update` = 1
-UNION ALL
-SELECT CONCAT(role_permission.permission_code, ':delete')
-FROM role_permission WHERE role_permission.role_id = sqlc.arg('role_id') AND role_permission.`delete` = 1
-ORDER BY 1;
+-- name: FindRolePermissionFlags :many
+-- One scan of the role's permissions; the caller expands each row into its `code:verb`
+-- strings. The UNION ALL of four filtered SELECTs this replaced scanned
+-- role_permission_role_id_idx once per verb and filesorted the result, reading 4x the rows
+-- on every authorized request.
+SELECT permission_code, `create`, `read`, `update`, `delete`
+FROM role_permission
+WHERE role_id = sqlc.arg('role_id');
 
 -- name: ListRolePermissionsByRoleID :many
 SELECT id, permission_code, `create`, `read`, `update`, `delete`, role_id, created_at, updated_at

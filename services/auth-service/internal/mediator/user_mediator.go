@@ -531,11 +531,16 @@ func (s *userMedImpl) validateUserCredential(ctx context.Context, span trace.Spa
 		return buildRelatedUserIdentity(userModel, accountRelation, actorType, finalTargetAccountID, accountMode, accountCtx.SubscriptionStatus), nil
 	}
 
-	// The user is associated with the target account, mark as used if not recent
-	// Fire and forget - don't block on this
-	go func() { // #nosec G118 - fire and forget; a request-scoped context would cancel it
-		_ = s.coreClient.MarkAccountUserUsed(context.Background(), access.AccountUserID)
-	}()
+	// The user is associated with the target account, so mark it used — but only if this process
+	// has not already done so recently. Without the throttle this fired on every authenticated
+	// request: a row update plus a cross-service RPC per request, for a timestamp read only when
+	// choosing which account a returning user lands on.
+	if lastUsedMarks.shouldMark(access.AccountUserID) {
+		// Fire and forget - don't block on this
+		go func() { // #nosec G118 - fire and forget; a request-scoped context would cancel it
+			_ = s.coreClient.MarkAccountUserUsed(context.Background(), access.AccountUserID)
+		}()
+	}
 
 	return buildAccountUserIdentity(userModel, access, finalTargetAccountID, accountMode, accountCtx.SubscriptionStatus), nil
 }

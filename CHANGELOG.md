@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.50.2](https://github.com/Augno/api/compare/v0.50.1...v0.50.2) (2026-08-20)
+
+
+### Bug Fixes
+
+* optimize mysqldump schema generation and role permission queries ([#508](https://github.com/Augno/api/issues/508)) ([1f4cd75](https://github.com/Augno/api/commit/1f4cd75e788eea2c4704964427bf773a44aae65d))
+
 ## [0.50.1](https://github.com/Augno/api/compare/v0.50.0...v0.50.1) (2026-08-20)
 
 

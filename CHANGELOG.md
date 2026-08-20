@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.50.0](https://github.com/Augno/api/compare/v0.49.5...v0.50.0) (2026-08-20)
+
+
+### Features
+
+* pick endpoints migration ([#492](https://github.com/Augno/api/issues/492)) ([73ca42f](https://github.com/Augno/api/commit/73ca42f7a2e0a95ab2dfcc69a7301ad929d3251c))
+
+
+### Bug Fixes
+
+* inventory changes ([#504](https://github.com/Augno/api/issues/504)) ([8e4dfef](https://github.com/Augno/api/commit/8e4dfef8dc15214a6e4e2b11d29927feceea7885))
+
 ## [0.49.5](https://github.com/Augno/api/compare/v0.49.4...v0.49.5) (2026-08-19)
 
 

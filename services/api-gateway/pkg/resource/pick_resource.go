@@ -13,73 +13,110 @@ const SamplePickNumber = "PK-001"
 
 // A warehouse picking task for a sales order, tracking the quantities to pull from inventory and pack for shipment.
 //
-// A pick is created automatically when a sales order is issued, with one line for each order line whose product is of type `sale` — service, shipping, tax, credit and return lines are skipped — and nothing picked yet. There is no endpoint that creates a pick directly.
+// A pick is created automatically when a sales order is issued, with one line for each order line whose product is of type `sale`  service, shipping, tax, credit and return lines are skipped — and nothing picked yet.
 type Pick struct {
 	// Pick ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=pick"`
 	// Human-readable number that identifies the pick, distinct from the `id`.
-	//
-	// Copied from the sales order's number when the pick is created, and can be renamed with Update Pick.
 	Number string `json:"number" validate:"required"`
-	// The sales order this pick fulfills.
-	SalesOrder *SalesOrder `json:"sales_order" expandable:"true"`
-	// The customer the associated sales order is for.
+	// The customer associated with the sales order.
 	Customer *Customer `json:"customer" expandable:"true"`
-	// Priority used to order picks for fulfillment, inherited from the associated sales order.
+	// How urgently the pick should be worked.
 	Priority constants.PriorityCode `json:"priority" validate:"required"`
+	// Address the associated sales order ships to.
+	ShipTo *Address `json:"ship_to"`
+	// Number of lines on this pick.
+	LineCount int32 `json:"line_count"`
+	// Progress through picking and packing, aggregated over the pick's sale lines so a list row can render progress bars without expanding `lines`.
+	Totals *PickTotals `json:"totals"`
+	// Timestamp of the most recent shipment sent (null until shipped).
+	LastShippedAt *time.Time `json:"last_shipped_at"`
 	// The pick's lines, each tracking the quantity picked against one sales order line.
 	Lines *List[PickLine] `json:"lines" expandable:"true"`
-	// Departments assigned to this pick.
-	Departments *List[Department] `json:"departments" expandable:"true"`
+	// Records this pick sits between — the order it fulfills and the shipments packed from it.
+	Related *PickRelated `json:"related"`
 	// Timestamp when the pick was finished.
-	//
-	// Set automatically once every line on the pick has been packed, and cleared whenever picking work reopens — when the pick is voided, when a shipment for the order is deleted, or when the order is reopened or its lines change so quantity is outstanding again. It can also be set or cleared directly with Update Pick.
 	FinishedAt *time.Time `json:"finished_at"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
+	// When the associated sales order promised delivery.
+	PromisedAt *time.Time `json:"promised_at"`
+	// Date the order must ship by to meet its commitment.
+	ShipByDate *time.Time `json:"ship_by_date"`
+	// Days allowed to prepare the order before it ships.
+	LeadTimeDays *int32 `json:"lead_time_days"`
+	// Which rule in the customer/group/account chain produced `lead_time_days`.
+	LeadTimeSource *constants.LeadTimeSource `json:"lead_time_source"`
+	// Days the carrier is expected to take in transit.
+	TransitDays *int32 `json:"transit_days"`
+	// Whether `transit_days` came from a cached lane estimate or the service level's default.
+	TransitSource *constants.TransitSource `json:"transit_source"`
 }
 
+// Groups the records a pick sits between — the order it fulfills and the shipments packed from it — and is returned only once at least one member has been expanded.
+type PickRelated struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=pick_related"`
+	// The sales order this pick fulfills.
+	SalesOrder *Record `json:"sales_order" expandable:"true"`
+	// Lists the shipments packed from this pick.
+	Shipments *List[Record] `json:"shipments" expandable:"true"`
+}
+
+// Progress through each fulfillment stage of a pick.
+type PickTotals struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=pick_totals"`
+	// How far picking has progressed.
+	Picked PickStageTotal `json:"picked"`
+	// How far packing has progressed.
+	Packed PickStageTotal `json:"packed"`
+}
+
+// How far one fulfillment stage of a pick has progressed.
+type PickStageTotal struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=pick_stage_total"`
+	// Progress as a fraction between 0 and 1.
+	Completion float64 `json:"completion"`
+}
+
+var samplePickLeadTimeDays = int32(3)
+var samplePickLeadTimeSource = constants.LeadTimeSourceAccountGroup
+var samplePickTransitDays = int32(2)
+var samplePickTransitSource = constants.TransitSourceServiceLevel
+
 var SamplePick = &Pick{
-	ID:          SamplePickID,
-	Object:      constants.ObjectTypePick,
-	Number:      SamplePickNumber,
-	SalesOrder:  SampleSalesOrder,
-	Customer:    SampleCustomer,
-	Priority:    SamplePriorityCode,
-	Lines:       NewList([]PickLine{*SamplePickLine}, PageInfo{}),
-	Departments: NewList([]Department{*SampleDepartment}, PageInfo{}),
-	CreatedAt:   timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:   timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:        SamplePickID,
+	Object:    constants.ObjectTypePick,
+	Number:    SamplePickNumber,
+	Customer:  SampleCustomer,
+	Priority:  SamplePriorityCode,
+	ShipTo:    SampleAddress,
+	LineCount: 1,
+	Totals: &PickTotals{
+		Object: constants.ObjectTypePickTotals,
+		Picked: PickStageTotal{Object: constants.ObjectTypePickStageTotal, Completion: 1},
+		Packed: PickStageTotal{Object: constants.ObjectTypePickStageTotal, Completion: 0.5},
+	},
+	Lines:          NewList([]PickLine{*SamplePickLine}, PageInfo{}),
+	Related:        &PickRelated{Object: constants.ObjectTypePickRelated},
+	PromisedAt:     timeutil.TimestampToTimePtr(sampleExpiresAtTimestamp),
+	ShipByDate:     timeutil.TimestampToTimePtr(sampleExpiresAtTimestamp),
+	LeadTimeDays:   &samplePickLeadTimeDays,
+	LeadTimeSource: &samplePickLeadTimeSource,
+	TransitDays:    &samplePickTransitDays,
+	TransitSource:  &samplePickTransitSource,
+	CreatedAt:      timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:      timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*Pick) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SamplePick)
-}
-
-// The result of packing a pick: the pick as it stands after packing, plus the number of the shipment that packing created.
-type PackPickResponse struct {
-	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=pack_pick_response"`
-	// The pick after the pack operation, including its updated lines.
-	Pick *Pick `json:"pick" validate:"required"`
-	// Number of the shipment created by the pack operation.
-	//
-	// Derived from the sales order number: the first shipment for an order uses the order number itself; later shipments append a sequence suffix (e.g. `SO-123-2`).
-	ShipmentNumber string `json:"shipment_number" validate:"required"`
-}
-
-var SamplePackPickResponse = &PackPickResponse{
-	Object:         constants.ObjectTypePackPickResponse,
-	Pick:           SamplePick,
-	ShipmentNumber: "SH-001",
-}
-
-func (*PackPickResponse) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(SamplePackPickResponse)
 }
 
 // The shipment numbers for the sales order a pick belongs to.

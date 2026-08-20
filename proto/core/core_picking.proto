@@ -5,6 +5,7 @@ package core;
 
 import "google/protobuf/timestamp.proto";
 import "core/core.proto";
+import "core/core_async.proto";
 
 option go_package = "shared/proto/core;core";
 
@@ -40,24 +41,6 @@ service CorePickingService {
   rpc VoidPickLine(VoidPickLineRequest) returns (VoidPickLineResponse);
 }
 
-// PickSummaryInfo represents a pick in list views.
-message PickSummaryInfo {
-  string id = 1;
-  string number = 2;
-  string sales_order_id = 3;
-  string customer_id = 4;
-  string customer_name = 5;
-  string customer_number = 6;
-  string priority_code = 7;
-  string priority_name = 8;
-  google.protobuf.Timestamp finished_at = 9;
-  google.protobuf.Timestamp created_at = 10;
-  google.protobuf.Timestamp updated_at = 11;
-  string sales_order_number = 12;
-  string priority_id = 13;
-  // Departments (populated only when the list request includes "departments").
-  repeated PickDepartmentInfo departments = 14;
-}
 
 // PickInfo represents a full pick resource.
 message PickInfo {
@@ -76,6 +59,35 @@ message PickInfo {
   repeated PickDepartmentInfo departments = 13;
   string sales_order_number = 14;
   string priority_id = 15;
+  // Server-computed roll-ups so a caller needs no line expansion.
+  int32 line_count = 16;
+  google.protobuf.Timestamp last_shipped_at = 17;
+  double picked_completion = 18;
+  double packed_completion = 19;
+  // Promised delivery date, carried from the sales order.
+  optional google.protobuf.Timestamp promised_at = 20;
+  // Ship-to address, denormalized from the sales order so a pick renders its header without a join.
+  string shipping_address_id = 21;
+  optional string shipping_address_name = 22;
+  optional string shipping_address_phone = 23;
+  optional string shipping_address_email = 24;
+  optional bool shipping_address_is_drop_ship = 25;
+  optional string shipping_address_geolocation_id = 26;
+  optional string shipping_address_street_line_1 = 27;
+  optional string shipping_address_street_line_2 = 28;
+  optional string shipping_address_locality = 29;
+  optional string shipping_address_state = 30;
+  optional string shipping_address_postal_code = 31;
+  optional string shipping_address_country = 32;
+  // Shipments packed from this pick's order, populated only when related.shipments is requested.
+  repeated string shipment_ids = 33;
+  // Lead time and transit, carried from the sales order so the pick can explain its commitment.
+  optional int32 lead_time_days = 34;
+  optional string lead_time_source = 35;
+  optional int32 transit_days = 36;
+  optional string transit_source = 37;
+  // Computed ship-by commitment, carried from the sales order alongside the lead-time chain.
+  optional google.protobuf.Timestamp ship_by_date = 38;
 }
 
 // PickLineInfo represents a pick line resource.
@@ -106,6 +118,10 @@ message PickLineInfo {
   string unit_price_denominator_unit_id = 23;
   string unit_price_denominator_unit_abbreviation = 24;
   string ordered_quantity_id = 25;
+  // Backs the pick line's sales_order_line.product expansion; null on lines whose order line has no product.
+  optional string order_line_product_id = 26;
+  // The order line's item, so lines.item resolves without a standalone loader.
+  optional string order_line_item_id = 27;
 }
 
 // PickDepartmentInfo represents a department associated with a pick.
@@ -127,10 +143,11 @@ message ListPicksRequest {
   optional string start_date = 9;
   optional string end_date = 10;
   repeated string includes = 11;
+  string sort = 12;
 }
 
 message ListPicksResponse {
-  repeated PickSummaryInfo picks = 1;
+  repeated PickInfo picks = 1;
   PageInfo page_info = 2;
 }
 
@@ -181,9 +198,9 @@ message PackPickRequest {
 }
 
 message PackPickResponse {
-  PickInfo pick = 1;
-  string shipment_number = 2;
+  JobInfo job = 1;
 }
+
 
 // Get pick shipments
 message GetPickShipmentsRequest {

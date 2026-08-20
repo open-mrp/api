@@ -42,12 +42,14 @@ func (*ShippingCasesEndpointGroup) Materialize(config *ShippingCasesEndpointGrou
 
 	getShippingCaseEndpoint := apiendpoint.From(&shippingcaseep.RetrieveShippingCaseEndpoint{}).WithService(inner, shippingCaseSvc)
 	updateShippingCaseEndpoint := apiendpoint.From(&shippingcaseep.UpdateShippingCaseEndpoint{}).WithService(inner, shippingCaseSvc)
+	adminUpdateTrackingEndpoint := apiendpoint.From(&shippingcaseep.AdminUpdateShippingCaseTrackingEndpoint{}).WithService(inner, shippingCaseSvc)
 	deleteShippingCaseEndpoint := apiendpoint.From(&shippingcaseep.DeleteShippingCaseEndpoint{}).WithService(inner, shippingCaseSvc)
 	getShippingCaseLabelEndpoint := apiendpoint.From(&shippingcaseep.GetShippingCaseLabelEndpoint{}).WithService(inner, shippingCaseSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		getShippingCaseEndpoint,
 		updateShippingCaseEndpoint,
+		adminUpdateTrackingEndpoint,
 		deleteShippingCaseEndpoint,
 		getShippingCaseLabelEndpoint,
 	}

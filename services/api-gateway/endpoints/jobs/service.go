@@ -68,12 +68,12 @@ func jobResultsFromProto(list *pb.JobResultList) *apiresource.List[apiresource.J
 			Status: constants.JobResultStatus(item.GetStatus()),
 		}
 		if id := item.GetId(); id != "" {
-			result.Resource = apiresource.NewEntity(id, constants.ObjectType(item.GetResourceType()), nil, nil)
+			result.Resource = apiresource.NewEntity(id, constants.ObjectType(item.GetResourceType()), item.Name, nil)
 		}
 		if subs := item.GetSubResources(); len(subs) > 0 {
 			entities := make([]apiresource.Entity, 0, len(subs))
 			for _, sub := range subs {
-				entities = append(entities, *apiresource.NewEntity(sub.GetId(), constants.ObjectType(sub.GetResourceType()), nil, nil))
+				entities = append(entities, *apiresource.NewEntity(sub.GetId(), constants.ObjectType(sub.GetResourceType()), sub.Name, nil))
 			}
 			result.SubResources = apiresource.NewList(entities, apiresource.PageInfo{})
 		}

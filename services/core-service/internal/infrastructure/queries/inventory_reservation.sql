@@ -89,14 +89,37 @@ SELECT
     ir.id,
     q.id AS quantity_id,
     q.value AS quantity_value,
-    q.unit_id
+    q.unit_id,
+    uc.value AS unit_cost_value,
+    uc.numerator_unit_id AS unit_cost_numerator_unit_id,
+    uc.denominator_unit_id AS unit_cost_denominator_unit_id
 FROM inventory_receipt ir
 JOIN quantity q ON q.id = ir.quantity_id
-WHERE ir.owner_account_id = sqlc.arg('account_id')
+JOIN rate uc ON uc.id = ir.unit_cost_id
+-- Held stock counts as allocatable: consigned goods sit under a holder while another account owns
+-- them, and excluding them makes the item look short when it is physically on the shelf.
+WHERE (ir.owner_account_id = sqlc.arg('account_id') OR ir.holder_account_id = sqlc.arg('account_id'))
 AND ir.item_id = sqlc.arg('item_id')
 AND ir.status_code = 'available'
+-- An issue pinned to a location or lot may only draw from stock sitting there; an unpinned issue
+-- draws from anywhere.
+AND (sqlc.narg('storage_location_id') IS NULL OR ir.storage_location_id = sqlc.narg('storage_location_id'))
+AND (sqlc.narg('lot_id') IS NULL OR ir.lot_id = sqlc.narg('lot_id'))
 ORDER BY ir.received_at ASC
 FOR UPDATE;
+
+-- Retires receipts whose quantity is entirely spoken for so later runs stop reconsidering them.
+-- name: MarkInventoryReceiptsAllocated :exec
+UPDATE inventory_receipt
+SET status_code = 'allocated', updated_at = NOW(3)
+WHERE id IN (sqlc.slice('ids'));
+
+-- Retires an issue whose demand is fully covered, which is what stops a later receipt allocating
+-- against it a second time.
+-- name: CloseFullyAllocatedInventoryIssue :exec
+UPDATE inventory_issue
+SET status_code = 'closed', issued_at = NOW(3), updated_at = NOW(3)
+WHERE id = sqlc.arg('id');
 
 -- name: GetAllocationSumForReceipt :one
 SELECT COALESCE(SUM(CAST(q.value AS DECIMAL(65,30))), 0) AS total_allocated

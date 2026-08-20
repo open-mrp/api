@@ -353,6 +353,24 @@ func (q *Queries) GetCurrencyBaseUnit(ctx context.Context) (string, error) {
 	return id, err
 }
 
+const getFreightWeightUnit = `-- name: GetFreightWeightUnit :one
+SELECT id
+FROM unit
+WHERE unit_dimension_code = 'mass'
+AND abbreviation = 'lb'
+AND account_id IS NULL
+LIMIT 1
+`
+
+// Returns the global unit freight is weighed in. Pounds, not the mass base unit (grams): it is what
+// the carriers are sent and what the shipping cases record.
+func (q *Queries) GetFreightWeightUnit(ctx context.Context) (string, error) {
+	row := q.db.QueryRowContext(ctx, getFreightWeightUnit)
+	var id string
+	err := row.Scan(&id)
+	return id, err
+}
+
 const getUnit = `-- name: GetUnit :one
 SELECT
     unit.id,

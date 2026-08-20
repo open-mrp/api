@@ -26,55 +26,116 @@ func NewPickRepo(queries *sqlc.Queries) domain.PickRepo {
 	return &pickRepoImpl{queries: queries}
 }
 
-func pickCreatedAt(p *domain.PickSummary) time.Time { return p.CreatedAt }
-func pickID(p *domain.PickSummary) string           { return p.ID }
+func pickCreatedAt(p *domain.Pick) time.Time { return p.CreatedAt }
+func pickID(p *domain.Pick) string           { return p.ID }
+
+// Stands in for a missing ship-by date so the sort key is never null; must match the COALESCE in pick.sql or the keyset skips rows.
+var pickNoShipByDate = time.Date(9999, 12, 31, 0, 0, 0, 0, time.UTC)
+
+func pickShipByDate(p *domain.Pick) time.Time {
+	if p.ShipByDate == nil {
+		return pickNoShipByDate
+	}
+	return *p.ShipByDate
+}
 
 // parseDateFilter is parseDateString under the name the pick and shipment repositories already used. Kept as a one-liner rather than renamed at both call sites so the two date filters cannot drift apart again.
 func parseDateFilter(s *string) gosql.NullTime {
 	return parseDateString(s)
 }
 
-func mapPickForwardRow(row sqlc.ListPicksForwardRow) *domain.PickSummary {
+// Parses an inclusive end-date filter, pushing it to the last microsecond of the day so rows created
+// during that day still match. Microseconds, not nanoseconds — that is all DATETIME(6) stores.
+func parseEndDateFilter(s *string) gosql.NullTime {
+	end := parseDateFilter(s)
+	if !end.Valid {
+		return end
+	}
+	end.Time = end.Time.Add(24*time.Hour - time.Microsecond)
+	return end
+}
+
+func mapPickForwardRow(row sqlc.ListPicksForwardRow) *domain.Pick {
 	var finishedAt *time.Time
 	if row.FinishedAt.Valid {
 		finishedAt = &row.FinishedAt.Time
 	}
-	return &domain.PickSummary{
-		ID:               row.ID,
-		Number:           row.Number,
-		SalesOrderID:     row.SalesOrderID,
-		SalesOrderNumber: row.SalesOrderNumber,
-		CustomerID:       row.CustomerID,
-		CustomerName:     row.CustomerName,
-		CustomerNumber:   row.CustomerNumber,
-		PriorityID:       row.PriorityID,
-		PriorityCode:     constants.PriorityCode(row.PriorityCode),
-		PriorityName:     row.PriorityName,
-		FinishedAt:       finishedAt,
-		CreatedAt:        row.CreatedAt,
-		UpdatedAt:        row.UpdatedAt,
+	return &domain.Pick{
+		ID:                         row.ID,
+		Number:                     row.Number,
+		SalesOrderID:               row.SalesOrderID,
+		SalesOrderNumber:           row.SalesOrderNumber,
+		CustomerID:                 row.CustomerID,
+		CustomerName:               row.CustomerName,
+		CustomerNumber:             row.CustomerNumber,
+		PriorityID:                 row.PriorityID,
+		PriorityCode:               constants.PriorityCode(row.PriorityCode),
+		PriorityName:               row.PriorityName,
+		FinishedAt:                 finishedAt,
+		CreatedAt:                  row.CreatedAt,
+		UpdatedAt:                  row.UpdatedAt,
+		LineCount:                  safeconv.Int64ToInt32(row.LineCount),
+		LastShippedAt:              interfaceToTimePtr(row.LastShippedAt),
+		PromisedAt:                 nullTimePtr(row.PromisedAt),
+		ShipByDate:                 nullTimePtr(row.ShipByDate),
+		LeadTimeDays:               nullInt32Ptr(row.LeadTimeDays),
+		LeadTimeSource:             leadTimeSourcePtr(row.LeadTimeSourceCode),
+		TransitDays:                nullInt32Ptr(row.TransitDays),
+		TransitSource:              transitSourcePtr(row.TransitSourceCode),
+		ShippingAddressID:          row.ShippingAddressID,
+		ShippingAddressName:        nullStringToPtr(row.ShippingAddressName),
+		ShippingAddressPhone:       nullStringToPtr(row.ShippingAddressPhone),
+		ShippingAddressEmail:       nullStringToPtr(row.ShippingAddressEmail),
+		ShippingAddressIsDropShip:  nullBoolPtr(row.ShippingAddressIsDropShip),
+		ShippingAddressGeolocation: nullStringToPtr(row.ShippingAddressGeolocationID),
+		ShippingAddressStreetLine1: nullStringToPtr(row.ShippingAddressStreetLine1),
+		ShippingAddressStreetLine2: nullStringToPtr(row.ShippingAddressStreetLine2),
+		ShippingAddressLocality:    nullStringToPtr(row.ShippingAddressLocality),
+		ShippingAddressState:       nullStringToPtr(row.ShippingAddressState),
+		ShippingAddressPostalCode:  nullStringToPtr(row.ShippingAddressPostalCode),
+		ShippingAddressCountry:     nullStringToPtr(row.ShippingAddressCountry),
 	}
 }
 
-func mapPickBackwardRow(row sqlc.ListPicksBackwardRow) *domain.PickSummary {
+func mapPickBackwardRow(row sqlc.ListPicksBackwardRow) *domain.Pick {
 	var finishedAt *time.Time
 	if row.FinishedAt.Valid {
 		finishedAt = &row.FinishedAt.Time
 	}
-	return &domain.PickSummary{
-		ID:               row.ID,
-		Number:           row.Number,
-		SalesOrderID:     row.SalesOrderID,
-		SalesOrderNumber: row.SalesOrderNumber,
-		CustomerID:       row.CustomerID,
-		CustomerName:     row.CustomerName,
-		CustomerNumber:   row.CustomerNumber,
-		PriorityID:       row.PriorityID,
-		PriorityCode:     constants.PriorityCode(row.PriorityCode),
-		PriorityName:     row.PriorityName,
-		FinishedAt:       finishedAt,
-		CreatedAt:        row.CreatedAt,
-		UpdatedAt:        row.UpdatedAt,
+	return &domain.Pick{
+		ID:                         row.ID,
+		Number:                     row.Number,
+		SalesOrderID:               row.SalesOrderID,
+		SalesOrderNumber:           row.SalesOrderNumber,
+		CustomerID:                 row.CustomerID,
+		CustomerName:               row.CustomerName,
+		CustomerNumber:             row.CustomerNumber,
+		PriorityID:                 row.PriorityID,
+		PriorityCode:               constants.PriorityCode(row.PriorityCode),
+		PriorityName:               row.PriorityName,
+		FinishedAt:                 finishedAt,
+		CreatedAt:                  row.CreatedAt,
+		UpdatedAt:                  row.UpdatedAt,
+		LineCount:                  safeconv.Int64ToInt32(row.LineCount),
+		LastShippedAt:              interfaceToTimePtr(row.LastShippedAt),
+		PromisedAt:                 nullTimePtr(row.PromisedAt),
+		ShipByDate:                 nullTimePtr(row.ShipByDate),
+		LeadTimeDays:               nullInt32Ptr(row.LeadTimeDays),
+		LeadTimeSource:             leadTimeSourcePtr(row.LeadTimeSourceCode),
+		TransitDays:                nullInt32Ptr(row.TransitDays),
+		TransitSource:              transitSourcePtr(row.TransitSourceCode),
+		ShippingAddressID:          row.ShippingAddressID,
+		ShippingAddressName:        nullStringToPtr(row.ShippingAddressName),
+		ShippingAddressPhone:       nullStringToPtr(row.ShippingAddressPhone),
+		ShippingAddressEmail:       nullStringToPtr(row.ShippingAddressEmail),
+		ShippingAddressIsDropShip:  nullBoolPtr(row.ShippingAddressIsDropShip),
+		ShippingAddressGeolocation: nullStringToPtr(row.ShippingAddressGeolocationID),
+		ShippingAddressStreetLine1: nullStringToPtr(row.ShippingAddressStreetLine1),
+		ShippingAddressStreetLine2: nullStringToPtr(row.ShippingAddressStreetLine2),
+		ShippingAddressLocality:    nullStringToPtr(row.ShippingAddressLocality),
+		ShippingAddressState:       nullStringToPtr(row.ShippingAddressState),
+		ShippingAddressPostalCode:  nullStringToPtr(row.ShippingAddressPostalCode),
+		ShippingAddressCountry:     nullStringToPtr(row.ShippingAddressCountry),
 	}
 }
 
@@ -91,6 +152,10 @@ func mapGetPickLinesRow(row sqlc.GetPickLinesRow) *domain.PickLine {
 	if row.ProductDescription.Valid {
 		productDescription = &row.ProductDescription.String
 	}
+	var productID *string
+	if row.ProductID.Valid {
+		productID = &row.ProductID.String
+	}
 	return &domain.PickLine{
 		ID:                                   row.ID,
 		PickID:                               row.PickID,
@@ -106,6 +171,8 @@ func mapGetPickLinesRow(row sqlc.GetPickLinesRow) *domain.PickLine {
 		OrderLineItemNumber:                  lineItemNumber,
 		OrderLineSKU:                         row.ProductSku,
 		OrderLineDescription:                 productDescription,
+		OrderLineProductID:                   productID,
+		OrderLineItemID:                      nullStringToPtr(row.OrderLineItemID),
 		OrderedQuantityID:                    row.OrderedQuantityID,
 		OrderedQuantityValue:                 row.OrderedQuantityValue,
 		OrderedQuantityUnitID:                row.OrderedQuantityUnitID,
@@ -163,7 +230,7 @@ func (r *pickRepoImpl) List(ctx context.Context, params domain.ListPicksParams) 
 	searchQuery := db.NullStringLikePtr(params.Query)
 	statusFilter := toNullString(params.Status)
 	startDate := parseDateFilter(params.StartDate)
-	endDate := parseDateFilter(params.EndDate)
+	endDate := parseEndDateFilter(params.EndDate)
 
 	customerIDs := params.CustomerIDs
 	if customerIDs == nil {
@@ -187,7 +254,34 @@ func (r *pickRepoImpl) List(ctx context.Context, params domain.ListPicksParams) 
 	includeDepartmentFilter := len(params.DepartmentIDs) > 0
 	includeProductLineFilter := len(params.ProductLineIDs) > 0
 
+	// An unset sort means ship-by date, so a caller that never sends the parameter still gets the urgent-first order.
+	sortByShipBy := params.Sort != constants.PickSortCreatedAt
+	sortKey := pickCreatedAt
+	if sortByShipBy {
+		sortKey = pickShipByDate
+	}
+
+	forwardParams := sqlc.ListPicksForwardParams{
+		AccountID:                  params.AccountID,
+		SearchQuery:                searchQuery,
+		Status:                     statusFilter,
+		IncludeCustomerFilter:      includeCustomerFilter,
+		CustomerIds:                customerIDs,
+		IncludeCustomerGroupFilter: includeCustomerGroupFilter,
+		CustomerGroupIds:           customerGroupIDs,
+		IncludeDepartmentFilter:    includeDepartmentFilter,
+		DepartmentIds:              departmentIDs,
+		IncludeProductLineFilter:   includeProductLineFilter,
+		ProductLineIds:             productLineIDs,
+		StartDate:                  startDate,
+		EndDate:                    endDate,
+		SortByShipBy:               sortByShipBy,
+		Limit:                      params.Limit + 1,
+	}
+
 	var cursorDir *pagination.Direction
+	var picks []*domain.Pick
+	backward := false
 
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
@@ -195,8 +289,9 @@ func (r *pickRepoImpl) List(ctx context.Context, params domain.ListPicksParams) 
 			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
 		}
 		cursorDir = &cur.Direction
+		backward = cur.Direction == pagination.DirectionBackward
 
-		if cur.Direction == pagination.DirectionBackward {
+		if backward {
 			rows, err := r.queries.ListPicksBackward(ctx, sqlc.ListPicksBackwardParams{
 				AccountID:                  params.AccountID,
 				SearchQuery:                searchQuery,
@@ -211,77 +306,42 @@ func (r *pickRepoImpl) List(ctx context.Context, params domain.ListPicksParams) 
 				ProductLineIds:             productLineIDs,
 				StartDate:                  startDate,
 				EndDate:                    endDate,
+				SortByShipBy:               sortByShipBy,
 				CursorCreatedAt:            cur.OccurredAt,
+				CursorShipByDate:           cur.OccurredAt,
 				CursorID:                   cur.ID,
 				Limit:                      params.Limit + 1,
 			})
 			if apiErr := db.MapSQLError(err); apiErr != nil {
 				return nil, tracing.Trace(span, apiErr)
 			}
-			picks := make([]*domain.PickSummary, len(rows))
+			picks = make([]*domain.Pick, len(rows))
 			for i, row := range rows {
 				picks[i] = mapPickBackwardRow(row)
 			}
-			result, pageInfo := pagination.BuildPageString(picks, params.Limit, cursorDir, pickCreatedAt, pickID)
-			return &domain.ListPicksResult{Picks: result, PageInfo: pageInfo}, nil
+		} else {
+			// Only one of the two cursor columns is read; the sort decides which.
+			forwardParams.CursorCreatedAt = gosql.NullTime{Time: cur.OccurredAt, Valid: true}
+			forwardParams.CursorShipByDate = gosql.NullTime{Time: cur.OccurredAt, Valid: true}
+			forwardParams.CursorID = gosql.NullString{String: cur.ID, Valid: true}
 		}
+	}
 
-		// Forward with cursor
-		rows, err := r.queries.ListPicksForward(ctx, sqlc.ListPicksForwardParams{
-			AccountID:                  params.AccountID,
-			SearchQuery:                searchQuery,
-			Status:                     statusFilter,
-			IncludeCustomerFilter:      includeCustomerFilter,
-			CustomerIds:                customerIDs,
-			IncludeCustomerGroupFilter: includeCustomerGroupFilter,
-			CustomerGroupIds:           customerGroupIDs,
-			IncludeDepartmentFilter:    includeDepartmentFilter,
-			DepartmentIds:              departmentIDs,
-			IncludeProductLineFilter:   includeProductLineFilter,
-			ProductLineIds:             productLineIDs,
-			StartDate:                  startDate,
-			EndDate:                    endDate,
-			CursorCreatedAt:            gosql.NullTime{Time: cur.OccurredAt, Valid: true},
-			CursorID:                   gosql.NullString{String: cur.ID, Valid: true},
-			Limit:                      params.Limit + 1,
-		})
+	if !backward {
+		rows, err := r.queries.ListPicksForward(ctx, forwardParams)
 		if apiErr := db.MapSQLError(err); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
-		picks := make([]*domain.PickSummary, len(rows))
+		picks = make([]*domain.Pick, len(rows))
 		for i, row := range rows {
 			picks[i] = mapPickForwardRow(row)
 		}
-		result, pageInfo := pagination.BuildPageString(picks, params.Limit, cursorDir, pickCreatedAt, pickID)
-		return &domain.ListPicksResult{Picks: result, PageInfo: pageInfo}, nil
 	}
 
-	// No cursor — first page
-	rows, err := r.queries.ListPicksForward(ctx, sqlc.ListPicksForwardParams{
-		AccountID:                  params.AccountID,
-		SearchQuery:                searchQuery,
-		Status:                     statusFilter,
-		IncludeCustomerFilter:      includeCustomerFilter,
-		CustomerIds:                customerIDs,
-		IncludeCustomerGroupFilter: includeCustomerGroupFilter,
-		CustomerGroupIds:           customerGroupIDs,
-		IncludeDepartmentFilter:    includeDepartmentFilter,
-		DepartmentIds:              departmentIDs,
-		IncludeProductLineFilter:   includeProductLineFilter,
-		ProductLineIds:             productLineIDs,
-		StartDate:                  startDate,
-		EndDate:                    endDate,
-		Limit:                      params.Limit + 1,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
+	result, pageInfo := pagination.BuildPageString(picks, params.Limit, cursorDir, sortKey, pickID)
+	if apiErr := r.attachProgress(ctx, result); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-
-	picks := make([]*domain.PickSummary, len(rows))
-	for i, row := range rows {
-		picks[i] = mapPickForwardRow(row)
-	}
-	result, pageInfo := pagination.BuildPageString(picks, params.Limit, cursorDir, pickCreatedAt, pickID)
 	return &domain.ListPicksResult{Picks: result, PageInfo: pageInfo}, nil
 }
 
@@ -299,22 +359,68 @@ func (r *pickRepoImpl) Get(ctx context.Context, accountID, pickID string) (*doma
 		finishedAt = &row.FinishedAt.Time
 	}
 
-	return &domain.Pick{
-		ID:               row.ID,
-		Number:           row.Number,
-		SalesOrderID:     row.SalesOrderID,
-		SalesOrderNumber: row.SalesOrderNumber,
-		AccountID:        accountID,
-		CustomerID:       row.CustomerID,
-		CustomerName:     row.CustomerName,
-		CustomerNumber:   row.CustomerNumber,
-		PriorityID:       row.PriorityID,
-		PriorityCode:     constants.PriorityCode(row.PriorityCode),
-		PriorityName:     row.PriorityName,
-		FinishedAt:       finishedAt,
-		CreatedAt:        row.CreatedAt,
-		UpdatedAt:        row.UpdatedAt,
-	}, nil
+	pick := &domain.Pick{
+		ID:                         row.ID,
+		Number:                     row.Number,
+		SalesOrderID:               row.SalesOrderID,
+		SalesOrderNumber:           row.SalesOrderNumber,
+		AccountID:                  accountID,
+		CustomerID:                 row.CustomerID,
+		CustomerName:               row.CustomerName,
+		CustomerNumber:             row.CustomerNumber,
+		PriorityID:                 row.PriorityID,
+		PriorityCode:               constants.PriorityCode(row.PriorityCode),
+		PriorityName:               row.PriorityName,
+		FinishedAt:                 finishedAt,
+		CreatedAt:                  row.CreatedAt,
+		UpdatedAt:                  row.UpdatedAt,
+		LineCount:                  safeconv.Int64ToInt32(row.LineCount),
+		LastShippedAt:              interfaceToTimePtr(row.LastShippedAt),
+		PromisedAt:                 nullTimePtr(row.PromisedAt),
+		ShipByDate:                 nullTimePtr(row.ShipByDate),
+		LeadTimeDays:               nullInt32Ptr(row.LeadTimeDays),
+		LeadTimeSource:             leadTimeSourcePtr(row.LeadTimeSourceCode),
+		TransitDays:                nullInt32Ptr(row.TransitDays),
+		TransitSource:              transitSourcePtr(row.TransitSourceCode),
+		ShippingAddressID:          row.ShippingAddressID,
+		ShippingAddressName:        nullStringToPtr(row.ShippingAddressName),
+		ShippingAddressPhone:       nullStringToPtr(row.ShippingAddressPhone),
+		ShippingAddressEmail:       nullStringToPtr(row.ShippingAddressEmail),
+		ShippingAddressIsDropShip:  nullBoolPtr(row.ShippingAddressIsDropShip),
+		ShippingAddressGeolocation: nullStringToPtr(row.ShippingAddressGeolocationID),
+		ShippingAddressStreetLine1: nullStringToPtr(row.ShippingAddressStreetLine1),
+		ShippingAddressStreetLine2: nullStringToPtr(row.ShippingAddressStreetLine2),
+		ShippingAddressLocality:    nullStringToPtr(row.ShippingAddressLocality),
+		ShippingAddressState:       nullStringToPtr(row.ShippingAddressState),
+		ShippingAddressPostalCode:  nullStringToPtr(row.ShippingAddressPostalCode),
+		ShippingAddressCountry:     nullStringToPtr(row.ShippingAddressCountry),
+	}
+
+	if apiErr := r.attachProgress(ctx, []*domain.Pick{pick}); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return pick, nil
+}
+
+// Fills the picked/packed fractions on already-built picks. It sits beside the other roll-ups in
+// the repository so no caller can hand back a pick that silently reports zero progress.
+func (r *pickRepoImpl) attachProgress(ctx context.Context, picks []*domain.Pick) *apierror.APIError {
+	if len(picks) == 0 {
+		return nil
+	}
+	ids := make([]string, len(picks))
+	for i, p := range picks {
+		ids[i] = p.ID
+	}
+	progress, apiErr := r.GetProgress(ctx, ids)
+	if apiErr != nil {
+		return apiErr
+	}
+	for _, p := range picks {
+		p.PickedCompletion = progress[p.ID].PickedCompletion
+		p.PackedCompletion = progress[p.ID].PackedCompletion
+	}
+	return nil
 }
 
 func (r *pickRepoImpl) GetLines(ctx context.Context, pickID string) ([]*domain.PickLine, *apierror.APIError) {
@@ -331,6 +437,30 @@ func (r *pickRepoImpl) GetLines(ctx context.Context, pickID string) ([]*domain.P
 		lines[i] = mapGetPickLinesRow(row)
 	}
 	return lines, nil
+}
+
+func (r *pickRepoImpl) GetProgress(ctx context.Context, pickIDs []string) (map[string]domain.PickProgress, *apierror.APIError) {
+	ctx, span := pickRepoTracer.Start(ctx, "repository.pick.get_progress")
+	defer span.End()
+
+	if len(pickIDs) == 0 {
+		return map[string]domain.PickProgress{}, nil
+	}
+
+	rows, err := r.queries.GetPickProgress(ctx, pickIDs)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	progress := make(map[string]domain.PickProgress, len(rows))
+	for _, row := range rows {
+		ordered := parseDecimalOrZero(decimalToString(row.QuantityOrdered))
+		progress[row.PickID] = domain.PickProgress{
+			PickedCompletion: completionFraction(decimalToString(row.QuantityPicked), ordered),
+			PackedCompletion: completionFraction(decimalToString(row.QuantityPacked), ordered),
+		}
+	}
+	return progress, nil
 }
 
 func (r *pickRepoImpl) GetDepartments(ctx context.Context, pickID string) ([]*domain.PickDepartment, *apierror.APIError) {
@@ -681,4 +811,40 @@ func (r *pickRepoImpl) FindIDByShipmentOrder(ctx context.Context, accountID, shi
 		return "", tracing.Trace(span, apierror.NewInternalError(err, "Failed to find pick by shipment order."))
 	}
 	return pickID, nil
+}
+
+func (r *pickRepoImpl) GetShipmentIDs(ctx context.Context, accountID, pickID string) ([]string, *apierror.APIError) {
+	ids, err := r.queries.GetShipmentIDsByPick(ctx, sqlc.GetShipmentIDsByPickParams{
+		PickID:    pickID,
+		AccountID: accountID,
+	})
+	if err != nil {
+		return nil, apierror.NewInternalError(err, "failed to list shipment ids for pick")
+	}
+	return ids, nil
+}
+
+// Converts the stored lead-time source code, which is nullable, into the typed constant the
+// resource exposes. An unrecognised code reads as absent rather than inventing a value.
+func leadTimeSourcePtr(ns gosql.NullString) *constants.LeadTimeSource {
+	if !ns.Valid || ns.String == "" {
+		return nil
+	}
+	v := constants.LeadTimeSource(ns.String)
+	if !v.IsValid() {
+		return nil
+	}
+	return &v
+}
+
+// Converts the stored transit source code the same way its lead-time counterpart does.
+func transitSourcePtr(ns gosql.NullString) *constants.TransitSource {
+	if !ns.Valid || ns.String == "" {
+		return nil
+	}
+	v := constants.TransitSource(ns.String)
+	if !v.IsValid() {
+		return nil
+	}
+	return &v
 }

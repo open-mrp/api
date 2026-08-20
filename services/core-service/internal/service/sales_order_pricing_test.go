@@ -367,4 +367,54 @@ func TestComputeUnitPrice_FullPrecedence(t *testing.T) {
 	assertPrice(t, got, "50", "usd", "dz")
 }
 
+// Pins the multi-discount rule: when several discounts match one line, exactly one applies — never
+// their product — and the winner is the highest surviving multiplier, i.e. the smallest discount.
+func TestComputeUnitPrice_MultipleMatchingDiscounts_SmallestDiscountWinsRegardlessOfOrder(t *testing.T) {
+	t.Parallel()
+	product := basePricingProduct("100", nil, nil)
+	groupUnits := map[string]*domain.PricingUnitGroupUnit{"ea": {UnitGroupID: "ug", UnitID: "ea"}}
+
+	mild := &domain.PricingVolumeDiscount{
+		ID: "vd-mild", AcceptableUnitIDs: []string{"ea"},
+		Tiers: []domain.PricingVolumeDiscountTier{{Threshold: "1", DiscountPercentage: "0.1"}},
+	}
+	steep := &domain.PricingVolumeDiscount{
+		ID: "vd-steep", AcceptableUnitIDs: []string{"ea"},
+		Tiers: []domain.PricingVolumeDiscountTier{{Threshold: "1", DiscountPercentage: "0.4"}},
+	}
+	lines := []domain.SalesOrderPriceLineInput{line("1", "ea")}
+
+	// 100 * 0.9 — not 100 * 0.6, and not the compounded 100 * 0.9 * 0.6 = 54. Both orderings are
+	// asserted because the loader returns discounts unordered (sales_order_pricing.sql, no ORDER BY).
+	got := computeUnitPrice(pricingTestBundle(product, groupUnits, nil, []*domain.PricingVolumeDiscount{mild, steep}), lines[0], lines)
+	assertPrice(t, got, "90", "usd", "ea")
+
+	got = computeUnitPrice(pricingTestBundle(product, groupUnits, nil, []*domain.PricingVolumeDiscount{steep, mild}), lines[0], lines)
+	assertPrice(t, got, "90", "usd", "ea")
+}
+
+// Pins that customer-group scope outranks the multiplier rule: a group-matched discount wins even
+// when an unscoped one would leave the price higher.
+func TestComputeUnitPrice_CustomerGroupDiscountOutranksTheMultiplierRule(t *testing.T) {
+	t.Parallel()
+	product := basePricingProduct("100", nil, nil)
+	groupUnits := map[string]*domain.PricingUnitGroupUnit{"ea": {UnitGroupID: "ug", UnitID: "ea"}}
+
+	open := &domain.PricingVolumeDiscount{
+		ID: "vd-open", AcceptableUnitIDs: []string{"ea"},
+		Tiers: []domain.PricingVolumeDiscountTier{{Threshold: "1", DiscountPercentage: "0.1"}},
+	}
+	grouped := &domain.PricingVolumeDiscount{
+		ID: "vd-group", MatchesCustomerGroup: true, AcceptableUnitIDs: []string{"ea"},
+		Tiers: []domain.PricingVolumeDiscountTier{{Threshold: "1", DiscountPercentage: "0.4"}},
+	}
+	lines := []domain.SalesOrderPriceLineInput{line("1", "ea")}
+
+	got := computeUnitPrice(pricingTestBundle(product, groupUnits, nil, []*domain.PricingVolumeDiscount{open, grouped}), lines[0], lines)
+	assertPrice(t, got, "60", "usd", "ea")
+
+	got = computeUnitPrice(pricingTestBundle(product, groupUnits, nil, []*domain.PricingVolumeDiscount{grouped, open}), lines[0], lines)
+	assertPrice(t, got, "60", "usd", "ea")
+}
+
 func strptr(s string) *string { return &s }

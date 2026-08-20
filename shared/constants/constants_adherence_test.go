@@ -140,6 +140,7 @@ var typeRegistry = map[string]any{
 	"OeeMeasurementStatus":         OeeMeasurementStatus(""),
 	"OeeAnomaly":                   OeeAnomaly(""),
 
+	"AccountPlanLimitKey":             AccountPlanLimitKey(""),
 	"ActorType":                       ActorType(""),
 	"RecordType":                      RecordType(""),
 	"HTTPMethod":                      HTTPMethod(""),
@@ -254,6 +255,7 @@ var typeRegistry = map[string]any{
 	"Model":                           Model(""),
 	"ModelTier":                       ModelTier(""),
 	"PriorityCode":                    PriorityCode(""),
+	"PickSort":                        PickSort(""),
 	"PaymentTermStatus":               PaymentTermStatus(""),
 	"OwnerType":                       OwnerType(""),
 	"CreatedByRelation":               CreatedByRelation(""),

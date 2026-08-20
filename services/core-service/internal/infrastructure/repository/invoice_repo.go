@@ -11,6 +11,7 @@ import (
 	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/db"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/id"
 	"github.com/augno/api/shared/pagination"
 	"github.com/augno/api/shared/safeconv"
 	"github.com/augno/api/shared/tracing"
@@ -26,8 +27,8 @@ func NewInvoiceRepo(queries *sqlc.Queries) domain.InvoiceRepo {
 	return &invoiceRepoImpl{queries: queries}
 }
 
-func invoiceCreatedAt(d *domain.InvoiceSummary) time.Time { return d.CreatedAt }
-func invoiceID(d *domain.InvoiceSummary) string           { return d.ID }
+func invoiceCreatedAt(d *domain.Invoice) time.Time { return d.CreatedAt }
+func invoiceID(d *domain.Invoice) string           { return d.ID }
 
 func customerInvoiceCreatedAt(d *domain.InvoiceForPayment) time.Time { return d.CreatedAt }
 func customerInvoiceID(d *domain.InvoiceForPayment) string           { return d.ID }
@@ -149,9 +150,9 @@ func (r *invoiceRepoImpl) List(ctx context.Context, params domain.ListInvoicesPa
 			if apiErr := db.MapSQLError(err); apiErr != nil {
 				return nil, tracing.Trace(span, apiErr)
 			}
-			invoices := make([]*domain.InvoiceSummary, len(rows))
+			invoices := make([]*domain.Invoice, len(rows))
 			for i, row := range rows {
-				invoices[i] = mapBackwardInvoiceRow(row)
+				invoices[i] = mapInvoiceRow(sqlc.GetInvoiceRow(row))
 			}
 			result, pageInfo := pagination.BuildPageString(invoices, params.Limit, cursorDir, invoiceCreatedAt, invoiceID)
 			return &domain.ListInvoicesResult{Invoices: result, PageInfo: pageInfo}, nil
@@ -181,9 +182,9 @@ func (r *invoiceRepoImpl) List(ctx context.Context, params domain.ListInvoicesPa
 		if apiErr := db.MapSQLError(err); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
-		invoices := make([]*domain.InvoiceSummary, len(rows))
+		invoices := make([]*domain.Invoice, len(rows))
 		for i, row := range rows {
-			invoices[i] = mapForwardInvoiceRow(row)
+			invoices[i] = mapInvoiceRow(invoiceListRow(row))
 		}
 		result, pageInfo := pagination.BuildPageString(invoices, params.Limit, cursorDir, invoiceCreatedAt, invoiceID)
 		return &domain.ListInvoicesResult{Invoices: result, PageInfo: pageInfo}, nil
@@ -212,9 +213,9 @@ func (r *invoiceRepoImpl) List(ctx context.Context, params domain.ListInvoicesPa
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	invoices := make([]*domain.InvoiceSummary, len(rows))
+	invoices := make([]*domain.Invoice, len(rows))
 	for i, row := range rows {
-		invoices[i] = mapForwardInvoiceRow(row)
+		invoices[i] = mapInvoiceRow(invoiceListRow(row))
 	}
 	result, pageInfo := pagination.BuildPageString(invoices, params.Limit, cursorDir, invoiceCreatedAt, invoiceID)
 	return &domain.ListInvoicesResult{Invoices: result, PageInfo: pageInfo}, nil
@@ -232,54 +233,7 @@ func (r *invoiceRepoImpl) Get(ctx context.Context, params domain.GetInvoiceParam
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	invoice := &domain.Invoice{
-		ID:                    row.ID,
-		Number:                row.Number,
-		OrderID:               row.OrderID,
-		OrderNumber:           row.OrderNumber,
-		CustomerID:            row.CustomerID,
-		BillingAddressID:      row.BillingAddressID,
-		BillingAddressCountry: row.BillingAddressCountry,
-		IsPaidInFull:          row.IsPaidInFull,
-		IsOverPaid:            row.IsOverPaid,
-		IsEdiSent:             row.IsEdiSent,
-		HasBeenSent:           row.HasBeenSent,
-		AcceptsInvoiceEmails:  row.AcceptsInvoiceEmails != 0,
-		CreatedAt:             row.CreatedAt,
-		UpdatedAt:             row.UpdatedAt,
-	}
-
-	if row.PaymentTermID.Valid {
-		invoice.PaymentTermID = &row.PaymentTermID.String
-	}
-
-	if row.Note.Valid {
-		invoice.Note = &row.Note.String
-	}
-	invoice.BillingAddressName = &row.BillingAddressName
-	if row.BillingAddressLine1.Valid {
-		invoice.BillingAddressLine1 = &row.BillingAddressLine1.String
-	}
-	if row.BillingAddressLine2.Valid {
-		invoice.BillingAddressLine2 = &row.BillingAddressLine2.String
-	}
-	if row.BillingAddressCity.Valid {
-		invoice.BillingAddressCity = &row.BillingAddressCity.String
-	}
-	if row.BillingAddressState.Valid {
-		invoice.BillingAddressState = &row.BillingAddressState.String
-	}
-	if row.BillingAddressZip.Valid {
-		invoice.BillingAddressZip = &row.BillingAddressZip.String
-	}
-	if row.ShipmentID.Valid {
-		invoice.ShipmentID = &row.ShipmentID.String
-	}
-	if row.ShipmentNumber.Valid {
-		invoice.ShipmentNumber = &row.ShipmentNumber.String
-	}
-
-	return invoice, nil
+	return mapInvoiceRow(row), nil
 }
 
 func (r *invoiceRepoImpl) GetLines(ctx context.Context, invoiceID string) ([]*domain.InvoiceLine, *apierror.APIError) {
@@ -294,29 +248,76 @@ func (r *invoiceRepoImpl) GetLines(ctx context.Context, invoiceID string) ([]*do
 	lines := make([]*domain.InvoiceLine, len(rows))
 	for i, row := range rows {
 		line := &domain.InvoiceLine{
-			ID:               row.ID,
-			QuantityID:       row.QuantityID,
-			QuantityValue:    row.QuantityValue,
-			QuantityUnitID:   row.QuantityUnitID,
-			QuantityUnitAbbr: row.QuantityUnitAbbreviation,
-			UnitPriceID:      row.UnitPriceID,
-			UnitPriceValue:   row.UnitPriceValue,
-			UnitPriceNumUnit: row.UnitPriceNumeratorUnitID,
-			UnitPriceDenUnit: row.UnitPriceDenominatorUnitID,
-			OrderLineID:      row.OrderLineID,
-			CreatedAt:        row.CreatedAt,
-			UpdatedAt:        row.UpdatedAt,
+			ID:                  row.ID,
+			QuantityID:          row.QuantityID,
+			QuantityValue:       row.QuantityValue,
+			QuantityUnitID:      row.QuantityUnitID,
+			QuantityUnitAbbr:    row.QuantityUnitAbbreviation,
+			QuantityUnitName:    row.QuantityUnitName,
+			UnitPriceID:         row.UnitPriceID,
+			UnitPriceValue:      row.UnitPriceValue,
+			UnitPriceNumUnit:    row.UnitPriceNumeratorUnitID,
+			UnitPriceDenUnit:    row.UnitPriceDenominatorUnitID,
+			OrderLineID:         row.OrderLineID,
+			OrderLineQtyOrdered: row.OrderLineQuantityOrdered,
+			CreatedAt:           row.CreatedAt,
+			UpdatedAt:           row.UpdatedAt,
 		}
 		if row.OrderLineItemID.Valid {
 			line.OrderLineItemID = &row.OrderLineItemID.String
 		}
+		if row.OrderLineItemNumber.Valid {
+			line.OrderLineItemNumber = &row.OrderLineItemNumber.Int32
+		}
+		if row.OrderLineProductID.Valid {
+			line.OrderLineProductID = &row.OrderLineProductID.String
+		}
 		if row.OrderLineItemSku.Valid {
 			line.OrderLineItemSKU = &row.OrderLineItemSku.String
+		}
+		if row.OrderLineDescription.Valid {
+			line.OrderLineDescription = &row.OrderLineDescription.String
 		}
 		lines[i] = line
 	}
 
 	return lines, nil
+}
+
+// Loads the allocations for a whole page of invoices in one round trip, keyed by invoice id.
+// Invoices with no allocations are simply absent from the map.
+func (r *invoiceRepoImpl) GetAllocationsForInvoices(ctx context.Context, invoiceIDs []string) (map[string][]*domain.InvoiceAllocation, *apierror.APIError) {
+	ctx, span := invoiceRepoTracer.Start(ctx, "repository.invoice.get_allocations_for_invoices")
+	defer span.End()
+
+	if len(invoiceIDs) == 0 {
+		return map[string][]*domain.InvoiceAllocation{}, nil
+	}
+
+	rows, err := r.queries.GetInvoiceAllocationsForInvoices(ctx, invoiceIDs)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	byInvoice := make(map[string][]*domain.InvoiceAllocation, len(invoiceIDs))
+	for _, row := range rows {
+		alloc := &domain.InvoiceAllocation{
+			ID:             row.ID,
+			TransactionID:  row.TransactionID,
+			AmountID:       row.AmountID,
+			AmountValue:    row.AmountValue,
+			AmountUnitID:   row.AmountUnitID,
+			AmountUnitAbbr: row.AmountUnitAbbreviation,
+			CreatedAt:      row.CreatedAt,
+			UpdatedAt:      row.UpdatedAt,
+		}
+		if row.Note.Valid {
+			alloc.Note = &row.Note.String
+		}
+		byInvoice[row.InvoiceID] = append(byInvoice[row.InvoiceID], alloc)
+	}
+
+	return byInvoice, nil
 }
 
 func (r *invoiceRepoImpl) GetAllocations(ctx context.Context, invoiceID string) ([]*domain.InvoiceAllocation, *apierror.APIError) {
@@ -349,16 +350,15 @@ func (r *invoiceRepoImpl) GetAllocations(ctx context.Context, invoiceID string) 
 	return allocations, nil
 }
 
-func (r *invoiceRepoImpl) Update(ctx context.Context, params domain.UpdateInvoiceParams) (*domain.InvoiceSummary, *apierror.APIError) {
+func (r *invoiceRepoImpl) Update(ctx context.Context, params domain.UpdateInvoiceParams) (*domain.Invoice, *apierror.APIError) {
 	ctx, span := invoiceRepoTracer.Start(ctx, "repository.invoice.update")
 	defer span.End()
 
 	updateParams := sqlc.UpdateInvoiceParams{
 		ID:        params.InvoiceID,
 		AccountID: params.AccountID,
-	}
-	if params.Note != nil {
-		updateParams.Note = gosql.NullString{String: *params.Note, Valid: true}
+		Note:      dtNullString(params.Note.ValuePtr()),
+		ClearNote: params.Note.IsClear(),
 	}
 	if params.HasBeenSent != nil {
 		updateParams.HasBeenSent = gosql.NullBool{Bool: *params.HasBeenSent, Valid: true}
@@ -375,8 +375,7 @@ func (r *invoiceRepoImpl) Update(ctx context.Context, params domain.UpdateInvoic
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// Re-fetch the updated invoice summary
-	row, err := r.queries.GetInvoiceSummaryByID(ctx, sqlc.GetInvoiceSummaryByIDParams{
+	row, err := r.queries.GetInvoice(ctx, sqlc.GetInvoiceParams{
 		ID:        params.InvoiceID,
 		AccountID: params.AccountID,
 	})
@@ -384,7 +383,7 @@ func (r *invoiceRepoImpl) Update(ctx context.Context, params domain.UpdateInvoic
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return mapSummaryByIDRow(row), nil
+	return mapInvoiceRow(row), nil
 }
 
 func (r *invoiceRepoImpl) IsDuplicateNumber(ctx context.Context, accountID, number string) (bool, *apierror.APIError) {
@@ -478,13 +477,12 @@ func (r *invoiceRepoImpl) ListByCustomer(ctx context.Context, params domain.List
 
 		if cur.Direction == pagination.DirectionBackward {
 			rows, err := r.queries.ListCustomerInvoicesBackward(ctx, sqlc.ListCustomerInvoicesBackwardParams{
-				AccountID:            params.AccountID,
-				IncludeChildAccounts: params.IncludeChildAccounts,
-				CustomerAccountID:    params.CustomerAccountID,
-				SearchQuery:          searchQuery,
-				CursorCreatedAt:      cur.OccurredAt,
-				CursorID:             cur.ID,
-				Limit:                params.Limit + 1,
+				AccountID:         params.AccountID,
+				CustomerAccountID: params.CustomerAccountID,
+				SearchQuery:       searchQuery,
+				CursorCreatedAt:   cur.OccurredAt,
+				CursorID:          cur.ID,
+				Limit:             params.Limit + 1,
 			})
 			if apiErr := db.MapSQLError(err); apiErr != nil {
 				return nil, tracing.Trace(span, apiErr)
@@ -499,13 +497,12 @@ func (r *invoiceRepoImpl) ListByCustomer(ctx context.Context, params domain.List
 
 		// Forward with cursor
 		rows, err := r.queries.ListCustomerInvoicesForward(ctx, sqlc.ListCustomerInvoicesForwardParams{
-			AccountID:            params.AccountID,
-			IncludeChildAccounts: params.IncludeChildAccounts,
-			CustomerAccountID:    params.CustomerAccountID,
-			SearchQuery:          searchQuery,
-			CursorCreatedAt:      gosql.NullTime{Time: cur.OccurredAt, Valid: true},
-			CursorID:             gosql.NullString{String: cur.ID, Valid: true},
-			Limit:                params.Limit + 1,
+			AccountID:         params.AccountID,
+			CustomerAccountID: params.CustomerAccountID,
+			SearchQuery:       searchQuery,
+			CursorCreatedAt:   gosql.NullTime{Time: cur.OccurredAt, Valid: true},
+			CursorID:          gosql.NullString{String: cur.ID, Valid: true},
+			Limit:             params.Limit + 1,
 		})
 		if apiErr := db.MapSQLError(err); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
@@ -520,11 +517,10 @@ func (r *invoiceRepoImpl) ListByCustomer(ctx context.Context, params domain.List
 
 	// No cursor — first page
 	rows, err := r.queries.ListCustomerInvoicesForward(ctx, sqlc.ListCustomerInvoicesForwardParams{
-		AccountID:            params.AccountID,
-		IncludeChildAccounts: params.IncludeChildAccounts,
-		CustomerAccountID:    params.CustomerAccountID,
-		SearchQuery:          searchQuery,
-		Limit:                params.Limit + 1,
+		AccountID:         params.AccountID,
+		CustomerAccountID: params.CustomerAccountID,
+		SearchQuery:       searchQuery,
+		Limit:             params.Limit + 1,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -540,172 +536,72 @@ func (r *invoiceRepoImpl) ListByCustomer(ctx context.Context, params domain.List
 
 // Mapping helpers
 
-func mapForwardInvoiceRow(row sqlc.ListInvoicesForwardRow) *domain.InvoiceSummary {
-	s := &domain.InvoiceSummary{
-		ID:                    row.ID,
-		Number:                row.Number,
-		IsPaidInFull:          row.IsPaidInFull,
-		IsEdiSent:             row.IsEdiSent,
-		HasBeenSent:           row.HasBeenSent,
-		CustomerID:            row.CustomerID,
-		CustomerName:          row.CustomerName,
-		CustomerNumber:        row.CustomerNumber,
-		CustomerIsEdiEnabled:  row.CustomerIsEdiEnabled,
-		OrderID:               row.OrderID,
-		OrderNumber:           row.OrderNumber,
-		BillingAddressID:      row.BillingAddressID,
-		BillingAddressCountry: row.BillingAddressCountry,
-		PriorityCode:          constants.PriorityCode(row.PriorityCode),
-		LineCount:             safeconv.Int64ToInt32(row.LineCount),
-		TotalInvoiced:         decimalToString(row.TotalInvoiced),
-		AcceptsInvoiceEmails:  row.AcceptsInvoiceEmails != 0,
-		CreatedAt:             row.CreatedAt,
-		UpdatedAt:             row.UpdatedAt,
-	}
-	if row.Note.Valid {
-		s.Note = &row.Note.String
-	}
-	if row.ShipmentID.Valid {
-		s.ShipmentID = &row.ShipmentID.String
-	}
-	s.BillingAddressName = &row.BillingAddressName
-	if row.BillingAddressLine1.Valid {
-		s.BillingAddressLine1 = &row.BillingAddressLine1.String
-	}
-	if row.BillingAddressLine2.Valid {
-		s.BillingAddressLine2 = &row.BillingAddressLine2.String
-	}
-	if row.BillingAddressCity.Valid {
-		s.BillingAddressCity = &row.BillingAddressCity.String
-	}
-	if row.BillingAddressState.Valid {
-		s.BillingAddressState = &row.BillingAddressState.String
-	}
-	if row.BillingAddressZip.Valid {
-		s.BillingAddressZip = &row.BillingAddressZip.String
-	}
-	if row.PaymentTermID.Valid {
-		s.PaymentTermID = &row.PaymentTermID.String
-	}
-	if row.PaymentTermName.Valid {
-		s.PaymentTermName = &row.PaymentTermName.String
-	}
-	s.PaymentTermIsActive = nullBoolPtr(row.PaymentTermIsActive)
-	s.CustomerStatusCode = nullStringToPtr(row.CustomerStatusCode)
-	s.CustomerCommissionPolicy = nullStringToPtr(row.CustomerCommissionPolicy)
-	return s
+// Converts a list row to the detail row so both share one mapper — legal only while the three
+// invoice queries select the same projection in the same order, and a compile error if they drift.
+func invoiceListRow(row sqlc.ListInvoicesForwardRow) sqlc.GetInvoiceRow {
+	return sqlc.GetInvoiceRow(row)
 }
 
-func mapBackwardInvoiceRow(row sqlc.ListInvoicesBackwardRow) *domain.InvoiceSummary {
-	s := &domain.InvoiceSummary{
+func mapInvoiceRow(row sqlc.GetInvoiceRow) *domain.Invoice {
+	invoice := &domain.Invoice{
 		ID:                    row.ID,
 		Number:                row.Number,
-		IsPaidInFull:          row.IsPaidInFull,
-		IsEdiSent:             row.IsEdiSent,
-		HasBeenSent:           row.HasBeenSent,
+		OrderID:               row.OrderID,
+		OrderNumber:           row.OrderNumber,
+		PriorityCode:          constants.PriorityCode(row.PriorityCode),
 		CustomerID:            row.CustomerID,
 		CustomerName:          row.CustomerName,
 		CustomerNumber:        row.CustomerNumber,
 		CustomerIsEdiEnabled:  row.CustomerIsEdiEnabled,
-		OrderID:               row.OrderID,
-		OrderNumber:           row.OrderNumber,
 		BillingAddressID:      row.BillingAddressID,
+		BillingAddressName:    &row.BillingAddressName,
 		BillingAddressCountry: row.BillingAddressCountry,
-		PriorityCode:          constants.PriorityCode(row.PriorityCode),
 		LineCount:             safeconv.Int64ToInt32(row.LineCount),
 		TotalInvoiced:         decimalToString(row.TotalInvoiced),
+		IsPaidInFull:          row.IsPaidInFull,
+		IsOverPaid:            row.IsOverPaid,
+		IsEdiSent:             row.IsEdiSent,
+		HasBeenSent:           row.HasBeenSent,
 		AcceptsInvoiceEmails:  row.AcceptsInvoiceEmails != 0,
 		CreatedAt:             row.CreatedAt,
 		UpdatedAt:             row.UpdatedAt,
 	}
-	if row.Note.Valid {
-		s.Note = &row.Note.String
-	}
-	if row.ShipmentID.Valid {
-		s.ShipmentID = &row.ShipmentID.String
-	}
-	s.BillingAddressName = &row.BillingAddressName
-	if row.BillingAddressLine1.Valid {
-		s.BillingAddressLine1 = &row.BillingAddressLine1.String
-	}
-	if row.BillingAddressLine2.Valid {
-		s.BillingAddressLine2 = &row.BillingAddressLine2.String
-	}
-	if row.BillingAddressCity.Valid {
-		s.BillingAddressCity = &row.BillingAddressCity.String
-	}
-	if row.BillingAddressState.Valid {
-		s.BillingAddressState = &row.BillingAddressState.String
-	}
-	if row.BillingAddressZip.Valid {
-		s.BillingAddressZip = &row.BillingAddressZip.String
-	}
-	if row.PaymentTermID.Valid {
-		s.PaymentTermID = &row.PaymentTermID.String
-	}
-	if row.PaymentTermName.Valid {
-		s.PaymentTermName = &row.PaymentTermName.String
-	}
-	s.PaymentTermIsActive = nullBoolPtr(row.PaymentTermIsActive)
-	s.CustomerStatusCode = nullStringToPtr(row.CustomerStatusCode)
-	s.CustomerCommissionPolicy = nullStringToPtr(row.CustomerCommissionPolicy)
-	return s
-}
 
-func mapSummaryByIDRow(row sqlc.GetInvoiceSummaryByIDRow) *domain.InvoiceSummary {
-	s := &domain.InvoiceSummary{
-		ID:                    row.ID,
-		Number:                row.Number,
-		IsPaidInFull:          row.IsPaidInFull,
-		IsEdiSent:             row.IsEdiSent,
-		HasBeenSent:           row.HasBeenSent,
-		CustomerID:            row.CustomerID,
-		CustomerName:          row.CustomerName,
-		CustomerNumber:        row.CustomerNumber,
-		CustomerIsEdiEnabled:  row.CustomerIsEdiEnabled,
-		OrderID:               row.OrderID,
-		OrderNumber:           row.OrderNumber,
-		BillingAddressID:      row.BillingAddressID,
-		BillingAddressCountry: row.BillingAddressCountry,
-		PriorityCode:          constants.PriorityCode(row.PriorityCode),
-		LineCount:             safeconv.Int64ToInt32(row.LineCount),
-		TotalInvoiced:         decimalToString(row.TotalInvoiced),
-		AcceptsInvoiceEmails:  row.AcceptsInvoiceEmails != 0,
-		CreatedAt:             row.CreatedAt,
-		UpdatedAt:             row.UpdatedAt,
-	}
 	if row.Note.Valid {
-		s.Note = &row.Note.String
+		invoice.Note = &row.Note.String
 	}
 	if row.ShipmentID.Valid {
-		s.ShipmentID = &row.ShipmentID.String
+		invoice.ShipmentID = &row.ShipmentID.String
 	}
-	s.BillingAddressName = &row.BillingAddressName
+	if row.ShipmentNumber.Valid {
+		invoice.ShipmentNumber = &row.ShipmentNumber.String
+	}
 	if row.BillingAddressLine1.Valid {
-		s.BillingAddressLine1 = &row.BillingAddressLine1.String
+		invoice.BillingAddressLine1 = &row.BillingAddressLine1.String
 	}
 	if row.BillingAddressLine2.Valid {
-		s.BillingAddressLine2 = &row.BillingAddressLine2.String
+		invoice.BillingAddressLine2 = &row.BillingAddressLine2.String
 	}
 	if row.BillingAddressCity.Valid {
-		s.BillingAddressCity = &row.BillingAddressCity.String
+		invoice.BillingAddressCity = &row.BillingAddressCity.String
 	}
 	if row.BillingAddressState.Valid {
-		s.BillingAddressState = &row.BillingAddressState.String
+		invoice.BillingAddressState = &row.BillingAddressState.String
 	}
 	if row.BillingAddressZip.Valid {
-		s.BillingAddressZip = &row.BillingAddressZip.String
+		invoice.BillingAddressZip = &row.BillingAddressZip.String
 	}
 	if row.PaymentTermID.Valid {
-		s.PaymentTermID = &row.PaymentTermID.String
+		invoice.PaymentTermID = &row.PaymentTermID.String
 	}
 	if row.PaymentTermName.Valid {
-		s.PaymentTermName = &row.PaymentTermName.String
+		invoice.PaymentTermName = &row.PaymentTermName.String
 	}
-	s.PaymentTermIsActive = nullBoolPtr(row.PaymentTermIsActive)
-	s.CustomerStatusCode = nullStringToPtr(row.CustomerStatusCode)
-	s.CustomerCommissionPolicy = nullStringToPtr(row.CustomerCommissionPolicy)
-	return s
+	invoice.PaymentTermIsActive = nullBoolPtr(row.PaymentTermIsActive)
+	invoice.CustomerStatusCode = nullStringToPtr(row.CustomerStatusCode)
+	invoice.CustomerCommissionPolicy = nullStringToPtr(row.CustomerCommissionPolicy)
+
+	return invoice
 }
 
 func mapForwardCustomerInvoiceRow(row sqlc.ListCustomerInvoicesForwardRow) *domain.InvoiceForPayment {
@@ -764,4 +660,72 @@ func mapBackwardCustomerInvoiceRow(row sqlc.ListCustomerInvoicesBackwardRow) *do
 	}
 	inv.IsPrepaid = row.CustomerPaymentTermID.Valid && row.CustomerPaymentTermID.String == "prepaid"
 	return inv
+}
+
+func (r *invoiceRepoImpl) CreateFromShipment(ctx context.Context, params domain.CreateInvoiceFromShipmentParams) (string, *apierror.APIError) {
+	ctx, span := invoiceRepoTracer.Start(ctx, "repository.invoice.create_from_shipment")
+	defer span.End()
+
+	billToID, err := r.queries.GetBillToAddressIDByOrder(ctx, sqlc.GetBillToAddressIDByOrderParams{
+		SalesOrderID: params.SalesOrderID,
+		AccountID:    params.AccountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return "", tracing.Trace(span, apiErr)
+	}
+
+	// The non-shippable order lines (freight/tax/discount/service) are billed at full ordered
+	// quantity alongside the shipped goods, so a shipment's invoice covers the whole order line set.
+	nonSale, err := r.queries.GetNonSaleInvoiceableOrderLines(ctx, params.SalesOrderID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return "", tracing.Trace(span, apiErr)
+	}
+
+	lines := make([]domain.InvoiceLineDraft, 0, len(params.ShippedLines)+len(nonSale))
+	lines = append(lines, params.ShippedLines...)
+	for _, n := range nonSale {
+		lines = append(lines, domain.InvoiceLineDraft{
+			SalesOrderLineID: n.SalesOrderLineID,
+			QuantityValue:    n.OrderedValue,
+			QuantityUnitID:   n.OrderedUnitID,
+		})
+	}
+
+	if err := r.queries.CreateInvoice(ctx, sqlc.CreateInvoiceParams{
+		ID:               params.InvoiceID,
+		Number:           params.Number,
+		SalesOrderID:     params.SalesOrderID,
+		BillingAddressID: billToID,
+		AccountID:        params.AccountID,
+	}); err != nil {
+		return "", tracing.Trace(span, db.MapSQLError(err))
+	}
+
+	for _, line := range lines {
+		quantityID, apiErr := id.GenID(id.QuantityIDPrefix, nil)
+		if apiErr != nil {
+			return "", tracing.Trace(span, apiErr)
+		}
+		lineID, apiErr := id.GenID(id.InvoiceLineIDPrefix, nil)
+		if apiErr != nil {
+			return "", tracing.Trace(span, apiErr)
+		}
+		if err := r.queries.CreateInvoiceLineQuantity(ctx, sqlc.CreateInvoiceLineQuantityParams{
+			ID:     quantityID,
+			Value:  line.QuantityValue,
+			UnitID: line.QuantityUnitID,
+		}); err != nil {
+			return "", tracing.Trace(span, db.MapSQLError(err))
+		}
+		if err := r.queries.CreateInvoiceLine(ctx, sqlc.CreateInvoiceLineParams{
+			ID:               lineID,
+			InvoiceID:        params.InvoiceID,
+			QuantityID:       quantityID,
+			SalesOrderLineID: line.SalesOrderLineID,
+		}); err != nil {
+			return "", tracing.Trace(span, db.MapSQLError(err))
+		}
+	}
+
+	return params.InvoiceID, nil
 }

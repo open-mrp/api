@@ -27,6 +27,9 @@ message InvoiceLineInfo {
   optional string order_line_item_sku = 12;
   google.protobuf.Timestamp created_at = 13;
   google.protobuf.Timestamp updated_at = 14;
+  // The order line's product, carried so lines.order_line.product resolves without a
+  // standalone sales-order-line loader.
+  optional string order_line_product_id = 15;
 }
 message InvoiceAllocationInfo {
   string id = 1;

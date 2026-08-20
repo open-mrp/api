@@ -79,7 +79,7 @@ func (m *transactionSvcImpl) ListTransactions(ctx context.Context, req *ListTran
 		}
 	}
 	if req.EndDate != nil {
-		t, err := grpcutil.ParseDateString(*req.EndDate)
+		t, err := grpcutil.ParseEndDateString(*req.EndDate)
 		if err == nil {
 			pbReq.EndDate = timestamppb.New(t)
 		}
@@ -191,16 +191,14 @@ func (m *transactionSvcImpl) DeleteTransaction(ctx context.Context, req *DeleteT
 
 func (m *transactionSvcImpl) ListAccountTransactions(ctx context.Context, req *ListAccountTransactionsRequest) (*apiresource.List[apiresource.TransactionDetail], *apierror.APIError) {
 	// Default to including child accounts (matches legacy Dashboard behavior).
-	includeChildAccounts := req.IncludeChildAccounts == nil || *req.IncludeChildAccounts
 
 	pbReq := &pb.ListAccountTransactionsRequest{
-		CustomerAccountId:    req.CustomerAccountID,
-		Cursor:               req.Cursor,
-		Limit:                req.Limit,
-		Query:                req.Query,
-		Status:               req.Status,
-		Type:                 req.Type,
-		IncludeChildAccounts: includeChildAccounts,
+		CustomerAccountId: req.CustomerAccountID,
+		Cursor:            req.Cursor,
+		Limit:             req.Limit,
+		Query:             req.Query,
+		Status:            req.Status,
+		Type:              req.Type,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, transactionSvcTracer, "service.transactions.list_account", domain.ServiceName,

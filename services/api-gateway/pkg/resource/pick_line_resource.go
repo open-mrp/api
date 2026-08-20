@@ -16,17 +16,15 @@ type PickLine struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=pick_line"`
-	// Quantity actually picked for this line.
-	//
-	// May be less than `ordered_quantity` when stock is short or the line is only partially fulfilled. A value of `0` means nothing has been picked yet, or the line was voided.
+	// The item this line picks, named by the originating sales order line and returned as it stands now rather than as it was when the order was placed.
+	Item *Item `json:"item" expandable:"true"`
+	// Quantity actually picked for this line. A value of `0` means nothing has been picked yet.
 	Quantity *Quantity `json:"quantity" validate:"required"`
 	// Quantity requested by the originating sales order line for this pick line.
 	OrderedQuantity *Quantity `json:"ordered_quantity" validate:"required"`
 	// The sales order line this pick line fulfills.
 	SalesOrderLine *SalesOrderLine `json:"sales_order_line" expandable:"true"`
 	// Timestamp when the line was packed.
-	//
-	// Once packed, a line can no longer be picked or voided. If the sales order line still has quantity outstanding, packing adds a fresh zero-quantity pick line for the remainder rather than reopening this one.
 	PackedAt *time.Time `json:"packed_at"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -37,6 +35,7 @@ type PickLine struct {
 var SamplePickLine = &PickLine{
 	ID:              SamplePickLineID,
 	Object:          constants.ObjectTypePickLine,
+	Item:            SampleItem,
 	Quantity:        SampleQuantity,
 	OrderedQuantity: SampleQuantity,
 	SalesOrderLine:  SampleSalesOrderLine,

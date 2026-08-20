@@ -655,7 +655,7 @@ func TestCovCoreSearch_Validation_IncludeParamRejected(t *testing.T) {
 	t.Parallel()
 
 	status, body, err := apiClient.GetListRaw(covCoreSearchPath, url.Values{
-		"q": {"x"}, "include": {"sales_order"},
+		"q": {"x"}, "include": {"related.sales_order"},
 	})
 	require.NoError(t, err)
 	assert.Equal(t, 400, status, "include should be rejected as unknown, got %d: %s", status, string(body))

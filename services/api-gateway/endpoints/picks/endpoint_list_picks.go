@@ -36,9 +36,11 @@ type ListPicksRequest struct {
 	StartDate *string `query:"starts_at"`
 	// Only return picks created before this date (`YYYY-MM-DD`).
 	EndDate *string `query:"ends_at"`
+	// Orders the results: `ship_by_date` puts the soonest delivery commitment first, with picks whose order has no ship-by date last; `created_at` puts the newest pick first.
+	Sort constants.PickSort `query:"sort" default:"ship_by_date"`
 }
 
-// Returns a paginated list of picks, newest first.
+// Returns a paginated list of picks, soonest ship-by date first.
 //
 // The `q` search term matches the pick number, the sales order number, the customer PO number, and the customer's name or number.
 type ListPicksEndpoint struct{}
@@ -63,7 +65,19 @@ func (e *ListPicksEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPicksReq
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypePick,
-			Fields:     []string{"sales_order", "customer", "departments"},
+			// Same resource as detail, so the same include set — a row just asks for less.
+			Fields: []string{
+				"customer", "related.sales_order", "related.shipments",
+
+				"lines",
+				"lines.item",
+				"lines.sales_order_line",
+				"lines.sales_order_line.product",
+				"lines.quantity",
+				"lines.quantity.unit",
+				"lines.ordered_quantity",
+				"lines.ordered_quantity.unit",
+			},
 		}),
 	})
 }

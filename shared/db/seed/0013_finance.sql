@@ -58,6 +58,10 @@ INSERT IGNORE INTO invoice (id, number, sales_order_id, billing_address_id, acco
 -- Link SHP-001 (SeedShipmentID) to INV-003 so `?include=invoice` resolves.
 UPDATE shipment SET invoice_id = 'iv_01seedinvoice003000' WHERE id = 'sh_01k0a87w33emw8pmkz1mf86cg1' AND invoice_id IS NULL;
 
+-- Link SHP-003 (ORD-001's shipment) to INV-002 so `invoice.shipment` resolves —
+-- INV-002 and SHP-003 both belong to ORD-001.
+UPDATE shipment SET invoice_id = 'iv_01seedinvoice002000' WHERE id = 'sh_01k0a87w33emw8pmkz1mf86cg2' AND invoice_id IS NULL;
+
 -- Invoice line quantities for INV-002
 INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
     ('qu_01seedivln_iss_ln100', 15, 'un_01seedpair000000000', NOW(), NOW()),

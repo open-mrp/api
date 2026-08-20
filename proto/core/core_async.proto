@@ -72,8 +72,6 @@ message JobResultList {
 // JobResultInfo is what became of one row of the request: the resource it produced, or
 // the error it was rejected with.
 message JobResultInfo {
-  // 4 carried the sub-resources as bare ids, before they gained their object types.
-  reserved 4;
   // Index is the zero-based row of the request this result names.
   int32 index = 1;
   // Id of the resource the row produced. Empty when the row failed.
@@ -88,6 +86,9 @@ message JobResultInfo {
   // Error is why the row was rejected, in the same JSON form as JobInfo.error. Empty
   // unless status is "failed".
   string error = 7;
+  // Name is the resource's human-readable reference, e.g. a shipment number. Absent for
+  // operations that have none to hand.
+  optional string name = 4;
 }
 
 // JobSubResourceInfo is one resource produced alongside a result row's own.
@@ -95,6 +96,8 @@ message JobSubResourceInfo {
   string id = 1;
   // ResourceType is the object type of id, e.g. "batch".
   string resource_type = 2;
+  // Name is the resource's human-readable reference, e.g. a shipping case number.
+  optional string name = 3;
 }
 
 // Points an export job at its download. It rides on JobInfo, so a client learns one

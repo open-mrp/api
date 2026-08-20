@@ -136,3 +136,29 @@ func formatInt64(n int64, width int) string {
 	}
 	return s
 }
+
+// Carries everything needed to buy carrier labels for a shipment's cases.
+type CreateLabelParams struct {
+	CarrierAccountObjectID string
+	ServiceLevelToken      string
+	FromAddress            ShippingAddress
+	ToAddress              ShippingAddress
+	// Holds one entry per shipping case, in case order; the result packages match this order.
+	Parcels []Parcel
+	Billing *ShippingBilling
+}
+
+// Reports the outcome of a label purchase across a shipment's cases.
+type LabelResult struct {
+	MasterTrackingNumber string
+	NegotiatedRate       float64
+	// Holds one purchased label per parcel, in the same order as CreateLabelParams.Parcels.
+	Packages []LabelPackage
+}
+
+// Holds a single case's purchased label.
+type LabelPackage struct {
+	TrackingNumber      string
+	LabelURL            string
+	ShippoTransactionID string
+}

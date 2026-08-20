@@ -91,15 +91,40 @@ func issueOrderForCustomer(t *testing.T, customerID string, extra map[string]any
 	return parseJSON(issueBody)
 }
 
-// expectedShipBy is the issue date plus n calendar days, formatted the way a DATE
-// column comes back.
-func expectedShipBy(t *testing.T, order map[string]any, days int) string {
+// The date a lead-time *rule* commits to, less whatever the calendars pulled it back onto an open
+// day. A span the order reported has that taken out already — use issuedPlusDays for those.
+func expectedShipBy(t *testing.T, order map[string]any, ruleDays int) string {
+	t.Helper()
+	return issuedPlusDays(t, order, ruleDays-calendarAdjustmentDays(order))
+}
+
+// The issue date plus a span, with no calendar reasoning of its own.
+func issuedPlusDays(t *testing.T, order map[string]any, days int) string {
 	t.Helper()
 	issuedAt := jsonField(order, "issued_at")
 	require.NotEmpty(t, issuedAt, "issued order must carry issued_at")
 	parsed, err := time.Parse(time.RFC3339, issuedAt)
 	require.NoError(t, err)
 	return parsed.UTC().AddDate(0, 0, days).Format("2006-01-02")
+}
+
+// The lead-time rule an order resolved to: the span it committed to, plus whatever the calendars
+// took back out of it. Assert against this rather than lead_time_days, which moves with the date.
+func committedRuleDays(t *testing.T, order map[string]any) int {
+	t.Helper()
+	days, err := strconv.Atoi(jsonField(order, "lead_time_days"))
+	require.NoError(t, err, "an issued order must carry the days it committed to")
+	return days + calendarAdjustmentDays(order)
+}
+
+// How many days the receiving and shipping calendars pulled an order's ship-by back. Zero when the
+// field is absent, which is what an order whose dates all landed on open days reports.
+func calendarAdjustmentDays(order map[string]any) int {
+	adjustment, ok := order["calendar_adjustment_days"].(float64)
+	if !ok {
+		return 0
+	}
+	return int(adjustment)
 }
 
 // shipByDate normalizes the ship_by_date field, which serializes as a timestamp.
@@ -123,7 +148,7 @@ func TestShipByCommitment_CustomerLeadTimeWinsTheChain(t *testing.T) {
 	order := issueOrderForCustomer(t, customerID, nil)
 
 	assert.Equal(t, "customer", jsonField(order, "lead_time_source"))
-	assert.Equal(t, "14", jsonField(order, "lead_time_days"))
+	assert.Equal(t, 14, committedRuleDays(t, order))
 	assert.Equal(t, expectedShipBy(t, order, 14), shipByDate(t, order))
 }
 
@@ -136,7 +161,7 @@ func TestShipByCommitment_InheritsAccountGroupLeadTime(t *testing.T) {
 	order := issueOrderForCustomer(t, customerID, nil)
 
 	assert.Equal(t, "account_group", jsonField(order, "lead_time_source"))
-	assert.Equal(t, "21", jsonField(order, "lead_time_days"))
+	assert.Equal(t, 21, committedRuleDays(t, order))
 	assert.Equal(t, expectedShipBy(t, order, 21), shipByDate(t, order))
 }
 
@@ -158,7 +183,7 @@ func TestShipByCommitment_FallsBackToAccountDefault(t *testing.T) {
 
 	parsedDays, err := strconv.Atoi(days)
 	require.NoError(t, err)
-	assert.Equal(t, expectedShipBy(t, order, parsedDays), shipByDate(t, order))
+	assert.Equal(t, issuedPlusDays(t, order, parsedDays), shipByDate(t, order))
 }
 
 // A promised date is a negotiation about one order, so it beats every standing rule

@@ -860,6 +860,23 @@ UPDATE sales_order SET
 WHERE id = sqlc.arg('id')
 AND owner_account_id = sqlc.arg('account_id');
 
+-- name: GetSalesOrderSalesRepEmail :one
+-- The email of the order's sales rep, if it has one with a set email; empty result otherwise.
+SELECT u.email FROM sales_order so
+JOIN account_user au ON au.id = so.sales_rep_id
+JOIN user u ON u.id = au.user_id
+WHERE so.id = sqlc.arg('sales_order_id')
+AND so.owner_account_id = sqlc.arg('account_id')
+AND u.email IS NOT NULL;
+
+-- name: MarkSalesOrderFulfilled :exec
+UPDATE sales_order SET
+    sales_order_status_code = 'fulfilled',
+    completed_at = COALESCE(completed_at, NOW(3)),
+    updated_at = NOW(3)
+WHERE id = sqlc.arg('id')
+AND owner_account_id = sqlc.arg('account_id');
+
 -- name: NoteSalesOrderFirstShipAt :exec
 UPDATE sales_order SET
     first_ship_at = COALESCE(first_ship_at, NOW(3)),

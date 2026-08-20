@@ -24,7 +24,8 @@ type ListShipmentsRequest struct {
 	ProductLineIDs []string `query:"product_line_ids"`
 	// Only include shipments whose customer belongs to any of these customer groups.
 	CustomerGroupIDs []string `query:"customer_group_ids"`
-	// Only include shipments whose customer is assigned to any of these sales reps.
+	// Only include shipments whose customer is assigned to any of these sales reps, given as account
+	// user IDs matching the customer's default sales rep.
 	SalesRepIDs []string `query:"sales_rep_ids"`
 	// Only include shipments created on or after this date (`YYYY-MM-DD`).
 	//
@@ -55,11 +56,22 @@ func (e *ListShipmentsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListShip
 			return svc.(ShipmentSvc).ListShipments
 		},
 		ObjectType: constants.ObjectTypeShipment,
-		// The list summary carries customer_id + sales_order_id; expose exactly the
-		// includes those FK ids can resolve (loaders are account-scoped, same account).
+		// Same resource as detail, so the same include set — a row just asks for less. Shipping
+		// cases are the exception: only the detail RPC expands them.
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeShipment,
-			Fields:     []string{"customer", "sales_order", "lines"},
+			Fields: []string{
+				"related.sales_order",
+				"customer",
+				"freight",
+				"shipping_address",
+				"shipped_by",
+				"related.invoice",
+				"related.pick",
+				"lines",
+				"lines.sales_order_line",
+				"lines.sales_order_line.product",
+			},
 		}),
 	})
 }

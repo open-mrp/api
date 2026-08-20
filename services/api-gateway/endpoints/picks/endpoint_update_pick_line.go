@@ -19,9 +19,7 @@ type UpdatePickLineRequest struct {
 	PickID string `path:"pick_id" validate:"required"`
 	// Pick line ID.
 	PickLineID string `path:"id" validate:"required"`
-	// New picked quantity for the line, as a decimal string.
-	//
-	// Interpreted in the line's existing quantity unit, which this endpoint cannot change. The value is stored as given and is not capped at the ordered quantity.
+	// New picked quantity for the line, as a decimal string read in the unit the sales order line was sold in, stored as given and not capped at the ordered quantity.
 	QuantityValue field.Optional[string] `json:"quantity_value,omitzero"`
 }
 
@@ -55,5 +53,16 @@ func (e *UpdatePickLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateP
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdatePickLineRequest) (*apiresource.PickLine, *apierror.APIError) {
 			return svc.(PickSvc).UpdatePickLine
 		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypePickLine,
+			Fields: []string{
+				"sales_order_line",
+				"sales_order_line.product",
+				"quantity",
+				"quantity.unit",
+				"ordered_quantity",
+				"ordered_quantity.unit",
+			},
+		}),
 	})
 }

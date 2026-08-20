@@ -77,62 +77,78 @@ func (q *Queries) GetOpenCreditsByCustomer(ctx context.Context, arg GetOpenCredi
 
 const listReceivablesBackward = `-- name: ListReceivablesBackward :many
 SELECT
-    inv.id,
-    inv.number AS invoice_number,
-    inv.is_paid_in_full,
-    inv.created_at,
-    so.customer_po_number AS po_number,
-    buyer.id AS customer_id,
-    buyer.name AS customer_name,
-    ar.external_number AS customer_number,
-    ROUND(
-        COALESCE((
-            SELECT SUM(q.value * r.value)
-            FROM invoice_line il
-            JOIN quantity q ON q.id = il.quantity_id
-            JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
-            JOIN rate r ON r.id = sol.unit_price_id
-            WHERE il.invoice_id = inv.id
-        ), 0)
-        -
-        COALESCE((
-            SELECT SUM(aq.value)
-            FROM transaction_allocation ta
-            JOIN quantity aq ON aq.id = ta.amount_id
-            WHERE ta.invoice_id = inv.id
-            AND ta.created_at < ?
-        ), 0),
-    2) AS remaining_balance
-FROM invoice inv
-JOIN sales_order so ON inv.sales_order_id = so.id
-JOIN account_relation ar ON ar.owner_account_id = inv.account_id
-    AND ar.counterparty_account_id = so.buyer_account_id
-    AND ar.account_relation_role_code = 'customer'
-JOIN account buyer ON buyer.id = so.buyer_account_id
-WHERE inv.account_id = ?
-AND inv.is_paid_in_full = false
-AND (? IS NULL OR inv.created_at < ?)
-AND (
-    ? IS NULL
-    OR inv.number LIKE ?
-    OR buyer.name LIKE ?
-)
-AND (
-    inv.created_at > ?
-    OR (inv.created_at = ? AND inv.id > ?)
-)
-ORDER BY inv.created_at ASC, inv.id ASC
+    rec.id,
+    rec.invoice_number,
+    rec.is_paid_in_full,
+    rec.created_at,
+    rec.po_number,
+    rec.customer_id,
+    rec.customer_name,
+    rec.customer_number,
+    rec.remaining_balance
+FROM (
+    SELECT
+        inv.id,
+        inv.number AS invoice_number,
+        inv.is_paid_in_full,
+        inv.created_at,
+        so.customer_po_number AS po_number,
+        buyer.id AS customer_id,
+        buyer.name AS customer_name,
+        ar.external_number AS customer_number,
+        ROUND(
+            COALESCE((
+                SELECT SUM(q.value * rt.value)
+                FROM invoice_line il
+                JOIN quantity q ON q.id = il.quantity_id
+                JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
+                JOIN rate rt ON rt.id = sol.unit_price_id
+                WHERE il.invoice_id = inv.id
+            ), 0)
+            -
+            COALESCE((
+                SELECT SUM(aq.value)
+                FROM transaction_allocation ta
+                JOIN quantity aq ON aq.id = ta.amount_id
+                JOIN ` + "`" + `transaction` + "`" + ` txn ON txn.id = ta.transaction_id
+                WHERE ta.invoice_id = inv.id
+                AND txn.funds_received_at IS NOT NULL
+                AND txn.funds_received_at < COALESCE(?, CAST('9999-12-31 23:59:59' AS DATETIME(6)))
+            ), 0),
+        2) AS remaining_balance
+    FROM invoice inv
+    JOIN sales_order so ON inv.sales_order_id = so.id
+    JOIN account_relation ar ON ar.owner_account_id = inv.account_id
+        AND ar.counterparty_account_id = so.buyer_account_id
+        AND ar.account_relation_role_code = 'customer'
+    JOIN account buyer ON buyer.id = so.buyer_account_id
+    WHERE inv.account_id = ?
+    AND inv.is_paid_in_full = false
+    AND (? IS NULL OR inv.created_at < ?)
+    AND (
+        ? IS NULL
+        OR inv.number LIKE ?
+        OR buyer.name LIKE ?
+    )
+    AND (
+        inv.created_at > ?
+        OR (inv.created_at = ? AND inv.id > ?)
+    )
+) rec
+WHERE ? = false OR rec.remaining_balance > 0
+ORDER BY rec.created_at ASC, rec.id ASC
 LIMIT ?
 `
 
 type ListReceivablesBackwardParams struct {
-	AllocationCutoffDate sql.NullTime
-	AccountID            string
-	CutoffDate           sql.NullTime
-	SearchQuery          sql.NullString
-	CursorCreatedAt      time.Time
-	CursorID             string
-	Limit                int32
+	AllocationCutoffDate   sql.NullTime
+	AccountID              string
+	CutoffDate             sql.NullTime
+	SearchQuery            sql.NullString
+	CursorCreatedAt        time.Time
+	CursorID               string
+	RequirePositiveBalance interface{}
+	Limit                  int32
 }
 
 type ListReceivablesBackwardRow struct {
@@ -159,6 +175,7 @@ func (q *Queries) ListReceivablesBackward(ctx context.Context, arg ListReceivabl
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
 		arg.CursorID,
+		arg.RequirePositiveBalance,
 		arg.Limit,
 	)
 	if err != nil {
@@ -194,64 +211,80 @@ func (q *Queries) ListReceivablesBackward(ctx context.Context, arg ListReceivabl
 
 const listReceivablesByCustomerBackward = `-- name: ListReceivablesByCustomerBackward :many
 SELECT
-    inv.id,
-    inv.number AS invoice_number,
-    inv.is_paid_in_full,
-    inv.created_at,
-    so.customer_po_number AS po_number,
-    buyer.id AS customer_id,
-    buyer.name AS customer_name,
-    ar.external_number AS customer_number,
-    ROUND(
-        COALESCE((
-            SELECT SUM(q.value * r.value)
-            FROM invoice_line il
-            JOIN quantity q ON q.id = il.quantity_id
-            JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
-            JOIN rate r ON r.id = sol.unit_price_id
-            WHERE il.invoice_id = inv.id
-        ), 0)
-        -
-        COALESCE((
-            SELECT SUM(aq.value)
-            FROM transaction_allocation ta
-            JOIN quantity aq ON aq.id = ta.amount_id
-            WHERE ta.invoice_id = inv.id
-            AND ta.created_at < ?
-        ), 0),
-    2) AS remaining_balance
-FROM invoice inv
-JOIN sales_order so ON inv.sales_order_id = so.id
-JOIN account_relation ar ON ar.owner_account_id = inv.account_id
-    AND ar.counterparty_account_id = so.buyer_account_id
-    AND ar.account_relation_role_code = 'customer'
-JOIN account buyer ON buyer.id = so.buyer_account_id
-WHERE inv.account_id = ?
-AND so.buyer_account_id = ?
-AND inv.is_paid_in_full = false
-AND (? IS NULL OR inv.created_at < ?)
-AND (
-    ? IS NULL
-    OR inv.number LIKE ?
-    OR buyer.name LIKE ?
-)
-AND (
-    inv.created_at > ?
-    OR (inv.created_at = ? AND inv.id > ?)
-)
-ORDER BY inv.created_at ASC, inv.id ASC
+    rec.id,
+    rec.invoice_number,
+    rec.is_paid_in_full,
+    rec.created_at,
+    rec.po_number,
+    rec.customer_id,
+    rec.customer_name,
+    rec.customer_number,
+    rec.remaining_balance
+FROM (
+    SELECT
+        inv.id,
+        inv.number AS invoice_number,
+        inv.is_paid_in_full,
+        inv.created_at,
+        so.customer_po_number AS po_number,
+        buyer.id AS customer_id,
+        buyer.name AS customer_name,
+        ar.external_number AS customer_number,
+        ROUND(
+            COALESCE((
+                SELECT SUM(q.value * rt.value)
+                FROM invoice_line il
+                JOIN quantity q ON q.id = il.quantity_id
+                JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
+                JOIN rate rt ON rt.id = sol.unit_price_id
+                WHERE il.invoice_id = inv.id
+            ), 0)
+            -
+            COALESCE((
+                SELECT SUM(aq.value)
+                FROM transaction_allocation ta
+                JOIN quantity aq ON aq.id = ta.amount_id
+                JOIN ` + "`" + `transaction` + "`" + ` txn ON txn.id = ta.transaction_id
+                WHERE ta.invoice_id = inv.id
+                AND txn.funds_received_at IS NOT NULL
+                AND txn.funds_received_at < COALESCE(?, CAST('9999-12-31 23:59:59' AS DATETIME(6)))
+            ), 0),
+        2) AS remaining_balance
+    FROM invoice inv
+    JOIN sales_order so ON inv.sales_order_id = so.id
+    JOIN account_relation ar ON ar.owner_account_id = inv.account_id
+        AND ar.counterparty_account_id = so.buyer_account_id
+        AND ar.account_relation_role_code = 'customer'
+    JOIN account buyer ON buyer.id = so.buyer_account_id
+    WHERE inv.account_id = ?
+    AND so.buyer_account_id = ?
+    AND inv.is_paid_in_full = false
+    AND (? IS NULL OR inv.created_at < ?)
+    AND (
+        ? IS NULL
+        OR inv.number LIKE ?
+        OR buyer.name LIKE ?
+    )
+    AND (
+        inv.created_at > ?
+        OR (inv.created_at = ? AND inv.id > ?)
+    )
+) rec
+WHERE ? = false OR rec.remaining_balance > 0
+ORDER BY rec.created_at ASC, rec.id ASC
 LIMIT ?
 `
 
 type ListReceivablesByCustomerBackwardParams struct {
-	AllocationCutoffDate sql.NullTime
-	AccountID            string
-	CustomerAccountID    string
-	CutoffDate           sql.NullTime
-	SearchQuery          sql.NullString
-	CursorCreatedAt      time.Time
-	CursorID             string
-	Limit                int32
+	AllocationCutoffDate   sql.NullTime
+	AccountID              string
+	CustomerAccountID      string
+	CutoffDate             sql.NullTime
+	SearchQuery            sql.NullString
+	CursorCreatedAt        time.Time
+	CursorID               string
+	RequirePositiveBalance interface{}
+	Limit                  int32
 }
 
 type ListReceivablesByCustomerBackwardRow struct {
@@ -279,6 +312,7 @@ func (q *Queries) ListReceivablesByCustomerBackward(ctx context.Context, arg Lis
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
 		arg.CursorID,
+		arg.RequirePositiveBalance,
 		arg.Limit,
 	)
 	if err != nil {
@@ -314,65 +348,81 @@ func (q *Queries) ListReceivablesByCustomerBackward(ctx context.Context, arg Lis
 
 const listReceivablesByCustomerForward = `-- name: ListReceivablesByCustomerForward :many
 SELECT
-    inv.id,
-    inv.number AS invoice_number,
-    inv.is_paid_in_full,
-    inv.created_at,
-    so.customer_po_number AS po_number,
-    buyer.id AS customer_id,
-    buyer.name AS customer_name,
-    ar.external_number AS customer_number,
-    ROUND(
-        COALESCE((
-            SELECT SUM(q.value * r.value)
-            FROM invoice_line il
-            JOIN quantity q ON q.id = il.quantity_id
-            JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
-            JOIN rate r ON r.id = sol.unit_price_id
-            WHERE il.invoice_id = inv.id
-        ), 0)
-        -
-        COALESCE((
-            SELECT SUM(aq.value)
-            FROM transaction_allocation ta
-            JOIN quantity aq ON aq.id = ta.amount_id
-            WHERE ta.invoice_id = inv.id
-            AND ta.created_at < ?
-        ), 0),
-    2) AS remaining_balance
-FROM invoice inv
-JOIN sales_order so ON inv.sales_order_id = so.id
-JOIN account_relation ar ON ar.owner_account_id = inv.account_id
-    AND ar.counterparty_account_id = so.buyer_account_id
-    AND ar.account_relation_role_code = 'customer'
-JOIN account buyer ON buyer.id = so.buyer_account_id
-WHERE inv.account_id = ?
-AND so.buyer_account_id = ?
-AND inv.is_paid_in_full = false
-AND (? IS NULL OR inv.created_at < ?)
-AND (
-    ? IS NULL
-    OR inv.number LIKE ?
-    OR buyer.name LIKE ?
-)
-AND (
-    ? IS NULL
-    OR inv.created_at < ?
-    OR (inv.created_at = ? AND inv.id < ?)
-)
-ORDER BY inv.created_at DESC, inv.id DESC
+    rec.id,
+    rec.invoice_number,
+    rec.is_paid_in_full,
+    rec.created_at,
+    rec.po_number,
+    rec.customer_id,
+    rec.customer_name,
+    rec.customer_number,
+    rec.remaining_balance
+FROM (
+    SELECT
+        inv.id,
+        inv.number AS invoice_number,
+        inv.is_paid_in_full,
+        inv.created_at,
+        so.customer_po_number AS po_number,
+        buyer.id AS customer_id,
+        buyer.name AS customer_name,
+        ar.external_number AS customer_number,
+        ROUND(
+            COALESCE((
+                SELECT SUM(q.value * rt.value)
+                FROM invoice_line il
+                JOIN quantity q ON q.id = il.quantity_id
+                JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
+                JOIN rate rt ON rt.id = sol.unit_price_id
+                WHERE il.invoice_id = inv.id
+            ), 0)
+            -
+            COALESCE((
+                SELECT SUM(aq.value)
+                FROM transaction_allocation ta
+                JOIN quantity aq ON aq.id = ta.amount_id
+                JOIN ` + "`" + `transaction` + "`" + ` txn ON txn.id = ta.transaction_id
+                WHERE ta.invoice_id = inv.id
+                AND txn.funds_received_at IS NOT NULL
+                AND txn.funds_received_at < COALESCE(?, CAST('9999-12-31 23:59:59' AS DATETIME(6)))
+            ), 0),
+        2) AS remaining_balance
+    FROM invoice inv
+    JOIN sales_order so ON inv.sales_order_id = so.id
+    JOIN account_relation ar ON ar.owner_account_id = inv.account_id
+        AND ar.counterparty_account_id = so.buyer_account_id
+        AND ar.account_relation_role_code = 'customer'
+    JOIN account buyer ON buyer.id = so.buyer_account_id
+    WHERE inv.account_id = ?
+    AND so.buyer_account_id = ?
+    AND inv.is_paid_in_full = false
+    AND (? IS NULL OR inv.created_at < ?)
+    AND (
+        ? IS NULL
+        OR inv.number LIKE ?
+        OR buyer.name LIKE ?
+    )
+    AND (
+        ? IS NULL
+        OR inv.created_at < ?
+        OR (inv.created_at = ? AND inv.id < ?)
+    )
+) rec
+WHERE ? = false OR rec.remaining_balance > 0
+ORDER BY rec.created_at DESC, rec.id DESC
 LIMIT ?
 `
 
 type ListReceivablesByCustomerForwardParams struct {
-	AllocationCutoffDate sql.NullTime
-	AccountID            string
-	CustomerAccountID    string
-	CutoffDate           sql.NullTime
-	SearchQuery          sql.NullString
-	CursorCreatedAt      sql.NullTime
-	CursorID             sql.NullString
-	Limit                int32
+	AllocationCutoffDate   sql.NullTime
+	AccountID              string
+	CustomerAccountID      string
+	CutoffDate             sql.NullTime
+	SearchQuery            sql.NullString
+	CursorCreatedAt        sql.NullTime
+	CursorID               sql.NullString
+	RequirePositiveBalance interface{}
+	Limit                  int32
 }
 
 type ListReceivablesByCustomerForwardRow struct {
@@ -401,6 +451,7 @@ func (q *Queries) ListReceivablesByCustomerForward(ctx context.Context, arg List
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
 		arg.CursorID,
+		arg.RequirePositiveBalance,
 		arg.Limit,
 	)
 	if err != nil {
@@ -436,63 +487,79 @@ func (q *Queries) ListReceivablesByCustomerForward(ctx context.Context, arg List
 
 const listReceivablesForward = `-- name: ListReceivablesForward :many
 SELECT
-    inv.id,
-    inv.number AS invoice_number,
-    inv.is_paid_in_full,
-    inv.created_at,
-    so.customer_po_number AS po_number,
-    buyer.id AS customer_id,
-    buyer.name AS customer_name,
-    ar.external_number AS customer_number,
-    ROUND(
-        COALESCE((
-            SELECT SUM(q.value * r.value)
-            FROM invoice_line il
-            JOIN quantity q ON q.id = il.quantity_id
-            JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
-            JOIN rate r ON r.id = sol.unit_price_id
-            WHERE il.invoice_id = inv.id
-        ), 0)
-        -
-        COALESCE((
-            SELECT SUM(aq.value)
-            FROM transaction_allocation ta
-            JOIN quantity aq ON aq.id = ta.amount_id
-            WHERE ta.invoice_id = inv.id
-            AND ta.created_at < ?
-        ), 0),
-    2) AS remaining_balance
-FROM invoice inv
-JOIN sales_order so ON inv.sales_order_id = so.id
-JOIN account_relation ar ON ar.owner_account_id = inv.account_id
-    AND ar.counterparty_account_id = so.buyer_account_id
-    AND ar.account_relation_role_code = 'customer'
-JOIN account buyer ON buyer.id = so.buyer_account_id
-WHERE inv.account_id = ?
-AND inv.is_paid_in_full = false
-AND (? IS NULL OR inv.created_at < ?)
-AND (
-    ? IS NULL
-    OR inv.number LIKE ?
-    OR buyer.name LIKE ?
-)
-AND (
-    ? IS NULL
-    OR inv.created_at < ?
-    OR (inv.created_at = ? AND inv.id < ?)
-)
-ORDER BY inv.created_at DESC, inv.id DESC
+    rec.id,
+    rec.invoice_number,
+    rec.is_paid_in_full,
+    rec.created_at,
+    rec.po_number,
+    rec.customer_id,
+    rec.customer_name,
+    rec.customer_number,
+    rec.remaining_balance
+FROM (
+    SELECT
+        inv.id,
+        inv.number AS invoice_number,
+        inv.is_paid_in_full,
+        inv.created_at,
+        so.customer_po_number AS po_number,
+        buyer.id AS customer_id,
+        buyer.name AS customer_name,
+        ar.external_number AS customer_number,
+        ROUND(
+            COALESCE((
+                SELECT SUM(q.value * rt.value)
+                FROM invoice_line il
+                JOIN quantity q ON q.id = il.quantity_id
+                JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
+                JOIN rate rt ON rt.id = sol.unit_price_id
+                WHERE il.invoice_id = inv.id
+            ), 0)
+            -
+            COALESCE((
+                SELECT SUM(aq.value)
+                FROM transaction_allocation ta
+                JOIN quantity aq ON aq.id = ta.amount_id
+                JOIN ` + "`" + `transaction` + "`" + ` txn ON txn.id = ta.transaction_id
+                WHERE ta.invoice_id = inv.id
+                AND txn.funds_received_at IS NOT NULL
+                AND txn.funds_received_at < COALESCE(?, CAST('9999-12-31 23:59:59' AS DATETIME(6)))
+            ), 0),
+        2) AS remaining_balance
+    FROM invoice inv
+    JOIN sales_order so ON inv.sales_order_id = so.id
+    JOIN account_relation ar ON ar.owner_account_id = inv.account_id
+        AND ar.counterparty_account_id = so.buyer_account_id
+        AND ar.account_relation_role_code = 'customer'
+    JOIN account buyer ON buyer.id = so.buyer_account_id
+    WHERE inv.account_id = ?
+    AND inv.is_paid_in_full = false
+    AND (? IS NULL OR inv.created_at < ?)
+    AND (
+        ? IS NULL
+        OR inv.number LIKE ?
+        OR buyer.name LIKE ?
+    )
+    AND (
+        ? IS NULL
+        OR inv.created_at < ?
+        OR (inv.created_at = ? AND inv.id < ?)
+    )
+) rec
+WHERE ? = false OR rec.remaining_balance > 0
+ORDER BY rec.created_at DESC, rec.id DESC
 LIMIT ?
 `
 
 type ListReceivablesForwardParams struct {
-	AllocationCutoffDate sql.NullTime
-	AccountID            string
-	CutoffDate           sql.NullTime
-	SearchQuery          sql.NullString
-	CursorCreatedAt      sql.NullTime
-	CursorID             sql.NullString
-	Limit                int32
+	AllocationCutoffDate   sql.NullTime
+	AccountID              string
+	CutoffDate             sql.NullTime
+	SearchQuery            sql.NullString
+	CursorCreatedAt        sql.NullTime
+	CursorID               sql.NullString
+	RequirePositiveBalance interface{}
+	Limit                  int32
 }
 
 type ListReceivablesForwardRow struct {
@@ -507,6 +574,8 @@ type ListReceivablesForwardRow struct {
 	RemainingBalance float64
 }
 
+// Nets only allocations whose transaction has a funds-received date before the cutoff, then drops
+// anything already settled by then; without a cutoff every unpaid invoice is reported as-is.
 func (q *Queries) ListReceivablesForward(ctx context.Context, arg ListReceivablesForwardParams) ([]ListReceivablesForwardRow, error) {
 	rows, err := q.db.QueryContext(ctx, listReceivablesForward,
 		arg.AllocationCutoffDate,
@@ -520,6 +589,7 @@ func (q *Queries) ListReceivablesForward(ctx context.Context, arg ListReceivable
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
 		arg.CursorID,
+		arg.RequirePositiveBalance,
 		arg.Limit,
 	)
 	if err != nil {

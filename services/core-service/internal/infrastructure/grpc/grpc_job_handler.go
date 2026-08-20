@@ -38,13 +38,14 @@ func jobResultsToProto(results []domain.RowResult, truncated bool) *pb.JobResult
 	for i, r := range results {
 		subs := make([]*pb.JobSubResourceInfo, len(r.SubResources))
 		for j, s := range r.SubResources {
-			subs[j] = &pb.JobSubResourceInfo{Id: s.ID, ResourceType: string(s.ResourceType)}
+			subs[j] = &pb.JobSubResourceInfo{Id: s.ID, ResourceType: string(s.ResourceType), Name: s.Name}
 		}
 		item := &pb.JobResultInfo{
 			Index:        safeconv.IntToInt32(r.Index),
 			Id:           r.ID,
 			Status:       string(r.Status),
 			ResourceType: string(r.ResourceType),
+			Name:         r.Name,
 			SubResources: subs,
 		}
 		if r.Error != nil {

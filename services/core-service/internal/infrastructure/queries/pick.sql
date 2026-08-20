@@ -12,13 +12,38 @@ SELECT
     pr.name AS priority_name,
     p.finished_at,
     p.created_at,
-    p.updated_at
+    p.updated_at,
+    (SELECT COUNT(*) FROM pick_line plc WHERE plc.pick_id = p.id) AS line_count,
+    -- Latest ship date across the order's shipments; drives the date in the pick header.
+    (SELECT MAX(sh.shipped_at) FROM shipment sh WHERE sh.sales_order_id = so.id) AS last_shipped_at,
+    so.promised_at,
+    -- The order's delivery commitment and how it was derived, so a pick can explain its dates.
+    so.ship_by_date,
+    so.lead_time_days,
+    so.lead_time_source_code,
+    so.transit_days,
+    so.transit_source_code,
+    -- Ship-to is the order's, denormalized so a pick header needs no second fetch.
+    so.shipping_address_id,
+    addr.name AS shipping_address_name,
+    addr.phone AS shipping_address_phone,
+    addr.email AS shipping_address_email,
+    addr.is_drop_ship AS shipping_address_is_drop_ship,
+    ship_geo.id AS shipping_address_geolocation_id,
+    ship_geo.street_line_1 AS shipping_address_street_line_1,
+    ship_geo.street_line_2 AS shipping_address_street_line_2,
+    ship_geo.locality AS shipping_address_locality,
+    ship_geo.state AS shipping_address_state,
+    ship_geo.postal_code AS shipping_address_postal_code,
+    ship_geo.country AS shipping_address_country
 FROM pick p
 JOIN sales_order so ON so.id = p.sales_order_id
 JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
     AND ar.counterparty_account_id = so.buyer_account_id
 JOIN account ba ON ba.id = so.buyer_account_id
 JOIN priority pr ON pr.code = so.priority_code
+LEFT JOIN address addr ON addr.id = so.shipping_address_id
+LEFT JOIN geolocation ship_geo ON ship_geo.id = addr.geolocation_id
 WHERE p.account_id = sqlc.arg('account_id')
 AND (
     sqlc.narg('search_query') IS NULL
@@ -68,11 +93,26 @@ AND (
     OR p.created_at <= sqlc.narg('end_date')
 )
 AND (
-    sqlc.narg('cursor_created_at') IS NULL
+    sqlc.arg('sort_by_ship_by') = true
+    OR sqlc.narg('cursor_created_at') IS NULL
     OR p.created_at < sqlc.narg('cursor_created_at')
     OR (p.created_at = sqlc.narg('cursor_created_at') AND p.id < sqlc.narg('cursor_id'))
 )
-ORDER BY p.created_at DESC, p.id DESC
+-- The sentinel keeps a pick whose order has no ship-by date sortable and last; the repository's cursor must use the same value.
+AND (
+    sqlc.arg('sort_by_ship_by') = false
+    OR sqlc.narg('cursor_ship_by_date') IS NULL
+    OR COALESCE(so.ship_by_date, '9999-12-31') > CAST(sqlc.narg('cursor_ship_by_date') AS DATE)
+    OR (
+        COALESCE(so.ship_by_date, '9999-12-31') = CAST(sqlc.narg('cursor_ship_by_date') AS DATE)
+        AND p.id > sqlc.narg('cursor_id')
+    )
+)
+ORDER BY
+    CASE WHEN sqlc.arg('sort_by_ship_by') = true THEN COALESCE(so.ship_by_date, '9999-12-31') END ASC,
+    CASE WHEN sqlc.arg('sort_by_ship_by') = true THEN p.id END ASC,
+    p.created_at DESC,
+    p.id DESC
 LIMIT ?;
 
 -- name: ListPicksBackward :many
@@ -89,13 +129,38 @@ SELECT
     pr.name AS priority_name,
     p.finished_at,
     p.created_at,
-    p.updated_at
+    p.updated_at,
+    (SELECT COUNT(*) FROM pick_line plc WHERE plc.pick_id = p.id) AS line_count,
+    -- Latest ship date across the order's shipments; drives the date in the pick header.
+    (SELECT MAX(sh.shipped_at) FROM shipment sh WHERE sh.sales_order_id = so.id) AS last_shipped_at,
+    so.promised_at,
+    -- The order's delivery commitment and how it was derived, so a pick can explain its dates.
+    so.ship_by_date,
+    so.lead_time_days,
+    so.lead_time_source_code,
+    so.transit_days,
+    so.transit_source_code,
+    -- Ship-to is the order's, denormalized so a pick header needs no second fetch.
+    so.shipping_address_id,
+    addr.name AS shipping_address_name,
+    addr.phone AS shipping_address_phone,
+    addr.email AS shipping_address_email,
+    addr.is_drop_ship AS shipping_address_is_drop_ship,
+    ship_geo.id AS shipping_address_geolocation_id,
+    ship_geo.street_line_1 AS shipping_address_street_line_1,
+    ship_geo.street_line_2 AS shipping_address_street_line_2,
+    ship_geo.locality AS shipping_address_locality,
+    ship_geo.state AS shipping_address_state,
+    ship_geo.postal_code AS shipping_address_postal_code,
+    ship_geo.country AS shipping_address_country
 FROM pick p
 JOIN sales_order so ON so.id = p.sales_order_id
 JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
     AND ar.counterparty_account_id = so.buyer_account_id
 JOIN account ba ON ba.id = so.buyer_account_id
 JOIN priority pr ON pr.code = so.priority_code
+LEFT JOIN address addr ON addr.id = so.shipping_address_id
+LEFT JOIN geolocation ship_geo ON ship_geo.id = addr.geolocation_id
 WHERE p.account_id = sqlc.arg('account_id')
 AND (
     sqlc.narg('search_query') IS NULL
@@ -145,10 +210,24 @@ AND (
     OR p.created_at <= sqlc.narg('end_date')
 )
 AND (
-    p.created_at > sqlc.arg('cursor_created_at')
+    sqlc.arg('sort_by_ship_by') = true
+    OR p.created_at > sqlc.arg('cursor_created_at')
     OR (p.created_at = sqlc.arg('cursor_created_at') AND p.id > sqlc.arg('cursor_id'))
 )
-ORDER BY p.created_at ASC, p.id ASC
+-- The sentinel keeps a pick whose order has no ship-by date sortable and last; the repository's cursor must use the same value.
+AND (
+    sqlc.arg('sort_by_ship_by') = false
+    OR COALESCE(so.ship_by_date, '9999-12-31') < CAST(sqlc.arg('cursor_ship_by_date') AS DATE)
+    OR (
+        COALESCE(so.ship_by_date, '9999-12-31') = CAST(sqlc.arg('cursor_ship_by_date') AS DATE)
+        AND p.id < sqlc.arg('cursor_id')
+    )
+)
+ORDER BY
+    CASE WHEN sqlc.arg('sort_by_ship_by') = true THEN COALESCE(so.ship_by_date, '9999-12-31') END DESC,
+    CASE WHEN sqlc.arg('sort_by_ship_by') = true THEN p.id END DESC,
+    p.created_at ASC,
+    p.id ASC
 LIMIT ?;
 
 -- name: CountPicks :one
@@ -221,13 +300,38 @@ SELECT
     pr.name AS priority_name,
     p.finished_at,
     p.created_at,
-    p.updated_at
+    p.updated_at,
+    (SELECT COUNT(*) FROM pick_line plc WHERE plc.pick_id = p.id) AS line_count,
+    -- Latest ship date across the order's shipments; drives the date in the pick header.
+    (SELECT MAX(sh.shipped_at) FROM shipment sh WHERE sh.sales_order_id = so.id) AS last_shipped_at,
+    so.promised_at,
+    -- The order's delivery commitment and how it was derived, so a pick can explain its dates.
+    so.ship_by_date,
+    so.lead_time_days,
+    so.lead_time_source_code,
+    so.transit_days,
+    so.transit_source_code,
+    -- Ship-to is the order's, denormalized so a pick header needs no second fetch.
+    so.shipping_address_id,
+    addr.name AS shipping_address_name,
+    addr.phone AS shipping_address_phone,
+    addr.email AS shipping_address_email,
+    addr.is_drop_ship AS shipping_address_is_drop_ship,
+    ship_geo.id AS shipping_address_geolocation_id,
+    ship_geo.street_line_1 AS shipping_address_street_line_1,
+    ship_geo.street_line_2 AS shipping_address_street_line_2,
+    ship_geo.locality AS shipping_address_locality,
+    ship_geo.state AS shipping_address_state,
+    ship_geo.postal_code AS shipping_address_postal_code,
+    ship_geo.country AS shipping_address_country
 FROM pick p
 JOIN sales_order so ON so.id = p.sales_order_id
 JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
     AND ar.counterparty_account_id = so.buyer_account_id
 JOIN account ba ON ba.id = so.buyer_account_id
 JOIN priority pr ON pr.code = so.priority_code
+LEFT JOIN address addr ON addr.id = so.shipping_address_id
+LEFT JOIN geolocation ship_geo ON ship_geo.id = addr.geolocation_id
 WHERE p.id = sqlc.arg('pick_id')
 AND p.account_id = sqlc.arg('account_id');
 
@@ -249,6 +353,8 @@ SELECT
     sol.line_item_number,
     sol.product_sku,
     sol.product_description,
+    sol.product_id,
+    sol.item_id AS order_line_item_id,
     -- Ordered quantity
     sol_q.id AS ordered_quantity_id,
     sol_q.value AS ordered_quantity_value,
@@ -273,6 +379,26 @@ JOIN unit up_nu ON up_nu.id = up.numerator_unit_id
 JOIN unit up_du ON up_du.id = up.denominator_unit_id
 WHERE pl.pick_id = sqlc.arg('pick_id')
 ORDER BY sol.line_item_number ASC;
+
+-- name: GetPickProgress :many
+-- Aggregates ordered/picked/packed quantities per pick in one batched pass, keyed by
+-- pick ID. Backs the pick-level picked/packed completion fractions on both the list and
+-- detail endpoints without loading each pick's lines. Only product_type_code = 'sale'
+-- lines are counted, matching the frontend's completion math. Picks whose lines are all
+-- non-sale are absent from the result and read as zero progress.
+SELECT
+    pl.pick_id,
+    COALESCE(SUM(solq.value), 0) AS quantity_ordered,
+    COALESCE(SUM(plq.value), 0) AS quantity_picked,
+    COALESCE(SUM(CASE WHEN pl.packed_at IS NOT NULL THEN plq.value ELSE 0 END), 0) AS quantity_packed
+FROM pick_line pl
+JOIN quantity plq ON plq.id = pl.quantity_id
+JOIN sales_order_line sol ON sol.id = pl.sales_order_line_id
+JOIN quantity solq ON solq.id = sol.quantity_id
+JOIN product p ON p.id = sol.product_id
+WHERE pl.pick_id IN (sqlc.slice('pick_ids'))
+AND p.product_type_code = 'sale'
+GROUP BY pl.pick_id;
 
 -- name: GetPickDepartments :many
 SELECT
@@ -314,13 +440,17 @@ SELECT EXISTS(
 ) AS has_shipped;
 
 -- name: VoidAllPickLines :exec
+-- Skips a finished pick's lines: voiding one clears finished_at but must not rewrite work that
+-- was already completed (Dashboard filters the same way on pick.finishedAt).
 UPDATE quantity SET
     value = 0,
     updated_at = NOW(3)
 WHERE id IN (
-    SELECT quantity_id FROM pick_line
-    WHERE pick_id = sqlc.arg('pick_id')
-    AND packed_at IS NULL
+    SELECT pl.quantity_id FROM pick_line pl
+    JOIN pick p ON p.id = pl.pick_id
+    WHERE pl.pick_id = sqlc.arg('pick_id')
+    AND pl.packed_at IS NULL
+    AND p.finished_at IS NULL
 );
 
 -- name: DeleteDuplicatePickLines :exec
@@ -362,10 +492,13 @@ LEFT JOIN (
     )
     GROUP BY pl_sum.sales_order_line_id
 ) picked ON picked.sales_order_line_id = pl.sales_order_line_id
+JOIN pick p ON p.id = pl.pick_id
 SET q.value = GREATEST(0, sol_q.value - GREATEST(COALESCE(picked.total_picked_value, 0) - q.value, 0)),
     q.updated_at = NOW(3)
 WHERE pl.pick_id = sqlc.arg('pick_id')
-AND pl.packed_at IS NULL;
+AND pl.packed_at IS NULL
+-- A finished pick is completed work; Dashboard filters its pick-all on pick.finishedAt too.
+AND p.finished_at IS NULL;
 
 -- name: PickRemainingQuantityForLine :exec
 UPDATE quantity q
@@ -388,7 +521,10 @@ LEFT JOIN (
     AND pl_sum.id != sqlc.arg('pick_line_id')
     GROUP BY pl_sum.sales_order_line_id
 ) picked ON picked.sales_order_line_id = pl.sales_order_line_id
-SET q.value = GREATEST(0, sol_q.value - COALESCE(picked.total_picked_value, 0)),
+-- Remaining excludes this line's own quantity, matching PickAllLines. Dashboard subtracts the
+-- total including self, so picking a line already holding 3 of 10 leaves it at 7 rather than
+-- filling it to 10 — a deliberate divergence, and the two picking paths must agree.
+SET q.value = GREATEST(0, sol_q.value - GREATEST(COALESCE(picked.total_picked_value, 0) - q.value, 0)),
     q.updated_at = NOW(3)
 WHERE pl.id = sqlc.arg('pick_line_id')
 AND pl.packed_at IS NULL;
@@ -404,7 +540,8 @@ WHERE id = (
 
 -- name: UpdatePickLineQuantity :exec
 UPDATE quantity SET
-    value = sqlc.arg('value'),
+    value = COALESCE(sqlc.narg('value'), value),
+    unit_id = COALESCE(sqlc.narg('unit_id'), unit_id),
     updated_at = NOW(3)
 WHERE id = (
     SELECT pl.quantity_id FROM pick_line pl
@@ -464,6 +601,8 @@ SELECT
     sol.line_item_number,
     sol.product_sku,
     sol.product_description,
+    sol.product_id,
+    sol.item_id AS order_line_item_id,
     -- Ordered quantity
     sol_q.id AS ordered_quantity_id,
     sol_q.value AS ordered_quantity_value,
@@ -602,6 +741,8 @@ SELECT
     sol.line_item_number,
     sol.product_sku,
     sol.product_description,
+    sol.product_id,
+    sol.item_id AS order_line_item_id,
     -- Ordered quantity
     sol_q.id AS ordered_quantity_id,
     sol_q.value AS ordered_quantity_value,
@@ -675,14 +816,37 @@ AND packed_at IS NULL;
 -- name: CountPickLinesByPick :one
 SELECT COUNT(*) AS total FROM pick_line WHERE pick_id = sqlc.arg('pick_id');
 
--- name: UnpackPickLinesByShipment :exec
+-- name: ListShippedOrderLineQuantitiesByShipment :many
+-- The order line and shipped quantity behind each of a shipment's lines. Deleting the
+-- shipment hands these back to the pick, so the reopened pick line can be matched to
+-- the quantity this shipment took.
+SELECT sl.sales_order_line_id, q.value AS shipped_value
+FROM shipment_line sl
+JOIN quantity q ON q.id = sl.quantity_id
+WHERE sl.shipment_id = sqlc.arg('shipment_id');
+
+-- name: ListPickLinesForOrderLine :many
+SELECT pl.id, pl.quantity_id, pl.packed_at, q.value AS quantity_value
+FROM pick_line pl
+JOIN quantity q ON q.id = pl.quantity_id
+WHERE pl.sales_order_line_id = sqlc.arg('sales_order_line_id')
+ORDER BY pl.created_at, pl.id;
+
+-- name: ReopenPickLine :exec
+-- Reopens a packed pick line so the goods it committed become pickable again. The caller
+-- restores its quantity separately (UpdatePickLineQuantity).
 UPDATE pick_line SET
     packed_at = NULL,
     updated_at = NOW(3)
-WHERE sales_order_line_id IN (
-    SELECT sl.sales_order_line_id FROM shipment_line sl
-    WHERE sl.shipment_id = sqlc.arg('shipment_id')
-);
+WHERE id = sqlc.arg('pick_line_id');
+
+-- name: DeleteQuantitiesByPickLineIDs :exec
+DELETE q FROM quantity q
+JOIN pick_line pl ON pl.quantity_id = q.id
+WHERE pl.id IN (sqlc.slice('ids'));
+
+-- name: DeletePickLinesByIDs :exec
+DELETE FROM pick_line WHERE id IN (sqlc.slice('ids'));
 
 -- name: FindPickIDByShipmentOrder :one
 SELECT pk.id FROM pick pk
@@ -692,3 +856,12 @@ AND pk.sales_order_id = (
     WHERE s.id = sqlc.arg('shipment_id')
 )
 LIMIT 1;
+
+-- name: GetShipmentIDsByPick :many
+-- Shipments raised against the pick's sales order, oldest first. Backs related.shipments.
+SELECT s.id
+FROM shipment s
+JOIN pick pk ON pk.sales_order_id = s.sales_order_id
+WHERE pk.id = sqlc.arg('pick_id')
+AND pk.account_id = sqlc.arg('account_id')
+ORDER BY s.created_at, s.id;

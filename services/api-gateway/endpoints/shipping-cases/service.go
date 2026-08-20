@@ -18,6 +18,7 @@ import (
 type ShippingCaseSvc interface {
 	GetShippingCase(ctx context.Context, req *RetrieveShippingCaseRequest) (*apiresource.ShippingCase, *apierror.APIError)
 	UpdateShippingCase(ctx context.Context, req *UpdateShippingCaseRequest) (*apiresource.ShippingCase, *apierror.APIError)
+	AdminUpdateShippingCaseTracking(ctx context.Context, req *AdminUpdateShippingCaseTrackingRequest) (*apiresource.ShippingCase, *apierror.APIError)
 	DeleteShippingCase(ctx context.Context, req *DeleteShippingCaseRequest) (*apiresource.EmptyResource, *apierror.APIError)
 	GetShippingCaseLabel(ctx context.Context, req *GetShippingCaseLabelRequest) (*apiresource.ShippingCaseLabelURL, *apierror.APIError)
 }
@@ -83,6 +84,27 @@ func (m *shippingCaseSvcImpl) UpdateShippingCase(ctx context.Context, req *Updat
 	resp, apiErr := grpcutil.CallRPC(ctx, shippingCaseSvcTracer, "service.shipping_cases.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateShippingCaseResponse, error) {
 			return m.coreClient.UpdateShippingCase(ctx, pbReq, opts...)
+		})
+
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	meta := resourcekit.GetLoadMeta(ctx)
+	result := shippingCaseFromProto(resp.ShippingCase)
+	stashShippingCaseMeta(meta, resp.ShippingCase)
+	return &result, nil
+}
+
+func (m *shippingCaseSvcImpl) AdminUpdateShippingCaseTracking(ctx context.Context, req *AdminUpdateShippingCaseTrackingRequest) (*apiresource.ShippingCase, *apierror.APIError) {
+	pbReq := &pb.AdminUpdateShippingCaseTrackingRequest{
+		Id:             req.ShippingCaseID,
+		TrackingNumber: req.TrackingNumber.Ptr(),
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, shippingCaseSvcTracer, "service.shipping_cases.admin_update_tracking", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.AdminUpdateShippingCaseTrackingResponse, error) {
+			return m.coreClient.AdminUpdateShippingCaseTracking(ctx, pbReq, opts...)
 		})
 
 	if apiErr != nil {

@@ -9,7 +9,10 @@ import (
 
 // Page geometry (A4, 15mm margins => 180mm content width).
 const (
-	ackPageLeft     = 15.0
+	ackPageLeft = 15.0
+	// The dashboard prints onto letter stock whose padding starts the content lower than a bare
+	// print margin would, so match where its letterhead lands.
+	ackPageTop      = 20.0
 	ackPageRight    = 195.0
 	ackContentWidth = ackPageRight - ackPageLeft
 )
@@ -20,7 +23,7 @@ const (
 // (Line Item / SKU / Description / Price / Qty / Total), and a Total Due footer.
 func buildOrderAcknowledgementPDF(data ackData) ([]byte, error) {
 	pdf := fpdf.New("P", "mm", "A4", "")
-	pdf.SetMargins(ackPageLeft, 15, 15)
+	pdf.SetMargins(ackPageLeft, ackPageTop, 15)
 	pdf.SetAutoPageBreak(true, 15)
 	pdf.AddPage()
 
@@ -51,22 +54,30 @@ func ackHeader(pdf *fpdf.Fpdf, data ackData) {
 	}
 	pdf.SetXY(ackPageLeft, nameY)
 	pdf.SetFont("Helvetica", "B", 15)
-	pdf.CellFormat(98, 7, data.AccountName, "", 2, "L", false, 0, "")
-	pdf.SetFont("Helvetica", "", 9)
+	pdf.CellFormat(98, 8, data.AccountName, "", 2, "L", false, 0, "")
+	pdf.SetFont("Helvetica", "", 10.5)
 	// Address, then the merchant's support email and phone (from account branding).
-	for _, line := range nonEmpty(data.AccountAddress.Line1, data.AccountAddress.Line2, data.AccountAddress.CityStateZip, data.AccountEmail, data.AccountPhone) {
-		pdf.CellFormat(98, 4.6, line, "", 2, "L", false, 0, "")
+	for _, line := range nonEmpty(data.AccountAddress.Line1, data.AccountAddress.Line2, data.AccountAddress.CityStateZip, data.AccountPhone, data.AccountEmail) {
+		pdf.CellFormat(98, 5.6, line, "", 2, "L", false, 0, "")
 	}
 	leftEndY := pdf.GetY()
 
 	// --- Right: document title + identity block, all left-aligned within the block ---
-	titleX := 115.0
+	title := data.DocumentTitle
+	if title == "" {
+		title = "ORDER ACKNOWLEDGEMENT"
+	}
+	numberLabel := data.NumberLabel
+	if numberLabel == "" {
+		numberLabel = "Sales Order Number"
+	}
+	titleX := 118.0
 	pdf.SetXY(titleX, startY)
-	pdf.SetFont("Helvetica", "", 14)
-	pdf.CellFormat(ackPageRight-titleX, 7, "ORDER ACKNOWLEDGEMENT", "", 2, "L", false, 0, "")
-	pdf.Ln(1.5)
+	pdf.SetFont("Helvetica", "", 18)
+	pdf.CellFormat(ackPageRight-titleX, 9, title, "", 2, "R", false, 0, "")
+	pdf.Ln(3)
 
-	ackIdentityRow(pdf, titleX, "Sales Order Number", data.OrderNumber, true)
+	ackIdentityRow(pdf, titleX, numberLabel, data.OrderNumber, true)
 	if data.CustomerPO != "" {
 		ackIdentityRow(pdf, titleX, "PO Number", data.CustomerPO, false)
 	}
@@ -83,23 +94,23 @@ func ackHeader(pdf *fpdf.Fpdf, data ackData) {
 // the label in a fixed-width column and the value left-aligned beside it.
 func ackIdentityRow(pdf *fpdf.Fpdf, leftX float64, label, value string, main bool) {
 	y := pdf.GetY()
-	const labelW = 42.0
+	const labelW = 40.0
 	valueX := leftX + labelW
 	if main {
-		pdf.SetFont("Helvetica", "B", 10.5)
+		pdf.SetFont("Helvetica", "B", 11.5)
 	} else {
-		pdf.SetFont("Helvetica", "", 9.5)
+		pdf.SetFont("Helvetica", "", 10.5)
 	}
 	pdf.SetXY(leftX, y)
-	pdf.CellFormat(labelW, 5.4, label, "", 0, "L", false, 0, "")
+	pdf.CellFormat(labelW, 6.4, label, "", 0, "L", false, 0, "")
 	if main {
-		pdf.SetFont("Helvetica", "B", 10)
+		pdf.SetFont("Helvetica", "B", 11.5)
 	} else {
-		pdf.SetFont("Helvetica", "", 9.5)
+		pdf.SetFont("Helvetica", "", 10.5)
 	}
 	pdf.SetXY(valueX, y)
-	pdf.CellFormat(ackPageRight-valueX, 5.4, value, "", 0, "L", false, 0, "")
-	pdf.SetXY(leftX, y+5.4)
+	pdf.CellFormat(ackPageRight-valueX, 6.4, value, "", 0, "L", false, 0, "")
+	pdf.SetXY(leftX, y+6.4)
 }
 
 // ackCustomerAddresses renders the two-column Bill To / Ship To block.
@@ -158,35 +169,36 @@ func ackOrderTerms(pdf *fpdf.Fpdf, data ackData) {
 		pdf.SetXY(x, startY)
 		ackOverline(pdf, colW, t.title)
 		pdf.SetXY(x, pdf.GetY())
-		pdf.SetFont("Helvetica", "", 9)
-		pdf.MultiCell(colW, 4.6, t.value, "", "L", false)
+		pdf.SetFont("Helvetica", "", 10.5)
+		pdf.MultiCell(colW, 6.4, t.value, "", "L", false)
 	}
 }
 
 // ackOrderSummary renders the line-item table and the Total Due footer.
 func ackOrderSummary(pdf *fpdf.Fpdf, data ackData) {
+	pdf.Ln(2)
 	pdf.SetFont("Helvetica", "B", 13)
-	pdf.CellFormat(0, 8, "Order Summary", "", 1, "L", false, 0, "")
+	pdf.CellFormat(0, 11, "Order Summary", "", 1, "L", false, 0, "")
 
 	// Columns: Line Item | SKU | Description | Price | Qty | Total (sum = 180mm).
 	// Price ("$8.50 / pr") and Qty ("1,200 pair") are wider to fit their units.
-	wLine, wSKU, wDesc, wPrice, wQty, wTotal := 13.0, 26.0, 55.0, 31.0, 28.0, 27.0
+	wLine, wSKU, wDesc, wPrice, wQty, wTotal := 20.0, 26.0, 51.0, 30.0, 27.0, 26.0
 
-	pdf.SetFont("Helvetica", "B", 8)
-	pdf.SetFillColor(229, 231, 235) // #e5e7eb
+	pdf.SetFont("Helvetica", "B", 9.5)
+	pdf.SetFillColor(243, 244, 246)
 	pdf.SetDrawColor(229, 231, 235)
-	pdf.CellFormat(wLine, 7, "Line Item", "B", 0, "L", true, 0, "")
-	pdf.CellFormat(wSKU, 7, "SKU", "B", 0, "L", true, 0, "")
-	pdf.CellFormat(wDesc, 7, "Description", "B", 0, "L", true, 0, "")
-	pdf.CellFormat(wPrice, 7, "Price", "B", 0, "R", true, 0, "")
-	pdf.CellFormat(wQty, 7, "Qty", "B", 0, "R", true, 0, "")
-	pdf.CellFormat(wTotal, 7, "Total", "B", 1, "R", true, 0, "")
+	pdf.CellFormat(wLine, 9, "Line Item", "B", 0, "L", true, 0, "")
+	pdf.CellFormat(wSKU, 9, "SKU", "B", 0, "L", true, 0, "")
+	pdf.CellFormat(wDesc, 9, "Description", "B", 0, "L", true, 0, "")
+	pdf.CellFormat(wPrice, 9, "Price", "B", 0, "R", true, 0, "")
+	pdf.CellFormat(wQty, 9, "Qty", "B", 0, "R", true, 0, "")
+	pdf.CellFormat(wTotal, 9, "Total", "B", 1, "R", true, 0, "")
 
-	pdf.SetFont("Helvetica", "", 8)
+	pdf.SetFont("Helvetica", "", 9.5)
 	pdf.SetDrawColor(229, 231, 235)
 	for _, line := range data.Lines {
 		desc := ackWrap(pdf, line.Description, wDesc-2)
-		rowH := 5.5 * float64(len(desc))
+		rowH := 7.5 * float64(len(desc))
 
 		x, y := pdf.GetX(), pdf.GetY()
 		pdf.CellFormat(wLine, rowH, line.LineItem, "B", 0, "L", false, 0, "")
@@ -194,7 +206,7 @@ func ackOrderSummary(pdf *fpdf.Fpdf, data ackData) {
 		// Description can wrap to multiple lines; draw it as a multi-line block.
 		dx := x + wLine + wSKU
 		pdf.SetXY(dx, y)
-		pdf.MultiCell(wDesc, 5.5, strings.Join(desc, "\n"), "B", "L", false)
+		pdf.MultiCell(wDesc, 7.5, strings.Join(desc, "\n"), "B", "L", false)
 		pdf.SetXY(dx+wDesc, y)
 		pdf.CellFormat(wPrice, rowH, line.Price, "B", 0, "R", false, 0, "")
 		pdf.CellFormat(wQty, rowH, line.Qty, "B", 0, "R", false, 0, "")
@@ -202,10 +214,10 @@ func ackOrderSummary(pdf *fpdf.Fpdf, data ackData) {
 	}
 
 	// Total Due footer (right-aligned into the last two columns).
-	pdf.SetFont("Helvetica", "B", 9)
-	pdf.CellFormat(wLine+wSKU+wDesc+wPrice, 8, "", "", 0, "R", false, 0, "")
-	pdf.CellFormat(wQty, 8, "Total Due:", "", 0, "R", false, 0, "")
-	pdf.CellFormat(wTotal, 8, data.OrderTotal, "", 1, "R", false, 0, "")
+	pdf.SetFont("Helvetica", "B", 10.5)
+	pdf.CellFormat(wLine+wSKU+wDesc+wPrice, 10, "", "", 0, "R", false, 0, "")
+	pdf.CellFormat(wQty, 10, "Total Due:", "", 0, "R", false, 0, "")
+	pdf.CellFormat(wTotal, 10, data.OrderTotal, "", 1, "R", false, 0, "")
 }
 
 // --- helpers ---
@@ -235,17 +247,17 @@ func ackDrawLogo(pdf *fpdf.Fpdf, data ackData, y float64) float64 {
 }
 
 func ackHR(pdf *fpdf.Fpdf) {
-	pdf.Ln(2.5)
+	pdf.Ln(6)
 	pdf.SetDrawColor(229, 231, 235)
 	y := pdf.GetY()
 	pdf.Line(ackPageLeft, y, ackPageRight, y)
-	pdf.Ln(3.5)
+	pdf.Ln(7.5)
 }
 
 func ackOverline(pdf *fpdf.Fpdf, w float64, title string) {
-	pdf.SetFont("Helvetica", "", 8)
-	pdf.SetTextColor(102, 102, 102) // #666666
-	pdf.CellFormat(w, 5, strings.ToUpper(title), "", 2, "L", false, 0, "")
+	pdf.SetFont("Helvetica", "", 9)
+	pdf.SetTextColor(120, 128, 140)
+	pdf.CellFormat(w, 6.5, strings.ToUpper(title), "", 2, "L", false, 0, "")
 	pdf.SetTextColor(0, 0, 0)
 }
 
@@ -256,8 +268,8 @@ func ackTwoColumnBlock(pdf *fpdf.Fpdf, leftTitle, leftBody, rightTitle, rightBod
 	pdf.SetXY(ackPageLeft, startY)
 	ackOverline(pdf, colW, leftTitle)
 	pdf.SetXY(ackPageLeft, pdf.GetY())
-	pdf.SetFont("Helvetica", "", 9)
-	pdf.MultiCell(colW, 4.8, leftBody, "", "L", false)
+	pdf.SetFont("Helvetica", "", 10.5)
+	pdf.MultiCell(colW, 5.6, leftBody, "", "L", false)
 	leftEndY := pdf.GetY()
 
 	if rightTitle != "" {
@@ -265,8 +277,8 @@ func ackTwoColumnBlock(pdf *fpdf.Fpdf, leftTitle, leftBody, rightTitle, rightBod
 		pdf.SetXY(rightX, startY)
 		ackOverline(pdf, colW, rightTitle)
 		pdf.SetXY(rightX, pdf.GetY())
-		pdf.SetFont("Helvetica", "", 9)
-		pdf.MultiCell(colW, 4.8, rightBody, "", "L", false)
+		pdf.SetFont("Helvetica", "", 10.5)
+		pdf.MultiCell(colW, 5.6, rightBody, "", "L", false)
 	}
 
 	pdf.SetXY(ackPageLeft, maxF(leftEndY, pdf.GetY()))

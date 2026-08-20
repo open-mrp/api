@@ -18,7 +18,7 @@ type ShipShipmentRequest struct {
 	ShipmentID string `path:"id" validate:"required"`
 	// Whether to email the customer a shipping notification.
 	//
-	// Shipping notification emails are not dispatched yet, so this flag has no effect today.
+	// Whether to email the customer the invoice raised for this shipment.
 	EmailCustomer bool `json:"email_customer"`
 }
 
@@ -51,7 +51,7 @@ func (e *ShipShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*ShipShipm
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeShipment,
-			Fields:     []string{"lines", "shipping_cases", "sales_order", "customer", "freight", "shipping_address", "shipped_by", "shipped_by.user", "invoice", "pick"},
+			Fields:     []string{"lines", "shipping_cases", "related.sales_order", "customer", "freight", "shipping_address", "shipped_by", "related.invoice", "related.pick"},
 		}),
 	})
 }

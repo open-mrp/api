@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/services/core-service/internal/domain"
@@ -182,7 +183,7 @@ func (s *invoiceSvcImpl) GetInvoice(ctx context.Context, params domain.GetInvoic
 	return invoice, nil
 }
 
-func (s *invoiceSvcImpl) UpdateInvoice(ctx context.Context, params domain.UpdateInvoiceParams) (*domain.InvoiceSummary, *apierror.APIError) {
+func (s *invoiceSvcImpl) UpdateInvoice(ctx context.Context, params domain.UpdateInvoiceParams) (*domain.Invoice, *apierror.APIError) {
 	ctx, span := invoiceSvcTracer.Start(ctx, "service.invoice.update")
 	defer span.End()
 
@@ -220,14 +221,14 @@ func (s *invoiceSvcImpl) UpdateInvoice(ctx context.Context, params domain.Update
 
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.InvoiceSummary](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		cached, err := idempotency.UnmarshalCachedResponse[domain.Invoice](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
 		return cached.Data, cached.Error
 
 	case domain.RecoveryPointStarted:
-		var result *domain.InvoiceSummary
+		var result *domain.Invoice
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *invoiceSvcImpl) *apierror.APIError {
 			txRepo := txSvc.repos.NewInvoiceRepo()
 
@@ -243,10 +244,27 @@ func (s *invoiceSvcImpl) UpdateInvoice(ctx context.Context, params domain.Update
 			if apiErr != nil {
 				return apiErr
 			}
+
+			// Expand the same relations a read would, so a PATCH answers ?include= like a GET does.
+			for _, include := range params.Includes {
+				switch include {
+				case "lines":
+					lines, apiErr := txRepo.GetLines(txCtx, params.InvoiceID)
+					if apiErr != nil {
+						return apiErr
+					}
+					updated.Lines = lines
+				case "allocations":
+					allocations, apiErr := txRepo.GetAllocations(txCtx, params.InvoiceID)
+					if apiErr != nil {
+						return apiErr
+					}
+					updated.Allocations = allocations
+				}
+			}
 			result = updated
 
-			// Use explicit field names because old (*Invoice) and updated (*InvoiceSummary) are different types.
-			// Only the updatable fields are compared.
+			// Names the fields explicitly so only the updatable ones are diffed.
 			changes := audit.ComputeChanges(old, updated, "Note", "HasBeenSent", "IsEdiSent", "IsPaidInFull")
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
@@ -303,7 +321,6 @@ func (s *invoiceSvcImpl) ListCustomerInvoices(ctx context.Context, params domain
 	}
 
 	params.AccountID = identity.Target.AccountID
-	params.IncludeChildAccounts = true
 
 	repo := s.repos.NewInvoiceRepo()
 
@@ -312,13 +329,21 @@ func (s *invoiceSvcImpl) ListCustomerInvoices(ctx context.Context, params domain
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// Fetch allocations for each invoice to match Dashboard parity
-	for _, inv := range result.Invoices {
-		allocations, apiErr := repo.GetAllocations(ctx, inv.ID)
+	// The settle flow works each invoice's balance out from these, but they cost a query of their
+	// own, so they are loaded only when the caller asked to expand them.
+	if slices.Contains(params.Includes, "allocations") && len(result.Invoices) > 0 {
+		invoiceIDs := make([]string, len(result.Invoices))
+		for i, inv := range result.Invoices {
+			invoiceIDs[i] = inv.ID
+		}
+
+		byInvoice, apiErr := repo.GetAllocationsForInvoices(ctx, invoiceIDs)
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
-		inv.Allocations = allocations
+		for _, inv := range result.Invoices {
+			inv.Allocations = byInvoice[inv.ID]
+		}
 	}
 
 	return result, nil
@@ -352,4 +377,22 @@ func checkInvoiceWritePermission(identity *types.Identity, action types.Action) 
 		return identity.CheckHasPermission(types.PermissionDomainSuppliers, types.ActionUpdate)
 	}
 	return identity.CheckHasPermission(types.PermissionDomainInvoices, action)
+}
+
+// Rejects an invoice that would exceed the account plan's per-billing-period invoice cap. Sandboxes,
+// accounts on no plan, and plans with no cap are exempt.
+func enforceInvoicesPerPeriodLimit(ctx context.Context, repos domain.RepoFactory, accountID string) *apierror.APIError {
+	max, start, apiErr := resolveAccountPlanLimit(ctx, repos, accountID, constants.AccountPlanLimitInvoicesMaximum)
+	if apiErr != nil || max == nil {
+		return apiErr
+	}
+
+	count, apiErr := repos.NewInvoiceRepo().CountSince(ctx, accountID, start)
+	if apiErr != nil {
+		return apiErr
+	}
+	if count >= int64(*max) {
+		return apierror.NewValidationError(fmt.Sprintf("Your plan allows a maximum of %d invoices per billing period.", *max))
+	}
+	return nil
 }

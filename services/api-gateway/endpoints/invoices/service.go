@@ -10,6 +10,7 @@ import (
 	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -76,7 +77,7 @@ func (m *invoiceSvcImpl) ListInvoices(ctx context.Context, req *ListInvoicesRequ
 		}
 	}
 	if req.EndDate != nil {
-		t, err := grpcutil.ParseDateString(*req.EndDate)
+		t, err := grpcutil.ParseEndDateString(*req.EndDate)
 		if err == nil {
 			pbReq.EndDate = timestamppb.New(t)
 		}
@@ -97,7 +98,7 @@ func (m *invoiceSvcImpl) ListInvoices(ctx context.Context, req *ListInvoicesRequ
 
 	invoices := make([]apiresource.Invoice, len(resp.Invoices))
 	for i, d := range resp.Invoices {
-		invoices[i] = invoiceFromSummaryProto(ctx, d)
+		invoices[i] = invoiceFromProto(ctx, d)
 	}
 
 	return apiresource.NewList(invoices, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
@@ -125,10 +126,11 @@ func (m *invoiceSvcImpl) GetInvoice(ctx context.Context, req *RetrieveInvoiceReq
 func (m *invoiceSvcImpl) UpdateInvoice(ctx context.Context, req *UpdateInvoiceRequest) (*apiresource.Invoice, *apierror.APIError) {
 	pbReq := &pb.UpdateInvoiceRequest{
 		Id:           req.InvoiceID,
-		Note:         req.Note.Ptr(),
+		Note:         field.StringClearableToProto(req.Note),
 		HasBeenSent:  req.HasBeenSent.Ptr(),
 		IsEdiSent:    req.IsEdiSent.Ptr(),
 		IsPaidInFull: req.IsPaidInFull.Ptr(),
+		Includes:     resourcekit.FilterIncludes(ctx, invoiceIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, invoiceSvcTracer, "service.invoices.update", domain.ServiceName,
@@ -140,17 +142,19 @@ func (m *invoiceSvcImpl) UpdateInvoice(ctx context.Context, req *UpdateInvoiceRe
 		return nil, apiErr
 	}
 
-	result := invoiceFromSummaryProto(ctx, resp.Invoice)
+	result := invoiceFromProto(ctx, resp.Invoice)
 	return &result, nil
 }
 
 func (m *invoiceSvcImpl) ListCustomerInvoices(ctx context.Context, req *ListCustomerInvoicesRequest) (*apiresource.List[apiresource.InvoiceForPayment], *apierror.APIError) {
+	// Child accounts are rolled up by default: a payment against a parent settles their invoices too.
+
 	pbReq := &pb.ListCustomerInvoicesRequest{
-		CustomerAccountId:    req.CustomerAccountID,
-		Cursor:               req.Cursor,
-		Limit:                req.Limit,
-		Query:                req.Query,
-		IncludeChildAccounts: req.IncludeChildAccounts,
+		CustomerAccountId: req.CustomerAccountID,
+		Cursor:            req.Cursor,
+		Limit:             req.Limit,
+		Query:             req.Query,
+		Includes:          resourcekit.FilterIncludes(ctx, "allocations"),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, invoiceSvcTracer, "service.invoices.list_customer", domain.ServiceName,
@@ -188,11 +192,9 @@ func invoicePaymentStatus(isPaidInFull, isOverPaid bool) constants.InvoicePaymen
 	}
 }
 
-// invoiceFromSummaryProto builds an Invoice with base fields only from the list
-// projection. Expandable relations (customer, order, shipment, billing_address,
-// payment_term) are left nil and populated by registered loaders on ?include=;
-// only the FK ids are stashed here. Never fabricate.
-func invoiceFromSummaryProto(ctx context.Context, d *pb.InvoiceSummaryInfo) apiresource.Invoice {
+// Builds an Invoice from the one projection list, retrieve and update all share. Expandable
+// relations stay nil and are populated by registered loaders on ?include=. Never fabricate.
+func invoiceFromProto(ctx context.Context, d *pb.InvoiceInfo) apiresource.Invoice {
 	if d == nil {
 		return apiresource.Invoice{}
 	}
@@ -204,61 +206,12 @@ func invoiceFromSummaryProto(ctx context.Context, d *pb.InvoiceSummaryInfo) apir
 		Note:                 d.Note,
 		LineCount:            d.LineCount,
 		PriorityCode:         constants.PriorityCode(d.PriorityCode),
-		PaymentStatus:        invoicePaymentStatus(d.IsPaidInFull, false),
+		PaymentStatus:        invoicePaymentStatus(d.IsPaidInFull, d.IsOverPaid),
 		IsEdiSent:            d.IsEdiSent,
 		HasBeenSent:          d.HasBeenSent,
 		TotalInvoiced:        d.TotalInvoiced,
 		AcceptsInvoiceEmails: d.AcceptsInvoiceEmails,
 		CustomerIsEdiEnabled: d.CustomerIsEdiEnabled,
-		CreatedAt:            grpcutil.TimestampToTime(d.CreatedAt),
-		UpdatedAt:            grpcutil.TimestampToTime(d.UpdatedAt),
-	}
-
-	meta := resourcekit.GetLoadMeta(ctx)
-	if d.CustomerId != "" {
-		meta.Set(constants.ObjectTypeInvoice, inv.ID, "customer_id", d.CustomerId)
-	}
-	if d.OrderId != "" {
-		meta.Set(constants.ObjectTypeInvoice, inv.ID, "order_id", d.OrderId)
-	}
-	if d.ShipmentId != nil && *d.ShipmentId != "" {
-		meta.Set(constants.ObjectTypeInvoice, inv.ID, "shipment_id", *d.ShipmentId)
-	}
-	if d.BillingAddressId != "" {
-		meta.Set(constants.ObjectTypeInvoice, inv.ID, "billing_address_id", d.BillingAddressId)
-	}
-	if d.PaymentTermId != nil && *d.PaymentTermId != "" {
-		meta.Set(constants.ObjectTypeInvoice, inv.ID, "payment_term_id", *d.PaymentTermId)
-	}
-	// Lines are populated on the summary only when the list includes them.
-	if len(d.Lines) > 0 {
-		lines := make([]apiresource.InvoiceLine, len(d.Lines))
-		for i, l := range d.Lines {
-			lines[i] = invoiceLineFromProto(ctx, l)
-		}
-		meta.Set(constants.ObjectTypeInvoice, inv.ID, "lines", apiresource.NewList(lines, apiresource.PageInfo{}))
-	}
-	return inv
-}
-
-// invoiceFromProto builds an Invoice from the full document projection and stashes
-// expandable relations (FK ids for customer/order/shipment/billing_address, and the
-// pre-built lines/allocations lists). Relations are left nil on the returned struct
-// and populated by registered loaders on ?include=. Never fabricate.
-func invoiceFromProto(ctx context.Context, d *pb.InvoiceInfo) apiresource.Invoice {
-	if d == nil {
-		return apiresource.Invoice{}
-	}
-
-	inv := apiresource.Invoice{
-		ID:                   d.Id,
-		Object:               constants.ObjectTypeInvoice,
-		Number:               d.Number,
-		Note:                 d.Note,
-		PaymentStatus:        invoicePaymentStatus(d.IsPaidInFull, d.IsOverPaid),
-		IsEdiSent:            d.IsEdiSent,
-		HasBeenSent:          d.HasBeenSent,
-		AcceptsInvoiceEmails: d.AcceptsInvoiceEmails,
 		CreatedAt:            grpcutil.TimestampToTime(d.CreatedAt),
 		UpdatedAt:            grpcutil.TimestampToTime(d.UpdatedAt),
 	}
@@ -341,6 +294,12 @@ func invoiceLineFromProto(ctx context.Context, l *pb.InvoiceLineInfo) apiresourc
 	// the line's identifying proto fields and stash it for populate on ?include=.
 	if l.OrderLineId != "" {
 		resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeInvoiceLine, line.ID, "order_line", buildSalesOrderLineForInvoice(l))
+
+		// Keyed by the order line, not the invoice line, because the product loader runs against the
+		// sales_order_line resource once the resolver recurses into it.
+		if l.OrderLineProductId != nil && *l.OrderLineProductId != "" {
+			resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeSalesOrderLine, l.OrderLineId, "product_id", *l.OrderLineProductId)
+		}
 	}
 	// Item carried inline (the order line's item) so lines.item.id resolves.
 	if l.OrderLineItemId != nil && *l.OrderLineItemId != "" {
@@ -360,15 +319,10 @@ func invoiceLineFromProto(ctx context.Context, l *pb.InvoiceLineInfo) apiresourc
 // never fabricated.
 func buildSalesOrderLineForInvoice(l *pb.InvoiceLineInfo) *apiresource.SalesOrderLine {
 	now := grpcutil.TimestampToTime(l.CreatedAt)
-	sku := "—"
-	if l.OrderLineItemSku != nil && *l.OrderLineItemSku != "" {
-		sku = *l.OrderLineItemSku
-	}
-
 	return &apiresource.SalesOrderLine{
 		ID:         l.OrderLineId,
 		Object:     constants.ObjectTypeSalesOrderLine,
-		ProductSKU: sku,
+		ProductSKU: l.GetOrderLineItemSku(),
 		CreatedAt:  now,
 		UpdatedAt:  grpcutil.TimestampToTime(l.UpdatedAt),
 	}
@@ -416,9 +370,9 @@ func invoiceForPaymentFromProto(ctx context.Context, d *pb.InvoiceForPaymentInfo
 		IsPrepaid:       d.IsPrepaid,
 		InvoiceTotal:    d.InvoiceTotal,
 		IsPaidInFull:    d.IsPaidInFull,
-		Allocations:     apiresource.NewList(allocations, apiresource.PageInfo{}),
-		CreatedAt:       createdAt,
-		UpdatedAt:       grpcutil.TimestampToTime(d.UpdatedAt),
+		// Allocations left nil: expandable, populated from the stash on ?include=allocations.
+		CreatedAt: createdAt,
+		UpdatedAt: grpcutil.TimestampToTime(d.UpdatedAt),
 	}
 
 	// customer, parent_account, and billing_address are expandable references:
@@ -431,5 +385,6 @@ func invoiceForPaymentFromProto(ctx context.Context, d *pb.InvoiceForPaymentInfo
 	if d.ParentAccountId != nil && *d.ParentAccountId != "" {
 		meta.Set(constants.ObjectTypeInvoiceForPayment, inv.ID, "parent_account_id", *d.ParentAccountId)
 	}
+	meta.Set(constants.ObjectTypeInvoiceForPayment, inv.ID, "allocations", apiresource.NewList(allocations, apiresource.PageInfo{}))
 	return inv
 }

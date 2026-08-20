@@ -18,7 +18,7 @@ type ListAllocationEntriesRequest struct {
 	TransactionType *string `query:"transaction_type"`
 	// Only include allocations created on or after this date (`YYYY-MM-DD`).
 	StartDate *string `query:"starts_at"`
-	// Only include allocations created before this date (`YYYY-MM-DD`).
+	// Only include allocations created on or before this date (`YYYY-MM-DD`), covering that whole day.
 	EndDate *string `query:"ends_at"`
 }
 

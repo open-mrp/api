@@ -246,6 +246,19 @@ func (r *unitRepoImpl) List(ctx context.Context, params domain.ListUnitsParams) 
 	return &domain.ListUnitsResult{Units: result, PageInfo: pageInfo}, nil
 }
 
+// Resolves the unit freight is weighed in. Deliberately not the mass base unit: that is grams, while
+// carriers are quoted in pounds and the shipping cases record pounds.
+func (r *unitRepoImpl) GetFreightWeightUnitID(ctx context.Context) (string, *apierror.APIError) {
+	ctx, span := unitRepoTracer.Start(ctx, "repository.unit.get_freight_weight_unit_id")
+	defer span.End()
+
+	id, err := r.queries.GetFreightWeightUnit(ctx)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return "", tracing.Trace(span, apiErr)
+	}
+	return id, nil
+}
+
 func (r *unitRepoImpl) GetCurrencyBaseUnitID(ctx context.Context) (string, *apierror.APIError) {
 	ctx, span := unitRepoTracer.Start(ctx, "repository.unit.get_currency_base_unit_id")
 	defer span.End()

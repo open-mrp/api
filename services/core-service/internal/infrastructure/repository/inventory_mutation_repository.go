@@ -497,6 +497,144 @@ func (r *inventoryMutationRepo) ReverseInventoryForBatch(ctx context.Context, pa
 	return deltas, nil
 }
 
+// Gives a consumed measure back to the order's reservation, undoing the issues that took it newest
+// first: their allocations drop, releasing the receipts, and an overshooting issue is split.
+func (r *inventoryMutationRepo) ReverseInventoryForOrderItem(ctx context.Context, accountID, orderID, itemID string, measure decimal.Decimal) *apierror.APIError {
+	ctx, span := inventoryMutationRepoTracer.Start(ctx, "repository.inventory_mutation.reverse_inventory_for_order_item")
+	defer span.End()
+
+	if measure.LessThanOrEqual(decimal.Zero) {
+		return nil
+	}
+
+	issues, err := r.queries.FindOpenIssuesForOrderItemReversal(ctx, sqlc.FindOpenIssuesForOrderItemReversalParams{
+		OrderID:   sql.NullString{String: orderID, Valid: true},
+		AccountID: accountID,
+		ItemID:    itemID,
+	})
+	if err != nil {
+		return tracing.Trace(span, db.MapSQLError(err))
+	}
+
+	remaining := measure
+	issueIDs := make([]string, 0, len(issues))
+
+	// Only the last issue taken can overshoot, and it is reversed down to the budget with the balance
+	// re-issued as a fresh open row.
+	var split *sqlc.FindOpenIssuesForOrderItemReversalRow
+	var splitReversed, splitResidual decimal.Decimal
+
+	for i := range issues {
+		if remaining.LessThanOrEqual(decimal.Zero) {
+			break
+		}
+
+		issueQty, parseErr := decimal.NewFromString(issues[i].QuantityValue)
+		if parseErr != nil {
+			return tracing.Trace(span, apierror.NewInternalError(parseErr, "Invalid issue quantity value."))
+		}
+		if !issueQty.IsPositive() {
+			continue
+		}
+
+		issueIDs = append(issueIDs, issues[i].ID)
+
+		if issueQty.GreaterThan(remaining) {
+			split = &issues[i]
+			splitReversed = remaining
+			splitResidual = issueQty.Sub(remaining)
+			break
+		}
+
+		remaining = remaining.Sub(issueQty)
+	}
+
+	if len(issueIDs) == 0 {
+		return nil
+	}
+
+	// Dropping an allocation hands the quantity back to the receipt it came from.
+	allocations, err := r.queries.FindAllocationsByIssueIDs(ctx, issueIDs)
+	if err != nil {
+		return tracing.Trace(span, db.MapSQLError(err))
+	}
+
+	if len(allocations) > 0 {
+		allocationIDs := make([]string, 0, len(allocations))
+		quantityIDs := make([]string, 0, len(allocations)*2)
+		rateIDs := make([]string, 0, len(allocations))
+		receiptIDs := make([]string, 0, len(allocations))
+		for _, allocation := range allocations {
+			allocationIDs = append(allocationIDs, allocation.ID)
+			quantityIDs = append(quantityIDs, allocation.QuantityID, allocation.TotalCostID)
+			rateIDs = append(rateIDs, allocation.UnitCostID)
+			receiptIDs = append(receiptIDs, allocation.InventoryReceiptID)
+		}
+
+		if err := r.queries.DeleteAllocationsByIDs(ctx, allocationIDs); err != nil {
+			return tracing.Trace(span, db.MapSQLError(err))
+		}
+		if err := r.queries.DeleteQuantitiesByIDs(ctx, quantityIDs); err != nil {
+			return tracing.Trace(span, db.MapSQLError(err))
+		}
+		if err := r.queries.DeleteRatesByIDs(ctx, rateIDs); err != nil {
+			return tracing.Trace(span, db.MapSQLError(err))
+		}
+		// Runs after the deletes so it weighs only the allocations that survived.
+		if err := r.queries.FreeReleasedReceipts(ctx, receiptIDs); err != nil {
+			return tracing.Trace(span, db.MapSQLError(err))
+		}
+	}
+
+	if err := r.queries.RestoreIssuesToReserved(ctx, issueIDs); err != nil {
+		return tracing.Trace(span, db.MapSQLError(err))
+	}
+
+	if split != nil {
+		if err := r.queries.UpdateQuantityValue(ctx, sqlc.UpdateQuantityValueParams{
+			Value: splitReversed.String(),
+			ID:    split.QuantityID,
+		}); err != nil {
+			return tracing.Trace(span, db.MapSQLError(err))
+		}
+
+		residualIssueID, apiErr := id.GenID(id.InventoryIssueIDPrefix, nil)
+		if apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+		residualQuantityID, apiErr := id.GenID(id.QuantityIDPrefix, nil)
+		if apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+
+		if err := r.queries.InsertQuantityForInventory(ctx, sqlc.InsertQuantityForInventoryParams{
+			ID:     residualQuantityID,
+			Value:  splitResidual.String(),
+			UnitID: split.UnitID,
+		}); err != nil {
+			return tracing.Trace(span, db.MapSQLError(err))
+		}
+
+		// Carries no allocations of its own: the caller's FIFO pass covers it alongside the other
+		// issues the freed receipts can now fill.
+		if err := r.queries.InsertInventoryIssueForReservation(ctx, sqlc.InsertInventoryIssueForReservationParams{
+			ID:                residualIssueID,
+			AccountID:         accountID,
+			ItemID:            itemID,
+			QuantityID:        residualQuantityID,
+			StatusCode:        "open",
+			OrderID:           sql.NullString{String: orderID, Valid: true},
+			BatchID:           split.BatchID,
+			StorageLocationID: split.StorageLocationID,
+			LotID:             split.LotID,
+		}); err != nil {
+			return tracing.Trace(span, db.MapSQLError(err))
+		}
+	}
+
+	return nil
+}
+
 func (r *inventoryMutationRepo) CreateQuantityForInventory(ctx context.Context, quantityID, value, unitID string) *apierror.APIError {
 	if err := r.queries.InsertQuantityForInventory(ctx, sqlc.InsertQuantityForInventoryParams{
 		ID:     quantityID,

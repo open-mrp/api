@@ -86,7 +86,18 @@ func shipmentReferenceFromProto(s *pb.ShipmentInfo) *apiresource.Shipment {
 		MasterTrackingNumber: s.MasterTrackingNumber,
 		Status:               constants.ShipmentStatus(s.StatusCode),
 		ShippedAt:            grpcutil.TimestampToTimePtr(s.ShippedAt),
+		Priority:             constants.PriorityCode(s.PriorityCode),
+		CaseCount:            int32(s.CaseCount),
+		IsReadyToShip:        s.IsReadyToShip,
 		CreatedAt:            grpcutil.TimestampToTime(s.CreatedAt),
 		UpdatedAt:            grpcutil.TimestampToTime(s.UpdatedAt),
 	}
+}
+
+// Satisfies Register's required Load but is never invoked: shipment lines are expandable only by
+// traversal from their shipment (attached inline via ExtractRefs), never loaded by their own id.
+func LoadShipmentLines(_ context.Context, _ []string) (map[string]any, *apierror.APIError) {
+	return nil, apierror.NewInvariantViolationError(
+		"LoadShipmentLines must not be called — shipment lines are attached by the shipment and traversed via ExtractRefs, not loaded by id",
+	)
 }

@@ -1069,6 +1069,19 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 				return apiErr
 			}
 
+			// Issuing is the only way a pick is born, so this is the create event the order's history
+			// needs; without it the timeline jumps from "issued" to the pick already existing.
+			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+				ServiceName:      domain.ServiceName,
+				Action:           constants.AuditActionCreate,
+				ResourceType:     constants.ObjectTypePick,
+				ResourceID:       pickID,
+				RootResourceType: constants.ObjectTypeSalesOrder,
+				RootResourceID:   params.SalesOrderID,
+			}); apiErr != nil {
+				return apiErr
+			}
+
 			// Get only sale-type lines for pick creation and inventory reservation
 			saleLines, apiErr := txRepo.GetSaleLinesForIssue(txCtx, params.SalesOrderID)
 			if apiErr != nil {
@@ -1097,6 +1110,17 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 				}
 
 				if apiErr := txRepo.CreatePickLine(txCtx, pickLineID, pickID, pickQtyID, line.ID); apiErr != nil {
+					return apiErr
+				}
+
+				if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+					ServiceName:      domain.ServiceName,
+					Action:           constants.AuditActionCreate,
+					ResourceType:     constants.ObjectTypePickLine,
+					ResourceID:       pickLineID,
+					RootResourceType: constants.ObjectTypeSalesOrder,
+					RootResourceID:   params.SalesOrderID,
+				}); apiErr != nil {
 					return apiErr
 				}
 
@@ -1346,54 +1370,7 @@ func (s *salesOrderSvcImpl) sendOrderAcknowledgementEmail(ctx context.Context, a
 
 // checkInvoicePlanLimit enforces the account's per-billing-period invoice plan limit before allowing a new sales order (which will typically generate an invoice). Sandbox accounts and accounts with no configured limit are exempt. Returns a validation error when the current count meets or exceeds the limit.
 func (s *salesOrderSvcImpl) checkInvoicePlanLimit(ctx context.Context, accountID string) *apierror.APIError {
-	accountRepo := s.repos.NewAccountRepo()
-
-	// Sandbox accounts are exempt.
-	accountCtx, apiErr := accountRepo.GetAccountContext(ctx, accountID)
-	if apiErr != nil {
-		return apiErr
-	}
-	if accountCtx != nil && accountCtx.IsSandbox {
-		return nil
-	}
-
-	planID, periodEnd, apiErr := accountRepo.GetPlanIDAndPeriodEnd(ctx, accountID)
-	if apiErr != nil {
-		return apiErr
-	}
-	if planID == nil {
-		return nil
-	}
-
-	limits, apiErr := accountRepo.ListPlanLimits(ctx, *planID)
-	if apiErr != nil {
-		return apiErr
-	}
-	maxInvoices, ok := limits["invoices_maximum"]
-	if !ok || maxInvoices == nil {
-		// Unlimited / not configured → nothing to enforce.
-		return nil
-	}
-
-	// Derive the billing-period start the same way billing-service does: (period end - 1 month) when subscribed, else start of the current calendar month UTC.
-	var periodStart time.Time
-	if periodEnd != nil {
-		periodStart = periodEnd.AddDate(0, -1, 0)
-	} else {
-		now := time.Now().UTC()
-		periodStart = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
-	}
-
-	count, apiErr := s.repos.NewInvoiceRepo().CountSince(ctx, accountID, periodStart)
-	if apiErr != nil {
-		return apiErr
-	}
-
-	if count >= int64(*maxInvoices) {
-		return apierror.NewValidationError(fmt.Sprintf("Your plan allows a maximum of %d invoices per billing period.", *maxInvoices))
-	}
-
-	return nil
+	return enforceInvoicesPerPeriodLimit(ctx, s.repos, accountID)
 }
 
 // synthesizeShippingLine inserts the order's shipping line using the account's "shipping" system product and a rate already estimated by the caller (see estimateOrderShippingRate), matching Dashboard behavior where every sales order carries a dedicated shipping line. The rate is computed before the transaction so the live Shippo call does not run inside it. No-ops cleanly if the account has no shipping system product configured.
@@ -1435,6 +1412,59 @@ func (s *salesOrderSvcImpl) synthesizeShippingLine(ctx context.Context, orderID 
 		UnitPriceDenominatorUnitID: shippingProduct.QuantityUnitID,
 	})
 	return apiErr
+}
+
+// Returns the order's freight line, creating it from the account's "shipping" system product when the order
+// carries none — mirroring legacy findOrAddShipping. Returns (nil, nil) when the account has no such product.
+func findOrAddFreightLine(ctx context.Context, repos domain.RepoFactory, accountID, salesOrderID string) (*domain.SalesOrderLine, *apierror.APIError) {
+	lines, apiErr := repos.NewSalesOrderRepo().GetLines(ctx, salesOrderID)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	for _, line := range lines {
+		if line.ProductTypeCode != nil && *line.ProductTypeCode == systemProductCodeShipping {
+			return line, nil
+		}
+	}
+
+	shippingProduct, apiErr := repos.NewProductRepo().GetSystemProduct(ctx, accountID, systemProductCodeShipping)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	if shippingProduct == nil {
+		return nil, nil
+	}
+
+	currencyUnitID, apiErr := repos.NewUnitRepo().GetCurrencyBaseUnitID(ctx)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	lineID, apiErr := id.GenID(id.OrderLineIDPrefix, nil)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	// Falls back to the SKU so the freight line is never blank (see synthesizeShippingLine).
+	description := shippingProduct.ProductDescription
+	if description == nil || *description == "" {
+		description = &shippingProduct.ProductSKU
+	}
+
+	// The line is added to carry a cost the carrier already charged, so its price starts at zero —
+	// matching legacy addShippingToOrder, which never estimates a rate here.
+	return repos.NewSalesOrderLineRepo().Create(ctx, lineID, domain.CreateSalesOrderLineParams{
+		SalesOrderID:               salesOrderID,
+		AccountID:                  accountID,
+		ProductID:                  shippingProduct.ProductID,
+		ProductSKU:                 shippingProduct.ProductSKU,
+		ProductDescription:         description,
+		QuantityValue:              "1",
+		QuantityUnitID:             shippingProduct.QuantityUnitID,
+		UnitPriceValue:             "0",
+		UnitPriceNumeratorUnitID:   currencyUnitID,
+		UnitPriceDenominatorUnitID: shippingProduct.QuantityUnitID,
+	})
 }
 
 // estimateFreightForOrder re-estimates an existing order's freight (shipping) charge from its CURRENT persisted ship-to, carrier, service level, and lines, using the same freight-exemption / flat-rate / minimum-order / live-Shippo cascade as the create path. Returns the rate rounded to cents (matching Dashboard's update path). Read-only: it does not mutate the order — the caller (the quote-freight endpoint) returns it for the user to review and approve. Runs on the outer receiver so the live Shippo call stays out of any write transaction.

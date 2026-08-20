@@ -202,7 +202,7 @@ func (r *inventoryReservationRepo) AllocateReservationsForConsumption(ctx contex
 			}
 			// take, not issueQty: the portion already allocated has been drawn from receipts once
 			// already, and re-issuing the whole quantity consumes it a second time.
-			if apiErr := r.allocateOpenIssue(ctx, issue.ID, take, params.AccountID, params.ItemID); apiErr != nil {
+			if apiErr := r.allocateOpenIssue(ctx, issue.ID, take, params.AccountID, params.ItemID, issue.StorageLocationID, issue.LotID); apiErr != nil {
 				return nil, apiErr
 			}
 		} else {
@@ -248,7 +248,7 @@ func (r *inventoryReservationRepo) AllocateReservationsForConsumption(ctx contex
 				return nil, db.MapSQLError(err)
 			}
 
-			if apiErr := r.allocateOpenIssue(ctx, newIssueID, take, params.AccountID, params.ItemID); apiErr != nil {
+			if apiErr := r.allocateOpenIssue(ctx, newIssueID, take, params.AccountID, params.ItemID, issue.StorageLocationID, issue.LotID); apiErr != nil {
 				return nil, apiErr
 			}
 		}
@@ -296,16 +296,19 @@ func (r *inventoryReservationRepo) allocatedSumsByReceipt(ctx context.Context, r
 }
 
 // allocateOpenIssue performs FIFO allocation of an open issue against available receipts.
-func (r *inventoryReservationRepo) allocateOpenIssue(ctx context.Context, issueID string, issueQty decimal.Decimal, accountID, itemID string) *apierror.APIError {
+func (r *inventoryReservationRepo) allocateOpenIssue(ctx context.Context, issueID string, issueQty decimal.Decimal, accountID, itemID string, storageLocationID, lotID sql.NullString) *apierror.APIError {
 	receipts, err := r.queries.FindReceiptsForAllocation(ctx, sqlc.FindReceiptsForAllocationParams{
-		AccountID: accountID,
-		ItemID:    itemID,
+		AccountID:         accountID,
+		ItemID:            itemID,
+		StorageLocationID: storageLocationID,
+		LotID:             lotID,
 	})
 	if err != nil {
 		return db.MapSQLError(err)
 	}
 
 	remaining := issueQty
+	var exhaustedReceiptIDs []string
 
 	// One aggregate for the whole candidate set. Asking per receipt put a round trip inside the walk
 	// below, which an item whose older receipts are all full pays for on every allocation.
@@ -325,6 +328,10 @@ func (r *inventoryReservationRepo) allocateOpenIssue(ctx context.Context, issueI
 		}
 
 		available := receiptQty.Sub(allocatedByReceipt[receipt.ID])
+		if available.LessThanOrEqual(decimal.Zero) {
+			exhaustedReceiptIDs = append(exhaustedReceiptIDs, receipt.ID)
+			continue
+		}
 		take := decimal.Min(available, remaining)
 		// A receipt that is already over-allocated leaves available negative. IsZero let that through,
 		// writing a negative allocation and growing `remaining` — so the issue drew more than it asked for.
@@ -345,7 +352,9 @@ func (r *inventoryReservationRepo) allocateOpenIssue(ctx context.Context, issueI
 		if genErr != nil {
 			return genErr
 		}
-		allocTotalCostID, genErr := id.GenID(id.RateIDPrefix, nil)
+		// A total cost is a quantity of currency, not a rate — the column points at `quantity`, and
+		// the reversal paths delete it from there.
+		allocTotalCostID, genErr := id.GenID(id.QuantityIDPrefix, nil)
 		if genErr != nil {
 			return genErr
 		}
@@ -359,22 +368,27 @@ func (r *inventoryReservationRepo) allocateOpenIssue(ctx context.Context, issueI
 			return db.MapSQLError(err)
 		}
 
-		// Insert unit cost rate (zero for simplicity)
+		// Carry the receipt's own cost onto the allocation so COGS reads the price actually paid.
+		unitCost, parseErr := decimal.NewFromString(receipt.UnitCostValue)
+		if parseErr != nil {
+			return apierror.NewInternalError(parseErr, "Invalid receipt unit cost value.")
+		}
+
 		if err := r.queries.InsertRateForInventory(ctx, sqlc.InsertRateForInventoryParams{
 			ID:                allocUnitCostID,
-			Value:             "0",
-			NumeratorUnitID:   receipt.UnitID,
-			DenominatorUnitID: receipt.UnitID,
+			Value:             receipt.UnitCostValue,
+			NumeratorUnitID:   receipt.UnitCostNumeratorUnitID,
+			DenominatorUnitID: receipt.UnitCostDenominatorUnitID,
 		}); err != nil {
 			return db.MapSQLError(err)
 		}
 
-		// Insert total cost rate (zero for simplicity)
-		if err := r.queries.InsertRateForInventory(ctx, sqlc.InsertRateForInventoryParams{
-			ID:                allocTotalCostID,
-			Value:             "0",
-			NumeratorUnitID:   receipt.UnitID,
-			DenominatorUnitID: receipt.UnitID,
+		// Extending the rate over the allocated quantity cancels its denominator, leaving an amount
+		// in the rate's numerator currency.
+		if err := r.queries.InsertQuantityForInventory(ctx, sqlc.InsertQuantityForInventoryParams{
+			ID:     allocTotalCostID,
+			Value:  take.Mul(unitCost).String(),
+			UnitID: receipt.UnitCostNumeratorUnitID,
 		}); err != nil {
 			return db.MapSQLError(err)
 		}
@@ -392,6 +406,18 @@ func (r *inventoryReservationRepo) allocateOpenIssue(ctx context.Context, issueI
 		}
 
 		remaining = remaining.Sub(take)
+	}
+
+	if len(exhaustedReceiptIDs) > 0 {
+		if err := r.queries.MarkInventoryReceiptsAllocated(ctx, exhaustedReceiptIDs); err != nil {
+			return db.MapSQLError(err)
+		}
+	}
+
+	if remaining.LessThanOrEqual(decimal.Zero) {
+		if err := r.queries.CloseFullyAllocatedInventoryIssue(ctx, issueID); err != nil {
+			return db.MapSQLError(err)
+		}
 	}
 
 	return nil
@@ -436,7 +462,7 @@ func (r *inventoryReservationRepo) AllocateOpenIssuesForItem(ctx context.Context
 			continue
 		}
 
-		if apiErr := r.allocateOpenIssue(ctx, issue.ID, issueRemaining, accountID, itemID); apiErr != nil {
+		if apiErr := r.allocateOpenIssue(ctx, issue.ID, issueRemaining, accountID, itemID, issue.StorageLocationID, issue.LotID); apiErr != nil {
 			return tracing.Trace(span, apiErr)
 		}
 	}

@@ -27,11 +27,21 @@ func NewReceivableRepo(queries *sqlc.Queries) domain.ReceivableRepo {
 func receivableEntryCreatedAt(e domain.ReceivableEntry) time.Time { return e.InvoicedAt }
 func receivableEntryID(e domain.ReceivableEntry) string           { return e.InvoiceID }
 
+// Bounds which allocations net against the balance. A cutoff-free run still needs a comparable
+// upper bound, so it gets a sentinel far enough out that every funded allocation clears it.
+// Leaves the allocation window open when no cutoff is asked for. A far-future sentinel cannot serve
+// here: nanosecond precision overflows MySQL's DATETIME, and the comparison then matches nothing.
 func buildAllocationCutoffParam(cutoffDate *time.Time) gosql.NullTime {
 	if cutoffDate == nil {
-		return gosql.NullTime{Time: time.Date(9999, 12, 31, 23, 59, 59, 999_999_999, time.UTC), Valid: true}
+		return gosql.NullTime{}
 	}
 	return gosql.NullTime{Time: *cutoffDate, Valid: true}
+}
+
+// Reports whether settled entries must be dropped: only an as-of run prunes them, so a plain
+// listing still shows every unpaid invoice.
+func requirePositiveBalance(cutoffDate *time.Time) bool {
+	return cutoffDate != nil
 }
 
 func buildCutoffDateParam(cutoffDate *time.Time) gosql.NullTime {
@@ -109,6 +119,7 @@ func (r *receivableRepoImpl) List(ctx context.Context, params domain.ListReceiva
 	defer span.End()
 
 	allocationCutoff := buildAllocationCutoffParam(params.CutoffDate)
+	positiveOnly := requirePositiveBalance(params.CutoffDate)
 	cutoffDate := buildCutoffDateParam(params.CutoffDate)
 	searchQuery := buildReceivableSearchParam(params.Query)
 
@@ -123,13 +134,14 @@ func (r *receivableRepoImpl) List(ctx context.Context, params domain.ListReceiva
 
 		if cur.Direction == pagination.DirectionBackward {
 			rows, err := r.queries.ListReceivablesBackward(ctx, sqlc.ListReceivablesBackwardParams{
-				AllocationCutoffDate: allocationCutoff,
-				AccountID:            params.AccountID,
-				CutoffDate:           cutoffDate,
-				SearchQuery:          searchQuery,
-				CursorCreatedAt:      cur.OccurredAt,
-				CursorID:             cur.ID,
-				Limit:                params.Limit + 1,
+				AllocationCutoffDate:   allocationCutoff,
+				RequirePositiveBalance: positiveOnly,
+				AccountID:              params.AccountID,
+				CutoffDate:             cutoffDate,
+				SearchQuery:            searchQuery,
+				CursorCreatedAt:        cur.OccurredAt,
+				CursorID:               cur.ID,
+				Limit:                  params.Limit + 1,
 			})
 			if apiErr := db.MapSQLError(err); apiErr != nil {
 				return nil, tracing.Trace(span, apiErr)
@@ -144,13 +156,14 @@ func (r *receivableRepoImpl) List(ctx context.Context, params domain.ListReceiva
 
 		// Forward with cursor
 		rows, err := r.queries.ListReceivablesForward(ctx, sqlc.ListReceivablesForwardParams{
-			AllocationCutoffDate: allocationCutoff,
-			AccountID:            params.AccountID,
-			CutoffDate:           cutoffDate,
-			SearchQuery:          searchQuery,
-			CursorCreatedAt:      gosql.NullTime{Time: cur.OccurredAt, Valid: true},
-			CursorID:             gosql.NullString{String: cur.ID, Valid: true},
-			Limit:                params.Limit + 1,
+			AllocationCutoffDate:   allocationCutoff,
+			RequirePositiveBalance: positiveOnly,
+			AccountID:              params.AccountID,
+			CutoffDate:             cutoffDate,
+			SearchQuery:            searchQuery,
+			CursorCreatedAt:        gosql.NullTime{Time: cur.OccurredAt, Valid: true},
+			CursorID:               gosql.NullString{String: cur.ID, Valid: true},
+			Limit:                  params.Limit + 1,
 		})
 		if apiErr := db.MapSQLError(err); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
@@ -165,11 +178,12 @@ func (r *receivableRepoImpl) List(ctx context.Context, params domain.ListReceiva
 
 	// No cursor — first page
 	rows, err := r.queries.ListReceivablesForward(ctx, sqlc.ListReceivablesForwardParams{
-		AllocationCutoffDate: allocationCutoff,
-		AccountID:            params.AccountID,
-		CutoffDate:           cutoffDate,
-		SearchQuery:          searchQuery,
-		Limit:                params.Limit + 1,
+		AllocationCutoffDate:   allocationCutoff,
+		RequirePositiveBalance: positiveOnly,
+		AccountID:              params.AccountID,
+		CutoffDate:             cutoffDate,
+		SearchQuery:            searchQuery,
+		Limit:                  params.Limit + 1,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -188,6 +202,7 @@ func (r *receivableRepoImpl) ListByCustomer(ctx context.Context, params domain.L
 	defer span.End()
 
 	allocationCutoff := buildAllocationCutoffParam(params.CutoffDate)
+	positiveOnly := requirePositiveBalance(params.CutoffDate)
 	cutoffDate := buildCutoffDateParam(params.CutoffDate)
 	searchQuery := buildReceivableSearchParam(params.Query)
 
@@ -202,14 +217,15 @@ func (r *receivableRepoImpl) ListByCustomer(ctx context.Context, params domain.L
 
 		if cur.Direction == pagination.DirectionBackward {
 			rows, err := r.queries.ListReceivablesByCustomerBackward(ctx, sqlc.ListReceivablesByCustomerBackwardParams{
-				AllocationCutoffDate: allocationCutoff,
-				AccountID:            params.AccountID,
-				CustomerAccountID:    params.CustomerAccountID,
-				CutoffDate:           cutoffDate,
-				SearchQuery:          searchQuery,
-				CursorCreatedAt:      cur.OccurredAt,
-				CursorID:             cur.ID,
-				Limit:                params.Limit + 1,
+				AllocationCutoffDate:   allocationCutoff,
+				RequirePositiveBalance: positiveOnly,
+				AccountID:              params.AccountID,
+				CustomerAccountID:      params.CustomerAccountID,
+				CutoffDate:             cutoffDate,
+				SearchQuery:            searchQuery,
+				CursorCreatedAt:        cur.OccurredAt,
+				CursorID:               cur.ID,
+				Limit:                  params.Limit + 1,
 			})
 			if apiErr := db.MapSQLError(err); apiErr != nil {
 				return nil, tracing.Trace(span, apiErr)
@@ -224,14 +240,15 @@ func (r *receivableRepoImpl) ListByCustomer(ctx context.Context, params domain.L
 
 		// Forward with cursor
 		rows, err := r.queries.ListReceivablesByCustomerForward(ctx, sqlc.ListReceivablesByCustomerForwardParams{
-			AllocationCutoffDate: allocationCutoff,
-			AccountID:            params.AccountID,
-			CustomerAccountID:    params.CustomerAccountID,
-			CutoffDate:           cutoffDate,
-			SearchQuery:          searchQuery,
-			CursorCreatedAt:      gosql.NullTime{Time: cur.OccurredAt, Valid: true},
-			CursorID:             gosql.NullString{String: cur.ID, Valid: true},
-			Limit:                params.Limit + 1,
+			AllocationCutoffDate:   allocationCutoff,
+			RequirePositiveBalance: positiveOnly,
+			AccountID:              params.AccountID,
+			CustomerAccountID:      params.CustomerAccountID,
+			CutoffDate:             cutoffDate,
+			SearchQuery:            searchQuery,
+			CursorCreatedAt:        gosql.NullTime{Time: cur.OccurredAt, Valid: true},
+			CursorID:               gosql.NullString{String: cur.ID, Valid: true},
+			Limit:                  params.Limit + 1,
 		})
 		if apiErr := db.MapSQLError(err); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
@@ -246,12 +263,13 @@ func (r *receivableRepoImpl) ListByCustomer(ctx context.Context, params domain.L
 
 	// No cursor — first page
 	rows, err := r.queries.ListReceivablesByCustomerForward(ctx, sqlc.ListReceivablesByCustomerForwardParams{
-		AllocationCutoffDate: allocationCutoff,
-		AccountID:            params.AccountID,
-		CustomerAccountID:    params.CustomerAccountID,
-		CutoffDate:           cutoffDate,
-		SearchQuery:          searchQuery,
-		Limit:                params.Limit + 1,
+		AllocationCutoffDate:   allocationCutoff,
+		RequirePositiveBalance: positiveOnly,
+		AccountID:              params.AccountID,
+		CustomerAccountID:      params.CustomerAccountID,
+		CutoffDate:             cutoffDate,
+		SearchQuery:            searchQuery,
+		Limit:                  params.Limit + 1,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -270,14 +288,16 @@ func (r *receivableRepoImpl) ListAllByCustomer(ctx context.Context, accountID, c
 	defer span.End()
 
 	allocationCutoff := buildAllocationCutoffParam(cutoffDate)
+	positiveOnly := requirePositiveBalance(cutoffDate)
 	cutoffDateParam := buildCutoffDateParam(cutoffDate)
 
 	rows, err := r.queries.ListReceivablesByCustomerForward(ctx, sqlc.ListReceivablesByCustomerForwardParams{
-		AllocationCutoffDate: allocationCutoff,
-		AccountID:            accountID,
-		CustomerAccountID:    customerAccountID,
-		CutoffDate:           cutoffDateParam,
-		Limit:                10000,
+		AllocationCutoffDate:   allocationCutoff,
+		RequirePositiveBalance: positiveOnly,
+		AccountID:              accountID,
+		CustomerAccountID:      customerAccountID,
+		CutoffDate:             cutoffDateParam,
+		Limit:                  10000,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)

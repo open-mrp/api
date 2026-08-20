@@ -3,17 +3,22 @@ package domain
 import (
 	"time"
 
+	"github.com/shopspring/decimal"
+
 	"github.com/augno/api/shared/pagination"
 )
 
 // ShipmentLine represents a shipment line domain model.
 type ShipmentLine struct {
-	ID               string
-	ShipmentID       string
-	SalesOrderLineID string  `audit:"sales_order_line_id"`
-	OrderLineSKU     string  `audit:"order_line_sku"`
-	OrderLineDesc    *string `audit:"order_line_desc"`
-	OrderLineItemID  *string
+	ID                 string
+	ShipmentID         string
+	SalesOrderLineID   string  `audit:"sales_order_line_id"`
+	OrderLineSKU       string  `audit:"order_line_sku"`
+	OrderLineDesc      *string `audit:"order_line_desc"`
+	OrderLineItemID    *string
+	OrderLineProductID *string
+	// Position of the sales order line the shipment line fulfills.
+	OrderLineItemNumber int32
 
 	// Quantity
 	QuantityID               string
@@ -65,4 +70,20 @@ type DeleteShipmentLineEndpointParams struct {
 	AccountID      string
 	ShipmentID     string
 	ShipmentLineID string
+}
+
+// Reports how much of a sales order line remains unshipped.
+type SalesOrderLineShipmentCapacity struct {
+	SalesOrderID string
+	Ordered      decimal.Decimal
+	Shipped      decimal.Decimal
+}
+
+// Reports the quantity still available to ship, never negative.
+func (c SalesOrderLineShipmentCapacity) Remaining() decimal.Decimal {
+	remaining := c.Ordered.Sub(c.Shipped)
+	if remaining.IsNegative() {
+		return decimal.Zero
+	}
+	return remaining
 }

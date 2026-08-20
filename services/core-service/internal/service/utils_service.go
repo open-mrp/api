@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"strings"
 
@@ -17,6 +18,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/idempotency"
 	"github.com/augno/api/shared/messaging"
+	"github.com/augno/api/shared/textutil"
 	"github.com/augno/api/shared/tracing"
 )
 
@@ -309,23 +311,47 @@ func (s *utilsSvcImpl) emailInvoice(ctx context.Context, span trace.Span, invoic
 		return nil
 	}
 
-	// Fetch account name for email.
-	accountName, apiErr := s.repos.NewAccountRepo().GetName(ctx, accountID)
-	if apiErr != nil {
-		return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, tracing.Trace(span, apiErr))
+	// The document backs both the email body and its PDF, so assemble it once. Its lookups are
+	// best-effort, so fall back to the account name when the letterhead came back blank.
+	lines, _ := invoiceRepo.GetLines(ctx, invoiceID)
+	doc := gatherInvoiceDoc(ctx, s.repos, accountID, invoice, lines)
+	// The PDF embeds the letterhead logo, so its bytes are fetched here; this runs before the
+	// transaction below, so a slow logo host costs only this request.
+	logo := fetchAccountLogo(ctx, s.repos, s.branding, accountID)
+	doc.Header.LogoImageType, doc.Header.LogoImage = logo.ImageType, logo.Image
+
+	var shipment *domain.Shipment
+	if invoice.ShipmentID != nil {
+		shipment, _ = s.repos.NewShipmentRepo().Get(ctx, domain.GetShipmentParams{AccountID: accountID, ShipmentID: *invoice.ShipmentID})
 	}
 
-	subject := fmt.Sprintf("Invoice %s", invoice.Number)
+	params := doc.emailParams(shipmentMasterTrackingURL(shipment))
+	if params["account_name"] == "" {
+		accountName, apiErr := s.repos.NewAccountRepo().GetName(ctx, accountID)
+		if apiErr != nil {
+			return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, tracing.Trace(span, apiErr))
+		}
+		params["account_name"] = accountName
+	}
+
+	subject := fmt.Sprintf("Invoice %s", textutil.FormatRecordNumber(invoice.Number))
 
 	emailData := messaging.EmailSendData{
 		To:         recipients,
 		Subject:    subject,
 		TemplateID: constants.EmailTemplateInvoice,
-		Params: map[string]any{
-			"invoice_number": invoice.Number,
-			"account_name":   accountName,
-		},
-		AccountID: &accountID,
+		Params:     params,
+		AccountID:  &accountID,
+	}
+
+	// Attach the rendered invoice PDF, best-effort — a render failure sends the email without it.
+	if pdfBytes, err := buildInvoicePDF(doc); err == nil {
+		encoded := base64.StdEncoding.EncodeToString(pdfBytes)
+		filename := fmt.Sprintf("invoice-%s.pdf", invoice.Number)
+		contentType := "application/pdf"
+		emailData.AttachmentData = &encoded
+		emailData.AttachmentFilename = &filename
+		emailData.AttachmentContentType = &contentType
 	}
 
 	// Publish email and mark as sent inside a transaction.

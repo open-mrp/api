@@ -157,6 +157,12 @@ func Run(
 		return err
 	}
 
+	invoiceCreatedHandler := event.NewInvoiceCreatedHandler(accountUsageRepo, stripeClient)
+	invoiceCreatedConsumer := event.NewInvoiceCreatedConsumer(rabbitmq, inboxRepo, invoiceCreatedHandler)
+	if err := invoiceCreatedConsumer.Listen(ctx); err != nil {
+		return err
+	}
+
 	server, err := contracts.NewGRPCServer(domain.ServiceName, nil, nil)
 	if err != nil {
 		return err

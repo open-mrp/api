@@ -133,13 +133,30 @@ func pickAllLines(t *testing.T, pickID string) {
 	requireStatus(t, 200, status, body)
 }
 
-// packPick packs the pick, creating a shipment with a single shipping case.
+// Packs the pick into a shipment with a single case, waiting for the job so callers can read
+// the writes it made.
 func packPick(t *testing.T, pickID string) {
 	t.Helper()
+	acceptPackPick(t, pickID, 1)
+}
+
+// Posts a pack, requires the 202, follows the job to completion and returns it.
+func acceptPackPick(t *testing.T, pickID string, caseCount int) map[string]any {
+	t.Helper()
+
 	status, body, err := apiClient.Post("/v1/operations/picks/"+pickID+"/actions/pack",
-		map[string]any{"shipment_case_count": 1}, newIdempotencyKey())
+		map[string]any{"shipment_case_count": caseCount}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
+	requireStatus(t, 202, status, body)
+
+	accepted := parseJSON(body)
+	require.Equal(t, "job", jsonField(accepted, "object"), "202 returns the canonical job resource")
+	jobID := jsonField(accepted, "id")
+	require.NotEmpty(t, jobID, "the 202 must name the job to poll")
+
+	job := pollJobUntilTerminal(t, jobID)
+	require.Equal(t, "completed", jsonField(job, "status"), "the pack job should complete: %v", job)
+	return job
 }
 
 // firstPickLineID returns the id of the pick's single (or first) pick line.

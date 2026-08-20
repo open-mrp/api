@@ -540,6 +540,7 @@ func Run(
 	pickSvc := service.NewPickSvc(&service.PickSvcConfig{
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
+		JobSvcFactory:   jobSvcFactory,
 		TxManager:       txManager,
 	})
 
@@ -656,12 +657,17 @@ func Run(
 	})
 
 	shipmentSvc := service.NewShipmentSvc(&service.ShipmentSvcConfig{
-		Repos:           repoFactory,
-		MediatorFactory: mediatorFactory,
-		TxManager:       txManager,
-		ShippoFactory:   shippoFactory,
-		EncryptionKey:   integrationEncryptionKey,
-		NotificationPub: notificationPublisher,
+		Repos:                repoFactory,
+		MediatorFactory:      mediatorFactory,
+		TxManager:            txManager,
+		ShippoFactory:        shippoFactory,
+		EncryptionKey:        integrationEncryptionKey,
+		NotificationPub:      notificationPublisher,
+		BillingPub:           billingPublisher,
+		S3Client:             s3Store,
+		ShippingLabelsBucket: cfg.ShippingLabelsBucket,
+		FrontendURL:          cfg.FrontendURL,
+		Branding:             brandingAssets,
 	})
 
 	shipmentLineSvc := service.NewShipmentLineSvc(&service.ShipmentLineSvcConfig{
@@ -736,6 +742,7 @@ func Run(
 		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.BulkUpsertMaterials, materialSvc.ExecuteBulkUpsertMaterials),
 		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.BulkUpsertProperties, propertySvc.ExecuteBulkUpsertProperties),
 		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.BulkResolveHubspotCompanyReviews, hubspotSyncSvc.ExecuteBulkResolveReviews),
+		event.NewBulkOperationConsumer(rabbitmq, inboxRepo, messaging.PackPick, pickSvc.ExecutePackPick),
 	}
 	for _, bulkConsumer := range bulkConsumers {
 		if err := bulkConsumer.Listen(ctx); err != nil {

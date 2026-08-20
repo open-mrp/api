@@ -26,28 +26,44 @@ type Pick struct {
 	PriorityCode   constants.PriorityCode
 	PriorityName   string
 
+	// Server-computed roll-ups, so a row can show counts and progress without expanding its lines.
+	LineCount        int32
+	LastShippedAt    *time.Time
+	PickedCompletion float64
+	PackedCompletion float64
+
+	// Ship-to carried from the sales order, so a pick renders its header without fetching the order.
+	PromisedAt *time.Time
+	// The order's delivery commitment and the rules that produced it, carried so a pick can explain
+	// its dates without fetching the order.
+	ShipByDate                 *time.Time
+	LeadTimeDays               *int32
+	LeadTimeSource             *constants.LeadTimeSource
+	TransitDays                *int32
+	TransitSource              *constants.TransitSource
+	ShippingAddressID          string
+	ShippingAddressName        *string
+	ShippingAddressPhone       *string
+	ShippingAddressEmail       *string
+	ShippingAddressIsDropShip  *bool
+	ShippingAddressGeolocation *string
+	ShippingAddressStreetLine1 *string
+	ShippingAddressStreetLine2 *string
+	ShippingAddressLocality    *string
+	ShippingAddressState       *string
+	ShippingAddressPostalCode  *string
+	ShippingAddressCountry     *string
+
 	// Populated conditionally
 	Lines       []*PickLine
 	Departments []*PickDepartment
+	ShipmentIDs []string
 }
 
-// PickSummary represents a pick for list views.
-type PickSummary struct {
-	ID               string
-	Number           string
-	SalesOrderID     string
-	SalesOrderNumber string
-	CustomerID       string
-	CustomerName     string
-	CustomerNumber   string
-	PriorityID       string
-	PriorityCode     constants.PriorityCode
-	PriorityName     string
-	FinishedAt       *time.Time
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
-	// Departments (populated only when the list request includes "departments").
-	Departments []*PickDepartment
+// Carries the picked/packed completion fractions for one pick, aggregated over its sale lines.
+type PickProgress struct {
+	PickedCompletion float64
+	PackedCompletion float64
 }
 
 // PickDepartment represents a department associated with a pick.
@@ -58,6 +74,8 @@ type PickDepartment struct {
 
 // PickLine represents a pick line domain model with joined fields.
 type PickLine struct {
+	// OrderLineItemID is the item on the originating order line, so lines.item resolves.
+	OrderLineItemID          *string
 	ID                       string
 	PickID                   string
 	SalesOrderLineID         string
@@ -74,6 +92,7 @@ type PickLine struct {
 	OrderLineItemNumber       int32
 	OrderLineSKU              string
 	OrderLineDescription      *string
+	OrderLineProductID        *string
 	OrderedQuantityID         string
 	OrderedQuantityValue      string
 	OrderedQuantityUnitID     string
@@ -102,11 +121,13 @@ type ListPicksParams struct {
 	StartDate        *string
 	EndDate          *string
 	Includes         []string
+	// Empty means the default, soonest ship-by date first.
+	Sort constants.PickSort
 }
 
 // ListPicksResult holds the result of listing picks.
 type ListPicksResult struct {
-	Picks    []*PickSummary
+	Picks    []*Pick
 	PageInfo pagination.PageInfo
 }
 
@@ -119,7 +140,7 @@ type UpdatePickParams struct {
 	Includes   []string
 }
 
-// UpdatePickLineParams holds the parameters for updating a pick line's quantity.
+// Carries the parameters for updating a pick line's picked quantity.
 type UpdatePickLineParams struct {
 	AccountID     string
 	PickID        string
@@ -142,10 +163,10 @@ type PickShipmentsResult struct {
 	Count           int32
 }
 
-// PackPickResult holds the result of packing a pick.
-type PackPickResult struct {
-	Pick           *Pick
-	ShipmentNumber string
+// Records what a pack was accepted to do. Stored on the job, so it carries only resolved ids.
+type PackPickJob struct {
+	PickID            string
+	ShipmentCaseCount int32
 }
 
 // PickSalesOrder holds order info needed for shipment creation during pack.

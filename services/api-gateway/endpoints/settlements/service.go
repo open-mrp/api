@@ -68,7 +68,7 @@ func (m *settlementSvcImpl) ListSettlements(ctx context.Context, req *ListSettle
 		}
 	}
 	if req.EndDate != nil {
-		t, err := grpcutil.ParseDateString(*req.EndDate)
+		t, err := grpcutil.ParseEndDateString(*req.EndDate)
 		if err == nil {
 			pbReq.EndDate = timestamppb.New(t)
 		}

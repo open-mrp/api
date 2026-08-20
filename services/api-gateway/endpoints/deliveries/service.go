@@ -69,7 +69,7 @@ func (m *deliverySvcImpl) ListDeliveries(ctx context.Context, req *ListDeliverie
 		}
 	}
 	if req.EndDate != nil {
-		t, err := grpcutil.ParseDateString(*req.EndDate)
+		t, err := grpcutil.ParseEndDateString(*req.EndDate)
 		if err == nil {
 			pbReq.EndDate = timestamppb.New(t)
 		}

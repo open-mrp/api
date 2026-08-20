@@ -74,7 +74,7 @@ func (m *receivingOrderSvcImpl) ListReceivingOrders(ctx context.Context, req *Li
 		}
 	}
 	if req.EndDate != nil {
-		t, err := grpcutil.ParseDateString(*req.EndDate)
+		t, err := grpcutil.ParseEndDateString(*req.EndDate)
 		if err == nil {
 			pbReq.EndDate = timestamppb.New(t)
 		}
@@ -389,21 +389,12 @@ func receivingOrderLineFromProto(info *pb.ReceivingOrderLineInfo) apiresource.Re
 // are left nil and are never fabricated.
 func buildOrderLineForReceivingLine(info *pb.ReceivingOrderLineInfo) *apiresource.SalesOrderLine {
 	ts := grpcutil.TimestampToTime(info.CreatedAt)
-	sku := "—"
-	if info.OrderLineItemSku != nil && *info.OrderLineItemSku != "" {
-		sku = *info.OrderLineItemSku
-	}
-	var productDesc *string
-	if info.OrderLineItemDescription != nil && *info.OrderLineItemDescription != "" {
-		productDesc = info.OrderLineItemDescription
-	}
-
 	line := &apiresource.SalesOrderLine{
 		ID:                 info.OrderLineId,
 		Object:             constants.ObjectTypeSalesOrderLine,
 		LineItemNumber:     1,
-		ProductSKU:         sku,
-		ProductDescription: productDesc,
+		ProductSKU:         info.GetOrderLineItemSku(),
+		ProductDescription: info.OrderLineItemDescription,
 		CreatedAt:          ts,
 		UpdatedAt:          ts,
 	}

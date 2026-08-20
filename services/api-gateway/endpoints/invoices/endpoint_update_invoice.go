@@ -17,8 +17,8 @@ import (
 type UpdateInvoiceRequest struct {
 	// Invoice ID.
 	InvoiceID string `path:"id" validate:"required"`
-	// Note to attach to the invoice.
-	Note field.Optional[string] `json:"note,omitzero"`
+	// Free-text note attached to the invoice; send `null` to clear it.
+	Note field.Clearable[string] `json:"note,omitzero"`
 	// Records whether the invoice has been sent to the customer.
 	//
 	// Emailing the invoice through Email Record sets this on its own, so it only needs to be set here when the invoice was delivered outside the platform.
@@ -36,7 +36,7 @@ type UpdateInvoiceRequest struct {
 var sampleUpdateInvoiceNote = "Payment received via wire transfer"
 var sampleUpdateInvoiceHasBeenSent = true
 var sampleUpdateInvoiceRequest = &UpdateInvoiceRequest{
-	Note:        field.Some(sampleUpdateInvoiceNote),
+	Note:        field.Set(sampleUpdateInvoiceNote),
 	HasBeenSent: field.Some(sampleUpdateInvoiceHasBeenSent),
 }
 
@@ -69,7 +69,18 @@ func (e *UpdateInvoiceEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateIn
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeInvoice,
-			Fields:     []string{"customer", "order", "shipment", "billing_address", "payment_term", "lines", "allocations"},
+			Fields: []string{"customer",
+				"order",
+				"shipment",
+				"related.sales_order",
+				"related.shipment",
+				"billing_address",
+				"payment_term",
+				"lines",
+				"lines.order_line",
+				"lines.order_line.product",
+				"allocations",
+			},
 		}),
 	})
 }

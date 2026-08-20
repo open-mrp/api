@@ -29,6 +29,8 @@ const shippoRequestTimeout = 15 * time.Second
 type clientImpl struct {
 	apiKey     string
 	httpClient *http.Client
+	// Points every call at the Shippo API; tests redirect it at a stub server.
+	baseURL string
 
 	// Rate shopping resolves a published-rate account per carrier off the same list. The client is per-request, so one fetch serves them all.
 	carrierAccountsOnce sync.Once
@@ -46,6 +48,7 @@ func (f *ClientFactory) Build(apiKey string) domain.ShippoClient {
 	return &clientImpl{
 		apiKey:     apiKey,
 		httpClient: &http.Client{Timeout: shippoRequestTimeout},
+		baseURL:    shippoBaseURL,
 	}
 }
 
@@ -63,7 +66,12 @@ func (c *clientImpl) doRequest(ctx context.Context, method, path string, body an
 		reqBody = bytes.NewReader(b)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, method, shippoBaseURL+path, reqBody)
+	base := c.baseURL
+	if base == "" {
+		base = shippoBaseURL
+	}
+
+	req, err := http.NewRequestWithContext(ctx, method, base+path, reqBody)
 	if err != nil {
 		return nil, apierror.NewInternalError(err, "Failed to create Shippo HTTP request.")
 	}
@@ -266,18 +274,21 @@ func (c *clientImpl) DeactivateCarrierAccount(ctx context.Context, objectID stri
 	return nil
 }
 
+// Lists the service levels a carrier account offers, which Shippo exposes only as the rates on a
+// shipment — so this rates a throwaway one and keeps the service levels off it.
 func (c *clientImpl) GetCarrierServiceLevels(ctx context.Context, objectID string) ([]domain.ShippoServiceLevel, *apierror.APIError) {
 	ctx, span := shippoTracer.Start(ctx, "shippo.get_carrier_service_levels")
 	defer span.End()
 
+	// Fabricated origin, destination and parcel: nothing is bought, only the rate list is read.
 	shipmentReq := CreateShipmentRequest{
-		AddressFrom: TestAddress{
+		AddressFrom: ShipmentAddress{
 			Name: "Test", Street1: "215 Clayton St", City: "San Francisco", State: "CA", Zip: "94117", Country: "US",
 		},
-		AddressTo: TestAddress{
+		AddressTo: ShipmentAddress{
 			Name: "Test", Street1: "185 Berry St", City: "San Francisco", State: "CA", Zip: "94107", Country: "US",
 		},
-		Parcels: []TestParcel{{
+		Parcels: []Parcel{{
 			Weight: "5", Length: "10", Width: "10", Height: "10", MassUnit: "lb", DistanceUnit: "in",
 		}},
 		CarrierAccounts: []string{objectID},
@@ -470,9 +481,9 @@ func applyShippingMarkup(rate float64) float64 {
 }
 
 func (c *clientImpl) createShipmentForRates(ctx context.Context, carrierAccountObjectID string, from, to domain.ShippingAddress, parcels []domain.Parcel, billing *domain.ShippingBilling) (*ShipmentResponse, *apierror.APIError) {
-	shipmentParcels := make([]TestParcel, len(parcels))
+	shipmentParcels := make([]Parcel, len(parcels))
 	for i, p := range parcels {
-		shipmentParcels[i] = TestParcel{
+		shipmentParcels[i] = Parcel{
 			Weight:       normalizeShippoDecimal(p.Weight),
 			Length:       normalizeShippoDecimal(p.Length),
 			Width:        normalizeShippoDecimal(p.Width),
@@ -483,7 +494,7 @@ func (c *clientImpl) createShipmentForRates(ctx context.Context, carrierAccountO
 	}
 
 	shipmentReq := CreateShipmentRequest{
-		AddressFrom: TestAddress{
+		AddressFrom: ShipmentAddress{
 			Name:    from.Name,
 			Street1: from.Street1,
 			City:    from.City,
@@ -491,7 +502,7 @@ func (c *clientImpl) createShipmentForRates(ctx context.Context, carrierAccountO
 			Zip:     from.Zip,
 			Country: from.Country,
 		},
-		AddressTo: TestAddress{
+		AddressTo: ShipmentAddress{
 			Name:    to.Name,
 			Street1: to.Street1,
 			City:    to.City,
@@ -719,6 +730,229 @@ func normalizeShippoDecimal(s string) string {
 	if strings.Contains(out, ".") {
 		out = strings.TrimRight(out, "0")
 		out = strings.TrimRight(out, ".")
+	}
+	return out
+}
+
+// Selects the format Shippo renders purchased labels in, matching what the label viewer expects.
+const labelFileType = "PNG"
+
+// Buys carrier labels for a shipment's cases in one instant-label transaction, then reads the
+// per-parcel transactions off the purchased rate for each case's tracking number and label URL.
+func (c *clientImpl) CreateTransactionInstantLabel(ctx context.Context, params domain.CreateLabelParams) (*domain.LabelResult, *apierror.APIError) {
+	ctx, span := shippoTracer.Start(ctx, "shippo.create_transaction_instant_label")
+	defer span.End()
+
+	if len(params.Parcels) == 0 {
+		return nil, tracing.Trace(span, apierror.NewValidationError("SHIPPO: A label purchase requires at least one parcel."))
+	}
+
+	parcels := make([]Parcel, len(params.Parcels))
+	for i, parcel := range params.Parcels {
+		parcels[i] = Parcel{
+			Weight:       normalizeShippoDecimal(parcel.Weight),
+			Length:       normalizeShippoDecimal(parcel.Length),
+			Width:        normalizeShippoDecimal(parcel.Width),
+			Height:       normalizeShippoDecimal(parcel.Height),
+			MassUnit:     "lb",
+			DistanceUnit: "in",
+		}
+	}
+
+	req := CreateTransactionRequest{
+		CarrierAccount:    params.CarrierAccountObjectID,
+		ServiceLevelToken: params.ServiceLevelToken,
+		LabelFileType:     labelFileType,
+		Shipment: LabelShipment{
+			AddressFrom: toLabelAddress(params.FromAddress),
+			AddressTo:   toLabelAddress(params.ToAddress),
+			Parcels:     parcels,
+		},
+	}
+	if params.Billing != nil && params.Billing.Type != "" {
+		req.Shipment.Extra = &ShipmentExtra{
+			Billing: &ShipmentBilling{
+				Type:    params.Billing.Type,
+				Account: params.Billing.Account,
+				Country: params.Billing.Country,
+				Zip:     params.Billing.Zip,
+			},
+		}
+	}
+
+	resp, apiErr := c.doRequest(ctx, http.MethodPost, "/transactions", req)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
+		return nil, tracing.Trace(span, c.parseErrorResponse(resp))
+	}
+
+	var transaction TransactionResponse
+	if err := json.NewDecoder(resp.Body).Decode(&transaction); err != nil {
+		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to parse Shippo transaction response."))
+	}
+
+	rateObjectID, rateAmount := parseTransactionRate(transaction.Rate)
+	if transaction.Status != "SUCCESS" || rateObjectID == "" {
+		return nil, tracing.Trace(span, apierror.NewValidationError(
+			fmt.Sprintf("SHIPPO: Transaction status is %s - %s", transaction.Status, transactionMessages(transaction.Messages))))
+	}
+
+	// The instant-label call returns one transaction; the per-parcel labels hang off the rate it bought.
+	parcelTransactions, apiErr := c.listTransactionsByRate(ctx, rateObjectID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if len(parcelTransactions) < len(params.Parcels) {
+		return nil, tracing.Trace(span, apierror.NewValidationError("SHIPPO: Parcel transactions not found."))
+	}
+
+	masterTracking := transaction.TrackingNumber
+	packages := make([]domain.LabelPackage, len(params.Parcels))
+	for i := range params.Parcels {
+		// Shippo lists a rate's transactions newest-first, so the parcels come back reversed.
+		pt := parcelTransactions[len(parcelTransactions)-1-i]
+		if pt.ObjectID == "" || pt.TrackingNumber == "" || pt.LabelURL == "" {
+			return nil, tracing.Trace(span, apierror.NewValidationError("SHIPPO: Parcel transaction not found."))
+		}
+		if masterTracking == "" {
+			masterTracking = pt.TrackingNumber
+		}
+		packages[i] = domain.LabelPackage{
+			TrackingNumber:      pt.TrackingNumber,
+			LabelURL:            pt.LabelURL,
+			ShippoTransactionID: pt.ObjectID,
+		}
+	}
+
+	// The negotiated rate is what the account is actually billed, so it is passed through unmarked-up.
+	amount, err := parseFloat(rateAmount)
+	if err != nil {
+		amount = 0
+	}
+
+	return &domain.LabelResult{
+		MasterTrackingNumber: masterTracking,
+		NegotiatedRate:       amount,
+		Packages:             packages,
+	}, nil
+}
+
+// Lists the transactions Shippo created for one purchased rate — one per parcel.
+func (c *clientImpl) listTransactionsByRate(ctx context.Context, rateObjectID string) ([]TransactionResponse, *apierror.APIError) {
+	resp, apiErr := c.doRequest(ctx, http.MethodGet, "/transactions?rate="+url.QueryEscape(rateObjectID), nil)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, c.parseErrorResponse(resp)
+	}
+
+	var listResp TransactionListResponse
+	if err := json.NewDecoder(resp.Body).Decode(&listResp); err != nil {
+		return nil, apierror.NewInternalError(err, "Failed to parse Shippo transaction list response.")
+	}
+	return listResp.Results, nil
+}
+
+// Refunds a purchased Shippo label transaction. An already-refunded transaction is treated as
+// success so a retried void is not blocked by work a previous attempt completed.
+func (c *clientImpl) RefundTransaction(ctx context.Context, transactionID string) *apierror.APIError {
+	ctx, span := shippoTracer.Start(ctx, "shippo.refund_transaction")
+	defer span.End()
+
+	resp, apiErr := c.doRequest(ctx, http.MethodPost, "/refunds", CreateRefundRequest{Transaction: transactionID})
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusBadRequest {
+		b, _ := io.ReadAll(resp.Body)
+		if isAlreadyRefunded(parseAPIErrorMessage(b)) {
+			return nil
+		}
+		return tracing.Trace(span, apierror.NewValidationError("SHIPPO: "+parseAPIErrorMessage(b)))
+	}
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
+		return tracing.Trace(span, c.parseErrorResponse(resp))
+	}
+
+	var refund RefundResponse
+	if err := json.NewDecoder(resp.Body).Decode(&refund); err != nil {
+		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to parse Shippo refund response."))
+	}
+	if refund.Status == "ERROR" {
+		return tracing.Trace(span, apierror.NewValidationError("SHIPPO: Refund failed for transaction "+transactionID+"."))
+	}
+	return nil
+}
+
+// Reports whether a Shippo 400 means the label was already refunded or voided rather than a real failure.
+func isAlreadyRefunded(message string) bool {
+	m := strings.ToLower(message)
+	return strings.Contains(m, "already") || strings.Contains(m, "refunded") || strings.Contains(m, "voided")
+}
+
+// Reads a transaction's rate, which Shippo returns either as the rate's object id or as the rate object.
+func parseTransactionRate(raw json.RawMessage) (objectID, amount string) {
+	if len(raw) == 0 {
+		return "", ""
+	}
+	var rate TransactionRate
+	if err := json.Unmarshal(raw, &rate); err == nil && rate.ObjectID != "" {
+		return rate.ObjectID, rate.Amount
+	}
+	var id string
+	if err := json.Unmarshal(raw, &id); err == nil {
+		return id, ""
+	}
+	return "", ""
+}
+
+// Joins a transaction's messages into one explanation for the error surfaced to the user.
+func transactionMessages(messages []TransactionMessage) string {
+	if len(messages) == 0 {
+		return "Unknown error"
+	}
+	texts := make([]string, 0, len(messages))
+	for _, m := range messages {
+		if m.Text != "" {
+			texts = append(texts, m.Text)
+		}
+	}
+	if len(texts) == 0 {
+		return "Unknown error"
+	}
+	return strings.Join(texts, ", ")
+}
+
+// Maps a domain address onto the fuller address a printed label needs.
+func toLabelAddress(a domain.ShippingAddress) LabelAddress {
+	out := LabelAddress{
+		Name:    a.Name,
+		Street1: a.Street1,
+		City:    a.City,
+		State:   a.State,
+		Zip:     a.Zip,
+		Country: a.Country,
+	}
+	if a.Company != nil {
+		out.Company = *a.Company
+	}
+	if a.Street2 != nil {
+		out.Street2 = *a.Street2
+	}
+	if a.Phone != nil {
+		out.Phone = *a.Phone
+	}
+	if a.Email != nil {
+		out.Email = *a.Email
 	}
 	return out
 }

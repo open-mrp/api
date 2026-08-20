@@ -35,6 +35,8 @@ type BillingPublisher interface {
 	PublishSyncSeats(ctx context.Context, accountID string) *apierror.APIError
 	// PublishReportSeatChange writes a report-seat-change command to the outbox for usage metering with the billing provider.
 	PublishReportSeatChange(ctx context.Context, accountID string) *apierror.APIError
+	// Writes a report-invoice-created command to the outbox for usage metering with the billing provider.
+	PublishReportInvoiceCreated(ctx context.Context, accountID, invoiceID string) *apierror.APIError
 }
 
 // ProductionScheduleEnqueuer publishes a generate command. The cadence tick uses it so

@@ -24,252 +24,16 @@ func NewShipmentRepo(queries *sqlc.Queries) domain.ShipmentRepo {
 	return &shipmentRepoImpl{queries: queries}
 }
 
-func shipmentCreatedAt(s *domain.ShipmentSummary) time.Time { return s.CreatedAt }
-func shipmentID(s *domain.ShipmentSummary) string           { return s.ID }
+func shipmentCreatedAt(s *domain.Shipment) time.Time { return s.CreatedAt }
+func shipmentID(s *domain.Shipment) string           { return s.ID }
 
-func mapShipmentForwardRow(row sqlc.ListShipmentsForwardRow) *domain.ShipmentSummary {
-	s := &domain.ShipmentSummary{
-		ID:                  row.ID,
-		Number:              row.Number,
-		StatusCode:          row.StatusCode,
-		StatusName:          row.StatusName,
-		SalesOrderID:        row.SalesOrderID,
-		SalesOrderNumber:    row.SalesOrderNumber,
-		SalesOrderCreatedAt: row.SalesOrderCreatedAt,
-		SalesOrderUpdatedAt: row.SalesOrderUpdatedAt,
-		CustomerID:          row.CustomerID,
-		CustomerName:        row.CustomerName,
-		CustomerNumber:      row.CustomerNumber,
-		CustomerCreatedAt:   row.CustomerCreatedAt,
-		CustomerUpdatedAt:   row.CustomerUpdatedAt,
-		CarrierID:           row.CarrierID,
-		CarrierName:         row.CarrierName,
-		CreatedAt:           row.CreatedAt,
-		UpdatedAt:           row.UpdatedAt,
-	}
-	if row.BillOfLading.Valid {
-		s.BillOfLading = &row.BillOfLading.String
-	}
-	if row.Note.Valid {
-		s.Note = &row.Note.String
-	}
-	if row.MasterTrackingNumber.Valid {
-		s.MasterTrackingNumber = &row.MasterTrackingNumber.String
-	}
-	if row.ShippedAt.Valid {
-		s.ShippedAt = &row.ShippedAt.Time
-	}
-	b := row.CarrierIsPortalEnabled
-	s.CarrierIsPortalEnabled = &b
-	if row.CarrierOptionID.Valid {
-		s.ServiceLevelID = &row.CarrierOptionID.String
-	}
-	if row.CarrierOptionName.Valid {
-		s.ServiceLevelName = &row.CarrierOptionName.String
-	}
-	s.ServiceLevelIsPortalEnabled = nullBoolPtr(row.ServiceLevelIsPortalEnabled)
-	s.ServiceLevelToken = nullStringToPtr(row.ServiceLevelToken)
-	s.CustomerStatusCode = nullStringToPtr(row.CustomerStatusCode)
-	s.CustomerCommissionPolicy = nullStringToPtr(row.CustomerCommissionPolicy)
-	return s
+// Converts a list row to the detail row so both share one mapper — legal only while the three
+// shipment queries select the same projection in the same order, and a compile error if they drift.
+func shipmentListRow(row sqlc.ListShipmentsForwardRow) sqlc.GetShipmentRow {
+	return sqlc.GetShipmentRow(row)
 }
 
-func mapShipmentBackwardRow(row sqlc.ListShipmentsBackwardRow) *domain.ShipmentSummary {
-	s := &domain.ShipmentSummary{
-		ID:                  row.ID,
-		Number:              row.Number,
-		StatusCode:          row.StatusCode,
-		StatusName:          row.StatusName,
-		SalesOrderID:        row.SalesOrderID,
-		SalesOrderNumber:    row.SalesOrderNumber,
-		SalesOrderCreatedAt: row.SalesOrderCreatedAt,
-		SalesOrderUpdatedAt: row.SalesOrderUpdatedAt,
-		CustomerID:          row.CustomerID,
-		CustomerName:        row.CustomerName,
-		CustomerNumber:      row.CustomerNumber,
-		CustomerCreatedAt:   row.CustomerCreatedAt,
-		CustomerUpdatedAt:   row.CustomerUpdatedAt,
-		CarrierID:           row.CarrierID,
-		CarrierName:         row.CarrierName,
-		CreatedAt:           row.CreatedAt,
-		UpdatedAt:           row.UpdatedAt,
-	}
-	if row.BillOfLading.Valid {
-		s.BillOfLading = &row.BillOfLading.String
-	}
-	if row.Note.Valid {
-		s.Note = &row.Note.String
-	}
-	if row.MasterTrackingNumber.Valid {
-		s.MasterTrackingNumber = &row.MasterTrackingNumber.String
-	}
-	if row.ShippedAt.Valid {
-		s.ShippedAt = &row.ShippedAt.Time
-	}
-	b2 := row.CarrierIsPortalEnabled
-	s.CarrierIsPortalEnabled = &b2
-	if row.CarrierOptionID.Valid {
-		s.ServiceLevelID = &row.CarrierOptionID.String
-	}
-	if row.CarrierOptionName.Valid {
-		s.ServiceLevelName = &row.CarrierOptionName.String
-	}
-	s.ServiceLevelIsPortalEnabled = nullBoolPtr(row.ServiceLevelIsPortalEnabled)
-	s.ServiceLevelToken = nullStringToPtr(row.ServiceLevelToken)
-	s.CustomerStatusCode = nullStringToPtr(row.CustomerStatusCode)
-	s.CustomerCommissionPolicy = nullStringToPtr(row.CustomerCommissionPolicy)
-	return s
-}
-
-func (r *shipmentRepoImpl) List(ctx context.Context, params domain.ListShipmentsParams) (*domain.ListShipmentsResult, *apierror.APIError) {
-	ctx, span := shipmentRepoTracer.Start(ctx, "repository.shipment.list")
-	defer span.End()
-
-	searchQuery := db.NullStringLikePtr(params.Query)
-	statusFilter := toNullString(params.Status)
-	startDate := parseDateFilter(params.StartDate)
-	endDate := parseDateFilter(params.EndDate)
-
-	itemIDs := toNullStringSlice(params.ItemIDs)
-	if itemIDs == nil {
-		itemIDs = []gosql.NullString{}
-	}
-	customerIDs := params.CustomerIDs
-	if customerIDs == nil {
-		customerIDs = []string{}
-	}
-	productLineIDs := toNullStringSlice(params.ProductLineIDs)
-	if productLineIDs == nil {
-		productLineIDs = []gosql.NullString{}
-	}
-	customerGroupIDs := toNullStringSlice(params.CustomerGroupIDs)
-	if customerGroupIDs == nil {
-		customerGroupIDs = []gosql.NullString{}
-	}
-	salesRepIDs := toNullStringSlice(params.SalesRepIDs)
-	if salesRepIDs == nil {
-		salesRepIDs = []gosql.NullString{}
-	}
-
-	includeItemFilter := len(params.ItemIDs) > 0
-	includeCustomerFilter := len(params.CustomerIDs) > 0
-	includeProductLineFilter := len(params.ProductLineIDs) > 0
-	includeCustomerGroupFilter := len(params.CustomerGroupIDs) > 0
-	includeSalesRepFilter := len(params.SalesRepIDs) > 0
-
-	var cursorDir *pagination.Direction
-
-	if params.Cursor != nil {
-		cur, err := pagination.DecodeStringCursor(*params.Cursor)
-		if err != nil {
-			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
-		}
-		cursorDir = &cur.Direction
-
-		if cur.Direction == pagination.DirectionBackward {
-			rows, err := r.queries.ListShipmentsBackward(ctx, sqlc.ListShipmentsBackwardParams{
-				AccountID:                  params.AccountID,
-				StatusCode:                 statusFilter,
-				SearchQuery:                searchQuery,
-				IncludeItemFilter:          includeItemFilter,
-				ItemIds:                    itemIDs,
-				IncludeCustomerFilter:      includeCustomerFilter,
-				CustomerIds:                customerIDs,
-				IncludeProductLineFilter:   includeProductLineFilter,
-				ProductLineIds:             productLineIDs,
-				IncludeCustomerGroupFilter: includeCustomerGroupFilter,
-				CustomerGroupIds:           customerGroupIDs,
-				IncludeSalesRepFilter:      includeSalesRepFilter,
-				SalesRepIds:                salesRepIDs,
-				StartDate:                  startDate,
-				EndDate:                    endDate,
-				CursorCreatedAt:            cur.OccurredAt,
-				CursorID:                   cur.ID,
-				Limit:                      params.Limit + 1,
-			})
-			if apiErr := db.MapSQLError(err); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			shipments := make([]*domain.ShipmentSummary, len(rows))
-			for i, row := range rows {
-				shipments[i] = mapShipmentBackwardRow(row)
-			}
-			result, pageInfo := pagination.BuildPageString(shipments, params.Limit, cursorDir, shipmentCreatedAt, shipmentID)
-			return &domain.ListShipmentsResult{Shipments: result, PageInfo: pageInfo}, nil
-		}
-
-		rows, err := r.queries.ListShipmentsForward(ctx, sqlc.ListShipmentsForwardParams{
-			AccountID:                  params.AccountID,
-			StatusCode:                 statusFilter,
-			SearchQuery:                searchQuery,
-			IncludeItemFilter:          includeItemFilter,
-			ItemIds:                    itemIDs,
-			IncludeCustomerFilter:      includeCustomerFilter,
-			CustomerIds:                customerIDs,
-			IncludeProductLineFilter:   includeProductLineFilter,
-			ProductLineIds:             productLineIDs,
-			IncludeCustomerGroupFilter: includeCustomerGroupFilter,
-			CustomerGroupIds:           customerGroupIDs,
-			IncludeSalesRepFilter:      includeSalesRepFilter,
-			SalesRepIds:                salesRepIDs,
-			StartDate:                  startDate,
-			EndDate:                    endDate,
-			CursorCreatedAt:            gosql.NullTime{Time: cur.OccurredAt, Valid: true},
-			CursorID:                   gosql.NullString{String: cur.ID, Valid: true},
-			Limit:                      params.Limit + 1,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		shipments := make([]*domain.ShipmentSummary, len(rows))
-		for i, row := range rows {
-			shipments[i] = mapShipmentForwardRow(row)
-		}
-		result, pageInfo := pagination.BuildPageString(shipments, params.Limit, cursorDir, shipmentCreatedAt, shipmentID)
-		return &domain.ListShipmentsResult{Shipments: result, PageInfo: pageInfo}, nil
-	}
-
-	rows, err := r.queries.ListShipmentsForward(ctx, sqlc.ListShipmentsForwardParams{
-		AccountID:                  params.AccountID,
-		StatusCode:                 statusFilter,
-		SearchQuery:                searchQuery,
-		IncludeItemFilter:          includeItemFilter,
-		ItemIds:                    itemIDs,
-		IncludeCustomerFilter:      includeCustomerFilter,
-		CustomerIds:                customerIDs,
-		IncludeProductLineFilter:   includeProductLineFilter,
-		ProductLineIds:             productLineIDs,
-		IncludeCustomerGroupFilter: includeCustomerGroupFilter,
-		CustomerGroupIds:           customerGroupIDs,
-		IncludeSalesRepFilter:      includeSalesRepFilter,
-		SalesRepIds:                salesRepIDs,
-		StartDate:                  startDate,
-		EndDate:                    endDate,
-		Limit:                      params.Limit + 1,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	shipments := make([]*domain.ShipmentSummary, len(rows))
-	for i, row := range rows {
-		shipments[i] = mapShipmentForwardRow(row)
-	}
-	result, pageInfo := pagination.BuildPageString(shipments, params.Limit, cursorDir, shipmentCreatedAt, shipmentID)
-	return &domain.ListShipmentsResult{Shipments: result, PageInfo: pageInfo}, nil
-}
-
-func (r *shipmentRepoImpl) Get(ctx context.Context, params domain.GetShipmentParams) (*domain.Shipment, *apierror.APIError) {
-	ctx, span := shipmentRepoTracer.Start(ctx, "repository.shipment.get")
-	defer span.End()
-
-	row, err := r.queries.GetShipment(ctx, sqlc.GetShipmentParams{
-		ID:        params.ShipmentID,
-		AccountID: params.AccountID,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
+func mapShipmentRow(row sqlc.GetShipmentRow) *domain.Shipment {
 	shipment := &domain.Shipment{
 		ID:                row.ID,
 		Number:            row.Number,
@@ -283,6 +47,9 @@ func (r *shipmentRepoImpl) Get(ctx context.Context, params domain.GetShipmentPar
 		CarrierID:         row.CarrierID,
 		CarrierName:       row.CarrierName,
 		ShippingAddressID: row.ShippingAddressID,
+		PriorityCode:      row.PriorityCode,
+		CaseCount:         row.CaseCount,
+		IsReadyToShip:     row.IsReadyToShip.Valid && row.IsReadyToShip.Bool,
 		AccountID:         row.AccountID,
 		CreatedAt:         row.CreatedAt,
 		UpdatedAt:         row.UpdatedAt,
@@ -380,7 +147,159 @@ func (r *shipmentRepoImpl) Get(ctx context.Context, params domain.GetShipmentPar
 	shipment.PickCreatedAt = nullTimePtr(row.PickCreatedAt)
 	shipment.PickUpdatedAt = nullTimePtr(row.PickUpdatedAt)
 
-	return shipment, nil
+	return shipment
+}
+
+func (r *shipmentRepoImpl) List(ctx context.Context, params domain.ListShipmentsParams) (*domain.ListShipmentsResult, *apierror.APIError) {
+	ctx, span := shipmentRepoTracer.Start(ctx, "repository.shipment.list")
+	defer span.End()
+
+	searchQuery := db.NullStringLikePtr(params.Query)
+	statusFilter := toNullString(params.Status)
+	startDate := parseDateFilter(params.StartDate)
+	endDate := parseEndDateFilter(params.EndDate)
+
+	itemIDs := toNullStringSlice(params.ItemIDs)
+	if itemIDs == nil {
+		itemIDs = []gosql.NullString{}
+	}
+	customerIDs := params.CustomerIDs
+	if customerIDs == nil {
+		customerIDs = []string{}
+	}
+	productLineIDs := toNullStringSlice(params.ProductLineIDs)
+	if productLineIDs == nil {
+		productLineIDs = []gosql.NullString{}
+	}
+	customerGroupIDs := toNullStringSlice(params.CustomerGroupIDs)
+	if customerGroupIDs == nil {
+		customerGroupIDs = []gosql.NullString{}
+	}
+	salesRepIDs := toNullStringSlice(params.SalesRepIDs)
+	if salesRepIDs == nil {
+		salesRepIDs = []gosql.NullString{}
+	}
+
+	includeItemFilter := len(params.ItemIDs) > 0
+	includeCustomerFilter := len(params.CustomerIDs) > 0
+	includeProductLineFilter := len(params.ProductLineIDs) > 0
+	includeCustomerGroupFilter := len(params.CustomerGroupIDs) > 0
+	includeSalesRepFilter := len(params.SalesRepIDs) > 0
+
+	var cursorDir *pagination.Direction
+
+	if params.Cursor != nil {
+		cur, err := pagination.DecodeStringCursor(*params.Cursor)
+		if err != nil {
+			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
+		}
+		cursorDir = &cur.Direction
+
+		if cur.Direction == pagination.DirectionBackward {
+			rows, err := r.queries.ListShipmentsBackward(ctx, sqlc.ListShipmentsBackwardParams{
+				AccountID:                  params.AccountID,
+				StatusCode:                 statusFilter,
+				SearchQuery:                searchQuery,
+				IncludeItemFilter:          includeItemFilter,
+				ItemIds:                    itemIDs,
+				IncludeCustomerFilter:      includeCustomerFilter,
+				CustomerIds:                customerIDs,
+				IncludeProductLineFilter:   includeProductLineFilter,
+				ProductLineIds:             productLineIDs,
+				IncludeCustomerGroupFilter: includeCustomerGroupFilter,
+				CustomerGroupIds:           customerGroupIDs,
+				IncludeSalesRepFilter:      includeSalesRepFilter,
+				SalesRepIds:                salesRepIDs,
+				StartDate:                  startDate,
+				EndDate:                    endDate,
+				CursorCreatedAt:            cur.OccurredAt,
+				CursorID:                   cur.ID,
+				Limit:                      params.Limit + 1,
+			})
+			if apiErr := db.MapSQLError(err); apiErr != nil {
+				return nil, tracing.Trace(span, apiErr)
+			}
+			shipments := make([]*domain.Shipment, len(rows))
+			for i, row := range rows {
+				shipments[i] = mapShipmentRow(sqlc.GetShipmentRow(row))
+			}
+			result, pageInfo := pagination.BuildPageString(shipments, params.Limit, cursorDir, shipmentCreatedAt, shipmentID)
+			return &domain.ListShipmentsResult{Shipments: result, PageInfo: pageInfo}, nil
+		}
+
+		rows, err := r.queries.ListShipmentsForward(ctx, sqlc.ListShipmentsForwardParams{
+			AccountID:                  params.AccountID,
+			StatusCode:                 statusFilter,
+			SearchQuery:                searchQuery,
+			IncludeItemFilter:          includeItemFilter,
+			ItemIds:                    itemIDs,
+			IncludeCustomerFilter:      includeCustomerFilter,
+			CustomerIds:                customerIDs,
+			IncludeProductLineFilter:   includeProductLineFilter,
+			ProductLineIds:             productLineIDs,
+			IncludeCustomerGroupFilter: includeCustomerGroupFilter,
+			CustomerGroupIds:           customerGroupIDs,
+			IncludeSalesRepFilter:      includeSalesRepFilter,
+			SalesRepIds:                salesRepIDs,
+			StartDate:                  startDate,
+			EndDate:                    endDate,
+			CursorCreatedAt:            gosql.NullTime{Time: cur.OccurredAt, Valid: true},
+			CursorID:                   gosql.NullString{String: cur.ID, Valid: true},
+			Limit:                      params.Limit + 1,
+		})
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		shipments := make([]*domain.Shipment, len(rows))
+		for i, row := range rows {
+			shipments[i] = mapShipmentRow(shipmentListRow(row))
+		}
+		result, pageInfo := pagination.BuildPageString(shipments, params.Limit, cursorDir, shipmentCreatedAt, shipmentID)
+		return &domain.ListShipmentsResult{Shipments: result, PageInfo: pageInfo}, nil
+	}
+
+	rows, err := r.queries.ListShipmentsForward(ctx, sqlc.ListShipmentsForwardParams{
+		AccountID:                  params.AccountID,
+		StatusCode:                 statusFilter,
+		SearchQuery:                searchQuery,
+		IncludeItemFilter:          includeItemFilter,
+		ItemIds:                    itemIDs,
+		IncludeCustomerFilter:      includeCustomerFilter,
+		CustomerIds:                customerIDs,
+		IncludeProductLineFilter:   includeProductLineFilter,
+		ProductLineIds:             productLineIDs,
+		IncludeCustomerGroupFilter: includeCustomerGroupFilter,
+		CustomerGroupIds:           customerGroupIDs,
+		IncludeSalesRepFilter:      includeSalesRepFilter,
+		SalesRepIds:                salesRepIDs,
+		StartDate:                  startDate,
+		EndDate:                    endDate,
+		Limit:                      params.Limit + 1,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	shipments := make([]*domain.Shipment, len(rows))
+	for i, row := range rows {
+		shipments[i] = mapShipmentRow(shipmentListRow(row))
+	}
+	result, pageInfo := pagination.BuildPageString(shipments, params.Limit, cursorDir, shipmentCreatedAt, shipmentID)
+	return &domain.ListShipmentsResult{Shipments: result, PageInfo: pageInfo}, nil
+}
+
+func (r *shipmentRepoImpl) Get(ctx context.Context, params domain.GetShipmentParams) (*domain.Shipment, *apierror.APIError) {
+	ctx, span := shipmentRepoTracer.Start(ctx, "repository.shipment.get")
+	defer span.End()
+
+	row, err := r.queries.GetShipment(ctx, sqlc.GetShipmentParams{
+		ID:        params.ShipmentID,
+		AccountID: params.AccountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	return mapShipmentRow(row), nil
 }
 
 func (r *shipmentRepoImpl) Update(ctx context.Context, params domain.UpdateShipmentParams) (*domain.Shipment, *apierror.APIError) {
@@ -392,7 +311,7 @@ func (r *shipmentRepoImpl) Update(ctx context.Context, params domain.UpdateShipm
 		Number:               toNullString(params.Number),
 		MasterTrackingNumber: toNullString(params.MasterTrackingNumber),
 		CarrierID:            toNullString(params.CarrierID),
-		CarrierOptionID:      toNullString(params.ServiceLevelID),
+		CarrierOptionID:      toNullString(params.ServiceLevelID.ValuePtr()),
 		ID:                   params.ShipmentID,
 		AccountID:            params.AccountID,
 	})
@@ -406,6 +325,23 @@ func (r *shipmentRepoImpl) Update(ctx context.Context, params domain.UpdateShipm
 	})
 }
 
+// Re-points every shipment on an order to the given ship-to address. Split from the carrier sync because
+// an order with no carrier still owes its shipments the address change (legacy updateShipToByOrder).
+func (r *shipmentRepoImpl) SyncShipToForOrder(ctx context.Context, accountID, salesOrderID, shippingAddressID string) *apierror.APIError {
+	ctx, span := shipmentRepoTracer.Start(ctx, "repository.shipment.sync_ship_to_for_order")
+	defer span.End()
+
+	err := r.queries.SyncShipmentShipToForOrder(ctx, sqlc.SyncShipmentShipToForOrderParams{
+		ShippingAddressID: shippingAddressID,
+		SalesOrderID:      salesOrderID,
+		AccountID:         accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return nil
+}
+
 // SyncShippingForOrder re-points every shipment on an order to the given carrier, service level, and ship-to address. Used by the out-of-band shipping-updated consumer to keep shipments in sync with the order.
 func (r *shipmentRepoImpl) SyncShippingForOrder(ctx context.Context, params domain.SyncShipmentShippingParams) *apierror.APIError {
 	ctx, span := shipmentRepoTracer.Start(ctx, "repository.shipment.sync_shipping_for_order")
@@ -417,6 +353,17 @@ func (r *shipmentRepoImpl) SyncShippingForOrder(ctx context.Context, params doma
 		ShippingAddressID: params.ShippingAddressID,
 		SalesOrderID:      params.SalesOrderID,
 		AccountID:         params.AccountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	// The cases carry their own carrier, and their tracking links are built from it, so they move
+	// with the shipments rather than being left pointing at the previous carrier.
+	err = r.queries.RepointShippingCasesToCarrierByOrder(ctx, sqlc.RepointShippingCasesToCarrierByOrderParams{
+		CarrierID:    params.CarrierID,
+		SalesOrderID: params.SalesOrderID,
+		AccountID:    params.AccountID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
@@ -482,6 +429,36 @@ func (r *shipmentRepoImpl) FindInvoiceIDByShipment(ctx context.Context, accountI
 		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to find invoice by shipment."))
 	}
 	return &invoiceID, nil
+}
+
+func (r *shipmentRepoImpl) LinkInvoice(ctx context.Context, accountID, shipmentID, invoiceID string) *apierror.APIError {
+	ctx, span := shipmentRepoTracer.Start(ctx, "repository.shipment.link_invoice")
+	defer span.End()
+
+	err := r.queries.LinkShipmentInvoice(ctx, sqlc.LinkShipmentInvoiceParams{
+		InvoiceID: gosql.NullString{String: invoiceID, Valid: true},
+		ID:        shipmentID,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return nil
+}
+
+func (r *shipmentRepoImpl) SetMasterTracking(ctx context.Context, accountID, shipmentID, trackingNumber string) *apierror.APIError {
+	ctx, span := shipmentRepoTracer.Start(ctx, "repository.shipment.set_master_tracking")
+	defer span.End()
+
+	err := r.queries.SetShipmentMasterTracking(ctx, sqlc.SetShipmentMasterTrackingParams{
+		MasterTrackingNumber: gosql.NullString{String: trackingNumber, Valid: trackingNumber != ""},
+		ID:                   shipmentID,
+		AccountID:            accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return nil
 }
 
 func (r *shipmentRepoImpl) IsInAccount(ctx context.Context, accountID, shipmentID string) (bool, *apierror.APIError) {

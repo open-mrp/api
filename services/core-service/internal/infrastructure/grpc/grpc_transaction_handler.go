@@ -181,13 +181,12 @@ func (h *gRPCHandler) ListAccountTransactions(ctx context.Context, req *pb.ListA
 	}
 
 	params := domain.ListAccountTransactionsParams{
-		CustomerAccountID:    req.CustomerAccountId,
-		Cursor:               req.Cursor,
-		Limit:                req.Limit,
-		Query:                req.Query,
-		Status:               req.Status,
-		Type:                 req.Type,
-		IncludeChildAccounts: req.IncludeChildAccounts,
+		CustomerAccountID: req.CustomerAccountId,
+		Cursor:            req.Cursor,
+		Limit:             req.Limit,
+		Query:             req.Query,
+		Status:            req.Status,
+		Type:              req.Type,
 	}
 
 	result, apiErr := h.transactionSvc.ListAccountTransactions(ctx, params)

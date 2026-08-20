@@ -140,14 +140,13 @@ type DeleteTransactionParams struct {
 
 // ListAccountTransactionsParams holds parameters for listing transactions by customer account.
 type ListAccountTransactionsParams struct {
-	AccountID            string
-	CustomerAccountID    string
-	Cursor               *string
-	Limit                int32
-	Query                *string
-	Status               *string
-	Type                 *string
-	IncludeChildAccounts bool
+	AccountID         string
+	CustomerAccountID string
+	Cursor            *string
+	Limit             int32
+	Query             *string
+	Status            *string
+	Type              *string
 }
 
 // ListAccountTransactionsResult holds the result of listing customer transactions.

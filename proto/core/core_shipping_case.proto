@@ -14,6 +14,9 @@ service CoreShippingCaseService {
   // UpdateShippingCase updates an existing shipping case.
   rpc UpdateShippingCase(UpdateShippingCaseRequest) returns (UpdateShippingCaseResponse);
 
+  // AdminUpdateShippingCaseTracking corrects the tracking number of a case that has already shipped.
+  rpc AdminUpdateShippingCaseTracking(AdminUpdateShippingCaseTrackingRequest) returns (AdminUpdateShippingCaseTrackingResponse);
+
   // DeleteShippingCase deletes a shipping case.
   rpc DeleteShippingCase(DeleteShippingCaseRequest) returns (DeleteShippingCaseResponse);
 
@@ -89,6 +92,16 @@ message UpdateShippingCaseRequest {
 }
 
 message UpdateShippingCaseResponse {
+  ShippingCaseInfo shipping_case = 1;
+}
+
+// Admin update shipping case tracking
+message AdminUpdateShippingCaseTrackingRequest {
+  string id = 1;
+  optional string tracking_number = 2;
+}
+
+message AdminUpdateShippingCaseTrackingResponse {
   ShippingCaseInfo shipping_case = 1;
 }
 

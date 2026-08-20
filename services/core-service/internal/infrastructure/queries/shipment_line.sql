@@ -3,9 +3,11 @@ SELECT
     sl.id,
     sl.shipment_id,
     sl.sales_order_line_id,
+    sol.line_item_number AS order_line_item_number,
     sol.product_sku,
     sol.product_description,
     sol.item_id AS order_line_item_id,
+    sol.product_id AS order_line_product_id,
     -- Quantity
     q.id AS quantity_id,
     q.value AS quantity_value,
@@ -40,9 +42,11 @@ SELECT
     sl.id,
     sl.shipment_id,
     sl.sales_order_line_id,
+    sol.line_item_number AS order_line_item_number,
     sol.product_sku,
     sol.product_description,
     sol.item_id AS order_line_item_id,
+    sol.product_id AS order_line_product_id,
     -- Quantity
     q.id AS quantity_id,
     q.value AS quantity_value,
@@ -76,9 +80,11 @@ SELECT
     sl.id,
     sl.shipment_id,
     sl.sales_order_line_id,
+    sol.line_item_number AS order_line_item_number,
     sol.product_sku,
     sol.product_description,
     sol.item_id AS order_line_item_id,
+    sol.product_id AS order_line_product_id,
     -- Quantity
     q.id AS quantity_id,
     q.value AS quantity_value,
@@ -139,9 +145,11 @@ SELECT
     sl.id,
     sl.shipment_id,
     sl.sales_order_line_id,
+    sol.line_item_number AS order_line_item_number,
     sol.product_sku,
     sol.product_description,
     sol.item_id AS order_line_item_id,
+    sol.product_id AS order_line_product_id,
     -- Quantity
     q.id AS quantity_id,
     q.value AS quantity_value,
@@ -167,3 +175,26 @@ DELETE FROM quantity WHERE id IN (
     SELECT quantity_id FROM shipment_line
     WHERE shipment_id = sqlc.arg('shipment_id')
 );
+
+-- name: GetSalesOrderLineShipmentCapacity :one
+-- Backs the create/update guards: which order the line belongs to, and how much of it is still
+-- unshipped. exclude_shipment_line_id keeps an update from counting the row it is replacing.
+SELECT
+    sol.sales_order_id,
+    sol_q.value AS ordered_value,
+    COALESCE(shipped.total_shipped, 0) AS shipped_value
+FROM sales_order_line sol
+JOIN quantity sol_q ON sol_q.id = sol.quantity_id
+LEFT JOIN (
+    SELECT
+        sl.sales_order_line_id,
+        SUM(sl_q.value) AS total_shipped
+    FROM shipment_line sl
+    JOIN quantity sl_q ON sl_q.id = sl.quantity_id
+    WHERE (
+        sqlc.narg('exclude_shipment_line_id') IS NULL
+        OR sl.id <> sqlc.narg('exclude_shipment_line_id')
+    )
+    GROUP BY sl.sales_order_line_id
+) shipped ON shipped.sales_order_line_id = sol.id
+WHERE sol.id = sqlc.arg('sales_order_line_id');

@@ -170,8 +170,9 @@ INSERT IGNORE INTO shipment (id, number, sales_order_id, carrier_id, carrier_opt
 INSERT IGNORE INTO shipment (id, number, sales_order_id, carrier_id, shipping_address_id, shipment_status_code, shipped_at, shipped_by_id, master_tracking_number, account_id, created_at, updated_at) VALUES
     ('sh_01k0a87w33fw0shhsahaa0yq6r', 'SHP-002', 'or_01k0a8bs2yf909wjkd7ecd6x4z', 'will_call', 'ad_01k09wnpvrea0awz7vem2j8j7g', 'shipped', DATE_SUB(NOW(), INTERVAL 2 DAY), 'acus_s83fjhyfmqen', '1234567890', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
 
--- Packed shipment for the shared seed order (SeedSalesOrderID / ORD-001) so that
--- ?include=related.shipments populates on its detail (ORD-001 has PICK-001).
+-- Shipped shipment for the shared seed order (SeedSalesOrderID / ORD-001) so that
+-- ?include=related.shipments populates on its detail (ORD-001 has PICK-001). INV-002 links to
+-- it in 0013_finance.sql; the link rides on invoice_id and needs no shipped status.
 INSERT IGNORE INTO shipment (id, number, sales_order_id, carrier_id, shipping_address_id, shipment_status_code, account_id, created_at, updated_at) VALUES
     ('sh_01k0a87w33emw8pmkz1mf86cg2', 'SHP-003', 'or_01k0a8bs2yejxbsvqhrx4drkq1', 'delivery', 'ad_01k09wnpvrea0awz7vem2j8j7g', 'packed', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
 
@@ -192,6 +193,33 @@ INSERT IGNORE INTO shipping_case (id, number, freight_amount_id, freight_weight_
 -- Fulfilled shipment case (1 case with tracking)
 INSERT IGNORE INTO shipping_case (id, number, sscc, tracking_number, shipping_label_url, shipped_at, freight_amount_id, freight_weight_id, shipment_id, carrier_id, account_id, created_at, updated_at) VALUES
     ('shcs_01seedshcase3_00000', 'SHP-002-1', '1234567890', '1234567890', 'https://www.google.com', DATE_SUB(NOW(), INTERVAL 2 DAY), 'qu_01seedshcase3_fam000', 'qu_01seedshcase3_fwt000', 'sh_01k0a87w33fw0shhsahaa0yq6r', 'will_call', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
+
+-- Shipment lines — the order lines + shipped quantities behind each seed shipment.
+-- Without these, deleting a shipment can't hand quantities back to the pick (unpack),
+-- so the pick would reopen but stay packed. Mirrors each order's invoice lines.
+INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
+    ('qu_01seedshl_pck_ln1', 20, 'un_01seedpair000000000', NOW(), NOW()),
+    ('qu_01seedshl_pck_ln2', 15, 'un_01seedpair000000000', NOW(), NOW()),
+    ('qu_01seedshl_pck_ln3', 1, 'each', NOW(), NOW()),
+    ('qu_01seedshl_ful_ln1', 25, 'un_01seedpair000000000', NOW(), NOW()),
+    ('qu_01seedshl_ful_ln2', 18, 'un_01seedpair000000000', NOW(), NOW()),
+    ('qu_01seedshl_ful_ln3', 1, 'each', NOW(), NOW()),
+    ('qu_01seedshl_iss_ln1', 15, 'un_01seedpair000000000', NOW(), NOW()),
+    ('qu_01seedshl_iss_ln2', 8, 'un_01seedpair000000000', NOW(), NOW()),
+    ('qu_01seedshl_iss_ln3', 1, 'each', NOW(), NOW());
+
+INSERT IGNORE INTO shipment_line (id, shipment_id, sales_order_line_id, quantity_id, created_at, updated_at) VALUES
+    -- SHP-001 (ORD-002)
+    ('shln_01seedpck_ln1_000', 'sh_01k0a87w33emw8pmkz1mf86cg1', 'orln_01seedpck_ln1_0000', 'qu_01seedshl_pck_ln1', NOW(), NOW()),
+    ('shln_01seedpck_ln2_000', 'sh_01k0a87w33emw8pmkz1mf86cg1', 'orln_01seedpck_ln2_0000', 'qu_01seedshl_pck_ln2', NOW(), NOW()),
+    -- SHP-002 (fulfilled order)
+    ('shln_01seedful_ln1_000', 'sh_01k0a87w33fw0shhsahaa0yq6r', 'orln_01seedful_ln1_0000', 'qu_01seedshl_ful_ln1', NOW(), NOW()),
+    ('shln_01seedful_ln2_000', 'sh_01k0a87w33fw0shhsahaa0yq6r', 'orln_01seedful_ln2_0000', 'qu_01seedshl_ful_ln2', NOW(), NOW()),
+    ('shln_01seedful_ln3_000', 'sh_01k0a87w33fw0shhsahaa0yq6r', 'orln_01seedful_ln3_0000', 'qu_01seedshl_ful_ln3', NOW(), NOW()),
+    -- SHP-003 (ORD-001)
+    ('shln_01seediss_ln1_000', 'sh_01k0a87w33emw8pmkz1mf86cg2', 'orln_01seediss_ln1_0000', 'qu_01seedshl_iss_ln1', NOW(), NOW()),
+    ('shln_01seediss_ln2_000', 'sh_01k0a87w33emw8pmkz1mf86cg2', 'orln_01seediss_ln2_0000', 'qu_01seedshl_iss_ln2', NOW(), NOW()),
+    ('shln_01seediss_ln3_000', 'sh_01k0a87w33emw8pmkz1mf86cg2', 'orln_01seediss_ln3_0000', 'qu_01seedshl_iss_ln3', NOW(), NOW());
 
 -- ============================================================
 -- INVOICE (for fulfilled order)

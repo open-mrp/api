@@ -243,6 +243,8 @@ type UnitRepo interface {
 	Get(ctx context.Context, params GetUnitParams) (*Unit, *apierror.APIError)
 	// GetCurrencyBaseUnitID returns the global currency base unit ID used as the numerator unit when building monetary price rates.
 	GetCurrencyBaseUnitID(ctx context.Context) (string, *apierror.APIError)
+	// GetFreightWeightUnitID returns the global unit shipping-case freight weights are recorded in (pounds), which is what carriers are quoted and billed on.
+	GetFreightWeightUnitID(ctx context.Context) (string, *apierror.APIError)
 	// GetDimensionCodes returns a unit-id → unit_dimension_code map for the given IDs. Used to enforce unit-type constraints (e.g., currency-only numerator on cost rates) before persisting rate rows.
 	GetDimensionCodes(ctx context.Context, ids []string) (map[string]string, *apierror.APIError)
 	Create(ctx context.Context, id string, params CreateUnitParams) (*Unit, *apierror.APIError)
@@ -753,6 +755,8 @@ type InventoryMutationRepo interface {
 	ReverseInventoryForBatch(ctx context.Context, params ReverseInventoryForBatchParams) ([]InventoryReversalDelta, *apierror.APIError)
 	// CountAllocatedReceiptsForBatch reports how many of a batch's produced receipts have already been drawn against. Used as a pre-flight guard before a batch is deleted.
 	CountAllocatedReceiptsForBatch(ctx context.Context, accountID, batchID string) (int64, *apierror.APIError)
+	// ReverseInventoryForOrderItem hands a consumed measure back to the order's reservation, walking the issues it opened newest first and splitting the last one when it overshoots. The caller re-runs FIFO allocation so the freed receipts can cover other open issues.
+	ReverseInventoryForOrderItem(ctx context.Context, accountID, orderID, itemID string, measure decimal.Decimal) *apierror.APIError
 }
 
 // OrderQueryRepo provides read-only queries for orders needed by the batch/production system.
@@ -1255,6 +1259,10 @@ type SalesOrderRepo interface {
 	CreateEmailContact(ctx context.Context, id, salesOrderID, accountUserID, notificationTypeCode string) *apierror.APIError
 	DeleteEmailContactsByOrderAndType(ctx context.Context, salesOrderID, notificationTypeCode string) *apierror.APIError
 	NoteFirstShipAt(ctx context.Context, accountID, salesOrderID string) *apierror.APIError
+	// MarkFulfilled sets the order status to fulfilled and stamps completed_at (idempotent).
+	MarkFulfilled(ctx context.Context, accountID, salesOrderID string) *apierror.APIError
+	// GetSalesRepEmail returns the order's sales rep email, or nil if it has no rep or no email.
+	GetSalesRepEmail(ctx context.Context, accountID, salesOrderID string) (*string, *apierror.APIError)
 	MarkUnfulfilled(ctx context.Context, accountID, salesOrderID string) *apierror.APIError
 	HasShippedShipment(ctx context.Context, salesOrderID string) (bool, *apierror.APIError)
 }
@@ -1392,13 +1400,18 @@ type InvoiceRepo interface {
 	CountSince(ctx context.Context, accountID string, since time.Time) (int64, *apierror.APIError)
 	GetLines(ctx context.Context, invoiceID string) ([]*InvoiceLine, *apierror.APIError)
 	GetAllocations(ctx context.Context, invoiceID string) ([]*InvoiceAllocation, *apierror.APIError)
-	Update(ctx context.Context, params UpdateInvoiceParams) (*InvoiceSummary, *apierror.APIError)
+	GetAllocationsForInvoices(ctx context.Context, invoiceIDs []string) (map[string][]*InvoiceAllocation, *apierror.APIError)
+	Update(ctx context.Context, params UpdateInvoiceParams) (*Invoice, *apierror.APIError)
 	ListByCustomer(ctx context.Context, params ListCustomerInvoicesParams) (*ListCustomerInvoicesResult, *apierror.APIError)
 	IsDuplicateNumber(ctx context.Context, accountID, number string) (bool, *apierror.APIError)
 	GetEmailRecipients(ctx context.Context, invoiceID string) ([]string, *apierror.APIError)
 	MarkEmailSent(ctx context.Context, accountID, invoiceID string) *apierror.APIError
 	DeleteLinesByInvoice(ctx context.Context, invoiceID string) *apierror.APIError
 	Delete(ctx context.Context, accountID, invoiceID string) *apierror.APIError
+	// CreateFromShipment writes the invoice a shipment bills for: one line per shipped line plus the
+	// order's non-shippable lines (freight/tax/discount/service) at full ordered quantity. Returns
+	// the new invoice id.
+	CreateFromShipment(ctx context.Context, params CreateInvoiceFromShipmentParams) (string, *apierror.APIError)
 }
 
 type ReceivableRepo interface {
@@ -1412,6 +1425,8 @@ type PickRepo interface {
 	List(ctx context.Context, params ListPicksParams) (*ListPicksResult, *apierror.APIError)
 	Get(ctx context.Context, accountID, pickID string) (*Pick, *apierror.APIError)
 	GetLines(ctx context.Context, pickID string) ([]*PickLine, *apierror.APIError)
+	GetShipmentNumbers(ctx context.Context, params GetPickShipmentsParams) (*PickShipmentsResult, *apierror.APIError)
+	GetProgress(ctx context.Context, pickIDs []string) (map[string]PickProgress, *apierror.APIError)
 	GetDepartments(ctx context.Context, pickID string) ([]*PickDepartment, *apierror.APIError)
 	UpdateNumber(ctx context.Context, accountID, pickID, number string) *apierror.APIError
 	UpdateFinishedAt(ctx context.Context, accountID, pickID string, finishedAt time.Time) *apierror.APIError
@@ -1420,7 +1435,8 @@ type PickRepo interface {
 	DeleteDuplicatePickLines(ctx context.Context, accountID, pickID string) *apierror.APIError
 	ClearFinishedAt(ctx context.Context, accountID, pickID string) *apierror.APIError
 	PickAllLines(ctx context.Context, pickID string) *apierror.APIError
-	GetShipmentNumbers(ctx context.Context, params GetPickShipmentsParams) (*PickShipmentsResult, *apierror.APIError)
+	// GetShipmentIDs returns the ids of shipments raised against the pick's order, oldest first.
+	GetShipmentIDs(ctx context.Context, accountID, pickID string) ([]string, *apierror.APIError)
 	IsInAccount(ctx context.Context, accountID, pickID string) (bool, *apierror.APIError)
 	FindLinesToPack(ctx context.Context, pickID string) ([]*PickLine, *apierror.APIError)
 	PackLines(ctx context.Context, pickID string) *apierror.APIError
@@ -1441,7 +1457,8 @@ type PickRepo interface {
 
 type PickLineRepo interface {
 	Get(ctx context.Context, pickLineID string) (*PickLine, *apierror.APIError)
-	UpdateQuantity(ctx context.Context, pickLineID, quantityValue string) *apierror.APIError
+	// UpdateQuantity writes the line's picked quantity; a nil value or unit leaves that half unchanged.
+	UpdateQuantity(ctx context.Context, pickLineID string, quantityValue, quantityUnitID *string) *apierror.APIError
 	PickRemainingQuantity(ctx context.Context, pickLineID string) *apierror.APIError
 	VoidLine(ctx context.Context, pickLineID string) *apierror.APIError
 	IsInPick(ctx context.Context, pickLineID, pickID string) (bool, *apierror.APIError)
@@ -1583,10 +1600,16 @@ type ShipmentRepo interface {
 	Get(ctx context.Context, params GetShipmentParams) (*Shipment, *apierror.APIError)
 	Update(ctx context.Context, params UpdateShipmentParams) (*Shipment, *apierror.APIError)
 	SyncShippingForOrder(ctx context.Context, params SyncShipmentShippingParams) *apierror.APIError
+	// SyncShipToForOrder re-points every shipment on an order to the given ship-to address, independently of the carrier.
+	SyncShipToForOrder(ctx context.Context, accountID, salesOrderID, shippingAddressID string) *apierror.APIError
 	Delete(ctx context.Context, accountID, shipmentID string) *apierror.APIError
 	MarkShipped(ctx context.Context, accountID, shipmentID, shippedByID string) *apierror.APIError
 	MarkVoided(ctx context.Context, accountID, shipmentID string) *apierror.APIError
 	FindInvoiceIDByShipment(ctx context.Context, accountID, shipmentID string) (*string, *apierror.APIError)
+	// LinkInvoice points the shipment at the invoice created for it, so void can find it later.
+	LinkInvoice(ctx context.Context, accountID, shipmentID, invoiceID string) *apierror.APIError
+	// SetMasterTracking stamps the shipment's carrier master tracking number.
+	SetMasterTracking(ctx context.Context, accountID, shipmentID, trackingNumber string) *apierror.APIError
 	IsInAccount(ctx context.Context, accountID, shipmentID string) (bool, *apierror.APIError)
 }
 
@@ -1599,6 +1622,9 @@ type ShipmentLineRepo interface {
 	IsInShipment(ctx context.Context, shipmentLineID, shipmentID string) (bool, *apierror.APIError)
 	ListByShipment(ctx context.Context, shipmentID string) ([]*ShipmentLine, *apierror.APIError)
 	DeleteByShipment(ctx context.Context, shipmentID string) *apierror.APIError
+	// GetSalesOrderLineCapacity reports which order a sales order line belongs to and how much of
+	// it is still unshipped. excludeShipmentLineID omits the line an update is replacing.
+	GetSalesOrderLineCapacity(ctx context.Context, salesOrderLineID string, excludeShipmentLineID *string) (*SalesOrderLineShipmentCapacity, *apierror.APIError)
 }
 
 type ScanningStationRepo interface {
@@ -1623,9 +1649,13 @@ type ScanningStationRepo interface {
 type ShippingCaseRepo interface {
 	Get(ctx context.Context, accountID, shippingCaseID string) (*ShippingCase, *apierror.APIError)
 	Update(ctx context.Context, params UpdateShippingCaseParams) *apierror.APIError
+	// RepointToCarrier moves every case on a shipment onto the given carrier, so per-case tracking deep-links keep resolving against the carrier that actually carries them.
+	RepointToCarrier(ctx context.Context, accountID, shipmentID, carrierID string) *apierror.APIError
 	Delete(ctx context.Context, accountID, shippingCaseID string) *apierror.APIError
 	IsInAccount(ctx context.Context, accountID, shippingCaseID string) (bool, *apierror.APIError)
 	GetNumber(ctx context.Context, accountID, shippingCaseID string) (string, *apierror.APIError)
+	// GetSalesOrderID walks the case to its order, so audit events can stamp that order as their root.
+	GetSalesOrderID(ctx context.Context, accountID, shippingCaseID string) (string, *apierror.APIError)
 	ListByShipment(ctx context.Context, shipmentID string) ([]*ShippingCase, *apierror.APIError)
 	MarkShippedByShipment(ctx context.Context, shipmentID string) *apierror.APIError
 	VoidByShipment(ctx context.Context, shipmentID string) *apierror.APIError

@@ -36,7 +36,19 @@ func (e *RetrieveShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeShipment,
-			Fields:     []string{"lines", "shipping_cases", "sales_order", "customer", "freight", "shipping_address", "shipped_by", "shipped_by.user", "invoice", "pick"},
+			Fields: []string{
+				"related.sales_order",
+				"customer",
+				"freight",
+				"shipping_address",
+				"shipped_by",
+				"related.invoice",
+				"related.pick",
+				"shipping_cases",
+				"lines",
+				"lines.sales_order_line",
+				"lines.sales_order_line.product",
+			},
 		}),
 	})
 }

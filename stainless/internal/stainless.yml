@@ -1545,18 +1545,16 @@ resources:
           invoice: '#/components/schemas/Invoice'
           invoice_allocation: '#/components/schemas/InvoiceAllocation'
           invoice_line: '#/components/schemas/InvoiceLine'
-          list_department: '#/components/schemas/List_Department'
+          invoice_related: '#/components/schemas/InvoiceRelated'
           list_invoice: '#/components/schemas/List_Invoice'
           list_invoice_allocation: '#/components/schemas/List_InvoiceAllocation'
           list_invoice_line: '#/components/schemas/List_InvoiceLine'
-          list_pick_line: '#/components/schemas/List_PickLine'
           list_shipment_line: '#/components/schemas/List_ShipmentLine'
           list_shipping_case_detail: '#/components/schemas/List_ShippingCaseDetail'
           list_transaction_allocation: '#/components/schemas/List_TransactionAllocation'
-          pick: '#/components/schemas/Pick'
-          pick_line: '#/components/schemas/PickLine'
           shipment: '#/components/schemas/Shipment'
           shipment_line: '#/components/schemas/ShipmentLine'
+          shipment_related: '#/components/schemas/ShipmentRelated'
           shipping_case_detail: '#/components/schemas/ShippingCaseDetail'
           transaction_allocation: '#/components/schemas/TransactionAllocation'
           transaction_detail: '#/components/schemas/TransactionDetail'
@@ -1807,6 +1805,7 @@ resources:
         models:
           create_department_request: '#/components/schemas/CreateDepartmentRequest'
           department_rate_input: '#/components/schemas/DepartmentRateInput'
+          list_department: '#/components/schemas/List_Department'
           update_department_request: '#/components/schemas/UpdateDepartmentRequest'
       production_steps:
         methods:
@@ -2186,7 +2185,6 @@ resources:
               pack: post /v1/operations/picks/{id}/actions/pack
             models:
               pack_pick_request: '#/components/schemas/PackPickRequest'
-              pack_pick_response: '#/components/schemas/PackPickResponse'
           lines:
             methods:
               update: patch /v1/operations/picks/{pick_id}/lines/{id}
@@ -2199,7 +2197,13 @@ resources:
               update_pick_line_request: '#/components/schemas/UpdatePickLineRequest'
         models:
           list_pick: '#/components/schemas/List_Pick'
+          list_pick_line: '#/components/schemas/List_PickLine'
+          pick: '#/components/schemas/Pick'
+          pick_line: '#/components/schemas/PickLine'
+          pick_related: '#/components/schemas/PickRelated'
           pick_shipments_response: '#/components/schemas/PickShipmentsResponse'
+          pick_stage_total: '#/components/schemas/PickStageTotal'
+          pick_totals: '#/components/schemas/PickTotals'
           update_pick_request: '#/components/schemas/UpdatePickRequest'
       locations:
         methods:
@@ -2233,6 +2237,12 @@ resources:
           update: patch /v1/operations/shipping-cases/{id}
           delete: delete /v1/operations/shipping-cases/{id}
           retrieve_label: get /v1/operations/shipping-cases/{id}/label
+        subresources:
+          actions:
+            methods:
+              admin_update_tracking: post /v1/operations/shipping-cases/{id}/actions/admin-update-tracking
+            models:
+              admin_update_shipping_case_tracking_request: '#/components/schemas/AdminUpdateShippingCaseTrackingRequest'
         models:
           shipping_case: '#/components/schemas/ShippingCase'
           shipping_case_label_url: '#/components/schemas/ShippingCaseLabelURL'
@@ -2246,11 +2256,13 @@ resources:
         subresources:
           actions:
             methods:
+              admin_update_tracking: post /v1/operations/shipments/{id}/actions/admin-update-tracking
               ship: post /v1/operations/shipments/{id}/actions/ship
               void: post /v1/operations/shipments/{id}/actions/void
               estimate_rate: post /v1/operations/shipments/actions/estimate-rate
               rate_shop: post /v1/operations/shipments/actions/rate-shop
             models:
+              admin_update_shipment_tracking_request: '#/components/schemas/AdminUpdateShipmentTrackingRequest'
               estimate_rate_request: '#/components/schemas/EstimateRateRequest'
               estimate_rate_result: '#/components/schemas/EstimateRateResult'
               list_rate_shop_option: '#/components/schemas/List_RateShopOption'

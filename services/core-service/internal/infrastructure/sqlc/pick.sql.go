@@ -427,6 +427,46 @@ func (q *Queries) DeleteDuplicatePickLines(ctx context.Context, arg DeleteDuplic
 	return err
 }
 
+const deletePickLinesByIDs = `-- name: DeletePickLinesByIDs :exec
+DELETE FROM pick_line WHERE id IN (/*SLICE:ids*/?)
+`
+
+func (q *Queries) DeletePickLinesByIDs(ctx context.Context, ids []string) error {
+	query := deletePickLinesByIDs
+	var queryParams []interface{}
+	if len(ids) > 0 {
+		for _, v := range ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
+	return err
+}
+
+const deleteQuantitiesByPickLineIDs = `-- name: DeleteQuantitiesByPickLineIDs :exec
+DELETE q FROM quantity q
+JOIN pick_line pl ON pl.quantity_id = q.id
+WHERE pl.id IN (/*SLICE:ids*/?)
+`
+
+func (q *Queries) DeleteQuantitiesByPickLineIDs(ctx context.Context, ids []string) error {
+	query := deleteQuantitiesByPickLineIDs
+	var queryParams []interface{}
+	if len(ids) > 0 {
+		for _, v := range ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
+	return err
+}
+
 const deleteQuantitiesByUnpackedPickLinesForLine = `-- name: DeleteQuantitiesByUnpackedPickLinesForLine :exec
 DELETE q FROM quantity q
 JOIN pick_line pl ON pl.quantity_id = q.id
@@ -468,6 +508,8 @@ SELECT
     sol.line_item_number,
     sol.product_sku,
     sol.product_description,
+    sol.product_id,
+    sol.item_id AS order_line_item_id,
     -- Ordered quantity
     sol_q.id AS ordered_quantity_id,
     sol_q.value AS ordered_quantity_value,
@@ -500,6 +542,8 @@ type FindLinesToPackRow struct {
 	LineItemNumber                  sql.NullInt32
 	ProductSku                      string
 	ProductDescription              sql.NullString
+	ProductID                       sql.NullString
+	OrderLineItemID                 sql.NullString
 	OrderedQuantityID               string
 	OrderedQuantityValue            string
 	OrderedQuantityUnitID           string
@@ -531,6 +575,8 @@ func (q *Queries) FindLinesToPack(ctx context.Context, pickID string) ([]FindLin
 			&i.LineItemNumber,
 			&i.ProductSku,
 			&i.ProductDescription,
+			&i.ProductID,
+			&i.OrderLineItemID,
 			&i.OrderedQuantityID,
 			&i.OrderedQuantityValue,
 			&i.OrderedQuantityUnitID,
@@ -616,13 +662,38 @@ SELECT
     pr.name AS priority_name,
     p.finished_at,
     p.created_at,
-    p.updated_at
+    p.updated_at,
+    (SELECT COUNT(*) FROM pick_line plc WHERE plc.pick_id = p.id) AS line_count,
+    -- Latest ship date across the order's shipments; drives the date in the pick header.
+    (SELECT MAX(sh.shipped_at) FROM shipment sh WHERE sh.sales_order_id = so.id) AS last_shipped_at,
+    so.promised_at,
+    -- The order's delivery commitment and how it was derived, so a pick can explain its dates.
+    so.ship_by_date,
+    so.lead_time_days,
+    so.lead_time_source_code,
+    so.transit_days,
+    so.transit_source_code,
+    -- Ship-to is the order's, denormalized so a pick header needs no second fetch.
+    so.shipping_address_id,
+    addr.name AS shipping_address_name,
+    addr.phone AS shipping_address_phone,
+    addr.email AS shipping_address_email,
+    addr.is_drop_ship AS shipping_address_is_drop_ship,
+    ship_geo.id AS shipping_address_geolocation_id,
+    ship_geo.street_line_1 AS shipping_address_street_line_1,
+    ship_geo.street_line_2 AS shipping_address_street_line_2,
+    ship_geo.locality AS shipping_address_locality,
+    ship_geo.state AS shipping_address_state,
+    ship_geo.postal_code AS shipping_address_postal_code,
+    ship_geo.country AS shipping_address_country
 FROM pick p
 JOIN sales_order so ON so.id = p.sales_order_id
 JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
     AND ar.counterparty_account_id = so.buyer_account_id
 JOIN account ba ON ba.id = so.buyer_account_id
 JOIN priority pr ON pr.code = so.priority_code
+LEFT JOIN address addr ON addr.id = so.shipping_address_id
+LEFT JOIN geolocation ship_geo ON ship_geo.id = addr.geolocation_id
 WHERE p.id = ?
 AND p.account_id = ?
 `
@@ -633,19 +704,39 @@ type GetPickParams struct {
 }
 
 type GetPickRow struct {
-	ID               string
-	Number           string
-	SalesOrderID     string
-	SalesOrderNumber string
-	CustomerID       string
-	CustomerName     string
-	CustomerNumber   string
-	PriorityCode     string
-	PriorityID       string
-	PriorityName     string
-	FinishedAt       sql.NullTime
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	ID                           string
+	Number                       string
+	SalesOrderID                 string
+	SalesOrderNumber             string
+	CustomerID                   string
+	CustomerName                 string
+	CustomerNumber               string
+	PriorityCode                 string
+	PriorityID                   string
+	PriorityName                 string
+	FinishedAt                   sql.NullTime
+	CreatedAt                    time.Time
+	UpdatedAt                    time.Time
+	LineCount                    int64
+	LastShippedAt                interface{}
+	PromisedAt                   sql.NullTime
+	ShipByDate                   sql.NullTime
+	LeadTimeDays                 sql.NullInt32
+	LeadTimeSourceCode           sql.NullString
+	TransitDays                  sql.NullInt32
+	TransitSourceCode            sql.NullString
+	ShippingAddressID            string
+	ShippingAddressName          sql.NullString
+	ShippingAddressPhone         sql.NullString
+	ShippingAddressEmail         sql.NullString
+	ShippingAddressIsDropShip    sql.NullBool
+	ShippingAddressGeolocationID sql.NullString
+	ShippingAddressStreetLine1   sql.NullString
+	ShippingAddressStreetLine2   sql.NullString
+	ShippingAddressLocality      sql.NullString
+	ShippingAddressState         sql.NullString
+	ShippingAddressPostalCode    sql.NullString
+	ShippingAddressCountry       sql.NullString
 }
 
 func (q *Queries) GetPick(ctx context.Context, arg GetPickParams) (GetPickRow, error) {
@@ -665,6 +756,26 @@ func (q *Queries) GetPick(ctx context.Context, arg GetPickParams) (GetPickRow, e
 		&i.FinishedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.LineCount,
+		&i.LastShippedAt,
+		&i.PromisedAt,
+		&i.ShipByDate,
+		&i.LeadTimeDays,
+		&i.LeadTimeSourceCode,
+		&i.TransitDays,
+		&i.TransitSourceCode,
+		&i.ShippingAddressID,
+		&i.ShippingAddressName,
+		&i.ShippingAddressPhone,
+		&i.ShippingAddressEmail,
+		&i.ShippingAddressIsDropShip,
+		&i.ShippingAddressGeolocationID,
+		&i.ShippingAddressStreetLine1,
+		&i.ShippingAddressStreetLine2,
+		&i.ShippingAddressLocality,
+		&i.ShippingAddressState,
+		&i.ShippingAddressPostalCode,
+		&i.ShippingAddressCountry,
 	)
 	return i, err
 }
@@ -724,6 +835,8 @@ SELECT
     sol.line_item_number,
     sol.product_sku,
     sol.product_description,
+    sol.product_id,
+    sol.item_id AS order_line_item_id,
     -- Ordered quantity
     sol_q.id AS ordered_quantity_id,
     sol_q.value AS ordered_quantity_value,
@@ -754,6 +867,8 @@ type GetPickLineRow struct {
 	LineItemNumber                  sql.NullInt32
 	ProductSku                      string
 	ProductDescription              sql.NullString
+	ProductID                       sql.NullString
+	OrderLineItemID                 sql.NullString
 	OrderedQuantityID               string
 	OrderedQuantityValue            string
 	OrderedQuantityUnitID           string
@@ -779,6 +894,8 @@ func (q *Queries) GetPickLine(ctx context.Context, pickLineID string) (GetPickLi
 		&i.LineItemNumber,
 		&i.ProductSku,
 		&i.ProductDescription,
+		&i.ProductID,
+		&i.OrderLineItemID,
 		&i.OrderedQuantityID,
 		&i.OrderedQuantityValue,
 		&i.OrderedQuantityUnitID,
@@ -806,6 +923,8 @@ SELECT
     sol.line_item_number,
     sol.product_sku,
     sol.product_description,
+    sol.product_id,
+    sol.item_id AS order_line_item_id,
     -- Ordered quantity
     sol_q.id AS ordered_quantity_id,
     sol_q.value AS ordered_quantity_value,
@@ -847,6 +966,8 @@ type GetPickLinesRow struct {
 	LineItemNumber                       sql.NullInt32
 	ProductSku                           string
 	ProductDescription                   sql.NullString
+	ProductID                            sql.NullString
+	OrderLineItemID                      sql.NullString
 	OrderedQuantityID                    string
 	OrderedQuantityValue                 string
 	OrderedQuantityUnitID                string
@@ -884,6 +1005,8 @@ func (q *Queries) GetPickLines(ctx context.Context, pickID string) ([]GetPickLin
 			&i.LineItemNumber,
 			&i.ProductSku,
 			&i.ProductDescription,
+			&i.ProductID,
+			&i.OrderLineItemID,
 			&i.OrderedQuantityID,
 			&i.OrderedQuantityValue,
 			&i.OrderedQuantityUnitID,
@@ -895,6 +1018,72 @@ func (q *Queries) GetPickLines(ctx context.Context, pickID string) ([]GetPickLin
 			&i.UnitPriceNumeratorUnitAbbreviation,
 			&i.UnitPriceDenominatorUnitID,
 			&i.UnitPriceDenominatorUnitAbbreviation,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getPickProgress = `-- name: GetPickProgress :many
+SELECT
+    pl.pick_id,
+    COALESCE(SUM(solq.value), 0) AS quantity_ordered,
+    COALESCE(SUM(plq.value), 0) AS quantity_picked,
+    COALESCE(SUM(CASE WHEN pl.packed_at IS NOT NULL THEN plq.value ELSE 0 END), 0) AS quantity_packed
+FROM pick_line pl
+JOIN quantity plq ON plq.id = pl.quantity_id
+JOIN sales_order_line sol ON sol.id = pl.sales_order_line_id
+JOIN quantity solq ON solq.id = sol.quantity_id
+JOIN product p ON p.id = sol.product_id
+WHERE pl.pick_id IN (/*SLICE:pick_ids*/?)
+AND p.product_type_code = 'sale'
+GROUP BY pl.pick_id
+`
+
+type GetPickProgressRow struct {
+	PickID          string
+	QuantityOrdered interface{}
+	QuantityPicked  interface{}
+	QuantityPacked  interface{}
+}
+
+// Aggregates ordered/picked/packed quantities per pick in one batched pass, keyed by
+// pick ID. Backs the pick-level picked/packed completion fractions on both the list and
+// detail endpoints without loading each pick's lines. Only product_type_code = 'sale'
+// lines are counted, matching the frontend's completion math. Picks whose lines are all
+// non-sale are absent from the result and read as zero progress.
+func (q *Queries) GetPickProgress(ctx context.Context, pickIds []string) ([]GetPickProgressRow, error) {
+	query := getPickProgress
+	var queryParams []interface{}
+	if len(pickIds) > 0 {
+		for _, v := range pickIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:pick_ids*/?", strings.Repeat(",?", len(pickIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:pick_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPickProgressRow
+	for rows.Next() {
+		var i GetPickProgressRow
+		if err := rows.Scan(
+			&i.PickID,
+			&i.QuantityOrdered,
+			&i.QuantityPicked,
+			&i.QuantityPacked,
 		); err != nil {
 			return nil, err
 		}
@@ -1005,6 +1194,44 @@ func (q *Queries) GetSalesOrderForPick(ctx context.Context, arg GetSalesOrderFor
 	return i, err
 }
 
+const getShipmentIDsByPick = `-- name: GetShipmentIDsByPick :many
+SELECT s.id
+FROM shipment s
+JOIN pick pk ON pk.sales_order_id = s.sales_order_id
+WHERE pk.id = ?
+AND pk.account_id = ?
+ORDER BY s.created_at, s.id
+`
+
+type GetShipmentIDsByPickParams struct {
+	PickID    string
+	AccountID string
+}
+
+// Shipments raised against the pick's sales order, oldest first. Backs related.shipments.
+func (q *Queries) GetShipmentIDsByPick(ctx context.Context, arg GetShipmentIDsByPickParams) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, getShipmentIDsByPick, arg.PickID, arg.AccountID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const hasShippedItems = `-- name: HasShippedItems :one
 SELECT EXISTS(
     SELECT 1 FROM shipment s
@@ -1083,6 +1310,49 @@ func (q *Queries) IsPickLineInPick(ctx context.Context, arg IsPickLineInPickPara
 	return is_in_pick, err
 }
 
+const listPickLinesForOrderLine = `-- name: ListPickLinesForOrderLine :many
+SELECT pl.id, pl.quantity_id, pl.packed_at, q.value AS quantity_value
+FROM pick_line pl
+JOIN quantity q ON q.id = pl.quantity_id
+WHERE pl.sales_order_line_id = ?
+ORDER BY pl.created_at, pl.id
+`
+
+type ListPickLinesForOrderLineRow struct {
+	ID            string
+	QuantityID    string
+	PackedAt      sql.NullTime
+	QuantityValue string
+}
+
+func (q *Queries) ListPickLinesForOrderLine(ctx context.Context, salesOrderLineID string) ([]ListPickLinesForOrderLineRow, error) {
+	rows, err := q.db.QueryContext(ctx, listPickLinesForOrderLine, salesOrderLineID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPickLinesForOrderLineRow
+	for rows.Next() {
+		var i ListPickLinesForOrderLineRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.QuantityID,
+			&i.PackedAt,
+			&i.QuantityValue,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listPicksBackward = `-- name: ListPicksBackward :many
 SELECT
     p.id,
@@ -1097,13 +1367,38 @@ SELECT
     pr.name AS priority_name,
     p.finished_at,
     p.created_at,
-    p.updated_at
+    p.updated_at,
+    (SELECT COUNT(*) FROM pick_line plc WHERE plc.pick_id = p.id) AS line_count,
+    -- Latest ship date across the order's shipments; drives the date in the pick header.
+    (SELECT MAX(sh.shipped_at) FROM shipment sh WHERE sh.sales_order_id = so.id) AS last_shipped_at,
+    so.promised_at,
+    -- The order's delivery commitment and how it was derived, so a pick can explain its dates.
+    so.ship_by_date,
+    so.lead_time_days,
+    so.lead_time_source_code,
+    so.transit_days,
+    so.transit_source_code,
+    -- Ship-to is the order's, denormalized so a pick header needs no second fetch.
+    so.shipping_address_id,
+    addr.name AS shipping_address_name,
+    addr.phone AS shipping_address_phone,
+    addr.email AS shipping_address_email,
+    addr.is_drop_ship AS shipping_address_is_drop_ship,
+    ship_geo.id AS shipping_address_geolocation_id,
+    ship_geo.street_line_1 AS shipping_address_street_line_1,
+    ship_geo.street_line_2 AS shipping_address_street_line_2,
+    ship_geo.locality AS shipping_address_locality,
+    ship_geo.state AS shipping_address_state,
+    ship_geo.postal_code AS shipping_address_postal_code,
+    ship_geo.country AS shipping_address_country
 FROM pick p
 JOIN sales_order so ON so.id = p.sales_order_id
 JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
     AND ar.counterparty_account_id = so.buyer_account_id
 JOIN account ba ON ba.id = so.buyer_account_id
 JOIN priority pr ON pr.code = so.priority_code
+LEFT JOIN address addr ON addr.id = so.shipping_address_id
+LEFT JOIN geolocation ship_geo ON ship_geo.id = addr.geolocation_id
 WHERE p.account_id = ?
 AND (
     ? IS NULL
@@ -1153,10 +1448,23 @@ AND (
     OR p.created_at <= ?
 )
 AND (
-    p.created_at > ?
+    ? = true
+    OR p.created_at > ?
     OR (p.created_at = ? AND p.id > ?)
 )
-ORDER BY p.created_at ASC, p.id ASC
+AND (
+    ? = false
+    OR COALESCE(so.ship_by_date, '9999-12-31') < CAST(? AS DATE)
+    OR (
+        COALESCE(so.ship_by_date, '9999-12-31') = CAST(? AS DATE)
+        AND p.id < ?
+    )
+)
+ORDER BY
+    CASE WHEN ? = true THEN COALESCE(so.ship_by_date, '9999-12-31') END DESC,
+    CASE WHEN ? = true THEN p.id END DESC,
+    p.created_at ASC,
+    p.id ASC
 LIMIT ?
 `
 
@@ -1174,27 +1482,50 @@ type ListPicksBackwardParams struct {
 	ProductLineIds             []sql.NullString
 	StartDate                  sql.NullTime
 	EndDate                    sql.NullTime
+	SortByShipBy               interface{}
 	CursorCreatedAt            time.Time
 	CursorID                   string
+	CursorShipByDate           time.Time
 	Limit                      int32
 }
 
 type ListPicksBackwardRow struct {
-	ID               string
-	Number           string
-	SalesOrderID     string
-	SalesOrderNumber string
-	CustomerID       string
-	CustomerName     string
-	CustomerNumber   string
-	PriorityCode     string
-	PriorityID       string
-	PriorityName     string
-	FinishedAt       sql.NullTime
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	ID                           string
+	Number                       string
+	SalesOrderID                 string
+	SalesOrderNumber             string
+	CustomerID                   string
+	CustomerName                 string
+	CustomerNumber               string
+	PriorityCode                 string
+	PriorityID                   string
+	PriorityName                 string
+	FinishedAt                   sql.NullTime
+	CreatedAt                    time.Time
+	UpdatedAt                    time.Time
+	LineCount                    int64
+	LastShippedAt                interface{}
+	PromisedAt                   sql.NullTime
+	ShipByDate                   sql.NullTime
+	LeadTimeDays                 sql.NullInt32
+	LeadTimeSourceCode           sql.NullString
+	TransitDays                  sql.NullInt32
+	TransitSourceCode            sql.NullString
+	ShippingAddressID            string
+	ShippingAddressName          sql.NullString
+	ShippingAddressPhone         sql.NullString
+	ShippingAddressEmail         sql.NullString
+	ShippingAddressIsDropShip    sql.NullBool
+	ShippingAddressGeolocationID sql.NullString
+	ShippingAddressStreetLine1   sql.NullString
+	ShippingAddressStreetLine2   sql.NullString
+	ShippingAddressLocality      sql.NullString
+	ShippingAddressState         sql.NullString
+	ShippingAddressPostalCode    sql.NullString
+	ShippingAddressCountry       sql.NullString
 }
 
+// The sentinel keeps a pick whose order has no ship-by date sortable and last; the repository's cursor must use the same value.
 func (q *Queries) ListPicksBackward(ctx context.Context, arg ListPicksBackwardParams) ([]ListPicksBackwardRow, error) {
 	query := listPicksBackward
 	var queryParams []interface{}
@@ -1248,9 +1579,16 @@ func (q *Queries) ListPicksBackward(ctx context.Context, arg ListPicksBackwardPa
 	queryParams = append(queryParams, arg.StartDate)
 	queryParams = append(queryParams, arg.EndDate)
 	queryParams = append(queryParams, arg.EndDate)
+	queryParams = append(queryParams, arg.SortByShipBy)
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
+	queryParams = append(queryParams, arg.SortByShipBy)
+	queryParams = append(queryParams, arg.CursorShipByDate)
+	queryParams = append(queryParams, arg.CursorShipByDate)
+	queryParams = append(queryParams, arg.CursorID)
+	queryParams = append(queryParams, arg.SortByShipBy)
+	queryParams = append(queryParams, arg.SortByShipBy)
 	queryParams = append(queryParams, arg.Limit)
 	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
@@ -1274,6 +1612,26 @@ func (q *Queries) ListPicksBackward(ctx context.Context, arg ListPicksBackwardPa
 			&i.FinishedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.LineCount,
+			&i.LastShippedAt,
+			&i.PromisedAt,
+			&i.ShipByDate,
+			&i.LeadTimeDays,
+			&i.LeadTimeSourceCode,
+			&i.TransitDays,
+			&i.TransitSourceCode,
+			&i.ShippingAddressID,
+			&i.ShippingAddressName,
+			&i.ShippingAddressPhone,
+			&i.ShippingAddressEmail,
+			&i.ShippingAddressIsDropShip,
+			&i.ShippingAddressGeolocationID,
+			&i.ShippingAddressStreetLine1,
+			&i.ShippingAddressStreetLine2,
+			&i.ShippingAddressLocality,
+			&i.ShippingAddressState,
+			&i.ShippingAddressPostalCode,
+			&i.ShippingAddressCountry,
 		); err != nil {
 			return nil, err
 		}
@@ -1302,13 +1660,38 @@ SELECT
     pr.name AS priority_name,
     p.finished_at,
     p.created_at,
-    p.updated_at
+    p.updated_at,
+    (SELECT COUNT(*) FROM pick_line plc WHERE plc.pick_id = p.id) AS line_count,
+    -- Latest ship date across the order's shipments; drives the date in the pick header.
+    (SELECT MAX(sh.shipped_at) FROM shipment sh WHERE sh.sales_order_id = so.id) AS last_shipped_at,
+    so.promised_at,
+    -- The order's delivery commitment and how it was derived, so a pick can explain its dates.
+    so.ship_by_date,
+    so.lead_time_days,
+    so.lead_time_source_code,
+    so.transit_days,
+    so.transit_source_code,
+    -- Ship-to is the order's, denormalized so a pick header needs no second fetch.
+    so.shipping_address_id,
+    addr.name AS shipping_address_name,
+    addr.phone AS shipping_address_phone,
+    addr.email AS shipping_address_email,
+    addr.is_drop_ship AS shipping_address_is_drop_ship,
+    ship_geo.id AS shipping_address_geolocation_id,
+    ship_geo.street_line_1 AS shipping_address_street_line_1,
+    ship_geo.street_line_2 AS shipping_address_street_line_2,
+    ship_geo.locality AS shipping_address_locality,
+    ship_geo.state AS shipping_address_state,
+    ship_geo.postal_code AS shipping_address_postal_code,
+    ship_geo.country AS shipping_address_country
 FROM pick p
 JOIN sales_order so ON so.id = p.sales_order_id
 JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
     AND ar.counterparty_account_id = so.buyer_account_id
 JOIN account ba ON ba.id = so.buyer_account_id
 JOIN priority pr ON pr.code = so.priority_code
+LEFT JOIN address addr ON addr.id = so.shipping_address_id
+LEFT JOIN geolocation ship_geo ON ship_geo.id = addr.geolocation_id
 WHERE p.account_id = ?
 AND (
     ? IS NULL
@@ -1358,11 +1741,25 @@ AND (
     OR p.created_at <= ?
 )
 AND (
-    ? IS NULL
+    ? = true
+    OR ? IS NULL
     OR p.created_at < ?
     OR (p.created_at = ? AND p.id < ?)
 )
-ORDER BY p.created_at DESC, p.id DESC
+AND (
+    ? = false
+    OR ? IS NULL
+    OR COALESCE(so.ship_by_date, '9999-12-31') > CAST(? AS DATE)
+    OR (
+        COALESCE(so.ship_by_date, '9999-12-31') = CAST(? AS DATE)
+        AND p.id > ?
+    )
+)
+ORDER BY
+    CASE WHEN ? = true THEN COALESCE(so.ship_by_date, '9999-12-31') END ASC,
+    CASE WHEN ? = true THEN p.id END ASC,
+    p.created_at DESC,
+    p.id DESC
 LIMIT ?
 `
 
@@ -1380,27 +1777,50 @@ type ListPicksForwardParams struct {
 	ProductLineIds             []sql.NullString
 	StartDate                  sql.NullTime
 	EndDate                    sql.NullTime
+	SortByShipBy               interface{}
 	CursorCreatedAt            sql.NullTime
 	CursorID                   sql.NullString
+	CursorShipByDate           sql.NullTime
 	Limit                      int32
 }
 
 type ListPicksForwardRow struct {
-	ID               string
-	Number           string
-	SalesOrderID     string
-	SalesOrderNumber string
-	CustomerID       string
-	CustomerName     string
-	CustomerNumber   string
-	PriorityCode     string
-	PriorityID       string
-	PriorityName     string
-	FinishedAt       sql.NullTime
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	ID                           string
+	Number                       string
+	SalesOrderID                 string
+	SalesOrderNumber             string
+	CustomerID                   string
+	CustomerName                 string
+	CustomerNumber               string
+	PriorityCode                 string
+	PriorityID                   string
+	PriorityName                 string
+	FinishedAt                   sql.NullTime
+	CreatedAt                    time.Time
+	UpdatedAt                    time.Time
+	LineCount                    int64
+	LastShippedAt                interface{}
+	PromisedAt                   sql.NullTime
+	ShipByDate                   sql.NullTime
+	LeadTimeDays                 sql.NullInt32
+	LeadTimeSourceCode           sql.NullString
+	TransitDays                  sql.NullInt32
+	TransitSourceCode            sql.NullString
+	ShippingAddressID            string
+	ShippingAddressName          sql.NullString
+	ShippingAddressPhone         sql.NullString
+	ShippingAddressEmail         sql.NullString
+	ShippingAddressIsDropShip    sql.NullBool
+	ShippingAddressGeolocationID sql.NullString
+	ShippingAddressStreetLine1   sql.NullString
+	ShippingAddressStreetLine2   sql.NullString
+	ShippingAddressLocality      sql.NullString
+	ShippingAddressState         sql.NullString
+	ShippingAddressPostalCode    sql.NullString
+	ShippingAddressCountry       sql.NullString
 }
 
+// The sentinel keeps a pick whose order has no ship-by date sortable and last; the repository's cursor must use the same value.
 func (q *Queries) ListPicksForward(ctx context.Context, arg ListPicksForwardParams) ([]ListPicksForwardRow, error) {
 	query := listPicksForward
 	var queryParams []interface{}
@@ -1454,10 +1874,18 @@ func (q *Queries) ListPicksForward(ctx context.Context, arg ListPicksForwardPara
 	queryParams = append(queryParams, arg.StartDate)
 	queryParams = append(queryParams, arg.EndDate)
 	queryParams = append(queryParams, arg.EndDate)
+	queryParams = append(queryParams, arg.SortByShipBy)
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
+	queryParams = append(queryParams, arg.SortByShipBy)
+	queryParams = append(queryParams, arg.CursorShipByDate)
+	queryParams = append(queryParams, arg.CursorShipByDate)
+	queryParams = append(queryParams, arg.CursorShipByDate)
+	queryParams = append(queryParams, arg.CursorID)
+	queryParams = append(queryParams, arg.SortByShipBy)
+	queryParams = append(queryParams, arg.SortByShipBy)
 	queryParams = append(queryParams, arg.Limit)
 	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
@@ -1481,7 +1909,65 @@ func (q *Queries) ListPicksForward(ctx context.Context, arg ListPicksForwardPara
 			&i.FinishedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.LineCount,
+			&i.LastShippedAt,
+			&i.PromisedAt,
+			&i.ShipByDate,
+			&i.LeadTimeDays,
+			&i.LeadTimeSourceCode,
+			&i.TransitDays,
+			&i.TransitSourceCode,
+			&i.ShippingAddressID,
+			&i.ShippingAddressName,
+			&i.ShippingAddressPhone,
+			&i.ShippingAddressEmail,
+			&i.ShippingAddressIsDropShip,
+			&i.ShippingAddressGeolocationID,
+			&i.ShippingAddressStreetLine1,
+			&i.ShippingAddressStreetLine2,
+			&i.ShippingAddressLocality,
+			&i.ShippingAddressState,
+			&i.ShippingAddressPostalCode,
+			&i.ShippingAddressCountry,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listShippedOrderLineQuantitiesByShipment = `-- name: ListShippedOrderLineQuantitiesByShipment :many
+SELECT sl.sales_order_line_id, q.value AS shipped_value
+FROM shipment_line sl
+JOIN quantity q ON q.id = sl.quantity_id
+WHERE sl.shipment_id = ?
+`
+
+type ListShippedOrderLineQuantitiesByShipmentRow struct {
+	SalesOrderLineID string
+	ShippedValue     string
+}
+
+// The order line and shipped quantity behind each of a shipment's lines. Deleting the
+// shipment hands these back to the pick, so the reopened pick line can be matched to
+// the quantity this shipment took.
+func (q *Queries) ListShippedOrderLineQuantitiesByShipment(ctx context.Context, shipmentID string) ([]ListShippedOrderLineQuantitiesByShipmentRow, error) {
+	rows, err := q.db.QueryContext(ctx, listShippedOrderLineQuantitiesByShipment, shipmentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListShippedOrderLineQuantitiesByShipmentRow
+	for rows.Next() {
+		var i ListShippedOrderLineQuantitiesByShipmentRow
+		if err := rows.Scan(&i.SalesOrderLineID, &i.ShippedValue); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -1553,16 +2039,19 @@ LEFT JOIN (
     )
     GROUP BY pl_sum.sales_order_line_id
 ) picked ON picked.sales_order_line_id = pl.sales_order_line_id
+JOIN pick p ON p.id = pl.pick_id
 SET q.value = GREATEST(0, sol_q.value - GREATEST(COALESCE(picked.total_picked_value, 0) - q.value, 0)),
     q.updated_at = NOW(3)
 WHERE pl.pick_id = ?
 AND pl.packed_at IS NULL
+AND p.finished_at IS NULL
 `
 
 type PickAllLinesParams struct {
 	PickID string
 }
 
+// A finished pick is completed work; Dashboard filters its pick-all on pick.finishedAt too.
 func (q *Queries) PickAllLines(ctx context.Context, arg PickAllLinesParams) error {
 	_, err := q.db.ExecContext(ctx, pickAllLines, arg.PickID, arg.PickID)
 	return err
@@ -1589,7 +2078,7 @@ LEFT JOIN (
     AND pl_sum.id != ?
     GROUP BY pl_sum.sales_order_line_id
 ) picked ON picked.sales_order_line_id = pl.sales_order_line_id
-SET q.value = GREATEST(0, sol_q.value - COALESCE(picked.total_picked_value, 0)),
+SET q.value = GREATEST(0, sol_q.value - GREATEST(COALESCE(picked.total_picked_value, 0) - q.value, 0)),
     q.updated_at = NOW(3)
 WHERE pl.id = ?
 AND pl.packed_at IS NULL
@@ -1599,6 +2088,9 @@ type PickRemainingQuantityForLineParams struct {
 	PickLineID string
 }
 
+// Remaining excludes this line's own quantity, matching PickAllLines. Dashboard subtracts the
+// total including self, so picking a line already holding 3 of 10 leaves it at 7 rather than
+// filling it to 10 — a deliberate divergence, and the two picking paths must agree.
 func (q *Queries) PickRemainingQuantityForLine(ctx context.Context, arg PickRemainingQuantityForLineParams) error {
 	_, err := q.db.ExecContext(ctx, pickRemainingQuantityForLine, arg.PickLineID, arg.PickLineID, arg.PickLineID)
 	return err
@@ -1623,18 +2115,17 @@ func (q *Queries) ReopenIncompletePickLines(ctx context.Context, pickID string) 
 	return err
 }
 
-const unpackPickLinesByShipment = `-- name: UnpackPickLinesByShipment :exec
+const reopenPickLine = `-- name: ReopenPickLine :exec
 UPDATE pick_line SET
     packed_at = NULL,
     updated_at = NOW(3)
-WHERE sales_order_line_id IN (
-    SELECT sl.sales_order_line_id FROM shipment_line sl
-    WHERE sl.shipment_id = ?
-)
+WHERE id = ?
 `
 
-func (q *Queries) UnpackPickLinesByShipment(ctx context.Context, shipmentID string) error {
-	_, err := q.db.ExecContext(ctx, unpackPickLinesByShipment, shipmentID)
+// Reopens a packed pick line so the goods it committed become pickable again. The caller
+// restores its quantity separately (UpdatePickLineQuantity).
+func (q *Queries) ReopenPickLine(ctx context.Context, pickLineID string) error {
+	_, err := q.db.ExecContext(ctx, reopenPickLine, pickLineID)
 	return err
 }
 
@@ -1659,7 +2150,8 @@ func (q *Queries) UpdatePickFinishedAt(ctx context.Context, arg UpdatePickFinish
 
 const updatePickLineQuantity = `-- name: UpdatePickLineQuantity :exec
 UPDATE quantity SET
-    value = ?,
+    value = COALESCE(?, value),
+    unit_id = COALESCE(?, unit_id),
     updated_at = NOW(3)
 WHERE id = (
     SELECT pl.quantity_id FROM pick_line pl
@@ -1668,12 +2160,13 @@ WHERE id = (
 `
 
 type UpdatePickLineQuantityParams struct {
-	Value      string
+	Value      sql.NullString
+	UnitID     sql.NullString
 	PickLineID string
 }
 
 func (q *Queries) UpdatePickLineQuantity(ctx context.Context, arg UpdatePickLineQuantityParams) error {
-	_, err := q.db.ExecContext(ctx, updatePickLineQuantity, arg.Value, arg.PickLineID)
+	_, err := q.db.ExecContext(ctx, updatePickLineQuantity, arg.Value, arg.UnitID, arg.PickLineID)
 	return err
 }
 
@@ -1701,12 +2194,16 @@ UPDATE quantity SET
     value = 0,
     updated_at = NOW(3)
 WHERE id IN (
-    SELECT quantity_id FROM pick_line
-    WHERE pick_id = ?
-    AND packed_at IS NULL
+    SELECT pl.quantity_id FROM pick_line pl
+    JOIN pick p ON p.id = pl.pick_id
+    WHERE pl.pick_id = ?
+    AND pl.packed_at IS NULL
+    AND p.finished_at IS NULL
 )
 `
 
+// Skips a finished pick's lines: voiding one clears finished_at but must not rewrite work that
+// was already completed (Dashboard filters the same way on pick.finishedAt).
 func (q *Queries) VoidAllPickLines(ctx context.Context, pickID string) error {
 	_, err := q.db.ExecContext(ctx, voidAllPickLines, pickID)
 	return err

@@ -1984,6 +1984,28 @@ func (q *Queries) GetSalesOrderSaleLinesForIssue(ctx context.Context, salesOrder
 	return items, nil
 }
 
+const getSalesOrderSalesRepEmail = `-- name: GetSalesOrderSalesRepEmail :one
+SELECT u.email FROM sales_order so
+JOIN account_user au ON au.id = so.sales_rep_id
+JOIN user u ON u.id = au.user_id
+WHERE so.id = ?
+AND so.owner_account_id = ?
+AND u.email IS NOT NULL
+`
+
+type GetSalesOrderSalesRepEmailParams struct {
+	SalesOrderID string
+	AccountID    string
+}
+
+// The email of the order's sales rep, if it has one with a set email; empty result otherwise.
+func (q *Queries) GetSalesOrderSalesRepEmail(ctx context.Context, arg GetSalesOrderSalesRepEmailParams) (sql.NullString, error) {
+	row := q.db.QueryRowContext(ctx, getSalesOrderSalesRepEmail, arg.SalesOrderID, arg.AccountID)
+	var email sql.NullString
+	err := row.Scan(&email)
+	return email, err
+}
+
 const getShipmentIDsBySalesOrder = `-- name: GetShipmentIDsBySalesOrder :many
 SELECT s.id
 FROM shipment s
@@ -3228,6 +3250,25 @@ type MarkAcknowledgementSentParams struct {
 
 func (q *Queries) MarkAcknowledgementSent(ctx context.Context, arg MarkAcknowledgementSentParams) error {
 	_, err := q.db.ExecContext(ctx, markAcknowledgementSent, arg.ID, arg.AccountID)
+	return err
+}
+
+const markSalesOrderFulfilled = `-- name: MarkSalesOrderFulfilled :exec
+UPDATE sales_order SET
+    sales_order_status_code = 'fulfilled',
+    completed_at = COALESCE(completed_at, NOW(3)),
+    updated_at = NOW(3)
+WHERE id = ?
+AND owner_account_id = ?
+`
+
+type MarkSalesOrderFulfilledParams struct {
+	ID        string
+	AccountID string
+}
+
+func (q *Queries) MarkSalesOrderFulfilled(ctx context.Context, arg MarkSalesOrderFulfilledParams) error {
+	_, err := q.db.ExecContext(ctx, markSalesOrderFulfilled, arg.ID, arg.AccountID)
 	return err
 }
 

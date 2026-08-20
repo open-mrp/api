@@ -214,12 +214,123 @@ func (s *shippingCaseSvcImpl) UpdateShippingCase(ctx context.Context, params dom
 
 			changes := audit.ComputeChanges(old, updated)
 
+			// The case hangs off a sales order; stamping it as the root is what puts a case edit in
+			// that order's history alongside its shipment and invoice.
+			rootOrderID, apiErr := txShippingCaseRepo.GetSalesOrderID(txCtx, params.AccountID, params.ShippingCaseID)
+			if apiErr != nil {
+				return apiErr
+			}
+
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionUpdate,
-				ResourceType: constants.ObjectTypeShippingCase,
-				ResourceID:   updated.ID,
-				Changes:      changes,
+				ServiceName:      domain.ServiceName,
+				Action:           constants.AuditActionUpdate,
+				ResourceType:     constants.ObjectTypeShippingCase,
+				ResourceID:       updated.ID,
+				RootResourceType: constants.ObjectTypeSalesOrder,
+				RootResourceID:   rootOrderID,
+				Changes:          changes,
+			}); apiErr != nil {
+				return apiErr
+			}
+
+			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
+		})
+
+		if apiErr != nil {
+			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
+		}
+
+		return result, nil
+
+	default:
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
+	}
+}
+
+// Corrects the tracking number of a case that has already shipped, which the ordinary update path
+// is not meant to reach. Reserved for admins recovering a mis-recorded dispatch.
+func (s *shippingCaseSvcImpl) AdminUpdateShippingCaseTracking(ctx context.Context, params domain.AdminUpdateShippingCaseTrackingParams) (*domain.ShippingCase, *apierror.APIError) {
+	ctx, span := shippingCaseSvcTracer.Start(ctx, "service.shipping_case.admin_update_tracking")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckIsAdmin(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainShipments, types.ActionUpdate); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	params.AccountID = identity.Target.AccountID
+
+	meds := s.mediators()
+
+	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
+	case domain.RecoveryPointFinished:
+		cached, err := idempotency.UnmarshalCachedResponse[domain.ShippingCase](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		if err != nil {
+			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
+		}
+		return cached.Data, cached.Error
+
+	case domain.RecoveryPointStarted:
+		var result *domain.ShippingCase
+		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *shippingCaseSvcImpl) *apierror.APIError {
+			txShippingCaseRepo := txSvc.repos.NewShippingCaseRepo()
+
+			old, apiErr := txShippingCaseRepo.Get(txCtx, params.AccountID, params.ShippingCaseID)
+			if apiErr != nil {
+				return apiErr
+			}
+
+			if old.ShippedAt == nil {
+				return apierror.NewValidationError("Shipping case has not been shipped yet. Use the regular update endpoint.")
+			}
+
+			if params.TrackingNumber != nil {
+				if apiErr := txShippingCaseRepo.Update(txCtx, domain.UpdateShippingCaseParams{
+					AccountID:      params.AccountID,
+					ShippingCaseID: params.ShippingCaseID,
+					TrackingNumber: params.TrackingNumber,
+				}); apiErr != nil {
+					return apiErr
+				}
+			}
+
+			updated, apiErr := txShippingCaseRepo.Get(txCtx, params.AccountID, params.ShippingCaseID)
+			if apiErr != nil {
+				return apiErr
+			}
+			result = updated
+
+			changes := audit.ComputeChanges(old, updated)
+
+			// The case hangs off a sales order; stamping it as the root is what puts a case edit in
+			// that order's history alongside its shipment and invoice.
+			rootOrderID, apiErr := txShippingCaseRepo.GetSalesOrderID(txCtx, params.AccountID, params.ShippingCaseID)
+			if apiErr != nil {
+				return apiErr
+			}
+
+			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+				ServiceName:      domain.ServiceName,
+				Action:           constants.AuditActionUpdate,
+				ResourceType:     constants.ObjectTypeShippingCase,
+				ResourceID:       updated.ID,
+				RootResourceType: constants.ObjectTypeSalesOrder,
+				RootResourceID:   rootOrderID,
+				Changes:          changes,
 			}); apiErr != nil {
 				return apiErr
 			}
@@ -277,6 +388,12 @@ func (s *shippingCaseSvcImpl) DeleteShippingCase(ctx context.Context, accountID,
 			return apiErr
 		}
 
+		// Resolved before the delete, since the row it walks is about to go.
+		rootOrderID, apiErr := txSvc.repos.NewShippingCaseRepo().GetSalesOrderID(txCtx, identity.Target.AccountID, shippingCaseID)
+		if apiErr != nil {
+			return apiErr
+		}
+
 		if apiErr := txSvc.repos.NewShippingCaseRepo().Delete(txCtx, identity.Target.AccountID, shippingCaseID); apiErr != nil {
 			return apiErr
 		}
@@ -284,11 +401,13 @@ func (s *shippingCaseSvcImpl) DeleteShippingCase(ctx context.Context, accountID,
 		changes := audit.ComputeChanges(shippingCase, (*domain.ShippingCase)(nil))
 
 		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-			ServiceName:  domain.ServiceName,
-			Action:       constants.AuditActionDelete,
-			ResourceType: constants.ObjectTypeShippingCase,
-			ResourceID:   shippingCase.ID,
-			Changes:      changes,
+			ServiceName:      domain.ServiceName,
+			Action:           constants.AuditActionDelete,
+			ResourceType:     constants.ObjectTypeShippingCase,
+			ResourceID:       shippingCase.ID,
+			RootResourceType: constants.ObjectTypeSalesOrder,
+			RootResourceID:   rootOrderID,
+			Changes:          changes,
 		}); apiErr != nil {
 			return apiErr
 		}
@@ -327,9 +446,10 @@ func (s *shippingCaseSvcImpl) GetShippingCaseLabel(ctx context.Context, accountI
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	s3Key := fmt.Sprintf("shipping-labels/%s/%s.gif", identity.Target.AccountID, number)
+	s3Key := shippingLabelS3Key(identity.Target.AccountID, number)
 
-	// NOTE: core-service only READS shipping labels here; they are written by the dashboard API. core-service's S3 access comes from the AugnoProdCoreS3Access IRSA policy (infra/production/terraform/core.tf). That policy is currently broad (Get/Put/Delete on all three buckets), but if it is ever tightened to least-privilege (read-only for the shipping-labels bucket, as it should be while core-service never uploads labels) and we later add an s3Client.Upload (PutObject) for shipping labels here, the policy must be updated to grant s3:PutObject on the shipping-labels bucket or the upload will fail with AccessDenied.
+	// Reads a label core-service itself uploads on ship and deletes on void, so the AugnoProdCoreS3Access
+	// IRSA policy (infra/production/terraform/core.tf) must keep Get/Put/Delete on the shipping-labels bucket.
 	exists, apiErr := s.s3Client.FileExists(ctx, s.shippingLabelsBucket, s3Key)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -345,4 +465,10 @@ func (s *shippingCaseSvcImpl) GetShippingCaseLabel(ctx context.Context, accountI
 	}
 
 	return &url, nil
+}
+
+// Locates a shipping case's stored label. The layout is shared with the dashboard API, which uploads
+// the labels core-service reads here and deletes on void.
+func shippingLabelS3Key(accountID, caseNumber string) string {
+	return fmt.Sprintf("shipping-labels/%s/%s.gif", accountID, caseNumber)
 }

@@ -46,9 +46,14 @@ type ShippoClient interface {
 	InitiateOAuth(ctx context.Context, objectID, redirectURI string, state *string) (string, *apierror.APIError)
 	FetchShippingRate(ctx context.Context, params FetchShippingRateParams) (float64, *apierror.APIError)
 	FetchAllShippingRates(ctx context.Context, params FetchAllShippingRatesParams) ([]ShippoRateOption, *apierror.APIError)
+	// CreateTransactionInstantLabel buys carrier labels for a shipment's cases and returns the
+	// master tracking number, negotiated rate, and per-case tracking/label details.
+	CreateTransactionInstantLabel(ctx context.Context, params CreateLabelParams) (*LabelResult, *apierror.APIError)
+	// RefundTransaction refunds a purchased Shippo label transaction (best-effort; used on void).
+	RefundTransaction(ctx context.Context, transactionID string) *apierror.APIError
 }
 
-// ShippoClientFactory builds ShippoClient instances from API keys.
+// Builds ShippoClient instances from API keys.
 type ShippoClientFactory interface {
 	Build(apiKey string) ShippoClient
 }

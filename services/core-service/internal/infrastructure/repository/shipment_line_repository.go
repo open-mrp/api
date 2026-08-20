@@ -11,6 +11,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/pagination"
 	"github.com/augno/api/shared/tracing"
+	"github.com/shopspring/decimal"
 )
 
 var shipmentLineRepoTracer = tracing.GetTracer("core-service.shipment_line_repository")
@@ -58,7 +59,7 @@ func (r *shipmentLineRepoImpl) List(ctx context.Context, params domain.ListShipm
 			}
 			lines := make([]*domain.ShipmentLine, len(rows))
 			for i, row := range rows {
-				lines[i] = mapBackwardShipmentLineRow(row)
+				lines[i] = mapShipmentLineRow(sqlc.GetShipmentLineRow(row))
 			}
 			result, pageInfo := pagination.BuildPageString(lines, params.Limit, cursorDir, shipmentLineCreatedAt, shipmentLineID)
 			return &domain.ListShipmentLinesResult{Lines: result, PageInfo: pageInfo}, nil
@@ -76,7 +77,7 @@ func (r *shipmentLineRepoImpl) List(ctx context.Context, params domain.ListShipm
 		}
 		lines := make([]*domain.ShipmentLine, len(rows))
 		for i, row := range rows {
-			lines[i] = mapForwardShipmentLineRow(row)
+			lines[i] = mapShipmentLineRow(shipmentLineListRow(row))
 		}
 		result, pageInfo := pagination.BuildPageString(lines, params.Limit, cursorDir, shipmentLineCreatedAt, shipmentLineID)
 		return &domain.ListShipmentLinesResult{Lines: result, PageInfo: pageInfo}, nil
@@ -95,7 +96,7 @@ func (r *shipmentLineRepoImpl) List(ctx context.Context, params domain.ListShipm
 	}
 	lines := make([]*domain.ShipmentLine, len(rows))
 	for i, row := range rows {
-		lines[i] = mapForwardShipmentLineRow(row)
+		lines[i] = mapShipmentLineRow(shipmentLineListRow(row))
 	}
 	result, pageInfo := pagination.BuildPageString(lines, params.Limit, cursorDir, shipmentLineCreatedAt, shipmentLineID)
 	return &domain.ListShipmentLinesResult{Lines: result, PageInfo: pageInfo}, nil
@@ -110,7 +111,7 @@ func (r *shipmentLineRepoImpl) Get(ctx context.Context, shipmentLineID string) (
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return mapGetShipmentLineRow(row), nil
+	return mapShipmentLineRow(row), nil
 }
 
 func (r *shipmentLineRepoImpl) Create(ctx context.Context, id, quantityID string, params domain.CreateShipmentLineEndpointParams) (*domain.ShipmentLine, *apierror.APIError) {
@@ -219,7 +220,7 @@ func (r *shipmentLineRepoImpl) ListByShipment(ctx context.Context, shipmentID st
 
 	lines := make([]*domain.ShipmentLine, len(rows))
 	for i, row := range rows {
-		lines[i] = mapListByShipmentRow(row)
+		lines[i] = mapShipmentLineRow(sqlc.GetShipmentLineRow(row))
 	}
 
 	return lines, nil
@@ -245,75 +246,19 @@ func (r *shipmentLineRepoImpl) DeleteByShipment(ctx context.Context, shipmentID 
 	return nil
 }
 
-func mapForwardShipmentLineRow(row sqlc.ListShipmentLinesForwardRow) *domain.ShipmentLine {
-	l := &domain.ShipmentLine{
-		ID:                       row.ID,
-		ShipmentID:               row.ShipmentID,
-		SalesOrderLineID:         row.SalesOrderLineID,
-		OrderLineSKU:             row.ProductSku,
-		QuantityID:               row.QuantityID,
-		QuantityValue:            row.QuantityValue,
-		QuantityUnitID:           row.QuantityUnitID,
-		QuantityUnitName:         row.QuantityUnitName,
-		QuantityUnitAbbreviation: row.QuantityUnitAbbreviation,
-		QuantityUnitType:         row.QuantityUnitType,
-		CreatedAt:                row.CreatedAt,
-		UpdatedAt:                row.UpdatedAt,
-	}
-	if row.ProductDescription.Valid {
-		l.OrderLineDesc = &row.ProductDescription.String
-	}
-	return l
+// Converts a list row to the detail row so every shipment-line query shares one mapper — legal only
+// while all four select the same projection in the same order, and a compile error if they drift.
+func shipmentLineListRow(row sqlc.ListShipmentLinesForwardRow) sqlc.GetShipmentLineRow {
+	return sqlc.GetShipmentLineRow(row)
 }
 
-func mapBackwardShipmentLineRow(row sqlc.ListShipmentLinesBackwardRow) *domain.ShipmentLine {
+func mapShipmentLineRow(row sqlc.GetShipmentLineRow) *domain.ShipmentLine {
 	l := &domain.ShipmentLine{
 		ID:                       row.ID,
 		ShipmentID:               row.ShipmentID,
 		SalesOrderLineID:         row.SalesOrderLineID,
 		OrderLineSKU:             row.ProductSku,
-		QuantityID:               row.QuantityID,
-		QuantityValue:            row.QuantityValue,
-		QuantityUnitID:           row.QuantityUnitID,
-		QuantityUnitName:         row.QuantityUnitName,
-		QuantityUnitAbbreviation: row.QuantityUnitAbbreviation,
-		QuantityUnitType:         row.QuantityUnitType,
-		CreatedAt:                row.CreatedAt,
-		UpdatedAt:                row.UpdatedAt,
-	}
-	if row.ProductDescription.Valid {
-		l.OrderLineDesc = &row.ProductDescription.String
-	}
-	return l
-}
-
-func mapGetShipmentLineRow(row sqlc.GetShipmentLineRow) *domain.ShipmentLine {
-	l := &domain.ShipmentLine{
-		ID:                       row.ID,
-		ShipmentID:               row.ShipmentID,
-		SalesOrderLineID:         row.SalesOrderLineID,
-		OrderLineSKU:             row.ProductSku,
-		QuantityID:               row.QuantityID,
-		QuantityValue:            row.QuantityValue,
-		QuantityUnitID:           row.QuantityUnitID,
-		QuantityUnitName:         row.QuantityUnitName,
-		QuantityUnitAbbreviation: row.QuantityUnitAbbreviation,
-		QuantityUnitType:         row.QuantityUnitType,
-		CreatedAt:                row.CreatedAt,
-		UpdatedAt:                row.UpdatedAt,
-	}
-	if row.ProductDescription.Valid {
-		l.OrderLineDesc = &row.ProductDescription.String
-	}
-	return l
-}
-
-func mapListByShipmentRow(row sqlc.ListShipmentLinesByShipmentRow) *domain.ShipmentLine {
-	l := &domain.ShipmentLine{
-		ID:                       row.ID,
-		ShipmentID:               row.ShipmentID,
-		SalesOrderLineID:         row.SalesOrderLineID,
-		OrderLineSKU:             row.ProductSku,
+		OrderLineItemNumber:      row.OrderLineItemNumber.Int32,
 		QuantityID:               row.QuantityID,
 		QuantityValue:            row.QuantityValue,
 		QuantityUnitID:           row.QuantityUnitID,
@@ -329,5 +274,48 @@ func mapListByShipmentRow(row sqlc.ListShipmentLinesByShipmentRow) *domain.Shipm
 	if row.OrderLineItemID.Valid {
 		l.OrderLineItemID = &row.OrderLineItemID.String
 	}
+	if row.OrderLineProductID.Valid {
+		l.OrderLineProductID = &row.OrderLineProductID.String
+	}
 	return l
+}
+
+func (r *shipmentLineRepoImpl) GetSalesOrderLineCapacity(ctx context.Context, salesOrderLineID string, excludeShipmentLineID *string) (*domain.SalesOrderLineShipmentCapacity, *apierror.APIError) {
+	ctx, span := shipmentLineRepoTracer.Start(ctx, "repository.shipment_line.get_sales_order_line_capacity")
+	defer span.End()
+
+	row, err := r.queries.GetSalesOrderLineShipmentCapacity(ctx, sqlc.GetSalesOrderLineShipmentCapacityParams{
+		SalesOrderLineID:      salesOrderLineID,
+		ExcludeShipmentLineID: toNullString(excludeShipmentLineID),
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	ordered, _ := decimal.NewFromString(row.OrderedValue)
+	return &domain.SalesOrderLineShipmentCapacity{
+		SalesOrderID: row.SalesOrderID,
+		Ordered:      ordered,
+		Shipped:      decimalFromSQLValue(row.ShippedValue),
+	}, nil
+}
+
+// Converts a driver value from a SUM/COALESCE column, which sqlc types as interface{}.
+func decimalFromSQLValue(v any) decimal.Decimal {
+	switch t := v.(type) {
+	case nil:
+		return decimal.Zero
+	case []byte:
+		d, _ := decimal.NewFromString(string(t))
+		return d
+	case string:
+		d, _ := decimal.NewFromString(t)
+		return d
+	case float64:
+		return decimal.NewFromFloat(t)
+	case int64:
+		return decimal.NewFromInt(t)
+	default:
+		return decimal.Zero
+	}
 }

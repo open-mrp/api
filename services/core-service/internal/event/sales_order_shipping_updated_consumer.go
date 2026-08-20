@@ -93,15 +93,29 @@ func (c *SalesOrderShippingUpdatedConsumer) handleMessage(ctx context.Context, m
 		return nil
 	}
 
+	shipmentRepo := c.repos.NewShipmentRepo()
+
+	// The ship-to cascades on its own: legacy's updateShipToAddress re-points every shipment of the
+	// order regardless of carrier, and an order can be left without one.
+	if order.ShippingAddressID != "" {
+		if apiErr := shipmentRepo.SyncShipToForOrder(ctx, data.AccountID, data.SalesOrderID, order.ShippingAddressID); apiErr != nil {
+			if apiErr.IsTransient {
+				return apiErr
+			}
+			log.Printf("[sales_order_shipping_updated] ship-to sync permanently failed for order %s (account %s): %v", data.SalesOrderID, data.AccountID, apiErr)
+			return nil
+		}
+	}
+
 	// The carrier, service level or ship-to just moved, which is exactly what a transit lane is keyed on, so the order's old lane no longer describes it. Warming here is what keeps a lane ready for orders whose carrier is chosen after create rather than during it.
 	c.warmTransit(ctx, data.AccountID, data.SalesOrderID)
 
-	// Shipments require a carrier; if the order has none there is nothing to cascade.
+	// The carrier half needs a carrier; without one there is nothing more to cascade.
 	if order.CarrierID == nil {
 		return nil
 	}
 
-	apiErr = c.repos.NewShipmentRepo().SyncShippingForOrder(ctx, domain.SyncShipmentShippingParams{
+	apiErr = shipmentRepo.SyncShippingForOrder(ctx, domain.SyncShipmentShippingParams{
 		AccountID:         data.AccountID,
 		SalesOrderID:      data.SalesOrderID,
 		CarrierID:         *order.CarrierID,

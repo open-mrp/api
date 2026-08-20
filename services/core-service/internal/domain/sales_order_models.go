@@ -266,7 +266,7 @@ type CreateSalesOrderLineInput struct {
 	// ProductSKU / ProductDescription default to the product's when nil.
 	ProductSKU         *string
 	ProductDescription *string
-	// UnitPrice is an optional override, honored only for internal actors.
+	// Overrides the server-computed price; honored only for internal actors.
 	UnitPrice *RateValue
 }
 

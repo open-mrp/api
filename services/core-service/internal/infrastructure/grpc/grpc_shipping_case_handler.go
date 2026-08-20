@@ -118,6 +118,28 @@ func (h *shippingCaseGRPCHandler) UpdateShippingCase(ctx context.Context, req *p
 	}, nil
 }
 
+// Corrects the tracking number of a shipping case that has already shipped.
+func (h *shippingCaseGRPCHandler) AdminUpdateShippingCaseTracking(ctx context.Context, req *pb.AdminUpdateShippingCaseTrackingRequest) (*pb.AdminUpdateShippingCaseTrackingResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	sc, apiErr := h.shippingCaseSvc.AdminUpdateShippingCaseTracking(ctx, domain.AdminUpdateShippingCaseTrackingParams{
+		ShippingCaseID: req.Id,
+		TrackingNumber: req.TrackingNumber,
+	})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.AdminUpdateShippingCaseTrackingResponse{
+		ShippingCase: shippingCaseToProto(sc),
+	}, nil
+}
+
 func (h *shippingCaseGRPCHandler) DeleteShippingCase(ctx context.Context, req *pb.DeleteShippingCaseRequest) (*pb.DeleteShippingCaseResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()

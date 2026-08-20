@@ -389,7 +389,7 @@ LEFT JOIN user usr ON usr.id = au.user_id
 WHERE t.account_id = sqlc.arg('account_id')
 AND (
     t.customer_account_id = sqlc.arg('customer_account_id')
-    OR (sqlc.arg('include_child_accounts') = 1 AND t.customer_account_id IN (
+    OR (t.customer_account_id IN (
         SELECT ar2.counterparty_account_id FROM account_relation ar2
         WHERE ar2.parent_account_relation_id IN (
             SELECT ar3.id FROM account_relation ar3
@@ -460,7 +460,7 @@ LEFT JOIN user usr ON usr.id = au.user_id
 WHERE t.account_id = sqlc.arg('account_id')
 AND (
     t.customer_account_id = sqlc.arg('customer_account_id')
-    OR (sqlc.arg('include_child_accounts') = 1 AND t.customer_account_id IN (
+    OR (t.customer_account_id IN (
         SELECT ar2.counterparty_account_id FROM account_relation ar2
         WHERE ar2.parent_account_relation_id IN (
             SELECT ar3.id FROM account_relation ar3
@@ -484,7 +484,7 @@ FROM transaction t
 WHERE t.account_id = sqlc.arg('account_id')
 AND (
     t.customer_account_id = sqlc.arg('customer_account_id')
-    OR (sqlc.arg('include_child_accounts') = 1 AND t.customer_account_id IN (
+    OR (t.customer_account_id IN (
         SELECT ar2.counterparty_account_id FROM account_relation ar2
         WHERE ar2.parent_account_relation_id IN (
             SELECT ar3.id FROM account_relation ar3

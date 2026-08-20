@@ -1,201 +1,263 @@
 -- name: ListReceivablesForward :many
+-- Nets only allocations whose transaction has a funds-received date before the cutoff, then drops
+-- anything already settled by then; without a cutoff every unpaid invoice is reported as-is.
 SELECT
-    inv.id,
-    inv.number AS invoice_number,
-    inv.is_paid_in_full,
-    inv.created_at,
-    so.customer_po_number AS po_number,
-    buyer.id AS customer_id,
-    buyer.name AS customer_name,
-    ar.external_number AS customer_number,
-    ROUND(
-        COALESCE((
-            SELECT SUM(q.value * r.value)
-            FROM invoice_line il
-            JOIN quantity q ON q.id = il.quantity_id
-            JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
-            JOIN rate r ON r.id = sol.unit_price_id
-            WHERE il.invoice_id = inv.id
-        ), 0)
-        -
-        COALESCE((
-            SELECT SUM(aq.value)
-            FROM transaction_allocation ta
-            JOIN quantity aq ON aq.id = ta.amount_id
-            WHERE ta.invoice_id = inv.id
-            AND ta.created_at < sqlc.narg('allocation_cutoff_date')
-        ), 0),
-    2) AS remaining_balance
-FROM invoice inv
-JOIN sales_order so ON inv.sales_order_id = so.id
-JOIN account_relation ar ON ar.owner_account_id = inv.account_id
-    AND ar.counterparty_account_id = so.buyer_account_id
-    AND ar.account_relation_role_code = 'customer'
-JOIN account buyer ON buyer.id = so.buyer_account_id
-WHERE inv.account_id = sqlc.arg('account_id')
-AND inv.is_paid_in_full = false
-AND (sqlc.narg('cutoff_date') IS NULL OR inv.created_at < sqlc.narg('cutoff_date'))
-AND (
-    sqlc.narg('search_query') IS NULL
-    OR inv.number LIKE sqlc.narg('search_query')
-    OR buyer.name LIKE sqlc.narg('search_query')
-)
-AND (
-    sqlc.narg('cursor_created_at') IS NULL
-    OR inv.created_at < sqlc.narg('cursor_created_at')
-    OR (inv.created_at = sqlc.narg('cursor_created_at') AND inv.id < sqlc.narg('cursor_id'))
-)
-ORDER BY inv.created_at DESC, inv.id DESC
+    rec.id,
+    rec.invoice_number,
+    rec.is_paid_in_full,
+    rec.created_at,
+    rec.po_number,
+    rec.customer_id,
+    rec.customer_name,
+    rec.customer_number,
+    rec.remaining_balance
+FROM (
+    SELECT
+        inv.id,
+        inv.number AS invoice_number,
+        inv.is_paid_in_full,
+        inv.created_at,
+        so.customer_po_number AS po_number,
+        buyer.id AS customer_id,
+        buyer.name AS customer_name,
+        ar.external_number AS customer_number,
+        ROUND(
+            COALESCE((
+                SELECT SUM(q.value * rt.value)
+                FROM invoice_line il
+                JOIN quantity q ON q.id = il.quantity_id
+                JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
+                JOIN rate rt ON rt.id = sol.unit_price_id
+                WHERE il.invoice_id = inv.id
+            ), 0)
+            -
+            COALESCE((
+                SELECT SUM(aq.value)
+                FROM transaction_allocation ta
+                JOIN quantity aq ON aq.id = ta.amount_id
+                JOIN `transaction` txn ON txn.id = ta.transaction_id
+                WHERE ta.invoice_id = inv.id
+                AND txn.funds_received_at IS NOT NULL
+                AND txn.funds_received_at < COALESCE(sqlc.narg('allocation_cutoff_date'), CAST('9999-12-31 23:59:59' AS DATETIME(6)))
+            ), 0),
+        2) AS remaining_balance
+    FROM invoice inv
+    JOIN sales_order so ON inv.sales_order_id = so.id
+    JOIN account_relation ar ON ar.owner_account_id = inv.account_id
+        AND ar.counterparty_account_id = so.buyer_account_id
+        AND ar.account_relation_role_code = 'customer'
+    JOIN account buyer ON buyer.id = so.buyer_account_id
+    WHERE inv.account_id = sqlc.arg('account_id')
+    AND inv.is_paid_in_full = false
+    AND (sqlc.narg('cutoff_date') IS NULL OR inv.created_at < sqlc.narg('cutoff_date'))
+    AND (
+        sqlc.narg('search_query') IS NULL
+        OR inv.number LIKE sqlc.narg('search_query')
+        OR buyer.name LIKE sqlc.narg('search_query')
+    )
+    AND (
+        sqlc.narg('cursor_created_at') IS NULL
+        OR inv.created_at < sqlc.narg('cursor_created_at')
+        OR (inv.created_at = sqlc.narg('cursor_created_at') AND inv.id < sqlc.narg('cursor_id'))
+    )
+) rec
+WHERE sqlc.arg('require_positive_balance') = false OR rec.remaining_balance > 0
+ORDER BY rec.created_at DESC, rec.id DESC
 LIMIT ?;
 
 -- name: ListReceivablesBackward :many
 SELECT
-    inv.id,
-    inv.number AS invoice_number,
-    inv.is_paid_in_full,
-    inv.created_at,
-    so.customer_po_number AS po_number,
-    buyer.id AS customer_id,
-    buyer.name AS customer_name,
-    ar.external_number AS customer_number,
-    ROUND(
-        COALESCE((
-            SELECT SUM(q.value * r.value)
-            FROM invoice_line il
-            JOIN quantity q ON q.id = il.quantity_id
-            JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
-            JOIN rate r ON r.id = sol.unit_price_id
-            WHERE il.invoice_id = inv.id
-        ), 0)
-        -
-        COALESCE((
-            SELECT SUM(aq.value)
-            FROM transaction_allocation ta
-            JOIN quantity aq ON aq.id = ta.amount_id
-            WHERE ta.invoice_id = inv.id
-            AND ta.created_at < sqlc.narg('allocation_cutoff_date')
-        ), 0),
-    2) AS remaining_balance
-FROM invoice inv
-JOIN sales_order so ON inv.sales_order_id = so.id
-JOIN account_relation ar ON ar.owner_account_id = inv.account_id
-    AND ar.counterparty_account_id = so.buyer_account_id
-    AND ar.account_relation_role_code = 'customer'
-JOIN account buyer ON buyer.id = so.buyer_account_id
-WHERE inv.account_id = sqlc.arg('account_id')
-AND inv.is_paid_in_full = false
-AND (sqlc.narg('cutoff_date') IS NULL OR inv.created_at < sqlc.narg('cutoff_date'))
-AND (
-    sqlc.narg('search_query') IS NULL
-    OR inv.number LIKE sqlc.narg('search_query')
-    OR buyer.name LIKE sqlc.narg('search_query')
-)
-AND (
-    inv.created_at > sqlc.arg('cursor_created_at')
-    OR (inv.created_at = sqlc.arg('cursor_created_at') AND inv.id > sqlc.arg('cursor_id'))
-)
-ORDER BY inv.created_at ASC, inv.id ASC
+    rec.id,
+    rec.invoice_number,
+    rec.is_paid_in_full,
+    rec.created_at,
+    rec.po_number,
+    rec.customer_id,
+    rec.customer_name,
+    rec.customer_number,
+    rec.remaining_balance
+FROM (
+    SELECT
+        inv.id,
+        inv.number AS invoice_number,
+        inv.is_paid_in_full,
+        inv.created_at,
+        so.customer_po_number AS po_number,
+        buyer.id AS customer_id,
+        buyer.name AS customer_name,
+        ar.external_number AS customer_number,
+        ROUND(
+            COALESCE((
+                SELECT SUM(q.value * rt.value)
+                FROM invoice_line il
+                JOIN quantity q ON q.id = il.quantity_id
+                JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
+                JOIN rate rt ON rt.id = sol.unit_price_id
+                WHERE il.invoice_id = inv.id
+            ), 0)
+            -
+            COALESCE((
+                SELECT SUM(aq.value)
+                FROM transaction_allocation ta
+                JOIN quantity aq ON aq.id = ta.amount_id
+                JOIN `transaction` txn ON txn.id = ta.transaction_id
+                WHERE ta.invoice_id = inv.id
+                AND txn.funds_received_at IS NOT NULL
+                AND txn.funds_received_at < COALESCE(sqlc.narg('allocation_cutoff_date'), CAST('9999-12-31 23:59:59' AS DATETIME(6)))
+            ), 0),
+        2) AS remaining_balance
+    FROM invoice inv
+    JOIN sales_order so ON inv.sales_order_id = so.id
+    JOIN account_relation ar ON ar.owner_account_id = inv.account_id
+        AND ar.counterparty_account_id = so.buyer_account_id
+        AND ar.account_relation_role_code = 'customer'
+    JOIN account buyer ON buyer.id = so.buyer_account_id
+    WHERE inv.account_id = sqlc.arg('account_id')
+    AND inv.is_paid_in_full = false
+    AND (sqlc.narg('cutoff_date') IS NULL OR inv.created_at < sqlc.narg('cutoff_date'))
+    AND (
+        sqlc.narg('search_query') IS NULL
+        OR inv.number LIKE sqlc.narg('search_query')
+        OR buyer.name LIKE sqlc.narg('search_query')
+    )
+    AND (
+        inv.created_at > sqlc.arg('cursor_created_at')
+        OR (inv.created_at = sqlc.arg('cursor_created_at') AND inv.id > sqlc.arg('cursor_id'))
+    )
+) rec
+WHERE sqlc.arg('require_positive_balance') = false OR rec.remaining_balance > 0
+ORDER BY rec.created_at ASC, rec.id ASC
 LIMIT ?;
 
 -- name: ListReceivablesByCustomerForward :many
 SELECT
-    inv.id,
-    inv.number AS invoice_number,
-    inv.is_paid_in_full,
-    inv.created_at,
-    so.customer_po_number AS po_number,
-    buyer.id AS customer_id,
-    buyer.name AS customer_name,
-    ar.external_number AS customer_number,
-    ROUND(
-        COALESCE((
-            SELECT SUM(q.value * r.value)
-            FROM invoice_line il
-            JOIN quantity q ON q.id = il.quantity_id
-            JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
-            JOIN rate r ON r.id = sol.unit_price_id
-            WHERE il.invoice_id = inv.id
-        ), 0)
-        -
-        COALESCE((
-            SELECT SUM(aq.value)
-            FROM transaction_allocation ta
-            JOIN quantity aq ON aq.id = ta.amount_id
-            WHERE ta.invoice_id = inv.id
-            AND ta.created_at < sqlc.narg('allocation_cutoff_date')
-        ), 0),
-    2) AS remaining_balance
-FROM invoice inv
-JOIN sales_order so ON inv.sales_order_id = so.id
-JOIN account_relation ar ON ar.owner_account_id = inv.account_id
-    AND ar.counterparty_account_id = so.buyer_account_id
-    AND ar.account_relation_role_code = 'customer'
-JOIN account buyer ON buyer.id = so.buyer_account_id
-WHERE inv.account_id = sqlc.arg('account_id')
-AND so.buyer_account_id = sqlc.arg('customer_account_id')
-AND inv.is_paid_in_full = false
-AND (sqlc.narg('cutoff_date') IS NULL OR inv.created_at < sqlc.narg('cutoff_date'))
-AND (
-    sqlc.narg('search_query') IS NULL
-    OR inv.number LIKE sqlc.narg('search_query')
-    OR buyer.name LIKE sqlc.narg('search_query')
-)
-AND (
-    sqlc.narg('cursor_created_at') IS NULL
-    OR inv.created_at < sqlc.narg('cursor_created_at')
-    OR (inv.created_at = sqlc.narg('cursor_created_at') AND inv.id < sqlc.narg('cursor_id'))
-)
-ORDER BY inv.created_at DESC, inv.id DESC
+    rec.id,
+    rec.invoice_number,
+    rec.is_paid_in_full,
+    rec.created_at,
+    rec.po_number,
+    rec.customer_id,
+    rec.customer_name,
+    rec.customer_number,
+    rec.remaining_balance
+FROM (
+    SELECT
+        inv.id,
+        inv.number AS invoice_number,
+        inv.is_paid_in_full,
+        inv.created_at,
+        so.customer_po_number AS po_number,
+        buyer.id AS customer_id,
+        buyer.name AS customer_name,
+        ar.external_number AS customer_number,
+        ROUND(
+            COALESCE((
+                SELECT SUM(q.value * rt.value)
+                FROM invoice_line il
+                JOIN quantity q ON q.id = il.quantity_id
+                JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
+                JOIN rate rt ON rt.id = sol.unit_price_id
+                WHERE il.invoice_id = inv.id
+            ), 0)
+            -
+            COALESCE((
+                SELECT SUM(aq.value)
+                FROM transaction_allocation ta
+                JOIN quantity aq ON aq.id = ta.amount_id
+                JOIN `transaction` txn ON txn.id = ta.transaction_id
+                WHERE ta.invoice_id = inv.id
+                AND txn.funds_received_at IS NOT NULL
+                AND txn.funds_received_at < COALESCE(sqlc.narg('allocation_cutoff_date'), CAST('9999-12-31 23:59:59' AS DATETIME(6)))
+            ), 0),
+        2) AS remaining_balance
+    FROM invoice inv
+    JOIN sales_order so ON inv.sales_order_id = so.id
+    JOIN account_relation ar ON ar.owner_account_id = inv.account_id
+        AND ar.counterparty_account_id = so.buyer_account_id
+        AND ar.account_relation_role_code = 'customer'
+    JOIN account buyer ON buyer.id = so.buyer_account_id
+    WHERE inv.account_id = sqlc.arg('account_id')
+    AND so.buyer_account_id = sqlc.arg('customer_account_id')
+    AND inv.is_paid_in_full = false
+    AND (sqlc.narg('cutoff_date') IS NULL OR inv.created_at < sqlc.narg('cutoff_date'))
+    AND (
+        sqlc.narg('search_query') IS NULL
+        OR inv.number LIKE sqlc.narg('search_query')
+        OR buyer.name LIKE sqlc.narg('search_query')
+    )
+    AND (
+        sqlc.narg('cursor_created_at') IS NULL
+        OR inv.created_at < sqlc.narg('cursor_created_at')
+        OR (inv.created_at = sqlc.narg('cursor_created_at') AND inv.id < sqlc.narg('cursor_id'))
+    )
+) rec
+WHERE sqlc.arg('require_positive_balance') = false OR rec.remaining_balance > 0
+ORDER BY rec.created_at DESC, rec.id DESC
 LIMIT ?;
 
 -- name: ListReceivablesByCustomerBackward :many
 SELECT
-    inv.id,
-    inv.number AS invoice_number,
-    inv.is_paid_in_full,
-    inv.created_at,
-    so.customer_po_number AS po_number,
-    buyer.id AS customer_id,
-    buyer.name AS customer_name,
-    ar.external_number AS customer_number,
-    ROUND(
-        COALESCE((
-            SELECT SUM(q.value * r.value)
-            FROM invoice_line il
-            JOIN quantity q ON q.id = il.quantity_id
-            JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
-            JOIN rate r ON r.id = sol.unit_price_id
-            WHERE il.invoice_id = inv.id
-        ), 0)
-        -
-        COALESCE((
-            SELECT SUM(aq.value)
-            FROM transaction_allocation ta
-            JOIN quantity aq ON aq.id = ta.amount_id
-            WHERE ta.invoice_id = inv.id
-            AND ta.created_at < sqlc.narg('allocation_cutoff_date')
-        ), 0),
-    2) AS remaining_balance
-FROM invoice inv
-JOIN sales_order so ON inv.sales_order_id = so.id
-JOIN account_relation ar ON ar.owner_account_id = inv.account_id
-    AND ar.counterparty_account_id = so.buyer_account_id
-    AND ar.account_relation_role_code = 'customer'
-JOIN account buyer ON buyer.id = so.buyer_account_id
-WHERE inv.account_id = sqlc.arg('account_id')
-AND so.buyer_account_id = sqlc.arg('customer_account_id')
-AND inv.is_paid_in_full = false
-AND (sqlc.narg('cutoff_date') IS NULL OR inv.created_at < sqlc.narg('cutoff_date'))
-AND (
-    sqlc.narg('search_query') IS NULL
-    OR inv.number LIKE sqlc.narg('search_query')
-    OR buyer.name LIKE sqlc.narg('search_query')
-)
-AND (
-    inv.created_at > sqlc.arg('cursor_created_at')
-    OR (inv.created_at = sqlc.arg('cursor_created_at') AND inv.id > sqlc.arg('cursor_id'))
-)
-ORDER BY inv.created_at ASC, inv.id ASC
+    rec.id,
+    rec.invoice_number,
+    rec.is_paid_in_full,
+    rec.created_at,
+    rec.po_number,
+    rec.customer_id,
+    rec.customer_name,
+    rec.customer_number,
+    rec.remaining_balance
+FROM (
+    SELECT
+        inv.id,
+        inv.number AS invoice_number,
+        inv.is_paid_in_full,
+        inv.created_at,
+        so.customer_po_number AS po_number,
+        buyer.id AS customer_id,
+        buyer.name AS customer_name,
+        ar.external_number AS customer_number,
+        ROUND(
+            COALESCE((
+                SELECT SUM(q.value * rt.value)
+                FROM invoice_line il
+                JOIN quantity q ON q.id = il.quantity_id
+                JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
+                JOIN rate rt ON rt.id = sol.unit_price_id
+                WHERE il.invoice_id = inv.id
+            ), 0)
+            -
+            COALESCE((
+                SELECT SUM(aq.value)
+                FROM transaction_allocation ta
+                JOIN quantity aq ON aq.id = ta.amount_id
+                JOIN `transaction` txn ON txn.id = ta.transaction_id
+                WHERE ta.invoice_id = inv.id
+                AND txn.funds_received_at IS NOT NULL
+                AND txn.funds_received_at < COALESCE(sqlc.narg('allocation_cutoff_date'), CAST('9999-12-31 23:59:59' AS DATETIME(6)))
+            ), 0),
+        2) AS remaining_balance
+    FROM invoice inv
+    JOIN sales_order so ON inv.sales_order_id = so.id
+    JOIN account_relation ar ON ar.owner_account_id = inv.account_id
+        AND ar.counterparty_account_id = so.buyer_account_id
+        AND ar.account_relation_role_code = 'customer'
+    JOIN account buyer ON buyer.id = so.buyer_account_id
+    WHERE inv.account_id = sqlc.arg('account_id')
+    AND so.buyer_account_id = sqlc.arg('customer_account_id')
+    AND inv.is_paid_in_full = false
+    AND (sqlc.narg('cutoff_date') IS NULL OR inv.created_at < sqlc.narg('cutoff_date'))
+    AND (
+        sqlc.narg('search_query') IS NULL
+        OR inv.number LIKE sqlc.narg('search_query')
+        OR buyer.name LIKE sqlc.narg('search_query')
+    )
+    AND (
+        inv.created_at > sqlc.arg('cursor_created_at')
+        OR (inv.created_at = sqlc.arg('cursor_created_at') AND inv.id > sqlc.arg('cursor_id'))
+    )
+) rec
+WHERE sqlc.arg('require_positive_balance') = false OR rec.remaining_balance > 0
+ORDER BY rec.created_at ASC, rec.id ASC
 LIMIT ?;
 
 -- name: GetOpenCreditsByCustomer :many

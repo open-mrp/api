@@ -4,24 +4,27 @@ import (
 	"time"
 
 	"github.com/augno/api/shared/constants"
+	"github.com/augno/api/shared/field"
 	"github.com/augno/api/shared/pagination"
 )
 
-// InvoiceSummary represents a lightweight invoice for list views.
-type InvoiceSummary struct {
+// Bills a customer for goods shipped against a sales order; read, list and update all return it.
+type Invoice struct {
 	ID                       string
 	Number                   string                 `audit:"number"`
 	Note                     *string                `audit:"note"`
+	OrderID                  string                 `audit:"order_id"`
+	OrderNumber              string                 `audit:"order_number"`
+	PriorityCode             constants.PriorityCode `audit:"priority_code"`
 	CustomerID               string                 `audit:"customer_id"`
 	CustomerName             string                 `audit:"customer_name"`
 	CustomerNumber           string                 `audit:"customer_number"`
 	CustomerStatusCode       *string                `audit:"customer_status_code"`
 	CustomerCommissionPolicy *string                `audit:"customer_commission_policy"`
 	CustomerIsEdiEnabled     bool                   `audit:"customer_is_edi_enabled"`
-	OrderID                  string                 `audit:"order_id"`
-	OrderNumber              string                 `audit:"order_number"`
-	ShipmentID               *string                `audit:"shipment_id"`
-	LineCount                int32                  `audit:"line_count"`
+	PaymentTermID            *string                `audit:"payment_term_id"`
+	PaymentTermName          *string                `audit:"payment_term_name"`
+	PaymentTermIsActive      *bool                  `audit:"payment_term_is_active"`
 	BillingAddressID         string                 `audit:"billing_address_id"`
 	BillingAddressName       *string                `audit:"billing_address_name"`
 	BillingAddressLine1      *string                `audit:"billing_address_line_1"`
@@ -30,68 +33,42 @@ type InvoiceSummary struct {
 	BillingAddressState      *string                `audit:"billing_address_state"`
 	BillingAddressZip        *string                `audit:"billing_address_zip"`
 	BillingAddressCountry    string                 `audit:"billing_address_country"`
-	PriorityCode             constants.PriorityCode `audit:"priority_code"`
-	PaymentTermID            *string                `audit:"payment_term_id"`
-	PaymentTermName          *string                `audit:"payment_term_name"`
-	PaymentTermIsActive      *bool                  `audit:"payment_term_is_active"`
-	PaymentTermDays          *int32                 `audit:"payment_term_days"`
+	ShipmentID               *string                `audit:"shipment_id"`
+	ShipmentNumber           *string                `audit:"shipment_number"`
+	LineCount                int32                  `audit:"line_count"`
+	TotalInvoiced            string                 `audit:"total_invoiced"`
 	IsPaidInFull             bool                   `audit:"is_paid_in_full"`
+	IsOverPaid               bool                   `audit:"is_over_paid"`
 	IsEdiSent                bool                   `audit:"is_edi_sent"`
 	HasBeenSent              bool                   `audit:"has_been_sent"`
-	TotalInvoiced            string                 `audit:"total_invoiced"`
 	AcceptsInvoiceEmails     bool                   `audit:"accepts_invoice_emails"`
+	Lines                    []*InvoiceLine
+	Allocations              []*InvoiceAllocation
 	CreatedAt                time.Time
 	UpdatedAt                time.Time
-	// Lines (populated only when the list request includes "lines").
-	Lines []*InvoiceLine
-}
-
-// Invoice represents a full invoice with expandable lines and allocations.
-type Invoice struct {
-	ID                    string
-	Number                string  `audit:"number"`
-	Note                  *string `audit:"note"`
-	OrderID               string  `audit:"order_id"`
-	OrderNumber           string  `audit:"order_number"`
-	CustomerID            string  `audit:"customer_id"`
-	PaymentTermID         *string `audit:"payment_term_id"`
-	BillingAddressID      string  `audit:"billing_address_id"`
-	BillingAddressName    *string `audit:"billing_address_name"`
-	BillingAddressLine1   *string `audit:"billing_address_line_1"`
-	BillingAddressLine2   *string `audit:"billing_address_line_2"`
-	BillingAddressCity    *string `audit:"billing_address_city"`
-	BillingAddressState   *string `audit:"billing_address_state"`
-	BillingAddressZip     *string `audit:"billing_address_zip"`
-	BillingAddressCountry string  `audit:"billing_address_country"`
-	ShipmentID            *string `audit:"shipment_id"`
-	ShipmentNumber        *string `audit:"shipment_number"`
-	IsPaidInFull          bool    `audit:"is_paid_in_full"`
-	IsOverPaid            bool    `audit:"is_over_paid"`
-	IsEdiSent             bool    `audit:"is_edi_sent"`
-	HasBeenSent           bool    `audit:"has_been_sent"`
-	AcceptsInvoiceEmails  bool    `audit:"accepts_invoice_emails"`
-	Lines                 []*InvoiceLine
-	Allocations           []*InvoiceAllocation
-	CreatedAt             time.Time
-	UpdatedAt             time.Time
 }
 
 // InvoiceLine represents a line item in an invoice.
 type InvoiceLine struct {
-	ID               string
-	QuantityID       string
-	QuantityValue    string
-	QuantityUnitID   string
-	QuantityUnitAbbr string
-	UnitPriceID      string
-	UnitPriceValue   string
-	UnitPriceNumUnit string
-	UnitPriceDenUnit string
-	OrderLineID      string
-	OrderLineItemID  *string
-	OrderLineItemSKU *string
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	ID                   string
+	QuantityID           string
+	QuantityValue        string
+	QuantityUnitID       string
+	QuantityUnitAbbr     string
+	QuantityUnitName     string
+	UnitPriceID          string
+	UnitPriceValue       string
+	UnitPriceNumUnit     string
+	UnitPriceDenUnit     string
+	OrderLineID          string
+	OrderLineItemID      *string
+	OrderLineItemNumber  *int32
+	OrderLineProductID   *string
+	OrderLineQtyOrdered  string
+	OrderLineItemSKU     *string
+	OrderLineDescription *string
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
 }
 
 // InvoiceAllocation represents a transaction allocation against an invoice.
@@ -144,9 +121,9 @@ type ListInvoicesParams struct {
 	Includes         []string
 }
 
-// ListInvoicesResult holds the result of listing invoices.
+// Holds one page of invoices plus its cursors.
 type ListInvoicesResult struct {
-	Invoices []*InvoiceSummary
+	Invoices []*Invoice
 	PageInfo pagination.PageInfo
 }
 
@@ -161,20 +138,21 @@ type GetInvoiceParams struct {
 type UpdateInvoiceParams struct {
 	AccountID    string
 	InvoiceID    string
-	Note         *string
+	Note         field.Clearable[string]
 	HasBeenSent  *bool
 	IsEdiSent    *bool
 	IsPaidInFull *bool
+	Includes     []string
 }
 
 // ListCustomerInvoicesParams holds parameters for listing invoices by customer.
 type ListCustomerInvoicesParams struct {
-	AccountID            string
-	CustomerAccountID    string
-	Cursor               *string
-	Limit                int32
-	Query                *string
-	IncludeChildAccounts bool
+	AccountID         string
+	CustomerAccountID string
+	Cursor            *string
+	Limit             int32
+	Query             *string
+	Includes          []string
 }
 
 // ListCustomerInvoicesResult holds the result of listing customer invoices.
@@ -188,4 +166,20 @@ type InvoicePaymentFlags struct {
 	InvoiceID    string
 	IsPaidInFull bool
 	IsOverPaid   bool
+}
+
+// Carries everything CreateFromShipment needs, resolved by the service inside the ship transaction.
+type CreateInvoiceFromShipmentParams struct {
+	AccountID    string
+	InvoiceID    string
+	Number       string
+	SalesOrderID string
+	ShippedLines []InvoiceLineDraft
+}
+
+// Describes one line to write: the order line billed and the quantity billed for it.
+type InvoiceLineDraft struct {
+	SalesOrderLineID string
+	QuantityValue    string
+	QuantityUnitID   string
 }

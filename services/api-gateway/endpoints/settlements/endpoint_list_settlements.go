@@ -20,9 +20,7 @@ type ListSettlementsRequest struct {
 	InvoiceIDs []string `query:"invoice_ids"`
 	// Only return settlements created on or after the start of this date (`YYYY-MM-DD`, UTC).
 	StartDate *string `query:"starts_at"`
-	// Only return settlements created up to the start of this date (`YYYY-MM-DD`, UTC).
-	//
-	// Settlements created later on that day are excluded, so pass the following day to cover a full day.
+	// Only return settlements created on or before this date (`YYYY-MM-DD`, UTC), covering that whole day.
 	EndDate *string `query:"ends_at"`
 }
 

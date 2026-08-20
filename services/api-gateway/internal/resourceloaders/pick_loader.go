@@ -52,8 +52,10 @@ func pickReferenceFromProto(info *pb.PickInfo) *apiresource.Pick {
 	}
 }
 
+// Satisfies Register's required Load but is never invoked: pick lines are expandable only by
+// traversal from their pick (attached inline via ExtractRefs), never loaded by their own id.
 func LoadPickLines(_ context.Context, _ []string) (map[string]any, *apierror.APIError) {
 	return nil, apierror.NewInvariantViolationError(
-		"LoadPickLines should not be called — pick lines are not used as expandable sub-resources",
+		"LoadPickLines must not be called — pick lines are attached by the pick and traversed via ExtractRefs, not loaded by id",
 	)
 }

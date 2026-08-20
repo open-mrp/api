@@ -10,11 +10,13 @@ const (
 	JobTypeBulkUpsert JobType = "bulk_upsert"
 	// JobTypeExport indicates the job renders a resource as a downloadable file.
 	JobTypeExport JobType = "export"
+	// Packs a pick into a new shipment with its lines and cases.
+	JobTypePackPick JobType = "pack_pick"
 )
 
 func (m JobType) IsValid() bool {
 	switch m {
-	case JobTypeBulkCreate, JobTypeBulkUpsert, JobTypeExport:
+	case JobTypeBulkCreate, JobTypeBulkUpsert, JobTypeExport, JobTypePackPick:
 		return true
 	default:
 		return false
@@ -26,5 +28,6 @@ func (m JobType) EnumValues() []string {
 		string(JobTypeBulkCreate),
 		string(JobTypeBulkUpsert),
 		string(JobTypeExport),
+		string(JobTypePackPick),
 	}
 }

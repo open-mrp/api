@@ -9,6 +9,7 @@ import "core/core_identity_context.proto";
 import "core/core_items.proto";
 import "core/core_consumption.proto";
 import "core/core_invoices.proto";
+import "core/core_patch.proto";
 import "core/core_async.proto";
 
 option go_package = "shared/proto/core;core";
@@ -415,7 +416,7 @@ message ListInvoicesRequest {
   repeated string includes = 12;
 }
 message ListInvoicesResponse {
-  repeated InvoiceSummaryInfo invoices = 1;
+  repeated InvoiceInfo invoices = 1;
   PageInfo page_info = 2;
 }
 message GetInvoiceRequest {
@@ -427,61 +428,25 @@ message GetInvoiceResponse {
 }
 message UpdateInvoiceRequest {
   string id = 1;
-  optional string note = 2;
+  StringPatch note = 2;
   optional bool has_been_sent = 3;
   optional bool is_edi_sent = 4;
   optional bool is_paid_in_full = 5;
+  repeated string includes = 6;
 }
 message UpdateInvoiceResponse {
-  InvoiceSummaryInfo invoice = 1;
+  InvoiceInfo invoice = 1;
 }
 message ListCustomerInvoicesRequest {
   string customer_account_id = 1;
   optional string cursor = 2;
   int32 limit = 3;
   optional string query = 4;
-  bool include_child_accounts = 5;
+  repeated string includes = 5;
 }
 message ListCustomerInvoicesResponse {
   repeated InvoiceForPaymentInfo invoices = 1;
   PageInfo page_info = 2;
-}
-message InvoiceSummaryInfo {
-  string id = 1;
-  string number = 2;
-  optional string note = 3;
-  string customer_id = 4;
-  string customer_name = 5;
-  string customer_number = 6;
-  bool customer_is_edi_enabled = 7;
-  string order_id = 8;
-  string order_number = 9;
-  optional string shipment_id = 10;
-  int32 line_count = 11;
-  string billing_address_id = 12;
-  optional string billing_address_name = 13;
-  optional string billing_address_line1 = 14;
-  optional string billing_address_line2 = 15;
-  optional string billing_address_city = 16;
-  optional string billing_address_state = 17;
-  optional string billing_address_zip = 18;
-  string billing_address_country = 19;
-  string priority_code = 20;
-  optional string payment_term_id = 21;
-  optional string payment_term_name = 22;
-  optional int32 payment_term_days = 23;
-  bool is_paid_in_full = 24;
-  bool is_edi_sent = 25;
-  bool has_been_sent = 26;
-  string total_invoiced = 27;
-  bool accepts_invoice_emails = 28;
-  google.protobuf.Timestamp created_at = 29;
-  google.protobuf.Timestamp updated_at = 30;
-  optional bool payment_term_is_active = 31;
-  optional string customer_status_code = 32;
-  optional string customer_commission_policy = 33;
-  // Lines (populated only when the list request includes "lines").
-  repeated InvoiceLineInfo lines = 34;
 }
 message InvoiceInfo {
   string id = 1;
@@ -510,4 +475,14 @@ message InvoiceInfo {
   google.protobuf.Timestamp updated_at = 24;
   string customer_id = 25;
   optional string payment_term_id = 26;
+  string customer_name = 27;
+  string customer_number = 28;
+  optional string customer_status_code = 29;
+  optional string customer_commission_policy = 30;
+  bool customer_is_edi_enabled = 31;
+  int32 line_count = 32;
+  string priority_code = 33;
+  optional string payment_term_name = 34;
+  optional bool payment_term_is_active = 35;
+  string total_invoiced = 36;
 }

@@ -65,6 +65,23 @@ UPDATE shipping_case SET
 WHERE id = sqlc.arg('id')
   AND account_id = sqlc.arg('account_id');
 
+-- name: RepointShippingCasesToCarrier :exec
+UPDATE shipping_case SET
+    carrier_id = sqlc.arg('carrier_id'),
+    updated_at = NOW(3)
+WHERE shipment_id = sqlc.arg('shipment_id')
+  AND account_id = sqlc.arg('account_id');
+
+-- Follows the order-wide shipment re-point: a case's tracking link is built from its own carrier,
+-- so a case left on the old carrier deep-links to the wrong one.
+-- name: RepointShippingCasesToCarrierByOrder :exec
+UPDATE shipping_case sc
+JOIN shipment s ON s.id = sc.shipment_id
+SET sc.carrier_id = sqlc.arg('carrier_id'),
+    sc.updated_at = NOW(3)
+WHERE s.sales_order_id = sqlc.arg('sales_order_id')
+  AND sc.account_id = sqlc.arg('account_id');
+
 -- name: DeleteShippingCase :exec
 DELETE FROM shipping_case
 WHERE id = sqlc.arg('id')
@@ -173,3 +190,12 @@ WHERE id = sqlc.arg('id');
 -- name: DeleteShippingCasesByShipment :exec
 DELETE FROM shipping_case
 WHERE shipment_id = sqlc.arg('shipment_id');
+
+-- name: GetSalesOrderIDByShippingCase :one
+-- Walks the case to the order it ultimately belongs to. Audit events stamp that order as their
+-- root so a case edit shows up in the order's history, and the route is only ever case → shipment.
+SELECT s.sales_order_id
+FROM shipping_case sc
+JOIN shipment s ON s.id = sc.shipment_id
+WHERE sc.id = sqlc.arg('shipping_case_id')
+AND sc.account_id = sqlc.arg('account_id');

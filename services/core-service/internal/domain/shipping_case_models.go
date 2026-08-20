@@ -64,3 +64,10 @@ type UpdateShippingCaseParams struct {
 	FreightWeightValue  *string
 	FreightWeightUnitID *string
 }
+
+// Carries the admin override that corrects a shipped case's tracking number.
+type AdminUpdateShippingCaseTrackingParams struct {
+	AccountID      string
+	ShippingCaseID string
+	TrackingNumber *string
+}

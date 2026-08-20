@@ -16,15 +16,11 @@ type ListCustomerInvoicesRequest struct {
 	apiresource.PaginationRequest
 	// ID of the customer account whose invoices are listed.
 	CustomerAccountID string `path:"account_id" validate:"required"`
-	// Whether to also include invoices billed to the customer's child accounts.
-	//
-	// Currently has no effect: invoices for child accounts are always included.
-	IncludeChildAccounts bool `query:"include_child_accounts"`
 }
 
 // Returns a paginated list of a customer's open invoices, newest first, in the shape used to apply a payment.
 //
-// Only invoices that still owe a balance are returned; invoices marked paid in full or overpaid are omitted. Invoices billed to the customer's child accounts are included alongside its own. Each invoice carries the payments already allocated to it, so the remaining balance can be worked out client-side.
+// Only invoices that still owe a balance are returned; invoices marked paid in full are omitted, while overpaid ones are kept because they still need correcting. Invoices billed to the customer's child accounts are included alongside its own, because the parent settles for them. Each invoice carries the payments already allocated to it, so the remaining balance can be worked out client-side.
 type ListCustomerInvoicesEndpoint struct{}
 
 func (e *ListCustomerInvoicesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCustomerInvoicesRequest, *apiresource.List[apiresource.InvoiceForPayment]] {
@@ -47,7 +43,7 @@ func (e *ListCustomerInvoicesEndpoint) Materialize() *apiendpoint.APIEndpoint[*L
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeInvoiceForPayment,
-			Fields:     []string{"customer", "parent_account"},
+			Fields:     []string{"customer", "parent_account", "allocations"},
 		}),
 	})
 }

@@ -96,14 +96,58 @@ func (q *Queries) DeleteShipmentLinesByShipment(ctx context.Context, shipmentID 
 	return err
 }
 
+const getSalesOrderLineShipmentCapacity = `-- name: GetSalesOrderLineShipmentCapacity :one
+SELECT
+    sol.sales_order_id,
+    sol_q.value AS ordered_value,
+    COALESCE(shipped.total_shipped, 0) AS shipped_value
+FROM sales_order_line sol
+JOIN quantity sol_q ON sol_q.id = sol.quantity_id
+LEFT JOIN (
+    SELECT
+        sl.sales_order_line_id,
+        SUM(sl_q.value) AS total_shipped
+    FROM shipment_line sl
+    JOIN quantity sl_q ON sl_q.id = sl.quantity_id
+    WHERE (
+        ? IS NULL
+        OR sl.id <> ?
+    )
+    GROUP BY sl.sales_order_line_id
+) shipped ON shipped.sales_order_line_id = sol.id
+WHERE sol.id = ?
+`
+
+type GetSalesOrderLineShipmentCapacityParams struct {
+	ExcludeShipmentLineID sql.NullString
+	SalesOrderLineID      string
+}
+
+type GetSalesOrderLineShipmentCapacityRow struct {
+	SalesOrderID string
+	OrderedValue string
+	ShippedValue interface{}
+}
+
+// Backs the create/update guards: which order the line belongs to, and how much of it is still
+// unshipped. exclude_shipment_line_id keeps an update from counting the row it is replacing.
+func (q *Queries) GetSalesOrderLineShipmentCapacity(ctx context.Context, arg GetSalesOrderLineShipmentCapacityParams) (GetSalesOrderLineShipmentCapacityRow, error) {
+	row := q.db.QueryRowContext(ctx, getSalesOrderLineShipmentCapacity, arg.ExcludeShipmentLineID, arg.ExcludeShipmentLineID, arg.SalesOrderLineID)
+	var i GetSalesOrderLineShipmentCapacityRow
+	err := row.Scan(&i.SalesOrderID, &i.OrderedValue, &i.ShippedValue)
+	return i, err
+}
+
 const getShipmentLine = `-- name: GetShipmentLine :one
 SELECT
     sl.id,
     sl.shipment_id,
     sl.sales_order_line_id,
+    sol.line_item_number AS order_line_item_number,
     sol.product_sku,
     sol.product_description,
     sol.item_id AS order_line_item_id,
+    sol.product_id AS order_line_product_id,
     -- Quantity
     q.id AS quantity_id,
     q.value AS quantity_value,
@@ -125,9 +169,11 @@ type GetShipmentLineRow struct {
 	ID                       string
 	ShipmentID               string
 	SalesOrderLineID         string
+	OrderLineItemNumber      sql.NullInt32
 	ProductSku               string
 	ProductDescription       sql.NullString
 	OrderLineItemID          sql.NullString
+	OrderLineProductID       sql.NullString
 	QuantityID               string
 	QuantityValue            string
 	QuantityUnitID           string
@@ -145,9 +191,11 @@ func (q *Queries) GetShipmentLine(ctx context.Context, shipmentLineID string) (G
 		&i.ID,
 		&i.ShipmentID,
 		&i.SalesOrderLineID,
+		&i.OrderLineItemNumber,
 		&i.ProductSku,
 		&i.ProductDescription,
 		&i.OrderLineItemID,
+		&i.OrderLineProductID,
 		&i.QuantityID,
 		&i.QuantityValue,
 		&i.QuantityUnitID,
@@ -185,9 +233,11 @@ SELECT
     sl.id,
     sl.shipment_id,
     sl.sales_order_line_id,
+    sol.line_item_number AS order_line_item_number,
     sol.product_sku,
     sol.product_description,
     sol.item_id AS order_line_item_id,
+    sol.product_id AS order_line_product_id,
     -- Quantity
     q.id AS quantity_id,
     q.value AS quantity_value,
@@ -229,9 +279,11 @@ type ListShipmentLinesBackwardRow struct {
 	ID                       string
 	ShipmentID               string
 	SalesOrderLineID         string
+	OrderLineItemNumber      sql.NullInt32
 	ProductSku               string
 	ProductDescription       sql.NullString
 	OrderLineItemID          sql.NullString
+	OrderLineProductID       sql.NullString
 	QuantityID               string
 	QuantityValue            string
 	QuantityUnitID           string
@@ -265,9 +317,11 @@ func (q *Queries) ListShipmentLinesBackward(ctx context.Context, arg ListShipmen
 			&i.ID,
 			&i.ShipmentID,
 			&i.SalesOrderLineID,
+			&i.OrderLineItemNumber,
 			&i.ProductSku,
 			&i.ProductDescription,
 			&i.OrderLineItemID,
+			&i.OrderLineProductID,
 			&i.QuantityID,
 			&i.QuantityValue,
 			&i.QuantityUnitID,
@@ -295,9 +349,11 @@ SELECT
     sl.id,
     sl.shipment_id,
     sl.sales_order_line_id,
+    sol.line_item_number AS order_line_item_number,
     sol.product_sku,
     sol.product_description,
     sol.item_id AS order_line_item_id,
+    sol.product_id AS order_line_product_id,
     -- Quantity
     q.id AS quantity_id,
     q.value AS quantity_value,
@@ -320,9 +376,11 @@ type ListShipmentLinesByShipmentRow struct {
 	ID                       string
 	ShipmentID               string
 	SalesOrderLineID         string
+	OrderLineItemNumber      sql.NullInt32
 	ProductSku               string
 	ProductDescription       sql.NullString
 	OrderLineItemID          sql.NullString
+	OrderLineProductID       sql.NullString
 	QuantityID               string
 	QuantityValue            string
 	QuantityUnitID           string
@@ -346,9 +404,11 @@ func (q *Queries) ListShipmentLinesByShipment(ctx context.Context, shipmentID st
 			&i.ID,
 			&i.ShipmentID,
 			&i.SalesOrderLineID,
+			&i.OrderLineItemNumber,
 			&i.ProductSku,
 			&i.ProductDescription,
 			&i.OrderLineItemID,
+			&i.OrderLineProductID,
 			&i.QuantityID,
 			&i.QuantityValue,
 			&i.QuantityUnitID,
@@ -376,9 +436,11 @@ SELECT
     sl.id,
     sl.shipment_id,
     sl.sales_order_line_id,
+    sol.line_item_number AS order_line_item_number,
     sol.product_sku,
     sol.product_description,
     sol.item_id AS order_line_item_id,
+    sol.product_id AS order_line_product_id,
     -- Quantity
     q.id AS quantity_id,
     q.value AS quantity_value,
@@ -421,9 +483,11 @@ type ListShipmentLinesForwardRow struct {
 	ID                       string
 	ShipmentID               string
 	SalesOrderLineID         string
+	OrderLineItemNumber      sql.NullInt32
 	ProductSku               string
 	ProductDescription       sql.NullString
 	OrderLineItemID          sql.NullString
+	OrderLineProductID       sql.NullString
 	QuantityID               string
 	QuantityValue            string
 	QuantityUnitID           string
@@ -458,9 +522,11 @@ func (q *Queries) ListShipmentLinesForward(ctx context.Context, arg ListShipment
 			&i.ID,
 			&i.ShipmentID,
 			&i.SalesOrderLineID,
+			&i.OrderLineItemNumber,
 			&i.ProductSku,
 			&i.ProductDescription,
 			&i.OrderLineItemID,
+			&i.OrderLineProductID,
 			&i.QuantityID,
 			&i.QuantityValue,
 			&i.QuantityUnitID,

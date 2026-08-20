@@ -188,8 +188,8 @@ func (s *billingSvcImpl) GetAccountUsage(ctx context.Context, accountID string) 
 	}
 
 	usage := &domain.AccountUsage{
-		Seats:     domain.UsageItem{Current: userCount, Limit: limitMap["seats_maximum"]},
-		Sandboxes: domain.UsageItem{Current: sandboxCount, Limit: limitMap["sandboxes_maximum"]},
+		Seats:     domain.UsageItem{Current: userCount, Limit: limitMap[string(constants.AccountPlanLimitSeatsMaximum)]},
+		Sandboxes: domain.UsageItem{Current: sandboxCount, Limit: limitMap[string(constants.AccountPlanLimitSandboxesMaximum)]},
 	}
 
 	// Use v2 status from account record
@@ -206,8 +206,7 @@ func (s *billingSvcImpl) GetAccountUsage(ctx context.Context, accountID string) 
 		}
 	}
 
-	// Determine billing period start for per-period usage counts
-	periodStart := agentSpendPeriodStart(subInfo)
+	periodStart := constants.BillingPeriodStart(subInfo.PeriodEnd())
 
 	invoiceCount, apiErr := repo.CountInvoicesByAccountID(ctx, accountID, periodStart)
 	if apiErr != nil {
@@ -219,8 +218,8 @@ func (s *billingSvcImpl) GetAccountUsage(ctx context.Context, accountID string) 
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	usage.Invoices = domain.UsageItem{Current: invoiceCount, Limit: limitMap["invoices_maximum"]}
-	usage.Batches = domain.UsageItem{Current: batchCount, Limit: limitMap["batches_maximum"]}
+	usage.Invoices = domain.UsageItem{Current: invoiceCount, Limit: limitMap[string(constants.AccountPlanLimitInvoicesMaximum)]}
+	usage.Batches = domain.UsageItem{Current: batchCount, Limit: limitMap[string(constants.AccountPlanLimitBatchesMaximum)]}
 
 	spend, plan := s.currentAgentSpend(ctx, accountID, periodStart)
 	usage.EstimatedAgentSpendCents = spend
@@ -320,7 +319,7 @@ func (s *billingSvcImpl) GetAgentSpendCents(ctx context.Context, accountID strin
 		return 0, tracing.Trace(span, apiErr)
 	}
 
-	cents, _ := s.currentAgentSpend(ctx, accountID, agentSpendPeriodStart(subInfo))
+	cents, _ := s.currentAgentSpend(ctx, accountID, constants.BillingPeriodStart(subInfo.PeriodEnd()))
 	return cents, nil
 }
 
@@ -347,15 +346,6 @@ func (s *billingSvcImpl) GetAgentTokenRates(ctx context.Context, accountID strin
 		return nil, tracing.Trace(span, apierror.NewInternalError(err, "failed to fetch rate card token rates"))
 	}
 	return rates, nil
-}
-
-// agentSpendPeriodStart returns the start of the account's current billing period: one month before the subscription period end, or the calendar month start when there is no active subscription.
-func agentSpendPeriodStart(subInfo *domain.AccountSubscriptionInfo) time.Time {
-	if subInfo != nil && subInfo.SubscriptionCurrentPeriodEnd != nil {
-		return subInfo.SubscriptionCurrentPeriodEnd.AddDate(0, -1, 0)
-	}
-	now := time.Now().UTC()
-	return time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
 }
 
 func (s *billingSvcImpl) CreateBillingPortalSession(ctx context.Context, accountID string) (string, *apierror.APIError) {

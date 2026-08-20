@@ -15,6 +15,20 @@ func FormatRecordNumber(number string) string {
 	return strings.Join(parts, "-")
 }
 
+// Left-pads an all-digit account number to five digits ("8841" -> "08841"), mirroring the dashboard's
+// formatAccountNumber. A leading "0" or any non-digit leaves it untouched — record numbers pad to six.
+func FormatAccountNumber(number string) string {
+	if number == "" || strings.HasPrefix(number, "0") {
+		return number
+	}
+	for _, r := range number {
+		if r < '0' || r > '9' {
+			return number
+		}
+	}
+	return leftPadZeros(number, 5)
+}
+
 func startsWithASCIILetter(s string) bool {
 	c := s[0]
 	return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')

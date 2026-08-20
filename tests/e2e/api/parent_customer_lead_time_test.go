@@ -149,7 +149,7 @@ func TestParentCustomerLeadTime_StampsAnIssuedOrdersCommitment(t *testing.T) {
 	days, err := strconv.Atoi(jsonField(order, "lead_time_days"))
 	require.NoError(t, err, "an issued order must carry the days it committed to")
 	assert.LessOrEqual(t, days, 13, "a calendar can only pull a ship-by date earlier")
-	assert.Equal(t, expectedShipBy(t, order, days), shipByDate(t, order))
+	assert.Equal(t, issuedPlusDays(t, order, days), shipByDate(t, order))
 }
 
 // The write path, end to end: a rep sets a lead time on the head office and every location

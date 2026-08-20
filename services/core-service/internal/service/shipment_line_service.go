@@ -13,6 +13,7 @@ import (
 	"github.com/augno/api/shared/id"
 	"github.com/augno/api/shared/idempotency"
 	"github.com/augno/api/shared/tracing"
+	"github.com/shopspring/decimal"
 )
 
 var shipmentLineSvcTracer = tracing.GetTracer("core-service.shipment_line_service")
@@ -237,6 +238,10 @@ func (s *shipmentLineSvcImpl) CreateShipmentLine(ctx context.Context, params dom
 
 			txLineRepo := txSvc.repos.NewShipmentLineRepo()
 
+			if apiErr := checkShipmentLineCapacity(txCtx, txLineRepo, params.SalesOrderLineID, rootShipment.SalesOrderID, params.QuantityValue, nil); apiErr != nil {
+				return apiErr
+			}
+
 			created, apiErr := txLineRepo.Create(txCtx, lineID, quantityID, params)
 			if apiErr != nil {
 				return apiErr
@@ -338,6 +343,14 @@ func (s *shipmentLineSvcImpl) UpdateShipmentLine(ctx context.Context, params dom
 			rootShipment, apiErr := txShipmentRepo.Get(txCtx, domain.GetShipmentParams{AccountID: params.AccountID, ShipmentID: params.ShipmentID})
 			if apiErr != nil {
 				return apiErr
+			}
+
+			// The line being updated is excluded from the shipped total so raising it to exactly the
+			// remaining quantity is allowed rather than double-counting what it already holds.
+			if params.QuantityValue != nil {
+				if apiErr := checkShipmentLineCapacity(txCtx, txLineRepo, old.SalesOrderLineID, rootShipment.SalesOrderID, *params.QuantityValue, &params.ShipmentLineID); apiErr != nil {
+					return apiErr
+				}
 			}
 
 			// Backfill unchanged nullable fields with existing values. Since the SQL uses direct assignment (no COALESCE) for these fields, we must provide the existing value when the field was not sent.
@@ -475,4 +488,43 @@ func checkShipmentLineReadPermission(identity *types.Identity) *apierror.APIErro
 		return identity.CheckHasPermission(types.PermissionDomainSuppliers, types.ActionRead)
 	}
 	return identity.CheckHasPermission(types.PermissionDomainShipments, types.ActionRead)
+}
+
+// Rejects a shipment line that does not belong to the shipment's order, or that would ship more
+// than the order line has left. Legacy had no line endpoints, so these are v2's own invariants:
+// without them a line can bill goods the customer never ordered.
+func checkShipmentLineCapacity(
+	ctx context.Context,
+	lineRepo domain.ShipmentLineRepo,
+	salesOrderLineID, shipmentSalesOrderID, quantityValue string,
+	excludeShipmentLineID *string,
+) *apierror.APIError {
+	capacity, apiErr := lineRepo.GetSalesOrderLineCapacity(ctx, salesOrderLineID, excludeShipmentLineID)
+	if apiErr != nil {
+		return apiErr
+	}
+
+	if capacity.SalesOrderID != shipmentSalesOrderID {
+		return apierror.NewParameterInvalidError(
+			"Sales order line does not belong to this shipment's sales order.",
+			"sales_order_line_id",
+		)
+	}
+
+	requested, err := decimal.NewFromString(quantityValue)
+	if err != nil {
+		return apierror.NewParameterInvalidError("Quantity value is not a number.", "quantity_value")
+	}
+	if requested.IsNegative() {
+		return apierror.NewParameterInvalidError("Quantity value cannot be negative.", "quantity_value")
+	}
+
+	if remaining := capacity.Remaining(); requested.GreaterThan(remaining) {
+		return apierror.NewParameterInvalidError(
+			fmt.Sprintf("Quantity exceeds the %s remaining to ship on this sales order line.", remaining.String()),
+			"quantity_value",
+		)
+	}
+
+	return nil
 }

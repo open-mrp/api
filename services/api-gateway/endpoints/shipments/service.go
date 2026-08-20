@@ -13,6 +13,7 @@ import (
 	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/field"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/ptrutil"
 	"github.com/augno/api/shared/tracing"
@@ -24,6 +25,7 @@ type ShipmentSvc interface {
 	ListShipments(ctx context.Context, req *ListShipmentsRequest) (*apiresource.List[apiresource.Shipment], *apierror.APIError)
 	GetShipment(ctx context.Context, req *RetrieveShipmentRequest) (*apiresource.Shipment, *apierror.APIError)
 	UpdateShipment(ctx context.Context, req *UpdateShipmentRequest) (*apiresource.Shipment, *apierror.APIError)
+	AdminUpdateShipmentTracking(ctx context.Context, req *AdminUpdateShipmentTrackingRequest) (*apiresource.Shipment, *apierror.APIError)
 	DeleteShipment(ctx context.Context, req *DeleteShipmentRequest) (*apiresource.EmptyResource, *apierror.APIError)
 	ShipShipment(ctx context.Context, req *ShipShipmentRequest) (*apiresource.Shipment, *apierror.APIError)
 	VoidShipment(ctx context.Context, req *VoidShipmentRequest) (*apiresource.Shipment, *apierror.APIError)
@@ -99,8 +101,8 @@ func (m *shipmentSvcImpl) ListShipments(ctx context.Context, req *ListShipmentsR
 
 	shipments := make([]apiresource.Shipment, len(resp.Shipments))
 	for i, s := range resp.Shipments {
-		shipments[i] = shipmentFromSummaryProto(s)
-		stashShipmentSummaryMeta(ctx, s, &shipments[i])
+		shipments[i] = shipmentFromProto(s)
+		stashShipmentMeta(ctx, s, &shipments[i])
 	}
 
 	return apiresource.NewList(shipments, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
@@ -133,13 +135,36 @@ func (m *shipmentSvcImpl) UpdateShipment(ctx context.Context, req *UpdateShipmen
 		Number:               req.Number.Ptr(),
 		MasterTrackingNumber: req.MasterTrackingNumber.Ptr(),
 		CarrierId:            req.CarrierID.Ptr(),
-		ServiceLevelId:       req.ServiceLevelID.Ptr(),
+		ServiceLevelId:       field.StringClearableToProto(req.ServiceLevelID),
 		Includes:             resourcekit.FilterIncludes(ctx, shipmentIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, shipmentSvcTracer, "service.shipments.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateShipmentResponse, error) {
 			return m.coreClient.UpdateShipment(ctx, pbReq, opts...)
+		})
+
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	result := shipmentFromProto(resp.Shipment)
+	stashShipmentMeta(ctx, resp.Shipment, &result)
+	return &result, nil
+}
+
+func (m *shipmentSvcImpl) AdminUpdateShipmentTracking(ctx context.Context, req *AdminUpdateShipmentTrackingRequest) (*apiresource.Shipment, *apierror.APIError) {
+	pbReq := &pb.AdminUpdateShipmentTrackingRequest{
+		Id:                   req.ShipmentID,
+		MasterTrackingNumber: req.MasterTrackingNumber.Ptr(),
+		CarrierId:            req.CarrierID.Ptr(),
+		ServiceLevelId:       field.StringClearableToProto(req.ServiceLevelID),
+		Includes:             resourcekit.FilterIncludes(ctx, shipmentIncludes...),
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, shipmentSvcTracer, "service.shipments.admin_update_tracking", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.AdminUpdateShipmentTrackingResponse, error) {
+			return m.coreClient.AdminUpdateShipmentTracking(ctx, pbReq, opts...)
 		})
 
 	if apiErr != nil {
@@ -477,6 +502,9 @@ func shipmentFromProto(s *pb.ShipmentInfo) apiresource.Shipment {
 		MasterTrackingNumber: s.MasterTrackingNumber,
 		Status:               constants.ShipmentStatus(s.StatusCode),
 		ShippedAt:            grpcutil.TimestampToTimePtr(s.ShippedAt),
+		Priority:             constants.PriorityCode(s.PriorityCode),
+		CaseCount:            int32(s.CaseCount),
+		IsReadyToShip:        s.IsReadyToShip,
 		CreatedAt:            grpcutil.TimestampToTime(s.CreatedAt),
 		UpdatedAt:            grpcutil.TimestampToTime(s.UpdatedAt),
 	}
@@ -530,6 +558,7 @@ func stashShipmentMeta(ctx context.Context, s *pb.ShipmentInfo, d *apiresource.S
 		lines := make([]apiresource.ShipmentLine, len(s.Lines))
 		for i, l := range s.Lines {
 			lines[i] = shipmentLineFromProto(l)
+			stashShipmentLineMeta(ctx, &lines[i], l)
 		}
 		meta.Set(constants.ObjectTypeShipment, d.ID, "lines", apiresource.NewList(lines, apiresource.PageInfo{}))
 	}
@@ -640,53 +669,6 @@ func shipmentFreightFromProto(s *pb.ShipmentInfo) *apiresource.Freight {
 	return freight
 }
 
-// shipmentFromSummaryProto builds a Shipment from a list-view ShipmentSummaryInfo
-// with only base fields. Expandable sub-resources are populated via the V2
-// include resolver from stashed meta.
-func shipmentFromSummaryProto(s *pb.ShipmentSummaryInfo) apiresource.Shipment {
-	if s == nil {
-		return apiresource.Shipment{}
-	}
-
-	return apiresource.Shipment{
-		ID:                   s.Id,
-		Object:               constants.ObjectTypeShipment,
-		Number:               s.Number,
-		Note:                 s.Note,
-		BillOfLading:         s.BillOfLading,
-		MasterTrackingNumber: s.MasterTrackingNumber,
-		Status:               constants.ShipmentStatus(s.StatusCode),
-		ShippedAt:            grpcutil.TimestampToTimePtr(s.ShippedAt),
-		CreatedAt:            grpcutil.TimestampToTime(s.CreatedAt),
-		UpdatedAt:            grpcutil.TimestampToTime(s.UpdatedAt),
-	}
-}
-
-// stashShipmentSummaryMeta stashes the FK ids carried by a list-view shipment so
-// the include resolver can hydrate loader-backed references on ?include=.
-func stashShipmentSummaryMeta(ctx context.Context, s *pb.ShipmentSummaryInfo, d *apiresource.Shipment) {
-	if s == nil {
-		return
-	}
-
-	meta := resourcekit.GetLoadMeta(ctx)
-
-	if s.SalesOrderId != "" {
-		meta.Set(constants.ObjectTypeShipment, d.ID, "sales_order_id", s.SalesOrderId)
-	}
-	if s.CustomerId != "" {
-		meta.Set(constants.ObjectTypeShipment, d.ID, "customer_id", s.CustomerId)
-	}
-	// Lines are populated on the summary only when the list includes them.
-	if len(s.Lines) > 0 {
-		lines := make([]apiresource.ShipmentLine, len(s.Lines))
-		for i, l := range s.Lines {
-			lines[i] = shipmentLineFromProto(l)
-		}
-		meta.Set(constants.ObjectTypeShipment, d.ID, "lines", apiresource.NewList(lines, apiresource.PageInfo{}))
-	}
-}
-
 func shipmentLineFromProto(l *pb.ShipmentLineInfo) apiresource.ShipmentLine {
 	if l == nil {
 		return apiresource.ShipmentLine{}
@@ -715,6 +697,36 @@ func shipmentLineFromProto(l *pb.ShipmentLineInfo) apiresource.ShipmentLine {
 	}
 
 	return result
+}
+
+// Stashes the order line a shipment line fulfils, plus that line's product FK, so the resolver can
+// serve lines.sales_order_line and its product on ?include=.
+func stashShipmentLineMeta(ctx context.Context, d *apiresource.ShipmentLine, l *pb.ShipmentLineInfo) {
+	meta := resourcekit.GetLoadMeta(ctx)
+	line := buildSalesOrderLineForShipmentLine(l)
+	meta.Set(constants.ObjectTypeShipmentLine, d.ID, "sales_order_line", line)
+
+	// Keyed by the order line, not the shipment line, because the product loader runs against the
+	// sales_order_line resource once the resolver recurses into it.
+	if l.OrderLineProductId != nil && *l.OrderLineProductId != "" {
+		meta.Set(constants.ObjectTypeSalesOrderLine, line.ID, "product_id", *l.OrderLineProductId)
+	}
+}
+
+// Builds the sales order line reference a shipment line fulfils, from the fields the parent proto
+// carries — there is no standalone sales-order-line loader to resolve it against.
+func buildSalesOrderLineForShipmentLine(l *pb.ShipmentLineInfo) *apiresource.SalesOrderLine {
+	now := grpcutil.TimestampToTime(l.CreatedAt)
+
+	return &apiresource.SalesOrderLine{
+		ID:                 l.SalesOrderLineId,
+		Object:             constants.ObjectTypeSalesOrderLine,
+		LineItemNumber:     l.OrderLineItemNumber,
+		ProductSKU:         l.OrderLineSku,
+		ProductDescription: l.OrderLineDescription,
+		CreatedAt:          now,
+		UpdatedAt:          now,
+	}
 }
 
 func shippingCaseDetailFromProto(c *pb.ShippingCaseDetailInfo) apiresource.ShippingCaseDetail {

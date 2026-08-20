@@ -44,7 +44,7 @@ type Invoice struct {
 	//
 	// - `unpaid`: the invoice is not marked paid in full, which includes invoices carrying partial payments.
 	// - `paid`: the invoice is marked paid in full.
-	// - `overpaid`: the payments applied to the invoice exceed the invoiced amount. List Invoices and Update Invoice report such an invoice as `paid`.
+	// - `overpaid`: the payments applied to the invoice exceed the invoiced amount.
 	// - `partially_paid`: not currently returned; an invoice carrying a partial payment reports `unpaid`.
 	PaymentStatus constants.InvoicePaymentStatus `json:"payment_status" validate:"required"`
 	// Whether the invoice has been transmitted to the customer via EDI.
@@ -71,10 +71,23 @@ type Invoice struct {
 	//
 	// These are the payments and credits recorded against the invoice; recording a settlement refreshes `payment_status` from them, while Update Invoice can set that status directly.
 	Allocations *List[InvoiceAllocation] `json:"allocations" expandable:"true"`
+	// Records this invoice bills against — its order and shipment.
+	Related *InvoiceRelated `json:"related"`
 	// Timestamp when the invoice was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Timestamp when the invoice was last updated.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
+}
+
+// Groups the records an invoice bills against: the order it belongs to and the shipment that
+// raised it. Returned only when at least one member has been expanded.
+type InvoiceRelated struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=invoice_related"`
+	// The sales order this invoice bills against.
+	SalesOrder *Record `json:"sales_order" expandable:"true"`
+	// The shipment whose shipping raised this invoice.
+	Shipment *Record `json:"shipment" expandable:"true"`
 }
 
 var sampleInvoiceNote = "Net 30 terms; contact accounts payable for remittance details."
@@ -91,6 +104,7 @@ var SampleInvoice = &Invoice{
 		Object:    constants.ObjectTypeShipment,
 		Number:    SampleShipmentNumber,
 		Status:    constants.ShipmentStatusShipped,
+		Priority:  SamplePriorityCode,
 		CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 		UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 	},
@@ -106,6 +120,7 @@ var SampleInvoice = &Invoice{
 	CustomerIsEdiEnabled: false,
 	Lines:                NewList([]InvoiceLine{*SampleInvoiceLine}, PageInfo{}),
 	Allocations:          NewList([]InvoiceAllocation{*SampleInvoiceAllocation}, PageInfo{}),
+	Related:              &InvoiceRelated{Object: constants.ObjectTypeInvoiceRelated},
 	CreatedAt:            timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:            timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
@@ -125,11 +140,11 @@ type InvoiceLine struct {
 	// Price per unit billed on this line, carried over from the sales order line.
 	UnitPrice *Rate `json:"unit_price" validate:"required"`
 	// Sales order line this invoice line bills against.
-	OrderLine *SalesOrderLine `json:"order_line" expandable:"true"`
-	// The item being invoiced, taken from the order line's item.
 	//
-	// Only the item's `id` and `sku` are populated, and only when the invoice's lines are included.
-	Item *Item `json:"item"`
+	// Expand with `lines.order_line` for the sold `product_sku` and the ordered quantities, and with `lines.order_line.product` for the product itself. To show only the SKU, read `item` below instead — it needs no expansion.
+	OrderLine *SalesOrderLine `json:"order_line" expandable:"true"`
+	// What this line bills, as recorded on the originating sales order line.
+	Item *Item `json:"item" expandable:"true"`
 	// Timestamp when the line was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Timestamp when the line was last updated.

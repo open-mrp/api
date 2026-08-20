@@ -143,7 +143,7 @@ func (s *pickLineSvcImpl) UpdatePickLine(ctx context.Context, params domain.Upda
 			}
 
 			if params.QuantityValue != nil {
-				if apiErr := txPickLineRepo.UpdateQuantity(txCtx, params.PickLineID, *params.QuantityValue); apiErr != nil {
+				if apiErr := txPickLineRepo.UpdateQuantity(txCtx, params.PickLineID, params.QuantityValue, nil); apiErr != nil {
 					return apiErr
 				}
 			}

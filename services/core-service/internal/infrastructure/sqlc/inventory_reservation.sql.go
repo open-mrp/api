@@ -11,6 +11,19 @@ import (
 	"strings"
 )
 
+const closeFullyAllocatedInventoryIssue = `-- name: CloseFullyAllocatedInventoryIssue :exec
+UPDATE inventory_issue
+SET status_code = 'closed', issued_at = NOW(3), updated_at = NOW(3)
+WHERE id = ?
+`
+
+// Retires an issue whose demand is fully covered, which is what stops a later receipt allocating
+// against it a second time.
+func (q *Queries) CloseFullyAllocatedInventoryIssue(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, closeFullyAllocatedInventoryIssue, id)
+	return err
+}
+
 const deleteInventoryIssueByID = `-- name: DeleteInventoryIssueByID :exec
 DELETE FROM inventory_issue WHERE id = ?
 `
@@ -34,26 +47,37 @@ SELECT
     ir.id,
     q.id AS quantity_id,
     q.value AS quantity_value,
-    q.unit_id
+    q.unit_id,
+    uc.value AS unit_cost_value,
+    uc.numerator_unit_id AS unit_cost_numerator_unit_id,
+    uc.denominator_unit_id AS unit_cost_denominator_unit_id
 FROM inventory_receipt ir
 JOIN quantity q ON q.id = ir.quantity_id
-WHERE ir.owner_account_id = ?
+JOIN rate uc ON uc.id = ir.unit_cost_id
+WHERE (ir.owner_account_id = ? OR ir.holder_account_id = ?)
 AND ir.item_id = ?
 AND ir.status_code = 'available'
+AND (? IS NULL OR ir.storage_location_id = ?)
+AND (? IS NULL OR ir.lot_id = ?)
 ORDER BY ir.received_at ASC
 FOR UPDATE
 `
 
 type FindReceiptsForAllocationParams struct {
-	AccountID string
-	ItemID    string
+	AccountID         string
+	ItemID            string
+	StorageLocationID sql.NullString
+	LotID             sql.NullString
 }
 
 type FindReceiptsForAllocationRow struct {
-	ID            string
-	QuantityID    string
-	QuantityValue string
-	UnitID        string
+	ID                        string
+	QuantityID                string
+	QuantityValue             string
+	UnitID                    string
+	UnitCostValue             string
+	UnitCostNumeratorUnitID   string
+	UnitCostDenominatorUnitID string
 }
 
 // FindReceiptsForAllocation lists the receipts an issue may draw from, oldest first.
@@ -63,8 +87,20 @@ type FindReceiptsForAllocationRow struct {
 // consumptions of the same item both saw the same receipt as free and each allocated the whole of
 // it — consuming stock that was never used. Only `available` receipts are candidates, so the lock
 // covers the few rows actually in play rather than the item's whole receipt history.
+// Held stock counts as allocatable: consigned goods sit under a holder while another account owns
+// them, and excluding them makes the item look short when it is physically on the shelf.
+// An issue pinned to a location or lot may only draw from stock sitting there; an unpinned issue
+// draws from anywhere.
 func (q *Queries) FindReceiptsForAllocation(ctx context.Context, arg FindReceiptsForAllocationParams) ([]FindReceiptsForAllocationRow, error) {
-	rows, err := q.db.QueryContext(ctx, findReceiptsForAllocation, arg.AccountID, arg.ItemID)
+	rows, err := q.db.QueryContext(ctx, findReceiptsForAllocation,
+		arg.AccountID,
+		arg.AccountID,
+		arg.ItemID,
+		arg.StorageLocationID,
+		arg.StorageLocationID,
+		arg.LotID,
+		arg.LotID,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -77,6 +113,9 @@ func (q *Queries) FindReceiptsForAllocation(ctx context.Context, arg FindReceipt
 			&i.QuantityID,
 			&i.QuantityValue,
 			&i.UnitID,
+			&i.UnitCostValue,
+			&i.UnitCostNumeratorUnitID,
+			&i.UnitCostDenominatorUnitID,
 		); err != nil {
 			return nil, err
 		}
@@ -375,6 +414,28 @@ func (q *Queries) InsertInventoryIssueForReservation(ctx context.Context, arg In
 		arg.StorageLocationID,
 		arg.LotID,
 	)
+	return err
+}
+
+const markInventoryReceiptsAllocated = `-- name: MarkInventoryReceiptsAllocated :exec
+UPDATE inventory_receipt
+SET status_code = 'allocated', updated_at = NOW(3)
+WHERE id IN (/*SLICE:ids*/?)
+`
+
+// Retires receipts whose quantity is entirely spoken for so later runs stop reconsidering them.
+func (q *Queries) MarkInventoryReceiptsAllocated(ctx context.Context, ids []string) error {
+	query := markInventoryReceiptsAllocated
+	var queryParams []interface{}
+	if len(ids) > 0 {
+		for _, v := range ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
 	return err
 }
 

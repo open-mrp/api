@@ -27,14 +27,12 @@ func TestShipments_ExpandableFieldsNullWithoutInclude(t *testing.T) {
 	got := parseJSON(body)
 	assert.Nil(t, got["lines"], "lines should be null without ?include=lines")
 	assert.Nil(t, got["shipping_cases"], "shipping_cases should be null without ?include=shipping_cases")
-	assert.Nil(t, got["sales_order"], "sales_order should be null without ?include=sales_order")
+	assert.Nil(t, got["related"], "related should be null until one of its members is included")
 	assert.Nil(t, got["customer"], "customer should be null without ?include=customer")
 	assert.Nil(t, got["carrier"], "carrier should be null without ?include=carrier")
 	assert.Nil(t, got["service_level"], "service_level should be null without ?include=service_level")
 	assert.Nil(t, got["shipping_address"], "shipping_address should be null without ?include=shipping_address")
 	assert.Nil(t, got["shipped_by"], "shipped_by should be null without ?include=shipped_by")
-	assert.Nil(t, got["invoice"], "invoice should be null without ?include=invoice")
-	assert.Nil(t, got["pick"], "pick should be null without ?include=pick")
 }
 
 func TestShipments_IncludeLines(t *testing.T) {
@@ -61,13 +59,14 @@ func TestShipments_IncludeShippingCases(t *testing.T) {
 
 func TestShipments_IncludeSalesOrder(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(shipmentsPath+"/"+SeedShipmentID, url.Values{"include": {"sales_order"}})
+	status, body, err := apiClient.GetListRaw(shipmentsPath+"/"+SeedShipmentID, url.Values{"include": {"related.sales_order"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
-	so := jsonObject(parseJSON(body), "sales_order")
+	so := jsonObject(jsonObject(parseJSON(body), "related"), "sales_order")
 	require.NotNil(t, so, "sales_order should be present with ?include=sales_order")
-	assert.Equal(t, "sales_order", jsonField(so, "object"))
+	assert.Equal(t, "record", jsonField(so, "object"))
+	assert.Equal(t, "sales_order", jsonField(so, "type"))
 	assert.NotEmpty(t, jsonField(so, "id"))
 }
 
@@ -107,34 +106,36 @@ func TestShipments_IncludeShippedBy(t *testing.T) {
 	assert.True(t, ok, "shipped_by key should be present with ?include=shipped_by")
 	// shipped_by may be null if not yet shipped
 	if sb := jsonObject(got, "shipped_by"); sb != nil {
-		assert.Equal(t, "account_user", jsonField(sb, "object"))
+		assert.Equal(t, "created_by", jsonField(sb, "object"))
 	}
 }
 
 func TestShipments_IncludeInvoice(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(shipmentsPath+"/"+SeedShipmentID, url.Values{"include": {"invoice"}})
+	status, body, err := apiClient.GetListRaw(shipmentsPath+"/"+SeedShipmentID, url.Values{"include": {"related.invoice"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
 	got := parseJSON(body)
-	_, ok := got["invoice"]
-	assert.True(t, ok, "invoice key should be present with ?include=invoice")
-	if inv := jsonObject(got, "invoice"); inv != nil {
-		assert.Equal(t, "invoice", jsonField(inv, "object"))
+	if related := jsonObject(got, "related"); related != nil {
+		if inv := jsonObject(related, "invoice"); inv != nil {
+			assert.Equal(t, "record", jsonField(inv, "object"))
+			assert.Equal(t, "invoice", jsonField(inv, "type"))
+		}
 	}
 }
 
 func TestShipments_IncludePick(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(shipmentsPath+"/"+SeedShipmentID, url.Values{"include": {"pick"}})
+	status, body, err := apiClient.GetListRaw(shipmentsPath+"/"+SeedShipmentID, url.Values{"include": {"related.pick"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
 	got := parseJSON(body)
-	_, ok := got["pick"]
-	assert.True(t, ok, "pick key should be present with ?include=pick")
-	if pick := jsonObject(got, "pick"); pick != nil {
-		assert.Equal(t, "pick", jsonField(pick, "object"))
+	if related := jsonObject(got, "related"); related != nil {
+		if pick := jsonObject(related, "pick"); pick != nil {
+			assert.Equal(t, "record", jsonField(pick, "object"), "related members are Record references")
+			assert.Equal(t, "pick", jsonField(pick, "type"))
+		}
 	}
 }

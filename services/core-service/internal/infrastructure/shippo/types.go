@@ -1,5 +1,7 @@
 package shippo
 
+import "encoding/json"
+
 // CarrierAccount represents a carrier account from the Shippo API.
 type CarrierAccount struct {
 	ObjectID        string `json:"object_id"`
@@ -55,8 +57,8 @@ type UpdateCarrierAccountRequest struct {
 	Parameters map[string]string `json:"parameters,omitempty"`
 }
 
-// TestAddress is a simple address for test shipments.
-type TestAddress struct {
+// Addresses a shipment for rating. Buying a label needs more of the recipient, which LabelAddress carries.
+type ShipmentAddress struct {
 	Name    string `json:"name"`
 	Street1 string `json:"street1"`
 	City    string `json:"city"`
@@ -65,8 +67,8 @@ type TestAddress struct {
 	Country string `json:"country"`
 }
 
-// TestParcel is a parcel for test shipments.
-type TestParcel struct {
+// Sizes a parcel the way Shippo's API takes it: decimal strings, with the units named alongside.
+type Parcel struct {
 	Weight       string `json:"weight"`
 	Length       string `json:"length"`
 	Width        string `json:"width"`
@@ -75,13 +77,14 @@ type TestParcel struct {
 	DistanceUnit string `json:"distance_unit"`
 }
 
-// CreateShipmentRequest is used to create a test shipment to discover service levels.
+// Asks Shippo to rate a shipment. Used both to quote a real customer's parcels and, with throwaway
+// values, to discover which service levels a carrier offers.
 type CreateShipmentRequest struct {
-	AddressFrom     TestAddress    `json:"address_from"`
-	AddressTo       TestAddress    `json:"address_to"`
-	Parcels         []TestParcel   `json:"parcels"`
-	CarrierAccounts []string       `json:"carrier_accounts"`
-	Extra           *ShipmentExtra `json:"extra,omitempty"`
+	AddressFrom     ShipmentAddress `json:"address_from"`
+	AddressTo       ShipmentAddress `json:"address_to"`
+	Parcels         []Parcel        `json:"parcels"`
+	CarrierAccounts []string        `json:"carrier_accounts"`
+	Extra           *ShipmentExtra  `json:"extra,omitempty"`
 }
 
 // ShipmentExtra carries optional Shippo shipment options; only third-party billing is used here.
@@ -95,6 +98,77 @@ type ShipmentBilling struct {
 	Account string `json:"account,omitempty"`
 	Country string `json:"country,omitempty"`
 	Zip     string `json:"zip,omitempty"`
+}
+
+// Carries a full address for a label purchase; unlike rating, the carrier prints these fields.
+type LabelAddress struct {
+	Name    string `json:"name"`
+	Company string `json:"company,omitempty"`
+	Street1 string `json:"street1"`
+	Street2 string `json:"street2,omitempty"`
+	City    string `json:"city"`
+	State   string `json:"state"`
+	Zip     string `json:"zip"`
+	Country string `json:"country"`
+	Phone   string `json:"phone,omitempty"`
+	Email   string `json:"email,omitempty"`
+	// Sent explicitly so the carrier does not guess residential and surcharge.
+	IsResidential bool `json:"is_residential"`
+}
+
+// Holds the shipment inlined into an instant-label transaction.
+type LabelShipment struct {
+	AddressFrom LabelAddress   `json:"address_from"`
+	AddressTo   LabelAddress   `json:"address_to"`
+	Parcels     []Parcel       `json:"parcels"`
+	Extra       *ShipmentExtra `json:"extra,omitempty"`
+}
+
+// Buys labels in one call by inlining the shipment rather than rating first.
+type CreateTransactionRequest struct {
+	CarrierAccount    string        `json:"carrier_account"`
+	ServiceLevelToken string        `json:"servicelevel_token"`
+	Shipment          LabelShipment `json:"shipment"`
+	LabelFileType     string        `json:"label_file_type"`
+	Async             bool          `json:"async"`
+}
+
+// Represents a Shippo transaction — one purchased label, or the master transaction.
+type TransactionResponse struct {
+	ObjectID       string `json:"object_id"`
+	Status         string `json:"status"`
+	TrackingNumber string `json:"tracking_number"`
+	LabelURL       string `json:"label_url"`
+	// Arrives as either the rate's object id string or the embedded rate object, depending on the call.
+	Rate     json.RawMessage      `json:"rate"`
+	Messages []TransactionMessage `json:"messages"`
+}
+
+// Carries a carrier or Shippo explanation for a non-SUCCESS transaction.
+type TransactionMessage struct {
+	Text string `json:"text"`
+}
+
+// Holds the rate object embedded in a transaction.
+type TransactionRate struct {
+	ObjectID string `json:"object_id"`
+	Amount   string `json:"amount"`
+}
+
+// Wraps the transactions listed for one rate.
+type TransactionListResponse struct {
+	Results []TransactionResponse `json:"results"`
+}
+
+// Requests a refund of a purchased label transaction.
+type CreateRefundRequest struct {
+	Transaction string `json:"transaction"`
+	Async       bool   `json:"async"`
+}
+
+// Reports the outcome of a refund request.
+type RefundResponse struct {
+	Status string `json:"status"`
 }
 
 // OAuthInitiateResponse represents the Shippo OAuth redirect response.

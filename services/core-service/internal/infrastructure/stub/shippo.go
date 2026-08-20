@@ -154,3 +154,11 @@ func (s *shippoClient) FetchShippingRate(_ context.Context, params domain.FetchS
 func (s *shippoClient) FetchAllShippingRates(_ context.Context, params domain.FetchAllShippingRatesParams) ([]domain.ShippoRateOption, *apierror.APIError) {
 	return ratesForDestination(params.ToAddress.Zip)
 }
+
+func (s *shippoClient) CreateTransactionInstantLabel(_ context.Context, _ domain.CreateLabelParams) (*domain.LabelResult, *apierror.APIError) {
+	return &domain.LabelResult{}, nil
+}
+
+func (s *shippoClient) RefundTransaction(_ context.Context, _ string) *apierror.APIError {
+	return nil
+}

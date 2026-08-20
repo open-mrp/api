@@ -244,6 +244,9 @@ message ListSalesOrderStatusesResponse {
 // Batched read of full sales orders for the api-gateway resourcekit resolver.
 message BatchGetSalesOrdersByIDsRequest {
   repeated string ids = 1;
+  // Sub-includes the parent resource asked for, so relations the detail projection does not
+  // carry (e.g. related.shipments) are fetched for a nested order too.
+  repeated string includes = 2;
 }
 message BatchGetSalesOrdersByIDsResponse {
   repeated SalesOrderInfo sales_orders = 1;

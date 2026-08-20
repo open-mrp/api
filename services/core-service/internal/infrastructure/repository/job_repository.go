@@ -64,6 +64,7 @@ type storedRowResult struct {
 	Status       constants.JobResultStatus `json:"status"`
 	ResourceType constants.ObjectType      `json:"resource_type,omitempty"`
 	ID           string                    `json:"id,omitempty"`
+	Name         *string                   `json:"name,omitempty"`
 	SubResources []storedSubResource       `json:"sub_resources,omitempty"`
 	Error        *apierror.ResponseError   `json:"error,omitempty"`
 }
@@ -71,6 +72,7 @@ type storedRowResult struct {
 type storedSubResource struct {
 	ResourceType constants.ObjectType `json:"resource_type"`
 	ID           string               `json:"id"`
+	Name         *string              `json:"name,omitempty"`
 }
 
 // legacyStoredRowResult reads a row written before a result carried its own status and
@@ -133,13 +135,14 @@ func encodeResults(results []domain.RowResult, truncated bool) (db.NullableRawMe
 	for i, r := range results {
 		subs := make([]storedSubResource, len(r.SubResources))
 		for j, s := range r.SubResources {
-			subs[j] = storedSubResource{ResourceType: s.ResourceType, ID: s.ID}
+			subs[j] = storedSubResource{ResourceType: s.ResourceType, ID: s.ID, Name: s.Name}
 		}
 		rows[i] = storedRowResult{
 			Index:        r.Index,
 			Status:       r.Status,
 			ResourceType: r.ResourceType,
 			ID:           r.ID,
+			Name:         r.Name,
 			SubResources: subs,
 			Error:        r.Error,
 		}
@@ -168,13 +171,14 @@ func decodeResults(rawResults, rawErrors db.NullableRawMessage, resourceType con
 	for i, r := range stored.Rows {
 		subs := make([]domain.SubResourceRef, len(r.SubResources))
 		for j, s := range r.SubResources {
-			subs[j] = domain.SubResourceRef{ResourceType: s.ResourceType, ID: s.ID}
+			subs[j] = domain.SubResourceRef{ResourceType: s.ResourceType, ID: s.ID, Name: s.Name}
 		}
 		out[i] = domain.RowResult{
 			Index:        r.Index,
 			Status:       r.Status,
 			ResourceType: r.ResourceType,
 			ID:           r.ID,
+			Name:         r.Name,
 			SubResources: subs,
 			Error:        r.Error,
 		}

@@ -18,14 +18,14 @@ type ListInvoicesRequest struct {
 	//
 	// - `all`: no payment-state filtering, the same as omitting the parameter.
 	// - `paid`: only invoices marked paid in full.
-	// - `unpaid`: only invoices that are neither paid in full nor overpaid, including invoices carrying partial payments.
+	// - `unpaid`: only invoices not marked paid in full, including invoices carrying partial payments.
 	// - `overpaid`: only invoices whose applied payments exceed the invoiced amount.
 	Status *constants.InvoiceListStatus `query:"status"`
-	// Restricts results to invoices with at least one line billing any of these items.
+	// Restricts results to invoices whose sales order has at least one line for any of these items.
 	ItemIDs []string `query:"item_ids"`
 	// Restricts results to invoices billed to any of these customers.
 	CustomerIDs []string `query:"customer_ids"`
-	// Restricts results to invoices with at least one line whose product belongs to any of these product lines.
+	// Restricts results to invoices whose sales order has at least one line whose product belongs to any of these product lines.
 	ProductLineIDs []string `query:"product_line_ids"`
 	// Restricts results to invoices billed to customers belonging to any of these account groups.
 	CustomerGroupIDs []string `query:"customer_group_ids"`
@@ -43,7 +43,7 @@ type ListInvoicesRequest struct {
 
 // Returns a paginated list of invoices for the current account, newest first.
 //
-// A free-text search term (`q`) is matched against the invoice number, the invoice note, and the customer name, and still respects the other filters.
+// A free-text search term (`q`) is matched against the invoice number, the invoice note, the customer name, the sales order number, the customer PO number, and the customer number, and still respects the other filters.
 type ListInvoicesEndpoint struct{}
 
 func (e *ListInvoicesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListInvoicesRequest, *apiresource.List[apiresource.Invoice]] {
@@ -64,9 +64,22 @@ func (e *ListInvoicesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListInvoi
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListInvoicesRequest) (*apiresource.List[apiresource.Invoice], *apierror.APIError) {
 			return svc.(InvoiceSvc).ListInvoices
 		},
+		// Same resource as retrieve, so the same include set — allocations are the exception: only
+		// the retrieve and update RPCs expand them.
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeInvoice,
-			Fields:     []string{"customer", "order", "shipment", "billing_address", "payment_term", "lines"},
+			Fields: []string{
+				"customer",
+				"order",
+				"shipment",
+				"related.sales_order",
+				"related.shipment",
+				"billing_address",
+				"payment_term",
+				"lines",
+				"lines.order_line",
+				"lines.order_line.product",
+			},
 		}),
 	})
 }

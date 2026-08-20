@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/augno/api/services/core-service/internal/domain"
+	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/contracts"
 	pb "github.com/augno/api/shared/proto/core"
 
@@ -16,37 +17,6 @@ type pickingGRPCHandler struct {
 
 	pickSvc     domain.PickSvc
 	pickLineSvc domain.PickLineSvc
-}
-
-func pickSummaryToProto(p *domain.PickSummary) *pb.PickSummaryInfo {
-	if p == nil {
-		return nil
-	}
-
-	info := &pb.PickSummaryInfo{
-		Id:               p.ID,
-		Number:           p.Number,
-		SalesOrderId:     p.SalesOrderID,
-		SalesOrderNumber: p.SalesOrderNumber,
-		CustomerId:       p.CustomerID,
-		CustomerName:     p.CustomerName,
-		CustomerNumber:   p.CustomerNumber,
-		PriorityId:       p.PriorityID,
-		PriorityCode:     string(p.PriorityCode),
-		PriorityName:     p.PriorityName,
-		CreatedAt:        timestamppb.New(p.CreatedAt),
-		UpdatedAt:        timestamppb.New(p.UpdatedAt),
-	}
-
-	if p.FinishedAt != nil {
-		info.FinishedAt = timestamppb.New(*p.FinishedAt)
-	}
-
-	for _, d := range p.Departments {
-		info.Departments = append(info.Departments, pickDepartmentToProto(d))
-	}
-
-	return info
 }
 
 func pickToProto(p *domain.Pick) *pb.PickInfo {
@@ -67,6 +37,43 @@ func pickToProto(p *domain.Pick) *pb.PickInfo {
 		PriorityName:     p.PriorityName,
 		CreatedAt:        timestamppb.New(p.CreatedAt),
 		UpdatedAt:        timestamppb.New(p.UpdatedAt),
+		LineCount:        p.LineCount,
+		PickedCompletion: p.PickedCompletion,
+		PackedCompletion: p.PackedCompletion,
+
+		ShippingAddressId:            p.ShippingAddressID,
+		ShippingAddressName:          p.ShippingAddressName,
+		ShippingAddressPhone:         p.ShippingAddressPhone,
+		ShippingAddressEmail:         p.ShippingAddressEmail,
+		ShippingAddressIsDropShip:    p.ShippingAddressIsDropShip,
+		ShippingAddressGeolocationId: p.ShippingAddressGeolocation,
+		ShippingAddressStreetLine_1:  p.ShippingAddressStreetLine1,
+		ShippingAddressStreetLine_2:  p.ShippingAddressStreetLine2,
+		ShippingAddressLocality:      p.ShippingAddressLocality,
+		ShippingAddressState:         p.ShippingAddressState,
+		ShippingAddressPostalCode:    p.ShippingAddressPostalCode,
+		ShippingAddressCountry:       p.ShippingAddressCountry,
+		ShipmentIds:                  p.ShipmentIDs,
+	}
+
+	if p.PromisedAt != nil {
+		info.PromisedAt = timestamppb.New(*p.PromisedAt)
+	}
+
+	if p.ShipByDate != nil {
+		info.ShipByDate = timestamppb.New(*p.ShipByDate)
+	}
+	info.LeadTimeDays = p.LeadTimeDays
+	info.TransitDays = p.TransitDays
+	if p.LeadTimeSource != nil {
+		info.LeadTimeSource = p.LeadTimeSource.StringPtr()
+	}
+	if p.TransitSource != nil {
+		info.TransitSource = p.TransitSource.StringPtr()
+	}
+
+	if p.LastShippedAt != nil {
+		info.LastShippedAt = timestamppb.New(*p.LastShippedAt)
 	}
 
 	if p.FinishedAt != nil {
@@ -110,6 +117,8 @@ func pickLineToProto(l *domain.PickLine) *pb.PickLineInfo {
 		UpdatedAt:                            timestamppb.New(l.UpdatedAt),
 		OrderLineItemNumber:                  l.OrderLineItemNumber,
 		OrderLineSku:                         l.OrderLineSKU,
+		OrderLineProductId:                   l.OrderLineProductID,
+		OrderLineItemId:                      l.OrderLineItemID,
 		OrderedQuantityId:                    l.OrderedQuantityID,
 		OrderedQuantityValue:                 l.OrderedQuantityValue,
 		OrderedQuantityUnitId:                l.OrderedQuantityUnitID,
@@ -183,15 +192,16 @@ func (h *pickingGRPCHandler) ListPicks(ctx context.Context, req *pb.ListPicksReq
 		params.EndDate = req.EndDate
 	}
 	params.Includes = req.Includes
+	params.Sort = constants.PickSort(req.Sort)
 
 	result, apiErr := h.pickSvc.ListPicks(ctx, params)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
-	picks := make([]*pb.PickSummaryInfo, len(result.Picks))
+	picks := make([]*pb.PickInfo, len(result.Picks))
 	for i, p := range result.Picks {
-		picks[i] = pickSummaryToProto(p)
+		picks[i] = pickToProto(p)
 	}
 
 	return &pb.ListPicksResponse{
@@ -294,7 +304,7 @@ func (h *pickingGRPCHandler) VoidPick(ctx context.Context, req *pb.VoidPickReque
 	}, nil
 }
 
-// PackPick packs a pick and creates shipment cases.
+// Accepts a pack and returns the job tracking it.
 func (h *pickingGRPCHandler) PackPick(ctx context.Context, req *pb.PackPickRequest) (*pb.PackPickResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
@@ -303,15 +313,12 @@ func (h *pickingGRPCHandler) PackPick(ctx context.Context, req *pb.PackPickReque
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
-	result, apiErr := h.pickSvc.PackPick(ctx, req.Id, req.ShipmentCaseCount)
+	job, apiErr := h.pickSvc.PackPick(ctx, req.Id, req.ShipmentCaseCount)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
-	return &pb.PackPickResponse{
-		Pick:           pickToProto(result.Pick),
-		ShipmentNumber: result.ShipmentNumber,
-	}, nil
+	return &pb.PackPickResponse{Job: jobToProto(job)}, nil
 }
 
 // GetPickShipments returns the shipment numbers associated with a pick.
@@ -352,12 +359,9 @@ func (h *pickingGRPCHandler) UpdatePickLine(ctx context.Context, req *pb.UpdateP
 	defer finalizeIdempotency()
 
 	params := domain.UpdatePickLineParams{
-		PickID:     req.PickId,
-		PickLineID: req.Id,
-	}
-
-	if req.QuantityValue != nil {
-		params.QuantityValue = req.QuantityValue
+		PickID:        req.PickId,
+		PickLineID:    req.Id,
+		QuantityValue: req.QuantityValue,
 	}
 
 	line, apiErr := h.pickLineSvc.UpdatePickLine(ctx, params)

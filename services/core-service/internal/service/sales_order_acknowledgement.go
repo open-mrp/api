@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/shared/constants"
@@ -40,10 +41,19 @@ type ackLine struct {
 	Total       string
 }
 
+// The dashboard shows its American-made panel on one account's customer emails only, keyed by a
+// hard-coded id; this mirrors that so the mail matches. Delete both when that panel is retired.
+const americanMadeAccountID = "ac_REDACTED_ACCOUNT_ID"
+
 // ackData is the shared view model for the order-acknowledgement email and PDF.
 // It carries pre-formatted, presentation-ready strings so the email template and
 // the PDF renderer stay in lockstep with the legacy Dashboard layout.
 type ackData struct {
+	// Document identity — parameterised so the same renderer serves the invoice PDF. Default to the
+	// acknowledgement title/label when empty.
+	DocumentTitle string
+	NumberLabel   string
+
 	// Seller letterhead / branding.
 	AccountName    string
 	LogoURL        string
@@ -62,9 +72,12 @@ type ackData struct {
 	OrderNumber    string
 	CustomerPO     string
 	CustomerNumber string
-	CustomerName   string
-	OrderDateShort string // e.g. 7/14/2026 (email)
-	OrderDateLong  string // e.g. 07/14/2026 (PDF)
+	// CustomerNumberRaw is the unpadded number; the portal CTA quotes it verbatim so it matches what
+	// the customer types to link their account.
+	CustomerNumberRaw string
+	CustomerName      string
+	OrderDateShort    string // e.g. 7/14/2026 (email)
+	OrderDateLong     string // e.g. 07/14/2026 02:30 PM (PDF)
 
 	// OrderOnlineLink is the customer-portal registration URL, set only for
 	// accounts with a portal configured; empty otherwise (no CTA is rendered).
@@ -88,6 +101,16 @@ type ackData struct {
 	Lines      []ackLine
 	OrderTotal string
 
+	// Social handles and the mailto subject feed the footer both customer emails share.
+	InstagramHandle string
+	TwitterHandle   string
+	FacebookHandle  string
+	LinkedInHandle  string
+	EmailSubject    string
+
+	// Seller Co's marketing panel rides on its own emails only, matching the dashboard.
+	ShowAmericanMade bool
+
 	Year string
 }
 
@@ -97,18 +120,21 @@ type ackData struct {
 // empty letterhead rather than failing.
 func buildOrderAcknowledgementData(order *domain.SalesOrder, lines []*domain.SalesOrderLine, account *domain.Account, originAddr *domain.ShippingAddress) ackData {
 	d := ackData{
-		AccountName:    accountDisplayName(account, order.CustomerName),
-		OrderNumber:    textutil.FormatRecordNumber(order.Number),
-		CustomerPO:     ptrutil.Deref(order.CustomerPONumber),
-		CustomerNumber: textutil.FormatRecordNumber(order.CustomerNumber),
-		CustomerName:   order.CustomerName,
-		OrderDateShort: order.CreatedAt.Format("1/2/2006"),
-		OrderDateLong:  order.CreatedAt.Format("01/02/2006"),
+		AccountName:       accountDisplayName(account, order.CustomerName),
+		OrderNumber:       textutil.FormatRecordNumber(order.Number),
+		CustomerPO:        ptrutil.Deref(order.CustomerPONumber),
+		CustomerNumber:    textutil.FormatAccountNumber(order.CustomerNumber),
+		CustomerNumberRaw: order.CustomerNumber,
+		CustomerName:      order.CustomerName,
+		// Rendered in the server's zone, as the dashboard's date-fns and toLocaleDateString are.
+		OrderDateShort: order.CreatedAt.Local().Format("1/2/2006"),
+		OrderDateLong:  order.CreatedAt.Local().Format("01/02/2006 03:04 PM"),
 		Carrier:        ackCarrier(order),
 		Priority:       order.PriorityName,
 		PaymentTerms:   ptrutil.Deref(order.PaymentTermName),
 		SalesRep:       ptrutil.Deref(order.SalesRepName),
-		Year:           order.CreatedAt.Format("2006"),
+		Year:           time.Now().Format("2006"),
+		EmailSubject:   "Sales Order " + textutil.FormatRecordNumber(order.Number),
 	}
 
 	if account != nil && account.Branding != nil {
@@ -116,7 +142,12 @@ func buildOrderAcknowledgementData(order *domain.SalesOrder, lines []*domain.Sal
 		d.AccountEmail = ptrutil.Deref(account.Branding.SupportEmail)
 		d.AccountPhone = ptrutil.Deref(account.Branding.PhoneNumber)
 		d.AccountWebsite = ptrutil.Deref(account.Branding.WebsiteURL)
+		d.InstagramHandle = ptrutil.Deref(account.Branding.InstagramHandle)
+		d.TwitterHandle = ptrutil.Deref(account.Branding.TwitterHandle)
+		d.FacebookHandle = ptrutil.Deref(account.Branding.FacebookHandle)
+		d.LinkedInHandle = ptrutil.Deref(account.Branding.LinkedInHandle)
 	}
+	d.ShowAmericanMade = account != nil && account.ID == americanMadeAccountID
 	if originAddr != nil {
 		d.AccountAddress = ackAddress{
 			Line1:        originAddr.Street1,
@@ -181,23 +212,29 @@ func (d ackData) emailParams() map[string]any {
 		}
 	}
 	return map[string]any{
-		"account_name":      d.AccountName,
-		"logo_url":          d.LogoURL,
-		"order_number":      d.OrderNumber,
-		"customer_po":       d.CustomerPO,
-		"order_date":        d.OrderDateShort,
-		"order_total":       d.OrderTotal,
-		"has_ship_to":       d.HasShipTo,
-		"ship_to_name":      d.ShipTo.Name,
-		"ship_to_line1":     d.ShipTo.Line1,
-		"ship_to_line2":     d.ShipTo.Line2,
-		"ship_to_csz":       d.ShipTo.CityStateZip,
-		"lines":             lines,
-		"account_email":     d.AccountEmail,
-		"account_website":   d.AccountWebsite,
-		"year":              d.Year,
-		"customer_number":   d.CustomerNumber,
-		"order_online_link": d.OrderOnlineLink,
+		"account_name":       d.AccountName,
+		"logo_url":           d.LogoURL,
+		"order_number":       d.OrderNumber,
+		"customer_po":        d.CustomerPO,
+		"order_date":         d.OrderDateShort,
+		"order_total":        d.OrderTotal,
+		"has_ship_to":        d.HasShipTo,
+		"ship_to_name":       d.ShipTo.Name,
+		"ship_to_line1":      d.ShipTo.Line1,
+		"ship_to_line2":      d.ShipTo.Line2,
+		"ship_to_csz":        d.ShipTo.CityStateZip,
+		"lines":              lines,
+		"account_email":      d.AccountEmail,
+		"account_website":    d.AccountWebsite,
+		"year":               d.Year,
+		"customer_number":    d.CustomerNumberRaw,
+		"order_online_link":  d.OrderOnlineLink,
+		"email_subject":      d.EmailSubject,
+		"instagram_handle":   d.InstagramHandle,
+		"twitter_handle":     d.TwitterHandle,
+		"facebook_handle":    d.FacebookHandle,
+		"linkedin_handle":    d.LinkedInHandle,
+		"show_american_made": d.ShowAmericanMade,
 	}
 }
 
@@ -348,6 +385,12 @@ func formatQty(qty decimal.Decimal, unitAbbr string) string {
 	return out
 }
 
+// Renders a count the way the dashboard's numeral('0,0') does: rounded to a whole number with
+// thousands separators, so the invoice's Ordered/Invoiced columns read identically.
+func formatCount(qty decimal.Decimal) string {
+	return formatQty(qty.Round(0), "")
+}
+
 // ackAttachmentFilename names the emailed acknowledgement PDF, tagging the customer's
 // PO number when the order has one so the customer can file it against their PO.
 func ackAttachmentFilename(orderNumber, customerPO string) string {
@@ -424,4 +467,26 @@ func addThousandsSep(s string) string {
 		}
 	}
 	return b.String()
+}
+
+// Holds a letterhead logo already fetched, so the bytes can be gathered before a transaction opens
+// and embedded inside it — fpdf draws bytes, not URLs.
+type ackLogo struct {
+	ImageType string
+	Image     []byte
+}
+
+// Fetches the account's letterhead logo for embedding, best-effort: a miss leaves a text letterhead.
+func fetchAccountLogo(ctx context.Context, repos domain.RepoFactory, branding BrandingAssets, accountID string) ackLogo {
+	account, apiErr := repos.NewAccountRepo().GetByID(ctx, accountID)
+	if apiErr != nil || account == nil || account.Branding == nil {
+		return ackLogo{}
+	}
+	stored := ptrutil.Deref(account.Branding.LogoURL)
+	if stored == "" {
+		return ackLogo{}
+	}
+	var logo ackLogo
+	logo.ImageType, logo.Image = branding.LogoImage(ctx, stored)
+	return logo
 }

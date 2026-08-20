@@ -110,7 +110,6 @@ func arrayFilterCases() []arrayFilterCase {
 		{name: "deliveries/item_ids", path: "/v1/operations/deliveries", param: "item_ids", valuePath: "lines.data[].item.id", include: "lines", fromSelf: true},
 
 		{name: "picks/customer_ids", path: "/v1/operations/picks", param: "customer_ids", valuePath: "customer.id", include: "customer", fromSelf: true},
-		{name: "picks/department_ids", path: "/v1/operations/picks", param: "department_ids", valuePath: "departments.data[].id", include: "departments", fromSelf: true},
 
 		{name: "shipments/customer_ids", path: "/v1/operations/shipments", param: "customer_ids", valuePath: "customer.id", include: "customer", fromSelf: true},
 		{name: "shipments/item_ids", path: "/v1/operations/shipments", param: "item_ids", valuePath: "lines.data[].item.id", include: "lines", fromSelf: true},

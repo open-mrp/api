@@ -17,7 +17,7 @@ type ListReceivablesRequest struct {
 	apiresource.PaginationRequest
 	// Compute receivable balances as of this timestamp.
 	//
-	// Only invoices created before the cutoff are included, and only allocations made before the cutoff are subtracted from each remaining balance. When omitted, current balances are returned.
+	// Only invoices created before the cutoff are included, only payments whose funds had landed by then are subtracted from each remaining balance, and entries already settled by the cutoff drop out. When omitted, current balances are returned for every unpaid invoice.
 	CutoffDate *time.Time `query:"cutoff_at"`
 }
 

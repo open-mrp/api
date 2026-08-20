@@ -208,6 +208,16 @@ SELECT
 FROM unit
 WHERE (unit.account_id = sqlc.arg('account_id') OR unit.account_id IS NULL);
 
+-- name: GetFreightWeightUnit :one
+-- Returns the global unit freight is weighed in. Pounds, not the mass base unit (grams): it is what
+-- the carriers are sent and what the shipping cases record.
+SELECT id
+FROM unit
+WHERE unit_dimension_code = 'mass'
+AND abbreviation = 'lb'
+AND account_id IS NULL
+LIMIT 1;
+
 -- name: GetCurrencyBaseUnit :one
 -- Returns the global currency base unit ID (used as the numerator unit for price rates).
 SELECT id

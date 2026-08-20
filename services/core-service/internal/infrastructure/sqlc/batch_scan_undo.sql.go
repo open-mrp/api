@@ -262,6 +262,81 @@ func (q *Queries) FindIssuesForBatchReversal(ctx context.Context, arg FindIssues
 	return items, nil
 }
 
+const findOpenIssuesForOrderItemReversal = `-- name: FindOpenIssuesForOrderItemReversal :many
+SELECT
+    ii.id,
+    ii.item_id,
+    ii.order_id,
+    ii.quantity_id,
+    q.value AS quantity_value,
+    q.unit_id,
+    ii.storage_location_id,
+    ii.lot_id,
+    ii.batch_id
+FROM inventory_issue ii
+JOIN quantity q ON q.id = ii.quantity_id
+WHERE ii.order_id = ?
+AND ii.account_id = ?
+AND ii.item_id = ?
+AND ii.status_code IN ('open', 'closed')
+ORDER BY ii.issued_at DESC, ii.id DESC
+`
+
+type FindOpenIssuesForOrderItemReversalParams struct {
+	OrderID   sql.NullString
+	AccountID string
+	ItemID    string
+}
+
+type FindOpenIssuesForOrderItemReversalRow struct {
+	ID                string
+	ItemID            string
+	OrderID           sql.NullString
+	QuantityID        string
+	QuantityValue     string
+	UnitID            string
+	StorageLocationID sql.NullString
+	LotID             sql.NullString
+	BatchID           sql.NullString
+}
+
+// Lists the issues an order's consumption left open, newest first, so a void walks them back in the
+// reverse of the order they were taken.
+// Closed issues are the fully-allocated ones, so a void has to reach them too or the shipment's
+// own stock is the part it cannot give back.
+func (q *Queries) FindOpenIssuesForOrderItemReversal(ctx context.Context, arg FindOpenIssuesForOrderItemReversalParams) ([]FindOpenIssuesForOrderItemReversalRow, error) {
+	rows, err := q.db.QueryContext(ctx, findOpenIssuesForOrderItemReversal, arg.OrderID, arg.AccountID, arg.ItemID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FindOpenIssuesForOrderItemReversalRow
+	for rows.Next() {
+		var i FindOpenIssuesForOrderItemReversalRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ItemID,
+			&i.OrderID,
+			&i.QuantityID,
+			&i.QuantityValue,
+			&i.UnitID,
+			&i.StorageLocationID,
+			&i.LotID,
+			&i.BatchID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const findReceiptsForBatchReversal = `-- name: FindReceiptsForBatchReversal :many
 SELECT
     ir.id,

@@ -147,7 +147,7 @@ const (
 	SeedSalesOrderPONumber   = "PO-E2E-EXACT-001"
 	SeedShipmentID           = "sh_01k0a87w33emw8pmkz1mf86cg1"
 	SeedDeliveryID           = "dv_01seeddelivery1_0000"
-	SeedShipmentLineID       = "shln_01seedshpln1_00000"
+	SeedShipmentLineID       = "shln_01seedpck_ln1_000"
 	SeedShippingCaseID       = "shcs_01seedshcase1_00000"
 	SeedPickID               = "pk_01k0a5tsn7f7psgagr1732fxqa"
 	SeedPickLineID           = "pkln_01seediss_ln1_0000"

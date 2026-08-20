@@ -36,7 +36,7 @@ FROM transaction t
 WHERE t.account_id = ?
 AND (
     t.customer_account_id = ?
-    OR (? = 1 AND t.customer_account_id IN (
+    OR (t.customer_account_id IN (
         SELECT ar2.counterparty_account_id FROM account_relation ar2
         WHERE ar2.parent_account_relation_id IN (
             SELECT ar3.id FROM account_relation ar3
@@ -53,19 +53,17 @@ AND (? IS NULL OR t.transaction_type_code = ?)
 `
 
 type CountAccountTransactionsParams struct {
-	AccountID            string
-	CustomerAccountID    string
-	IncludeChildAccounts interface{}
-	Query                sql.NullString
-	Status               interface{}
-	Type                 sql.NullString
+	AccountID         string
+	CustomerAccountID string
+	Query             sql.NullString
+	Status            interface{}
+	Type              sql.NullString
 }
 
 func (q *Queries) CountAccountTransactions(ctx context.Context, arg CountAccountTransactionsParams) (int64, error) {
 	row := q.db.QueryRowContext(ctx, countAccountTransactions,
 		arg.AccountID,
 		arg.CustomerAccountID,
-		arg.IncludeChildAccounts,
 		arg.CustomerAccountID,
 		arg.Query,
 		arg.Query,
@@ -633,7 +631,7 @@ LEFT JOIN user usr ON usr.id = au.user_id
 WHERE t.account_id = ?
 AND (
     t.customer_account_id = ?
-    OR (? = 1 AND t.customer_account_id IN (
+    OR (t.customer_account_id IN (
         SELECT ar2.counterparty_account_id FROM account_relation ar2
         WHERE ar2.parent_account_relation_id IN (
             SELECT ar3.id FROM account_relation ar3
@@ -653,14 +651,13 @@ LIMIT ?
 `
 
 type ListAccountTransactionsBackwardParams struct {
-	AccountID            string
-	CustomerAccountID    string
-	IncludeChildAccounts interface{}
-	Cursor               string
-	Query                sql.NullString
-	Status               interface{}
-	Type                 sql.NullString
-	Limit                int32
+	AccountID         string
+	CustomerAccountID string
+	Cursor            string
+	Query             sql.NullString
+	Status            interface{}
+	Type              sql.NullString
+	Limit             int32
 }
 
 type ListAccountTransactionsBackwardRow struct {
@@ -708,7 +705,6 @@ func (q *Queries) ListAccountTransactionsBackward(ctx context.Context, arg ListA
 	rows, err := q.db.QueryContext(ctx, listAccountTransactionsBackward,
 		arg.AccountID,
 		arg.CustomerAccountID,
-		arg.IncludeChildAccounts,
 		arg.CustomerAccountID,
 		arg.Cursor,
 		arg.Query,
@@ -827,7 +823,7 @@ LEFT JOIN user usr ON usr.id = au.user_id
 WHERE t.account_id = ?
 AND (
     t.customer_account_id = ?
-    OR (? = 1 AND t.customer_account_id IN (
+    OR (t.customer_account_id IN (
         SELECT ar2.counterparty_account_id FROM account_relation ar2
         WHERE ar2.parent_account_relation_id IN (
             SELECT ar3.id FROM account_relation ar3
@@ -847,14 +843,13 @@ LIMIT ?
 `
 
 type ListAccountTransactionsForwardParams struct {
-	AccountID            string
-	CustomerAccountID    string
-	IncludeChildAccounts interface{}
-	Cursor               sql.NullString
-	Query                sql.NullString
-	Status               interface{}
-	Type                 sql.NullString
-	Limit                int32
+	AccountID         string
+	CustomerAccountID string
+	Cursor            sql.NullString
+	Query             sql.NullString
+	Status            interface{}
+	Type              sql.NullString
+	Limit             int32
 }
 
 type ListAccountTransactionsForwardRow struct {
@@ -902,7 +897,6 @@ func (q *Queries) ListAccountTransactionsForward(ctx context.Context, arg ListAc
 	rows, err := q.db.QueryContext(ctx, listAccountTransactionsForward,
 		arg.AccountID,
 		arg.CustomerAccountID,
-		arg.IncludeChildAccounts,
 		arg.CustomerAccountID,
 		arg.Cursor,
 		arg.Cursor,

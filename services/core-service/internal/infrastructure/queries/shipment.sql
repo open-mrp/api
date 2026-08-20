@@ -10,13 +10,37 @@ SELECT
     ss.name AS status_name,
     s.sales_order_id,
     so.number AS sales_order_number,
+    so.customer_po_number,
+    COALESCE(so.carrier_billing_type, ar.carrier_billing_type) AS carrier_billing_type,
+    COALESCE(so.carrier_billing_account, ar.carrier_billing_account) AS carrier_billing_account,
     s.carrier_id,
     cr.name AS carrier_name,
+    cr.code AS carrier_code,
     cr.is_portal_enabled AS carrier_is_portal_enabled,
+    cr.created_at AS carrier_created_at,
+    cr.updated_at AS carrier_updated_at,
     s.carrier_option_id,
     co.name AS carrier_option_name,
     co.is_portal_enabled AS service_level_is_portal_enabled,
     co.service_level_token AS service_level_token,
+    co.created_at AS service_level_created_at,
+    co.updated_at AS service_level_updated_at,
+    s.shipping_address_id,
+    addr.name AS shipping_address_name,
+    addr.phone AS shipping_address_phone,
+    addr.email AS shipping_address_email,
+    addr.is_drop_ship AS shipping_address_is_drop_ship,
+    ship_geo.id AS shipping_address_geolocation_id,
+    ship_geo.street_line_1 AS shipping_address_street_line_1,
+    ship_geo.street_line_2 AS shipping_address_street_line_2,
+    ship_geo.locality AS shipping_address_locality,
+    ship_geo.state AS shipping_address_state,
+    ship_geo.postal_code AS shipping_address_postal_code,
+    ship_geo.country AS shipping_address_country,
+    s.shipped_by_id,
+    shipped_by_user.name AS shipped_by_name,
+    s.invoice_id,
+    inv.number AS invoice_number,
     ar.counterparty_account_id AS customer_id,
     ba.name AS customer_name,
     ar.external_number AS customer_number,
@@ -24,10 +48,37 @@ SELECT
     ar.commission_status_code AS customer_commission_policy,
     ar.created_at AS customer_created_at,
     ar.updated_at AS customer_updated_at,
+    p.id AS pick_id,
+    p.number AS pick_number,
+    p.created_at AS pick_created_at,
+    p.updated_at AS pick_updated_at,
+    billing_geo.country AS billing_address_country,
+    billing_geo.postal_code AS billing_address_zip,
+    s.account_id,
+    s.created_at,
+    s.updated_at,
     so.created_at AS sales_order_created_at,
     so.updated_at AS sales_order_updated_at,
-    s.created_at,
-    s.updated_at
+    addr.created_at AS shipping_address_created_at,
+    addr.updated_at AS shipping_address_updated_at,
+    shipped_by_au.status_code AS shipped_by_status_code,
+    shipped_by_au.created_at AS shipped_by_created_at,
+    shipped_by_au.updated_at AS shipped_by_updated_at,
+    inv.created_at AS invoice_created_at,
+    inv.updated_at AS invoice_updated_at,
+    so.priority_code,
+    (SELECT COUNT(*) FROM shipping_case sc WHERE sc.shipment_id = s.id) AS case_count,
+    -- Dashboard's isValidToShip: not yet shipped, has at least one case, and every case has a
+    -- freight weight recorded (ShippingCaseUtils.isReadyToShip = freightWeight > 0).
+    (
+        s.shipped_at IS NULL
+        AND EXISTS (SELECT 1 FROM shipping_case rc WHERE rc.shipment_id = s.id)
+        AND NOT EXISTS (
+            SELECT 1 FROM shipping_case rc2
+            JOIN quantity rfw ON rfw.id = rc2.freight_weight_id
+            WHERE rc2.shipment_id = s.id AND rfw.value <= 0
+        )
+    ) AS is_ready_to_ship
 FROM shipment s
 JOIN shipment_status ss ON ss.code = s.shipment_status_code
 JOIN sales_order so ON so.id = s.sales_order_id
@@ -36,6 +87,14 @@ JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
 JOIN account ba ON ba.id = so.buyer_account_id
 JOIN carrier cr ON cr.id = s.carrier_id
 LEFT JOIN carrier_option co ON co.id = s.carrier_option_id
+LEFT JOIN address addr ON addr.id = s.shipping_address_id
+LEFT JOIN geolocation ship_geo ON ship_geo.id = addr.geolocation_id
+LEFT JOIN account_user shipped_by_au ON shipped_by_au.id = s.shipped_by_id
+LEFT JOIN user shipped_by_user ON shipped_by_user.id = shipped_by_au.user_id
+LEFT JOIN invoice inv ON inv.id = s.invoice_id
+LEFT JOIN pick p ON p.sales_order_id = so.id
+LEFT JOIN address billing_addr ON billing_addr.id = so.billing_address_id
+LEFT JOIN geolocation billing_geo ON billing_geo.id = billing_addr.geolocation_id
 WHERE s.account_id = sqlc.arg('account_id')
 AND (
     sqlc.narg('status_code') IS NULL
@@ -110,13 +169,37 @@ SELECT
     ss.name AS status_name,
     s.sales_order_id,
     so.number AS sales_order_number,
+    so.customer_po_number,
+    COALESCE(so.carrier_billing_type, ar.carrier_billing_type) AS carrier_billing_type,
+    COALESCE(so.carrier_billing_account, ar.carrier_billing_account) AS carrier_billing_account,
     s.carrier_id,
     cr.name AS carrier_name,
+    cr.code AS carrier_code,
     cr.is_portal_enabled AS carrier_is_portal_enabled,
+    cr.created_at AS carrier_created_at,
+    cr.updated_at AS carrier_updated_at,
     s.carrier_option_id,
     co.name AS carrier_option_name,
     co.is_portal_enabled AS service_level_is_portal_enabled,
     co.service_level_token AS service_level_token,
+    co.created_at AS service_level_created_at,
+    co.updated_at AS service_level_updated_at,
+    s.shipping_address_id,
+    addr.name AS shipping_address_name,
+    addr.phone AS shipping_address_phone,
+    addr.email AS shipping_address_email,
+    addr.is_drop_ship AS shipping_address_is_drop_ship,
+    ship_geo.id AS shipping_address_geolocation_id,
+    ship_geo.street_line_1 AS shipping_address_street_line_1,
+    ship_geo.street_line_2 AS shipping_address_street_line_2,
+    ship_geo.locality AS shipping_address_locality,
+    ship_geo.state AS shipping_address_state,
+    ship_geo.postal_code AS shipping_address_postal_code,
+    ship_geo.country AS shipping_address_country,
+    s.shipped_by_id,
+    shipped_by_user.name AS shipped_by_name,
+    s.invoice_id,
+    inv.number AS invoice_number,
     ar.counterparty_account_id AS customer_id,
     ba.name AS customer_name,
     ar.external_number AS customer_number,
@@ -124,10 +207,37 @@ SELECT
     ar.commission_status_code AS customer_commission_policy,
     ar.created_at AS customer_created_at,
     ar.updated_at AS customer_updated_at,
+    p.id AS pick_id,
+    p.number AS pick_number,
+    p.created_at AS pick_created_at,
+    p.updated_at AS pick_updated_at,
+    billing_geo.country AS billing_address_country,
+    billing_geo.postal_code AS billing_address_zip,
+    s.account_id,
+    s.created_at,
+    s.updated_at,
     so.created_at AS sales_order_created_at,
     so.updated_at AS sales_order_updated_at,
-    s.created_at,
-    s.updated_at
+    addr.created_at AS shipping_address_created_at,
+    addr.updated_at AS shipping_address_updated_at,
+    shipped_by_au.status_code AS shipped_by_status_code,
+    shipped_by_au.created_at AS shipped_by_created_at,
+    shipped_by_au.updated_at AS shipped_by_updated_at,
+    inv.created_at AS invoice_created_at,
+    inv.updated_at AS invoice_updated_at,
+    so.priority_code,
+    (SELECT COUNT(*) FROM shipping_case sc WHERE sc.shipment_id = s.id) AS case_count,
+    -- Dashboard's isValidToShip: not yet shipped, has at least one case, and every case has a
+    -- freight weight recorded (ShippingCaseUtils.isReadyToShip = freightWeight > 0).
+    (
+        s.shipped_at IS NULL
+        AND EXISTS (SELECT 1 FROM shipping_case rc WHERE rc.shipment_id = s.id)
+        AND NOT EXISTS (
+            SELECT 1 FROM shipping_case rc2
+            JOIN quantity rfw ON rfw.id = rc2.freight_weight_id
+            WHERE rc2.shipment_id = s.id AND rfw.value <= 0
+        )
+    ) AS is_ready_to_ship
 FROM shipment s
 JOIN shipment_status ss ON ss.code = s.shipment_status_code
 JOIN sales_order so ON so.id = s.sales_order_id
@@ -136,6 +246,14 @@ JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
 JOIN account ba ON ba.id = so.buyer_account_id
 JOIN carrier cr ON cr.id = s.carrier_id
 LEFT JOIN carrier_option co ON co.id = s.carrier_option_id
+LEFT JOIN address addr ON addr.id = s.shipping_address_id
+LEFT JOIN geolocation ship_geo ON ship_geo.id = addr.geolocation_id
+LEFT JOIN account_user shipped_by_au ON shipped_by_au.id = s.shipped_by_id
+LEFT JOIN user shipped_by_user ON shipped_by_user.id = shipped_by_au.user_id
+LEFT JOIN invoice inv ON inv.id = s.invoice_id
+LEFT JOIN pick p ON p.sales_order_id = so.id
+LEFT JOIN address billing_addr ON billing_addr.id = so.billing_address_id
+LEFT JOIN geolocation billing_geo ON billing_geo.id = billing_addr.geolocation_id
 WHERE s.account_id = sqlc.arg('account_id')
 AND (
     sqlc.narg('status_code') IS NULL
@@ -264,7 +382,20 @@ SELECT
     shipped_by_au.created_at AS shipped_by_created_at,
     shipped_by_au.updated_at AS shipped_by_updated_at,
     inv.created_at AS invoice_created_at,
-    inv.updated_at AS invoice_updated_at
+    inv.updated_at AS invoice_updated_at,
+    so.priority_code,
+    (SELECT COUNT(*) FROM shipping_case sc WHERE sc.shipment_id = s.id) AS case_count,
+    -- Dashboard's isValidToShip: not yet shipped, has at least one case, and every case has a
+    -- freight weight recorded (ShippingCaseUtils.isReadyToShip = freightWeight > 0).
+    (
+        s.shipped_at IS NULL
+        AND EXISTS (SELECT 1 FROM shipping_case rc WHERE rc.shipment_id = s.id)
+        AND NOT EXISTS (
+            SELECT 1 FROM shipping_case rc2
+            JOIN quantity rfw ON rfw.id = rc2.freight_weight_id
+            WHERE rc2.shipment_id = s.id AND rfw.value <= 0
+        )
+    ) AS is_ready_to_ship
 FROM shipment s
 JOIN shipment_status ss ON ss.code = s.shipment_status_code
 JOIN sales_order so ON so.id = s.sales_order_id
@@ -309,6 +440,20 @@ UPDATE shipment SET
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');
 
+-- name: SetShipmentMasterTracking :exec
+UPDATE shipment SET
+    master_tracking_number = sqlc.arg('master_tracking_number'),
+    updated_at = NOW(3)
+WHERE id = sqlc.arg('id')
+AND account_id = sqlc.arg('account_id');
+
+-- name: LinkShipmentInvoice :exec
+UPDATE shipment SET
+    invoice_id = sqlc.arg('invoice_id'),
+    updated_at = NOW(3)
+WHERE id = sqlc.arg('id')
+AND account_id = sqlc.arg('account_id');
+
 -- name: MarkShipmentVoided :exec
 UPDATE shipment SET
     shipment_status_code = 'packed',
@@ -336,6 +481,17 @@ SELECT EXISTS(
     WHERE id = sqlc.arg('id')
     AND account_id = sqlc.arg('account_id')
 ) AS `exists`;
+
+-- name: SyncShipmentShipToForOrder :exec
+-- Re-points every shipment on an order to the order's current ship-to address (legacy
+-- updateShipToByOrder). Separate from the carrier sync because an order can lose its
+-- carrier and still owe its shipments the new address.
+UPDATE shipment
+SET shipping_address_id = sqlc.arg('shipping_address_id'),
+    updated_at = NOW(3)
+WHERE sales_order_id = sqlc.arg('sales_order_id')
+AND account_id = sqlc.arg('account_id')
+AND shipping_address_id <> sqlc.arg('shipping_address_id');
 
 -- name: SyncShipmentShippingForOrder :exec
 -- Re-points every shipment on an order to the order's current carrier, service level,

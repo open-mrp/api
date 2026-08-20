@@ -74,6 +74,28 @@ func (q *Queries) DeleteShippingCasesByShipment(ctx context.Context, shipmentID 
 	return err
 }
 
+const getSalesOrderIDByShippingCase = `-- name: GetSalesOrderIDByShippingCase :one
+SELECT s.sales_order_id
+FROM shipping_case sc
+JOIN shipment s ON s.id = sc.shipment_id
+WHERE sc.id = ?
+AND sc.account_id = ?
+`
+
+type GetSalesOrderIDByShippingCaseParams struct {
+	ShippingCaseID string
+	AccountID      string
+}
+
+// Walks the case to the order it ultimately belongs to. Audit events stamp that order as their
+// root so a case edit shows up in the order's history, and the route is only ever case → shipment.
+func (q *Queries) GetSalesOrderIDByShippingCase(ctx context.Context, arg GetSalesOrderIDByShippingCaseParams) (string, error) {
+	row := q.db.QueryRowContext(ctx, getSalesOrderIDByShippingCase, arg.ShippingCaseID, arg.AccountID)
+	var sales_order_id string
+	err := row.Scan(&sales_order_id)
+	return sales_order_id, err
+}
+
 const getShippingCase = `-- name: GetShippingCase :one
 SELECT
     sc.id,
@@ -432,6 +454,47 @@ WHERE shipment_id = ?
 
 func (q *Queries) MarkShippingCasesShippedByShipment(ctx context.Context, shipmentID string) error {
 	_, err := q.db.ExecContext(ctx, markShippingCasesShippedByShipment, shipmentID)
+	return err
+}
+
+const repointShippingCasesToCarrier = `-- name: RepointShippingCasesToCarrier :exec
+UPDATE shipping_case SET
+    carrier_id = ?,
+    updated_at = NOW(3)
+WHERE shipment_id = ?
+  AND account_id = ?
+`
+
+type RepointShippingCasesToCarrierParams struct {
+	CarrierID  string
+	ShipmentID string
+	AccountID  string
+}
+
+func (q *Queries) RepointShippingCasesToCarrier(ctx context.Context, arg RepointShippingCasesToCarrierParams) error {
+	_, err := q.db.ExecContext(ctx, repointShippingCasesToCarrier, arg.CarrierID, arg.ShipmentID, arg.AccountID)
+	return err
+}
+
+const repointShippingCasesToCarrierByOrder = `-- name: RepointShippingCasesToCarrierByOrder :exec
+UPDATE shipping_case sc
+JOIN shipment s ON s.id = sc.shipment_id
+SET sc.carrier_id = ?,
+    sc.updated_at = NOW(3)
+WHERE s.sales_order_id = ?
+  AND sc.account_id = ?
+`
+
+type RepointShippingCasesToCarrierByOrderParams struct {
+	CarrierID    string
+	SalesOrderID string
+	AccountID    string
+}
+
+// Follows the order-wide shipment re-point: a case's tracking link is built from its own carrier,
+// so a case left on the old carrier deep-links to the wrong one.
+func (q *Queries) RepointShippingCasesToCarrierByOrder(ctx context.Context, arg RepointShippingCasesToCarrierByOrderParams) error {
+	_, err := q.db.ExecContext(ctx, repointShippingCasesToCarrierByOrder, arg.CarrierID, arg.SalesOrderID, arg.AccountID)
 	return err
 }
 

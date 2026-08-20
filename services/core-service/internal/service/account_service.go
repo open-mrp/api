@@ -1210,3 +1210,36 @@ func (s *accountSvcImpl) GetAccountFaviconURL(ctx context.Context, accountID str
 
 	return &url, nil
 }
+
+// Resolves one of the account plan's caps, returning nil when it should not be enforced — a sandbox,
+// an account on no plan, or a cap that is absent or unlimited. start is the window to count within.
+func resolveAccountPlanLimit(ctx context.Context, repos domain.RepoFactory, accountID string, key constants.AccountPlanLimitKey) (limit *int32, start time.Time, apiErr *apierror.APIError) {
+	accountRepo := repos.NewAccountRepo()
+
+	accountCtx, apiErr := accountRepo.GetAccountContext(ctx, accountID)
+	if apiErr != nil {
+		return nil, time.Time{}, apiErr
+	}
+	if accountCtx != nil && accountCtx.IsSandbox {
+		return nil, time.Time{}, nil
+	}
+
+	planID, periodEnd, apiErr := accountRepo.GetPlanIDAndPeriodEnd(ctx, accountID)
+	if apiErr != nil {
+		return nil, time.Time{}, apiErr
+	}
+	if planID == nil {
+		return nil, time.Time{}, nil
+	}
+
+	limits, apiErr := accountRepo.ListPlanLimits(ctx, *planID)
+	if apiErr != nil {
+		return nil, time.Time{}, apiErr
+	}
+	max, ok := limits[string(key)]
+	if !ok || max == nil {
+		return nil, time.Time{}, nil
+	}
+
+	return max, constants.BillingPeriodStart(periodEnd), nil
+}

@@ -107,6 +107,14 @@ type AccountSubscriptionInfo struct {
 	PricingPlanSubscriptionID    *string
 }
 
+// Returns the subscription's current period end, or nil when the account has no subscription at all.
+func (i *AccountSubscriptionInfo) PeriodEnd() *time.Time {
+	if i == nil {
+		return nil
+	}
+	return i.SubscriptionCurrentPeriodEnd
+}
+
 type IdempotencyKey struct {
 	ID             int64
 	TypeID         string

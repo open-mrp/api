@@ -43,6 +43,7 @@ func (*ShipmentsEndpointGroup) Materialize(config *ShipmentsEndpointGroupConfig)
 	listShipmentsEndpoint := apiendpoint.From(&shipmentep.ListShipmentsEndpoint{}).WithService(inner, shipmentSvc)
 	getShipmentEndpoint := apiendpoint.From(&shipmentep.RetrieveShipmentEndpoint{}).WithService(inner, shipmentSvc)
 	updateShipmentEndpoint := apiendpoint.From(&shipmentep.UpdateShipmentEndpoint{}).WithService(inner, shipmentSvc)
+	adminUpdateTrackingEndpoint := apiendpoint.From(&shipmentep.AdminUpdateShipmentTrackingEndpoint{}).WithService(inner, shipmentSvc)
 	deleteShipmentEndpoint := apiendpoint.From(&shipmentep.DeleteShipmentEndpoint{}).WithService(inner, shipmentSvc)
 	shipShipmentEndpoint := apiendpoint.From(&shipmentep.ShipShipmentEndpoint{}).WithService(inner, shipmentSvc)
 	voidShipmentEndpoint := apiendpoint.From(&shipmentep.VoidShipmentEndpoint{}).WithService(inner, shipmentSvc)
@@ -58,6 +59,7 @@ func (*ShipmentsEndpointGroup) Materialize(config *ShipmentsEndpointGroupConfig)
 		listShipmentsEndpoint,
 		getShipmentEndpoint,
 		updateShipmentEndpoint,
+		adminUpdateTrackingEndpoint,
 		deleteShipmentEndpoint,
 		shipShipmentEndpoint,
 		voidShipmentEndpoint,

@@ -1139,7 +1139,7 @@ type InvoiceSvc interface {
 	GetInvoice(ctx context.Context, params GetInvoiceParams) (*Invoice, *apierror.APIError)
 
 	// UpdateInvoice partially updates an invoice with idempotency support.
-	UpdateInvoice(ctx context.Context, params UpdateInvoiceParams) (*InvoiceSummary, *apierror.APIError)
+	UpdateInvoice(ctx context.Context, params UpdateInvoiceParams) (*Invoice, *apierror.APIError)
 
 	// ListCustomerInvoices returns a paginated list of invoices for a customer account.
 	ListCustomerInvoices(ctx context.Context, params ListCustomerInvoicesParams) (*ListCustomerInvoicesResult, *apierror.APIError)
@@ -1429,8 +1429,11 @@ type PickSvc interface {
 	// VoidPick voids all lines in a pick, setting quantities to zero.
 	VoidPick(ctx context.Context, pickID string) (*Pick, *apierror.APIError)
 
-	// PackPick packs eligible lines and creates a shipment with shipping cases.
-	PackPick(ctx context.Context, pickID string, shipmentCaseCount int32) (*PackPickResult, *apierror.APIError)
+	// PackPick accepts a pack and returns the job tracking it; the shipment is created by ExecutePackPick.
+	PackPick(ctx context.Context, pickID string, shipmentCaseCount int32) (*Job, *apierror.APIError)
+
+	// ExecutePackPick runs an accepted pack: the shipment, its lines and its cases.
+	ExecutePackPick(ctx context.Context, event BulkOperationJobEvent) *apierror.APIError
 
 	// GetPickShipments returns shipment numbers associated with a pick's order.
 	GetPickShipments(ctx context.Context, params GetPickShipmentsParams) (*PickShipmentsResult, *apierror.APIError)
@@ -1692,6 +1695,8 @@ type TerritorySvc interface {
 type ShippingCaseSvc interface {
 	GetShippingCase(ctx context.Context, accountID, shippingCaseID string) (*ShippingCase, *apierror.APIError)
 	UpdateShippingCase(ctx context.Context, params UpdateShippingCaseParams) (*ShippingCase, *apierror.APIError)
+	// AdminUpdateShippingCaseTracking corrects the tracking number of a case that has already shipped.
+	AdminUpdateShippingCaseTracking(ctx context.Context, params AdminUpdateShippingCaseTrackingParams) (*ShippingCase, *apierror.APIError)
 	DeleteShippingCase(ctx context.Context, accountID, shippingCaseID string) *apierror.APIError
 	GetShippingCaseLabel(ctx context.Context, accountID, shippingCaseID string) (*string, *apierror.APIError)
 }
@@ -1700,6 +1705,8 @@ type ShipmentSvc interface {
 	ListShipments(ctx context.Context, params ListShipmentsParams) (*ListShipmentsResult, *apierror.APIError)
 	GetShipment(ctx context.Context, params GetShipmentParams) (*Shipment, *apierror.APIError)
 	UpdateShipment(ctx context.Context, params UpdateShipmentParams) (*Shipment, *apierror.APIError)
+	// AdminUpdateShipmentTracking corrects the tracking and routing of a shipment that has already shipped.
+	AdminUpdateShipmentTracking(ctx context.Context, params AdminUpdateShipmentTrackingParams) (*Shipment, *apierror.APIError)
 	DeleteShipment(ctx context.Context, params DeleteShipmentParams) *apierror.APIError
 	ShipShipment(ctx context.Context, params ShipShipmentParams) (*Shipment, *apierror.APIError)
 	VoidShipment(ctx context.Context, params VoidShipmentParams) (*Shipment, *apierror.APIError)

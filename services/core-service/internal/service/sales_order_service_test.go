@@ -701,7 +701,7 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_CustomerWithPurchaseOr
 	suite.accountRepo.EXPECT().GetPlanIDAndPeriodEnd(gomock.Any(), "ac_target").
 		Return(&planID, &periodEnd, nil).Times(1)
 	suite.accountRepo.EXPECT().ListPlanLimits(gomock.Any(), planID).
-		Return(map[string]*int32{"invoices_maximum": &max}, nil).Times(1)
+		Return(map[string]*int32{string(constants.AccountPlanLimitInvoicesMaximum): &max}, nil).Times(1)
 	suite.invoiceRepo.EXPECT().CountSince(gomock.Any(), "ac_target", gomock.Any()).
 		Return(int64(10), nil).Times(1)
 
@@ -727,7 +727,7 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_PlanLimitExceeded_NonS
 	suite.accountRepo.EXPECT().GetPlanIDAndPeriodEnd(gomock.Any(), "ac_test").
 		Return(&planID, &periodEnd, nil).Times(1)
 	suite.accountRepo.EXPECT().ListPlanLimits(gomock.Any(), planID).
-		Return(map[string]*int32{"invoices_maximum": &max}, nil).Times(1)
+		Return(map[string]*int32{string(constants.AccountPlanLimitInvoicesMaximum): &max}, nil).Times(1)
 	suite.invoiceRepo.EXPECT().CountSince(gomock.Any(), "ac_test", gomock.Any()).
 		Return(int64(10), nil).Times(1) // at the cap
 

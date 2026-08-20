@@ -12,7 +12,7 @@ import (
 const rateShopPath = "/v1/operations/shipments/actions/rate-shop"
 
 // seededExpressServiceLevelID is the second permanent service level on the
-// seeded "delivery" carrier (see shared/db/seed/e2e/0014_e2e_extras.sql).
+// seeded "delivery" carrier (see shared/db/seed/0003_accounts.sql).
 // SeedServiceLevelID covers the "ground" option. Both are stable across runs —
 // no test creates or deletes them — so they are safe to assert on even while
 // cov_operations_carriers churns other service levels on the same carrier.

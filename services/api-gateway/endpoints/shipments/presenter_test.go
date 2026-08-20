@@ -54,44 +54,6 @@ func TestShipmentPresenter(t *testing.T) {
 	resourcetest.ValidateExpandableStubs(t, "Shipment", result)
 }
 
-func TestShipmentSummaryPresenter(t *testing.T) {
-	t.Parallel()
-	now := timestamppb.Now()
-	carrierPortal := true
-	slID := "crop_01abc"
-	slName := "FedEx Ground"
-	slPortal := true
-	slToken := "fedex_ground"
-	custStatus := "active"
-	custCommission := "net"
-
-	info := &pb.ShipmentSummaryInfo{
-		Id:                          "sh_01abc",
-		Number:                      "SHP-0001",
-		StatusCode:                  "shipped",
-		StatusName:                  "Shipped",
-		SalesOrderId:                "so_01abc",
-		SalesOrderNumber:            "SO-0001",
-		CustomerId:                  "ac_01abc",
-		CustomerName:                "Acme Corp",
-		CustomerNumber:              "ACME001",
-		CarrierId:                   "cr_01abc",
-		CarrierName:                 "FedEx",
-		CarrierIsPortalEnabled:      &carrierPortal,
-		ServiceLevelId:              &slID,
-		ServiceLevelName:            &slName,
-		ServiceLevelIsPortalEnabled: &slPortal,
-		ServiceLevelToken:           &slToken,
-		CustomerStatusCode:          &custStatus,
-		CustomerCommissionPolicy:    &custCommission,
-		CreatedAt:                   now,
-		UpdatedAt:                   now,
-	}
-
-	result := shipmentFromSummaryProto(info)
-	resourcetest.ValidateExpandableStubs(t, "Shipment", result)
-}
-
 func TestShippingCaseDetailPresenter(t *testing.T) {
 	t.Parallel()
 	now := timestamppb.Now()

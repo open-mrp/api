@@ -668,7 +668,6 @@ func (r *transactionRepoImpl) ListByCustomer(ctx context.Context, params domain.
 	searchQuery := buildTransactionSearchQuery(params.Query)
 	status := toNullString(params.Status)
 	txType := toNullString(params.Type)
-	includeChildren := params.IncludeChildAccounts
 
 	var cursorDir *pagination.Direction
 
@@ -681,14 +680,13 @@ func (r *transactionRepoImpl) ListByCustomer(ctx context.Context, params domain.
 
 		if cur.Direction == pagination.DirectionBackward {
 			rows, err := r.queries.ListAccountTransactionsBackward(ctx, sqlc.ListAccountTransactionsBackwardParams{
-				AccountID:            params.AccountID,
-				CustomerAccountID:    params.CustomerAccountID,
-				IncludeChildAccounts: includeChildren,
-				Cursor:               cur.ID,
-				Query:                searchQuery,
-				Status:               status,
-				Type:                 txType,
-				Limit:                params.Limit + 1,
+				AccountID:         params.AccountID,
+				CustomerAccountID: params.CustomerAccountID,
+				Cursor:            cur.ID,
+				Query:             searchQuery,
+				Status:            status,
+				Type:              txType,
+				Limit:             params.Limit + 1,
 			})
 			if apiErr := db.MapSQLError(err); apiErr != nil {
 				return nil, tracing.Trace(span, apiErr)
@@ -702,14 +700,13 @@ func (r *transactionRepoImpl) ListByCustomer(ctx context.Context, params domain.
 		}
 
 		rows, err := r.queries.ListAccountTransactionsForward(ctx, sqlc.ListAccountTransactionsForwardParams{
-			AccountID:            params.AccountID,
-			CustomerAccountID:    params.CustomerAccountID,
-			IncludeChildAccounts: includeChildren,
-			Cursor:               gosql.NullString{String: cur.ID, Valid: true},
-			Query:                searchQuery,
-			Status:               status,
-			Type:                 txType,
-			Limit:                params.Limit + 1,
+			AccountID:         params.AccountID,
+			CustomerAccountID: params.CustomerAccountID,
+			Cursor:            gosql.NullString{String: cur.ID, Valid: true},
+			Query:             searchQuery,
+			Status:            status,
+			Type:              txType,
+			Limit:             params.Limit + 1,
 		})
 		if apiErr := db.MapSQLError(err); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
@@ -724,14 +721,13 @@ func (r *transactionRepoImpl) ListByCustomer(ctx context.Context, params domain.
 
 	// No cursor
 	rows, err := r.queries.ListAccountTransactionsForward(ctx, sqlc.ListAccountTransactionsForwardParams{
-		AccountID:            params.AccountID,
-		CustomerAccountID:    params.CustomerAccountID,
-		IncludeChildAccounts: includeChildren,
-		Cursor:               gosql.NullString{},
-		Query:                searchQuery,
-		Status:               status,
-		Type:                 txType,
-		Limit:                params.Limit + 1,
+		AccountID:         params.AccountID,
+		CustomerAccountID: params.CustomerAccountID,
+		Cursor:            gosql.NullString{},
+		Query:             searchQuery,
+		Status:            status,
+		Type:              txType,
+		Limit:             params.Limit + 1,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)

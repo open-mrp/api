@@ -462,7 +462,6 @@ message ListAccountTransactionsRequest {
   optional string query = 4;
   optional string status = 5;
   optional string type = 6;
-  bool include_child_accounts = 7;
 }
 message ListAccountTransactionsResponse {
   repeated TransactionInfo transactions = 1;

@@ -58,6 +58,22 @@ func (r *shippingCaseRepoImpl) Update(ctx context.Context, params domain.UpdateS
 	return nil
 }
 
+func (r *shippingCaseRepoImpl) RepointToCarrier(ctx context.Context, accountID, shipmentID, carrierID string) *apierror.APIError {
+	ctx, span := shippingCaseRepoTracer.Start(ctx, "repository.shipping_case.repoint_to_carrier")
+	defer span.End()
+
+	err := r.queries.RepointShippingCasesToCarrier(ctx, sqlc.RepointShippingCasesToCarrierParams{
+		CarrierID:  carrierID,
+		ShipmentID: shipmentID,
+		AccountID:  accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	return nil
+}
+
 func (r *shippingCaseRepoImpl) Delete(ctx context.Context, accountID, shippingCaseID string) *apierror.APIError {
 	ctx, span := shippingCaseRepoTracer.Start(ctx, "repository.shipping_case.delete")
 	defer span.End()
@@ -321,4 +337,18 @@ func mapGetShippingCaseRow(row sqlc.GetShippingCaseRow) *domain.ShippingCase {
 	}
 
 	return sc
+}
+
+func (r *shippingCaseRepoImpl) GetSalesOrderID(ctx context.Context, accountID, shippingCaseID string) (string, *apierror.APIError) {
+	ctx, span := shippingCaseRepoTracer.Start(ctx, "repository.shipping_case.get_sales_order_id")
+	defer span.End()
+
+	orderID, err := r.queries.GetSalesOrderIDByShippingCase(ctx, sqlc.GetSalesOrderIDByShippingCaseParams{
+		ShippingCaseID: shippingCaseID,
+		AccountID:      accountID,
+	})
+	if err != nil {
+		return "", tracing.Trace(span, db.MapSQLError(err))
+	}
+	return orderID, nil
 }

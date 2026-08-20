@@ -23,8 +23,8 @@ type UpdatePickRequest struct {
 	Number field.Optional[string] `json:"number,omitzero" validate:"omitempty,max=255"`
 	// Timestamp when the pick was finished, in RFC 3339 format.
 	//
-	// Setting it closes the pick out even if lines are still unpacked; pass an empty string to clear it and reopen the pick.
-	FinishedAt field.Optional[string] `json:"finished_at,omitzero"`
+	// Setting it closes the pick out even if lines are still unpacked; send `null` to clear it and reopen the pick.
+	FinishedAt field.Clearable[string] `json:"finished_at,omitzero"`
 }
 
 var sampleUpdatePickNumber = "PCK-2025-0042"

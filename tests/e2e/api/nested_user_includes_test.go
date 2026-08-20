@@ -154,13 +154,3 @@ func TestNestedUserInclude_SettlementResponsibleUser(t *testing.T) {
 	ru := jsonObject(parseJSON(body), "responsible_user")
 	assertExpandedAccountUserWithUser(t, ru, SeedAccountUserID)
 }
-
-func TestNestedUserInclude_ShipmentShippedBy(t *testing.T) {
-	t.Parallel()
-	status, body, err := apiClient.GetListRaw(shipmentsPath+"/"+SeedShipmentID, url.Values{"include": {"shipped_by,shipped_by.user"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-
-	sb := jsonObject(parseJSON(body), "shipped_by")
-	assertExpandedAccountUserWithUser(t, sb, SeedAccountUserID)
-}

@@ -24,9 +24,7 @@ type ListDeliveriesRequest struct {
 	SupplierIDs []string `query:"supplier_ids"`
 	// Only include deliveries created on or after this date (`YYYY-MM-DD`).
 	StartDate *string `query:"starts_at"`
-	// Only include deliveries created up to this date (`YYYY-MM-DD`).
-	//
-	// Compared against the start of the given day, so deliveries created later that same day are excluded.
+	// Only include deliveries created on or before this date (`YYYY-MM-DD`), covering that whole day.
 	EndDate *string `query:"ends_at"`
 }
 

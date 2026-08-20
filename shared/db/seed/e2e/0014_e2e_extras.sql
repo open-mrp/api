@@ -211,17 +211,10 @@ INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
     ('qu_01seedshln1_qty00000', 20, 'un_01seedpair000000000', NOW(), NOW()),
     ('qu_01seedshln2_qty00000', 15, 'un_01seedpair000000000', NOW(), NOW());
 
-INSERT IGNORE INTO shipment_line (id, shipment_id, sales_order_line_id, quantity_id, created_at, updated_at) VALUES
-    ('shln_01seedshpln1_00000', 'sh_01k0a87w33emw8pmkz1mf86cg1', 'orln_01seedpck_ln1_0000', 'qu_01seedshln1_qty00000', NOW(), NOW()),
-    ('shln_01seedshpln2_00000', 'sh_01k0a87w33emw8pmkz1mf86cg1', 'orln_01seedpck_ln2_0000', 'qu_01seedshln2_qty00000', NOW(), NOW());
-
 -- ============================================================
--- CARRIER OPTIONS (2 rows for carrier 'delivery')
+-- CARRIER OPTIONS (system-owned write-guard fixture)
 -- ============================================================
-
-INSERT IGNORE INTO carrier_option (id, code, name, service_level_token, carrier_id, account_id, created_at, updated_at) VALUES
-    ('crop_01seedground000000', 'ground', 'Ground Shipping', 'fedex_ground', 'delivery', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
-    ('crop_01seedexpress00000', 'express', 'Express Shipping', 'fedex_express', 'delivery', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
+-- The delivery carrier's account-scoped service levels live in the base seed (0003_accounts.sql).
 
 -- System-owned (account_id = NULL) carrier + service level for write-guard e2e coverage.
 INSERT IGNORE INTO carrier (id, code, name, account_id, created_at, updated_at) VALUES
@@ -1586,6 +1579,222 @@ INSERT IGNORE INTO production_schedule_derived_line (
      2, 2, 'planned', NOW(3), NOW(3));
 
 -- ============================================================
+-- PICK-BEHAVIOUR ORDER + PICK (pick update / line ops / pick-all / void / pack e2e)
+-- Dedicated rows for tests that MUTATE pick state. Deliberately has NO shipment, so
+-- the void guard ("cannot void a pick with shipped items") does not fire and the
+-- happy paths are reachable. No other test may assert on these values.
+-- =====================================================
+
+
+INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
+    ('qu_01seedpb_ln1_qty000', 10, 'un_01seedpair000000000', NOW(), NOW()),
+    ('qu_01seedpb_ln2_qty000', 4, 'un_01seedpair000000000', NOW(), NOW()),
+    ('qu_01seedpb_pkln1_q000', 0, 'un_01seedpair000000000', NOW(), NOW()),
+    ('qu_01seedpb_pkln2_q000', 0, 'un_01seedpair000000000', NOW(), NOW());
+
+INSERT IGNORE INTO rate (id, value, numerator_unit_id, denominator_unit_id, created_at, updated_at) VALUES
+    ('rt_01seedpb_ln1_prc000', 7, 'dollar', 'un_01seedpair000000000', NOW(), NOW()),
+    ('rt_01seedpb_ln2_prc000', 5, 'dollar', 'un_01seedpair000000000', NOW(), NOW());
+
+INSERT IGNORE INTO sales_order (id, number, sales_order_status_code, sales_order_type_code, priority_code, carrier_id, billing_address_id, shipping_address_id, buyer_account_id, seller_account_id, owner_account_id, payment_term_id, shipping_term_id, issued_at, created_at, updated_at) VALUES
+    ('or_01seedpborder00000', 'ORD-PB-001', 'issued', 'sales_order', 'normal', 'delivery', 'ad_01k09wnac0e1ar211e0sy0ba4g', 'ad_01k09wnpvrea0awz7vem2j8j7g', 'ac_01k09wm2fgevdsc344gpbcj30f', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'pytm_01seednet3000000', 'prepaid_billed', DATE_SUB(NOW(), INTERVAL 1 DAY), NOW(), NOW());
+
+INSERT IGNORE INTO sales_order_line (id, product_sku, product_description, product_id, item_id, sales_order_id, quantity_id, unit_price_id, line_item_number, created_at, updated_at) VALUES
+    ('orln_01seedpb_ln1_0000', 'SCK-001', 'Small white sock', 'pd_01k0a65nx2e2crfxrvryyxnmdh', 'it_01k0a7100aeysrs9vxpeq14yxj', 'or_01seedpborder00000', 'qu_01seedpb_ln1_qty000', 'rt_01seedpb_ln1_prc000', 1, NOW(), NOW()),
+    ('orln_01seedpb_ln2_0000', 'SCK-002', 'Large white sock', 'pd_01k0a65nx5e3haz2fgfm34hmcz', 'it_01k0a7100aedgv8416p4p2v9ks', 'or_01seedpborder00000', 'qu_01seedpb_ln2_qty000', 'rt_01seedpb_ln2_prc000', 2, NOW(), NOW());
+
+-- Both pick lines start at 0 so pick/pick-all have something to fill.
+INSERT IGNORE INTO pick (id, number, sales_order_id, account_id, created_at, updated_at) VALUES
+    ('pk_01seedpbpick000000', 'PICK-PB-001', 'or_01seedpborder00000', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
+
+INSERT IGNORE INTO pick_line (id, pick_id, quantity_id, sales_order_line_id, created_at, updated_at) VALUES
+    ('pkln_01seedpb_ln1_000', 'pk_01seedpbpick000000', 'qu_01seedpb_pkln1_q000', 'orln_01seedpb_ln1_0000', NOW(), NOW()),
+    ('pkln_01seedpb_ln2_000', 'pk_01seedpbpick000000', 'qu_01seedpb_pkln2_q000', 'orln_01seedpb_ln2_0000', NOW(), NOW());
+
+-- A second pick for the pack test specifically. Packing marks lines packed permanently and
+-- synthesizes replacements, so it cannot share PICK-PB-001 with the reversible tests.
+INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
+    ('qu_01seedpb2_ln1_qty00', 6, 'un_01seedpair000000000', NOW(), NOW()),
+    ('qu_01seedpb2_pkln1_q00', 0, 'un_01seedpair000000000', NOW(), NOW());
+
+INSERT IGNORE INTO rate (id, value, numerator_unit_id, denominator_unit_id, created_at, updated_at) VALUES
+    ('rt_01seedpb2_ln1_prc00', 7, 'dollar', 'un_01seedpair000000000', NOW(), NOW());
+
+INSERT IGNORE INTO sales_order (id, number, sales_order_status_code, sales_order_type_code, priority_code, carrier_id, billing_address_id, shipping_address_id, buyer_account_id, seller_account_id, owner_account_id, payment_term_id, shipping_term_id, issued_at, created_at, updated_at) VALUES
+    ('or_01seedpb2order0000', 'ORD-PB-002', 'issued', 'sales_order', 'normal', 'delivery', 'ad_01k09wnac0e1ar211e0sy0ba4g', 'ad_01k09wnpvrea0awz7vem2j8j7g', 'ac_01k09wm2fgevdsc344gpbcj30f', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'pytm_01seednet3000000', 'prepaid_billed', DATE_SUB(NOW(), INTERVAL 1 DAY), NOW(), NOW());
+
+INSERT IGNORE INTO sales_order_line (id, product_sku, product_description, product_id, item_id, sales_order_id, quantity_id, unit_price_id, line_item_number, created_at, updated_at) VALUES
+    ('orln_01seedpb2_ln1_000', 'SCK-001', 'Small white sock', 'pd_01k0a65nx2e2crfxrvryyxnmdh', 'it_01k0a7100aeysrs9vxpeq14yxj', 'or_01seedpb2order0000', 'qu_01seedpb2_ln1_qty00', 'rt_01seedpb2_ln1_prc00', 1, NOW(), NOW());
+
+INSERT IGNORE INTO pick (id, number, sales_order_id, account_id, created_at, updated_at) VALUES
+    ('pk_01seedpb2pick00000', 'PICK-PB-002', 'or_01seedpb2order0000', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
+
+INSERT IGNORE INTO pick_line (id, pick_id, quantity_id, sales_order_line_id, created_at, updated_at) VALUES
+    ('pkln_01seedpb2_ln1_00', 'pk_01seedpb2pick00000', 'qu_01seedpb2_pkln1_q00', 'orln_01seedpb2_ln1_000', NOW(), NOW());
+
+-- ============================================================
+-- SHIPPING BEHAVIOURAL FIXTURES (crud_shipments_behavioral_test.go)
+-- Three dedicated shipments on their own orders. SHP-SB-001 is cased and weighed so it is
+-- is_ready_to_ship, and ship/void return it to packed — the reversible tests share it.
+-- SHP-SB-002 exists only for delete, which cascades and cannot be undone.
+-- SHP-SB-003 ships its order in full, so shipping it creates the invoice and marks it fulfilled.
+-- ============================================================
+
+INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
+    ('qu_01seedsb_ln1_qty00', 10, 'un_01seedpair000000000', NOW(), NOW()),
+    ('qu_01seedsb_ln2_qty00', 4, 'un_01seedpair000000000', NOW(), NOW()),
+    ('qu_01seedsb_shln1_q00', 6, 'un_01seedpair000000000', NOW(), NOW()),
+    ('qu_01seedsb_pkln1_q00', 0, 'un_01seedpair000000000', NOW(), NOW()),
+    ('qu_01seedsb_c1_fwt000', 12, 'un_01seedpound00000000', NOW(), NOW()),
+    ('qu_01seedsb_c1_fam000', 25, 'dollar', NOW(), NOW()),
+    ('qu_01seedsb_c2_fwt000', 8, 'un_01seedpound00000000', NOW(), NOW()),
+    ('qu_01seedsb_c2_fam000', 15, 'dollar', NOW(), NOW()),
+    ('qu_01seedsb2_ln1_qty0', 5, 'un_01seedpair000000000', NOW(), NOW()),
+    ('qu_01seedsb2_shln1_q0', 5, 'un_01seedpair000000000', NOW(), NOW()),
+    ('qu_01seedsb2_pkln1_q0', 5, 'un_01seedpair000000000', NOW(), NOW()),
+    ('qu_01seedsb2_c1_fwt00', 3, 'un_01seedpound00000000', NOW(), NOW()),
+    ('qu_01seedsb2_c1_fam00', 9, 'dollar', NOW(), NOW());
+
+INSERT IGNORE INTO rate (id, value, numerator_unit_id, denominator_unit_id, created_at, updated_at) VALUES
+    ('rt_01seedsb_ln1_prc00', 7, 'dollar', 'un_01seedpair000000000', NOW(), NOW()),
+    ('rt_01seedsb_ln2_prc00', 5, 'dollar', 'un_01seedpair000000000', NOW(), NOW()),
+    ('rt_01seedsb2_ln1_prc0', 6, 'dollar', 'un_01seedpair000000000', NOW(), NOW());
+
+INSERT IGNORE INTO sales_order (id, number, sales_order_status_code, sales_order_type_code, priority_code, carrier_id, billing_address_id, shipping_address_id, buyer_account_id, seller_account_id, owner_account_id, payment_term_id, shipping_term_id, issued_at, created_at, updated_at) VALUES
+    ('or_01seedsborder00000', 'ORD-SB-001', 'issued', 'sales_order', 'high', 'delivery', 'ad_01k09wnac0e1ar211e0sy0ba4g', 'ad_01k09wnpvrea0awz7vem2j8j7g', 'ac_01k09wm2fgevdsc344gpbcj30f', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'pytm_01seednet3000000', 'prepaid_billed', DATE_SUB(NOW(), INTERVAL 1 DAY), NOW(), NOW()),
+    ('or_01seedsb2order0000', 'ORD-SB-002', 'issued', 'sales_order', 'normal', 'delivery', 'ad_01k09wnac0e1ar211e0sy0ba4g', 'ad_01k09wnpvrea0awz7vem2j8j7g', 'ac_01k09wm2fgevdsc344gpbcj30f', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'pytm_01seednet3000000', 'prepaid_billed', DATE_SUB(NOW(), INTERVAL 1 DAY), NOW(), NOW());
+
+INSERT IGNORE INTO sales_order_line (id, product_sku, product_description, product_id, item_id, sales_order_id, quantity_id, unit_price_id, line_item_number, created_at, updated_at) VALUES
+    ('orln_01seedsb_ln1_000', 'SCK-001', 'Small white sock', 'pd_01k0a65nx2e2crfxrvryyxnmdh', 'it_01k0a7100aeysrs9vxpeq14yxj', 'or_01seedsborder00000', 'qu_01seedsb_ln1_qty00', 'rt_01seedsb_ln1_prc00', 1, NOW(), NOW()),
+    ('orln_01seedsb_ln2_000', 'SCK-002', 'Large white sock', 'pd_01k0a65nx5e3haz2fgfm34hmcz', 'it_01k0a7100aedgv8416p4p2v9ks', 'or_01seedsborder00000', 'qu_01seedsb_ln2_qty00', 'rt_01seedsb_ln2_prc00', 2, NOW(), NOW()),
+    ('orln_01seedsb2_ln1_00', 'SCK-001', 'Small white sock', 'pd_01k0a65nx2e2crfxrvryyxnmdh', 'it_01k0a7100aeysrs9vxpeq14yxj', 'or_01seedsb2order0000', 'qu_01seedsb2_ln1_qty0', 'rt_01seedsb2_ln1_prc0', 1, NOW(), NOW());
+
+INSERT IGNORE INTO pick (id, number, sales_order_id, account_id, created_at, updated_at) VALUES
+    ('pk_01seedsbpick000000', 'PICK-SB-001', 'or_01seedsborder00000', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
+    ('pk_01seedsb2pick00000', 'PICK-SB-002', 'or_01seedsb2order0000', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
+
+-- SHP-SB-002's pick line is packed so the delete test can assert it gets unpacked.
+INSERT IGNORE INTO pick_line (id, pick_id, quantity_id, sales_order_line_id, packed_at, created_at, updated_at) VALUES
+    ('pkln_01seedsb_ln1_000', 'pk_01seedsbpick000000', 'qu_01seedsb_pkln1_q00', 'orln_01seedsb_ln1_000', NULL, NOW(), NOW()),
+    ('pkln_01seedsb2_ln1_00', 'pk_01seedsb2pick00000', 'qu_01seedsb2_pkln1_q0', 'orln_01seedsb2_ln1_00', NOW(), NOW(), NOW());
+
+INSERT IGNORE INTO shipment (id, number, sales_order_id, carrier_id, carrier_option_id, shipping_address_id, shipment_status_code, account_id, created_at, updated_at) VALUES
+    ('sh_01seedsbship00000', 'SHP-SB-001', 'or_01seedsborder00000', 'delivery', 'crop_01seedground000000', 'ad_01k09wnpvrea0awz7vem2j8j7g', 'packed', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
+    ('sh_01seedsb2ship0000', 'SHP-SB-002', 'or_01seedsb2order0000', 'delivery', 'crop_01seedground000000', 'ad_01k09wnpvrea0awz7vem2j8j7g', 'packed', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
+
+INSERT IGNORE INTO shipment_line (id, shipment_id, sales_order_line_id, quantity_id, created_at, updated_at) VALUES
+    ('shln_01seedsb_ln1_000', 'sh_01seedsbship00000', 'orln_01seedsb_ln1_000', 'qu_01seedsb_shln1_q00', NOW(), NOW()),
+    ('shln_01seedsb2_ln1_00', 'sh_01seedsb2ship0000', 'orln_01seedsb2_ln1_00', 'qu_01seedsb2_shln1_q0', NOW(), NOW());
+
+-- Non-zero freight weights are what make SHP-SB-001 is_ready_to_ship.
+INSERT IGNORE INTO shipping_case (id, number, freight_amount_id, freight_weight_id, shipment_id, carrier_id, account_id, created_at, updated_at) VALUES
+    ('shcs_01seedsb_c1_0000', 'SHP-SB-001-1', 'qu_01seedsb_c1_fam000', 'qu_01seedsb_c1_fwt000', 'sh_01seedsbship00000', 'delivery', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
+    ('shcs_01seedsb_c2_0000', 'SHP-SB-001-2', 'qu_01seedsb_c2_fam000', 'qu_01seedsb_c2_fwt000', 'sh_01seedsbship00000', 'delivery', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
+    ('shcs_01seedsb2_c1_000', 'SHP-SB-002-1', 'qu_01seedsb2_c1_fam00', 'qu_01seedsb2_c1_fwt00', 'sh_01seedsb2ship0000', 'delivery', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
+
+-- SHP-SB-003: ships the whole order (one sale line, ordered 5, shipped 5) so ship marks the
+-- order fulfilled. A freight line (non-sale) rides along to prove it lands on the invoice too.
+INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
+    ('qu_01seedsb3_ln1_qty0', 5, 'un_01seedpair000000000', NOW(), NOW()),
+    ('qu_01seedsb3_frt_qty0', 1, 'un_01seedpair000000000', NOW(), NOW()),
+    ('qu_01seedsb3_shln1_q0', 5, 'un_01seedpair000000000', NOW(), NOW()),
+    ('qu_01seedsb3_c1_fwt00', 4, 'un_01seedpound00000000', NOW(), NOW()),
+    ('qu_01seedsb3_c1_fam00', 10, 'dollar', NOW(), NOW());
+
+INSERT IGNORE INTO rate (id, value, numerator_unit_id, denominator_unit_id, created_at, updated_at) VALUES
+    ('rt_01seedsb3_ln1_prc0', 8, 'dollar', 'un_01seedpair000000000', NOW(), NOW()),
+    ('rt_01seedsb3_frt_prc0', 12, 'dollar', 'un_01seedpair000000000', NOW(), NOW());
+
+INSERT IGNORE INTO sales_order (id, number, sales_order_status_code, sales_order_type_code, priority_code, carrier_id, billing_address_id, shipping_address_id, buyer_account_id, seller_account_id, owner_account_id, payment_term_id, shipping_term_id, issued_at, created_at, updated_at) VALUES
+    ('or_01seedsb3order0000', 'ORD-SB-003', 'issued', 'sales_order', 'normal', 'delivery', 'ad_01k09wnac0e1ar211e0sy0ba4g', 'ad_01k09wnpvrea0awz7vem2j8j7g', 'ac_01k09wm2fgevdsc344gpbcj30f', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'pytm_01seednet3000000', 'prepaid_billed', DATE_SUB(NOW(), INTERVAL 1 DAY), NOW(), NOW());
+
+-- Line 1 is a sale line; line 2 is a shipping (non-sale) line that must be billed but never ships.
+INSERT IGNORE INTO sales_order_line (id, product_sku, product_description, product_id, item_id, sales_order_id, quantity_id, unit_price_id, line_item_number, created_at, updated_at) VALUES
+    ('orln_01seedsb3_ln1_00', 'SCK-001', 'Small white sock', 'pd_01k0a65nx2e2crfxrvryyxnmdh', 'it_01k0a7100aeysrs9vxpeq14yxj', 'or_01seedsb3order0000', 'qu_01seedsb3_ln1_qty0', 'rt_01seedsb3_ln1_prc0', 1, NOW(), NOW()),
+    ('orln_01seedsb3_frt_00', 'FREIGHT', 'Shipping', 'pd_01k0a65nx5fj1bxedew2jvjpwz', 'it_01k0a71009fc5szdjy8mn2nzq5', 'or_01seedsb3order0000', 'qu_01seedsb3_frt_qty0', 'rt_01seedsb3_frt_prc0', 2, NOW(), NOW());
+
+INSERT IGNORE INTO pick (id, number, sales_order_id, account_id, created_at, updated_at) VALUES
+    ('pk_01seedsb3pick00000', 'PICK-SB-003', 'or_01seedsb3order0000', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
+
+INSERT IGNORE INTO pick_line (id, pick_id, quantity_id, sales_order_line_id, packed_at, created_at, updated_at) VALUES
+    ('pkln_01seedsb3_ln1_00', 'pk_01seedsb3pick00000', 'qu_01seedsb3_shln1_q0', 'orln_01seedsb3_ln1_00', NOW(), NOW(), NOW());
+
+INSERT IGNORE INTO shipment (id, number, sales_order_id, carrier_id, carrier_option_id, shipping_address_id, shipment_status_code, account_id, created_at, updated_at) VALUES
+    ('sh_01seedsb3ship0000', 'SHP-SB-003', 'or_01seedsb3order0000', 'delivery', 'crop_01seedground000000', 'ad_01k09wnpvrea0awz7vem2j8j7g', 'packed', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
+
+INSERT IGNORE INTO shipment_line (id, shipment_id, sales_order_line_id, quantity_id, created_at, updated_at) VALUES
+    ('shln_01seedsb3_ln1_00', 'sh_01seedsb3ship0000', 'orln_01seedsb3_ln1_00', 'qu_01seedsb3_shln1_q0', NOW(), NOW());
+
+INSERT IGNORE INTO shipping_case (id, number, freight_amount_id, freight_weight_id, shipment_id, carrier_id, account_id, created_at, updated_at) VALUES
+    ('shcs_01seedsb3_c1_000', 'SHP-SB-003-1', 'qu_01seedsb3_c1_fam00', 'qu_01seedsb3_c1_fwt00', 'sh_01seedsb3ship0000', 'delivery', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
+
+-- An invoice email contact on ORD-SB-003 so shipping it (with email_customer) actually stages an
+-- invoice email in the outbox rather than short-circuiting on an empty recipient list.
+INSERT IGNORE INTO order_email_contact (id, sales_order_id, account_user_id, notification_type_code, created_at, updated_at) VALUES
+    ('oec_01seedsb3_invoice0', 'or_01seedsb3order0000', 'acus_s83fjhyfmqen', 'invoice', NOW(), NOW());
+
+-- Give ORD-SB-003 a sales rep (with a set email) so shipping it exercises the always-on sales-rep
+-- invoice email, alongside the customer invoice email.
+UPDATE sales_order SET sales_rep_id = 'acus_s83fjhyfmqen'
+WHERE id = 'or_01seedsb3order0000';
+
+-- SHP-SB-004: a PARTIAL pack — 6 of 10 packed, with the remaining 4 sitting on a second, open pick
+-- line. Deleting it must fold that backorder line back into the reopened one, so the order line ends
+-- with a single open line at the full 10. SB-002 packs its line in full and cannot cover that.
+INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
+    ('qu_01seedsb4_ln1_qty0', 10, 'un_01seedpair000000000', NOW(), NOW()),
+    ('qu_01seedsb4_shln1_q0', 6, 'un_01seedpair000000000', NOW(), NOW()),
+    ('qu_01seedsb4_pkln1_q0', 6, 'un_01seedpair000000000', NOW(), NOW()),
+    ('qu_01seedsb4_pkln2_q0', 4, 'un_01seedpair000000000', NOW(), NOW()),
+    ('qu_01seedsb4_c1_fwt00', 5, 'un_01seedpound00000000', NOW(), NOW()),
+    ('qu_01seedsb4_c1_fam00', 11, 'dollar', NOW(), NOW());
+
+INSERT IGNORE INTO rate (id, value, numerator_unit_id, denominator_unit_id, created_at, updated_at) VALUES
+    ('rt_01seedsb4_ln1_prc0', 9, 'dollar', 'un_01seedpair000000000', NOW(), NOW());
+
+INSERT IGNORE INTO sales_order (id, number, sales_order_status_code, sales_order_type_code, priority_code, carrier_id, billing_address_id, shipping_address_id, buyer_account_id, seller_account_id, owner_account_id, payment_term_id, shipping_term_id, issued_at, created_at, updated_at) VALUES
+    ('or_01seedsb4order0000', 'ORD-SB-004', 'issued', 'sales_order', 'normal', 'delivery', 'ad_01k09wnac0e1ar211e0sy0ba4g', 'ad_01k09wnpvrea0awz7vem2j8j7g', 'ac_01k09wm2fgevdsc344gpbcj30f', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'pytm_01seednet3000000', 'prepaid_billed', DATE_SUB(NOW(), INTERVAL 1 DAY), NOW(), NOW());
+
+INSERT IGNORE INTO sales_order_line (id, product_sku, product_description, product_id, item_id, sales_order_id, quantity_id, unit_price_id, line_item_number, created_at, updated_at) VALUES
+    ('orln_01seedsb4_ln1_00', 'SCK-001', 'Small white sock', 'pd_01k0a65nx2e2crfxrvryyxnmdh', 'it_01k0a7100aeysrs9vxpeq14yxj', 'or_01seedsb4order0000', 'qu_01seedsb4_ln1_qty0', 'rt_01seedsb4_ln1_prc0', 1, NOW(), NOW());
+
+INSERT IGNORE INTO pick (id, number, sales_order_id, account_id, created_at, updated_at) VALUES
+    ('pk_01seedsb4pick00000', 'PICK-SB-004', 'or_01seedsb4order0000', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
+
+INSERT IGNORE INTO pick_line (id, pick_id, quantity_id, sales_order_line_id, packed_at, created_at, updated_at) VALUES
+    ('pkln_01seedsb4_ln1_00', 'pk_01seedsb4pick00000', 'qu_01seedsb4_pkln1_q0', 'orln_01seedsb4_ln1_00', NOW(), NOW(), NOW()),
+    ('pkln_01seedsb4_ln2_00', 'pk_01seedsb4pick00000', 'qu_01seedsb4_pkln2_q0', 'orln_01seedsb4_ln1_00', NULL, NOW(), NOW());
+
+INSERT IGNORE INTO shipment (id, number, sales_order_id, carrier_id, carrier_option_id, shipping_address_id, shipment_status_code, account_id, created_at, updated_at) VALUES
+    ('sh_01seedsb4ship0000', 'SHP-SB-004', 'or_01seedsb4order0000', 'delivery', 'crop_01seedground000000', 'ad_01k09wnpvrea0awz7vem2j8j7g', 'packed', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
+
+INSERT IGNORE INTO shipment_line (id, shipment_id, sales_order_line_id, quantity_id, created_at, updated_at) VALUES
+    ('shln_01seedsb4_ln1_00', 'sh_01seedsb4ship0000', 'orln_01seedsb4_ln1_00', 'qu_01seedsb4_shln1_q0', NOW(), NOW());
+
+INSERT IGNORE INTO shipping_case (id, number, freight_amount_id, freight_weight_id, shipment_id, carrier_id, account_id, created_at, updated_at) VALUES
+    ('shcs_01seedsb4_c1_000', 'SHP-SB-004-1', 'qu_01seedsb4_c1_fam00', 'qu_01seedsb4_c1_fwt00', 'sh_01seedsb4ship0000', 'delivery', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
+
+-- SHP-SB-005 exists so the case-edit tests have a case they can freely rewrite. Its tracking number
+-- is seeded non-empty because a blank one cannot be restored: the update rejects it.
+INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
+    ('qu_01seedsb5_ln1_qty0', 3, 'un_01seedpair000000000', NOW(), NOW()),
+    ('qu_01seedsb5_c1_fwt00', 9, 'un_01seedpound00000000', NOW(), NOW()),
+    ('qu_01seedsb5_c1_fam00', 14, 'dollar', NOW(), NOW());
+
+INSERT IGNORE INTO rate (id, value, numerator_unit_id, denominator_unit_id, created_at, updated_at) VALUES
+    ('rt_01seedsb5_ln1_prc0', 7, 'dollar', 'un_01seedpair000000000', NOW(), NOW());
+
+INSERT IGNORE INTO sales_order (id, number, sales_order_status_code, sales_order_type_code, priority_code, carrier_id, billing_address_id, shipping_address_id, buyer_account_id, seller_account_id, owner_account_id, payment_term_id, shipping_term_id, issued_at, created_at, updated_at) VALUES
+    ('or_01seedsb5order0000', 'ORD-SB-005', 'issued', 'sales_order', 'normal', 'delivery', 'ad_01k09wnac0e1ar211e0sy0ba4g', 'ad_01k09wnpvrea0awz7vem2j8j7g', 'ac_01k09wm2fgevdsc344gpbcj30f', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'pytm_01seednet3000000', 'prepaid_billed', DATE_SUB(NOW(), INTERVAL 1 DAY), NOW(), NOW());
+
+INSERT IGNORE INTO sales_order_line (id, product_sku, product_description, product_id, item_id, sales_order_id, quantity_id, unit_price_id, line_item_number, created_at, updated_at) VALUES
+    ('orln_01seedsb5_ln1_00', 'SCK-001', 'Small white sock', 'pd_01k0a65nx2e2crfxrvryyxnmdh', 'it_01k0a7100aeysrs9vxpeq14yxj', 'or_01seedsb5order0000', 'qu_01seedsb5_ln1_qty0', 'rt_01seedsb5_ln1_prc0', 1, NOW(), NOW());
+
+INSERT IGNORE INTO shipment (id, number, sales_order_id, carrier_id, carrier_option_id, shipping_address_id, shipment_status_code, account_id, created_at, updated_at) VALUES
+    ('sh_01seedsb5ship0000', 'SHP-SB-005', 'or_01seedsb5order0000', 'delivery', 'crop_01seedground000000', 'ad_01k09wnpvrea0awz7vem2j8j7g', 'packed', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
+
+INSERT IGNORE INTO shipping_case (id, number, tracking_number, freight_amount_id, freight_weight_id, shipment_id, carrier_id, account_id, created_at, updated_at) VALUES
+    ('shcs_01seedsb5_c1_000', 'SHP-SB-005-1', '1Z-SB5-ORIGINAL', 'qu_01seedsb5_c1_fam00', 'qu_01seedsb5_c1_fwt00', 'sh_01seedsb5ship0000', 'delivery', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
 -- JOB (for GET /v1/core/jobs/{id} include coverage)
 -- ============================================================
 -- A completed bulk upsert attributed to the seeded admin account user so retrieve-job's created_by / created_by.role includes have a fixture.

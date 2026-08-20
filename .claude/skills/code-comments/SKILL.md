@@ -94,6 +94,51 @@ enough in it to get lost in. The forms already in use:
 A marker names a region; it does not explain it. If a section needs a paragraph to
 justify its existence, it probably wants its own file.
 
+## Auditing a diff's comments (audit mode)
+
+Reviewing every comment in a large diff is a fan-out job, not a read-through: extract each
+added comment, verify its claim against the code it annotates, and report. Run it like this.
+
+1. **Extract** added/changed comment lines, grouped by file:
+
+   ```bash
+   git diff <base> -- '*.go' '*.sql' '*.proto' | awk '
+     /^diff --git/ {f=$3; sub("a/","",f)}
+     /^\+[[:space:]]*(\/\/|--)/ {print f}' | sort | uniq -c | sort -rn
+   ```
+
+   Skip generated files (`*.pb.go`, `sqlc/*.sql.go`, `*_mock.go`) — their comments are copied
+   from the `.proto`/`.sql`/source, so audit the source and the copy is covered.
+
+2. **Fan out** one subagent per area (services, SQL, tests, loaders/domain). Each reads the
+   annotated code *fully* and returns a verdict per comment. Auditing is read-only — agents
+   report, they do not edit.
+
+3. **Verdict per comment**, then the style flags:
+   - TRUE — matches the code.
+   - FALSE — contradicts the code (wrong column, wrong return, wrong condition).
+   - MISLEADING — defensible but reads wrong. **This is the dominant failure, not FALSE.**
+   - STALE — describes code that no longer exists as described.
+   - Style: change-narration (§1), how-not-why (§2), too-long (§3), name-prefix.
+
+**What MISLEADING looks like in practice** (every one of these was a real finding):
+
+- **A test comment that over-claims the assertion.** "a replay must not report zero" on an
+  assertion that is trivially `0 == 0`; "the header links to order, pick and invoice" above a
+  block that only checks order and pick. The comment states the *goal* — verify it against what
+  the code actually asserts, not against what it was trying to prove.
+- **A count or list a later hunk invalidates.** "Two dedicated shipments" when the same change
+  adds a third under the same section.
+- **A parenthetical the next line contradicts.** "(not a loader Target)" directly above
+  `Target: ...`.
+- **"Never reached" / "short-circuits" that overstate.** The path is unwired entirely, not
+  merely skipped in one mode.
+
+**"Legacy" is usually a why, not change-narration.** A comment citing the external system being
+migrated from ("matching legacy's canCreateInvoice") states a standing reason and is fine. A
+comment narrating *this file's own* old→new format ("Legacy returned a bare number; v2 wraps it")
+is §1 change-narration. Test: does "legacy" name another system, or a prior version of this code?
+
 ## The check before you keep a comment
 
 1. Would this read as sensible to someone seeing the file for the first time, with no

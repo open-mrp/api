@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/shopspring/decimal"
+
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/augno/api/shared/db"
@@ -37,6 +39,11 @@ func mapGetPickLineRow(row sqlc.GetPickLineRow) *domain.PickLine {
 		productDescription = &row.ProductDescription.String
 	}
 
+	var productID *string
+	if row.ProductID.Valid {
+		productID = &row.ProductID.String
+	}
+
 	return &domain.PickLine{
 		ID:                        row.ID,
 		PickID:                    row.PickID,
@@ -52,6 +59,7 @@ func mapGetPickLineRow(row sqlc.GetPickLineRow) *domain.PickLine {
 		OrderLineItemNumber:       lineItemNumber,
 		OrderLineSKU:              row.ProductSku,
 		OrderLineDescription:      productDescription,
+		OrderLineProductID:        productID,
 		OrderedQuantityValue:      row.OrderedQuantityValue,
 		OrderedQuantityUnitID:     row.OrderedQuantityUnitID,
 		OrderedQuantityUnitName:   row.OrderedQuantityUnitName,
@@ -71,12 +79,13 @@ func (r *pickLineRepoImpl) Get(ctx context.Context, pickLineID string) (*domain.
 	return mapGetPickLineRow(row), nil
 }
 
-func (r *pickLineRepoImpl) UpdateQuantity(ctx context.Context, pickLineID, quantityValue string) *apierror.APIError {
+func (r *pickLineRepoImpl) UpdateQuantity(ctx context.Context, pickLineID string, quantityValue, quantityUnitID *string) *apierror.APIError {
 	ctx, span := pickLineRepoTracer.Start(ctx, "repository.pick_line.update_quantity")
 	defer span.End()
 
 	if err := r.queries.UpdatePickLineQuantity(ctx, sqlc.UpdatePickLineQuantityParams{
-		Value:      quantityValue,
+		Value:      toNullString(quantityValue),
+		UnitID:     toNullString(quantityUnitID),
 		PickLineID: pickLineID,
 	}); err != nil {
 		return tracing.Trace(span, db.MapSQLError(err))
@@ -201,9 +210,120 @@ func (r *pickLineRepoImpl) UnpackByShipment(ctx context.Context, shipmentID stri
 	ctx, span := pickLineRepoTracer.Start(ctx, "repository.pick_line.unpack_by_shipment")
 	defer span.End()
 
-	err := r.queries.UnpackPickLinesByShipment(ctx, shipmentID)
+	shippedLines, err := r.queries.ListShippedOrderLineQuantitiesByShipment(ctx, shipmentID)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
+
+	for _, shippedLine := range shippedLines {
+		if apiErr := r.unpackOrderLine(ctx, shippedLine.SalesOrderLineID, shippedLine.ShippedValue); apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+	}
+
 	return nil
+}
+
+// Hands one shipment line's goods back to the pick: the packed line reopens at the order line's full
+// unshipped quantity and the backorder lines it displaces are removed, leaving exactly one open line.
+func (r *pickLineRepoImpl) unpackOrderLine(ctx context.Context, orderLineID, shippedValue string) *apierror.APIError {
+	rows, err := r.queries.ListPickLinesForOrderLine(ctx, orderLineID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return apiErr
+	}
+
+	shipped, stillPacked, openIDs := splitPickLinesForUnpack(rows, shippedValue)
+	// Nothing packed to reopen (already unpacked, or the pick was removed) — leave the line as is.
+	if shipped == nil {
+		return nil
+	}
+
+	progress, err := r.queries.GetOrderLinePackProgress(ctx, orderLineID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return apiErr
+	}
+	ordered, decErr := decimal.NewFromString(progress.OrderedValue)
+	if decErr != nil {
+		return apierror.NewInternalError(decErr, "Failed to parse the order line's ordered quantity.")
+	}
+
+	// The reopened line absorbs everything not still committed to another shipment, which is why the
+	// backorder lines below are deleted rather than kept.
+	reopened := ordered.Sub(stillPacked)
+	if reopened.IsNegative() {
+		reopened = decimal.Zero
+	}
+
+	reopenedValue := reopened.String()
+	if err := r.queries.UpdatePickLineQuantity(ctx, sqlc.UpdatePickLineQuantityParams{
+		Value:      toNullString(&reopenedValue),
+		PickLineID: shipped.ID,
+	}); err != nil {
+		return db.MapSQLError(err)
+	}
+	if err := r.queries.ReopenPickLine(ctx, shipped.ID); err != nil {
+		return db.MapSQLError(err)
+	}
+
+	if len(openIDs) == 0 {
+		return nil
+	}
+	// The quantity rows go first: they are reachable only through the pick lines being deleted.
+	if err := r.queries.DeleteQuantitiesByPickLineIDs(ctx, openIDs); err != nil {
+		return db.MapSQLError(err)
+	}
+	if err := r.queries.DeletePickLinesByIDs(ctx, openIDs); err != nil {
+		return db.MapSQLError(err)
+	}
+	return nil
+}
+
+// Picks the packed line this shipment took (matched on the shipped quantity, else the first packed
+// line), the quantity other shipments still hold, and the open lines to discard.
+func splitPickLinesForUnpack(rows []sqlc.ListPickLinesForOrderLineRow, shippedValue string) (*sqlc.ListPickLinesForOrderLineRow, decimal.Decimal, []string) {
+	var shipped *sqlc.ListPickLinesForOrderLineRow
+	openIDs := make([]string, 0, len(rows))
+	shippedQty, shippedQtyErr := decimal.NewFromString(shippedValue)
+
+	for i := range rows {
+		row := &rows[i]
+		if !row.PackedAt.Valid {
+			openIDs = append(openIDs, row.ID)
+			continue
+		}
+		if shipped != nil {
+			continue
+		}
+		if shippedQtyErr != nil {
+			shipped = row
+			continue
+		}
+		if qty, err := decimal.NewFromString(row.QuantityValue); err == nil && qty.Equal(shippedQty) {
+			shipped = row
+		}
+	}
+
+	// No packed line carries the shipped quantity, so fall back to the first packed line.
+	if shipped == nil {
+		for i := range rows {
+			if rows[i].PackedAt.Valid {
+				shipped = &rows[i]
+				break
+			}
+		}
+	}
+
+	stillPacked := decimal.Zero
+	if shipped != nil {
+		for i := range rows {
+			if !rows[i].PackedAt.Valid || rows[i].ID == shipped.ID {
+				continue
+			}
+			if qty, err := decimal.NewFromString(rows[i].QuantityValue); err == nil {
+				stillPacked = stillPacked.Add(qty)
+			}
+		}
+	}
+
+	return shipped, stillPacked, openIDs
 }

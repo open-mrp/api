@@ -5,6 +5,7 @@ import (
 
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/shared/contracts"
+	"github.com/augno/api/shared/field"
 	pb "github.com/augno/api/shared/proto/core"
 
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -16,72 +17,6 @@ type shippingGRPCHandler struct {
 
 	shipmentSvc     domain.ShipmentSvc
 	shipmentLineSvc domain.ShipmentLineSvc
-}
-
-func shipmentSummaryToProto(s *domain.ShipmentSummary) *pb.ShipmentSummaryInfo {
-	if s == nil {
-		return nil
-	}
-
-	info := &pb.ShipmentSummaryInfo{
-		Id:               s.ID,
-		Number:           s.Number,
-		StatusCode:       s.StatusCode,
-		StatusName:       s.StatusName,
-		SalesOrderId:     s.SalesOrderID,
-		SalesOrderNumber: s.SalesOrderNumber,
-		CustomerId:       s.CustomerID,
-		CustomerName:     s.CustomerName,
-		CustomerNumber:   s.CustomerNumber,
-		CarrierId:        s.CarrierID,
-		CarrierName:      s.CarrierName,
-		CreatedAt:        timestamppb.New(s.CreatedAt),
-		UpdatedAt:        timestamppb.New(s.UpdatedAt),
-	}
-
-	if s.Note != nil {
-		info.Note = s.Note
-	}
-	if s.BillOfLading != nil {
-		info.BillOfLading = s.BillOfLading
-	}
-	if s.MasterTrackingNumber != nil {
-		info.MasterTrackingNumber = s.MasterTrackingNumber
-	}
-	if s.ShippedAt != nil {
-		info.ShippedAt = timestamppb.New(*s.ShippedAt)
-	}
-	if s.CarrierIsPortalEnabled != nil {
-		info.CarrierIsPortalEnabled = s.CarrierIsPortalEnabled
-	}
-	if s.ServiceLevelID != nil {
-		info.ServiceLevelId = s.ServiceLevelID
-	}
-	if s.ServiceLevelName != nil {
-		info.ServiceLevelName = s.ServiceLevelName
-	}
-	if s.ServiceLevelIsPortalEnabled != nil {
-		info.ServiceLevelIsPortalEnabled = s.ServiceLevelIsPortalEnabled
-	}
-	if s.ServiceLevelToken != nil {
-		info.ServiceLevelToken = s.ServiceLevelToken
-	}
-	if s.CustomerStatusCode != nil {
-		info.CustomerStatusCode = s.CustomerStatusCode
-	}
-	if s.CustomerCommissionPolicy != nil {
-		info.CustomerCommissionPolicy = s.CustomerCommissionPolicy
-	}
-	info.CustomerCreatedAt = timestamppb.New(s.CustomerCreatedAt)
-	info.CustomerUpdatedAt = timestamppb.New(s.CustomerUpdatedAt)
-	info.SalesOrderCreatedAt = timestamppb.New(s.SalesOrderCreatedAt)
-	info.SalesOrderUpdatedAt = timestamppb.New(s.SalesOrderUpdatedAt)
-
-	for _, l := range s.Lines {
-		info.Lines = append(info.Lines, shipmentLineToProto(l))
-	}
-
-	return info
 }
 
 func shipmentToProto(s *domain.Shipment) *pb.ShipmentInfo {
@@ -102,6 +37,9 @@ func shipmentToProto(s *domain.Shipment) *pb.ShipmentInfo {
 		CarrierId:         s.CarrierID,
 		CarrierName:       s.CarrierName,
 		ShippingAddressId: s.ShippingAddressID,
+		PriorityCode:      s.PriorityCode,
+		CaseCount:         s.CaseCount,
+		IsReadyToShip:     s.IsReadyToShip,
 		AccountId:         s.AccountID,
 		CreatedAt:         timestamppb.New(s.CreatedAt),
 		UpdatedAt:         timestamppb.New(s.UpdatedAt),
@@ -262,6 +200,7 @@ func shipmentLineToProto(l *domain.ShipmentLine) *pb.ShipmentLineInfo {
 		ShipmentId:               l.ShipmentID,
 		SalesOrderLineId:         l.SalesOrderLineID,
 		OrderLineSku:             l.OrderLineSKU,
+		OrderLineItemNumber:      l.OrderLineItemNumber,
 		QuantityId:               l.QuantityID,
 		QuantityValue:            l.QuantityValue,
 		QuantityUnitId:           l.QuantityUnitID,
@@ -277,6 +216,9 @@ func shipmentLineToProto(l *domain.ShipmentLine) *pb.ShipmentLineInfo {
 	}
 	if l.OrderLineItemID != nil {
 		info.OrderLineItemId = l.OrderLineItemID
+	}
+	if l.OrderLineProductID != nil {
+		info.OrderLineProductId = l.OrderLineProductID
 	}
 
 	return info
@@ -444,9 +386,9 @@ func (h *shippingGRPCHandler) ListShipments(ctx context.Context, req *pb.ListShi
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
-	shipments := make([]*pb.ShipmentSummaryInfo, len(result.Shipments))
+	shipments := make([]*pb.ShipmentInfo, len(result.Shipments))
 	for i, s := range result.Shipments {
-		shipments[i] = shipmentSummaryToProto(s)
+		shipments[i] = shipmentToProto(s)
 	}
 
 	return &pb.ListShipmentsResponse{
@@ -507,9 +449,7 @@ func (h *shippingGRPCHandler) UpdateShipment(ctx context.Context, req *pb.Update
 	if req.CarrierId != nil {
 		params.CarrierID = req.CarrierId
 	}
-	if req.ServiceLevelId != nil {
-		params.ServiceLevelID = req.ServiceLevelId
-	}
+	params.ServiceLevelID = field.StringClearableFromProto(req.ServiceLevelId)
 
 	shipment, apiErr := h.shipmentSvc.UpdateShipment(ctx, params)
 	if apiErr != nil {
@@ -517,6 +457,33 @@ func (h *shippingGRPCHandler) UpdateShipment(ctx context.Context, req *pb.Update
 	}
 
 	return &pb.UpdateShipmentResponse{
+		Shipment: shipmentToProto(shipment),
+	}, nil
+}
+
+// Corrects the tracking and routing of a shipment that has already shipped.
+func (h *shippingGRPCHandler) AdminUpdateShipmentTracking(ctx context.Context, req *pb.AdminUpdateShipmentTrackingRequest) (*pb.AdminUpdateShipmentTrackingResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	params := domain.AdminUpdateShipmentTrackingParams{
+		ShipmentID:           req.Id,
+		MasterTrackingNumber: req.MasterTrackingNumber,
+		CarrierID:            req.CarrierId,
+		ServiceLevelID:       field.StringClearableFromProto(req.ServiceLevelId),
+		Includes:             req.Includes,
+	}
+
+	shipment, apiErr := h.shipmentSvc.AdminUpdateShipmentTracking(ctx, params)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.AdminUpdateShipmentTrackingResponse{
 		Shipment: shipmentToProto(shipment),
 	}, nil
 }

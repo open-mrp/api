@@ -343,7 +343,7 @@ func TestScheduleSettings_DefaultLeadTimeDrivesTheChain(t *testing.T) {
 	order := issueOrderForCustomer(t, customerID, nil)
 
 	assert.Equal(t, "account", jsonField(order, "lead_time_source"))
-	assert.Equal(t, "37", jsonField(order, "lead_time_days"))
+	assert.Equal(t, 37, committedRuleDays(t, order))
 	assert.Equal(t, expectedShipBy(t, order, 37), shipByDate(t, order))
 }
 

@@ -48,6 +48,40 @@ func (r *salesOrderRepoImpl) NoteFirstShipAt(ctx context.Context, accountID, sal
 	return nil
 }
 
+func (r *salesOrderRepoImpl) MarkFulfilled(ctx context.Context, accountID, salesOrderID string) *apierror.APIError {
+	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.mark_fulfilled")
+	defer span.End()
+
+	err := r.queries.MarkSalesOrderFulfilled(ctx, sqlc.MarkSalesOrderFulfilledParams{
+		ID:        salesOrderID,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return nil
+}
+
+func (r *salesOrderRepoImpl) GetSalesRepEmail(ctx context.Context, accountID, salesOrderID string) (*string, *apierror.APIError) {
+	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.get_sales_rep_email")
+	defer span.End()
+
+	email, err := r.queries.GetSalesOrderSalesRepEmail(ctx, sqlc.GetSalesOrderSalesRepEmailParams{
+		SalesOrderID: salesOrderID,
+		AccountID:    accountID,
+	})
+	if errors.Is(err, gosql.ErrNoRows) {
+		return nil, nil
+	}
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if !email.Valid {
+		return nil, nil
+	}
+	return &email.String, nil
+}
+
 // buildSalesOrderSearchParams builds the free-text search term for the list queries, which match it as an EXACT value against the sales order number and the customer PO number (not a substring/LIKE). Customer-name search was removed deliberately — it forced a full table scan; filter by customer via the customer_ids query param instead.
 func buildSalesOrderSearchParams(query *string) gosql.NullString {
 	if query == nil || *query == "" {

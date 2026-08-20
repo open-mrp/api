@@ -47,6 +47,29 @@ JOIN quantity q ON q.id = ii.quantity_id
 WHERE ii.batch_id = sqlc.arg('batch_id')
 AND ii.account_id = sqlc.arg('account_id');
 
+-- Lists the issues an order's consumption left open, newest first, so a void walks them back in the
+-- reverse of the order they were taken.
+-- name: FindOpenIssuesForOrderItemReversal :many
+SELECT
+    ii.id,
+    ii.item_id,
+    ii.order_id,
+    ii.quantity_id,
+    q.value AS quantity_value,
+    q.unit_id,
+    ii.storage_location_id,
+    ii.lot_id,
+    ii.batch_id
+FROM inventory_issue ii
+JOIN quantity q ON q.id = ii.quantity_id
+WHERE ii.order_id = sqlc.arg('order_id')
+AND ii.account_id = sqlc.arg('account_id')
+AND ii.item_id = sqlc.arg('item_id')
+-- Closed issues are the fully-allocated ones, so a void has to reach them too or the shipment's
+-- own stock is the part it cannot give back.
+AND ii.status_code IN ('open', 'closed')
+ORDER BY ii.issued_at DESC, ii.id DESC;
+
 -- name: FindAllocationsByIssueIDs :many
 SELECT id, inventory_receipt_id, inventory_issue_id, quantity_id, unit_cost_id, total_cost_id
 FROM inventory_allocation

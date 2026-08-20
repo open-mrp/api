@@ -563,7 +563,7 @@ func (h *salesGRPCHandler) BatchGetSalesOrdersByIDs(ctx context.Context, req *pb
 		if soID == "" {
 			continue
 		}
-		order, apiErr := h.salesOrderSvc.GetSalesOrder(ctx, domain.GetSalesOrderParams{SalesOrderID: soID})
+		order, apiErr := h.salesOrderSvc.GetSalesOrder(ctx, domain.GetSalesOrderParams{SalesOrderID: soID, Includes: req.Includes})
 		if apiErr != nil {
 			continue
 		}

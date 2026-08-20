@@ -65,7 +65,7 @@ func (m *transactionAllocationSvcImpl) ListAllocationEntries(ctx context.Context
 		}
 	}
 	if req.EndDate != nil {
-		t, err := grpcutil.ParseDateString(*req.EndDate)
+		t, err := grpcutil.ParseEndDateString(*req.EndDate)
 		if err == nil {
 			pbReq.EndDate = timestamppb.New(t)
 		}
@@ -138,7 +138,7 @@ func (m *transactionAllocationSvcImpl) ListOpenCredits(ctx context.Context, req 
 		}
 	}
 	if req.EndDate != nil {
-		t, err := grpcutil.ParseDateString(*req.EndDate)
+		t, err := grpcutil.ParseEndDateString(*req.EndDate)
 		if err == nil {
 			pbReq.EndDate = timestamppb.New(t)
 		}

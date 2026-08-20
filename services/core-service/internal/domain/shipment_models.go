@@ -3,6 +3,7 @@ package domain
 import (
 	"time"
 
+	"github.com/augno/api/shared/field"
 	"github.com/augno/api/shared/pagination"
 )
 
@@ -71,47 +72,17 @@ type Shipment struct {
 	SalesOrderUpdatedAt          time.Time
 	BillingAddressCountry        *string
 	BillingAddressZip            *string
-	AccountID                    string
-	CreatedAt                    time.Time
-	UpdatedAt                    time.Time
+	PriorityCode                 string
+	CaseCount                    int64
+	// Reports whether the shipment can be shipped now: unshipped, cased, every case weighed.
+	IsReadyToShip bool
+	AccountID     string
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 
 	// Expandable collections
 	Lines         []*ShipmentLine
 	ShippingCases []*ShippingCase
-}
-
-// ShipmentSummary represents a shipment in list views.
-type ShipmentSummary struct {
-	ID                          string
-	Number                      string
-	Note                        *string
-	BillOfLading                *string
-	MasterTrackingNumber        *string
-	StatusCode                  string
-	StatusName                  string
-	ShippedAt                   *time.Time
-	SalesOrderID                string
-	SalesOrderNumber            string
-	SalesOrderCreatedAt         time.Time
-	SalesOrderUpdatedAt         time.Time
-	CustomerID                  string
-	CustomerName                string
-	CustomerNumber              string
-	CustomerStatusCode          *string
-	CustomerCommissionPolicy    *string
-	CustomerCreatedAt           time.Time
-	CustomerUpdatedAt           time.Time
-	CarrierID                   string
-	CarrierName                 string
-	CarrierIsPortalEnabled      *bool
-	ServiceLevelID              *string
-	ServiceLevelName            *string
-	ServiceLevelToken           *string
-	ServiceLevelIsPortalEnabled *bool
-	CreatedAt                   time.Time
-	UpdatedAt                   time.Time
-	// Lines (populated only when the list request includes "lines").
-	Lines []*ShipmentLine
 }
 
 // ListShipmentsParams holds the parameters for listing shipments.
@@ -133,7 +104,7 @@ type ListShipmentsParams struct {
 
 // ListShipmentsResult holds the result of listing shipments.
 type ListShipmentsResult struct {
-	Shipments []*ShipmentSummary
+	Shipments []*Shipment
 	PageInfo  pagination.PageInfo
 }
 
@@ -152,8 +123,20 @@ type UpdateShipmentParams struct {
 	Number               *string
 	MasterTrackingNumber *string
 	CarrierID            *string
-	ServiceLevelID       *string
-	Includes             []string
+	// Tri-state: unset keeps the current service level, null clears it.
+	ServiceLevelID field.Clearable[string]
+	Includes       []string
+}
+
+// Carries the admin override that corrects a shipped shipment's tracking and routing.
+type AdminUpdateShipmentTrackingParams struct {
+	AccountID            string
+	ShipmentID           string
+	MasterTrackingNumber *string
+	CarrierID            *string
+	// Tri-state: unset keeps the current service level, null clears it.
+	ServiceLevelID field.Clearable[string]
+	Includes       []string
 }
 
 // SyncShipmentShippingParams re-points every shipment on an order to the order's current carrier, service level, and ship-to. Used by the out-of-band shipping-updated consumer.

@@ -19,3 +19,18 @@ func TestFormatRecordNumber(t *testing.T) {
 		}
 	}
 }
+
+func TestFormatAccountNumber(t *testing.T) {
+	cases := map[string]string{
+		"8841":   "08841", // pads to five, not six
+		"08841":  "08841", // a leading zero means it is already formatted
+		"C-8841": "C-8841",
+		"123456": "123456", // longer than five is left alone
+		"":       "",
+	}
+	for in, want := range cases {
+		if got := FormatAccountNumber(in); got != want {
+			t.Errorf("FormatAccountNumber(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

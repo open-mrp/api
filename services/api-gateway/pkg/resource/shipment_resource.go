@@ -37,8 +37,12 @@ type Shipment struct {
 	//
 	// Cleared if the shipment is voided.
 	ShippedAt *time.Time `json:"shipped_at"`
-	// The sales order this shipment fulfills.
-	SalesOrder *SalesOrder `json:"sales_order" expandable:"true"`
+	// Fulfillment priority, inherited from the sales order.
+	Priority constants.PriorityCode `json:"priority" validate:"required"`
+	// Number of shipping cases packed into this shipment.
+	CaseCount int32 `json:"case_count"`
+	// TODO: change from bool to a status type constant; check if its sued
+	IsReadyToShip bool `json:"is_ready_to_ship"`
 	// The customer receiving this shipment.
 	Customer *Customer `json:"customer" expandable:"true"`
 	// Carrier selection and freight billing for this shipment.
@@ -46,21 +50,31 @@ type Shipment struct {
 	// Destination shipping address.
 	ShippingAddress *Address `json:"shipping_address" expandable:"true"`
 	// User who shipped this shipment.
-	ShippedBy *AccountUser `json:"shipped_by" expandable:"true"`
-	// The invoice raised for this shipment.
-	//
-	// Voiding the shipment deletes this invoice and unlinks it from the shipment.
-	Invoice *Invoice `json:"invoice" expandable:"true"`
-	// Pick associated with this shipment's order.
-	Pick *Pick `json:"pick" expandable:"true"`
+	ShippedBy *CreatedBy `json:"shipped_by" expandable:"true"`
+	// TODO: Lines are a sub-object of cases, so move them
 	// Lines recording the quantity shipped for each sales order line.
 	Lines *List[ShipmentLine] `json:"lines" expandable:"true"`
 	// Physical cases (packages) in this shipment, each with its own tracking and label details.
 	ShippingCases *List[ShippingCaseDetail] `json:"shipping_cases" expandable:"true"`
+	// Records this shipment sits between — its order, pick and invoice.
+	Related *ShipmentRelated `json:"related"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
+}
+
+// Groups the records a shipment sits between: the order it fulfills, the pick it was packed from,
+// and the invoice it raised. Returned only when at least one member has been expanded.
+type ShipmentRelated struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=shipment_related"`
+	// The sales order this shipment fulfills.
+	SalesOrder *Record `json:"sales_order" expandable:"true"`
+	// The pick this shipment was packed from.
+	Pick *Record `json:"pick" expandable:"true"`
+	// The invoice raised when this shipment shipped.
+	Invoice *Record `json:"invoice" expandable:"true"`
 }
 
 // A shipment line recording the quantity of a sales order line included in a shipment.
@@ -71,18 +85,38 @@ type ShipmentLine struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=shipment_line"`
 	// The sales order line this shipment line fulfills.
 	SalesOrderLine *SalesOrderLine `json:"sales_order_line" expandable:"true"`
-	// The item being shipped, taken from the sales order line.
-	//
-	// Only the item's ID and SKU are carried here; retrieve the item to read its remaining details.
-	Item *Item `json:"item"`
-	// Quantity shipped.
+	// What this line ships, as recorded on the originating sales order line.
+	Item *Item `json:"item" expandable:"true"`
+	// Quantity shipped on this line.
 	Quantity *Quantity `json:"quantity" validate:"required"`
+	// TODO: get this setup
+	Totals ShipmentLineTotals ``
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
+type ShipmentLineTotals struct {
+	Ordered     ShipmentLineStageTotal
+	BackOrdered ShipmentLineStageTotal
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=pick_totals"`
+}
+
+// The monetary amount that has reached one fulfillment stage, together with how far that stage has progressed.
+type ShipmentLineStageTotal struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=pick_stage_total"`
+	// Progress through this stage, as a fraction between 0 and 1.
+	//
+	// Calculated as the quantity that has reached this stage divided by the quantity ordered, so `1` means the whole order has cleared the stage and `0` means nothing has reached it yet.
+	Completion float64 `json:"completion"`
+	// Amount that has reached this stage, as a decimal string (unit price times the quantity at this stage).
+	Amount string `json:"amount" validate:"required" format:"decimal"`
+}
+
+// TODO: collaps the detail with the shipping case object whichever is more accurate
 // A physical case (package) within a shipment, with its own tracking number, label and freight charge.
 type ShippingCaseDetail struct {
 	// Shipping case ID.
@@ -201,23 +235,6 @@ var sampleShipmentNote = "Handle with care"
 var sampleBillOfLading = "BOL-12345"
 var sampleMasterTrackingNumber = "1Z999AA10123456784"
 
-// sampleShipmentInvoice is a lean invoice example embedded in the shipment sample.
-// It intentionally leaves its own expandable back-references (shipment, order,
-// customer) nil so the shipment<->invoice example pair never nests infinitely.
-var sampleShipmentInvoice = &Invoice{
-	ID:             SampleInvoiceID,
-	Object:         constants.ObjectTypeInvoice,
-	Number:         "INV-001",
-	LineCount:      1,
-	BillingAddress: SampleAddress,
-	PriorityCode:   constants.PriorityCodeNormal,
-	PaymentStatus:  constants.InvoicePaymentStatusUnpaid,
-	TotalInvoiced:  "1234.56",
-	HasBeenSent:    true,
-	CreatedAt:      timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:      timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
-}
-
 var sampleShippingCaseDetail = ShippingCaseDetail{
 	ID:             SampleShippingCaseID,
 	Object:         constants.ObjectTypeShippingCase,
@@ -253,15 +270,15 @@ var SampleShipment = &Shipment{
 	MasterTrackingNumber: &sampleMasterTrackingNumber,
 	Status:               constants.ShipmentStatusShipped,
 	ShippedAt:            timeutil.TimestampToTimePtr(sampleUpdatedAtTimestamp),
-	SalesOrder:           SampleSalesOrder,
+	Priority:             SamplePriorityCode,
+	CaseCount:            1,
 	Customer:             SampleCustomer,
 	Freight:              SampleFreight,
 	ShippingAddress:      SampleAddress,
-	ShippedBy:            SampleAccountUser,
-	Invoice:              sampleShipmentInvoice,
-	Pick:                 SamplePick,
+	ShippedBy:            SampleCreatedBy,
 	Lines:                NewList([]ShipmentLine{*SampleShipmentLine}, PageInfo{}),
 	ShippingCases:        NewList([]ShippingCaseDetail{sampleShippingCaseDetail}, PageInfo{}),
+	Related:              &ShipmentRelated{Object: constants.ObjectTypeShipmentRelated},
 	CreatedAt:            timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:            timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
@@ -270,19 +287,15 @@ func (*Shipment) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleShipment)
 }
 
+// TODO: Totals sample
 var SampleShipmentLine = &ShipmentLine{
 	ID:             SampleShipmentLineID,
 	Object:         constants.ObjectTypeShipmentLine,
 	SalesOrderLine: SampleSalesOrderLine,
 	Item:           SampleItem,
-	Quantity: &Quantity{
-		ID:           SampleQuantityID,
-		Object:       constants.ObjectTypeQuantity,
-		Value:        "10.000000000000000000000000000000",
-		DisplayValue: "10 kg",
-	},
-	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	Quantity:       SampleQuantity,
+	CreatedAt:      timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:      timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*ShipmentLine) SchemaExample() any {

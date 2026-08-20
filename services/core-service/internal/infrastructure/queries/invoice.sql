@@ -4,6 +4,7 @@ SELECT
     inv.number,
     inv.note,
     inv.is_paid_in_full,
+    inv.is_over_paid,
     inv.is_edi_sent,
     inv.has_been_sent,
     inv.created_at,
@@ -18,6 +19,7 @@ SELECT
     ar.commission_status_code AS customer_commission_policy,
     ar.is_edi_enabled AS customer_is_edi_enabled,
     sh.id AS shipment_id,
+    sh.number AS shipment_number,
     addr.id AS billing_address_id,
     addr.name AS billing_address_name,
     geo.street_line_1 AS billing_address_line1,
@@ -29,14 +31,14 @@ SELECT
     pt.id AS payment_term_id,
     pt.name AS payment_term_name,
     pt.is_active AS payment_term_is_active,
-    COUNT(il.id) AS line_count,
+    -- Counts and sums through scalar subqueries: joining invoice_line fans out rows and breaks the cursor.
+    (SELECT COUNT(*) FROM invoice_line il WHERE il.invoice_id = inv.id) AS line_count,
     COALESCE((
-        -- Correlated per invoice: a grouped derived table cannot take the account filter and so aggregates every invoice_line in the database to return one page.
-        SELECT SUM(q2.value * r2.value)
+        SELECT SUM(q.value * r.value)
         FROM invoice_line il2
-        JOIN quantity q2 ON q2.id = il2.quantity_id
-        JOIN sales_order_line sol2 ON sol2.id = il2.sales_order_line_id
-        JOIN rate r2 ON r2.id = sol2.unit_price_id
+        JOIN quantity q ON q.id = il2.quantity_id
+        JOIN sales_order_line sol ON sol.id = il2.sales_order_line_id
+        JOIN rate r ON r.id = sol.unit_price_id
         WHERE il2.invoice_id = inv.id
     ), 0) AS total_invoiced,
     CASE WHEN EXISTS (
@@ -54,26 +56,30 @@ LEFT JOIN shipment sh ON sh.invoice_id = inv.id
 JOIN address addr ON addr.id = inv.billing_address_id
 JOIN geolocation geo ON geo.id = addr.geolocation_id
 LEFT JOIN payment_term pt ON pt.id = so.payment_term_id
-LEFT JOIN invoice_line il ON il.invoice_id = inv.id
 WHERE inv.account_id = sqlc.arg('account_id')
 AND (
     sqlc.narg('search_query') IS NULL
     OR inv.number LIKE sqlc.narg('search_query')
     OR inv.note LIKE sqlc.narg('search_query')
     OR buyer.name LIKE sqlc.narg('search_query')
+    -- Reaches the order and relation already joined one-to-one above, so the search widens without fanning rows out.
+    OR so.number LIKE sqlc.narg('search_query')
+    OR so.customer_po_number LIKE sqlc.narg('search_query')
+    OR ar.external_number LIKE sqlc.narg('search_query')
 )
 AND (
     sqlc.narg('status') IS NULL
     OR (sqlc.narg('status') = 'paid' AND inv.is_paid_in_full = true)
-    OR (sqlc.narg('status') = 'unpaid' AND inv.is_paid_in_full = false AND inv.is_over_paid = false)
+    -- Overpaid invoices stay in the unpaid bucket: a negative balance is not cleanly settled either.
+    OR (sqlc.narg('status') = 'unpaid' AND inv.is_paid_in_full = false)
     OR (sqlc.narg('status') = 'overpaid' AND inv.is_over_paid = true)
 )
 AND (
+    -- Scopes to the order's lines, not the invoice's: an invoice bills a shipment's subset of them.
     sqlc.arg('include_item_filter') = false
     OR EXISTS (
-        SELECT 1 FROM invoice_line il3
-        JOIN sales_order_line sol3 ON il3.sales_order_line_id = sol3.id
-        WHERE il3.invoice_id = inv.id
+        SELECT 1 FROM sales_order_line sol3
+        WHERE sol3.sales_order_id = so.id
         AND sol3.item_id IN (sqlc.slice('item_ids'))
     )
 )
@@ -84,10 +90,9 @@ AND (
 AND (
     sqlc.arg('include_product_line_filter') = false
     OR EXISTS (
-        SELECT 1 FROM invoice_line il4
-        JOIN sales_order_line sol4 ON il4.sales_order_line_id = sol4.id
-        JOIN product p4 ON p4.item_id = sol4.item_id
-        WHERE il4.invoice_id = inv.id
+        SELECT 1 FROM sales_order_line sol4
+        JOIN product p4 ON p4.id = sol4.product_id
+        WHERE sol4.sales_order_id = so.id
         AND p4.product_line_id IN (sqlc.slice('product_line_ids'))
     )
 )
@@ -112,11 +117,6 @@ AND (
     OR inv.created_at < sqlc.narg('cursor_created_at')
     OR (inv.created_at = sqlc.narg('cursor_created_at') AND inv.id < sqlc.narg('cursor_id'))
 )
-GROUP BY inv.id, inv.number, inv.note, inv.is_paid_in_full, inv.is_edi_sent, inv.has_been_sent,
-    inv.created_at, inv.updated_at, so.id, so.number, so.priority_code,
-    buyer.id, buyer.name, ar.external_number, ar.account_status_code, ar.commission_status_code, ar.is_edi_enabled,
-    sh.id, addr.id, addr.name, geo.street_line_1, geo.street_line_2, geo.locality, geo.state,
-    geo.postal_code, geo.country, pt.id, pt.name
 ORDER BY inv.created_at DESC, inv.id DESC
 LIMIT ?;
 
@@ -126,6 +126,7 @@ SELECT
     inv.number,
     inv.note,
     inv.is_paid_in_full,
+    inv.is_over_paid,
     inv.is_edi_sent,
     inv.has_been_sent,
     inv.created_at,
@@ -140,6 +141,7 @@ SELECT
     ar.commission_status_code AS customer_commission_policy,
     ar.is_edi_enabled AS customer_is_edi_enabled,
     sh.id AS shipment_id,
+    sh.number AS shipment_number,
     addr.id AS billing_address_id,
     addr.name AS billing_address_name,
     geo.street_line_1 AS billing_address_line1,
@@ -151,14 +153,14 @@ SELECT
     pt.id AS payment_term_id,
     pt.name AS payment_term_name,
     pt.is_active AS payment_term_is_active,
-    COUNT(il.id) AS line_count,
+    -- Counts and sums through scalar subqueries: joining invoice_line fans out rows and breaks the cursor.
+    (SELECT COUNT(*) FROM invoice_line il WHERE il.invoice_id = inv.id) AS line_count,
     COALESCE((
-        -- Correlated per invoice: a grouped derived table cannot take the account filter and so aggregates every invoice_line in the database to return one page.
-        SELECT SUM(q2.value * r2.value)
+        SELECT SUM(q.value * r.value)
         FROM invoice_line il2
-        JOIN quantity q2 ON q2.id = il2.quantity_id
-        JOIN sales_order_line sol2 ON sol2.id = il2.sales_order_line_id
-        JOIN rate r2 ON r2.id = sol2.unit_price_id
+        JOIN quantity q ON q.id = il2.quantity_id
+        JOIN sales_order_line sol ON sol.id = il2.sales_order_line_id
+        JOIN rate r ON r.id = sol.unit_price_id
         WHERE il2.invoice_id = inv.id
     ), 0) AS total_invoiced,
     CASE WHEN EXISTS (
@@ -176,26 +178,30 @@ LEFT JOIN shipment sh ON sh.invoice_id = inv.id
 JOIN address addr ON addr.id = inv.billing_address_id
 JOIN geolocation geo ON geo.id = addr.geolocation_id
 LEFT JOIN payment_term pt ON pt.id = so.payment_term_id
-LEFT JOIN invoice_line il ON il.invoice_id = inv.id
 WHERE inv.account_id = sqlc.arg('account_id')
 AND (
     sqlc.narg('search_query') IS NULL
     OR inv.number LIKE sqlc.narg('search_query')
     OR inv.note LIKE sqlc.narg('search_query')
     OR buyer.name LIKE sqlc.narg('search_query')
+    -- Reaches the order and relation already joined one-to-one above, so the search widens without fanning rows out.
+    OR so.number LIKE sqlc.narg('search_query')
+    OR so.customer_po_number LIKE sqlc.narg('search_query')
+    OR ar.external_number LIKE sqlc.narg('search_query')
 )
 AND (
     sqlc.narg('status') IS NULL
     OR (sqlc.narg('status') = 'paid' AND inv.is_paid_in_full = true)
-    OR (sqlc.narg('status') = 'unpaid' AND inv.is_paid_in_full = false AND inv.is_over_paid = false)
+    -- Overpaid invoices stay in the unpaid bucket: a negative balance is not cleanly settled either.
+    OR (sqlc.narg('status') = 'unpaid' AND inv.is_paid_in_full = false)
     OR (sqlc.narg('status') = 'overpaid' AND inv.is_over_paid = true)
 )
 AND (
+    -- Scopes to the order's lines, not the invoice's: an invoice bills a shipment's subset of them.
     sqlc.arg('include_item_filter') = false
     OR EXISTS (
-        SELECT 1 FROM invoice_line il3
-        JOIN sales_order_line sol3 ON il3.sales_order_line_id = sol3.id
-        WHERE il3.invoice_id = inv.id
+        SELECT 1 FROM sales_order_line sol3
+        WHERE sol3.sales_order_id = so.id
         AND sol3.item_id IN (sqlc.slice('item_ids'))
     )
 )
@@ -206,10 +212,9 @@ AND (
 AND (
     sqlc.arg('include_product_line_filter') = false
     OR EXISTS (
-        SELECT 1 FROM invoice_line il4
-        JOIN sales_order_line sol4 ON il4.sales_order_line_id = sol4.id
-        JOIN product p4 ON p4.item_id = sol4.item_id
-        WHERE il4.invoice_id = inv.id
+        SELECT 1 FROM sales_order_line sol4
+        JOIN product p4 ON p4.id = sol4.product_id
+        WHERE sol4.sales_order_id = so.id
         AND p4.product_line_id IN (sqlc.slice('product_line_ids'))
     )
 )
@@ -233,15 +238,12 @@ AND (
     inv.created_at > sqlc.arg('cursor_created_at')
     OR (inv.created_at = sqlc.arg('cursor_created_at') AND inv.id > sqlc.arg('cursor_id'))
 )
-GROUP BY inv.id, inv.number, inv.note, inv.is_paid_in_full, inv.is_edi_sent, inv.has_been_sent,
-    inv.created_at, inv.updated_at, so.id, so.number, so.priority_code,
-    buyer.id, buyer.name, ar.external_number, ar.account_status_code, ar.commission_status_code, ar.is_edi_enabled,
-    sh.id, addr.id, addr.name, geo.street_line_1, geo.street_line_2, geo.locality, geo.state,
-    geo.postal_code, geo.country, pt.id, pt.name
 ORDER BY inv.created_at ASC, inv.id ASC
 LIMIT ?;
 
 -- name: GetInvoice :one
+-- Selects the same projection, in the same order, as the two list queries so one Go mapper serves
+-- read, list and update; the column lists must be kept identical.
 SELECT
     inv.id,
     inv.number,
@@ -254,8 +256,15 @@ SELECT
     inv.updated_at,
     so.id AS order_id,
     so.number AS order_number,
-    so.buyer_account_id AS customer_id,
-    so.payment_term_id AS payment_term_id,
+    so.priority_code,
+    buyer.id AS customer_id,
+    buyer.name AS customer_name,
+    ar.external_number AS customer_number,
+    ar.account_status_code AS customer_status_code,
+    ar.commission_status_code AS customer_commission_policy,
+    ar.is_edi_enabled AS customer_is_edi_enabled,
+    sh.id AS shipment_id,
+    sh.number AS shipment_number,
     addr.id AS billing_address_id,
     addr.name AS billing_address_name,
     geo.street_line_1 AS billing_address_line1,
@@ -264,8 +273,18 @@ SELECT
     geo.state AS billing_address_state,
     geo.postal_code AS billing_address_zip,
     geo.country AS billing_address_country,
-    sh.id AS shipment_id,
-    sh.number AS shipment_number,
+    pt.id AS payment_term_id,
+    pt.name AS payment_term_name,
+    pt.is_active AS payment_term_is_active,
+    (SELECT COUNT(*) FROM invoice_line il WHERE il.invoice_id = inv.id) AS line_count,
+    COALESCE((
+        SELECT SUM(q.value * r.value)
+        FROM invoice_line il2
+        JOIN quantity q ON q.id = il2.quantity_id
+        JOIN sales_order_line sol ON sol.id = il2.sales_order_line_id
+        JOIN rate r ON r.id = sol.unit_price_id
+        WHERE il2.invoice_id = inv.id
+    ), 0) AS total_invoiced,
     CASE WHEN EXISTS (
         SELECT 1 FROM order_email_contact oec
         WHERE oec.sales_order_id = so.id
@@ -273,9 +292,14 @@ SELECT
     ) THEN true ELSE false END AS accepts_invoice_emails
 FROM invoice inv
 JOIN sales_order so ON inv.sales_order_id = so.id
+JOIN account_relation ar ON ar.owner_account_id = inv.account_id
+    AND ar.counterparty_account_id = so.buyer_account_id
+    AND ar.account_relation_role_code = 'customer'
+JOIN account buyer ON buyer.id = so.buyer_account_id
+LEFT JOIN shipment sh ON sh.invoice_id = inv.id
 JOIN address addr ON addr.id = inv.billing_address_id
 JOIN geolocation geo ON geo.id = addr.geolocation_id
-LEFT JOIN shipment sh ON sh.invoice_id = inv.id
+LEFT JOIN payment_term pt ON pt.id = so.payment_term_id
 WHERE inv.id = sqlc.arg('id')
 AND inv.account_id = sqlc.arg('account_id');
 
@@ -288,21 +312,45 @@ SELECT
     q.value AS quantity_value,
     qu.id AS quantity_unit_id,
     qu.abbreviation AS quantity_unit_abbreviation,
+    qu.name AS quantity_unit_name,
     r.id AS unit_price_id,
     r.value AS unit_price_value,
     r.numerator_unit_id AS unit_price_numerator_unit_id,
     r.denominator_unit_id AS unit_price_denominator_unit_id,
     sol.id AS order_line_id,
     sol.item_id AS order_line_item_id,
-    i.sku AS order_line_item_sku
+    sol.line_item_number AS order_line_item_number,
+    sol.product_id AS order_line_product_id,
+    oq.value AS order_line_quantity_ordered,
+    i.sku AS order_line_item_sku,
+    sol.product_description AS order_line_description
 FROM invoice_line il
 JOIN quantity q ON q.id = il.quantity_id
 JOIN unit qu ON qu.id = q.unit_id
 JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
+JOIN quantity oq ON oq.id = sol.quantity_id
 JOIN rate r ON r.id = sol.unit_price_id
 LEFT JOIN item i ON i.id = sol.item_id
 WHERE il.invoice_id = sqlc.arg('invoice_id')
-ORDER BY il.created_at ASC, il.id ASC;
+ORDER BY sol.line_item_number ASC, il.created_at ASC, il.id ASC;
+
+-- name: GetInvoiceAllocationsForInvoices :many
+SELECT
+    ta.invoice_id,
+    ta.id,
+    ta.transaction_id,
+    ta.note,
+    ta.created_at,
+    ta.updated_at,
+    q.id AS amount_id,
+    q.value AS amount_value,
+    u.id AS amount_unit_id,
+    u.abbreviation AS amount_unit_abbreviation
+FROM transaction_allocation ta
+JOIN quantity q ON q.id = ta.amount_id
+JOIN unit u ON u.id = q.unit_id
+WHERE ta.invoice_id IN (sqlc.slice('invoice_ids'))
+ORDER BY ta.created_at ASC, ta.id ASC;
 
 -- name: GetInvoiceAllocations :many
 SELECT
@@ -354,71 +402,13 @@ FROM (
 -- name: UpdateInvoice :exec
 UPDATE invoice
 SET
-    note = COALESCE(sqlc.narg('note'), note),
+    note = IF(sqlc.arg('clear_note'), NULL, COALESCE(sqlc.narg('note'), note)),
     has_been_sent = COALESCE(sqlc.narg('has_been_sent'), has_been_sent),
     is_edi_sent = COALESCE(sqlc.narg('is_edi_sent'), is_edi_sent),
     is_paid_in_full = COALESCE(sqlc.narg('is_paid_in_full'), is_paid_in_full),
     updated_at = CURRENT_TIMESTAMP(3)
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');
-
--- name: GetInvoiceSummaryByID :one
-SELECT
-    inv.id,
-    inv.number,
-    inv.note,
-    inv.is_paid_in_full,
-    inv.is_edi_sent,
-    inv.has_been_sent,
-    inv.created_at,
-    inv.updated_at,
-    so.id AS order_id,
-    so.number AS order_number,
-    so.priority_code,
-    buyer.id AS customer_id,
-    buyer.name AS customer_name,
-    ar.external_number AS customer_number,
-    ar.account_status_code AS customer_status_code,
-    ar.commission_status_code AS customer_commission_policy,
-    ar.is_edi_enabled AS customer_is_edi_enabled,
-    sh.id AS shipment_id,
-    addr.id AS billing_address_id,
-    addr.name AS billing_address_name,
-    geo.street_line_1 AS billing_address_line1,
-    geo.street_line_2 AS billing_address_line2,
-    geo.locality AS billing_address_city,
-    geo.state AS billing_address_state,
-    geo.postal_code AS billing_address_zip,
-    geo.country AS billing_address_country,
-    pt.id AS payment_term_id,
-    pt.name AS payment_term_name,
-    pt.is_active AS payment_term_is_active,
-    (SELECT COUNT(*) FROM invoice_line il WHERE il.invoice_id = inv.id) AS line_count,
-    COALESCE((
-        SELECT SUM(q.value * r.value)
-        FROM invoice_line il2
-        JOIN quantity q ON q.id = il2.quantity_id
-        JOIN sales_order_line sol ON sol.id = il2.sales_order_line_id
-        JOIN rate r ON r.id = sol.unit_price_id
-        WHERE il2.invoice_id = inv.id
-    ), 0) AS total_invoiced,
-    CASE WHEN EXISTS (
-        SELECT 1 FROM order_email_contact oec
-        WHERE oec.sales_order_id = so.id
-        AND oec.notification_type_code = 'invoice'
-    ) THEN true ELSE false END AS accepts_invoice_emails
-FROM invoice inv
-JOIN sales_order so ON inv.sales_order_id = so.id
-JOIN account_relation ar ON ar.owner_account_id = inv.account_id
-    AND ar.counterparty_account_id = so.buyer_account_id
-    AND ar.account_relation_role_code = 'customer'
-JOIN account buyer ON buyer.id = so.buyer_account_id
-LEFT JOIN shipment sh ON sh.invoice_id = inv.id
-JOIN address addr ON addr.id = inv.billing_address_id
-JOIN geolocation geo ON geo.id = addr.geolocation_id
-LEFT JOIN payment_term pt ON pt.id = so.payment_term_id
-WHERE inv.id = sqlc.arg('id')
-AND inv.account_id = sqlc.arg('account_id');
 
 -- name: ListCustomerInvoicesForward :many
 SELECT
@@ -456,11 +446,11 @@ JOIN account buyer ON buyer.id = so.buyer_account_id
 LEFT JOIN account_relation par ON par.id = ar.parent_account_relation_id
 LEFT JOIN address addr ON addr.id = so.billing_address_id
 WHERE inv.account_id = sqlc.arg('account_id')
+-- Overpaid invoices still owe a correction, so they stay in the payable set.
 AND inv.is_paid_in_full = false
-AND inv.is_over_paid = false
+-- A parent settles for its children, so their invoices are payable here too.
 AND (
-    (sqlc.arg('include_child_accounts') = false AND so.buyer_account_id = sqlc.arg('customer_account_id'))
-    OR (sqlc.arg('include_child_accounts') = true AND (
+    (
         so.buyer_account_id = sqlc.arg('customer_account_id')
         OR EXISTS (
             SELECT 1 FROM account_relation child_ar
@@ -474,7 +464,7 @@ AND (
                 AND par_ar.account_relation_role_code = 'customer'
             )
         )
-    ))
+    )
 )
 AND (
     sqlc.narg('search_query') IS NULL
@@ -524,11 +514,11 @@ JOIN account buyer ON buyer.id = so.buyer_account_id
 LEFT JOIN account_relation par ON par.id = ar.parent_account_relation_id
 LEFT JOIN address addr ON addr.id = so.billing_address_id
 WHERE inv.account_id = sqlc.arg('account_id')
+-- Overpaid invoices still owe a correction, so they stay in the payable set.
 AND inv.is_paid_in_full = false
-AND inv.is_over_paid = false
+-- A parent settles for its children, so their invoices are payable here too.
 AND (
-    (sqlc.arg('include_child_accounts') = false AND so.buyer_account_id = sqlc.arg('customer_account_id'))
-    OR (sqlc.arg('include_child_accounts') = true AND (
+    (
         so.buyer_account_id = sqlc.arg('customer_account_id')
         OR EXISTS (
             SELECT 1 FROM account_relation child_ar
@@ -542,7 +532,7 @@ AND (
                 AND par_ar.account_relation_role_code = 'customer'
             )
         )
-    ))
+    )
 )
 AND (
     sqlc.narg('search_query') IS NULL
@@ -590,3 +580,42 @@ AND account_id = sqlc.arg('account_id');
 SELECT COUNT(*) AS cnt FROM invoice
 WHERE account_id = sqlc.arg('account_id')
 AND created_at >= sqlc.arg('since');
+
+-- name: CreateInvoice :exec
+INSERT INTO invoice (id, number, sales_order_id, billing_address_id, account_id, created_at, updated_at)
+VALUES (sqlc.arg('id'), sqlc.arg('number'), sqlc.arg('sales_order_id'), sqlc.arg('billing_address_id'), sqlc.arg('account_id'), NOW(3), NOW(3));
+
+-- name: CreateInvoiceLineQuantity :exec
+INSERT INTO quantity (id, value, unit_id, created_at, updated_at)
+VALUES (sqlc.arg('id'), sqlc.arg('value'), sqlc.arg('unit_id'), NOW(3), NOW(3));
+
+-- name: CreateInvoiceLine :exec
+INSERT INTO invoice_line (id, invoice_id, quantity_id, sales_order_line_id, created_at, updated_at)
+VALUES (sqlc.arg('id'), sqlc.arg('invoice_id'), sqlc.arg('quantity_id'), sqlc.arg('sales_order_line_id'), NOW(3), NOW(3));
+
+-- name: GetBillToAddressIDByOrder :one
+-- The invoice bills to the order's billing address.
+SELECT billing_address_id FROM sales_order
+WHERE id = sqlc.arg('sales_order_id')
+AND owner_account_id = sqlc.arg('account_id');
+
+-- name: GetNonSaleInvoiceableOrderLines :many
+-- The order lines that never ship but must still be billed — freight, tax, discount and service
+-- lines (product_type_code <> 'sale') — excluding any already fully invoiced. Mirrors legacy
+-- findNonShippedItemsToBeInvoiced: an invoice built from a shipment covers the shipped goods, and
+-- these lines are added at their full ordered quantity so the customer is billed for them once.
+SELECT
+    sol.id AS sales_order_line_id,
+    sol.quantity_id,
+    q.value AS ordered_value,
+    q.unit_id AS ordered_unit_id
+FROM sales_order_line sol
+JOIN quantity q ON q.id = sol.quantity_id
+JOIN product p ON p.id = sol.product_id
+WHERE sol.sales_order_id = sqlc.arg('sales_order_id')
+AND p.product_type_code <> 'sale'
+AND q.value > COALESCE((
+    SELECT SUM(ilq.value) FROM invoice_line il
+    JOIN quantity ilq ON ilq.id = il.quantity_id
+    WHERE il.sales_order_line_id = sol.id
+), 0);

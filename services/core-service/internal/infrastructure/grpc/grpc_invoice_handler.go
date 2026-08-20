@@ -5,6 +5,7 @@ import (
 
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/shared/contracts"
+	"github.com/augno/api/shared/field"
 	pb "github.com/augno/api/shared/proto/core"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -41,9 +42,9 @@ func (h *gRPCHandler) ListInvoices(ctx context.Context, req *pb.ListInvoicesRequ
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
-	invoices := make([]*pb.InvoiceSummaryInfo, len(result.Invoices))
+	invoices := make([]*pb.InvoiceInfo, len(result.Invoices))
 	for i, inv := range result.Invoices {
-		invoices[i] = invoiceSummaryToProto(inv)
+		invoices[i] = invoiceToProto(inv)
 	}
 
 	return &pb.ListInvoicesResponse{
@@ -85,9 +86,8 @@ func (h *gRPCHandler) UpdateInvoice(ctx context.Context, req *pb.UpdateInvoiceRe
 
 	params := domain.UpdateInvoiceParams{
 		InvoiceID: req.Id,
-	}
-	if req.Note != nil {
-		params.Note = req.Note
+		Includes:  req.Includes,
+		Note:      field.StringClearableFromProto(req.Note),
 	}
 	if req.HasBeenSent != nil {
 		params.HasBeenSent = req.HasBeenSent
@@ -105,7 +105,7 @@ func (h *gRPCHandler) UpdateInvoice(ctx context.Context, req *pb.UpdateInvoiceRe
 	}
 
 	return &pb.UpdateInvoiceResponse{
-		Invoice: invoiceSummaryToProto(result),
+		Invoice: invoiceToProto(result),
 	}, nil
 }
 
@@ -115,11 +115,11 @@ func (h *gRPCHandler) ListCustomerInvoices(ctx context.Context, req *pb.ListCust
 	}
 
 	params := domain.ListCustomerInvoicesParams{
-		CustomerAccountID:    req.CustomerAccountId,
-		Cursor:               req.Cursor,
-		Limit:                req.Limit,
-		Query:                req.Query,
-		IncludeChildAccounts: req.IncludeChildAccounts,
+		CustomerAccountID: req.CustomerAccountId,
+		Cursor:            req.Cursor,
+		Limit:             req.Limit,
+		Query:             req.Query,
+		Includes:          req.Includes,
 	}
 
 	result, apiErr := h.invoiceSvc.ListCustomerInvoices(ctx, params)
@@ -145,58 +145,6 @@ func (h *gRPCHandler) ListCustomerInvoices(ctx context.Context, req *pb.ListCust
 
 // Proto conversion helpers
 
-func invoiceSummaryToProto(s *domain.InvoiceSummary) *pb.InvoiceSummaryInfo {
-	if s == nil {
-		return nil
-	}
-
-	info := &pb.InvoiceSummaryInfo{
-		Id:                    s.ID,
-		Number:                s.Number,
-		Note:                  s.Note,
-		CustomerId:            s.CustomerID,
-		CustomerName:          s.CustomerName,
-		CustomerNumber:        s.CustomerNumber,
-		CustomerIsEdiEnabled:  s.CustomerIsEdiEnabled,
-		OrderId:               s.OrderID,
-		OrderNumber:           s.OrderNumber,
-		ShipmentId:            s.ShipmentID,
-		LineCount:             s.LineCount,
-		BillingAddressId:      s.BillingAddressID,
-		BillingAddressName:    s.BillingAddressName,
-		BillingAddressLine1:   s.BillingAddressLine1,
-		BillingAddressLine2:   s.BillingAddressLine2,
-		BillingAddressCity:    s.BillingAddressCity,
-		BillingAddressState:   s.BillingAddressState,
-		BillingAddressZip:     s.BillingAddressZip,
-		BillingAddressCountry: s.BillingAddressCountry,
-		PriorityCode:          string(s.PriorityCode),
-		PaymentTermId:         s.PaymentTermID,
-		PaymentTermName:       s.PaymentTermName,
-		PaymentTermIsActive:   s.PaymentTermIsActive,
-		IsPaidInFull:          s.IsPaidInFull,
-		IsEdiSent:             s.IsEdiSent,
-		HasBeenSent:           s.HasBeenSent,
-		TotalInvoiced:         s.TotalInvoiced,
-		AcceptsInvoiceEmails:  s.AcceptsInvoiceEmails,
-		CreatedAt:             timestamppb.New(s.CreatedAt),
-		UpdatedAt:             timestamppb.New(s.UpdatedAt),
-	}
-
-	if s.CustomerStatusCode != nil {
-		info.CustomerStatusCode = s.CustomerStatusCode
-	}
-	if s.CustomerCommissionPolicy != nil {
-		info.CustomerCommissionPolicy = s.CustomerCommissionPolicy
-	}
-
-	for _, l := range s.Lines {
-		info.Lines = append(info.Lines, invoiceLineToProto(l))
-	}
-
-	return info
-}
-
 func invoiceToProto(inv *domain.Invoice) *pb.InvoiceInfo {
 	if inv == nil {
 		return nil
@@ -213,32 +161,42 @@ func invoiceToProto(inv *domain.Invoice) *pb.InvoiceInfo {
 	}
 
 	info := &pb.InvoiceInfo{
-		Id:                    inv.ID,
-		Number:                inv.Number,
-		Note:                  inv.Note,
-		OrderId:               inv.OrderID,
-		OrderNumber:           inv.OrderNumber,
-		BillingAddressId:      inv.BillingAddressID,
-		BillingAddressName:    inv.BillingAddressName,
-		BillingAddressLine1:   inv.BillingAddressLine1,
-		BillingAddressLine2:   inv.BillingAddressLine2,
-		BillingAddressCity:    inv.BillingAddressCity,
-		BillingAddressState:   inv.BillingAddressState,
-		BillingAddressZip:     inv.BillingAddressZip,
-		BillingAddressCountry: inv.BillingAddressCountry,
-		ShipmentId:            inv.ShipmentID,
-		ShipmentNumber:        inv.ShipmentNumber,
-		IsPaidInFull:          inv.IsPaidInFull,
-		IsOverPaid:            inv.IsOverPaid,
-		IsEdiSent:             inv.IsEdiSent,
-		HasBeenSent:           inv.HasBeenSent,
-		AcceptsInvoiceEmails:  inv.AcceptsInvoiceEmails,
-		Lines:                 lines,
-		Allocations:           allocations,
-		CustomerId:            inv.CustomerID,
-		PaymentTermId:         inv.PaymentTermID,
-		CreatedAt:             timestamppb.New(inv.CreatedAt),
-		UpdatedAt:             timestamppb.New(inv.UpdatedAt),
+		Id:                       inv.ID,
+		Number:                   inv.Number,
+		Note:                     inv.Note,
+		OrderId:                  inv.OrderID,
+		OrderNumber:              inv.OrderNumber,
+		BillingAddressId:         inv.BillingAddressID,
+		BillingAddressName:       inv.BillingAddressName,
+		BillingAddressLine1:      inv.BillingAddressLine1,
+		BillingAddressLine2:      inv.BillingAddressLine2,
+		BillingAddressCity:       inv.BillingAddressCity,
+		BillingAddressState:      inv.BillingAddressState,
+		BillingAddressZip:        inv.BillingAddressZip,
+		BillingAddressCountry:    inv.BillingAddressCountry,
+		ShipmentId:               inv.ShipmentID,
+		ShipmentNumber:           inv.ShipmentNumber,
+		IsPaidInFull:             inv.IsPaidInFull,
+		IsOverPaid:               inv.IsOverPaid,
+		IsEdiSent:                inv.IsEdiSent,
+		HasBeenSent:              inv.HasBeenSent,
+		AcceptsInvoiceEmails:     inv.AcceptsInvoiceEmails,
+		Lines:                    lines,
+		Allocations:              allocations,
+		CustomerId:               inv.CustomerID,
+		CustomerName:             inv.CustomerName,
+		CustomerNumber:           inv.CustomerNumber,
+		CustomerIsEdiEnabled:     inv.CustomerIsEdiEnabled,
+		PriorityCode:             string(inv.PriorityCode),
+		PaymentTermId:            inv.PaymentTermID,
+		PaymentTermName:          inv.PaymentTermName,
+		PaymentTermIsActive:      inv.PaymentTermIsActive,
+		LineCount:                inv.LineCount,
+		TotalInvoiced:            inv.TotalInvoiced,
+		CustomerStatusCode:       inv.CustomerStatusCode,
+		CustomerCommissionPolicy: inv.CustomerCommissionPolicy,
+		CreatedAt:                timestamppb.New(inv.CreatedAt),
+		UpdatedAt:                timestamppb.New(inv.UpdatedAt),
 	}
 
 	return info
@@ -262,6 +220,7 @@ func invoiceLineToProto(l *domain.InvoiceLine) *pb.InvoiceLineInfo {
 		OrderLineId:                l.OrderLineID,
 		OrderLineItemId:            l.OrderLineItemID,
 		OrderLineItemSku:           l.OrderLineItemSKU,
+		OrderLineProductId:         l.OrderLineProductID,
 		CreatedAt:                  timestamppb.New(l.CreatedAt),
 		UpdatedAt:                  timestamppb.New(l.UpdatedAt),
 	}

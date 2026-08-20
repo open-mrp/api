@@ -27,6 +27,8 @@ type SalesOrderLine struct {
 	ProductSKU string `json:"product_sku" validate:"required"`
 	// Description recorded on this line, taken from the product unless the line supplies its own.
 	ProductDescription *string `json:"product_description"`
+	// The item this line sells, identified by the SKU recorded when the line was created.
+	Item *Item `json:"item" expandable:"true"`
 	// The product being sold on this line.
 	//
 	// The product's `type` tells you what kind of line this is: the freight and discount lines an order generates for itself reference the account's built-in shipping and credit products, so their type is `shipping` or `credit` rather than `sale`.
@@ -55,6 +57,7 @@ var SampleSalesOrderLine = &SalesOrderLine{
 	LineItemNumber:     1,
 	ProductSKU:         SampleItemSKU,
 	ProductDescription: &sampleProductDescription,
+	Item:               SampleItem,
 	Product:            SampleProduct,
 	QuantityOrdered:    SampleQuantity,
 	UnitPrice:          SampleRate,

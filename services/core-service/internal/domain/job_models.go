@@ -36,6 +36,9 @@ type RowResult struct {
 	Status       constants.JobResultStatus
 	ResourceType constants.ObjectType
 	ID           string
+	// The resource's human-readable reference — a shipment number, say. Set only where the
+	// operation has one to hand, so a client can name what it wrote without a second read.
+	Name         *string
 	SubResources []SubResourceRef
 	Error        *apierror.ResponseError
 }
@@ -45,6 +48,7 @@ type RowResult struct {
 type SubResourceRef struct {
 	ResourceType constants.ObjectType
 	ID           string
+	Name         *string
 }
 
 // NewSubResourceRefs tags a run of ids produced by one row with the object type they

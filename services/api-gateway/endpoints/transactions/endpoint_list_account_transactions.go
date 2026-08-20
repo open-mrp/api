@@ -20,10 +20,6 @@ type ListAccountTransactionsRequest struct {
 	Status *string `query:"status"`
 	// Filter by transaction type code (`payment`, `credit_memo`, `adjustment`, or `rebate`).
 	Type *string `query:"type"`
-	// Whether to also include transactions recorded against the customer's child accounts.
-	//
-	// Child account transactions are included unless this is set to `false`.
-	IncludeChildAccounts *bool `query:"include_child_accounts"`
 }
 
 // Returns a paginated list of the transactions recorded against one customer account, newest first.

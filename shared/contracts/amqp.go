@@ -142,6 +142,9 @@ const (
 	// BillingCmdReportSeatChange is a command to report a seat count change to the billing provider's usage metering system.
 	BillingCmdReportSeatChange AmqpRoutingKey = "billing.cmd.report_seat_change"
 
+	// Commands the billing provider's usage metering system to record a created invoice.
+	BillingCmdReportInvoiceCreated AmqpRoutingKey = "billing.cmd.report_invoice_created"
+
 	// PlatformEventAuditLogged is an event that indicates an audit event has been produced and needs to be persisted by the platform-service.
 	PlatformEventAuditLogged AmqpRoutingKey = "platform.event.audit_logged"
 )

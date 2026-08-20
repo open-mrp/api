@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.50.1](https://github.com/Augno/api/compare/v0.50.0...v0.50.1) (2026-08-20)
+
+
+### Bug Fixes
+
+* optimize sales order ID search query and improve performance by using derived tables ([#506](https://github.com/Augno/api/issues/506)) ([41bd773](https://github.com/Augno/api/commit/41bd773465bd46fb23e9c638919aacfdb5a4e9e0))
+
 ## [0.50.0](https://github.com/Augno/api/compare/v0.49.5...v0.50.0) (2026-08-20)
 
 

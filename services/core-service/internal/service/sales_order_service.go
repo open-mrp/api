@@ -792,6 +792,14 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 				if apiErr := txSvc.stampShipByCommitment(txCtx, params.AccountID, updated, *updated.IssuedAt); apiErr != nil {
 					return apiErr
 				}
+
+				// The stamp writes the new ship-by straight to the row, so the copy read before it still carries the old date. Re-read it: a caller who just moved a lead time is answered with the date it moved to rather than the one it replaced, and the audit diff below records the commitment moving with the basis.
+				restamped, apiErr := txRepo.Get(txCtx, params.AccountID, params.SalesOrderID)
+				if apiErr != nil {
+					return apiErr
+				}
+				updated = restamped
+				result = updated
 			}
 
 			// Replace email contacts when the caller supplied lists (nil = leave alone)

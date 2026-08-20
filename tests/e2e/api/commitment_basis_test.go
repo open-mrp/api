@@ -175,6 +175,81 @@ func TestCommitmentBasis_SwitchingBasisInOnePatchSucceeds(t *testing.T) {
 	assert.NotEmpty(t, jsonField(updated, "promised_at"))
 }
 
+// Moving a basis on a live order re-stamps its commitment, and the response says so.
+//
+// The stamp writes the new ship-by straight to the row, behind the copy the update read, so a
+// response built from that copy answers a renegotiated date with the date it replaced. A caller
+// that trusts the response — the order page does, writing it straight into its cache — shows the
+// old date until something else refetches. All three bases are re-stamped through the one re-read,
+// so all three are checked here rather than only the one that was reported.
+func TestCommitmentBasis_PatchingABasisMovesTheStampedShipBy(t *testing.T) {
+	t.Parallel()
+
+	// Far enough out that no basis here can land on the date the seed account's standing lead time
+	// already committed to, which would make a stale response indistinguishable from a fresh one.
+	when := futureWeekday(60)
+	whenDay := when.Format("2006-01-02")
+
+	cases := map[string]struct {
+		patch      map[string]any
+		wantSource string
+		// The date the basis resolves to, where that is knowable from the request alone. A promised
+		// delivery date is not: carrier transit is subtracted from it, and how long the seed lane
+		// takes is the carrier's answer rather than this test's. Those cases assert the response
+		// agrees with the stored order, which is the property under test either way.
+		wantShipBy func(t *testing.T, patched map[string]any) string
+	}{
+		"a lead time for this order": {
+			patch:      map[string]any{"lead_time_override_days": 33},
+			wantSource: "order_lead_time",
+			wantShipBy: func(t *testing.T, patched map[string]any) string { return expectedShipBy(t, patched, 33) },
+		},
+		"a pinned ship date": {
+			patch:      map[string]any{"ship_by_override_date": whenDay + "T00:00:00Z"},
+			wantSource: "order_ship_by",
+			wantShipBy: func(*testing.T, map[string]any) string { return whenDay },
+		},
+		"a promised delivery date": {
+			patch:      map[string]any{"promised_at": whenDay + "T00:00:00Z"},
+			wantSource: "manual",
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			issued := issueOrderForCustomer(t, SeedCustomerAccountID, nil)
+			orderID := jsonField(issued, "id")
+			require.NotEmpty(t, shipByDate(t, issued), "precondition: the issued order carries a commitment")
+
+			status, body, err := apiClient.Patch(salesOrdersPath+"/"+orderID, tc.patch, newIdempotencyKey())
+			require.NoError(t, err)
+			require.Less(t, status, 500, "patch must not 5xx: %s", string(body))
+			requireStatus(t, 200, status, body)
+
+			patched := parseJSON(body)
+			assert.Equal(t, tc.wantSource, jsonField(patched, "lead_time_source"))
+			assert.NotEqual(t, shipByDate(t, issued), shipByDate(t, patched),
+				"the response must not still carry the ship-by the basis replaced: %v", patched)
+			if tc.wantShipBy != nil {
+				assert.Equal(t, tc.wantShipBy(t, patched), shipByDate(t, patched),
+					"the patch response must carry the re-stamped ship-by: %v", patched)
+			}
+
+			resp, err := apiClient.GetFull(salesOrdersPath+"/"+orderID, nil)
+			require.NoError(t, err)
+			requireStatus(t, 200, resp.StatusCode, resp.Body)
+
+			fetched := parseJSON(resp.Body)
+			assert.Equal(t, shipByDate(t, patched), shipByDate(t, fetched),
+				"the patch response must match what a read of the order returns")
+			assert.Equal(t, jsonField(patched, "lead_time_days"), jsonField(fetched, "lead_time_days"))
+			assert.Equal(t, jsonField(patched, "lead_time_source"), jsonField(fetched, "lead_time_source"))
+		})
+	}
+}
+
 func TestQuoteCommitment_NamesTheDateAndExplainsIt(t *testing.T) {
 	t.Parallel()
 

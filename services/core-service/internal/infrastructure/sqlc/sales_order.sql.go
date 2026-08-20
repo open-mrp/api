@@ -3312,10 +3312,7 @@ func (q *Queries) NoteSalesOrderFirstShipAt(ctx context.Context, arg NoteSalesOr
 
 const searchSalesOrderIDs = `-- name: SearchSalesOrderIDs :many
 SELECT so.id, so.created_at
-FROM sales_order so
-JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
-    AND ar.counterparty_account_id = so.buyer_account_id
-WHERE so.id IN (
+FROM (
     SELECT so2.id
     FROM sales_order so2
     WHERE so2.owner_account_id = ?
@@ -3329,8 +3326,11 @@ WHERE so.id IN (
       AND so2.seller_account_id = so2.owner_account_id
       AND (? IS NULL OR so2.buyer_account_id = ?)
       AND so2.customer_po_number = ?
-)
-AND (
+) matched
+STRAIGHT_JOIN sales_order so ON so.id = matched.id
+JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
+    AND ar.counterparty_account_id = so.buyer_account_id
+WHERE (
     ? = false
     OR so.sales_order_status_code IN (/*SLICE:status_codes*/?)
 )
@@ -3430,12 +3430,20 @@ type SearchSalesOrderIDsRow struct {
 	CreatedAt time.Time
 }
 
-// Exact-match free-text search (the `q=` param). The inner UNION is two
-// single-column equality seeks because this platform will NOT index_merge an
+// Exact-match free-text search (the `q=` param). The UNION is two single-column
+// equality seeks because this platform will NOT index_merge an
 // `(number = ? OR customer_po_number = ?)` predicate — it scans the whole
 // account instead. Each UNION arm seeks its own index (number via the global
 // number index; customer_po_number via sales_order_owner_customer_po_number_idx),
 // so a search resolves in ~1 row instead of a 121k-row scan.
+//
+// The UNION must be a JOINed derived table, not `so.id IN (SELECT ... UNION ...)`.
+// MySQL cannot semi-join a UNION, so the IN form is rewritten into a DEPENDENT
+// SUBQUERY: `so` becomes a full 121k-row scan with a filesort, and the UNION is
+// re-executed once per row (~400k rows read per row returned, p99 2.7s). As a
+// derived table it materializes once, both arms seek, and `so` is reached by
+// eq_ref on the PRIMARY key. STRAIGHT_JOIN pins that order so the optimizer
+// cannot fall back to driving from `so`. Do not rewrite this as IN.
 //
 // The outer query then applies the same browse-list filters (status, item,
 // product line, customer, customer group, sales rep, date range, exclude-internal)

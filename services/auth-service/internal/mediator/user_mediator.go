@@ -340,7 +340,7 @@ func (s *userMedImpl) validateAPIKeyCredential(ctx context.Context, span trace.S
 	}
 
 	// Touch the API key to mark it as used
-	go func() {
+	go func() { // #nosec G118 - fire and forget; a request-scoped context would cancel it
 		_ = s.apiKeyMed.TouchIfNotRecent(context.Background(), apiKeyModel)
 	}()
 
@@ -533,7 +533,7 @@ func (s *userMedImpl) validateUserCredential(ctx context.Context, span trace.Spa
 
 	// The user is associated with the target account, mark as used if not recent
 	// Fire and forget - don't block on this
-	go func() {
+	go func() { // #nosec G118 - fire and forget; a request-scoped context would cancel it
 		_ = s.coreClient.MarkAccountUserUsed(context.Background(), access.AccountUserID)
 	}()
 

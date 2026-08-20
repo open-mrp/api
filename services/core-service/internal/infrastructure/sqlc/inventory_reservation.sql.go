@@ -14,7 +14,7 @@ import (
 const closeFullyAllocatedInventoryIssue = `-- name: CloseFullyAllocatedInventoryIssue :exec
 UPDATE inventory_issue
 SET status_code = 'closed', issued_at = NOW(3), updated_at = NOW(3)
-WHERE id = ?
+WHERE id = ? AND status_code <> 'closed'
 `
 
 // Retires an issue whose demand is fully covered, which is what stops a later receipt allocating
@@ -87,6 +87,13 @@ type FindReceiptsForAllocationRow struct {
 // consumptions of the same item both saw the same receipt as free and each allocated the whole of
 // it — consuming stock that was never used. Only `available` receipts are candidates, so the lock
 // covers the few rows actually in play rather than the item's whole receipt history.
+//
+// The account may hold stock it does not own, so both sides are candidates: consigned material sits
+// on the shelf under the owner's account id and is drawn down by the holder's demand.
+//
+// The receipt's own unit cost comes back with it. What an allocation cost is the price the stock was
+// received at, not the item's price today, which is the whole reason the cost is copied onto the
+// receipt when it lands.
 // Held stock counts as allocatable: consigned goods sit under a holder while another account owns
 // them, and excluding them makes the item look short when it is physically on the shelf.
 // An issue pinned to a location or lot may only draw from stock sitting there; an unpinned issue
@@ -201,19 +208,22 @@ SELECT
     q.id AS quantity_id,
     q.value AS quantity_value,
     q.unit_id,
+    CAST(u.ratio_numerator / u.ratio_denominator AS DECIMAL(65,30)) AS unit_ratio,
     ii.storage_location_id,
     ii.lot_id,
     ii.batch_id,
-    COALESCE(SUM(CAST(aq.value AS DECIMAL(65,30))), 0) AS allocated_sum
+    COALESCE(SUM(CAST(aq.value AS DECIMAL(65,30)) * (au.ratio_numerator / au.ratio_denominator)), 0) AS allocated_sum
 FROM inventory_issue ii
 JOIN quantity q ON q.id = ii.quantity_id
+JOIN unit u ON u.id = q.unit_id
 LEFT JOIN inventory_allocation ia ON ia.inventory_issue_id = ii.id
 LEFT JOIN quantity aq ON aq.id = ia.quantity_id
+LEFT JOIN unit au ON au.id = aq.unit_id
 WHERE ii.order_id = ?
 AND ii.account_id = ?
 AND ii.item_id = ?
 AND ii.status_code = 'reserved'
-GROUP BY ii.id, q.id, q.value, q.unit_id, ii.storage_location_id, ii.lot_id, ii.batch_id
+GROUP BY ii.id, q.id, q.value, q.unit_id, u.ratio_numerator, u.ratio_denominator, ii.storage_location_id, ii.lot_id, ii.batch_id
 ORDER BY ii.created_at ASC
 `
 
@@ -228,12 +238,15 @@ type FindReservedIssuesWithAllocationSumsRow struct {
 	QuantityID        string
 	QuantityValue     string
 	UnitID            string
+	UnitRatio         string
 	StorageLocationID sql.NullString
 	LotID             sql.NullString
 	BatchID           sql.NullString
 	AllocatedSum      interface{}
 }
 
+// Allocation rows are recorded in whatever unit the code that wrote them chose, so the sum is taken
+// through each row's own ratio; dividing by `unit_ratio` puts it in the issue's unit.
 func (q *Queries) FindReservedIssuesWithAllocationSums(ctx context.Context, arg FindReservedIssuesWithAllocationSumsParams) ([]FindReservedIssuesWithAllocationSumsRow, error) {
 	rows, err := q.db.QueryContext(ctx, findReservedIssuesWithAllocationSums, arg.OrderID, arg.AccountID, arg.ItemID)
 	if err != nil {
@@ -248,6 +261,7 @@ func (q *Queries) FindReservedIssuesWithAllocationSums(ctx context.Context, arg 
 			&i.QuantityID,
 			&i.QuantityValue,
 			&i.UnitID,
+			&i.UnitRatio,
 			&i.StorageLocationID,
 			&i.LotID,
 			&i.BatchID,
@@ -267,12 +281,14 @@ func (q *Queries) FindReservedIssuesWithAllocationSums(ctx context.Context, arg 
 }
 
 const getAllocationSumForReceipt = `-- name: GetAllocationSumForReceipt :one
-SELECT COALESCE(SUM(CAST(q.value AS DECIMAL(65,30))), 0) AS total_allocated
+SELECT COALESCE(SUM(CAST(q.value AS DECIMAL(65,30)) * (u.ratio_numerator / u.ratio_denominator)), 0) AS total_allocated
 FROM inventory_allocation ia
 JOIN quantity q ON q.id = ia.quantity_id
+JOIN unit u ON u.id = q.unit_id
 WHERE ia.inventory_receipt_id = ?
 `
 
+// Through each row's own ratio. See GetAllocationSumsForReceipts.
 func (q *Queries) GetAllocationSumForReceipt(ctx context.Context, receiptID string) (interface{}, error) {
 	row := q.db.QueryRowContext(ctx, getAllocationSumForReceipt, receiptID)
 	var total_allocated interface{}
@@ -281,9 +297,10 @@ func (q *Queries) GetAllocationSumForReceipt(ctx context.Context, receiptID stri
 }
 
 const getAllocationSumsForReceipts = `-- name: GetAllocationSumsForReceipts :many
-SELECT ia.inventory_receipt_id, COALESCE(SUM(CAST(q.value AS DECIMAL(65,30))), 0) AS total_allocated
+SELECT ia.inventory_receipt_id, COALESCE(SUM(CAST(q.value AS DECIMAL(65,30)) * (u.ratio_numerator / u.ratio_denominator)), 0) AS total_allocated
 FROM inventory_allocation ia
 JOIN quantity q ON q.id = ia.quantity_id
+JOIN unit u ON u.id = q.unit_id
 WHERE ia.inventory_receipt_id IN (/*SLICE:receipt_ids*/?)
 GROUP BY ia.inventory_receipt_id
 `
@@ -297,6 +314,11 @@ type GetAllocationSumsForReceiptsRow struct {
 // oldest first and needs each one's drawn-down total; asking per receipt put a round trip inside that
 // loop, so an item with a long tail of open receipts cost a query apiece to find most of them full.
 // Receipts with no allocations are absent rather than zero — the caller treats a missing row as zero.
+//
+// Each row is taken through its own unit's ratio before it is added. Allocations against one receipt
+// can be recorded in different units — the row carries whatever unit the code that wrote it chose —
+// so adding the raw column values produces a number in no unit at all. Divide the total by a unit's
+// ratio to read it in that unit.
 func (q *Queries) GetAllocationSumsForReceipts(ctx context.Context, receiptIds []string) ([]GetAllocationSumsForReceiptsRow, error) {
 	query := getAllocationSumsForReceipts
 	var queryParams []interface{}
@@ -317,6 +339,57 @@ func (q *Queries) GetAllocationSumsForReceipts(ctx context.Context, receiptIds [
 	for rows.Next() {
 		var i GetAllocationSumsForReceiptsRow
 		if err := rows.Scan(&i.InventoryReceiptID, &i.TotalAllocated); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getUnitRatios = `-- name: GetUnitRatios :many
+SELECT
+    u.id,
+    CAST(u.ratio_numerator / u.ratio_denominator AS DECIMAL(65,30)) AS ratio
+FROM unit u
+WHERE u.id IN (/*SLICE:unit_ids*/?)
+`
+
+type GetUnitRatiosRow struct {
+	ID    string
+	Ratio string
+}
+
+// GetUnitRatios gives each unit its ratio, which every unit carries against the same reference for
+// its dimension. Any two units convert directly through them: `value * ratio_from / ratio_to`.
+//
+// Read on its own rather than joined into FindReceiptsForAllocation because that query is
+// FOR UPDATE, and a join would take locks on `unit` rows every account in the database shares.
+func (q *Queries) GetUnitRatios(ctx context.Context, unitIds []string) ([]GetUnitRatiosRow, error) {
+	query := getUnitRatios
+	var queryParams []interface{}
+	if len(unitIds) > 0 {
+		for _, v := range unitIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:unit_ids*/?", strings.Repeat(",?", len(unitIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:unit_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetUnitRatiosRow
+	for rows.Next() {
+		var i GetUnitRatiosRow
+		if err := rows.Scan(&i.ID, &i.Ratio); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -420,10 +493,14 @@ func (q *Queries) InsertInventoryIssueForReservation(ctx context.Context, arg In
 const markInventoryReceiptsAllocated = `-- name: MarkInventoryReceiptsAllocated :exec
 UPDATE inventory_receipt
 SET status_code = 'allocated', updated_at = NOW(3)
-WHERE id IN (/*SLICE:ids*/?)
+WHERE id IN (/*SLICE:ids*/?) AND status_code <> 'allocated'
 `
 
 // Retires receipts whose quantity is entirely spoken for so later runs stop reconsidering them.
+//
+// Allocation is derived from the rows either way — a receipt whose allocations cover it has nothing
+// left to give whatever its status says — but leaving it `available` means every later pass re-reads
+// and re-locks it, and it still reads as free stock to anything that asks by status.
 func (q *Queries) MarkInventoryReceiptsAllocated(ctx context.Context, ids []string) error {
 	query := markInventoryReceiptsAllocated
 	var queryParams []interface{}

@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
+	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
@@ -19,12 +20,12 @@ type UpdateItemInventoryRequest struct {
 	ItemID string `path:"id" validate:"required"`
 	// The quantity to apply, interpreted according to `operation`.
 	//
-	// With `adjust`, it is added to the current on-hand quantity and may be negative; with `reconcile`, the on-hand quantity is set to exactly this value.
-	QuantityChange field.Optional[float64] `json:"quantity_change,omitzero"`
-	// How `quantity_change` is applied.
+	// With `adjust` it is added to the current quantity and may be negative; with `reconcile` the current quantity is set to exactly this value. It is recorded in the unit you send it in, and the current quantity a `reconcile` measures against is read in that same unit, so a reconcile to the figure already reported moves no stock.
+	Quantity apirequest.QuantityInput `json:"quantity" validate:"required"`
+	// How `quantity` is applied.
 	//
-	// - `adjust`: adds `quantity_change` to the current on-hand quantity.
-	// - `reconcile`: sets the on-hand quantity to exactly `quantity_change`.
+	// - `adjust`: adds `quantity` to the current quantity.
+	// - `reconcile`: sets the current quantity to exactly `quantity`.
 	Operation field.Optional[constants.InventoryUpdateOperation] `json:"operation,omitzero"`
 	// ID of the customer account that owns the resulting inventory.
 	//
@@ -38,29 +39,29 @@ type UpdateItemInventoryRequest struct {
 	//
 	// The lot is created for the item if it does not already exist.
 	LotNumber field.Optional[string] `json:"lot_number,omitzero" validate:"omitempty,max=255"`
-	// ID of the unit `quantity_change` is expressed in.
-	//
-	// The figure is recorded exactly as sent, with no conversion, so send it in the base unit of the item's category to keep it comparable with the quantities the inventory endpoints report.
-	UnitID field.Optional[string] `json:"unit_id,omitzero" validate:"omitempty"`
 }
 
 var sampleUpdateItemInventoryRequest = &UpdateItemInventoryRequest{
-	QuantityChange: field.Some(10.5),
-	Operation:      field.Some(constants.InventoryUpdateOperationAdjust),
-	CustomerID:     field.Some(apiresource.SampleCustomerID),
-	LocationID:     field.Some(apiresource.SampleLocationID),
-	UnitID:         field.Some(apiresource.SampleUnitID),
+	Quantity: apirequest.QuantityInput{
+		Value:  "10.5",
+		UnitID: apiresource.SampleUnitID,
+	},
+	Operation:  field.Some(constants.InventoryUpdateOperationAdjust),
+	CustomerID: field.Some(apiresource.SampleCustomerID),
+	LocationID: field.Some(apiresource.SampleLocationID),
 }
 
 func (*UpdateItemInventoryRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateItemInventoryRequest)
 }
 
-// Adjusts or reconciles on-hand inventory for an item.
+// Adjusts or reconciles the quantity of an item you hold.
 //
-// With `operation` set to `adjust` (the behavior when it is omitted), `quantity_change` is added to the current on-hand quantity; with `reconcile`, the on-hand quantity is set to exactly `quantity_change`. Either way it is the resulting difference that gets written, so a difference of zero moves no stock.
+// With `operation` set to `adjust` (the behavior when it is omitted), `quantity` is added to the current quantity; with `reconcile`, the current quantity is set to exactly `quantity`. Either way it is the resulting difference that gets written, so a difference of zero moves no stock.
 //
-// Added stock is immediately allocated against any unfilled demand for the item, so an adjustment can settle a shortfall instead of raising the quantity free on hand. The change is recorded in the item's inventory audit trail as a user correction attributed to the caller.
+// The figure a `reconcile` measures against is what is on hand net of demand nothing has covered — the same figure `available_to_promise` is derived from, not the raw on-hand total. Reconciling to the quantity already reported therefore writes nothing.
+//
+// Stock that arrives is allocated against unfilled demand for the item, so an adjustment can settle a shortfall instead of raising the quantity free to promise. That allocation happens just after the request rather than inside it, because it walks every open issue for the item. The change is recorded in the item's inventory audit trail as a user correction attributed to the caller.
 type UpdateItemInventoryEndpoint struct{}
 
 func (e *UpdateItemInventoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateItemInventoryRequest, *apiresource.EmptyResource] {
@@ -70,7 +71,8 @@ func (e *UpdateItemInventoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Up
 		Route:               "/v1/catalog/items/{id}/inventory",
 		ContentType:         "application/json",
 		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
+		Public:              true,
+		AgentTool:           true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionUpdate}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateItemInventoryRequest) (*apiresource.EmptyResource, *apierror.APIError) {

@@ -84,8 +84,8 @@ func (s *BatchScannedConsumerTestSuite) SetupTest() {
 	itemRepo.EXPECT().Get(gomock.Any(), gomock.Any()).
 		Return(nil, apierror.NewResourceNotFoundError("item")).AnyTimes()
 	inventoryQuery := repositorymock.NewMockInventoryQueryRepo(s.ctrl)
-	inventoryQuery.EXPECT().FetchPhysicalInventory(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(float64(0), nil).AnyTimes()
+	inventoryQuery.EXPECT().FetchPhysicalInventory(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(decimal.Zero, nil).AnyTimes()
 	s.inventoryMuts.EXPECT().CreateInventoryLog(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 	s.inventoryMuts.EXPECT().CreateInventoryChangeLog(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 

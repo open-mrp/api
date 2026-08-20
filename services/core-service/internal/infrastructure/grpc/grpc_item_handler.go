@@ -3,8 +3,11 @@ package grpc
 import (
 	"context"
 
+	"github.com/shopspring/decimal"
+
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/shared/contracts"
+	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -517,14 +520,21 @@ func (h *gRPCHandler) UpdateItemInventory(ctx context.Context, req *pb.UpdateIte
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
+	measure, parseErr := decimal.NewFromString(req.Measure)
+	if parseErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(
+			apierror.NewInvalidFormatError("Quantity must be a decimal number.", "quantity"),
+		)
+	}
+
 	params := domain.UpdateItemInventoryParams{
-		ItemID:         req.ItemId,
-		QuantityChange: req.QuantityChange,
-		Reconcile:      req.Reconcile,
-		CustomerID:     req.CustomerId,
-		LocationID:     req.LocationId,
-		LotNumber:      req.LotNumber,
-		UnitID:         req.UnitId,
+		ItemID:     req.ItemId,
+		Measure:    measure,
+		UnitID:     req.UnitId,
+		Reconcile:  req.Reconcile,
+		CustomerID: req.CustomerId,
+		LocationID: req.LocationId,
+		LotNumber:  req.LotNumber,
 	}
 
 	apiErr := h.itemSvc.UpdateItemInventory(ctx, params)
@@ -545,10 +555,16 @@ func (h *gRPCHandler) BulkReconcileItems(ctx context.Context, req *pb.BulkReconc
 
 	data := make([]domain.BulkReconcileItemInput, len(req.Data))
 	for i, d := range req.Data {
+		measure, parseErr := decimal.NewFromString(d.Measure)
+		if parseErr != nil {
+			return nil, contracts.ConvertAPIErrorToGRPC(
+				apierror.NewInvalidFormatError("Quantity for SKU "+d.Sku+" must be a decimal number.", "quantity"),
+			)
+		}
 		data[i] = domain.BulkReconcileItemInput{
-			SKU:      d.Sku,
-			Unit:     d.Unit,
-			Quantity: d.Quantity,
+			SKU:     d.Sku,
+			Unit:    d.Unit,
+			Measure: measure,
 		}
 	}
 
@@ -564,7 +580,7 @@ func (h *gRPCHandler) BulkReconcileItems(ctx context.Context, req *pb.BulkReconc
 	for _, r := range result.ReconciledItems {
 		resp.ReconciledItems = append(resp.ReconciledItems, &pb.ReconciledItemProto{
 			ItemId: r.ItemID, Sku: r.SKU,
-			PreviousQuantity: r.PreviousQuantity, NewQuantity: r.NewQuantity,
+			PreviousMeasure: r.PreviousMeasure.String(), NewMeasure: r.NewMeasure.String(),
 		})
 	}
 	for _, s := range result.SkippedItems {

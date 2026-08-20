@@ -94,13 +94,18 @@ message ChangeItemCategoryResponse {
   ItemInfo item = 1;
 }
 message UpdateItemInventoryRequest {
+  // 2 held quantity_change as a double. A quantity that has been through a binary float is not the
+  // quantity that was sent: 20 lbs in grams is 9071.8474, which no double holds.
+  reserved 2;
+  reserved "quantity_change";
   string item_id = 1;
-  optional double quantity_change = 2;
   optional bool reconcile = 3;
   optional string customer_id = 4;
   optional string location_id = 5;
   optional string lot_number = 6;
-  optional string unit_id = 7;
+  string unit_id = 7;
+  // Decimal string.
+  string measure = 8;
 }
 message UpdateItemInventoryResponse {
   string message = 1;

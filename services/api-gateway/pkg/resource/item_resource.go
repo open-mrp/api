@@ -74,25 +74,27 @@ func (*Item) SchemaExample() any {
 // The stock position for an item: what is in stock, what is already committed, and what is still free to sell.
 //
 // All four quantities are reported in the same unit — the base unit of the item's category.
+// Derived figures, not stored rows: each is netted out of the ledger at read time, so none of them
+// carries a quantity id.
 type ItemInventory struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=item_inventory"`
 	// Physical quantity currently in stock.
-	OnHand *Quantity `json:"on_hand" expandable:"true"`
+	OnHand *ComputedQuantity `json:"on_hand" expandable:"true"`
 	// Quantity committed to existing orders and therefore not free to allocate.
-	Reserved *Quantity `json:"reserved" expandable:"true"`
+	Reserved *ComputedQuantity `json:"reserved" expandable:"true"`
 	// Quantity free to commit to new orders, i.e. on-hand minus reserved minus short.
-	AvailableToPromise *Quantity `json:"available_to_promise" expandable:"true"`
+	AvailableToPromise *ComputedQuantity `json:"available_to_promise" expandable:"true"`
 	// Quantity by which demand exceeds available supply (the unfulfillable shortfall).
-	Short *Quantity `json:"short" expandable:"true"`
+	Short *ComputedQuantity `json:"short" expandable:"true"`
 }
 
 var SampleItemInventory = &ItemInventory{
 	Object:             constants.ObjectTypeItemInventory,
-	OnHand:             SampleQuantity,
-	Reserved:           SampleQuantity,
-	AvailableToPromise: SampleQuantity,
-	Short:              SampleQuantity,
+	OnHand:             SampleComputedQuantity,
+	Reserved:           SampleComputedQuantity,
+	AvailableToPromise: SampleComputedQuantity,
+	Short:              SampleComputedQuantity,
 }
 
 func (*ItemInventory) SchemaExample() any {
@@ -256,10 +258,10 @@ type ReconciledItemResult struct {
 	ItemID string `json:"item_id" validate:"required"`
 	// Item SKU.
 	SKU string `json:"sku" validate:"required"`
-	// On-hand quantity before the reconciliation.
-	PreviousQuantity float64 `json:"previous_quantity" validate:"required"`
-	// On-hand quantity after the reconciliation.
-	NewQuantity float64 `json:"new_quantity" validate:"required"`
+	// Quantity before the reconciliation, as a decimal string.
+	PreviousQuantity string `json:"previous_quantity" validate:"required" format:"decimal"`
+	// Quantity after the reconciliation, as a decimal string.
+	NewQuantity string `json:"new_quantity" validate:"required" format:"decimal"`
 }
 
 // A submitted row that was skipped rather than reconciled.
@@ -284,8 +286,8 @@ var SampleBulkReconcileItemsResponse = &BulkReconcileItemsResponse{
 		{
 			ItemID:           SampleItemID,
 			SKU:              SampleItemSKU,
-			PreviousQuantity: 10,
-			NewQuantity:      12,
+			PreviousQuantity: "10",
+			NewQuantity:      "12",
 		},
 	}, PageInfo{}),
 	SkippedItems: NewList([]SkippedItemResult{}, PageInfo{}),

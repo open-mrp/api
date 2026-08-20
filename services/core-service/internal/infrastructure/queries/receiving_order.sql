@@ -424,25 +424,36 @@ INSERT INTO inventory_receipt (
     NOW(3)
 );
 
+-- FindOpenIssuesForItem lists demand nothing has covered yet, oldest first.
+--
+-- The issue's unit ratio rides along because the receipts that cover it are recorded in whatever
+-- unit their own source used. An allocator comparing the raw column values draws 40 grams against an
+-- issue asking for 40 pounds and calls the demand met.
 -- name: FindOpenIssuesForItem :many
 SELECT
     ii.id,
     q.id AS quantity_id,
     q.value AS quantity_value,
     q.unit_id,
+    CAST(u.ratio_numerator / u.ratio_denominator AS DECIMAL(65,30)) AS unit_ratio,
     ii.storage_location_id,
     ii.lot_id
 FROM inventory_issue ii
 JOIN quantity q ON q.id = ii.quantity_id
+JOIN unit u ON u.id = q.unit_id
 WHERE ii.account_id = sqlc.arg('account_id')
 AND ii.item_id = sqlc.arg('item_id')
 AND ii.status_code = 'open'
 ORDER BY ii.created_at ASC;
 
+-- Each allocation is taken through its own unit's ratio before it is added: an issue in pounds can be
+-- covered by allocations recorded in grams, and once they are added together the caller has nothing
+-- left to convert with. Divide the total by a unit's ratio to read it in that unit.
 -- name: GetAllocationSumForIssue :one
-SELECT COALESCE(SUM(CAST(q.value AS DECIMAL(65,30))), 0) AS total_allocated
+SELECT COALESCE(SUM(CAST(q.value AS DECIMAL(65,30)) * (u.ratio_numerator / u.ratio_denominator)), 0) AS total_allocated
 FROM inventory_allocation ia
 JOIN quantity q ON q.id = ia.quantity_id
+JOIN unit u ON u.id = q.unit_id
 WHERE ia.inventory_issue_id = sqlc.arg('issue_id');
 
 -- name: HasUnstockedReceivingOrderLineForOrderLine :one

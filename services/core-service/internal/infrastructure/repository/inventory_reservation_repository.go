@@ -181,10 +181,18 @@ func (r *inventoryReservationRepo) AllocateReservationsForConsumption(ctx contex
 		// SUM() over a DECIMAL comes back as interface{}; decimalToString covers every shape the driver
 		// may hand back. Reading it as []byte alone left allocatedSum at zero for any other type, which
 		// reads as "nothing allocated yet" and allocates the issue a second time.
-		allocatedSum, allocParseErr := decimal.NewFromString(decimalToString(issue.AllocatedSum))
+		allocatedRef, allocParseErr := decimal.NewFromString(decimalToString(issue.AllocatedSum))
 		if allocParseErr != nil {
 			return nil, apierror.NewInternalError(allocParseErr, "Invalid allocated sum for issue.")
 		}
+
+		// The sum came through each allocation's own ratio; the rest of this loop works in the issue's
+		// unit, since that is what the split below writes back into the issue's quantity row.
+		issueRatio, ratioErr := decimal.NewFromString(issue.UnitRatio)
+		if ratioErr != nil {
+			return nil, apierror.NewInternalError(ratioErr, "Invalid unit ratio on issue quantity.")
+		}
+		allocatedSum := convertMeasure(allocatedRef, decimal.NewFromInt(1), issueRatio)
 
 		available := issueQty.Sub(allocatedSum)
 		take := decimal.Min(available, remainingToIssue)
@@ -202,7 +210,8 @@ func (r *inventoryReservationRepo) AllocateReservationsForConsumption(ctx contex
 			}
 			// take, not issueQty: the portion already allocated has been drawn from receipts once
 			// already, and re-issuing the whole quantity consumes it a second time.
-			if apiErr := r.allocateOpenIssue(ctx, issue.ID, take, params.AccountID, params.ItemID, issue.StorageLocationID, issue.LotID); apiErr != nil {
+			if _, apiErr := r.allocateOpenIssue(ctx, issue.ID, take, issueRatio, params.AccountID, params.ItemID,
+				issue.StorageLocationID, issue.LotID); apiErr != nil {
 				return nil, apiErr
 			}
 		} else {
@@ -248,7 +257,8 @@ func (r *inventoryReservationRepo) AllocateReservationsForConsumption(ctx contex
 				return nil, db.MapSQLError(err)
 			}
 
-			if apiErr := r.allocateOpenIssue(ctx, newIssueID, take, params.AccountID, params.ItemID, issue.StorageLocationID, issue.LotID); apiErr != nil {
+			if _, apiErr := r.allocateOpenIssue(ctx, newIssueID, take, issueRatio, params.AccountID, params.ItemID,
+				issue.StorageLocationID, issue.LotID); apiErr != nil {
 				return nil, apiErr
 			}
 		}
@@ -262,7 +272,70 @@ func (r *inventoryReservationRepo) AllocateReservationsForConsumption(ctx contex
 	}, nil
 }
 
-// allocatedSumsByReceipt returns how much each of the given receipts has already been drawn down.
+// convertMeasure expresses a value given in `from` units in `to` units.
+//
+// Units with the same ratio are the same unit as far as arithmetic goes, and handing the value back
+// untouched keeps that case exact. Ratios arrive rounded to thirty places, so multiplying by one and
+// dividing by it again is not guaranteed to land where it started.
+func convertMeasure(value, from, to decimal.Decimal) decimal.Decimal {
+	if from.Equal(to) {
+		return value
+	}
+	return value.Mul(from).Div(to)
+}
+
+// unitRatios looks up the given units' ratios, deduplicated.
+//
+// Every unit carries its ratio against the same reference for its dimension, so any two convert
+// directly: `value * ratio_from / ratio_to`. A unit id read off a quantity row always resolves, so a
+// missing one is a broken row rather than something to default past.
+func (r *inventoryReservationRepo) unitRatios(ctx context.Context, unitIDs []string) (map[string]decimal.Decimal, *apierror.APIError) {
+	wanted := make(map[string]struct{}, len(unitIDs))
+	ids := make([]string, 0, len(unitIDs))
+	for _, unitID := range unitIDs {
+		if unitID == "" {
+			continue
+		}
+		if _, seen := wanted[unitID]; seen {
+			continue
+		}
+		wanted[unitID] = struct{}{}
+		ids = append(ids, unitID)
+	}
+
+	ratios := make(map[string]decimal.Decimal, len(ids))
+	if len(ids) == 0 {
+		return ratios, nil
+	}
+
+	rows, err := r.queries.GetUnitRatios(ctx, ids)
+	if err != nil {
+		return nil, db.MapSQLError(err)
+	}
+
+	for _, row := range rows {
+		ratio, parseErr := decimal.NewFromString(row.Ratio)
+		if parseErr != nil {
+			return nil, apierror.NewInternalError(parseErr, "Invalid unit ratio.")
+		}
+		// Zero would divide by zero below, and no unit is worth nothing of its own reference.
+		if ratio.LessThanOrEqual(decimal.Zero) {
+			ratio = decimal.NewFromInt(1)
+		}
+		ratios[row.ID] = ratio
+	}
+
+	for _, unitID := range ids {
+		if _, ok := ratios[unitID]; !ok {
+			return nil, apierror.NewInvariantViolationError("Unknown unit on an inventory quantity: " + unitID)
+		}
+	}
+
+	return ratios, nil
+}
+
+// allocatedSumsByReceipt returns how much each of the given receipts has already been drawn down,
+// each allocation taken through its own unit's ratio.
 //
 // A receipt with no allocations is absent from the result rather than zero; the zero value of the map
 // is what the caller wants for it anyway. An unhandled driver type used to leave the sum at zero,
@@ -295,8 +368,14 @@ func (r *inventoryReservationRepo) allocatedSumsByReceipt(ctx context.Context, r
 	return sums, nil
 }
 
-// allocateOpenIssue performs FIFO allocation of an open issue against available receipts.
-func (r *inventoryReservationRepo) allocateOpenIssue(ctx context.Context, issueID string, issueQty decimal.Decimal, accountID, itemID string, storageLocationID, lotID sql.NullString) *apierror.APIError {
+// allocateOpenIssue draws down receipts to cover an issue, returning how much it managed to cover.
+//
+// Demand and coverage are both in the issue's own unit, `demandRatio`. The receipts covering it are
+// recorded in whatever unit their own source used, so each one is converted before it is compared.
+// The reconcile page produces exactly that pair — a receipt in grams from setting a level, an issue
+// in pounds from adjusting one — and comparing the raw values allocated 40 g against demand for
+// 40 lbs and closed the issue as covered.
+func (r *inventoryReservationRepo) allocateOpenIssue(ctx context.Context, issueID string, demand, demandRatio decimal.Decimal, accountID, itemID string, storageLocationID, lotID sql.NullString) (decimal.Decimal, *apierror.APIError) {
 	receipts, err := r.queries.FindReceiptsForAllocation(ctx, sqlc.FindReceiptsForAllocationParams{
 		AccountID:         accountID,
 		ItemID:            itemID,
@@ -304,17 +383,29 @@ func (r *inventoryReservationRepo) allocateOpenIssue(ctx context.Context, issueI
 		LotID:             lotID,
 	})
 	if err != nil {
-		return db.MapSQLError(err)
+		return decimal.Zero, db.MapSQLError(err)
+	}
+	if len(receipts) == 0 {
+		return decimal.Zero, nil
 	}
 
-	remaining := issueQty
+	unitIDs := make([]string, 0, len(receipts)*2)
+	for _, receipt := range receipts {
+		unitIDs = append(unitIDs, receipt.UnitID, receipt.UnitCostDenominatorUnitID)
+	}
+	ratios, apiErr := r.unitRatios(ctx, unitIDs)
+	if apiErr != nil {
+		return decimal.Zero, apiErr
+	}
+
+	remaining := demand
 	var exhaustedReceiptIDs []string
 
 	// One aggregate for the whole candidate set. Asking per receipt put a round trip inside the walk
 	// below, which an item whose older receipts are all full pays for on every allocation.
 	allocatedByReceipt, apiErr := r.allocatedSumsByReceipt(ctx, receipts)
 	if apiErr != nil {
-		return apiErr
+		return decimal.Zero, apiErr
 	}
 
 	for _, receipt := range receipts {
@@ -324,73 +415,84 @@ func (r *inventoryReservationRepo) allocateOpenIssue(ctx context.Context, issueI
 
 		receiptQty, parseErr := decimal.NewFromString(receipt.QuantityValue)
 		if parseErr != nil {
-			return apierror.NewInternalError(parseErr, "Invalid receipt quantity value.")
+			return decimal.Zero, apierror.NewInternalError(parseErr, "Invalid receipt quantity value.")
 		}
 
-		available := receiptQty.Sub(allocatedByReceipt[receipt.ID])
-		if available.LessThanOrEqual(decimal.Zero) {
-			exhaustedReceiptIDs = append(exhaustedReceiptIDs, receipt.ID)
-			continue
-		}
+		// What is left of the receipt is worked out in the receipt's own units, where it is exact; only
+		// the comparison against the demand needs converting.
+		receiptRatio := ratios[receipt.UnitID]
+		receiptLeft := receiptQty.Sub(convertMeasure(allocatedByReceipt[receipt.ID], decimal.NewFromInt(1), receiptRatio))
+		available := convertMeasure(receiptLeft, receiptRatio, demandRatio)
 		take := decimal.Min(available, remaining)
 		// A receipt that is already over-allocated leaves available negative. IsZero let that through,
 		// writing a negative allocation and growing `remaining` — so the issue drew more than it asked for.
 		if take.LessThanOrEqual(decimal.Zero) {
+			// Nothing left to give; it should not be offered to the next issue either.
+			exhaustedReceiptIDs = append(exhaustedReceiptIDs, receipt.ID)
 			continue
 		}
 
 		// Create allocation record
 		allocationID, genErr := id.GenID(id.InventoryAllocationIDPrefix, nil)
 		if genErr != nil {
-			return genErr
+			return decimal.Zero, genErr
 		}
 		allocQtyID, genErr := id.GenID(id.QuantityIDPrefix, nil)
 		if genErr != nil {
-			return genErr
+			return decimal.Zero, genErr
 		}
 		allocUnitCostID, genErr := id.GenID(id.RateIDPrefix, nil)
 		if genErr != nil {
-			return genErr
+			return decimal.Zero, genErr
 		}
-		// A total cost is a quantity of currency, not a rate — the column points at `quantity`, and
-		// the reversal paths delete it from there.
 		allocTotalCostID, genErr := id.GenID(id.QuantityIDPrefix, nil)
 		if genErr != nil {
-			return genErr
+			return decimal.Zero, genErr
 		}
 
-		// Insert quantity for the allocation
+		// Recorded against the receipt it draws on, in that receipt's unit. Converting the demand into
+		// it can round, so a take that empties the receipt is written as the exact remainder instead —
+		// a receipt left a hair short of covered is re-read and re-locked by every later pass.
+		allocQty := convertMeasure(take, demandRatio, receiptRatio)
+		if take.Equal(available) {
+			allocQty = receiptLeft
+		}
 		if err := r.queries.InsertQuantityForInventory(ctx, sqlc.InsertQuantityForInventoryParams{
 			ID:     allocQtyID,
-			Value:  take.String(),
+			Value:  allocQty.String(),
 			UnitID: receipt.UnitID,
 		}); err != nil {
-			return db.MapSQLError(err)
+			return decimal.Zero, db.MapSQLError(err)
 		}
 
-		// Carry the receipt's own cost onto the allocation so COGS reads the price actually paid.
+		// The allocation is costed at what the stock it draws on was received at, copied off the
+		// receipt. Writing zero here left the ledger saying every allocated unit cost nothing.
 		unitCost, parseErr := decimal.NewFromString(receipt.UnitCostValue)
 		if parseErr != nil {
-			return apierror.NewInternalError(parseErr, "Invalid receipt unit cost value.")
+			return decimal.Zero, apierror.NewInternalError(parseErr, "Invalid receipt unit cost value.")
 		}
-
 		if err := r.queries.InsertRateForInventory(ctx, sqlc.InsertRateForInventoryParams{
 			ID:                allocUnitCostID,
-			Value:             receipt.UnitCostValue,
+			Value:             unitCost.String(),
 			NumeratorUnitID:   receipt.UnitCostNumeratorUnitID,
 			DenominatorUnitID: receipt.UnitCostDenominatorUnitID,
 		}); err != nil {
-			return db.MapSQLError(err)
+			return decimal.Zero, db.MapSQLError(err)
 		}
 
-		// Extending the rate over the allocated quantity cancels its denominator, leaving an amount
-		// in the rate's numerator currency.
+		// Total cost is a quantity of money — the rate's numerator — not a rate. It was being written
+		// to `rate`, so the id on the allocation pointed at a row `quantity` does not have and every
+		// reader joining it came back empty.
+		//
+		// A rate is priced per its denominator unit, so the quantity has to be expressed in that unit
+		// before it is multiplied: $6/lb against 9,071 grams is $54,431 otherwise.
+		costQty := convertMeasure(allocQty, receiptRatio, ratios[receipt.UnitCostDenominatorUnitID])
 		if err := r.queries.InsertQuantityForInventory(ctx, sqlc.InsertQuantityForInventoryParams{
 			ID:     allocTotalCostID,
-			Value:  take.Mul(unitCost).String(),
+			Value:  costQty.Mul(unitCost).String(),
 			UnitID: receipt.UnitCostNumeratorUnitID,
 		}); err != nil {
-			return db.MapSQLError(err)
+			return decimal.Zero, db.MapSQLError(err)
 		}
 
 		// Insert the allocation
@@ -402,25 +504,24 @@ func (r *inventoryReservationRepo) allocateOpenIssue(ctx context.Context, issueI
 			UnitCostID:         allocUnitCostID,
 			TotalCostID:        allocTotalCostID,
 		}); err != nil {
-			return db.MapSQLError(err)
+			return decimal.Zero, db.MapSQLError(err)
 		}
 
 		remaining = remaining.Sub(take)
+
+		if take.Equal(available) {
+			exhaustedReceiptIDs = append(exhaustedReceiptIDs, receipt.ID)
+		}
 	}
 
+	// One statement for the whole walk rather than an UPDATE per receipt.
 	if len(exhaustedReceiptIDs) > 0 {
 		if err := r.queries.MarkInventoryReceiptsAllocated(ctx, exhaustedReceiptIDs); err != nil {
-			return db.MapSQLError(err)
+			return decimal.Zero, db.MapSQLError(err)
 		}
 	}
 
-	if remaining.LessThanOrEqual(decimal.Zero) {
-		if err := r.queries.CloseFullyAllocatedInventoryIssue(ctx, issueID); err != nil {
-			return db.MapSQLError(err)
-		}
-	}
-
-	return nil
+	return demand.Sub(remaining), nil
 }
 
 // AllocateOpenIssuesForItem performs FIFO allocation of all open inventory issues for the given item against available receipts.
@@ -442,28 +543,49 @@ func (r *inventoryReservationRepo) AllocateOpenIssuesForItem(ctx context.Context
 			return tracing.Trace(span, apierror.NewInternalError(pErr, "Failed to parse issue quantity."))
 		}
 
+		// The allocated sum below is taken through each allocation's own ratio; this is what reads it
+		// back in the unit the issue was recorded in.
+		issueRatio, rErr := decimal.NewFromString(issue.UnitRatio)
+		if rErr != nil {
+			return tracing.Trace(span, apierror.NewInternalError(rErr, "Invalid unit ratio on issue quantity."))
+		}
+
 		allocatedRaw, aErr := r.queries.GetAllocationSumForIssue(ctx, issue.ID)
 		if apiErr := db.MapSQLError(aErr); apiErr != nil {
 			return tracing.Trace(span, apiErr)
 		}
 
-		var allocated decimal.Decimal
-		switch v := allocatedRaw.(type) {
-		case []byte:
-			allocated, _ = decimal.NewFromString(string(v))
-		case string:
-			allocated, _ = decimal.NewFromString(v)
-		default:
-			allocated = decimal.Zero
+		// SUM() over a DECIMAL arrives as interface{} and the driver picks the shape. Reading only
+		// []byte and string and falling back to zero for anything else — an int64 for a whole number,
+		// a float64 — reads as "nothing allocated yet" for an issue that is already covered, and
+		// allocates the whole of it a second time. That is where negative shortages come from: the
+		// issue then has more allocated against it than it ever asked for.
+		allocated, parseErr := decimal.NewFromString(decimalToString(allocatedRaw))
+		if parseErr != nil {
+			return tracing.Trace(span, apierror.NewInternalError(parseErr, "Invalid allocated sum for issue."))
 		}
 
-		issueRemaining := issueMeasure.Sub(allocated)
+		issueRemaining := issueMeasure.Sub(convertMeasure(allocated, decimal.NewFromInt(1), issueRatio))
 		if issueRemaining.LessThanOrEqual(decimal.Zero) {
+			// Already covered, and left open by an allocation that predates the closing below.
+			if err := r.queries.CloseFullyAllocatedInventoryIssue(ctx, issue.ID); err != nil {
+				return tracing.Trace(span, db.MapSQLError(err))
+			}
 			continue
 		}
 
-		if apiErr := r.allocateOpenIssue(ctx, issue.ID, issueRemaining, accountID, itemID, issue.StorageLocationID, issue.LotID); apiErr != nil {
+		covered, apiErr := r.allocateOpenIssue(ctx, issue.ID, issueRemaining, issueRatio, accountID, itemID,
+			issue.StorageLocationID, issue.LotID)
+		if apiErr != nil {
 			return tracing.Trace(span, apiErr)
+		}
+
+		// Demand that is now covered stops being demand. An issue left open reads as unfilled for the
+		// rest of its life and is re-examined by every later allocation for the item.
+		if covered.GreaterThanOrEqual(issueRemaining) {
+			if err := r.queries.CloseFullyAllocatedInventoryIssue(ctx, issue.ID); err != nil {
+				return tracing.Trace(span, db.MapSQLError(err))
+			}
 		}
 	}
 

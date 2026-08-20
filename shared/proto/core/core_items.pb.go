@@ -1030,16 +1030,17 @@ func (x *ChangeItemCategoryResponse) GetItem() *ItemInfo {
 }
 
 type UpdateItemInventoryRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	ItemId         string                 `protobuf:"bytes,1,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
-	QuantityChange *float64               `protobuf:"fixed64,2,opt,name=quantity_change,json=quantityChange,proto3,oneof" json:"quantity_change,omitempty"`
-	Reconcile      *bool                  `protobuf:"varint,3,opt,name=reconcile,proto3,oneof" json:"reconcile,omitempty"`
-	CustomerId     *string                `protobuf:"bytes,4,opt,name=customer_id,json=customerId,proto3,oneof" json:"customer_id,omitempty"`
-	LocationId     *string                `protobuf:"bytes,5,opt,name=location_id,json=locationId,proto3,oneof" json:"location_id,omitempty"`
-	LotNumber      *string                `protobuf:"bytes,6,opt,name=lot_number,json=lotNumber,proto3,oneof" json:"lot_number,omitempty"`
-	UnitId         *string                `protobuf:"bytes,7,opt,name=unit_id,json=unitId,proto3,oneof" json:"unit_id,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	ItemId     string                 `protobuf:"bytes,1,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
+	Reconcile  *bool                  `protobuf:"varint,3,opt,name=reconcile,proto3,oneof" json:"reconcile,omitempty"`
+	CustomerId *string                `protobuf:"bytes,4,opt,name=customer_id,json=customerId,proto3,oneof" json:"customer_id,omitempty"`
+	LocationId *string                `protobuf:"bytes,5,opt,name=location_id,json=locationId,proto3,oneof" json:"location_id,omitempty"`
+	LotNumber  *string                `protobuf:"bytes,6,opt,name=lot_number,json=lotNumber,proto3,oneof" json:"lot_number,omitempty"`
+	UnitId     string                 `protobuf:"bytes,7,opt,name=unit_id,json=unitId,proto3" json:"unit_id,omitempty"`
+	// Decimal string.
+	Measure       string `protobuf:"bytes,8,opt,name=measure,proto3" json:"measure,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateItemInventoryRequest) Reset() {
@@ -1079,13 +1080,6 @@ func (x *UpdateItemInventoryRequest) GetItemId() string {
 	return ""
 }
 
-func (x *UpdateItemInventoryRequest) GetQuantityChange() float64 {
-	if x != nil && x.QuantityChange != nil {
-		return *x.QuantityChange
-	}
-	return 0
-}
-
 func (x *UpdateItemInventoryRequest) GetReconcile() bool {
 	if x != nil && x.Reconcile != nil {
 		return *x.Reconcile
@@ -1115,8 +1109,15 @@ func (x *UpdateItemInventoryRequest) GetLotNumber() string {
 }
 
 func (x *UpdateItemInventoryRequest) GetUnitId() string {
-	if x != nil && x.UnitId != nil {
-		return *x.UnitId
+	if x != nil {
+		return x.UnitId
+	}
+	return ""
+}
+
+func (x *UpdateItemInventoryRequest) GetMeasure() string {
+	if x != nil {
+		return x.Measure
 	}
 	return ""
 }
@@ -5902,26 +5903,23 @@ const file_core_core_items_proto_rawDesc = "" +
 	"categoryId\x12\x1a\n" +
 	"\bincludes\x18\x03 \x03(\tR\bincludes\"@\n" +
 	"\x1aChangeItemCategoryResponse\x12\"\n" +
-	"\x04item\x18\x01 \x01(\v2\x0e.core.ItemInfoR\x04item\"\xf1\x02\n" +
+	"\x04item\x18\x01 \x01(\v2\x0e.core.ItemInfoR\x04item\"\xcf\x02\n" +
 	"\x1aUpdateItemInventoryRequest\x12\x17\n" +
-	"\aitem_id\x18\x01 \x01(\tR\x06itemId\x12,\n" +
-	"\x0fquantity_change\x18\x02 \x01(\x01H\x00R\x0equantityChange\x88\x01\x01\x12!\n" +
-	"\treconcile\x18\x03 \x01(\bH\x01R\treconcile\x88\x01\x01\x12$\n" +
-	"\vcustomer_id\x18\x04 \x01(\tH\x02R\n" +
+	"\aitem_id\x18\x01 \x01(\tR\x06itemId\x12!\n" +
+	"\treconcile\x18\x03 \x01(\bH\x00R\treconcile\x88\x01\x01\x12$\n" +
+	"\vcustomer_id\x18\x04 \x01(\tH\x01R\n" +
 	"customerId\x88\x01\x01\x12$\n" +
-	"\vlocation_id\x18\x05 \x01(\tH\x03R\n" +
+	"\vlocation_id\x18\x05 \x01(\tH\x02R\n" +
 	"locationId\x88\x01\x01\x12\"\n" +
 	"\n" +
-	"lot_number\x18\x06 \x01(\tH\x04R\tlotNumber\x88\x01\x01\x12\x1c\n" +
-	"\aunit_id\x18\a \x01(\tH\x05R\x06unitId\x88\x01\x01B\x12\n" +
-	"\x10_quantity_changeB\f\n" +
+	"lot_number\x18\x06 \x01(\tH\x03R\tlotNumber\x88\x01\x01\x12\x17\n" +
+	"\aunit_id\x18\a \x01(\tR\x06unitId\x12\x18\n" +
+	"\ameasure\x18\b \x01(\tR\ameasureB\f\n" +
 	"\n" +
 	"_reconcileB\x0e\n" +
 	"\f_customer_idB\x0e\n" +
 	"\f_location_idB\r\n" +
-	"\v_lot_numberB\n" +
-	"\n" +
-	"\b_unit_id\"7\n" +
+	"\v_lot_numberJ\x04\b\x02\x10\x03R\x0fquantity_change\"7\n" +
 	"\x1bUpdateItemInventoryResponse\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\"\xc9\x01\n" +
 	"\x13BulkCreateItemInput\x12\x10\n" +

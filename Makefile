@@ -55,33 +55,33 @@ dev: ## Run the API in development mode
 
 openapi: ## Generate OpenAPI specifications (specs only, no Stainless configs)
 	@mkdir -p specs
-	@cd tools && GOTOOLCHAIN=go1.26.2 go run ./apidocs --name api --skip-stainless
+	@cd tools && GOTOOLCHAIN=go1.27.0 go run ./apidocs --name api --skip-stainless
 
 openapi-quiet: ## Generate OpenAPI specifications without informational output (specs only)
 	@mkdir -p specs
-	@cd tools && GOTOOLCHAIN=go1.26.2 go run ./apidocs --name api --skip-stainless --quiet
+	@cd tools && GOTOOLCHAIN=go1.27.0 go run ./apidocs --name api --skip-stainless --quiet
 
 gen-agent-tools: ## Generate the agent-service endpoint-tool catalog + DB seed from endpoints flagged AgentTool=true
-	@cd tools && GOTOOLCHAIN=go1.26.2 go run ./apidocs --agent-tools --root ..
+	@cd tools && GOTOOLCHAIN=go1.27.0 go run ./apidocs --agent-tools --root ..
 
 stainless: ## Generate Stainless SDK configs only (no OpenAPI specs)
-	@cd tools && GOTOOLCHAIN=go1.26.2 go run ./apidocs --name api --only-stainless
+	@cd tools && GOTOOLCHAIN=go1.27.0 go run ./apidocs --name api --only-stainless
 
 openapi-stainless: ## Generate both OpenAPI specs and Stainless SDK configs
 	@mkdir -p specs
-	@cd tools && GOTOOLCHAIN=go1.26.2 go run ./apidocs --name api
+	@cd tools && GOTOOLCHAIN=go1.27.0 go run ./apidocs --name api
 
 openapi-stainless-quiet: ## Generate both OpenAPI specs and Stainless SDK configs (no informational output)
 	@mkdir -p specs
-	@cd tools && GOTOOLCHAIN=go1.26.2 go run ./apidocs --name api --quiet
+	@cd tools && GOTOOLCHAIN=go1.27.0 go run ./apidocs --name api --quiet
 
 generate: ## Generate OpenAPI specs, Stainless configs, and agent tools
 	@mkdir -p specs
-	@cd tools && GOTOOLCHAIN=go1.26.2 go run ./apidocs --name api --with-agent-tools
+	@cd tools && GOTOOLCHAIN=go1.27.0 go run ./apidocs --name api --with-agent-tools
 
 generate-quiet: ## Generate OpenAPI specs, Stainless configs, and agent tools (no informational output)
 	@mkdir -p specs
-	@cd tools && GOTOOLCHAIN=go1.26.2 go run ./apidocs --name api --with-agent-tools --quiet
+	@cd tools && GOTOOLCHAIN=go1.27.0 go run ./apidocs --name api --with-agent-tools --quiet
 
 httpie: ## Generate HTTPie workspace file
 	@mkdir -p httpie
@@ -244,7 +244,7 @@ lint: gosec static-check tx-audit ## Run gosec + staticcheck + transaction-callb
 
 tx-audit: ## Check that database transaction callbacks are safe to re-run after a deadlock
 	@echo "Auditing transaction callbacks..."
-	@cd tools && GOTOOLCHAIN=go1.26.2 go run ./txaudit --root ..
+	@cd tools && GOTOOLCHAIN=go1.27.0 go run ./txaudit --root ..
 
 gosec: ## Run gosec (all rules)
 	@echo "Running gosec..."

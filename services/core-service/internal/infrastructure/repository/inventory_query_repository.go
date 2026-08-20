@@ -74,22 +74,28 @@ func (r *inventoryQueryRepoImpl) FetchOnHandInventoryBulk(ctx context.Context, i
 	return result, nil
 }
 
-func (r *inventoryQueryRepoImpl) FetchPhysicalInventory(ctx context.Context, itemID, ownerAccountID string) (float64, *apierror.APIError) {
+// FetchPhysicalInventory returns the level as a decimal, never a float.
+//
+// The ledger is decimal from the column to the arithmetic, and a round trip through float64 in the
+// middle of it does not survive contact with a reconcile: 9959.03214 comes back 9959.032140000001,
+// and a correction to the figure already on screen writes a receipt of 0.000000000003 instead of
+// recognising there is nothing to do.
+func (r *inventoryQueryRepoImpl) FetchPhysicalInventory(ctx context.Context, itemID, ownerAccountID, unitID string) (decimal.Decimal, *apierror.APIError) {
 	ctx, span := inventoryQueryRepoTracer.Start(ctx, "repository.inventory_query.fetch_physical_inventory")
 	defer span.End()
 
 	physicalInv, err := r.queries.FetchPhysicalInventoryForItem(ctx, sqlc.FetchPhysicalInventoryForItemParams{
 		ItemID:         itemID,
 		OwnerAccountID: ownerAccountID,
+		UnitID:         unitID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return 0, tracing.Trace(span, apiErr)
+		return decimal.Zero, tracing.Trace(span, apiErr)
 	}
 
 	measure, parseErr := decimal.NewFromString(physicalInv)
 	if parseErr != nil {
-		return 0, tracing.Trace(span, apierror.NewInternalError(parseErr, "Invalid physical inventory value."))
+		return decimal.Zero, tracing.Trace(span, apierror.NewInternalError(parseErr, "Invalid physical inventory value."))
 	}
-	f, _ := measure.Float64()
-	return f, nil
+	return measure, nil
 }

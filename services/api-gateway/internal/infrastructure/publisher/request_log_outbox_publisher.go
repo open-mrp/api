@@ -101,7 +101,7 @@ func (p *requestLogOutboxPublisher) Create(ctx context.Context, rl *appctx.Reque
 
 	// Save to outbox asynchronously - don't block the HTTP response
 	// No tracing here since this runs after the request completes
-	go func() {
+	go func() { // #nosec G118 - runs after the response; a request-scoped context would cancel it
 		err := messaging.WithOutboxDBLockRetry(context.Background(), messaging.OutboxDBRetryConfig(p.platformMode), "request_log_outbox.create", func() error {
 			_, err := p.outboxRepo.Create(context.Background(), input)
 			return err

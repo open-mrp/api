@@ -28,7 +28,7 @@ func populateOnHandOnItemInventory(ctx context.Context, parent any, _ map[string
 	if !ok {
 		return
 	}
-	inv.OnHand = v.(*apiresource.Quantity)
+	inv.OnHand = v.(*apiresource.ComputedQuantity)
 }
 
 func populateReservedOnItemInventory(ctx context.Context, parent any, _ map[string]any) {
@@ -37,7 +37,7 @@ func populateReservedOnItemInventory(ctx context.Context, parent any, _ map[stri
 	if !ok {
 		return
 	}
-	inv.Reserved = v.(*apiresource.Quantity)
+	inv.Reserved = v.(*apiresource.ComputedQuantity)
 }
 
 func populateATPOnItemInventory(ctx context.Context, parent any, _ map[string]any) {
@@ -46,7 +46,7 @@ func populateATPOnItemInventory(ctx context.Context, parent any, _ map[string]an
 	if !ok {
 		return
 	}
-	inv.AvailableToPromise = v.(*apiresource.Quantity)
+	inv.AvailableToPromise = v.(*apiresource.ComputedQuantity)
 }
 
 func populateShortOnItemInventory(ctx context.Context, parent any, _ map[string]any) {
@@ -55,5 +55,5 @@ func populateShortOnItemInventory(ctx context.Context, parent any, _ map[string]
 	if !ok {
 		return
 	}
-	inv.Short = v.(*apiresource.Quantity)
+	inv.Short = v.(*apiresource.ComputedQuantity)
 }

@@ -1,22 +1,19 @@
 module github.com/augno/api/tools
 
-go 1.26.2
+go 1.27.0
 
 replace github.com/augno/api => ../
 
 // External tool versions are pinned in tools/tool-versions.
 // The Makefile reads those versions when installing via `go install pkg@version`.
 
-require google.golang.org/protobuf v1.36.11 // indirect
-
 // Required by tools/apidocs (OpenAPI spec generator)
 require (
 	github.com/augno/api v0.0.0
 	github.com/ohler55/ojg v1.28.0
 	github.com/stretchr/testify v1.11.1
+	gopkg.in/yaml.v3 v3.0.1
 )
-
-require gopkg.in/yaml.v3 v3.0.1
 
 require (
 	filippo.io/edwards25519 v1.2.0 // indirect
@@ -27,7 +24,6 @@ require (
 	github.com/gabriel-vasile/mimetype v1.4.13 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/go-pdf/fpdf v0.9.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.30.3 // indirect
@@ -59,11 +55,11 @@ require (
 	go.opentelemetry.io/otel/trace v1.44.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.10.0 // indirect
 	golang.org/x/crypto v0.53.0 // indirect
-	golang.org/x/image v0.25.0 // indirect
 	golang.org/x/net v0.56.0 // indirect
 	golang.org/x/sys v0.46.0 // indirect
 	golang.org/x/text v0.38.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260630182238-925bb5da69e7 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260630182238-925bb5da69e7 // indirect
 	google.golang.org/grpc v1.82.0 // indirect
+	google.golang.org/protobuf v1.36.11 // indirect
 )

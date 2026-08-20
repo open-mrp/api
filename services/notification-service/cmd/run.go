@@ -79,9 +79,8 @@ func Run(
 	enqueuer, err := messaging.NewEnqueuer(&messaging.EnqueuerConfig{
 		ServiceName:  domain.ServiceName,
 		PlatformMode: cfg.PlatformMode,
-		// Posting a message kicks the enqueuer (see NewConversationSvc) so agent dispatch and realtime
-		// delivery fire instantly; this tightens the idle-backoff ceiling below the shared default so an
-		// un-kicked realtime event still posts within 500ms.
+		// Posting a message kicks the enqueuer (see NewConversationSvc) so agent dispatch and realtime delivery fire instantly; this ceiling covers the un-kicked ones, above all the realtime events that carry agent streaming bubbles to the gateway WS.
+		// Because the poll is not scoped by service_name, these pollers also drain what api-gateway, auth, billing, core, and platform write — those run at the 30s default rather than duplicating this sweep. Raising this ceiling therefore slows every service's outbox, not just this one.
 		MaxPollInterval: 500 * time.Millisecond,
 	}, outboxEnqueuerRepo, rabbitmq, leaseSvc)
 	if err != nil {

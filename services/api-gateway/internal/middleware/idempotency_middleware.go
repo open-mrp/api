@@ -269,7 +269,7 @@ func IdempotencyMiddleware(config *IdempotencyMiddlewareConfig) func(http.Handle
 					var cookies []SerializedCookie
 					if err := json.Unmarshal(resp.ResponseHeaders, &cookies); err == nil {
 						for _, sc := range cookies {
-							cookie := &http.Cookie{
+							cookie := &http.Cookie{ // #nosec G124 - replays the cached cookie's original attributes
 								Name:     sc.Name,
 								Value:    sc.Value,
 								Path:     sc.Path,

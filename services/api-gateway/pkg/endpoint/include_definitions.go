@@ -257,10 +257,10 @@ func init() {
 	RegisterIncludes(&ObjectIncludes{
 		ObjectType: constants.ObjectTypeItemInventory,
 		Fields: []IncludeFieldDef{
-			{Key: "on_hand", ObjectType: constants.ObjectTypeQuantity},
-			{Key: "reserved", ObjectType: constants.ObjectTypeQuantity},
-			{Key: "available_to_promise", ObjectType: constants.ObjectTypeQuantity},
-			{Key: "short", ObjectType: constants.ObjectTypeQuantity},
+			{Key: "on_hand", ObjectType: constants.ObjectTypeComputedQuantity},
+			{Key: "reserved", ObjectType: constants.ObjectTypeComputedQuantity},
+			{Key: "available_to_promise", ObjectType: constants.ObjectTypeComputedQuantity},
+			{Key: "short", ObjectType: constants.ObjectTypeComputedQuantity},
 		},
 	})
 

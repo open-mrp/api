@@ -9967,10 +9967,11 @@ func (x *AnalyzeWeeksOfSalesResponse) GetCount() int64 {
 }
 
 type BulkReconcileItemInput struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Sku           string                 `protobuf:"bytes,1,opt,name=sku,proto3" json:"sku,omitempty"`
-	Unit          string                 `protobuf:"bytes,2,opt,name=unit,proto3" json:"unit,omitempty"`
-	Quantity      float64                `protobuf:"fixed64,3,opt,name=quantity,proto3" json:"quantity,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Sku   string                 `protobuf:"bytes,1,opt,name=sku,proto3" json:"sku,omitempty"`
+	Unit  string                 `protobuf:"bytes,2,opt,name=unit,proto3" json:"unit,omitempty"`
+	// Decimal string.
+	Measure       string `protobuf:"bytes,4,opt,name=measure,proto3" json:"measure,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -10019,11 +10020,11 @@ func (x *BulkReconcileItemInput) GetUnit() string {
 	return ""
 }
 
-func (x *BulkReconcileItemInput) GetQuantity() float64 {
+func (x *BulkReconcileItemInput) GetMeasure() string {
 	if x != nil {
-		return x.Quantity
+		return x.Measure
 	}
-	return 0
+	return ""
 }
 
 type BulkReconcileItemsRequest struct {
@@ -10079,13 +10080,14 @@ func (x *BulkReconcileItemsRequest) GetData() []*BulkReconcileItemInput {
 }
 
 type ReconciledItemProto struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	ItemId           string                 `protobuf:"bytes,1,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
-	Sku              string                 `protobuf:"bytes,2,opt,name=sku,proto3" json:"sku,omitempty"`
-	PreviousQuantity float64                `protobuf:"fixed64,3,opt,name=previous_quantity,json=previousQuantity,proto3" json:"previous_quantity,omitempty"`
-	NewQuantity      float64                `protobuf:"fixed64,4,opt,name=new_quantity,json=newQuantity,proto3" json:"new_quantity,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	ItemId string                 `protobuf:"bytes,1,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
+	Sku    string                 `protobuf:"bytes,2,opt,name=sku,proto3" json:"sku,omitempty"`
+	// Decimal strings.
+	PreviousMeasure string `protobuf:"bytes,5,opt,name=previous_measure,json=previousMeasure,proto3" json:"previous_measure,omitempty"`
+	NewMeasure      string `protobuf:"bytes,6,opt,name=new_measure,json=newMeasure,proto3" json:"new_measure,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *ReconciledItemProto) Reset() {
@@ -10132,18 +10134,18 @@ func (x *ReconciledItemProto) GetSku() string {
 	return ""
 }
 
-func (x *ReconciledItemProto) GetPreviousQuantity() float64 {
+func (x *ReconciledItemProto) GetPreviousMeasure() string {
 	if x != nil {
-		return x.PreviousQuantity
+		return x.PreviousMeasure
 	}
-	return 0
+	return ""
 }
 
-func (x *ReconciledItemProto) GetNewQuantity() float64 {
+func (x *ReconciledItemProto) GetNewMeasure() string {
 	if x != nil {
-		return x.NewQuantity
+		return x.NewMeasure
 	}
-	return 0
+	return ""
 }
 
 type SkippedItemProto struct {
@@ -11277,19 +11279,20 @@ const file_core_core_lookups_proto_rawDesc = "" +
 	"\x10quantity_on_hand\x18\t \x01(\x01R\x0equantityOnHand\"f\n" +
 	"\x1bAnalyzeWeeksOfSalesResponse\x121\n" +
 	"\x05items\x18\x01 \x03(\v2\x1b.core.WeeksOfSalesItemProtoR\x05items\x12\x14\n" +
-	"\x05count\x18\x02 \x01(\x03R\x05count\"Z\n" +
+	"\x05count\x18\x02 \x01(\x03R\x05count\"h\n" +
 	"\x16BulkReconcileItemInput\x12\x10\n" +
 	"\x03sku\x18\x01 \x01(\tR\x03sku\x12\x12\n" +
-	"\x04unit\x18\x02 \x01(\tR\x04unit\x12\x1a\n" +
-	"\bquantity\x18\x03 \x01(\x01R\bquantity\"t\n" +
+	"\x04unit\x18\x02 \x01(\tR\x04unit\x12\x18\n" +
+	"\ameasure\x18\x04 \x01(\tR\ameasureJ\x04\b\x03\x10\x04R\bquantity\"t\n" +
 	"\x19BulkReconcileItemsRequest\x12%\n" +
 	"\x0ereconcile_type\x18\x01 \x01(\tR\rreconcileType\x120\n" +
-	"\x04data\x18\x02 \x03(\v2\x1c.core.BulkReconcileItemInputR\x04data\"\x90\x01\n" +
+	"\x04data\x18\x02 \x03(\v2\x1c.core.BulkReconcileItemInputR\x04data\"\xb9\x01\n" +
 	"\x13ReconciledItemProto\x12\x17\n" +
 	"\aitem_id\x18\x01 \x01(\tR\x06itemId\x12\x10\n" +
-	"\x03sku\x18\x02 \x01(\tR\x03sku\x12+\n" +
-	"\x11previous_quantity\x18\x03 \x01(\x01R\x10previousQuantity\x12!\n" +
-	"\fnew_quantity\x18\x04 \x01(\x01R\vnewQuantity\"<\n" +
+	"\x03sku\x18\x02 \x01(\tR\x03sku\x12)\n" +
+	"\x10previous_measure\x18\x05 \x01(\tR\x0fpreviousMeasure\x12\x1f\n" +
+	"\vnew_measure\x18\x06 \x01(\tR\n" +
+	"newMeasureJ\x04\b\x03\x10\x04J\x04\b\x04\x10\x05R\x11previous_quantityR\fnew_quantity\"<\n" +
 	"\x10SkippedItemProto\x12\x10\n" +
 	"\x03sku\x18\x01 \x01(\tR\x03sku\x12\x16\n" +
 	"\x06reason\x18\x02 \x01(\tR\x06reason\"=\n" +

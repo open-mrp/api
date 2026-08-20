@@ -2,8 +2,8 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"math"
 	"slices"
 	"strings"
 
@@ -15,12 +15,45 @@ import (
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/audit"
 	"github.com/augno/api/shared/constants"
+	"github.com/augno/api/shared/contracts"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/excel"
 	"github.com/augno/api/shared/id"
 	"github.com/augno/api/shared/idempotency"
+	"github.com/augno/api/shared/messaging"
 	"github.com/augno/api/shared/tracing"
 )
+
+// enqueueInventoryReceived hands allocation to the consumer that owns it.
+//
+// Written in the transaction that moved the stock, so the handoff commits with the movement or not
+// at all — the same arrangement the dashboard has used since allocation stopped happening in-request.
+func (s *itemSvcImpl) enqueueInventoryReceived(ctx context.Context, repos domain.RepoFactory, evt domain.InventoryReceivedEvent) *apierror.APIError {
+	payload, err := json.Marshal(evt)
+	if err != nil {
+		return apierror.NewInternalError(err, "Failed to marshal inventory received event.")
+	}
+
+	msg := contracts.AmqpMessage{Data: payload}
+	if identity, ok := appctx.GetIdentityFromContext(ctx); ok {
+		msg.Identity = identity
+	}
+	if requestID, ok := appctx.GetRequestID(ctx); ok {
+		msg.RequestID = requestID
+	}
+
+	if _, err := repos.NewOutboxRepo().Create(ctx, messaging.OutboxMessageInput{
+		ServiceName: "core-service",
+		MessageType: string(contracts.CoreEventInventoryReceived),
+		Destination: messaging.ApplicationExchange,
+		RoutingKey:  string(contracts.CoreEventInventoryReceived),
+		Payload:     msg,
+	}); err != nil {
+		return apierror.NewInternalError(err, "Failed to create outbox message for inventory received.")
+	}
+
+	return nil
+}
 
 var itemSvcTracer = tracing.GetTracer("core-service.item_service")
 
@@ -1161,32 +1194,23 @@ func (s *itemSvcImpl) UpdateItemInventory(ctx context.Context, params domain.Upd
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *itemSvcImpl) *apierror.APIError {
 			invQueryRepo := txSvc.repos.NewInventoryQueryRepo()
 			invMutRepo := txSvc.repos.NewInventoryMutationRepo()
-			invReservationRepo := txSvc.repos.NewInventoryReservationRepo()
 
-			// Fetch current physical inventory (always uses the main account, matching Dashboard behavior).
-			currentPhysical, apiErr := invQueryRepo.FetchPhysicalInventory(txCtx, params.ItemID, accountID)
+			quantityChange := params.Measure
+			reconcile := params.Reconcile != nil && *params.Reconcile
+			unitID := params.UnitID
+
+			// Read in that same unit: a reconcile subtracts the two, and a target in pairs measured
+			// against a level in each is a correction to a number the operator never saw.
+			// (Always the main account, matching Dashboard behavior.)
+			currentPhysical, apiErr := invQueryRepo.FetchPhysicalInventory(txCtx, params.ItemID, accountID, unitID)
 			if apiErr != nil {
 				return apiErr
 			}
 
-			var qc float64
-			if params.QuantityChange != nil {
-				qc = *params.QuantityChange
-			}
-			quantityChange := decimal.NewFromFloat(qc)
-
-			reconcile := params.Reconcile != nil && *params.Reconcile
-
-			var unitID string
-			if params.UnitID != nil {
-				unitID = *params.UnitID
-			}
-
 			// Calculate delta based on reconcile mode.
 			var delta decimal.Decimal
-			currentQty := decimal.NewFromFloat(currentPhysical)
 			if reconcile {
-				delta = quantityChange.Sub(currentQty)
+				delta = quantityChange.Sub(currentPhysical)
 			} else {
 				delta = quantityChange
 			}
@@ -1210,11 +1234,6 @@ func (s *itemSvcImpl) UpdateItemInventory(ctx context.Context, params domain.Upd
 				}); apiErr != nil {
 					return apiErr
 				}
-
-				// Allocate open issues against new receipt.
-				if apiErr := invReservationRepo.AllocateOpenIssuesForItem(txCtx, accountID, params.ItemID); apiErr != nil {
-					return apiErr
-				}
 			} else if delta.LessThan(decimal.Zero) {
 				// Negative delta: create inventory issue.
 				if apiErr := invMutRepo.CreateInventoryIssue(txCtx, domain.CreateInventoryIssueParams{
@@ -1227,11 +1246,17 @@ func (s *itemSvcImpl) UpdateItemInventory(ctx context.Context, params domain.Upd
 				}); apiErr != nil {
 					return apiErr
 				}
+			}
 
-				// Allocate open issues.
-				if apiErr := invReservationRepo.AllocateOpenIssuesForItem(txCtx, accountID, params.ItemID); apiErr != nil {
-					return apiErr
-				}
+			// Allocation walks every open issue for the item and locks the receipts it draws on, which
+			// is not work to hold a request open for. The message commits with the movement that
+			// caused it, and the consumer does it just after.
+			if apiErr := txSvc.enqueueInventoryReceived(txCtx, txSvc.repos, domain.InventoryReceivedEvent{
+				AccountID: accountID,
+				ItemIDs:   []string{params.ItemID},
+				Reason:    "inventory_updated",
+			}); apiErr != nil {
+				return apiErr
 			}
 
 			if apiErr := mediator.RecordInventoryAuditTrail(
@@ -1251,7 +1276,7 @@ func (s *itemSvcImpl) UpdateItemInventory(ctx context.Context, params domain.Upd
 			// Empty when delta is zero (reconcile to the same quantity), in which case the publisher skips the event as a no-op.
 			var changes []audit.FieldChange
 			if !delta.IsZero() {
-				changes = append(changes, audit.NewFieldChange("quantity", currentQty, currentQty.Add(delta)))
+				changes = append(changes, audit.NewFieldChange("quantity", currentPhysical, currentPhysical.Add(delta)))
 			}
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
@@ -2045,13 +2070,14 @@ func (s *itemSvcImpl) BulkReconcileItems(ctx context.Context, params domain.Bulk
 		// This matches the Dashboard pattern which bulk-fetches inventory before processing.
 		// Uses physical inventory (receipts - open issues) instead of ATP to match Dashboard's physicalInventory metric.
 		invQueryRepo := s.repos.NewInventoryQueryRepo()
-		physicalInvMap := make(map[string]float64)
+		physicalInvMap := make(map[string]decimal.Decimal)
 		for _, d := range validItems {
 			item := itemMap[d.SKU]
 			if _, already := physicalInvMap[item.ItemID]; already {
 				continue
 			}
-			physInv, fetchErr := invQueryRepo.FetchPhysicalInventory(ctx, item.ItemID, accountID)
+			// In the base unit, which is what the rows below are written in.
+			physInv, fetchErr := invQueryRepo.FetchPhysicalInventory(ctx, item.ItemID, accountID, item.BaseUnitID)
 			if fetchErr != nil {
 				// Skip items where inventory cannot be fetched, matching Dashboard behavior where items with no currentInventory are silently skipped.
 				continue
@@ -2077,26 +2103,26 @@ func (s *itemSvcImpl) BulkReconcileItems(ctx context.Context, params domain.Bulk
 						continue
 					}
 
-					var newQty, delta float64
+					var newQty, delta decimal.Decimal
 					if params.ReconcileType == "force" {
-						newQty = d.Quantity
-						delta = d.Quantity - currentQty
+						newQty = d.Measure
+						delta = d.Measure.Sub(currentQty)
 					} else { // addition
-						delta = d.Quantity
-						newQty = currentQty + delta
+						delta = d.Measure
+						newQty = currentQty.Add(delta)
 					}
 
-					measure := decimal.NewFromFloat(math.Abs(delta))
+					measure := delta.Abs()
 					unitID := item.BaseUnitID
 
-					if delta > 0 {
+					if delta.GreaterThan(decimal.Zero) {
 						if apiErr := invMutRepo.CreateInventoryReceipt(txCtx, domain.CreateInventoryReceiptParams{
 							AccountID: accountID, ItemID: item.ItemID, Measure: measure, UnitID: unitID,
 						}); apiErr != nil {
 							result.Errors = append(result.Errors, domain.ReconcileError{SKU: d.SKU, Error: "Failed to create receipt"})
 							continue
 						}
-					} else if delta < 0 {
+					} else if delta.LessThan(decimal.Zero) {
 						if apiErr := invMutRepo.CreateInventoryIssue(txCtx, domain.CreateInventoryIssueParams{
 							AccountID: accountID, ItemID: item.ItemID, Measure: measure, UnitID: unitID,
 						}); apiErr != nil {
@@ -2105,13 +2131,12 @@ func (s *itemSvcImpl) BulkReconcileItems(ctx context.Context, params domain.Bulk
 						}
 					}
 
-					changeMeasure := decimal.NewFromFloat(delta)
 					if apiErr := mediator.RecordInventoryAuditTrail(
 						txCtx,
 						txSvc.repos,
 						accountID,
 						item.ItemID,
-						changeMeasure,
+						delta,
 						unitID,
 						"user_correction",
 						nil,
@@ -2123,12 +2148,12 @@ func (s *itemSvcImpl) BulkReconcileItems(ctx context.Context, params domain.Bulk
 
 					result.ReconciledItems = append(result.ReconciledItems, domain.ReconciledItem{
 						ItemID: item.ItemID, SKU: d.SKU,
-						PreviousQuantity: currentQty, NewQuantity: newQty,
+						PreviousMeasure: currentQty, NewMeasure: newQty,
 					})
 
 					// Empty when the reconciled quantity equals the current quantity; the publisher skips the event as a no-op.
 					var changes []audit.FieldChange
-					if delta != 0 {
+					if !delta.IsZero() {
 						changes = append(changes, audit.NewFieldChange("quantity", currentQty, newQty))
 					}
 

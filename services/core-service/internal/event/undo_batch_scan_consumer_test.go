@@ -46,8 +46,8 @@ func (s *UndoBatchScanConsumerTestSuite) SetupTest() {
 	itemRepo := repositorymock.NewMockItemRepo(s.ctrl)
 	itemRepo.EXPECT().Get(gomock.Any(), gomock.Any()).
 		Return(nil, apierror.NewResourceNotFoundError("item")).AnyTimes()
-	s.inventoryQuery.EXPECT().FetchPhysicalInventory(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(float64(0), nil).AnyTimes()
+	s.inventoryQuery.EXPECT().FetchPhysicalInventory(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(decimal.Zero, nil).AnyTimes()
 	s.inventoryMutRepo.EXPECT().CreateInventoryLog(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 	s.inventoryMutRepo.EXPECT().CreateInventoryChangeLog(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 

@@ -16,7 +16,7 @@ import (
 
 // EnqueuerConfig holds the configuration for the outbox enqueuer.
 type EnqueuerConfig struct {
-	// ServiceName (required) identifies which service owns this enqueuer instance. Used in log messages and to scope outbox queries to the owning service's messages.
+	// ServiceName (required) identifies which service owns this enqueuer instance. Stamped onto rows this service writes and used in log messages; it does not scope the poll, which claims pending rows from every service sharing the database.
 	ServiceName string
 
 	// PlatformMode (optional) is the platform mode. When set to "test", default intervals are minimized so e2e runs observe async side-effects quickly (see WithDefaults).
@@ -28,7 +28,9 @@ type EnqueuerConfig struct {
 	// PollInterval (optional; default: 250ms in production, 10ms in test) controls how frequently the enqueuer polls the outbox table for pending messages while there is work to do.
 	PollInterval time.Duration
 
-	// MaxPollInterval (optional; default: 1s in production, == PollInterval in test) is the ceiling for idle backoff. When consecutive polls find nothing, the interval doubles from PollInterval up to this value so an empty outbox is not queried at full rate. Any poll that finds work resets the interval to PollInterval, so pickup latency and throughput under load are unchanged; only the steady-state idle poll rate drops. The tradeoff is that the first message after a sustained idle period waits up to MaxPollInterval to be picked up. Must be >= PollInterval (clamped in WithDefaults).
+	// MaxPollInterval (optional; default: 30s in production, == PollInterval in test) is the ceiling for idle backoff. When consecutive polls find nothing, the interval doubles from PollInterval up to this value so an empty outbox is not queried at full rate. Any poll that finds work resets the interval to PollInterval, so pickup latency and throughput under load are unchanged; only the steady-state idle poll rate drops. The tradeoff is that the first message after a sustained idle period waits up to MaxPollInterval to be picked up. Must be >= PollInterval (clamped in WithDefaults).
+	//
+	// The default is deliberately slow because the poll query is not scoped by service_name: every enqueuer on a given database competes for every pending row, so a service that overrides this to a tighter ceiling (notification-service, agent-service) drains the whole table on behalf of the services that do not. Latency-sensitive producers should call Notify() after commit rather than lowering this, and anything that must publish promptly without a kick belongs on a service that overrides the ceiling.
 	MaxPollInterval time.Duration
 
 	// BatchSize (optional; default: 100) is the maximum number of outbox messages to lock and publish in a single poll cycle.
@@ -78,7 +80,7 @@ func (c *EnqueuerConfig) WithDefaults() *EnqueuerConfig {
 			// Keep e2e cadence tight so async side-effects are observed quickly: no backoff.
 			c.MaxPollInterval = c.PollInterval
 		} else {
-			c.MaxPollInterval = 1 * time.Second
+			c.MaxPollInterval = 30 * time.Second
 		}
 	}
 	if c.MaxPollInterval < c.PollInterval {

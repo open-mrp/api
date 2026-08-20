@@ -22,17 +22,19 @@ type BulkReconcileItemInput struct {
 	// The unit is checked for existence only: the quantity is always recorded in the item's own base unit, so send figures already expressed in that unit. Rows naming an abbreviation that matches no built-in or account-defined unit are reported in the response's `errors`.
 	Unit string `json:"unit" validate:"required"`
 	// Quantity to apply, interpreted according to the request's `reconcile_type`.
-	Quantity float64 `json:"quantity" validate:"required"`
+	//
+	// A decimal string rather than a number: a quantity that has been through a binary float is not the quantity you sent.
+	Quantity string `json:"quantity" validate:"required" format:"decimal"`
 }
 
 // Request to reconcile inventory for many items at once.
 type BulkReconcileItemsRequest struct {
 	// Items to reconcile.
 	Data []BulkReconcileItemInput `json:"data" validate:"required"`
-	// How each item's quantity is applied to its current on-hand inventory.
+	// How each item's quantity is applied to its current quantity.
 	//
-	// - `addition`: adds the quantity to the item's current on-hand quantity.
-	// - `force`: sets the item's on-hand quantity to exactly the given quantity.
+	// - `addition`: adds the quantity to the item's current quantity.
+	// - `force`: sets the item's current quantity to exactly the given quantity.
 	ReconcileType string `json:"reconcile_type" validate:"required"`
 }
 
@@ -41,7 +43,7 @@ var sampleBulkReconcileItemsRequest = &BulkReconcileItemsRequest{
 		{
 			SKU:      apiresource.SampleItemSKU,
 			Unit:     apiresource.SampleUnitAbbreviation,
-			Quantity: 10.5,
+			Quantity: "10.5",
 		},
 	},
 	ReconcileType: "addition",
@@ -51,9 +53,9 @@ func (*BulkReconcileItemsRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleBulkReconcileItemsRequest)
 }
 
-// Reconciles on-hand inventory for multiple items by SKU in one call, the bulk equivalent of counting stock and correcting the books.
+// Reconciles inventory for multiple items by SKU in one call, the bulk equivalent of counting stock and correcting the books.
 //
-// `reconcile_type` controls whether each quantity is added to the item's current on-hand quantity (`addition`) or replaces it (`force`). The response reports each item as reconciled, skipped (e.g. unknown SKU), or errored (e.g. unknown unit), so a problem with one item does not fail the rest of the batch.
+// `reconcile_type` controls whether each quantity is added to the item's current quantity (`addition`) or replaces it (`force`). The figure a `force` measures against is what is on hand net of demand nothing has covered, the same basis the single-item endpoint uses. The response reports each item as reconciled, skipped (e.g. unknown SKU), or errored (e.g. unknown unit), so a problem with one item does not fail the rest of the batch.
 //
 // Each correction is written to the item's inventory audit trail as a user correction, attributed to the caller.
 type BulkReconcileItemsEndpoint struct{}
@@ -65,7 +67,8 @@ func (e *BulkReconcileItemsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Bul
 		Route:               "/v1/catalog/items/actions/bulk-reconcile",
 		ContentType:         "application/json",
 		SuccessStatusCode:   http.StatusOK,
-		Public:              false,
+		Public:              true,
+		AgentTool:           true,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainItems, Action: types.ActionCreate}},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkReconcileItemsRequest) (*apiresource.BulkReconcileItemsResponse, *apierror.APIError) {

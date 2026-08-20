@@ -78,24 +78,57 @@ INSERT INTO inventory_change_log (
     sqlc.narg('responsible_user_id'), NOW(3), NOW(3)
 );
 
+-- FetchPhysicalInventoryForItem is what the shelf holds net of the demand nothing has covered — the
+-- figure a reconcile measures its target against, and the level the inventory log records.
+--
+-- It has to agree with what the item's inventory endpoint reports, or a correction is computed
+-- against a number the operator never saw. Two things make it disagree if they are left out:
+--
+--   • Allocations. An open issue drawn from a receipt appears on both sides, so subtracting whole
+--     receipts from whole issues counts every allocated unit twice. An item with 120 received and a
+--     220 issue that has already drawn 180 of it read as -220 while the page showed 0, and a
+--     reconcile to 0 then wrote a receipt for 220 instead of removing anything.
+--   • Units. Receipts, issues and allocations are each recorded in whatever unit their source used;
+--     adding 120 ea to 60 pr as though they were the same number is arithmetic on labels.
+--
+-- Everything is normalised through its unit's ratio and netted per row, then the total is expressed
+-- in `unit_id`. An unknown or empty unit leaves it in base units. Nothing is clamped: a row drawn on
+-- for more than it holds nets negative and carries that into the total, which is what makes the
+-- level the sum of the movements recorded against the item.
 -- name: FetchPhysicalInventoryForItem :one
-SELECT CAST(
+SELECT CAST((
     COALESCE(
-        (SELECT SUM(CAST(q.value AS DECIMAL(65,30)))
+        (SELECT SUM(CAST(q.value AS DECIMAL(65,30)) * (u.ratio_numerator / u.ratio_denominator) - COALESCE((
+            SELECT SUM(CAST(aq.value AS DECIMAL(65,30)) * (au.ratio_numerator / au.ratio_denominator))
+            FROM inventory_allocation ia
+            JOIN quantity aq ON aq.id = ia.quantity_id
+            JOIN unit au ON au.id = aq.unit_id
+            WHERE ia.inventory_receipt_id = ir.id
+         ), 0))
          FROM inventory_receipt ir
          JOIN quantity q ON ir.quantity_id = q.id
+         JOIN unit u ON u.id = q.unit_id
          WHERE ir.item_id = sqlc.arg('item_id')
          AND (ir.owner_account_id = sqlc.arg('owner_account_id') OR ir.holder_account_id = sqlc.arg('owner_account_id'))
          AND ir.status_code = 'available'), 0
     ) - COALESCE(
-        (SELECT SUM(CAST(q.value AS DECIMAL(65,30)))
+        (SELECT SUM(CAST(q.value AS DECIMAL(65,30)) * (u.ratio_numerator / u.ratio_denominator) - COALESCE((
+            SELECT SUM(CAST(aq.value AS DECIMAL(65,30)) * (au.ratio_numerator / au.ratio_denominator))
+            FROM inventory_allocation ia
+            JOIN quantity aq ON aq.id = ia.quantity_id
+            JOIN unit au ON au.id = aq.unit_id
+            WHERE ia.inventory_issue_id = ii.id
+         ), 0))
          FROM inventory_issue ii
          JOIN quantity q ON ii.quantity_id = q.id
+         JOIN unit u ON u.id = q.unit_id
          WHERE ii.item_id = sqlc.arg('item_id')
          AND ii.account_id = sqlc.arg('owner_account_id')
          AND ii.status_code = 'open'), 0
     )
-AS DECIMAL(65,30)) AS physical_inventory;
+) / COALESCE(NULLIF((
+    SELECT u.ratio_numerator / u.ratio_denominator FROM unit u WHERE u.id = sqlc.arg('unit_id')
+), 0), 1) AS DECIMAL(65,30)) AS physical_inventory;
 
 -- name: GetBatchSecondsAndWaste :one
 SELECT

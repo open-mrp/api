@@ -134,7 +134,7 @@ func makeAccessTokenCookie(token string, opts cookieOptions) *http.Cookie {
 	maxAge := 60 * 60 // 1 hour in seconds
 	expires := time.Now().UTC().Add(time.Duration(maxAge) * time.Second)
 
-	return &http.Cookie{
+	return &http.Cookie{ // #nosec G124 - Secure/HttpOnly/SameSite are set from opts; gosec cannot resolve them
 		Name:     accessTokenCookieName,
 		Value:    token,
 		Path:     opts.Path,
@@ -151,7 +151,7 @@ func makeRefreshTokenCookie(token string, opts cookieOptions) *http.Cookie {
 	maxAge := 30 * 24 * 60 * 60 // 30 days in seconds
 	expires := time.Now().UTC().Add(time.Duration(maxAge) * time.Second)
 
-	return &http.Cookie{
+	return &http.Cookie{ // #nosec G124 - Secure/HttpOnly/SameSite are set from opts; gosec cannot resolve them
 		Name:     refreshTokenCookieName,
 		Value:    token,
 		Path:     opts.Path,
@@ -165,7 +165,7 @@ func makeRefreshTokenCookie(token string, opts cookieOptions) *http.Cookie {
 }
 
 func makeClearAccessTokenCookie(opts cookieOptions) *http.Cookie {
-	return &http.Cookie{
+	return &http.Cookie{ // #nosec G124 - Secure/HttpOnly/SameSite are set from opts; gosec cannot resolve them
 		Name:     accessTokenCookieName,
 		Value:    "",
 		Path:     opts.Path,
@@ -179,7 +179,7 @@ func makeClearAccessTokenCookie(opts cookieOptions) *http.Cookie {
 }
 
 func makeClearRefreshTokenCookie(opts cookieOptions) *http.Cookie {
-	return &http.Cookie{
+	return &http.Cookie{ // #nosec G124 - Secure/HttpOnly/SameSite are set from opts; gosec cannot resolve them
 		Name:     refreshTokenCookieName,
 		Value:    "",
 		Path:     opts.Path,

@@ -217,14 +217,14 @@ type ChangeItemCategoryParams struct {
 
 // UpdateItemInventoryParams holds parameters for updating item inventory.
 type UpdateItemInventoryParams struct {
-	AccountID      string
-	ItemID         string
-	QuantityChange *float64
-	Reconcile      *bool
-	CustomerID     *string
-	LocationID     *string
-	LotNumber      *string
-	UnitID         *string
+	AccountID  string
+	ItemID     string
+	Measure    decimal.Decimal
+	UnitID     string
+	Reconcile  *bool
+	CustomerID *string
+	LocationID *string
+	LotNumber  *string
 }
 
 // BulkCreateItemsParams holds parameters for bulk creating items.
@@ -275,9 +275,9 @@ type BulkReconcileItemsParams struct {
 
 // BulkReconcileItemInput represents a single item to reconcile.
 type BulkReconcileItemInput struct {
-	SKU      string
-	Unit     string
-	Quantity float64
+	SKU     string
+	Unit    string
+	Measure decimal.Decimal
 }
 
 // BulkReconcileItemsResult holds the results of a bulk reconciliation.
@@ -289,10 +289,10 @@ type BulkReconcileItemsResult struct {
 
 // ReconciledItem represents a successfully reconciled item.
 type ReconciledItem struct {
-	ItemID           string
-	SKU              string
-	PreviousQuantity float64
-	NewQuantity      float64
+	ItemID          string
+	SKU             string
+	PreviousMeasure decimal.Decimal
+	NewMeasure      decimal.Decimal
 }
 
 // SkippedItem represents an item that was skipped during reconciliation.

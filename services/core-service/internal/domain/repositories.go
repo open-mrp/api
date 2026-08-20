@@ -630,7 +630,7 @@ type UnitQueryRepo interface {
 type InventoryQueryRepo interface {
 	FetchCurrentInventory(ctx context.Context, itemID, ownerAccountID string) (*InventorySnapshot, *apierror.APIError)
 	FetchOnHandInventoryBulk(ctx context.Context, itemIDs []string, ownerAccountID string) ([]*BulkOnHandInventory, *apierror.APIError)
-	FetchPhysicalInventory(ctx context.Context, itemID, ownerAccountID string) (float64, *apierror.APIError)
+	FetchPhysicalInventory(ctx context.Context, itemID, ownerAccountID, unitID string) (decimal.Decimal, *apierror.APIError)
 }
 
 type ProductLineRepo interface {

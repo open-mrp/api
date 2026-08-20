@@ -52,16 +52,26 @@ func (r *inventoryMutationRepo) UpdateInventory(ctx context.Context, params doma
 			return apiErr
 		}
 
-		// Create a zero unit cost rate for the receipt.
+		// The receipt carries a copy of the item's unit cost as it stood when the stock landed, which
+		// is what inventory is later valued at — a receipt written at zero values everything a scan
+		// produced at nothing, and the weighted average it feeds with it.
+		costRow, err := r.queries.GetItemUnitCost(ctx, sqlc.GetItemUnitCostParams{
+			ItemID:    params.ItemID,
+			AccountID: params.AccountID,
+		})
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return apiErr
+		}
+
 		rateID, apiErr := id.GenID(id.RateIDPrefix, nil)
 		if apiErr != nil {
 			return apiErr
 		}
 		if err := r.queries.InsertRateForInventory(ctx, sqlc.InsertRateForInventoryParams{
 			ID:                rateID,
-			Value:             "0",
-			NumeratorUnitID:   params.UnitID,
-			DenominatorUnitID: params.UnitID,
+			Value:             costRow.Value,
+			NumeratorUnitID:   costRow.NumeratorUnitID,
+			DenominatorUnitID: costRow.DenominatorUnitID,
 		}); err != nil {
 			return apierror.NewInternalError(err, "Failed to insert unit cost for inventory receipt.")
 		}

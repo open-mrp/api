@@ -522,6 +522,20 @@ func namedEnumSchemaName(t reflect.Type) string {
 	return ""
 }
 
+// isJSONRawMessage reports whether t is json.RawMessage. Go 1.27 re-aliased it to encoding/json/jsontext.Value, so both identities have to match.
+func isJSONRawMessage(t reflect.Type) bool {
+	if t.Kind() != reflect.Slice {
+		return false
+	}
+	switch {
+	case t.PkgPath() == "encoding/json" && t.Name() == "RawMessage":
+		return true
+	case t.PkgPath() == "encoding/json/jsontext" && t.Name() == "Value":
+		return true
+	}
+	return false
+}
+
 func generateSchema(t reflect.Type, components *Components, docReader *DocReader) Schema {
 	origT := t
 	if t.Kind() == reflect.Pointer {
@@ -537,7 +551,7 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 	// For documentation purposes, model it as a generic JSON object.
 	// Without this special-case, we'd treat it like a Go slice ([]byte) and
 	// incorrectly render it as `type: array` in the OpenAPI schema.
-	if t.Kind() == reflect.Slice && t.PkgPath() == "encoding/json" && t.Name() == "RawMessage" {
+	if isJSONRawMessage(t) {
 		return Schema{Type: "object"}
 	}
 
@@ -778,7 +792,7 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 		case reflect.Slice:
 			// Treat json.RawMessage as a JSON object for docs. RawMessage is a
 			// Go slice ([]byte), so without this check we'd render it as an array.
-			if fieldType.PkgPath() == "encoding/json" && fieldType.Name() == "RawMessage" {
+			if isJSONRawMessage(fieldType) {
 				fieldSchema.Type = "object"
 				// Absent values are nil RawMessage, which encode as JSON null.
 				fieldSchema.Nullable = true

@@ -915,30 +915,48 @@ FROM _item_attributes ia
 JOIN attribute a ON a.id = ia.A
 WHERE ia.B IN (sqlc.slice('item_ids'));
 
+-- GetItemInventory reports what is on the shelf, what is spoken for, and what demand is still short.
+--
+-- Every quantity is normalised through its own unit's ratio before anything is subtracted, then
+-- expressed in the unit the item is stocked in. Netting the raw column values instead assumes a
+-- receipt, an issue and an allocation are all recorded in the same unit, and they are not: an
+-- allocation is written in the unit of the receipt it draws from, and the issue it covers in whatever
+-- unit its own source used. An issue of 10 dozen covered by allocations recording 120 each then read
+-- as 10 - 120, and the item reported as short by a negative amount.
+--
 -- name: GetItemInventory :one
 SELECT
-    COALESCE(receipt_totals.on_hand, 0) AS on_hand,
-    COALESCE(issue_totals.reserved, 0) AS reserved,
-    COALESCE(issue_totals.short, 0) AS short,
-    CAST(COALESCE(receipt_totals.on_hand, 0) - COALESCE(issue_totals.reserved, 0) - COALESCE(issue_totals.short, 0) AS DECIMAL(65,30)) AS available_to_promise,
+    CAST(COALESCE(receipt_totals.on_hand, 0) / display_ratio.r AS DECIMAL(65,30)) AS on_hand,
+    CAST(COALESCE(issue_totals.reserved, 0) / display_ratio.r AS DECIMAL(65,30)) AS reserved,
+    CAST(COALESCE(issue_totals.short, 0) / display_ratio.r AS DECIMAL(65,30)) AS short,
+    CAST((COALESCE(receipt_totals.on_hand, 0) - COALESCE(issue_totals.reserved, 0) - COALESCE(issue_totals.short, 0)) / display_ratio.r AS DECIMAL(65,30)) AS available_to_promise,
     COALESCE(rv.denominator_unit_id, '') AS unit_id,
     COALESCE(dvu.abbreviation, '') AS unit_abbreviation,
     COALESCE(dvu.unit_dimension_code, '') AS unit_type
 FROM item i
 JOIN rate rv ON rv.id = i.unit_value_id
 LEFT JOIN unit dvu ON dvu.id = rv.denominator_unit_id
+JOIN (
+    SELECT COALESCE(NULLIF(u.ratio_numerator / u.ratio_denominator, 0), 1) AS r
+    FROM item i2
+    JOIN rate rv2 ON rv2.id = i2.unit_value_id
+    LEFT JOIN unit u ON u.id = rv2.denominator_unit_id
+    WHERE i2.id = sqlc.arg('item_id')
+) display_ratio
 LEFT JOIN (
     SELECT
         ir.item_id,
         -- Correlated per receipt: a grouped derived table cannot take the item filter and so aggregates all of inventory_allocation on every call.
-        SUM(q.value - COALESCE((
-            SELECT SUM(aq.value)
+        SUM(q.value * (u.ratio_numerator / u.ratio_denominator) - COALESCE((
+            SELECT SUM(aq.value * (au.ratio_numerator / au.ratio_denominator))
             FROM inventory_allocation ia
             JOIN quantity aq ON aq.id = ia.quantity_id
+            JOIN unit au ON au.id = aq.unit_id
             WHERE ia.inventory_receipt_id = ir.id
         ), 0)) AS on_hand
     FROM inventory_receipt ir
     JOIN quantity q ON q.id = ir.quantity_id
+    JOIN unit u ON u.id = q.unit_id
     WHERE ir.item_id = sqlc.arg('item_id')
         AND (ir.owner_account_id = sqlc.arg('account_id') OR ir.holder_account_id = sqlc.arg('account_id'))
         AND ir.status_code = 'available'
@@ -947,20 +965,23 @@ LEFT JOIN (
 LEFT JOIN (
     SELECT
         ii.item_id,
-        SUM(CASE WHEN ii.status_code = 'reserved' THEN q.value - COALESCE((
-            SELECT SUM(aq.value)
+        SUM(CASE WHEN ii.status_code = 'reserved' THEN q.value * (u.ratio_numerator / u.ratio_denominator) - COALESCE((
+            SELECT SUM(aq.value * (au.ratio_numerator / au.ratio_denominator))
             FROM inventory_allocation ia
             JOIN quantity aq ON aq.id = ia.quantity_id
+            JOIN unit au ON au.id = aq.unit_id
             WHERE ia.inventory_issue_id = ii.id
         ), 0) ELSE 0 END) AS reserved,
-        SUM(CASE WHEN ii.status_code = 'open' THEN q.value - COALESCE((
-            SELECT SUM(aq.value)
+        SUM(CASE WHEN ii.status_code = 'open' THEN q.value * (u.ratio_numerator / u.ratio_denominator) - COALESCE((
+            SELECT SUM(aq.value * (au.ratio_numerator / au.ratio_denominator))
             FROM inventory_allocation ia
             JOIN quantity aq ON aq.id = ia.quantity_id
+            JOIN unit au ON au.id = aq.unit_id
             WHERE ia.inventory_issue_id = ii.id
         ), 0) ELSE 0 END) AS short
     FROM inventory_issue ii
     JOIN quantity q ON q.id = ii.quantity_id
+    JOIN unit u ON u.id = q.unit_id
     WHERE ii.item_id = sqlc.arg('item_id')
         AND ii.account_id = sqlc.arg('account_id')
         AND ii.status_code IN ('reserved', 'open')

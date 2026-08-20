@@ -34,20 +34,19 @@ func TestMaterials_BurnRate_FromConsumptionHistory(t *testing.T) {
 	itemID := jsonField(item, "id")
 	require.NotEmpty(t, itemID)
 
-	adjust := func(delta float64) {
+	adjust := func(delta string) {
 		t.Helper()
 		patchBody := map[string]any{
-			"quantity_change": delta,
-			"operation":       "adjust",
-			"unit_id":         nonCurrencyUnitID,
+			"quantity":  map[string]any{"value": delta, "unit_id": nonCurrencyUnitID},
+			"operation": "adjust",
 		}
 		status, resp, patchErr := apiClient.Patch(itemsPath+"/"+itemID+"/inventory", patchBody, newIdempotencyKey())
 		require.NoError(t, patchErr)
 		requireStatus(t, 200, status, resp)
 	}
 
-	adjust(-10)
-	adjust(-5)
+	adjust("-10")
+	adjust("-5")
 
 	status, getBody, err := apiClient.GetListRaw(materialsPath+"/"+materialID, url.Values{
 		"include": {"item.burn_rate"},

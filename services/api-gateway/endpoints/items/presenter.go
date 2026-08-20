@@ -7,7 +7,6 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
 	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/id"
 	pb "github.com/augno/api/shared/proto/core"
 )
 
@@ -146,35 +145,18 @@ func ItemInventoryPresenter(ctx context.Context, resp *pb.GetItemInventoryRespon
 	}
 }
 
+// The four inventory figures are netted out of the ledger at read time, so each is a computed
+// quantity: there is no row behind it to carry an id, and the unit rides in `display_value`.
 func stashItemInventoryQuantity(ctx context.Context, meta *resourcekit.LoadMeta, key string, q *pb.QuantityInfo) {
 	if q == nil {
 		return
 	}
-	quantity := buildQuantityFromProto(ctx, q)
+	quantity := &apiresource.ComputedQuantity{
+		Object:       constants.ObjectTypeComputedQuantity,
+		Value:        apiresource.NormalizeQuantityValue(q.Value, q.UnitType),
+		DisplayValue: apiresource.FormatDisplayValue(q.Value, q.UnitAbbreviation, q.UnitType),
+	}
 	meta.Set(constants.ObjectTypeItemInventory, "singleton", key, quantity)
-}
-
-func buildQuantityFromProto(ctx context.Context, q *pb.QuantityInfo) *apiresource.Quantity {
-	qid, _ := id.GenID(id.QuantityIDPrefix, nil)
-
-	meta := resourcekit.GetLoadMeta(ctx)
-	// unit is an expandable reference on the quantity: stash the FK id so
-	// LoadUnits fetches the real Unit on ?include=...unit. Never fabricate.
-	if q.UnitId != "" {
-		meta.Set(constants.ObjectTypeQuantity, qid, "unit_id", q.UnitId)
-	}
-
-	return &apiresource.Quantity{
-		ID:     qid,
-		Object: constants.ObjectTypeQuantity,
-		Value:  apiresource.NormalizeQuantityValue(q.Value, q.UnitType),
-		DisplayValue: apiresource.FormatDisplayValue(
-			q.Value,
-			q.UnitAbbreviation,
-			q.UnitType,
-		),
-		// Unit left nil: populated with real data via LoadUnits on ?include=...unit.
-	}
 }
 
 func ItemCostsPresenter(resp *pb.GetItemCostsResponse) *apiresource.ItemCosts {
@@ -229,7 +211,7 @@ func BulkReconcileItemsPresenter(resp *pb.BulkReconcileItemsResponse) *apiresour
 	for i, r := range resp.ReconciledItems {
 		reconciled[i] = apiresource.ReconciledItemResult{
 			ItemID: r.ItemId, SKU: r.Sku,
-			PreviousQuantity: r.PreviousQuantity, NewQuantity: r.NewQuantity,
+			PreviousQuantity: r.PreviousMeasure, NewQuantity: r.NewMeasure,
 		}
 	}
 

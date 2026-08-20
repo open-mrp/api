@@ -869,19 +869,27 @@ message AnalyzeWeeksOfSalesResponse {
   int64 count = 2;
 }
 message BulkReconcileItemInput {
+  // 3 held quantity as a double. See UpdateItemInventoryRequest.
+  reserved 3;
+  reserved "quantity";
   string sku = 1;
   string unit = 2;
-  double quantity = 3;
+  // Decimal string.
+  string measure = 4;
 }
 message BulkReconcileItemsRequest {
   string reconcile_type = 1;
   repeated BulkReconcileItemInput data = 2;
 }
 message ReconciledItemProto {
+  // 3 and 4 held these as doubles. See UpdateItemInventoryRequest.
+  reserved 3, 4;
+  reserved "previous_quantity", "new_quantity";
   string item_id = 1;
   string sku = 2;
-  double previous_quantity = 3;
-  double new_quantity = 4;
+  // Decimal strings.
+  string previous_measure = 5;
+  string new_measure = 6;
 }
 message SkippedItemProto {
   string sku = 1;

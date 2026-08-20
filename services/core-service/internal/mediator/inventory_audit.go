@@ -30,18 +30,18 @@ func RecordInventoryAuditTrail(
 	}
 
 	invQueryRepo := repos.NewInventoryQueryRepo()
-	currentPhysical, apiErr := invQueryRepo.FetchPhysicalInventory(ctx, itemID, accountID)
+	// Logged in the unit the movement was recorded in, so the level and the change agree.
+	currentPhysical, apiErr := invQueryRepo.FetchPhysicalInventory(ctx, itemID, accountID, unitID)
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
 
-	finalQty := decimal.NewFromFloat(currentPhysical)
 	invMutRepo := repos.NewInventoryMutationRepo()
 
 	if apiErr := invMutRepo.CreateInventoryLog(ctx, domain.CreateInventoryLogParams{
 		AccountID: accountID,
 		ItemID:    itemID,
-		Measure:   finalQty,
+		Measure:   currentPhysical,
 		UnitID:    unitID,
 	}); apiErr != nil {
 		return tracing.Trace(span, apiErr)

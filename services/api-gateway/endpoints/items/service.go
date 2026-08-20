@@ -284,13 +284,13 @@ func (m *itemSvcImpl) UpdateItemInventory(ctx context.Context, req *UpdateItemIn
 	}
 
 	pbReq := &pb.UpdateItemInventoryRequest{
-		ItemId:         req.ItemID,
-		QuantityChange: req.QuantityChange.Ptr(),
-		Reconcile:      reconcile,
-		CustomerId:     req.CustomerID.Ptr(),
-		LocationId:     req.LocationID.Ptr(),
-		LotNumber:      req.LotNumber.Ptr(),
-		UnitId:         req.UnitID.Ptr(),
+		ItemId:     req.ItemID,
+		Measure:    req.Quantity.Value,
+		UnitId:     req.Quantity.UnitID,
+		Reconcile:  reconcile,
+		CustomerId: req.CustomerID.Ptr(),
+		LocationId: req.LocationID.Ptr(),
+		LotNumber:  req.LotNumber.Ptr(),
 	}
 
 	_, apiErr := grpcutil.CallRPC(ctx, itemSvcTracer, "service.items.update_inventory", domain.ServiceName,
@@ -354,9 +354,9 @@ func (m *itemSvcImpl) BulkReconcileItems(ctx context.Context, req *BulkReconcile
 	pbData := make([]*pb.BulkReconcileItemInput, len(req.Data))
 	for i, d := range req.Data {
 		pbData[i] = &pb.BulkReconcileItemInput{
-			Sku:      d.SKU,
-			Unit:     d.Unit,
-			Quantity: d.Quantity,
+			Sku:     d.SKU,
+			Unit:    d.Unit,
+			Measure: d.Quantity,
 		}
 	}
 

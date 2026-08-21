@@ -144,9 +144,12 @@ INSERT IGNORE INTO pick_line (id, pick_id, quantity_id, sales_order_line_id, cre
     ('pkln_01seedful_ln1_0000', 'pk_01k0a5tsn7eeht162chb2jcknc', 'qu_01seedpkln_ful_ln100', 'orln_01seedful_ln1_0000', NOW(), NOW()),
     ('pkln_01seedful_ln2_0000', 'pk_01k0a5tsn7eeht162chb2jcknc', 'qu_01seedpkln_ful_ln200', 'orln_01seedful_ln2_0000', NOW(), NOW());
 
--- Mark packed pick lines as packed
+-- Mark packed pick lines as packed. PICK-001 (the open pick) is partially packed:
+-- its SCK-002 line is packed to back SHP-003, while SCK-001 stays unpacked so the pick
+-- stays open (a pick finishes only once every one of its lines is packed).
 UPDATE pick_line SET packed_at = DATE_SUB(NOW(), INTERVAL 2 DAY) WHERE id IN ('pkln_01seedpck_ln1_0000', 'pkln_01seedpck_ln2_0000') AND packed_at IS NULL;
 UPDATE pick_line SET packed_at = DATE_SUB(NOW(), INTERVAL 4 DAY) WHERE id IN ('pkln_01seedful_ln1_0000', 'pkln_01seedful_ln2_0000') AND packed_at IS NULL;
+UPDATE pick_line SET packed_at = NOW() WHERE id = 'pkln_01seediss_ln2_0000' AND packed_at IS NULL;
 
 INSERT IGNORE INTO `_departments_picks` (`A`, `B`) VALUES
     ('dp_01k0a5r01yfx3sj1vy9qgv3dc0', 'pk_01k0a5tsn7f7psgagr1732fxqa'),
@@ -170,9 +173,11 @@ INSERT IGNORE INTO shipment (id, number, sales_order_id, carrier_id, carrier_opt
 INSERT IGNORE INTO shipment (id, number, sales_order_id, carrier_id, shipping_address_id, shipment_status_code, shipped_at, shipped_by_id, master_tracking_number, account_id, created_at, updated_at) VALUES
     ('sh_01k0a87w33fw0shhsahaa0yq6r', 'SHP-002', 'or_01k0a8bs2yf909wjkd7ecd6x4z', 'will_call', 'ad_01k09wnpvrea0awz7vem2j8j7g', 'shipped', DATE_SUB(NOW(), INTERVAL 2 DAY), 'acus_s83fjhyfmqen', '1234567890', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
 
--- Shipped shipment for the shared seed order (SeedSalesOrderID / ORD-001) so that
--- ?include=related.shipments populates on its detail (ORD-001 has PICK-001). INV-002 links to
--- it in 0013_finance.sql; the link rides on invoice_id and needs no shipped status.
+-- Packed shipment for the shared seed order (SeedSalesOrderID / ORD-001). It carries the
+-- packed portion of PICK-001's partial pack — its SCK-002 line, plus freight — so the open
+-- pick and this shipment agree (SCK-001 is neither packed here nor shipped). Serves
+-- ?include=related.shipments on ORD-001, links to INV-002 in 0013_finance.sql (via invoice_id),
+-- and its shipped items make the pick's void guard fire (TestPicks_Void_RejectedWhenOrderHasShipments).
 INSERT IGNORE INTO shipment (id, number, sales_order_id, carrier_id, shipping_address_id, shipment_status_code, account_id, created_at, updated_at) VALUES
     ('sh_01k0a87w33emw8pmkz1mf86cg2', 'SHP-003', 'or_01k0a8bs2yejxbsvqhrx4drkq1', 'delivery', 'ad_01k09wnpvrea0awz7vem2j8j7g', 'packed', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
 
@@ -204,7 +209,6 @@ INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
     ('qu_01seedshl_ful_ln1', 25, 'un_01seedpair000000000', NOW(), NOW()),
     ('qu_01seedshl_ful_ln2', 18, 'un_01seedpair000000000', NOW(), NOW()),
     ('qu_01seedshl_ful_ln3', 1, 'each', NOW(), NOW()),
-    ('qu_01seedshl_iss_ln1', 15, 'un_01seedpair000000000', NOW(), NOW()),
     ('qu_01seedshl_iss_ln2', 8, 'un_01seedpair000000000', NOW(), NOW()),
     ('qu_01seedshl_iss_ln3', 1, 'each', NOW(), NOW());
 
@@ -216,8 +220,7 @@ INSERT IGNORE INTO shipment_line (id, shipment_id, sales_order_line_id, quantity
     ('shln_01seedful_ln1_000', 'sh_01k0a87w33fw0shhsahaa0yq6r', 'orln_01seedful_ln1_0000', 'qu_01seedshl_ful_ln1', NOW(), NOW()),
     ('shln_01seedful_ln2_000', 'sh_01k0a87w33fw0shhsahaa0yq6r', 'orln_01seedful_ln2_0000', 'qu_01seedshl_ful_ln2', NOW(), NOW()),
     ('shln_01seedful_ln3_000', 'sh_01k0a87w33fw0shhsahaa0yq6r', 'orln_01seedful_ln3_0000', 'qu_01seedshl_ful_ln3', NOW(), NOW()),
-    -- SHP-003 (ORD-001)
-    ('shln_01seediss_ln1_000', 'sh_01k0a87w33emw8pmkz1mf86cg2', 'orln_01seediss_ln1_0000', 'qu_01seedshl_iss_ln1', NOW(), NOW()),
+    -- SHP-003 (ORD-001) — only the packed SCK-002 line plus freight; SCK-001 stays open on PICK-001.
     ('shln_01seediss_ln2_000', 'sh_01k0a87w33emw8pmkz1mf86cg2', 'orln_01seediss_ln2_0000', 'qu_01seedshl_iss_ln2', NOW(), NOW()),
     ('shln_01seediss_ln3_000', 'sh_01k0a87w33emw8pmkz1mf86cg2', 'orln_01seediss_ln3_0000', 'qu_01seedshl_iss_ln3', NOW(), NOW());
 

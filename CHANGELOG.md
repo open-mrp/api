@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.50.3](https://github.com/Augno/api/compare/v0.50.2...v0.50.3) (2026-08-21)
+
+
+### Bug Fixes
+
+* better permission error messages; remove unneeded endpoints ([#511](https://github.com/Augno/api/issues/511)) ([a9f8ede](https://github.com/Augno/api/commit/a9f8edeffed6d1b505895e0f9abcc242b764087a))
+
+
+### Documentation
+
+* cleanup wip files and add query logs to be fixed ([9c1ca5e](https://github.com/Augno/api/commit/9c1ca5e8e34d0c6a6bb4b4675e4a0ad11cfa0617))
+
 ## [0.50.2](https://github.com/Augno/api/compare/v0.50.1...v0.50.2) (2026-08-20)
 
 

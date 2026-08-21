@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.50.4](https://github.com/Augno/api/compare/v0.50.3...v0.50.4) (2026-08-21)
+
+
+### Bug Fixes
+
+* seed data ([#512](https://github.com/Augno/api/issues/512)) ([68db52c](https://github.com/Augno/api/commit/68db52c2bad430dc9ef82f2dece5a9a66bc1d23e))
+
 ## [0.50.3](https://github.com/Augno/api/compare/v0.50.2...v0.50.3) (2026-08-21)
 
 

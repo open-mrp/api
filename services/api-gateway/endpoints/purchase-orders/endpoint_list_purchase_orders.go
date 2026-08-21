@@ -14,8 +14,8 @@ import (
 // Request to list purchase orders.
 type ListPurchaseOrdersRequest struct {
 	apiresource.PaginationRequest
-	// Filter to orders with any of these statuses (`estimate`, `issued`, `fulfilled`).
-	StatusCodes []string `query:"status_codes"`
+	// Filter to orders with any of these statuses.
+	StatusCodes []constants.SalesOrderStatusCode `query:"status_codes"`
 	// Filter to orders with at least one line referencing any of these items.
 	ItemIDs []string `query:"item_ids"`
 	// Filter to orders placed with any of these suppliers.

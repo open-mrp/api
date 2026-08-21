@@ -14,8 +14,8 @@ import (
 // Request to list sales orders.
 type ListSalesOrdersRequest struct {
 	apiresource.PaginationRequest
-	// Restricts results to orders in any of these lifecycle statuses (`estimate`, `issued`, `fulfilled`).
-	StatusCodes []string `query:"status_codes"`
+	// Restricts results to orders in any of these lifecycle statuses.
+	StatusCodes []constants.SalesOrderStatusCode `query:"status_codes"`
 	// Restricts results to orders that have at least one line for any of these inventory items.
 	ItemIDs []string `query:"item_ids"`
 	// Restricts results to orders that have at least one line whose product belongs to any of these product lines.

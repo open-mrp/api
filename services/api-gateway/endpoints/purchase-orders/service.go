@@ -49,6 +49,18 @@ var purchaseOrderEpSvcTracer = tracing.GetTracer("api-gateway.endpoints.purchase
 
 var purchaseOrderIncludes = []string{"supplier", "bill_to_address", "ship_to_address", "freight", "payment_term", "shipping_term", "receiving_order", "lines", "contacts"}
 
+// enumStrings narrows typed enum filters to the plain strings the proto layer carries.
+func enumStrings[T ~string](values []T) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	out := make([]string, len(values))
+	for i, v := range values {
+		out[i] = string(v)
+	}
+	return out
+}
+
 func (c *PurchaseOrderSvcConfig) validate() error {
 	if c.CoreClient == nil {
 		return fmt.Errorf("purchase order endpoint service: core client is required")
@@ -75,7 +87,7 @@ func (m *purchaseOrderSvcImpl) ListPurchaseOrders(ctx context.Context, req *List
 		Cursor:      req.Cursor,
 		Limit:       req.Limit,
 		Query:       req.Query,
-		StatusCodes: req.StatusCodes,
+		StatusCodes: enumStrings(req.StatusCodes),
 		ItemIds:     req.ItemIDs,
 		SupplierIds: req.SupplierIDs,
 		StartDate:   req.StartDate,

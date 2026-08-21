@@ -958,9 +958,6 @@ type ProductionScheduleSvc interface {
 	// ListAtRiskOrders returns the commitments a version does not meet.
 	ListAtRiskOrders(ctx context.Context, scheduleID string) ([]*ScheduleOrderCoverage, *apierror.APIError)
 
-	// QuotePromiseDate says the earliest date the published plan could ship a quantity.
-	QuotePromiseDate(ctx context.Context, itemID string, quantity float64) (*PromiseDateQuote, *apierror.APIError)
-
 	// ListFulfillmentRecommendations works out which SKUs should be built to order and which to stock.
 	ListFulfillmentRecommendations(ctx context.Context) ([]*FulfillmentRecommendation, *apierror.APIError)
 

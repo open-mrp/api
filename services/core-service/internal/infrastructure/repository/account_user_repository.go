@@ -48,6 +48,7 @@ func (r *accountUserRepoImpl) FindByAccountAndUserID(ctx context.Context, userID
 		DepartmentID: db.StringFromNullString(row.DepartmentID),
 		RoleID:       db.StringFromNullString(row.RoleID),
 		RoleType:     db.StringFromNullString(row.RoleTypeCode),
+		RoleName:     db.StringFromNullString(row.RoleName),
 		AccountID:    row.AccountID,
 		LastUsedAt:   db.TimeFromNullTime(row.LastUsedAt),
 		CreatedAt:    row.CreatedAt,

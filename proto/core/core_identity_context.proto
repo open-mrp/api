@@ -46,6 +46,9 @@ message AccountUserAccess {
   // Keys are permission codes (e.g. "invoices.create"), values are always true.
   map<string, bool> permissions = 5;
   optional google.protobuf.Timestamp last_used_at = 6;
+  // The role's display name, so an authorization failure can name the role the
+  // user actually holds rather than only its ID.
+  optional string role_name = 7;
 }
 message GetAccountRelationRequest {
   // Despite the name, this is the target account the caller wants to act on.

@@ -2029,7 +2029,6 @@ resources:
               preview: put /v1/operations/production-schedules/actions/preview
               preview_regenerate: put /v1/operations/production-schedules/{id}/actions/preview-regenerate
               regenerate: put /v1/operations/production-schedules/{id}/actions/regenerate
-              quote_promise_date: post /v1/operations/production-schedules/actions/quote-promise-date
               publish: put /v1/operations/production-schedules/{id}/actions/publish
               release_week: post /v1/operations/production-schedules/{id}/actions/release-week
               archive: put /v1/operations/production-schedules/{id}/actions/archive
@@ -2042,8 +2041,6 @@ resources:
               preview_regenerate_production_schedule_request: '#/components/schemas/PreviewRegenerateProductionScheduleRequest'
               production_schedule_preview: '#/components/schemas/ProductionSchedulePreview'
               production_schedule_regenerate_preview: '#/components/schemas/ProductionScheduleRegeneratePreview'
-              promise_date_quote: '#/components/schemas/PromiseDateQuote'
-              quote_promise_date_request: '#/components/schemas/QuotePromiseDateRequest'
               regenerate_production_schedule_request: '#/components/schemas/RegenerateProductionScheduleRequest'
               release_production_schedule_week_request: '#/components/schemas/ReleaseProductionScheduleWeekRequest'
               release_schedule_week_result: '#/components/schemas/ReleaseScheduleWeekResult'

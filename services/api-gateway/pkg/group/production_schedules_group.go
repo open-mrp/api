@@ -54,7 +54,6 @@ func (*ProductionSchedulesEndpointGroup) Materialize(config *ProductionSchedules
 	finishingLinesEndpoint := apiendpoint.From(&productionscheduleep.ListProductionScheduleFinishingLinesEndpoint{}).WithService(inner, svc)
 	derivedLinesEndpoint := apiendpoint.From(&productionscheduleep.ListProductionScheduleDerivedLinesEndpoint{}).WithService(inner, svc)
 	atRiskOrdersEndpoint := apiendpoint.From(&productionscheduleep.ListAtRiskOrdersEndpoint{}).WithService(inner, svc)
-	quotePromiseDateEndpoint := apiendpoint.From(&productionscheduleep.QuotePromiseDateEndpoint{}).WithService(inner, svc)
 	deviationTypesEndpoint := apiendpoint.From(&productionscheduleep.ListScheduleDeviationTypesEndpoint{}).WithService(inner, svc)
 	deviationsEndpoint := apiendpoint.From(&productionscheduleep.ListProductionScheduleDeviationsEndpoint{}).WithService(inner, svc)
 	createLineEndpoint := apiendpoint.From(&productionscheduleep.CreateProductionScheduleLineEndpoint{}).WithService(inner, svc)
@@ -80,7 +79,6 @@ func (*ProductionSchedulesEndpointGroup) Materialize(config *ProductionSchedules
 		regenerateEndpoint,
 		derivedLinesEndpoint,
 		atRiskOrdersEndpoint,
-		quotePromiseDateEndpoint,
 		deviationTypesEndpoint,
 		deviationsEndpoint,
 		createLineEndpoint,

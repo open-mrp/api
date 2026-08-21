@@ -237,7 +237,8 @@ SELECT
     account_user.updated_at,
     account_user.role_id,
     account_user.account_id,
-    role.role_type_code
+    role.role_type_code,
+    role.name AS role_name
 FROM account_user 
 LEFT JOIN role ON account_user.role_id = role.id
 WHERE account_user.account_id = ? AND account_user.user_id = ? 
@@ -259,6 +260,7 @@ type FindAccountUserWithRoleByAccountIDAndUserIDRow struct {
 	RoleID       sql.NullString
 	AccountID    string
 	RoleTypeCode sql.NullString
+	RoleName     sql.NullString
 }
 
 func (q *Queries) FindAccountUserWithRoleByAccountIDAndUserID(ctx context.Context, arg FindAccountUserWithRoleByAccountIDAndUserIDParams) (FindAccountUserWithRoleByAccountIDAndUserIDRow, error) {
@@ -274,6 +276,7 @@ func (q *Queries) FindAccountUserWithRoleByAccountIDAndUserID(ctx context.Contex
 		&i.RoleID,
 		&i.AccountID,
 		&i.RoleTypeCode,
+		&i.RoleName,
 	)
 	return i, err
 }

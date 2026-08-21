@@ -35,7 +35,6 @@ type ProductionScheduleSvc interface {
 	ListProductionScheduleFinishingLines(ctx context.Context, req *ListProductionScheduleFinishingLinesRequest) (*apiresource.List[apiresource.ProductionScheduleFinishingLine], *apierror.APIError)
 	ListProductionScheduleDerivedLines(ctx context.Context, req *ListProductionScheduleDerivedLinesRequest) (*apiresource.List[apiresource.ProductionScheduleDerivedLine], *apierror.APIError)
 	ListAtRiskOrders(ctx context.Context, req *ListAtRiskOrdersRequest) (*apiresource.List[apiresource.ScheduleOrderCoverage], *apierror.APIError)
-	QuotePromiseDate(ctx context.Context, req *QuotePromiseDateRequest) (*apiresource.PromiseDateQuote, *apierror.APIError)
 	ListScheduleDeviationTypes(ctx context.Context, req *ListScheduleDeviationTypesRequest) (*apiresource.List[apiresource.ScheduleDeviationType], *apierror.APIError)
 	ListProductionScheduleDeviations(ctx context.Context, req *ListProductionScheduleDeviationsRequest) (*apiresource.List[apiresource.ProductionScheduleDeviation], *apierror.APIError)
 	CreateProductionScheduleLine(ctx context.Context, req *CreateProductionScheduleLineRequest) (*apiresource.ProductionScheduleLine, *apierror.APIError)
@@ -1341,29 +1340,4 @@ func (m *productionScheduleSvcImpl) ListAtRiskOrders(ctx context.Context, req *L
 		items = append(items, row)
 	}
 	return apiresource.NewList(items, apiresource.PageInfo{}), nil
-}
-
-func (m *productionScheduleSvcImpl) QuotePromiseDate(ctx context.Context, req *QuotePromiseDateRequest) (*apiresource.PromiseDateQuote, *apierror.APIError) {
-	resp, apiErr := grpcutil.CallRPC(ctx, productionScheduleEpSvcTracer, "service.production_schedule.quote_promise_date", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.QuotePromiseDateResponse, error) {
-			return m.coreClient.QuotePromiseDate(ctx, &pb.QuotePromiseDateRequest{ItemId: req.ItemID, Quantity: req.Quantity}, opts...)
-		})
-	if apiErr != nil {
-		return nil, apiErr
-	}
-
-	out := &apiresource.PromiseDateQuote{
-		Object:                    constants.ObjectTypePromiseDateQuote,
-		Item:                      entityRef(resp.ItemId, constants.ObjectTypeItem),
-		Quantity:                  resp.Quantity,
-		IsPromisable:              resp.IsPromisable,
-		EarliestWeekIndex:         resp.EarliestWeekIndex,
-		ProductionSchedule:        entityRef(resp.ProductionScheduleId, constants.ObjectTypeProductionSchedule),
-		ProductionScheduleVersion: resp.ProductionScheduleVersion,
-	}
-	if resp.EarliestShipDate != nil {
-		t := grpcutil.TimestampToTime(resp.EarliestShipDate)
-		out.EarliestShipDate = &t
-	}
-	return out, nil
 }

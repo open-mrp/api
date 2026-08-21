@@ -368,8 +368,11 @@ type AccountUserAccess struct {
 	RoleId        *string                `protobuf:"bytes,3,opt,name=role_id,json=roleId,proto3,oneof" json:"role_id,omitempty"`
 	RoleTypeCode  *string                `protobuf:"bytes,4,opt,name=role_type_code,json=roleTypeCode,proto3,oneof" json:"role_type_code,omitempty"`
 	// Keys are permission codes (e.g. "invoices.create"), values are always true.
-	Permissions   map[string]bool        `protobuf:"bytes,5,rep,name=permissions,proto3" json:"permissions,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
-	LastUsedAt    *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=last_used_at,json=lastUsedAt,proto3,oneof" json:"last_used_at,omitempty"`
+	Permissions map[string]bool        `protobuf:"bytes,5,rep,name=permissions,proto3" json:"permissions,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
+	LastUsedAt  *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=last_used_at,json=lastUsedAt,proto3,oneof" json:"last_used_at,omitempty"`
+	// The role's display name, so an authorization failure can name the role the
+	// user actually holds rather than only its ID.
+	RoleName      *string `protobuf:"bytes,7,opt,name=role_name,json=roleName,proto3,oneof" json:"role_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -444,6 +447,13 @@ func (x *AccountUserAccess) GetLastUsedAt() *timestamppb.Timestamp {
 		return x.LastUsedAt
 	}
 	return nil
+}
+
+func (x *AccountUserAccess) GetRoleName() string {
+	if x != nil && x.RoleName != nil {
+		return *x.RoleName
+	}
+	return ""
 }
 
 type GetAccountRelationRequest struct {
@@ -10823,7 +10833,7 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\n" +
 	"has_access\x18\x01 \x01(\bR\thasAccess\x124\n" +
 	"\x06access\x18\x02 \x01(\v2\x17.core.AccountUserAccessH\x00R\x06access\x88\x01\x01B\t\n" +
-	"\a_access\"\xa2\x03\n" +
+	"\a_access\"\xd2\x03\n" +
 	"\x11AccountUserAccess\x12&\n" +
 	"\x0faccount_user_id\x18\x01 \x01(\tR\raccountUserId\x12\x1d\n" +
 	"\n" +
@@ -10832,14 +10842,17 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\x0erole_type_code\x18\x04 \x01(\tH\x01R\froleTypeCode\x88\x01\x01\x12J\n" +
 	"\vpermissions\x18\x05 \x03(\v2(.core.AccountUserAccess.PermissionsEntryR\vpermissions\x12A\n" +
 	"\flast_used_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampH\x02R\n" +
-	"lastUsedAt\x88\x01\x01\x1a>\n" +
+	"lastUsedAt\x88\x01\x01\x12 \n" +
+	"\trole_name\x18\a \x01(\tH\x03R\broleName\x88\x01\x01\x1a>\n" +
 	"\x10PermissionsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01B\n" +
 	"\n" +
 	"\b_role_idB\x11\n" +
 	"\x0f_role_type_codeB\x0f\n" +
-	"\r_last_used_at\"\xce\x01\n" +
+	"\r_last_used_atB\f\n" +
+	"\n" +
+	"_role_name\"\xce\x01\n" +
 	"\x19GetAccountRelationRequest\x12(\n" +
 	"\x10owner_account_id\x18\x01 \x01(\tR\x0eownerAccountId\x12\x19\n" +
 	"\auser_id\x18\x02 \x01(\tH\x00R\x06userId\x12\x1e\n" +

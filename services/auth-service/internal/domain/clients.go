@@ -21,6 +21,7 @@ type AccountUserAccess struct {
 	AccountID     string
 	RoleID        *string
 	RoleType      *string
+	RoleName      *string
 	Permissions   map[string]bool
 }
 

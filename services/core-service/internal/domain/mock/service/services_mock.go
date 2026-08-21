@@ -5507,21 +5507,6 @@ func (mr *MockProductionScheduleSvcMockRecorder) PublishProductionSchedule(ctx, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishProductionSchedule", reflect.TypeOf((*MockProductionScheduleSvc)(nil).PublishProductionSchedule), ctx, scheduleID)
 }
 
-// QuotePromiseDate mocks base method.
-func (m *MockProductionScheduleSvc) QuotePromiseDate(ctx context.Context, itemID string, quantity float64) (*domain.PromiseDateQuote, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "QuotePromiseDate", ctx, itemID, quantity)
-	ret0, _ := ret[0].(*domain.PromiseDateQuote)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// QuotePromiseDate indicates an expected call of QuotePromiseDate.
-func (mr *MockProductionScheduleSvcMockRecorder) QuotePromiseDate(ctx, itemID, quantity any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QuotePromiseDate", reflect.TypeOf((*MockProductionScheduleSvc)(nil).QuotePromiseDate), ctx, itemID, quantity)
-}
-
 // RegenerateProductionSchedule mocks base method.
 func (m *MockProductionScheduleSvc) RegenerateProductionSchedule(ctx context.Context, params domain.RegenerateProductionScheduleParams) (*domain.ProductionSchedule, *apierror.APIError) {
 	m.ctrl.T.Helper()

@@ -374,6 +374,7 @@ func (h *gRPCHandler) GetUserAccountAccess(ctx context.Context, req *pb.GetUserA
 			AccountId:     access.AccountID,
 			RoleId:        access.RoleID,
 			RoleTypeCode:  access.RoleType,
+			RoleName:      access.RoleName,
 			Permissions:   access.Permissions,
 			LastUsedAt:    lastUsedAt,
 		},

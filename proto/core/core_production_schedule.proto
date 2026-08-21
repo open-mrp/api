@@ -85,8 +85,6 @@ service CoreProductionScheduleService {
   // ListProductionScheduleAtRiskOrders returns the commitments a version does not meet.
   rpc ListProductionScheduleAtRiskOrders(ListProductionScheduleAtRiskOrdersRequest) returns (ListProductionScheduleAtRiskOrdersResponse);
 
-  // QuotePromiseDate says the earliest date the published plan could ship a quantity.
-  rpc QuotePromiseDate(QuotePromiseDateRequest) returns (QuotePromiseDateResponse);
 
   // ListProductionScheduleDerivedLines returns derived downstream department work.
   rpc ListProductionScheduleDerivedLines(ListProductionScheduleDerivedLinesRequest) returns (ListProductionScheduleDerivedLinesResponse);
@@ -935,21 +933,6 @@ message ListProductionScheduleAtRiskOrdersResponse {
   repeated ScheduleOrderCoverageProto orders = 1;
 }
 
-message QuotePromiseDateRequest {
-  string item_id = 1;
-  double quantity = 2;
-}
-
-message QuotePromiseDateResponse {
-  string item_id = 1;
-  double quantity = 2;
-  // Absent when the published horizon cannot supply the quantity at all.
-  optional google.protobuf.Timestamp earliest_ship_date = 3;
-  optional int32 earliest_week_index = 4;
-  bool is_promisable = 5;
-  string production_schedule_id = 6;
-  int32 production_schedule_version = 7;
-}
 
 message ListProductionScheduleItemSettingsRequest {}
 

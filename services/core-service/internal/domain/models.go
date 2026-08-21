@@ -49,6 +49,7 @@ type AccountUser struct {
 	DepartmentID *string
 	RoleID       *string
 	RoleType     *string
+	RoleName     *string
 	AccountID    string
 	LastUsedAt   *time.Time
 	CreatedAt    time.Time
@@ -60,6 +61,7 @@ type AccountUserAccess struct {
 	AccountID     string
 	RoleID        *string
 	RoleType      *string
+	RoleName      *string
 	Permissions   map[string]bool
 	LastUsedAt    *time.Time
 }

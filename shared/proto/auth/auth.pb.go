@@ -707,7 +707,10 @@ type IdentityActor struct {
 	RoleId       *string `protobuf:"bytes,5,opt,name=role_id,json=roleId,proto3,oneof" json:"role_id,omitempty"`
 	RoleTypeCode *string `protobuf:"bytes,6,opt,name=role_type_code,json=roleTypeCode,proto3,oneof" json:"role_type_code,omitempty"`
 	// Keys are permission codes (e.g. "invoices.create"); only granted permissions are present.
-	Permissions   map[string]bool `protobuf:"bytes,7,rep,name=permissions,proto3" json:"permissions,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
+	Permissions map[string]bool `protobuf:"bytes,7,rep,name=permissions,proto3" json:"permissions,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
+	// The role's display name, used to explain an authorization failure in terms the
+	// caller recognizes.
+	RoleName      *string `protobuf:"bytes,8,opt,name=role_name,json=roleName,proto3,oneof" json:"role_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -789,6 +792,13 @@ func (x *IdentityActor) GetPermissions() map[string]bool {
 		return x.Permissions
 	}
 	return nil
+}
+
+func (x *IdentityActor) GetRoleName() string {
+	if x != nil && x.RoleName != nil {
+		return *x.RoleName
+	}
+	return ""
 }
 
 type RegisterRequest struct {
@@ -3475,7 +3485,7 @@ const file_auth_auth_proto_rawDesc = "" +
 	"\n" +
 	"account_id\x18\x01 \x01(\tR\taccountId\x12(\n" +
 	"\rrelation_type\x18\x02 \x01(\tH\x00R\frelationType\x88\x01\x01B\x10\n" +
-	"\x0e_relation_type\"\xa5\x03\n" +
+	"\x0e_relation_type\"\xd5\x03\n" +
 	"\rIdentityActor\x12?\n" +
 	"\rrelation_type\x18\x01 \x01(\x0e2\x1a.auth.IdentityRelationTypeR\frelationType\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\tR\x02id\x12\x17\n" +
@@ -3484,7 +3494,8 @@ const file_auth_auth_proto_rawDesc = "" +
 	"account_id\x18\x04 \x01(\tH\x01R\taccountId\x88\x01\x01\x12\x1c\n" +
 	"\arole_id\x18\x05 \x01(\tH\x02R\x06roleId\x88\x01\x01\x12)\n" +
 	"\x0erole_type_code\x18\x06 \x01(\tH\x03R\froleTypeCode\x88\x01\x01\x12F\n" +
-	"\vpermissions\x18\a \x03(\v2$.auth.IdentityActor.PermissionsEntryR\vpermissions\x1a>\n" +
+	"\vpermissions\x18\a \x03(\v2$.auth.IdentityActor.PermissionsEntryR\vpermissions\x12 \n" +
+	"\trole_name\x18\b \x01(\tH\x04R\broleName\x88\x01\x01\x1a>\n" +
 	"\x10PermissionsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01B\a\n" +
@@ -3492,7 +3503,9 @@ const file_auth_auth_proto_rawDesc = "" +
 	"\v_account_idB\n" +
 	"\n" +
 	"\b_role_idB\x11\n" +
-	"\x0f_role_type_code\"\xd1\x01\n" +
+	"\x0f_role_type_codeB\f\n" +
+	"\n" +
+	"_role_name\"\xd1\x01\n" +
 	"\x0fRegisterRequest\x12\x14\n" +
 	"\x05email\x18\x01 \x01(\tR\x05email\x12\x1a\n" +
 	"\bpassword\x18\x02 \x01(\tR\bpassword\x12\x12\n" +

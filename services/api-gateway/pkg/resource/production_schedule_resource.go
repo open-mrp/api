@@ -264,48 +264,6 @@ type ScheduleOrderCoverageLine struct {
 	AllocatedQuantity float64 `json:"allocated_quantity"`
 }
 
-// The earliest date the published plan could ship a quantity of an item.
-type PromiseDateQuote struct {
-	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=promise_date_quote"`
-	// The item being quoted.
-	Item *Entity `json:"item" validate:"required"`
-	// The quantity being quoted.
-	Quantity float64 `json:"quantity"`
-	// Whether the published horizon can supply it at all.
-	//
-	// False means the plan as published runs out before it could cover this quantity. That is not the same as "never" — it is the honest limit of a plan that only runs so many weeks.
-	IsPromisable bool `json:"is_promisable"`
-	// Earliest date the quantity could ship, allowing for finishing after the constraint stage completes.
-	EarliestShipDate *time.Time `json:"earliest_ship_date"`
-	// Horizon week the constraint stage would complete in.
-	EarliestWeekIndex *int32 `json:"earliest_week_index"`
-	// The published version this was quoted from.
-	//
-	// Quoted from what the floor is working to rather than a fresh solve, and net of everything already promised to other orders.
-	ProductionSchedule *Entity `json:"production_schedule" validate:"required"`
-	// Version number of that schedule.
-	ProductionScheduleVersion int32 `json:"production_schedule_version"`
-}
-
-var sampleEarliestWeek = int32(4)
-var sampleEarliestShipDate = timeutil.TimestampToTime("2026-07-06T00:00:00Z")
-
-var SamplePromiseDateQuote = &PromiseDateQuote{
-	Object:                    constants.ObjectTypePromiseDateQuote,
-	Item:                      NewEntity(SampleItemID, constants.ObjectTypeItem, nil, &sampleScheduleSKU),
-	Quantity:                  1200,
-	IsPromisable:              true,
-	EarliestShipDate:          &sampleEarliestShipDate,
-	EarliestWeekIndex:         &sampleEarliestWeek,
-	ProductionSchedule:        NewEntity(SampleProductionScheduleID, constants.ObjectTypeProductionSchedule, nil, nil),
-	ProductionScheduleVersion: 7,
-}
-
-func (*PromiseDateQuote) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(SamplePromiseDateQuote)
-}
-
 var SampleScheduleOrderCoverage = &ScheduleOrderCoverage{
 	Object:      constants.ObjectTypeScheduleOrderCoverage,
 	SalesOrder:  NewEntity(SampleSalesOrderID, constants.ObjectTypeSalesOrder, nil, nil),

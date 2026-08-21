@@ -47,7 +47,6 @@ const (
 	CoreProductionScheduleService_UpsertProductionScheduleItemSetting_FullMethodName     = "/core.CoreProductionScheduleService/UpsertProductionScheduleItemSetting"
 	CoreProductionScheduleService_DeleteProductionScheduleItemSetting_FullMethodName     = "/core.CoreProductionScheduleService/DeleteProductionScheduleItemSetting"
 	CoreProductionScheduleService_ListProductionScheduleAtRiskOrders_FullMethodName      = "/core.CoreProductionScheduleService/ListProductionScheduleAtRiskOrders"
-	CoreProductionScheduleService_QuotePromiseDate_FullMethodName                        = "/core.CoreProductionScheduleService/QuotePromiseDate"
 	CoreProductionScheduleService_ListProductionScheduleDerivedLines_FullMethodName      = "/core.CoreProductionScheduleService/ListProductionScheduleDerivedLines"
 	CoreProductionScheduleService_ListScheduleDeviationTypes_FullMethodName              = "/core.CoreProductionScheduleService/ListScheduleDeviationTypes"
 	CoreProductionScheduleService_ListProductionScheduleDeviations_FullMethodName        = "/core.CoreProductionScheduleService/ListProductionScheduleDeviations"
@@ -122,8 +121,6 @@ type CoreProductionScheduleServiceClient interface {
 	DeleteProductionScheduleItemSetting(ctx context.Context, in *DeleteProductionScheduleItemSettingRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// ListProductionScheduleAtRiskOrders returns the commitments a version does not meet.
 	ListProductionScheduleAtRiskOrders(ctx context.Context, in *ListProductionScheduleAtRiskOrdersRequest, opts ...grpc.CallOption) (*ListProductionScheduleAtRiskOrdersResponse, error)
-	// QuotePromiseDate says the earliest date the published plan could ship a quantity.
-	QuotePromiseDate(ctx context.Context, in *QuotePromiseDateRequest, opts ...grpc.CallOption) (*QuotePromiseDateResponse, error)
 	// ListProductionScheduleDerivedLines returns derived downstream department work.
 	ListProductionScheduleDerivedLines(ctx context.Context, in *ListProductionScheduleDerivedLinesRequest, opts ...grpc.CallOption) (*ListProductionScheduleDerivedLinesResponse, error)
 	// ListScheduleDeviationTypes returns the global deviation taxonomy.
@@ -397,16 +394,6 @@ func (c *coreProductionScheduleServiceClient) ListProductionScheduleAtRiskOrders
 	return out, nil
 }
 
-func (c *coreProductionScheduleServiceClient) QuotePromiseDate(ctx context.Context, in *QuotePromiseDateRequest, opts ...grpc.CallOption) (*QuotePromiseDateResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(QuotePromiseDateResponse)
-	err := c.cc.Invoke(ctx, CoreProductionScheduleService_QuotePromiseDate_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *coreProductionScheduleServiceClient) ListProductionScheduleDerivedLines(ctx context.Context, in *ListProductionScheduleDerivedLinesRequest, opts ...grpc.CallOption) (*ListProductionScheduleDerivedLinesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListProductionScheduleDerivedLinesResponse)
@@ -650,8 +637,6 @@ type CoreProductionScheduleServiceServer interface {
 	DeleteProductionScheduleItemSetting(context.Context, *DeleteProductionScheduleItemSettingRequest) (*emptypb.Empty, error)
 	// ListProductionScheduleAtRiskOrders returns the commitments a version does not meet.
 	ListProductionScheduleAtRiskOrders(context.Context, *ListProductionScheduleAtRiskOrdersRequest) (*ListProductionScheduleAtRiskOrdersResponse, error)
-	// QuotePromiseDate says the earliest date the published plan could ship a quantity.
-	QuotePromiseDate(context.Context, *QuotePromiseDateRequest) (*QuotePromiseDateResponse, error)
 	// ListProductionScheduleDerivedLines returns derived downstream department work.
 	ListProductionScheduleDerivedLines(context.Context, *ListProductionScheduleDerivedLinesRequest) (*ListProductionScheduleDerivedLinesResponse, error)
 	// ListScheduleDeviationTypes returns the global deviation taxonomy.
@@ -763,9 +748,6 @@ func (UnimplementedCoreProductionScheduleServiceServer) DeleteProductionSchedule
 }
 func (UnimplementedCoreProductionScheduleServiceServer) ListProductionScheduleAtRiskOrders(context.Context, *ListProductionScheduleAtRiskOrdersRequest) (*ListProductionScheduleAtRiskOrdersResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListProductionScheduleAtRiskOrders not implemented")
-}
-func (UnimplementedCoreProductionScheduleServiceServer) QuotePromiseDate(context.Context, *QuotePromiseDateRequest) (*QuotePromiseDateResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method QuotePromiseDate not implemented")
 }
 func (UnimplementedCoreProductionScheduleServiceServer) ListProductionScheduleDerivedLines(context.Context, *ListProductionScheduleDerivedLinesRequest) (*ListProductionScheduleDerivedLinesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListProductionScheduleDerivedLines not implemented")
@@ -1260,24 +1242,6 @@ func _CoreProductionScheduleService_ListProductionScheduleAtRiskOrders_Handler(s
 	return interceptor(ctx, in, info, handler)
 }
 
-func _CoreProductionScheduleService_QuotePromiseDate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QuotePromiseDateRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CoreProductionScheduleServiceServer).QuotePromiseDate(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CoreProductionScheduleService_QuotePromiseDate_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CoreProductionScheduleServiceServer).QuotePromiseDate(ctx, req.(*QuotePromiseDateRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _CoreProductionScheduleService_ListProductionScheduleDerivedLines_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListProductionScheduleDerivedLinesRequest)
 	if err := dec(in); err != nil {
@@ -1718,10 +1682,6 @@ var CoreProductionScheduleService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListProductionScheduleAtRiskOrders",
 			Handler:    _CoreProductionScheduleService_ListProductionScheduleAtRiskOrders_Handler,
-		},
-		{
-			MethodName: "QuotePromiseDate",
-			Handler:    _CoreProductionScheduleService_QuotePromiseDate_Handler,
 		},
 		{
 			MethodName: "ListProductionScheduleDerivedLines",

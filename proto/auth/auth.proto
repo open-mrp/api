@@ -169,6 +169,9 @@ message IdentityActor {
   optional string role_type_code = 6;
   // Keys are permission codes (e.g. "invoices.create"); only granted permissions are present.
   map<string, bool> permissions = 7;
+  // The role's display name, used to explain an authorization failure in terms the
+  // caller recognizes.
+  optional string role_name = 8;
 }
 
 enum IdentityActorType {

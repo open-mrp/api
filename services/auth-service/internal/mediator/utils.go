@@ -106,6 +106,7 @@ func buildAccountUserIdentity(userModel *types.User, access *domain.AccountUserA
 			AccountID:    &access.AccountID,
 			RoleID:       access.RoleID,
 			RoleType:     access.RoleType,
+			RoleName:     access.RoleName,
 			Permissions:  access.Permissions,
 		},
 		AccountMode:        accountMode,

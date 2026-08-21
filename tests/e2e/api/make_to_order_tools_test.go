@@ -31,7 +31,6 @@ func TestMakeToOrderTools_ReadEndpointsAreExposed(t *testing.T) {
 		"analyze_delivery_performance":              "sales_orders:read",
 		"retrieve_customer_lead_time":               "customers:read",
 		"list_schedule_at_risk_orders":              "production_schedules:read",
-		"quote_promise_date":                        "production_schedules:read",
 		"list_fulfillment_recommendations":          "production_schedules:read",
 		"list_production_schedule_item_settings":    "production_schedules:read",
 		"retrieve_production_schedule_item_setting": "production_schedules:read",

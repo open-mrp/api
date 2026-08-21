@@ -136,6 +136,7 @@ func (s *accountSvcImpl) GetUserAccountAccess(ctx context.Context, userID, accou
 		AccountID:     accountUser.AccountID,
 		RoleID:        accountUser.RoleID,
 		RoleType:      accountUser.RoleType,
+		RoleName:      accountUser.RoleName,
 		Permissions:   permissions,
 		LastUsedAt:    accountUser.LastUsedAt,
 	}, true, nil

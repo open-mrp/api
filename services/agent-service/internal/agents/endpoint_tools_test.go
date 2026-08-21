@@ -459,7 +459,6 @@ func TestMutating_ReadOnlyEndpointsAreNotMutating(t *testing.T) {
 
 	// Every one of these takes a request body — a date window, a quantity, an address — so none of them can be a GET.
 	for _, slug := range []string{
-		"quote_promise_date",
 		"analyze_delivery_performance",
 		"analyze_schedule_attainment",
 		"preview_production_schedule",

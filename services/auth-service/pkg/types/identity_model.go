@@ -12,6 +12,7 @@ type IdentityActor struct {
 	AccountID    *string
 	RoleID       *string
 	RoleType     *string
+	RoleName     *string
 	Permissions  map[string]bool
 }
 
@@ -177,6 +178,7 @@ func (i *Identity) ToProto() *pb.Identity {
 			AccountId:    i.Actor.AccountID,
 			RoleId:       i.Actor.RoleID,
 			RoleTypeCode: i.Actor.RoleType,
+			RoleName:     i.Actor.RoleName,
 			Permissions:  i.Actor.Permissions,
 		}
 	}
@@ -256,6 +258,7 @@ func IdentityFromProto(pbIdentity *pb.Identity) *Identity {
 			AccountID:    pbIdentity.Actor.AccountId,
 			RoleID:       pbIdentity.Actor.RoleId,
 			RoleType:     pbIdentity.Actor.RoleTypeCode,
+			RoleName:     pbIdentity.Actor.RoleName,
 			Permissions:  pbIdentity.Actor.Permissions,
 		}
 	}

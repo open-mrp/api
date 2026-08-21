@@ -234,19 +234,6 @@ type ScheduleOrderCoverageLine struct {
 	AllocatedQuantity        float64
 }
 
-// PromiseDateQuote is the earliest date the published plan could ship a quantity.
-type PromiseDateQuote struct {
-	ItemID   string
-	Quantity float64
-	// EarliestShipDate and EarliestWeekIndex are nil when the published horizon cannot supply the quantity at all.
-	EarliestShipDate  *time.Time
-	EarliestWeekIndex *int
-	IsPromisable      bool
-
-	ProductionScheduleID      string
-	ProductionScheduleVersion int32
-}
-
 // FulfillmentRecommendation is the engine's advice for one item, with the measurements behind it.
 type FulfillmentRecommendation struct {
 	scheduling.Recommendation

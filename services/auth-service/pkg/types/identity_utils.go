@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
@@ -148,7 +149,7 @@ func (i *Identity) CheckHasAnyPermission(perms ...Permission) *apierror.APIError
 		return i.CheckIsAuthenticated()
 	}
 	if i.IsRelationActor() {
-		return apierror.NewAuthorizationError(i.getPermissionErrorMessage(perms[0].Domain, perms[0].Action))
+		return apierror.NewAuthorizationError(i.getAnyOfPermissionErrorMessage(perms))
 	}
 	if i.IsAdmin() {
 		return nil
@@ -160,9 +161,7 @@ func (i *Identity) CheckHasAnyPermission(perms ...Permission) *apierror.APIError
 			}
 		}
 	}
-	// Reuse the single-permission message for the first declared permission; it
-	// names the domain/action the caller is missing.
-	return apierror.NewAuthorizationError(i.getPermissionErrorMessage(perms[0].Domain, perms[0].Action))
+	return apierror.NewAuthorizationError(i.getAnyOfPermissionErrorMessage(perms))
 }
 
 // CheckHasRelationCapability reports whether a customer/supplier relation actor holds
@@ -201,19 +200,79 @@ func (i *Identity) CheckHasRoleType(roleType constants.RoleType) *apierror.APIEr
 }
 
 func (i *Identity) getPermissionErrorMessage(domain PermissionDomain, action Action) string {
-	if i != nil && i.Actor != nil {
-		switch i.Type {
-		case IdentityActorTypeUser:
-			return fmt.Sprintf("User %s does not have permission to %s:%s", i.Actor.ID, domain, action)
-		case IdentityActorTypeAPIKey:
-			return fmt.Sprintf("This API Key does not have permission to %s:%s", domain, action)
-		case IdentityActorTypeAgent:
-			return fmt.Sprintf("Agent %s does not have permission to %s:%s", i.Actor.ID, domain, action)
-		default:
-			return fmt.Sprintf("You do not have permission to %s:%s", domain, action)
-		}
+	return i.getAnyOfPermissionErrorMessage([]Permission{{Domain: domain, Action: action}})
+}
+
+// getAnyOfPermissionErrorMessage explains an authorization failure to the person who hit
+// it. Whoever reads this — a support engineer, an admin deciding what to grant — needs to
+// know who was denied, what they hold, and what would have let them through, so the
+// message names the actor, names their role, and lists every permission that would have
+// been accepted rather than only the first declared one. The role ID comes along because
+// it is what an admin edits; the role name is what they recognize.
+func (i *Identity) getAnyOfPermissionErrorMessage(perms []Permission) string {
+	required := describePermissions(perms)
+
+	if i == nil || i.Actor == nil {
+		return fmt.Sprintf("You do not have permission to %s.", required)
 	}
-	return fmt.Sprintf("You do not have permission to %s:%s", domain, action)
+
+	switch i.Type {
+	case IdentityActorTypeUser:
+		return fmt.Sprintf("%s does not have permission to %s.%s", i.actorLabel("This user"), required, i.roleClause())
+	case IdentityActorTypeAPIKey:
+		return fmt.Sprintf("API key %s does not have permission to %s.%s", i.actorLabel("(unnamed)"), required, i.roleClause())
+	case IdentityActorTypeAgent:
+		return fmt.Sprintf("Agent %s does not have permission to %s.%s", i.actorLabel("(unnamed)"), required, i.roleClause())
+	default:
+		return fmt.Sprintf("You do not have permission to %s.", required)
+	}
+}
+
+// actorLabel prefers the actor's name over its ID, since the ID means nothing to a reader.
+// Falls back to the ID only when the name is unset, and to fallback when neither is known.
+func (i *Identity) actorLabel(fallback string) string {
+	if i.Actor.Name != nil && *i.Actor.Name != "" {
+		return *i.Actor.Name
+	}
+	if i.Actor.ID != "" {
+		return i.Actor.ID
+	}
+	return fallback
+}
+
+// roleClause names the role the actor holds, so the reader knows which role to change.
+// Returns "" when no role is carried — relation actors hold none, and saying so would
+// misdescribe why they were denied.
+func (i *Identity) roleClause() string {
+	hasName := i.Actor.RoleName != nil && *i.Actor.RoleName != ""
+	hasID := i.Actor.RoleID != nil && *i.Actor.RoleID != ""
+	switch {
+	case hasName && hasID:
+		return fmt.Sprintf(" Their role %q (ID %s) does not grant it.", *i.Actor.RoleName, *i.Actor.RoleID)
+	case hasName:
+		return fmt.Sprintf(" Their role %q does not grant it.", *i.Actor.RoleName)
+	case hasID:
+		return fmt.Sprintf(" Their role (ID %s) does not grant it.", *i.Actor.RoleID)
+	default:
+		return ""
+	}
+}
+
+// describePermissions renders the accepted set as "a", "a or b", or "a, b or c" — any one
+// of them is enough, and a bare comma-separated list reads as though all are required.
+func describePermissions(perms []Permission) string {
+	codes := make([]string, 0, len(perms))
+	for _, p := range perms {
+		codes = append(codes, fmt.Sprintf("%s:%s", p.Domain, p.Action))
+	}
+	switch len(codes) {
+	case 0:
+		return "perform this action"
+	case 1:
+		return codes[0]
+	default:
+		return strings.Join(codes[:len(codes)-1], ", ") + " or " + codes[len(codes)-1]
+	}
 }
 
 // CheckIsAssignedActor verifies that the identity is authenticated and is an

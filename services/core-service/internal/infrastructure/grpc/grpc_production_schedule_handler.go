@@ -613,29 +613,3 @@ func (h *productionScheduleGRPCHandler) ListProductionScheduleAtRiskOrders(ctx c
 	}
 	return &pb.ListProductionScheduleAtRiskOrdersResponse{Orders: out}, nil
 }
-
-func (h *productionScheduleGRPCHandler) QuotePromiseDate(ctx context.Context, req *pb.QuotePromiseDateRequest) (*pb.QuotePromiseDateResponse, error) {
-	if req == nil {
-		return nil, contracts.NewMissingGRPCRequestDataError()
-	}
-	quote, apiErr := h.productionScheduleSvc.QuotePromiseDate(ctx, req.ItemId, req.Quantity)
-	if apiErr != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
-	}
-
-	resp := &pb.QuotePromiseDateResponse{
-		ItemId:                    quote.ItemID,
-		Quantity:                  quote.Quantity,
-		IsPromisable:              quote.IsPromisable,
-		ProductionScheduleId:      quote.ProductionScheduleID,
-		ProductionScheduleVersion: quote.ProductionScheduleVersion,
-	}
-	if quote.EarliestShipDate != nil {
-		resp.EarliestShipDate = timestamppb.New(*quote.EarliestShipDate)
-	}
-	if quote.EarliestWeekIndex != nil {
-		week := safeconv.IntToInt32(*quote.EarliestWeekIndex)
-		resp.EarliestWeekIndex = &week
-	}
-	return resp, nil
-}

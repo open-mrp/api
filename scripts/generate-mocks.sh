@@ -127,7 +127,11 @@ run_jobs() {
     done
 
     (
-      mockgen -source="${source_file}" -destination="${dest_file}" -package="${package_name}" 2>&1 && \
+      # mockgen writes whatever paths it is handed into the generated header, so run from the repo
+      # root with repo-relative paths. Absolute paths would bake the generating machine's home
+      # directory into 29 committed files, and would make the output differ per developer.
+      cd "${ROOT_DIR}"
+      mockgen -source="${source_file#"${ROOT_DIR}/"}" -destination="${dest_file#"${ROOT_DIR}/"}" -package="${package_name}" 2>&1 && \
         echo "  OK: ${label}" || \
         { echo "  FAIL: ${label}" >&2; exit 1; }
     ) &

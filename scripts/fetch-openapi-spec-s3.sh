@@ -13,12 +13,14 @@ dest="${2:?usage: fetch-openapi-spec-s3.sh <internal|public> <dest-path> [curren
 which="${3:-current}"
 artifact="${4:-openapi}"
 
+# Bucket names are deployment configuration, supplied by the caller (CI passes the repo's Actions
+# variables). Keeping them out of source keeps this repo from naming the account's buckets.
 case "$sdk" in
   internal)
-    bucket="augno-private-openapi-specs"
+    bucket="${INTERNAL_SPEC_BUCKET:?INTERNAL_SPEC_BUCKET is required}"
     ;;
   public)
-    bucket="augno-public-openapi-specs"
+    bucket="${PUBLIC_SPEC_BUCKET:?PUBLIC_SPEC_BUCKET is required}"
     ;;
   *)
     echo "unknown sdk: $sdk" >&2

@@ -41,9 +41,15 @@ type ackLine struct {
 	Total       string
 }
 
-// The dashboard shows its American-made panel on one account's customer emails only, keyed by a
-// hard-coded id; this mirrors that so the mail matches. Delete both when that panel is retired.
-const americanMadeAccountID = "ac_REDACTED_ACCOUNT_ID"
+// accountMarketingBlurbs maps an account id to the marketing sentence its customer emails carry in
+// the footer, mirroring the dashboard so the mail matches. Operator configuration rather than
+// source: no account id or account copy belongs in this repository. Set once at startup, before any
+// request is served, and read-only after.
+var accountMarketingBlurbs map[string]string
+
+// SetAccountMarketingBlurbs installs the account-to-footer-blurb map. Call once from main before
+// serving; later calls race with in-flight renders.
+func SetAccountMarketingBlurbs(m map[string]string) { accountMarketingBlurbs = m }
 
 // ackData is the shared view model for the order-acknowledgement email and PDF.
 // It carries pre-formatted, presentation-ready strings so the email template and
@@ -108,8 +114,9 @@ type ackData struct {
 	LinkedInHandle  string
 	EmailSubject    string
 
-	// Seller Co's marketing panel rides on its own emails only, matching the dashboard.
-	ShowAmericanMade bool
+	// MarketingBlurb is the footer sentence configured for this account, empty for accounts that have
+	// none. Its presence is what gates the panel.
+	MarketingBlurb string
 
 	Year string
 }
@@ -147,7 +154,9 @@ func buildOrderAcknowledgementData(order *domain.SalesOrder, lines []*domain.Sal
 		d.FacebookHandle = ptrutil.Deref(account.Branding.FacebookHandle)
 		d.LinkedInHandle = ptrutil.Deref(account.Branding.LinkedInHandle)
 	}
-	d.ShowAmericanMade = account != nil && account.ID == americanMadeAccountID
+	if account != nil {
+		d.MarketingBlurb = accountMarketingBlurbs[account.ID]
+	}
 	if originAddr != nil {
 		d.AccountAddress = ackAddress{
 			Line1:        originAddr.Street1,
@@ -212,29 +221,29 @@ func (d ackData) emailParams() map[string]any {
 		}
 	}
 	return map[string]any{
-		"account_name":       d.AccountName,
-		"logo_url":           d.LogoURL,
-		"order_number":       d.OrderNumber,
-		"customer_po":        d.CustomerPO,
-		"order_date":         d.OrderDateShort,
-		"order_total":        d.OrderTotal,
-		"has_ship_to":        d.HasShipTo,
-		"ship_to_name":       d.ShipTo.Name,
-		"ship_to_line1":      d.ShipTo.Line1,
-		"ship_to_line2":      d.ShipTo.Line2,
-		"ship_to_csz":        d.ShipTo.CityStateZip,
-		"lines":              lines,
-		"account_email":      d.AccountEmail,
-		"account_website":    d.AccountWebsite,
-		"year":               d.Year,
-		"customer_number":    d.CustomerNumberRaw,
-		"order_online_link":  d.OrderOnlineLink,
-		"email_subject":      d.EmailSubject,
-		"instagram_handle":   d.InstagramHandle,
-		"twitter_handle":     d.TwitterHandle,
-		"facebook_handle":    d.FacebookHandle,
-		"linkedin_handle":    d.LinkedInHandle,
-		"show_american_made": d.ShowAmericanMade,
+		"account_name":      d.AccountName,
+		"logo_url":          d.LogoURL,
+		"order_number":      d.OrderNumber,
+		"customer_po":       d.CustomerPO,
+		"order_date":        d.OrderDateShort,
+		"order_total":       d.OrderTotal,
+		"has_ship_to":       d.HasShipTo,
+		"ship_to_name":      d.ShipTo.Name,
+		"ship_to_line1":     d.ShipTo.Line1,
+		"ship_to_line2":     d.ShipTo.Line2,
+		"ship_to_csz":       d.ShipTo.CityStateZip,
+		"lines":             lines,
+		"account_email":     d.AccountEmail,
+		"account_website":   d.AccountWebsite,
+		"year":              d.Year,
+		"customer_number":   d.CustomerNumberRaw,
+		"order_online_link": d.OrderOnlineLink,
+		"email_subject":     d.EmailSubject,
+		"instagram_handle":  d.InstagramHandle,
+		"twitter_handle":    d.TwitterHandle,
+		"facebook_handle":   d.FacebookHandle,
+		"linkedin_handle":   d.LinkedInHandle,
+		"marketing_blurb":   d.MarketingBlurb,
 	}
 }
 

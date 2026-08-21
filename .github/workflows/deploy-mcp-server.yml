@@ -9,9 +9,10 @@ name: Deploy MCP Server (manual)
 # the manual / first-time path: it builds the image from typescript-sdk's
 # generated Dockerfile and rolls it out on prod EKS.
 #
-# Mirrors the "Build and Deploy MCP Server" job in release.yml. The
-# github-actions-mcp-deploy OIDC role only trusts refs/heads/main, so this must
-# be dispatched from the main branch.
+# Mirrors the "Build and Deploy MCP Server" job in release.yml: the image is built and pushed here,
+# and the rollout is dispatched to the private augno/infra repo, which owns the manifest and the only
+# credential that can touch the cluster. The ECR-push OIDC role only trusts refs/heads/main, so this
+# must be dispatched from the main branch.
 on:
   workflow_dispatch:
     inputs:
@@ -29,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - name: Checkout API repo (k8s manifest)
+      - name: Checkout API repo (deploy dispatch script)
         uses: actions/checkout@v5
         with:
           persist-credentials: false
@@ -72,7 +73,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
-          role-to-assume: arn:aws:iam::AWS_ACCOUNT_ID:role/github-actions-mcp-deploy
+          role-to-assume: ${{ vars.AWS_ROLE_MCP_ECR_PUSH }}
           aws-region: us-east-2
 
       - name: Login to Amazon ECR
@@ -97,14 +98,10 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Deploy MCP Server to EKS
-        run: |
-          set -euo pipefail
-          aws eks update-kubeconfig --region us-east-2 --name augno-prod
-          registry="${{ steps.login-ecr.outputs.registry }}"
-          image="${registry}/augno/mcp-server:${{ steps.tag.outputs.image_tag }}"
-          manifest=infra/production/kubernetes/apps/mcp-server.yaml
-          # Pin the rolled-out image to the resolved tag (mirrors deploy.sh).
-          sed -E "s#^([[:space:]]*image: ).*#\1${image}#" "$manifest" > /tmp/mcp-server.yaml
-          kubectl apply -f /tmp/mcp-server.yaml
-          kubectl rollout status deployment/mcp-server --timeout=5m
+      - name: Deploy MCP Server via augno/infra
+        run: ./scripts/dispatch-infra-deploy.sh
+        env:
+          GH_TOKEN: ${{ secrets.INFRA_DISPATCH_TOKEN }}
+          IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
+          DEPLOY_SERVICES: ""
+          MCP_IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}

@@ -11,6 +11,7 @@ The handler converter supports binding request parameters from multiple sources 
 -   **Header parameters** from HTTP headers like `Authorization: Bearer <token>`
 -   **Cookie parameters** from HTTP cookies with automatic fallback support
 -   **JSON body parameters** from request body data
+-   **Raw body bytes** for endpoints that must verify a signature over the exact payload
 
 ### Example
 
@@ -122,7 +123,23 @@ type CreateUserRequest struct {
 }
 ```
 
-### 6. Combined Example
+### 6. Raw Body
+
+Webhook endpoints need the exact bytes the sender signed, before any JSON decoding. Tag a
+`[]byte` field with `rawbody`:
+
+```go
+type StripeWebhookRequest struct {
+    Signature string `header:"Stripe-Signature" validate:"required"`
+    Payload   []byte `rawbody:"true"`
+}
+```
+
+The tag only works on `[]byte` fields, the body is read once and shared across every `rawbody`
+field on the struct, and the read is capped at 1MB. The tag's value is not interpreted — any
+non-empty value works, and `"true"` is the convention.
+
+### 7. Combined Example
 
 A realistic example showing all parameter types together:
 
@@ -148,7 +165,7 @@ type CreatePostRequest struct {
 }
 ```
 
-### 7. Time Parsing
+### 8. Time Parsing
 
 Handle date/time parameters with custom layouts:
 
@@ -159,7 +176,7 @@ type TimeRequest struct {
 }
 ```
 
-### 8. Default Values
+### 9. Default Values
 
 Provide fallback values when parameters are missing:
 
@@ -214,6 +231,7 @@ The binding system supports automatic conversion for:
 | `cookie:"name"`        | Binds to HTTP cookie `name`            | `cookie:"session_id"`       |
 | `scheme:"Bearer"`      | Strips scheme prefix from header value | `scheme:"Bearer"`           |
 | `json:"name"`          | Binds to JSON field in request body    | `json:"title"`              |
+| `rawbody:"true"`       | Binds the raw request body to `[]byte` | `rawbody:"true"`            |
 | `default:"value"`      | Fallback value if parameter is missing | `default:"1"`               |
 | `time_layout:"layout"` | Custom time parsing layout             | `time_layout:"2006-01-02"`  |
 | `validate:"rules"`     | Validation rules for the field         | `validate:"required,email"` |
@@ -226,7 +244,10 @@ When validation fails, the system automatically:
 
 1. Converts validation errors to user-friendly messages
 2. Returns appropriate HTTP status codes (400 for validation errors)
-3. Formats errors as JSON responses with error codes and messages
+3. Formats errors as JSON responses using the `apierror.APIErrorResponse` envelope
+
+Unknown fields are rejected rather than ignored: an unrecognized JSON body field or query
+parameter produces a validation error naming the offending field.
 
 Example error response:
 
@@ -235,7 +256,15 @@ Example error response:
     "error": {
         "code": "validation_failed",
         "type": "invalid_request_error",
-        "message": "UserID is required; Title must be at least 1 characters long"
+        "message": "Title must be at least 1 characters long",
+        "param": "title",
+        "doc_url": "https://docs.augno.com/api/errors#validation_failed",
+        "is_transient": false,
+        "quota": null,
+        "request_log_url": "https://augno.com/dashboard/request-logs/rq_fbv1ygmybo3eauykr74"
     }
 }
 ```
+
+Every field is always present — `param`, `doc_url`, `quota`, and `request_log_url` are `null`
+when they do not apply. The shape is defined by `apierror.ResponseError` in `shared/errors`.

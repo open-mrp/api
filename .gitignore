@@ -46,6 +46,7 @@ test/logs/
 # generated openapi spec docs
 specs/
 httpie/
+vacuum-spectral-report.json
 
 # Added by goreleaser init:
 dist/
@@ -79,3 +80,10 @@ stainless/public/builds/
 
 # prompt executables
 prompts/*.mjs
+
+# Compiled Go binaries. `go build` drops its output next to the package under the package's own
+# name, which no extension rule above catches — tools/apidocs/apidocs was committed at 51 MB this
+# way. Everything here is invoked with `go run`, so a binary in the tree is always an accident.
+/tools/apidocs/apidocs
+/cmd/*/[a-z]*
+!/cmd/*/*.go

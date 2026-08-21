@@ -449,7 +449,7 @@ func (s *shippingCaseSvcImpl) GetShippingCaseLabel(ctx context.Context, accountI
 	s3Key := shippingLabelS3Key(identity.Target.AccountID, number)
 
 	// Reads a label core-service itself uploads on ship and deletes on void, so the AugnoProdCoreS3Access
-	// IRSA policy (infra/production/terraform/core.tf) must keep Get/Put/Delete on the shipping-labels bucket.
+	// IRSA policy (augno/infra: production/terraform/core.tf) must keep Get/Put/Delete on the shipping-labels bucket.
 	exists, apiErr := s.s3Client.FileExists(ctx, s.shippingLabelsBucket, s3Key)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)

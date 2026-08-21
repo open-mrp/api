@@ -20,18 +20,12 @@ import (
 )
 
 type outputs struct {
-	PreviousTag        string
-	CurrentRef         string
-	BuildServicesJSON  string
-	BuildServicesCSV   string
-	BuildMatrixJSON    string
-	HasBuildServices   string
-	DeployServicesJSON string
-	DeployServicesCSV  string
-	HasDeployServices  string
-	TerraformChanged   string
-	ConfigChanged      string
-	PlatformChanged    string
+	PreviousTag  string
+	CurrentRef   string
+	ServicesJSON string
+	ServicesCSV  string
+	MatrixJSON   string
+	HasServices  string
 }
 
 // errBadFlags signals a flag-parse failure; the FlagSet already printed the
@@ -235,36 +229,25 @@ func repoRelativeDir(repoRoot, dir string) (string, bool) {
 }
 
 func marshalOutputs(previousTag, currentRef string, analysis releasechanges.Analysis) (outputs, error) {
-	buildJSON, err := json.Marshal(analysis.BuildServices)
+	servicesJSON, err := json.Marshal(analysis.Services)
 	if err != nil {
 		return outputs{}, err
 	}
 
-	buildMatrixJSON, err := json.Marshal(map[string][]string{
-		"service": analysis.BuildServices,
+	matrixJSON, err := json.Marshal(map[string][]string{
+		"service": analysis.Services,
 	})
 	if err != nil {
 		return outputs{}, err
 	}
 
-	deployJSON, err := json.Marshal(analysis.DeployServices)
-	if err != nil {
-		return outputs{}, err
-	}
-
 	return outputs{
-		PreviousTag:        previousTag,
-		CurrentRef:         currentRef,
-		BuildServicesJSON:  string(buildJSON),
-		BuildServicesCSV:   strings.Join(analysis.BuildServices, ","),
-		BuildMatrixJSON:    string(buildMatrixJSON),
-		HasBuildServices:   fmt.Sprintf("%t", len(analysis.BuildServices) > 0),
-		DeployServicesJSON: string(deployJSON),
-		DeployServicesCSV:  strings.Join(analysis.DeployServices, ","),
-		HasDeployServices:  fmt.Sprintf("%t", len(analysis.DeployServices) > 0),
-		TerraformChanged:   fmt.Sprintf("%t", analysis.TerraformChanged),
-		ConfigChanged:      fmt.Sprintf("%t", analysis.ConfigChanged),
-		PlatformChanged:    fmt.Sprintf("%t", analysis.PlatformChanged),
+		PreviousTag:  previousTag,
+		CurrentRef:   currentRef,
+		ServicesJSON: string(servicesJSON),
+		ServicesCSV:  strings.Join(analysis.Services, ","),
+		MatrixJSON:   string(matrixJSON),
+		HasServices:  fmt.Sprintf("%t", len(analysis.Services) > 0),
 	}, nil
 }
 
@@ -272,27 +255,17 @@ func printSummary(stdout io.Writer, previousTag, currentRef string, changedFiles
 	fmt.Fprintf(stdout, "Previous tag: %s\n", valueOrNone(previousTag))
 	fmt.Fprintf(stdout, "Current ref: %s\n", currentRef)
 	fmt.Fprintf(stdout, "Changed files: %d\n", len(changedFiles))
-	fmt.Fprintf(stdout, "Build services: %s\n", joinOrNone(analysis.BuildServices))
-	fmt.Fprintf(stdout, "Deploy services: %s\n", joinOrNone(analysis.DeployServices))
-	fmt.Fprintf(stdout, "Terraform changed: %t\n", analysis.TerraformChanged)
-	fmt.Fprintf(stdout, "Config changed: %t\n", analysis.ConfigChanged)
-	fmt.Fprintf(stdout, "Platform changed: %t\n", analysis.PlatformChanged)
+	fmt.Fprintf(stdout, "Services: %s\n", joinOrNone(analysis.Services))
 }
 
 func writeOutputs(stdout io.Writer, getenv func(string) string, out outputs) error {
 	lines := []string{
 		"previous_tag=" + out.PreviousTag,
 		"current_ref=" + out.CurrentRef,
-		"build_services_json=" + out.BuildServicesJSON,
-		"build_services_csv=" + out.BuildServicesCSV,
-		"build_matrix_json=" + out.BuildMatrixJSON,
-		"has_build_services=" + out.HasBuildServices,
-		"deploy_services_json=" + out.DeployServicesJSON,
-		"deploy_services_csv=" + out.DeployServicesCSV,
-		"has_deploy_services=" + out.HasDeployServices,
-		"terraform_changed=" + out.TerraformChanged,
-		"config_changed=" + out.ConfigChanged,
-		"platform_changed=" + out.PlatformChanged,
+		"services_json=" + out.ServicesJSON,
+		"services_csv=" + out.ServicesCSV,
+		"matrix_json=" + out.MatrixJSON,
+		"has_services=" + out.HasServices,
 	}
 
 	for _, line := range lines {

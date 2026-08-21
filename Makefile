@@ -1,4 +1,4 @@
-.PHONY: help dev sqlc proto buf-lint db-dump test test-e2e tx-audit test-verbose test-sql-prepare-smoke install-tools install-ci-tools docs mocks lint gosec gosec-fast govet static-check check-format jaeger-tracing connect-minikube connect-eks version validate-openapi-specs httpie local-db local-db-cli local-db-down local-db-nuke setup teardown migrate-agent-db seed-agent-db seed-core seed-user-photos seed-stripe teardown-stripe teardown-all-stripe fmt stripe-webhook stripe-webhook-account view-otel e2e-up e2e-up-ci e2e e2e-down fix-minikube-dns openapi openapi-quiet gen-agent-tools stainless openapi-stainless openapi-stainless-quiet generate generate-quiet install-stlc stlc-internal-sdk stlc-public-typescript-sdk stlc-public-python-sdk stlc-public-go-sdk stlc-public-sdks stlc-sdks sdk-yalc
+.PHONY: help dev sqlc proto buf-lint db-dump no-binaries test test-e2e tx-audit test-verbose test-sql-prepare-smoke install-tools install-ci-tools docs mocks lint gosec gosec-fast govet static-check check-format jaeger-tracing connect-minikube version validate-openapi-specs httpie local-db local-db-cli local-db-down local-db-nuke setup teardown migrate-agent-db seed-agent-db seed-core seed-user-photos seed-stripe teardown-stripe teardown-all-stripe fmt stripe-webhook stripe-webhook-account view-otel e2e-up e2e-up-ci e2e e2e-down fix-minikube-dns openapi openapi-quiet gen-agent-tools stainless openapi-stainless openapi-stainless-quiet generate generate-quiet install-stlc stlc-internal-sdk stlc-public-typescript-sdk stlc-public-python-sdk stlc-public-go-sdk stlc-public-sdks stlc-sdks sdk-yalc
 
 # Include .env file if it exists (optional for CI)
 -include .env
@@ -29,9 +29,6 @@ help: ## Show this help message
 	
 connect-minikube: ## Switch kubectl context to minikube
 	@kubectl config use-context minikube
-
-connect-eks: ## Switch kubectl context to EKS production cluster
-	@aws eks update-kubeconfig --region us-east-2 --name augno-prod
 
 fix-minikube-dns: ## Ensure host.minikube.internal resolves inside minikube pods
 	@HOST_IP=$$(minikube ssh "ip route | grep default" 2>/dev/null | awk '{print $$3}'); \
@@ -240,7 +237,10 @@ install-ci-tools: ## Install minimum tools for CI
 mocks: ## Generate mocks. Usage: make mocks [services]
 	@$(MOCK_SCRIPT) $(ARGS)
 
-lint: gosec static-check tx-audit ## Run gosec + staticcheck + transaction-callback audit
+lint: gosec static-check tx-audit no-binaries ## Run gosec + staticcheck + transaction-callback audit + committed-binary check
+
+no-binaries: ## Check that no compiled binary or oversized file is tracked in git
+	@./scripts/check-no-binaries.sh
 
 tx-audit: ## Check that database transaction callbacks are safe to re-run after a deadlock
 	@echo "Auditing transaction callbacks..."
@@ -266,18 +266,12 @@ static-check: ## Run staticcheck
 	@echo "Running static check..."
 	@go run honnef.co/go/tools/cmd/staticcheck@$(call tool-version,honnef.co/go/tools) ./...
 
-fmt: ## Format Go source code and Terraform
+fmt: ## Format Go source code
 	@echo "Formatting Go source code..."
 	@go fmt ./...
 	@if command -v goimports >/dev/null; then \
 		echo "Organizing imports with goimports..."; \
 		goimports -w .; \
-	fi
-	@echo "Formatting Terraform..."
-	@if command -v terraform >/dev/null 2>&1; then \
-		terraform -chdir=infra/production/terraform fmt; \
-	else \
-		echo "Terraform not found, skipping Terraform formatting"; \
 	fi
 
 stripe-webhook: ## Run the Stripe webhook listener

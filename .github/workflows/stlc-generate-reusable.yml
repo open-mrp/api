@@ -109,10 +109,13 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
-          role-to-assume: arn:aws:iam::AWS_ACCOUNT_ID:role/github-actions-openapi-reader
+          role-to-assume: ${{ vars.AWS_ROLE_OPENAPI_READER }}
           aws-region: us-east-2
 
       - name: Download OpenAPI specs and Stainless configs from S3
+        env:
+          PUBLIC_SPEC_BUCKET: ${{ vars.PUBLIC_SPEC_BUCKET }}
+          INTERNAL_SPEC_BUCKET: ${{ vars.INTERNAL_SPEC_BUCKET }}
         run: |
           mkdir -p specs
           ./scripts/fetch-openapi-spec-s3.sh internal specs/internal_openapi_spec.json current

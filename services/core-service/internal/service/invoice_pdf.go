@@ -88,7 +88,7 @@ func (d invoiceDoc) emailParams(masterTrackingURL string) map[string]any {
 		"twitter_handle":      d.Header.TwitterHandle,
 		"facebook_handle":     d.Header.FacebookHandle,
 		"linkedin_handle":     d.Header.LinkedInHandle,
-		"show_american_made":  d.Header.ShowAmericanMade,
+		"marketing_blurb":     d.Header.MarketingBlurb,
 	}
 }
 

@@ -3,6 +3,7 @@ package main
 import (
 	"cmp"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"strconv"
 
@@ -35,6 +36,7 @@ const (
 	envVercelAPIToken             = "VERCEL_API_TOKEN" // #nosec G101 - Env var name, not a credential
 	envVercelProjectID            = "VERCEL_PROJECT_ID"
 	envVercelTeamID               = "VERCEL_TEAM_ID"
+	envAccountMarketingBlurbs     = "ACCOUNT_MARKETING_BLURBS"
 )
 
 // config represents the configuration for the core service.
@@ -98,6 +100,12 @@ type config struct {
 
 	// VercelTeamID (optional) scopes Vercel API calls to a team; empty for personal-scope tokens.
 	VercelTeamID string
+
+	// AccountMarketingBlurbs (optional; default: none) is a JSON object mapping an account id to the
+	// marketing sentence that account's customer emails carry in the footer, e.g.
+	// {"ac_123":"A family owned company making widgets since 1975."}. An account absent from the map
+	// gets no footer panel. Kept in configuration so no customer id or customer copy lives in source.
+	AccountMarketingBlurbs string
 }
 
 // withDefaults sets the default values for the configuration.
@@ -135,6 +143,7 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		VercelAPIToken:             env.GetEnv(envVercelAPIToken, getenv),
 		VercelProjectID:            env.GetEnv(envVercelProjectID, getenv),
 		VercelTeamID:               env.GetEnv(envVercelTeamID, getenv),
+		AccountMarketingBlurbs:     env.GetEnv(envAccountMarketingBlurbs, getenv),
 	}
 }
 
@@ -201,5 +210,21 @@ func (c *config) validate() error {
 			return fmt.Errorf("core-service: VERCEL_PROJECT_ID is required")
 		}
 	}
+	if _, err := c.marketingBlurbs(); err != nil {
+		return err
+	}
 	return nil
+}
+
+// marketingBlurbs decodes AccountMarketingBlurbs. An unset value is not an error — it simply means no
+// account carries a footer panel.
+func (c *config) marketingBlurbs() (map[string]string, error) {
+	if c.AccountMarketingBlurbs == "" {
+		return nil, nil
+	}
+	var m map[string]string
+	if err := json.Unmarshal([]byte(c.AccountMarketingBlurbs), &m); err != nil {
+		return nil, fmt.Errorf("core-service: ACCOUNT_MARKETING_BLURBS must be a JSON object of account id to blurb: %w", err)
+	}
+	return m, nil
 }

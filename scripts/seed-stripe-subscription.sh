@@ -320,7 +320,8 @@ info "Billing intent committed."
 
 # --- Step 9: Find the pricing plan subscription ---
 # v2 billing: commit creates the pricing plan subscription; ID may be in commit response,
-# in the committed billing intent (GET), or via list by cadence. See docs/v2-stripe.
+# in the committed billing intent (GET), or via list by cadence. See Stripe's pricing-plan
+# subscription docs: https://docs.stripe.com/billing/subscriptions/usage-based/pricing-plans
 # Parse path matches billing-service: actions[].subscribe.pricing_plan_subscription_details.pricing_plan_subscription
 
 SUBSCRIPTION_ID=""
@@ -356,7 +357,7 @@ fi
 
 if [ -z "$SUBSCRIPTION_ID" ]; then
     error "Could not find subscription ID after commit. Cannot update DB without it."
-    error "See docs/v2-stripe for v2 billing intent and pricing plan subscription flow."
+    error "See https://docs.stripe.com/billing/subscriptions/usage-based/pricing-plans for the v2 billing intent and pricing plan subscription flow."
     exit 1
 fi
 

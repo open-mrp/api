@@ -6,8 +6,6 @@
 .terraform
 *.tfstate*
 *.tfvars*
-infra/production/terraform
-infra/bootstrap
 infra/development
 node_modules
 tmp

@@ -14,9 +14,7 @@ func TestAnalyze_ServiceLocalGoChange(t *testing.T) {
 		"services/core-service/internal/service": {"core-service"},
 	})
 
-	assertServicesEqual(t, analysis.BuildServices, []string{"core-service"})
-	assertServicesEqual(t, analysis.DeployServices, []string{"core-service"})
-	assertBools(t, analysis, false, false, false)
+	assertServicesEqual(t, analysis.Services, []string{"core-service"})
 }
 
 func TestAnalyze_ImportablePackageMarksDependentServices(t *testing.T) {
@@ -28,33 +26,32 @@ func TestAnalyze_ImportablePackageMarksDependentServices(t *testing.T) {
 		"services/auth-service/pkg/types": {"api-gateway", "auth-service", "core-service"},
 	})
 
-	assertServicesEqual(t, analysis.BuildServices, []string{"api-gateway", "auth-service", "core-service"})
-	assertServicesEqual(t, analysis.DeployServices, []string{"api-gateway", "auth-service", "core-service"})
-	assertBools(t, analysis, false, false, false)
+	assertServicesEqual(t, analysis.Services, []string{"api-gateway", "auth-service", "core-service"})
 }
 
-func TestAnalyze_ManifestOnlyChangeDeploysOnlyThatService(t *testing.T) {
+// Cluster state moved to the private augno/infra repo, which reconciles its own manifests. A path
+// that looks like one is now just an unrecognised file and must not select anything to rebuild.
+func TestAnalyze_ManifestPathSelectsNothing(t *testing.T) {
 	t.Parallel()
 
 	analysis := Analyze([]string{
 		"infra/production/kubernetes/apps/auth-service.yaml",
+		"infra/production/kubernetes/config/app-config.yaml",
+		"infra/production/terraform/eks.tf",
 	}, nil)
 
-	assertServicesEqual(t, analysis.BuildServices, nil)
-	assertServicesEqual(t, analysis.DeployServices, []string{"auth-service"})
-	assertBools(t, analysis, false, false, false)
+	assertServicesEqual(t, analysis.Services, nil)
 }
 
-func TestAnalyze_ConfigChangeRedeploysAllServices(t *testing.T) {
+// The production Dockerfile stays in this repo: it is the build recipe for every service image.
+func TestAnalyze_DockerfileChangeBuildsAllServices(t *testing.T) {
 	t.Parallel()
 
 	analysis := Analyze([]string{
-		"infra/production/kubernetes/config/app-config.yaml",
+		"infra/production/docker/Dockerfile",
 	}, nil)
 
-	assertServicesEqual(t, analysis.BuildServices, nil)
-	assertServicesEqual(t, analysis.DeployServices, ServiceNames)
-	assertBools(t, analysis, false, true, false)
+	assertServicesEqual(t, analysis.Services, ServiceNames)
 }
 
 func TestAnalyze_UnmappedSharedChangeBuildsAllServices(t *testing.T) {
@@ -64,9 +61,7 @@ func TestAnalyze_UnmappedSharedChangeBuildsAllServices(t *testing.T) {
 		"shared/db/migrations/0001_initial.sql",
 	}, nil)
 
-	assertServicesEqual(t, analysis.BuildServices, ServiceNames)
-	assertServicesEqual(t, analysis.DeployServices, ServiceNames)
-	assertBools(t, analysis, false, false, false)
+	assertServicesEqual(t, analysis.Services, ServiceNames)
 }
 
 func TestAnalyze_DocsOnlyChangeDoesNothing(t *testing.T) {
@@ -76,9 +71,7 @@ func TestAnalyze_DocsOnlyChangeDoesNothing(t *testing.T) {
 		"docs/patterns/architecture-patterns.md",
 	}, nil)
 
-	assertServicesEqual(t, analysis.BuildServices, nil)
-	assertServicesEqual(t, analysis.DeployServices, nil)
-	assertBools(t, analysis, false, false, false)
+	assertServicesEqual(t, analysis.Services, nil)
 }
 
 func TestAnalyze_ProtoChangeBuildsAllServices(t *testing.T) {
@@ -88,9 +81,7 @@ func TestAnalyze_ProtoChangeBuildsAllServices(t *testing.T) {
 		"proto/core/core.proto",
 	}, nil)
 
-	assertServicesEqual(t, analysis.BuildServices, ServiceNames)
-	assertServicesEqual(t, analysis.DeployServices, ServiceNames)
-	assertBools(t, analysis, false, false, false)
+	assertServicesEqual(t, analysis.Services, ServiceNames)
 }
 
 func assertServicesEqual(t *testing.T, got, want []string) {
@@ -100,18 +91,5 @@ func assertServicesEqual(t *testing.T, got, want []string) {
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("services mismatch: got %v want %v", got, want)
-	}
-}
-
-func assertBools(t *testing.T, analysis Analysis, terraform, config, platform bool) {
-	t.Helper()
-	if analysis.TerraformChanged != terraform {
-		t.Fatalf("TerraformChanged mismatch: got %t want %t", analysis.TerraformChanged, terraform)
-	}
-	if analysis.ConfigChanged != config {
-		t.Fatalf("ConfigChanged mismatch: got %t want %t", analysis.ConfigChanged, config)
-	}
-	if analysis.PlatformChanged != platform {
-		t.Fatalf("PlatformChanged mismatch: got %t want %t", analysis.PlatformChanged, platform)
 	}
 }

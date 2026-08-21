@@ -15,6 +15,19 @@
 set -euo pipefail
 
 API_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# internal-sdk and dashboard are private sibling checkouts, so this only works from inside the Augno
+# monorepo. Say so, rather than dying on an opaque "no such file or directory" two lines down.
+for sibling in internal-sdk dashboard; do
+  if [ ! -d "$API_DIR/../$sibling" ]; then
+    echo "Missing sibling checkout: $API_DIR/../$sibling" >&2
+    echo "This script links a locally built SDK into the dashboard and needs the private" >&2
+    echo "augno/internal-sdk and augno/dashboard repositories checked out alongside this one." >&2
+    echo "To regenerate just the OpenAPI spec and SDK config, use 'make generate' instead." >&2
+    exit 1
+  fi
+done
+
 SDK_DIR="$(cd "$API_DIR/../internal-sdk" && pwd)"
 DASH_DIR="$(cd "$API_DIR/../dashboard" && pwd)"
 

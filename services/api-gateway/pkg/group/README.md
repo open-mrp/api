@@ -10,3 +10,6 @@ Each group:
 
 Define REST endpoints and route metadata here  
 Do not put business logic in this layer
+
+Each group has a `Materialize` method taking a config struct that it validates (and panics on, at
+startup) before wiring the endpoints. See `docs/patterns/architecture-patterns.md`.

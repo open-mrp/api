@@ -25,7 +25,7 @@ targets:
       # Generate an MCP server as a sub-package (packages/mcp-server) of the
       # public TypeScript SDK. There is no standalone `mcp` target in stlc; the
       # server wraps @augno/sdk and is built/hosted as its own container (see
-      # infra/production/kubernetes/apps/mcp-server.yaml and docs/stlc-sdk-codegen.md).
+      # augno/infra: production/kubernetes/apps/mcp-server.yaml, and docs/stlc-sdk-codegen.md).
       mcp_server:
         package_name: "@augno/sdk-mcp"
         # The MCP server exposes a single code-execution tool: agents write small

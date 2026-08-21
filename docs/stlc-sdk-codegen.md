@@ -160,10 +160,10 @@ stlc generates a runnable HTTP server (`mcp-server --transport=http --port=<n>`,
 and `GET`/`POST /`, Streamable HTTP, stateless) **and** its own Dockerfile at
 `packages/mcp-server/Dockerfile`. We host it on the existing EKS cluster:
 
-- **ECR:** `augno/mcp-server` ([`infra/.../terraform/ecr.tf`](../infra/production/terraform/ecr.tf)) —
+- **ECR:** `augno/mcp-server` (private [augno/infra](https://github.com/Augno/infra): `production/terraform/ecr.tf`) —
   a dedicated repo kept **out** of `var.service_names` so the Go build matrix never tries to build it
   with the shared Go Dockerfile.
-- **k8s:** [`infra/.../kubernetes/apps/mcp-server.yaml`](../infra/production/kubernetes/apps/mcp-server.yaml)
+- **k8s:** private [augno/infra](https://github.com/Augno/infra): `production/kubernetes/apps/mcp-server.yaml`
   — Deployment + NodePort Service + Ingress on **`mcp.augno.com`**, sharing the api-gateway ALB
   (`group.name: api-gateway`, so no second ALB). Each caller passes their own Augno API key as a Bearer
   token (`parseClientAuthHeaders`), so no shared credential is mounted.
@@ -184,7 +184,7 @@ and `GET`/`POST /`, Streamable HTTP, stateless) **and** its own Dockerfile at
 
 SDK generation runs **only** from [`.github/workflows/release.yml`](../.github/workflows/release.yml) **`generate-sdks`** after **`publish-openapi-specs`** succeeds:
 
-1. **`publish-openapi-specs`** downloads **`openapi.json`** from each bucket into **`specs/sdk-baseline/`** (pre-upload baseline), runs **`make openapi-stainless`** (specs + Stainless configs, since both are uploaded to S3), compares with [`scripts/sdk-openapi-spec-changed.sh`](../scripts/sdk-openapi-spec-changed.sh) for internal and public, then uploads **`openapi.json`** and **`stainless.yml`** (plus versioned copies) to **`augno-public-openapi-specs`** and **`augno-private-openapi-specs`**. Job outputs **`internal_spec_changed`** and **`public_spec_changed`** gate SDK generation.
+1. **`publish-openapi-specs`** downloads **`openapi.json`** from each bucket into **`specs/sdk-baseline/`** (pre-upload baseline), runs **`make openapi-stainless`** (specs + Stainless configs, since both are uploaded to S3), compares with [`scripts/sdk-openapi-spec-changed.sh`](../scripts/sdk-openapi-spec-changed.sh) for internal and public, then uploads **`openapi.json`** and **`stainless.yml`** (plus versioned copies) to the buckets named by the **`PUBLIC_SPEC_BUCKET`** and **`INTERNAL_SPEC_BUCKET`** Actions variables. Job outputs **`internal_spec_changed`** and **`public_spec_changed`** gate SDK generation.
 
 2. **`generate-sdks`** calls [`stlc-generate-reusable.yml`](../.github/workflows/stlc-generate-reusable.yml) with **`openapi_specs_source: s3`** and inputs **`openapi_internal_gate`** / **`openapi_public_gate`** (from **`internal_spec_changed`** / **`public_spec_changed`** on **`publish-openapi-specs`**). The job runs a **matrix of four SDK targets** — internal TS, public TS, public Python, public Go — each gated on its spec's change flag. When a flag is **`false`**, that target's **`stlc build --push`** is **skipped**. When **`true`**, it downloads the published specs from S3 and runs **`stlc build --push --targets <lang>`** to the target's **`main`**:
    - **All targets** (`internal`, `public`, `public-python`, `public-go` — all `release: release-please`): **no changeset is added.** The conventional-commit sync message (`feat(sdk):`/`fix(sdk):`/`feat(sdk)!:` `sync with deployed API <tag>`) is what each repo's **release-please** workflow consumes to open a `release: <version>` PR → merge to publish. The public targets publish to npmjs/PyPI/Go; `internal` publishes to **GitHub Packages** (its committed `release.yml` runs release-please, then `pnpm publish`es to `npm.pkg.github.com`).

@@ -117,6 +117,13 @@ func Run(
 	// Branding logos are stored as object keys in the same bucket the upload endpoint writes to, so every document that prints one signs or reads it from here.
 	brandingAssets := service.NewBrandingAssets(s3Store, cfg.AccountPhotosBucket)
 
+	// Which accounts carry a marketing sentence in their customer-email footer is operator configuration; install it before anything can render an email.
+	blurbs, err := cfg.marketingBlurbs()
+	if err != nil {
+		return err
+	}
+	service.SetAccountMarketingBlurbs(blurbs)
+
 	jobSvcFactory := service.NewJobSvcFactory()
 	jobSvc := jobSvcFactory.Build(repoFactory)
 

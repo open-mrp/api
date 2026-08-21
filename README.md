@@ -14,20 +14,23 @@ Augno is a Go-based microservices platform using an API Gateway and domain-focus
 
 ### Prerequisites
 
-- Go 1.25+
-- Docker & Tilt
-- [sqlc](https://sqlc.dev/)
-- [mockgen](https://github.com/uber-go/mock)
+- Go 1.27+
+- Docker
 - [minikube](https://minikube.sigs.k8s.io/)
+- [Tilt](https://tilt.dev/)
+- [protoc](https://protobuf.dev/installation/) — only needed for `make proto`
+
+`make install-tools` installs everything else (buf, sqlc, goose, mockgen, gotestsum, vacuum, the protoc plugins, gosec, staticcheck, goimports) at the versions pinned in `tools/tool-versions`.
 
 ### Setup
 
 ```bash
-make install-tools  # Install dev dependencies (goose, sqlc, mockgen, etc.)
-make local-db       # Start MySQL & PostgreSQL in Docker, apply migrations, configure .env
-minikube start      # Start a local Kubernetes cluster
+make install-tools  # Install dev dependencies
+make setup          # Start minikube and the local databases (migrations + seed data)
 make dev            # Spin up the environment with Tilt
 ```
+
+`make teardown` reverses it: deletes minikube, nukes the local databases, and tears down the E2E stack.
 
 ### Local Databases
 
@@ -36,7 +39,7 @@ make dev            # Spin up the environment with Tilt
 - **MySQL 8** on port `3306` — core-service (`augno` database)
 - **PostgreSQL 16** on port `5432` — agent-service (`augno_agents` database)
 
-Data is persisted in named Docker volumes so it survives container restarts. `make local-db` also seeds the core database with sample data (accounts, users, items, orders, etc.) via the SQL files in `shared/db/seed/`.
+Data is persisted in named Docker volumes so it survives container restarts. `make local-db` also seeds the core database with sample data (accounts, users, items, orders, etc.) via the SQL files in `shared/db/seed/`, and — when `STRIPE_SECRET_KEY` is set — creates a matching Stripe test subscription for the seeded account. Without that variable the Stripe step is skipped with a warning; run `make seed-stripe` later to add it.
 
 ```bash
 # Re-seed core data (idempotent, safe to run multiple times)
@@ -45,17 +48,21 @@ make seed-core
 # Seed with a specific plan (default: enterprise)
 make seed-core ARGS="--plan starter"
 
-# Seed agent definitions and tools
-make seed-agents <account_id>
+# Seed the agent-service (PostgreSQL) database with e2e test data
+# Migrations for it already ran as part of `make local-db`
+make seed-agent-db
+
+# Upload the seeded users' avatars to the user-photos S3 bucket
+make seed-user-photos
 
 # Connect directly
-mysql -u root -p'Testing123!' -h 127.0.0.1 --protocol=tcp augno
+make local-db-cli   # MySQL CLI using DB_URL from .env
 psql postgres://augno@localhost:5432/augno_agents
 
 # Tear down containers (data preserved)
 make local-db-down
 
-# Tear down containers and delete all data (volumes) for a fresh start
+# Tear down containers, clean up Stripe test resources, and delete all data (volumes)
 # Run `make local-db` after to get clean databases with fresh migrations and seed data
 make local-db-nuke
 ```
@@ -97,18 +104,26 @@ stringData:
   token: "dev-internal-token" # any non-empty value in dev
 ```
 
-Both `api-gateway` and `agent-service` already consume this secret (as `INTERNAL_SERVICE_TOKEN`) and the `API_GATEWAY_INTERNAL_URL` config value. In production the token is generated and delivered by Terraform (`infra/production/terraform/internal_service_token.tf`).
+Both `api-gateway` and `agent-service` already consume this secret (as `INTERNAL_SERVICE_TOKEN`) and the `API_GATEWAY_INTERNAL_URL` config value. In production the token is generated and delivered by Terraform in the private [augno/infra](https://github.com/Augno/infra) repo (`production/terraform/internal_service_token.tf`).
 
 ### Common Commands
 
-Arguments like `auth`, `notification`, or `logging` can be passed to target specific services.
+`make help` lists every target. `make sqlc` and `make mocks` take service arguments — either the full directory name (`core-service`) or its short alias (`core`, `auth`, `notification`, `logging` → platform-service, `payment` → billing-service, `agent`, `api`). With no argument they run against every service.
 
 ```bash
-make sqlc [service]       # Generate database code
-make proto                # Generate protobuf code
-make mocks [service]          # Generate mock implementations
-make test                     # Run all tests
+make sqlc [service]     # Generate database code from SQL queries
+make proto              # Generate Go protobuf bindings
+make mocks [service]    # Generate mock implementations
+make generate           # Regenerate OpenAPI specs, Stainless configs, and agent tools
+make test               # Run all tests
+make e2e                # Bring up the E2E stack and run the E2E tests
+make lint               # gosec + staticcheck + tx audit + committed-binary check
+make fmt                # Format Go sources
 ```
+
+### Conventions
+
+`AGENTS.md` and the pattern docs in `docs/patterns/` are the normative spec for this codebase — layering, API versioning, nullable fields, authorization, audit events, entity IDs, logging, comments. Read the doc for the layer you are changing before you write; where a doc and existing code disagree, the doc wins.
 
 ## Development Process
 
@@ -145,7 +160,36 @@ We use [Conventional Commits](https://www.conventionalcommits.org/) to maintain 
 3. **Release PR:** `release-please` will automatically create or update a "Release PR" that aggregates all pending changes and updates the changelog.
 4. **Production Release:** When ready to deploy, merge the "Release PR" into `main`. This triggers the final release process and deployment to production.
 
+Production infrastructure — Terraform, the production Kubernetes manifests, and the deploy script —
+lives in the private [augno/infra](https://github.com/Augno/infra) repo. This repo builds service
+images and pushes them to ECR; it then asks `augno/infra` to roll them out and waits for the result,
+so nothing here holds a credential that can reach the cluster.
+
+Two consequences worth knowing:
+
+- **Infrastructure changes ship separately.** Terraform no longer runs inside this pipeline. When a
+  release needs new infrastructure, merge and apply it in `augno/infra` *first*, then cut the
+  release here.
+- **Manifest-only changes deploy from `augno/infra`.** Editing a Deployment or the shared ConfigMap
+  is a push to that repo, not a release here.
+
+`infra/development/` stays in this repo — it is what `make dev` runs against, and it holds no
+production identifiers.
+
 ### 4. Notes
 
 - minikube might need refreshed, try `minikube delete` and `minikube start`
 
+
+## Security
+
+Found a vulnerability? Email **security@augno.com** rather than opening an issue — see
+[SECURITY.md](SECURITY.md) for scope and what to include.
+
+Every `sk_test_`, `aug_sk_test_`, `whsec_` and JWT in this repository is fabricated sample or fixture
+data. If you find one that resolves against a real service, that is a genuine finding.
+
+## License
+
+[MIT](LICENSE). "Augno" and the Augno logo are trademarks of Augno, Inc. and are not covered by that
+grant.

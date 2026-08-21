@@ -12,8 +12,10 @@ data:
     SHIPPING_LABELS_BUCKET: "augno-shipping-labels-dev-us-east-2"
     EXPORTS_BUCKET: "augno-exports-dev-us-east-2"
     CHAT_BUCKET: "augno-chat-attachments-dev-us-east-2"
-    # Inbound email bridge (dev). Pinned to us-east-1 (SES receiving region). The QUEUE_URL is printed
-    # by the dev setup script (scripts/dev-email-bridge-setup.sh) — paste the real account id in.
+    # Inbound email bridge (dev). Pinned to us-east-1 (SES receiving region). Fill AWS_ACCOUNT_ID in
+    # locally — scripts/dev-email-bridge-setup.sh prints the full queue URL. Leave the placeholder in
+    # anything you commit: this file is public and an account id is what an attacker enumerates roles
+    # with. Only the inbound-email consumer reads it, so the rest of the stack runs without it.
     INBOUND_EMAIL_BUCKET: "augno-notification-inbound-email-dev"
     INBOUND_EMAIL_QUEUE_URL: "https://sqs.us-east-1.amazonaws.com/AWS_ACCOUNT_ID/augno-notification-inbound-email-dev"
     INBOUND_EMAIL_REGION: "us-east-1"

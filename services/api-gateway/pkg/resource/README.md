@@ -20,3 +20,9 @@ Do not use these internally in services or repositories
 | Required, but nullable | Field \*string `json:"field"`                   | Yes      |
 
 Fields are **always present** in the response — either with a value or `null`. Never use `omitempty`.
+
+Enum fields carry the value set in the tag (`validate:"required,enum=address"`), and every field
+needs a doc comment: both feed the generated OpenAPI spec, and from there the SDKs and docs site.
+
+`docs/patterns/api-resource-conventions.md` and `docs/patterns/nullable-field-patterns.md` are the
+full spec for this layer.

@@ -16,40 +16,20 @@ var ServiceNames = []string{
 	"agent-service",
 }
 
+// Analysis names the services a release has to rebuild. Every rebuilt service is also redeployed, so
+// one list serves both. Cluster state — Terraform, ConfigMaps, platform components, per-service
+// manifests — lives in the private augno/infra repo and is reconciled by that repo's own workflows,
+// so nothing here classifies it.
 type Analysis struct {
-	BuildServices    []string
-	DeployServices   []string
-	TerraformChanged bool
-	ConfigChanged    bool
-	PlatformChanged  bool
+	Services []string
 }
 
 func Analyze(changedFiles []string, dirToServices map[string][]string) Analysis {
 	buildSet := make(map[string]struct{}, len(ServiceNames))
-	deploySet := make(map[string]struct{}, len(ServiceNames))
-
-	analysis := Analysis{}
 
 	for _, rawPath := range changedFiles {
 		path := normalizePath(rawPath)
 		if path == "" {
-			continue
-		}
-
-		switch {
-		case strings.HasPrefix(path, "infra/production/terraform/"):
-			analysis.TerraformChanged = true
-			continue
-		case strings.HasPrefix(path, "infra/production/kubernetes/platform/"):
-			analysis.PlatformChanged = true
-			continue
-		case strings.HasPrefix(path, "infra/production/kubernetes/config/"):
-			analysis.ConfigChanged = true
-			continue
-		}
-
-		if service, ok := serviceFromAppManifestPath(path); ok {
-			deploySet[service] = struct{}{}
 			continue
 		}
 
@@ -75,18 +55,7 @@ func Analyze(changedFiles []string, dirToServices map[string][]string) Analysis 
 		}
 	}
 
-	for service := range buildSet {
-		deploySet[service] = struct{}{}
-	}
-
-	if analysis.ConfigChanged {
-		addAllServices(deploySet)
-	}
-
-	analysis.BuildServices = orderedServices(buildSet)
-	analysis.DeployServices = orderedServices(deploySet)
-
-	return analysis
+	return Analysis{Services: orderedServices(buildSet)}
 }
 
 func normalizePath(path string) string {
@@ -127,19 +96,6 @@ func dependentServicesForPath(path string, dirToServices map[string][]string) []
 	}
 
 	return nil
-}
-
-func serviceFromAppManifestPath(path string) (string, bool) {
-	if !strings.HasPrefix(path, "infra/production/kubernetes/apps/") {
-		return "", false
-	}
-
-	base := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
-	if !isKnownService(base) {
-		return "", false
-	}
-
-	return base, true
 }
 
 func serviceFromServicePath(path string) (string, bool) {

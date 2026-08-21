@@ -146,23 +146,23 @@ func TestRenderInvoiceOmitsTrackingButtonWithoutURL(t *testing.T) {
 }
 
 // The customer emails carry the dashboard's footer: social links for whatever handles the account
-// set, a mailto that pre-fills the subject, and the Seller Co-only American-made panel.
+// set, a mailto that pre-fills the subject, and the account's configured marketing panel.
 func TestRenderInvoiceFooterMatchesDashboard(t *testing.T) {
 	renderer, apiErr := NewTemplateRenderer()
 	require.Nil(t, apiErr)
 
 	body, apiErr := renderer.RenderTemplate(context.Background(), constants.EmailTemplateInvoice, map[string]any{
-		"account_name":       "Seller Co",
-		"account_email":      "orders@sellerco.example.com",
-		"invoice_number":     "INV-9",
-		"invoice_total":      "$351.00",
-		"email_subject":      "Invoice 000009",
-		"instagram_handle":   "sellerco",
-		"twitter_handle":     "sellerco",
-		"facebook_handle":    "sellerco",
-		"linkedin_handle":    "sellerco",
-		"show_american_made": true,
-		"year":               "2026",
+		"account_name":     "Seller Co",
+		"account_email":    "orders@sellerco.example.com",
+		"invoice_number":   "INV-9",
+		"invoice_total":    "$351.00",
+		"email_subject":    "Invoice 000009",
+		"instagram_handle": "sellerco",
+		"twitter_handle":   "sellerco",
+		"facebook_handle":  "sellerco",
+		"linkedin_handle":  "sellerco",
+		"marketing_blurb":  "A family owned company making widgets in the USA since 1975.",
+		"year":             "2026",
 	})
 	require.Nil(t, apiErr)
 
@@ -173,7 +173,7 @@ func TestRenderInvoiceFooterMatchesDashboard(t *testing.T) {
 	require.Contains(t, body, "https://www.linkedin.com/sellerco/")
 	// The subject rides on the mailto so a reply is already titled.
 	require.Contains(t, body, "mailto:orders@sellerco.example.com?subject=Invoice%20000009")
-	require.Contains(t, body, "compression products in the USA since 1975")
+	require.Contains(t, body, "making widgets in the USA since 1975")
 	require.NotContains(t, body, "ZgotmplZ")
 }
 

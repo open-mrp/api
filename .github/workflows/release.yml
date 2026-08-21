@@ -99,16 +99,10 @@ jobs:
     outputs:
       previous_tag: ${{ steps.detect.outputs.previous_tag }}
       current_ref: ${{ steps.detect.outputs.current_ref }}
-      build_services_json: ${{ steps.detect.outputs.build_services_json }}
-      build_services_csv: ${{ steps.detect.outputs.build_services_csv }}
-      build_matrix_json: ${{ steps.detect.outputs.build_matrix_json }}
-      has_build_services: ${{ steps.detect.outputs.has_build_services }}
-      deploy_services_json: ${{ steps.detect.outputs.deploy_services_json }}
-      deploy_services_csv: ${{ steps.detect.outputs.deploy_services_csv }}
-      has_deploy_services: ${{ steps.detect.outputs.has_deploy_services }}
-      terraform_changed: ${{ steps.detect.outputs.terraform_changed }}
-      config_changed: ${{ steps.detect.outputs.config_changed }}
-      platform_changed: ${{ steps.detect.outputs.platform_changed }}
+      services_json: ${{ steps.detect.outputs.services_json }}
+      services_csv: ${{ steps.detect.outputs.services_csv }}
+      matrix_json: ${{ steps.detect.outputs.matrix_json }}
+      has_services: ${{ steps.detect.outputs.has_services }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v5
@@ -139,74 +133,19 @@ jobs:
             echo ""
             echo "- Previous tag: ${PREVIOUS_TAG}"
             echo "- Current ref: ${{ steps.detect.outputs.current_ref }}"
-            echo "- Build services: ${{ steps.detect.outputs.build_services_json }}"
-            echo "- Deploy services: ${{ steps.detect.outputs.deploy_services_json }}"
-            echo "- Terraform changed: ${{ steps.detect.outputs.terraform_changed }}"
-            echo "- Config changed: ${{ steps.detect.outputs.config_changed }}"
-            echo "- Platform changed: ${{ steps.detect.outputs.platform_changed }}"
+            echo "- Services: ${{ steps.detect.outputs.services_json }}"
           } >> "$GITHUB_STEP_SUMMARY"
-
-  terraform:
-    name: Terraform Apply
-    needs: [release-please, detect-changes]
-    if: |
-      needs.release-please.outputs.release_created == 'true' &&
-      needs.detect-changes.outputs.terraform_changed == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-    defaults:
-      run:
-        working-directory: infra/production/terraform
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v5
-        with:
-          # Run release jobs from the resolved release tag.
-          ref: ${{ needs.release-please.outputs.tag_name }}
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v6
-        with:
-          role-to-assume: arn:aws:iam::AWS_ACCOUNT_ID:role/github-action-role
-          aws-region: us-east-2
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v4
-
-      - name: Cache Terraform Providers
-        uses: actions/cache@v5
-        with:
-          path: |
-            .terraform/providers
-            .terraform.lock.hcl
-          key: ${{ runner.os }}-terraform-${{ hashFiles('**/*.tf') }}-${{ hashFiles('**/.terraform.lock.hcl') }}
-          restore-keys: |
-            ${{ runner.os }}-terraform-
-
-      - name: Terraform Init
-        run: terraform init
-
-      - name: Terraform Apply
-        run: terraform apply -auto-approve -input=false
 
   build-push:
     name: Build and Push
-    needs: [release-please, detect-changes, terraform]
+    needs: [release-please, detect-changes]
     if: |
-      always() &&
       needs.release-please.outputs.release_created == 'true' &&
-      needs.detect-changes.result == 'success' &&
-      needs.detect-changes.outputs.has_build_services == 'true' &&
-      (
-        needs.terraform.result == 'success' ||
-        (needs.terraform.result == 'skipped' && needs.detect-changes.outputs.terraform_changed != 'true')
-      )
+      needs.detect-changes.outputs.has_services == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix: ${{ fromJson(needs.detect-changes.outputs.build_matrix_json) }}
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix_json) }}
     permissions:
       id-token: write
       contents: read
@@ -220,7 +159,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
-          role-to-assume: arn:aws:iam::AWS_ACCOUNT_ID:role/github-actions-ecr-push
+          role-to-assume: ${{ vars.AWS_ROLE_ECR_PUSH }}
           aws-region: us-east-2
 
       - name: Login to Amazon ECR
@@ -247,19 +186,14 @@ jobs:
 
   deploy:
     name: Deploy to EKS
-    needs: [release-please, detect-changes, terraform, build-push]
+    needs: [release-please, detect-changes, build-push]
     if: |
       always() &&
       needs.release-please.outputs.release_created == 'true' &&
       needs.detect-changes.result == 'success' &&
-      (
-        needs.terraform.result == 'success' ||
-        (needs.terraform.result == 'skipped' && needs.detect-changes.outputs.terraform_changed != 'true')
-      ) &&
       (needs.build-push.result == 'success' || needs.build-push.result == 'skipped')
     runs-on: ubuntu-latest
     permissions:
-      id-token: write
       contents: read
     steps:
       - name: Checkout Code
@@ -268,26 +202,21 @@ jobs:
           # Run release jobs from the resolved release tag.
           ref: ${{ needs.release-please.outputs.tag_name }}
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v6
-        with:
-          role-to-assume: arn:aws:iam::AWS_ACCOUNT_ID:role/github-actions-eks-deploy
-          aws-region: us-east-2
-
-      - name: Deploy to EKS
-        run: ./scripts/deploy.sh
+      # The rollout itself runs in the private augno/infra repo, behind that repo's `production`
+      # environment. This job asks for it and waits, so the downstream spec/SDK jobs still only run
+      # once the code is actually live. No AWS credential is needed — or wanted — here.
+      - name: Deploy via augno/infra
+        run: ./scripts/dispatch-infra-deploy.sh
         env:
-          AWS_REGION: "us-east-2"
-          CLUSTER_NAME: "augno-prod"
+          GH_TOKEN: ${{ secrets.INFRA_DISPATCH_TOKEN }}
           IMAGE_TAG: ${{ needs.release-please.outputs.tag_name }}
-          DEPLOY_SERVICES: ${{ needs.detect-changes.outputs.deploy_services_csv }}
-          BUILD_SERVICES: ${{ needs.detect-changes.outputs.build_services_csv }}
-          APPLY_PLATFORM: ${{ needs.detect-changes.outputs.platform_changed }}
-          APPLY_CONFIG: ${{ needs.detect-changes.outputs.config_changed }}
-          CONFIG_CHANGED: ${{ needs.detect-changes.outputs.config_changed }}
+          DEPLOY_SERVICES: ${{ needs.detect-changes.outputs.services_csv }}
 
   publish-openapi-specs:
     name: Publish OpenAPI Specs
+    env:
+      PUBLIC_SPEC_BUCKET: ${{ vars.PUBLIC_SPEC_BUCKET }}
+      INTERNAL_SPEC_BUCKET: ${{ vars.INTERNAL_SPEC_BUCKET }}
     needs: [release-please, deploy]
     if: |
       always() &&
@@ -317,7 +246,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
-          role-to-assume: arn:aws:iam::AWS_ACCOUNT_ID:role/github-actions-openapi-writer
+          role-to-assume: ${{ vars.AWS_ROLE_OPENAPI_WRITER }}
           aws-region: us-east-2
 
       - name: Install Modules
@@ -332,8 +261,8 @@ jobs:
       - name: Snapshot current OpenAPI specs from S3 (pre-upload baseline)
         run: |
           mkdir -p specs/sdk-baseline
-          aws s3 cp s3://augno-public-openapi-specs/openapi.json specs/sdk-baseline/public_openapi_spec.json 2>/dev/null || true
-          aws s3 cp s3://augno-private-openapi-specs/openapi.json specs/sdk-baseline/internal_openapi_spec.json 2>/dev/null || true
+          aws s3 cp "s3://${PUBLIC_SPEC_BUCKET}/openapi.json" specs/sdk-baseline/public_openapi_spec.json 2>/dev/null || true
+          aws s3 cp "s3://${INTERNAL_SPEC_BUCKET}/openapi.json" specs/sdk-baseline/internal_openapi_spec.json 2>/dev/null || true
 
       - name: Generate OpenAPI Specs and Stainless configs
         run: make openapi-stainless
@@ -354,18 +283,18 @@ jobs:
           # releases that ship the same API version overwrite the key: it always holds
           # the latest spec for that API version.
           api_version="${{ steps.api-version.outputs.api_version }}"
-          aws s3 cp specs/public_openapi_spec.json "s3://augno-public-openapi-specs/openapi.json"
-          aws s3 cp specs/public_openapi_spec.json "s3://augno-public-openapi-specs/${api_version}.json"
-          aws s3 cp stainless/public/stainless.yml "s3://augno-public-openapi-specs/stainless.yml"
-          aws s3 cp stainless/public/stainless.yml "s3://augno-public-openapi-specs/${api_version}-stainless.yml"
+          aws s3 cp specs/public_openapi_spec.json "s3://${PUBLIC_SPEC_BUCKET}/openapi.json"
+          aws s3 cp specs/public_openapi_spec.json "s3://${PUBLIC_SPEC_BUCKET}/${api_version}.json"
+          aws s3 cp stainless/public/stainless.yml "s3://${PUBLIC_SPEC_BUCKET}/stainless.yml"
+          aws s3 cp stainless/public/stainless.yml "s3://${PUBLIC_SPEC_BUCKET}/${api_version}-stainless.yml"
 
       - name: Upload Private Release Artifacts to S3
         run: |
           api_version="${{ steps.api-version.outputs.api_version }}"
-          aws s3 cp specs/internal_openapi_spec.json "s3://augno-private-openapi-specs/openapi.json"
-          aws s3 cp specs/internal_openapi_spec.json "s3://augno-private-openapi-specs/${api_version}.json"
-          aws s3 cp stainless/internal/stainless.yml "s3://augno-private-openapi-specs/stainless.yml"
-          aws s3 cp stainless/internal/stainless.yml "s3://augno-private-openapi-specs/${api_version}-stainless.yml"
+          aws s3 cp specs/internal_openapi_spec.json "s3://${INTERNAL_SPEC_BUCKET}/openapi.json"
+          aws s3 cp specs/internal_openapi_spec.json "s3://${INTERNAL_SPEC_BUCKET}/${api_version}.json"
+          aws s3 cp stainless/internal/stainless.yml "s3://${INTERNAL_SPEC_BUCKET}/stainless.yml"
+          aws s3 cp stainless/internal/stainless.yml "s3://${INTERNAL_SPEC_BUCKET}/${api_version}-stainless.yml"
 
   generate-sdks:
     name: Generate SDKs with stlc
@@ -394,9 +323,9 @@ jobs:
   build-deploy-mcp:
     name: Build and Deploy MCP Server
     # The MCP server source lives in typescript-sdk/packages/mcp-server and is
-    # (re)generated by generate-sdks. Build its image from the generated
-    # Dockerfile and roll it out on EKS. Gated on the public spec changing — the
-    # same condition under which generate-sdks pushes a new public TS SDK.
+    # (re)generated by generate-sdks. Build its image from the generated Dockerfile, push it, and
+    # ask augno/infra to roll it. Gated on the public spec changing — the same condition under
+    # which generate-sdks pushes a new public TS SDK.
     needs: [release-please, deploy, publish-openapi-specs, generate-sdks]
     if: |
       always() &&
@@ -411,7 +340,7 @@ jobs:
     env:
       IMAGE_TAG: ${{ needs.release-please.outputs.tag_name }}
     steps:
-      - name: Checkout API repo (k8s manifest + kubeconfig)
+      - name: Checkout API repo (deploy dispatch script)
         uses: actions/checkout@v5
         with:
           # Run release jobs from the resolved release tag.
@@ -432,7 +361,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
-          role-to-assume: arn:aws:iam::AWS_ACCOUNT_ID:role/github-actions-mcp-deploy
+          role-to-assume: ${{ vars.AWS_ROLE_MCP_ECR_PUSH }}
           aws-region: us-east-2
 
       - name: Login to Amazon ECR
@@ -457,17 +386,15 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Deploy MCP Server to EKS
-        run: |
-          set -euo pipefail
-          aws eks update-kubeconfig --region us-east-2 --name augno-prod
-          registry="${{ steps.login-ecr.outputs.registry }}"
-          image="${registry}/augno/mcp-server:${IMAGE_TAG}"
-          manifest=infra/production/kubernetes/apps/mcp-server.yaml
-          # Pin the rolled-out image to this release's tag (mirrors deploy.sh).
-          sed -E "s#^([[:space:]]*image: ).*#\1${image}#" "$manifest" > /tmp/mcp-server.yaml
-          kubectl apply -f /tmp/mcp-server.yaml
-          kubectl rollout status deployment/mcp-server --timeout=5m
+      # The manifest and the cluster credential live in augno/infra; ask it to roll the image we
+      # just pushed and wait for the result.
+      - name: Deploy MCP Server via augno/infra
+        run: ./scripts/dispatch-infra-deploy.sh
+        env:
+          GH_TOKEN: ${{ secrets.INFRA_DISPATCH_TOKEN }}
+          IMAGE_TAG: ${{ env.IMAGE_TAG }}
+          DEPLOY_SERVICES: ""
+          MCP_IMAGE_TAG: ${{ env.IMAGE_TAG }}
 
   notify-consumers:
     name: Notify ${{ matrix.consumer }}

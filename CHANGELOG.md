@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.50.5](https://github.com/Augno/api/compare/v0.50.4...v0.50.5) (2026-08-21)
+
+
+### Bug Fixes
+
+* prep for open source ([#514](https://github.com/Augno/api/issues/514)) ([35130e5](https://github.com/Augno/api/commit/35130e5e4296ac05b66f51000c9f23510fae96fd))
+
 ## [0.50.4](https://github.com/Augno/api/compare/v0.50.3...v0.50.4) (2026-08-21)
 
 

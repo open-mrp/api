@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.0.0](https://github.com/open-mrp/api/compare/v0.50.7...v1.0.0) (2026-08-22)
+
+
+### ⚠ BREAKING CHANGES
+
+* rename Augno to OpenMRP ([#3](https://github.com/open-mrp/api/issues/3))
+
+### Bug Fixes
+
+* unblock the E2E suite and stop shipment lists 404ing on a concurrent delete ([#6](https://github.com/open-mrp/api/issues/6)) ([44e1c4f](https://github.com/open-mrp/api/commit/44e1c4f83bbcdb04ea1afd15699e2747c31db186))
+
+
+### Miscellaneous
+
+* rename Augno to OpenMRP ([#3](https://github.com/open-mrp/api/issues/3)) ([c2f082c](https://github.com/open-mrp/api/commit/c2f082cc24f864854a73983e57fc3c89f17c6c84))
+
 ## [0.50.7](https://github.com/open-mrp/api/compare/v0.50.6...v0.50.7) (2026-08-21)
 
 

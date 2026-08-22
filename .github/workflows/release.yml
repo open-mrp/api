@@ -18,6 +18,15 @@ on:
           the newest other tag.
         required: true
         type: string
+      all_services:
+        description: >-
+          Rebuild and redeploy every service, ignoring change detection. Needed
+          when the fix is to the pipeline itself — such a commit touches no
+          service code, so detection selects nothing and images that failed to
+          push are never rebuilt.
+        required: false
+        default: false
+        type: boolean
 
 # Serialize release runs so a manual resume cannot race the next
 # push-triggered release deploy.
@@ -119,7 +128,7 @@ jobs:
 
       - name: Detect release changes since last release
         id: detect
-        run: go run ./cmd/detect-release-changes --current-tag "${{ needs.release-please.outputs.tag_name }}"
+        run: go run ./cmd/detect-release-changes --current-tag "${{ needs.release-please.outputs.tag_name }}" ${{ inputs.all_services && '--all-services' || '' }}
 
       - name: Summarize release selection
         run: |

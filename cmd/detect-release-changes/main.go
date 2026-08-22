@@ -51,11 +51,16 @@ func Run(
 ) error {
 	var currentTag string
 	var repoRoot string
+	var allServices bool
 
 	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	flags.StringVar(&currentTag, "current-tag", "", "Current release tag, for example v0.18.3")
 	flags.StringVar(&repoRoot, "repo-root", ".", "Repository root")
+	flags.BoolVar(&allServices, "all-services", false,
+		"Select every service regardless of the diff. Use when a release must reach the "+
+			"cluster even though it touches no service code, such as a commit that repairs "+
+			"the build pipeline itself.")
 	if err := flags.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return nil
@@ -89,17 +94,23 @@ func Run(
 		return fmt.Errorf("resolve current ref: %w", err)
 	}
 
-	changedFiles, err := changedFilesBetween(ctx, absRepoRoot, previousTag, currentRef)
-	if err != nil {
-		return fmt.Errorf("list changed files: %w", err)
-	}
+	var changedFiles []string
+	var analysis releasechanges.Analysis
+	if allServices {
+		analysis = releasechanges.AnalyzeAll()
+	} else {
+		changedFiles, err = changedFilesBetween(ctx, absRepoRoot, previousTag, currentRef)
+		if err != nil {
+			return fmt.Errorf("list changed files: %w", err)
+		}
 
-	dirToServices, err := buildDependencyMap(ctx, absRepoRoot)
-	if err != nil {
-		return fmt.Errorf("build service dependency map: %w", err)
-	}
+		dirToServices, err := buildDependencyMap(ctx, absRepoRoot)
+		if err != nil {
+			return fmt.Errorf("build service dependency map: %w", err)
+		}
 
-	analysis := releasechanges.Analyze(changedFiles, dirToServices)
+		analysis = releasechanges.Analyze(changedFiles, dirToServices)
+	}
 
 	out, err := marshalOutputs(previousTag, currentRef, analysis)
 	if err != nil {

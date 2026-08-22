@@ -72,7 +72,12 @@ jobs:
           if [ -n "$INPUT_SDK_REF" ]; then
             sdk_ref="$INPUT_SDK_REF"
           else
-            sdk_ref="$(gh release view --repo open-mrp/typescript-sdk --json tagName --jq .tagName)"
+            # `gh release view` returns GitHub's "latest", which EXCLUDES pre-releases.
+            # typescript-sdk marks every release prerelease=true, so that resolves to
+            # v0.2.0 — old enough to predate packages/mcp-server, and the build then
+            # fails with "lstat typescript-sdk-src/packages: no such file or directory".
+            # `gh release list` is reverse-chronological and includes pre-releases.
+            sdk_ref="$(gh release list --repo open-mrp/typescript-sdk --limit 1 --json tagName --jq '.[0].tagName')"
           fi
           if [ -z "$sdk_ref" ]; then
             echo "could not resolve a typescript-sdk ref" >&2

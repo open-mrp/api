@@ -191,5 +191,5 @@ data. If you find one that resolves against a real service, that is a genuine fi
 
 ## License
 
-[MIT](LICENSE). "OpenMRP" and the OpenMRP logo are trademarks of Augno, Inc. and are not covered by that
-grant.
+[Apache 2.0](LICENSE). "OpenMRP" and "Augno", with their logos and wordmarks, are trademarks of
+Augno, Inc. Section 6 of the license grants no trademark rights — see [TRADEMARKS.md](TRADEMARKS.md).

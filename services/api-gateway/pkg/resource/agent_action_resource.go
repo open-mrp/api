@@ -84,7 +84,7 @@ var SampleAgentAction = &AgentAction{
 		UpdatedAt:   timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 	},
 	Input:             json.RawMessage(`{"path":"/api/sales-orders/create"}`),
-	Output:            json.RawMessage(`{"title":"Create a sales order","url":"https://docs.openmrp.ai/api/sales-orders/create"}`),
+	Output:            json.RawMessage(`{"title":"Create a sales order","url":"https://docs.augno.com/api/sales-orders/create"}`),
 	ReviewRequirement: constants.ReviewRequirementNotRequired,
 	ExecutedAt:        new(timeutil.TimestampToTime(sampleUpdatedAtTimestamp)),
 	CreatedAt:         timeutil.TimestampToTime(sampleCreatedAtTimestamp),

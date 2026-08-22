@@ -27,10 +27,10 @@ const (
 	SeedRegistrationFlowID = "mock-registration-flow"
 
 	// account_user belonging to SeedCustomerAccountID (the buyer/customer account),
-	// user "Jane Doe" <dev@openmrp.ai>. A valid order email-contact recipient, which
+	// user "Jane Doe" <dev@augno.com>. A valid order email-contact recipient, which
 	// must resolve within the BUYER's account (not the seller/acting account).
 	SeedCustomerAccountUserID = "acus_01seedcustuser00000"
-	SeedCustomerUserEmail     = "dev@openmrp.ai"
+	SeedCustomerUserEmail     = "dev@augno.com"
 
 	// Customer portal API key (owned by customer account, targets vendor account)
 	SeedCustomerAPIKey = "mrp_sk_prod_CustPortalE2eTestKey1_CustomerPortalE2eTestSecretValueForAuthTestingPurpose12345efS0Og"

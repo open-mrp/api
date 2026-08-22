@@ -84,10 +84,10 @@ VALUES
      '[]'),
 
     ('tdef_01k0b1seed0readdoc000000', 'Read Doc',
-     'Read the content of an OpenMRP documentation page. To find the right page, first fetch https://docs.openmrp.ai/llms.txt which lists all available pages with descriptions.',
+     'Read the content of an OpenMRP documentation page. To find the right page, first fetch https://docs.augno.com/llms.txt which lists all available pages with descriptions.',
      'read_doc',
      '{}',
-     '{"type":"object","properties":{"url":{"type":"string","description":"The full URL of the documentation page to read (must be from docs.openmrp.ai)"}},"required":["url"]}',
+     '{"type":"object","properties":{"url":{"type":"string","description":"The full URL of the documentation page to read (must be from docs.augno.com)"}},"required":["url"]}',
      'built_in',
      'tgrp_01k0b1seed0knowledge0000',
      '[]'),

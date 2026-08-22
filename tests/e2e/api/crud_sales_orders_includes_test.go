@@ -47,7 +47,7 @@ func TestSalesOrders_IncludeContacts(t *testing.T) {
 	require.NotNil(t, contacts, "contacts should be present with ?include=contacts")
 	assert.Equal(t, "order_contact", jsonField(contacts, "object"))
 	// ORD-001 is seeded with one invoice and one acknowledgement recipient.
-	assert.Contains(t, jsonStringSlice(contacts, "invoice"), "dane@openmrp.ai")
+	assert.Contains(t, jsonStringSlice(contacts, "invoice"), "dane@augno.com")
 	assert.Contains(t, jsonStringSlice(contacts, "acknowledgement"), "user2@openmrp.ai")
 }
 
@@ -58,7 +58,7 @@ func TestSalesOrders_List_IncludeContacts(t *testing.T) {
 	contacts := jsonObject(row, "contacts")
 	require.NotNil(t, contacts, "contacts should be populated on the list row with ?include=contacts")
 	assert.Equal(t, "order_contact", jsonField(contacts, "object"))
-	assert.Contains(t, jsonStringSlice(contacts, "invoice"), "dane@openmrp.ai")
+	assert.Contains(t, jsonStringSlice(contacts, "invoice"), "dane@augno.com")
 	assert.Contains(t, jsonStringSlice(contacts, "acknowledgement"), "user2@openmrp.ai")
 }
 
@@ -365,7 +365,7 @@ func TestSalesOrders_IncludeCreatedBy_SystemFallback(t *testing.T) {
 // sales_rep is an expandable Actor. The backend only ships the rep's id and name
 // on the order; the gateway hydrates the rep's display name, handle (email), and
 // avatar URL from core-service when ?include=sales_rep is requested. ORD-001 is
-// seeded with sales_rep_id = SeedAccountUserID (John Doe / dane@openmrp.ai, who has
+// seeded with sales_rep_id = SeedAccountUserID (John Doe / dane@augno.com, who has
 // a seeded avatar), so the hydrated fields resolve with real data.
 
 func TestSalesOrders_SalesRep_OmittedByDefault(t *testing.T) {
@@ -391,7 +391,7 @@ func assertSeedSalesRepActor(t *testing.T, salesRep map[string]any) {
 	assert.Equal(t, SeedAccountUserID, jsonField(salesRep, "id"))
 	// Name, handle (email), and avatar_url are hydrated by default — the fix under test.
 	assert.Equal(t, "John Doe", jsonField(salesRep, "name"))
-	assert.Equal(t, "dane@openmrp.ai", jsonField(salesRep, "handle"))
+	assert.Equal(t, "dane@augno.com", jsonField(salesRep, "handle"))
 	assert.NotEmpty(t, jsonField(salesRep, "avatar_url"), "avatar_url should be hydrated for a rep with a seeded avatar")
 }
 

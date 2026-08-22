@@ -696,7 +696,7 @@ func (s *registrationSessionSvcImpl) handleRegistrationLimitHit(ctx context.Cont
 	// Best-effort: send admin alert email
 	publishCtx := event.WithRepos(ctx, s.repos)
 	if emailErr := s.notificationPublisher.PublishSendEmail(publishCtx, messaging.EmailSendData{
-		To:         []string{"dev@openmrp.ai"},
+		To:         []string{"dev@augno.com"},
 		Subject:    fmt.Sprintf("[Registration Limit] %s plan at capacity", session.PlanCode),
 		TemplateID: constants.EmailTemplateRegistrationLimitAlert,
 		Params: map[string]any{

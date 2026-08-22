@@ -10,7 +10,7 @@ import (
 )
 
 const SampleRequestLogID = "rq_0lhl3kkhme40"
-const SampleRequestLogHost = "https://api.openmrp.ai"
+const SampleRequestLogHost = "https://api.augno.com"
 const SampleRequestLogPath = "/v1/core/sandboxes"
 const SampleRequestLogQueryJSON = `{"limit":10}`
 const SampleRequestLogAPIVersion = "2026-01-01"
@@ -30,7 +30,7 @@ type RequestLog struct {
 	Method string `json:"method" validate:"required"`
 	// Request host.
 	//
-	// Usually `api.openmrp.ai`.
+	// Usually `api.augno.com`.
 	Host string `json:"host" validate:"required"`
 	// The exact path the request was made to, including path parameter values.
 	Path string `json:"path" validate:"required"`
@@ -113,7 +113,7 @@ var SampleRequestLog = &RequestLog{
 	APIVersion:       new(SampleRequestLogAPIVersion),
 	ClientIP:         new(SampleRequestLogClientIP),
 	UserAgent:        new(SampleRequestLogUserAgent),
-	Referrer:         new("https://www.openmrp.ai"),
+	Referrer:         new("https://www.augno.com"),
 	OccurredAt:       timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	CreatedAt:        timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	Account:          SampleAccount,
@@ -130,7 +130,7 @@ func (*RequestLog) SchemaExample() any {
 // service name:port) never leaks. We surface the public API host the agent's call
 // is logically equivalent to, rather than a meaningless "internal" placeholder. The
 // true internal host stays in platform-service storage for operator debugging.
-const RedactedRequestLogHost = "https://api.openmrp.ai"
+const RedactedRequestLogHost = "https://api.augno.com"
 
 // internalListenerIdentityType is the request_log.identity_type stamped on requests
 // authenticated by the gateway's trusted internal listener (agents). It is the

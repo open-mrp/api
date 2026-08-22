@@ -15,7 +15,7 @@ const (
 	loginPath = "/v1/auth/actions/login"
 
 	// Seeded user credentials from shared/db/seed/0004_auth.sql.
-	seedUserEmail    = "dane@openmrp.ai"
+	seedUserEmail    = "dane@augno.com"
 	seedUserUsername = "jdoe"
 	seedUserName     = "John Doe"
 	seedUserPassword = "Testing123!" // #nosec G101 - Test constant, not a production credential

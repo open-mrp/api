@@ -583,7 +583,7 @@ func (r ResponseError) SchemaExample() any {
 		Param:         new("email"),
 		DocURL:        new(docURLValidationFailed),
 		IsTransient:   false,
-		RequestLogURL: new("https://openmrp.ai/dashboard/request-logs/rq_fbv1ygmybo3eauykr74"),
+		RequestLogURL: new("https://augno.com/dashboard/request-logs/rq_fbv1ygmybo3eauykr74"),
 	}
 }
 

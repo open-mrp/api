@@ -222,7 +222,7 @@ func (s *notificationSvcImpl) SendEnterpriseRequest(ctx context.Context, req *do
 	}
 
 	// Send to sales team
-	salesEmail := "sales@openmrp.ai"
+	salesEmail := "sales@augno.com"
 	_, apiErr = s.emailSender.Send(ctx, domain.EmailData{
 		To:      []string{salesEmail},
 		Subject: subject,

@@ -23,8 +23,8 @@ import (
 var sesEmailSenderTracer = tracing.GetTracer("notification-service.aws.ses")
 
 const (
-	EmailSenderSource     = "noreply@openmrp.ai"
-	EmailTestingRecipient = "dev@openmrp.ai"
+	EmailSenderSource     = "noreply@augno.com"
+	EmailTestingRecipient = "dev@augno.com"
 )
 
 func NewSESEmailSender(ctx context.Context, platformMode constants.PlatformMode, region string) (domain.EmailSender, *apierror.APIError) {

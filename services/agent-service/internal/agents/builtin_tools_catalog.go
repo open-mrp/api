@@ -43,9 +43,9 @@ var BuiltinTools = []BuiltinToolDescriptor{
 		Slug:        constants.ToolReadDoc,
 		DisplayName: "Read Doc",
 		Description: "Read the content of an OpenMRP documentation page. " +
-			"To find the right page, first fetch https://docs.openmrp.ai/llms.txt which lists all available pages with descriptions. " +
+			"To find the right page, first fetch https://docs.augno.com/llms.txt which lists all available pages with descriptions. " +
 			"Then call this tool again with the URL of the page you want to read.",
-		InputSchema: `{"type":"object","properties":{"url":{"type":"string","description":"The full URL of the documentation page to read (must be from docs.openmrp.ai). Start with https://docs.openmrp.ai/llms.txt to discover available pages."}},"required":["url"]}`,
+		InputSchema: `{"type":"object","properties":{"url":{"type":"string","description":"The full URL of the documentation page to read (must be from docs.augno.com). Start with https://docs.augno.com/llms.txt to discover available pages."}},"required":["url"]}`,
 		Group:       builtinGroupKnowledge,
 	},
 	{

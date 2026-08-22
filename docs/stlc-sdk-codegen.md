@@ -164,7 +164,7 @@ and `GET`/`POST /`, Streamable HTTP, stateless) **and** its own Dockerfile at
   a dedicated repo kept **out** of `var.service_names` so the Go build matrix never tries to build it
   with the shared Go Dockerfile.
 - **k8s:** private [open-mrp/infra](https://github.com/open-mrp/infra): `production/kubernetes/apps/mcp-server.yaml`
-  — Deployment + NodePort Service + Ingress on **`mcp.openmrp.ai`**, sharing the api-gateway ALB
+  — Deployment + NodePort Service + Ingress on **`mcp.augno.com`**, sharing the api-gateway ALB
   (`group.name: api-gateway`, so no second ALB). Each caller passes their own OpenMRP API key as a Bearer
   token (`parseClientAuthHeaders`), so no shared credential is mounted.
 - **CI:** the `build-deploy-mcp` job in [`release.yml`](../.github/workflows/release.yml) runs after
@@ -174,7 +174,7 @@ and `GET`/`POST /`, Streamable HTTP, stateless) **and** its own Dockerfile at
 
 **Prerequisites before the first deploy:**
 
-- An **ACM certificate covering `mcp.openmrp.ai`** (e.g. a `*.openmrp.ai` wildcard) so the shared ALB has
+- An **ACM certificate covering `mcp.augno.com`** (e.g. a `*.openmrp.ai` wildcard) so the shared ALB has
   a listener cert for the host (the ingress relies on cert auto-discovery, like api-gateway).
 - `make install-stlc` has been re-run so CI/agents have the `stlc-mcp` worker.
 

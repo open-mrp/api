@@ -23,7 +23,7 @@ type ListAPIKeysRequest struct {
 	Statuses []constants.APIKeyStatus `query:"statuses" default:"active,expired,revoked"`
 }
 
-// Returns a paginated list of [API keys](https://docs.openmrp.ai/api/api-keys), newest first.
+// Returns a paginated list of [API keys](https://docs.augno.com/api/api-keys), newest first.
 //
 // Only keys belonging to the account making the request are returned. The search term matches against the key name.
 type ListAPIKeysEndpoint struct{}

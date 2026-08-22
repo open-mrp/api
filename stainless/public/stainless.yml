@@ -1,7 +1,7 @@
 edition: "2026-02-23"
 organization:
   name: openmrp
-  contact: support@openmrp.ai
+  contact: support@augno.com
 targets:
   typescript:
     edition: typescript.2025-10-10
@@ -75,7 +75,7 @@ targets:
         branch: main
         prerelease: false
 environments:
-  production: https://api.openmrp.ai
+  production: https://api.augno.com
   local: http://localhost:8081
 client_settings:
   # The API requires an OpenMRP-Version header on every request. The self-hosted

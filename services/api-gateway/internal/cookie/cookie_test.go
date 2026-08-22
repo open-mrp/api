@@ -176,9 +176,11 @@ func TestCookieDomains(t *testing.T) {
 		wantDomain   string
 	}{
 		{
+			// No external host means the middleware is not in the chain; production
+			// falls back to the primary domain.
 			name:         "Production mode domain",
 			isProduction: true,
-			wantDomain:   ".openmrp.ai",
+			wantDomain:   ".augno.com",
 		},
 		{
 			name:         "Non-production mode domain",
@@ -207,6 +209,27 @@ func TestCookieDomains(t *testing.T) {
 			name:         "Lookalike domain does not get the wildcard",
 			isProduction: true,
 			externalHost: "evilopenmrp.ai",
+			wantDomain:   "",
+		},
+		{
+			// augno.com stays live and serving through the OpenMRP rename, so it must
+			// still receive a wildcard cookie. Scoping to the wrong domain makes the
+			// browser drop the cookie and breaks auth entirely.
+			name:         "Production legacy apex host keeps its own wildcard domain",
+			isProduction: true,
+			externalHost: "augno.com",
+			wantDomain:   ".augno.com",
+		},
+		{
+			name:         "Production legacy subdomain keeps its own wildcard domain",
+			isProduction: true,
+			externalHost: "app.augno.com",
+			wantDomain:   ".augno.com",
+		},
+		{
+			name:         "Legacy lookalike domain does not get the wildcard",
+			isProduction: true,
+			externalHost: "evilaugno.com",
 			wantDomain:   "",
 		},
 	}

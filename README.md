@@ -183,7 +183,7 @@ production identifiers.
 
 ## Security
 
-Found a vulnerability? Email **security@openmrp.ai** rather than opening an issue — see
+Found a vulnerability? Email **security@augno.com** rather than opening an issue — see
 [SECURITY.md](SECURITY.md) for scope and what to include.
 
 Every `sk_test_`, `mrp_sk_test_`, `whsec_` and JWT in this repository is fabricated sample or fixture

@@ -40,11 +40,11 @@ func (*CreateAPIKeyRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateAPIKeyRequest)
 }
 
-// Creates an [API key](https://docs.openmrp.ai/api/api-keys) to authenticate API requests.
+// Creates an [API key](https://docs.augno.com/api/api-keys) to authenticate API requests.
 //
 // The key belongs to the account it was created under and only ever acts on behalf of that account. Keys created under a sandbox account carry an `mrp_sk_test_` prefix; keys created under a production account carry an `mrp_sk_prod_` prefix.
 //
-// The secret key is returned once and cannot be retrieved later, so you should store it securely. We provide some [recommendations](https://docs.openmrp.ai/api/managing-api-keys) on how you can manage your API keys.
+// The secret key is returned once and cannot be retrieved later, so you should store it securely. We provide some [recommendations](https://docs.augno.com/api/managing-api-keys) on how you can manage your API keys.
 type CreateAPIKeyEndpoint struct{}
 
 func (e *CreateAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAPIKeyRequest, *apiresource.CreatedAPIKey] {

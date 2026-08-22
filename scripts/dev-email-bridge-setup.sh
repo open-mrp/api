@@ -112,5 +112,5 @@ echo "  # -> S3 fires an event -> SQS -> notification-service inbound consumer t
 #     --rule "{\"Name\":\"dev-to-s3\",\"Enabled\":true,\"ScanEnabled\":true,\"Recipients\":[\"mail.dev.openmrp.ai\"],\"Actions\":[{\"S3Action\":{\"BucketName\":\"${BUCKET}\",\"ObjectKeyPrefix\":\"inbound/\"}}]}"
 #
 # Part C (OPTIONAL) — outbound send test. SES starts in sandbox (can only send to verified addresses).
-#   aws ses verify-email-identity --region us-east-1 --email-address dev@openmrp.ai
+#   aws ses verify-email-identity --region us-east-1 --email-address dev@augno.com
 # ----------------------------------------------------------------------------------------------------

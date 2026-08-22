@@ -53,7 +53,7 @@ type conversationSvcImpl struct {
 	createLimiter       *ratelimit.Limiter
 	// bridgeEmailSender sends outbound mail for the email bridge (SES, in the receiving region so the reply comes from the same DKIM-verified identity). May be nil in tests/dev without AWS, in which case SendInboxReply errors out.
 	bridgeEmailSender domain.EmailSender
-	// inboundEmailDomain is the OpenMRP-owned SES receiving subdomain (e.g. "inbound.openmrp.ai"). When set,
+	// inboundEmailDomain is the OpenMRP-owned SES receiving subdomain (e.g. "inbound.augno.com"). When set,
 	// inbound routing also resolves mail addressed to <inbox_id>@<this domain> (the per-inbox forwarding
 	// address) back to its inbox, so customers who can't repoint their apex MX can forward instead. Empty
 	// disables forwarding-address matching (direct customer-MX inboxes still resolve by address).

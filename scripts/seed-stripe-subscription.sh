@@ -190,7 +190,7 @@ info "Using pricing plan: $PRICING_PLAN_ID"
 info "Creating Stripe customer..."
 CUSTOMER_RESP=$(stripe_v1 POST /v1/customers \
     -d "name=Acme Inc." \
-    -d "email=dev@openmrp.ai" \
+    -d "email=dev@augno.com" \
     -d "metadata[account_id]=${ACCOUNT_ID}" \
     -d "metadata[environment]=development")
 check_error "$CUSTOMER_RESP" "Create customer"

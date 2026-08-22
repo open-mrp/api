@@ -92,7 +92,7 @@ func buildEnvironments() []HTTPieEnvironment {
 		val := ""
 		switch v.Name {
 		case "host":
-			val = "https://api.openmrp.ai"
+			val = "https://api.augno.com"
 		case "version":
 			val = "v1"
 		}

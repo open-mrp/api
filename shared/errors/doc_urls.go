@@ -1,7 +1,7 @@
 package apierror
 
 const (
-	docsBaseURL = "https://docs.openmrp.ai"
+	docsBaseURL = "https://docs.augno.com"
 
 	// Auth & authorization
 	docURLExpiredToken       = docsBaseURL + "/api/errors#expired_token"

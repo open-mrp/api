@@ -93,8 +93,8 @@ var SampleAccountBranding = &AccountBranding{
 	Object:          constants.ObjectTypeAccountBranding,
 	SupportEmail:    new("support@acme.example.com"),
 	PhoneNumber:     new("+1-614-555-0100"),
-	LogoURL:         new("https://cdn.openmrp.ai/branding/abr_2rygb4fof28b/logo.png"),
-	FaviconURL:      new("https://cdn.openmrp.ai/branding/abr_2rygb4fof28b/favicon.png"),
+	LogoURL:         new("https://cdn.augno.com/branding/abr_2rygb4fof28b/logo.png"),
+	FaviconURL:      new("https://cdn.augno.com/branding/abr_2rygb4fof28b/favicon.png"),
 	FacebookHandle:  new("acmeinc"),
 	InstagramHandle: new("acmeinc"),
 	LinkedInHandle:  new("acme-inc"),
@@ -167,9 +167,9 @@ var SamplePublicAccount = &PublicAccount{
 	Slug:                  SampleAccountPortalSlug,
 	DefaultBillingAddress: SampleAddress,
 	SupportEmail:          new("support@acme.example.com"),
-	LogoURL:               new("https://cdn.openmrp.ai/branding/abr_2rygb4fof28b/logo.png"),
+	LogoURL:               new("https://cdn.augno.com/branding/abr_2rygb4fof28b/logo.png"),
 	PortalDomain:          new("shop.acme.com"),
-	FaviconURL:            new("https://cdn.openmrp.ai/branding/abr_2rygb4fof28b/favicon.png"),
+	FaviconURL:            new("https://cdn.augno.com/branding/abr_2rygb4fof28b/favicon.png"),
 }
 
 func (*PublicAccount) SchemaExample() any {

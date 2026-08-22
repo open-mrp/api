@@ -375,7 +375,7 @@ func (s *accountSvcImpl) UpdateAccountSubscription(ctx context.Context, accountI
 // publishPlanChangeAlert sends a best-effort admin email when an account's plan changes.
 func (s *accountSvcImpl) publishPlanChangeAlert(ctx context.Context, accountID, oldPlan, newPlan string) {
 	emailData := messaging.EmailSendData{
-		To:         []string{"dev@openmrp.ai"},
+		To:         []string{"dev@augno.com"},
 		Subject:    fmt.Sprintf("[Plan Change] %s → %s", oldPlan, newPlan),
 		TemplateID: constants.EmailTemplatePlanChangeAlert,
 		Params: map[string]any{
@@ -641,7 +641,7 @@ func (s *accountSvcImpl) CompleteRegistration(ctx context.Context, input domain.
 
 		// 7. Enqueue admin notification for the new registration
 		emailData := messaging.EmailSendData{
-			To:         []string{"dev@openmrp.ai"},
+			To:         []string{"dev@augno.com"},
 			Subject:    fmt.Sprintf("[New Registration] %s", input.AccountData.AccountName),
 			TemplateID: constants.EmailTemplateNewRegistrationAlert,
 			Params: map[string]any{

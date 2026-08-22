@@ -150,7 +150,7 @@ func (p *requestLogOutboxPublisher) publishErrorAlert(rl *appctx.RequestLog, act
 	}
 
 	emailData := messaging.EmailSendData{
-		To:         []string{"dev@openmrp.ai"},
+		To:         []string{"dev@augno.com"},
 		Subject:    fmt.Sprintf("[%d Alert] %s %s", rl.StatusCode, rl.Method, rl.Path),
 		TemplateID: constants.EmailTemplateInternalErrorAlert,
 		Params:     params,

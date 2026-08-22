@@ -520,7 +520,7 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 					case portalDomain != nil && portalDomain.Status == constants.PortalDomainStatusVerified:
 						emailParams["LoginLink"] = "https://" + portalDomain.Domain + "/login"
 					case slug != nil:
-						emailParams["LoginLink"] = "https://www.openmrp.ai/" + *slug + "/login"
+						emailParams["LoginLink"] = "https://www.augno.com/" + *slug + "/login"
 					}
 					subject = "Welcome to the " + accountName + " platform"
 				}

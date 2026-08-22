@@ -11,7 +11,7 @@ OpenMRP publishes **multiple** Stainless workspaces from this directory:
 
 The `public/` workspace's TypeScript target also generates an **MCP server** sub-package
 (`typescript-sdk/packages/mcp-server`, published as `@openmrp/sdk-mcp`) via `options.mcp_server`, hosted on
-EKS at `mcp.openmrp.ai`. See [`docs/stlc-sdk-codegen.md` → MCP server](../docs/stlc-sdk-codegen.md#mcp-server).
+EKS at `mcp.augno.com`. See [`docs/stlc-sdk-codegen.md` → MCP server](../docs/stlc-sdk-codegen.md#mcp-server).
 
 Paths in each `workspace.json` are relative to that JSON file (`openapi_spec`, `stainless_config`) and climb to the monorepo root via `output_path`.
 

@@ -16,6 +16,12 @@ name: Deploy MCP Server (manual)
 on:
   workflow_dispatch:
     inputs:
+      sdk_ref:
+        description: >-
+          typescript-sdk tag supplying the MCP build context (e.g. v0.19.3).
+          Defaults to that repo's latest release. It is versioned independently
+          of this repo, so it is NOT the same as image_tag.
+        required: false
       image_tag:
         description: Image tag to build/deploy (e.g. v0.23.4). Defaults to v<.release-please-manifest.json>.
         required: false
@@ -39,6 +45,8 @@ jobs:
         id: tag
         env:
           INPUT_TAG: ${{ inputs.image_tag }}
+          INPUT_SDK_REF: ${{ inputs.sdk_ref }}
+          GH_TOKEN: ${{ secrets.CROSS_REPO_PAT }}
         run: |
           set -euo pipefail
           if [ -n "$INPUT_TAG" ]; then
@@ -57,15 +65,31 @@ jobs:
           echo "image_tag=${tag}" >> "$GITHUB_OUTPUT"
           echo "MCP image tag: ${tag}"
 
+          # The MCP source lives in typescript-sdk, which release-please versions on
+          # its own line — this repo is on 1.x while the SDK is still 0.19.x, so the
+          # two tags are unrelated. Reusing image_tag as the checkout ref fails with
+          # "process '/usr/bin/git' failed with exit code 1" once they diverge.
+          if [ -n "$INPUT_SDK_REF" ]; then
+            sdk_ref="$INPUT_SDK_REF"
+          else
+            sdk_ref="$(gh release view --repo open-mrp/typescript-sdk --json tagName --jq .tagName)"
+          fi
+          if [ -z "$sdk_ref" ]; then
+            echo "could not resolve a typescript-sdk ref" >&2
+            exit 1
+          fi
+          echo "sdk_ref=${sdk_ref}" >> "$GITHUB_OUTPUT"
+          echo "MCP build context: open-mrp/typescript-sdk@${sdk_ref}"
+
       - name: Checkout typescript-sdk (MCP build context)
         uses: actions/checkout@v5
         with:
           repository: open-mrp/typescript-sdk
-          # Pin the SDK checkout to the release tag being deployed, never a
+          # Pinned to a resolved typescript-sdk release tag, never a raw
           # caller-supplied ref. CROSS_REPO_PAT is a read-scoped cross-repo
           # token, available here because this job runs in the `production`
           # environment.
-          ref: ${{ steps.tag.outputs.image_tag }}
+          ref: ${{ steps.tag.outputs.sdk_ref }}
           token: ${{ secrets.CROSS_REPO_PAT }}
           path: typescript-sdk-src
           persist-credentials: false

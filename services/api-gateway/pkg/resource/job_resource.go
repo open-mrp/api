@@ -128,7 +128,7 @@ func (*JobResult) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleJobResult)
 }
 
-var SampleJobExport = NewJobExport("https://files.augno.com/exports/" + SampleAccountID + "/production_runs/" + SampleJobID + "/production_runs_20260817.xlsx?X-Amz-Signature=example")
+var SampleJobExport = NewJobExport("https://files.openmrp.ai/exports/" + SampleAccountID + "/production_runs/" + SampleJobID + "/production_runs_20260817.xlsx?X-Amz-Signature=example")
 
 func (*JobExport) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleJobExport)

@@ -59,7 +59,7 @@ type CreatedAPIKey struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=created_api_key"`
 	// The secret used to authenticate requests, sent as a bearer token in the `Authorization` header.
 	//
-	// This is the only response that ever contains the secret; if it is lost, rotate the key to issue a new one. Learn more about [managing your API keys](https://docs.augno.com/api/managing-api-keys).
+	// This is the only response that ever contains the secret; if it is lost, rotate the key to issue a new one. Learn more about [managing your API keys](https://docs.openmrp.ai/api/managing-api-keys).
 	APIKeySecret string `json:"api_key_secret" validate:"required" sensitive:"true"`
 	// The key's non-secret details, such as its ID, name, role, and expiration.
 	APIKeyInfo APIKey `json:"api_key_info" validate:"required"`

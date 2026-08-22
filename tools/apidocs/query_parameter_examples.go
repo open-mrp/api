@@ -191,7 +191,7 @@ func sampleQueryExampleForOpenAPIName(openAPIParam string) any {
 	case "normalized_routes":
 		return []any{"/v1/catalog/items"}
 	case "hosts":
-		return []any{"api.augno.com"}
+		return []any{"api.openmrp.ai"}
 	case "status_codes":
 		return []any{float64(200)}
 	case "status_code_classes":

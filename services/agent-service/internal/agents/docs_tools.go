@@ -16,7 +16,7 @@ import (
 var docsHTTPClient = &http.Client{Timeout: 15 * time.Second}
 
 // docsURLPrefixes are the documentation origins read_doc will fetch from.
-var docsURLPrefixes = []string{"https://docs.augno.com/", "https://docs.openmrp.ai/"}
+var docsURLPrefixes = []string{"https://docs.openmrp.ai/", "https://docs.augno.com/"}
 
 func HandleReadDoc(_ context.Context, input json.RawMessage, _ *domain.HandlerRunContext) (string, error) {
 	var params struct {
@@ -26,12 +26,13 @@ func HandleReadDoc(_ context.Context, input json.RawMessage, _ *domain.HandlerRu
 		return "", fmt.Errorf("invalid read_doc input: %w", err)
 	}
 
-	// docs.augno.com is the live docs host; docs.openmrp.ai takes over at the DNS
-	// cutover. Both are accepted so the tool keeps working across it.
+	// docs.openmrp.ai is the live docs host since the DNS cutover; docs.augno.com is still
+	// accepted because it keeps serving, and an agent may be working from a URL it read
+	// before the move or from a page that still links the old host.
 	if !slices.ContainsFunc(docsURLPrefixes, func(prefix string) bool {
 		return strings.HasPrefix(params.URL, prefix)
 	}) {
-		return "", fmt.Errorf("read_doc: URL must be from docs.augno.com or docs.openmrp.ai")
+		return "", fmt.Errorf("read_doc: URL must be from docs.openmrp.ai or docs.augno.com")
 	}
 
 	resp, err := docsHTTPClient.Get(params.URL)

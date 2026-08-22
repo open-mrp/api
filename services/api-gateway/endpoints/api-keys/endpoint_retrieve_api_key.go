@@ -16,7 +16,7 @@ type RetrieveAPIKeyRequest struct {
 	APIKeyID string `path:"id" validate:"required"`
 }
 
-// Returns [API key](https://docs.augno.com/api/api-keys) metadata by ID.
+// Returns [API key](https://docs.openmrp.ai/api/api-keys) metadata by ID.
 //
 // Only the redacted key value is returned. The full secret is available only in the response that issued the key, so a lost secret must be replaced by rotating the key.
 type RetrieveAPIKeyEndpoint struct{}

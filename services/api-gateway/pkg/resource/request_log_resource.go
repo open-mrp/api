@@ -10,7 +10,7 @@ import (
 )
 
 const SampleRequestLogID = "rq_0lhl3kkhme40"
-const SampleRequestLogHost = "https://api.augno.com"
+const SampleRequestLogHost = "https://api.openmrp.ai"
 const SampleRequestLogPath = "/v1/core/sandboxes"
 const SampleRequestLogQueryJSON = `{"limit":10}`
 const SampleRequestLogAPIVersion = "2026-01-01"
@@ -30,7 +30,7 @@ type RequestLog struct {
 	Method string `json:"method" validate:"required"`
 	// Request host.
 	//
-	// Usually `api.augno.com`.
+	// Usually `api.openmrp.ai`.
 	Host string `json:"host" validate:"required"`
 	// The exact path the request was made to, including path parameter values.
 	Path string `json:"path" validate:"required"`
@@ -113,7 +113,7 @@ var SampleRequestLog = &RequestLog{
 	APIVersion:       new(SampleRequestLogAPIVersion),
 	ClientIP:         new(SampleRequestLogClientIP),
 	UserAgent:        new(SampleRequestLogUserAgent),
-	Referrer:         new("https://www.augno.com"),
+	Referrer:         new("https://www.openmrp.ai"),
 	OccurredAt:       timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	CreatedAt:        timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	Account:          SampleAccount,

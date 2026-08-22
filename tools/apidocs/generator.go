@@ -80,7 +80,7 @@ func buildOpenAPISpec(groups []apiendpoint.APIEndpointGroup, publicOnly bool, ve
 			Version:     version,
 		},
 		Servers: []Server{
-			{URL: "https://api.augno.com", Description: "Production server"},
+			{URL: "https://api.openmrp.ai", Description: "Production server"},
 			{URL: "http://localhost:8081", Description: "Local development server"},
 		},
 		Paths: make(map[string]map[string]Operation),

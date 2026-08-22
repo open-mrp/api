@@ -55,7 +55,7 @@ type ListRequestLogsRequest struct {
 	NormalizedRoutes []string `query:"normalized_routes"`
 	// Filter by the request host.
 	//
-	// Typically `api.augno.com`.
+	// Typically `api.openmrp.ai`.
 	Hosts []string `query:"hosts"`
 	// Restricts results to requests that took at least this many microseconds.
 	MinLatencyUs *int64 `query:"min_latency_us"`

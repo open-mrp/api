@@ -12,7 +12,7 @@ const SampleUserID = "us_43irtlt2ajz6"
 const SampleUserUsername = "jdoe"
 const SampleUserEmail = "jdoe@openmrp.ai"
 const SampleUserName = "John Doe"
-const SampleUserImageUrl = "https://cdn.augno.com/avatars/us_43irtlt2ajz6.jpg"
+const SampleUserImageUrl = "https://cdn.openmrp.ai/avatars/us_43irtlt2ajz6.jpg"
 const SampleUserPassword = "QgS7Z8Hhj3&1"     // #nosec G101 -- sample data for API docs
 const SampleNewUserPassword = "50iR2X0r@bvIH" // #nosec G101 -- sample data for API docs
 
@@ -89,7 +89,7 @@ type UserPhotoURL struct {
 
 var SampleUserPhotoURL = &UserPhotoURL{
 	Object: constants.ObjectTypeUserPhotoURL,
-	URL:    new("https://cdn.augno.com/avatars/us_43irtlt2ajz6.jpg?X-Amz-Expires=3600&X-Amz-Signature=example"),
+	URL:    new("https://cdn.openmrp.ai/avatars/us_43irtlt2ajz6.jpg?X-Amz-Expires=3600&X-Amz-Signature=example"),
 }
 
 func (*UserPhotoURL) SchemaExample() any {

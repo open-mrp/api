@@ -231,12 +231,15 @@ func fromHeader(inbox *domain.EmailInbox) string {
 	return inbox.Address
 }
 
-// addressDomain returns the domain part of an email address (after the last @), or "openmrp.ai" if absent.
+// addressDomain returns the domain part of an email address (after the last @), or the mail
+// domain if absent. It supplies the domain half of an RFC Message-ID, so the fallback tracks
+// where mail is actually sent from — augno.com, which is what SES has verified — rather than
+// the web domain.
 func addressDomain(addr string) string {
 	if i := strings.LastIndex(addr, "@"); i >= 0 && i < len(addr)-1 {
 		return addr[i+1:]
 	}
-	return "openmrp.ai"
+	return "augno.com"
 }
 
 // buildReferences appends the just-replied-to message-id to the prior References chain, de-duplicated.

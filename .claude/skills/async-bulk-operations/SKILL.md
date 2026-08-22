@@ -205,7 +205,7 @@ Reuse `references/checklist.md` for the file-by-file steps. In summary:
   - **Every failure carries a row-indexed param** — `machines[3].name`,
     `production_steps[2].consumptions[0].item`. Never `apierror.NewValidationError` (no
     param) in a bulk path: the published contract tells clients to "fix the value named by
-    `param`" (docs.augno.com/api/errors), and a param-less error in a 500-row request makes
+    `param`" (docs.openmrp.ai/api/errors), and a param-less error in a 500-row request makes
     them string-match the message to find the row. A bare param like `"ratio_denominator"`
     is the same bug — it does not say *which* row.
   - **Collect every bad row, don't return on the first.** No job exists yet at accept, so

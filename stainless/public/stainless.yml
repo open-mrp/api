@@ -75,7 +75,7 @@ targets:
         branch: main
         prerelease: false
 environments:
-  production: https://api.augno.com
+  production: https://api.openmrp.ai
   local: http://localhost:8081
 client_settings:
   # The API requires an OpenMRP-Version header on every request. The self-hosted

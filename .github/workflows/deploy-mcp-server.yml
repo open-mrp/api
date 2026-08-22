@@ -93,8 +93,8 @@ jobs:
           push: true
           platforms: linux/amd64
           tags: |
-            ${{ steps.login-ecr.outputs.registry }}/open-mrp/mcp-server:${{ steps.tag.outputs.image_tag }}
-            ${{ steps.login-ecr.outputs.registry }}/open-mrp/mcp-server:latest
+            ${{ steps.login-ecr.outputs.registry }}/augno/mcp-server:${{ steps.tag.outputs.image_tag }}
+            ${{ steps.login-ecr.outputs.registry }}/augno/mcp-server:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

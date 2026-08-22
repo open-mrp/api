@@ -178,9 +178,13 @@ jobs:
           platforms: linux/amd64
           build-args: |
             SERVICE_NAME=${{ matrix.service }}
+          # The augno/ namespace is deliberate. ECR repository names are immutable, so
+          # they were left alone through the OpenMRP rename — and the ecr-push role's
+          # policy is scoped to arn:aws:ecr:...:repository/augno/*. Renaming this path
+          # fails the push with ecr:GetDownloadUrlForLayer denied.
           tags: |
-            ${{ steps.login-ecr.outputs.registry }}/openmrp/${{ matrix.service }}:${{ needs.release-please.outputs.tag_name }}
-            ${{ steps.login-ecr.outputs.registry }}/openmrp/${{ matrix.service }}:latest
+            ${{ steps.login-ecr.outputs.registry }}/augno/${{ matrix.service }}:${{ needs.release-please.outputs.tag_name }}
+            ${{ steps.login-ecr.outputs.registry }}/augno/${{ matrix.service }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -381,8 +385,8 @@ jobs:
           push: true
           platforms: linux/amd64
           tags: |
-            ${{ steps.login-ecr.outputs.registry }}/open-mrp/mcp-server:${{ env.IMAGE_TAG }}
-            ${{ steps.login-ecr.outputs.registry }}/open-mrp/mcp-server:latest
+            ${{ steps.login-ecr.outputs.registry }}/augno/mcp-server:${{ env.IMAGE_TAG }}
+            ${{ steps.login-ecr.outputs.registry }}/augno/mcp-server:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

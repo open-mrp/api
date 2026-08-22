@@ -287,7 +287,7 @@ jobs:
       # All SDK targets now release via release-please (python, go, public TS, and
       # internal TS): each derives its bump from the conventional-commit sync
       # message produced by "Generate SDK and push" above, so no explicit
-      # .changeset/*.md is added. (Internal-sdk publishes to GitHub Packages rather
+      # .changeset/*.md is added. (Internal-sdk publishes to npmjs rather
       # than npmjs, but still via release-please — see its committed release.yml.)
 
       - name: Open pull request on SDK repo

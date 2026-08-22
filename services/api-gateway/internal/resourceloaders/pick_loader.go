@@ -30,6 +30,14 @@ func LoadPicks(ctx context.Context, ids []string) (map[string]any, *apierror.API
 			if omitOnUnauthorized(apiErr) {
 				return out, nil
 			}
+			// A pick that is gone by the time the include resolves leaves that one row's
+			// related.pick null rather than failing the request. Deleting a shipment deletes
+			// the pick it was packed from, so any list page holding a reference read moments
+			// earlier would otherwise 404 in full — one concurrent delete elsewhere in the
+			// account blanking a planner's whole shipping table.
+			if apierror.IsNotFound(apiErr) {
+				continue
+			}
 			return nil, apiErr
 		}
 		if resp.Pick == nil {

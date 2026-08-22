@@ -23,7 +23,7 @@ import (
 //
 // Each test exercises a distinct code path of the list query: exact-match
 // search (the new behavior — exact on number/customer_po_number, no substring,
-// no customer name), the status_codes "all" wildcard, customer_group_ids, the
+// no customer name), the status_codes enum guard, customer_group_ids, the
 // starts_at/ends_at range, the batched line_count path, and several filters
 // combined.
 //
@@ -120,17 +120,29 @@ func TestListSalesOrders_SearchRespectsDateFilter(t *testing.T) {
 	assertEmptyListData(t, list.Data, "search must not bypass the ends_at filter")
 }
 
-// --- status_codes "all" wildcard ---
+// --- status_codes omitted ---
 
-func TestListSalesOrders_StatusCodesAllWildcard(t *testing.T) {
+func TestListSalesOrders_NoStatusFilterReturnsEveryStatus(t *testing.T) {
 	t.Parallel()
-	// "all" is a wildcard meaning "no status filter": with it set, orders of
-	// different statuses all appear. Scope to the seed customer (orthogonal to
-	// status) so the lookup stays reliable as the global order set grows; both
-	// the issued order and the estimate order belong to that customer.
-	params := url.Values{"status_codes": {"all"}, "customer_ids": {SeedCustomerAccountID}}
+	// Omitting status_codes is how a caller asks for every status. Scope to the seed
+	// customer (orthogonal to status) so the lookup stays reliable as the global order
+	// set grows; both the issued order and the estimate order belong to that customer.
+	params := url.Values{"customer_ids": {SeedCustomerAccountID}}
 	assertListContainsID(t, salesOrdersPath, params, SeedSalesOrderID)                   // ORD-001, issued
 	assertListContainsID(t, salesOrdersPath, params, SeedIncludePutEstimateSalesOrderID) // EST-001, estimate
+}
+
+// status_codes is an enum, and "all" is not one of its members. The repository still
+// carries a legacy wildcard branch for it, but the gateway rejects the value before
+// the query is ever built — so the wildcard is unreachable through the API and the
+// only supported way to drop the filter is to omit the parameter.
+func TestListSalesOrders_StatusCodesAllRejected(t *testing.T) {
+	t.Parallel()
+	status, body, err := apiClient.GetListRaw(salesOrdersPath, url.Values{"status_codes": {"all"}})
+	require.NoError(t, err)
+	requireStatus(t, 400, status, body)
+	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	assertErrorParam(t, errObj, "status_codes")
 }
 
 // --- customer_group_ids ---

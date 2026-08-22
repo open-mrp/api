@@ -52,11 +52,11 @@ func getCookieOptions(isProduction bool, path, externalHost string) cookieOption
 	return opts
 }
 
-// firstPartyDomains are the domains we own, most-preferred first. Both are listed
-// through the OpenMRP rename: the app is still served from augno.com and openmrp.ai
-// takes over at the DNS cutover. Scoping a cookie to a domain the browser is not on
+// firstPartyDomains are the domains we own, most-preferred first. openmrp.ai is the
+// live host since the DNS cutover; augno.com is still listed because it keeps serving
+// for anyone who has not moved. Scoping a cookie to a domain the browser is not on
 // makes it drop the cookie outright, so this must cover whichever host is live.
-var firstPartyDomains = []string{"augno.com", "openmrp.ai"}
+var firstPartyDomains = []string{"openmrp.ai", "augno.com"}
 
 // firstPartyCookieDomain returns the wildcard cookie domain for a first-party host,
 // or "" for a customer's custom portal domain, which gets a host-only cookie. An

@@ -239,7 +239,7 @@ func TestShipByCommitment_ChangingCustomerLeadTimeLeavesIssuedOrdersAlone(t *tes
 
 	originalShipBy := shipByDate(t, order)
 	require.NotEmpty(t, originalShipBy)
-	require.Equal(t, "7", jsonField(order, "lead_time_days"))
+	require.Equal(t, 7, committedRuleDays(t, order))
 
 	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+customerID,
 		map[string]any{"lead_time_days": 90}, newIdempotencyKey())
@@ -254,7 +254,7 @@ func TestShipByCommitment_ChangingCustomerLeadTimeLeavesIssuedOrdersAlone(t *tes
 	after := parseJSON(getBody)
 	assert.Equal(t, originalShipBy, shipByDate(t, after),
 		"an existing commitment must not move when the customer's lead time changes")
-	assert.Equal(t, "7", jsonField(after, "lead_time_days"))
+	assert.Equal(t, 7, committedRuleDays(t, after))
 	assert.Equal(t, "customer", jsonField(after, "lead_time_source"))
 }
 
@@ -467,7 +467,11 @@ func TestSalesOrders_PastDueFilterFindsALateOrder(t *testing.T) {
 	customerID := leadTimeCustomer(t, "e2e-pastdue", ptrInt(30), "")
 	order := issueOrderForCustomer(t, customerID, map[string]any{"promised_at": promised})
 	orderID := jsonField(order, "id")
-	require.Equal(t, promised[:10], shipByDate(t, order), "precondition: the order is committed to a past date")
+	// The shipping calendar can only pull a ship-by date back onto an earlier open day, never
+	// forward, so a promise a week old stays in the past whichever weekday the suite runs on.
+	committed := shipByDate(t, order)
+	require.NotEmpty(t, committed, "precondition: the order carries a commitment")
+	require.LessOrEqual(t, committed, promised[:10], "precondition: the order is committed to a past date")
 
 	assert.True(t, orderAppearsInFilteredList(t, orderID, url.Values{"past_due": {"true"}}),
 		"an issued order past its ship-by date is past due")

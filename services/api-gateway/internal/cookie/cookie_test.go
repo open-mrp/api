@@ -180,7 +180,7 @@ func TestCookieDomains(t *testing.T) {
 			// falls back to the primary domain.
 			name:         "Production mode domain",
 			isProduction: true,
-			wantDomain:   ".augno.com",
+			wantDomain:   ".openmrp.ai",
 		},
 		{
 			name:         "Non-production mode domain",

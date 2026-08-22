@@ -160,7 +160,7 @@ stlc generates a runnable HTTP server (`mcp-server --transport=http --port=<n>`,
 and `GET`/`POST /`, Streamable HTTP, stateless) **and** its own Dockerfile at
 `packages/mcp-server/Dockerfile`. We host it on the existing EKS cluster:
 
-- **ECR:** `open-mrp/mcp-server` (private [open-mrp/infra](https://github.com/open-mrp/infra): `production/terraform/ecr.tf`) —
+- **ECR:** `augno/mcp-server` (private [open-mrp/infra](https://github.com/open-mrp/infra): `production/terraform/ecr.tf`) —
   a dedicated repo kept **out** of `var.service_names` so the Go build matrix never tries to build it
   with the shared Go Dockerfile.
 - **k8s:** private [open-mrp/infra](https://github.com/open-mrp/infra): `production/kubernetes/apps/mcp-server.yaml`
@@ -169,7 +169,7 @@ and `GET`/`POST /`, Streamable HTTP, stateless) **and** its own Dockerfile at
   token (`parseClientAuthHeaders`), so no shared credential is mounted.
 - **CI:** the `build-deploy-mcp` job in [`release.yml`](../.github/workflows/release.yml) runs after
   `generate-sdks` (gated on the public spec changing), checks out `open-mrp/typescript-sdk@main`, builds
-  the image from the generated Dockerfile, pushes `open-mrp/mcp-server:<tag>`/`:latest`, and rolls it out
+  the image from the generated Dockerfile, pushes `augno/mcp-server:<tag>`/`:latest`, and rolls it out
   with `kubectl`.
 
 **Prerequisites before the first deploy:**

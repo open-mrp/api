@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/open-mrp/api/compare/v1.1.0...v1.1.1) (2026-08-22)
+
+
+### Bug Fixes
+
+* resolve the MCP build context from typescript-sdk's own releases ([#12](https://github.com/open-mrp/api/issues/12)) ([4d25578](https://github.com/open-mrp/api/commit/4d255786b1bfdb2c0693de6b07868b1ea11a984e))
+
 ## [1.1.0](https://github.com/open-mrp/api/compare/v1.0.1...v1.1.0) (2026-08-22)
 
 

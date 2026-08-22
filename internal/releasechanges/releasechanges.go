@@ -24,6 +24,18 @@ type Analysis struct {
 	Services []string
 }
 
+// AnalyzeAll returns every service, bypassing change detection.
+//
+// Needed when a release has to reach the cluster even though the diff touches no
+// service code — a fixed build pipeline being the usual case: the commit that
+// repairs it changes only workflow files, so ordinary detection selects nothing
+// and the previously failed images never get rebuilt.
+func AnalyzeAll() Analysis {
+	buildSet := make(map[string]struct{}, len(ServiceNames))
+	addAllServices(buildSet)
+	return Analysis{Services: orderedServices(buildSet)}
+}
+
 func Analyze(changedFiles []string, dirToServices map[string][]string) Analysis {
 	buildSet := make(map[string]struct{}, len(ServiceNames))
 

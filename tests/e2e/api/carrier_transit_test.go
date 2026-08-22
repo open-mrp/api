@@ -317,7 +317,7 @@ func TestCarrierTransit_LeadTimeOrdersAreUnaffected(t *testing.T) {
 	issued := issueOrder(t, orderID)
 
 	assert.Equal(t, "customer", jsonField(issued, "lead_time_source"))
-	assert.Equal(t, "14", jsonField(issued, "lead_time_days"))
+	assert.Equal(t, 14, committedRuleDays(t, issued))
 	assert.Empty(t, jsonField(issued, "transit_days"),
 		"no delivery date was promised, so there is nothing to subtract transit from")
 	assert.Equal(t, expectedShipBy(t, issued, 14), shipByDate(t, issued))

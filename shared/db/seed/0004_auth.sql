@@ -224,7 +224,7 @@ INSERT IGNORE INTO role_permission (id, role_id, permission_code, `create`, `rea
 INSERT IGNORE INTO user (id, name, username, email, hashed_password, email_verified, image_url, created_at, updated_at) VALUES
     ('us_1wjfmmbwg8l7', 'John Doe', 'jdoe', 'dane@augno.com', @password_hash, NOW(), '/v1/core/users/us_1wjfmmbwg8l7/photo', NOW(), NOW()),
     ('us_2ndadmin0000', 'Mike Johnson', 'mjohnson', 'mjohnson@openmrp.ai', @password_hash, NOW(), '/v1/core/users/us_2ndadmin0000/photo', NOW(), NOW()),
-    ('us_6p7460uuwibz', 'Sarah Martinez', 'user2', 'user2@augno.com', @password_hash, NOW(), '/v1/core/users/us_6p7460uuwibz/photo', NOW(), NOW()),
+    ('us_6p7460uuwibz', 'Sarah Martinez', 'user2', 'user2@openmrp.ai', @password_hash, NOW(), '/v1/core/users/us_6p7460uuwibz/photo', NOW(), NOW()),
     ('us_fltactor3', 'Filter Test User 3', 'ftuser3', 'ftuser3@openmrp.ai', @password_hash, NOW(), NULL, NOW(), NOW()),
     ('us_e2esrep0flag000', 'E2E Sales Rep Stale Flag', 'e2esrep0flag', 'e2e-srep-noflag@test.openmrp.ai', @password_hash, NOW(), NULL, NOW(), NOW());
 

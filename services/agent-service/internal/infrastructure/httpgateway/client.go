@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/augno/api/services/agent-service/internal/domain"
-	"github.com/augno/api/shared/version"
+	"github.com/open-mrp/api/services/agent-service/internal/domain"
+	"github.com/open-mrp/api/shared/version"
 )
 
 const (
@@ -22,9 +22,9 @@ const (
 	// maxOutputBytes caps what we hand back to the LLM, to avoid bloating context.
 	maxOutputBytes = 24000
 
-	versionHeader              = "Augno-Version"
-	internalIdentityHeader     = "X-Augno-Internal-Identity"
-	internalServiceTokenHeader = "X-Augno-Service-Token" // #nosec G101 -- header name, not a credential
+	versionHeader              = "OpenMRP-Version"
+	internalIdentityHeader     = "X-OpenMRP-Internal-Identity"
+	internalServiceTokenHeader = "X-OpenMRP-Service-Token" // #nosec G101 -- header name, not a credential
 	idempotencyKeyHeader       = "Idempotency-Key"
 )
 

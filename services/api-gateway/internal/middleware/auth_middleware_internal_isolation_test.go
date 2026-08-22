@@ -6,9 +6,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	grpcclient "github.com/augno/api/services/api-gateway/grpc-client"
-	"github.com/augno/api/services/api-gateway/internal/header"
-	pb "github.com/augno/api/shared/proto/auth"
+	grpcclient "github.com/open-mrp/api/services/api-gateway/grpc-client"
+	"github.com/open-mrp/api/services/api-gateway/internal/header"
+	pb "github.com/open-mrp/api/shared/proto/auth"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

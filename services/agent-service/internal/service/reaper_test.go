@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	factorymock "github.com/augno/api/services/agent-service/internal/domain/mock/factory"
-	repositorymock "github.com/augno/api/services/agent-service/internal/domain/mock/repository"
-	apierror "github.com/augno/api/shared/errors"
+	factorymock "github.com/open-mrp/api/services/agent-service/internal/domain/mock/factory"
+	repositorymock "github.com/open-mrp/api/services/agent-service/internal/domain/mock/repository"
+	apierror "github.com/open-mrp/api/shared/errors"
 	"go.uber.org/mock/gomock"
 )
 

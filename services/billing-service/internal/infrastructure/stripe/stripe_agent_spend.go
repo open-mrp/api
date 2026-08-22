@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/augno/api/services/billing-service/internal/domain"
+	"github.com/open-mrp/api/services/billing-service/internal/domain"
 	"github.com/stripe/stripe-go/v84"
 )
 

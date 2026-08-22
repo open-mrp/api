@@ -6,17 +6,17 @@ For general authentication and identity model background, see [authentication-pa
 
 ## Cross-Account Identity Model
 
-When a request targets the caller's own account, the **actor account** and **target account** are the same. Cross-account access occurs when the `Augno-Account` header specifies a different account — for example, a merchant's API key operating on a customer's account.
+When a request targets the caller's own account, the **actor account** and **target account** are the same. Cross-account access occurs when the `OpenMRP-Account` header specifies a different account — for example, a merchant's API key operating on a customer's account.
 
 The identity carries two pieces of information for this:
 
 - **Actor account** (`identity.ActorAccountID()`): The account the caller belongs to (the API key's owner account).
-- **Target account** (`identity.TargetAccountID`): The account being accessed (from the `Augno-Account` header).
+- **Target account** (`identity.TargetAccountID`): The account being accessed (from the `OpenMRP-Account` header).
 - **Target relation type** (`identity.TargetRelationType`): When the target differs from the actor, this indicates the relationship — `"customer"` or `"supplier"`. It is `nil` when the actor targets their own account.
 
 ### How owner-side auth works
 
-When a merchant API key sets the `Augno-Account` header to a customer's account ID, the auth system:
+When a merchant API key sets the `OpenMRP-Account` header to a customer's account ID, the auth system:
 
 1. Finds the `account_relation` where the merchant is the owner and the customer is the counterparty.
 2. Resolves the API key's permissions from the **actor** (merchant) account — not the target.
@@ -71,7 +71,7 @@ func (s *mySvcImpl) ListThings(ctx context.Context, params domain.ListThingsPara
 
     // 4. Verify target account is set (use the method, not TargetAccountID == nil)
     if !identity.IsTargetAccountSet() {
-        return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+        return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
     }
 
     // 5. Check cross-account access

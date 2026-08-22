@@ -5,9 +5,9 @@ import (
 	"slices"
 	"testing"
 
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/version"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/version"
 )
 
 // a completed bulk create with one written row and one rejected one — the case the

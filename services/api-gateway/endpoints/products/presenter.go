@@ -1,12 +1,12 @@
 package productep
 
 import (
-	itemep "github.com/augno/api/services/api-gateway/endpoints/items"
-	productlineep "github.com/augno/api/services/api-gateway/endpoints/product-lines"
-	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/constants"
-	pb "github.com/augno/api/shared/proto/core"
+	itemep "github.com/open-mrp/api/services/api-gateway/endpoints/items"
+	productlineep "github.com/open-mrp/api/services/api-gateway/endpoints/product-lines"
+	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/shared/constants"
+	pb "github.com/open-mrp/api/shared/proto/core"
 )
 
 func ProductPresenter(proto *pb.ProductFullInfo) apiresource.Product {

@@ -3,9 +3,9 @@ package httpgroup
 import (
 	"fmt"
 
-	checkoutsessionep "github.com/augno/api/services/api-gateway/endpoints/checkout-sessions"
-	grpcclient "github.com/augno/api/services/api-gateway/grpc-client"
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	checkoutsessionep "github.com/open-mrp/api/services/api-gateway/endpoints/checkout-sessions"
+	grpcclient "github.com/open-mrp/api/services/api-gateway/grpc-client"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 )
 
 type CheckoutSessionsEndpointGroup struct {

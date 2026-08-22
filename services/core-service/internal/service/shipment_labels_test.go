@@ -6,14 +6,14 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/services/core-service/internal/domain"
-	clientmock "github.com/augno/api/services/core-service/internal/domain/mock/client"
-	factorymock "github.com/augno/api/services/core-service/internal/domain/mock/factory"
-	mediatormock "github.com/augno/api/services/core-service/internal/domain/mock/mediator"
-	repositorymock "github.com/augno/api/services/core-service/internal/domain/mock/repository"
-	"github.com/augno/api/shared/appctx"
-	apierror "github.com/augno/api/shared/errors"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	clientmock "github.com/open-mrp/api/services/core-service/internal/domain/mock/client"
+	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
+	mediatormock "github.com/open-mrp/api/services/core-service/internal/domain/mock/mediator"
+	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
+	"github.com/open-mrp/api/shared/appctx"
+	apierror "github.com/open-mrp/api/shared/errors"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -116,7 +116,7 @@ func (h *labelHarness) expectPurchasePreconditions() {
 
 	h.orderRepo.EXPECT().GetAccountOriginAddress(gomock.Any(), testLabelAccountID).
 		Return(&domain.ShippingAddress{
-			Name: "Augno", Street1: "215 Clayton St", City: "San Francisco", State: "CA", Zip: "94117", Country: "US",
+			Name: "OpenMRP", Street1: "215 Clayton St", City: "San Francisco", State: "CA", Zip: "94117", Country: "US",
 		}, nil)
 }
 

@@ -8,8 +8,8 @@ import (
 	"slices"
 	"strings"
 
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/field"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/field"
 )
 
 // RejectExplicitJSONNulls returns an invalid_format API error when the JSON body contains an explicit null or a blank string for optional pointer fields (json omitempty) or a blank string for field.Optional fields. Absent keys are allowed (PATCH semantics).

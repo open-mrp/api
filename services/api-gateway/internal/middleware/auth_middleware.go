@@ -4,16 +4,16 @@ import (
 	"fmt"
 	"net/http"
 
-	grpcclient "github.com/augno/api/services/api-gateway/grpc-client"
-	"github.com/augno/api/services/api-gateway/internal/cookie"
-	"github.com/augno/api/services/api-gateway/internal/header"
-	httptransport "github.com/augno/api/services/api-gateway/internal/http"
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/contracts"
-	apierror "github.com/augno/api/shared/errors"
-	pb "github.com/augno/api/shared/proto/auth"
-	"github.com/augno/api/shared/tracing"
+	grpcclient "github.com/open-mrp/api/services/api-gateway/grpc-client"
+	"github.com/open-mrp/api/services/api-gateway/internal/cookie"
+	"github.com/open-mrp/api/services/api-gateway/internal/header"
+	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/contracts"
+	apierror "github.com/open-mrp/api/shared/errors"
+	pb "github.com/open-mrp/api/shared/proto/auth"
+	"github.com/open-mrp/api/shared/tracing"
 
 	"go.opentelemetry.io/otel"
 )
@@ -48,7 +48,7 @@ func AuthMiddleware(config *AuthMiddlewareConfig) func(http.HandlerFunc) http.Ha
 			ctx, span := tracer.Start(r.Context(), spanName)
 
 			authHeader := r.Header.Get(header.AuthorizationHeader)
-			augnoAccountIDHeader := r.Header.Get(header.TargetAccountIDHeader)
+			openMRPAccountIDHeader := r.Header.Get(header.TargetAccountIDHeader)
 			actorAccountIDHeader := r.Header.Get(header.ActorAccountIDHeader)
 
 			platform, _ := appctx.GetPlatformFromContext(r.Context())
@@ -97,7 +97,7 @@ func AuthMiddleware(config *AuthMiddlewareConfig) func(http.HandlerFunc) http.Ha
 
 			if authToken != "" && header.IsAPIKey(authToken) && actorAccountIDHeader != "" {
 				apiErr := apierror.NewValidationErrorWithParam(
-					"Augno-Actor-Account header is not allowed when authenticating with an API key. API keys always act on behalf of the account they were created by.",
+					"OpenMRP-Actor-Account header is not allowed when authenticating with an API key. API keys always act on behalf of the account they were created by.",
 					header.ActorAccountIDHeader,
 				)
 				httptransport.RespondWithAPIError(r.Context(), w, apiErr)
@@ -107,8 +107,8 @@ func AuthMiddleware(config *AuthMiddlewareConfig) func(http.HandlerFunc) http.Ha
 			}
 
 			var targetAccountID *string
-			if augnoAccountIDHeader != "" {
-				targetAccountID = &augnoAccountIDHeader
+			if openMRPAccountIDHeader != "" {
+				targetAccountID = &openMRPAccountIDHeader
 			}
 
 			var actorAccountID *string

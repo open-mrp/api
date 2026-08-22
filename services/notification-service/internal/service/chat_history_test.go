@@ -3,8 +3,8 @@ package service
 import (
 	"testing"
 
-	"github.com/augno/api/services/notification-service/internal/domain"
-	"github.com/augno/api/shared/messaging"
+	"github.com/open-mrp/api/services/notification-service/internal/domain"
+	"github.com/open-mrp/api/shared/messaging"
 	"github.com/stretchr/testify/assert"
 )
 

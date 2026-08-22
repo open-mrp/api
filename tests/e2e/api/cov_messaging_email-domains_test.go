@@ -295,7 +295,7 @@ func TestCovMessagingEmailDomains_List(t *testing.T) {
 		assertObjectField(t, item, "email_domain")
 		if jsonField(item, "id") == SeedEmailDomainID {
 			foundSeed = true
-			assert.Equal(t, "mail.e2e.augno.com", jsonField(item, "domain"))
+			assert.Equal(t, "mail.e2e.openmrp.ai", jsonField(item, "domain"))
 			assert.Equal(t, "verified", jsonField(item, "status"))
 			assertValidTimestamp(t, jsonField(item, "verified_at"), "verified_at")
 		}

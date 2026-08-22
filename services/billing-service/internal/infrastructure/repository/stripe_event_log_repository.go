@@ -3,11 +3,11 @@ package repository
 import (
 	"context"
 
-	"github.com/augno/api/services/billing-service/internal/infrastructure/sqlc"
-	"github.com/augno/api/shared/db"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/id"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/billing-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/db"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var stripeEventLogRepoTracer = tracing.GetTracer("billing-service.stripe_event_log_repository")

@@ -94,7 +94,7 @@ func covPortalDomainsVerify(t *testing.T, client *Client, id string) (int, map[s
 // covPortalHostsResolveRaw performs an UNAUTHENTICATED GET against the public
 // portal-host resolver, bypassing Client (which always injects auth headers) so we
 // prove the endpoint is callable without credentials. sendVersion toggles the
-// Augno-Version header to cover the "version required" branch. apiClient.baseURL/
+// OpenMRP-Version header to cover the "version required" branch. apiClient.baseURL/
 // apiVersion are unexported but reachable from this same-package test.
 func covPortalHostsResolveRaw(t *testing.T, host string, sendVersion bool) (int, []byte) {
 	t.Helper()
@@ -102,7 +102,7 @@ func covPortalHostsResolveRaw(t *testing.T, host string, sendVersion bool) (int,
 	require.NoError(t, err)
 	req.Header.Set("Accept", "application/json")
 	if sendVersion {
-		req.Header.Set("Augno-Version", apiClient.apiVersion)
+		req.Header.Set("OpenMRP-Version", apiClient.apiVersion)
 	}
 
 	resp, err := http.DefaultClient.Do(req)
@@ -305,7 +305,7 @@ func TestCovPortalDomains_ResolveHost_Unknown(t *testing.T) {
 }
 
 // TestCovPortalDomains_ResolveHost_RequiresVersion guards the regression that a
-// missing Augno-Version header yields 400 api_version_required (the bug that had the
+// missing OpenMRP-Version header yields 400 api_version_required (the bug that had the
 // frontend proxy resolving every custom host to null).
 func TestCovPortalDomains_ResolveHost_RequiresVersion(t *testing.T) {
 	t.Parallel()
@@ -346,11 +346,11 @@ func TestCovPortalDomains_CreateValidation_ContainsAt(t *testing.T) {
 	assertErrorParam(t, errObj, "domain")
 }
 
-// TestCovPortalDomains_CreateValidation_AugnoDomain covers the explicit rule that
-// augno.com hosts cannot be used as a custom portal domain.
-func TestCovPortalDomains_CreateValidation_AugnoDomain(t *testing.T) {
+// TestCovPortalDomains_CreateValidation_OpenMRPDomain covers the explicit rule that
+// openmrp.ai hosts cannot be used as a custom portal domain.
+func TestCovPortalDomains_CreateValidation_OpenMRPDomain(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Post(covPortalDomainsPath, map[string]any{"domain": "shop.augno.com"}, newIdempotencyKey())
+	status, body, err := apiClient.Post(covPortalDomainsPath, map[string]any{"domain": "shop.openmrp.ai"}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")

@@ -4,10 +4,10 @@ import (
 	"context"
 	"strings"
 
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/id"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/id"
 )
 
 // legacyAPIKeyIDPrefix is the api_key type_id prefix used before GenID adopted the composable "apke" prefix. Rows written under the legacy scheme (seeds and data migrated from the dashboard) still carry it, so actor recognition must accept both.

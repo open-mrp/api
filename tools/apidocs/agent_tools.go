@@ -10,7 +10,7 @@ import (
 	"sort"
 	"strings"
 
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 )
 
 // agentToolsGoPath is the generated Go catalog, relative to the project root the tool chdirs into. Endpoint-tools live entirely in code — there is intentionally no DB seed, so adding endpoints never needs a migration.

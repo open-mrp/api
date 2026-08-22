@@ -3,7 +3,7 @@ package stub
 import (
 	"context"
 
-	"github.com/augno/api/services/agent-service/internal/llm"
+	"github.com/open-mrp/api/services/agent-service/internal/llm"
 )
 
 // LLMProvider is a no-op LLMProvider implementation for use in test mode.

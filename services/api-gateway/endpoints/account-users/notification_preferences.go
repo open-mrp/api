@@ -1,6 +1,6 @@
 package accountuserep
 
-import "github.com/augno/api/shared/constants"
+import "github.com/open-mrp/api/shared/constants"
 
 // NotificationPreferenceItem toggles a single account-relation notification type.
 type NotificationPreferenceItem struct {

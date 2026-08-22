@@ -1,8 +1,8 @@
 package apiresource
 
 import (
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	"github.com/augno/api/shared/constants"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 // Cost preview for switching to a different pricing plan.
@@ -27,7 +27,7 @@ type PlanChangeProration struct {
 	LineItems *List[PlanChangeLineItem] `json:"line_items"`
 	// Whether the amounts are locally estimated rather than quoted by Stripe.
 	//
-	// Augno falls back to its own calculation when Stripe cannot quote the change, usually because another billing change is still in flight. The amounts are then approximations and the final charge may differ.
+	// OpenMRP falls back to its own calculation when Stripe cannot quote the change, usually because another billing change is still in flight. The amounts are then approximations and the final charge may differ.
 	IsEstimate bool `json:"is_estimate"`
 }
 

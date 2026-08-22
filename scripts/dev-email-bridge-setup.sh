@@ -102,15 +102,15 @@ echo "  # -> S3 fires an event -> SQS -> notification-service inbound consumer t
 #
 #   ACTIVE_RS="$(aws ses describe-active-receipt-rule-set --region us-east-1 --query Metadata.Name --output text)"
 #   # 1. Verify a DEV-ONLY subdomain for receiving + DKIM (never a real customer/prod domain):
-#   aws ses verify-domain-identity --region us-east-1 --domain mail.dev.augno.com
-#   aws ses verify-domain-dkim     --region us-east-1 --domain mail.dev.augno.com   # publish the 3 CNAMEs
-#   # 2. Publish MX:  mail.dev.augno.com  MX 10 inbound-smtp.us-east-1.amazonaws.com
+#   aws ses verify-domain-identity --region us-east-1 --domain mail.dev.openmrp.ai
+#   aws ses verify-domain-dkim     --region us-east-1 --domain mail.dev.openmrp.ai   # publish the 3 CNAMEs
+#   # 2. Publish MX:  mail.dev.openmrp.ai  MX 10 inbound-smtp.us-east-1.amazonaws.com
 #   # 3. Allow SES to write to the dev bucket:
 #   aws s3api put-bucket-policy --bucket "${BUCKET}" --policy "$(jq -c -n --arg b "arn:aws:s3:::${BUCKET}" --arg acct "${ACCOUNT_ID}" '{Version:"2012-10-17",Statement:[{Sid:"AllowSESPuts",Effect:"Allow",Principal:{Service:"ses.amazonaws.com"},Action:"s3:PutObject",Resource:($b+"/*"),Condition:{StringEquals:{"AWS:SourceAccount":$acct}}}]}')"
 #   # 4. Add a DEV rule to the EXISTING active rule set (recipient-scoped so it can't catch prod mail):
 #   aws ses create-receipt-rule --region us-east-1 --rule-set-name "${ACTIVE_RS}" \
-#     --rule "{\"Name\":\"dev-to-s3\",\"Enabled\":true,\"ScanEnabled\":true,\"Recipients\":[\"mail.dev.augno.com\"],\"Actions\":[{\"S3Action\":{\"BucketName\":\"${BUCKET}\",\"ObjectKeyPrefix\":\"inbound/\"}}]}"
+#     --rule "{\"Name\":\"dev-to-s3\",\"Enabled\":true,\"ScanEnabled\":true,\"Recipients\":[\"mail.dev.openmrp.ai\"],\"Actions\":[{\"S3Action\":{\"BucketName\":\"${BUCKET}\",\"ObjectKeyPrefix\":\"inbound/\"}}]}"
 #
 # Part C (OPTIONAL) — outbound send test. SES starts in sandbox (can only send to verified addresses).
-#   aws ses verify-email-identity --region us-east-1 --email-address dev@augno.com
+#   aws ses verify-email-identity --region us-east-1 --email-address dev@openmrp.ai
 # ----------------------------------------------------------------------------------------------------

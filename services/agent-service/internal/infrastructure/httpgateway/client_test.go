@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/augno/api/services/agent-service/internal/domain"
-	"github.com/augno/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/services/agent-service/internal/domain"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 )
 
 func TestClientDo_SetsInternalHeadersAndForwardsRequest(t *testing.T) {

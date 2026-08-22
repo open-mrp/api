@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/augno/api/shared/db"
+	"github.com/open-mrp/api/shared/db"
 )
 
 type Account struct {

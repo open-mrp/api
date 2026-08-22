@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var purgeRepoTracer = tracing.GetTracer("core-service.purge_repository")

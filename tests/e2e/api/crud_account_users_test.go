@@ -204,7 +204,7 @@ func TestAccountUsers_IncludeDepartment(t *testing.T) {
 func TestAccountUsers_CreateAndGet(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-acuser")
-	email := name + "@e2e-test.augno.com"
+	email := name + "@e2e-test.openmrp.ai"
 
 	createResp, err := apiClient.PostFull(accountUsersPath, map[string]any{
 		"name":    name,
@@ -241,7 +241,7 @@ func TestAccountUsers_CreateAndUpdateAllFields(t *testing.T) {
 
 	// ── CREATE with all fields ──
 	name := uniqueName("e2e-au-allf")
-	email := name + "@e2e-test.augno.com"
+	email := name + "@e2e-test.openmrp.ai"
 	createResp, err := apiClient.PostFull(accountUsersPath, map[string]any{
 		"name":          name,
 		"email":         email,
@@ -290,7 +290,7 @@ func TestAccountUsers_CreateAndUpdateAllFields(t *testing.T) {
 
 	// ── UPDATE with different values ──
 	updatedName := uniqueName("e2e-au-allf-u")
-	updatedEmail := updatedName + "@e2e-test.augno.com"
+	updatedEmail := updatedName + "@e2e-test.openmrp.ai"
 	patchStatus, patchBody, err := apiClient.Patch(accountUsersPath+"/"+id, map[string]any{
 		"name":    updatedName,
 		"email":   updatedEmail,
@@ -335,7 +335,7 @@ func TestAccountUsers_CreateAndUpdateAllFields(t *testing.T) {
 func TestAccountUsers_Update(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-acuser-upd")
-	email := name + "@e2e-test.augno.com"
+	email := name + "@e2e-test.openmrp.ai"
 
 	createStatus, createBody, err := apiClient.Post(accountUsersPath, map[string]any{
 		"name":    name,
@@ -367,7 +367,7 @@ func TestAccountUsers_Update(t *testing.T) {
 func TestAccountUsers_Remove(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-acuser-del")
-	email := name + "@e2e-test.augno.com"
+	email := name + "@e2e-test.openmrp.ai"
 
 	createStatus, createBody, err := apiClient.Post(accountUsersPath, map[string]any{
 		"name":    name,
@@ -396,7 +396,7 @@ func TestAccountUsers_Remove(t *testing.T) {
 func TestAccountUsers_LockAndUnlock(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-acuser-lock")
-	email := name + "@e2e-test.augno.com"
+	email := name + "@e2e-test.openmrp.ai"
 
 	// Use a non-admin role since admin users cannot be locked.
 	createStatus, createBody, err := apiClient.Post(accountUsersPath, map[string]any{
@@ -444,7 +444,7 @@ func TestAccountUsers_LockAndUnlock(t *testing.T) {
 func TestAccountUsers_RemoveAndRestore(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-acuser-rest")
-	email := name + "@e2e-test.augno.com"
+	email := name + "@e2e-test.openmrp.ai"
 
 	createStatus, createBody, err := apiClient.Post(accountUsersPath, map[string]any{
 		"name":    name,
@@ -483,7 +483,7 @@ func TestAccountUsers_RemoveAndRestore(t *testing.T) {
 func TestAccountUsers_CreateIdempotent(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-idem-acuser")
-	email := name + "@e2e-test.augno.com"
+	email := name + "@e2e-test.openmrp.ai"
 	idemKey := newIdempotencyKey()
 
 	status1, body1, err := apiClient.Post(accountUsersPath, map[string]any{
@@ -510,7 +510,7 @@ func TestAccountUsers_CreateIdempotent(t *testing.T) {
 func TestAccountUsers_ListIncludeRemoved(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-acuser-rem")
-	email := name + "@e2e-test.augno.com"
+	email := name + "@e2e-test.openmrp.ai"
 
 	// Create and remove a user
 	createStatus, createBody, err := apiClient.Post(accountUsersPath, map[string]any{
@@ -575,7 +575,7 @@ func TestAccountUsers_CreateScannerMissingPasswordFails(t *testing.T) {
 func TestAccountUsers_CreateNonScannerWithPasswordFails(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-acu-nopw")
-	email := name + "@e2e-test.augno.com"
+	email := name + "@e2e-test.openmrp.ai"
 
 	status, _, err := apiClient.Post(accountUsersPath, map[string]any{
 		"name":     name,
@@ -592,7 +592,7 @@ func TestAccountUsers_CreateNonScannerWithPasswordFails(t *testing.T) {
 func TestAccountUsers_StatusNoopIsIdempotent(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-acu-noop")
-	email := name + "@e2e-test.augno.com"
+	email := name + "@e2e-test.openmrp.ai"
 
 	createStatus, createBody, err := apiClient.Post(accountUsersPath, map[string]any{
 		"name":    name,
@@ -626,7 +626,7 @@ func TestAccountUsers_StatusLockAdminFails(t *testing.T) {
 func TestAccountUsers_StatusLockAfterRemoveFails(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-acu-lock-rm")
-	email := name + "@e2e-test.augno.com"
+	email := name + "@e2e-test.openmrp.ai"
 
 	createStatus, createBody, err := apiClient.Post(accountUsersPath, map[string]any{
 		"name":    name,
@@ -682,7 +682,7 @@ func TestAccountUsers_OmittedFields(t *testing.T) {
 
 	t.Run("CreateWithOnlyRequiredFields", func(t *testing.T) {
 		name := uniqueName("e2e-au-omit")
-		email := name + "@e2e-test.augno.com"
+		email := name + "@e2e-test.openmrp.ai"
 
 		status, body, err := apiClient.Post(accountUsersPath, map[string]any{
 			"name":    name,
@@ -729,7 +729,7 @@ func TestAccountUsers_OmittedFields(t *testing.T) {
 
 	t.Run("UpdatePreservesOmittedFields", func(t *testing.T) {
 		name := uniqueName("e2e-au-pres")
-		email := name + "@e2e-test.augno.com"
+		email := name + "@e2e-test.openmrp.ai"
 
 		// Create with all fields
 		createStatus, createBody, err := apiClient.Post(accountUsersPath, map[string]any{
@@ -801,7 +801,7 @@ func TestAccountUsers_CommissionEligibleOnCustomRole(t *testing.T) {
 	defer apiClient.Delete(rolesPath + "/" + roleID)
 
 	name := uniqueName("e2e-au-comm")
-	email := name + "@e2e-test.augno.com"
+	email := name + "@e2e-test.openmrp.ai"
 	createStatus, createBody, err := apiClient.Post(accountUsersPath, map[string]any{
 		"name":                   name,
 		"email":                  email,
@@ -827,7 +827,7 @@ func TestAccountUsers_SalesRepForcesCommissionEligible(t *testing.T) {
 	t.Parallel()
 
 	name := uniqueName("e2e-au-srep-comm")
-	email := name + "@e2e-test.augno.com"
+	email := name + "@e2e-test.openmrp.ai"
 	createStatus, createBody, err := apiClient.Post(accountUsersPath, map[string]any{
 		"name":    name,
 		"email":   email,

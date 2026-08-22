@@ -14,9 +14,9 @@ import (
 	reflect "reflect"
 	time "time"
 
-	domain "github.com/augno/api/services/notification-service/internal/domain"
-	apierror "github.com/augno/api/shared/errors"
-	messaging "github.com/augno/api/shared/messaging"
+	domain "github.com/open-mrp/api/services/notification-service/internal/domain"
+	apierror "github.com/open-mrp/api/shared/errors"
+	messaging "github.com/open-mrp/api/shared/messaging"
 	gomock "go.uber.org/mock/gomock"
 )
 

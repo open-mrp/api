@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/augno/api/shared/version"
+	"github.com/open-mrp/api/shared/version"
 	"github.com/stretchr/testify/require"
 )
 

@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
-	"github.com/augno/api/shared/constants"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 // The sales-order line's product include is driven entirely by the product_id stashed in meta — never by a prebuilt stub on the line. These tests lock that wiring: with no stashed id the product stays nil (the leak we fixed), and with a stashed id it populates from the loaded map.

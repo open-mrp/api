@@ -1,8 +1,8 @@
 package resourceregistry
 
 import (
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/constants"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 // buildOwnerShell constructs the public Owner projection of a parent resource's account_id. Empty accountID -> system-owned; otherwise the owner advertises type=account but leaves Account nil. A full Account is attached only when ?include[]=<parent>.owner.account also fires — at which point the populateOwnerAccountOn<Resource> SubField writes the loaded *Account in (looking up the FK in LoadMeta, not on the Owner).

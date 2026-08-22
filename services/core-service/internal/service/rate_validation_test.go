@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/augno/api/services/core-service/internal/domain"
-	repositorymock "github.com/augno/api/services/core-service/internal/domain/mock/repository"
-	apierror "github.com/augno/api/shared/errors"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
+	apierror "github.com/open-mrp/api/shared/errors"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"

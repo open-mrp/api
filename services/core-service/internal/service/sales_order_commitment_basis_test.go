@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/shared/field"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/field"
 )
 
 func TestValidateCommitmentBasisExclusive_AcceptsAtMostOne(t *testing.T) {

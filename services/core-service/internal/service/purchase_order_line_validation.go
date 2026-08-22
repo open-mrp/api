@@ -3,8 +3,8 @@ package service
 import (
 	"context"
 
-	"github.com/augno/api/services/core-service/internal/domain"
-	apierror "github.com/augno/api/shared/errors"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // validatePurchaseOrderLineUnits rejects a line whose quantity is expressed in a unit the product is not measured in.

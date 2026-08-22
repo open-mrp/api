@@ -3,9 +3,9 @@ package apiresource
 import (
 	"time"
 
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/timeutil"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/timeutil"
 )
 
 const SampleAdjustmentTypeID = "adjt_e2t6ruyqik5q"
@@ -33,7 +33,7 @@ type AdjustmentType struct {
 	Code constants.AdjustmentType `json:"code" validate:"required"`
 	// Owner of this resource.
 	//
-	// Adjustment types are platform-provided and shared across all accounts, so the owner is always the Augno system owner.
+	// Adjustment types are platform-provided and shared across all accounts, so the owner is always the OpenMRP system owner.
 	Owner *Owner `json:"owner" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

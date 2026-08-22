@@ -3,7 +3,7 @@ package domain
 import (
 	"time"
 
-	"github.com/augno/api/shared/pagination"
+	"github.com/open-mrp/api/shared/pagination"
 )
 
 // EmailLogActor identifies the actor who sent an email. Today this is always a user, but the shape mirrors other actor references so future senders (API keys, agents) can be represented without another schema change.

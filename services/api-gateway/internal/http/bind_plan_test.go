@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 )
 
 func TestBindFromQuery_embeddedPaginationRequest(t *testing.T) {

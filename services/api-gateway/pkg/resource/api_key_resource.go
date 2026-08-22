@@ -3,23 +3,23 @@ package apiresource
 import (
 	"time"
 
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/timeutil"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/timeutil"
 )
 
 const SampleAPIKeyID = "apke_eiylmwr6q7oz"                   // #nosec G101 - sample data for API docs
 const SampleAPIKeyName = "Production API Key"                // #nosec G101 - sample data for API docs
-const SampleTestAPIKeyRedactedValue = "aug_sk_test_****kuIb" // #nosec G101 - sample data for API docs
-const SampleProdAPIKeyRedactedValue = "aug_sk_prod_****hjt4" // #nosec G101 - sample data for API docs
+const SampleTestAPIKeyRedactedValue = "mrp_sk_test_****kuIb" // #nosec G101 - sample data for API docs
+const SampleProdAPIKeyRedactedValue = "mrp_sk_prod_****hjt4" // #nosec G101 - sample data for API docs
 
 // #nosec G101 - This is sample data for API documentation, not a real credential
-const SampleTestAPIKeyValue = "aug_sk_test_RhxFDvTdDnb0bgtcoA5P79_60EmH4h9j9ZldsuU9XyngXlpu8NqdIlGTQw8OM8cGeCadykuIb"
+const SampleTestAPIKeyValue = "mrp_sk_test_RhxFDvTdDnb0bgtcoA5P79_60EmH4h9j9ZldsuU9XyngXlpu8NqdIlGTQw8OM8cGeCadykuIb"
 
 // #nosec G101 - This is sample data for API documentation, not a real credential
-const SampleProdAPIKeyValue = "aug_sk_prod_RhxFDvTdDnb0bgtcoA5P79_60EmH4h9j9ZldsuU9XyngXlpu8NqdIlGTQw8OM8cGeCadyhjtr"
+const SampleProdAPIKeyValue = "mrp_sk_prod_RhxFDvTdDnb0bgtcoA5P79_60EmH4h9j9ZldsuU9XyngXlpu8NqdIlGTQw8OM8cGeCadyhjtr"
 
-// An API key used to authenticate requests to the Augno API.
+// An API key used to authenticate requests to the OpenMRP API.
 //
 // A key always acts on behalf of the account it was created under, with the permissions of the role assigned to it.
 type APIKey struct {
@@ -31,7 +31,7 @@ type APIKey struct {
 	Name string `json:"name" validate:"required"`
 	// Redacted key value safe for display.
 	//
-	// The key's prefix followed by its last four characters, e.g. `aug_sk_prod_****hjt4`.
+	// The key's prefix followed by its last four characters, e.g. `mrp_sk_prod_****hjt4`.
 	RedactedValue string `json:"redacted_value" validate:"required"`
 	// Role assigned to the key, which determines the permissions of requests made with it.
 	Role *Role `json:"role" expandable:"true"`
@@ -59,7 +59,7 @@ type CreatedAPIKey struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=created_api_key"`
 	// The secret used to authenticate requests, sent as a bearer token in the `Authorization` header.
 	//
-	// This is the only response that ever contains the secret; if it is lost, rotate the key to issue a new one. Learn more about [managing your API keys](https://docs.augno.com/api/managing-api-keys).
+	// This is the only response that ever contains the secret; if it is lost, rotate the key to issue a new one. Learn more about [managing your API keys](https://docs.openmrp.ai/api/managing-api-keys).
 	APIKeySecret string `json:"api_key_secret" validate:"required" sensitive:"true"`
 	// The key's non-secret details, such as its ID, name, role, and expiration.
 	APIKeyInfo APIKey `json:"api_key_info" validate:"required"`

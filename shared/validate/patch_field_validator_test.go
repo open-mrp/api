@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/augno/api/shared/field"
+	"github.com/open-mrp/api/shared/field"
 )
 
 type patchValidateReq struct {

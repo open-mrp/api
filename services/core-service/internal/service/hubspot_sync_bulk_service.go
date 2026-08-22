@@ -6,15 +6,15 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/services/core-service/internal/hubspotsync"
-	"github.com/augno/api/shared/audit"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/db"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/excel"
-	"github.com/augno/api/shared/messaging"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/services/core-service/internal/hubspotsync"
+	"github.com/open-mrp/api/shared/audit"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/db"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/excel"
+	"github.com/open-mrp/api/shared/messaging"
 )
 
 // asyncBulkDeps hands the async bulk and export engines the plumbing they run on.

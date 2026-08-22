@@ -1,9 +1,9 @@
 package grpc
 
 import (
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/shared/field"
-	pb "github.com/augno/api/shared/proto/core"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/field"
+	pb "github.com/open-mrp/api/shared/proto/core"
 )
 
 func quantityPatchToDomain(p *pb.QuantityPatch) field.Clearable[domain.QuantityInput] {

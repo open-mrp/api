@@ -16,7 +16,7 @@ spec:
                 # Bump this when rabbitmq.conf changes: the config lives in a
                 # ConfigMap, which pods only read at startup, so a template
                 # change is needed to force a restart.
-                augno.dev/config-rev: "2"
+                openmrp.dev/config-rev: "2"
         spec:
             containers:
                 - name: rabbitmq

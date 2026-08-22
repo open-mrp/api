@@ -3,7 +3,7 @@ package field
 import (
 	"time"
 
-	pb "github.com/augno/api/shared/proto/core"
+	pb "github.com/open-mrp/api/shared/proto/core"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 

@@ -11,11 +11,11 @@ import (
 	"runtime/debug"
 	"strings"
 
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	"github.com/augno/api/shared/contracts"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/shared/contracts"
 )
 
-// noAccountHeaderGroups are groups where the Augno-Account-ID header should be omitted.
+// noAccountHeaderGroups are groups where the OpenMRP-Account-ID header should be omitted.
 var noAccountHeaderGroups = map[string]bool{
 	"Auth":                  true,
 	"Health":                true,
@@ -136,10 +136,10 @@ func generateHTTPieWorkspace(groups []apiendpoint.APIEndpointGroup, outputPath s
 			ContentType: "workspace",
 			Schema:      "https://schema.httpie.io/1.0.0.json",
 			Docs:        "https://httpie.io/r/help/export-from-httpie",
-			Source:      "Augno API Generator",
+			Source:      "OpenMRP API Generator",
 		},
 		Entry: HTTPieEntry{
-			Name: "Augno API",
+			Name: "OpenMRP API",
 			Icon: HTTPieIcon{
 				Name:  "default",
 				Color: "gray",
@@ -323,14 +323,14 @@ func buildHeaders(groupTitle string, method string) []HTTPieHeader {
 
 	if !noAccountHeaderGroups[groupTitle] {
 		headers = append(headers, HTTPieHeader{
-			Name:    "Augno-Account-ID",
+			Name:    "OpenMRP-Account-ID",
 			Value:   "{{act-id}}",
 			Enabled: true,
 		})
 	}
 
 	headers = append(headers, HTTPieHeader{
-		Name:    "Augno-Version",
+		Name:    "OpenMRP-Version",
 		Value:   "{{api-version}}",
 		Enabled: true,
 	})

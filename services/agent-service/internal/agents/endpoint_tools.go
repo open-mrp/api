@@ -10,8 +10,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/augno/api/services/agent-service/internal/domain"
-	"github.com/augno/api/shared/fuzzy"
+	"github.com/open-mrp/api/services/agent-service/internal/domain"
+	"github.com/open-mrp/api/shared/fuzzy"
 )
 
 // EndpointToolParamLocation identifies where a tool input value goes when building the gateway HTTP request.

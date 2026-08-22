@@ -1,7 +1,7 @@
 package apiendpoint
 
 import (
-	"github.com/augno/api/shared/contracts"
+	"github.com/open-mrp/api/shared/contracts"
 )
 
 /*

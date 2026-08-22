@@ -1,8 +1,8 @@
 package apiresource
 
 import (
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	"github.com/augno/api/shared/constants"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 // Record is a lightweight reference to a business record — a sales order, purchase order, pick, shipment, production run, invoice, etc.

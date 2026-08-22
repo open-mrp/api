@@ -4,13 +4,13 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
-// Asks the Augno sales team to get in touch about an enterprise plan.
+// Asks the OpenMRP sales team to get in touch about an enterprise plan.
 //
 // The account, its current plan, and the requesting user's name and email are sent to sales for follow-up. Nothing about the account's plan, subscription, or billing changes.
 type CreateEnterpriseInquiryEndpoint struct{}

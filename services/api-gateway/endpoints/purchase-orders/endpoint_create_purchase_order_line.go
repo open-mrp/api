@@ -4,11 +4,11 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/services/auth-service/pkg/types"
-	apierror "github.com/augno/api/shared/errors"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // Request to create a line on a purchase order.

@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/augno/api/services/notification-service/internal/domain"
-	"github.com/augno/api/shared/contracts"
-	pb "github.com/augno/api/shared/proto/notification"
+	"github.com/open-mrp/api/services/notification-service/internal/domain"
+	"github.com/open-mrp/api/shared/contracts"
+	pb "github.com/open-mrp/api/shared/proto/notification"
 
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -16,7 +16,7 @@ type emailBridgeGRPCHandler struct {
 	pb.UnimplementedEmailBridgeServiceServer
 	emailBridgeSvc domain.EmailBridgeSvc
 	chatSvc        domain.ConversationSvc
-	// inboundEmailDomain is the Augno SES receiving subdomain used to render each inbox's forwarding
+	// inboundEmailDomain is the OpenMRP SES receiving subdomain used to render each inbox's forwarding
 	// address (<inbox_id>@<domain>). Empty when the subdomain isn't configured → forwarding_address unset.
 	inboundEmailDomain string
 }
@@ -223,7 +223,7 @@ func (h *emailBridgeGRPCHandler) emailInboxToProto(i *domain.EmailInbox) *pb.Ema
 		CreatedAt:            timestamppb.New(i.CreatedAt),
 		UpdatedAt:            timestamppb.New(i.UpdatedAt),
 	}
-	// The forwarding address is derived, not stored: the inbox id is the local part on the Augno receiving
+	// The forwarding address is derived, not stored: the inbox id is the local part on the OpenMRP receiving
 	// subdomain. Customers who can't repoint their apex MX forward their support address here; ingestion
 	// resolves it back to this inbox by id (see resolveInbox). Omitted when the subdomain isn't configured.
 	if h.inboundEmailDomain != "" {

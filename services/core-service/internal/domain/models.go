@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/pagination"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/pagination"
 )
 
 type AccountType string

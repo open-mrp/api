@@ -6,16 +6,16 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/audit"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/contracts"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/idempotency"
-	"github.com/augno/api/shared/messaging"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/audit"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/contracts"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/messaging"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var sandboxSvcTracer = tracing.GetTracer("core-service.sandbox_service")
@@ -94,7 +94,7 @@ func (s *sandboxSvcImpl) GetSandboxAccountByOwner(ctx context.Context, ownerAcco
 // ListSandboxAccounts returns a paginated list of sandbox accounts for the caller's production account.
 //
 // 1. Extract and validate the caller's identity, actor type, sandbox:read permission, and non-sandbox mode.
-// 2. Require the Augno-Account header.
+// 2. Require the OpenMRP-Account header.
 // 3. Query the sandbox account repository with pagination and optional includes.
 func (s *sandboxSvcImpl) ListSandboxAccounts(ctx context.Context, cursor *string, limit int32, query *string, includes []string) (*domain.ListSandboxAccountsResult, *apierror.APIError) {
 	ctx, span := sandboxSvcTracer.Start(ctx, "service.sandbox.list_sandbox_accounts")
@@ -283,7 +283,7 @@ func (s *sandboxSvcImpl) BatchGetSandboxesByIDs(ctx context.Context, typeIDs []s
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 	if len(typeIDs) == 0 {
 		return nil, nil

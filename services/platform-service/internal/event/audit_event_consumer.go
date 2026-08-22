@@ -5,15 +5,15 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/augno/api/services/platform-service/internal/domain"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/audit"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/contracts"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/messaging"
+	"github.com/open-mrp/api/services/platform-service/internal/domain"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/audit"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/contracts"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/messaging"
 
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/shared/tracing"
 	"github.com/rabbitmq/amqp091-go"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -72,7 +72,7 @@ func (c *AuditEventConsumer) handleMessage(ctx context.Context, msg amqp091.Deli
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 	if !identity.IsTargetAccountSet() {
-		return tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account header is required."))
+		return tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account header is required."))
 	}
 	if identity.Actor == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity actor not found in context."))

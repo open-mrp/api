@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/augno/api/services/api-gateway/internal/domain"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/contracts"
-	"github.com/augno/api/shared/messaging"
-	pb "github.com/augno/api/shared/proto/platform"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/api-gateway/internal/domain"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/contracts"
+	"github.com/open-mrp/api/shared/messaging"
+	pb "github.com/open-mrp/api/shared/proto/platform"
+	"github.com/open-mrp/api/shared/tracing"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -150,7 +150,7 @@ func (p *requestLogOutboxPublisher) publishErrorAlert(rl *appctx.RequestLog, act
 	}
 
 	emailData := messaging.EmailSendData{
-		To:         []string{"dev@augno.com"},
+		To:         []string{"dev@openmrp.ai"},
 		Subject:    fmt.Sprintf("[%d Alert] %s %s", rl.StatusCode, rl.Method, rl.Path),
 		TemplateID: constants.EmailTemplateInternalErrorAlert,
 		Params:     params,

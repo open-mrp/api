@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
-	"github.com/augno/api/shared/constants"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 // The sales order's related records (pick / production_run / shipments) carry only ids on SalesOrderInfo; their number and status must be loaded from the owning service via the include resolver. These tests lock the extract/populate wiring that turns a loaded resource into a Record with number + status.

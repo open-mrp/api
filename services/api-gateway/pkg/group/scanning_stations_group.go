@@ -3,10 +3,10 @@ package httpgroup
 import (
 	"fmt"
 
-	scanningstationep "github.com/augno/api/services/api-gateway/endpoints/scanning-stations"
-	grpcclient "github.com/augno/api/services/api-gateway/grpc-client"
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	scanningstationep "github.com/open-mrp/api/services/api-gateway/endpoints/scanning-stations"
+	grpcclient "github.com/open-mrp/api/services/api-gateway/grpc-client"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 )
 
 type ScanningStationsEndpointGroup struct {

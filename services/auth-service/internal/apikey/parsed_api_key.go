@@ -4,10 +4,10 @@ import (
 	"cmp"
 	"strings"
 
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/crypto"
-	apierror "github.com/augno/api/shared/errors"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/crypto"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 type ParsedAPIKey struct {
@@ -31,13 +31,13 @@ type APIKeyGenConfig struct {
 }
 
 const (
-	apiKeyAugnoPrefixIdx = 0
-	apiKeySKPrefixIdx    = 1
-	apiKeyModeIdx        = 2
-	apiKeyIDIdx          = 3
-	apiKeySCSIdx         = 4
-	apiKeyNumParts       = 5
-	apiKeyChecksumLen    = 6
+	apiKeyOpenMRPPrefixIdx = 0
+	apiKeySKPrefixIdx      = 1
+	apiKeyModeIdx          = 2
+	apiKeyIDIdx            = 3
+	apiKeySCSIdx           = 4
+	apiKeyNumParts         = 5
+	apiKeyChecksumLen      = 6
 )
 
 // GenParsedAPIKey generates a new parsed API key for the given account mode.
@@ -77,7 +77,7 @@ func ParseAPIKey(key string) (*ParsedAPIKey, *apierror.APIError) {
 		return nil, invalidAPIKeyError(key)
 	}
 
-	if !strings.HasPrefix(parts[apiKeyAugnoPrefixIdx]+"_"+parts[apiKeySKPrefixIdx]+"_", string(types.APIKeyPrefixSecretKey)) {
+	if !strings.HasPrefix(parts[apiKeyOpenMRPPrefixIdx]+"_"+parts[apiKeySKPrefixIdx]+"_", string(types.APIKeyPrefixSecretKey)) {
 		return nil, invalidAPIKeyError(key)
 	}
 
@@ -109,7 +109,7 @@ func ParseAPIKey(key string) (*ParsedAPIKey, *apierror.APIError) {
 }
 
 // RedactedValue returns a display-safe representation of the full key string.
-// Format: aug_sk_{mode}_****{last4}
+// Format: mrp_sk_{mode}_****{last4}
 func (p *ParsedAPIKey) RedactedValue() string {
 	full := p.String()
 	return string(types.APIKeyPrefixSecretKey) + string(p.AccountMode) + "_****" + full[len(full)-4:]

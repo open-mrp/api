@@ -11,7 +11,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/augno/api/shared/db"
+	"github.com/open-mrp/api/shared/db"
 )
 
 const cleanupExpiredOutboxLocksByIDs = `-- name: CleanupExpiredOutboxLocksByIDs :execresult

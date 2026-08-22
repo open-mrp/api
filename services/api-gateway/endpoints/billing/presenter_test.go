@@ -3,8 +3,8 @@ package billingep
 import (
 	"testing"
 
-	"github.com/augno/api/services/api-gateway/pkg/resource/resourcetest"
-	pb "github.com/augno/api/shared/proto/billing"
+	"github.com/open-mrp/api/services/api-gateway/pkg/resource/resourcetest"
+	pb "github.com/open-mrp/api/shared/proto/billing"
 )
 
 func TestPricingPlanPresenter(t *testing.T) {

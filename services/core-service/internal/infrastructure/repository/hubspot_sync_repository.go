@@ -7,13 +7,13 @@ import (
 	"errors"
 	"time"
 
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/augno/api/shared/db"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/id"
-	"github.com/augno/api/shared/pagination"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/db"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var hubspotSyncRepoTracer = tracing.GetTracer("core-service.hubspot_sync_repository")
@@ -134,7 +134,7 @@ func (r *hubspotSyncRepoImpl) UpsertRecord(ctx context.Context, params domain.Up
 	return nil
 }
 
-// ListRecords pages the account's mappings for one Augno type. Pagination is forward-only: the keyset rides the (account_id, augno_type, augno_id) unique index, and augno_id — not created_at — is the ordering key, so there is no backward branch to mirror.
+// ListRecords pages the account's mappings for one OpenMRP type. Pagination is forward-only: the keyset rides the (account_id, augno_type, augno_id) unique index, and augno_id — not created_at — is the ordering key, so there is no backward branch to mirror.
 func (r *hubspotSyncRepoImpl) ListRecords(ctx context.Context, params domain.ListHubspotSyncRecordsParams) (*domain.ListHubspotSyncRecordsResult, *apierror.APIError) {
 	ctx, span := hubspotSyncRepoTracer.Start(ctx, "repository.hubspot_sync.list_records")
 	defer span.End()
@@ -184,7 +184,7 @@ func (r *hubspotSyncRepoImpl) ListRecords(ctx context.Context, params domain.Lis
 	return &domain.ListHubspotSyncRecordsResult{Items: page, PageInfo: pageInfo}, nil
 }
 
-// GetRecord returns the mapping for an Augno entity, or (nil, nil) when none exists.
+// GetRecord returns the mapping for an OpenMRP entity, or (nil, nil) when none exists.
 func (r *hubspotSyncRepoImpl) GetRecord(ctx context.Context, accountID, augnoType, augnoID string) (*domain.HubspotSyncRecord, *apierror.APIError) {
 	ctx, span := hubspotSyncRepoTracer.Start(ctx, "repository.hubspot_sync.get_record")
 	defer span.End()

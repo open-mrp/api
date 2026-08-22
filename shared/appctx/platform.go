@@ -3,7 +3,7 @@ package appctx
 import (
 	"context"
 
-	"github.com/augno/api/shared/constants"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 const platformKey contextKey = "platform"

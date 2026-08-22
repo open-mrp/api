@@ -8,8 +8,8 @@ package sqlc
 import (
 	"context"
 
-	"github.com/augno/api/shared/db"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/open-mrp/api/shared/db"
 )
 
 const acquireOutboxMessages = `-- name: AcquireOutboxMessages :exec

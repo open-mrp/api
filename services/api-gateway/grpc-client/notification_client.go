@@ -3,8 +3,8 @@ package grpcclient
 import (
 	"context"
 
-	"github.com/augno/api/shared/contracts"
-	pb "github.com/augno/api/shared/proto/notification"
+	"github.com/open-mrp/api/shared/contracts"
+	pb "github.com/open-mrp/api/shared/proto/notification"
 )
 
 const notificationServiceName = "notification-service"

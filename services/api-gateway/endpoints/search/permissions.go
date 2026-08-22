@@ -1,8 +1,8 @@
 package searchep
 
 import (
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/shared/constants"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 // searchReadPermissions is the any-of set for unified search: the gateway rejects callers who hold none of these, and the handler only queries resource types the caller can read.

@@ -3,8 +3,8 @@ package apiresource
 import (
 	"github.com/shopspring/decimal"
 
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	"github.com/augno/api/shared/constants"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 // A rate calculated on demand rather than stored.

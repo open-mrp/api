@@ -15,7 +15,7 @@ func TestAddresses_UpdateClearNullableFields(t *testing.T) {
 	id := SeedAddressID
 
 	setStatus, setBody, err := apiClient.Patch(addressesPath+"/"+id, map[string]any{
-		"email":         "clear-me@e2e.augno.com",
+		"email":         "clear-me@e2e.openmrp.ai",
 		"phone":         "555-111-2222",
 		"street_line_2": "Suite 500",
 	}, newIdempotencyKey())

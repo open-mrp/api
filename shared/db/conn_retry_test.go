@@ -8,7 +8,7 @@ import (
 	"github.com/go-sql-driver/mysql"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/augno/api/shared/retry"
+	"github.com/open-mrp/api/shared/retry"
 )
 
 func fastConnRetryConfig() *retry.Config {

@@ -3,9 +3,9 @@ package apiresource
 import (
 	"time"
 
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/timeutil"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/timeutil"
 )
 
 const SampleAnnouncementID = "an_m4vwgn2t8cqs"
@@ -21,7 +21,7 @@ type Announcement struct {
 	// Who the announcement reaches.
 	//
 	// - `account`: published to a single account and shown only to that account's users.
-	// - `platform`: published by Augno and shown to every user across all accounts.
+	// - `platform`: published by OpenMRP and shown to every user across all accounts.
 	Scope constants.AnnouncementScope `json:"scope" validate:"required"`
 	// The kind of event the announcement is about.
 	//

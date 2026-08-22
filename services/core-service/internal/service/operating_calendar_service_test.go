@@ -3,7 +3,7 @@ package service
 import (
 	"testing"
 
-	"github.com/augno/api/shared/constants"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 func TestValidateCalendarShape_RejectsAMaskNothingCanShipOn(t *testing.T) {

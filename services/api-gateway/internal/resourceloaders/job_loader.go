@@ -3,7 +3,7 @@ package resourceloaders
 import (
 	"context"
 
-	apierror "github.com/augno/api/shared/errors"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // LoadJobs exists to satisfy the registry's Load hook. Nothing embeds a job as a

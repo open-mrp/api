@@ -15,12 +15,12 @@ import (
 	reflect "reflect"
 	time "time"
 
-	apikey "github.com/augno/api/services/auth-service/internal/apikey"
-	domain "github.com/augno/api/services/auth-service/internal/domain"
-	types "github.com/augno/api/services/auth-service/pkg/types"
-	constants "github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
-	pagination "github.com/augno/api/shared/pagination"
+	apikey "github.com/open-mrp/api/services/auth-service/internal/apikey"
+	domain "github.com/open-mrp/api/services/auth-service/internal/domain"
+	types "github.com/open-mrp/api/services/auth-service/pkg/types"
+	constants "github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
+	pagination "github.com/open-mrp/api/shared/pagination"
 	gomock "go.uber.org/mock/gomock"
 )
 

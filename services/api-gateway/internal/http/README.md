@@ -91,7 +91,7 @@ Extract values from HTTP cookies with automatic fallback support:
 ```go
 type RefreshTokenRequest struct {
     // Tries Authorization header first, falls back to cookie if header is missing or invalid
-    RefreshToken string `header:"Authorization" cookie:"__Secure-augno.refresh-token" validate:"required"`
+    RefreshToken string `header:"Authorization" cookie:"__Secure-openmrp.refresh-token" validate:"required"`
 }
 ```
 
@@ -258,10 +258,10 @@ Example error response:
         "type": "invalid_request_error",
         "message": "Title must be at least 1 characters long",
         "param": "title",
-        "doc_url": "https://docs.augno.com/api/errors#validation_failed",
+        "doc_url": "https://docs.openmrp.ai/api/errors#validation_failed",
         "is_transient": false,
         "quota": null,
-        "request_log_url": "https://augno.com/dashboard/request-logs/rq_fbv1ygmybo3eauykr74"
+        "request_log_url": "https://openmrp.ai/dashboard/request-logs/rq_fbv1ygmybo3eauykr74"
     }
 }
 ```

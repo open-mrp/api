@@ -13,7 +13,7 @@ import (
 // Customer portal access tests verify that a customer API key (owned by the
 // customer account) can read product lines and unit groups on the vendor's
 // account. The customer authenticates with their own API key and sets the
-// Augno-Account header to the vendor's account ID.
+// OpenMRP-Account header to the vendor's account ID.
 //
 // Seed data used:
 //   - Customer account:  ac_01k09wm2fgevdsc344gpbcj30f (Global Manufacturing Solutions)

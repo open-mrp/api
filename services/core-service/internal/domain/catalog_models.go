@@ -1,6 +1,6 @@
 package domain
 
-import "github.com/augno/api/shared/pagination"
+import "github.com/open-mrp/api/shared/pagination"
 
 // CatalogProductLine represents a product line available in the catalog.
 type CatalogProductLine struct {

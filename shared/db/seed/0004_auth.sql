@@ -222,11 +222,11 @@ INSERT IGNORE INTO role_permission (id, role_id, permission_code, `create`, `rea
 -- {account_id}/{user_id}.png object). The bytes are uploaded by
 -- scripts/seed-user-photos.sh (make seed-user-photos). us_fltactor3 has no avatar.
 INSERT IGNORE INTO user (id, name, username, email, hashed_password, email_verified, image_url, created_at, updated_at) VALUES
-    ('us_1wjfmmbwg8l7', 'John Doe', 'jdoe', 'dane@augno.com', @password_hash, NOW(), '/v1/core/users/us_1wjfmmbwg8l7/photo', NOW(), NOW()),
-    ('us_2ndadmin0000', 'Mike Johnson', 'mjohnson', 'mjohnson@augno.com', @password_hash, NOW(), '/v1/core/users/us_2ndadmin0000/photo', NOW(), NOW()),
-    ('us_6p7460uuwibz', 'Sarah Martinez', 'user2', 'user2@augno.com', @password_hash, NOW(), '/v1/core/users/us_6p7460uuwibz/photo', NOW(), NOW()),
-    ('us_fltactor3', 'Filter Test User 3', 'ftuser3', 'ftuser3@augno.com', @password_hash, NOW(), NULL, NOW(), NOW()),
-    ('us_e2esrep0flag000', 'E2E Sales Rep Stale Flag', 'e2esrep0flag', 'e2e-srep-noflag@test.augno.com', @password_hash, NOW(), NULL, NOW(), NOW());
+    ('us_1wjfmmbwg8l7', 'John Doe', 'jdoe', 'dane@openmrp.ai', @password_hash, NOW(), '/v1/core/users/us_1wjfmmbwg8l7/photo', NOW(), NOW()),
+    ('us_2ndadmin0000', 'Mike Johnson', 'mjohnson', 'mjohnson@openmrp.ai', @password_hash, NOW(), '/v1/core/users/us_2ndadmin0000/photo', NOW(), NOW()),
+    ('us_6p7460uuwibz', 'Sarah Martinez', 'user2', 'user2@openmrp.ai', @password_hash, NOW(), '/v1/core/users/us_6p7460uuwibz/photo', NOW(), NOW()),
+    ('us_fltactor3', 'Filter Test User 3', 'ftuser3', 'ftuser3@openmrp.ai', @password_hash, NOW(), NULL, NOW(), NOW()),
+    ('us_e2esrep0flag000', 'E2E Sales Rep Stale Flag', 'e2esrep0flag', 'e2e-srep-noflag@test.openmrp.ai', @password_hash, NOW(), NULL, NOW(), NOW());
 
 -- Account-user associations. The admin account-user (SeedAccountUserID) is
 -- pinned to the Knitting department so `?include=department` resolves on the
@@ -241,5 +241,5 @@ INSERT IGNORE INTO account_user (id, user_id, role_id, account_id, department_id
 -- API keys
 -- HMAC computed as: createHmac('sha256', 'pepper').update(secret).digest()
 INSERT IGNORE INTO api_key (type_id, key_id, name, secret_hash, redacted_value, owner_account_id, role_id, created_at, updated_at) VALUES
-    ('apky_pajbskcck3cabxajdh8h8', 'u6Xh5ZpaUruMAU12EPAs4z', 'Admin API Key', UNHEX('166b905c32542e43efd8ec0b79077cb48df5430a17fb436c48f2ca12d5fc2b32'), 'aug_sk_prod_****UCZu', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'rl_mtg88e6u6fbu', NOW(), NOW()),
-    ('apky_sandbox_pajbskcck3cabxajdh8h9', 'AM4Bjb7xBLrmM0EZ3ADvlv', 'Sandbox Admin API Key', UNHEX('3228020129fc6ffd68dd835338fffaadc5cc45958a7ec5dd89f6c90961d5f071'), 'aug_sk_test_****WNXD', 'ac_sandbox_01k0a5smf9ekb8rqg12555zjqb', 'rl_01seedsb_admin000000', NOW(), NOW());
+    ('apky_pajbskcck3cabxajdh8h8', 'u6Xh5ZpaUruMAU12EPAs4z', 'Admin API Key', UNHEX('166b905c32542e43efd8ec0b79077cb48df5430a17fb436c48f2ca12d5fc2b32'), 'mrp_sk_prod_****UCZu', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'rl_mtg88e6u6fbu', NOW(), NOW()),
+    ('apky_sandbox_pajbskcck3cabxajdh8h9', 'AM4Bjb7xBLrmM0EZ3ADvlv', 'Sandbox Admin API Key', UNHEX('3228020129fc6ffd68dd835338fffaadc5cc45958a7ec5dd89f6c90961d5f071'), 'mrp_sk_test_****WNXD', 'ac_sandbox_01k0a5smf9ekb8rqg12555zjqb', 'rl_01seedsb_admin000000', NOW(), NOW());

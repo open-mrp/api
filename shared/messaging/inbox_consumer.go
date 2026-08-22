@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"log/slog"
 
-	"github.com/augno/api/shared/contracts"
-	"github.com/augno/api/shared/db"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/shared/contracts"
+	"github.com/open-mrp/api/shared/db"
+	"github.com/open-mrp/api/shared/tracing"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"go.opentelemetry.io/otel/trace"
 )

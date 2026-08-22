@@ -5,15 +5,15 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/augno/api/services/auth-service/internal/domain"
-	"github.com/augno/api/services/auth-service/internal/event"
-	pwdutil "github.com/augno/api/services/auth-service/internal/password"
-	tokenutil "github.com/augno/api/services/auth-service/internal/token"
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/messaging"
-	tracing "github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/auth-service/internal/domain"
+	"github.com/open-mrp/api/services/auth-service/internal/event"
+	pwdutil "github.com/open-mrp/api/services/auth-service/internal/password"
+	tokenutil "github.com/open-mrp/api/services/auth-service/internal/token"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/messaging"
+	tracing "github.com/open-mrp/api/shared/tracing"
 )
 
 var passwordMedTracer = tracing.GetTracer("auth-service.password_mediator")

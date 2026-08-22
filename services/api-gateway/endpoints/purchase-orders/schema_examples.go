@@ -1,10 +1,10 @@
 package purchaseorderep
 
 import (
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/field"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/shared/field"
 )
 
 func (*CreatePurchaseOrderLineRequest) SchemaExample() any {

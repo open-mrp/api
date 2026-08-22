@@ -3,8 +3,8 @@ package requestlogep
 import (
 	"testing"
 
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	pb "github.com/augno/api/shared/proto/platform"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	pb "github.com/open-mrp/api/shared/proto/platform"
 )
 
 // requestLogFromProto must scrub internal infrastructure (internal listener host,
@@ -34,13 +34,13 @@ func TestRequestLogFromProto_ScrubsInternalAgentInfra(t *testing.T) {
 		got := requestLogFromProto(&pb.RequestLogInfo{
 			Id:           "rq_user",
 			Method:       "GET",
-			Host:         "api.augno.com",
+			Host:         "api.openmrp.ai",
 			Path:         "/v1/catalog/items",
 			ClientIp:     new("198.51.100.7"),
 			IdentityType: new("user"),
 		})
-		if got.Host != "api.augno.com" {
-			t.Errorf("Host = %q, want api.augno.com", got.Host)
+		if got.Host != "api.openmrp.ai" {
+			t.Errorf("Host = %q, want api.openmrp.ai", got.Host)
 		}
 		if got.ClientIP == nil || *got.ClientIP != "198.51.100.7" {
 			t.Errorf("ClientIP = %v, want 198.51.100.7", got.ClientIP)

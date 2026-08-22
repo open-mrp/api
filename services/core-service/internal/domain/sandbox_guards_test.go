@@ -3,7 +3,7 @@ package domain
 import (
 	"testing"
 
-	apierror "github.com/augno/api/shared/errors"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // SAFETY: DO NOT REMOVE — these tests ensure sandbox guard functions

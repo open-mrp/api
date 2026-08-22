@@ -5,15 +5,15 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/audit"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/id"
-	"github.com/augno/api/shared/idempotency"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/audit"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var portalDomainSvcTracer = tracing.GetTracer("core-service.portal_domain_service")
@@ -477,13 +477,13 @@ func portalDomainScope(ctx context.Context, action types.Action) (*types.Identit
 		return nil, "", apiErr
 	}
 	if !identity.IsTargetAccountSet() {
-		return nil, "", apierror.NewAuthenticationError("The Augno-Account-ID header is required.")
+		return nil, "", apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required.")
 	}
 
 	return identity, identity.Target.AccountID, nil
 }
 
-// normalizePortalDomain lowercases and validates a customer-supplied portal domain. Augno-owned hosts are rejected so a customer cannot shadow first-party subdomains.
+// normalizePortalDomain lowercases and validates a customer-supplied portal domain. OpenMRP-owned hosts are rejected so a customer cannot shadow first-party subdomains.
 func normalizePortalDomain(domainName string) (string, *apierror.APIError) {
 	normalized := strings.ToLower(strings.TrimSpace(strings.TrimSuffix(domainName, ".")))
 
@@ -496,8 +496,12 @@ func normalizePortalDomain(domainName string) (string, *apierror.APIError) {
 	if !strings.Contains(normalized, ".") || strings.ContainsAny(normalized, "@/\\:?#& ") || strings.Contains(normalized, "..") {
 		return "", apierror.NewValidationErrorWithParam("Domain must be a valid hostname like shop.example.com.", "domain")
 	}
-	if normalized == "augno.com" || strings.HasSuffix(normalized, ".augno.com") {
-		return "", apierror.NewValidationErrorWithParam("Augno domains cannot be used as a custom portal domain.", "domain")
+	// augno.com stays live and redirecting through the OpenMRP transition, so it
+	// remains reserved alongside the new domain.
+	for _, reserved := range []string{"openmrp.ai", "augno.com"} {
+		if normalized == reserved || strings.HasSuffix(normalized, "."+reserved) {
+			return "", apierror.NewValidationErrorWithParam("OpenMRP domains cannot be used as a custom portal domain.", "domain")
+		}
 	}
 
 	return normalized, nil

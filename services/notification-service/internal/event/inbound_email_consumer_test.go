@@ -67,7 +67,7 @@ func TestParseInboundEmail_DecodesQuotedPrintableBody(t *testing.T) {
 func TestParseInboundEmail_PlainText(t *testing.T) {
 	raw := strings.Join([]string{
 		"From: Jane Customer <jane@theirco.com>",
-		"To: support@augno-test.com",
+		"To: support@openmrp-test.com",
 		"Subject: Where is my order?",
 		"Message-ID: <abc123@theirco.com>",
 		"Content-Type: text/plain; charset=utf-8",
@@ -78,7 +78,7 @@ func TestParseInboundEmail_PlainText(t *testing.T) {
 
 	in, err := parseInboundEmail([]byte(raw), "inbound/x")
 	require.NoError(t, err)
-	assert.Equal(t, []string{"support@augno-test.com"}, in.Recipients)
+	assert.Equal(t, []string{"support@openmrp-test.com"}, in.Recipients)
 	assert.Equal(t, "jane@theirco.com", in.From)
 	assert.Equal(t, "Jane Customer", in.FromName)
 	assert.Equal(t, "Where is my order?", in.Subject)
@@ -90,7 +90,7 @@ func TestParseInboundEmail_PlainText(t *testing.T) {
 func TestParseInboundEmail_MultipartPrefersPlain(t *testing.T) {
 	raw := strings.Join([]string{
 		"From: jane@theirco.com",
-		"To: support@augno-test.com",
+		"To: support@openmrp-test.com",
 		"Subject: multipart",
 		"Message-ID: <m1@theirco.com>",
 		"Content-Type: multipart/alternative; boundary=BOUND",
@@ -115,7 +115,7 @@ func TestParseInboundEmail_MultipartPrefersPlain(t *testing.T) {
 func TestParseInboundEmail_HTMLOnlyStripped(t *testing.T) {
 	raw := strings.Join([]string{
 		"From: jane@theirco.com",
-		"To: support@augno-test.com",
+		"To: support@openmrp-test.com",
 		"Subject: html only",
 		"Message-ID: <m2@theirco.com>",
 		"Content-Type: text/html; charset=utf-8",
@@ -135,11 +135,11 @@ func TestParseInboundEmail_HTMLOnlyStripped(t *testing.T) {
 func TestParseInboundEmail_Threading(t *testing.T) {
 	raw := strings.Join([]string{
 		"From: jane@theirco.com",
-		"To: support@augno-test.com",
+		"To: support@openmrp-test.com",
 		"Subject: Re: ticket",
 		"Message-ID: <reply@theirco.com>",
-		"In-Reply-To: <orig@augno-test.com>",
-		"References: <root@augno-test.com> <orig@augno-test.com>",
+		"In-Reply-To: <orig@openmrp-test.com>",
+		"References: <root@openmrp-test.com> <orig@openmrp-test.com>",
 		"Content-Type: text/plain",
 		"",
 		"following up",
@@ -148,8 +148,8 @@ func TestParseInboundEmail_Threading(t *testing.T) {
 
 	in, err := parseInboundEmail([]byte(raw), "inbound/r")
 	require.NoError(t, err)
-	assert.Equal(t, "orig@augno-test.com", in.InReplyTo)
-	assert.Equal(t, []string{"root@augno-test.com", "orig@augno-test.com"}, in.References)
+	assert.Equal(t, "orig@openmrp-test.com", in.InReplyTo)
+	assert.Equal(t, []string{"root@openmrp-test.com", "orig@openmrp-test.com"}, in.References)
 }
 
 func TestParseInboundEmail_CollectsAllCandidateRecipients(t *testing.T) {
@@ -158,7 +158,7 @@ func TestParseInboundEmail_CollectsAllCandidateRecipients(t *testing.T) {
 	// Delivered-To, so ingestion must see them all rather than trusting one "delivered" header.
 	raw := strings.Join([]string{
 		"From: jane@theirco.com",
-		"Delivered-To: in_01hf@inbound.augno.com",
+		"Delivered-To: in_01hf@inbound.openmrp.ai",
 		"To: support@acme.com, cc@elsewhere.com",
 		"Cc: support@acme.com", // duplicate collapses
 		"Subject: envelope recipient",
@@ -172,9 +172,9 @@ func TestParseInboundEmail_CollectsAllCandidateRecipients(t *testing.T) {
 	in, err := parseInboundEmail([]byte(raw), "inbound/d")
 	require.NoError(t, err)
 	assert.Equal(t, []string{
-		"in_01hf@inbound.augno.com", // Delivered-To first
-		"support@acme.com",          // To
-		"cc@elsewhere.com",          // To
+		"in_01hf@inbound.openmrp.ai", // Delivered-To first
+		"support@acme.com",           // To
+		"cc@elsewhere.com",           // To
 	}, in.Recipients, "delivery headers first, duplicates dropped")
 }
 

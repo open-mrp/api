@@ -12,21 +12,21 @@ import (
 	"strings"
 	"time"
 
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/services/notification-service/internal/domain"
-	"github.com/augno/api/services/notification-service/internal/ratelimit"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/audit"
-	s3 "github.com/augno/api/shared/cloud/s3"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/contracts"
-	"github.com/augno/api/shared/db"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/id"
-	"github.com/augno/api/shared/idempotency"
-	"github.com/augno/api/shared/messaging"
-	"github.com/augno/api/shared/ptrutil"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/services/notification-service/internal/domain"
+	"github.com/open-mrp/api/services/notification-service/internal/ratelimit"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/audit"
+	s3 "github.com/open-mrp/api/shared/cloud/s3"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/contracts"
+	"github.com/open-mrp/api/shared/db"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/messaging"
+	"github.com/open-mrp/api/shared/ptrutil"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var conversationSvcTracer = tracing.GetTracer("notification-service.conversation_service")
@@ -53,7 +53,7 @@ type conversationSvcImpl struct {
 	createLimiter       *ratelimit.Limiter
 	// bridgeEmailSender sends outbound mail for the email bridge (SES, in the receiving region so the reply comes from the same DKIM-verified identity). May be nil in tests/dev without AWS, in which case SendInboxReply errors out.
 	bridgeEmailSender domain.EmailSender
-	// inboundEmailDomain is the Augno-owned SES receiving subdomain (e.g. "inbound.augno.com"). When set,
+	// inboundEmailDomain is the OpenMRP-owned SES receiving subdomain (e.g. "inbound.openmrp.ai"). When set,
 	// inbound routing also resolves mail addressed to <inbox_id>@<this domain> (the per-inbox forwarding
 	// address) back to its inbox, so customers who can't repoint their apex MX can forward instead. Empty
 	// disables forwarding-address matching (direct customer-MX inboxes still resolve by address).
@@ -104,7 +104,7 @@ func (s *conversationSvcImpl) caller(ctx context.Context) (*types.Identity, stri
 		return nil, "", "", apierror.NewAuthenticationError("Authentication is required.")
 	}
 	if !identity.IsTargetAccountSet() {
-		return nil, "", "", apierror.NewAuthenticationError("The Augno-Account-ID header is required.")
+		return nil, "", "", apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required.")
 	}
 	accountID := identity.Target.AccountID
 	accountUserID, apiErr := s.repoFactory.NewNotificationRepo().ResolveAccountUserID(ctx, identity.Actor.ID, accountID)
@@ -284,7 +284,7 @@ func (s *conversationSvcImpl) ListConversations(ctx context.Context, input domai
 		return nil, tracing.Trace(span, apierror.NewAuthenticationError("Authentication is required."))
 	}
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 	accountID := identity.Target.AccountID
 
@@ -501,7 +501,7 @@ func (s *conversationSvcImpl) ContactSupport(ctx context.Context) (*domain.Conve
 		return nil, tracing.Trace(span, apierror.NewAuthenticationError("Authentication is required."))
 	}
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 	if !identity.IsRelationActor() {
 		return nil, tracing.Trace(span, apierror.NewAuthorizationError("Only customer accounts can contact support."))
@@ -585,7 +585,7 @@ func (s *conversationSvcImpl) SupportAvailability(ctx context.Context) (bool, *a
 		return false, tracing.Trace(span, apierror.NewAuthenticationError("Authentication is required."))
 	}
 	if !identity.IsTargetAccountSet() {
-		return false, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return false, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 	if !identity.IsRelationActor() {
 		return false, tracing.Trace(span, apierror.NewAuthorizationError("Only customer accounts can check support availability."))
@@ -770,7 +770,7 @@ func (s *conversationSvcImpl) resolveParticipant(ctx context.Context, conversati
 		return nil, apierror.NewAuthenticationError("Authentication is required.")
 	}
 	if !identity.IsTargetAccountSet() {
-		return nil, apierror.NewAuthenticationError("The Augno-Account-ID header is required.")
+		return nil, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required.")
 	}
 	accountID := identity.Target.AccountID
 
@@ -3412,7 +3412,7 @@ func (s *conversationSvcImpl) ListContacts(ctx context.Context, query string) ([
 		return nil, tracing.Trace(span, apierror.NewAuthenticationError("Authentication is required."))
 	}
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	if identity.IsRelationActor() {
@@ -3516,7 +3516,7 @@ func (s *conversationSvcImpl) requireMessagingAdmin(ctx context.Context, action 
 		return "", apierror.NewAuthenticationError("Authentication is required.")
 	}
 	if !identity.IsTargetAccountSet() {
-		return "", apierror.NewAuthenticationError("The Augno-Account-ID header is required.")
+		return "", apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required.")
 	}
 	if identity.IsRelationActor() {
 		return "", apierror.NewAuthorizationError("This operation is not available to customer accounts.")

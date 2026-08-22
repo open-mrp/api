@@ -3,7 +3,7 @@ package resourceloaders
 import (
 	"context"
 
-	apierror "github.com/augno/api/shared/errors"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // The notification, announcement, message_report, and messaging_block resources are only ever produced as top-level roots of their own endpoints — never referenced by id as an include target — so these loaders are never invoked. They exist solely to satisfy the resourcekit Definition's required non-nil Load.

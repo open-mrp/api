@@ -24,9 +24,9 @@ import (
 	"strings"
 	"time"
 
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/field"
 	"github.com/go-playground/validator/v10"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/field"
 	"github.com/shopspring/decimal"
 )
 

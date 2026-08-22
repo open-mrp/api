@@ -11,25 +11,25 @@ import (
 	"syscall"
 	"time"
 
-	grpcclient "github.com/augno/api/services/api-gateway/grpc-client"
-	"github.com/augno/api/services/api-gateway/internal/domain"
-	httptransport "github.com/augno/api/services/api-gateway/internal/http"
-	"github.com/augno/api/services/api-gateway/internal/infrastructure/publisher"
-	"github.com/augno/api/services/api-gateway/internal/infrastructure/repository"
-	"github.com/augno/api/services/api-gateway/internal/infrastructure/sqlc"
-	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
+	grpcclient "github.com/open-mrp/api/services/api-gateway/grpc-client"
+	"github.com/open-mrp/api/services/api-gateway/internal/domain"
+	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
+	"github.com/open-mrp/api/services/api-gateway/internal/infrastructure/publisher"
+	"github.com/open-mrp/api/services/api-gateway/internal/infrastructure/repository"
+	"github.com/open-mrp/api/services/api-gateway/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 
 	// resourceregistry's init() registers the resourcekit Definitions for every resource the include resolver handles. Blank-imported so the init runs at startup; the loaders rely on SetCoreClient being called (a few lines below).
-	_ "github.com/augno/api/services/api-gateway/internal/resourceregistry"
-	"github.com/augno/api/services/api-gateway/internal/router"
+	_ "github.com/open-mrp/api/services/api-gateway/internal/resourceregistry"
+	"github.com/open-mrp/api/services/api-gateway/internal/router"
 
 	// versiontransforms's init() registers the version.Transformer chain that downgrades responses (and upgrades requests) for callers on older API versions. Blank-imported so the init runs at startup.
-	_ "github.com/augno/api/services/api-gateway/internal/versiontransforms"
-	"github.com/augno/api/services/api-gateway/internal/ws"
-	"github.com/augno/api/shared/db"
-	"github.com/augno/api/shared/lease"
-	"github.com/augno/api/shared/messaging"
-	"github.com/augno/api/shared/tracing"
+	_ "github.com/open-mrp/api/services/api-gateway/internal/versiontransforms"
+	"github.com/open-mrp/api/services/api-gateway/internal/ws"
+	"github.com/open-mrp/api/shared/db"
+	"github.com/open-mrp/api/shared/lease"
+	"github.com/open-mrp/api/shared/messaging"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 const (

@@ -6,16 +6,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 const (
 	// #nosec G101 - These are cookie names, not hardcoded credentials
-	accessTokenCookieName = "__Secure-augno.access-token"
+	accessTokenCookieName = "__Secure-openmrp.access-token"
 	// #nosec G101 - These are cookie names, not hardcoded credentials
-	refreshTokenCookieName = "__Secure-augno.refresh-token"
+	refreshTokenCookieName = "__Secure-openmrp.refresh-token"
 
 	// Paths
 	authRoutePrefix = "/v1/auth"
@@ -42,17 +42,17 @@ func getCookieOptions(isProduction bool, path, externalHost string) cookieOption
 		Path:     path,
 	}
 
-	// First-party hosts share the wildcard domain so sessions span *.augno.com. Requests proxied from a customer's custom portal domain (external host outside augno.com) get host-only cookies instead: the browser scopes them to that domain, which both makes auth work there and isolates sessions per tenant domain. When the external host is unknown, production keeps the legacy wildcard behavior.
-	if isProduction && isAugnoHost(externalHost) {
-		opts.Domain = ".augno.com"
+	// First-party hosts share the wildcard domain so sessions span *.openmrp.ai. Requests proxied from a customer's custom portal domain (external host outside openmrp.ai) get host-only cookies instead: the browser scopes them to that domain, which both makes auth work there and isolates sessions per tenant domain. When the external host is unknown, production keeps the legacy wildcard behavior.
+	if isProduction && isOpenMRPHost(externalHost) {
+		opts.Domain = ".openmrp.ai"
 	}
 
 	return opts
 }
 
-// isAugnoHost reports whether the external request host is a first-party augno.com host. An empty host (middleware not in the chain) is treated as first-party to preserve legacy behavior.
-func isAugnoHost(host string) bool {
-	return host == "" || host == "augno.com" || strings.HasSuffix(host, ".augno.com")
+// isOpenMRPHost reports whether the external request host is a first-party openmrp.ai host. An empty host (middleware not in the chain) is treated as first-party to preserve legacy behavior.
+func isOpenMRPHost(host string) bool {
+	return host == "" || host == "openmrp.ai" || strings.HasSuffix(host, ".openmrp.ai")
 }
 
 // externalHostFromContext reads the browser-facing host captured by ExternalHostMiddleware; empty when unset.

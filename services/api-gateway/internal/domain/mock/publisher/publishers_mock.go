@@ -13,7 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	appctx "github.com/augno/api/shared/appctx"
+	appctx "github.com/open-mrp/api/shared/appctx"
 	gomock "go.uber.org/mock/gomock"
 )
 

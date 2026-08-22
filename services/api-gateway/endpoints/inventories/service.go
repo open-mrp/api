@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/augno/api/services/api-gateway/internal/domain"
-	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	apierror "github.com/augno/api/shared/errors"
-	pb "github.com/augno/api/shared/proto/core"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/api-gateway/internal/domain"
+	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	apierror "github.com/open-mrp/api/shared/errors"
+	pb "github.com/open-mrp/api/shared/proto/core"
+	"github.com/open-mrp/api/shared/tracing"
 	"google.golang.org/grpc"
 )
 

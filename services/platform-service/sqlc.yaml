@@ -11,31 +11,31 @@ sql:
         overrides:
           - column: "idempotency_key.request_params"
             go_type:
-              import: "github.com/augno/api/shared/db"
+              import: "github.com/open-mrp/api/shared/db"
               type: "NullableRawMessage"
           - column: "idempotency_key.response_body"
             go_type:
-              import: "github.com/augno/api/shared/db"
+              import: "github.com/open-mrp/api/shared/db"
               type: "NullableRawMessage"
           - column: "idempotency_key.response_headers"
             go_type:
-              import: "github.com/augno/api/shared/db"
+              import: "github.com/open-mrp/api/shared/db"
               type: "NullableRawMessage"
           - column: "request_log.query_json"
             go_type:
-              import: "github.com/augno/api/shared/db"
+              import: "github.com/open-mrp/api/shared/db"
               type: "NullableRawMessage"
           - column: "request_log.request_body_json"
             go_type:
-              import: "github.com/augno/api/shared/db"
+              import: "github.com/open-mrp/api/shared/db"
               type: "NullableRawMessage"
           - column: "request_log.response_body_json"
             go_type:
-              import: "github.com/augno/api/shared/db"
+              import: "github.com/open-mrp/api/shared/db"
               type: "NullableRawMessage"
           - column: "message_outbox.headers"
             go_type:
-              import: "github.com/augno/api/shared/db"
+              import: "github.com/open-mrp/api/shared/db"
               type: "NullableRawMessage"
           # target_account_id is nullable until the backfill + non-null migration
           # land. Pin it so the equality predicate in the actor-or-target OR scope
@@ -45,9 +45,9 @@ sql:
             go_type: "database/sql.NullString"
           - column: "audit_event.changes"
             go_type:
-              import: "github.com/augno/api/shared/db"
+              import: "github.com/open-mrp/api/shared/db"
               type: "NullableRawMessage"
           - column: "audit_event.metadata"
             go_type:
-              import: "github.com/augno/api/shared/db"
+              import: "github.com/open-mrp/api/shared/db"
               type: "NullableRawMessage"

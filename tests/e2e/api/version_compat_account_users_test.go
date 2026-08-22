@@ -77,7 +77,7 @@ func TestVersionCompat_AccountUsers_CreateAndPatch(t *testing.T) {
 	oldClient := apiClient.WithAPIVersion(preview1APIVersion)
 
 	name := uniqueName("e2e-vc-acuser")
-	email := name + "@e2e-test.augno.com"
+	email := name + "@e2e-test.openmrp.ai"
 
 	createStatus, createBody, err := oldClient.Post(accountUsersPath, map[string]any{
 		"name":    name,

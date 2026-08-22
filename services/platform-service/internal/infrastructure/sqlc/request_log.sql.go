@@ -10,7 +10,7 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/augno/api/shared/db"
+	"github.com/open-mrp/api/shared/db"
 )
 
 const createRequestLog = `-- name: CreateRequestLog :exec

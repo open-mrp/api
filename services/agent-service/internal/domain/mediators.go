@@ -3,8 +3,8 @@ package domain
 import (
 	"context"
 
-	types "github.com/augno/api/services/auth-service/pkg/types"
-	apierror "github.com/augno/api/shared/errors"
+	types "github.com/open-mrp/api/services/auth-service/pkg/types"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // IdempotencyMed provides idempotency logic for service operations.

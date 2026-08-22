@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/services/core-service/internal/scheduling"
-	"github.com/augno/api/shared/contracts"
-	pb "github.com/augno/api/shared/proto/core"
-	"github.com/augno/api/shared/safeconv"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/services/core-service/internal/scheduling"
+	"github.com/open-mrp/api/shared/contracts"
+	pb "github.com/open-mrp/api/shared/proto/core"
+	"github.com/open-mrp/api/shared/safeconv"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 

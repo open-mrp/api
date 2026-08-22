@@ -5,7 +5,7 @@ import (
 
 	"github.com/shopspring/decimal"
 
-	"github.com/augno/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
 )
 
 // countUnits is a unit group where a pair is two each and a dozen is twelve each, with "each" as the base.

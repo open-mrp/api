@@ -3,7 +3,7 @@ package resourceloaders
 import (
 	"context"
 
-	apierror "github.com/augno/api/shared/errors"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // LoadCustomerPricingFindings exists only so the finding can register its expandable sub-resources. A finding is computed per request and has no row to fetch, so it is never loaded as anyone's child.

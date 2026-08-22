@@ -3,11 +3,11 @@ package httpgroup
 import (
 	"fmt"
 
-	apikeyep "github.com/augno/api/services/api-gateway/endpoints/api-keys"
-	grpcclient "github.com/augno/api/services/api-gateway/grpc-client"
-	"github.com/augno/api/services/api-gateway/internal/middleware"
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	apikeyep "github.com/open-mrp/api/services/api-gateway/endpoints/api-keys"
+	grpcclient "github.com/open-mrp/api/services/api-gateway/grpc-client"
+	"github.com/open-mrp/api/services/api-gateway/internal/middleware"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 )
 
 type APIKeysEndpointGroup struct {

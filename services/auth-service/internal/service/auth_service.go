@@ -4,14 +4,14 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/augno/api/services/auth-service/internal/domain"
-	"github.com/augno/api/services/auth-service/internal/event"
-	"github.com/augno/api/services/auth-service/internal/infrastructure/repository"
-	"github.com/augno/api/services/auth-service/internal/infrastructure/sqlc"
-	"github.com/augno/api/services/auth-service/internal/mediator"
-	"github.com/augno/api/services/auth-service/pkg/types"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/auth-service/internal/domain"
+	"github.com/open-mrp/api/services/auth-service/internal/event"
+	"github.com/open-mrp/api/services/auth-service/internal/infrastructure/repository"
+	"github.com/open-mrp/api/services/auth-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/services/auth-service/internal/mediator"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var authSvcTracer = tracing.GetTracer("auth-service.auth_service")

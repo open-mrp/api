@@ -4,11 +4,11 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/field"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/field"
 )
 
 // Request to submit user feedback.
@@ -30,7 +30,7 @@ func (*SubmitFeedbackRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleSubmitFeedbackRequest)
 }
 
-// Submits an answer to an in-product feedback prompt for the Augno team to review.
+// Submits an answer to an in-product feedback prompt for the OpenMRP team to review.
 //
 // The submission creates no resource and cannot be read back through the API. The response carries a confirmation message suitable for display.
 type SubmitFeedbackEndpoint struct{}

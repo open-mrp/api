@@ -4,16 +4,16 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	apierror "github.com/augno/api/shared/errors"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // Request to revoke a refresh token.
 type RevokeRefreshTokenRequest struct {
-	// Refresh token to revoke, read from the `__Secure-augno.refresh-token` cookie.
-	RefreshToken string `cookie:"__Secure-augno.refresh-token" validate:"required"` // #nosec G117 - Struct field, not a hardcoded credential
+	// Refresh token to revoke, read from the `__Secure-openmrp.refresh-token` cookie.
+	RefreshToken string `cookie:"__Secure-openmrp.refresh-token" validate:"required"` // #nosec G117 - Struct field, not a hardcoded credential
 }
 
 var sampleRevokeRefreshTokenRequest = &RevokeRefreshTokenRequest{

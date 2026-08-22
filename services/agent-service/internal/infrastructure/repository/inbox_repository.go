@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	agentdb "github.com/augno/api/services/agent-service/internal/infrastructure/db"
-	"github.com/augno/api/services/agent-service/internal/infrastructure/sqlc"
-	"github.com/augno/api/shared/messaging"
-	"github.com/augno/api/shared/tracing"
+	agentdb "github.com/open-mrp/api/services/agent-service/internal/infrastructure/db"
+	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/messaging"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var inboxRepoTracer = tracing.GetTracer("agent-service.inbox_repository")

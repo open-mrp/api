@@ -3,9 +3,9 @@ package apiresource
 import (
 	"time"
 
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/timeutil"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/timeutil"
 )
 
 // A pack-list document assembled for a shipment: the shipment's packed line items and shipping cases, the parent order's header, parties, and terms, and any order lines still back-ordered.
@@ -133,7 +133,7 @@ type PackListCase struct {
 // --- Sample Data ---
 
 var (
-	samplePackListLogoURL     = "https://assets.augno.example.com/acme/logo.png?signature=abc123"
+	samplePackListLogoURL     = "https://assets.openmrp.example.com/acme/logo.png?signature=abc123"
 	samplePackListCustomerPO  = "PO-99887"
 	samplePackListCarrier     = "UPS"
 	samplePackListOption      = "Ground"

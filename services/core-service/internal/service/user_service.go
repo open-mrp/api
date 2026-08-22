@@ -7,15 +7,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/audit"
-	s3client "github.com/augno/api/shared/cloud/s3"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/idempotency"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/audit"
+	s3client "github.com/open-mrp/api/shared/cloud/s3"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var userSvcTracer = tracing.GetTracer("core-service.user_service")
@@ -146,7 +146,7 @@ func (s *userSvcImpl) BatchGetUsersByIDs(ctx context.Context, ids []string) ([]*
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	users, apiErr := s.repos.NewUserRepo().GetByIDs(ctx, identity.Target.AccountID, ids)
@@ -272,7 +272,7 @@ func (s *userSvcImpl) UploadUserPhoto(ctx context.Context, userID string, file [
 	}
 
 	if !identity.IsTargetAccountSet() {
-		return tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	accountUserRepo := s.repos.NewAccountUserRepo()

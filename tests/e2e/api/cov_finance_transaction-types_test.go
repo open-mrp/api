@@ -276,7 +276,7 @@ func TestCovFinanceTransactionTypes_NoAccountScoping(t *testing.T) {
 
 // TestCovFinanceTransactionTypes_RequiresAuth asserts the endpoint requires
 // authentication: a request with an empty bearer token (but valid
-// Augno-Version/Augno-Account headers, so the request reaches auth
+// OpenMRP-Version/OpenMRP-Account headers, so the request reaches auth
 // middleware rather than failing an earlier header check) is rejected with
 // 401 invalid_credentials.
 func TestCovFinanceTransactionTypes_RequiresAuth(t *testing.T) {

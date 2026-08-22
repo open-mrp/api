@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/augno/api/services/core-service/internal/scheduling"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/pagination"
+	"github.com/open-mrp/api/services/core-service/internal/scheduling"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/pagination"
 )
 
 // ProductionScheduleItemSetting is a merchant override for one item's planning.

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	apierror "github.com/augno/api/shared/errors"
+	apierror "github.com/open-mrp/api/shared/errors"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

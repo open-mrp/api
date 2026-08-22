@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/augno/api/services/platform-service/internal/infrastructure/sqlc"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/db"
+	"github.com/open-mrp/api/services/platform-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/db"
 )
 
 func nullStr(s string) sql.NullString {

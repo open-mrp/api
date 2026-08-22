@@ -3,7 +3,7 @@ package version
 import (
 	"slices"
 
-	"github.com/augno/api/shared/constants"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 // Transformer defines an interface for transforming requests and responses between API versions. Each transformer handles the conversion between two adjacent versions:

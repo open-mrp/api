@@ -7,14 +7,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/augno/api/services/platform-service/internal/domain"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/contracts"
-	"github.com/augno/api/shared/db"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/messaging"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/platform-service/internal/domain"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/contracts"
+	"github.com/open-mrp/api/shared/db"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/messaging"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 // Sales-order activity notifications: every user who creates or edits a sales order — or any record rooted at it (lines, shipments, invoices, picks) — implicitly follows the order, and is notified of each subsequent change made by anyone else. The audit trail doubles as the follower registry: a user's own audit events mark them a follower for everything that comes after, so nobody is notified of actions that preceded their first touch, and the creator hears about every edit from the moment the order exists.

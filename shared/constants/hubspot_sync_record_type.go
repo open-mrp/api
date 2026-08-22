@@ -1,14 +1,14 @@
 package constants
 
-// HubspotSyncRecordAugnoType is the kind of Augno record a sync record maps from.
+// HubspotSyncRecordAugnoType is the kind of OpenMRP record a sync record maps from.
 type HubspotSyncRecordAugnoType string
 
 const (
-	// HubspotSyncRecordAugnoTypeCustomer maps an Augno customer to a HubSpot company.
+	// HubspotSyncRecordAugnoTypeCustomer maps an OpenMRP customer to a HubSpot company.
 	HubspotSyncRecordAugnoTypeCustomer HubspotSyncRecordAugnoType = "customer"
-	// HubspotSyncRecordAugnoTypeContact maps an Augno customer's billing contact to a HubSpot contact.
+	// HubspotSyncRecordAugnoTypeContact maps an OpenMRP customer's billing contact to a HubSpot contact.
 	HubspotSyncRecordAugnoTypeContact HubspotSyncRecordAugnoType = "contact"
-	// HubspotSyncRecordAugnoTypeDeal maps an Augno sales order to a HubSpot deal.
+	// HubspotSyncRecordAugnoTypeDeal maps an OpenMRP sales order to a HubSpot deal.
 	HubspotSyncRecordAugnoTypeDeal HubspotSyncRecordAugnoType = "deal"
 )
 

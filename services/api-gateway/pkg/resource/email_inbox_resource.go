@@ -3,9 +3,9 @@ package apiresource
 import (
 	"time"
 
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/timeutil"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/timeutil"
 )
 
 const SampleEmailInboxID = "eminb_2s9kobr9s7tp"
@@ -27,9 +27,9 @@ type EmailInbox struct {
 	EmailDomain *EmailDomain `json:"email_domain" validate:"required" expandable:"true"`
 	// The full inbox address (e.g. `support@acme.com`).
 	Address string `json:"address" validate:"required"`
-	// A forwarding address on an Augno-owned domain that also routes to this inbox.
+	// A forwarding address on an OpenMRP-owned domain that also routes to this inbox.
 	//
-	// Use this when your domain's mail is hosted elsewhere (e.g. Google Workspace, Microsoft 365) and you cannot point its MX records at Augno: forward mail from `address` to this address instead, and it will still be threaded into a conversation.
+	// Use this when your domain's mail is hosted elsewhere (e.g. Google Workspace, Microsoft 365) and you cannot point its MX records at OpenMRP: forward mail from `address` to this address instead, and it will still be threaded into a conversation.
 	ForwardingAddress *string `json:"forwarding_address"`
 	// The display name used in the `From` header of outbound mail.
 	FromName *string `json:"from_name"`

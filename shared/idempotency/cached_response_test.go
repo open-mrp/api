@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/augno/api/shared/appctx"
-	apierror "github.com/augno/api/shared/errors"
+	"github.com/open-mrp/api/shared/appctx"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 //go:fix inline

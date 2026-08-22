@@ -14,11 +14,11 @@ func TestHandleFindAppPage_ReturnsWritableLinks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(out, "(augno:page/customer-prices)") {
+	if !strings.Contains(out, "(openmrp:page/customer-prices)") {
 		t.Errorf("no page link in result:\n%s", out)
 	}
 	// The record form matters more than the list page: an agent that just looked up a price wants to link it.
-	if !strings.Contains(out, "augno:account_price/<id>") {
+	if !strings.Contains(out, "openmrp:account_price/<id>") {
 		t.Errorf("no record-link form for the page's record type:\n%s", out)
 	}
 	if !strings.Contains(out, "Sales › Pricing") {

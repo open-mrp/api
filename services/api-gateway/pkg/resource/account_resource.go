@@ -3,9 +3,9 @@ package apiresource
 import (
 	"time"
 
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/timeutil"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/timeutil"
 )
 
 const SampleAccountID = "ac_ykxoradjoeb3"
@@ -14,7 +14,7 @@ const SampleAccountBrandingID = "abr_2rygb4fof28b"
 const SampleAccountPortalID = "apo_u2esi5el78uv"
 const SampleAccountPortalSlug = "acme"
 
-// An organization on Augno, including its branding and customer portal sub-resources.
+// An organization on OpenMRP, including its branding and customer portal sub-resources.
 //
 // Your own account and any customer or supplier account you trade with are both represented by this object.
 type Account struct {
@@ -93,8 +93,8 @@ var SampleAccountBranding = &AccountBranding{
 	Object:          constants.ObjectTypeAccountBranding,
 	SupportEmail:    new("support@acme.example.com"),
 	PhoneNumber:     new("+1-614-555-0100"),
-	LogoURL:         new("https://cdn.augno.com/branding/abr_2rygb4fof28b/logo.png"),
-	FaviconURL:      new("https://cdn.augno.com/branding/abr_2rygb4fof28b/favicon.png"),
+	LogoURL:         new("https://cdn.openmrp.ai/branding/abr_2rygb4fof28b/logo.png"),
+	FaviconURL:      new("https://cdn.openmrp.ai/branding/abr_2rygb4fof28b/favicon.png"),
 	FacebookHandle:  new("acmeinc"),
 	InstagramHandle: new("acmeinc"),
 	LinkedInHandle:  new("acme-inc"),
@@ -167,9 +167,9 @@ var SamplePublicAccount = &PublicAccount{
 	Slug:                  SampleAccountPortalSlug,
 	DefaultBillingAddress: SampleAddress,
 	SupportEmail:          new("support@acme.example.com"),
-	LogoURL:               new("https://cdn.augno.com/branding/abr_2rygb4fof28b/logo.png"),
+	LogoURL:               new("https://cdn.openmrp.ai/branding/abr_2rygb4fof28b/logo.png"),
 	PortalDomain:          new("shop.acme.com"),
-	FaviconURL:            new("https://cdn.augno.com/branding/abr_2rygb4fof28b/favicon.png"),
+	FaviconURL:            new("https://cdn.openmrp.ai/branding/abr_2rygb4fof28b/favicon.png"),
 }
 
 func (*PublicAccount) SchemaExample() any {

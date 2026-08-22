@@ -3,9 +3,9 @@ package token
 import (
 	"context"
 
-	"github.com/augno/api/shared/crypto"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/shared/crypto"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var opaqueTokenTracer = tracing.GetTracer("auth-service.opaque_token")

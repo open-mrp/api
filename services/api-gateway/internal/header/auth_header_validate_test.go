@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/augno/api/services/api-gateway/internal/testutil"
-	apierror "github.com/augno/api/shared/errors"
+	"github.com/open-mrp/api/services/api-gateway/internal/testutil"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 func TestValidateAndExtractAuthHeader(t *testing.T) {
@@ -308,8 +308,8 @@ func TestValidateBasicAuthHeader(t *testing.T) {
 		},
 		{
 			name:          "valid basic auth with complex token",
-			authHeader:    "Basic " + base64.StdEncoding.EncodeToString([]byte("aug_sk_test_12345:")),
-			expectedToken: "aug_sk_test_12345",
+			authHeader:    "Basic " + base64.StdEncoding.EncodeToString([]byte("mrp_sk_test_12345:")),
+			expectedToken: "mrp_sk_test_12345",
 			hasError:      false,
 		},
 		{

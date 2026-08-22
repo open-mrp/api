@@ -52,7 +52,7 @@ const covMessagingEmailInboxesPath = "/v1/messaging/email-inboxes"
 func covMessagingEmailInboxCreateBody(localPart string) map[string]any {
 	return map[string]any{
 		"email_domain_id": SeedEmailDomainID,
-		"address":         localPart + "@mail.e2e.augno.com",
+		"address":         localPart + "@mail.e2e.openmrp.ai",
 	}
 }
 
@@ -71,7 +71,7 @@ func TestCovMessagingEmailInboxes_CRUD(t *testing.T) {
 	id := jsonField(created, "id")
 	require.NotEmpty(t, id)
 	assertObjectField(t, created, "email_inbox")
-	assert.Equal(t, addr+"@mail.e2e.augno.com", jsonField(created, "address"))
+	assert.Equal(t, addr+"@mail.e2e.openmrp.ai", jsonField(created, "address"))
 	assert.Equal(t, "active", jsonField(created, "status"))
 
 	// GET
@@ -80,7 +80,7 @@ func TestCovMessagingEmailInboxes_CRUD(t *testing.T) {
 	requireStatus(t, 200, getStatus, getBody)
 	got := parseJSON(getBody)
 	assert.Equal(t, id, jsonField(got, "id"))
-	assert.Equal(t, addr+"@mail.e2e.augno.com", jsonField(got, "address"))
+	assert.Equal(t, addr+"@mail.e2e.openmrp.ai", jsonField(got, "address"))
 
 	// UPDATE
 	patchStatus, patchBody, err := apiClient.Patch(covMessagingEmailInboxesPath+"/"+id, map[string]any{
@@ -111,7 +111,7 @@ func TestCovMessagingEmailInboxes_CreateAndUpdateAllFields(t *testing.T) {
 
 	createStatus, createBody, err := apiClient.Post(covMessagingEmailInboxesPath+"?include=email_domain,agent_config", map[string]any{
 		"email_domain_id":        SeedEmailDomainID,
-		"address":                addr + "@mail.e2e.augno.com",
+		"address":                addr + "@mail.e2e.openmrp.ai",
 		"from_name":              "E2E Support Bot",
 		"agent_config_id":        SeedAgentDefinitionID,
 		"agent_trigger_policy":   "mention",
@@ -129,7 +129,7 @@ func TestCovMessagingEmailInboxes_CreateAndUpdateAllFields(t *testing.T) {
 	assertIDFormat(t, id, "emix")
 	assertObjectField(t, got, "email_inbox")
 	assert.Equal(t, "active", jsonField(got, "status"))
-	assert.Equal(t, addr+"@mail.e2e.augno.com", jsonField(got, "address"))
+	assert.Equal(t, addr+"@mail.e2e.openmrp.ai", jsonField(got, "address"))
 	assert.Equal(t, "E2E Support Bot", jsonField(got, "from_name"))
 	assert.Equal(t, "mention", jsonField(got, "agent_trigger_policy"))
 	assert.ElementsMatch(t, []string{"forecast", "reorder"}, jsonStringSlice(got, "agent_trigger_keywords"))
@@ -140,7 +140,7 @@ func TestCovMessagingEmailInboxes_CreateAndUpdateAllFields(t *testing.T) {
 	require.NotNil(t, domain, "email_domain must be populated with ?include=email_domain")
 	assert.Equal(t, SeedEmailDomainID, jsonField(domain, "id"))
 	assert.Equal(t, "email_domain", jsonField(domain, "object"))
-	assert.Equal(t, "mail.e2e.augno.com", jsonField(domain, "domain"))
+	assert.Equal(t, "mail.e2e.openmrp.ai", jsonField(domain, "domain"))
 	assert.Equal(t, "verified", jsonField(domain, "status"))
 
 	agentConfig := jsonObject(got, "agent_config")
@@ -165,7 +165,7 @@ func TestCovMessagingEmailInboxes_CreateAndUpdateAllFields(t *testing.T) {
 	assert.Equal(t, "Updated Support Bot", jsonField(updated, "from_name"))
 	assert.Equal(t, "keyword", jsonField(updated, "agent_trigger_policy"))
 	assert.Equal(t, []string{"escalate"}, jsonStringSlice(updated, "agent_trigger_keywords"))
-	assert.Equal(t, addr+"@mail.e2e.augno.com", jsonField(updated, "address"), "address is immutable via update")
+	assert.Equal(t, addr+"@mail.e2e.openmrp.ai", jsonField(updated, "address"), "address is immutable via update")
 	assertValidTimestamp(t, jsonField(updated, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(updated, "updated_at"), "updated_at")
 
@@ -241,7 +241,7 @@ func TestCovMessagingEmailInboxes_OmittedFields(t *testing.T) {
 		addr := uniqueName("e2e-eminb-pres")
 		createStatus, createBody, err := apiClient.Post(covMessagingEmailInboxesPath, map[string]any{
 			"email_domain_id":        SeedEmailDomainID,
-			"address":                addr + "@mail.e2e.augno.com",
+			"address":                addr + "@mail.e2e.openmrp.ai",
 			"from_name":              "Original Name",
 			"agent_config_id":        SeedAgentDefinitionID,
 			"agent_trigger_policy":   "mention",
@@ -389,7 +389,7 @@ func TestCovMessagingEmailInboxes_IncludeEmailDomain(t *testing.T) {
 	require.NotNil(t, domain, "email_domain should be present with ?include=email_domain")
 	assert.Equal(t, SeedEmailDomainID, jsonField(domain, "id"))
 	assert.Equal(t, "email_domain", jsonField(domain, "object"))
-	assert.Equal(t, "mail.e2e.augno.com", jsonField(domain, "domain"))
+	assert.Equal(t, "mail.e2e.openmrp.ai", jsonField(domain, "domain"))
 	assert.Equal(t, "verified", jsonField(domain, "status"))
 	assert.NotEmpty(t, jsonStringSlice(domain, "dkim_tokens"))
 	assertValidTimestamp(t, jsonField(domain, "verified_at"), "verified_at")
@@ -674,7 +674,7 @@ func TestCovMessagingEmailInboxes_UpdateValidation_CannotClearFromName(t *testin
 	t.Parallel()
 	created := createAndCleanup(t, covMessagingEmailInboxesPath, map[string]any{
 		"email_domain_id": SeedEmailDomainID,
-		"address":         uniqueName("e2e-eminb-clearfn") + "@mail.e2e.augno.com",
+		"address":         uniqueName("e2e-eminb-clearfn") + "@mail.e2e.openmrp.ai",
 		"from_name":       "Has A Name",
 	})
 	id := jsonField(created, "id")
@@ -739,7 +739,7 @@ func TestCovMessagingEmailInboxes_TenantIsolation(t *testing.T) {
 // --- 10. Auth ---
 
 // TestCovMessagingEmailInboxes_Unauthenticated asserts an empty bearer token
-// (but valid Augno-Version/Augno-Account headers) is rejected 401
+// (but valid OpenMRP-Version/OpenMRP-Account headers) is rejected 401
 // invalid_credentials on all five operations, matching the pattern used
 // elsewhere (e.g. TestCovMessagingBlocks_Unauthenticated).
 func TestCovMessagingEmailInboxes_Unauthenticated(t *testing.T) {

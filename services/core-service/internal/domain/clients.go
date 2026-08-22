@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	apierror "github.com/augno/api/shared/errors"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // IncompleteRegistrationSession is the subset of a pending registration session returned to the tenancy response.
@@ -88,7 +88,7 @@ type HubspotDeal struct {
 	// PipelineID and StageID select the deal's pipeline and stage (e.g. Closed Won).
 	PipelineID string
 	StageID    string
-	// SalesOrderID is the Augno order id, stored on the deal's augno_sales_order_id property for idempotent upserts.
+	// SalesOrderID is the OpenMRP order id, stored on the deal's augno_sales_order_id property for idempotent upserts.
 	SalesOrderID string
 }
 

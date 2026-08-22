@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"strconv"
 
-	agentdb "github.com/augno/api/services/agent-service/internal/infrastructure/db"
-	"github.com/augno/api/services/agent-service/internal/infrastructure/sqlc"
-	"github.com/augno/api/shared/contracts"
-	"github.com/augno/api/shared/id"
-	"github.com/augno/api/shared/messaging"
-	"github.com/augno/api/shared/tracing"
 	"github.com/jackc/pgx/v5/pgxpool"
+	agentdb "github.com/open-mrp/api/services/agent-service/internal/infrastructure/db"
+	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/contracts"
+	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/messaging"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var outboxRepoTracer = tracing.GetTracer("agent-service.outbox_repository")

@@ -4,10 +4,10 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/services/auth-service/pkg/types"
-	apierror "github.com/augno/api/shared/errors"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // Request to delete a custom agent definition.
@@ -18,7 +18,7 @@ type DeleteAgentRequest struct {
 
 // Deletes a custom agent.
 //
-// The agent is withdrawn from the API: it stops appearing in listings, no longer resolves by ID, and can no longer be run or modified. Runs it already produced are kept. Augno's `system` agents cannot be deleted — disable one for your account with the Update Agent Status endpoint instead.
+// The agent is withdrawn from the API: it stops appearing in listings, no longer resolves by ID, and can no longer be run or modified. Runs it already produced are kept. OpenMRP's `system` agents cannot be deleted — disable one for your account with the Update Agent Status endpoint instead.
 type DeleteAgentEndpoint struct{}
 
 func (e *DeleteAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteAgentRequest, *apiresource.EmptyResource] {

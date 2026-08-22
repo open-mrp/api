@@ -3,7 +3,7 @@ package id
 import (
 	"fmt"
 
-	apierror "github.com/augno/api/shared/errors"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // GenID generates a new type-specific ID with the given prefix and length. If length is nil, it will default to 12.

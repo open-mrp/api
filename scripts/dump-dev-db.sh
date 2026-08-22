@@ -22,7 +22,7 @@ print_error() {
 HOST="127.0.0.1"
 PORT="3306"
 USERNAME="root"
-DATABASE="augno"
+DATABASE="openmrp"
 export MYSQL_PWD="Testing123!"
 
 print_status "Preparing to generate Goose migration (db/migrations/0001_initial.sql)..."

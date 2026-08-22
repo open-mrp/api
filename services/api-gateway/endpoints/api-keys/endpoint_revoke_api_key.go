@@ -4,10 +4,10 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // Request to revoke an API key.
@@ -16,7 +16,7 @@ type RevokeAPIKeyRequest struct {
 	APIKeyID string `path:"id" validate:"required"`
 }
 
-// Revokes an [API key](https://docs.augno.com/api/api-keys).
+// Revokes an [API key](https://docs.openmrp.ai/api/api-keys).
 //
 // Revocation takes effect immediately and cannot be undone; any request still presenting the key is rejected. The key record is kept, so it stays visible in the key list with a `revoked` status. To replace a key without an interruption in access, use Rotate API Key instead.
 type RevokeAPIKeyEndpoint struct{}

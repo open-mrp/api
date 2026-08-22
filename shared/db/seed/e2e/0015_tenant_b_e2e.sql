@@ -27,10 +27,10 @@ INSERT IGNORE INTO account_user (id, user_id, role_id, account_id, last_used_at,
     ('acus_tenant2_e2e_admin', 'us_1wjfmmbwg8l7', 'rl_tenant2_e2e_admin00', 'ac_tenant2_e2e_isolati', NOW(), NOW(), NOW());
 
 -- Tenant B API key
--- Full key: aug_sk_prod_TenantBKeyForE2eTests1_TenantBSecretForE2eIsolationTestingPurpose12didR71
+-- Full key: mrp_sk_prod_TenantBKeyForE2eTests1_TenantBSecretForE2eIsolationTestingPurpose12didR71
 -- HMAC-SHA256(pepper='pepper', secret='TenantBSecretForE2eIsolationTestingPurpose12')
 INSERT IGNORE INTO api_key (type_id, key_id, name, secret_hash, redacted_value, owner_account_id, role_id, created_at, updated_at) VALUES
-    ('apky_tenant2_e2e_key00', 'TenantBKeyForE2eTests1', 'Tenant B E2E Key', UNHEX('9928395362577e4c62f4f93f116de080502392523d9de7140ac7b3c5e7d66ba8'), 'aug_sk_prod_****dR71', 'ac_tenant2_e2e_isolati', 'rl_tenant2_e2e_admin00', NOW(), NOW());
+    ('apky_tenant2_e2e_key00', 'TenantBKeyForE2eTests1', 'Tenant B E2E Key', UNHEX('9928395362577e4c62f4f93f116de080502392523d9de7140ac7b3c5e7d66ba8'), 'mrp_sk_prod_****dR71', 'ac_tenant2_e2e_isolati', 'rl_tenant2_e2e_admin00', NOW(), NOW());
 
 -- Tenant B sys properties (required for auto-number generation)
 INSERT IGNORE INTO sys_property (id, sys_property_type_code, value, account_id, created_at, updated_at) VALUES

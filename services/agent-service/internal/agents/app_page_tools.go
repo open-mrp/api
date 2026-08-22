@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/augno/api/services/agent-service/internal/domain"
-	"github.com/augno/api/shared/appnav"
+	"github.com/open-mrp/api/services/agent-service/internal/domain"
+	"github.com/open-mrp/api/shared/appnav"
 )
 
 // FindAppPageSlug is the meta-tool a chat agent uses to find the app pages it can link to. Like
@@ -57,9 +57,9 @@ func HandleFindAppPage(_ context.Context, input json.RawMessage, _ *domain.Handl
 		if loc := breadcrumb(p); loc != "" {
 			fmt.Fprintf(&b, " (%s)", loc)
 		}
-		fmt.Fprintf(&b, "\n  page link: [%s](augno:page/%s)\n", p.Title, p.Key)
+		fmt.Fprintf(&b, "\n  page link: [%s](openmrp:page/%s)\n", p.Title, p.Key)
 		if p.RecordType != "" {
-			fmt.Fprintf(&b, "  link one %s record: [<its number or name>](augno:%s/<id>)\n", strings.ReplaceAll(p.RecordType, "_", " "), p.RecordType)
+			fmt.Fprintf(&b, "  link one %s record: [<its number or name>](openmrp:%s/<id>)\n", strings.ReplaceAll(p.RecordType, "_", " "), p.RecordType)
 		}
 	}
 	return b.String(), nil

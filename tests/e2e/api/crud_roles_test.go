@@ -480,7 +480,7 @@ func TestRoles_DeleteBlockedWhenUsersAssigned(t *testing.T) {
 	roleID := jsonField(parseJSON(createRoleBody), "id")
 
 	userName := uniqueName("e2e-role-assigned-user")
-	userEmail := userName + "@e2e-test.augno.com"
+	userEmail := userName + "@e2e-test.openmrp.ai"
 	createUserStatus, createUserBody, err := apiClient.Post(accountUsersPath, map[string]any{
 		"name":    userName,
 		"email":   userEmail,
@@ -512,7 +512,7 @@ func TestRoles_DeleteSucceedsAfterUsersUnassigned(t *testing.T) {
 	roleID := jsonField(parseJSON(createRoleBody), "id")
 
 	userName := uniqueName("e2e-role-unassign-user")
-	userEmail := userName + "@e2e-test.augno.com"
+	userEmail := userName + "@e2e-test.openmrp.ai"
 	createUserStatus, createUserBody, err := apiClient.Post(accountUsersPath, map[string]any{
 		"name":    userName,
 		"email":   userEmail,

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/augno/api/shared/constants"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 // TestBuiltinTools_HaveRegisteredHandlers ensures every built-in tool in the code catalog has a runtime handler registered in RegisterTools. Without this, an agent could be granted a tool slug that the runner cannot execute.

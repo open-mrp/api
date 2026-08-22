@@ -13,11 +13,11 @@ import (
 	context "context"
 	reflect "reflect"
 
-	apikey "github.com/augno/api/services/auth-service/internal/apikey"
-	domain "github.com/augno/api/services/auth-service/internal/domain"
-	types "github.com/augno/api/services/auth-service/pkg/types"
-	constants "github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
+	apikey "github.com/open-mrp/api/services/auth-service/internal/apikey"
+	domain "github.com/open-mrp/api/services/auth-service/internal/domain"
+	types "github.com/open-mrp/api/services/auth-service/pkg/types"
+	constants "github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
 	gomock "go.uber.org/mock/gomock"
 )
 

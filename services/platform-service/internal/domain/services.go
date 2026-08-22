@@ -3,7 +3,7 @@ package domain
 import (
 	"context"
 
-	apierror "github.com/augno/api/shared/errors"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 type LoggingSvc interface {

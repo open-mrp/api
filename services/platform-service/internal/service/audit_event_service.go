@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	authtypes "github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/services/platform-service/internal/domain"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/messaging"
-	"github.com/augno/api/shared/tracing"
+	authtypes "github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/services/platform-service/internal/domain"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/messaging"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var auditEventSvcTracer = tracing.GetTracer("platform-service.audit_event_service")
@@ -69,7 +69,7 @@ func (s *auditEventSvcImpl) BatchGetResourceCreators(ctx context.Context, resour
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account header is required."))
 	}
 
 	if len(resourceIDs) == 0 {
@@ -95,7 +95,7 @@ func (s *auditEventSvcImpl) GetAuditEvent(ctx context.Context, id string, includ
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account header is required."))
 	}
 
 	return s.auditEventRepo.FindByID(ctx, id, identity.Target.AccountID, includes)
@@ -117,7 +117,7 @@ func (s *auditEventSvcImpl) ListAuditEvents(ctx context.Context, filter *domain.
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account header is required."))
 	}
 
 	return s.auditEventRepo.List(ctx, identity.Target.AccountID, filter, includes)

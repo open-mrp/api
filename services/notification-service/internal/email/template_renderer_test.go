@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/augno/api/shared/constants"
+	"github.com/open-mrp/api/shared/constants"
 
 	"github.com/stretchr/testify/require"
 )

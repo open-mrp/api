@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/augno/api/services/agent-service/internal/domain"
+	"github.com/open-mrp/api/services/agent-service/internal/domain"
 )
 
 var docsHTTPClient = &http.Client{Timeout: 15 * time.Second}
@@ -22,8 +22,8 @@ func HandleReadDoc(_ context.Context, input json.RawMessage, _ *domain.HandlerRu
 		return "", fmt.Errorf("invalid read_doc input: %w", err)
 	}
 
-	if !strings.HasPrefix(params.URL, "https://docs.augno.com/") {
-		return "", fmt.Errorf("read_doc: URL must be from docs.augno.com")
+	if !strings.HasPrefix(params.URL, "https://docs.openmrp.ai/") {
+		return "", fmt.Errorf("read_doc: URL must be from docs.openmrp.ai")
 	}
 
 	resp, err := docsHTTPClient.Get(params.URL)

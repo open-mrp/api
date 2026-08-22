@@ -4,15 +4,15 @@ import (
 	"regexp"
 	"strings"
 
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 )
 
-// augnoIDPattern matches primary-key style docs IDs: short prefix + nano segment (length >= 12).
-var augnoIDPattern = regexp.MustCompile(`^[a-z]{2,15}_[0-9a-z]{12,}$`)
+// openMRPIDPattern matches primary-key style docs IDs: short prefix + nano segment (length >= 12).
+var openMRPIDPattern = regexp.MustCompile(`^[a-z]{2,15}_[0-9a-z]{12,}$`)
 
-// isAugnoLikeDocID reports whether s looks like an Augno type id for docs validation. The nano segment must contain at least one digit so strings like "order_acknowledgement" are excluded.
-func isAugnoLikeDocID(s string) bool {
-	if !augnoIDPattern.MatchString(s) {
+// isOpenMRPLikeDocID reports whether s looks like an OpenMRP type id for docs validation. The nano segment must contain at least one digit so strings like "order_acknowledgement" are excluded.
+func isOpenMRPLikeDocID(s string) bool {
+	if !openMRPIDPattern.MatchString(s) {
 		return false
 	}
 	i := strings.IndexByte(s, '_')
@@ -27,7 +27,7 @@ func isAugnoLikeDocID(s string) bool {
 	return false
 }
 
-// documentedAugnoIDs is every Sample*ID used in OpenAPI examples that matches our type-id shape. Strings in request/response examples matching isAugnoLikeDocID must appear here or the completeness test fails.
+// documentedAugnoIDs is every Sample*ID used in OpenAPI examples that matches our type-id shape. Strings in request/response examples matching isOpenMRPLikeDocID must appear here or the completeness test fails.
 func documentedAugnoIDs() map[string]struct{} {
 	m := map[string]struct{}{
 		apiresource.SampleAccountID:                           {},

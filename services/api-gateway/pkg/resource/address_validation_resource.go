@@ -1,8 +1,8 @@
 package apiresource
 
 import (
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	"github.com/augno/api/shared/constants"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 // A candidate address returned by address autocomplete.
@@ -11,7 +11,7 @@ import (
 type AddressSuggestion struct {
 	// Identifier of the suggested place.
 	//
-	// Pass this value as the `id` path parameter of the address details endpoint to retrieve the full parsed address. It is issued by the underlying address provider rather than by Augno, so it is not a durable Augno resource ID.
+	// Pass this value as the `id` path parameter of the address details endpoint to retrieve the full parsed address. It is issued by the underlying address provider rather than by OpenMRP, so it is not a durable OpenMRP resource ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=address_suggestion"`

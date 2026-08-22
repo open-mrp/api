@@ -3,8 +3,8 @@ package types
 import (
 	"testing"
 
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 func TestCheckHasUserActor(t *testing.T) {

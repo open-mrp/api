@@ -11,13 +11,13 @@ import (
 	"strings"
 	"testing"
 
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/field"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/field"
 
-	invoiceep "github.com/augno/api/services/api-gateway/endpoints/invoices"
+	invoiceep "github.com/open-mrp/api/services/api-gateway/endpoints/invoices"
 )
 
 func TestMain(m *testing.M) {
@@ -503,8 +503,8 @@ func TestGenerate_FullAssembly(t *testing.T) {
 	if _, ok := schemesAny["BearerAuth"]; !ok {
 		t.Error("expected BearerAuth security scheme")
 	}
-	if _, ok := schemesAny["AugnoApiKey"]; ok {
-		t.Error("did not expect AugnoApiKey security scheme")
+	if _, ok := schemesAny["OpenMRPApiKey"]; ok {
+		t.Error("did not expect OpenMRPApiKey security scheme")
 	}
 	if sec, ok := spec["security"].([]any); !ok || len(sec) != 2 {
 		t.Fatalf("expected top-level security with 2 alternatives, got %v", spec["security"])

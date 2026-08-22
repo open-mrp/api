@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"time"
 
-	grpcclient "github.com/augno/api/services/api-gateway/grpc-client"
-	"github.com/augno/api/services/api-gateway/internal/cookie"
-	"github.com/augno/api/shared/contracts"
-	pb "github.com/augno/api/shared/proto/auth"
+	grpcclient "github.com/open-mrp/api/services/api-gateway/grpc-client"
+	"github.com/open-mrp/api/services/api-gateway/internal/cookie"
+	"github.com/open-mrp/api/shared/contracts"
+	pb "github.com/open-mrp/api/shared/proto/auth"
 )
 
 // NewTicketHandler returns an http.HandlerFunc that mints short-lived WebSocket tickets for cookie-authenticated callers. Custom portal domains reach it through the frontend's same-origin API proxy (so the auth cookie is present), then open the WebSocket cross-origin to the API host with the ticket instead of the cookie. When ticketSecret is empty the endpoint is disabled.

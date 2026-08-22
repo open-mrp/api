@@ -6,15 +6,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/augno/api/services/auth-service/internal/domain"
-	"github.com/augno/api/services/auth-service/internal/event"
-	"github.com/augno/api/services/auth-service/internal/token"
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/id"
-	"github.com/augno/api/shared/messaging"
-	tracing "github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/auth-service/internal/domain"
+	"github.com/open-mrp/api/services/auth-service/internal/event"
+	"github.com/open-mrp/api/services/auth-service/internal/token"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/messaging"
+	tracing "github.com/open-mrp/api/shared/tracing"
 
 	"go.opentelemetry.io/otel/trace"
 )
@@ -268,7 +268,7 @@ func (s *userMedImpl) ValidateCredential(ctx context.Context, authToken string, 
 	}
 
 	// Otherwise, validate it as a user credential.
-	// User requests always include Augno-Actor-Account to identify the user's own account. When it matches the target the user is internal; when it differs the user is accessing cross-account (customer/supplier).
+	// User requests always include OpenMRP-Actor-Account to identify the user's own account. When it matches the target the user is internal; when it differs the user is accessing cross-account (customer/supplier).
 	if actorAccountID != nil {
 		// Validate the user is a member of their actor account.
 		identity, apiErr := s.validateUserCredential(ctx, span, authToken, actorAccountID, true)
@@ -493,7 +493,7 @@ func (s *userMedImpl) validateUserCredential(ctx context.Context, span trace.Spa
 		return nil, err
 	}
 
-	// When requireAccountUser is set (e.g. Augno-Actor-Account header), the user must be an account member.
+	// When requireAccountUser is set (e.g. OpenMRP-Actor-Account header), the user must be an account member.
 	if requireAccountUser && !hasAccess {
 		return nil, tracing.Trace(span, apierror.NewAuthenticationError(ErrActorAccountRequiresMember))
 	}

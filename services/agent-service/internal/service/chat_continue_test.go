@@ -5,14 +5,14 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/augno/api/services/agent-service/internal/domain"
-	factorymock "github.com/augno/api/services/agent-service/internal/domain/mock/factory"
-	repositorymock "github.com/augno/api/services/agent-service/internal/domain/mock/repository"
-	agentdb "github.com/augno/api/services/agent-service/internal/infrastructure/db"
-	"github.com/augno/api/services/agent-service/internal/infrastructure/sqlc"
-	"github.com/augno/api/shared/contracts"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/messaging"
+	"github.com/open-mrp/api/services/agent-service/internal/domain"
+	factorymock "github.com/open-mrp/api/services/agent-service/internal/domain/mock/factory"
+	repositorymock "github.com/open-mrp/api/services/agent-service/internal/domain/mock/repository"
+	agentdb "github.com/open-mrp/api/services/agent-service/internal/infrastructure/db"
+	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/contracts"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/messaging"
 	"go.uber.org/mock/gomock"
 )
 

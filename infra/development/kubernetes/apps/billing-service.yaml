@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: billing-service
-          image: augno-api/billing-service
+          image: openmrp-api/billing-service
           ports:
             - containerPort: 9092
           readinessProbe:

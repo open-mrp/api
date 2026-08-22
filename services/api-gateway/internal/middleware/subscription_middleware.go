@@ -4,10 +4,10 @@ import (
 	"net/http"
 	"strings"
 
-	httptransport "github.com/augno/api/services/api-gateway/internal/http"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
+	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 func SubscriptionMiddleware() func(http.HandlerFunc) http.HandlerFunc {

@@ -3,10 +3,10 @@ package apiresource
 import (
 	"time"
 
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/timeutil"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/timeutil"
 )
 
 const SampleJobID = "jb_grz7cdpnz8jr"
@@ -128,7 +128,7 @@ func (*JobResult) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleJobResult)
 }
 
-var SampleJobExport = NewJobExport("https://files.augno.com/exports/" + SampleAccountID + "/production_runs/" + SampleJobID + "/production_runs_20260817.xlsx?X-Amz-Signature=example")
+var SampleJobExport = NewJobExport("https://files.openmrp.ai/exports/" + SampleAccountID + "/production_runs/" + SampleJobID + "/production_runs_20260817.xlsx?X-Amz-Signature=example")
 
 func (*JobExport) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleJobExport)

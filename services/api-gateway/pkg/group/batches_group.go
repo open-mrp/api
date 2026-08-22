@@ -3,10 +3,10 @@ package httpgroup
 import (
 	"fmt"
 
-	batchep "github.com/augno/api/services/api-gateway/endpoints/batches"
-	grpcclient "github.com/augno/api/services/api-gateway/grpc-client"
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	batchep "github.com/open-mrp/api/services/api-gateway/endpoints/batches"
+	grpcclient "github.com/open-mrp/api/services/api-gateway/grpc-client"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 )
 
 type BatchesEndpointGroup struct {

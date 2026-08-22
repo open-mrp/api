@@ -5,9 +5,9 @@ import (
 	"errors"
 	"time"
 
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/sanitize"
-	"github.com/augno/api/shared/tracing"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/sanitize"
+	"github.com/open-mrp/api/shared/tracing"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -38,7 +38,7 @@ var (
 	ErrJWT = errors.New("JWT error")
 )
 
-const defaultJWTIssuer = "https://augno.com"
+const defaultJWTIssuer = "https://openmrp.ai"
 
 var jwtTracer = tracing.GetTracer("auth-service.jwt")
 

@@ -5,15 +5,15 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/audit"
-	s3client "github.com/augno/api/shared/cloud/s3"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/idempotency"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/audit"
+	s3client "github.com/open-mrp/api/shared/cloud/s3"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var shippingCaseSvcTracer = tracing.GetTracer("core-service.shipping_case_service")
@@ -109,7 +109,7 @@ func (s *shippingCaseSvcImpl) GetShippingCase(ctx context.Context, accountID, sh
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	repo := s.repos.NewShippingCaseRepo()
@@ -136,7 +136,7 @@ func (s *shippingCaseSvcImpl) UpdateShippingCase(ctx context.Context, params dom
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	params.AccountID = identity.Target.AccountID
@@ -364,7 +364,7 @@ func (s *shippingCaseSvcImpl) DeleteShippingCase(ctx context.Context, accountID,
 		return tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
-		return tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	repo := s.repos.NewShippingCaseRepo()
@@ -437,7 +437,7 @@ func (s *shippingCaseSvcImpl) GetShippingCaseLabel(ctx context.Context, accountI
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	repo := s.repos.NewShippingCaseRepo()
@@ -449,7 +449,7 @@ func (s *shippingCaseSvcImpl) GetShippingCaseLabel(ctx context.Context, accountI
 	s3Key := shippingLabelS3Key(identity.Target.AccountID, number)
 
 	// Reads a label core-service itself uploads on ship and deletes on void, so the AugnoProdCoreS3Access
-	// IRSA policy (augno/infra: production/terraform/core.tf) must keep Get/Put/Delete on the shipping-labels bucket.
+	// IRSA policy (open-mrp/infra: production/terraform/core.tf) must keep Get/Put/Delete on the shipping-labels bucket.
 	exists, apiErr := s.s3Client.FileExists(ctx, s.shippingLabelsBucket, s3Key)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)

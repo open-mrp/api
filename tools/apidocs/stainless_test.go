@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"testing"
 
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	"gopkg.in/yaml.v3"
 )
 
@@ -272,7 +272,7 @@ func TestRewriteStainlessResourcesReplacesOnlyResourcesNode(t *testing.T) {
 
 	dir := t.TempDir()
 	path := filepath.Join(dir, "stainless.yml")
-	input := []byte("edition: \"2026-02-23\"\norganization:\n  name: augno\nresources:\n  old:\n    methods:\n      list: get /old\n")
+	input := []byte("edition: \"2026-02-23\"\norganization:\n  name: openmrp\nresources:\n  old:\n    methods:\n      list: get /old\n")
 	if err := os.WriteFile(path, input, 0600); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
@@ -321,7 +321,7 @@ func TestSyncVersionHeaderValueUpdatesOnlyVersionHeader(t *testing.T) {
 	input := []byte("edition: \"2026-02-23\"\n" +
 		"client_settings:\n" +
 		"  default_headers:\n" +
-		"    Augno-Version:\n" +
+		"    OpenMRP-Version:\n" +
 		"      value: \"0.0.0-stale\"\n" +
 		"      version_header: true\n" +
 		"    X-Static:\n" +
@@ -344,10 +344,10 @@ func TestSyncVersionHeaderValueUpdatesOnlyVersionHeader(t *testing.T) {
 	}
 
 	headers := doc["client_settings"].(map[string]any)["default_headers"].(map[string]any)
-	if got := headers["Augno-Version"].(map[string]any)["value"]; got != "1.2.3" {
-		t.Fatalf("Augno-Version value = %v; want 1.2.3", got)
+	if got := headers["OpenMRP-Version"].(map[string]any)["value"]; got != "1.2.3" {
+		t.Fatalf("OpenMRP-Version value = %v; want 1.2.3", got)
 	}
-	if got := headers["Augno-Version"].(map[string]any)["version_header"]; got != true {
+	if got := headers["OpenMRP-Version"].(map[string]any)["version_header"]; got != true {
 		t.Fatalf("version_header marker = %v; want true (must be preserved)", got)
 	}
 	// A header without the version_header marker must be left untouched.

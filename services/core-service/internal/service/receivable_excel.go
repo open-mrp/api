@@ -8,7 +8,7 @@ import (
 
 	"github.com/xuri/excelize/v2"
 
-	"github.com/augno/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
 )
 
 const (

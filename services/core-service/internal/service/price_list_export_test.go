@@ -8,10 +8,10 @@ import (
 
 	"go.uber.org/mock/gomock"
 
-	"github.com/augno/api/services/core-service/internal/domain"
-	factorymock "github.com/augno/api/services/core-service/internal/domain/mock/factory"
-	repositorymock "github.com/augno/api/services/core-service/internal/domain/mock/repository"
-	apierror "github.com/augno/api/shared/errors"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
+	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // The browser names a downloaded export from the last segment of its object key, so an export that is not a spreadsheet has to say so in the key. Getting this wrong ships a PDF named .xlsx, which refuses to open.

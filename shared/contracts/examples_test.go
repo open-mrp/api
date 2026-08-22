@@ -1,7 +1,7 @@
 package contracts_test
 
 import (
-	"github.com/augno/api/shared/contracts"
+	"github.com/open-mrp/api/shared/contracts"
 )
 
 // ExampleNewGRPCClientConn shows the minimal configuration for dialing another

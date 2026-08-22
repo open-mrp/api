@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Rebuild @augno/internal-sdk from the CURRENT api code and publish it to the local
+# Rebuild @openmrp/internal-sdk from the CURRENT api code and publish it to the local
 # yalc store, then (by default) link it into dashboard for local testing.
 #
 # This lives in the api repo on purpose: regenerating the SDK with `stlc` overwrites
@@ -16,13 +16,13 @@ set -euo pipefail
 
 API_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-# internal-sdk and dashboard are private sibling checkouts, so this only works from inside the Augno
+# internal-sdk and dashboard are private sibling checkouts, so this only works from inside the OpenMRP
 # monorepo. Say so, rather than dying on an opaque "no such file or directory" two lines down.
 for sibling in internal-sdk dashboard; do
   if [ ! -d "$API_DIR/../$sibling" ]; then
     echo "Missing sibling checkout: $API_DIR/../$sibling" >&2
     echo "This script links a locally built SDK into the dashboard and needs the private" >&2
-    echo "augno/internal-sdk and augno/dashboard repositories checked out alongside this one." >&2
+    echo "open-mrp/internal-sdk and open-mrp/dashboard repositories checked out alongside this one." >&2
     echo "To regenerate just the OpenAPI spec and SDK config, use 'make generate' instead." >&2
     exit 1
   fi
@@ -71,9 +71,9 @@ log "Publishing to the yalc store (from dist/)"
 if [ "$DO_LINK" -eq 1 ]; then
   log "Linking into dashboard (yalc add + bun install)"
   ( cd "$DASH_DIR" && bun run sdk:link )
-  printf '\n\033[1;32mDone.\033[0m Dashboard is using the yalc-linked local @augno/internal-sdk.\n'
+  printf '\n\033[1;32mDone.\033[0m Dashboard is using the yalc-linked local @openmrp/internal-sdk.\n'
   echo "Teardown: (cd $DASH_DIR && bun run sdk:unlink)"
 else
-  printf '\n\033[1;32mDone.\033[0m @augno/internal-sdk published to yalc.\n'
+  printf '\n\033[1;32mDone.\033[0m @openmrp/internal-sdk published to yalc.\n'
   echo "Link into dashboard with: (cd $DASH_DIR && bun run sdk:link)"
 fi

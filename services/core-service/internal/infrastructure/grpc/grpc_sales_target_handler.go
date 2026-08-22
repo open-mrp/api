@@ -4,10 +4,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/shared/contracts"
-	apierror "github.com/augno/api/shared/errors"
-	pb "github.com/augno/api/shared/proto/core"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/contracts"
+	apierror "github.com/open-mrp/api/shared/errors"
+	pb "github.com/open-mrp/api/shared/proto/core"
 )
 
 func (h *gRPCHandler) ListSalesTargets(ctx context.Context, req *pb.ListSalesTargetsRequest) (*pb.ListSalesTargetsResponse, error) {

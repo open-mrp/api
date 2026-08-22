@@ -5,8 +5,8 @@ import (
 	"math/big"
 	"strings"
 
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	"github.com/augno/api/shared/constants"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 const SampleQuantityID = "qty_8hnxbigf0bod"

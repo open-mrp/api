@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"time"
 
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/timeutil"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/timeutil"
 )
 
 const SampleRequestLogID = "rq_0lhl3kkhme40"
-const SampleRequestLogHost = "https://api.augno.com"
+const SampleRequestLogHost = "https://api.openmrp.ai"
 const SampleRequestLogPath = "/v1/core/sandboxes"
 const SampleRequestLogQueryJSON = `{"limit":10}`
 const SampleRequestLogAPIVersion = "2026-01-01"
@@ -30,7 +30,7 @@ type RequestLog struct {
 	Method string `json:"method" validate:"required"`
 	// Request host.
 	//
-	// Usually `api.augno.com`.
+	// Usually `api.openmrp.ai`.
 	Host string `json:"host" validate:"required"`
 	// The exact path the request was made to, including path parameter values.
 	Path string `json:"path" validate:"required"`
@@ -44,15 +44,15 @@ type RequestLog struct {
 	StatusCode int32 `json:"status_code" validate:"required"`
 	// Request latency in microseconds.
 	//
-	// Measured at the API edge, from the moment the request was received until the response was written, so it excludes network time between your client and Augno.
+	// Measured at the API edge, from the moment the request was received until the response was written, so it excludes network time between your client and OpenMRP.
 	LatencyUs int64 `json:"latency_us" validate:"required"`
 	// The API version the request was served with.
 	//
-	// Taken from the `Augno-Version` header the caller sent; requests rejected for omitting that header record no version.
+	// Taken from the `OpenMRP-Version` header the caller sent; requests rejected for omitting that header record no version.
 	APIVersion *string `json:"api_version"`
 	// Client IP address the request came from.
 	//
-	// Not recorded for requests an Augno agent made on your behalf, since those originate inside Augno's own network.
+	// Not recorded for requests an OpenMRP agent made on your behalf, since those originate inside OpenMRP's own network.
 	ClientIP *string `json:"client_ip"`
 	// User agent.
 	UserAgent *string `json:"user_agent"`
@@ -84,7 +84,7 @@ type RequestLog struct {
 	//
 	// Sensitive values such as passwords, tokens, and secrets are redacted before the body is stored. Bodies larger than 256 KB are not stored in full; a small marker object with `_truncated` set to `true` is stored in their place.
 	RequestBodyJSON json.RawMessage `json:"request_body" expandable:"true"`
-	// The JSON body Augno responded with.
+	// The JSON body OpenMRP responded with.
 	//
 	// Sensitive values such as generated API key secrets are redacted before the body is stored. Bodies larger than 256 KB are not stored in full; a small marker object with `_truncated` set to `true` is stored in their place.
 	ResponseBodyJSON json.RawMessage `json:"response_body" expandable:"true"`
@@ -113,7 +113,7 @@ var SampleRequestLog = &RequestLog{
 	APIVersion:       new(SampleRequestLogAPIVersion),
 	ClientIP:         new(SampleRequestLogClientIP),
 	UserAgent:        new(SampleRequestLogUserAgent),
-	Referrer:         new("https://www.augno.com"),
+	Referrer:         new("https://www.openmrp.ai"),
 	OccurredAt:       timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	CreatedAt:        timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	Account:          SampleAccount,
@@ -130,7 +130,7 @@ func (*RequestLog) SchemaExample() any {
 // service name:port) never leaks. We surface the public API host the agent's call
 // is logically equivalent to, rather than a meaningless "internal" placeholder. The
 // true internal host stays in platform-service storage for operator debugging.
-const RedactedRequestLogHost = "https://api.augno.com"
+const RedactedRequestLogHost = "https://api.openmrp.ai"
 
 // internalListenerIdentityType is the request_log.identity_type stamped on requests
 // authenticated by the gateway's trusted internal listener (agents). It is the

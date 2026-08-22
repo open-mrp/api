@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/augno/api/shared/constants"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 // LoadMeta is a request-scoped store of loader-side metadata that does NOT

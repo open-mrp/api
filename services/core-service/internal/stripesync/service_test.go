@@ -8,13 +8,13 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
-	"github.com/augno/api/services/core-service/internal/domain"
-	clientmock "github.com/augno/api/services/core-service/internal/domain/mock/client"
-	factorymock "github.com/augno/api/services/core-service/internal/domain/mock/factory"
-	repositorymock "github.com/augno/api/services/core-service/internal/domain/mock/repository"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/crypto"
-	apierror "github.com/augno/api/shared/errors"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	clientmock "github.com/open-mrp/api/services/core-service/internal/domain/mock/client"
+	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
+	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/crypto"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 const (
@@ -203,7 +203,7 @@ func TestSyncCustomer_UnchangedEmailSkipsRelationWrite(t *testing.T) {
 	require.Nil(t, h.svc.SyncCustomer(context.Background(), testOwnerAccountID, testCustomerAccountID))
 }
 
-// Clearing the email in Augno must not strip Stripe's copy: live receipts and
+// Clearing the email in OpenMRP must not strip Stripe's copy: live receipts and
 // subscriptions point at it, and a cleared branding field is not that request.
 func TestSyncCustomer_ClearedEmailIsNotPushedToStripe(t *testing.T) {
 	h := newHarness(t)
@@ -216,7 +216,7 @@ func TestSyncCustomer_ClearedEmailIsNotPushedToStripe(t *testing.T) {
 
 	h.client.EXPECT().UpdateStripeCustomer(gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ context.Context, params domain.UpdateStripeCustomerParams) *apierror.APIError {
-			require.Nil(t, params.Email, "a cleared Augno email must not blank the Stripe customer's")
+			require.Nil(t, params.Email, "a cleared OpenMRP email must not blank the Stripe customer's")
 			return nil
 		}).Times(1)
 

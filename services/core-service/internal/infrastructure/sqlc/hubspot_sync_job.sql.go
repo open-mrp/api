@@ -9,7 +9,7 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/augno/api/shared/db"
+	"github.com/open-mrp/api/shared/db"
 )
 
 const claimHubspotSyncJobForExecute = `-- name: ClaimHubspotSyncJobForExecute :execresult

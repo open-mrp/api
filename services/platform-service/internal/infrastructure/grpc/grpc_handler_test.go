@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/augno/api/services/platform-service/internal/domain"
-	repositorymock "github.com/augno/api/services/platform-service/internal/domain/mock/repository"
-	"github.com/augno/api/services/platform-service/pkg/idempotency"
-	apierror "github.com/augno/api/shared/errors"
-	pb "github.com/augno/api/shared/proto/platform"
+	"github.com/open-mrp/api/services/platform-service/internal/domain"
+	repositorymock "github.com/open-mrp/api/services/platform-service/internal/domain/mock/repository"
+	"github.com/open-mrp/api/services/platform-service/pkg/idempotency"
+	apierror "github.com/open-mrp/api/shared/errors"
+	pb "github.com/open-mrp/api/shared/proto/platform"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"

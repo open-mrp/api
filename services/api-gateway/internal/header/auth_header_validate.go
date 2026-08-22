@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	authsvctypes "github.com/augno/api/services/auth-service/pkg/types"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/sanitize"
+	authsvctypes "github.com/open-mrp/api/services/auth-service/pkg/types"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/sanitize"
 )
 
 var (

@@ -1,7 +1,7 @@
 package db_test
 
 import (
-	"github.com/augno/api/shared/db"
+	"github.com/open-mrp/api/shared/db"
 )
 
 // ExampleNewDbPool shows the minimal configuration for creating a connection

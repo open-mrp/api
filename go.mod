@@ -1,8 +1,8 @@
-module github.com/augno/api
+module github.com/open-mrp/api
 
 go 1.27.0
 
-replace github.com/augno/api => ./
+replace github.com/open-mrp/api => ./
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2

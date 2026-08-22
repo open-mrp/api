@@ -3,8 +3,8 @@ package analyticsep
 import (
 	"github.com/shopspring/decimal"
 
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/constants"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 // computedRate renders a price as an unpersisted rate. The unit sub-objects are left for the include resolver; display_value carries the readable form so a caller that does not expand them still sees the basis.

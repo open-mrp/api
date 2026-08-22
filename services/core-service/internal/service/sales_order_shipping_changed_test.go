@@ -3,8 +3,8 @@ package service
 import (
 	"testing"
 
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/shared/field"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/field"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -10,8 +10,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/augno/api/shared/logging"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/shared/logging"
+	"github.com/open-mrp/api/shared/tracing"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"

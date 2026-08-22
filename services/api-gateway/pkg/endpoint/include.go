@@ -1,6 +1,6 @@
 package apiendpoint
 
-import "github.com/augno/api/shared/constants"
+import "github.com/open-mrp/api/shared/constants"
 
 // IncludeField describes a single expandable sub-object on an API response.
 type IncludeField struct {

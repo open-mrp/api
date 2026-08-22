@@ -1,8 +1,8 @@
 package types
 
 import (
-	"github.com/augno/api/shared/constants"
-	pb "github.com/augno/api/shared/proto/auth"
+	"github.com/open-mrp/api/shared/constants"
+	pb "github.com/open-mrp/api/shared/proto/auth"
 )
 
 type IdentityActor struct {

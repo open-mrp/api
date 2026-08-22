@@ -5,13 +5,13 @@ import (
 	"encoding/json"
 	"time"
 
-	agentep "github.com/augno/api/services/api-gateway/endpoints/agents"
-	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
-	"github.com/augno/api/shared/constants"
-	pb "github.com/augno/api/shared/proto/agent"
-	"github.com/augno/api/shared/timeutil"
+	agentep "github.com/open-mrp/api/services/api-gateway/endpoints/agents"
+	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
+	"github.com/open-mrp/api/shared/constants"
+	pb "github.com/open-mrp/api/shared/proto/agent"
+	"github.com/open-mrp/api/shared/timeutil"
 )
 
 func AgentRunPresenter(r *pb.AgentRunInfo) apiresource.AgentRun {

@@ -1,8 +1,8 @@
 package participantep
 
 import (
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	"github.com/augno/api/shared/constants"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 // conversationIncludeConfig exposes the conversation ?include= keys on the participant-action

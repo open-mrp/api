@@ -18,7 +18,7 @@ var ServiceNames = []string{
 
 // Analysis names the services a release has to rebuild. Every rebuilt service is also redeployed, so
 // one list serves both. Cluster state — Terraform, ConfigMaps, platform components, per-service
-// manifests — lives in the private augno/infra repo and is reconciled by that repo's own workflows,
+// manifests — lives in the private open-mrp/infra repo and is reconciled by that repo's own workflows,
 // so nothing here classifies it.
 type Analysis struct {
 	Services []string

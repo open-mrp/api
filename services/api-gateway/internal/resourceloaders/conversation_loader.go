@@ -3,12 +3,12 @@ package resourceloaders
 import (
 	"context"
 
-	"github.com/augno/api/services/api-gateway/internal/chatmap"
-	"github.com/augno/api/services/api-gateway/internal/domain"
-	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
-	apierror "github.com/augno/api/shared/errors"
-	pb "github.com/augno/api/shared/proto/notification"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/api-gateway/internal/chatmap"
+	"github.com/open-mrp/api/services/api-gateway/internal/domain"
+	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
+	apierror "github.com/open-mrp/api/shared/errors"
+	pb "github.com/open-mrp/api/shared/proto/notification"
+	"github.com/open-mrp/api/shared/tracing"
 	"google.golang.org/grpc"
 )
 

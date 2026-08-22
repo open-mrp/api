@@ -15,10 +15,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/augno/api/shared/contracts"
-	"github.com/augno/api/shared/id"
-	"github.com/augno/api/shared/retry"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/shared/contracts"
+	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/retry"
+	"github.com/open-mrp/api/shared/tracing"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )

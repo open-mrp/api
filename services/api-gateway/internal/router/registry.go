@@ -1,7 +1,7 @@
 package router
 
 import (
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 )
 
 type Registry struct {

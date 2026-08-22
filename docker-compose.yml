@@ -1,12 +1,12 @@
 services:
   mysql:
     image: mysql:8
-    container_name: augno-mysql
+    container_name: openmrp-mysql
     ports:
       - "3306:3306"
     environment:
       MYSQL_ROOT_PASSWORD: "Testing123!"
-      MYSQL_DATABASE: augno
+      MYSQL_DATABASE: openmrp
     volumes:
       - mysql-data:/var/lib/mysql
     healthcheck:
@@ -17,17 +17,17 @@ services:
 
   postgres:
     image: postgres:16
-    container_name: augno-postgres
+    container_name: openmrp-postgres
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_DB: augno_agents
-      POSTGRES_USER: augno
+      POSTGRES_DB: openmrp_agents
+      POSTGRES_USER: openmrp
       POSTGRES_HOST_AUTH_METHOD: trust
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U augno -d augno_agents"]
+      test: ["CMD-SHELL", "pg_isready -U openmrp -d openmrp_agents"]
       interval: 5s
       timeout: 5s
       retries: 10

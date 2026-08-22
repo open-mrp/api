@@ -3,13 +3,13 @@ package grpc
 import (
 	"context"
 
-	"github.com/augno/api/services/platform-service/internal/domain"
-	"github.com/augno/api/services/platform-service/pkg/idempotency"
-	"github.com/augno/api/shared/contracts"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/id"
-	pb "github.com/augno/api/shared/proto/platform"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/platform-service/internal/domain"
+	"github.com/open-mrp/api/services/platform-service/pkg/idempotency"
+	"github.com/open-mrp/api/shared/contracts"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/id"
+	pb "github.com/open-mrp/api/shared/proto/platform"
+	"github.com/open-mrp/api/shared/tracing"
 
 	"google.golang.org/grpc"
 )

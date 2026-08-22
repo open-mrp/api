@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/contracts"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/id"
-	"github.com/augno/api/shared/messaging"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/contracts"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/messaging"
 )
 
 type Publisher struct{}
@@ -50,7 +50,7 @@ func (p *Publisher) Publish(
 		return apierror.NewInvariantViolationError("Identity not found in context.")
 	}
 	if !identity.IsTargetAccountSet() {
-		return apierror.NewAuthenticationError("The Augno-Account header is required.")
+		return apierror.NewAuthenticationError("The OpenMRP-Account header is required.")
 	}
 	if outboxRepo == nil {
 		return apierror.NewInternalError(nil, "Audit publisher: outbox repo is required.")

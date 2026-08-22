@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	apierror "github.com/augno/api/shared/errors"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 func TestEncodeJWT_Success(t *testing.T) {

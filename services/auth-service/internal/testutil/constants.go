@@ -19,16 +19,16 @@ const (
 	EntityIDAPIKeyNeverExpires = "NvrExp123456789012345678"
 
 	// API Keys
-	APIKeyValidSandboxMode = "aug_sk_test_" + EntityIDAPIKeyValidSandboxMode + "_eR0LAkxYmlLllMxoTIwMcLls1Nvn1oIk1Z8pSrOhztciaRPPjK"
-	APIKeyValidProdMode    = "aug_sk_prod_" + EntityIDAPIKeyValidProdMode + "_BypPtziojf1MpdSwloJ6vGSVhVwrJQOn6WHe84zmMWxmdhdY2f"
-	ApiKeyInvalid          = "aug_sk_prod_" + EntityIDAPIKeyInvalid + "_YPYfj0RZxycEabE2hrj9B8AfycwSrUEeGjdLfOF8MfbpcOi0Ff"
-	ApiKeyExpired          = "aug_sk_prod_" + EntityIDAPIKeyExpired + "_az1kn9XJsXC7EEU0qNvHT40U9oj8QRwuULxAX20byI2IaroHZi"
-	ApiKeyBadSecret        = "aug_sk_prod_" + EntityIDAPIKeyBadSecret + "_DtGA0hknpXDnvNz7SuTF3A4ZrKt4wEfiz5M6mq1xD2Hdt4XVH"
-	ApiKeyInvalidChecksum  = "aug_sk_prod_" + EntityIDAPIKeyValidSandboxMode + "_eR0LAkxYmlLllMxoTIwMcs1Nvn1oIk1Z8pSrOhztciTESTIN"
-	ApiKeyTooShort         = "aug_sk_prod_" + EntityIDAPIKeyValidSandboxMode + "_eR0LAkxYmlLllMxoTIwMcs1Nvn1oIk1Z8pSrOhztciaRPPjK"
-	ApiKeyTooLong          = "aug_sk_prod_" + EntityIDAPIKeyValidSandboxMode + "_eR0LAkxYmlLllMxoTD3IwMcLls1Nvn1oIk1Z8pSrOhztciaRPPjK"
+	APIKeyValidSandboxMode = "mrp_sk_test_" + EntityIDAPIKeyValidSandboxMode + "_eR0LAkxYmlLllMxoTIwMcLls1Nvn1oIk1Z8pSrOhztciaRPPjK"
+	APIKeyValidProdMode    = "mrp_sk_prod_" + EntityIDAPIKeyValidProdMode + "_BypPtziojf1MpdSwloJ6vGSVhVwrJQOn6WHe84zmMWxmdhdY2f"
+	ApiKeyInvalid          = "mrp_sk_prod_" + EntityIDAPIKeyInvalid + "_YPYfj0RZxycEabE2hrj9B8AfycwSrUEeGjdLfOF8MfbpcOi0Ff"
+	ApiKeyExpired          = "mrp_sk_prod_" + EntityIDAPIKeyExpired + "_az1kn9XJsXC7EEU0qNvHT40U9oj8QRwuULxAX20byI2IaroHZi"
+	ApiKeyBadSecret        = "mrp_sk_prod_" + EntityIDAPIKeyBadSecret + "_DtGA0hknpXDnvNz7SuTF3A4ZrKt4wEfiz5M6mq1xD2Hdt4XVH"
+	ApiKeyInvalidChecksum  = "mrp_sk_prod_" + EntityIDAPIKeyValidSandboxMode + "_eR0LAkxYmlLllMxoTIwMcs1Nvn1oIk1Z8pSrOhztciTESTIN"
+	ApiKeyTooShort         = "mrp_sk_prod_" + EntityIDAPIKeyValidSandboxMode + "_eR0LAkxYmlLllMxoTIwMcs1Nvn1oIk1Z8pSrOhztciaRPPjK"
+	ApiKeyTooLong          = "mrp_sk_prod_" + EntityIDAPIKeyValidSandboxMode + "_eR0LAkxYmlLllMxoTD3IwMcLls1Nvn1oIk1Z8pSrOhztciaRPPjK"
 	ApiKeyInvalidPrefix    = "ag_sk_prod_" + EntityIDAPIKeyValidSandboxMode + "_eR0LAkxYmlLllMxoTIwMcLls1Nvn1oIk1Z8pSrOhztciaRPPjK"
-	ApiKeyNeverExpires     = "aug_sk_prod_" + EntityIDAPIKeyNeverExpires + "_T7PceMyiMCxYFA18ZMvN7ZHt9VXl5UDWIdgshcEYdFHgbBqjOj"
+	ApiKeyNeverExpires     = "mrp_sk_prod_" + EntityIDAPIKeyNeverExpires + "_T7PceMyiMCxYFA18ZMvN7ZHt9VXl5UDWIdgshcEYdFHgbBqjOj"
 
 	// Test secrets
 	JWTSecret = "test-secret"

@@ -3,11 +3,11 @@ package analyticsep
 import (
 	"strconv"
 
-	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/id"
-	pb "github.com/augno/api/shared/proto/core"
+	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/id"
+	pb "github.com/open-mrp/api/shared/proto/core"
 )
 
 func AnalyzeSalesPresenter(resp *pb.AnalyzeSalesResponse) *apiresource.AnalyzeSalesResponse {

@@ -25,7 +25,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/augno/api/shared/id"
+	"github.com/open-mrp/api/shared/id"
 )
 
 // augnoID matches a type id literal: lowercase type prefix, underscore, nano segment. The nano segment must be at least 10 characters and carry a digit so snake_case enum codes ("prepaid_billed") are never mistaken for ids.
@@ -109,7 +109,7 @@ func collectReplacementPairs(stderr io.Writer) ([]replPair, error) {
 					continue
 				}
 				if _, skip := skipNames[name]; skip {
-					fmt.Fprintf(stderr, "skip (non-augno): %s %q\n", name, s)
+					fmt.Fprintf(stderr, "skip (non-openmrp): %s %q\n", name, s)
 					continue
 				}
 				if _, ok := splitPrefixNano(s); !ok {
@@ -160,7 +160,7 @@ func includeConstName(name string) bool {
 	return strings.HasPrefix(name, "Sample") && strings.Contains(name, "ID")
 }
 
-// newSampleID mints a docs sample id with the production generator so examples are indistinguishable from real ids. The nano segment must contain a digit — isAugnoLikeDocID keys the docs completeness check off that — and must not repeat an id already handed out this run.
+// newSampleID mints a docs sample id with the production generator so examples are indistinguishable from real ids. The nano segment must contain a digit — isOpenMRPLikeDocID keys the docs completeness check off that — and must not repeat an id already handed out this run.
 func newSampleID(prefix string, used map[string]struct{}) (string, error) {
 	for range 100 {
 		candidate, apiErr := id.GenID(id.IDPrefix(prefix), nil)

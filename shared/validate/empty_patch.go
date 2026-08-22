@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"reflect"
 
-	apierror "github.com/augno/api/shared/errors"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // RejectEmptyPatchBody returns a validation error when the JSON body does not contain at least one field that maps to a body-bound struct field. Fields bound from non-body sources (path, query, header tags) are excluded.

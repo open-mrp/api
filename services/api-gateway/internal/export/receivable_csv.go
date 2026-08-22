@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	pb "github.com/augno/api/shared/proto/core"
+	pb "github.com/open-mrp/api/shared/proto/core"
 )
 
 const (

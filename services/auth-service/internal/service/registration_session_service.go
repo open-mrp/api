@@ -6,18 +6,18 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/augno/api/services/auth-service/internal/domain"
-	"github.com/augno/api/services/auth-service/internal/event"
-	"github.com/augno/api/services/auth-service/internal/infrastructure/repository"
-	"github.com/augno/api/services/auth-service/internal/infrastructure/sqlc"
-	"github.com/augno/api/services/auth-service/internal/mediator"
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/idempotency"
-	"github.com/augno/api/shared/messaging"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/auth-service/internal/domain"
+	"github.com/open-mrp/api/services/auth-service/internal/event"
+	"github.com/open-mrp/api/services/auth-service/internal/infrastructure/repository"
+	"github.com/open-mrp/api/services/auth-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/services/auth-service/internal/mediator"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/messaging"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var registrationSessionSvcTracer = tracing.GetTracer("auth-service.registration_session_service")
@@ -696,7 +696,7 @@ func (s *registrationSessionSvcImpl) handleRegistrationLimitHit(ctx context.Cont
 	// Best-effort: send admin alert email
 	publishCtx := event.WithRepos(ctx, s.repos)
 	if emailErr := s.notificationPublisher.PublishSendEmail(publishCtx, messaging.EmailSendData{
-		To:         []string{"dev@augno.com"},
+		To:         []string{"dev@openmrp.ai"},
 		Subject:    fmt.Sprintf("[Registration Limit] %s plan at capacity", session.PlanCode),
 		TemplateID: constants.EmailTemplateRegistrationLimitAlert,
 		Params: map[string]any{

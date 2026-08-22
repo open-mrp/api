@@ -3,7 +3,7 @@ package domain
 import (
 	"time"
 
-	"github.com/augno/api/shared/field"
+	"github.com/open-mrp/api/shared/field"
 )
 
 // SalesOrderLine represents a sales order line domain model.

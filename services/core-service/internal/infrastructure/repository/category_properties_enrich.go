@@ -3,10 +3,10 @@ package repository
 import (
 	"context"
 
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/augno/api/shared/db"
-	apierror "github.com/augno/api/shared/errors"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/db"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // enrichItemCategoryProperties loads _item_categories_properties for all distinct item_category_id values present on the given items and attaches them to each domain.ItemCategory.

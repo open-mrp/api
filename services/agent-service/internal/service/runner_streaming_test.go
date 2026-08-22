@@ -7,8 +7,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/augno/api/shared/contracts"
-	"github.com/augno/api/shared/messaging"
+	"github.com/open-mrp/api/shared/contracts"
+	"github.com/open-mrp/api/shared/messaging"
 )
 
 // mockBroker is a test double for messaging.MessageBroker that captures published messages.

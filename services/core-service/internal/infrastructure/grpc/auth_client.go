@@ -3,12 +3,12 @@ package grpc
 import (
 	"context"
 
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/shared/contracts"
-	apierror "github.com/augno/api/shared/errors"
-	pb "github.com/augno/api/shared/proto/auth"
-	"github.com/augno/api/shared/rpc"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/contracts"
+	apierror "github.com/open-mrp/api/shared/errors"
+	pb "github.com/open-mrp/api/shared/proto/auth"
+	"github.com/open-mrp/api/shared/rpc"
+	"github.com/open-mrp/api/shared/tracing"
 
 	"google.golang.org/grpc"
 )

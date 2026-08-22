@@ -3,11 +3,11 @@ package productlineep
 import (
 	"strconv"
 
-	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/db"
-	pb "github.com/augno/api/shared/proto/core"
+	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/db"
+	pb "github.com/open-mrp/api/shared/proto/core"
 )
 
 func ProductLinePresenter(pl *pb.ProductLineInfo, ownerAccount *apiresource.Account) apiresource.ProductLine {

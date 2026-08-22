@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/augno/api/shared/contracts"
+	"github.com/open-mrp/api/shared/contracts"
 )
 
 // OutboxStatus represents the lifecycle state of an outbox message as it moves from creation through publishing or failure.

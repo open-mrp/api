@@ -4,11 +4,11 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // Request to list the caller's active announcements.
@@ -18,7 +18,7 @@ type ListAnnouncementsRequest struct {
 
 // Lists the announcements currently active for the caller, newest first.
 //
-// The feed covers announcements broadcast to the account being acted in together with platform-wide announcements from Augno. Announcements the caller has dismissed are left out, as are any that are scheduled for later or have already expired.
+// The feed covers announcements broadcast to the account being acted in together with platform-wide announcements from OpenMRP. Announcements the caller has dismissed are left out, as are any that are scheduled for later or have already expired.
 type ListAnnouncementsEndpoint struct{}
 
 func (e *ListAnnouncementsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAnnouncementsRequest, *apiresource.List[apiresource.Announcement]] {

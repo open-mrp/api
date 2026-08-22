@@ -3,7 +3,7 @@ package testutil
 import (
 	"time"
 
-	"github.com/augno/api/services/auth-service/internal/apikey"
+	"github.com/open-mrp/api/services/auth-service/internal/apikey"
 )
 
 var (
@@ -16,7 +16,7 @@ func GetValidTestAPIKeyModel(secretHash []byte) *apikey.APIKey {
 		ID:             1,
 		TypeID:         "apikey_sandbox",
 		KeyID:          EntityIDAPIKeyValidSandboxMode,
-		RedactedValue:  "aug_sk_test_****1234",
+		RedactedValue:  "mrp_sk_test_****1234",
 		OwnerAccountID: EntityIDAccount,
 		RoleID:         EntityIDRole,
 		ExpiresAt:      &apiKeyExpiresAt,
@@ -29,7 +29,7 @@ func GetValidProdAPIKeyModel(secretHash []byte) *apikey.APIKey {
 		ID:             2,
 		TypeID:         "apikey_prod",
 		KeyID:          EntityIDAPIKeyValidProdMode,
-		RedactedValue:  "aug_sk_prod_****1234",
+		RedactedValue:  "mrp_sk_prod_****1234",
 		OwnerAccountID: EntityIDAccount,
 		RoleID:         EntityIDRole,
 		ExpiresAt:      &apiKeyExpiresAt,
@@ -42,7 +42,7 @@ func GetExpiredAPIKeyModel(secretHash []byte) *apikey.APIKey {
 		ID:             3,
 		TypeID:         "apikey_prod",
 		KeyID:          EntityIDAPIKeyExpired,
-		RedactedValue:  "aug_sk_prod_****1234",
+		RedactedValue:  "mrp_sk_prod_****1234",
 		OwnerAccountID: EntityIDAccount,
 		RoleID:         EntityIDRole,
 		ExpiresAt:      &apiKeyExpiresAtExpired,
@@ -55,7 +55,7 @@ func GetBadSecretAPIKeyModel(secretHash []byte) *apikey.APIKey {
 		ID:             4,
 		TypeID:         "apikey_prod",
 		KeyID:          EntityIDAPIKeyBadSecret,
-		RedactedValue:  "aug_sk_prod_****1234",
+		RedactedValue:  "mrp_sk_prod_****1234",
 		OwnerAccountID: EntityIDAccount,
 		RoleID:         EntityIDRole,
 		ExpiresAt:      &apiKeyExpiresAt,
@@ -68,7 +68,7 @@ func GetNeverExpiresAPIKeyModel(secretHash []byte) *apikey.APIKey {
 		ID:             5,
 		TypeID:         "apikey_prod",
 		KeyID:          EntityIDAPIKeyNeverExpires,
-		RedactedValue:  "aug_sk_prod_****4HAj",
+		RedactedValue:  "mrp_sk_prod_****4HAj",
 		OwnerAccountID: EntityIDAccount,
 		RoleID:         EntityIDRole,
 		ExpiresAt:      nil,

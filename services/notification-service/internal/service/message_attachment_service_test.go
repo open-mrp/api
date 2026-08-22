@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/augno/api/services/notification-service/internal/domain"
-	s3 "github.com/augno/api/shared/cloud/s3"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
+	"github.com/open-mrp/api/services/notification-service/internal/domain"
+	s3 "github.com/open-mrp/api/shared/cloud/s3"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

@@ -1,9 +1,9 @@
 package pagination
 
 import (
-	apierror "github.com/augno/api/shared/errors"
-	sharedpagination "github.com/augno/api/shared/pagination"
-	pb "github.com/augno/api/shared/proto/agent"
+	apierror "github.com/open-mrp/api/shared/errors"
+	sharedpagination "github.com/open-mrp/api/shared/pagination"
+	pb "github.com/open-mrp/api/shared/proto/agent"
 )
 
 // ParseOptionalStringCursor decodes a platform list cursor for forward-only varchar-ID lists. Empty or omitted cursors are valid for the first page.

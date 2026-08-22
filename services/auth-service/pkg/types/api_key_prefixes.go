@@ -3,5 +3,5 @@ package types
 type APIKeyPrefix string
 
 const (
-	APIKeyPrefixSecretKey APIKeyPrefix = "aug_sk_"
+	APIKeyPrefixSecretKey APIKeyPrefix = "mrp_sk_"
 )

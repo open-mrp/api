@@ -3,10 +3,10 @@ package httpgroup
 import (
 	"fmt"
 
-	agentmemoryep "github.com/augno/api/services/api-gateway/endpoints/agent-memories"
-	grpcclient "github.com/augno/api/services/api-gateway/grpc-client"
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	agentmemoryep "github.com/open-mrp/api/services/api-gateway/endpoints/agent-memories"
+	grpcclient "github.com/open-mrp/api/services/api-gateway/grpc-client"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 )
 
 type AgentMemoriesEndpointGroup struct {

@@ -408,11 +408,11 @@ INSERT IGNORE INTO hubspot_sync_record (id, account_id, augno_type, augno_id, hu
 -- ============================================================
 
 INSERT IGNORE INTO email_domain (id, account_id, domain, status, dkim_tokens, verified_at, created_at, updated_at) VALUES
-    ('emdom_01seeddomain1_00', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'mail.e2e.augno.com', 'verified',
-     '["sel1._domainkey.mail.e2e.augno.com","sel2._domainkey.mail.e2e.augno.com"]', NOW(), NOW(), NOW());
+    ('emdom_01seeddomain1_00', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'mail.e2e.openmrp.ai', 'verified',
+     '["sel1._domainkey.mail.e2e.openmrp.ai","sel2._domainkey.mail.e2e.openmrp.ai"]', NOW(), NOW(), NOW());
 
 INSERT IGNORE INTO email_inbox (id, account_id, email_domain_id, address, from_name, status, agent_config_id, created_at, updated_at) VALUES
-    ('eminb_01seedinbox1_000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'emdom_01seeddomain1_00', 'support@mail.e2e.augno.com', 'E2E Support', 'active', 'agdf_01seede2e_orderbot0', NOW(), NOW());
+    ('eminb_01seedinbox1_000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'emdom_01seeddomain1_00', 'support@mail.e2e.openmrp.ai', 'E2E Support', 'active', 'agdf_01seede2e_orderbot0', NOW(), NOW());
 
 -- ============================================================
 -- AUDIT EVENTS (2 rows so audit event tests don't skip)
@@ -512,22 +512,22 @@ INSERT IGNORE INTO email_recipient (id, email, email_log_id, created_at, updated
 -- ============================================================
 
 INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, status_code, latency_us, public_endpoint, account_id, target_account_id, actor_id, actor_type, identity_type, occurred_at, created_at) VALUES
-    ('rqlog_01seedreqlog1_000', 'GET', 'api.augno.com', '/v1/catalog/items', '/v1/catalog/items', 200, 15000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', DATE_SUB(NOW(), INTERVAL 1 HOUR), NOW()),
-    ('rqlog_01seedreqlog2_000', 'POST', 'api.augno.com', '/v1/catalog/units', '/v1/catalog/units', 201, 25000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', NOW(), NOW()),
-    ('rqlog_01seedreqlog3_000', 'GET', 'api.augno.com', '/v1/catalog/items', '/v1/catalog/items', 200, 12000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'apky_pajbskcck3cabxajdh8h8', 'api_key', 'api_key', DATE_SUB(NOW(), INTERVAL 30 MINUTE), NOW());
+    ('rqlog_01seedreqlog1_000', 'GET', 'api.openmrp.ai', '/v1/catalog/items', '/v1/catalog/items', 200, 15000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', DATE_SUB(NOW(), INTERVAL 1 HOUR), NOW()),
+    ('rqlog_01seedreqlog2_000', 'POST', 'api.openmrp.ai', '/v1/catalog/units', '/v1/catalog/units', 201, 25000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', NOW(), NOW()),
+    ('rqlog_01seedreqlog3_000', 'GET', 'api.openmrp.ai', '/v1/catalog/items', '/v1/catalog/items', 200, 12000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'apky_pajbskcck3cabxajdh8h8', 'api_key', 'api_key', DATE_SUB(NOW(), INTERVAL 30 MINUTE), NOW());
 
 INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, status_code, latency_us, public_endpoint, account_id, target_account_id, actor_id, actor_type, identity_type, error_code, error_message, occurred_at, created_at) VALUES
-    ('rqlog_01seedreqlog4_000', 'POST', 'api.augno.com', '/v1/catalog/units', '/v1/catalog/units', 422, 9000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', 'validation_failed', 'Name is required.', DATE_SUB(NOW(), INTERVAL 2 HOUR), NOW());
+    ('rqlog_01seedreqlog4_000', 'POST', 'api.openmrp.ai', '/v1/catalog/units', '/v1/catalog/units', 422, 9000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', 'validation_failed', 'Name is required.', DATE_SUB(NOW(), INTERVAL 2 HOUR), NOW());
 
 INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, query_json, status_code, latency_us, public_endpoint, account_id, target_account_id, actor_id, actor_type, identity_type, occurred_at, created_at) VALUES
-    ('rqlog_01seedreqlog5_000', 'GET', 'api.augno.com', '/v1/catalog/items', '/v1/catalog/items', '{"limit":10,"status_codes":["200"]}', 200, 8000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', DATE_SUB(NOW(), INTERVAL 3 HOUR), NOW());
+    ('rqlog_01seedreqlog5_000', 'GET', 'api.openmrp.ai', '/v1/catalog/items', '/v1/catalog/items', '{"limit":10,"status_codes":["200"]}', 200, 8000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', DATE_SUB(NOW(), INTERVAL 3 HOUR), NOW());
 
 -- Search target: a distinctive resource id embedded in the request path so the
 -- free-text search ('q') test can paste that id and find the log. Request log
 -- search matches the literal path (and normalized_route) — see
 -- repository/request_log_list_query.go.
 INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, status_code, latency_us, public_endpoint, account_id, target_account_id, actor_id, actor_type, identity_type, occurred_at, created_at) VALUES
-    ('rqlog_01seedsearchtgt0', 'GET', 'api.augno.com', '/v1/catalog/items/it_01seedreqlogsrchtgt', '/v1/catalog/items/{id}', 200, 11000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', DATE_SUB(NOW(), INTERVAL 20 MINUTE), NOW());
+    ('rqlog_01seedsearchtgt0', 'GET', 'api.openmrp.ai', '/v1/catalog/items/it_01seedreqlogsrchtgt', '/v1/catalog/items/{id}', 200, 11000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', DATE_SUB(NOW(), INTERVAL 20 MINUTE), NOW());
 
 -- Multi-actor union fixtures. One user-authored and one api_key-authored log,
 -- both with a far-future occurred_at so they stay at the top of any
@@ -536,12 +536,12 @@ INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, status
 -- filter test could not observe a result for the user actor even though the
 -- filter returns it. See TestRequestLogs_ListFilterByMultipleActorsUnion.
 INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, status_code, latency_us, public_endpoint, account_id, target_account_id, actor_id, actor_type, identity_type, occurred_at, created_at) VALUES
-    ('rqlog_01sedunionuser0', 'GET', 'api.augno.com', '/v1/catalog/items', '/v1/catalog/items', 200, 10000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', DATE_ADD(NOW(), INTERVAL 9 YEAR), DATE_ADD(NOW(), INTERVAL 9 YEAR)),
-    ('rqlog_01sedunionapik0', 'GET', 'api.augno.com', '/v1/catalog/units', '/v1/catalog/units', 200, 10000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'apky_pajbskcck3cabxajdh8h8', 'api_key', 'api_key', DATE_ADD(NOW(), INTERVAL 9 YEAR), DATE_ADD(NOW(), INTERVAL 9 YEAR)),
+    ('rqlog_01sedunionuser0', 'GET', 'api.openmrp.ai', '/v1/catalog/items', '/v1/catalog/items', 200, 10000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', DATE_ADD(NOW(), INTERVAL 9 YEAR), DATE_ADD(NOW(), INTERVAL 9 YEAR)),
+    ('rqlog_01sedunionapik0', 'GET', 'api.openmrp.ai', '/v1/catalog/units', '/v1/catalog/units', 200, 10000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'apky_pajbskcck3cabxajdh8h8', 'api_key', 'api_key', DATE_ADD(NOW(), INTERVAL 9 YEAR), DATE_ADD(NOW(), INTERVAL 9 YEAR)),
     -- A far-future POST/201 row so the methods and status_codes filter discoveries
     -- always see >=2 distinct values on the first page (the harness's own traffic is
     -- all GET/200, and the seeded POST/422 rows are old enough to be buried).
-    ('rqlog_01sedunionpost0', 'POST', 'api.augno.com', '/v1/catalog/units', '/v1/catalog/units', 201, 10000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', DATE_ADD(NOW(), INTERVAL 9 YEAR), DATE_ADD(NOW(), INTERVAL 9 YEAR));
+    ('rqlog_01sedunionpost0', 'POST', 'api.openmrp.ai', '/v1/catalog/units', '/v1/catalog/units', 201, 10000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', DATE_ADD(NOW(), INTERVAL 9 YEAR), DATE_ADD(NOW(), INTERVAL 9 YEAR));
 
 INSERT IGNORE INTO idempotency_key (type_id, idempotency_key, identity_type, request_method, normalized_route, request_body_hash, scope_hash, recovery_point, target_account_id, actor_id, created_at, updated_at) VALUES
     ('idk_01seedreqlogik001', 'e2e-seed-idempotency-key-01', 'user', 'POST', '/v1/catalog/units', 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', 'finished', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', NOW(3), NOW(3));
@@ -635,7 +635,7 @@ INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, status
 -- agdf_01infraseedagent (seeded in agent-service), whose name + slug the request-logs
 -- presenter hydrates onto the actor. api_version is set so the customer-facing log
 -- shows the version the agent's internal call carried (the agent client sends
--- Augno-Version). The agent row's id is also referenced by an audit_event
+-- OpenMRP-Version). The agent row's id is also referenced by an audit_event
 -- (request_id) below so the audit-event ?include=request path is covered too. These
 -- rows are fetched by the normalized_route scope filter and by id (both
 -- date-independent), so they are dated in the past (like the other filter cohorts) to
@@ -643,13 +643,13 @@ INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, status
 -- crud_audit_events_test.go.
 INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, status_code, latency_us, public_endpoint, account_id, target_account_id, actor_id, actor_type, identity_type, api_version, client_ip_string, user_agent, occurred_at, created_at) VALUES
     ('rqlog_01infraagent0', 'GET', 'api-gateway-internal:8091', '/v1/sales/customers', '/filtertest/infra-scrub', 200, 295867, 0, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'agdf_01infraseedagent', 'internal', 'agent', '1.0.forge-preview.2', '10.244.0.18',  'Go-http-client/1.1', '2022-01-01 00:00:00', NOW()),
-    ('rqlog_01infrauser00', 'GET', 'api.augno.com',             '/v1/sales/customers', '/filtertest/infra-scrub', 200, 15000,  1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7',       'user',     'user',  '1.0.forge-preview.2', '198.51.100.7', 'Mozilla/5.0',        '2022-01-01 00:00:00', NOW());
+    ('rqlog_01infrauser00', 'GET', 'api.openmrp.ai',             '/v1/sales/customers', '/filtertest/infra-scrub', 200, 15000,  1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7',       'user',     'user',  '1.0.forge-preview.2', '198.51.100.7', 'Mozilla/5.0',        '2022-01-01 00:00:00', NOW());
 
 -- referrer is the only optional request_log field no seed row sets; put it on the
 -- stable infra-scrub user row (SeedReqLogInfraUserID) so the allFields test can
 -- assert a non-null referrer (SeedRequestLogReferrerValue). Re-seed-safe UPDATE
 -- because the INSERT above omits the column.
-UPDATE request_log SET referrer = 'https://dashboard.augno.com/inbox' WHERE id = 'rqlog_01infrauser00' AND (referrer IS NULL OR referrer = '');
+UPDATE request_log SET referrer = 'https://dashboard.openmrp.ai/inbox' WHERE id = 'rqlog_01infrauser00' AND (referrer IS NULL OR referrer = '');
 
 -- Audit event whose request_id points at the agent request_log above, so the
 -- audit-event ?include=request expansion is exercised against an internal/agent log.
@@ -756,8 +756,8 @@ INSERT IGNORE INTO transaction (id, number, customer_account_id, amount_id, tran
 -- ============================================================
 -- CHILD ACCOUNTS (parent-child account setup for /v1/identity/child-accounts)
 -- The endpoint uses ActorAccountID (API key owner) as the relation owner and
--- TargetAccountID (Augno-Account header) as the parent. Since the e2e test
--- client sends Augno-Account: SeedAccountID, we create a "house account"
+-- TargetAccountID (OpenMRP-Account header) as the parent. Since the e2e test
+-- client sends OpenMRP-Account: SeedAccountID, we create a "house account"
 -- self-relation so FindRelationByOwnerAndCounterparty(SeedAccountID, SeedAccountID)
 -- resolves, then create child relations pointing to it.
 -- ============================================================
@@ -786,7 +786,7 @@ INSERT IGNORE INTO account_relation (id, owner_account_id, counterparty_account_
 -- filter, so this row lets the messaging_blocks cross-account test pin down
 -- actual behavior. Named user so ?include=blocked_user resolves a real name.
 INSERT IGNORE INTO user (id, email, name, username, status_code) VALUES
-    ('us_childblktgt00', 'child-block-target@e2e.augno.com', 'Blocked Child User', 'childblocktgt', 'active');
+    ('us_childblktgt00', 'child-block-target@e2e.openmrp.ai', 'Blocked Child User', 'childblocktgt', 'active');
 INSERT IGNORE INTO account_user (id, user_id, account_id, status_code) VALUES
     ('acus_childblktgt', 'us_childblktgt00', 'ac_01seedchild_acct0001', 'active');
 
@@ -919,7 +919,7 @@ INSERT IGNORE INTO account_relation (id, owner_account_id, counterparty_account_
 -- `?include=parent` on the seeded location resolves to a populated stub.
 
 INSERT IGNORE INTO storage_location (id, account_id, storage_location_type_code, name, created_at, updated_at) VALUES
-    ('sglc_01seedcampus00000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'building', 'Augno Campus', NOW(), NOW());
+    ('sglc_01seedcampus00000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'building', 'OpenMRP Campus', NOW(), NOW());
 
 UPDATE storage_location SET parent_id = 'sglc_01seedcampus00000'
     WHERE id = 'sglc_01seedbuilding0000' AND parent_id IS NULL;

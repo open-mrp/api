@@ -94,7 +94,7 @@ message EmailInboxInfo {
   repeated string agent_trigger_keywords = 9;
   google.protobuf.Timestamp created_at = 10;
   google.protobuf.Timestamp updated_at = 11;
-  // Per-inbox forwarding address (<inbox_id>@<Augno receiving subdomain>). Customers whose corporate
+  // Per-inbox forwarding address (<inbox_id>@<OpenMRP receiving subdomain>). Customers whose corporate
   // domain can't repoint its apex MX at SES forward their support address here instead. Unset when the
   // receiving subdomain isn't configured.
   optional string forwarding_address = 12;

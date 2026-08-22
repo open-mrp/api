@@ -3,10 +3,10 @@ package service
 import (
 	"context"
 
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/services/core-service/internal/domain"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/tracing"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -22,7 +22,7 @@ func authorizeCatalogBatchRead(
 		return tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
-		return tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 	if identity.IsInternalActor() {
 		if apiErr := internalPermissionCheck(); apiErr != nil {

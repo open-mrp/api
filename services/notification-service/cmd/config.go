@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/contracts"
-	"github.com/augno/api/shared/env"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/contracts"
+	"github.com/open-mrp/api/shared/env"
 )
 
 var (
@@ -67,8 +67,8 @@ type config struct {
 	// SQS queue. Distinct from AWSRegion because SES email receiving is not available in us-east-2.
 	InboundEmailRegion string
 
-	// InboundEmailDomain (optional) is the Augno-owned subdomain set up for SES receiving (e.g.
-	// "inbound.augno.com"). It lets a customer whose corporate domain can't repoint its apex MX at SES
+	// InboundEmailDomain (optional) is the OpenMRP-owned subdomain set up for SES receiving (e.g.
+	// "inbound.openmrp.ai"). It lets a customer whose corporate domain can't repoint its apex MX at SES
 	// (Google/M365/Barracuda) instead forward their support address to <inbox_id>@<this domain>. When set,
 	// inbound routing also matches mail delivered to that per-inbox forwarding address; left empty, only
 	// direct-to-domain (customer MX → SES) inboxes are matched.

@@ -5,17 +5,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/augno/api/services/auth-service/internal/apikey"
-	"github.com/augno/api/services/auth-service/internal/domain"
-	clientmock "github.com/augno/api/services/auth-service/internal/domain/mock/client"
-	factorymock "github.com/augno/api/services/auth-service/internal/domain/mock/factory"
-	mediatormock "github.com/augno/api/services/auth-service/internal/domain/mock/mediator"
-	repositorymock "github.com/augno/api/services/auth-service/internal/domain/mock/repository"
-	"github.com/augno/api/services/auth-service/internal/testutil"
-	"github.com/augno/api/services/auth-service/internal/token"
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
+	"github.com/open-mrp/api/services/auth-service/internal/apikey"
+	"github.com/open-mrp/api/services/auth-service/internal/domain"
+	clientmock "github.com/open-mrp/api/services/auth-service/internal/domain/mock/client"
+	factorymock "github.com/open-mrp/api/services/auth-service/internal/domain/mock/factory"
+	mediatormock "github.com/open-mrp/api/services/auth-service/internal/domain/mock/mediator"
+	repositorymock "github.com/open-mrp/api/services/auth-service/internal/domain/mock/repository"
+	"github.com/open-mrp/api/services/auth-service/internal/testutil"
+	"github.com/open-mrp/api/services/auth-service/internal/token"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
 
 	"go.uber.org/mock/gomock"
 )
@@ -76,8 +76,8 @@ func TestValidateCredential_APIKeyOwnedAccount(t *testing.T) {
 	}
 	touchDone := make(chan struct{}, 1)
 
-	apiKeyMed.EXPECT().FindAndValidate(gomock.Any(), "aug_sk_token").Return(apiKey, nil)
-	apiKeyMed.EXPECT().ParseKey(gomock.Any(), "aug_sk_token").Return(parsedKey, nil)
+	apiKeyMed.EXPECT().FindAndValidate(gomock.Any(), "mrp_sk_token").Return(apiKey, nil)
+	apiKeyMed.EXPECT().ParseKey(gomock.Any(), "mrp_sk_token").Return(parsedKey, nil)
 	apiKeyMed.EXPECT().TouchIfNotRecent(gomock.Any(), apiKey).DoAndReturn(func(context.Context, *apikey.APIKey) *apierror.APIError {
 		touchDone <- struct{}{}
 		return nil
@@ -102,7 +102,7 @@ func TestValidateCredential_APIKeyOwnedAccount(t *testing.T) {
 		jwtSecret:  testutil.JWTSecret,
 	}
 
-	identity, err := med.ValidateCredential(context.Background(), "aug_sk_token", new("acct-1"), nil)
+	identity, err := med.ValidateCredential(context.Background(), "mrp_sk_token", new("acct-1"), nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -154,8 +154,8 @@ func TestValidateCredential_APIKeyCounterpartySideCarriesPermissions(t *testing.
 	parsedKey := &apikey.ParsedAPIKey{AccountMode: constants.AccountModeProduction, ID: "api-cust", Secret: "secret", Checksum: "abc"}
 	touchDone := make(chan struct{}, 1)
 
-	apiKeyMed.EXPECT().FindAndValidate(gomock.Any(), "aug_sk_cust").Return(apiKey, nil)
-	apiKeyMed.EXPECT().ParseKey(gomock.Any(), "aug_sk_cust").Return(parsedKey, nil)
+	apiKeyMed.EXPECT().FindAndValidate(gomock.Any(), "mrp_sk_cust").Return(apiKey, nil)
+	apiKeyMed.EXPECT().ParseKey(gomock.Any(), "mrp_sk_cust").Return(parsedKey, nil)
 	apiKeyMed.EXPECT().TouchIfNotRecent(gomock.Any(), apiKey).DoAndReturn(func(context.Context, *apikey.APIKey) *apierror.APIError {
 		touchDone <- struct{}{}
 		return nil
@@ -182,7 +182,7 @@ func TestValidateCredential_APIKeyCounterpartySideCarriesPermissions(t *testing.
 
 	med := &userMedImpl{repos: repoFactory, apiKeyMed: apiKeyMed, coreClient: coreClient, jwtSecret: testutil.JWTSecret}
 
-	identity, err := med.ValidateCredential(context.Background(), "aug_sk_cust", new("acct-merchant"), nil)
+	identity, err := med.ValidateCredential(context.Background(), "mrp_sk_cust", new("acct-merchant"), nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -233,8 +233,8 @@ func TestValidateCredential_APIKeyRelationMissing(t *testing.T) {
 	}
 	touchDone := make(chan struct{}, 1)
 
-	apiKeyMed.EXPECT().FindAndValidate(gomock.Any(), "aug_sk_missing").Return(apiKey, nil)
-	apiKeyMed.EXPECT().ParseKey(gomock.Any(), "aug_sk_missing").Return(parsedKey, nil)
+	apiKeyMed.EXPECT().FindAndValidate(gomock.Any(), "mrp_sk_missing").Return(apiKey, nil)
+	apiKeyMed.EXPECT().ParseKey(gomock.Any(), "mrp_sk_missing").Return(parsedKey, nil)
 	apiKeyMed.EXPECT().TouchIfNotRecent(gomock.Any(), apiKey).DoAndReturn(func(context.Context, *apikey.APIKey) *apierror.APIError {
 		touchDone <- struct{}{}
 		return nil
@@ -253,7 +253,7 @@ func TestValidateCredential_APIKeyRelationMissing(t *testing.T) {
 		jwtSecret:  testutil.JWTSecret,
 	}
 
-	identity, err := med.ValidateCredential(context.Background(), "aug_sk_missing", new("acct-target"), nil)
+	identity, err := med.ValidateCredential(context.Background(), "mrp_sk_missing", new("acct-target"), nil)
 	select {
 	case <-touchDone:
 	case <-time.After(100 * time.Millisecond):
@@ -549,7 +549,7 @@ func TestValidateCredential_UserToken_ActorAccountHeader_RequiresAccountUser(t *
 
 	identity, err := med.ValidateCredential(context.Background(), validToken, nil, &actorAccountID)
 	if err == nil {
-		t.Fatal("expected error when Augno-Actor-Account is set but user has no account-user relation, got nil")
+		t.Fatal("expected error when OpenMRP-Actor-Account is set but user has no account-user relation, got nil")
 	}
 	if identity != nil {
 		t.Fatalf("expected nil identity on error, got %+v", identity)
@@ -725,7 +725,7 @@ func TestValidateCredential_UserToken_CounterpartySideCarriesPermissions(t *test
 	}
 }
 
-// TestValidateCredential_UserToken_NoActorAccountRejectsOwnerSide guards the no-Augno-Actor-Account
+// TestValidateCredential_UserToken_NoActorAccountRejectsOwnerSide guards the no-OpenMRP-Actor-Account
 // path. Without a validated actor account, an owner-side relation has no actor permissions to bind
 // to and the related-user identity builder would incorrectly attribute Actor.AccountID to the
 // counterparty — so we reject the request. The mediator passes "" as actorAccountID, which causes
@@ -759,7 +759,7 @@ func TestValidateCredential_UserToken_NoActorAccountRejectsOwnerSide(t *testing.
 		AccountMode: constants.AccountModeProduction,
 	}, nil)
 	coreClient.EXPECT().GetUserAccountAccess(gomock.Any(), userID, targetAccountID).Return(nil, false, nil)
-	// Mediator must pass "" for actor when no Augno-Actor-Account header is present.
+	// Mediator must pass "" for actor when no OpenMRP-Actor-Account header is present.
 	// Simulate the defense-in-depth path: core-service returns an owner-side relation anyway.
 	coreClient.EXPECT().GetAccountRelationByUserID(gomock.Any(), targetAccountID, "", userID).Return(&domain.AuthAccountRelation{
 		ID:                      "rel-A-C",

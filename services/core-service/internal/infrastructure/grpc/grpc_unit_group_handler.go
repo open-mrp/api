@@ -3,10 +3,10 @@ package grpc
 import (
 	"context"
 
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/shared/contracts"
-	"github.com/augno/api/shared/field"
-	pb "github.com/augno/api/shared/proto/core"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/contracts"
+	"github.com/open-mrp/api/shared/field"
+	pb "github.com/open-mrp/api/shared/proto/core"
 
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"

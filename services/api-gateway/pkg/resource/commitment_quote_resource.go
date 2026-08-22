@@ -3,7 +3,7 @@ package apiresource
 import (
 	"time"
 
-	"github.com/augno/api/shared/constants"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 // CommitmentQuoteStep is one rule's contribution to a previewed ship-by date.

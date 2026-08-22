@@ -4,18 +4,18 @@ import (
 	"context"
 	"fmt"
 
-	jobep "github.com/augno/api/services/api-gateway/endpoints/jobs"
-	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
-	pb "github.com/augno/api/shared/proto/core"
-	"github.com/augno/api/shared/ptrutil"
-	"github.com/augno/api/shared/tracing"
+	jobep "github.com/open-mrp/api/services/api-gateway/endpoints/jobs"
+	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
+	pb "github.com/open-mrp/api/shared/proto/core"
+	"github.com/open-mrp/api/shared/ptrutil"
+	"github.com/open-mrp/api/shared/tracing"
 	"google.golang.org/grpc"
 
-	"github.com/augno/api/services/api-gateway/internal/domain"
+	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 )
 
 var pickEpSvcTracer = tracing.GetTracer("api-gateway.endpoints.picks.service")

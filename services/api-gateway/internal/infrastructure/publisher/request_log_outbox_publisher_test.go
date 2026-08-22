@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/messaging"
-	pb "github.com/augno/api/shared/proto/platform"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/messaging"
+	pb "github.com/open-mrp/api/shared/proto/platform"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 

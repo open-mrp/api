@@ -3,7 +3,7 @@ package llm
 import (
 	"fmt"
 
-	"github.com/augno/api/shared/constants"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 // ModelLimits defines the context window and output token reservation per model.

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/augno/api/shared/constants"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 // Queue name constants define the AMQP queue names used across all services. Each queue is bound to the application exchange ("app") with a routing key matching its name. The naming convention is "{service}_{cmd|event}_{action}" to make ownership and intent clear at a glance.
@@ -130,7 +130,7 @@ type EmailSendData struct {
 	TemplateID constants.EmailTemplate `json:"template_id"`
 	// Params are key-value pairs passed to the template engine for variable substitution (e.g. user name, verification link).
 	Params map[string]any `json:"params,omitempty"`
-	// SendAs overrides the default sender address (e.g. "support@augno.com"). When nil the notification-service uses its configured default sender.
+	// SendAs overrides the default sender address (e.g. "support@openmrp.ai"). When nil the notification-service uses its configured default sender.
 	SendAs *string `json:"send_as,omitempty"`
 	// AccountID is the account context for the email, used for audit logging.
 	AccountID *string `json:"account_id,omitempty"`

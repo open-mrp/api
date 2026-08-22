@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"time"
 
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/timeutil"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/timeutil"
 )
 
 const SampleAuditEventID = "ae_emripvn8t1xl"
@@ -69,7 +69,7 @@ type AuditEvent struct {
 	Account *Account `json:"account" expandable:"true"`
 	// Field-level changes recorded for this event.
 	//
-	// Only fields Augno tracks for that resource type are compared, and only those whose value actually differs are listed. Actions that do not alter stored fields, such as `approve` and `deny`, generally record no changes.
+	// Only fields OpenMRP tracks for that resource type are compared, and only those whose value actually differs are listed. Actions that do not alter stored fields, such as `approve` and `deny`, generally record no changes.
 	Changes *List[AuditFieldChange] `json:"changes" expandable:"true"`
 	// Arbitrary JSON metadata for the mutation (e.g. reason, source, tags).
 	Metadata json.RawMessage `json:"metadata"`

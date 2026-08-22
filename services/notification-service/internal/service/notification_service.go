@@ -4,15 +4,15 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/augno/api/services/notification-service/internal/domain"
-	"github.com/augno/api/services/notification-service/internal/email"
-	"github.com/augno/api/services/notification-service/internal/infrastructure/aws"
-	"github.com/augno/api/services/notification-service/internal/infrastructure/stub"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/id"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/notification-service/internal/domain"
+	"github.com/open-mrp/api/services/notification-service/internal/email"
+	"github.com/open-mrp/api/services/notification-service/internal/infrastructure/aws"
+	"github.com/open-mrp/api/services/notification-service/internal/infrastructure/stub"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var notificationSvcTracer = tracing.GetTracer("notification-service.notification_service")
@@ -222,7 +222,7 @@ func (s *notificationSvcImpl) SendEnterpriseRequest(ctx context.Context, req *do
 	}
 
 	// Send to sales team
-	salesEmail := "sales@augno.com"
+	salesEmail := "sales@openmrp.ai"
 	_, apiErr = s.emailSender.Send(ctx, domain.EmailData{
 		To:      []string{salesEmail},
 		Subject: subject,

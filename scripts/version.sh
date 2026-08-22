@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Version utilities for the Augno API
+# Version utilities for the OpenMRP API
 #
 # Version format:
 #   Stable:  <minor>.<patch>.<codename>          (e.g., 1.2.forge)

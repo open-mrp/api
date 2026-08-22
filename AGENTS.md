@@ -31,7 +31,7 @@ Read the doc **before** you write, not after review. Reading the section you nee
 
 ## Breaking Changes Require a New API Version (non-negotiable)
 
-**Any breaking change to the public API requires a new API version plus a version transformer that preserves the old shape.** A client pinned to a supported `Augno-Version` must keep receiving byte-compatible request and response shapes for as long as that version is supported. Shipping a shape change without a transformer silently breaks every pinned consumer — that is never an acceptable trade for a smaller diff, and it is not something to "follow up on later."
+**Any breaking change to the public API requires a new API version plus a version transformer that preserves the old shape.** A client pinned to a supported `OpenMRP-Version` must keep receiving byte-compatible request and response shapes for as long as that version is supported. Shipping a shape change without a transformer silently breaks every pinned consumer — that is never an acceptable trade for a smaller diff, and it is not something to "follow up on later."
 
 Breaking — needs a new version **and** a transformer:
 
@@ -301,7 +301,7 @@ if apiErr := types.CheckHasPermission(identity, types.PermissionDomainUnits, typ
     return nil, tracing.Trace(span, apiErr)
 }
 if identity.TargetAccountID == nil {
-    return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account header is required."))
+    return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account header is required."))
 }
 
 unitID, apiErr := id.GenID(id.UnitIDPrefix, nil)

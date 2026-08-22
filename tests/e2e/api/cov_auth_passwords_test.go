@@ -40,7 +40,7 @@ const (
 	// this is the only way to mint a real, valid reset token for the happy path.
 	covAuthPasswordsJWTSecretDefault = "test-token-secret" // #nosec G101 - Test-environment JWT signing secret, not a production credential
 
-	covAuthPasswordsJWTIssuer = "https://augno.com"
+	covAuthPasswordsJWTIssuer = "https://openmrp.ai"
 )
 
 // covAuthPasswordsJWTSecret resolves the signing secret, allowing CI to override via
@@ -102,7 +102,7 @@ func covAuthPasswordsRegisterUser(t *testing.T, prefix string) (userID, email st
 }
 
 // covAuthPasswordsNewAccountMember registers a disposable user, grants it membership on
-// SeedAccountID (required for UpdatePassword: the Augno-Account header is resolved
+// SeedAccountID (required for UpdatePassword: the OpenMRP-Account header is resolved
 // against real account membership before the endpoint's own account-agnostic
 // CheckHasUserActor logic ever runs, so a freshly-registered account-less user 403s),
 // logs in, and returns a bearer-authenticated Client plus the user's id/email/password.
@@ -120,7 +120,7 @@ func covAuthPasswordsNewAccountMember(t *testing.T, prefix string) (client *Clie
 	return client, userID, email, covAuthUsersPassword
 }
 
-// covAuthPasswordsRawPost performs a POST with no Authorization and no Augno-Account
+// covAuthPasswordsRawPost performs a POST with no Authorization and no OpenMRP-Account
 // header, bypassing Client (which always injects both), to prove an endpoint is truly
 // callable unauthenticated. apiClient.baseURL/apiVersion are unexported fields on
 // *Client but accessible here since this file is in the same package.
@@ -132,7 +132,7 @@ func covAuthPasswordsRawPost(t *testing.T, path string, body map[string]any) (in
 	req, err := http.NewRequest(http.MethodPost, apiClient.baseURL+path, bytes.NewReader(b))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Augno-Version", apiClient.apiVersion)
+	req.Header.Set("OpenMRP-Version", apiClient.apiVersion)
 	req.Header.Set("Idempotency-Key", newIdempotencyKey())
 
 	resp, err := http.DefaultClient.Do(req)
@@ -405,7 +405,7 @@ func TestCovAuthPasswords_RequestReset_EnumerationSafety(t *testing.T) {
 }
 
 // TestCovAuthPasswords_RequestReset_CallableUnauthenticated proves the endpoint has no
-// identity check at all: a raw request with no Authorization and no Augno-Account
+// identity check at all: a raw request with no Authorization and no OpenMRP-Account
 // header still succeeds.
 func TestCovAuthPasswords_RequestReset_CallableUnauthenticated(t *testing.T) {
 	t.Parallel()
@@ -584,7 +584,7 @@ func TestCovAuthPasswords_ResetPassword_HappyPath(t *testing.T) {
 			assert.Contains(t, c, "HttpOnly", "access token cookie should be HttpOnly")
 			assert.Contains(t, c, "Secure", "access token cookie should be Secure")
 		}
-		if strings.Contains(c, "__Secure-augno.refresh-token") {
+		if strings.Contains(c, "__Secure-openmrp.refresh-token") {
 			hasRefreshToken = true
 			assert.Contains(t, c, "HttpOnly", "refresh token cookie should be HttpOnly")
 			assert.Contains(t, c, "Secure", "refresh token cookie should be Secure")

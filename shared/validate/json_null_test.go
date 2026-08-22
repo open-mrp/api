@@ -3,8 +3,8 @@ package validate
 import (
 	"testing"
 
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/field"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/field"
 )
 
 type patchOptionalPointer struct {

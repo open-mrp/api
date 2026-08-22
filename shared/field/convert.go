@@ -1,7 +1,7 @@
 package field
 
 import (
-	pb "github.com/augno/api/shared/proto/core"
+	pb "github.com/open-mrp/api/shared/proto/core"
 )
 
 // QuantityInput holds amount and unit for quantity patch fields.

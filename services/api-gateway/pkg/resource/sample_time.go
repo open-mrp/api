@@ -1,7 +1,7 @@
 package apiresource
 
 import (
-	"github.com/augno/api/shared/timeutil"
+	"github.com/open-mrp/api/shared/timeutil"
 )
 
 const sampleYear = "2026"

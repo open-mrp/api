@@ -5,9 +5,9 @@ import (
 
 	"github.com/shopspring/decimal"
 
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/field"
-	"github.com/augno/api/shared/pagination"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/pagination"
 )
 
 // SalesOrder represents a full sales order domain model.

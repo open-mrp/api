@@ -364,7 +364,7 @@ type EmailInboxInfo struct {
 	AgentTriggerKeywords []string               `protobuf:"bytes,9,rep,name=agent_trigger_keywords,json=agentTriggerKeywords,proto3" json:"agent_trigger_keywords,omitempty"`
 	CreatedAt            *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt            *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	// Per-inbox forwarding address (<inbox_id>@<Augno receiving subdomain>). Customers whose corporate
+	// Per-inbox forwarding address (<inbox_id>@<OpenMRP receiving subdomain>). Customers whose corporate
 	// domain can't repoint its apex MX at SES forward their support address here instead. Unset when the
 	// receiving subdomain isn't configured.
 	ForwardingAddress *string `protobuf:"bytes,12,opt,name=forwarding_address,json=forwardingAddress,proto3,oneof" json:"forwarding_address,omitempty"`

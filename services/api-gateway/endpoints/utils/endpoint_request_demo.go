@@ -4,11 +4,11 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/field"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/field"
 )
 
 // Request to be contacted for a product demo.
@@ -35,7 +35,7 @@ func (*RequestDemoRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleRequestDemoRequest)
 }
 
-// Submits a demo request from a prospective customer for the Augno team to follow up on.
+// Submits a demo request from a prospective customer for the OpenMRP team to follow up on.
 //
 // The request creates no account, user, or other resource, and there is no endpoint to read it back. The response carries a confirmation message suitable for display.
 type RequestDemoEndpoint struct{}

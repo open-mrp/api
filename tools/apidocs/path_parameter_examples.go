@@ -4,8 +4,8 @@ import (
 	"reflect"
 	"strings"
 
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/contracts"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/shared/contracts"
 )
 
 // routeSegmentToSampleID maps the route path segment immediately before a generic {id} parameter to a documentation sample ID from apiresource.

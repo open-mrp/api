@@ -3,8 +3,8 @@ package domain
 import (
 	"time"
 
-	"github.com/augno/api/shared/field"
-	"github.com/augno/api/shared/pagination"
+	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/pagination"
 )
 
 // Part represents a part entity (specialization of Item).

@@ -3,9 +3,9 @@ package repository
 import (
 	"context"
 
-	"github.com/augno/api/services/notification-service/internal/infrastructure/sqlc"
-	"github.com/augno/api/services/notification-service/internal/reaper"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/notification-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/services/notification-service/internal/reaper"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var messagingReaperRepoTracer = tracing.GetTracer("notification-service.messaging_reaper_repository")

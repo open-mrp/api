@@ -8,10 +8,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/lease"
-	"github.com/augno/api/shared/retry"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/lease"
+	"github.com/open-mrp/api/shared/retry"
 )
 
 // EnqueuerConfig holds the configuration for the outbox enqueuer.

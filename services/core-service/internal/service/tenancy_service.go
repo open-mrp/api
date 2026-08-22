@@ -6,12 +6,12 @@ import (
 	"sort"
 	"time"
 
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/shared/appctx"
-	s3client "github.com/augno/api/shared/cloud/s3"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/ptrutil"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/appctx"
+	s3client "github.com/open-mrp/api/shared/cloud/s3"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/ptrutil"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var tenancySvcTracer = tracing.GetTracer("core-service.tenancy_service")
@@ -227,7 +227,7 @@ func (s *tenancySvcImpl) GetCurrentUser(ctx context.Context, userID string, targ
 	}
 
 	if user.ImageURL != nil {
-		// A non-null user.image_url is only an avatar-existence signal (a sentinel path or a normalized legacy URL — see normalizeUserImageURL), never a browser-servable URL. The only servable form is a freshly presigned URL for the account-scoped key {account}/{user}.png, which we presign directly rather than doing an S3 HeadObject — presigning is a local SigV4 operation with no network I/O, keeping /me off the S3 critical path. /me is account-agnostic on bootstrap (called before an account is selected, so no Augno-Account header → no targetAccountID), so when there is no target account, or signing fails, we return a nil image_url instead of the unservable stored value. Clients fall back to initials and pick up the real avatar when they refetch /me with an account selected.
+		// A non-null user.image_url is only an avatar-existence signal (a sentinel path or a normalized legacy URL — see normalizeUserImageURL), never a browser-servable URL. The only servable form is a freshly presigned URL for the account-scoped key {account}/{user}.png, which we presign directly rather than doing an S3 HeadObject — presigning is a local SigV4 operation with no network I/O, keeping /me off the S3 critical path. /me is account-agnostic on bootstrap (called before an account is selected, so no OpenMRP-Account header → no targetAccountID), so when there is no target account, or signing fails, we return a nil image_url instead of the unservable stored value. Clients fall back to initials and pick up the real avatar when they refetch /me with an account selected.
 		var presigned *string
 		if targetAccountID != nil {
 			key := *targetAccountID + "/" + userID + ".png"

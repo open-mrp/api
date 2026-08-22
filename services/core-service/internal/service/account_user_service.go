@@ -5,20 +5,20 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/services/core-service/internal/event"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/audit"
-	s3client "github.com/augno/api/shared/cloud/s3"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/crypto"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/id"
-	"github.com/augno/api/shared/idempotency"
-	"github.com/augno/api/shared/messaging"
-	"github.com/augno/api/shared/ptrutil"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/services/core-service/internal/event"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/audit"
+	s3client "github.com/open-mrp/api/shared/cloud/s3"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/crypto"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/messaging"
+	"github.com/open-mrp/api/shared/ptrutil"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var accountUserSvcTracer = tracing.GetTracer("core-service.account_user_service")
@@ -158,7 +158,7 @@ func (s *accountUserSvcImpl) ListAccountUsers(ctx context.Context, params domain
 	}
 
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	if identity.IsExternalTarget() {
@@ -198,7 +198,7 @@ func (s *accountUserSvcImpl) GetAccountUser(ctx context.Context, accountUserID s
 	}
 
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	if identity.IsExternalTarget() {
@@ -234,7 +234,7 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 	}
 
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	params.AccountID = identity.Target.AccountID
@@ -499,7 +499,7 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 					"Password": generatedPassword,
 				}
 
-				subject := "Welcome to Augno"
+				subject := "Welcome to OpenMRP"
 
 				if identity.IsExternalTarget() {
 					actorAccountID := *identity.ActorAccountID()
@@ -520,7 +520,7 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 					case portalDomain != nil && portalDomain.Status == constants.PortalDomainStatusVerified:
 						emailParams["LoginLink"] = "https://" + portalDomain.Domain + "/login"
 					case slug != nil:
-						emailParams["LoginLink"] = "https://www.augno.com/" + *slug + "/login"
+						emailParams["LoginLink"] = "https://www.openmrp.ai/" + *slug + "/login"
 					}
 					subject = "Welcome to the " + accountName + " platform"
 				}
@@ -812,7 +812,7 @@ func (s *accountUserSvcImpl) UpdateAccountUserStatus(ctx context.Context, accoun
 	}
 
 	if !identity.IsTargetAccountSet() {
-		return tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	accountID := identity.Target.AccountID

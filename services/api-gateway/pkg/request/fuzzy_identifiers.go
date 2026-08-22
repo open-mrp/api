@@ -1,8 +1,8 @@
 package apirequest
 
 import (
-	"github.com/augno/api/shared/field"
-	pb "github.com/augno/api/shared/proto/core"
+	"github.com/open-mrp/api/shared/field"
+	pb "github.com/open-mrp/api/shared/proto/core"
 )
 
 /* -------------------------- Named Object -------------------------- */

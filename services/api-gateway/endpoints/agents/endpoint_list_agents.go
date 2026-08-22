@@ -4,11 +4,11 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // Request to list agent definitions.
@@ -26,7 +26,7 @@ type ListAgentsRequest struct {
 
 // Lists the agents available to your account, newest first.
 //
-// Covers both the `system` agents Augno provides to every account and the `custom` agents created in yours. Deleted agents are never returned. The `q` parameter matches an agent's name, slug, description, or ID.
+// Covers both the `system` agents OpenMRP provides to every account and the `custom` agents created in yours. Deleted agents are never returned. The `q` parameter matches an agent's name, slug, description, or ID.
 type ListAgentsEndpoint struct{}
 
 func (e *ListAgentsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAgentsRequest, *apiresource.List[apiresource.AgentDefinition]] {

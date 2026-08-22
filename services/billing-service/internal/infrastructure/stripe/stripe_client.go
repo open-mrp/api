@@ -10,9 +10,9 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/augno/api/services/billing-service/internal/domain"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/billing-service/internal/domain"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/tracing"
 	"github.com/stripe/stripe-go/v84"
 	portalsession "github.com/stripe/stripe-go/v84/billingportal/session"
 	"github.com/stripe/stripe-go/v84/customer"

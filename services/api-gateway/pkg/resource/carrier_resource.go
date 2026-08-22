@@ -3,9 +3,9 @@ package apiresource
 import (
 	"time"
 
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/timeutil"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/timeutil"
 )
 
 const SampleCarrierID = "cr_tv5vfjtgu1n3"
@@ -84,7 +84,7 @@ type OAuthResponse struct {
 
 var SampleOAuthResponse = &OAuthResponse{
 	Object:   constants.ObjectTypeOAuthResponse,
-	OAuthURL: "https://oauth.fedex.com/authorize?client_id=abc123&redirect_uri=https://www.augno.com/carriers/oauth/callback",
+	OAuthURL: "https://oauth.fedex.com/authorize?client_id=abc123&redirect_uri=https://www.openmrp.ai/carriers/oauth/callback",
 }
 
 func (*OAuthResponse) SchemaExample() any {

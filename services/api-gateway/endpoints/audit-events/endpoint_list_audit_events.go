@@ -5,11 +5,11 @@ import (
 	"net/http"
 	"time"
 
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // Request to list audit events.
@@ -39,7 +39,7 @@ type ListAuditEventsRequest struct {
 	ActorIDs []string `query:"actor_ids"`
 	// Filter by the actor type.
 	//
-	// Events are recorded for actors of type `user`, `api_key`, and `agent` — the last covering changes an Augno agent made on your account's behalf.
+	// Events are recorded for actors of type `user`, `api_key`, and `agent` — the last covering changes an OpenMRP agent made on your account's behalf.
 	ActorTypes []constants.ActorType `query:"actor_types"`
 	// Filter by the mutation type recorded on the event.
 	Actions []constants.AuditAction `query:"actions"`

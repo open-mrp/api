@@ -5,15 +5,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/services/core-service/internal/domain"
-	clientmock "github.com/augno/api/services/core-service/internal/domain/mock/client"
-	factorymock "github.com/augno/api/services/core-service/internal/domain/mock/factory"
-	mediatormock "github.com/augno/api/services/core-service/internal/domain/mock/mediator"
-	repositorymock "github.com/augno/api/services/core-service/internal/domain/mock/repository"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	clientmock "github.com/open-mrp/api/services/core-service/internal/domain/mock/client"
+	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
+	mediatormock "github.com/open-mrp/api/services/core-service/internal/domain/mock/mediator"
+	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
@@ -188,10 +188,10 @@ func (suite *PortalDomainSvcTestSuite) TestCreatePortalDomain_ConflictWhenAccoun
 	suite.Equal(apierror.ErrorCodeResourceConflict, apiErr.Code)
 }
 
-func (suite *PortalDomainSvcTestSuite) TestCreatePortalDomain_RejectsInvalidAndAugnoDomains() {
+func (suite *PortalDomainSvcTestSuite) TestCreatePortalDomain_RejectsInvalidAndOpenMRPDomains() {
 	ctx := portalDomainInternalCtx(testPortalAccountID)
 
-	for _, bad := range []string{"", "not-a-domain", "shop.augno.com", "augno.com", "http://shop.acme.com", "shop..acme.com"} {
+	for _, bad := range []string{"", "not-a-domain", "shop.openmrp.ai", "openmrp.ai", "http://shop.acme.com", "shop..acme.com"} {
 		_, apiErr := suite.svc.CreatePortalDomain(ctx, bad)
 		suite.NotNil(apiErr, "expected validation error for %q", bad)
 		suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code, "domain %q", bad)

@@ -11,8 +11,8 @@ import (
 	// Embed the IANA timezone database into the binary so time.LoadLocation works in minimal runtime images (e.g. Alpine/scratch) that ship no tzdata.
 	_ "time/tzdata"
 
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/lease"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/lease"
 )
 
 const (

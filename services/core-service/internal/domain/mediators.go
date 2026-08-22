@@ -3,8 +3,8 @@ package domain
 import (
 	"context"
 
-	"github.com/augno/api/services/auth-service/pkg/types"
-	apierror "github.com/augno/api/shared/errors"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 type IdempotencyMed interface {

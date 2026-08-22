@@ -7,7 +7,7 @@ import "strings"
 // Seed data constants from shared/db/seed/ and tools/apidocs/httpie_seed_data.go.
 // These are IDs and values known to exist after seeding.
 const (
-	SeedAPIKey = "aug_sk_prod_u6Xh5ZpaUruMAU12EPAs4z_rSA4zJM5NbRqAtalvXMoRWOUPohFKJtX7ZUFUOp36IVwdiUCZu"
+	SeedAPIKey = "mrp_sk_prod_u6Xh5ZpaUruMAU12EPAs4z_rSA4zJM5NbRqAtalvXMoRWOUPohFKJtX7ZUFUOp36IVwdiUCZu"
 	// The signature the e2e Stripe stub accepts; anything else is refused, so both webhook
 	// branches are reachable. Mirrors stub.StubWebhookSignature in billing-service.
 	StubStripeSignature = "t=0,v1=e2e-stub-signature"
@@ -27,13 +27,13 @@ const (
 	SeedRegistrationFlowID = "mock-registration-flow"
 
 	// account_user belonging to SeedCustomerAccountID (the buyer/customer account),
-	// user "Jane Doe" <dev@augno.com>. A valid order email-contact recipient, which
+	// user "Jane Doe" <dev@openmrp.ai>. A valid order email-contact recipient, which
 	// must resolve within the BUYER's account (not the seller/acting account).
 	SeedCustomerAccountUserID = "acus_01seedcustuser00000"
-	SeedCustomerUserEmail     = "dev@augno.com"
+	SeedCustomerUserEmail     = "dev@openmrp.ai"
 
 	// Customer portal API key (owned by customer account, targets vendor account)
-	SeedCustomerAPIKey = "aug_sk_prod_CustPortalE2eTestKey1_CustomerPortalE2eTestSecretValueForAuthTestingPurpose12345efS0Og"
+	SeedCustomerAPIKey = "mrp_sk_prod_CustPortalE2eTestKey1_CustomerPortalE2eTestSecretValueForAuthTestingPurpose12345efS0Og"
 	SeedAddressID      = "ad_01k09wnac0e1ar211e0sy0ba4g"
 
 	// Catalog
@@ -276,12 +276,12 @@ const (
 	// customer-facing log (it is not internal infrastructure, so not scrubbed).
 	SeedReqLogInfraAgentAPIVersion = "1.0.forge-preview.2"
 	SeedReqLogInfraUserID          = "rqlog_01infrauser00" // identity_type=user -> preserved
-	SeedReqLogInfraUserHost        = "api.augno.com"
+	SeedReqLogInfraUserHost        = "api.openmrp.ai"
 	SeedReqLogInfraUserIP          = "198.51.100.7"
 	// RedactedRequestLogHost mirrors apiresource.RedactedRequestLogHost (kept as a
 	// literal so the e2e suite stays a black-box client of the API): the public API
 	// host shown in place of the internal listener hostname for agent requests.
-	SeedReqLogRedactedHost = "https://api.augno.com"
+	SeedReqLogRedactedHost = "https://api.openmrp.ai"
 
 	// Audit event whose request_id points at SeedReqLogInfraAgentID, covering the
 	// audit-event ?include=request expansion of an internal/agent request_log.
@@ -461,7 +461,7 @@ const (
 	SeedRequestLogQueryParamsID = "rqlog_01seedreqlog5_000" // has query_json populated for include=query_params tests
 	// referrer set on SeedReqLogInfraUserID (rqlog_01infrauser00) — only seed row
 	// that populates the otherwise-always-null referrer field.
-	SeedRequestLogReferrerValue = "https://dashboard.augno.com/inbox"
+	SeedRequestLogReferrerValue = "https://dashboard.openmrp.ai/inbox"
 	// Audit event that populates source_ip + idempotency_key_id (NULL on all other
 	// seed rows). The joined idempotency_key surfaces as the key string.
 	SeedAuditEventWithSourceIPID = "adev_01seedsrcipkey0"
@@ -470,7 +470,7 @@ const (
 
 	// Tenant B (seeded in 0015_tenant_b_e2e.sql) — used for tenant isolation tests
 	SeedTenantBAccountID = "ac_tenant2_e2e_isolati"
-	SeedTenantBAPIKey    = "aug_sk_prod_TenantBKeyForE2eTests1_TenantBSecretForE2eIsolationTestingPurpose12didR71"
+	SeedTenantBAPIKey    = "mrp_sk_prod_TenantBKeyForE2eTests1_TenantBSecretForE2eIsolationTestingPurpose12didR71"
 	// Tenant B's only account user, needed wherever a write must name who is responsible.
 	SeedTenantBAccountUserID = "acus_tenant2_e2e_admin"
 )
@@ -653,9 +653,9 @@ var nullableFieldSeeds = map[string]string{
 	"product_line_id":     SeedProductLineID,
 
 	// String fields
-	"email": "e2e-nullable@test.augno.com",
+	"email": "e2e-nullable@test.openmrp.ai",
 	"phone": "555-000-9999",
-	"url":   "https://e2e-nullable.test.augno.com",
+	"url":   "https://e2e-nullable.test.openmrp.ai",
 	"note":  "e2e nullable test note",
 
 	// Clearable text fields (generic PATCH test)

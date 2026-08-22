@@ -15,7 +15,7 @@ import (
 
 const (
 	registrationSessionsPath = "/v1/auth/registration-sessions"
-	accessTokenCookieName    = "__Secure-augno.access-token"
+	accessTokenCookieName    = "__Secure-openmrp.access-token"
 )
 
 // accessTokenFromSetCookie pulls the access token out of a response's Set-Cookie

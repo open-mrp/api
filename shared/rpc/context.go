@@ -3,8 +3,8 @@ package rpc
 import (
 	"context"
 
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/contracts"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/contracts"
 
 	"google.golang.org/grpc/metadata"
 )

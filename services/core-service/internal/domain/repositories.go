@@ -7,9 +7,9 @@ import (
 
 	"github.com/shopspring/decimal"
 
-	"github.com/augno/api/services/core-service/internal/scheduling"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
+	"github.com/open-mrp/api/services/core-service/internal/scheduling"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 type AccountRepo interface {
@@ -399,7 +399,7 @@ type AccountIntegrationRepo interface {
 	HasIntegration(ctx context.Context, accountID string, code constants.IntegrationCode) (bool, *apierror.APIError)
 }
 
-// HubspotSyncRepo persists the HubSpot backfill state: jobs (state machine), the generic Augno->HubSpot id mapping, and the company-match review queue.
+// HubspotSyncRepo persists the HubSpot backfill state: jobs (state machine), the generic OpenMRP->HubSpot id mapping, and the company-match review queue.
 type HubspotSyncRepo interface {
 	CreateJob(ctx context.Context, params CreateHubspotSyncJobParams) (*HubspotSyncJob, *apierror.APIError)
 	GetJob(ctx context.Context, accountID, id string) (*HubspotSyncJob, *apierror.APIError)
@@ -410,7 +410,7 @@ type HubspotSyncRepo interface {
 
 	UpsertRecord(ctx context.Context, params UpsertHubspotSyncRecordParams) *apierror.APIError
 	GetRecord(ctx context.Context, accountID, augnoType, augnoID string) (*HubspotSyncRecord, *apierror.APIError)
-	// ListRecords pages the account's mappings for one Augno type, resolving each entity's display name.
+	// ListRecords pages the account's mappings for one OpenMRP type, resolving each entity's display name.
 	ListRecords(ctx context.Context, params ListHubspotSyncRecordsParams) (*ListHubspotSyncRecordsResult, *apierror.APIError)
 
 	CreateReview(ctx context.Context, params CreateHubspotCompanyReviewParams) (*HubspotCompanyReview, *apierror.APIError)

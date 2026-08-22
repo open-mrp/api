@@ -4,10 +4,10 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // Request to list API keys.
@@ -23,7 +23,7 @@ type ListAPIKeysRequest struct {
 	Statuses []constants.APIKeyStatus `query:"statuses" default:"active,expired,revoked"`
 }
 
-// Returns a paginated list of [API keys](https://docs.augno.com/api/api-keys), newest first.
+// Returns a paginated list of [API keys](https://docs.openmrp.ai/api/api-keys), newest first.
 //
 // Only keys belonging to the account making the request are returned. The search term matches against the key name.
 type ListAPIKeysEndpoint struct{}

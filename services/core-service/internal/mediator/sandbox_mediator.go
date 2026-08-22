@@ -6,11 +6,11 @@ import (
 	"math"
 	"time"
 
-	"github.com/augno/api/services/core-service/internal/calendarseed"
-	"github.com/augno/api/services/core-service/internal/domain"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/id"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/core-service/internal/calendarseed"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var sandboxMedTracer = tracing.GetTracer("core-service.sandbox_mediator")

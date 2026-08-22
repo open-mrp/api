@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/augno/api/shared/field"
+	"github.com/open-mrp/api/shared/field"
 )
 
 type updateBodyExample struct {

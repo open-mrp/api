@@ -1,6 +1,6 @@
 # Go API layer map (`api/`)
 
-Monorepo, module `github.com/augno/api`. Services under `services/`,
+Monorepo, module `github.com/open-mrp/api`. Services under `services/`,
 cross-cutting code under `shared/`, protobufs under `shared/proto/*`.
 Inter-service transport is gRPC; async is RabbitMQ via outbox/inbox.
 

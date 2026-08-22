@@ -6,15 +6,15 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/audit"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/crypto"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/id"
-	"github.com/augno/api/shared/idempotency"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/audit"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/crypto"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/tracing"
 
 	"go.opentelemetry.io/otel/trace"
 )
@@ -143,7 +143,7 @@ func (s *accountIntegrationSvcImpl) BatchGetAccountIntegrationsByIDs(ctx context
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 	if len(ids) == 0 {
 		return nil, nil
@@ -525,7 +525,7 @@ func (s *accountIntegrationSvcImpl) GetStripePublishableKey(ctx context.Context)
 	}
 
 	if !identity.IsTargetAccountSet() {
-		return "", tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return "", tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	// Only internal actors and customer actors are allowed; supplier actors are rejected.
@@ -577,7 +577,7 @@ func (s *accountIntegrationSvcImpl) HasStripeIntegration(ctx context.Context) (b
 	}
 
 	if !identity.IsTargetAccountSet() {
-		return false, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return false, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	// Customer actor read access check

@@ -4,10 +4,10 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // Request to get an API key by ID.
@@ -16,7 +16,7 @@ type RetrieveAPIKeyRequest struct {
 	APIKeyID string `path:"id" validate:"required"`
 }
 
-// Returns [API key](https://docs.augno.com/api/api-keys) metadata by ID.
+// Returns [API key](https://docs.openmrp.ai/api/api-keys) metadata by ID.
 //
 // Only the redacted key value is returned. The full secret is available only in the response that issued the key, so a lost secret must be replaced by rotating the key.
 type RetrieveAPIKeyEndpoint struct{}

@@ -21,8 +21,8 @@ cd "$REPO_ROOT"
 
 # --- Connection strings ---
 
-DB_URL="mysql://root:Testing123!@localhost:3306/augno"
-AGENT_DB_URL="postgres://augno@localhost:5432/augno_agents?sslmode=disable"
+DB_URL="mysql://root:Testing123!@localhost:3306/openmrp"
+AGENT_DB_URL="postgres://openmrp@localhost:5432/openmrp_agents?sslmode=disable"
 
 # --- Write .env ---
 
@@ -49,13 +49,13 @@ docker compose up -d
 # --- Wait for healthy ---
 
 info "Waiting for MySQL to be healthy..."
-until docker inspect --format='{{.State.Health.Status}}' augno-mysql 2>/dev/null | grep -q "healthy"; do
+until docker inspect --format='{{.State.Health.Status}}' openmrp-mysql 2>/dev/null | grep -q "healthy"; do
     sleep 1
 done
 info "MySQL is ready."
 
 info "Waiting for PostgreSQL to be healthy..."
-until docker inspect --format='{{.State.Health.Status}}' augno-postgres 2>/dev/null | grep -q "healthy"; do
+until docker inspect --format='{{.State.Health.Status}}' openmrp-postgres 2>/dev/null | grep -q "healthy"; do
     sleep 1
 done
 info "PostgreSQL is ready."
@@ -75,7 +75,7 @@ info "Applying core-service MySQL migration..."
 # Retry goose until the connection succeeds.
 MAX_RETRIES=10
 for i in $(seq 1 $MAX_RETRIES); do
-    if GOOSE_DRIVER=mysql GOOSE_DBSTRING="root:Testing123!@tcp(localhost:3306)/augno?parseTime=true" \
+    if GOOSE_DRIVER=mysql GOOSE_DBSTRING="root:Testing123!@tcp(localhost:3306)/openmrp?parseTime=true" \
         goose -dir shared/db/migrations up 2>/dev/null; then
         break
     fi
@@ -97,7 +97,7 @@ info "Core-service seed complete."
 # --- Apply agent-service PostgreSQL migration ---
 
 info "Applying agent-service PostgreSQL migration..."
-GOOSE_DRIVER=postgres GOOSE_DBSTRING="postgres://augno@localhost:5432/augno_agents?sslmode=disable" \
+GOOSE_DRIVER=postgres GOOSE_DBSTRING="postgres://openmrp@localhost:5432/openmrp_agents?sslmode=disable" \
     goose -dir services/agent-service/db/migrations up
 
 info "Agent-service migration complete."
@@ -107,8 +107,8 @@ info "Agent-service migration complete."
 echo ""
 info "Local databases are ready!"
 echo ""
-echo "  MySQL:      mysql -u root -p'Testing123!' -h 127.0.0.1 augno"
-echo "  PostgreSQL: psql postgres://augno@localhost:5432/augno_agents"
+echo "  MySQL:      mysql -u root -p'Testing123!' -h 127.0.0.1 openmrp"
+echo "  PostgreSQL: psql postgres://openmrp@localhost:5432/openmrp_agents"
 echo ""
 echo "  To re-seed core data:"
 echo "    make seed-core"

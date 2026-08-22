@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/augno/api/services/agent-service/internal/domain"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/contracts"
-	"github.com/augno/api/shared/id"
-	pb "github.com/augno/api/shared/proto/billing"
-	"github.com/augno/api/shared/rpc"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/agent-service/internal/domain"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/contracts"
+	"github.com/open-mrp/api/shared/id"
+	pb "github.com/open-mrp/api/shared/proto/billing"
+	"github.com/open-mrp/api/shared/rpc"
+	"github.com/open-mrp/api/shared/tracing"
 
 	grpclib "google.golang.org/grpc"
 )

@@ -107,7 +107,7 @@ func TestCovMessagingGroups_CreateAndUpdateAllFields(t *testing.T) {
 	assertObjectField(t, userActor, "actor")
 	assert.Equal(t, "user", jsonField(userActor, "type"))
 	assert.Equal(t, "Sarah Martinez", jsonField(userActor, "name"))
-	assert.Equal(t, "user2@augno.com", jsonField(userActor, "handle"))
+	assert.Equal(t, "user2@openmrp.ai", jsonField(userActor, "handle"))
 	assert.NotEmpty(t, jsonField(userActor, "avatar_url"))
 	assertNilField(t, userActor, "role")
 

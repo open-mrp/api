@@ -5,17 +5,17 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/services/core-service/internal/event"
-	"github.com/augno/api/services/core-service/internal/hubspotsync"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/audit"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/idempotency"
-	"github.com/augno/api/shared/messaging"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/services/core-service/internal/event"
+	"github.com/open-mrp/api/services/core-service/internal/hubspotsync"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/audit"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/messaging"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var hubspotSyncSvcTracer = tracing.GetTracer("core-service.hubspot_sync_service")
@@ -198,7 +198,7 @@ func (s *hubspotSyncSvcImpl) ListReviews(ctx context.Context, jobID string, stat
 	return reviews, tracing.Trace(span, apiErr)
 }
 
-// ListRecords returns the account's Augno->HubSpot mappings: what the sync has actually written. The account is taken from the identity, never the request, so a caller cannot read another tenant's mappings.
+// ListRecords returns the account's OpenMRP->HubSpot mappings: what the sync has actually written. The account is taken from the identity, never the request, so a caller cannot read another tenant's mappings.
 func (s *hubspotSyncSvcImpl) ListRecords(ctx context.Context, params domain.ListHubspotSyncRecordsParams) (*domain.ListHubspotSyncRecordsResult, *apierror.APIError) {
 	ctx, span := hubspotSyncSvcTracer.Start(ctx, "service.hubspot_sync.list_records")
 	defer span.End()

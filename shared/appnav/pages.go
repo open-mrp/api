@@ -1,7 +1,7 @@
 // Package appnav exposes the dashboard's page catalog to the API — which pages the app has, and
 // which API object type each record detail page shows.
 //
-// Agents reference app records and pages by writing `augno:` markdown links that the frontend
+// Agents reference app records and pages by writing `openmrp:` markdown links that the frontend
 // resolves to real routes, so nothing here builds a URL; the catalog exists so an agent can be told
 // what is linkable at all. The manifest is generated from the dashboard's own navigation
 // (`dashboard/apps/frontend/scripts/generate-app-pages.ts`) and committed, which keeps a new page
@@ -15,7 +15,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/augno/api/shared/fuzzy"
+	"github.com/open-mrp/api/shared/fuzzy"
 )
 
 //go:embed app_pages.json
@@ -23,7 +23,7 @@ var manifestFS embed.FS
 
 // Page is a linkable dashboard page.
 type Page struct {
-	// Key identifies the page in an `augno:page/<key>` link (e.g. `customer-prices`, `agents/runs`).
+	// Key identifies the page in an `openmrp:page/<key>` link (e.g. `customer-prices`, `agents/runs`).
 	Key string `json:"key"`
 	// Title is the page's name as the navigation shows it.
 	Title string `json:"title"`

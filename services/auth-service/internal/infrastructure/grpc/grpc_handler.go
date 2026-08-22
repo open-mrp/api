@@ -4,10 +4,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/augno/api/services/auth-service/internal/domain"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/contracts"
-	pb "github.com/augno/api/shared/proto/auth"
+	"github.com/open-mrp/api/services/auth-service/internal/domain"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/contracts"
+	pb "github.com/open-mrp/api/shared/proto/auth"
 
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"

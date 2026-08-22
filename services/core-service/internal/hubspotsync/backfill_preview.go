@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/augno/api/services/core-service/internal/domain"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 // Job status values (mirror the hubspot_sync_job.status column).
@@ -33,8 +33,8 @@ const (
 
 // hubspot_sync_record.augno_type values. A customer maps to both its HubSpot company and its primary contact.
 const (
-	augnoTypeCustomer = "customer"
-	augnoTypeContact  = "contact"
+	openMRPTypeCustomer = "customer"
+	openMRPTypeContact  = "contact"
 )
 
 // customerPageSize bounds how many customers we page through at a time during preview.
@@ -96,7 +96,7 @@ func (s *service) RunPreview(ctx context.Context, accountID, jobID string) *apie
 				counts.CompaniesConfident++
 				if apiErr := syncRepo.UpsertRecord(ctx, domain.UpsertHubspotSyncRecordParams{
 					AccountID:   accountID,
-					AugnoType:   augnoTypeCustomer,
+					AugnoType:   openMRPTypeCustomer,
 					AugnoID:     customer.ID,
 					HubspotType: objectTypeCompanies,
 					HubspotID:   candidates[0].HubspotID,

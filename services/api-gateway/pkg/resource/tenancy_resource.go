@@ -3,8 +3,8 @@ package apiresource
 import (
 	"time"
 
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	"github.com/augno/api/shared/constants"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 // The authenticated user's tenancy context: which account they are currently acting in and every other account they can switch to.
@@ -58,7 +58,7 @@ type TenancyCurrentAccount struct {
 	Slug *string `json:"slug"`
 	// The authenticated user's role in this account.
 	Role *Role `json:"role"`
-	// The Stripe customer that Augno bills this account's own subscription and usage against.
+	// The Stripe customer that OpenMRP bills this account's own subscription and usage against.
 	//
 	// This is not the account's own Stripe customer for charging their customers.
 	InternalStripeCustomerID *string `json:"internal_stripe_customer_id"`

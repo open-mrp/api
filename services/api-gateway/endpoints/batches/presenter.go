@@ -3,11 +3,11 @@ package batchep
 import (
 	"context"
 
-	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/constants"
-	pb "github.com/augno/api/shared/proto/core"
-	"github.com/augno/api/shared/ptrutil"
+	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/shared/constants"
+	pb "github.com/open-mrp/api/shared/proto/core"
+	"github.com/open-mrp/api/shared/ptrutil"
 )
 
 // BatchQuantityPresenter converts a proto BatchQuantityInfo to an apiresource.Quantity.

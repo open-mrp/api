@@ -39,7 +39,7 @@ import (
 // require a new DB seed row, which is out of scope for this file (hard
 // rule: write only to this file). The positive-customer-match case is
 // covered instead using the pre-existing seeded account_user
-// acus_01seedcustuser00000 (email dev@augno.com) on SeedCustomerAccountID,
+// acus_01seedcustuser00000 (email dev@openmrp.ai) on SeedCustomerAccountID,
 // which requires no new seed data.
 // ──────────────────────────────────────────────
 
@@ -49,7 +49,7 @@ import (
 const covSalesContactsCustomerAccountUserID = "acus_01seedcustuser00000"
 
 // covSalesContactsCustomerEmail is the email on the seeded customer account_user above.
-const covSalesContactsCustomerEmail = "dev@augno.com"
+const covSalesContactsCustomerEmail = "dev@openmrp.ai"
 
 // TestCovSalesContacts_CustomerRelationshipMatch asserts a real positive
 // `relationship:"customer"` match (not just filter-exclusion of a self
@@ -164,7 +164,7 @@ func TestCovSalesContacts_IncludeAccountUserRoleAndDepartment(t *testing.T) {
 	t.Parallel()
 
 	name := uniqueName("e2e-covsc-roledept")
-	email := name + "@e2e-test.augno.com"
+	email := name + "@e2e-test.openmrp.ai"
 
 	status, body, err := apiClient.Post(accountUsersPath, map[string]any{
 		"name":          name,
@@ -271,7 +271,7 @@ func TestCovSalesContacts_ValidationInvalidInclude(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Post(
 		contactsFindByEmailPath+"?include=nonexistent_bogus_field",
-		map[string]any{"email": uniqueName("e2e-covsc-badinclude") + "@e2e-test.augno.com"},
+		map[string]any{"email": uniqueName("e2e-covsc-badinclude") + "@e2e-test.openmrp.ai"},
 		newIdempotencyKey(),
 	)
 	require.NoError(t, err)

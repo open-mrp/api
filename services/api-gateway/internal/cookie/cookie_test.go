@@ -178,7 +178,7 @@ func TestCookieDomains(t *testing.T) {
 		{
 			name:         "Production mode domain",
 			isProduction: true,
-			wantDomain:   ".augno.com",
+			wantDomain:   ".openmrp.ai",
 		},
 		{
 			name:         "Non-production mode domain",
@@ -188,14 +188,14 @@ func TestCookieDomains(t *testing.T) {
 		{
 			name:         "Production first-party host keeps wildcard domain",
 			isProduction: true,
-			externalHost: "docs.augno.com",
-			wantDomain:   ".augno.com",
+			externalHost: "docs.openmrp.ai",
+			wantDomain:   ".openmrp.ai",
 		},
 		{
 			name:         "Production apex host keeps wildcard domain",
 			isProduction: true,
-			externalHost: "augno.com",
-			wantDomain:   ".augno.com",
+			externalHost: "openmrp.ai",
+			wantDomain:   ".openmrp.ai",
 		},
 		{
 			name:         "Production custom portal domain gets host-only cookie",
@@ -206,7 +206,7 @@ func TestCookieDomains(t *testing.T) {
 		{
 			name:         "Lookalike domain does not get the wildcard",
 			isProduction: true,
-			externalHost: "evilaugno.com",
+			externalHost: "evilopenmrp.ai",
 			wantDomain:   "",
 		},
 	}

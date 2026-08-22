@@ -362,7 +362,7 @@ func TestCovMessagingContacts_InvalidBearerTokenUnauthorized(t *testing.T) {
 
 // TestCovMessagingContacts_MissingAccountHeaderRejected verifies that a
 // user-session caller (not an API key, which is already permanently scoped
-// to an account) with an empty Augno-Account header is rejected. Live-curl
+// to an account) with an empty OpenMRP-Account header is rejected. Live-curl
 // verified: the gateway's RequiredPermissions gate (messaging:read) fails
 // before the request ever reaches notification-service's own
 // !IsTargetAccountSet() check, so the observed status is 403

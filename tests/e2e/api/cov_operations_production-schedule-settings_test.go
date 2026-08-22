@@ -361,7 +361,7 @@ func TestScheduleSettings_ZeroLeadTimeIsSameDay(t *testing.T) {
 	order := issueOrderForCustomer(t, customerID, nil)
 
 	assert.Equal(t, "account", jsonField(order, "lead_time_source"))
-	assert.Equal(t, "0", jsonField(order, "lead_time_days"))
+	assert.Equal(t, 0, committedRuleDays(t, order))
 	assert.Equal(t, expectedShipBy(t, order, 0), shipByDate(t, order),
 		"a zero lead time commits the order to shipping the day it was issued")
 }

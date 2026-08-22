@@ -233,9 +233,12 @@ func TestQuoteSalesOrderPrices_VolumeDiscountTiers(t *testing.T) {
 	for _, c := range cases {
 		c := c
 		t.Run(c.cartons+"ct", func(t *testing.T) {
-			// No lock here: the parent holds the shared side until every parallel subtest has
-			// finished, and RLock is not reentrant once a writer is waiting.
-			t.Parallel()
+			// Serial, and no lock of its own: the parent already holds the shared side for the
+			// whole table, and RLock is not reentrant once a writer is waiting. Parallel
+			// subtests would deadlock the package — the parent cannot release the read lock
+			// until they finish, they cannot start until a parallel slot frees, and the slots
+			// fill with the account-price tests blocked on the exclusive side. Four quotes run
+			// serially in a few hundred milliseconds, which is not worth a lock cycle to shave.
 			body := map[string]any{
 				"buyer_account_id": SeedCustomerAccountID,
 				"lines":            []map[string]any{quoteLine(seedVolumeProductA, c.cartons, seedCartonUnitID)},

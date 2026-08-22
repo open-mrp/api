@@ -738,12 +738,16 @@ func TestCovSalesSalesOrders_LineUnitPriceOverride_InternalHonoredCustomerIgnore
 // list — query-param gaps not covered elsewhere
 // ──────────────────────────────────────────────
 
-func TestCovSalesSalesOrders_ListStatusCodesUnknownReturnsEmpty(t *testing.T) {
+// status_codes is a closed enum, so an unrecognized member is a malformed request
+// rather than a filter that happens to match nothing — the caller is told the value
+// is wrong instead of being handed an empty page they would read as "no such orders".
+func TestCovSalesSalesOrders_ListStatusCodesUnknownRejected(t *testing.T) {
 	t.Parallel()
-	list, status, err := apiClient.GetList(salesOrdersPath, url.Values{"status_codes": {"bogus_status_code_e2e"}})
+	status, body, err := apiClient.GetListRaw(salesOrdersPath, url.Values{"status_codes": {"bogus_status_code_e2e"}})
 	require.NoError(t, err)
-	require.Equal(t, 200, status)
-	assertEmptyListData(t, list.Data, "an unknown status code should match no orders, not error")
+	requireStatus(t, 400, status, body)
+	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	assertErrorParam(t, errObj, "status_codes")
 }
 
 // TestCovSalesSalesOrders_ListMalformedDateFiltersIgnoredNot5xx pins the

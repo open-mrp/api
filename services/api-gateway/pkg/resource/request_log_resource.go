@@ -130,7 +130,7 @@ func (*RequestLog) SchemaExample() any {
 // service name:port) never leaks. We surface the public API host the agent's call
 // is logically equivalent to, rather than a meaningless "internal" placeholder. The
 // true internal host stays in platform-service storage for operator debugging.
-const RedactedRequestLogHost = "https://api.augno.com"
+const RedactedRequestLogHost = "https://api.openmrp.ai"
 
 // internalListenerIdentityType is the request_log.identity_type stamped on requests
 // authenticated by the gateway's trusted internal listener (agents). It is the

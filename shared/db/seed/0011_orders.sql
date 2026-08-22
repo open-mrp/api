@@ -97,7 +97,7 @@ INSERT IGNORE INTO sales_order_line (id, product_sku, product_description, produ
 
 -- Email contacts for ORD-001 (SeedSalesOrderID): one invoice recipient (John Doe /
 -- dane@augno.com) and one acknowledgement recipient (Sarah Martinez /
--- user2@augno.com), exercising the ?include=contacts expansion.
+-- user2@openmrp.ai), exercising the ?include=contacts expansion.
 INSERT IGNORE INTO order_email_contact (id, sales_order_id, account_user_id, notification_type_code, created_at, updated_at) VALUES
     ('oec_01seediss_invoice00', 'or_01k0a8bs2yejxbsvqhrx4drkq1', 'acus_s83fjhyfmqen', 'invoice', NOW(), NOW()),
     ('oec_01seediss_acknowled', 'or_01k0a8bs2yejxbsvqhrx4drkq1', 'acus_ubdx4zebgl6p', 'order_acknowledgement', NOW(), NOW());

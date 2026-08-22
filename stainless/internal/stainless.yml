@@ -9,17 +9,21 @@ targets:
     staging_repo: open-mrp/internal-sdk
     production_repo: open-mrp/internal-sdk
     publish:
-      # Publish to GitHub Packages (npm.pkg.github.com), not public npmjs — the
-      # object form selects the registry (`npm: true` shorthand means npmjs).
+      # Public npmjs, matching the public typescript target. This moved off
+      # GitHub Packages with the OpenMRP rename: the package is consumed by
+      # dashboard and public-docs, whose CI has no GitHub Packages credential,
+      # and it is published openly alongside @openmrp/ui.
+      #
+      # This key is the source of truth for the registry. Codegen owns
+      # .github/workflows and deletes non-generated files, so editing
+      # release-please.yml in the SDK repo by hand is undone at the next sync —
+      # that is exactly how a hand-fixed registry would silently revert.
+      #
       # `release` makes stlc emit the stock release-please workflow + config as
-      # generated files, so internal-sdk's release automation survives every SDK
-      # sync (codegen owns .github/workflows and deletes non-generated files —
-      # this previously wiped a hand-committed release.yml, so release-please
-      # never ran and the SDK stopped publishing). Mirrors the public typescript
-      # target, which uses the same block with `registry: npmjs`. prerelease:
-      # false cuts stable X.Y.Z versions.
+      # generated files, so the release automation survives every SDK sync.
+      # prerelease: false cuts stable X.Y.Z versions.
       npm:
-        registry: github-packages
+        registry: npmjs
       release:
         branch: main
         prerelease: false

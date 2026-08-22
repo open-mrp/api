@@ -22,7 +22,7 @@ workspace is **multi-target** (TypeScript + Python + Go), each target building t
 
 | Workspace | Target | Package | Spec | Repo (`production_repo`) | Registry |
 | --- | --- | --- | --- | --- | --- |
-| [`stainless/internal`](../stainless/internal/) | typescript | `@openmrp/internal-sdk` | `internal_openapi_spec.json` | [`open-mrp/internal-sdk`](https://github.com/open-mrp/internal-sdk) | GitHub Packages |
+| [`stainless/internal`](../stainless/internal/) | typescript | `@openmrp/internal-sdk` | `internal_openapi_spec.json` | [`open-mrp/internal-sdk`](https://github.com/open-mrp/internal-sdk) | npmjs |
 | [`stainless/public`](../stainless/public/) | typescript | `@openmrp/sdk` | `public_openapi_spec.json` | [`open-mrp/typescript-sdk`](https://github.com/open-mrp/typescript-sdk) | npmjs |
 | [`stainless/public`](../stainless/public/) | python | `openmrp` | `public_openapi_spec.json` | [`open-mrp/python-sdk`](https://github.com/open-mrp/python-sdk) | PyPI (OIDC) |
 | [`stainless/public`](../stainless/public/) | go | `github.com/open-mrp/openmrp-go` | `public_openapi_spec.json` | [`open-mrp/openmrp-go`](https://github.com/open-mrp/openmrp-go) | git tag → pkg.go.dev |
@@ -187,7 +187,7 @@ SDK generation runs **only** from [`.github/workflows/release.yml`](../.github/w
 1. **`publish-openapi-specs`** downloads **`openapi.json`** from each bucket into **`specs/sdk-baseline/`** (pre-upload baseline), runs **`make openapi-stainless`** (specs + Stainless configs, since both are uploaded to S3), compares with [`scripts/sdk-openapi-spec-changed.sh`](../scripts/sdk-openapi-spec-changed.sh) for internal and public, then uploads **`openapi.json`** and **`stainless.yml`** (plus versioned copies) to the buckets named by the **`PUBLIC_SPEC_BUCKET`** and **`INTERNAL_SPEC_BUCKET`** Actions variables. Job outputs **`internal_spec_changed`** and **`public_spec_changed`** gate SDK generation.
 
 2. **`generate-sdks`** calls [`stlc-generate-reusable.yml`](../.github/workflows/stlc-generate-reusable.yml) with **`openapi_specs_source: s3`** and inputs **`openapi_internal_gate`** / **`openapi_public_gate`** (from **`internal_spec_changed`** / **`public_spec_changed`** on **`publish-openapi-specs`**). The job runs a **matrix of four SDK targets** — internal TS, public TS, public Python, public Go — each gated on its spec's change flag. When a flag is **`false`**, that target's **`stlc build --push`** is **skipped**. When **`true`**, it downloads the published specs from S3 and runs **`stlc build --push --targets <lang>`** to the target's **`main`**:
-   - **All targets** (`internal`, `public`, `public-python`, `public-go` — all `release: release-please`): **no changeset is added.** The conventional-commit sync message (`feat(sdk):`/`fix(sdk):`/`feat(sdk)!:` `sync with deployed API <tag>`) is what each repo's **release-please** workflow consumes to open a `release: <version>` PR → merge to publish. The public targets publish to npmjs/PyPI/Go; `internal` publishes to **GitHub Packages** (its committed `release.yml` runs release-please, then `pnpm publish`es to `npm.pkg.github.com`).
+   - **All targets** (`internal`, `public`, `public-python`, `public-go` — all `release: release-please`): **no changeset is added.** The conventional-commit sync message (`feat(sdk):`/`fix(sdk):`/`feat(sdk)!:` `sync with deployed API <tag>`) is what each repo's **release-please** workflow consumes to open a `release: <version>` PR → merge to publish. All targets publish to public registries: npmjs for the two TypeScript SDKs, PyPI for python, and the Go module proxy.
 
    All three public targets share the single `stainless/public` workspace and the same `public_spec_changed` gate, so a public-spec change fans out to `typescript-sdk`, `python-sdk`, and `openmrp-go` together.
 
@@ -203,7 +203,7 @@ TypeScript codegen overwrites `pnpm-lock.yaml` using merged templates from `stlc
 
 All four SDK repos release via **release-please** on push to **`main`**: release automation pushes SDK codegen as a single conventional `feat(sdk)/fix(sdk): sync with deployed API <tag>` commit, and each repo's release-please workflow derives the bump from that commit and opens a `release: <version>` PR. The bump mirrors the API release: derived from the tag shape (`X.0.0` → major, `X.Y.0` → minor, otherwise patch — release-please always zeroes lower components on a bump), so a minor/major API release produces a minor/major SDK release. There is no separate `api-release` dispatch to those repos and no bot sync PR to merge first.
 
-> **Note:** `internal-sdk` was previously on Changesets (publishing to GitHub Packages). The v0.23.2 regen stripped its Changesets tooling, so it moved to release-please like the others — but still publishes to **GitHub Packages** via a committed `release.yml`, not npmjs. See [`open-mrp/internal-sdk` `.github/workflows/release.yml`](https://github.com/open-mrp/internal-sdk/blob/main/.github/workflows/release.yml).
+> **Note:** `internal-sdk` was previously on Changesets, then moved to release-please in the v0.23.2 regen. With the OpenMRP rename it also moved off GitHub Packages to **npmjs**, so it now matches every other target. The registry is set by `publish.npm.registry` in [`stainless/internal/stainless.yml`](../stainless/internal/stainless.yml) — codegen owns `.github/workflows`, so editing the SDK repo's workflow by hand is undone at the next sync.
 
 Production flow (keeps SDKs aligned with what is deployed):
 
@@ -215,7 +215,7 @@ Production flow (keeps SDKs aligned with what is deployed):
    - `generate-sdks` downloads specs from S3 when needed and runs **`stlc build --push`** to **`main`** as a conventional `feat(sdk)/fix(sdk): sync ...` commit that release-please consumes (skipped per SDK when that spec matched S3 **`openapi.json`** before upload).
    - `notify-consumers` dispatches `api-release` to public-docs and openapi-spec so those repos sync from S3 (same buckets as [`fetch-openapi-spec-s3.sh`](../scripts/fetch-openapi-spec-s3.sh); pass **`stainless`** as the fourth argument to fetch **`stainless.yml`**).
 
-**Timing:** Consumer repos sync from the deployed API and S3-published OpenAPI specs; they do not wait for SDK publishes. Downstream npm/GitHub Packages SDK versions update after the release-please **release: <version>** PR on each SDK repo is **merged** (only when the OpenAPI spec actually changed for that SDK).
+**Timing:** Consumer repos sync from the deployed API and S3-published OpenAPI specs; they do not wait for SDK publishes. Downstream SDK versions update after the release-please **release: <version>** PR on each SDK repo is **merged** (only when the OpenAPI spec actually changed for that SDK).
 
 When `stlc build` fails, the release job runs **Print STLC failure report** (`stlc status`, `stlc diagnostics`, `stlc show`, and the latest `builds/*.json` manifest) in the job log and Actions step summary.
 
@@ -239,7 +239,7 @@ The API release workflow regenerates SDKs and dispatches `api-release` to spec c
 When the API release changed that SDK’s OpenAPI spec, automation pushes **`fix(sdk)`/`feat(sdk)`/`feat(sdk)!`** **`: sync with deployed API <tag>`** (prefix matches the API bump level) to **`main`**. Then:
 
 1. **`release.yml` on `main`** — release-please opens **release: <version>** (or publishes when a release PR is merged).
-2. **Merge the release PR** when opened — that completes the publish: GitHub Packages for `@openmrp/internal-sdk`, npmjs for `@openmrp/sdk`.
+2. **Merge the release PR** when opened — that completes the publish to npmjs for both `@openmrp/internal-sdk` and `@openmrp/sdk`.
 
 If the spec was unchanged for that SDK, no push runs and no new SDK version is cut.
 
@@ -261,9 +261,10 @@ that). In the self-hosted model each repo therefore needs **one committed `relea
   release-please creates **is** the publish; `pkg.go.dev` indexes the public repo. No registry secret.
 - **`open-mrp/internal-sdk`** — on push to `main`: run `googleapis/release-please-action@v4` (opens
   `release: <version>` PR). On `release_created`: `pnpm build` + `pnpm publish` from `dist/` to
-  **GitHub Packages** (`npm.pkg.github.com`), not npmjs — so do **not** wire up the generated
-  `bin/publish-npm` (it targets `registry.npmjs.org`). Publish runs in the same job as the
-  release-please step, so the default `GITHUB_TOKEN` suffices (no PAT / cross-workflow trigger).
+  **npmjs**, via the generated `bin/publish-npm`. Publish runs in the same job as the release-please
+  step. It needs the `NPM_TOKEN` org secret exported as **`NODE_AUTH_TOKEN`** — `setup-node` writes an
+  `.npmrc` that reads that name, and `bin/publish-npm` sets no credential itself, so exporting only
+  `NPM_TOKEN` publishes anonymously and npm answers `404` on the PUT.
 
 Two one-time config notes per repo:
 - `stlc` defaults `release-please-config.json` to `"versioning": "prerelease"` / `"prerelease": true`
@@ -279,7 +280,7 @@ is **not** this repo; archive it to avoid confusion.
 
 ### Publishing packages
 
-`stlc build --push` updates SDK **git** repos only; the actual npm/GitHub Packages/PyPI/Go publish runs in each SDK repo via its committed **`release.yml`**/`release-please.yml`. Local **`make stlc-*`** runs push a plain build commit — if you need a version bump outside the API release pipeline, push a conventional `feat(sdk)/fix(sdk):` commit so release-please opens a `release: <version>` PR.
+`stlc build --push` updates SDK **git** repos only; the actual npm/PyPI/Go publish runs in each SDK repo via its committed **`release.yml`**/`release-please.yml`. Local **`make stlc-*`** runs push a plain build commit — if you need a version bump outside the API release pipeline, push a conventional `feat(sdk)/fix(sdk):` commit so release-please opens a `release: <version>` PR.
 
 ### Recovering missed publishes (before automation landed)
 

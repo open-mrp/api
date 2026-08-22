@@ -3,7 +3,7 @@ services:
   # only way to exercise a photo upload is to point at AWS, so those endpoints went untested.
   minio-e2e:
     image: minio/minio:latest
-    container_name: augno-minio-e2e
+    container_name: openmrp-minio-e2e
     command: server /data
     environment:
       MINIO_ROOT_USER: e2eaccesskey
@@ -23,7 +23,7 @@ services:
   # Creates the buckets the services expect and exits. Services wait on it completing.
   minio-e2e-init:
     image: minio/mc:latest
-    container_name: augno-minio-init-e2e
+    container_name: openmrp-minio-init-e2e
     depends_on:
       minio-e2e:
         condition: service_healthy
@@ -39,10 +39,10 @@ services:
 
   mysql-e2e:
     image: mysql:8
-    container_name: augno-mysql-e2e
+    container_name: openmrp-mysql-e2e
     environment:
       MYSQL_ROOT_PASSWORD: "Testing123!"
-      MYSQL_DATABASE: augno
+      MYSQL_DATABASE: openmrp
     # Long-running e2e stacks accumulate thousands of rows in message_outbox
     # and request_log. The outbox poller's `ORDER BY next_run_at LIMIT N` under
     # an UPDATE resorts to filesort, which exceeds the 256K default
@@ -70,13 +70,13 @@ services:
 
   postgres-e2e:
     image: postgres:16
-    container_name: augno-postgres-e2e
+    container_name: openmrp-postgres-e2e
     environment:
-      POSTGRES_DB: augno_agents
-      POSTGRES_USER: augno
+      POSTGRES_DB: openmrp_agents
+      POSTGRES_USER: openmrp
       POSTGRES_HOST_AUTH_METHOD: trust
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U augno -d augno_agents"]
+      test: ["CMD-SHELL", "pg_isready -U openmrp -d openmrp_agents"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -85,7 +85,7 @@ services:
 
   rabbitmq:
     image: rabbitmq:3-management
-    container_name: augno-rabbitmq-e2e
+    container_name: openmrp-rabbitmq-e2e
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 5s
@@ -95,17 +95,17 @@ services:
       - e2e
 
   platform-service:
-    image: augno-e2e-platform-service
+    image: openmrp-e2e-platform-service
     build:
       context: .
       dockerfile: infra/production/docker/Dockerfile
       args:
         SERVICE_NAME: platform-service
-    container_name: augno-platform-service-e2e
+    container_name: openmrp-platform-service-e2e
     environment:
       PLATFORM: test
       PORT: "9092"
-      DB_URL: root:Testing123!@tcp(mysql-e2e:3306)/augno?parseTime=true
+      DB_URL: root:Testing123!@tcp(mysql-e2e:3306)/openmrp?parseTime=true
       RABBITMQ_URI: amqp://guest:guest@rabbitmq:5672/
       CURSOR_HMAC_KEY: b073b04358fbd77eaf3ce224de1ba3c7d8f91fa5bdea440dc5a37c9e1627197d
     depends_on:
@@ -123,17 +123,17 @@ services:
       - e2e
 
   core-service:
-    image: augno-e2e-core-service
+    image: openmrp-e2e-core-service
     build:
       context: .
       dockerfile: infra/production/docker/Dockerfile
       args:
         SERVICE_NAME: core-service
-    container_name: augno-core-service-e2e
+    container_name: openmrp-core-service-e2e
     environment:
       PLATFORM: test
       PORT: "9092"
-      DB_URL: root:Testing123!@tcp(mysql-e2e:3306)/augno?parseTime=true
+      DB_URL: root:Testing123!@tcp(mysql-e2e:3306)/openmrp?parseTime=true
       RABBITMQ_URI: amqp://guest:guest@rabbitmq:5672/
       CURSOR_HMAC_KEY: b073b04358fbd77eaf3ce224de1ba3c7d8f91fa5bdea440dc5a37c9e1627197d
       INTEGRATION_ENCRYPTION_KEY: "4815cd74058e6ce82216c9b89dac44dbd171371243342f96fa7a6d8c81c1a491"
@@ -165,17 +165,17 @@ services:
       - e2e
 
   auth-service:
-    image: augno-e2e-auth-service
+    image: openmrp-e2e-auth-service
     build:
       context: .
       dockerfile: infra/production/docker/Dockerfile
       args:
         SERVICE_NAME: auth-service
-    container_name: augno-auth-service-e2e
+    container_name: openmrp-auth-service-e2e
     environment:
       PLATFORM: test
       PORT: "9092"
-      DB_URL: root:Testing123!@tcp(mysql-e2e:3306)/augno?parseTime=true
+      DB_URL: root:Testing123!@tcp(mysql-e2e:3306)/openmrp?parseTime=true
       RABBITMQ_URI: amqp://guest:guest@rabbitmq:5672/
       JWT_SECRET: test-token-secret
       PEPPER: pepper
@@ -204,17 +204,17 @@ services:
       - e2e
 
   notification-service:
-    image: augno-e2e-notification-service
+    image: openmrp-e2e-notification-service
     build:
       context: .
       dockerfile: infra/production/docker/Dockerfile
       args:
         SERVICE_NAME: notification-service
-    container_name: augno-notification-service-e2e
+    container_name: openmrp-notification-service-e2e
     environment:
       PLATFORM: test
       PORT: "9092"
-      DB_URL: root:Testing123!@tcp(mysql-e2e:3306)/augno?parseTime=true
+      DB_URL: root:Testing123!@tcp(mysql-e2e:3306)/openmrp?parseTime=true
       RABBITMQ_URI: amqp://guest:guest@rabbitmq:5672/
     depends_on:
       mysql-e2e:
@@ -231,13 +231,13 @@ services:
       - e2e
 
   billing-service:
-    image: augno-e2e-billing-service
+    image: openmrp-e2e-billing-service
     build:
       context: .
       dockerfile: infra/production/docker/Dockerfile
       args:
         SERVICE_NAME: billing-service
-    container_name: augno-billing-service-e2e
+    container_name: openmrp-billing-service-e2e
     environment:
       # Handed to the browser so Stripe.js can mount the card form. Not a credential — a
       # publishable key is public by design — but the setup-billing response declares it
@@ -245,7 +245,7 @@ services:
       STRIPE_PUBLISHABLE_KEY: pk_test_e2e_stub
       PLATFORM: test
       PORT: "9092"
-      DB_URL: root:Testing123!@tcp(mysql-e2e:3306)/augno?parseTime=true
+      DB_URL: root:Testing123!@tcp(mysql-e2e:3306)/openmrp?parseTime=true
       RABBITMQ_URI: amqp://guest:guest@rabbitmq:5672/
       CURSOR_HMAC_KEY: b073b04358fbd77eaf3ce224de1ba3c7d8f91fa5bdea440dc5a37c9e1627197d
       CORE_SERVICE_URL: core-service:9092
@@ -270,17 +270,17 @@ services:
       - e2e
 
   agent-service:
-    image: augno-e2e-agent-service
+    image: openmrp-e2e-agent-service
     build:
       context: .
       dockerfile: infra/production/docker/Dockerfile
       args:
         SERVICE_NAME: agent-service
-    container_name: augno-agent-service-e2e
+    container_name: openmrp-agent-service-e2e
     environment:
       PLATFORM: test
       PORT: "9092"
-      DB_URL: postgres://augno@postgres-e2e:5432/augno_agents?sslmode=disable
+      DB_URL: postgres://openmrp@postgres-e2e:5432/openmrp_agents?sslmode=disable
       RABBITMQ_URI: amqp://guest:guest@rabbitmq:5672/
       CURSOR_HMAC_KEY: b073b04358fbd77eaf3ce224de1ba3c7d8f91fa5bdea440dc5a37c9e1627197d
       CORE_SERVICE_URL: core-service:9092
@@ -302,17 +302,17 @@ services:
       - e2e
 
   api-gateway:
-    image: augno-e2e-api-gateway
+    image: openmrp-e2e-api-gateway
     build:
       context: .
       dockerfile: infra/production/docker/Dockerfile
       args:
         SERVICE_NAME: api-gateway
-    container_name: augno-api-gateway-e2e
+    container_name: openmrp-api-gateway-e2e
     environment:
       PLATFORM: test
       PORT: "8081"
-      DB_URL: root:Testing123!@tcp(mysql-e2e:3306)/augno?parseTime=true
+      DB_URL: root:Testing123!@tcp(mysql-e2e:3306)/openmrp?parseTime=true
       RABBITMQ_URI: amqp://guest:guest@rabbitmq:5672/
       AUTH_SERVICE_URL: auth-service:9092
       CORE_SERVICE_URL: core-service:9092

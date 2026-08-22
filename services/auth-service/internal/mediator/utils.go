@@ -1,10 +1,10 @@
 package mediator
 
 import (
-	"github.com/augno/api/services/auth-service/internal/apikey"
-	"github.com/augno/api/services/auth-service/internal/domain"
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/shared/constants"
+	"github.com/open-mrp/api/services/auth-service/internal/apikey"
+	"github.com/open-mrp/api/services/auth-service/internal/domain"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 func buildOwnedAPIKeyIdentity(apiKeyModel *apikey.APIKey, targetAccountID string, permissions map[string]bool, accountMode constants.AccountMode, subscriptionStatus *string) *types.Identity {

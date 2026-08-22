@@ -5,14 +5,14 @@ import (
 	"reflect"
 	"testing"
 
-	grpcclient "github.com/augno/api/services/api-gateway/grpc-client"
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	httpgroup "github.com/augno/api/services/api-gateway/pkg/group"
-	agentpb "github.com/augno/api/shared/proto/agent"
-	authpb "github.com/augno/api/shared/proto/auth"
-	billingpb "github.com/augno/api/shared/proto/billing"
-	pbgrpc "github.com/augno/api/shared/proto/core"
-	platformpb "github.com/augno/api/shared/proto/platform"
+	grpcclient "github.com/open-mrp/api/services/api-gateway/grpc-client"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	httpgroup "github.com/open-mrp/api/services/api-gateway/pkg/group"
+	agentpb "github.com/open-mrp/api/shared/proto/agent"
+	authpb "github.com/open-mrp/api/shared/proto/auth"
+	billingpb "github.com/open-mrp/api/shared/proto/billing"
+	pbgrpc "github.com/open-mrp/api/shared/proto/core"
+	platformpb "github.com/open-mrp/api/shared/proto/platform"
 )
 
 // TestAllEndpointsHaveDocSource verifies that every endpoint registered in every

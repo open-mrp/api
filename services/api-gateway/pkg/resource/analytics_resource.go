@@ -4,7 +4,7 @@ package apiresource
 import (
 	"time"
 
-	"github.com/augno/api/shared/constants"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 // AnalyzeSalesResponse represents the response from the analyze sales endpoint.

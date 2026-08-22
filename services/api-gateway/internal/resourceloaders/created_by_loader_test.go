@@ -3,8 +3,8 @@ package resourceloaders
 import (
 	"testing"
 
-	"github.com/augno/api/shared/constants"
-	pb "github.com/augno/api/shared/proto/platform"
+	"github.com/open-mrp/api/shared/constants"
+	pb "github.com/open-mrp/api/shared/proto/platform"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

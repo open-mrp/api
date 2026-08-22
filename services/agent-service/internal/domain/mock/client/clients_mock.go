@@ -13,7 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	domain "github.com/augno/api/services/agent-service/internal/domain"
+	domain "github.com/open-mrp/api/services/agent-service/internal/domain"
 	gomock "go.uber.org/mock/gomock"
 )
 

@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"testing"
 
-	agentdb "github.com/augno/api/services/agent-service/internal/infrastructure/db"
-	"github.com/augno/api/services/agent-service/internal/infrastructure/sqlc"
-	"github.com/augno/api/services/agent-service/internal/llm"
+	agentdb "github.com/open-mrp/api/services/agent-service/internal/infrastructure/db"
+	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/services/agent-service/internal/llm"
 )
 
 // toolCallEvent builds the event the runner emits when the model requests a tool.

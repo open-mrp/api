@@ -4,7 +4,7 @@ import (
 	"math"
 	"strings"
 
-	"github.com/augno/api/shared/constants"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 // Per-model pricing in cents per million tokens.

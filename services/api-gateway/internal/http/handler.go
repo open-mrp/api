@@ -14,12 +14,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/augno/api/services/api-gateway/internal/header"
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/shared/appctx"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/field"
-	"github.com/augno/api/shared/fuzzy"
+	"github.com/open-mrp/api/services/api-gateway/internal/header"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/appctx"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/fuzzy"
 )
 
 var PathExtractor func(*http.Request) func(string) string = defaultPathExtractor

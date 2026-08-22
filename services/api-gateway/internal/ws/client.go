@@ -6,8 +6,8 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/augno/api/shared/contracts"
 	"github.com/coder/websocket"
+	"github.com/open-mrp/api/shared/contracts"
 )
 
 const (

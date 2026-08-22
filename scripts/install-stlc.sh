@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install stlc + the TypeScript, Python, Go, and MCP workers from Augno's
+# Install stlc + the TypeScript, Python, Go, and MCP workers from OpenMRP's
 # sdk-gen forks (not stainless/*). The MCP worker (stlc-mcp) generates the
 # packages/mcp-server sub-package when a target enables options.mcp_server.
 set -euo pipefail

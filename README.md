@@ -1,6 +1,6 @@
-# Augno API
+# OpenMRP API
 
-Augno is a Go-based microservices platform using an API Gateway and domain-focused services coordinated via gRPC and RabbitMQ.
+OpenMRP is a Go-based microservices platform using an API Gateway and domain-focused services coordinated via gRPC and RabbitMQ.
 
 ## Architecture
 
@@ -36,8 +36,8 @@ make dev            # Spin up the environment with Tilt
 
 `make local-db` spins up both databases in Docker containers, applies all migrations, and writes connection strings to `.env` automatically:
 
-- **MySQL 8** on port `3306` — core-service (`augno` database)
-- **PostgreSQL 16** on port `5432` — agent-service (`augno_agents` database)
+- **MySQL 8** on port `3306` — core-service (`openmrp` database)
+- **PostgreSQL 16** on port `5432` — agent-service (`openmrp_agents` database)
 
 Data is persisted in named Docker volumes so it survives container restarts. `make local-db` also seeds the core database with sample data (accounts, users, items, orders, etc.) via the SQL files in `shared/db/seed/`, and — when `STRIPE_SECRET_KEY` is set — creates a matching Stripe test subscription for the seeded account. Without that variable the Stripe step is skipped with a warning; run `make seed-stripe` later to add it.
 
@@ -57,7 +57,7 @@ make seed-user-photos
 
 # Connect directly
 make local-db-cli   # MySQL CLI using DB_URL from .env
-psql postgres://augno@localhost:5432/augno_agents
+psql postgres://openmrp@localhost:5432/openmrp_agents
 
 # Tear down containers (data preserved)
 make local-db-down
@@ -72,7 +72,7 @@ make local-db-nuke
 The dashboard API (Prisma) can connect to the same Docker MySQL instance. Add this to `dashboard/apps/api/.env`:
 
 ```typescript
-DATABASE_URL="mysql://root:Testing123!@localhost:3306/augno"
+DATABASE_URL="mysql://root:Testing123!@localhost:3306/openmrp"
 ```
 
 #### Using with Tilt / Kubernetes
@@ -82,8 +82,8 @@ Services running in minikube cannot reach `localhost` on the host machine. The K
 
 | Service            | URI                                                                         |
 | ------------------ | --------------------------------------------------------------------------- |
-| Core (MySQL)       | `root:Testing123!@tcp(host.minikube.internal:3306)/augno`                   |
-| Agent (PostgreSQL) | `postgres://augno@host.minikube.internal:5432/augno_agents?sslmode=disable` |
+| Core (MySQL)       | `root:Testing123!@tcp(host.minikube.internal:3306)/openmrp`                   |
+| Agent (PostgreSQL) | `postgres://openmrp@host.minikube.internal:5432/openmrp_agents?sslmode=disable` |
 
 
 The seed script hardcodes the Docker Compose connection details, so no `.env` configuration is needed — just run `make local-db` before `make dev`.
@@ -104,7 +104,7 @@ stringData:
   token: "dev-internal-token" # any non-empty value in dev
 ```
 
-Both `api-gateway` and `agent-service` already consume this secret (as `INTERNAL_SERVICE_TOKEN`) and the `API_GATEWAY_INTERNAL_URL` config value. In production the token is generated and delivered by Terraform in the private [augno/infra](https://github.com/Augno/infra) repo (`production/terraform/internal_service_token.tf`).
+Both `api-gateway` and `agent-service` already consume this secret (as `INTERNAL_SERVICE_TOKEN`) and the `API_GATEWAY_INTERNAL_URL` config value. In production the token is generated and delivered by Terraform in the private [open-mrp/infra](https://github.com/open-mrp/infra) repo (`production/terraform/internal_service_token.tf`).
 
 ### Common Commands
 
@@ -161,16 +161,16 @@ We use [Conventional Commits](https://www.conventionalcommits.org/) to maintain 
 4. **Production Release:** When ready to deploy, merge the "Release PR" into `main`. This triggers the final release process and deployment to production.
 
 Production infrastructure — Terraform, the production Kubernetes manifests, and the deploy script —
-lives in the private [augno/infra](https://github.com/Augno/infra) repo. This repo builds service
-images and pushes them to ECR; it then asks `augno/infra` to roll them out and waits for the result,
+lives in the private [open-mrp/infra](https://github.com/open-mrp/infra) repo. This repo builds service
+images and pushes them to ECR; it then asks `open-mrp/infra` to roll them out and waits for the result,
 so nothing here holds a credential that can reach the cluster.
 
 Two consequences worth knowing:
 
 - **Infrastructure changes ship separately.** Terraform no longer runs inside this pipeline. When a
-  release needs new infrastructure, merge and apply it in `augno/infra` *first*, then cut the
+  release needs new infrastructure, merge and apply it in `open-mrp/infra` *first*, then cut the
   release here.
-- **Manifest-only changes deploy from `augno/infra`.** Editing a Deployment or the shared ConfigMap
+- **Manifest-only changes deploy from `open-mrp/infra`.** Editing a Deployment or the shared ConfigMap
   is a push to that repo, not a release here.
 
 `infra/development/` stays in this repo — it is what `make dev` runs against, and it holds no
@@ -186,10 +186,10 @@ production identifiers.
 Found a vulnerability? Email **security@augno.com** rather than opening an issue — see
 [SECURITY.md](SECURITY.md) for scope and what to include.
 
-Every `sk_test_`, `aug_sk_test_`, `whsec_` and JWT in this repository is fabricated sample or fixture
+Every `sk_test_`, `mrp_sk_test_`, `whsec_` and JWT in this repository is fabricated sample or fixture
 data. If you find one that resolves against a real service, that is a genuine finding.
 
 ## License
 
-[MIT](LICENSE). "Augno" and the Augno logo are trademarks of Augno, Inc. and are not covered by that
-grant.
+[Apache 2.0](LICENSE). "OpenMRP" and "Augno", with their logos and wordmarks, are trademarks of
+Augno, Inc. Section 6 of the license grants no trademark rights — see [TRADEMARKS.md](TRADEMARKS.md).

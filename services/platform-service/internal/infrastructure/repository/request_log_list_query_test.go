@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/augno/api/services/platform-service/internal/domain"
-	"github.com/augno/api/shared/pagination"
+	"github.com/open-mrp/api/services/platform-service/internal/domain"
+	"github.com/open-mrp/api/shared/pagination"
 )
 
 // emptyFilter represents the no-filter case — only the scope branches, cursor,

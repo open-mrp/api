@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/augno/api/shared/lease"
+	"github.com/open-mrp/api/shared/lease"
 	"github.com/stretchr/testify/require"
 )
 

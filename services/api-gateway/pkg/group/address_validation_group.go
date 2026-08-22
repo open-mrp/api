@@ -3,10 +3,10 @@ package httpgroup
 import (
 	"fmt"
 
-	addressvalidationep "github.com/augno/api/services/api-gateway/endpoints/address-validation"
-	grpcclient "github.com/augno/api/services/api-gateway/grpc-client"
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	addressvalidationep "github.com/open-mrp/api/services/api-gateway/endpoints/address-validation"
+	grpcclient "github.com/open-mrp/api/services/api-gateway/grpc-client"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 )
 
 type AddressValidationEndpointGroup struct {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"os"
 
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 // ExampleInitProvider shows the minimal call to install the global tracer

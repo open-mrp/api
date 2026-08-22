@@ -1,12 +1,12 @@
 package materialep
 
 import (
-	itemep "github.com/augno/api/services/api-gateway/endpoints/items"
-	quantityep "github.com/augno/api/services/api-gateway/endpoints/quantities"
-	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/constants"
-	pb "github.com/augno/api/shared/proto/core"
+	itemep "github.com/open-mrp/api/services/api-gateway/endpoints/items"
+	quantityep "github.com/open-mrp/api/services/api-gateway/endpoints/quantities"
+	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/shared/constants"
+	pb "github.com/open-mrp/api/shared/proto/core"
 )
 
 // TODO: this kind of work around where we send back various forms of quantities and do a unit from a quantity should be migrated to use a standard object no matter what. If the user does not request a sub-object, we should not send it. There should be exactly one quantity protobuf that is similar to our apiresource for quantity and this should be true for all objects. That way we only have to define them once and each has one way of being turned into a presenter and the presenters can be reused and drilled down e.g. the unit presenter would be used here with the quantity.

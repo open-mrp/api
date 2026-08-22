@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/augno/api/shared/constants"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 const otMetaTest constants.ObjectType = "test_meta_obj"

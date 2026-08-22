@@ -3,9 +3,9 @@ package searchep
 import (
 	"testing"
 
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/shared/constants"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/constants"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

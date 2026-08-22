@@ -48,7 +48,7 @@ import (
 // SeedAdmin2AccountUserID in seed_test.go); no login helper for the second
 // admin exists yet, so this file adds one locally rather than touching
 // seed_test.go.
-const covMessagingBlocksAdmin2Email = "mjohnson@augno.com"
+const covMessagingBlocksAdmin2Email = "mjohnson@openmrp.ai"
 
 func covMessagingBlocksAdmin2Client(t *testing.T) *Client {
 	t.Helper()
@@ -309,7 +309,7 @@ func TestCovMessagingBlocks_UnsupportedQueryParamRejected(t *testing.T) {
 }
 
 // TestCovMessagingBlocks_Unauthenticated asserts an empty bearer token (but
-// valid Augno-Version/Augno-Account headers) is rejected with 401
+// valid OpenMRP-Version/OpenMRP-Account headers) is rejected with 401
 // invalid_credentials on all three operations, matching the pattern used
 // elsewhere (e.g. TestCovFinanceTransactionTypes_RequiresAuth). No block
 // state is mutated (request never reaches the handler).

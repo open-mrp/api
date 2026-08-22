@@ -9,8 +9,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/augno/api/services/api-gateway/internal/header"
-	"github.com/augno/api/shared/appctx"
+	"github.com/open-mrp/api/services/api-gateway/internal/header"
+	"github.com/open-mrp/api/shared/appctx"
 )
 
 type stubSaver struct {
@@ -145,7 +145,7 @@ func TestLoggingMiddleware_RedactsSensitiveResponseFields(t *testing.T) {
 		}
 		rl.SensitiveResponseFields = map[string]bool{"api_key_secret": true}
 		w.WriteHeader(http.StatusCreated)
-		_, _ = w.Write([]byte(`{"api_key_secret":"aug_sk_prod_secret","object":"created_api_key","api_key_info":{"id":"apke_123","object":"api_key"}}`))
+		_, _ = w.Write([]byte(`{"api_key_secret":"mrp_sk_prod_secret","object":"created_api_key","api_key_info":{"id":"apke_123","object":"api_key"}}`))
 	}, saver, nil, 0)
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/test", nil)

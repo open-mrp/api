@@ -4,14 +4,14 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/audit"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/idempotency"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/audit"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var customerProductLineAccessSvcTracer = tracing.GetTracer("core-service.customer_product_line_access_service")
@@ -94,7 +94,7 @@ func (s *customerProductLineAccessSvcImpl) ListCustomerProductLineAccess(ctx con
 	}
 
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	params.AccountID = identity.Target.AccountID
@@ -119,7 +119,7 @@ func (s *customerProductLineAccessSvcImpl) GetCustomerProductLineAccess(ctx cont
 	}
 
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	return s.repos.NewCustomerProductLineAccessRepo().Get(ctx, identity.Target.AccountID, customerID)
@@ -141,7 +141,7 @@ func (s *customerProductLineAccessSvcImpl) BatchGetCustomerProductLineAccessByID
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 	if len(customerIDs) == 0 {
 		return nil, nil
@@ -178,7 +178,7 @@ func (s *customerProductLineAccessSvcImpl) CreateCustomerProductLineAccess(ctx c
 	}
 
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	params.AccountID = identity.Target.AccountID
@@ -260,7 +260,7 @@ func (s *customerProductLineAccessSvcImpl) UpdateCustomerProductLineAccess(ctx c
 	}
 
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	params.AccountID = identity.Target.AccountID
@@ -339,7 +339,7 @@ func (s *customerProductLineAccessSvcImpl) DeleteCustomerProductLineAccess(ctx c
 	}
 
 	if !identity.IsTargetAccountSet() {
-		return tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	accountID := identity.Target.AccountID

@@ -3,9 +3,9 @@ package apiresource
 import (
 	"time"
 
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/timeutil"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/timeutil"
 )
 
 const SampleAgentDefinitionID = "agdf_ah7tkyfxk8jl"
@@ -18,9 +18,9 @@ type AgentDefinition struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=agent_definition"`
-	// Whether the agent is provided by Augno or created in this account.
+	// Whether the agent is provided by OpenMRP or created in this account.
 	//
-	// - `system`: provided by Augno; cannot be edited or deleted.
+	// - `system`: provided by OpenMRP; cannot be edited or deleted.
 	// - `custom`: created by a user in this account.
 	DefinitionType constants.AgentDefinitionType `json:"definition_type" validate:"required"`
 	// Category grouping for the agent (e.g. `order_processing`), used to organize agents in the UI.

@@ -3,9 +3,9 @@ package domain
 import (
 	"time"
 
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/field"
-	"github.com/augno/api/shared/pagination"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/pagination"
 )
 
 // Deviation types name what changed about a line. The reason code carries why, and is required only for edits inside a frozen week. These alias the shared enum so the vocabulary has a single source of truth.

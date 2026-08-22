@@ -4,11 +4,11 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/augno/api/services/notification-service/internal/domain"
-	"github.com/augno/api/services/notification-service/internal/infrastructure/sqlc"
-	"github.com/augno/api/shared/db"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/notification-service/internal/domain"
+	"github.com/open-mrp/api/services/notification-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/db"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var messageReportRepoTracer = tracing.GetTracer("notification-service.message_report_repository")

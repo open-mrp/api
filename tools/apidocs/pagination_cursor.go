@@ -4,8 +4,8 @@ import (
 	"strings"
 	"time"
 
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/pagination"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/shared/pagination"
 )
 
 // listElementTypesUsingInt64Cursor are list item types whose backends paginate with

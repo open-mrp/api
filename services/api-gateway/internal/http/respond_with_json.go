@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/augno/api/services/api-gateway/internal/header"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/version"
+	"github.com/open-mrp/api/services/api-gateway/internal/header"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/version"
 )
 
 type RespondOption func(http.Header)

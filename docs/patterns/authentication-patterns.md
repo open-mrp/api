@@ -6,7 +6,7 @@ Every HTTP request processed by the API gateway (except `/healthz`) passes throu
 
 - **Type**: The kind of actor (`user`, `api_key`, `agent`, or **`unauthenticated`** when no credential was supplied)
 - **Actor**: The authenticated entity with its ID, permissions map, and role type code (unset for `unauthenticated`)
-- **TargetAccountID**: The account being accessed (from `Augno-Account` header when applicable)
+- **TargetAccountID**: The account being accessed (from `OpenMRP-Account` header when applicable)
 - **AccountMode**: Whether the account is in `prod` or `test` mode
 
 Identity is propagated from the API gateway to backend microservices via gRPC metadata using `contracts.SetIdentityInMetadata()` (see also `rpc.WithIdentity`).

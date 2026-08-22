@@ -6,10 +6,10 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/augno/api/services/agent-service/internal/agents"
-	"github.com/augno/api/services/agent-service/internal/domain"
-	"github.com/augno/api/services/agent-service/internal/infrastructure/sqlc"
-	"github.com/augno/api/services/agent-service/internal/llm"
+	"github.com/open-mrp/api/services/agent-service/internal/agents"
+	"github.com/open-mrp/api/services/agent-service/internal/domain"
+	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/services/agent-service/internal/llm"
 )
 
 // blockedTranscript builds the reconstructed messages for a single tool call that paused for approval: an assistant tool_use answered by the "[REQUIRES APPROVAL]" placeholder the guard writes.

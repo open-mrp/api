@@ -7,15 +7,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/augno/api/services/auth-service/internal/apikey"
-	"github.com/augno/api/services/auth-service/internal/domain"
-	clientmock "github.com/augno/api/services/auth-service/internal/domain/mock/client"
-	factorymock "github.com/augno/api/services/auth-service/internal/domain/mock/factory"
-	repositorymock "github.com/augno/api/services/auth-service/internal/domain/mock/repository"
-	"github.com/augno/api/services/auth-service/internal/testutil"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/crypto"
-	apierror "github.com/augno/api/shared/errors"
+	"github.com/open-mrp/api/services/auth-service/internal/apikey"
+	"github.com/open-mrp/api/services/auth-service/internal/domain"
+	clientmock "github.com/open-mrp/api/services/auth-service/internal/domain/mock/client"
+	factorymock "github.com/open-mrp/api/services/auth-service/internal/domain/mock/factory"
+	repositorymock "github.com/open-mrp/api/services/auth-service/internal/domain/mock/repository"
+	"github.com/open-mrp/api/services/auth-service/internal/testutil"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/crypto"
+	apierror "github.com/open-mrp/api/shared/errors"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
@@ -549,7 +549,7 @@ func (suite *APIKeyMedTestSuite) TestCreate_RedactedValueMatchesLastFour() {
 			)
 
 			// RedactedValue should contain the correct mode prefix
-			expectedPrefix := "aug_sk_" + string(tt.accountMode) + "_****"
+			expectedPrefix := "mrp_sk_" + string(tt.accountMode) + "_****"
 			suite.Equal(expectedPrefix, apiKeyModel.RedactedValue[:len(expectedPrefix)])
 		})
 	}
@@ -567,7 +567,7 @@ func (suite *APIKeyMedTestSuite) TestRotate_HasRedactedValue() {
 		ID:             10,
 		TypeID:         apiKeyTypeID,
 		Name:           "Rotate Me",
-		RedactedValue:  "aug_sk_test_****old1",
+		RedactedValue:  "mrp_sk_test_****old1",
 		OwnerAccountID: ownerAccountID,
 		RoleID:         roleID,
 		ExpiresAt:      &expiresAt,
@@ -850,12 +850,12 @@ func (suite *APIKeyMedTestSuite) TestList_HasRedactedValue() {
 				{
 					TypeID:        "apikey_1",
 					Name:          "Key 1",
-					RedactedValue: "aug_sk_test_****aaaa",
+					RedactedValue: "mrp_sk_test_****aaaa",
 				},
 				{
 					TypeID:        "apikey_2",
 					Name:          "Key 2",
-					RedactedValue: "aug_sk_test_****bbbb",
+					RedactedValue: "mrp_sk_test_****bbbb",
 				},
 			},
 		}, nil).
@@ -917,8 +917,8 @@ func (suite *APIKeyMedTestSuite) TestCreate_RedactedValueConsistentAcrossModes()
 		// 1. RedactedValue ends with the last 4 chars of the full key
 		suite.Equal(lastFour, apiKeyModel.RedactedValue[len(apiKeyModel.RedactedValue)-4:])
 
-		// 2. RedactedValue format is correct: aug_sk_{mode}_****{lastFour}
-		expectedRedacted := "aug_sk_" + string(mode) + "_****" + lastFour
+		// 2. RedactedValue format is correct: mrp_sk_{mode}_****{lastFour}
+		expectedRedacted := "mrp_sk_" + string(mode) + "_****" + lastFour
 		suite.Equal(expectedRedacted, apiKeyModel.RedactedValue)
 	}
 }

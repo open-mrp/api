@@ -57,7 +57,7 @@ func (r *DocReader) GetTypeDoc(t reflect.Type) TypeDoc {
 }
 
 func (r *DocReader) loadPackage(pkgPath string) {
-	localDir := strings.TrimPrefix(pkgPath, "github.com/augno/api/")
+	localDir := strings.TrimPrefix(pkgPath, "github.com/open-mrp/api/")
 	if localDir == pkgPath {
 		return
 	}

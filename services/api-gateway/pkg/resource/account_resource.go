@@ -3,9 +3,9 @@ package apiresource
 import (
 	"time"
 
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/timeutil"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/timeutil"
 )
 
 const SampleAccountID = "ac_ykxoradjoeb3"
@@ -14,7 +14,7 @@ const SampleAccountBrandingID = "abr_2rygb4fof28b"
 const SampleAccountPortalID = "apo_u2esi5el78uv"
 const SampleAccountPortalSlug = "acme"
 
-// An organization on Augno, including its branding and customer portal sub-resources.
+// An organization on OpenMRP, including its branding and customer portal sub-resources.
 //
 // Your own account and any customer or supplier account you trade with are both represented by this object.
 type Account struct {

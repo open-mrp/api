@@ -5,20 +5,20 @@ import (
 	"fmt"
 	"net/http"
 
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/field"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/field"
 )
 
 // Tool to attach to an agent definition.
 type ToolInput struct {
 	// The built-in tool to attach.
 	//
-	// Only Augno's built-in tools are attached here. Access to API-endpoint tools (creating a customer, listing orders, and so on) is granted separately through `config.endpoint_tool_slugs`. The List Tools endpoint (`GET /v1/ai/tools`) returns both kinds, with API-endpoint tools in the `api_endpoint` category.
+	// Only OpenMRP's built-in tools are attached here. Access to API-endpoint tools (creating a customer, listing orders, and so on) is granted separately through `config.endpoint_tool_slugs`. The List Tools endpoint (`GET /v1/ai/tools`) returns both kinds, with API-endpoint tools in the `api_endpoint` category.
 	Tool constants.Tool `json:"tool" validate:"required"`
 	// JSON-encoded configuration for this tool instance.
 	//
@@ -70,7 +70,7 @@ func (*TriggerConfigInput) SchemaExample() any {
 type ConfigInput struct {
 	// Instructions that define the agent's role and how it should behave.
 	//
-	// Sent to the model on every turn of a run, alongside the platform guidance Augno adds automatically.
+	// Sent to the model on every turn of a run, alongside the platform guidance OpenMRP adds automatically.
 	SystemPrompt field.Optional[string] `json:"system_prompt,omitzero"`
 	// Intelligence and cost tier for the agent's reasoning.
 	//

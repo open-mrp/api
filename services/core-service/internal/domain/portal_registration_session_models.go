@@ -3,8 +3,8 @@ package domain
 import (
 	"time"
 
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/pagination"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/pagination"
 )
 
 // PortalRegistrationSessionData is the scratch form data accumulated across the buyer registration steps, persisted as JSON on the session so a resumed session restores exactly where the buyer left off.

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // CheckIsUser checks that the identity is a user
@@ -60,7 +60,7 @@ func (i *Identity) CheckIsAuthenticated() *apierror.APIError {
 
 func (i *Identity) CheckIsTargetAccountSet() *apierror.APIError {
 	if !i.IsTargetAccountSet() {
-		return apierror.NewAuthenticationError("The Augno-Account header is required.")
+		return apierror.NewAuthenticationError("The OpenMRP-Account header is required.")
 	}
 
 	return nil

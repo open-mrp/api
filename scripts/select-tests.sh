@@ -2,7 +2,7 @@
 set -euo pipefail
 
 base_ref="${1:-origin/main}"
-module_path="github.com/augno/api"
+module_path="github.com/open-mrp/api"
 
 # Dependency graph can shift broadly when module definitions change.
 if git diff --name-only "${base_ref}"...HEAD -- go.mod go.sum | rg . >/dev/null; then

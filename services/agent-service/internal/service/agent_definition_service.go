@@ -8,20 +8,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/augno/api/services/agent-service/internal/agents"
-	"github.com/augno/api/services/agent-service/internal/domain"
-	agentdb "github.com/augno/api/services/agent-service/internal/infrastructure/db"
-	"github.com/augno/api/services/agent-service/internal/infrastructure/sqlc"
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/audit"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/contracts"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/id"
-	"github.com/augno/api/shared/idempotency"
-	"github.com/augno/api/shared/messaging"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/agent-service/internal/agents"
+	"github.com/open-mrp/api/services/agent-service/internal/domain"
+	agentdb "github.com/open-mrp/api/services/agent-service/internal/infrastructure/db"
+	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/audit"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/contracts"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/messaging"
+	"github.com/open-mrp/api/shared/tracing"
 
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -162,7 +162,7 @@ func (s *agentDefSvcImpl) CreateCustomAgent(ctx context.Context, params domain.C
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account header is required."))
 	}
 	accountID := identity.Target.AccountID
 
@@ -314,7 +314,7 @@ func (s *agentDefSvcImpl) UpdateCustomAgent(ctx context.Context, params domain.U
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account header is required."))
 	}
 	accountID := identity.Target.AccountID
 
@@ -488,7 +488,7 @@ func (s *agentDefSvcImpl) DeleteCustomAgent(ctx context.Context, params domain.D
 		return tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
-		return tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account header is required."))
+		return tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account header is required."))
 	}
 	accountID := identity.Target.AccountID
 
@@ -573,7 +573,7 @@ func (s *agentDefSvcImpl) GetAgentDefinition(ctx context.Context, agentDefinitio
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account header is required."))
 	}
 	accountID := identity.Target.AccountID
 
@@ -612,7 +612,7 @@ func (s *agentDefSvcImpl) ListAgentDefinitions(ctx context.Context, params domai
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account header is required."))
 	}
 	accountID := identity.Target.AccountID
 
@@ -917,7 +917,7 @@ func (s *agentDefSvcImpl) UpdateAgentAccountStatus(ctx context.Context, params d
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account header is required."))
 	}
 	accountID := identity.Target.AccountID
 
@@ -1330,7 +1330,7 @@ func (s *agentDefSvcImpl) TriggerRun(ctx context.Context, params domain.TriggerR
 		return "", tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
-		return "", tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account header is required."))
+		return "", tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account header is required."))
 	}
 	accountID := identity.Target.AccountID
 
@@ -1504,7 +1504,7 @@ func (s *agentDefSvcImpl) CancelRun(ctx context.Context, params domain.CancelRun
 		return tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
-		return tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account header is required."))
+		return tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account header is required."))
 	}
 	accountID := identity.Target.AccountID
 
@@ -1651,7 +1651,7 @@ func (s *agentDefSvcImpl) ContinueRun(ctx context.Context, params domain.Continu
 		return "", tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
-		return "", tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account header is required."))
+		return "", tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account header is required."))
 	}
 	accountID := identity.Target.AccountID
 
@@ -1832,7 +1832,7 @@ func (s *agentDefSvcImpl) RetryRun(ctx context.Context, params domain.RetryRunPa
 		return "", tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
-		return "", tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account header is required."))
+		return "", tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account header is required."))
 	}
 	accountID := identity.Target.AccountID
 
@@ -2001,7 +2001,7 @@ func (s *agentDefSvcImpl) CreateAgentMemory(ctx context.Context, params domain.C
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account header is required."))
 	}
 	accountID := identity.Target.AccountID
 
@@ -2110,7 +2110,7 @@ func (s *agentDefSvcImpl) UpdateAgentMemory(ctx context.Context, params domain.U
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account header is required."))
 	}
 	accountID := identity.Target.AccountID
 
@@ -2237,7 +2237,7 @@ func (s *agentDefSvcImpl) DeleteAgentMemory(ctx context.Context, params domain.D
 		return tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
-		return tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account header is required."))
+		return tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account header is required."))
 	}
 	accountID := identity.Target.AccountID
 

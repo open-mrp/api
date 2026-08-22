@@ -13,7 +13,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/augno/api/shared/version"
+	"github.com/open-mrp/api/shared/version"
 )
 
 // QuotaInfo provides machine-readable details about a plan-imposed resource limit. Included in limit_exceeded errors so clients can display upgrade prompts, usage bars, or implement programmatic retry/backoff logic.
@@ -36,7 +36,7 @@ const (
 	ErrorCodeExpiredToken ErrorCode = "expired_token"
 	// ErrorCodeExpiredAPIKey indicates an API key has passed its expiration date.
 	ErrorCodeExpiredAPIKey ErrorCode = "api_key_expired" // #nosec G101 - This is an error code constant, not a hardcoded credential
-	// ErrorCodeRevokedAPIKey indicates an API key was explicitly revoked by the owner or Augno.
+	// ErrorCodeRevokedAPIKey indicates an API key was explicitly revoked by the owner or OpenMRP.
 	ErrorCodeRevokedAPIKey ErrorCode = "api_key_revoked" // #nosec G101 - This is an error code constant, not a hardcoded credential
 	// ErrorCodeInvalidCredentials indicates the provided credentials are wrong.
 	ErrorCodeInvalidCredentials ErrorCode = "invalid_credentials" // #nosec G101 - This is an error code constant, not a hardcoded credential
@@ -117,7 +117,7 @@ const (
 
 	// --- API version errors (400) ---
 
-	// ErrorCodeAPIVersionRequired indicates the Augno-Version header was missing from the request.
+	// ErrorCodeAPIVersionRequired indicates the OpenMRP-Version header was missing from the request.
 	ErrorCodeAPIVersionRequired ErrorCode = "api_version_required"
 	// ErrorCodeAPIVersionInvalid indicates the requested API version string is not recognized.
 	ErrorCodeAPIVersionInvalid ErrorCode = "api_version_invalid"
@@ -539,9 +539,9 @@ func NewClientClosedRequestError(publicMessage string) *APIError {
 	return NewAPIError(ErrorCodeClientClosedRequest, ErrorTypeAPI, publicMessage, "Client closed request.", WithDocURL(docURLClientClosedRequest))
 }
 
-// NewAPIVersionRequiredError creates a 400 error when the Augno-Version header is missing.
+// NewAPIVersionRequiredError creates a 400 error when the OpenMRP-Version header is missing.
 func NewAPIVersionRequiredError() *APIError {
-	return NewAPIError(ErrorCodeAPIVersionRequired, ErrorTypeInvalidRequest, fmt.Sprintf("The Augno-Version header is required. Please include a valid API version. The latest version is %s.", version.Latest.String()), "", WithDocURL(docURLAPIVersionRequired))
+	return NewAPIError(ErrorCodeAPIVersionRequired, ErrorTypeInvalidRequest, fmt.Sprintf("The OpenMRP-Version header is required. Please include a valid API version. The latest version is %s.", version.Latest.String()), "", WithDocURL(docURLAPIVersionRequired))
 }
 
 // NewAPIVersionInvalidError creates a 400 error when the requested API version is not recognized.

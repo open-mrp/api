@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/augno/api/internal/releasechanges"
+	"github.com/open-mrp/api/internal/releasechanges"
 )
 
 type outputs struct {

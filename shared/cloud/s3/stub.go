@@ -5,7 +5,7 @@ import (
 	"io"
 	"time"
 
-	apierror "github.com/augno/api/shared/errors"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // StubClient is a no-op ObjectStore implementation for use in test mode. FileExistsResult controls what FileExists reports: it defaults to false (so photo/label lookups behave as "absent"), but a service that needs uploads to validate as present in test mode (e.g. chat attachments) can set it to true.

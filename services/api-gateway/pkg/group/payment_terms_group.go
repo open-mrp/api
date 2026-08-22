@@ -3,10 +3,10 @@ package httpgroup
 import (
 	"fmt"
 
-	paymenttermep "github.com/augno/api/services/api-gateway/endpoints/payment-terms"
-	grpcclient "github.com/augno/api/services/api-gateway/grpc-client"
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	paymenttermep "github.com/open-mrp/api/services/api-gateway/endpoints/payment-terms"
+	grpcclient "github.com/open-mrp/api/services/api-gateway/grpc-client"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 )
 
 type PaymentTermsEndpointGroup struct {

@@ -1,7 +1,7 @@
 package id
 
 import (
-	apierror "github.com/augno/api/shared/errors"
+	apierror "github.com/open-mrp/api/shared/errors"
 
 	nanoid "github.com/matoous/go-nanoid/v2"
 )

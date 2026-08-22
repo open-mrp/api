@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"time"
 
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/timeutil"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/timeutil"
 )
 
 const SampleProductionScheduleID = "pnsc_m4zt3z8g8src"

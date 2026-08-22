@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/augno/api/services/api-gateway/internal/header"
-	httptransport "github.com/augno/api/services/api-gateway/internal/http"
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/shared/appctx"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/api-gateway/internal/header"
+	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/appctx"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/tracing"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
@@ -30,7 +30,7 @@ func (c *InternalAuthMiddlewareConfig) validate() error {
 	return nil
 }
 
-// InternalAuthMiddleware authenticates requests on the gateway's internal listener. Instead of validating a user credential against auth-service, it trusts an agent identity supplied directly in InternalIdentityHeader — but ONLY when InternalServiceTokenHeader matches the configured secret (constant-time) and the identity is a well-formed agent identity. This listener must never be exposed behind the public ALB, and the edge must strip X-Augno-Internal-* from external traffic.
+// InternalAuthMiddleware authenticates requests on the gateway's internal listener. Instead of validating a user credential against auth-service, it trusts an agent identity supplied directly in InternalIdentityHeader — but ONLY when InternalServiceTokenHeader matches the configured secret (constant-time) and the identity is a well-formed agent identity. This listener must never be exposed behind the public ALB, and the edge must strip X-OpenMRP-Internal-* from external traffic.
 func InternalAuthMiddleware(config *InternalAuthMiddlewareConfig) func(http.HandlerFunc) http.HandlerFunc {
 	if err := config.validate(); err != nil {
 		panic(err)

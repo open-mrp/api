@@ -9,10 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/lease"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/lease"
 )
 
 // ScheduledMessageDeliverer materializes due scheduled messages into real messages.

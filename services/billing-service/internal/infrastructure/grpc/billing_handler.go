@@ -3,12 +3,12 @@ package grpc
 import (
 	"context"
 
-	"github.com/augno/api/services/billing-service/internal/domain"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/contracts"
-	apierror "github.com/augno/api/shared/errors"
-	pb "github.com/augno/api/shared/proto/billing"
-	"github.com/augno/api/shared/safeconv"
+	"github.com/open-mrp/api/services/billing-service/internal/domain"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/contracts"
+	apierror "github.com/open-mrp/api/shared/errors"
+	pb "github.com/open-mrp/api/shared/proto/billing"
+	"github.com/open-mrp/api/shared/safeconv"
 
 	"google.golang.org/grpc"
 )
@@ -204,7 +204,7 @@ func (h *billingHandler) GetAccountUsage(ctx context.Context, req *pb.GetAccount
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The Augno-Account header is required."))
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The OpenMRP-Account header is required."))
 	}
 
 	result, apiErr := h.billingSvc.GetAccountUsage(ctx, identity.Target.AccountID)
@@ -266,7 +266,7 @@ func (h *billingHandler) CreateBillingPortalSession(ctx context.Context, req *pb
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthorizationError("You are not authorized to perform this action."))
 	}
 	if !identity.IsTargetAccountSet() {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The Augno-Account header is required."))
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The OpenMRP-Account header is required."))
 	}
 
 	url, apiErr := h.billingSvc.CreateBillingPortalSession(ctx, identity.Target.AccountID)
@@ -293,7 +293,7 @@ func (h *billingHandler) RequestEnterpriseUpgrade(ctx context.Context, req *pb.R
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthorizationError("You are not authorized to perform this action."))
 	}
 	if !identity.IsTargetAccountSet() {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The Augno-Account header is required."))
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The OpenMRP-Account header is required."))
 	}
 
 	var actorID string
@@ -337,7 +337,7 @@ func (h *billingHandler) EnsureBillingCustomer(ctx context.Context, req *pb.Ensu
 			return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthorizationError("You are not authorized to perform this action."))
 		}
 		if !identity.IsTargetAccountSet() {
-			return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The Augno-Account header is required."))
+			return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The OpenMRP-Account header is required."))
 		}
 		accountID = identity.Target.AccountID
 	}
@@ -375,7 +375,7 @@ func (h *billingHandler) GetAgentSpend(ctx context.Context, req *pb.GetAgentSpen
 			return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthorizationError("You are not authorized to perform this action."))
 		}
 		if !identity.IsTargetAccountSet() {
-			return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The Augno-Account header is required."))
+			return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The OpenMRP-Account header is required."))
 		}
 		accountID = identity.Target.AccountID
 	}
@@ -418,7 +418,7 @@ func (h *billingHandler) SwitchPlan(ctx context.Context, req *pb.SwitchPlanReque
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthorizationError("You are not authorized to perform this action."))
 	}
 	if !identity.IsTargetAccountSet() {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The Augno-Account header is required."))
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The OpenMRP-Account header is required."))
 	}
 
 	result, apiErr := h.billingSvc.SwitchPlan(ctx, identity.Target.AccountID, req.PlanId)
@@ -449,7 +449,7 @@ func (h *billingHandler) PreviewPlanChange(ctx context.Context, req *pb.PreviewP
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthorizationError("You are not authorized to perform this action."))
 	}
 	if !identity.IsTargetAccountSet() {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The Augno-Account header is required."))
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The OpenMRP-Account header is required."))
 	}
 
 	result, apiErr := h.billingSvc.PreviewPlanChange(ctx, identity.Target.AccountID, req.PlanId)

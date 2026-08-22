@@ -7,11 +7,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/services/core-service/internal/scheduling"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/id"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/services/core-service/internal/scheduling"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/id"
 )
 
 // closureSeedYears is how far ahead a seed writes holidays.

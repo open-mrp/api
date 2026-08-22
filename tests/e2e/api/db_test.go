@@ -14,7 +14,7 @@ import (
 // defaultE2EDBURL points at the e2e MySQL published on the host (3306 is the
 // local dev DB, so the e2e stack publishes 3307). CI can override via E2E_DB_URL
 // — e.g. mysql-e2e:3306 when tests run inside the compose network.
-const defaultE2EDBURL = "root:Testing123!@tcp(127.0.0.1:3307)/augno?parseTime=true"
+const defaultE2EDBURL = "root:Testing123!@tcp(127.0.0.1:3307)/openmrp?parseTime=true"
 
 var (
 	e2eDBOnce sync.Once

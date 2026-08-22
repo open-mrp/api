@@ -7,8 +7,8 @@ import (
 	"os"
 	"time"
 
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/tracing"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/tracing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"

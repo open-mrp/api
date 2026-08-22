@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/shared/constants"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 func TestNormalizePostal(t *testing.T) {

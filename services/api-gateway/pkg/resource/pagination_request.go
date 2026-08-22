@@ -1,8 +1,8 @@
 package apiresource
 
 import (
-	"github.com/augno/api/shared/contracts"
-	"github.com/augno/api/shared/pagination"
+	"github.com/open-mrp/api/shared/contracts"
+	"github.com/open-mrp/api/shared/pagination"
 )
 
 // PaginationRequest is the standard request type for paginated list endpoints.

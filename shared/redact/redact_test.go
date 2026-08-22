@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/augno/api/shared/redact"
+	"github.com/open-mrp/api/shared/redact"
 )
 
 type flatReq struct {

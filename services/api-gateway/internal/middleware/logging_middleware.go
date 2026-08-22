@@ -8,11 +8,11 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/augno/api/services/api-gateway/internal/header"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/id"
-	"github.com/augno/api/shared/redact"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/api-gateway/internal/header"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/redact"
+	"github.com/open-mrp/api/shared/tracing"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )

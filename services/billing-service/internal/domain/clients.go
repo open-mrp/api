@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	apierror "github.com/augno/api/shared/errors"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // StripeClient is the interface for all Stripe API operations needed by the billing service, including v2 pricing plan billing and customer management.

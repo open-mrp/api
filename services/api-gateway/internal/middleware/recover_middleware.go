@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"runtime/debug"
 
-	httptransport "github.com/augno/api/services/api-gateway/internal/http"
-	"github.com/augno/api/shared/appctx"
-	apierror "github.com/augno/api/shared/errors"
+	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
+	"github.com/open-mrp/api/shared/appctx"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // RecoverMiddleware recovers from a handler panic, records the panic as the request log's error message (when one is not already set), and responds to the client with a generic internal server error instead of letting the connection drop.

@@ -1,9 +1,9 @@
-# Declarative API Endpoints (the Augno registry pattern)
+# Declarative API Endpoints (the OpenMRP registry pattern)
 
 > Source: https://www.danealbaugh.com/articles/declarative-endpoints
 
 **Status in this repo**: this IS the framework this repo runs on — the
-article describes the pattern built here for Augno's 400+ endpoint API.
+article describes the pattern built here for OpenMRP's 400+ endpoint API.
 Live code: `services/api-gateway/endpoints/<resource>/` (endpoint
 definitions), `shared/field` (`Optional`/`Clearable`), `shared/idempotency`.
 All new endpoints must use it; never hand-roll an HTTP handler.

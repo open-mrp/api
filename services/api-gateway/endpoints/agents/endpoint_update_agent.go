@@ -4,13 +4,13 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/field"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/field"
 )
 
 // Request to partially update an agent definition.
@@ -55,7 +55,7 @@ func (*UpdateAgentRequest) SchemaExample() any {
 
 // Updates a custom agent.
 //
-// Only the fields provided in the request are changed. Augno's `system` agents cannot be edited — the only thing you can change about them is whether they are enabled for your account, with the Update Agent Status endpoint.
+// Only the fields provided in the request are changed. OpenMRP's `system` agents cannot be edited — the only thing you can change about them is whether they are enabled for your account, with the Update Agent Status endpoint.
 type UpdateAgentEndpoint struct{}
 
 func (e *UpdateAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAgentRequest, *apiresource.AgentDefinition] {

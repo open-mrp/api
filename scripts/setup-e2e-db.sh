@@ -17,11 +17,11 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$REPO_ROOT"
 
-MYSQL_CONTAINER="augno-mysql-e2e"
-POSTGRES_CONTAINER="augno-postgres-e2e"
+MYSQL_CONTAINER="openmrp-mysql-e2e"
+POSTGRES_CONTAINER="openmrp-postgres-e2e"
 
-MYSQL_CMD=(mysql -uroot -pTesting123! --protocol=tcp augno)
-PSQL_CMD=(psql -U augno -d augno_agents)
+MYSQL_CMD=(mysql -uroot -pTesting123! --protocol=tcp openmrp)
+PSQL_CMD=(psql -U openmrp -d openmrp_agents)
 
 # --- Helper: extract goose Up section from a migration file ---
 

@@ -6,7 +6,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/augno/api/shared/constants"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 func main() {

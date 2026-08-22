@@ -6,17 +6,17 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/shared/audit"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/db"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/excel"
-	"github.com/augno/api/shared/field"
-	"github.com/augno/api/shared/id"
-	"github.com/augno/api/shared/messaging"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/audit"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/db"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/excel"
+	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/messaging"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 // asyncBulkDeps hands the async bulk engine the plumbing it runs on.

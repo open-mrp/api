@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/augno/api/shared/retry"
+	"github.com/open-mrp/api/shared/retry"
 )
 
 // ExampleWithBackoff shows the minimal configuration needed to retry an

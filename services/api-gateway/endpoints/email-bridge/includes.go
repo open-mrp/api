@@ -1,8 +1,8 @@
 package emailbridgeep
 
 import (
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	"github.com/augno/api/shared/constants"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 // emailInboxIncludeFields is the whitelist of ?include= keys exposed by the email

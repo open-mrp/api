@@ -22,7 +22,7 @@ type Response struct {
 
 const defaultAPIVersion = "1.0.forge-preview.3"
 
-// Client is an HTTP client for the Augno API configured with authentication.
+// Client is an HTTP client for the OpenMRP API configured with authentication.
 type Client struct {
 	baseURL    string
 	apiKey     string
@@ -85,8 +85,8 @@ func (c *Client) applyAuth(req *http.Request) {
 	} else {
 		req.Header.Set("Authorization", "Bearer "+c.apiKey)
 	}
-	req.Header.Set("Augno-Account", c.accountID)
-	req.Header.Set("Augno-Version", c.apiVersion)
+	req.Header.Set("OpenMRP-Account", c.accountID)
+	req.Header.Set("OpenMRP-Version", c.apiVersion)
 	req.Header.Set("Accept", "application/json")
 }
 

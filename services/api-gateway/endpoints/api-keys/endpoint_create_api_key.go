@@ -5,12 +5,12 @@ import (
 	"net/http"
 	"time"
 
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/field"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/field"
 )
 
 // Request to create an API key.
@@ -42,7 +42,7 @@ func (*CreateAPIKeyRequest) SchemaExample() any {
 
 // Creates an [API key](https://docs.augno.com/api/api-keys) to authenticate API requests.
 //
-// The key belongs to the account it was created under and only ever acts on behalf of that account. Keys created under a sandbox account carry an `aug_sk_test_` prefix; keys created under a production account carry an `aug_sk_prod_` prefix.
+// The key belongs to the account it was created under and only ever acts on behalf of that account. Keys created under a sandbox account carry an `mrp_sk_test_` prefix; keys created under a production account carry an `mrp_sk_prod_` prefix.
 //
 // The secret key is returned once and cannot be retrieved later, so you should store it securely. We provide some [recommendations](https://docs.augno.com/api/managing-api-keys) on how you can manage your API keys.
 type CreateAPIKeyEndpoint struct{}

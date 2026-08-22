@@ -3,12 +3,12 @@ package repository
 import (
 	"context"
 
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/augno/api/services/core-service/internal/scheduling"
-	"github.com/augno/api/shared/db"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/services/core-service/internal/scheduling"
+	"github.com/open-mrp/api/shared/db"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 // LoadStepGraph returns the production-step graph plus the per-step metadata the explosion needs, with lead-time offsets already resolved from resource settings.

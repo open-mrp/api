@@ -11,22 +11,22 @@ import (
 	"sync"
 	"time"
 
-	"github.com/augno/api/services/agent-service/internal/agents"
-	"github.com/augno/api/services/agent-service/internal/domain"
-	agentdb "github.com/augno/api/services/agent-service/internal/infrastructure/db"
-	"github.com/augno/api/services/agent-service/internal/infrastructure/sqlc"
-	"github.com/augno/api/services/agent-service/internal/llm"
-	types "github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/contracts"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/id"
-	"github.com/augno/api/shared/messaging"
-	"github.com/augno/api/shared/ptrutil"
-	"github.com/augno/api/shared/retry"
-	"github.com/augno/api/shared/safeconv"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/agent-service/internal/agents"
+	"github.com/open-mrp/api/services/agent-service/internal/domain"
+	agentdb "github.com/open-mrp/api/services/agent-service/internal/infrastructure/db"
+	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/services/agent-service/internal/llm"
+	types "github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/contracts"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/messaging"
+	"github.com/open-mrp/api/shared/ptrutil"
+	"github.com/open-mrp/api/shared/retry"
+	"github.com/open-mrp/api/shared/safeconv"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 const maxToolLoopIterations = 20
@@ -672,9 +672,9 @@ func truncateString(s string, maxLen int) string {
 // chatResourceLinkPreamble instructs a chat-triggered agent to link the records and pages it talks about so they render as clickable in-app links. Both forms are resolved client-side to the correct shell-aware route, so the agent never has to know real URLs: for a record it copies the `object` and `id` it already sees in tool results, and for a page it takes the key from find_app_page. Deliberately names no specific record types — every object type with a detail page in the dashboard is linkable (see shared/appnav), and listing a few here previously taught agents that only those few were.
 const chatResourceLinkPreamble = `Link the things you mention so the user can open them.
 
-For a RECORD you looked up, write [<label>](augno:<object>/<id>), taking <object> and <id> verbatim from that record's "object" and "id" fields in the tool result and using its human-readable number or name as <label>. For example a sales order {"id":"so_abc","object":"sales_order","number":"SO-1042"} becomes [SO-1042](augno:sales_order/so_abc). This works for every kind of record, not just orders. Link each record the first time you mention it, and only ones you actually retrieved — never guess or invent an id.
+For a RECORD you looked up, write [<label>](openmrp:<object>/<id>), taking <object> and <id> verbatim from that record's "object" and "id" fields in the tool result and using its human-readable number or name as <label>. For example a sales order {"id":"so_abc","object":"sales_order","number":"SO-1042"} becomes [SO-1042](openmrp:sales_order/so_abc). This works for every kind of record, not just orders. Link each record the first time you mention it, and only ones you actually retrieved — never guess or invent an id.
 
-For a PAGE of the app — a list, a settings screen, wherever something is managed — call the find_app_page tool and write the link exactly as it gives it to you, in the form [<page name>](augno:page/<key>). Do this instead of describing a menu path or writing a URL: you do not know this app's URLs, and a guessed one is a dead link. When you tell someone where to do something, link the page.`
+For a PAGE of the app — a list, a settings screen, wherever something is managed — call the find_app_page tool and write the link exactly as it gives it to you, in the form [<page name>](openmrp:page/<key>). Do this instead of describing a menu path or writing a URL: you do not know this app's URLs, and a guessed one is a dead link. When you tell someone where to do something, link the page.`
 
 // chatReplyDeliveryPreamble tells a chat-triggered agent how its output reaches the conversation, so it
 // stops trying to "post" or "send" messages through generic API tools and stalling on a conversation id

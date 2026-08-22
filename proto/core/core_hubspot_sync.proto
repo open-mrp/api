@@ -28,7 +28,7 @@ service CoreHubspotSyncService {
   rpc ExecuteHubspotSync(ExecuteHubspotSyncRequest) returns (HubspotSyncJobResponse);
   // CancelHubspotSync force-fails an in-flight job so the account can start a new one.
   rpc CancelHubspotSync(CancelHubspotSyncRequest) returns (HubspotSyncJobResponse);
-  // ListHubspotSyncRecords pages the Augno->HubSpot mappings the sync has written.
+  // ListHubspotSyncRecords pages the OpenMRP->HubSpot mappings the sync has written.
   rpc ListHubspotSyncRecords(ListHubspotSyncRecordsRequest) returns (ListHubspotSyncRecordsResponse);
 }
 
@@ -36,7 +36,7 @@ message HubspotSyncRecordInfo {
   string id = 1;
   string augno_type = 2;
   string augno_id = 3;
-  // Display name of the mapped Augno entity; empty when it no longer exists.
+  // Display name of the mapped OpenMRP entity; empty when it no longer exists.
   string augno_name = 4;
   string hubspot_type = 5;
   string hubspot_id = 6;
@@ -150,7 +150,7 @@ message CancelHubspotSyncRequest {
 }
 
 message ListHubspotSyncRecordsRequest {
-  // Which Augno entity type to list (e.g. customer). Required: it anchors the keyset index.
+  // Which OpenMRP entity type to list (e.g. customer). Required: it anchors the keyset index.
   string augno_type = 1;
   optional string cursor = 2;
   int32 limit = 3;

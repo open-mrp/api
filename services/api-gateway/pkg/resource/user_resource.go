@@ -3,14 +3,14 @@ package apiresource
 import (
 	"time"
 
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/timeutil"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/timeutil"
 )
 
 const SampleUserID = "us_43irtlt2ajz6"
 const SampleUserUsername = "jdoe"
-const SampleUserEmail = "jdoe@augno.com"
+const SampleUserEmail = "jdoe@openmrp.ai"
 const SampleUserName = "John Doe"
 const SampleUserImageUrl = "https://cdn.augno.com/avatars/us_43irtlt2ajz6.jpg"
 const SampleUserPassword = "QgS7Z8Hhj3&1"     // #nosec G101 -- sample data for API docs

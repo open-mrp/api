@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
-	"github.com/augno/api/services/core-service/internal/domain"
-	factorymock "github.com/augno/api/services/core-service/internal/domain/mock/factory"
-	repositorymock "github.com/augno/api/services/core-service/internal/domain/mock/repository"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
+	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"

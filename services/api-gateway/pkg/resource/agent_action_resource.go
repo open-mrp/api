@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"time"
 
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/timeutil"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/timeutil"
 )
 
 // A single tool invocation performed by an agent during a run.
@@ -20,7 +20,7 @@ type AgentAction struct {
 	// The tool the agent invoked for this action.
 	//
 	// - `create_artifact`: create an artifact such as a report, document, or data export.
-	// - `read_doc`: read Augno documentation pages.
+	// - `read_doc`: read OpenMRP documentation pages.
 	// - `fetch_url`: fetch content from a public URL.
 	// - `draft_reply`: propose a reply to the case's external party as a draft held for human approval (not sent).
 	// - `send_email`: send an email reply through the conversation's bound inbox.
@@ -74,7 +74,7 @@ var SampleAgentAction = &AgentAction{
 	Tool:        constants.ToolReadDoc,
 	Status:      constants.AgentActionStatusExecuted,
 	Label:       new("Read Doc"),
-	Description: new("Read the Augno documentation page on creating sales orders."),
+	Description: new("Read the OpenMRP documentation page on creating sales orders."),
 	Run: &AgentRun{
 		ID:          SampleAgentRunID,
 		Object:      constants.ObjectTypeAgentRun,

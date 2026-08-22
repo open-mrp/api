@@ -9,10 +9,10 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/augno/api/services/agent-service/internal/domain"
-	"github.com/augno/api/shared/contracts"
-	"github.com/augno/api/shared/messaging"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/agent-service/internal/domain"
+	"github.com/open-mrp/api/shared/contracts"
+	"github.com/open-mrp/api/shared/messaging"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 type RunConsumer struct {

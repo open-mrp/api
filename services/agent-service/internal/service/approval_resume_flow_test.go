@@ -6,13 +6,13 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/augno/api/services/agent-service/internal/agents"
-	"github.com/augno/api/services/agent-service/internal/domain"
-	factorymock "github.com/augno/api/services/agent-service/internal/domain/mock/factory"
-	repositorymock "github.com/augno/api/services/agent-service/internal/domain/mock/repository"
-	agentdb "github.com/augno/api/services/agent-service/internal/infrastructure/db"
-	"github.com/augno/api/services/agent-service/internal/infrastructure/sqlc"
-	"github.com/augno/api/services/agent-service/internal/llm"
+	"github.com/open-mrp/api/services/agent-service/internal/agents"
+	"github.com/open-mrp/api/services/agent-service/internal/domain"
+	factorymock "github.com/open-mrp/api/services/agent-service/internal/domain/mock/factory"
+	repositorymock "github.com/open-mrp/api/services/agent-service/internal/domain/mock/repository"
+	agentdb "github.com/open-mrp/api/services/agent-service/internal/infrastructure/db"
+	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/services/agent-service/internal/llm"
 	"go.uber.org/mock/gomock"
 )
 

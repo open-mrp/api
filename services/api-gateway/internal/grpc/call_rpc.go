@@ -5,11 +5,11 @@ import (
 	"net"
 	"time"
 
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/contracts"
-	"github.com/augno/api/shared/rpc"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/contracts"
+	"github.com/open-mrp/api/shared/rpc"
 
-	apierror "github.com/augno/api/shared/errors"
+	apierror "github.com/open-mrp/api/shared/errors"
 
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"

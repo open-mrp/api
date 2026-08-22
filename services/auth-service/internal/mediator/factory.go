@@ -3,7 +3,7 @@ package mediator
 import (
 	"fmt"
 
-	"github.com/augno/api/services/auth-service/internal/domain"
+	"github.com/open-mrp/api/services/auth-service/internal/domain"
 )
 
 // MediatorFactoryConfig declares the dependencies needed to build mediators.

@@ -4,15 +4,15 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/audit"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/id"
-	"github.com/augno/api/shared/idempotency"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/audit"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var paymentTermSvcTracer = tracing.GetTracer("core-service.payment_term_service")
@@ -137,7 +137,7 @@ func (s *paymentTermSvcImpl) BatchGetPaymentTermsByIDs(ctx context.Context, ids 
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 	if len(ids) == 0 {
 		return nil, nil

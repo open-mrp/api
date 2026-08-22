@@ -9,8 +9,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/augno/api/services/agent-service/internal/domain"
-	"github.com/augno/api/shared/appnav"
+	"github.com/open-mrp/api/services/agent-service/internal/domain"
+	"github.com/open-mrp/api/shared/appnav"
 )
 
 // ActionPreview is a reviewable description of what a blocked tool call will do, built when the run

@@ -35,11 +35,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/augno/api/services/core-service/internal/calendarseed"
-	"github.com/augno/api/services/core-service/internal/infrastructure/repository"
-	"github.com/augno/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/augno/api/shared/db"
-	"github.com/augno/api/shared/env"
+	"github.com/open-mrp/api/services/core-service/internal/calendarseed"
+	"github.com/open-mrp/api/services/core-service/internal/infrastructure/repository"
+	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/db"
+	"github.com/open-mrp/api/shared/env"
 )
 
 func main() {

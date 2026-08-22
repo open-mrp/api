@@ -1,6 +1,6 @@
 package apiresource
 
-import "github.com/augno/api/shared/constants"
+import "github.com/open-mrp/api/shared/constants"
 
 // Who a notification is aimed at.
 type NotificationTargetInput struct {

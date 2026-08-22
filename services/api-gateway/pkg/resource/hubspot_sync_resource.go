@@ -3,9 +3,9 @@ package apiresource
 import (
 	"time"
 
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/timeutil"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/timeutil"
 )
 
 // A one-time run that brings the account's existing customers, contacts, and orders into HubSpot.
@@ -66,23 +66,23 @@ type HubspotSyncReport struct {
 	ContactsWithEmail int `json:"contacts_with_email"`
 }
 
-// One Augno record and the HubSpot object the sync has mapped it to.
+// One OpenMRP record and the HubSpot object the sync has mapped it to.
 type HubspotSyncRecord struct {
 	// Sync record ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=hubspot_sync_record"`
-	// The kind of Augno record that was synced.
+	// The kind of OpenMRP record that was synced.
 	//
 	// - `customer`: a customer, mapped to a HubSpot company.
 	// - `contact`: a customer's primary contact person, mapped to a HubSpot contact.
 	// - `deal`: a sales order, mapped to a HubSpot deal.
 	AugnoType constants.HubspotSyncRecordAugnoType `json:"augno_type" validate:"required"`
-	// ID of the Augno record that was synced.
+	// ID of the OpenMRP record that was synced.
 	//
 	// A `contact` record carries the customer's id, because a customer keeps a single primary contact in HubSpot.
 	AugnoID string `json:"augno_id" validate:"required"`
-	// Name of the Augno record that was synced.
+	// Name of the OpenMRP record that was synced.
 	//
 	// Empty when the record has since been deleted.
 	AugnoName string `json:"augno_name"`
@@ -110,11 +110,11 @@ type HubspotCompanyReview struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=hubspot_company_review"`
 	// The sync job this review belongs to.
 	Job *HubspotSyncJob `json:"job" validate:"required"`
-	// The Augno customer account being matched.
+	// The OpenMRP customer account being matched.
 	Customer *Customer `json:"customer" validate:"required"`
 	// The customer's email address as it stood when the review was raised.
 	//
-	// Snapshotted on the review rather than read from the customer, because matching a company means comparing what Augno held at match time against what HubSpot holds — a later edit to the customer must not silently change what a reviewer is deciding on.
+	// Snapshotted on the review rather than read from the customer, because matching a company means comparing what OpenMRP held at match time against what HubSpot holds — a later edit to the customer must not silently change what a reviewer is deciding on.
 	CustomerEmail *string `json:"customer_email"`
 	// The customer's website as it stood when the review was raised — the field the domain match was derived from.
 	CustomerURL *string `json:"customer_url"`

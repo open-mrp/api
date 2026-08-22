@@ -6,9 +6,9 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/augno/api/services/api-gateway/internal/middleware"
-	apierror "github.com/augno/api/shared/errors"
-	pb "github.com/augno/api/shared/proto/auth"
+	"github.com/open-mrp/api/services/api-gateway/internal/middleware"
+	apierror "github.com/open-mrp/api/shared/errors"
+	pb "github.com/open-mrp/api/shared/proto/auth"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

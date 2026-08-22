@@ -5,11 +5,11 @@ import (
 	"testing"
 
 	// Registers the finding definitions whose sub-fields this file exercises.
-	_ "github.com/augno/api/services/api-gateway/internal/resourceregistry"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
-	"github.com/augno/api/shared/constants"
-	pb "github.com/augno/api/shared/proto/core"
+	_ "github.com/open-mrp/api/services/api-gateway/internal/resourceregistry"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
+	"github.com/open-mrp/api/shared/constants"
+	pb "github.com/open-mrp/api/shared/proto/core"
 )
 
 // These tests close the loop between the two halves of the include system that are written in different packages and can silently drift apart: the presenter stashes foreign keys under string keys, and the registry's ExtractIDs reads them back under string keys. A typo on either side produces no error — the relation just serializes as null forever — so the round trip is asserted rather than assumed.

@@ -2,7 +2,7 @@
 
 This is the canonical reference for how we version the public API: what a version is, what counts as a breaking change, how the gateway serves multiple versions from a single latest-shaped backend, and how versions are introduced, maintained, and fully retired.
 
-**The contract: a pinned consumer never breaks.** A client that pins `Augno-Version` keeps getting byte-compatible request and response shapes for as long as that version is supported — no matter how the latest API evolves underneath it. The only way a pinned client ever sees a behavior change is when its version is deliberately deprecated and removed, which is a planned, communicated event — never a side effect of shipping a feature.
+**The contract: a pinned consumer never breaks.** A client that pins `OpenMRP-Version` keeps getting byte-compatible request and response shapes for as long as that version is supported — no matter how the latest API evolves underneath it. The only way a pinned client ever sees a behavior change is when its version is deliberately deprecated and removed, which is a planned, communicated event — never a side effect of shipping a feature.
 
 > **Worked example.** `1.0.forge-preview.2` changed `account_user`: the duplicated profile fields (`name`, `email`, `username`, `image_url`) moved onto an expandable full `user` sub-resource. Callers pinned to `1.0.forge-preview.1` still receive the old shape — hoisted profile fields and a `user` entity reference — via the transformer in `services/api-gateway/internal/versiontransforms/`. That migration exercises every mechanism in this doc and is referenced throughout.
 
@@ -33,7 +33,7 @@ Latest = V1_0_Forge_Preview2
 Supported = []APIVersion{V1_0_Forge_Preview2, V1_0_Forge_Preview1}
 ```
 
-Every request must carry a valid `Augno-Version` header. `VersionMiddleware` (`services/api-gateway/internal/middleware/version_middleware.go`) rejects missing or unsupported versions with a 400, parses the header against `Supported`, stores the result in the request context (`appctx.WithAPIVersion`), and echoes the version back in the response header.
+Every request must carry a valid `OpenMRP-Version` header. `VersionMiddleware` (`services/api-gateway/internal/middleware/version_middleware.go`) rejects missing or unsupported versions with a 400, parses the header against `Supported`, stores the result in the request context (`appctx.WithAPIVersion`), and echoes the version back in the response header.
 
 ---
 

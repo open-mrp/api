@@ -1,6 +1,6 @@
 package scheduling
 
-import "github.com/augno/api/shared/constants"
+import "github.com/open-mrp/api/shared/constants"
 
 // Fulfillment policies, aliased from the shared enum so the engine cannot drift from the API contract.
 const (

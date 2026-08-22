@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/pagination"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/pagination"
 )
 
 type RequestLog struct {
@@ -186,7 +186,7 @@ type AuditEvent struct {
 	IdentityType string
 	AccountID    string
 	// TargetAccountID is the account the audited mutation was performed against
-	// (the Augno-Account targeted by the originating request). Nullable until the backfill + non-null migration land.
+	// (the OpenMRP-Account targeted by the originating request). Nullable until the backfill + non-null migration land.
 	TargetAccountID *string
 
 	Action       constants.AuditAction

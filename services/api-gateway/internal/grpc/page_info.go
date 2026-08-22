@@ -4,9 +4,9 @@ import (
 	"context"
 	"net/url"
 
-	"github.com/augno/api/shared/appctx"
+	"github.com/open-mrp/api/shared/appctx"
 
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 )
 
 // ProtoPageInfo is an interface satisfied by all proto-generated PageInfo types across the core, auth, platform, billing, and agent proto packages.

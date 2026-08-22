@@ -7,9 +7,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
+	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // V2 integration tests validate the path: parseIncludeTree → ResolveIncludes →

@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/augno/api/shared/crypto"
+	"github.com/open-mrp/api/shared/crypto"
 )
 
 // DocumentationHMACKey signs OpenAPI example cursors. It is not used at runtime.
-const DocumentationHMACKey = "augno-openapi-documentation-cursor-key-v1"
+const DocumentationHMACKey = "openmrp-openapi-documentation-cursor-key-v1"
 
 var documentationHMACKey = []byte(DocumentationHMACKey)
 

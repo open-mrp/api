@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/augno/api/shared/appctx"
-	apierror "github.com/augno/api/shared/errors"
+	"github.com/open-mrp/api/shared/appctx"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // CachedResult holds the outcome of attempting to deserialize a previously stored idempotency response. Service handlers use this to short-circuit execution when a cache hit is found.

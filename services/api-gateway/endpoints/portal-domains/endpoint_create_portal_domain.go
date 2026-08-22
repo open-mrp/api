@@ -4,19 +4,19 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // Request to connect a custom domain to the account's customer portal.
 type CreatePortalDomainRequest struct {
 	// The fully-qualified domain name to connect (e.g. `shop.acme.com`).
 	//
-	// A subdomain such as `shop.acme.com` is routed with a CNAME record and an apex domain such as `acme.com` with an A record; either way the records to publish come back on the response. The value is lowercased and any trailing dot is stripped before it is stored, and Augno-owned hostnames are rejected.
+	// A subdomain such as `shop.acme.com` is routed with a CNAME record and an apex domain such as `acme.com` with an A record; either way the records to publish come back on the response. The value is lowercased and any trailing dot is stripped before it is stored, and OpenMRP-owned hostnames are rejected.
 	Domain string `json:"domain" validate:"required"`
 }
 

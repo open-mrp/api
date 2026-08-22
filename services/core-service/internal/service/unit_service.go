@@ -6,15 +6,15 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/audit"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/id"
-	"github.com/augno/api/shared/idempotency"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/audit"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var unitSvcTracer = tracing.GetTracer("core-service.unit_service")
@@ -111,7 +111,7 @@ func (s *unitSvcImpl) withTx(ctx context.Context, fn func(context.Context, *unit
 // ListUnits returns a paginated list of units for the caller's account.
 //
 // 1. Extract and validate the caller's identity, actor type, and units:read permission.
-// 2. Require the Augno-Account header to scope the query.
+// 2. Require the OpenMRP-Account header to scope the query.
 // 3. Query the unit repository with the account ID and pagination params.
 func (s *unitSvcImpl) ListUnits(ctx context.Context, params domain.ListUnitsParams) (*domain.ListUnitsResult, *apierror.APIError) {
 	ctx, span := unitSvcTracer.Start(ctx, "service.unit.list")
@@ -137,7 +137,7 @@ func (s *unitSvcImpl) ListUnits(ctx context.Context, params domain.ListUnitsPara
 // GetUnit retrieves a single unit by ID, scoped to the caller's account.
 //
 // 1. Extract and validate the caller's identity, actor type, and units:read permission.
-// 2. Require the Augno-Account header.
+// 2. Require the OpenMRP-Account header.
 // 3. Fetch the unit from the repository by account ID and unit ID.
 func (s *unitSvcImpl) GetUnit(ctx context.Context, unitID string) (*domain.Unit, *apierror.APIError) {
 	ctx, span := unitSvcTracer.Start(ctx, "service.unit.get")
@@ -479,7 +479,7 @@ func (s *unitSvcImpl) ValidateUnits(ctx context.Context, params domain.ValidateU
 	}
 
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	if identity.IsExternalTarget() {
@@ -541,7 +541,7 @@ func (s *unitSvcImpl) BatchGetUnitsByIDs(ctx context.Context, ids []string) ([]*
 	}
 
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	if identity.IsInternalActor() {

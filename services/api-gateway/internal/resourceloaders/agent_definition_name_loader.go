@@ -3,11 +3,11 @@ package resourceloaders
 import (
 	"context"
 
-	"github.com/augno/api/services/api-gateway/internal/domain"
-	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
-	apierror "github.com/augno/api/shared/errors"
-	agentpb "github.com/augno/api/shared/proto/agent"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/api-gateway/internal/domain"
+	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
+	apierror "github.com/open-mrp/api/shared/errors"
+	agentpb "github.com/open-mrp/api/shared/proto/agent"
+	"github.com/open-mrp/api/shared/tracing"
 	"google.golang.org/grpc"
 )
 

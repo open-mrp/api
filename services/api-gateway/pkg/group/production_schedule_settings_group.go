@@ -3,10 +3,10 @@ package httpgroup
 import (
 	"fmt"
 
-	productionschedulesettingsep "github.com/augno/api/services/api-gateway/endpoints/production-schedule-settings"
-	grpcclient "github.com/augno/api/services/api-gateway/grpc-client"
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	productionschedulesettingsep "github.com/open-mrp/api/services/api-gateway/endpoints/production-schedule-settings"
+	grpcclient "github.com/open-mrp/api/services/api-gateway/grpc-client"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 )
 
 type ProductionScheduleSettingsEndpointGroup struct {

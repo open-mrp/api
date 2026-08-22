@@ -5,15 +5,15 @@ import (
 	"encoding/json"
 	"testing"
 
-	factorymock "github.com/augno/api/services/auth-service/internal/domain/mock/factory"
-	mediatormock "github.com/augno/api/services/auth-service/internal/domain/mock/mediator"
+	factorymock "github.com/open-mrp/api/services/auth-service/internal/domain/mock/factory"
+	mediatormock "github.com/open-mrp/api/services/auth-service/internal/domain/mock/mediator"
 
-	"github.com/augno/api/services/auth-service/internal/apikey"
-	"github.com/augno/api/services/auth-service/internal/domain"
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
+	"github.com/open-mrp/api/services/auth-service/internal/apikey"
+	"github.com/open-mrp/api/services/auth-service/internal/domain"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
@@ -24,7 +24,7 @@ const (
 	testSandboxAccountID = "acct_sandbox123"
 	testAdminRoleID      = "rl_admin123"
 	testAPIKeyTypeID     = "apke_test123"
-	testAPIKeySecret     = "aug_sk_test_abc123_secret" // #nosec G101
+	testAPIKeySecret     = "mrp_sk_test_abc123_secret" // #nosec G101
 	testDocAPIKeyTypeID  = "apkedf_test123"
 )
 

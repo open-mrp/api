@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: api-gateway
-          image: augno-api/api-gateway
+          image: openmrp-api/api-gateway
           ports:
             - containerPort: 8081
             # Internal listener for agent-service endpoint-tools. Not exposed by any Service of type LoadBalancer/NodePort or any Ingress.

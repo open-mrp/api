@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/augno/api/shared/contracts"
+	"github.com/open-mrp/api/shared/contracts"
 )
 
 // buildListSchemaExample constructs the OpenAPI example for apiresource.List[T].

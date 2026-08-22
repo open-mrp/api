@@ -3,9 +3,9 @@ package apiresource
 import (
 	"time"
 
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/timeutil"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/timeutil"
 )
 
 const SampleAccountStatusID = "acss_st5zyjmzm30k"
@@ -16,7 +16,7 @@ const SampleAccountStatusName = "Normal"
 
 // A lookup value describing the standing of a customer account, such as whether shipments or all activity should be held.
 //
-// The set of statuses is fixed by Augno and cannot be added to or edited; you apply one to a customer by setting the customer's `status`.
+// The set of statuses is fixed by OpenMRP and cannot be added to or edited; you apply one to a customer by setting the customer's `status`.
 type AccountStatus struct {
 	// Account status ID.
 	ID string `json:"id" validate:"required"`
@@ -35,7 +35,7 @@ type AccountStatus struct {
 	Name string `json:"name" validate:"required"`
 	// Owner of this resource.
 	//
-	// Account statuses are platform-provided and shared across all accounts, so the owner is always the Augno system owner.
+	// Account statuses are platform-provided and shared across all accounts, so the owner is always the OpenMRP system owner.
 	Owner *Owner `json:"owner" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

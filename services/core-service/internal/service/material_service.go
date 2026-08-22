@@ -6,16 +6,16 @@ import (
 
 	"github.com/shopspring/decimal"
 
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/services/core-service/internal/mediator"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/audit"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/id"
-	"github.com/augno/api/shared/idempotency"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/services/core-service/internal/mediator"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/audit"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var materialSvcTracer = tracing.GetTracer("core-service.material_service")
@@ -107,7 +107,7 @@ func (s *materialSvcImpl) ListMaterials(ctx context.Context, params domain.ListM
 	}
 
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	if identity.IsExternalTarget() {
@@ -125,7 +125,7 @@ func (s *materialSvcImpl) ListMaterials(ctx context.Context, params domain.ListM
 // GetMaterial retrieves a single material by material ID, scoped to the caller's account.
 //
 // 1. Extract and validate the caller's identity, actor type, and items:read permission.
-// 2. Require the Augno-Account header.
+// 2. Require the OpenMRP-Account header.
 // 3. Fetch the material from the repository by account ID and item ID.
 func (s *materialSvcImpl) GetMaterial(ctx context.Context, params domain.GetMaterialParams) (*domain.Material, *apierror.APIError) {
 	ctx, span := materialSvcTracer.Start(ctx, "service.material.get")
@@ -144,7 +144,7 @@ func (s *materialSvcImpl) GetMaterial(ctx context.Context, params domain.GetMate
 	}
 
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	if identity.IsExternalTarget() {
@@ -193,7 +193,7 @@ func (s *materialSvcImpl) CreateMaterial(ctx context.Context, params domain.Crea
 	}
 
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	if identity.IsExternalTarget() {
@@ -451,7 +451,7 @@ func (s *materialSvcImpl) UpdateMaterial(ctx context.Context, params domain.Upda
 	}
 
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	if identity.IsExternalTarget() {
@@ -610,7 +610,7 @@ func (s *materialSvcImpl) DeleteMaterial(ctx context.Context, materialID string)
 	}
 
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	if identity.IsExternalTarget() {
@@ -689,7 +689,7 @@ func (s *materialSvcImpl) BatchGetMaterialsByIDs(ctx context.Context, ids []stri
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	materials, apiErr := s.repos.NewMaterialRepo().GetByIDs(ctx, identity.Target.AccountID, ids)

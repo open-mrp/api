@@ -94,14 +94,14 @@ func TestCovSalesAddresses_UpdateClearNullableFields(t *testing.T) {
 	// First set the three clearable fields to non-null values.
 	setStatus, setBody, err := apiClient.Patch(addressesPath+"/"+id, map[string]any{
 		"phone":         "555-000-0000",
-		"email":         name + "@e2e-test.augno.com",
+		"email":         name + "@e2e-test.openmrp.ai",
 		"street_line_2": "Suite 5",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, setStatus, setBody)
 	setResp := parseJSON(setBody)
 	assert.Equal(t, "555-000-0000", jsonField(setResp, "phone"))
-	assert.Equal(t, name+"@e2e-test.augno.com", jsonField(setResp, "email"))
+	assert.Equal(t, name+"@e2e-test.openmrp.ai", jsonField(setResp, "email"))
 	setGeo := jsonObject(setResp, "geolocation")
 	require.NotNil(t, setGeo)
 	assert.Equal(t, "Suite 5", jsonField(setGeo, "street_line_2"))
@@ -131,7 +131,7 @@ func TestCovSalesAddresses_UpdateClearNullableFields(t *testing.T) {
 func TestCovSalesAddresses_UpdateClearPhoneOnly(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-addr-clear-phone")
-	email := name + "@e2e-test.augno.com"
+	email := name + "@e2e-test.openmrp.ai"
 
 	createStatus, createBody, err := apiClient.Post(addressesPath, map[string]any{
 		"name":    name,

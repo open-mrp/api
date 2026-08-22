@@ -3,7 +3,7 @@ package domain
 import (
 	"time"
 
-	"github.com/augno/api/shared/pagination"
+	"github.com/open-mrp/api/shared/pagination"
 )
 
 // ProductionStep is the full production step domain model with all associated data.

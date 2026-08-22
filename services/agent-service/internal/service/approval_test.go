@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/augno/api/services/agent-service/internal/domain"
-	"github.com/augno/api/services/agent-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/services/agent-service/internal/domain"
+	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
 )
 
 // isToolBlocked mirrors the guard logic in runAgentLoop.

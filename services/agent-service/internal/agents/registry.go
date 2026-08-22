@@ -3,7 +3,7 @@ package agents
 import (
 	"sync"
 
-	"github.com/augno/api/services/agent-service/internal/domain"
+	"github.com/open-mrp/api/services/agent-service/internal/domain"
 )
 
 // ToolHandlerRegistry maps tool slugs to their handler functions.

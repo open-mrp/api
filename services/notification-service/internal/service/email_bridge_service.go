@@ -4,11 +4,11 @@ import (
 	"context"
 	"strings"
 
-	"github.com/augno/api/services/notification-service/internal/domain"
-	"github.com/augno/api/shared/appctx"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/id"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/notification-service/internal/domain"
+	"github.com/open-mrp/api/shared/appctx"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var emailBridgeSvcTracer = tracing.GetTracer("notification-service.email_bridge_service")
@@ -30,7 +30,7 @@ func (s *emailBridgeSvcImpl) accountID(ctx context.Context) (string, *apierror.A
 		return "", apierror.NewAuthenticationError("Authentication is required.")
 	}
 	if !identity.IsTargetAccountSet() {
-		return "", apierror.NewAuthenticationError("The Augno-Account-ID header is required.")
+		return "", apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required.")
 	}
 	return identity.Target.AccountID, nil
 }

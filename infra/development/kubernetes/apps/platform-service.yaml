@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: platform-service
-          image: augno-api/platform-service
+          image: openmrp-api/platform-service
           ports:
             - containerPort: 9092
           readinessProbe:

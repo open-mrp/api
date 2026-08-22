@@ -6,14 +6,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/augno/api/services/auth-service/internal/apikey"
-	"github.com/augno/api/services/auth-service/internal/domain"
-	clientmock "github.com/augno/api/services/auth-service/internal/domain/mock/client"
-	factorymock "github.com/augno/api/services/auth-service/internal/domain/mock/factory"
-	mediatormock "github.com/augno/api/services/auth-service/internal/domain/mock/mediator"
-	repositorymock "github.com/augno/api/services/auth-service/internal/domain/mock/repository"
-	"github.com/augno/api/shared/crypto"
-	apierror "github.com/augno/api/shared/errors"
+	"github.com/open-mrp/api/services/auth-service/internal/apikey"
+	"github.com/open-mrp/api/services/auth-service/internal/domain"
+	clientmock "github.com/open-mrp/api/services/auth-service/internal/domain/mock/client"
+	factorymock "github.com/open-mrp/api/services/auth-service/internal/domain/mock/factory"
+	mediatormock "github.com/open-mrp/api/services/auth-service/internal/domain/mock/mediator"
+	repositorymock "github.com/open-mrp/api/services/auth-service/internal/domain/mock/repository"
+	"github.com/open-mrp/api/shared/crypto"
+	apierror "github.com/open-mrp/api/shared/errors"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
@@ -83,7 +83,7 @@ func (s *DocAPIKeyMedTestSuite) TestResolve_ReturnExistingKey_HasRedactedValue()
 		TypeID:         apiKeyTypeID,
 		KeyID:          "someKeyID",
 		Name:           "Test Doc API Key",
-		RedactedValue:  "aug_sk_test_****abcd",
+		RedactedValue:  "mrp_sk_test_****abcd",
 		OwnerAccountID: sandboxAccountID,
 		RoleID:         "rol_test123",
 		ExpiresAt:      &expiresAt,
@@ -117,7 +117,7 @@ func (s *DocAPIKeyMedTestSuite) TestResolve_CreateDocAPIKey_HasRedactedValue() {
 		ID:            1,
 		TypeID:        "apikey_new123",
 		Name:          "Doc API Key [System Generated]",
-		RedactedValue: "aug_sk_test_****wxyz",
+		RedactedValue: "mrp_sk_test_****wxyz",
 	}
 
 	s.docAPIKeyRepo.EXPECT().
@@ -130,7 +130,7 @@ func (s *DocAPIKeyMedTestSuite) TestResolve_CreateDocAPIKey_HasRedactedValue() {
 
 	s.apiKeyMed.EXPECT().
 		Create(gomock.Any(), gomock.Any()).
-		Return("aug_sk_test_full_secret_wxyz", createdAPIKey, nil)
+		Return("mrp_sk_test_full_secret_wxyz", createdAPIKey, nil)
 
 	s.docAPIKeyRepo.EXPECT().
 		Create(gomock.Any(), gomock.Any()).
@@ -165,7 +165,7 @@ func (s *DocAPIKeyMedTestSuite) TestResolve_RotateDocAPIKey_HasRedactedValue() {
 		ID:            2,
 		TypeID:        "apikey_rotated123",
 		Name:          "Doc API Key [System Generated]",
-		RedactedValue: "aug_sk_test_****qrst",
+		RedactedValue: "mrp_sk_test_****qrst",
 	}
 
 	s.docAPIKeyRepo.EXPECT().
@@ -184,7 +184,7 @@ func (s *DocAPIKeyMedTestSuite) TestResolve_RotateDocAPIKey_HasRedactedValue() {
 			s.Equal(sandboxAccountID, input.OwnerAccountID,
 				"Rotate must be scoped to the sandbox account that owns the doc API key")
 			s.Equal(oldAPIKeyTypeID, input.APIKeyTypeID)
-			return "aug_sk_test_full_rotated_qrst", rotatedAPIKey, nil
+			return "mrp_sk_test_full_rotated_qrst", rotatedAPIKey, nil
 		})
 
 	s.docAPIKeyRepo.EXPECT().

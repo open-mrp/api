@@ -30,7 +30,7 @@ type HubspotSyncRecordInfo struct {
 	Id        string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	AugnoType string                 `protobuf:"bytes,2,opt,name=augno_type,json=augnoType,proto3" json:"augno_type,omitempty"`
 	AugnoId   string                 `protobuf:"bytes,3,opt,name=augno_id,json=augnoId,proto3" json:"augno_id,omitempty"`
-	// Display name of the mapped Augno entity; empty when it no longer exists.
+	// Display name of the mapped OpenMRP entity; empty when it no longer exists.
 	AugnoName     string                 `protobuf:"bytes,4,opt,name=augno_name,json=augnoName,proto3" json:"augno_name,omitempty"`
 	HubspotType   string                 `protobuf:"bytes,5,opt,name=hubspot_type,json=hubspotType,proto3" json:"hubspot_type,omitempty"`
 	HubspotId     string                 `protobuf:"bytes,6,opt,name=hubspot_id,json=hubspotId,proto3" json:"hubspot_id,omitempty"`
@@ -1105,7 +1105,7 @@ func (x *CancelHubspotSyncRequest) GetId() string {
 
 type ListHubspotSyncRecordsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Which Augno entity type to list (e.g. customer). Required: it anchors the keyset index.
+	// Which OpenMRP entity type to list (e.g. customer). Required: it anchors the keyset index.
 	AugnoType     string  `protobuf:"bytes,1,opt,name=augno_type,json=augnoType,proto3" json:"augno_type,omitempty"`
 	Cursor        *string `protobuf:"bytes,2,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
 	Limit         int32   `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`

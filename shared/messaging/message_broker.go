@@ -3,7 +3,7 @@ package messaging
 import (
 	"context"
 
-	"github.com/augno/api/shared/contracts"
+	"github.com/open-mrp/api/shared/contracts"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 

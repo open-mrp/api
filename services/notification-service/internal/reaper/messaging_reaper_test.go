@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	s3 "github.com/augno/api/shared/cloud/s3"
-	apierror "github.com/augno/api/shared/errors"
+	s3 "github.com/open-mrp/api/shared/cloud/s3"
+	apierror "github.com/open-mrp/api/shared/errors"
 
 	"github.com/stretchr/testify/assert"
 )

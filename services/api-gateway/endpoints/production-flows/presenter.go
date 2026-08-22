@@ -4,13 +4,13 @@ import (
 	"context"
 	"time"
 
-	quantityep "github.com/augno/api/services/api-gateway/endpoints/quantities"
-	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
-	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
-	"github.com/augno/api/shared/constants"
-	pb "github.com/augno/api/shared/proto/core"
+	quantityep "github.com/open-mrp/api/services/api-gateway/endpoints/quantities"
+	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
+	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
+	"github.com/open-mrp/api/shared/constants"
+	pb "github.com/open-mrp/api/shared/proto/core"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 

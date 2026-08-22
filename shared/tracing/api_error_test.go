@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	apierror "github.com/augno/api/shared/errors"
+	apierror "github.com/open-mrp/api/shared/errors"
 
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/codes"

@@ -7,10 +7,10 @@ import (
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
 
-	factorymock "github.com/augno/api/services/core-service/internal/domain/mock/factory"
-	repositorymock "github.com/augno/api/services/core-service/internal/domain/mock/repository"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/tracing"
+	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
+	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 const costAccountID = "acct_test"

@@ -3,7 +3,7 @@ package domain
 import (
 	"time"
 
-	"github.com/augno/api/shared/constants"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 // PortalDNSRecord is a DNS record the customer must publish for their portal domain to route and verify.

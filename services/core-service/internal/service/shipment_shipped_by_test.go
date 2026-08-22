@@ -8,10 +8,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
-	"github.com/augno/api/services/auth-service/pkg/types"
-	factorymock "github.com/augno/api/services/core-service/internal/domain/mock/factory"
-	repositorymock "github.com/augno/api/services/core-service/internal/domain/mock/repository"
-	apierror "github.com/augno/api/shared/errors"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
+	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // Wires just the account-user repo the shipped_by lookup touches, so each test owns its own

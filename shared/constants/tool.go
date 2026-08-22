@@ -6,7 +6,7 @@ type Tool string
 const (
 	// ToolCreateArtifact creates an artifact (report, document, data export).
 	ToolCreateArtifact Tool = "create_artifact"
-	// ToolReadDoc reads Augno documentation pages.
+	// ToolReadDoc reads OpenMRP documentation pages.
 	ToolReadDoc Tool = "read_doc"
 	// ToolFetchUrl fetches content from a public URL.
 	ToolFetchUrl Tool = "fetch_url"

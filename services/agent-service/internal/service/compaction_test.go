@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/augno/api/services/agent-service/internal/llm"
+	"github.com/open-mrp/api/services/agent-service/internal/llm"
 )
 
 func TestNeedsCompaction(t *testing.T) {

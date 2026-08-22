@@ -11,7 +11,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/augno/api/shared/version"
+	"github.com/open-mrp/api/shared/version"
 )
 
 var quietOutput bool

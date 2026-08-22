@@ -3,8 +3,8 @@ package domain
 import (
 	"time"
 
-	"github.com/augno/api/services/core-service/internal/scheduling"
-	"github.com/augno/api/shared/constants"
+	"github.com/open-mrp/api/services/core-service/internal/scheduling"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 // Resource-setting scopes. A setting attaches to a machine, a department or a production step; the scope says which. These alias the shared enum so the vocabulary has a single source of truth.

@@ -3,8 +3,8 @@ package middleware
 import (
 	"context"
 
-	"github.com/augno/api/services/api-gateway/internal/domain"
-	"github.com/augno/api/shared/appctx"
+	"github.com/open-mrp/api/services/api-gateway/internal/domain"
+	"github.com/open-mrp/api/shared/appctx"
 )
 
 type saver interface {

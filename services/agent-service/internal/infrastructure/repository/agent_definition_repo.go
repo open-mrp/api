@@ -3,11 +3,11 @@ package repository
 import (
 	"context"
 
-	agentdb "github.com/augno/api/services/agent-service/internal/infrastructure/db"
-	"github.com/augno/api/services/agent-service/internal/infrastructure/sqlc"
-	"github.com/augno/api/shared/db"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/tracing"
+	agentdb "github.com/open-mrp/api/services/agent-service/internal/infrastructure/db"
+	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/db"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var defRepoTracer = tracing.GetTracer("agent-service.agent_definition_repository")

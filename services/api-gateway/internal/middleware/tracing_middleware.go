@@ -3,7 +3,7 @@ package middleware
 import (
 	"net/http"
 
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 // TracingMiddleware adds OpenTelemetry tracing to the request. It skips tracing for health check endpoints to save resources.

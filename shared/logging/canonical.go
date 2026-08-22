@@ -10,8 +10,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/status"
 
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/shared/appctx"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/appctx"
 )
 
 // CanonicalLogInterceptor returns a gRPC unary server interceptor that emits one structured log line per RPC at INFO level. The log message is the full gRPC method name (e.g. "/auth.v1.AuthService/LoginUser") and the record includes:

@@ -48,7 +48,7 @@ local_resource(
 
 
 docker_build_with_restart(
-  'augno-api/api-gateway',
+  'openmrp-api/api-gateway',
   '.',
   entrypoint=['/app/build/api-gateway'],
   dockerfile='./infra/development/docker/api-gateway.Dockerfile',
@@ -76,7 +76,7 @@ local_resource(
   deps=['./services/auth-service', './shared'], labels="compiles")
 
 docker_build_with_restart(
-  'augno-api/auth-service',
+  'openmrp-api/auth-service',
   '.',
   entrypoint=['/app/build/auth-service'],
   dockerfile='./infra/development/docker/auth-service.Dockerfile',
@@ -108,7 +108,7 @@ local_resource(
   deps=['./services/core-service', './shared'], labels="compiles")
 
 docker_build_with_restart(
-  'augno-api/core-service',
+  'openmrp-api/core-service',
   '.',
   entrypoint=['/app/build/core-service'],
   dockerfile='./infra/development/docker/core-service.Dockerfile',
@@ -140,7 +140,7 @@ local_resource(
   deps=['./services/notification-service', './shared'], labels="compiles")
 
 docker_build_with_restart(
-  'augno-api/notification-service',
+  'openmrp-api/notification-service',
   '.',
   entrypoint=['/app/build/notification-service'],
   dockerfile='./infra/development/docker/notification-service.Dockerfile',
@@ -172,7 +172,7 @@ local_resource(
   deps=['./services/platform-service', './shared'], labels="compiles")
 
 docker_build_with_restart(
-  'augno-api/platform-service',
+  'openmrp-api/platform-service',
   '.',
   entrypoint=['/app/build/platform-service'],
   dockerfile='./infra/development/docker/platform-service.Dockerfile',
@@ -203,7 +203,7 @@ local_resource(
   deps=['./services/billing-service', './shared'], labels="compiles")
 
 docker_build_with_restart(
-  'augno-api/billing-service',
+  'openmrp-api/billing-service',
   '.',
   entrypoint=['/app/build/billing-service'],
   dockerfile='./infra/development/docker/billing-service.Dockerfile',
@@ -235,7 +235,7 @@ local_resource(
   deps=['./services/agent-service', './shared'], labels="compiles")
 
 docker_build_with_restart(
-  'augno-api/agent-service',
+  'openmrp-api/agent-service',
   '.',
   entrypoint=['/app/build/agent-service'],
   dockerfile='./infra/development/docker/agent-service.Dockerfile',

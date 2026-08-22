@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/shared/contracts"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/contracts"
 )
 
 // The wire contract between the Express API and these consumers.

@@ -1,15 +1,15 @@
-module github.com/augno/api/tools
+module github.com/open-mrp/api/tools
 
 go 1.27.0
 
-replace github.com/augno/api => ../
+replace github.com/open-mrp/api => ../
 
 // External tool versions are pinned in tools/tool-versions.
 // The Makefile reads those versions when installing via `go install pkg@version`.
 
 // Required by tools/apidocs (OpenAPI spec generator)
 require (
-	github.com/augno/api v0.0.0
+	github.com/open-mrp/api v0.0.0
 	github.com/ohler55/ojg v1.28.0
 	github.com/stretchr/testify v1.11.1
 	gopkg.in/yaml.v3 v3.0.1

@@ -16,9 +16,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/augno/api/services/notification-service/internal/domain"
-	s3client "github.com/augno/api/shared/cloud/s3"
-	sqsclient "github.com/augno/api/shared/cloud/sqs"
+	"github.com/open-mrp/api/services/notification-service/internal/domain"
+	s3client "github.com/open-mrp/api/shared/cloud/s3"
+	sqsclient "github.com/open-mrp/api/shared/cloud/sqs"
 
 	"go.opentelemetry.io/otel/trace"
 )

@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // DefaultMaxIncludeDepth caps the recursion depth of include resolution, which bounds an include key at that many dot-separated segments. Cycles in the resource graph (e.g. child_accounts.parent_account) are also bounded by per-request memoization, but the depth cap protects against pathological client requests that pile up include paths. Clients cannot reach it on their own — every endpoint whitelists its include keys, and IncludesFor rejects a whitelisted key deeper than this at startup.

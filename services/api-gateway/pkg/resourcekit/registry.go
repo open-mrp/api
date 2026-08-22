@@ -13,8 +13,8 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // Cardinality describes the shape of a sub-resource field on a parent.

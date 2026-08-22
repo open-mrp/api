@@ -1,8 +1,8 @@
 package apiresource
 
 import (
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	"github.com/augno/api/shared/constants"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 const SampleStripeCustomerID = "cus_OG9R5zKr5xJHHp"
@@ -140,7 +140,7 @@ type WebhookResponse struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=webhook_response"`
 	// Whether the event was accepted for processing.
 	//
-	// Acceptance means the signature was verified and the event was handled or queued. Event types Augno takes no action on are acknowledged the same way, so this is not a signal that anything changed.
+	// Acceptance means the signature was verified and the event was handled or queued. Event types OpenMRP takes no action on are acknowledged the same way, so this is not a signal that anything changed.
 	Received bool `json:"received"`
 }
 

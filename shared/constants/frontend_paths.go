@@ -1,6 +1,6 @@
 package constants
 
-// DashboardPath represents all routes to the Augno Dashboard.
+// DashboardPath represents all routes to the OpenMRP Dashboard.
 type DashboardPath string
 
 const (

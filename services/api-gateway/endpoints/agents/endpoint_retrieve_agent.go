@@ -4,11 +4,11 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // Request to retrieve an agent definition.
@@ -19,7 +19,7 @@ type RetrieveAgentRequest struct {
 
 // Retrieves a single agent by ID.
 //
-// Resolves both the `system` agents Augno provides and the `custom` agents in your account; the `status` reflects whether the agent is enabled for your account specifically.
+// Resolves both the `system` agents OpenMRP provides and the `custom` agents in your account; the `status` reflects whether the agent is enabled for your account specifically.
 type RetrieveAgentEndpoint struct{}
 
 func (e *RetrieveAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveAgentRequest, *apiresource.AgentDefinition] {

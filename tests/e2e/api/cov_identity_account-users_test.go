@@ -37,7 +37,7 @@ import (
 func TestCovIdentityAccountUsers_UpdateIdempotent(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-cov-au-updidem")
-	email := name + "@e2e-test.augno.com"
+	email := name + "@e2e-test.openmrp.ai"
 
 	createStatus, createBody, err := apiClient.Post(accountUsersPath, map[string]any{
 		"name":    name,
@@ -73,7 +73,7 @@ func TestCovIdentityAccountUsers_UpdateIdempotent(t *testing.T) {
 func TestCovIdentityAccountUsers_ClearRoleAndDepartment(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-cov-au-clear")
-	email := name + "@e2e-test.augno.com"
+	email := name + "@e2e-test.openmrp.ai"
 
 	createStatus, createBody, err := apiClient.Post(accountUsersPath, map[string]any{
 		"name":          name,
@@ -118,7 +118,7 @@ func TestCovIdentityAccountUsers_ClearRoleAndDepartment(t *testing.T) {
 func TestCovIdentityAccountUsers_CreateDuplicateEmailSameAccountConflict(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-cov-au-dupemail")
-	email := name + "@e2e-test.augno.com"
+	email := name + "@e2e-test.openmrp.ai"
 
 	createStatus, createBody, err := apiClient.Post(accountUsersPath, map[string]any{
 		"name":    name,
@@ -190,7 +190,7 @@ func TestCovIdentityAccountUsers_ActionsOnNonexistentIDReturn404(t *testing.T) {
 func TestCovIdentityAccountUsers_CreatePreferencesSameAccountSilentlyIgnored(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-cov-au-prefcreate")
-	email := name + "@e2e-test.augno.com"
+	email := name + "@e2e-test.openmrp.ai"
 
 	status, body, err := apiClient.Post(accountUsersPath, map[string]any{
 		"name":  name,
@@ -210,7 +210,7 @@ func TestCovIdentityAccountUsers_CreatePreferencesSameAccountSilentlyIgnored(t *
 func TestCovIdentityAccountUsers_UpdatePreferencesSameAccountRejected(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-cov-au-prefupd")
-	email := name + "@e2e-test.augno.com"
+	email := name + "@e2e-test.openmrp.ai"
 
 	createStatus, createBody, err := apiClient.Post(accountUsersPath, map[string]any{
 		"name":    name,
@@ -249,7 +249,7 @@ func TestCovIdentityAccountUsers_InvalidNotificationTypeCode(t *testing.T) {
 	t.Parallel()
 	custClient := apiClient.WithAccountID(SeedCustomerAccountID)
 	name := uniqueName("e2e-cov-au-badpref")
-	email := name + "@e2e-test.augno.com"
+	email := name + "@e2e-test.openmrp.ai"
 
 	status, body, err := custClient.Post(accountUsersPath, map[string]any{
 		"name":  name,
@@ -319,7 +319,7 @@ func TestCovIdentityAccountUsers_CreateInvalidRoleIDFails(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Post(accountUsersPath, map[string]any{
 		"name":    uniqueName("e2e-cov-au-badrole"),
-		"email":   uniqueName("e2e-cov-au-badrole") + "@e2e-test.augno.com",
+		"email":   uniqueName("e2e-cov-au-badrole") + "@e2e-test.openmrp.ai",
 		"role_id": "rl_doesnotexist00000",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -341,7 +341,7 @@ func TestCovIdentityAccountUsers_CreateInvalidDepartmentIDShouldFail(t *testing.
 	name := uniqueName("e2e-cov-au-baddept")
 	resp, err := apiClient.PostFull(accountUsersPath, map[string]any{
 		"name":          name,
-		"email":         name + "@e2e-test.augno.com",
+		"email":         name + "@e2e-test.openmrp.ai",
 		"department_id": "dp_doesnotexist00000",
 	}, newIdempotencyKey())
 	require.NoError(t, err)

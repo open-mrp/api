@@ -8,15 +8,15 @@ import (
 	"sort"
 	"strings"
 
-	types "github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/audit"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/id"
-	"github.com/augno/api/shared/idempotency"
-	"github.com/augno/api/shared/tracing"
+	types "github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/audit"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 type PropertySvcConfig struct {
@@ -135,7 +135,7 @@ func (s *propertySvcImpl) ListProperties(ctx context.Context, params domain.List
 	}
 
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	params.AccountID = identity.Target.AccountID
@@ -170,7 +170,7 @@ func (s *propertySvcImpl) GetProperty(ctx context.Context, propertyID string, in
 	}
 
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	property, apiErr := s.repos.NewPropertyRepo().Get(ctx, domain.GetPropertyParams{
@@ -233,7 +233,7 @@ func (s *propertySvcImpl) CreateProperty(ctx context.Context, params domain.Crea
 	}
 
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	propertyID, apiErr := id.GenID(id.PropertyIDPrefix, nil)
@@ -317,7 +317,7 @@ func (s *propertySvcImpl) UpdateProperty(ctx context.Context, params domain.Upda
 	}
 
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	params.AccountID = identity.Target.AccountID
@@ -404,7 +404,7 @@ func (s *propertySvcImpl) DeleteProperty(ctx context.Context, propertyID string)
 	}
 
 	if !identity.IsTargetAccountSet() {
-		return tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	accountID := identity.Target.AccountID

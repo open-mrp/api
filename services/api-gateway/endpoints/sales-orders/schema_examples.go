@@ -1,8 +1,8 @@
 package salesorderep
 
 import (
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 )
 
 func (*CheckoutSalesOrderRequest) SchemaExample() any {

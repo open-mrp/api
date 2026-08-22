@@ -7,12 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/messaging"
-	"github.com/augno/api/shared/ptrutil"
-	"github.com/augno/api/shared/textutil"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/messaging"
+	"github.com/open-mrp/api/shared/ptrutil"
+	"github.com/open-mrp/api/shared/textutil"
 	"github.com/shopspring/decimal"
 )
 

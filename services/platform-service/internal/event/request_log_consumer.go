@@ -6,11 +6,11 @@ import (
 	"log"
 	"time"
 
-	"github.com/augno/api/services/platform-service/internal/domain"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/contracts"
-	"github.com/augno/api/shared/messaging"
-	loggingpb "github.com/augno/api/shared/proto/platform"
+	"github.com/open-mrp/api/services/platform-service/internal/domain"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/contracts"
+	"github.com/open-mrp/api/shared/messaging"
+	loggingpb "github.com/open-mrp/api/shared/proto/platform"
 
 	"github.com/rabbitmq/amqp091-go"
 	"go.opentelemetry.io/otel/trace"

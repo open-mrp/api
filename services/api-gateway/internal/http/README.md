@@ -91,7 +91,7 @@ Extract values from HTTP cookies with automatic fallback support:
 ```go
 type RefreshTokenRequest struct {
     // Tries Authorization header first, falls back to cookie if header is missing or invalid
-    RefreshToken string `header:"Authorization" cookie:"__Secure-augno.refresh-token" validate:"required"`
+    RefreshToken string `header:"Authorization" cookie:"__Secure-openmrp.refresh-token" validate:"required"`
 }
 ```
 

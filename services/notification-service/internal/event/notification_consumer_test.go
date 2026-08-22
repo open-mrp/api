@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/augno/api/services/notification-service/internal/domain"
-	servicemock "github.com/augno/api/services/notification-service/internal/domain/mock/service"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/contracts"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/messaging"
+	"github.com/open-mrp/api/services/notification-service/internal/domain"
+	servicemock "github.com/open-mrp/api/services/notification-service/internal/domain/mock/service"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/contracts"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/messaging"
 
 	"github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/require"

@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/augno/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/stretchr/testify/assert"
 )
 

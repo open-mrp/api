@@ -5,10 +5,10 @@ import (
 	"net/http"
 	"slices"
 
-	"github.com/augno/api/shared/appctx"
+	"github.com/open-mrp/api/shared/appctx"
 
-	httptransport "github.com/augno/api/services/api-gateway/internal/http"
-	apierror "github.com/augno/api/shared/errors"
+	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 type router struct {

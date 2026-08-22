@@ -186,7 +186,7 @@ func TestStripeWebhook_AcceptsASignedEvent(t *testing.T) {
 	assert.Equal(t, true, parseJSON(body)["received"], "a verified event must be acknowledged: %s", string(body))
 }
 
-// Stripe sends far more event types than Augno acts on. Acknowledging the rest is what stops
+// Stripe sends far more event types than OpenMRP acts on. Acknowledging the rest is what stops
 // Stripe from retrying them forever.
 func TestStripeWebhook_AcknowledgesAnEventItDoesNotHandle(t *testing.T) {
 	t.Parallel()

@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"time"
 
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/pagination"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/pagination"
 )
 
 type PricingPlanRepo interface {

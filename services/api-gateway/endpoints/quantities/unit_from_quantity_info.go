@@ -1,9 +1,9 @@
 package quantityep
 
 import (
-	unitep "github.com/augno/api/services/api-gateway/endpoints/units"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	pb "github.com/augno/api/shared/proto/core"
+	unitep "github.com/open-mrp/api/services/api-gateway/endpoints/units"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	pb "github.com/open-mrp/api/shared/proto/core"
 )
 
 // UnitFromQuantityInfo returns the fully-resolved Unit when the proto carries

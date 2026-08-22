@@ -4,13 +4,13 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/contracts"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/pagination"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/contracts"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/pagination"
 )
 
 // Request to list the account's HubSpot sync records.
@@ -38,9 +38,9 @@ func (*ListHubspotSyncRecordsRequest) SchemaExample() any {
 	}
 }
 
-// Lists the mappings the HubSpot sync has recorded for the account — each Augno record and the HubSpot object it maps to.
+// Lists the mappings the HubSpot sync has recorded for the account — each OpenMRP record and the HubSpot object it maps to.
 //
-// A mapping is recorded as soon as the sync resolves a record's HubSpot object, which for a confidently matched customer happens during the read-only preview, before anything has been written to HubSpot. Results are ordered by Augno record id.
+// A mapping is recorded as soon as the sync resolves a record's HubSpot object, which for a confidently matched customer happens during the read-only preview, before anything has been written to HubSpot. Results are ordered by OpenMRP record id.
 type ListHubspotSyncRecordsEndpoint struct{}
 
 func (e *ListHubspotSyncRecordsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListHubspotSyncRecordsRequest, *apiresource.List[apiresource.HubspotSyncRecord]] {

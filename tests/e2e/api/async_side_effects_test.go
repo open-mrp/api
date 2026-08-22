@@ -273,9 +273,9 @@ func TestCustomers_AuditEvents_UpdateAllFields(t *testing.T) {
 	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+id, map[string]any{
 		"name":                    updatedName,
 		"note":                    "audit update note",
-		"email":                   "audit-update@e2e.augno.com",
+		"email":                   "audit-update@e2e.openmrp.ai",
 		"phone":                   "555-AUDIT",
-		"url":                     "https://audit.e2e.augno.com",
+		"url":                     "https://audit.e2e.openmrp.ai",
 		"edi_status":              "enabled",
 		"commission_policy":       "commission_applied",
 		"freight_policy":          "free_freight",
@@ -304,9 +304,9 @@ func TestCustomers_AuditEvents_UpdateAllFields(t *testing.T) {
 		value string
 	}{
 		{"note", "audit update note"},
-		{"email", "audit-update@e2e.augno.com"},
+		{"email", "audit-update@e2e.openmrp.ai"},
 		{"phone", "555-AUDIT"},
-		{"url", "https://audit.e2e.augno.com"},
+		{"url", "https://audit.e2e.openmrp.ai"},
 	} {
 		change, ok := changeForField(changes, tc.field)
 		require.True(t, ok, "should include %s change", tc.field)
@@ -367,9 +367,9 @@ func TestCustomers_AuditEvents_ClearAllNullableFields(t *testing.T) {
 	name := uniqueName("e2e-cust-audit-clr")
 	body := validCustomerBody(name)
 	body["note"] = "clear-test note"
-	body["email"] = "clear-test@e2e.augno.com"
+	body["email"] = "clear-test@e2e.openmrp.ai"
 	body["phone"] = "555-CLEAR"
-	body["url"] = "https://clear-test.e2e.augno.com"
+	body["url"] = "https://clear-test.e2e.openmrp.ai"
 	body["carrier_billing_type"] = "third_party"
 	body["carrier_billing_account"] = "CLR-ACCT"
 	body["default_priority"] = SeedPriorityCode
@@ -425,9 +425,9 @@ func TestCustomers_AuditEvents_ClearAllNullableFields(t *testing.T) {
 		oldValue string
 	}{
 		{"note", "clear-test note"},
-		{"email", "clear-test@e2e.augno.com"},
+		{"email", "clear-test@e2e.openmrp.ai"},
 		{"phone", "555-CLEAR"},
-		{"url", "https://clear-test.e2e.augno.com"},
+		{"url", "https://clear-test.e2e.openmrp.ai"},
 		{"carrier_billing_account", "CLR-ACCT"},
 	} {
 		change, ok := changeForField(changes, tc.field)
@@ -467,7 +467,7 @@ func TestCustomers_RequestLogs(t *testing.T) {
 func TestAccountUsers_AuditEvents(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-acuser-audit")
-	email := name + "@e2e-test.augno.com"
+	email := name + "@e2e-test.openmrp.ai"
 
 	status, body, err := apiClient.Post(accountUsersPath, map[string]any{
 		"name":    name,
@@ -493,7 +493,7 @@ func TestAccountUsers_AuditEvents(t *testing.T) {
 func TestAccountUsers_RequestLogs(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-acuser-rlog")
-	email := name + "@e2e-test.augno.com"
+	email := name + "@e2e-test.openmrp.ai"
 
 	status, body, err := apiClient.Post(accountUsersPath, map[string]any{
 		"name":    name,
@@ -519,7 +519,7 @@ func TestAccountUsers_RequestLogs(t *testing.T) {
 func TestAccountUsers_WelcomeEmailLog(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-acuser-welcome")
-	email := name + "@e2e-test.augno.com"
+	email := name + "@e2e-test.openmrp.ai"
 
 	status, body, err := apiClient.Post(accountUsersPath, map[string]any{
 		"name":    name,

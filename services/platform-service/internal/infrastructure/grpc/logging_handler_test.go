@@ -5,12 +5,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/augno/api/services/platform-service/internal/domain"
-	servicemock "github.com/augno/api/services/platform-service/internal/domain/mock/service"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/pagination"
-	pb "github.com/augno/api/shared/proto/platform"
+	"github.com/open-mrp/api/services/platform-service/internal/domain"
+	servicemock "github.com/open-mrp/api/services/platform-service/internal/domain/mock/service"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/pagination"
+	pb "github.com/open-mrp/api/shared/proto/platform"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"

@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/services/core-service/internal/domain"
-	repositorymock "github.com/augno/api/services/core-service/internal/domain/mock/repository"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/ptrutil"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/ptrutil"
 
 	"go.uber.org/mock/gomock"
 )

@@ -1260,7 +1260,7 @@ CREATE TABLE `hubspot_company_review` (
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
-  UNIQUE KEY `hubspot_company_review_job_id_augno_customer_id_key` (`job_id`,`augno_customer_id`),
+  UNIQUE KEY `hubspot_company_review_job_id_openmrp_customer_id_key` (`job_id`,`augno_customer_id`),
   KEY `hubspot_company_review_job_id_status_idx` (`job_id`,`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 DROP TABLE IF EXISTS `hubspot_sync_job`;
@@ -1294,7 +1294,7 @@ CREATE TABLE `hubspot_sync_record` (
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
-  UNIQUE KEY `hubspot_sync_record_account_id_augno_type_augno_id_key` (`account_id`,`augno_type`,`augno_id`),
+  UNIQUE KEY `hubspot_sync_record_account_id_openmrp_type_openmrp_id_key` (`account_id`,`augno_type`,`augno_id`),
   KEY `hubspot_sync_record_account_id_hubspot_type_hubspot_id_idx` (`account_id`,`hubspot_type`,`hubspot_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 DROP TABLE IF EXISTS `idempotency_key`;

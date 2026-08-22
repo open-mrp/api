@@ -3,7 +3,7 @@ package appctx
 import (
 	"context"
 
-	"github.com/augno/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 )
 
 const identityKey contextKey = "identity"

@@ -3,10 +3,10 @@ package password
 import (
 	"context"
 
-	"github.com/augno/api/shared/crypto"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/tracing"
-	"github.com/augno/api/shared/validate"
+	"github.com/open-mrp/api/shared/crypto"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/tracing"
+	"github.com/open-mrp/api/shared/validate"
 )
 
 var passwordTracer = tracing.GetTracer("auth-service.password")

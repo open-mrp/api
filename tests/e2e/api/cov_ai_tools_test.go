@@ -726,7 +726,7 @@ func TestCovAiTools_ToolGroupsUnknownQueryParamRejected(t *testing.T) {
 
 // TestCovAiTools_RequiresAuthBothRoutes asserts both routes require
 // authentication: a request with an empty bearer token (but valid
-// Augno-Version/Augno-Account headers, so the request reaches auth
+// OpenMRP-Version/OpenMRP-Account headers, so the request reaches auth
 // middleware rather than failing an earlier header check) is rejected with
 // 401 invalid_credentials.
 func TestCovAiTools_RequiresAuthBothRoutes(t *testing.T) {

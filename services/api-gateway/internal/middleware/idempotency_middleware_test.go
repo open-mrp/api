@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/augno/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/idempotency"
 )
 
 func TestIdempotencyScopeHash_SameTargetAccountSharesScope(t *testing.T) {

@@ -123,12 +123,12 @@ func TestCovAuthUsers_Register_SetsCookies(t *testing.T) {
 
 	var hasAccessToken, hasRefreshToken bool
 	for _, c := range cookies {
-		if strings.Contains(c, "__Secure-augno.access-token") {
+		if strings.Contains(c, "__Secure-openmrp.access-token") {
 			hasAccessToken = true
 			assert.Contains(t, c, "HttpOnly", "access token cookie should be HttpOnly")
 			assert.Contains(t, c, "Secure", "access token cookie should be Secure")
 		}
-		if strings.Contains(c, "__Secure-augno.refresh-token") {
+		if strings.Contains(c, "__Secure-openmrp.refresh-token") {
 			hasRefreshToken = true
 			assert.Contains(t, c, "HttpOnly", "refresh token cookie should be HttpOnly")
 			assert.Contains(t, c, "Secure", "refresh token cookie should be Secure")

@@ -8,10 +8,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
-	"github.com/augno/api/services/core-service/internal/domain"
-	factorymock "github.com/augno/api/services/core-service/internal/domain/mock/factory"
-	"github.com/augno/api/shared/contracts"
-	"github.com/augno/api/shared/messaging"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
+	"github.com/open-mrp/api/shared/contracts"
+	"github.com/open-mrp/api/shared/messaging"
 )
 
 // capturingOutboxRepo records the outbox messages a mutation writes so a test can assert on the published command.

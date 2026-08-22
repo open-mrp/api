@@ -3,7 +3,7 @@ package scheduling
 import (
 	"time"
 
-	"github.com/augno/api/shared/constants"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 // Lead-time sources, aliased from the shared enum so the engine cannot drift from the API contract.

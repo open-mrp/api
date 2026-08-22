@@ -2,9 +2,9 @@
 
 Express 4 + TypeScript (ESM) on Bun; Prisma over MySQL/PlanetScale; Zod
 validation. Path alias `#/*` → `./src/*`. Shared workspace packages:
-`@augno/db` (prisma singleton), `@augno/dtos` (endpoint specs + Zod
-schemas), `@augno/adapters`, `@augno/errors` (HttpError, Logger),
-`@augno/objects`. Stated rules: `dashboard/AGENTS.md:59-82`
+`@openmrp/db` (prisma singleton), `@openmrp/dtos` (endpoint specs + Zod
+schemas), `@openmrp/adapters`, `@openmrp/errors` (HttpError, Logger),
+`@openmrp/objects`. Stated rules: `dashboard/AGENTS.md:59-82`
 ("Controllers → Services → Repositories → Prisma").
 
 **Status**: legacy V1 front door during the V1→V2 cutover. It shares the
@@ -27,7 +27,7 @@ capability here if the Go API can own it.
 | repositories | `src/repositories/*.repo.ts` (~100) | extend `BaseRepo`; ALL Prisma access; adapters map rows → domain objects |
 | repo interfaces | `*.repo.interface.ts` (~30) | input DTO types + contracts — typing aids, not real substitution points (services import concrete classes) |
 | integrations | `src/integrations/` | S3/SES, Stripe, Shippo, Stedi |
-| DTOs/schemas | `@augno/dtos` | imported as `api`; each endpoint spec carries requestSchema/responseSchema |
+| DTOs/schemas | `@openmrp/dtos` | imported as `api`; each endpoint spec carries requestSchema/responseSchema |
 
 `BaseRepo.getDb(context?)` returns `context?.tx || prisma`
 (`base.repo.ts:17-19`) — the single seam for transaction-vs-connection.
@@ -52,7 +52,7 @@ capability here if the Go API can own it.
   scoping: services thread `ownerAccountID: this.identity.targetAccountID`
   into every repo call (`order.svc.ts:53, 68-69`).
 - **Shape validation** — controllers, first thing:
-  `RequestValidator.validate(req, {body, params, query})` with `@augno/dtos`
+  `RequestValidator.validate(req, {body, params, query})` with `@openmrp/dtos`
   Zod schemas (`order.ctrl.ts:13-16`); ZodError →
   `HttpError.badRequest(flatten)` (`validators.ts:178-211`).
 - **Business validation** — services (state transitions, existence,
@@ -72,7 +72,7 @@ capability here if the Go API can own it.
   lists via `src/utils/cursor.ts` (opaque base64url, `(createdAt,id)`
   keyset, `limit+1`) — deliberately mirrors the Go
   `shared/pagination/cursor.go` (`cursor.ts:8-11`).
-- **Errors** — throw `HttpError` (`@augno/errors`) anywhere; wrappers
+- **Errors** — throw `HttpError` (`@openmrp/errors`) anywhere; wrappers
   funnel to `next(error)`; terminal `src/middleware/error-handler.ts` maps
   `HttpError` → status+message, everything else → 500, logs, and alerts on
   500s (`error-handler.ts:40-51`).
@@ -85,7 +85,7 @@ capability here if the Go API can own it.
 ## Dependency direction
 
 `index.ts` → controllers → services → (mediators) → repositories →
-`@augno/db`. Controllers never import repos or `@augno/db`. Constructor
+`@openmrp/db`. Controllers never import repos or `@openmrp/db`. Constructor
 injection of `Identity` only; collaborators are directly `new`'d (no IoC).
 **No mechanical enforcement** — no boundary lint rules, no architecture
 test; discipline is convention (AGENTS.md:59-66) + review.

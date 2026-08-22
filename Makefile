@@ -93,7 +93,7 @@ validate-openapi-specs: ## Validate OpenAPI specifications with vacuum
 install-stlc: ## Install stlc + the typescript/python/go workers from sdk-gen (uses gh auth token if STLC_READ_TOKEN unset)
 	@./scripts/install-stlc.sh
 
-stlc-internal-sdk: ## SDK: augno/internal-sdk from stainless/internal
+stlc-internal-sdk: ## SDK: open-mrp/internal-sdk from stainless/internal
 	@command -v stlc >/dev/null 2>&1 || { printf '%s\n' 'stlc not on PATH — install per docs/stlc-sdk-codegen.md' >&2; exit 127; }
 	stlc build --workspace stainless/internal --targets typescript $(STLC_BUILD_EXTRA)
 
@@ -101,15 +101,15 @@ stlc-internal-sdk: ## SDK: augno/internal-sdk from stainless/internal
 # the stlc-mcp worker installed and NODE_OPTIONS=--preserve-symlinks so the
 # stlc-typescript + stlc-mcp plugins share one codegen.lib.mjs (else stlc reports the
 # stlc-mcp plugin as missing). See docs/stlc-sdk-codegen.md.
-stlc-public-typescript-sdk: ## SDK: augno/typescript-sdk (@augno/sdk) + MCP server from stainless/public
+stlc-public-typescript-sdk: ## SDK: open-mrp/typescript-sdk (@openmrp/sdk) + MCP server from stainless/public
 	@command -v stlc >/dev/null 2>&1 || { printf '%s\n' 'stlc not on PATH — install per docs/stlc-sdk-codegen.md' >&2; exit 127; }
 	NODE_OPTIONS=--preserve-symlinks stlc build --workspace stainless/public --targets typescript $(STLC_BUILD_EXTRA)
 
-stlc-public-python-sdk: ## SDK: augno/python-sdk (augno on PyPI) from stainless/public
+stlc-public-python-sdk: ## SDK: open-mrp/python-sdk (openmrp on PyPI) from stainless/public
 	@command -v stlc >/dev/null 2>&1 || { printf '%s\n' 'stlc not on PATH — install per docs/stlc-sdk-codegen.md' >&2; exit 127; }
 	stlc build --workspace stainless/public --targets python $(STLC_BUILD_EXTRA)
 
-stlc-public-go-sdk: ## SDK: augno/augno-go (github.com/augno/augno-go) from stainless/public
+stlc-public-go-sdk: ## SDK: open-mrp/openmrp-go (github.com/open-mrp/openmrp-go) from stainless/public
 	@command -v stlc >/dev/null 2>&1 || { printf '%s\n' 'stlc not on PATH — install per docs/stlc-sdk-codegen.md' >&2; exit 127; }
 	stlc build --workspace stainless/public --targets go $(STLC_BUILD_EXTRA)
 
@@ -117,7 +117,7 @@ stlc-public-sdks: stlc-public-typescript-sdk stlc-public-python-sdk stlc-public-
 
 stlc-sdks: stlc-internal-sdk stlc-public-sdks ## Regenerate every SDK workspace/target
 
-sdk-yalc: ## Rebuild @augno/internal-sdk from current api, publish to yalc, link into dashboard (local testing). Flags via the script: --skip-regen, --no-link.
+sdk-yalc: ## Rebuild @openmrp/internal-sdk from current api, publish to yalc, link into dashboard (local testing). Flags via the script: --skip-regen, --no-link.
 	@./scripts/regen-sdk-yalc.sh
 
 sqlc: ## Generate code from SQL queries using sqlc. Usage: make sqlc [services]

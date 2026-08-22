@@ -6,12 +6,12 @@ import (
 	"net/http"
 	"time"
 
-	grpcclient "github.com/augno/api/services/api-gateway/grpc-client"
-	"github.com/augno/api/services/api-gateway/internal/cookie"
-	"github.com/augno/api/shared/contracts"
-	pb "github.com/augno/api/shared/proto/auth"
-	notifpb "github.com/augno/api/shared/proto/notification"
 	"github.com/coder/websocket"
+	grpcclient "github.com/open-mrp/api/services/api-gateway/grpc-client"
+	"github.com/open-mrp/api/services/api-gateway/internal/cookie"
+	"github.com/open-mrp/api/shared/contracts"
+	pb "github.com/open-mrp/api/shared/proto/auth"
+	notifpb "github.com/open-mrp/api/shared/proto/notification"
 )
 
 // NewHandler returns an http.HandlerFunc that upgrades HTTP connections to WebSocket, authenticates the connection, and starts the client read/write pumps. Authentication is cookie-based (cookie + account ID query param) for first-party origins; connections from custom portal domains cannot send the auth cookie cross-origin, so they instead present a short-lived ticket minted by the cookie-authenticated ticket endpoint. notificationClient may be nil (conversation-subscribe authz is then unavailable). ticketSecret may be nil (ticket auth is then disabled).

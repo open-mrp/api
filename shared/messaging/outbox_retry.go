@@ -5,9 +5,9 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/db"
-	"github.com/augno/api/shared/retry"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/db"
+	"github.com/open-mrp/api/shared/retry"
 )
 
 // OutboxDBRetryConfig returns the short retry policy used for small outbox database operations that can safely be re-attempted after a lock conflict.

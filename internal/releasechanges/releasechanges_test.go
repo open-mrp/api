@@ -29,7 +29,7 @@ func TestAnalyze_ImportablePackageMarksDependentServices(t *testing.T) {
 	assertServicesEqual(t, analysis.Services, []string{"api-gateway", "auth-service", "core-service"})
 }
 
-// Cluster state moved to the private augno/infra repo, which reconciles its own manifests. A path
+// Cluster state moved to the private open-mrp/infra repo, which reconciles its own manifests. A path
 // that looks like one is now just an unrecognised file and must not select anything to rebuild.
 func TestAnalyze_ManifestPathSelectsNothing(t *testing.T) {
 	t.Parallel()

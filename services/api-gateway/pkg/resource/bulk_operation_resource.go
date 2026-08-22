@@ -2,7 +2,7 @@
 package apiresource
 
 import (
-	"github.com/augno/api/shared/constants"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 // BulkCreateItemResult represents the result of creating a single item in a bulk operation.

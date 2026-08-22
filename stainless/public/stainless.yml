@@ -1,13 +1,13 @@
 edition: "2026-02-23"
 organization:
-  name: augno
+  name: openmrp
   contact: support@augno.com
 targets:
   typescript:
     edition: typescript.2025-10-10
-    package_name: "@augno/sdk"
-    staging_repo: augno/typescript-sdk
-    production_repo: augno/typescript-sdk
+    package_name: "@openmrp/sdk"
+    staging_repo: open-mrp/typescript-sdk
+    production_repo: open-mrp/typescript-sdk
     publish:
       npm:
         registry: npmjs
@@ -24,12 +24,12 @@ targets:
     options:
       # Generate an MCP server as a sub-package (packages/mcp-server) of the
       # public TypeScript SDK. There is no standalone `mcp` target in stlc; the
-      # server wraps @augno/sdk and is built/hosted as its own container (see
-      # augno/infra: production/kubernetes/apps/mcp-server.yaml, and docs/stlc-sdk-codegen.md).
+      # server wraps @openmrp/sdk and is built/hosted as its own container (see
+      # open-mrp/infra: production/kubernetes/apps/mcp-server.yaml, and docs/stlc-sdk-codegen.md).
       mcp_server:
-        package_name: "@augno/sdk-mcp"
+        package_name: "@openmrp/sdk-mcp"
         # The MCP server exposes a single code-execution tool: agents write small
-        # TypeScript snippets against @augno/sdk (all 146 endpoints are reachable
+        # TypeScript snippets against @openmrp/sdk (all 146 endpoints are reachable
         # via packages/mcp-server/src/methods.ts). Because we generate self-hosted
         # (sdk-gen forks, not stainlessManaged), code execution is forced to LOCAL
         # mode — it runs in an in-container Deno worker, NOT a Stainless-hosted
@@ -39,18 +39,18 @@ targets:
         # currently serve — disable it.
         enable_docs_tool: false
         instructions: |
-          This MCP server wraps the Augno API (production management for SMB
+          This MCP server wraps the OpenMRP API (production management for SMB
           manufacturers). Use the code tool to call the API by writing TypeScript
-          against the Augno SDK. Authenticate with an Augno API key as a Bearer
-          token; set the active account with the Augno-Account header when
+          against the OpenMRP SDK. Authenticate with an OpenMRP API key as a Bearer
+          token; set the active account with the OpenMRP-Account header when
           operating across multiple accounts.
   python:
     edition: python.2025-11-20
-    # package_name is both the import name (`from augno import ...`) and the
-    # PyPI distribution name (`pip install augno`); project_name defaults to it.
-    package_name: augno
-    staging_repo: augno/python-sdk
-    production_repo: augno/python-sdk
+    # package_name is both the import name (`from openmrp import ...`) and the
+    # PyPI distribution name (`pip install openmrp`); project_name defaults to it.
+    package_name: openmrp
+    staging_repo: open-mrp/python-sdk
+    production_repo: open-mrp/python-sdk
     publish:
       pypi:
         # GitHub Actions OIDC (PyPI Trusted Publishing) — no long-lived token.
@@ -64,11 +64,11 @@ targets:
         prerelease: false
   go:
     edition: go.2026-04-15
-    # Module path is derived as github.com/<production_repo> => github.com/augno/augno-go.
+    # Module path is derived as github.com/<production_repo> => github.com/open-mrp/openmrp-go.
     # Go "publishing" is a git tag (release-please); pkg.go.dev indexes the public repo.
-    package_name: augno
-    staging_repo: augno/augno-go
-    production_repo: augno/augno-go
+    package_name: openmrp
+    staging_repo: open-mrp/openmrp-go
+    production_repo: open-mrp/openmrp-go
     publish:
       # Emit the release-please workflow + config as generated files (durable).
       release:
@@ -78,13 +78,13 @@ environments:
   production: https://api.augno.com
   local: http://localhost:8081
 client_settings:
-  # The API requires an Augno-Version header on every request. The self-hosted
+  # The API requires an OpenMRP-Version header on every request. The self-hosted
   # stlc fork does not honor the upstream `send_openapi_info_version_as_header`
   # key, so we emit it as a default header instead. `version_header: true` marks
   # it as the API-version header; `value` is kept in sync with the spec's
   # info.version by `make stainless` (see tools/apidocs/stainless.go).
   default_headers:
-    Augno-Version:
+    OpenMRP-Version:
       value: "1.0.forge-preview.3"
       version_header: true
   bearer_token_refresh:
@@ -101,16 +101,16 @@ client_settings:
     bearer_token:
       type: string
       nullable: true
-      read_env: AUGNO_API_KEY
+      read_env: OPENMRP_API_KEY
       auth:
         security_scheme: BearerAuth
         role: value
       description: "API key sent as a Bearer token. Omit for cookie-based user sessions (dashboard)."
-    augno_account_id:
+    openmrp_account_id:
       type: string
       nullable: true
-      description: "Current account UUID (Augno-Account). Update when switching accounts."
-      send_in_header: Augno-Account
+      description: "Current account UUID (OpenMRP-Account). Update when switching accounts."
+      send_in_header: OpenMRP-Account
 readme:
   include_stainless_attribution: false
   example_requests:

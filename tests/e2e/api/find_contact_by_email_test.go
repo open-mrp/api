@@ -19,7 +19,7 @@ const contactsFindByEmailPath = "/v1/sales/contacts/actions/find-by-email"
 func createSelfContact(t *testing.T) (accountUserID, email string) {
 	t.Helper()
 	name := uniqueName("e2e-contact")
-	email = name + "@e2e-test.augno.com"
+	email = name + "@e2e-test.openmrp.ai"
 
 	resp, err := apiClient.PostFull(accountUsersPath, map[string]any{
 		"name":    name,
@@ -163,7 +163,7 @@ func TestContacts_FindByEmail_RelationshipFilter(t *testing.T) {
 
 func TestContacts_FindByEmail_NoMatch(t *testing.T) {
 	t.Parallel()
-	email := uniqueName("e2e-nomatch") + "@e2e-test.augno.com"
+	email := uniqueName("e2e-nomatch") + "@e2e-test.openmrp.ai"
 	assert.Empty(t, findContacts(t, email, nil),
 		"an email with no related contact returns an empty list, not an error")
 }

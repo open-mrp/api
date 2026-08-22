@@ -6,8 +6,8 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/augno/api/shared/contracts"
-	"github.com/augno/api/shared/messaging"
+	"github.com/open-mrp/api/shared/contracts"
+	"github.com/open-mrp/api/shared/messaging"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 

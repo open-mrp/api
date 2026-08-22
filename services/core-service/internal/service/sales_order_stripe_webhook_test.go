@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/crypto"
-	apierror "github.com/augno/api/shared/errors"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/crypto"
+	apierror "github.com/open-mrp/api/shared/errors"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -149,7 +149,7 @@ func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_Succeeded_LinksPaymentAn
 
 func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_Succeeded_NoOrderMetadataAcked() {
 	suite.expectStripeWebhookCreds("ac_test")
-	// No orderID in metadata (e.g. a payment created outside Augno on the same Stripe
+	// No orderID in metadata (e.g. a payment created outside OpenMRP on the same Stripe
 	// account): acknowledged with zero side effects.
 	suite.expectWebhookEvent(&domain.StripeWebhookEvent{ID: "evt_1", Type: "payment_intent.succeeded"}, webhookPaymentIntent("", "ac_buyer"))
 

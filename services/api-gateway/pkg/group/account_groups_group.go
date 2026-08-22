@@ -3,10 +3,10 @@ package httpgroup
 import (
 	"fmt"
 
-	accountgroupep "github.com/augno/api/services/api-gateway/endpoints/account-groups"
-	grpcclient "github.com/augno/api/services/api-gateway/grpc-client"
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	accountgroupep "github.com/open-mrp/api/services/api-gateway/endpoints/account-groups"
+	grpcclient "github.com/open-mrp/api/services/api-gateway/grpc-client"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 )
 
 type AccountGroupsEndpointGroup struct {

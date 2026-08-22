@@ -4,11 +4,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/augno/api/shared/contracts"
-	apierror "github.com/augno/api/shared/errors"
-	pb "github.com/augno/api/shared/proto/core"
-	"github.com/augno/api/shared/rpc"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/shared/contracts"
+	apierror "github.com/open-mrp/api/shared/errors"
+	pb "github.com/open-mrp/api/shared/proto/core"
+	"github.com/open-mrp/api/shared/rpc"
+	"github.com/open-mrp/api/shared/tracing"
 
 	grpclib "google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"

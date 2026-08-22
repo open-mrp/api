@@ -3,10 +3,10 @@ package resourceregistry
 import (
 	"context"
 
-	"github.com/augno/api/services/api-gateway/internal/resourceloaders"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
-	"github.com/augno/api/shared/constants"
+	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 // serviceLevelsCanonicalPath is the dedicated paginated endpoint that the `service_levels` include's next_page_url points at when the inline list is truncated. Keeping this in one place so the URL shape stays consistent with the registered HTTP route.

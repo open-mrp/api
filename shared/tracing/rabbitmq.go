@@ -5,7 +5,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/augno/api/shared/appctx"
+	"github.com/open-mrp/api/shared/appctx"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"

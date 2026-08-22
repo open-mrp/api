@@ -3,8 +3,8 @@ package grpcclient
 import (
 	"context"
 
-	"github.com/augno/api/shared/contracts"
-	pb "github.com/augno/api/shared/proto/billing"
+	"github.com/open-mrp/api/shared/contracts"
+	pb "github.com/open-mrp/api/shared/proto/billing"
 )
 
 const billingServiceName = "billing-service"

@@ -1,7 +1,7 @@
 package domain
 
 import (
-	apierror "github.com/augno/api/shared/errors"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // RequireSandboxAccount returns an invariant violation error if the account is not a sandbox. Used before sandbox-mutating operations (delete, purge).

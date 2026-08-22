@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/augno/api/shared/retry"
+	"github.com/open-mrp/api/shared/retry"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 

@@ -3,10 +3,10 @@ package httpgroup
 import (
 	"fmt"
 
-	notificationpreferenceep "github.com/augno/api/services/api-gateway/endpoints/notification-preferences"
-	grpcclient "github.com/augno/api/services/api-gateway/grpc-client"
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	notificationpreferenceep "github.com/open-mrp/api/services/api-gateway/endpoints/notification-preferences"
+	grpcclient "github.com/open-mrp/api/services/api-gateway/grpc-client"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 )
 
 type NotificationPreferencesEndpointGroup struct {

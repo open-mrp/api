@@ -3,8 +3,8 @@ package domain
 import (
 	"time"
 
-	"github.com/augno/api/shared/field"
-	"github.com/augno/api/shared/pagination"
+	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/pagination"
 )
 
 // ProductFull represents a product entity, which extends an Item with product-specific fields.

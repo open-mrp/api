@@ -3,9 +3,9 @@ package aws
 import (
 	"context"
 
-	"github.com/augno/api/services/notification-service/internal/domain"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/notification-service/internal/domain"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/tracing"
 
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ses"

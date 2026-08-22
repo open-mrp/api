@@ -3,7 +3,7 @@ package service
 import (
 	"strings"
 
-	"github.com/augno/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
 )
 
 type addressComponent struct {

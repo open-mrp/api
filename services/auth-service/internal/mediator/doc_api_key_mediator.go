@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/augno/api/services/auth-service/internal/apikey"
-	"github.com/augno/api/services/auth-service/internal/domain"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/crypto"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/id"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/auth-service/internal/apikey"
+	"github.com/open-mrp/api/services/auth-service/internal/domain"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/crypto"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 const (

@@ -11,16 +11,16 @@ import (
 	"net/http"
 	"time"
 
-	grpcclient "github.com/augno/api/services/api-gateway/grpc-client"
-	"github.com/augno/api/services/api-gateway/internal/header"
-	httptransport "github.com/augno/api/services/api-gateway/internal/http"
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/contracts"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/idempotency"
-	pb "github.com/augno/api/shared/proto/platform"
-	"github.com/augno/api/shared/tracing"
+	grpcclient "github.com/open-mrp/api/services/api-gateway/grpc-client"
+	"github.com/open-mrp/api/services/api-gateway/internal/header"
+	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/contracts"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/idempotency"
+	pb "github.com/open-mrp/api/shared/proto/platform"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 type SerializedCookie struct {

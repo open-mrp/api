@@ -12,8 +12,8 @@ package factorymock
 import (
 	reflect "reflect"
 
-	domain "github.com/augno/api/services/auth-service/internal/domain"
-	messaging "github.com/augno/api/shared/messaging"
+	domain "github.com/open-mrp/api/services/auth-service/internal/domain"
+	messaging "github.com/open-mrp/api/shared/messaging"
 	gomock "go.uber.org/mock/gomock"
 )
 

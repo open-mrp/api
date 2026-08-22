@@ -3,7 +3,7 @@ package scheduling
 import (
 	"sort"
 
-	"github.com/augno/api/shared/constants"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 // LotDefault is the lot an item is made in: how many, counted in what.

@@ -7,13 +7,13 @@ import (
 
 	"github.com/shopspring/decimal"
 
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/services/core-service/internal/mediator"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/contracts"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/messaging"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/services/core-service/internal/mediator"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/contracts"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/messaging"
+	"github.com/open-mrp/api/shared/tracing"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 	"go.opentelemetry.io/otel/attribute"

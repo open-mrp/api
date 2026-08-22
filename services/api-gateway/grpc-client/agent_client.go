@@ -3,8 +3,8 @@ package grpcclient
 import (
 	"context"
 
-	"github.com/augno/api/shared/contracts"
-	pb "github.com/augno/api/shared/proto/agent"
+	"github.com/open-mrp/api/shared/contracts"
+	pb "github.com/open-mrp/api/shared/proto/agent"
 )
 
 const agentServiceName = "agent-service"

@@ -100,7 +100,7 @@ MYSQL_DB="$(echo "$MYSQL_CONN" | sed -E 's/(.+):(.+)@(.+):([0-9]+)\/(.+)/\5/')"
 
 if [ -z "$MYSQL_HOST" ] || [ "$MYSQL_HOST" = "$MYSQL_CONN" ]; then
     error "DB_URL could not be parsed. Expected format: mysql://USER:PASSWORD@HOST:PORT/DATABASE"
-    error "  Example: mysql://root:secret@localhost:3306/augno"
+    error "  Example: mysql://root:secret@localhost:3306/openmrp"
     exit 1
 fi
 

@@ -8,17 +8,17 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/augno/api/services/auth-service/internal/domain"
-	"github.com/augno/api/services/auth-service/internal/infrastructure/grpc"
-	"github.com/augno/api/services/auth-service/internal/infrastructure/repository"
-	"github.com/augno/api/services/auth-service/internal/infrastructure/sqlc"
-	"github.com/augno/api/services/auth-service/internal/service"
-	"github.com/augno/api/shared/contracts"
-	"github.com/augno/api/shared/db"
-	"github.com/augno/api/shared/lease"
-	"github.com/augno/api/shared/messaging"
-	"github.com/augno/api/shared/pagination"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/auth-service/internal/domain"
+	"github.com/open-mrp/api/services/auth-service/internal/infrastructure/grpc"
+	"github.com/open-mrp/api/services/auth-service/internal/infrastructure/repository"
+	"github.com/open-mrp/api/services/auth-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/services/auth-service/internal/service"
+	"github.com/open-mrp/api/shared/contracts"
+	"github.com/open-mrp/api/shared/db"
+	"github.com/open-mrp/api/shared/lease"
+	"github.com/open-mrp/api/shared/messaging"
+	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 func Run(

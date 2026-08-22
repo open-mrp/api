@@ -4,15 +4,15 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/audit"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/id"
-	"github.com/augno/api/shared/idempotency"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/audit"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var consumptionSvcTracer = tracing.GetTracer("core-service.consumption_service")
@@ -80,7 +80,7 @@ func (s *consumptionSvcImpl) withTx(ctx context.Context, fn func(context.Context
 // GetConsumption returns a single consumption by ID within a production step.
 //
 // 1. Extract and validate the caller's identity, actor type, and production_steps:read permission.
-// 2. Require the Augno-Account header to scope the query.
+// 2. Require the OpenMRP-Account header to scope the query.
 // 3. Verify the production step belongs to the account.
 // 4. Fetch the consumption from the repository.
 func (s *consumptionSvcImpl) GetConsumption(ctx context.Context, productionStepID, consumptionID string) (*domain.Consumption, *apierror.APIError) {

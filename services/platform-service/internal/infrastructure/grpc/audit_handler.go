@@ -5,13 +5,13 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/augno/api/services/platform-service/internal/domain"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/contracts"
-	apierror "github.com/augno/api/shared/errors"
-	pb "github.com/augno/api/shared/proto/platform"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/platform-service/internal/domain"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/contracts"
+	apierror "github.com/open-mrp/api/shared/errors"
+	pb "github.com/open-mrp/api/shared/proto/platform"
+	"github.com/open-mrp/api/shared/tracing"
 
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -49,7 +49,7 @@ func (h *auditHandler) CreateAuditEvent(ctx context.Context, req *pb.CreateAudit
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 	if !identity.IsTargetAccountSet() {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The Augno-Account header is required."))
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The OpenMRP-Account header is required."))
 	}
 
 	info := req.AuditEvent
@@ -82,7 +82,7 @@ func (h *auditHandler) CreateAuditEvent(ctx context.Context, req *pb.CreateAudit
 		occurredAt = info.OccurredAt.AsTime()
 	}
 
-	// target_account_id is the account the mutation was performed against — the Augno-Account target of the request, the same value used for account_id / the list authorization scope today.
+	// target_account_id is the account the mutation was performed against — the OpenMRP-Account target of the request, the same value used for account_id / the list authorization scope today.
 	targetAccountID := identity.Target.AccountID
 
 	event := &domain.AuditEvent{

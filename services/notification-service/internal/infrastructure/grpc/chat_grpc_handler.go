@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/augno/api/services/notification-service/internal/domain"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/contracts"
-	pb "github.com/augno/api/shared/proto/notification"
+	"github.com/open-mrp/api/services/notification-service/internal/domain"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/contracts"
+	pb "github.com/open-mrp/api/shared/proto/notification"
 
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"

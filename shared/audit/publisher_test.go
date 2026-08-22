@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/augno/api/shared/constants"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 // A no-op update (no changes, no metadata) must be skipped before any

@@ -24,13 +24,13 @@ WAIT_TIMEOUT_SEC=180
 POLL_INTERVAL_SEC=2
 
 containers=(
-	augno-platform-service-e2e
-	augno-core-service-e2e
-	augno-notification-service-e2e
-	augno-auth-service-e2e
-	augno-billing-service-e2e
-	augno-agent-service-e2e
-	augno-api-gateway-e2e
+	openmrp-platform-service-e2e
+	openmrp-core-service-e2e
+	openmrp-notification-service-e2e
+	openmrp-auth-service-e2e
+	openmrp-billing-service-e2e
+	openmrp-agent-service-e2e
+	openmrp-api-gateway-e2e
 )
 
 compose_up() {

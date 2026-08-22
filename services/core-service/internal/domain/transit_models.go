@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	apierror "github.com/augno/api/shared/errors"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // TransitLane identifies the journey a transit estimate describes: one service level between two postal codes. Postal codes are compared as stored, so callers normalize before building one.

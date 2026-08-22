@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/augno/api/shared/contracts"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/shared/contracts"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/tracing"
 
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"

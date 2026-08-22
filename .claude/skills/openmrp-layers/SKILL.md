@@ -1,9 +1,9 @@
 ---
-name: augno-layers
-description: The Augno layer contract — what each layer (edge/transport, controller/handler, service, mediator, repository, database) does, must not do, and where every cross-cutting concern lives (auth, permissions, validation, idempotency, transactions, mutation, messaging, pagination, errors). Use when adding or reviewing any endpoint, service, or repository in the Go API or the dashboard Express API.
+name: openmrp-layers
+description: The OpenMRP layer contract — what each layer (edge/transport, controller/handler, service, mediator, repository, database) does, must not do, and where every cross-cutting concern lives (auth, permissions, validation, idempotency, transactions, mutation, messaging, pagination, errors). Use when adding or reviewing any endpoint, service, or repository in the Go API or the dashboard Express API.
 ---
 
-# The Augno layer contract
+# The OpenMRP layer contract
 
 Both APIs implement the same doctrine (see the `dane-api-design` skill for
 the philosophy) with different embodiments:

@@ -3,8 +3,8 @@ package domain
 import (
 	"context"
 
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // AccountContext represents the context of an account (sandbox status, mode, etc.)

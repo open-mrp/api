@@ -3,10 +3,10 @@ package service
 import (
 	"testing"
 
-	agentdb "github.com/augno/api/services/agent-service/internal/infrastructure/db"
-	"github.com/augno/api/services/agent-service/internal/infrastructure/sqlc"
-	"github.com/augno/api/services/agent-service/internal/llm"
 	"github.com/jackc/pgx/v5/pgtype"
+	agentdb "github.com/open-mrp/api/services/agent-service/internal/infrastructure/db"
+	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/services/agent-service/internal/llm"
 )
 
 // isChatRun gates resource-link linking + native reasoning streaming: true only when the run carries

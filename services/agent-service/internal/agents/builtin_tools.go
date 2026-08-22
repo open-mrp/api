@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/augno/api/services/agent-service/internal/domain"
+	"github.com/open-mrp/api/services/agent-service/internal/domain"
 )
 
 func HandleCreateArtifact(_ context.Context, input json.RawMessage, runCtx *domain.HandlerRunContext) (string, error) {

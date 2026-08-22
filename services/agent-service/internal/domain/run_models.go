@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/augno/api/services/agent-service/internal/infrastructure/sqlc"
-	types "github.com/augno/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
+	types "github.com/open-mrp/api/services/auth-service/pkg/types"
 )
 
 // RunContext holds the loaded context for an agent run.

@@ -3,11 +3,11 @@ package apikey
 import (
 	"fmt"
 
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/crypto"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/sanitize"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/crypto"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/sanitize"
 )
 
 // SanitizeAPIKey sanitizes a given API key string for display.

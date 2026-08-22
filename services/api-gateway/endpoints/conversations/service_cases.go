@@ -3,12 +3,12 @@ package conversationep
 import (
 	"context"
 
-	"github.com/augno/api/services/api-gateway/internal/chatmap"
-	"github.com/augno/api/services/api-gateway/internal/domain"
-	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	apierror "github.com/augno/api/shared/errors"
-	pb "github.com/augno/api/shared/proto/notification"
+	"github.com/open-mrp/api/services/api-gateway/internal/chatmap"
+	"github.com/open-mrp/api/services/api-gateway/internal/domain"
+	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	apierror "github.com/open-mrp/api/shared/errors"
+	pb "github.com/open-mrp/api/shared/proto/notification"
 	"google.golang.org/grpc"
 )
 

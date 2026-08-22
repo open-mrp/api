@@ -4,14 +4,14 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/augno/api/services/auth-service/internal/domain"
-	"github.com/augno/api/services/auth-service/internal/event"
-	"github.com/augno/api/services/auth-service/internal/infrastructure/repository"
-	"github.com/augno/api/services/auth-service/internal/infrastructure/sqlc"
-	"github.com/augno/api/services/auth-service/internal/mediator"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/idempotency"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/auth-service/internal/domain"
+	"github.com/open-mrp/api/services/auth-service/internal/event"
+	"github.com/open-mrp/api/services/auth-service/internal/infrastructure/repository"
+	"github.com/open-mrp/api/services/auth-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/services/auth-service/internal/mediator"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var tokenSvcTracer = tracing.GetTracer("auth-service.token_service")

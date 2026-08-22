@@ -7,9 +7,9 @@ import (
 
 	"github.com/shopspring/decimal"
 
-	"github.com/augno/api/services/core-service/internal/domain"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 // computeSalesOrderLinePrices prices every line of a sales order at once. The volume-discount stage sums quantities across all lines that share a chosen discount, so the whole line set must be priced together.

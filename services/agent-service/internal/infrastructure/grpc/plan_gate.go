@@ -3,8 +3,8 @@ package grpc
 import (
 	"context"
 
-	"github.com/augno/api/services/agent-service/internal/domain"
-	"github.com/augno/api/shared/constants"
+	"github.com/open-mrp/api/services/agent-service/internal/domain"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 type PlanGateAdapter struct {

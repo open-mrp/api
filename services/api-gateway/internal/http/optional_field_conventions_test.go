@@ -227,7 +227,7 @@ func TestWrapperConventionDetection(t *testing.T) {
 	t.Parallel()
 	const src = `package fixture
 
-import "github.com/augno/api/shared/field"
+import "github.com/open-mrp/api/shared/field"
 
 type Req struct {
 	Plain     string                 ` + "`json:\"plain\" validate:\"required\"`" + `

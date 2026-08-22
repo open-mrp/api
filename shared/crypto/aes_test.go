@@ -498,7 +498,7 @@ func TestDecodeHexKey256_Invalid(t *testing.T) {
 func TestFullFlow_EncryptParseDecrypt(t *testing.T) {
 	t.Parallel()
 	key := testKey(t)
-	plaintext := []byte("aug_sk_test_abc123_secret")
+	plaintext := []byte("mrp_sk_test_abc123_secret")
 	aad := []byte("apke_test123")
 
 	// Encrypt

@@ -1,22 +1,22 @@
 #!/bin/bash
 
 # dispatch-infra-deploy.sh
-# Asks the private augno/infra repo to roll this release onto EKS, then blocks until that run
+# Asks the private open-mrp/infra repo to roll this release onto EKS, then blocks until that run
 # finishes and exits with its result.
 #
 # This repo can build and push images; it deliberately cannot deploy them. The rollout runs in
-# augno/infra behind that repo's `production` environment, so the credential that can mutate the
+# open-mrp/infra behind that repo's `production` environment, so the credential that can mutate the
 # cluster never exists here. Blocking rather than firing-and-forgetting preserves the release
 # ordering the pipeline has always had: nothing publishes an OpenAPI spec or an SDK for code that
 # is not live yet.
 #
 # Required env:
-#   GH_TOKEN            token with `actions: write` on augno/infra
+#   GH_TOKEN            token with `actions: write` on open-mrp/infra
 #   IMAGE_TAG           release tag whose images are in ECR
 # Optional env:
 #   DEPLOY_SERVICES     comma-separated services to roll (empty applies cluster config only)
 #   MCP_IMAGE_TAG       if set, mcp-server is rolled to this tag too
-#   INFRA_REPO          default augno/infra
+#   INFRA_REPO          default open-mrp/infra
 #   INFRA_REF           default main
 #   DEPLOY_TIMEOUT_SECS default 2400
 
@@ -29,7 +29,7 @@ NC='\033[0m'
 print_status() { echo -e "${GREEN}[INFO]${NC} $1"; }
 print_error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
 
-INFRA_REPO=${INFRA_REPO:-augno/infra}
+INFRA_REPO=${INFRA_REPO:-open-mrp/infra}
 INFRA_REF=${INFRA_REF:-main}
 WORKFLOW=${WORKFLOW:-deploy.yml}
 DEPLOY_TIMEOUT_SECS=${DEPLOY_TIMEOUT_SECS:-2400}

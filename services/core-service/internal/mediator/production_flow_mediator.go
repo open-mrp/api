@@ -3,9 +3,9 @@ package mediator
 import (
 	"context"
 
-	"github.com/augno/api/services/core-service/internal/domain"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var productionFlowMedTracer = tracing.GetTracer("core-service.production_flow_mediator")

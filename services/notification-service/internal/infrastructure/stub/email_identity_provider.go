@@ -3,7 +3,7 @@ package stub
 import (
 	"context"
 
-	apierror "github.com/augno/api/shared/errors"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // EmailIdentityProvider is a no-op EmailIdentityProvider for test mode: it returns placeholder DKIM tokens and reports every domain as already verified so the bridge can be exercised without SES.

@@ -3,10 +3,10 @@ package repository
 import (
 	"context"
 
-	"github.com/augno/api/services/billing-service/internal/infrastructure/sqlc"
-	"github.com/augno/api/shared/db"
-	"github.com/augno/api/shared/messaging"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/billing-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/db"
+	"github.com/open-mrp/api/shared/messaging"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var inboxRepoTracer = tracing.GetTracer("billing-service.inbox_repository")

@@ -17,7 +17,7 @@ func TestAddresses_CRUD(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-addr")
 	phone := "555-123-4567"
-	email := name + "@e2e-test.augno.com"
+	email := name + "@e2e-test.openmrp.ai"
 
 	// CREATE
 	createResp, err := apiClient.PostFull(addressesPath, map[string]any{
@@ -102,7 +102,7 @@ func TestAddresses_CreateAndUpdateAllFields(t *testing.T) {
 
 	// ── CREATE with all fields ──
 	name := uniqueName("e2e-addr-allf")
-	email := name + "@e2e-test.augno.com"
+	email := name + "@e2e-test.openmrp.ai"
 	createResp, err := apiClient.PostFull(addressesPath, map[string]any{
 		"name":          name,
 		"phone":         "555-000-1234",
@@ -145,7 +145,7 @@ func TestAddresses_CreateAndUpdateAllFields(t *testing.T) {
 
 	// ── UPDATE with different values ──
 	updatedName := uniqueName("e2e-addr-allf-u")
-	updatedEmail := updatedName + "@e2e-test.augno.com"
+	updatedEmail := updatedName + "@e2e-test.openmrp.ai"
 	patchStatus, patchBody, err := apiClient.Patch(addressesPath+"/"+id, map[string]any{
 		"name":          updatedName,
 		"phone":         "555-999-8888",
@@ -454,7 +454,7 @@ func TestAddresses_UpdateAddressFields(t *testing.T) {
 	patchStatus, patchBody, err := apiClient.Patch(addressesPath+"/"+id, map[string]any{
 		"name":  newName,
 		"phone": "555-111-2222",
-		"email": newName + "@test.augno.com",
+		"email": newName + "@test.openmrp.ai",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
@@ -462,7 +462,7 @@ func TestAddresses_UpdateAddressFields(t *testing.T) {
 	updated := parseJSON(patchBody)
 	assert.Equal(t, newName, jsonField(updated, "name"))
 	assert.Equal(t, "555-111-2222", jsonField(updated, "phone"))
-	assert.Equal(t, newName+"@test.augno.com", jsonField(updated, "email"))
+	assert.Equal(t, newName+"@test.openmrp.ai", jsonField(updated, "email"))
 
 	// Geolocation should be preserved
 	geo := jsonObject(updated, "geolocation")

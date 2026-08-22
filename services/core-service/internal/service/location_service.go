@@ -4,15 +4,15 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/audit"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/id"
-	"github.com/augno/api/shared/idempotency"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/audit"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var locationSvcTracer = tracing.GetTracer("core-service.location_service")
@@ -103,7 +103,7 @@ func (s *locationSvcImpl) ListLocations(ctx context.Context, params domain.ListL
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account header is required."))
 	}
 
 	params.AccountID = identity.Target.AccountID
@@ -127,7 +127,7 @@ func (s *locationSvcImpl) GetLocation(ctx context.Context, params domain.GetLoca
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account header is required."))
 	}
 
 	params.AccountID = identity.Target.AccountID
@@ -151,7 +151,7 @@ func (s *locationSvcImpl) CreateLocation(ctx context.Context, params domain.Crea
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account header is required."))
 	}
 
 	locationID, apiErr := id.GenID(id.LocationIDPrefix, nil)
@@ -251,7 +251,7 @@ func (s *locationSvcImpl) UpdateLocation(ctx context.Context, params domain.Upda
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account header is required."))
 	}
 
 	params.AccountID = identity.Target.AccountID
@@ -373,7 +373,7 @@ func (s *locationSvcImpl) DeleteLocation(ctx context.Context, params domain.Dele
 		return tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
-		return tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account header is required."))
+		return tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account header is required."))
 	}
 
 	params.AccountID = identity.Target.AccountID

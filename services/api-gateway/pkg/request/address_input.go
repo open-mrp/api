@@ -1,9 +1,9 @@
 package apirequest
 
 import (
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/field"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/field"
 )
 
 // Address details supplied when creating an address, either on its own or inline on another resource.

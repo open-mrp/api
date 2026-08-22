@@ -4,13 +4,13 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/augno/api/services/agent-service/internal/domain"
-	agentdb "github.com/augno/api/services/agent-service/internal/infrastructure/db"
-	"github.com/augno/api/services/agent-service/internal/infrastructure/sqlc"
-	"github.com/augno/api/shared/db"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/safeconv"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/agent-service/internal/domain"
+	agentdb "github.com/open-mrp/api/services/agent-service/internal/infrastructure/db"
+	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/db"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/safeconv"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var idempotencyRepoTracer = tracing.GetTracer("agent-service.idempotency_key_repository")

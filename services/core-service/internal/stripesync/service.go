@@ -1,4 +1,4 @@
-// Package stripesync reconciles Augno customers with their counterparts in a merchant's connected Stripe account.
+// Package stripesync reconciles OpenMRP customers with their counterparts in a merchant's connected Stripe account.
 //
 // Every operation is idempotent on replay: the link lives on the account relation, so a redelivered message updates the existing Stripe customer rather than creating a second one.
 //
@@ -9,16 +9,16 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/crypto"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/crypto"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var tracer = tracing.GetTracer("core-service.stripe_sync")
 
-// Service syncs Augno customers to a connected Stripe account.
+// Service syncs OpenMRP customers to a connected Stripe account.
 type Service interface {
 	// SyncCustomer creates the customer's Stripe counterpart on first sync, or pushes a changed email/name/number onto the existing one. It is a no-op (returns nil) when the account has no active Stripe integration, and when an unlinked customer has no email to create one with.
 	SyncCustomer(ctx context.Context, ownerAccountID, customerAccountID string) *apierror.APIError
@@ -109,7 +109,7 @@ func (s *service) SyncCustomer(ctx context.Context, ownerAccountID, customerAcco
 		Number:           &customer.Number,
 	}
 	// An email is never cleared on Stripe: the customer may have live subscriptions or
-	// receipts pointing at it, and Augno clearing the branding email is not a request to
+	// receipts pointing at it, and OpenMRP clearing the branding email is not a request to
 	// strip Stripe's copy.
 	if email != "" {
 		updateParams.Email = &email

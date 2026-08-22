@@ -4,12 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // Request to update the per-account status of an agent.
@@ -32,7 +32,7 @@ func (*UpdateAgentStatusRequest) SchemaExample() any {
 
 // Enables or disables an agent for your account.
 //
-// Activation is per-account, so this works for the `system` agents Augno shares across accounts as well as your own `custom` agents: disabling one here leaves the underlying agent untouched for everyone else. Triggering an inactive agent returns a validation error.
+// Activation is per-account, so this works for the `system` agents OpenMRP shares across accounts as well as your own `custom` agents: disabling one here leaves the underlying agent untouched for everyone else. Triggering an inactive agent returns a validation error.
 type UpdateAgentStatusEndpoint struct{}
 
 func (e *UpdateAgentStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAgentStatusRequest, *apiresource.AgentDefinition] {

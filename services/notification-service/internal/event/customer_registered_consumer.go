@@ -6,10 +6,10 @@ import (
 
 	"encoding/json"
 
-	"github.com/augno/api/services/notification-service/internal/domain"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/contracts"
-	"github.com/augno/api/shared/messaging"
+	"github.com/open-mrp/api/services/notification-service/internal/domain"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/contracts"
+	"github.com/open-mrp/api/shared/messaging"
 
 	"github.com/rabbitmq/amqp091-go"
 	"go.opentelemetry.io/otel/attribute"

@@ -5,9 +5,9 @@ import (
 	"io"
 	"log"
 
-	grpcclient "github.com/augno/api/services/api-gateway/grpc-client"
-	"github.com/augno/api/services/api-gateway/internal/domain"
-	"github.com/augno/api/shared/constants"
+	grpcclient "github.com/open-mrp/api/services/api-gateway/grpc-client"
+	"github.com/open-mrp/api/services/api-gateway/internal/domain"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 type BaseConfig struct {

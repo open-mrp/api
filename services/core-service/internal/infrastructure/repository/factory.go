@@ -1,9 +1,9 @@
 package repository
 
 import (
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/augno/api/shared/messaging"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/messaging"
 )
 
 // reads one row past the export cap, so an overflow is distinguishable from an exact fit

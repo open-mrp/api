@@ -45,15 +45,15 @@ func TestResponseHeaders_ContentType(t *testing.T) {
 		"Content-Type should start with application/json, got %q", ct)
 }
 
-// TestResponseHeaders_AugnoVersion validates that the Augno-Version header is echoed back.
-func TestResponseHeaders_AugnoVersion(t *testing.T) {
+// TestResponseHeaders_OpenMRPVersion validates that the OpenMRP-Version header is echoed back.
+func TestResponseHeaders_OpenMRPVersion(t *testing.T) {
 	t.Parallel()
 	path := headersTestCustomerPath + "/" + SeedCustomerAccountID
 
 	resp, err := apiClient.GetFull(path, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, resp.StatusCode, resp.Body)
-	assertResponseHeaderPresent(t, resp.Header, "Augno-Version")
+	assertResponseHeaderPresent(t, resp.Header, "OpenMRP-Version")
 }
 
 // TestResponseHeaders_LocationOnCreate validates that 201 Created includes a

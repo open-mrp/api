@@ -6,8 +6,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/augno/api/shared/contracts"
 	"github.com/go-sql-driver/mysql"
+	"github.com/open-mrp/api/shared/contracts"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/suite"
 )

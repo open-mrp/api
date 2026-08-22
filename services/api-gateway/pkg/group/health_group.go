@@ -1,9 +1,9 @@
 package httpgroup
 
 import (
-	healthep "github.com/augno/api/services/api-gateway/endpoints/health"
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	healthep "github.com/open-mrp/api/services/api-gateway/endpoints/health"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 )
 
 type HealthEndpointGroup struct {

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"unicode"
 
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	"gopkg.in/yaml.v3"
 )
 
@@ -168,7 +168,7 @@ func generateStainlessConfig(groups []apiendpoint.APIEndpointGroup, outputPath s
 		return err
 	}
 
-	// Keep the Augno-Version default header in sync with the spec's info.version
+	// Keep the OpenMRP-Version default header in sync with the spec's info.version
 	// (which is set to `version` in buildOpenAPISpec). The self-hosted stlc fork
 	// emits this header literally, so it must be refreshed on every generation.
 	if err := syncVersionHeaderValue(outputPath, version); err != nil {
@@ -532,7 +532,7 @@ func replaceTopLevelMappingNode(root *yaml.Node, key string, value *yaml.Node) {
 // client_settings.default_headers entry marked `version_header: true` to the
 // given API version. The header's name and presence stay hand-maintained in
 // stainless.yml; this only keeps its value aligned with the spec's info.version
-// so the generated SDKs send the correct Augno-Version header. It is a no-op if
+// so the generated SDKs send the correct OpenMRP-Version header. It is a no-op if
 // no such header is configured.
 func syncVersionHeaderValue(path, version string) error {
 	raw, err := os.ReadFile(path)

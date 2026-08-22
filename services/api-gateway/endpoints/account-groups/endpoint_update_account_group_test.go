@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/augno/api/shared/validate"
+	"github.com/open-mrp/api/shared/validate"
 )
 
 func TestRejectExplicitJSONNulls_updateAccountGroup_nameNull(t *testing.T) {

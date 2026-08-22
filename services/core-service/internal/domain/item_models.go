@@ -5,7 +5,7 @@ import (
 
 	"github.com/shopspring/decimal"
 
-	"github.com/augno/api/shared/pagination"
+	"github.com/open-mrp/api/shared/pagination"
 )
 
 // Item represents an inventory item (product, material, or part).

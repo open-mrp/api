@@ -6,11 +6,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/augno/api/services/api-gateway/internal/header"
-	httptransport "github.com/augno/api/services/api-gateway/internal/http"
-	"github.com/augno/api/shared/appctx"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/retry"
+	"github.com/open-mrp/api/services/api-gateway/internal/header"
+	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
+	"github.com/open-mrp/api/shared/appctx"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/retry"
 )
 
 // A rate limiter with exponential backoff and jitter

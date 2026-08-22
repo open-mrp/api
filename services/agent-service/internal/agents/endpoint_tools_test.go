@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/augno/api/services/agent-service/internal/domain"
+	"github.com/open-mrp/api/services/agent-service/internal/domain"
 )
 
 type fakeGatewayClient struct {

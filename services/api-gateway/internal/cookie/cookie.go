@@ -6,16 +6,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 const (
 	// #nosec G101 - These are cookie names, not hardcoded credentials
-	accessTokenCookieName = "__Secure-augno.access-token"
+	accessTokenCookieName = "__Secure-openmrp.access-token"
 	// #nosec G101 - These are cookie names, not hardcoded credentials
-	refreshTokenCookieName = "__Secure-augno.refresh-token"
+	refreshTokenCookieName = "__Secure-openmrp.refresh-token"
 
 	// Paths
 	authRoutePrefix = "/v1/auth"
@@ -42,17 +42,36 @@ func getCookieOptions(isProduction bool, path, externalHost string) cookieOption
 		Path:     path,
 	}
 
-	// First-party hosts share the wildcard domain so sessions span *.augno.com. Requests proxied from a customer's custom portal domain (external host outside augno.com) get host-only cookies instead: the browser scopes them to that domain, which both makes auth work there and isolates sessions per tenant domain. When the external host is unknown, production keeps the legacy wildcard behavior.
-	if isProduction && isAugnoHost(externalHost) {
-		opts.Domain = ".augno.com"
+	// First-party hosts share a wildcard domain so sessions span all our subdomains. Requests proxied from a customer's custom portal domain get host-only cookies instead: the browser scopes them to that domain, which both makes auth work there and isolates sessions per tenant domain. When the external host is unknown, production keeps the legacy wildcard behavior.
+	if isProduction {
+		if domain := firstPartyCookieDomain(externalHost); domain != "" {
+			opts.Domain = domain
+		}
 	}
 
 	return opts
 }
 
-// isAugnoHost reports whether the external request host is a first-party augno.com host. An empty host (middleware not in the chain) is treated as first-party to preserve legacy behavior.
-func isAugnoHost(host string) bool {
-	return host == "" || host == "augno.com" || strings.HasSuffix(host, ".augno.com")
+// firstPartyDomains are the domains we own, most-preferred first. Both are listed
+// through the OpenMRP rename: the app is still served from augno.com and openmrp.ai
+// takes over at the DNS cutover. Scoping a cookie to a domain the browser is not on
+// makes it drop the cookie outright, so this must cover whichever host is live.
+var firstPartyDomains = []string{"augno.com", "openmrp.ai"}
+
+// firstPartyCookieDomain returns the wildcard cookie domain for a first-party host,
+// or "" for a customer's custom portal domain, which gets a host-only cookie. An
+// empty host (middleware not in the chain) falls back to the primary domain to
+// preserve legacy behavior.
+func firstPartyCookieDomain(host string) string {
+	if host == "" {
+		return "." + firstPartyDomains[0]
+	}
+	for _, domain := range firstPartyDomains {
+		if host == domain || strings.HasSuffix(host, "."+domain) {
+			return "." + domain
+		}
+	}
+	return ""
 }
 
 // externalHostFromContext reads the browser-facing host captured by ExternalHostMiddleware; empty when unset.

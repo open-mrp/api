@@ -56,7 +56,7 @@ type CoreHubspotSyncServiceClient interface {
 	ExecuteHubspotSync(ctx context.Context, in *ExecuteHubspotSyncRequest, opts ...grpc.CallOption) (*HubspotSyncJobResponse, error)
 	// CancelHubspotSync force-fails an in-flight job so the account can start a new one.
 	CancelHubspotSync(ctx context.Context, in *CancelHubspotSyncRequest, opts ...grpc.CallOption) (*HubspotSyncJobResponse, error)
-	// ListHubspotSyncRecords pages the Augno->HubSpot mappings the sync has written.
+	// ListHubspotSyncRecords pages the OpenMRP->HubSpot mappings the sync has written.
 	ListHubspotSyncRecords(ctx context.Context, in *ListHubspotSyncRecordsRequest, opts ...grpc.CallOption) (*ListHubspotSyncRecordsResponse, error)
 }
 
@@ -190,7 +190,7 @@ type CoreHubspotSyncServiceServer interface {
 	ExecuteHubspotSync(context.Context, *ExecuteHubspotSyncRequest) (*HubspotSyncJobResponse, error)
 	// CancelHubspotSync force-fails an in-flight job so the account can start a new one.
 	CancelHubspotSync(context.Context, *CancelHubspotSyncRequest) (*HubspotSyncJobResponse, error)
-	// ListHubspotSyncRecords pages the Augno->HubSpot mappings the sync has written.
+	// ListHubspotSyncRecords pages the OpenMRP->HubSpot mappings the sync has written.
 	ListHubspotSyncRecords(context.Context, *ListHubspotSyncRecordsRequest) (*ListHubspotSyncRecordsResponse, error)
 	mustEmbedUnimplementedCoreHubspotSyncServiceServer()
 }

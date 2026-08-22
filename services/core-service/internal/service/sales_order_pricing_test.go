@@ -6,7 +6,7 @@ import (
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/augno/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
 )
 
 // These tests pin the server-side sales-order line pricing algorithm (a faithful port

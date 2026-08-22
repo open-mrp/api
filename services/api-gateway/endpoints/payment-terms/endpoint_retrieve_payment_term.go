@@ -4,11 +4,11 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // Request to retrieve a payment term.
@@ -19,7 +19,7 @@ type RetrievePaymentTermRequest struct {
 
 // Returns a payment term by ID.
 //
-// Both payment terms created by your account and Augno-provided system defaults can be retrieved.
+// Both payment terms created by your account and OpenMRP-provided system defaults can be retrieved.
 type RetrievePaymentTermEndpoint struct{}
 
 func (e *RetrievePaymentTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrievePaymentTermRequest, *apiresource.PaymentTerm] {

@@ -1,6 +1,6 @@
 package mediator
 
-import "github.com/augno/api/services/core-service/internal/domain"
+import "github.com/open-mrp/api/services/core-service/internal/domain"
 
 type mediatorFactoryImpl struct{}
 

@@ -3,11 +3,11 @@ package service
 import (
 	"context"
 
-	"github.com/augno/api/services/agent-service/internal/domain"
-	"github.com/augno/api/services/agent-service/internal/infrastructure/repository"
-	"github.com/augno/api/services/agent-service/internal/infrastructure/sqlc"
-	apierror "github.com/augno/api/shared/errors"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/open-mrp/api/services/agent-service/internal/domain"
+	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/repository"
+	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 type TransactionManager interface {

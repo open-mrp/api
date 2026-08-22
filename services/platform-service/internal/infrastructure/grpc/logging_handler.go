@@ -5,10 +5,10 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/augno/api/services/platform-service/internal/domain"
-	"github.com/augno/api/shared/contracts"
-	pb "github.com/augno/api/shared/proto/platform"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/platform-service/internal/domain"
+	"github.com/open-mrp/api/shared/contracts"
+	pb "github.com/open-mrp/api/shared/proto/platform"
+	"github.com/open-mrp/api/shared/tracing"
 
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"

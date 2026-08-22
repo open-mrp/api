@@ -3,9 +3,9 @@ package apiresource
 import (
 	"time"
 
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/timeutil"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/timeutil"
 )
 
 const SampleSalesOrderID = "or_9lqo07quiwyb"
@@ -135,7 +135,7 @@ type SalesOrder struct {
 	PaymentIntentIDs []string `json:"payment_intent_ids"`
 	// Whether an order acknowledgment has been sent to the customer.
 	//
-	// Becomes `sent` when the order is issued with customer notification requested and the order has acknowledgement contacts to send to. It can also be set directly when an acknowledgement was sent outside Augno.
+	// Becomes `sent` when the order is issued with customer notification requested and the order has acknowledgement contacts to send to. It can also be set directly when an acknowledgement was sent outside OpenMRP.
 	AcknowledgmentStatus constants.AcknowledgmentStatus `json:"acknowledgment_status" validate:"required"`
 	// The customer this order is for.
 	Customer *Customer `json:"customer" expandable:"true"`

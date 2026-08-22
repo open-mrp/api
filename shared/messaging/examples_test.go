@@ -3,7 +3,7 @@ package messaging_test
 import (
 	"context"
 
-	"github.com/augno/api/shared/messaging"
+	"github.com/open-mrp/api/shared/messaging"
 )
 
 // ExampleNewRabbitMQ shows the minimal configuration for connecting to the

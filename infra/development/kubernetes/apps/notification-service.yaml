@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: notification-service
-          image: augno-api/notification-service
+          image: openmrp-api/notification-service
           ports:
             - containerPort: 9092
           readinessProbe:

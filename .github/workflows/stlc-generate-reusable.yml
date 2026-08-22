@@ -154,12 +154,12 @@ jobs:
             # release-please, not changesets: the v0.23.2 regen dropped internal-sdk's
             # Changesets tooling (@changesets/cli + scripts/release + the Changesets
             # Release workflow were removed). It now releases via release-please (a
-            # committed release.yml in Augno/internal-sdk), publishing to GitHub
+            # committed release.yml in open-mrp/internal-sdk), publishing to GitHub
             # Packages, driven by the conventional "fix(sdk): sync ..." commit produced
             # below; the "Add changeset" steps no longer apply.
             release: release-please
-            pr_repo: Augno/internal-sdk
-            package_name: "@augno/internal-sdk"
+            pr_repo: open-mrp/internal-sdk
+            package_name: "@openmrp/internal-sdk"
             spec_changed: ${{ needs.spec-changes.outputs.internal }}
           - sdk: public
             workspace: stainless/public
@@ -170,15 +170,15 @@ jobs:
             # bump from the conventional "fix(sdk): sync with deployed API vX.Y.Z"
             # commit produced below.
             release: release-please
-            pr_repo: Augno/typescript-sdk
-            package_name: "@augno/sdk"
+            pr_repo: open-mrp/typescript-sdk
+            package_name: "@openmrp/sdk"
             spec_changed: ${{ needs.spec-changes.outputs.public }}
           - sdk: public-go
             workspace: stainless/public
             targets: go
             release: release-please
-            pr_repo: augno/augno-go
-            package_name: augno
+            pr_repo: open-mrp/openmrp-go
+            package_name: openmrp
             spec_changed: ${{ needs.spec-changes.outputs.public }}
     steps:
       - name: Skip SDK generation (OpenAPI spec unchanged)
@@ -329,10 +329,10 @@ jobs:
           fi
           body_file="$(mktemp)"
           {
-            echo "Automated SDK sync from [Augno/api](https://github.com/Augno/api) release **${tag}**."
+            echo "Automated SDK sync from [open-mrp/api](https://github.com/open-mrp/api) release **${tag}**."
             echo ""
             if [ "$OPENAPI_SPECS_SOURCE" = "s3" ]; then
-              echo "OpenAPI specs were downloaded from the release S3 buckets (\`augno-*-openapi-specs/openapi.json\`)."
+              echo "OpenAPI specs were downloaded from the release S3 buckets (\`openmrp-*-openapi-specs/openapi.json\`)."
             else
               echo "OpenAPI specs and Stainless configs were generated in this job with \`make openapi-stainless-quiet\`."
             fi

@@ -4,15 +4,15 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/audit"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/id"
-	"github.com/augno/api/shared/idempotency"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/audit"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var supplierMaterialSvcTracer = tracing.GetTracer("core-service.supplier_material_service")
@@ -81,7 +81,7 @@ func (s *supplierMaterialSvcImpl) withTx(ctx context.Context, fn func(context.Co
 // ListSupplierMaterials returns a paginated list of supplier materials for the caller's account.
 //
 // 1. Extract and validate the caller's identity, actor type, and suppliers:read permission.
-// 2. Require the Augno-Account header to scope the query.
+// 2. Require the OpenMRP-Account header to scope the query.
 // 3. Query the supplier material repository with the account ID and pagination params.
 func (s *supplierMaterialSvcImpl) ListSupplierMaterials(ctx context.Context, params domain.ListSupplierMaterialsParams) (*domain.ListSupplierMaterialsResult, *apierror.APIError) {
 	ctx, span := supplierMaterialSvcTracer.Start(ctx, "service.supplier_material.list")
@@ -107,7 +107,7 @@ func (s *supplierMaterialSvcImpl) ListSupplierMaterials(ctx context.Context, par
 // GetSupplierMaterial retrieves a single supplier material by supplier account ID and material ID, scoped to the caller's account.
 //
 // 1. Extract and validate the caller's identity, actor type, and suppliers:read permission.
-// 2. Require the Augno-Account header.
+// 2. Require the OpenMRP-Account header.
 // 3. Fetch the supplier material from the repository by owner account ID, supplier account ID, and material ID.
 func (s *supplierMaterialSvcImpl) GetSupplierMaterial(ctx context.Context, supplierAccountID, materialID string) (*domain.SupplierMaterial, *apierror.APIError) {
 	ctx, span := supplierMaterialSvcTracer.Start(ctx, "service.supplier_material.get")
@@ -303,7 +303,7 @@ func (s *supplierMaterialSvcImpl) UpdateSupplierMaterial(ctx context.Context, pa
 // DeleteSupplierMaterial deletes a supplier material association by supplier and material ID, scoped to the caller's account.
 //
 // 1. Extract and validate the caller's identity, actor type, and suppliers:update permission.
-// 2. Require the Augno-Account header.
+// 2. Require the OpenMRP-Account header.
 // 3. Delete the supplier material from the repository and return the deleted record.
 func (s *supplierMaterialSvcImpl) DeleteSupplierMaterial(ctx context.Context, params domain.DeleteSupplierMaterialParams) (*domain.SupplierMaterial, *apierror.APIError) {
 	ctx, span := supplierMaterialSvcTracer.Start(ctx, "service.supplier_material.delete")

@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"time"
 
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/pagination"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/pagination"
 )
 
 // HubspotSyncSvc is the application service for the HubSpot backfill: starting a job (which dispatches the preview command), reading job status, managing the company-review queue, and triggering execute. The target account and authorization are derived from the request identity.
@@ -98,13 +98,13 @@ type UpdateHubspotSyncJobParams struct {
 	CompletedAt *time.Time
 }
 
-// HubspotSyncRecord maps one Augno entity to its HubSpot counterpart, making sync idempotent across replays and re-runs.
+// HubspotSyncRecord maps one OpenMRP entity to its HubSpot counterpart, making sync idempotent across replays and re-runs.
 type HubspotSyncRecord struct {
 	ID        string
 	AccountID string
 	AugnoType string
 	AugnoID   string
-	// AugnoName is the display name of the mapped Augno entity, resolved by the list query. Empty when the entity no longer exists or was not joined.
+	// AugnoName is the display name of the mapped OpenMRP entity, resolved by the list query. Empty when the entity no longer exists or was not joined.
 	AugnoName    string
 	HubspotType  string
 	HubspotID    string
@@ -115,7 +115,7 @@ type HubspotSyncRecord struct {
 	UpdatedAt    time.Time
 }
 
-// ListHubspotSyncRecordsParams pages the account's Augno->HubSpot mappings. AugnoType is required: it keeps the keyset on the (account_id, augno_type, augno_id) index.
+// ListHubspotSyncRecordsParams pages the account's OpenMRP->HubSpot mappings. AugnoType is required: it keeps the keyset on the (account_id, augno_type, augno_id) index.
 type ListHubspotSyncRecordsParams struct {
 	AccountID string
 	AugnoType string

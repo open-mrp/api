@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/crypto"
-	apierror "github.com/augno/api/shared/errors"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/crypto"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 func TestGenParsedAPIKey(t *testing.T) {
@@ -165,11 +165,11 @@ func TestParseAPIKey_InvalidKeys(t *testing.T) {
 	}{
 		{"empty key", ""},
 		{"wrong prefix", "invalid_prefix_prod_123_456_789"},
-		{"too few parts", "aug_sk_prod_123"},
-		{"too many parts", "aug_sk_prod_123_456_789_extra"},
-		{"invalid app mode", "aug_sk_invalid_123_456_789abc"},
-		{"secret too short", "aug_sk_prod_123_45_789abc"},
-		{"invalid checksum", "aug_sk_prod_123_456789_000000"},
+		{"too few parts", "mrp_sk_prod_123"},
+		{"too many parts", "mrp_sk_prod_123_456_789_extra"},
+		{"invalid app mode", "mrp_sk_invalid_123_456_789abc"},
+		{"secret too short", "mrp_sk_prod_123_45_789abc"},
+		{"invalid checksum", "mrp_sk_prod_123_456789_000000"},
 	}
 
 	for _, tt := range tests {
@@ -242,10 +242,10 @@ func TestParsedAPIKey_VerifySecretHMAC(t *testing.T) {
 
 func TestSanitizeAPIKey(t *testing.T) {
 	t.Parallel()
-	key := "aug_sk_prod_testid123_testsecret456abc123"
+	key := "mrp_sk_prod_testid123_testsecret456abc123"
 	sanitized := SanitizeAPIKey(key)
 
-	if !strings.HasPrefix(sanitized, "aug_sk_prod_te") {
+	if !strings.HasPrefix(sanitized, "mrp_sk_prod_te") {
 		t.Errorf("SanitizeAPIKey() should preserve prefix, got: %s", sanitized)
 	}
 	if !strings.Contains(sanitized, "****") {
@@ -367,7 +367,7 @@ func TestParsedAPIKey_RedactedValue(t *testing.T) {
 
 			fullKey := key.String()
 			expectedSuffix := fullKey[len(fullKey)-4:]
-			expectedPrefix := "aug_sk_" + tt.wantMode + "_****"
+			expectedPrefix := "mrp_sk_" + tt.wantMode + "_****"
 
 			if !strings.HasPrefix(redacted, expectedPrefix) {
 				t.Errorf("RedactedValue() = %s, want prefix %s", redacted, expectedPrefix)
@@ -391,7 +391,7 @@ func TestParsedAPIKey_String(t *testing.T) {
 		Checksum:    "abc123",
 	}
 
-	expected := "aug_sk_prod_testid123_testsecret456abc123"
+	expected := "mrp_sk_prod_testid123_testsecret456abc123"
 	result := key.String()
 
 	if result != expected {

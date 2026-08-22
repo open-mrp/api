@@ -10,12 +10,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/augno/api/services/api-gateway/internal/header"
-	httptransport "github.com/augno/api/services/api-gateway/internal/http"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/version"
+	"github.com/open-mrp/api/services/api-gateway/internal/header"
+	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/version"
 )
 
 func bindHandler[TReq, TResp any](ep *APIEndpoint[TReq, TResp]) {
@@ -283,7 +283,7 @@ func TestExecute_headerSchemeInvalid_reportsParameterInvalid(t *testing.T) {
 	t.Parallel()
 
 	type hdrTok struct {
-		Token string `header:"Augno-Routing-Namespace" scheme:"Bearer"`
+		Token string `header:"OpenMRP-Routing-Namespace" scheme:"Bearer"`
 	}
 
 	ep := &APIEndpoint[*hdrTok, *stubResponse]{
@@ -300,7 +300,7 @@ func TestExecute_headerSchemeInvalid_reportsParameterInvalid(t *testing.T) {
 	bindHandler(ep)
 
 	r := httptest.NewRequest(http.MethodGet, "/v1/things", nil)
-	r.Header.Set("Augno-Routing-Namespace", "Digest abc")
+	r.Header.Set("OpenMRP-Routing-Namespace", "Digest abc")
 	w := httptest.NewRecorder()
 
 	ep.Execute(w, r)

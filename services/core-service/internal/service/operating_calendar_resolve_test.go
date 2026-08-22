@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/augno/api/services/core-service/internal/scheduling"
+	"github.com/open-mrp/api/services/core-service/internal/scheduling"
 )
 
 func TestCommitmentAnchor_ProjectsEveryBasisNotJustTheIssueDate(t *testing.T) {

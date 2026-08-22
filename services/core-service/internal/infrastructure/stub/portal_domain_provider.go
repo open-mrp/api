@@ -5,9 +5,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // PortalDomainProvider is an in-memory portal domain provider for test/dev mode. A domain walks the real lifecycle across successive state reads: read #1 is unverified (pending), read #2 is verified+routing but not yet serving (securing, as if the TLS certificate were still issuing), and reads #3+ are verified and serving. This lets tests exercise the pending, securing, and verified paths of the verify action.

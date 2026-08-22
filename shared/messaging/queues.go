@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/augno/api/shared/constants"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 // Queue name constants define the AMQP queue names used across all services. Each queue is bound to the application exchange ("app") with a routing key matching its name. The naming convention is "{service}_{cmd|event}_{action}" to make ownership and intent clear at a glance.

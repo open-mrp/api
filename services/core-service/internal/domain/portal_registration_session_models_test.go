@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/augno/api/shared/constants"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 func TestDeriveStatus(t *testing.T) {

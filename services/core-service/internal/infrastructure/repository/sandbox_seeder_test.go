@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/augno/api/services/core-service/internal/infrastructure/queries"
+	"github.com/open-mrp/api/services/core-service/internal/infrastructure/queries"
 )
 
 func TestSubstituteVars_ReplacesKnownVars(t *testing.T) {

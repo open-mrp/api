@@ -1,6 +1,6 @@
 package contracts
 
-import "github.com/augno/api/services/auth-service/pkg/types"
+import "github.com/open-mrp/api/services/auth-service/pkg/types"
 
 // AmqpMessage is the envelope for all messages published to and consumed from RabbitMQ. It carries the caller's identity, the application payload, and tracing/idempotency metadata needed to correlate and deduplicate messages.
 type AmqpMessage struct {

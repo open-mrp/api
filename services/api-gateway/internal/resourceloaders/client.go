@@ -4,13 +4,13 @@
 package resourceloaders
 
 import (
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/constants"
-	agentpb "github.com/augno/api/shared/proto/agent"
-	authpb "github.com/augno/api/shared/proto/auth"
-	pb "github.com/augno/api/shared/proto/core"
-	notifpb "github.com/augno/api/shared/proto/notification"
-	platformpb "github.com/augno/api/shared/proto/platform"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/shared/constants"
+	agentpb "github.com/open-mrp/api/shared/proto/agent"
+	authpb "github.com/open-mrp/api/shared/proto/auth"
+	pb "github.com/open-mrp/api/shared/proto/core"
+	notifpb "github.com/open-mrp/api/shared/proto/notification"
+	platformpb "github.com/open-mrp/api/shared/proto/platform"
 )
 
 // coreClient is the primary CoreService gRPC client used by every loader whose RPC lives on CoreService (carrier, account, priority, etc.). Set by SetCoreClient during api-gateway startup before any HTTP traffic is served.

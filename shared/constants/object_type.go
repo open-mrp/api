@@ -172,7 +172,7 @@ const (
 	ObjectTypeHubspotCompanyReview ObjectType = "hubspot_company_review"
 	// ObjectTypeHubspotCompanyCandidate indicates that the object is a candidate HubSpot company match within a review.
 	ObjectTypeHubspotCompanyCandidate ObjectType = "hubspot_company_candidate"
-	// ObjectTypeHubspotSyncRecord indicates that the object is a mapping from an Augno record to its HubSpot counterpart.
+	// ObjectTypeHubspotSyncRecord indicates that the object is a mapping from an OpenMRP record to its HubSpot counterpart.
 	ObjectTypeHubspotSyncRecord ObjectType = "hubspot_sync_record"
 	// ObjectTypeAccountPrice indicates that the object is an account price.
 	ObjectTypeAccountPrice ObjectType = "account_price"

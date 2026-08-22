@@ -14,8 +14,8 @@ import (
 	reflect "reflect"
 	time "time"
 
-	domain "github.com/augno/api/services/billing-service/internal/domain"
-	apierror "github.com/augno/api/shared/errors"
+	domain "github.com/open-mrp/api/services/billing-service/internal/domain"
+	apierror "github.com/open-mrp/api/shared/errors"
 	gomock "go.uber.org/mock/gomock"
 )
 

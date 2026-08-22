@@ -4,11 +4,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/augno/api/services/billing-service/internal/domain"
-	"github.com/augno/api/services/billing-service/internal/infrastructure/sqlc"
-	"github.com/augno/api/shared/db"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/billing-service/internal/domain"
+	"github.com/open-mrp/api/services/billing-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/db"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var agentTokenBillingRepoTracer = tracing.GetTracer("billing-service.agent_token_billing_repository")

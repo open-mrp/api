@@ -3,10 +3,10 @@ package httpgroup
 import (
 	"fmt"
 
-	jobep "github.com/augno/api/services/api-gateway/endpoints/jobs"
-	grpcclient "github.com/augno/api/services/api-gateway/grpc-client"
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	jobep "github.com/open-mrp/api/services/api-gateway/endpoints/jobs"
+	grpcclient "github.com/open-mrp/api/services/api-gateway/grpc-client"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 )
 
 type JobsEndpointGroup struct {

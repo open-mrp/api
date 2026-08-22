@@ -13,9 +13,9 @@ import (
 	context "context"
 	reflect "reflect"
 
-	types "github.com/augno/api/services/auth-service/pkg/types"
-	domain "github.com/augno/api/services/core-service/internal/domain"
-	apierror "github.com/augno/api/shared/errors"
+	types "github.com/open-mrp/api/services/auth-service/pkg/types"
+	domain "github.com/open-mrp/api/services/core-service/internal/domain"
+	apierror "github.com/open-mrp/api/shared/errors"
 	gomock "go.uber.org/mock/gomock"
 )
 

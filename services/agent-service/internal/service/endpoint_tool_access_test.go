@@ -3,7 +3,7 @@ package service
 import (
 	"testing"
 
-	"github.com/augno/api/services/agent-service/internal/agents"
+	"github.com/open-mrp/api/services/agent-service/internal/agents"
 )
 
 func TestEndpointToolCatalogInfos(t *testing.T) {

@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"sync/atomic"
 
-	"github.com/augno/api/services/notification-service/internal/domain"
-	apierror "github.com/augno/api/shared/errors"
+	"github.com/open-mrp/api/services/notification-service/internal/domain"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // EmailSender is a no-op EmailSender implementation for use in test mode.

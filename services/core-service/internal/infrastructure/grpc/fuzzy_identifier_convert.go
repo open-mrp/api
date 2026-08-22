@@ -1,8 +1,8 @@
 package grpc
 
 import (
-	"github.com/augno/api/services/core-service/internal/domain"
-	pb "github.com/augno/api/shared/proto/core"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	pb "github.com/open-mrp/api/shared/proto/core"
 )
 
 // This file maps the shared fuzzy reference protobuf messages to their domain forms.

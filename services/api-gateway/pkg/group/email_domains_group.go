@@ -3,10 +3,10 @@ package httpgroup
 import (
 	"fmt"
 
-	emailbridgeep "github.com/augno/api/services/api-gateway/endpoints/email-bridge"
-	grpcclient "github.com/augno/api/services/api-gateway/grpc-client"
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	emailbridgeep "github.com/open-mrp/api/services/api-gateway/endpoints/email-bridge"
+	grpcclient "github.com/open-mrp/api/services/api-gateway/grpc-client"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 )
 
 type EmailDomainsEndpointGroup struct {

@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/shared/lease"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/lease"
+	"github.com/open-mrp/api/shared/tracing"
 	"github.com/robfig/cron/v3"
 )
 

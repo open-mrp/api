@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/augno/api/services/agent-service/internal/domain"
+	"github.com/open-mrp/api/services/agent-service/internal/domain"
 )
 
 // HandleSendEmail sends an email reply through the conversation's bound inbox. The tool is gated by human review (see send_email's RequireReview wiring), so by the time this handler runs the send has been approved.

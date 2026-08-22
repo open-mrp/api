@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/augno/api/shared/appctx"
+	"github.com/open-mrp/api/shared/appctx"
 )
 
 func CORSMiddleware() func(http.HandlerFunc) http.HandlerFunc {
@@ -23,12 +23,12 @@ func CORSMiddleware() func(http.HandlerFunc) http.HandlerFunc {
 				w.Header().Set("Access-Control-Allow-Methods", strings.Join(methods, ", "))
 			}
 			w.Header().Set("Access-Control-Allow-Headers",
-				"Content-Type, Authorization, X-Requested-With, X-Retry, Augno-Account, Augno-Actor-Account, Idempotency-Key, Accept, Origin, User-Agent, Cache-Control, Pragma, Augno-Version, "+
+				"Content-Type, Authorization, X-Requested-With, X-Retry, OpenMRP-Account, OpenMRP-Actor-Account, Idempotency-Key, Accept, Origin, User-Agent, Cache-Control, Pragma, OpenMRP-Version, "+
 					"X-Stainless-Arch, X-Stainless-Lang, X-Stainless-OS, X-Stainless-Package-Version, X-Stainless-Read-Timeout, "+
 					"X-Stainless-Retry-Count, X-Stainless-Runtime, X-Stainless-Runtime-Version, X-Stainless-Timeout",
 			)
 			// Content-Disposition is not a CORS-safelisted response header, so a browser drops it unless it is named here. File-download endpoints put the filename there, and without it the client falls back to a generic default and saves a PDF as .xlsx.
-			w.Header().Set("Access-Control-Expose-Headers", "RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset, Request-Id, Augno-Version, Content-Disposition")
+			w.Header().Set("Access-Control-Expose-Headers", "RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset, Request-Id, OpenMRP-Version, Content-Disposition")
 			w.Header().Set("Access-Control-Max-Age", "86400") // 24 hours
 
 			// Handle preflight requests

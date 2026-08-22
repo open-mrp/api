@@ -11,11 +11,11 @@ import (
 	"runtime/debug"
 	"strings"
 
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/contracts"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/field"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/contracts"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/field"
 )
 
 func endpointSpecField(e apiendpoint.APIEndpointer) reflect.Value {
@@ -75,8 +75,8 @@ func buildOpenAPISpec(groups []apiendpoint.APIEndpointGroup, publicOnly bool, ve
 	spec := OpenAPI{
 		OpenAPI: "3.0.0",
 		Info: Info{
-			Title:       "Augno API",
-			Description: "API for Augno services",
+			Title:       "OpenMRP API",
+			Description: "API for OpenMRP services",
 			Version:     version,
 		},
 		Servers: []Server{
@@ -206,7 +206,7 @@ func buildOpenAPISpec(groups []apiendpoint.APIEndpointGroup, publicOnly bool, ve
 						}
 						if cookie := f.Tag.Get("cookie"); cookie != "" {
 							desc := fmt.Sprintf("Cookie parameter: %s for %s", cookie, title)
-							if cookie == "__Secure-augno.refresh-token" {
+							if cookie == "__Secure-openmrp.refresh-token" {
 								desc = fmt.Sprintf("The Secure refresh token cookie for %s", title)
 							}
 							operation.Parameters = append(operation.Parameters, Parameter{

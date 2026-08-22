@@ -4,12 +4,12 @@ import (
 	"context"
 	"time"
 
-	"github.com/augno/api/services/auth-service/internal/domain"
-	"github.com/augno/api/shared/contracts"
-	apierror "github.com/augno/api/shared/errors"
-	pb "github.com/augno/api/shared/proto/billing"
-	"github.com/augno/api/shared/rpc"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/auth-service/internal/domain"
+	"github.com/open-mrp/api/shared/contracts"
+	apierror "github.com/open-mrp/api/shared/errors"
+	pb "github.com/open-mrp/api/shared/proto/billing"
+	"github.com/open-mrp/api/shared/rpc"
+	"github.com/open-mrp/api/shared/tracing"
 
 	"google.golang.org/grpc"
 )

@@ -9,16 +9,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/services/notification-service/internal/domain"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/contracts"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/id"
-	"github.com/augno/api/shared/messaging"
-	"github.com/augno/api/shared/ptrutil"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/services/notification-service/internal/domain"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/contracts"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/messaging"
+	"github.com/open-mrp/api/shared/ptrutil"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var messagingSvcTracer = tracing.GetTracer("notification-service.messaging_service")
@@ -53,7 +53,7 @@ func (s *messagingSvcImpl) recipient(ctx context.Context) (string, *apierror.API
 		return "", apiErr
 	}
 	if !identity.IsTargetAccountSet() {
-		return "", apierror.NewAuthenticationError("The Augno-Account-ID header is required.")
+		return "", apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required.")
 	}
 	recipientID, apiErr := s.repoFactory.NewNotificationRepo().ResolveAccountUserID(ctx, identity.Actor.ID, identity.Target.AccountID)
 	if apiErr != nil {
@@ -78,7 +78,7 @@ func (s *messagingSvcImpl) SendNotification(ctx context.Context, input domain.Se
 		return 0, tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
-		return 0, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return 0, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	if input.Title == "" {
@@ -750,7 +750,7 @@ func (s *messagingSvcImpl) UpsertNotificationPreference(ctx context.Context, inp
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 	accountID := identity.Target.AccountID
 	recipientID, apiErr := s.repoFactory.NewNotificationRepo().ResolveAccountUserID(ctx, identity.Actor.ID, accountID)

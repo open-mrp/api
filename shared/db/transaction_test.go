@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
-	apierror "github.com/augno/api/shared/errors"
 	"github.com/go-sql-driver/mysql"
+	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

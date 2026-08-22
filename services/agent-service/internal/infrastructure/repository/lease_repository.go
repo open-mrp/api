@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	agentdb "github.com/augno/api/services/agent-service/internal/infrastructure/db"
-	"github.com/augno/api/services/agent-service/internal/infrastructure/sqlc"
-	"github.com/augno/api/shared/lease"
-	"github.com/augno/api/shared/tracing"
+	agentdb "github.com/open-mrp/api/services/agent-service/internal/infrastructure/db"
+	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/lease"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var leaseRepoTracer = tracing.GetTracer("agent-service.lease_repository")

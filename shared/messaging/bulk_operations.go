@@ -1,6 +1,6 @@
 package messaging
 
-import "github.com/augno/api/shared/contracts"
+import "github.com/open-mrp/api/shared/contracts"
 
 // names one async bulk operation, and stems its routing key, queue and inbox handler so
 // those cannot drift apart. Persisted in the inbox: renaming one orphans in-flight records.

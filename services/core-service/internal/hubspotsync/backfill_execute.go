@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/augno/api/services/core-service/internal/domain"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/ptrutil"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/ptrutil"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 // Execute phases (stored in hubspot_sync_job.cursors.phase) so an interrupted run resumes where it left off.
@@ -142,7 +142,7 @@ func (s *service) executeCompaniesPass(ctx context.Context, client domain.Hubspo
 
 // executeCustomerCompany resolves one customer's HubSpot company (confident mapping / resolved review / create-new), persists the mapping, and upserts the primary contact — all without lifecycle. Customers whose review was skipped are left untouched.
 func (s *service) executeCustomerCompany(ctx context.Context, client domain.HubspotClient, accountID string, customer *domain.Customer, review *domain.HubspotCompanyReview) *apierror.APIError {
-	mapping, apiErr := s.repos.NewHubspotSyncRepo().GetRecord(ctx, accountID, augnoTypeCustomer, customer.ID)
+	mapping, apiErr := s.repos.NewHubspotSyncRepo().GetRecord(ctx, accountID, openMRPTypeCustomer, customer.ID)
 	if apiErr != nil {
 		return apiErr
 	}
@@ -158,7 +158,7 @@ func (s *service) executeCustomerCompany(ctx context.Context, client domain.Hubs
 			return apierror.NewInternalError(nil, "Resolved company review is missing the linked HubSpot company id.")
 		}
 		companyID = *review.ResolvedHubspotID
-		if apiErr := s.storeMapping(ctx, accountID, augnoTypeCustomer, customer.ID, objectTypeCompanies, companyID); apiErr != nil {
+		if apiErr := s.storeMapping(ctx, accountID, openMRPTypeCustomer, customer.ID, objectTypeCompanies, companyID); apiErr != nil {
 			return apiErr
 		}
 	default:
@@ -181,7 +181,7 @@ func (s *service) createCompanyNoLifecycle(ctx context.Context, client domain.Hu
 	if apiErr != nil {
 		return "", apiErr
 	}
-	if apiErr := s.storeMapping(ctx, accountID, augnoTypeCustomer, customer.ID, objectTypeCompanies, created.ID); apiErr != nil {
+	if apiErr := s.storeMapping(ctx, accountID, openMRPTypeCustomer, customer.ID, objectTypeCompanies, created.ID); apiErr != nil {
 		return "", apiErr
 	}
 	return created.ID, nil
@@ -199,7 +199,7 @@ func (s *service) executeDealsPass(ctx context.Context, client domain.HubspotCli
 			return apiErr
 		}
 		for _, order := range page.SalesOrders {
-			mapping, apiErr := syncRepo.GetRecord(ctx, accountID, augnoTypeCustomer, order.BuyerAccountID)
+			mapping, apiErr := syncRepo.GetRecord(ctx, accountID, openMRPTypeCustomer, order.BuyerAccountID)
 			if apiErr != nil {
 				return apiErr
 			}

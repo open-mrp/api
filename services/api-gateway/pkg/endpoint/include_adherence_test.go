@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/constants"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 // resourceRegistry maps each ObjectType that has an include registration to a

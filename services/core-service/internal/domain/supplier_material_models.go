@@ -3,7 +3,7 @@ package domain
 import (
 	"time"
 
-	"github.com/augno/api/shared/pagination"
+	"github.com/open-mrp/api/shared/pagination"
 )
 
 // SupplierMaterial represents a link between a supplier and a material.

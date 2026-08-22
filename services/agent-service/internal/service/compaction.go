@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/augno/api/services/agent-service/internal/llm"
-	"github.com/augno/api/shared/constants"
+	"github.com/open-mrp/api/services/agent-service/internal/llm"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 const (

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/augno/api/shared/crypto"
+	"github.com/open-mrp/api/shared/crypto"
 )
 
 var cursorKey []byte

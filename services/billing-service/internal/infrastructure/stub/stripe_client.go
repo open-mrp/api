@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/augno/api/services/billing-service/internal/domain"
+	"github.com/open-mrp/api/services/billing-service/internal/domain"
 )
 
 // StripeClient is a no-op StripeClient implementation for use in test mode.

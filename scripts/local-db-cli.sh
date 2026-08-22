@@ -22,7 +22,7 @@ if [ -f ".env" ]; then
     done < .env
 fi
 
-DB_URL="${DB_URL:-mysql://root:Testing123!@localhost:3306/augno}"
+DB_URL="${DB_URL:-mysql://root:Testing123!@localhost:3306/openmrp}"
 
 if echo "$DB_URL" | grep -qiE 'psdb\.cloud|planetscale|pscale'; then
     error "Refusing to connect: DB_URL points to PlanetScale. Run 'make local-db' first."

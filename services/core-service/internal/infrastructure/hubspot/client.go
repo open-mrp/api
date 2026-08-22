@@ -14,9 +14,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/augno/api/services/core-service/internal/domain"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/tracing"
 
 	"go.opentelemetry.io/otel/trace"
 )
@@ -24,7 +24,7 @@ import (
 const (
 	hubspotBaseURL = "https://api.hubapi.com"
 
-	// dealSalesOrderProperty is the custom HubSpot deal property that stores the Augno order id for idempotent upserts.
+	// dealSalesOrderProperty is the custom HubSpot deal property that stores the OpenMRP order id for idempotent upserts.
 	dealSalesOrderProperty = "augno_sales_order_id"
 
 	// maxRetries bounds retries on rate-limit (429) and server (5xx) responses. The inbox consumer provides the outer retry loop.
@@ -153,7 +153,7 @@ func (c *clientImpl) EnsureDealProperties(ctx context.Context) *apierror.APIErro
 
 	def := propertyDefinition{
 		Name:           dealSalesOrderProperty,
-		Label:          "Augno Sales Order ID",
+		Label:          "OpenMRP Sales Order ID",
 		Type:           "string",
 		FieldType:      "text",
 		GroupName:      "dealinformation",

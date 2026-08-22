@@ -4,8 +4,8 @@ import (
 	"context"
 	"strings"
 
-	"github.com/augno/api/services/core-service/internal/domain"
-	apierror "github.com/augno/api/shared/errors"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // AddressValidationSvc is a stub AddressValidationSvc implementation for use in test mode. It returns realistic canned responses so that e2e tests can exercise the full address validation flow without an external Google Maps API key.

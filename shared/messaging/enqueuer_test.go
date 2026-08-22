@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/contracts"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/contracts"
 )
 
 // mockEnqueuerRepo serves scripted batches of outbox messages and records the

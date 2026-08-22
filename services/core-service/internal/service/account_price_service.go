@@ -5,15 +5,15 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/audit"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/id"
-	"github.com/augno/api/shared/idempotency"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/audit"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var accountPriceSvcTracer = tracing.GetTracer("core-service.account_price_service")
@@ -109,7 +109,7 @@ func (s *accountPriceSvcImpl) withTx(ctx context.Context, fn func(context.Contex
 // 1. Extract and validate the caller's identity via CheckIsAssignedActor.
 // 2. For internal actors, require discounts:read permission.
 // 3. For customer actors, force the recipient account ID filter to their own account.
-// 4. Require the Augno-Account header to scope the query.
+// 4. Require the OpenMRP-Account header to scope the query.
 // 5. Query the account price repository with the account ID and pagination params.
 func (s *accountPriceSvcImpl) ListAccountPrices(ctx context.Context, params domain.ListAccountPricesParams) (*domain.ListAccountPricesResult, *apierror.APIError) {
 	ctx, span := accountPriceSvcTracer.Start(ctx, "service.account_price.list")
@@ -128,7 +128,7 @@ func (s *accountPriceSvcImpl) ListAccountPrices(ctx context.Context, params doma
 	}
 
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	if identity.IsExternalTarget() {
@@ -168,7 +168,7 @@ func (s *accountPriceSvcImpl) ListAccountPrices(ctx context.Context, params doma
 //
 // 1. Extract and validate the caller's identity via CheckIsAssignedActor.
 // 2. For internal actors, require discounts:read permission.
-// 3. Require the Augno-Account header.
+// 3. Require the OpenMRP-Account header.
 // 4. Fetch the account price from the repository.
 // 5. For customer actors, verify the price's recipient is their own account or its parent.
 func (s *accountPriceSvcImpl) GetAccountPrice(ctx context.Context, accountPriceID string) (*domain.AccountPrice, *apierror.APIError) {
@@ -188,7 +188,7 @@ func (s *accountPriceSvcImpl) GetAccountPrice(ctx context.Context, accountPriceI
 	}
 
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	if identity.IsExternalTarget() {
@@ -391,7 +391,7 @@ func (s *accountPriceSvcImpl) UpdateAccountPrice(ctx context.Context, params dom
 // DeleteAccountPrice deletes an account price and cascades to associations and rate.
 //
 // 1. Extract and validate the caller's identity, actor type (internal), and discounts:delete permission.
-// 2. Require the Augno-Account header.
+// 2. Require the OpenMRP-Account header.
 // 3. Within a transaction, delete the account price from the repository.
 func (s *accountPriceSvcImpl) DeleteAccountPrice(ctx context.Context, accountPriceID string) *apierror.APIError {
 	ctx, span := accountPriceSvcTracer.Start(ctx, "service.account_price.delete")

@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/augno/api/services/platform-service/internal/infrastructure/sqlc"
-	"github.com/augno/api/shared/lease"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/platform-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/lease"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var leaseRepoTracer = tracing.GetTracer("platform-service.lease_repository")

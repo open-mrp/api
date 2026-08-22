@@ -1,4 +1,4 @@
-// Package forecast holds Augno's standard monthly demand forecaster.
+// Package forecast holds OpenMRP's standard monthly demand forecaster.
 //
 // Seasonal EMA is used by both the analytics demand-forecast endpoint and the production scheduler, so it lives here rather than in either caller. It mirrors dashboard/packages/utils/src/seasonal-ema.ts; the two must stay in step or the schedule and the dashboard will disagree about the same demand.
 //

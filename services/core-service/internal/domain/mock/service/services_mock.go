@@ -15,10 +15,10 @@ import (
 	reflect "reflect"
 	time "time"
 
-	domain "github.com/augno/api/services/core-service/internal/domain"
-	scheduling "github.com/augno/api/services/core-service/internal/scheduling"
-	constants "github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
+	domain "github.com/open-mrp/api/services/core-service/internal/domain"
+	scheduling "github.com/open-mrp/api/services/core-service/internal/scheduling"
+	constants "github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
 	gomock "go.uber.org/mock/gomock"
 )
 

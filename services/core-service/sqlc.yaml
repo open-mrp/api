@@ -16,7 +16,7 @@ sql:
               pointer: true
           - column: "message_outbox.headers"
             go_type:
-              import: "github.com/augno/api/shared/db"
+              import: "github.com/open-mrp/api/shared/db"
               type: "NullableRawMessage"
           # job.results, job.error and job.errors are nullable json: they are empty
           # until the job settles. json.RawMessage cannot scan NULL — database/sql
@@ -24,30 +24,30 @@ sql:
           # job would fail to read back.
           - column: "job.results"
             go_type:
-              import: "github.com/augno/api/shared/db"
+              import: "github.com/open-mrp/api/shared/db"
               type: "NullableRawMessage"
           - column: "job.error"
             go_type:
-              import: "github.com/augno/api/shared/db"
+              import: "github.com/open-mrp/api/shared/db"
               type: "NullableRawMessage"
           - column: "job.errors"
             go_type:
-              import: "github.com/augno/api/shared/db"
+              import: "github.com/open-mrp/api/shared/db"
               type: "NullableRawMessage"
           - column: "hubspot_sync_job.cursors"
             go_type:
-              import: "github.com/augno/api/shared/db"
+              import: "github.com/open-mrp/api/shared/db"
               type: "NullableRawMessage"
           - column: "hubspot_sync_job.counts"
             go_type:
-              import: "github.com/augno/api/shared/db"
+              import: "github.com/open-mrp/api/shared/db"
               type: "NullableRawMessage"
           - column: "hubspot_company_review.candidate_matches"
             go_type:
-              import: "github.com/augno/api/shared/db"
+              import: "github.com/open-mrp/api/shared/db"
               type: "NullableRawMessage"
           - column: "portal_domain.dns_records"
             go_type:
-              import: "github.com/augno/api/shared/db"
+              import: "github.com/open-mrp/api/shared/db"
               type: "NullableRawMessage"
 

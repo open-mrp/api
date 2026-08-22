@@ -3,8 +3,8 @@ package event
 import (
 	"context"
 
-	"github.com/augno/api/shared/messaging"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/shared/messaging"
+	"github.com/open-mrp/api/shared/tracing"
 
 	"go.opentelemetry.io/otel/trace"
 )

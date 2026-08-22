@@ -4,14 +4,14 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/augno/api/services/api-gateway/internal/domain"
-	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
-	agentpb "github.com/augno/api/shared/proto/agent"
-	"github.com/augno/api/shared/timeutil"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/api-gateway/internal/domain"
+	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
+	agentpb "github.com/open-mrp/api/shared/proto/agent"
+	"github.com/open-mrp/api/shared/timeutil"
+	"github.com/open-mrp/api/shared/tracing"
 	"google.golang.org/grpc"
 )
 

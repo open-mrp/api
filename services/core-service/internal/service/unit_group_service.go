@@ -4,15 +4,15 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/shared/appctx"
-	"github.com/augno/api/shared/audit"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/id"
-	"github.com/augno/api/shared/idempotency"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/audit"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 var unitGroupSvcTracer = tracing.GetTracer("core-service.unit_group_service")
@@ -101,7 +101,7 @@ func (s *unitGroupSvcImpl) ListUnitGroups(ctx context.Context, params domain.Lis
 	}
 
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	if identity.IsInternalActor() {
@@ -138,7 +138,7 @@ func (s *unitGroupSvcImpl) GetUnitGroup(ctx context.Context, params domain.GetUn
 	}
 
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	if identity.IsInternalActor() {
@@ -766,7 +766,7 @@ func (s *unitGroupSvcImpl) ListUnitGroupUnits(ctx context.Context, unitGroupID s
 	}
 
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	if identity.IsInternalActor() {
@@ -810,7 +810,7 @@ func (s *unitGroupSvcImpl) GetUnitGroupUnit(ctx context.Context, params domain.G
 	}
 
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 
 	if identity.IsInternalActor() {
@@ -868,7 +868,7 @@ func (s *unitGroupSvcImpl) BatchGetUnitGroupsByIDs(ctx context.Context, ids []st
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 	if identity.IsInternalActor() {
 		if apiErr := identity.CheckHasPermission(types.PermissionDomainUnitGroups, types.ActionRead); apiErr != nil {
@@ -901,7 +901,7 @@ func (s *unitGroupSvcImpl) BatchGetUnitGroupUnitsByIDs(ctx context.Context, ids 
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
 	}
 	if identity.IsInternalActor() {
 		if apiErr := identity.CheckHasPermission(types.PermissionDomainUnitGroups, types.ActionRead); apiErr != nil {

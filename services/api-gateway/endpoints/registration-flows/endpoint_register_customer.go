@@ -4,12 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/field"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/field"
 )
 
 // Request to register a new or existing customer.

@@ -3,9 +3,9 @@ package apiresource
 import (
 	"time"
 
-	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/timeutil"
+	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/timeutil"
 )
 
 const SampleCustomerID = "ac_opnlh43ymyee"
@@ -32,7 +32,7 @@ type Customer struct {
 	// - `hold_shipment`: the customer's shipments should be held, typically over a credit problem, while orders can still be placed.
 	// - `hold_all`: all activity for the customer should be held.
 	//
-	// The hold statuses are advisory: Augno flags the customer's orders as being on credit hold, but requests to create orders or shipments for the customer are not rejected.
+	// The hold statuses are advisory: OpenMRP flags the customer's orders as being on credit hold, but requests to create orders or shipments for the customer are not rejected.
 	Status constants.AccountStatusCode `json:"status" validate:"required"`
 	// Whether EDI (Electronic Data Interchange) is enabled for exchanging orders and documents with this customer.
 	EDIStatus constants.EDIStatus `json:"edi_status" validate:"required"`

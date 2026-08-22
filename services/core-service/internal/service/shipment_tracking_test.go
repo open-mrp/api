@@ -5,10 +5,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/augno/api/services/core-service/internal/domain"
-	clientmock "github.com/augno/api/services/core-service/internal/domain/mock/client"
-	factorymock "github.com/augno/api/services/core-service/internal/domain/mock/factory"
-	repositorymock "github.com/augno/api/services/core-service/internal/domain/mock/repository"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	clientmock "github.com/open-mrp/api/services/core-service/internal/domain/mock/client"
+	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
+	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

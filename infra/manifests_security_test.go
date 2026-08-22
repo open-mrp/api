@@ -15,7 +15,7 @@ import (
 
 const internalPort = 8091
 
-// environments under test. Production manifests live in the private augno/infra repo and are
+// environments under test. Production manifests live in the private open-mrp/infra repo and are
 // covered by the sibling copy of this test there; both sets must satisfy the same invariants.
 var environments = []string{"development"}
 

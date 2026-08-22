@@ -6,7 +6,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/augno/api/services/agent-service/internal/domain"
+	"github.com/open-mrp/api/services/agent-service/internal/domain"
 )
 
 // pathGateway answers GETs from a canned body per path, so a test can supply (or withhold) the target

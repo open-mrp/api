@@ -1,6 +1,6 @@
 package domain
 
-import "github.com/augno/api/shared/messaging"
+import "github.com/open-mrp/api/shared/messaging"
 
 // RepoFactory constructs repository implementations for a single database session (typically *sqlc.Queries).
 type RepoFactory interface {

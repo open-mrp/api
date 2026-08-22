@@ -1,4 +1,4 @@
-// Package hubspotsync orchestrates pushing Augno sales orders to HubSpot as Closed-Won deals, upserting the associated company and contact along the way.
+// Package hubspotsync orchestrates pushing OpenMRP sales orders to HubSpot as Closed-Won deals, upserting the associated company and contact along the way.
 //
 // It is the single source of truth for the HubSpot mapping and is designed to be shared by both the incremental order-created consumer (this step) and the account backfill worker (a later step). Each operation is idempotent on replay: deals are keyed on the augno_sales_order_id property, contacts dedupe on email, and companies are matched by domain/name before creation.
 package hubspotsync
@@ -9,12 +9,12 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/crypto"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/ptrutil"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/crypto"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/ptrutil"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 const (
@@ -68,7 +68,7 @@ func (c *Config) validate() error {
 	return nil
 }
 
-// Service syncs Augno sales orders to a connected HubSpot account.
+// Service syncs OpenMRP sales orders to a connected HubSpot account.
 type Service interface {
 	// SyncOrder upserts the order's company + contact and creates/moves its deal to Closed-Won. It is a no-op (returns nil) when the account has no active HubSpot integration.
 	SyncOrder(ctx context.Context, accountID, salesOrderID string) *apierror.APIError
@@ -206,7 +206,7 @@ func (s *service) clientForAccount(ctx context.Context, accountID string) (domai
 
 // syncCompany resolves the customer's HubSpot company id, matching or creating it on first sync and reusing the stored mapping thereafter. When promoteLifecycle is set (an order represents won business) it moves the company to the customer lifecycle stage. The resolved mapping is persisted so later syncs and the backfill share it.
 func (s *service) syncCompany(ctx context.Context, client domain.HubspotClient, accountID string, customer *domain.Customer, promoteLifecycle bool) (string, *apierror.APIError) {
-	mapping, apiErr := s.repos.NewHubspotSyncRepo().GetRecord(ctx, accountID, augnoTypeCustomer, customer.ID)
+	mapping, apiErr := s.repos.NewHubspotSyncRepo().GetRecord(ctx, accountID, openMRPTypeCustomer, customer.ID)
 	if apiErr != nil {
 		return "", apiErr
 	}
@@ -252,7 +252,7 @@ func (s *service) syncCompany(ctx context.Context, client domain.HubspotClient, 
 		companyID = created.ID
 	}
 
-	if apiErr := s.storeMapping(ctx, accountID, augnoTypeCustomer, customer.ID, objectTypeCompanies, companyID); apiErr != nil {
+	if apiErr := s.storeMapping(ctx, accountID, openMRPTypeCustomer, customer.ID, objectTypeCompanies, companyID); apiErr != nil {
 		return "", apiErr
 	}
 	return companyID, nil
@@ -291,13 +291,13 @@ func (s *service) upsertContact(ctx context.Context, client domain.HubspotClient
 			return "", apiErr
 		}
 	}
-	if apiErr := s.storeMapping(ctx, accountID, augnoTypeContact, customerID, objectTypeContacts, contact.ID); apiErr != nil {
+	if apiErr := s.storeMapping(ctx, accountID, openMRPTypeContact, customerID, objectTypeContacts, contact.ID); apiErr != nil {
 		return "", apiErr
 	}
 	return contact.ID, nil
 }
 
-// storeMapping persists an Augno→HubSpot id mapping (idempotent upsert).
+// storeMapping persists an OpenMRP→HubSpot id mapping (idempotent upsert).
 func (s *service) storeMapping(ctx context.Context, accountID, augnoType, augnoID, hubspotType, hubspotID string) *apierror.APIError {
 	return s.repos.NewHubspotSyncRepo().UpsertRecord(ctx, domain.UpsertHubspotSyncRecordParams{
 		AccountID:   accountID,

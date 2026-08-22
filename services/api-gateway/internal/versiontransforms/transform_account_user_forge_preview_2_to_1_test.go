@@ -3,8 +3,8 @@ package versiontransforms
 import (
 	"testing"
 
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/version"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/version"
 )
 
 func accountUserPreview2Payload() map[string]any {

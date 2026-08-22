@@ -3,7 +3,7 @@ package types
 import (
 	"time"
 
-	pb "github.com/augno/api/shared/proto/auth"
+	pb "github.com/open-mrp/api/shared/proto/auth"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
 )

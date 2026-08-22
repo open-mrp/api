@@ -1,13 +1,13 @@
 edition: "2026-02-23"
 organization:
-  name: augno
+  name: openmrp
   contact: support@augno.com
 targets:
   typescript:
     edition: typescript.2025-10-10
-    package_name: "@augno/internal-sdk"
-    staging_repo: augno/internal-sdk
-    production_repo: augno/internal-sdk
+    package_name: "@openmrp/internal-sdk"
+    staging_repo: open-mrp/internal-sdk
+    production_repo: open-mrp/internal-sdk
     publish:
       # Publish to GitHub Packages (npm.pkg.github.com), not public npmjs — the
       # object form selects the registry (`npm: true` shorthand means npmjs).
@@ -27,13 +27,13 @@ environments:
   production: https://api.augno.com
   local: http://localhost:8081
 client_settings:
-  # The API requires an Augno-Version header on every request. The self-hosted
+  # The API requires an OpenMRP-Version header on every request. The self-hosted
   # stlc fork does not honor the upstream `send_openapi_info_version_as_header`
   # key, so we emit it as a default header instead. `version_header: true` marks
   # it as the API-version header; `value` is kept in sync with the spec's
   # info.version by `make stainless` (see tools/apidocs/stainless.go).
   default_headers:
-    Augno-Version:
+    OpenMRP-Version:
       value: "1.0.forge-preview.3"
       version_header: true
   bearer_token_refresh:
@@ -50,16 +50,16 @@ client_settings:
     bearer_token:
       type: string
       nullable: true
-      read_env: AUGNO_API_KEY
+      read_env: OPENMRP_API_KEY
       auth:
         security_scheme: BearerAuth
         role: value
       description: "API key sent as a Bearer token. Omit for cookie-based user sessions (dashboard)."
-    augno_account_id:
+    openmrp_account_id:
       type: string
       nullable: true
-      description: "Current account UUID (Augno-Account). Update when switching accounts."
-      send_in_header: Augno-Account
+      description: "Current account UUID (OpenMRP-Account). Update when switching accounts."
+      send_in_header: OpenMRP-Account
 readme:
   include_stainless_attribution: false
   example_requests:

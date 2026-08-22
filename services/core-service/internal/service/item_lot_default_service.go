@@ -3,12 +3,12 @@ package service
 import (
 	"context"
 
-	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/services/core-service/internal/scheduling"
-	"github.com/augno/api/shared/appctx"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/services/core-service/internal/scheduling"
+	"github.com/open-mrp/api/shared/appctx"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 // maxLotInheritanceDepth bounds the walk from an intermediate item to something sellable. It matches the solver's own max_flow_depth default: past that the item being made and the line it is inherited from have little to do with each other.

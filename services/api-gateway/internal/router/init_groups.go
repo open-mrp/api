@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/augno/api/services/api-gateway/internal/middleware"
-	httpgroup "github.com/augno/api/services/api-gateway/pkg/group"
+	"github.com/open-mrp/api/services/api-gateway/internal/middleware"
+	httpgroup "github.com/open-mrp/api/services/api-gateway/pkg/group"
 )
 
 func (r *router) InitEndpointGroups(config MainRouterConfig) {

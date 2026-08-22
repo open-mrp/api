@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/augno/api/services/auth-service/internal/apikey"
-	"github.com/augno/api/services/auth-service/internal/domain"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/id"
-	tracing "github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/auth-service/internal/apikey"
+	"github.com/open-mrp/api/services/auth-service/internal/domain"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/id"
+	tracing "github.com/open-mrp/api/shared/tracing"
 )
 
 var apiKeyMedTracer = tracing.GetTracer("auth-service.api_key_mediator")

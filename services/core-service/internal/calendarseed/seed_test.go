@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/augno/api/services/core-service/internal/scheduling"
-	"github.com/augno/api/shared/constants"
+	"github.com/open-mrp/api/services/core-service/internal/scheduling"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 // Both seeded calendars must reproduce the pre-calendar behaviour exactly. A newly seeded account should see its holidays respected and nothing else change.

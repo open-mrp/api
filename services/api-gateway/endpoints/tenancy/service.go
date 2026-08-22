@@ -6,14 +6,14 @@ import (
 
 	"maps"
 
-	"github.com/augno/api/services/api-gateway/internal/domain"
-	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
-	httptransport "github.com/augno/api/services/api-gateway/internal/http"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
-	pb "github.com/augno/api/shared/proto/core"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/api-gateway/internal/domain"
+	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
+	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
+	pb "github.com/open-mrp/api/shared/proto/core"
+	"github.com/open-mrp/api/shared/tracing"
 	"google.golang.org/grpc"
 )
 
@@ -57,7 +57,7 @@ func (m *tenancySvcImpl) GetTenancy(ctx context.Context, req *GetTenancyRequest)
 
 	// Tenancy is account-agnostic: it is how a freshly authenticated user
 	// discovers which accounts they can access, so it is called before any
-	// account is selected (no Augno-Account header) and the identity has no
+	// account is selected (no OpenMRP-Account header) and the identity has no
 	// actor account yet. Require an authenticated user but NOT an assigned
 	// account - CheckIsUser would 403 here because IsActorSet demands an actor
 	// account. Without any guard an unauthenticated request would send an empty
@@ -118,7 +118,7 @@ func (m *tenancySvcImpl) GetCurrentUser(ctx context.Context, req *GetCurrentUser
 	}
 
 	// /me is account-agnostic: it is called before an account is selected
-	// (no Augno-Account header), so the identity may have no actor account.
+	// (no OpenMRP-Account header), so the identity may have no actor account.
 	// CheckIsUser would 403 there; require an authenticated user actor only.
 	if apiErr := identity.CheckHasUserActor(); apiErr != nil {
 		return nil, apiErr

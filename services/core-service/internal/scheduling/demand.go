@@ -5,8 +5,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/augno/api/services/core-service/internal/forecast"
-	"github.com/augno/api/shared/constants"
+	"github.com/open-mrp/api/services/core-service/internal/forecast"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 // Demand basis codes, aliased from the shared enum so the engine cannot drift from the API contract.

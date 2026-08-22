@@ -1,6 +1,6 @@
 package agents
 
-import "github.com/augno/api/shared/constants"
+import "github.com/open-mrp/api/shared/constants"
 
 // This catalog declares the built-in agent tools entirely in code, mirroring the generated endpoint-tool catalog (EndpointTools). Built-in tools used to live as migration-seeded tool_definition/tool_group rows; they are now code-only, so adding, removing, or editing one is a pure code change with no database migration. The runtime handlers for these slugs are registered in register.go; an agent is granted a built-in tool by a slug entry in its agent_definition_tool links.
 
@@ -42,7 +42,7 @@ var BuiltinTools = []BuiltinToolDescriptor{
 	{
 		Slug:        constants.ToolReadDoc,
 		DisplayName: "Read Doc",
-		Description: "Read the content of an Augno documentation page. " +
+		Description: "Read the content of an OpenMRP documentation page. " +
 			"To find the right page, first fetch https://docs.augno.com/llms.txt which lists all available pages with descriptions. " +
 			"Then call this tool again with the URL of the page you want to read.",
 		InputSchema: `{"type":"object","properties":{"url":{"type":"string","description":"The full URL of the documentation page to read (must be from docs.augno.com). Start with https://docs.augno.com/llms.txt to discover available pages."}},"required":["url"]}`,

@@ -5,14 +5,14 @@ import (
 	gosql "database/sql"
 	"time"
 
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/augno/api/services/core-service/internal/scheduling"
-	"github.com/augno/api/shared/db"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/id"
-	"github.com/augno/api/shared/safeconv"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/services/core-service/internal/scheduling"
+	"github.com/open-mrp/api/shared/db"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/safeconv"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 // defaultSettings returns the settings an account gets before it saves any, taken from the solver's own defaults so the API can never advertise assumptions the solver would not actually apply.

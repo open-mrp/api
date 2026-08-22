@@ -21,7 +21,7 @@ func TestPrepareQueriesSmoke(t *testing.T) {
 	t.Parallel()
 	dsn := os.Getenv("SQL_PREPARE_TEST_DSN")
 	if dsn == "" {
-		dsn = "root:Testing123!@tcp(localhost:3306)/augno?parseTime=true"
+		dsn = "root:Testing123!@tcp(localhost:3306)/openmrp?parseTime=true"
 	}
 
 	db, err := sql.Open("mysql", dsn)

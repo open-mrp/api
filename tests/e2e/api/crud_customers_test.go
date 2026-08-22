@@ -112,9 +112,9 @@ func TestCustomers_CreateWithAllFields(t *testing.T) {
 	createResp, err := apiClient.PostFull(customersPath, map[string]any{
 		"name":                     name,
 		"note":                     "Test customer note",
-		"email":                    name + "@e2e-test.augno.com",
+		"email":                    name + "@e2e-test.openmrp.ai",
 		"phone":                    "555-000-1234",
-		"url":                      "https://e2e.augno.com",
+		"url":                      "https://e2e.openmrp.ai",
 		"status":                   "normal",
 		"edi_status":               "enabled",
 		"commission_policy":        "commission_exempt",
@@ -174,9 +174,9 @@ func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 		map[string]any{
 			"name":                     name,
 			"note":                     "Create note",
-			"email":                    name + "@e2e-test.augno.com",
+			"email":                    name + "@e2e-test.openmrp.ai",
 			"phone":                    "555-000-1234",
-			"url":                      "https://create.e2e.augno.com",
+			"url":                      "https://create.e2e.openmrp.ai",
 			"status":                   "normal",
 			"edi_status":               "enabled",
 			"commission_policy":        "commission_exempt",
@@ -229,9 +229,9 @@ func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 	contactInfo := jsonObject(got, "contact_info")
 	require.NotNil(t, contactInfo, "contact_info should be expanded")
 	assert.Equal(t, "customer_contact_info", jsonField(contactInfo, "object"))
-	assert.Equal(t, name+"@e2e-test.augno.com", jsonField(contactInfo, "email"))
+	assert.Equal(t, name+"@e2e-test.openmrp.ai", jsonField(contactInfo, "email"))
 	assert.Equal(t, "555-000-1234", jsonField(contactInfo, "phone"))
-	assert.Equal(t, "https://create.e2e.augno.com", jsonField(contactInfo, "url"))
+	assert.Equal(t, "https://create.e2e.openmrp.ai", jsonField(contactInfo, "url"))
 
 	// defaults — payment_term (this catches the known bug)
 	defaults := jsonObject(got, "defaults")
@@ -304,9 +304,9 @@ func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 		map[string]any{
 			"name":                    updatedName,
 			"note":                    "Updated note",
-			"email":                   updatedName + "@e2e-test.augno.com",
+			"email":                   updatedName + "@e2e-test.openmrp.ai",
 			"phone":                   "555-999-8888",
-			"url":                     "https://update.e2e.augno.com",
+			"url":                     "https://update.e2e.openmrp.ai",
 			"edi_status":              "disabled",
 			"commission_policy":       "commission_applied",
 			"freight_policy":          "billed_freight",
@@ -343,9 +343,9 @@ func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 	// Updated contact_info
 	updContactInfo := jsonObject(updated, "contact_info")
 	require.NotNil(t, updContactInfo)
-	assert.Equal(t, updatedName+"@e2e-test.augno.com", jsonField(updContactInfo, "email"))
+	assert.Equal(t, updatedName+"@e2e-test.openmrp.ai", jsonField(updContactInfo, "email"))
 	assert.Equal(t, "555-999-8888", jsonField(updContactInfo, "phone"))
-	assert.Equal(t, "https://update.e2e.augno.com", jsonField(updContactInfo, "url"))
+	assert.Equal(t, "https://update.e2e.openmrp.ai", jsonField(updContactInfo, "url"))
 
 	// Updated defaults — payment_term changed
 	updDefaults := jsonObject(updated, "defaults")
@@ -991,7 +991,7 @@ func TestCustomers_IncludeMultipleWithNested(t *testing.T) {
 func TestCustomers_CreateWithInclude(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-cust-inc-create")
-	email := name + "@e2e-test.augno.com"
+	email := name + "@e2e-test.openmrp.ai"
 	payload := validCustomerBody(name)
 	payload["email"] = email
 	payload["phone"] = "555-111-2222"
@@ -1018,13 +1018,13 @@ func TestCustomers_UpdateWithInclude(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-cust-inc-upd")
 	createPayload := validCustomerBody(name)
-	createPayload["email"] = name + "@e2e-test.augno.com"
+	createPayload["email"] = name + "@e2e-test.openmrp.ai"
 	createStatus, createBody, err := apiClient.Post(customersPath, createPayload, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
 
-	newEmail := uniqueName("e2e-cust-upd") + "@e2e-test.augno.com"
+	newEmail := uniqueName("e2e-cust-upd") + "@e2e-test.openmrp.ai"
 	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+id+"?include=contact_info", map[string]any{
 		"email": newEmail,
 	}, newIdempotencyKey())
@@ -1123,9 +1123,9 @@ func TestCustomers_OmittedFields(t *testing.T) {
 		name := uniqueName("e2e-cust-pres")
 		createPayload := validCustomerBody(name)
 		createPayload["note"] = "Original note"
-		createPayload["email"] = name + "@e2e-test.augno.com"
+		createPayload["email"] = name + "@e2e-test.openmrp.ai"
 		createPayload["phone"] = "555-000-1234"
-		createPayload["url"] = "https://original.e2e.augno.com"
+		createPayload["url"] = "https://original.e2e.openmrp.ai"
 		createPayload["edi_status"] = "enabled"
 		createPayload["commission_policy"] = "commission_exempt"
 		createPayload["freight_policy"] = "free_freight"
@@ -1176,9 +1176,9 @@ func TestCustomers_OmittedFields(t *testing.T) {
 		// Preserved contact_info
 		ci := jsonObject(got, "contact_info")
 		require.NotNil(t, ci)
-		assert.Equal(t, name+"@e2e-test.augno.com", jsonField(ci, "email"), "email should be preserved")
+		assert.Equal(t, name+"@e2e-test.openmrp.ai", jsonField(ci, "email"), "email should be preserved")
 		assert.Equal(t, "555-000-1234", jsonField(ci, "phone"), "phone should be preserved")
-		assert.Equal(t, "https://original.e2e.augno.com", jsonField(ci, "url"), "url should be preserved")
+		assert.Equal(t, "https://original.e2e.openmrp.ai", jsonField(ci, "url"), "url should be preserved")
 
 		// Preserved defaults
 		defaults := jsonObject(got, "defaults")

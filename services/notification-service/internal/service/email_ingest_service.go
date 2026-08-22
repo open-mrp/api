@@ -8,11 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/augno/api/services/notification-service/internal/domain"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/id"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/notification-service/internal/domain"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 // messageExternalSender is stashed on an inbound email message's metadata so the read, chat-history, and
@@ -220,7 +220,7 @@ func (s *conversationSvcImpl) IngestInboundEmail(ctx context.Context, in domain.
 }
 
 // resolveInbox finds the inbox an inbound mail belongs to by trying each candidate recipient in order.
-// A candidate on the Augno receiving subdomain is a per-inbox forwarding address whose local part is the
+// A candidate on the OpenMRP receiving subdomain is a per-inbox forwarding address whose local part is the
 // inbox id (resolved by id, no account scope); any other candidate is matched directly as an inbox
 // address. The first candidate that resolves to a known inbox wins. A nil inbox with nil error means no
 // candidate matched — the caller drops (acks) the mail. This tolerates forwarding, where the original

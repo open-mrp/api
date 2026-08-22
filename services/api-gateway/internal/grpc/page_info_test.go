@@ -8,9 +8,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/appctx"
+	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/shared/appctx"
 )
 
 // mockProtoPageInfo is a test implementation of ProtoPageInfo.

@@ -134,9 +134,9 @@ message Credential {
   // Bearer token from Authorization header. May be a JWT or API key;
   // the auth-service determines the type by inspecting the format.
   string token = 1;
-  // From the Augno-Account header. When absent, the user's default account is used.
+  // From the OpenMRP-Account header. When absent, the user's default account is used.
   optional string target_account_id = 2;
-  // From the Augno-Actor-Account header. When present, the identity is resolved
+  // From the OpenMRP-Actor-Account header. When present, the identity is resolved
   // against this account instead of the target account.
   optional string actor_account_id = 3;
 }

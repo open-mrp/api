@@ -4,13 +4,13 @@ import (
 	"context"
 	"strconv"
 
-	itemep "github.com/augno/api/services/api-gateway/endpoints/items"
-	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/id"
-	pb "github.com/augno/api/shared/proto/core"
+	itemep "github.com/open-mrp/api/services/api-gateway/endpoints/items"
+	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/id"
+	pb "github.com/open-mrp/api/shared/proto/core"
 )
 
 func ListInventoriesPresenter(ctx context.Context, resp *pb.ListInventoriesResponse) *apiresource.List[apiresource.InventoryItem] {

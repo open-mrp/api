@@ -505,9 +505,9 @@ type Credential struct {
 	// Bearer token from Authorization header. May be a JWT or API key;
 	// the auth-service determines the type by inspecting the format.
 	Token string `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
-	// From the Augno-Account header. When absent, the user's default account is used.
+	// From the OpenMRP-Account header. When absent, the user's default account is used.
 	TargetAccountId *string `protobuf:"bytes,2,opt,name=target_account_id,json=targetAccountId,proto3,oneof" json:"target_account_id,omitempty"`
-	// From the Augno-Actor-Account header. When present, the identity is resolved
+	// From the OpenMRP-Actor-Account header. When present, the identity is resolved
 	// against this account instead of the target account.
 	ActorAccountId *string `protobuf:"bytes,3,opt,name=actor_account_id,json=actorAccountId,proto3,oneof" json:"actor_account_id,omitempty"`
 	unknownFields  protoimpl.UnknownFields

@@ -9,10 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/augno/api/shared/appctx"
-	s3 "github.com/augno/api/shared/cloud/s3"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/lease"
+	"github.com/open-mrp/api/shared/appctx"
+	s3 "github.com/open-mrp/api/shared/cloud/s3"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/lease"
 )
 
 // AttachmentPurgeRef identifies an attachment row whose backing object must be removed before the row is deleted.

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"net/url"
 
-	"github.com/augno/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 )
 
 // GatewayRequest is a single HTTP call into the api-gateway's internal listener, made on behalf of an agent identity. The Path is already resolved (path params substituted); Query and Body carry the remaining inputs.

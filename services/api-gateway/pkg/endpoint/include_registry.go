@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/augno/api/services/api-gateway/pkg/resourcekit"
-	"github.com/augno/api/shared/constants"
+	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 // IncludeFieldDef defines a single expandable field on a resource type.

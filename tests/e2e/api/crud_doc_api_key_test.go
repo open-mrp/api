@@ -15,7 +15,7 @@ const (
 
 	// accessTokenCookie is the cookie the login endpoint sets with the user
 	// access token (see api-gateway internal/cookie).
-	accessTokenCookie = "__Secure-augno.access-token"
+	accessTokenCookie = "__Secure-openmrp.access-token"
 )
 
 // docAPIKeyResult holds the salient fields of a fetch-doc-api-key response.

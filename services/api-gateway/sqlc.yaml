@@ -11,5 +11,5 @@ sql:
         overrides:
           - column: "message_outbox.headers"
             go_type:
-              import: "github.com/augno/api/shared/db"
+              import: "github.com/open-mrp/api/shared/db"
               type: "NullableRawMessage"

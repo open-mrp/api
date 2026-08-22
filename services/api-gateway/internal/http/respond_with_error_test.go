@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/augno/api/shared/appctx"
-	apierror "github.com/augno/api/shared/errors"
+	"github.com/open-mrp/api/shared/appctx"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 func TestRespondWithAPIError_NilErrorPanics(t *testing.T) {
@@ -161,7 +161,7 @@ func TestRespondWithAPIError_WithRequestLog_InternalError(t *testing.T) {
 
 func TestRespondWithAPIError_RequestLogURL_WithFrontendURL(t *testing.T) {
 	old := frontendURL
-	frontendURL = "https://www.augno.com"
+	frontendURL = "https://www.openmrp.ai"
 	defer func() { frontendURL = old }()
 
 	apiErr := apierror.NewValidationError("Invalid input")
@@ -185,7 +185,7 @@ func TestRespondWithAPIError_RequestLogURL_WithFrontendURL(t *testing.T) {
 	if !ok {
 		t.Fatal("expected request_log_url to be a string")
 	}
-	expected := "https://www.augno.com/dashboard/request-logs/req_abc123"
+	expected := "https://www.openmrp.ai/dashboard/request-logs/req_abc123"
 	if url != expected {
 		t.Fatalf("expected request_log_url %q, got %q", expected, url)
 	}
@@ -220,7 +220,7 @@ func TestRespondWithAPIError_RequestLogURL_WithoutFrontendURL(t *testing.T) {
 
 func TestRespondWithAPIError_RequestLogURL_NoRequestLog(t *testing.T) {
 	old := frontendURL
-	frontendURL = "https://www.augno.com"
+	frontendURL = "https://www.openmrp.ai"
 	defer func() { frontendURL = old }()
 
 	apiErr := apierror.NewValidationError("Invalid input")

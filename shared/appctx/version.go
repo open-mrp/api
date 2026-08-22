@@ -3,7 +3,7 @@ package appctx
 import (
 	"context"
 
-	"github.com/augno/api/shared/version"
+	"github.com/open-mrp/api/shared/version"
 )
 
 const apiVersionKey contextKey = "api_version"

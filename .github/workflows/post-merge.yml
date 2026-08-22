@@ -65,7 +65,7 @@ jobs:
         image: mysql:8
         env:
           MYSQL_ROOT_PASSWORD: "Testing123!"
-          MYSQL_DATABASE: augno
+          MYSQL_DATABASE: openmrp
         ports:
           - 3306:3306
         options: >-
@@ -76,13 +76,13 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_DB: augno_agents
-          POSTGRES_USER: augno
+          POSTGRES_DB: openmrp_agents
+          POSTGRES_USER: openmrp
           POSTGRES_HOST_AUTH_METHOD: trust
         ports:
           - 5432:5432
         options: >-
-          --health-cmd="pg_isready -U augno -d augno_agents"
+          --health-cmd="pg_isready -U openmrp -d openmrp_agents"
           --health-interval=5s
           --health-timeout=5s
           --health-retries=10
@@ -120,20 +120,20 @@ jobs:
       - name: Apply MySQL migrations
         run: |
           GOOSE_DRIVER=mysql \
-          GOOSE_DBSTRING="root:Testing123!@tcp(localhost:3306)/augno?parseTime=true" \
+          GOOSE_DBSTRING="root:Testing123!@tcp(localhost:3306)/openmrp?parseTime=true" \
             goose -dir shared/db/migrations up
 
       - name: Apply PostgreSQL migrations
         run: |
           GOOSE_DRIVER=postgres \
-          GOOSE_DBSTRING="postgres://augno@localhost:5432/augno_agents?sslmode=disable" \
+          GOOSE_DBSTRING="postgres://openmrp@localhost:5432/openmrp_agents?sslmode=disable" \
             goose -dir services/agent-service/db/migrations up
 
       - name: Run SQL Prepare Smoke Tests
         run: make test-sql-prepare-smoke
         env:
-          DB_URL: "root:Testing123!@tcp(localhost:3306)/augno?parseTime=true"
-          AGENT_DB_URL: "postgres://augno@localhost:5432/augno_agents?sslmode=disable"
+          DB_URL: "root:Testing123!@tcp(localhost:3306)/openmrp?parseTime=true"
+          AGENT_DB_URL: "postgres://openmrp@localhost:5432/openmrp_agents?sslmode=disable"
 
   e2e:
     name: E2E
@@ -174,7 +174,7 @@ jobs:
                 --cache-from type=gha,scope=e2e-$svc \
                 --cache-to type=gha,scope=e2e-$svc,mode=max \
                 --load \
-                -t augno-e2e-$svc \
+                -t openmrp-e2e-$svc \
                 -f infra/production/docker/Dockerfile .
               echo "$svc done."
             ) &

@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/augno/api/services/core-service/internal/domain"
-	factorymock "github.com/augno/api/services/core-service/internal/domain/mock/factory"
-	repositorymock "github.com/augno/api/services/core-service/internal/domain/mock/repository"
-	"github.com/augno/api/shared/constants"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
+	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
+	"github.com/open-mrp/api/shared/constants"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"

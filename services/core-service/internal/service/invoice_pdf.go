@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/augno/api/services/core-service/internal/domain"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/ptrutil"
-	"github.com/augno/api/shared/textutil"
+	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/ptrutil"
+	"github.com/open-mrp/api/shared/textutil"
 	"github.com/shopspring/decimal"
 )
 

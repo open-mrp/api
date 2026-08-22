@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	apierror "github.com/augno/api/shared/errors"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // stubBrandingStore implements s3.ObjectStore, recording what a branding lookup asked the bucket for.

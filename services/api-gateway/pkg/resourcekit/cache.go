@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/augno/api/shared/constants"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 // loadCache is a per-request memo of already-loaded resources, keyed by

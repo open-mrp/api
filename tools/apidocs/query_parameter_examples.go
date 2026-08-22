@@ -5,9 +5,9 @@ import (
 	"reflect"
 	"strings"
 
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/contracts"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/contracts"
 )
 
 func queryParameterExample(reqType reflect.Type, field reflect.StructField, paramSchema Schema) any {
@@ -156,7 +156,7 @@ func sampleQueryExampleForOpenAPIName(openAPIParam string) any {
 	case "input":
 		return "1 Ferry Building"
 	case "session_token":
-		return "sess_augno_docs_example"
+		return "sess_openmrp_docs_example"
 	case "idempotency_key":
 		return apiresource.SampleRequestLogID
 	case "city":

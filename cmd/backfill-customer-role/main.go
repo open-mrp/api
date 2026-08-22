@@ -31,9 +31,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/db"
-	"github.com/augno/api/shared/env"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/db"
+	"github.com/open-mrp/api/shared/env"
 )
 
 func main() {

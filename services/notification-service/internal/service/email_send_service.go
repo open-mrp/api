@@ -6,12 +6,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/augno/api/services/notification-service/internal/domain"
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/id"
-	"github.com/augno/api/shared/ptrutil"
-	"github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/notification-service/internal/domain"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/ptrutil"
+	"github.com/open-mrp/api/shared/tracing"
 )
 
 // SendInboxReply sends an agent's outbound email through the conversation's bound inbox and records it in the thread + ledger. Recipient and threading are derived from the latest inbound mail, so the agent cannot redirect the reply to an arbitrary address.
@@ -231,12 +231,12 @@ func fromHeader(inbox *domain.EmailInbox) string {
 	return inbox.Address
 }
 
-// addressDomain returns the domain part of an email address (after the last @), or "augno.com" if absent.
+// addressDomain returns the domain part of an email address (after the last @), or "openmrp.ai" if absent.
 func addressDomain(addr string) string {
 	if i := strings.LastIndex(addr, "@"); i >= 0 && i < len(addr)-1 {
 		return addr[i+1:]
 	}
-	return "augno.com"
+	return "openmrp.ai"
 }
 
 // buildReferences appends the just-replied-to message-id to the prior References chain, de-duplicated.

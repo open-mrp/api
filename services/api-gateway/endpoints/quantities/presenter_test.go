@@ -3,10 +3,10 @@ package quantityep
 import (
 	"testing"
 
-	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/services/api-gateway/pkg/resource/resourcetest"
-	"github.com/augno/api/shared/constants"
-	pb "github.com/augno/api/shared/proto/core"
+	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/api-gateway/pkg/resource/resourcetest"
+	"github.com/open-mrp/api/shared/constants"
+	pb "github.com/open-mrp/api/shared/proto/core"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 

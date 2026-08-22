@@ -7,7 +7,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/augno/api/shared/id"
+	"github.com/open-mrp/api/shared/id"
 )
 
 func main() {

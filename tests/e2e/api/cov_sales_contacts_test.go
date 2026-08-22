@@ -164,7 +164,7 @@ func TestCovSalesContacts_IncludeAccountUserRoleAndDepartment(t *testing.T) {
 	t.Parallel()
 
 	name := uniqueName("e2e-covsc-roledept")
-	email := name + "@e2e-test.augno.com"
+	email := name + "@e2e-test.openmrp.ai"
 
 	status, body, err := apiClient.Post(accountUsersPath, map[string]any{
 		"name":          name,
@@ -271,7 +271,7 @@ func TestCovSalesContacts_ValidationInvalidInclude(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Post(
 		contactsFindByEmailPath+"?include=nonexistent_bogus_field",
-		map[string]any{"email": uniqueName("e2e-covsc-badinclude") + "@e2e-test.augno.com"},
+		map[string]any{"email": uniqueName("e2e-covsc-badinclude") + "@e2e-test.openmrp.ai"},
 		newIdempotencyKey(),
 	)
 	require.NoError(t, err)

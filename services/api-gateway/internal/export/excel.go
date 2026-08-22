@@ -7,7 +7,7 @@ import (
 	"github.com/xuri/excelize/v2"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	pb "github.com/augno/api/shared/proto/core"
+	pb "github.com/open-mrp/api/shared/proto/core"
 )
 
 const (

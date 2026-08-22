@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/augno/api/shared/version"
+	"github.com/open-mrp/api/shared/version"
 	"github.com/stretchr/testify/require"
 )
 
@@ -149,7 +149,7 @@ func assertOperationRequestBody(t *testing.T, ctx string, op map[string]any) {
 	ex := jsonNormalizeExample(rawEx)
 
 	allow := documentedAugnoIDs()
-	walkAugnoLikeStrings(ex, func(id string) {
+	walkOpenMRPLikeStrings(ex, func(id string) {
 		if _, ok := allow[id]; !ok {
 			t.Errorf("%s: request body example contains undocumented id-like string %q", ctx, id)
 		}
@@ -191,7 +191,7 @@ func assertOperationSuccessResponses(t *testing.T, ctx string, op map[string]any
 		ex := jsonNormalizeExample(rawEx)
 
 		allow := documentedAugnoIDs()
-		walkAugnoLikeStrings(ex, func(id string) {
+		walkOpenMRPLikeStrings(ex, func(id string) {
 			if _, ok := allow[id]; !ok {
 				t.Errorf("%s: response example contains undocumented id-like string %q", ctx, id)
 			}
@@ -279,19 +279,19 @@ func lookupPathParameterExample(op map[string]any, param string) (string, bool) 
 	return "", false
 }
 
-func walkAugnoLikeStrings(v any, fn func(string)) {
+func walkOpenMRPLikeStrings(v any, fn func(string)) {
 	switch x := v.(type) {
 	case string:
-		if isAugnoLikeDocID(x) {
+		if isOpenMRPLikeDocID(x) {
 			fn(x)
 		}
 	case map[string]any:
 		for _, vv := range x {
-			walkAugnoLikeStrings(vv, fn)
+			walkOpenMRPLikeStrings(vv, fn)
 		}
 	case []any:
 		for _, vv := range x {
-			walkAugnoLikeStrings(vv, fn)
+			walkOpenMRPLikeStrings(vv, fn)
 		}
 	}
 }

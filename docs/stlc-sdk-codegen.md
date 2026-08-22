@@ -1,4 +1,4 @@
-# STLC codegen for Augno SDKs
+# STLC codegen for OpenMRP SDKs
 
 This reflects your **account migration guide** at repo root [`migration-guide.md`](../../migration-guide.md) and the official **STLC docs** (`stlc-main/packages/stlc/docs/`, especially [`migration-plan.md`](../../stlc-main/packages/stlc/docs/migration-plan.md) and [`codegen.md`](../../stlc-main/packages/stlc/docs/codegen.md)).
 
@@ -9,7 +9,7 @@ This reflects your **account migration guide** at repo root [`migration-guide.md
 | **Config repo** | The git repo where the OpenAPI spec and `stainless/` workspace live—the **API repo** (`api/`), not each SDK checkout. |
 | **Workspace** | A directory tree that contains **`workspace.json`**, **`stainless.yml`**, the spec snapshot, **`custom-code/`**, build manifests (`builds/`), etc. |
 | **Discovery** | Run `stlc` **from somewhere under the config repo**; it walks up until it finds **`stainless/workspace.json`**, unless you pass `--workspace`. |
-| **SDK repos** | `targets.<lang>.staging_repo` / `production_repo` describe **GitHub repos** (`augno/internal-sdk`, `augno/typescript-sdk`). Builds write **into clones** rooted under the workspace’s **`output_path`** (`output_path` + repo name ⇒ e.g. `core/internal-sdk` in our monorepo). |
+| **SDK repos** | `targets.<lang>.staging_repo` / `production_repo` describe **GitHub repos** (`open-mrp/internal-sdk`, `open-mrp/typescript-sdk`). Builds write **into clones** rooted under the workspace’s **`output_path`** (`output_path` + repo name ⇒ e.g. `core/internal-sdk` in our monorepo). |
 | **Day-to-day loop** | `make openapi-stainless` (refresh specs **and** `stainless.yml` configs) → `stlc build [--push]`; CI uses one workflow against the config repo with `STLC_READ_TOKEN` / `SDK_WRITE_TOKEN`. |
 
 **Anti-patterns** for this model:
@@ -22,10 +22,10 @@ workspace is **multi-target** (TypeScript + Python + Go), each target building t
 
 | Workspace | Target | Package | Spec | Repo (`production_repo`) | Registry |
 | --- | --- | --- | --- | --- | --- |
-| [`stainless/internal`](../stainless/internal/) | typescript | `@augno/internal-sdk` | `internal_openapi_spec.json` | [`augno/internal-sdk`](https://github.com/augno/internal-sdk) | GitHub Packages |
-| [`stainless/public`](../stainless/public/) | typescript | `@augno/sdk` | `public_openapi_spec.json` | [`augno/typescript-sdk`](https://github.com/augno/typescript-sdk) | npmjs |
-| [`stainless/public`](../stainless/public/) | python | `augno` | `public_openapi_spec.json` | [`augno/python-sdk`](https://github.com/augno/python-sdk) | PyPI (OIDC) |
-| [`stainless/public`](../stainless/public/) | go | `github.com/augno/augno-go` | `public_openapi_spec.json` | [`augno/augno-go`](https://github.com/augno/augno-go) | git tag → pkg.go.dev |
+| [`stainless/internal`](../stainless/internal/) | typescript | `@openmrp/internal-sdk` | `internal_openapi_spec.json` | [`open-mrp/internal-sdk`](https://github.com/open-mrp/internal-sdk) | GitHub Packages |
+| [`stainless/public`](../stainless/public/) | typescript | `@openmrp/sdk` | `public_openapi_spec.json` | [`open-mrp/typescript-sdk`](https://github.com/open-mrp/typescript-sdk) | npmjs |
+| [`stainless/public`](../stainless/public/) | python | `openmrp` | `public_openapi_spec.json` | [`open-mrp/python-sdk`](https://github.com/open-mrp/python-sdk) | PyPI (OIDC) |
+| [`stainless/public`](../stainless/public/) | go | `github.com/open-mrp/openmrp-go` | `public_openapi_spec.json` | [`open-mrp/openmrp-go`](https://github.com/open-mrp/openmrp-go) | git tag → pkg.go.dev |
 
 A single `stainless/public/stainless.yml` declares all three public targets under `targets:`; `stlc build
 --targets <lang>` selects one. The Go module path is **derived** as `github.com/<go.production_repo>`.
@@ -38,7 +38,7 @@ A single `stainless/public/stainless.yml` declares all three public targets unde
 
 ## Install stlc
 
-Augno uses **forks under [`sdk-gen`](https://github.com/sdk-gen)** (`stlc` plus the `stlc-typescript`,
+OpenMRP uses **forks under [`sdk-gen`](https://github.com/sdk-gen)** (`stlc` plus the `stlc-typescript`,
 `stlc-python`, `stlc-go`, and `stlc-mcp` workers), not the upstream `stainless/*` repos. `stlc-mcp` is
 the worker that generates the MCP server (`packages/mcp-server`) when a target enables
 `options.mcp_server` — see [MCP server](#mcp-server) below.
@@ -100,10 +100,10 @@ stlc version
    - Regenerate SDKs:
 
      ```bash
-     make stlc-internal-sdk           # augno/internal-sdk  → @augno/internal-sdk (TS)
-     make stlc-public-typescript-sdk  # augno/typescript-sdk → @augno/sdk          (TS)
-     make stlc-public-python-sdk      # augno/python-sdk     → augno               (PyPI)
-     make stlc-public-go-sdk          # augno/augno-go       → github.com/augno/augno-go
+     make stlc-internal-sdk           # open-mrp/internal-sdk  → @openmrp/internal-sdk (TS)
+     make stlc-public-typescript-sdk  # open-mrp/typescript-sdk → @openmrp/sdk          (TS)
+     make stlc-public-python-sdk      # open-mrp/python-sdk     → openmrp               (PyPI)
+     make stlc-public-go-sdk          # open-mrp/openmrp-go       → github.com/open-mrp/openmrp-go
      make stlc-public-sdks            # all three public targets
      make stlc-sdks                   # internal + all public targets
      ```
@@ -135,7 +135,7 @@ So after edits under **`stlc-main/packages/sdk-codegen/`**, rebuild the worker c
 The **public** TypeScript target also generates an **MCP server** as a sub-package
 (`typescript-sdk/packages/mcp-server`). There is **no standalone `mcp` target** in stlc — it is enabled
 via `targets.typescript.options.mcp_server` in [`stainless/public/stainless.yml`](../stainless/public/stainless.yml)
-and built by the `stlc-mcp` worker. The server wraps `@augno/sdk` and is published as `@augno/sdk-mcp`.
+and built by the `stlc-mcp` worker. The server wraps `@openmrp/sdk` and is published as `@openmrp/sdk-mcp`.
 
 Key facts about our configuration:
 
@@ -160,21 +160,21 @@ stlc generates a runnable HTTP server (`mcp-server --transport=http --port=<n>`,
 and `GET`/`POST /`, Streamable HTTP, stateless) **and** its own Dockerfile at
 `packages/mcp-server/Dockerfile`. We host it on the existing EKS cluster:
 
-- **ECR:** `augno/mcp-server` (private [augno/infra](https://github.com/Augno/infra): `production/terraform/ecr.tf`) —
+- **ECR:** `open-mrp/mcp-server` (private [open-mrp/infra](https://github.com/open-mrp/infra): `production/terraform/ecr.tf`) —
   a dedicated repo kept **out** of `var.service_names` so the Go build matrix never tries to build it
   with the shared Go Dockerfile.
-- **k8s:** private [augno/infra](https://github.com/Augno/infra): `production/kubernetes/apps/mcp-server.yaml`
+- **k8s:** private [open-mrp/infra](https://github.com/open-mrp/infra): `production/kubernetes/apps/mcp-server.yaml`
   — Deployment + NodePort Service + Ingress on **`mcp.augno.com`**, sharing the api-gateway ALB
-  (`group.name: api-gateway`, so no second ALB). Each caller passes their own Augno API key as a Bearer
+  (`group.name: api-gateway`, so no second ALB). Each caller passes their own OpenMRP API key as a Bearer
   token (`parseClientAuthHeaders`), so no shared credential is mounted.
 - **CI:** the `build-deploy-mcp` job in [`release.yml`](../.github/workflows/release.yml) runs after
-  `generate-sdks` (gated on the public spec changing), checks out `augno/typescript-sdk@main`, builds
-  the image from the generated Dockerfile, pushes `augno/mcp-server:<tag>`/`:latest`, and rolls it out
+  `generate-sdks` (gated on the public spec changing), checks out `open-mrp/typescript-sdk@main`, builds
+  the image from the generated Dockerfile, pushes `open-mrp/mcp-server:<tag>`/`:latest`, and rolls it out
   with `kubectl`.
 
 **Prerequisites before the first deploy:**
 
-- An **ACM certificate covering `mcp.augno.com`** (e.g. a `*.augno.com` wildcard) so the shared ALB has
+- An **ACM certificate covering `mcp.augno.com`** (e.g. a `*.openmrp.ai` wildcard) so the shared ALB has
   a listener cert for the host (the ingress relies on cert auto-discovery, like api-gateway).
 - `make install-stlc` has been re-run so CI/agents have the `stlc-mcp` worker.
 
@@ -189,7 +189,7 @@ SDK generation runs **only** from [`.github/workflows/release.yml`](../.github/w
 2. **`generate-sdks`** calls [`stlc-generate-reusable.yml`](../.github/workflows/stlc-generate-reusable.yml) with **`openapi_specs_source: s3`** and inputs **`openapi_internal_gate`** / **`openapi_public_gate`** (from **`internal_spec_changed`** / **`public_spec_changed`** on **`publish-openapi-specs`**). The job runs a **matrix of four SDK targets** — internal TS, public TS, public Python, public Go — each gated on its spec's change flag. When a flag is **`false`**, that target's **`stlc build --push`** is **skipped**. When **`true`**, it downloads the published specs from S3 and runs **`stlc build --push --targets <lang>`** to the target's **`main`**:
    - **All targets** (`internal`, `public`, `public-python`, `public-go` — all `release: release-please`): **no changeset is added.** The conventional-commit sync message (`feat(sdk):`/`fix(sdk):`/`feat(sdk)!:` `sync with deployed API <tag>`) is what each repo's **release-please** workflow consumes to open a `release: <version>` PR → merge to publish. The public targets publish to npmjs/PyPI/Go; `internal` publishes to **GitHub Packages** (its committed `release.yml` runs release-please, then `pnpm publish`es to `npm.pkg.github.com`).
 
-   All three public targets share the single `stainless/public` workspace and the same `public_spec_changed` gate, so a public-spec change fans out to `typescript-sdk`, `python-sdk`, and `augno-go` together.
+   All three public targets share the single `stainless/public` workspace and the same `public_spec_changed` gate, so a public-spec change fans out to `typescript-sdk`, `python-sdk`, and `openmrp-go` together.
 
 [`stlc-generate.yml`](../.github/workflows/stlc-generate.yml) is **manual-only** (`workflow_dispatch`); it sets **`openapi_specs_source: generate`** and leaves change flags unset so **`stlc build --push`** always runs without an S3 pre-compare gate.
 
@@ -203,7 +203,7 @@ TypeScript codegen overwrites `pnpm-lock.yaml` using merged templates from `stlc
 
 All four SDK repos release via **release-please** on push to **`main`**: release automation pushes SDK codegen as a single conventional `feat(sdk)/fix(sdk): sync with deployed API <tag>` commit, and each repo's release-please workflow derives the bump from that commit and opens a `release: <version>` PR. The bump mirrors the API release: derived from the tag shape (`X.0.0` → major, `X.Y.0` → minor, otherwise patch — release-please always zeroes lower components on a bump), so a minor/major API release produces a minor/major SDK release. There is no separate `api-release` dispatch to those repos and no bot sync PR to merge first.
 
-> **Note:** `internal-sdk` was previously on Changesets (publishing to GitHub Packages). The v0.23.2 regen stripped its Changesets tooling, so it moved to release-please like the others — but still publishes to **GitHub Packages** via a committed `release.yml`, not npmjs. See [`Augno/internal-sdk` `.github/workflows/release.yml`](https://github.com/augno/internal-sdk/blob/main/.github/workflows/release.yml).
+> **Note:** `internal-sdk` was previously on Changesets (publishing to GitHub Packages). The v0.23.2 regen stripped its Changesets tooling, so it moved to release-please like the others — but still publishes to **GitHub Packages** via a committed `release.yml`, not npmjs. See [`open-mrp/internal-sdk` `.github/workflows/release.yml`](https://github.com/open-mrp/internal-sdk/blob/main/.github/workflows/release.yml).
 
 Production flow (keeps SDKs aligned with what is deployed):
 
@@ -223,27 +223,27 @@ Local preview before release: `make openapi-stainless` then `make stlc-internal-
 
 ### Repository secrets (required before CI can push)
 
-Add these secrets on **`augno/api`** (Settings → Secrets and variables → Actions):
+Add these secrets on **`open-mrp/api`** (Settings → Secrets and variables → Actions):
 
 | Secret | Permissions |
 | --- | --- |
 | **`STLC_READ_TOKEN`** | Fine-grained PAT, **Contents: Read** on `sdk-gen/stlc`, `sdk-gen/stlc-typescript`, `sdk-gen/stlc-python`, `sdk-gen/stlc-go`, and `sdk-gen/stlc-mcp` |
-| **`SDK_WRITE_TOKEN`** | Fine-grained PAT, **Contents: Write** on `augno/internal-sdk`, `augno/typescript-sdk`, `augno/python-sdk`, and `augno/augno-go` (push to **`main`**). Add **Pull requests: Write** only if you use manual `stlc-generate` with `open_pr: true`. |
+| **`SDK_WRITE_TOKEN`** | Fine-grained PAT, **Contents: Write** on `open-mrp/internal-sdk`, `open-mrp/typescript-sdk`, `open-mrp/python-sdk`, and `open-mrp/openmrp-go` (push to **`main`**). Add **Pull requests: Write** only if you use manual `stlc-generate` with `open_pr: true`. |
 
 Authorize both tokens for SSO if your org requires it.
 
-The API release workflow regenerates SDKs and dispatches `api-release` to spec consumers in parallel after deploy and OpenAPI publish. SDK repos (`internal-sdk`, `typescript-sdk`, `python-sdk`, `augno-go`) receive direct pushes to **`main`** when their OpenAPI spec changed.
+The API release workflow regenerates SDKs and dispatches `api-release` to spec consumers in parallel after deploy and OpenAPI publish. SDK repos (`internal-sdk`, `typescript-sdk`, `python-sdk`, `openmrp-go`) receive direct pushes to **`main`** when their OpenAPI spec changed.
 
 ### SDK release checklist (`internal-sdk`, `typescript-sdk`)
 
 When the API release changed that SDK’s OpenAPI spec, automation pushes **`fix(sdk)`/`feat(sdk)`/`feat(sdk)!`** **`: sync with deployed API <tag>`** (prefix matches the API bump level) to **`main`**. Then:
 
 1. **`release.yml` on `main`** — release-please opens **release: <version>** (or publishes when a release PR is merged).
-2. **Merge the release PR** when opened — that completes the publish: GitHub Packages for `@augno/internal-sdk`, npmjs for `@augno/sdk`.
+2. **Merge the release PR** when opened — that completes the publish: GitHub Packages for `@openmrp/internal-sdk`, npmjs for `@openmrp/sdk`.
 
 If the spec was unchanged for that SDK, no push runs and no new SDK version is cut.
 
-### SDK release model (`internal-sdk`, `typescript-sdk`, `python-sdk`, `augno-go`)
+### SDK release model (`internal-sdk`, `typescript-sdk`, `python-sdk`, `openmrp-go`)
 
 All SDK repos use **release-please**, not Changesets. `stlc` generates the per-repo config
 (`release-please-config.json`, `.release-please-manifest.json`, the version `extra-files`, and — for
@@ -252,14 +252,14 @@ workflow that opens the release PR or publishes on release (Stainless's hosted b
 that). In the self-hosted model each repo therefore needs **one committed `release.yml`** (e.g.
 `release-please.yml` on `typescript-sdk`, `release.yml` on `internal-sdk`):
 
-- **`augno/python-sdk`** — on push to `main`: run `googleapis/release-please-action@v5` (opens
+- **`open-mrp/python-sdk`** — on push to `main`: run `googleapis/release-please-action@v5` (opens
   `release: <version>` PR). On `release_created`: `uv build` + `uv publish` via **PyPI Trusted
   Publishing** (job needs `permissions: id-token: write`; `bin/publish-pypi` already does this — it
   uses OIDC when `PYPI_TOKEN` is unset). One-time on PyPI: register a **Trusted Publisher** for project
-  `augno` → repo `augno/python-sdk`, workflow filename = that `release.yml`.
-- **`augno/augno-go`** — on push to `main`: run `googleapis/release-please-action@v5` only. The git tag
+  `openmrp` → repo `open-mrp/python-sdk`, workflow filename = that `release.yml`.
+- **`open-mrp/openmrp-go`** — on push to `main`: run `googleapis/release-please-action@v5` only. The git tag
   release-please creates **is** the publish; `pkg.go.dev` indexes the public repo. No registry secret.
-- **`augno/internal-sdk`** — on push to `main`: run `googleapis/release-please-action@v4` (opens
+- **`open-mrp/internal-sdk`** — on push to `main`: run `googleapis/release-please-action@v4` (opens
   `release: <version>` PR). On `release_created`: `pnpm build` + `pnpm publish` from `dist/` to
   **GitHub Packages** (`npm.pkg.github.com`), not npmjs — so do **not** wire up the generated
   `bin/publish-npm` (it targets `registry.npmjs.org`). Publish runs in the same job as the
@@ -272,9 +272,9 @@ Two one-time config notes per repo:
 - `release-doctor.yml` references a **`RELEASE_PLEASE_TOKEN`** secret; provide it (a PAT or the
   app token used by the release workflow) or remove that workflow.
 
-The Go module path must equal the repo URL (`github.com/augno/augno-go`), the repo must be **public**,
+The Go module path must equal the repo URL (`github.com/open-mrp/openmrp-go`), the repo must be **public**,
 and `go.production_repo` in `stainless/public/stainless.yml` must match it — this is derived, not a
-separate field. The legacy Stainless-cloud stub `Augno/go-sdk` (module `github.com/stainless-sdks/...`)
+separate field. The legacy Stainless-cloud stub `open-mrp/go-sdk` (module `github.com/stainless-sdks/...`)
 is **not** this repo; archive it to avoid confusion.
 
 ### Publishing packages

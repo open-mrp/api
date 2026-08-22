@@ -7,8 +7,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/augno/api/shared/constants"
-	apierror "github.com/augno/api/shared/errors"
+	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // customerObject is the minimal fields parsed from a Stripe customer data.object.

@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/augno/api/services/auth-service/internal/domain"
-	"github.com/augno/api/services/auth-service/internal/token"
-	apierror "github.com/augno/api/shared/errors"
-	tracing "github.com/augno/api/shared/tracing"
+	"github.com/open-mrp/api/services/auth-service/internal/domain"
+	"github.com/open-mrp/api/services/auth-service/internal/token"
+	apierror "github.com/open-mrp/api/shared/errors"
+	tracing "github.com/open-mrp/api/shared/tracing"
 )
 
 var refreshTokenMedTracer = tracing.GetTracer("auth-service.refresh_token_mediator")

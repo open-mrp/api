@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/augno/api/services/agent-service/internal/domain"
+	"github.com/open-mrp/api/services/agent-service/internal/domain"
 )
 
 const maxFetchOutputBytes = 30_000 // 30 KB post-conversion cap
@@ -56,7 +56,7 @@ func HandleFetchURL(_ context.Context, input json.RawMessage, _ *domain.HandlerR
 	if err != nil {
 		return "", fmt.Errorf("fetch_url: failed to create request: %w", err)
 	}
-	req.Header.Set("User-Agent", "AugnoAgent/1.0")
+	req.Header.Set("User-Agent", "OpenMRPAgent/1.0")
 	req.Header.Set("Accept", "text/html, text/plain, application/json, text/markdown")
 
 	resp, err := webHTTPClient.Do(req) // #nosec G704 -- URL from agent-provided tool input, validated upstream

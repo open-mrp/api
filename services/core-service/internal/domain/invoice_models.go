@@ -3,9 +3,9 @@ package domain
 import (
 	"time"
 
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/field"
-	"github.com/augno/api/shared/pagination"
+	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/pagination"
 )
 
 // Bills a customer for goods shipped against a sales order; read, list and update all return it.

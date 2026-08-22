@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/augno/api/shared/appctx"
-	apierror "github.com/augno/api/shared/errors"
+	"github.com/open-mrp/api/shared/appctx"
+	apierror "github.com/open-mrp/api/shared/errors"
 
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"

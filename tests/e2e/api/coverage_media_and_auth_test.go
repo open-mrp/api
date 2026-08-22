@@ -167,7 +167,7 @@ func TestRefreshAccessToken_IssuesAFreshSession(t *testing.T) {
 	// The point of a refresh is a new access token, and it arrives the same way it did at login.
 	var refreshed bool
 	for _, c := range (&http.Response{Header: resp.Header}).Cookies() {
-		if c.Name == "__Secure-augno.access-token" && c.Value != "" {
+		if c.Name == "__Secure-openmrp.access-token" && c.Value != "" {
 			refreshed = true
 		}
 	}
@@ -189,7 +189,7 @@ func TestRefreshAccessToken_RejectsAForgedCookie(t *testing.T) {
 	t.Parallel()
 
 	forged := apiClient.WithCookies([]*http.Cookie{{
-		Name:  "__Secure-augno.refresh-token",
+		Name:  "__Secure-openmrp.refresh-token",
 		Value: "not-a-real-refresh-token",
 	}}, SeedAccountID)
 

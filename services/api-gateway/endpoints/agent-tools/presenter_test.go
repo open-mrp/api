@@ -3,8 +3,8 @@ package agenttoolep
 import (
 	"testing"
 
-	"github.com/augno/api/services/api-gateway/pkg/resource/resourcetest"
-	pb "github.com/augno/api/shared/proto/agent"
+	"github.com/open-mrp/api/services/api-gateway/pkg/resource/resourcetest"
+	pb "github.com/open-mrp/api/shared/proto/agent"
 )
 
 func TestAvailableToolPresenter(t *testing.T) {

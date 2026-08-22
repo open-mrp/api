@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/augno/api/shared/retry"
+	"github.com/open-mrp/api/shared/retry"
 )
 
 // ConnRetryConfig returns the short retry policy used by WithConnRetry. The waits are deliberately small: a dropped database connection (e.g. a Vitess tablet failover) is either recovered by the next pooled connection almost immediately or not at all, and callers sit on hot request paths.

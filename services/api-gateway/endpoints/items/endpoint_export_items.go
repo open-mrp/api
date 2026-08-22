@@ -4,10 +4,10 @@ import (
 	"context"
 	"net/http"
 
-	httptransport "github.com/augno/api/services/api-gateway/internal/http"
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	"github.com/augno/api/services/auth-service/pkg/types"
-	apierror "github.com/augno/api/shared/errors"
+	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
+	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // Request to export items.

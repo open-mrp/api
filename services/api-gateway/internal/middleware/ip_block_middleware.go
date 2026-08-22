@@ -4,9 +4,9 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/augno/api/services/api-gateway/internal/header"
-	httptransport "github.com/augno/api/services/api-gateway/internal/http"
-	apierror "github.com/augno/api/shared/errors"
+	"github.com/open-mrp/api/services/api-gateway/internal/header"
+	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 // blockedIPs is the hardcoded set of IP addresses that are denied access to every router. Entries should be exact-match IP literals (IPv4 or IPv6).

@@ -3,7 +3,7 @@ package domain
 import (
 	"context"
 
-	"github.com/augno/api/shared/appctx"
+	"github.com/open-mrp/api/shared/appctx"
 )
 
 type RequestLogPublisher interface {

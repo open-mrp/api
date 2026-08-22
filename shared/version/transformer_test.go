@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/augno/api/shared/constants"
+	"github.com/open-mrp/api/shared/constants"
 )
 
 // mockTransformer implements Transformer for testing

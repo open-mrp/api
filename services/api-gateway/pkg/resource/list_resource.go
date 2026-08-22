@@ -1,6 +1,6 @@
 package apiresource
 
-import "github.com/augno/api/shared/constants"
+import "github.com/open-mrp/api/shared/constants"
 
 // PageInfo describes where the current page sits within a paginated result set and how to move to the adjacent pages.
 //

@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.5](https://github.com/open-mrp/api/compare/v1.1.4...v1.1.5) (2026-08-23)
+
+
+### Bug Fixes
+
+* keep generated client consistent with org name ([#21](https://github.com/open-mrp/api/issues/21)) ([ea7917d](https://github.com/open-mrp/api/commit/ea7917db345e6926377c39ab94b405cf913f3373))
+
 ## [1.1.4](https://github.com/open-mrp/api/compare/v1.1.3...v1.1.4) (2026-08-23)
 
 

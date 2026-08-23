@@ -496,8 +496,10 @@ func normalizePortalDomain(domainName string) (string, *apierror.APIError) {
 	if !strings.Contains(normalized, ".") || strings.ContainsAny(normalized, "@/\\:?#& ") || strings.Contains(normalized, "..") {
 		return "", apierror.NewValidationErrorWithParam("Domain must be a valid hostname like shop.example.com.", "domain")
 	}
-	// augno.com stays live and redirecting through the OpenMRP transition, so it
-	// remains reserved alongside the new domain.
+	// augno.com stays reserved even though the API no longer serves it: we still own it,
+	// it redirects to openmrp.ai, and it is the domain outbound mail is sent from. Letting
+	// a customer claim a portal domain under it would hand them a host our own mail is
+	// authenticated against.
 	for _, reserved := range []string{"openmrp.ai", "augno.com"} {
 		if normalized == reserved || strings.HasSuffix(normalized, "."+reserved) {
 			return "", apierror.NewValidationErrorWithParam("OpenMRP domains cannot be used as a custom portal domain.", "domain")

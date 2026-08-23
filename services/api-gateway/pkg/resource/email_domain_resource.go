@@ -27,7 +27,7 @@ type EmailDomain struct {
 	// - `failed`: verification could not be completed.
 	//
 	// Inboxes can only be created on a `verified` domain.
-	Status string `json:"status" validate:"required"`
+	Status constants.EmailDomainStatus `json:"status" validate:"required"`
 	// The DKIM tokens that must be published in your DNS before the domain can be verified.
 	//
 	// Publish each token as a CNAME record on the domain, then call the verify action to confirm them.

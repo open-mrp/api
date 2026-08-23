@@ -22,7 +22,7 @@ type EmailInbox struct {
 	//
 	// - `active`: inbound mail is threaded into a conversation.
 	// - `disabled`: the inbox stays provisioned and keeps its history, but inbound mail is dropped without being threaded.
-	Status string `json:"status" validate:"required"`
+	Status constants.EmailInboxStatus `json:"status" validate:"required"`
 	// The domain this inbox belongs to.
 	EmailDomain *EmailDomain `json:"email_domain" validate:"required" expandable:"true"`
 	// The full inbox address (e.g. `support@acme.com`).
@@ -44,7 +44,7 @@ type EmailInbox struct {
 	// - `always`: on every incoming message.
 	//
 	// When no policy is set the agent runs on every incoming message, since email has no reliable @mention convention.
-	AgentTriggerPolicy *string `json:"agent_trigger_policy"`
+	AgentTriggerPolicy *constants.AgentTriggerPolicy `json:"agent_trigger_policy"`
 	// The keywords that decide whether the agent runs on an incoming message.
 	//
 	// Under the `keyword` policy a keyword matches anywhere in the message; under `mention` it only counts where it is prefixed with `@`.
@@ -61,7 +61,7 @@ type EmailInbox struct {
 
 var (
 	sampleEmailInboxFromName      = "Acme Support"
-	sampleEmailInboxTriggerPolicy = "always"
+	sampleEmailInboxTriggerPolicy = constants.AgentTriggerPolicyAlways
 )
 
 var SampleEmailInbox = &EmailInbox{

@@ -14,8 +14,8 @@ import (
 // Request to list shipments.
 type ListShipmentsRequest struct {
 	apiresource.PaginationRequest
-	// Only include shipments with this status, either `packed` or `shipped`.
-	Status *string `query:"status"`
+	// Only include shipments with this status.
+	Status *constants.ShipmentStatus `query:"status"`
 	// Only include shipments containing at least one line for any of these items.
 	ItemIDs []string `query:"item_ids"`
 	// Only include shipments for any of these customers.

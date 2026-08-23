@@ -167,7 +167,7 @@ type RateShopResult struct {
 	// - `minimum_order_met`: the customer's shipping term sets a free-shipping minimum order value and the order total exceeded it, so options are rated at zero. If the shipping term restricts free shipping to specific service levels, only those options are zeroed and the rest keep their carrier or flat rate.
 	// - `flat_rate`: the customer's shipping term applies a flat shipping rate, which replaced every option's carrier rate.
 	// - `none`: standard carrier rates apply with no exemption.
-	ExemptionType *string `json:"exemption_type"`
+	ExemptionType *constants.FreightExemptionType `json:"exemption_type"`
 	// Flat shipping amount applied to the options.
 	//
 	// Set when the customer's shipping term applies a flat rate, including when a met free-shipping minimum has already rated some options at zero.
@@ -222,7 +222,7 @@ var SampleRateShopOption = &RateShopOption{
 var SampleRateShopResult = &RateShopResult{
 	Object:        constants.ObjectTypeRateShopResult,
 	Options:       NewList([]RateShopOption{*SampleRateShopOption}, PageInfo{}),
-	ExemptionType: new("none"),
+	ExemptionType: new(constants.FreightExemptionTypeNone),
 }
 
 func (*RateShopResult) SchemaExample() any {

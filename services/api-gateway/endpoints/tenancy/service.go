@@ -193,7 +193,7 @@ func tenancyAccountPlanFromProto(p *pb.TenancyAccountPlanProto) *apiresource.Ten
 		TypeID:        p.TypeId,
 		Object:        constants.ObjectTypeAccountPlan,
 		Name:          p.Name,
-		PlanTypeCode:  p.PlanTypeCode,
+		PlanTypeCode:  constants.PlanCode(p.PlanTypeCode),
 		Version:       p.Version,
 		PricePerSeat:  p.PricePerSeat,
 		PricePerMonth: p.PricePerMonth,
@@ -210,8 +210,8 @@ func tenancyPendingRegistrationFromProto(pr *pb.TenancyPendingRegistrationProto)
 	return &apiresource.TenancyPendingRegistration{
 		Object:    constants.ObjectTypeTenancyPendingRegistration,
 		SessionID: pr.SessionId,
-		PlanCode:  pr.PlanCode,
-		Step:      pr.Step,
+		PlanCode:  constants.PlanCode(pr.PlanCode),
+		Step:      constants.RegistrationStep(pr.Step),
 		CreatedAt: grpcutil.TimestampToTime(pr.CreatedAt),
 	}
 }
@@ -235,9 +235,9 @@ func tenancyFromProto(resp *pb.GetTenancyResponse) *apiresource.Tenancy {
 			ID:                       resp.CurrentAccount.Id,
 			Object:                   constants.ObjectTypeAccount,
 			Name:                     resp.CurrentAccount.Name,
-			Type:                     resp.CurrentAccount.Type,
-			OnboardingStatus:         resp.CurrentAccount.OnboardingStatus,
-			Plan:                     resp.CurrentAccount.PlanCode,
+			Type:                     constants.AccountTypeCode(resp.CurrentAccount.Type),
+			OnboardingStatus:         constants.OnboardingStatus(resp.CurrentAccount.OnboardingStatus),
+			Plan:                     constants.PlanCode(resp.CurrentAccount.PlanCode),
 			Slug:                     resp.CurrentAccount.Slug,
 			InternalStripeCustomerID: resp.CurrentAccount.InternalStripeCustomerId,
 			AccountPlan:              tenancyAccountPlanFromProto(resp.CurrentAccount.AccountPlan),
@@ -286,7 +286,7 @@ func tenancyFromProto(resp *pb.GetTenancyResponse) *apiresource.Tenancy {
 			ID:     o.Id,
 			Object: constants.ObjectTypeAccount,
 			Name:   o.Name,
-			Type:   o.Type,
+			Type:   constants.AccountTypeCode(o.Type),
 		})
 	}
 	result.OtherAccounts = apiresource.NewList(otherAccounts, apiresource.PageInfo{})

@@ -269,7 +269,7 @@ func pricingPlanFromProto(p *pb.PricingPlan) apiresource.PricingPlan {
 		}
 		limitSlice[i] = apiresource.PlanLimit{
 			Object: constants.ObjectTypePlanLimit,
-			Key:    l.Key,
+			Key:    constants.AccountPlanLimitKey(l.Key),
 			Value:  value,
 		}
 	}

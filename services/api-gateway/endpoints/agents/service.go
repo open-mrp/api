@@ -293,7 +293,7 @@ func (m *agentSvcImpl) DeleteAgent(ctx context.Context, req *DeleteAgentRequest)
 func (m *agentSvcImpl) UpdateAgentStatus(ctx context.Context, req *UpdateAgentStatusRequest) (*apiresource.AgentDefinition, *apierror.APIError) {
 	pbReq := &pb.UpdateAgentAccountStatusRequest{
 		AgentDefinitionId: req.AgentDefinitionID,
-		StatusCode:        req.Status,
+		StatusCode:        string(req.Status),
 	}
 
 	if _, rpcErr := grpcutil.CallRPC(ctx, agentSvcTracer, "service.agents.update_status", domain.ServiceName,

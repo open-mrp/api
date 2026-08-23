@@ -23,7 +23,7 @@ type NotificationPreference struct {
 	// The notification category this preference applies to.
 	//
 	// A preference with no category is the user's global default, used for every category they have not set a specific preference for.
-	Category *string `json:"category"`
+	Category *constants.NotificationCategory `json:"category"`
 	// Whether notifications in this category appear in the user's in-app feed.
 	//
 	// A direct @mention is always delivered in-app, even when this is disabled.
@@ -54,7 +54,7 @@ type NotificationPreference struct {
 var SampleNotificationPreference = &NotificationPreference{
 	ID:           SampleNotificationPreferenceID,
 	Object:       constants.ObjectTypeNotificationPreference,
-	Category:     new("chat.message"),
+	Category:     new(constants.NotificationCategoryChatMessage),
 	InAppEnabled: true,
 	EmailEnabled: true,
 	PushEnabled:  false,

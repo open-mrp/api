@@ -192,7 +192,7 @@ func ItemTrendsPresenter(resp *pb.GetItemTrendsResponse) *apiresource.ItemTrends
 
 	return &apiresource.ItemTrends{
 		Object:    constants.ObjectTypeItem,
-		TrendType: resp.TrendType,
+		TrendType: constants.ItemTrendType(resp.TrendType),
 		Points:    apiresource.NewList(points, apiresource.PageInfo{}),
 	}
 }

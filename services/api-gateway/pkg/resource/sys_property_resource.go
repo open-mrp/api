@@ -70,7 +70,7 @@ type SysPropertyType struct {
 	// - `supplier_number`: identifiers assigned to new suppliers.
 	// - `production_run_number`: numbering for production runs.
 	// - `sscc_count`: serial component of the GS1 SSCC-18 codes assigned to shipping cases.
-	Code string `json:"code" validate:"required"`
+	Code constants.SysPropertyTypeCode `json:"code" validate:"required"`
 }
 
 // The value read from a system property counter.

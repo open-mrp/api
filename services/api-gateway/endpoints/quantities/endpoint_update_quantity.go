@@ -30,8 +30,8 @@ type UpdateQuantityRequest struct {
 	ObjectID field.Optional[string] `json:"object_id,omitzero" validate:"omitempty"`
 	// Type of the resource that owns this quantity.
 	//
-	// Determines the permission required for the update. Must be `item`, `production_step`, or `department`.
-	ObjectType field.Optional[string] `json:"object_type,omitzero" validate:"omitempty,max=255"`
+	// Determines the permission required for the update.
+	ObjectType field.Optional[constants.MeasureOwnerType] `json:"object_type,omitzero" validate:"omitempty"`
 }
 
 var sampleUpdateQuantityValue = "50.000000000000000000000000000000"

@@ -64,10 +64,10 @@ func (m *transactionSvcImpl) ListTransactions(ctx context.Context, req *ListTran
 		Cursor:              req.Cursor,
 		Limit:               req.Limit,
 		Query:               req.Query,
-		Status:              req.Status,
-		TypeCodes:           req.TypeCodes,
+		Status:              req.Status.StringPtr(),
+		TypeCodes:           constants.Strings(req.TypeCodes),
 		AdjustmentTypeCodes: req.AdjustmentTypeCodes,
-		MethodCodes:         req.MethodCodes,
+		MethodCodes:         constants.Strings(req.MethodCodes),
 		CustomerIds:         req.CustomerIDs,
 		CustomerGroupIds:    req.CustomerGroupIDs,
 	}
@@ -123,9 +123,9 @@ func (m *transactionSvcImpl) GetTransaction(ctx context.Context, req *RetrieveTr
 func (m *transactionSvcImpl) CreateTransaction(ctx context.Context, req *CreateTransactionRequest) (*apiresource.TransactionDetail, *apierror.APIError) {
 	pbReq := &pb.CreateTransactionRequest{
 		CustomerId:            req.CustomerID,
-		TransactionTypeCode:   req.TransactionTypeCode,
+		TransactionTypeCode:   string(req.TransactionTypeCode),
 		Amount:                req.Amount,
-		TransactionMethodCode: req.TransactionMethodCode.Ptr(),
+		TransactionMethodCode: req.TransactionMethodCode.Ptr().StringPtr(),
 		AdjustmentTypeCode:    req.AdjustmentTypeCode.Ptr(),
 		ResponsibleUserId:     req.ResponsibleUserID.Ptr(),
 		Note:                  req.Note.Ptr(),
@@ -150,7 +150,7 @@ func (m *transactionSvcImpl) UpdateTransaction(ctx context.Context, req *UpdateT
 		Number:                 req.Number.Ptr(),
 		Note:                   req.Note.Ptr(),
 		Amount:                 req.Amount.Ptr(),
-		TransactionMethodCode:  req.TransactionMethodCode.Ptr(),
+		TransactionMethodCode:  req.TransactionMethodCode.Ptr().StringPtr(),
 		AdjustmentTypeCode:     req.AdjustmentTypeCode.Ptr(),
 		ResponsibleUserId:      req.ResponsibleUserID.Ptr(),
 		ClearResponsibleUser:   req.ClearResponsibleUser,
@@ -197,8 +197,8 @@ func (m *transactionSvcImpl) ListAccountTransactions(ctx context.Context, req *L
 		Cursor:            req.Cursor,
 		Limit:             req.Limit,
 		Query:             req.Query,
-		Status:            req.Status,
-		Type:              req.Type,
+		Status:            req.Status.StringPtr(),
+		Type:              req.Type.StringPtr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, transactionSvcTracer, "service.transactions.list_account", domain.ServiceName,

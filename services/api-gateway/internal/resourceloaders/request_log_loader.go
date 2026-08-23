@@ -45,7 +45,7 @@ func requestLogFromProto(rl *pb.RequestLogInfo) *apiresource.RequestLog {
 	result := &apiresource.RequestLog{
 		ID:              rl.Id,
 		Object:          constants.ObjectTypeRequestLog,
-		Method:          rl.Method,
+		Method:          constants.HTTPMethod(rl.Method),
 		Host:            rl.Host,
 		Path:            rl.Path,
 		NormalizedRoute: rl.NormalizedRoute,
@@ -55,7 +55,7 @@ func requestLogFromProto(rl *pb.RequestLogInfo) *apiresource.RequestLog {
 		ClientIP:        rl.ClientIp,
 		UserAgent:       rl.UserAgent,
 		Referrer:        rl.Referrer,
-		ErrorCode:       rl.ErrorCode,
+		ErrorCode:       constants.EnumPtr[apierror.ErrorCode](rl.ErrorCode),
 		ErrorMessage:    rl.ErrorMessage,
 		OccurredAt:      grpcutil.TimestampToTime(rl.OccurredAt),
 		CreatedAt:       grpcutil.TimestampToTime(rl.CreatedAt),

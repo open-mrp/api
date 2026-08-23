@@ -14,8 +14,8 @@ import (
 // Request to list transaction allocation entries.
 type ListAllocationEntriesRequest struct {
 	apiresource.PaginationRequest
-	// Filter by the underlying transaction's type code (`payment`, `credit_memo`, `adjustment`, or `rebate`).
-	TransactionType *string `query:"transaction_type"`
+	// Filter by the underlying transaction's type code.
+	TransactionType *constants.TransactionType `query:"transaction_type"`
 	// Only include allocations created on or after this date (`YYYY-MM-DD`).
 	StartDate *string `query:"starts_at"`
 	// Only include allocations created on or before this date (`YYYY-MM-DD`), covering that whole day.

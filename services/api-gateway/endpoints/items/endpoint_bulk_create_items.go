@@ -8,6 +8,7 @@ import (
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/field"
 )
@@ -39,11 +40,11 @@ type BulkCreateItemsRequest struct {
 	// - `product`: a finished product.
 	// - `material`: a raw material or component consumed in production.
 	// - `part`: a part used in production.
-	Type string `json:"type" validate:"required"`
+	Type constants.ItemTypeCode `json:"type" validate:"required"`
 }
 
 var sampleBulkCreateItemsRequest = &BulkCreateItemsRequest{
-	Type: "material",
+	Type: constants.ItemTypeCodeMaterial,
 	Items: []BulkCreateItemInput{
 		{
 			SKU:            "ALM-FLOUR-25LB",

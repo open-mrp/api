@@ -73,7 +73,7 @@ func (m *shipmentSvcImpl) ListShipments(ctx context.Context, req *ListShipmentsR
 		Cursor:           req.Cursor,
 		Limit:            req.Limit,
 		Query:            req.Query,
-		Status:           req.Status,
+		Status:           req.Status.StringPtr(),
 		ItemIds:          req.ItemIDs,
 		CustomerIds:      req.CustomerIDs,
 		ProductLineIds:   req.ProductLineIDs,
@@ -832,7 +832,7 @@ func rateShopFromProto(resp *pb.RateShopResponse, carriers map[string]*apiresour
 	return &apiresource.RateShopResult{
 		Object:        constants.ObjectTypeRateShopResult,
 		Options:       apiresource.NewList(options, apiresource.PageInfo{}),
-		ExemptionType: resp.ExemptionType,
+		ExemptionType: constants.EnumPtr[constants.FreightExemptionType](resp.ExemptionType),
 		FlatRate:      resp.FlatRate,
 	}
 }

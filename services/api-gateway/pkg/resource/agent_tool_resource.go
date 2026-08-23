@@ -42,7 +42,7 @@ type AvailableTool struct {
 	//
 	// - `built_in`: a capability implemented by the agent runtime itself, such as fetching a web page or drafting a reply for a teammate to approve.
 	// - `api_endpoint`: an operation of this API exposed as a tool, letting the agent perform it on the account's behalf.
-	Category string `json:"category" validate:"required"`
+	Category constants.AgentToolCategory `json:"category" validate:"required"`
 	// Human-readable name for the tool.
 	Name string `json:"name" validate:"required"`
 	// Explanation of what the tool does.
@@ -56,7 +56,7 @@ type AvailableTool struct {
 	// Permission scopes the agent's role must hold for this tool to be usable (e.g. `products:read`).
 	RequiredPermissions []string `json:"required_permissions"`
 	// Role type the caller must have for this tool, when the operation is gated by role rather than a permission (e.g. `admin`).
-	RequiredRoleType *string `json:"required_role_type"`
+	RequiredRoleType *constants.RoleType `json:"required_role_type"`
 	// Whether invoking this tool takes an action rather than only reading data.
 	//
 	// True for any `api_endpoint` tool whose underlying operation is not a read, and for `built_in` tools that do something externally visible or hard to undo, such as sending an email. A mutating `built_in` tool always pauses its run for human approval and that gate cannot be turned off for an individual agent; for `api_endpoint` tools the flag is advisory and review stays configurable per agent.

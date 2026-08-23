@@ -73,7 +73,7 @@ func (m *pickSvcImpl) ListPicks(ctx context.Context, req *ListPicksRequest) (*ap
 		pbReq.Query = req.Query
 	}
 	if req.Status != nil {
-		pbReq.Status = req.Status
+		pbReq.Status = req.Status.StringPtr()
 	}
 	if len(req.CustomerIDs) > 0 {
 		pbReq.CustomerIds = req.CustomerIDs

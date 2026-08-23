@@ -23,7 +23,7 @@ type AssignConversationRequest struct {
 	//
 	// - `account_user`: an individual teammate takes the case.
 	// - `account_group`: a team takes the case, so anyone on it can pick it up.
-	AssigneeResourceType field.Optional[string] `json:"assignee_resource_type,omitzero"`
+	AssigneeResourceType field.Optional[constants.ConversationAssigneeType] `json:"assignee_resource_type,omitzero"`
 	// The owner's id, an `account_user` or `account_group` matching `assignee_resource_type`.
 	//
 	// Omit this and `assignee_resource_type` to clear the assignment.
@@ -32,7 +32,7 @@ type AssignConversationRequest struct {
 
 var sampleAssignConversationRequest = &AssignConversationRequest{
 	ConversationID:       apiresource.SampleConversationID,
-	AssigneeResourceType: field.Some(string(constants.ObjectTypeAccountUser)),
+	AssigneeResourceType: field.Some(constants.ConversationAssigneeTypeAccountUser),
 	AssigneeResourceID:   field.Some(apiresource.SampleAccountUserID),
 }
 

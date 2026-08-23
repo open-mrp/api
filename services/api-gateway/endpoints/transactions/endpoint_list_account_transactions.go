@@ -17,9 +17,9 @@ type ListAccountTransactionsRequest struct {
 	// Customer account ID.
 	CustomerAccountID string `path:"account_id" validate:"required"`
 	// Filter by allocation status: `allocated` (marked fully applied to invoices) or `unallocated` (still counted as an open credit).
-	Status *string `query:"status"`
-	// Filter by transaction type code (`payment`, `credit_memo`, `adjustment`, or `rebate`).
-	Type *string `query:"type"`
+	Status *constants.TransactionAllocationStatus `query:"status"`
+	// Filter by transaction type code.
+	Type *constants.TransactionType `query:"type"`
 }
 
 // Returns a paginated list of the transactions recorded against one customer account, newest first.

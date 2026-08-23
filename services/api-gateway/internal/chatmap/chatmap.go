@@ -11,6 +11,7 @@ import (
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/notification"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -175,7 +176,7 @@ func MessageFromProto(m *pb.MessageInfo) apiresource.Message {
 		Body:            m.Body,
 		Subject:         m.Subject,
 		ScheduledAt:     TsToPtr(m.ScheduledFor),
-		StreamingState:  m.StreamingState,
+		StreamingState:  constants.EnumPtr[constants.MessageStreamingState](m.StreamingState),
 		ClientMessageID: m.ClientMessageId,
 		EditedAt:        TsToPtr(m.EditedAt),
 		DeletedAt:       TsToPtr(m.DeletedAt),
@@ -183,7 +184,7 @@ func MessageFromProto(m *pb.MessageInfo) apiresource.Message {
 		UpdatedAt:       TsToTime(m.UpdatedAt),
 		Channel:         constants.ResolveMessageChannel(m.Channel, m.Kind),
 		AgentRunFailed:  m.AgentRunFailed,
-		AgentErrorCode:  m.AgentErrorCode,
+		AgentErrorCode:  constants.EnumPtr[apierror.ErrorCode](m.AgentErrorCode),
 	}
 	if m.Status == "" {
 		msg.Status = constants.MessageStatusSent

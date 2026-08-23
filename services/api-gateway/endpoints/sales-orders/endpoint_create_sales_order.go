@@ -41,7 +41,7 @@ type CreateSalesOrderRequest struct {
 	// Carrier billing account number charged when `carrier_billing_type` is `third_party`.
 	CarrierBillingAccountNumber field.Optional[string] `json:"carrier_billing_account_number,omitzero" validate:"omitempty,max=255"`
 	// Fulfillment priority used to rank the order on the shop floor.
-	PriorityCode string `json:"priority_code" validate:"required,max=255"`
+	PriorityCode constants.PriorityCode `json:"priority_code" validate:"required"`
 	// ID of the account user to credit as the order's sales rep.
 	//
 	// When omitted, a rep is assigned automatically: the customer's default sales rep first, then the sales territory matching the ship-to postal code, then the ship-to state. No rep is assigned when the customer is commission-exempt or every ordered product belongs to a commission-exempt product line.
@@ -133,7 +133,7 @@ var sampleCreateSalesOrderRequest = &CreateSalesOrderRequest{
 	ServiceLevelID:              field.Some(sampleCreateSOServiceLevelID),
 	CarrierBillingType:          field.Some(constants.CarrierBillingTypeSender),
 	CarrierBillingAccountNumber: field.Some(sampleCreateSOCarrierBillingAccount),
-	PriorityCode:                string(constants.PriorityCodeNormal),
+	PriorityCode:                constants.PriorityCodeNormal,
 	SalesRepID:                  field.Some(apiresource.SampleAccountUserID),
 	ShippingTermID:              field.Some(apiresource.SampleShippingTermID),
 	PaymentTermID:               field.Some(apiresource.SamplePaymentTermID),

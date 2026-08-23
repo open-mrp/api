@@ -42,7 +42,7 @@ func sysPropertyFromProto(sp *pb.SysPropertyInfo) *apiresource.SysProperty {
 			ID:     sp.TypeId,
 			Object: constants.ObjectTypeSysPropertyType,
 			Name:   sp.TypeName,
-			Code:   sp.TypeCode,
+			Code:   constants.SysPropertyTypeCode(sp.TypeCode),
 		},
 		Value:     sp.Value,
 		CreatedAt: grpcutil.TimestampToTime(sp.CreatedAt),

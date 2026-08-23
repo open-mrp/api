@@ -25,8 +25,8 @@ type UpdateTransactionRequest struct {
 	Note field.Optional[string] `json:"note,omitzero"`
 	// New transaction amount as a decimal string, in US dollars.
 	Amount field.Optional[string] `json:"amount,omitzero"`
-	// How the money moved: one of `cash`, `check`, `credit_card`, `gift_card`, or `ach`.
-	TransactionMethodCode field.Optional[string] `json:"method,omitzero" validate:"omitempty,max=255"`
+	// How the money moved.
+	TransactionMethodCode field.Optional[constants.TransactionMethod] `json:"method,omitzero" validate:"omitempty"`
 	// The kind of correction this transaction represents (see List Adjustment Types for available values).
 	AdjustmentTypeCode field.Optional[string] `json:"adjustment_type,omitzero" validate:"omitempty,max=255"`
 	// ID of the account user responsible for the transaction.
@@ -53,7 +53,7 @@ type UpdateTransactionRequest struct {
 
 var sampleUpdateTransactionNote = "Updated payment note"
 var sampleUpdateTransactionAmount = "750.00"
-var sampleUpdateTransactionMethodCode = "ach"
+var sampleUpdateTransactionMethodCode = constants.TransactionMethodACH
 var sampleUpdateTransactionRequest = &UpdateTransactionRequest{
 	Note:                  field.Some(sampleUpdateTransactionNote),
 	Amount:                field.Some(sampleUpdateTransactionAmount),

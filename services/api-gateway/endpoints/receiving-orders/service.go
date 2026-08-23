@@ -59,7 +59,7 @@ func (m *receivingOrderSvcImpl) ListReceivingOrders(ctx context.Context, req *Li
 		Cursor:      req.Cursor,
 		Limit:       req.Limit,
 		Query:       req.Query,
-		Status:      req.Status,
+		Status:      req.Status.StringPtr(),
 		ItemIds:     req.ItemIDs,
 		SupplierIds: req.SupplierIDs,
 		// Ask the backend to expand lines when requested (supplier/purchase_order

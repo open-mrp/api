@@ -15,9 +15,7 @@ import (
 type ListPicksRequest struct {
 	apiresource.PaginationRequest
 	// Filter by pick status.
-	//
-	// Pass `open` for picks that have not been finished, or `closed` for picks that have.
-	Status *string `query:"status"`
+	Status *constants.PickStatus `query:"status"`
 	// Filter by customer IDs.
 	CustomerIDs []string `query:"customer_ids"`
 	// Filter by product line IDs.

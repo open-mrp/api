@@ -195,11 +195,11 @@ func (s *notificationSvcImpl) LogFailedEmail(ctx context.Context, messageID stri
 	return s.emailLogRepo.Create(ctx, emailLog)
 }
 
-// SendEnterpriseRequest sends an enterprise upgrade request email to the sales team.
+// SendEnterpriseRequest sends an enterprise upgrade request email to support.
 //
 // 1. If the request originates from a sandbox, skip sending and return immediately.
 // 2. Render the enterprise request email template with account and requester details.
-// 3. Send the rendered email to the sales team address.
+// 3. Send the rendered email to the support address.
 func (s *notificationSvcImpl) SendEnterpriseRequest(ctx context.Context, req *domain.EnterpriseRequestData) *apierror.APIError {
 	ctx, span := notificationSvcTracer.Start(ctx, "service.notification.send_enterprise_request")
 	defer span.End()
@@ -221,10 +221,9 @@ func (s *notificationSvcImpl) SendEnterpriseRequest(ctx context.Context, req *do
 		return apiErr
 	}
 
-	// Send to sales team
-	salesEmail := "sales@augno.com"
+	supportEmail := "support@openmrp.ai"
 	_, apiErr = s.emailSender.Send(ctx, domain.EmailData{
-		To:      []string{salesEmail},
+		To:      []string{supportEmail},
 		Subject: subject,
 		Body:    body,
 		SendAs:  nil,

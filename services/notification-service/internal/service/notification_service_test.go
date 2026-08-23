@@ -68,7 +68,7 @@ func (suite *NotificationServiceTestSuite) TestSendEnterpriseRequest_Success() {
 			gomock.Any(),
 		).
 		DoAndReturn(func(ctx context.Context, data domain.EmailData) (*string, *apierror.APIError) {
-			suite.Equal([]string{"sales@augno.com"}, data.To)
+			suite.Equal([]string{"support@openmrp.ai"}, data.To)
 			suite.Equal("Enterprise Upgrade Request: Test Account", data.Subject)
 			suite.Nil(data.SendAs)
 			return nil, nil

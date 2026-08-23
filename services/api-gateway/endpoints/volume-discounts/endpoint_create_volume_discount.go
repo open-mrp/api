@@ -105,7 +105,7 @@ func (e *CreateVolumeDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*C
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeVolumeDiscount,
-			Fields:     []string{"customer_groups", "product_lines", "categories", "attributes", "acceptable_units"},
+			Fields:     []string{"customer_groups", "product_lines", "categories", "categories.properties", "attributes", "acceptable_units"},
 		}),
 	})
 }

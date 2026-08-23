@@ -59,11 +59,12 @@ type VolumeDiscountCategory struct {
 }
 
 type VolumeDiscountAttribute struct {
-	ID        string
-	Name      string
-	ColorCode string
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID         string
+	Name       string
+	ColorCode  string
+	PropertyID string
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
 }
 
 type VolumeDiscountUnit struct {

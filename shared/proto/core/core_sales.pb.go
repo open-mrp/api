@@ -5556,6 +5556,7 @@ type VolumeDiscountAttributeInfo struct {
 	ColorCode     *string                `protobuf:"bytes,3,opt,name=color_code,json=colorCode,proto3,oneof" json:"color_code,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3,oneof" json:"created_at,omitempty"`
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=updated_at,json=updatedAt,proto3,oneof" json:"updated_at,omitempty"`
+	PropertyId    string                 `protobuf:"bytes,6,opt,name=property_id,json=propertyId,proto3" json:"property_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -5623,6 +5624,13 @@ func (x *VolumeDiscountAttributeInfo) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
+}
+
+func (x *VolumeDiscountAttributeInfo) GetPropertyId() string {
+	if x != nil {
+		return x.PropertyId
+	}
+	return ""
 }
 
 type VolumeDiscountUnitInfo struct {
@@ -7473,7 +7481,7 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampH\x02R\tupdatedAt\x88\x01\x01B\a\n" +
 	"\x05_typeB\r\n" +
 	"\v_created_atB\r\n" +
-	"\v_updated_at\"\x92\x02\n" +
+	"\v_updated_at\"\xb3\x02\n" +
 	"\x1bVolumeDiscountAttributeInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\"\n" +
@@ -7482,7 +7490,9 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampH\x01R\tcreatedAt\x88\x01\x01\x12>\n" +
 	"\n" +
-	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampH\x02R\tupdatedAt\x88\x01\x01B\r\n" +
+	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampH\x02R\tupdatedAt\x88\x01\x01\x12\x1f\n" +
+	"\vproperty_id\x18\x06 \x01(\tR\n" +
+	"propertyIdB\r\n" +
 	"\v_color_codeB\r\n" +
 	"\v_created_atB\r\n" +
 	"\v_updated_at\"\x9a\x03\n" +

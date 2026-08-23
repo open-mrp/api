@@ -827,6 +827,7 @@ message VolumeDiscountAttributeInfo {
   optional string color_code = 3;
   optional google.protobuf.Timestamp created_at = 4;
   optional google.protobuf.Timestamp updated_at = 5;
+  string property_id = 6;
 }
 
 message VolumeDiscountUnitInfo {

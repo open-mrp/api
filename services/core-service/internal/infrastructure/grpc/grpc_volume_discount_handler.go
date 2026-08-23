@@ -85,11 +85,12 @@ func volumeDiscountToProto(d *domain.VolumeDiscount) *pb.VolumeDiscountInfo {
 		attrCreatedAt := timestamppb.New(attr.CreatedAt)
 		attrUpdatedAt := timestamppb.New(attr.UpdatedAt)
 		attributes[i] = &pb.VolumeDiscountAttributeInfo{
-			Id:        attr.ID,
-			Name:      attr.Name,
-			ColorCode: &attrColorCode,
-			CreatedAt: attrCreatedAt,
-			UpdatedAt: attrUpdatedAt,
+			Id:         attr.ID,
+			Name:       attr.Name,
+			ColorCode:  &attrColorCode,
+			PropertyId: attr.PropertyID,
+			CreatedAt:  attrCreatedAt,
+			UpdatedAt:  attrUpdatedAt,
 		}
 	}
 

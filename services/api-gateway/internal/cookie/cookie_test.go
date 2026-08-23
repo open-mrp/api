@@ -212,24 +212,18 @@ func TestCookieDomains(t *testing.T) {
 			wantDomain:   "",
 		},
 		{
-			// augno.com stays live and serving through the OpenMRP rename, so it must
-			// still receive a wildcard cookie. Scoping to the wrong domain makes the
-			// browser drop the cookie and breaks auth entirely.
-			name:         "Production legacy apex host keeps its own wildcard domain",
+			// augno.com only redirects to openmrp.ai now, so a browser never sits on it
+			// long enough to be issued a cookie. It is no longer first-party, and a host
+			// we merely redirect from should not get a wildcard scoped to it.
+			name:         "Retired domain no longer gets the wildcard",
 			isProduction: true,
 			externalHost: "augno.com",
-			wantDomain:   ".augno.com",
+			wantDomain:   "",
 		},
 		{
-			name:         "Production legacy subdomain keeps its own wildcard domain",
+			name:         "Retired subdomain no longer gets the wildcard",
 			isProduction: true,
 			externalHost: "app.augno.com",
-			wantDomain:   ".augno.com",
-		},
-		{
-			name:         "Legacy lookalike domain does not get the wildcard",
-			isProduction: true,
-			externalHost: "evilaugno.com",
 			wantDomain:   "",
 		},
 	}

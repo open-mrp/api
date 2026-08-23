@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.4](https://github.com/open-mrp/api/compare/v1.1.3...v1.1.4) (2026-08-23)
+
+
+### Bug Fixes
+
+* allow category property includes in volume discounts ([#19](https://github.com/open-mrp/api/issues/19)) ([98c8cc8](https://github.com/open-mrp/api/commit/98c8cc801a5205a3a5fd999047881797b302201f))
+
 ## [1.1.3](https://github.com/open-mrp/api/compare/v1.1.2...v1.1.3) (2026-08-23)
 
 

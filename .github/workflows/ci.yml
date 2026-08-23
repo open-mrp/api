@@ -4,6 +4,12 @@ on:
   pull_request:
     branches: [main]
 
+# paths-filter reads the PR's changed files from the API, which the default token
+# is not granted.
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   changes:
     name: Detect Changes

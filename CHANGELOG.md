@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.2](https://github.com/open-mrp/api/compare/v1.1.1...v1.1.2) (2026-08-23)
+
+
+### Bug Fixes
+
+* resolve the SDK ref including pre-releases ([#14](https://github.com/open-mrp/api/issues/14)) ([1429ad2](https://github.com/open-mrp/api/commit/1429ad2bbfaa5a4dd974ad9eae089409c42f3849))
+
 ## [1.1.1](https://github.com/open-mrp/api/compare/v1.1.0...v1.1.1) (2026-08-22)
 
 

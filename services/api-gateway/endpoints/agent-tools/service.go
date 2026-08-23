@@ -122,9 +122,10 @@ func availableToolFromProto(t *pb.AvailableToolInfo) apiresource.AvailableTool {
 		perms = []string{}
 	}
 
-	var roleType *string
+	var roleType *constants.RoleType
 	if t.RequiredRoleType != "" {
-		roleType = &t.RequiredRoleType
+		rt := constants.RoleType(t.RequiredRoleType)
+		roleType = &rt
 	}
 
 	return apiresource.AvailableTool{
@@ -133,7 +134,7 @@ func availableToolFromProto(t *pb.AvailableToolInfo) apiresource.AvailableTool {
 		Name:                t.DisplayName,
 		Description:         &t.Description,
 		ConfigSchema:        json.RawMessage(t.ConfigSchemaJson),
-		Category:            t.Category,
+		Category:            constants.AgentToolCategory(t.Category),
 		RequiredPermissions: perms,
 		RequiredRoleType:    roleType,
 		Mutating:            t.Mutating,

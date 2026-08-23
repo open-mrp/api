@@ -183,7 +183,7 @@ func (m *itemSvcImpl) GetItemCosts(ctx context.Context, req *GetItemCostsRequest
 func (m *itemSvcImpl) GetItemTrends(ctx context.Context, req *GetItemTrendsRequest) (*apiresource.ItemTrends, *apierror.APIError) {
 	pbReq := &pb.GetItemTrendsRequest{
 		Id:        req.ItemID,
-		TrendType: req.TrendType,
+		TrendType: string(req.TrendType),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, itemSvcTracer, "service.items.get_trends", domain.ServiceName,
@@ -318,7 +318,7 @@ func (m *itemSvcImpl) BulkCreateItems(ctx context.Context, req *BulkCreateItemsR
 
 	pbReq := &pb.BulkCreateItemsRequest{
 		Items: pbItems,
-		Type:  req.Type,
+		Type:  string(req.Type),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, itemSvcTracer, "service.items.bulk_create", domain.ServiceName,
@@ -332,9 +332,9 @@ func (m *itemSvcImpl) BulkCreateItems(ctx context.Context, req *BulkCreateItemsR
 
 	results := make([]apiresource.BulkCreateItemResult, len(resp.Results))
 	for i, r := range resp.Results {
-		status := "failed"
+		status := constants.BulkResultStatusFailed
 		if r.Success {
-			status = "created"
+			status = constants.BulkResultStatusCreated
 		}
 		results[i] = apiresource.BulkCreateItemResult{
 			SKU:    r.Sku,
@@ -362,7 +362,7 @@ func (m *itemSvcImpl) BulkReconcileItems(ctx context.Context, req *BulkReconcile
 
 	pbReq := &pb.BulkReconcileItemsRequest{
 		Data:          pbData,
-		ReconcileType: req.ReconcileType,
+		ReconcileType: string(req.ReconcileType),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, itemSvcTracer, "service.items.bulk_reconcile", domain.ServiceName,

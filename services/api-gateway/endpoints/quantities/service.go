@@ -53,7 +53,7 @@ func (m *quantitySvcImpl) UpdateQuantity(ctx context.Context, req *UpdateQuantit
 		Value:      req.Value.Ptr(),
 		UnitId:     req.UnitID.Ptr(),
 		ObjectId:   req.ObjectID.Ptr(),
-		ObjectType: req.ObjectType.Ptr(),
+		ObjectType: req.ObjectType.Ptr().StringPtr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, quantitySvcTracer, "service.quantities.update", domain.ServiceName,

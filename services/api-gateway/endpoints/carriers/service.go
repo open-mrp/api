@@ -224,7 +224,7 @@ func (m *carrierSvcImpl) GetOAuthStatus(ctx context.Context, req *GetOAuthStatus
 		return nil, apiErr
 	}
 
-	return &apiresource.OAuthStatusResponse{Object: constants.ObjectTypeOAuthStatusResponse, Status: resp.Status}, nil
+	return &apiresource.OAuthStatusResponse{Object: constants.ObjectTypeOAuthStatusResponse, Status: constants.CarrierConnectionStatus(resp.Status)}, nil
 }
 
 func (m *carrierSvcImpl) SyncOptions(ctx context.Context, req *SyncOptionsRequest) (*apiresource.Carrier, *apierror.APIError) {

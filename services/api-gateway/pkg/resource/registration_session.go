@@ -83,7 +83,7 @@ type RegistrationSession struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=registration_session"`
 	// Code of the pricing plan selected for this registration.
-	PlanCode string `json:"plan_code" validate:"required"`
+	PlanCode constants.PlanCode `json:"plan_code" validate:"required"`
 	// Current step in the registration flow.
 	//
 	// Steps advance in this order:
@@ -204,7 +204,7 @@ var SampleRegistrationSessionAccount = &RegistrationSessionAccount{
 var SampleRegistrationSession = &RegistrationSession{
 	ID:                      SampleRegistrationSessionID,
 	Object:                  constants.ObjectTypeRegistrationSession,
-	PlanCode:                string(constants.PlanCodeStarter),
+	PlanCode:                constants.PlanCodeStarter,
 	Step:                    constants.RegistrationStepVerification,
 	StripeCustomerID:        new(SampleStripeCustomerID),
 	StripeCheckoutSessionID: new(SampleCheckoutSessionID),

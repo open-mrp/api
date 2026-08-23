@@ -8,6 +8,7 @@ import (
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/field"
 )
@@ -19,7 +20,7 @@ type CheckDuplicateRequest struct {
 	// - `invoice_number`: checks invoice numbers.
 	// - `order_number`: checks sales order numbers.
 	// - `customer_po_number`: checks customer PO numbers on sales orders; requires `customer_id`.
-	Type string `json:"type" validate:"required"`
+	Type constants.DuplicateCheckType `json:"type" validate:"required"`
 	// The record number to check for an existing match.
 	//
 	// Surrounding whitespace is trimmed before the number is compared against existing records.

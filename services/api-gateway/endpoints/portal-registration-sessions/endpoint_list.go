@@ -20,7 +20,7 @@ type ListPortalRegistrationSessionsRequest struct {
 	// - `completed`: the buyer finished registering.
 	// - `abandoned`: the buyer explicitly gave the session up.
 	// - `expired`: still incomplete, but past the resume window, so the buyer can no longer pick it back up.
-	Status *string `query:"status"`
+	Status *constants.PortalRegistrationStatus `query:"status"`
 }
 
 // Returns the account's buyer registrations into its customer portal, newest first.

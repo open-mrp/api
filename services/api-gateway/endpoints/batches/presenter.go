@@ -106,7 +106,7 @@ func BatchPresenter(b *pb.BatchInfo) apiresource.Batch {
 		lots[i] = apiresource.BatchLot{
 			Object:    constants.ObjectTypeBatchLot,
 			LotNumber: l.LotNumber,
-			Type:      l.Type,
+			Type:      constants.BatchLotType(l.Type),
 		}
 	}
 

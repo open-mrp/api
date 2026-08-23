@@ -24,7 +24,7 @@ type UpdatePurchaseOrderRequest struct {
 	// Must be unique within the account; a number already used by another order is rejected.
 	Number field.Optional[string] `json:"number,omitzero" validate:"omitempty,max=255"`
 	// Priority level for fulfilling the order (`low`, `normal`, or `high`).
-	PriorityCode field.Optional[string] `json:"priority_code,omitzero" validate:"omitempty,max=255"`
+	PriorityCode field.Optional[constants.PriorityCode] `json:"priority_code,omitzero" validate:"omitempty"`
 	// ID of an existing address to use as the bill-to address.
 	BillingAddressID field.Optional[string] `json:"billing_address_id,omitzero" validate:"omitempty"`
 	// ID of an existing address to use as the ship-to address.
@@ -41,7 +41,7 @@ type UpdatePurchaseOrderRequest struct {
 
 var sampleUpdatePONote = "Updated delivery notes"
 var sampleUpdatePONumber = apiresource.SamplePurchaseOrderNumber
-var sampleUpdatePOPriorityCode = string(constants.PriorityCodeNormal)
+var sampleUpdatePOPriorityCode = constants.PriorityCodeNormal
 var sampleUpdatePOPromisedAt = "2026-05-15T00:00:00Z"
 var sampleUpdatePurchaseOrderRequest = &UpdatePurchaseOrderRequest{
 	Note:         field.Some(sampleUpdatePONote),

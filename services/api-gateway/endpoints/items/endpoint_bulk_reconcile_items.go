@@ -8,6 +8,7 @@ import (
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 )
 
@@ -35,7 +36,7 @@ type BulkReconcileItemsRequest struct {
 	//
 	// - `addition`: adds the quantity to the item's current quantity.
 	// - `force`: sets the item's current quantity to exactly the given quantity.
-	ReconcileType string `json:"reconcile_type" validate:"required"`
+	ReconcileType constants.ItemReconcileType `json:"reconcile_type" validate:"required"`
 }
 
 var sampleBulkReconcileItemsRequest = &BulkReconcileItemsRequest{
@@ -46,7 +47,7 @@ var sampleBulkReconcileItemsRequest = &BulkReconcileItemsRequest{
 			Quantity: "10.5",
 		},
 	},
-	ReconcileType: "addition",
+	ReconcileType: constants.ItemReconcileTypeAddition,
 }
 
 func (*BulkReconcileItemsRequest) SchemaExample() any {

@@ -318,7 +318,7 @@ func mapProtoToRegistrationSession(s *pb.RegistrationSessionInfo) *apiresource.R
 	return &apiresource.RegistrationSession{
 		ID:                      s.Id,
 		Object:                  constants.ObjectTypeRegistrationSession,
-		PlanCode:                s.PlanCode,
+		PlanCode:                constants.PlanCode(s.PlanCode),
 		Step:                    constants.RegistrationStep(s.Step),
 		StripeCustomerID:        s.StripeCustomerId,
 		StripeCheckoutSessionID: s.StripeCheckoutSessionId,

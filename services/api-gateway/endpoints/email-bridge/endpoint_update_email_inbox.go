@@ -21,7 +21,7 @@ type UpdateEmailInboxRequest struct {
 	//
 	// - `active`: inbound mail is threaded into a conversation.
 	// - `disabled`: the inbox stays provisioned and keeps its history, but inbound mail is dropped without being threaded.
-	Status string `json:"status" validate:"required"`
+	Status constants.EmailInboxStatus `json:"status" validate:"required"`
 	// Display name for the `From` header of outbound mail.
 	FromName field.Optional[string] `json:"from_name,omitzero"`
 	// The agent to bind to this inbox to handle incoming mail.
@@ -33,7 +33,7 @@ type UpdateEmailInboxRequest struct {
 	// - `always`: runs on every incoming message.
 	//
 	// While no policy has been set, the agent runs on every incoming message, since email has no reliable @mention convention.
-	AgentTriggerPolicy field.Optional[string] `json:"agent_trigger_policy,omitzero"`
+	AgentTriggerPolicy field.Optional[constants.AgentTriggerPolicy] `json:"agent_trigger_policy,omitzero"`
 	// The keywords that decide whether the agent runs on an incoming message.
 	//
 	// Under the `keyword` policy a keyword matches anywhere in the message; under `mention` it only counts where it is prefixed with `@`.
@@ -50,7 +50,7 @@ var sampleUpdateEmailInboxRequest = &UpdateEmailInboxRequest{
 	Status:               "active",
 	FromName:             field.Some(sampleUpdateEmailInboxFromName),
 	AgentConfigID:        field.Some(apiresource.SampleAgentDefinitionID),
-	AgentTriggerPolicy:   field.Some(string(constants.AgentTriggerPolicyKeyword)),
+	AgentTriggerPolicy:   field.Some(constants.AgentTriggerPolicyKeyword),
 	AgentTriggerKeywords: []string{"invoice", "refund"},
 }
 

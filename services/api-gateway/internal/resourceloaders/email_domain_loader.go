@@ -49,7 +49,7 @@ func emailDomainBaseFromProto(d *notifpb.EmailDomainInfo) *apiresource.EmailDoma
 		ID:         d.Id,
 		Object:     constants.ObjectTypeEmailDomain,
 		Domain:     d.Domain,
-		Status:     d.Status,
+		Status:     constants.EmailDomainStatus(d.Status),
 		DkimTokens: orEmptyStrSlice(d.DkimTokens),
 		VerifiedAt: grpcutil.TimestampToTimePtr(d.VerifiedAt),
 		CreatedAt:  grpcutil.TimestampToTime(d.CreatedAt),

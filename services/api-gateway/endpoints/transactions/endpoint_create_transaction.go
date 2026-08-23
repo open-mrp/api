@@ -23,13 +23,13 @@ type CreateTransactionRequest struct {
 	// - `credit_memo`: a credit issued to the customer.
 	// - `adjustment`: a manual correction (also provide `adjustment_type`).
 	// - `rebate`: a rebate granted to the customer.
-	TransactionTypeCode string `json:"type" validate:"required,max=255"`
+	TransactionTypeCode constants.TransactionType `json:"type" validate:"required"`
 	// Transaction amount as a decimal string, in US dollars.
 	Amount string `json:"amount" validate:"required"`
-	// How the money moved: one of `cash`, `check`, `credit_card`, `gift_card`, or `ach`.
+	// How the money moved.
 	//
 	// Typically provided for payment transactions.
-	TransactionMethodCode field.Optional[string] `json:"method,omitzero" validate:"omitempty,max=255"`
+	TransactionMethodCode field.Optional[constants.TransactionMethod] `json:"method,omitzero" validate:"omitempty"`
 	// The kind of correction this transaction represents (see List Adjustment Types for available values).
 	//
 	// Typically provided when `type` is `adjustment`.
@@ -42,11 +42,11 @@ type CreateTransactionRequest struct {
 	Note field.Optional[string] `json:"note,omitzero"`
 }
 
-var sampleCreateTransactionMethodCode = "check"
+var sampleCreateTransactionMethodCode = constants.TransactionMethodCheck
 var sampleCreateTransactionNote = "Q1 invoice payment"
 var sampleCreateTransactionRequest = &CreateTransactionRequest{
 	CustomerID:            apiresource.SampleCustomerID,
-	TransactionTypeCode:   "payment",
+	TransactionTypeCode:   constants.TransactionTypePayment,
 	Amount:                "500.00",
 	TransactionMethodCode: field.Some(sampleCreateTransactionMethodCode),
 	Note:                  field.Some(sampleCreateTransactionNote),

@@ -203,7 +203,7 @@ func (m *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, req *CreateSal
 		ServiceLevelId:               req.ServiceLevelID.Ptr(),
 		CarrierBillingType:           carrierBillingType,
 		CarrierBillingAccount:        req.CarrierBillingAccountNumber.Ptr(),
-		PriorityCode:                 req.PriorityCode,
+		PriorityCode:                 string(req.PriorityCode),
 		SalesRepId:                   req.SalesRepID.Ptr(),
 		ShippingTermId:               req.ShippingTermID.Ptr(),
 		PaymentTermId:                req.PaymentTermID.Ptr(),
@@ -265,7 +265,7 @@ func (m *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, req *UpdateSal
 		ShipByOverrideDate:    field.TimestampClearableToProto(req.ShipByOverrideDate),
 		// Non-nullable optional fields → *string (set or leave; not clearable).
 		CarrierId:                    req.CarrierID.Ptr(),
-		PriorityCode:                 req.PriorityCode.Ptr(),
+		PriorityCode:                 req.PriorityCode.Ptr().StringPtr(),
 		ShippingTermId:               req.ShippingTermID.Ptr(),
 		PaymentTermId:                req.PaymentTermID.Ptr(),
 		BillingAddressId:             req.BillingAddressID.Ptr(),

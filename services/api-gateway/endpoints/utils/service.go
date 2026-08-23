@@ -52,11 +52,11 @@ func NewUtilsSvc(config *UtilsSvcConfig) UtilsSvc {
 func (m *utilsSvcImpl) CheckDuplicate(ctx context.Context, req *CheckDuplicateRequest) (*apiresource.CheckDuplicateResult, *apierror.APIError) {
 	var pbType pb.DuplicateCheckType
 	switch req.Type {
-	case "invoice_number":
+	case constants.DuplicateCheckTypeInvoiceNumber:
 		pbType = pb.DuplicateCheckType_DUPLICATE_CHECK_TYPE_INVOICE_NUMBER
-	case "order_number":
+	case constants.DuplicateCheckTypeOrderNumber:
 		pbType = pb.DuplicateCheckType_DUPLICATE_CHECK_TYPE_ORDER_NUMBER
-	case "customer_po_number":
+	case constants.DuplicateCheckTypeCustomerPONumber:
 		pbType = pb.DuplicateCheckType_DUPLICATE_CHECK_TYPE_CUSTOMER_PO_NUMBER
 	default:
 		return nil, apierror.NewValidationErrorWithParam("Invalid duplicate check type. Must be one of: invoice_number, order_number, customer_po_number.", "type")

@@ -54,7 +54,7 @@ func (m *rateSvcImpl) UpdateRate(ctx context.Context, req *UpdateRateRequest) (*
 		NumeratorUnitId:   req.NumeratorUnitID.Ptr(),
 		DenominatorUnitId: req.DenominatorUnitID.Ptr(),
 		ObjectId:          req.ObjectID.Ptr(),
-		ObjectType:        req.ObjectType.Ptr(),
+		ObjectType:        req.ObjectType.Ptr().StringPtr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, rateSvcTracer, "service.rates.update", domain.ServiceName,

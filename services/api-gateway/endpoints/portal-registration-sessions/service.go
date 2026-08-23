@@ -116,7 +116,7 @@ func (s *portalRegSessionSvcImpl) List(ctx context.Context, req *ListPortalRegis
 			return s.coreClient.ListPortalRegistrationSessions(ctx, &pb.ListPortalRegistrationSessionsRequest{
 				Cursor: req.Cursor,
 				Limit:  req.Limit,
-				Status: req.Status,
+				Status: req.Status.StringPtr(),
 				Search: req.Query,
 			}, opts...)
 		})

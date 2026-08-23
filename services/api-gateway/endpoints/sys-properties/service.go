@@ -97,7 +97,7 @@ func (m *sysPropertySvcImpl) UpdateSysProperty(ctx context.Context, req *UpdateS
 
 func (m *sysPropertySvcImpl) GetLatestSysPropertyValue(ctx context.Context, req *GetLatestSysPropertyValueRequest) (*apiresource.SysPropertyValue, *apierror.APIError) {
 	pbReq := &pb.GetLatestSysPropertyValueRequest{
-		TypeCode: req.TypeCode,
+		TypeCode: string(req.TypeCode),
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, sysPropertySvcTracer, "service.sys_properties.get_latest_value", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetLatestSysPropertyValueResponse, error) {

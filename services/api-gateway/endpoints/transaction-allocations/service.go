@@ -55,7 +55,7 @@ func (m *transactionAllocationSvcImpl) ListAllocationEntries(ctx context.Context
 		Cursor:          req.Cursor,
 		Limit:           req.Limit,
 		Query:           req.Query,
-		TransactionType: req.TransactionType,
+		TransactionType: req.TransactionType.StringPtr(),
 	}
 
 	if req.StartDate != nil {
@@ -175,8 +175,8 @@ func allocationEntryFromProto(d *pb.AllocationEntryInfo) apiresource.AllocationE
 		Transaction: &apiresource.AllocationTransaction{
 			ID:             d.TransactionId,
 			Object:         constants.ObjectTypeTransaction,
-			Type:           d.TransactionType,
-			Method:         d.TransactionMethod,
+			Type:           constants.TransactionType(d.TransactionType),
+			Method:         constants.EnumPtr[constants.TransactionMethod](d.TransactionMethod),
 			AdjustmentType: d.AdjustmentType,
 		},
 		Invoice: &apiresource.AllocationInvoice{

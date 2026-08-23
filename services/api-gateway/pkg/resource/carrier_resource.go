@@ -100,12 +100,12 @@ type OAuthStatusResponse struct {
 	// - `connected`: your own carrier account is authorized and ready for live rating and label purchase.
 	// - `authorization_pending`: a carrier account exists but is still Shippo's shared default account, so authorization of your own carrier account has not been completed.
 	// - `disconnected`: the carrier has no carrier account to authorize, or the carrier account could not be reached. Sandbox accounts always report this status.
-	Status string `json:"status" validate:"required"`
+	Status constants.CarrierConnectionStatus `json:"status" validate:"required"`
 }
 
 var SampleOAuthStatusResponse = &OAuthStatusResponse{
 	Object: constants.ObjectTypeOAuthStatusResponse,
-	Status: "connected",
+	Status: constants.CarrierConnectionStatusConnected,
 }
 
 func (*OAuthStatusResponse) SchemaExample() any {

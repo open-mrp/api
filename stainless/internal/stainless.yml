@@ -1,7 +1,7 @@
 edition: "2026-02-23"
 organization:
   name: openmrp
-  contact: support@augno.com
+  contact: support@openmrp.ai
 targets:
   typescript:
     edition: typescript.2025-10-10

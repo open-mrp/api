@@ -21,4 +21,4 @@ affiliated with your project.
 
 If you fork this repository and publish it, replace the branding with your own.
 
-Questions about trademark use: support@augno.com
+Questions about trademark use: support@openmrp.ai

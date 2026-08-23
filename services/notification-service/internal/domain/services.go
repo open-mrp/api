@@ -213,7 +213,7 @@ type NotificationSvc interface {
 	//   - If the email has already been logged for this message ID, the operation is a no-op.
 	LogFailedEmail(ctx context.Context, messageID string, data EmailSendData) *apierror.APIError
 
-	// SendEnterpriseRequest sends an enterprise upgrade request email to the sales team.
+	// SendEnterpriseRequest sends an enterprise upgrade request email to support.
 	SendEnterpriseRequest(ctx context.Context, req *EnterpriseRequestData) *apierror.APIError
 }
 

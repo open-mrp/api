@@ -41,7 +41,7 @@ type BillingSvc interface {
 	// PreviewPlanChange previews the cost impact of switching to a different pricing plan using the billing intent reserve+void pattern.
 	PreviewPlanChange(ctx context.Context, accountID string, planID string) (*PlanChangePreview, *apierror.APIError)
 
-	// RequestEnterpriseUpgrade sends an enterprise plan inquiry to the sales team on behalf of the requesting admin.
+	// RequestEnterpriseUpgrade sends an enterprise plan inquiry to support on behalf of the requesting admin.
 	RequestEnterpriseUpgrade(ctx context.Context, input RequestEnterpriseUpgradeInput) (*RequestEnterpriseUpgradeResult, *apierror.APIError)
 
 	// EnsureBillingCustomer links or fetches a Stripe customer for an account. If one already exists it is returned; otherwise a new one is created. Also creates a billing profile if one doesn't exist.

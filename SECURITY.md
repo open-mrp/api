@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-Email **[security@augno.com](mailto:security@augno.com)**. Please do not open a public issue, and do not disclose the
+Email **[security@openmrp.ai](mailto:security@openmrp.ai)**. Please do not open a public issue, and do not disclose the
 vulnerability publicly until we have shipped a fix.
 
 Include whatever you have: affected endpoint or component, the steps to reproduce, what an attacker

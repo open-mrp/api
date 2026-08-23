@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.3](https://github.com/open-mrp/api/compare/v1.1.2...v1.1.3) (2026-08-23)
+
+
+### Bug Fixes
+
+* drop dual-domain support now that only openmrp.ai is served ([#16](https://github.com/open-mrp/api/issues/16)) ([374a350](https://github.com/open-mrp/api/commit/374a3502f764fcd25821c4a55ad0a9ba298ba51c))
+
 ## [1.1.2](https://github.com/open-mrp/api/compare/v1.1.1...v1.1.2) (2026-08-23)
 
 

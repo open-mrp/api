@@ -296,6 +296,12 @@ func stashVolumeDiscountMeta(meta *resourcekit.LoadMeta, d *pb.VolumeDiscountInf
 		if attr.ColorCode != nil {
 			attributes[i].ColorCode = constants.Color(*attr.ColorCode)
 		}
+		if attr.PropertyId != "" {
+			attributes[i].Property = &apiresource.Property{
+				ID:     attr.PropertyId,
+				Object: constants.ObjectTypeProperty,
+			}
+		}
 	}
 	meta.Set(constants.ObjectTypeVolumeDiscount, d.Id, "attributes",
 		apiresource.NewList(attributes, apiresource.PageInfo{}))

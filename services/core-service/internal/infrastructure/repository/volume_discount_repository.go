@@ -139,11 +139,12 @@ func (r *volumeDiscountRepoImpl) enrichSingle(ctx context.Context, d *domain.Vol
 		d.Attributes = make([]*domain.VolumeDiscountAttribute, len(attrRows))
 		for i, attr := range attrRows {
 			d.Attributes[i] = &domain.VolumeDiscountAttribute{
-				ID:        attr.ID,
-				Name:      attr.Name,
-				ColorCode: attr.ColorCode,
-				CreatedAt: attr.CreatedAt,
-				UpdatedAt: attr.UpdatedAt,
+				ID:         attr.ID,
+				Name:       attr.Name,
+				ColorCode:  attr.ColorCode,
+				PropertyID: attr.PropertyID,
+				CreatedAt:  attr.CreatedAt,
+				UpdatedAt:  attr.UpdatedAt,
 			}
 		}
 	}
@@ -274,11 +275,12 @@ func (r *volumeDiscountRepoImpl) enrichBatch(ctx context.Context, discounts []*d
 		}
 		for _, attr := range attrRows {
 			attrMap[attr.QuantityDiscountID] = append(attrMap[attr.QuantityDiscountID], &domain.VolumeDiscountAttribute{
-				ID:        attr.ID,
-				Name:      attr.Name,
-				ColorCode: attr.ColorCode,
-				CreatedAt: attr.CreatedAt,
-				UpdatedAt: attr.UpdatedAt,
+				ID:         attr.ID,
+				Name:       attr.Name,
+				ColorCode:  attr.ColorCode,
+				PropertyID: attr.PropertyID,
+				CreatedAt:  attr.CreatedAt,
+				UpdatedAt:  attr.UpdatedAt,
 			})
 		}
 	}

@@ -17,6 +17,16 @@ func init() {
 			{Key: "customer_groups", Cardinality: resourcekit.CardinalityList, Populate: populateCustomerGroupsOnVolumeDiscount},
 			{Key: "product_lines", Cardinality: resourcekit.CardinalityList, Populate: populateProductLinesOnVolumeDiscount},
 			{Key: "categories", Cardinality: resourcekit.CardinalityList, Populate: populateCategoriesOnVolumeDiscount},
+			// The discount's own category rows carry no properties, so this one hop
+			// through the category loader is what makes the attribute pickers on the
+			// discount page render at all.
+			{
+				Key:         "categories.properties",
+				Target:      constants.ObjectTypeItemCategory,
+				Cardinality: resourcekit.CardinalityList,
+				ExtractIDs:  extractCategoryIDsFromVolumeDiscount,
+				Populate:    populatePropertiesOnVolumeDiscountCategories,
+			},
 			{Key: "attributes", Cardinality: resourcekit.CardinalityList, Populate: populateAttributesOnVolumeDiscount},
 			{Key: "acceptable_units", Cardinality: resourcekit.CardinalityList, Populate: populateAcceptableUnitsOnVolumeDiscount},
 		},
@@ -51,6 +61,37 @@ func populateCategoriesOnVolumeDiscount(ctx context.Context, parent any, _ map[s
 		return
 	}
 	vd.Categories = v.(*apiresource.List[apiresource.ItemCategory])
+}
+
+func extractCategoryIDsFromVolumeDiscount(_ context.Context, parent any) []string {
+	vd := parent.(*apiresource.VolumeDiscount)
+	if vd.Categories == nil {
+		return nil
+	}
+	ids := make([]string, len(vd.Categories.Data))
+	for i, cat := range vd.Categories.Data {
+		ids[i] = cat.ID
+	}
+	return ids
+}
+
+func populatePropertiesOnVolumeDiscountCategories(ctx context.Context, parent any, loaded map[string]any) {
+	vd := parent.(*apiresource.VolumeDiscount)
+	if vd.Categories == nil {
+		return
+	}
+	meta := resourcekit.GetLoadMeta(ctx)
+	for i := range vd.Categories.Data {
+		cat := &vd.Categories.Data[i]
+		if _, ok := loaded[cat.ID]; !ok {
+			continue
+		}
+		v, ok := meta.Get(constants.ObjectTypeItemCategory, cat.ID, "properties_list")
+		if !ok || v == nil {
+			continue
+		}
+		cat.Properties = v.(*apiresource.List[apiresource.Property])
+	}
 }
 
 func populateAttributesOnVolumeDiscount(ctx context.Context, parent any, _ map[string]any) {

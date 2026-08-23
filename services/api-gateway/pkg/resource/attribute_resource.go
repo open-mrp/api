@@ -31,7 +31,7 @@ type Attribute struct {
 	SortOrder int32 `json:"sort_order"`
 	// The property this attribute belongs to.
 	//
-	// Populated only when the attribute is returned under an item's `attributes` list.
+	// Populated only when the attribute is returned under an item's or a volume discount's `attributes` list.
 	Property *Property `json:"property"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

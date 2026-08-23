@@ -183,6 +183,7 @@ SELECT
     a.id,
     a.text AS name,
     a.color_code,
+    a.property_id,
     a.created_at,
     a.updated_at
 FROM ` + "`" + `_quantity_discounts_attributes` + "`" + ` qda
@@ -191,11 +192,12 @@ WHERE qda.B = ?
 `
 
 type GetVolumeDiscountAttributesRow struct {
-	ID        string
-	Name      string
-	ColorCode string
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID         string
+	Name       string
+	ColorCode  string
+	PropertyID string
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
 }
 
 func (q *Queries) GetVolumeDiscountAttributes(ctx context.Context, quantityDiscountID string) ([]GetVolumeDiscountAttributesRow, error) {
@@ -211,6 +213,7 @@ func (q *Queries) GetVolumeDiscountAttributes(ctx context.Context, quantityDisco
 			&i.ID,
 			&i.Name,
 			&i.ColorCode,
+			&i.PropertyID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -232,6 +235,7 @@ SELECT
     a.id,
     a.text AS name,
     a.color_code,
+    a.property_id,
     a.created_at,
     a.updated_at,
     qda.B AS quantity_discount_id
@@ -244,6 +248,7 @@ type GetVolumeDiscountAttributesByDiscountIDsRow struct {
 	ID                 string
 	Name               string
 	ColorCode          string
+	PropertyID         string
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
 	QuantityDiscountID string
@@ -272,6 +277,7 @@ func (q *Queries) GetVolumeDiscountAttributesByDiscountIDs(ctx context.Context, 
 			&i.ID,
 			&i.Name,
 			&i.ColorCode,
+			&i.PropertyID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.QuantityDiscountID,

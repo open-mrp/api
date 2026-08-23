@@ -77,7 +77,22 @@ targets:
 environments:
   production: https://api.openmrp.ai
   local: http://localhost:8081
+custom_casings:
+  # `MRP` is an initialism, but stlc's pascalCase only knows the base set
+  # (api, id, http, ...) and would render the client class `Openmrp`. Registering
+  # it here is what lets `default_client_name: OpenMRP` below survive casing.
+  #
+  # Scoped deliberately to `mrp`, not `openmrp`: a casing entry for the whole word
+  # would also recase every `openmrp_*` schema field (`openmrpAccountID` ->
+  # `openMRPAccountID`), which is a breaking rename of the client options. No
+  # identifier in either spec has `mrp` as its own word, so nothing else moves.
+  mrp:
+    initialism: true
 client_settings:
+  # Without this the client class is derived from `organization.name` ("openmrp")
+  # and generates as `Openmrp`. Consumers import `OpenMRP`; a hand rename in the
+  # SDK repo is undone by the next sync, so it has to be set here.
+  default_client_name: OpenMRP
   # The API requires an OpenMRP-Version header on every request. The self-hosted
   # stlc fork does not honor the upstream `send_openapi_info_version_as_header`
   # key, so we emit it as a default header instead. `version_header: true` marks

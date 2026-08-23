@@ -1,0 +1,32 @@
+version: 2
+updates:
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      # One PR per week for the routine bumps; majors still arrive individually.
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  # Pinned to tools/tool-versions; a bump here has to be matched there or `make sqlc`
+  # and `make proto` rewrite every generated file.
+  - package-ecosystem: "gomod"
+    directory: "/tools"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: "docker"
+    directory: "/infra/production/docker"
+    schedule:
+      interval: "weekly"

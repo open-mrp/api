@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.6](https://github.com/open-mrp/api/compare/v1.1.5...v1.1.6) (2026-08-23)
+
+
+### Bug Fixes
+
+* a few endpoints using type `string` instead of a `constant` ([#27](https://github.com/open-mrp/api/issues/27)) ([fa05ecb](https://github.com/open-mrp/api/commit/fa05ecbc0b8a920f4107e2b19fb14b72e3ee5646))
+
 ## [1.1.5](https://github.com/open-mrp/api/compare/v1.1.4...v1.1.5) (2026-08-23)
 
 

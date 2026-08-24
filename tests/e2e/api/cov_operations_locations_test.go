@@ -222,8 +222,7 @@ func TestCovOperationsLocations_CreateNameTooLongRejected(t *testing.T) {
 }
 
 // ──────────────────────────────────────────────
-// name — empty string rejected on update (prodBugSuspect #2: confirmed the
-// backend correctly rejects this; the suspected bypass does not reproduce)
+// name — empty string rejected on update
 // ──────────────────────────────────────────────
 
 func TestCovOperationsLocations_UpdateEmptyStringNameRejected(t *testing.T) {
@@ -412,13 +411,7 @@ func TestCovOperationsLocations_ListInvalidIncludeRejected(t *testing.T) {
 // Auth — internal-actor-only gate on a Public:true route
 // ──────────────────────────────────────────────
 
-// TestCovOperationsLocations_CustomerActorForbidden confirms non-internal
-// (customer portal) actors cannot reach this group at all: the service layer
-// calls identity.CheckIsInternalActor() unconditionally, so even a valid
-// customer-scoped API key for the same account is rejected with 403, despite
-// the route being marked Public:true in the OpenAPI surface (prodBugSuspect
-// #5 — flagged as worth a sanity check, confirmed here as the actual,
-// consistent behavior rather than a flaky 5xx).
+// Non-internal (customer portal) actors cannot reach this group at all: the service layer calls identity.CheckIsInternalActor() unconditionally, so even a customer-scoped API key for the same account is rejected with 403.
 func TestCovOperationsLocations_CustomerActorForbidden(t *testing.T) {
 	t.Parallel()
 	customer := apiClient.WithBearerToken(SeedCustomerAPIKey, SeedAccountID)

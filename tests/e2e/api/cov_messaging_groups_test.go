@@ -126,7 +126,7 @@ func TestCovMessagingGroups_CreateAndUpdateAllFields(t *testing.T) {
 	assertNilField(t, agentActor, "role")
 
 	// Fetch a fresh GET to obtain the canonical timestamps — the create response's created_at/
-	// updated_at are affected by a known bug (see TestCovMessagingGroups_CreateTimestampsNotZero),
+	// updated_at are covered by TestCovMessagingGroups_CreateTimestampsNotZero,
 	// so the preservation comparisons below are anchored on GET, not the raw create body.
 	getStatus, getBody, err := owner.GetListRaw(messagingGroupsPath+"/"+id, nil)
 	require.NoError(t, err)
@@ -189,7 +189,7 @@ func TestCovMessagingGroups_ResponseShape(t *testing.T) {
 // TestCovMessagingGroups_CreateTimestampsNotZero asserts the create response
 // carries real created_at/updated_at values.
 //
-// BUG (confirmed): services/notification-service/internal/service/
+// services/notification-service/internal/service/
 // messaging_group_service.go CreateMessagingGroup builds
 // `group := &domain.MessagingGroup{...}` in Go without ever setting
 // CreatedAt/UpdatedAt on it, and messagingGroupRepoImpl.Create
@@ -468,7 +468,7 @@ func TestCovMessagingGroups_CreateIdempotent(t *testing.T) {
 // actor_id) pair is a benign no-op — 201, member count unchanged, same
 // member id.
 //
-// BUG (confirmed): services/notification-service/internal/service/
+// services/notification-service/internal/service/
 // messaging_group_service.go AddMessagingGroupMember only swallows the
 // duplicate-insert error when its code equals apierror.ErrorCodeResourceConflict
 // ("resource_conflict"). But the actual duplicate-key error produced for a

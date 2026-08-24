@@ -498,19 +498,15 @@ func TestCovAiRuns_List_StatusFilter(t *testing.T) {
 	assertListContainsID(t, agentRunsPath, url.Values{"status": {"completed"}}, SeedAgentRunID)
 }
 
-// TestCovAiRuns_List_StatusFilterUnrecognizedIsEmpty documents (rather than
-// 400s) the observed behaviour that an unrecognized `status` value is a
-// bare equality filter with no enum validation at the gateway -- it
-// silently returns an empty list instead of erroring. This locks the
-// current behaviour in place so a future change to a 400 (or a regression
-// to a 5xx) is caught explicitly.
-func TestCovAiRuns_List_StatusFilterUnrecognizedIsEmpty(t *testing.T) {
+// The `status` filter is a constants.AgentRunStatus enum, so an unrecognized value is rejected by the gateway enum validator rather than passed through as a bare equality filter.
+func TestCovAiRuns_List_StatusFilterUnrecognizedRejected(t *testing.T) {
 	t.Parallel()
 
-	list, status, err := apiClient.GetList(agentRunsPath, url.Values{"status": {"bogus_status_xyz"}})
+	status, body, err := apiClient.GetListRaw(agentRunsPath, url.Values{"status": {"bogus_status_xyz"}})
 	require.NoError(t, err)
-	require.Equal(t, 200, status)
-	assertEmptyListData(t, list.Data)
+	requireStatus(t, 400, status, body)
+	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	assertErrorParam(t, errObj, "status")
 }
 
 func TestCovAiRuns_List_AgentDefinitionIDFilter(t *testing.T) {

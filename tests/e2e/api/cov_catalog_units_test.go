@@ -228,7 +228,7 @@ func TestCovCatalogUnits_OmittedFields(t *testing.T) {
 		}{
 			{"name", "name", "missing_field"},
 			{"abbreviation", "abbreviation", "missing_field"},
-			{"type", "type", "parameter_invalid"},
+			{"type", "type", "missing_field"},
 			{"ratio_numerator", "ratio_numerator", "missing_field"},
 			{"ratio_denominator", "ratio_denominator", "missing_field"},
 			{"offset_numerator", "offset_numerator", "missing_field"},
@@ -375,14 +375,7 @@ func TestCovCatalogUnits_CreateZeroOffsetDenominator(t *testing.T) {
 	assertErrorParam(t, errObj, "offset_denominator")
 }
 
-// TestCovCatalogUnits_CreateNonNumericRatioNumerator documents a suspected
-// backend bug (see confirmedBugs): CreateUnitRequest.RatioNumerator only has
-// validate:"required" (non-empty), not a decimal-format check, so a
-// non-numeric string reaches core-service's DECIMAL column unguarded and the
-// live stack currently 500s instead of returning a 400 validation error.
-// This assertion intentionally encodes the CORRECT desired behavior (400) and
-// will fail red against the current build until the backend adds decimal
-// parsing validation for ratio_numerator/offset_numerator.
+// A non-numeric ratio_numerator is a 400, caught before it reaches core-service's DECIMAL column.
 func TestCovCatalogUnits_CreateNonNumericRatioNumerator(t *testing.T) {
 	t.Parallel()
 	body := covCatalogUnitsCreateBody(uniqueName("e2e-cov-unit-nonnum"), uniqueName("e2ecunonnum"))
@@ -391,7 +384,7 @@ func TestCovCatalogUnits_CreateNonNumericRatioNumerator(t *testing.T) {
 	status, respBody, err := apiClient.Post(unitsPath, body, newIdempotencyKey())
 	require.NoError(t, err)
 	assert.Equal(t, 400, status,
-		"non-numeric ratio_numerator should be rejected with 400, got %d: %s (suspected backend bug: missing decimal-format validation)",
+		"non-numeric ratio_numerator should be rejected with 400, got %d: %s",
 		status, string(respBody))
 }
 
@@ -459,11 +452,7 @@ func TestCovCatalogUnits_UpdateZeroOffsetDenominator(t *testing.T) {
 	assertErrorParam(t, errObj, "offset_denominator")
 }
 
-// TestCovCatalogUnits_UpdateNonNumericRatioNumerator is the PATCH-side
-// counterpart of TestCovCatalogUnits_CreateNonNumericRatioNumerator (see that
-// test's doc comment and confirmedBugs). UpdateUnitRequest's RatioNumerator
-// has no validate tag at all, so this is expected to reach core-service
-// unguarded the same way. Asserts the CORRECT desired behavior (400).
+// The PATCH-side counterpart of TestCovCatalogUnits_CreateNonNumericRatioNumerator: a non-numeric ratio_numerator is a 400 on update too.
 func TestCovCatalogUnits_UpdateNonNumericRatioNumerator(t *testing.T) {
 	t.Parallel()
 	id := covCatalogUnitsCreate(t, uniqueName("e2e-cov-unit-unonnum"), uniqueName("e2ecuunonnum"))
@@ -472,7 +461,7 @@ func TestCovCatalogUnits_UpdateNonNumericRatioNumerator(t *testing.T) {
 	status, body, err := apiClient.Patch(unitsPath+"/"+id, map[string]any{"ratio_numerator": "abc"}, newIdempotencyKey())
 	require.NoError(t, err)
 	assert.Equal(t, 400, status,
-		"non-numeric ratio_numerator on update should be rejected with 400, got %d: %s (suspected backend bug: missing decimal-format validation)",
+		"non-numeric ratio_numerator on update should be rejected with 400, got %d: %s",
 		status, string(body))
 }
 

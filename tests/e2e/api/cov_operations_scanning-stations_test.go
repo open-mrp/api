@@ -104,15 +104,6 @@ func TestCovOperationsScanningStations_LabelFieldsDefaultNil(t *testing.T) {
 }
 
 // --- label_size / label_type: create round-trip ---
-//
-// KNOWN BUG: services/core-service/internal/infrastructure/grpc/grpc_scanning_station_handler.go's
-// CreateScanningStation handler never copies req.LabelSizeCode/req.LabelTypeCode
-// into domain.CreateScanningStationParams (which doesn't even declare those
-// fields), so label_size/label_type sent on create are silently dropped and
-// the response always has them null, even though the request schema
-// (CreateScanningStationRequest) declares and documents both fields.
-// Confirmed via curl: POST with label_size="1x1", label_type="tag" returns
-// "label_size": null, "label_type": null in a 201 response.
 func TestCovOperationsScanningStations_CreateWithLabelFields(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-cov-stn-labelcreate")
@@ -130,12 +121,8 @@ func TestCovOperationsScanningStations_CreateWithLabelFields(t *testing.T) {
 	require.NotEmpty(t, id)
 	defer apiClient.Delete(scanningStationsPath + "/" + id)
 
-	// EXPECTED/CORRECT behavior: label_size and label_type set on create
-	// should round-trip. This currently fails against the live stack (a
-	// confirmed backend bug, see comment above) — do not weaken this
-	// assertion.
-	assert.Equal(t, "1x1", jsonField(created, "label_size"), "label_size sent on create should round-trip (known backend bug: dropped silently)")
-	assert.Equal(t, "tag", jsonField(created, "label_type"), "label_type sent on create should round-trip (known backend bug: dropped silently)")
+	assert.Equal(t, "1x1", jsonField(created, "label_size"), "label_size sent on create should round-trip")
+	assert.Equal(t, "tag", jsonField(created, "label_type"), "label_type sent on create should round-trip")
 }
 
 // --- label_size / label_type: update round-trip + preservation ---
@@ -298,10 +285,7 @@ func TestCovOperationsScanningStations_CreateValidation_InvalidEnums(t *testing.
 
 			status, respBody, err := apiClient.Post(scanningStationsPath, body, newIdempotencyKey())
 			require.NoError(t, err)
-			// Confirmed live (not just "suspected"): the gateway rejects
-			// these at the schema-validation layer before reaching the
-			// service. Per feedback_no_skip_5xx_in_e2e, assert the correct
-			// behavior outright rather than accepting a loose status range.
+			// The gateway rejects these at the schema-validation layer, before the service sees them.
 			assert.True(t, status == 400 || status == 422,
 				"invalid %s value should return 400 or 422, got %d: %s", tc.field, status, string(respBody))
 		})
@@ -321,15 +305,8 @@ func TestCovOperationsScanningStations_CreateNonexistentDepartment(t *testing.T)
 		defer apiClient.Delete(scanningStationsPath + "/" + id)
 	}
 
-	// EXPECTED/CORRECT behavior: creating a scanning station with a
-	// well-formed but nonexistent department_id should be rejected.
-	// KNOWN BUG (confirmed live): the create service never validates
-	// department_id existence (no FK constraint on scanning_station.department_id,
-	// no lookup in CreateScanningStation), so this currently returns 201 with
-	// a dangling reference instead of 400/404 — do not weaken this
-	// assertion to accept 201.
 	assert.True(t, status == 400 || status == 404,
-		"create with a nonexistent department_id should be rejected (400/404), got %d: %s (known backend bug: dangling department_id silently accepted)", status, string(respBody))
+		"create with a nonexistent department_id should be rejected (400/404), got %d: %s", status, string(respBody))
 }
 
 // --- Validation: update ---

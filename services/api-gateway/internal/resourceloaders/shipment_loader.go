@@ -87,7 +87,7 @@ func shipmentReferenceFromProto(s *pb.ShipmentInfo) *apiresource.Shipment {
 		Status:               constants.ShipmentStatus(s.StatusCode),
 		ShippedAt:            grpcutil.TimestampToTimePtr(s.ShippedAt),
 		Priority:             constants.PriorityCode(s.PriorityCode),
-		CaseCount:            int32(s.CaseCount),
+		CaseCount:            int32(s.CaseCount), // #nosec G115 - COUNT(*) of shipping_case rows for one shipment
 		IsReadyToShip:        s.IsReadyToShip,
 		CreatedAt:            grpcutil.TimestampToTime(s.CreatedAt),
 		UpdatedAt:            grpcutil.TimestampToTime(s.UpdatedAt),

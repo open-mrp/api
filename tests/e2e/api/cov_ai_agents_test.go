@@ -18,47 +18,6 @@ import (
 // response-shape test, a list/search test, an idempotency test, a
 // per-field validation test, or coverage of the two action-style
 // mutations (DELETE and PUT .../status). See TASK-ai_agents.md.
-//
-// Three confirmed backend bugs surfaced while writing this suite (all
-// verified directly against the live stack, not assumed):
-//
-//  1. GetAgentDefinitionByID (services/agent-service/internal/infrastructure/
-//     queries/agent.sql) selects `SELECT * FROM agent_definition WHERE id = $1`
-//     with NO `is_active = true` filter, unlike ListAgentDefinitions*/
-//     ListAgentDefinitionsByAccount* which do filter. Every read path that
-//     goes through GetByID (GET, PATCH's existence check, DELETE's existence
-//     check) therefore still finds a soft-deleted custom agent. Effects:
-//       - GET /v1/ai/agents/{id} on a deleted agent still returns 200 with
-//         the full resource instead of 404.
-//       - PATCH /v1/ai/agents/{id} on a deleted agent still succeeds (200)
-//         instead of 404/410.
-//       - A second DELETE on an already-deleted custom agent finds the row
-//         via GetByID (not NotFound), so it re-runs the soft-delete as a
-//         no-op and returns 200 instead of the documented 410
-//         (apierror.NewAlreadyDeletedError via DeletedRecordRepo.Exists,
-//         which is dead code on this path because GetByID never returns
-//         NotFound for a soft-deleted row in the first place).
-//     See TestCovAiAgents_CRUD and TestCovAiAgents_DoubleDeleteReturns410Bug.
-//
-//  2. UpdateCustomAgent (services/agent-service/internal/service/
-//     agent_definition_service.go, ~L438) builds its *response* via
-//     `txSvc.buildResult(txCtx, params.AgentDefinitionID, ...)`, which calls
-//     buildResultForAccount with accountID="" (see buildResult, ~L2327-2329).
-//     With no accountID, the per-account AgentAccountStatus row is never
-//     looked up, so the gateway's default-to-inactive fallback
-//     (apiresource default in agent_loader.go / presenter.go) kicks in and
-//     EVERY PATCH response reports `status:"inactive"` regardless of the
-//     agent's actual persisted status — even though the persisted row is
-//     untouched (a subsequent GET shows the correct status). This is a
-//     response-shape bug only, not a data-corruption bug, but it silently
-//     lies to every PATCH caller. See TestCovAiAgents_PatchResponseStatusBug.
-//
-// Two suspected-but-not-fixed behaviors from the task spec are also pinned
-// down exactly as currently observed (not asserted as "correct", since the
-// task explicitly calls for documenting current behavior rather than fixing
-// it): the config full-object-replace-on-PATCH semantics
-// (TestCovAiAgents_PatchConfigIsFullReplaceNotMerge) and PUT .../status
-// accepting an arbitrary unvalidated string (TestCovAiAgents_StatusActionAcceptsInvalidValue).
 
 const covAiAgentsPath = "/v1/ai/agents"
 
@@ -78,10 +37,6 @@ func covAiAgentsMinimalCreateBody(slugSuffix string) map[string]any {
 
 // TestCovAiAgents_CRUD exercises create -> get -> update -> delete ->
 // verify-404 against a freshly created custom agent.
-//
-// The final verify-404 step is expected to be RED until confirmed bug #1
-// (see file header) is fixed: GetAgentDefinitionByID does not filter
-// is_active, so the deleted agent is still returned with 200 instead of 404.
 func TestCovAiAgents_CRUD(t *testing.T) {
 	t.Parallel()
 
@@ -130,13 +85,10 @@ func TestCovAiAgents_CRUD(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 200, delStatus, delBody)
 
-	// Verify deletion. BUG #1 (see file header): GetAgentDefinitionByID
-	// doesn't filter is_active, so this currently returns 200, not 404.
 	getStatus2, getBody2, err := apiClient.GetListRaw(covAiAgentsPath+"/"+id, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 404, getStatus2,
-		"GET on a deleted custom agent should 404; BUG: GetAgentDefinitionByID doesn't filter is_active, got %d: %s",
-		getStatus2, string(getBody2))
+		"GET on a deleted custom agent should 404, got %d: %s", getStatus2, string(getBody2))
 }
 
 // ──────────────────────────────────────────────
@@ -694,14 +646,8 @@ func TestCovAiAgents_CreateValidation_EventRequiresEventFilters(t *testing.T) {
 	requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
 }
 
-// TestCovAiAgents_CreateChatTriggerTypeSucceedsUnvalidated pins down the
-// currently-observed behavior for trigger_type=chat: unlike scheduled/event,
-// ConfigInput.Validate has no case for "chat", so create succeeds with 201
-// and no config requirement, even though the CreateAgentRequest doc comment
-// only documents scheduled/event/manual. This is a suspected doc/behavior
-// gap (see confirmedBugs), not asserted as wrong here per the task spec's
-// instruction to pin down actual behavior rather than assume a 400.
-func TestCovAiAgents_CreateChatTriggerTypeSucceedsUnvalidated(t *testing.T) {
+// A chat agent runs when a user messages it, so like `manual` it carries no trigger config to validate and creates without one.
+func TestCovAiAgents_CreateChatTriggerTypeNeedsNoConfig(t *testing.T) {
 	t.Parallel()
 	body := covAiAgentsMinimalCreateBody("chat")
 	body["trigger_type"] = "chat"
@@ -761,7 +707,7 @@ func TestCovAiAgents_CreateValidation_UnknownEndpointToolSlug(t *testing.T) {
 }
 
 // TestCovAiAgents_CreateRoleIDNonexistentSilentlyAccepted pins down the
-// documented (task spec section 3) prodbug: role_id has no FK validation in
+// role_id has no FK validation in
 // agent-service, so a nonexistent role_id is silently accepted at create
 // time (201) and only surfaces as role:null when later fetched with
 // ?include=role.
@@ -854,14 +800,8 @@ func TestCovAiAgents_CrossAccountPatchAndDeleteMasking(t *testing.T) {
 	assert.Equal(t, 404, deleteStatus, "cross-account DELETE should 404, got %d: %s", deleteStatus, string(deleteBody))
 }
 
-// TestCovAiAgents_DoubleDeleteReturns410Bug documents BUG #1 (see file
-// header): a second DELETE on an already-deleted custom agent should return
-// 410 (apierror.NewAlreadyDeletedError via DeletedRecordRepo.Exists) per the
-// task spec, but GetAgentDefinitionByID never filters is_active, so the
-// second DELETE still finds the (soft-deleted) row and re-runs the delete as
-// a no-op, returning 200. This assertion is the CORRECT/desired behavior and
-// is expected to be RED until the backend bug is fixed.
-func TestCovAiAgents_DoubleDeleteReturns410Bug(t *testing.T) {
+// A second DELETE of an already-deleted custom agent reports 410 via apierror.NewAlreadyDeletedError, rather than repeating the soft delete as a no-op 200.
+func TestCovAiAgents_DoubleDeleteReturns410(t *testing.T) {
 	t.Parallel()
 
 	created := createAndCleanup(t, covAiAgentsPath, covAiAgentsMinimalCreateBody("dbldel"))
@@ -874,24 +814,16 @@ func TestCovAiAgents_DoubleDeleteReturns410Bug(t *testing.T) {
 	secondStatus, secondBody, err := apiClient.Delete(covAiAgentsPath + "/" + id)
 	require.NoError(t, err)
 	assert.Equal(t, 410, secondStatus,
-		"BUG: a second DELETE of an already-deleted custom agent should 410 (ErrorCodeResourceGone), "+
-			"but GetAgentDefinitionByID doesn't filter is_active so it's treated as still-existing; got %d: %s",
+		"a second DELETE of an already-deleted custom agent should 410 (ErrorCodeResourceGone); got %d: %s",
 		secondStatus, string(secondBody))
 }
 
 // ──────────────────────────────────────────────
-// PATCH response status bug (confirmed bug #2, see file header)
+// PATCH response status
 // ──────────────────────────────────────────────
 
-// TestCovAiAgents_PatchResponseStatusBug documents that the PATCH response
-// always reports status:"inactive" regardless of the agent's actual
-// persisted account status, because UpdateCustomAgent's response builder
-// (buildResult, not buildResultForAccount) never resolves the per-account
-// AgentAccountStatus row. A subsequent GET (which does use the account-scoped
-// path) shows the correct, unaffected status. This assertion is the
-// CORRECT/desired behavior (the PATCH response should reflect the real
-// status) and is expected to be RED until fixed.
-func TestCovAiAgents_PatchResponseStatusBug(t *testing.T) {
+// A PATCH response reports the agent's real per-account status, which means resolving the AgentAccountStatus row rather than falling back to the presenter's inactive default.
+func TestCovAiAgents_PatchResponseReflectsPersistedStatus(t *testing.T) {
 	t.Parallel()
 
 	created := createAndCleanup(t, covAiAgentsPath, covAiAgentsMinimalCreateBody("statusbug"))
@@ -905,9 +837,7 @@ func TestCovAiAgents_PatchResponseStatusBug(t *testing.T) {
 	requireStatus(t, 200, patchStatus, patchBody)
 	patched := parseJSON(patchBody)
 	assert.Equal(t, "active", jsonField(patched, "status"),
-		"BUG: PATCH response status should reflect the unchanged persisted status, but UpdateCustomAgent's "+
-			"buildResult() call omits the accountID so it always falls back to inactive; got %q",
-		jsonField(patched, "status"))
+		"the PATCH response should reflect the unchanged persisted status; got %q", jsonField(patched, "status"))
 
 	// Sanity: the persisted status was never actually touched by the PATCH.
 	getStatus, getBody, err := apiClient.GetListRaw(covAiAgentsPath+"/"+id, nil)
@@ -917,18 +847,11 @@ func TestCovAiAgents_PatchResponseStatusBug(t *testing.T) {
 }
 
 // ──────────────────────────────────────────────
-// Config full-replace-on-PATCH (pinned, task spec section 3/205)
+// Config merge-on-PATCH
 // ──────────────────────────────────────────────
 
-// TestCovAiAgents_PatchConfigIsFullReplaceNotMerge pins down the observed
-// (not necessarily "correct" — the task spec flags it as a suspect, not a
-// confirmed-required fix) full-object-replace semantics of PATCH .../config:
-// sending only {"config":{"tier":"cheap"}} after a prior create with a full
-// config wipes system_prompt/temperature/trigger_config/endpoint_tool_slugs/
-// endpoint_tool_review down to null, leaving only tier set. This is the
-// CURRENT behavior, asserted as-is per the task's explicit instruction to pin
-// it down rather than assume/enforce a merge.
-func TestCovAiAgents_PatchConfigIsFullReplaceNotMerge(t *testing.T) {
+// A PATCH carries only the config keys the caller named, and the rest are merged forward from the stored config: updating one setting must not silently clear the others.
+func TestCovAiAgents_PatchConfigMergesWithStored(t *testing.T) {
 	t.Parallel()
 
 	createBody := covAiAgentsMinimalCreateBody("cfgreplace")
@@ -967,11 +890,12 @@ func TestCovAiAgents_PatchConfigIsFullReplaceNotMerge(t *testing.T) {
 	config := jsonObject(patched, "config")
 	require.NotNil(t, config)
 	assert.Equal(t, "cheap", jsonField(config, "tier"), "the sent field is applied")
-	assertNilField(t, config, "system_prompt")
-	assertNilField(t, config, "temperature")
-	assertNilField(t, config, "trigger_config")
-	assertNilField(t, config, "endpoint_tool_slugs")
-	assertNilField(t, config, "endpoint_tool_review")
+	assert.Equal(t, "orig prompt", jsonField(config, "system_prompt"), "an omitted field keeps its stored value")
+	assert.NotNil(t, config["temperature"], "an omitted field keeps its stored value")
+	require.NotNil(t, jsonObject(config, "trigger_config"), "an omitted nested object keeps its stored value")
+	assert.Equal(t, "0 * * * *", jsonField(jsonObject(config, "trigger_config"), "cron_schedule"))
+	assert.NotNil(t, config["endpoint_tool_slugs"], "an omitted field keeps its stored value")
+	assert.NotNil(t, config["endpoint_tool_review"], "an omitted field keeps its stored value")
 }
 
 // TestCovAiAgents_PatchToolsOmittedPreservesExistingTools confirms that
@@ -1089,13 +1013,8 @@ func TestCovAiAgents_StatusActionSystemAgent(t *testing.T) {
 	assert.Equal(t, "active", jsonField(got, "status"))
 }
 
-// TestCovAiAgents_StatusActionAcceptsInvalidValue documents (per task spec
-// section 3 — a confirmed prodbug, not fixed as part of this task) that
-// UpdateAgentStatusRequest.Status is a bare string (not the
-// constants.AgentAccountStatus enum type), so the generic enum validator
-// never fires, and the arbitrary string is persisted/echoed back verbatim
-// with 200 instead of being rejected with 400.
-func TestCovAiAgents_StatusActionAcceptsInvalidValue(t *testing.T) {
+// UpdateAgentStatusRequest.Status is a constants.AgentAccountStatus enum, so an arbitrary string is rejected by the generic gateway enum validator instead of being persisted and echoed back.
+func TestCovAiAgents_StatusActionRejectsInvalidValue(t *testing.T) {
 	t.Parallel()
 
 	created := createAndCleanup(t, covAiAgentsPath, covAiAgentsMinimalCreateBody("statusinvalid"))
@@ -1103,12 +1022,9 @@ func TestCovAiAgents_StatusActionAcceptsInvalidValue(t *testing.T) {
 
 	status, body, err := apiClient.Put(covAiAgentsPath+"/"+id+"/status", map[string]any{"status": "bogus_e2e_status"})
 	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-	got := parseJSON(body)
-	assert.Equal(t, "bogus_e2e_status", jsonField(got, "status"),
-		"BUG (confirmed, not fixed as part of this task): PUT .../status accepts and echoes back an "+
-			"unvalidated status string; UpdateAgentStatusRequest.Status is a bare string, not the "+
-			"constants.AgentAccountStatus enum type, so the generic gateway enum validator never fires")
+	requireStatus(t, 400, status, body)
+	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	assertErrorParam(t, errObj, "status")
 }
 
 // TestCovAiAgents_StatusActionNaturalIdempotency confirms back-to-back

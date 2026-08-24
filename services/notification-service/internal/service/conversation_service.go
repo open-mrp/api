@@ -3316,11 +3316,11 @@ func (s *conversationSvcImpl) Block(ctx context.Context, blockedAccountUserID st
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if blockedAccountUserID == "" || blockedAccountUserID == callerAcus {
-		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("The user to block is invalid.", "account_user_id"))
+		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("The user to block is invalid.", "blocked_account_user_id"))
 	}
 	if _, apiErr := s.repoFactory.NewNotificationRepo().ResolveUserID(ctx, blockedAccountUserID); apiErr != nil {
 		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
-			return nil, tracing.Trace(span, apierror.NewParameterInvalidError("The user to block does not exist.", "account_user_id"))
+			return nil, tracing.Trace(span, apierror.NewParameterInvalidError("The user to block does not exist.", "blocked_account_user_id"))
 		}
 		return nil, tracing.Trace(span, apiErr)
 	}

@@ -347,7 +347,7 @@ func TestCovCoreAddresses_Details_FromAutocomplete_AllFields(t *testing.T) {
 // place ID must return 400 or 404, never 5xx. On the live e2e stack this
 // currently passes cleanly (404 "Place not found." via the
 // AddressValidationSvc stub's GetPlaceDetails, which uses a plain map
-// lookup with no upstream call) — no 500 was observed, so no backend bug
+// lookup with no upstream call) — no 500 was observed, so nothing
 // is being flagged here for this particular path; the 500-tolerant
 // assertion in the pre-existing test is simply stale/over-broad and should
 // be narrowed by whoever next touches that file.

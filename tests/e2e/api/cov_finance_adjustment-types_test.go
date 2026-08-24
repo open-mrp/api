@@ -245,7 +245,7 @@ func TestCovFinanceAdjustmentTypes_OwnerPopulatedWithInclude(t *testing.T) {
 		owner := jsonObject(m, "owner")
 		require.NotNil(t, owner, "owner should be populated with ?include=owner")
 		assert.Equal(t, "owner", jsonField(owner, "object"), "owner.object should be 'owner'")
-		// NOTE (prodBugSuspect, do not fix here): populateOwnerOnAdjustmentType in
+		// NOTE: populateOwnerOnAdjustmentType in
 		// registered_adjustment_type.go hardcodes OwnerTypeSystem for every row
 		// regardless of actual provenance; the adjustment_type table has no
 		// account_id column, so this passing today doesn't validate any

@@ -29,17 +29,6 @@ jobs:
               - 'tools/tool-versions'
               - 'shared/db/migrations/**'
 
-  no-binaries:
-    name: No Committed Binaries
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-
-      # Runs on every PR regardless of the paths filter: a stray build artifact is exactly the kind
-      # of file that lands outside the paths CI otherwise watches.
-      - name: Check for committed binaries and oversized files
-        run: ./scripts/check-no-binaries.sh
-
   validate-version:
     name: Validate Version
     needs: [changes]

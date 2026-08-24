@@ -102,15 +102,7 @@ func TestCovCatalogProducts_Create_NonexistentCategoryID(t *testing.T) {
 	requireErrorResponse(t, respBody, "resource_not_found", "invalid_request_error")
 }
 
-// TestCovCatalogProducts_Create_NonexistentProductLineID asserts the desired/correct behavior:
-// a well-formed-but-nonexistent product_line_id must be rejected (400/404), matching the
-// existing category_id FK-not-found behavior. SUSPECTED BACKEND BUG: as of this writing the
-// live stack silently accepts the request (201) and creates the product with product_line=null,
-// silently dropping the caller-supplied FK reference instead of validating it. This test is
-// expected to be RED until the backend adds an existence check for product_line_id in
-// services/core-service/internal/service/product_service.go CreateProduct (see
-// productRepoImpl.Create in product_repo.go, which inserts product_line_id with no existence
-// check because PlanetScale/Vitess does not enforce FK constraints on this column).
+// A well-formed but nonexistent product_line_id is rejected, matching category_id: Vitess enforces no FK on the column, so the existence check has to be explicit.
 func TestCovCatalogProducts_Create_NonexistentProductLineID(t *testing.T) {
 	t.Parallel()
 
@@ -330,7 +322,7 @@ func TestCovCatalogProducts_ChangeProductLine_NotFoundProductID(t *testing.T) {
 
 // TestCovCatalogProducts_ChangeProductLine_NotFoundProductLineID asserts the desired/correct
 // behavior for a well-formed-but-nonexistent product_line_id path param: it must be rejected
-// (400/404). SUSPECTED BACKEND BUG: the live stack currently returns 200 and silently leaves
+// (400/404). the live stack currently returns 200 and silently leaves
 // the product's product_line association unset/unchanged rather than validating the FK
 // (services/core-service/internal/infrastructure/repository/product_repo.go ChangeProductLine
 // writes product_line_id with no existence check, matching the create-time gap above). Expected

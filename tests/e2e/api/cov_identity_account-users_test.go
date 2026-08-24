@@ -326,16 +326,7 @@ func TestCovIdentityAccountUsers_CreateInvalidRoleIDFails(t *testing.T) {
 	requireStatus(t, 404, status, body)
 }
 
-// TestCovIdentityAccountUsers_CreateInvalidDepartmentIDShouldFail documents a
-// confirmed backend bug: unlike role_id (which correctly 404s for a
-// nonexistent FK, see TestCovIdentityAccountUsers_CreateInvalidRoleIDFails),
-// department_id is never existence-checked on create — a bogus
-// department_id is silently persisted as a dangling foreign key (confirmed
-// via direct DB inspection: the row is written with
-// department_id='dp_doesnotexist00000' verbatim). The desired behavior,
-// symmetric with role_id, is a 404. This assertion is therefore expected to
-// fail against the current build (it observes 201) until the backend adds
-// the same existence check department_id already lacks.
+// A nonexistent department_id is existence-checked on create and 404s, symmetric with role_id, rather than persisting as a dangling foreign key.
 func TestCovIdentityAccountUsers_CreateInvalidDepartmentIDShouldFail(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-cov-au-baddept")
@@ -389,11 +380,11 @@ func TestCovIdentityAccountUsers_ListCursorPaginationAdvances(t *testing.T) {
 }
 
 // ──────────────────────────────────────────────
-// Confirmed backend bug: cross-account account-user hydration
+// cross-account account-user hydration
 // ──────────────────────────────────────────────
 
 // TestCovIdentityAccountUsers_ListCrossAccountCustomerReadBlockedByHydrationBug
-// pins a confirmed backend bug found while implementing the cross-account
+// pins the cross-account
 // (?WithAccountID) preferences tests called for in the coverage task.
 //
 // account_user_service.checkAccountUserReadPermission (and
@@ -441,7 +432,7 @@ func TestCovIdentityAccountUsers_ListCrossAccountCustomerReadBlockedByHydrationB
 // account_relation ownership. Note this makes the "preferences applied when
 // external" branch further down in UpdateAccountUser (and its accompanying
 // request-field doc comment) unreachable dead code — flagged separately as
-// a prodBugSuspect (doc/implementation mismatch), not asserted here since
+// a doc/implementation mismatch, not asserted here since
 // unlike the List/Get/Create case this restriction is applied consistently
 // with role/department/user management elsewhere and may be intentional.
 func TestCovIdentityAccountUsers_UpdateCrossAccountBlocked(t *testing.T) {

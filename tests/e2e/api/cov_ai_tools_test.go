@@ -24,7 +24,7 @@ import (
 // expandable-fields-null/populated basics for ToolGroup.tools, so this file
 // focuses on the previously-unasserted fields, targeted query-param
 // validation, the two 403 auth paths, and two newly-discovered cursor bugs
-// (see the prodBugSuspect-tagged tests below).
+// (see the cursor tests below).
 // ──────────────────────────────────────────────
 
 // covAiToolsAdminGatedSlug is a stable admin-role-gated endpoint tool used to
@@ -261,13 +261,7 @@ func TestCovAiTools_ToolsLimitValidation(t *testing.T) {
 	}
 }
 
-// TestCovAiTools_ToolsLimitTruncatesPageInfoStaysEmpty pins prodBugSuspect #2
-// from TASK-ai_tools.md: the gateway's ListTools handler constructs
-// apiresource.NewList with a zero-value apiresource.PageInfo{}, so even
-// though limit demonstrably truncates the response body (the catalog has 195
-// tools, far more than the requested 5), has_next_page/next_page_url never
-// reflect that more data exists. Flagged, not fixed — this locks in the
-// current (surprising) behavior as an explicit regression trip-wire.
+// ListTools builds its list with a zero-value PageInfo, so a truncated page never reports that more data exists. Fixing it needs pagination fields on the agent-service RPC, which ListAvailableToolsResponse does not carry; tracked separately. This pins the current shape so a fix is a deliberate change.
 func TestCovAiTools_ToolsLimitTruncatesPageInfoStaysEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -276,7 +270,7 @@ func TestCovAiTools_ToolsLimitTruncatesPageInfoStaysEmpty(t *testing.T) {
 	require.Equal(t, 200, status)
 	require.Len(t, list.Data, 5)
 
-	assert.False(t, list.PageInfo.HasNextPage, "prodBugSuspect: has_next_page stays false even though limit truncated a 195-row catalog")
+	assert.False(t, list.PageInfo.HasNextPage, "has_next_page stays false even though limit truncated a 195-row catalog")
 	assert.Nil(t, list.PageInfo.NextPageURL)
 	assert.False(t, list.PageInfo.HasPrevPage)
 	assert.Nil(t, list.PageInfo.PreviousPageURL)
@@ -338,17 +332,7 @@ func TestCovAiTools_ToolsCursorInvalidRejected(t *testing.T) {
 	assert.Equal(t, "Invalid pagination cursor.", errObj["message"])
 }
 
-// TestCovAiTools_ToolsCursorAcceptsCrossResourceGroupID documents a
-// CONFIRMED BACKEND BUG (see confirmedBugs in the implementer output):
-// agent_definition_service.go's ListAvailableTools treats a cursor as valid
-// if it matches EITHER a tool slug (idx) OR a tool-group id (gIdx) — but
-// /v1/ai/tools only ever paginates tools. Passing a real tool-group id as the
-// tools cursor should be rejected the same way TestCovAiTools_ToolsCursorInvalidRejected's
-// garbage string is (neither idx nor a *tools* match), yet because gIdx >= 0
-// short-circuits the "not found" check, the tools slice-forward branch falls
-// into its `else` arm (idx stays -1) and zeroes out `results` entirely — every
-// such call silently 200s with an empty page instead of a 400. This asserts
-// the CORRECT/desired behavior and will fail until the backend is fixed.
+// A tool-group id is not a valid cursor for /v1/ai/tools, which paginates tools only, so it is rejected rather than silently returning an empty page.
 func TestCovAiTools_ToolsCursorAcceptsCrossResourceGroupID(t *testing.T) {
 	t.Parallel()
 
@@ -366,7 +350,7 @@ func TestCovAiTools_ToolsCursorAcceptsCrossResourceGroupID(t *testing.T) {
 	assert.Equal(t, "Invalid pagination cursor.", errObj["message"])
 }
 
-// TestCovAiTools_ToolsIncludeParamRejected resolves prodBugSuspect #3 from
+// TestCovAiTools_ToolsIncludeParamRejected resolves the open question from
 // TASK-ai_tools.md: ListToolsEndpoint (unlike ListToolGroupsEndpoint) has no
 // IncludeConfig wired, so ?include=tools on the flat route is rejected the
 // same way any other undeclared query parameter would be.
@@ -594,7 +578,7 @@ func TestCovAiTools_ToolGroupsLimitValidation(t *testing.T) {
 // TestCovAiTools_ToolGroupsLimitTruncatesPageInfoStaysEmpty mirrors
 // TestCovAiTools_ToolsLimitTruncatesPageInfoStaysEmpty for the groups route:
 // the catalog has 51 groups, far more than a requested limit of 5, yet
-// ListToolGroups also discards PageInfo (see prodBugSuspect #2).
+// ListToolGroups also discards PageInfo.
 func TestCovAiTools_ToolGroupsLimitTruncatesPageInfoStaysEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -603,7 +587,7 @@ func TestCovAiTools_ToolGroupsLimitTruncatesPageInfoStaysEmpty(t *testing.T) {
 	require.Equal(t, 200, status)
 	require.Len(t, list.Data, 5)
 
-	assert.False(t, list.PageInfo.HasNextPage, "prodBugSuspect: has_next_page stays false even though limit truncated a 51-row catalog")
+	assert.False(t, list.PageInfo.HasNextPage, "has_next_page stays false even though limit truncated a 51-row catalog")
 	assert.Nil(t, list.PageInfo.NextPageURL)
 }
 
@@ -652,22 +636,7 @@ func TestCovAiTools_ToolGroupsCursorInvalidRejected(t *testing.T) {
 	assert.Equal(t, "Invalid pagination cursor.", errObj["message"])
 }
 
-// TestCovAiTools_ToolGroupsIncludeToolsCursorWipesNestedTools documents a
-// second facet of the same shared-cursor-parsing bug as
-// TestCovAiTools_ToolsCursorAcceptsCrossResourceGroupID (CONFIRMED BACKEND
-// BUG — see confirmedBugs): /v1/ai/tool-groups forwards its own `cursor` into
-// the exact same agent-service RPC (ListAvailableTools) that both paginates
-// groups AND supplies the tools used to build ?include=tools's nested
-// per-group tool lists. Because that shared RPC applies the cursor to the
-// `results` (tools) slice as well as the groups slice, paginating the *groups*
-// list with a legitimate group-id cursor (gIdx>=0, idx==-1 → `results = nil`)
-// silently collapses every remaining group's nested `tools` array to empty,
-// even though each group still on the page owns the same tools it always did.
-// This exercises the CORRECT/desired contract — a groups-pagination cursor
-// must slice only the groups page, never the per-group ?include=tools set —
-// and will stay red until the RPC scopes its cursor to the resource being
-// paginated (see backendPatch). Verified live: with a valid group cursor the
-// groups page advances (e.g. 51→48) but the summed nested tools drop to 0.
+// A groups-pagination cursor slices only the groups page, never the per-group ?include=tools set, even though one shared agent-service RPC backs both.
 func TestCovAiTools_ToolGroupsIncludeToolsCursorWipesNestedTools(t *testing.T) {
 	t.Parallel()
 

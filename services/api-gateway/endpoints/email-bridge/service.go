@@ -6,10 +6,12 @@ import (
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
+	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/field"
 	pb "github.com/open-mrp/api/shared/proto/notification"
 	"github.com/open-mrp/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -170,7 +172,27 @@ func (s *emailBridgeSvcImpl) DeleteDomain(ctx context.Context, req *DeleteEmailD
 	return &apiresource.EmptyResource{}, nil
 }
 
+// validateAgentConfigID rejects an agent_config_id that names no agent definition, so an inbox cannot be bound to an agent that will never resolve. email_domain_id is already checked this way.
+func validateAgentConfigID(ctx context.Context, id field.Optional[string]) *apierror.APIError {
+	v, ok := id.Value()
+	if !ok || v == "" {
+		return nil
+	}
+	exists, apiErr := resourceloaders.AgentDefinitionExists(ctx, v)
+	if apiErr != nil {
+		return apiErr
+	}
+	if !exists {
+		return apierror.NewParameterInvalidError("The agent config does not exist.", "agent_config_id")
+	}
+	return nil
+}
+
 func (s *emailBridgeSvcImpl) CreateInbox(ctx context.Context, req *CreateEmailInboxRequest) (*apiresource.EmailInbox, *apierror.APIError) {
+	if apiErr := validateAgentConfigID(ctx, req.AgentConfigID); apiErr != nil {
+		return nil, apiErr
+	}
+
 	pbReq := &pb.CreateEmailInboxRequest{
 		EmailDomainId:        req.EmailDomainID,
 		Address:              req.Address,
@@ -218,6 +240,10 @@ func (s *emailBridgeSvcImpl) GetInbox(ctx context.Context, req *GetEmailInboxReq
 }
 
 func (s *emailBridgeSvcImpl) UpdateInbox(ctx context.Context, req *UpdateEmailInboxRequest) (*apiresource.EmailInbox, *apierror.APIError) {
+	if apiErr := validateAgentConfigID(ctx, req.AgentConfigID); apiErr != nil {
+		return nil, apiErr
+	}
+
 	pbReq := &pb.UpdateEmailInboxRequest{
 		Id:                   req.ID,
 		FromName:             req.FromName.Ptr(),

@@ -63,14 +63,21 @@ func TestValidateEnumFields(t *testing.T) {
 		}
 	})
 
-	t.Run("Empty enum value", func(t *testing.T) {
+	// A required enum reads as empty whether it was omitted or sent empty, and this check runs ahead of the `required` tag, so it has to report the missing field rather than call it an unrecognized value.
+	t.Run("Empty required enum value reports a missing field", func(t *testing.T) {
 		req := &enumTestRequest{
 			Mode: constants.AccountMode(""),
 			Name: "Test",
 		}
 		err := ValidateEnumFields(req)
 		if err == nil {
-			t.Error("expected error, got nil")
+			t.Fatal("expected error, got nil")
+		}
+		if err.Code != apierror.ErrorCodeMissingField {
+			t.Errorf("expected code %q, got %q", apierror.ErrorCodeMissingField, err.Code)
+		}
+		if err.Param != "mode" {
+			t.Errorf("expected param 'mode', got %s", err.Param)
 		}
 	})
 

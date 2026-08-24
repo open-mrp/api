@@ -76,7 +76,7 @@ func TestCovSalesAddresses_CreateOmittedFieldsDefault(t *testing.T) {
 // TestCovSalesAddresses_UpdateClearNullableFields confirms the highest-risk
 // untested path: patching phone/email/street_line_2 with JSON null clears
 // each field back to null in the response, exercising the non-pointer
-// field.Clearable[T] update path (prodBugSuspect #3 in the task doc).
+// field.Clearable[T] update path .
 func TestCovSalesAddresses_UpdateClearNullableFields(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-addr-clear")
@@ -296,7 +296,7 @@ func TestCovSalesAddresses_CreateValidation_NameTooLong(t *testing.T) {
 // TestCovSalesAddresses_CreateValidation_InvalidType confirms the "type"
 // field rejects a value outside the standard/drop_ship enum on create.
 // Live verification shows this IS validated (400), contradicting the
-// task doc's prodBugSuspect #1 which flagged it as a suspected silent-accept.
+// the suspected silent-accept, which does not reproduce.
 func TestCovSalesAddresses_CreateValidation_InvalidType(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Post(addressesPath, map[string]any{
@@ -343,12 +343,7 @@ func TestCovSalesAddresses_UpdateValidation_InvalidType(t *testing.T) {
 		"Invalid type enum on update should return 400 or 422, got %d: %s", status, string(body))
 }
 
-// TestCovSalesAddresses_UpdateValidation_InvalidEmail documents
-// prodBugSuspect #2: AddressInput.Email (create) has a custom_email
-// validator but UpdateAddressRequest.Email does not, so this asserts the
-// CORRECT/desired behavior (reject, matching create's contract) which the
-// live stack currently fails (accepts with 200). This test is intentionally
-// red until the backend closes the validator gap — see confirmedBugs.
+// Update rejects a malformed email, matching the custom_email validator create already applies.
 func TestCovSalesAddresses_UpdateValidation_InvalidEmail(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-addr-bademail-upd")

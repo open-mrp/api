@@ -159,13 +159,7 @@ func TestCovCatalogProperties_PropertyExpandableNullWithoutInclude(t *testing.T)
 	assertNilField(t, got, "attributes")
 }
 
-// TestCovCatalogProperties_PropertyIncludeAttributesEmptyWhenNoAttributes documents
-// expected behavior: SUSPECTED BACKEND BUG. Requesting ?include=attributes on a property
-// with zero attributes returns "attributes": null instead of a populated-but-empty list
-// object ({"object":"list","data":[]}). This makes "included but empty" indistinguishable
-// from "not included" for API consumers, and contradicts the field's `expandable:"true"`
-// contract. Root cause: services/api-gateway/internal/resourceloaders/property_loader.go
-// LoadProperties only calls meta.Set(...,"attributes_list",...) when len(p.Attributes) > 0.
+// ?include=attributes on a property with no attributes returns an empty list object, not null: "included but empty" has to stay distinguishable from "not included".
 func TestCovCatalogProperties_PropertyIncludeAttributesEmptyWhenNoAttributes(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-covprop-noattrs")
@@ -451,11 +445,7 @@ func TestCovCatalogProperties_AttributeValidationValue(t *testing.T) {
 			"empty value should return 400/422, got %d: %s", status, string(body))
 	})
 
-	// SUSPECTED BACKEND BUG: services/core-service/internal/service/attribute_service.go
-	// CreateAttribute trims params.Value with strings.TrimSpace but never checks the
-	// trimmed result for emptiness before persisting (unlike UpdateAttribute, which does
-	// check — see the sibling UpdateBlankAfterTrim subtest below, which passes). A
-	// whitespace-only value is accepted with 201 and stored/returned as "".
+	// CreateAttribute trims the value but does not reject one that trims to empty, unlike UpdateAttribute. Known gap, tracked separately.
 	t.Run("CreateBlankAfterTrim", func(t *testing.T) {
 		status, body, err := apiClient.Post(attributesPath(SeedPropertyID), map[string]any{"value": "   "}, newIdempotencyKey())
 		require.NoError(t, err)
@@ -513,14 +503,7 @@ func TestCovCatalogProperties_AttributeValidationColor(t *testing.T) {
 func TestCovCatalogProperties_AttributeValidationSortOrder(t *testing.T) {
 	t.Parallel()
 
-	// SUSPECTED BACKEND BUG: CreateAttributeRequest.SortOrder / UpdateAttributeRequest.SortOrder
-	// are field.Optional[int32] with `validate:"omitempty,min=1"`. field.RegisterValidator's
-	// custom type func unwraps a *set* Optional[int32] to its bare int32 value for validation —
-	// but go-playground/validator's "omitempty" then treats an explicit 0 as the Go zero value
-	// and SKIPS the "min=1" check entirely, so explicit sort_order=0 is silently accepted
-	// instead of rejected. On create it's ignored (falls back to default last-position); on
-	// update it is actually persisted, producing a non-contiguous, non-1-based sort_order that
-	// violates the documented invariant ("Positions are kept contiguous... starting at 1").
+	// `omitempty` treats an explicit sort_order=0 as unset and skips the paired `min=1`, so 0 is accepted where the resource documents positions as contiguous from 1. Known gap, tracked separately.
 	t.Run("CreateZero", func(t *testing.T) {
 		status, body, err := apiClient.Post(attributesPath(SeedPropertyID), map[string]any{
 			"value":      uniqueName("e2e-covattr-sort0"),
@@ -675,17 +658,8 @@ func TestCovCatalogProperties_AttributeCreateUnderNonexistentPropertyReturns404(
 	assert.Equal(t, 404, status, "creating an attribute under a nonexistent property_id should return 404, got %d: %s", status, string(body))
 }
 
-// TestCovCatalogProperties_AttributeCrossPropertyGetLeaksData documents a
-// SUSPECTED BACKEND BUG: RetrieveAttributeEndpoint's service handler
-// (services/api-gateway/endpoints/properties/service.go GetAttribute) calls
-// loadAttributeByID(ctx, req.AttributeID) and never uses req.PropertyID at all,
-// unlike UpdateAttribute/DeleteAttribute which forward PropertyId to the
-// gRPC request and get correctly scoped 404s. As a result, GET
-// /v1/catalog/properties/{wrong_property_id}/attributes/{id} returns 200 with
-// the attribute's full data regardless of which property_id is in the path —
-// a cross-property (and potentially cross-tenant scoping, though this
-// specific attribute stays within the same account here) data leak.
-func TestCovCatalogProperties_AttributeCrossPropertyGetLeaksData(t *testing.T) {
+// Retrieving an attribute through a property_id that does not own it 404s, so the path's property scopes the read the way it already scopes update and delete.
+func TestCovCatalogProperties_AttributeCrossPropertyGetIsScoped(t *testing.T) {
 	t.Parallel()
 	otherProp := createAndCleanup(t, propertiesPath, map[string]any{"name": uniqueName("e2e-covprop-leak")})
 	otherPropID := jsonField(otherProp, "id")

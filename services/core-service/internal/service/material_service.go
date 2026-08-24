@@ -293,6 +293,10 @@ func (s *materialSvcImpl) createMaterialInTx(txCtx context.Context, params domai
 	// material categories (same rule as the change-item-category endpoint).
 	baseUnitID, categoryTypeCode, apiErr := txItemRepo.GetCategoryBaseUnitID(txCtx, params.CategoryID)
 	if apiErr != nil {
+		// A category that does not exist is a bad caller-supplied reference, so it is reported against the field like the other foreign keys on this request rather than as a bare not-found for the material itself.
+		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+			return nil, apierror.NewValidationErrorWithParam("The category does not exist.", "category_id")
+		}
 		return nil, apiErr
 	}
 	if !categoryTypeMatchesItem(string(constants.ItemTypeCodeMaterial), categoryTypeCode) {

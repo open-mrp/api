@@ -9,6 +9,7 @@ import (
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
@@ -201,6 +202,12 @@ func parsePermissionStrings(perms []string) ([]*pb.CreateRolePermissionInput, *a
 			)
 		}
 		domain, action := parts[0], parts[1]
+
+		if !types.PermissionDomain(domain).IsValid() {
+			return nil, apierror.NewValidationErrorWithParam(
+				fmt.Sprintf("Unknown permission %q: %q is not a recognized permission code.", p, domain), "permissions",
+			)
+		}
 
 		entry, ok := grouped[domain]
 		if !ok {

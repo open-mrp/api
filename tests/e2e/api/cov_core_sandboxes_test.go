@@ -96,7 +96,7 @@ func TestCovCoreSandboxes_CreateValidation_NameTooLong(t *testing.T) {
 	requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
 }
 
-// TestCovCoreSandboxes_CreateValidation_InvalidMode targets the prodBugSuspect
+// TestCovCoreSandboxes_CreateValidation_InvalidMode targets the suspected gap
 // flagged in the task spec: an invalid `mode` enum value. Verified live against
 // the running stack, the gateway correctly rejects this with 400
 // parameter_invalid — so this test pins the CORRECT behavior (no bug found
@@ -174,12 +174,7 @@ func TestCovCoreSandboxes_DeleteNeverExisted(t *testing.T) {
 	requireErrorResponse(t, body, "resource_not_found", "invalid_request_error")
 }
 
-// TestCovCoreSandboxes_CreateIdempotent_DifferentBodySameKey closes the
-// idempotency gap: same key + DIFFERENT body. Verified live against the
-// running stack, the gateway's idempotency mediator correctly rejects this
-// with 400 idempotency_error (NOT a silent replay of the first response, as
-// the task spec's prodBugSuspect speculated) — this test pins that correct
-// behavior.
+// Same idempotency key with a DIFFERENT body is rejected with 400 idempotency_error by the gateway's idempotency mediator, rather than silently replaying the first response.
 func TestCovCoreSandboxes_CreateIdempotent_DifferentBodySameKey(t *testing.T) {
 	t.Parallel()
 	idemKey := newIdempotencyKey()

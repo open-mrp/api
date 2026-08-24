@@ -258,7 +258,7 @@ Example error response:
         "type": "invalid_request_error",
         "message": "Title must be at least 1 characters long",
         "param": "title",
-        "doc_url": "https://docs.openmrp.ai/api/errors#validation_failed",
+        "doc_url": "https://docs.openmrp.ai/api-reference/errors#validation_failed",
         "is_transient": false,
         "quota": null,
         "request_log_url": "https://openmrp.ai/dashboard/request-logs/rq_fbv1ygmybo3eauykr74"

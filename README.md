@@ -1,8 +1,13 @@
-# OpenMRP
+# ![](docs/assets/dark-logo.png) OpenMRP
 
-**Programmable operations for people who make things.** An open source manufacturing platform built to make factories programmable, reliable, and increasingly autonomous.
+**Programmable operations for people who make things.**
 
-[Website](https://openmrp.ai) · [Documentation](https://docs.openmrp.ai) · [API reference](https://docs.openmrp.ai/api-reference) · [All repos](https://github.com/open-mrp)
+An open source manufacturing platform built to make factories  
+programmable, reliable, and increasingly autonomous.
+
+[Website](https://openmrp.ai)  ·  [Documentation](https://docs.openmrp.ai)  ·  [API reference](https://docs.openmrp.ai/api-reference)  ·  [All repos](https://github.com/open-mrp)
+
+![The OpenMRP landing page: an agent reviewing a sales order and holding two protected writes for approval](docs/assets/screenshots/landing.png)
 
 ---
 
@@ -10,17 +15,7 @@
 
 This project grew out of running a real manufacturing operation. It started as a way to locate material inside a circular knitting factory, and turned into the software that ran the orders, the inventory, the workflows, and eventually the operations around them.
 
-Our philosophy is that **ERPs should be programmable infrastructure.**
-
-## Principles
-
-- **Idempotency** — accept a key on every write and return the original result to a repeat request.
-- **Durability** — commit state changes transactionally and hand messages off through an outbox so work survives a crashed process.
-- **Observability** — log every request, emit an audit event on every state change, and trace operations end to end.
-- **Extensibility** — keep the core concepts stable and let each company build its own workflows on top of them.
-- **Agent-readiness** — keep interfaces explicit, deterministic, and safe to compose.
-
-
+Our philosophy is that **ERPs should be programmable infrastructure.** Our goal with OpenMRP is to provide a durable and performant foundation by which manufacturing operations can efficiently operate and automate their back office and factory operations. With this in mind, we have designed OpenMRP to scale with your company and deploy to any cloud provider or locally. Endpoints are idempotent, work is durable via transactional inboxes and outboxes, and systems are designed to be resilient to failure.
 
 ## What it does
 
@@ -46,57 +41,72 @@ Our philosophy is that **ERPs should be programmable infrastructure.**
 
 Browse the [API reference](https://docs.openmrp.ai/api-reference), or read the OpenAPI specification.
 
-## Screenshots
+**Production flows.** A product's bill of materials and its routing are the same graph: materials feed production steps, steps yield parts, and every edge carries the quantity consumed or produced. Costs roll up along it.
 
+![A production flow running from raw yarn through knitting, dyeing, boarding, and packing to a finished SKU](docs/assets/screenshots/production-flow-full.png)
 
-|                             |                                   |
-| --------------------------- | --------------------------------- |
-| **Production schedule**     | **Sales orders**                  |
-| **Inventory and lots**      | **An agent run, step by step**    |
-| **Shop-floor scanning**     | **The customer portal**           |
-| **Manufacturing analytics** | **Request logs and audit events** |
+**Production schedules.** A solver turns forecast demand into a week-by-week plan per SKU — run hours, utilisation, and what freezes when. It stays a draft until you publish it.
 
+![A draft production schedule laid out by SKU across thirteen weeks](docs/assets/screenshots/production-schedule.png)
 
+**Agents.** @mention an agent in any thread and it works the same API you do. Tools that write are gated: the run stops, a human approves by name, and only then does it continue.
 
+![An agent run holding a customer update at an approval gate until a human approves it](docs/assets/screenshots/agent-run.png)
+
+**Request logs.** Every call the dashboard makes is a call you can make. Method, path, status, latency, and caller — whether that caller was a person, an API key, or an agent.
+
+![Request logs listing API calls with method, path, status, latency, and caller](docs/assets/screenshots/request-logs.png)
 
 ## Architecture
 
 This repository is the backend: an HTTP gateway in front of six domain services that talk to each other over gRPC and to themselves over RabbitMQ.
 
 ```mermaid
-flowchart TB
+flowchart LR
     subgraph clients [Clients]
         DASH[Dashboard]
         PORTAL[Customer portal]
         SDK["TypeScript / Go SDKs"]
-        MCP["MCP server<br/>AI agents"]
+        MCP[MCP server]
     end
 
-    GW[["api-gateway<br/>HTTP · auth · versioning · idempotency · rate limits"]]
+    GW[["api-gateway<br/>auth · versioning<br/>idempotency · rate limits<br/>internal listener :8091"]]
 
     subgraph services [Domain services · gRPC]
-        CORE[core-service<br/>items, production,<br/>inventory, orders]
-        AUTH[auth-service<br/>identity, JWT,<br/>API keys]
-        NOTIF[notification-service<br/>email, messaging,<br/>notifications]
-        AGENT[agent-service<br/>agent runs,<br/>tools, memories]
-        BILL[billing-service<br/>subscriptions,<br/>payments]
-        PLAT[platform-service<br/>audit, request logs,<br/>idempotency]
+        CORE[core-service]
+        AUTH[auth-service]
+        NOTIF[notification-service]
+        BILL[billing-service]
+        PLAT[platform-service]
+        AGENT[agent-service]
     end
 
-    MQ{{"RabbitMQ · outbox / inbox"}}
-    MYSQL[(MySQL)]
-    PG[(PostgreSQL)]
+    MQ{{"RabbitMQ<br/>outbox / inbox"}}
 
-    clients --> GW
-    GW --> CORE & AUTH & NOTIF & AGENT & BILL & PLAT
-    CORE & AUTH & NOTIF & AGENT & BILL & PLAT <--> MQ
-    CORE & AUTH & NOTIF & BILL & PLAT --> MYSQL
-    AGENT --> PG
+    DASH & PORTAL & SDK & MCP --> GW
+    GW --> CORE & AUTH & NOTIF & BILL & PLAT & AGENT
+    AGENT -- "agent tool calls" --> GW
+    CORE & AUTH & NOTIF & BILL & PLAT & AGENT <--> MQ
 ```
 
 
 
-Every service is layered the same way, and the layering is enforced by a test:
+Agents run inside `agent-service`, and when a run calls a tool it loops back through the gateway rather than reaching into another service directly, so an agent's writes get the same auth, versioning, idempotency, and audit trail as anyone else's. That loop lands on a second gateway listener on port 8091, a ClusterIP that is never routed publicly and is gated by a shared token.
+
+Messages cross between services through the outbox and inbox tables, so a publish commits in the same transaction as the state change it describes. At the moment, several services share a MySQL database; this will change after we finish migrating a legacy API to this repository.
+
+
+| Service                | Owns                                    | Store      |
+| ---------------------- | --------------------------------------- | ---------- |
+| `core-service`         | Items, production, inventory, orders    | MySQL      |
+| `auth-service`         | Identity, JWTs, API keys                | MySQL      |
+| `notification-service` | Email, messaging, notifications         | MySQL      |
+| `billing-service`      | Subscriptions, payments                 | MySQL      |
+| `platform-service`     | Audit events, request logs, idempotency | MySQL      |
+| `agent-service`        | Agent runs, tools, memories             | PostgreSQL |
+
+
+Every service is layered the same way:
 
 
 | Layer          | Responsibility                                                          |
@@ -169,9 +179,9 @@ curl https://api.openmrp.ai/v1/catalog/items \
 ```
 
 ```ts
-import OpenMRP from '@openmrp/sdk';
+import OpenMRP from "@openmrp/sdk";
 
-const client = new OpenMRP({ bearerToken: process.env['OPENMRP_API_KEY'] });
+const client = new OpenMRP({ bearerToken: process.env["OPENMRP_API_KEY"] });
 const items = await client.catalog.items.list();
 ```
 
@@ -330,6 +340,6 @@ Every `sk_test_`, `mrp_sk_test_`, `whsec_` and JWT in this repository is fabrica
 
 ## License
 
-[Apache 2.0](LICENSE). Documentation content in [public-docs](https://github.com/open-mrp/public-docs) is CC BY 4.0.
+[Apache 2.0](LICENSE).
 
 "OpenMRP" and "Augno", with their logos and wordmarks, are trademarks of Augno, Inc. Section 6 of the license grants no trademark rights — see [TRADEMARKS.md](TRADEMARKS.md).

@@ -125,15 +125,21 @@ services/[name]/
 
 ## Database
 
-PlanetScale (MySQL) with safe migrations. Schema in `shared/db/migrations/0001_initial.sql`.
+PlanetScale (MySQL) with safe migrations. **Schema source of truth is the goose migrations in `shared/db/migrations`.** See `docs/patterns/database-migrations.md` for the full workflow — it explains the constraints the rules below come from.
 
-**Schema source of truth is the Prisma schema in `dashboard/packages/db`** — `0001_initial.sql` is synced from it. Do **not** hand-write a migration file or edit the api SQL dump directly.
+`00001_initial.sql` is a frozen baseline: a dump of the schema at the goose cutover. Never edit or regenerate it. It begins by dropping every table, so applying it to a populated database destroys that database.
 
 To add/modify schema:
 
-1. Edit the Prisma schema in `dashboard/packages/db` to describe the new table/column/index.
-2. **Hand off to the human** — they update Prisma, generate/create the migrations, and sync `0001_initial.sql`, then pass it back.
-3. Once the synced schema is back, run `make sqlc [service]` for affected services to regenerate DB code, and continue.
+1. `make migrate-create name=add_something` — writes a new numbered migration in `shared/db/migrations`.
+2. Fill in the Up and Down halves. Keep the `-- +goose NO TRANSACTION` line the template starts with: Vitess rejects DDL inside an explicit transaction.
+3. `make migrate-up` to apply it to the local Docker MySQL, then `make sqlc [service]` for affected services. sqlc reads the whole migrations directory, so no dump needs regenerating.
+4. Update the Prisma schema in `dashboard/packages/db` to match, in the same change — it is the dashboard's model definition and cannot be derived from the database (no foreign keys, `relationMode = "prisma"`). Nothing enforces this automatically; it is caught in review.
+5. Shipping is automated — the release PR opens a PlanetScale deploy request for review, and merging it deploys the schema before any service image rolls. Never run DDL against prod yourself.
+
+The agent-service Postgres schema works the same way but lives in `services/agent-service/db/migrations` (`make migrate-agent-create`). Postgres has no deploy requests — PlanetScale applies Postgres DDL directly — so those migrations are applied on merge.
+
+Data backfills are not schema: they go in `shared/db/data-migrations` (`make migrate-create-data`) or `services/agent-service/db/data-migrations` (`make migrate-agent-create-data`). A PlanetScale deploy request diffs schema only, so DML written into a schema migration silently never reaches production. Backfills run after both schemas are live and before any image rolls.
 
 ## Code Style
 

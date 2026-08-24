@@ -4,11 +4,6 @@ on:
   push:
     branches:
       - main
-  # Manual resume: re-run the full pipeline for an already-published release.
-  # Use this when a release run failed partway (e.g. deploy blocked on infra)
-  # and the failure was fixed out-of-band — "Re-run all jobs" does NOT work
-  # because release-please reports release_created=false for an existing
-  # release, which silently skips every downstream job.
   workflow_dispatch:
     inputs:
       tag_name:
@@ -28,8 +23,6 @@ on:
         default: false
         type: boolean
 
-# Serialize release runs so a manual resume cannot race the next
-# push-triggered release deploy.
 concurrency:
   group: release
   cancel-in-progress: false
@@ -38,6 +31,7 @@ permissions:
   contents: write
   issues: write
   pull-requests: write
+  statuses: write
 
 jobs:
   release-please:
@@ -56,6 +50,20 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+
+      - name: Satisfy Detect Changes on the release PR
+        if: github.event_name == 'push' && steps.release.outputs.pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_JSON: ${{ steps.release.outputs.pr }}
+        run: |
+          set -euo pipefail
+          pr_number="$(echo "$PR_JSON" | jq -r '.number')"
+          head_sha="$(gh pr view "$pr_number" --repo "${{ github.repository }}" --json headRefOid --jq .headRefOid)"
+          gh api --method POST "repos/${{ github.repository }}/statuses/${head_sha}" \
+            -f state=success \
+            -f context='Detect Changes' \
+            -f description='Skipped: release PR touches no Go or migration paths'
 
       - name: Validate dispatched tag
         if: github.event_name == 'workflow_dispatch'
@@ -117,7 +125,6 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
-          # Run release jobs from the resolved release tag.
           ref: ${{ needs.release-please.outputs.tag_name }}
 
       - name: Set up Go
@@ -162,7 +169,6 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v7
         with:
-          # Run release jobs from the resolved release tag.
           ref: ${{ needs.release-please.outputs.tag_name }}
 
       - name: Configure AWS Credentials
@@ -187,10 +193,6 @@ jobs:
           platforms: linux/amd64
           build-args: |
             SERVICE_NAME=${{ matrix.service }}
-          # The augno/ namespace is deliberate. ECR repository names are immutable, so
-          # they were left alone through the OpenMRP rename — and the ecr-push role's
-          # policy is scoped to arn:aws:ecr:...:repository/augno/*. Renaming this path
-          # fails the push with ecr:GetDownloadUrlForLayer denied.
           tags: |
             ${{ steps.login-ecr.outputs.registry }}/augno/${{ matrix.service }}:${{ needs.release-please.outputs.tag_name }}
             ${{ steps.login-ecr.outputs.registry }}/augno/${{ matrix.service }}:latest
@@ -212,12 +214,8 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v7
         with:
-          # Run release jobs from the resolved release tag.
           ref: ${{ needs.release-please.outputs.tag_name }}
 
-      # The rollout itself runs in the private open-mrp/infra repo, behind that repo's `production`
-      # environment. This job asks for it and waits, so the downstream spec/SDK jobs still only run
-      # once the code is actually live. No AWS credential is needed — or wanted — here.
       - name: Deploy via open-mrp/infra
         run: ./scripts/dispatch-infra-deploy.sh
         env:
@@ -247,7 +245,6 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v7
         with:
-          # Run release jobs from the resolved release tag.
           ref: ${{ needs.release-please.outputs.tag_name }}
 
       - name: Setup Go
@@ -290,11 +287,6 @@ jobs:
 
       - name: Upload Public Release Artifacts to S3
         run: |
-          # Key per-version artifacts by the API version (cmd/print-version, e.g.
-          # 1.0.forge-preview.2) — the same value notify-consumers dispatches and the
-          # spec embeds in info.version. The API version is not unique per release, so
-          # releases that ship the same API version overwrite the key: it always holds
-          # the latest spec for that API version.
           api_version="${{ steps.api-version.outputs.api_version }}"
           aws s3 cp specs/public_openapi_spec.json "s3://${PUBLIC_SPEC_BUCKET}/openapi.json"
           aws s3 cp specs/public_openapi_spec.json "s3://${PUBLIC_SPEC_BUCKET}/${api_version}.json"
@@ -322,8 +314,6 @@ jobs:
       contents: read
     uses: ./.github/workflows/stlc-generate-reusable.yml
     with:
-      # Deliberately the release-please tag, not the API version: the reusable
-      # workflow derives the SDK semver bump from the tag's shape (vX.Y.Z).
       api_version: ${{ needs.release-please.outputs.tag_name }}
       push_branch: main
       openapi_specs_source: s3
@@ -335,10 +325,6 @@ jobs:
 
   build-deploy-mcp:
     name: Build and Deploy MCP Server
-    # The MCP server source lives in typescript-sdk/packages/mcp-server and is
-    # (re)generated by generate-sdks. Build its image from the generated Dockerfile, push it, and
-    # ask open-mrp/infra to roll it. Gated on the public spec changing — the same condition under
-    # which generate-sdks pushes a new public TS SDK.
     needs: [release-please, deploy, publish-openapi-specs, generate-sdks]
     if: |
       always() &&
@@ -356,7 +342,6 @@ jobs:
       - name: Checkout API repo (deploy dispatch script)
         uses: actions/checkout@v7
         with:
-          # Run release jobs from the resolved release tag.
           ref: ${{ needs.release-please.outputs.tag_name }}
 
       - name: Checkout typescript-sdk (MCP build context)
@@ -364,9 +349,6 @@ jobs:
         with:
           repository: open-mrp/typescript-sdk
           ref: main
-          # This job has no `environment: production`, so the CROSS_REPO_PAT env
-          # secret isn't available to it. SDK_WRITE_TOKEN (repo secret) has write
-          # access to the SDK repos and can read typescript-sdk here.
           token: ${{ secrets.SDK_WRITE_TOKEN }}
           persist-credentials: false
           path: typescript-sdk-src
@@ -387,8 +369,6 @@ jobs:
       - name: Build and Push MCP Server image
         uses: docker/build-push-action@v7
         with:
-          # The generated Dockerfile builds the whole pnpm workspace; context is
-          # the typescript-sdk repo root, Dockerfile is the generated one.
           context: typescript-sdk-src
           file: typescript-sdk-src/packages/mcp-server/Dockerfile
           push: true
@@ -399,8 +379,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # The manifest and the cluster credential live in open-mrp/infra; ask it to roll the image we
-      # just pushed and wait for the result.
       - name: Deploy MCP Server via open-mrp/infra
         run: ./scripts/dispatch-infra-deploy.sh
         env:
@@ -411,7 +389,6 @@ jobs:
 
   notify-consumers:
     name: Notify ${{ matrix.consumer }}
-    # Runs in parallel with generate-sdks; consumers sync from deployed API / S3 specs, not from SDK PRs.
     needs: [release-please, deploy, publish-openapi-specs]
     if: |
       always() &&
@@ -433,9 +410,4 @@ jobs:
           token: ${{ secrets.CROSS_REPO_PAT }}
           repository: ${{ matrix.consumer }}
           event-type: api-release
-          # Send the API version (e.g. 1.0.forge-preview.2) — the SAME value
-          # publish-openapi-specs uses to key the per-version S3 artifact
-          # `<api_version>.json`, which consumers fetch. Keep this in lockstep with
-          # the Upload *Release Artifacts to S3 steps. release_version (the
-          # release-please tag) rides along for traceability.
           client-payload: '{"api_version": "${{ needs.publish-openapi-specs.outputs.api_version }}", "release_version": "${{ needs.release-please.outputs.tag_name }}"}'

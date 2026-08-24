@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.1.7](https://github.com/open-mrp/api/compare/v1.1.6...v1.1.7) (2026-08-24)
+
+
+### Bug Fixes
+
+* update deps and fix some tests ([#33](https://github.com/open-mrp/api/issues/33)) ([5b95a9f](https://github.com/open-mrp/api/commit/5b95a9f078830bf2a58c09e1523cc77587743866))
+
+
+### Documentation
+
+* remove logo from README.md ([b8d510d](https://github.com/open-mrp/api/commit/b8d510de052ca0450e16896cf8c7d18f494ef691))
+* update README ([#30](https://github.com/open-mrp/api/issues/30)) ([20f99d1](https://github.com/open-mrp/api/commit/20f99d192125d5e2569caadfebe957fbb7a47af1))
+
 ## [1.1.6](https://github.com/open-mrp/api/compare/v1.1.5...v1.1.6) (2026-08-23)
 
 

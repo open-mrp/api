@@ -1,5 +1,3 @@
-# ![](docs/assets/dark-logo.png) OpenMRP
-
 **Programmable operations for people who make things.**
 
 An open source manufacturing platform built to make factories  

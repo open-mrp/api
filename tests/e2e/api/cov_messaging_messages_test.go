@@ -121,12 +121,7 @@ func TestCovMessagingMessages_UpdateDraftAllFields(t *testing.T) {
 	assertNilField(t, got2, "attachments")
 }
 
-// CONFIRMED BUG (see prodBugSuspects #2/#5 in the task audit): UpdateDraftRequest.Subject is a bare
-// field.Optional[string] with documented "PATCH omit = leave unchanged" semantics (per
-// nullable-field-patterns.md), but UpdateReplyDraft passes the unset pointer straight through to a
-// plain (non-COALESCE) SQL `SET subject = ?` — so omitting `subject` on a PATCH silently NULLs out a
-// previously-set subject instead of preserving it. This asserts the CORRECT (documented) behavior and
-// is expected to fail today.
+// Omitting `subject` on a draft PATCH leaves a previously-set subject in place, per the "PATCH omit = leave unchanged" contract in nullable-field-patterns.md.
 func TestCovMessagingMessages_UpdateDraftOmittedSubjectNotPreserved(t *testing.T) {
 	t.Parallel()
 	seedSupportRoute(t)
@@ -259,9 +254,7 @@ func TestCovMessagingMessages_UpdateDraftIdempotencyKeyConflict(t *testing.T) {
 
 // Full-field coverage of the happy path (with ?include=conversation), plus the highest-value new test
 // in this group: a sequential retry with the SAME client_message_id after the first approve-send
-// already completed does NOT idempotently return the sent message — it 409s (see prodBugSuspects #3,
-// the doc comment's "Idempotent on client_message_id" claim only holds for a concurrent double-approve,
-// not a sequential retry).
+// already completed does NOT idempotently return the sent message — it 409s, since the documented "Idempotent on client_message_id" claim holds only for a concurrent double-approve, not a sequential retry.
 func TestCovMessagingMessages_ApproveSendDraftAllFieldsAndSequentialRetryConflict(t *testing.T) {
 	t.Parallel()
 	seedSupportRoute(t)
@@ -303,10 +296,7 @@ func TestCovMessagingMessages_ApproveSendDraftAllFieldsAndSequentialRetryConflic
 	assert.Greater(t, seq, 0, "a sent (promoted) message carries a real timeline sequence")
 	assert.Equal(t, "message", jsonField(got, "channel"))
 	assert.Equal(t, "complete", jsonField(got, "streaming_state"))
-	// CONFIRMED BUG (prodBugSuspects #3): the response never echoes the request's client_message_id
-	// back, and ApproveAndSendReplyDraft never persists or looks it up by it either — the parameter is
-	// required but functionally dead beyond the request struct, despite the endpoint doc comment
-	// describing the operation as "Idempotent on client_message_id."
+	// client_message_id is required but never persisted, echoed back, or looked up, so the endpoint's documented "Idempotent on client_message_id" holds only for a concurrent double-approve, not a sequential retry. Known gap, tracked separately.
 	assertNilField(t, got, "client_message_id")
 	assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
@@ -408,11 +398,7 @@ func TestCovMessagingMessages_RejectDraftHappyPathAndRepeatConflict(t *testing.T
 	requireErrorResponse(t, body2, "resource_conflict", "invalid_request_error")
 }
 
-// CONFIRMED BUG (prodBugSuspects #4): unlike UpdateDraft and ApproveSendDraft — which both do an
-// explicit GetByID 404 check before touching status — RejectDraft's SetDraftStatus is a bare
-// compare-and-set with no distinct not-found signal, so an unknown message id currently returns 409
-// ("This draft is no longer open."), not 404. This pins down the actual (inconsistent, surprising)
-// ground truth rather than assuming the more-consistent 404.
+// RejectDraft's SetDraftStatus is a bare compare-and-set with no distinct not-found signal, so an unknown message id reports 409 rather than the 404 UpdateDraft and ApproveSendDraft give. Known inconsistency, tracked separately.
 func TestCovMessagingMessages_RejectDraftUnknownIDIs409(t *testing.T) {
 	t.Parallel()
 	dane := chatUserClient(t)
@@ -499,11 +485,7 @@ func TestCovMessagingMessages_CancelScheduledNonScheduledConflict(t *testing.T) 
 	requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 }
 
-// CONFIRMED BUG (prodBugSuspects #1): canceling a scheduled message that exists in the caller's own
-// account but is owned by a DIFFERENT account_user returns 400 ("...can no longer be canceled (status:
-// scheduled).") rather than a 403/404 — and the message actively lies (the message plainly could be
-// canceled, by its owner). This also leaks the existence and status of another user's scheduled
-// message to a non-owner. Pinning down actual (surprising) behavior, not the arguably-more-correct one.
+// Canceling a scheduled message owned by a different account_user in the caller's own account reports 400 with the message's status rather than 403/404, which both misstates why it failed and discloses another user's scheduled message to a non-owner. Known gap, tracked separately.
 func TestCovMessagingMessages_CancelScheduledCrossUserConflict(t *testing.T) {
 	t.Parallel()
 	dane := chatUserClient(t)

@@ -240,10 +240,8 @@ func TestCovIdentityRoles_UpdateValidation_InvalidPermissionAction(t *testing.T)
 	assertErrorParam(t, errObj, "permissions")
 }
 
-// TestCovIdentityRoles_CreateValidation_UnrecognizedPermissionDomainAccepted documents actual (verified) behavior for an unrecognized permission domain: the domain half of `domain:action` is NOT validated against the known PermissionDomain enum anywhere in the create path, so "bogus_domain:read" is silently accepted, persisted, and echoed back via ?include=permissions.
-//
-// This is a data-integrity gap (action words are strictly validated, domains are not) but it does not 5xx, so per task instructions we assert the actual observed behavior rather than an unverified expectation. Flagged in confirmedBugs for follow-up.
-func TestCovIdentityRoles_CreateValidation_UnrecognizedPermissionDomainAccepted(t *testing.T) {
+// The domain half of `domain:action` is checked against the known permission domains, the same way the action half is, so a role cannot be created holding a grant that names nothing.
+func TestCovIdentityRoles_CreateValidation_UnrecognizedPermissionDomainRejected(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-covroles-bogusdomain")
 	status, body, err := apiClient.Post(rolesPath+"?include=permissions", map[string]any{
@@ -251,17 +249,9 @@ func TestCovIdentityRoles_CreateValidation_UnrecognizedPermissionDomainAccepted(
 		"permissions": []string{"bogus_domain:read"},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, status, body)
-
-	got := parseJSON(body)
-	id := jsonField(got, "id")
-	require.NotEmpty(t, id)
-	defer apiClient.Delete(rolesPath + "/" + id)
-
-	perms, ok := got["permissions"].([]any)
-	require.True(t, ok, "permissions should be present with ?include=permissions")
-	require.Len(t, perms, 1)
-	assert.Equal(t, "bogus_domain:read", perms[0])
+	requireStatus(t, 400, status, body)
+	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
+	assertErrorParam(t, errObj, "permissions")
 }
 
 // --- Query param: types filter ---

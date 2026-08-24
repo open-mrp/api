@@ -495,8 +495,7 @@ func TestCovSalesCustomers_ListFilterByDateRange(t *testing.T) {
 // allFields Gap-Closing — relationship_type / parent_account / child_accounts
 // ──────────────────────────────────────────────
 
-// TestCovSalesCustomers_RelationshipTypeAndParentChildPopulated closes prodBugSuspect
-// #1: SeedCustomerAccountID has both a parent (via acre_01seedhouseacct0000) and two
+// TestCovSalesCustomers_RelationshipTypeAndParentChildPopulated confirms SeedCustomerAccountID has both a parent (via acre_01seedhouseacct0000) and two
 // seeded children (ac_01seedcustchild00001/2). This asserts real, non-null
 // materialized data rather than mere key-presence.
 func TestCovSalesCustomers_RelationshipTypeAndParentChildPopulated(t *testing.T) {
@@ -535,8 +534,7 @@ func TestCovSalesCustomers_RelationshipTypeAndParentChildPopulated(t *testing.T)
 	assert.True(t, childIDs["ac_01seedcustchild00002"], "expected seeded child 2 in child_accounts")
 }
 
-// TestCovSalesCustomers_FreightPreferencesServiceLevelPopulated closes prodBugSuspect
-// #2: SeedCustomerAccountID has default_carrier_option_id set to a real service level
+// TestCovSalesCustomers_FreightPreferencesServiceLevelPopulated confirms SeedCustomerAccountID has default_carrier_option_id set to a real service level
 // seed row; this asserts freight_preferences.service_level is populated with real
 // field data (not just key-presence) when explicitly included.
 func TestCovSalesCustomers_FreightPreferencesServiceLevelPopulated(t *testing.T) {

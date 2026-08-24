@@ -128,26 +128,18 @@ func TestCovFinanceTransactionTypes_SearchNoResults(t *testing.T) {
 	assertEmptyListData(t, list.Data)
 }
 
-// TestCovFinanceTransactionTypes_SearchByCodeReturnsNothing locks in
-// prodBugSuspect #3 from the task file: q matches Name via
-// strings.Contains only — searching by the exact Code value ("credit_memo")
-// returns zero rows, even though the same value's display Name substring
-// ("Credit") matches. Not asking for a fix; this test exists so a future
-// refactor that changes q to also match Code doesn't do so silently.
-func TestCovFinanceTransactionTypes_SearchByCodeReturnsNothing(t *testing.T) {
+// q matches the machine-readable code as well as the display name, so searching the value a caller already has from a transaction finds its type.
+func TestCovFinanceTransactionTypes_SearchMatchesCode(t *testing.T) {
 	t.Parallel()
 
 	list, status, err := apiClient.GetList(covFinanceTransactionTypesPath, url.Values{"q": {"credit_memo"}})
 	require.NoError(t, err)
 	require.Equal(t, 200, status)
-	assertEmptyListData(t, list.Data, "q=credit_memo (a Code value, not a Name substring) should match nothing")
+	require.Len(t, list.Data, 1, "q=credit_memo should match the credit_memo type")
+	assert.Equal(t, "credit_memo", jsonField(parseJSON(list.Data[0]), "code"))
 }
 
-// TestCovFinanceTransactionTypes_LimitTruncates pins down prodBugSuspect #1:
-// when limit < total rows, the response is truncated but PageInfo stays the
-// zero value (has_next_page stays false, next_page_url stays nil) even
-// though more rows exist. This locks in the current (possibly buggy)
-// behavior as an explicit regression trip-wire.
+// When limit < total rows the response is truncated but PageInfo stays the zero value, so a caller cannot tell more rows exist. Known gap shared with the /v1/ai/tools and /v1/ai/tool-groups lists, tracked separately; this pins the current shape so a fix is a deliberate change.
 func TestCovFinanceTransactionTypes_LimitTruncates(t *testing.T) {
 	t.Parallel()
 
@@ -156,15 +148,14 @@ func TestCovFinanceTransactionTypes_LimitTruncates(t *testing.T) {
 	require.Equal(t, 200, status)
 	require.Len(t, list.Data, 2)
 
-	assert.False(t, list.PageInfo.HasNextPage, "prodBugSuspect: has_next_page stays false even though limit truncated the static 4-row list")
+	assert.False(t, list.PageInfo.HasNextPage, "has_next_page stays false even though limit truncated the static 4-row list")
 	assert.Nil(t, list.PageInfo.NextPageURL)
 	assert.False(t, list.PageInfo.HasPrevPage)
 	assert.Nil(t, list.PageInfo.PreviousPageURL)
 }
 
 // TestCovFinanceTransactionTypes_CursorRejected asserts the endpoint's
-// hand-rolled "not actually cursor-paginated" validation (prodBugSuspect
-// #2): ANY non-empty cursor value is rejected, regardless of content. This
+// hand-rolled "not actually cursor-paginated" validation : ANY non-empty cursor value is rejected, regardless of content. This
 // path is excluded from the generic cursor-pagination sweep
 // (excludedPaginationPaths in spec_test.go), so without this test that
 // behavior has zero coverage.

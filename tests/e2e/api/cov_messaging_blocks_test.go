@@ -224,11 +224,7 @@ func TestCovMessagingBlocks_WrongTypeField(t *testing.T) {
 	assertErrorParam(t, errObj, "blocked_account_user_id")
 }
 
-// TestCovMessagingBlocks_NonexistentTargetRejected asserts blocking a
-// syntactically-valid but nonexistent account_user id returns 400
-// parameter_invalid (not 404). Per the service code the error `param` is
-// "account_user_id", not the request field name "blocked_account_user_id"
-// (prodBugSuspect #4, naming mismatch) — assert the actual observed value.
+// Blocking a syntactically-valid but nonexistent account_user id is a 400 parameter_invalid, not a 404, and names the request field the caller sent.
 func TestCovMessagingBlocks_NonexistentTargetRejected(t *testing.T) {
 	t.Parallel()
 	user := chatUserClient(t)
@@ -237,11 +233,11 @@ func TestCovMessagingBlocks_NonexistentTargetRejected(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
-	assertErrorParam(t, errObj, "account_user_id")
+	assertErrorParam(t, errObj, "blocked_account_user_id")
 }
 
 // TestCovMessagingBlocks_CrossAccountTargetRecordedBehavior pins down actual
-// behavior for prodBugSuspect #1: Block() resolves the target account_user
+// behavior for Block() resolves the target account_user
 // id via a query with no account_id filter, so a caller can plausibly
 // create a messaging_block row referencing an account_user in a completely
 // different account. SeedChildAccountUserID is an account_user scoped to
@@ -266,7 +262,7 @@ func TestCovMessagingBlocks_CrossAccountTargetRecordedBehavior(t *testing.T) {
 	switch resp.StatusCode {
 	case 201:
 		// Currently-observed behavior: no account-scoping on target resolution, so the
-		// cross-account block row is created successfully (prodBugSuspect #1).
+		// cross-account block row is created successfully.
 		created := parseJSON(resp.Body)
 		assertIDFormat(t, jsonField(created, "id"), "mgbk")
 		assertObjectField(t, created, "messaging_block")

@@ -204,8 +204,7 @@ func TestCovAiMemories_OmittedFields(t *testing.T) {
 		}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 400, status, body)
-		// The category enum is checked before the required-field rule, so an omitted category surfaces as an invalid value rather than a missing one. Still a 400 naming the same param.
-		errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+		errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 		assertErrorParam(t, errObj, "category")
 	})
 
@@ -385,7 +384,7 @@ func TestCovAiMemories_ListEntityTypeFilter(t *testing.T) {
 }
 
 // TestCovAiMemories_ExpiredMemoryVisibleOnGetButExcludedFromList exercises the
-// documented Get/List asymmetry (prodBugSuspect #3): List filters out memories whose
+// documented Get/List asymmetry: List filters out memories whose
 // expires_at is in the past, but Get/Update/Delete apply no such filter and still
 // operate on the row normally.
 func TestCovAiMemories_ExpiredMemoryVisibleOnGetButExcludedFromList(t *testing.T) {
@@ -599,7 +598,7 @@ func TestCovAiMemories_CreateValidation_UnknownJSONField(t *testing.T) {
 }
 
 // TestCovAiMemories_CreateValidation_MetadataExplicitNullAccepted documents
-// prodBugSuspect #2: unlike entity_type/entity_id/importance, metadata is a bare
+// unlike entity_type/entity_id/importance, metadata is a bare
 // json.RawMessage (not field.Optional/field.Clearable), so RejectExplicitJSONNulls
 // does not guard it — an explicit "metadata": null is silently accepted (201).
 func TestCovAiMemories_CreateValidation_MetadataExplicitNullAccepted(t *testing.T) {
@@ -610,7 +609,7 @@ func TestCovAiMemories_CreateValidation_MetadataExplicitNullAccepted(t *testing.
 		"metadata": nil,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	// explicit metadata:null is accepted (prodBugSuspect #2), not rejected like other optional fields
+	// explicit metadata:null is accepted, not rejected like other optional fields
 	requireStatus(t, 201, status, body)
 
 	got := parseJSON(body)
@@ -620,7 +619,7 @@ func TestCovAiMemories_CreateValidation_MetadataExplicitNullAccepted(t *testing.
 	assertNilField(t, got, "metadata")
 }
 
-// TestCovAiMemories_CreateMetadataEmptyObjectRendersNull documents prodBugSuspect #1:
+// TestCovAiMemories_CreateMetadataEmptyObjectRendersNull documents
 // AgentMemoryFromProto treats MetadataJson=="{}" the same as unset, so an explicit
 // "metadata": {} on create renders as "metadata": null in the response.
 func TestCovAiMemories_CreateMetadataEmptyObjectRendersNull(t *testing.T) {
@@ -637,7 +636,7 @@ func TestCovAiMemories_CreateMetadataEmptyObjectRendersNull(t *testing.T) {
 	assertNilField(t, parseJSON(body), "metadata")
 }
 
-// TestCovAiMemories_CreateEntityTypeOnlyYieldsNilEntity documents prodBugSuspect #6:
+// TestCovAiMemories_CreateEntityTypeOnlyYieldsNilEntity documents
 // there is no cross-field validation pairing entity_type+entity_id on create; sending
 // only entity_type is accepted (201) and the response's entity renders null because
 // the loader requires both non-empty.
@@ -759,7 +758,7 @@ func TestCovAiMemories_DeleteValidation_NotFoundIsIdempotentNoOp(t *testing.T) {
 	assert.JSONEq(t, `{}`, string(body))
 }
 
-// TestCovAiMemories_UpdateEntityClearingClearsBothFields documents prodBugSuspect #5:
+// TestCovAiMemories_UpdateEntityClearingClearsBothFields documents
 // service.go sets ClearEntity = req.EntityType.IsClear() || req.EntityID.IsClear(), so
 // sending a real entity_type alongside entity_id:null discards the just-provided
 // entity_type too — both columns clear, not just entity_id.
@@ -785,7 +784,7 @@ func TestCovAiMemories_UpdateEntityClearingClearsBothFields(t *testing.T) {
 
 // TestCovAiMemories_UpdateEntityTypeClearableThreeState exercises the
 // omit/null/value three-state contract of the value-type field.Clearable[string]
-// used for EntityType/EntityID on update (prodBugSuspect #4).
+// used for EntityType/EntityID on update.
 func TestCovAiMemories_UpdateEntityTypeClearableThreeState(t *testing.T) {
 	t.Parallel()
 	id := covAiMemoriesCreate(t, map[string]any{
@@ -828,7 +827,7 @@ func TestCovAiMemories_UpdateEntityTypeClearableThreeState(t *testing.T) {
 
 // TestCovAiMemories_UpdateExpiresAtClearableThreeState exercises the
 // omit/null/value three-state contract of the value-type field.Clearable[string]
-// used for ExpiresAt on update (prodBugSuspect #4).
+// used for ExpiresAt on update.
 func TestCovAiMemories_UpdateExpiresAtClearableThreeState(t *testing.T) {
 	t.Parallel()
 	id := covAiMemoriesCreate(t, map[string]any{

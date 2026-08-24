@@ -678,22 +678,10 @@ func TestCovOperationsCarriers_ServiceLevel_DefaultCannotBeDeleted(t *testing.T)
 }
 
 // ──────────────────────────────────────────────
-// Service Levels: cross-carrier / already-deleted edge cases (some are
-// SUSPECTED BACKEND BUGS — see confirmedBugs; these tests assert correct
-// behavior and will fail red until the underlying issue is fixed).
+// Service Levels: cross-carrier / already-deleted edge cases
 // ──────────────────────────────────────────────
 
-// TestCovOperationsCarriers_ServiceLevel_RetrieveCrossCarrier404s asserts that
-// retrieving a real service level ID through the WRONG carrier_id path
-// segment 404s, matching the scoping enforced by update/delete (both of
-// which call IsInCarrier before returning the resource). SUSPECTED BACKEND
-// BUG: the gateway's GetServiceLevel loads purely by ID
-// (resourceloaders.LoadServiceLevels via loadServiceLevelByID) and never
-// validates req.CarrierID, so any carrier_id in the path currently returns
-// 200 with the resource. Verified live: GET
-// /v1/operations/carriers/{SeedSystemCarrierID}/service-levels/{SeedServiceLevelID}
-// (a service level that belongs to SeedCarrierID, not SeedSystemCarrierID)
-// returns 200, not 404.
+// Retrieving a real service level through a carrier_id that does not own it 404s, matching the scoping update and delete already enforce via IsInCarrier.
 func TestCovOperationsCarriers_ServiceLevel_RetrieveCrossCarrier404s(t *testing.T) {
 	t.Parallel()
 	wrongPath := serviceLevelsPath(SeedSystemCarrierID) + "/" + SeedServiceLevelID
@@ -705,14 +693,8 @@ func TestCovOperationsCarriers_ServiceLevel_RetrieveCrossCarrier404s(t *testing.
 
 // TestCovOperationsCarriers_ServiceLevel_AlreadyDeleted410 asserts that
 // deleting an already-deleted service level returns 410 Gone, matching the
-// carrier delete-already-deleted behavior (TestCarriers has no equivalent
-// name but the same NewAlreadyDeletedError pattern is used in
-// service_level_service.go's DeleteServiceLevel). SUSPECTED BACKEND BUG: the
-// IsInCarrier pre-check in DeleteServiceLevel runs before the
-// Get+DeletedRecordRepo fallback that would produce 410, and IsInCarrier
-// always returns false once the row is hard-deleted from carrier_option, so
-// the 410 branch is unreachable — the second delete returns 404 "Service
-// level not found." instead of 410.
+// carrier delete-already-deleted behavior, via the same NewAlreadyDeletedError pattern in
+// service_level_service.go's DeleteServiceLevel.
 func TestCovOperationsCarriers_ServiceLevel_AlreadyDeleted410(t *testing.T) {
 	t.Parallel()
 	basePath := serviceLevelsPath(SeedCarrierID)
@@ -768,13 +750,7 @@ func TestCovOperationsCarriers_Carrier_CreateValidation_InvalidVisibilityEnum(t 
 // TestCovOperationsCarriers_Carrier_CreateUPSWithoutAccountNumber asserts the
 // documented business rule (services/core-service/internal/service/carrier_service.go)
 // that code=ups/usps without account_number returns 400
-// ("Account number is required for this carrier."). SUSPECTED BACKEND BUG:
-// verified live this currently returns 500 internal_error instead. The
-// validation branch that would produce the 400 only runs when
-// !accountCtx.IsSandbox, and in this environment the create instead falls
-// through to a real Shippo-connection attempt that errors out as a 500
-// (getShippoClient / crypto.DecryptAESGCM path) before ever reaching the
-// account_number check for the actual failure mode observed.
+// ("Account number is required for this carrier.").
 func TestCovOperationsCarriers_Carrier_CreateUPSWithoutAccountNumber(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Post(carriersPath, map[string]any{
@@ -790,12 +766,7 @@ func TestCovOperationsCarriers_Carrier_CreateUPSWithoutAccountNumber(t *testing.
 	}
 }
 
-// TestCovOperationsCarriers_Carrier_CreateFedexDoesNotError asserts that
-// creating a carrier with a Shippo-managed code (fedex, which doesn't
-// require account_number since it uses OAuth) at least doesn't 500.
-// SUSPECTED BACKEND BUG: verified live this currently returns 500
-// internal_error (see the ups/usps sibling test doc comment for the
-// suspected root cause).
+// A Shippo-managed code (fedex needs no account_number, since it authenticates over OAuth) does not 500 on create.
 func TestCovOperationsCarriers_Carrier_CreateFedexDoesNotError(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Post(carriersPath, map[string]any{

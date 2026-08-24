@@ -225,12 +225,7 @@ func TestCovOperationsShippingTerms_CreateValidation_NameTooLong(t *testing.T) {
 		"name > 255 chars should return 400 or 422, got %d: %s", status, string(body))
 }
 
-// TestCovOperationsShippingTerms_CreateValidation_FlatRateMissingValue is a
-// SUSPECTED BACKEND BUG: sending flat_rate with unit_id but no value should
-// be a 400/422 validation error (QuantityInput.Value is validate:"required"),
-// but the live stack currently returns a 500 internal_error. This test
-// intentionally asserts the CORRECT contract and will fail until the bug is
-// fixed — see confirmedBugs. Do not weaken this assertion.
+// QuantityInput.Value is validate:"required", so a flat_rate carrying only a unit_id is a validation error rather than a persisted half-quantity.
 func TestCovOperationsShippingTerms_CreateValidation_FlatRateMissingValue(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Post(shippingTermsPath, map[string]any{
@@ -251,13 +246,7 @@ func TestCovOperationsShippingTerms_CreateValidation_FlatRateMissingValue(t *tes
 		"flat_rate missing value should return 400 or 422, got %d: %s", status, string(body))
 }
 
-// TestCovOperationsShippingTerms_CreateValidation_FlatRateMissingUnitID is a
-// SUSPECTED BACKEND BUG: sending flat_rate with value but no unit_id should
-// be a 400/422 validation error (QuantityInput.UnitID is validate:"required"),
-// but the live stack currently returns 201 and silently creates the quantity
-// with a null unit. This test intentionally asserts the CORRECT contract and
-// will fail until the bug is fixed — see confirmedBugs. Do not weaken this
-// assertion.
+// QuantityInput.UnitID is validate:"required", so a flat_rate carrying only a value is a validation error rather than a quantity with a null unit.
 func TestCovOperationsShippingTerms_CreateValidation_FlatRateMissingUnitID(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Post(shippingTermsPath, map[string]any{
@@ -278,13 +267,7 @@ func TestCovOperationsShippingTerms_CreateValidation_FlatRateMissingUnitID(t *te
 		"flat_rate missing unit_id should return 400 or 422, got %d: %s", status, string(body))
 }
 
-// TestCovOperationsShippingTerms_CreateValidation_FlatRateUnknownUnitID is a
-// SUSPECTED BACKEND BUG: flat_rate.unit_id referencing a non-existent unit
-// should be rejected (400/404/422), but the live stack currently returns 201
-// and silently persists the quantity with no unit association. This test
-// intentionally asserts the CORRECT contract and will fail until the bug is
-// fixed — see confirmedBugs. Per team convention this must NOT be relaxed
-// or skipped, even if the backend instead returns a 5xx.
+// A flat_rate.unit_id naming a unit that does not exist is rejected, rather than persisting a quantity with no unit association.
 func TestCovOperationsShippingTerms_CreateValidation_FlatRateUnknownUnitID(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Post(shippingTermsPath, map[string]any{
@@ -306,13 +289,7 @@ func TestCovOperationsShippingTerms_CreateValidation_FlatRateUnknownUnitID(t *te
 		"flat_rate.unit_id referencing a non-existent unit should return 400, 404, or 422, got %d: %s", status, string(body))
 }
 
-// TestCovOperationsShippingTerms_CreateValidation_FreeShippingServiceLevelUnknownID
-// is a SUSPECTED BACKEND BUG: free_shipping_service_level_ids containing a
-// non-existent service-level ID should be rejected (400/404/422), but the
-// live stack currently returns 201 and silently drops the invalid reference
-// (the created term ends up with an empty free_shipping_service_levels list).
-// This test intentionally asserts the CORRECT contract and will fail until
-// the bug is fixed — see confirmedBugs. Do not weaken this assertion.
+// A free_shipping_service_level_ids entry naming a service level that does not exist is rejected, rather than silently dropped from the created term.
 func TestCovOperationsShippingTerms_CreateValidation_FreeShippingServiceLevelUnknownID(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Post(shippingTermsPath, map[string]any{

@@ -67,6 +67,44 @@ if ! command -v goose &> /dev/null; then
     exit 1
 fi
 
+# --- Ensure MySQL database exists ---
+
+# MYSQL_DATABASE is only applied when the data volume is first initialized, so reused volumes can be healthy with no schema for goose to connect to.
+info "Ensuring core-service MySQL database exists..."
+if ! docker exec openmrp-mysql mysql -uroot -p'Testing123!' -e "CREATE DATABASE IF NOT EXISTS openmrp;" >/dev/null 2>&1; then
+    error "Failed to ensure core-service MySQL database exists."
+    exit 1
+fi
+
+# --- Ensure PostgreSQL role and database exist ---
+
+# POSTGRES_USER / POSTGRES_DB are only applied on first volume init. pg_isready reports healthy even when the role or database is missing.
+info "Ensuring agent-service PostgreSQL role and database exist..."
+PG_ADMIN=""
+for candidate in openmrp postgres augno; do
+    if docker exec openmrp-postgres psql -U "$candidate" -d postgres -c 'SELECT 1' >/dev/null 2>&1; then
+        PG_ADMIN="$candidate"
+        break
+    fi
+done
+if [ -z "$PG_ADMIN" ]; then
+    error "Could not connect to PostgreSQL as a superuser to create role openmrp."
+    exit 1
+fi
+docker exec -i openmrp-postgres psql -U "$PG_ADMIN" -d postgres -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'openmrp') THEN
+    CREATE ROLE openmrp WITH LOGIN SUPERUSER;
+  END IF;
+END
+$$;
+SQL
+if ! docker exec openmrp-postgres psql -U "$PG_ADMIN" -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = 'openmrp_agents'" | grep -qx 1; then
+    docker exec openmrp-postgres psql -U "$PG_ADMIN" -d postgres -v ON_ERROR_STOP=1 \
+        -c "CREATE DATABASE openmrp_agents OWNER openmrp;" >/dev/null
+fi
+
 # --- Apply core-service MySQL migration ---
 
 info "Applying core-service MySQL migration..."
@@ -74,13 +112,18 @@ info "Applying core-service MySQL migration..."
 # MySQL healthcheck can pass before it's fully ready for client connections.
 # Retry goose until the connection succeeds.
 MAX_RETRIES=10
+GOOSE_LOG="$(mktemp)"
 for i in $(seq 1 $MAX_RETRIES); do
     if GOOSE_DRIVER=mysql GOOSE_DBSTRING="root:Testing123!@tcp(localhost:3306)/openmrp?parseTime=true" \
-        goose -dir shared/db/migrations up 2>/dev/null; then
+        goose -dir shared/db/migrations up >"$GOOSE_LOG" 2>&1; then
+        cat "$GOOSE_LOG"
+        rm -f "$GOOSE_LOG"
         break
     fi
     if [ "$i" -eq "$MAX_RETRIES" ]; then
         error "Failed to apply core-service migration after $MAX_RETRIES attempts."
+        sed 's/^/  /' "$GOOSE_LOG" >&2
+        rm -f "$GOOSE_LOG"
         exit 1
     fi
     sleep 2

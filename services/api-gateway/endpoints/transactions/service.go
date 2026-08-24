@@ -300,7 +300,7 @@ func (m *transactionSvcImpl) ListTransactionTypes(ctx context.Context, req *List
 		q := strings.ToLower(*req.Query)
 		filtered := make([]apiresource.TransactionType, 0, len(staticTransactionTypes))
 		for _, t := range staticTransactionTypes {
-			if strings.Contains(strings.ToLower(t.Name), q) {
+			if strings.Contains(strings.ToLower(t.Name), q) || strings.Contains(strings.ToLower(string(t.Code)), q) {
 				filtered = append(filtered, t)
 			}
 		}
@@ -330,7 +330,7 @@ func (m *transactionSvcImpl) ListTransactionMethods(ctx context.Context, req *Li
 		q := strings.ToLower(*req.Query)
 		filtered := make([]apiresource.TransactionMethod, 0, len(staticTransactionMethods))
 		for _, t := range staticTransactionMethods {
-			if strings.Contains(strings.ToLower(t.Name), q) {
+			if strings.Contains(strings.ToLower(t.Name), q) || strings.Contains(strings.ToLower(string(t.Code)), q) {
 				filtered = append(filtered, t)
 			}
 		}

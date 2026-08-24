@@ -39,3 +39,18 @@ func LoadAgentDefinitionNames(ctx context.Context, ids []string) (map[string]Age
 	}
 	return out, nil
 }
+
+// AgentDefinitionExists reports whether an agent definition id resolves through AgentService, for callers that need to validate a caller-supplied reference before storing it. A missing agent is (false, nil); any other failure is returned so an AgentService outage surfaces as itself rather than as a rejected request.
+func AgentDefinitionExists(ctx context.Context, id string) (bool, *apierror.APIError) {
+	resp, apiErr := grpcutil.CallRPC(ctx, agentDefinitionNameLoaderTracer, "loader.agent_definitions.exists", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*agentpb.GetAgentDefinitionResponse, error) {
+			return agentClient.GetAgentDefinition(ctx, &agentpb.GetAgentDefinitionRequest{AgentDefinitionId: id}, opts...)
+		})
+	if apiErr != nil {
+		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+			return false, nil
+		}
+		return false, apiErr
+	}
+	return resp != nil && resp.Agent != nil, nil
+}

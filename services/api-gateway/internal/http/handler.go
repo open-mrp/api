@@ -671,6 +671,25 @@ func enumParamName(sf reflect.StructField) string {
 	return sf.Name
 }
 
+// isRequiredField reports whether the field carries the `required` validate tag, so an empty enum can be told apart from an optional one left unset.
+func isRequiredField(sf reflect.StructField) bool {
+	for _, rule := range strings.Split(sf.Tag.Get("validate"), ",") {
+		if rule == "required" {
+			return true
+		}
+	}
+	return false
+}
+
+// newMissingEnumFieldError mirrors the code that shared/validate would pick for a missing `required` field, keeping a body field a missing_field and a query or path parameter a parameter_missing.
+func newMissingEnumFieldError(sf reflect.StructField) *apierror.APIError {
+	name := enumParamName(sf)
+	if sf.Tag.Get("json") != "" {
+		return apierror.NewMissingFieldError(fmt.Sprintf("Field '%s' is required.", name), name)
+	}
+	return apierror.NewParameterMissingError(fmt.Sprintf("Parameter '%s' is required.", name), name)
+}
+
 func ValidateEnumFields(dst any) *apierror.APIError {
 	rv := reflect.ValueOf(dst)
 	if rv.Kind() == reflect.Pointer {
@@ -792,6 +811,11 @@ func ValidateEnumFields(dst any) *apierror.APIError {
 
 		validValues := results[0]
 		currentValue := fv.String()
+
+		// A required scalar enum is indistinguishable from an absent one when empty, and this check runs ahead of the `required` tag. Reporting it as an unrecognized value would call a missing field invalid, so it gets the same code the tag would have produced.
+		if currentValue == "" && isRequiredField(sf) {
+			return newMissingEnumFieldError(sf)
+		}
 
 		isValid := false
 		var allowedValues []string

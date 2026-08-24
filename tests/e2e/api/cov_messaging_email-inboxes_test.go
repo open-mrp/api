@@ -229,14 +229,7 @@ func TestCovMessagingEmailInboxes_OmittedFields(t *testing.T) {
 			"missing address should return 400 or 422, got %d: %s", status, string(body))
 	})
 
-	// prodBugSuspect #1 (HIGH): UpdateInbox issues an unconditional SET on
-	// every column (email_inbox.sql.go's UpdateEmailInbox), not a
-	// COALESCE/merge. A PATCH that sends only `status` therefore wipes
-	// from_name/agent_config_id/agent_trigger_policy/agent_trigger_keywords
-	// to null/empty even though the request never mentioned them. This
-	// sub-test asserts the CORRECT (preserving) behavior per
-	// e2e-test-patterns.md §3 and is expected to fail red against the
-	// current backend — do not weaken it to match the buggy overwrite.
+	// A PATCH that sends only `status` leaves from_name, agent_config_id, agent_trigger_policy and agent_trigger_keywords untouched, rather than the update wiping every column it did not mention.
 	t.Run("UpdatePreservesOmittedFields", func(t *testing.T) {
 		addr := uniqueName("e2e-eminb-pres")
 		createStatus, createBody, err := apiClient.Post(covMessagingEmailInboxesPath, map[string]any{
@@ -269,14 +262,12 @@ func TestCovMessagingEmailInboxes_OmittedFields(t *testing.T) {
 		assert.Equal(t, origCreatedAt, jsonField(got, "created_at"), "created_at should not change")
 		assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
 
-		// prodBugSuspect #1: these are expected to be PRESERVED but the live
-		// backend currently overwrites them to null/empty on any PATCH.
 		assert.Equal(t, "Original Name", jsonField(got, "from_name"),
-			"from_name should be preserved when omitted from PATCH body (prodBugSuspect #1: UpdateEmailInbox does an unconditional SET on every column)")
+			"from_name should be preserved when omitted from PATCH body")
 		assert.Equal(t, "mention", jsonField(got, "agent_trigger_policy"),
-			"agent_trigger_policy should be preserved when omitted from PATCH body (prodBugSuspect #1)")
+			"agent_trigger_policy should be preserved when omitted from PATCH body")
 		assert.ElementsMatch(t, []string{"forecast", "reorder"}, jsonStringSlice(got, "agent_trigger_keywords"),
-			"agent_trigger_keywords should be preserved when omitted from PATCH body (prodBugSuspect #1)")
+			"agent_trigger_keywords should be preserved when omitted from PATCH body")
 	})
 }
 
@@ -546,9 +537,7 @@ func TestCovMessagingEmailInboxes_CreateValidation_DomainNotVerified(t *testing.
 
 func TestCovMessagingEmailInboxes_CreateValidation_FromNameExplicitNull(t *testing.T) {
 	t.Parallel()
-	// prodBugSuspect #4: from_name is field.Optional[string] not
-	// *field.Clearable[string], so explicit null is rejected rather than
-	// clearing the field. Document the current behavior.
+	// from_name is field.Optional[string] rather than field.Clearable[string], so an explicit null is rejected instead of clearing it. Known gap, tracked separately.
 	body := covMessagingEmailInboxCreateBody(uniqueName("e2e"))
 	body["from_name"] = nil
 	status, respBody, err := apiClient.Post(covMessagingEmailInboxesPath, body, newIdempotencyKey())
@@ -570,52 +559,28 @@ func TestCovMessagingEmailInboxes_CreateValidation_FromNameBlank(t *testing.T) {
 }
 
 // TestCovMessagingEmailInboxes_CreateValidation_AgentConfigIDNotValidated
-// documents prodBugSuspect #3: neither the gateway nor the notification
-// service verifies the referenced agent config exists or belongs to the
-// caller's account before binding it — an unknown id is silently accepted
-// (201), unlike email_domain_id which does a real ownership-checked lookup.
-// This is a data-quality / potential-authz gap, not the "nice" 404 one might
-// expect — asserted as observed, not desired.
-func TestCovMessagingEmailInboxes_CreateValidation_AgentConfigIDNotValidated(t *testing.T) {
+// An agent_config_id naming no agent definition is rejected, so an inbox cannot be bound to an agent that will never resolve. email_domain_id is checked the same way.
+func TestCovMessagingEmailInboxes_CreateValidation_AgentConfigIDRejected(t *testing.T) {
 	t.Parallel()
 	body := covMessagingEmailInboxCreateBody(uniqueName("e2e"))
 	body["agent_config_id"] = "agdf_doesnotexist00000"
 	status, respBody, err := apiClient.Post(covMessagingEmailInboxesPath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, status, respBody)
-	t.Log("prodBugSuspect #3: create accepted an agent_config_id that does not exist (no FK/ownership check) — see TASK-messaging_email-inboxes.md §6.3")
-
-	got := parseJSON(respBody)
-	id := jsonField(got, "id")
-	require.NotEmpty(t, id)
-	defer apiClient.Delete(covMessagingEmailInboxesPath + "/" + id)
-	// The unknown id was stored, but hydration of a nonexistent agent config
-	// resolves to nothing, so ?include=agent_config still comes back null.
-	getStatus, getBody, err := apiClient.GetListRaw(covMessagingEmailInboxesPath+"/"+id, url.Values{"include": {"agent_config"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, getStatus, getBody)
-	assertNilField(t, parseJSON(getBody), "agent_config")
+	requireStatus(t, 400, status, respBody)
+	errObj := requireErrorResponse(t, respBody, "parameter_invalid", "invalid_request_error")
+	assertErrorParam(t, errObj, "agent_config_id")
 }
 
-// TestCovMessagingEmailInboxes_CreateValidation_AgentTriggerPolicyNotValidated
-// documents prodBugSuspect #2: agent_trigger_policy has no IsValid() enum
-// check on create (contrast with the analogous chat-group field in
-// conversation_service.go). An arbitrary string is silently accepted and
-// persisted verbatim.
-func TestCovMessagingEmailInboxes_CreateValidation_AgentTriggerPolicyNotValidated(t *testing.T) {
+// agent_trigger_policy is a constants.AgentTriggerPolicy enum, so an arbitrary string is rejected on create rather than persisted verbatim.
+func TestCovMessagingEmailInboxes_CreateValidation_AgentTriggerPolicyRejected(t *testing.T) {
 	t.Parallel()
 	body := covMessagingEmailInboxCreateBody(uniqueName("e2e"))
 	body["agent_trigger_policy"] = "bogus"
 	status, respBody, err := apiClient.Post(covMessagingEmailInboxesPath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, status, respBody)
-	t.Log("prodBugSuspect #2: create accepted agent_trigger_policy='bogus' with no enum validation — see TASK-messaging_email-inboxes.md §6.2")
-
-	got := parseJSON(respBody)
-	assert.Equal(t, "bogus", jsonField(got, "agent_trigger_policy"))
-	id := jsonField(got, "id")
-	require.NotEmpty(t, id)
-	defer apiClient.Delete(covMessagingEmailInboxesPath + "/" + id)
+	requireStatus(t, 400, status, respBody)
+	errObj := requireErrorResponse(t, respBody, "parameter_invalid", "invalid_request_error")
+	assertErrorParam(t, errObj, "agent_trigger_policy")
 }
 
 func TestCovMessagingEmailInboxes_CreateValidation_DuplicateAddress(t *testing.T) {
@@ -666,10 +631,7 @@ func TestCovMessagingEmailInboxes_UpdateValidation_InvalidStatusEnum(t *testing.
 	assertErrorParam(t, errObj, "status")
 }
 
-// TestCovMessagingEmailInboxes_UpdateValidation_CannotClearFromName
-// documents prodBugSuspect #4 on the update side: from_name cannot be
-// cleared back to null via PATCH — explicit null is rejected, and there is
-// no dedicated "clear from_name" pathway at all in this group.
+// from_name cannot be cleared back to null on update: it is field.Optional, not field.Clearable, and the group offers no dedicated clear pathway. Known gap, tracked separately.
 func TestCovMessagingEmailInboxes_UpdateValidation_CannotClearFromName(t *testing.T) {
 	t.Parallel()
 	created := createAndCleanup(t, covMessagingEmailInboxesPath, map[string]any{
@@ -687,7 +649,6 @@ func TestCovMessagingEmailInboxes_UpdateValidation_CannotClearFromName(t *testin
 	requireStatus(t, 400, status, respBody)
 	errObj := requireErrorResponse(t, respBody, "invalid_format", "invalid_request_error")
 	assertErrorParam(t, errObj, "from_name")
-	t.Log("prodBugSuspect #4: from_name cannot be cleared back to null via PATCH (field.Optional, not *field.Clearable) — see TASK-messaging_email-inboxes.md §6.4")
 }
 
 func TestCovMessagingEmailInboxes_UnknownJSONFieldRejected(t *testing.T) {

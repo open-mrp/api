@@ -51,22 +51,9 @@ const covSalesContactsCustomerAccountUserID = "acus_01seedcustuser00000"
 // covSalesContactsCustomerEmail is the email on the seeded customer account_user above.
 const covSalesContactsCustomerEmail = "dev@augno.com"
 
-// TestCovSalesContacts_CustomerRelationshipMatch asserts a real positive
-// `relationship:"customer"` match (not just filter-exclusion of a self
-// match, which is all the existing suite covers).
+// A real positive `relationship:"customer"` match, rather than the filter-exclusion of a self match the rest of the suite covers.
 //
-// NOTE (confirmed backend bug): the `account` assertion below is the
-// CORRECT/desired behavior per the endpoint's own doc comment ("The account
-// this contact belongs to") and IncludeConfig (which explicitly allows
-// `account` as an include path) — but it currently fails. core-service's
-// AccountSvc.BatchGetAccountsByIDs (services/core-service/internal/service/account_service.go
-// ~L825-836) filters the requested IDs down to ONLY identity.Target.AccountID
-// ("the caller can only read their own account"), silently dropping every
-// other id. Since a customer/supplier ContactMatch's account_id is the
-// COUNTERPARTY account (never the caller's own), `?include=account` can
-// never hydrate for anything but a self match — which trivially already
-// equals the caller's own account. This makes the `account` expandable
-// field on ContactMatch effectively dead for its one interesting use case.
+// ?include=account hydrates the counterparty account here, which is the only interesting case for a ContactMatch: its account_id is never the caller's own.
 func TestCovSalesContacts_CustomerRelationshipMatch(t *testing.T) {
 	t.Parallel()
 
@@ -86,8 +73,6 @@ func TestCovSalesContacts_CustomerRelationshipMatch(t *testing.T) {
 	assert.Equal(t, "account_user", jsonField(au, "object"))
 	assert.Equal(t, covSalesContactsCustomerAccountUserID, jsonField(au, "id"))
 
-	// SUSPECTED BUG: see doc comment above. This currently returns null instead
-	// of the customer account, so this assertion is expected to fail today.
 	acct := jsonObject(match, "account")
 	require.NotNil(t, acct, "account should be populated with ?include=account for a customer-relationship match")
 	assert.Equal(t, "account", jsonField(acct, "object"))
@@ -101,7 +86,7 @@ func TestCovSalesContacts_CustomerRelationshipMatch(t *testing.T) {
 // self account_user with the SAME email so a single find-by-email call
 // returns two distinct matches with distinct relationship values.
 //
-// NOTE (confirmed backend bug, surfaces as 409 on a persistent stack): this
+// NOTE (surfaces as 409 on a persistent stack): this
 // test passes on a clean database. On a stack whose DB survives prior runs it
 // can fail at the create step with 409 resource_exists. account-user "remove"
 // (PUT /v1/identity/account-users/{id}/actions/remove) is a SOFT delete that
@@ -286,7 +271,7 @@ func TestCovSalesContacts_ValidationInvalidInclude(t *testing.T) {
 // `validate` enum tag, and bind_plan.go has no generic enum-enforcement for
 // query fields (unlike the strict `include` path above). The result is not
 // a 5xx and not a 400 — it silently filters every match out, returning an
-// empty list. This is a prodBugSuspect (inconsistent with `include`'s
+// empty list. This is inconsistent (inconsistent with `include`'s
 // strict behavior on the same endpoint) but not a crash, so per the task
 // doc it is documented here rather than asserted-around or turned into an
 // invented 400 expectation.

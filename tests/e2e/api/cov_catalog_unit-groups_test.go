@@ -392,12 +392,7 @@ func TestCovCatalogUnitGroups_UpdateAssociatedUnitsAdditive(t *testing.T) {
 	assert.Len(t, assocData, 3, "PATCH associated_units should be additive: prior entries plus the new one, alongside the auto-included base unit")
 }
 
-// TestCovCatalogUnitGroups_CreateBaseUnitDimensionMismatch documents a
-// SUSPECTED BACKEND BUG: unlike associated_units (which is validated via
-// validateUnitConversionTypes), base_unit_id's dimension is never checked
-// against the group's type on create. This asserts the CORRECT/desired
-// behavior (reject) per repo policy of not weakening assertions to match a
-// known bug; it will fail (red) until the backend adds this validation.
+// base_unit_id's dimension is checked against the group's type on create, the same way associated_units are checked through validateUnitConversionTypes.
 func TestCovCatalogUnitGroups_CreateBaseUnitDimensionMismatch(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Post(unitGroupsPath, map[string]any{
@@ -625,16 +620,7 @@ func TestCovCatalogUnitGroups_DeleteNotFound(t *testing.T) {
 	assert.Equal(t, 404, status, "DELETE of a nonexistent unit group should 404, got %d: %s", status, string(body))
 }
 
-// TestCovCatalogUnitGroupUnits_UpdateNotFound documents a SUSPECTED BACKEND
-// BUG: PATCH .../unit-groups/{group}/units/{id} for a nonexistent nested
-// unit id currently returns 500, not 404. Root cause: UpsertUnitGroupUnit's
-// "isUpdate" backfill loop in unit_group_service.go only fires when the
-// UnitGroupUnitID actually matches an existing conversion; if it doesn't
-// match (nonexistent id) none of UnitID/DiscountPercentage/DiscountFixed get
-// backfilled, so the subsequent upsert is attempted with an empty unit_id,
-// which fails at the DB layer and falls through to a generic 500. This test
-// asserts the CORRECT/desired behavior (404) per repo policy of never
-// weakening an assertion to match a live 5xx bug.
+// PATCHing a nonexistent nested unit id is a 404, rather than an unmatched backfill reaching the upsert with an empty unit_id and failing at the DB layer.
 func TestCovCatalogUnitGroupUnits_UpdateNotFound(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Patch(covCatalogUnitGroupUnitPath(SeedUnitGroupID, "ungpun_000000000000"), map[string]any{
@@ -710,18 +696,7 @@ func TestCovCatalogUnitGroupUnits_UpdateIdempotent(t *testing.T) {
 		"a replayed idempotent PATCH should return the exact cached response, not re-execute")
 }
 
-// TestCovCatalogUnitGroupUnits_UpdatePreservesVisibility documents a
-// SUSPECTED BACKEND BUG: PATCHing a unit_group_unit with a field other than
-// customer_portal_visibility (e.g. discount_fixed alone) silently resets
-// customer_portal_visibility to "hidden". Root cause: in the gateway's
-// UpdateUnitGroupUnit, IsVisible is a bare proto bool with no "unset"
-// sentinel (unlike UnitID/DiscountPercentage/DiscountFixed, which use empty-
-// string sentinels), and the core-service upsert's isUpdate backfill loop
-// only restores those three sentinel-bearing fields from the existing row,
-// never IsVisible — so an omitted customer_portal_visibility is always sent
-// as Go's zero value (false/"hidden"), clobbering whatever was previously
-// stored. This test asserts the CORRECT/desired behavior (omitted fields are
-// preserved, matching every other optional field on this resource).
+// An omitted customer_portal_visibility is preserved on PATCH, matching every other optional field on this resource, rather than being clobbered by the proto bool's zero value.
 func TestCovCatalogUnitGroupUnits_UpdatePreservesVisibility(t *testing.T) {
 	t.Parallel()
 	groupID := covCatalogUnitGroupsCreate(t, uniqueName("e2e-cov-ugu-vispreserve"))

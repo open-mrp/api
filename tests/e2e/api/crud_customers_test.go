@@ -233,7 +233,7 @@ func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 	assert.Equal(t, "555-000-1234", jsonField(contactInfo, "phone"))
 	assert.Equal(t, "https://create.e2e.openmrp.ai", jsonField(contactInfo, "url"))
 
-	// defaults — payment_term (this catches the known bug)
+	// defaults — payment_term
 	defaults := jsonObject(got, "defaults")
 	require.NotNil(t, defaults, "defaults should be expanded")
 	assert.Equal(t, "customer_defaults", jsonField(defaults, "object"))

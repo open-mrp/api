@@ -102,20 +102,15 @@ func TestCovFinanceTransactionMethods_ListSearch(t *testing.T) {
 	assert.Equal(t, "credit_card", jsonField(row, "code"))
 }
 
-// TestCovFinanceTransactionMethods_SearchMatchesNameOnlyNotCode pins down a
-// documented-but-surprising behavior (prodBugSuspect #3 in the task file):
-// q matches Name via strings.Contains only — searching by the exact Code
-// value ("credit_card") returns zero rows, even though the same value's
-// display Name substring ("Credit") matches. Not asking for a fix; this test
-// exists so a future refactor that changes q to also match Code doesn't do
-// so silently.
-func TestCovFinanceTransactionMethods_SearchMatchesNameOnlyNotCode(t *testing.T) {
+// q matches the machine-readable code as well as the display name, matching the transaction-types list.
+func TestCovFinanceTransactionMethods_SearchMatchesCode(t *testing.T) {
 	t.Parallel()
 
 	list, status, err := apiClient.GetList(covFinanceTransactionMethodsPath, url.Values{"q": {"credit_card"}})
 	require.NoError(t, err)
 	require.Equal(t, 200, status)
-	assertEmptyListData(t, list.Data, "q=credit_card (a Code value, not a Name substring) should match nothing")
+	require.Len(t, list.Data, 1, "q=credit_card should match the credit_card method")
+	assert.Equal(t, "credit_card", jsonField(parseJSON(list.Data[0]), "code"))
 }
 
 func TestCovFinanceTransactionMethods_ListSearchNoResults(t *testing.T) {
@@ -137,14 +132,14 @@ func TestCovFinanceTransactionMethods_ListLimit(t *testing.T) {
 
 	// PageInfo is always the zero value on this endpoint — there is no real
 	// pagination, so a client cannot distinguish "more rows exist" from
-	// "that's everything" purely from limit truncation (prodBugSuspect #2).
+	// "that's everything" purely from limit truncation.
 	assert.False(t, list.PageInfo.HasNextPage)
 	assert.Nil(t, list.PageInfo.NextPageURL)
 }
 
 // TestCovFinanceTransactionMethods_LimitAppliedAfterSearch pins down that
 // limit truncation is applied to the already-`q`-filtered slice, not the
-// full static list (prodBugSuspect #2): q=c matches Cash/Check/Credit Card
+// full static list: q=c matches Cash/Check/Credit Card
 // (in that static list order), and limit=1 should truncate to just the
 // first match (Cash), not an arbitrary/unfiltered row.
 func TestCovFinanceTransactionMethods_LimitAppliedAfterSearch(t *testing.T) {

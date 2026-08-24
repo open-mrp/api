@@ -124,7 +124,7 @@ func TestCovCatalogItems_ChangeCategory_CategoryNotFound(t *testing.T) {
 }
 
 // ──────────────────────────────────────────────
-// Attributes — not-found & nonexistent-attribute-id (prodBugSuspect)
+// Attributes — not-found & nonexistent-attribute-id
 // ──────────────────────────────────────────────
 
 // TestCovCatalogItems_AddAttribute_ItemNotFound covers PUT
@@ -266,19 +266,10 @@ func TestCovCatalogItems_ListItems_FilterByAttribute_NoResults(t *testing.T) {
 }
 
 // ──────────────────────────────────────────────
-// List — subassembly_filter invalid value (prodBugSuspect: param casing)
+// List — subassembly_filter invalid value
 // ──────────────────────────────────────────────
 
-// TestCovCatalogItems_ListItems_SubassemblyFilterInvalidValue pins down the
-// actual error shape for an invalid subassembly_filter value.
-//
-// prodBugSuspect: ListItemsRequest.SubassemblyFilter has only a `query` tag
-// and no `json` tag, so httptransport.ValidateEnumFields's json-tag lookup
-// falls back to the Go struct field name. Verified live: error.param comes
-// back as "SubassemblyFilter" (PascalCase, the Go field name) instead of the
-// snake_case "subassembly_filter" every other query-param validation error
-// in this API uses. Asserted as observed, not the (arguably correct)
-// snake_case value, per the no-bandaids policy — flagged for follow-up.
+// An invalid subassembly_filter names the query parameter the caller sent, not the Go field behind it.
 func TestCovCatalogItems_ListItems_SubassemblyFilterInvalidValue(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.GetListRaw(itemsPath, url.Values{"subassembly_filter": {"bogus_value"}})
@@ -297,7 +288,7 @@ func TestCovCatalogItems_ListItems_SubassemblyFilterInvalidValue(t *testing.T) {
 // Idempotency-Key header twice on PUT .../category/{id} via DoFull (not the
 // bodyless Put wrapper) to exercise the header-replay path directly.
 //
-// Discovery (verified live, not in the original task's prodBugSuspect list):
+// Discovery:
 // the api-gateway's IdempotencyMiddleware only intercepts POST and PATCH
 // (see services/api-gateway/internal/middleware/idempotency_middleware.go,
 // `r.Method != http.MethodPost && r.Method != http.MethodPatch` short-

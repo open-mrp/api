@@ -146,21 +146,7 @@ func TestCovAuthApiKeys_ListFilterByStatusExpired(t *testing.T) {
 	assertEmptyListData(t, list.Data, "an expired key should not appear under statuses=active")
 }
 
-// TestCovAuthApiKeys_ListExpiredBeyond30DaysStillVisible verifies a key that
-// expired more than 30 days ago still appears under statuses=expired.
-//
-// BUG (confirmed, discovered during this audit — not in the original task
-// spec's failure-mode checklist): services/auth-service/internal/
-// infrastructure/queries/api_key.sql ListAPIKeysBaseForward (and the role/
-// backward/forward variants) bound the `expired` clause with `AND
-// api_key.expires_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY)`, so a key expired
-// more than 30 days ago silently drops out of every list result (default
-// statuses too — it also fails to show under any other status), even though
-// direct GET /v1/auth/api-keys/{id} still returns it with a 200. The
-// documented semantics of `expired` ("the key passed its expiration time and
-// can no longer authenticate requests") say nothing about a 30-day listing
-// window. This test asserts the documented behavior and is expected to fail
-// (red) until fixed.
+// A key that expired more than 30 days ago still lists under statuses=expired: `expired` means the key passed its expiration time, with no listing window attached.
 func TestCovAuthApiKeys_ListExpiredBeyond30DaysStillVisible(t *testing.T) {
 	t.Parallel()
 	staleExpiry := time.Now().UTC().Add(-40 * 24 * time.Hour).Truncate(time.Second)
@@ -368,16 +354,7 @@ func TestCovAuthApiKeys_RotatePastRevokeAtCollapsesToImmediate(t *testing.T) {
 	assert.NotNil(t, parseJSON(getBody)["revoked_at"], "old key should be revoked immediately when revoke_at is in the past")
 }
 
-// TestCovAuthApiKeys_ListInvalidStatusValueRejected asserts the desired
-// behavior for an unrecognized `statuses` query value.
-//
-// BUG (suspected, see confirmedBugs / prod bug suspects): the live stack
-// currently accepts any unrecognized statuses value and silently returns an
-// empty list (200) rather than rejecting it with 400/422, for both this
-// endpoint and GET /v1/ai/agents (same []constants.XStatus `query:"statuses"`
-// binding pattern) — the query binder does not call APIKeyStatus.IsValid().
-// This test asserts the correct behavior and is expected to fail (red) until
-// fixed.
+// An unrecognized `statuses` value is rejected rather than silently returning an empty list.
 func TestCovAuthApiKeys_ListInvalidStatusValueRejected(t *testing.T) {
 	t.Parallel()
 	// Unrecognized enum values in a list filter are rejected with 400 (platform convention).
@@ -387,15 +364,7 @@ func TestCovAuthApiKeys_ListInvalidStatusValueRejected(t *testing.T) {
 	requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
 }
 
-// TestCovAuthApiKeys_CreateNonexistentRoleIDRejected asserts the desired
-// behavior for a syntactically valid but nonexistent role_id on create.
-//
-// BUG (suspected, see confirmedBugs / prod bug suspects #1): the live stack
-// currently returns 201 and creates a permanently-broken API key with no
-// resolvable role (services/auth-service/internal/mediator/api_key_mediator.go
-// Create inserts RoleID with no existence check; the api_key table has only
-// a plain index, no FK). This test asserts the correct behavior and is
-// expected to fail (red) until an existence check is added.
+// A syntactically valid but nonexistent role_id is rejected on create, rather than producing an API key with no resolvable role.
 func TestCovAuthApiKeys_CreateNonexistentRoleIDRejected(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Post(apiKeysPath, map[string]any{

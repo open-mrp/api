@@ -103,3 +103,95 @@ type AnyOfPermissions []Permission
 func (p Permission) String() string {
 	return string(p.Domain) + ":" + string(p.Action)
 }
+
+// AllPermissionDomains lists every permission domain the platform recognizes, so a role's `<domain>:<action>` grant can be checked against a real domain instead of persisting an unusable one. Kept beside the constants it enumerates: adding a domain without adding it here makes that domain unassignable through the roles API.
+func AllPermissionDomains() []PermissionDomain {
+	return []PermissionDomain{
+		PermissionDomainAgents,
+		PermissionDomainAgentRuns,
+		PermissionDomainAgentMemories,
+		PermissionDomainAlerts,
+		PermissionDomainAccount,
+		PermissionDomainDeliveries,
+		PermissionDomainLocations,
+		PermissionDomainSettlements,
+		PermissionDomainTransactions,
+		PermissionDomainBatches,
+		PermissionDomainCarriers,
+		PermissionDomainCustomerGroups,
+		PermissionDomainCustomers,
+		PermissionDomainCustomerUsers,
+		PermissionDomainDepartmentPicks,
+		PermissionDomainDepartments,
+		PermissionDomainDiscounts,
+		PermissionDomainEdiLocations,
+		PermissionDomainEdiRuns,
+		PermissionDomainEmailLogs,
+		PermissionDomainErrorLogs,
+		PermissionDomainProducts,
+		PermissionDomainInventory,
+		PermissionDomainInventoryChangeLogs,
+		PermissionDomainInventoryLogs,
+		PermissionDomainInvoices,
+		PermissionDomainCategories,
+		PermissionDomainMachines,
+		PermissionDomainMachineDowntime,
+		PermissionDomainProductionSchedules,
+		PermissionDomainDemandOverrides,
+		PermissionDomainMaterials,
+		PermissionDomainOrganization,
+		PermissionDomainPaymentTerms,
+		PermissionDomainPermissions,
+		PermissionDomainParts,
+		PermissionDomainPicks,
+		PermissionDomainReceivingOrders,
+		PermissionDomainProductGroups,
+		PermissionDomainItems,
+		PermissionDomainProductionRuns,
+		PermissionDomainProductionStepTransformations,
+		PermissionDomainProductionSteps,
+		PermissionDomainProductLines,
+		PermissionDomainProductVariations,
+		PermissionDomainProperties,
+		PermissionDomainPurchaseOrders,
+		PermissionDomainSuppliers,
+		PermissionDomainReceiving,
+		PermissionDomainProductLineAccess,
+		PermissionDomainRoles,
+		PermissionDomainSalesOrders,
+		PermissionDomainTerritories,
+		PermissionDomainSalesTargets,
+		PermissionDomainScanningStations,
+		PermissionDomainScanningErrorLogs,
+		PermissionDomainShifts,
+		PermissionDomainShipments,
+		PermissionDomainShippingCases,
+		PermissionDomainShippingTerms,
+		PermissionDomainSupplies,
+		PermissionDomainSystemProperties,
+		PermissionDomainTeamUsers,
+		PermissionDomainUnits,
+		PermissionDomainUnitGroups,
+		PermissionDomainRequestLogs,
+		PermissionDomainAuditEvents,
+		PermissionDomainAPIKeys,
+		PermissionDomainSandbox,
+		PermissionDomainAddresses,
+		PermissionDomainIntegrations,
+		PermissionDomainAdjustmentTypes,
+		PermissionDomainPriorities,
+		PermissionDomainProductTypes,
+		PermissionDomainJobs,
+		PermissionDomainMessaging,
+	}
+}
+
+// IsValid reports whether the domain is one the platform recognizes.
+func (d PermissionDomain) IsValid() bool {
+	for _, known := range AllPermissionDomains() {
+		if d == known {
+			return true
+		}
+	}
+	return false
+}

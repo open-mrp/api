@@ -249,7 +249,7 @@ func TestCovSalesSalesOrders_LifecycleTimestampsPopulatedOnFulfilledOrder(t *tes
 }
 
 // TestCovSalesSalesOrders_TotalsExpandable closes the zero-coverage gap on the
-// `totals` expandable (prodBugSuspect #2): null without ?include=totals, and a
+// `totals` expandable: null without ?include=totals, and a
 // populated non-zero value with it, using the seed order with a real
 // settlement/invoice history.
 func TestCovSalesSalesOrders_TotalsExpandable(t *testing.T) {
@@ -510,7 +510,7 @@ func TestCovSalesSalesOrders_NonexistentValidatedForeignKeysRejected(t *testing.
 }
 
 // TestCovSalesSalesOrders_UnknownPriorityCodeRejectedNotGhosted empirically
-// establishes the prodBugSuspect #1 behavior: PriorityCode is a bare
+// establishes that PriorityCode is a bare
 // `string` on the gateway request (no enum validation), and
 // core-service reads sales orders back via an INNER JOIN against the
 // priority lookup table, which could in theory create an order that 201s
@@ -539,26 +539,11 @@ func TestCovSalesSalesOrders_UnknownPriorityCodeRejectedNotGhosted(t *testing.T)
 }
 
 // ──────────────────────────────────────────────
-// validation — foreign keys that are NOT checked at create (confirmed bugs)
+// validation — foreign keys checked at create
 // ──────────────────────────────────────────────
 
-// TestCovSalesSalesOrders_UnvalidatedForeignKeysAcceptedBug documents a
-// CONFIRMED backend bug (prodBugSuspects #3 in TASK-sales_sales-orders.md):
-// unlike carrier_id/order_discount_id (see
-// TestCovSalesSalesOrders_NonexistentValidatedForeignKeysRejected, which
-// correctly 400/404), service_level_id, payment_term_id, shipping_term_id,
-// and sales_rep_id are never existence-checked at create time. A garbage id
-// for any of these is silently accepted and stored as-is, producing a 201
-// whose expanded sub-resource is a dangling reference (empty name, zero-value
-// timestamps) instead of a validation error. Verified live:
-//
-//	POST /v1/sales/sales-orders {..., "service_level_id": "crop_00000000000000000000"} -> 201
-//	GET  .../{id}?include=freight -> freight.service_level = {"id":"crop_...","name":"","created_at":"0001-01-01T00:00:00Z",...}
-//
-// This test asserts the CORRECT desired behavior (400/404) and will fail red
-// against the current build until the backend adds existence checks for
-// these fields.
-func TestCovSalesSalesOrders_UnvalidatedForeignKeysAcceptedBug(t *testing.T) {
+// service_level_id, payment_term_id, shipping_term_id and sales_rep_id are existence-checked at create, like carrier_id and order_discount_id, so an order cannot be stored holding a dangling reference.
+func TestCovSalesSalesOrders_NonexistentUncheckedForeignKeysRejected(t *testing.T) {
 	t.Parallel()
 	customerID := setupOrderCustomer(t)
 
@@ -586,7 +571,7 @@ func TestCovSalesSalesOrders_UnvalidatedForeignKeysAcceptedBug(t *testing.T) {
 				deleteOrder(t, id)
 			}
 			assert.True(t, status == 400 || status == 404,
-				"nonexistent %s should be rejected with 400/404, got %d: %s (confirmed backend bug: unvalidated foreign key accepted on create)",
+				"nonexistent %s should be rejected with 400/404, got %d: %s",
 				tc.field, status, string(respBody))
 		})
 	}

@@ -238,7 +238,7 @@ func TestCovCatalogMaterials_UpdateUnitCostRejectsNonCurrencyNumerator(t *testin
 // --- Nonexistent FK validation (category_id / unit_id / attribute_ids) ---
 // ──────────────────────────────────────────────
 
-// TestCovCatalogMaterials_CreateNonexistentCategoryID probes prodBugSuspect #4: a nonexistent category_id currently surfaces as a generic, unscoped 404 resource_not_found (via GetCategoryBaseUnitID -> db.MapSQLError on sql.ErrNoRows) rather than a 400 validation_failed scoped to category_id, as sibling FK-validated fields (e.g. unit_price/unit_cost unit ids) do. This is not a 5xx, so the currently-observed status is asserted here; the inconsistency with sibling endpoints is flagged separately for a human reviewer, not treated as a hard failure in this test.
+// A nonexistent category_id is reported against the field, the way the sibling foreign keys on this request (unit_price/unit_cost unit ids) are, rather than as a bare not-found for the material itself.
 func TestCovCatalogMaterials_CreateNonexistentCategoryID(t *testing.T) {
 	t.Parallel()
 	body := validMaterialBody(uniqueName("e2e-mat-badcat"))
@@ -246,12 +246,12 @@ func TestCovCatalogMaterials_CreateNonexistentCategoryID(t *testing.T) {
 
 	status, respBody, err := apiClient.Post(materialsPath, body, newIdempotencyKey())
 	require.NoError(t, err)
-	require.NotEqual(t, 500, status, "nonexistent category_id must not 500 (body: %s)", string(respBody))
-	requireStatus(t, 404, status, respBody)
-	requireErrorResponse(t, respBody, "resource_not_found", "invalid_request_error")
+	requireStatus(t, 400, status, respBody)
+	errObj := requireErrorResponse(t, respBody, "validation_failed", "invalid_request_error")
+	assertErrorParam(t, errObj, "category_id")
 }
 
-// TestCovCatalogMaterials_CreateNonexistentOrderPointUnitID probes prodBugSuspect #3: CreateMaterial never validates order_point.unit_id through ValidateCostRateUnits the way unit_price/unit_cost are validated. The currently-observed behavior (a clean, non-5xx not-found error) is asserted so any regression to a raw 500 is caught.
+// A nonexistent order_point.unit_id is a clean client error rather than a raw 500, the same way unit_price and unit_cost unit ids are guarded.
 func TestCovCatalogMaterials_CreateNonexistentOrderPointUnitID(t *testing.T) {
 	t.Parallel()
 	body := validMaterialBody(uniqueName("e2e-mat-badopunit"))

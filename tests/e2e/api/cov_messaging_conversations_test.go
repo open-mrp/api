@@ -40,7 +40,7 @@ func TestCovMessagingConversations_Create_MissingType(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
-	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 	assertErrorParam(t, errObj, "type")
 }
 
@@ -259,7 +259,7 @@ func TestCovMessagingConversations_Create_AllFieldsAndDefaults(t *testing.T) {
 // A blank string ("") on a field.Clearable field is a real value ("set to empty string"), not a
 // clear (which only happens on explicit JSON null) — see docs/patterns/nullable-field-patterns.md
 // and the established precedent TestCovCatalogProducts_Update_BlankStringDoesNotClear. This is a
-// SUSPECTED BACKEND BUG for conversations: shared/db.NullStringPtr collapses "" to SQL NULL, so the
+// shared/db.NullStringPtr collapses "" to SQL NULL, so the
 // UpdateConversation query's `COALESCE(sqlc.narg('title'), title)` silently falls back to the OLD
 // title instead of writing "". The endpoint returns 200 but the title is left unchanged, which is a
 // silent no-op masquerading as success.
@@ -327,7 +327,7 @@ func covMessagingConversationsMustGetFull(t *testing.T, c *Client, path string) 
 // Expandable fields not covered elsewhere: last_message (full), and its asymmetry vs. list
 // ──────────────────────────────────────────────
 
-// SUSPECTED BACKEND BUG: RetrieveConversation (GET /v1/messaging/conversations/{id}) never
+// RetrieveConversation (GET /v1/messaging/conversations/{id}) never
 // hydrates `last_message` even with ?include=last_message, unlike ListConversations which batch-
 // hydrates it correctly (see services/notification-service/internal/service/conversation_service.go:
 // GetConversation never sets conv.LastMessage, while the list path around ListConversations does via
@@ -488,10 +488,8 @@ func TestCovMessagingConversations_Assign_RequiresCustomerCase(t *testing.T) {
 	assert.Contains(t, string(body), "not a customer-facing case")
 }
 
-// Team assignment (assignee_resource_type=account_group), clearing an existing assignment by
-// omitting both fields, and the service's loose (non-enum) typing of assignee_resource_type — all
-// against the shared support case, so no t.Parallel (see file header).
-func TestCovMessagingConversations_Assign_TeamClearAndLooseTyping(t *testing.T) {
+// Team assignment (assignee_resource_type=account_group), clearing an existing assignment by omitting both fields, and enum rejection of an unrecognized assignee_resource_type — all against the shared support case, so no t.Parallel (see file header).
+func TestCovMessagingConversations_Assign_TeamClearAndInvalidType(t *testing.T) {
 	seedSupportRoute(t)
 	customer := getCustomerPortalClient()
 	dane := chatUserClient(t)
@@ -518,18 +516,15 @@ func TestCovMessagingConversations_Assign_TeamClearAndLooseTyping(t *testing.T) 
 	requireStatus(t, 200, clearResp.StatusCode, clearResp.Body)
 	assertNilField(t, parseJSON(clearResp.Body), "assignee")
 
-	// assignee_resource_type is field.Optional[string], not an enum — any value is accepted and maps
-	// to a "user" actor unless it is exactly "account_group".
-	looseResp, err := dane.PostFull(assignWithInclude, map[string]any{
+	// assignee_resource_type is a constants.ConversationAssigneeType enum, so an unrecognized value is rejected by the generic enum validator rather than falling through to a default actor type.
+	invalidResp, err := dane.PostFull(assignWithInclude, map[string]any{
 		"assignee_resource_type": "widget",
 		"assignee_resource_id":   "abc123",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 200, looseResp.StatusCode, looseResp.Body)
-	looseAssignee := jsonObject(parseJSON(looseResp.Body), "assignee")
-	require.NotNil(t, looseAssignee)
-	assert.Equal(t, "abc123", jsonField(looseAssignee, "id"))
-	assert.Equal(t, "user", jsonField(looseAssignee, "type"), "an unrecognized resource type defaults to a user actor")
+	requireStatus(t, 400, invalidResp.StatusCode, invalidResp.Body)
+	invalidErr := requireErrorResponse(t, invalidResp.Body, "parameter_invalid", "invalid_request_error")
+	assertErrorParam(t, invalidErr, "assignee_resource_type")
 
 	// Leave the shared case unassigned for other tests.
 	_, _, _ = dane.Post(covMessagingConversationsCaseAssignPath(caseID), map[string]any{}, newIdempotencyKey())
@@ -562,7 +557,7 @@ func TestCovMessagingConversations_SetWorkflowStatus_MissingField(t *testing.T) 
 	status, body, err := owner.Post(conversationsPath+"/"+convID+"/actions/set-status", map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
-	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
 	assertErrorParam(t, errObj, "workflow_status")
 }
 
@@ -761,7 +756,7 @@ func TestCovMessagingConversations_AddLink_InvalidResourceType(t *testing.T) {
 	assertErrorParam(t, errObj, "resource_type")
 }
 
-// SUSPECTED BACKEND BUG: AddConversationLink (POST .../links) returns created_at as the Go zero
+// AddConversationLink (POST .../links) returns created_at as the Go zero
 // time ("0001-01-01T00:00:00Z") rather than the actual creation timestamp — the service builds the
 // domain.ConversationLink in memory (services/notification-service/internal/service/
 // conversation_case_service.go AddConversationLink) and returns it directly without ever setting

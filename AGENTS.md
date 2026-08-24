@@ -143,7 +143,8 @@ Data backfills are not schema: they go in `shared/db/data-migrations` (`make mig
 
 ## Code Style
 
-- Do not create README files, examples, or comments unless explicitly requested
+- **Never write agent-generated comments.** Do not add comments to code you write or edit unless the user explicitly asks for them. This is absolute: no explanatory comments, no narration of what the code does, no rationale blocks, no "helpful" annotations — even when they seem useful. When a comment is genuinely warranted the user will ask for it; absent that instruction, leave the code uncommented and do not remove or rewrite existing human-authored comments.
+- Do not create README files or examples unless explicitly requested
 - **Comments: never hard-wrap a prose paragraph across multiple `//` lines** — one paragraph is one physical line (let the editor soft-wrap). Distinct paragraphs get a blank `//` separator; numbered/TODO lists may use one line per item. Internal doc comments explain business intent, side effects, ordering/transactionality, idempotency, and failure modes — not the mechanics. See `docs/patterns/comment-conventions.md`.
 - **Commits must follow the Conventional Commits conventions in `README.md` (the "Committing" section).** release-please parses these prefixes (feat:, fix:, feat!:, etc.) to calculate the next version — a non-conforming prefix is ignored, so the change won't make it into a Release PR and no release gets cut.
 - Review `docs/patterns/` for the conventions governing whatever you are touching — see the routing table at the top of this file. These are requirements, not suggestions.

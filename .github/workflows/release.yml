@@ -39,6 +39,8 @@ jobs:
     outputs:
       release_created: ${{ steps.resolve.outputs.release_created }}
       tag_name: ${{ steps.resolve.outputs.tag_name }}
+      pr_number: ${{ steps.resolve.outputs.pr_number }}
+      pr_head_ref: ${{ steps.resolve.outputs.pr_head_ref }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -99,6 +101,7 @@ jobs:
         id: resolve
         env:
           VALIDATED_TAG_NAME: ${{ steps.validate.outputs.tag_name }}
+          RELEASE_PR: ${{ steps.release.outputs.pr }}
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "release_created=true" >> "$GITHUB_OUTPUT"
@@ -106,6 +109,127 @@ jobs:
           else
             echo "release_created=${{ steps.release.outputs.release_created }}" >> "$GITHUB_OUTPUT"
             echo "tag_name=${{ steps.release.outputs.tag_name }}" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ -n "${RELEASE_PR:-}" ] && [ "${RELEASE_PR}" != "null" ]; then
+            echo "pr_number=$(echo "$RELEASE_PR" | jq -r '.number // empty')" >> "$GITHUB_OUTPUT"
+            echo "pr_head_ref=$(echo "$RELEASE_PR" | jq -r '.headBranchName // empty')" >> "$GITHUB_OUTPUT"
+          fi
+
+  prepare-migrations:
+    name: Prepare Database Migrations
+    needs: release-please
+    if: |
+      needs.release-please.outputs.release_created != 'true' &&
+      needs.release-please.outputs.pr_number != ''
+    runs-on: ubuntu-latest
+    # Holds a PlanetScale token scoped to dev branches and opening deploy requests — deliberately not
+    # one that can deploy them. This job runs on every push to main while a release PR is open, so it
+    # is the more exposed of the two; a stolen token here can open a deploy request for review but
+    # cannot put anything on prod.
+    environment: database-preparation
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Read the version being released
+        id: version
+        env:
+          PR_HEAD_REF: ${{ needs.release-please.outputs.pr_head_ref }}
+        run: |
+          set -euo pipefail
+          # The version lives on the release PR's head — that commit is release-please bumping the
+          # manifest. main does not carry it until the PR merges.
+          git fetch --depth=1 origin "$PR_HEAD_REF"
+          version="$(git show "FETCH_HEAD:.release-please-manifest.json" | jq -r '.["."]')"
+          if [ -z "$version" ] || [ "$version" = "null" ]; then
+            echo "Could not read the release version from .release-please-manifest.json" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Preparing schema for release $version"
+
+      - name: Install goose, pscale and the MySQL client
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq mysql-client
+
+          mkdir -p /usr/local/bin/ci-tools
+
+          GOOSE_V=$(awk '/goose/{gsub(/^v/,"",$2); print $2}' tools/tool-versions)
+          curl -sSL "https://github.com/pressly/goose/releases/download/v${GOOSE_V}/goose_linux_x86_64" -o /usr/local/bin/ci-tools/goose
+          chmod +x /usr/local/bin/ci-tools/goose
+
+          PSCALE_V=$(awk '/planetscale/{gsub(/^v/,"",$2); print $2}' tools/tool-versions)
+          curl -sSL "https://github.com/planetscale/cli/releases/download/v${PSCALE_V}/pscale_${PSCALE_V}_linux_amd64.tar.gz" \
+            | tar xz -C /usr/local/bin/ci-tools pscale
+          chmod +x /usr/local/bin/ci-tools/pscale
+
+          echo "/usr/local/bin/ci-tools" >> "$GITHUB_PATH"
+
+      - name: Cut branch, apply migrations, open deploy request
+        id: planetscale
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+          BASE_REF: ${{ github.sha }}
+          PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
+          PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
+        run: ./scripts/planetscale-release-branch.sh
+
+      # The MySQL schema half gets a reviewable deploy request; the Postgres schema and both sets of
+      # backfills do not, so the manifest is their review surface.
+      - name: Build the migration manifest
+        id: manifest
+        env:
+          BASE_REF: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          ./scripts/release-migration-manifest.sh > /tmp/migration-manifest.md
+          if grep -q '^No database migrations' /tmp/migration-manifest.md; then
+            echo "has_any=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_any=true" >> "$GITHUB_OUTPUT"
+          fi
+          cat /tmp/migration-manifest.md
+
+      - name: Comment the migration plan on the release PR
+        if: steps.manifest.outputs.has_any == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ needs.release-please.outputs.pr_number }}
+          DR_URL: ${{ steps.planetscale.outputs.deploy_request_url }}
+          DR_NUMBER: ${{ steps.planetscale.outputs.deploy_request }}
+          BRANCH: ${{ steps.planetscale.outputs.branch }}
+          HAS_DR: ${{ steps.planetscale.outputs.has_migrations }}
+        run: |
+          set -euo pipefail
+          {
+            echo "### Database changes in this release"
+            echo
+            cat /tmp/migration-manifest.md
+            if [ "${HAS_DR:-false}" = "true" ]; then
+              echo "Schema deploy request: [#${DR_NUMBER}](${DR_URL}) on PlanetScale branch \`${BRANCH}\` — review the diff there."
+              echo
+            fi
+            echo "Merging deploys all of the above to production before any service image rolls."
+            echo "If any of it fails, the rollout is skipped."
+          } > /tmp/pr-comment.md
+
+          gh pr comment "$PR" --repo "${{ github.repository }}" --body-file /tmp/pr-comment.md
+
+      - name: Summary
+        if: always()
+        run: |
+          if [ -f /tmp/migration-manifest.md ]; then
+            cat /tmp/migration-manifest.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Migration manifest was not produced." >> "$GITHUB_STEP_SUMMARY"
           fi
 
   detect-changes:
@@ -199,13 +323,85 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  deploy-migrations:
+    name: Deploy Migrations
+    needs: [release-please]
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    # Holds the token that can actually deploy a deploy request and run DDL/DML on prod. Kept separate
+    # from `production` so it does not also carry CROSS_REPO_PAT, and from the preparation environment
+    # so a compromise of the more frequently-run job cannot reach prod.
+    environment: database-production
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.release-please.outputs.tag_name }}
+
+      - name: Install goose, pscale and the MySQL client
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq mysql-client
+
+          mkdir -p /usr/local/bin/ci-tools
+
+          GOOSE_V=$(awk '/goose/{gsub(/^v/,"",$2); print $2}' tools/tool-versions)
+          curl -sSL "https://github.com/pressly/goose/releases/download/v${GOOSE_V}/goose_linux_x86_64" -o /usr/local/bin/ci-tools/goose
+          chmod +x /usr/local/bin/ci-tools/goose
+
+          PSCALE_V=$(awk '/planetscale/{gsub(/^v/,"",$2); print $2}' tools/tool-versions)
+          curl -sSL "https://github.com/planetscale/cli/releases/download/v${PSCALE_V}/pscale_${PSCALE_V}_linux_amd64.tar.gz" \
+            | tar xz -C /usr/local/bin/ci-tools pscale
+          chmod +x /usr/local/bin/ci-tools/pscale
+
+          echo "/usr/local/bin/ci-tools" >> "$GITHUB_PATH"
+
+      # The four steps below are ordered, and the order is the point: schema first so the new code
+      # never meets a column that does not exist, then backfills so it never meets an empty one. Each
+      # step failing fails the job, and `deploy` requires this job to succeed.
+
+      # 1. MySQL schema — deploys the request the release PR opened and reviewed.
+      - name: Deploy the core schema to prod (MySQL)
+        run: ./scripts/planetscale-deploy-release.sh
+        env:
+          RELEASE_VERSION: ${{ needs.release-please.outputs.tag_name }}
+          PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
+          PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
+
+      # 2. Postgres schema — applied directly. Postgres has no deploy requests; PlanetScale's guidance
+      # is that Postgres branches apply DDL directly, and the branch has safe migrations off.
+      - name: Deploy the agent-service schema to prod (Postgres)
+        run: ./scripts/planetscale-postgres-migrate.sh
+        env:
+          MIGRATIONS: schema
+          PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
+          PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
+
+      # 3 & 4. Backfills, once both schemas are live and before any image rolls.
+      - name: Run core data migrations (MySQL)
+        run: ./scripts/planetscale-data-migrations.sh
+        env:
+          PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
+          PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
+
+      - name: Run agent-service data migrations (Postgres)
+        run: ./scripts/planetscale-postgres-migrate.sh
+        env:
+          MIGRATIONS: data
+          PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
+          PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
+
   deploy:
     name: Deploy to EKS
-    needs: [release-please, detect-changes, build-push]
+    needs: [release-please, detect-changes, build-push, deploy-migrations]
     if: |
       always() &&
       needs.release-please.outputs.release_created == 'true' &&
       needs.detect-changes.result == 'success' &&
+      needs.deploy-migrations.result == 'success' &&
       (needs.build-push.result == 'success' || needs.build-push.result == 'skipped')
     runs-on: ubuntu-latest
     permissions:

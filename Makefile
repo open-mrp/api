@@ -1,4 +1,4 @@
-.PHONY: help dev sqlc proto buf-lint db-dump no-binaries test test-e2e tx-audit test-verbose test-sql-prepare-smoke install-tools install-ci-tools docs mocks lint gosec gosec-fast govet static-check check-format jaeger-tracing connect-minikube version validate-openapi-specs httpie local-db local-db-cli local-db-down local-db-nuke setup teardown migrate-agent-db seed-agent-db seed-core seed-user-photos seed-stripe teardown-stripe teardown-all-stripe fmt stripe-webhook stripe-webhook-account view-otel e2e-up e2e-up-ci e2e e2e-down fix-minikube-dns openapi openapi-quiet gen-agent-tools stainless openapi-stainless openapi-stainless-quiet generate generate-quiet install-stlc stlc-internal-sdk stlc-public-typescript-sdk stlc-public-python-sdk stlc-public-go-sdk stlc-public-sdks stlc-sdks sdk-yalc
+.PHONY: help dev sqlc proto buf-lint no-binaries test test-e2e tx-audit test-verbose test-sql-prepare-smoke install-tools install-ci-tools docs mocks lint gosec gosec-fast govet static-check check-format jaeger-tracing connect-minikube version validate-openapi-specs httpie local-db local-db-cli local-db-down local-db-nuke setup teardown migrate-create migrate-create-data migrate-up migrate-down migrate-status migrate-baseline migrate-data-up migrate-data-status migrate-agent-db migrate-agent-create migrate-agent-create-data migrate-agent-data migrate-agent-status seed-agent-db seed-core seed-user-photos seed-stripe teardown-stripe teardown-all-stripe fmt stripe-webhook stripe-webhook-account view-otel e2e-up e2e-up-ci e2e e2e-down fix-minikube-dns openapi openapi-quiet gen-agent-tools stainless openapi-stainless openapi-stainless-quiet generate generate-quiet install-stlc stlc-internal-sdk stlc-public-typescript-sdk stlc-public-python-sdk stlc-public-go-sdk stlc-public-sdks stlc-sdks sdk-yalc
 
 # Include .env file if it exists (optional for CI)
 -include .env
@@ -6,6 +6,9 @@
 -include .env.test
 export $(shell [ -f .env ] && sed 's/=.*//' .env || echo "")
 export $(shell [ -f .env.test ] && sed 's/=.*//' .env.test || echo "")
+
+# Default database for the migration targets. Override with TARGET=branch or TARGET=prod.
+TARGET ?= local
 
 PROTO_DIR := proto
 PROTO_SRC := $(shell find $(PROTO_DIR) -name '*.proto' -print | sort)
@@ -137,9 +140,6 @@ buf-lint: ## Run buf lint (requires: make install-tools, buf.work.yaml at repo r
 	@command -v buf >/dev/null || (echo "buf not found. Run: make install-tools  (ensure go env GOPATH bin is on PATH)" && exit 1)
 	@buf lint
 
-db-dump: ## Dump the database
-	@./scripts/dump-dev-db.sh
-
 local-db: ## Start local databases, apply migrations, and seed data
 	@./scripts/setup-local-db.sh
 	@if [ -n "$(STRIPE_SECRET_KEY)" ]; then \
@@ -166,9 +166,49 @@ setup: ## Start minikube and local databases
 teardown: ## Delete minikube, nuke local databases, and tear down the E2E stack
 	@minikube delete && $(MAKE) local-db-nuke && $(MAKE) e2e-down
 
+migrate-create: ## Create a core-service schema migration. Usage: make migrate-create name=add_foo
+	@./scripts/migrate.sh create $(name)
+
+migrate-create-data: ## Create a core-service data (backfill) migration. Usage: make migrate-create-data name=backfill_foo
+	@./scripts/migrate.sh create-data $(name)
+
+migrate-up: ## Apply pending core-service schema migrations. Usage: make migrate-up [TARGET=local|branch]
+	@./scripts/migrate.sh up --target $(TARGET)
+
+migrate-down: ## Roll back the most recent core-service schema migration. Usage: make migrate-down [TARGET=local|branch]
+	@./scripts/migrate.sh down --target $(TARGET)
+
+migrate-status: ## Show core-service schema migration status. Usage: make migrate-status [TARGET=local|branch|prod]
+	@./scripts/migrate.sh status --target $(TARGET)
+
+migrate-baseline: ## Record the baseline as applied on a database that already has the schema. Usage: make migrate-baseline TARGET=branch
+	@./scripts/migrate.sh baseline --target $(TARGET)
+
+migrate-data-up: ## Apply pending core-service data migrations. Usage: make migrate-data-up [TARGET=local|branch|prod]
+	@./scripts/migrate.sh data-up --target $(TARGET)
+
+migrate-data-status: ## Show core-service data migration status. Usage: make migrate-data-status [TARGET=local|branch|prod]
+	@./scripts/migrate.sh data-status --target $(TARGET)
+
 migrate-agent-db: ## Apply migrations to the agent-service PostgreSQL database
 	@GOOSE_DRIVER=postgres GOOSE_DBSTRING="$$AGENT_DB_URL" \
 		goose -dir services/agent-service/db/migrations up
+
+migrate-agent-create: ## Create an agent-service schema migration. Usage: make migrate-agent-create name=add_foo
+	@goose -s -dir services/agent-service/db/migrations create $(name) sql
+
+migrate-agent-create-data: ## Create an agent-service data (backfill) migration. Usage: make migrate-agent-create-data name=backfill_foo
+	@goose -s -table goose_db_version_data -dir services/agent-service/db/data-migrations create $(name) sql
+
+migrate-agent-data: ## Apply agent-service data migrations to the PostgreSQL database
+	@GOOSE_DRIVER=postgres GOOSE_DBSTRING="$$AGENT_DB_URL" \
+		goose -table goose_db_version_data -dir services/agent-service/db/data-migrations up
+
+migrate-agent-status: ## Show agent-service schema + data migration status
+	@GOOSE_DRIVER=postgres GOOSE_DBSTRING="$$AGENT_DB_URL" \
+		goose -dir services/agent-service/db/migrations status
+	@GOOSE_DRIVER=postgres GOOSE_DBSTRING="$$AGENT_DB_URL" \
+		goose -table goose_db_version_data -dir services/agent-service/db/data-migrations status
 
 seed-agent-db: ## Seed agent-service DB with e2e test data
 	@GOOSE_DRIVER=postgres GOOSE_DBSTRING="$$AGENT_DB_URL" \

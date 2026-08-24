@@ -58,7 +58,7 @@ func TestAnalyze_UnmappedSharedChangeBuildsAllServices(t *testing.T) {
 	t.Parallel()
 
 	analysis := Analyze([]string{
-		"shared/db/migrations/0001_initial.sql",
+		"shared/db/migrations/00001_initial.sql",
 	}, nil)
 
 	assertServicesEqual(t, analysis.Services, ServiceNames)

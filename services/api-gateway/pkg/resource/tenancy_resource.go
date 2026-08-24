@@ -43,15 +43,15 @@ type TenancyCurrentAccount struct {
 	//
 	// - `company`: a standard production account.
 	// - `sandbox`: an isolated testing account.
-	Type string `json:"type" validate:"required"`
+	Type constants.AccountTypeCode `json:"type" validate:"required"`
 	// How far the account has progressed through onboarding.
 	//
 	// The account is fully set up and usable once this is `active`.
-	OnboardingStatus string `json:"onboarding_status" validate:"required"`
-	// Code of the account's subscription plan (for example `free`, `starter`, or `pro`).
+	OnboardingStatus constants.OnboardingStatus `json:"onboarding_status" validate:"required"`
+	// Code of the account's subscription plan.
 	//
 	// The same code appears as `account_plan.plan_type_code`, alongside the plan's resolved limits and features.
-	Plan string `json:"plan" validate:"required"`
+	Plan constants.PlanCode `json:"plan" validate:"required"`
 	// The slug this account's customer portal is addressed by.
 	//
 	// Absent until the account enables its customer portal.
@@ -76,8 +76,8 @@ type TenancyAccountPlan struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=account_plan"`
 	// Display name of the plan, as shown in billing.
 	Name string `json:"name" validate:"required"`
-	// Stable code for the plan tier (for example `free`, `starter`, or `pro`).
-	PlanTypeCode string `json:"plan_type_code" validate:"required"`
+	// Stable code for the plan tier.
+	PlanTypeCode constants.PlanCode `json:"plan_type_code" validate:"required"`
 	// Revision of the plan definition the account is on.
 	//
 	// Plans are versioned so existing subscribers keep the pricing, limits, and features they signed up under when a newer version of the same plan is published.
@@ -105,11 +105,11 @@ type TenancyPendingRegistration struct {
 	// Registration session ID.
 	SessionID string `json:"session_id" validate:"required"`
 	// Plan code selected during registration.
-	PlanCode string `json:"plan_code" validate:"required"`
+	PlanCode constants.PlanCode `json:"plan_code" validate:"required"`
 	// How far the signup has progressed, so the flow can be resumed where the user left off.
 	//
 	// Steps run `verification`, `user_details`, `account_details`, `review`, `payment`, then `completed`.
-	Step string `json:"step" validate:"required"`
+	Step constants.RegistrationStep `json:"step" validate:"required"`
 	// Session creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 }
@@ -146,7 +146,7 @@ type TenancyOtherAccount struct {
 	//
 	// - `company`: a standard production account.
 	// - `sandbox`: an isolated testing account.
-	Type string `json:"type" validate:"required"`
+	Type constants.AccountTypeCode `json:"type" validate:"required"`
 }
 
 // SampleTenancy describes a fully registered user operating in their owner account, so pending_registration is null — a pending registration only exists mid-signup, before the account does.
@@ -156,16 +156,16 @@ var SampleTenancy = &Tenancy{
 		ID:               SampleAccountID,
 		Object:           constants.ObjectTypeAccount,
 		Name:             SampleAccountName,
-		Type:             string(constants.AccountTypeCodeStandard),
-		OnboardingStatus: "active",
-		Plan:             string(constants.PublicPlanCodeStarter),
+		Type:             constants.AccountTypeCodeStandard,
+		OnboardingStatus: constants.OnboardingStatusActive,
+		Plan:             constants.PlanCodeStarter,
 		Role:             SampleRole,
 		AccountUserID:    SampleAccountUserID,
 		AccountPlan: &TenancyAccountPlan{
 			TypeID:        SamplePlanTypeIDStarter,
 			Object:        constants.ObjectTypeAccountPlan,
 			Name:          "Starter",
-			PlanTypeCode:  string(constants.PublicPlanCodeStarter),
+			PlanTypeCode:  constants.PlanCodeStarter,
 			Version:       1,
 			PricePerSeat:  19,
 			PricePerMonth: new(19.0),

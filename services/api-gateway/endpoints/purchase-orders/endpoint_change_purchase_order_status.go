@@ -22,7 +22,7 @@ type ChangePurchaseOrderStatusRequest struct {
 	// - `unissue`: move an `issued` order back to `estimate`. Deletes the receiving order.
 	// - `close`: move an `issued` order to `fulfilled`. Marks the receiving order complete.
 	// - `open`: move a `fulfilled` order back to `issued`. Re-opens the receiving order.
-	StatusChange string `json:"status_change" validate:"required"`
+	StatusChange constants.SalesOrderStatusChange `json:"status_change" validate:"required"`
 	// Whether to email the purchase order to the order's contacts.
 	//
 	// Only applies to the `issue` action. When `true`, the purchase order submission email is sent to the order's email contacts and `acknowledgment_status` is set to `sent`. An order with no email contacts still moves to `sent` even though no email goes out.
@@ -30,7 +30,7 @@ type ChangePurchaseOrderStatusRequest struct {
 }
 
 var sampleChangePurchaseOrderStatusRequest = &ChangePurchaseOrderStatusRequest{
-	StatusChange: "issue",
+	StatusChange: constants.SalesOrderStatusChangeIssue,
 	SendEmail:    true,
 }
 

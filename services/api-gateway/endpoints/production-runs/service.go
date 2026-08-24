@@ -76,7 +76,7 @@ func (m *productionRunSvcImpl) ListProductionRuns(ctx context.Context, req *List
 		Cursor:     req.Cursor,
 		Limit:      req.Limit,
 		Query:      req.Query,
-		Status:     req.Status,
+		Status:     req.Status.StringPtr(),
 		ItemIds:    req.ItemIDs,
 		MachineIds: req.MachineIDs,
 		StartDate:  req.StartDate,

@@ -131,3 +131,23 @@ func (m *EmailSendStatus) StringPtr() *string          { return stringPtrEnum(m)
 func (m *RemovedResourceScope) StringPtr() *string     { return stringPtrEnum(m) }
 func (m *JobStatus) StringPtr() *string                { return stringPtrEnum(m) }
 func (m *JobType) StringPtr() *string                  { return stringPtrEnum(m) }
+func (s *PickStatus) StringPtr() *string               { return stringPtrEnum(s) }
+func (s *ProductionRunStatus) StringPtr() *string      { return stringPtrEnum(s) }
+func (s *ReceivingOrderStatus) StringPtr() *string     { return stringPtrEnum(s) }
+func (s *TransactionAllocationStatus) StringPtr() *string {
+	return stringPtrEnum(s)
+}
+func (s *EmailInboxStatus) StringPtr() *string         { return stringPtrEnum(s) }
+func (s *EmailDomainStatus) StringPtr() *string        { return stringPtrEnum(s) }
+func (t *DuplicateCheckType) StringPtr() *string       { return stringPtrEnum(t) }
+func (t *ItemReconcileType) StringPtr() *string        { return stringPtrEnum(t) }
+func (s *OnboardingStatus) StringPtr() *string         { return stringPtrEnum(s) }
+func (s *BulkResultStatus) StringPtr() *string         { return stringPtrEnum(s) }
+func (a *BulkResultAction) StringPtr() *string         { return stringPtrEnum(a) }
+func (s *CarrierConnectionStatus) StringPtr() *string  { return stringPtrEnum(s) }
+func (s *MessageStreamingState) StringPtr() *string    { return stringPtrEnum(s) }
+func (t *FreightExemptionType) StringPtr() *string     { return stringPtrEnum(t) }
+func (c *AgentToolCategory) StringPtr() *string        { return stringPtrEnum(c) }
+func (t *BatchLotType) StringPtr() *string             { return stringPtrEnum(t) }
+func (t *MeasureOwnerType) StringPtr() *string         { return stringPtrEnum(t) }
+func (t *ConversationAssigneeType) StringPtr() *string { return stringPtrEnum(t) }

@@ -151,9 +151,7 @@ type ItemTrends struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=item"`
 	// The trend type that was requested.
-	//
-	// Currently the only supported value is `inventory`.
-	TrendType string `json:"trend_type" validate:"required"`
+	TrendType constants.ItemTrendType `json:"trend_type" validate:"required"`
 	// Trend data points, oldest first.
 	//
 	// At most one point is returned per calendar day: when several measurements were recorded on the same day, the earliest one is kept.

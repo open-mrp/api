@@ -16,8 +16,8 @@ type ListReceivingOrdersRequest struct {
 	apiresource.PaginationRequest
 	// Filter by completion status.
 	//
-	// Accepts `open`, `completed`, or `all`. Completed orders are hidden when this is omitted.
-	Status *string `query:"status"`
+	// Completed orders are hidden when this is omitted.
+	Status *constants.ReceivingOrderStatus `query:"status"`
 	// Filter to orders that have at least one line for any of the given item IDs.
 	ItemIDs []string `query:"item_ids"`
 	// Filter to orders whose originating purchase order was placed with any of the given supplier account IDs.

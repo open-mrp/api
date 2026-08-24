@@ -5,6 +5,7 @@ import (
 
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/timeutil"
 )
 
@@ -87,7 +88,7 @@ type Message struct {
 	// The streaming state of an agent reply.
 	//
 	// `streaming` means the body is still being generated and keeps growing as realtime updates arrive; `complete` means it is final.
-	StreamingState *string `json:"streaming_state"`
+	StreamingState *constants.MessageStreamingState `json:"streaming_state"`
 	// The dedupe key the client supplied when sending, echoed back so an optimistic local copy can be matched to the stored message.
 	ClientMessageID *string `json:"client_message_id"`
 	// When the message was last edited.
@@ -107,7 +108,7 @@ type Message struct {
 	// Machine-readable reason an agent reply failed.
 	//
 	// A client can react to the specific code rather than just showing the body — `agent_spending_cap_reached`, for example, is a cue to offer raising the agent spending limit.
-	AgentErrorCode *string `json:"agent_error_code"`
+	AgentErrorCode *apierror.ErrorCode `json:"agent_error_code"`
 }
 
 var SampleMessage = &Message{

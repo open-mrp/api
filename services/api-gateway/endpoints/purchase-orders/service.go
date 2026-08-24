@@ -161,9 +161,9 @@ func (m *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, req *Cre
 		Note:                  req.Note.Ptr(),
 		CarrierId:             req.CarrierID.Ptr(),
 		ServiceLevelId:        req.ServiceLevelID.Ptr(),
-		CarrierBillingType:    req.CarrierBillingType.Ptr(),
+		CarrierBillingType:    req.CarrierBillingType.Ptr().StringPtr(),
 		CarrierBillingAccount: req.CarrierBillingAccount.Ptr(),
-		PriorityCode:          req.PriorityCode,
+		PriorityCode:          string(req.PriorityCode),
 		ShippingTermId:        req.ShippingTermID.Ptr(),
 		PaymentTermId:         req.PaymentTermID.Ptr(),
 		BillToName:            req.BillToName.Ptr(),
@@ -205,7 +205,7 @@ func (m *purchaseOrderSvcImpl) UpdatePurchaseOrder(ctx context.Context, req *Upd
 		Id:                    req.PurchaseOrderID,
 		Note:                  req.Note.Ptr(),
 		Number:                req.Number.Ptr(),
-		PriorityCode:          req.PriorityCode.Ptr(),
+		PriorityCode:          req.PriorityCode.Ptr().StringPtr(),
 		BillingAddressId:      req.BillingAddressID.Ptr(),
 		ShippingAddressId:     req.ShippingAddressID.Ptr(),
 		PromisedAt:            req.PromisedAt.Ptr(),
@@ -257,7 +257,7 @@ func (m *purchaseOrderSvcImpl) BulkDeletePurchaseOrders(ctx context.Context, req
 func (m *purchaseOrderSvcImpl) ChangePurchaseOrderStatus(ctx context.Context, req *ChangePurchaseOrderStatusRequest) (*apiresource.PurchaseOrder, *apierror.APIError) {
 	pbReq := &pb.ChangePurchaseOrderStatusRequest{
 		Id:           req.PurchaseOrderID,
-		StatusChange: req.StatusChange,
+		StatusChange: string(req.StatusChange),
 		SendEmail:    req.SendEmail,
 		Includes:     resourcekit.FilterIncludes(ctx, purchaseOrderIncludes...),
 	}

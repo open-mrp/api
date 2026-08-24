@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 )
 
@@ -16,8 +17,8 @@ type GetItemTrendsRequest struct {
 	ItemID string `path:"id" validate:"required"`
 	// The trend metric to fetch.
 	//
-	// Currently the only supported value is `inventory`, which returns the item's inventory-level measurements from the last 30 days. Unsupported values are rejected with a validation error.
-	TrendType string `query:"trend_type" validate:"required"`
+	// `inventory` returns the item's inventory-level measurements from the last 30 days.
+	TrendType constants.ItemTrendType `query:"trend_type" validate:"required"`
 }
 
 // Returns how an item's stock level has moved over the last 30 days, as a series of point-in-time measurements.

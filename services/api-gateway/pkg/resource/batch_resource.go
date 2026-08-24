@@ -58,7 +58,7 @@ type BatchLot struct {
 	//
 	// - `material`: the lot number traces a raw material consumed by the batch.
 	// - `productionRun`: the lot number is the production run number the batch belongs to.
-	Type string `json:"type" validate:"required"`
+	Type constants.BatchLotType `json:"type" validate:"required"`
 }
 
 var SampleBatchLot = &BatchLot{

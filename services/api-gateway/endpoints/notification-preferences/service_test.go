@@ -22,7 +22,7 @@ func TestNotificationPreferenceFromProto_Category(t *testing.T) {
 	assert.Equal(t, "nfpf_1", p.ID)
 	assert.Equal(t, constants.ObjectTypeNotificationPreference, p.Object)
 	require.NotNil(t, p.Category)
-	assert.Equal(t, "chat.message", *p.Category)
+	assert.Equal(t, constants.NotificationCategoryChatMessage, *p.Category)
 	assert.True(t, p.InAppEnabled)
 	assert.False(t, p.EmailEnabled)
 	assert.Equal(t, constants.NotificationDigestInstant, p.Digest)

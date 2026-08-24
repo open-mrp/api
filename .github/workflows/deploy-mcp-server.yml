@@ -37,7 +37,7 @@ jobs:
     environment: production
     steps:
       - name: Checkout API repo (deploy dispatch script)
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -87,7 +87,7 @@ jobs:
           echo "MCP build context: open-mrp/typescript-sdk@${sdk_ref}"
 
       - name: Checkout typescript-sdk (MCP build context)
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           repository: open-mrp/typescript-sdk
           # Pinned to a resolved typescript-sdk release tag, never a raw

@@ -54,13 +54,11 @@ type AllocationTransaction struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=transaction"`
 	// Type code of the transaction the money came from.
-	//
-	// One of `payment`, `credit_memo`, `adjustment`, or `rebate`.
-	Type string `json:"type" validate:"required"`
-	// Payment method code (e.g. `check`, `ach`).
+	Type constants.TransactionType `json:"type" validate:"required"`
+	// Payment method code.
 	//
 	// Typically set only when `type` is `payment`.
-	Method *string `json:"method"`
+	Method *constants.TransactionMethod `json:"method"`
 	// Adjustment category code (e.g. `discount`, `write_off`).
 	//
 	// Typically set only when `type` is `adjustment`.

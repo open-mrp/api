@@ -34,7 +34,7 @@ type CreateEmailInboxRequest struct {
 	// - `always`: runs on every incoming message.
 	//
 	// Leaving this unset makes the agent run on every incoming message, since email has no reliable @mention convention.
-	AgentTriggerPolicy field.Optional[string] `json:"agent_trigger_policy,omitzero"`
+	AgentTriggerPolicy field.Optional[constants.AgentTriggerPolicy] `json:"agent_trigger_policy,omitzero"`
 	// The keywords that decide whether the agent runs on an incoming message.
 	//
 	// Under the `keyword` policy a keyword matches anywhere in the message; under `mention` it only counts where it is prefixed with `@`.
@@ -52,7 +52,7 @@ var sampleCreateEmailInboxRequest = &CreateEmailInboxRequest{
 	Address:              "support@acme.com",
 	FromName:             field.Some(sampleCreateEmailInboxFromName),
 	AgentConfigID:        field.Some(apiresource.SampleAgentDefinitionID),
-	AgentTriggerPolicy:   field.Some(string(constants.AgentTriggerPolicyKeyword)),
+	AgentTriggerPolicy:   field.Some(constants.AgentTriggerPolicyKeyword),
 	AgentTriggerKeywords: []string{"invoice", "refund"},
 }
 

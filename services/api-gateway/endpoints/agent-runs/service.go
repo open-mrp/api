@@ -62,8 +62,8 @@ func (m *agentRunSvcImpl) ListRuns(ctx context.Context, req *ListRunsRequest) (*
 	if req.Query != nil {
 		pbReq.Query = req.Query
 	}
-	if req.StatusCode != nil {
-		pbReq.StatusCode = *req.StatusCode
+	if req.Status != nil {
+		pbReq.StatusCode = string(*req.Status)
 	}
 	if req.AgentDefinitionID != nil {
 		pbReq.AgentDefinitionId = *req.AgentDefinitionID

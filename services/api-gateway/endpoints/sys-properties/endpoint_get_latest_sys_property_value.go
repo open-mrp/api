@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 )
 
@@ -22,7 +23,7 @@ type GetLatestSysPropertyValueRequest struct {
 	// - `supplier_number`: identifiers assigned to new suppliers.
 	// - `production_run_number`: numbering for production runs.
 	// - `sscc_count`: serial component of the GS1 SSCC-18 codes assigned to shipping cases.
-	TypeCode string `path:"type_code" validate:"required"`
+	TypeCode constants.SysPropertyTypeCode `path:"type_code" validate:"required"`
 }
 
 // Returns the next available counter value for a system property type.

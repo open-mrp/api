@@ -28,11 +28,11 @@ type CreatePurchaseOrderRequest struct {
 	//
 	// - `sender`: the carrier bills the party shipping the goods.
 	// - `third_party`: the carrier bills the account given in `carrier_billing_account`.
-	CarrierBillingType field.Optional[string] `json:"carrier_billing_type,omitzero" validate:"omitempty,max=255"`
+	CarrierBillingType field.Optional[constants.CarrierBillingType] `json:"carrier_billing_type,omitzero" validate:"omitempty"`
 	// Carrier account number to bill when the billing type is `third_party`.
 	CarrierBillingAccount field.Optional[string] `json:"carrier_billing_account,omitzero" validate:"omitempty,max=255"`
-	// Priority level for fulfilling the order (`low`, `normal`, or `high`).
-	PriorityCode string `json:"priority_code" validate:"required,max=255"`
+	// Priority level for fulfilling the order.
+	PriorityCode constants.PriorityCode `json:"priority_code" validate:"required"`
 	// ID of the shipping term that applies to the order.
 	ShippingTermID field.Optional[string] `json:"shipping_term_id,omitzero" validate:"omitempty"`
 	// ID of the payment term agreed with the supplier.
@@ -98,7 +98,7 @@ var sampleCreatePurchaseOrderRequest = &CreatePurchaseOrderRequest{
 	Note:              field.Some(sampleCreatePONote),
 	CarrierID:         field.Some(sampleCreatePOCarrierID),
 	ServiceLevelID:    field.Some(sampleCreatePOServiceLevelID),
-	PriorityCode:      string(constants.PriorityCodeNormal),
+	PriorityCode:      constants.PriorityCodeNormal,
 	ShipToName:        field.Some(sampleCreatePOShipToName),
 	ShipToStreetLine1: field.Some(sampleCreatePOShipToStreetLine1),
 	ShipToLocality:    field.Some(sampleCreatePOShipToLocality),

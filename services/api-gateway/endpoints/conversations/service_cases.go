@@ -32,7 +32,7 @@ func (s *conversationSvcImpl) AssignConversation(ctx context.Context, req *Assig
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ConversationInfo, error) {
 			return s.chatClient.AssignConversation(ctx, &pb.AssignConversationRequest{
 				ConversationId:       req.ConversationID,
-				AssigneeResourceType: req.AssigneeResourceType.Ptr(),
+				AssigneeResourceType: req.AssigneeResourceType.Ptr().StringPtr(),
 				AssigneeResourceId:   req.AssigneeResourceID.Ptr(),
 			}, opts...)
 		})

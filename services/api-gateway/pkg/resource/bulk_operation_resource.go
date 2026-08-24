@@ -9,8 +9,8 @@ import (
 type BulkCreateItemResult struct {
 	// The SKU of the item.
 	SKU string `json:"sku" validate:"required"`
-	// Outcome of the create attempt: "created" or "failed".
-	Status string `json:"status" validate:"required"`
+	// Outcome of the create attempt.
+	Status constants.BulkResultStatus `json:"status" validate:"required"`
 	// The error message if the item failed to create.
 	Error *string `json:"error"`
 	// The ID of the created item.
@@ -36,14 +36,14 @@ func (*BulkCreateItemsResponse) SchemaExample() any {
 type BulkCreateProductionStepResult struct {
 	// The name of the production step.
 	Name string `json:"name" validate:"required"`
-	// Outcome of the operation for this step: "created" or "failed".
-	Status string `json:"status" validate:"required"`
+	// Outcome of the operation for this step.
+	Status constants.BulkResultStatus `json:"status" validate:"required"`
 	// The error message if the step failed.
 	Error *string `json:"error"`
 	// The ID of the created or updated production step.
 	ProductionStepID *string `json:"production_step_id"`
-	// The action taken: "created", "updated", or "skipped".
-	Action string `json:"action" validate:"required"`
+	// The action taken on the underlying production step.
+	Action constants.BulkResultAction `json:"action" validate:"required"`
 }
 
 // BulkCreateProductionStepsResponse represents the response from the bulk create production steps endpoint.

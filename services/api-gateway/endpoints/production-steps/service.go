@@ -388,16 +388,16 @@ func (m *productionStepSvcImpl) BulkCreateProductionSteps(ctx context.Context, r
 
 	results := make([]apiresource.BulkCreateProductionStepResult, len(resp.Results))
 	for i, r := range resp.Results {
-		status := "failed"
+		status := constants.BulkResultStatusFailed
 		if r.Success {
-			status = "created"
+			status = constants.BulkResultStatusCreated
 		}
 		results[i] = apiresource.BulkCreateProductionStepResult{
 			Name:             r.Name,
 			Status:           status,
 			Error:            r.Error,
 			ProductionStepID: r.ProductionStepId,
-			Action:           r.Action,
+			Action:           constants.BulkResultAction(r.Action),
 		}
 	}
 

@@ -106,7 +106,7 @@ func notificationPreferenceFromProto(p *pb.NotificationPreferenceInfo) apiresour
 	}
 	// An empty category is the global default, surfaced to clients as null.
 	if p.Category != "" {
-		category := p.Category
+		category := constants.NotificationCategory(p.Category)
 		result.Category = &category
 	}
 	return result

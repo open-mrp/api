@@ -17,7 +17,7 @@ type ListProductionRunsRequest struct {
 	// Filter by run status.
 	//
 	// A run is `open` until every batch in it has been scanned or deleted, at which point it completes and becomes `closed`. Only open runs are returned when this filter is omitted, so ask for `closed` explicitly to see finished runs.
-	Status *string `query:"status"`
+	Status *constants.ProductionRunStatus `query:"status"`
 	// Only return runs containing at least one batch that produces any of these items.
 	ItemIDs []string `query:"item_ids"`
 	// Only return runs containing at least one batch that used any of these machines.

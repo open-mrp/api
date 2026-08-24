@@ -31,16 +31,16 @@ jobs:
     env:
       CGO_ENABLED: 0
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
           cache-dependency-path: go.sum
 
       - name: Cache gosec
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         id: cache-gosec
         with:
           path: ~/go/bin/gosec
@@ -90,15 +90,15 @@ jobs:
           --health-timeout=5s
           --health-retries=10
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
 
       - name: Cache test tools
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         id: cache-test-tools
         with:
           path: /usr/local/bin/ci-tools
@@ -147,12 +147,12 @@ jobs:
       DOCKER_BUILDKIT: 1
       COMPOSE_DOCKER_CLI_BUILD: 1
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
 
@@ -196,7 +196,7 @@ jobs:
         run: make e2e-up-ci
 
       - name: Cache e2e tools
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         id: cache-e2e-tools
         with:
           path: /usr/local/bin/ci-tools

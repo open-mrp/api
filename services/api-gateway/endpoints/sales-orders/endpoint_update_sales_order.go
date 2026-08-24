@@ -34,7 +34,7 @@ type UpdateSalesOrderRequest struct {
 	// Carrier billing account number charged when `carrier_billing_type` is `third_party`.
 	CarrierBillingAccountNumber field.Clearable[string] `json:"carrier_billing_account_number,omitzero" validate:"omitempty,max=255"`
 	// New fulfillment priority for the order.
-	PriorityCode field.Optional[string] `json:"priority_code,omitzero" validate:"omitempty,max=255"`
+	PriorityCode field.Optional[constants.PriorityCode] `json:"priority_code,omitzero" validate:"omitempty"`
 	// ID of the account user to credit as the order's sales rep.
 	SalesRepID field.Clearable[string] `json:"sales_rep_id,omitzero" validate:"omitempty"`
 	// ID of the shipping terms for the order.
@@ -79,7 +79,7 @@ type UpdateSalesOrderRequest struct {
 
 var sampleUpdateSONote = "Updated shipping instructions"
 var sampleUpdateSOCarrierID = apiresource.SampleCarrierID
-var sampleUpdateSOPriorityCode = string(constants.PriorityCodeNormal)
+var sampleUpdateSOPriorityCode = constants.PriorityCodeNormal
 var sampleUpdateSOShippingAddressID = apiresource.SampleAddressID
 var sampleUpdateSalesOrderRequest = &UpdateSalesOrderRequest{
 	Note:              field.Set(sampleUpdateSONote),

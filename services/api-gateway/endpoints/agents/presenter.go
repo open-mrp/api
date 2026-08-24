@@ -92,7 +92,7 @@ func StashAgentDefinitionMeta(meta *resourcekit.LoadMeta, a *pb.AgentDefinitionI
 				Name:                t.DisplayName,
 				Description:         &t.Description,
 				ConfigSchema:        json.RawMessage(t.ConfigSchemaJson),
-				Category:            t.Category,
+				Category:            constants.AgentToolCategory(t.Category),
 				RequiredPermissions: orEmptyStrSlice(t.RequiredPermissions),
 			},
 			Config:            json.RawMessage(t.ConfigJson),

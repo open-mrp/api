@@ -15,9 +15,7 @@ import (
 type ListRunsRequest struct {
 	apiresource.PaginationRequest
 	// Restricts results to runs in this status.
-	//
-	// One of `pending`, `running`, `awaiting_input`, `awaiting_approval`, `completed`, `failed`, or `cancelled`.
-	StatusCode *string `query:"status"`
+	Status *constants.AgentRunStatus `query:"status"`
 	// Restricts results to runs of a single agent.
 	AgentDefinitionID *string `query:"agent_definition_id"`
 }

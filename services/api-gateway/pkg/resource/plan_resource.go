@@ -19,7 +19,7 @@ type PlanLimit struct {
 	// - `sandboxes_maximum`: sandbox environments the account can have.
 	// - `invoices_maximum`: invoices the account can issue per billing period.
 	// - `batches_maximum`: production batches the account can create per billing period.
-	Key string `json:"key" validate:"required"`
+	Key constants.AccountPlanLimitKey `json:"key" validate:"required"`
 	// Maximum allowed value.
 	//
 	// Null means the plan places no limit on this resource.

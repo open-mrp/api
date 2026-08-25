@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.8](https://github.com/open-mrp/api/compare/v1.1.7...v1.1.8) (2026-08-25)
+
+
+### Bug Fixes
+
+* **core:** recompute item burn rate off the consumption transaction ([#36](https://github.com/open-mrp/api/issues/36)) ([a028c0d](https://github.com/open-mrp/api/commit/a028c0d7bce274aec5ca7d9327b973440c035cf9))
+
 ## [1.1.7](https://github.com/open-mrp/api/compare/v1.1.6...v1.1.7) (2026-08-24)
 
 

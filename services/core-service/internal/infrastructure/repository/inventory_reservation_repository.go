@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/shopspring/decimal"
 
@@ -538,54 +539,99 @@ func (r *inventoryReservationRepo) AllocateOpenIssuesForItem(ctx context.Context
 	}
 
 	for _, issue := range issues {
-		issueMeasure, pErr := decimal.NewFromString(issue.QuantityValue)
-		if pErr != nil {
-			return tracing.Trace(span, apierror.NewInternalError(pErr, "Failed to parse issue quantity."))
-		}
-
-		// The allocated sum below is taken through each allocation's own ratio; this is what reads it
-		// back in the unit the issue was recorded in.
-		issueRatio, rErr := decimal.NewFromString(issue.UnitRatio)
-		if rErr != nil {
-			return tracing.Trace(span, apierror.NewInternalError(rErr, "Invalid unit ratio on issue quantity."))
-		}
-
-		allocatedRaw, aErr := r.queries.GetAllocationSumForIssue(ctx, issue.ID)
-		if apiErr := db.MapSQLError(aErr); apiErr != nil {
+		if apiErr := r.allocateOneOpenIssue(ctx, accountID, itemID, issue.ID, issue.QuantityValue, issue.UnitRatio,
+			issue.StorageLocationID, issue.LotID); apiErr != nil {
 			return tracing.Trace(span, apiErr)
 		}
+	}
 
-		// SUM() over a DECIMAL arrives as interface{} and the driver picks the shape. Reading only
-		// []byte and string and falling back to zero for anything else — an int64 for a whole number,
-		// a float64 — reads as "nothing allocated yet" for an issue that is already covered, and
-		// allocates the whole of it a second time. That is where negative shortages come from: the
-		// issue then has more allocated against it than it ever asked for.
-		allocated, parseErr := decimal.NewFromString(decimalToString(allocatedRaw))
-		if parseErr != nil {
-			return tracing.Trace(span, apierror.NewInternalError(parseErr, "Invalid allocated sum for issue."))
+	return nil
+}
+
+var openIssueCursorEpoch = time.Unix(0, 0).UTC()
+
+func (r *inventoryReservationRepo) AllocateOpenIssuesForItemPage(ctx context.Context, accountID, itemID string, afterCreatedAt time.Time, afterID string, limit int32) (time.Time, string, int, *apierror.APIError) {
+	ctx, span := inventoryReservationRepoTracer.Start(ctx, "repository.inventory_reservation.allocate_open_issues_for_item_page")
+	defer span.End()
+
+	cursorCreatedAt := afterCreatedAt
+	if afterID == "" {
+		cursorCreatedAt = openIssueCursorEpoch
+	}
+
+	issues, err := r.queries.FindOpenIssuesForItemPaged(ctx, sqlc.FindOpenIssuesForItemPagedParams{
+		AccountID:       accountID,
+		ItemID:          itemID,
+		CursorCreatedAt: cursorCreatedAt,
+		CursorID:        afterID,
+		Limit:           limit,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return time.Time{}, "", 0, tracing.Trace(span, apiErr)
+	}
+
+	lastCreatedAt := afterCreatedAt
+	lastID := afterID
+	for _, issue := range issues {
+		if apiErr := r.allocateOneOpenIssue(ctx, accountID, itemID, issue.ID, issue.QuantityValue, issue.UnitRatio,
+			issue.StorageLocationID, issue.LotID); apiErr != nil {
+			return time.Time{}, "", 0, tracing.Trace(span, apiErr)
 		}
+		lastCreatedAt = issue.CreatedAt
+		lastID = issue.ID
+	}
 
-		issueRemaining := issueMeasure.Sub(convertMeasure(allocated, decimal.NewFromInt(1), issueRatio))
-		if issueRemaining.LessThanOrEqual(decimal.Zero) {
-			// Already covered, and left open by an allocation that predates the closing below.
-			if err := r.queries.CloseFullyAllocatedInventoryIssue(ctx, issue.ID); err != nil {
-				return tracing.Trace(span, db.MapSQLError(err))
-			}
-			continue
+	return lastCreatedAt, lastID, len(issues), nil
+}
+
+func (r *inventoryReservationRepo) allocateOneOpenIssue(ctx context.Context, accountID, itemID, issueID, quantityValue, unitRatio string, storageLocationID, lotID sql.NullString) *apierror.APIError {
+	issueMeasure, pErr := decimal.NewFromString(quantityValue)
+	if pErr != nil {
+		return apierror.NewInternalError(pErr, "Failed to parse issue quantity.")
+	}
+
+	// The allocated sum below is taken through each allocation's own ratio; this is what reads it
+	// back in the unit the issue was recorded in.
+	issueRatio, rErr := decimal.NewFromString(unitRatio)
+	if rErr != nil {
+		return apierror.NewInternalError(rErr, "Invalid unit ratio on issue quantity.")
+	}
+
+	allocatedRaw, aErr := r.queries.GetAllocationSumForIssue(ctx, issueID)
+	if apiErr := db.MapSQLError(aErr); apiErr != nil {
+		return apiErr
+	}
+
+	// SUM() over a DECIMAL arrives as interface{} and the driver picks the shape. Reading only
+	// []byte and string and falling back to zero for anything else — an int64 for a whole number,
+	// a float64 — reads as "nothing allocated yet" for an issue that is already covered, and
+	// allocates the whole of it a second time. That is where negative shortages come from: the
+	// issue then has more allocated against it than it ever asked for.
+	allocated, parseErr := decimal.NewFromString(decimalToString(allocatedRaw))
+	if parseErr != nil {
+		return apierror.NewInternalError(parseErr, "Invalid allocated sum for issue.")
+	}
+
+	issueRemaining := issueMeasure.Sub(convertMeasure(allocated, decimal.NewFromInt(1), issueRatio))
+	if issueRemaining.LessThanOrEqual(decimal.Zero) {
+		// Already covered, and left open by an allocation that predates the closing below.
+		if err := r.queries.CloseFullyAllocatedInventoryIssue(ctx, issueID); err != nil {
+			return db.MapSQLError(err)
 		}
+		return nil
+	}
 
-		covered, apiErr := r.allocateOpenIssue(ctx, issue.ID, issueRemaining, issueRatio, accountID, itemID,
-			issue.StorageLocationID, issue.LotID)
-		if apiErr != nil {
-			return tracing.Trace(span, apiErr)
-		}
+	covered, apiErr := r.allocateOpenIssue(ctx, issueID, issueRemaining, issueRatio, accountID, itemID,
+		storageLocationID, lotID)
+	if apiErr != nil {
+		return apiErr
+	}
 
-		// Demand that is now covered stops being demand. An issue left open reads as unfilled for the
-		// rest of its life and is re-examined by every later allocation for the item.
-		if covered.GreaterThanOrEqual(issueRemaining) {
-			if err := r.queries.CloseFullyAllocatedInventoryIssue(ctx, issue.ID); err != nil {
-				return tracing.Trace(span, db.MapSQLError(err))
-			}
+	// Demand that is now covered stops being demand. An issue left open reads as unfilled for the
+	// rest of its life and is re-examined by every later allocation for the item.
+	if covered.GreaterThanOrEqual(issueRemaining) {
+		if err := r.queries.CloseFullyAllocatedInventoryIssue(ctx, issueID); err != nil {
+			return db.MapSQLError(err)
 		}
 	}
 

@@ -2,6 +2,7 @@ package event
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
+	"github.com/open-mrp/api/shared/contracts"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
 	"github.com/open-mrp/api/shared/tracing"
@@ -22,6 +24,21 @@ import (
 type stubOutboxRepo struct{}
 
 func (stubOutboxRepo) Create(context.Context, messaging.OutboxMessageInput) (int64, error) {
+	return 0, nil
+}
+
+type recordingOutboxRepo struct {
+	onAllocateOpenIssues func(itemID string)
+}
+
+func (r recordingOutboxRepo) Create(_ context.Context, input messaging.OutboxMessageInput) (int64, error) {
+	if input.MessageType == string(contracts.CoreCmdAllocateOpenIssues) && r.onAllocateOpenIssues != nil {
+		var evt domain.AllocateOpenIssuesEvent
+		if err := json.Unmarshal(input.Payload.Data, &evt); err != nil {
+			return 0, err
+		}
+		r.onAllocateOpenIssues(evt.ItemID)
+	}
 	return 0, nil
 }
 
@@ -58,7 +75,7 @@ type BatchScannedConsumerTestSuite struct {
 	// the arithmetic without caring what order the consumer applied it in.
 	inventoryMoves map[string]decimal.Decimal
 	moveUnits      map[string]string
-	// allocatedItems records, in order, the items offered to outstanding open issues.
+	// allocatedItems records, in order, the items whose open-issue allocation the scan enqueued.
 	allocatedItems []string
 }
 
@@ -112,15 +129,11 @@ func (s *BatchScannedConsumerTestSuite) SetupTest() {
 	repoFactory.EXPECT().NewMaterialDemandRepo().Return(s.materialRepo).AnyTimes()
 	repoFactory.EXPECT().NewItemRepo().Return(itemRepo).AnyTimes()
 	repoFactory.EXPECT().NewInventoryQueryRepo().Return(inventoryQuery).AnyTimes()
-	repoFactory.EXPECT().NewOutboxRepo().Return(stubOutboxRepo{}).AnyTimes()
-
-	// Allocation of outstanding shortages closes every scan; the tests that are about it assert on
-	// s.allocatedItems, the rest just need it not to fail.
-	s.reservationRepo.EXPECT().AllocateOpenIssuesForItem(gomock.Any(), scanAccountID, gomock.Any()).
-		DoAndReturn(func(_ context.Context, _ string, itemID string) *apierror.APIError {
-			s.allocatedItems = append(s.allocatedItems, itemID)
-			return nil
-		}).AnyTimes()
+	// Allocation of outstanding shortages is deferred to an async command every scan enqueues; the
+	// tests that are about it assert on s.allocatedItems, the rest just need the enqueue not to fail.
+	repoFactory.EXPECT().NewOutboxRepo().Return(recordingOutboxRepo{
+		onAllocateOpenIssues: func(itemID string) { s.allocatedItems = append(s.allocatedItems, itemID) },
+	}).AnyTimes()
 
 	s.consumer = &BatchScannedConsumer{
 		repos:  repoFactory,
@@ -593,8 +606,8 @@ func (s *BatchScannedConsumerTestSuite) TestRefusesUnparseableScrap() {
 
 // ─── allocating what the scan produced ─────────────────────────────────────
 
-// An issue goes open when demand outran the shelf. The scan is the stock arriving, so the produced
-// item and every material it touched are offered to whatever is still short.
+// An issue goes open when demand outran the shelf. The scan is the stock arriving, so allocation is
+// enqueued for the produced item and every material it touched — whatever is still short.
 func (s *BatchScannedConsumerTestSuite) TestOffersProducedAndConsumedItemsToOpenIssues() {
 	s.stepQueryRepo.EXPECT().Find(gomock.Any(), scanAccountID, scanStepID).
 		Return(step("12", unitPair,

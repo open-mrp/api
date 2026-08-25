@@ -174,6 +174,30 @@ SELECT
 FROM unit u
 WHERE u.id IN (sqlc.slice('unit_ids'));
 
+-- FindOpenIssuesForItemPaged lists a bounded page of open demand, oldest first, resuming after the (created_at, id) cursor. Same columns and filters as FindOpenIssuesForItem.
+-- name: FindOpenIssuesForItemPaged :many
+SELECT
+    ii.id,
+    q.id AS quantity_id,
+    q.value AS quantity_value,
+    q.unit_id,
+    CAST(u.ratio_numerator / u.ratio_denominator AS DECIMAL(65,30)) AS unit_ratio,
+    ii.storage_location_id,
+    ii.lot_id,
+    ii.created_at
+FROM inventory_issue ii
+JOIN quantity q ON q.id = ii.quantity_id
+JOIN unit u ON u.id = q.unit_id
+WHERE ii.account_id = sqlc.arg('account_id')
+AND ii.item_id = sqlc.arg('item_id')
+AND ii.status_code = 'open'
+AND (
+    ii.created_at > sqlc.arg('cursor_created_at')
+    OR (ii.created_at = sqlc.arg('cursor_created_at') AND ii.id > sqlc.arg('cursor_id'))
+)
+ORDER BY ii.created_at ASC, ii.id ASC
+LIMIT ?;
+
 -- name: InsertInventoryAllocation :exec
 INSERT INTO inventory_allocation (
     id, inventory_receipt_id, inventory_issue_id,

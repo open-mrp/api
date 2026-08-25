@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"time"
 
 	"github.com/shopspring/decimal"
 
@@ -244,7 +245,7 @@ func (c *BatchScannedConsumer) applyInventory(ctx context.Context, accountID str
 		return apiErr
 	}
 
-	if apiErr := c.allocateOpenIssues(ctx, accountID, step); apiErr != nil {
+	if apiErr := c.enqueueOpenIssueAllocation(ctx, accountID, step); apiErr != nil {
 		return apiErr
 	}
 
@@ -254,27 +255,16 @@ func (c *BatchScannedConsumer) applyInventory(ctx context.Context, accountID str
 	return nil
 }
 
-// allocateOpenIssues offers what the scan moved to the demand already waiting on it.
-//
-// An issue goes open when it was asked for more than the shelf could cover, and stays short until
-// stock arrives — which is what just happened. Without this the receipt sits available while the
-// order it was made for still reads as unfilled.
-//
-// This runs inside the scan's transaction, unlike the legacy path which had to lift it out to stay
-// under a five-second interactive-transaction limit. Keeping it in means the receipts it draws on
-// are still held by the FOR UPDATE taken when they were found, so two scans of the same item cannot
-// both hand the same receipt to their own shortages.
-func (c *BatchScannedConsumer) allocateOpenIssues(ctx context.Context, accountID string, step *domain.ProductionStepDetail) *apierror.APIError {
-	reservationRepo := c.repos.NewInventoryReservationRepo()
+func (c *BatchScannedConsumer) enqueueOpenIssueAllocation(ctx context.Context, accountID string, step *domain.ProductionStepDetail) *apierror.APIError {
+	outboxRepo := c.repos.NewOutboxRepo()
 
-	// The produced item first: a scan most often clears a shortage of the thing it just made.
 	seen := map[string]bool{}
 	for _, itemID := range append([]string{step.Production.ProducedItem.ID}, consumedItemIDs(step)...) {
 		if itemID == "" || seen[itemID] {
 			continue
 		}
 		seen[itemID] = true
-		if apiErr := reservationRepo.AllocateOpenIssuesForItem(ctx, accountID, itemID); apiErr != nil {
+		if apiErr := enqueueAllocateOpenIssues(ctx, outboxRepo, accountID, itemID, time.Time{}, ""); apiErr != nil {
 			return apiErr
 		}
 	}

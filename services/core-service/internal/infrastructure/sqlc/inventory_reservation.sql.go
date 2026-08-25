@@ -9,6 +9,7 @@ import (
 	"context"
 	"database/sql"
 	"strings"
+	"time"
 )
 
 const closeFullyAllocatedInventoryIssue = `-- name: CloseFullyAllocatedInventoryIssue :exec
@@ -40,6 +41,89 @@ DELETE FROM quantity WHERE id = ?
 func (q *Queries) DeleteQuantityByID(ctx context.Context, id string) error {
 	_, err := q.db.ExecContext(ctx, deleteQuantityByID, id)
 	return err
+}
+
+const findOpenIssuesForItemPaged = `-- name: FindOpenIssuesForItemPaged :many
+SELECT
+    ii.id,
+    q.id AS quantity_id,
+    q.value AS quantity_value,
+    q.unit_id,
+    CAST(u.ratio_numerator / u.ratio_denominator AS DECIMAL(65,30)) AS unit_ratio,
+    ii.storage_location_id,
+    ii.lot_id,
+    ii.created_at
+FROM inventory_issue ii
+JOIN quantity q ON q.id = ii.quantity_id
+JOIN unit u ON u.id = q.unit_id
+WHERE ii.account_id = ?
+AND ii.item_id = ?
+AND ii.status_code = 'open'
+AND (
+    ii.created_at > ?
+    OR (ii.created_at = ? AND ii.id > ?)
+)
+ORDER BY ii.created_at ASC, ii.id ASC
+LIMIT ?
+`
+
+type FindOpenIssuesForItemPagedParams struct {
+	AccountID       string
+	ItemID          string
+	CursorCreatedAt time.Time
+	CursorID        string
+	Limit           int32
+}
+
+type FindOpenIssuesForItemPagedRow struct {
+	ID                string
+	QuantityID        string
+	QuantityValue     string
+	UnitID            string
+	UnitRatio         string
+	StorageLocationID sql.NullString
+	LotID             sql.NullString
+	CreatedAt         time.Time
+}
+
+// FindOpenIssuesForItemPaged lists a bounded page of open demand, oldest first, resuming after the (created_at, id) cursor. Same columns and filters as FindOpenIssuesForItem.
+func (q *Queries) FindOpenIssuesForItemPaged(ctx context.Context, arg FindOpenIssuesForItemPagedParams) ([]FindOpenIssuesForItemPagedRow, error) {
+	rows, err := q.db.QueryContext(ctx, findOpenIssuesForItemPaged,
+		arg.AccountID,
+		arg.ItemID,
+		arg.CursorCreatedAt,
+		arg.CursorCreatedAt,
+		arg.CursorID,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FindOpenIssuesForItemPagedRow
+	for rows.Next() {
+		var i FindOpenIssuesForItemPagedRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.QuantityID,
+			&i.QuantityValue,
+			&i.UnitID,
+			&i.UnitRatio,
+			&i.StorageLocationID,
+			&i.LotID,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const findReceiptsForAllocation = `-- name: FindReceiptsForAllocation :many

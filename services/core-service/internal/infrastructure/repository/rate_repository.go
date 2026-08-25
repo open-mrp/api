@@ -8,6 +8,8 @@ import (
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/tracing"
+
+	"go.opentelemetry.io/otel/attribute"
 )
 
 var rateRepoTracer = tracing.GetTracer("core-service.rate_repository")
@@ -23,6 +25,7 @@ func NewRateRepo(queries *sqlc.Queries) domain.RateRepo {
 func (r *rateRepoImpl) Get(ctx context.Context, id string) (*domain.Rate, *apierror.APIError) {
 	ctx, span := rateRepoTracer.Start(ctx, "repository.rate.get")
 	defer span.End()
+	span.SetAttributes(attribute.String("rate.id", id))
 
 	row, err := r.queries.GetRateWithUnits(ctx, id)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -48,6 +51,7 @@ func (r *rateRepoImpl) Get(ctx context.Context, id string) (*domain.Rate, *apier
 func (r *rateRepoImpl) Update(ctx context.Context, params domain.UpdateRateParams) (*domain.Rate, *apierror.APIError) {
 	ctx, span := rateRepoTracer.Start(ctx, "repository.rate.update")
 	defer span.End()
+	span.SetAttributes(attribute.String("rate.id", params.RateID))
 
 	result, err := r.queries.UpdateRateByID(ctx, sqlc.UpdateRateByIDParams{
 		Value:             toNullString(params.Value),

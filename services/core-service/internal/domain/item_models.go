@@ -36,6 +36,12 @@ type Item struct {
 	Attributes []*ItemAttribute `audit:"attributes"`
 }
 
+// RecalcItemBurnRateEvent is the outbox command payload asking a consumer to recompute an item's burn rate from history. It carries only the item's identity; the rate is recomputed from current state, so repeated commands coalesce and a redelivery recomputes the same absolute value.
+type RecalcItemBurnRateEvent struct {
+	AccountID string `json:"account_id"`
+	ItemID    string `json:"item_id"`
+}
+
 // ItemCategory represents an item category (joined data).
 type ItemCategory struct {
 	ID                   string

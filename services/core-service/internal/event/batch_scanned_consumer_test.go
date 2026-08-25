@@ -13,8 +13,17 @@ import (
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/messaging"
 	"github.com/open-mrp/api/shared/tracing"
 )
+
+// stubOutboxRepo satisfies messaging.OutboxRepo so the best-effort burn-rate enqueue behind each
+// consumption movement stays quiet rather than becoming the subject of these tests.
+type stubOutboxRepo struct{}
+
+func (stubOutboxRepo) Create(context.Context, messaging.OutboxMessageInput) (int64, error) {
+	return 0, nil
+}
 
 const (
 	scanAccountID  = "acct_test"
@@ -99,6 +108,7 @@ func (s *BatchScannedConsumerTestSuite) SetupTest() {
 	repoFactory.EXPECT().NewMaterialDemandRepo().Return(s.materialRepo).AnyTimes()
 	repoFactory.EXPECT().NewItemRepo().Return(itemRepo).AnyTimes()
 	repoFactory.EXPECT().NewInventoryQueryRepo().Return(inventoryQuery).AnyTimes()
+	repoFactory.EXPECT().NewOutboxRepo().Return(stubOutboxRepo{}).AnyTimes()
 
 	// Allocation of outstanding shortages closes every scan; the tests that are about it assert on
 	// s.allocatedItems, the rest just need it not to fail.

@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.3.0](https://github.com/open-mrp/api/compare/v1.2.0...v1.3.0) (2026-08-25)
+
+
+### Features
+
+* **scheduling:** hold a physical greige buffer at the constraint ([#51](https://github.com/open-mrp/api/issues/51)) ([57b6987](https://github.com/open-mrp/api/commit/57b69879000b13a7a33df156727106a60a117ddf))
+
+
+### Bug Fixes
+
+* **core:** defer batch-scan open-issue allocation to a paged async consumer ([#50](https://github.com/open-mrp/api/issues/50)) ([c8bf1b1](https://github.com/open-mrp/api/commit/c8bf1b1c78dcd2d22107d3bd9994f27e0678e0b1))
+* **release:** skip already-shipped migrations on the prod-cut branch ([#53](https://github.com/open-mrp/api/issues/53)) ([9516f54](https://github.com/open-mrp/api/commit/9516f549db441147bc9b93d80bf31fdfb4adef04))
+
 ## [1.2.0](https://github.com/open-mrp/api/compare/v1.1.11...v1.2.0) (2026-08-25)
 
 

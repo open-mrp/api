@@ -734,8 +734,8 @@ SELECT
     u.ratio_denominator,
     b.production_step_id,
     COALESCE(ps.department_id, ss.department_id) AS step_department_id,
-    bm.B AS machine_id,
-    mc.name AS machine_name,
+    COALESCE(bm.B, '') AS machine_id,
+    COALESCE(mc.name, '') AS machine_name,
     cost_rate.value AS unit_cost,
     labor_time.value AS labor_time_value,
     labor_time_unit.abbreviation AS labor_time_unit,
@@ -743,8 +743,8 @@ SELECT
     overhead_rate.value AS overhead_rate,
     pr.created_at AS run_created_at
 FROM batch b
-JOIN _batches_machines bm ON bm.A = b.id
-JOIN machine mc ON mc.id = bm.B
+LEFT JOIN _batches_machines bm ON bm.A = b.id
+LEFT JOIN machine mc ON mc.id = bm.B
 JOIN item i ON i.id = b.item_id
 LEFT JOIN quantity q ON q.id = b.quantity_id
 LEFT JOIN unit u ON u.id = q.unit_id
@@ -798,6 +798,8 @@ type GetFinishingBatchMeasurementsRow struct {
 // GetFinishingBatchMeasurements returns one row per historical batch produced outside the constraint department, which is what the second stage's run rates are measured from.
 //
 // The mirror of GetConstraintBatchMeasurements, and it excludes constraint-department steps for the same reason that one includes only them: a knitting scan recorded against a finishing machine is not a measurement of finishing, and letting it in would size the department's hours against the wrong operation. The step's own department is also carried out, so a finished good's line can name the room that makes it without a second query.
+//
+// The machine join is a LEFT JOIN, unlike the constraint mirror's inner join: stage two is planned as one department pool, so the run rate is read off the production step's labor time and the machine is only carried for display. Finishing stations (boarding, dyeing, packing) are commonly scanned with no machine recorded; an inner join would silently drop every one of those scans and leave the SKU with no measured rate, which is exactly the failure this avoids. The constraint side keeps the inner join because it plans machine by machine and filters on the machine.
 func (q *Queries) GetFinishingBatchMeasurements(ctx context.Context, arg GetFinishingBatchMeasurementsParams) ([]GetFinishingBatchMeasurementsRow, error) {
 	query := getFinishingBatchMeasurements
 	var queryParams []interface{}

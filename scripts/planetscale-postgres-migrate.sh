@@ -86,10 +86,17 @@ trap cleanup EXIT
 
 info "Creating a short-lived admin role on $PG_DATABASE/$PG_BRANCH..."
 
-ROLE_JSON="$(pscale_cmd role create "$PG_DATABASE" "$PG_BRANCH" "$ROLE_NAME" \
+# Under --format json pscale writes its error as a JSON object to stdout and exits non-zero. Left to
+# `set -e` the failing assignment would abort with a bare "exit code 2" and the reason — most often
+# the service token lacking access to this database — captured and thrown away. Surface it instead.
+if ! ROLE_JSON="$(pscale_cmd role create "$PG_DATABASE" "$PG_BRANCH" "$ROLE_NAME" \
     --inherited-roles postgres \
     --ttl 30m \
-    --format json)"
+    --format json)"; then
+    error "Could not create the migration role on $PG_DATABASE/$PG_BRANCH:"
+    echo "$ROLE_JSON" | jq -r '.error // .issues[].message // .' 2>/dev/null >&2 || echo "$ROLE_JSON" >&2
+    exit 1
+fi
 
 ROLE_ID="$(echo "$ROLE_JSON" | jq -r '.id // empty')"
 DATABASE_URL="$(echo "$ROLE_JSON" | jq -r '.database_url // empty')"

@@ -339,8 +339,51 @@ jobs:
         uses: actions/checkout@v7
         with:
           ref: ${{ needs.release-please.outputs.tag_name }}
+          # Full history and tags so the change detection below can diff this release against the
+          # previous tag.
+          fetch-depth: 0
+
+      # Which databases this release actually touches. Each deploy step is gated on its own flag, so a
+      # release with no migrations — the common case — never opens a connection to PlanetScale. This is
+      # computed here in the workflow rather than in the scripts on purpose: a manual resume of an
+      # already-tagged release runs this file from the default branch while the job checks out the tag,
+      # and only a workflow-level gate is guaranteed to be the fixed one.
+      - name: Detect database changes in this release
+        id: changes
+        env:
+          CURRENT_TAG: ${{ needs.release-please.outputs.tag_name }}
+        run: |
+          set -euo pipefail
+          previous_tag="$(git tag --list 'v*' --sort=-v:refname --merged HEAD | grep -vxF "$CURRENT_TAG" | head -1 || true)"
+          if [ -n "$previous_tag" ]; then
+            echo "Comparing migrations against previous release tag: $previous_tag"
+          else
+            echo "No previous release tag; treating every migration as new."
+          fi
+
+          changed_in() {
+            local dir="$1" files
+            if [ -n "$previous_tag" ]; then
+              files="$(git diff --name-only "$previous_tag" HEAD -- "$dir" 2>/dev/null || true)"
+            else
+              files="$(git ls-tree -r --name-only HEAD -- "$dir" 2>/dev/null || true)"
+            fi
+            if echo "$files" | grep -q '\.sql$'; then echo true; else echo false; fi
+          }
+
+          {
+            echo "core_schema=$(changed_in shared/db/migrations)"
+            echo "core_data=$(changed_in shared/db/data-migrations)"
+            echo "agent_schema=$(changed_in services/agent-service/db/migrations)"
+            echo "agent_data=$(changed_in services/agent-service/db/data-migrations)"
+          } | tee -a "$GITHUB_OUTPUT"
 
       - name: Install goose, pscale and the MySQL client
+        if: |
+          steps.changes.outputs.core_schema == 'true' ||
+          steps.changes.outputs.core_data == 'true' ||
+          steps.changes.outputs.agent_schema == 'true' ||
+          steps.changes.outputs.agent_data == 'true'
         run: |
           set -euo pipefail
           sudo apt-get update -qq
@@ -365,6 +408,7 @@ jobs:
 
       # 1. MySQL schema — deploys the request the release PR opened and reviewed.
       - name: Deploy the core schema to prod (MySQL)
+        if: steps.changes.outputs.core_schema == 'true'
         run: ./scripts/planetscale-deploy-release.sh
         env:
           RELEASE_VERSION: ${{ needs.release-please.outputs.tag_name }}
@@ -374,6 +418,7 @@ jobs:
       # 2. Postgres schema — applied directly. Postgres has no deploy requests; PlanetScale's guidance
       # is that Postgres branches apply DDL directly, and the branch has safe migrations off.
       - name: Deploy the agent-service schema to prod (Postgres)
+        if: steps.changes.outputs.agent_schema == 'true'
         run: ./scripts/planetscale-postgres-migrate.sh
         env:
           MIGRATIONS: schema
@@ -382,12 +427,14 @@ jobs:
 
       # 3 & 4. Backfills, once both schemas are live and before any image rolls.
       - name: Run core data migrations (MySQL)
+        if: steps.changes.outputs.core_data == 'true'
         run: ./scripts/planetscale-data-migrations.sh
         env:
           PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
           PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
 
       - name: Run agent-service data migrations (Postgres)
+        if: steps.changes.outputs.agent_data == 'true'
         run: ./scripts/planetscale-postgres-migrate.sh
         env:
           MIGRATIONS: data

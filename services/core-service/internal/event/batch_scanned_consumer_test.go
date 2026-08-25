@@ -95,6 +95,10 @@ func (s *BatchScannedConsumerTestSuite) SetupTest() {
 	inventoryQuery := repositorymock.NewMockInventoryQueryRepo(s.ctrl)
 	inventoryQuery.EXPECT().FetchPhysicalInventory(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(decimal.Zero, nil).AnyTimes()
+	inventoryQuery.EXPECT().FetchPhysicalInventoryBaseForItems(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(map[string]decimal.Decimal{}, nil).AnyTimes()
+	s.unitConvRepo.EXPECT().GetUnitFactors(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(map[string]domain.UnitFactors{}, nil).AnyTimes()
 	s.inventoryMuts.EXPECT().CreateInventoryLog(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 	s.inventoryMuts.EXPECT().CreateInventoryChangeLog(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 

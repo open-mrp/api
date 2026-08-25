@@ -58,6 +58,13 @@ func (c *BatchScannedConsumer) Listen(ctx context.Context) error {
 		c.inboxConsumer.Wrap("core.batch_scanned_inventory", c.handleMessage))
 }
 
+// ReplayMessage re-drives a single delivery through the same inbox-dedup wrapper Listen uses, so a
+// maintenance tool can re-run a message that failed permanently without re-applying one that already
+// succeeded: the wrapper skips any inbox record already marked processed.
+func (c *BatchScannedConsumer) ReplayMessage(ctx context.Context, msg amqp.Delivery) error {
+	return c.inboxConsumer.Wrap("core.batch_scanned_inventory", c.handleMessage)(ctx, msg)
+}
+
 func (c *BatchScannedConsumer) handleMessage(ctx context.Context, msg amqp.Delivery) error {
 	ctx, span := c.tracer.Start(ctx, "consumer.batch_scanned_inventory",
 		trace.WithSpanKind(trace.SpanKindConsumer),
@@ -195,7 +202,12 @@ func (c *BatchScannedConsumer) applyInventory(ctx context.Context, accountID str
 		consumptionMultiplier = convertedMeasure.Add(convertedScrap).Div(step.Production.Quantity.Measure)
 	}
 
-	if apiErr := updateInventoryWithAudit(ctx, c.repos, accountID, domain.InventoryUpdateParams{
+	// One collector for the whole scan. Every movement below is applied immediately but logged only
+	// once all of them are written, so the level each records is the item's final physical inventory
+	// for the scan and comes from a single batched read rather than one aggregation per movement.
+	audit := &inventoryAuditCollector{}
+
+	if apiErr := audit.mutate(ctx, c.repos, accountID, domain.InventoryUpdateParams{
 		AccountID:         accountID,
 		ItemID:            step.Production.ProducedItem.ID,
 		Measure:           producedMeasure,
@@ -228,11 +240,18 @@ func (c *BatchScannedConsumer) applyInventory(ctx context.Context, accountID str
 		return apiErr
 	}
 
-	if apiErr := c.applyConsumptions(ctx, accountID, evt, step, consumptionMultiplier, orderID); apiErr != nil {
+	if apiErr := c.applyConsumptions(ctx, accountID, evt, step, consumptionMultiplier, orderID, audit); apiErr != nil {
 		return apiErr
 	}
 
-	return c.allocateOpenIssues(ctx, accountID, step)
+	if apiErr := c.allocateOpenIssues(ctx, accountID, step); apiErr != nil {
+		return apiErr
+	}
+
+	// Levels are stamped last, once every mutation this scan makes is written, so each is the item's
+	// final physical inventory for the scan.
+	audit.finalize(ctx, c.repos, accountID)
+	return nil
 }
 
 // allocateOpenIssues offers what the scan moved to the demand already waiting on it.
@@ -324,6 +343,7 @@ func (c *BatchScannedConsumer) applyConsumptions(
 	step *domain.ProductionStepDetail,
 	multiplier decimal.Decimal,
 	orderID *string,
+	audit *inventoryAuditCollector,
 ) *apierror.APIError {
 	if len(step.Consumptions) == 0 {
 		return nil
@@ -344,7 +364,7 @@ func (c *BatchScannedConsumer) applyConsumptions(
 		// With no order behind the batch there is no reservation to draw from, so the material comes
 		// straight off the shelf.
 		if orderID == nil {
-			if apiErr := updateInventoryWithAudit(ctx, c.repos, accountID, domain.InventoryUpdateParams{
+			if apiErr := audit.mutate(ctx, c.repos, accountID, domain.InventoryUpdateParams{
 				AccountID:         accountID,
 				ItemID:            consumption.ConsumedItem.ID,
 				Measure:           consumedMeasure.Neg(),
@@ -375,7 +395,7 @@ func (c *BatchScannedConsumer) applyConsumptions(
 		if result == nil || result.RemainingMeasure.LessThanOrEqual(decimal.Zero) {
 			continue
 		}
-		if apiErr := updateInventoryWithAudit(ctx, c.repos, accountID, domain.InventoryUpdateParams{
+		if apiErr := audit.mutate(ctx, c.repos, accountID, domain.InventoryUpdateParams{
 			AccountID:         accountID,
 			ItemID:            consumption.ConsumedItem.ID,
 			Measure:           result.RemainingMeasure.Neg(),

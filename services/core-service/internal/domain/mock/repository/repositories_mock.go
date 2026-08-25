@@ -7103,6 +7103,21 @@ func (mr *MockInventoryQueryRepoMockRecorder) FetchPhysicalInventory(ctx, itemID
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FetchPhysicalInventory", reflect.TypeOf((*MockInventoryQueryRepo)(nil).FetchPhysicalInventory), ctx, itemID, ownerAccountID, unitID)
 }
 
+// FetchPhysicalInventoryBaseForItems mocks base method.
+func (m *MockInventoryQueryRepo) FetchPhysicalInventoryBaseForItems(ctx context.Context, accountID string, itemIDs []string) (map[string]decimal.Decimal, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FetchPhysicalInventoryBaseForItems", ctx, accountID, itemIDs)
+	ret0, _ := ret[0].(map[string]decimal.Decimal)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// FetchPhysicalInventoryBaseForItems indicates an expected call of FetchPhysicalInventoryBaseForItems.
+func (mr *MockInventoryQueryRepoMockRecorder) FetchPhysicalInventoryBaseForItems(ctx, accountID, itemIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FetchPhysicalInventoryBaseForItems", reflect.TypeOf((*MockInventoryQueryRepo)(nil).FetchPhysicalInventoryBaseForItems), ctx, accountID, itemIDs)
+}
+
 // MockProductLineRepo is a mock of ProductLineRepo interface.
 type MockProductLineRepo struct {
 	ctrl     *gomock.Controller

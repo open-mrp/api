@@ -11,6 +11,117 @@ import (
 	"strings"
 )
 
+const fetchPhysicalInventoryBaseForItems = `-- name: FetchPhysicalInventoryBaseForItems :many
+SELECT
+    i.id AS item_id,
+    CAST(
+        (COALESCE(r.qty, 0) - COALESCE(ra.qty, 0)) - (COALESCE(iss.qty, 0) - COALESCE(ia.qty, 0))
+    AS DECIMAL(65,30)) AS physical_base
+FROM item i
+LEFT JOIN (
+    SELECT ir.item_id AS item_id,
+           SUM(CAST(q.value AS DECIMAL(65,30)) * (u.ratio_numerator / u.ratio_denominator)) AS qty
+    FROM inventory_receipt ir
+    JOIN quantity q ON q.id = ir.quantity_id
+    JOIN unit u ON u.id = q.unit_id
+    WHERE (ir.owner_account_id = ? OR ir.holder_account_id = ?)
+      AND ir.status_code = 'available'
+    GROUP BY ir.item_id
+) r ON r.item_id = i.id
+LEFT JOIN (
+    SELECT ir.item_id AS item_id,
+           SUM(CAST(aq.value AS DECIMAL(65,30)) * (au.ratio_numerator / au.ratio_denominator)) AS qty
+    FROM inventory_allocation ia
+    JOIN inventory_receipt ir ON ir.id = ia.inventory_receipt_id
+    JOIN quantity aq ON aq.id = ia.quantity_id
+    JOIN unit au ON au.id = aq.unit_id
+    WHERE (ir.owner_account_id = ? OR ir.holder_account_id = ?)
+      AND ir.status_code = 'available'
+    GROUP BY ir.item_id
+) ra ON ra.item_id = i.id
+LEFT JOIN (
+    SELECT ii.item_id AS item_id,
+           SUM(CAST(q.value AS DECIMAL(65,30)) * (u.ratio_numerator / u.ratio_denominator)) AS qty
+    FROM inventory_issue ii
+    JOIN quantity q ON q.id = ii.quantity_id
+    JOIN unit u ON u.id = q.unit_id
+    WHERE ii.account_id = ?
+      AND ii.status_code = 'open'
+    GROUP BY ii.item_id
+) iss ON iss.item_id = i.id
+LEFT JOIN (
+    SELECT ii.item_id AS item_id,
+           SUM(CAST(aq.value AS DECIMAL(65,30)) * (au.ratio_numerator / au.ratio_denominator)) AS qty
+    FROM inventory_allocation ia
+    JOIN inventory_issue ii ON ii.id = ia.inventory_issue_id
+    JOIN quantity aq ON aq.id = ia.quantity_id
+    JOIN unit au ON au.id = aq.unit_id
+    WHERE ii.account_id = ?
+      AND ii.status_code = 'open'
+    GROUP BY ii.item_id
+) ia ON ia.item_id = i.id
+WHERE i.id IN (/*SLICE:item_ids*/?)
+  AND i.account_id = ?
+`
+
+type FetchPhysicalInventoryBaseForItemsParams struct {
+	AccountID string
+	ItemIds   []string
+}
+
+type FetchPhysicalInventoryBaseForItemsRow struct {
+	ItemID       string
+	PhysicalBase string
+}
+
+// FetchPhysicalInventoryBaseForItems is the batched, base-unit form of FetchPhysicalInventoryForItem.
+//
+// It returns the same shelf figure — available receipts net of what open issues have drawn, each row
+// normalised through its own unit's ratio — but for a set of items in one pass and left in base
+// units, so a caller applies the per-item target-unit divide itself. The correlated per-row
+// subqueries the single-item form runs once per item are replaced by four sums grouped by item and
+// joined onto the item list, which is what lets one query stand in for the N the audit trail used to
+// run per scan. Nothing is clamped: a row drawn on for more than it holds nets negative and carries.
+func (q *Queries) FetchPhysicalInventoryBaseForItems(ctx context.Context, arg FetchPhysicalInventoryBaseForItemsParams) ([]FetchPhysicalInventoryBaseForItemsRow, error) {
+	query := fetchPhysicalInventoryBaseForItems
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.AccountID)
+	if len(arg.ItemIds) > 0 {
+		for _, v := range arg.ItemIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FetchPhysicalInventoryBaseForItemsRow
+	for rows.Next() {
+		var i FetchPhysicalInventoryBaseForItemsRow
+		if err := rows.Scan(&i.ItemID, &i.PhysicalBase); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const fetchPhysicalInventoryForItem = `-- name: FetchPhysicalInventoryForItem :one
 SELECT CAST((
     COALESCE(

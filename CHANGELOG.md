@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.1.9](https://github.com/open-mrp/api/compare/v1.1.8...v1.1.9) (2026-08-25)
+
+
+### Bug Fixes
+
+* **release:** gate migration deploy on real DB changes; surface pscale role errors ([#38](https://github.com/open-mrp/api/issues/38)) ([5798036](https://github.com/open-mrp/api/commit/579803617b58b132309ed1f6f185b37feb63e5e5))
+* **release:** stop Postgres migrate role name collision between steps ([#42](https://github.com/open-mrp/api/issues/42)) ([2859bf3](https://github.com/open-mrp/api/commit/2859bf35eab6692101c5a726be9c1e4370bf3c63))
+
+
+### Documentation
+
+* **agents:** keep commit messages concise and attribution-free ([#41](https://github.com/open-mrp/api/issues/41)) ([b34b4e7](https://github.com/open-mrp/api/commit/b34b4e79841f5324e2b0e3052bab77bc4fe96aa0))
+* **agents:** keep PR descriptions concise and follow the PR template ([#39](https://github.com/open-mrp/api/issues/39)) ([5609018](https://github.com/open-mrp/api/commit/560901856ac81f2343111aa124b2cec557d212ba))
+
 ## [1.1.8](https://github.com/open-mrp/api/compare/v1.1.7...v1.1.8) (2026-08-25)
 
 

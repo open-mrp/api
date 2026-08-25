@@ -96,6 +96,33 @@ info "Migrations in this release:"
 echo "$CHANGED" | sed 's/^/  /'
 emit has_migrations true
 
+# --- Migrations already live in prod ---
+
+# The branch is cut from prod, so it inherits the schema of every migration shipped in prior releases.
+# baseline only records 00001, so goose would otherwise replay 00002+ against a branch that already
+# carries them and collide on the first non-idempotent DDL. Record the versions present at the previous
+# release tag (what prod reflects) as applied, and let `up` run only what this release adds.
+SHIPPED_MIGRATION_VERSIONS=""
+if [ -n "$PREVIOUS_TAG" ]; then
+    while IFS= read -r shipped_file; do
+        [ -n "$shipped_file" ] || continue
+        version="$(basename "$shipped_file")"
+        version="${version%%_*}"
+        case "$version" in ''|*[!0-9]*) continue ;; esac
+        version=$((10#$version))
+        # 00001 is the baseline; `migrate.sh baseline` records it.
+        if [ "$version" -le 1 ]; then continue; fi
+        SHIPPED_MIGRATION_VERSIONS="$SHIPPED_MIGRATION_VERSIONS $version"
+    done <<EOF
+$(git ls-tree -r --name-only "$PREVIOUS_TAG" -- "$MIGRATIONS_DIR" || true)
+EOF
+fi
+export SHIPPED_MIGRATION_VERSIONS
+
+if [ -n "$SHIPPED_MIGRATION_VERSIONS" ]; then
+    info "Already deployed in $PREVIOUS_TAG, recorded as applied on the branch:$SHIPPED_MIGRATION_VERSIONS"
+fi
+
 # --- Recreate the branch ---
 
 pscale_cmd() {

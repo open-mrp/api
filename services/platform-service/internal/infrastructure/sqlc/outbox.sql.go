@@ -10,6 +10,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"strings"
+	"time"
 
 	"github.com/open-mrp/api/shared/db"
 )
@@ -76,7 +77,7 @@ func (q *Queries) CreateOutboxMessage(ctx context.Context, arg CreateOutboxMessa
 }
 
 const getLockedOutboxMessagesByIDs = `-- name: GetLockedOutboxMessagesByIDs :many
-SELECT id, message_id, service_name, message_type, destination, routing_key, headers, payload, status, attempts, max_attempts, next_run_at, locked_at, lock_owner, lock_expires_at, last_error, published_at, request_id, parent_message_id, created_at, updated_at FROM message_outbox FORCE INDEX (PRIMARY)
+SELECT id, message_id, service_name, message_type, destination, routing_key, headers, payload, status, attempts, max_attempts, next_run_at, locked_at, lock_owner, lock_expires_at, last_error, published_at, request_id, parent_message_id, created_at, updated_at, alerted_at FROM message_outbox FORCE INDEX (PRIMARY)
 WHERE id IN (/*SLICE:ids*/?)
   AND lock_owner = ?
   AND lock_expires_at > NOW(3)
@@ -130,6 +131,62 @@ func (q *Queries) GetLockedOutboxMessagesByIDs(ctx context.Context, arg GetLocke
 			&i.ParentMessageID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.AlertedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUnalertedOutboxFailures = `-- name: ListUnalertedOutboxFailures :many
+SELECT id, message_id, service_name, message_type, destination, routing_key, attempts, max_attempts, last_error, created_at
+FROM message_outbox
+WHERE status = 'failed' AND alerted_at IS NULL
+ORDER BY id ASC
+LIMIT ?
+`
+
+type ListUnalertedOutboxFailuresRow struct {
+	ID          int64
+	MessageID   string
+	ServiceName string
+	MessageType string
+	Destination string
+	RoutingKey  sql.NullString
+	Attempts    int32
+	MaxAttempts int32
+	LastError   sql.NullString
+	CreatedAt   time.Time
+}
+
+func (q *Queries) ListUnalertedOutboxFailures(ctx context.Context, limit int32) ([]ListUnalertedOutboxFailuresRow, error) {
+	rows, err := q.db.QueryContext(ctx, listUnalertedOutboxFailures, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListUnalertedOutboxFailuresRow
+	for rows.Next() {
+		var i ListUnalertedOutboxFailuresRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.MessageID,
+			&i.ServiceName,
+			&i.MessageType,
+			&i.Destination,
+			&i.RoutingKey,
+			&i.Attempts,
+			&i.MaxAttempts,
+			&i.LastError,
+			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -215,6 +272,27 @@ WHERE id IN (/*SLICE:ids*/?)
 
 func (q *Queries) MarkOutboxMessagesPublished(ctx context.Context, ids []int64) error {
 	query := markOutboxMessagesPublished
+	var queryParams []interface{}
+	if len(ids) > 0 {
+		for _, v := range ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
+	return err
+}
+
+const markOutboxRecordsAlerted = `-- name: MarkOutboxRecordsAlerted :exec
+UPDATE message_outbox
+SET alerted_at = NOW(3)
+WHERE id IN (/*SLICE:ids*/?)
+`
+
+func (q *Queries) MarkOutboxRecordsAlerted(ctx context.Context, ids []int64) error {
+	query := markOutboxRecordsAlerted
 	var queryParams []interface{}
 	if len(ids) > 0 {
 		for _, v := range ids {

@@ -21,3 +21,17 @@ WHERE id = ?;
 DELETE FROM message_inbox
 WHERE status = 'processed' AND processed_at < DATE_SUB(NOW(3), INTERVAL ? HOUR)
 LIMIT ?;
+
+-- name: ListUnalertedInboxFailures :many
+SELECT id, message_id, service_name, handler, message_type, attempts, last_error, received_at
+FROM message_inbox
+WHERE status = 'received'
+  AND alerted_at IS NULL
+  AND (last_error IS NOT NULL OR received_at < DATE_SUB(NOW(3), INTERVAL sqlc.arg('crash_stuck_minutes') MINUTE))
+ORDER BY id ASC
+LIMIT ?;
+
+-- name: MarkInboxRecordsAlerted :exec
+UPDATE message_inbox
+SET alerted_at = NOW(3)
+WHERE id IN (sqlc.slice('ids'));

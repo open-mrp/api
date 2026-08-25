@@ -41,6 +41,8 @@ const (
 
 	// EmailTemplateChatMessage notifies a user by email of a new chat message (the in-app/email bridge).
 	EmailTemplateChatMessage EmailTemplate = "chat_message"
+	// EmailTemplateMessageFailureAlert indicates that the email template is for the async message failure monitor digest (failed/stuck inbox and outbox rows).
+	EmailTemplateMessageFailureAlert EmailTemplate = "message_failure_alert"
 )
 
 func (t EmailTemplate) IsValid() bool {
@@ -62,12 +64,13 @@ func (t EmailTemplate) IsValid() bool {
 		EmailTemplateInvoice,
 		EmailTemplateOrderAcknowledgement,
 		EmailTemplateAlreadyRegistered,
-		EmailTemplateChatMessage:
+		EmailTemplateChatMessage,
+		EmailTemplateMessageFailureAlert:
 		return true
 	}
 	return false
 }
 
 func (t EmailTemplate) EnumValues() []string {
-	return []string{string(EmailTemplateWelcome), string(EmailTemplatePasswordReset), string(EmailTemplatePasswordUpdated), string(EmailTemplateRegistrationVerify), string(EmailTemplateRegistrationVerifyExisting), string(EmailTemplateEnterpriseRequest), string(EmailTemplateInternalErrorAlert), string(EmailTemplateNewRegistrationAlert), string(EmailTemplatePlanChangeAlert), string(EmailTemplateRegistrationLimitAlert), string(EmailTemplateNewUserWelcome), string(EmailTemplateOrderCheckout), string(EmailTemplatePurchaseOrderSubmission), string(EmailTemplateStatementOfAccount), string(EmailTemplateInvoice), string(EmailTemplateOrderAcknowledgement), string(EmailTemplateAlreadyRegistered), string(EmailTemplateChatMessage)}
+	return []string{string(EmailTemplateWelcome), string(EmailTemplatePasswordReset), string(EmailTemplatePasswordUpdated), string(EmailTemplateRegistrationVerify), string(EmailTemplateRegistrationVerifyExisting), string(EmailTemplateEnterpriseRequest), string(EmailTemplateInternalErrorAlert), string(EmailTemplateNewRegistrationAlert), string(EmailTemplatePlanChangeAlert), string(EmailTemplateRegistrationLimitAlert), string(EmailTemplateNewUserWelcome), string(EmailTemplateOrderCheckout), string(EmailTemplatePurchaseOrderSubmission), string(EmailTemplateStatementOfAccount), string(EmailTemplateInvoice), string(EmailTemplateOrderAcknowledgement), string(EmailTemplateAlreadyRegistered), string(EmailTemplateChatMessage), string(EmailTemplateMessageFailureAlert)}
 }

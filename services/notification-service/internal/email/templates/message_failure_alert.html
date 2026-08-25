@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Message Failure Alert</title>
+</head>
+<body style="margin: 0; padding: 0; width: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+    <table role="presentation" cellPadding="0" cellSpacing="0" width="100%" bgcolor="#F4F5F7" style="width: 100%; background-color: #F4F5F7; padding-top: 24px; padding-bottom: 24px;">
+        <tbody>
+            <tr>
+                <td>
+                    <table role="presentation" cellPadding="0" cellSpacing="0" style="width: 100%; max-width: 640px; margin-left: auto; margin-right: auto; background-color: #FFFFFF; border-radius: 12px; border: 1px solid #E5E7EB; border-top: 4px solid #DC2626;" width="100%" bgcolor="#FFFFFF">
+                        <tbody>
+                            <tr>
+                                <td style="padding: 24px 24px 0 24px; text-align: center; background-color: #FFFFFF;">
+                                    <img src="https://augno-public-images.s3.us-east-2.amazonaws.com/dark-logo.png" alt="OpenMRP" style="height: 40px; width: auto;">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="background-color: #FFFFFF; padding: 24px;">
+                                    <h1 style="margin: 0; margin-bottom: 8px; font-size: 22px; line-height: 28px; font-weight: 700; color: #DC2626; text-align: center;">Message Failure Alert</h1>
+                                    <p style="margin: 0; margin-bottom: 16px; font-size: 14px; line-height: 20px; color: #475569; text-align: center;">{{.InboxCount}} inbox failure(s) &middot; {{.OutboxCount}} outbox failure(s)</p>
+
+                                    {{if .InboxFailures}}
+                                    <h2 style="margin: 24px 0 8px 0; font-size: 16px; font-weight: 700; color: #0F172A;">Inbox failures (handler could not process)</h2>
+                                    {{range .InboxFailures}}
+                                    <table role="presentation" cellPadding="0" cellSpacing="0" style="width: 100%; margin-bottom: 12px; border: 1px solid #E2E8F0; border-radius: 8px;">
+                                        <tbody>
+                                            <tr><td style="padding: 8px 12px; font-size: 13px; color: #0F172A;"><strong>Handler:</strong> {{.Handler}}</td></tr>
+                                            <tr><td style="padding: 4px 12px; font-size: 13px; color: #475569;"><strong>Message type:</strong> {{.MessageType}}</td></tr>
+                                            <tr><td style="padding: 4px 12px; font-size: 13px; color: #475569;"><strong>Service:</strong> {{.ServiceName}} &middot; <strong>Attempts:</strong> {{.Attempts}}</td></tr>
+                                            <tr><td style="padding: 4px 12px; font-size: 13px; color: #475569;"><strong>Message ID:</strong> {{.MessageID}} &middot; <strong>Received:</strong> {{.ReceivedAt}}</td></tr>
+                                            <tr><td style="padding: 4px 12px 8px 12px; font-size: 13px; color: #0F172A;"><strong>Error:</strong>
+                                                <pre style="margin: 4px 0 0 0; padding: 10px; background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; font-size: 12px; line-height: 18px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; color: #334155;">{{.Error}}</pre>
+                                            </td></tr>
+                                        </tbody>
+                                    </table>
+                                    {{end}}
+                                    {{end}}
+
+                                    {{if .OutboxFailures}}
+                                    <h2 style="margin: 24px 0 8px 0; font-size: 16px; font-weight: 700; color: #0F172A;">Outbox failures (could not publish)</h2>
+                                    {{range .OutboxFailures}}
+                                    <table role="presentation" cellPadding="0" cellSpacing="0" style="width: 100%; margin-bottom: 12px; border: 1px solid #E2E8F0; border-radius: 8px;">
+                                        <tbody>
+                                            <tr><td style="padding: 8px 12px; font-size: 13px; color: #0F172A;"><strong>Message type:</strong> {{.MessageType}}</td></tr>
+                                            <tr><td style="padding: 4px 12px; font-size: 13px; color: #475569;"><strong>Routing key:</strong> {{.RoutingKey}}</td></tr>
+                                            <tr><td style="padding: 4px 12px; font-size: 13px; color: #475569;"><strong>Service:</strong> {{.ServiceName}} &middot; <strong>Attempts:</strong> {{.Attempts}}/{{.MaxAttempts}}</td></tr>
+                                            <tr><td style="padding: 4px 12px; font-size: 13px; color: #475569;"><strong>Message ID:</strong> {{.MessageID}} &middot; <strong>Created:</strong> {{.CreatedAt}}</td></tr>
+                                            <tr><td style="padding: 4px 12px 8px 12px; font-size: 13px; color: #0F172A;"><strong>Error:</strong>
+                                                <pre style="margin: 4px 0 0 0; padding: 10px; background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; font-size: 12px; line-height: 18px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; color: #334155;">{{.Error}}</pre>
+                                            </td></tr>
+                                        </tbody>
+                                    </table>
+                                    {{end}}
+                                    {{end}}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="height: 1px; background-color: #E5E7EB;"></td>
+                            </tr>
+                            <tr>
+                                <td style="background-color: #FFFFFF; padding: 16px; text-align: center; color: #6B7280; font-size: 12px;">
+                                    <div>
+                                        <div style="margin-top: 8px; font-size: 12px; color: #9CA3AF;">
+                                            Generated at {{.GeneratedAt}}. This is an internal notification from OpenMRP.
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</body>
+</html>

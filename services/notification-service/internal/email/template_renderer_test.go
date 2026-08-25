@@ -35,6 +35,31 @@ func TestRendererCoversEveryTemplate(t *testing.T) {
 	}
 }
 
+// The message failure alert ranges over inbox/outbox failure slices, so execute it with real rows to
+// catch a range/field typo that plain parse coverage would miss.
+func TestRenderMessageFailureAlert(t *testing.T) {
+	renderer, apiErr := NewTemplateRenderer()
+	require.Nil(t, apiErr)
+
+	body, apiErr := renderer.RenderTemplate(context.Background(), constants.EmailTemplateMessageFailureAlert, map[string]any{
+		"InboxCount":  1,
+		"OutboxCount": 1,
+		"GeneratedAt": "2026-08-25 12:00:00 UTC",
+		"InboxFailures": []map[string]any{
+			{"MessageID": "mg_in1", "ServiceName": "core-service", "Handler": "notification.send_email", "MessageType": "notification.cmd.send_email", "Attempts": 3, "Error": "boom", "ReceivedAt": "2026-08-25 11:00:00 UTC"},
+		},
+		"OutboxFailures": []map[string]any{
+			{"MessageID": "mg_out1", "ServiceName": "core-service", "MessageType": "sales_order.created", "RoutingKey": "sales_order.created", "Attempts": 25, "MaxAttempts": 25, "Error": "broker down", "CreatedAt": "2026-08-25 10:00:00 UTC"},
+		},
+	})
+	require.Nil(t, apiErr)
+
+	require.Contains(t, body, "notification.send_email")
+	require.Contains(t, body, "boom")
+	require.Contains(t, body, "sales_order.created")
+	require.Contains(t, body, "broker down")
+}
+
 func TestRenderOrderCheckoutIncludesCheckoutURL(t *testing.T) {
 	renderer, apiErr := NewTemplateRenderer()
 	require.Nil(t, apiErr)

@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.11](https://github.com/open-mrp/api/compare/v1.1.10...v1.1.11) (2026-08-25)
+
+
+### Bug Fixes
+
+* **core:** batch physical-inventory levels in batch-scan apply ([#45](https://github.com/open-mrp/api/issues/45)) ([b5be4db](https://github.com/open-mrp/api/commit/b5be4dbdf673ce9a22bad0ff5784b74bf25792ad))
+* **scheduling:** measure finishing rates from machine-less scans ([#47](https://github.com/open-mrp/api/issues/47)) ([a9fef05](https://github.com/open-mrp/api/commit/a9fef055c9712a7e87d2ea643ec13e956c112136))
+
 ## [1.1.10](https://github.com/open-mrp/api/compare/v1.1.9...v1.1.10) (2026-08-25)
 
 

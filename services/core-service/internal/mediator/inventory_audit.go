@@ -59,8 +59,7 @@ func RecordInventoryAuditTrail(
 		return tracing.Trace(span, apiErr)
 	}
 
-	meds := NewMediatorFactory().Build(repos)
-	MaybeRecalculateAfterConsumption(ctx, meds, accountID, itemID, delta, actionType)
+	MaybeRecalculateAfterConsumption(ctx, repos, accountID, itemID, delta, actionType)
 
 	return nil
 }

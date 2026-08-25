@@ -57,6 +57,7 @@ func (s *UndoBatchScanConsumerTestSuite) SetupTest() {
 	repoFactory.EXPECT().NewMaterialDemandRepo().Return(s.materialRepo).AnyTimes()
 	repoFactory.EXPECT().NewInventoryQueryRepo().Return(s.inventoryQuery).AnyTimes()
 	repoFactory.EXPECT().NewItemRepo().Return(itemRepo).AnyTimes()
+	repoFactory.EXPECT().NewOutboxRepo().Return(stubOutboxRepo{}).AnyTimes()
 
 	s.consumer = &UndoBatchScanConsumer{
 		repos:  repoFactory,

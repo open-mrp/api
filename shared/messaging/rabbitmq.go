@@ -719,6 +719,15 @@ func (r *rabbitMQ) setupExchangesAndQueues() error {
 		return err
 	}
 
+	// Burn-rate recalculation off the consumption transaction (handled by core-service)
+	if err := r.declareAndBindQueue(
+		CoreCmdRecalcItemBurnRateQueue,
+		[]string{string(contracts.CoreCmdRecalcItemBurnRate)},
+		ApplicationExchange,
+	); err != nil {
+		return err
+	}
+
 	// Core undo batch scan command queue (handled by core-service)
 	if err := r.declareAndBindQueue(
 		CoreCmdUndoBatchScanQueue,

@@ -2,13 +2,18 @@ package mediator
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/shopspring/decimal"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/shared/contracts"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/messaging"
 	"github.com/open-mrp/api/shared/tracing"
 )
 
@@ -58,6 +63,10 @@ func NewBurnRateMed(config *BurnRateMedConfig) domain.BurnRateMed {
 func (m *burnRateMedImpl) RecalculateFromHistory(ctx context.Context, accountID, itemID string) *apierror.APIError {
 	ctx, span := burnRateMedTracer.Start(ctx, "mediator.burn_rate.recalculate_from_history")
 	defer span.End()
+	span.SetAttributes(
+		attribute.String("account.id", accountID),
+		attribute.String("item.id", itemID),
+	)
 
 	itemRepo := m.repos.NewItemRepo()
 	item, apiErr := itemRepo.Get(ctx, domain.GetItemParams{
@@ -107,6 +116,10 @@ func (m *burnRateMedImpl) RecalculateFromHistory(ctx context.Context, accountID,
 
 	burnRateMeasure := totalConsumption.Div(decimal.NewFromFloat(timeSpanDays))
 	valueStr := burnRateMeasure.String()
+	span.SetAttributes(
+		attribute.String("rate.id", item.BurnRateID),
+		attribute.String("burn_rate.value", valueStr),
+	)
 
 	rateRepo := m.repos.NewRateRepo()
 	value := valueStr
@@ -125,10 +138,10 @@ func (m *burnRateMedImpl) RecalculateFromHistory(ctx context.Context, accountID,
 	return nil
 }
 
-// MaybeRecalculateAfterConsumption recalculates burn rate when a consumption change log was recorded. Errors are traced but do not fail the caller's primary operation.
+// MaybeRecalculateAfterConsumption enqueues a burn-rate recalculation when a consumption change log was recorded. The recompute runs off the caller's transaction via the outbox, so the shared rate row's lock is not held for the length of that transaction. Errors are traced but do not fail the caller's primary operation.
 func MaybeRecalculateAfterConsumption(
 	ctx context.Context,
-	meds domain.Mediators,
+	repos domain.RepoFactory,
 	accountID, itemID string,
 	delta decimal.Decimal,
 	actionType string,
@@ -141,9 +154,48 @@ func MaybeRecalculateAfterConsumption(
 	}
 	ctx, span := burnRateMedTracer.Start(ctx, "mediator.burn_rate.maybe_recalculate_after_consumption")
 	defer span.End()
-	if apiErr := meds.BurnRate.RecalculateFromHistory(ctx, accountID, itemID); apiErr != nil {
+	span.SetAttributes(
+		attribute.String("account.id", accountID),
+		attribute.String("item.id", itemID),
+	)
+	if apiErr := enqueueBurnRateRecalc(ctx, repos.NewOutboxRepo(), accountID, itemID); apiErr != nil {
 		tracing.Trace(span, apiErr)
 	}
+}
+
+// enqueueBurnRateRecalc writes an outbox command to recompute the item's burn rate off the current transaction.
+func enqueueBurnRateRecalc(ctx context.Context, outboxRepo messaging.OutboxRepo, accountID, itemID string) *apierror.APIError {
+	payload, err := json.Marshal(domain.RecalcItemBurnRateEvent{
+		AccountID: accountID,
+		ItemID:    itemID,
+	})
+	if err != nil {
+		return apierror.NewInternalError(err, "Failed to marshal recalc item burn rate event.")
+	}
+
+	msg := contracts.AmqpMessage{
+		Data: payload,
+	}
+	if identity, ok := appctx.GetIdentityFromContext(ctx); ok {
+		msg.Identity = identity
+	}
+	if requestID, ok := appctx.GetRequestID(ctx); ok {
+		msg.RequestID = requestID
+	}
+
+	outboxInput := messaging.OutboxMessageInput{
+		ServiceName: "core-service",
+		MessageType: string(contracts.CoreCmdRecalcItemBurnRate),
+		Destination: messaging.ApplicationExchange,
+		RoutingKey:  string(contracts.CoreCmdRecalcItemBurnRate),
+		Payload:     msg,
+	}
+
+	if _, err := outboxRepo.Create(ctx, outboxInput); err != nil {
+		return apierror.NewInternalError(err, "Failed to create outbox message for recalc item burn rate.")
+	}
+
+	return nil
 }
 
 // IncludesItemBurnRate reports whether API includes request item.burn_rate.

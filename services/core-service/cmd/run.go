@@ -731,6 +731,11 @@ func Run(
 		return err
 	}
 
+	recalcBurnRateConsumer := event.NewRecalcItemBurnRateConsumer(rabbitmq, inboxRepo, repoFactory, txManager)
+	if err := recalcBurnRateConsumer.Listen(ctx); err != nil {
+		return err
+	}
+
 	// Every async bulk operation runs on the same generic consumer; the variance is data —
 	// the operation's canonical identity plus its executor. Add a row to register one.
 	bulkConsumers := []*event.BulkOperationConsumer{

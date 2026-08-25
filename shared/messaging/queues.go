@@ -38,6 +38,9 @@ const (
 	// switch happens still drain; delete once it has been empty across a deploy.
 	CoreCmdExecuteProductionStepQueue = "core_cmd_execute_production_step"
 
+	// CoreCmdRecalcItemBurnRateQueue carries recalc-item-burn-rate commands to the core-service consumer that recomputes an item's burn rate from history in its own short transaction, off the long consumption transaction that would otherwise hold the shared rate row's lock.
+	CoreCmdRecalcItemBurnRateQueue = "core_cmd_recalc_item_burn_rate"
+
 	// CoreEventInventoryReceivedAllocationQueue carries inventory-received events to the core-service consumer that offers the new stock to whatever demand went short waiting for it.
 	CoreEventInventoryReceivedAllocationQueue = "core_event_inventory_received_allocation"
 

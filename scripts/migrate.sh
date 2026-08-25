@@ -58,6 +58,7 @@ Schema (DDL) commands - shared/db/migrations:
   status              Show which schema migrations are applied
   version             Show the current schema version
   baseline            Record the baseline as applied without running it
+  mark-shipped        Record already-deployed migrations (SHIPPED_MIGRATION_VERSIONS) as applied
 
 Data (DML) commands - shared/db/data-migrations:
   create-data <name>  Scaffold a new data migration
@@ -419,6 +420,46 @@ case "$COMMAND" in
         info "Recording baseline (version $BASELINE_VERSION) as applied without running it..."
         mysql_query "INSERT INTO goose_db_version (version_id, is_applied) VALUES ($BASELINE_VERSION, 1);" >/dev/null
         info "Done. 'up' will now start from the first migration after the baseline."
+        ;;
+
+    # Records migrations that already shipped (and so are inherited by a branch cut from prod) as
+    # applied, so `up` runs only what this release adds. Fed by planetscale-release-branch.sh via
+    # SHIPPED_MIGRATION_VERSIONS; a no-op everywhere the env var is unset (local, first release).
+    mark-shipped)
+        require_goose
+        require_mysql_client
+        resolve_target
+        if [ "$TARGET" = "prod" ]; then
+            error "mark-shipped is for release dev branches, not prod."
+            exit 1
+        fi
+
+        versions="${SHIPPED_MIGRATION_VERSIONS:-}"
+        if [ -z "$versions" ]; then
+            info "No previously shipped migrations to record on $TARGET_LABEL."
+            exit 0
+        fi
+
+        goose_table="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = '$MYSQL_DB' AND TABLE_NAME = 'goose_db_version';")"
+        if [ "$goose_table" -eq 0 ]; then
+            error "goose_db_version is missing on $TARGET_LABEL. Run 'baseline' first."
+            exit 1
+        fi
+
+        for v in $versions; do
+            case "$v" in
+                ''|*[!0-9]*)
+                    error "Invalid version id in SHIPPED_MIGRATION_VERSIONS: '$v'"
+                    exit 1
+                    ;;
+            esac
+            recorded="$(mysql_query "SELECT COUNT(*) FROM goose_db_version WHERE version_id = $v AND is_applied = 1;")"
+            if [ "$recorded" -gt 0 ]; then
+                continue
+            fi
+            info "Recording migration $v as already applied (shipped in a prior release)..."
+            mysql_query "INSERT INTO goose_db_version (version_id, is_applied) VALUES ($v, 1);" >/dev/null
+        done
         ;;
 
     data-up)

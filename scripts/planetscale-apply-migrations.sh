@@ -27,6 +27,12 @@ export PS_BRANCH_DB_URL="$DATABASE_URL"
 # A branch freshly cut from prod carries prod's schema with no goose bookkeeping. Without this the
 # baseline would read as pending, and applying it drops every table.
 ./scripts/migrate.sh baseline --target branch
+
+# Prod's schema also includes every migration shipped in prior releases. planetscale-release-branch.sh
+# passes those version ids in SHIPPED_MIGRATION_VERSIONS so they are recorded as applied rather than
+# replayed against the branch that already carries them (non-idempotent DDL would collide otherwise).
+./scripts/migrate.sh mark-shipped --target branch
+
 ./scripts/migrate.sh up --target branch
 ./scripts/migrate.sh status --target branch
 

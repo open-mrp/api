@@ -1327,6 +1327,11 @@ type ProductionScheduleItemPolicyInfo struct {
 	// The echelon position at the end of each horizon week. Weeks with no campaign are
 	// what this explains: stock draining toward the reorder point.
 	ProjectedOnHand []float64 `protobuf:"fixed64,33,rep,packed,name=projected_on_hand,json=projectedOnHand,proto3" json:"projected_on_hand,omitempty"`
+	// The physical greige store at the end of each horizon week — the constraint stage on
+	// its own, which the echelon curve cannot be decomposed back into. A week where it dips
+	// to the safety stock is the week knitting is meant to replenish. Empty for a schedule
+	// generated before the greige buffer existed.
+	ProjectedGreigeOnHand []float64 `protobuf:"fixed64,40,rep,packed,name=projected_greige_on_hand,json=projectedGreigeOnHand,proto3" json:"projected_greige_on_hand,omitempty"`
 	// How this item was planned, the rule that decided, and the split between what the
 	// order book owed and what the forecast projected.
 	FulfillmentPolicyCode string  `protobuf:"bytes,36,opt,name=fulfillment_policy_code,json=fulfillmentPolicyCode,proto3" json:"fulfillment_policy_code,omitempty"`
@@ -1608,6 +1613,13 @@ func (x *ProductionScheduleItemPolicyInfo) GetMaxGreigeInventory() float64 {
 func (x *ProductionScheduleItemPolicyInfo) GetProjectedOnHand() []float64 {
 	if x != nil {
 		return x.ProjectedOnHand
+	}
+	return nil
+}
+
+func (x *ProductionScheduleItemPolicyInfo) GetProjectedGreigeOnHand() []float64 {
+	if x != nil {
+		return x.ProjectedGreigeOnHand
 	}
 	return nil
 }
@@ -7911,7 +7923,7 @@ const file_core_core_production_schedule_proto_rawDesc = "" +
 	"\x10_planned_unit_idB\x0e\n" +
 	"\f_reason_codeB\x14\n" +
 	"\x12_production_run_idB\x1c\n" +
-	"\x1a_planned_unit_abbreviation\"\x86\x0e\n" +
+	"\x1a_planned_unit_abbreviation\"\xbf\x0e\n" +
 	" ProductionScheduleItemPolicyInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x124\n" +
 	"\x16production_schedule_id\x18\x02 \x01(\tR\x14productionScheduleId\x12\x17\n" +
@@ -7951,7 +7963,8 @@ const file_core_core_production_schedule_proto_rawDesc = "" +
 	"\x0eon_hand_greige\x18\x1e \x01(\x01R\fonHandGreige\x128\n" +
 	"\x18average_greige_inventory\x18\x1f \x01(\x01R\x16averageGreigeInventory\x120\n" +
 	"\x14max_greige_inventory\x18  \x01(\x01R\x12maxGreigeInventory\x12*\n" +
-	"\x11projected_on_hand\x18! \x03(\x01R\x0fprojectedOnHand\x126\n" +
+	"\x11projected_on_hand\x18! \x03(\x01R\x0fprojectedOnHand\x127\n" +
+	"\x18projected_greige_on_hand\x18( \x03(\x01R\x15projectedGreigeOnHand\x126\n" +
 	"\x17fulfillment_policy_code\x18$ \x01(\tR\x15fulfillmentPolicyCode\x12,\n" +
 	"\x12policy_source_code\x18% \x01(\tR\x10policySourceCode\x12*\n" +
 	"\x11firm_demand_units\x18& \x01(\x01R\x0ffirmDemandUnits\x122\n" +

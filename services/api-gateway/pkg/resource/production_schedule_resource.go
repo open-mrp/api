@@ -309,6 +309,8 @@ var (
 	samplePlannedUnitName  = "Pair"
 	// The echelon position at each horizon week end: the week-0 campaign lands, stock drains at 100/week until it crosses the reorder point, then a second campaign lands.
 	sampleScheduleProjectedOnHand = []float64{2070, 1970, 1870, 1770, 1670, 1570, 1470, 1370, 1270, 1170, 1070, 970, 1590}
+	// The greige store on its own over the same weeks: it starts near its safety stock, a campaign lands, and it drains toward the floor where knitting replenishes it — well below the echelon curve, which the downstream finished stock holds up.
+	sampleScheduleProjectedGreigeOnHand = []float64{680, 580, 480, 380, 280, 320, 220, 120, 320, 220, 120, 320, 220}
 )
 
 var sampleAppliedOverride = ScheduleAppliedOverride{
@@ -712,6 +714,10 @@ type ProductionScheduleItemPolicy struct {
 	//
 	// A run of weeks with no campaign is stock draining toward `reorder_point`; this is what makes that visible rather than looking like the solver did nothing.
 	ProjectedOnHand []float64 `json:"projected_on_hand"`
+	// The physical greige store at the end of each horizon week — the constraint stage on its own, which `projected_on_hand` cannot be decomposed back into.
+	//
+	// A week where this dips to `safety_stock_primary` is the week knitting is meant to replenish, even where `projected_on_hand` still reads full because the stock is held downstream as finished goods. Empty for a schedule generated before the greige buffer existed.
+	ProjectedGreigeOnHand []float64 `json:"projected_greige_on_hand"`
 	// Constraint hours this item's annual demand consumes.
 	AnnualRunHours float64 `json:"annual_run_hours"`
 	// ABC class by share of constraint run hours.
@@ -764,6 +770,7 @@ var SampleProductionScheduleItemPolicy = &ProductionScheduleItemPolicy{
 	MaxGreigeInventory:      964,
 	WeeksOfCover:            14.5,
 	ProjectedOnHand:         sampleScheduleProjectedOnHand,
+	ProjectedGreigeOnHand:   sampleScheduleProjectedGreigeOnHand,
 	AnnualRunHours:          43.3,
 	ABCClass:                &sampleABCClassA,
 	Constraints:             []constants.SchedulePolicyConstraint{},

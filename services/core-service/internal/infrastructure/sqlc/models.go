@@ -1776,6 +1776,7 @@ type ProductionScheduleItemPolicy struct {
 	ForecastDemandUnits     string
 	FulfillmentPolicyCode   string
 	PolicySourceCode        string
+	ProjectedGreigeOnHand   json.RawMessage
 }
 
 type ProductionScheduleItemSetting struct {

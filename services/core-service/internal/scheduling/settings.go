@@ -30,6 +30,9 @@ type Settings struct {
 	MaxWeeksSupply                 float64 `json:"max_weeks_supply"`                   // MAX_WEEKS_SUPPLY = 12
 	MaxFlowDepth                   int     `json:"max_flow_depth"`                     // MAX_FLOW_DEPTH = 10
 
+	// GreigeBufferEnabled makes stage one hold a physical greige buffer at the constraint rather than letting the pooled safety stock live as finished goods. With it off, a campaign is triggered only when the echelon position (greige plus every finished good downstream of it) falls below the reorder point, so a family sitting on plenty of finished stock in the wrong SKUs is read as fully covered and no greige is knit — which leaves stage two with nothing to rebalance the mix from. With it on, a second trigger fires whenever projected greige-on-hand alone falls below its own safety stock, so the constraint keeps the undifferentiated buffer the postponement model assumes. Off by default so the parity gate reproduces the script, which has no such buffer; the service turns it on.
+	GreigeBufferEnabled bool `json:"greige_buffer_enabled"`
+
 	// Fulfillment commitments
 	//
 	// DefaultCustomerLeadTimeDays is the last fallback in the ship-by chain, behind the customer and its account group. It lives with the planning assumptions because it is what a make-to-order promise is measured against: the date it produces has to be the same date the plan is solved to.

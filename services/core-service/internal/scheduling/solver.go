@@ -85,8 +85,10 @@ type SolverOutput struct {
 	// FinishedPolicies is the per-finished-SKU decomposition of the pooled greige buffers in Policies. The two stages together are the whole inventory picture and do not overlap: greige holds its own buffer, finished goods hold theirs.
 	FinishedPolicies []FinishedPolicy
 	Campaigns        []Campaign
-	// ProjectedOnHand[itemID][weekIndex] is the position at the end of that week.
+	// ProjectedOnHand[itemID][weekIndex] is the echelon position at the end of that week.
 	ProjectedOnHand map[string][]float64
+	// ProjectedGreigeOnHand[itemID][weekIndex] is the physical greige store at the end of that week — the constraint stage on its own, which the echelon projection cannot be decomposed back into. It is what the greige buffer is measured against.
+	ProjectedGreigeOnHand map[string][]float64
 
 	// Allocations say which campaign is building which order. Written alongside the plan so "what is this campaign for" and "is my order covered" are two readings of one answer.
 	Allocations []OrderAllocation
@@ -292,6 +294,7 @@ func Solve(in SolverInput) SolverOutput {
 	levelled := Level(levellingItems, in.Machines, in.Settings, in.PinnedCampaigns)
 	out.Campaigns = levelled.Campaigns
 	out.ProjectedOnHand = levelled.ProjectedOnHand
+	out.ProjectedGreigeOnHand = levelled.ProjectedGreigeOnHand
 	out.Diagnostics.LevellingDiagnostics = levelled.Diagnostics
 
 	skuByItem := make(map[string]string, len(measurements))

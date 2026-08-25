@@ -238,7 +238,7 @@ INSERT INTO production_schedule_item_policy (
     safety_stock_primary, safety_stock_downstream,
     reorder_point, order_up_to, on_hand_echelon,
     on_hand_greige, average_greige_inventory, max_greige_inventory,
-    weeks_of_cover, projected_on_hand, annual_run_hours,
+    weeks_of_cover, projected_on_hand, projected_greige_on_hand, annual_run_hours,
     abc_class, was_eoq_capped, was_capacity_starved,
     fulfillment_policy_code, policy_source_code, firm_demand_units, forecast_demand_units,
     created_at, updated_at
@@ -252,7 +252,7 @@ INSERT INTO production_schedule_item_policy (
     ?, ?,
     ?, ?, ?,
     ?, ?, ?,
-    ?, ?, ?,
+    ?, ?, ?, ?,
     ?, ?, ?,
     ?, ?, ?, ?,
     NOW(3), NOW(3)
@@ -289,6 +289,7 @@ type CreateProductionScheduleItemPolicyParams struct {
 	MaxGreigeInventory      string
 	WeeksOfCover            string
 	ProjectedOnHand         json.RawMessage
+	ProjectedGreigeOnHand   json.RawMessage
 	AnnualRunHours          string
 	AbcClass                sql.NullString
 	WasEoqCapped            bool
@@ -330,6 +331,7 @@ func (q *Queries) CreateProductionScheduleItemPolicy(ctx context.Context, arg Cr
 		arg.MaxGreigeInventory,
 		arg.WeeksOfCover,
 		arg.ProjectedOnHand,
+		arg.ProjectedGreigeOnHand,
 		arg.AnnualRunHours,
 		arg.AbcClass,
 		arg.WasEoqCapped,
@@ -952,6 +954,7 @@ SELECT
     p.max_greige_inventory,
     p.weeks_of_cover,
     CAST(p.projected_on_hand AS CHAR) AS projected_on_hand,
+    CAST(p.projected_greige_on_hand AS CHAR) AS projected_greige_on_hand,
     p.annual_run_hours,
     p.abc_class,
     p.was_eoq_capped,
@@ -1004,6 +1007,7 @@ type ListProductionScheduleItemPoliciesRow struct {
 	MaxGreigeInventory      string
 	WeeksOfCover            string
 	ProjectedOnHand         interface{}
+	ProjectedGreigeOnHand   interface{}
 	AnnualRunHours          string
 	AbcClass                sql.NullString
 	WasEoqCapped            bool
@@ -1055,6 +1059,7 @@ func (q *Queries) ListProductionScheduleItemPolicies(ctx context.Context, arg Li
 			&i.MaxGreigeInventory,
 			&i.WeeksOfCover,
 			&i.ProjectedOnHand,
+			&i.ProjectedGreigeOnHand,
 			&i.AnnualRunHours,
 			&i.AbcClass,
 			&i.WasEoqCapped,

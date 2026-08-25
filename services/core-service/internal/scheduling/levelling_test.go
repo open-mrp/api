@@ -458,3 +458,89 @@ func TestLevel_PinnedCampaignConsumesCapacity(t *testing.T) {
 		}
 	}
 }
+
+// The point of the greige buffer: a family can be flush with finished goods — so its
+// echelon reads well above the reorder point — while the physical greige store it needs
+// to build the short colourways is empty. With the buffer on, that empty store must
+// still knit; with it off, the healthy echelon knits nothing, which is the pooled
+// behaviour the parity gate preserves.
+func TestLevel_GreigeBufferKnitsWhenStoreDryDespiteHealthyEchelon(t *testing.T) {
+	t.Parallel()
+
+	s := testSettings()
+	s.HorizonWeeks = 1
+
+	// Echelon is far above its reorder point (stock is held downstream as finished goods),
+	// but the greige store is empty and its safety stock is 200.
+	dryGreige := func() LevellingItem {
+		return LevellingItem{
+			Policy: ItemPolicy{
+				ItemID:             "it_A",
+				SKU:                "A",
+				WeeklyDemand:       100,
+				AnnualDemand:       5200,
+				SecondsPerUnit:     10,
+				EOQUnits:           600,
+				ReorderPoint:       400,
+				OrderUpTo:          1200,
+				OnHandEchelon:      5000,
+				OnHandGreige:       0,
+				SafetyStockPrimary: 200,
+			},
+			LotUnits: 60,
+		}
+	}
+	machines := []Machine{{ID: "mc_1", Name: "1"}}
+
+	s.GreigeBufferEnabled = true
+	on := Level([]LevellingItem{dryGreige()}, machines, s, nil)
+	if len(on.Campaigns) != 1 {
+		t.Fatalf("buffer on: a dry greige store must knit despite a healthy echelon; campaigns = %d, want 1", len(on.Campaigns))
+	}
+	// 0 on hand + 600 built - 100 demand = 500 greige at week end.
+	if got := on.ProjectedGreigeOnHand["it_A"][0]; got != 500 {
+		t.Errorf("projected greige on hand = %v, want 500 (built EOQ minus one week of pull)", got)
+	}
+
+	s.GreigeBufferEnabled = false
+	off := Level([]LevellingItem{dryGreige()}, machines, s, nil)
+	if len(off.Campaigns) != 0 {
+		t.Fatalf("buffer off: a healthy echelon knits nothing; campaigns = %d, want 0", len(off.Campaigns))
+	}
+	// The store is still projected even when the trigger is off, so it can be shown.
+	if off.ProjectedGreigeOnHand["it_A"] == nil {
+		t.Errorf("projected greige on hand must be populated even with the buffer off")
+	}
+}
+
+// A make-to-order item is built against its order book, not to a buffer, so it holds no
+// greige safety stock and the buffer trigger must never fire for it even when its store
+// is dry.
+func TestLevel_MakeToOrderHoldsNoGreigeBuffer(t *testing.T) {
+	t.Parallel()
+
+	s := testSettings()
+	s.HorizonWeeks = 1
+	s.GreigeBufferEnabled = true
+
+	mto := LevellingItem{
+		Policy: ItemPolicy{
+			ItemID:             "it_A",
+			SKU:                "A",
+			WeeklyDemand:       0,
+			SecondsPerUnit:     10,
+			EOQUnits:           600,
+			OnHandEchelon:      500,
+			OnHandGreige:       0,
+			SafetyStockPrimary: 200, // ignored: a make-to-order item is not buffered
+			FulfillmentPolicy:  PolicyMakeToOrder,
+		},
+		LotUnits:   60,
+		FirmByWeek: []float64{50}, // covered by the 500 on hand, so nothing is due
+	}
+
+	got := Level([]LevellingItem{mto}, []Machine{{ID: "mc_1", Name: "1"}}, s, nil)
+	if len(got.Campaigns) != 0 {
+		t.Errorf("a make-to-order item with a dry greige store must not knit a buffer: %+v", got.Campaigns)
+	}
+}

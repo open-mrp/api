@@ -422,6 +422,7 @@ func (m *productionScheduleSvcImpl) ListProductionScheduleItemPolicies(ctx conte
 			AverageGreigeInventory:  p.AverageGreigeInventory,
 			MaxGreigeInventory:      p.MaxGreigeInventory,
 			ProjectedOnHand:         orEmptyFloats(p.ProjectedOnHand),
+			ProjectedGreigeOnHand:   orEmptyFloats(p.ProjectedGreigeOnHand),
 			WeeksOfCover:            p.WeeksOfCover,
 			AnnualRunHours:          p.AnnualRunHours,
 			ABCClass:                abcClassPtrFrom(p.AbcClass),

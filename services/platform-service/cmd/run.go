@@ -123,6 +123,23 @@ func Run(
 	}
 	defer cleanupWorker.Stop()
 
+	// Start the message failure monitor to email an alert when async messages fail to process
+	// (dead-lettered inbox handlers, exhausted outbox publishes, crash-stuck rows). It scans the
+	// shared message_inbox/message_outbox tables that the whole MySQL fleet writes to.
+	failureMonitor, err := messaging.NewFailureMonitor(
+		&messaging.FailureMonitorConfig{ServiceName: domain.ServiceName, PlatformMode: cfg.PlatformMode},
+		repository.NewFailureMonitorRepo(queries),
+		repository.NewOutboxRepo(queries),
+		leaseSvc,
+	)
+	if err != nil {
+		return err
+	}
+	if err := failureMonitor.Start(ctx); err != nil {
+		return err
+	}
+	defer failureMonitor.Stop()
+
 	server, err := contracts.NewGRPCServer(domain.ServiceName, nil, nil)
 	if err != nil {
 		return err

@@ -77,3 +77,15 @@ WHERE id IN (sqlc.slice('ids'))
   AND status = 'published'
   AND published_at < DATE_SUB(NOW(3), INTERVAL sqlc.arg('retention_hours') HOUR)
 ORDER BY id ASC;
+
+-- name: ListUnalertedOutboxFailures :many
+SELECT id, message_id, service_name, message_type, destination, routing_key, attempts, max_attempts, last_error, created_at
+FROM message_outbox
+WHERE status = 'failed' AND alerted_at IS NULL
+ORDER BY id ASC
+LIMIT ?;
+
+-- name: MarkOutboxRecordsAlerted :exec
+UPDATE message_outbox
+SET alerted_at = NOW(3)
+WHERE id IN (sqlc.slice('ids'));

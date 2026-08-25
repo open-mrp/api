@@ -8,6 +8,8 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
+	"time"
 )
 
 const getInboxRecordByMessageAndHandler = `-- name: GetInboxRecordByMessageAndHandler :one
@@ -21,9 +23,24 @@ type GetInboxRecordByMessageAndHandlerParams struct {
 	Handler   string
 }
 
-func (q *Queries) GetInboxRecordByMessageAndHandler(ctx context.Context, arg GetInboxRecordByMessageAndHandlerParams) (MessageInbox, error) {
+type GetInboxRecordByMessageAndHandlerRow struct {
+	ID              int64
+	MessageID       string
+	ServiceName     string
+	Handler         string
+	MessageType     string
+	RequestID       sql.NullString
+	ParentMessageID sql.NullString
+	Status          string
+	Attempts        int32
+	LastError       sql.NullString
+	ReceivedAt      time.Time
+	ProcessedAt     sql.NullTime
+}
+
+func (q *Queries) GetInboxRecordByMessageAndHandler(ctx context.Context, arg GetInboxRecordByMessageAndHandlerParams) (GetInboxRecordByMessageAndHandlerRow, error) {
 	row := q.db.QueryRowContext(ctx, getInboxRecordByMessageAndHandler, arg.MessageID, arg.Handler)
-	var i MessageInbox
+	var i GetInboxRecordByMessageAndHandlerRow
 	err := row.Scan(
 		&i.ID,
 		&i.MessageID,
@@ -39,6 +56,64 @@ func (q *Queries) GetInboxRecordByMessageAndHandler(ctx context.Context, arg Get
 		&i.ProcessedAt,
 	)
 	return i, err
+}
+
+const listUnalertedInboxFailures = `-- name: ListUnalertedInboxFailures :many
+SELECT id, message_id, service_name, handler, message_type, attempts, last_error, received_at
+FROM message_inbox
+WHERE status = 'received'
+  AND alerted_at IS NULL
+  AND (last_error IS NOT NULL OR received_at < DATE_SUB(NOW(3), INTERVAL ? MINUTE))
+ORDER BY id ASC
+LIMIT ?
+`
+
+type ListUnalertedInboxFailuresParams struct {
+	CrashStuckMinutes interface{}
+	Limit             int32
+}
+
+type ListUnalertedInboxFailuresRow struct {
+	ID          int64
+	MessageID   string
+	ServiceName string
+	Handler     string
+	MessageType string
+	Attempts    int32
+	LastError   sql.NullString
+	ReceivedAt  time.Time
+}
+
+func (q *Queries) ListUnalertedInboxFailures(ctx context.Context, arg ListUnalertedInboxFailuresParams) ([]ListUnalertedInboxFailuresRow, error) {
+	rows, err := q.db.QueryContext(ctx, listUnalertedInboxFailures, arg.CrashStuckMinutes, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListUnalertedInboxFailuresRow
+	for rows.Next() {
+		var i ListUnalertedInboxFailuresRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.MessageID,
+			&i.ServiceName,
+			&i.Handler,
+			&i.MessageType,
+			&i.Attempts,
+			&i.LastError,
+			&i.ReceivedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const markInboxRecordFailed = `-- name: MarkInboxRecordFailed :exec
@@ -65,6 +140,27 @@ WHERE id = ?
 
 func (q *Queries) MarkInboxRecordProcessed(ctx context.Context, id int64) error {
 	_, err := q.db.ExecContext(ctx, markInboxRecordProcessed, id)
+	return err
+}
+
+const markInboxRecordsAlerted = `-- name: MarkInboxRecordsAlerted :exec
+UPDATE message_inbox
+SET alerted_at = NOW(3)
+WHERE id IN (/*SLICE:ids*/?)
+`
+
+func (q *Queries) MarkInboxRecordsAlerted(ctx context.Context, ids []int64) error {
+	query := markInboxRecordsAlerted
+	var queryParams []interface{}
+	if len(ids) > 0 {
+		for _, v := range ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
 	return err
 }
 

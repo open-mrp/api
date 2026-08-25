@@ -631,6 +631,8 @@ type InventoryQueryRepo interface {
 	FetchCurrentInventory(ctx context.Context, itemID, ownerAccountID string) (*InventorySnapshot, *apierror.APIError)
 	FetchOnHandInventoryBulk(ctx context.Context, itemIDs []string, ownerAccountID string) ([]*BulkOnHandInventory, *apierror.APIError)
 	FetchPhysicalInventory(ctx context.Context, itemID, ownerAccountID, unitID string) (decimal.Decimal, *apierror.APIError)
+	// FetchPhysicalInventoryBaseForItems returns each item's physical inventory in base units, so the batch-scan audit trail can level many items with one query instead of one per item.
+	FetchPhysicalInventoryBaseForItems(ctx context.Context, accountID string, itemIDs []string) (map[string]decimal.Decimal, *apierror.APIError)
 }
 
 type ProductLineRepo interface {

@@ -99,3 +99,34 @@ func (r *inventoryQueryRepoImpl) FetchPhysicalInventory(ctx context.Context, ite
 	}
 	return measure, nil
 }
+
+// FetchPhysicalInventoryBaseForItems returns each item's physical inventory in base units, netting
+// allocations and normalising every row through its own unit's ratio exactly as FetchPhysicalInventory
+// does, but for many items in one query. The target-unit divide is left to the caller, which applies
+// it per event. Items with no receipts or issues are absent from the map.
+func (r *inventoryQueryRepoImpl) FetchPhysicalInventoryBaseForItems(ctx context.Context, accountID string, itemIDs []string) (map[string]decimal.Decimal, *apierror.APIError) {
+	ctx, span := inventoryQueryRepoTracer.Start(ctx, "repository.inventory_query.fetch_physical_inventory_base_for_items")
+	defer span.End()
+
+	out := make(map[string]decimal.Decimal, len(itemIDs))
+	if len(itemIDs) == 0 {
+		return out, nil
+	}
+
+	rows, err := r.queries.FetchPhysicalInventoryBaseForItems(ctx, sqlc.FetchPhysicalInventoryBaseForItemsParams{
+		AccountID: accountID,
+		ItemIds:   itemIDs,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	for _, row := range rows {
+		measure, parseErr := decimal.NewFromString(row.PhysicalBase)
+		if parseErr != nil {
+			return nil, tracing.Trace(span, apierror.NewInternalError(parseErr, "Invalid physical inventory value."))
+		}
+		out[row.ItemID] = measure
+	}
+	return out, nil
+}

@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/open-mrp/api/compare/v1.1.11...v1.2.0) (2026-08-25)
+
+
+### Features
+
+* **platform:** alert on failed async message processing ([#48](https://github.com/open-mrp/api/issues/48)) ([5142be1](https://github.com/open-mrp/api/commit/5142be1c43da4d361045a6f56f5354c8cb2bbb98))
+
 ## [1.1.11](https://github.com/open-mrp/api/compare/v1.1.10...v1.1.11) (2026-08-25)
 
 

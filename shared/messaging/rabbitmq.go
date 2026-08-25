@@ -728,6 +728,15 @@ func (r *rabbitMQ) setupExchangesAndQueues() error {
 		return err
 	}
 
+	// Open-issue allocation paged off the scan transaction (handled by core-service)
+	if err := r.declareAndBindQueue(
+		CoreCmdAllocateOpenIssuesQueue,
+		[]string{string(contracts.CoreCmdAllocateOpenIssues)},
+		ApplicationExchange,
+	); err != nil {
+		return err
+	}
+
 	// Core undo batch scan command queue (handled by core-service)
 	if err := r.declareAndBindQueue(
 		CoreCmdUndoBatchScanQueue,

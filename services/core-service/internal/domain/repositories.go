@@ -779,6 +779,8 @@ type InventoryReservationRepo interface {
 	AllocateReservationsForConsumption(ctx context.Context, params ConsumptionAllocationParams) (*ConsumptionAllocationResult, *apierror.APIError)
 	// AllocateOpenIssuesForItem performs FIFO allocation of all open inventory issues for the given item against available receipts. Used after receiving inventory.
 	AllocateOpenIssuesForItem(ctx context.Context, accountID, itemID string) *apierror.APIError
+	// AllocateOpenIssuesForItemPage allocates one page (up to limit, oldest first, resuming after the (afterCreatedAt, afterID) cursor) of the item's open issues against available receipts. Returns the (created_at, id) of the last issue processed and how many the page held.
+	AllocateOpenIssuesForItemPage(ctx context.Context, accountID, itemID string, afterCreatedAt time.Time, afterID string, limit int32) (time.Time, string, int, *apierror.APIError)
 }
 
 // MaterialDemandRepo calculates material demand from a bill of materials.

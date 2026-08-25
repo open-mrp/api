@@ -42,6 +42,14 @@ type RecalcItemBurnRateEvent struct {
 	ItemID    string `json:"item_id"`
 }
 
+// AllocateOpenIssuesEvent is the outbox command payload asking a consumer to allocate one page of an item's open inventory issues against available receipts, resuming after the (AfterCreatedAt, AfterID) cursor. AfterID is empty and AfterCreatedAt the zero time for the first page.
+type AllocateOpenIssuesEvent struct {
+	AccountID      string    `json:"account_id"`
+	ItemID         string    `json:"item_id"`
+	AfterCreatedAt time.Time `json:"after_created_at"`
+	AfterID        string    `json:"after_id"`
+}
+
 // ItemCategory represents an item category (joined data).
 type ItemCategory struct {
 	ID                   string

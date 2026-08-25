@@ -71,6 +71,9 @@ const (
 	// CoreCmdRecalcItemBurnRate is a command to recompute an item's burn rate from its recent consumption history, off the transaction that recorded the consumption so the shared rate row is not X-locked for the length of that long transaction.
 	CoreCmdRecalcItemBurnRate AmqpRoutingKey = "core.cmd.recalc_item_burn_rate"
 
+	// CoreCmdAllocateOpenIssues is a command to allocate one bounded page of an item's open inventory issues against available receipts, resuming after a cursor the command carries and re-enqueuing a continuation while more remain, so the walk does not run inline in the scan transaction that enqueued it.
+	CoreCmdAllocateOpenIssues AmqpRoutingKey = "core.cmd.allocate_open_issues"
+
 	// CoreCmdUndoBatchScan is a command to reverse the inventory a scan recorded against a batch that has just been deleted: the receipts it produced, the issues it consumed, and the reservations it drew down. The delete itself is synchronous; this unwinds the ledger behind it.
 	CoreCmdUndoBatchScan AmqpRoutingKey = "core.cmd.undo_batch_scan"
 

@@ -321,7 +321,7 @@ INSERT INTO production_schedule_item_policy (
     safety_stock_primary, safety_stock_downstream,
     reorder_point, order_up_to, on_hand_echelon,
     on_hand_greige, average_greige_inventory, max_greige_inventory,
-    weeks_of_cover, projected_on_hand, annual_run_hours,
+    weeks_of_cover, projected_on_hand, projected_greige_on_hand, annual_run_hours,
     abc_class, was_eoq_capped, was_capacity_starved,
     fulfillment_policy_code, policy_source_code, firm_demand_units, forecast_demand_units,
     created_at, updated_at
@@ -335,7 +335,7 @@ INSERT INTO production_schedule_item_policy (
     sqlc.arg('safety_stock_primary'), sqlc.arg('safety_stock_downstream'),
     sqlc.arg('reorder_point'), sqlc.arg('order_up_to'), sqlc.arg('on_hand_echelon'),
     sqlc.arg('on_hand_greige'), sqlc.arg('average_greige_inventory'), sqlc.arg('max_greige_inventory'),
-    sqlc.arg('weeks_of_cover'), sqlc.narg('projected_on_hand'), sqlc.arg('annual_run_hours'),
+    sqlc.arg('weeks_of_cover'), sqlc.narg('projected_on_hand'), sqlc.narg('projected_greige_on_hand'), sqlc.arg('annual_run_hours'),
     sqlc.narg('abc_class'), sqlc.arg('was_eoq_capped'), sqlc.arg('was_capacity_starved'),
     sqlc.arg('fulfillment_policy_code'), sqlc.arg('policy_source_code'), sqlc.arg('firm_demand_units'), sqlc.arg('forecast_demand_units'),
     NOW(3), NOW(3)
@@ -376,6 +376,7 @@ SELECT
     p.max_greige_inventory,
     p.weeks_of_cover,
     CAST(p.projected_on_hand AS CHAR) AS projected_on_hand,
+    CAST(p.projected_greige_on_hand AS CHAR) AS projected_greige_on_hand,
     p.annual_run_hours,
     p.abc_class,
     p.was_eoq_capped,

@@ -483,8 +483,10 @@ type ProductionScheduleItemPolicy struct {
 	MaxGreigeInventory     float64
 	// ProjectedOnHand is the echelon position at the end of each horizon week. Weeks with no campaign are the ones this explains: stock draining toward the trigger.
 	ProjectedOnHand []float64
-	WeeksOfCover    float64
-	AnnualRunHours  float64
+	// ProjectedGreigeOnHand is the physical greige store at the end of each horizon week — the constraint stage on its own, which the echelon curve cannot be decomposed back into. It is what the greige buffer is measured against, so a week where it dips to the floor is the week knitting is meant to replenish. Nil for a schedule generated before the buffer existed.
+	ProjectedGreigeOnHand []float64
+	WeeksOfCover          float64
+	AnnualRunHours        float64
 
 	ABCClass           *string
 	WasEOQCapped       bool

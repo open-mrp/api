@@ -40,8 +40,10 @@ type LevellingDiagnostics struct {
 type LevellingResult struct {
 	Campaigns   []Campaign
 	Diagnostics LevellingDiagnostics
-	// ProjectedOnHand[itemID][weekIndex] is the position at the END of that week, after that week's campaigns land and that week's demand is drawn down.
+	// ProjectedOnHand[itemID][weekIndex] is the echelon position at the END of that week, after that week's campaigns land and that week's demand is drawn down.
 	ProjectedOnHand map[string][]float64
+	// ProjectedGreigeOnHand[itemID][weekIndex] is the physical greige store — the constraint stage on its own, not the echelon — at the end of that week. It starts from what is knitted and waiting, rises with each campaign, and is drawn down by demand as a proxy for finishing pull. It is what the greige-buffer trigger watches, and it is always populated so the store can be shown even where the trigger is off.
+	ProjectedGreigeOnHand map[string][]float64
 }
 
 // PinnedCampaign is a hand-edited campaign the sweep must plan around rather than re-derive. Its units raise the item's projected position in its week and its run time consumes that machine's capacity, so the rest of the plan responds to the hand edit: build something sooner and the solver builds less of it later; trim a campaign and the solver replenishes earlier.
@@ -155,7 +157,10 @@ func maxLotsInCapacity(capacityHours, secondsPerUnit, lotUnits float64) float64 
 //
 // Determinism: items are sorted by SKU and machines by name before any iteration, and the due-set sort breaks ties by SKU. Iterating the maps directly would produce a different plan on every run.
 func Level(items []LevellingItem, machines []Machine, s Settings, pinned []PinnedCampaign) LevellingResult {
-	result := LevellingResult{ProjectedOnHand: make(map[string][]float64, len(items))}
+	result := LevellingResult{
+		ProjectedOnHand:       make(map[string][]float64, len(items)),
+		ProjectedGreigeOnHand: make(map[string][]float64, len(items)),
+	}
 
 	// Stable ordering up front. Machine names sort numerically so "9" precedes "10" and "51" precedes "52" — plain lexical order would interleave them wrongly.
 	sortedItems := make([]LevellingItem, len(items))
@@ -176,18 +181,24 @@ func Level(items []LevellingItem, machines []Machine, s Settings, pinned []Pinne
 	active := make([]LevellingItem, 0, len(sortedItems))
 	for _, item := range sortedItems {
 		result.ProjectedOnHand[item.Policy.ItemID] = make([]float64, s.HorizonWeeks)
+		result.ProjectedGreigeOnHand[item.Policy.ItemID] = make([]float64, s.HorizonWeeks)
 		if item.Policy.WeeklyDemand > 0 || item.hasFirmDemand() {
 			active = append(active, item)
 		}
 	}
 
 	position := make(map[string]float64, len(sortedItems))
+	// greigePosition is the physical greige store, tracked in parallel to the echelon position. The echelon draws down on sale and the greige store on finishing conversion; the sweep models no lead delay, so both are drawn down by the same weekly demand, which conserves units over the horizon. The greige-buffer trigger watches this rather than the echelon so a family whose stock is locked up as finished goods still knits when its raw buffer runs dry.
+	greigePosition := make(map[string]float64, len(sortedItems))
+	// greigeFloor is the reorder point for that store: the pooled greige safety stock, which a campaign of one EOQ then lands on top of, so the store oscillates between the floor and floor+EOQ exactly as AverageGreigeInventory / MaxGreigeInventory describe. Make-to-order items hold no buffer, so their floor is zero and the trigger never fires for them.
+	greigeFloor := make(map[string]float64, len(active))
 	trigger := make(map[string]float64, len(active))
 	campaignUnits := make(map[string]float64, len(active))
 	campaignHours := make(map[string]float64, len(active))
 
 	for _, item := range sortedItems {
 		position[item.Policy.ItemID] = item.Policy.OnHandEchelon
+		greigePosition[item.Policy.ItemID] = item.Policy.OnHandGreige
 	}
 
 	for _, item := range active {
@@ -196,6 +207,11 @@ func Level(items []LevellingItem, machines []Machine, s Settings, pinned []Pinne
 		// Trigger at the lower of the reorder point and the order-up-to ceiling, so a slow mover with a huge statistical ROP is not built past its cap. A make-to-order item recomputes this per week instead; the value cached here is only its week-zero position.
 		trig := item.triggerForWeek(0)
 		trigger[id] = trig
+
+		// A make-to-order item is not buffered, so its greige floor stays zero and only the echelon trigger governs it.
+		if s.GreigeBufferEnabled && !item.Policy.IsMakeToOrder() {
+			greigeFloor[id] = item.Policy.SafetyStockPrimary
+		}
 
 		economic := roundUpToLot(item.Policy.EOQUnits, item.LotUnits)
 		fits := maxLotsInCapacity(capacityPerMachine, item.Policy.SecondsPerUnit, item.LotUnits)
@@ -214,7 +230,10 @@ func Level(items []LevellingItem, machines []Machine, s Settings, pinned []Pinne
 	// Track which already-short items never get served, so capacity starvation is reported rather than silently absorbed.
 	starved := make(map[string]bool)
 	for _, item := range active {
-		if item.Policy.OnHandEchelon < trigger[item.Policy.ItemID] {
+		id := item.Policy.ItemID
+		// Short on either count is a candidate for starvation: an item whose greige buffer is dry needs building even where its echelon reads full, and if it never wins a slot the plant could not afford that buffer — which is the same capacity signal.
+		greigeDry := s.GreigeBufferEnabled && item.Policy.OnHandGreige < greigeFloor[id]
+		if item.Policy.OnHandEchelon < trigger[id] || greigeDry {
 			starved[item.Policy.SKU] = true
 		}
 	}
@@ -249,6 +268,7 @@ func Level(items []LevellingItem, machines []Machine, s Settings, pinned []Pinne
 		// Hand-pinned campaigns land first: their stock arrives and their machine time is spent before the sweep decides what else the week can hold.
 		for _, pin := range pinsByWeek[week] {
 			position[pin.ItemID] += pin.Units
+			greigePosition[pin.ItemID] += pin.Units
 			machineHours[pin.MachineID] += pin.Units * secondsPerUnit[pin.ItemID] / 3600
 			delete(starved, skuByItem[pin.ItemID])
 		}
@@ -266,7 +286,10 @@ func Level(items []LevellingItem, machines []Machine, s Settings, pinned []Pinne
 
 		due := make([]LevellingItem, 0, len(active))
 		for _, item := range active {
-			if position[item.Policy.ItemID] < weekTrigger[item.Policy.ItemID] {
+			id := item.Policy.ItemID
+			// Due on either count: the echelon has fallen below its reorder point, or the physical greige store has fallen below its own floor even though the family reads covered. The second is what keeps a buffer of undifferentiated greige in front of finishing so it can build the colourways that are actually short. The greige store is tracked even when the buffer is off (so it can be shown), and it drifts negative as demand is drawn down, so the floor check is guarded by the flag rather than by the floor being zero.
+			greigeDry := s.GreigeBufferEnabled && greigePosition[id] < greigeFloor[id]
+			if position[id] < weekTrigger[id] || greigeDry {
 				due = append(due, item)
 			}
 		}
@@ -342,6 +365,7 @@ func Level(items []LevellingItem, machines []Machine, s Settings, pinned []Pinne
 			})
 
 			position[id] += units
+			greigePosition[id] += units
 			machineHours[best.ID] += hours
 			delete(starved, item.Policy.SKU)
 		}
@@ -349,8 +373,11 @@ func Level(items []LevellingItem, machines []Machine, s Settings, pinned []Pinne
 		// Demand is drawn down AFTER the week's campaigns land. Doing it before would let an item dip below its trigger and be rebuilt in the same week, which double-counts a week of consumption across the horizon.
 		for _, item := range sortedItems {
 			id := item.Policy.ItemID
-			position[id] -= item.demandForWeek(week)
+			demand := item.demandForWeek(week)
+			position[id] -= demand
+			greigePosition[id] -= demand
 			result.ProjectedOnHand[id][week] = position[id]
+			result.ProjectedGreigeOnHand[id][week] = greigePosition[id]
 		}
 	}
 

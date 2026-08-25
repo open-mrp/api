@@ -227,6 +227,9 @@ func (s *productionScheduleSvcImpl) loadEffectiveSettings(
 		DefaultCustomerLeadTimeDays: scheduling.DefaultSettings().DefaultCustomerLeadTimeDays,
 	}
 
+	// Hold a physical greige buffer at the constraint. Off in DefaultSettings so the parity gate reproduces the script, which pools the buffer into finished goods; on for every real solve, because a plant that keeps no undifferentiated greige cannot rebalance its finished mix when demand shifts to a colourway it is not already sitting on.
+	effective.Settings.GreigeBufferEnabled = true
+
 	repo := s.repos.NewProductionScheduleInputRepo()
 
 	row, apiErr := repo.GetAccountScheduleSettings(ctx, accountID)
@@ -1405,6 +1408,7 @@ func (s *productionScheduleSvcImpl) writeSolvedPlan(ctx context.Context, params 
 			AverageGreigeInventory:  p.AverageGreigeInventory,
 			MaxGreigeInventory:      p.MaxGreigeInventory,
 			ProjectedOnHand:         output.ProjectedOnHand[p.ItemID],
+			ProjectedGreigeOnHand:   output.ProjectedGreigeOnHand[p.ItemID],
 			WeeksOfCover:            p.WeeksOfCover,
 			AnnualRunHours:          p.AnnualRunHours(),
 			WasEOQCapped:            capped[p.SKU],

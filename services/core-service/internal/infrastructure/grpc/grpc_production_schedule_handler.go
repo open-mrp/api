@@ -289,6 +289,7 @@ func scheduleItemPolicyToProto(p *domain.ProductionScheduleItemPolicy) *pb.Produ
 		AverageGreigeInventory:  p.AverageGreigeInventory,
 		MaxGreigeInventory:      p.MaxGreigeInventory,
 		ProjectedOnHand:         p.ProjectedOnHand,
+		ProjectedGreigeOnHand:   p.ProjectedGreigeOnHand,
 		WeeksOfCover:            p.WeeksOfCover,
 		AnnualRunHours:          p.AnnualRunHours,
 		AbcClass:                p.ABCClass,

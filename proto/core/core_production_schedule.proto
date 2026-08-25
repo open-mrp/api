@@ -311,6 +311,11 @@ message ProductionScheduleItemPolicyInfo {
   // The echelon position at the end of each horizon week. Weeks with no campaign are
   // what this explains: stock draining toward the reorder point.
   repeated double projected_on_hand = 33;
+  // The physical greige store at the end of each horizon week — the constraint stage on
+  // its own, which the echelon curve cannot be decomposed back into. A week where it dips
+  // to the safety stock is the week knitting is meant to replenish. Empty for a schedule
+  // generated before the greige buffer existed.
+  repeated double projected_greige_on_hand = 40;
   // How this item was planned, the rule that decided, and the split between what the
   // order book owed and what the forecast projected.
   string fulfillment_policy_code = 36;

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
@@ -21,11 +22,10 @@ import (
 // InventoryReceivedConsumer offers newly available stock to the demand that went short waiting for
 // it.
 //
-// An issue goes open when it was asked for more than the shelf could cover. It stays short until
-// stock arrives, and this is what notices that it has. That used to be a nightly sweep over every
-// open issue in the account, which meant an order could sit unfilled for most of a day with the
-// stock to fill it already on the floor — and made a scan that failed to allocate indistinguishable
-// from one that had nothing to allocate, because the sweep quietly fixed both.
+// An issue goes open when it was asked for more than the shelf could cover; it stays short until
+// stock arrives, and this is what notices that it has. The walk itself is unbounded — an item can
+// carry any number of open issues — so it is handed to the paged allocate-open-issues consumer
+// rather than run here, keeping this handler's transaction to a few outbox rows.
 type InventoryReceivedConsumer struct {
 	rabbitmq      messaging.MessageBroker
 	inboxConsumer *messaging.InboxConsumer
@@ -82,11 +82,8 @@ func (c *InventoryReceivedConsumer) handleMessage(ctx context.Context, msg amqp.
 		attribute.String("event.reason", evt.Reason),
 	)
 
-	// One transaction for the whole set. Allocation reads each receipt's drawn-down total and then
-	// writes against it, so doing it under the same lock the reads take is what stops two arrivals of
-	// the same item handing the same receipt to two different shortages.
 	apiErr := c.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
-		return allocateForItems(txCtx, f, accountID, evt.ItemIDs)
+		return enqueueAllocationForItems(txCtx, f, accountID, evt.ItemIDs)
 	})
 	if apiErr != nil {
 		span.RecordError(apiErr)
@@ -95,13 +92,14 @@ func (c *InventoryReceivedConsumer) handleMessage(ctx context.Context, msg amqp.
 	return nil
 }
 
-// allocateForItems offers each item's newly available stock to the demand waiting on it.
+// enqueueAllocationForItems asks for each item's newly available stock to be offered to the demand
+// waiting on it.
 //
 // Items are deduplicated because one cause routinely names the same item twice — a step consuming a
 // material in two places, a batch whose output is also one of its inputs — and allocating twice for
 // one arrival would walk the same open issues again for nothing.
-func allocateForItems(ctx context.Context, repos domain.RepoFactory, accountID string, itemIDs []string) *apierror.APIError {
-	reservationRepo := repos.NewInventoryReservationRepo()
+func enqueueAllocationForItems(ctx context.Context, repos domain.RepoFactory, accountID string, itemIDs []string) *apierror.APIError {
+	outboxRepo := repos.NewOutboxRepo()
 
 	seen := make(map[string]bool, len(itemIDs))
 	for _, itemID := range itemIDs {
@@ -109,7 +107,7 @@ func allocateForItems(ctx context.Context, repos domain.RepoFactory, accountID s
 			continue
 		}
 		seen[itemID] = true
-		if apiErr := reservationRepo.AllocateOpenIssuesForItem(ctx, accountID, itemID); apiErr != nil {
+		if apiErr := enqueueAllocateOpenIssues(ctx, outboxRepo, accountID, itemID, time.Time{}, ""); apiErr != nil {
 			return apiErr
 		}
 	}

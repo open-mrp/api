@@ -147,6 +147,7 @@ Data backfills are not schema: they go in `shared/db/data-migrations` (`make mig
 - Do not create README files or examples unless explicitly requested
 - **Comments: never hard-wrap a prose paragraph across multiple `//` lines** — one paragraph is one physical line (let the editor soft-wrap). Distinct paragraphs get a blank `//` separator; numbered/TODO lists may use one line per item. Internal doc comments explain business intent, side effects, ordering/transactionality, idempotency, and failure modes — not the mechanics. See `docs/patterns/comment-conventions.md`.
 - **Commits must follow the Conventional Commits conventions in `README.md` (the "Committing" section).** release-please parses these prefixes (feat:, fix:, feat!:, etc.) to calculate the next version — a non-conforming prefix is ignored, so the change won't make it into a Release PR and no release gets cut.
+- **Keep PR descriptions concise and follow the PR template.** Fill out the repo's PR template; say what changed and why in as few words as it takes. Don't restate the diff, pad with redundant headers, or write an exhaustive narrative — a reviewer should grasp the change quickly.
 - Review `docs/patterns/` for the conventions governing whatever you are touching — see the routing table at the top of this file. These are requirements, not suggestions.
 
 ## End-to-end (e2e) tests

@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.10](https://github.com/open-mrp/api/compare/v1.1.9...v1.1.10) (2026-08-25)
+
+
+### Bug Fixes
+
+* **db:** make goose_db_version_data creation idempotent ([#43](https://github.com/open-mrp/api/issues/43)) ([7fa4b25](https://github.com/open-mrp/api/commit/7fa4b251ed4958e0a9c321d872a44c550457e702))
+
 ## [1.1.9](https://github.com/open-mrp/api/compare/v1.1.8...v1.1.9) (2026-08-25)
 
 

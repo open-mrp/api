@@ -70,9 +70,40 @@ pscale_cmd() {
     pscale "$@" --org "$PG_ORG"
 }
 
+# --- What will we apply? ---
+
+# Decide before touching PlanetScale. A run with nothing to apply — the agent-service usually has no
+# pending backfills — must not create a role: role creation is the step most likely to fail, and role
+# deletion afterwards is best-effort, so a needless role would either break the run or linger to TTL.
+
+dir_has_sql() {
+    local dir="$1"
+    [ -d "$dir" ] && [ -n "$(ls -A "$dir"/*.sql 2>/dev/null)" ]
+}
+
+TARGET_DIRS=()
+if [ "$MIGRATIONS" = "schema" ] || [ "$MIGRATIONS" = "both" ]; then
+    TARGET_DIRS+=("$SCHEMA_DIR")
+fi
+if [ "$MIGRATIONS" = "data" ] || [ "$MIGRATIONS" = "both" ]; then
+    TARGET_DIRS+=("$DATA_DIR")
+fi
+
+HAVE_WORK=false
+for dir in "${TARGET_DIRS[@]}"; do
+    if dir_has_sql "$dir"; then HAVE_WORK=true; fi
+done
+
+if [ "$HAVE_WORK" != "true" ]; then
+    info "No $MIGRATIONS migrations to apply."
+    exit 0
+fi
+
 # --- Short-lived role ---
 
-ROLE_NAME="ci-migrate-${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-1}"
+# The name carries $MIGRATIONS and the PID: the schema and data steps run this script twice in the
+# same job, so a shared name would collide the moment the first role outlives its best-effort deletion.
+ROLE_NAME="ci-migrate-${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-1}-${MIGRATIONS}-$$"
 ROLE_ID=""
 
 cleanup() {

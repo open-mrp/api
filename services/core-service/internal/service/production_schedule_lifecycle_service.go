@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"math"
+	"strconv"
 	"time"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/services/core-service/internal/scheduling"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
@@ -220,11 +222,16 @@ func (s *productionScheduleSvcImpl) ListProductionScheduleDeviations(ctx context
 	return s.repos.NewProductionScheduleRepo().ListDeviations(ctx, params)
 }
 
-// estimatedRunHours prices a hand-added campaign in constraint time using the seconds per unit the version was solved with. Returns 0 when the SKU has no policy on this version — an unmeasured item, which the solver would not have scheduled either.
+// estimatedRunHours prices a hand-added campaign in constraint time.
+//
+// The version's own solved rate first, so a campaign added next to a solved one is priced the same way. A SKU the version holds no policy for is the whole reason the planner is adding it by hand — it had no scan in the measurement window, so the solver never saw it — and falling to zero there would book a campaign that claims no machine time at all, leaving the week reading idle for work somebody has to do. The machine's production step carries the same labor time the solver would have measured off a batch, so use it.
+//
+// Zero only when neither is known, which is a step with no labor time configured.
 func (s *productionScheduleSvcImpl) estimatedRunHours(
 	ctx context.Context,
 	accountID, scheduleID, itemID string,
 	quantity float64,
+	productionStepID *string,
 ) (float64, *apierror.APIError) {
 	policies, apiErr := s.repos.NewProductionScheduleRepo().ListItemPolicies(ctx, accountID, scheduleID)
 	if apiErr != nil {
@@ -235,7 +242,22 @@ func (s *productionScheduleSvcImpl) estimatedRunHours(
 			return quantity * policy.SecondsPerUnit / 3600, nil
 		}
 	}
-	return 0, nil
+
+	if productionStepID == nil {
+		return 0, nil
+	}
+	step, apiErr := s.repos.NewProductionStepRepo().Get(ctx, accountID, *productionStepID)
+	if apiErr != nil {
+		return 0, apiErr
+	}
+	if step == nil || step.LaborTime == nil {
+		return 0, nil
+	}
+	value, err := strconv.ParseFloat(step.LaborTime.Value, 64)
+	if err != nil || value <= 0 {
+		return 0, nil
+	}
+	return quantity * scheduling.SecondsPerUnitFromLaborTime(value, step.LaborTime.NumeratorUnit.Abbreviation) / 3600, nil
 }
 
 // CreateProductionScheduleLine adds a campaign by hand and logs a deviation.
@@ -371,7 +393,7 @@ func (s *productionScheduleSvcImpl) createProductionScheduleLineTx(
 			line.PlannedRunHours = *params.RunHours
 		} else {
 			// Derived from the version's own measured rate for this SKU rather than left at zero. A campaign that claims no constraint time makes the week's utilisation read low, which is exactly the number a planner adds a campaign against.
-			runHours, apiErr := txSvc.estimatedRunHours(txCtx, accountID, params.ScheduleID, params.ItemID, params.Quantity)
+			runHours, apiErr := txSvc.estimatedRunHours(txCtx, accountID, params.ScheduleID, params.ItemID, params.Quantity, machine.ProductionStepID)
 			if apiErr != nil {
 				return apiErr
 			}
@@ -534,7 +556,7 @@ func (s *productionScheduleSvcImpl) updateProductionScheduleLineTx(
 		// Machine time and lot count follow the quantity unless the caller prices the campaign itself. Left alone, a resized campaign keeps the hours it was originally sized at, and the week's utilisation — the number a planner resizes a campaign against — goes on reporting work that is no longer planned.
 		if params.Quantity != nil {
 			if params.RunHours == nil {
-				runHours, apiErr := txSvc.estimatedRunHours(txCtx, accountID, params.ScheduleID, existing.ItemID, *params.Quantity)
+				runHours, apiErr := txSvc.estimatedRunHours(txCtx, accountID, params.ScheduleID, existing.ItemID, *params.Quantity, existing.ProductionStepID)
 				if apiErr != nil {
 					return apiErr
 				}

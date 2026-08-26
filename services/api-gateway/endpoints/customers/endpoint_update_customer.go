@@ -59,6 +59,13 @@ type UpdateCustomerRequest struct {
 	LeadTimeDays field.Clearable[int32] `json:"lead_time_days,omitzero" validate:"omitempty,gte=0,lte=3650"`
 	// The operating calendar naming the days this customer's dock accepts freight. Clearing it returns the customer to their group's calendar, then the account default.
 	ReceiveCalendarID field.Clearable[string] `json:"receive_calendar_id,omitzero" validate:"omitempty"`
+	// How this customer's orders are produced.
+	//
+	// - `make_to_stock`: their order history feeds the production-schedule forecast, so stock is built ahead of their demand.
+	// - `make_to_order`: their history is left out of the forecast; their orders are produced only once placed, and fit into the schedule on their own ship-by dates.
+	//
+	// Clearing it returns the customer to their account group policy, then the make-to-stock default.
+	FulfillmentPolicy field.Clearable[constants.FulfillmentPolicy] `json:"fulfillment_policy,omitzero"`
 	// ID of the carrier used on this customer's orders when the order does not specify one.
 	DefaultCarrierID field.Optional[string] `json:"default_carrier_id,omitzero" validate:"omitempty"`
 	// ID of the carrier service level used when an order takes its carrier from this customer's default.
@@ -117,6 +124,7 @@ var sampleUpdateCustomerRequest = &UpdateCustomerRequest{
 	EDIStatus:             field.Some(constants.EDIStatusDisabled),
 	CommissionPolicy:      field.Some(constants.CommissionPolicyApplied),
 	FreightPolicy:         field.Some(sampleUpdateCustomerFreightPolicy),
+	FulfillmentPolicy:     field.Set(constants.FulfillmentPolicyMakeToOrder),
 	DefaultCarrierID:      field.Some(sampleUpdateCustomerDefaultCarrierID),
 	DefaultServiceLevelID: field.Set(apiresource.SampleServiceLevelID),
 	DefaultPaymentTermID:  field.Some(apiresource.SamplePaymentTermID),

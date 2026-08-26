@@ -76,6 +76,32 @@ func nullInt32Ptr(ni gosql.NullInt32) *int32 {
 	return nil
 }
 
+func nullFulfillmentPolicy(ns gosql.NullString) *constants.FulfillmentPolicy {
+	if !ns.Valid || ns.String == "" {
+		return nil
+	}
+	p := constants.FulfillmentPolicy(ns.String)
+	return &p
+}
+
+func fulfillmentPolicyToNullString(p *constants.FulfillmentPolicy) gosql.NullString {
+	if p == nil || *p == "" {
+		return gosql.NullString{}
+	}
+	return gosql.NullString{String: string(*p), Valid: true}
+}
+
+// fulfillmentPolicyClearableToNullString mirrors field.StringToNullString for the typed enum: an unset field maps to NULL like a cleared one, so the update service backfills it from the existing row first.
+func fulfillmentPolicyClearableToNullString(f field.Clearable[constants.FulfillmentPolicy]) gosql.NullString {
+	if f.IsSet() {
+		v, _ := f.Value()
+		if v != "" {
+			return gosql.NullString{String: string(v), Valid: true}
+		}
+	}
+	return gosql.NullString{}
+}
+
 func nullShippingTermType(isFreightExempt, isCarrierRate gosql.NullBool) *constants.ShippingTermType {
 	if !isFreightExempt.Valid && !isCarrierRate.Valid {
 		return nil
@@ -166,6 +192,7 @@ func mapListCustomerForwardRow(row sqlc.ListCustomersForwardRow) *domain.Custome
 		FreightPolicy:                      constants.FreightPolicy(row.FreightStatusCode.String),
 		DefaultLeadTimeDays:                nullInt32Ptr(row.DefaultLeadTimeDays),
 		ReceiveCalendarID:                  nullStringToPtr(row.ReceiveCalendarID),
+		FulfillmentPolicy:                  nullFulfillmentPolicy(row.FulfillmentPolicyCode),
 		Note:                               nullStringPtr(row.Notes),
 		Email:                              nullStringPtr(row.Email),
 		Phone:                              nullStringPtr(row.PhoneNumber),
@@ -278,6 +305,7 @@ func mapListCustomerBackwardRow(row sqlc.ListCustomersBackwardRow) *domain.Custo
 		FreightPolicy:                      constants.FreightPolicy(row.FreightStatusCode.String),
 		DefaultLeadTimeDays:                nullInt32Ptr(row.DefaultLeadTimeDays),
 		ReceiveCalendarID:                  nullStringToPtr(row.ReceiveCalendarID),
+		FulfillmentPolicy:                  nullFulfillmentPolicy(row.FulfillmentPolicyCode),
 		Note:                               nullStringPtr(row.Notes),
 		Email:                              nullStringPtr(row.Email),
 		Phone:                              nullStringPtr(row.PhoneNumber),
@@ -730,6 +758,7 @@ func (r *customerRepoImpl) Get(ctx context.Context, ownerAccountID, customerAcco
 		FreightPolicy:                      constants.FreightPolicy(row.FreightStatusCode.String),
 		DefaultLeadTimeDays:                nullInt32Ptr(row.DefaultLeadTimeDays),
 		ReceiveCalendarID:                  nullStringToPtr(row.ReceiveCalendarID),
+		FulfillmentPolicy:                  nullFulfillmentPolicy(row.FulfillmentPolicyCode),
 		Note:                               nullStringPtr(row.Notes),
 		Email:                              nullStringPtr(row.Email),
 		Phone:                              nullStringPtr(row.PhoneNumber),
@@ -962,6 +991,7 @@ func (r *customerRepoImpl) Create(ctx context.Context, accountID, relationID, br
 		CreditLimitID:            toNullString(params.CreditLimitID),
 		DefaultLeadTimeDays:      toNullInt32(params.DefaultLeadTimeDays),
 		ReceiveCalendarID:        toNullString(params.ReceiveCalendarID),
+		FulfillmentPolicyCode:    fulfillmentPolicyToNullString(params.FulfillmentPolicy),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -1011,6 +1041,7 @@ func (r *customerRepoImpl) Update(ctx context.Context, relationID string, params
 		CarrierBillingAccount:    field.StringToNullString(params.CarrierBillingAccount),
 		DefaultLeadTimeDays:      field.Int32ToNullInt32(params.DefaultLeadTimeDays),
 		ReceiveCalendarID:        field.StringToNullString(params.ReceiveCalendarID),
+		FulfillmentPolicyCode:    fulfillmentPolicyClearableToNullString(params.FulfillmentPolicy),
 		DefaultBillingAddressID:  field.StringToNullString(params.BillToAddressID),
 		DefaultShippingAddressID: field.StringToNullString(params.ShipToAddressID),
 		CreditLimitID:            stringToNullString(params.CreditLimitID),

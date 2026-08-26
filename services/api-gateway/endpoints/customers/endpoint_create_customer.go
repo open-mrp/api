@@ -59,6 +59,13 @@ type CreateCustomerRequest struct {
 	//
 	// Sits in the same chain as lead_time_days: leaving it unset falls through to the customer's group, then the account default, then Monday to Friday. A promised delivery date is never worked back from a day nobody is there to receive on.
 	ReceiveCalendarID field.Optional[string] `json:"receive_calendar_id,omitzero" validate:"omitempty"`
+	// How this customer's orders are produced.
+	//
+	// - `make_to_stock`: their order history feeds the production-schedule forecast, so stock is built ahead of their demand.
+	// - `make_to_order`: their history is left out of the forecast; their orders are produced only once placed, and fit into the schedule on their own ship-by dates.
+	//
+	// Leave unset to inherit the customer's account group policy, then the make-to-stock default.
+	FulfillmentPolicy field.Optional[constants.FulfillmentPolicy] `json:"fulfillment_policy,omitzero"`
 	// ID of the carrier used on this customer's orders when the order does not specify one.
 	DefaultCarrierID string `json:"default_carrier_id" validate:"required"`
 	// ID of the carrier service level used when an order takes its carrier from this customer's default.
@@ -114,6 +121,7 @@ var sampleCreateCustomerRequest = &CreateCustomerRequest{
 	EDIStatus:             field.Some(constants.EDIStatusDisabled),
 	CommissionPolicy:      field.Some(constants.CommissionPolicyApplied),
 	FreightPolicy:         field.Some(constants.FreightPolicyBilled),
+	FulfillmentPolicy:     field.Some(constants.FulfillmentPolicyMakeToOrder),
 	DefaultCarrierID:      apiresource.SampleCarrierID,
 	DefaultServiceLevelID: field.Some(apiresource.SampleServiceLevelID),
 	DefaultPaymentTermID:  apiresource.SamplePaymentTermID,

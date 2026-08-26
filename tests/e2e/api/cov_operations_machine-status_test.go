@@ -114,15 +114,8 @@ func TestMachineStatus_ShowsProgressOnReleasedWork(t *testing.T) {
 func TestMachineStatus_DownOutranksRunning(t *testing.T) {
 	t.Parallel()
 
-	// A machine that is already down cannot be taken down again, so pick one that is not.
-	machineID := ""
-	for _, machine := range machineStatus(t, nil) {
-		if jsonField(machine, "status") != "down" {
-			machineID = jsonField(jsonObject(machine, "machine"), "id")
-			break
-		}
-	}
-	require.NotEmpty(t, machineID, "every machine on this seed is already down")
+	// Its own machine: a machine picked out of the account-wide list may belong to a parallel test that deletes it before this one posts.
+	machineID := newTestMachine(t)
 
 	resp, err := apiClient.PostFull(machineDowntimeEventsPath, map[string]any{
 		"machine_id": machineID,

@@ -1,5 +1,28 @@
 # Changelog
 
+## [1.4.0](https://github.com/open-mrp/api/compare/v1.3.1...v1.4.0) (2026-08-26)
+
+
+### Features
+
+* **registration:** include registering user name and email in new-registration alert ([#57](https://github.com/open-mrp/api/issues/57)) ([fb495e0](https://github.com/open-mrp/api/commit/fb495e0858a23ff39b54cfd4d9604e55ae0579d6))
+* **scheduling:** make customers make-to-order ([#62](https://github.com/open-mrp/api/issues/62)) ([1755bdb](https://github.com/open-mrp/api/commit/1755bdbf6a9b1a435f9b05779f0b0092ade7635f))
+
+
+### Bug Fixes
+
+* **scheduling:** price a hand-added campaign off the machine's production step ([#60](https://github.com/open-mrp/api/issues/60)) ([8f9c8dd](https://github.com/open-mrp/api/commit/8f9c8ddead86a51933e3ee6f50cd528efd890a90))
+
+
+### Performance Improvements
+
+* **db:** drop 10 redundant left-prefix indexes ([#58](https://github.com/open-mrp/api/issues/58)) ([c0ad980](https://github.com/open-mrp/api/commit/c0ad980bdcd677e278351d0536074d7f118d6138))
+
+
+### Code Refactoring
+
+* **tests:** improve machine status and burn rate tests for reliability ([#61](https://github.com/open-mrp/api/issues/61)) ([c91b36f](https://github.com/open-mrp/api/commit/c91b36f933be4b2a3a5edfa4bd2e3cf4a439059b))
+
 ## [1.3.1](https://github.com/open-mrp/api/compare/v1.3.0...v1.3.1) (2026-08-26)
 
 

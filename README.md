@@ -203,7 +203,7 @@ Sandboxes, idempotency keys, pagination, `?include=` expansion, request IDs, and
 - Docker
 - [minikube](https://minikube.sigs.k8s.io/)
 - [Tilt](https://tilt.dev/)
-- [protoc](https://protobuf.dev/installation/) — only needed for `make proto`
+- [protoc](https://protobuf.dev/installation/) — only needed for `make proto`; pin to the version in `tools/tool-versions` (`protoc --version` must match, else `make proto` refuses to run to avoid version-stamp drift)
 
 `make install-tools` installs everything else (buf, sqlc, goose, mockgen, gotestsum, vacuum, the protoc plugins, gosec, staticcheck, goimports) at the versions pinned in `tools/tool-versions`.
 

@@ -25,6 +25,11 @@ ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
 # Reads a pinned tool version from tools/tool-versions
 tool-version = $(shell grep '$(1) ' tools/tool-versions | awk '{print $$2}')
 
+# protoc is a C++ binary (not `go install`-able), so it is pinned here and the
+# `proto` target checks the local binary matches before regenerating. A drifting
+# protoc rewrites the version stamp in every generated file.
+PROTOC_VERSION := $(shell grep '^protoc ' tools/tool-versions | awk '{print $$2}')
+
 # Default target
 help: ## Show this help message
 	@echo "Available targets:"
@@ -128,6 +133,12 @@ sqlc: ## Generate code from SQL queries using sqlc. Usage: make sqlc [services]
 	@$(MAKE) fmt
 
 proto: ## Generate Go protobuf bindings
+	@have=$$(protoc --version | awk '{print $$2}'); \
+		if [ "$$have" != "$(PROTOC_VERSION)" ]; then \
+			echo "protoc $$have found, but $(PROTOC_VERSION) is pinned (tools/tool-versions)."; \
+			echo "Install protoc $(PROTOC_VERSION) — see README — to avoid version-stamp drift."; \
+			exit 1; \
+		fi
 	find $(PROTO_GEN_DIR) -name '*.pb.go' -delete
 	protoc \
 		--proto_path=$(PROTO_DIR) \

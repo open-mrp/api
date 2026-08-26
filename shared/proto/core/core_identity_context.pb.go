@@ -5080,8 +5080,10 @@ type CustomerProto struct {
 	DefaultLeadTimeDays *int32 `protobuf:"varint,31,opt,name=default_lead_time_days,json=defaultLeadTimeDays,proto3,oneof" json:"default_lead_time_days,omitempty"`
 	// The days this customer's dock accepts freight. Sits in the same chain as the lead time above.
 	ReceiveCalendarId *string `protobuf:"bytes,32,opt,name=receive_calendar_id,json=receiveCalendarId,proto3,oneof" json:"receive_calendar_id,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// make_to_order marks the customer make-to-order: their history is kept out of the production-schedule forecast. Empty inherits the account group's policy, then make-to-stock.
+	FulfillmentPolicyCode *string `protobuf:"bytes,33,opt,name=fulfillment_policy_code,json=fulfillmentPolicyCode,proto3,oneof" json:"fulfillment_policy_code,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *CustomerProto) Reset() {
@@ -5334,6 +5336,13 @@ func (x *CustomerProto) GetDefaultLeadTimeDays() int32 {
 func (x *CustomerProto) GetReceiveCalendarId() string {
 	if x != nil && x.ReceiveCalendarId != nil {
 		return *x.ReceiveCalendarId
+	}
+	return ""
+}
+
+func (x *CustomerProto) GetFulfillmentPolicyCode() string {
+	if x != nil && x.FulfillmentPolicyCode != nil {
+		return *x.FulfillmentPolicyCode
 	}
 	return ""
 }
@@ -6810,6 +6819,7 @@ type CreateCustomerRequest struct {
 	Includes              []string                    `protobuf:"bytes,27,rep,name=includes,proto3" json:"includes,omitempty"`
 	DefaultLeadTimeDays   *int32                      `protobuf:"varint,28,opt,name=default_lead_time_days,json=defaultLeadTimeDays,proto3,oneof" json:"default_lead_time_days,omitempty"`
 	ReceiveCalendarId     *string                     `protobuf:"bytes,29,opt,name=receive_calendar_id,json=receiveCalendarId,proto3,oneof" json:"receive_calendar_id,omitempty"`
+	FulfillmentPolicyCode *string                     `protobuf:"bytes,30,opt,name=fulfillment_policy_code,json=fulfillmentPolicyCode,proto3,oneof" json:"fulfillment_policy_code,omitempty"`
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
@@ -7047,6 +7057,13 @@ func (x *CreateCustomerRequest) GetReceiveCalendarId() string {
 	return ""
 }
 
+func (x *CreateCustomerRequest) GetFulfillmentPolicyCode() string {
+	if x != nil && x.FulfillmentPolicyCode != nil {
+		return *x.FulfillmentPolicyCode
+	}
+	return ""
+}
+
 type CreateCustomerResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Customer      *CustomerProto         `protobuf:"bytes,1,opt,name=customer,proto3" json:"customer,omitempty"`
@@ -7121,6 +7138,7 @@ type UpdateCustomerRequest struct {
 	Includes                 []string               `protobuf:"bytes,26,rep,name=includes,proto3" json:"includes,omitempty"`
 	DefaultLeadTimeDays      *Int32Patch            `protobuf:"bytes,27,opt,name=default_lead_time_days,json=defaultLeadTimeDays,proto3,oneof" json:"default_lead_time_days,omitempty"`
 	ReceiveCalendarId        *StringPatch           `protobuf:"bytes,30,opt,name=receive_calendar_id,json=receiveCalendarId,proto3" json:"receive_calendar_id,omitempty"`
+	FulfillmentPolicyCode    *StringPatch           `protobuf:"bytes,31,opt,name=fulfillment_policy_code,json=fulfillmentPolicyCode,proto3" json:"fulfillment_policy_code,omitempty"`
 	unknownFields            protoimpl.UnknownFields
 	sizeCache                protoimpl.SizeCache
 }
@@ -7347,6 +7365,13 @@ func (x *UpdateCustomerRequest) GetDefaultLeadTimeDays() *Int32Patch {
 func (x *UpdateCustomerRequest) GetReceiveCalendarId() *StringPatch {
 	if x != nil {
 		return x.ReceiveCalendarId
+	}
+	return nil
+}
+
+func (x *UpdateCustomerRequest) GetFulfillmentPolicyCode() *StringPatch {
+	if x != nil {
+		return x.FulfillmentPolicyCode
 	}
 	return nil
 }
@@ -11242,7 +11267,7 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\n" +
 	"\b_role_idB\x10\n" +
 	"\x0e_department_idB\x0f\n" +
-	"\r_last_used_at\"\xd8\x10\n" +
+	"\r_last_used_at\"\xb1\x11\n" +
 	"\rCustomerProto\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x16\n" +
@@ -11280,7 +11305,8 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\fcredit_limit\x18\x1d \x01(\v2\x1e.core.CustomerCreditLimitProtoH\x10R\vcreditLimit\x88\x01\x01\x12G\n" +
 	"\x0echild_accounts\x18\x1e \x03(\v2 .core.CustomerLightCustomerProtoR\rchildAccounts\x128\n" +
 	"\x16default_lead_time_days\x18\x1f \x01(\x05H\x11R\x13defaultLeadTimeDays\x88\x01\x01\x123\n" +
-	"\x13receive_calendar_id\x18  \x01(\tH\x12R\x11receiveCalendarId\x88\x01\x01B\a\n" +
+	"\x13receive_calendar_id\x18  \x01(\tH\x12R\x11receiveCalendarId\x88\x01\x01\x12;\n" +
+	"\x17fulfillment_policy_code\x18! \x01(\tH\x13R\x15fulfillmentPolicyCode\x88\x01\x01B\a\n" +
 	"\x05_noteB\b\n" +
 	"\x06_emailB\b\n" +
 	"\x06_phoneB\x06\n" +
@@ -11299,7 +11325,8 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\x0f_parent_accountB\x0f\n" +
 	"\r_credit_limitB\x19\n" +
 	"\x17_default_lead_time_daysB\x16\n" +
-	"\x14_receive_calendar_id\"\x84\x02\n" +
+	"\x14_receive_calendar_idB\x1a\n" +
+	"\x18_fulfillment_policy_code\"\x84\x02\n" +
 	"\x14CustomerCarrierProto\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12*\n" +
@@ -11482,7 +11509,7 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\x0e_street_line_2B\v\n" +
 	"\t_localityB\b\n" +
 	"\x06_stateB\x0e\n" +
-	"\f_postal_code\"\xb9\x0f\n" +
+	"\f_postal_code\"\x92\x10\n" +
 	"\x15CreateCustomerRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1b\n" +
 	"\x06number\x18\x02 \x01(\tH\x00R\x06number\x88\x01\x01\x12\x17\n" +
@@ -11515,7 +11542,8 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\x14credit_limit_unit_id\x18\x1a \x01(\tH\x17R\x11creditLimitUnitId\x88\x01\x01\x12\x1a\n" +
 	"\bincludes\x18\x1b \x03(\tR\bincludes\x128\n" +
 	"\x16default_lead_time_days\x18\x1c \x01(\x05H\x18R\x13defaultLeadTimeDays\x88\x01\x01\x123\n" +
-	"\x13receive_calendar_id\x18\x1d \x01(\tH\x19R\x11receiveCalendarId\x88\x01\x01B\t\n" +
+	"\x13receive_calendar_id\x18\x1d \x01(\tH\x19R\x11receiveCalendarId\x88\x01\x01\x12;\n" +
+	"\x17fulfillment_policy_code\x18\x1e \x01(\tH\x1aR\x15fulfillmentPolicyCode\x88\x01\x01B\t\n" +
 	"\a_numberB\a\n" +
 	"\x05_noteB\b\n" +
 	"\x06_emailB\b\n" +
@@ -11541,9 +11569,10 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\x13_credit_limit_valueB\x17\n" +
 	"\x15_credit_limit_unit_idB\x19\n" +
 	"\x17_default_lead_time_daysB\x16\n" +
-	"\x14_receive_calendar_id\"I\n" +
+	"\x14_receive_calendar_idB\x1a\n" +
+	"\x18_fulfillment_policy_code\"I\n" +
 	"\x16CreateCustomerResponse\x12/\n" +
-	"\bcustomer\x18\x01 \x01(\v2\x13.core.CustomerProtoR\bcustomer\"\xb9\x0f\n" +
+	"\bcustomer\x18\x01 \x01(\v2\x13.core.CustomerProtoR\bcustomer\"\x84\x10\n" +
 	"\x15UpdateCustomerRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x1b\n" +
@@ -11575,7 +11604,8 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\fcredit_limit\x18\x19 \x01(\v2\x13.core.QuantityPatchH\x15R\vcreditLimit\x88\x01\x01\x12\x1a\n" +
 	"\bincludes\x18\x1a \x03(\tR\bincludes\x12J\n" +
 	"\x16default_lead_time_days\x18\x1b \x01(\v2\x10.core.Int32PatchH\x16R\x13defaultLeadTimeDays\x88\x01\x01\x12A\n" +
-	"\x13receive_calendar_id\x18\x1e \x01(\v2\x11.core.StringPatchR\x11receiveCalendarIdB\a\n" +
+	"\x13receive_calendar_id\x18\x1e \x01(\v2\x11.core.StringPatchR\x11receiveCalendarId\x12I\n" +
+	"\x17fulfillment_policy_code\x18\x1f \x01(\v2\x11.core.StringPatchR\x15fulfillmentPolicyCodeB\a\n" +
 	"\x05_nameB\t\n" +
 	"\a_numberB\a\n" +
 	"\x05_noteB\b\n" +
@@ -12248,67 +12278,68 @@ var file_core_core_identity_context_proto_depIdxs = []int32{
 	152, // 102: core.UpdateCustomerRequest.credit_limit:type_name -> core.QuantityPatch
 	153, // 103: core.UpdateCustomerRequest.default_lead_time_days:type_name -> core.Int32Patch
 	151, // 104: core.UpdateCustomerRequest.receive_calendar_id:type_name -> core.StringPatch
-	84,  // 105: core.UpdateCustomerResponse.customer:type_name -> core.CustomerProto
-	111, // 106: core.GetFrequentlyOrderedProductsResponse.products:type_name -> core.FrequentlyOrderedProductProto
-	84,  // 107: core.MergeCustomersResponse.customer:type_name -> core.CustomerProto
-	117, // 108: core.AnalyzeCustomerPricingResponse.findings:type_name -> core.CustomerPricingFindingProto
-	149, // 109: core.AnalyzeRealizedMarginsRequest.start_date:type_name -> google.protobuf.Timestamp
-	149, // 110: core.AnalyzeRealizedMarginsRequest.end_date:type_name -> google.protobuf.Timestamp
-	120, // 111: core.AnalyzeRealizedMarginsResponse.findings:type_name -> core.RealizedMarginFindingProto
-	149, // 112: core.AnalyzeSalesRequest.start_date:type_name -> google.protobuf.Timestamp
-	149, // 113: core.AnalyzeSalesRequest.end_date:type_name -> google.protobuf.Timestamp
-	149, // 114: core.SalesEntryProto.issued_at:type_name -> google.protobuf.Timestamp
-	149, // 115: core.SalesEntryProto.customer_created_at:type_name -> google.protobuf.Timestamp
-	149, // 116: core.SalesEntryProto.completed_at:type_name -> google.protobuf.Timestamp
-	149, // 117: core.SalesEntryProto.first_ship_at:type_name -> google.protobuf.Timestamp
-	149, // 118: core.SalesEntryProto.promised_at:type_name -> google.protobuf.Timestamp
-	149, // 119: core.SalesEntryProto.invoiced_at:type_name -> google.protobuf.Timestamp
-	123, // 120: core.AnalyzeSalesResponse.entries:type_name -> core.SalesEntryProto
-	149, // 121: core.AnalyzeProductionCostsRequest.start_date:type_name -> google.protobuf.Timestamp
-	149, // 122: core.AnalyzeProductionCostsRequest.end_date:type_name -> google.protobuf.Timestamp
-	127, // 123: core.BaseQuantity.unit:type_name -> core.BaseQuantityUnitProto
-	128, // 124: core.CostBreakdown.total:type_name -> core.BaseQuantity
-	128, // 125: core.CostBreakdown.labor:type_name -> core.BaseQuantity
-	128, // 126: core.CostBreakdown.materials:type_name -> core.BaseQuantity
-	128, // 127: core.CostBreakdown.overhead:type_name -> core.BaseQuantity
-	128, // 128: core.CostBreakdown.time:type_name -> core.BaseQuantity
-	128, // 129: core.CostBreakdown.quantity:type_name -> core.BaseQuantity
-	126, // 130: core.ProductionCostEntryProto.department:type_name -> core.BasicInfoProto
-	126, // 131: core.ProductionCostEntryProto.category:type_name -> core.BasicInfoProto
-	129, // 132: core.ProductionCostEntryProto.total_costs:type_name -> core.CostBreakdown
-	129, // 133: core.ProductionCostEntryProto.productive_costs:type_name -> core.CostBreakdown
-	129, // 134: core.ProductionCostEntryProto.waste_costs:type_name -> core.CostBreakdown
-	129, // 135: core.ProductionCostEntryProto.seconds_costs:type_name -> core.CostBreakdown
-	130, // 136: core.AnalyzeProductionCostsResponse.items:type_name -> core.ProductionCostEntryProto
-	149, // 137: core.AnalyzeDeliveriesRequest.start_date:type_name -> google.protobuf.Timestamp
-	149, // 138: core.AnalyzeDeliveriesRequest.end_date:type_name -> google.protobuf.Timestamp
-	134, // 139: core.ChartDataPointProto.data:type_name -> core.CoordinateProto
-	135, // 140: core.DeliveryChartDataProto.on_time_delivery:type_name -> core.ChartDataPointProto
-	135, // 141: core.DeliveryChartDataProto.average_delivery_time:type_name -> core.ChartDataPointProto
-	135, // 142: core.DeliveryChartDataProto.average_first_shipment_time:type_name -> core.ChartDataPointProto
-	133, // 143: core.AnalyzeDeliveriesResponse.statistics:type_name -> core.DeliveryStatisticsProto
-	136, // 144: core.AnalyzeDeliveriesResponse.chart_data:type_name -> core.DeliveryChartDataProto
-	149, // 145: core.AnalyzeManufacturingRequest.start_date:type_name -> google.protobuf.Timestamp
-	149, // 146: core.AnalyzeManufacturingRequest.end_date:type_name -> google.protobuf.Timestamp
-	149, // 147: core.AnalyzeManufacturingBatchRequest.start_date:type_name -> google.protobuf.Timestamp
-	149, // 148: core.AnalyzeManufacturingBatchRequest.end_date:type_name -> google.protobuf.Timestamp
-	149, // 149: core.AnalyzeManufacturingBatchRequest.comparison_start_date:type_name -> google.protobuf.Timestamp
-	149, // 150: core.AnalyzeManufacturingBatchRequest.comparison_end_date:type_name -> google.protobuf.Timestamp
-	140, // 151: core.AnalyzeManufacturingBatchResponse.current:type_name -> core.ManufacturingMetricsProto
-	140, // 152: core.AnalyzeManufacturingBatchResponse.comparison:type_name -> core.ManufacturingMetricsProto
-	149, // 153: core.AnalyzeOrdersRequest.start_date:type_name -> google.protobuf.Timestamp
-	149, // 154: core.AnalyzeOrdersRequest.end_date:type_name -> google.protobuf.Timestamp
-	149, // 155: core.OrderEntryProto.issued_at:type_name -> google.protobuf.Timestamp
-	149, // 156: core.OrderEntryProto.customer_created_at:type_name -> google.protobuf.Timestamp
-	149, // 157: core.OrderEntryProto.completed_at:type_name -> google.protobuf.Timestamp
-	149, // 158: core.OrderEntryProto.first_ship_at:type_name -> google.protobuf.Timestamp
-	149, // 159: core.OrderEntryProto.promised_at:type_name -> google.protobuf.Timestamp
-	144, // 160: core.AnalyzeOrdersResponse.entries:type_name -> core.OrderEntryProto
-	161, // [161:161] is the sub-list for method output_type
-	161, // [161:161] is the sub-list for method input_type
-	161, // [161:161] is the sub-list for extension type_name
-	161, // [161:161] is the sub-list for extension extendee
-	0,   // [0:161] is the sub-list for field type_name
+	151, // 105: core.UpdateCustomerRequest.fulfillment_policy_code:type_name -> core.StringPatch
+	84,  // 106: core.UpdateCustomerResponse.customer:type_name -> core.CustomerProto
+	111, // 107: core.GetFrequentlyOrderedProductsResponse.products:type_name -> core.FrequentlyOrderedProductProto
+	84,  // 108: core.MergeCustomersResponse.customer:type_name -> core.CustomerProto
+	117, // 109: core.AnalyzeCustomerPricingResponse.findings:type_name -> core.CustomerPricingFindingProto
+	149, // 110: core.AnalyzeRealizedMarginsRequest.start_date:type_name -> google.protobuf.Timestamp
+	149, // 111: core.AnalyzeRealizedMarginsRequest.end_date:type_name -> google.protobuf.Timestamp
+	120, // 112: core.AnalyzeRealizedMarginsResponse.findings:type_name -> core.RealizedMarginFindingProto
+	149, // 113: core.AnalyzeSalesRequest.start_date:type_name -> google.protobuf.Timestamp
+	149, // 114: core.AnalyzeSalesRequest.end_date:type_name -> google.protobuf.Timestamp
+	149, // 115: core.SalesEntryProto.issued_at:type_name -> google.protobuf.Timestamp
+	149, // 116: core.SalesEntryProto.customer_created_at:type_name -> google.protobuf.Timestamp
+	149, // 117: core.SalesEntryProto.completed_at:type_name -> google.protobuf.Timestamp
+	149, // 118: core.SalesEntryProto.first_ship_at:type_name -> google.protobuf.Timestamp
+	149, // 119: core.SalesEntryProto.promised_at:type_name -> google.protobuf.Timestamp
+	149, // 120: core.SalesEntryProto.invoiced_at:type_name -> google.protobuf.Timestamp
+	123, // 121: core.AnalyzeSalesResponse.entries:type_name -> core.SalesEntryProto
+	149, // 122: core.AnalyzeProductionCostsRequest.start_date:type_name -> google.protobuf.Timestamp
+	149, // 123: core.AnalyzeProductionCostsRequest.end_date:type_name -> google.protobuf.Timestamp
+	127, // 124: core.BaseQuantity.unit:type_name -> core.BaseQuantityUnitProto
+	128, // 125: core.CostBreakdown.total:type_name -> core.BaseQuantity
+	128, // 126: core.CostBreakdown.labor:type_name -> core.BaseQuantity
+	128, // 127: core.CostBreakdown.materials:type_name -> core.BaseQuantity
+	128, // 128: core.CostBreakdown.overhead:type_name -> core.BaseQuantity
+	128, // 129: core.CostBreakdown.time:type_name -> core.BaseQuantity
+	128, // 130: core.CostBreakdown.quantity:type_name -> core.BaseQuantity
+	126, // 131: core.ProductionCostEntryProto.department:type_name -> core.BasicInfoProto
+	126, // 132: core.ProductionCostEntryProto.category:type_name -> core.BasicInfoProto
+	129, // 133: core.ProductionCostEntryProto.total_costs:type_name -> core.CostBreakdown
+	129, // 134: core.ProductionCostEntryProto.productive_costs:type_name -> core.CostBreakdown
+	129, // 135: core.ProductionCostEntryProto.waste_costs:type_name -> core.CostBreakdown
+	129, // 136: core.ProductionCostEntryProto.seconds_costs:type_name -> core.CostBreakdown
+	130, // 137: core.AnalyzeProductionCostsResponse.items:type_name -> core.ProductionCostEntryProto
+	149, // 138: core.AnalyzeDeliveriesRequest.start_date:type_name -> google.protobuf.Timestamp
+	149, // 139: core.AnalyzeDeliveriesRequest.end_date:type_name -> google.protobuf.Timestamp
+	134, // 140: core.ChartDataPointProto.data:type_name -> core.CoordinateProto
+	135, // 141: core.DeliveryChartDataProto.on_time_delivery:type_name -> core.ChartDataPointProto
+	135, // 142: core.DeliveryChartDataProto.average_delivery_time:type_name -> core.ChartDataPointProto
+	135, // 143: core.DeliveryChartDataProto.average_first_shipment_time:type_name -> core.ChartDataPointProto
+	133, // 144: core.AnalyzeDeliveriesResponse.statistics:type_name -> core.DeliveryStatisticsProto
+	136, // 145: core.AnalyzeDeliveriesResponse.chart_data:type_name -> core.DeliveryChartDataProto
+	149, // 146: core.AnalyzeManufacturingRequest.start_date:type_name -> google.protobuf.Timestamp
+	149, // 147: core.AnalyzeManufacturingRequest.end_date:type_name -> google.protobuf.Timestamp
+	149, // 148: core.AnalyzeManufacturingBatchRequest.start_date:type_name -> google.protobuf.Timestamp
+	149, // 149: core.AnalyzeManufacturingBatchRequest.end_date:type_name -> google.protobuf.Timestamp
+	149, // 150: core.AnalyzeManufacturingBatchRequest.comparison_start_date:type_name -> google.protobuf.Timestamp
+	149, // 151: core.AnalyzeManufacturingBatchRequest.comparison_end_date:type_name -> google.protobuf.Timestamp
+	140, // 152: core.AnalyzeManufacturingBatchResponse.current:type_name -> core.ManufacturingMetricsProto
+	140, // 153: core.AnalyzeManufacturingBatchResponse.comparison:type_name -> core.ManufacturingMetricsProto
+	149, // 154: core.AnalyzeOrdersRequest.start_date:type_name -> google.protobuf.Timestamp
+	149, // 155: core.AnalyzeOrdersRequest.end_date:type_name -> google.protobuf.Timestamp
+	149, // 156: core.OrderEntryProto.issued_at:type_name -> google.protobuf.Timestamp
+	149, // 157: core.OrderEntryProto.customer_created_at:type_name -> google.protobuf.Timestamp
+	149, // 158: core.OrderEntryProto.completed_at:type_name -> google.protobuf.Timestamp
+	149, // 159: core.OrderEntryProto.first_ship_at:type_name -> google.protobuf.Timestamp
+	149, // 160: core.OrderEntryProto.promised_at:type_name -> google.protobuf.Timestamp
+	144, // 161: core.AnalyzeOrdersResponse.entries:type_name -> core.OrderEntryProto
+	162, // [162:162] is the sub-list for method output_type
+	162, // [162:162] is the sub-list for method input_type
+	162, // [162:162] is the sub-list for extension type_name
+	162, // [162:162] is the sub-list for extension extendee
+	0,   // [0:162] is the sub-list for field type_name
 }
 
 func init() { file_core_core_identity_context_proto_init() }

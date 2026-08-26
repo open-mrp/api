@@ -1141,6 +1141,15 @@ WHERE so.owner_account_id = ?
   AND so.issued_at >= ?
   AND so.issued_at <= ?
   AND sol.product_id IN (/*SLICE:product_ids*/?)
+  AND NOT EXISTS (
+      SELECT 1
+      FROM account_relation ar
+      LEFT JOIN account_group ag ON ag.id = ar.account_group_id
+      WHERE ar.owner_account_id = so.owner_account_id
+        AND ar.counterparty_account_id = so.buyer_account_id
+        AND ar.account_relation_role_code = 'customer'
+        AND COALESCE(NULLIF(ar.fulfillment_policy_code, ''), ag.fulfillment_policy_code) = 'make_to_order'
+  )
 GROUP BY sol.product_id, YEAR(so.issued_at), MONTH(so.issued_at)
 ORDER BY sol.product_id, demand_year, demand_month
 `
@@ -1162,6 +1171,8 @@ type GetPooledOrderDemandByProductRow struct {
 // GetPooledOrderDemandByProduct returns monthly sold quantity per product, which is pooled back onto the constraint item that produces it.
 //
 // Estimates are excluded: an unissued quote is not demand.
+//
+// Make-to-order customers are excluded too: their history is not a forecast to build against, only an order book to fill when they order, so counting it here would build stock nobody asked to hold. The policy is resolved the same way the fulfillment recommendation resolves it — the customer's own setting, then the account group's — so the two cannot disagree about the same customer. An order still built for such a customer flows through GetOpenOrderRequirements, where it is scheduled on its own ship-by.
 func (q *Queries) GetPooledOrderDemandByProduct(ctx context.Context, arg GetPooledOrderDemandByProductParams) ([]GetPooledOrderDemandByProductRow, error) {
 	query := getPooledOrderDemandByProduct
 	var queryParams []interface{}

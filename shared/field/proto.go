@@ -37,6 +37,17 @@ func EnumClearableToProto[T ~string](f Clearable[T]) *pb.StringPatch {
 	return &pb.StringPatch{Clear: false, Value: &s}
 }
 
+// EnumClearableFromProto converts a StringPatch to a string-enum field. Nil means unset; a set empty value is treated as a clear, the mirror of EnumClearableToProto.
+func EnumClearableFromProto[T ~string](p *pb.StringPatch) Clearable[T] {
+	if p == nil {
+		return Unset[T]()
+	}
+	if p.Clear || p.Value == nil || *p.Value == "" {
+		return Clear[T]()
+	}
+	return Set(T(*p.Value))
+}
+
 // StringClearableFromProto converts protobuf to a string field. Nil means unset.
 func StringClearableFromProto(p *pb.StringPatch) Clearable[string] {
 	if p == nil {

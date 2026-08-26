@@ -20,7 +20,9 @@ type Customer struct {
 	FreightPolicy       constants.FreightPolicy     `audit:"freight_policy"`
 	DefaultLeadTimeDays *int32                      `audit:"default_lead_time_days"`
 	// ReceiveCalendarID is the days this customer's dock accepts freight, in the same chain as the lead time above.
-	ReceiveCalendarID                  *string                       `audit:"receive_calendar_id"`
+	ReceiveCalendarID *string `audit:"receive_calendar_id"`
+	// FulfillmentPolicy marks the customer make-to-order: when make_to_order, their history is left out of the production-schedule forecast and their orders are built only when placed. Nil inherits the account group's policy, then make-to-stock.
+	FulfillmentPolicy                  *constants.FulfillmentPolicy  `audit:"fulfillment_policy_code"`
 	Note                               *string                       `audit:"note"`
 	Email                              *string                       `audit:"email"`
 	Phone                              *string                       `audit:"phone"`
@@ -174,6 +176,7 @@ type CreateCustomerParams struct {
 	FreightPolicy         *constants.FreightPolicy
 	DefaultLeadTimeDays   *int32
 	ReceiveCalendarID     *string
+	FulfillmentPolicy     *constants.FulfillmentPolicy
 	DefaultCarrierID      *string
 	DefaultServiceLevelID *string
 	DefaultPaymentTermID  *string
@@ -248,6 +251,7 @@ type UpdateCustomerParams struct {
 	FreightPolicy            *constants.FreightPolicy
 	DefaultLeadTimeDays      field.Clearable[int32]
 	ReceiveCalendarID        field.Clearable[string]
+	FulfillmentPolicy        field.Clearable[constants.FulfillmentPolicy]
 	DefaultCarrierID         *string
 	DefaultServiceLevelID    field.Clearable[string]
 	DefaultPaymentTermID     *string

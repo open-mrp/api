@@ -139,6 +139,13 @@ type CustomerDefaults struct {
 	//
 	// A promised delivery date is worked back from a day the customer can actually receive on. With none set here the customer inherits its account group's calendar, then the account default, then Monday to Friday.
 	ReceiveCalendarID *string `json:"receive_calendar_id"`
+	// How this customer's orders are produced.
+	//
+	// - `make_to_stock`: their order history feeds the production-schedule forecast, so stock is built ahead of their demand.
+	// - `make_to_order`: their history is left out of the forecast; their orders are produced only once placed, and fit into the schedule on their own ship-by dates.
+	//
+	// With none set here the customer inherits its account group's policy, then falls back to make-to-stock.
+	FulfillmentPolicy *constants.FulfillmentPolicy `json:"fulfillment_policy"`
 }
 
 // The ship-by lead time a new order for this customer would be committed to.
@@ -199,6 +206,7 @@ var sampleCustomerURL = "https://acme.com"
 var sampleCustomerNote = "Preferred customer since 2020."
 var sampleCarrierBillingType = constants.CarrierBillingTypeSender
 var sampleCarrierBillingAccount = "123456789"
+var sampleCustomerFulfillmentPolicy = constants.FulfillmentPolicyMakeToStock
 
 var SampleCustomer = &Customer{
 	ID:               SampleCustomerID,
@@ -226,11 +234,12 @@ var SampleCustomer = &Customer{
 		BillingAccount: &sampleCarrierBillingAccount,
 	},
 	Defaults: &CustomerDefaults{
-		Object:       constants.ObjectTypeCustomerDefaults,
-		PaymentTerm:  SamplePaymentTerm,
-		ShippingTerm: SampleShippingTerm,
-		Priority:     SamplePriority,
-		SalesRep:     SampleAccountUser,
+		Object:            constants.ObjectTypeCustomerDefaults,
+		PaymentTerm:       SamplePaymentTerm,
+		ShippingTerm:      SampleShippingTerm,
+		Priority:          SamplePriority,
+		SalesRep:          SampleAccountUser,
+		FulfillmentPolicy: &sampleCustomerFulfillmentPolicy,
 	},
 	NotificationPreferences: &CustomerNotificationPreferences{
 		Object:               constants.ObjectTypeCustomerNotificationPreferences,

@@ -30,6 +30,22 @@ func optStringToFreightPolicy(s *string) *constants.FreightPolicy {
 	return &v
 }
 
+func optStringToFulfillmentPolicy(s *string) *constants.FulfillmentPolicy {
+	if s == nil || *s == "" {
+		return nil
+	}
+	v := constants.FulfillmentPolicy(*s)
+	return &v
+}
+
+func fulfillmentPolicyToStringPtr(p *constants.FulfillmentPolicy) *string {
+	if p == nil {
+		return nil
+	}
+	s := string(*p)
+	return &s
+}
+
 func customerAddressToProto(addr *domain.CustomerAddress) *pb.CustomerAddressProto {
 	if addr == nil {
 		return nil
@@ -82,6 +98,7 @@ func customerToProto(c *domain.Customer) *pb.CustomerProto {
 		UpdatedAt:             timestamppb.New(c.UpdatedAt),
 		DefaultLeadTimeDays:   c.DefaultLeadTimeDays,
 		ReceiveCalendarId:     c.ReceiveCalendarID,
+		FulfillmentPolicyCode: fulfillmentPolicyToStringPtr(c.FulfillmentPolicy),
 	}
 
 	if c.CarrierBillingType != nil {
@@ -394,6 +411,7 @@ func (h *gRPCHandler) CreateCustomer(ctx context.Context, req *pb.CreateCustomer
 		FreightPolicy:         optStringToFreightPolicy(req.FreightPolicy),
 		DefaultLeadTimeDays:   req.DefaultLeadTimeDays,
 		ReceiveCalendarID:     req.ReceiveCalendarId,
+		FulfillmentPolicy:     optStringToFulfillmentPolicy(req.FulfillmentPolicyCode),
 		DefaultCarrierID:      req.DefaultCarrierId,
 		DefaultServiceLevelID: req.DefaultServiceLevelId,
 		DefaultPaymentTermID:  req.DefaultPaymentTermId,
@@ -448,6 +466,7 @@ func (h *gRPCHandler) UpdateCustomer(ctx context.Context, req *pb.UpdateCustomer
 		FreightPolicy:            optStringToFreightPolicy(req.FreightPolicy),
 		DefaultLeadTimeDays:      field.Int32ClearableFromProto(req.DefaultLeadTimeDays),
 		ReceiveCalendarID:        field.StringClearableFromProto(req.ReceiveCalendarId),
+		FulfillmentPolicy:        field.EnumClearableFromProto[constants.FulfillmentPolicy](req.FulfillmentPolicyCode),
 		DefaultCarrierID:         req.DefaultCarrierId,
 		DefaultServiceLevelID:    field.StringClearableFromProto(req.DefaultServiceLevelId),
 		DefaultPaymentTermID:     req.DefaultPaymentTermId,

@@ -492,6 +492,8 @@ message CustomerProto {
   optional int32 default_lead_time_days = 31;
   // The days this customer's dock accepts freight. Sits in the same chain as the lead time above.
   optional string receive_calendar_id = 32;
+  // make_to_order marks the customer make-to-order: their history is kept out of the production-schedule forecast. Empty inherits the account group's policy, then make-to-stock.
+  optional string fulfillment_policy_code = 33;
 }
 message CustomerCarrierProto {
   string id = 1;
@@ -660,6 +662,7 @@ message CreateCustomerRequest {
   repeated string includes = 27;
   optional int32 default_lead_time_days = 28;
   optional string receive_calendar_id = 29;
+  optional string fulfillment_policy_code = 30;
 }
 message CreateCustomerResponse {
   CustomerProto customer = 1;
@@ -693,6 +696,7 @@ message UpdateCustomerRequest {
   repeated string includes = 26;
   optional Int32Patch default_lead_time_days = 27;
   StringPatch receive_calendar_id = 30;
+  StringPatch fulfillment_policy_code = 31;
 }
 message UpdateCustomerResponse {
   CustomerProto customer = 1;

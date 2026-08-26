@@ -54,6 +54,13 @@ func (c *InventoryReceivedConsumer) Listen(ctx context.Context) error {
 		c.inboxConsumer.Wrap("core.inventory_received_allocation", c.handleMessage))
 }
 
+// ReplayMessage re-drives a single delivery through the same inbox-dedup wrapper Listen uses, so a
+// maintenance tool can re-run a message that failed permanently without re-applying one that already
+// succeeded: the wrapper skips any inbox record already marked processed.
+func (c *InventoryReceivedConsumer) ReplayMessage(ctx context.Context, msg amqp.Delivery) error {
+	return c.inboxConsumer.Wrap("core.inventory_received_allocation", c.handleMessage)(ctx, msg)
+}
+
 func (c *InventoryReceivedConsumer) handleMessage(ctx context.Context, msg amqp.Delivery) error {
 	ctx, span := c.tracer.Start(ctx, "consumer.inventory_received_allocation",
 		trace.WithSpanKind(trace.SpanKindConsumer),

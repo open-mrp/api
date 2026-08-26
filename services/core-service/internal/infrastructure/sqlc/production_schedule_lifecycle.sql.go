@@ -177,6 +177,7 @@ SELECT
     l.planned_quantity,
     l.planned_unit_id,
     lu.abbreviation AS planned_unit_abbreviation,
+    i.sku AS item_sku,
     l.planned_lots,
     l.planned_lot_units,
     l.planned_run_hours,
@@ -192,6 +193,7 @@ SELECT
     l.created_at,
     l.updated_at
 FROM production_schedule_line l
+LEFT JOIN item i ON i.id = l.item_id
 LEFT JOIN unit lu ON lu.id = l.planned_unit_id
 WHERE l.account_id = ?
 AND l.id = ?
@@ -215,6 +217,7 @@ type GetProductionScheduleLineRow struct {
 	PlannedQuantity          string
 	PlannedUnitID            sql.NullString
 	PlannedUnitAbbreviation  sql.NullString
+	ItemSku                  sql.NullString
 	PlannedLots              int32
 	PlannedLotUnits          string
 	PlannedRunHours          string
@@ -247,6 +250,7 @@ func (q *Queries) GetProductionScheduleLine(ctx context.Context, arg GetProducti
 		&i.PlannedQuantity,
 		&i.PlannedUnitID,
 		&i.PlannedUnitAbbreviation,
+		&i.ItemSku,
 		&i.PlannedLots,
 		&i.PlannedLotUnits,
 		&i.PlannedRunHours,

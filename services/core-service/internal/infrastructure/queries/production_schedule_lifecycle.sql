@@ -116,6 +116,7 @@ SELECT
     l.planned_quantity,
     l.planned_unit_id,
     lu.abbreviation AS planned_unit_abbreviation,
+    i.sku AS item_sku,
     l.planned_lots,
     l.planned_lot_units,
     l.planned_run_hours,
@@ -131,6 +132,7 @@ SELECT
     l.created_at,
     l.updated_at
 FROM production_schedule_line l
+LEFT JOIN item i ON i.id = l.item_id
 LEFT JOIN unit lu ON lu.id = l.planned_unit_id
 WHERE l.account_id = sqlc.arg('account_id')
 AND l.id = sqlc.arg('id');

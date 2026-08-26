@@ -103,6 +103,17 @@ func entityRef(id string, objectType constants.ObjectType) *apiresource.Entity {
 	return apiresource.NewEntity(id, objectType, nil, nil)
 }
 
+// itemRef labels an item reference with its SKU, which is how a plan row is read: the id alone leaves the grid showing an `itm_` string where the SKU belongs.
+func itemRef(id, sku string) *apiresource.Entity {
+	if id == "" {
+		return nil
+	}
+	if sku == "" {
+		return entityRef(id, constants.ObjectTypeItem)
+	}
+	return apiresource.NewEntity(id, constants.ObjectTypeItem, nil, &sku)
+}
+
 // entityRefPtr is entityRef for nullable foreign keys.
 func entityRefPtr(id *string, objectType constants.ObjectType) *apiresource.Entity {
 	if id == nil {
@@ -355,7 +366,7 @@ func scheduleLineFromProto(l *pb.ProductionScheduleLineInfo) apiresource.Product
 		Machine:                  entityRef(l.MachineId, constants.ObjectTypeMachine),
 		ProductionStep:           entityRefPtr(l.ProductionStepId, constants.ObjectTypeProductionStep),
 		Department:               entityRefPtr(l.DepartmentId, constants.ObjectTypeDepartment),
-		Item:                     entityRef(l.ItemId, constants.ObjectTypeItem),
+		Item:                     itemRef(l.ItemId, l.ItemSku),
 		PlannedQuantity:          l.PlannedQuantity,
 		PlannedUnit:              entityRefPtr(l.PlannedUnitId, constants.ObjectTypeUnit),
 		PlannedLots:              l.PlannedLots,

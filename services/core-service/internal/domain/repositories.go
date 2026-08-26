@@ -1038,6 +1038,8 @@ type ProductionScheduleInputRepo interface {
 
 	// GetConstraintBatchMeasurements returns one row per historical batch produced on the given machines inside the window.
 	GetConstraintBatchMeasurements(ctx context.Context, params GetConstraintBatchMeasurementsParams) ([]ConstraintBatchRow, *apierror.APIError)
+	// GetItemRunRateHistory returns the run-rate samples behind an item's most recent scans, newest first, ignoring any measurement window. Only scans whose step carries a labor time come back.
+	GetItemRunRateHistory(ctx context.Context, accountID, itemID string, limit int32) ([]ItemRunRateSample, *apierror.APIError)
 	// GetFinishingMachines returns every machine outside the constraint department — the second stage, selected as the complement of the constraint rather than as a list of its own.
 	GetFinishingMachines(ctx context.Context, accountID, constraintDepartmentID string) ([]scheduling.Machine, *apierror.APIError)
 	// GetFinishingBatchMeasurements returns the second stage's production history for the given finished goods, which is what its run rates are measured from.

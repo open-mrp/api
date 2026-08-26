@@ -1170,6 +1170,7 @@ SELECT
     l.planned_quantity,
     l.planned_unit_id,
     lu.abbreviation AS planned_unit_abbreviation,
+    i.sku AS item_sku,
     COALESCE(prog.released_batches, 0) AS released_batch_count,
     COALESCE(prog.scanned_batches, 0) AS scanned_batch_count,
     COALESCE(prog.scanned_quantity, 0) AS scanned_quantity,
@@ -1188,6 +1189,7 @@ SELECT
     l.created_at,
     l.updated_at
 FROM production_schedule_line l
+LEFT JOIN item i ON i.id = l.item_id
 LEFT JOIN unit lu ON lu.id = l.planned_unit_id
 LEFT JOIN (
     SELECT
@@ -1242,6 +1244,7 @@ type ListProductionScheduleLinesRow struct {
 	PlannedQuantity          string
 	PlannedUnitID            sql.NullString
 	PlannedUnitAbbreviation  sql.NullString
+	ItemSku                  sql.NullString
 	ReleasedBatchCount       int64
 	ScannedBatchCount        interface{}
 	ScannedQuantity          interface{}
@@ -1262,6 +1265,7 @@ type ListProductionScheduleLinesRow struct {
 }
 
 // ListProductionScheduleLines reads the plan FORWARD in time, matching prod_sched_line_sched_week_idx so the read is filesort-free.
+// LEFT JOIN on a NOT NULL key deliberately: it pins l as the driving table, and this read only stays filesort-free while the plan starts from the line index.
 // Progress comes from the run the week was released as, matched on the item the campaign is for: a run holds every SKU in its week, so the run alone would credit one campaign with another's work. Aggregated in a derived table rather than joined directly, or the batch rows would multiply the line. The aggregate is bounded to the runs this schedule's lines were released as, so it scans per-run batches rather than the tenant's entire batch history.
 func (q *Queries) ListProductionScheduleLines(ctx context.Context, arg ListProductionScheduleLinesParams) ([]ListProductionScheduleLinesRow, error) {
 	query := listProductionScheduleLines
@@ -1302,6 +1306,7 @@ func (q *Queries) ListProductionScheduleLines(ctx context.Context, arg ListProdu
 			&i.PlannedQuantity,
 			&i.PlannedUnitID,
 			&i.PlannedUnitAbbreviation,
+			&i.ItemSku,
 			&i.ReleasedBatchCount,
 			&i.ScannedBatchCount,
 			&i.ScannedQuantity,

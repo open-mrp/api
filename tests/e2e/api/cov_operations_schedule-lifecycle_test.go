@@ -694,6 +694,77 @@ func TestScheduleLifecycle_AddedLineIsPricedInConstraintTime(t *testing.T) {
 	lots, ok := line["planned_lots"].(float64)
 	require.True(t, ok)
 	assert.Positive(t, lots)
+
+	assert.NotEmpty(t, jsonField(jsonObject(line, "item"), "handle"),
+		"a hand-added campaign must name its SKU like every other line, or the plan grid labels its row with a raw item id")
+}
+
+// sewLargeSockSecondsPerUnit is the labor time of the step SeedItemID's one scan was produced at: five minutes a pair, on Sewing Machine 1.
+//
+// Deliberately not the step the campaign's machine carries — Knitting Machine 1 is nominally the ten-minute "Knit Large Sock" step — so an assertion on this number can only pass if the rate came from the item's own history.
+const sewLargeSockSecondsPerUnit = 300.0
+
+// A SKU no version planned is still priced, off its own scans.
+//
+// The solver's run rate is the labor time of the step a batch was produced at, so reaching outside the measurement window yields the same number it would have derived had the scan been recent. Without this a rarely-made SKU books a campaign claiming no machine time, and the week reads idle for work somebody has to do.
+func TestScheduleLifecycle_AddedLineIsPricedFromScanHistory(t *testing.T) {
+	t.Parallel()
+
+	schedule := ownedSchedule(t, uniqueName("e2e-added-history-rate"))
+	scheduleID := jsonField(schedule, "id")
+
+	// SeedItemID is sewn, not knitted: the constraint measurement never sees it, so a generated version holds no policy for it — the rarely-made SKU this whole path exists for.
+	for _, policy := range listItemPolicies(t, scheduleID) {
+		require.NotEqual(t, SeedItemID, jsonField(jsonObject(policy, "item"), "id"),
+			"this version planned the SKU, so it would be priced off its policy and prove nothing about history")
+	}
+
+	line := addLine(t, scheduleID, map[string]any{
+		"week_index": 5,
+		"item_id":    SeedItemID,
+		"machine_id": SeedMachineID,
+		"quantity":   120,
+	})
+
+	runHours, ok := line["planned_run_hours"].(float64)
+	require.True(t, ok, "planned_run_hours must be present: %v", line)
+	assert.InDelta(t, 120*sewLargeSockSecondsPerUnit/3600, runHours, 0.01,
+		"a SKU with scans must be priced at the rate it actually ran at, not left at zero and not taken off whatever step its new machine happens to name")
+}
+
+// A campaign smaller than one lot still issues a ticket.
+//
+// The lot count used to be the quantity divided by the lot size and rounded, which sends anything under half a lot to zero — a campaign reading as work the floor gets nothing for, while the release splits it into one batch regardless.
+func TestScheduleLifecycle_SubLotCampaignStillPlansALot(t *testing.T) {
+	t.Parallel()
+
+	schedule := ownedSchedule(t, uniqueName("e2e-sub-lot"))
+	scheduleID := jsonField(schedule, "id")
+
+	itemID, machineID, _ := plannedItem(t, scheduleID)
+
+	// The lot size is whatever this SKU's own lot chain resolves to, so read it off a normal campaign rather than assuming one.
+	sized := addLine(t, scheduleID, map[string]any{
+		"week_index": 6,
+		"item_id":    itemID,
+		"machine_id": machineID,
+		"quantity":   600,
+	})
+	lotUnits, ok := sized["planned_lot_units"].(float64)
+	require.True(t, ok)
+	require.Positive(t, lotUnits)
+
+	line := addLine(t, scheduleID, map[string]any{
+		"week_index": 7,
+		"item_id":    itemID,
+		"machine_id": machineID,
+		"quantity":   lotUnits / 3,
+	})
+
+	lots, ok := line["planned_lots"].(float64)
+	require.True(t, ok)
+	assert.Equal(t, float64(1), lots,
+		"a campaign under one lot is one lot, which is what releasing the week will issue")
 }
 
 // Resizing a campaign has to reprice it. A campaign that keeps the hours it was first sized at makes the week's utilisation report work that is no longer planned.

@@ -270,6 +270,7 @@ message ProductionScheduleLineInfo {
   int64 released_batch_count = 26;
   int64 scanned_batch_count = 27;
   double scanned_quantity = 28;
+  string item_sku = 29;
 }
 
 message ProductionScheduleItemPolicyInfo {

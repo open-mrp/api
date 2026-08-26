@@ -236,6 +236,7 @@ func scheduleLineToProto(l *domain.ProductionScheduleLine) *pb.ProductionSchedul
 		ProductionStepId:         l.ProductionStepID,
 		DepartmentId:             l.DepartmentID,
 		ItemId:                   l.ItemID,
+		ItemSku:                  l.ItemSKU,
 		PlannedQuantity:          l.PlannedQuantity,
 		PlannedUnitId:            l.PlannedUnitID,
 		PlannedLots:              l.PlannedLots,

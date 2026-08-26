@@ -72,6 +72,7 @@ func (r *productionScheduleRepoImpl) GetLine(ctx context.Context, accountID, lin
 		WeekStartDate:            row.WeekStartDate,
 		MachineID:                row.MachineID,
 		ItemID:                   row.ItemID,
+		ItemSKU:                  row.ItemSku.String,
 		PlannedQuantity:          decimalToFloat64(row.PlannedQuantity),
 		PlannedLots:              row.PlannedLots,
 		PlannedLotUnits:          decimalToFloat64(row.PlannedLotUnits),

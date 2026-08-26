@@ -922,6 +922,63 @@ func (q *Queries) GetFinishingMachines(ctx context.Context, arg GetFinishingMach
 	return items, nil
 }
 
+const getItemRunRateHistory = `-- name: GetItemRunRateHistory :many
+SELECT
+    bm.B AS machine_id,
+    labor_time.value AS labor_time_value,
+    labor_time_unit.abbreviation AS labor_time_unit
+FROM batch b
+LEFT JOIN _batches_machines bm ON bm.A = b.id
+JOIN production_step ps ON ps.id = b.production_step_id
+JOIN rate labor_time ON labor_time.id = ps.labor_time_id
+JOIN unit labor_time_unit ON labor_time_unit.id = labor_time.numerator_unit_id
+WHERE b.account_id = ?
+  AND b.item_id = ?
+  AND b.scanned_at IS NOT NULL
+ORDER BY b.scanned_at DESC, b.id DESC
+LIMIT ?
+`
+
+type GetItemRunRateHistoryParams struct {
+	AccountID string
+	ItemID    string
+	Limit     int32
+}
+
+type GetItemRunRateHistoryRow struct {
+	MachineID      sql.NullString
+	LaborTimeValue string
+	LaborTimeUnit  string
+}
+
+// GetItemRunRateHistory returns the labor time behind this item's most recent scans, newest first, so a SKU no version holds a policy for can still be priced off its own history.
+//
+// The plan's run rate is a production step's configured labor time, picked out by the step history says the item was actually produced at — the same derivation MeasureItems applies to the solver's own batches. Reaching outside any measurement window is the point: a rarely-made SKU is exactly the one with no recent scan.
+//
+// Filtered on the item first, which batch_item_id_idx makes selective, and bounded by LIMIT because only the newest usable sample is read.
+func (q *Queries) GetItemRunRateHistory(ctx context.Context, arg GetItemRunRateHistoryParams) ([]GetItemRunRateHistoryRow, error) {
+	rows, err := q.db.QueryContext(ctx, getItemRunRateHistory, arg.AccountID, arg.ItemID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetItemRunRateHistoryRow
+	for rows.Next() {
+		var i GetItemRunRateHistoryRow
+		if err := rows.Scan(&i.MachineID, &i.LaborTimeValue, &i.LaborTimeUnit); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getItemUnitCosts = `-- name: GetItemUnitCosts :many
 SELECT
     i.id AS item_id,

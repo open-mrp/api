@@ -737,6 +737,8 @@ func (h *gRPCHandler) CompleteRegistration(ctx context.Context, req *pb.Complete
 		UserID:           req.UserId,
 		PlanCode:         req.PlanCode,
 		StripeCustomerID: req.StripeCustomerId,
+		UserName:         req.UserName,
+		UserEmail:        req.UserEmail,
 	}
 
 	if req.StripeSubscriptionId != nil {

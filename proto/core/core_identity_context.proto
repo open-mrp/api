@@ -119,6 +119,9 @@ message CompleteRegistrationRequest {
   // Absent for free-tier plans that don't create a subscription.
   optional string stripe_subscription_id = 4;
   RegistrationAccountData account_data = 5;
+  // Registering user's name and email, surfaced in the internal new-registration alert.
+  string user_name = 6;
+  string user_email = 7;
 }
 message RegistrationAccountData {
   string account_name = 1;

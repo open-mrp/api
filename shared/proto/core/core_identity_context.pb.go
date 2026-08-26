@@ -1110,8 +1110,11 @@ type CompleteRegistrationRequest struct {
 	// Absent for free-tier plans that don't create a subscription.
 	StripeSubscriptionId *string                  `protobuf:"bytes,4,opt,name=stripe_subscription_id,json=stripeSubscriptionId,proto3,oneof" json:"stripe_subscription_id,omitempty"`
 	AccountData          *RegistrationAccountData `protobuf:"bytes,5,opt,name=account_data,json=accountData,proto3" json:"account_data,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	// Registering user's name and email, surfaced in the internal new-registration alert.
+	UserName      string `protobuf:"bytes,6,opt,name=user_name,json=userName,proto3" json:"user_name,omitempty"`
+	UserEmail     string `protobuf:"bytes,7,opt,name=user_email,json=userEmail,proto3" json:"user_email,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CompleteRegistrationRequest) Reset() {
@@ -1177,6 +1180,20 @@ func (x *CompleteRegistrationRequest) GetAccountData() *RegistrationAccountData 
 		return x.AccountData
 	}
 	return nil
+}
+
+func (x *CompleteRegistrationRequest) GetUserName() string {
+	if x != nil {
+		return x.UserName
+	}
+	return ""
+}
+
+func (x *CompleteRegistrationRequest) GetUserEmail() string {
+	if x != nil {
+		return x.UserEmail
+	}
+	return ""
 }
 
 type RegistrationAccountData struct {
@@ -10900,13 +10917,16 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\x0erole_type_code\x18\x05 \x01(\tR\froleTypeCode\x12A\n" +
 	"\flast_used_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\n" +
 	"lastUsedAt\x88\x01\x01B\x0f\n" +
-	"\r_last_used_at\"\x99\x02\n" +
+	"\r_last_used_at\"\xd5\x02\n" +
 	"\x1bCompleteRegistrationRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1b\n" +
 	"\tplan_code\x18\x02 \x01(\tR\bplanCode\x12,\n" +
 	"\x12stripe_customer_id\x18\x03 \x01(\tR\x10stripeCustomerId\x129\n" +
 	"\x16stripe_subscription_id\x18\x04 \x01(\tH\x00R\x14stripeSubscriptionId\x88\x01\x01\x12@\n" +
-	"\faccount_data\x18\x05 \x01(\v2\x1d.core.RegistrationAccountDataR\vaccountDataB\x19\n" +
+	"\faccount_data\x18\x05 \x01(\v2\x1d.core.RegistrationAccountDataR\vaccountData\x12\x1b\n" +
+	"\tuser_name\x18\x06 \x01(\tR\buserName\x12\x1d\n" +
+	"\n" +
+	"user_email\x18\a \x01(\tR\tuserEmailB\x19\n" +
 	"\x17_stripe_subscription_id\"\x9c\x01\n" +
 	"\x17RegistrationAccountData\x12!\n" +
 	"\faccount_name\x18\x01 \x01(\tR\vaccountName\x12I\n" +

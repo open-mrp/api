@@ -551,6 +551,8 @@ func (s *registrationSessionSvcImpl) CompleteRegistration(ctx context.Context, s
 				UserID:      *session.UserID,
 				PlanCode:    session.PlanCode,
 				AccountName: session.SessionData.AccountName,
+				UserName:    session.SessionData.UserName,
+				UserEmail:   session.Email,
 			}
 			if session.StripeCustomerID != nil {
 				coreInput.StripeCustomerID = *session.StripeCustomerID

@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.1](https://github.com/open-mrp/api/compare/v1.4.0...v1.4.1) (2026-08-26)
+
+
+### Bug Fixes
+
+* **core:** add replay CLI for stranded inventory_received messages ([#56](https://github.com/open-mrp/api/issues/56)) ([c41afd8](https://github.com/open-mrp/api/commit/c41afd82f643a65bc5396b63bb88cfe30416327a))
+* **schedule:** fix issue where manually added lines failed to resolve the SKU properly ([#65](https://github.com/open-mrp/api/issues/65)) ([130b3ac](https://github.com/open-mrp/api/commit/130b3acadaa4b1e3c3975651b9e0b701ae73eb6a))
+
 ## [1.4.0](https://github.com/open-mrp/api/compare/v1.3.1...v1.4.0) (2026-08-26)
 
 

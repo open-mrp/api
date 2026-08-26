@@ -52,6 +52,14 @@ type GetConstraintBatchMeasurementsParams struct {
 	ConstraintDepartmentID string
 }
 
+// ItemRunRateSample is what one of an item's past scans says its run rate was: the labor time of the step it was produced at, and the machine it ran on.
+type ItemRunRateSample struct {
+	// MachineID is empty for a scan recorded against no machine.
+	MachineID      string
+	LaborTimeValue float64
+	LaborTimeUnit  string
+}
+
 // ConstraintBatchRow is one historical batch as read from the database: the measurement the solver consumes plus the raw scan metadata the input assembly needs alongside it.
 type ConstraintBatchRow struct {
 	Measurement scheduling.BatchMeasurement
@@ -416,6 +424,8 @@ type ProductionScheduleLine struct {
 	ProductionStepID *string
 	DepartmentID     *string
 	ItemID           string `audit:"item_id"`
+	// ItemSKU is joined for display: a plan row is read by SKU, and a line whose item the version holds no policy for — every hand-added campaign — has nowhere else to get one.
+	ItemSKU string
 
 	PlannedQuantity float64 `audit:"planned_quantity"`
 	PlannedUnitID   *string `audit:"planned_unit_id"`

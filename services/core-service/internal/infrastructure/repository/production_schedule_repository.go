@@ -340,6 +340,7 @@ func (r *productionScheduleRepoImpl) ListLines(ctx context.Context, params domai
 			WeekStartDate:           row.WeekStartDate,
 			MachineID:               row.MachineID,
 			ItemID:                  row.ItemID,
+			ItemSKU:                 row.ItemSku.String,
 			PlannedQuantity:         decimalToFloat64(row.PlannedQuantity),
 			PlannedLots:             row.PlannedLots,
 			PlannedLotUnits:         decimalToFloat64(row.PlannedLotUnits),

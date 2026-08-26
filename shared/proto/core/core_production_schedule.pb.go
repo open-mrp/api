@@ -1057,6 +1057,7 @@ type ProductionScheduleLineInfo struct {
 	ReleasedBatchCount       int64                  `protobuf:"varint,26,opt,name=released_batch_count,json=releasedBatchCount,proto3" json:"released_batch_count,omitempty"`
 	ScannedBatchCount        int64                  `protobuf:"varint,27,opt,name=scanned_batch_count,json=scannedBatchCount,proto3" json:"scanned_batch_count,omitempty"`
 	ScannedQuantity          float64                `protobuf:"fixed64,28,opt,name=scanned_quantity,json=scannedQuantity,proto3" json:"scanned_quantity,omitempty"`
+	ItemSku                  string                 `protobuf:"bytes,29,opt,name=item_sku,json=itemSku,proto3" json:"item_sku,omitempty"`
 	unknownFields            protoimpl.UnknownFields
 	sizeCache                protoimpl.SizeCache
 }
@@ -1285,6 +1286,13 @@ func (x *ProductionScheduleLineInfo) GetScannedQuantity() float64 {
 		return x.ScannedQuantity
 	}
 	return 0
+}
+
+func (x *ProductionScheduleLineInfo) GetItemSku() string {
+	if x != nil {
+		return x.ItemSku
+	}
+	return ""
 }
 
 type ProductionScheduleItemPolicyInfo struct {
@@ -7879,8 +7887,7 @@ const file_core_core_production_schedule_proto_rawDesc = "" +
 	"\x10_generated_by_idB\x12\n" +
 	"\x10_published_by_idB\x0f\n" +
 	"\r_published_atB\x13\n" +
-	"\x11_superseded_by_id\"\xfd\n" +
-	"\n" +
+	"\x11_superseded_by_id\"\x98\v\n" +
 	"\x1aProductionScheduleLineInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x124\n" +
 	"\x16production_schedule_id\x18\x02 \x01(\tR\x14productionScheduleId\x12\x1d\n" +
@@ -7917,7 +7924,8 @@ const file_core_core_production_schedule_proto_rawDesc = "" +
 	"\x19planned_unit_abbreviation\x18\x19 \x01(\tH\x05R\x17plannedUnitAbbreviation\x88\x01\x01\x120\n" +
 	"\x14released_batch_count\x18\x1a \x01(\x03R\x12releasedBatchCount\x12.\n" +
 	"\x13scanned_batch_count\x18\x1b \x01(\x03R\x11scannedBatchCount\x12)\n" +
-	"\x10scanned_quantity\x18\x1c \x01(\x01R\x0fscannedQuantityB\x15\n" +
+	"\x10scanned_quantity\x18\x1c \x01(\x01R\x0fscannedQuantity\x12\x19\n" +
+	"\bitem_sku\x18\x1d \x01(\tR\aitemSkuB\x15\n" +
 	"\x13_production_step_idB\x10\n" +
 	"\x0e_department_idB\x12\n" +
 	"\x10_planned_unit_idB\x0e\n" +

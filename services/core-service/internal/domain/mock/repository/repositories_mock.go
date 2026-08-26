@@ -11347,6 +11347,21 @@ func (mr *MockProductionScheduleInputRepoMockRecorder) GetFinishingMachines(ctx,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFinishingMachines", reflect.TypeOf((*MockProductionScheduleInputRepo)(nil).GetFinishingMachines), ctx, accountID, constraintDepartmentID)
 }
 
+// GetItemRunRateHistory mocks base method.
+func (m *MockProductionScheduleInputRepo) GetItemRunRateHistory(ctx context.Context, accountID, itemID string, limit int32) ([]domain.ItemRunRateSample, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetItemRunRateHistory", ctx, accountID, itemID, limit)
+	ret0, _ := ret[0].([]domain.ItemRunRateSample)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetItemRunRateHistory indicates an expected call of GetItemRunRateHistory.
+func (mr *MockProductionScheduleInputRepoMockRecorder) GetItemRunRateHistory(ctx, accountID, itemID, limit any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetItemRunRateHistory", reflect.TypeOf((*MockProductionScheduleInputRepo)(nil).GetItemRunRateHistory), ctx, accountID, itemID, limit)
+}
+
 // GetItemUnitCosts mocks base method.
 func (m *MockProductionScheduleInputRepo) GetItemUnitCosts(ctx context.Context, accountID string, itemIDs []string) (map[string]float64, *apierror.APIError) {
 	m.ctrl.T.Helper()

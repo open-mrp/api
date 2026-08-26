@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"encoding/json"
-	"math"
 	"strconv"
 	"time"
 
@@ -16,6 +15,7 @@ import (
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/safeconv"
 	"github.com/open-mrp/api/shared/tracing"
 )
 
@@ -224,12 +224,18 @@ func (s *productionScheduleSvcImpl) ListProductionScheduleDeviations(ctx context
 
 // estimatedRunHours prices a hand-added campaign in constraint time.
 //
-// The version's own solved rate first, so a campaign added next to a solved one is priced the same way. A SKU the version holds no policy for is the whole reason the planner is adding it by hand — it had no scan in the measurement window, so the solver never saw it — and falling to zero there would book a campaign that claims no machine time at all, leaving the week reading idle for work somebody has to do. The machine's production step carries the same labor time the solver would have measured off a batch, so use it.
+// The version's own solved rate first, so a campaign added next to a solved one is priced the same way.
 //
-// Zero only when neither is known, which is a step with no labor time configured.
+// A SKU the version holds no policy for is the whole reason the planner is adding it by hand — it had no scan in the measurement window, so the solver never saw it — and falling to zero there would book a campaign that claims no machine time at all, leaving the week reading idle for work somebody has to do.
+//
+// So the item's own scans are read next, ignoring any window. A run rate here is the labor time of the production step a batch was produced at, which is what MeasureItems takes off the solver's own batches: a sample from two years ago therefore yields exactly the rate the solver would have derived had the scan been recent. Ties break toward the machine the campaign is going on, since that is the machine whose hours are being booked.
+//
+// The order below is item-specific before machine-specific, deliberately. A step belongs to an item, not to a machine — one knitting machine runs a ten-minute step for one SKU and an eight-minute step for another — so the machine's own production step is a per-machine default, and the weakest evidence of how long this SKU will occupy it. It is also the source most often absent: a machine is not required to name a step at all.
+//
+// Zero only when none of them is known, which is a SKU that has never run and whose flow configures no labor time.
 func (s *productionScheduleSvcImpl) estimatedRunHours(
 	ctx context.Context,
-	accountID, scheduleID, itemID string,
+	accountID, scheduleID, itemID, machineID string,
 	quantity float64,
 	productionStepID *string,
 ) (float64, *apierror.APIError) {
@@ -243,10 +249,69 @@ func (s *productionScheduleSvcImpl) estimatedRunHours(
 		}
 	}
 
-	if productionStepID == nil {
-		return 0, nil
+	measured, apiErr := s.measuredSecondsPerUnit(ctx, accountID, itemID, machineID)
+	if apiErr != nil {
+		return 0, apiErr
 	}
-	step, apiErr := s.repos.NewProductionStepRepo().Get(ctx, accountID, *productionStepID)
+	if measured > 0 {
+		return quantity * measured / 3600, nil
+	}
+
+	// Never run, so fall back to what the flow was configured to do: the step that makes this item, then the machine's own.
+	stepIDs, apiErr := s.repos.NewProductionFlowRepo().FindStepsByProducedItem(ctx, accountID, itemID)
+	if apiErr != nil {
+		return 0, apiErr
+	}
+	if productionStepID != nil {
+		stepIDs = append(stepIDs, *productionStepID)
+	}
+
+	for _, stepID := range stepIDs {
+		secondsPerUnit, apiErr := s.stepSecondsPerUnit(ctx, accountID, stepID)
+		if apiErr != nil {
+			return 0, apiErr
+		}
+		if secondsPerUnit > 0 {
+			return quantity * secondsPerUnit / 3600, nil
+		}
+	}
+	return 0, nil
+}
+
+// runRateHistorySamples caps how far back a hand-added campaign is priced from. A rarely-made SKU has a handful of scans in total, so this is a guard against reading a common SKU's whole history rather than a real horizon.
+const runRateHistorySamples = 50
+
+// measuredSecondsPerUnit prices an item from its own scan history, preferring the machine the campaign runs on. Zero when nothing it ever ran at carries a labor time.
+func (s *productionScheduleSvcImpl) measuredSecondsPerUnit(ctx context.Context, accountID, itemID, machineID string) (float64, *apierror.APIError) {
+	samples, apiErr := s.repos.NewProductionScheduleInputRepo().GetItemRunRateHistory(ctx, accountID, itemID, runRateHistorySamples)
+	if apiErr != nil {
+		return 0, apiErr
+	}
+
+	var anyMachine float64
+	for _, sample := range samples {
+		if sample.LaborTimeValue <= 0 {
+			continue
+		}
+		secondsPerUnit := scheduling.SecondsPerUnitFromLaborTime(sample.LaborTimeValue, sample.LaborTimeUnit)
+		if secondsPerUnit <= 0 {
+			continue
+		}
+		// Samples arrive newest first, so the first hit on this machine is the most recent thing it actually ran.
+		if machineID != "" && sample.MachineID == machineID {
+			return secondsPerUnit, nil
+		}
+		if anyMachine == 0 {
+			anyMachine = secondsPerUnit
+		}
+	}
+	// No scan on this machine: the item has run somewhere, and the rate it ran at beats booking no time at all.
+	return anyMachine, nil
+}
+
+// stepSecondsPerUnit reads a step's configured labor time as seconds per unit, or zero when it has none.
+func (s *productionScheduleSvcImpl) stepSecondsPerUnit(ctx context.Context, accountID, stepID string) (float64, *apierror.APIError) {
+	step, apiErr := s.repos.NewProductionStepRepo().Get(ctx, accountID, stepID)
 	if apiErr != nil {
 		return 0, apiErr
 	}
@@ -257,7 +322,7 @@ func (s *productionScheduleSvcImpl) estimatedRunHours(
 	if err != nil || value <= 0 {
 		return 0, nil
 	}
-	return quantity * scheduling.SecondsPerUnitFromLaborTime(value, step.LaborTime.NumeratorUnit.Abbreviation) / 3600, nil
+	return scheduling.SecondsPerUnitFromLaborTime(value, step.LaborTime.NumeratorUnit.Abbreviation), nil
 }
 
 // CreateProductionScheduleLine adds a campaign by hand and logs a deviation.
@@ -387,13 +452,14 @@ func (s *productionScheduleSvcImpl) createProductionScheduleLineTx(
 		if params.Lots != nil {
 			line.PlannedLots = *params.Lots
 		} else if line.PlannedLotUnits > 0 {
-			line.PlannedLots = int32(math.Round(params.Quantity / line.PlannedLotUnits))
+			// Counted the way the release will actually split the campaign, not by dividing and rounding. A quantity below one lot rounds to zero lots, which reads as a campaign that issues no tickets while the release issues one anyway; a quantity that is not a lot multiple lands short of the batch the remainder becomes.
+			line.PlannedLots = safeconv.IntToInt32(scheduling.CountLots(params.Quantity, line.PlannedLotUnits))
 		}
 		if params.RunHours != nil {
 			line.PlannedRunHours = *params.RunHours
 		} else {
 			// Derived from the version's own measured rate for this SKU rather than left at zero. A campaign that claims no constraint time makes the week's utilisation read low, which is exactly the number a planner adds a campaign against.
-			runHours, apiErr := txSvc.estimatedRunHours(txCtx, accountID, params.ScheduleID, params.ItemID, params.Quantity, machine.ProductionStepID)
+			runHours, apiErr := txSvc.estimatedRunHours(txCtx, accountID, params.ScheduleID, params.ItemID, params.MachineID, params.Quantity, machine.ProductionStepID)
 			if apiErr != nil {
 				return apiErr
 			}
@@ -556,7 +622,12 @@ func (s *productionScheduleSvcImpl) updateProductionScheduleLineTx(
 		// Machine time and lot count follow the quantity unless the caller prices the campaign itself. Left alone, a resized campaign keeps the hours it was originally sized at, and the week's utilisation — the number a planner resizes a campaign against — goes on reporting work that is no longer planned.
 		if params.Quantity != nil {
 			if params.RunHours == nil {
-				runHours, apiErr := txSvc.estimatedRunHours(txCtx, accountID, params.ScheduleID, existing.ItemID, *params.Quantity, existing.ProductionStepID)
+				// The machine this edit is moving the campaign to, not the one it is leaving: the hours being booked are the new machine's.
+				machineID := existing.MachineID
+				if params.MachineID != nil {
+					machineID = *params.MachineID
+				}
+				runHours, apiErr := txSvc.estimatedRunHours(txCtx, accountID, params.ScheduleID, existing.ItemID, machineID, *params.Quantity, existing.ProductionStepID)
 				if apiErr != nil {
 					return apiErr
 				}
@@ -567,7 +638,7 @@ func (s *productionScheduleSvcImpl) updateProductionScheduleLineTx(
 				repoParams.PlannedRunHours = &runHours
 			}
 			if params.Lots == nil && existing.PlannedLotUnits > 0 {
-				lots := int32(math.Round(*params.Quantity / existing.PlannedLotUnits))
+				lots := safeconv.IntToInt32(scheduling.CountLots(*params.Quantity, existing.PlannedLotUnits))
 				repoParams.PlannedLots = &lots
 			}
 		}

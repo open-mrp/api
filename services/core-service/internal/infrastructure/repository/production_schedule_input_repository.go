@@ -64,6 +64,31 @@ func (r *productionScheduleInputRepoImpl) CountConstraintMachinesWithoutStep(
 	return int(decimalToFloat64(coverage.MachinesWithoutStep)), nil
 }
 
+// GetItemRunRateHistory returns the run-rate samples behind an item's most recent scans, newest first.
+func (r *productionScheduleInputRepoImpl) GetItemRunRateHistory(ctx context.Context, accountID, itemID string, limit int32) ([]domain.ItemRunRateSample, *apierror.APIError) {
+	ctx, span := scheduleInputRepoTracer.Start(ctx, "repository.production_schedule_input.get_item_run_rate_history")
+	defer span.End()
+
+	rows, err := r.queries.GetItemRunRateHistory(ctx, sqlc.GetItemRunRateHistoryParams{
+		AccountID: accountID,
+		ItemID:    itemID,
+		Limit:     limit,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	out := make([]domain.ItemRunRateSample, len(rows))
+	for i, row := range rows {
+		out[i] = domain.ItemRunRateSample{
+			MachineID:      row.MachineID.String,
+			LaborTimeValue: decimalToFloat64(row.LaborTimeValue),
+			LaborTimeUnit:  row.LaborTimeUnit,
+		}
+	}
+	return out, nil
+}
+
 // GetConstraintBatchMeasurements returns one row per historical batch produced on the given machines inside the window: run rates, costs, affinity, lead times.
 func (r *productionScheduleInputRepoImpl) GetConstraintBatchMeasurements(
 	ctx context.Context,

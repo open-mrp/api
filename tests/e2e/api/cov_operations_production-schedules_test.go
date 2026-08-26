@@ -367,6 +367,11 @@ func TestProductionSchedules_LinesAndItemPolicies(t *testing.T) {
 			machine := jsonObject(line, "machine")
 			require.NotNil(t, machine, "a campaign must name the machine it runs on: %v", line)
 			assert.NotEmpty(t, jsonField(machine, "id"))
+			item := jsonObject(line, "item")
+			require.NotNil(t, item, "a campaign must name the item it produces: %v", line)
+			assert.NotEmpty(t, jsonField(item, "handle"),
+				"a campaign's item must carry its SKU: the plan grid labels rows from it, "+
+					"and a line the version holds no policy for has nowhere else to get one")
 			assert.Equal(t, "planned", jsonField(line, "status"))
 			assert.Equal(t, "solver", jsonField(line, "source"))
 			assert.Equal(t, "flexible", jsonField(line, "freeze_status"),

@@ -649,6 +649,8 @@ func (s *accountSvcImpl) CompleteRegistration(ctx context.Context, input domain.
 				"AccountID":   accountID,
 				"PlanCode":    input.PlanCode,
 				"UserID":      input.UserID,
+				"UserName":    input.UserName,
+				"UserEmail":   input.UserEmail,
 			},
 		}
 

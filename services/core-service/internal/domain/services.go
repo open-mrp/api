@@ -642,6 +642,8 @@ type CompleteRegistrationInput struct {
 	PlanCode             string
 	StripeCustomerID     string
 	StripeSubscriptionID string
+	UserName             string
+	UserEmail            string
 	AccountData          RegistrationAccountData
 	BusinessAddress      *RegistrationAddress
 }

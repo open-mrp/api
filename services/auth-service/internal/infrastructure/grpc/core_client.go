@@ -235,6 +235,8 @@ func (c *AuthCoreClient) CompleteRegistration(ctx context.Context, input domain.
 		UserId:           input.UserID,
 		PlanCode:         input.PlanCode,
 		StripeCustomerId: input.StripeCustomerID,
+		UserName:         input.UserName,
+		UserEmail:        input.UserEmail,
 		AccountData: &pb.RegistrationAccountData{
 			AccountName: input.AccountName,
 		},

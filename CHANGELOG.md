@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/open-mrp/api/compare/v1.3.0...v1.3.1) (2026-08-26)
+
+
+### Bug Fixes
+
+* **core:** defer inventory-received open-issue allocation to the paged consumer ([#54](https://github.com/open-mrp/api/issues/54)) ([f6c6cf2](https://github.com/open-mrp/api/commit/f6c6cf230ae8181ca0606d2997dea6ce58750ee6))
+
 ## [1.3.0](https://github.com/open-mrp/api/compare/v1.2.0...v1.3.0) (2026-08-25)
 
 

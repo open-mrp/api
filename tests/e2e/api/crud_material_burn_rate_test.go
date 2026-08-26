@@ -3,6 +3,7 @@
 package api_test
 
 import (
+	"fmt"
 	"net/url"
 	"strconv"
 	"testing"
@@ -48,24 +49,39 @@ func TestMaterials_BurnRate_FromConsumptionHistory(t *testing.T) {
 	adjust("-10")
 	adjust("-5")
 
-	status, getBody, err := apiClient.GetListRaw(materialsPath+"/"+materialID, url.Values{
-		"include": {"item.burn_rate"},
+	// The recompute runs off the consumption transaction via the outbox, so the rate lands a beat after the PATCH returns.
+	var burnRate map[string]any
+	eventually(t, e2eAsyncWaitTimeout, e2eAsyncPollInterval, func() error {
+		status, body, getErr := apiClient.GetListRaw(materialsPath+"/"+materialID, url.Values{
+			"include": {"item.burn_rate"},
+		})
+		if getErr != nil {
+			return getErr
+		}
+		if status != 200 {
+			return fmt.Errorf("retrieve material: status %d: %s", status, body)
+		}
+
+		gotItem := jsonObject(parseJSON(body), "item")
+		if gotItem == nil {
+			return fmt.Errorf("item should be present with include=item.burn_rate: %s", body)
+		}
+		rate := jsonObject(gotItem, "burn_rate")
+		if rate == nil {
+			return fmt.Errorf("item.burn_rate should be present: %s", body)
+		}
+		valueStr := jsonField(rate, "value")
+		measure, parseErr := strconv.ParseFloat(valueStr, 64)
+		if parseErr != nil {
+			return fmt.Errorf("burn rate value %q: %w", valueStr, parseErr)
+		}
+		if measure <= 0 {
+			return fmt.Errorf("burn rate %q should reflect consumption history", valueStr)
+		}
+
+		burnRate = rate
+		return nil
 	})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, getBody)
-
-	got := parseJSON(getBody)
-	item = jsonObject(got, "item")
-	require.NotNil(t, item, "item should be present with include=item.burn_rate")
-
-	burnRate := jsonObject(item, "burn_rate")
-	require.NotNil(t, burnRate, "item.burn_rate should be present")
-
-	valueStr := jsonField(burnRate, "value")
-	require.NotEmpty(t, valueStr)
-	measure, parseErr := strconv.ParseFloat(valueStr, 64)
-	require.NoError(t, parseErr)
-	assert.Greater(t, measure, 0.0, "burn rate should reflect consumption history")
 
 	denUnit := jsonObject(burnRate, "denominator_unit")
 	require.NotNil(t, denUnit, "burn rate denominator_unit should be present")

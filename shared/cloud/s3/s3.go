@@ -79,8 +79,13 @@ func NewClient(ctx context.Context, region string) (*Client, *apierror.APIError)
 	})
 
 	return &Client{
-		client:    client,
-		presigner: s3.NewPresignClient(client),
+		client: client,
+		// Response checksum validation is off for presigned URLs only. Left on, the SDK signs an `x-amz-checksum-mode: ENABLED` header into every presigned GET, and a browser loading that URL from an <img> tag cannot send it — S3 then rejects the signature with a 403. Real GetObject calls through c.client keep validating.
+		presigner: s3.NewPresignClient(client, func(o *s3.PresignOptions) {
+			o.ClientOptions = append(o.ClientOptions, func(so *s3.Options) {
+				so.ResponseChecksumValidation = aws.ResponseChecksumValidationWhenRequired
+			})
+		}),
 	}, nil
 }
 

@@ -20,7 +20,9 @@ type UpdatePickLineRequest struct {
 	// Pick line ID.
 	PickLineID string `path:"id" validate:"required"`
 	// New picked quantity for the line, as a decimal string read in the unit the sales order line was sold in, stored as given and not capped at the ordered quantity.
-	QuantityValue field.Optional[string] `json:"quantity_value,omitzero"`
+	//
+	// Must not be negative. Pulling more than was ordered is a real floor event and is kept as recorded; pulling a negative amount is not.
+	QuantityValue field.Optional[string] `json:"quantity_value,omitzero" validate:"omitempty,decimal,gte=0" format:"decimal"`
 }
 
 var sampleUpdatePickLineQuantityValue = "10.000000000000000000000000000000"

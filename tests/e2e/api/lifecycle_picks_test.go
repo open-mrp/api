@@ -133,10 +133,11 @@ func TestPicks_ShipmentsIsEmptyBeforePacking(t *testing.T) {
 
 	pickID := jsonField(issuedOrderPick(t), "id")
 
-	list, status, err := apiClient.GetList(picksPath+"/"+pickID+"/shipments", nil)
-	require.NoError(t, err)
-	requireStatus(t, 200, status, nil)
-	assertEmptyListData(t, list.Data)
+	// The response is its own shape, not a paginated list, so this reads shipment_numbers
+	// rather than a `data` array that would be absent either way.
+	numbers, count := pickShipments(t, pickID, nil)
+	assert.Empty(t, numbers, "a pick that has never been packed has shipped nothing")
+	assert.Equal(t, 0, count)
 }
 
 // ──────────────────────────────────────────────

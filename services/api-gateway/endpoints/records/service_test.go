@@ -11,12 +11,13 @@ func strp(s string) *string { return &s }
 
 func sampleShipment() *pb.ShipmentInfo {
 	return &pb.ShipmentInfo{
-		Id:           "shp_1",
-		Number:       "SH-001",
-		SalesOrderId: "so_1",
-		AccountId:    "acc_1",
-		CarrierName:  "UPS",
-		ShippedAt:    timestamppb.Now(),
+		Id:               "shp_1",
+		Number:           "SH-001",
+		SalesOrderId:     "so_1",
+		SalesOrderNumber: "000123",
+		AccountId:        "acc_1",
+		CarrierName:      "UPS",
+		ShippedAt:        timestamppb.Now(),
 		Lines: []*pb.ShipmentLineInfo{
 			// Deliberately out of line-number order to exercise sorting.
 			{Id: "shln_2", SalesOrderLineId: "sol_2", OrderLineSku: "RED", OrderLineDescription: strp("Red Widget"), QuantityValue: "5", QuantityUnitName: "each"},
@@ -48,6 +49,40 @@ func sampleOrder() *pb.SalesOrderInfo {
 			// Non-sale (shipping) line, unpacked → must be excluded from back-orders.
 			{Id: "sol_3", LineItemNumber: 3, ProductSku: "FREIGHT", QuantityValue: "1", QuantityPackedValue: strp("0"), QuantityUnitName: "each", ProductTypeCode: strp("shipping")},
 		},
+	}
+}
+
+func TestAssemblePackList_SalesOrderNumberFromShipment(t *testing.T) {
+	pl := assemblePackList(sampleShipment(), sampleOrder(), "Acme", nil)
+
+	if pl.SalesOrderNumber != "000123" {
+		t.Errorf("sales order number = %q; want 000123", pl.SalesOrderNumber)
+	}
+	if pl.ShipmentNumber != "SH-001" {
+		t.Errorf("shipment number = %q; want SH-001", pl.ShipmentNumber)
+	}
+}
+
+func TestAssemblePackList_SalesOrderNumberSurvivesEmptyOrderNumber(t *testing.T) {
+	ship := sampleShipment()
+	order := sampleOrder()
+	order.Number = ""
+
+	pl := assemblePackList(ship, order, "Acme", nil)
+
+	if pl.SalesOrderNumber != "000123" {
+		t.Errorf("sales order number = %q; want 000123 from the shipment's joined number", pl.SalesOrderNumber)
+	}
+}
+
+func TestAssemblePackList_SalesOrderNumberFallsBackToOrder(t *testing.T) {
+	ship := sampleShipment()
+	ship.SalesOrderNumber = ""
+
+	pl := assemblePackList(ship, sampleOrder(), "Acme", nil)
+
+	if pl.SalesOrderNumber != "000123" {
+		t.Errorf("sales order number = %q; want 000123 from the order fallback", pl.SalesOrderNumber)
 	}
 }
 

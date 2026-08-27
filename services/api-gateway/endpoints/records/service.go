@@ -141,11 +141,16 @@ func assemblePackList(s *pb.ShipmentInfo, o *pb.SalesOrderInfo, accountName stri
 		lineNumberByOrderLineID[l.Id] = l.LineItemNumber
 	}
 
+	salesOrderNumber := s.GetSalesOrderNumber()
+	if salesOrderNumber == "" {
+		salesOrderNumber = o.GetNumber()
+	}
+
 	pl := &apiresource.PackList{
 		Object:             constants.ObjectTypePackList,
 		AccountName:        accountName,
 		AccountLogoURL:     logoURL,
-		SalesOrderNumber:   o.GetNumber(),
+		SalesOrderNumber:   salesOrderNumber,
 		CustomerPO:         strPtrOrNil(o.GetCustomerPoNumber()),
 		ShipmentNumber:     s.GetNumber(),
 		ShippedAt:          grpcutil.TimestampToTimePtr(s.ShippedAt),

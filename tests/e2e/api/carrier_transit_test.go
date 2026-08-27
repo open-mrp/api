@@ -110,7 +110,7 @@ func issueOnceWarm(t *testing.T, orderID string) map[string]any {
 	var issued map[string]any
 	eventually(t, e2eAsyncWaitTimeout, e2eAsyncPollInterval, func() error {
 		issued = issueOrder(t, orderID)
-		if jsonField(issued, "transit_days") == "" {
+		if jsonField(commitmentOf(issued), "transit_days") == "" {
 			unissueOrder(t, orderID)
 			return fmt.Errorf("lane not warmed yet for order %s", orderID)
 		}
@@ -166,9 +166,9 @@ func TestCarrierTransit_ShipByIsPromisedDateLessTransit(t *testing.T) {
 
 	issued := issueOnceWarm(t, orderID)
 
-	assert.Equal(t, "3", jsonField(issued, "transit_days"))
-	assert.Equal(t, "carrier_lane", jsonField(issued, "transit_source"))
-	assert.Equal(t, "manual", jsonField(issued, "lead_time_source"),
+	assert.Equal(t, "3", jsonField(commitmentOf(issued), "transit_days"))
+	assert.Equal(t, "carrier_lane", jsonField(commitmentOf(issued), "transit_source"))
+	assert.Equal(t, "manual", jsonField(commitmentOf(issued), "lead_time_source"),
 		"a promised date still beats the customer's standing rule")
 	assert.Equal(t, shipByFor(promised, 3), shipByDate(t, issued))
 
@@ -201,8 +201,8 @@ func TestCarrierTransit_FasterServiceShipsLater(t *testing.T) {
 			orderID := createTransitOrder(t, customerID, tc.serviceLevelID, zipStubNormal, promised)
 			issued := issueOnceWarm(t, orderID)
 
-			assert.Equal(t, tc.wantDays, jsonField(issued, "transit_days"))
-			assert.Equal(t, "carrier_lane", jsonField(issued, "transit_source"))
+			assert.Equal(t, tc.wantDays, jsonField(commitmentOf(issued), "transit_days"))
+			assert.Equal(t, "carrier_lane", jsonField(commitmentOf(issued), "transit_source"))
 			assert.Equal(t, shipByFor(promised, tc.wantTransit), shipByDate(t, issued))
 		})
 	}
@@ -219,8 +219,8 @@ func TestCarrierTransit_SameDayLaneIsARealAnswer(t *testing.T) {
 
 	issued := issueOnceWarm(t, orderID)
 
-	assert.Equal(t, "0", jsonField(issued, "transit_days"))
-	assert.Equal(t, "carrier_lane", jsonField(issued, "transit_source"))
+	assert.Equal(t, "0", jsonField(commitmentOf(issued), "transit_days"))
+	assert.Equal(t, "carrier_lane", jsonField(commitmentOf(issued), "transit_source"))
 	assert.Equal(t, promised.Format("2006-01-02"), shipByDate(t, issued))
 }
 
@@ -236,8 +236,8 @@ func TestCarrierTransit_FallsBackToServiceLevelDefault(t *testing.T) {
 	// The fallback needs no warm, so this stamps on the first issue.
 	issued := issueOrder(t, orderID)
 
-	assert.Equal(t, "5", jsonField(issued, "transit_days"))
-	assert.Equal(t, "service_level", jsonField(issued, "transit_source"))
+	assert.Equal(t, "5", jsonField(commitmentOf(issued), "transit_days"))
+	assert.Equal(t, "service_level", jsonField(commitmentOf(issued), "transit_source"))
 	assert.Equal(t, shipByFor(promised, 5), shipByDate(t, issued))
 }
 
@@ -253,8 +253,8 @@ func TestCarrierTransit_UnknownTransitLeavesThePromisedDate(t *testing.T) {
 	awaitWarmBarrier(t, customerID, promised)
 	issued := issueOrder(t, orderID)
 
-	assert.Empty(t, jsonField(issued, "transit_days"))
-	assert.Empty(t, jsonField(issued, "transit_source"))
+	assert.Empty(t, jsonField(commitmentOf(issued), "transit_days"))
+	assert.Empty(t, jsonField(commitmentOf(issued), "transit_source"))
 	assert.Equal(t, promised.Format("2006-01-02"), shipByDate(t, issued),
 		"with no transit the order is due to ship on the promised date itself")
 }
@@ -284,8 +284,8 @@ func TestCarrierTransit_CarrierResponsesThatYieldNoEstimate(t *testing.T) {
 			awaitWarmBarrier(t, customerID, promised)
 			issued := issueOrder(t, orderID)
 
-			assert.Empty(t, jsonField(issued, "transit_days"), tc.why)
-			assert.Empty(t, jsonField(issued, "transit_source"), tc.why)
+			assert.Empty(t, jsonField(commitmentOf(issued), "transit_days"), tc.why)
+			assert.Empty(t, jsonField(commitmentOf(issued), "transit_source"), tc.why)
 			assert.Equal(t, promised.Format("2006-01-02"), shipByDate(t, issued),
 				"ship-by falls back to the promised date")
 		})
@@ -316,9 +316,9 @@ func TestCarrierTransit_LeadTimeOrdersAreUnaffected(t *testing.T) {
 
 	issued := issueOrder(t, orderID)
 
-	assert.Equal(t, "customer", jsonField(issued, "lead_time_source"))
+	assert.Equal(t, "customer", jsonField(commitmentOf(issued), "lead_time_source"))
 	assert.Equal(t, 14, committedRuleDays(t, issued))
-	assert.Empty(t, jsonField(issued, "transit_days"),
+	assert.Empty(t, jsonField(commitmentOf(issued), "transit_days"),
 		"no delivery date was promised, so there is nothing to subtract transit from")
 	assert.Equal(t, expectedShipBy(t, issued, 14), shipByDate(t, issued))
 }
@@ -333,15 +333,15 @@ func TestCarrierTransit_UnissueClearsTransit(t *testing.T) {
 	orderID := createTransitOrder(t, customerID, SeedTransitGroundServiceLevelID, zipStubNormal, promised)
 
 	issued := issueOnceWarm(t, orderID)
-	require.Equal(t, "3", jsonField(issued, "transit_days"), "precondition: transit was stamped")
+	require.Equal(t, "3", jsonField(commitmentOf(issued), "transit_days"), "precondition: transit was stamped")
 
 	status, body, err := apiClient.Put(salesOrdersPath+"/"+orderID+"/actions/unissue", nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
 	after := parseJSON(body)
-	assert.Empty(t, jsonField(after, "transit_days"))
-	assert.Empty(t, jsonField(after, "transit_source"))
+	assert.Empty(t, jsonField(commitmentOf(after), "transit_days"))
+	assert.Empty(t, jsonField(commitmentOf(after), "transit_source"))
 	assert.Empty(t, shipByDate(t, after))
 }
 
@@ -367,8 +367,8 @@ func TestCarrierTransit_StampedCommitmentDoesNotMoveWithTheLane(t *testing.T) {
 
 	after := parseJSON(body)
 	assert.Equal(t, originalShipBy, shipByDate(t, after))
-	assert.Equal(t, "3", jsonField(after, "transit_days"))
-	assert.Equal(t, "carrier_lane", jsonField(after, "transit_source"))
+	assert.Equal(t, "3", jsonField(commitmentOf(after), "transit_days"))
+	assert.Equal(t, "carrier_lane", jsonField(commitmentOf(after), "transit_source"))
 }
 
 // The service level's fallback has to be settable, or the only transit an

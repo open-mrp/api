@@ -65,14 +65,14 @@ func TestCommitmentBasis_LeadTimeOverrideReplacesTheCustomerChain(t *testing.T) 
 	requireStatus(t, 201, status, body)
 
 	orderID := jsonField(parseJSON(body), "id")
-	assert.Equal(t, "7", jsonField(parseJSON(body), "lead_time_override_days"))
+	assert.Equal(t, "7", jsonField(commitmentOf(parseJSON(body)), "lead_time_override_days"))
 
 	issued := issueOrder(t, orderID)
-	assert.Equal(t, "order_lead_time", jsonField(issued, "lead_time_source"),
+	assert.Equal(t, "order_lead_time", jsonField(commitmentOf(issued), "lead_time_source"),
 		"an order-level lead time must win the chain: %v", issued)
-	assert.NotEmpty(t, jsonField(issued, "ship_by_date"))
+	assert.NotEmpty(t, jsonField(commitmentOf(issued), "ship_by_date"))
 	// A lead time is already a ship lead time; subtracting transit would deduct the journey twice.
-	assert.Empty(t, jsonField(issued, "transit_days"), "a lead-time basis takes no transit")
+	assert.Empty(t, jsonField(commitmentOf(issued), "transit_days"), "a lead-time basis takes no transit")
 }
 
 func TestCommitmentBasis_ShipByPinIsTakenAsGiven(t *testing.T) {
@@ -86,10 +86,10 @@ func TestCommitmentBasis_ShipByPinIsTakenAsGiven(t *testing.T) {
 	requireStatus(t, 201, status, body)
 
 	issued := issueOrder(t, jsonField(parseJSON(body), "id"))
-	assert.Equal(t, "order_ship_by", jsonField(issued, "lead_time_source"))
-	assert.Equal(t, pinned.Format("2006-01-02"), dateOnly(jsonField(issued, "ship_by_date")),
+	assert.Equal(t, "order_ship_by", jsonField(commitmentOf(issued), "lead_time_source"))
+	assert.Equal(t, pinned.Format("2006-01-02"), dateOnly(jsonField(commitmentOf(issued), "ship_by_date")),
 		"a pinned ship date on an open day must be taken as given: %v", issued)
-	assert.Empty(t, jsonField(issued, "transit_days"), "a pinned ship date takes no transit")
+	assert.Empty(t, jsonField(commitmentOf(issued), "transit_days"), "a pinned ship date takes no transit")
 }
 
 // A pinned Saturday resolves to the Friday before rather than standing as a date nobody can ship on.
@@ -109,9 +109,9 @@ func TestCommitmentBasis_ShipByPinSnapsOffAClosedDay(t *testing.T) {
 
 	issued := issueOrder(t, jsonField(parseJSON(body), "id"))
 	want := saturday.AddDate(0, 0, -1).Format("2006-01-02")
-	assert.Equal(t, want, dateOnly(jsonField(issued, "ship_by_date")),
+	assert.Equal(t, want, dateOnly(jsonField(commitmentOf(issued), "ship_by_date")),
 		"a Saturday pin must resolve back to Friday: %v", issued)
-	assert.Equal(t, "1", jsonField(issued, "calendar_adjustment_days"),
+	assert.Equal(t, "1", jsonField(commitmentOf(issued), "calendar_adjustment_days"),
 		"the day lost to the snap must be reported: %v", issued)
 }
 
@@ -171,8 +171,8 @@ func TestCommitmentBasis_SwitchingBasisInOnePatchSucceeds(t *testing.T) {
 	requireStatus(t, 200, status, body)
 
 	updated := parseJSON(body)
-	assert.Empty(t, jsonField(updated, "lead_time_override_days"))
-	assert.NotEmpty(t, jsonField(updated, "promised_at"))
+	assert.Empty(t, jsonField(commitmentOf(updated), "lead_time_override_days"))
+	assert.NotEmpty(t, jsonField(commitmentOf(updated), "promised_at"))
 }
 
 // Moving a basis on a live order re-stamps its commitment, and the response says so.
@@ -229,7 +229,7 @@ func TestCommitmentBasis_PatchingABasisMovesTheStampedShipBy(t *testing.T) {
 			requireStatus(t, 200, status, body)
 
 			patched := parseJSON(body)
-			assert.Equal(t, tc.wantSource, jsonField(patched, "lead_time_source"))
+			assert.Equal(t, tc.wantSource, jsonField(commitmentOf(patched), "lead_time_source"))
 			assert.NotEqual(t, shipByDate(t, issued), shipByDate(t, patched),
 				"the response must not still carry the ship-by the basis replaced: %v", patched)
 			if tc.wantShipBy != nil {
@@ -244,8 +244,8 @@ func TestCommitmentBasis_PatchingABasisMovesTheStampedShipBy(t *testing.T) {
 			fetched := parseJSON(resp.Body)
 			assert.Equal(t, shipByDate(t, patched), shipByDate(t, fetched),
 				"the patch response must match what a read of the order returns")
-			assert.Equal(t, jsonField(patched, "lead_time_days"), jsonField(fetched, "lead_time_days"))
-			assert.Equal(t, jsonField(patched, "lead_time_source"), jsonField(fetched, "lead_time_source"))
+			assert.Equal(t, jsonField(commitmentOf(patched), "lead_time_days"), jsonField(commitmentOf(fetched), "lead_time_days"))
+			assert.Equal(t, jsonField(commitmentOf(patched), "lead_time_source"), jsonField(commitmentOf(fetched), "lead_time_source"))
 		})
 	}
 }
@@ -263,8 +263,8 @@ func TestQuoteCommitment_NamesTheDateAndExplainsIt(t *testing.T) {
 
 	quote := parseJSON(body)
 	assert.Equal(t, "sales_order_commitment_quote", jsonField(quote, "object"))
-	assert.NotEmpty(t, jsonField(quote, "ship_by_date"), "a quote must name a date: %s", string(body))
-	assert.Equal(t, "order_lead_time", jsonField(quote, "lead_time_source"))
+	assert.NotEmpty(t, jsonField(commitmentOf(quote), "ship_by_date"), "a quote must name a date: %s", string(body))
+	assert.Equal(t, "order_lead_time", jsonField(commitmentOf(quote), "lead_time_source"))
 	// The derivation is what lets a form explain the date rather than restate the rules.
 	assert.NotEmpty(t, jsonArray(quote, "steps"), "a quote must explain itself: %s", string(body))
 }
@@ -279,7 +279,7 @@ func TestQuoteCommitment_MatchesWhatIssueStamps(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
-	quoted := jsonField(parseJSON(body), "ship_by_date")
+	quoted := jsonField(commitmentOf(parseJSON(body)), "ship_by_date")
 
 	createStatus, createBody := createOrderWithBasis(t, SeedCustomerAccountID, map[string]any{
 		"lead_time_override_days": 12,
@@ -287,7 +287,7 @@ func TestQuoteCommitment_MatchesWhatIssueStamps(t *testing.T) {
 	requireStatus(t, 201, createStatus, createBody)
 
 	issued := issueOrder(t, jsonField(parseJSON(createBody), "id"))
-	assert.Equal(t, dateOnly(quoted), dateOnly(jsonField(issued, "ship_by_date")),
+	assert.Equal(t, dateOnly(quoted), dateOnly(jsonField(commitmentOf(issued), "ship_by_date")),
 		"the preview must agree with what issue stamped: %v", issued)
 }
 
@@ -317,7 +317,7 @@ func TestCommitmentBasis_UnissueClearsTheCommitment(t *testing.T) {
 	orderID := jsonField(parseJSON(body), "id")
 
 	issued := issueOrder(t, orderID)
-	require.NotEmpty(t, jsonField(issued, "ship_by_date"))
+	require.NotEmpty(t, jsonField(commitmentOf(issued), "ship_by_date"))
 
 	unissueOrder(t, orderID)
 
@@ -326,7 +326,7 @@ func TestCommitmentBasis_UnissueClearsTheCommitment(t *testing.T) {
 	requireStatus(t, 200, resp.StatusCode, resp.Body)
 
 	after := parseJSON(resp.Body)
-	assert.Empty(t, jsonField(after, "ship_by_date"), "unissue must clear the commitment: %v", after)
+	assert.Empty(t, jsonField(commitmentOf(after), "ship_by_date"), "unissue must clear the commitment: %v", after)
 	// The basis is an input, not a commitment, so it survives for the next issue.
-	assert.Equal(t, "7", jsonField(after, "lead_time_override_days"))
+	assert.Equal(t, "7", jsonField(commitmentOf(after), "lead_time_override_days"))
 }

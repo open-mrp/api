@@ -93,6 +93,9 @@ ON CONFLICT (id) DO UPDATE SET
     duration_ms         = EXCLUDED.duration_ms,
     total_input_tokens  = EXCLUDED.total_input_tokens,
     total_output_tokens = EXCLUDED.total_output_tokens,
+    -- Retrying increments this and the cap is MaxManualRetries, so leaving it alone lets runfail1
+    -- survive exactly five reseeds before the happy-path test starts failing on the cap instead.
+    retry_count         = 0,
     updated_at          = now();
 
 -- Agent actions. Run #3 exercises `list-runs/actions` and the alert→action

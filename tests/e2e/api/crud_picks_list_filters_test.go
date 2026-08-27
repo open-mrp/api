@@ -11,7 +11,7 @@ import (
 )
 
 // Covers the filter set the picking index page sends (pick.api.ts fetchPicks): q, status,
-// customer_ids, product_line_ids, customer_group_ids, department_ids and the date window.
+// customer_ids, product_line_ids, customer_group_ids and the date window.
 //
 // A filter the server silently ignores still returns 200 with a full page, so every case pairs a
 // positive match with a nonsense id that must narrow the list to nothing.
@@ -63,13 +63,9 @@ func TestPicksList_FiltersByCustomerAndGroup(t *testing.T) {
 	assert.Empty(t, pickIDsFiltered(t, url.Values{"customer_group_ids": {"acgp_01nosuchgroup0000"}}))
 }
 
-// Both reach through the pick's order lines to the product behind them.
-func TestPicksList_FiltersByDepartmentAndProductLine(t *testing.T) {
+// Reaches through the pick's order lines to the product behind them.
+func TestPicksList_FiltersByProductLine(t *testing.T) {
 	t.Parallel()
-
-	assert.Contains(t, pickIDsFiltered(t, url.Values{"department_ids": {SeedDepartmentID}}), seedOpenPickID,
-		"the seeded department owns the seeded picks")
-	assert.Empty(t, pickIDsFiltered(t, url.Values{"department_ids": {"dp_01nosuchdepartment"}}))
 
 	assert.NotEmpty(t, pickIDsFiltered(t, url.Values{"product_line_ids": {SeedProductLineID}}),
 		"the seeded product line is picked on at least one pick")

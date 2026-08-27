@@ -17,16 +17,16 @@ type ListInventoryChangeLogsRequest struct {
 	apiresource.PaginationRequest
 	// Restricts results to changes affecting these items.
 	ItemIDs []string `query:"item_ids"`
-	// Restricts results to these action types (`scan`, `user_action`, `system_action`, `user_correction`).
-	ActionTypeCodes []string `query:"action_type_codes"`
+	// Restricts results to these action types.
+	ActionTypes []constants.InventoryActionType `query:"action_types"`
 	// Restricts results to changes made by these users.
 	//
 	// Changes that were recorded without a responsible user are excluded whenever this filter is set.
 	ChangedByUserIDs []string `query:"changed_by_user_ids"`
 	// Restricts results to change logs created on or after this timestamp.
-	StartDate *time.Time `query:"starts_at"`
+	StartsAt *time.Time `query:"starts_at"`
 	// Restricts results to change logs created on or before this timestamp.
-	EndDate *time.Time `query:"ends_at"`
+	EndsAt *time.Time `query:"ends_at"`
 }
 
 // Returns a paginated list of inventory change logs, newest first.
@@ -41,8 +41,9 @@ func (e *ListInventoryChangeLogsEndpoint) Materialize() *apiendpoint.APIEndpoint
 		ContentType:       "application/json",
 		Route:             "/v1/operations/inventory-change-logs",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
+		AgentTool:         true,
 		ObjectType:        constants.ObjectTypeInventoryChangeLog,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainInventoryLogs, Action: types.ActionRead},
@@ -52,7 +53,7 @@ func (e *ListInventoryChangeLogsEndpoint) Materialize() *apiendpoint.APIEndpoint
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeInventoryChangeLog,
-			Fields:     []string{"item", "quantity", "quantity.unit", "responsible_user", "responsible_scanning_station"},
+			Fields:     []string{"item", "responsible_user", "responsible_scanning_station"},
 		}),
 	})
 }

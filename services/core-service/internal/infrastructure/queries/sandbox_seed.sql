@@ -2992,15 +2992,6 @@ INSERT INTO `pick_line` (`id`, `pick_id`, `quantity_id`, `sales_order_line_id`, 
   (@pkl9, @pick5, @qty241, @sol16, NOW() - INTERVAL 3 DAY),
   (@pkl10, @pick5, @qty242, @sol17, NOW() - INTERVAL 3 DAY);
 
--- Department-pick links (A = department, B = pick)
-INSERT INTO `_departments_picks` (`A`, `B`) VALUES
-  (@dept6, @pick1),
-  (@dept6, @pick2),
-  (@dept6, @pick3),
-  (@dept6, @pick4),
-  (@dept6, @pick5);
-
-
 -- ============================================================================
 -- SECTION 41: SHIPMENTS + SHIPMENT LINES
 -- ============================================================================

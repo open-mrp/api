@@ -151,14 +151,6 @@ UPDATE pick_line SET packed_at = DATE_SUB(NOW(), INTERVAL 2 DAY) WHERE id IN ('p
 UPDATE pick_line SET packed_at = DATE_SUB(NOW(), INTERVAL 4 DAY) WHERE id IN ('pkln_01seedful_ln1_0000', 'pkln_01seedful_ln2_0000') AND packed_at IS NULL;
 UPDATE pick_line SET packed_at = NOW() WHERE id = 'pkln_01seediss_ln2_0000' AND packed_at IS NULL;
 
-INSERT IGNORE INTO `_departments_picks` (`A`, `B`) VALUES
-    ('dp_01k0a5r01yfx3sj1vy9qgv3dc0', 'pk_01k0a5tsn7f7psgagr1732fxqa'),
-    ('dp_01k0a5r01yfx3sj1vy9qgv3dc0', 'pk_01k0a5tsn7ejfrwg5dnshzfwsx'),
-    ('dp_01k0a5r01yfx3sj1vy9qgv3dc0', 'pk_01k0a5tsn7eeht162chb2jcknc'),
-    -- A second distinct department on a pick so the picks/department_ids array
-    -- filter has >=2 distinct values to exercise union/exclusion (Washing).
-    ('dp_01k0a5r01yf5csvz0jqfznf13d', 'pk_01k0a5tsn7ejfrwg5dnshzfwsx');
-
 -- ============================================================
 -- SHIPMENTS
 -- ============================================================

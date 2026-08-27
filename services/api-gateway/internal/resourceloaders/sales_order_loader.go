@@ -63,7 +63,7 @@ func salesOrderReferenceFromProto(info *pb.SalesOrderInfo) *apiresource.SalesOrd
 	// The pick-ticket PDF prints the promised date off the order it hangs from.
 	if info.PromisedAt != nil {
 		t := grpcutil.TimestampToTime(info.PromisedAt)
-		ref.PromisedAt = &t
+		ref.Commitment = &apiresource.Commitment{Object: constants.ObjectTypeCommitment, PromisedAt: &t}
 	}
 	return ref
 }

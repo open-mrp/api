@@ -1416,11 +1416,8 @@ type PickSvc interface {
 	// ListPicks returns a paginated list of picks for the caller's account.
 	ListPicks(ctx context.Context, params ListPicksParams) (*ListPicksResult, *apierror.APIError)
 
-	// GetPick returns a single pick by ID, optionally including lines and departments.
+	// GetPick returns a single pick by ID, optionally including lines.
 	GetPick(ctx context.Context, pickID string, includes []string) (*Pick, *apierror.APIError)
-
-	// UpdatePick partially updates a pick's metadata (number).
-	UpdatePick(ctx context.Context, params UpdatePickParams) (*Pick, *apierror.APIError)
 
 	// PickAllLines picks all unpacked lines to their remaining quantities.
 	PickAllLines(ctx context.Context, pickID string) (*Pick, *apierror.APIError)
@@ -1433,9 +1430,6 @@ type PickSvc interface {
 
 	// ExecutePackPick runs an accepted pack: the shipment, its lines and its cases.
 	ExecutePackPick(ctx context.Context, event BulkOperationJobEvent) *apierror.APIError
-
-	// GetPickShipments returns shipment numbers associated with a pick's order.
-	GetPickShipments(ctx context.Context, params GetPickShipmentsParams) (*PickShipmentsResult, *apierror.APIError)
 }
 
 type PickLineSvc interface {

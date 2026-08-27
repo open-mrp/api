@@ -27,7 +27,8 @@ func (e *RetrieveInventoryChangeLogEndpoint) Materialize() *apiendpoint.APIEndpo
 		ContentType:       "application/json",
 		Route:             "/v1/operations/inventory-change-logs/{id}",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
+		AgentTool:         true,
 		Preview:           true,
 		ObjectType:        constants.ObjectTypeInventoryChangeLog,
 		RequiredPermissions: []types.Permission{
@@ -38,7 +39,7 @@ func (e *RetrieveInventoryChangeLogEndpoint) Materialize() *apiendpoint.APIEndpo
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeInventoryChangeLog,
-			Fields:     []string{"item", "quantity", "quantity.unit", "responsible_user", "responsible_scanning_station"},
+			Fields:     []string{"item", "responsible_user", "responsible_scanning_station"},
 		}),
 	})
 }

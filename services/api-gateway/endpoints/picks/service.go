@@ -25,11 +25,9 @@ var pickDetailIncludes = []string{"related.sales_order", "related.shipments", "l
 type PickSvc interface {
 	ListPicks(ctx context.Context, req *ListPicksRequest) (*apiresource.List[apiresource.Pick], *apierror.APIError)
 	GetPick(ctx context.Context, req *RetrievePickRequest) (*apiresource.Pick, *apierror.APIError)
-	UpdatePick(ctx context.Context, req *UpdatePickRequest) (*apiresource.Pick, *apierror.APIError)
 	PickAllLines(ctx context.Context, req *PickAllLinesRequest) (*apiresource.Pick, *apierror.APIError)
 	VoidPick(ctx context.Context, req *VoidPickRequest) (*apiresource.Pick, *apierror.APIError)
 	PackPick(ctx context.Context, req *PackPickRequest) (*apiresource.Job, *apierror.APIError)
-	GetPickShipments(ctx context.Context, req *GetPickShipmentsRequest) (*apiresource.PickShipmentsResponse, *apierror.APIError)
 	UpdatePickLine(ctx context.Context, req *UpdatePickLineRequest) (*apiresource.PickLine, *apierror.APIError)
 	PickPickLine(ctx context.Context, req *PickPickLineRequest) (*apiresource.PickLine, *apierror.APIError)
 	VoidPickLine(ctx context.Context, req *VoidPickLineRequest) (*apiresource.PickLine, *apierror.APIError)
@@ -59,9 +57,15 @@ func NewPickSvc(config *PickSvcConfig) PickSvc {
 }
 
 func (m *pickSvcImpl) ListPicks(ctx context.Context, req *ListPicksRequest) (*apiresource.List[apiresource.Pick], *apierror.APIError) {
+	// Resolved here rather than left empty for the backend to interpret, so the order a caller gets for an omitted `sort` is the one the parameter documents.
+	sort := constants.PickSortShipByDate
+	if req.Sort != nil {
+		sort = *req.Sort
+	}
+
 	pbReq := &pb.ListPicksRequest{
 		Limit: req.Limit,
-		Sort:  string(req.Sort),
+		Sort:  string(sort),
 		// List and detail return the same resource, so the backend gets the same include set
 		// (related.sales_order / customer are resolved gateway-side from stashed FK ids).
 		Includes: resourcekit.FilterIncludes(ctx, pickDetailIncludes...),
@@ -83,9 +87,6 @@ func (m *pickSvcImpl) ListPicks(ctx context.Context, req *ListPicksRequest) (*ap
 	}
 	if len(req.CustomerGroupIDs) > 0 {
 		pbReq.CustomerGroupIds = req.CustomerGroupIDs
-	}
-	if len(req.DepartmentIDs) > 0 {
-		pbReq.DepartmentIds = req.DepartmentIDs
 	}
 	if req.StartDate != nil {
 		pbReq.StartDate = req.StartDate
@@ -116,32 +117,6 @@ func (m *pickSvcImpl) GetPick(ctx context.Context, req *RetrievePickRequest) (*a
 	resp, apiErr := grpcutil.CallRPC(ctx, pickEpSvcTracer, "service.picks.get", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetPickResponse, error) {
 			return m.coreClient.GetPick(ctx, pbReq, opts...)
-		})
-	if apiErr != nil {
-		return nil, apiErr
-	}
-
-	result := pickDetailFromProto(resp.Pick)
-	stashPickDetailMeta(ctx, &result, resp.Pick)
-	return &result, nil
-}
-
-func (m *pickSvcImpl) UpdatePick(ctx context.Context, req *UpdatePickRequest) (*apiresource.Pick, *apierror.APIError) {
-	pbReq := &pb.UpdatePickRequest{Id: req.PickID, Includes: resourcekit.FilterIncludes(ctx, pickDetailIncludes...)}
-	if v, ok := req.Number.Value(); ok {
-		pbReq.Number = &v
-	}
-	// Core reads an empty string as "clear", so a null from the client maps onto that sentinel.
-	if req.FinishedAt.IsClear() {
-		cleared := ""
-		pbReq.FinishedAt = &cleared
-	} else if v, ok := req.FinishedAt.Value(); ok {
-		pbReq.FinishedAt = &v
-	}
-
-	resp, apiErr := grpcutil.CallRPC(ctx, pickEpSvcTracer, "service.picks.update", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdatePickResponse, error) {
-			return m.coreClient.UpdatePick(ctx, pbReq, opts...)
 		})
 	if apiErr != nil {
 		return nil, apiErr
@@ -196,33 +171,6 @@ func (m *pickSvcImpl) PackPick(ctx context.Context, req *PackPickRequest) (*apir
 	}
 
 	return jobep.JobFromProto(resp.GetJob()), nil
-}
-
-func (m *pickSvcImpl) GetPickShipments(ctx context.Context, req *GetPickShipmentsRequest) (*apiresource.PickShipmentsResponse, *apierror.APIError) {
-	pbReq := &pb.GetPickShipmentsRequest{Id: req.PickID}
-	if req.Query != nil {
-		pbReq.Query = req.Query
-	}
-	if req.Limit != nil {
-		pbReq.Limit = req.Limit
-	}
-	if req.Offset != nil {
-		pbReq.Offset = req.Offset
-	}
-
-	resp, apiErr := grpcutil.CallRPC(ctx, pickEpSvcTracer, "service.picks.get_shipments", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetPickShipmentsResponse, error) {
-			return m.coreClient.GetPickShipments(ctx, pbReq, opts...)
-		})
-	if apiErr != nil {
-		return nil, apiErr
-	}
-
-	return &apiresource.PickShipmentsResponse{
-		Object:          constants.ObjectTypePickShipmentsResponse,
-		ShipmentNumbers: resp.ShipmentNumbers,
-		Count:           resp.Count,
-	}, nil
 }
 
 func (m *pickSvcImpl) UpdatePickLine(ctx context.Context, req *UpdatePickLineRequest) (*apiresource.PickLine, *apierror.APIError) {
@@ -297,22 +245,33 @@ func pickDetailFromProto(info *pb.PickInfo) apiresource.Pick {
 			Packed: apiresource.PickStageTotal{Object: constants.ObjectTypePickStageTotal, Completion: info.PackedCompletion},
 		},
 		LastShippedAt: grpcutil.TimestampToTimePtr(info.LastShippedAt),
-		PromisedAt:    grpcutil.TimestampToTimePtr(info.PromisedAt),
-		ShipByDate:    grpcutil.TimestampToTimePtr(info.ShipByDate),
-		LeadTimeDays:  info.LeadTimeDays,
-		TransitDays:   info.TransitDays,
+		Commitment:    commitmentFromPickProto(info),
 		ShipTo:        shipToFromPickProto(info),
 	}
 	d.FinishedAt = grpcutil.TimestampToTimePtr(info.FinishedAt)
+	return d
+}
+
+// Builds the pick's commitment from the order's, denormalized onto the pick so the header shows the
+// deadline without expanding the order. The overrides that authored the date, the calendar
+// adjustment, and the arrival estimate are not carried across, so they stay null here.
+func commitmentFromPickProto(info *pb.PickInfo) *apiresource.Commitment {
+	c := &apiresource.Commitment{
+		Object:       constants.ObjectTypeCommitment,
+		PromisedAt:   grpcutil.TimestampToTimePtr(info.PromisedAt),
+		ShipByDate:   apiresource.ShipBy(grpcutil.TimestampToTimePtr(info.ShipByDate), grpcutil.TimestampToTimePtr(info.ShipByCutoffAt)),
+		LeadTimeDays: info.LeadTimeDays,
+		TransitDays:  info.TransitDays,
+	}
 	if info.LeadTimeSource != nil {
 		v := constants.LeadTimeSource(*info.LeadTimeSource)
-		d.LeadTimeSource = &v
+		c.LeadTimeSource = &v
 	}
 	if info.TransitSource != nil {
 		v := constants.TransitSource(*info.TransitSource)
-		d.TransitSource = &v
+		c.TransitSource = &v
 	}
-	return d
+	return c
 }
 
 // Builds the pick's ship-to from the order's address, denormalized onto the pick so the header
@@ -322,12 +281,14 @@ func shipToFromPickProto(info *pb.PickInfo) *apiresource.Address {
 		return nil
 	}
 	addr := &apiresource.Address{
-		ID:     info.ShippingAddressId,
-		Object: constants.ObjectTypeAddress,
-		Name:   ptrutil.Deref(info.ShippingAddressName),
-		Phone:  info.ShippingAddressPhone,
-		Email:  info.ShippingAddressEmail,
-		Type:   constants.AddressTypeStandard,
+		ID:        info.ShippingAddressId,
+		Object:    constants.ObjectTypeAddress,
+		Name:      ptrutil.Deref(info.ShippingAddressName),
+		Phone:     info.ShippingAddressPhone,
+		Email:     info.ShippingAddressEmail,
+		Type:      constants.AddressTypeStandard,
+		CreatedAt: grpcutil.TimestampToTime(info.ShippingAddressCreatedAt),
+		UpdatedAt: grpcutil.TimestampToTime(info.ShippingAddressUpdatedAt),
 	}
 	if info.GetShippingAddressIsDropShip() {
 		addr.Type = constants.AddressTypeDropShip

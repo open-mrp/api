@@ -28,15 +28,10 @@ func packedShipment(t *testing.T) map[string]any {
 	pickAllLines(t, pickID)
 	packPick(t, pickID)
 
-	status, body, err := apiClient.GetListRaw(picksPath+"/"+pickID+"/shipments", nil)
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
+	numbers := pickShipmentNumbers(t, pickID)
+	require.NotEmpty(t, numbers, "packing a pick must produce a shipment")
 
-	numbers := jsonArray(parseJSON(body), "shipment_numbers")
-	require.NotEmpty(t, numbers, "packing a pick must produce a shipment: %s", string(body))
-
-	// The pick lists shipment numbers, not IDs, so the shipment itself is found by number.
-	listStatus, listBody, err := apiClient.GetListRaw(shipmentsPath, url.Values{"q": {numbers[0].(string)}})
+	listStatus, listBody, err := apiClient.GetListRaw(shipmentsPath, url.Values{"q": {numbers[0]}})
 	require.NoError(t, err)
 	requireStatus(t, 200, listStatus, listBody)
 
@@ -120,13 +115,10 @@ func TestShipments_DeleteReopensThePick(t *testing.T) {
 	before := firstPickLine(t, pickID)
 	require.NotEmpty(t, jsonField(before, "packed_at"), "packing stamps the pick line")
 
-	numbersStatus, numbersBody, err := apiClient.GetListRaw(picksPath+"/"+pickID+"/shipments", nil)
-	require.NoError(t, err)
-	requireStatus(t, 200, numbersStatus, numbersBody)
-	numbers := jsonArray(parseJSON(numbersBody), "shipment_numbers")
+	numbers := pickShipmentNumbers(t, pickID)
 	require.NotEmpty(t, numbers)
 
-	listStatus, listBody, err := apiClient.GetListRaw(shipmentsPath, url.Values{"q": {numbers[0].(string)}})
+	listStatus, listBody, err := apiClient.GetListRaw(shipmentsPath, url.Values{"q": {numbers[0]}})
 	require.NoError(t, err)
 	requireStatus(t, 200, listStatus, listBody)
 	data := jsonArray(parseJSON(listBody), "data")
@@ -152,13 +144,10 @@ func TestShipmentLines_DeleteLeavesThePickPacked(t *testing.T) {
 	pickAllLines(t, pickID)
 	packPick(t, pickID)
 
-	numbersStatus, numbersBody, err := apiClient.GetListRaw(picksPath+"/"+pickID+"/shipments", nil)
-	require.NoError(t, err)
-	requireStatus(t, 200, numbersStatus, numbersBody)
-	numbers := jsonArray(parseJSON(numbersBody), "shipment_numbers")
+	numbers := pickShipmentNumbers(t, pickID)
 	require.NotEmpty(t, numbers)
 
-	listStatus, listBody, err := apiClient.GetListRaw(shipmentsPath, url.Values{"q": {numbers[0].(string)}})
+	listStatus, listBody, err := apiClient.GetListRaw(shipmentsPath, url.Values{"q": {numbers[0]}})
 	require.NoError(t, err)
 	requireStatus(t, 200, listStatus, listBody)
 	data := jsonArray(parseJSON(listBody), "data")

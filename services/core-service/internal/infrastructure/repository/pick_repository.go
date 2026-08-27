@@ -93,6 +93,7 @@ func mapPickForwardRow(row sqlc.ListPicksForwardRow) *domain.Pick {
 		CarrierBillingType:          nullStringToPtr(row.CarrierBillingType),
 		CarrierBillingAccount:       nullStringToPtr(row.CarrierBillingAccount),
 		ShipByDate:                  nullTimePtr(row.ShipByDate),
+		ShipByCutoffAt:              nullTimePtr(row.ShipByCutoffAt),
 		LeadTimeDays:                nullInt32Ptr(row.LeadTimeDays),
 		LeadTimeSource:              leadTimeSourcePtr(row.LeadTimeSourceCode),
 		TransitDays:                 nullInt32Ptr(row.TransitDays),
@@ -109,6 +110,8 @@ func mapPickForwardRow(row sqlc.ListPicksForwardRow) *domain.Pick {
 		ShippingAddressState:        nullStringToPtr(row.ShippingAddressState),
 		ShippingAddressPostalCode:   nullStringToPtr(row.ShippingAddressPostalCode),
 		ShippingAddressCountry:      nullStringToPtr(row.ShippingAddressCountry),
+		ShippingAddressCreatedAt:    nullTimePtr(row.ShippingAddressCreatedAt),
+		ShippingAddressUpdatedAt:    nullTimePtr(row.ShippingAddressUpdatedAt),
 	}
 }
 
@@ -150,6 +153,7 @@ func mapPickBackwardRow(row sqlc.ListPicksBackwardRow) *domain.Pick {
 		CarrierBillingType:          nullStringToPtr(row.CarrierBillingType),
 		CarrierBillingAccount:       nullStringToPtr(row.CarrierBillingAccount),
 		ShipByDate:                  nullTimePtr(row.ShipByDate),
+		ShipByCutoffAt:              nullTimePtr(row.ShipByCutoffAt),
 		LeadTimeDays:                nullInt32Ptr(row.LeadTimeDays),
 		LeadTimeSource:              leadTimeSourcePtr(row.LeadTimeSourceCode),
 		TransitDays:                 nullInt32Ptr(row.TransitDays),
@@ -166,6 +170,8 @@ func mapPickBackwardRow(row sqlc.ListPicksBackwardRow) *domain.Pick {
 		ShippingAddressState:        nullStringToPtr(row.ShippingAddressState),
 		ShippingAddressPostalCode:   nullStringToPtr(row.ShippingAddressPostalCode),
 		ShippingAddressCountry:      nullStringToPtr(row.ShippingAddressCountry),
+		ShippingAddressCreatedAt:    nullTimePtr(row.ShippingAddressCreatedAt),
+		ShippingAddressUpdatedAt:    nullTimePtr(row.ShippingAddressUpdatedAt),
 	}
 }
 
@@ -270,10 +276,6 @@ func (r *pickRepoImpl) List(ctx context.Context, params domain.ListPicksParams) 
 	if customerGroupIDs == nil {
 		customerGroupIDs = []gosql.NullString{}
 	}
-	departmentIDs := params.DepartmentIDs
-	if departmentIDs == nil {
-		departmentIDs = []string{}
-	}
 	productLineIDs := toNullStringSlice(params.ProductLineIDs)
 	if productLineIDs == nil {
 		productLineIDs = []gosql.NullString{}
@@ -281,7 +283,6 @@ func (r *pickRepoImpl) List(ctx context.Context, params domain.ListPicksParams) 
 
 	includeCustomerFilter := len(params.CustomerIDs) > 0
 	includeCustomerGroupFilter := len(params.CustomerGroupIDs) > 0
-	includeDepartmentFilter := len(params.DepartmentIDs) > 0
 	includeProductLineFilter := len(params.ProductLineIDs) > 0
 
 	// An unset sort means ship-by date, so a caller that never sends the parameter still gets the urgent-first order.
@@ -299,8 +300,6 @@ func (r *pickRepoImpl) List(ctx context.Context, params domain.ListPicksParams) 
 		CustomerIds:                customerIDs,
 		IncludeCustomerGroupFilter: includeCustomerGroupFilter,
 		CustomerGroupIds:           customerGroupIDs,
-		IncludeDepartmentFilter:    includeDepartmentFilter,
-		DepartmentIds:              departmentIDs,
 		IncludeProductLineFilter:   includeProductLineFilter,
 		ProductLineIds:             productLineIDs,
 		StartDate:                  startDate,
@@ -330,8 +329,6 @@ func (r *pickRepoImpl) List(ctx context.Context, params domain.ListPicksParams) 
 				CustomerIds:                customerIDs,
 				IncludeCustomerGroupFilter: includeCustomerGroupFilter,
 				CustomerGroupIds:           customerGroupIDs,
-				IncludeDepartmentFilter:    includeDepartmentFilter,
-				DepartmentIds:              departmentIDs,
 				IncludeProductLineFilter:   includeProductLineFilter,
 				ProductLineIds:             productLineIDs,
 				StartDate:                  startDate,
@@ -423,6 +420,7 @@ func (r *pickRepoImpl) Get(ctx context.Context, accountID, pickID string) (*doma
 		CarrierBillingType:          nullStringToPtr(row.CarrierBillingType),
 		CarrierBillingAccount:       nullStringToPtr(row.CarrierBillingAccount),
 		ShipByDate:                  nullTimePtr(row.ShipByDate),
+		ShipByCutoffAt:              nullTimePtr(row.ShipByCutoffAt),
 		LeadTimeDays:                nullInt32Ptr(row.LeadTimeDays),
 		LeadTimeSource:              leadTimeSourcePtr(row.LeadTimeSourceCode),
 		TransitDays:                 nullInt32Ptr(row.TransitDays),
@@ -439,6 +437,8 @@ func (r *pickRepoImpl) Get(ctx context.Context, accountID, pickID string) (*doma
 		ShippingAddressState:        nullStringToPtr(row.ShippingAddressState),
 		ShippingAddressPostalCode:   nullStringToPtr(row.ShippingAddressPostalCode),
 		ShippingAddressCountry:      nullStringToPtr(row.ShippingAddressCountry),
+		ShippingAddressCreatedAt:    nullTimePtr(row.ShippingAddressCreatedAt),
+		ShippingAddressUpdatedAt:    nullTimePtr(row.ShippingAddressUpdatedAt),
 	}
 
 	if apiErr := r.attachProgress(ctx, []*domain.Pick{pick}); apiErr != nil {
@@ -506,39 +506,6 @@ func (r *pickRepoImpl) GetProgress(ctx context.Context, pickIDs []string) (map[s
 		}
 	}
 	return progress, nil
-}
-
-func (r *pickRepoImpl) GetDepartments(ctx context.Context, pickID string) ([]*domain.PickDepartment, *apierror.APIError) {
-	ctx, span := pickRepoTracer.Start(ctx, "repository.pick.get_departments")
-	defer span.End()
-
-	rows, err := r.queries.GetPickDepartments(ctx, pickID)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	departments := make([]*domain.PickDepartment, len(rows))
-	for i, row := range rows {
-		departments[i] = &domain.PickDepartment{
-			ID:   row.ID,
-			Name: row.Name,
-		}
-	}
-	return departments, nil
-}
-
-func (r *pickRepoImpl) UpdateNumber(ctx context.Context, accountID, pickID, number string) *apierror.APIError {
-	ctx, span := pickRepoTracer.Start(ctx, "repository.pick.update_number")
-	defer span.End()
-
-	if err := r.queries.UpdatePickNumber(ctx, sqlc.UpdatePickNumberParams{
-		Number:    number,
-		PickID:    pickID,
-		AccountID: accountID,
-	}); err != nil {
-		return tracing.Trace(span, db.MapSQLError(err))
-	}
-	return nil
 }
 
 func (r *pickRepoImpl) UpdateFinishedAt(ctx context.Context, accountID, pickID string, finishedAt time.Time) *apierror.APIError {
@@ -613,48 +580,6 @@ func (r *pickRepoImpl) PickAllLines(ctx context.Context, pickID string) *apierro
 		return tracing.Trace(span, db.MapSQLError(err))
 	}
 	return nil
-}
-
-func (r *pickRepoImpl) GetShipmentNumbers(ctx context.Context, params domain.GetPickShipmentsParams) (*domain.PickShipmentsResult, *apierror.APIError) {
-	ctx, span := pickRepoTracer.Start(ctx, "repository.pick.get_shipment_numbers")
-	defer span.End()
-
-	var searchQuery gosql.NullString
-	if params.Query != nil && *params.Query != "" {
-		searchQuery = gosql.NullString{String: "%" + db.EscapeLike(*params.Query) + "%", Valid: true}
-	}
-
-	limit := params.Limit
-	if limit <= 0 {
-		limit = 100
-	}
-
-	offset := max(params.Offset, 0)
-
-	numbers, err := r.queries.GetPickShipmentNumbers(ctx, sqlc.GetPickShipmentNumbersParams{
-		PickID:      params.PickID,
-		AccountID:   params.AccountID,
-		SearchQuery: searchQuery,
-		Limit:       limit,
-		Offset:      offset,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	count, err := r.queries.CountPickShipmentNumbers(ctx, sqlc.CountPickShipmentNumbersParams{
-		PickID:      params.PickID,
-		AccountID:   params.AccountID,
-		SearchQuery: searchQuery,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	return &domain.PickShipmentsResult{
-		ShipmentNumbers: numbers,
-		Count:           safeconv.Int64ToInt32(count),
-	}, nil
 }
 
 func (r *pickRepoImpl) IsInAccount(ctx context.Context, accountID, pickID string) (bool, *apierror.APIError) {

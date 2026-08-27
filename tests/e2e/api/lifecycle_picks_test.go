@@ -128,16 +128,12 @@ func TestPickLines_PickingTwiceIsNotAdditive(t *testing.T) {
 }
 
 // The pick's shipments come through its sales order, so a pick that has never been packed has none.
-func TestPicks_ShipmentsIsEmptyBeforePacking(t *testing.T) {
+func TestPicks_RelatedShipmentsIsEmptyBeforePacking(t *testing.T) {
 	t.Parallel()
 
 	pickID := jsonField(issuedOrderPick(t), "id")
 
-	// The response is its own shape, not a paginated list, so this reads shipment_numbers
-	// rather than a `data` array that would be absent either way.
-	numbers, count := pickShipments(t, pickID, nil)
-	assert.Empty(t, numbers, "a pick that has never been packed has shipped nothing")
-	assert.Equal(t, 0, count)
+	assert.Empty(t, pickShipmentNumbers(t, pickID), "a pick that has never been packed has shipped nothing")
 }
 
 // ──────────────────────────────────────────────
@@ -153,11 +149,6 @@ func TestPicks_ActionsOnUnknownPickAre404(t *testing.T) {
 		require.Less(t, status, 500, "%s must 404 rather than 5xx: %s", action, string(body))
 		assert.Equal(t, 404, status, "%s on an unknown pick must 404: %s", action, string(body))
 	}
-
-	getStatus, getBody, err := apiClient.GetListRaw(picksPath+"/pk_doesnotexist00000/shipments", nil)
-	require.NoError(t, err)
-	require.Less(t, getStatus, 500, "shipments must 404 rather than 5xx: %s", string(getBody))
-	assert.Equal(t, 404, getStatus, "shipments for an unknown pick must 404: %s", string(getBody))
 }
 
 func TestPickLines_ActionsOnUnknownLineAre404(t *testing.T) {

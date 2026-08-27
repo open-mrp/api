@@ -36,17 +36,15 @@ func (*PicksEndpointGroup) Materialize(config *PicksEndpointGroupConfig) *PicksE
 
 	inner := &apiendpoint.APIEndpointGroup{
 		Title:        "Picks",
-		Description:  "List, view, update, pick, void, and pack picks and pick lines.",
+		Description:  "List, view, pick, void, and pack picks and pick lines.",
 		ResourceType: &apiresource.Pick{},
 	}
 
 	listEndpoint := apiendpoint.From(&pickep.ListPicksEndpoint{}).WithService(inner, svc)
 	retrieveEndpoint := apiendpoint.From(&pickep.RetrievePickEndpoint{}).WithService(inner, svc)
-	updateEndpoint := apiendpoint.From(&pickep.UpdatePickEndpoint{}).WithService(inner, svc)
 	pickAllLinesEndpoint := apiendpoint.From(&pickep.PickAllLinesEndpoint{}).WithService(inner, svc)
 	voidEndpoint := apiendpoint.From(&pickep.VoidPickEndpoint{}).WithService(inner, svc)
 	packEndpoint := apiendpoint.From(&pickep.PackPickEndpoint{}).WithService(inner, svc)
-	getShipmentsEndpoint := apiendpoint.From(&pickep.GetPickShipmentsEndpoint{}).WithService(inner, svc)
 	updateLineEndpoint := apiendpoint.From(&pickep.UpdatePickLineEndpoint{}).WithService(inner, svc)
 	pickLineEndpoint := apiendpoint.From(&pickep.PickPickLineEndpoint{}).WithService(inner, svc)
 	voidLineEndpoint := apiendpoint.From(&pickep.VoidPickLineEndpoint{}).WithService(inner, svc)
@@ -54,11 +52,9 @@ func (*PicksEndpointGroup) Materialize(config *PicksEndpointGroupConfig) *PicksE
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,
 		retrieveEndpoint,
-		updateEndpoint,
 		pickAllLinesEndpoint,
 		voidEndpoint,
 		packEndpoint,
-		getShipmentsEndpoint,
 		updateLineEndpoint,
 		pickLineEndpoint,
 		voidLineEndpoint,

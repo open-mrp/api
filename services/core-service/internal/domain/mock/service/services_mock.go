@@ -8049,21 +8049,6 @@ func (mr *MockPickSvcMockRecorder) GetPick(ctx, pickID, includes any) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPick", reflect.TypeOf((*MockPickSvc)(nil).GetPick), ctx, pickID, includes)
 }
 
-// GetPickShipments mocks base method.
-func (m *MockPickSvc) GetPickShipments(ctx context.Context, params domain.GetPickShipmentsParams) (*domain.PickShipmentsResult, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetPickShipments", ctx, params)
-	ret0, _ := ret[0].(*domain.PickShipmentsResult)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// GetPickShipments indicates an expected call of GetPickShipments.
-func (mr *MockPickSvcMockRecorder) GetPickShipments(ctx, params any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPickShipments", reflect.TypeOf((*MockPickSvc)(nil).GetPickShipments), ctx, params)
-}
-
 // ListPicks mocks base method.
 func (m *MockPickSvc) ListPicks(ctx context.Context, params domain.ListPicksParams) (*domain.ListPicksResult, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -8107,21 +8092,6 @@ func (m *MockPickSvc) PickAllLines(ctx context.Context, pickID string) (*domain.
 func (mr *MockPickSvcMockRecorder) PickAllLines(ctx, pickID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PickAllLines", reflect.TypeOf((*MockPickSvc)(nil).PickAllLines), ctx, pickID)
-}
-
-// UpdatePick mocks base method.
-func (m *MockPickSvc) UpdatePick(ctx context.Context, params domain.UpdatePickParams) (*domain.Pick, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdatePick", ctx, params)
-	ret0, _ := ret[0].(*domain.Pick)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// UpdatePick indicates an expected call of UpdatePick.
-func (mr *MockPickSvcMockRecorder) UpdatePick(ctx, params any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePick", reflect.TypeOf((*MockPickSvc)(nil).UpdatePick), ctx, params)
 }
 
 // VoidPick mocks base method.

@@ -195,6 +195,11 @@ func buildOpenAPISpec(groups []apiendpoint.APIEndpointGroup, publicOnly bool, ve
 								paramName = paramName + "[]"
 							}
 
+							// A query parameter's schema is built from its Go type alone, so the tag that documents what the server assumes for an omitted value has to be carried over by hand, as it is for body fields.
+							if defaultVal := f.Tag.Get("default"); defaultVal != "" {
+								paramSchema.Default = defaultVal
+							}
+
 							operation.Parameters = append(operation.Parameters, Parameter{
 								Name:        paramName,
 								In:          "query",

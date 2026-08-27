@@ -2,12 +2,10 @@ package grpc
 
 import (
 	"context"
-	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
-	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -69,6 +67,12 @@ func pickToProto(p *domain.Pick) *pb.PickInfo {
 		CarrierBillingAccount:       p.CarrierBillingAccount,
 	}
 
+	if p.ShippingAddressCreatedAt != nil {
+		info.ShippingAddressCreatedAt = timestamppb.New(*p.ShippingAddressCreatedAt)
+	}
+	if p.ShippingAddressUpdatedAt != nil {
+		info.ShippingAddressUpdatedAt = timestamppb.New(*p.ShippingAddressUpdatedAt)
+	}
 	if p.CarrierCreatedAt != nil {
 		info.CarrierCreatedAt = timestamppb.New(*p.CarrierCreatedAt)
 	}
@@ -88,6 +92,9 @@ func pickToProto(p *domain.Pick) *pb.PickInfo {
 
 	if p.ShipByDate != nil {
 		info.ShipByDate = timestamppb.New(*p.ShipByDate)
+	}
+	if p.ShipByCutoffAt != nil {
+		info.ShipByCutoffAt = timestamppb.New(*p.ShipByCutoffAt)
 	}
 	info.LeadTimeDays = p.LeadTimeDays
 	info.TransitDays = p.TransitDays
@@ -112,14 +119,6 @@ func pickToProto(p *domain.Pick) *pb.PickInfo {
 			lines[i] = pickLineToProto(l)
 		}
 		info.Lines = lines
-	}
-
-	if p.Departments != nil {
-		depts := make([]*pb.PickDepartmentInfo, len(p.Departments))
-		for i, d := range p.Departments {
-			depts[i] = pickDepartmentToProto(d)
-		}
-		info.Departments = depts
 	}
 
 	return info
@@ -169,17 +168,6 @@ func pickLineToProto(l *domain.PickLine) *pb.PickLineInfo {
 	return info
 }
 
-func pickDepartmentToProto(d *domain.PickDepartment) *pb.PickDepartmentInfo {
-	if d == nil {
-		return nil
-	}
-
-	return &pb.PickDepartmentInfo{
-		Id:   d.ID,
-		Name: d.Name,
-	}
-}
-
 // ListPicks returns a paginated list of picks.
 func (h *pickingGRPCHandler) ListPicks(ctx context.Context, req *pb.ListPicksRequest) (*pb.ListPicksResponse, error) {
 	if req == nil {
@@ -207,9 +195,6 @@ func (h *pickingGRPCHandler) ListPicks(ctx context.Context, req *pb.ListPicksReq
 	}
 	if len(req.CustomerGroupIds) > 0 {
 		params.CustomerGroupIDs = req.CustomerGroupIds
-	}
-	if len(req.DepartmentIds) > 0 {
-		params.DepartmentIDs = req.DepartmentIds
 	}
 	if req.StartDate != nil {
 		params.StartDate = req.StartDate
@@ -253,49 +238,6 @@ func (h *pickingGRPCHandler) GetPick(ctx context.Context, req *pb.GetPickRequest
 	}
 
 	return &pb.GetPickResponse{
-		Pick: pickToProto(pick),
-	}, nil
-}
-
-// UpdatePick updates a pick's mutable fields.
-func (h *pickingGRPCHandler) UpdatePick(ctx context.Context, req *pb.UpdatePickRequest) (*pb.UpdatePickResponse, error) {
-	if req == nil {
-		return nil, contracts.NewMissingGRPCRequestDataError()
-	}
-
-	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
-	defer finalizeIdempotency()
-
-	params := domain.UpdatePickParams{
-		PickID:   req.Id,
-		Includes: req.Includes,
-	}
-
-	if req.Number != nil {
-		params.Number = req.Number
-	}
-
-	if req.FinishedAt != nil {
-		if *req.FinishedAt == "" {
-			// Empty string means set to null
-			params.FinishedAt = new(*time.Time)
-		} else {
-			t, err := time.Parse(time.RFC3339, *req.FinishedAt)
-			if err != nil {
-				// Dropping it would answer 200 to an edit that was discarded. The gateway rejects a malformed timestamp before it reaches here, so this only fires for a caller that bypassed it.
-				return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewValidationErrorWithParam("Finished at must be a valid RFC 3339 timestamp.", "finished_at"))
-			}
-			tt := &t
-			params.FinishedAt = &tt
-		}
-	}
-
-	pick, apiErr := h.pickSvc.UpdatePick(ctx, params)
-	if apiErr != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
-	}
-
-	return &pb.UpdatePickResponse{
 		Pick: pickToProto(pick),
 	}, nil
 }
@@ -347,34 +289,6 @@ func (h *pickingGRPCHandler) PackPick(ctx context.Context, req *pb.PackPickReque
 	}
 
 	return &pb.PackPickResponse{Job: jobToProto(job)}, nil
-}
-
-// GetPickShipments returns the shipment numbers associated with a pick.
-func (h *pickingGRPCHandler) GetPickShipments(ctx context.Context, req *pb.GetPickShipmentsRequest) (*pb.GetPickShipmentsResponse, error) {
-	if req == nil {
-		return nil, contracts.NewMissingGRPCRequestDataError()
-	}
-
-	params := domain.GetPickShipmentsParams{
-		PickID: req.Id,
-		Query:  req.Query,
-	}
-	if req.Limit != nil {
-		params.Limit = *req.Limit
-	}
-	if req.Offset != nil {
-		params.Offset = *req.Offset
-	}
-
-	result, apiErr := h.pickSvc.GetPickShipments(ctx, params)
-	if apiErr != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
-	}
-
-	return &pb.GetPickShipmentsResponse{
-		ShipmentNumbers: result.ShipmentNumbers,
-		Count:           result.Count,
-	}, nil
 }
 
 // UpdatePickLine updates a pick line's mutable fields.

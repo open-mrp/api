@@ -27,8 +27,9 @@ func (e *RetrievePickEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveP
 		ContentType:       "application/json",
 		Route:             "/v1/operations/picks/{id}",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
+		AgentTool:         true,
 		ObjectType:        constants.ObjectTypePick,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainPicks, Action: types.ActionRead},

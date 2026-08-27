@@ -16,8 +16,6 @@ service CorePickingService {
   // GetPick returns a single pick by its ID.
   rpc GetPick(GetPickRequest) returns (GetPickResponse);
 
-  // UpdatePick updates an existing pick's metadata.
-  rpc UpdatePick(UpdatePickRequest) returns (UpdatePickResponse);
 
   // PickAllLines picks all unpacked lines in a pick to their remaining quantities.
   rpc PickAllLines(PickAllLinesRequest) returns (PickAllLinesResponse);
@@ -28,8 +26,6 @@ service CorePickingService {
   // PackPick packs all eligible lines and creates a shipment.
   rpc PackPick(PackPickRequest) returns (PackPickResponse);
 
-  // GetPickShipments returns shipment numbers for a pick's order.
-  rpc GetPickShipments(GetPickShipmentsRequest) returns (GetPickShipmentsResponse);
 
   // UpdatePickLine updates a pick line's quantity.
   rpc UpdatePickLine(UpdatePickLineRequest) returns (UpdatePickLineResponse);
@@ -56,7 +52,7 @@ message PickInfo {
   google.protobuf.Timestamp created_at = 10;
   google.protobuf.Timestamp updated_at = 11;
   repeated PickLineInfo lines = 12;
-  repeated PickDepartmentInfo departments = 13;
+  reserved 13; // was departments
   string sales_order_number = 14;
   string priority_id = 15;
   // Server-computed roll-ups so a caller needs no line expansion.
@@ -79,6 +75,8 @@ message PickInfo {
   optional string shipping_address_state = 30;
   optional string shipping_address_postal_code = 31;
   optional string shipping_address_country = 32;
+  optional google.protobuf.Timestamp shipping_address_created_at = 55;
+  optional google.protobuf.Timestamp shipping_address_updated_at = 56;
   // Shipments packed from this pick's order, populated only when related.shipments is requested.
   repeated string shipment_ids = 33;
   // Lead time and transit, carried from the sales order so the pick can explain its commitment.
@@ -88,6 +86,8 @@ message PickInfo {
   optional string transit_source = 37;
   // Computed ship-by commitment, carried from the sales order alongside the lead-time chain.
   optional google.protobuf.Timestamp ship_by_date = 38;
+  // The order's pickup cutoff, carried so the pick's ship-by reads as the same instant the order's does rather than losing the time to a bare date.
+  optional google.protobuf.Timestamp ship_by_cutoff_at = 54;
   // The order's cross-reference and instructions, carried so the floor works the pick without opening the order.
   optional string customer_po_number = 39;
   optional string note = 40;
@@ -141,12 +141,6 @@ message PickLineInfo {
   optional string order_line_item_id = 27;
 }
 
-// PickDepartmentInfo represents a department associated with a pick.
-message PickDepartmentInfo {
-  string id = 1;
-  string name = 2;
-}
-
 // List picks
 message ListPicksRequest {
   optional string cursor = 1;
@@ -156,7 +150,7 @@ message ListPicksRequest {
   repeated string customer_ids = 5;
   repeated string product_line_ids = 6;
   repeated string customer_group_ids = 7;
-  repeated string department_ids = 8;
+  reserved 8; // was department_ids
   optional string start_date = 9;
   optional string end_date = 10;
   repeated string includes = 11;
@@ -175,18 +169,6 @@ message GetPickRequest {
 }
 
 message GetPickResponse {
-  PickInfo pick = 1;
-}
-
-// Update pick
-message UpdatePickRequest {
-  string id = 1;
-  optional string number = 2;
-  optional string finished_at = 3;
-  repeated string includes = 4;
-}
-
-message UpdatePickResponse {
   PickInfo pick = 1;
 }
 
@@ -218,19 +200,6 @@ message PackPickResponse {
   JobInfo job = 1;
 }
 
-
-// Get pick shipments
-message GetPickShipmentsRequest {
-  string id = 1;
-  optional string query = 2;
-  optional int32 limit = 3;
-  optional int32 offset = 4;
-}
-
-message GetPickShipmentsResponse {
-  repeated string shipment_numbers = 1;
-  int32 count = 2;
-}
 
 // Update pick line
 message UpdatePickLineRequest {

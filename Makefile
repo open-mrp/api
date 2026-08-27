@@ -80,11 +80,11 @@ openapi-stainless-quiet: ## Generate both OpenAPI specs and Stainless SDK config
 	@mkdir -p specs
 	@cd tools && GOTOOLCHAIN=go1.27.0 go run ./apidocs --name api --quiet
 
-generate: ## Generate OpenAPI specs, Stainless configs, and agent tools
+generate: sqlc proto ## Generate sqlc code, protobuf bindings, OpenAPI specs, Stainless configs, and agent tools
 	@mkdir -p specs
 	@cd tools && GOTOOLCHAIN=go1.27.0 go run ./apidocs --name api --with-agent-tools
 
-generate-quiet: ## Generate OpenAPI specs, Stainless configs, and agent tools (no informational output)
+generate-quiet: sqlc proto ## Generate sqlc code, protobuf bindings, OpenAPI specs, Stainless configs, and agent tools (no informational output)
 	@mkdir -p specs
 	@cd tools && GOTOOLCHAIN=go1.27.0 go run ./apidocs --name api --with-agent-tools --quiet
 

@@ -54,6 +54,7 @@ type Pick struct {
 	// The order's delivery commitment and the rules that produced it, carried so a pick can explain
 	// its dates without fetching the order.
 	ShipByDate                 *time.Time
+	ShipByCutoffAt             *time.Time
 	LeadTimeDays               *int32
 	LeadTimeSource             *constants.LeadTimeSource
 	TransitDays                *int32
@@ -70,10 +71,11 @@ type Pick struct {
 	ShippingAddressState       *string
 	ShippingAddressPostalCode  *string
 	ShippingAddressCountry     *string
+	ShippingAddressCreatedAt   *time.Time
+	ShippingAddressUpdatedAt   *time.Time
 
 	// Populated conditionally
 	Lines       []*PickLine
-	Departments []*PickDepartment
 	ShipmentIDs []string
 }
 
@@ -81,12 +83,6 @@ type Pick struct {
 type PickProgress struct {
 	PickedCompletion float64
 	PackedCompletion float64
-}
-
-// PickDepartment represents a department associated with a pick.
-type PickDepartment struct {
-	ID   string
-	Name string
 }
 
 // PickLine represents a pick line domain model with joined fields.
@@ -134,7 +130,6 @@ type ListPicksParams struct {
 	CustomerIDs      []string
 	ProductLineIDs   []string
 	CustomerGroupIDs []string
-	DepartmentIDs    []string
 	StartDate        *string
 	EndDate          *string
 	Includes         []string
@@ -148,36 +143,12 @@ type ListPicksResult struct {
 	PageInfo pagination.PageInfo
 }
 
-// UpdatePickParams holds the parameters for updating a pick.
-type UpdatePickParams struct {
-	AccountID  string
-	PickID     string
-	Number     *string
-	FinishedAt **time.Time // double pointer: nil = not provided, *nil = set to null
-	Includes   []string
-}
-
 // Carries the parameters for updating a pick line's picked quantity.
 type UpdatePickLineParams struct {
 	AccountID     string
 	PickID        string
 	PickLineID    string
 	QuantityValue *string
-}
-
-// GetPickShipmentsParams holds the parameters for getting shipment numbers for a pick.
-type GetPickShipmentsParams struct {
-	AccountID string
-	PickID    string
-	Query     *string
-	Limit     int32
-	Offset    int32
-}
-
-// PickShipmentsResult holds the result of getting shipment numbers for a pick.
-type PickShipmentsResult struct {
-	ShipmentNumbers []string
-	Count           int32
 }
 
 // Records what a pack was accepted to do. Stored on the job, so it carries only resolved ids.

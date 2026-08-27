@@ -29,8 +29,9 @@ func (e *PickAllLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*PickAllLi
 		ContentType:       "application/json",
 		Route:             "/v1/operations/picks/{id}/actions/pick",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
+		AgentTool:         true,
 		ObjectType:        constants.ObjectTypePick,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainPicks, Action: types.ActionUpdate},

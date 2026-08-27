@@ -714,11 +714,6 @@ type Department struct {
 	LaborRateID sql.NullString
 }
 
-type DepartmentsPick struct {
-	A string
-	B string
-}
-
 type DocApiKey struct {
 	ID              int64
 	TypeID          string

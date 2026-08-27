@@ -123,20 +123,6 @@ func (s *pickSvcImpl) ListPicks(ctx context.Context, params domain.ListPicksPara
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// Expand departments per pick only when requested (so the list can serve the department_ids array filter and rows that render department pills).
-	for _, include := range params.Includes {
-		if include == "departments" {
-			for _, pick := range result.Picks {
-				depts, apiErr := repo.GetDepartments(ctx, pick.ID)
-				if apiErr != nil {
-					return nil, tracing.Trace(span, apiErr)
-				}
-				pick.Departments = depts
-			}
-			break
-		}
-	}
-
 	// Lines are the one heavy expansion, so the list pays for them only on request.
 	if includesPickLines(params.Includes) {
 		for _, pick := range result.Picks {
@@ -186,13 +172,6 @@ func (s *pickSvcImpl) GetPick(ctx context.Context, pickID string, includes []str
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// Departments are always returned (matches Dashboard behavior).
-	departments, apiErr := repo.GetDepartments(ctx, pickID)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	pick.Departments = departments
-
 	if includesPickLines(includes) {
 		lines, apiErr := repo.GetLines(ctx, pickID)
 		if apiErr != nil {
@@ -210,109 +189,6 @@ func (s *pickSvcImpl) GetPick(ctx context.Context, pickID string, includes []str
 	}
 
 	return pick, nil
-}
-
-func (s *pickSvcImpl) UpdatePick(ctx context.Context, params domain.UpdatePickParams) (*domain.Pick, *apierror.APIError) {
-	ctx, span := pickSvcTracer.Start(ctx, "service.pick.update")
-	defer span.End()
-
-	identity, ok := appctx.GetIdentityFromContext(ctx)
-	if !ok || identity == nil {
-		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
-	}
-
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	if apiErr := identity.CheckHasPermission(types.PermissionDomainPicks, types.ActionUpdate); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	params.AccountID = identity.Target.AccountID
-
-	meds := s.mediators()
-
-	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
-	if apiErr != nil {
-		return nil, apiErr
-	}
-
-	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
-	case domain.RecoveryPointFinished:
-		cached, err := idempotency.UnmarshalCachedResponse[domain.Pick](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
-		if err != nil {
-			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
-		}
-		return cached.Data, cached.Error
-
-	case domain.RecoveryPointStarted:
-		var result *domain.Pick
-		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *pickSvcImpl) *apierror.APIError {
-			txRepo := txSvc.repos.NewPickRepo()
-
-			old, apiErr := txRepo.Get(txCtx, params.AccountID, params.PickID)
-			if apiErr != nil {
-				return apiErr
-			}
-
-			if params.Number != nil {
-				if apiErr := txRepo.UpdateNumber(txCtx, params.AccountID, params.PickID, *params.Number); apiErr != nil {
-					return apiErr
-				}
-			}
-
-			if params.FinishedAt != nil {
-				if *params.FinishedAt == nil {
-					if apiErr := txRepo.ClearFinishedAt(txCtx, params.AccountID, params.PickID); apiErr != nil {
-						return apiErr
-					}
-				} else {
-					if apiErr := txRepo.UpdateFinishedAt(txCtx, params.AccountID, params.PickID, **params.FinishedAt); apiErr != nil {
-						return apiErr
-					}
-				}
-			}
-
-			pick, apiErr := txRepo.Get(txCtx, params.AccountID, params.PickID)
-			if apiErr != nil {
-				return apiErr
-			}
-			result = pick
-
-			if includesPickLines(params.Includes) {
-				lines, apiErr := txRepo.GetLines(txCtx, params.PickID)
-				if apiErr != nil {
-					return apiErr
-				}
-				result.Lines = lines
-			}
-
-			changes := audit.ComputeChanges(old, result)
-
-			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:      domain.ServiceName,
-				Action:           constants.AuditActionUpdate,
-				ResourceType:     constants.ObjectTypePick,
-				ResourceID:       result.ID,
-				RootResourceType: constants.ObjectTypeSalesOrder,
-				RootResourceID:   result.SalesOrderID,
-				Changes:          changes,
-			}); apiErr != nil {
-				return apiErr
-			}
-
-			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
-		})
-
-		if apiErr != nil {
-			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
-		}
-
-		return result, nil
-
-	default:
-		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
-	}
 }
 
 func (s *pickSvcImpl) PickAllLines(ctx context.Context, pickID string) (*domain.Pick, *apierror.APIError) {
@@ -356,12 +232,6 @@ func (s *pickSvcImpl) PickAllLines(ctx context.Context, pickID string) (*domain.
 			return apiErr
 		}
 		pick.Lines = lines
-
-		departments, apiErr := txRepo.GetDepartments(txCtx, pickID)
-		if apiErr != nil {
-			return apiErr
-		}
-		pick.Departments = departments
 
 		result = pick
 
@@ -934,32 +804,6 @@ func checkPickReadPermission(identity *types.Identity) *apierror.APIError {
 }
 
 // Reports whether the caller asked for the pick's related shipments, which cost their own query.
-func (s *pickSvcImpl) GetPickShipments(ctx context.Context, params domain.GetPickShipmentsParams) (*domain.PickShipmentsResult, *apierror.APIError) {
-	ctx, span := pickSvcTracer.Start(ctx, "service.pick.get_shipments")
-	defer span.End()
-
-	identity, ok := appctx.GetIdentityFromContext(ctx)
-	if !ok || identity == nil {
-		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
-	}
-
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	if apiErr := identity.CheckHasPermission(types.PermissionDomainPicks, types.ActionRead); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	params.AccountID = identity.Target.AccountID
-
-	// The shipment list is derived through the pick's sales order, so a pick that does not exist produces the same empty list as a real pick that has shipped nothing. Reading the pick first makes the two answerable apart, and stops the endpoint reporting on an ID belonging to another account.
-	if _, apiErr := s.repos.NewPickRepo().Get(ctx, params.AccountID, params.PickID); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	return s.repos.NewPickRepo().GetShipmentNumbers(ctx, params)
-}
-
 func includesPickShipments(includes []string) bool {
 	for _, inc := range includes {
 		if inc == "related.shipments" {

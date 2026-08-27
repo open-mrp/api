@@ -277,18 +277,78 @@ func (a exportICLFilterAdapter) getFilterSlices() ([]string, []string, []string)
 	return a.params.ItemIDs, a.params.ActionTypeCodes, a.params.ChangedByUserIDs
 }
 
-func buildICLSearchQuery(query *string) gosql.NullString {
+// iclSearchMatches holds the ids a free-text term resolved to, one set per dimension the log is searchable by.
+//
+// Empty is meaningful and distinct from absent: a term that matched no item still has to exclude every row, which is why matched() reports whether anything was found at all rather than the caller testing the sets.
+type iclSearchMatches struct {
+	itemIDs    []string
+	userIDs    []string
+	stationIDs []string
+}
+
+func (m iclSearchMatches) matched() bool {
+	return len(m.itemIDs) > 0 || len(m.userIDs) > 0 || len(m.stationIDs) > 0
+}
+
+// resolveICLSearch turns a free-text term into the id sets the list query filters on.
+//
+//  1. Returns nil when there is no term, which selects the unfiltered list path.
+//  2. Matches the term against item SKU, user name and scanning station name, each on its own table so each can use its own index.
+//  3. Returns the three id sets, any of which may be empty.
+//
+// Resolving here rather than matching a LIKE inside the list query is what keeps that query on an index: see SearchInventoryChangeLogsForward for the measured difference.
+func (r *inventoryChangeLogRepoImpl) resolveICLSearch(ctx context.Context, accountID string, query *string) (*iclSearchMatches, *apierror.APIError) {
 	if query == nil || *query == "" {
-		return gosql.NullString{}
+		return nil, nil
 	}
-	return gosql.NullString{String: "%" + db.EscapeLike(*query) + "%", Valid: true}
+	pattern := "%" + db.EscapeLike(*query) + "%"
+
+	itemIDs, err := r.queries.ResolveInventoryChangeLogSearchItemIDs(ctx, sqlc.ResolveInventoryChangeLogSearchItemIDsParams{
+		AccountID:   accountID,
+		SearchQuery: pattern,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, apiErr
+	}
+
+	userIDs, err := r.queries.ResolveInventoryChangeLogSearchUserIDs(ctx, gosql.NullString{String: pattern, Valid: true})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, apiErr
+	}
+
+	stationIDs, err := r.queries.ResolveInventoryChangeLogSearchStationIDs(ctx, sqlc.ResolveInventoryChangeLogSearchStationIDsParams{
+		AccountID:   accountID,
+		SearchQuery: pattern,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, apiErr
+	}
+
+	return &iclSearchMatches{itemIDs: itemIDs, userIDs: userIDs, stationIDs: stationIDs}, nil
+}
+
+// nullStrings adapts an id set for a nullable column, which sqlc types as []sql.NullString.
+func nullStrings(ids []string) []gosql.NullString {
+	out := make([]gosql.NullString, len(ids))
+	for i, id := range ids {
+		out[i] = gosql.NullString{String: id, Valid: true}
+	}
+	return out
 }
 
 func (r *inventoryChangeLogRepoImpl) List(ctx context.Context, params domain.ListInventoryChangeLogsParams) (*domain.ListInventoryChangeLogsResult, *apierror.APIError) {
 	ctx, span := inventoryChangeLogRepoTracer.Start(ctx, "repository.inventory_change_log.list")
 	defer span.End()
 
-	searchQuery := buildICLSearchQuery(params.Query)
+	search, apiErr := r.resolveICLSearch(ctx, params.AccountID, params.Query)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	// A term that matched nothing on any dimension has no page to return, and asking the log for one would scan the account to prove it.
+	if search != nil && !search.matched() {
+		return &domain.ListInventoryChangeLogsResult{Items: []*domain.InventoryChangeLog{}, PageInfo: pagination.PageInfo{}}, nil
+	}
+
 	includeItemFilter, itemIDs, includeActionTypeFilter, actionTypeCodes, includeUserFilter, changedByUserIDs := buildICLFilterParams(listICLFilterAdapter{params})
 
 	var startDate, endDate gosql.NullTime
@@ -299,43 +359,108 @@ func (r *inventoryChangeLogRepoImpl) List(ctx context.Context, params domain.Lis
 		endDate = gosql.NullTime{Time: *params.EndDate, Valid: true}
 	}
 
-	var cursorDir *pagination.Direction
+	limit := params.Limit + 1
 
+	var cursorDir *pagination.Direction
+	var cursorCreatedAt gosql.NullTime
+	var cursorID gosql.NullString
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
 			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
 		}
 		cursorDir = &cur.Direction
+		cursorCreatedAt = gosql.NullTime{Time: cur.OccurredAt, Valid: true}
+		cursorID = gosql.NullString{String: cur.ID, Valid: true}
+	}
 
-		if cur.Direction == pagination.DirectionBackward {
-			rows, err := r.queries.ListInventoryChangeLogsBackward(ctx, sqlc.ListInventoryChangeLogsBackwardParams{
-				AccountID:               params.AccountID,
-				IncludeItemFilter:       includeItemFilter,
-				ItemIds:                 itemIDs,
-				IncludeActionTypeFilter: includeActionTypeFilter,
-				ActionTypeCodes:         actionTypeCodes,
-				IncludeUserFilter:       includeUserFilter,
-				ChangedByUserIds:        changedByUserIDs,
-				StartDate:               startDate,
-				EndDate:                 endDate,
-				SearchQuery:             searchQuery,
-				CursorCreatedAt:         cur.OccurredAt,
-				CursorID:                cur.ID,
-				Limit:                   params.Limit + 1,
-			})
-			if apiErr := db.MapSQLError(err); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			items := make([]*domain.InventoryChangeLog, len(rows))
-			for i, row := range rows {
-				items[i] = mapICLBackwardRow(row)
-			}
-			result, pageInfo := pagination.BuildPageString(items, params.Limit, cursorDir, iclCreatedAt, iclID)
-			return &domain.ListInventoryChangeLogsResult{Items: result, PageInfo: pageInfo}, nil
+	backward := cursorDir != nil && *cursorDir == pagination.DirectionBackward
+
+	var items []*domain.InventoryChangeLog
+
+	switch {
+	case backward && search != nil:
+		rows, err := r.queries.SearchInventoryChangeLogsBackward(ctx, sqlc.SearchInventoryChangeLogsBackwardParams{
+			AccountID:               params.AccountID,
+			SearchItemIds:           search.itemIDs,
+			SearchUserIds:           nullStrings(search.userIDs),
+			SearchStationIds:        nullStrings(search.stationIDs),
+			IncludeItemFilter:       includeItemFilter,
+			ItemIds:                 itemIDs,
+			IncludeActionTypeFilter: includeActionTypeFilter,
+			ActionTypeCodes:         actionTypeCodes,
+			IncludeUserFilter:       includeUserFilter,
+			ChangedByUserIds:        changedByUserIDs,
+			StartDate:               startDate,
+			EndDate:                 endDate,
+			CursorCreatedAt:         cursorCreatedAt.Time,
+			CursorID:                cursorID.String,
+			Limit:                   limit,
+			Limit_2:                 limit,
+			Limit_3:                 limit,
+			Limit_4:                 limit,
+		})
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		items = make([]*domain.InventoryChangeLog, len(rows))
+		for i, row := range rows {
+			items[i] = mapICLBackwardRow(sqlc.ListInventoryChangeLogsBackwardRow(row))
 		}
 
-		// Forward
+	case backward:
+		rows, err := r.queries.ListInventoryChangeLogsBackward(ctx, sqlc.ListInventoryChangeLogsBackwardParams{
+			AccountID:               params.AccountID,
+			IncludeItemFilter:       includeItemFilter,
+			ItemIds:                 itemIDs,
+			IncludeActionTypeFilter: includeActionTypeFilter,
+			ActionTypeCodes:         actionTypeCodes,
+			IncludeUserFilter:       includeUserFilter,
+			ChangedByUserIds:        changedByUserIDs,
+			StartDate:               startDate,
+			EndDate:                 endDate,
+			CursorCreatedAt:         cursorCreatedAt.Time,
+			CursorID:                cursorID.String,
+			Limit:                   limit,
+		})
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		items = make([]*domain.InventoryChangeLog, len(rows))
+		for i, row := range rows {
+			items[i] = mapICLBackwardRow(row)
+		}
+
+	case search != nil:
+		rows, err := r.queries.SearchInventoryChangeLogsForward(ctx, sqlc.SearchInventoryChangeLogsForwardParams{
+			AccountID:               params.AccountID,
+			SearchItemIds:           search.itemIDs,
+			SearchUserIds:           nullStrings(search.userIDs),
+			SearchStationIds:        nullStrings(search.stationIDs),
+			IncludeItemFilter:       includeItemFilter,
+			ItemIds:                 itemIDs,
+			IncludeActionTypeFilter: includeActionTypeFilter,
+			ActionTypeCodes:         actionTypeCodes,
+			IncludeUserFilter:       includeUserFilter,
+			ChangedByUserIds:        changedByUserIDs,
+			StartDate:               startDate,
+			EndDate:                 endDate,
+			CursorCreatedAt:         cursorCreatedAt,
+			CursorID:                cursorID,
+			Limit:                   limit,
+			Limit_2:                 limit,
+			Limit_3:                 limit,
+			Limit_4:                 limit,
+		})
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		items = make([]*domain.InventoryChangeLog, len(rows))
+		for i, row := range rows {
+			items[i] = mapICLForwardRow(sqlc.ListInventoryChangeLogsForwardRow(row))
+		}
+
+	default:
 		rows, err := r.queries.ListInventoryChangeLogsForward(ctx, sqlc.ListInventoryChangeLogsForwardParams{
 			AccountID:               params.AccountID,
 			IncludeItemFilter:       includeItemFilter,
@@ -346,43 +471,19 @@ func (r *inventoryChangeLogRepoImpl) List(ctx context.Context, params domain.Lis
 			ChangedByUserIds:        changedByUserIDs,
 			StartDate:               startDate,
 			EndDate:                 endDate,
-			SearchQuery:             searchQuery,
-			CursorCreatedAt:         gosql.NullTime{Time: cur.OccurredAt, Valid: true},
-			CursorID:                gosql.NullString{String: cur.ID, Valid: true},
-			Limit:                   params.Limit + 1,
+			CursorCreatedAt:         cursorCreatedAt,
+			CursorID:                cursorID,
+			Limit:                   limit,
 		})
 		if apiErr := db.MapSQLError(err); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
-		items := make([]*domain.InventoryChangeLog, len(rows))
+		items = make([]*domain.InventoryChangeLog, len(rows))
 		for i, row := range rows {
 			items[i] = mapICLForwardRow(row)
 		}
-		result, pageInfo := pagination.BuildPageString(items, params.Limit, cursorDir, iclCreatedAt, iclID)
-		return &domain.ListInventoryChangeLogsResult{Items: result, PageInfo: pageInfo}, nil
 	}
 
-	// No cursor — first page
-	rows, err := r.queries.ListInventoryChangeLogsForward(ctx, sqlc.ListInventoryChangeLogsForwardParams{
-		AccountID:               params.AccountID,
-		IncludeItemFilter:       includeItemFilter,
-		ItemIds:                 itemIDs,
-		IncludeActionTypeFilter: includeActionTypeFilter,
-		ActionTypeCodes:         actionTypeCodes,
-		IncludeUserFilter:       includeUserFilter,
-		ChangedByUserIds:        changedByUserIDs,
-		StartDate:               startDate,
-		EndDate:                 endDate,
-		SearchQuery:             searchQuery,
-		Limit:                   params.Limit + 1,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	items := make([]*domain.InventoryChangeLog, len(rows))
-	for i, row := range rows {
-		items[i] = mapICLForwardRow(row)
-	}
 	result, pageInfo := pagination.BuildPageString(items, params.Limit, cursorDir, iclCreatedAt, iclID)
 	return &domain.ListInventoryChangeLogsResult{Items: result, PageInfo: pageInfo}, nil
 }

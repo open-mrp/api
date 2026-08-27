@@ -36,6 +36,7 @@ SELECT
     so.carrier_billing_account,
     -- The order's delivery commitment and how it was derived, so a pick can explain its dates.
     so.ship_by_date,
+    so.ship_by_cutoff_at,
     so.lead_time_days,
     so.lead_time_source_code,
     so.transit_days,
@@ -52,7 +53,9 @@ SELECT
     ship_geo.locality AS shipping_address_locality,
     ship_geo.state AS shipping_address_state,
     ship_geo.postal_code AS shipping_address_postal_code,
-    ship_geo.country AS shipping_address_country
+    ship_geo.country AS shipping_address_country,
+    addr.created_at AS shipping_address_created_at,
+    addr.updated_at AS shipping_address_updated_at
 FROM pick p
 JOIN sales_order so ON so.id = p.sales_order_id
 JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
@@ -84,14 +87,6 @@ AND (
 AND (
     sqlc.arg('include_customer_group_filter') = false
     OR ar.account_group_id IN (sqlc.slice('customer_group_ids'))
-)
-AND (
-    sqlc.arg('include_department_filter') = false
-    OR EXISTS (
-        SELECT 1 FROM _departments_picks dp
-        WHERE dp.B = p.id
-        AND dp.A IN (sqlc.slice('department_ids'))
-    )
 )
 AND (
     sqlc.arg('include_product_line_filter') = false
@@ -172,6 +167,7 @@ SELECT
     so.carrier_billing_account,
     -- The order's delivery commitment and how it was derived, so a pick can explain its dates.
     so.ship_by_date,
+    so.ship_by_cutoff_at,
     so.lead_time_days,
     so.lead_time_source_code,
     so.transit_days,
@@ -188,7 +184,9 @@ SELECT
     ship_geo.locality AS shipping_address_locality,
     ship_geo.state AS shipping_address_state,
     ship_geo.postal_code AS shipping_address_postal_code,
-    ship_geo.country AS shipping_address_country
+    ship_geo.country AS shipping_address_country,
+    addr.created_at AS shipping_address_created_at,
+    addr.updated_at AS shipping_address_updated_at
 FROM pick p
 JOIN sales_order so ON so.id = p.sales_order_id
 JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
@@ -220,14 +218,6 @@ AND (
 AND (
     sqlc.arg('include_customer_group_filter') = false
     OR ar.account_group_id IN (sqlc.slice('customer_group_ids'))
-)
-AND (
-    sqlc.arg('include_department_filter') = false
-    OR EXISTS (
-        SELECT 1 FROM _departments_picks dp
-        WHERE dp.B = p.id
-        AND dp.A IN (sqlc.slice('department_ids'))
-    )
 )
 AND (
     sqlc.arg('include_product_line_filter') = false
@@ -298,14 +288,6 @@ AND (
     OR ar.account_group_id IN (sqlc.slice('customer_group_ids'))
 )
 AND (
-    sqlc.arg('include_department_filter') = false
-    OR EXISTS (
-        SELECT 1 FROM _departments_picks dp
-        WHERE dp.B = p.id
-        AND dp.A IN (sqlc.slice('department_ids'))
-    )
-)
-AND (
     sqlc.arg('include_product_line_filter') = false
     OR EXISTS (
         SELECT 1 FROM pick_line pl2
@@ -362,6 +344,7 @@ SELECT
     so.carrier_billing_account,
     -- The order's delivery commitment and how it was derived, so a pick can explain its dates.
     so.ship_by_date,
+    so.ship_by_cutoff_at,
     so.lead_time_days,
     so.lead_time_source_code,
     so.transit_days,
@@ -378,7 +361,9 @@ SELECT
     ship_geo.locality AS shipping_address_locality,
     ship_geo.state AS shipping_address_state,
     ship_geo.postal_code AS shipping_address_postal_code,
-    ship_geo.country AS shipping_address_country
+    ship_geo.country AS shipping_address_country,
+    addr.created_at AS shipping_address_created_at,
+    addr.updated_at AS shipping_address_updated_at
 FROM pick p
 JOIN sales_order so ON so.id = p.sales_order_id
 JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
@@ -456,21 +441,6 @@ JOIN product p ON p.id = sol.product_id
 WHERE pl.pick_id IN (sqlc.slice('pick_ids'))
 AND p.product_type_code = 'sale'
 GROUP BY pl.pick_id;
-
--- name: GetPickDepartments :many
-SELECT
-    d.id,
-    d.name
-FROM _departments_picks dp
-JOIN department d ON d.id = dp.A
-WHERE dp.B = sqlc.arg('pick_id');
-
--- name: UpdatePickNumber :exec
-UPDATE pick SET
-    number = sqlc.arg('number'),
-    updated_at = NOW(3)
-WHERE id = sqlc.arg('pick_id')
-AND account_id = sqlc.arg('account_id');
 
 -- name: UpdatePickFinishedAt :exec
 UPDATE pick SET
@@ -603,34 +573,6 @@ UPDATE quantity SET
 WHERE id = (
     SELECT pl.quantity_id FROM pick_line pl
     WHERE pl.id = sqlc.arg('pick_line_id')
-);
-
--- name: GetPickShipmentNumbers :many
-SELECT s.number FROM shipment s
-WHERE s.account_id = sqlc.arg('account_id')
-AND s.sales_order_id = (
-    SELECT pk.sales_order_id FROM pick pk
-    WHERE pk.id = sqlc.arg('pick_id')
-    AND pk.account_id = sqlc.arg('account_id')
-)
-AND (
-    sqlc.narg('search_query') IS NULL
-    OR s.number LIKE sqlc.narg('search_query')
-)
-ORDER BY s.created_at ASC
-LIMIT ? OFFSET ?;
-
--- name: CountPickShipmentNumbers :one
-SELECT COUNT(*) AS count FROM shipment s
-WHERE s.account_id = sqlc.arg('account_id')
-AND s.sales_order_id = (
-    SELECT pk.sales_order_id FROM pick pk
-    WHERE pk.id = sqlc.arg('pick_id')
-    AND pk.account_id = sqlc.arg('account_id')
-)
-AND (
-    sqlc.narg('search_query') IS NULL
-    OR s.number LIKE sqlc.narg('search_query')
 );
 
 -- name: IsPickInAccount :one

@@ -124,7 +124,7 @@ func salesOrderCommitmentBasis(order *domain.SalesOrder) scheduling.CommitmentBa
 	}
 }
 
-// stampShipByCommitment resolves and writes an order's commitment. Called on issue, and again whenever a promised date moves on an order that is already issued.
+// stampShipByCommitment resolves and writes an order's commitment. Called on issue, and again on an already-issued order whenever something the date was derived from moves — the basis, or the lane its transit was quoted on.
 func (s *salesOrderSvcImpl) stampShipByCommitment(ctx context.Context, accountID string, order *domain.SalesOrder, issuedAt time.Time) *apierror.APIError {
 	commitment, apiErr := s.resolveShipByCommitment(ctx, accountID, order, issuedAt, commitmentOptions{})
 	if apiErr != nil {

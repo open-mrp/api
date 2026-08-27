@@ -44,8 +44,9 @@ func (e *PackPickEndpoint) Materialize() *apiendpoint.APIEndpoint[*PackPickReque
 		Route:             "/v1/operations/picks/{id}/actions/pack",
 		ContentType:       "application/json",
 		SuccessStatusCode: http.StatusAccepted,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
+		AgentTool:         true,
 		ObjectType:        constants.ObjectTypeJob,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainPicks, Action: types.ActionUpdate},

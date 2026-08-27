@@ -112,7 +112,7 @@ func issuedPlusDays(t *testing.T, order map[string]any, days int) string {
 // took back out of it. Assert against this rather than lead_time_days, which moves with the date.
 func committedRuleDays(t *testing.T, order map[string]any) int {
 	t.Helper()
-	days, err := strconv.Atoi(jsonField(order, "lead_time_days"))
+	days, err := strconv.Atoi(jsonField(commitmentOf(order), "lead_time_days"))
 	require.NoError(t, err, "an issued order must carry the days it committed to")
 	return days + calendarAdjustmentDays(order)
 }
@@ -120,7 +120,7 @@ func committedRuleDays(t *testing.T, order map[string]any) int {
 // How many days the receiving and shipping calendars pulled an order's ship-by back. Zero when the
 // field is absent, which is what an order whose dates all landed on open days reports.
 func calendarAdjustmentDays(order map[string]any) int {
-	adjustment, ok := order["calendar_adjustment_days"].(float64)
+	adjustment, ok := commitmentOf(order)["calendar_adjustment_days"].(float64)
 	if !ok {
 		return 0
 	}
@@ -130,7 +130,7 @@ func calendarAdjustmentDays(order map[string]any) int {
 // shipByDate normalizes the ship_by_date field, which serializes as a timestamp.
 func shipByDate(t *testing.T, order map[string]any) string {
 	t.Helper()
-	raw := jsonField(order, "ship_by_date")
+	raw := jsonField(commitmentOf(order), "ship_by_date")
 	if raw == "" {
 		return ""
 	}
@@ -147,7 +147,7 @@ func TestShipByCommitment_CustomerLeadTimeWinsTheChain(t *testing.T) {
 
 	order := issueOrderForCustomer(t, customerID, nil)
 
-	assert.Equal(t, "customer", jsonField(order, "lead_time_source"))
+	assert.Equal(t, "customer", jsonField(commitmentOf(order), "lead_time_source"))
 	assert.Equal(t, 14, committedRuleDays(t, order))
 	assert.Equal(t, expectedShipBy(t, order, 14), shipByDate(t, order))
 }
@@ -160,7 +160,7 @@ func TestShipByCommitment_InheritsAccountGroupLeadTime(t *testing.T) {
 
 	order := issueOrderForCustomer(t, customerID, nil)
 
-	assert.Equal(t, "account_group", jsonField(order, "lead_time_source"))
+	assert.Equal(t, "account_group", jsonField(commitmentOf(order), "lead_time_source"))
 	assert.Equal(t, 21, committedRuleDays(t, order))
 	assert.Equal(t, expectedShipBy(t, order, 21), shipByDate(t, order))
 }
@@ -177,8 +177,8 @@ func TestShipByCommitment_FallsBackToAccountDefault(t *testing.T) {
 
 	order := issueOrderForCustomer(t, customerID, nil)
 
-	assert.Equal(t, "account", jsonField(order, "lead_time_source"))
-	days := jsonField(order, "lead_time_days")
+	assert.Equal(t, "account", jsonField(commitmentOf(order), "lead_time_source"))
+	days := jsonField(commitmentOf(order), "lead_time_days")
 	require.NotEmpty(t, days, "an issued order must carry the days it committed to")
 
 	parsedDays, err := strconv.Atoi(days)
@@ -201,9 +201,9 @@ func TestShipByCommitment_PromisedDateOverridesTheChain(t *testing.T) {
 
 	order := issueOrderForCustomer(t, customerID, map[string]any{"promised_at": promised})
 
-	assert.Equal(t, "manual", jsonField(order, "lead_time_source"))
+	assert.Equal(t, "manual", jsonField(commitmentOf(order), "lead_time_source"))
 	assert.Equal(t, promised[:10], shipByDate(t, order))
-	assert.NotEqual(t, "45", jsonField(order, "lead_time_days"),
+	assert.NotEqual(t, "45", jsonField(commitmentOf(order), "lead_time_days"),
 		"the committed span should be the promised one, not the customer's standing rule")
 }
 
@@ -224,8 +224,8 @@ func TestShipByCommitment_UnissueClearsTheCommitment(t *testing.T) {
 
 	after := parseJSON(body)
 	assert.Empty(t, shipByDate(t, after), "ship_by_date should be cleared")
-	assert.Empty(t, jsonField(after, "lead_time_days"))
-	assert.Empty(t, jsonField(after, "lead_time_source"))
+	assert.Empty(t, jsonField(commitmentOf(after), "lead_time_days"))
+	assert.Empty(t, jsonField(commitmentOf(after), "lead_time_source"))
 }
 
 // The rule the whole design rests on: a commitment is a fact about the moment it
@@ -255,7 +255,7 @@ func TestShipByCommitment_ChangingCustomerLeadTimeLeavesIssuedOrdersAlone(t *tes
 	assert.Equal(t, originalShipBy, shipByDate(t, after),
 		"an existing commitment must not move when the customer's lead time changes")
 	assert.Equal(t, 7, committedRuleDays(t, after))
-	assert.Equal(t, "customer", jsonField(after, "lead_time_source"))
+	assert.Equal(t, "customer", jsonField(commitmentOf(after), "lead_time_source"))
 }
 
 func TestCustomerLeadTime_ResolvesChainWithoutAnOrder(t *testing.T) {

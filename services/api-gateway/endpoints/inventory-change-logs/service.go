@@ -56,7 +56,6 @@ func (m *inventoryChangeLogSvcImpl) ListInventoryChangeLogs(ctx context.Context,
 	pbReq := &pb.ListInventoryChangeLogsRequest{
 		Cursor:           req.Cursor,
 		Limit:            req.Limit,
-		Query:            req.Query,
 		ItemIds:          req.ItemIDs,
 		ActionTypeCodes:  actionTypeStrings(req.ActionTypes),
 		ChangedByUserIds: req.ChangedByUserIDs,

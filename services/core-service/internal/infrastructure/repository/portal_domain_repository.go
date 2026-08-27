@@ -56,7 +56,13 @@ func (r *portalDomainRepoImpl) GetByAccountID(ctx context.Context, accountID str
 	ctx, span := portalDomainRepoTracer.Start(ctx, "repository.portal_domain.get_by_account_id")
 	defer span.End()
 
-	row, err := r.queries.GetPortalDomainByAccountID(ctx, accountID)
+	// Second read of the unauthenticated portal branding lookup, so it carries the same connection-drop retry as the account read it follows.
+	var row sqlc.PortalDomain
+	err := db.WithConnRetry(ctx, nil, "portal_domain.get_by_account_id", func() error {
+		var queryErr error
+		row, queryErr = r.queries.GetPortalDomainByAccountID(ctx, accountID)
+		return queryErr
+	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
 			return nil, nil

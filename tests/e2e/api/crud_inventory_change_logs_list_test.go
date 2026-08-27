@@ -11,7 +11,7 @@ import (
 )
 
 // Covers the read surface of /v1/operations/inventory-change-logs: the resource shape, every list
-// filter, the free-text search, keyset paging, and the export.
+// filter, keyset paging, and the export.
 //
 // The log is account-wide and other tests write to it concurrently, so nothing here asserts a count
 // or a list length. The two enriched fixtures are dated into 2099 (0014_e2e_extras.sql), which is
@@ -262,6 +262,19 @@ func TestInventoryChangeLogs_ListRejectsAnUnknownQueryParam(t *testing.T) {
 	assertUnknownQueryParamRejected(t, inventoryChangeLogsPath, status, body)
 }
 
+// The log is filtered by item, action type, user and date rather than searched: `q` is not a
+// parameter here, and a caller sending one is told so rather than silently getting a full page.
+func TestInventoryChangeLogs_ListTakesNoSearchTerm(t *testing.T) {
+	t.Parallel()
+
+	status, body, err := apiClient.GetListRaw(inventoryChangeLogsPath, url.Values{"q": {"SCK-001"}})
+	require.NoError(t, err)
+	require.Less(t, status, 500, "a search term must not 5xx: %s", string(body))
+	require.Equal(t, 400, status, "q is not a parameter on this endpoint: %s", string(body))
+	errObj := requireErrorResponse(t, body, "parameter_unknown", "invalid_request_error")
+	assert.Equal(t, "q", errObj["param"], "the error names the parameter it rejected")
+}
+
 func TestInventoryChangeLogs_ListRejectsAnOutOfRangeLimit(t *testing.T) {
 	t.Parallel()
 
@@ -271,52 +284,6 @@ func TestInventoryChangeLogs_ListRejectsAnOutOfRangeLimit(t *testing.T) {
 		require.Less(t, status, 500, "limit=%s must not 5xx: %s", limit, string(body))
 		assert.Equal(t, 400, status, "limit=%s should 400: %s", limit, string(body))
 	}
-}
-
-// ──────────────────────────────────────────────
-// List — search
-// ──────────────────────────────────────────────
-
-// The term is resolved to item, user and station ids before the page is read, so each dimension has
-// to be reachable on its own — a rewrite that dropped one would still pass the other two.
-func TestInventoryChangeLogs_SearchMatchesEachDimension(t *testing.T) {
-	t.Parallel()
-
-	for name, term := range map[string]string{
-		"item sku":         SeedItemSKU,
-		"user name":        "John Doe",
-		"scanning station": "Knitting Station",
-	} {
-		assert.Contains(t, inventoryChangeLogIDsFiltered(t, url.Values{"q": {term}}), SeedInventoryChangeLogID,
-			"searching by %s should surface the fixture", name)
-	}
-}
-
-// A term matching nothing on any dimension short-circuits to an empty page rather than scanning the
-// account to prove it, so the empty result is the interesting assertion.
-func TestInventoryChangeLogs_SearchWithNoMatchesIsEmpty(t *testing.T) {
-	t.Parallel()
-
-	list, status, err := apiClient.GetList(inventoryChangeLogsPath, url.Values{"q": {"zzz-no-such-change-zzz"}})
-	require.NoError(t, err)
-	require.Equal(t, 200, status)
-	assertEmptyListData(t, list.Data)
-	assert.False(t, list.PageInfo.HasNextPage, "an empty search offers no next page")
-}
-
-// Search narrows the same page the filters do, rather than replacing them.
-func TestInventoryChangeLogs_SearchCombinesWithFilters(t *testing.T) {
-	t.Parallel()
-
-	assert.Contains(t, inventoryChangeLogIDsFiltered(t, url.Values{
-		"q":            {SeedItemSKU},
-		"action_types": {"user_action"},
-	}), SeedInventoryChangeLogID)
-
-	assert.Empty(t, inventoryChangeLogIDsFiltered(t, url.Values{
-		"q":            {SeedItemSKU},
-		"action_types": {"system_action"},
-	}), "SCK-001's change log is a user_action, so the system_action filter empties the search")
 }
 
 // ──────────────────────────────────────────────

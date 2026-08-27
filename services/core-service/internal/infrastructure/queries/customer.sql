@@ -789,45 +789,33 @@ WHERE owner_account_id = sqlc.arg('owner_account_id')
   AND account_relation_role_code = 'customer';
 
 -- name: GetFrequentlyOrderedProducts :many
--- One row per (item, unit) the customer has ordered. Reducing that to one row per
--- item — the unit they order it in most — happens in Go.
+-- One row per item the customer has ordered, most-ordered first decided in Go.
 --
--- Greatest-n-per-group is not expressed here because neither SQL form is
--- affordable. A ROW_NUMBER() window function cannot be planned by Vitess
--- (PlanetScale) inside a server-side prepared statement and fails with "[BUG]
--- unrecognized prepare statement"; since interpolateParams=false makes every sqlc
--- query a prepared statement, that form worked on the vanilla MySQL used in
--- dev/e2e and broke in production. The NOT EXISTS anti-join that replaced it runs
--- this same aggregate a second time as its own derived table, so a customer with a
--- long order history paid for the scan twice and the endpoint reached the request
--- deadline. Picking the winner per item in Go costs one pass over a result set
--- bounded by the customer's catalog.
+-- Greatest-n-per-group is not expressed here because neither SQL form is affordable. A ROW_NUMBER() window function cannot be planned by Vitess (PlanetScale) inside a server-side prepared statement and fails with "[BUG] unrecognized prepare statement"; since interpolateParams=false makes every sqlc query a prepared statement, that form worked on the vanilla MySQL used in dev/e2e and broke in production. The NOT EXISTS anti-join that replaced it runs this same aggregate a second time as its own derived table, so a customer with a long order history paid for the scan twice and the endpoint reached the request deadline.
 --
--- STRAIGHT_JOIN forces sales_order to lead. Left to itself the optimizer drives
--- from product — a full scan, because product_type_code / is_portal_ready are the
--- only predicates it sees there — and fans every product out across its sales
--- order lines before reaching the one genuinely selective predicate, this
--- customer's orders, which it applies last and which throws away ~95% of the
--- rows. Leading with sales_order uses (owner_account_id, buyer_account_id) and
--- reduces to that customer's orders first, so every later join is an eq_ref on a
--- primary key: measured 0.6s warm against 21s for the optimizer's own order.
+-- The derived table bounds the query to the customer's most recent orders, which is what makes it affordable: the join order is right either way, but cost tracks lines scanned and nothing else. The oldest account has ordered since 2014 — 4,088 orders, 14,491 lines — and aggregating all of it measured 8.7s warm and 15s cold against a 10s request deadline. Only 87 of 1,941 customer relationships have ever exceeded 400 orders, so the bound changes what the other 95% see not at all, and for the few it does affect recency is the better answer anyway: a reorder shortcut should reflect what someone buys now, not what they bought a decade ago.
+--
+-- FORCE INDEX and the ORDER BY match (owner_account_id, buyer_account_id, created_at DESC, id DESC) exactly, so the bound is an index-only prefix read with no filesort. Left to itself the optimizer picked the far less selective buyer_account_id index on about a third of production executions.
+--
+-- STRAIGHT_JOIN forces the bounded orders to lead. Materializing them into a derived table does not pin the join order on its own: production stats happen to drive from it, but the same plan on a small table drives from product instead, which is a scan filtered only by product_type_code / is_portal_ready that fans every product across its order lines before reaching the one selective predicate.
+--
+-- The unit the customer orders each item in is deliberately not reported. Reaching it meant joining quantity, which is five million wide rows and cost a random clustered read per surviving line: 486ms cold with it against 87ms without, four fifths of the query. The portal is the only caller and discards the unit, deriving one from the item's unit group when the customer adds the line.
 SELECT STRAIGHT_JOIN
     fg.item_id AS item_id,
-    it.description AS product_name,
-    u.id AS unit_id,
-    u.abbreviation AS unit_abbreviation,
     COUNT(*) AS order_count
-FROM sales_order so
+FROM (
+    SELECT id
+    FROM sales_order FORCE INDEX (sales_order_owner_buyer_created_idx)
+    WHERE owner_account_id = sqlc.arg('owner_account_id')
+      AND buyer_account_id = sqlc.arg('buyer_account_id')
+    ORDER BY created_at DESC, id DESC
+    LIMIT 400
+) so
 JOIN sales_order_line sol ON sol.sales_order_id = so.id
 JOIN product fg ON fg.id = sol.product_id
-JOIN item it ON it.id = fg.item_id
-JOIN quantity q ON q.id = sol.quantity_id
-JOIN unit u ON u.id = q.unit_id
-WHERE so.owner_account_id = sqlc.arg('owner_account_id')
-  AND so.buyer_account_id = sqlc.arg('buyer_account_id')
-  AND fg.product_type_code = 'sale'
+WHERE fg.product_type_code = 'sale'
   AND fg.is_portal_ready = 1
-GROUP BY fg.item_id, it.description, u.id, u.abbreviation;
+GROUP BY fg.item_id;
 
 -- name: MergeCustomerOrders :exec
 UPDATE sales_order SET buyer_account_id = sqlc.arg('target_account_id'), updated_at = NOW(3)

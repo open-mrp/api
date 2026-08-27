@@ -303,33 +303,17 @@ func (m *customerSvcImpl) GetFrequentlyOrderedProducts(ctx context.Context, req 
 		return nil, apiErr
 	}
 
-	// The aggregation RPC only carries item/unit IDs + counts. Hydrate the full item and
-	// unit resources through the shared loaders so the response matches their detail shape,
-	// instead of emitting partial stubs (which previously surfaced empty sku/type/timestamps
-	// and, worse, put the item description in the sku field). The item/unit batch-gets are
-	// counterparty-aware, so this works for the customer-portal relation actor.
+	// The aggregation RPC only carries item IDs + counts. Hydrate the full item resources through the shared loader so the response matches their detail shape, instead of emitting partial stubs (which previously surfaced empty sku/type/timestamps and, worse, put the item description in the sku field). The item batch-get is counterparty-aware, so this works for the customer-portal relation actor.
 	itemIDs := make([]string, 0, len(resp.Products))
-	unitIDs := make([]string, 0, len(resp.Products))
 	seenItem := make(map[string]struct{}, len(resp.Products))
-	seenUnit := make(map[string]struct{}, len(resp.Products))
 	for _, p := range resp.Products {
 		if _, ok := seenItem[p.ItemId]; !ok {
 			seenItem[p.ItemId] = struct{}{}
 			itemIDs = append(itemIDs, p.ItemId)
 		}
-		if p.UnitId != nil {
-			if _, ok := seenUnit[*p.UnitId]; !ok {
-				seenUnit[*p.UnitId] = struct{}{}
-				unitIDs = append(unitIDs, *p.UnitId)
-			}
-		}
 	}
 
 	itemsByID, apiErr := resourceloaders.LoadItems(ctx, itemIDs)
-	if apiErr != nil {
-		return nil, apiErr
-	}
-	unitsByID, apiErr := resourceloaders.LoadUnits(ctx, unitIDs)
 	if apiErr != nil {
 		return nil, apiErr
 	}
@@ -341,17 +325,11 @@ func (m *customerSvcImpl) GetFrequentlyOrderedProducts(ctx context.Context, req 
 			// Item was deleted since it was last ordered; skip it rather than emit a stub row.
 			continue
 		}
-		fop := apiresource.FrequentlyOrderedProduct{
+		products = append(products, apiresource.FrequentlyOrderedProduct{
 			Object:     constants.ObjectTypeFrequentlyOrderedProduct,
 			Item:       item,
 			OrderCount: p.OrderCount,
-		}
-		if p.UnitId != nil {
-			if unit, ok := unitsByID[*p.UnitId].(*apiresource.Unit); ok {
-				fop.Unit = unit
-			}
-		}
-		products = append(products, fop)
+		})
 	}
 
 	return apiresource.NewList(products, apiresource.PageInfo{}), nil

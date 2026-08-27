@@ -1213,35 +1213,15 @@ func (r *customerRepoImpl) GetFrequentlyOrderedProducts(ctx context.Context, own
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// The query returns one row per (item, unit); keep the unit the customer orders each item in most, breaking ties on the smallest unit id so the choice is stable across calls.
-	best := make(map[string]*domain.FrequentlyOrderedProduct, len(rows))
+	products := make([]*domain.FrequentlyOrderedProduct, 0, len(rows))
 	for _, row := range rows {
-		productName := ""
-		if row.ProductName.Valid {
-			productName = row.ProductName.String
-		}
-		unitID := row.UnitID
-		unitAbbr := row.UnitAbbreviation
-		candidate := &domain.FrequentlyOrderedProduct{
-			ItemID:           row.ItemID,
-			ProductName:      productName,
-			UnitID:           &unitID,
-			UnitAbbreviation: &unitAbbr,
-			OrderCount:       safeconv.Int64ToInt32(row.OrderCount),
-		}
-
-		current, seen := best[row.ItemID]
-		if !seen || candidate.OrderCount > current.OrderCount ||
-			(candidate.OrderCount == current.OrderCount && unitID < *current.UnitID) {
-			best[row.ItemID] = candidate
-		}
+		products = append(products, &domain.FrequentlyOrderedProduct{
+			ItemID:     row.ItemID,
+			OrderCount: safeconv.Int64ToInt32(row.OrderCount),
+		})
 	}
 
-	products := make([]*domain.FrequentlyOrderedProduct, 0, len(best))
-	for _, p := range best {
-		products = append(products, p)
-	}
-	// Most-ordered first, item id breaking ties so equally-ordered products do not shuffle between calls (map iteration order alone would).
+	// Most-ordered first, item id breaking ties so equally-ordered products do not shuffle between calls.
 	slices.SortFunc(products, func(a, b *domain.FrequentlyOrderedProduct) int {
 		if c := cmp.Compare(b.OrderCount, a.OrderCount); c != 0 {
 			return c

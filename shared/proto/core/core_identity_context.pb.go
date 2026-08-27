@@ -7649,14 +7649,11 @@ func (x *BulkDeleteCustomersRequest) GetCustomerIds() []string {
 }
 
 type FrequentlyOrderedProductProto struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	ItemId           string                 `protobuf:"bytes,1,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
-	ProductName      string                 `protobuf:"bytes,2,opt,name=product_name,json=productName,proto3" json:"product_name,omitempty"`
-	UnitId           *string                `protobuf:"bytes,3,opt,name=unit_id,json=unitId,proto3,oneof" json:"unit_id,omitempty"`
-	UnitAbbreviation *string                `protobuf:"bytes,4,opt,name=unit_abbreviation,json=unitAbbreviation,proto3,oneof" json:"unit_abbreviation,omitempty"`
-	OrderCount       int32                  `protobuf:"varint,5,opt,name=order_count,json=orderCount,proto3" json:"order_count,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ItemId        string                 `protobuf:"bytes,1,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
+	OrderCount    int32                  `protobuf:"varint,5,opt,name=order_count,json=orderCount,proto3" json:"order_count,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *FrequentlyOrderedProductProto) Reset() {
@@ -7692,27 +7689,6 @@ func (*FrequentlyOrderedProductProto) Descriptor() ([]byte, []int) {
 func (x *FrequentlyOrderedProductProto) GetItemId() string {
 	if x != nil {
 		return x.ItemId
-	}
-	return ""
-}
-
-func (x *FrequentlyOrderedProductProto) GetProductName() string {
-	if x != nil {
-		return x.ProductName
-	}
-	return ""
-}
-
-func (x *FrequentlyOrderedProductProto) GetUnitId() string {
-	if x != nil && x.UnitId != nil {
-		return *x.UnitId
-	}
-	return ""
-}
-
-func (x *FrequentlyOrderedProductProto) GetUnitAbbreviation() string {
-	if x != nil && x.UnitAbbreviation != nil {
-		return *x.UnitAbbreviation
 	}
 	return ""
 }
@@ -11665,17 +11641,11 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\x15DeleteCustomerRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"?\n" +
 	"\x1aBulkDeleteCustomersRequest\x12!\n" +
-	"\fcustomer_ids\x18\x01 \x03(\tR\vcustomerIds\"\xee\x01\n" +
+	"\fcustomer_ids\x18\x01 \x03(\tR\vcustomerIds\"\x95\x01\n" +
 	"\x1dFrequentlyOrderedProductProto\x12\x17\n" +
-	"\aitem_id\x18\x01 \x01(\tR\x06itemId\x12!\n" +
-	"\fproduct_name\x18\x02 \x01(\tR\vproductName\x12\x1c\n" +
-	"\aunit_id\x18\x03 \x01(\tH\x00R\x06unitId\x88\x01\x01\x120\n" +
-	"\x11unit_abbreviation\x18\x04 \x01(\tH\x01R\x10unitAbbreviation\x88\x01\x01\x12\x1f\n" +
+	"\aitem_id\x18\x01 \x01(\tR\x06itemId\x12\x1f\n" +
 	"\vorder_count\x18\x05 \x01(\x05R\n" +
-	"orderCountB\n" +
-	"\n" +
-	"\b_unit_idB\x14\n" +
-	"\x12_unit_abbreviation\"F\n" +
+	"orderCountJ\x04\b\x02\x10\x03J\x04\b\x03\x10\x04J\x04\b\x04\x10\x05R\fproduct_nameR\aunit_idR\x11unit_abbreviation\"F\n" +
 	"#GetFrequentlyOrderedProductsRequest\x12\x1f\n" +
 	"\vcustomer_id\x18\x01 \x01(\tR\n" +
 	"customerId\"g\n" +
@@ -12409,7 +12379,6 @@ func file_core_core_identity_context_proto_init() {
 	file_core_core_identity_context_proto_msgTypes[101].OneofWrappers = []any{}
 	file_core_core_identity_context_proto_msgTypes[103].OneofWrappers = []any{}
 	file_core_core_identity_context_proto_msgTypes[106].OneofWrappers = []any{}
-	file_core_core_identity_context_proto_msgTypes[109].OneofWrappers = []any{}
 	file_core_core_identity_context_proto_msgTypes[114].OneofWrappers = []any{}
 	file_core_core_identity_context_proto_msgTypes[115].OneofWrappers = []any{}
 	file_core_core_identity_context_proto_msgTypes[117].OneofWrappers = []any{}

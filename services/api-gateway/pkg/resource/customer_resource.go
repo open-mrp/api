@@ -265,16 +265,13 @@ type FrequentlyOrderedProduct struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=frequently_ordered_product"`
 	// The item the customer ordered.
 	Item *Item `json:"item" validate:"required"`
-	// The unit of measure this customer orders the item in most often.
-	Unit *Unit `json:"unit"`
-	// Number of sales order lines on which this customer ordered the item in the unit shown.
+	// Number of sales order lines on which this customer ordered the item.
 	OrderCount int32 `json:"order_count" validate:"required"`
 }
 
 var SampleFrequentlyOrderedProduct = &FrequentlyOrderedProduct{
 	Object:     constants.ObjectTypeFrequentlyOrderedProduct,
 	Item:       SampleItem,
-	Unit:       newSampleUnit(SampleUnitName, SampleUnitAbbreviation, constants.UnitTypeMass),
 	OrderCount: 42,
 }
 

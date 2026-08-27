@@ -17,9 +17,9 @@ type PortalProfile struct {
 	Name string `json:"name" validate:"required"`
 	// The URL slug that identifies the seller's customer portal.
 	Slug string `json:"slug" validate:"required"`
-	// Download URL for the seller's logo, valid for one hour after the response is generated.
+	// Stable public CDN URL for the seller's logo, safe to cache and embed.
 	LogoURL *string `json:"logo_url"`
-	// Download URL for the seller's customer-portal favicon, valid for one hour after the response is generated.
+	// Stable public CDN URL for the seller's customer-portal favicon, safe to cache and embed.
 	FaviconURL *string `json:"favicon_url"`
 	// The email address customers are directed to for support.
 	SupportEmail *string `json:"support_email"`

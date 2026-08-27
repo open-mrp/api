@@ -9,15 +9,15 @@ import (
 	apierror "github.com/open-mrp/api/shared/errors"
 )
 
-// Request to get a presigned logo URL.
+// Request to get the account's logo URL.
 type GetAccountLogoURLRequest struct {
 	// ID of the account whose logo is being fetched.
 	AccountID string `path:"id" validate:"required"`
 }
 
-// Returns a presigned download URL for the account's logo.
+// Returns a download URL for the account's logo.
 //
-// The URL expires one hour after it is generated, so fetch the logo promptly rather than caching it. The response carries no URL when the account has never uploaded a logo or the stored image is no longer available.
+// The URL is a stable public CDN link, safe to cache and embed. The response carries no URL when the account has never uploaded a logo or the stored image is no longer available.
 type GetAccountLogoURLEndpoint struct{}
 
 func (e *GetAccountLogoURLEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetAccountLogoURLRequest, *apiresource.AccountLogoURL] {

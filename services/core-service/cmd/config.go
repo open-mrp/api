@@ -28,6 +28,7 @@ const (
 	envIntegrationEncryptionKeyID = "INTEGRATION_ENCRYPTION_KEY_ID" // #nosec G101 - Env var name, not a credential
 	envAWSRegion                  = "AWS_REGION"
 	envAccountPhotosBucket        = "ACCOUNT_PHOTOS_BUCKET"
+	envAssetCDNBaseURL            = "ASSET_CDN_BASE_URL"
 	envUserPhotosBucket           = "USER_PHOTOS_BUCKET"
 	envShippingLabelsBucket       = "SHIPPING_LABELS_BUCKET"
 	envExportsBucket              = "EXPORTS_BUCKET"
@@ -73,6 +74,12 @@ type config struct {
 	// AccountPhotosBucket (required) is the S3 bucket for account logos.
 	// Not enforced when PlatformMode is "test".
 	AccountPhotosBucket string
+
+	// AssetCDNBaseURL (optional; default: "") is the public CDN origin fronting the account photos bucket
+	// (e.g. "https://cdn.augno.com"). When set, branding logo/favicon keys are served as stable, non-expiring
+	// "<base>/<key>" URLs instead of presigned ones — favicons ride in long-lived HTML that browsers cache
+	// past any signature. Unset (dev/e2e against MinIO) falls back to presigning.
+	AssetCDNBaseURL string
 
 	// UserPhotosBucket (required) is the S3 bucket for user profile photos.
 	// Not enforced when PlatformMode is "test".
@@ -135,6 +142,7 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		IntegrationEncryptionKeyID: env.GetEnv(envIntegrationEncryptionKeyID, getenv),
 		AWSRegion:                  env.GetEnv(envAWSRegion, getenv),
 		AccountPhotosBucket:        env.GetEnv(envAccountPhotosBucket, getenv),
+		AssetCDNBaseURL:            env.GetEnv(envAssetCDNBaseURL, getenv),
 		UserPhotosBucket:           env.GetEnv(envUserPhotosBucket, getenv),
 		ShippingLabelsBucket:       env.GetEnv(envShippingLabelsBucket, getenv),
 		ExportsBucket:              env.GetEnv(envExportsBucket, getenv),

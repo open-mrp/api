@@ -406,9 +406,10 @@ func (q *Queries) FindTransactionByStripePaymentID(ctx context.Context, stripePa
 }
 
 const getDollarUnitIDForTransaction = `-- name: GetDollarUnitIDForTransaction :one
-SELECT id FROM unit WHERE abbreviation = '$' LIMIT 1
+SELECT id FROM unit WHERE id = 'dollar' LIMIT 1
 `
 
+// Keyed on the well-known id rather than the abbreviation, which is editable per environment.
 func (q *Queries) GetDollarUnitIDForTransaction(ctx context.Context) (string, error) {
 	row := q.db.QueryRowContext(ctx, getDollarUnitIDForTransaction)
 	var id string

@@ -442,6 +442,16 @@
       ]
     },
     {
+      "key": "operating-calendars",
+      "title": "Operating Calendars",
+      "path": "/dashboard/operating-calendars",
+      "section": "Settings",
+      "subsection": "Production",
+      "shells": [
+        "user"
+      ]
+    },
+    {
       "key": "order-analytics",
       "title": "Sales",
       "path": "/dashboard/order-analytics",

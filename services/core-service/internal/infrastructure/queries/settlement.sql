@@ -265,4 +265,5 @@ SET is_paid_in_full = sqlc.arg('is_paid_in_full'),
 WHERE id = sqlc.arg('id');
 
 -- name: GetDollarUnitID :one
-SELECT id FROM unit WHERE abbreviation = '$' AND account_id IS NULL LIMIT 1;
+-- Keyed on the well-known id rather than the abbreviation, which is editable per environment.
+SELECT id FROM unit WHERE id = 'dollar' LIMIT 1;

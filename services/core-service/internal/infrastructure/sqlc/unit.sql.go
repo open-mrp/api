@@ -356,14 +356,14 @@ func (q *Queries) GetCurrencyBaseUnit(ctx context.Context) (string, error) {
 const getFreightWeightUnit = `-- name: GetFreightWeightUnit :one
 SELECT id
 FROM unit
-WHERE unit_dimension_code = 'mass'
-AND abbreviation = 'lb'
-AND account_id IS NULL
+WHERE id = 'pound'
 LIMIT 1
 `
 
 // Returns the global unit freight is weighed in. Pounds, not the mass base unit (grams): it is what
 // the carriers are sent and what the shipping cases record.
+// Keyed on the well-known id, not the abbreviation: abbreviations are editable per environment
+// ('lb' vs 'lbs') and a miss here fails the whole pack.
 func (q *Queries) GetFreightWeightUnit(ctx context.Context) (string, error) {
 	row := q.db.QueryRowContext(ctx, getFreightWeightUnit)
 	var id string

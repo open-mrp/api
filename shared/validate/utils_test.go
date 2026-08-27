@@ -817,3 +817,144 @@ func TestValidate_OuterFieldsShadowEmbeddedOnes(t *testing.T) {
 		t.Errorf("expected the outer field's tag to win, got: %s", err.PublicMessage)
 	}
 }
+
+type decimalBoundTestStruct struct {
+	Quantity field.Optional[string] `json:"quantity,omitzero" validate:"omitempty,decimal,gte=0"`
+}
+
+// gt/gte/lt/lte read a string's length by default, which is never what a field the API documents as
+// a decimal means. These pin the extension that compares the value numerically instead.
+func TestComparisonTagsOnDecimalStrings(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		value    field.Optional[string]
+		hasError bool
+	}{
+		{name: "unset passes", value: field.Optional[string]{}, hasError: false},
+		{name: "empty passes", value: field.Some(""), hasError: false},
+		{name: "zero passes the inclusive bound", value: field.Some("0"), hasError: false},
+		{name: "positive passes", value: field.Some("12.5"), hasError: false},
+		// A length comparison would pass every one of these: they are all longer than zero characters.
+		{name: "negative fails", value: field.Some("-5"), hasError: true},
+		{name: "negative fraction fails", value: field.Some("-0.0001"), hasError: true},
+		{name: "non-decimal fails", value: field.Some("abc"), hasError: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			err := Validate(&decimalBoundTestStruct{Quantity: tt.value})
+			if tt.hasError && err == nil {
+				t.Errorf("expected validation to fail, got nil")
+			}
+			if !tt.hasError && err != nil {
+				t.Errorf("expected validation to pass, got: %v", err)
+			}
+		})
+	}
+}
+
+type decimalRangeTestStruct struct {
+	Ratio  string `validate:"gt=0"`
+	Factor string `validate:"lte=1"`
+}
+
+func TestComparisonTagsCoverEveryDirectionOnDecimalStrings(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		ratio    string
+		factor   string
+		hasError bool
+	}{
+		{name: "inside both bounds passes", ratio: "0.5", factor: "1", hasError: false},
+		{name: "gt is exclusive", ratio: "0", factor: "1", hasError: true},
+		{name: "lte is inclusive", ratio: "2", factor: "1.0000", hasError: false},
+		{name: "above lte fails", ratio: "2", factor: "1.0001", hasError: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			err := Validate(&decimalRangeTestStruct{Ratio: tt.ratio, Factor: tt.factor})
+			if tt.hasError && err == nil {
+				t.Errorf("expected validation to fail, got nil")
+			}
+			if !tt.hasError && err != nil {
+				t.Errorf("expected validation to pass, got: %v", err)
+			}
+		})
+	}
+}
+
+type comparisonPassthroughTestStruct struct {
+	Days    field.Optional[int32]   `json:"days,omitzero" validate:"omitempty,gte=0,lte=3650"`
+	Hours   field.Optional[float64] `json:"hours,omitzero" validate:"omitempty,gte=0"`
+	Tags    []string                `validate:"omitempty,lte=3"`
+	Instant time.Time               `validate:"omitempty,gt"`
+}
+
+// Extending the comparison tags must not disturb the kinds they already served: numbers compare as
+// numbers, slices by length, and a time against now. Every one of these delegates to the built-in.
+func TestComparisonTagsStillDelegateNonStringKinds(t *testing.T) {
+	t.Parallel()
+	future := time.Now().Add(24 * time.Hour)
+	tests := []struct {
+		name     string
+		value    comparisonPassthroughTestStruct
+		hasError bool
+	}{
+		{name: "all within bounds", value: comparisonPassthroughTestStruct{Days: field.Some(int32(30)), Hours: field.Some(1.5), Tags: []string{"a"}, Instant: future}, hasError: false},
+		{name: "int below gte fails", value: comparisonPassthroughTestStruct{Days: field.Some(int32(-1)), Instant: future}, hasError: true},
+		{name: "int above lte fails", value: comparisonPassthroughTestStruct{Days: field.Some(int32(3651)), Instant: future}, hasError: true},
+		{name: "float below gte fails", value: comparisonPassthroughTestStruct{Hours: field.Some(-0.5), Instant: future}, hasError: true},
+		{name: "slice longer than lte fails", value: comparisonPassthroughTestStruct{Tags: []string{"a", "b", "c", "d"}, Instant: future}, hasError: true},
+		{name: "time in the past fails gt", value: comparisonPassthroughTestStruct{Instant: time.Now().Add(-24 * time.Hour)}, hasError: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			err := Validate(&tt.value)
+			if tt.hasError && err == nil {
+				t.Errorf("expected validation to fail, got nil")
+			}
+			if !tt.hasError && err != nil {
+				t.Errorf("expected validation to pass, got: %v", err)
+			}
+		})
+	}
+}
+
+type dateFilterTestStruct struct {
+	StartDate *string `validate:"omitempty,date_filter"`
+}
+
+func TestValidateDateFilterTag(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		value    *string
+		hasError bool
+	}{
+		{name: "unset passes", value: nil, hasError: false},
+		{name: "empty passes", value: ptr(""), hasError: false},
+		{name: "date only passes", value: ptr("2026-08-27"), hasError: false},
+		{name: "rfc3339 passes", value: ptr("2026-08-27T12:00:00Z"), hasError: false},
+		{name: "prose fails", value: ptr("notadate"), hasError: true},
+		{name: "us order fails", value: ptr("08/27/2026"), hasError: true},
+		{name: "impossible day fails", value: ptr("2026-02-31"), hasError: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			err := Validate(&dateFilterTestStruct{StartDate: tt.value})
+			if tt.hasError && err == nil {
+				t.Errorf("expected validation to fail, got nil")
+			}
+			if !tt.hasError && err != nil {
+				t.Errorf("expected validation to pass, got: %v", err)
+			}
+		})
+	}
+}
+
+func ptr(s string) *string { return &s }

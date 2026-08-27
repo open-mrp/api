@@ -31,9 +31,9 @@ type ListPicksRequest struct {
 	// Matches picks assigned to any of the given departments.
 	DepartmentIDs []string `query:"department_ids"`
 	// Only return picks created on or after this date (`YYYY-MM-DD`).
-	StartDate *string `query:"starts_at"`
+	StartDate *string `query:"starts_at" validate:"omitempty,date_filter"`
 	// Only return picks created before this date (`YYYY-MM-DD`).
-	EndDate *string `query:"ends_at"`
+	EndDate *string `query:"ends_at" validate:"omitempty,date_filter"`
 	// Orders the results: `ship_by_date` puts the soonest delivery commitment first, with picks whose order has no ship-by date last; `created_at` puts the newest pick first.
 	Sort constants.PickSort `query:"sort" default:"ship_by_date"`
 }

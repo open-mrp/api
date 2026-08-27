@@ -256,9 +256,10 @@ func (q *Queries) DeleteTransactionAllocationsBySettlement(ctx context.Context, 
 }
 
 const getDollarUnitID = `-- name: GetDollarUnitID :one
-SELECT id FROM unit WHERE abbreviation = '$' AND account_id IS NULL LIMIT 1
+SELECT id FROM unit WHERE id = 'dollar' LIMIT 1
 `
 
+// Keyed on the well-known id rather than the abbreviation, which is editable per environment.
 func (q *Queries) GetDollarUnitID(ctx context.Context) (string, error) {
 	row := q.db.QueryRowContext(ctx, getDollarUnitID)
 	var id string

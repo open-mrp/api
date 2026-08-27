@@ -24,7 +24,7 @@ type UpdatePickRequest struct {
 	// Timestamp when the pick was finished, in RFC 3339 format.
 	//
 	// Setting it closes the pick out even if lines are still unpacked; send `null` to clear it and reopen the pick.
-	FinishedAt field.Clearable[string] `json:"finished_at,omitzero"`
+	FinishedAt field.Clearable[string] `json:"finished_at,omitzero" validate:"omitempty,datetime=2006-01-02T15:04:05Z07:00"`
 }
 
 var sampleUpdatePickNumber = "PCK-2025-0042"

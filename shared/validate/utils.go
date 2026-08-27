@@ -1,14 +1,18 @@
 // Package validate provides request-level input validation for the platform. It wraps the go-playground/validator library with custom validation tags and human-readable error formatting that maps directly to the API's error response contract ([apierror.APIError] with a Param field).
 //
-// Seven custom validator tags are registered at init time:
+// Custom validator tags registered at init time:
 //
-//   - "password":          8–72 characters, at least one lowercase letter, one uppercase letter, one digit, and one special character.
-//   - "username":          3–255 characters, alphanumeric (upper and lower), underscores, and hyphens only ([a-zA-Z0-9_-]).
-//   - "identifier":        accepts either a valid email address or a username (3–50 characters, alphanumeric, underscores, and hyphens).
-//   - "custom_email":      stricter email validation than the built-in "email" tag, enforcing RFC length limits, TLD format, and no consecutive dots.
-//   - "nonzero_decimal":   the field, parsed as a decimal string, must not equal zero.
-//   - "max_days_ahead=N":  a time.Time (or field.Optional[time.Time]) no more than N days in the future. Past/zero values pass.
-//   - "multiple_of=N":     a numeric field (or field.Optional[float64]) that is a whole multiple of N (e.g. multiple_of=0.1). Zero/unset values pass.
+//   - "password":             8–72 characters, at least one lowercase letter, one uppercase letter, one digit, and one special character.
+//   - "username":             3–255 characters, alphanumeric (upper and lower), underscores, and hyphens only ([a-zA-Z0-9_-]).
+//   - "identifier":           accepts either a valid email address or a username (3–50 characters, alphanumeric, underscores, and hyphens).
+//   - "custom_email":         stricter email validation than the built-in "email" tag, enforcing RFC length limits, TLD format, and no consecutive dots.
+//   - "decimal":              the field parses as a decimal string.
+//   - "nonzero_decimal":      the field, parsed as a decimal string, must not equal zero.
+//   - "date_filter":          a list endpoint's date-window string, in YYYY-MM-DD or RFC 3339 form.
+//   - "max_days_ahead=N":     a time.Time (or field.Optional[time.Time]) no more than N days in the future. Past/zero values pass.
+//   - "multiple_of=N":        a numeric field (or field.Optional[float64]) that is a whole multiple of N (e.g. multiple_of=0.1). Zero/unset values pass.
+//
+// The built-in "gt", "gte", "lt", and "lte" tags are also extended: on a string field they compare the value as a decimal rather than as a length, so a quantity carried as "12.5" takes the same bound as one carried as an int32. Every other kind keeps the stock behavior.
 //
 // All custom tags treat empty/zero values as valid — combine with "required" when the field must be present.
 //
@@ -58,6 +62,11 @@ func init() {
 	_ = validate.RegisterValidation("custom_email", validateCustomEmail)
 	_ = validate.RegisterValidation("nonzero_decimal", validateNonzeroDecimal)
 	_ = validate.RegisterValidation("decimal", validateDecimal)
+	_ = validate.RegisterValidation("date_filter", validateDateFilter)
+	// The built-in comparison tags read a string's LENGTH, which is meaningless for the decimal strings this API carries quantities and rates in. These wrappers compare a string field as a decimal and hand every other kind straight back to the untouched built-in, so `gte=0` means the same thing whether the number arrived as an int32 or as "12.5".
+	for _, tag := range []string{"gt", "gte", "lt", "lte"} {
+		_ = validate.RegisterValidation(tag, decimalAwareComparison(tag))
+	}
 	_ = validate.RegisterValidation("max_days_ahead", validateMaxDaysAhead)
 	_ = validate.RegisterValidation("multiple_of", validateMultipleOf)
 	// "enum" is enforced by reflection in httptransport.ValidateEnumFields, which runs before this validator and knows the allowed values from the field's type. It is registered as a no-op only so the tag cannot panic: go-playground panics on an unknown tag while building its struct cache, so a single `validate:"enum"` on a request struct would 500 that endpoint on every request. The tag is common on response structs, where this validator never sees it.
@@ -170,6 +179,74 @@ func validateCustomEmail(fl validator.FieldLevel) bool {
 		return true
 	}
 	return isValidEmail(email)
+}
+
+// validateDateFilter implements the "date_filter" struct tag for list endpoints that take their date window as a string. It accepts the documented YYYY-MM-DD form and full RFC 3339, matching what the repositories parse; anything else is rejected here rather than reaching a repository that would read the unparseable value as "no filter" and silently return every row. Empty strings pass — combine with "required" to enforce presence. Supports both string and *string fields.
+func validateDateFilter(fl validator.FieldLevel) bool {
+	field := fl.Field()
+	if field.Kind() == reflect.Pointer {
+		if field.IsNil() {
+			return true
+		}
+		field = field.Elem()
+	}
+	s := field.String()
+	if s == "" {
+		return true
+	}
+	for _, layout := range []string{time.DateOnly, time.RFC3339} {
+		if _, err := time.Parse(layout, s); err == nil {
+			return true
+		}
+	}
+	return false
+}
+
+// builtinComparison is a pristine validator kept only so the comparison wrappers can delegate the kinds they do not handle. It must never have the wrappers registered on it, or delegation recurses.
+var builtinComparison = validator.New()
+
+// decimalAwareComparison extends one of the built-in gt/gte/lt/lte tags to decimal strings. A string field is parsed as a decimal and compared numerically — a value that is not a decimal fails, since a length comparison is never what these tags mean on a field the API documents as `format:"decimal"`. Every other kind (ints, floats, slices, time.Time, …) is delegated to the built-in implementation unchanged. Empty strings pass — combine with "required" to enforce presence.
+func decimalAwareComparison(tag string) validator.Func {
+	return func(fl validator.FieldLevel) bool {
+		f := fl.Field()
+		// An unset field.Optional arrives as an untyped nil, and Interface() panics on it.
+		if !f.IsValid() {
+			return true
+		}
+		if f.Kind() == reflect.Pointer {
+			if f.IsNil() {
+				return true
+			}
+			f = f.Elem()
+		}
+
+		if f.Kind() == reflect.String {
+			s := f.String()
+			if s == "" {
+				return true
+			}
+			value, err := decimal.NewFromString(s)
+			if err != nil {
+				return false
+			}
+			bound, err := decimal.NewFromString(fl.Param())
+			if err != nil {
+				return false
+			}
+			switch tag {
+			case "gt":
+				return value.GreaterThan(bound)
+			case "gte":
+				return value.GreaterThanOrEqual(bound)
+			case "lt":
+				return value.LessThan(bound)
+			default:
+				return value.LessThanOrEqual(bound)
+			}
+		}
+
+		return builtinComparison.Var(f.Interface(), tag+"="+fl.Param()) == nil
+	}
 }
 
 // validateNonzeroDecimal implements the "nonzero_decimal" struct tag. It parses the field value as a decimal string and returns false if the parsed value equals zero. Empty strings pass — combine with "required" to enforce presence. Supports both string and *string fields.

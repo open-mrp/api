@@ -7,6 +7,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
+	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -280,10 +281,12 @@ func (h *pickingGRPCHandler) UpdatePick(ctx context.Context, req *pb.UpdatePickR
 			params.FinishedAt = new(*time.Time)
 		} else {
 			t, err := time.Parse(time.RFC3339, *req.FinishedAt)
-			if err == nil {
-				tt := &t
-				params.FinishedAt = &tt
+			if err != nil {
+				// Dropping it would answer 200 to an edit that was discarded. The gateway rejects a malformed timestamp before it reaches here, so this only fires for a caller that bypassed it.
+				return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewValidationErrorWithParam("Finished at must be a valid RFC 3339 timestamp.", "finished_at"))
 			}
+			tt := &t
+			params.FinishedAt = &tt
 		}
 	}
 

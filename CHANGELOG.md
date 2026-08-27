@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.2](https://github.com/open-mrp/api/compare/v1.4.1...v1.4.2) (2026-08-27)
+
+
+### Bug Fixes
+
+* **s3:** enable response checksum validation for presigned URLs to prevent 403 errors ([#66](https://github.com/open-mrp/api/issues/66)) ([f41e6d7](https://github.com/open-mrp/api/commit/f41e6d77c24d219b7dc7aa50655d941fdf8b9c58))
+
 ## [1.4.1](https://github.com/open-mrp/api/compare/v1.4.0...v1.4.1) (2026-08-26)
 
 

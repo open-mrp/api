@@ -71,9 +71,26 @@ type PickInfo struct {
 	TransitDays    *int32  `protobuf:"varint,36,opt,name=transit_days,json=transitDays,proto3,oneof" json:"transit_days,omitempty"`
 	TransitSource  *string `protobuf:"bytes,37,opt,name=transit_source,json=transitSource,proto3,oneof" json:"transit_source,omitempty"`
 	// Computed ship-by commitment, carried from the sales order alongside the lead-time chain.
-	ShipByDate    *timestamppb.Timestamp `protobuf:"bytes,38,opt,name=ship_by_date,json=shipByDate,proto3,oneof" json:"ship_by_date,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	ShipByDate *timestamppb.Timestamp `protobuf:"bytes,38,opt,name=ship_by_date,json=shipByDate,proto3,oneof" json:"ship_by_date,omitempty"`
+	// The order's cross-reference and instructions, carried so the floor works the pick without opening the order.
+	CustomerPoNumber *string `protobuf:"bytes,39,opt,name=customer_po_number,json=customerPoNumber,proto3,oneof" json:"customer_po_number,omitempty"`
+	Note             *string `protobuf:"bytes,40,opt,name=note,proto3,oneof" json:"note,omitempty"`
+	// Freight, carried from the sales order so a pick shows the carrier it ships on.
+	CarrierId                   *string                `protobuf:"bytes,41,opt,name=carrier_id,json=carrierId,proto3,oneof" json:"carrier_id,omitempty"`
+	CarrierName                 *string                `protobuf:"bytes,42,opt,name=carrier_name,json=carrierName,proto3,oneof" json:"carrier_name,omitempty"`
+	CarrierIsPortalEnabled      *bool                  `protobuf:"varint,43,opt,name=carrier_is_portal_enabled,json=carrierIsPortalEnabled,proto3,oneof" json:"carrier_is_portal_enabled,omitempty"`
+	CarrierCreatedAt            *timestamppb.Timestamp `protobuf:"bytes,44,opt,name=carrier_created_at,json=carrierCreatedAt,proto3,oneof" json:"carrier_created_at,omitempty"`
+	CarrierUpdatedAt            *timestamppb.Timestamp `protobuf:"bytes,45,opt,name=carrier_updated_at,json=carrierUpdatedAt,proto3,oneof" json:"carrier_updated_at,omitempty"`
+	ServiceLevelId              *string                `protobuf:"bytes,46,opt,name=service_level_id,json=serviceLevelId,proto3,oneof" json:"service_level_id,omitempty"`
+	ServiceLevelName            *string                `protobuf:"bytes,47,opt,name=service_level_name,json=serviceLevelName,proto3,oneof" json:"service_level_name,omitempty"`
+	ServiceLevelIsPortalEnabled *bool                  `protobuf:"varint,48,opt,name=service_level_is_portal_enabled,json=serviceLevelIsPortalEnabled,proto3,oneof" json:"service_level_is_portal_enabled,omitempty"`
+	ServiceLevelToken           *string                `protobuf:"bytes,49,opt,name=service_level_token,json=serviceLevelToken,proto3,oneof" json:"service_level_token,omitempty"`
+	ServiceLevelCreatedAt       *timestamppb.Timestamp `protobuf:"bytes,50,opt,name=service_level_created_at,json=serviceLevelCreatedAt,proto3,oneof" json:"service_level_created_at,omitempty"`
+	ServiceLevelUpdatedAt       *timestamppb.Timestamp `protobuf:"bytes,51,opt,name=service_level_updated_at,json=serviceLevelUpdatedAt,proto3,oneof" json:"service_level_updated_at,omitempty"`
+	CarrierBillingType          *string                `protobuf:"bytes,52,opt,name=carrier_billing_type,json=carrierBillingType,proto3,oneof" json:"carrier_billing_type,omitempty"`
+	CarrierBillingAccount       *string                `protobuf:"bytes,53,opt,name=carrier_billing_account,json=carrierBillingAccount,proto3,oneof" json:"carrier_billing_account,omitempty"`
+	unknownFields               protoimpl.UnknownFields
+	sizeCache                   protoimpl.SizeCache
 }
 
 func (x *PickInfo) Reset() {
@@ -370,6 +387,111 @@ func (x *PickInfo) GetShipByDate() *timestamppb.Timestamp {
 		return x.ShipByDate
 	}
 	return nil
+}
+
+func (x *PickInfo) GetCustomerPoNumber() string {
+	if x != nil && x.CustomerPoNumber != nil {
+		return *x.CustomerPoNumber
+	}
+	return ""
+}
+
+func (x *PickInfo) GetNote() string {
+	if x != nil && x.Note != nil {
+		return *x.Note
+	}
+	return ""
+}
+
+func (x *PickInfo) GetCarrierId() string {
+	if x != nil && x.CarrierId != nil {
+		return *x.CarrierId
+	}
+	return ""
+}
+
+func (x *PickInfo) GetCarrierName() string {
+	if x != nil && x.CarrierName != nil {
+		return *x.CarrierName
+	}
+	return ""
+}
+
+func (x *PickInfo) GetCarrierIsPortalEnabled() bool {
+	if x != nil && x.CarrierIsPortalEnabled != nil {
+		return *x.CarrierIsPortalEnabled
+	}
+	return false
+}
+
+func (x *PickInfo) GetCarrierCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CarrierCreatedAt
+	}
+	return nil
+}
+
+func (x *PickInfo) GetCarrierUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CarrierUpdatedAt
+	}
+	return nil
+}
+
+func (x *PickInfo) GetServiceLevelId() string {
+	if x != nil && x.ServiceLevelId != nil {
+		return *x.ServiceLevelId
+	}
+	return ""
+}
+
+func (x *PickInfo) GetServiceLevelName() string {
+	if x != nil && x.ServiceLevelName != nil {
+		return *x.ServiceLevelName
+	}
+	return ""
+}
+
+func (x *PickInfo) GetServiceLevelIsPortalEnabled() bool {
+	if x != nil && x.ServiceLevelIsPortalEnabled != nil {
+		return *x.ServiceLevelIsPortalEnabled
+	}
+	return false
+}
+
+func (x *PickInfo) GetServiceLevelToken() string {
+	if x != nil && x.ServiceLevelToken != nil {
+		return *x.ServiceLevelToken
+	}
+	return ""
+}
+
+func (x *PickInfo) GetServiceLevelCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ServiceLevelCreatedAt
+	}
+	return nil
+}
+
+func (x *PickInfo) GetServiceLevelUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ServiceLevelUpdatedAt
+	}
+	return nil
+}
+
+func (x *PickInfo) GetCarrierBillingType() string {
+	if x != nil && x.CarrierBillingType != nil {
+		return *x.CarrierBillingType
+	}
+	return ""
+}
+
+func (x *PickInfo) GetCarrierBillingAccount() string {
+	if x != nil && x.CarrierBillingAccount != nil {
+		return *x.CarrierBillingAccount
+	}
+	return ""
 }
 
 // PickLineInfo represents a pick line resource.
@@ -1775,7 +1897,7 @@ var File_core_core_picking_proto protoreflect.FileDescriptor
 
 const file_core_core_picking_proto_rawDesc = "" +
 	"\n" +
-	"\x17core/core_picking.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fcore/core.proto\x1a\x15core/core_async.proto\"\xd1\x12\n" +
+	"\x17core/core_picking.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fcore/core.proto\x1a\x15core/core_async.proto\"\xb4\x1c\n" +
 	"\bPickInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12$\n" +
@@ -1824,7 +1946,23 @@ const file_core_core_picking_proto_rawDesc = "" +
 	"\ftransit_days\x18$ \x01(\x05H\x0eR\vtransitDays\x88\x01\x01\x12*\n" +
 	"\x0etransit_source\x18% \x01(\tH\x0fR\rtransitSource\x88\x01\x01\x12A\n" +
 	"\fship_by_date\x18& \x01(\v2\x1a.google.protobuf.TimestampH\x10R\n" +
-	"shipByDate\x88\x01\x01B\x0e\n" +
+	"shipByDate\x88\x01\x01\x121\n" +
+	"\x12customer_po_number\x18' \x01(\tH\x11R\x10customerPoNumber\x88\x01\x01\x12\x17\n" +
+	"\x04note\x18( \x01(\tH\x12R\x04note\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"carrier_id\x18) \x01(\tH\x13R\tcarrierId\x88\x01\x01\x12&\n" +
+	"\fcarrier_name\x18* \x01(\tH\x14R\vcarrierName\x88\x01\x01\x12>\n" +
+	"\x19carrier_is_portal_enabled\x18+ \x01(\bH\x15R\x16carrierIsPortalEnabled\x88\x01\x01\x12M\n" +
+	"\x12carrier_created_at\x18, \x01(\v2\x1a.google.protobuf.TimestampH\x16R\x10carrierCreatedAt\x88\x01\x01\x12M\n" +
+	"\x12carrier_updated_at\x18- \x01(\v2\x1a.google.protobuf.TimestampH\x17R\x10carrierUpdatedAt\x88\x01\x01\x12-\n" +
+	"\x10service_level_id\x18. \x01(\tH\x18R\x0eserviceLevelId\x88\x01\x01\x121\n" +
+	"\x12service_level_name\x18/ \x01(\tH\x19R\x10serviceLevelName\x88\x01\x01\x12I\n" +
+	"\x1fservice_level_is_portal_enabled\x180 \x01(\bH\x1aR\x1bserviceLevelIsPortalEnabled\x88\x01\x01\x123\n" +
+	"\x13service_level_token\x181 \x01(\tH\x1bR\x11serviceLevelToken\x88\x01\x01\x12X\n" +
+	"\x18service_level_created_at\x182 \x01(\v2\x1a.google.protobuf.TimestampH\x1cR\x15serviceLevelCreatedAt\x88\x01\x01\x12X\n" +
+	"\x18service_level_updated_at\x183 \x01(\v2\x1a.google.protobuf.TimestampH\x1dR\x15serviceLevelUpdatedAt\x88\x01\x01\x125\n" +
+	"\x14carrier_billing_type\x184 \x01(\tH\x1eR\x12carrierBillingType\x88\x01\x01\x12;\n" +
+	"\x17carrier_billing_account\x185 \x01(\tH\x1fR\x15carrierBillingAccount\x88\x01\x01B\x0e\n" +
 	"\f_promised_atB\x18\n" +
 	"\x16_shipping_address_nameB\x19\n" +
 	"\x17_shipping_address_phoneB\x19\n" +
@@ -1841,7 +1979,22 @@ const file_core_core_picking_proto_rawDesc = "" +
 	"\x11_lead_time_sourceB\x0f\n" +
 	"\r_transit_daysB\x11\n" +
 	"\x0f_transit_sourceB\x0f\n" +
-	"\r_ship_by_date\"\xe6\v\n" +
+	"\r_ship_by_dateB\x15\n" +
+	"\x13_customer_po_numberB\a\n" +
+	"\x05_noteB\r\n" +
+	"\v_carrier_idB\x0f\n" +
+	"\r_carrier_nameB\x1c\n" +
+	"\x1a_carrier_is_portal_enabledB\x15\n" +
+	"\x13_carrier_created_atB\x15\n" +
+	"\x13_carrier_updated_atB\x13\n" +
+	"\x11_service_level_idB\x15\n" +
+	"\x13_service_level_nameB\"\n" +
+	" _service_level_is_portal_enabledB\x16\n" +
+	"\x14_service_level_tokenB\x1b\n" +
+	"\x19_service_level_created_atB\x1b\n" +
+	"\x19_service_level_updated_atB\x17\n" +
+	"\x15_carrier_billing_typeB\x1a\n" +
+	"\x18_carrier_billing_account\"\xe6\v\n" +
 	"\fPickLineInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\apick_id\x18\x02 \x01(\tR\x06pickId\x12-\n" +
@@ -2022,44 +2175,48 @@ var file_core_core_picking_proto_depIdxs = []int32{
 	23, // 5: core.PickInfo.last_shipped_at:type_name -> google.protobuf.Timestamp
 	23, // 6: core.PickInfo.promised_at:type_name -> google.protobuf.Timestamp
 	23, // 7: core.PickInfo.ship_by_date:type_name -> google.protobuf.Timestamp
-	23, // 8: core.PickLineInfo.packed_at:type_name -> google.protobuf.Timestamp
-	23, // 9: core.PickLineInfo.created_at:type_name -> google.protobuf.Timestamp
-	23, // 10: core.PickLineInfo.updated_at:type_name -> google.protobuf.Timestamp
-	0,  // 11: core.ListPicksResponse.picks:type_name -> core.PickInfo
-	24, // 12: core.ListPicksResponse.page_info:type_name -> core.PageInfo
-	0,  // 13: core.GetPickResponse.pick:type_name -> core.PickInfo
-	0,  // 14: core.UpdatePickResponse.pick:type_name -> core.PickInfo
-	0,  // 15: core.PickAllLinesResponse.pick:type_name -> core.PickInfo
-	0,  // 16: core.VoidPickResponse.pick:type_name -> core.PickInfo
-	25, // 17: core.PackPickResponse.job:type_name -> core.JobInfo
-	1,  // 18: core.UpdatePickLineResponse.pick_line:type_name -> core.PickLineInfo
-	1,  // 19: core.PickPickLineResponse.pick_line:type_name -> core.PickLineInfo
-	1,  // 20: core.VoidPickLineResponse.pick_line:type_name -> core.PickLineInfo
-	3,  // 21: core.CorePickingService.ListPicks:input_type -> core.ListPicksRequest
-	5,  // 22: core.CorePickingService.GetPick:input_type -> core.GetPickRequest
-	7,  // 23: core.CorePickingService.UpdatePick:input_type -> core.UpdatePickRequest
-	9,  // 24: core.CorePickingService.PickAllLines:input_type -> core.PickAllLinesRequest
-	11, // 25: core.CorePickingService.VoidPick:input_type -> core.VoidPickRequest
-	13, // 26: core.CorePickingService.PackPick:input_type -> core.PackPickRequest
-	15, // 27: core.CorePickingService.GetPickShipments:input_type -> core.GetPickShipmentsRequest
-	17, // 28: core.CorePickingService.UpdatePickLine:input_type -> core.UpdatePickLineRequest
-	19, // 29: core.CorePickingService.PickPickLine:input_type -> core.PickPickLineRequest
-	21, // 30: core.CorePickingService.VoidPickLine:input_type -> core.VoidPickLineRequest
-	4,  // 31: core.CorePickingService.ListPicks:output_type -> core.ListPicksResponse
-	6,  // 32: core.CorePickingService.GetPick:output_type -> core.GetPickResponse
-	8,  // 33: core.CorePickingService.UpdatePick:output_type -> core.UpdatePickResponse
-	10, // 34: core.CorePickingService.PickAllLines:output_type -> core.PickAllLinesResponse
-	12, // 35: core.CorePickingService.VoidPick:output_type -> core.VoidPickResponse
-	14, // 36: core.CorePickingService.PackPick:output_type -> core.PackPickResponse
-	16, // 37: core.CorePickingService.GetPickShipments:output_type -> core.GetPickShipmentsResponse
-	18, // 38: core.CorePickingService.UpdatePickLine:output_type -> core.UpdatePickLineResponse
-	20, // 39: core.CorePickingService.PickPickLine:output_type -> core.PickPickLineResponse
-	22, // 40: core.CorePickingService.VoidPickLine:output_type -> core.VoidPickLineResponse
-	31, // [31:41] is the sub-list for method output_type
-	21, // [21:31] is the sub-list for method input_type
-	21, // [21:21] is the sub-list for extension type_name
-	21, // [21:21] is the sub-list for extension extendee
-	0,  // [0:21] is the sub-list for field type_name
+	23, // 8: core.PickInfo.carrier_created_at:type_name -> google.protobuf.Timestamp
+	23, // 9: core.PickInfo.carrier_updated_at:type_name -> google.protobuf.Timestamp
+	23, // 10: core.PickInfo.service_level_created_at:type_name -> google.protobuf.Timestamp
+	23, // 11: core.PickInfo.service_level_updated_at:type_name -> google.protobuf.Timestamp
+	23, // 12: core.PickLineInfo.packed_at:type_name -> google.protobuf.Timestamp
+	23, // 13: core.PickLineInfo.created_at:type_name -> google.protobuf.Timestamp
+	23, // 14: core.PickLineInfo.updated_at:type_name -> google.protobuf.Timestamp
+	0,  // 15: core.ListPicksResponse.picks:type_name -> core.PickInfo
+	24, // 16: core.ListPicksResponse.page_info:type_name -> core.PageInfo
+	0,  // 17: core.GetPickResponse.pick:type_name -> core.PickInfo
+	0,  // 18: core.UpdatePickResponse.pick:type_name -> core.PickInfo
+	0,  // 19: core.PickAllLinesResponse.pick:type_name -> core.PickInfo
+	0,  // 20: core.VoidPickResponse.pick:type_name -> core.PickInfo
+	25, // 21: core.PackPickResponse.job:type_name -> core.JobInfo
+	1,  // 22: core.UpdatePickLineResponse.pick_line:type_name -> core.PickLineInfo
+	1,  // 23: core.PickPickLineResponse.pick_line:type_name -> core.PickLineInfo
+	1,  // 24: core.VoidPickLineResponse.pick_line:type_name -> core.PickLineInfo
+	3,  // 25: core.CorePickingService.ListPicks:input_type -> core.ListPicksRequest
+	5,  // 26: core.CorePickingService.GetPick:input_type -> core.GetPickRequest
+	7,  // 27: core.CorePickingService.UpdatePick:input_type -> core.UpdatePickRequest
+	9,  // 28: core.CorePickingService.PickAllLines:input_type -> core.PickAllLinesRequest
+	11, // 29: core.CorePickingService.VoidPick:input_type -> core.VoidPickRequest
+	13, // 30: core.CorePickingService.PackPick:input_type -> core.PackPickRequest
+	15, // 31: core.CorePickingService.GetPickShipments:input_type -> core.GetPickShipmentsRequest
+	17, // 32: core.CorePickingService.UpdatePickLine:input_type -> core.UpdatePickLineRequest
+	19, // 33: core.CorePickingService.PickPickLine:input_type -> core.PickPickLineRequest
+	21, // 34: core.CorePickingService.VoidPickLine:input_type -> core.VoidPickLineRequest
+	4,  // 35: core.CorePickingService.ListPicks:output_type -> core.ListPicksResponse
+	6,  // 36: core.CorePickingService.GetPick:output_type -> core.GetPickResponse
+	8,  // 37: core.CorePickingService.UpdatePick:output_type -> core.UpdatePickResponse
+	10, // 38: core.CorePickingService.PickAllLines:output_type -> core.PickAllLinesResponse
+	12, // 39: core.CorePickingService.VoidPick:output_type -> core.VoidPickResponse
+	14, // 40: core.CorePickingService.PackPick:output_type -> core.PackPickResponse
+	16, // 41: core.CorePickingService.GetPickShipments:output_type -> core.GetPickShipmentsResponse
+	18, // 42: core.CorePickingService.UpdatePickLine:output_type -> core.UpdatePickLineResponse
+	20, // 43: core.CorePickingService.PickPickLine:output_type -> core.PickPickLineResponse
+	22, // 44: core.CorePickingService.VoidPickLine:output_type -> core.VoidPickLineResponse
+	35, // [35:45] is the sub-list for method output_type
+	25, // [25:35] is the sub-list for method input_type
+	25, // [25:25] is the sub-list for extension type_name
+	25, // [25:25] is the sub-list for extension extendee
+	0,  // [0:25] is the sub-list for field type_name
 }
 
 func init() { file_core_core_picking_proto_init() }

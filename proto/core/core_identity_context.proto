@@ -727,10 +727,9 @@ message BulkDeleteCustomersRequest {
 }
 message FrequentlyOrderedProductProto {
   string item_id = 1;
-  string product_name = 2;
-  optional string unit_id = 3;
-  optional string unit_abbreviation = 4;
   int32 order_count = 5;
+  reserved 2, 3, 4;
+  reserved "product_name", "unit_id", "unit_abbreviation";
 }
 message GetFrequentlyOrderedProductsRequest {
   string customer_id = 1;

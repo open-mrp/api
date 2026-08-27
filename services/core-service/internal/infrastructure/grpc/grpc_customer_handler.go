@@ -526,11 +526,8 @@ func (h *gRPCHandler) BulkDeleteCustomers(ctx context.Context, req *pb.BulkDelet
 
 func frequentlyOrderedProductToProto(p *domain.FrequentlyOrderedProduct) *pb.FrequentlyOrderedProductProto {
 	return &pb.FrequentlyOrderedProductProto{
-		ItemId:           p.ItemID,
-		ProductName:      p.ProductName,
-		UnitId:           p.UnitID,
-		UnitAbbreviation: p.UnitAbbreviation,
-		OrderCount:       p.OrderCount,
+		ItemId:     p.ItemID,
+		OrderCount: p.OrderCount,
 	}
 }
 

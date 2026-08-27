@@ -29,6 +29,14 @@ func init() {
 				Populate:    populateCustomerOnPick,
 			},
 			{
+				Key:         "created_by",
+				Target:      constants.ObjectTypeCreatedBy,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractIDs:  extractSalesOrderIDFromPick,
+				Populate:    populateCreatedByOnPick,
+			},
+			{Key: "freight", Populate: populateFreightOnPick},
+			{
 				Key:         "related.shipments",
 				Target:      constants.ObjectTypeShipment,
 				Cardinality: resourcekit.CardinalityList,
@@ -116,6 +124,27 @@ func populateSalesOrderOnPickRelated(ctx context.Context, parent any, loaded map
 	status := string(so.Status)
 	rec.Status = &status
 	ensurePickRelated(p).SalesOrder = rec
+}
+
+// The pick's creator is the creator of the order it fulfills, so the CreatedBy loader is keyed by the sales order id — the same id extractSalesOrderIDFromPick supplies for related.sales_order.
+func populateCreatedByOnPick(ctx context.Context, parent any, loaded map[string]any) {
+	p := parent.(*apiresource.Pick)
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypePick, p.ID, "sales_order_id")
+	if id == "" {
+		return
+	}
+	if v, ok := loaded[id]; ok {
+		p.CreatedBy = v.(*apiresource.CreatedBy)
+	}
+}
+
+func populateFreightOnPick(ctx context.Context, parent any, _ map[string]any) {
+	p := parent.(*apiresource.Pick)
+	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypePick, p.ID, "freight")
+	if !ok {
+		return
+	}
+	p.Freight = v.(*apiresource.Freight)
 }
 
 func extractCustomerIDFromPick(ctx context.Context, parent any) []string {

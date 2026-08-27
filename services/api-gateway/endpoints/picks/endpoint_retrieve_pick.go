@@ -39,7 +39,7 @@ func (e *RetrievePickEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveP
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypePick,
 			Fields: []string{
-				"customer", "related.sales_order", "related.shipments",
+				"customer", "created_by", "freight", "related.sales_order", "related.shipments",
 
 				"lines",
 				"lines.item",

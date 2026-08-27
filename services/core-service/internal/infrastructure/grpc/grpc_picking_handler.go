@@ -54,6 +54,31 @@ func pickToProto(p *domain.Pick) *pb.PickInfo {
 		ShippingAddressPostalCode:    p.ShippingAddressPostalCode,
 		ShippingAddressCountry:       p.ShippingAddressCountry,
 		ShipmentIds:                  p.ShipmentIDs,
+
+		CustomerPoNumber:            p.CustomerPONumber,
+		Note:                        p.Note,
+		CarrierId:                   p.CarrierID,
+		CarrierName:                 p.CarrierName,
+		CarrierIsPortalEnabled:      p.CarrierIsPortalEnabled,
+		ServiceLevelId:              p.ServiceLevelID,
+		ServiceLevelName:            p.ServiceLevelName,
+		ServiceLevelIsPortalEnabled: p.ServiceLevelIsPortalEnabled,
+		ServiceLevelToken:           p.ServiceLevelToken,
+		CarrierBillingType:          p.CarrierBillingType,
+		CarrierBillingAccount:       p.CarrierBillingAccount,
+	}
+
+	if p.CarrierCreatedAt != nil {
+		info.CarrierCreatedAt = timestamppb.New(*p.CarrierCreatedAt)
+	}
+	if p.CarrierUpdatedAt != nil {
+		info.CarrierUpdatedAt = timestamppb.New(*p.CarrierUpdatedAt)
+	}
+	if p.ServiceLevelCreatedAt != nil {
+		info.ServiceLevelCreatedAt = timestamppb.New(*p.ServiceLevelCreatedAt)
+	}
+	if p.ServiceLevelUpdatedAt != nil {
+		info.ServiceLevelUpdatedAt = timestamppb.New(*p.ServiceLevelUpdatedAt)
 	}
 
 	if p.PromisedAt != nil {

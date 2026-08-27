@@ -65,7 +65,7 @@ func (e *ListPicksEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPicksReq
 			ObjectType: constants.ObjectTypePick,
 			// Same resource as detail, so the same include set — a row just asks for less.
 			Fields: []string{
-				"customer", "related.sales_order", "related.shipments",
+				"customer", "created_by", "freight", "related.sales_order", "related.shipments",
 
 				"lines",
 				"lines.item",

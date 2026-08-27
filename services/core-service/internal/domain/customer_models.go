@@ -272,11 +272,8 @@ type UpdateCustomerParams struct {
 
 // FrequentlyOrderedProduct represents a product frequently ordered by a customer.
 type FrequentlyOrderedProduct struct {
-	ItemID           string
-	ProductName      string
-	UnitID           *string
-	UnitAbbreviation *string
-	OrderCount       int32
+	ItemID     string
+	OrderCount int32
 }
 
 // SyncStripeCustomerEvent is the outbox command payload for reconciling one customer with the account's connected Stripe integration.

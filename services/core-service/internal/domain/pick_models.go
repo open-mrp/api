@@ -34,6 +34,23 @@ type Pick struct {
 
 	// Ship-to carried from the sales order, so a pick renders its header without fetching the order.
 	PromisedAt *time.Time
+	// The order's cross-reference and instructions, carried so the floor works the pick without opening the order.
+	CustomerPONumber *string
+	Note             *string
+	// Freight carried from the sales order, so a pick shows the carrier it ships on.
+	CarrierID                   *string
+	CarrierName                 *string
+	CarrierIsPortalEnabled      *bool
+	CarrierCreatedAt            *time.Time
+	CarrierUpdatedAt            *time.Time
+	ServiceLevelID              *string
+	ServiceLevelName            *string
+	ServiceLevelIsPortalEnabled *bool
+	ServiceLevelToken           *string
+	ServiceLevelCreatedAt       *time.Time
+	ServiceLevelUpdatedAt       *time.Time
+	CarrierBillingType          *string
+	CarrierBillingAccount       *string
 	// The order's delivery commitment and the rules that produced it, carried so a pick can explain
 	// its dates without fetching the order.
 	ShipByDate                 *time.Time

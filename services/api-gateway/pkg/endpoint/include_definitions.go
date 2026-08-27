@@ -522,6 +522,8 @@ func init() {
 		ObjectType: constants.ObjectTypePick,
 		Fields: []IncludeFieldDef{
 			{Key: "customer", ObjectType: constants.ObjectTypeCustomer},
+			{Key: "created_by", ObjectType: constants.ObjectTypeCreatedBy},
+			{Key: "freight", ObjectType: constants.ObjectTypeFreight},
 			{Key: "lines", ObjectType: constants.ObjectTypePickLine},
 			{
 				Key:        "related",

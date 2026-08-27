@@ -667,6 +667,23 @@ SELECT
     -- Latest ship date across the order's shipments; drives the date in the pick header.
     (SELECT MAX(sh.shipped_at) FROM shipment sh WHERE sh.sales_order_id = so.id) AS last_shipped_at,
     so.promised_at,
+    -- The order's cross-reference and instructions, carried so the floor works the pick without opening the order.
+    so.customer_po_number,
+    so.note,
+    -- Freight is the order's, carried so a pick shows the carrier it ships on.
+    so.carrier_id,
+    cr.name AS carrier_name,
+    cr.is_portal_enabled AS carrier_is_portal_enabled,
+    cr.created_at AS carrier_created_at,
+    cr.updated_at AS carrier_updated_at,
+    so.carrier_option_id AS service_level_id,
+    co.name AS service_level_name,
+    co.is_portal_enabled AS service_level_is_portal_enabled,
+    co.service_level_token,
+    co.created_at AS service_level_created_at,
+    co.updated_at AS service_level_updated_at,
+    so.carrier_billing_type,
+    so.carrier_billing_account,
     -- The order's delivery commitment and how it was derived, so a pick can explain its dates.
     so.ship_by_date,
     so.lead_time_days,
@@ -694,6 +711,8 @@ JOIN account ba ON ba.id = so.buyer_account_id
 JOIN priority pr ON pr.code = so.priority_code
 LEFT JOIN address addr ON addr.id = so.shipping_address_id
 LEFT JOIN geolocation ship_geo ON ship_geo.id = addr.geolocation_id
+LEFT JOIN carrier cr ON cr.id = so.carrier_id
+LEFT JOIN carrier_option co ON co.id = so.carrier_option_id
 WHERE p.id = ?
 AND p.account_id = ?
 `
@@ -720,6 +739,21 @@ type GetPickRow struct {
 	LineCount                    int64
 	LastShippedAt                interface{}
 	PromisedAt                   sql.NullTime
+	CustomerPoNumber             sql.NullString
+	Note                         sql.NullString
+	CarrierID                    sql.NullString
+	CarrierName                  sql.NullString
+	CarrierIsPortalEnabled       sql.NullBool
+	CarrierCreatedAt             sql.NullTime
+	CarrierUpdatedAt             sql.NullTime
+	ServiceLevelID               sql.NullString
+	ServiceLevelName             sql.NullString
+	ServiceLevelIsPortalEnabled  sql.NullBool
+	ServiceLevelToken            sql.NullString
+	ServiceLevelCreatedAt        sql.NullTime
+	ServiceLevelUpdatedAt        sql.NullTime
+	CarrierBillingType           sql.NullString
+	CarrierBillingAccount        sql.NullString
 	ShipByDate                   sql.NullTime
 	LeadTimeDays                 sql.NullInt32
 	LeadTimeSourceCode           sql.NullString
@@ -759,6 +793,21 @@ func (q *Queries) GetPick(ctx context.Context, arg GetPickParams) (GetPickRow, e
 		&i.LineCount,
 		&i.LastShippedAt,
 		&i.PromisedAt,
+		&i.CustomerPoNumber,
+		&i.Note,
+		&i.CarrierID,
+		&i.CarrierName,
+		&i.CarrierIsPortalEnabled,
+		&i.CarrierCreatedAt,
+		&i.CarrierUpdatedAt,
+		&i.ServiceLevelID,
+		&i.ServiceLevelName,
+		&i.ServiceLevelIsPortalEnabled,
+		&i.ServiceLevelToken,
+		&i.ServiceLevelCreatedAt,
+		&i.ServiceLevelUpdatedAt,
+		&i.CarrierBillingType,
+		&i.CarrierBillingAccount,
 		&i.ShipByDate,
 		&i.LeadTimeDays,
 		&i.LeadTimeSourceCode,
@@ -1372,6 +1421,23 @@ SELECT
     -- Latest ship date across the order's shipments; drives the date in the pick header.
     (SELECT MAX(sh.shipped_at) FROM shipment sh WHERE sh.sales_order_id = so.id) AS last_shipped_at,
     so.promised_at,
+    -- The order's cross-reference and instructions, carried so the floor works the pick without opening the order.
+    so.customer_po_number,
+    so.note,
+    -- Freight is the order's, carried so a pick shows the carrier it ships on.
+    so.carrier_id,
+    cr.name AS carrier_name,
+    cr.is_portal_enabled AS carrier_is_portal_enabled,
+    cr.created_at AS carrier_created_at,
+    cr.updated_at AS carrier_updated_at,
+    so.carrier_option_id AS service_level_id,
+    co.name AS service_level_name,
+    co.is_portal_enabled AS service_level_is_portal_enabled,
+    co.service_level_token,
+    co.created_at AS service_level_created_at,
+    co.updated_at AS service_level_updated_at,
+    so.carrier_billing_type,
+    so.carrier_billing_account,
     -- The order's delivery commitment and how it was derived, so a pick can explain its dates.
     so.ship_by_date,
     so.lead_time_days,
@@ -1399,6 +1465,8 @@ JOIN account ba ON ba.id = so.buyer_account_id
 JOIN priority pr ON pr.code = so.priority_code
 LEFT JOIN address addr ON addr.id = so.shipping_address_id
 LEFT JOIN geolocation ship_geo ON ship_geo.id = addr.geolocation_id
+LEFT JOIN carrier cr ON cr.id = so.carrier_id
+LEFT JOIN carrier_option co ON co.id = so.carrier_option_id
 WHERE p.account_id = ?
 AND (
     ? IS NULL
@@ -1506,6 +1574,21 @@ type ListPicksBackwardRow struct {
 	LineCount                    int64
 	LastShippedAt                interface{}
 	PromisedAt                   sql.NullTime
+	CustomerPoNumber             sql.NullString
+	Note                         sql.NullString
+	CarrierID                    sql.NullString
+	CarrierName                  sql.NullString
+	CarrierIsPortalEnabled       sql.NullBool
+	CarrierCreatedAt             sql.NullTime
+	CarrierUpdatedAt             sql.NullTime
+	ServiceLevelID               sql.NullString
+	ServiceLevelName             sql.NullString
+	ServiceLevelIsPortalEnabled  sql.NullBool
+	ServiceLevelToken            sql.NullString
+	ServiceLevelCreatedAt        sql.NullTime
+	ServiceLevelUpdatedAt        sql.NullTime
+	CarrierBillingType           sql.NullString
+	CarrierBillingAccount        sql.NullString
 	ShipByDate                   sql.NullTime
 	LeadTimeDays                 sql.NullInt32
 	LeadTimeSourceCode           sql.NullString
@@ -1615,6 +1698,21 @@ func (q *Queries) ListPicksBackward(ctx context.Context, arg ListPicksBackwardPa
 			&i.LineCount,
 			&i.LastShippedAt,
 			&i.PromisedAt,
+			&i.CustomerPoNumber,
+			&i.Note,
+			&i.CarrierID,
+			&i.CarrierName,
+			&i.CarrierIsPortalEnabled,
+			&i.CarrierCreatedAt,
+			&i.CarrierUpdatedAt,
+			&i.ServiceLevelID,
+			&i.ServiceLevelName,
+			&i.ServiceLevelIsPortalEnabled,
+			&i.ServiceLevelToken,
+			&i.ServiceLevelCreatedAt,
+			&i.ServiceLevelUpdatedAt,
+			&i.CarrierBillingType,
+			&i.CarrierBillingAccount,
 			&i.ShipByDate,
 			&i.LeadTimeDays,
 			&i.LeadTimeSourceCode,
@@ -1665,6 +1763,23 @@ SELECT
     -- Latest ship date across the order's shipments; drives the date in the pick header.
     (SELECT MAX(sh.shipped_at) FROM shipment sh WHERE sh.sales_order_id = so.id) AS last_shipped_at,
     so.promised_at,
+    -- The order's cross-reference and instructions, carried so the floor works the pick without opening the order.
+    so.customer_po_number,
+    so.note,
+    -- Freight is the order's, carried so a pick shows the carrier it ships on.
+    so.carrier_id,
+    cr.name AS carrier_name,
+    cr.is_portal_enabled AS carrier_is_portal_enabled,
+    cr.created_at AS carrier_created_at,
+    cr.updated_at AS carrier_updated_at,
+    so.carrier_option_id AS service_level_id,
+    co.name AS service_level_name,
+    co.is_portal_enabled AS service_level_is_portal_enabled,
+    co.service_level_token,
+    co.created_at AS service_level_created_at,
+    co.updated_at AS service_level_updated_at,
+    so.carrier_billing_type,
+    so.carrier_billing_account,
     -- The order's delivery commitment and how it was derived, so a pick can explain its dates.
     so.ship_by_date,
     so.lead_time_days,
@@ -1692,6 +1807,8 @@ JOIN account ba ON ba.id = so.buyer_account_id
 JOIN priority pr ON pr.code = so.priority_code
 LEFT JOIN address addr ON addr.id = so.shipping_address_id
 LEFT JOIN geolocation ship_geo ON ship_geo.id = addr.geolocation_id
+LEFT JOIN carrier cr ON cr.id = so.carrier_id
+LEFT JOIN carrier_option co ON co.id = so.carrier_option_id
 WHERE p.account_id = ?
 AND (
     ? IS NULL
@@ -1801,6 +1918,21 @@ type ListPicksForwardRow struct {
 	LineCount                    int64
 	LastShippedAt                interface{}
 	PromisedAt                   sql.NullTime
+	CustomerPoNumber             sql.NullString
+	Note                         sql.NullString
+	CarrierID                    sql.NullString
+	CarrierName                  sql.NullString
+	CarrierIsPortalEnabled       sql.NullBool
+	CarrierCreatedAt             sql.NullTime
+	CarrierUpdatedAt             sql.NullTime
+	ServiceLevelID               sql.NullString
+	ServiceLevelName             sql.NullString
+	ServiceLevelIsPortalEnabled  sql.NullBool
+	ServiceLevelToken            sql.NullString
+	ServiceLevelCreatedAt        sql.NullTime
+	ServiceLevelUpdatedAt        sql.NullTime
+	CarrierBillingType           sql.NullString
+	CarrierBillingAccount        sql.NullString
 	ShipByDate                   sql.NullTime
 	LeadTimeDays                 sql.NullInt32
 	LeadTimeSourceCode           sql.NullString
@@ -1912,6 +2044,21 @@ func (q *Queries) ListPicksForward(ctx context.Context, arg ListPicksForwardPara
 			&i.LineCount,
 			&i.LastShippedAt,
 			&i.PromisedAt,
+			&i.CustomerPoNumber,
+			&i.Note,
+			&i.CarrierID,
+			&i.CarrierName,
+			&i.CarrierIsPortalEnabled,
+			&i.CarrierCreatedAt,
+			&i.CarrierUpdatedAt,
+			&i.ServiceLevelID,
+			&i.ServiceLevelName,
+			&i.ServiceLevelIsPortalEnabled,
+			&i.ServiceLevelToken,
+			&i.ServiceLevelCreatedAt,
+			&i.ServiceLevelUpdatedAt,
+			&i.CarrierBillingType,
+			&i.CarrierBillingAccount,
 			&i.ShipByDate,
 			&i.LeadTimeDays,
 			&i.LeadTimeSourceCode,

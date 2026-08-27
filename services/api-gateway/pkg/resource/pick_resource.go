@@ -21,8 +21,16 @@ type Pick struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=pick"`
 	// Human-readable number that identifies the pick, distinct from the `id`.
 	Number string `json:"number" validate:"required"`
+	// The customer's own purchase order number for the sales order this pick fulfills.
+	CustomerPurchaseOrderNumber *string `json:"customer_purchase_order_number"`
+	// Free-form note carried from the sales order this pick fulfills.
+	Note *string `json:"note"`
 	// The customer associated with the sales order.
 	Customer *Customer `json:"customer" expandable:"true"`
+	// Who created the sales order this pick fulfills, and their relation (internal/customer/system).
+	CreatedBy *CreatedBy `json:"created_by" expandable:"true"`
+	// Carrier selection and freight billing carried from the sales order this pick fulfills.
+	Freight *Freight `json:"freight" expandable:"true"`
 	// How urgently the pick should be worked.
 	Priority constants.PriorityCode `json:"priority" validate:"required"`
 	// Address the associated sales order ships to.
@@ -85,19 +93,25 @@ type PickStageTotal struct {
 	Completion float64 `json:"completion"`
 }
 
+var samplePickCustomerPurchaseOrderNumber = "PO-12345"
+var samplePickNote = "Rush order"
 var samplePickLeadTimeDays = int32(3)
 var samplePickLeadTimeSource = constants.LeadTimeSourceAccountGroup
 var samplePickTransitDays = int32(2)
 var samplePickTransitSource = constants.TransitSourceServiceLevel
 
 var SamplePick = &Pick{
-	ID:        SamplePickID,
-	Object:    constants.ObjectTypePick,
-	Number:    SamplePickNumber,
-	Customer:  SampleCustomer,
-	Priority:  SamplePriorityCode,
-	ShipTo:    SampleAddress,
-	LineCount: 1,
+	ID:                          SamplePickID,
+	Object:                      constants.ObjectTypePick,
+	Number:                      SamplePickNumber,
+	CustomerPurchaseOrderNumber: &samplePickCustomerPurchaseOrderNumber,
+	Note:                        &samplePickNote,
+	Customer:                    SampleCustomer,
+	CreatedBy:                   SampleCreatedBy,
+	Freight:                     SampleFreight,
+	Priority:                    SamplePriorityCode,
+	ShipTo:                      SampleAddress,
+	LineCount:                   1,
 	Totals: &PickTotals{
 		Object: constants.ObjectTypePickTotals,
 		Picked: PickStageTotal{Object: constants.ObjectTypePickStageTotal, Completion: 1},

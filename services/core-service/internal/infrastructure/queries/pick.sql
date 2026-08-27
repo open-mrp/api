@@ -17,6 +17,23 @@ SELECT
     -- Latest ship date across the order's shipments; drives the date in the pick header.
     (SELECT MAX(sh.shipped_at) FROM shipment sh WHERE sh.sales_order_id = so.id) AS last_shipped_at,
     so.promised_at,
+    -- The order's cross-reference and instructions, carried so the floor works the pick without opening the order.
+    so.customer_po_number,
+    so.note,
+    -- Freight is the order's, carried so a pick shows the carrier it ships on.
+    so.carrier_id,
+    cr.name AS carrier_name,
+    cr.is_portal_enabled AS carrier_is_portal_enabled,
+    cr.created_at AS carrier_created_at,
+    cr.updated_at AS carrier_updated_at,
+    so.carrier_option_id AS service_level_id,
+    co.name AS service_level_name,
+    co.is_portal_enabled AS service_level_is_portal_enabled,
+    co.service_level_token,
+    co.created_at AS service_level_created_at,
+    co.updated_at AS service_level_updated_at,
+    so.carrier_billing_type,
+    so.carrier_billing_account,
     -- The order's delivery commitment and how it was derived, so a pick can explain its dates.
     so.ship_by_date,
     so.lead_time_days,
@@ -44,6 +61,8 @@ JOIN account ba ON ba.id = so.buyer_account_id
 JOIN priority pr ON pr.code = so.priority_code
 LEFT JOIN address addr ON addr.id = so.shipping_address_id
 LEFT JOIN geolocation ship_geo ON ship_geo.id = addr.geolocation_id
+LEFT JOIN carrier cr ON cr.id = so.carrier_id
+LEFT JOIN carrier_option co ON co.id = so.carrier_option_id
 WHERE p.account_id = sqlc.arg('account_id')
 AND (
     sqlc.narg('search_query') IS NULL
@@ -134,6 +153,23 @@ SELECT
     -- Latest ship date across the order's shipments; drives the date in the pick header.
     (SELECT MAX(sh.shipped_at) FROM shipment sh WHERE sh.sales_order_id = so.id) AS last_shipped_at,
     so.promised_at,
+    -- The order's cross-reference and instructions, carried so the floor works the pick without opening the order.
+    so.customer_po_number,
+    so.note,
+    -- Freight is the order's, carried so a pick shows the carrier it ships on.
+    so.carrier_id,
+    cr.name AS carrier_name,
+    cr.is_portal_enabled AS carrier_is_portal_enabled,
+    cr.created_at AS carrier_created_at,
+    cr.updated_at AS carrier_updated_at,
+    so.carrier_option_id AS service_level_id,
+    co.name AS service_level_name,
+    co.is_portal_enabled AS service_level_is_portal_enabled,
+    co.service_level_token,
+    co.created_at AS service_level_created_at,
+    co.updated_at AS service_level_updated_at,
+    so.carrier_billing_type,
+    so.carrier_billing_account,
     -- The order's delivery commitment and how it was derived, so a pick can explain its dates.
     so.ship_by_date,
     so.lead_time_days,
@@ -161,6 +197,8 @@ JOIN account ba ON ba.id = so.buyer_account_id
 JOIN priority pr ON pr.code = so.priority_code
 LEFT JOIN address addr ON addr.id = so.shipping_address_id
 LEFT JOIN geolocation ship_geo ON ship_geo.id = addr.geolocation_id
+LEFT JOIN carrier cr ON cr.id = so.carrier_id
+LEFT JOIN carrier_option co ON co.id = so.carrier_option_id
 WHERE p.account_id = sqlc.arg('account_id')
 AND (
     sqlc.narg('search_query') IS NULL
@@ -305,6 +343,23 @@ SELECT
     -- Latest ship date across the order's shipments; drives the date in the pick header.
     (SELECT MAX(sh.shipped_at) FROM shipment sh WHERE sh.sales_order_id = so.id) AS last_shipped_at,
     so.promised_at,
+    -- The order's cross-reference and instructions, carried so the floor works the pick without opening the order.
+    so.customer_po_number,
+    so.note,
+    -- Freight is the order's, carried so a pick shows the carrier it ships on.
+    so.carrier_id,
+    cr.name AS carrier_name,
+    cr.is_portal_enabled AS carrier_is_portal_enabled,
+    cr.created_at AS carrier_created_at,
+    cr.updated_at AS carrier_updated_at,
+    so.carrier_option_id AS service_level_id,
+    co.name AS service_level_name,
+    co.is_portal_enabled AS service_level_is_portal_enabled,
+    co.service_level_token,
+    co.created_at AS service_level_created_at,
+    co.updated_at AS service_level_updated_at,
+    so.carrier_billing_type,
+    so.carrier_billing_account,
     -- The order's delivery commitment and how it was derived, so a pick can explain its dates.
     so.ship_by_date,
     so.lead_time_days,
@@ -332,6 +387,8 @@ JOIN account ba ON ba.id = so.buyer_account_id
 JOIN priority pr ON pr.code = so.priority_code
 LEFT JOIN address addr ON addr.id = so.shipping_address_id
 LEFT JOIN geolocation ship_geo ON ship_geo.id = addr.geolocation_id
+LEFT JOIN carrier cr ON cr.id = so.carrier_id
+LEFT JOIN carrier_option co ON co.id = so.carrier_option_id
 WHERE p.id = sqlc.arg('pick_id')
 AND p.account_id = sqlc.arg('account_id');
 

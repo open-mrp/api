@@ -88,6 +88,23 @@ message PickInfo {
   optional string transit_source = 37;
   // Computed ship-by commitment, carried from the sales order alongside the lead-time chain.
   optional google.protobuf.Timestamp ship_by_date = 38;
+  // The order's cross-reference and instructions, carried so the floor works the pick without opening the order.
+  optional string customer_po_number = 39;
+  optional string note = 40;
+  // Freight, carried from the sales order so a pick shows the carrier it ships on.
+  optional string carrier_id = 41;
+  optional string carrier_name = 42;
+  optional bool carrier_is_portal_enabled = 43;
+  optional google.protobuf.Timestamp carrier_created_at = 44;
+  optional google.protobuf.Timestamp carrier_updated_at = 45;
+  optional string service_level_id = 46;
+  optional string service_level_name = 47;
+  optional bool service_level_is_portal_enabled = 48;
+  optional string service_level_token = 49;
+  optional google.protobuf.Timestamp service_level_created_at = 50;
+  optional google.protobuf.Timestamp service_level_updated_at = 51;
+  optional string carrier_billing_type = 52;
+  optional string carrier_billing_account = 53;
 }
 
 // PickLineInfo represents a pick line resource.

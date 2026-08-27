@@ -281,12 +281,14 @@ func (m *pickSvcImpl) VoidPickLine(ctx context.Context, req *VoidPickLineRequest
 
 func pickDetailFromProto(info *pb.PickInfo) apiresource.Pick {
 	d := apiresource.Pick{
-		ID:        info.Id,
-		Object:    constants.ObjectTypePick,
-		Number:    info.Number,
-		Priority:  constants.PriorityCode(info.PriorityCode),
-		CreatedAt: grpcutil.TimestampToTime(info.CreatedAt),
-		UpdatedAt: grpcutil.TimestampToTime(info.UpdatedAt),
+		ID:                          info.Id,
+		Object:                      constants.ObjectTypePick,
+		Number:                      info.Number,
+		CustomerPurchaseOrderNumber: info.CustomerPoNumber,
+		Note:                        info.Note,
+		Priority:                    constants.PriorityCode(info.PriorityCode),
+		CreatedAt:                   grpcutil.TimestampToTime(info.CreatedAt),
+		UpdatedAt:                   grpcutil.TimestampToTime(info.UpdatedAt),
 
 		LineCount: info.LineCount,
 		Totals: &apiresource.PickTotals{
@@ -345,6 +347,52 @@ func shipToFromPickProto(info *pb.PickInfo) *apiresource.Address {
 	return addr
 }
 
+// Builds the pick's freight from the order's carrier selection, denormalized onto the pick so the
+// header shows how the order ships without expanding the order. Carrier and service level are each
+// nil when the order has none selected.
+func freightFromPickProto(info *pb.PickInfo) *apiresource.Freight {
+	f := &apiresource.Freight{
+		Object:               constants.ObjectTypeFreight,
+		BillingAccountNumber: info.CarrierBillingAccount,
+	}
+	if info.CarrierBillingType != nil {
+		bt := constants.CarrierBillingType(*info.CarrierBillingType)
+		f.BillingType = &bt
+	}
+	if info.CarrierId != nil {
+		carrier := &apiresource.Carrier{
+			ID:                       *info.CarrierId,
+			Object:                   constants.ObjectTypeCarrier,
+			Name:                     ptrutil.Deref(info.CarrierName),
+			CustomerPortalVisibility: portalVisibility(info.CarrierIsPortalEnabled),
+			CreatedAt:                grpcutil.TimestampToTime(info.CarrierCreatedAt),
+			UpdatedAt:                grpcutil.TimestampToTime(info.CarrierUpdatedAt),
+		}
+		f.Carrier = carrier
+	}
+	if info.ServiceLevelId != nil {
+		sl := &apiresource.ServiceLevel{
+			ID:                       *info.ServiceLevelId,
+			Object:                   constants.ObjectTypeServiceLevel,
+			Name:                     ptrutil.Deref(info.ServiceLevelName),
+			CustomerPortalVisibility: portalVisibility(info.ServiceLevelIsPortalEnabled),
+			ServiceLevelToken:        constants.ServiceLevelCode(ptrutil.Deref(info.ServiceLevelToken)),
+			CreatedAt:                grpcutil.TimestampToTime(info.ServiceLevelCreatedAt),
+			UpdatedAt:                grpcutil.TimestampToTime(info.ServiceLevelUpdatedAt),
+		}
+		f.ServiceLevel = sl
+	}
+	return f
+}
+
+// A nil or false flag reads as hidden — the portal shows only what was explicitly enabled.
+func portalVisibility(enabled *bool) constants.CustomerPortalVisibility {
+	if enabled != nil && *enabled {
+		return constants.CustomerPortalVisibilityVisible
+	}
+	return constants.CustomerPortalVisibilityHidden
+}
+
 func stashPickDetailMeta(ctx context.Context, d *apiresource.Pick, info *pb.PickInfo) {
 	meta := resourcekit.GetLoadMeta(ctx)
 
@@ -359,6 +407,8 @@ func stashPickDetailMeta(ctx context.Context, d *apiresource.Pick, info *pb.Pick
 	if len(info.ShipmentIds) > 0 {
 		meta.Set(constants.ObjectTypePick, d.ID, "related_shipment_ids", info.ShipmentIds)
 	}
+
+	meta.Set(constants.ObjectTypePick, d.ID, "freight", freightFromPickProto(info))
 
 	if len(info.Lines) > 0 {
 		lines := make([]apiresource.PickLine, len(info.Lines))

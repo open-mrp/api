@@ -76,7 +76,7 @@ type config struct {
 	AccountPhotosBucket string
 
 	// AssetCDNBaseURL (optional; default: "") is the public CDN origin fronting the account photos bucket
-	// (e.g. "https://cdn.openmrp.ai"). When set, branding logo/favicon keys are served as stable, non-expiring
+	// (e.g. "https://cdn.augno.com"). When set, branding logo/favicon keys are served as stable, non-expiring
 	// "<base>/<key>" URLs instead of presigned ones — favicons ride in long-lived HTML that browsers cache
 	// past any signature. Unset (dev/e2e against MinIO) falls back to presigning.
 	AssetCDNBaseURL string

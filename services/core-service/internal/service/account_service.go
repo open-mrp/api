@@ -62,7 +62,7 @@ type AccountSvcConfig struct {
 	// AccountPhotosBucket (optional; default: "") is the S3 bucket for account photos. It is not validated at construction.
 	AccountPhotosBucket string
 
-	// AssetCDNBaseURL (optional; default: "") is the public CDN origin that fronts the account photos bucket (e.g. "https://cdn.openmrp.ai"). When set, branding logo/favicon keys are handed out as stable "<base>/<key>" URLs instead of presigned ones, so they survive the browser favicon cache that keeps a URL in play long past any signature. Empty (dev/e2e) falls back to presigning.
+	// AssetCDNBaseURL (optional; default: "") is the public CDN origin that fronts the account photos bucket (e.g. "https://cdn.augno.com"). When set, branding logo/favicon keys are handed out as stable "<base>/<key>" URLs instead of presigned ones, so they survive the browser favicon cache that keeps a URL in play long past any signature. Empty (dev/e2e) falls back to presigning.
 	AssetCDNBaseURL string
 }
 

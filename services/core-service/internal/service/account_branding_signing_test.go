@@ -99,16 +99,16 @@ func TestAccountReads_ServeBrandingFromCDNWhenConfigured(t *testing.T) {
 	accountRepo.EXPECT().GetByID(gomock.Any(), accountID).Return(&domain.Account{ID: accountID, Branding: branding}, nil).AnyTimes()
 
 	store := &stubBrandingStore{presignedURL: "https://s3.example.com/signed"}
-	svc := &accountSvcImpl{accountRepo: accountRepo, s3Client: store, accountPhotosBucket: "account-photos", assetCDNBaseURL: "https://cdn.openmrp.ai"}
+	svc := &accountSvcImpl{accountRepo: accountRepo, s3Client: store, accountPhotosBucket: "account-photos", assetCDNBaseURL: "https://cdn.augno.com"}
 
 	account, apiErr := svc.GetAccount(accountReadCtx(accountID), accountID)
 	if apiErr != nil {
 		t.Fatalf("GetAccount: %v", apiErr)
 	}
-	if got := ptrutil.Deref(account.Branding.LogoURL); got != "https://cdn.openmrp.ai/ac_1/logo.png" {
+	if got := ptrutil.Deref(account.Branding.LogoURL); got != "https://cdn.augno.com/ac_1/logo.png" {
 		t.Errorf("logo_url = %q, want the CDN URL", got)
 	}
-	if got := ptrutil.Deref(account.Branding.FaviconURL); got != "https://cdn.openmrp.ai/ac_1/favicon.png" {
+	if got := ptrutil.Deref(account.Branding.FaviconURL); got != "https://cdn.augno.com/ac_1/favicon.png" {
 		t.Errorf("favicon_url = %q, want the CDN URL", got)
 	}
 	if store.presignKey != "" {

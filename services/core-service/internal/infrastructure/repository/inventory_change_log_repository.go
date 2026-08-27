@@ -147,14 +147,6 @@ func buildICLFilterParams(params interface {
 	return includeItemFilter, itemIDs, includeActionTypeFilter, actionTypeCodes, includeUserFilter, changedByUserIDs
 }
 
-type listICLFilterAdapter struct {
-	params domain.ListInventoryChangeLogsParams
-}
-
-func (a listICLFilterAdapter) getFilterSlices() ([]string, []string, []string) {
-	return a.params.ItemIDs, a.params.ActionTypeCodes, a.params.ChangedByUserIDs
-}
-
 type exportICLFilterAdapter struct {
 	params domain.ExportInventoryChangeLogsParams
 }

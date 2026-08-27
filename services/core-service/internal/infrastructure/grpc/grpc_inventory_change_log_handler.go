@@ -75,7 +75,6 @@ func (h *gRPCHandler) ListInventoryChangeLogs(ctx context.Context, req *pb.ListI
 	params := domain.ListInventoryChangeLogsParams{
 		Cursor:           req.Cursor,
 		Limit:            req.Limit,
-		Query:            req.Query,
 		ItemIDs:          req.ItemIds,
 		ActionTypeCodes:  req.ActionTypeCodes,
 		ChangedByUserIDs: req.ChangedByUserIds,

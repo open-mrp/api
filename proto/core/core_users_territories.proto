@@ -373,7 +373,7 @@ message InventoryChangeLogInfo {
 message ListInventoryChangeLogsRequest {
   optional string cursor = 1;
   int32 limit = 2;
-  optional string query = 3;
+  reserved 3; // was query
   repeated string item_ids = 4;
   repeated string action_type_codes = 5;
   repeated string changed_by_user_ids = 6;

@@ -46,7 +46,6 @@ type ListInventoryChangeLogsParams struct {
 	AccountID        string
 	Cursor           *string
 	Limit            int32
-	Query            *string
 	ItemIDs          []string
 	ActionTypeCodes  []string
 	ChangedByUserIDs []string

@@ -3984,7 +3984,6 @@ type ListInventoryChangeLogsRequest struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	Cursor           *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
 	Limit            int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
-	Query            *string                `protobuf:"bytes,3,opt,name=query,proto3,oneof" json:"query,omitempty"`
 	ItemIds          []string               `protobuf:"bytes,4,rep,name=item_ids,json=itemIds,proto3" json:"item_ids,omitempty"`
 	ActionTypeCodes  []string               `protobuf:"bytes,5,rep,name=action_type_codes,json=actionTypeCodes,proto3" json:"action_type_codes,omitempty"`
 	ChangedByUserIds []string               `protobuf:"bytes,6,rep,name=changed_by_user_ids,json=changedByUserIds,proto3" json:"changed_by_user_ids,omitempty"`
@@ -4036,13 +4035,6 @@ func (x *ListInventoryChangeLogsRequest) GetLimit() int32 {
 		return x.Limit
 	}
 	return 0
-}
-
-func (x *ListInventoryChangeLogsRequest) GetQuery() string {
-	if x != nil && x.Query != nil {
-		return *x.Query
-	}
-	return ""
 }
 
 func (x *ListInventoryChangeLogsRequest) GetItemIds() []string {
@@ -5624,21 +5616,19 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\x1c_scanning_station_created_atB\x1e\n" +
 	"\x1c_scanning_station_updated_atB\x1e\n" +
 	"\x1c_responsible_user_created_atB\x1e\n" +
-	"\x1c_responsible_user_updated_at\"\x91\x03\n" +
+	"\x1c_responsible_user_updated_at\"\xf2\x02\n" +
 	"\x1eListInventoryChangeLogsRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
-	"\x05query\x18\x03 \x01(\tH\x01R\x05query\x88\x01\x01\x12\x19\n" +
 	"\bitem_ids\x18\x04 \x03(\tR\aitemIds\x12*\n" +
 	"\x11action_type_codes\x18\x05 \x03(\tR\x0factionTypeCodes\x12-\n" +
 	"\x13changed_by_user_ids\x18\x06 \x03(\tR\x10changedByUserIds\x12>\n" +
 	"\n" +
-	"start_date\x18\a \x01(\v2\x1a.google.protobuf.TimestampH\x02R\tstartDate\x88\x01\x01\x12:\n" +
-	"\bend_date\x18\b \x01(\v2\x1a.google.protobuf.TimestampH\x03R\aendDate\x88\x01\x01B\t\n" +
-	"\a_cursorB\b\n" +
-	"\x06_queryB\r\n" +
+	"start_date\x18\a \x01(\v2\x1a.google.protobuf.TimestampH\x01R\tstartDate\x88\x01\x01\x12:\n" +
+	"\bend_date\x18\b \x01(\v2\x1a.google.protobuf.TimestampH\x02R\aendDate\x88\x01\x01B\t\n" +
+	"\a_cursorB\r\n" +
 	"\v_start_dateB\v\n" +
-	"\t_end_date\"\xa0\x01\n" +
+	"\t_end_dateJ\x04\b\x03\x10\x04\"\xa0\x01\n" +
 	"\x1fListInventoryChangeLogsResponse\x12P\n" +
 	"\x15inventory_change_logs\x18\x01 \x03(\v2\x1c.core.InventoryChangeLogInfoR\x13inventoryChangeLogs\x12+\n" +
 	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\".\n" +

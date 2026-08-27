@@ -14,7 +14,12 @@ import (
 
 // Request to list inventory change logs.
 type ListInventoryChangeLogsRequest struct {
-	apiresource.PaginationRequest
+	// Opaque cursor token identifying where the page of results starts.
+	//
+	// Use the `cursor` value embedded in a previous response's `next_page_url` or `previous_page_url` to fetch the adjacent page. Omit to start from the first page.
+	Cursor *string `query:"cursor"`
+	// Maximum number of results to return in a single page.
+	Limit int32 `query:"limit" default:"100" validate:"min=1,max=1000"`
 	// Restricts results to changes affecting these items.
 	ItemIDs []string `query:"item_ids"`
 	// Restricts results to these action types.
@@ -31,7 +36,7 @@ type ListInventoryChangeLogsRequest struct {
 
 // Returns a paginated list of inventory change logs, newest first.
 //
-// Filters combine with AND, while the values within a single filter combine with OR. The `q` search term matches on item SKU, responsible user name, and scanning station name.
+// Filters combine with AND, while the values within a single filter combine with OR.
 type ListInventoryChangeLogsEndpoint struct{}
 
 func (e *ListInventoryChangeLogsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListInventoryChangeLogsRequest, *apiresource.List[apiresource.InventoryChangeLog]] {

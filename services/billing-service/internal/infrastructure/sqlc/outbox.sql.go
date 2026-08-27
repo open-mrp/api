@@ -76,7 +76,7 @@ func (q *Queries) CreateOutboxMessage(ctx context.Context, arg CreateOutboxMessa
 }
 
 const getLockedOutboxMessagesByIDs = `-- name: GetLockedOutboxMessagesByIDs :many
-SELECT id, message_id, service_name, message_type, destination, routing_key, headers, payload, status, attempts, max_attempts, next_run_at, locked_at, lock_owner, lock_expires_at, last_error, published_at, request_id, parent_message_id, created_at, updated_at FROM message_outbox FORCE INDEX (PRIMARY)
+SELECT id, message_id, service_name, message_type, destination, routing_key, headers, payload, status, attempts, max_attempts, next_run_at, locked_at, lock_owner, lock_expires_at, last_error, published_at, request_id, parent_message_id, created_at, updated_at, alerted_at FROM message_outbox FORCE INDEX (PRIMARY)
 WHERE id IN (/*SLICE:ids*/?)
   AND lock_owner = ?
   AND lock_expires_at > NOW(3)
@@ -130,6 +130,7 @@ func (q *Queries) GetLockedOutboxMessagesByIDs(ctx context.Context, arg GetLocke
 			&i.ParentMessageID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.AlertedAt,
 		); err != nil {
 			return nil, err
 		}

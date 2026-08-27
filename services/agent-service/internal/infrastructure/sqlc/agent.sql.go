@@ -2004,19 +2004,20 @@ WHERE id = $6 AND status_code != 'cancelled'
 `
 
 type UpdateAgentRunCompletedParams struct {
-	StatusCode        string
+	Column1           string
 	Output            []byte
-	DurationMs        pgtype.Int4
+	Column3           int32
 	TotalInputTokens  int64
 	TotalOutputTokens int64
 	ID                string
 }
 
+// $1 is cast to text at every use so Postgres deduces a single, consistent type for the parameter. Left bare, `status_code = $1` pegs it to varchar while `$1 = 'completed'` pegs it to text, and the extended protocol (pgx sends no OID) rejects the parse with 42P08 "inconsistent types deduced for parameter $1" — which silently fails the finalize and strands the run in 'running' (never reaching awaiting_approval/completed). $3 is likewise cast so the untyped THEN/ELSE-NULL branch resolves to integer, not text.
 func (q *Queries) UpdateAgentRunCompleted(ctx context.Context, arg UpdateAgentRunCompletedParams) error {
 	_, err := q.db.Exec(ctx, updateAgentRunCompleted,
-		arg.StatusCode,
+		arg.Column1,
 		arg.Output,
-		arg.DurationMs,
+		arg.Column3,
 		arg.TotalInputTokens,
 		arg.TotalOutputTokens,
 		arg.ID,

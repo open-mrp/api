@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"time"
 )
 
 const getInboxRecordByMessageAndHandler = `-- name: GetInboxRecordByMessageAndHandler :one
@@ -21,9 +22,24 @@ type GetInboxRecordByMessageAndHandlerParams struct {
 	Handler   string
 }
 
-func (q *Queries) GetInboxRecordByMessageAndHandler(ctx context.Context, arg GetInboxRecordByMessageAndHandlerParams) (MessageInbox, error) {
+type GetInboxRecordByMessageAndHandlerRow struct {
+	ID              int64
+	MessageID       string
+	ServiceName     string
+	Handler         string
+	MessageType     string
+	RequestID       sql.NullString
+	ParentMessageID sql.NullString
+	Status          string
+	Attempts        int32
+	LastError       sql.NullString
+	ReceivedAt      time.Time
+	ProcessedAt     sql.NullTime
+}
+
+func (q *Queries) GetInboxRecordByMessageAndHandler(ctx context.Context, arg GetInboxRecordByMessageAndHandlerParams) (GetInboxRecordByMessageAndHandlerRow, error) {
 	row := q.db.QueryRowContext(ctx, getInboxRecordByMessageAndHandler, arg.MessageID, arg.Handler)
-	var i MessageInbox
+	var i GetInboxRecordByMessageAndHandlerRow
 	err := row.Scan(
 		&i.ID,
 		&i.MessageID,

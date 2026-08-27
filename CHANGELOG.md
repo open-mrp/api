@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.1](https://github.com/open-mrp/api/compare/v2.0.0...v2.0.1) (2026-08-27)
+
+
+### Bug Fixes
+
+* **inventory-change-logs:** stop list query scanning the whole table ([#76](https://github.com/open-mrp/api/issues/76)) ([83916c1](https://github.com/open-mrp/api/commit/83916c1c77879fd62bd544fe9999b0c6d58d429c))
+
 ## [2.0.0](https://github.com/open-mrp/api/compare/v1.4.5...v2.0.0) (2026-08-27)
 
 

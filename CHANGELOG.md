@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.0.0](https://github.com/open-mrp/api/compare/v1.4.5...v2.0.0) (2026-08-27)
+
+
+### ⚠ BREAKING CHANGES
+
+* commitments sent to their own sub object ([#74](https://github.com/open-mrp/api/issues/74))
+
+### Features
+
+* commitments sent to their own sub object ([#74](https://github.com/open-mrp/api/issues/74)) ([8adbe4d](https://github.com/open-mrp/api/commit/8adbe4d560264239f812e706e84bb6c3c6fbb433))
+
 ## [1.4.5](https://github.com/open-mrp/api/compare/v1.4.4...v1.4.5) (2026-08-27)
 
 

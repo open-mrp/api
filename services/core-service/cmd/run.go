@@ -133,6 +133,7 @@ func Run(
 		TxManager:           txManager,
 		S3Client:            s3Store,
 		AccountPhotosBucket: cfg.AccountPhotosBucket,
+		AssetCDNBaseURL:     cfg.AssetCDNBaseURL,
 	})
 	sandboxSvc := service.NewSandboxSvc(&service.SandboxSvcConfig{
 		Repos:           repoFactory,

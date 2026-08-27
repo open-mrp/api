@@ -9,15 +9,15 @@ import (
 	apierror "github.com/open-mrp/api/shared/errors"
 )
 
-// Request to get a presigned favicon URL.
+// Request to get the account's favicon URL.
 type GetAccountFaviconURLRequest struct {
 	// ID of the account whose favicon is being fetched.
 	AccountID string `path:"id" validate:"required"`
 }
 
-// Returns a presigned download URL for the account's customer-portal favicon.
+// Returns a download URL for the account's customer-portal favicon.
 //
-// The URL expires one hour after it is generated, so fetch the favicon promptly rather than caching it. The response carries no URL when the account has never uploaded a favicon or the stored image is no longer available.
+// The URL is a stable public CDN link, safe to cache and embed. The response carries no URL when the account has never uploaded a favicon or the stored image is no longer available.
 type GetAccountFaviconURLEndpoint struct{}
 
 func (e *GetAccountFaviconURLEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetAccountFaviconURLRequest, *apiresource.AccountFaviconURL] {

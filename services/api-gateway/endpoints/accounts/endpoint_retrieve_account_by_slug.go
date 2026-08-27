@@ -18,7 +18,7 @@ type RetrieveAccountBySlugRequest struct {
 
 // Returns a minimal public profile for the account that owns the given portal slug.
 //
-// This endpoint does not require authentication; it is intended for customer portal branding lookups. The logo and favicon are returned as download URLs that stay valid for one hour.
+// This endpoint does not require authentication; it is intended for customer portal branding lookups. The logo and favicon are returned as stable public CDN URLs, safe to embed in cached HTML (e.g. the portal favicon <link>) without the expiry that makes a presigned URL 403 once a browser reuses it past its signature.
 type RetrieveAccountBySlugEndpoint struct{}
 
 func (e *RetrieveAccountBySlugEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveAccountBySlugRequest, *apiresource.PublicAccount] {

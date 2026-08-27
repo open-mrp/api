@@ -15,20 +15,22 @@ import (
 
 // stubBrandingStore implements s3.ObjectStore, recording what a branding lookup asked the bucket for.
 type stubBrandingStore struct {
-	object       []byte
-	getBucket    string
-	getKey       string
-	presignKey   string
-	presignedURL string
-	getErr       *apierror.APIError
+	object        []byte
+	getBucket     string
+	getKey        string
+	presignKey    string
+	presignExpiry time.Duration
+	presignedURL  string
+	getErr        *apierror.APIError
 }
 
 func (s *stubBrandingStore) Upload(context.Context, string, string, io.Reader, string) *apierror.APIError {
 	return nil
 }
 
-func (s *stubBrandingStore) GetPresignedURL(_ context.Context, _, key string, _ time.Duration) (string, *apierror.APIError) {
+func (s *stubBrandingStore) GetPresignedURL(_ context.Context, _, key string, expiry time.Duration) (string, *apierror.APIError) {
 	s.presignKey = key
+	s.presignExpiry = expiry
 	return s.presignedURL, nil
 }
 

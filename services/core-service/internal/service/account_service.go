@@ -28,6 +28,9 @@ import (
 
 var accountSvcTracer = tracing.GetTracer("core-service.account_service")
 
+// brandingPresignExpiry is how long a presigned logo/favicon URL is signed to stay valid on the fallback (no-CDN) path. Branding assets are embedded in long-lived HTML — the customer portal favicon lands in a <link rel="icon"> that browsers cache for days — so a one-hour signature dies while the page still references it and S3 answers 403. Seven days is the SigV4 presign maximum. It only bounds the dev/e2e path (MinIO with static credentials); in production the durable fix is ASSET_CDN_BASE_URL, which serves these public assets from a stable, non-expiring CDN URL instead of presigning at all (a presign there is capped by the pod's temporary STS session anyway).
+const brandingPresignExpiry = 7 * 24 * time.Hour
+
 type accountSvcImpl struct {
 	accountRepo         domain.AccountRepo
 	accountUserRepo     domain.AccountUserRepo
@@ -40,6 +43,7 @@ type accountSvcImpl struct {
 	outboxRepo          messaging.OutboxRepo
 	s3Client            s3client.ObjectStore
 	accountPhotosBucket string
+	assetCDNBaseURL     string
 }
 
 type AccountSvcConfig struct {
@@ -57,6 +61,9 @@ type AccountSvcConfig struct {
 
 	// AccountPhotosBucket (optional; default: "") is the S3 bucket for account photos. It is not validated at construction.
 	AccountPhotosBucket string
+
+	// AssetCDNBaseURL (optional; default: "") is the public CDN origin that fronts the account photos bucket (e.g. "https://cdn.augno.com"). When set, branding logo/favicon keys are handed out as stable "<base>/<key>" URLs instead of presigned ones, so they survive the browser favicon cache that keeps a URL in play long past any signature. Empty (dev/e2e) falls back to presigning.
+	AssetCDNBaseURL string
 }
 
 func (c *AccountSvcConfig) validate() error {
@@ -92,6 +99,7 @@ func NewAccountSvc(config *AccountSvcConfig) domain.AccountSvc {
 		outboxRepo:          config.RepoFactory.NewOutboxRepo(),
 		s3Client:            config.S3Client,
 		accountPhotosBucket: config.AccountPhotosBucket,
+		assetCDNBaseURL:     config.AssetCDNBaseURL,
 	}
 }
 
@@ -704,6 +712,7 @@ func (s *accountSvcImpl) withTx(ctx context.Context, fn func(context.Context, *a
 			outboxRepo:          f.NewOutboxRepo(),
 			s3Client:            s.s3Client,
 			accountPhotosBucket: s.accountPhotosBucket,
+			assetCDNBaseURL:     s.assetCDNBaseURL,
 		}
 		return fn(txCtx, txSvc)
 	})
@@ -865,24 +874,28 @@ func (s *accountSvcImpl) BatchGetAccountsByIDs(ctx context.Context, ids []string
 	return accounts, nil
 }
 
-// signBranding replaces an account's stored branding asset keys with presigned URLs in place. The column holds the object key the upload wrote, so a resource that hands it out unsigned advertises a URL field carrying something no client can load.
+// signBranding replaces an account's stored branding asset keys with loadable URLs in place. The column holds the object key the upload wrote, so a resource that hands it out untouched advertises a URL field carrying something no client can load.
 func (s *accountSvcImpl) signBranding(ctx context.Context, account *domain.Account) {
 	if account == nil || account.Branding == nil {
 		return
 	}
-	account.Branding.LogoURL = s.presignedBrandingURL(ctx, account.Branding.LogoURL)
-	account.Branding.FaviconURL = s.presignedBrandingURL(ctx, account.Branding.FaviconURL)
+	account.Branding.LogoURL = s.brandingAssetURL(ctx, account.Branding.LogoURL)
+	account.Branding.FaviconURL = s.brandingAssetURL(ctx, account.Branding.FaviconURL)
 }
 
-// presignedBrandingURL converts a stored branding asset S3 key (logo or favicon) into a presigned download URL. Branding must still render without the asset, so it returns nil (best-effort) when there is no key or signing fails, and passes through values that are already absolute URLs.
-func (s *accountSvcImpl) presignedBrandingURL(ctx context.Context, key *string) *string {
+// brandingAssetURL turns a stored branding asset key (logo or favicon) into a URL a browser can load. These are public assets embedded in long-lived HTML — the customer portal favicon lands in a <link rel="icon"> browsers cache for days — so when a CDN base is configured they are served from a stable, non-expiring "<base>/<key>" URL; a presigned URL would 403 once its signature (or the pod's temporary STS session) expired while the page still referenced it. With no CDN configured (dev/e2e against MinIO) it falls back to a presigned URL. Branding must still render without the asset, so it returns nil (best-effort) when there is no key or signing fails, and passes through values that are already absolute URLs.
+func (s *accountSvcImpl) brandingAssetURL(ctx context.Context, key *string) *string {
 	if key == nil || *key == "" {
 		return nil
 	}
 	if strings.HasPrefix(*key, "http://") || strings.HasPrefix(*key, "https://") {
 		return key
 	}
-	url, apiErr := s.s3Client.GetPresignedURL(ctx, s.accountPhotosBucket, *key, time.Hour)
+	if s.assetCDNBaseURL != "" {
+		url := strings.TrimRight(s.assetCDNBaseURL, "/") + "/" + strings.TrimLeft(*key, "/")
+		return &url
+	}
+	url, apiErr := s.s3Client.GetPresignedURL(ctx, s.accountPhotosBucket, *key, brandingPresignExpiry)
 	if apiErr != nil {
 		slog.WarnContext(ctx, "Failed to presign account branding URL", "error", apiErr)
 		return nil
@@ -899,8 +912,8 @@ func (s *accountSvcImpl) GetAccountBySlug(ctx context.Context, slug string) (*do
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	account.LogoURL = s.presignedBrandingURL(ctx, account.LogoURL)
-	account.FaviconURL = s.presignedBrandingURL(ctx, account.FaviconURL)
+	account.LogoURL = s.brandingAssetURL(ctx, account.LogoURL)
+	account.FaviconURL = s.brandingAssetURL(ctx, account.FaviconURL)
 
 	portalDomain, apiErr := s.repos.NewPortalDomainRepo().GetByAccountID(ctx, account.ID)
 	if apiErr != nil {
@@ -935,8 +948,8 @@ func (s *accountSvcImpl) GetPortalProfileBySlug(ctx context.Context, slug string
 		ID:           account.ID,
 		Name:         account.Name,
 		Slug:         account.Slug,
-		LogoURL:      s.presignedBrandingURL(ctx, account.LogoURL),
-		FaviconURL:   s.presignedBrandingURL(ctx, account.FaviconURL),
+		LogoURL:      s.brandingAssetURL(ctx, account.LogoURL),
+		FaviconURL:   s.brandingAssetURL(ctx, account.FaviconURL),
 		SupportEmail: account.SupportEmail,
 	}
 
@@ -1129,12 +1142,7 @@ func (s *accountSvcImpl) GetAccountLogoURL(ctx context.Context, accountID string
 		return nil, nil
 	}
 
-	url, apiErr := s.s3Client.GetPresignedURL(ctx, s.accountPhotosBucket, *logoKey, time.Hour)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	return &url, nil
+	return s.brandingAssetURL(ctx, logoKey), nil
 }
 
 // UploadAccountFavicon uploads a customer-portal favicon to S3 and updates the branding record.
@@ -1206,12 +1214,7 @@ func (s *accountSvcImpl) GetAccountFaviconURL(ctx context.Context, accountID str
 		return nil, nil
 	}
 
-	url, apiErr := s.s3Client.GetPresignedURL(ctx, s.accountPhotosBucket, *faviconKey, time.Hour)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	return &url, nil
+	return s.brandingAssetURL(ctx, faviconKey), nil
 }
 
 // Resolves one of the account plan's caps, returning nil when it should not be enforced — a sandbox,

@@ -392,7 +392,13 @@ func (r *accountRepoImpl) GetBySlug(ctx context.Context, slug string) (*domain.P
 	ctx, span := accountRepoTracer.Start(ctx, "repository.account.get_by_slug")
 	defer span.End()
 
-	row, err := r.queries.GetPublicAccountBySlug(ctx, slug)
+	// Unauthenticated portal branding/profile loads funnel through this read, and internet scanners probe the route constantly, so a dropped database connection (Vitess tablet failover, killed connection) must not surface as a 500. The read is idempotent, making a short retry safe.
+	var row sqlc.GetPublicAccountBySlugRow
+	err := db.WithConnRetry(ctx, nil, "account.get_by_slug", func() error {
+		var queryErr error
+		row, queryErr = r.queries.GetPublicAccountBySlug(ctx, slug)
+		return queryErr
+	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}

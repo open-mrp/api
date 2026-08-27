@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.5](https://github.com/open-mrp/api/compare/v1.4.4...v1.4.5) (2026-08-27)
+
+
+### Bug Fixes
+
+* **branding:** serve portal logo/favicon from a stable CDN URL ([#70](https://github.com/open-mrp/api/issues/70)) ([a321414](https://github.com/open-mrp/api/commit/a321414c002aa3c3fef3a738ae1aecbed8933bda))
+
 ## [1.4.4](https://github.com/open-mrp/api/compare/v1.4.3...v1.4.4) (2026-08-27)
 
 

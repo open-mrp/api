@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.3](https://github.com/open-mrp/api/compare/v1.4.2...v1.4.3) (2026-08-27)
+
+
+### Bug Fixes
+
+* **core:** improve query performance on frequently ordered products; add fields to picking ([#68](https://github.com/open-mrp/api/issues/68)) ([c52a375](https://github.com/open-mrp/api/commit/c52a375b44ccc82c66ac9d16900f5476a8631b5f))
+
 ## [1.4.2](https://github.com/open-mrp/api/compare/v1.4.1...v1.4.2) (2026-08-27)
 
 

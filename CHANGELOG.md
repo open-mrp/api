@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.4](https://github.com/open-mrp/api/compare/v1.4.3...v1.4.4) (2026-08-27)
+
+
+### Bug Fixes
+
+* **core:** add validators, ensure key lookups use primary keys for units ([#71](https://github.com/open-mrp/api/issues/71)) ([876a076](https://github.com/open-mrp/api/commit/876a076b8f08d58050d091de8565e2bece9fd263))
+
 ## [1.4.3](https://github.com/open-mrp/api/compare/v1.4.2...v1.4.3) (2026-08-27)
 
 

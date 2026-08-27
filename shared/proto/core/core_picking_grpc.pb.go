@@ -22,16 +22,14 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	CorePickingService_ListPicks_FullMethodName        = "/core.CorePickingService/ListPicks"
-	CorePickingService_GetPick_FullMethodName          = "/core.CorePickingService/GetPick"
-	CorePickingService_UpdatePick_FullMethodName       = "/core.CorePickingService/UpdatePick"
-	CorePickingService_PickAllLines_FullMethodName     = "/core.CorePickingService/PickAllLines"
-	CorePickingService_VoidPick_FullMethodName         = "/core.CorePickingService/VoidPick"
-	CorePickingService_PackPick_FullMethodName         = "/core.CorePickingService/PackPick"
-	CorePickingService_GetPickShipments_FullMethodName = "/core.CorePickingService/GetPickShipments"
-	CorePickingService_UpdatePickLine_FullMethodName   = "/core.CorePickingService/UpdatePickLine"
-	CorePickingService_PickPickLine_FullMethodName     = "/core.CorePickingService/PickPickLine"
-	CorePickingService_VoidPickLine_FullMethodName     = "/core.CorePickingService/VoidPickLine"
+	CorePickingService_ListPicks_FullMethodName      = "/core.CorePickingService/ListPicks"
+	CorePickingService_GetPick_FullMethodName        = "/core.CorePickingService/GetPick"
+	CorePickingService_PickAllLines_FullMethodName   = "/core.CorePickingService/PickAllLines"
+	CorePickingService_VoidPick_FullMethodName       = "/core.CorePickingService/VoidPick"
+	CorePickingService_PackPick_FullMethodName       = "/core.CorePickingService/PackPick"
+	CorePickingService_UpdatePickLine_FullMethodName = "/core.CorePickingService/UpdatePickLine"
+	CorePickingService_PickPickLine_FullMethodName   = "/core.CorePickingService/PickPickLine"
+	CorePickingService_VoidPickLine_FullMethodName   = "/core.CorePickingService/VoidPickLine"
 )
 
 // CorePickingServiceClient is the client API for CorePickingService service.
@@ -42,16 +40,12 @@ type CorePickingServiceClient interface {
 	ListPicks(ctx context.Context, in *ListPicksRequest, opts ...grpc.CallOption) (*ListPicksResponse, error)
 	// GetPick returns a single pick by its ID.
 	GetPick(ctx context.Context, in *GetPickRequest, opts ...grpc.CallOption) (*GetPickResponse, error)
-	// UpdatePick updates an existing pick's metadata.
-	UpdatePick(ctx context.Context, in *UpdatePickRequest, opts ...grpc.CallOption) (*UpdatePickResponse, error)
 	// PickAllLines picks all unpacked lines in a pick to their remaining quantities.
 	PickAllLines(ctx context.Context, in *PickAllLinesRequest, opts ...grpc.CallOption) (*PickAllLinesResponse, error)
 	// VoidPick voids all lines in a pick by setting quantities to zero.
 	VoidPick(ctx context.Context, in *VoidPickRequest, opts ...grpc.CallOption) (*VoidPickResponse, error)
 	// PackPick packs all eligible lines and creates a shipment.
 	PackPick(ctx context.Context, in *PackPickRequest, opts ...grpc.CallOption) (*PackPickResponse, error)
-	// GetPickShipments returns shipment numbers for a pick's order.
-	GetPickShipments(ctx context.Context, in *GetPickShipmentsRequest, opts ...grpc.CallOption) (*GetPickShipmentsResponse, error)
 	// UpdatePickLine updates a pick line's quantity.
 	UpdatePickLine(ctx context.Context, in *UpdatePickLineRequest, opts ...grpc.CallOption) (*UpdatePickLineResponse, error)
 	// PickPickLine picks a single line to its remaining quantity.
@@ -88,16 +82,6 @@ func (c *corePickingServiceClient) GetPick(ctx context.Context, in *GetPickReque
 	return out, nil
 }
 
-func (c *corePickingServiceClient) UpdatePick(ctx context.Context, in *UpdatePickRequest, opts ...grpc.CallOption) (*UpdatePickResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UpdatePickResponse)
-	err := c.cc.Invoke(ctx, CorePickingService_UpdatePick_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *corePickingServiceClient) PickAllLines(ctx context.Context, in *PickAllLinesRequest, opts ...grpc.CallOption) (*PickAllLinesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(PickAllLinesResponse)
@@ -122,16 +106,6 @@ func (c *corePickingServiceClient) PackPick(ctx context.Context, in *PackPickReq
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(PackPickResponse)
 	err := c.cc.Invoke(ctx, CorePickingService_PackPick_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *corePickingServiceClient) GetPickShipments(ctx context.Context, in *GetPickShipmentsRequest, opts ...grpc.CallOption) (*GetPickShipmentsResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetPickShipmentsResponse)
-	err := c.cc.Invoke(ctx, CorePickingService_GetPickShipments_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -176,16 +150,12 @@ type CorePickingServiceServer interface {
 	ListPicks(context.Context, *ListPicksRequest) (*ListPicksResponse, error)
 	// GetPick returns a single pick by its ID.
 	GetPick(context.Context, *GetPickRequest) (*GetPickResponse, error)
-	// UpdatePick updates an existing pick's metadata.
-	UpdatePick(context.Context, *UpdatePickRequest) (*UpdatePickResponse, error)
 	// PickAllLines picks all unpacked lines in a pick to their remaining quantities.
 	PickAllLines(context.Context, *PickAllLinesRequest) (*PickAllLinesResponse, error)
 	// VoidPick voids all lines in a pick by setting quantities to zero.
 	VoidPick(context.Context, *VoidPickRequest) (*VoidPickResponse, error)
 	// PackPick packs all eligible lines and creates a shipment.
 	PackPick(context.Context, *PackPickRequest) (*PackPickResponse, error)
-	// GetPickShipments returns shipment numbers for a pick's order.
-	GetPickShipments(context.Context, *GetPickShipmentsRequest) (*GetPickShipmentsResponse, error)
 	// UpdatePickLine updates a pick line's quantity.
 	UpdatePickLine(context.Context, *UpdatePickLineRequest) (*UpdatePickLineResponse, error)
 	// PickPickLine picks a single line to its remaining quantity.
@@ -208,9 +178,6 @@ func (UnimplementedCorePickingServiceServer) ListPicks(context.Context, *ListPic
 func (UnimplementedCorePickingServiceServer) GetPick(context.Context, *GetPickRequest) (*GetPickResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetPick not implemented")
 }
-func (UnimplementedCorePickingServiceServer) UpdatePick(context.Context, *UpdatePickRequest) (*UpdatePickResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method UpdatePick not implemented")
-}
 func (UnimplementedCorePickingServiceServer) PickAllLines(context.Context, *PickAllLinesRequest) (*PickAllLinesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method PickAllLines not implemented")
 }
@@ -219,9 +186,6 @@ func (UnimplementedCorePickingServiceServer) VoidPick(context.Context, *VoidPick
 }
 func (UnimplementedCorePickingServiceServer) PackPick(context.Context, *PackPickRequest) (*PackPickResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method PackPick not implemented")
-}
-func (UnimplementedCorePickingServiceServer) GetPickShipments(context.Context, *GetPickShipmentsRequest) (*GetPickShipmentsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetPickShipments not implemented")
 }
 func (UnimplementedCorePickingServiceServer) UpdatePickLine(context.Context, *UpdatePickLineRequest) (*UpdatePickLineResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdatePickLine not implemented")
@@ -289,24 +253,6 @@ func _CorePickingService_GetPick_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
-func _CorePickingService_UpdatePick_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdatePickRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CorePickingServiceServer).UpdatePick(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CorePickingService_UpdatePick_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CorePickingServiceServer).UpdatePick(ctx, req.(*UpdatePickRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _CorePickingService_PickAllLines_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(PickAllLinesRequest)
 	if err := dec(in); err != nil {
@@ -357,24 +303,6 @@ func _CorePickingService_PackPick_Handler(srv interface{}, ctx context.Context, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CorePickingServiceServer).PackPick(ctx, req.(*PackPickRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CorePickingService_GetPickShipments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetPickShipmentsRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CorePickingServiceServer).GetPickShipments(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CorePickingService_GetPickShipments_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CorePickingServiceServer).GetPickShipments(ctx, req.(*GetPickShipmentsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -449,10 +377,6 @@ var CorePickingService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _CorePickingService_GetPick_Handler,
 		},
 		{
-			MethodName: "UpdatePick",
-			Handler:    _CorePickingService_UpdatePick_Handler,
-		},
-		{
 			MethodName: "PickAllLines",
 			Handler:    _CorePickingService_PickAllLines_Handler,
 		},
@@ -463,10 +387,6 @@ var CorePickingService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "PackPick",
 			Handler:    _CorePickingService_PackPick_Handler,
-		},
-		{
-			MethodName: "GetPickShipments",
-			Handler:    _CorePickingService_GetPickShipments_Handler,
 		},
 		{
 			MethodName: "UpdatePickLine",

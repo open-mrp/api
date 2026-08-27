@@ -15646,21 +15646,6 @@ func (mr *MockPickRepoMockRecorder) Get(ctx, accountID, pickID any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockPickRepo)(nil).Get), ctx, accountID, pickID)
 }
 
-// GetDepartments mocks base method.
-func (m *MockPickRepo) GetDepartments(ctx context.Context, pickID string) ([]*domain.PickDepartment, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetDepartments", ctx, pickID)
-	ret0, _ := ret[0].([]*domain.PickDepartment)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// GetDepartments indicates an expected call of GetDepartments.
-func (mr *MockPickRepoMockRecorder) GetDepartments(ctx, pickID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDepartments", reflect.TypeOf((*MockPickRepo)(nil).GetDepartments), ctx, pickID)
-}
-
 // GetLines mocks base method.
 func (m *MockPickRepo) GetLines(ctx context.Context, pickID string) ([]*domain.PickLine, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -15674,21 +15659,6 @@ func (m *MockPickRepo) GetLines(ctx context.Context, pickID string) ([]*domain.P
 func (mr *MockPickRepoMockRecorder) GetLines(ctx, pickID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLines", reflect.TypeOf((*MockPickRepo)(nil).GetLines), ctx, pickID)
-}
-
-// GetProgress mocks base method.
-func (m *MockPickRepo) GetProgress(ctx context.Context, pickIDs []string) (map[string]domain.PickProgress, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetProgress", ctx, pickIDs)
-	ret0, _ := ret[0].(map[string]domain.PickProgress)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// GetProgress indicates an expected call of GetProgress.
-func (mr *MockPickRepoMockRecorder) GetProgress(ctx, pickIDs any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProgress", reflect.TypeOf((*MockPickRepo)(nil).GetProgress), ctx, pickIDs)
 }
 
 // GetSalesOrderForPick mocks base method.
@@ -15719,21 +15689,6 @@ func (m *MockPickRepo) GetShipmentIDs(ctx context.Context, accountID, pickID str
 func (mr *MockPickRepoMockRecorder) GetShipmentIDs(ctx, accountID, pickID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetShipmentIDs", reflect.TypeOf((*MockPickRepo)(nil).GetShipmentIDs), ctx, accountID, pickID)
-}
-
-// GetShipmentNumbers mocks base method.
-func (m *MockPickRepo) GetShipmentNumbers(ctx context.Context, params domain.GetPickShipmentsParams) (*domain.PickShipmentsResult, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetShipmentNumbers", ctx, params)
-	ret0, _ := ret[0].(*domain.PickShipmentsResult)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// GetShipmentNumbers indicates an expected call of GetShipmentNumbers.
-func (mr *MockPickRepoMockRecorder) GetShipmentNumbers(ctx, params any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetShipmentNumbers", reflect.TypeOf((*MockPickRepo)(nil).GetShipmentNumbers), ctx, params)
 }
 
 // HasShippedItems mocks base method.
@@ -15849,20 +15804,6 @@ func (m *MockPickRepo) UpdateFinishedAt(ctx context.Context, accountID, pickID s
 func (mr *MockPickRepoMockRecorder) UpdateFinishedAt(ctx, accountID, pickID, finishedAt any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateFinishedAt", reflect.TypeOf((*MockPickRepo)(nil).UpdateFinishedAt), ctx, accountID, pickID, finishedAt)
-}
-
-// UpdateNumber mocks base method.
-func (m *MockPickRepo) UpdateNumber(ctx context.Context, accountID, pickID, number string) *apierror.APIError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateNumber", ctx, accountID, pickID, number)
-	ret0, _ := ret[0].(*apierror.APIError)
-	return ret0
-}
-
-// UpdateNumber indicates an expected call of UpdateNumber.
-func (mr *MockPickRepoMockRecorder) UpdateNumber(ctx, accountID, pickID, number any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateNumber", reflect.TypeOf((*MockPickRepo)(nil).UpdateNumber), ctx, accountID, pickID, number)
 }
 
 // VoidAllLines mocks base method.

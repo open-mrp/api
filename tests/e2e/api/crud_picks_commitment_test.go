@@ -38,8 +38,8 @@ func TestPicks_CarryTheOrdersCommitment(t *testing.T) {
 	// The commitment and the rules behind it come from the order, with no include required.
 	assert.Equal(t, orderShipBy, shipByDate(t, pick), "the pick's ship-by matches its order's")
 	// Compared against the order rather than the customer's configured 12: lead_time_days is the effective span to the ship-by date, which the ship calendar snaps back off a closed day, so the literal would only hold on issue dates whose twelfth day is an operating one.
-	require.NotNil(t, order["lead_time_days"], "the order must report the lead time the pick inherits")
-	assert.EqualValues(t, order["lead_time_days"], pick["lead_time_days"], "lead time rides along from the order")
-	assert.Equal(t, "customer", pick["lead_time_source"],
+	require.NotNil(t, commitmentOf(order)["lead_time_days"], "the order must report the lead time the pick inherits")
+	assert.EqualValues(t, commitmentOf(order)["lead_time_days"], commitmentOf(pick)["lead_time_days"], "lead time rides along from the order")
+	assert.Equal(t, "customer", commitmentOf(pick)["lead_time_source"],
 		"a customer-level lead time reports the customer as its source")
 }

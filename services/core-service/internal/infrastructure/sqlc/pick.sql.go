@@ -81,39 +81,6 @@ func (q *Queries) CountPickLinesByPick(ctx context.Context, pickID string) (int6
 	return total, err
 }
 
-const countPickShipmentNumbers = `-- name: CountPickShipmentNumbers :one
-SELECT COUNT(*) AS count FROM shipment s
-WHERE s.account_id = ?
-AND s.sales_order_id = (
-    SELECT pk.sales_order_id FROM pick pk
-    WHERE pk.id = ?
-    AND pk.account_id = ?
-)
-AND (
-    ? IS NULL
-    OR s.number LIKE ?
-)
-`
-
-type CountPickShipmentNumbersParams struct {
-	AccountID   string
-	PickID      string
-	SearchQuery sql.NullString
-}
-
-func (q *Queries) CountPickShipmentNumbers(ctx context.Context, arg CountPickShipmentNumbersParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countPickShipmentNumbers,
-		arg.AccountID,
-		arg.PickID,
-		arg.AccountID,
-		arg.SearchQuery,
-		arg.SearchQuery,
-	)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const countPicks = `-- name: CountPicks :one
 SELECT COUNT(DISTINCT p.id) AS total
 FROM pick p
@@ -146,14 +113,6 @@ AND (
 AND (
     ? = false
     OR EXISTS (
-        SELECT 1 FROM _departments_picks dp
-        WHERE dp.B = p.id
-        AND dp.A IN (/*SLICE:department_ids*/?)
-    )
-)
-AND (
-    ? = false
-    OR EXISTS (
         SELECT 1 FROM pick_line pl2
         JOIN sales_order_line sol2 ON sol2.id = pl2.sales_order_line_id
         JOIN product prod ON prod.id = sol2.product_id
@@ -179,8 +138,6 @@ type CountPicksParams struct {
 	CustomerIds                []string
 	IncludeCustomerGroupFilter interface{}
 	CustomerGroupIds           []sql.NullString
-	IncludeDepartmentFilter    interface{}
-	DepartmentIds              []string
 	IncludeProductLineFilter   interface{}
 	ProductLineIds             []sql.NullString
 	StartDate                  sql.NullTime
@@ -217,15 +174,6 @@ func (q *Queries) CountPicks(ctx context.Context, arg CountPicksParams) (int64, 
 		query = strings.Replace(query, "/*SLICE:customer_group_ids*/?", strings.Repeat(",?", len(arg.CustomerGroupIds))[1:], 1)
 	} else {
 		query = strings.Replace(query, "/*SLICE:customer_group_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeDepartmentFilter)
-	if len(arg.DepartmentIds) > 0 {
-		for _, v := range arg.DepartmentIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:department_ids*/?", strings.Repeat(",?", len(arg.DepartmentIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:department_ids*/?", "NULL", 1)
 	}
 	queryParams = append(queryParams, arg.IncludeProductLineFilter)
 	if len(arg.ProductLineIds) > 0 {
@@ -686,6 +634,7 @@ SELECT
     so.carrier_billing_account,
     -- The order's delivery commitment and how it was derived, so a pick can explain its dates.
     so.ship_by_date,
+    so.ship_by_cutoff_at,
     so.lead_time_days,
     so.lead_time_source_code,
     so.transit_days,
@@ -702,7 +651,9 @@ SELECT
     ship_geo.locality AS shipping_address_locality,
     ship_geo.state AS shipping_address_state,
     ship_geo.postal_code AS shipping_address_postal_code,
-    ship_geo.country AS shipping_address_country
+    ship_geo.country AS shipping_address_country,
+    addr.created_at AS shipping_address_created_at,
+    addr.updated_at AS shipping_address_updated_at
 FROM pick p
 JOIN sales_order so ON so.id = p.sales_order_id
 JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
@@ -755,6 +706,7 @@ type GetPickRow struct {
 	CarrierBillingType           sql.NullString
 	CarrierBillingAccount        sql.NullString
 	ShipByDate                   sql.NullTime
+	ShipByCutoffAt               sql.NullTime
 	LeadTimeDays                 sql.NullInt32
 	LeadTimeSourceCode           sql.NullString
 	TransitDays                  sql.NullInt32
@@ -771,6 +723,8 @@ type GetPickRow struct {
 	ShippingAddressState         sql.NullString
 	ShippingAddressPostalCode    sql.NullString
 	ShippingAddressCountry       sql.NullString
+	ShippingAddressCreatedAt     sql.NullTime
+	ShippingAddressUpdatedAt     sql.NullTime
 }
 
 func (q *Queries) GetPick(ctx context.Context, arg GetPickParams) (GetPickRow, error) {
@@ -809,6 +763,7 @@ func (q *Queries) GetPick(ctx context.Context, arg GetPickParams) (GetPickRow, e
 		&i.CarrierBillingType,
 		&i.CarrierBillingAccount,
 		&i.ShipByDate,
+		&i.ShipByCutoffAt,
 		&i.LeadTimeDays,
 		&i.LeadTimeSourceCode,
 		&i.TransitDays,
@@ -825,45 +780,10 @@ func (q *Queries) GetPick(ctx context.Context, arg GetPickParams) (GetPickRow, e
 		&i.ShippingAddressState,
 		&i.ShippingAddressPostalCode,
 		&i.ShippingAddressCountry,
+		&i.ShippingAddressCreatedAt,
+		&i.ShippingAddressUpdatedAt,
 	)
 	return i, err
-}
-
-const getPickDepartments = `-- name: GetPickDepartments :many
-SELECT
-    d.id,
-    d.name
-FROM _departments_picks dp
-JOIN department d ON d.id = dp.A
-WHERE dp.B = ?
-`
-
-type GetPickDepartmentsRow struct {
-	ID   string
-	Name string
-}
-
-func (q *Queries) GetPickDepartments(ctx context.Context, pickID string) ([]GetPickDepartmentsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getPickDepartments, pickID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetPickDepartmentsRow
-	for rows.Next() {
-		var i GetPickDepartmentsRow
-		if err := rows.Scan(&i.ID, &i.Name); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const getPickLine = `-- name: GetPickLine :one
@@ -1147,61 +1067,6 @@ func (q *Queries) GetPickProgress(ctx context.Context, pickIds []string) ([]GetP
 	return items, nil
 }
 
-const getPickShipmentNumbers = `-- name: GetPickShipmentNumbers :many
-SELECT s.number FROM shipment s
-WHERE s.account_id = ?
-AND s.sales_order_id = (
-    SELECT pk.sales_order_id FROM pick pk
-    WHERE pk.id = ?
-    AND pk.account_id = ?
-)
-AND (
-    ? IS NULL
-    OR s.number LIKE ?
-)
-ORDER BY s.created_at ASC
-LIMIT ? OFFSET ?
-`
-
-type GetPickShipmentNumbersParams struct {
-	AccountID   string
-	PickID      string
-	SearchQuery sql.NullString
-	Limit       int32
-	Offset      int32
-}
-
-func (q *Queries) GetPickShipmentNumbers(ctx context.Context, arg GetPickShipmentNumbersParams) ([]string, error) {
-	rows, err := q.db.QueryContext(ctx, getPickShipmentNumbers,
-		arg.AccountID,
-		arg.PickID,
-		arg.AccountID,
-		arg.SearchQuery,
-		arg.SearchQuery,
-		arg.Limit,
-		arg.Offset,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []string
-	for rows.Next() {
-		var number string
-		if err := rows.Scan(&number); err != nil {
-			return nil, err
-		}
-		items = append(items, number)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getSalesOrderForPick = `-- name: GetSalesOrderForPick :one
 SELECT
     so.id,
@@ -1440,6 +1305,7 @@ SELECT
     so.carrier_billing_account,
     -- The order's delivery commitment and how it was derived, so a pick can explain its dates.
     so.ship_by_date,
+    so.ship_by_cutoff_at,
     so.lead_time_days,
     so.lead_time_source_code,
     so.transit_days,
@@ -1456,7 +1322,9 @@ SELECT
     ship_geo.locality AS shipping_address_locality,
     ship_geo.state AS shipping_address_state,
     ship_geo.postal_code AS shipping_address_postal_code,
-    ship_geo.country AS shipping_address_country
+    ship_geo.country AS shipping_address_country,
+    addr.created_at AS shipping_address_created_at,
+    addr.updated_at AS shipping_address_updated_at
 FROM pick p
 JOIN sales_order so ON so.id = p.sales_order_id
 JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
@@ -1488,14 +1356,6 @@ AND (
 AND (
     ? = false
     OR ar.account_group_id IN (/*SLICE:customer_group_ids*/?)
-)
-AND (
-    ? = false
-    OR EXISTS (
-        SELECT 1 FROM _departments_picks dp
-        WHERE dp.B = p.id
-        AND dp.A IN (/*SLICE:department_ids*/?)
-    )
 )
 AND (
     ? = false
@@ -1544,8 +1404,6 @@ type ListPicksBackwardParams struct {
 	CustomerIds                []string
 	IncludeCustomerGroupFilter interface{}
 	CustomerGroupIds           []sql.NullString
-	IncludeDepartmentFilter    interface{}
-	DepartmentIds              []string
 	IncludeProductLineFilter   interface{}
 	ProductLineIds             []sql.NullString
 	StartDate                  sql.NullTime
@@ -1590,6 +1448,7 @@ type ListPicksBackwardRow struct {
 	CarrierBillingType           sql.NullString
 	CarrierBillingAccount        sql.NullString
 	ShipByDate                   sql.NullTime
+	ShipByCutoffAt               sql.NullTime
 	LeadTimeDays                 sql.NullInt32
 	LeadTimeSourceCode           sql.NullString
 	TransitDays                  sql.NullInt32
@@ -1606,6 +1465,8 @@ type ListPicksBackwardRow struct {
 	ShippingAddressState         sql.NullString
 	ShippingAddressPostalCode    sql.NullString
 	ShippingAddressCountry       sql.NullString
+	ShippingAddressCreatedAt     sql.NullTime
+	ShippingAddressUpdatedAt     sql.NullTime
 }
 
 // The sentinel keeps a pick whose order has no ship-by date sortable and last; the repository's cursor must use the same value.
@@ -1639,15 +1500,6 @@ func (q *Queries) ListPicksBackward(ctx context.Context, arg ListPicksBackwardPa
 		query = strings.Replace(query, "/*SLICE:customer_group_ids*/?", strings.Repeat(",?", len(arg.CustomerGroupIds))[1:], 1)
 	} else {
 		query = strings.Replace(query, "/*SLICE:customer_group_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeDepartmentFilter)
-	if len(arg.DepartmentIds) > 0 {
-		for _, v := range arg.DepartmentIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:department_ids*/?", strings.Repeat(",?", len(arg.DepartmentIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:department_ids*/?", "NULL", 1)
 	}
 	queryParams = append(queryParams, arg.IncludeProductLineFilter)
 	if len(arg.ProductLineIds) > 0 {
@@ -1714,6 +1566,7 @@ func (q *Queries) ListPicksBackward(ctx context.Context, arg ListPicksBackwardPa
 			&i.CarrierBillingType,
 			&i.CarrierBillingAccount,
 			&i.ShipByDate,
+			&i.ShipByCutoffAt,
 			&i.LeadTimeDays,
 			&i.LeadTimeSourceCode,
 			&i.TransitDays,
@@ -1730,6 +1583,8 @@ func (q *Queries) ListPicksBackward(ctx context.Context, arg ListPicksBackwardPa
 			&i.ShippingAddressState,
 			&i.ShippingAddressPostalCode,
 			&i.ShippingAddressCountry,
+			&i.ShippingAddressCreatedAt,
+			&i.ShippingAddressUpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -1782,6 +1637,7 @@ SELECT
     so.carrier_billing_account,
     -- The order's delivery commitment and how it was derived, so a pick can explain its dates.
     so.ship_by_date,
+    so.ship_by_cutoff_at,
     so.lead_time_days,
     so.lead_time_source_code,
     so.transit_days,
@@ -1798,7 +1654,9 @@ SELECT
     ship_geo.locality AS shipping_address_locality,
     ship_geo.state AS shipping_address_state,
     ship_geo.postal_code AS shipping_address_postal_code,
-    ship_geo.country AS shipping_address_country
+    ship_geo.country AS shipping_address_country,
+    addr.created_at AS shipping_address_created_at,
+    addr.updated_at AS shipping_address_updated_at
 FROM pick p
 JOIN sales_order so ON so.id = p.sales_order_id
 JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
@@ -1830,14 +1688,6 @@ AND (
 AND (
     ? = false
     OR ar.account_group_id IN (/*SLICE:customer_group_ids*/?)
-)
-AND (
-    ? = false
-    OR EXISTS (
-        SELECT 1 FROM _departments_picks dp
-        WHERE dp.B = p.id
-        AND dp.A IN (/*SLICE:department_ids*/?)
-    )
 )
 AND (
     ? = false
@@ -1888,8 +1738,6 @@ type ListPicksForwardParams struct {
 	CustomerIds                []string
 	IncludeCustomerGroupFilter interface{}
 	CustomerGroupIds           []sql.NullString
-	IncludeDepartmentFilter    interface{}
-	DepartmentIds              []string
 	IncludeProductLineFilter   interface{}
 	ProductLineIds             []sql.NullString
 	StartDate                  sql.NullTime
@@ -1934,6 +1782,7 @@ type ListPicksForwardRow struct {
 	CarrierBillingType           sql.NullString
 	CarrierBillingAccount        sql.NullString
 	ShipByDate                   sql.NullTime
+	ShipByCutoffAt               sql.NullTime
 	LeadTimeDays                 sql.NullInt32
 	LeadTimeSourceCode           sql.NullString
 	TransitDays                  sql.NullInt32
@@ -1950,6 +1799,8 @@ type ListPicksForwardRow struct {
 	ShippingAddressState         sql.NullString
 	ShippingAddressPostalCode    sql.NullString
 	ShippingAddressCountry       sql.NullString
+	ShippingAddressCreatedAt     sql.NullTime
+	ShippingAddressUpdatedAt     sql.NullTime
 }
 
 // The sentinel keeps a pick whose order has no ship-by date sortable and last; the repository's cursor must use the same value.
@@ -1983,15 +1834,6 @@ func (q *Queries) ListPicksForward(ctx context.Context, arg ListPicksForwardPara
 		query = strings.Replace(query, "/*SLICE:customer_group_ids*/?", strings.Repeat(",?", len(arg.CustomerGroupIds))[1:], 1)
 	} else {
 		query = strings.Replace(query, "/*SLICE:customer_group_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeDepartmentFilter)
-	if len(arg.DepartmentIds) > 0 {
-		for _, v := range arg.DepartmentIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:department_ids*/?", strings.Repeat(",?", len(arg.DepartmentIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:department_ids*/?", "NULL", 1)
 	}
 	queryParams = append(queryParams, arg.IncludeProductLineFilter)
 	if len(arg.ProductLineIds) > 0 {
@@ -2060,6 +1902,7 @@ func (q *Queries) ListPicksForward(ctx context.Context, arg ListPicksForwardPara
 			&i.CarrierBillingType,
 			&i.CarrierBillingAccount,
 			&i.ShipByDate,
+			&i.ShipByCutoffAt,
 			&i.LeadTimeDays,
 			&i.LeadTimeSourceCode,
 			&i.TransitDays,
@@ -2076,6 +1919,8 @@ func (q *Queries) ListPicksForward(ctx context.Context, arg ListPicksForwardPara
 			&i.ShippingAddressState,
 			&i.ShippingAddressPostalCode,
 			&i.ShippingAddressCountry,
+			&i.ShippingAddressCreatedAt,
+			&i.ShippingAddressUpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -2314,25 +2159,6 @@ type UpdatePickLineQuantityParams struct {
 
 func (q *Queries) UpdatePickLineQuantity(ctx context.Context, arg UpdatePickLineQuantityParams) error {
 	_, err := q.db.ExecContext(ctx, updatePickLineQuantity, arg.Value, arg.UnitID, arg.PickLineID)
-	return err
-}
-
-const updatePickNumber = `-- name: UpdatePickNumber :exec
-UPDATE pick SET
-    number = ?,
-    updated_at = NOW(3)
-WHERE id = ?
-AND account_id = ?
-`
-
-type UpdatePickNumberParams struct {
-	Number    string
-	PickID    string
-	AccountID string
-}
-
-func (q *Queries) UpdatePickNumber(ctx context.Context, arg UpdatePickNumberParams) error {
-	_, err := q.db.ExecContext(ctx, updatePickNumber, arg.Number, arg.PickID, arg.AccountID)
 	return err
 }
 

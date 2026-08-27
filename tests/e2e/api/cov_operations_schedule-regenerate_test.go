@@ -74,23 +74,40 @@ func TestScheduleRegenerate_PreviewChangesNothing(t *testing.T) {
 }
 
 // Re-solving the same inputs must agree with what is already stored, or the plan would churn every time anyone looked at it.
+//
+// planningMu keeps settings writes and releases off the same clock as the two solves, but firm demand is a solver input too and orders are issued all over this suite without any lock — an order landing between the generate and the preview legitimately moves a batch a week and shows up as one added plus one removed. That is a lost race rather than churn, so the pair is retried on a fresh draft: a solver that really is unstable drifts on every attempt, while a solve that merely straddled an order settles on the next one.
 func TestScheduleRegenerate_PreviewOfUntouchedDraftIsQuiet(t *testing.T) {
 	t.Parallel()
 
-	// One lock span across both solves: a release or settings write landing between them would change the inputs and make honest churn look like a bug.
-	defer lockPlanningRead()()
+	const attempts = 3
+	for attempt := 1; ; attempt++ {
+		// One lock span across both solves, so at least the inputs planningMu does cover cannot move between them.
+		drift := func() map[string]any {
+			defer lockPlanningRead()()
 
-	schedule := ownedScheduleLocked(t, uniqueName("e2e-regen-quiet"))
-	scheduleID := jsonField(schedule, "id")
+			scheduleID := jsonField(ownedScheduleLocked(t, uniqueName("e2e-regen-quiet")), "id")
+			preview := previewRegenerate(t, scheduleID, map[string]any{})
 
-	preview := previewRegenerate(t, scheduleID, map[string]any{})
+			for _, key := range []string{"added_count", "removed_count", "changed_count"} {
+				value, ok := preview[key].(float64)
+				require.True(t, ok, "%s must be present and numeric", key)
+				if value != 0 {
+					return preview
+				}
+			}
+			// A hand edit is nobody else's to make, so this one never races.
+			assert.Zero(t, preview["manual_line_count"], "an untouched draft has no hand edits")
+			return nil
+		}()
 
-	for _, key := range []string{"added_count", "removed_count", "changed_count"} {
-		value, ok := preview[key].(float64)
-		require.True(t, ok, "%s must be present and numeric", key)
-		assert.Zero(t, value, "%s should be 0 for a draft nobody has edited: %v", key, preview["lines"])
+		if drift == nil {
+			return
+		}
+		if attempt == attempts {
+			t.Fatalf("re-solving an untouched draft still reported churn after %d attempts: added=%v removed=%v changed=%v lines=%v",
+				attempts, drift["added_count"], drift["removed_count"], drift["changed_count"], drift["lines"])
+		}
 	}
-	assert.Zero(t, preview["manual_line_count"], "an untouched draft has no hand edits")
 }
 
 func TestScheduleRegenerate_PreviewCountsWhatReplaceAllWouldDestroy(t *testing.T) {

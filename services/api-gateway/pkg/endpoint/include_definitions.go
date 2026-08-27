@@ -481,7 +481,6 @@ func init() {
 		ObjectType: constants.ObjectTypeInventoryChangeLog,
 		Fields: []IncludeFieldDef{
 			{Key: "item", ObjectType: constants.ObjectTypeItem},
-			{Key: "quantity", ObjectType: constants.ObjectTypeQuantity},
 			{Key: "responsible_user", ObjectType: constants.ObjectTypeUser},
 			{Key: "responsible_scanning_station", ObjectType: constants.ObjectTypeScanningStation},
 		},

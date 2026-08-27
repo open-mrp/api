@@ -84,7 +84,7 @@ func TestCreateSalesOrder_PromisedAtRoundTrips(t *testing.T) {
 	gstatus, gbody, err := apiClient.GetListRaw(salesOrdersPath+"/"+orderID, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, gstatus, gbody)
-	promisedAt := jsonField(parseJSON(gbody), "promised_at")
+	promisedAt := jsonField(commitmentOf(parseJSON(gbody)), "promised_at")
 	assert.Contains(t, promisedAt, "2026-09-01", "promised_at is stored at create time")
 }
 

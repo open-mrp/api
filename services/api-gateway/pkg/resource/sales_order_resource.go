@@ -179,38 +179,8 @@ type SalesOrder struct {
 	FirstShipAt *time.Time `json:"first_ship_at"`
 	// When this estimate expires, if an expiration was set.
 	ExpiredAt *time.Time `json:"expired_at"`
-	// Date promised to the customer for delivery, if one was committed.
-	PromisedAt *time.Time `json:"promised_at"`
-	// Days between issue and the ship-by date, set on this order alone in place of the customer's standing lead time.
-	LeadTimeOverrideDays *int32 `json:"lead_time_override_days"`
-	// The ship date pinned on this order, bypassing transit and the customer's receiving days.
-	ShipByOverrideDate *time.Time `json:"ship_by_override_date"`
-	// Date this order is contractually due to ship.
-	//
-	// Stamped when the order is issued. With a promised delivery date, this is that date less the carrier's transit for the order's lane and less any day the customer cannot receive on — the day the order has to leave to arrive when promised. Otherwise it comes from a lead time, whether this order's own or the one on the customer, its parent account, its account group, or the account.
-	//
-	// Always a day the plant actually ships on, whichever rule produced it.
-	//
-	// It is not recomputed afterwards, so neither renegotiating a customer's lead time, nor a later carrier estimate, nor a holiday added to a calendar moves commitments already made. Cleared if the order is unissued.
-	ShipByDate *time.Time `json:"ship_by_date"`
-	// The ship-by date at the plant's pickup cutoff — the moment freight has to be tendered by, not just the day.
-	//
-	// Only set when the account's shipping calendar carries a cutoff time.
-	ShipByCutoffAt *time.Time `json:"ship_by_cutoff_at"`
-	// Days the customer's receiving calendar and the plant's shipping calendar pulled the ship-by date back, beyond what carrier transit accounted for.
-	//
-	// Zero means every date along the way already fell on an open day. This is what explains a ship-by date that is earlier than transit alone would suggest.
-	CalendarAdjustmentDays *int32 `json:"calendar_adjustment_days"`
-	// Calendar days between issue and the ship-by date.
-	LeadTimeDays *int32 `json:"lead_time_days"`
-	// Which rule produced the ship-by date.
-	LeadTimeSource *constants.LeadTimeSource `json:"lead_time_source"`
-	// Business days the carrier needs to cover this order's lane, subtracted from the promised delivery date to reach the ship-by date.
-	//
-	// Only set when a delivery date was promised and the lane could be priced. Without it the ship-by date falls back to the promised date itself.
-	TransitDays *int32 `json:"transit_days"`
-	// Where the transit estimate came from.
-	TransitSource *constants.TransitSource `json:"transit_source"`
+	// When this order is due to ship: the date promised or pinned, what it resolved to, and which rule decided.
+	Commitment *Commitment `json:"commitment"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.
@@ -257,7 +227,7 @@ var SampleSalesOrder = &SalesOrder{
 		Invoice:         []string{"ap@acme.example.com"},
 		Acknowledgement: []string{"purchasing@acme.example.com"},
 	},
-	PromisedAt: timeutil.TimestampToTimePtr(sampleExpiresAtTimestamp),
+	Commitment: SampleCommitment,
 	CreatedAt:  timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:  timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }

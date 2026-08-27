@@ -24,7 +24,8 @@ LEFT JOIN (
     FROM inventory_receipt ir
     JOIN quantity q ON q.id = ir.quantity_id
     JOIN unit u ON u.id = q.unit_id
-    WHERE (ir.owner_account_id = ? OR ir.holder_account_id = ?)
+    WHERE ir.item_id IN (/*SLICE:item_ids*/?)
+      AND (ir.owner_account_id = ? OR ir.holder_account_id = ?)
       AND ir.status_code = 'available'
     GROUP BY ir.item_id
 ) r ON r.item_id = i.id
@@ -35,7 +36,8 @@ LEFT JOIN (
     JOIN inventory_receipt ir ON ir.id = ia.inventory_receipt_id
     JOIN quantity aq ON aq.id = ia.quantity_id
     JOIN unit au ON au.id = aq.unit_id
-    WHERE (ir.owner_account_id = ? OR ir.holder_account_id = ?)
+    WHERE ir.item_id IN (/*SLICE:item_ids*/?)
+      AND (ir.owner_account_id = ? OR ir.holder_account_id = ?)
       AND ir.status_code = 'available'
     GROUP BY ir.item_id
 ) ra ON ra.item_id = i.id
@@ -45,7 +47,8 @@ LEFT JOIN (
     FROM inventory_issue ii
     JOIN quantity q ON q.id = ii.quantity_id
     JOIN unit u ON u.id = q.unit_id
-    WHERE ii.account_id = ?
+    WHERE ii.item_id IN (/*SLICE:item_ids*/?)
+      AND ii.account_id = ?
       AND ii.status_code = 'open'
     GROUP BY ii.item_id
 ) iss ON iss.item_id = i.id
@@ -56,7 +59,8 @@ LEFT JOIN (
     JOIN inventory_issue ii ON ii.id = ia.inventory_issue_id
     JOIN quantity aq ON aq.id = ia.quantity_id
     JOIN unit au ON au.id = aq.unit_id
-    WHERE ii.account_id = ?
+    WHERE ii.item_id IN (/*SLICE:item_ids*/?)
+      AND ii.account_id = ?
       AND ii.status_code = 'open'
     GROUP BY ii.item_id
 ) ia ON ia.item_id = i.id
@@ -65,8 +69,8 @@ WHERE i.id IN (/*SLICE:item_ids*/?)
 `
 
 type FetchPhysicalInventoryBaseForItemsParams struct {
-	AccountID string
 	ItemIds   []string
+	AccountID string
 }
 
 type FetchPhysicalInventoryBaseForItemsRow struct {
@@ -81,15 +85,48 @@ type FetchPhysicalInventoryBaseForItemsRow struct {
 // units, so a caller applies the per-item target-unit divide itself. The correlated per-row
 // subqueries the single-item form runs once per item are replaced by four sums grouped by item and
 // joined onto the item list, which is what lets one query stand in for the N the audit trail used to
-// run per scan. Nothing is clamped: a row drawn on for more than it holds nets negative and carries.
+// run per scan. Each of the four repeats the item list in its own WHERE clause: without it every one aggregates the account's entire ledger and the outer join throws all but the handful of rows asked for away.
+// Nothing is clamped: a row drawn on for more than it holds nets negative and carries.
 func (q *Queries) FetchPhysicalInventoryBaseForItems(ctx context.Context, arg FetchPhysicalInventoryBaseForItemsParams) ([]FetchPhysicalInventoryBaseForItemsRow, error) {
 	query := fetchPhysicalInventoryBaseForItems
 	var queryParams []interface{}
+	if len(arg.ItemIds) > 0 {
+		for _, v := range arg.ItemIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
+	}
 	queryParams = append(queryParams, arg.AccountID)
 	queryParams = append(queryParams, arg.AccountID)
+	if len(arg.ItemIds) > 0 {
+		for _, v := range arg.ItemIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
+	}
 	queryParams = append(queryParams, arg.AccountID)
 	queryParams = append(queryParams, arg.AccountID)
+	if len(arg.ItemIds) > 0 {
+		for _, v := range arg.ItemIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
+	}
 	queryParams = append(queryParams, arg.AccountID)
+	if len(arg.ItemIds) > 0 {
+		for _, v := range arg.ItemIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
+	}
 	queryParams = append(queryParams, arg.AccountID)
 	if len(arg.ItemIds) > 0 {
 		for _, v := range arg.ItemIds {

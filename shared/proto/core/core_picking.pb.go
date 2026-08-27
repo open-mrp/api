@@ -40,7 +40,6 @@ type PickInfo struct {
 	CreatedAt        *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt        *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	Lines            []*PickLineInfo        `protobuf:"bytes,12,rep,name=lines,proto3" json:"lines,omitempty"`
-	Departments      []*PickDepartmentInfo  `protobuf:"bytes,13,rep,name=departments,proto3" json:"departments,omitempty"`
 	SalesOrderNumber string                 `protobuf:"bytes,14,opt,name=sales_order_number,json=salesOrderNumber,proto3" json:"sales_order_number,omitempty"`
 	PriorityId       string                 `protobuf:"bytes,15,opt,name=priority_id,json=priorityId,proto3" json:"priority_id,omitempty"`
 	// Server-computed roll-ups so a caller needs no line expansion.
@@ -51,18 +50,20 @@ type PickInfo struct {
 	// Promised delivery date, carried from the sales order.
 	PromisedAt *timestamppb.Timestamp `protobuf:"bytes,20,opt,name=promised_at,json=promisedAt,proto3,oneof" json:"promised_at,omitempty"`
 	// Ship-to address, denormalized from the sales order so a pick renders its header without a join.
-	ShippingAddressId            string  `protobuf:"bytes,21,opt,name=shipping_address_id,json=shippingAddressId,proto3" json:"shipping_address_id,omitempty"`
-	ShippingAddressName          *string `protobuf:"bytes,22,opt,name=shipping_address_name,json=shippingAddressName,proto3,oneof" json:"shipping_address_name,omitempty"`
-	ShippingAddressPhone         *string `protobuf:"bytes,23,opt,name=shipping_address_phone,json=shippingAddressPhone,proto3,oneof" json:"shipping_address_phone,omitempty"`
-	ShippingAddressEmail         *string `protobuf:"bytes,24,opt,name=shipping_address_email,json=shippingAddressEmail,proto3,oneof" json:"shipping_address_email,omitempty"`
-	ShippingAddressIsDropShip    *bool   `protobuf:"varint,25,opt,name=shipping_address_is_drop_ship,json=shippingAddressIsDropShip,proto3,oneof" json:"shipping_address_is_drop_ship,omitempty"`
-	ShippingAddressGeolocationId *string `protobuf:"bytes,26,opt,name=shipping_address_geolocation_id,json=shippingAddressGeolocationId,proto3,oneof" json:"shipping_address_geolocation_id,omitempty"`
-	ShippingAddressStreetLine_1  *string `protobuf:"bytes,27,opt,name=shipping_address_street_line_1,json=shippingAddressStreetLine1,proto3,oneof" json:"shipping_address_street_line_1,omitempty"`
-	ShippingAddressStreetLine_2  *string `protobuf:"bytes,28,opt,name=shipping_address_street_line_2,json=shippingAddressStreetLine2,proto3,oneof" json:"shipping_address_street_line_2,omitempty"`
-	ShippingAddressLocality      *string `protobuf:"bytes,29,opt,name=shipping_address_locality,json=shippingAddressLocality,proto3,oneof" json:"shipping_address_locality,omitempty"`
-	ShippingAddressState         *string `protobuf:"bytes,30,opt,name=shipping_address_state,json=shippingAddressState,proto3,oneof" json:"shipping_address_state,omitempty"`
-	ShippingAddressPostalCode    *string `protobuf:"bytes,31,opt,name=shipping_address_postal_code,json=shippingAddressPostalCode,proto3,oneof" json:"shipping_address_postal_code,omitempty"`
-	ShippingAddressCountry       *string `protobuf:"bytes,32,opt,name=shipping_address_country,json=shippingAddressCountry,proto3,oneof" json:"shipping_address_country,omitempty"`
+	ShippingAddressId            string                 `protobuf:"bytes,21,opt,name=shipping_address_id,json=shippingAddressId,proto3" json:"shipping_address_id,omitempty"`
+	ShippingAddressName          *string                `protobuf:"bytes,22,opt,name=shipping_address_name,json=shippingAddressName,proto3,oneof" json:"shipping_address_name,omitempty"`
+	ShippingAddressPhone         *string                `protobuf:"bytes,23,opt,name=shipping_address_phone,json=shippingAddressPhone,proto3,oneof" json:"shipping_address_phone,omitempty"`
+	ShippingAddressEmail         *string                `protobuf:"bytes,24,opt,name=shipping_address_email,json=shippingAddressEmail,proto3,oneof" json:"shipping_address_email,omitempty"`
+	ShippingAddressIsDropShip    *bool                  `protobuf:"varint,25,opt,name=shipping_address_is_drop_ship,json=shippingAddressIsDropShip,proto3,oneof" json:"shipping_address_is_drop_ship,omitempty"`
+	ShippingAddressGeolocationId *string                `protobuf:"bytes,26,opt,name=shipping_address_geolocation_id,json=shippingAddressGeolocationId,proto3,oneof" json:"shipping_address_geolocation_id,omitempty"`
+	ShippingAddressStreetLine_1  *string                `protobuf:"bytes,27,opt,name=shipping_address_street_line_1,json=shippingAddressStreetLine1,proto3,oneof" json:"shipping_address_street_line_1,omitempty"`
+	ShippingAddressStreetLine_2  *string                `protobuf:"bytes,28,opt,name=shipping_address_street_line_2,json=shippingAddressStreetLine2,proto3,oneof" json:"shipping_address_street_line_2,omitempty"`
+	ShippingAddressLocality      *string                `protobuf:"bytes,29,opt,name=shipping_address_locality,json=shippingAddressLocality,proto3,oneof" json:"shipping_address_locality,omitempty"`
+	ShippingAddressState         *string                `protobuf:"bytes,30,opt,name=shipping_address_state,json=shippingAddressState,proto3,oneof" json:"shipping_address_state,omitempty"`
+	ShippingAddressPostalCode    *string                `protobuf:"bytes,31,opt,name=shipping_address_postal_code,json=shippingAddressPostalCode,proto3,oneof" json:"shipping_address_postal_code,omitempty"`
+	ShippingAddressCountry       *string                `protobuf:"bytes,32,opt,name=shipping_address_country,json=shippingAddressCountry,proto3,oneof" json:"shipping_address_country,omitempty"`
+	ShippingAddressCreatedAt     *timestamppb.Timestamp `protobuf:"bytes,55,opt,name=shipping_address_created_at,json=shippingAddressCreatedAt,proto3,oneof" json:"shipping_address_created_at,omitempty"`
+	ShippingAddressUpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,56,opt,name=shipping_address_updated_at,json=shippingAddressUpdatedAt,proto3,oneof" json:"shipping_address_updated_at,omitempty"`
 	// Shipments packed from this pick's order, populated only when related.shipments is requested.
 	ShipmentIds []string `protobuf:"bytes,33,rep,name=shipment_ids,json=shipmentIds,proto3" json:"shipment_ids,omitempty"`
 	// Lead time and transit, carried from the sales order so the pick can explain its commitment.
@@ -72,6 +73,8 @@ type PickInfo struct {
 	TransitSource  *string `protobuf:"bytes,37,opt,name=transit_source,json=transitSource,proto3,oneof" json:"transit_source,omitempty"`
 	// Computed ship-by commitment, carried from the sales order alongside the lead-time chain.
 	ShipByDate *timestamppb.Timestamp `protobuf:"bytes,38,opt,name=ship_by_date,json=shipByDate,proto3,oneof" json:"ship_by_date,omitempty"`
+	// The order's pickup cutoff, carried so the pick's ship-by reads as the same instant the order's does rather than losing the time to a bare date.
+	ShipByCutoffAt *timestamppb.Timestamp `protobuf:"bytes,54,opt,name=ship_by_cutoff_at,json=shipByCutoffAt,proto3,oneof" json:"ship_by_cutoff_at,omitempty"`
 	// The order's cross-reference and instructions, carried so the floor works the pick without opening the order.
 	CustomerPoNumber *string `protobuf:"bytes,39,opt,name=customer_po_number,json=customerPoNumber,proto3,oneof" json:"customer_po_number,omitempty"`
 	Note             *string `protobuf:"bytes,40,opt,name=note,proto3,oneof" json:"note,omitempty"`
@@ -203,13 +206,6 @@ func (x *PickInfo) GetUpdatedAt() *timestamppb.Timestamp {
 func (x *PickInfo) GetLines() []*PickLineInfo {
 	if x != nil {
 		return x.Lines
-	}
-	return nil
-}
-
-func (x *PickInfo) GetDepartments() []*PickDepartmentInfo {
-	if x != nil {
-		return x.Departments
 	}
 	return nil
 }
@@ -347,6 +343,20 @@ func (x *PickInfo) GetShippingAddressCountry() string {
 	return ""
 }
 
+func (x *PickInfo) GetShippingAddressCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ShippingAddressCreatedAt
+	}
+	return nil
+}
+
+func (x *PickInfo) GetShippingAddressUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ShippingAddressUpdatedAt
+	}
+	return nil
+}
+
 func (x *PickInfo) GetShipmentIds() []string {
 	if x != nil {
 		return x.ShipmentIds
@@ -385,6 +395,13 @@ func (x *PickInfo) GetTransitSource() string {
 func (x *PickInfo) GetShipByDate() *timestamppb.Timestamp {
 	if x != nil {
 		return x.ShipByDate
+	}
+	return nil
+}
+
+func (x *PickInfo) GetShipByCutoffAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ShipByCutoffAt
 	}
 	return nil
 }
@@ -750,59 +767,6 @@ func (x *PickLineInfo) GetOrderLineItemId() string {
 	return ""
 }
 
-// PickDepartmentInfo represents a department associated with a pick.
-type PickDepartmentInfo struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *PickDepartmentInfo) Reset() {
-	*x = PickDepartmentInfo{}
-	mi := &file_core_core_picking_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *PickDepartmentInfo) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*PickDepartmentInfo) ProtoMessage() {}
-
-func (x *PickDepartmentInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_picking_proto_msgTypes[2]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use PickDepartmentInfo.ProtoReflect.Descriptor instead.
-func (*PickDepartmentInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_picking_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *PickDepartmentInfo) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *PickDepartmentInfo) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
 // List picks
 type ListPicksRequest struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
@@ -813,7 +777,6 @@ type ListPicksRequest struct {
 	CustomerIds      []string               `protobuf:"bytes,5,rep,name=customer_ids,json=customerIds,proto3" json:"customer_ids,omitempty"`
 	ProductLineIds   []string               `protobuf:"bytes,6,rep,name=product_line_ids,json=productLineIds,proto3" json:"product_line_ids,omitempty"`
 	CustomerGroupIds []string               `protobuf:"bytes,7,rep,name=customer_group_ids,json=customerGroupIds,proto3" json:"customer_group_ids,omitempty"`
-	DepartmentIds    []string               `protobuf:"bytes,8,rep,name=department_ids,json=departmentIds,proto3" json:"department_ids,omitempty"`
 	StartDate        *string                `protobuf:"bytes,9,opt,name=start_date,json=startDate,proto3,oneof" json:"start_date,omitempty"`
 	EndDate          *string                `protobuf:"bytes,10,opt,name=end_date,json=endDate,proto3,oneof" json:"end_date,omitempty"`
 	Includes         []string               `protobuf:"bytes,11,rep,name=includes,proto3" json:"includes,omitempty"`
@@ -824,7 +787,7 @@ type ListPicksRequest struct {
 
 func (x *ListPicksRequest) Reset() {
 	*x = ListPicksRequest{}
-	mi := &file_core_core_picking_proto_msgTypes[3]
+	mi := &file_core_core_picking_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -836,7 +799,7 @@ func (x *ListPicksRequest) String() string {
 func (*ListPicksRequest) ProtoMessage() {}
 
 func (x *ListPicksRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_picking_proto_msgTypes[3]
+	mi := &file_core_core_picking_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -849,7 +812,7 @@ func (x *ListPicksRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPicksRequest.ProtoReflect.Descriptor instead.
 func (*ListPicksRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_picking_proto_rawDescGZIP(), []int{3}
+	return file_core_core_picking_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *ListPicksRequest) GetCursor() string {
@@ -901,13 +864,6 @@ func (x *ListPicksRequest) GetCustomerGroupIds() []string {
 	return nil
 }
 
-func (x *ListPicksRequest) GetDepartmentIds() []string {
-	if x != nil {
-		return x.DepartmentIds
-	}
-	return nil
-}
-
 func (x *ListPicksRequest) GetStartDate() string {
 	if x != nil && x.StartDate != nil {
 		return *x.StartDate
@@ -946,7 +902,7 @@ type ListPicksResponse struct {
 
 func (x *ListPicksResponse) Reset() {
 	*x = ListPicksResponse{}
-	mi := &file_core_core_picking_proto_msgTypes[4]
+	mi := &file_core_core_picking_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -958,7 +914,7 @@ func (x *ListPicksResponse) String() string {
 func (*ListPicksResponse) ProtoMessage() {}
 
 func (x *ListPicksResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_picking_proto_msgTypes[4]
+	mi := &file_core_core_picking_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -971,7 +927,7 @@ func (x *ListPicksResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPicksResponse.ProtoReflect.Descriptor instead.
 func (*ListPicksResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_picking_proto_rawDescGZIP(), []int{4}
+	return file_core_core_picking_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *ListPicksResponse) GetPicks() []*PickInfo {
@@ -999,7 +955,7 @@ type GetPickRequest struct {
 
 func (x *GetPickRequest) Reset() {
 	*x = GetPickRequest{}
-	mi := &file_core_core_picking_proto_msgTypes[5]
+	mi := &file_core_core_picking_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1011,7 +967,7 @@ func (x *GetPickRequest) String() string {
 func (*GetPickRequest) ProtoMessage() {}
 
 func (x *GetPickRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_picking_proto_msgTypes[5]
+	mi := &file_core_core_picking_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1024,7 +980,7 @@ func (x *GetPickRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPickRequest.ProtoReflect.Descriptor instead.
 func (*GetPickRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_picking_proto_rawDescGZIP(), []int{5}
+	return file_core_core_picking_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *GetPickRequest) GetId() string {
@@ -1050,7 +1006,7 @@ type GetPickResponse struct {
 
 func (x *GetPickResponse) Reset() {
 	*x = GetPickResponse{}
-	mi := &file_core_core_picking_proto_msgTypes[6]
+	mi := &file_core_core_picking_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1062,7 +1018,7 @@ func (x *GetPickResponse) String() string {
 func (*GetPickResponse) ProtoMessage() {}
 
 func (x *GetPickResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_picking_proto_msgTypes[6]
+	mi := &file_core_core_picking_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1075,123 +1031,10 @@ func (x *GetPickResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPickResponse.ProtoReflect.Descriptor instead.
 func (*GetPickResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_picking_proto_rawDescGZIP(), []int{6}
+	return file_core_core_picking_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *GetPickResponse) GetPick() *PickInfo {
-	if x != nil {
-		return x.Pick
-	}
-	return nil
-}
-
-// Update pick
-type UpdatePickRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Number        *string                `protobuf:"bytes,2,opt,name=number,proto3,oneof" json:"number,omitempty"`
-	FinishedAt    *string                `protobuf:"bytes,3,opt,name=finished_at,json=finishedAt,proto3,oneof" json:"finished_at,omitempty"`
-	Includes      []string               `protobuf:"bytes,4,rep,name=includes,proto3" json:"includes,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *UpdatePickRequest) Reset() {
-	*x = UpdatePickRequest{}
-	mi := &file_core_core_picking_proto_msgTypes[7]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdatePickRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdatePickRequest) ProtoMessage() {}
-
-func (x *UpdatePickRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_picking_proto_msgTypes[7]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use UpdatePickRequest.ProtoReflect.Descriptor instead.
-func (*UpdatePickRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_picking_proto_rawDescGZIP(), []int{7}
-}
-
-func (x *UpdatePickRequest) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *UpdatePickRequest) GetNumber() string {
-	if x != nil && x.Number != nil {
-		return *x.Number
-	}
-	return ""
-}
-
-func (x *UpdatePickRequest) GetFinishedAt() string {
-	if x != nil && x.FinishedAt != nil {
-		return *x.FinishedAt
-	}
-	return ""
-}
-
-func (x *UpdatePickRequest) GetIncludes() []string {
-	if x != nil {
-		return x.Includes
-	}
-	return nil
-}
-
-type UpdatePickResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Pick          *PickInfo              `protobuf:"bytes,1,opt,name=pick,proto3" json:"pick,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *UpdatePickResponse) Reset() {
-	*x = UpdatePickResponse{}
-	mi := &file_core_core_picking_proto_msgTypes[8]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdatePickResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdatePickResponse) ProtoMessage() {}
-
-func (x *UpdatePickResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_picking_proto_msgTypes[8]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use UpdatePickResponse.ProtoReflect.Descriptor instead.
-func (*UpdatePickResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_picking_proto_rawDescGZIP(), []int{8}
-}
-
-func (x *UpdatePickResponse) GetPick() *PickInfo {
 	if x != nil {
 		return x.Pick
 	}
@@ -1208,7 +1051,7 @@ type PickAllLinesRequest struct {
 
 func (x *PickAllLinesRequest) Reset() {
 	*x = PickAllLinesRequest{}
-	mi := &file_core_core_picking_proto_msgTypes[9]
+	mi := &file_core_core_picking_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1220,7 +1063,7 @@ func (x *PickAllLinesRequest) String() string {
 func (*PickAllLinesRequest) ProtoMessage() {}
 
 func (x *PickAllLinesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_picking_proto_msgTypes[9]
+	mi := &file_core_core_picking_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1233,7 +1076,7 @@ func (x *PickAllLinesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PickAllLinesRequest.ProtoReflect.Descriptor instead.
 func (*PickAllLinesRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_picking_proto_rawDescGZIP(), []int{9}
+	return file_core_core_picking_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *PickAllLinesRequest) GetId() string {
@@ -1252,7 +1095,7 @@ type PickAllLinesResponse struct {
 
 func (x *PickAllLinesResponse) Reset() {
 	*x = PickAllLinesResponse{}
-	mi := &file_core_core_picking_proto_msgTypes[10]
+	mi := &file_core_core_picking_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1264,7 +1107,7 @@ func (x *PickAllLinesResponse) String() string {
 func (*PickAllLinesResponse) ProtoMessage() {}
 
 func (x *PickAllLinesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_picking_proto_msgTypes[10]
+	mi := &file_core_core_picking_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1277,7 +1120,7 @@ func (x *PickAllLinesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PickAllLinesResponse.ProtoReflect.Descriptor instead.
 func (*PickAllLinesResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_picking_proto_rawDescGZIP(), []int{10}
+	return file_core_core_picking_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *PickAllLinesResponse) GetPick() *PickInfo {
@@ -1297,7 +1140,7 @@ type VoidPickRequest struct {
 
 func (x *VoidPickRequest) Reset() {
 	*x = VoidPickRequest{}
-	mi := &file_core_core_picking_proto_msgTypes[11]
+	mi := &file_core_core_picking_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1309,7 +1152,7 @@ func (x *VoidPickRequest) String() string {
 func (*VoidPickRequest) ProtoMessage() {}
 
 func (x *VoidPickRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_picking_proto_msgTypes[11]
+	mi := &file_core_core_picking_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1322,7 +1165,7 @@ func (x *VoidPickRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VoidPickRequest.ProtoReflect.Descriptor instead.
 func (*VoidPickRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_picking_proto_rawDescGZIP(), []int{11}
+	return file_core_core_picking_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *VoidPickRequest) GetId() string {
@@ -1341,7 +1184,7 @@ type VoidPickResponse struct {
 
 func (x *VoidPickResponse) Reset() {
 	*x = VoidPickResponse{}
-	mi := &file_core_core_picking_proto_msgTypes[12]
+	mi := &file_core_core_picking_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1353,7 +1196,7 @@ func (x *VoidPickResponse) String() string {
 func (*VoidPickResponse) ProtoMessage() {}
 
 func (x *VoidPickResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_picking_proto_msgTypes[12]
+	mi := &file_core_core_picking_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1366,7 +1209,7 @@ func (x *VoidPickResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VoidPickResponse.ProtoReflect.Descriptor instead.
 func (*VoidPickResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_picking_proto_rawDescGZIP(), []int{12}
+	return file_core_core_picking_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *VoidPickResponse) GetPick() *PickInfo {
@@ -1387,7 +1230,7 @@ type PackPickRequest struct {
 
 func (x *PackPickRequest) Reset() {
 	*x = PackPickRequest{}
-	mi := &file_core_core_picking_proto_msgTypes[13]
+	mi := &file_core_core_picking_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1399,7 +1242,7 @@ func (x *PackPickRequest) String() string {
 func (*PackPickRequest) ProtoMessage() {}
 
 func (x *PackPickRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_picking_proto_msgTypes[13]
+	mi := &file_core_core_picking_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1412,7 +1255,7 @@ func (x *PackPickRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PackPickRequest.ProtoReflect.Descriptor instead.
 func (*PackPickRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_picking_proto_rawDescGZIP(), []int{13}
+	return file_core_core_picking_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *PackPickRequest) GetId() string {
@@ -1438,7 +1281,7 @@ type PackPickResponse struct {
 
 func (x *PackPickResponse) Reset() {
 	*x = PackPickResponse{}
-	mi := &file_core_core_picking_proto_msgTypes[14]
+	mi := &file_core_core_picking_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1450,7 +1293,7 @@ func (x *PackPickResponse) String() string {
 func (*PackPickResponse) ProtoMessage() {}
 
 func (x *PackPickResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_picking_proto_msgTypes[14]
+	mi := &file_core_core_picking_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1463,7 +1306,7 @@ func (x *PackPickResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PackPickResponse.ProtoReflect.Descriptor instead.
 func (*PackPickResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_picking_proto_rawDescGZIP(), []int{14}
+	return file_core_core_picking_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *PackPickResponse) GetJob() *JobInfo {
@@ -1471,127 +1314,6 @@ func (x *PackPickResponse) GetJob() *JobInfo {
 		return x.Job
 	}
 	return nil
-}
-
-// Get pick shipments
-type GetPickShipmentsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Query         *string                `protobuf:"bytes,2,opt,name=query,proto3,oneof" json:"query,omitempty"`
-	Limit         *int32                 `protobuf:"varint,3,opt,name=limit,proto3,oneof" json:"limit,omitempty"`
-	Offset        *int32                 `protobuf:"varint,4,opt,name=offset,proto3,oneof" json:"offset,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetPickShipmentsRequest) Reset() {
-	*x = GetPickShipmentsRequest{}
-	mi := &file_core_core_picking_proto_msgTypes[15]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetPickShipmentsRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetPickShipmentsRequest) ProtoMessage() {}
-
-func (x *GetPickShipmentsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_picking_proto_msgTypes[15]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetPickShipmentsRequest.ProtoReflect.Descriptor instead.
-func (*GetPickShipmentsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_picking_proto_rawDescGZIP(), []int{15}
-}
-
-func (x *GetPickShipmentsRequest) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *GetPickShipmentsRequest) GetQuery() string {
-	if x != nil && x.Query != nil {
-		return *x.Query
-	}
-	return ""
-}
-
-func (x *GetPickShipmentsRequest) GetLimit() int32 {
-	if x != nil && x.Limit != nil {
-		return *x.Limit
-	}
-	return 0
-}
-
-func (x *GetPickShipmentsRequest) GetOffset() int32 {
-	if x != nil && x.Offset != nil {
-		return *x.Offset
-	}
-	return 0
-}
-
-type GetPickShipmentsResponse struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	ShipmentNumbers []string               `protobuf:"bytes,1,rep,name=shipment_numbers,json=shipmentNumbers,proto3" json:"shipment_numbers,omitempty"`
-	Count           int32                  `protobuf:"varint,2,opt,name=count,proto3" json:"count,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
-}
-
-func (x *GetPickShipmentsResponse) Reset() {
-	*x = GetPickShipmentsResponse{}
-	mi := &file_core_core_picking_proto_msgTypes[16]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetPickShipmentsResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetPickShipmentsResponse) ProtoMessage() {}
-
-func (x *GetPickShipmentsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_picking_proto_msgTypes[16]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetPickShipmentsResponse.ProtoReflect.Descriptor instead.
-func (*GetPickShipmentsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_picking_proto_rawDescGZIP(), []int{16}
-}
-
-func (x *GetPickShipmentsResponse) GetShipmentNumbers() []string {
-	if x != nil {
-		return x.ShipmentNumbers
-	}
-	return nil
-}
-
-func (x *GetPickShipmentsResponse) GetCount() int32 {
-	if x != nil {
-		return x.Count
-	}
-	return 0
 }
 
 // Update pick line
@@ -1606,7 +1328,7 @@ type UpdatePickLineRequest struct {
 
 func (x *UpdatePickLineRequest) Reset() {
 	*x = UpdatePickLineRequest{}
-	mi := &file_core_core_picking_proto_msgTypes[17]
+	mi := &file_core_core_picking_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1618,7 +1340,7 @@ func (x *UpdatePickLineRequest) String() string {
 func (*UpdatePickLineRequest) ProtoMessage() {}
 
 func (x *UpdatePickLineRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_picking_proto_msgTypes[17]
+	mi := &file_core_core_picking_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1631,7 +1353,7 @@ func (x *UpdatePickLineRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdatePickLineRequest.ProtoReflect.Descriptor instead.
 func (*UpdatePickLineRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_picking_proto_rawDescGZIP(), []int{17}
+	return file_core_core_picking_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *UpdatePickLineRequest) GetPickId() string {
@@ -1664,7 +1386,7 @@ type UpdatePickLineResponse struct {
 
 func (x *UpdatePickLineResponse) Reset() {
 	*x = UpdatePickLineResponse{}
-	mi := &file_core_core_picking_proto_msgTypes[18]
+	mi := &file_core_core_picking_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1676,7 +1398,7 @@ func (x *UpdatePickLineResponse) String() string {
 func (*UpdatePickLineResponse) ProtoMessage() {}
 
 func (x *UpdatePickLineResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_picking_proto_msgTypes[18]
+	mi := &file_core_core_picking_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1689,7 +1411,7 @@ func (x *UpdatePickLineResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdatePickLineResponse.ProtoReflect.Descriptor instead.
 func (*UpdatePickLineResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_picking_proto_rawDescGZIP(), []int{18}
+	return file_core_core_picking_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *UpdatePickLineResponse) GetPickLine() *PickLineInfo {
@@ -1710,7 +1432,7 @@ type PickPickLineRequest struct {
 
 func (x *PickPickLineRequest) Reset() {
 	*x = PickPickLineRequest{}
-	mi := &file_core_core_picking_proto_msgTypes[19]
+	mi := &file_core_core_picking_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1722,7 +1444,7 @@ func (x *PickPickLineRequest) String() string {
 func (*PickPickLineRequest) ProtoMessage() {}
 
 func (x *PickPickLineRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_picking_proto_msgTypes[19]
+	mi := &file_core_core_picking_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1735,7 +1457,7 @@ func (x *PickPickLineRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PickPickLineRequest.ProtoReflect.Descriptor instead.
 func (*PickPickLineRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_picking_proto_rawDescGZIP(), []int{19}
+	return file_core_core_picking_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *PickPickLineRequest) GetPickId() string {
@@ -1761,7 +1483,7 @@ type PickPickLineResponse struct {
 
 func (x *PickPickLineResponse) Reset() {
 	*x = PickPickLineResponse{}
-	mi := &file_core_core_picking_proto_msgTypes[20]
+	mi := &file_core_core_picking_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1773,7 +1495,7 @@ func (x *PickPickLineResponse) String() string {
 func (*PickPickLineResponse) ProtoMessage() {}
 
 func (x *PickPickLineResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_picking_proto_msgTypes[20]
+	mi := &file_core_core_picking_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1786,7 +1508,7 @@ func (x *PickPickLineResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PickPickLineResponse.ProtoReflect.Descriptor instead.
 func (*PickPickLineResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_picking_proto_rawDescGZIP(), []int{20}
+	return file_core_core_picking_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *PickPickLineResponse) GetPickLine() *PickLineInfo {
@@ -1807,7 +1529,7 @@ type VoidPickLineRequest struct {
 
 func (x *VoidPickLineRequest) Reset() {
 	*x = VoidPickLineRequest{}
-	mi := &file_core_core_picking_proto_msgTypes[21]
+	mi := &file_core_core_picking_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1819,7 +1541,7 @@ func (x *VoidPickLineRequest) String() string {
 func (*VoidPickLineRequest) ProtoMessage() {}
 
 func (x *VoidPickLineRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_picking_proto_msgTypes[21]
+	mi := &file_core_core_picking_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1832,7 +1554,7 @@ func (x *VoidPickLineRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VoidPickLineRequest.ProtoReflect.Descriptor instead.
 func (*VoidPickLineRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_picking_proto_rawDescGZIP(), []int{21}
+	return file_core_core_picking_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *VoidPickLineRequest) GetPickId() string {
@@ -1858,7 +1580,7 @@ type VoidPickLineResponse struct {
 
 func (x *VoidPickLineResponse) Reset() {
 	*x = VoidPickLineResponse{}
-	mi := &file_core_core_picking_proto_msgTypes[22]
+	mi := &file_core_core_picking_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1870,7 +1592,7 @@ func (x *VoidPickLineResponse) String() string {
 func (*VoidPickLineResponse) ProtoMessage() {}
 
 func (x *VoidPickLineResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_picking_proto_msgTypes[22]
+	mi := &file_core_core_picking_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1883,7 +1605,7 @@ func (x *VoidPickLineResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VoidPickLineResponse.ProtoReflect.Descriptor instead.
 func (*VoidPickLineResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_picking_proto_rawDescGZIP(), []int{22}
+	return file_core_core_picking_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *VoidPickLineResponse) GetPickLine() *PickLineInfo {
@@ -1897,7 +1619,7 @@ var File_core_core_picking_proto protoreflect.FileDescriptor
 
 const file_core_core_picking_proto_rawDesc = "" +
 	"\n" +
-	"\x17core/core_picking.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fcore/core.proto\x1a\x15core/core_async.proto\"\xb4\x1c\n" +
+	"\x17core/core_picking.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fcore/core.proto\x1a\x15core/core_async.proto\"\xe0\x1e\n" +
 	"\bPickInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12$\n" +
@@ -1915,8 +1637,7 @@ const file_core_core_picking_proto_rawDesc = "" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12(\n" +
-	"\x05lines\x18\f \x03(\v2\x12.core.PickLineInfoR\x05lines\x12:\n" +
-	"\vdepartments\x18\r \x03(\v2\x18.core.PickDepartmentInfoR\vdepartments\x12,\n" +
+	"\x05lines\x18\f \x03(\v2\x12.core.PickLineInfoR\x05lines\x12,\n" +
 	"\x12sales_order_number\x18\x0e \x01(\tR\x10salesOrderNumber\x12\x1f\n" +
 	"\vpriority_id\x18\x0f \x01(\tR\n" +
 	"priorityId\x12\x1d\n" +
@@ -1939,30 +1660,33 @@ const file_core_core_picking_proto_rawDesc = "" +
 	"\x16shipping_address_state\x18\x1e \x01(\tH\tR\x14shippingAddressState\x88\x01\x01\x12D\n" +
 	"\x1cshipping_address_postal_code\x18\x1f \x01(\tH\n" +
 	"R\x19shippingAddressPostalCode\x88\x01\x01\x12=\n" +
-	"\x18shipping_address_country\x18  \x01(\tH\vR\x16shippingAddressCountry\x88\x01\x01\x12!\n" +
+	"\x18shipping_address_country\x18  \x01(\tH\vR\x16shippingAddressCountry\x88\x01\x01\x12^\n" +
+	"\x1bshipping_address_created_at\x187 \x01(\v2\x1a.google.protobuf.TimestampH\fR\x18shippingAddressCreatedAt\x88\x01\x01\x12^\n" +
+	"\x1bshipping_address_updated_at\x188 \x01(\v2\x1a.google.protobuf.TimestampH\rR\x18shippingAddressUpdatedAt\x88\x01\x01\x12!\n" +
 	"\fshipment_ids\x18! \x03(\tR\vshipmentIds\x12)\n" +
-	"\x0elead_time_days\x18\" \x01(\x05H\fR\fleadTimeDays\x88\x01\x01\x12-\n" +
-	"\x10lead_time_source\x18# \x01(\tH\rR\x0eleadTimeSource\x88\x01\x01\x12&\n" +
-	"\ftransit_days\x18$ \x01(\x05H\x0eR\vtransitDays\x88\x01\x01\x12*\n" +
-	"\x0etransit_source\x18% \x01(\tH\x0fR\rtransitSource\x88\x01\x01\x12A\n" +
-	"\fship_by_date\x18& \x01(\v2\x1a.google.protobuf.TimestampH\x10R\n" +
-	"shipByDate\x88\x01\x01\x121\n" +
-	"\x12customer_po_number\x18' \x01(\tH\x11R\x10customerPoNumber\x88\x01\x01\x12\x17\n" +
-	"\x04note\x18( \x01(\tH\x12R\x04note\x88\x01\x01\x12\"\n" +
+	"\x0elead_time_days\x18\" \x01(\x05H\x0eR\fleadTimeDays\x88\x01\x01\x12-\n" +
+	"\x10lead_time_source\x18# \x01(\tH\x0fR\x0eleadTimeSource\x88\x01\x01\x12&\n" +
+	"\ftransit_days\x18$ \x01(\x05H\x10R\vtransitDays\x88\x01\x01\x12*\n" +
+	"\x0etransit_source\x18% \x01(\tH\x11R\rtransitSource\x88\x01\x01\x12A\n" +
+	"\fship_by_date\x18& \x01(\v2\x1a.google.protobuf.TimestampH\x12R\n" +
+	"shipByDate\x88\x01\x01\x12J\n" +
+	"\x11ship_by_cutoff_at\x186 \x01(\v2\x1a.google.protobuf.TimestampH\x13R\x0eshipByCutoffAt\x88\x01\x01\x121\n" +
+	"\x12customer_po_number\x18' \x01(\tH\x14R\x10customerPoNumber\x88\x01\x01\x12\x17\n" +
+	"\x04note\x18( \x01(\tH\x15R\x04note\x88\x01\x01\x12\"\n" +
 	"\n" +
-	"carrier_id\x18) \x01(\tH\x13R\tcarrierId\x88\x01\x01\x12&\n" +
-	"\fcarrier_name\x18* \x01(\tH\x14R\vcarrierName\x88\x01\x01\x12>\n" +
-	"\x19carrier_is_portal_enabled\x18+ \x01(\bH\x15R\x16carrierIsPortalEnabled\x88\x01\x01\x12M\n" +
-	"\x12carrier_created_at\x18, \x01(\v2\x1a.google.protobuf.TimestampH\x16R\x10carrierCreatedAt\x88\x01\x01\x12M\n" +
-	"\x12carrier_updated_at\x18- \x01(\v2\x1a.google.protobuf.TimestampH\x17R\x10carrierUpdatedAt\x88\x01\x01\x12-\n" +
-	"\x10service_level_id\x18. \x01(\tH\x18R\x0eserviceLevelId\x88\x01\x01\x121\n" +
-	"\x12service_level_name\x18/ \x01(\tH\x19R\x10serviceLevelName\x88\x01\x01\x12I\n" +
-	"\x1fservice_level_is_portal_enabled\x180 \x01(\bH\x1aR\x1bserviceLevelIsPortalEnabled\x88\x01\x01\x123\n" +
-	"\x13service_level_token\x181 \x01(\tH\x1bR\x11serviceLevelToken\x88\x01\x01\x12X\n" +
-	"\x18service_level_created_at\x182 \x01(\v2\x1a.google.protobuf.TimestampH\x1cR\x15serviceLevelCreatedAt\x88\x01\x01\x12X\n" +
-	"\x18service_level_updated_at\x183 \x01(\v2\x1a.google.protobuf.TimestampH\x1dR\x15serviceLevelUpdatedAt\x88\x01\x01\x125\n" +
-	"\x14carrier_billing_type\x184 \x01(\tH\x1eR\x12carrierBillingType\x88\x01\x01\x12;\n" +
-	"\x17carrier_billing_account\x185 \x01(\tH\x1fR\x15carrierBillingAccount\x88\x01\x01B\x0e\n" +
+	"carrier_id\x18) \x01(\tH\x16R\tcarrierId\x88\x01\x01\x12&\n" +
+	"\fcarrier_name\x18* \x01(\tH\x17R\vcarrierName\x88\x01\x01\x12>\n" +
+	"\x19carrier_is_portal_enabled\x18+ \x01(\bH\x18R\x16carrierIsPortalEnabled\x88\x01\x01\x12M\n" +
+	"\x12carrier_created_at\x18, \x01(\v2\x1a.google.protobuf.TimestampH\x19R\x10carrierCreatedAt\x88\x01\x01\x12M\n" +
+	"\x12carrier_updated_at\x18- \x01(\v2\x1a.google.protobuf.TimestampH\x1aR\x10carrierUpdatedAt\x88\x01\x01\x12-\n" +
+	"\x10service_level_id\x18. \x01(\tH\x1bR\x0eserviceLevelId\x88\x01\x01\x121\n" +
+	"\x12service_level_name\x18/ \x01(\tH\x1cR\x10serviceLevelName\x88\x01\x01\x12I\n" +
+	"\x1fservice_level_is_portal_enabled\x180 \x01(\bH\x1dR\x1bserviceLevelIsPortalEnabled\x88\x01\x01\x123\n" +
+	"\x13service_level_token\x181 \x01(\tH\x1eR\x11serviceLevelToken\x88\x01\x01\x12X\n" +
+	"\x18service_level_created_at\x182 \x01(\v2\x1a.google.protobuf.TimestampH\x1fR\x15serviceLevelCreatedAt\x88\x01\x01\x12X\n" +
+	"\x18service_level_updated_at\x183 \x01(\v2\x1a.google.protobuf.TimestampH R\x15serviceLevelUpdatedAt\x88\x01\x01\x125\n" +
+	"\x14carrier_billing_type\x184 \x01(\tH!R\x12carrierBillingType\x88\x01\x01\x12;\n" +
+	"\x17carrier_billing_account\x185 \x01(\tH\"R\x15carrierBillingAccount\x88\x01\x01B\x0e\n" +
 	"\f_promised_atB\x18\n" +
 	"\x16_shipping_address_nameB\x19\n" +
 	"\x17_shipping_address_phoneB\x19\n" +
@@ -1974,12 +1698,15 @@ const file_core_core_picking_proto_rawDesc = "" +
 	"\x1a_shipping_address_localityB\x19\n" +
 	"\x17_shipping_address_stateB\x1f\n" +
 	"\x1d_shipping_address_postal_codeB\x1b\n" +
-	"\x19_shipping_address_countryB\x11\n" +
+	"\x19_shipping_address_countryB\x1e\n" +
+	"\x1c_shipping_address_created_atB\x1e\n" +
+	"\x1c_shipping_address_updated_atB\x11\n" +
 	"\x0f_lead_time_daysB\x13\n" +
 	"\x11_lead_time_sourceB\x0f\n" +
 	"\r_transit_daysB\x11\n" +
 	"\x0f_transit_sourceB\x0f\n" +
-	"\r_ship_by_dateB\x15\n" +
+	"\r_ship_by_dateB\x14\n" +
+	"\x12_ship_by_cutoff_atB\x15\n" +
 	"\x13_customer_po_numberB\a\n" +
 	"\x05_noteB\r\n" +
 	"\v_carrier_idB\x0f\n" +
@@ -1994,7 +1721,7 @@ const file_core_core_picking_proto_rawDesc = "" +
 	"\x19_service_level_created_atB\x1b\n" +
 	"\x19_service_level_updated_atB\x17\n" +
 	"\x15_carrier_billing_typeB\x1a\n" +
-	"\x18_carrier_billing_account\"\xe6\v\n" +
+	"\x18_carrier_billing_accountJ\x04\b\r\x10\x0e\"\xe6\v\n" +
 	"\fPickLineInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\apick_id\x18\x02 \x01(\tR\x06pickId\x12-\n" +
@@ -2029,10 +1756,7 @@ const file_core_core_picking_proto_rawDesc = "" +
 	"\x12order_line_item_id\x18\x1b \x01(\tH\x02R\x0forderLineItemId\x88\x01\x01B\x19\n" +
 	"\x17_order_line_descriptionB\x18\n" +
 	"\x16_order_line_product_idB\x15\n" +
-	"\x13_order_line_item_id\"8\n" +
-	"\x12PickDepartmentInfo\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\"\xcf\x03\n" +
+	"\x13_order_line_item_id\"\xae\x03\n" +
 	"\x10ListPicksRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
@@ -2040,8 +1764,7 @@ const file_core_core_picking_proto_rawDesc = "" +
 	"\x06status\x18\x04 \x01(\tH\x02R\x06status\x88\x01\x01\x12!\n" +
 	"\fcustomer_ids\x18\x05 \x03(\tR\vcustomerIds\x12(\n" +
 	"\x10product_line_ids\x18\x06 \x03(\tR\x0eproductLineIds\x12,\n" +
-	"\x12customer_group_ids\x18\a \x03(\tR\x10customerGroupIds\x12%\n" +
-	"\x0edepartment_ids\x18\b \x03(\tR\rdepartmentIds\x12\"\n" +
+	"\x12customer_group_ids\x18\a \x03(\tR\x10customerGroupIds\x12\"\n" +
 	"\n" +
 	"start_date\x18\t \x01(\tH\x03R\tstartDate\x88\x01\x01\x12\x1e\n" +
 	"\bend_date\x18\n" +
@@ -2052,7 +1775,7 @@ const file_core_core_picking_proto_rawDesc = "" +
 	"\x06_queryB\t\n" +
 	"\a_statusB\r\n" +
 	"\v_start_dateB\v\n" +
-	"\t_end_date\"f\n" +
+	"\t_end_dateJ\x04\b\b\x10\t\"f\n" +
 	"\x11ListPicksResponse\x12$\n" +
 	"\x05picks\x18\x01 \x03(\v2\x0e.core.PickInfoR\x05picks\x12+\n" +
 	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"<\n" +
@@ -2060,16 +1783,6 @@ const file_core_core_picking_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\bincludes\x18\x02 \x03(\tR\bincludes\"5\n" +
 	"\x0fGetPickResponse\x12\"\n" +
-	"\x04pick\x18\x01 \x01(\v2\x0e.core.PickInfoR\x04pick\"\x9d\x01\n" +
-	"\x11UpdatePickRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
-	"\x06number\x18\x02 \x01(\tH\x00R\x06number\x88\x01\x01\x12$\n" +
-	"\vfinished_at\x18\x03 \x01(\tH\x01R\n" +
-	"finishedAt\x88\x01\x01\x12\x1a\n" +
-	"\bincludes\x18\x04 \x03(\tR\bincludesB\t\n" +
-	"\a_numberB\x0e\n" +
-	"\f_finished_at\"8\n" +
-	"\x12UpdatePickResponse\x12\"\n" +
 	"\x04pick\x18\x01 \x01(\v2\x0e.core.PickInfoR\x04pick\"%\n" +
 	"\x13PickAllLinesRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\":\n" +
@@ -2083,18 +1796,7 @@ const file_core_core_picking_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12.\n" +
 	"\x13shipment_case_count\x18\x02 \x01(\x05R\x11shipmentCaseCount\"3\n" +
 	"\x10PackPickResponse\x12\x1f\n" +
-	"\x03job\x18\x01 \x01(\v2\r.core.JobInfoR\x03job\"\x9b\x01\n" +
-	"\x17GetPickShipmentsRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
-	"\x05query\x18\x02 \x01(\tH\x00R\x05query\x88\x01\x01\x12\x19\n" +
-	"\x05limit\x18\x03 \x01(\x05H\x01R\x05limit\x88\x01\x01\x12\x1b\n" +
-	"\x06offset\x18\x04 \x01(\x05H\x02R\x06offset\x88\x01\x01B\b\n" +
-	"\x06_queryB\b\n" +
-	"\x06_limitB\t\n" +
-	"\a_offset\"[\n" +
-	"\x18GetPickShipmentsResponse\x12)\n" +
-	"\x10shipment_numbers\x18\x01 \x03(\tR\x0fshipmentNumbers\x12\x14\n" +
-	"\x05count\x18\x02 \x01(\x05R\x05count\"\x7f\n" +
+	"\x03job\x18\x01 \x01(\v2\r.core.JobInfoR\x03job\"\x7f\n" +
 	"\x15UpdatePickLineRequest\x12\x17\n" +
 	"\apick_id\x18\x01 \x01(\tR\x06pickId\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\tR\x02id\x12*\n" +
@@ -2111,16 +1813,13 @@ const file_core_core_picking_proto_rawDesc = "" +
 	"\apick_id\x18\x01 \x01(\tR\x06pickId\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\tR\x02id\"G\n" +
 	"\x14VoidPickLineResponse\x12/\n" +
-	"\tpick_line\x18\x01 \x01(\v2\x12.core.PickLineInfoR\bpickLine2\xb6\x05\n" +
+	"\tpick_line\x18\x01 \x01(\v2\x12.core.PickLineInfoR\bpickLine2\xa2\x04\n" +
 	"\x12CorePickingService\x12<\n" +
 	"\tListPicks\x12\x16.core.ListPicksRequest\x1a\x17.core.ListPicksResponse\x126\n" +
-	"\aGetPick\x12\x14.core.GetPickRequest\x1a\x15.core.GetPickResponse\x12?\n" +
-	"\n" +
-	"UpdatePick\x12\x17.core.UpdatePickRequest\x1a\x18.core.UpdatePickResponse\x12E\n" +
+	"\aGetPick\x12\x14.core.GetPickRequest\x1a\x15.core.GetPickResponse\x12E\n" +
 	"\fPickAllLines\x12\x19.core.PickAllLinesRequest\x1a\x1a.core.PickAllLinesResponse\x129\n" +
 	"\bVoidPick\x12\x15.core.VoidPickRequest\x1a\x16.core.VoidPickResponse\x129\n" +
-	"\bPackPick\x12\x15.core.PackPickRequest\x1a\x16.core.PackPickResponse\x12Q\n" +
-	"\x10GetPickShipments\x12\x1d.core.GetPickShipmentsRequest\x1a\x1e.core.GetPickShipmentsResponse\x12K\n" +
+	"\bPackPick\x12\x15.core.PackPickRequest\x1a\x16.core.PackPickResponse\x12K\n" +
 	"\x0eUpdatePickLine\x12\x1b.core.UpdatePickLineRequest\x1a\x1c.core.UpdatePickLineResponse\x12E\n" +
 	"\fPickPickLine\x12\x19.core.PickPickLineRequest\x1a\x1a.core.PickPickLineResponse\x12E\n" +
 	"\fVoidPickLine\x12\x19.core.VoidPickLineRequest\x1a\x1a.core.VoidPickLineResponseB\x18Z\x16shared/proto/core;coreb\x06proto3"
@@ -2137,86 +1836,78 @@ func file_core_core_picking_proto_rawDescGZIP() []byte {
 	return file_core_core_picking_proto_rawDescData
 }
 
-var file_core_core_picking_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
+var file_core_core_picking_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
 var file_core_core_picking_proto_goTypes = []any{
-	(*PickInfo)(nil),                 // 0: core.PickInfo
-	(*PickLineInfo)(nil),             // 1: core.PickLineInfo
-	(*PickDepartmentInfo)(nil),       // 2: core.PickDepartmentInfo
-	(*ListPicksRequest)(nil),         // 3: core.ListPicksRequest
-	(*ListPicksResponse)(nil),        // 4: core.ListPicksResponse
-	(*GetPickRequest)(nil),           // 5: core.GetPickRequest
-	(*GetPickResponse)(nil),          // 6: core.GetPickResponse
-	(*UpdatePickRequest)(nil),        // 7: core.UpdatePickRequest
-	(*UpdatePickResponse)(nil),       // 8: core.UpdatePickResponse
-	(*PickAllLinesRequest)(nil),      // 9: core.PickAllLinesRequest
-	(*PickAllLinesResponse)(nil),     // 10: core.PickAllLinesResponse
-	(*VoidPickRequest)(nil),          // 11: core.VoidPickRequest
-	(*VoidPickResponse)(nil),         // 12: core.VoidPickResponse
-	(*PackPickRequest)(nil),          // 13: core.PackPickRequest
-	(*PackPickResponse)(nil),         // 14: core.PackPickResponse
-	(*GetPickShipmentsRequest)(nil),  // 15: core.GetPickShipmentsRequest
-	(*GetPickShipmentsResponse)(nil), // 16: core.GetPickShipmentsResponse
-	(*UpdatePickLineRequest)(nil),    // 17: core.UpdatePickLineRequest
-	(*UpdatePickLineResponse)(nil),   // 18: core.UpdatePickLineResponse
-	(*PickPickLineRequest)(nil),      // 19: core.PickPickLineRequest
-	(*PickPickLineResponse)(nil),     // 20: core.PickPickLineResponse
-	(*VoidPickLineRequest)(nil),      // 21: core.VoidPickLineRequest
-	(*VoidPickLineResponse)(nil),     // 22: core.VoidPickLineResponse
-	(*timestamppb.Timestamp)(nil),    // 23: google.protobuf.Timestamp
-	(*PageInfo)(nil),                 // 24: core.PageInfo
-	(*JobInfo)(nil),                  // 25: core.JobInfo
+	(*PickInfo)(nil),               // 0: core.PickInfo
+	(*PickLineInfo)(nil),           // 1: core.PickLineInfo
+	(*ListPicksRequest)(nil),       // 2: core.ListPicksRequest
+	(*ListPicksResponse)(nil),      // 3: core.ListPicksResponse
+	(*GetPickRequest)(nil),         // 4: core.GetPickRequest
+	(*GetPickResponse)(nil),        // 5: core.GetPickResponse
+	(*PickAllLinesRequest)(nil),    // 6: core.PickAllLinesRequest
+	(*PickAllLinesResponse)(nil),   // 7: core.PickAllLinesResponse
+	(*VoidPickRequest)(nil),        // 8: core.VoidPickRequest
+	(*VoidPickResponse)(nil),       // 9: core.VoidPickResponse
+	(*PackPickRequest)(nil),        // 10: core.PackPickRequest
+	(*PackPickResponse)(nil),       // 11: core.PackPickResponse
+	(*UpdatePickLineRequest)(nil),  // 12: core.UpdatePickLineRequest
+	(*UpdatePickLineResponse)(nil), // 13: core.UpdatePickLineResponse
+	(*PickPickLineRequest)(nil),    // 14: core.PickPickLineRequest
+	(*PickPickLineResponse)(nil),   // 15: core.PickPickLineResponse
+	(*VoidPickLineRequest)(nil),    // 16: core.VoidPickLineRequest
+	(*VoidPickLineResponse)(nil),   // 17: core.VoidPickLineResponse
+	(*timestamppb.Timestamp)(nil),  // 18: google.protobuf.Timestamp
+	(*PageInfo)(nil),               // 19: core.PageInfo
+	(*JobInfo)(nil),                // 20: core.JobInfo
 }
 var file_core_core_picking_proto_depIdxs = []int32{
-	23, // 0: core.PickInfo.finished_at:type_name -> google.protobuf.Timestamp
-	23, // 1: core.PickInfo.created_at:type_name -> google.protobuf.Timestamp
-	23, // 2: core.PickInfo.updated_at:type_name -> google.protobuf.Timestamp
+	18, // 0: core.PickInfo.finished_at:type_name -> google.protobuf.Timestamp
+	18, // 1: core.PickInfo.created_at:type_name -> google.protobuf.Timestamp
+	18, // 2: core.PickInfo.updated_at:type_name -> google.protobuf.Timestamp
 	1,  // 3: core.PickInfo.lines:type_name -> core.PickLineInfo
-	2,  // 4: core.PickInfo.departments:type_name -> core.PickDepartmentInfo
-	23, // 5: core.PickInfo.last_shipped_at:type_name -> google.protobuf.Timestamp
-	23, // 6: core.PickInfo.promised_at:type_name -> google.protobuf.Timestamp
-	23, // 7: core.PickInfo.ship_by_date:type_name -> google.protobuf.Timestamp
-	23, // 8: core.PickInfo.carrier_created_at:type_name -> google.protobuf.Timestamp
-	23, // 9: core.PickInfo.carrier_updated_at:type_name -> google.protobuf.Timestamp
-	23, // 10: core.PickInfo.service_level_created_at:type_name -> google.protobuf.Timestamp
-	23, // 11: core.PickInfo.service_level_updated_at:type_name -> google.protobuf.Timestamp
-	23, // 12: core.PickLineInfo.packed_at:type_name -> google.protobuf.Timestamp
-	23, // 13: core.PickLineInfo.created_at:type_name -> google.protobuf.Timestamp
-	23, // 14: core.PickLineInfo.updated_at:type_name -> google.protobuf.Timestamp
-	0,  // 15: core.ListPicksResponse.picks:type_name -> core.PickInfo
-	24, // 16: core.ListPicksResponse.page_info:type_name -> core.PageInfo
-	0,  // 17: core.GetPickResponse.pick:type_name -> core.PickInfo
-	0,  // 18: core.UpdatePickResponse.pick:type_name -> core.PickInfo
-	0,  // 19: core.PickAllLinesResponse.pick:type_name -> core.PickInfo
-	0,  // 20: core.VoidPickResponse.pick:type_name -> core.PickInfo
-	25, // 21: core.PackPickResponse.job:type_name -> core.JobInfo
-	1,  // 22: core.UpdatePickLineResponse.pick_line:type_name -> core.PickLineInfo
-	1,  // 23: core.PickPickLineResponse.pick_line:type_name -> core.PickLineInfo
-	1,  // 24: core.VoidPickLineResponse.pick_line:type_name -> core.PickLineInfo
-	3,  // 25: core.CorePickingService.ListPicks:input_type -> core.ListPicksRequest
-	5,  // 26: core.CorePickingService.GetPick:input_type -> core.GetPickRequest
-	7,  // 27: core.CorePickingService.UpdatePick:input_type -> core.UpdatePickRequest
-	9,  // 28: core.CorePickingService.PickAllLines:input_type -> core.PickAllLinesRequest
-	11, // 29: core.CorePickingService.VoidPick:input_type -> core.VoidPickRequest
-	13, // 30: core.CorePickingService.PackPick:input_type -> core.PackPickRequest
-	15, // 31: core.CorePickingService.GetPickShipments:input_type -> core.GetPickShipmentsRequest
-	17, // 32: core.CorePickingService.UpdatePickLine:input_type -> core.UpdatePickLineRequest
-	19, // 33: core.CorePickingService.PickPickLine:input_type -> core.PickPickLineRequest
-	21, // 34: core.CorePickingService.VoidPickLine:input_type -> core.VoidPickLineRequest
-	4,  // 35: core.CorePickingService.ListPicks:output_type -> core.ListPicksResponse
-	6,  // 36: core.CorePickingService.GetPick:output_type -> core.GetPickResponse
-	8,  // 37: core.CorePickingService.UpdatePick:output_type -> core.UpdatePickResponse
-	10, // 38: core.CorePickingService.PickAllLines:output_type -> core.PickAllLinesResponse
-	12, // 39: core.CorePickingService.VoidPick:output_type -> core.VoidPickResponse
-	14, // 40: core.CorePickingService.PackPick:output_type -> core.PackPickResponse
-	16, // 41: core.CorePickingService.GetPickShipments:output_type -> core.GetPickShipmentsResponse
-	18, // 42: core.CorePickingService.UpdatePickLine:output_type -> core.UpdatePickLineResponse
-	20, // 43: core.CorePickingService.PickPickLine:output_type -> core.PickPickLineResponse
-	22, // 44: core.CorePickingService.VoidPickLine:output_type -> core.VoidPickLineResponse
-	35, // [35:45] is the sub-list for method output_type
-	25, // [25:35] is the sub-list for method input_type
-	25, // [25:25] is the sub-list for extension type_name
-	25, // [25:25] is the sub-list for extension extendee
-	0,  // [0:25] is the sub-list for field type_name
+	18, // 4: core.PickInfo.last_shipped_at:type_name -> google.protobuf.Timestamp
+	18, // 5: core.PickInfo.promised_at:type_name -> google.protobuf.Timestamp
+	18, // 6: core.PickInfo.shipping_address_created_at:type_name -> google.protobuf.Timestamp
+	18, // 7: core.PickInfo.shipping_address_updated_at:type_name -> google.protobuf.Timestamp
+	18, // 8: core.PickInfo.ship_by_date:type_name -> google.protobuf.Timestamp
+	18, // 9: core.PickInfo.ship_by_cutoff_at:type_name -> google.protobuf.Timestamp
+	18, // 10: core.PickInfo.carrier_created_at:type_name -> google.protobuf.Timestamp
+	18, // 11: core.PickInfo.carrier_updated_at:type_name -> google.protobuf.Timestamp
+	18, // 12: core.PickInfo.service_level_created_at:type_name -> google.protobuf.Timestamp
+	18, // 13: core.PickInfo.service_level_updated_at:type_name -> google.protobuf.Timestamp
+	18, // 14: core.PickLineInfo.packed_at:type_name -> google.protobuf.Timestamp
+	18, // 15: core.PickLineInfo.created_at:type_name -> google.protobuf.Timestamp
+	18, // 16: core.PickLineInfo.updated_at:type_name -> google.protobuf.Timestamp
+	0,  // 17: core.ListPicksResponse.picks:type_name -> core.PickInfo
+	19, // 18: core.ListPicksResponse.page_info:type_name -> core.PageInfo
+	0,  // 19: core.GetPickResponse.pick:type_name -> core.PickInfo
+	0,  // 20: core.PickAllLinesResponse.pick:type_name -> core.PickInfo
+	0,  // 21: core.VoidPickResponse.pick:type_name -> core.PickInfo
+	20, // 22: core.PackPickResponse.job:type_name -> core.JobInfo
+	1,  // 23: core.UpdatePickLineResponse.pick_line:type_name -> core.PickLineInfo
+	1,  // 24: core.PickPickLineResponse.pick_line:type_name -> core.PickLineInfo
+	1,  // 25: core.VoidPickLineResponse.pick_line:type_name -> core.PickLineInfo
+	2,  // 26: core.CorePickingService.ListPicks:input_type -> core.ListPicksRequest
+	4,  // 27: core.CorePickingService.GetPick:input_type -> core.GetPickRequest
+	6,  // 28: core.CorePickingService.PickAllLines:input_type -> core.PickAllLinesRequest
+	8,  // 29: core.CorePickingService.VoidPick:input_type -> core.VoidPickRequest
+	10, // 30: core.CorePickingService.PackPick:input_type -> core.PackPickRequest
+	12, // 31: core.CorePickingService.UpdatePickLine:input_type -> core.UpdatePickLineRequest
+	14, // 32: core.CorePickingService.PickPickLine:input_type -> core.PickPickLineRequest
+	16, // 33: core.CorePickingService.VoidPickLine:input_type -> core.VoidPickLineRequest
+	3,  // 34: core.CorePickingService.ListPicks:output_type -> core.ListPicksResponse
+	5,  // 35: core.CorePickingService.GetPick:output_type -> core.GetPickResponse
+	7,  // 36: core.CorePickingService.PickAllLines:output_type -> core.PickAllLinesResponse
+	9,  // 37: core.CorePickingService.VoidPick:output_type -> core.VoidPickResponse
+	11, // 38: core.CorePickingService.PackPick:output_type -> core.PackPickResponse
+	13, // 39: core.CorePickingService.UpdatePickLine:output_type -> core.UpdatePickLineResponse
+	15, // 40: core.CorePickingService.PickPickLine:output_type -> core.PickPickLineResponse
+	17, // 41: core.CorePickingService.VoidPickLine:output_type -> core.VoidPickLineResponse
+	34, // [34:42] is the sub-list for method output_type
+	26, // [26:34] is the sub-list for method input_type
+	26, // [26:26] is the sub-list for extension type_name
+	26, // [26:26] is the sub-list for extension extendee
+	0,  // [0:26] is the sub-list for field type_name
 }
 
 func init() { file_core_core_picking_proto_init() }
@@ -2228,17 +1919,15 @@ func file_core_core_picking_proto_init() {
 	file_core_core_async_proto_init()
 	file_core_core_picking_proto_msgTypes[0].OneofWrappers = []any{}
 	file_core_core_picking_proto_msgTypes[1].OneofWrappers = []any{}
-	file_core_core_picking_proto_msgTypes[3].OneofWrappers = []any{}
-	file_core_core_picking_proto_msgTypes[7].OneofWrappers = []any{}
-	file_core_core_picking_proto_msgTypes[15].OneofWrappers = []any{}
-	file_core_core_picking_proto_msgTypes[17].OneofWrappers = []any{}
+	file_core_core_picking_proto_msgTypes[2].OneofWrappers = []any{}
+	file_core_core_picking_proto_msgTypes[12].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_core_picking_proto_rawDesc), len(file_core_core_picking_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   23,
+			NumMessages:   18,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

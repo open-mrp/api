@@ -39,7 +39,6 @@ func TestInventoryChangeLogs_ExpandableFieldsNullWithoutInclude(t *testing.T) {
 
 	got := parseJSON(body)
 	assert.Nil(t, got["item"], "item should be null without ?include=item")
-	assert.Nil(t, got["quantity"], "quantity should be null without ?include=quantity")
 	assert.Nil(t, got["responsible_user"], "responsible_user should be null without ?include=responsible_user")
 	assert.Nil(t, got["responsible_scanning_station"], "responsible_scanning_station should be null without ?include=responsible_scanning_station")
 
@@ -48,7 +47,6 @@ func TestInventoryChangeLogs_ExpandableFieldsNullWithoutInclude(t *testing.T) {
 	for _, m := range list.Data {
 		mm := parseJSON(m)
 		assert.Nil(t, mm["item"], "item should be null on list items without ?include=item")
-		assert.Nil(t, mm["quantity"], "quantity should be null on list items without ?include=quantity")
 		assert.Nil(t, mm["responsible_user"], "responsible_user should be null on list items without ?include=responsible_user")
 		assert.Nil(t, mm["responsible_scanning_station"], "responsible_scanning_station should be null on list items without ?include=responsible_scanning_station")
 	}
@@ -68,18 +66,16 @@ func TestInventoryChangeLogs_IncludeItem(t *testing.T) {
 	assert.Equal(t, "item", jsonField(item, "object"))
 }
 
-func TestInventoryChangeLogs_IncludeQuantity(t *testing.T) {
+// The amount is part of the entry rather than a relation, so naming it as an include is a caller
+// mistake instead of a no-op that would quietly return the row anyway.
+func TestInventoryChangeLogs_QuantityIsNotAnInclude(t *testing.T) {
 	t.Parallel()
 	id := firstInventoryChangeLogID(t)
 
 	status, body, err := apiClient.GetListRaw(inventoryChangeLogsPath+"/"+id, url.Values{"include": {"quantity"}})
 	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-
-	got := parseJSON(body)
-	q := jsonObject(got, "quantity")
-	require.NotNil(t, q, "quantity should be present with ?include=quantity")
-	assert.Equal(t, "quantity", jsonField(q, "object"))
+	require.Less(t, status, 500, "an unknown include must not 5xx: %s", string(body))
+	assert.Equal(t, 400, status, "quantity is not an expandable relation: %s", string(body))
 }
 
 func TestInventoryChangeLogs_IncludeResponsibleUser(t *testing.T) {

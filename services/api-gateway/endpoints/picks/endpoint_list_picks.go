@@ -14,28 +14,23 @@ import (
 // Request to list picks.
 type ListPicksRequest struct {
 	apiresource.PaginationRequest
-	// Filter by pick status.
+	// Restricts results to picks in this state.
+	//
+	// - `open`: picks that have not been finished.
+	// - `closed`: picks that have been finished.
 	Status *constants.PickStatus `query:"status"`
-	// Filter by customer IDs.
+	// Restricts results to picks raised for any of these customers.
 	CustomerIDs []string `query:"customer_ids"`
-	// Filter by product line IDs.
-	//
-	// Matches picks that contain at least one line for a product in any of the given product lines.
+	// Restricts results to picks with at least one line whose product belongs to any of these product lines.
 	ProductLineIDs []string `query:"product_line_ids"`
-	// Filter by customer type group IDs.
-	//
-	// Matches picks whose customer's type group — the account group returned in the customer's `type` field — is one of the given groups.
+	// Restricts results to picks whose customer belongs to any of these account groups, matching the `type` on the customer.
 	CustomerGroupIDs []string `query:"customer_group_ids"`
-	// Filter by department IDs.
-	//
-	// Matches picks assigned to any of the given departments.
-	DepartmentIDs []string `query:"department_ids"`
-	// Only return picks created on or after this date (`YYYY-MM-DD`).
+	// Earliest pick creation date to include, in `YYYY-MM-DD` format.
 	StartDate *string `query:"starts_at" validate:"omitempty,date_filter"`
-	// Only return picks created before this date (`YYYY-MM-DD`).
+	// Latest pick creation date to include, in `YYYY-MM-DD` format. Inclusive of the date itself.
 	EndDate *string `query:"ends_at" validate:"omitempty,date_filter"`
 	// Orders the results: `ship_by_date` puts the soonest delivery commitment first, with picks whose order has no ship-by date last; `created_at` puts the newest pick first.
-	Sort constants.PickSort `query:"sort" default:"ship_by_date"`
+	Sort *constants.PickSort `query:"sort" default:"ship_by_date"`
 }
 
 // Returns a paginated list of picks, soonest ship-by date first.
@@ -50,8 +45,9 @@ func (e *ListPicksEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPicksReq
 		ContentType:       "application/json",
 		Route:             "/v1/operations/picks",
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
+		AgentTool:         true,
 		ObjectType:        constants.ObjectTypePick,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainPicks, Action: types.ActionRead},

@@ -51,18 +51,10 @@ type Pick struct {
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
-	// When the associated sales order promised delivery.
-	PromisedAt *time.Time `json:"promised_at"`
-	// Date the order must ship by to meet its commitment.
-	ShipByDate *time.Time `json:"ship_by_date"`
-	// Days allowed to prepare the order before it ships.
-	LeadTimeDays *int32 `json:"lead_time_days"`
-	// Which rule in the customer/group/account chain produced `lead_time_days`.
-	LeadTimeSource *constants.LeadTimeSource `json:"lead_time_source"`
-	// Days the carrier is expected to take in transit.
-	TransitDays *int32 `json:"transit_days"`
-	// Whether `transit_days` came from a cached lane estimate or the service level's default.
-	TransitSource *constants.TransitSource `json:"transit_source"`
+	// When the order this pick fulfills is due to ship, carried from the order so the pick can explain its own deadline without expanding it.
+	//
+	// The calendar adjustment and the overrides that produced the date stay on the order; a pick carries the date, not the authoring history behind it.
+	Commitment *Commitment `json:"commitment"`
 }
 
 // Groups the records a pick sits between — the order it fulfills and the shipments packed from it — and is returned only once at least one member has been expanded.
@@ -95,10 +87,17 @@ type PickStageTotal struct {
 
 var samplePickCustomerPurchaseOrderNumber = "PO-12345"
 var samplePickNote = "Rush order"
-var samplePickLeadTimeDays = int32(3)
-var samplePickLeadTimeSource = constants.LeadTimeSourceAccountGroup
-var samplePickTransitDays = int32(2)
-var samplePickTransitSource = constants.TransitSourceServiceLevel
+
+// A pick carries only what the order denormalizes onto it.
+var samplePickCommitment = &Commitment{
+	Object:         constants.ObjectTypeCommitment,
+	PromisedAt:     SampleCommitment.PromisedAt,
+	ShipByDate:     SampleCommitment.ShipByDate,
+	LeadTimeDays:   SampleCommitment.LeadTimeDays,
+	LeadTimeSource: SampleCommitment.LeadTimeSource,
+	TransitDays:    SampleCommitment.TransitDays,
+	TransitSource:  SampleCommitment.TransitSource,
+}
 
 var SamplePick = &Pick{
 	ID:                          SamplePickID,
@@ -117,38 +116,13 @@ var SamplePick = &Pick{
 		Picked: PickStageTotal{Object: constants.ObjectTypePickStageTotal, Completion: 1},
 		Packed: PickStageTotal{Object: constants.ObjectTypePickStageTotal, Completion: 0.5},
 	},
-	Lines:          NewList([]PickLine{*SamplePickLine}, PageInfo{}),
-	Related:        &PickRelated{Object: constants.ObjectTypePickRelated},
-	PromisedAt:     timeutil.TimestampToTimePtr(sampleExpiresAtTimestamp),
-	ShipByDate:     timeutil.TimestampToTimePtr(sampleExpiresAtTimestamp),
-	LeadTimeDays:   &samplePickLeadTimeDays,
-	LeadTimeSource: &samplePickLeadTimeSource,
-	TransitDays:    &samplePickTransitDays,
-	TransitSource:  &samplePickTransitSource,
-	CreatedAt:      timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:      timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	Lines:      NewList([]PickLine{*SamplePickLine}, PageInfo{}),
+	Related:    &PickRelated{Object: constants.ObjectTypePickRelated},
+	Commitment: samplePickCommitment,
+	CreatedAt:  timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:  timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*Pick) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SamplePick)
-}
-
-// The shipment numbers for the sales order a pick belongs to.
-type PickShipmentsResponse struct {
-	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=pick_shipments_response"`
-	// Shipment numbers associated with the pick, oldest first.
-	ShipmentNumbers []string `json:"shipment_numbers" validate:"required"`
-	// Total number of matching shipments, ignoring `limit` and `offset`.
-	Count int32 `json:"count" validate:"required"`
-}
-
-var SamplePickShipmentsResponse = &PickShipmentsResponse{
-	Object:          constants.ObjectTypePickShipmentsResponse,
-	ShipmentNumbers: []string{"SH-001", "SH-002"},
-	Count:           2,
-}
-
-func (*PickShipmentsResponse) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(SamplePickShipmentsResponse)
 }

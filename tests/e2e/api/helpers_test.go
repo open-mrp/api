@@ -67,6 +67,11 @@ func jsonField(m map[string]any, key string) string {
 	}
 }
 
+// commitmentOf extracts the commitment sub-resource an order, a pick, or a quote carries its ship-by date and derivation on.
+func commitmentOf(m map[string]any) map[string]any {
+	return jsonObject(m, "commitment")
+}
+
 // jsonObject extracts a nested object from a parsed JSON map.
 func jsonObject(m map[string]any, key string) map[string]any {
 	if m == nil {

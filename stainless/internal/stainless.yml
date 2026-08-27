@@ -53,7 +53,7 @@ client_settings:
   # info.version by `make stainless` (see tools/apidocs/stainless.go).
   default_headers:
     OpenMRP-Version:
-      value: "1.0.forge-preview.3"
+      value: "1.0.forge-preview.4"
       version_header: true
   bearer_token_refresh:
     method: PUT
@@ -813,6 +813,7 @@ resources:
         models:
           checkout_sales_order_request: '#/components/schemas/CheckoutSalesOrderRequest'
           checkout_sales_order_response: '#/components/schemas/CheckoutSalesOrderResponse'
+          commitment: '#/components/schemas/Commitment'
           create_sales_order_line_input: '#/components/schemas/CreateSalesOrderLineInput'
           create_sales_order_request: '#/components/schemas/CreateSalesOrderRequest'
           created_by: '#/components/schemas/CreatedBy'
@@ -2191,8 +2192,6 @@ resources:
         methods:
           list: get /v1/operations/picks
           retrieve: get /v1/operations/picks/{id}
-          update: patch /v1/operations/picks/{id}
-          retrieve_shipments: get /v1/operations/picks/{id}/shipments
         subresources:
           actions:
             methods:
@@ -2217,10 +2216,8 @@ resources:
           pick: '#/components/schemas/Pick'
           pick_line: '#/components/schemas/PickLine'
           pick_related: '#/components/schemas/PickRelated'
-          pick_shipments_response: '#/components/schemas/PickShipmentsResponse'
           pick_stage_total: '#/components/schemas/PickStageTotal'
           pick_totals: '#/components/schemas/PickTotals'
-          update_pick_request: '#/components/schemas/UpdatePickRequest'
       locations:
         methods:
           list: get /v1/operations/locations

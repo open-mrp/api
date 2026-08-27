@@ -148,14 +148,14 @@ WHERE id = $1 AND status_code = 'running'
 RETURNING retry_count;
 
 -- name: UpdateAgentRunCompleted :exec
--- $1 is cast to text at every use so Postgres deduces a single, consistent type for the parameter. Left bare, `status_code = $1` pegs it to varchar while `$1 = 'completed'` pegs it to text, and the extended protocol (pgx sends no OID) rejects the parse with 42P08 "inconsistent types deduced for parameter $1" — which silently fails the finalize and strands the run in 'running' (never reaching awaiting_approval/completed). $3 is likewise cast so the untyped THEN/ELSE-NULL branch resolves to integer, not text.
+-- The status code is cast to text at every use so Postgres deduces a single, consistent type for the parameter. Left bare, `status_code = $1` pegs it to varchar while `$1 = 'completed'` pegs it to text, and the extended protocol (pgx sends no OID) rejects the parse with 42P08 "inconsistent types deduced for parameter $1" — which silently fails the finalize and strands the run in 'running' (never reaching awaiting_approval/completed). The duration is likewise cast so the untyped THEN/ELSE-NULL branch resolves to integer, not text.
 UPDATE agent_run
-SET status_code = $1::text, output = $2,
-    completed_at = CASE WHEN $1::text = 'completed' THEN now() ELSE NULL END,
-    duration_ms = CASE WHEN $1::text = 'completed' THEN $3::integer ELSE NULL END,
-    total_input_tokens = $4, total_output_tokens = $5,
+SET status_code = sqlc.arg('status_code')::text, output = sqlc.arg('output'),
+    completed_at = CASE WHEN sqlc.arg('status_code')::text = 'completed' THEN now() ELSE NULL END,
+    duration_ms = CASE WHEN sqlc.arg('status_code')::text = 'completed' THEN sqlc.arg('duration_ms')::integer ELSE NULL END,
+    total_input_tokens = sqlc.arg('total_input_tokens'), total_output_tokens = sqlc.arg('total_output_tokens'),
     updated_at = now()
-WHERE id = $6 AND status_code != 'cancelled';
+WHERE id = sqlc.arg('id') AND status_code != 'cancelled';
 
 -- name: UpdateAgentRunCancelled :exec
 UPDATE agent_run

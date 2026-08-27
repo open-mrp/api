@@ -140,13 +140,13 @@ func TestParentCustomerLeadTime_StampsAnIssuedOrdersCommitment(t *testing.T) {
 
 	order := issueOrderForCustomer(t, leadTimeChildInheritsID, nil)
 
-	assert.Equal(t, "parent_customer", jsonField(order, "lead_time_source"),
+	assert.Equal(t, "parent_customer", jsonField(commitmentOf(order), "lead_time_source"),
 		"the order records the rule that produced its ship-by date")
 
 	// The days are asserted against the date rather than against 13: the shipping
 	// calendar can pull a ship-by date back onto an open day, and which day that is
 	// depends on when the test runs.
-	days, err := strconv.Atoi(jsonField(order, "lead_time_days"))
+	days, err := strconv.Atoi(jsonField(commitmentOf(order), "lead_time_days"))
 	require.NoError(t, err, "an issued order must carry the days it committed to")
 	assert.LessOrEqual(t, days, 13, "a calendar can only pull a ship-by date earlier")
 	assert.Equal(t, issuedPlusDays(t, order, days), shipByDate(t, order))
@@ -244,8 +244,8 @@ func TestParentCustomerLeadTime_ShowsInACommitmentQuote(t *testing.T) {
 	requireStatus(t, 200, status, body)
 
 	quote := parseJSON(body)
-	assert.Equal(t, "parent_customer", jsonField(quote, "lead_time_source"))
-	assert.NotEmpty(t, jsonField(quote, "ship_by_date"), "a quote must name a date: %s", string(body))
+	assert.Equal(t, "parent_customer", jsonField(commitmentOf(quote), "lead_time_source"))
+	assert.NotEmpty(t, jsonField(commitmentOf(quote), "ship_by_date"), "a quote must name a date: %s", string(body))
 }
 
 // A hierarchy is a commercial relationship, so another tenant must not be able to read what a

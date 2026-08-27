@@ -177,7 +177,7 @@ func TestSalesOrder_Update_PersistsPromisedAtAndCustomer(t *testing.T) {
 		map[string]any{"promised_at": "2026-12-24T00:00:00Z"}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
-	assert.Contains(t, jsonField(getSalesOrder(t, orderID, nil), "promised_at"), "2026-12-24",
+	assert.Contains(t, jsonField(commitmentOf(getSalesOrder(t, orderID, nil)), "promised_at"), "2026-12-24",
 		"promised_at persists on update")
 
 	// customer_id is forwarded on update (also previously dropped). Re-point to a new buyer.

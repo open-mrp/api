@@ -714,11 +714,6 @@ type Department struct {
 	LaborRateID sql.NullString
 }
 
-type DepartmentsPick struct {
-	A string
-	B string
-}
-
 type DocApiKey struct {
 	ID              int64
 	TypeID          string
@@ -1805,6 +1800,7 @@ type ProductionScheduleItemPolicy struct {
 	ForecastDemandUnits     string
 	FulfillmentPolicyCode   string
 	PolicySourceCode        string
+	ProjectedGreigeOnHand   json.RawMessage
 }
 
 type ProductionScheduleItemSetting struct {

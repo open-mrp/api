@@ -58,15 +58,15 @@ func (m *inventoryChangeLogSvcImpl) ListInventoryChangeLogs(ctx context.Context,
 		Limit:            req.Limit,
 		Query:            req.Query,
 		ItemIds:          req.ItemIDs,
-		ActionTypeCodes:  req.ActionTypeCodes,
+		ActionTypeCodes:  actionTypeStrings(req.ActionTypes),
 		ChangedByUserIds: req.ChangedByUserIDs,
 	}
 
-	if req.StartDate != nil {
-		pbReq.StartDate = timestamppb.New(*req.StartDate)
+	if req.StartsAt != nil {
+		pbReq.StartDate = timestamppb.New(*req.StartsAt)
 	}
-	if req.EndDate != nil {
-		pbReq.EndDate = timestamppb.New(*req.EndDate)
+	if req.EndsAt != nil {
+		pbReq.EndDate = timestamppb.New(*req.EndsAt)
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, inventoryChangeLogSvcTracer, "service.inventory_change_logs.list", domain.ServiceName,
@@ -111,15 +111,15 @@ func (m *inventoryChangeLogSvcImpl) GetInventoryChangeLog(ctx context.Context, r
 func (m *inventoryChangeLogSvcImpl) ExportInventoryChangeLogs(ctx context.Context, req *ExportInventoryChangeLogsRequest) (*httptransport.FileDownload, *apierror.APIError) {
 	pbReq := &pb.ExportInventoryChangeLogsRequest{
 		ItemIds:          req.ItemIDs,
-		ActionTypeCodes:  req.ActionTypeCodes,
+		ActionTypeCodes:  actionTypeStrings(req.ActionTypes),
 		ChangedByUserIds: req.ChangedByUserIDs,
 	}
 
-	if req.StartDate != nil {
-		pbReq.StartDate = timestamppb.New(*req.StartDate)
+	if req.StartsAt != nil {
+		pbReq.StartDate = timestamppb.New(*req.StartsAt)
 	}
-	if req.EndDate != nil {
-		pbReq.EndDate = timestamppb.New(*req.EndDate)
+	if req.EndsAt != nil {
+		pbReq.EndDate = timestamppb.New(*req.EndsAt)
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, inventoryChangeLogSvcTracer, "service.inventory_change_logs.export", domain.ServiceName,
@@ -137,12 +137,12 @@ func (m *inventoryChangeLogSvcImpl) ExportInventoryChangeLogs(ctx context.Contex
 	}
 
 	startDateStr := "all"
-	if req.StartDate != nil {
-		startDateStr = req.StartDate.Format("2006-01-02")
+	if req.StartsAt != nil {
+		startDateStr = req.StartsAt.Format("2006-01-02")
 	}
 	endDateStr := "all"
-	if req.EndDate != nil {
-		endDateStr = req.EndDate.Format("2006-01-02")
+	if req.EndsAt != nil {
+		endDateStr = req.EndsAt.Format("2006-01-02")
 	}
 	filename := fmt.Sprintf("inventory-change-logs-%s-%s.xlsx", startDateStr, endDateStr)
 
@@ -153,38 +153,33 @@ func (m *inventoryChangeLogSvcImpl) ExportInventoryChangeLogs(ctx context.Contex
 	}, nil
 }
 
+// actionTypeStrings unwraps the typed filter for the proto request, which carries codes as plain strings.
+func actionTypeStrings(types []constants.InventoryActionType) []string {
+	out := make([]string, len(types))
+	for i, t := range types {
+		out[i] = string(t)
+	}
+	return out
+}
+
 func inventoryChangeLogFromProto(icl *pb.InventoryChangeLogInfo) apiresource.InventoryChangeLog {
 	if icl == nil {
 		return apiresource.InventoryChangeLog{}
 	}
 
 	return apiresource.InventoryChangeLog{
-		ID:             icl.Id,
-		Object:         constants.ObjectTypeInventoryChangeLog,
-		ActionTypeCode: constants.InventoryActionType(icl.ActionTypeCode),
-		CreatedAt:      grpcutil.TimestampToTime(icl.CreatedAt),
-		UpdatedAt:      grpcutil.TimestampToTime(icl.UpdatedAt),
+		ID:         icl.Id,
+		Object:     constants.ObjectTypeInventoryChangeLog,
+		ActionType: constants.InventoryActionType(icl.ActionTypeCode),
+		Quantity:   inventoryChangeLogQuantity(icl),
+		CreatedAt:  grpcutil.TimestampToTime(icl.CreatedAt),
+		UpdatedAt:  grpcutil.TimestampToTime(icl.UpdatedAt),
 	}
 }
 
-func stashInventoryChangeLogMeta(meta *resourcekit.LoadMeta, icl *pb.InventoryChangeLogInfo) {
-	if icl == nil {
-		return
-	}
-
-	item := &apiresource.Item{
-		ID:        icl.ItemId,
-		Object:    constants.ObjectTypeItem,
-		SKU:       icl.ItemSku,
-		CreatedAt: grpcutil.TimestampToTime(icl.ItemCreatedAt),
-		UpdatedAt: grpcutil.TimestampToTime(icl.ItemUpdatedAt),
-	}
-	if icl.ItemTypeCode != nil {
-		item.ItemTypeCode = constants.ItemTypeCode(*icl.ItemTypeCode)
-	}
-	meta.Set(constants.ObjectTypeInventoryChangeLog, icl.Id, "item", item)
-
-	qty := &apiresource.Quantity{
+// inventoryChangeLogQuantity builds the signed amount the entry recorded. Carried inline rather than stashed for an include: the amount is what the entry is, and an entry reporting null for it says nothing.
+func inventoryChangeLogQuantity(icl *pb.InventoryChangeLogInfo) *apiresource.Quantity {
+	return &apiresource.Quantity{
 		ID:     icl.QuantityId,
 		Object: constants.ObjectTypeQuantity,
 		Value:  icl.QuantityValue,
@@ -207,7 +202,24 @@ func stashInventoryChangeLogMeta(meta *resourcekit.LoadMeta, icl *pb.InventoryCh
 			UpdatedAt:         grpcutil.TimestampToTime(icl.QuantityUnitUpdatedAt),
 		},
 	}
-	meta.Set(constants.ObjectTypeInventoryChangeLog, icl.Id, "quantity", qty)
+}
+
+func stashInventoryChangeLogMeta(meta *resourcekit.LoadMeta, icl *pb.InventoryChangeLogInfo) {
+	if icl == nil {
+		return
+	}
+
+	item := &apiresource.Item{
+		ID:        icl.ItemId,
+		Object:    constants.ObjectTypeItem,
+		SKU:       icl.ItemSku,
+		CreatedAt: grpcutil.TimestampToTime(icl.ItemCreatedAt),
+		UpdatedAt: grpcutil.TimestampToTime(icl.ItemUpdatedAt),
+	}
+	if icl.ItemTypeCode != nil {
+		item.ItemTypeCode = constants.ItemTypeCode(*icl.ItemTypeCode)
+	}
+	meta.Set(constants.ObjectTypeInventoryChangeLog, icl.Id, "item", item)
 
 	if icl.ResponsibleUserId != nil {
 		user := &apiresource.User{

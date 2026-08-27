@@ -448,7 +448,7 @@ func (s *runnerSvc) ExecuteRun(ctx context.Context, runID, configID, accountID, 
 		if completeErr := runRepo.UpdateCompleted(ctx, sqlc.UpdateAgentRunCompletedParams{
 			StatusCode:        statusCode,
 			Output:            result.Output,
-			DurationMs:        agentdb.PgInt4(durationMs),
+			DurationMs:        durationMs,
 			TotalInputTokens:  int64(result.InputTokens),
 			TotalOutputTokens: int64(result.OutputTokens),
 			ID:                runID,
@@ -1991,7 +1991,7 @@ func (s *runnerSvc) ContinueRun(ctx context.Context, runID, accountID, message s
 		if completeErr := runRepo.UpdateCompleted(ctx, sqlc.UpdateAgentRunCompletedParams{
 			StatusCode:        statusCode,
 			Output:            result.Output,
-			DurationMs:        agentdb.PgInt4(durationMs),
+			DurationMs:        durationMs,
 			TotalInputTokens:  cumulativeInputTokens,
 			TotalOutputTokens: cumulativeOutputTokens,
 			ID:                runID,

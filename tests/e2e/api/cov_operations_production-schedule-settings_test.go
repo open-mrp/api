@@ -342,7 +342,7 @@ func TestScheduleSettings_DefaultLeadTimeDrivesTheChain(t *testing.T) {
 	customerID := leadTimeCustomer(t, "e2e-settings-lt", nil, "")
 	order := issueOrderForCustomer(t, customerID, nil)
 
-	assert.Equal(t, "account", jsonField(order, "lead_time_source"))
+	assert.Equal(t, "account", jsonField(commitmentOf(order), "lead_time_source"))
 	assert.Equal(t, 37, committedRuleDays(t, order))
 	assert.Equal(t, expectedShipBy(t, order, 37), shipByDate(t, order))
 }
@@ -360,7 +360,7 @@ func TestScheduleSettings_ZeroLeadTimeIsSameDay(t *testing.T) {
 	customerID := leadTimeCustomer(t, "e2e-settings-lt-zero", nil, "")
 	order := issueOrderForCustomer(t, customerID, nil)
 
-	assert.Equal(t, "account", jsonField(order, "lead_time_source"))
+	assert.Equal(t, "account", jsonField(commitmentOf(order), "lead_time_source"))
 	assert.Equal(t, 0, committedRuleDays(t, order))
 	assert.Equal(t, expectedShipBy(t, order, 0), shipByDate(t, order),
 		"a zero lead time commits the order to shipping the day it was issued")

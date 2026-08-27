@@ -24,11 +24,11 @@ type InventoryChangeLog struct {
 	// - `user_action`: change made manually by a user.
 	// - `system_action`: change made automatically by the system.
 	// - `user_correction`: manual adjustment a user made to correct an inventory discrepancy.
-	ActionTypeCode constants.InventoryActionType `json:"action_type" validate:"required"`
+	ActionType constants.InventoryActionType `json:"action_type" validate:"required"`
 	// Amount of inventory this change applied.
 	//
 	// The value is signed: positive values increased on-hand inventory, negative values decreased it.
-	Quantity *Quantity `json:"quantity" expandable:"true"`
+	Quantity *Quantity `json:"quantity" validate:"required"`
 	// Item affected by this change.
 	Item *Item `json:"item" expandable:"true"`
 	// The user who made this change.
@@ -46,7 +46,7 @@ type InventoryChangeLog struct {
 var SampleInventoryChangeLog = &InventoryChangeLog{
 	ID:                         SampleInventoryChangeLogID,
 	Object:                     constants.ObjectTypeInventoryChangeLog,
-	ActionTypeCode:             constants.InventoryActionTypeScan,
+	ActionType:                 constants.InventoryActionTypeScan,
 	Quantity:                   SampleQuantity,
 	Item:                       SampleItem,
 	ResponsibleUser:            SampleUser,

@@ -714,11 +714,6 @@ type Department struct {
 	LaborRateID sql.NullString
 }
 
-type DepartmentsPick struct {
-	A string
-	B string
-}
-
 type DocApiKey struct {
 	ID              int64
 	TypeID          string
@@ -737,6 +732,26 @@ type EdiRun struct {
 	HasSucceeded bool
 	Failures     json.RawMessage
 	UpdatedAt    time.Time
+}
+
+type EdiTransmission struct {
+	ID                    string
+	AccountID             string
+	Direction             string
+	DocumentType          string
+	SubjectType           string
+	SubjectID             string
+	CounterpartyAccountID string
+	Status                string
+	Attempts              int32
+	AvailableAt           time.Time
+	ClaimOwner            sql.NullString
+	ClaimToken            sql.NullString
+	ClaimExpiresAt        sql.NullTime
+	LastError             sql.NullString
+	TransmittedAt         sql.NullTime
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
 }
 
 type EmailDomain struct {
@@ -843,6 +858,13 @@ type Geolocation struct {
 	Latitude       sql.NullFloat64
 	Longitude      sql.NullFloat64
 	Timezone       sql.NullString
+}
+
+type GooseDbVersionDatum struct {
+	ID        uint64
+	VersionID int64
+	IsApplied bool
+	Tstamp    sql.NullTime
 }
 
 type HubspotAccountUserLink struct {
@@ -1277,6 +1299,7 @@ type MessageInbox struct {
 	LastError       sql.NullString
 	ReceivedAt      time.Time
 	ProcessedAt     sql.NullTime
+	AlertedAt       sql.NullTime
 }
 
 type MessageOutbox struct {
@@ -1301,6 +1324,7 @@ type MessageOutbox struct {
 	ParentMessageID sql.NullString
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
+	AlertedAt       sql.NullTime
 }
 
 type MessageReceipt struct {
@@ -1776,6 +1800,7 @@ type ProductionScheduleItemPolicy struct {
 	ForecastDemandUnits     string
 	FulfillmentPolicyCode   string
 	PolicySourceCode        string
+	ProjectedGreigeOnHand   json.RawMessage
 }
 
 type ProductionScheduleItemSetting struct {

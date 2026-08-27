@@ -41,7 +41,8 @@ LEFT JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
 LEFT JOIN account_group ag ON ag.id = ar.account_group_id
 WHERE so.owner_account_id = sqlc.arg('account_id')
   AND so.sales_order_type_code = 'sales_order'
-  AND so.sales_order_status_code <> 'estimate'
+  -- Spelled as an IN-list over the closed status enum rather than <> 'estimate': the inequality leaves sales_order_owner_status_ship_by_idx unusable past its first column, so the ship-by range below degrades into a scan of every order on the account.
+  AND so.sales_order_status_code IN ('issued', 'fulfilled')
   AND p.product_type_code = 'sale'
   AND so.ship_by_date IS NOT NULL
   AND so.ship_by_date >= sqlc.arg('window_start')
@@ -89,7 +90,8 @@ LEFT JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
     AND ar.account_relation_role_code = 'customer'
 WHERE so.owner_account_id = sqlc.arg('account_id')
   AND so.sales_order_type_code = 'sales_order'
-  AND so.sales_order_status_code <> 'estimate'
+  -- Spelled as an IN-list over the closed status enum rather than <> 'estimate': the inequality leaves sales_order_owner_status_ship_by_idx unusable past its first column, so the ship-by range below degrades into a scan of every order on the account.
+  AND so.sales_order_status_code IN ('issued', 'fulfilled')
   AND p.product_type_code = 'sale'
   AND so.ship_by_date IS NOT NULL
   AND so.ship_by_date >= sqlc.arg('window_start')

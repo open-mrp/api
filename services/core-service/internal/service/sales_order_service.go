@@ -787,8 +787,13 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 			}
 			result = updated
 
-			// Renegotiating a date on a live order moves the commitment with it, and clearing one hands the order back to the customer's standing lead time. Only issued orders carry a commitment at all, so an estimate is left alone until it is issued.
-			if basisChanged && updated.SalesOrderStatusCode == string(constants.SalesOrderStatusCodeIssued) && updated.IssuedAt != nil {
+			// Renegotiating a date on a live order moves the commitment with it, and clearing one hands the order back to the customer's standing lead time. Re-routing the order does the same, but only where routing is what the date was built from: a promised delivery date is worked back through the carrier's transit for one lane, so changing the carrier, the service level, or the destination leaves the stamped date derived from a journey the order no longer takes. The other bases name a ship date directly and never consult transit, so re-routing them changes nothing worth rewriting a promise over.
+			//
+			// Only an edit to the order itself restamps it. A customer's standing lead time being renegotiated, or a holiday appearing on a calendar, does not trigger one: those move every open commitment at once, and a promise already given is not the API's to quietly revise behind the customer's back.
+			//
+			// Only issued orders carry a commitment at all, so an estimate is left alone until it is issued.
+			transitChanged := shippingChanged && updated.PromisedAt != nil
+			if (basisChanged || transitChanged) && updated.SalesOrderStatusCode == string(constants.SalesOrderStatusCodeIssued) && updated.IssuedAt != nil {
 				if apiErr := txSvc.stampShipByCommitment(txCtx, params.AccountID, updated, *updated.IssuedAt); apiErr != nil {
 					return apiErr
 				}

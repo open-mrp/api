@@ -550,32 +550,30 @@ func (m *salesOrderSvcImpl) QuoteSalesOrderCommitment(ctx context.Context, req *
 		return nil, apiErr
 	}
 
-	out := &QuoteSalesOrderCommitmentResponse{
-		Object:                 constants.ObjectTypeSalesOrderCommitmentQuote,
+	commitment := &apiresource.Commitment{
+		Object:                 constants.ObjectTypeCommitment,
+		PromisedAt:             grpcutil.TimestampToTimePtr(pbReq.PromisedAt),
+		LeadTimeOverrideDays:   pbReq.LeadTimeOverrideDays,
+		ShipByOverrideDate:     grpcutil.TimestampToTimePtr(pbReq.ShipByOverrideDate),
+		ShipByDate:             apiresource.ShipBy(grpcutil.TimestampToTimePtr(resp.ShipByDate), grpcutil.TimestampToTimePtr(resp.ShipByCutoffAt)),
 		LeadTimeDays:           resp.LeadTimeDays,
 		TransitDays:            resp.TransitDays,
-		CalendarAdjustmentDays: resp.CalendarAdjustmentDays,
-		Steps:                  []apiresource.CommitmentQuoteStep{},
-	}
-	if resp.ShipByDate != nil {
-		t := grpcutil.TimestampToTime(resp.ShipByDate)
-		out.ShipByDate = &t
-	}
-	if resp.ShipByCutoffAt != nil {
-		t := grpcutil.TimestampToTime(resp.ShipByCutoffAt)
-		out.ShipByCutoffAt = &t
+		CalendarAdjustmentDays: &resp.CalendarAdjustmentDays,
+		EstimatedDeliveryDate:  grpcutil.TimestampToTimePtr(resp.EstimatedDeliveryDate),
 	}
 	if resp.LeadTimeSourceCode != nil {
 		source := constants.LeadTimeSource(*resp.LeadTimeSourceCode)
-		out.LeadTimeSource = &source
+		commitment.LeadTimeSource = &source
 	}
 	if resp.TransitSourceCode != nil {
 		source := constants.TransitSource(*resp.TransitSourceCode)
-		out.TransitSource = &source
+		commitment.TransitSource = &source
 	}
-	if resp.EstimatedDeliveryDate != nil {
-		t := grpcutil.TimestampToTime(resp.EstimatedDeliveryDate)
-		out.EstimatedDeliveryDate = &t
+
+	out := &QuoteSalesOrderCommitmentResponse{
+		Object:     constants.ObjectTypeSalesOrderCommitmentQuote,
+		Commitment: commitment,
+		Steps:      []apiresource.CommitmentQuoteStep{},
 	}
 	for _, step := range resp.Steps {
 		out.Steps = append(out.Steps, apiresource.CommitmentQuoteStep{
@@ -743,36 +741,34 @@ func salesOrderDetailFromProto(info *pb.SalesOrderInfo) apiresource.SalesOrder {
 		t := grpcutil.TimestampToTime(info.ExpiredAt)
 		d.ExpiredAt = &t
 	}
-	if info.PromisedAt != nil {
-		t := grpcutil.TimestampToTime(info.PromisedAt)
-		d.PromisedAt = &t
-	}
-	if info.ShipByDate != nil {
-		t := grpcutil.TimestampToTime(info.ShipByDate)
-		d.ShipByDate = &t
-	}
-	d.LeadTimeDays = info.LeadTimeDays
-	if info.LeadTimeSourceCode != nil {
-		source := constants.LeadTimeSource(*info.LeadTimeSourceCode)
-		d.LeadTimeSource = &source
-	}
-	d.TransitDays = info.TransitDays
-	if info.TransitSourceCode != nil {
-		source := constants.TransitSource(*info.TransitSourceCode)
-		d.TransitSource = &source
-	}
-	d.LeadTimeOverrideDays = info.LeadTimeOverrideDays
-	if info.ShipByOverrideDate != nil {
-		t := grpcutil.TimestampToTime(info.ShipByOverrideDate)
-		d.ShipByOverrideDate = &t
-	}
-	if info.ShipByCutoffAt != nil {
-		t := grpcutil.TimestampToTime(info.ShipByCutoffAt)
-		d.ShipByCutoffAt = &t
-	}
-	d.CalendarAdjustmentDays = info.CalendarAdjustmentDays
+	d.Commitment = commitmentFromSalesOrderProto(info)
 
 	return d
+}
+
+// Builds the order's commitment from the fields stamped on it at issue. The arrival estimate is left
+// null: an order carries the commitment it was made on, not a projection forward from it, which only
+// the preview computes.
+func commitmentFromSalesOrderProto(info *pb.SalesOrderInfo) *apiresource.Commitment {
+	c := &apiresource.Commitment{
+		Object:                 constants.ObjectTypeCommitment,
+		PromisedAt:             grpcutil.TimestampToTimePtr(info.PromisedAt),
+		LeadTimeOverrideDays:   info.LeadTimeOverrideDays,
+		ShipByOverrideDate:     grpcutil.TimestampToTimePtr(info.ShipByOverrideDate),
+		ShipByDate:             apiresource.ShipBy(grpcutil.TimestampToTimePtr(info.ShipByDate), grpcutil.TimestampToTimePtr(info.ShipByCutoffAt)),
+		LeadTimeDays:           info.LeadTimeDays,
+		TransitDays:            info.TransitDays,
+		CalendarAdjustmentDays: info.CalendarAdjustmentDays,
+	}
+	if info.LeadTimeSourceCode != nil {
+		source := constants.LeadTimeSource(*info.LeadTimeSourceCode)
+		c.LeadTimeSource = &source
+	}
+	if info.TransitSourceCode != nil {
+		source := constants.TransitSource(*info.TransitSourceCode)
+		c.TransitSource = &source
+	}
+	return c
 }
 
 // withLinesForTotals ensures the backend returns line data whenever the

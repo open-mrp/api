@@ -42,24 +42,10 @@ type QuoteSalesOrderCommitmentRequest struct {
 type QuoteSalesOrderCommitmentResponse struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=sales_order_commitment_quote"`
-	// The date the order would be due to ship, or null when no rule resolves one.
-	ShipByDate *time.Time `json:"ship_by_date"`
-	// That date at the plant's pickup cutoff — the moment freight would have to be tendered by. Null when the shipping calendar carries no cutoff.
-	ShipByCutoffAt *time.Time `json:"ship_by_cutoff_at"`
-	// Calendar days between issue and the ship-by date.
-	LeadTimeDays *int32 `json:"lead_time_days"`
-	// Which rule produced the date.
-	LeadTimeSource *constants.LeadTimeSource `json:"lead_time_source"`
-	// Days the carrier needs to cover the lane. Null when the lane has never been quoted and the service level carries no default, or when no service level was supplied to quote one on.
-	TransitDays *int32 `json:"transit_days"`
-	// Where the transit estimate came from.
-	TransitSource *constants.TransitSource `json:"transit_source"`
-	// When freight leaving on the ship-by date would reach the customer: transit walked forward from it and landed on a day their dock receives. Null whenever `transit_days` is, since an arrival with no journey behind it would just be the ship date wearing a different name.
+	// The commitment the inputs would produce — the same object an order carries once issued, so a preview and the stamped result cannot drift.
 	//
-	// Reported for every basis, including the ones that do not use transit to decide the ship-by date. An order committed on a lead time has the same journey ahead of it; it simply was not worked backwards from.
-	EstimatedDeliveryDate *time.Time `json:"estimated_delivery_date"`
-	// Days the receiving and shipping calendars pulled the date back, beyond what transit accounted for.
-	CalendarAdjustmentDays int32 `json:"calendar_adjustment_days"`
+	// Its `ship_by_date` is null when no rule resolves one, and `transit_days` is null when the lane has never been quoted and the service level carries no default, or when no service level was supplied to quote one on.
+	Commitment *apiresource.Commitment `json:"commitment"`
 	// The derivation in order, one entry per rule that moved the date.
 	Steps []apiresource.CommitmentQuoteStep `json:"steps"`
 }
@@ -77,16 +63,9 @@ func (*QuoteSalesOrderCommitmentRequest) SchemaExample() any {
 }
 
 var sampleQuoteSalesOrderCommitmentResponse = &QuoteSalesOrderCommitmentResponse{
-	Object:                 constants.ObjectTypeSalesOrderCommitmentQuote,
-	ShipByDate:             apiresource.SampleShipByDate(),
-	ShipByCutoffAt:         apiresource.SampleShipByCutoffAt(),
-	LeadTimeDays:           apiresource.SampleCommitmentLeadTimeDays(),
-	LeadTimeSource:         apiresource.SampleCommitmentLeadTimeSource(),
-	TransitDays:            apiresource.SampleCommitmentTransitDays(),
-	TransitSource:          apiresource.SampleCommitmentTransitSource(),
-	EstimatedDeliveryDate:  apiresource.SampleCommitmentEstimatedDeliveryDate(),
-	CalendarAdjustmentDays: 2,
-	Steps:                  apiresource.SampleCommitmentQuoteSteps(),
+	Object:     constants.ObjectTypeSalesOrderCommitmentQuote,
+	Commitment: apiresource.SampleQuotedCommitment,
+	Steps:      apiresource.SampleCommitmentQuoteSteps(),
 }
 
 func (*QuoteSalesOrderCommitmentResponse) SchemaExample() any {

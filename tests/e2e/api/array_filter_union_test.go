@@ -126,7 +126,7 @@ func arrayFilterCases() []arrayFilterCase {
 		{name: "purchase-orders/supplier_ids", path: "/v1/operations/purchase-orders", param: "supplier_ids", valuePath: "supplier.id", include: "supplier", fromSelf: true},
 		{name: "purchase-orders/item_ids", path: "/v1/operations/purchase-orders", param: "item_ids", valuePath: "lines.data[].item.id", include: "lines", fromSelf: true},
 
-		{name: "inventory-change-logs/action_type_codes", path: "/v1/operations/inventory-change-logs", param: "action_type_codes", valuePath: "action_type", fromSelf: true},
+		{name: "inventory-change-logs/action_types", path: "/v1/operations/inventory-change-logs", param: "action_types", valuePath: "action_type", fromSelf: true},
 		{name: "inventory-change-logs/item_ids", path: "/v1/operations/inventory-change-logs", param: "item_ids", valuePath: "item.id", include: "item", fromSelf: true},
 		{name: "inventory-change-logs/changed_by_user_ids", path: "/v1/operations/inventory-change-logs", param: "changed_by_user_ids", valuePath: "responsible_user.id", include: "responsible_user", fromSelf: true},
 

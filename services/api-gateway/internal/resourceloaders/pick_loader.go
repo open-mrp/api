@@ -15,7 +15,7 @@ import (
 
 var pickLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.pick")
 
-// LoadPicks fetches picks by ID via GetPick and builds expandable Pick references with real header data. There is no batch RPC for picks, so each ID is fetched individually. Nested sub-resources (lines, sales_order, customer, departments) are their own expandable relations and are not populated here.
+// LoadPicks fetches picks by ID via GetPick and builds expandable Pick references with real header data. There is no batch RPC for picks, so each ID is fetched individually. Nested sub-resources (lines, sales_order, customer) are their own expandable relations and are not populated here.
 func LoadPicks(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil

@@ -55,36 +55,33 @@ func pickForQuantity(t *testing.T, customerID, quantity string) string {
 	return pickForOrderBody(t, body)
 }
 
-// Reads the pick's shipments listing and returns its numbers and total count.
-func pickShipments(t *testing.T, pickID string, params url.Values) ([]string, int) {
+// Reads the pick's related shipments and returns their numbers, oldest first.
+func pickShipmentNumbers(t *testing.T, pickID string) []string {
 	t.Helper()
 
-	status, body, err := apiClient.GetListRaw(picksPath+"/"+pickID+"/shipments", params)
+	status, body, err := apiClient.GetListRaw(picksPath+"/"+pickID, url.Values{"include": {"related.shipments"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
-	got := parseJSON(body)
-	assertObjectField(t, got, "pick_shipments_response")
-
-	count, ok := got["count"].(float64)
-	require.True(t, ok, "the response reports a count: %s", string(body))
-
-	numbers := make([]string, 0, len(jsonArray(got, "shipment_numbers")))
-	for _, raw := range jsonArray(got, "shipment_numbers") {
-		number, ok := raw.(string)
-		require.True(t, ok, "shipment_numbers holds plain strings: %s", string(body))
-		numbers = append(numbers, number)
+	// A pick whose order has shipped nothing collapses `related` to null rather than reporting an
+	// empty list, so an absent relation reads as no shipments rather than a failure.
+	numbers := make([]string, 0)
+	shipments := jsonObject(jsonObject(parseJSON(body), "related"), "shipments")
+	for _, raw := range jsonArray(shipments, "data") {
+		shipment, ok := raw.(map[string]any)
+		require.True(t, ok, "related.shipments.data holds objects: %s", string(body))
+		numbers = append(numbers, jsonField(shipment, "number"))
 	}
-	return numbers, int(count)
+	return numbers
 }
 
 // ──────────────────────────────────────────────
 // Get Pick Shipments
 // ──────────────────────────────────────────────
 
-// Every partial pack adds another shipment to the pick's order, and the listing is the picker's
-// record of what has left the building so far.
-func TestCovOperationsPicks_ShipmentsListsEveryPackOldestFirst(t *testing.T) {
+// Every partial pack adds another shipment to the pick's order, and related.shipments is the
+// picker's record of what has left the building so far.
+func TestCovOperationsPicks_RelatedShipmentsListsEveryPackOldestFirst(t *testing.T) {
 	t.Parallel()
 
 	customerID := leadTimeCustomer(t, "e2e-pick-ships", nil, "")
@@ -94,74 +91,14 @@ func TestCovOperationsPicks_ShipmentsListsEveryPackOldestFirst(t *testing.T) {
 	second := packPartOfPick(t, pickID, "2")
 	require.NotEqual(t, first, second, "two packs produce two distinct shipments")
 
-	numbers, count := pickShipments(t, pickID, nil)
-	assert.Equal(t, []string{first, second}, numbers, "shipments come back oldest first")
-	assert.Equal(t, 2, count)
-}
-
-// The search box on the shipments panel filters by number, so a picker holding one label can find
-// the pack it belongs to without reading the whole list.
-func TestCovOperationsPicks_ShipmentsSearchFiltersByNumber(t *testing.T) {
-	t.Parallel()
-
-	customerID := leadTimeCustomer(t, "e2e-pick-ships-q", nil, "")
-	pickID := pickForQuantity(t, customerID, "4")
-
-	first := packPartOfPick(t, pickID, "2")
-	second := packPartOfPick(t, pickID, "2")
-
-	// The second shipment's number extends the first with a suffix, so searching the bare first
-	// number matches both — the suffix is what tells them apart.
-	numbers, count := pickShipments(t, pickID, url.Values{"q": {second}})
-	assert.Equal(t, []string{second}, numbers, "searching the suffixed number narrows to that pack")
-	assert.Equal(t, 1, count, "the count follows the search rather than reporting every shipment")
-
-	numbers, count = pickShipments(t, pickID, url.Values{"q": {"zzz-no-such-shipment-zzz"}})
-	assert.Empty(t, numbers, "a search matching nothing returns nothing")
-	assert.Equal(t, 0, count)
-	assert.NotEmpty(t, first, "both packs exist; the empty result is the filter, not an empty pick")
-}
-
-// limit and offset page the numbers, but count is the size of the whole match — a pager that read
-// the page length instead would never offer a second page.
-func TestCovOperationsPicks_ShipmentsPageWhileCountStaysWhole(t *testing.T) {
-	t.Parallel()
-
-	customerID := leadTimeCustomer(t, "e2e-pick-ships-page", nil, "")
-	pickID := pickForQuantity(t, customerID, "4")
-
-	first := packPartOfPick(t, pickID, "2")
-	second := packPartOfPick(t, pickID, "2")
-
-	numbers, count := pickShipments(t, pickID, url.Values{"limit": {"1"}})
-	assert.Equal(t, []string{first}, numbers, "the first page holds the oldest shipment")
-	assert.Equal(t, 2, count, "count ignores limit")
-
-	numbers, count = pickShipments(t, pickID, url.Values{"limit": {"1"}, "offset": {"1"}})
-	assert.Equal(t, []string{second}, numbers, "the second page holds the next one")
-	assert.Equal(t, 2, count, "count ignores offset")
-
-	numbers, count = pickShipments(t, pickID, url.Values{"offset": {"99"}})
-	assert.Empty(t, numbers, "an offset past the end returns no numbers")
-	assert.Equal(t, 2, count, "but the pick still has two shipments")
+	assert.Equal(t, []string{first, second}, pickShipmentNumbers(t, pickID), "shipments come back oldest first")
 }
 
 // Reads the pick's shipment numbers off the seeded pick, whose order carries exactly one.
-func TestCovOperationsPicks_ShipmentsOnASeededPick(t *testing.T) {
+func TestCovOperationsPicks_RelatedShipmentsOnASeededPick(t *testing.T) {
 	t.Parallel()
 
-	numbers, count := pickShipments(t, SeedPickID, nil)
-	assert.Equal(t, []string{"SHP-003"}, numbers, "PICK-001's order carries SHP-003")
-	assert.Equal(t, 1, count)
-}
-
-func TestCovOperationsPicks_ShipmentsRejectAnUnknownQueryParam(t *testing.T) {
-	t.Parallel()
-
-	path := picksPath + "/" + SeedPickID + "/shipments"
-	status, body, err := apiClient.GetListRaw(path, url.Values{bogusE2EQueryParam: {"1"}})
-	require.NoError(t, err)
-	assertUnknownQueryParamRejected(t, path, status, body)
+	assert.Equal(t, []string{"SHP-003"}, pickShipmentNumbers(t, SeedPickID), "PICK-001's order carries SHP-003")
 }
 
 // Sets one unpacked line to the given quantity, packs the pick, and returns the shipment's number.
@@ -231,57 +168,6 @@ func TestCovOperationsPicks_ListRejectsAnOutOfRangeLimit(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, 400, status, "limit=%s should 400: %s", limit, string(body))
 	}
-}
-
-// ──────────────────────────────────────────────
-// Update Pick
-// ──────────────────────────────────────────────
-
-func TestCovOperationsPicks_UpdateUnknownPickIs404(t *testing.T) {
-	t.Parallel()
-
-	status, body, err := apiClient.Patch(picksPath+"/pk_doesnotexist00000",
-		map[string]any{"number": "PICK-E2E-404"}, newIdempotencyKey())
-	require.NoError(t, err)
-	require.Less(t, status, 500, "an unknown pick must not 5xx: %s", string(body))
-	assert.Equal(t, 404, status, "updating an unknown pick must 404: %s", string(body))
-}
-
-func TestCovOperationsPicks_UpdateRejectsAnOverlongNumber(t *testing.T) {
-	t.Parallel()
-
-	overlong := make([]byte, 256)
-	for i := range overlong {
-		overlong[i] = 'x'
-	}
-
-	status, body, err := apiClient.Patch(picksPath+"/"+pbPickID,
-		map[string]any{"number": string(overlong)}, newIdempotencyKey())
-	require.NoError(t, err)
-	require.Equal(t, 400, status, "number is capped at 255 characters: %s", string(body))
-	errObj := requireErrorResponse(t, body, "", "invalid_request_error")
-	assert.Equal(t, "number", errObj["param"], "the error names the field it rejected")
-}
-
-func TestCovOperationsPicks_UpdateRejectsAnUnknownField(t *testing.T) {
-	t.Parallel()
-
-	path := picksPath + "/" + pbPickID
-	status, body, err := apiClient.Patch(path, map[string]any{bogusE2EJSONField: "x"}, newIdempotencyKey())
-	require.NoError(t, err)
-	assertJSONUnknownFieldRejected(t, "PATCH", path, status, body)
-}
-
-// Both of the patch's fields are optional, but sending neither is a caller mistake rather than a
-// no-op: the request asked for nothing, and answering 200 would read as "your edit was applied".
-func TestCovOperationsPicks_UpdateWithNoFieldsIsRejected(t *testing.T) {
-	t.Parallel()
-
-	status, body, err := apiClient.Patch(picksPath+"/"+pbPickID, map[string]any{}, newIdempotencyKey())
-	require.NoError(t, err)
-	require.Less(t, status, 500, "an empty patch must not 5xx: %s", string(body))
-	require.Equal(t, 400, status, "an empty patch is rejected: %s", string(body))
-	requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 }
 
 // ──────────────────────────────────────────────

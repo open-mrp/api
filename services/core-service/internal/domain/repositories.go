@@ -1431,10 +1431,6 @@ type PickRepo interface {
 	List(ctx context.Context, params ListPicksParams) (*ListPicksResult, *apierror.APIError)
 	Get(ctx context.Context, accountID, pickID string) (*Pick, *apierror.APIError)
 	GetLines(ctx context.Context, pickID string) ([]*PickLine, *apierror.APIError)
-	GetShipmentNumbers(ctx context.Context, params GetPickShipmentsParams) (*PickShipmentsResult, *apierror.APIError)
-	GetProgress(ctx context.Context, pickIDs []string) (map[string]PickProgress, *apierror.APIError)
-	GetDepartments(ctx context.Context, pickID string) ([]*PickDepartment, *apierror.APIError)
-	UpdateNumber(ctx context.Context, accountID, pickID, number string) *apierror.APIError
 	UpdateFinishedAt(ctx context.Context, accountID, pickID string, finishedAt time.Time) *apierror.APIError
 	HasShippedItems(ctx context.Context, accountID, pickID string) (bool, *apierror.APIError)
 	VoidAllLines(ctx context.Context, pickID string) *apierror.APIError

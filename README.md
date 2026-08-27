@@ -225,7 +225,7 @@ make dev            # Spin up the environment with Tilt
 make sqlc [service]     # Generate database code from SQL queries
 make proto              # Generate Go protobuf bindings
 make mocks [service]    # Generate mock implementations
-make generate           # Regenerate OpenAPI specs, Stainless configs, and agent tools
+make generate           # Regenerate sqlc, proto, OpenAPI specs, Stainless configs, and agent tools
 make test               # Run all tests
 make e2e                # Bring up the E2E stack and run the E2E tests
 make lint               # gosec + staticcheck + tx audit + committed-binary check

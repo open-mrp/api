@@ -114,7 +114,7 @@ func TestCovSalesSalesOrders_CreateAllFields(t *testing.T) {
 	assert.Equal(t, "unpaid", jsonField(created, "payment_status"))
 	assert.Equal(t, "not_sent", jsonField(created, "acknowledgment_status"))
 	assert.EqualValues(t, 3, created["line_count"], "1 input line + synthesized shipping line + synthesized discount line")
-	assert.Equal(t, "2026-09-01T00:00:00Z", jsonField(created, "promised_at"))
+	assert.Equal(t, "2026-09-01T00:00:00Z", jsonField(commitmentOf(created), "promised_at"))
 	assertNilField(t, created, "issued_at")
 	assertNilField(t, created, "completed_at")
 	assertNilField(t, created, "first_ship_at")
@@ -289,7 +289,7 @@ func TestCovSalesSalesOrders_OmittedOptionalFieldsDefaultNull(t *testing.T) {
 
 	assertNilField(t, created, "customer_purchase_order_number")
 	assertNilField(t, created, "note")
-	assertNilField(t, created, "promised_at")
+	assertNilField(t, commitmentOf(created), "promised_at")
 	assertNilField(t, created, "issued_at")
 	assertNilField(t, created, "completed_at")
 	assertNilField(t, created, "first_ship_at")

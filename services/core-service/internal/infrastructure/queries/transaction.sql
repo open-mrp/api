@@ -500,7 +500,8 @@ AND (sqlc.narg('status') IS NULL OR
 AND (sqlc.narg('type') IS NULL OR t.transaction_type_code = sqlc.narg('type'));
 
 -- name: GetDollarUnitIDForTransaction :one
-SELECT id FROM unit WHERE abbreviation = '$' LIMIT 1;
+-- Keyed on the well-known id rather than the abbreviation, which is editable per environment.
+SELECT id FROM unit WHERE id = 'dollar' LIMIT 1;
 
 -- name: UpdateTransactionFundsReceivedByStripePaymentIDs :exec
 UPDATE transaction

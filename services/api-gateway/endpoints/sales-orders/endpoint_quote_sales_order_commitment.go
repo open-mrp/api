@@ -28,7 +28,7 @@ type QuoteSalesOrderCommitmentRequest struct {
 	CarrierID field.Optional[string] `json:"carrier_id,omitzero" validate:"omitempty"`
 	// Service level for the shipment, which the lane's transit estimate is keyed on.
 	ServiceLevelID field.Optional[string] `json:"service_level_id,omitzero" validate:"omitempty"`
-	// When the order would be issued. Defaults to now, since a lead time is measured from issue and an order built today but issued next week commits to next week's date.
+	// When the order would be issued. Defaults to the date sales_order_id was issued on, or to now for an order that has not been issued — a lead time is measured from issue, so an order built today but issued next week commits to next week's date, and re-committing one issued last week still counts from last week.
 	IssuedAt field.Optional[time.Time] `json:"issued_at,omitzero"`
 	// Date delivery would be promised to the customer.
 	PromisedAt field.Optional[time.Time] `json:"promised_at,omitzero"`

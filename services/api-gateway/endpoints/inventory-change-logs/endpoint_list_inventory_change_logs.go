@@ -9,7 +9,9 @@ import (
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/contracts"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/pagination"
 )
 
 // Request to list inventory change logs.
@@ -32,6 +34,16 @@ type ListInventoryChangeLogsRequest struct {
 	StartsAt *time.Time `query:"starts_at"`
 	// Restricts results to change logs created on or before this timestamp.
 	EndsAt *time.Time `query:"ends_at"`
+}
+
+var _ contracts.DocumentedType = (*ListInventoryChangeLogsRequest)(nil)
+
+// SchemaExample documents this endpoint's paging query parameters for OpenAPI. It carries its own cursor and limit rather than embedding PaginationRequest, which would also advertise a `?q=` this endpoint does not search on, so the cursor example has to be documented here too. The cursor keysets on the log's created_at and its type ID, so it is a string cursor rather than the internal-id one PaginationRequest documents.
+func (*ListInventoryChangeLogsRequest) SchemaExample() any {
+	return map[string]any{
+		"cursor": pagination.EncodeDocumentationStringCursor(apiresource.SampleAnalyticsPeriodStart, apiresource.SampleInventoryChangeLogID),
+		"limit":  int64(100),
+	}
 }
 
 // Returns a paginated list of inventory change logs, newest first.

@@ -41,12 +41,7 @@ func (s *salesOrderSvcImpl) QuoteSalesOrderCommitment(ctx context.Context, param
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	issuedAt := time.Now()
-	if params.IssuedAt != nil {
-		issuedAt = *params.IssuedAt
-	}
-
-	commitment, apiErr := s.resolveShipByCommitment(ctx, params.AccountID, order, issuedAt, commitmentOptions{EstimateArrival: true})
+	commitment, apiErr := s.resolveShipByCommitment(ctx, params.AccountID, order, commitmentQuoteIssuedAt(params, order), commitmentOptions{EstimateArrival: true})
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -55,6 +50,19 @@ func (s *salesOrderSvcImpl) QuoteSalesOrderCommitment(ctx context.Context, param
 		return nil, nil
 	}
 	return commitment, nil
+}
+
+// commitmentQuoteIssuedAt is the date the preview works back from: one the caller named, else the subject order's own issue date, else today.
+//
+// An issued order's commitment is stamped from the day it was issued, never from the day somebody re-committed it. Previewing such an order against today answers with a date the save then contradicts, by however long ago it was issued — the divergence this endpoint exists to rule out. An unissued order has no issue date to use, and today is what issuing it now would stamp from.
+func commitmentQuoteIssuedAt(params domain.QuoteCommitmentParams, order *domain.SalesOrder) time.Time {
+	if params.IssuedAt != nil {
+		return *params.IssuedAt
+	}
+	if order.IssuedAt != nil {
+		return *order.IssuedAt
+	}
+	return time.Now()
 }
 
 // commitmentQuoteSubject builds the order the preview is resolved against.

@@ -69,3 +69,16 @@ func sandboxForOwnerAccount(t *testing.T, ownerAccountID string) (id, name strin
 	require.NoError(t, err, "querying sandbox for owner account %s", ownerAccountID)
 	return id, name
 }
+
+// backdateIssuedAt moves an order's issue date back, so a test can exercise the difference
+// between the day an order was issued and the day somebody edits it. There is no API for it:
+// issued_at is stamped by the issue action and never settable, which is exactly why an order
+// that has been open for a while can only be built this way.
+func backdateIssuedAt(t *testing.T, salesOrderID string, days int) {
+	t.Helper()
+	_, err := authDB(t).Exec(
+		"UPDATE sales_order SET issued_at = DATE_SUB(issued_at, INTERVAL ? DAY) WHERE id = ?",
+		days, salesOrderID,
+	)
+	require.NoError(t, err, "backdating issued_at for order %s", salesOrderID)
+}

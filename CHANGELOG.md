@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.4](https://github.com/open-mrp/api/compare/v2.0.3...v2.0.4) (2026-08-28)
+
+
+### Bug Fixes
+
+* **queries:** optimize query performance by refining filter logic and removing unnecessary conditions ([#82](https://github.com/open-mrp/api/issues/82)) ([2af84c6](https://github.com/open-mrp/api/commit/2af84c6ad71108b1ac5f9a684d430bc00163edef))
+
 ## [2.0.3](https://github.com/open-mrp/api/compare/v2.0.2...v2.0.3) (2026-08-28)
 
 

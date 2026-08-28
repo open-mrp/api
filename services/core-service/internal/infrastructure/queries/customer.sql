@@ -1,5 +1,8 @@
 -- name: ListCustomersForward :many
-SELECT
+-- STRAIGHT_JOIN forces `ar` as the driving table. Without it the optimizer drives from one of the
+-- seventeen hydration joins and runs every one of the owner's customer relations through all of
+-- them before sorting — measured at 19,311 rows read to return 10.
+SELECT STRAIGHT_JOIN
     ar.id AS relation_id,
     ar.counterparty_account_id AS account_id,
     COALESCE(NULLIF(ar.alias, ''), a.name) AS account_name,
@@ -99,7 +102,18 @@ SELECT
     clu.unit_dimension_code AS credit_limit_unit_type,
     ar.created_at,
     ar.updated_at
-FROM account_relation ar
+-- FORCE INDEX restricts the optimizer to the four indexes that satisfy the ORDER BY
+-- (created_at, counterparty_account_id) without a filesort: the plain owner_role index when no
+-- filter narrows the set, and the group/rep/status variants when one does. Left to itself the
+-- optimizer picks account_relation_owner_account_id_counterparty_account_id_ac_key on every
+-- production execution — it satisfies the owner equality but not the ordering, so the whole set
+-- goes through the joins and is then filesorted. Do not remove.
+FROM account_relation ar FORCE INDEX (
+    account_relation_owner_role_created_idx,
+    account_relation_owner_role_group_created_idx,
+    account_relation_owner_role_rep_created_idx,
+    account_relation_owner_role_status_created_idx
+)
 INNER JOIN account a ON a.id = ar.counterparty_account_id
 LEFT JOIN account_branding ab ON ab.owner_account_id = ar.counterparty_account_id
 LEFT JOIN account_relation par ON par.id = ar.parent_account_relation_id
@@ -206,7 +220,10 @@ ORDER BY ar.created_at DESC, ar.counterparty_account_id DESC
 LIMIT ?;
 
 -- name: ListCustomersBackward :many
-SELECT
+-- STRAIGHT_JOIN forces `ar` as the driving table. Without it the optimizer drives from one of the
+-- seventeen hydration joins and runs every one of the owner's customer relations through all of
+-- them before sorting — measured at 19,311 rows read to return 10.
+SELECT STRAIGHT_JOIN
     ar.id AS relation_id,
     ar.counterparty_account_id AS account_id,
     COALESCE(NULLIF(ar.alias, ''), a.name) AS account_name,
@@ -306,7 +323,18 @@ SELECT
     clu.unit_dimension_code AS credit_limit_unit_type,
     ar.created_at,
     ar.updated_at
-FROM account_relation ar
+-- FORCE INDEX restricts the optimizer to the four indexes that satisfy the ORDER BY
+-- (created_at, counterparty_account_id) without a filesort: the plain owner_role index when no
+-- filter narrows the set, and the group/rep/status variants when one does. Left to itself the
+-- optimizer picks account_relation_owner_account_id_counterparty_account_id_ac_key on every
+-- production execution — it satisfies the owner equality but not the ordering, so the whole set
+-- goes through the joins and is then filesorted. Do not remove.
+FROM account_relation ar FORCE INDEX (
+    account_relation_owner_role_created_idx,
+    account_relation_owner_role_group_created_idx,
+    account_relation_owner_role_rep_created_idx,
+    account_relation_owner_role_status_created_idx
+)
 INNER JOIN account a ON a.id = ar.counterparty_account_id
 LEFT JOIN account_branding ab ON ab.owner_account_id = ar.counterparty_account_id
 LEFT JOIN account_relation par ON par.id = ar.parent_account_relation_id

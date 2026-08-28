@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.0.5](https://github.com/open-mrp/api/compare/v2.0.4...v2.0.5) (2026-08-28)
+
+
+### Bug Fixes
+
+* **deploy:** enhance deployment state handling in release script ([4d46e1f](https://github.com/open-mrp/api/commit/4d46e1f5296077235b8a347476e04ab0fce79c53))
+* **queries:** enhance query efficiency by adjusting filter application and removing redundant conditions ([#84](https://github.com/open-mrp/api/issues/84)) ([1fe5dc7](https://github.com/open-mrp/api/commit/1fe5dc74f4ac829569edee777fbceaf580ea0ed8))
+
 ## [2.0.4](https://github.com/open-mrp/api/compare/v2.0.3...v2.0.4) (2026-08-28)
 
 

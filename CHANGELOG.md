@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.6](https://github.com/open-mrp/api/compare/v2.0.5...v2.0.6) (2026-08-28)
+
+
+### Bug Fixes
+
+* **shared:** add better test coverage and fix a few discovered bugs in shared package ([#86](https://github.com/open-mrp/api/issues/86)) ([9a99f59](https://github.com/open-mrp/api/commit/9a99f59b1eadd1cca5458092cafd10d37a016d24))
+
 ## [2.0.5](https://github.com/open-mrp/api/compare/v2.0.4...v2.0.5) (2026-08-28)
 
 

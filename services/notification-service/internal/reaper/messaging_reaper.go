@@ -85,7 +85,7 @@ func (c *MessagingReaperConfig) WithDefaults() *MessagingReaperConfig {
 		MessageRetentionHours:      cmp.Or(c.MessageRetentionHours, 24*30),      // 30 days
 		ReapInterval:               reapInterval,
 		BatchSize:                  int32(cmp.Or(int(c.BatchSize), 1000)), // #nosec G115 - small config value
-		LeaseTTL:                   cmp.Or(c.LeaseTTL, 5*time.Minute),
+		LeaseTTL:                   lease.TTLOr(c.LeaseTTL, 5*time.Minute),
 	}
 }
 

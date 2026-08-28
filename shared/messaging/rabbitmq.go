@@ -382,15 +382,35 @@ func (r *rabbitMQ) PublishMessage(ctx context.Context, exchange, routingKey stri
 	return tracing.TracedPublisher(ctx, exchange, routingKey, msg, r.publishWithReconnect)
 }
 
-// publish sends a single AMQP publishing to the given exchange and routing key. This is the low-level publish that assumes the channel is already open. It is called through publishFunc, which is indirected for testability.
+// publish sends a single AMQP publishing to the given exchange and routing key and blocks until the broker confirms it. This is the low-level publish that assumes the channel is already open. It is called through publishFunc, which is indirected for testability.
+//
+// The wait is what makes the transactional outbox honest: the caller may only mark a message published once the broker has taken responsibility for it. An unconfirmed publish is reported as an error so the outbox marks the row failed and a later pass republishes it — consumers deduplicate via the inbox, so the retry costs nothing.
 func (r *rabbitMQ) publish(ctx context.Context, exchange, routingKey string, msg amqp.Publishing) error {
-	return r.Channel.PublishWithContext(ctx,
+	confirmation, err := r.Channel.PublishWithDeferredConfirmWithContext(ctx,
 		exchange,   // exchange
 		routingKey, // routing key
 		false,      // mandatory
 		false,      // immediate
 		msg,
 	)
+	if err != nil {
+		return err
+	}
+	if confirmation == nil {
+		// Only happens on a channel that never had Confirm() applied. connect always applies it, so reaching here means the channel came from somewhere else and the delivery guarantee does not hold.
+		return fmt.Errorf("publish to exchange %q: channel is not in confirm mode", exchange)
+	}
+
+	// A channel or connection that dies while we wait resolves every outstanding confirmation as un-acked rather than blocking, so this cannot outlive the broker.
+	acked, err := confirmation.WaitContext(ctx)
+	if err != nil {
+		return fmt.Errorf("awaiting publisher confirm for exchange %q: %w", exchange, err)
+	}
+	if !acked {
+		return fmt.Errorf("broker did not confirm publish to exchange %q with routing key %q", exchange, routingKey)
+	}
+
+	return nil
 }
 
 // publishWithReconnect is a resilient publish wrapper. It first ensures the channel is open (reconnecting if needed), then attempts the publish. If the publish fails with a recoverable error (closed connection, channel error, or connection forced), it reconnects once and retries. Non-recoverable errors are returned immediately.
@@ -509,6 +529,13 @@ func (r *rabbitMQ) connect(ctx context.Context) (*amqp.Connection, *amqp.Channel
 	if err != nil {
 		_ = conn.Close()
 		return nil, nil, fmt.Errorf("failed to create channel: %v", err)
+	}
+
+	// Publisher confirms. Without them PublishWithContext reports success as soon as the frame reaches the socket buffer, so the outbox would mark a row published that the broker never accepted and no retry would ever revisit it.
+	if err := ch.Confirm(false); err != nil {
+		_ = ch.Close()
+		_ = conn.Close()
+		return nil, nil, fmt.Errorf("failed to enable publisher confirms: %v", err)
 	}
 
 	return conn, ch, nil

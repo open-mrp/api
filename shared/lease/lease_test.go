@@ -24,6 +24,7 @@ type memRepo struct {
 	}
 	failAcquire error
 	failRenew   error
+	failRelease error
 }
 
 type memRow struct {
@@ -72,6 +73,9 @@ func (r *memRepo) Renew(_ context.Context, name, holder string, ttl time.Duratio
 
 func (r *memRepo) Release(_ context.Context, name, holder string) error {
 	r.calls.release.Add(1)
+	if r.failRelease != nil {
+		return r.failRelease
+	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if row, ok := r.rows[name]; ok && row.holder == holder {
@@ -215,4 +219,123 @@ func TestNew_DerivesHolderFromHostnameAndPid(t *testing.T) {
 	l := New(newMemRepo())
 	require.NotEmpty(t, l.Holder())
 	require.Contains(t, l.Holder(), "-", "holder should look like hostname-pid")
+}
+
+// secondGranularityRepo mirrors the production repos, which persist the TTL as int64(ttl/time.Second) into a whole-second SQL column.
+type secondGranularityRepo struct {
+	*memRepo
+}
+
+func (r *secondGranularityRepo) Acquire(ctx context.Context, name, holder string, ttl time.Duration) (bool, error) {
+	return r.memRepo.Acquire(ctx, name, holder, ttl.Truncate(time.Second))
+}
+
+func (r *secondGranularityRepo) Renew(ctx context.Context, name, holder string, ttl time.Duration) (bool, error) {
+	return r.memRepo.Renew(ctx, name, holder, ttl.Truncate(time.Second))
+}
+
+func TestAcquire_SecondGranularityExcludesSecondHolder(t *testing.T) {
+	t.Parallel()
+	repo := &secondGranularityRepo{memRepo: newMemRepo()}
+
+	ok, err := repo.Acquire(context.Background(), "test", "pod-a", 2*time.Second)
+	require.NoError(t, err)
+	require.True(t, ok)
+
+	ok, err = repo.Acquire(context.Background(), "test", "pod-b", 2*time.Second)
+	require.NoError(t, err)
+	require.False(t, ok, "a live lease must exclude every other holder")
+}
+
+func TestWithLease_TransientRenewErrorCancelsWorkAndLeavesRow(t *testing.T) {
+	t.Parallel()
+	repo := newMemRepo()
+	repo.failRenew = errors.New("db blip")
+	repo.failRelease = errors.New("db blip")
+	l := NewWithHolder(repo, "pod-a")
+
+	// A renew *error* is treated exactly like a lost lease: the work context is cancelled even though the row is still ours and nowhere near expiry.
+	err := l.WithLease(context.Background(), "test", 30*time.Millisecond, func(ctx context.Context) error {
+		<-ctx.Done()
+		return ctx.Err()
+	})
+
+	require.ErrorIs(t, err, context.Canceled)
+	require.GreaterOrEqual(t, repo.calls.renew.Load(), int32(1))
+	require.Equal(t, int32(1), repo.calls.release.Load())
+	// Release failed too, so the claim outlives the work: no pod runs the task until the TTL lapses.
+	require.Equal(t, "pod-a", repo.rows["test"].holder, "a failed release leaves the lease row orphaned")
+}
+
+func TestWithLease_ReleaseErrorDoesNotMaskFnError(t *testing.T) {
+	t.Parallel()
+	repo := newMemRepo()
+	repo.failRelease = errors.New("db blip")
+	l := NewWithHolder(repo, "pod-a")
+
+	wantErr := errors.New("boom")
+	err := l.WithLease(context.Background(), "test", time.Second, func(ctx context.Context) error {
+		return wantErr
+	})
+	require.ErrorIs(t, err, wantErr, "release failures are logged, not returned")
+}
+
+// A non-positive TTL used to reach time.NewTicker inside the renewal goroutine, panicking the whole process where no caller could recover. It must be rejected before the lease is ever acquired.
+func TestWithLease_RejectsNonPositiveTTL(t *testing.T) {
+	t.Parallel()
+	for _, ttl := range []time.Duration{0, -time.Second, -time.Millisecond} {
+		t.Run(ttl.String(), func(t *testing.T) {
+			t.Parallel()
+			repo := newMemRepo()
+			l := NewWithHolder(repo, "pod-a")
+
+			ran := false
+			err := l.WithLease(t.Context(), "test", ttl, func(context.Context) error {
+				ran = true
+				return nil
+			})
+
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "ttl must be positive")
+			require.False(t, ran, "fn must not run without a usable lease")
+			require.Zero(t, repo.calls.acquire.Load(), "must reject before touching the repo")
+			require.Zero(t, repo.calls.release.Load())
+		})
+	}
+}
+
+// The smallest positive TTL still divides to a zero renew interval, which must fall back to the TTL rather than reaching NewTicker with zero.
+func TestWithLease_TinyPositiveTTLDoesNotPanic(t *testing.T) {
+	t.Parallel()
+	repo := newMemRepo()
+	l := NewWithHolder(repo, "pod-a")
+
+	ran := false
+	err := l.WithLease(t.Context(), "test", 1, func(context.Context) error {
+		ran = true
+		return nil
+	})
+
+	require.NoError(t, err)
+	require.True(t, ran)
+}
+
+func TestTTLOr(t *testing.T) {
+	t.Parallel()
+	fallback := 5 * time.Minute
+	tests := []struct {
+		name string
+		ttl  time.Duration
+		want time.Duration
+	}{
+		{name: "positive is kept", ttl: 90 * time.Second, want: 90 * time.Second},
+		{name: "zero takes the fallback", ttl: 0, want: fallback},
+		{name: "negative takes the fallback", ttl: -time.Second, want: fallback},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tt.want, TTLOr(tt.ttl, fallback))
+		})
+	}
 }

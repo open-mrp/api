@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"unicode/utf16"
+	"unicode/utf8"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/appctx"
@@ -56,7 +58,48 @@ func SetIdentityInMetadata(md metadata.MD, identity *types.Identity) {
 	if err != nil {
 		return
 	}
-	md.Set(IdentityHeader, string(jsonData))
+	md.Set(IdentityHeader, asciiEscapeJSON(jsonData))
+}
+
+// asciiEscapeJSON rewrites every non-ASCII rune in JSON text as a \uXXXX escape.
+//
+// gRPC accepts only printable ASCII in a metadata value whose key does not end in "-bin", and fails the whole RPC with codes.Internal otherwise. Identity carries user-supplied names (user, role, API key), so a single accent, CJK character or emoji anywhere in an account would otherwise break every RPC that account makes. Escaping keeps the value valid JSON that decodes to the same string, so a peer running either version of this code reads it identically and no coordinated deploy is needed.
+func asciiEscapeJSON(b []byte) string {
+	needsEscape := false
+	for _, c := range b {
+		if c >= utf8.RuneSelf || c == 0x7f {
+			needsEscape = true
+			break
+		}
+	}
+	if !needsEscape {
+		return string(b)
+	}
+
+	var sb strings.Builder
+	sb.Grow(len(b) + len(b)/4)
+	for i := 0; i < len(b); {
+		if c := b[i]; c < utf8.RuneSelf && c != 0x7f {
+			sb.WriteByte(c)
+			i++
+			continue
+		}
+		r, size := utf8.DecodeRune(b[i:])
+		if r == utf8.RuneError && size <= 1 {
+			// Not valid UTF-8. json.Marshal does not emit this, but escaping the raw byte keeps the header transmittable rather than silently dropping the identity.
+			fmt.Fprintf(&sb, `\u%04x`, b[i])
+			i++
+			continue
+		}
+		if r > 0xFFFF {
+			hi, lo := utf16.EncodeRune(r)
+			fmt.Fprintf(&sb, `\u%04x\u%04x`, hi, lo)
+		} else {
+			fmt.Fprintf(&sb, `\u%04x`, r)
+		}
+		i += size
+	}
+	return sb.String()
 }
 
 // IdentityUnaryServerInterceptor returns a server interceptor that extracts the caller's identity from incoming gRPC metadata and stores it in the context. If the header is absent or invalid the request proceeds without an identity.

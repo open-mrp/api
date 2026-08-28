@@ -435,3 +435,82 @@ func TestWithBackoff_ValidationError(t *testing.T) {
 		t.Fatal("expected validation error")
 	}
 }
+
+func TestCalculateDelay_NonNilConfigIsNotDefaulted(t *testing.T) {
+	t.Parallel()
+	// Only a nil Config is promoted by WithDefaults; a struct literal reaches the formula exactly as the caller wrote it.
+	tests := []struct {
+		name    string
+		cfg     *Config
+		attempt int
+		want    time.Duration
+	}{
+		{"zero value, first attempt", &Config{}, 0, 0},
+		{"zero value, later attempt", &Config{}, 5, 0},
+		{"partial config keeps zero jitter", &Config{InitialWait: 100 * time.Millisecond, MaxWait: 10 * time.Second, Multiplier: 2.0}, 2, 400 * time.Millisecond},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := CalculateDelay(tt.cfg, tt.attempt)
+			if got != tt.want {
+				t.Errorf("CalculateDelay(%+v, %d) = %v, want %v", tt.cfg, tt.attempt, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCalculateDelay_JitterExceedsMaxWait(t *testing.T) {
+	t.Parallel()
+	cfg := &Config{
+		InitialWait:    1 * time.Second,
+		MaxWait:        2 * time.Second,
+		Multiplier:     2.0,
+		JitterFraction: 0.5,
+	}
+
+	upper := time.Duration(float64(cfg.MaxWait) * (1 + cfg.JitterFraction))
+	sawAboveMaxWait := false
+	for range 200 {
+		got := CalculateDelay(cfg, 10)
+		if got < cfg.InitialWait || got > upper {
+			t.Fatalf("CalculateDelay(attempt=10) = %v, want in [%v, %v]", got, cfg.InitialWait, upper)
+		}
+		if got > cfg.MaxWait {
+			sawAboveMaxWait = true
+		}
+	}
+
+	// MaxWait caps the exponential, not the jittered result — callers sizing a shutdown budget off MaxWait need the jitter headroom too.
+	if !sawAboveMaxWait {
+		t.Errorf("no delay exceeded MaxWait %v; jitter is expected to overshoot it", cfg.MaxWait)
+	}
+}
+
+func TestWithBackoff_PreCancelledContext(t *testing.T) {
+	t.Parallel()
+	cfg := &Config{
+		MaxRetries:     3,
+		InitialWait:    1 * time.Second,
+		MaxWait:        10 * time.Second,
+		Multiplier:     2.0,
+		JitterFraction: 0,
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	calls := 0
+	err := WithBackoff(ctx, cfg, func() error {
+		calls++
+		return errors.New("fail")
+	})
+
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("err = %v, want context.Canceled", err)
+	}
+	// Cancellation is only checked before a sleep, so the first attempt runs on a context that is already dead.
+	if calls != 1 {
+		t.Errorf("calls = %d, want 1", calls)
+	}
+}

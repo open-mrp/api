@@ -2,6 +2,7 @@ package audit
 
 import (
 	"encoding/json"
+	"math"
 	"testing"
 )
 
@@ -94,5 +95,68 @@ func TestComputeChanges_jsonFragments(t *testing.T) {
 	}
 	if err := json.Unmarshal(ch[0].NewValue, &s); err != nil || s != "b" {
 		t.Fatalf("new value: %v err=%v", ch[0].NewValue, err)
+	}
+}
+
+type embeddedIdentifier struct {
+	ID string `audit:"id"`
+}
+
+type withEmbedded struct {
+	embeddedIdentifier
+	Name string `audit:"name"`
+}
+
+// A promoted field is addressable by name, so an explicit field list reaches
+// audit-tagged fields the embedding struct did not declare itself.
+func TestComputeChanges_explicitPromotedField(t *testing.T) {
+	t.Parallel()
+	old := withEmbedded{embeddedIdentifier{ID: "a1"}, "x"}
+	newer := withEmbedded{embeddedIdentifier{ID: "a2"}, "x"}
+
+	ch := ComputeChanges(old, newer, "ID")
+	if len(ch) != 1 {
+		t.Fatalf("want 1 change, got %d: %+v", len(ch), ch)
+	}
+	if ch[0].Field != "id" {
+		t.Fatalf("Field: got %q want id", ch[0].Field)
+	}
+	if string(ch[0].OldValue) != `"a1"` || string(ch[0].NewValue) != `"a2"` {
+		t.Fatalf("values: old=%s new=%s", ch[0].OldValue, ch[0].NewValue)
+	}
+}
+
+type numeric struct {
+	Amount float64 `audit:"amount"`
+}
+
+// A value JSON cannot represent must not abort the mutation it describes: the
+// change is still recorded, with a null in place of the value.
+func TestComputeChanges_unmarshalableValueBecomesNull(t *testing.T) {
+	t.Parallel()
+	old := numeric{Amount: 1}
+	newer := numeric{Amount: math.NaN()}
+
+	ch := ComputeChanges(old, newer)
+	if len(ch) != 1 {
+		t.Fatalf("want 1 change, got %d", len(ch))
+	}
+	if string(ch[0].OldValue) != "1" {
+		t.Fatalf("old: got %s want 1", ch[0].OldValue)
+	}
+	if string(ch[0].NewValue) != "null" {
+		t.Fatalf("new: got %s want null", ch[0].NewValue)
+	}
+}
+
+func TestNewFieldChange_unmarshalableValueBecomesNull(t *testing.T) {
+	t.Parallel()
+
+	ch := NewFieldChange("amount", math.Inf(1), 2.5)
+	if string(ch.OldValue) != "null" {
+		t.Fatalf("old: got %s want null", ch.OldValue)
+	}
+	if string(ch.NewValue) != "2.5" {
+		t.Fatalf("new: got %s want 2.5", ch.NewValue)
 	}
 }

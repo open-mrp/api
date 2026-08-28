@@ -109,7 +109,7 @@ func (c *FailureMonitorConfig) WithDefaults() *FailureMonitorConfig {
 		ScanInterval:      scanInterval,
 		CrashStuckMinutes: cmp.Or(c.CrashStuckMinutes, 30),
 		BatchSize:         int32(cmp.Or(int(c.BatchSize), 100)), // #nosec G115 - small config value
-		LeaseTTL:          cmp.Or(c.LeaseTTL, 5*time.Minute),
+		LeaseTTL:          lease.TTLOr(c.LeaseTTL, 5*time.Minute),
 	}
 }
 

@@ -175,6 +175,17 @@ func TestBuild_RejectsSpecsExcelCannotRepresent(t *testing.T) {
 			spec:    Spec{Sheets: []Sheet{{Name: "NoKey", Columns: []ColumnSpec{{Header: "A"}}}}},
 			wantErr: "has no key",
 		},
+		{
+			// "Sheet1" is the name excelize gives the default sheet, which Build
+			// deletes once the spec's own sheets exist. A spec that claims the
+			// name loses the sheet, so it must not build.
+			name: "sheet named Sheet1",
+			spec: Spec{Sheets: []Sheet{
+				{Name: "Sheet1", Columns: []ColumnSpec{{Header: "A", Key: "a"}}},
+				{Name: "Other", Columns: []ColumnSpec{{Header: "A", Key: "a"}}},
+			}},
+			wantErr: "Sheet1",
+		},
 	}
 
 	for _, tc := range tests {
@@ -206,4 +217,27 @@ func TestStr(t *testing.T) {
 	value := "present"
 	assert.Equal(t, "present", Str(&value))
 	assert.Equal(t, "", Str(nil))
+}
+
+// a key a row omits and a key a row sets to nil are the same absent value, and
+// Excel spells both of them as an empty cell
+func TestBuild_NilCellIsBlank(t *testing.T) {
+	t.Parallel()
+
+	sheet := Sheet{
+		Name:    "Nils",
+		Columns: []ColumnSpec{{Header: "A", Key: "a"}, {Header: "B", Key: "b"}},
+		Rows:    []Row{{"a": nil, "b": "set"}},
+	}
+
+	data, err := Build(Spec{Sheets: []Sheet{sheet}})
+	require.NoError(t, err)
+
+	f := reopen(t, data)
+	got, err := f.GetCellValue("Nils", "A2")
+	require.NoError(t, err)
+	assert.Equal(t, "", got)
+	got, err = f.GetCellValue("Nils", "B2")
+	require.NoError(t, err)
+	assert.Equal(t, "set", got)
 }

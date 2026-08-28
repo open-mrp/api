@@ -27,6 +27,7 @@ func TestWithConnRetry(t *testing.T) {
 	lostConn := &mysql.MySQLError{Number: 2013, Message: "Lost connection to MySQL server during query"}
 
 	t.Run("succeeds without retry", func(t *testing.T) {
+		t.Parallel()
 		calls := 0
 		err := WithConnRetry(context.Background(), fastConnRetryConfig(), "test.op", func() error {
 			calls++
@@ -37,6 +38,7 @@ func TestWithConnRetry(t *testing.T) {
 	})
 
 	t.Run("retries transient connection error until success", func(t *testing.T) {
+		t.Parallel()
 		calls := 0
 		err := WithConnRetry(context.Background(), fastConnRetryConfig(), "test.op", func() error {
 			calls++
@@ -50,6 +52,7 @@ func TestWithConnRetry(t *testing.T) {
 	})
 
 	t.Run("returns last error when retries are exhausted", func(t *testing.T) {
+		t.Parallel()
 		calls := 0
 		err := WithConnRetry(context.Background(), fastConnRetryConfig(), "test.op", func() error {
 			calls++
@@ -60,6 +63,7 @@ func TestWithConnRetry(t *testing.T) {
 	})
 
 	t.Run("does not retry non-connection errors", func(t *testing.T) {
+		t.Parallel()
 		calls := 0
 		dup := &mysql.MySQLError{Number: 1062, Message: "Duplicate entry"}
 		err := WithConnRetry(context.Background(), fastConnRetryConfig(), "test.op", func() error {
@@ -71,6 +75,7 @@ func TestWithConnRetry(t *testing.T) {
 	})
 
 	t.Run("stops when context is canceled between attempts", func(t *testing.T) {
+		t.Parallel()
 		ctx, cancel := context.WithCancel(context.Background())
 		calls := 0
 		err := WithConnRetry(ctx, fastConnRetryConfig(), "test.op", func() error {
@@ -83,6 +88,7 @@ func TestWithConnRetry(t *testing.T) {
 	})
 
 	t.Run("nil config uses default", func(t *testing.T) {
+		t.Parallel()
 		calls := 0
 		err := WithConnRetry(context.Background(), nil, "test.op", func() error {
 			calls++
@@ -93,5 +99,16 @@ func TestWithConnRetry(t *testing.T) {
 		})
 		assert.NoError(t, err)
 		assert.Equal(t, 2, calls)
+	})
+
+	t.Run("partially filled config honors MaxRetries", func(t *testing.T) {
+		t.Parallel()
+		calls := 0
+		err := WithConnRetry(context.Background(), &retry.Config{MaxRetries: 1, InitialWait: time.Millisecond}, "test.op", func() error {
+			calls++
+			return lostConn
+		})
+		assert.ErrorIs(t, err, lostConn)
+		assert.Equal(t, 2, calls) // 1 initial + 1 retry
 	})
 }

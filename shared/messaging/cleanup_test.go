@@ -208,3 +208,145 @@ func TestCleanupConfigWithDefaults(t *testing.T) {
 	require.Equal(t, 1000, config.BatchSize)
 	require.Equal(t, 100, config.MaxBatchesPerRun)
 }
+
+func TestCleanupConfigValidate(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		config  CleanupConfig
+		wantErr string
+	}{
+		{name: "valid", config: CleanupConfig{Interval: time.Hour, BatchSize: 100, MaxBatchesPerRun: 10, ScheduleLocation: time.UTC}},
+		{name: "non-positive interval", config: CleanupConfig{Interval: -time.Hour, BatchSize: 100, MaxBatchesPerRun: 10, ScheduleLocation: time.UTC}, wantErr: "interval must be positive"},
+		{name: "non-positive batch size", config: CleanupConfig{Interval: time.Hour, BatchSize: -1, MaxBatchesPerRun: 10, ScheduleLocation: time.UTC}, wantErr: "batch size must be positive"},
+		{name: "non-positive max batches per run", config: CleanupConfig{Interval: time.Hour, BatchSize: 100, MaxBatchesPerRun: -1, ScheduleLocation: time.UTC}, wantErr: "max batches per run must be positive"},
+		{name: "nil schedule location", config: CleanupConfig{Interval: time.Hour, BatchSize: 100, MaxBatchesPerRun: 10}, wantErr: "schedule location must not be nil"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := tt.config.validate()
+			if tt.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.ErrorContains(t, err, tt.wantErr)
+		})
+	}
+}
+
+func TestNewCleanupWorkerRejectsInvalidConfig(t *testing.T) {
+	t.Parallel()
+
+	// Defaults only fill zero values, so a negative interval survives into validate.
+	worker, err := NewCleanupWorker(&CleanupConfig{Interval: -time.Hour}, &mockCleanupRepo{}, testLease())
+	require.ErrorContains(t, err, "interval must be positive")
+	require.Nil(t, worker)
+}
+
+func TestNewCleanupWorkerRequiresLease(t *testing.T) {
+	t.Parallel()
+
+	worker, err := NewCleanupWorker(&CleanupConfig{}, &mockCleanupRepo{}, nil)
+	require.ErrorContains(t, err, "lease is required")
+	require.Nil(t, worker)
+}
+
+func TestCleanupConfigWithDefaultsLoadsScheduleTimezone(t *testing.T) {
+	t.Parallel()
+
+	config := new(CleanupConfig).WithDefaults()
+	require.Equal(t, defaultCleanupScheduleTZ, config.ScheduleLocation.String())
+	require.Equal(t, defaultCleanupLeaseName, config.LeaseName)
+	require.Equal(t, defaultCleanupLeaseTTL, config.LeaseTTL)
+
+	explicit := (&CleanupConfig{ScheduleLocation: time.UTC}).WithDefaults()
+	require.Equal(t, time.UTC, explicit.ScheduleLocation)
+}
+
+func TestNextMidnight(t *testing.T) {
+	t.Parallel()
+
+	newYork, err := time.LoadLocation("America/New_York")
+	require.NoError(t, err)
+
+	for _, loc := range []*time.Location{time.UTC, newYork, time.FixedZone("half-hour", 30*60)} {
+		t.Run(loc.String(), func(t *testing.T) {
+			t.Parallel()
+
+			now := time.Now().In(loc)
+			next := nextMidnight(loc)
+
+			require.True(t, next.After(now), "next midnight must always be in the future")
+			require.Equal(t, 0, next.Hour())
+			require.Equal(t, 0, next.Minute())
+			require.Equal(t, 0, next.Second())
+			require.Equal(t, 0, next.Nanosecond())
+			require.Equal(t, loc, next.Location())
+			require.LessOrEqual(t, next.Sub(now), 24*time.Hour, "next midnight is at most a day away")
+		})
+	}
+}
+
+func TestCleanupLoopWaitsForMidnightThenRepeatsEveryInterval(t *testing.T) {
+	t.Parallel()
+
+	runs := make(chan struct{}, 8)
+	repo := &mockCleanupRepo{
+		apiDeleteFunc: func(context.Context, int) (int64, error) {
+			select {
+			case runs <- struct{}{}:
+			default:
+			}
+			return 0, nil
+		},
+	}
+
+	loc := zoneWhereMidnightIsNear(2 * time.Second)
+	untilMidnight := time.Until(nextMidnight(loc))
+	require.Greater(t, untilMidnight, 500*time.Millisecond, "the fixture must leave a measurable wait before midnight")
+
+	worker, err := NewCleanupWorker(&CleanupConfig{
+		Interval:         100 * time.Millisecond,
+		BatchSize:        100,
+		MaxBatchesPerRun: 1,
+		ScheduleLocation: loc,
+	}, repo, testLease())
+	require.NoError(t, err)
+
+	start := time.Now()
+	require.NoError(t, worker.Start(context.Background()))
+	defer worker.Stop()
+
+	select {
+	case <-runs:
+	case <-time.After(30 * time.Second):
+		t.Fatal("cleanup never ran at the scheduled midnight")
+	}
+	require.GreaterOrEqual(t, time.Since(start), untilMidnight-50*time.Millisecond, "the first run must wait for midnight, not fire immediately")
+
+	select {
+	case <-runs:
+	case <-time.After(30 * time.Second):
+		t.Fatal("cleanup did not repeat on the configured interval")
+	}
+}
+
+// zoneWhereMidnightIsNear builds a whole-second fixed-offset location whose local clock sits just under `d` before midnight, so a scheduling test can exercise the real midnight-then-interval path without waiting for a real day boundary.
+func zoneWhereMidnightIsNear(d time.Duration) *time.Location {
+	now := time.Now().UTC()
+	sinceUTCMidnight := now.Hour()*3600 + now.Minute()*60 + now.Second()
+
+	offset := 86400 - int(d.Seconds()) - sinceUTCMidnight
+	for offset <= -43200 {
+		offset += 86400
+	}
+	for offset > 43200 {
+		offset -= 86400
+	}
+
+	return time.FixedZone("test-midnight", offset)
+}

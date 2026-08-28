@@ -128,3 +128,106 @@ func TestClearableValue_unmarshalJSON(t *testing.T) {
 		t.Fatalf("expected hello, got %q ok=%v", v, ok)
 	}
 }
+
+func TestClearable_BackfillUnsetPtr(t *testing.T) {
+	t.Parallel()
+
+	existing := "existing"
+	tests := []struct {
+		name      string
+		in        Clearable[string]
+		existing  *string
+		wantState string
+		wantValue string
+	}{
+		{"unset with existing takes the existing value", Unset[string](), &existing, "set", "existing"},
+		// A nil existing means the column is already NULL, so the field stays unset and the
+		// sql helpers write NULL — the same value the row already holds.
+		{"unset with nil existing stays unset", Unset[string](), nil, "unset", ""},
+		{"clear is not backfilled", Clear[string](), &existing, "clear", ""},
+		{"set keeps the requested value", Set("new"), &existing, "set", "new"},
+		{"set blank keeps the blank", Set(""), &existing, "set", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := tt.in.BackfillUnsetPtr(tt.existing)
+			if state := stateName(got); state != tt.wantState {
+				t.Fatalf("state: got %s, want %s", state, tt.wantState)
+			}
+			if v, _ := got.Value(); v != tt.wantValue {
+				t.Fatalf("value: got %q, want %q", v, tt.wantValue)
+			}
+		})
+	}
+}
+
+// TestClearable_BackfillUnsetPtr_nilExistingWritesNull ties the unset+nil case to what the
+// repository layer does with it: NULL, which is why callers must backfill before the sql helpers.
+func TestClearable_BackfillUnsetPtr_nilExistingWritesNull(t *testing.T) {
+	t.Parallel()
+
+	got := StringToNullString(Unset[string]().BackfillUnsetPtr(nil))
+	if got.Valid {
+		t.Fatalf("want NULL, got %+v", got)
+	}
+}
+
+func TestClearable_StringPtrAfterBackfill(t *testing.T) {
+	t.Parallel()
+
+	existing := "existing"
+	tests := []struct {
+		name     string
+		in       Clearable[string]
+		existing *string
+		want     *string
+	}{
+		{"unset takes the existing value", Unset[string](), &existing, &existing},
+		{"unset with nil existing stays nil", Unset[string](), nil, nil},
+		{"clear beats the existing value", Clear[string](), &existing, nil},
+		{"set wins", Set("new"), &existing, ptrTo("new")},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := tt.in.StringPtrAfterBackfill(tt.existing)
+			switch {
+			case tt.want == nil && got != nil:
+				t.Fatalf("want nil, got %q", *got)
+			case tt.want != nil && got == nil:
+				t.Fatalf("want %q, got nil", *tt.want)
+			case tt.want != nil && *got != *tt.want:
+				t.Fatalf("got %q, want %q", *got, *tt.want)
+			}
+		})
+	}
+}
+
+// TestClearable_StringPtrAfterBackfill_anyInnerType documents the name: the method's "string" is
+// a type-parameter name, not the string type, so it works on every Clearable[T].
+func TestClearable_StringPtrAfterBackfill_anyInnerType(t *testing.T) {
+	t.Parallel()
+
+	existing := 7
+	got := Unset[int]().StringPtrAfterBackfill(&existing)
+	if got == nil || *got != 7 {
+		t.Fatalf("got %v, want a pointer to 7", got)
+	}
+	if p := Clear[int]().StringPtrAfterBackfill(&existing); p != nil {
+		t.Fatalf("clear must yield nil, got %d", *p)
+	}
+}
+
+func stateName[T any](f Clearable[T]) string {
+	switch {
+	case f.IsUnset():
+		return "unset"
+	case f.IsClear():
+		return "clear"
+	default:
+		return "set"
+	}
+}
+
+func ptrTo[T any](v T) *T { return &v }

@@ -958,3 +958,178 @@ func TestValidateDateFilterTag(t *testing.T) {
 }
 
 func ptr(s string) *string { return &s }
+
+type decimalTagTestStruct struct {
+	Amount   string  `json:"amount" validate:"decimal"`
+	Discount *string `json:"discount,omitempty" validate:"omitempty,decimal"`
+}
+
+func TestValidateDecimalTag(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		amount   string
+		discount *string
+		hasError bool
+	}{
+		{name: "empty passes", amount: "", hasError: false},
+		{name: "zero passes", amount: "0", hasError: false},
+		{name: "negative zero passes", amount: "-0.00", hasError: false},
+		{name: "integer passes", amount: "42", hasError: false},
+		{name: "fraction passes", amount: "12.50", hasError: false},
+		{name: "negative passes", amount: "-3.5", hasError: false},
+		{name: "prose fails", amount: "abc", hasError: true},
+		{name: "two decimal points fails", amount: "12.5.6", hasError: true},
+		{name: "currency symbol fails", amount: "$5", hasError: true},
+		{name: "thousands separator fails", amount: "1,000", hasError: true},
+		{name: "trailing unit fails", amount: "5kg", hasError: true},
+		{name: "nil pointer passes", amount: "1", discount: nil, hasError: false},
+		{name: "pointer to decimal passes", amount: "1", discount: ptr("0.25"), hasError: false},
+		{name: "pointer to prose fails", amount: "1", discount: ptr("abc"), hasError: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			err := Validate(&decimalTagTestStruct{Amount: tt.amount, Discount: tt.discount})
+			if tt.hasError && err == nil {
+				t.Errorf("expected validation to fail, got nil")
+			}
+			if !tt.hasError && err != nil {
+				t.Errorf("expected validation to pass, got: %v", err)
+			}
+		})
+	}
+}
+
+func TestValidateDecimalErrorMessage(t *testing.T) {
+	t.Parallel()
+	err := Validate(&decimalTagTestStruct{Amount: "abc"})
+	if err == nil {
+		t.Fatal("expected validation to fail")
+	}
+	if !strings.Contains(err.PublicMessage, "must be a valid decimal number") {
+		t.Errorf("expected a decimal message, got: %s", err.PublicMessage)
+	}
+	if err.Param != "amount" {
+		t.Errorf("expected param 'amount', got: %q", err.Param)
+	}
+}
+
+type nonzeroDecimalTagTestStruct struct {
+	Quantity string  `json:"quantity" validate:"nonzero_decimal"`
+	Rate     *string `json:"rate,omitempty" validate:"omitempty,nonzero_decimal"`
+}
+
+func TestValidateNonzeroDecimalTag(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		quantity string
+		rate     *string
+		hasError bool
+	}{
+		{name: "empty passes", quantity: "", hasError: false},
+		{name: "positive passes", quantity: "1", hasError: false},
+		{name: "negative passes", quantity: "-1.5", hasError: false},
+		{name: "tiny fraction passes", quantity: "0.0000001", hasError: false},
+		{name: "zero fails", quantity: "0", hasError: true},
+		{name: "padded zero fails", quantity: "0.000", hasError: true},
+		{name: "negative zero fails", quantity: "-0", hasError: true},
+		{name: "prose fails", quantity: "abc", hasError: true},
+		{name: "nil pointer passes", quantity: "1", rate: nil, hasError: false},
+		{name: "pointer to nonzero passes", quantity: "1", rate: ptr("2"), hasError: false},
+		{name: "pointer to zero fails", quantity: "1", rate: ptr("0"), hasError: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			err := Validate(&nonzeroDecimalTagTestStruct{Quantity: tt.quantity, Rate: tt.rate})
+			if tt.hasError && err == nil {
+				t.Errorf("expected validation to fail, got nil")
+			}
+			if !tt.hasError && err != nil {
+				t.Errorf("expected validation to pass, got: %v", err)
+			}
+		})
+	}
+}
+
+func TestValidateNonzeroDecimalErrorMessage(t *testing.T) {
+	t.Parallel()
+	err := Validate(&nonzeroDecimalTagTestStruct{Quantity: "0"})
+	if err == nil {
+		t.Fatal("expected validation to fail")
+	}
+	if !strings.Contains(err.PublicMessage, "must not be zero") {
+		t.Errorf("expected a nonzero message, got: %s", err.PublicMessage)
+	}
+	if err.Param != "quantity" {
+		t.Errorf("expected param 'quantity', got: %q", err.Param)
+	}
+}
+
+type multiFieldFailureTestStruct struct {
+	Name  string `json:"name" validate:"required"`
+	Email string `json:"email" validate:"required,custom_email"`
+	Limit int    `query:"limit" validate:"omitempty,min=1"`
+}
+
+// A malformed create request fails several fields at once. The joined message must name every one
+// of them, and `param` carries the first so a client has something to focus.
+func TestValidate_AggregatesEveryFailingField(t *testing.T) {
+	t.Parallel()
+
+	err := Validate(&multiFieldFailureTestStruct{Limit: -1})
+	if err == nil {
+		t.Fatal("expected validation to fail")
+	}
+	if !strings.HasPrefix(err.PublicMessage, "Validation failed for the following fields: ") {
+		t.Errorf("expected the aggregated prefix, got: %s", err.PublicMessage)
+	}
+	for _, want := range []string{"'name'", "'email'", "'limit'"} {
+		if !strings.Contains(err.PublicMessage, want) {
+			t.Errorf("expected the message to name %s, got: %s", want, err.PublicMessage)
+		}
+	}
+	if !strings.Contains(err.PublicMessage, "Query parameter 'limit'") {
+		t.Errorf("expected each field to keep its own source, got: %s", err.PublicMessage)
+	}
+	if err.Param != "name" {
+		t.Errorf("expected param to be the first failing field, got: %q", err.Param)
+	}
+}
+
+// validator reports an unusable argument as an InvalidValidationError rather than field errors.
+// The fallback branch must return an error instead of panicking or reporting the request valid.
+func TestValidate_NonStructArguments(t *testing.T) {
+	t.Parallel()
+	s := "not a struct"
+	for _, arg := range []any{nil, &s, 42} {
+		err := Validate(arg)
+		if err == nil {
+			t.Errorf("expected an error for %#v, got nil", arg)
+		}
+	}
+}
+
+// The embedded shared struct is sometimes carried by pointer. The descent must deref it, or the
+// paging parameters fall back to their Go field names again.
+func TestValidate_NamesFieldsOnEmbeddedPointerStructs(t *testing.T) {
+	t.Parallel()
+
+	type embeddedPointerRequest struct {
+		*embeddedPagingTestFields
+		Status string `query:"status"`
+	}
+
+	err := Validate(&embeddedPointerRequest{embeddedPagingTestFields: &embeddedPagingTestFields{Limit: -1}})
+	if err == nil {
+		t.Fatal("expected validation to fail")
+	}
+	if !strings.Contains(err.PublicMessage, "Query parameter 'limit'") {
+		t.Errorf("expected the message to name the query parameter, got: %s", err.PublicMessage)
+	}
+	if err.Param != "limit" {
+		t.Errorf("expected param 'limit', got: %q", err.Param)
+	}
+}

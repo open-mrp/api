@@ -66,7 +66,7 @@ func (c *CleanupConfig) WithDefaults() *CleanupConfig {
 		BatchSize:        cmp.Or(c.BatchSize, defaultCleanupBatchSize),
 		MaxBatchesPerRun: cmp.Or(c.MaxBatchesPerRun, defaultCleanupMaxBatchesPerRun),
 		LeaseName:        cmp.Or(c.LeaseName, defaultCleanupLeaseName),
-		LeaseTTL:         cmp.Or(c.LeaseTTL, defaultCleanupLeaseTTL),
+		LeaseTTL:         lease.TTLOr(c.LeaseTTL, defaultCleanupLeaseTTL),
 		ScheduleLocation: loc,
 	}
 }

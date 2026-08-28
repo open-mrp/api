@@ -45,6 +45,38 @@ func TestTimestampToTimePtr(t *testing.T) {
 			input:   "2024-01-15T10:30:00",
 			wantNil: true,
 		},
+		{
+			// The shape agent-service emits for every pgtype.Timestamptz field.
+			name:      "millisecond fraction",
+			input:     "2024-01-15T10:30:00.000Z",
+			wantEqual: time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC),
+		},
+		{
+			name:      "microsecond fraction",
+			input:     "2024-01-15T10:30:00.123456Z",
+			wantEqual: time.Date(2024, 1, 15, 10, 30, 0, 123456000, time.UTC),
+		},
+		{
+			// The layout's Z is a literal, so RFC 3339 offset forms are rejected rather than converted.
+			name:    "rfc 3339 zero offset",
+			input:   "2024-01-15T10:30:00+00:00",
+			wantNil: true,
+		},
+		{
+			name:    "rfc 3339 negative offset",
+			input:   "2024-01-15T10:30:00-05:00",
+			wantNil: true,
+		},
+		{
+			name:    "lowercase zone designator",
+			input:   "2024-01-15T10:30:00z",
+			wantNil: true,
+		},
+		{
+			name:    "trailing whitespace",
+			input:   "2024-01-15T10:30:00Z ",
+			wantNil: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -102,6 +134,38 @@ func TestTimestampToTime(t *testing.T) {
 		{
 			name:     "missing Z suffix",
 			input:    "2024-01-15T10:30:00",
+			wantZero: true,
+		},
+		{
+			// The shape agent-service emits for every pgtype.Timestamptz field.
+			name:      "millisecond fraction",
+			input:     "2024-01-15T10:30:00.000Z",
+			wantEqual: time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC),
+		},
+		{
+			name:      "microsecond fraction",
+			input:     "2024-01-15T10:30:00.123456Z",
+			wantEqual: time.Date(2024, 1, 15, 10, 30, 0, 123456000, time.UTC),
+		},
+		{
+			// The layout's Z is a literal, so RFC 3339 offset forms are rejected rather than converted. Callers get the zero time with no error, which reaches the API as 0001-01-01T00:00:00Z.
+			name:     "rfc 3339 zero offset",
+			input:    "2024-01-15T10:30:00+00:00",
+			wantZero: true,
+		},
+		{
+			name:     "rfc 3339 negative offset",
+			input:    "2024-01-15T10:30:00-05:00",
+			wantZero: true,
+		},
+		{
+			name:     "lowercase zone designator",
+			input:    "2024-01-15T10:30:00z",
+			wantZero: true,
+		},
+		{
+			name:     "trailing whitespace",
+			input:    "2024-01-15T10:30:00Z ",
 			wantZero: true,
 		},
 	}

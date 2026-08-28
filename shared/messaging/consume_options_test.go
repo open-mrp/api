@@ -129,3 +129,138 @@ func TestProcessDeliverySkipsWhenContextCancelled(t *testing.T) {
 		t.Error("expected handler to be skipped when context is cancelled")
 	}
 }
+
+// failingAcknowledger reports ack/reject outcomes and can fail either operation, the way a broker does when the channel dies mid-delivery.
+type failingAcknowledger struct {
+	mu        sync.Mutex
+	ackErr    error
+	rejectErr error
+	acks      int
+	rejects   int
+}
+
+func (f *failingAcknowledger) Ack(_ uint64, _ bool) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.acks++
+	return f.ackErr
+}
+
+func (f *failingAcknowledger) Nack(_ uint64, _ bool, _ bool) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.rejects++
+	return f.rejectErr
+}
+
+func (f *failingAcknowledger) Reject(_ uint64, _ bool) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.rejects++
+	return f.rejectErr
+}
+
+func TestProcessDeliverySwallowsAckFailure(t *testing.T) {
+	t.Parallel()
+
+	r := &rabbitMQ{}
+	ack := &failingAcknowledger{ackErr: errors.New("channel closed")}
+	delivery := amqp.Delivery{Acknowledger: ack, Body: []byte(`{}`)}
+
+	r.processDelivery(context.Background(), "test-queue", func(context.Context, amqp.Delivery) error {
+		return nil
+	}, delivery)
+
+	if ack.acks != 1 {
+		t.Errorf("expected exactly one ack attempt, got %d", ack.acks)
+	}
+	// A failed ack must not become a reject: the broker will redeliver the message, and dead-lettering it here would discard work the handler already completed.
+	if ack.rejects != 0 {
+		t.Errorf("expected no reject after a failed ack, got %d", ack.rejects)
+	}
+}
+
+func TestProcessDeliverySwallowsRejectFailure(t *testing.T) {
+	t.Parallel()
+
+	r := &rabbitMQ{consumerRetry: fastConsumerRetry()}
+	ack := &failingAcknowledger{rejectErr: errors.New("channel closed")}
+	delivery := amqp.Delivery{Acknowledger: ack, Body: []byte(`{}`)}
+
+	r.processDelivery(context.Background(), "test-queue", func(context.Context, amqp.Delivery) error {
+		return errors.New("handler failure")
+	}, delivery)
+
+	if ack.rejects != 1 {
+		t.Errorf("expected exactly one reject attempt, got %d", ack.rejects)
+	}
+	if ack.acks != 0 {
+		t.Errorf("expected no ack, got %d", ack.acks)
+	}
+}
+
+func TestProcessDeliveryStampsDeadLetterHeaders(t *testing.T) {
+	t.Parallel()
+
+	retryCfg := fastConsumerRetry()
+	r := &rabbitMQ{consumerRetry: retryCfg}
+	headers := amqp.Table{"x-existing": "kept"}
+	delivery := amqp.Delivery{
+		Acknowledger: &fakeAcknowledger{},
+		Headers:      headers,
+		Exchange:     "app",
+		RoutingKey:   "sales_order.created",
+		Body:         []byte(`{}`),
+	}
+
+	r.processDelivery(context.Background(), "test-queue", func(context.Context, amqp.Delivery) error {
+		return errors.New("handler failure")
+	}, delivery)
+
+	if got := headers["x-death-reason"]; got != "handler failure" {
+		t.Errorf("expected the handler error as x-death-reason, got %v", got)
+	}
+	if got := headers["x-origin-exchange"]; got != "app" {
+		t.Errorf("expected x-origin-exchange app, got %v", got)
+	}
+	if got := headers["x-original-routing-key"]; got != "sales_order.created" {
+		t.Errorf("expected x-original-routing-key sales_order.created, got %v", got)
+	}
+	if got := headers["x-retry-count"]; got != retryCfg.MaxRetries {
+		t.Errorf("expected x-retry-count %d, got %v", retryCfg.MaxRetries, got)
+	}
+	if got := headers["x-existing"]; got != "kept" {
+		t.Errorf("expected pre-existing headers to be preserved, got %v", got)
+	}
+}
+
+func TestProcessDeliveryHandlerContextIsDetachedFromConsumer(t *testing.T) {
+	t.Parallel()
+
+	r := &rabbitMQ{consumerRetry: fastConsumerRetry()}
+	ack := &fakeAcknowledger{}
+	delivery := amqp.Delivery{Acknowledger: ack, Body: []byte(`{}`)}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	calls := 0
+	var lastHandlerErr error
+	r.processDelivery(ctx, "test-queue", func(handlerCtx context.Context, _ amqp.Delivery) error {
+		calls++
+		cancel()
+		lastHandlerErr = handlerCtx.Err()
+		return errors.New("handler failure")
+	}, delivery)
+
+	// TracedConsumer starts the handler context from context.Background(), so shutdown cannot interrupt an in-flight handler or its retries.
+	if lastHandlerErr != nil {
+		t.Errorf("expected the handler context to be unaffected by consumer cancellation, got %v", lastHandlerErr)
+	}
+	if calls != 2 {
+		t.Errorf("expected the handler to be retried after consumer cancellation, got %d calls", calls)
+	}
+	if !ack.rejected {
+		t.Error("expected the delivery to be dead-lettered after retry exhaustion")
+	}
+}

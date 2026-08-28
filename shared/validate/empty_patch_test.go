@@ -3,6 +3,7 @@ package validate
 import (
 	"testing"
 
+	"github.com/open-mrp/api/shared/field"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -93,4 +94,49 @@ func TestRejectEmptyPatchBody_NilPointer(t *testing.T) {
 	t.Parallel()
 	err := RejectEmptyPatchBody([]byte(`{}`), (*patchReqBasic)(nil))
 	assert.Nil(t, err, "nil pointer should be accepted (no-op)")
+}
+
+type patchReqValueFields struct {
+	ID   string                  `path:"id" validate:"required"`
+	Name field.Optional[string]  `json:"name,omitzero"`
+	Note field.Clearable[string] `json:"note,omitzero"`
+}
+
+func TestRejectEmptyPatchBody_ValueFieldsEmptyObject(t *testing.T) {
+	t.Parallel()
+	err := RejectEmptyPatchBody([]byte(`{}`), &patchReqValueFields{})
+	assert.NotNil(t, err, "empty body should be rejected on an Optional/Clearable request")
+}
+
+func TestRejectEmptyPatchBody_OptionalFieldPresent(t *testing.T) {
+	t.Parallel()
+	err := RejectEmptyPatchBody([]byte(`{"name": "test"}`), &patchReqValueFields{})
+	assert.Nil(t, err, "a field.Optional key should count as a body field")
+}
+
+func TestRejectEmptyPatchBody_ClearableFieldCleared(t *testing.T) {
+	t.Parallel()
+	err := RejectEmptyPatchBody([]byte(`{"note": null}`), &patchReqValueFields{})
+	assert.Nil(t, err, "clearing a field.Clearable is an update, not an empty body")
+}
+
+func TestRejectEmptyPatchBody_ValueFieldsUnknownFieldsOnly(t *testing.T) {
+	t.Parallel()
+	err := RejectEmptyPatchBody([]byte(`{"unknown_field": "value"}`), &patchReqValueFields{})
+	assert.NotNil(t, err, "body with only unknown fields should be rejected")
+}
+
+// Non-object bodies are the decoder's to reject; this guard only ever inspects a JSON object.
+func TestRejectEmptyPatchBody_NonObjectBodies(t *testing.T) {
+	t.Parallel()
+	for _, body := range []string{`[]`, `[{"name":"test"}]`, `"just a string"`, `null`, `123`} {
+		err := RejectEmptyPatchBody([]byte(body), &patchReqBasic{})
+		assert.Nil(t, err, "non-object body %s should be a no-op", body)
+	}
+}
+
+func TestRejectEmptyPatchBody_MalformedJSON(t *testing.T) {
+	t.Parallel()
+	err := RejectEmptyPatchBody([]byte(`{"name": `), &patchReqBasic{})
+	assert.Nil(t, err, "a body that does not parse should be a no-op")
 }

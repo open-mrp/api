@@ -1,6 +1,7 @@
 package version
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -437,5 +438,354 @@ func TestDefaultRegistry_TransformRequest(t *testing.T) {
 
 	if !reflect.DeepEqual(result, data) {
 		t.Errorf("Expected unchanged data from default registry TransformRequest, got %v", result)
+	}
+}
+
+// mockIncludeForcer is a mockTransformer that also declares forced includes.
+type mockIncludeForcer struct {
+	mockTransformer
+	forcedIncludes func(constants.ObjectType) []string
+}
+
+func (t *mockIncludeForcer) ForcedIncludes(objectType constants.ObjectType) []string {
+	if t.forcedIncludes != nil {
+		return t.forcedIncludes(objectType)
+	}
+	return nil
+}
+
+func previewVersion(preview int) APIVersion {
+	return APIVersion{
+		Version:   fmt.Sprintf("1.0.forge-preview.%d", preview),
+		Minor:     1,
+		Patch:     0,
+		Codename:  "forge",
+		Preview:   preview,
+		IsPreview: true,
+	}
+}
+
+// recordingTransformer appends its name to order and stamps the payload, so a chain's execution sequence is observable.
+func recordingTransformer(order *[]string, name string, from, to APIVersion, objectTypes ...constants.ObjectType) *mockTransformer {
+	stamp := func(_ constants.ObjectType, data map[string]any) map[string]any {
+		*order = append(*order, name)
+		if data != nil {
+			data["steps"] = append(data["steps"].([]string), name)
+		}
+		return data
+	}
+
+	return &mockTransformer{
+		from:                 from,
+		to:                   to,
+		objectTypes:          objectTypes,
+		transformFunc:        stamp,
+		transformRequestFunc: stamp,
+	}
+}
+
+// The registry walks its transformers in registration order, so a downgrade chain only runs newest-to-oldest when it was registered in that order.
+func TestTransformerRegistry_TransformChainNewestToOldest(t *testing.T) {
+	t.Parallel()
+	v1, v2, v3 := previewVersion(1), previewVersion(2), previewVersion(3)
+
+	var order []string
+	registry := NewTransformerRegistry()
+	registry.Register(recordingTransformer(&order, "3->2", v3, v2, constants.ObjectTypeUser))
+	registry.Register(recordingTransformer(&order, "2->1", v2, v1, constants.ObjectTypeUser))
+
+	data := map[string]any{"steps": []string{}}
+	result := registry.Transform(v3, v1, constants.ObjectTypeUser, data)
+
+	want := []string{"3->2", "2->1"}
+	if !reflect.DeepEqual(order, want) {
+		t.Errorf("Expected downgrade steps to run %v, got %v", want, order)
+	}
+	if steps, ok := result["steps"].([]string); !ok || !reflect.DeepEqual(steps, want) {
+		t.Errorf("Expected payload to record steps %v, got %v", want, result["steps"])
+	}
+}
+
+// Mirror of the downgrade chain: the reverse walk yields oldest-to-newest only for a newest-to-oldest registration order.
+func TestTransformerRegistry_TransformRequestChainOldestToNewest(t *testing.T) {
+	t.Parallel()
+	v1, v2, v3 := previewVersion(1), previewVersion(2), previewVersion(3)
+
+	var order []string
+	registry := NewTransformerRegistry()
+	registry.Register(recordingTransformer(&order, "3->2", v3, v2, constants.ObjectTypeUser))
+	registry.Register(recordingTransformer(&order, "2->1", v2, v1, constants.ObjectTypeUser))
+
+	data := map[string]any{"steps": []string{}}
+	result := registry.TransformRequest(v1, v3, constants.ObjectTypeUser, data)
+
+	want := []string{"2->1", "3->2"}
+	if !reflect.DeepEqual(order, want) {
+		t.Errorf("Expected upgrade steps to run %v, got %v", want, order)
+	}
+	if steps, ok := result["steps"].([]string); !ok || !reflect.DeepEqual(steps, want) {
+		t.Errorf("Expected payload to record steps %v, got %v", want, result["steps"])
+	}
+}
+
+// The range predicate is the only thing keeping a transformer away from a payload whose versions it knows nothing about.
+func TestTransformerRegistry_TransformSkipsOutOfRangeTransformers(t *testing.T) {
+	t.Parallel()
+	v1, v2, v3, v4 := previewVersion(1), previewVersion(2), previewVersion(3), previewVersion(4)
+
+	var order []string
+	registry := NewTransformerRegistry()
+	registry.Register(recordingTransformer(&order, "4->3", v4, v3, constants.ObjectTypeUser))
+	registry.Register(recordingTransformer(&order, "2->1", v2, v1, constants.ObjectTypeUser))
+
+	data := map[string]any{"steps": []string{}}
+	registry.Transform(v3, v2, constants.ObjectTypeUser, data)
+
+	if len(order) != 0 {
+		t.Errorf("Expected no transformer to run for a 3 -> 2 downgrade, got %v", order)
+	}
+}
+
+func TestTransformerRegistry_TransformRequestSkipsOutOfRangeTransformers(t *testing.T) {
+	t.Parallel()
+	v1, v2, v3, v4 := previewVersion(1), previewVersion(2), previewVersion(3), previewVersion(4)
+
+	var order []string
+	registry := NewTransformerRegistry()
+	registry.Register(recordingTransformer(&order, "4->3", v4, v3, constants.ObjectTypeUser))
+	registry.Register(recordingTransformer(&order, "2->1", v2, v1, constants.ObjectTypeUser))
+
+	data := map[string]any{"steps": []string{}}
+	registry.TransformRequest(v2, v3, constants.ObjectTypeUser, data)
+
+	if len(order) != 0 {
+		t.Errorf("Expected no transformer to run for a 2 -> 3 upgrade, got %v", order)
+	}
+}
+
+// A handler response that marshals to JSON null reaches the registry as a nil map; transformers must be handed it as-is rather than the registry substituting something.
+func TestTransformerRegistry_NilAndEmptyData(t *testing.T) {
+	t.Parallel()
+	older, newer := previewVersion(1), previewVersion(2)
+
+	tests := []struct {
+		name string
+		data map[string]any
+	}{
+		{"nil", nil},
+		{"empty", map[string]any{}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var sawNil, called bool
+			registry := NewTransformerRegistry()
+			registry.Register(&mockTransformer{
+				from:        newer,
+				to:          older,
+				objectTypes: []constants.ObjectType{constants.ObjectTypeUser},
+				transformFunc: func(_ constants.ObjectType, data map[string]any) map[string]any {
+					called = true
+					sawNil = data == nil
+					return data
+				},
+			})
+
+			result := registry.Transform(newer, older, constants.ObjectTypeUser, tt.data)
+
+			if !called {
+				t.Fatal("Expected transformer to be invoked")
+			}
+			if sawNil != (tt.data == nil) {
+				t.Errorf("Expected transformer to receive nil=%t, got nil=%t", tt.data == nil, sawNil)
+			}
+			if len(result) != 0 {
+				t.Errorf("Expected empty result, got %v", result)
+			}
+		})
+	}
+}
+
+func TestTransformerRegistry_TransformerReturningNil(t *testing.T) {
+	t.Parallel()
+	v1, v2, v3 := previewVersion(1), previewVersion(2), previewVersion(3)
+
+	registry := NewTransformerRegistry()
+	registry.Register(&mockTransformer{
+		from:        v3,
+		to:          v2,
+		objectTypes: []constants.ObjectType{constants.ObjectTypeUser},
+		transformFunc: func(_ constants.ObjectType, _ map[string]any) map[string]any {
+			return nil
+		},
+	})
+	registry.Register(&mockTransformer{
+		from:        v2,
+		to:          v1,
+		objectTypes: []constants.ObjectType{constants.ObjectTypeUser},
+		transformFunc: func(_ constants.ObjectType, data map[string]any) map[string]any {
+			if data != nil {
+				t.Error("Expected the nil returned by the previous step to be passed through")
+			}
+			return data
+		},
+	})
+
+	result := registry.Transform(v3, v1, constants.ObjectTypeUser, map[string]any{"key": "value"})
+
+	if result != nil {
+		t.Errorf("Expected nil result, got %v", result)
+	}
+}
+
+// --- ForcedIncludes tests ---
+
+func TestTransformerRegistry_ForcedIncludes_TransformerWithoutForcer(t *testing.T) {
+	t.Parallel()
+	older, newer := previewVersion(1), previewVersion(2)
+
+	registry := NewTransformerRegistry()
+	registry.Register(&mockTransformer{
+		from:        newer,
+		to:          older,
+		objectTypes: []constants.ObjectType{constants.ObjectTypeUser},
+	})
+
+	keys := registry.ForcedIncludes(newer, older, constants.ObjectTypeUser)
+	if len(keys) != 0 {
+		t.Errorf("Expected no forced includes from a transformer that is not an IncludeForcer, got %v", keys)
+	}
+}
+
+func TestTransformerRegistry_ForcedIncludes_Deduplicates(t *testing.T) {
+	t.Parallel()
+	v1, v2, v3 := previewVersion(1), previewVersion(2), previewVersion(3)
+
+	forcer := func(from, to APIVersion, keys ...string) *mockIncludeForcer {
+		return &mockIncludeForcer{
+			mockTransformer: mockTransformer{
+				from:        from,
+				to:          to,
+				objectTypes: []constants.ObjectType{constants.ObjectTypeUser},
+			},
+			forcedIncludes: func(constants.ObjectType) []string { return keys },
+		}
+	}
+
+	registry := NewTransformerRegistry()
+	registry.Register(forcer(v3, v2, "user", "user.account"))
+	registry.Register(forcer(v2, v1, "user", "user.address"))
+
+	keys := registry.ForcedIncludes(v3, v1, constants.ObjectTypeUser)
+
+	want := []string{"user", "user.account", "user.address"}
+	if !reflect.DeepEqual(keys, want) {
+		t.Errorf("Expected deduplicated includes %v, got %v", want, keys)
+	}
+}
+
+func TestTransformerRegistry_ForcedIncludes_NoDowngrade(t *testing.T) {
+	t.Parallel()
+	older, newer := previewVersion(1), previewVersion(2)
+
+	registry := NewTransformerRegistry()
+	registry.Register(&mockIncludeForcer{
+		mockTransformer: mockTransformer{
+			from:        newer,
+			to:          older,
+			objectTypes: []constants.ObjectType{constants.ObjectTypeUser},
+		},
+		forcedIncludes: func(constants.ObjectType) []string { return []string{"user"} },
+	})
+
+	tests := []struct {
+		name     string
+		from, to APIVersion
+	}{
+		{"equal versions", newer, newer},
+		{"requesting a newer version", older, newer},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			keys := registry.ForcedIncludes(tt.from, tt.to, constants.ObjectTypeUser)
+			if keys != nil {
+				t.Errorf("Expected nil forced includes, got %v", keys)
+			}
+		})
+	}
+}
+
+func TestTransformerRegistry_ForcedIncludes_OutOfRangeOrWrongObjectType(t *testing.T) {
+	t.Parallel()
+	v1, v2, v3, v4 := previewVersion(1), previewVersion(2), previewVersion(3), previewVersion(4)
+
+	registry := NewTransformerRegistry()
+	registry.Register(&mockIncludeForcer{
+		mockTransformer: mockTransformer{
+			from:        v4,
+			to:          v3,
+			objectTypes: []constants.ObjectType{constants.ObjectTypeUser},
+		},
+		forcedIncludes: func(constants.ObjectType) []string { return []string{"out-of-range"} },
+	})
+	registry.Register(&mockIncludeForcer{
+		mockTransformer: mockTransformer{
+			from:        v2,
+			to:          v1,
+			objectTypes: []constants.ObjectType{constants.ObjectTypeAccount},
+		},
+		forcedIncludes: func(constants.ObjectType) []string { return []string{"wrong-object-type"} },
+	})
+	registry.Register(&mockIncludeForcer{
+		mockTransformer: mockTransformer{
+			from:        v2,
+			to:          v1,
+			objectTypes: []constants.ObjectType{constants.ObjectTypeUser},
+		},
+		forcedIncludes: func(constants.ObjectType) []string { return []string{"user"} },
+	})
+
+	keys := registry.ForcedIncludes(v2, v1, constants.ObjectTypeUser)
+
+	want := []string{"user"}
+	if !reflect.DeepEqual(keys, want) {
+		t.Errorf("Expected only the in-range includes %v, got %v", want, keys)
+	}
+}
+
+func TestTransformerRegistry_ForcedIncludes_ObjectTypeScoped(t *testing.T) {
+	t.Parallel()
+	older, newer := previewVersion(1), previewVersion(2)
+
+	registry := NewTransformerRegistry()
+	registry.Register(&mockIncludeForcer{
+		mockTransformer: mockTransformer{
+			from:        newer,
+			to:          older,
+			objectTypes: []constants.ObjectType{constants.ObjectTypeUser, constants.ObjectTypeAccount},
+		},
+		forcedIncludes: func(objectType constants.ObjectType) []string {
+			if objectType == constants.ObjectTypeAccount {
+				return nil
+			}
+			return []string{"user.account"}
+		},
+	})
+
+	if keys := registry.ForcedIncludes(newer, older, constants.ObjectTypeAccount); len(keys) != 0 {
+		t.Errorf("Expected no forced includes for account, got %v", keys)
+	}
+
+	want := []string{"user.account"}
+	if keys := registry.ForcedIncludes(newer, older, constants.ObjectTypeUser); !reflect.DeepEqual(keys, want) {
+		t.Errorf("Expected forced includes %v for user, got %v", want, keys)
+	}
+}
+
+func TestDefaultRegistry_ForcedIncludes(t *testing.T) {
+	t.Parallel()
+	if keys := ForcedIncludes(Latest, Latest, constants.ObjectTypeUser); keys != nil {
+		t.Errorf("Expected nil forced includes from default registry for equal versions, got %v", keys)
 	}
 }

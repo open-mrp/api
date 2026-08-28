@@ -51,13 +51,26 @@ func NewWithHolder(repo Repo, holder string) *Lease {
 	return &Lease{repo: repo, holder: holder}
 }
 
+// TTLOr returns ttl when it is positive and fallback otherwise. Config structs reach for cmp.Or to default a TTL, but that only replaces a zero value: a negative one survives, and WithLease rejects it, silently disabling the periodic task for callers that discard the error.
+func TTLOr(ttl, fallback time.Duration) time.Duration {
+	if ttl > 0 {
+		return ttl
+	}
+	return fallback
+}
+
 // Holder returns the identity this Lease uses when acquiring leases.
 func (l *Lease) Holder() string { return l.holder }
 
 // WithLease runs fn iff the lease `name` can be acquired. While fn runs the lease is renewed at ttl/3 intervals; if renewal fails (the lease was lost), the context passed to fn is cancelled so fn can bail out. On exit the lease is released.
 //
-// Returns fn's error if fn ran. Returns nil if another pod holds the lease or acquisition errored — these are not treated as caller-visible failures because the tick will simply re-attempt on the next interval.
+// Returns fn's error if fn ran. Returns nil if another pod holds the lease or acquisition errored — these are not treated as caller-visible failures because the tick will simply re-attempt on the next interval. Returns an error for a non-positive ttl, which no retry can fix.
 func (l *Lease) WithLease(ctx context.Context, name string, ttl time.Duration, fn func(context.Context) error) error {
+	// A non-positive ttl expires the row the instant it is written, so no caller would ever hold exclusive access. Reject it here rather than let it reach time.NewTicker below, which panics from inside the renewal goroutine where no caller can recover.
+	if ttl <= 0 {
+		return fmt.Errorf("lease %q: ttl must be positive, got %s", name, ttl)
+	}
+
 	acquired, err := l.repo.Acquire(ctx, name, l.holder, ttl)
 	if err != nil {
 		slog.Warn("Lease acquire failed", "lease", name, "holder", l.holder, "error", err)

@@ -227,6 +227,62 @@ func TestTransactionManager_WithTxSavepoint_RollbackFailureAborts(t *testing.T) 
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
+// A unit whose SAVEPOINT could not be created has no rollback point, so running it would
+// leave writes the batch cannot undo. The unit is refused instead.
+func TestTransactionManager_WithTxSavepoint_SavepointCreationFailureSkipsTheUnit(t *testing.T) {
+	t.Parallel()
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	mock.ExpectBegin()
+	mock.ExpectExec("SAVEPOINT sp1").WillReturnError(errors.New("connection lost"))
+	mock.ExpectRollback()
+
+	queries := &mockQueries{db: db}
+	factoryCreate := func(q *mockQueries) *mockFactory { return &mockFactory{queries: q} }
+	txMgr := NewTransactionManager(db, queries, factoryCreate)
+
+	unitRan := false
+	apiErr := txMgr.WithTxSavepoint(context.Background(), func(ctx context.Context, f *mockFactory, sp SavepointRunner) *apierror.APIError {
+		return sp.Run(ctx, func(context.Context) *apierror.APIError {
+			unitRan = true
+			return nil
+		})
+	})
+
+	require.NotNil(t, apiErr)
+	assert.Equal(t, apierror.ErrorCodeInternalError, apiErr.Code)
+	assert.False(t, unitRan, "the unit must not run without a savepoint to undo it")
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+// A unit that succeeded but whose RELEASE failed is not a success: the release is a statement
+// on the same doomed connection, so its writes cannot be reported as committed.
+func TestTransactionManager_WithTxSavepoint_ReleaseFailureFailsTheUnit(t *testing.T) {
+	t.Parallel()
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	mock.ExpectBegin()
+	mock.ExpectExec("SAVEPOINT sp1").WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectExec("RELEASE SAVEPOINT sp1").WillReturnError(errors.New("connection lost"))
+	mock.ExpectRollback()
+
+	queries := &mockQueries{db: db}
+	factoryCreate := func(q *mockQueries) *mockFactory { return &mockFactory{queries: q} }
+	txMgr := NewTransactionManager(db, queries, factoryCreate)
+
+	apiErr := txMgr.WithTxSavepoint(context.Background(), func(ctx context.Context, f *mockFactory, sp SavepointRunner) *apierror.APIError {
+		return sp.Run(ctx, func(context.Context) *apierror.APIError { return nil })
+	})
+
+	require.NotNil(t, apiErr)
+	assert.Equal(t, apierror.ErrorCodeInternalError, apiErr.Code)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
 // ──────────────────────────────────────────────
 // Deadlock retry
 // ──────────────────────────────────────────────
@@ -424,4 +480,110 @@ func TestDeadlockBackoff_IsShortAndSpread(t *testing.T) {
 	assert.Greater(t, len(seen), 1, "identical waits would make two victims collide again")
 
 	assert.Greater(t, deadlockBackoff(2), deadlockBaseBackoff, "later retries back off further")
+}
+
+// The pattern every bulk writer uses: the batch keeps the error from the failing unit and
+// carries on with the next one. The failed unit's write is undone by its ROLLBACK TO
+// SAVEPOINT while the surviving unit's write commits with the transaction.
+func TestTransactionManager_WithTxSavepoint_ContinuesAfterAFailedUnit(t *testing.T) {
+	t.Parallel()
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	mock.ExpectBegin()
+	mock.ExpectExec("SAVEPOINT sp1").WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectExec("INSERT INTO t").WithArgs("bad").WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectExec("ROLLBACK TO SAVEPOINT sp1").WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectExec("SAVEPOINT sp2").WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectExec("INSERT INTO t").WithArgs("good").WillReturnResult(sqlmock.NewResult(2, 1))
+	mock.ExpectExec("RELEASE SAVEPOINT sp2").WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectCommit()
+
+	queries := &mockQueries{db: db}
+	factoryCreate := func(q *mockQueries) *mockFactory { return &mockFactory{queries: q} }
+	txMgr := NewTransactionManager(db, queries, factoryCreate)
+
+	rowErr := apierror.NewValidationError("bad row")
+	var failures []*apierror.APIError
+	apiErr := txMgr.WithTxSavepoint(context.Background(), func(ctx context.Context, f *mockFactory, sp SavepointRunner) *apierror.APIError {
+		for _, row := range []string{"bad", "good"} {
+			runErr := sp.Run(ctx, func(ctx context.Context) *apierror.APIError {
+				if _, execErr := f.queries.tx.ExecContext(ctx, "INSERT INTO t VALUES ?", row); execErr != nil {
+					return MapSQLError(execErr)
+				}
+				if row == "bad" {
+					return rowErr
+				}
+				return nil
+			})
+			if runErr != nil {
+				failures = append(failures, runErr)
+			}
+		}
+		return nil
+	})
+
+	assert.Nil(t, apiErr, "one rejected row must not fail the whole batch")
+	require.Len(t, failures, 1)
+	assert.Same(t, rowErr, failures[0])
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+// A deadlock raised inside a savepoint unit is still the database asking for the whole
+// transaction to be re-run, so a batch that returns it gets the same retry as WithTx.
+func TestTransactionManager_WithTxSavepoint_RetriesADeadlockRaisedInsideAUnit(t *testing.T) {
+	t.Parallel()
+	_, mock, txMgr := newDeadlockTestManager(t)
+
+	mock.ExpectBegin()
+	mock.ExpectExec("SAVEPOINT sp1").WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectExec("ROLLBACK TO SAVEPOINT sp1").WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectRollback()
+	mock.ExpectBegin()
+	mock.ExpectExec("SAVEPOINT sp1").WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectExec("RELEASE SAVEPOINT sp1").WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectCommit()
+
+	attempts := 0
+	apiErr := txMgr.WithTxSavepoint(context.Background(), func(ctx context.Context, f *mockFactory, sp SavepointRunner) *apierror.APIError {
+		attempts++
+		return sp.Run(ctx, func(context.Context) *apierror.APIError {
+			if attempts == 1 {
+				return MapSQLError(deadlockErr())
+			}
+			return nil
+		})
+	})
+
+	assert.Nil(t, apiErr)
+	assert.Equal(t, 2, attempts, "the batch is re-run whole, savepoint numbering included")
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+// InnoDB rolls the whole transaction back when it picks a deadlock victim, so the savepoint
+// the unit is trying to undo is already gone (1305). Nothing further can be written, and the
+// batch must abort rather than commit whatever it managed before the deadlock.
+func TestTransactionManager_WithTxSavepoint_AbortsWhenTheDeadlockDestroyedTheSavepoint(t *testing.T) {
+	t.Parallel()
+	_, mock, txMgr := newDeadlockTestManager(t)
+
+	mock.ExpectBegin()
+	mock.ExpectExec("SAVEPOINT sp1").WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectExec("ROLLBACK TO SAVEPOINT sp1").
+		WillReturnError(&mysql.MySQLError{Number: 1305, Message: "SAVEPOINT sp1 does not exist"})
+	mock.ExpectRollback()
+
+	attempts := 0
+	apiErr := txMgr.WithTxSavepoint(context.Background(), func(ctx context.Context, f *mockFactory, sp SavepointRunner) *apierror.APIError {
+		attempts++
+		return sp.Run(ctx, func(context.Context) *apierror.APIError {
+			return MapSQLError(deadlockErr())
+		})
+	})
+
+	require.NotNil(t, apiErr)
+	assert.Equal(t, apierror.ErrorCodeInternalError, apiErr.Code)
+	assert.Equal(t, 1, attempts, "the doomed transaction is abandoned, not re-run")
+	assert.NoError(t, mock.ExpectationsWereMet())
 }

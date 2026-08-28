@@ -1,7 +1,7 @@
 package appctx
 
-// contextKey is an unexported type used for all context keys in this package to prevent collisions with keys defined in other packages.
+// contextKey is used for all context keys in this repository.
 type contextKey string
 
-// noTraceKeyType is the unexported context-key type for the "no trace" flag. Using a dedicated struct type avoids collisions with other context values.
+// noTraceKeyType is the context-key type for the "no trace" flag.
 type noTraceKeyType struct{}

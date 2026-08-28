@@ -90,6 +90,49 @@ func TestSearchEmptyQueryListsCatalog(t *testing.T) {
 	}
 }
 
+// TestSearchUnmatchedQueryReturnsNothing is the contract the model-facing tool rests on: a query the
+// catalog cannot answer must come back empty, not as pages the agent will link anyway.
+func TestSearchUnmatchedQueryReturnsNothing(t *testing.T) {
+	t.Parallel()
+	for _, q := range []string{"zzqqxx wombatron", "quixotic flibbertigibbet", "asdfgh qwerty"} {
+		if got := Search(q, 5); len(got) != 0 {
+			t.Errorf("%q returned %d pages (%v), want none", q, len(got), keys(got))
+		}
+	}
+}
+
+func TestSearchLimitCapsMatches(t *testing.T) {
+	t.Parallel()
+	all := Search("orders", 100)
+	if len(all) < 3 {
+		t.Fatalf("%q matched %d pages, expected the order pages", "orders", len(all))
+	}
+	capped := Search("orders", 2)
+	if len(capped) != 2 {
+		t.Fatalf("limit 2 returned %d pages (%v)", len(capped), keys(capped))
+	}
+	// The cap must keep the best matches, not an arbitrary slice of them.
+	for i, p := range capped {
+		if p.Key != all[i].Key {
+			t.Errorf("capped[%d] = %q, want %q — the limit changed the ranking", i, p.Key, all[i].Key)
+		}
+	}
+}
+
+func TestPageByKeyNormalizesKey(t *testing.T) {
+	t.Parallel()
+	for _, key := range []string{"/customer-prices", "customer-prices/", "Customer-Prices", "/Customer-Prices/"} {
+		p, ok := PageByKey(key)
+		if !ok {
+			t.Errorf("PageByKey(%q) missed", key)
+			continue
+		}
+		if p.Key != "customer-prices" {
+			t.Errorf("PageByKey(%q) = %q, want customer-prices", key, p.Key)
+		}
+	}
+}
+
 func keys(pages []Page) []string {
 	out := make([]string, 0, len(pages))
 	for i, p := range pages {

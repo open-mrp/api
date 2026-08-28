@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
+	"net"
 	"testing"
 
 	"github.com/go-sql-driver/mysql"
@@ -330,5 +331,44 @@ func TestIsDuplicateEntry(t *testing.T) {
 	t.Run("returns false for non-MySQL errors", func(t *testing.T) {
 		err := assert.AnError
 		assert.False(t, IsDuplicateEntry(err))
+	})
+}
+
+// netTimeoutError stands in for the deadline the driver reports when a query outlives its
+// read timeout: a net.Error whose Timeout reports true.
+type netTimeoutError struct{}
+
+func (netTimeoutError) Error() string { return "read tcp 10.0.0.1:3306: i/o timeout" }
+func (netTimeoutError) Timeout() bool { return true }
+
+func TestMapSQLError_NetworkTimeout(t *testing.T) {
+	t.Parallel()
+
+	t.Run("timed out net.Error returns request timed out", func(t *testing.T) {
+		t.Parallel()
+		result := MapSQLError(&net.OpError{Op: "read", Net: "tcp", Err: netTimeoutError{}})
+		assert.NotNil(t, result)
+		assert.Equal(t, apierror.ErrorCodeInternalError, result.Code)
+		assert.Equal(t, "Database request timed out.", result.InternalMessage)
+	})
+
+	t.Run("wrapped timed out net.Error returns request timed out", func(t *testing.T) {
+		t.Parallel()
+		err := fmt.Errorf("query failed: %w", &net.OpError{Op: "read", Net: "tcp", Err: netTimeoutError{}})
+		result := MapSQLError(err)
+		assert.NotNil(t, result)
+		assert.Equal(t, "Database request timed out.", result.InternalMessage)
+	})
+
+	t.Run("context deadline beats the net.Error branch", func(t *testing.T) {
+		t.Parallel()
+		result := MapSQLError(fmt.Errorf("query failed: %w", context.DeadlineExceeded))
+		assert.NotNil(t, result)
+		assert.Equal(t, "Database query deadline exceeded.", result.InternalMessage)
+	})
+
+	t.Run("timed out net.Error is not a connection retry", func(t *testing.T) {
+		t.Parallel()
+		assert.False(t, IsRetryableConnectionError(&net.OpError{Op: "read", Net: "tcp", Err: netTimeoutError{}}))
 	})
 }

@@ -425,3 +425,266 @@ func TestClearable_decode_embeddedStruct(t *testing.T) {
 		t.Fatalf("Name: got %q ok=%v", v, ok)
 	}
 }
+
+// ---- Non-canonical null in the request body ----
+
+// TestClearable_decode_paddedNullClears covers the real decode path for a body whose null
+// carries surrounding whitespace: encoding/json hands UnmarshalJSON the trimmed literal, so the
+// field still clears. Clearable.UnmarshalJSON's own comparison is byte-exact, so this property
+// belongs to the decoder, not to the wrapper.
+func TestClearable_decode_paddedNullClears(t *testing.T) {
+	t.Parallel()
+
+	for name, body := range map[string]string{
+		"spaces around null":  "{\"f\":  null  }",
+		"newline before null": "{\"f\":\n null\n}",
+		"tab before null":     "{\"f\":\tnull}",
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			f, err := decodeClearable[string](t, body)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !f.IsClear() {
+				t.Fatalf("want clear, got %+v", f)
+			}
+		})
+	}
+}
+
+// TestOptional_unmarshalJSON_trimsBeforeNullCheck pins that Optional rejects a non-canonical
+// null too, so a direct caller cannot slip one past the check.
+func TestOptional_unmarshalJSON_trimsBeforeNullCheck(t *testing.T) {
+	t.Parallel()
+
+	for _, data := range []string{"null", " null ", "null\n", "\tnull"} {
+		var n Optional[string]
+		if err := n.UnmarshalJSON([]byte(data)); !errors.Is(err, ErrExplicitNull) {
+			t.Fatalf("%q: want ErrExplicitNull, got %v", data, err)
+		}
+		if n.IsSet() {
+			t.Fatalf("%q: must stay unset after a rejected null", data)
+		}
+	}
+}
+
+func TestOptional_decode_paddedNullRejected(t *testing.T) {
+	t.Parallel()
+
+	if _, err := decodeOptional[string](t, "{\"f\":  null  }"); !errors.Is(err, ErrExplicitNull) {
+		t.Fatalf("want ErrExplicitNull, got %v", err)
+	}
+}
+
+// ---- Set values whose JSON form is null ----
+
+// TestClearable_marshal_nilInnerIsNull records the collision behind the job_items hazard: a set
+// field holding a nil slice, map or pointer marshals to the same "null" that means clear, so the
+// state cannot survive a JSON hop. Carry an empty non-nil value instead.
+func TestClearable_marshal_nilInnerIsNull(t *testing.T) {
+	t.Parallel()
+
+	slice, err := json.Marshal(clearableHolder[[]string]{F: Set[[]string](nil)})
+	if err != nil {
+		t.Fatalf("marshal slice: %v", err)
+	}
+	if string(slice) != `{"f":null}` {
+		t.Fatalf("nil slice: got %s, want {\"f\":null}", slice)
+	}
+
+	m, err := json.Marshal(clearableHolder[map[string]string]{F: Set[map[string]string](nil)})
+	if err != nil {
+		t.Fatalf("marshal map: %v", err)
+	}
+	if string(m) != `{"f":null}` {
+		t.Fatalf("nil map: got %s, want {\"f\":null}", m)
+	}
+
+	ptr, err := json.Marshal(optionalHolder[*string]{F: Some[*string](nil)})
+	if err != nil {
+		t.Fatalf("marshal pointer: %v", err)
+	}
+	if string(ptr) != `{"f":null}` {
+		t.Fatalf("nil pointer: got %s, want {\"f\":null}", ptr)
+	}
+}
+
+// TestClearable_roundTrip_nilInnerLosesTheSetState completes the case above through the decode
+// half, which is where the job_items hop actually bites: a set-to-nil slice comes back CLEAR, and
+// a set-to-nil pointer on an Optional comes back as a decode failure. JSON has one null, so no
+// wrapper can carry these; resolved rows must hold an empty non-nil value instead.
+func TestClearable_roundTrip_nilInnerLosesTheSetState(t *testing.T) {
+	t.Parallel()
+
+	t.Run("clearable nil slice decodes as clear", func(t *testing.T) {
+		t.Parallel()
+		b, err := json.Marshal(clearableHolder[[]string]{F: Set[[]string](nil)})
+		if err != nil {
+			t.Fatalf("marshal: %v", err)
+		}
+		var got clearableHolder[[]string]
+		if err := json.Unmarshal(b, &got); err != nil {
+			t.Fatalf("unmarshal %s: %v", b, err)
+		}
+		if !got.F.IsClear() {
+			t.Fatalf("via %s: want clear, got %+v", b, got.F)
+		}
+	})
+
+	t.Run("clearable nil map decodes as clear", func(t *testing.T) {
+		t.Parallel()
+		b, err := json.Marshal(clearableHolder[map[string]string]{F: Set[map[string]string](nil)})
+		if err != nil {
+			t.Fatalf("marshal: %v", err)
+		}
+		var got clearableHolder[map[string]string]
+		if err := json.Unmarshal(b, &got); err != nil {
+			t.Fatalf("unmarshal %s: %v", b, err)
+		}
+		if !got.F.IsClear() {
+			t.Fatalf("via %s: want clear, got %+v", b, got.F)
+		}
+	})
+
+	t.Run("optional nil pointer fails to decode", func(t *testing.T) {
+		t.Parallel()
+		b, err := json.Marshal(optionalHolder[*string]{F: Some[*string](nil)})
+		if err != nil {
+			t.Fatalf("marshal: %v", err)
+		}
+		var got optionalHolder[*string]
+		if err := json.Unmarshal(b, &got); !errors.Is(err, ErrExplicitNull) {
+			t.Fatalf("via %s: want ErrExplicitNull, got %v", b, err)
+		}
+	})
+}
+
+// TestClearable_roundTrip_emptyNonNilInner is the safe form of the case above: an allocated but
+// empty slice or map marshals to [] / {} and comes back set.
+func TestClearable_roundTrip_emptyNonNilInner(t *testing.T) {
+	t.Parallel()
+
+	t.Run("slice", func(t *testing.T) {
+		t.Parallel()
+		b, err := json.Marshal(clearableHolder[[]string]{F: Set([]string{})})
+		if err != nil {
+			t.Fatalf("marshal: %v", err)
+		}
+		if string(b) != `{"f":[]}` {
+			t.Fatalf("got %s, want {\"f\":[]}", b)
+		}
+		var got clearableHolder[[]string]
+		if err := json.Unmarshal(b, &got); err != nil {
+			t.Fatalf("unmarshal: %v", err)
+		}
+		v, ok := got.F.Value()
+		if !ok || len(v) != 0 {
+			t.Fatalf("want set to an empty slice, got %#v ok=%v", v, ok)
+		}
+	})
+
+	t.Run("map", func(t *testing.T) {
+		t.Parallel()
+		b, err := json.Marshal(optionalHolder[map[string]string]{F: Some(map[string]string{})})
+		if err != nil {
+			t.Fatalf("marshal: %v", err)
+		}
+		if string(b) != `{"f":{}}` {
+			t.Fatalf("got %s, want {\"f\":{}}", b)
+		}
+		var got optionalHolder[map[string]string]
+		if err := json.Unmarshal(b, &got); err != nil {
+			t.Fatalf("unmarshal: %v", err)
+		}
+		v, ok := got.F.Value()
+		if !ok || len(v) != 0 {
+			t.Fatalf("want set to an empty map, got %#v ok=%v", v, ok)
+		}
+	})
+}
+
+// TestClearable_roundTrip_innerTypes extends the string-only round trip to the inner types that
+// travel through the job_items JSON hop.
+func TestClearable_roundTrip_innerTypes(t *testing.T) {
+	t.Parallel()
+
+	t.Run("slice", func(t *testing.T) {
+		t.Parallel()
+		for name, want := range map[string]Clearable[[]string]{
+			"unset": Unset[[]string](),
+			"clear": Clear[[]string](),
+			"set":   Set([]string{"a", "b"}),
+		} {
+			b, err := json.Marshal(clearableHolder[[]string]{F: want})
+			if err != nil {
+				t.Fatalf("%s: marshal: %v", name, err)
+			}
+			var got clearableHolder[[]string]
+			if err := json.Unmarshal(b, &got); err != nil {
+				t.Fatalf("%s: unmarshal %s: %v", name, b, err)
+			}
+			if got.F.IsUnset() != want.IsUnset() || got.F.IsClear() != want.IsClear() || got.F.IsSet() != want.IsSet() {
+				t.Fatalf("%s: state mismatch via %s: got %+v want %+v", name, b, got.F, want)
+			}
+			gv, _ := got.F.Value()
+			wv, _ := want.Value()
+			if !reflect.DeepEqual(gv, wv) {
+				t.Fatalf("%s: value got %#v want %#v", name, gv, wv)
+			}
+		}
+	})
+
+	t.Run("struct", func(t *testing.T) {
+		t.Parallel()
+		want := Set(innerObj{A: "x", B: 7})
+		b, err := json.Marshal(clearableHolder[innerObj]{F: want})
+		if err != nil {
+			t.Fatalf("marshal: %v", err)
+		}
+		var got clearableHolder[innerObj]
+		if err := json.Unmarshal(b, &got); err != nil {
+			t.Fatalf("unmarshal %s: %v", b, err)
+		}
+		gv, ok := got.F.Value()
+		if !ok || gv != (innerObj{A: "x", B: 7}) {
+			t.Fatalf("got %#v ok=%v", gv, ok)
+		}
+	})
+
+	t.Run("time", func(t *testing.T) {
+		t.Parallel()
+		b, err := json.Marshal(clearableHolder[time.Time]{F: Set(refTime)})
+		if err != nil {
+			t.Fatalf("marshal: %v", err)
+		}
+		var got clearableHolder[time.Time]
+		if err := json.Unmarshal(b, &got); err != nil {
+			t.Fatalf("unmarshal %s: %v", b, err)
+		}
+		gv, ok := got.F.Value()
+		if !ok || !gv.Equal(refTime) {
+			t.Fatalf("got %v ok=%v, want %v", gv, ok, refTime)
+		}
+	})
+}
+
+// TestClearable_marshalUnset_withoutOmitzero shows what a missing omitzero costs: the whole
+// response or job payload fails to marshal, since an unset field has no JSON form.
+func TestClearable_marshalUnset_withoutOmitzero(t *testing.T) {
+	t.Parallel()
+
+	type noOmitzero struct {
+		F Clearable[string] `json:"f"`
+	}
+	if _, err := json.Marshal(noOmitzero{}); err == nil {
+		t.Fatal("expected an error marshaling an unset field declared without omitzero")
+	}
+
+	type optionalNoOmitzero struct {
+		F Optional[string] `json:"f"`
+	}
+	if _, err := json.Marshal(optionalNoOmitzero{}); err == nil {
+		t.Fatal("expected an error marshaling an unset Optional declared without omitzero")
+	}
+}

@@ -2,6 +2,8 @@ package version
 
 import (
 	"slices"
+	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -403,5 +405,175 @@ func TestV1_0_Forge_Preview1(t *testing.T) {
 
 	if v.Preview != 1 {
 		t.Errorf("Expected Preview to be 1, got %d", v.Preview)
+	}
+}
+
+func TestParse_BoundaryInvalidFormats(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{"leading whitespace", " 1.0.forge-preview.4"},
+		{"trailing whitespace", "1.0.forge-preview.4 "},
+		{"trailing newline", "1.0.forge-preview.4\n"},
+		{"leading newline", "\n1.0.forge-preview.4"},
+		{"internal whitespace", "1.0.forge - preview.4"},
+		{"uppercase preview", "1.0.FORGE-PREVIEW.4"},
+		{"mixed case codename", "1.0.Forge-preview.4"},
+		{"embedded NUL", "1.0.forge-preview.4\x00"},
+		{"non-ASCII codename", "1.0.fórge"},
+		{"non-ASCII digit", "1.0.forge-preview.٤"},
+		{"tab separated", "1.0.forge\t"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := Parse(tt.input)
+			if err == nil {
+				t.Fatalf("expected error for %q", tt.input)
+			}
+			if !strings.Contains(err.Error(), "invalid version format") {
+				t.Errorf("expected an invalid-format error for %q, got %v", tt.input, err)
+			}
+		})
+	}
+}
+
+// Well-formed strings that are simply not in Supported must fail differently from malformed ones, so the middleware can tell a client "wrong version" apart from "unparseable header".
+func TestParse_WellFormedButUnsupported(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{"leading zero preview number", "1.0.forge-preview.04"},
+		{"oversized minor", "99999999999999999999.0.forge"},
+		{"oversized preview number", "1.0.forge-preview.99999999999999999999"},
+		{"zero preview number", "1.0.forge-preview.0"},
+		{"stable of a preview codename", "1.0.forge"},
+		{"hyphenated codename", "1.0.forge-crucible"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := Parse(tt.input)
+			if err == nil {
+				t.Fatalf("expected error for %q", tt.input)
+			}
+			if !strings.Contains(err.Error(), "unsupported API version") {
+				t.Errorf("expected an unsupported-version error for %q, got %v", tt.input, err)
+			}
+		})
+	}
+}
+
+// --- version table consistency ---
+
+func TestSupported_ContainsLatest(t *testing.T) {
+	t.Parallel()
+	if !slices.Contains(Supported, Latest) {
+		t.Fatalf("Latest %s is not a member of Supported %v", Latest.Version, SupportedVersionStrings())
+	}
+
+	for _, v := range Supported {
+		if v.Equal(Latest) {
+			continue
+		}
+		if v.After(Latest) {
+			t.Errorf("supported version %s is newer than Latest %s", v.Version, Latest.Version)
+		}
+	}
+}
+
+func TestSupported_StrictlyDescending(t *testing.T) {
+	t.Parallel()
+	for i := 1; i < len(Supported); i++ {
+		newer, older := Supported[i-1], Supported[i]
+
+		if !older.Before(newer) {
+			t.Errorf("Supported[%d] (%s) is not before Supported[%d] (%s)", i, older.Version, i-1, newer.Version)
+		}
+		if newer.Before(older) {
+			t.Errorf("Supported[%d] (%s) is before Supported[%d] (%s)", i-1, newer.Version, i, older.Version)
+		}
+		if older.Equal(newer) {
+			t.Errorf("Supported[%d] and Supported[%d] are the same version (%s)", i-1, i, newer.Version)
+		}
+	}
+}
+
+func TestSupported_ParseRoundTrip(t *testing.T) {
+	t.Parallel()
+	for _, want := range Supported {
+		t.Run(want.Version, func(t *testing.T) {
+			got, err := Parse(want.Version)
+			if err != nil {
+				t.Fatalf("Parse(%q) failed: %v", want.Version, err)
+			}
+			if got != want {
+				t.Errorf("Parse(%q) returned %+v, want %+v", want.Version, got, want)
+			}
+		})
+	}
+}
+
+// A new version is added by copying an existing literal, which makes it easy to leave Minor/Patch/Preview describing the version that was copied from; Before() then orders the two identically and every downgrade for the release is silently skipped.
+func TestSupported_FieldsMatchVersionString(t *testing.T) {
+	t.Parallel()
+	for _, v := range Supported {
+		t.Run(v.Version, func(t *testing.T) {
+			var minor, patch, codename, preview string
+			isPreview := false
+
+			if matches := previewRegex.FindStringSubmatch(v.Version); matches != nil {
+				minor, patch, codename, preview = matches[1], matches[2], matches[3], matches[4]
+				isPreview = true
+			} else if matches := stableRegex.FindStringSubmatch(v.Version); matches != nil {
+				minor, patch, codename, preview = matches[1], matches[2], matches[3], "0"
+			} else {
+				t.Fatalf("version string %q matches neither the stable nor the preview format", v.Version)
+			}
+
+			wantMinor, err := strconv.Atoi(minor)
+			if err != nil {
+				t.Fatalf("failed to parse minor from %q: %v", v.Version, err)
+			}
+			wantPatch, err := strconv.Atoi(patch)
+			if err != nil {
+				t.Fatalf("failed to parse patch from %q: %v", v.Version, err)
+			}
+			wantPreview, err := strconv.Atoi(preview)
+			if err != nil {
+				t.Fatalf("failed to parse preview from %q: %v", v.Version, err)
+			}
+
+			if v.Minor != wantMinor {
+				t.Errorf("Minor is %d, but version string says %d", v.Minor, wantMinor)
+			}
+			if v.Patch != wantPatch {
+				t.Errorf("Patch is %d, but version string says %d", v.Patch, wantPatch)
+			}
+			if v.Codename != codename {
+				t.Errorf("Codename is %q, but version string says %q", v.Codename, codename)
+			}
+			if v.Preview != wantPreview {
+				t.Errorf("Preview is %d, but version string says %d", v.Preview, wantPreview)
+			}
+			if v.IsPreview != isPreview {
+				t.Errorf("IsPreview is %t, but version string says %t", v.IsPreview, isPreview)
+			}
+		})
+	}
+}
+
+func TestSupported_NoDuplicateVersionStrings(t *testing.T) {
+	t.Parallel()
+	seen := make(map[string]struct{}, len(Supported))
+	for _, v := range Supported {
+		if _, exists := seen[v.Version]; exists {
+			t.Errorf("duplicate version string %q in Supported", v.Version)
+		}
+		seen[v.Version] = struct{}{}
 	}
 }

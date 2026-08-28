@@ -1,6 +1,9 @@
 package fuzzy
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestLevenshteinDistance(t *testing.T) {
 	t.Parallel()
@@ -181,6 +184,59 @@ func TestFindClosestByLevenshtein(t *testing.T) {
 			if word != tt.expectedWord || dist != tt.expectedDist {
 				t.Errorf("FindClosestByLevenshtein(%q, %v) = (%q, %d), want (%q, %d)",
 					tt.target, tt.candidates, word, dist, tt.expectedWord, tt.expectedDist)
+			}
+		})
+	}
+}
+
+// The one production caller (api-gateway's unknown-JSON-field suggestion) passes a request-supplied
+// target against a fixed set of short field names. There is no length guard, so the full O(m*n)
+// matrix runs on whatever arrives; BenchmarkLevenshteinDistance pins what that costs.
+func TestFindClosestByLevenshtein_TargetFarLongerThanCandidates(t *testing.T) {
+	t.Parallel()
+	target := strings.Repeat("a", 4096)
+	candidates := []string{"abc", "email", "warehouse"}
+
+	word, dist := FindClosestByLevenshtein(target, candidates)
+	if word != "abc" || dist != 4095 {
+		t.Errorf("FindClosestByLevenshtein(<4096 a's>, %v) = (%q, %d), want (%q, %d)", candidates, word, dist, "abc", 4095)
+	}
+	// Distance can never be less than the length difference, so no candidate is a plausible suggestion here.
+	if minGap := len(target) - len("warehouse"); dist < minGap {
+		t.Errorf("distance %d is below the length-difference lower bound %d", dist, minGap)
+	}
+}
+
+var lengthTiers = []struct {
+	name string
+	size int
+}{
+	{"1KiB", 1 << 10},
+	{"64KiB", 1 << 16},
+	{"1MiB", 1 << 20},
+}
+
+func BenchmarkLevenshteinDistance(b *testing.B) {
+	const field = "customerId"
+	for _, tier := range lengthTiers {
+		b.Run(tier.name, func(b *testing.B) {
+			target := strings.Repeat("ab", tier.size/2)
+			b.ReportAllocs()
+			for b.Loop() {
+				LevenshteinDistance(target, field)
+			}
+		})
+	}
+}
+
+func BenchmarkFindClosestByLevenshtein(b *testing.B) {
+	candidates := []string{"customerId", "email", "name", "phone", "address", "warehouseId"}
+	for _, tier := range lengthTiers {
+		b.Run(tier.name, func(b *testing.B) {
+			target := strings.Repeat("ab", tier.size/2)
+			b.ReportAllocs()
+			for b.Loop() {
+				FindClosestByLevenshtein(target, candidates)
 			}
 		})
 	}

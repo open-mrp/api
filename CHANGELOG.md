@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.2](https://github.com/open-mrp/api/compare/v2.0.1...v2.0.2) (2026-08-28)
+
+
+### Bug Fixes
+
+* **commitments:** update commitment quoting logic to use order issue date ([#78](https://github.com/open-mrp/api/issues/78)) ([68f3727](https://github.com/open-mrp/api/commit/68f37278a7393ef415dbc615d6e9a8a39548959b))
+
 ## [2.0.1](https://github.com/open-mrp/api/compare/v2.0.0...v2.0.1) (2026-08-27)
 
 

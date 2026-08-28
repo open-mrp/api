@@ -65,9 +65,10 @@ fi
 
 DR_NUMBER="$(echo "$DR_JSON" | jq -r '.number // empty')"
 DR_STATE="$(echo "$DR_JSON" | jq -r '.state // empty')"
+DR_DEPLOYMENT_STATE="$(echo "$DR_JSON" | jq -r '.deployment_state // .deployment.state // empty')"
 DR_URL="https://app.planetscale.com/$PS_ORG/$PS_DATABASE/deploy-requests/${DR_NUMBER:-}"
 
-info "Deploy request #${DR_NUMBER:-?} (state: ${DR_STATE:-unknown}) — $DR_URL"
+info "Deploy request #${DR_NUMBER:-?} (state: ${DR_STATE:-unknown}, deployment: ${DR_DEPLOYMENT_STATE:-none}) — $DR_URL"
 
 # Re-running a release must not fail on schema that is already live: a closed deploy request has
 # either been deployed or deliberately abandoned, and either way there is nothing here to apply.
@@ -75,6 +76,24 @@ if [ "$DR_STATE" = "closed" ]; then
     info "Deploy request is already closed. Nothing to deploy."
     exit 0
 fi
+
+# A deploy request stays open for the 30-minute revert window after its schema is already live, so
+# `state` alone cannot tell "not deployed yet" from "deployed, still revertable". Deploying again in
+# that window is rejected with "This deploy request cannot be deployed" and used to fail the release
+# even though the schema it gates on was in fact applied (v2.0.4, deploy request #199).
+case "$DR_DEPLOYMENT_STATE" in
+    complete|complete_pending_revert)
+        info "Schema is already deployed (deployment state '$DR_DEPLOYMENT_STATE'). Nothing to deploy."
+        exit 0
+        ;;
+    # The schema was deployed and then taken back out, so prod is NOT running this release's schema.
+    # Rolling the service images on top of that is exactly what this gate exists to prevent.
+    complete_reverted|complete_revert_started|in_progress_revert)
+        error "Deploy request #${DR_NUMBER:-?} was reverted (deployment state '$DR_DEPLOYMENT_STATE'); its schema is not live."
+        error "Re-cut the deploy request before releasing. See $DR_URL"
+        exit 1
+        ;;
+esac
 
 info "Deploying into $PS_PROD_BRANCH and waiting for it to finish..."
 

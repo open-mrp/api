@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.3](https://github.com/open-mrp/api/compare/v2.0.2...v2.0.3) (2026-08-28)
+
+
+### Bug Fixes
+
+* **queries:** remove indexes that are no longer in use ([#80](https://github.com/open-mrp/api/issues/80)) ([b9b2909](https://github.com/open-mrp/api/commit/b9b290964eac55e186f31638c0c4297ad11c4075))
+
 ## [2.0.2](https://github.com/open-mrp/api/compare/v2.0.1...v2.0.2) (2026-08-28)
 
 

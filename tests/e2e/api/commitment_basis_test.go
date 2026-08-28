@@ -330,3 +330,36 @@ func TestCommitmentBasis_UnissueClearsTheCommitment(t *testing.T) {
 	// The basis is an input, not a commitment, so it survives for the next issue.
 	assert.Equal(t, "7", jsonField(commitmentOf(after), "lead_time_override_days"))
 }
+
+// The same guarantee for an order issued days ago, which is where it used to break.
+//
+// A commitment is stamped from the day the order was issued, so re-committing one carries on
+// counting from that day. Quoting against today instead answered the detail page with a date
+// the save then contradicted, by exactly as long as the order had been open: an order issued
+// nine days ago and re-committed to sixty days previewed as sixty days from today and stamped
+// as sixty days from issue.
+func TestQuoteCommitment_CountsFromTheOrdersIssueDateNotToday(t *testing.T) {
+	t.Parallel()
+
+	issued := issueOrderForCustomer(t, SeedCustomerAccountID, nil)
+	orderID := jsonField(issued, "id")
+	backdateIssuedAt(t, orderID, 9)
+
+	status, body, err := apiClient.Post(quoteCommitmentPath, map[string]any{
+		"sales_order_id":          orderID,
+		"lead_time_override_days": 60,
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	require.Less(t, status, 500, "quote must not 5xx: %s", string(body))
+	requireStatus(t, 200, status, body)
+	quoted := jsonField(commitmentOf(parseJSON(body)), "ship_by_date")
+
+	status, body, err = apiClient.Patch(salesOrdersPath+"/"+orderID, map[string]any{
+		"lead_time_override_days": 60,
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	assert.Equal(t, dateOnly(quoted), dateOnly(jsonField(commitmentOf(parseJSON(body)), "ship_by_date")),
+		"the preview must agree with what the save stamped: %s", string(body))
+}

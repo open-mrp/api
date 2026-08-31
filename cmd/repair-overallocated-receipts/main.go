@@ -89,6 +89,12 @@ type overDrawnReceipt struct {
 	SKU           string
 	ReceiptBase   decimal.Decimal
 	AllocatedBase decimal.Decimal
+	// MixedUnits marks a receipt carrying an allocation stamped in a different unit from its own.
+	// Such a receipt is reported and skipped, never repaired — see skipMixedUnitsNote.
+	MixedUnits bool
+	// Oversized marks a receipt carrying a single allocation larger than the whole receipt. Also
+	// reported and skipped — see skipOversizedNote.
+	Oversized bool
 }
 
 // allocationRow is one allocation being considered for removal, with the satellite rows it owns.
@@ -153,9 +159,28 @@ func Run(ctx context.Context, args []string, getenv func(string) string, stdout,
 		return err
 	}
 
-	p.stagef("Choosing allocations to remove for %d receipt(s)...", len(receipts))
+	// A receipt drawn on in a unit other than its own is not evidence of over-allocation at all: the
+	// allocator stamps every allocation with its receipt's unit, so a differing unit means the row was
+	// written by something else with the wrong label, and the overshoot is the ratio between the two
+	// labels rather than stock. Removing those allocations would delete draws that really happened.
+	// They are reported and left alone; see skipMixedUnitsNote.
+	var eligible []overDrawnReceipt
+	var mixed []overDrawnReceipt
+	var oversized []overDrawnReceipt
+	for _, r := range receipts {
+		switch {
+		case r.MixedUnits:
+			mixed = append(mixed, r)
+		case r.Oversized:
+			oversized = append(oversized, r)
+		default:
+			eligible = append(eligible, r)
+		}
+	}
+
+	p.stagef("Choosing allocations to remove for %d receipt(s)...", len(eligible))
 	var repairs []repair
-	for i, r := range receipts {
+	for i, r := range eligible {
 		rep, planErr := planRepair(ctx, sqlDB, r)
 		if planErr != nil {
 			return planErr
@@ -163,17 +188,28 @@ func Run(ctx context.Context, args []string, getenv func(string) string, stdout,
 		if len(rep.Delete) > 0 {
 			repairs = append(repairs, rep)
 		}
-		p.step(i+1, len(receipts), "receipts planned")
+		p.step(i+1, len(eligible), "receipts planned")
 	}
 
 	allocationIDs, issueIDs, receiptIDs, totalFreed := collect(repairs)
 
 	p.stage("Summary")
-	fmt.Fprintf(stdout, "  Over-allocated receipts:   %d\n", len(receipts))
+	fmt.Fprintf(stdout, "  Over-drawn receipts found: %d\n", len(receipts))
+	fmt.Fprintf(stdout, "  Skipped, mixed units:      %d\n", len(mixed))
+	fmt.Fprintf(stdout, "  Skipped, oversized alloc:  %d\n", len(oversized))
 	fmt.Fprintf(stdout, "  Receipts to repair:        %d\n", len(repairs))
 	fmt.Fprintf(stdout, "  Allocation rows to delete: %d\n", len(allocationIDs))
 	fmt.Fprintf(stdout, "  Issues to re-check:        %d\n", len(issueIDs))
 	fmt.Fprintf(stdout, "  Phantom base units removed: %s\n", totalFreed.String())
+
+	if len(mixed) > 0 {
+		fmt.Fprint(stdout, skipMixedUnitsNote)
+		printReceiptLines(stdout, mixed)
+	}
+	if len(oversized) > 0 {
+		fmt.Fprint(stdout, skipOversizedNote)
+		printReceiptLines(stdout, oversized)
+	}
 
 	printWorstOffenders(stdout, repairs)
 
@@ -206,15 +242,19 @@ func Run(ctx context.Context, args []string, getenv func(string) string, stdout,
 // anything having gone wrong.
 func findOverDrawnReceipts(ctx context.Context, sqlDB *sql.DB, accountID, itemID string, limit int, eps decimal.Decimal, p *progress) ([]overDrawnReceipt, error) {
 	var where strings.Builder
-	var params []any
+	var filterParams []any
 	if accountID != "" {
 		where.WriteString(" AND i2.account_id = ?")
-		params = append(params, accountID)
+		filterParams = append(filterParams, accountID)
 	}
 	if itemID != "" {
 		where.WriteString(" AND ir2.item_id = ?")
-		params = append(params, itemID)
+		filterParams = append(filterParams, itemID)
 	}
+
+	// Bound by position in the SQL text, not by role: the `oversized` subquery's epsilon sits in the
+	// SELECT list and so binds before the derived table's filters, and the overshoot epsilon last.
+	params := append([]any{eps.String()}, filterParams...)
 
 	// The filters are applied inside the grouped subquery as well as outside it: without them the
 	// aggregate covers every allocation in the database and the join throws all but a handful away.
@@ -224,7 +264,20 @@ func findOverDrawnReceipts(ctx context.Context, sqlDB *sql.DB, accountID, itemID
 	query := `
 SELECT ir.id, ir.item_id, i.sku,
        CAST(q.value AS DECIMAL(65,30)) * (u.ratio_numerator / u.ratio_denominator) AS receipt_base,
-       a.alloc_base
+       a.alloc_base,
+       EXISTS (
+           SELECT 1 FROM inventory_allocation ia3
+           JOIN quantity aq3 ON aq3.id = ia3.quantity_id
+           WHERE ia3.inventory_receipt_id = ir.id AND aq3.unit_id <> q.unit_id
+       ) AS mixed_units,
+       EXISTS (
+           SELECT 1 FROM inventory_allocation ia4
+           JOIN quantity aq4 ON aq4.id = ia4.quantity_id
+           JOIN unit au4 ON au4.id = aq4.unit_id
+           WHERE ia4.inventory_receipt_id = ir.id
+             AND CAST(aq4.value AS DECIMAL(65,30)) * (au4.ratio_numerator / au4.ratio_denominator)
+                 > CAST(q.value AS DECIMAL(65,30)) * (u.ratio_numerator / u.ratio_denominator) + ?
+       ) AS oversized
 FROM inventory_receipt ir
 JOIN quantity q ON q.id = ir.quantity_id
 JOIN unit u ON u.id = q.unit_id
@@ -258,7 +311,7 @@ ORDER BY (a.alloc_base - CAST(q.value AS DECIMAL(65,30)) * (u.ratio_numerator / 
 	for rows.Next() {
 		var r overDrawnReceipt
 		var receiptBase, allocBase string
-		if err := rows.Scan(&r.ReceiptID, &r.ItemID, &r.SKU, &receiptBase, &allocBase); err != nil {
+		if err := rows.Scan(&r.ReceiptID, &r.ItemID, &r.SKU, &receiptBase, &allocBase, &r.MixedUnits, &r.Oversized); err != nil {
 			return nil, fmt.Errorf("scan over-drawn receipt: %w", err)
 		}
 		if r.ReceiptBase, err = decimal.NewFromString(receiptBase); err != nil {
@@ -367,6 +420,42 @@ func printWorstOffenders(out io.Writer, repairs []repair) {
 }
 
 const worstOffenderLines = 20
+
+// skipMixedUnitsNote explains the one class this command deliberately will not touch. It is printed
+// in full rather than summarised because the receipts behind it need a person: there is no mechanical
+// rule that recovers the intent, and the obvious one — restamp the allocation with the receipt's unit
+// — is only right where the raw values already agree.
+const skipMixedUnitsNote = `
+  NOT REPAIRED — these receipts carry an allocation stamped in a unit other than their own.
+  The allocator writes every allocation in its receipt's unit, so a differing unit means the row came
+  from somewhere else with the wrong label and the overshoot is the ratio between the two labels, not
+  missing stock. The draws themselves are real. Deleting them would remove allocations that happened
+  and reopen demand that was filled, so they are left for a person to judge.
+`
+
+// skipOversizedNote covers the other class a race cannot produce. Allocation takes
+// min(what the receipt has left, what the issue still wants), so no allocation the allocator writes
+// is ever larger than the receipt it draws from, however many transactions raced. One that is came
+// from a wrong quantity, and the row to correct is that quantity — not the allocation.
+const skipOversizedNote = `
+  NOT REPAIRED — these receipts carry a single allocation larger than the whole receipt.
+  Allocation takes min(receipt remaining, issue remaining), so no race can produce a draw bigger than
+  the receipt itself; the quantity on that allocation is simply wrong. Trimming here would delete a
+  real draw and reopen filled demand, so they are left for a person to judge.
+`
+
+// printReceiptLines lists receipts with what they hold against what is allocated, in base units.
+func printReceiptLines(out io.Writer, receipts []overDrawnReceipt) {
+	for i, r := range receipts {
+		if i >= worstOffenderLines {
+			fmt.Fprintf(out, "    ... and %d more\n", len(receipts)-worstOffenderLines)
+			break
+		}
+		fmt.Fprintf(out, "    %-32s %-24s %s / %s\n",
+			r.ReceiptID, r.SKU, r.ReceiptBase.String(), r.AllocatedBase.String())
+	}
+	fmt.Fprintln(out)
+}
 
 // apply deletes the over-drawn allocations with their satellite rows, reopens the demand they were
 // covering and re-statuses the receipts, all in one transaction so a failure leaves the ledger as it

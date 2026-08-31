@@ -1,5 +1,13 @@
 -- name: ListPicksForward :many
-SELECT
+-- STRAIGHT_JOIN pins `p` as the driving table. Without it, on a large account the
+-- optimizer either full-scans sales_order (ship-by sort) or hash-joins `priority`
+-- (created-at sort) — the hash join drops `p`'s index order and forces a filesort of
+-- every pick before the LIMIT, ~10s past the RPC deadline. Driving from `p` keeps the
+-- joins as ordered nested loops, so the created-at sort reads straight from
+-- pick_account_created_idx and stops at the LIMIT. No FORCE INDEX: the optimizer must
+-- stay free to pick pick_account_id_finished_at_idx for a status filter (open picks are
+-- a tiny slice of a mostly-closed table). Do not remove.
+SELECT STRAIGHT_JOIN
     p.id,
     p.number,
     p.sales_order_id,
@@ -67,13 +75,11 @@ LEFT JOIN geolocation ship_geo ON ship_geo.id = addr.geolocation_id
 LEFT JOIN carrier cr ON cr.id = so.carrier_id
 LEFT JOIN carrier_option co ON co.id = so.carrier_option_id
 WHERE p.account_id = sqlc.arg('account_id')
+-- Only short (< ngram token size) terms reach here as a LIKE; ListPicksSearch* serves the ngram path.
 AND (
     sqlc.narg('search_query') IS NULL
     OR p.number LIKE sqlc.narg('search_query')
-    OR so.number LIKE sqlc.narg('search_query')
     OR so.customer_po_number LIKE sqlc.narg('search_query')
-    OR ba.name LIKE sqlc.narg('search_query')
-    OR ar.external_number LIKE sqlc.narg('search_query')
 )
 AND (
     sqlc.narg('status') IS NULL
@@ -130,6 +136,137 @@ ORDER BY
 LIMIT ?;
 
 -- name: ListPicksBackward :many
+-- STRAIGHT_JOIN forces `p` as the driving table; see ListPicksForward for why. Do not remove.
+SELECT STRAIGHT_JOIN
+    p.id,
+    p.number,
+    p.sales_order_id,
+    so.number AS sales_order_number,
+    ar.counterparty_account_id AS customer_id,
+    ba.name AS customer_name,
+    ar.external_number AS customer_number,
+    so.priority_code,
+    pr.id AS priority_id,
+    pr.name AS priority_name,
+    p.finished_at,
+    p.created_at,
+    p.updated_at,
+    (SELECT COUNT(*) FROM pick_line plc WHERE plc.pick_id = p.id) AS line_count,
+    -- Latest ship date across the order's shipments; drives the date in the pick header.
+    (SELECT MAX(sh.shipped_at) FROM shipment sh WHERE sh.sales_order_id = so.id) AS last_shipped_at,
+    so.promised_at,
+    -- The order's cross-reference and instructions, carried so the floor works the pick without opening the order.
+    so.customer_po_number,
+    so.note,
+    -- Freight is the order's, carried so a pick shows the carrier it ships on.
+    so.carrier_id,
+    cr.name AS carrier_name,
+    cr.is_portal_enabled AS carrier_is_portal_enabled,
+    cr.created_at AS carrier_created_at,
+    cr.updated_at AS carrier_updated_at,
+    so.carrier_option_id AS service_level_id,
+    co.name AS service_level_name,
+    co.is_portal_enabled AS service_level_is_portal_enabled,
+    co.service_level_token,
+    co.created_at AS service_level_created_at,
+    co.updated_at AS service_level_updated_at,
+    so.carrier_billing_type,
+    so.carrier_billing_account,
+    -- The order's delivery commitment and how it was derived, so a pick can explain its dates.
+    so.ship_by_date,
+    so.ship_by_cutoff_at,
+    so.lead_time_days,
+    so.lead_time_source_code,
+    so.transit_days,
+    so.transit_source_code,
+    -- Ship-to is the order's, denormalized so a pick header needs no second fetch.
+    so.shipping_address_id,
+    addr.name AS shipping_address_name,
+    addr.phone AS shipping_address_phone,
+    addr.email AS shipping_address_email,
+    addr.is_drop_ship AS shipping_address_is_drop_ship,
+    ship_geo.id AS shipping_address_geolocation_id,
+    ship_geo.street_line_1 AS shipping_address_street_line_1,
+    ship_geo.street_line_2 AS shipping_address_street_line_2,
+    ship_geo.locality AS shipping_address_locality,
+    ship_geo.state AS shipping_address_state,
+    ship_geo.postal_code AS shipping_address_postal_code,
+    ship_geo.country AS shipping_address_country,
+    addr.created_at AS shipping_address_created_at,
+    addr.updated_at AS shipping_address_updated_at
+FROM pick p
+JOIN sales_order so ON so.id = p.sales_order_id
+JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
+    AND ar.counterparty_account_id = so.buyer_account_id
+JOIN account ba ON ba.id = so.buyer_account_id
+JOIN priority pr ON pr.code = so.priority_code
+LEFT JOIN address addr ON addr.id = so.shipping_address_id
+LEFT JOIN geolocation ship_geo ON ship_geo.id = addr.geolocation_id
+LEFT JOIN carrier cr ON cr.id = so.carrier_id
+LEFT JOIN carrier_option co ON co.id = so.carrier_option_id
+WHERE p.account_id = sqlc.arg('account_id')
+-- Only short (< ngram token size) terms reach here as a LIKE; ListPicksSearch* serves the ngram path.
+AND (
+    sqlc.narg('search_query') IS NULL
+    OR p.number LIKE sqlc.narg('search_query')
+    OR so.customer_po_number LIKE sqlc.narg('search_query')
+)
+AND (
+    sqlc.narg('status') IS NULL
+    OR (sqlc.narg('status') = 'open' AND p.finished_at IS NULL)
+    OR (sqlc.narg('status') = 'closed' AND p.finished_at IS NOT NULL)
+)
+AND (
+    sqlc.arg('include_customer_filter') = false
+    OR so.buyer_account_id IN (sqlc.slice('customer_ids'))
+)
+AND (
+    sqlc.arg('include_customer_group_filter') = false
+    OR ar.account_group_id IN (sqlc.slice('customer_group_ids'))
+)
+AND (
+    sqlc.arg('include_product_line_filter') = false
+    OR EXISTS (
+        SELECT 1 FROM pick_line pl2
+        JOIN sales_order_line sol2 ON sol2.id = pl2.sales_order_line_id
+        JOIN product prod ON prod.id = sol2.product_id
+        WHERE pl2.pick_id = p.id
+        AND prod.product_line_id IN (sqlc.slice('product_line_ids'))
+    )
+)
+AND (
+    sqlc.narg('start_date') IS NULL
+    OR p.created_at >= sqlc.narg('start_date')
+)
+AND (
+    sqlc.narg('end_date') IS NULL
+    OR p.created_at <= sqlc.narg('end_date')
+)
+AND (
+    sqlc.arg('sort_by_ship_by') = true
+    OR p.created_at > sqlc.arg('cursor_created_at')
+    OR (p.created_at = sqlc.arg('cursor_created_at') AND p.id > sqlc.arg('cursor_id'))
+)
+-- The sentinel keeps a pick whose order has no ship-by date sortable and last; the repository's cursor must use the same value.
+AND (
+    sqlc.arg('sort_by_ship_by') = false
+    OR COALESCE(so.ship_by_date, '9999-12-31') < CAST(sqlc.arg('cursor_ship_by_date') AS DATE)
+    OR (
+        COALESCE(so.ship_by_date, '9999-12-31') = CAST(sqlc.arg('cursor_ship_by_date') AS DATE)
+        AND p.id < sqlc.arg('cursor_id')
+    )
+)
+ORDER BY
+    CASE WHEN sqlc.arg('sort_by_ship_by') = true THEN COALESCE(so.ship_by_date, '9999-12-31') END DESC,
+    CASE WHEN sqlc.arg('sort_by_ship_by') = true THEN p.id END DESC,
+    p.created_at ASC,
+    p.id ASC
+LIMIT ?;
+
+-- name: ListPicksSearchForward :many
+-- The search sibling of ListPicksForward. No STRAIGHT_JOIN: the `p.id IN (...)` semi-join lets the
+-- optimizer drive from the ngram FULLTEXT match (a handful of rows) instead of the account's whole
+-- pick range, so the join order that helps the unsearched browse would only get in the way here.
 SELECT
     p.id,
     p.number,
@@ -198,13 +335,153 @@ LEFT JOIN geolocation ship_geo ON ship_geo.id = addr.geolocation_id
 LEFT JOIN carrier cr ON cr.id = so.carrier_id
 LEFT JOIN carrier_option co ON co.id = so.carrier_option_id
 WHERE p.account_id = sqlc.arg('account_id')
+-- Substring search over the pick number and the order's customer PO number, each served by its own
+-- ngram FULLTEXT index. A semi-join, not an OR of two MATCHes in the main WHERE, so each MATCH drives
+-- its own index — an OR of MATCH across joined tables cannot use either. The repo only runs this query
+-- when a term of at least the ngram token size is present, so the match is unconditional.
+AND p.id IN (
+    SELECT pk.id FROM pick pk
+    WHERE pk.account_id = sqlc.arg('account_id')
+    AND MATCH(pk.number) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
+    UNION
+    SELECT pk.id FROM pick pk
+    JOIN sales_order pso ON pso.id = pk.sales_order_id
+    WHERE pk.account_id = sqlc.arg('account_id')
+    AND MATCH(pso.customer_po_number) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
+)
 AND (
-    sqlc.narg('search_query') IS NULL
-    OR p.number LIKE sqlc.narg('search_query')
-    OR so.number LIKE sqlc.narg('search_query')
-    OR so.customer_po_number LIKE sqlc.narg('search_query')
-    OR ba.name LIKE sqlc.narg('search_query')
-    OR ar.external_number LIKE sqlc.narg('search_query')
+    sqlc.narg('status') IS NULL
+    OR (sqlc.narg('status') = 'open' AND p.finished_at IS NULL)
+    OR (sqlc.narg('status') = 'closed' AND p.finished_at IS NOT NULL)
+)
+AND (
+    sqlc.arg('include_customer_filter') = false
+    OR so.buyer_account_id IN (sqlc.slice('customer_ids'))
+)
+AND (
+    sqlc.arg('include_customer_group_filter') = false
+    OR ar.account_group_id IN (sqlc.slice('customer_group_ids'))
+)
+AND (
+    sqlc.arg('include_product_line_filter') = false
+    OR EXISTS (
+        SELECT 1 FROM pick_line pl2
+        JOIN sales_order_line sol2 ON sol2.id = pl2.sales_order_line_id
+        JOIN product prod ON prod.id = sol2.product_id
+        WHERE pl2.pick_id = p.id
+        AND prod.product_line_id IN (sqlc.slice('product_line_ids'))
+    )
+)
+AND (
+    sqlc.narg('start_date') IS NULL
+    OR p.created_at >= sqlc.narg('start_date')
+)
+AND (
+    sqlc.narg('end_date') IS NULL
+    OR p.created_at <= sqlc.narg('end_date')
+)
+AND (
+    sqlc.arg('sort_by_ship_by') = true
+    OR sqlc.narg('cursor_created_at') IS NULL
+    OR p.created_at < sqlc.narg('cursor_created_at')
+    OR (p.created_at = sqlc.narg('cursor_created_at') AND p.id < sqlc.narg('cursor_id'))
+)
+-- The sentinel keeps a pick whose order has no ship-by date sortable and last; the repository's cursor must use the same value.
+AND (
+    sqlc.arg('sort_by_ship_by') = false
+    OR sqlc.narg('cursor_ship_by_date') IS NULL
+    OR COALESCE(so.ship_by_date, '9999-12-31') > CAST(sqlc.narg('cursor_ship_by_date') AS DATE)
+    OR (
+        COALESCE(so.ship_by_date, '9999-12-31') = CAST(sqlc.narg('cursor_ship_by_date') AS DATE)
+        AND p.id > sqlc.narg('cursor_id')
+    )
+)
+ORDER BY
+    CASE WHEN sqlc.arg('sort_by_ship_by') = true THEN COALESCE(so.ship_by_date, '9999-12-31') END ASC,
+    CASE WHEN sqlc.arg('sort_by_ship_by') = true THEN p.id END ASC,
+    p.created_at DESC,
+    p.id DESC
+LIMIT ?;
+
+-- name: ListPicksSearchBackward :many
+-- The search sibling of ListPicksBackward; see ListPicksSearchForward for why there is no STRAIGHT_JOIN.
+SELECT
+    p.id,
+    p.number,
+    p.sales_order_id,
+    so.number AS sales_order_number,
+    ar.counterparty_account_id AS customer_id,
+    ba.name AS customer_name,
+    ar.external_number AS customer_number,
+    so.priority_code,
+    pr.id AS priority_id,
+    pr.name AS priority_name,
+    p.finished_at,
+    p.created_at,
+    p.updated_at,
+    (SELECT COUNT(*) FROM pick_line plc WHERE plc.pick_id = p.id) AS line_count,
+    -- Latest ship date across the order's shipments; drives the date in the pick header.
+    (SELECT MAX(sh.shipped_at) FROM shipment sh WHERE sh.sales_order_id = so.id) AS last_shipped_at,
+    so.promised_at,
+    -- The order's cross-reference and instructions, carried so the floor works the pick without opening the order.
+    so.customer_po_number,
+    so.note,
+    -- Freight is the order's, carried so a pick shows the carrier it ships on.
+    so.carrier_id,
+    cr.name AS carrier_name,
+    cr.is_portal_enabled AS carrier_is_portal_enabled,
+    cr.created_at AS carrier_created_at,
+    cr.updated_at AS carrier_updated_at,
+    so.carrier_option_id AS service_level_id,
+    co.name AS service_level_name,
+    co.is_portal_enabled AS service_level_is_portal_enabled,
+    co.service_level_token,
+    co.created_at AS service_level_created_at,
+    co.updated_at AS service_level_updated_at,
+    so.carrier_billing_type,
+    so.carrier_billing_account,
+    -- The order's delivery commitment and how it was derived, so a pick can explain its dates.
+    so.ship_by_date,
+    so.ship_by_cutoff_at,
+    so.lead_time_days,
+    so.lead_time_source_code,
+    so.transit_days,
+    so.transit_source_code,
+    -- Ship-to is the order's, denormalized so a pick header needs no second fetch.
+    so.shipping_address_id,
+    addr.name AS shipping_address_name,
+    addr.phone AS shipping_address_phone,
+    addr.email AS shipping_address_email,
+    addr.is_drop_ship AS shipping_address_is_drop_ship,
+    ship_geo.id AS shipping_address_geolocation_id,
+    ship_geo.street_line_1 AS shipping_address_street_line_1,
+    ship_geo.street_line_2 AS shipping_address_street_line_2,
+    ship_geo.locality AS shipping_address_locality,
+    ship_geo.state AS shipping_address_state,
+    ship_geo.postal_code AS shipping_address_postal_code,
+    ship_geo.country AS shipping_address_country,
+    addr.created_at AS shipping_address_created_at,
+    addr.updated_at AS shipping_address_updated_at
+FROM pick p
+JOIN sales_order so ON so.id = p.sales_order_id
+JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
+    AND ar.counterparty_account_id = so.buyer_account_id
+JOIN account ba ON ba.id = so.buyer_account_id
+JOIN priority pr ON pr.code = so.priority_code
+LEFT JOIN address addr ON addr.id = so.shipping_address_id
+LEFT JOIN geolocation ship_geo ON ship_geo.id = addr.geolocation_id
+LEFT JOIN carrier cr ON cr.id = so.carrier_id
+LEFT JOIN carrier_option co ON co.id = so.carrier_option_id
+WHERE p.account_id = sqlc.arg('account_id')
+AND p.id IN (
+    SELECT pk.id FROM pick pk
+    WHERE pk.account_id = sqlc.arg('account_id')
+    AND MATCH(pk.number) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
+    UNION
+    SELECT pk.id FROM pick pk
+    JOIN sales_order pso ON pso.id = pk.sales_order_id
+    WHERE pk.account_id = sqlc.arg('account_id')
+    AND MATCH(pso.customer_po_number) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
 )
 AND (
     sqlc.narg('status') IS NULL
@@ -266,13 +543,11 @@ JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
     AND ar.counterparty_account_id = so.buyer_account_id
 JOIN account ba ON ba.id = so.buyer_account_id
 WHERE p.account_id = sqlc.arg('account_id')
+-- Only short (< ngram token size) terms reach here as a LIKE; ListPicksSearch* serves the ngram path.
 AND (
     sqlc.narg('search_query') IS NULL
     OR p.number LIKE sqlc.narg('search_query')
-    OR so.number LIKE sqlc.narg('search_query')
     OR so.customer_po_number LIKE sqlc.narg('search_query')
-    OR ba.name LIKE sqlc.narg('search_query')
-    OR ar.external_number LIKE sqlc.narg('search_query')
 )
 AND (
     sqlc.narg('status') IS NULL

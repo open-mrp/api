@@ -82,4 +82,45 @@ func TestNewFulltextSearch_UsesEitherModeNotBoth(t *testing.T) {
 	}
 }
 
+func TestNewNgramSearch(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name         string
+		query        *string
+		wantFulltext string
+		wantLike     string
+	}{
+		{name: "nil"},
+		{name: "empty", query: ptr("")},
+		{name: "below the ngram token size falls back to like", query: ptr("p"), wantLike: "%p%"},
+		{name: "one char like fallback escapes metacharacters", query: ptr("%"), wantLike: `%\%%`},
+		{name: "at the ngram token size uses a phrase", query: ptr("po"), wantFulltext: `"po"`},
+		{name: "longer term becomes a phrase for substring matching", query: ptr("23839"), wantFulltext: `"23839"`},
+		{name: "phrase wraps after stripping boolean operators and quotes", query: ptr(`+2"38*`), wantFulltext: `"238"`},
+		{name: "all operators leave nothing to search", query: ptr(`"+*`)},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := NewNgramSearch(tt.query)
+
+			if got.Fulltext.Valid != (tt.wantFulltext != "") || got.Fulltext.String != tt.wantFulltext {
+				t.Fatalf("Fulltext = %+v, want %q", got.Fulltext, tt.wantFulltext)
+			}
+			if got.Like.Valid != (tt.wantLike != "") || got.Like.String != tt.wantLike {
+				t.Fatalf("Like = %+v, want %q", got.Like, tt.wantLike)
+			}
+			if got.Fulltext.Valid && got.Like.Valid {
+				t.Fatalf("query bound both modes: %+v", got)
+			}
+			// sqlc binds the same AGAINST parameter twice (once per UNION branch); a mismatch
+			// would send NULL to one of the two MATCH clauses.
+			if got.Fulltext2 != got.Fulltext {
+				t.Fatalf("Fulltext2 = %+v, want it to equal Fulltext %+v", got.Fulltext2, got.Fulltext)
+			}
+		})
+	}
+}
+
 func ptr(s string) *string { return &s }

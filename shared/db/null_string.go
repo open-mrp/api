@@ -100,6 +100,37 @@ func NewFulltextSearch(s *string) FulltextSearch {
 	return FulltextSearch{Fulltext: ft, Fulltext2: ft}
 }
 
+// ngramTokenSize is the MySQL server's ngram_token_size (default 2). An ngram FULLTEXT index tokenizes
+// text into overlapping tokens of this length, so a query shorter than it has no token to match and
+// must fall back to LIKE.
+const ngramTokenSize = 2
+
+// NewNgramSearch formats a search term for a MySQL ngram FULLTEXT index (substring search). A term of
+// at least ngramTokenSize characters becomes a boolean-mode phrase ("term"), which forces the ngram
+// tokens to appear consecutively — matching the term as a substring anywhere in the column. Shorter
+// terms have no ngram token and fall back to LIKE. Wrapping is safe because SanitizeFulltextBoolean
+// strips the double-quote (and every other operator) from the user's input first.
+func NewNgramSearch(s *string) FulltextSearch {
+	if s == nil || *s == "" {
+		return FulltextSearch{}
+	}
+	if len([]rune(*s)) < ngramTokenSize {
+		sanitized := EscapeLike(*s)
+		if sanitized == "" {
+			return FulltextSearch{}
+		}
+		return FulltextSearch{
+			Like: sql.NullString{String: "%" + sanitized + "%", Valid: true},
+		}
+	}
+	sanitized := SanitizeFulltextBoolean(*s)
+	if sanitized == "" {
+		return FulltextSearch{}
+	}
+	ft := sql.NullString{String: `"` + sanitized + `"`, Valid: true}
+	return FulltextSearch{Fulltext: ft, Fulltext2: ft}
+}
+
 func StringFromNullString(ns sql.NullString) *string {
 	if !ns.Valid {
 		return nil

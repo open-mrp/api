@@ -20,11 +20,13 @@ func NewSESIdentityProvider(ctx context.Context, region string) (domain.EmailIde
 	if err != nil {
 		return nil, apierror.NewInternalError(err, "Failed to load AWS configuration.")
 	}
-	return &sesIdentityProviderImpl{client: ses.NewFromConfig(cfg)}, nil
+	return &sesIdentityProviderImpl{client: ses.NewFromConfig(cfg), region: region}, nil
 }
 
 type sesIdentityProviderImpl struct {
 	client *ses.Client
+	// region names the SES region in the bounce-feedback MX record the customer publishes; it must be the region the identity was verified in, not the default send region.
+	region string
 }
 
 func (s *sesIdentityProviderImpl) RegisterDomain(ctx context.Context, domainName string) ([]string, *apierror.APIError) {
@@ -67,4 +69,31 @@ func (s *sesIdentityProviderImpl) DeleteDomain(ctx context.Context, domainName s
 		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to delete the email domain identity from SES."))
 	}
 	return nil
+}
+
+func (s *sesIdentityProviderImpl) SetMailFromDomain(ctx context.Context, domainName, mailFromSubdomain string) (domain.MailFromRecords, *apierror.APIError) {
+	ctx, span := sesIdentityTracer.Start(ctx, "aws.ses_identity.set_mail_from_domain")
+	defer span.End()
+
+	// UseDefaultValue keeps mail flowing on the amazonses.com Return-Path until the customer publishes the
+	// MX record. RejectMessage would drop every send in the window between configuring the identity and
+	// DNS propagating — a merchant's invoices, silently, for as long as their DNS takes.
+	input := &ses.SetIdentityMailFromDomainInput{
+		Identity:            &domainName,
+		MailFromDomain:      &mailFromSubdomain,
+		BehaviorOnMXFailure: sestypes.BehaviorOnMXFailureUseDefaultValue,
+	}
+	if _, err := s.client.SetIdentityMailFromDomain(ctx, input); err != nil {
+		return domain.MailFromRecords{}, tracing.Trace(span, apierror.NewInternalError(err, "Failed to configure the custom MAIL FROM domain."))
+	}
+
+	return s.MailFromRecordsFor(mailFromSubdomain), nil
+}
+
+func (s *sesIdentityProviderImpl) MailFromRecordsFor(mailFromSubdomain string) domain.MailFromRecords {
+	return domain.MailFromRecords{
+		Subdomain: mailFromSubdomain,
+		MXRecord:  "10 feedback-smtp." + s.region + ".amazonses.com",
+		SPFRecord: "v=spf1 include:amazonses.com ~all",
+	}
 }

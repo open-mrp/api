@@ -74,3 +74,18 @@ func (t EmailTemplate) IsValid() bool {
 func (t EmailTemplate) EnumValues() []string {
 	return []string{string(EmailTemplateWelcome), string(EmailTemplatePasswordReset), string(EmailTemplatePasswordUpdated), string(EmailTemplateRegistrationVerify), string(EmailTemplateRegistrationVerifyExisting), string(EmailTemplateEnterpriseRequest), string(EmailTemplateInternalErrorAlert), string(EmailTemplateNewRegistrationAlert), string(EmailTemplatePlanChangeAlert), string(EmailTemplateRegistrationLimitAlert), string(EmailTemplateNewUserWelcome), string(EmailTemplateOrderCheckout), string(EmailTemplatePurchaseOrderSubmission), string(EmailTemplateStatementOfAccount), string(EmailTemplateInvoice), string(EmailTemplateOrderAcknowledgement), string(EmailTemplateAlreadyRegistered), string(EmailTemplateChatMessage), string(EmailTemplateMessageFailureAlert)}
 }
+
+// SendsAsMerchant reports whether the template carries a merchant's own correspondence with their counterparty — an order, an invoice, a statement — rather than Augno's relationship with a user. Only these may leave from an account's configured sender: a password reset arriving from a tenant's domain reads as a spoof of exactly the mail it is meant to authenticate, and puts that tenant's sending reputation behind our credential flow.
+//
+// EmailTemplateChatMessage is deliberately excluded. It notifies a platform user that a thread has a new message, so sending it from the account's customer-facing address would tell a merchant's own staff their internal notification came from their sales inbox. Actual email-bridge replies leave through SendInboxReply, which sets its own From from the bound inbox.
+func (t EmailTemplate) SendsAsMerchant() bool {
+	switch t {
+	case EmailTemplateOrderCheckout,
+		EmailTemplateOrderAcknowledgement,
+		EmailTemplateInvoice,
+		EmailTemplatePurchaseOrderSubmission,
+		EmailTemplateStatementOfAccount:
+		return true
+	}
+	return false
+}

@@ -195,16 +195,76 @@ func (h *emailBridgeGRPCHandler) DeleteEmailInbox(ctx context.Context, req *pb.D
 	return &pb.EmailBridgeAck{Ok: true}, nil
 }
 
+func (h *emailBridgeGRPCHandler) GetEmailSender(ctx context.Context, req *pb.GetEmailSenderRequest) (*pb.EmailSenderInfo, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	sender, apiErr := h.emailBridgeSvc.GetSender(ctx)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	return emailSenderToProto(sender), nil
+}
+
+func (h *emailBridgeGRPCHandler) SetEmailSender(ctx context.Context, req *pb.SetEmailSenderRequest) (*pb.EmailSenderInfo, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	sender, apiErr := h.emailBridgeSvc.SetSender(ctx, domain.UpsertAccountEmailSenderInput{
+		EmailDomainID: req.EmailDomainId,
+		LocalPart:     req.LocalPart,
+		FromName:      req.FromName,
+		ReplyTo:       req.ReplyTo,
+	})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	return emailSenderToProto(sender), nil
+}
+
+func (h *emailBridgeGRPCHandler) DeleteEmailSender(ctx context.Context, req *pb.DeleteEmailSenderRequest) (*pb.EmailBridgeAck, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	if apiErr := h.emailBridgeSvc.DeleteSender(ctx); apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	return &pb.EmailBridgeAck{Ok: true}, nil
+}
+
 func emailDomainToProto(d *domain.EmailDomain) *pb.EmailDomainInfo {
-	return &pb.EmailDomainInfo{
-		Id:         d.ID,
-		AccountId:  d.AccountID,
-		Domain:     d.Domain,
-		Status:     d.Status,
-		DkimTokens: d.DkimTokens,
-		VerifiedAt: nullableTimestamp(d.VerifiedAt),
-		CreatedAt:  timestamppb.New(d.CreatedAt),
-		UpdatedAt:  timestamppb.New(d.UpdatedAt),
+	out := &pb.EmailDomainInfo{
+		Id:             d.ID,
+		AccountId:      d.AccountID,
+		Domain:         d.Domain,
+		Status:         d.Status,
+		DkimTokens:     d.DkimTokens,
+		MailFromDomain: d.MailFromDomain,
+		VerifiedAt:     nullableTimestamp(d.VerifiedAt),
+		CreatedAt:      timestamppb.New(d.CreatedAt),
+		UpdatedAt:      timestamppb.New(d.UpdatedAt),
+	}
+	// The records only mean anything once SES has been told which subdomain to use; before that there is nothing for the customer to publish.
+	if d.MailFromMXRecord != "" {
+		out.MailFromMxRecord = &d.MailFromMXRecord
+		out.MailFromSpfRecord = &d.MailFromSPFRecord
+	}
+	return out
+}
+
+func emailSenderToProto(s *domain.AccountEmailSender) *pb.EmailSenderInfo {
+	return &pb.EmailSenderInfo{
+		Id:            s.ID,
+		AccountId:     s.AccountID,
+		EmailDomainId: s.EmailDomainID,
+		LocalPart:     s.LocalPart,
+		Address:       s.Address(),
+		FromName:      s.FromName,
+		ReplyTo:       s.ReplyTo,
+		Domain:        s.Domain,
+		DomainStatus:  s.DomainStatus,
+		CreatedAt:     timestamppb.New(s.CreatedAt),
+		UpdatedAt:     timestamppb.New(s.UpdatedAt),
 	}
 }
 

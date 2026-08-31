@@ -25,6 +25,20 @@ type EmailDomainRepo interface {
 	UpdateStatus(ctx context.Context, id, accountID, status string, dkimTokens []string) *apierror.APIError
 	// Delete removes a domain; deleted is false when no matching domain existed.
 	Delete(ctx context.Context, id, accountID string) (deleted bool, apiErr *apierror.APIError)
+	// SetMailFromDomain records the envelope Return-Path subdomain SES was configured with for this identity.
+	SetMailFromDomain(ctx context.Context, id, accountID, mailFromDomain string) *apierror.APIError
+}
+
+// AccountEmailSenderRepo persists the one outbound identity an account sends its merchant-facing mail as, and resolves it on the send path.
+type AccountEmailSenderRepo interface {
+	// Upsert writes the account's sender, replacing any existing one (at most one per account).
+	Upsert(ctx context.Context, id, accountID string, input *UpsertAccountEmailSenderInput) *apierror.APIError
+	// GetByAccount resolves the account's sender joined to its domain. Returns (nil, nil) when the account has not configured one — the common case, and not an error: those accounts send under the platform address.
+	GetByAccount(ctx context.Context, accountID string) (*AccountEmailSender, *apierror.APIError)
+	// Delete removes the account's sender; deleted is false when none was configured.
+	Delete(ctx context.Context, accountID string) (deleted bool, apiErr *apierror.APIError)
+	// DeleteByDomain removes the account's sender if it is bound to the given domain, so deleting a domain cannot strand a sender pointing at it.
+	DeleteByDomain(ctx context.Context, emailDomainID, accountID string) (deleted bool, apiErr *apierror.APIError)
 }
 
 // EmailInboxRepo persists routable inbox addresses and resolves the inbox an inbound mail arrived at.

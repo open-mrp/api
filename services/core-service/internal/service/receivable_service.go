@@ -24,6 +24,7 @@ type receivableSvcImpl struct {
 	mediatorFactory       domain.MediatorFactory
 	txManager             TransactionManager
 	notificationPublisher domain.NotificationPublisher
+	branding              BrandingAssets
 }
 
 // ReceivableSvcConfig holds the dependencies for the receivable service.
@@ -39,6 +40,9 @@ type ReceivableSvcConfig struct {
 
 	// NotificationPublisher (required) publishes notification messages to the outbox.
 	NotificationPublisher domain.NotificationPublisher
+
+	// Branding (optional; default: zero value) resolves account logos for the statement-of-account letterhead. The zero value resolves absolute URLs only.
+	Branding BrandingAssets
 }
 
 func (c *ReceivableSvcConfig) validate() error {
@@ -68,6 +72,7 @@ func NewReceivableSvc(config *ReceivableSvcConfig) domain.ReceivableSvc {
 		mediatorFactory:       config.MediatorFactory,
 		txManager:             config.TxManager,
 		notificationPublisher: config.NotificationPublisher,
+		branding:              config.Branding,
 	}
 }
 
@@ -82,6 +87,7 @@ func (s *receivableSvcImpl) withTx(ctx context.Context, fn func(context.Context,
 			mediatorFactory:       s.mediatorFactory,
 			txManager:             s.txManager,
 			notificationPublisher: s.notificationPublisher,
+			branding:              s.branding,
 		}
 		return fn(txCtx, txSvc)
 	})
@@ -228,17 +234,25 @@ func (s *receivableSvcImpl) EmailReceivablesForCustomer(ctx context.Context, par
 		attachmentFilename := fmt.Sprintf("account-statement-%s-%s.xlsx", customerName, formattedDate)
 		attachmentContentType := "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
+		subject := fmt.Sprintf("Statement of Account for %s", customerName)
+
+		// The sending account's own name heads the letterhead; customerName is the party the statement is about.
+		sellerName, _ := s.repos.NewAccountRepo().GetName(ctx, accountID)
+		letterhead := merchantLetterheadParams(ctx, s.repos, s.branding, accountID, sellerName, subject)
+		letterhead.params["body"] = fmt.Sprintf("Please find the statement of account for %s attached.", customerName)
+
 		emailData := messaging.EmailSendData{
 			To:                    params.RecipientEmails,
-			Subject:               fmt.Sprintf("Statement of Account for %s", customerName),
+			Subject:               subject,
 			TemplateID:            constants.EmailTemplateStatementOfAccount,
-			Params:                map[string]any{"body": fmt.Sprintf("Please find the statement of account for %s attached.", customerName)},
+			Params:                letterhead.params,
 			AccountID:             &accountID,
 			SentByID:              &identity.Actor.ID,
 			AttachmentData:        &encoded,
 			AttachmentFilename:    &attachmentFilename,
 			AttachmentContentType: &attachmentContentType,
 		}
+		applyMerchantReplyTo(&emailData, letterhead.supportEmail)
 
 		// Publish the email inside a transaction so the outbox write and idempotency cache update are atomic.
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *receivableSvcImpl) *apierror.APIError {

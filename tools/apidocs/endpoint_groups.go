@@ -185,6 +185,9 @@ func openAPIEndpointGroups() []apiendpoint.APIEndpointGroup {
 		*(&httpgroup.EmailInboxesEndpointGroup{}).Materialize(&httpgroup.EmailInboxesEndpointGroupConfig{
 			NotificationClient: notificationClient,
 		}).APIEndpointGroup,
+		*(&httpgroup.EmailSendersEndpointGroup{}).Materialize(&httpgroup.EmailSendersEndpointGroupConfig{
+			NotificationClient: notificationClient,
+		}).APIEndpointGroup,
 		*(&httpgroup.AgentRunsEndpointGroup{}).Materialize(&httpgroup.AgentRunsEndpointGroupConfig{
 			AgentClient: agentClient,
 		}).APIEndpointGroup,

@@ -146,12 +146,13 @@ func (c *NotificationConsumer) handleSendEmail(ctx context.Context, messageID st
 	}
 
 	sendData := domain.EmailSendData{
-		To:        payload.To,
-		Subject:   payload.Subject,
-		Body:      body,
-		SendAs:    payload.SendAs,
-		AccountID: payload.AccountID,
-		SentByID:  payload.SentByID,
+		To:         payload.To,
+		Subject:    payload.Subject,
+		Body:       body,
+		SendAs:     payload.SendAs,
+		TemplateID: payload.TemplateID,
+		AccountID:  payload.AccountID,
+		SentByID:   payload.SentByID,
 	}
 
 	// Pass through attachment fields if present.

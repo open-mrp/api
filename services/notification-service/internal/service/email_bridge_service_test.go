@@ -49,6 +49,18 @@ func (p *stubIdentityProvider) DeleteDomain(_ context.Context, _ string) *apierr
 	return nil
 }
 
+func (p *stubIdentityProvider) SetMailFromDomain(_ context.Context, _, mailFromSubdomain string) (domain.MailFromRecords, *apierror.APIError) {
+	return p.MailFromRecordsFor(mailFromSubdomain), nil
+}
+
+func (p *stubIdentityProvider) MailFromRecordsFor(mailFromSubdomain string) domain.MailFromRecords {
+	return domain.MailFromRecords{
+		Subdomain: mailFromSubdomain,
+		MXRecord:  "10 feedback-smtp.us-east-1.amazonses.com",
+		SPFRecord: "v=spf1 include:amazonses.com ~all",
+	}
+}
+
 func newEmailBridgeSvc(t *testing.T, domainRepo *repositorymock.MockEmailDomainRepo, inboxRepo *repositorymock.MockEmailInboxRepo, provider domain.EmailIdentityProvider) *emailBridgeSvcImpl {
 	t.Helper()
 	ctrl := gomock.NewController(t)
@@ -58,6 +70,13 @@ func newEmailBridgeSvc(t *testing.T, domainRepo *repositorymock.MockEmailDomainR
 	}
 	if inboxRepo != nil {
 		factory.EXPECT().NewEmailInboxRepo().Return(inboxRepo).AnyTimes()
+	}
+	// CreateDomain records the MAIL FROM subdomain, and DeleteDomain clears any sender bound to the domain; both are incidental to what these tests assert.
+	senderRepo := repositorymock.NewMockAccountEmailSenderRepo(ctrl)
+	senderRepo.EXPECT().DeleteByDomain(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil).AnyTimes()
+	factory.EXPECT().NewAccountEmailSenderRepo().Return(senderRepo).AnyTimes()
+	if domainRepo != nil {
+		domainRepo.EXPECT().SetMailFromDomain(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 	}
 	return &emailBridgeSvcImpl{repoFactory: factory, identityProvider: provider}
 }

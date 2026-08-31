@@ -139,15 +139,103 @@ func (r *emailDomainRepoImpl) Delete(ctx context.Context, id, accountID string) 
 
 func emailDomainFromRow(row sqlc.EmailDomain) *domain.EmailDomain {
 	return &domain.EmailDomain{
-		ID:         row.ID,
-		AccountID:  row.AccountID,
-		Domain:     row.Domain,
-		Status:     row.Status,
-		DkimTokens: unmarshalStringSlice(row.DkimTokens),
-		VerifiedAt: db.TimeFromNullTime(row.VerifiedAt),
-		CreatedAt:  row.CreatedAt,
-		UpdatedAt:  row.UpdatedAt,
+		ID:             row.ID,
+		AccountID:      row.AccountID,
+		Domain:         row.Domain,
+		Status:         row.Status,
+		DkimTokens:     unmarshalStringSlice(row.DkimTokens),
+		MailFromDomain: db.StringFromNullString(row.MailFromDomain),
+		VerifiedAt:     db.TimeFromNullTime(row.VerifiedAt),
+		CreatedAt:      row.CreatedAt,
+		UpdatedAt:      row.UpdatedAt,
 	}
+}
+
+func (r *emailDomainRepoImpl) SetMailFromDomain(ctx context.Context, id, accountID, mailFromDomain string) *apierror.APIError {
+	ctx, span := emailRepoTracer.Start(ctx, "repository.email_domain.set_mail_from_domain")
+	defer span.End()
+	err := r.db.SetEmailDomainMailFrom(ctx, sqlc.SetEmailDomainMailFromParams{
+		MailFromDomain: db.NullString(mailFromDomain),
+		ID:             id,
+		AccountID:      accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return nil
+}
+
+// ── email_sender ──
+
+type accountEmailSenderRepoImpl struct {
+	db *sqlc.Queries
+}
+
+func NewAccountEmailSenderRepo(db *sqlc.Queries) domain.AccountEmailSenderRepo {
+	return &accountEmailSenderRepoImpl{db: db}
+}
+
+func (r *accountEmailSenderRepoImpl) Upsert(ctx context.Context, id, accountID string, input *domain.UpsertAccountEmailSenderInput) *apierror.APIError {
+	ctx, span := emailRepoTracer.Start(ctx, "repository.email_sender.upsert")
+	defer span.End()
+	err := r.db.UpsertEmailSender(ctx, sqlc.UpsertEmailSenderParams{
+		ID:            id,
+		AccountID:     accountID,
+		EmailDomainID: input.EmailDomainID,
+		LocalPart:     input.LocalPart,
+		FromName:      db.NullStringPtr(input.FromName),
+		ReplyTo:       db.NullStringPtr(input.ReplyTo),
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return nil
+}
+
+// GetByAccount runs on every merchant-facing send, and most accounts have no sender configured. No rows is therefore the ordinary case and maps to (nil, nil) rather than a 404 the send path would have to unwrap.
+func (r *accountEmailSenderRepoImpl) GetByAccount(ctx context.Context, accountID string) (*domain.AccountEmailSender, *apierror.APIError) {
+	ctx, span := emailRepoTracer.Start(ctx, "repository.email_sender.get_by_account")
+	defer span.End()
+	row, err := r.db.GetEmailSenderByAccount(ctx, accountID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+			return nil, nil
+		}
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return &domain.AccountEmailSender{
+		ID:             row.EmailSender.ID,
+		AccountID:      row.EmailSender.AccountID,
+		EmailDomainID:  row.EmailSender.EmailDomainID,
+		LocalPart:      row.EmailSender.LocalPart,
+		FromName:       db.StringFromNullString(row.EmailSender.FromName),
+		ReplyTo:        db.StringFromNullString(row.EmailSender.ReplyTo),
+		Domain:         row.Domain,
+		DomainStatus:   row.Status,
+		MailFromDomain: db.StringFromNullString(row.MailFromDomain),
+		CreatedAt:      row.EmailSender.CreatedAt,
+		UpdatedAt:      row.EmailSender.UpdatedAt,
+	}, nil
+}
+
+func (r *accountEmailSenderRepoImpl) Delete(ctx context.Context, accountID string) (bool, *apierror.APIError) {
+	ctx, span := emailRepoTracer.Start(ctx, "repository.email_sender.delete")
+	defer span.End()
+	rows, err := r.db.DeleteEmailSender(ctx, accountID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return false, tracing.Trace(span, apiErr)
+	}
+	return rows > 0, nil
+}
+
+func (r *accountEmailSenderRepoImpl) DeleteByDomain(ctx context.Context, emailDomainID, accountID string) (bool, *apierror.APIError) {
+	ctx, span := emailRepoTracer.Start(ctx, "repository.email_sender.delete_by_domain")
+	defer span.End()
+	rows, err := r.db.DeleteEmailSenderByDomain(ctx, sqlc.DeleteEmailSenderByDomainParams{EmailDomainID: emailDomainID, AccountID: accountID})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return false, tracing.Trace(span, apiErr)
+	}
+	return rows > 0, nil
 }
 
 // ── email_inbox ──

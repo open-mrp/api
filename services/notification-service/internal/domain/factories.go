@@ -17,6 +17,7 @@ type RepoFactory interface {
 	NewMessageAttachmentRepo() MessageAttachmentRepo
 	NewEmailDomainRepo() EmailDomainRepo
 	NewEmailInboxRepo() EmailInboxRepo
+	NewAccountEmailSenderRepo() AccountEmailSenderRepo
 	NewEmailMessageRepo() EmailMessageRepo
 	NewSupportRouteRepo() SupportRouteRepo
 	NewConversationLinkRepo() ConversationLinkRepo

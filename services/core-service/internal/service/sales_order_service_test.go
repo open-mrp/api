@@ -265,6 +265,13 @@ func (suite *SalesOrderSvcTestSuite) expectIdempotencyStarted() {
 		Times(1)
 }
 
+// The checkout path reads the seller's name for the Stripe line item, and its account and origin address for the email letterhead. The letterhead lookups are best-effort, so they are permitted rather than required.
+func (suite *SalesOrderSvcTestSuite) expectCheckoutSellerLookups() {
+	suite.accountRepo.EXPECT().GetName(gomock.Any(), "ac_test").Return("Seller Co", nil).AnyTimes()
+	suite.accountRepo.EXPECT().GetByID(gomock.Any(), "ac_test").Return(nil, nil).AnyTimes()
+	suite.orderRepo.EXPECT().GetAccountOriginAddress(gomock.Any(), "ac_test").Return(nil, nil).AnyTimes()
+}
+
 func (suite *SalesOrderSvcTestSuite) expectCacheSuccess() {
 	suite.idempotencyMed.EXPECT().
 		CacheSuccessResponse(gomock.Any(), "idk_test", gomock.Any()).
@@ -1465,6 +1472,7 @@ func (suite *SalesOrderSvcTestSuite) TestChangeStatus_IssueWithSendEmailFiresNot
 	portalDomainRepo := repositorymock.NewMockPortalDomainRepo(suite.ctrl)
 	suite.repoFactory.EXPECT().NewPortalDomainRepo().Return(portalDomainRepo).AnyTimes()
 	portalDomainRepo.EXPECT().GetByAccountID(gomock.Any(), "ac_test").Return(nil, nil).Times(1)
+	suite.expectCheckoutSellerLookups()
 	suite.accountRepo.EXPECT().GetPortalSlug(gomock.Any(), "ac_test").Return(nil, nil).Times(1)
 
 	suite.notifier.EXPECT().PublishSendEmail(gomock.Any(), gomock.Any()).Return(nil).Times(1)
@@ -1545,6 +1553,7 @@ func (suite *SalesOrderSvcTestSuite) TestCheckoutSalesOrder_Success() {
 	// Success/cancel URLs are built server-side from the account's portal slug, never
 	// from caller input, so the emailed checkout link can't be turned into an open redirect.
 	portalSlug := "acme"
+	suite.expectCheckoutSellerLookups()
 	suite.accountRepo.EXPECT().GetPortalSlug(gomock.Any(), "ac_test").Return(&portalSlug, nil).Times(1)
 
 	suite.checkoutFactory.EXPECT().Build("sk_test_xxx").Return(suite.checkoutClient).Times(1)
@@ -1558,8 +1567,14 @@ func (suite *SalesOrderSvcTestSuite) TestCheckoutSalesOrder_Success() {
 			// Single aggregate line item: (2.5 × $20.00) + (1 × -$10.00) = $40.00 → 4000 cents.
 			suite.Equal(int64(4000), params.LineItems[0].AmountCents)
 			suite.Equal(int64(1), params.LineItems[0].Quantity)
-			// Label uses the zero-padded record number (formatRecordNumber("1001")).
-			suite.Equal("SO #001001", params.LineItems[0].Name)
+			// The buyer arrives from an email, so the line item names the seller alongside the zero-padded record number (formatRecordNumber("1001")), and the description dates the order.
+			suite.Equal("Seller Co — Order 001001", params.LineItems[0].Name)
+			suite.Contains(params.LineItems[0].Description, "Placed ")
+			suite.Contains(params.SubmitMessage, "Seller Co")
+			suite.Contains(params.SubmitMessage, "001001")
+			suite.Equal("Seller Co — Order 001001", params.PaymentDescription)
+			// The card statement gets the order number stripped to alphanumerics.
+			suite.Equal("001001", params.StatementDescriptorSuffix)
 			// Metadata must carry orderID + customerID for webhook correlation.
 			suite.Equal("or_1", params.PaymentIntentMetadata["orderID"])
 			suite.Equal("ac_buyer", params.PaymentIntentMetadata["customerID"])
@@ -1582,6 +1597,9 @@ func (suite *SalesOrderSvcTestSuite) TestCheckoutSalesOrder_Success() {
 			suite.Equal("usr_test123", *data.SentByID)
 			suite.Equal([]string{"buyer@example.com"}, data.To)
 			suite.Equal(constants.EmailTemplateOrderCheckout, data.TemplateID)
+			// The merchant, not the buyer, must be the identity the mail presents and replies reach.
+			suite.Equal("Seller Co", data.Params["account_name"])
+			suite.Contains(data.Subject, "Seller Co")
 			return nil
 		}).Times(1)
 	suite.expectCacheSuccess()
@@ -1646,6 +1664,7 @@ func (suite *SalesOrderSvcTestSuite) TestCheckoutSalesOrder_CreatesStripeCustome
 		Return(nil).Times(1)
 
 	portalSlug := "acme"
+	suite.expectCheckoutSellerLookups()
 	suite.accountRepo.EXPECT().GetPortalSlug(gomock.Any(), "ac_test").Return(&portalSlug, nil).Times(1)
 
 	suite.checkoutClient.EXPECT().
@@ -1715,6 +1734,7 @@ func (suite *SalesOrderSvcTestSuite) TestCheckoutSalesOrder_CreatesStripeCustome
 		Return(nil).Times(1)
 
 	portalSlug := "acme"
+	suite.expectCheckoutSellerLookups()
 	suite.accountRepo.EXPECT().GetPortalSlug(gomock.Any(), "ac_test").Return(&portalSlug, nil).Times(1)
 	suite.checkoutClient.EXPECT().
 		CreateOneTimeCheckoutSession(gomock.Any(), gomock.Any()).

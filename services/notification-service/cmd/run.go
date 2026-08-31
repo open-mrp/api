@@ -96,7 +96,20 @@ func Run(
 		return apiErr
 	}
 
-	notificationConfig, apiErr := service.BuildNotificationSvcConfig(repoFactory, cfg.PlatformMode, cfg.AWSRegion, templateRenderer)
+	// bridgeEmailSender sends as a customer's own DKIM-verified domain, via SES in the inbound (receiving)
+	// region where those identities are verified — the platform's noreply@ identity lives in AWSRegion and
+	// neither region holds the other's. It carries both the email-bridge replies and, for accounts that have
+	// configured a sender, their merchant-facing transactional mail. Nil in test/dev-without-AWS, which
+	// leaves the bridge erroring on SendInboxReply and all transactional mail on the platform address.
+	var bridgeEmailSender domain.EmailSender
+	if !cfg.PlatformMode.IsTest() {
+		bridgeEmailSender, apiErr = aws.NewSESEmailSender(ctx, cfg.PlatformMode, cfg.InboundEmailRegion)
+		if apiErr != nil {
+			return apiErr
+		}
+	}
+
+	notificationConfig, apiErr := service.BuildNotificationSvcConfig(repoFactory, cfg.PlatformMode, cfg.AWSRegion, templateRenderer, bridgeEmailSender)
 	if apiErr != nil {
 		return apiErr
 	}
@@ -113,16 +126,6 @@ func Run(
 			return apiErr
 		}
 		objectStore = s3Client
-	}
-	// bridgeEmailSender sends outbound email-bridge replies via SES in the inbound (receiving) region so
-	// the reply comes from the same DKIM-verified identity. Nil in test/dev-without-AWS → SendInboxReply
-	// errors out there.
-	var bridgeEmailSender domain.EmailSender
-	if !cfg.PlatformMode.IsTest() {
-		bridgeEmailSender, apiErr = aws.NewSESEmailSender(ctx, cfg.PlatformMode, cfg.InboundEmailRegion)
-		if apiErr != nil {
-			return apiErr
-		}
 	}
 	chatSvc := service.NewConversationSvc(repoFactory, txManager, objectStore, cfg.ChatBucket, rabbitmq, enqueuer, bridgeEmailSender, cfg.InboundEmailDomain)
 

@@ -46,14 +46,17 @@ func LoadEmailDomains(ctx context.Context, ids []string) (map[string]any, *apier
 // here because that package would otherwise form an import cycle with resourceloaders.
 func emailDomainBaseFromProto(d *notifpb.EmailDomainInfo) *apiresource.EmailDomain {
 	return &apiresource.EmailDomain{
-		ID:         d.Id,
-		Object:     constants.ObjectTypeEmailDomain,
-		Domain:     d.Domain,
-		Status:     constants.EmailDomainStatus(d.Status),
-		DkimTokens: orEmptyStrSlice(d.DkimTokens),
-		VerifiedAt: grpcutil.TimestampToTimePtr(d.VerifiedAt),
-		CreatedAt:  grpcutil.TimestampToTime(d.CreatedAt),
-		UpdatedAt:  grpcutil.TimestampToTime(d.UpdatedAt),
+		ID:                d.Id,
+		Object:            constants.ObjectTypeEmailDomain,
+		Domain:            d.Domain,
+		Status:            constants.EmailDomainStatus(d.Status),
+		DkimTokens:        orEmptyStrSlice(d.DkimTokens),
+		MailFromDomain:    d.MailFromDomain,
+		MailFromMxRecord:  d.MailFromMxRecord,
+		MailFromSpfRecord: d.MailFromSpfRecord,
+		VerifiedAt:        grpcutil.TimestampToTimePtr(d.VerifiedAt),
+		CreatedAt:         grpcutil.TimestampToTime(d.CreatedAt),
+		UpdatedAt:         grpcutil.TimestampToTime(d.UpdatedAt),
 	}
 }
 

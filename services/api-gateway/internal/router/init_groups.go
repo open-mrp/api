@@ -829,6 +829,14 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 		if emailInboxesGroup != nil {
 			registry.RegisterGroup(emailInboxesGroup.APIEndpointGroup)
 		}
+
+		// Email senders (the address customer-facing mail is sent from)
+		emailSendersGroup := (&httpgroup.EmailSendersEndpointGroup{}).Materialize(&httpgroup.EmailSendersEndpointGroupConfig{
+			NotificationClient: config.NotificationClient,
+		})
+		if emailSendersGroup != nil {
+			registry.RegisterGroup(emailSendersGroup.APIEndpointGroup)
+		}
 	}
 
 	// Agents

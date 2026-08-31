@@ -22,9 +22,63 @@ type EmailDomain struct {
 	Domain     string
 	Status     string
 	DkimTokens []string
-	VerifiedAt *time.Time
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
+	// MailFromDomain is the subdomain SES was told to use as the envelope Return-Path (e.g. mail.example.com). Without it the Return-Path stays on amazonses.com, which does not align with the From domain, so mail clients annotate the sender with "via amazonses.com" even though DKIM passes. Nil for domains registered before custom MAIL FROM was configured.
+	MailFromDomain *string
+	// MailFromMXRecord and MailFromSPFRecord are the records the customer publishes on MailFromDomain. Rendered on read rather than stored: they are a function of the SES region, and a stored copy would go stale if the region ever moved. Empty when MailFromDomain is unset.
+	MailFromMXRecord  string
+	MailFromSPFRecord string
+	VerifiedAt        *time.Time
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+}
+
+// mailFromSubdomainLabel is the label prefixed to a customer's domain for the envelope Return-Path (mail.example.com). A subdomain is required: SES refuses to use a root domain as MAIL FROM when that domain also receives mail, which every bridged domain does.
+const mailFromSubdomainLabel = "mail"
+
+// MailFromSubdomain renders the MAIL FROM subdomain for a customer domain.
+func MailFromSubdomain(domainName string) string {
+	return mailFromSubdomainLabel + "." + domainName
+}
+
+// AccountEmailSender is the outbound identity an account's merchant-facing mail is sent as. At most one per account. Domain, DomainStatus and MailFromDomain are joined from the underlying email_domain: the sender is only usable while its domain is verified, and the resolver checks that on every send rather than trusting a flag written at configuration time.
+type AccountEmailSender struct {
+	ID             string
+	AccountID      string
+	EmailDomainID  string
+	LocalPart      string
+	FromName       *string
+	ReplyTo        *string
+	Domain         string
+	DomainStatus   string
+	MailFromDomain *string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+// Address is the bare address the sender posts from, e.g. "orders@carolon.com".
+func (s *AccountEmailSender) Address() string {
+	return s.LocalPart + "@" + s.Domain
+}
+
+// FromHeader renders the RFC 5322 From value. SES accepts a display name in Source, and the display name is what a mail client shows in the sender column, so an account that set one gets its own name there rather than a bare address.
+func (s *AccountEmailSender) FromHeader() string {
+	if s.FromName == nil || *s.FromName == "" {
+		return s.Address()
+	}
+	return *s.FromName + " <" + s.Address() + ">"
+}
+
+// Usable reports whether mail may be sent as this identity. An unverified domain is rejected by SES, so sending under it would bounce every merchant email rather than degrade.
+func (s *AccountEmailSender) Usable() bool {
+	return s != nil && s.DomainStatus == EmailDomainStatusVerified && s.LocalPart != "" && s.Domain != ""
+}
+
+// UpsertAccountEmailSenderInput configures an account's outbound identity. ReplyTo defaults to the sender address when unset.
+type UpsertAccountEmailSenderInput struct {
+	EmailDomainID string
+	LocalPart     string
+	FromName      *string
+	ReplyTo       *string
 }
 
 type EmailInbox struct {

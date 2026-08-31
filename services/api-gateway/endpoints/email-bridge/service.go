@@ -32,6 +32,10 @@ type EmailBridgeSvc interface {
 	GetInbox(ctx context.Context, req *GetEmailInboxRequest) (*apiresource.EmailInbox, *apierror.APIError)
 	UpdateInbox(ctx context.Context, req *UpdateEmailInboxRequest) (*apiresource.EmailInbox, *apierror.APIError)
 	DeleteInbox(ctx context.Context, req *DeleteEmailInboxRequest) (*apiresource.EmptyResource, *apierror.APIError)
+
+	GetSender(ctx context.Context, req *GetEmailSenderRequest) (*apiresource.EmailSender, *apierror.APIError)
+	SetSender(ctx context.Context, req *SetEmailSenderRequest) (*apiresource.EmailSender, *apierror.APIError)
+	DeleteSender(ctx context.Context, req *DeleteEmailSenderRequest) (*apiresource.EmptyResource, *apierror.APIError)
 }
 
 type EmailBridgeSvcConfig struct {
@@ -61,14 +65,17 @@ func NewEmailBridgeSvc(config *EmailBridgeSvcConfig) EmailBridgeSvc {
 
 func emailDomainFromProto(d *pb.EmailDomainInfo) *apiresource.EmailDomain {
 	return &apiresource.EmailDomain{
-		ID:         d.Id,
-		Object:     constants.ObjectTypeEmailDomain,
-		Domain:     d.Domain,
-		Status:     constants.EmailDomainStatus(d.Status),
-		DkimTokens: emptyIfNil(d.DkimTokens),
-		VerifiedAt: grpcutil.TimestampToTimePtr(d.VerifiedAt),
-		CreatedAt:  grpcutil.TimestampToTime(d.CreatedAt),
-		UpdatedAt:  grpcutil.TimestampToTime(d.UpdatedAt),
+		ID:                d.Id,
+		Object:            constants.ObjectTypeEmailDomain,
+		Domain:            d.Domain,
+		Status:            constants.EmailDomainStatus(d.Status),
+		DkimTokens:        emptyIfNil(d.DkimTokens),
+		MailFromDomain:    d.MailFromDomain,
+		MailFromMxRecord:  d.MailFromMxRecord,
+		MailFromSpfRecord: d.MailFromSpfRecord,
+		VerifiedAt:        grpcutil.TimestampToTimePtr(d.VerifiedAt),
+		CreatedAt:         grpcutil.TimestampToTime(d.CreatedAt),
+		UpdatedAt:         grpcutil.TimestampToTime(d.UpdatedAt),
 	}
 }
 
@@ -268,6 +275,61 @@ func (s *emailBridgeSvcImpl) DeleteInbox(ctx context.Context, req *DeleteEmailIn
 	_, apiErr := grpcutil.CallRPC(ctx, emailBridgeSvcTracer, "service.email_bridge.delete_inbox", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.EmailBridgeAck, error) {
 			return s.emailBridgeClient.DeleteEmailInbox(ctx, pbReq, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	return &apiresource.EmptyResource{}, nil
+}
+
+func emailSenderFromProto(sender *pb.EmailSenderInfo) *apiresource.EmailSender {
+	return &apiresource.EmailSender{
+		ID:            sender.Id,
+		Object:        constants.ObjectTypeEmailSender,
+		EmailDomainID: sender.EmailDomainId,
+		LocalPart:     sender.LocalPart,
+		Address:       sender.Address,
+		FromName:      sender.FromName,
+		ReplyTo:       sender.ReplyTo,
+		Domain:        sender.Domain,
+		DomainStatus:  constants.EmailDomainStatus(sender.DomainStatus),
+		CreatedAt:     grpcutil.TimestampToTime(sender.CreatedAt),
+		UpdatedAt:     grpcutil.TimestampToTime(sender.UpdatedAt),
+	}
+}
+
+func (s *emailBridgeSvcImpl) GetSender(ctx context.Context, _ *GetEmailSenderRequest) (*apiresource.EmailSender, *apierror.APIError) {
+	resp, apiErr := grpcutil.CallRPC(ctx, emailBridgeSvcTracer, "service.email_bridge.get_sender", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.EmailSenderInfo, error) {
+			return s.emailBridgeClient.GetEmailSender(ctx, &pb.GetEmailSenderRequest{}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	return emailSenderFromProto(resp), nil
+}
+
+func (s *emailBridgeSvcImpl) SetSender(ctx context.Context, req *SetEmailSenderRequest) (*apiresource.EmailSender, *apierror.APIError) {
+	pbReq := &pb.SetEmailSenderRequest{
+		EmailDomainId: req.EmailDomainID,
+		LocalPart:     req.LocalPart,
+		FromName:      req.FromName.Ptr(),
+		ReplyTo:       req.ReplyTo.Ptr(),
+	}
+	resp, apiErr := grpcutil.CallRPC(ctx, emailBridgeSvcTracer, "service.email_bridge.set_sender", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.EmailSenderInfo, error) {
+			return s.emailBridgeClient.SetEmailSender(ctx, pbReq, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	return emailSenderFromProto(resp), nil
+}
+
+func (s *emailBridgeSvcImpl) DeleteSender(ctx context.Context, _ *DeleteEmailSenderRequest) (*apiresource.EmptyResource, *apierror.APIError) {
+	_, apiErr := grpcutil.CallRPC(ctx, emailBridgeSvcTracer, "service.email_bridge.delete_sender", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.EmailBridgeAck, error) {
+			return s.emailBridgeClient.DeleteEmailSender(ctx, &pb.DeleteEmailSenderRequest{}, opts...)
 		})
 	if apiErr != nil {
 		return nil, apiErr

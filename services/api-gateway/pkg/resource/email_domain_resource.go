@@ -32,6 +32,14 @@ type EmailDomain struct {
 	//
 	// Publish each token as a CNAME record on the domain, then call the verify action to confirm them.
 	DkimTokens []string `json:"dkim_tokens"`
+	// The subdomain used as the envelope return path for mail sent from this domain.
+	//
+	// Publishing the two records below makes the return path match the sender address. Until you do, mail clients show your mail as coming from your address "via amazonses.com".
+	MailFromDomain *string `json:"mail_from_domain"`
+	// The MX record to publish on `mail_from_domain`, for delivery of bounces and complaints.
+	MailFromMxRecord *string `json:"mail_from_mx_record"`
+	// The SPF record to publish as a TXT record on `mail_from_domain`.
+	MailFromSpfRecord *string `json:"mail_from_spf_record"`
 	// When the domain's DKIM verification was confirmed.
 	VerifiedAt *time.Time `json:"verified_at"`
 	// Creation timestamp.

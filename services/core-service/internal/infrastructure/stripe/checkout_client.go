@@ -71,9 +71,24 @@ func (c *checkoutClientImpl) CreateOneTimeCheckoutSession(ctx context.Context, p
 		sessParams.CustomerEmail = gostripe.String(params.CustomerEmail)
 	}
 
-	if len(params.PaymentIntentMetadata) > 0 {
+	if len(params.PaymentIntentMetadata) > 0 || params.PaymentDescription != "" || params.StatementDescriptorSuffix != "" {
 		sessParams.PaymentIntentData = &gostripe.CheckoutSessionPaymentIntentDataParams{
 			Metadata: params.PaymentIntentMetadata,
+		}
+		if params.PaymentDescription != "" {
+			sessParams.PaymentIntentData.Description = gostripe.String(params.PaymentDescription)
+		}
+		if params.StatementDescriptorSuffix != "" {
+			sessParams.PaymentIntentData.StatementDescriptorSuffix = gostripe.String(params.StatementDescriptorSuffix)
+		}
+	}
+
+	// Names the seller and the order directly above the pay button. Without it the hosted page shows only a line item and whatever branding the merchant configured in their own Stripe dashboard, which is what made an emailed checkout link unrecognizable to buyers.
+	if params.SubmitMessage != "" {
+		sessParams.CustomText = &gostripe.CheckoutSessionCustomTextParams{
+			Submit: &gostripe.CheckoutSessionCustomTextSubmitParams{
+				Message: gostripe.String(params.SubmitMessage),
+			},
 		}
 	}
 

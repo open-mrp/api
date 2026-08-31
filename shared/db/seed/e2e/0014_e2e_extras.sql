@@ -407,12 +407,16 @@ INSERT IGNORE INTO hubspot_sync_record (id, account_id, augno_type, augno_id, hu
 -- and the update/{id} endpoints resolve their path param)
 -- ============================================================
 
-INSERT IGNORE INTO email_domain (id, account_id, domain, status, dkim_tokens, verified_at, created_at, updated_at) VALUES
+INSERT IGNORE INTO email_domain (id, account_id, domain, status, dkim_tokens, mail_from_domain, verified_at, created_at, updated_at) VALUES
     ('emdom_01seeddomain1_00', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'mail.e2e.openmrp.ai', 'verified',
-     '["sel1._domainkey.mail.e2e.openmrp.ai","sel2._domainkey.mail.e2e.openmrp.ai"]', NOW(), NOW(), NOW());
+     '["sel1._domainkey.mail.e2e.openmrp.ai","sel2._domainkey.mail.e2e.openmrp.ai"]', 'mail.mail.e2e.openmrp.ai', NOW(), NOW(), NOW());
 
 INSERT IGNORE INTO email_inbox (id, account_id, email_domain_id, address, from_name, status, agent_config_id, created_at, updated_at) VALUES
     ('eminb_01seedinbox1_000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'emdom_01seeddomain1_00', 'support@mail.e2e.openmrp.ai', 'E2E Support', 'active', 'agdf_01seede2e_orderbot0', NOW(), NOW());
+
+-- A configured sender so GET/PUT/DELETE /v1/messaging/email-sender resolve against a real row.
+INSERT IGNORE INTO email_sender (id, account_id, email_domain_id, local_part, from_name, reply_to, created_at, updated_at) VALUES
+    ('emsx_01seedsender1_00', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'emdom_01seeddomain1_00', 'orders', 'E2E Sales', NULL, NOW(), NOW());
 
 -- ============================================================
 -- AUDIT EVENTS (2 rows so audit event tests don't skip)

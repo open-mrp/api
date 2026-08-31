@@ -538,8 +538,17 @@ func (r *inventoryReservationRepo) AllocateOpenIssuesForItem(ctx context.Context
 		return tracing.Trace(span, apiErr)
 	}
 
+	unitIDs := make([]string, 0, len(issues))
 	for _, issue := range issues {
-		if apiErr := r.allocateOneOpenIssue(ctx, accountID, itemID, issue.ID, issue.QuantityValue, issue.UnitRatio,
+		unitIDs = append(unitIDs, issue.UnitID)
+	}
+	ratios, apiErr := r.unitRatios(ctx, unitIDs)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	for _, issue := range issues {
+		if apiErr := r.allocateOneOpenIssue(ctx, accountID, itemID, issue.ID, issue.QuantityValue, ratios[issue.UnitID],
 			issue.StorageLocationID, issue.LotID); apiErr != nil {
 			return tracing.Trace(span, apiErr)
 		}
@@ -570,10 +579,19 @@ func (r *inventoryReservationRepo) AllocateOpenIssuesForItemPage(ctx context.Con
 		return time.Time{}, "", 0, tracing.Trace(span, apiErr)
 	}
 
+	unitIDs := make([]string, 0, len(issues))
+	for _, issue := range issues {
+		unitIDs = append(unitIDs, issue.UnitID)
+	}
+	ratios, apiErr := r.unitRatios(ctx, unitIDs)
+	if apiErr != nil {
+		return time.Time{}, "", 0, tracing.Trace(span, apiErr)
+	}
+
 	lastCreatedAt := afterCreatedAt
 	lastID := afterID
 	for _, issue := range issues {
-		if apiErr := r.allocateOneOpenIssue(ctx, accountID, itemID, issue.ID, issue.QuantityValue, issue.UnitRatio,
+		if apiErr := r.allocateOneOpenIssue(ctx, accountID, itemID, issue.ID, issue.QuantityValue, ratios[issue.UnitID],
 			issue.StorageLocationID, issue.LotID); apiErr != nil {
 			return time.Time{}, "", 0, tracing.Trace(span, apiErr)
 		}
@@ -584,17 +602,20 @@ func (r *inventoryReservationRepo) AllocateOpenIssuesForItemPage(ctx context.Con
 	return lastCreatedAt, lastID, len(issues), nil
 }
 
-func (r *inventoryReservationRepo) allocateOneOpenIssue(ctx context.Context, accountID, itemID, issueID, quantityValue, unitRatio string, storageLocationID, lotID sql.NullString) *apierror.APIError {
+// allocateOneOpenIssue covers one open issue, whatever is left of it, from the item's receipts.
+//
+// issueRatio is the ratio of the unit the issue was recorded in, resolved by the caller through
+// GetUnitRatios rather than joined onto the issue: the read that finds these issues is a locking one
+// and must not take locks on the `unit` rows every account shares. The allocated sum below is taken
+// through each allocation's own ratio, and this is what reads it back in the issue's unit.
+func (r *inventoryReservationRepo) allocateOneOpenIssue(ctx context.Context, accountID, itemID, issueID, quantityValue string, issueRatio decimal.Decimal, storageLocationID, lotID sql.NullString) *apierror.APIError {
 	issueMeasure, pErr := decimal.NewFromString(quantityValue)
 	if pErr != nil {
 		return apierror.NewInternalError(pErr, "Failed to parse issue quantity.")
 	}
 
-	// The allocated sum below is taken through each allocation's own ratio; this is what reads it
-	// back in the unit the issue was recorded in.
-	issueRatio, rErr := decimal.NewFromString(unitRatio)
-	if rErr != nil {
-		return apierror.NewInternalError(rErr, "Invalid unit ratio on issue quantity.")
+	if issueRatio.LessThanOrEqual(decimal.Zero) {
+		return apierror.NewInvariantViolationError("Missing unit ratio for the unit an inventory issue was recorded in.")
 	}
 
 	allocatedRaw, aErr := r.queries.GetAllocationSumForIssue(ctx, issueID)

@@ -35,7 +35,13 @@ func (r *inventoryQueryRepoImpl) FetchCurrentInventory(ctx context.Context, item
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	atp := decimal.NewFromInt(int64(row.AvailableToPromise))
+	// Decimal from the column through to the caller. It used to arrive as an int64 because the query
+	// cast the total to SIGNED, which rounded away the half-units an item stocked in pairs and drawn
+	// on in each ends up holding.
+	atp, parseErr := decimal.NewFromString(row.AvailableToPromise)
+	if parseErr != nil {
+		return nil, tracing.Trace(span, apierror.NewInternalError(parseErr, "Invalid available-to-promise value."))
+	}
 
 	var unitAbbreviation string
 	if row.UnitAbbreviation != nil {
@@ -62,9 +68,19 @@ func (r *inventoryQueryRepoImpl) FetchOnHandInventoryBulk(ctx context.Context, i
 
 	result := make([]*domain.BulkOnHandInventory, len(rows))
 	for i, row := range rows {
+		// The query returns DECIMAL rather than the SIGNED it used to, so a level of 60.5 pairs
+		// survives the trip instead of arriving as 60. Parsed as a decimal and narrowed once here
+		// rather than scanned straight into a float: the list column is a display figure, but the
+		// rounding that produced it should happen where it can be seen.
+		onHand, parseErr := decimal.NewFromString(row.OnHandQuantity)
+		if parseErr != nil {
+			return nil, tracing.Trace(span, apierror.NewInternalError(parseErr, "Invalid on-hand quantity value."))
+		}
+		measure, _ := onHand.Float64()
+
 		result[i] = &domain.BulkOnHandInventory{
 			ItemID:           row.ItemID,
-			OnHandQuantity:   float64(row.OnHandQuantity),
+			OnHandQuantity:   measure,
 			UnitID:           row.UnitID,
 			UnitAbbreviation: row.UnitAbbreviation,
 			UnitType:         row.UnitType,

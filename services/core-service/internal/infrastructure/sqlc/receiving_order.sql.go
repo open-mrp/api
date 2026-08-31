@@ -180,16 +180,15 @@ SELECT
     q.id AS quantity_id,
     q.value AS quantity_value,
     q.unit_id,
-    CAST(u.ratio_numerator / u.ratio_denominator AS DECIMAL(65,30)) AS unit_ratio,
     ii.storage_location_id,
     ii.lot_id
 FROM inventory_issue ii
 JOIN quantity q ON q.id = ii.quantity_id
-JOIN unit u ON u.id = q.unit_id
 WHERE ii.account_id = ?
 AND ii.item_id = ?
 AND ii.status_code = 'open'
 ORDER BY ii.created_at ASC
+FOR UPDATE
 `
 
 type FindOpenIssuesForItemParams struct {
@@ -202,7 +201,6 @@ type FindOpenIssuesForItemRow struct {
 	QuantityID        string
 	QuantityValue     string
 	UnitID            string
-	UnitRatio         string
 	StorageLocationID sql.NullString
 	LotID             sql.NullString
 }
@@ -212,6 +210,9 @@ type FindOpenIssuesForItemRow struct {
 // The issue's unit ratio rides along because the receipts that cover it are recorded in whatever
 // unit their own source used. An allocator comparing the raw column values draws 40 grams against an
 // issue asking for 40 pounds and calls the demand met.
+// FindOpenIssuesForItem claims an item's whole open demand, oldest first. FOR UPDATE, first statement
+// of the transaction, unit not joined — all three for the reasons FindOpenIssuesForItemPaged spells
+// out; the two must not diverge, since either can be the read that opens an allocation transaction.
 func (q *Queries) FindOpenIssuesForItem(ctx context.Context, arg FindOpenIssuesForItemParams) ([]FindOpenIssuesForItemRow, error) {
 	rows, err := q.db.QueryContext(ctx, findOpenIssuesForItem, arg.AccountID, arg.ItemID)
 	if err != nil {
@@ -226,7 +227,6 @@ func (q *Queries) FindOpenIssuesForItem(ctx context.Context, arg FindOpenIssuesF
 			&i.QuantityID,
 			&i.QuantityValue,
 			&i.UnitID,
-			&i.UnitRatio,
 			&i.StorageLocationID,
 			&i.LotID,
 		); err != nil {

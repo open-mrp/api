@@ -408,6 +408,10 @@ func deleteByIDs(ctx context.Context, tx *sql.Tx, table string, ids []string, p 
 // freeReleasedReceipts returns receipts to `available` once the surviving allocations no longer cover
 // them. The correlated sum mirrors FreeReleasedReceipts in batch_scan_undo.sql: a receipt another
 // issue still fills stays as it is.
+//
+// Both sides go through their own unit's ratio. Allocations against one receipt carry whatever unit
+// the code that wrote them chose, so an allocation stamped in each against a receipt in pairs counts
+// double against it, and the raw comparison left receipts closed out that had stock left on them.
 func freeReleasedReceipts(ctx context.Context, tx *sql.Tx, receipts map[string]struct{}, p *progress) (int, error) {
 	ids := make([]string, 0, len(receipts))
 	for id := range receipts {
@@ -421,15 +425,17 @@ func freeReleasedReceipts(ctx context.Context, tx *sql.Tx, receipts map[string]s
 		query := `
 UPDATE inventory_receipt ir
 JOIN quantity q ON q.id = ir.quantity_id
+JOIN unit u ON u.id = q.unit_id
 SET ir.status_code = 'available', ir.updated_at = NOW(3)
 WHERE ir.id IN (` + placeholders(len(chunk)) + `)
 AND ir.status_code <> 'available'
 AND COALESCE((
-    SELECT SUM(CAST(aq.value AS DECIMAL(65,30)))
+    SELECT SUM(CAST(aq.value AS DECIMAL(65,30)) * (au.ratio_numerator / au.ratio_denominator))
     FROM inventory_allocation ia
     JOIN quantity aq ON aq.id = ia.quantity_id
+    JOIN unit au ON au.id = aq.unit_id
     WHERE ia.inventory_receipt_id = ir.id
-), 0) < CAST(q.value AS DECIMAL(65,30))`
+), 0) < CAST(q.value AS DECIMAL(65,30)) * (u.ratio_numerator / u.ratio_denominator)`
 		res, err := tx.ExecContext(ctx, query, toAny(chunk)...)
 		if err != nil {
 			return 0, fmt.Errorf("free released receipts: %w", err)

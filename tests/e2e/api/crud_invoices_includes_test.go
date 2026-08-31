@@ -55,3 +55,24 @@ func TestInvoices_IncludeAllocations(t *testing.T) {
 		assert.Equal(t, "list", jsonField(a, "object"))
 	}
 }
+
+// The order include must carry the full sales order, not the reference the batch loader built without
+// its lifecycle timestamps: issued_at/first_ship_at/completed_at rode the batch projection but were
+// never mapped onto the reference, so a hydrated order reported them null even though the order stores
+// them. See TestIncludes_HydratedToOneMatchesCanonical for the cross-endpoint guard.
+func TestInvoices_IncludeOrderCarriesLifecycleTimestamps(t *testing.T) {
+	t.Parallel()
+	status, body, err := apiClient.GetListRaw(invoicesPath+"/"+SeedInvoiceID, url.Values{"include": {"order"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	order := jsonObject(parseJSON(body), "order")
+	require.NotNil(t, order, "order should be present with ?include=order")
+	assert.Equal(t, "sales_order", jsonField(order, "object"))
+	assert.NotEmpty(t, jsonField(order, "issued_at"),
+		"the included order carries its issued_at, not a reference stripped of lifecycle timestamps")
+	assert.NotEmpty(t, jsonField(order, "first_ship_at"),
+		"the included order carries its first_ship_at, not a reference stripped of lifecycle timestamps")
+	assert.NotEmpty(t, jsonField(order, "completed_at"),
+		"the included order carries its completed_at, not a reference stripped of lifecycle timestamps")
+}

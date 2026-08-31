@@ -14,7 +14,13 @@ func init() {
 		ObjectType: constants.ObjectTypeAccountPrice,
 		Load:       resourceloaders.LoadAccountPrices,
 		Subs: []resourcekit.SubField{
-			{Key: "recipient_account", Populate: populateRecipientAccountOnAccountPrice},
+			{
+				Key:         "recipient_account",
+				Target:      constants.ObjectTypeCustomer,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractIDs:  extractRecipientAccountIDFromAccountPrice,
+				Populate:    populateRecipientAccountOnAccountPrice,
+			},
 			{Key: "product_line", Populate: populateProductLineOnAccountPrice},
 			{Key: "categories", Populate: populateCategoriesOnAccountPrice},
 			{Key: "attributes", Populate: populateAttributesOnAccountPrice},
@@ -22,14 +28,23 @@ func init() {
 	})
 }
 
-func populateRecipientAccountOnAccountPrice(ctx context.Context, parent any, _ map[string]any) {
+func extractRecipientAccountIDFromAccountPrice(ctx context.Context, parent any) []string {
 	ap := parent.(*apiresource.AccountPrice)
-	v, ok := resourcekit.GetLoadMeta(ctx).
-		Get(constants.ObjectTypeAccountPrice, ap.ID, "recipient_account")
-	if !ok {
-		return
+	id, _ := resourcekit.GetLoadMeta(ctx).
+		GetString(constants.ObjectTypeAccountPrice, ap.ID, "recipient_account_id")
+	if id == "" {
+		return nil
 	}
-	ap.RecipientAccount = v.(*apiresource.Customer)
+	return []string{id}
+}
+
+func populateRecipientAccountOnAccountPrice(ctx context.Context, parent any, loaded map[string]any) {
+	ap := parent.(*apiresource.AccountPrice)
+	id, _ := resourcekit.GetLoadMeta(ctx).
+		GetString(constants.ObjectTypeAccountPrice, ap.ID, "recipient_account_id")
+	if v, ok := loaded[id]; ok {
+		ap.RecipientAccount = v.(*apiresource.Customer)
+	}
 }
 
 func populateProductLineOnAccountPrice(ctx context.Context, parent any, _ map[string]any) {

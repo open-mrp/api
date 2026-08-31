@@ -182,32 +182,15 @@ func stashShippingCaseMeta(meta *resourcekit.LoadMeta, sc *pb.ShippingCaseInfo) 
 		return
 	}
 
-	carrier := &apiresource.Carrier{
-		ID:     sc.CarrierId,
-		Object: constants.ObjectTypeCarrier,
-		Name:   sc.CarrierName,
+	// Stash only the carrier and shipment ids; both are hydrated on demand through their shared batched
+	// loaders so ?include= carries the full carrier (code, account number) and shipment (priority), not a
+	// stub built from the shipping-case join.
+	if sc.CarrierId != "" {
+		meta.Set(constants.ObjectTypeShippingCase, sc.Id, "carrier_id", sc.CarrierId)
 	}
-	if sc.CarrierIsPortalEnabled != nil && *sc.CarrierIsPortalEnabled {
-		carrier.CustomerPortalVisibility = constants.CustomerPortalVisibilityVisible
-	} else {
-		carrier.CustomerPortalVisibility = constants.CustomerPortalVisibilityHidden
+	if sc.ShipmentId != "" {
+		meta.Set(constants.ObjectTypeShippingCase, sc.Id, "shipment_id", sc.ShipmentId)
 	}
-	if sc.CarrierCreatedAt != nil {
-		carrier.CreatedAt = sc.CarrierCreatedAt.AsTime()
-	}
-	if sc.CarrierUpdatedAt != nil {
-		carrier.UpdatedAt = sc.CarrierUpdatedAt.AsTime()
-	}
-	meta.Set(constants.ObjectTypeShippingCase, sc.Id, "carrier", carrier)
-
-	meta.Set(constants.ObjectTypeShippingCase, sc.Id, "shipment", &apiresource.Shipment{
-		ID:        sc.ShipmentId,
-		Object:    constants.ObjectTypeShipment,
-		Number:    sc.GetShipmentNumber(),
-		Status:    constants.ShipmentStatus(sc.GetShipmentStatusCode()),
-		CreatedAt: grpcutil.TimestampToTime(sc.ShipmentCreatedAt),
-		UpdatedAt: grpcutil.TimestampToTime(sc.ShipmentUpdatedAt),
-	})
 
 	meta.Set(constants.ObjectTypeShippingCase, sc.Id, "freight_amount", &apiresource.Quantity{
 		ID:           sc.FreightAmountId,

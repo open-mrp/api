@@ -14,32 +14,62 @@ func init() {
 		ObjectType: constants.ObjectTypeShippingCase,
 		Load:       resourceloaders.LoadShippingCases,
 		Subs: []resourcekit.SubField{
-			{Key: "carrier", Populate: populateCarrierOnShippingCase},
-			{Key: "shipment", Populate: populateShipmentOnShippingCase},
+			{
+				Key:         "carrier",
+				Target:      constants.ObjectTypeCarrier,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractIDs:  extractCarrierIDFromShippingCase,
+				Populate:    populateCarrierOnShippingCase,
+			},
+			{
+				Key:         "shipment",
+				Target:      constants.ObjectTypeShipment,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractIDs:  extractShipmentIDFromShippingCase,
+				Populate:    populateShipmentOnShippingCase,
+			},
 			{Key: "freight_amount", Populate: populateFreightAmountOnShippingCase},
 			{Key: "freight_weight", Populate: populateFreightWeightOnShippingCase},
 		},
 	})
 }
 
-func populateCarrierOnShippingCase(ctx context.Context, parent any, _ map[string]any) {
+func extractCarrierIDFromShippingCase(ctx context.Context, parent any) []string {
 	sc := parent.(*apiresource.ShippingCase)
-	v, ok := resourcekit.GetLoadMeta(ctx).
-		Get(constants.ObjectTypeShippingCase, sc.ID, "carrier")
-	if !ok {
-		return
+	id, _ := resourcekit.GetLoadMeta(ctx).
+		GetString(constants.ObjectTypeShippingCase, sc.ID, "carrier_id")
+	if id == "" {
+		return nil
 	}
-	sc.Carrier = v.(*apiresource.Carrier)
+	return []string{id}
 }
 
-func populateShipmentOnShippingCase(ctx context.Context, parent any, _ map[string]any) {
+func populateCarrierOnShippingCase(ctx context.Context, parent any, loaded map[string]any) {
 	sc := parent.(*apiresource.ShippingCase)
-	v, ok := resourcekit.GetLoadMeta(ctx).
-		Get(constants.ObjectTypeShippingCase, sc.ID, "shipment")
-	if !ok {
-		return
+	id, _ := resourcekit.GetLoadMeta(ctx).
+		GetString(constants.ObjectTypeShippingCase, sc.ID, "carrier_id")
+	if v, ok := loaded[id]; ok {
+		sc.Carrier = v.(*apiresource.Carrier)
 	}
-	sc.Shipment = v.(*apiresource.Shipment)
+}
+
+func extractShipmentIDFromShippingCase(ctx context.Context, parent any) []string {
+	sc := parent.(*apiresource.ShippingCase)
+	id, _ := resourcekit.GetLoadMeta(ctx).
+		GetString(constants.ObjectTypeShippingCase, sc.ID, "shipment_id")
+	if id == "" {
+		return nil
+	}
+	return []string{id}
+}
+
+func populateShipmentOnShippingCase(ctx context.Context, parent any, loaded map[string]any) {
+	sc := parent.(*apiresource.ShippingCase)
+	id, _ := resourcekit.GetLoadMeta(ctx).
+		GetString(constants.ObjectTypeShippingCase, sc.ID, "shipment_id")
+	if v, ok := loaded[id]; ok {
+		sc.Shipment = v.(*apiresource.Shipment)
+	}
 }
 
 func populateFreightAmountOnShippingCase(ctx context.Context, parent any, _ map[string]any) {

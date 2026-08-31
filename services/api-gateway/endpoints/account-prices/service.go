@@ -255,24 +255,11 @@ func stashAccountPriceMeta(meta *resourcekit.LoadMeta, ap *pb.AccountPriceInfo) 
 		return
 	}
 
+	// Stash only the recipient's account id; the customer is hydrated on demand through the shared
+	// batched customer loader so the include carries the full customer (including a relationship_type
+	// derived from the account's own hierarchy, not the price-list projection's stale value), not a stub.
 	if ap.RecipientAccount != nil {
-		ra := ap.RecipientAccount
-		ediStatus := constants.EDIStatusDisabled
-		if ra.IsEdiEnabled {
-			ediStatus = constants.EDIStatusEnabled
-		}
-		meta.Set(constants.ObjectTypeAccountPrice, ap.Id, "recipient_account", &apiresource.Customer{
-			ID:               ra.Id,
-			Object:           constants.ObjectTypeCustomer,
-			Name:             ra.Name,
-			Number:           ra.Number,
-			Status:           constants.AccountStatusCode(ra.Status),
-			EDIStatus:        ediStatus,
-			RelationshipType: constants.CustomerRelationshipType(ra.RelationshipType),
-			CommissionPolicy: constants.CommissionPolicy(ra.CommissionPolicy),
-			CreatedAt:        grpcutil.TimestampToTime(ra.CreatedAt),
-			UpdatedAt:        grpcutil.TimestampToTime(ra.UpdatedAt),
-		})
+		meta.Set(constants.ObjectTypeAccountPrice, ap.Id, "recipient_account_id", ap.RecipientAccount.Id)
 	}
 
 	if ap.ProductLine != nil {

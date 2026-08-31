@@ -45,7 +45,12 @@ func TestShippingCases_IncludeCarrier(t *testing.T) {
 	carrier := jsonObject(got, "carrier")
 	require.NotNil(t, carrier, "carrier should be present with ?include=carrier")
 	assert.Equal(t, "carrier", jsonField(carrier, "object"))
-	assert.NotEmpty(t, jsonField(carrier, "id"))
+	assert.Equal(t, SeedCarrierID, jsonField(carrier, "id"))
+	// The include must carry the full carrier, not a stub built from the shipping-case join: the join
+	// projection dropped the carrier's own code, so a stub reads null here even though it's a carrier
+	// with a code. See TestIncludes_HydratedToOneMatchesCanonical for the cross-endpoint guard.
+	assert.Equal(t, "delivery", jsonField(carrier, "code"),
+		"the included carrier carries its code, not a partial stub")
 }
 
 func TestShippingCases_IncludeShipment(t *testing.T) {
@@ -58,7 +63,12 @@ func TestShippingCases_IncludeShipment(t *testing.T) {
 	shipment := jsonObject(got, "shipment")
 	require.NotNil(t, shipment, "shipment should be present with ?include=shipment")
 	assert.Equal(t, "shipment", jsonField(shipment, "object"))
-	assert.NotEmpty(t, jsonField(shipment, "id"))
+	assert.Equal(t, SeedShipmentID, jsonField(shipment, "id"))
+	// The include must carry the full shipment, not a stub built from the shipping-case join: the join
+	// projection dropped the shipment's stored priority, so a stub reads empty here. See
+	// TestIncludes_HydratedToOneMatchesCanonical for the cross-endpoint guard.
+	assert.Equal(t, "normal", jsonField(shipment, "priority"),
+		"the included shipment carries its priority, not a partial stub")
 }
 
 func TestShippingCases_IncludeFreightAmountUnit(t *testing.T) {

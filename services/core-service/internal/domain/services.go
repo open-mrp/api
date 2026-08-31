@@ -567,6 +567,9 @@ type AccountSvc interface {
 	// GetAccountContext returns contextual information for an account (including whether it is a sandbox).
 	GetAccountContext(ctx context.Context, accountID string) (*AccountContext, *apierror.APIError)
 
+	// GetAccountNames resolves account IDs to their display names. IDs with no matching account are omitted from the result.
+	GetAccountNames(ctx context.Context, ids []string) (map[string]string, *apierror.APIError)
+
 	// GetUserAccountAccess returns the user's access to an account, including role and permissions.
 	//
 	// If the user has no relationship to the account, returns (nil, false, nil).

@@ -26,6 +26,11 @@ service CoreService {
   // Returns account metadata (sandbox status, parent account, mode) for identity resolution.
   rpc GetAccountContext(GetAccountContextRequest) returns (GetAccountContextResponse);
 
+  // Resolves account IDs to their display names, unfiltered by caller
+  // affiliation. Used by the api-gateway to name the acting and target accounts
+  // in internal 5xx error-alert emails. Internal — not exposed to clients.
+  rpc GetAccountNames(GetAccountNamesRequest) returns (GetAccountNamesResponse);
+
   // Returns accounts by ID for the api-gateway include resolver. Authorization
   // follows the same affiliation check as GetAccount. Internal — not exposed
   // to clients.

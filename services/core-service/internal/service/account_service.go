@@ -111,6 +111,14 @@ func (s *accountSvcImpl) GetAccountContext(ctx context.Context, accountID string
 	return s.accountRepo.GetAccountContext(ctx, accountID)
 }
 
+// GetAccountNames resolves account IDs to their display names. IDs with no matching account are omitted from the result.
+func (s *accountSvcImpl) GetAccountNames(ctx context.Context, ids []string) (map[string]string, *apierror.APIError) {
+	ctx, span := accountSvcTracer.Start(ctx, "service.account.get_account_names")
+	defer span.End()
+
+	return s.accountRepo.GetAccountNames(ctx, ids)
+}
+
 // GetUserAccountAccess checks whether a user has access to an account and returns their access details including role and permissions.
 //
 // 1. Look up the account-user link by user ID and account ID.

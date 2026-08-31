@@ -24,6 +24,13 @@ message GetAccountContextResponse {
   // For sandbox accounts, this is the owner account's cap.
   optional int64 agent_monthly_spending_cap_cents = 6;
 }
+message GetAccountNamesRequest {
+  repeated string account_ids = 1;
+}
+message GetAccountNamesResponse {
+  // Maps account ID to display name. IDs with no matching account are omitted.
+  map<string, string> names = 1;
+}
 enum AccountMode {
   ACCOUNT_MODE_UNSPECIFIED = 0;
   ACCOUNT_MODE_PRODUCTION = 1;

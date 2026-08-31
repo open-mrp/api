@@ -116,6 +116,26 @@ func (r *accountRepoImpl) GetAccountContext(ctx context.Context, accountID strin
 	}, nil
 }
 
+func (r *accountRepoImpl) GetAccountNames(ctx context.Context, ids []string) (map[string]string, *apierror.APIError) {
+	ctx, span := accountRepoTracer.Start(ctx, "repository.account.get_account_names")
+	defer span.End()
+
+	if len(ids) == 0 {
+		return map[string]string{}, nil
+	}
+
+	rows, err := r.queries.GetAccountNames(ctx, ids)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	names := make(map[string]string, len(rows))
+	for _, row := range rows {
+		names[row.ID] = row.Name
+	}
+	return names, nil
+}
+
 func (r *accountRepoImpl) GetPlanTypeIDByCode(ctx context.Context, planCode string) (string, *apierror.APIError) {
 	ctx, span := accountRepoTracer.Start(ctx, "repository.account.get_plan_type_id_by_code")
 	defer span.End()

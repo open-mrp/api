@@ -15,6 +15,9 @@ JOIN account_billing ab ON a.account_billing_id = ab.id
 JOIN account_plan ap ON ab.account_plan_id = ap.type_id
 WHERE a.id = ?;
 
+-- name: GetAccountNames :many
+SELECT id, name FROM account WHERE id IN (sqlc.slice('ids'));
+
 -- name: DeleteAccountByID :exec
 DELETE FROM account WHERE id = ?;
 

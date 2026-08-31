@@ -49,13 +49,11 @@ SELECT
     q.id AS quantity_id,
     q.value AS quantity_value,
     q.unit_id,
-    CAST(u.ratio_numerator / u.ratio_denominator AS DECIMAL(65,30)) AS unit_ratio,
     ii.storage_location_id,
     ii.lot_id,
     ii.created_at
 FROM inventory_issue ii
 JOIN quantity q ON q.id = ii.quantity_id
-JOIN unit u ON u.id = q.unit_id
 WHERE ii.account_id = ?
 AND ii.item_id = ?
 AND ii.status_code = 'open'
@@ -65,6 +63,7 @@ AND (
 )
 ORDER BY ii.created_at ASC, ii.id ASC
 LIMIT ?
+FOR UPDATE
 `
 
 type FindOpenIssuesForItemPagedParams struct {
@@ -80,13 +79,32 @@ type FindOpenIssuesForItemPagedRow struct {
 	QuantityID        string
 	QuantityValue     string
 	UnitID            string
-	UnitRatio         string
 	StorageLocationID sql.NullString
 	LotID             sql.NullString
 	CreatedAt         time.Time
 }
 
-// FindOpenIssuesForItemPaged lists a bounded page of open demand, oldest first, resuming after the (created_at, id) cursor. Same columns and filters as FindOpenIssuesForItem.
+// FindOpenIssuesForItemPaged claims a bounded page of open demand, oldest first, resuming after the
+// (created_at, id) cursor. Same columns and filters as FindOpenIssuesForItem.
+//
+// FOR UPDATE, and it has to be the transaction's first statement, for two reasons that are really one
+// reason. Allocation is driven by a command anything that moves stock can enqueue — a batch scan, a
+// receipt landing, a receiving order being stocked — so two paging chains for the same item overlap
+// routinely, and this is what makes the second wait for the first and then re-evaluate `status_code`
+// against what the first committed rather than against a page it read before the first ran.
+//
+// The subtler half: under REPEATABLE READ the transaction's read view is created by its first
+// *consistent* read, and a locking read is not one. While this was a plain SELECT it froze the
+// transaction's view of the whole ledger at the moment the page was read, so the allocated-sum reads
+// that follow — GetAllocationSumForIssue, GetAllocationSumsForReceipts — still saw an issue as
+// untouched and a receipt as undrawn however long the transaction had since sat waiting on the
+// receipt lock. Every one of the 2026-08-26 over-draws is that: the same open issue allocated in full
+// by two chains, twice its quantity against one receipt. Locking here defers the read view until the
+// locks are held, so the sums that follow read what is actually committed.
+//
+// The unit is deliberately not joined. A locking read takes locks on every row it touches, and `unit`
+// rows are shared by every account in the database — see GetUnitRatios, which exists so that
+// FindReceiptsForAllocation does not do this either. The caller resolves the ratio through it.
 func (q *Queries) FindOpenIssuesForItemPaged(ctx context.Context, arg FindOpenIssuesForItemPagedParams) ([]FindOpenIssuesForItemPagedRow, error) {
 	rows, err := q.db.QueryContext(ctx, findOpenIssuesForItemPaged,
 		arg.AccountID,
@@ -108,7 +126,6 @@ func (q *Queries) FindOpenIssuesForItemPaged(ctx context.Context, arg FindOpenIs
 			&i.QuantityID,
 			&i.QuantityValue,
 			&i.UnitID,
-			&i.UnitRatio,
 			&i.StorageLocationID,
 			&i.LotID,
 			&i.CreatedAt,

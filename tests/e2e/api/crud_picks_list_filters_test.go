@@ -32,7 +32,11 @@ func TestPicksList_SearchMatchesPickNumber(t *testing.T) {
 	t.Parallel()
 
 	assert.Contains(t, pickIDsFiltered(t, url.Values{"q": {"PICK-002"}}), seedClosedPickID,
-		"searching a pick number should surface that pick")
+		"searching a full pick number should surface that pick")
+	// The ngram search matches a substring, not just a prefix or whole token: "CK-002" sits in the
+	// middle of "PICK-002".
+	assert.Contains(t, pickIDsFiltered(t, url.Values{"q": {"CK-002"}}), seedClosedPickID,
+		"searching a substring of a pick number should surface that pick")
 	assert.Empty(t, pickIDsFiltered(t, url.Values{"q": {"zzz-no-such-pick-zzz"}}),
 		"a search matching nothing must return nothing")
 }

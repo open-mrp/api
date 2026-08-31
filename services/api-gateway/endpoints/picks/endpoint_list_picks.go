@@ -35,7 +35,7 @@ type ListPicksRequest struct {
 
 // Returns a paginated list of picks, soonest ship-by date first.
 //
-// The `q` search term matches the pick number, the sales order number, the customer PO number, and the customer's name or number.
+// The `q` search term matches the pick number (which is the order number) and the customer PO number. To narrow by customer, use `customer_ids` rather than searching for a customer name.
 type ListPicksEndpoint struct{}
 
 func (e *ListPicksEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPicksRequest, *apiresource.List[apiresource.Pick]] {

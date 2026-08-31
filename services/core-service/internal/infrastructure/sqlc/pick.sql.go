@@ -92,10 +92,7 @@ WHERE p.account_id = ?
 AND (
     ? IS NULL
     OR p.number LIKE ?
-    OR so.number LIKE ?
     OR so.customer_po_number LIKE ?
-    OR ba.name LIKE ?
-    OR ar.external_number LIKE ?
 )
 AND (
     ? IS NULL
@@ -144,13 +141,11 @@ type CountPicksParams struct {
 	EndDate                    sql.NullTime
 }
 
+// Only short (< ngram token size) terms reach here as a LIKE; ListPicksSearch* serves the ngram path.
 func (q *Queries) CountPicks(ctx context.Context, arg CountPicksParams) (int64, error) {
 	query := countPicks
 	var queryParams []interface{}
 	queryParams = append(queryParams, arg.AccountID)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
@@ -1268,7 +1263,7 @@ func (q *Queries) ListPickLinesForOrderLine(ctx context.Context, salesOrderLineI
 }
 
 const listPicksBackward = `-- name: ListPicksBackward :many
-SELECT
+SELECT STRAIGHT_JOIN
     p.id,
     p.number,
     p.sales_order_id,
@@ -1339,10 +1334,7 @@ WHERE p.account_id = ?
 AND (
     ? IS NULL
     OR p.number LIKE ?
-    OR so.number LIKE ?
     OR so.customer_po_number LIKE ?
-    OR ba.name LIKE ?
-    OR ar.external_number LIKE ?
 )
 AND (
     ? IS NULL
@@ -1469,14 +1461,13 @@ type ListPicksBackwardRow struct {
 	ShippingAddressUpdatedAt     sql.NullTime
 }
 
+// STRAIGHT_JOIN forces `p` as the driving table; see ListPicksForward for why. Do not remove.
+// Only short (< ngram token size) terms reach here as a LIKE; ListPicksSearch* serves the ngram path.
 // The sentinel keeps a pick whose order has no ship-by date sortable and last; the repository's cursor must use the same value.
 func (q *Queries) ListPicksBackward(ctx context.Context, arg ListPicksBackwardParams) ([]ListPicksBackwardRow, error) {
 	query := listPicksBackward
 	var queryParams []interface{}
 	queryParams = append(queryParams, arg.AccountID)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
@@ -1600,7 +1591,7 @@ func (q *Queries) ListPicksBackward(ctx context.Context, arg ListPicksBackwardPa
 }
 
 const listPicksForward = `-- name: ListPicksForward :many
-SELECT
+SELECT STRAIGHT_JOIN
     p.id,
     p.number,
     p.sales_order_id,
@@ -1671,10 +1662,7 @@ WHERE p.account_id = ?
 AND (
     ? IS NULL
     OR p.number LIKE ?
-    OR so.number LIKE ?
     OR so.customer_po_number LIKE ?
-    OR ba.name LIKE ?
-    OR ar.external_number LIKE ?
 )
 AND (
     ? IS NULL
@@ -1803,14 +1791,20 @@ type ListPicksForwardRow struct {
 	ShippingAddressUpdatedAt     sql.NullTime
 }
 
+// STRAIGHT_JOIN pins `p` as the driving table. Without it, on a large account the
+// optimizer either full-scans sales_order (ship-by sort) or hash-joins `priority`
+// (created-at sort) — the hash join drops `p`'s index order and forces a filesort of
+// every pick before the LIMIT, ~10s past the RPC deadline. Driving from `p` keeps the
+// joins as ordered nested loops, so the created-at sort reads straight from
+// pick_account_created_idx and stops at the LIMIT. No FORCE INDEX: the optimizer must
+// stay free to pick pick_account_id_finished_at_idx for a status filter (open picks are
+// a tiny slice of a mostly-closed table). Do not remove.
+// Only short (< ngram token size) terms reach here as a LIKE; ListPicksSearch* serves the ngram path.
 // The sentinel keeps a pick whose order has no ship-by date sortable and last; the repository's cursor must use the same value.
 func (q *Queries) ListPicksForward(ctx context.Context, arg ListPicksForwardParams) ([]ListPicksForwardRow, error) {
 	query := listPicksForward
 	var queryParams []interface{}
 	queryParams = append(queryParams, arg.AccountID)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
@@ -1869,6 +1863,682 @@ func (q *Queries) ListPicksForward(ctx context.Context, arg ListPicksForwardPara
 	var items []ListPicksForwardRow
 	for rows.Next() {
 		var i ListPicksForwardRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Number,
+			&i.SalesOrderID,
+			&i.SalesOrderNumber,
+			&i.CustomerID,
+			&i.CustomerName,
+			&i.CustomerNumber,
+			&i.PriorityCode,
+			&i.PriorityID,
+			&i.PriorityName,
+			&i.FinishedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.LineCount,
+			&i.LastShippedAt,
+			&i.PromisedAt,
+			&i.CustomerPoNumber,
+			&i.Note,
+			&i.CarrierID,
+			&i.CarrierName,
+			&i.CarrierIsPortalEnabled,
+			&i.CarrierCreatedAt,
+			&i.CarrierUpdatedAt,
+			&i.ServiceLevelID,
+			&i.ServiceLevelName,
+			&i.ServiceLevelIsPortalEnabled,
+			&i.ServiceLevelToken,
+			&i.ServiceLevelCreatedAt,
+			&i.ServiceLevelUpdatedAt,
+			&i.CarrierBillingType,
+			&i.CarrierBillingAccount,
+			&i.ShipByDate,
+			&i.ShipByCutoffAt,
+			&i.LeadTimeDays,
+			&i.LeadTimeSourceCode,
+			&i.TransitDays,
+			&i.TransitSourceCode,
+			&i.ShippingAddressID,
+			&i.ShippingAddressName,
+			&i.ShippingAddressPhone,
+			&i.ShippingAddressEmail,
+			&i.ShippingAddressIsDropShip,
+			&i.ShippingAddressGeolocationID,
+			&i.ShippingAddressStreetLine1,
+			&i.ShippingAddressStreetLine2,
+			&i.ShippingAddressLocality,
+			&i.ShippingAddressState,
+			&i.ShippingAddressPostalCode,
+			&i.ShippingAddressCountry,
+			&i.ShippingAddressCreatedAt,
+			&i.ShippingAddressUpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPicksSearchBackward = `-- name: ListPicksSearchBackward :many
+SELECT
+    p.id,
+    p.number,
+    p.sales_order_id,
+    so.number AS sales_order_number,
+    ar.counterparty_account_id AS customer_id,
+    ba.name AS customer_name,
+    ar.external_number AS customer_number,
+    so.priority_code,
+    pr.id AS priority_id,
+    pr.name AS priority_name,
+    p.finished_at,
+    p.created_at,
+    p.updated_at,
+    (SELECT COUNT(*) FROM pick_line plc WHERE plc.pick_id = p.id) AS line_count,
+    -- Latest ship date across the order's shipments; drives the date in the pick header.
+    (SELECT MAX(sh.shipped_at) FROM shipment sh WHERE sh.sales_order_id = so.id) AS last_shipped_at,
+    so.promised_at,
+    -- The order's cross-reference and instructions, carried so the floor works the pick without opening the order.
+    so.customer_po_number,
+    so.note,
+    -- Freight is the order's, carried so a pick shows the carrier it ships on.
+    so.carrier_id,
+    cr.name AS carrier_name,
+    cr.is_portal_enabled AS carrier_is_portal_enabled,
+    cr.created_at AS carrier_created_at,
+    cr.updated_at AS carrier_updated_at,
+    so.carrier_option_id AS service_level_id,
+    co.name AS service_level_name,
+    co.is_portal_enabled AS service_level_is_portal_enabled,
+    co.service_level_token,
+    co.created_at AS service_level_created_at,
+    co.updated_at AS service_level_updated_at,
+    so.carrier_billing_type,
+    so.carrier_billing_account,
+    -- The order's delivery commitment and how it was derived, so a pick can explain its dates.
+    so.ship_by_date,
+    so.ship_by_cutoff_at,
+    so.lead_time_days,
+    so.lead_time_source_code,
+    so.transit_days,
+    so.transit_source_code,
+    -- Ship-to is the order's, denormalized so a pick header needs no second fetch.
+    so.shipping_address_id,
+    addr.name AS shipping_address_name,
+    addr.phone AS shipping_address_phone,
+    addr.email AS shipping_address_email,
+    addr.is_drop_ship AS shipping_address_is_drop_ship,
+    ship_geo.id AS shipping_address_geolocation_id,
+    ship_geo.street_line_1 AS shipping_address_street_line_1,
+    ship_geo.street_line_2 AS shipping_address_street_line_2,
+    ship_geo.locality AS shipping_address_locality,
+    ship_geo.state AS shipping_address_state,
+    ship_geo.postal_code AS shipping_address_postal_code,
+    ship_geo.country AS shipping_address_country,
+    addr.created_at AS shipping_address_created_at,
+    addr.updated_at AS shipping_address_updated_at
+FROM pick p
+JOIN sales_order so ON so.id = p.sales_order_id
+JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
+    AND ar.counterparty_account_id = so.buyer_account_id
+JOIN account ba ON ba.id = so.buyer_account_id
+JOIN priority pr ON pr.code = so.priority_code
+LEFT JOIN address addr ON addr.id = so.shipping_address_id
+LEFT JOIN geolocation ship_geo ON ship_geo.id = addr.geolocation_id
+LEFT JOIN carrier cr ON cr.id = so.carrier_id
+LEFT JOIN carrier_option co ON co.id = so.carrier_option_id
+WHERE p.account_id = ?
+AND p.id IN (
+    SELECT pk.id FROM pick pk
+    WHERE pk.account_id = ?
+    AND MATCH(pk.number) AGAINST(? IN BOOLEAN MODE)
+    UNION
+    SELECT pk.id FROM pick pk
+    JOIN sales_order pso ON pso.id = pk.sales_order_id
+    WHERE pk.account_id = ?
+    AND MATCH(pso.customer_po_number) AGAINST(? IN BOOLEAN MODE)
+)
+AND (
+    ? IS NULL
+    OR (? = 'open' AND p.finished_at IS NULL)
+    OR (? = 'closed' AND p.finished_at IS NOT NULL)
+)
+AND (
+    ? = false
+    OR so.buyer_account_id IN (/*SLICE:customer_ids*/?)
+)
+AND (
+    ? = false
+    OR ar.account_group_id IN (/*SLICE:customer_group_ids*/?)
+)
+AND (
+    ? = false
+    OR EXISTS (
+        SELECT 1 FROM pick_line pl2
+        JOIN sales_order_line sol2 ON sol2.id = pl2.sales_order_line_id
+        JOIN product prod ON prod.id = sol2.product_id
+        WHERE pl2.pick_id = p.id
+        AND prod.product_line_id IN (/*SLICE:product_line_ids*/?)
+    )
+)
+AND (
+    ? IS NULL
+    OR p.created_at >= ?
+)
+AND (
+    ? IS NULL
+    OR p.created_at <= ?
+)
+AND (
+    ? = true
+    OR p.created_at > ?
+    OR (p.created_at = ? AND p.id > ?)
+)
+AND (
+    ? = false
+    OR COALESCE(so.ship_by_date, '9999-12-31') < CAST(? AS DATE)
+    OR (
+        COALESCE(so.ship_by_date, '9999-12-31') = CAST(? AS DATE)
+        AND p.id < ?
+    )
+)
+ORDER BY
+    CASE WHEN ? = true THEN COALESCE(so.ship_by_date, '9999-12-31') END DESC,
+    CASE WHEN ? = true THEN p.id END DESC,
+    p.created_at ASC,
+    p.id ASC
+LIMIT ?
+`
+
+type ListPicksSearchBackwardParams struct {
+	AccountID                  string
+	SearchQuery                sql.NullString
+	Status                     interface{}
+	IncludeCustomerFilter      interface{}
+	CustomerIds                []string
+	IncludeCustomerGroupFilter interface{}
+	CustomerGroupIds           []sql.NullString
+	IncludeProductLineFilter   interface{}
+	ProductLineIds             []sql.NullString
+	StartDate                  sql.NullTime
+	EndDate                    sql.NullTime
+	SortByShipBy               interface{}
+	CursorCreatedAt            time.Time
+	CursorID                   string
+	CursorShipByDate           time.Time
+	Limit                      int32
+}
+
+type ListPicksSearchBackwardRow struct {
+	ID                           string
+	Number                       string
+	SalesOrderID                 string
+	SalesOrderNumber             string
+	CustomerID                   string
+	CustomerName                 string
+	CustomerNumber               string
+	PriorityCode                 string
+	PriorityID                   string
+	PriorityName                 string
+	FinishedAt                   sql.NullTime
+	CreatedAt                    time.Time
+	UpdatedAt                    time.Time
+	LineCount                    int64
+	LastShippedAt                interface{}
+	PromisedAt                   sql.NullTime
+	CustomerPoNumber             sql.NullString
+	Note                         sql.NullString
+	CarrierID                    sql.NullString
+	CarrierName                  sql.NullString
+	CarrierIsPortalEnabled       sql.NullBool
+	CarrierCreatedAt             sql.NullTime
+	CarrierUpdatedAt             sql.NullTime
+	ServiceLevelID               sql.NullString
+	ServiceLevelName             sql.NullString
+	ServiceLevelIsPortalEnabled  sql.NullBool
+	ServiceLevelToken            sql.NullString
+	ServiceLevelCreatedAt        sql.NullTime
+	ServiceLevelUpdatedAt        sql.NullTime
+	CarrierBillingType           sql.NullString
+	CarrierBillingAccount        sql.NullString
+	ShipByDate                   sql.NullTime
+	ShipByCutoffAt               sql.NullTime
+	LeadTimeDays                 sql.NullInt32
+	LeadTimeSourceCode           sql.NullString
+	TransitDays                  sql.NullInt32
+	TransitSourceCode            sql.NullString
+	ShippingAddressID            string
+	ShippingAddressName          sql.NullString
+	ShippingAddressPhone         sql.NullString
+	ShippingAddressEmail         sql.NullString
+	ShippingAddressIsDropShip    sql.NullBool
+	ShippingAddressGeolocationID sql.NullString
+	ShippingAddressStreetLine1   sql.NullString
+	ShippingAddressStreetLine2   sql.NullString
+	ShippingAddressLocality      sql.NullString
+	ShippingAddressState         sql.NullString
+	ShippingAddressPostalCode    sql.NullString
+	ShippingAddressCountry       sql.NullString
+	ShippingAddressCreatedAt     sql.NullTime
+	ShippingAddressUpdatedAt     sql.NullTime
+}
+
+// The search sibling of ListPicksBackward; see ListPicksSearchForward for why there is no STRAIGHT_JOIN.
+// The sentinel keeps a pick whose order has no ship-by date sortable and last; the repository's cursor must use the same value.
+func (q *Queries) ListPicksSearchBackward(ctx context.Context, arg ListPicksSearchBackwardParams) ([]ListPicksSearchBackwardRow, error) {
+	query := listPicksSearchBackward
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.Status)
+	queryParams = append(queryParams, arg.Status)
+	queryParams = append(queryParams, arg.Status)
+	queryParams = append(queryParams, arg.IncludeCustomerFilter)
+	if len(arg.CustomerIds) > 0 {
+		for _, v := range arg.CustomerIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:customer_ids*/?", strings.Repeat(",?", len(arg.CustomerIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:customer_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.IncludeCustomerGroupFilter)
+	if len(arg.CustomerGroupIds) > 0 {
+		for _, v := range arg.CustomerGroupIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:customer_group_ids*/?", strings.Repeat(",?", len(arg.CustomerGroupIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:customer_group_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.IncludeProductLineFilter)
+	if len(arg.ProductLineIds) > 0 {
+		for _, v := range arg.ProductLineIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:product_line_ids*/?", strings.Repeat(",?", len(arg.ProductLineIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:product_line_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.StartDate)
+	queryParams = append(queryParams, arg.StartDate)
+	queryParams = append(queryParams, arg.EndDate)
+	queryParams = append(queryParams, arg.EndDate)
+	queryParams = append(queryParams, arg.SortByShipBy)
+	queryParams = append(queryParams, arg.CursorCreatedAt)
+	queryParams = append(queryParams, arg.CursorCreatedAt)
+	queryParams = append(queryParams, arg.CursorID)
+	queryParams = append(queryParams, arg.SortByShipBy)
+	queryParams = append(queryParams, arg.CursorShipByDate)
+	queryParams = append(queryParams, arg.CursorShipByDate)
+	queryParams = append(queryParams, arg.CursorID)
+	queryParams = append(queryParams, arg.SortByShipBy)
+	queryParams = append(queryParams, arg.SortByShipBy)
+	queryParams = append(queryParams, arg.Limit)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPicksSearchBackwardRow
+	for rows.Next() {
+		var i ListPicksSearchBackwardRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Number,
+			&i.SalesOrderID,
+			&i.SalesOrderNumber,
+			&i.CustomerID,
+			&i.CustomerName,
+			&i.CustomerNumber,
+			&i.PriorityCode,
+			&i.PriorityID,
+			&i.PriorityName,
+			&i.FinishedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.LineCount,
+			&i.LastShippedAt,
+			&i.PromisedAt,
+			&i.CustomerPoNumber,
+			&i.Note,
+			&i.CarrierID,
+			&i.CarrierName,
+			&i.CarrierIsPortalEnabled,
+			&i.CarrierCreatedAt,
+			&i.CarrierUpdatedAt,
+			&i.ServiceLevelID,
+			&i.ServiceLevelName,
+			&i.ServiceLevelIsPortalEnabled,
+			&i.ServiceLevelToken,
+			&i.ServiceLevelCreatedAt,
+			&i.ServiceLevelUpdatedAt,
+			&i.CarrierBillingType,
+			&i.CarrierBillingAccount,
+			&i.ShipByDate,
+			&i.ShipByCutoffAt,
+			&i.LeadTimeDays,
+			&i.LeadTimeSourceCode,
+			&i.TransitDays,
+			&i.TransitSourceCode,
+			&i.ShippingAddressID,
+			&i.ShippingAddressName,
+			&i.ShippingAddressPhone,
+			&i.ShippingAddressEmail,
+			&i.ShippingAddressIsDropShip,
+			&i.ShippingAddressGeolocationID,
+			&i.ShippingAddressStreetLine1,
+			&i.ShippingAddressStreetLine2,
+			&i.ShippingAddressLocality,
+			&i.ShippingAddressState,
+			&i.ShippingAddressPostalCode,
+			&i.ShippingAddressCountry,
+			&i.ShippingAddressCreatedAt,
+			&i.ShippingAddressUpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPicksSearchForward = `-- name: ListPicksSearchForward :many
+SELECT
+    p.id,
+    p.number,
+    p.sales_order_id,
+    so.number AS sales_order_number,
+    ar.counterparty_account_id AS customer_id,
+    ba.name AS customer_name,
+    ar.external_number AS customer_number,
+    so.priority_code,
+    pr.id AS priority_id,
+    pr.name AS priority_name,
+    p.finished_at,
+    p.created_at,
+    p.updated_at,
+    (SELECT COUNT(*) FROM pick_line plc WHERE plc.pick_id = p.id) AS line_count,
+    -- Latest ship date across the order's shipments; drives the date in the pick header.
+    (SELECT MAX(sh.shipped_at) FROM shipment sh WHERE sh.sales_order_id = so.id) AS last_shipped_at,
+    so.promised_at,
+    -- The order's cross-reference and instructions, carried so the floor works the pick without opening the order.
+    so.customer_po_number,
+    so.note,
+    -- Freight is the order's, carried so a pick shows the carrier it ships on.
+    so.carrier_id,
+    cr.name AS carrier_name,
+    cr.is_portal_enabled AS carrier_is_portal_enabled,
+    cr.created_at AS carrier_created_at,
+    cr.updated_at AS carrier_updated_at,
+    so.carrier_option_id AS service_level_id,
+    co.name AS service_level_name,
+    co.is_portal_enabled AS service_level_is_portal_enabled,
+    co.service_level_token,
+    co.created_at AS service_level_created_at,
+    co.updated_at AS service_level_updated_at,
+    so.carrier_billing_type,
+    so.carrier_billing_account,
+    -- The order's delivery commitment and how it was derived, so a pick can explain its dates.
+    so.ship_by_date,
+    so.ship_by_cutoff_at,
+    so.lead_time_days,
+    so.lead_time_source_code,
+    so.transit_days,
+    so.transit_source_code,
+    -- Ship-to is the order's, denormalized so a pick header needs no second fetch.
+    so.shipping_address_id,
+    addr.name AS shipping_address_name,
+    addr.phone AS shipping_address_phone,
+    addr.email AS shipping_address_email,
+    addr.is_drop_ship AS shipping_address_is_drop_ship,
+    ship_geo.id AS shipping_address_geolocation_id,
+    ship_geo.street_line_1 AS shipping_address_street_line_1,
+    ship_geo.street_line_2 AS shipping_address_street_line_2,
+    ship_geo.locality AS shipping_address_locality,
+    ship_geo.state AS shipping_address_state,
+    ship_geo.postal_code AS shipping_address_postal_code,
+    ship_geo.country AS shipping_address_country,
+    addr.created_at AS shipping_address_created_at,
+    addr.updated_at AS shipping_address_updated_at
+FROM pick p
+JOIN sales_order so ON so.id = p.sales_order_id
+JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
+    AND ar.counterparty_account_id = so.buyer_account_id
+JOIN account ba ON ba.id = so.buyer_account_id
+JOIN priority pr ON pr.code = so.priority_code
+LEFT JOIN address addr ON addr.id = so.shipping_address_id
+LEFT JOIN geolocation ship_geo ON ship_geo.id = addr.geolocation_id
+LEFT JOIN carrier cr ON cr.id = so.carrier_id
+LEFT JOIN carrier_option co ON co.id = so.carrier_option_id
+WHERE p.account_id = ?
+AND p.id IN (
+    SELECT pk.id FROM pick pk
+    WHERE pk.account_id = ?
+    AND MATCH(pk.number) AGAINST(? IN BOOLEAN MODE)
+    UNION
+    SELECT pk.id FROM pick pk
+    JOIN sales_order pso ON pso.id = pk.sales_order_id
+    WHERE pk.account_id = ?
+    AND MATCH(pso.customer_po_number) AGAINST(? IN BOOLEAN MODE)
+)
+AND (
+    ? IS NULL
+    OR (? = 'open' AND p.finished_at IS NULL)
+    OR (? = 'closed' AND p.finished_at IS NOT NULL)
+)
+AND (
+    ? = false
+    OR so.buyer_account_id IN (/*SLICE:customer_ids*/?)
+)
+AND (
+    ? = false
+    OR ar.account_group_id IN (/*SLICE:customer_group_ids*/?)
+)
+AND (
+    ? = false
+    OR EXISTS (
+        SELECT 1 FROM pick_line pl2
+        JOIN sales_order_line sol2 ON sol2.id = pl2.sales_order_line_id
+        JOIN product prod ON prod.id = sol2.product_id
+        WHERE pl2.pick_id = p.id
+        AND prod.product_line_id IN (/*SLICE:product_line_ids*/?)
+    )
+)
+AND (
+    ? IS NULL
+    OR p.created_at >= ?
+)
+AND (
+    ? IS NULL
+    OR p.created_at <= ?
+)
+AND (
+    ? = true
+    OR ? IS NULL
+    OR p.created_at < ?
+    OR (p.created_at = ? AND p.id < ?)
+)
+AND (
+    ? = false
+    OR ? IS NULL
+    OR COALESCE(so.ship_by_date, '9999-12-31') > CAST(? AS DATE)
+    OR (
+        COALESCE(so.ship_by_date, '9999-12-31') = CAST(? AS DATE)
+        AND p.id > ?
+    )
+)
+ORDER BY
+    CASE WHEN ? = true THEN COALESCE(so.ship_by_date, '9999-12-31') END ASC,
+    CASE WHEN ? = true THEN p.id END ASC,
+    p.created_at DESC,
+    p.id DESC
+LIMIT ?
+`
+
+type ListPicksSearchForwardParams struct {
+	AccountID                  string
+	SearchQuery                sql.NullString
+	Status                     interface{}
+	IncludeCustomerFilter      interface{}
+	CustomerIds                []string
+	IncludeCustomerGroupFilter interface{}
+	CustomerGroupIds           []sql.NullString
+	IncludeProductLineFilter   interface{}
+	ProductLineIds             []sql.NullString
+	StartDate                  sql.NullTime
+	EndDate                    sql.NullTime
+	SortByShipBy               interface{}
+	CursorCreatedAt            sql.NullTime
+	CursorID                   sql.NullString
+	CursorShipByDate           sql.NullTime
+	Limit                      int32
+}
+
+type ListPicksSearchForwardRow struct {
+	ID                           string
+	Number                       string
+	SalesOrderID                 string
+	SalesOrderNumber             string
+	CustomerID                   string
+	CustomerName                 string
+	CustomerNumber               string
+	PriorityCode                 string
+	PriorityID                   string
+	PriorityName                 string
+	FinishedAt                   sql.NullTime
+	CreatedAt                    time.Time
+	UpdatedAt                    time.Time
+	LineCount                    int64
+	LastShippedAt                interface{}
+	PromisedAt                   sql.NullTime
+	CustomerPoNumber             sql.NullString
+	Note                         sql.NullString
+	CarrierID                    sql.NullString
+	CarrierName                  sql.NullString
+	CarrierIsPortalEnabled       sql.NullBool
+	CarrierCreatedAt             sql.NullTime
+	CarrierUpdatedAt             sql.NullTime
+	ServiceLevelID               sql.NullString
+	ServiceLevelName             sql.NullString
+	ServiceLevelIsPortalEnabled  sql.NullBool
+	ServiceLevelToken            sql.NullString
+	ServiceLevelCreatedAt        sql.NullTime
+	ServiceLevelUpdatedAt        sql.NullTime
+	CarrierBillingType           sql.NullString
+	CarrierBillingAccount        sql.NullString
+	ShipByDate                   sql.NullTime
+	ShipByCutoffAt               sql.NullTime
+	LeadTimeDays                 sql.NullInt32
+	LeadTimeSourceCode           sql.NullString
+	TransitDays                  sql.NullInt32
+	TransitSourceCode            sql.NullString
+	ShippingAddressID            string
+	ShippingAddressName          sql.NullString
+	ShippingAddressPhone         sql.NullString
+	ShippingAddressEmail         sql.NullString
+	ShippingAddressIsDropShip    sql.NullBool
+	ShippingAddressGeolocationID sql.NullString
+	ShippingAddressStreetLine1   sql.NullString
+	ShippingAddressStreetLine2   sql.NullString
+	ShippingAddressLocality      sql.NullString
+	ShippingAddressState         sql.NullString
+	ShippingAddressPostalCode    sql.NullString
+	ShippingAddressCountry       sql.NullString
+	ShippingAddressCreatedAt     sql.NullTime
+	ShippingAddressUpdatedAt     sql.NullTime
+}
+
+// The search sibling of ListPicksForward. No STRAIGHT_JOIN: the `p.id IN (...)` semi-join lets the
+// optimizer drive from the ngram FULLTEXT match (a handful of rows) instead of the account's whole
+// pick range, so the join order that helps the unsearched browse would only get in the way here.
+// Substring search over the pick number and the order's customer PO number, each served by its own
+// ngram FULLTEXT index. A semi-join, not an OR of two MATCHes in the main WHERE, so each MATCH drives
+// its own index — an OR of MATCH across joined tables cannot use either. The repo only runs this query
+// when a term of at least the ngram token size is present, so the match is unconditional.
+// The sentinel keeps a pick whose order has no ship-by date sortable and last; the repository's cursor must use the same value.
+func (q *Queries) ListPicksSearchForward(ctx context.Context, arg ListPicksSearchForwardParams) ([]ListPicksSearchForwardRow, error) {
+	query := listPicksSearchForward
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.Status)
+	queryParams = append(queryParams, arg.Status)
+	queryParams = append(queryParams, arg.Status)
+	queryParams = append(queryParams, arg.IncludeCustomerFilter)
+	if len(arg.CustomerIds) > 0 {
+		for _, v := range arg.CustomerIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:customer_ids*/?", strings.Repeat(",?", len(arg.CustomerIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:customer_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.IncludeCustomerGroupFilter)
+	if len(arg.CustomerGroupIds) > 0 {
+		for _, v := range arg.CustomerGroupIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:customer_group_ids*/?", strings.Repeat(",?", len(arg.CustomerGroupIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:customer_group_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.IncludeProductLineFilter)
+	if len(arg.ProductLineIds) > 0 {
+		for _, v := range arg.ProductLineIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:product_line_ids*/?", strings.Repeat(",?", len(arg.ProductLineIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:product_line_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.StartDate)
+	queryParams = append(queryParams, arg.StartDate)
+	queryParams = append(queryParams, arg.EndDate)
+	queryParams = append(queryParams, arg.EndDate)
+	queryParams = append(queryParams, arg.SortByShipBy)
+	queryParams = append(queryParams, arg.CursorCreatedAt)
+	queryParams = append(queryParams, arg.CursorCreatedAt)
+	queryParams = append(queryParams, arg.CursorCreatedAt)
+	queryParams = append(queryParams, arg.CursorID)
+	queryParams = append(queryParams, arg.SortByShipBy)
+	queryParams = append(queryParams, arg.CursorShipByDate)
+	queryParams = append(queryParams, arg.CursorShipByDate)
+	queryParams = append(queryParams, arg.CursorShipByDate)
+	queryParams = append(queryParams, arg.CursorID)
+	queryParams = append(queryParams, arg.SortByShipBy)
+	queryParams = append(queryParams, arg.SortByShipBy)
+	queryParams = append(queryParams, arg.Limit)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPicksSearchForwardRow
+	for rows.Next() {
+		var i ListPicksSearchForwardRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Number,

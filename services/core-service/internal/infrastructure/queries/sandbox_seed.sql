@@ -314,6 +314,8 @@
 -- HISTORICAL DEMAND (the trailing-12 window the schedule plans from)
 --   @hso1..3    ORD-H001 7 months back, ORD-H002 4 months, ORD-H003 2 months
 --   @hsol1..6   lines, @qhso1..6 quantities, @rthso1..6 prices, @rthsc1..6 costs
+--   @dho1..12   ORD-D01..D12, one per complete month of the trailing year
+--   @dhq1..36   line quantities (3 per order), @dhr1..3 the S/M/L unit prices
 --
 -- MACHINE DOWNTIME (mcdt_seed...)
 --   @mcdt1..5   breakdown, changeover, material shortage, minor stop, quality hold
@@ -3490,10 +3492,12 @@ INSERT INTO `_batch_flow` (`A`, `B`) VALUES
 -- ============================================================================
 -- SECTION 52: HISTORICAL DEMAND
 -- ============================================================================
--- Three fulfilled orders spread over completed months, for the finished goods the
--- seeded runs produce. Trailing-twelve demand deliberately ignores the current partial
--- month, so the orders in SECTION 39 -- all inside the last two weeks -- contribute
--- nothing to a plan. Without this history every item plans to zero.
+-- Fulfilled orders spread over completed months, for the finished goods the seeded runs
+-- produce. Trailing-twelve demand deliberately ignores the current partial month, so the
+-- orders in SECTION 39 -- all inside the last two weeks -- contribute nothing to a plan.
+-- Without this history every item plans to zero. The three anchor orders here are kept for
+-- their per-line costs. SECTION 52b layers a full twelve months of volume on top so the
+-- plan is not a single frozen campaign. See that section for the sizing rationale.
 
 INSERT INTO `rate` (`id`, `value`, `numerator_unit_id`, `denominator_unit_id`) VALUES
   (@rthso1, 11, @un4, @un2), (@rthso2, 11, @un4, @un2), (@rthso3, 12, @un4, @un2),
@@ -3519,6 +3523,190 @@ INSERT INTO `sales_order_line` (`id`, `product_sku`, `product_description`, `lin
   (@hsol4, 'FG-CRW-L-WHT', 'Crew Sock Large White',  2, @pd7, @it7, @hso2, @qhso4, @rthso4, @rthsc4),
   (@hsol5, 'FG-CRW-S-WHT', 'Crew Sock Small White',  1, @pd1, @it1, @hso3, @qhso5, @rthso5, @rthsc5),
   (@hsol6, 'FG-CRW-L-WHT', 'Crew Sock Large White',  2, @pd7, @it7, @hso3, @qhso6, @rthso6, @rthsc6);
+
+
+-- ----------------------------------------------------------------------------
+-- SECTION 52b: EXPANDED MONTHLY DEMAND HISTORY
+-- ----------------------------------------------------------------------------
+-- One fulfilled order per complete month for the trailing year, on the three finished
+-- goods the seeded knit runs produce (Crew White S/M/L, the only products the batch
+-- genealogy pools onto WIP-KNT-S/M/L). The three orders above alone leave weekly demand
+-- so far below a machine-week that a single campaign covers the whole horizon and every
+-- flexible week reads idle. Twelve months of realistic volume (~46k/41k/32k pairs a year
+-- across S/M/L, roughly half of knitting capacity) is what makes the solver plan
+-- recurring campaigns across the weeks instead of one frozen batch. Every month carries
+-- demand so the series is dense and classifies as smooth, with quantities rising into the
+-- autumn peak. Customers rotate so the history is not one buyer, and every order names
+-- the sales rep so it counts toward the seeded targets. Lines carry a unit price but no
+-- cost -- the schedule reads quantity only, and the costed history above already feeds
+-- the margin views.
+
+SET @dho1 = CONCAT('or_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dho2 = CONCAT('or_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dho3 = CONCAT('or_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dho4 = CONCAT('or_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dho5 = CONCAT('or_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dho6 = CONCAT('or_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dho7 = CONCAT('or_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dho8 = CONCAT('or_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dho9 = CONCAT('or_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dho10 = CONCAT('or_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dho11 = CONCAT('or_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dho12 = CONCAT('or_', LEFT(REPLACE(UUID(), '-', ''), 12));
+
+SET @dhq1 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhq2 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhq3 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhq4 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhq5 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhq6 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhq7 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhq8 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhq9 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhq10 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhq11 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhq12 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhq13 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhq14 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhq15 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhq16 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhq17 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhq18 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhq19 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhq20 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhq21 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhq22 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhq23 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhq24 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhq25 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhq26 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhq27 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhq28 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhq29 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhq30 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhq31 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhq32 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhq33 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhq34 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhq35 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhq36 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+
+SET @dhr1 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhr2 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhr3 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhr4 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhr5 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhr6 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhr7 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhr8 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhr9 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhr10 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhr11 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhr12 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhr13 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhr14 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhr15 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhr16 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhr17 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhr18 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhr19 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhr20 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhr21 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhr22 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhr23 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhr24 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhr25 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhr26 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhr27 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhr28 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhr29 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhr30 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhr31 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhr32 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhr33 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhr34 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhr35 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dhr36 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+
+INSERT INTO `rate` (`id`, `value`, `numerator_unit_id`, `denominator_unit_id`) VALUES
+  (@dhr1, 11.50, @un4, @un2), (@dhr2, 11.00, @un4, @un2), (@dhr3, 12.00, @un4, @un2),
+  (@dhr4, 11.50, @un4, @un2), (@dhr5, 11.00, @un4, @un2), (@dhr6, 12.00, @un4, @un2),
+  (@dhr7, 11.50, @un4, @un2), (@dhr8, 11.00, @un4, @un2), (@dhr9, 12.00, @un4, @un2),
+  (@dhr10, 11.50, @un4, @un2), (@dhr11, 11.00, @un4, @un2), (@dhr12, 12.00, @un4, @un2),
+  (@dhr13, 11.50, @un4, @un2), (@dhr14, 11.00, @un4, @un2), (@dhr15, 12.00, @un4, @un2),
+  (@dhr16, 11.50, @un4, @un2), (@dhr17, 11.00, @un4, @un2), (@dhr18, 12.00, @un4, @un2),
+  (@dhr19, 11.50, @un4, @un2), (@dhr20, 11.00, @un4, @un2), (@dhr21, 12.00, @un4, @un2),
+  (@dhr22, 11.50, @un4, @un2), (@dhr23, 11.00, @un4, @un2), (@dhr24, 12.00, @un4, @un2),
+  (@dhr25, 11.50, @un4, @un2), (@dhr26, 11.00, @un4, @un2), (@dhr27, 12.00, @un4, @un2),
+  (@dhr28, 11.50, @un4, @un2), (@dhr29, 11.00, @un4, @un2), (@dhr30, 12.00, @un4, @un2),
+  (@dhr31, 11.50, @un4, @un2), (@dhr32, 11.00, @un4, @un2), (@dhr33, 12.00, @un4, @un2),
+  (@dhr34, 11.50, @un4, @un2), (@dhr35, 11.00, @un4, @un2), (@dhr36, 12.00, @un4, @un2);
+
+INSERT INTO `quantity` (`id`, `value`, `unit_id`) VALUES
+  (@dhq1, 3800, @un2), (@dhq2, 3400, @un2), (@dhq3, 2600, @un2),
+  (@dhq4, 3200, @un2), (@dhq5, 2900, @un2), (@dhq6, 2200, @un2),
+  (@dhq7, 2800, @un2), (@dhq8, 2600, @un2), (@dhq9, 2000, @un2),
+  (@dhq10, 3000, @un2), (@dhq11, 2800, @un2), (@dhq12, 2100, @un2),
+  (@dhq13, 3600, @un2), (@dhq14, 3200, @un2), (@dhq15, 2500, @un2),
+  (@dhq16, 4200, @un2), (@dhq17, 3700, @un2), (@dhq18, 2900, @un2),
+  (@dhq19, 4800, @un2), (@dhq20, 4200, @un2), (@dhq21, 3300, @un2),
+  (@dhq22, 5200, @un2), (@dhq23, 4500, @un2), (@dhq24, 3600, @un2),
+  (@dhq25, 4600, @un2), (@dhq26, 4000, @un2), (@dhq27, 3200, @un2),
+  (@dhq28, 3800, @un2), (@dhq29, 3400, @un2), (@dhq30, 2700, @un2),
+  (@dhq31, 3400, @un2), (@dhq32, 3000, @un2), (@dhq33, 2400, @un2),
+  (@dhq34, 3600, @un2), (@dhq35, 3200, @un2), (@dhq36, 2500, @un2);
+
+INSERT INTO `sales_order` (`id`, `number`, `sales_order_status_code`, `sales_order_type_code`, `priority_code`, `buyer_account_id`, `seller_account_id`, `owner_account_id`, `billing_address_id`, `shipping_address_id`, `carrier_id`, `carrier_option_id`, `payment_term_id`, `shipping_term_id`, `sales_rep_id`, `issued_at`, `completed_at`) VALUES
+  (@dho1, 'ORD-D01', 'fulfilled', 'sales_order', 'normal', @cust1, '@account_id', '@account_id', @caddr1, @caddr2, 'delivery', NULL, @pytm1, @shtm1, @acus1, NOW() - INTERVAL 1 MONTH, NOW() - INTERVAL 1 MONTH + INTERVAL 10 DAY),
+  (@dho2, 'ORD-D02', 'fulfilled', 'sales_order', 'normal', @cust2, '@account_id', '@account_id', @caddr3, @caddr4, 'delivery', NULL, @pytm1, @shtm1, @acus1, NOW() - INTERVAL 2 MONTH, NOW() - INTERVAL 2 MONTH + INTERVAL 10 DAY),
+  (@dho3, 'ORD-D03', 'fulfilled', 'sales_order', 'normal', @cust3, '@account_id', '@account_id', @caddr5, @caddr6, 'delivery', NULL, @pytm2, @shtm1, @acus1, NOW() - INTERVAL 3 MONTH, NOW() - INTERVAL 3 MONTH + INTERVAL 10 DAY),
+  (@dho4, 'ORD-D04', 'fulfilled', 'sales_order', 'normal', @cust1, '@account_id', '@account_id', @caddr1, @caddr2, 'delivery', NULL, @pytm1, @shtm1, @acus1, NOW() - INTERVAL 4 MONTH, NOW() - INTERVAL 4 MONTH + INTERVAL 10 DAY),
+  (@dho5, 'ORD-D05', 'fulfilled', 'sales_order', 'normal', @cust2, '@account_id', '@account_id', @caddr3, @caddr4, 'delivery', NULL, @pytm1, @shtm1, @acus1, NOW() - INTERVAL 5 MONTH, NOW() - INTERVAL 5 MONTH + INTERVAL 10 DAY),
+  (@dho6, 'ORD-D06', 'fulfilled', 'sales_order', 'normal', @cust3, '@account_id', '@account_id', @caddr5, @caddr6, 'delivery', NULL, @pytm2, @shtm1, @acus1, NOW() - INTERVAL 6 MONTH, NOW() - INTERVAL 6 MONTH + INTERVAL 10 DAY),
+  (@dho7, 'ORD-D07', 'fulfilled', 'sales_order', 'normal', @cust1, '@account_id', '@account_id', @caddr1, @caddr2, 'delivery', NULL, @pytm1, @shtm1, @acus1, NOW() - INTERVAL 7 MONTH, NOW() - INTERVAL 7 MONTH + INTERVAL 10 DAY),
+  (@dho8, 'ORD-D08', 'fulfilled', 'sales_order', 'normal', @cust2, '@account_id', '@account_id', @caddr3, @caddr4, 'delivery', NULL, @pytm1, @shtm1, @acus1, NOW() - INTERVAL 8 MONTH, NOW() - INTERVAL 8 MONTH + INTERVAL 10 DAY),
+  (@dho9, 'ORD-D09', 'fulfilled', 'sales_order', 'normal', @cust3, '@account_id', '@account_id', @caddr5, @caddr6, 'delivery', NULL, @pytm2, @shtm1, @acus1, NOW() - INTERVAL 9 MONTH, NOW() - INTERVAL 9 MONTH + INTERVAL 10 DAY),
+  (@dho10, 'ORD-D10', 'fulfilled', 'sales_order', 'normal', @cust1, '@account_id', '@account_id', @caddr1, @caddr2, 'delivery', NULL, @pytm1, @shtm1, @acus1, NOW() - INTERVAL 10 MONTH, NOW() - INTERVAL 10 MONTH + INTERVAL 10 DAY),
+  (@dho11, 'ORD-D11', 'fulfilled', 'sales_order', 'normal', @cust2, '@account_id', '@account_id', @caddr3, @caddr4, 'delivery', NULL, @pytm1, @shtm1, @acus1, NOW() - INTERVAL 11 MONTH, NOW() - INTERVAL 11 MONTH + INTERVAL 10 DAY),
+  (@dho12, 'ORD-D12', 'fulfilled', 'sales_order', 'normal', @cust3, '@account_id', '@account_id', @caddr5, @caddr6, 'delivery', NULL, @pytm2, @shtm1, @acus1, NOW() - INTERVAL 12 MONTH, NOW() - INTERVAL 12 MONTH + INTERVAL 10 DAY);
+
+INSERT INTO `sales_order_line` (`id`, `product_sku`, `product_description`, `line_item_number`, `product_id`, `item_id`, `sales_order_id`, `quantity_id`, `unit_price_id`, `unit_cost_id`) VALUES
+  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-S-WHT', 'Crew Sock Small White', 1, @pd1, @it1, @dho1, @dhq1, @dhr1, NULL),
+  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-M-WHT', 'Crew Sock Medium White', 2, @pd4, @it4, @dho1, @dhq2, @dhr2, NULL),
+  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-L-WHT', 'Crew Sock Large White', 3, @pd7, @it7, @dho1, @dhq3, @dhr3, NULL),
+  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-S-WHT', 'Crew Sock Small White', 1, @pd1, @it1, @dho2, @dhq4, @dhr4, NULL),
+  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-M-WHT', 'Crew Sock Medium White', 2, @pd4, @it4, @dho2, @dhq5, @dhr5, NULL),
+  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-L-WHT', 'Crew Sock Large White', 3, @pd7, @it7, @dho2, @dhq6, @dhr6, NULL),
+  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-S-WHT', 'Crew Sock Small White', 1, @pd1, @it1, @dho3, @dhq7, @dhr7, NULL),
+  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-M-WHT', 'Crew Sock Medium White', 2, @pd4, @it4, @dho3, @dhq8, @dhr8, NULL),
+  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-L-WHT', 'Crew Sock Large White', 3, @pd7, @it7, @dho3, @dhq9, @dhr9, NULL),
+  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-S-WHT', 'Crew Sock Small White', 1, @pd1, @it1, @dho4, @dhq10, @dhr10, NULL),
+  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-M-WHT', 'Crew Sock Medium White', 2, @pd4, @it4, @dho4, @dhq11, @dhr11, NULL),
+  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-L-WHT', 'Crew Sock Large White', 3, @pd7, @it7, @dho4, @dhq12, @dhr12, NULL),
+  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-S-WHT', 'Crew Sock Small White', 1, @pd1, @it1, @dho5, @dhq13, @dhr13, NULL),
+  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-M-WHT', 'Crew Sock Medium White', 2, @pd4, @it4, @dho5, @dhq14, @dhr14, NULL),
+  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-L-WHT', 'Crew Sock Large White', 3, @pd7, @it7, @dho5, @dhq15, @dhr15, NULL),
+  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-S-WHT', 'Crew Sock Small White', 1, @pd1, @it1, @dho6, @dhq16, @dhr16, NULL),
+  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-M-WHT', 'Crew Sock Medium White', 2, @pd4, @it4, @dho6, @dhq17, @dhr17, NULL),
+  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-L-WHT', 'Crew Sock Large White', 3, @pd7, @it7, @dho6, @dhq18, @dhr18, NULL),
+  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-S-WHT', 'Crew Sock Small White', 1, @pd1, @it1, @dho7, @dhq19, @dhr19, NULL),
+  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-M-WHT', 'Crew Sock Medium White', 2, @pd4, @it4, @dho7, @dhq20, @dhr20, NULL),
+  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-L-WHT', 'Crew Sock Large White', 3, @pd7, @it7, @dho7, @dhq21, @dhr21, NULL),
+  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-S-WHT', 'Crew Sock Small White', 1, @pd1, @it1, @dho8, @dhq22, @dhr22, NULL),
+  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-M-WHT', 'Crew Sock Medium White', 2, @pd4, @it4, @dho8, @dhq23, @dhr23, NULL),
+  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-L-WHT', 'Crew Sock Large White', 3, @pd7, @it7, @dho8, @dhq24, @dhr24, NULL),
+  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-S-WHT', 'Crew Sock Small White', 1, @pd1, @it1, @dho9, @dhq25, @dhr25, NULL),
+  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-M-WHT', 'Crew Sock Medium White', 2, @pd4, @it4, @dho9, @dhq26, @dhr26, NULL),
+  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-L-WHT', 'Crew Sock Large White', 3, @pd7, @it7, @dho9, @dhq27, @dhr27, NULL),
+  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-S-WHT', 'Crew Sock Small White', 1, @pd1, @it1, @dho10, @dhq28, @dhr28, NULL),
+  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-M-WHT', 'Crew Sock Medium White', 2, @pd4, @it4, @dho10, @dhq29, @dhr29, NULL),
+  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-L-WHT', 'Crew Sock Large White', 3, @pd7, @it7, @dho10, @dhq30, @dhr30, NULL),
+  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-S-WHT', 'Crew Sock Small White', 1, @pd1, @it1, @dho11, @dhq31, @dhr31, NULL),
+  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-M-WHT', 'Crew Sock Medium White', 2, @pd4, @it4, @dho11, @dhq32, @dhr32, NULL),
+  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-L-WHT', 'Crew Sock Large White', 3, @pd7, @it7, @dho11, @dhq33, @dhr33, NULL),
+  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-S-WHT', 'Crew Sock Small White', 1, @pd1, @it1, @dho12, @dhq34, @dhr34, NULL),
+  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-M-WHT', 'Crew Sock Medium White', 2, @pd4, @it4, @dho12, @dhq35, @dhr35, NULL),
+  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-L-WHT', 'Crew Sock Large White', 3, @pd7, @it7, @dho12, @dhq36, @dhr36, NULL);
 
 
 -- ============================================================================

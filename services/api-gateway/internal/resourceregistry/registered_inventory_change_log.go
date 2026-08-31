@@ -14,9 +14,21 @@ func init() {
 		ObjectType: constants.ObjectTypeInventoryChangeLog,
 		Load:       resourceloaders.LoadInventoryChangeLogs,
 		Subs: []resourcekit.SubField{
-			{Key: "item", Populate: populateItemOnInventoryChangeLog},
+			{
+				Key:         "item",
+				Target:      constants.ObjectTypeItem,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractIDs:  extractItemIDFromInventoryChangeLog,
+				Populate:    populateItemOnInventoryChangeLog,
+			},
 			{Key: "quantity", Populate: populateQuantityOnInventoryChangeLog},
-			{Key: "responsible_user", Populate: populateResponsibleUserOnInventoryChangeLog},
+			{
+				Key:         "responsible_user",
+				Target:      constants.ObjectTypeUser,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractIDs:  extractResponsibleUserIDFromInventoryChangeLog,
+				Populate:    populateResponsibleUserOnInventoryChangeLog,
+			},
 			{
 				Key:         "responsible_scanning_station",
 				Target:      constants.ObjectTypeScanningStation,
@@ -28,14 +40,27 @@ func init() {
 	})
 }
 
-func populateItemOnInventoryChangeLog(ctx context.Context, parent any, _ map[string]any) {
+// itemIDOnInventoryChangeLog reads the affected item's id off LoadMeta so the item is hydrated through the shared batched item loader, which carries every base field (description, notes) and the item's own expandables — rather than a thin stub synthesized from the change-log join.
+func itemIDOnInventoryChangeLog(ctx context.Context, parent any) string {
 	icl := parent.(*apiresource.InventoryChangeLog)
-	v, ok := resourcekit.GetLoadMeta(ctx).
-		Get(constants.ObjectTypeInventoryChangeLog, icl.ID, "item")
-	if !ok {
-		return
+	id, _ := resourcekit.GetLoadMeta(ctx).
+		GetString(constants.ObjectTypeInventoryChangeLog, icl.ID, "item_id")
+	return id
+}
+
+func extractItemIDFromInventoryChangeLog(ctx context.Context, parent any) []string {
+	id := itemIDOnInventoryChangeLog(ctx, parent)
+	if id == "" {
+		return nil
 	}
-	icl.Item = v.(*apiresource.Item)
+	return []string{id}
+}
+
+func populateItemOnInventoryChangeLog(ctx context.Context, parent any, loaded map[string]any) {
+	icl := parent.(*apiresource.InventoryChangeLog)
+	if v, ok := loaded[itemIDOnInventoryChangeLog(ctx, parent)]; ok {
+		icl.Item = v.(*apiresource.Item)
+	}
 }
 
 func populateQuantityOnInventoryChangeLog(ctx context.Context, parent any, _ map[string]any) {
@@ -48,14 +73,27 @@ func populateQuantityOnInventoryChangeLog(ctx context.Context, parent any, _ map
 	icl.Quantity = v.(*apiresource.Quantity)
 }
 
-func populateResponsibleUserOnInventoryChangeLog(ctx context.Context, parent any, _ map[string]any) {
+// responsibleUserIDOnInventoryChangeLog reads the recording user's id off LoadMeta so the user is hydrated through the shared batched user loader, which carries every base field (email, username, image url) — rather than a stub built from the change-log join.
+func responsibleUserIDOnInventoryChangeLog(ctx context.Context, parent any) string {
 	icl := parent.(*apiresource.InventoryChangeLog)
-	v, ok := resourcekit.GetLoadMeta(ctx).
-		Get(constants.ObjectTypeInventoryChangeLog, icl.ID, "responsible_user")
-	if !ok {
-		return
+	id, _ := resourcekit.GetLoadMeta(ctx).
+		GetString(constants.ObjectTypeInventoryChangeLog, icl.ID, "responsible_user_id")
+	return id
+}
+
+func extractResponsibleUserIDFromInventoryChangeLog(ctx context.Context, parent any) []string {
+	id := responsibleUserIDOnInventoryChangeLog(ctx, parent)
+	if id == "" {
+		return nil
 	}
-	icl.ResponsibleUser = v.(*apiresource.User)
+	return []string{id}
+}
+
+func populateResponsibleUserOnInventoryChangeLog(ctx context.Context, parent any, loaded map[string]any) {
+	icl := parent.(*apiresource.InventoryChangeLog)
+	if v, ok := loaded[responsibleUserIDOnInventoryChangeLog(ctx, parent)]; ok {
+		icl.ResponsibleUser = v.(*apiresource.User)
+	}
 }
 
 func extractScanningStationIDFromInventoryChangeLog(ctx context.Context, parent any) []string {

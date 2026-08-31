@@ -209,31 +209,12 @@ func stashInventoryChangeLogMeta(meta *resourcekit.LoadMeta, icl *pb.InventoryCh
 		return
 	}
 
-	item := &apiresource.Item{
-		ID:        icl.ItemId,
-		Object:    constants.ObjectTypeItem,
-		SKU:       icl.ItemSku,
-		CreatedAt: grpcutil.TimestampToTime(icl.ItemCreatedAt),
-		UpdatedAt: grpcutil.TimestampToTime(icl.ItemUpdatedAt),
-	}
-	if icl.ItemTypeCode != nil {
-		item.ItemTypeCode = constants.ItemTypeCode(*icl.ItemTypeCode)
-	}
-	meta.Set(constants.ObjectTypeInventoryChangeLog, icl.Id, "item", item)
+	// Stash only the affected item's id; the item is hydrated on demand through the shared batched item loader so the include carries the full item (description, notes, and its own expandables), not a stub built from the change-log join.
+	meta.Set(constants.ObjectTypeInventoryChangeLog, icl.Id, "item_id", icl.ItemId)
 
 	if icl.ResponsibleUserId != nil {
-		user := &apiresource.User{
-			ID:     *icl.ResponsibleUserId,
-			Object: constants.ObjectTypeUser,
-			Name:   icl.ResponsibleUserName,
-		}
-		if icl.ResponsibleUserCreatedAt != nil {
-			user.CreatedAt = icl.ResponsibleUserCreatedAt.AsTime()
-		}
-		if icl.ResponsibleUserUpdatedAt != nil {
-			user.UpdatedAt = icl.ResponsibleUserUpdatedAt.AsTime()
-		}
-		meta.Set(constants.ObjectTypeInventoryChangeLog, icl.Id, "responsible_user", user)
+		// Stash only the recording user's id; the user is hydrated on demand through the shared batched user loader so the include carries the full user, not a stub built from the change-log join.
+		meta.Set(constants.ObjectTypeInventoryChangeLog, icl.Id, "responsible_user_id", *icl.ResponsibleUserId)
 	}
 
 	if icl.ScanningStationId != nil {

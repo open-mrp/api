@@ -62,6 +62,10 @@ func TestInventoryChangeLogs_RetrieveReportsEveryField(t *testing.T) {
 	require.NotNil(t, item, "item should be present with ?include=item")
 	assert.Equal(t, SeedInventoryChangeLogItemID, jsonField(item, "id"))
 	assert.Equal(t, SeedItemSKU, jsonField(item, "sku"))
+	// The include must carry the full item, not a stub built from the change-log join: a stub that
+	// drops the item's own base fields reads null here even though the item has a description.
+	assert.Equal(t, SeedItemDescription, jsonField(item, "description"),
+		"the included item carries its description, not a partial stub")
 
 	user := jsonObject(got, "responsible_user")
 	require.NotNil(t, user, "responsible_user should be present with ?include=responsible_user")
@@ -70,6 +74,41 @@ func TestInventoryChangeLogs_RetrieveReportsEveryField(t *testing.T) {
 	station := jsonObject(got, "responsible_scanning_station")
 	require.NotNil(t, station, "responsible_scanning_station should be present with ?include=responsible_scanning_station")
 	assert.Equal(t, SeedScanningStationID, jsonField(station, "id"))
+}
+
+// Listing with ?include=item must hydrate each row's own item — fully, and matched to that row.
+//
+// The two 2099-dated fixtures head the list newest-first and point at distinct items (SCK-001,
+// SCK-002), so a bug that stitched the same item onto every row, or built a partial stub that drops
+// the item's base fields, fails here. The retrieve test above cannot catch a per-row mismatch because
+// it only ever reads a single row.
+func TestInventoryChangeLogs_ListIncludeItemHydratesEachRow(t *testing.T) {
+	t.Parallel()
+
+	list, status, err := apiClient.GetList(inventoryChangeLogsPath,
+		url.Values{"limit": {"2"}, "include": {"item"}})
+	require.NoError(t, err)
+	require.Equal(t, 200, status)
+	require.Len(t, list.Data, 2, "the two 2099 fixtures head the list")
+
+	first := parseJSON(list.Data[0])
+	assert.Equal(t, SeedInventoryChangeLogID, jsonField(first, "id"))
+	firstItem := jsonObject(first, "item")
+	require.NotNil(t, firstItem, "the first row's item is hydrated: %s", string(list.Data[0]))
+	assert.Equal(t, SeedInventoryChangeLogItemID, jsonField(firstItem, "id"), "the first row carries its own item")
+	assert.Equal(t, SeedItemSKU, jsonField(firstItem, "sku"))
+	assert.Equal(t, SeedItemDescription, jsonField(firstItem, "description"),
+		"a list row's included item carries its base fields, not a stub")
+
+	second := parseJSON(list.Data[1])
+	assert.Equal(t, SeedInventoryChangeLog2ID, jsonField(second, "id"))
+	secondItem := jsonObject(second, "item")
+	require.NotNil(t, secondItem, "the second row's item is hydrated: %s", string(list.Data[1]))
+	assert.Equal(t, SeedInventoryChangeLog2ItemID, jsonField(secondItem, "id"),
+		"the second row carries a different item than the first")
+	assert.Equal(t, "SCK-002", jsonField(secondItem, "sku"))
+	assert.NotEqual(t, jsonField(firstItem, "id"), jsonField(secondItem, "id"),
+		"distinct rows must not share one hydrated item")
 }
 
 // The quantity is not expandable, so it must arrive on a list row that asked for no includes at all

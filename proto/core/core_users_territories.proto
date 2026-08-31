@@ -379,6 +379,8 @@ message ListInventoryChangeLogsRequest {
   repeated string changed_by_user_ids = 6;
   optional google.protobuf.Timestamp start_date = 7;
   optional google.protobuf.Timestamp end_date = 8;
+  // Substring match on the affected item's SKU.
+  optional string search_query = 9;
 }
 message ListInventoryChangeLogsResponse {
   repeated InventoryChangeLogInfo inventory_change_logs = 1;

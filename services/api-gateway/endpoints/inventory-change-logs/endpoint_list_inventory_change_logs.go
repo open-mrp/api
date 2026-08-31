@@ -34,11 +34,13 @@ type ListInventoryChangeLogsRequest struct {
 	StartsAt *time.Time `query:"starts_at"`
 	// Restricts results to change logs created on or before this timestamp.
 	EndsAt *time.Time `query:"ends_at"`
+	// Restricts results to changes affecting items whose SKU contains this term, matched case-insensitively anywhere in the SKU.
+	Query *string `query:"q" validate:"omitempty,max=500"`
 }
 
 var _ contracts.DocumentedType = (*ListInventoryChangeLogsRequest)(nil)
 
-// SchemaExample documents this endpoint's paging query parameters for OpenAPI. It carries its own cursor and limit rather than embedding PaginationRequest, which would also advertise a `?q=` this endpoint does not search on, so the cursor example has to be documented here too. The cursor keysets on the log's created_at and its type ID, so it is a string cursor rather than the internal-id one PaginationRequest documents.
+// SchemaExample documents this endpoint's paging query parameters for OpenAPI. It carries its own cursor and limit rather than embedding PaginationRequest, whose cursor keysets on an internal id; this endpoint's cursor keysets on the log's created_at and its type ID, so it is a documented string cursor.
 func (*ListInventoryChangeLogsRequest) SchemaExample() any {
 	return map[string]any{
 		"cursor": pagination.EncodeDocumentationStringCursor(apiresource.SampleAnalyticsPeriodStart, apiresource.SampleInventoryChangeLogID),

@@ -2858,6 +2858,82 @@ func (q *Queries) RemoveItemAttribute(ctx context.Context, arg RemoveItemAttribu
 	return q.db.ExecContext(ctx, removeItemAttribute, arg.AttributeID, arg.ItemID, arg.AccountID)
 }
 
+const searchItemIDsBySKUFulltext = `-- name: SearchItemIDsBySKUFulltext :many
+SELECT id
+FROM item
+WHERE account_id = ?
+  AND MATCH(sku) AGAINST(? IN BOOLEAN MODE)
+`
+
+type SearchItemIDsBySKUFulltextParams struct {
+	AccountID   string
+	SearchQuery sql.NullString
+}
+
+// SearchItemIDsBySKUFulltext resolves the account's item IDs whose SKU contains the search term, using
+// the ngram FULLTEXT index (item_sku_ngram_idx) for substring matching. Kept as a standalone MATCH — not
+// OR'd with the LIKE fallback below — so the optimizer can drive off the fulltext index; an OR with a
+// non-fulltext predicate would abandon it. Callers feed the result into a downstream item_id filter.
+func (q *Queries) SearchItemIDsBySKUFulltext(ctx context.Context, arg SearchItemIDsBySKUFulltextParams) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, searchItemIDsBySKUFulltext, arg.AccountID, arg.SearchQuery)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const searchItemIDsBySKULike = `-- name: SearchItemIDsBySKULike :many
+SELECT id
+FROM item
+WHERE account_id = ?
+  AND sku LIKE ?
+`
+
+type SearchItemIDsBySKULikeParams struct {
+	AccountID string
+	LikeQuery sql.NullString
+}
+
+// SearchItemIDsBySKULike is the fallback for terms shorter than the ngram token size, which have no
+// ngram token to match and so cannot use item_sku_ngram_idx.
+func (q *Queries) SearchItemIDsBySKULike(ctx context.Context, arg SearchItemIDsBySKULikeParams) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, searchItemIDsBySKULike, arg.AccountID, arg.LikeQuery)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const setItemDescription = `-- name: SetItemDescription :exec
 UPDATE item SET
   description = ?,

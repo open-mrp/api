@@ -51,6 +51,8 @@ type ListInventoryChangeLogsParams struct {
 	ChangedByUserIDs []string
 	StartDate        *time.Time
 	EndDate          *time.Time
+	// Query is a substring search on the affected item's SKU. Empty means no SKU search.
+	Query *string
 }
 
 // ListInventoryChangeLogsResult contains the paginated result of listing inventory change logs.

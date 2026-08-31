@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.1](https://github.com/open-mrp/api/compare/v2.3.0...v2.3.1) (2026-08-31)
+
+
+### Bug Fixes
+
+* **inventory:** guard the repair command and restamp the Oct-2025 unit mislabel ([#101](https://github.com/open-mrp/api/issues/101)) ([3e99b96](https://github.com/open-mrp/api/commit/3e99b962d2b2cd626620483fa8b4437a4f240f99))
+
 ## [2.3.0](https://github.com/open-mrp/api/compare/v2.2.0...v2.3.0) (2026-08-31)
 
 

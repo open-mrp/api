@@ -148,6 +148,21 @@ func (mr *MockAccountRepoMockRecorder) GetAccountContext(ctx, accountID any) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountContext", reflect.TypeOf((*MockAccountRepo)(nil).GetAccountContext), ctx, accountID)
 }
 
+// GetAccountNames mocks base method.
+func (m *MockAccountRepo) GetAccountNames(ctx context.Context, ids []string) (map[string]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAccountNames", ctx, ids)
+	ret0, _ := ret[0].(map[string]string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetAccountNames indicates an expected call of GetAccountNames.
+func (mr *MockAccountRepoMockRecorder) GetAccountNames(ctx, ids any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountNames", reflect.TypeOf((*MockAccountRepo)(nil).GetAccountNames), ctx, ids)
+}
+
 // GetAgentSpendingCap mocks base method.
 func (m *MockAccountRepo) GetAgentSpendingCap(ctx context.Context, accountID string) (*int64, *apierror.APIError) {
 	m.ctrl.T.Helper()

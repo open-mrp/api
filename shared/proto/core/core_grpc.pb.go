@@ -28,6 +28,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	CoreService_GetAccountContext_FullMethodName                          = "/core.CoreService/GetAccountContext"
+	CoreService_GetAccountNames_FullMethodName                            = "/core.CoreService/GetAccountNames"
 	CoreService_BatchGetAccountsByIDs_FullMethodName                      = "/core.CoreService/BatchGetAccountsByIDs"
 	CoreService_GetUserAccountAccess_FullMethodName                       = "/core.CoreService/GetUserAccountAccess"
 	CoreService_GetRolePermissions_FullMethodName                         = "/core.CoreService/GetRolePermissions"
@@ -436,6 +437,10 @@ const (
 type CoreServiceClient interface {
 	// Returns account metadata (sandbox status, parent account, mode) for identity resolution.
 	GetAccountContext(ctx context.Context, in *GetAccountContextRequest, opts ...grpc.CallOption) (*GetAccountContextResponse, error)
+	// Resolves account IDs to their display names, unfiltered by caller
+	// affiliation. Used by the api-gateway to name the acting and target accounts
+	// in internal 5xx error-alert emails. Internal — not exposed to clients.
+	GetAccountNames(ctx context.Context, in *GetAccountNamesRequest, opts ...grpc.CallOption) (*GetAccountNamesResponse, error)
 	// Returns accounts by ID for the api-gateway include resolver. Authorization
 	// follows the same affiliation check as GetAccount. Internal — not exposed
 	// to clients.
@@ -1096,6 +1101,16 @@ func (c *coreServiceClient) GetAccountContext(ctx context.Context, in *GetAccoun
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetAccountContextResponse)
 	err := c.cc.Invoke(ctx, CoreService_GetAccountContext_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) GetAccountNames(ctx context.Context, in *GetAccountNamesRequest, opts ...grpc.CallOption) (*GetAccountNamesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetAccountNamesResponse)
+	err := c.cc.Invoke(ctx, CoreService_GetAccountNames_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -5108,6 +5123,10 @@ func (c *coreServiceClient) BatchGetTerritoriesByIDs(ctx context.Context, in *Ba
 type CoreServiceServer interface {
 	// Returns account metadata (sandbox status, parent account, mode) for identity resolution.
 	GetAccountContext(context.Context, *GetAccountContextRequest) (*GetAccountContextResponse, error)
+	// Resolves account IDs to their display names, unfiltered by caller
+	// affiliation. Used by the api-gateway to name the acting and target accounts
+	// in internal 5xx error-alert emails. Internal — not exposed to clients.
+	GetAccountNames(context.Context, *GetAccountNamesRequest) (*GetAccountNamesResponse, error)
 	// Returns accounts by ID for the api-gateway include resolver. Authorization
 	// follows the same affiliation check as GetAccount. Internal — not exposed
 	// to clients.
@@ -5766,6 +5785,9 @@ type UnimplementedCoreServiceServer struct{}
 
 func (UnimplementedCoreServiceServer) GetAccountContext(context.Context, *GetAccountContextRequest) (*GetAccountContextResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetAccountContext not implemented")
+}
+func (UnimplementedCoreServiceServer) GetAccountNames(context.Context, *GetAccountNamesRequest) (*GetAccountNamesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetAccountNames not implemented")
 }
 func (UnimplementedCoreServiceServer) BatchGetAccountsByIDs(context.Context, *BatchGetAccountsByIDsRequest) (*BatchGetAccountsByIDsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method BatchGetAccountsByIDs not implemented")
@@ -7002,6 +7024,24 @@ func _CoreService_GetAccountContext_Handler(srv interface{}, ctx context.Context
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CoreServiceServer).GetAccountContext(ctx, req.(*GetAccountContextRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_GetAccountNames_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAccountNamesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).GetAccountNames(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_GetAccountNames_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).GetAccountNames(ctx, req.(*GetAccountNamesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -14216,6 +14256,10 @@ var CoreService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetAccountContext",
 			Handler:    _CoreService_GetAccountContext_Handler,
+		},
+		{
+			MethodName: "GetAccountNames",
+			Handler:    _CoreService_GetAccountNames_Handler,
 		},
 		{
 			MethodName: "BatchGetAccountsByIDs",

@@ -19,7 +19,7 @@
                             </tr>
                             <tr>
                                 <td style="background-color: #FFFFFF; padding: 24px;">
-                                    <h1 style="margin: 0; margin-bottom: 8px; font-size: 22px; line-height: 28px; font-weight: 700; color: #DC2626; text-align: center;">{{.StatusCode}} Internal Error</h1>
+                                    <h1 style="margin: 0; margin-bottom: 8px; font-size: 22px; line-height: 28px; font-weight: 700; color: #DC2626; text-align: center;">{{.StatusCode}} Error</h1>
                                     <p style="margin: 0; margin-bottom: 16px; font-size: 14px; line-height: 20px; color: #475569; text-align: center;">{{.Method}} {{.Path}}</p>
 
                                     <table role="presentation" cellPadding="0" cellSpacing="0" style="width: 100%; margin-top: 16px;">
@@ -108,10 +108,24 @@
                                                 </td>
                                             </tr>
                                             {{end}}
+                                            {{if .AccountName}}
+                                            <tr>
+                                                <td style="padding: 4px 0; font-size: 13px; color: #64748B;">
+                                                    <strong>Account:</strong> {{.AccountName}}
+                                                </td>
+                                            </tr>
+                                            {{end}}
                                             {{if .AccountID}}
                                             <tr>
                                                 <td style="padding: 4px 0; font-size: 13px; color: #64748B;">
                                                     <strong>Account ID:</strong> {{.AccountID}}
+                                                </td>
+                                            </tr>
+                                            {{end}}
+                                            {{if .TargetAccountName}}
+                                            <tr>
+                                                <td style="padding: 4px 0; font-size: 13px; color: #64748B;">
+                                                    <strong>Target Account:</strong> {{.TargetAccountName}}
                                                 </td>
                                             </tr>
                                             {{end}}

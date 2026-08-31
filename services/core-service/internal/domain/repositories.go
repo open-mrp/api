@@ -16,6 +16,8 @@ type AccountRepo interface {
 	Create(ctx context.Context, id, name string, accountTypeCode AccountType, planCode constants.PlanCode) *apierror.APIError
 	GetPlanCode(ctx context.Context, id string) (constants.PlanCode, *apierror.APIError)
 	GetAccountContext(ctx context.Context, accountID string) (*AccountContext, *apierror.APIError)
+	// GetAccountNames resolves account IDs to their display names. IDs with no matching account are omitted from the result.
+	GetAccountNames(ctx context.Context, ids []string) (map[string]string, *apierror.APIError)
 	// GetPlanIDAndPeriodEnd returns the account's active plan id (for limit lookups) and current subscription period end (for deriving billing-period start).
 	GetPlanIDAndPeriodEnd(ctx context.Context, accountID string) (planID *string, periodEnd *time.Time, apiErr *apierror.APIError)
 	Delete(ctx context.Context, id string) *apierror.APIError

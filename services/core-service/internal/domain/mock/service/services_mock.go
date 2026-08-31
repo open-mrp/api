@@ -3314,6 +3314,21 @@ func (mr *MockAccountSvcMockRecorder) GetAccountLogoURL(ctx, accountID any) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountLogoURL", reflect.TypeOf((*MockAccountSvc)(nil).GetAccountLogoURL), ctx, accountID)
 }
 
+// GetAccountNames mocks base method.
+func (m *MockAccountSvc) GetAccountNames(ctx context.Context, ids []string) (map[string]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAccountNames", ctx, ids)
+	ret0, _ := ret[0].(map[string]string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetAccountNames indicates an expected call of GetAccountNames.
+func (mr *MockAccountSvcMockRecorder) GetAccountNames(ctx, ids any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountNames", reflect.TypeOf((*MockAccountSvc)(nil).GetAccountNames), ctx, ids)
+}
+
 // GetAccountRelationByAPIKeyID mocks base method.
 func (m *MockAccountSvc) GetAccountRelationByAPIKeyID(ctx context.Context, ownerAccountID string, apiKeyID int64) (*domain.AccountRelation, *apierror.APIError) {
 	m.ctrl.T.Helper()

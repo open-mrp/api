@@ -346,6 +346,19 @@ func (h *gRPCHandler) GetAccountContext(ctx context.Context, req *pb.GetAccountC
 	}, nil
 }
 
+func (h *gRPCHandler) GetAccountNames(ctx context.Context, req *pb.GetAccountNamesRequest) (*pb.GetAccountNamesResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	names, apiErr := h.accountSvc.GetAccountNames(ctx, req.AccountIds)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.GetAccountNamesResponse{Names: names}, nil
+}
+
 func (h *gRPCHandler) GetUserAccountAccess(ctx context.Context, req *pb.GetUserAccountAccessRequest) (*pb.GetUserAccountAccessResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()

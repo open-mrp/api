@@ -3040,10 +3040,10 @@ UPDATE `account` SET default_billing_address_id = @caddr1, default_shipping_addr
 UPDATE `account` SET default_billing_address_id = @caddr3, default_shipping_address_id = @caddr4 WHERE id = @cust2;
 UPDATE `account` SET default_billing_address_id = @caddr5, default_shipping_address_id = @caddr6 WHERE id = @cust3;
 
-INSERT INTO `account_relation` (`id`, `owner_account_id`, `counterparty_account_id`, `account_relation_role_code`, `external_number`, `priority_code`, `account_group_id`, `payment_term_id`, `shipping_term_id`, `default_carrier_id`, `default_carrier_option_id`, `default_billing_address_id`, `default_shipping_address_id`, `account_status_code`, `commission_status_code`, `freight_status_code`) VALUES
-  (@acrel1, '@account_id', @cust1, 'customer', 'CUST-001', 'normal', @acgrp1, @pytm1, @shtm1, 'delivery', NULL, @caddr1, @caddr2, 'normal', 'commission_applied', 'billed_freight'),
-  (@acrel2, '@account_id', @cust2, 'customer', 'CUST-002', 'normal', @acgrp1, @pytm1, @shtm1, 'delivery', NULL, @caddr3, @caddr4, 'normal', 'commission_applied', 'billed_freight'),
-  (@acrel3, '@account_id', @cust3, 'customer', 'CUST-003', 'normal', @acgrp1, @pytm2, @shtm1, 'delivery', NULL, @caddr5, @caddr6, 'normal', 'commission_applied', 'billed_freight');
+INSERT INTO `account_relation` (`id`, `owner_account_id`, `counterparty_account_id`, `account_relation_role_code`, `external_number`, `priority_code`, `account_group_id`, `payment_term_id`, `shipping_term_id`, `default_carrier_id`, `default_carrier_option_id`, `default_billing_address_id`, `default_shipping_address_id`, `default_sales_rep_id`, `account_status_code`, `commission_status_code`, `freight_status_code`) VALUES
+  (@acrel1, '@account_id', @cust1, 'customer', 'CUST-001', 'normal', @acgrp1, @pytm1, @shtm1, 'delivery', NULL, @caddr1, @caddr2, @acus1, 'normal', 'commission_applied', 'billed_freight'),
+  (@acrel2, '@account_id', @cust2, 'customer', 'CUST-002', 'normal', @acgrp1, @pytm1, @shtm1, 'delivery', NULL, @caddr3, @caddr4, @acus1, 'normal', 'commission_applied', 'billed_freight'),
+  (@acrel3, '@account_id', @cust3, 'customer', 'CUST-003', 'normal', @acgrp1, @pytm2, @shtm1, 'delivery', NULL, @caddr5, @caddr6, @acus1, 'normal', 'commission_applied', 'billed_freight');
 
 
 -- ============================================================================
@@ -3129,19 +3129,19 @@ INSERT INTO `quantity` (`id`, `value`, `unit_id`) VALUES
 -- SECTION 39: SALES ORDERS + LINES
 -- ============================================================================
 
-INSERT INTO `sales_order` (`id`, `number`, `sales_order_status_code`, `sales_order_type_code`, `priority_code`, `buyer_account_id`, `seller_account_id`, `owner_account_id`, `billing_address_id`, `shipping_address_id`, `carrier_id`, `carrier_option_id`, `payment_term_id`, `shipping_term_id`, `issued_at`, `completed_at`) VALUES
+INSERT INTO `sales_order` (`id`, `number`, `sales_order_status_code`, `sales_order_type_code`, `priority_code`, `buyer_account_id`, `seller_account_id`, `owner_account_id`, `billing_address_id`, `shipping_address_id`, `carrier_id`, `carrier_option_id`, `payment_term_id`, `shipping_term_id`, `sales_rep_id`, `issued_at`, `completed_at`) VALUES
   -- EST-001: estimate for Customer 1
-  (@so1, 'EST-001', 'estimate',  'sales_order', 'normal', @cust1, '@account_id', '@account_id', @caddr1, @caddr2, 'delivery', NULL, @pytm1, @shtm1, NULL, NULL),
+  (@so1, 'EST-001', 'estimate',  'sales_order', 'normal', @cust1, '@account_id', '@account_id', @caddr1, @caddr2, 'delivery', NULL, @pytm1, @shtm1, @acus1, NULL, NULL),
   -- ORD-001: issued for Customer 1
-  (@so2, 'ORD-001', 'issued',    'sales_order', 'normal', @cust1, '@account_id', '@account_id', @caddr1, @caddr2, 'delivery', NULL, @pytm1, @shtm1, NOW() - INTERVAL 10 DAY, NULL),
+  (@so2, 'ORD-001', 'issued',    'sales_order', 'normal', @cust1, '@account_id', '@account_id', @caddr1, @caddr2, 'delivery', NULL, @pytm1, @shtm1, @acus1, NOW() - INTERVAL 10 DAY, NULL),
   -- ORD-002: issued for Customer 2
-  (@so3, 'ORD-002', 'issued',    'sales_order', 'normal', @cust2, '@account_id', '@account_id', @caddr3, @caddr4, 'delivery', NULL, @pytm1, @shtm1, NOW() - INTERVAL 8 DAY, NULL),
+  (@so3, 'ORD-002', 'issued',    'sales_order', 'normal', @cust2, '@account_id', '@account_id', @caddr3, @caddr4, 'delivery', NULL, @pytm1, @shtm1, @acus1, NOW() - INTERVAL 8 DAY, NULL),
   -- ORD-003: issued for Customer 2 (packed shipment)
-  (@so4, 'ORD-003', 'issued',    'sales_order', 'high',   @cust2, '@account_id', '@account_id', @caddr3, @caddr4, 'delivery', NULL, @pytm1, @shtm1, NOW() - INTERVAL 6 DAY, NULL),
+  (@so4, 'ORD-003', 'issued',    'sales_order', 'high',   @cust2, '@account_id', '@account_id', @caddr3, @caddr4, 'delivery', NULL, @pytm1, @shtm1, @acus1, NOW() - INTERVAL 6 DAY, NULL),
   -- ORD-004: fulfilled for Customer 1
-  (@so5, 'ORD-004', 'fulfilled', 'sales_order', 'normal', @cust1, '@account_id', '@account_id', @caddr1, @caddr2, 'delivery', NULL, @pytm1, @shtm1, NOW() - INTERVAL 14 DAY, NOW() - INTERVAL 2 DAY),
+  (@so5, 'ORD-004', 'fulfilled', 'sales_order', 'normal', @cust1, '@account_id', '@account_id', @caddr1, @caddr2, 'delivery', NULL, @pytm1, @shtm1, @acus1, NOW() - INTERVAL 14 DAY, NOW() - INTERVAL 2 DAY),
   -- ORD-005: fulfilled for Customer 3
-  (@so6, 'ORD-005', 'fulfilled', 'sales_order', 'normal', @cust3, '@account_id', '@account_id', @caddr5, @caddr6, 'delivery', NULL, @pytm2, @shtm1, NOW() - INTERVAL 12 DAY, NOW() - INTERVAL 1 DAY);
+  (@so6, 'ORD-005', 'fulfilled', 'sales_order', 'normal', @cust3, '@account_id', '@account_id', @caddr5, @caddr6, 'delivery', NULL, @pytm2, @shtm1, @acus1, NOW() - INTERVAL 12 DAY, NOW() - INTERVAL 1 DAY);
 
 INSERT INTO `sales_order_line` (`id`, `product_sku`, `product_description`, `line_item_number`, `product_id`, `item_id`, `sales_order_id`, `quantity_id`, `unit_price_id`, `unit_cost_id`) VALUES
   -- EST-001 lines
@@ -3507,10 +3507,10 @@ INSERT INTO `quantity` (`id`, `value`, `unit_id`) VALUES
   (@qhso1, 480, @un2), (@qhso2, 360, @un2), (@qhso3, 600, @un2),
   (@qhso4, 420, @un2), (@qhso5, 540, @un2), (@qhso6, 480, @un2);
 
-INSERT INTO `sales_order` (`id`, `number`, `sales_order_status_code`, `sales_order_type_code`, `priority_code`, `buyer_account_id`, `seller_account_id`, `owner_account_id`, `billing_address_id`, `shipping_address_id`, `carrier_id`, `carrier_option_id`, `payment_term_id`, `shipping_term_id`, `issued_at`, `completed_at`) VALUES
-  (@hso1, 'ORD-H001', 'fulfilled', 'sales_order', 'normal', @cust1, '@account_id', '@account_id', @caddr1, @caddr2, 'delivery', NULL, @pytm1, @shtm1, NOW() - INTERVAL 7 MONTH, NOW() - INTERVAL 7 MONTH + INTERVAL 12 DAY),
-  (@hso2, 'ORD-H002', 'fulfilled', 'sales_order', 'normal', @cust2, '@account_id', '@account_id', @caddr3, @caddr4, 'delivery', NULL, @pytm1, @shtm1, NOW() - INTERVAL 4 MONTH, NOW() - INTERVAL 4 MONTH + INTERVAL 9 DAY),
-  (@hso3, 'ORD-H003', 'fulfilled', 'sales_order', 'normal', @cust3, '@account_id', '@account_id', @caddr5, @caddr6, 'delivery', NULL, @pytm2, @shtm1, NOW() - INTERVAL 2 MONTH, NOW() - INTERVAL 2 MONTH + INTERVAL 11 DAY);
+INSERT INTO `sales_order` (`id`, `number`, `sales_order_status_code`, `sales_order_type_code`, `priority_code`, `buyer_account_id`, `seller_account_id`, `owner_account_id`, `billing_address_id`, `shipping_address_id`, `carrier_id`, `carrier_option_id`, `payment_term_id`, `shipping_term_id`, `sales_rep_id`, `issued_at`, `completed_at`) VALUES
+  (@hso1, 'ORD-H001', 'fulfilled', 'sales_order', 'normal', @cust1, '@account_id', '@account_id', @caddr1, @caddr2, 'delivery', NULL, @pytm1, @shtm1, @acus1, NOW() - INTERVAL 7 MONTH, NOW() - INTERVAL 7 MONTH + INTERVAL 12 DAY),
+  (@hso2, 'ORD-H002', 'fulfilled', 'sales_order', 'normal', @cust2, '@account_id', '@account_id', @caddr3, @caddr4, 'delivery', NULL, @pytm1, @shtm1, @acus1, NOW() - INTERVAL 4 MONTH, NOW() - INTERVAL 4 MONTH + INTERVAL 9 DAY),
+  (@hso3, 'ORD-H003', 'fulfilled', 'sales_order', 'normal', @cust3, '@account_id', '@account_id', @caddr5, @caddr6, 'delivery', NULL, @pytm2, @shtm1, @acus1, NOW() - INTERVAL 2 MONTH, NOW() - INTERVAL 2 MONTH + INTERVAL 11 DAY);
 
 INSERT INTO `sales_order_line` (`id`, `product_sku`, `product_description`, `line_item_number`, `product_id`, `item_id`, `sales_order_id`, `quantity_id`, `unit_price_id`, `unit_cost_id`) VALUES
   (@hsol1, 'FG-CRW-S-WHT', 'Crew Sock Small White',  1, @pd1, @it1, @hso1, @qhso1, @rthso1, @rthsc1),
@@ -3538,8 +3538,13 @@ INSERT INTO `machine_downtime_event` (`id`, `account_id`, `machine_id`, `departm
 -- ============================================================================
 -- SECTION 54: SALES TARGETS
 -- ============================================================================
--- Quarter-to-date and year-to-date revenue targets for the sandbox admin, who is the
--- sales rep on every seeded order.
+-- Quarter-to-date and year-to-date revenue targets for the sandbox admin.
+--
+-- A target only means something against orders attributed to the same rep: the quarterly
+-- totals and the sales and order analytics all group on sales_order.sales_rep_id. That is
+-- why every seeded sales order names this account_user, and why the customer relations
+-- carry it as their default -- an order added later inherits a rep rather than landing
+-- unattributed next to the seeded ones. Purchase orders have no sales rep and set none.
 
 INSERT INTO `quantity` (`id`, `value`, `unit_id`) VALUES
   (@qta1, 250000, @un4),

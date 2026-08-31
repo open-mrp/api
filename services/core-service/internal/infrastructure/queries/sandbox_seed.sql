@@ -314,8 +314,8 @@
 -- HISTORICAL DEMAND (the trailing-12 window the schedule plans from)
 --   @hso1..3    ORD-H001 7 months back, ORD-H002 4 months, ORD-H003 2 months
 --   @hsol1..6   lines, @qhso1..6 quantities, @rthso1..6 prices, @rthsc1..6 costs
---   @dho1..12   ORD-D01..D12, one per complete month of the trailing year
---   @dhq1..36   line quantities (3 per order), @dhr1..3 the S/M/L unit prices
+--   @dho1..11   ORD-D01..D11, one per complete month solidly inside the demand window
+--   @dhq1..33   line quantities (3 per order), @dhr1..33 per-line unit prices
 --
 -- MACHINE DOWNTIME (mcdt_seed...)
 --   @mcdt1..5   breakdown, changeover, material shortage, minor stop, quality hold
@@ -3496,7 +3496,7 @@ INSERT INTO `_batch_flow` (`A`, `B`) VALUES
 -- produce. Trailing-twelve demand deliberately ignores the current partial month, so the
 -- orders in SECTION 39 -- all inside the last two weeks -- contribute nothing to a plan.
 -- Without this history every item plans to zero. The three anchor orders here are kept for
--- their per-line costs. SECTION 52b layers a full twelve months of volume on top so the
+-- their per-line costs. SECTION 52b layers a full year of monthly volume on top so the
 -- plan is not a single frozen campaign. See that section for the sizing rationale.
 
 INSERT INTO `rate` (`id`, `value`, `numerator_unit_id`, `denominator_unit_id`) VALUES
@@ -3528,18 +3528,24 @@ INSERT INTO `sales_order_line` (`id`, `product_sku`, `product_description`, `lin
 -- ----------------------------------------------------------------------------
 -- SECTION 52b: EXPANDED MONTHLY DEMAND HISTORY
 -- ----------------------------------------------------------------------------
--- One fulfilled order per complete month for the trailing year, on the three finished
--- goods the seeded knit runs produce (Crew White S/M/L, the only products the batch
--- genealogy pools onto WIP-KNT-S/M/L). The three orders above alone leave weekly demand
--- so far below a machine-week that a single campaign covers the whole horizon and every
--- flexible week reads idle. Twelve months of realistic volume (~46k/41k/32k pairs a year
--- across S/M/L, roughly half of knitting capacity) is what makes the solver plan
--- recurring campaigns across the weeks instead of one frozen batch. Every month carries
--- demand so the series is dense and classifies as smooth, with quantities rising into the
--- autumn peak. Customers rotate so the history is not one buyer, and every order names
--- the sales rep so it counts toward the seeded targets. Lines carry a unit price but no
--- cost -- the schedule reads quantity only, and the costed history above already feeds
--- the margin views.
+-- One fulfilled order for each of the eleven completed months at NOW() - INTERVAL k MONTH
+-- (k = 1..11), on the three finished goods the seeded knit runs produce (Crew White S/M/L,
+-- the only products the batch genealogy pools onto WIP-KNT-S/M/L). The three orders above
+-- alone leave weekly demand so far below a machine-week that a single campaign covers the
+-- whole horizon and every flexible week reads idle. A year of realistic volume
+-- (~42k/38k/30k pairs across S/M/L, roughly half of knitting capacity) is what makes the
+-- solver plan recurring campaigns across the weeks instead of one frozen batch.
+--
+-- Eleven months rather than twelve on purpose: the demand window is planning-date minus
+-- twelve months, so an order at exactly NOW() - INTERVAL 12 MONTH sits on the window edge
+-- and drops out the moment the schedule is generated any later than the seed ran. k stops
+-- at 11 so the oldest order (about eleven months back) still clears the window start by
+-- roughly a month of slack -- the trailing year holds eleven complete months anyway once
+-- the current partial month is set aside. Every month carries demand so the series is
+-- dense and classifies as smooth, with quantities rising into the autumn peak. Customers
+-- rotate so the history is not one buyer, and every order names the sales rep so it counts
+-- toward the seeded targets. Lines carry a unit price but no cost -- the schedule reads
+-- quantity only, and the costed history above already feeds the margin views.
 
 SET @dho1 = CONCAT('or_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @dho2 = CONCAT('or_', LEFT(REPLACE(UUID(), '-', ''), 12));
@@ -3552,7 +3558,6 @@ SET @dho8 = CONCAT('or_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @dho9 = CONCAT('or_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @dho10 = CONCAT('or_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @dho11 = CONCAT('or_', LEFT(REPLACE(UUID(), '-', ''), 12));
-SET @dho12 = CONCAT('or_', LEFT(REPLACE(UUID(), '-', ''), 12));
 
 SET @dhq1 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @dhq2 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
@@ -3587,9 +3592,6 @@ SET @dhq30 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @dhq31 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @dhq32 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @dhq33 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
-SET @dhq34 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
-SET @dhq35 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
-SET @dhq36 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
 
 SET @dhr1 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @dhr2 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
@@ -3624,9 +3626,6 @@ SET @dhr30 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @dhr31 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @dhr32 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @dhr33 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
-SET @dhr34 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
-SET @dhr35 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
-SET @dhr36 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
 
 INSERT INTO `rate` (`id`, `value`, `numerator_unit_id`, `denominator_unit_id`) VALUES
   (@dhr1, 11.50, @un4, @un2), (@dhr2, 11.00, @un4, @un2), (@dhr3, 12.00, @un4, @un2),
@@ -3639,8 +3638,7 @@ INSERT INTO `rate` (`id`, `value`, `numerator_unit_id`, `denominator_unit_id`) V
   (@dhr22, 11.50, @un4, @un2), (@dhr23, 11.00, @un4, @un2), (@dhr24, 12.00, @un4, @un2),
   (@dhr25, 11.50, @un4, @un2), (@dhr26, 11.00, @un4, @un2), (@dhr27, 12.00, @un4, @un2),
   (@dhr28, 11.50, @un4, @un2), (@dhr29, 11.00, @un4, @un2), (@dhr30, 12.00, @un4, @un2),
-  (@dhr31, 11.50, @un4, @un2), (@dhr32, 11.00, @un4, @un2), (@dhr33, 12.00, @un4, @un2),
-  (@dhr34, 11.50, @un4, @un2), (@dhr35, 11.00, @un4, @un2), (@dhr36, 12.00, @un4, @un2);
+  (@dhr31, 11.50, @un4, @un2), (@dhr32, 11.00, @un4, @un2), (@dhr33, 12.00, @un4, @un2);
 
 INSERT INTO `quantity` (`id`, `value`, `unit_id`) VALUES
   (@dhq1, 3800, @un2), (@dhq2, 3400, @un2), (@dhq3, 2600, @un2),
@@ -3653,8 +3651,7 @@ INSERT INTO `quantity` (`id`, `value`, `unit_id`) VALUES
   (@dhq22, 5200, @un2), (@dhq23, 4500, @un2), (@dhq24, 3600, @un2),
   (@dhq25, 4600, @un2), (@dhq26, 4000, @un2), (@dhq27, 3200, @un2),
   (@dhq28, 3800, @un2), (@dhq29, 3400, @un2), (@dhq30, 2700, @un2),
-  (@dhq31, 3400, @un2), (@dhq32, 3000, @un2), (@dhq33, 2400, @un2),
-  (@dhq34, 3600, @un2), (@dhq35, 3200, @un2), (@dhq36, 2500, @un2);
+  (@dhq31, 3400, @un2), (@dhq32, 3000, @un2), (@dhq33, 2400, @un2);
 
 INSERT INTO `sales_order` (`id`, `number`, `sales_order_status_code`, `sales_order_type_code`, `priority_code`, `buyer_account_id`, `seller_account_id`, `owner_account_id`, `billing_address_id`, `shipping_address_id`, `carrier_id`, `carrier_option_id`, `payment_term_id`, `shipping_term_id`, `sales_rep_id`, `issued_at`, `completed_at`) VALUES
   (@dho1, 'ORD-D01', 'fulfilled', 'sales_order', 'normal', @cust1, '@account_id', '@account_id', @caddr1, @caddr2, 'delivery', NULL, @pytm1, @shtm1, @acus1, NOW() - INTERVAL 1 MONTH, NOW() - INTERVAL 1 MONTH + INTERVAL 10 DAY),
@@ -3667,8 +3664,7 @@ INSERT INTO `sales_order` (`id`, `number`, `sales_order_status_code`, `sales_ord
   (@dho8, 'ORD-D08', 'fulfilled', 'sales_order', 'normal', @cust2, '@account_id', '@account_id', @caddr3, @caddr4, 'delivery', NULL, @pytm1, @shtm1, @acus1, NOW() - INTERVAL 8 MONTH, NOW() - INTERVAL 8 MONTH + INTERVAL 10 DAY),
   (@dho9, 'ORD-D09', 'fulfilled', 'sales_order', 'normal', @cust3, '@account_id', '@account_id', @caddr5, @caddr6, 'delivery', NULL, @pytm2, @shtm1, @acus1, NOW() - INTERVAL 9 MONTH, NOW() - INTERVAL 9 MONTH + INTERVAL 10 DAY),
   (@dho10, 'ORD-D10', 'fulfilled', 'sales_order', 'normal', @cust1, '@account_id', '@account_id', @caddr1, @caddr2, 'delivery', NULL, @pytm1, @shtm1, @acus1, NOW() - INTERVAL 10 MONTH, NOW() - INTERVAL 10 MONTH + INTERVAL 10 DAY),
-  (@dho11, 'ORD-D11', 'fulfilled', 'sales_order', 'normal', @cust2, '@account_id', '@account_id', @caddr3, @caddr4, 'delivery', NULL, @pytm1, @shtm1, @acus1, NOW() - INTERVAL 11 MONTH, NOW() - INTERVAL 11 MONTH + INTERVAL 10 DAY),
-  (@dho12, 'ORD-D12', 'fulfilled', 'sales_order', 'normal', @cust3, '@account_id', '@account_id', @caddr5, @caddr6, 'delivery', NULL, @pytm2, @shtm1, @acus1, NOW() - INTERVAL 12 MONTH, NOW() - INTERVAL 12 MONTH + INTERVAL 10 DAY);
+  (@dho11, 'ORD-D11', 'fulfilled', 'sales_order', 'normal', @cust2, '@account_id', '@account_id', @caddr3, @caddr4, 'delivery', NULL, @pytm1, @shtm1, @acus1, NOW() - INTERVAL 11 MONTH, NOW() - INTERVAL 11 MONTH + INTERVAL 10 DAY);
 
 INSERT INTO `sales_order_line` (`id`, `product_sku`, `product_description`, `line_item_number`, `product_id`, `item_id`, `sales_order_id`, `quantity_id`, `unit_price_id`, `unit_cost_id`) VALUES
   (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-S-WHT', 'Crew Sock Small White', 1, @pd1, @it1, @dho1, @dhq1, @dhr1, NULL),
@@ -3703,10 +3699,7 @@ INSERT INTO `sales_order_line` (`id`, `product_sku`, `product_description`, `lin
   (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-L-WHT', 'Crew Sock Large White', 3, @pd7, @it7, @dho10, @dhq30, @dhr30, NULL),
   (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-S-WHT', 'Crew Sock Small White', 1, @pd1, @it1, @dho11, @dhq31, @dhr31, NULL),
   (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-M-WHT', 'Crew Sock Medium White', 2, @pd4, @it4, @dho11, @dhq32, @dhr32, NULL),
-  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-L-WHT', 'Crew Sock Large White', 3, @pd7, @it7, @dho11, @dhq33, @dhr33, NULL),
-  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-S-WHT', 'Crew Sock Small White', 1, @pd1, @it1, @dho12, @dhq34, @dhr34, NULL),
-  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-M-WHT', 'Crew Sock Medium White', 2, @pd4, @it4, @dho12, @dhq35, @dhr35, NULL),
-  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-L-WHT', 'Crew Sock Large White', 3, @pd7, @it7, @dho12, @dhq36, @dhr36, NULL);
+  (CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12)), 'FG-CRW-L-WHT', 'Crew Sock Large White', 3, @pd7, @it7, @dho11, @dhq33, @dhr33, NULL);
 
 
 -- ============================================================================

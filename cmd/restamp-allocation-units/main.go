@@ -1,5 +1,6 @@
-// Command restamp-allocation-units repairs allocations whose quantity was converted into their
-// receipt's unit but labelled with the issue's, by correcting the label and leaving the value alone.
+// Command restamp-allocation-units repairs allocations whose quantity was converted into the unit
+// the item is stocked in but labelled with the issue's, by correcting the label and leaving the
+// value alone.
 //
 // # What went wrong
 //
@@ -13,6 +14,17 @@
 // The value is right and the unit is wrong, so the repair is to restamp the unit. Deleting the
 // allocation instead — which is what a tool looking only at "allocated exceeds received" would do —
 // removes a draw that really happened and reopens an order that was really filled.
+//
+// The unit to restamp to is the item's, not the receipt's. Almost every item here is received in the
+// unit it is stocked in, so the two coincide; they part company on an item received in a pack, and
+// 4020 is the case that shows which rule is right — stocked in `ea`, received in `cs50ea`, and its
+// `350 cs50ea` against an order for `7 cs50ea` is 350 *each*, 7 × 50, not 350 cases.
+//
+// Both sides of the ledger have to be searched for these. An inflated draw only makes its receipt
+// look over-drawn when it happens to exceed it, and on a 697 pr receipt a draw of `20 ct10pr` for 20
+// pairs hides inside it comfortably — but the issue it covers still ends up with ten times what it
+// ordered. So candidates come from over-drawn receipts and over-covered issues alike; searching only
+// receipts missed 36 of these on the first pass.
 //
 // # Why it is safe to do mechanically, and where it stops
 //
@@ -68,13 +80,19 @@ func main() {
 	}
 }
 
-// candidate is one mislabelled allocation: the value stays, the unit becomes the receipt's.
+// candidate is one mislabelled allocation: the value stays, the unit becomes the item's base unit.
+//
+// The base unit, not the receipt's. The import converted each value into the unit the item is
+// stocked in and then labelled it with the issue's, and for almost every item here the receipts are
+// held in that same base unit, so the two rules agree. They part company on an item received in a
+// pack unit: 4020 is based in `ea` but received in `cs50ea`, and its allocation of `350 cs50ea`
+// against an order for `7 cs50ea` is 350 *each* — 7 × 50 — not 350 cases.
 type candidate struct {
-	AllocID       string
-	QuantityID    string
-	ReceiptID     string
-	IssueID       string
-	ReceiptUnitID string
+	AllocID      string
+	QuantityID   string
+	ReceiptID    string
+	IssueID      string
+	TargetUnitID string
 }
 
 // allocation is any allocation touching a receipt or issue in play, mislabelled or not, because the
@@ -85,7 +103,7 @@ type allocation struct {
 	IssueID   string
 	// Base is what the row contributes today, through its own unit's ratio.
 	Base decimal.Decimal
-	// RestampedBase is what it would contribute with the receipt's unit instead. Equal to Base for
+	// RestampedBase is what it would contribute with the item's base unit instead. Equal to Base for
 	// rows that are not candidates.
 	RestampedBase decimal.Decimal
 }
@@ -218,35 +236,48 @@ func findCandidates(ctx context.Context, sqlDB *sql.DB, accountID, itemID string
 		params = append(params, itemID)
 	}
 
+	// Two things betray a mislabelled row, and a run has to look for both. A receipt drawn past what
+	// it received is the obvious one, but it only shows up where the inflated draw happens to exceed
+	// the receipt — on a 697 pr receipt a draw of `20 ct10pr` for 20 pairs hides comfortably inside
+	// it. What that row does show is the other side: the *issue* ends up with ten times what it
+	// ordered. So candidates come from over-drawn receipts and over-covered issues alike.
+	//
 	// #nosec G202 -- the only interpolation is `where`, built above from fixed literals; the account
 	// and item ids it filters on are bound as parameters.
 	query := `
-SELECT a.id, aq.id AS quantity_id, a.inventory_receipt_id, a.inventory_issue_id, rq.unit_id
+SELECT a.id, aq.id AS quantity_id, a.inventory_receipt_id, a.inventory_issue_id, ug.base_unit_id
 FROM inventory_allocation a
 JOIN quantity aq ON aq.id = a.quantity_id
 JOIN inventory_receipt ir ON ir.id = a.inventory_receipt_id
 JOIN quantity rq ON rq.id = ir.quantity_id
 JOIN unit ru ON ru.id = rq.unit_id
+JOIN inventory_issue ii ON ii.id = a.inventory_issue_id
+JOIN quantity iq ON iq.id = ii.quantity_id
+JOIN unit iu ON iu.id = iq.unit_id
 JOIN item i ON i.id = ir.item_id
-JOIN (
-    SELECT ia.inventory_receipt_id AS rid,
-           SUM(CAST(aq2.value AS DECIMAL(65,30)) * (au2.ratio_numerator / au2.ratio_denominator)) AS alloc_base
-    FROM inventory_allocation ia
-    JOIN inventory_receipt ir2 ON ir2.id = ia.inventory_receipt_id
-    JOIN item i2 ON i2.id = ir2.item_id
-    JOIN quantity aq2 ON aq2.id = ia.quantity_id
-    JOIN unit au2 ON au2.id = aq2.unit_id
-    WHERE 1 = 1` + strings.ReplaceAll(strings.ReplaceAll(where.String(), "i.account_id", "i2.account_id"), "ir.item_id", "ir2.item_id") + `
-    GROUP BY ia.inventory_receipt_id
-) s ON s.rid = ir.id
-WHERE aq.unit_id <> rq.unit_id
-  AND CAST(rq.value AS DECIMAL(65,30)) > 0
-  AND s.alloc_base > CAST(rq.value AS DECIMAL(65,30)) * (ru.ratio_numerator / ru.ratio_denominator) + 0.000001` +
-		where.String()
+JOIN item_category ic ON ic.id = i.item_category_id
+JOIN unit_group ug ON ug.id = ic.unit_group_id
+JOIN unit bu ON bu.id = ug.base_unit_id
+WHERE aq.unit_id <> ug.base_unit_id
+  AND (
+    (CAST(rq.value AS DECIMAL(65,30)) > 0 AND COALESCE((
+        SELECT SUM(CAST(aq2.value AS DECIMAL(65,30)) * (au2.ratio_numerator / au2.ratio_denominator))
+        FROM inventory_allocation ia
+        JOIN quantity aq2 ON aq2.id = ia.quantity_id
+        JOIN unit au2 ON au2.id = aq2.unit_id
+        WHERE ia.inventory_receipt_id = ir.id), 0)
+      > CAST(rq.value AS DECIMAL(65,30)) * (ru.ratio_numerator / ru.ratio_denominator) + 0.000001)
+    OR
+    (COALESCE((
+        SELECT SUM(CAST(aq3.value AS DECIMAL(65,30)) * (au3.ratio_numerator / au3.ratio_denominator))
+        FROM inventory_allocation ia3
+        JOIN quantity aq3 ON aq3.id = ia3.quantity_id
+        JOIN unit au3 ON au3.id = aq3.unit_id
+        WHERE ia3.inventory_issue_id = ii.id), 0)
+      > CAST(iq.value AS DECIMAL(65,30)) * (iu.ratio_numerator / iu.ratio_denominator) + 0.000001)
+  )` + where.String()
 
-	// The derived table repeats the same filters under rewritten aliases, so its parameters are bound
-	// first and the outer copy follows.
-	allParams := append(append([]any{}, params...), params...)
+	allParams := params
 
 	p.stage("Scanning for mislabelled allocations on over-drawn receipts...")
 
@@ -259,7 +290,7 @@ WHERE aq.unit_id <> rq.unit_id
 	var out []candidate
 	for rows.Next() {
 		var c candidate
-		if err := rows.Scan(&c.AllocID, &c.QuantityID, &c.ReceiptID, &c.IssueID, &c.ReceiptUnitID); err != nil {
+		if err := rows.Scan(&c.AllocID, &c.QuantityID, &c.ReceiptID, &c.IssueID, &c.TargetUnitID); err != nil {
 			return nil, fmt.Errorf("scan candidate: %w", err)
 		}
 		out = append(out, c)
@@ -329,13 +360,15 @@ func loadModel(ctx context.Context, sqlDB *sql.DB, candidates []candidate, p *pr
 			query := `
 SELECT a.id, a.inventory_receipt_id, a.inventory_issue_id,
        CAST(aq.value AS DECIMAL(65,30)) * (au.ratio_numerator / au.ratio_denominator) AS base,
-       CAST(aq.value AS DECIMAL(65,30)) * (ru.ratio_numerator / ru.ratio_denominator) AS restamped
+       CAST(aq.value AS DECIMAL(65,30)) * (bu.ratio_numerator / bu.ratio_denominator) AS restamped
 FROM inventory_allocation a
 JOIN quantity aq ON aq.id = a.quantity_id
 JOIN unit au ON au.id = aq.unit_id
 JOIN inventory_receipt ir ON ir.id = a.inventory_receipt_id
-JOIN quantity rq ON rq.id = ir.quantity_id
-JOIN unit ru ON ru.id = rq.unit_id
+JOIN item i ON i.id = ir.item_id
+JOIN item_category ic ON ic.id = i.item_category_id
+JOIN unit_group ug ON ug.id = ic.unit_group_id
+JOIN unit bu ON bu.id = ug.base_unit_id
 WHERE ` + spec.column + ` IN (` + placeholders(len(chunk)) + `)`
 			rows, err := sqlDB.QueryContext(ctx, query, toAny(chunk)...)
 			if err != nil {
@@ -508,7 +541,7 @@ func apply(ctx context.Context, sqlDB *sql.DB, eligible []candidate, m *model, e
 	for i, c := range eligible {
 		if _, err := tx.ExecContext(ctx,
 			"UPDATE quantity SET unit_id = ?, updated_at = NOW(3) WHERE id = ?",
-			c.ReceiptUnitID, c.QuantityID); err != nil {
+			c.TargetUnitID, c.QuantityID); err != nil {
 			return 0, fmt.Errorf("restamp quantity %s: %w", c.QuantityID, err)
 		}
 		p.step(i+1, len(eligible), "quantities restamped")

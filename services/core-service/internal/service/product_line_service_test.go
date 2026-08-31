@@ -2,11 +2,13 @@ package service
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
 
+	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
@@ -134,4 +136,74 @@ func (suite *ProductLineSvcTestSuite) TestExport_RejectsAnIdentitylessContext() 
 	export, apiErr := suite.svc.ExportProductLines(suite.T().Context(), domain.ExportProductLinesParams{})
 	suite.Nil(export)
 	suite.NotNil(apiErr)
+}
+
+// grants product_lines:read, which the read paths check and internalIdentityCtx does not carry
+func productLineReaderCtx(targetAccountID string) context.Context {
+	adminCode := string(constants.RoleTypeAdmin)
+	return appctx.WithIdentity(context.Background(), &types.Identity{
+		Type:   types.IdentityActorTypeUser,
+		Target: &types.IdentityTarget{AccountID: targetAccountID},
+		Actor: &types.IdentityActor{
+			RelationType: types.IdentityRelationTypeInternal,
+			ID:           "usr_test123",
+			AccountID:    &targetAccountID,
+			RoleType:     &adminCode,
+			Permissions:  map[string]bool{"product_lines:read": true},
+		},
+	})
+}
+
+// A system product line points at a shared unit group. Scope that group to one account by mistake and every other tenant's lookup comes back empty — which must cost that line its unit_group, not the whole page.
+func (suite *ProductLineSvcTestSuite) TestList_UnresolvableUnitGroupLeavesTheLineWithoutOne() {
+	ctx := productLineReaderCtx("ac_tenant")
+	visible := &domain.ProductLineFull{ID: "pdln_own", UnitGroupID: "ungp_own"}
+	system := &domain.ProductLineFull{ID: "shipping", UnitGroupID: "each_group"}
+
+	suite.productLineRepo.EXPECT().List(gomock.Any(), gomock.Any()).
+		Return(&domain.ListProductLinesResult{ProductLines: []*domain.ProductLineFull{visible, system}}, nil)
+	suite.productLineRepo.EXPECT().GetUnitGroup(gomock.Any(), "ac_tenant", "ungp_own", gomock.Any()).
+		Return(&domain.ProductLineUnitGroup{ID: "ungp_own"}, nil)
+	suite.productLineRepo.EXPECT().GetUnitGroup(gomock.Any(), "ac_tenant", "each_group", gomock.Any()).
+		Return(nil, apierror.NewResourceNotFoundError("Resource not found."))
+
+	result, apiErr := suite.svc.ListProductLines(ctx, domain.ListProductLinesParams{Includes: []string{"unit_group"}})
+	suite.Require().Nil(apiErr)
+	suite.Require().Len(result.ProductLines, 2)
+	suite.Equal("ungp_own", visible.UnitGroup.ID)
+	suite.Nil(system.UnitGroup)
+}
+
+// anything that is not a missing group is still the page's problem
+func (suite *ProductLineSvcTestSuite) TestList_UnitGroupLookupFailurePropagates() {
+	ctx := productLineReaderCtx("ac_tenant")
+	suite.productLineRepo.EXPECT().List(gomock.Any(), gomock.Any()).
+		Return(&domain.ListProductLinesResult{
+			ProductLines: []*domain.ProductLineFull{{ID: "pdln_own", UnitGroupID: "ungp_own"}},
+		}, nil)
+	suite.productLineRepo.EXPECT().GetUnitGroup(gomock.Any(), "ac_tenant", "ungp_own", gomock.Any()).
+		Return(nil, apierror.NewInternalError(errors.New("boom"), "unit group lookup failed"))
+
+	result, apiErr := suite.svc.ListProductLines(ctx, domain.ListProductLinesParams{Includes: []string{"unit_group"}})
+	suite.Nil(result)
+	suite.Require().NotNil(apiErr)
+	suite.Equal(apierror.ErrorCodeInternalError, apiErr.Code)
+}
+
+// the line was found; a group it points at that the tenant cannot see does not make the line missing
+func (suite *ProductLineSvcTestSuite) TestGet_UnresolvableUnitGroupStillReturnsTheLine() {
+	ctx := productLineReaderCtx("ac_tenant")
+	line := &domain.ProductLineFull{ID: "shipping", UnitGroupID: "each_group"}
+
+	suite.productLineRepo.EXPECT().Get(gomock.Any(), gomock.Any()).Return(line, nil)
+	suite.productLineRepo.EXPECT().GetUnitGroup(gomock.Any(), "ac_tenant", "each_group", gomock.Any()).
+		Return(nil, apierror.NewResourceNotFoundError("Resource not found."))
+
+	result, apiErr := suite.svc.GetProductLine(ctx, domain.GetProductLineParams{
+		ProductLineID: "shipping",
+		Includes:      []string{"unit_group"},
+	})
+	suite.Require().Nil(apiErr)
+	suite.Equal("shipping", result.ID)
+	suite.Nil(result.UnitGroup)
 }

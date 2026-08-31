@@ -19,9 +19,10 @@ INSERT IGNORE INTO unit (id, name, abbreviation, unit_dimension_code, account_id
     ('un_01seedgrain00000000', 'Grain',  'gr',   'mass',     'ac_01k0a5smf9ekb8rqg12555zjqa', 6479891, 100000000, 0, 1, 0, NOW(), NOW());
 
 -- Unit groups
--- each_group (base: each, type: quantity) — account-scoped
+-- each_group (base: each, type: quantity) — shared, like time_group and currency_group: the
+-- system product lines in 0006_catalog point at it, so it must resolve for every tenant.
 INSERT IGNORE INTO unit_group (id, name, base_unit_id, account_id, unit_type_code, created_at, updated_at) VALUES
-    ('each_group', 'Each', 'each', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'quantity', NOW(), NOW());
+    ('each_group', 'Each', 'each', NULL, 'quantity', NOW(), NOW());
 
 INSERT IGNORE INTO unit_group_unit (id, unit_group_id, unit_id, created_at, updated_at) VALUES
     ('ungpun_01seedeachgrpeach', 'each_group', 'each', NOW(), NOW());

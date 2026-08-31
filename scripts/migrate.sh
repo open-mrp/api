@@ -279,6 +279,28 @@ require_safe_to_apply() {
     fi
 }
 
+# goose seeds a version-0 row when it creates its bookkeeping table, and reads that row to establish
+# the current version. On prod it never gets to: creating a table is DDL, which safe migrations only
+# accept through a deploy request, so 00002_goose_data_version_table.sql makes the table instead and
+# goose meets one that already exists and is empty. It cannot tell that apart from a table it has no
+# business reading, and fails the whole command with "failed to ensure DB version: no next version
+# found" -- before applying anything. Writing the row is DML, which prod does allow, so this is the one
+# place the gap can be closed. A table goose creates for itself is left alone.
+ensure_data_version_row() {
+    local table_exists rows
+
+    table_exists="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = '$MYSQL_DB' AND TABLE_NAME = '$DML_TABLE';")"
+    if [ "$table_exists" -eq 0 ]; then
+        return
+    fi
+
+    rows="$(mysql_query "SELECT COUNT(*) FROM \`$DML_TABLE\`;")"
+    if [ "$rows" -eq 0 ]; then
+        info "Initializing $DML_TABLE bookkeeping on $TARGET_LABEL (goose version 0)."
+        mysql_query "INSERT INTO \`$DML_TABLE\` (version_id, is_applied) VALUES (0, 1);" >/dev/null
+    fi
+}
+
 confirm_prod() {
     if [ "$ASSUME_YES" -eq 1 ]; then
         return
@@ -464,17 +486,21 @@ case "$COMMAND" in
 
     data-up)
         require_goose
+        require_mysql_client
         resolve_target
         if [ "$TARGET" = "prod" ]; then
             confirm_prod
         fi
+        ensure_data_version_row
         info "Applying data migrations to $TARGET_LABEL"
         run_goose "$DML_DIR" up
         ;;
 
     data-status)
         require_goose
+        require_mysql_client
         resolve_target
+        ensure_data_version_row
         info "Data migration status for $TARGET_LABEL"
         run_goose "$DML_DIR" status
         ;;

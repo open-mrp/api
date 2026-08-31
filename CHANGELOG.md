@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.1.0](https://github.com/open-mrp/api/compare/v2.0.7...v2.1.0) (2026-08-31)
+
+
+### Features
+
+* **migrate:** ensure data version row exists before migrations in production; add more seed data ([#91](https://github.com/open-mrp/api/issues/91)) ([b46ba21](https://github.com/open-mrp/api/commit/b46ba218bf9e7db4e92811195df25aab9f121570))
+
+
+### Bug Fixes
+
+* **picks:** resolve pick list timeouts on large accounts ([#92](https://github.com/open-mrp/api/issues/92)) ([796cb2f](https://github.com/open-mrp/api/commit/796cb2f9f5b43eb3427cd71cf2ed81044a0c0eb5))
+
 ## [2.0.7](https://github.com/open-mrp/api/compare/v2.0.6...v2.0.7) (2026-08-31)
 
 

@@ -101,6 +101,7 @@ type overDrawnReceipt struct {
 type allocationRow struct {
 	ID          string
 	IssueID     string
+	ReceiptID   string
 	QuantityID  string
 	UnitCostID  string
 	TotalCostID string
@@ -112,6 +113,25 @@ type repair struct {
 	Receipt overDrawnReceipt
 	Delete  []allocationRow
 	Freed   decimal.Decimal
+}
+
+// overCoveredIssue is the other side of the same damage: an order carrying more allocation than it
+// ever asked for. It is what an inflated or duplicated draw looks like when the receipt it came from
+// was large enough to absorb it — a 697 pr receipt swallows a draw of ten times 20 pairs without ever
+// reading as over-drawn, while the order it covers plainly shows ten times what it ordered.
+//
+// The excess is not free stock sitting idle: it is still charged against real receipts, so it holds
+// down on-hand exactly as an over-drawn receipt does.
+type overCoveredIssue struct {
+	IssueID       string
+	ItemID        string
+	SKU           string
+	DemandBase    decimal.Decimal
+	AllocatedBase decimal.Decimal
+	// Oversized marks an issue carrying a single allocation larger than the whole order. Allocation
+	// takes min(receipt remaining, issue remaining), so no race writes one; the quantity is wrong and
+	// trimming would delete a real draw. Reported and skipped, as on the receipt side.
+	Oversized bool
 }
 
 func Run(ctx context.Context, args []string, getenv func(string) string, stdout, stderr io.Writer) error {
@@ -193,11 +213,39 @@ func Run(ctx context.Context, args []string, getenv func(string) string, stdout,
 
 	allocationIDs, issueIDs, receiptIDs, totalFreed := collect(repairs)
 
+	issues, err := findOverCoveredIssues(ctx, sqlDB, *accountID, *itemID, eps, p)
+	if err != nil {
+		return err
+	}
+	var oversizedIssues []overCoveredIssue
+	var issueRepairs []repair
+	for _, iss := range issues {
+		if iss.Oversized {
+			oversizedIssues = append(oversizedIssues, iss)
+			continue
+		}
+		rep, planErr := planIssueRepair(ctx, sqlDB, iss)
+		if planErr != nil {
+			return planErr
+		}
+		if len(rep.Delete) > 0 {
+			issueRepairs = append(issueRepairs, rep)
+		}
+	}
+	issueAllocIDs, issueTouched, issueReceipts, issueFreed := collect(issueRepairs)
+	allocationIDs = append(allocationIDs, issueAllocIDs...)
+	issueIDs = append(issueIDs, issueTouched...)
+	receiptIDs = append(receiptIDs, issueReceipts...)
+	totalFreed = totalFreed.Add(issueFreed)
+
 	p.stage("Summary")
 	fmt.Fprintf(stdout, "  Over-drawn receipts found: %d\n", len(receipts))
 	fmt.Fprintf(stdout, "  Skipped, mixed units:      %d\n", len(mixed))
 	fmt.Fprintf(stdout, "  Skipped, oversized alloc:  %d\n", len(oversized))
 	fmt.Fprintf(stdout, "  Receipts to repair:        %d\n", len(repairs))
+	fmt.Fprintf(stdout, "  Over-covered issues found: %d\n", len(issues))
+	fmt.Fprintf(stdout, "  Skipped, oversized draw:   %d\n", len(oversizedIssues))
+	fmt.Fprintf(stdout, "  Issues to repair:          %d\n", len(issueRepairs))
 	fmt.Fprintf(stdout, "  Allocation rows to delete: %d\n", len(allocationIDs))
 	fmt.Fprintf(stdout, "  Issues to re-check:        %d\n", len(issueIDs))
 	fmt.Fprintf(stdout, "  Phantom base units removed: %s\n", totalFreed.String())
@@ -209,6 +257,18 @@ func Run(ctx context.Context, args []string, getenv func(string) string, stdout,
 	if len(oversized) > 0 {
 		fmt.Fprint(stdout, skipOversizedNote)
 		printReceiptLines(stdout, oversized)
+	}
+	if len(oversizedIssues) > 0 {
+		fmt.Fprint(stdout, skipOversizedIssueNote)
+		for i, iss := range oversizedIssues {
+			if i >= worstOffenderLines {
+				fmt.Fprintf(stdout, "    ... and %d more\n", len(oversizedIssues)-worstOffenderLines)
+				break
+			}
+			fmt.Fprintf(stdout, "    %-22s %-24s ordered %s / allocated %s\n",
+				iss.IssueID, iss.SKU, iss.DemandBase.StringFixed(2), iss.AllocatedBase.StringFixed(2))
+		}
+		fmt.Fprintln(stdout)
 	}
 
 	printWorstOffenders(stdout, repairs)
@@ -333,13 +393,136 @@ ORDER BY (a.alloc_base - CAST(q.value AS DECIMAL(65,30)) * (u.ratio_numerator / 
 	return out, nil
 }
 
+// findOverCoveredIssues lists the orders carrying more allocation than they asked for.
+//
+// Demand must be positive: an issue for nothing is not something this can reason about.
+func findOverCoveredIssues(ctx context.Context, sqlDB *sql.DB, accountID, itemID string, eps decimal.Decimal, p *progress) ([]overCoveredIssue, error) {
+	var where strings.Builder
+	var params []any
+	if accountID != "" {
+		where.WriteString(" AND i.account_id = ?")
+		params = append(params, accountID)
+	}
+	if itemID != "" {
+		where.WriteString(" AND ii.item_id = ?")
+		params = append(params, itemID)
+	}
+	params = append(params, eps.String())
+
+	// #nosec G202 -- the only interpolation is `where`, built above from fixed literals; the account
+	// and item ids it filters on are bound as parameters.
+	query := `
+SELECT ii.id, ii.item_id, i.sku,
+       CAST(iq.value AS DECIMAL(65,30)) * (iu.ratio_numerator / iu.ratio_denominator) AS demand_base,
+       COALESCE((
+           SELECT SUM(CAST(aq.value AS DECIMAL(65,30)) * (au.ratio_numerator / au.ratio_denominator))
+           FROM inventory_allocation ia
+           JOIN quantity aq ON aq.id = ia.quantity_id
+           JOIN unit au ON au.id = aq.unit_id
+           WHERE ia.inventory_issue_id = ii.id), 0) AS alloc_base,
+       EXISTS (
+           SELECT 1 FROM inventory_allocation ia2
+           JOIN quantity aq2 ON aq2.id = ia2.quantity_id
+           JOIN unit au2 ON au2.id = aq2.unit_id
+           WHERE ia2.inventory_issue_id = ii.id
+             AND CAST(aq2.value AS DECIMAL(65,30)) * (au2.ratio_numerator / au2.ratio_denominator)
+                 > CAST(iq.value AS DECIMAL(65,30)) * (iu.ratio_numerator / iu.ratio_denominator) + 0.000001
+       ) AS oversized
+FROM inventory_issue ii
+JOIN quantity iq ON iq.id = ii.quantity_id
+JOIN unit iu ON iu.id = iq.unit_id
+JOIN item i ON i.id = ii.item_id
+WHERE CAST(iq.value AS DECIMAL(65,30)) > 0` + where.String() + `
+HAVING alloc_base > demand_base + ?
+ORDER BY (alloc_base - demand_base) DESC`
+
+	p.stage("Scanning inventory_issue for over-covered orders...")
+
+	rows, err := sqlDB.QueryContext(ctx, query, params...)
+	if err != nil {
+		return nil, fmt.Errorf("find over-covered issues: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var out []overCoveredIssue
+	for rows.Next() {
+		var iss overCoveredIssue
+		var demand, alloc string
+		if err := rows.Scan(&iss.IssueID, &iss.ItemID, &iss.SKU, &demand, &alloc, &iss.Oversized); err != nil {
+			return nil, fmt.Errorf("scan over-covered issue: %w", err)
+		}
+		if iss.DemandBase, err = decimal.NewFromString(demand); err != nil {
+			return nil, fmt.Errorf("parse demand for %s: %w", iss.IssueID, err)
+		}
+		if iss.AllocatedBase, err = decimal.NewFromString(alloc); err != nil {
+			return nil, fmt.Errorf("parse allocated total for %s: %w", iss.IssueID, err)
+		}
+		out = append(out, iss)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate over-covered issues: %w", err)
+	}
+
+	p.stagef("Found %d over-covered issue(s)", len(out))
+	return out, nil
+}
+
+// planIssueRepair picks the allocations to drop from one over-covered order: newest first, stopping
+// as soon as what is left fits inside what was ordered. Newest first for the same reason as on the
+// receipt side — the earliest draw is the one that filled the order, and the later ones are what the
+// duplication added.
+func planIssueRepair(ctx context.Context, sqlDB *sql.DB, iss overCoveredIssue) (repair, error) {
+	const query = `
+SELECT ia.id, ia.inventory_issue_id, ia.inventory_receipt_id, ia.quantity_id, ia.unit_cost_id, ia.total_cost_id,
+       CAST(q.value AS DECIMAL(65,30)) * (u.ratio_numerator / u.ratio_denominator) AS base_value
+FROM inventory_allocation ia
+JOIN quantity q ON q.id = ia.quantity_id
+JOIN unit u ON u.id = q.unit_id
+WHERE ia.inventory_issue_id = ?
+ORDER BY ia.created_at DESC, ia.id DESC`
+
+	rows, err := sqlDB.QueryContext(ctx, query, iss.IssueID)
+	if err != nil {
+		return repair{}, fmt.Errorf("load allocations for issue %s: %w", iss.IssueID, err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	rep := repair{Freed: decimal.Zero}
+	remaining := iss.AllocatedBase
+
+	for rows.Next() {
+		if remaining.LessThanOrEqual(iss.DemandBase) {
+			break
+		}
+		var a allocationRow
+		var base string
+		if err := rows.Scan(&a.ID, &a.IssueID, &a.ReceiptID, &a.QuantityID, &a.UnitCostID, &a.TotalCostID, &base); err != nil {
+			return repair{}, fmt.Errorf("scan allocation: %w", err)
+		}
+		if a.Base, err = decimal.NewFromString(base); err != nil {
+			return repair{}, fmt.Errorf("parse allocation quantity for %s: %w", a.ID, err)
+		}
+		if a.Base.LessThanOrEqual(decimal.Zero) {
+			continue
+		}
+		rep.Delete = append(rep.Delete, a)
+		rep.Freed = rep.Freed.Add(a.Base)
+		remaining = remaining.Sub(a.Base)
+	}
+	if err := rows.Err(); err != nil {
+		return repair{}, fmt.Errorf("iterate allocations: %w", err)
+	}
+
+	return rep, nil
+}
+
 // planRepair picks the allocations to remove from one receipt: newest first, stopping as soon as the
 // survivors fit inside the receipt. An allocation that would take the receipt from over-drawn to
 // under-drawn by more than it is over is still removed — whole rows only — because the reopened
 // demand draws the remainder back down.
 func planRepair(ctx context.Context, sqlDB *sql.DB, r overDrawnReceipt) (repair, error) {
 	const query = `
-SELECT ia.id, ia.inventory_issue_id, ia.quantity_id, ia.unit_cost_id, ia.total_cost_id,
+SELECT ia.id, ia.inventory_issue_id, ia.inventory_receipt_id, ia.quantity_id, ia.unit_cost_id, ia.total_cost_id,
        CAST(q.value AS DECIMAL(65,30)) * (u.ratio_numerator / u.ratio_denominator) AS base_value
 FROM inventory_allocation ia
 JOIN quantity q ON q.id = ia.quantity_id
@@ -362,7 +545,7 @@ ORDER BY ia.created_at DESC, ia.id DESC`
 		}
 		var a allocationRow
 		var base string
-		if err := rows.Scan(&a.ID, &a.IssueID, &a.QuantityID, &a.UnitCostID, &a.TotalCostID, &base); err != nil {
+		if err := rows.Scan(&a.ID, &a.IssueID, &a.ReceiptID, &a.QuantityID, &a.UnitCostID, &a.TotalCostID, &base); err != nil {
 			return repair{}, fmt.Errorf("scan allocation: %w", err)
 		}
 		if a.Base, err = decimal.NewFromString(base); err != nil {
@@ -386,11 +569,24 @@ ORDER BY ia.created_at DESC, ia.id DESC`
 func collect(repairs []repair) (allocationIDs, issueIDs, receiptIDs []string, totalFreed decimal.Decimal) {
 	totalFreed = decimal.Zero
 	seenIssues := map[string]struct{}{}
+	seenReceipts := map[string]struct{}{}
+	addReceipt := func(id string) {
+		if id == "" {
+			return
+		}
+		if _, seen := seenReceipts[id]; seen {
+			return
+		}
+		seenReceipts[id] = struct{}{}
+		receiptIDs = append(receiptIDs, id)
+	}
 	for _, rep := range repairs {
-		receiptIDs = append(receiptIDs, rep.Receipt.ReceiptID)
+		addReceipt(rep.Receipt.ReceiptID)
 		totalFreed = totalFreed.Add(rep.Freed)
 		for _, a := range rep.Delete {
 			allocationIDs = append(allocationIDs, a.ID)
+			// An issue-side repair has no single receipt of its own; the rows it drops each name one.
+			addReceipt(a.ReceiptID)
 			if _, seen := seenIssues[a.IssueID]; !seen {
 				seenIssues[a.IssueID] = struct{}{}
 				issueIDs = append(issueIDs, a.IssueID)
@@ -437,6 +633,13 @@ const skipMixedUnitsNote = `
 // min(what the receipt has left, what the issue still wants), so no allocation the allocator writes
 // is ever larger than the receipt it draws from, however many transactions raced. One that is came
 // from a wrong quantity, and the row to correct is that quantity — not the allocation.
+const skipOversizedIssueNote = `
+  NOT REPAIRED — these orders carry a single allocation larger than the whole order.
+  A draw is min(receipt remaining, issue remaining), so no duplication produces one bigger than the
+  order it covers; that quantity is wrong in itself. Trimming would delete a draw that happened, so
+  they are left for a person to judge.
+`
+
 const skipOversizedNote = `
   NOT REPAIRED — these receipts carry a single allocation larger than the whole receipt.
   Allocation takes min(receipt remaining, issue remaining), so no race can produce a draw bigger than

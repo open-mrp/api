@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.0](https://github.com/open-mrp/api/compare/v2.3.3...v2.4.0) (2026-08-31)
+
+
+### Features
+
+* **domain:** add endpoints to set custom merchant email addresses for system emails ([#105](https://github.com/open-mrp/api/issues/105)) ([fd7bd18](https://github.com/open-mrp/api/commit/fd7bd18cb8bf3d59cd63a6004487b72b737d9b15))
+
 ## [2.3.3](https://github.com/open-mrp/api/compare/v2.3.2...v2.3.3) (2026-08-31)
 
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.0](https://github.com/open-mrp/api/compare/v2.2.0...v2.3.0) (2026-08-31)
+
+
+### Features
+
+* **alerts:** add user, account names, and stack trace to 5xx error emails ([#99](https://github.com/open-mrp/api/issues/99)) ([5fe19e3](https://github.com/open-mrp/api/commit/5fe19e34174182e213a16e16579a66dde951dce4))
+
 ## [2.2.0](https://github.com/open-mrp/api/compare/v2.1.0...v2.2.0) (2026-08-31)
 
 

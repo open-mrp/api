@@ -97,6 +97,8 @@ func Run(ctx context.Context, args []string, getenv func(string) string, stdout,
 	accountID := fs.String("account", "", "restrict to a single account id")
 	itemID := fs.String("item", "", "restrict to a single item id")
 	epsilon := fs.String("epsilon", "0.0001", "tolerance in base units for fits / exactly covered")
+	acceptImperfect := fs.Bool("accept-imperfect-coverage", false,
+		"restamp wherever the receipts fit, even where the issue does not land exactly on its demand")
 	if err := fs.Parse(args[1:]); err != nil {
 		return err
 	}
@@ -143,7 +145,7 @@ func Run(ctx context.Context, args []string, getenv func(string) string, stdout,
 		return err
 	}
 
-	eligible, groups, skipped := model.plan(candidates, eps)
+	eligible, groups, skipped := model.plan(candidates, eps, *acceptImperfect)
 
 	p.stage("Summary")
 	fmt.Fprintf(stdout, "  Mislabelled allocations:   %d\n", len(candidates))
@@ -378,12 +380,26 @@ WHERE ` + spec.column + ` IN (` + placeholders(len(chunk)) + `)`
 }
 
 // plan groups the receipts and issues the candidates join into connected components and accepts a
-// component only when every receipt in it fits and every issue in it is exactly covered.
+// component only when every receipt in it fits and — unless acceptImperfect — every issue in it is
+// exactly covered.
 //
 // Grouping is the whole point. Eligibility cannot be decided per row: an issue covered from three
 // receipts is only correct once all three are corrected, and correcting two of them would leave it
 // short by the third.
-func (m *model) plan(candidates []candidate, eps decimal.Decimal) (eligible []candidate, groups int, skipped []string) {
+//
+// The receipt test is the hard one and is never waived: a receipt cannot give out more than it took
+// in, so a component that still overflows after the labels are corrected has something else wrong
+// with it and correcting the labels would not be an improvement.
+//
+// The issue test is a different kind of claim. Landing exactly on demand is strong evidence that the
+// label was the only thing wrong, which is why it is the default. But an issue that misses is not
+// evidence *against* the label — the ways it misses turn out to be a duplicate draw on top of the
+// mislabel, which lands on exactly twice the demand, and a draw that emptied a receipt too small to
+// cover the order, which lands under. Both are conditions the mislabel hides rather than causes, and
+// both are repaired on their own terms once the units read correctly. acceptImperfect is for that
+// second pass: it keeps the receipt invariant and drops the exactness requirement, so the remaining
+// labels are corrected and the coverage problem underneath becomes visible and fixable.
+func (m *model) plan(candidates []candidate, eps decimal.Decimal, acceptImperfect bool) (eligible []candidate, groups int, skipped []string) {
 	uf := newUnionFind()
 	for _, c := range candidates {
 		uf.union("r:"+c.ReceiptID, "i:"+c.IssueID)
@@ -409,6 +425,9 @@ func (m *model) plan(candidates []candidate, eps decimal.Decimal) (eligible []ca
 		}
 	}
 	for iid, allocs := range m.byIssue {
+		if acceptImperfect {
+			break
+		}
 		demand, ok := m.issueDemand[iid]
 		if !ok {
 			continue

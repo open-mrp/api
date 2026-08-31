@@ -132,9 +132,10 @@ func (s *productLineSvcImpl) ListProductLines(ctx context.Context, params domain
 	}
 
 	if slices.Contains(params.Includes, "unit_group") {
+		// A group the tenant cannot see leaves that line's unit_group unpopulated rather than failing the page.
 		for _, pl := range result.ProductLines {
 			unitGroup, apiErr := repo.GetUnitGroup(ctx, params.AccountID, pl.UnitGroupID, params.Includes)
-			if apiErr != nil {
+			if apiErr != nil && !apierror.IsNotFound(apiErr) {
 				return nil, tracing.Trace(span, apiErr)
 			}
 			pl.UnitGroup = unitGroup
@@ -187,8 +188,9 @@ func (s *productLineSvcImpl) GetProductLine(ctx context.Context, params domain.G
 	}
 
 	if slices.Contains(params.Includes, "unit_group") {
+		// The line itself was found, so a group the tenant cannot see leaves unit_group unpopulated rather than reporting the line as missing.
 		unitGroup, apiErr := repo.GetUnitGroup(ctx, params.AccountID, productLine.UnitGroupID, params.Includes)
-		if apiErr != nil {
+		if apiErr != nil && !apierror.IsNotFound(apiErr) {
 			return nil, tracing.Trace(span, apiErr)
 		}
 		productLine.UnitGroup = unitGroup

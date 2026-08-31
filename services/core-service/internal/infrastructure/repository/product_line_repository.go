@@ -564,9 +564,11 @@ func (r *productLineRepoImpl) GetByIDs(ctx context.Context, accountID string, id
 		out[i] = mapGetProductLinesByIDsScopedRow(row)
 	}
 	// Stitch unit group data — always include base_unit and associated_units so the API gateway's SubField resolver has everything it needs.
+	//
+	// A group the tenant cannot see leaves the line's UnitGroup nil rather than failing the batch: this backs the list loader, so one line pointing at a group scoped to another account would otherwise 404 the entire page.
 	for _, pl := range out {
 		ug, apiErr := r.GetUnitGroup(ctx, accountID, pl.UnitGroupID, []string{"unit_group.base_unit", "unit_group.associated_units"})
-		if apiErr != nil {
+		if apiErr != nil && !apierror.IsNotFound(apiErr) {
 			return nil, tracing.Trace(span, apiErr)
 		}
 		pl.UnitGroup = ug

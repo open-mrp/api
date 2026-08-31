@@ -458,6 +458,20 @@ func (r *inventoryReservationRepo) allocateOpenIssue(ctx context.Context, issueI
 		if take.Equal(available) {
 			allocQty = receiptLeft
 		}
+
+		// A tripwire, not a condition that should ever hold. take is min(available, remaining) and
+		// allocQty is that converted back, so the arithmetic above cannot exceed what the receipt has
+		// left — unless receiptLeft was computed from a stale reading of the allocations, which is
+		// exactly what happened when the read that opens this transaction was not a locking one and
+		// froze the transaction's view before a sibling committed. That went unnoticed for months
+		// because nothing objected: the rows were simply written, and the damage only surfaced as
+		// stock that had left the ledger without leaving the floor. Failing here turns a silent
+		// over-draw into a message that stops and says so.
+		if allocQty.GreaterThan(receiptLeft) {
+			return decimal.Zero, apierror.NewInvariantViolationError(
+				"Allocation would draw " + allocQty.String() + " from receipt " + receipt.ID +
+					", which has " + receiptLeft.String() + " left.")
+		}
 		if err := r.queries.InsertQuantityForInventory(ctx, sqlc.InsertQuantityForInventoryParams{
 			ID:     allocQtyID,
 			Value:  allocQty.String(),

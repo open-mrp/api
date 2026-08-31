@@ -429,9 +429,22 @@ INSERT INTO inventory_receipt (
 -- The issue's unit ratio rides along because the receipts that cover it are recorded in whatever
 -- unit their own source used. An allocator comparing the raw column values draws 40 grams against an
 -- issue asking for 40 pounds and calls the demand met.
--- FindOpenIssuesForItem claims an item's whole open demand, oldest first. FOR UPDATE, first statement
--- of the transaction, unit not joined — all three for the reasons FindOpenIssuesForItemPaged spells
--- out; the two must not diverge, since either can be the read that opens an allocation transaction.
+-- FindOpenIssuesForItem lists an item's whole open demand, oldest first.
+--
+-- Deliberately NOT a locking read, unlike its paged sibling, and the difference is lock ordering
+-- rather than taste. Its two callers — a receiving order being stocked, a shipment being reversed —
+-- reach it near the end of a transaction that has already written the receipts, so they hold
+-- receipt locks and would then be asking for issue locks. The allocate-open-issues consumer runs the
+-- other way round: it claims issues first and asks for receipts after. Locking here put the two
+-- flows on opposite orders over the same two tables, which deadlocked in production within a day.
+--
+-- Not locking costs nothing these callers were relying on. Both already hold `FOR UPDATE` on the
+-- receipts any concurrent allocation would have to draw from, so they are serialised against the
+-- consumer on those rows instead — one side waits, and whichever goes second re-reads the allocation
+-- sums before deciding what is left.
+--
+-- The unit is still not joined: `unit` rows are shared by every account, and keeping the two queries
+-- shaped alike means neither grows a join the other has to avoid.
 -- name: FindOpenIssuesForItem :many
 SELECT
     ii.id,
@@ -445,8 +458,7 @@ JOIN quantity q ON q.id = ii.quantity_id
 WHERE ii.account_id = sqlc.arg('account_id')
 AND ii.item_id = sqlc.arg('item_id')
 AND ii.status_code = 'open'
-ORDER BY ii.created_at ASC
-FOR UPDATE;
+ORDER BY ii.created_at ASC;
 
 -- Each allocation is taken through its own unit's ratio before it is added: an issue in pounds can be
 -- covered by allocations recorded in grams, and once they are added together the caller has nothing

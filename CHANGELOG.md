@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.2.0](https://github.com/open-mrp/api/compare/v2.1.0...v2.2.0) (2026-08-31)
+
+
+### Features
+
+* **inventory-change-logs:** add SKU search to list endpoint ([#95](https://github.com/open-mrp/api/issues/95)) ([c88202b](https://github.com/open-mrp/api/commit/c88202bf3560725163d935a0d111fafbd0f13904))
+* **seed:** expand sandbox demand history so the schedule plans across weeks ([#96](https://github.com/open-mrp/api/issues/96)) ([7bcdb76](https://github.com/open-mrp/api/commit/7bcdb7633ae7ae41f1cc50dcc81c5692076feb51))
+
+
+### Bug Fixes
+
+* **inventory:** close receipt double-allocation and correct on-hand reads ([#97](https://github.com/open-mrp/api/issues/97)) ([7044443](https://github.com/open-mrp/api/commit/7044443ade6af4298822b13f689642533d3ab9e4))
+
 ## [2.1.0](https://github.com/open-mrp/api/compare/v2.0.7...v2.1.0) (2026-08-31)
 
 

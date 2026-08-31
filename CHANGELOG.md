@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.7](https://github.com/open-mrp/api/compare/v2.0.6...v2.0.7) (2026-08-31)
+
+
+### Bug Fixes
+
+* **product_line:** handle unresolvable unit groups gracefully in product line retrieval ([#89](https://github.com/open-mrp/api/issues/89)) ([98e6814](https://github.com/open-mrp/api/commit/98e6814f0173ee3cb28b422521e6118fe0401053))
+
 ## [2.0.6](https://github.com/open-mrp/api/compare/v2.0.5...v2.0.6) (2026-08-28)
 
 

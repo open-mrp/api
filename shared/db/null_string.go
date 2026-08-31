@@ -108,26 +108,24 @@ const ngramTokenSize = 2
 // NewNgramSearch formats a search term for a MySQL ngram FULLTEXT index (substring search). A term of
 // at least ngramTokenSize characters becomes a boolean-mode phrase ("term"), which forces the ngram
 // tokens to appear consecutively — matching the term as a substring anywhere in the column. Shorter
-// terms have no ngram token and fall back to LIKE. Wrapping is safe because SanitizeFulltextBoolean
-// strips the double-quote (and every other operator) from the user's input first.
+// terms have no ngram token and fall back to LIKE.
+//
+// Inside a phrase every boolean operator (+, -, *, …) is literal, so — unlike NewFulltextSearch — the
+// term must NOT be run through SanitizeFulltextBoolean: stripping the hyphen from a pick number like
+// "PICK-002" changes its ngram tokens and matches nothing. The only character that must go is the
+// double-quote, which would close the phrase early. A term that is all punctuation stays a (possibly
+// empty) phrase, which matches nothing — never dropping the filter so the list returns every row.
 func NewNgramSearch(s *string) FulltextSearch {
 	if s == nil || *s == "" {
 		return FulltextSearch{}
 	}
 	if len([]rune(*s)) < ngramTokenSize {
-		sanitized := EscapeLike(*s)
-		if sanitized == "" {
-			return FulltextSearch{}
-		}
 		return FulltextSearch{
-			Like: sql.NullString{String: "%" + sanitized + "%", Valid: true},
+			Like: sql.NullString{String: "%" + EscapeLike(*s) + "%", Valid: true},
 		}
 	}
-	sanitized := SanitizeFulltextBoolean(*s)
-	if sanitized == "" {
-		return FulltextSearch{}
-	}
-	ft := sql.NullString{String: `"` + sanitized + `"`, Valid: true}
+	phrase := `"` + strings.ReplaceAll(*s, `"`, "") + `"`
+	ft := sql.NullString{String: phrase, Valid: true}
 	return FulltextSearch{Fulltext: ft, Fulltext2: ft}
 }
 

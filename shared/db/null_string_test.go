@@ -96,8 +96,14 @@ func TestNewNgramSearch(t *testing.T) {
 		{name: "one char like fallback escapes metacharacters", query: ptr("%"), wantLike: `%\%%`},
 		{name: "at the ngram token size uses a phrase", query: ptr("po"), wantFulltext: `"po"`},
 		{name: "longer term becomes a phrase for substring matching", query: ptr("23839"), wantFulltext: `"23839"`},
-		{name: "phrase wraps after stripping boolean operators and quotes", query: ptr(`+2"38*`), wantFulltext: `"238"`},
-		{name: "all operators leave nothing to search", query: ptr(`"+*`)},
+		// The hyphen must survive: a phrase keeps operators literal, and stripping it would change the
+		// ngram tokens so a real pick number never matches.
+		{name: "hyphenated pick number keeps the hyphen", query: ptr("PICK-002"), wantFulltext: `"PICK-002"`},
+		{name: "operators stay literal inside the phrase", query: ptr("+2-38*"), wantFulltext: `"+2-38*"`},
+		// Only the phrase delimiter is removed; an all-quote term becomes an empty phrase, which matches
+		// nothing rather than dropping the filter and returning every row.
+		{name: "embedded quotes are stripped", query: ptr(`a"b"c`), wantFulltext: `"abc"`},
+		{name: "all-quote term becomes an empty phrase", query: ptr(`""`), wantFulltext: `""`},
 	}
 
 	for _, tt := range tests {

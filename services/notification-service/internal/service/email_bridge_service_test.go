@@ -31,6 +31,57 @@ func emailBridgeCtx() context.Context {
 	})
 }
 
+// emailBridgeRelationActorCtx is a customer of the target account — the shape the gateway's coarse
+// permission gate deliberately waves through (APIEndpoint.authorize returns nil for relation actors
+// and defers to the service), so the service is the only thing standing between a counterparty and
+// the merchant's mail configuration.
+func emailBridgeRelationActorCtx() context.Context {
+	buyer := "ac_eb_buyer"
+	return appctx.WithIdentity(context.Background(), &types.Identity{
+		Type:   types.IdentityActorTypeUser,
+		Target: &types.IdentityTarget{AccountID: ebTestAccountID},
+		Actor: &types.IdentityActor{
+			RelationType: types.IdentityRelationTypeCustomer,
+			ID:           "us_eb_buyer",
+			AccountID:    &buyer,
+		},
+	})
+}
+
+// A counterparty must not be able to read or rewrite the merchant's mail configuration. Repointing the
+// sender would send the merchant's invoices and checkout links from — and route their replies to — an
+// address the counterparty controls; registering a domain would seed the identity to do it with.
+func TestEmailBridge_RejectsRelationActors(t *testing.T) {
+	svc := newEmailBridgeSvc(t, repositorymock.NewMockEmailDomainRepo(gomock.NewController(t)), nil, &stubIdentityProvider{verified: true})
+	ctx := emailBridgeRelationActorCtx()
+
+	t.Run("SetSender", func(t *testing.T) {
+		_, apiErr := svc.SetSender(ctx, domain.UpsertAccountEmailSenderInput{EmailDomainID: "emdn_1", LocalPart: "orders"})
+		require.NotNil(t, apiErr)
+		assert.Equal(t, apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+	})
+	t.Run("GetSender", func(t *testing.T) {
+		_, apiErr := svc.GetSender(ctx)
+		require.NotNil(t, apiErr)
+		assert.Equal(t, apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+	})
+	t.Run("DeleteSender", func(t *testing.T) {
+		apiErr := svc.DeleteSender(ctx)
+		require.NotNil(t, apiErr)
+		assert.Equal(t, apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+	})
+	t.Run("CreateDomain", func(t *testing.T) {
+		_, apiErr := svc.CreateDomain(ctx, "attacker.example.com")
+		require.NotNil(t, apiErr)
+		assert.Equal(t, apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+	})
+	t.Run("CreateInbox", func(t *testing.T) {
+		_, apiErr := svc.CreateInbox(ctx, domain.CreateEmailInboxInput{EmailDomainID: "emdn_1", Address: "x@theirco.com"})
+		require.NotNil(t, apiErr)
+		assert.Equal(t, apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+	})
+}
+
 // stubIdentityProvider is a controllable EmailIdentityProvider for service tests.
 type stubIdentityProvider struct {
 	tokens   []string

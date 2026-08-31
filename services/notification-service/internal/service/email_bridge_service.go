@@ -24,7 +24,11 @@ func NewEmailBridgeSvc(repoFactory domain.RepoFactory, identityProvider domain.E
 	return &emailBridgeSvcImpl{repoFactory: repoFactory, identityProvider: identityProvider}
 }
 
-// accountID resolves the caller's acting account from the request identity.
+// accountID resolves the caller's acting account from the request identity, and is the sole authorization point for every email-bridge operation: registering and verifying domains, provisioning inboxes, and choosing the address customer-facing mail is sent from.
+//
+// It requires an INTERNAL actor of the target account. The gateway's coarse permission gate cannot be relied on here — APIEndpoint.authorize returns nil for customer- and supplier-relation actors by design, deferring their authorization to the service — so without this check a counterparty targeting the merchant's account would pass the gate and reach these methods. That would let a customer register a domain on the merchant's account, or repoint the From and Reply-To used for the merchant's invoices, checkout links, purchase orders, and statements at a mailbox of their choosing.
+//
+// This is merchant configuration with no counterparty-facing use, so requiring an internal actor costs no legitimate caller. Agents qualify: they run as same-account internal actors (see the agent identity built in agent-service's runner).
 func (s *emailBridgeSvcImpl) accountID(ctx context.Context) (string, *apierror.APIError) {
 	identity, ok := appctx.GetIdentityFromContext(ctx)
 	if !ok || identity == nil || !identity.IsActorSet() {
@@ -32,6 +36,9 @@ func (s *emailBridgeSvcImpl) accountID(ctx context.Context) (string, *apierror.A
 	}
 	if !identity.IsTargetAccountSet() {
 		return "", apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required.")
+	}
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return "", apiErr
 	}
 	return identity.Target.AccountID, nil
 }

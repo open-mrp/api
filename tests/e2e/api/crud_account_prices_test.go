@@ -78,12 +78,16 @@ func TestAccountPrices_IncludeRecipientAccount(t *testing.T) {
 	got := parseJSON(body)
 	_, ok := got["recipient_account"]
 	assert.True(t, ok, "recipient_account key should be present with ?include=recipient_account")
-	if acc := jsonObject(got, "recipient_account"); acc != nil {
-		// account or customer object (recipient is typically an account)
-		obj := jsonField(acc, "object")
-		assert.NotEmpty(t, obj)
-		assert.NotEmpty(t, jsonField(acc, "id"))
-	}
+	acc := jsonObject(got, "recipient_account")
+	require.NotNil(t, acc, "recipient_account should be present with ?include=recipient_account")
+	assert.Equal(t, "customer", jsonField(acc, "object"))
+	assert.Equal(t, SeedCustomerAccountID, jsonField(acc, "id"))
+	// The include must carry the full customer, not a stub built from the price-list projection: that
+	// projection reported a relationship_type ("child") that contradicts the customer's own account
+	// hierarchy. The hydrated customer must match the canonical value ("parent", since it heads a
+	// child account). See TestIncludes_HydratedToOneMatchesCanonical for the cross-endpoint guard.
+	assert.Equal(t, "parent", jsonField(acc, "relationship_type"),
+		"the included customer carries its canonical relationship_type, not the price-list stub's value")
 }
 
 func TestAccountPrices_IncludeProductLine(t *testing.T) {

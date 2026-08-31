@@ -65,6 +65,20 @@ func salesOrderReferenceFromProto(info *pb.SalesOrderInfo) *apiresource.SalesOrd
 		t := grpcutil.TimestampToTime(info.PromisedAt)
 		ref.Commitment = &apiresource.Commitment{Object: constants.ObjectTypeCommitment, PromisedAt: &t}
 	}
+	// Lifecycle timestamps ride the batch projection, so carry them onto the reference to match the
+	// canonical order — an ?include=order that dropped them was returning a stale stub.
+	if info.IssuedAt != nil {
+		t := grpcutil.TimestampToTime(info.IssuedAt)
+		ref.IssuedAt = &t
+	}
+	if info.CompletedAt != nil {
+		t := grpcutil.TimestampToTime(info.CompletedAt)
+		ref.CompletedAt = &t
+	}
+	if info.FirstShipAt != nil {
+		t := grpcutil.TimestampToTime(info.FirstShipAt)
+		ref.FirstShipAt = &t
+	}
 	return ref
 }
 

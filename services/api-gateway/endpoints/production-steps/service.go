@@ -543,39 +543,15 @@ func stashProductionStepMeta(meta *resourcekit.LoadMeta, s *pb.ProductionStepInf
 	}
 	meta.Set(constants.ObjectTypeProductionStep, s.Id, "machines", apiresource.NewList(machines, apiresource.PageInfo{}))
 
-	if s.ScanningStation != nil {
-		ss := s.ScanningStation
-		ssType := constants.ScanningStationType(ss.Type)
-		if !ssType.IsValid() {
-			ssType = constants.ScanningStationTypeInitBatch
-		}
-		ssCreated := stepTS
-		if ss.CreatedAt != nil {
-			ssCreated = grpcutil.TimestampToTime(ss.CreatedAt)
-		}
-		ssUpdated := stepTS
-		if ss.UpdatedAt != nil {
-			ssUpdated = grpcutil.TimestampToTime(ss.UpdatedAt)
-		}
-		meta.Set(constants.ObjectTypeProductionStep, s.Id, "scanning_station", &apiresource.ScanningStation{
-			ID:                  ss.Id,
-			Object:              constants.ObjectTypeScanningStation,
-			Name:                ss.Name,
-			Type:                ssType,
-			OperatorRequirement: constants.OperatorRequirementNone,
-			CreatedAt:           ssCreated,
-			UpdatedAt:           ssUpdated,
-		})
+	// Stash only the ids; the scanning station and department are hydrated on demand through their
+	// shared batched loaders so ?include= carries the full resource (station label type/size, the
+	// department's real name), not a stub built from the production-step projection.
+	if s.ScanningStation != nil && s.ScanningStation.Id != "" {
+		meta.Set(constants.ObjectTypeProductionStep, s.Id, "scanning_station_id", s.ScanningStation.Id)
 	}
 
 	if s.DepartmentId != nil && *s.DepartmentId != "" {
-		meta.Set(constants.ObjectTypeProductionStep, s.Id, "department", &apiresource.Department{
-			ID:        *s.DepartmentId,
-			Object:    constants.ObjectTypeDepartment,
-			Name:      "Department",
-			CreatedAt: stepTS,
-			UpdatedAt: stepTS,
-		})
+		meta.Set(constants.ObjectTypeProductionStep, s.Id, "department_id", *s.DepartmentId)
 	}
 
 	inSteps := make([]apiresource.ProductionStep, len(s.InSteps))

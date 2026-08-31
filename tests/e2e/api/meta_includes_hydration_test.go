@@ -105,41 +105,25 @@ var includeHydrationSkipFields = map[string]bool{
 }
 
 // includeHydrationKnownGaps records, per object type, fields a hydrated include is allowed to differ
-// from the canonical resource on. This is a ledger of pre-existing gaps this guard surfaced, kept
-// green so it can guard against NEW regressions (and the inventory-change-logs item/responsible_user
-// includes it was written for) while the entries below are burned down. Two kinds live here:
+// from the canonical resource on. This is a ledger of gaps this guard surfaced, kept green so it can
+// guard against NEW regressions. The reference-include stubs it originally captured (carrier.code,
+// shipment.priority, sales_order lifecycle timestamps, department.name, customer.relationship_type,
+// scanning_station label fields) have been burned down by migrating each include to its resource's full
+// loader (see registered_inventory_change_log.go). What remains is deliberate:
 //
 //   - computed aggregates: counts/rollups the full retrieve computes but a lightweight reference
 //     include legitimately leaves at its zero value — a real design choice, not a bug.
-//   - reference-include stubs: fields a stored resource carries that its reference include still
-//     synthesizes away. These ARE the item-class bug on other endpoints; migrating each include to
-//     its resource's full loader (see registered_inventory_change_log.go) removes the entry.
+//   - value-object stubs: the freight unit is embedded inline in a Money/Rate value object with
+//     normalized ratios rather than loaded through the unit loader, so it diverges from the canonical
+//     unit. Not a field-drop; a distinct serialization of the same value.
 //
 // Keyed by object type: these are properties of a resource's reference shape, shared across every
 // endpoint that includes it. An empty map (all entries removed) is the goal.
 var includeHydrationKnownGaps = map[string]map[string]string{
 	"supplier":       {"material_count": "computed aggregate; reference include leaves it 0"},
 	"order_discount": {"order_count": "computed aggregate; reference include leaves it 0"},
-	"shipment": {
-		"case_count": "computed aggregate; reference include leaves it 0",
-		"priority":   "reference-include stub: shipment reference drops stored priority",
-	},
-	"sales_order": {
-		"line_count":    "computed aggregate; reference include leaves it 0",
-		"issued_at":     "reference-include stub: order reference drops stored issued_at",
-		"first_ship_at": "reference-include stub: order reference drops stored first_ship_at",
-		"completed_at":  "reference-include stub: order reference drops stored completed_at",
-	},
-	"department": {"name": "reference-include stub: department reference drops stored name"},
-	"customer":   {"relationship_type": "reference-include stub: account reference drops stored relationship_type"},
-	"carrier":    {"code": "reference-include stub: carrier reference drops stored code"},
-	"scanning_station": {
-		"type":       "reference-include stub: scanning-station reference drops stored type",
-		"label_type": "reference-include stub: scanning-station reference drops stored label_type",
-		"label_size": "reference-include stub: scanning-station reference drops stored label_size",
-	},
-	// The freight unit is embedded inline in a Money/Rate value object with normalized ratios rather
-	// than loaded through the unit loader, so its conversion factors diverge from the canonical unit.
+	"shipment":       {"case_count": "computed aggregate; reference include leaves it 0"},
+	"sales_order":    {"line_count": "computed aggregate; reference include leaves it 0"},
 	"unit": {
 		"ratio_numerator":    "value-object stub: freight unit is embedded with normalized ratios",
 		"ratio_denominator":  "value-object stub: freight unit is embedded with normalized ratios",

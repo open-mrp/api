@@ -17,8 +17,20 @@ func init() {
 			{Key: "production", Populate: populateProductionOnProductionStep},
 			{Key: "consumptions", Populate: populateConsumptionsOnProductionStep},
 			{Key: "machines", Populate: populateMachinesOnProductionStep},
-			{Key: "scanning_station", Populate: populateScanningStationOnProductionStep},
-			{Key: "department", Populate: populateDepartmentOnProductionStep},
+			{
+				Key:         "scanning_station",
+				Target:      constants.ObjectTypeScanningStation,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractIDs:  extractScanningStationIDFromProductionStep,
+				Populate:    populateScanningStationOnProductionStep,
+			},
+			{
+				Key:         "department",
+				Target:      constants.ObjectTypeDepartment,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractIDs:  extractDepartmentIDFromProductionStep,
+				Populate:    populateDepartmentOnProductionStep,
+			},
 			{Key: "in_steps", Populate: populateInStepsOnProductionStep},
 			{Key: "out_steps", Populate: populateOutStepsOnProductionStep},
 		},
@@ -63,24 +75,42 @@ func populateMachinesOnProductionStep(ctx context.Context, parent any, _ map[str
 	ps.Machines = v.(*apiresource.List[apiresource.Machine])
 }
 
-func populateScanningStationOnProductionStep(ctx context.Context, parent any, _ map[string]any) {
+func extractScanningStationIDFromProductionStep(ctx context.Context, parent any) []string {
 	ps := parent.(*apiresource.ProductionStep)
-	v, ok := resourcekit.GetLoadMeta(ctx).
-		Get(constants.ObjectTypeProductionStep, ps.ID, "scanning_station")
-	if !ok {
-		return
+	id, _ := resourcekit.GetLoadMeta(ctx).
+		GetString(constants.ObjectTypeProductionStep, ps.ID, "scanning_station_id")
+	if id == "" {
+		return nil
 	}
-	ps.ScanningStation = v.(*apiresource.ScanningStation)
+	return []string{id}
 }
 
-func populateDepartmentOnProductionStep(ctx context.Context, parent any, _ map[string]any) {
+func populateScanningStationOnProductionStep(ctx context.Context, parent any, loaded map[string]any) {
 	ps := parent.(*apiresource.ProductionStep)
-	v, ok := resourcekit.GetLoadMeta(ctx).
-		Get(constants.ObjectTypeProductionStep, ps.ID, "department")
-	if !ok {
-		return
+	id, _ := resourcekit.GetLoadMeta(ctx).
+		GetString(constants.ObjectTypeProductionStep, ps.ID, "scanning_station_id")
+	if v, ok := loaded[id]; ok {
+		ps.ScanningStation = v.(*apiresource.ScanningStation)
 	}
-	ps.Department = v.(*apiresource.Department)
+}
+
+func extractDepartmentIDFromProductionStep(ctx context.Context, parent any) []string {
+	ps := parent.(*apiresource.ProductionStep)
+	id, _ := resourcekit.GetLoadMeta(ctx).
+		GetString(constants.ObjectTypeProductionStep, ps.ID, "department_id")
+	if id == "" {
+		return nil
+	}
+	return []string{id}
+}
+
+func populateDepartmentOnProductionStep(ctx context.Context, parent any, loaded map[string]any) {
+	ps := parent.(*apiresource.ProductionStep)
+	id, _ := resourcekit.GetLoadMeta(ctx).
+		GetString(constants.ObjectTypeProductionStep, ps.ID, "department_id")
+	if v, ok := loaded[id]; ok {
+		ps.Department = v.(*apiresource.Department)
+	}
 }
 
 func populateInStepsOnProductionStep(ctx context.Context, parent any, _ map[string]any) {

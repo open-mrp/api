@@ -67,3 +67,37 @@ func TestProductionSteps_IncludeMachines(t *testing.T) {
 	got := parseJSON(body)
 	assert.NotNil(t, got["machines"], "machines should be present with ?include=machines")
 }
+
+// The department and scanning_station includes must carry the full resource, not a stub built from the
+// production-step projection: that projection hardcoded the department name to the literal "Department"
+// and dropped the station's label type/size, so a stub returns those wrong or null even though the
+// station and department store real values. See TestIncludes_HydratedToOneMatchesCanonical for the
+// cross-endpoint guard.
+func TestProductionSteps_IncludeDepartmentAndScanningStationHydrated(t *testing.T) {
+	t.Parallel()
+	id := SeedSewLargeProductionStepID
+
+	status, body, err := apiClient.GetListRaw(productionStepsPath+"/"+id, url.Values{"include": {"department", "scanning_station"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	got := parseJSON(body)
+
+	dept := jsonObject(got, "department")
+	require.NotNil(t, dept, "department should be present with ?include=department")
+	assert.Equal(t, "department", jsonField(dept, "object"))
+	assert.NotEmpty(t, jsonField(dept, "id"))
+	assert.Equal(t, "Sewing", jsonField(dept, "name"),
+		"the included department carries its real name, not the hardcoded \"Department\" stub")
+
+	station := jsonObject(got, "scanning_station")
+	require.NotNil(t, station, "scanning_station should be present with ?include=scanning_station")
+	assert.Equal(t, "scanning_station", jsonField(station, "object"))
+	assert.NotEmpty(t, jsonField(station, "id"))
+	assert.Equal(t, "move_batch", jsonField(station, "type"),
+		"the included station carries its real type, not the init_batch stub default")
+	assert.Equal(t, "tag", jsonField(station, "label_type"),
+		"the included station carries its label_type, not a partial stub")
+	assert.Equal(t, "1x4", jsonField(station, "label_size"),
+		"the included station carries its label_size, not a partial stub")
+}

@@ -59,6 +59,7 @@ func (m *inventoryChangeLogSvcImpl) ListInventoryChangeLogs(ctx context.Context,
 		ItemIds:          req.ItemIDs,
 		ActionTypeCodes:  actionTypeStrings(req.ActionTypes),
 		ChangedByUserIds: req.ChangedByUserIDs,
+		SearchQuery:      req.Query,
 	}
 
 	if req.StartsAt != nil {

@@ -262,17 +262,49 @@ func TestInventoryChangeLogs_ListRejectsAnUnknownQueryParam(t *testing.T) {
 	assertUnknownQueryParamRejected(t, inventoryChangeLogsPath, status, body)
 }
 
-// The log is filtered by item, action type, user and date rather than searched: `q` is not a
-// parameter here, and a caller sending one is told so rather than silently getting a full page.
-func TestInventoryChangeLogs_ListTakesNoSearchTerm(t *testing.T) {
+// `q` searches the affected item's SKU, so a fixture's exact SKU returns that fixture's log and
+// excludes the other.
+func TestInventoryChangeLogs_SearchesByItemSKU(t *testing.T) {
 	t.Parallel()
 
-	status, body, err := apiClient.GetListRaw(inventoryChangeLogsPath, url.Values{"q": {"SCK-001"}})
-	require.NoError(t, err)
-	require.Less(t, status, 500, "a search term must not 5xx: %s", string(body))
-	require.Equal(t, 400, status, "q is not a parameter on this endpoint: %s", string(body))
-	errObj := requireErrorResponse(t, body, "parameter_unknown", "invalid_request_error")
-	assert.Equal(t, "q", errObj["param"], "the error names the parameter it rejected")
+	matched := inventoryChangeLogIDsFiltered(t, url.Values{"q": {SeedItemSKU}})
+	assert.Contains(t, matched, SeedInventoryChangeLogID, "SCK-001's log matches its own SKU")
+	assert.NotContains(t, matched, SeedInventoryChangeLog2ID, "SCK-002's log does not match SCK-001")
+}
+
+// The match is a substring anywhere in the SKU, not a prefix: a fragment that sits at the tail of one
+// fixture's SKU and nowhere in the other still separates them.
+func TestInventoryChangeLogs_SearchMatchesSKUSubstring(t *testing.T) {
+	t.Parallel()
+
+	matched := inventoryChangeLogIDsFiltered(t, url.Values{"q": {"001"}})
+	assert.Contains(t, matched, SeedInventoryChangeLogID, `"001" is a substring of SCK-001`)
+	assert.NotContains(t, matched, SeedInventoryChangeLog2ID, `SCK-002 does not contain "001"`)
+}
+
+// A SKU no item carries narrows the list to nothing rather than being ignored.
+func TestInventoryChangeLogs_SearchWithNoSKUMatchIsEmpty(t *testing.T) {
+	t.Parallel()
+
+	assert.Empty(t, inventoryChangeLogIDsFiltered(t, url.Values{"q": {"zzz-no-such-sku-e2e"}}),
+		"an unmatched SKU search returns no rows")
+}
+
+// SKU search intersects with the other filters rather than widening them: a SKU paired with an item
+// it does not belong to matches nothing even though each half matches on its own.
+func TestInventoryChangeLogs_SearchCombinesWithItemFilter(t *testing.T) {
+	t.Parallel()
+
+	assert.Empty(t, inventoryChangeLogIDsFiltered(t, url.Values{
+		"q":        {SeedItemSKU},
+		"item_ids": {SeedInventoryChangeLog2ItemID},
+	}), "SCK-001's SKU paired with SCK-002's item satisfies neither row")
+
+	both := inventoryChangeLogIDsFiltered(t, url.Values{
+		"q":        {SeedItemSKU},
+		"item_ids": {SeedInventoryChangeLogItemID},
+	})
+	assert.Contains(t, both, SeedInventoryChangeLogID, "the SKU and the item agree on SCK-001's log")
 }
 
 func TestInventoryChangeLogs_ListRejectsAnOutOfRangeLimit(t *testing.T) {

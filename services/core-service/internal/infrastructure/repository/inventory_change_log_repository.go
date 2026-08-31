@@ -177,6 +177,26 @@ func (r *inventoryChangeLogRepoImpl) List(ctx context.Context, params domain.Lis
 		dir = *cursorDir
 	}
 
+	// A SKU search resolves to the account's matching item IDs, which fold into the existing item_id
+	// filter — the same predicate the list is already indexed for — rather than joining item.sku into
+	// the listing query, where a MATCH would fight the STRAIGHT_JOIN that pins inventory_change_log as
+	// the driving table. When the term matches no SKU (or none that also satisfies an explicit item_ids
+	// filter), the page is empty without touching inventory_change_log at all.
+	if params.Query != nil && *params.Query != "" {
+		skuItemIDs, apiErr := r.resolveSKUItemIDs(ctx, params.AccountID, params.Query)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		if len(params.ItemIDs) > 0 {
+			skuItemIDs = intersectStrings(params.ItemIDs, skuItemIDs)
+		}
+		if len(skuItemIDs) == 0 {
+			result, pageInfo := pagination.BuildPageString(nil, params.Limit, cursorDir, iclCreatedAt, iclID)
+			return &domain.ListInventoryChangeLogsResult{Items: result, PageInfo: pageInfo}, nil
+		}
+		params.ItemIDs = skuItemIDs
+	}
+
 	query, args := buildICLListQuery(params, dir, cursorCreatedAt, cursorID, params.Limit+1)
 
 	rows, err := r.queries.DB().QueryContext(ctx, query, args...)
@@ -192,6 +212,49 @@ func (r *inventoryChangeLogRepoImpl) List(ctx context.Context, params domain.Lis
 
 	result, pageInfo := pagination.BuildPageString(items, params.Limit, cursorDir, iclCreatedAt, iclID)
 	return &domain.ListInventoryChangeLogsResult{Items: result, PageInfo: pageInfo}, nil
+}
+
+// resolveSKUItemIDs returns the account's item IDs whose SKU matches the search term. Terms long enough
+// for an ngram token use the ngram FULLTEXT index for substring matching; shorter terms fall back to LIKE.
+func (r *inventoryChangeLogRepoImpl) resolveSKUItemIDs(ctx context.Context, accountID string, query *string) ([]string, *apierror.APIError) {
+	search := db.NewNgramSearch(query)
+
+	var ids []string
+	var err error
+	switch {
+	case search.Fulltext.Valid:
+		ids, err = r.queries.SearchItemIDsBySKUFulltext(ctx, sqlc.SearchItemIDsBySKUFulltextParams{
+			AccountID:   accountID,
+			SearchQuery: search.Fulltext,
+		})
+	case search.Like.Valid:
+		ids, err = r.queries.SearchItemIDsBySKULike(ctx, sqlc.SearchItemIDsBySKULikeParams{
+			AccountID: accountID,
+			LikeQuery: search.Like,
+		})
+	default:
+		// A non-empty term always yields a fulltext phrase or a LIKE fallback; guard the empty case anyway.
+		return nil, nil
+	}
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, apiErr
+	}
+	return ids, nil
+}
+
+// intersectStrings returns the values present in both slices, preserving the order of a.
+func intersectStrings(a, b []string) []string {
+	set := make(map[string]struct{}, len(b))
+	for _, v := range b {
+		set[v] = struct{}{}
+	}
+	var out []string
+	for _, v := range a {
+		if _, ok := set[v]; ok {
+			out = append(out, v)
+		}
+	}
+	return out
 }
 
 func (r *inventoryChangeLogRepoImpl) Get(ctx context.Context, accountID, id string) (*domain.InventoryChangeLog, *apierror.APIError) {

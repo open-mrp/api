@@ -78,6 +78,7 @@ func (h *gRPCHandler) ListInventoryChangeLogs(ctx context.Context, req *pb.ListI
 		ItemIDs:          req.ItemIds,
 		ActionTypeCodes:  req.ActionTypeCodes,
 		ChangedByUserIDs: req.ChangedByUserIds,
+		Query:            req.SearchQuery,
 	}
 
 	if startDate != nil {

@@ -3989,8 +3989,10 @@ type ListInventoryChangeLogsRequest struct {
 	ChangedByUserIds []string               `protobuf:"bytes,6,rep,name=changed_by_user_ids,json=changedByUserIds,proto3" json:"changed_by_user_ids,omitempty"`
 	StartDate        *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=start_date,json=startDate,proto3,oneof" json:"start_date,omitempty"`
 	EndDate          *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=end_date,json=endDate,proto3,oneof" json:"end_date,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Substring match on the affected item's SKU.
+	SearchQuery   *string `protobuf:"bytes,9,opt,name=search_query,json=searchQuery,proto3,oneof" json:"search_query,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListInventoryChangeLogsRequest) Reset() {
@@ -4070,6 +4072,13 @@ func (x *ListInventoryChangeLogsRequest) GetEndDate() *timestamppb.Timestamp {
 		return x.EndDate
 	}
 	return nil
+}
+
+func (x *ListInventoryChangeLogsRequest) GetSearchQuery() string {
+	if x != nil && x.SearchQuery != nil {
+		return *x.SearchQuery
+	}
+	return ""
 }
 
 type ListInventoryChangeLogsResponse struct {
@@ -5616,7 +5625,7 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\x1c_scanning_station_created_atB\x1e\n" +
 	"\x1c_scanning_station_updated_atB\x1e\n" +
 	"\x1c_responsible_user_created_atB\x1e\n" +
-	"\x1c_responsible_user_updated_at\"\xf2\x02\n" +
+	"\x1c_responsible_user_updated_at\"\xab\x03\n" +
 	"\x1eListInventoryChangeLogsRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
@@ -5625,10 +5634,12 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\x13changed_by_user_ids\x18\x06 \x03(\tR\x10changedByUserIds\x12>\n" +
 	"\n" +
 	"start_date\x18\a \x01(\v2\x1a.google.protobuf.TimestampH\x01R\tstartDate\x88\x01\x01\x12:\n" +
-	"\bend_date\x18\b \x01(\v2\x1a.google.protobuf.TimestampH\x02R\aendDate\x88\x01\x01B\t\n" +
+	"\bend_date\x18\b \x01(\v2\x1a.google.protobuf.TimestampH\x02R\aendDate\x88\x01\x01\x12&\n" +
+	"\fsearch_query\x18\t \x01(\tH\x03R\vsearchQuery\x88\x01\x01B\t\n" +
 	"\a_cursorB\r\n" +
 	"\v_start_dateB\v\n" +
-	"\t_end_dateJ\x04\b\x03\x10\x04\"\xa0\x01\n" +
+	"\t_end_dateB\x0f\n" +
+	"\r_search_queryJ\x04\b\x03\x10\x04\"\xa0\x01\n" +
 	"\x1fListInventoryChangeLogsResponse\x12P\n" +
 	"\x15inventory_change_logs\x18\x01 \x03(\v2\x1c.core.InventoryChangeLogInfoR\x13inventoryChangeLogs\x12+\n" +
 	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\".\n" +

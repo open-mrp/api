@@ -89,8 +89,12 @@ type overDrawnReceipt struct {
 	SKU           string
 	ReceiptBase   decimal.Decimal
 	AllocatedBase decimal.Decimal
-	// MixedUnits marks a receipt carrying an allocation stamped in a different unit from its own.
-	// Such a receipt is reported and skipped, never repaired — see skipMixedUnitsNote.
+	// MixedUnits marks a receipt carrying an allocation stamped in a different unit from its own AND
+	// inconsistent with it — the row alone covers more than the order it is against, which is the
+	// mislabel signature. A differing unit on its own means nothing: the dashboard's allocator records
+	// a draw in whichever unit bounded it, so a draw limited by the issue is written in the issue's
+	// unit with a value to match. Skipping on the unit alone left genuinely over-drawn receipts
+	// unrepaired. Reported and skipped, never repaired — see skipMixedUnitsNote.
 	MixedUnits bool
 	// Oversized marks a receipt carrying a single allocation larger than the whole receipt. Also
 	// reported and skipped — see skipOversizedNote.
@@ -312,9 +316,9 @@ func findOverDrawnReceipts(ctx context.Context, sqlDB *sql.DB, accountID, itemID
 		filterParams = append(filterParams, itemID)
 	}
 
-	// Bound by position in the SQL text, not by role: the `oversized` subquery's epsilon sits in the
-	// SELECT list and so binds before the derived table's filters, and the overshoot epsilon last.
-	params := append([]any{eps.String()}, filterParams...)
+	// Bound by position in the SQL text, not by role: the `mixed_units` and `oversized` subqueries sit
+	// in the SELECT list and so bind before the derived table's filters, and the overshoot last.
+	params := append([]any{eps.String(), eps.String()}, filterParams...)
 
 	// The filters are applied inside the grouped subquery as well as outside it: without them the
 	// aggregate covers every allocation in the database and the join throws all but a handful away.
@@ -328,7 +332,14 @@ SELECT ir.id, ir.item_id, i.sku,
        EXISTS (
            SELECT 1 FROM inventory_allocation ia3
            JOIN quantity aq3 ON aq3.id = ia3.quantity_id
-           WHERE ia3.inventory_receipt_id = ir.id AND aq3.unit_id <> q.unit_id
+           JOIN unit au3 ON au3.id = aq3.unit_id
+           JOIN inventory_issue ii3 ON ii3.id = ia3.inventory_issue_id
+           JOIN quantity iq3 ON iq3.id = ii3.quantity_id
+           JOIN unit iu3 ON iu3.id = iq3.unit_id
+           WHERE ia3.inventory_receipt_id = ir.id
+             AND aq3.unit_id <> q.unit_id
+             AND CAST(aq3.value AS DECIMAL(65,30)) * (au3.ratio_numerator / au3.ratio_denominator)
+                 > CAST(iq3.value AS DECIMAL(65,30)) * (iu3.ratio_numerator / iu3.ratio_denominator) + ?
        ) AS mixed_units,
        EXISTS (
            SELECT 1 FROM inventory_allocation ia4
@@ -622,7 +633,7 @@ const worstOffenderLines = 20
 // rule that recovers the intent, and the obvious one — restamp the allocation with the receipt's unit
 // — is only right where the raw values already agree.
 const skipMixedUnitsNote = `
-  NOT REPAIRED — these receipts carry an allocation stamped in a unit other than their own.
+  NOT REPAIRED — these receipts carry an allocation whose unit and value disagree.
   The allocator writes every allocation in its receipt's unit, so a differing unit means the row came
   from somewhere else with the wrong label and the overshoot is the ratio between the two labels, not
   missing stock. The draws themselves are real. Deleting them would remove allocations that happened

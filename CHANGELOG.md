@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.2](https://github.com/open-mrp/api/compare/v2.3.1...v2.3.2) (2026-08-31)
+
+
+### Bug Fixes
+
+* **inventory-change-logs:** hydrate item/responsible_user includes via full loaders ([#103](https://github.com/open-mrp/api/issues/103)) ([61009a4](https://github.com/open-mrp/api/commit/61009a452eef222c7a1ac8d202a5e05364e704de))
+
 ## [2.3.1](https://github.com/open-mrp/api/compare/v2.3.0...v2.3.1) (2026-08-31)
 
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.3](https://github.com/open-mrp/api/compare/v2.3.2...v2.3.3) (2026-08-31)
+
+
+### Bug Fixes
+
+* **api-gateway:** hydrate carrier/shipment/order/department/scanning-station/recipient includes via full loaders ([#106](https://github.com/open-mrp/api/issues/106)) ([b7ded11](https://github.com/open-mrp/api/commit/b7ded111e8436b57376ec2bdeff23ea013f3bf23))
+
 ## [2.3.2](https://github.com/open-mrp/api/compare/v2.3.1...v2.3.2) (2026-08-31)
 
 

@@ -247,6 +247,7 @@ type AccountRelation struct {
 	ID                       string
 	OwnerAccountID           string
 	CounterpartyAccountID    string
+	AccountRelationRoleCode  string
 	ExternalNumber           string
 	IsEdiEnabled             bool
 	StripeCustomerID         sql.NullString
@@ -259,23 +260,22 @@ type AccountRelation struct {
 	Alias                    sql.NullString
 	DefaultBillingAddressID  sql.NullString
 	DefaultShippingAddressID sql.NullString
+	CommissionStatusCode     sql.NullString
+	FreightStatusCode        sql.NullString
 	DefaultCarrierID         sql.NullString
 	DefaultCarrierOptionID   sql.NullString
 	DefaultSalesRepID        sql.NullString
+	AccountStatusCode        sql.NullString
 	PaymentTermID            sql.NullString
 	AccountGroupID           sql.NullString
+	PriorityCode             string
 	ShippingTermID           sql.NullString
+	CarrierBillingType       sql.NullString
 	CarrierBillingAccount    sql.NullString
 	CreditLimitID            sql.NullString
 	DefaultLeadTimeDays      sql.NullInt32
-	ReceiveCalendarID        sql.NullString
-	AccountRelationRoleCode  string
-	PriorityCode             string
-	AccountStatusCode        sql.NullString
-	CommissionStatusCode     sql.NullString
-	FreightStatusCode        sql.NullString
 	FulfillmentPolicyCode    sql.NullString
-	CarrierBillingType       sql.NullString
+	ReceiveCalendarID        sql.NullString
 }
 
 type AccountRelationNotificationPreference struct {
@@ -530,12 +530,12 @@ type ChangeLog struct {
 	ID                string
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
+	ActionTypeCode    string
 	Description       string
 	ResponsibleUserID sql.NullString
 	AccountID         string
-	RecordID          string
-	ActionTypeCode    string
 	ModelType         string
+	RecordID          string
 }
 
 type Color struct {
@@ -755,15 +755,14 @@ type EdiTransmission struct {
 }
 
 type EmailDomain struct {
-	ID             string
-	AccountID      string
-	Domain         string
-	Status         string
-	DkimTokens     json.RawMessage
-	VerifiedAt     sql.NullTime
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
-	MailFromDomain sql.NullString
+	ID         string
+	AccountID  string
+	Domain     string
+	Status     string
+	DkimTokens json.RawMessage
+	VerifiedAt sql.NullTime
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
 }
 
 type EmailInbox struct {
@@ -819,17 +818,6 @@ type EmailRecipient struct {
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 	EmailLogID sql.NullString
-}
-
-type EmailSender struct {
-	ID            string
-	AccountID     string
-	EmailDomainID string
-	LocalPart     string
-	FromName      sql.NullString
-	ReplyTo       sql.NullString
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
 }
 
 type ErrorLog struct {
@@ -974,13 +962,13 @@ type InventoryChangeLog struct {
 	ID                string
 	ItemID            string
 	QuantityID        string
+	ActionTypeCode    string
 	ScanningStationID sql.NullString
 	CreatedAt         time.Time
 	AccountID         string
 	InventoryLogID    sql.NullString
 	UpdatedAt         time.Time
 	ResponsibleUserID sql.NullString
-	ActionTypeCode    string
 }
 
 type InventoryIssue struct {
@@ -992,10 +980,10 @@ type InventoryIssue struct {
 	IssuedAt          sql.NullTime
 	OrderID           sql.NullString
 	BatchID           sql.NullString
+	StatusCode        string
 	QuantityID        string
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
-	StatusCode        string
 }
 
 type InventoryLog struct {
@@ -1027,9 +1015,9 @@ type InventoryReceipt struct {
 	UnitCostID        string
 	OrderID           sql.NullString
 	BatchID           sql.NullString
+	StatusCode        string
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
-	StatusCode        string
 }
 
 type InventoryReceiptStatus struct {
@@ -1083,10 +1071,10 @@ type Item struct {
 	UnitValueID    string
 	BurnRateID     string
 	AccountID      string
+	ItemTypeCode   string
 	UnitCostID     string
 	ItemCategoryID string
 	IsDirty        bool
-	ItemTypeCode   string
 }
 
 type ItemAttribute struct {
@@ -1515,21 +1503,21 @@ type PaymentTermsRegistrationFlow struct {
 
 type Permission struct {
 	ID                  string
+	Code                string
 	Name                string
 	Description         sql.NullString
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
-	Code                string
 	PermissionGroupCode string
 }
 
 type PermissionGroup struct {
 	ID          string
+	Code        string
 	Name        string
 	Description sql.NullString
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
-	Code        string
 }
 
 type Pick struct {
@@ -2088,10 +2076,13 @@ type RequestLog struct {
 	ApiVersion           sql.NullString
 	AccountID            sql.NullString
 	ActorID              sql.NullString
+	ActorType            sql.NullString
+	IdentityType         sql.NullString
 	ClientIp             sql.NullString
 	ClientIpString       sql.NullString
 	UserAgent            sql.NullString
 	Referrer             sql.NullString
+	ErrorCode            sql.NullString
 	ErrorMessage         sql.NullString
 	CreatedAt            time.Time
 	OccurredAt           time.Time
@@ -2100,9 +2091,6 @@ type RequestLog struct {
 	InternalErrorMessage sql.NullString
 	TraceID              sql.NullString
 	Hidden               bool
-	ErrorCode            sql.NullString
-	IdentityType         sql.NullString
-	ActorType            sql.NullString
 }
 
 type Role struct {
@@ -2121,9 +2109,9 @@ type RolePermission struct {
 	Update         bool
 	Delete         bool
 	RoleID         string
+	PermissionCode string
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
-	PermissionCode string
 }
 
 type RoleType struct {
@@ -2144,9 +2132,13 @@ type SalesOrder struct {
 	IsAcknowledgmentSent   bool
 	CarrierID              sql.NullString
 	CarrierOptionID        sql.NullString
+	CarrierBillingType     sql.NullString
 	CarrierBillingAccount  sql.NullString
+	PriorityCode           string
 	SalesRepID             sql.NullString
 	ShippingTermID         sql.NullString
+	SalesOrderStatusCode   string
+	SalesOrderTypeCode     string
 	PaymentTermID          sql.NullString
 	ProductionRunID        sql.NullString
 	OrderDiscountID        sql.NullString
@@ -2169,10 +2161,6 @@ type SalesOrder struct {
 	LeadTimeOverrideDays   sql.NullInt32
 	ShipByCutoffAt         sql.NullTime
 	ShipByOverrideDate     sql.NullTime
-	SalesOrderTypeCode     string
-	SalesOrderStatusCode   string
-	PriorityCode           string
-	CarrierBillingType     sql.NullString
 }
 
 type SalesOrderLine struct {
@@ -2289,11 +2277,11 @@ type Shipment struct {
 	ShippingAddressID    string
 	ShippedByID          sql.NullString
 	SalesOrderID         string
+	ShipmentStatusCode   string
 	AccountID            string
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
 	MasterTrackingNumber sql.NullString
-	ShipmentStatusCode   string
 }
 
 type ShipmentLine struct {
@@ -2463,17 +2451,17 @@ type Transaction struct {
 	CustomerAccountID     string
 	AmountID              string
 	Note                  sql.NullString
+	TransactionMethodCode sql.NullString
+	TransactionTypeCode   string
 	IsFullyAllocated      bool
 	ResponsibleUserID     sql.NullString
 	AccountID             string
 	CreatedAt             time.Time
 	UpdatedAt             time.Time
+	AdjustmentTypeCode    sql.NullString
 	StripePaymentID       sql.NullString
 	FundsReceivedAt       sql.NullTime
 	Number                string
-	TransactionTypeCode   string
-	TransactionMethodCode sql.NullString
-	AdjustmentTypeCode    sql.NullString
 }
 
 type TransactionAllocation struct {

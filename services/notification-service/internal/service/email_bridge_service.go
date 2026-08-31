@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"net/mail"
 	"strings"
 
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
@@ -33,6 +34,29 @@ func (s *emailBridgeSvcImpl) accountID(ctx context.Context) (string, *apierror.A
 		return "", apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required.")
 	}
 	return identity.Target.AccountID, nil
+}
+
+// ensureMailFromDomain points the identity's envelope Return-Path at a subdomain the customer controls and records which subdomain was chosen. DKIM alone leaves the Return-Path on amazonses.com, and mail clients annotate a sender whose Return-Path domain does not match its From domain — so without this a merchant's mail arrives as "orders@theirdomain.com via amazonses.com" however well it is signed.
+//
+// A no-op once one is configured. The SES call is best-effort: SES falls back to the default Return-Path until the customer publishes the records, so a failure here costs the annotation rather than the domain. Both CreateDomain and VerifyDomain route through here, so a domain that missed it — registered before this existed, or failed at creation — is repaired by verifying again. Failing to persist the result is NOT swallowed: that would leave SES and the database disagreeing about which subdomain the customer has to publish.
+func (s *emailBridgeSvcImpl) ensureMailFromDomain(ctx context.Context, domainID, accountID, domainName string, existing *string) *apierror.APIError {
+	if existing != nil && *existing != "" {
+		return nil
+	}
+	records, apiErr := s.identityProvider.SetMailFromDomain(ctx, domainName, domain.MailFromSubdomain(domainName))
+	if apiErr != nil {
+		return nil
+	}
+	return s.repoFactory.NewEmailDomainRepo().SetMailFromDomain(ctx, domainID, accountID, records.Subdomain)
+}
+
+// reloadDomain re-reads a domain and renders its DNS records. Verify writes to the row before returning it (marking it verified, configuring MAIL FROM), so the copy read at the top of the call is already stale.
+func (s *emailBridgeSvcImpl) reloadDomain(ctx context.Context, domainID, accountID string) (*domain.EmailDomain, *apierror.APIError) {
+	dom, apiErr := s.repoFactory.NewEmailDomainRepo().GetByID(ctx, domainID, accountID)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	return s.withMailFromRecords(dom), nil
 }
 
 // withMailFromRecords fills in the DNS records the customer publishes for the domain's envelope Return-Path. Rendered on every read rather than stored, because the MX host names the SES region and a stored copy would go stale if that ever moved.
@@ -77,15 +101,8 @@ func (s *emailBridgeSvcImpl) CreateDomain(ctx context.Context, domainName string
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// Point the envelope Return-Path at a subdomain the customer controls. DKIM alone leaves the Return-Path
-	// on amazonses.com, and mail clients annotate a sender whose Return-Path domain does not match its From
-	// domain — so without this a merchant's mail arrives as "orders@theirdomain.com via amazonses.com".
-	// Best-effort: SES falls back to the default Return-Path until the records are published, so a failure
-	// here costs the annotation, not the domain, and the customer can retry through VerifyDomain.
-	if records, apiErr := s.identityProvider.SetMailFromDomain(ctx, domainName, domain.MailFromSubdomain(domainName)); apiErr == nil {
-		if apiErr := s.repoFactory.NewEmailDomainRepo().SetMailFromDomain(ctx, domainID, accountID, records.Subdomain); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
+	if apiErr := s.ensureMailFromDomain(ctx, domainID, accountID, domainName, nil); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 
 	dom, apiErr := s.repoFactory.NewEmailDomainRepo().GetByID(ctx, domainID, accountID)
@@ -137,24 +154,27 @@ func (s *emailBridgeSvcImpl) VerifyDomain(ctx context.Context, domainID string) 
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
+	// Verify doubles as the repair path for the best-effort MAIL FROM setup in CreateDomain: a domain
+	// registered before custom MAIL FROM existed, or one whose SES call failed at creation, would
+	// otherwise keep the amazonses.com Return-Path forever with no way to fix it through the API.
+	if apiErr := s.ensureMailFromDomain(ctx, domainID, accountID, dom.Domain, dom.MailFromDomain); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
 	if dom.Status == domain.EmailDomainStatusVerified {
-		return s.withMailFromRecords(dom), nil
+		return s.reloadDomain(ctx, domainID, accountID)
 	}
 	verified, apiErr := s.identityProvider.DomainVerified(ctx, dom.Domain)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if !verified {
-		return s.withMailFromRecords(dom), nil
+		return s.reloadDomain(ctx, domainID, accountID)
 	}
 	if apiErr := s.repoFactory.NewEmailDomainRepo().MarkVerified(ctx, domainID, accountID); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	verifiedDomain, apiErr := s.repoFactory.NewEmailDomainRepo().GetByID(ctx, domainID, accountID)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	return s.withMailFromRecords(verifiedDomain), nil
+	return s.reloadDomain(ctx, domainID, accountID)
 }
 
 func (s *emailBridgeSvcImpl) DeleteDomain(ctx context.Context, domainID string) *apierror.APIError {
@@ -351,6 +371,22 @@ func (s *emailBridgeSvcImpl) SetSender(ctx context.Context, input domain.UpsertA
 		return nil, tracing.Trace(span, apierror.NewParameterInvalidError("A valid mailbox name is required, for example \"orders\".", "local_part"))
 	}
 
+	// The display name is written into a header of every merchant-facing message. A control character there is never legitimate and is how header injection starts, so it is refused at the door rather than only neutralized at render time.
+	if input.FromName != nil {
+		trimmed := strings.TrimSpace(*input.FromName)
+		if containsControlChar(trimmed) {
+			return nil, tracing.Trace(span, apierror.NewParameterInvalidError("The display name cannot contain line breaks or control characters.", "from_name"))
+		}
+		input.FromName = &trimmed
+	}
+	if input.ReplyTo != nil {
+		trimmed := strings.TrimSpace(*input.ReplyTo)
+		if trimmed != "" && !isValidEmailAddress(trimmed) {
+			return nil, tracing.Trace(span, apierror.NewParameterInvalidError("A valid reply-to email address is required.", "reply_to"))
+		}
+		input.ReplyTo = &trimmed
+	}
+
 	// The domain has to be this account's, and verified — SES rejects an identity it has not confirmed, so accepting an unverified one here would bounce every merchant email later instead of failing now.
 	dom, apiErr := s.repoFactory.NewEmailDomainRepo().GetByID(ctx, input.EmailDomainID, accountID)
 	if apiErr != nil {
@@ -405,4 +441,20 @@ func isValidLocalPart(localPart string) bool {
 		}
 	}
 	return true
+}
+
+// containsControlChar reports whether s holds a C0/C7F control character. CR and LF are the dangerous ones — they end a header — but no control character belongs in a display name, so the whole class is refused.
+func containsControlChar(s string) bool {
+	for _, r := range s {
+		if r < 0x20 || r == 0x7f {
+			return true
+		}
+	}
+	return false
+}
+
+// isValidEmailAddress reports whether s parses as a single RFC 5322 address. Reply-To is echoed into a header on every merchant send, so it is parsed rather than pattern-matched: mail.ParseAddress rejects the embedded newlines and stray angle brackets a regex tends to let through.
+func isValidEmailAddress(s string) bool {
+	addr, err := mail.ParseAddress(s)
+	return err == nil && addr.Address == s
 }

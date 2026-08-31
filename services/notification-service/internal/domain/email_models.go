@@ -1,6 +1,9 @@
 package domain
 
-import "time"
+import (
+	"net/mail"
+	"time"
+)
 
 // Email inbox bridge domain models. An EmailDomain is a customer-owned domain verified with SES via DKIM; an EmailInbox is a routable address on that domain; an EmailMessage is the per-rfc822-message ledger row that threads inbound/outbound mail onto a conversation and dedupes redelivery.
 
@@ -61,11 +64,13 @@ func (s *AccountEmailSender) Address() string {
 }
 
 // FromHeader renders the RFC 5322 From value. SES accepts a display name in Source, and the display name is what a mail client shows in the sender column, so an account that set one gets its own name there rather than a bare address.
+//
+// The name is account-supplied and lands in a header of a raw MIME message, so it goes through mail.Address rather than string concatenation: that quotes the specials RFC 5322 reserves, escapes embedded quotes, and encodes any control character — so a name carrying CR/LF cannot terminate the header and inject one of its own. SetSender rejects such names up front; this is the second line of defense, because it is the one every send passes through.
 func (s *AccountEmailSender) FromHeader() string {
 	if s.FromName == nil || *s.FromName == "" {
 		return s.Address()
 	}
-	return *s.FromName + " <" + s.Address() + ">"
+	return (&mail.Address{Name: *s.FromName, Address: s.Address()}).String()
 }
 
 // Usable reports whether mail may be sent as this identity. An unverified domain is rejected by SES, so sending under it would bounce every merchant email rather than degrade.

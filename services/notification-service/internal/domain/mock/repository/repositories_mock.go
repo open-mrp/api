@@ -186,6 +186,20 @@ func (mr *MockEmailDomainRepoMockRecorder) MarkVerified(ctx, id, accountID any) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkVerified", reflect.TypeOf((*MockEmailDomainRepo)(nil).MarkVerified), ctx, id, accountID)
 }
 
+// SetMailFromDomain mocks base method.
+func (m *MockEmailDomainRepo) SetMailFromDomain(ctx context.Context, id, accountID, mailFromDomain string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetMailFromDomain", ctx, id, accountID, mailFromDomain)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// SetMailFromDomain indicates an expected call of SetMailFromDomain.
+func (mr *MockEmailDomainRepoMockRecorder) SetMailFromDomain(ctx, id, accountID, mailFromDomain any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetMailFromDomain", reflect.TypeOf((*MockEmailDomainRepo)(nil).SetMailFromDomain), ctx, id, accountID, mailFromDomain)
+}
+
 // UpdateStatus mocks base method.
 func (m *MockEmailDomainRepo) UpdateStatus(ctx context.Context, id, accountID, status string, dkimTokens []string) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -198,6 +212,89 @@ func (m *MockEmailDomainRepo) UpdateStatus(ctx context.Context, id, accountID, s
 func (mr *MockEmailDomainRepoMockRecorder) UpdateStatus(ctx, id, accountID, status, dkimTokens any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateStatus", reflect.TypeOf((*MockEmailDomainRepo)(nil).UpdateStatus), ctx, id, accountID, status, dkimTokens)
+}
+
+// MockAccountEmailSenderRepo is a mock of AccountEmailSenderRepo interface.
+type MockAccountEmailSenderRepo struct {
+	ctrl     *gomock.Controller
+	recorder *MockAccountEmailSenderRepoMockRecorder
+	isgomock struct{}
+}
+
+// MockAccountEmailSenderRepoMockRecorder is the mock recorder for MockAccountEmailSenderRepo.
+type MockAccountEmailSenderRepoMockRecorder struct {
+	mock *MockAccountEmailSenderRepo
+}
+
+// NewMockAccountEmailSenderRepo creates a new mock instance.
+func NewMockAccountEmailSenderRepo(ctrl *gomock.Controller) *MockAccountEmailSenderRepo {
+	mock := &MockAccountEmailSenderRepo{ctrl: ctrl}
+	mock.recorder = &MockAccountEmailSenderRepoMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockAccountEmailSenderRepo) EXPECT() *MockAccountEmailSenderRepoMockRecorder {
+	return m.recorder
+}
+
+// Delete mocks base method.
+func (m *MockAccountEmailSenderRepo) Delete(ctx context.Context, accountID string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", ctx, accountID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockAccountEmailSenderRepoMockRecorder) Delete(ctx, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockAccountEmailSenderRepo)(nil).Delete), ctx, accountID)
+}
+
+// DeleteByDomain mocks base method.
+func (m *MockAccountEmailSenderRepo) DeleteByDomain(ctx context.Context, emailDomainID, accountID string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteByDomain", ctx, emailDomainID, accountID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// DeleteByDomain indicates an expected call of DeleteByDomain.
+func (mr *MockAccountEmailSenderRepoMockRecorder) DeleteByDomain(ctx, emailDomainID, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteByDomain", reflect.TypeOf((*MockAccountEmailSenderRepo)(nil).DeleteByDomain), ctx, emailDomainID, accountID)
+}
+
+// GetByAccount mocks base method.
+func (m *MockAccountEmailSenderRepo) GetByAccount(ctx context.Context, accountID string) (*domain.AccountEmailSender, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByAccount", ctx, accountID)
+	ret0, _ := ret[0].(*domain.AccountEmailSender)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetByAccount indicates an expected call of GetByAccount.
+func (mr *MockAccountEmailSenderRepoMockRecorder) GetByAccount(ctx, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByAccount", reflect.TypeOf((*MockAccountEmailSenderRepo)(nil).GetByAccount), ctx, accountID)
+}
+
+// Upsert mocks base method.
+func (m *MockAccountEmailSenderRepo) Upsert(ctx context.Context, id, accountID string, input *domain.UpsertAccountEmailSenderInput) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Upsert", ctx, id, accountID, input)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Upsert indicates an expected call of Upsert.
+func (mr *MockAccountEmailSenderRepoMockRecorder) Upsert(ctx, id, accountID, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upsert", reflect.TypeOf((*MockAccountEmailSenderRepo)(nil).Upsert), ctx, id, accountID, input)
 }
 
 // MockEmailInboxRepo is a mock of EmailInboxRepo interface.

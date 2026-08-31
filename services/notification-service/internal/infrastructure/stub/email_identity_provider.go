@@ -3,6 +3,7 @@ package stub
 import (
 	"context"
 
+	"github.com/open-mrp/api/services/notification-service/internal/domain"
 	apierror "github.com/open-mrp/api/shared/errors"
 )
 
@@ -19,4 +20,16 @@ func (p *EmailIdentityProvider) DomainVerified(_ context.Context, _ string) (boo
 
 func (p *EmailIdentityProvider) DeleteDomain(_ context.Context, _ string) *apierror.APIError {
 	return nil
+}
+
+func (p *EmailIdentityProvider) SetMailFromDomain(_ context.Context, _, mailFromSubdomain string) (domain.MailFromRecords, *apierror.APIError) {
+	return p.MailFromRecordsFor(mailFromSubdomain), nil
+}
+
+func (p *EmailIdentityProvider) MailFromRecordsFor(mailFromSubdomain string) domain.MailFromRecords {
+	return domain.MailFromRecords{
+		Subdomain: mailFromSubdomain,
+		MXRecord:  "10 feedback-smtp.us-east-1.amazonses.com",
+		SPFRecord: "v=spf1 include:amazonses.com ~all",
+	}
 }

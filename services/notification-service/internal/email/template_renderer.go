@@ -12,7 +12,7 @@ import (
 	"github.com/open-mrp/api/shared/tracing"
 )
 
-//go:embed templates/*.html
+//go:embed templates/*.html templates/partials/*.html
 var templatesFS embed.FS
 
 var templateRendererTracer = tracing.GetTracer("notification-service.email.template_renderer")
@@ -47,13 +47,16 @@ func NewTemplateRenderer() (TemplateRenderer, *apierror.APIError) {
 		constants.EmailTemplateInvoice:                    "templates/invoice_email.html",
 		constants.EmailTemplateOrderAcknowledgement:       "templates/order_acknowledgement_email.html",
 		constants.EmailTemplateOrderCheckout:              "templates/order_checkout.html",
+		constants.EmailTemplatePurchaseOrderSubmission:    "templates/purchase_order_submission.html",
+		constants.EmailTemplateStatementOfAccount:         "templates/statement_of_account.html",
 		constants.EmailTemplateAlreadyRegistered:          "templates/already_registered.html",
 		constants.EmailTemplateChatMessage:                "templates/chat_message.html",
 		constants.EmailTemplateMessageFailureAlert:        "templates/message_failure_alert.html",
 	}
 
+	// The partials carry the shared merchant letterhead and footer, so every merchant-facing email renders the same branding. They hold only {{define}} blocks, and ParseFS names the result after the first file, so the per-template Execute still resolves to the template itself.
 	for templateID, filename := range templateFiles {
-		tmpl, err := template.ParseFS(templatesFS, filename)
+		tmpl, err := template.ParseFS(templatesFS, filename, "templates/partials/*.html")
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, fmt.Sprintf("Failed to parse template %s", filename)))
 		}

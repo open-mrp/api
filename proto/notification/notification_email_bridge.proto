@@ -35,6 +35,14 @@ service EmailBridgeService {
   // DeleteEmailInbox removes an inbox.
   rpc DeleteEmailInbox(DeleteEmailInboxRequest) returns (EmailBridgeAck);
 
+  // GetEmailSender returns the outbound identity the account's merchant-facing mail sends as, or
+  // NOT_FOUND when none is configured (in which case that mail sends from the platform address).
+  rpc GetEmailSender(GetEmailSenderRequest) returns (EmailSenderInfo);
+  // SetEmailSender configures the account's outbound identity on one of its verified domains.
+  rpc SetEmailSender(SetEmailSenderRequest) returns (EmailSenderInfo);
+  // DeleteEmailSender clears the account's outbound identity, returning its mail to the platform address.
+  rpc DeleteEmailSender(DeleteEmailSenderRequest) returns (EmailBridgeAck);
+
   // SendInboxReply sends an agent's outbound email reply through the conversation's bound inbox
   // (SES, threaded under the latest inbound mail) and posts it into the thread. Called by
   // agent-service when an approved send_email tool executes.
@@ -77,6 +85,13 @@ message EmailDomainInfo {
   string domain = 3;
   string status = 4; // pending | verified | failed
   repeated string dkim_tokens = 5;
+  // Envelope Return-Path subdomain (e.g. mail.example.com). Unset for domains registered before custom
+  // MAIL FROM was configured; without it mail clients annotate the sender with "via amazonses.com".
+  optional string mail_from_domain = 9;
+  // DNS records the customer publishes on mail_from_domain for bounce delivery and SPF. Empty when
+  // mail_from_domain is unset.
+  optional string mail_from_mx_record = 10;
+  optional string mail_from_spf_record = 11;
   google.protobuf.Timestamp verified_at = 6;
   google.protobuf.Timestamp created_at = 7;
   google.protobuf.Timestamp updated_at = 8;
@@ -100,6 +115,25 @@ message EmailInboxInfo {
   optional string forwarding_address = 12;
   // Reusable roster (messaging_group) whose members are seated on every new thread this inbox opens.
   optional string group_id = 13;
+}
+
+message EmailSenderInfo {
+  string id = 1;
+  string account_id = 2;
+  string email_domain_id = 3;
+  // Local part of the sending address, e.g. "orders".
+  string local_part = 4;
+  // Full sending address, e.g. "orders@example.com".
+  string address = 5;
+  // Display name shown in a mail client's sender column; unset sends the bare address.
+  optional string from_name = 6;
+  // Where replies land. Unset means the sending address itself.
+  optional string reply_to = 7;
+  string domain = 8;
+  // Verification status of the underlying domain. Mail only sends as this identity while it is verified.
+  string domain_status = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
 }
 
 message CreateEmailDomainRequest {
@@ -157,6 +191,17 @@ message UpdateEmailInboxRequest {
 message DeleteEmailInboxRequest {
   string id = 1;
 }
+
+message GetEmailSenderRequest {}
+
+message SetEmailSenderRequest {
+  string email_domain_id = 1;
+  string local_part = 2;
+  optional string from_name = 3;
+  optional string reply_to = 4;
+}
+
+message DeleteEmailSenderRequest {}
 
 message EmailBridgeAck {
   bool ok = 1;

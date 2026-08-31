@@ -31,6 +31,57 @@ func emailBridgeCtx() context.Context {
 	})
 }
 
+// emailBridgeRelationActorCtx is a customer of the target account — the shape the gateway's coarse
+// permission gate deliberately waves through (APIEndpoint.authorize returns nil for relation actors
+// and defers to the service), so the service is the only thing standing between a counterparty and
+// the merchant's mail configuration.
+func emailBridgeRelationActorCtx() context.Context {
+	buyer := "ac_eb_buyer"
+	return appctx.WithIdentity(context.Background(), &types.Identity{
+		Type:   types.IdentityActorTypeUser,
+		Target: &types.IdentityTarget{AccountID: ebTestAccountID},
+		Actor: &types.IdentityActor{
+			RelationType: types.IdentityRelationTypeCustomer,
+			ID:           "us_eb_buyer",
+			AccountID:    &buyer,
+		},
+	})
+}
+
+// A counterparty must not be able to read or rewrite the merchant's mail configuration. Repointing the
+// sender would send the merchant's invoices and checkout links from — and route their replies to — an
+// address the counterparty controls; registering a domain would seed the identity to do it with.
+func TestEmailBridge_RejectsRelationActors(t *testing.T) {
+	svc := newEmailBridgeSvc(t, repositorymock.NewMockEmailDomainRepo(gomock.NewController(t)), nil, &stubIdentityProvider{verified: true})
+	ctx := emailBridgeRelationActorCtx()
+
+	t.Run("SetSender", func(t *testing.T) {
+		_, apiErr := svc.SetSender(ctx, domain.UpsertAccountEmailSenderInput{EmailDomainID: "emdn_1", LocalPart: "orders"})
+		require.NotNil(t, apiErr)
+		assert.Equal(t, apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+	})
+	t.Run("GetSender", func(t *testing.T) {
+		_, apiErr := svc.GetSender(ctx)
+		require.NotNil(t, apiErr)
+		assert.Equal(t, apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+	})
+	t.Run("DeleteSender", func(t *testing.T) {
+		apiErr := svc.DeleteSender(ctx)
+		require.NotNil(t, apiErr)
+		assert.Equal(t, apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+	})
+	t.Run("CreateDomain", func(t *testing.T) {
+		_, apiErr := svc.CreateDomain(ctx, "attacker.example.com")
+		require.NotNil(t, apiErr)
+		assert.Equal(t, apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+	})
+	t.Run("CreateInbox", func(t *testing.T) {
+		_, apiErr := svc.CreateInbox(ctx, domain.CreateEmailInboxInput{EmailDomainID: "emdn_1", Address: "x@theirco.com"})
+		require.NotNil(t, apiErr)
+		assert.Equal(t, apierror.ErrorCodeInsufficientPerms, apiErr.Code)
+	})
+}
+
 // stubIdentityProvider is a controllable EmailIdentityProvider for service tests.
 type stubIdentityProvider struct {
 	tokens   []string
@@ -49,6 +100,18 @@ func (p *stubIdentityProvider) DeleteDomain(_ context.Context, _ string) *apierr
 	return nil
 }
 
+func (p *stubIdentityProvider) SetMailFromDomain(_ context.Context, _, mailFromSubdomain string) (domain.MailFromRecords, *apierror.APIError) {
+	return p.MailFromRecordsFor(mailFromSubdomain), nil
+}
+
+func (p *stubIdentityProvider) MailFromRecordsFor(mailFromSubdomain string) domain.MailFromRecords {
+	return domain.MailFromRecords{
+		Subdomain: mailFromSubdomain,
+		MXRecord:  "10 feedback-smtp.us-east-1.amazonses.com",
+		SPFRecord: "v=spf1 include:amazonses.com ~all",
+	}
+}
+
 func newEmailBridgeSvc(t *testing.T, domainRepo *repositorymock.MockEmailDomainRepo, inboxRepo *repositorymock.MockEmailInboxRepo, provider domain.EmailIdentityProvider) *emailBridgeSvcImpl {
 	t.Helper()
 	ctrl := gomock.NewController(t)
@@ -58,6 +121,13 @@ func newEmailBridgeSvc(t *testing.T, domainRepo *repositorymock.MockEmailDomainR
 	}
 	if inboxRepo != nil {
 		factory.EXPECT().NewEmailInboxRepo().Return(inboxRepo).AnyTimes()
+	}
+	// CreateDomain records the MAIL FROM subdomain, and DeleteDomain clears any sender bound to the domain; both are incidental to what these tests assert.
+	senderRepo := repositorymock.NewMockAccountEmailSenderRepo(ctrl)
+	senderRepo.EXPECT().DeleteByDomain(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil).AnyTimes()
+	factory.EXPECT().NewAccountEmailSenderRepo().Return(senderRepo).AnyTimes()
+	if domainRepo != nil {
+		domainRepo.EXPECT().SetMailFromDomain(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 	}
 	return &emailBridgeSvcImpl{repoFactory: factory, identityProvider: provider}
 }
@@ -143,12 +213,63 @@ func TestDeleteDomain_DeletesWhenNoInboxes(t *testing.T) {
 
 func TestVerifyDomain_NoFlipWhenSESPending(t *testing.T) {
 	domainRepo := repositorymock.NewMockEmailDomainRepo(gomock.NewController(t))
+	// Verify writes to the row (MAIL FROM) before returning it, so it re-reads rather than returning the copy it started from.
 	domainRepo.EXPECT().GetByID(gomock.Any(), "emdn_1", ebTestAccountID).Return(&domain.EmailDomain{
 		ID: "emdn_1", AccountID: ebTestAccountID, Domain: "theirco.com", Status: domain.EmailDomainStatusPending,
-	}, nil)
+	}, nil).AnyTimes()
 	svc := newEmailBridgeSvc(t, domainRepo, nil, &stubIdentityProvider{verified: false})
 
 	dom, apiErr := svc.VerifyDomain(emailBridgeCtx(), "emdn_1")
 	require.Nil(t, apiErr)
 	assert.Equal(t, domain.EmailDomainStatusPending, dom.Status)
+}
+
+// A domain registered before custom MAIL FROM existed, or one whose SES call failed at creation, keeps the amazonses.com Return-Path — which is what makes a merchant's mail read as "via amazonses.com". Verify is the only retry path a customer has, so it has to repair that rather than only re-poll DKIM.
+func TestVerifyDomain_ConfiguresMissingMailFrom(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	domainRepo := repositorymock.NewMockEmailDomainRepo(ctrl)
+	domainRepo.EXPECT().GetByID(gomock.Any(), "emdn_1", ebTestAccountID).Return(&domain.EmailDomain{
+		ID:     "emdn_1",
+		Domain: "theirco.com",
+		Status: domain.EmailDomainStatusVerified,
+		// No MailFromDomain — the state this repairs.
+	}, nil).AnyTimes()
+	domainRepo.EXPECT().
+		SetMailFromDomain(gomock.Any(), "emdn_1", ebTestAccountID, "mail.theirco.com").
+		Return(nil).
+		Times(1)
+
+	svc := newEmailBridgeSvc(t, nil, nil, &stubIdentityProvider{verified: true})
+	svc.repoFactory = repoFactoryWithDomainRepo(t, ctrl, domainRepo)
+
+	_, apiErr := svc.VerifyDomain(emailBridgeCtx(), "emdn_1")
+	require.Nil(t, apiErr)
+}
+
+// An already-configured domain must not be re-pushed to SES on every verify poll.
+func TestVerifyDomain_LeavesConfiguredMailFromAlone(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	existing := "mail.theirco.com"
+	domainRepo := repositorymock.NewMockEmailDomainRepo(ctrl)
+	domainRepo.EXPECT().GetByID(gomock.Any(), "emdn_1", ebTestAccountID).Return(&domain.EmailDomain{
+		ID: "emdn_1", Domain: "theirco.com", Status: domain.EmailDomainStatusVerified, MailFromDomain: &existing,
+	}, nil).AnyTimes()
+	domainRepo.EXPECT().SetMailFromDomain(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+
+	svc := newEmailBridgeSvc(t, nil, nil, &stubIdentityProvider{verified: true})
+	svc.repoFactory = repoFactoryWithDomainRepo(t, ctrl, domainRepo)
+
+	_, apiErr := svc.VerifyDomain(emailBridgeCtx(), "emdn_1")
+	require.Nil(t, apiErr)
+}
+
+// repoFactoryWithDomainRepo builds a factory over a domain repo whose SetMailFromDomain expectations are the assertion, rather than the permissive AnyTimes() the shared helper installs.
+func repoFactoryWithDomainRepo(t *testing.T, ctrl *gomock.Controller, domainRepo *repositorymock.MockEmailDomainRepo) domain.RepoFactory {
+	t.Helper()
+	factory := factorymock.NewMockRepoFactory(ctrl)
+	factory.EXPECT().NewEmailDomainRepo().Return(domainRepo).AnyTimes()
+	senderRepo := repositorymock.NewMockAccountEmailSenderRepo(ctrl)
+	senderRepo.EXPECT().DeleteByDomain(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil).AnyTimes()
+	factory.EXPECT().NewAccountEmailSenderRepo().Return(senderRepo).AnyTimes()
+	return factory
 }

@@ -123,6 +123,7 @@ const (
 	VocStatus       = "ss"
 	VocSupplier     = "su"
 	VocSupport      = "sp"
+	VocSender       = "sx"
 	VocSeverity     = "sv"
 	VocSystem       = "sy"
 	VocSize         = "sz"
@@ -457,6 +458,7 @@ var (
 	EmailDomainIDPrefix    = composePrefix(VocEmail, VocDomain)
 	EmailInboxIDPrefix     = composePrefix(VocEmail, VocInbox)
 	EmailMessageIDPrefix   = composePrefix(VocEmail, VocMessage)
+	EmailSenderIDPrefix    = composePrefix(VocEmail, VocSender)
 
 	// Inventory-related prefix values
 	InventoryChangeLogIDPrefix  = composePrefix(VocInventory, VocChange, VocLog)

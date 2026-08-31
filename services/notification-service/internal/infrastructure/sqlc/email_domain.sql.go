@@ -53,7 +53,7 @@ func (q *Queries) DeleteEmailDomain(ctx context.Context, arg DeleteEmailDomainPa
 }
 
 const getEmailDomainByDomain = `-- name: GetEmailDomainByDomain :one
-SELECT id, account_id, domain, status, dkim_tokens, verified_at, created_at, updated_at FROM email_domain
+SELECT id, account_id, domain, status, dkim_tokens, verified_at, created_at, updated_at, mail_from_domain FROM email_domain
 WHERE domain = ?
 `
 
@@ -69,12 +69,13 @@ func (q *Queries) GetEmailDomainByDomain(ctx context.Context, domain string) (Em
 		&i.VerifiedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.MailFromDomain,
 	)
 	return i, err
 }
 
 const getEmailDomainByID = `-- name: GetEmailDomainByID :one
-SELECT id, account_id, domain, status, dkim_tokens, verified_at, created_at, updated_at FROM email_domain
+SELECT id, account_id, domain, status, dkim_tokens, verified_at, created_at, updated_at, mail_from_domain FROM email_domain
 WHERE id = ? AND account_id = ?
 `
 
@@ -95,12 +96,13 @@ func (q *Queries) GetEmailDomainByID(ctx context.Context, arg GetEmailDomainByID
 		&i.VerifiedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.MailFromDomain,
 	)
 	return i, err
 }
 
 const listEmailDomainsByAccount = `-- name: ListEmailDomainsByAccount :many
-SELECT id, account_id, domain, status, dkim_tokens, verified_at, created_at, updated_at FROM email_domain
+SELECT id, account_id, domain, status, dkim_tokens, verified_at, created_at, updated_at, mail_from_domain FROM email_domain
 WHERE account_id = ?
 ORDER BY created_at DESC, id DESC
 `
@@ -123,6 +125,7 @@ func (q *Queries) ListEmailDomainsByAccount(ctx context.Context, accountID strin
 			&i.VerifiedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.MailFromDomain,
 		); err != nil {
 			return nil, err
 		}

@@ -292,6 +292,7 @@ func buildOrderAcknowledgementEmail(ctx context.Context, repos domain.RepoFactor
 		Params:     data.emailParams(),
 		AccountID:  &accountID,
 	}
+	applyMerchantReplyTo(emailData, data.AccountEmail)
 
 	// Attach the generated order-acknowledgement PDF, matching legacy (which attached a
 	// rendered PDF of the order). A PDF failure degrades gracefully to an attachment-free

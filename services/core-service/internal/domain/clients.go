@@ -150,6 +150,15 @@ type CreateCheckoutSessionParams struct {
 	CancelURL        *string
 	// Metadata to attach to the payment intent (e.g. orderID, customerID).
 	PaymentIntentMetadata map[string]string
+
+	// SubmitMessage is rendered above the pay button. The buyer arrives from an email and has to recognize who is being paid before entering a card, and the Stripe-hosted page carries only the merchant's own dashboard branding — this is the one place our code can name the seller and the order. Omitted when empty.
+	SubmitMessage string
+
+	// PaymentDescription rides on the payment intent, so it is what shows on the Stripe receipt and in the merchant's dashboard. Omitted when empty.
+	PaymentDescription string
+
+	// StatementDescriptorSuffix is appended to the merchant's statement descriptor on the buyer's card statement, where the charge is questioned weeks later. Stripe restricts this to a short ASCII string; the caller is responsible for sanitizing it. Omitted when empty.
+	StatementDescriptorSuffix string
 }
 
 // CheckoutLineItem represents a line item in a Stripe checkout session.

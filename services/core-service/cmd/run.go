@@ -495,6 +495,7 @@ func Run(
 		MediatorFactory:       mediatorFactory,
 		TxManager:             txManager,
 		NotificationPublisher: notificationPublisher,
+		Branding:              brandingAssets,
 	})
 
 	settlementSvc := service.NewSettlementSvc(&service.SettlementSvcConfig{
@@ -520,6 +521,7 @@ func Run(
 		MediatorFactory:       mediatorFactory,
 		TxManager:             txManager,
 		NotificationPublisher: notificationPublisher,
+		Branding:              brandingAssets,
 	})
 
 	purchaseOrderLineSvc := service.NewPurchaseOrderLineSvc(&service.PurchaseOrderLineSvcConfig{

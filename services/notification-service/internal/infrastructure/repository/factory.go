@@ -70,6 +70,10 @@ func (f *repoFactoryImpl) NewEmailInboxRepo() domain.EmailInboxRepo {
 	return NewEmailInboxRepo(f.db)
 }
 
+func (f *repoFactoryImpl) NewAccountEmailSenderRepo() domain.AccountEmailSenderRepo {
+	return NewAccountEmailSenderRepo(f.db)
+}
+
 func (f *repoFactoryImpl) NewEmailMessageRepo() domain.EmailMessageRepo {
 	return NewEmailMessageRepo(f.db)
 }

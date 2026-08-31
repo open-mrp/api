@@ -1503,6 +1503,14 @@ resources:
           email_inbox: '#/components/schemas/EmailInbox'
           list_email_inbox: '#/components/schemas/List_EmailInbox'
           update_email_inbox_request: '#/components/schemas/UpdateEmailInboxRequest'
+      email_sender:
+        methods:
+          list: get /v1/messaging/email-sender
+          update: put /v1/messaging/email-sender
+          delete: delete /v1/messaging/email-sender
+        models:
+          email_sender: '#/components/schemas/EmailSender'
+          set_email_sender_request: '#/components/schemas/SetEmailSenderRequest'
       support_routes:
         methods:
           list: get /v1/messaging/support-routes

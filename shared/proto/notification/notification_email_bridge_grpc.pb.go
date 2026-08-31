@@ -36,6 +36,9 @@ const (
 	EmailBridgeService_GetEmailInbox_FullMethodName     = "/notification.EmailBridgeService/GetEmailInbox"
 	EmailBridgeService_UpdateEmailInbox_FullMethodName  = "/notification.EmailBridgeService/UpdateEmailInbox"
 	EmailBridgeService_DeleteEmailInbox_FullMethodName  = "/notification.EmailBridgeService/DeleteEmailInbox"
+	EmailBridgeService_GetEmailSender_FullMethodName    = "/notification.EmailBridgeService/GetEmailSender"
+	EmailBridgeService_SetEmailSender_FullMethodName    = "/notification.EmailBridgeService/SetEmailSender"
+	EmailBridgeService_DeleteEmailSender_FullMethodName = "/notification.EmailBridgeService/DeleteEmailSender"
 	EmailBridgeService_SendInboxReply_FullMethodName    = "/notification.EmailBridgeService/SendInboxReply"
 	EmailBridgeService_PostReplyDraft_FullMethodName    = "/notification.EmailBridgeService/PostReplyDraft"
 )
@@ -65,6 +68,13 @@ type EmailBridgeServiceClient interface {
 	UpdateEmailInbox(ctx context.Context, in *UpdateEmailInboxRequest, opts ...grpc.CallOption) (*EmailInboxInfo, error)
 	// DeleteEmailInbox removes an inbox.
 	DeleteEmailInbox(ctx context.Context, in *DeleteEmailInboxRequest, opts ...grpc.CallOption) (*EmailBridgeAck, error)
+	// GetEmailSender returns the outbound identity the account's merchant-facing mail sends as, or
+	// NOT_FOUND when none is configured (in which case that mail sends from the platform address).
+	GetEmailSender(ctx context.Context, in *GetEmailSenderRequest, opts ...grpc.CallOption) (*EmailSenderInfo, error)
+	// SetEmailSender configures the account's outbound identity on one of its verified domains.
+	SetEmailSender(ctx context.Context, in *SetEmailSenderRequest, opts ...grpc.CallOption) (*EmailSenderInfo, error)
+	// DeleteEmailSender clears the account's outbound identity, returning its mail to the platform address.
+	DeleteEmailSender(ctx context.Context, in *DeleteEmailSenderRequest, opts ...grpc.CallOption) (*EmailBridgeAck, error)
 	// SendInboxReply sends an agent's outbound email reply through the conversation's bound inbox
 	// (SES, threaded under the latest inbound mail) and posts it into the thread. Called by
 	// agent-service when an approved send_email tool executes.
@@ -184,6 +194,36 @@ func (c *emailBridgeServiceClient) DeleteEmailInbox(ctx context.Context, in *Del
 	return out, nil
 }
 
+func (c *emailBridgeServiceClient) GetEmailSender(ctx context.Context, in *GetEmailSenderRequest, opts ...grpc.CallOption) (*EmailSenderInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(EmailSenderInfo)
+	err := c.cc.Invoke(ctx, EmailBridgeService_GetEmailSender_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *emailBridgeServiceClient) SetEmailSender(ctx context.Context, in *SetEmailSenderRequest, opts ...grpc.CallOption) (*EmailSenderInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(EmailSenderInfo)
+	err := c.cc.Invoke(ctx, EmailBridgeService_SetEmailSender_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *emailBridgeServiceClient) DeleteEmailSender(ctx context.Context, in *DeleteEmailSenderRequest, opts ...grpc.CallOption) (*EmailBridgeAck, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(EmailBridgeAck)
+	err := c.cc.Invoke(ctx, EmailBridgeService_DeleteEmailSender_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *emailBridgeServiceClient) SendInboxReply(ctx context.Context, in *SendInboxReplyRequest, opts ...grpc.CallOption) (*EmailMessageRef, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(EmailMessageRef)
@@ -229,6 +269,13 @@ type EmailBridgeServiceServer interface {
 	UpdateEmailInbox(context.Context, *UpdateEmailInboxRequest) (*EmailInboxInfo, error)
 	// DeleteEmailInbox removes an inbox.
 	DeleteEmailInbox(context.Context, *DeleteEmailInboxRequest) (*EmailBridgeAck, error)
+	// GetEmailSender returns the outbound identity the account's merchant-facing mail sends as, or
+	// NOT_FOUND when none is configured (in which case that mail sends from the platform address).
+	GetEmailSender(context.Context, *GetEmailSenderRequest) (*EmailSenderInfo, error)
+	// SetEmailSender configures the account's outbound identity on one of its verified domains.
+	SetEmailSender(context.Context, *SetEmailSenderRequest) (*EmailSenderInfo, error)
+	// DeleteEmailSender clears the account's outbound identity, returning its mail to the platform address.
+	DeleteEmailSender(context.Context, *DeleteEmailSenderRequest) (*EmailBridgeAck, error)
 	// SendInboxReply sends an agent's outbound email reply through the conversation's bound inbox
 	// (SES, threaded under the latest inbound mail) and posts it into the thread. Called by
 	// agent-service when an approved send_email tool executes.
@@ -277,6 +324,15 @@ func (UnimplementedEmailBridgeServiceServer) UpdateEmailInbox(context.Context, *
 }
 func (UnimplementedEmailBridgeServiceServer) DeleteEmailInbox(context.Context, *DeleteEmailInboxRequest) (*EmailBridgeAck, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteEmailInbox not implemented")
+}
+func (UnimplementedEmailBridgeServiceServer) GetEmailSender(context.Context, *GetEmailSenderRequest) (*EmailSenderInfo, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetEmailSender not implemented")
+}
+func (UnimplementedEmailBridgeServiceServer) SetEmailSender(context.Context, *SetEmailSenderRequest) (*EmailSenderInfo, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetEmailSender not implemented")
+}
+func (UnimplementedEmailBridgeServiceServer) DeleteEmailSender(context.Context, *DeleteEmailSenderRequest) (*EmailBridgeAck, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteEmailSender not implemented")
 }
 func (UnimplementedEmailBridgeServiceServer) SendInboxReply(context.Context, *SendInboxReplyRequest) (*EmailMessageRef, error) {
 	return nil, status.Error(codes.Unimplemented, "method SendInboxReply not implemented")
@@ -485,6 +541,60 @@ func _EmailBridgeService_DeleteEmailInbox_Handler(srv interface{}, ctx context.C
 	return interceptor(ctx, in, info, handler)
 }
 
+func _EmailBridgeService_GetEmailSender_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetEmailSenderRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EmailBridgeServiceServer).GetEmailSender(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EmailBridgeService_GetEmailSender_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EmailBridgeServiceServer).GetEmailSender(ctx, req.(*GetEmailSenderRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EmailBridgeService_SetEmailSender_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetEmailSenderRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EmailBridgeServiceServer).SetEmailSender(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EmailBridgeService_SetEmailSender_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EmailBridgeServiceServer).SetEmailSender(ctx, req.(*SetEmailSenderRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EmailBridgeService_DeleteEmailSender_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteEmailSenderRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EmailBridgeServiceServer).DeleteEmailSender(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EmailBridgeService_DeleteEmailSender_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EmailBridgeServiceServer).DeleteEmailSender(ctx, req.(*DeleteEmailSenderRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _EmailBridgeService_SendInboxReply_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SendInboxReplyRequest)
 	if err := dec(in); err != nil {
@@ -567,6 +677,18 @@ var EmailBridgeService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteEmailInbox",
 			Handler:    _EmailBridgeService_DeleteEmailInbox_Handler,
+		},
+		{
+			MethodName: "GetEmailSender",
+			Handler:    _EmailBridgeService_GetEmailSender_Handler,
+		},
+		{
+			MethodName: "SetEmailSender",
+			Handler:    _EmailBridgeService_SetEmailSender_Handler,
+		},
+		{
+			MethodName: "DeleteEmailSender",
+			Handler:    _EmailBridgeService_DeleteEmailSender_Handler,
 		},
 		{
 			MethodName: "SendInboxReply",

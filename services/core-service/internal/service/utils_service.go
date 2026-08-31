@@ -343,6 +343,7 @@ func (s *utilsSvcImpl) emailInvoice(ctx context.Context, span trace.Span, invoic
 		Params:     params,
 		AccountID:  &accountID,
 	}
+	applyMerchantReplyTo(&emailData, doc.Header.AccountEmail)
 
 	// Attach the rendered invoice PDF, best-effort — a render failure sends the email without it.
 	if pdfBytes, err := buildInvoicePDF(doc); err == nil {
@@ -450,16 +451,17 @@ func (s *utilsSvcImpl) emailPurchaseOrder(ctx context.Context, span trace.Span, 
 
 	subject := fmt.Sprintf("Purchase Order %s", po.Number)
 
+	letterhead := merchantLetterheadParams(ctx, s.repos, s.branding, accountID, accountName, subject)
+	letterhead.params["order_number"] = po.Number
+
 	emailData := messaging.EmailSendData{
 		To:         recipients,
 		Subject:    subject,
 		TemplateID: constants.EmailTemplatePurchaseOrderSubmission,
-		Params: map[string]any{
-			"order_number": po.Number,
-			"account_name": accountName,
-		},
-		AccountID: &accountID,
+		Params:     letterhead.params,
+		AccountID:  &accountID,
 	}
+	applyMerchantReplyTo(&emailData, letterhead.supportEmail)
 
 	// Publish email and mark as sent inside a transaction.
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *utilsSvcImpl) *apierror.APIError {

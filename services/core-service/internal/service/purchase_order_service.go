@@ -25,6 +25,7 @@ type purchaseOrderSvcImpl struct {
 	mediatorFactory       domain.MediatorFactory
 	txManager             TransactionManager
 	notificationPublisher domain.NotificationPublisher
+	branding              BrandingAssets
 }
 
 type PurchaseOrderSvcConfig struct {
@@ -39,6 +40,9 @@ type PurchaseOrderSvcConfig struct {
 
 	// NotificationPublisher (optional; default: nil) publishes notification messages to the outbox. When nil, status-change emails (e.g. purchase-order submission on issue) are skipped. It is not validated at construction.
 	NotificationPublisher domain.NotificationPublisher
+
+	// Branding (optional; default: zero value) resolves the issuing account's logo for the submission letterhead. The zero value resolves absolute URLs only.
+	Branding BrandingAssets
 }
 
 func (c *PurchaseOrderSvcConfig) validate() error {
@@ -64,6 +68,7 @@ func NewPurchaseOrderSvc(config *PurchaseOrderSvcConfig) domain.PurchaseOrderSvc
 		mediatorFactory:       config.MediatorFactory,
 		txManager:             config.TxManager,
 		notificationPublisher: config.NotificationPublisher,
+		branding:              config.Branding,
 	}
 }
 
@@ -78,6 +83,7 @@ func (s *purchaseOrderSvcImpl) withTx(ctx context.Context, fn func(context.Conte
 			mediatorFactory:       s.mediatorFactory,
 			txManager:             s.txManager,
 			notificationPublisher: s.notificationPublisher,
+			branding:              s.branding,
 		}
 		return fn(txCtx, txSvc)
 	})
@@ -783,18 +789,31 @@ func (s *purchaseOrderSvcImpl) ChangePurchaseOrderStatus(ctx context.Context, pa
 
 			// Send email notification if requested
 			if params.SendEmail && s.notificationPublisher != nil {
-				contacts, apiErr := txRepo.GetEmailContacts(txCtx, params.PurchaseOrderID)
+				// The submission recipients are the supplier addresses the order goes to; GetEmailContacts returns internal account-user ids and cannot address an email.
+				recipients, apiErr := txRepo.GetSubmissionRecipients(txCtx, params.PurchaseOrderID)
 				if apiErr != nil {
 					return apiErr
 				}
-				if len(contacts) > 0 {
-					if pubErr := s.notificationPublisher.PublishSendEmail(txCtx, messaging.EmailSendData{
+				if len(recipients) > 0 {
+					// The letterhead is the issuing account's own — a purchase order goes out to the supplier over the buyer's name.
+					accountName, apiErr := txSvc.repos.NewAccountRepo().GetName(txCtx, params.AccountID)
+					if apiErr != nil {
+						return apiErr
+					}
+					subject := fmt.Sprintf("Purchase Order %s", order.Number)
+					letterhead := merchantLetterheadParams(txCtx, txSvc.repos, s.branding, params.AccountID, accountName, subject)
+					letterhead.params["order_number"] = order.Number
+
+					emailData := messaging.EmailSendData{
+						To:         recipients,
+						Subject:    subject,
 						TemplateID: constants.EmailTemplatePurchaseOrderSubmission,
-						Params: map[string]any{
-							"order_id":     params.PurchaseOrderID,
-							"order_number": order.Number,
-						},
-					}); pubErr != nil {
+						Params:     letterhead.params,
+						AccountID:  &params.AccountID,
+					}
+					applyMerchantReplyTo(&emailData, letterhead.supportEmail)
+
+					if pubErr := s.notificationPublisher.PublishSendEmail(txCtx, emailData); pubErr != nil {
 						return pubErr
 					}
 				}

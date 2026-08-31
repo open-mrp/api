@@ -2389,12 +2389,21 @@ func (s *salesOrderSvcImpl) CheckoutSalesOrder(ctx context.Context, params domai
 		}
 		amountCents := total.Mul(decimal.NewFromInt(100)).Round(0).IntPart()
 
-		description := ""
+		// The buyer reaches this page from an email and has to recognize the seller before entering a card, so the seller's name and the order's date go on the line item itself rather than relying on the merchant's Stripe dashboard branding alone.
+		sellerName, _ := s.repos.NewAccountRepo().GetName(ctx, params.AccountID)
+		orderNumber := textutil.FormatRecordNumber(order.Number)
+		orderDate := order.CreatedAt.Local().Format("Jan 2, 2006")
+
+		description := fmt.Sprintf("Placed %s", orderDate)
 		if order.CustomerPONumber != nil && *order.CustomerPONumber != "" {
-			description = fmt.Sprintf("PO #%s", *order.CustomerPONumber)
+			description += fmt.Sprintf(" · PO #%s", *order.CustomerPONumber)
+		}
+		lineItemName := fmt.Sprintf("Order %s", orderNumber)
+		if sellerName != "" {
+			lineItemName = fmt.Sprintf("%s — Order %s", sellerName, orderNumber)
 		}
 		checkoutItems := []domain.CheckoutLineItem{{
-			Name:        fmt.Sprintf("SO #%s", textutil.FormatRecordNumber(order.Number)),
+			Name:        lineItemName,
 			Description: description,
 			AmountCents: amountCents,
 			Quantity:    1,
@@ -2427,6 +2436,9 @@ func (s *salesOrderSvcImpl) CheckoutSalesOrder(ctx context.Context, params domai
 				"orderID":    order.ID,
 				"customerID": order.BuyerAccountID,
 			},
+			SubmitMessage:             checkoutSubmitMessage(sellerName, orderNumber, orderDate),
+			PaymentDescription:        lineItemName,
+			StatementDescriptorSuffix: statementDescriptorSuffix(orderNumber),
 		})
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
@@ -2441,19 +2453,10 @@ func (s *salesOrderSvcImpl) CheckoutSalesOrder(ctx context.Context, params domai
 			if s.notificationPublisher != nil {
 				// The outbox publisher reads the RepoFactory from the context; inject it before publishing.
 				pubCtx := event.WithRepos(txCtx, txSvc.repos)
+				emailData := buildOrderCheckoutEmail(ctx, s.repos, s.branding, order, lines, params.AccountID, sellerName, params.Email, checkoutSession.URL)
 				// Without AccountID the log row is written against account_id = '', and the email log lists by account, so the sent checkout link would never appear in it.
-				if pubErr := s.notificationPublisher.PublishSendEmail(pubCtx, messaging.EmailSendData{
-					To:         []string{params.Email},
-					Subject:    "Your Order Checkout - " + order.Number,
-					TemplateID: constants.EmailTemplateOrderCheckout,
-					AccountID:  &params.AccountID,
-					SentByID:   &identity.Actor.ID,
-					Params: map[string]any{
-						"checkout_url": checkoutSession.URL,
-						"order_number": order.Number,
-						"account_name": order.CustomerName,
-					},
-				}); pubErr != nil {
+				emailData.SentByID = &identity.Actor.ID
+				if pubErr := s.notificationPublisher.PublishSendEmail(pubCtx, *emailData); pubErr != nil {
 					return pubErr
 				}
 			}

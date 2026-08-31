@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
 )
@@ -304,12 +305,14 @@ type EmailLogData struct {
 }
 
 type EmailSendData struct {
-	To        []string `json:"to"`
-	Subject   string   `json:"subject"`
-	Body      string   `json:"body"`
-	SendAs    *string  `json:"send_as,omitempty"`
-	AccountID *string  `json:"account_id,omitempty"`
-	SentByID  *string  `json:"sent_by_id,omitempty"`
+	To      []string `json:"to"`
+	Subject string   `json:"subject"`
+	Body    string   `json:"body"`
+	SendAs  *string  `json:"send_as,omitempty"`
+	// TemplateID is carried past rendering because it decides whose identity the message goes out under: only a merchant's own correspondence may send from that merchant's domain.
+	TemplateID constants.EmailTemplate `json:"template_id,omitempty"`
+	AccountID  *string                 `json:"account_id,omitempty"`
+	SentByID   *string                 `json:"sent_by_id,omitempty"`
 	// Attachment fields for raw MIME emails.
 	Attachment []byte  `json:"attachment,omitempty"`
 	Filename   *string `json:"filename,omitempty"`

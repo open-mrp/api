@@ -21,6 +21,10 @@ type notificationSvcImpl struct {
 	emailLogRepo     domain.EmailLogRepo
 	emailSender      domain.EmailSender
 	templateRenderer email.TemplateRenderer
+	// senderRepo resolves an account's own outbound identity. Nil leaves every send on the platform address.
+	senderRepo domain.AccountEmailSenderRepo
+	// merchantSender posts mail addressed from a customer's own domain. Those domains are DKIM-verified in the inbound region, and SES rejects an identity it does not hold in the region the request lands in, so a merchant-addressed message cannot go out over emailSender (the platform's send region). Nil leaves every send on the platform address.
+	merchantSender domain.EmailSender
 }
 
 type NotificationSvcConfig struct {
@@ -32,6 +36,12 @@ type NotificationSvcConfig struct {
 
 	// TemplateRenderer (required) renders email templates into message bodies.
 	TemplateRenderer email.TemplateRenderer
+
+	// SenderRepo (optional; default: nil) resolves an account's configured outbound identity. When nil, all mail sends from the platform address.
+	SenderRepo domain.AccountEmailSenderRepo
+
+	// MerchantSender (optional; default: nil) sends mail addressed from a customer's own verified domain, in the region those domains are verified in. When nil, all mail sends from the platform address.
+	MerchantSender domain.EmailSender
 }
 
 func (c *NotificationSvcConfig) validate() error {
@@ -56,10 +66,13 @@ func NewNotificationSvc(config *NotificationSvcConfig) domain.NotificationSvc {
 		emailLogRepo:     config.EmailLogRepo,
 		emailSender:      config.EmailSender,
 		templateRenderer: config.TemplateRenderer,
+		senderRepo:       config.SenderRepo,
+		merchantSender:   config.MerchantSender,
 	}
 }
 
-func BuildNotificationSvcConfig(repoFactory domain.RepoFactory, platformMode constants.PlatformMode, awsRegion string, templateRenderer email.TemplateRenderer) (*NotificationSvcConfig, *apierror.APIError) {
+// BuildNotificationSvcConfig wires the notification service. merchantSender posts mail from accounts' own verified domains and must be an SES client in the region those domains are verified in — not awsRegion, where only the platform identity exists. Nil is allowed (test mode, or a deployment without the bridge) and leaves every send on the platform address.
+func BuildNotificationSvcConfig(repoFactory domain.RepoFactory, platformMode constants.PlatformMode, awsRegion string, templateRenderer email.TemplateRenderer, merchantSender domain.EmailSender) (*NotificationSvcConfig, *apierror.APIError) {
 	var emailSender domain.EmailSender
 	if platformMode.IsTest() {
 		emailSender = &stub.EmailSender{}
@@ -75,6 +88,8 @@ func BuildNotificationSvcConfig(repoFactory domain.RepoFactory, platformMode con
 		EmailLogRepo:     repoFactory.NewEmailLogRepo(),
 		EmailSender:      emailSender,
 		TemplateRenderer: templateRenderer,
+		SenderRepo:       repoFactory.NewAccountEmailSenderRepo(),
+		MerchantSender:   merchantSender,
 	}, nil
 }
 
@@ -91,19 +106,59 @@ func (s *notificationSvcImpl) SendEmail(ctx context.Context, data domain.EmailSe
 		return s.logSuppressedEmail(ctx, data)
 	}
 
-	sesMessageID, apiErr := s.emailSender.Send(ctx, domain.EmailData{
+	emailData := domain.EmailData{
 		To:         data.To,
 		Subject:    data.Subject,
 		Body:       data.Body,
 		SendAs:     data.SendAs,
 		Attachment: data.Attachment,
 		Filename:   data.Filename,
-	})
+	}
+
+	sender := s.emailSender
+	if merchant := s.resolveMerchantSender(ctx, data); merchant != nil {
+		from := merchant.FromHeader()
+		emailData.From = &from
+		if replyTo := merchantReplyTo(merchant); replyTo != "" {
+			emailData.SendAs = &replyTo
+		}
+		sender = s.merchantSender
+	}
+
+	sesMessageID, apiErr := sender.Send(ctx, emailData)
 	if apiErr != nil {
 		return nil, apiErr
 	}
 
 	return sesMessageID, nil
+}
+
+// resolveMerchantSender returns the account's own outbound identity when this message may use one, and nil to leave it on the platform address — which is the common case and never an error.
+//
+// Three things all have to hold. The template must be the merchant's own correspondence with their counterparty (EmailTemplate.SendsAsMerchant), because a password reset arriving from a tenant's domain reads as a spoof of the very mail it authenticates. The account must have configured a sender on a domain that is still verified, since SES rejects an unverified identity and sending under one would bounce a merchant's invoices rather than degrade them. And the region-correct sender must be wired, or there is nothing that can post the message.
+//
+// A lookup failure is swallowed deliberately: the platform address still delivers the mail, and losing an invoice because a branding lookup errored is the worse outcome.
+func (s *notificationSvcImpl) resolveMerchantSender(ctx context.Context, data domain.EmailSendData) *domain.AccountEmailSender {
+	if s.senderRepo == nil || s.merchantSender == nil {
+		return nil
+	}
+	if data.AccountID == nil || *data.AccountID == "" || !data.TemplateID.SendsAsMerchant() {
+		return nil
+	}
+
+	sender, apiErr := s.senderRepo.GetByAccount(ctx, *data.AccountID)
+	if apiErr != nil || !sender.Usable() {
+		return nil
+	}
+	return sender
+}
+
+// merchantReplyTo picks where a reply lands: the account's configured reply-to, else the sending address itself. Either beats the platform's no-reply address, which every merchant template invites the reader to write to and none of them can receive at.
+func merchantReplyTo(sender *domain.AccountEmailSender) string {
+	if sender.ReplyTo != nil && *sender.ReplyTo != "" {
+		return *sender.ReplyTo
+	}
+	return sender.Address()
 }
 
 // LogEmail records a sent email in the email log, deduplicating by SES message ID.

@@ -3,7 +3,12 @@
 
 -- Bookkeeping for shared/db/data-migrations. goose would create this itself, but creating a table is
 -- DDL and prod has safe migrations enabled, so on prod it can only arrive through a deploy request.
--- goose still inserts its own version-0 row on first use; that is DML, which prod does allow.
+--
+-- goose seeds a version-0 row as part of creating the table, and reads that row to establish the
+-- current version -- it does NOT write one when it finds a table already there, and fails outright on
+-- an empty one. The table arriving as DDL therefore leaves goose unable to run at all, so migrate.sh
+-- writes that row itself (ensure_data_version_row) before invoking goose. Inserting it here would not
+-- help: a deploy request diffs schema only, so DML in a schema migration never reaches prod.
 --
 -- IF NOT EXISTS because this migration re-runs on every release branch cut after the table reaches
 -- prod: baseline only records the 00001 baseline as applied, so goose replays 00002 on the fresh

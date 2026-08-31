@@ -279,6 +279,53 @@
 --   @invl1..4   (2 per invoice)
 --   @qty257..260  invoice line quantities
 --
+-- LOOKUPS OF ROWS CREATED WITH THE ACCOUNT
+--   @acus1    the sandbox admin account_user
+--   @ownadr1  the account's own billing address
+--   @ownadr2  the account's own shipping address
+--
+-- PRODUCTION SHIFTS (pnsf_seed...)
+--   @pnsf1..2  Day, Swing
+--
+-- SUPPLIERS
+--   @supp1    Carolina Yarn Mills   (SUP-001)
+--   @supp2    Atlantic Packaging Co (SUP-002)
+--   @sgeo1..2, @saddr1..2, @sacadr1..2  geolocation, address, account_address
+--   @acrel4..5  sandbox -> supplier, role=supplier
+--   @suml1..4   supplier part numbers for 3 yarns and 1 carton
+--
+-- PURCHASE ORDERS (share the sales_order table, type purchase_order)
+--   @po1  PO-001  fulfilled, received in full
+--   @po2  PO-002  issued, still open
+--   @poln1..4   lines, @qpo1..4 quantities, @rtpo1..4 prices
+--
+-- RECEIVING + INBOUND
+--   @rcor1..2     RCV-001 closed, RCV-002 open
+--   @rcorln1..4   receiving lines, first two stocked
+--   @dv1..2       DLV-001, DLV-002
+--   @dvln1..4     delivery lines, @qdv1..4 quantities, @rtdv1..4 unit costs
+--   @inrp1..4     inventory receipts, the costed layers the deliveries created
+--
+-- PRODUCTION RUNS + BATCHES
+--   @pnrn1..3   PR-1001 small, PR-1002 medium, PR-1003 large
+--   @bt1..12    4 batches per run: knit, link, wash, pack
+--   @qbt1..12   batch quantities in pairs
+--
+-- HISTORICAL DEMAND (the trailing-12 window the schedule plans from)
+--   @hso1..3    ORD-H001 7 months back, ORD-H002 4 months, ORD-H003 2 months
+--   @hsol1..6   lines, @qhso1..6 quantities, @rthso1..6 prices, @rthsc1..6 costs
+--
+-- MACHINE DOWNTIME (mcdt_seed...)
+--   @mcdt1..5   breakdown, changeover, material shortage, minor stop, quality hold
+--
+-- SALES TARGETS + CUSTOMER PRICING
+--   @ta1..2     quarter and year revenue targets, @qta1..2 amounts
+--   @acpr1..3   negotiated product line prices, @rtacpr1..3 rates
+--
+-- PRODUCTION SCHEDULE SETTINGS
+--   @acpnscsd1     knitting named as the planning constraint, scheduling enabled
+--   @pnscrrsd1..3  the three knitting machines, written explicitly
+--
 -- ============================================================================
 
 
@@ -1390,6 +1437,170 @@ SET @qty258 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @qty259 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @qty260 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
 
+-- The sandbox admin, created with the account before this script runs. Owns the seeded
+-- production runs, downtime reports and sales targets, all of which require a person.
+SET @acus1 = (SELECT id FROM account_user WHERE account_id = '@account_id' ORDER BY created_at LIMIT 1);
+
+-- The sandbox's own business address, for purchase orders it is the ship-to.
+SET @ownadr1 = (SELECT default_billing_address_id FROM account WHERE id = '@account_id');
+SET @ownadr2 = (SELECT default_shipping_address_id FROM account WHERE id = '@account_id');
+
+-- Third knitting machine, so each knit size has one (see SECTION 20)
+SET @mach13 = CONCAT('mc_', LEFT(REPLACE(UUID(), '-', ''), 12));
+
+-- Production shifts (2)
+SET @pnsf1 = CONCAT('pnsf_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @pnsf2 = CONCAT('pnsf_', LEFT(REPLACE(UUID(), '-', ''), 12));
+
+-- Supplier accounts, geolocations, addresses, links and relations (2 each)
+SET @supp1 = CONCAT('ac_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @supp2 = CONCAT('ac_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @sgeo1 = CONCAT('gl_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @sgeo2 = CONCAT('gl_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @saddr1 = CONCAT('ad_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @saddr2 = CONCAT('ad_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @sacadr1 = CONCAT('acad_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @sacadr2 = CONCAT('acad_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @acrel4 = CONCAT('acre_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @acrel5 = CONCAT('acre_', LEFT(REPLACE(UUID(), '-', ''), 12));
+
+-- Supplier materials (4)
+SET @suml1 = CONCAT('suml_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @suml2 = CONCAT('suml_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @suml3 = CONCAT('suml_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @suml4 = CONCAT('suml_', LEFT(REPLACE(UUID(), '-', ''), 12));
+
+-- Purchase orders (2) + lines (4) + quantities + prices
+SET @po1 = CONCAT('or_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @po2 = CONCAT('or_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @poln1 = CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @poln2 = CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @poln3 = CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @poln4 = CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @qpo1 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @qpo2 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @qpo3 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @qpo4 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @rtpo1 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @rtpo2 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @rtpo3 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @rtpo4 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+
+-- Receiving orders (2) + lines (4)
+SET @rcor1 = CONCAT('rcor_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @rcor2 = CONCAT('rcor_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @rcorln1 = CONCAT('rcorln_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @rcorln2 = CONCAT('rcorln_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @rcorln3 = CONCAT('rcorln_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @rcorln4 = CONCAT('rcorln_', LEFT(REPLACE(UUID(), '-', ''), 12));
+
+-- Deliveries (2) + lines (4) + quantities + unit costs
+SET @dv1 = CONCAT('dv_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dv2 = CONCAT('dv_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dvln1 = CONCAT('dvln_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dvln2 = CONCAT('dvln_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dvln3 = CONCAT('dvln_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @dvln4 = CONCAT('dvln_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @qdv1 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @qdv2 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @qdv3 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @qdv4 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @rtdv1 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @rtdv2 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @rtdv3 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @rtdv4 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+
+-- Inventory receipts (4)
+SET @inrp1 = CONCAT('inrp_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @inrp2 = CONCAT('inrp_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @inrp3 = CONCAT('inrp_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @inrp4 = CONCAT('inrp_', LEFT(REPLACE(UUID(), '-', ''), 12));
+
+-- Production runs (3) + batches (12) + batch quantities (12)
+SET @pnrn1 = CONCAT('pnrn_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @pnrn2 = CONCAT('pnrn_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @pnrn3 = CONCAT('pnrn_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @bt1 = CONCAT('bt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @bt2 = CONCAT('bt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @bt3 = CONCAT('bt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @bt4 = CONCAT('bt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @bt5 = CONCAT('bt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @bt6 = CONCAT('bt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @bt7 = CONCAT('bt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @bt8 = CONCAT('bt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @bt9 = CONCAT('bt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @bt10 = CONCAT('bt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @bt11 = CONCAT('bt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @bt12 = CONCAT('bt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @qbt1 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @qbt2 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @qbt3 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @qbt4 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @qbt5 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @qbt6 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @qbt7 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @qbt8 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @qbt9 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @qbt10 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @qbt11 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @qbt12 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+
+-- Historical demand orders (3) + lines (6) + quantities + prices + costs
+SET @hso1 = CONCAT('or_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @hso2 = CONCAT('or_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @hso3 = CONCAT('or_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @hsol1 = CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @hsol2 = CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @hsol3 = CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @hsol4 = CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @hsol5 = CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @hsol6 = CONCAT('orln_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @qhso1 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @qhso2 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @qhso3 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @qhso4 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @qhso5 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @qhso6 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @rthso1 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @rthso2 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @rthso3 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @rthso4 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @rthso5 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @rthso6 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @rthsc1 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @rthsc2 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @rthsc3 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @rthsc4 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @rthsc5 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @rthsc6 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+
+-- Machine downtime events (5)
+SET @mcdt1 = CONCAT('mcdt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @mcdt2 = CONCAT('mcdt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @mcdt3 = CONCAT('mcdt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @mcdt4 = CONCAT('mcdt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @mcdt5 = CONCAT('mcdt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+
+-- Sales targets (2) + target amounts (2)
+SET @ta1 = CONCAT('ta_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @ta2 = CONCAT('ta_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @qta1 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @qta2 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
+
+-- Customer prices (3) + their rates (3)
+SET @acpr1 = CONCAT('acpr_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @acpr2 = CONCAT('acpr_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @acpr3 = CONCAT('acpr_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @rtacpr1 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @rtacpr2 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @rtacpr3 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+
+-- Production schedule settings + per-machine resource settings (3)
+SET @acpnscsd1 = CONCAT('acpnscsd_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @pnscrrsd1 = CONCAT('pnscrrsd_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @pnscrrsd2 = CONCAT('pnscrrsd_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @pnscrrsd3 = CONCAT('pnscrrsd_', LEFT(REPLACE(UUID(), '-', ''), 12));
+
 
 -- ============================================================================
 -- SECTION 1: UNITS
@@ -2011,10 +2222,18 @@ INSERT INTO `scanning_station` (`id`, `name`, `notes`, `department_id`, `account
 -- SECTION 20: MACHINES
 -- ============================================================================
 
+-- The knitting machines carry a production step, the rest do not. Knitting is the
+-- planning constraint (SECTION 56), and a campaign explodes into downstream department
+-- work through its machine's own step: a constraint machine without one derives nothing
+-- and is reported as a gap on every generated schedule. One machine per knit size is
+-- what makes that coverage complete. Machines outside the constraint are planned as a
+-- department pool and read their rate off the production step, so a step there would be
+-- decoration.
 INSERT INTO `machine` (`id`, `account_id`, `name`, `notes`, `serial_number`, `department_id`, `production_step_id`) VALUES
-  -- Knitting (2 machines)
-  (@mach1, '@account_id', 'Lonati GL616 #1',        NULL, 'LNT-KNT-001', @dept1, NULL),
-  (@mach2, '@account_id', 'Lonati GL616 #2',        NULL, 'LNT-KNT-002', @dept1, NULL),
+  -- Knitting (3 machines, one per size)
+  (@mach1, '@account_id', 'Lonati GL616 #1',        NULL, 'LNT-KNT-001', @dept1, @pdst1),
+  (@mach2, '@account_id', 'Lonati GL616 #2',        NULL, 'LNT-KNT-002', @dept1, @pdst2),
+  (@mach13, '@account_id', 'Lonati GL616 #3',       NULL, 'LNT-KNT-003', @dept1, @pdst3),
   -- Linking (2 machines)
   (@mach3, '@account_id', 'Rosso RSM-08 #1',        NULL, 'RSO-LNK-001', @dept2, NULL),
   (@mach4, '@account_id', 'Rosso RSM-08 #2',        NULL, 'RSO-LNK-002', @dept2, NULL),
@@ -3069,3 +3288,304 @@ INSERT INTO `invoice_line` (`id`, `invoice_id`, `quantity_id`, `sales_order_line
   -- INV-002 lines (ORD-005 product lines)
   (@invl3, @inv2, @qty259, @sol16),
   (@invl4, @inv2, @qty260, @sol17);
+
+
+-- ============================================================================
+-- SECTION 44: PRODUCTION SHIFTS
+-- ============================================================================
+-- Two shifts on the standard five-day week. The schedule's capacity comes from
+-- shifts_per_day and hours_per_shift on the settings row, not from these, but the
+-- floor's downtime and attainment views read a shift off the calendar.
+
+INSERT INTO `production_shift` (`id`, `account_id`, `department_id`, `code`, `name`, `start_time`, `end_time`, `crosses_midnight`, `days_of_week`, `is_active`, `sort_order`) VALUES
+  (@pnsf1, '@account_id', NULL, 'day',   'Day Shift',   '06:00', '14:00', 0, '1111100', 1, 1),
+  (@pnsf2, '@account_id', NULL, 'swing', 'Swing Shift', '14:00', '22:00', 0, '1111100', 1, 2);
+
+
+-- ============================================================================
+-- SECTION 45: SUPPLIERS
+-- ============================================================================
+-- Receiving resolves a supplier through the purchase order's seller_account_id and
+-- the owner's account_relation, so a purchase order without one of these is unreadable.
+
+INSERT INTO `account` (`id`, `name`, `account_type_code`, `onboarding_status_code`) VALUES
+  (@supp1, 'Carolina Yarn Mills',   'company', 'unclaimed'),
+  (@supp2, 'Atlantic Packaging Co', 'company', 'unclaimed');
+
+INSERT INTO `geolocation` (`id`, `street_line_1`, `street_line_2`, `locality`, `state`, `postal_code`, `country`) VALUES
+  (@sgeo1, '900 Mill Rd',     NULL, 'Gastonia',  'NC', '28052', 'US'),
+  (@sgeo2, '410 Carton Way',  NULL, 'Charlotte', 'NC', '28206', 'US');
+
+INSERT INTO `address` (`id`, `name`, `phone`, `email`, `is_drop_ship`, `geolocation_id`) VALUES
+  (@saddr1, 'Carolina Yarn Mills',   '704-555-0400', 'orders@carolinayarn.example.com', false, @sgeo1),
+  (@saddr2, 'Atlantic Packaging Co', '704-555-0500', 'sales@atlanticpkg.example.com',   false, @sgeo2);
+
+INSERT INTO `account_address` (`id`, `account_id`, `address_id`) VALUES
+  (@sacadr1, @supp1, @saddr1),
+  (@sacadr2, @supp2, @saddr2);
+
+UPDATE `account` SET default_billing_address_id = @saddr1, default_shipping_address_id = @saddr1 WHERE id = @supp1;
+UPDATE `account` SET default_billing_address_id = @saddr2, default_shipping_address_id = @saddr2 WHERE id = @supp2;
+
+INSERT INTO `account_relation` (`id`, `owner_account_id`, `counterparty_account_id`, `account_relation_role_code`, `external_number`, `priority_code`, `payment_term_id`, `shipping_term_id`, `default_carrier_id`, `default_billing_address_id`, `default_shipping_address_id`, `account_status_code`, `commission_status_code`, `freight_status_code`) VALUES
+  (@acrel4, '@account_id', @supp1, 'supplier', 'SUP-001', 'normal', @pytm1, @shtm1, 'delivery', @saddr1, @saddr1, 'normal', 'commission_applied', 'billed_freight'),
+  (@acrel5, '@account_id', @supp2, 'supplier', 'SUP-002', 'normal', @pytm2, @shtm1, 'delivery', @saddr2, @saddr2, 'normal', 'commission_applied', 'billed_freight');
+
+
+-- ============================================================================
+-- SECTION 46: SUPPLIER MATERIALS
+-- ============================================================================
+-- The supplier's own part number for a material, which is what a buyer quotes back
+-- to them and what an inbound document is matched on.
+
+INSERT INTO `supplier_material` (`id`, `material_id`, `supplier_account_id`, `supplier_part_number`, `supplier_description`, `is_active`, `owner_account_id`) VALUES
+  (@suml1, @mat1, @supp1, 'CYM-COT-70', 'Combed cotton 70 denier, cone wound', 1, '@account_id'),
+  (@suml2, @mat2, @supp1, 'CYM-COT-40', 'Combed cotton 40 denier, cone wound', 1, '@account_id'),
+  (@suml3, @mat3, @supp1, 'CYM-NYL-40', 'Textured nylon 40 denier',            1, '@account_id'),
+  (@suml4, @mat10, @supp2, 'APC-BX-12', 'Corrugated shipper, 12-pack',         1, '@account_id');
+
+
+-- ============================================================================
+-- SECTION 47: PURCHASE ORDERS + LINES
+-- ============================================================================
+-- Purchase orders share the sales_order table, distinguished by type and by the
+-- account on each side: here the sandbox is the buyer and the supplier the seller.
+-- PO-001 is fully received, PO-002 is still open so the receiving and on-order views
+-- both have work in them.
+
+INSERT INTO `rate` (`id`, `value`, `numerator_unit_id`, `denominator_unit_id`) VALUES
+  (@rtpo1, 4.85, @un4, @un8),
+  (@rtpo2, 4.40, @un4, @un8),
+  (@rtpo3, 6.20, @un4, @un8),
+  (@rtpo4, 1.15, @un4, @un1);
+
+INSERT INTO `quantity` (`id`, `value`, `unit_id`) VALUES
+  (@qpo1, 800, @un8),
+  (@qpo2, 600, @un8),
+  (@qpo3, 400, @un8),
+  (@qpo4, 1200, @un1);
+
+INSERT INTO `sales_order` (`id`, `number`, `sales_order_status_code`, `sales_order_type_code`, `priority_code`, `buyer_account_id`, `seller_account_id`, `owner_account_id`, `billing_address_id`, `shipping_address_id`, `carrier_id`, `carrier_option_id`, `payment_term_id`, `shipping_term_id`, `issued_at`, `completed_at`) VALUES
+  (@po1, 'PO-001', 'fulfilled', 'purchase_order', 'normal', '@account_id', @supp1, '@account_id', @ownadr1, @ownadr2, 'delivery', NULL, @pytm1, @shtm1, NOW() - INTERVAL 45 DAY, NOW() - INTERVAL 38 DAY),
+  (@po2, 'PO-002', 'issued',    'purchase_order', 'normal', '@account_id', @supp2, '@account_id', @ownadr1, @ownadr2, 'delivery', NULL, @pytm2, @shtm1, NOW() - INTERVAL 9 DAY, NULL);
+
+INSERT INTO `sales_order_line` (`id`, `product_sku`, `product_description`, `line_item_number`, `product_id`, `item_id`, `sales_order_id`, `quantity_id`, `unit_price_id`, `unit_cost_id`) VALUES
+  (@poln1, 'RM-YRN-COT70', 'Cotton Yarn 70D',        1, NULL, @it21, @po1, @qpo1, @rtpo1, @rtpo1),
+  (@poln2, 'RM-YRN-COT40', 'Cotton Yarn 40D',        2, NULL, @it22, @po1, @qpo2, @rtpo2, @rtpo2),
+  (@poln3, 'RM-YRN-NYL40', 'Nylon Yarn 40D',         1, NULL, @it23, @po2, @qpo3, @rtpo3, @rtpo3),
+  (@poln4, 'RM-PKG-BX12',  'Corrugated Box 12-Pack', 2, NULL, @it30, @po2, @qpo4, @rtpo4, @rtpo4);
+
+
+-- ============================================================================
+-- SECTION 48: RECEIVING ORDERS + LINES
+-- ============================================================================
+-- RCV-001 is closed against PO-001. RCV-002 is open with nothing stocked yet, which
+-- is what puts PO-002 on the open receiving and products-on-order lists.
+
+INSERT INTO `receiving_order` (`id`, `number`, `order_id`, `account_id`, `completed_at`) VALUES
+  (@rcor1, 'RCV-001', @po1, '@account_id', NOW() - INTERVAL 38 DAY),
+  (@rcor2, 'RCV-002', @po2, '@account_id', NULL);
+
+INSERT INTO `receiving_order_line` (`id`, `receiving_order_id`, `quantity_id`, `sales_order_line_id`, `stocked_at`) VALUES
+  (@rcorln1, @rcor1, @qpo1, @poln1, NOW() - INTERVAL 38 DAY),
+  (@rcorln2, @rcor1, @qpo2, @poln2, NOW() - INTERVAL 38 DAY),
+  (@rcorln3, @rcor2, @qpo3, @poln3, NULL),
+  (@rcorln4, @rcor2, @qpo4, @poln4, NULL);
+
+
+-- ============================================================================
+-- SECTION 49: DELIVERIES + LINES
+-- ============================================================================
+-- A delivery is the inbound event against a purchase order. DLV-001 landed complete,
+-- DLV-002 is a short first drop against the still-open PO-002.
+
+INSERT INTO `rate` (`id`, `value`, `numerator_unit_id`, `denominator_unit_id`) VALUES
+  (@rtdv1, 4.85, @un4, @un8),
+  (@rtdv2, 4.40, @un4, @un8),
+  (@rtdv3, 6.20, @un4, @un8),
+  (@rtdv4, 1.15, @un4, @un1);
+
+INSERT INTO `quantity` (`id`, `value`, `unit_id`) VALUES
+  (@qdv1, 800, @un8),
+  (@qdv2, 600, @un8),
+  (@qdv3, 150, @un8),
+  (@qdv4, 400, @un1);
+
+INSERT INTO `delivery` (`id`, `number`, `sales_order_id`, `account_id`, `delivery_status_code`, `accepted_at`) VALUES
+  (@dv1, 'DLV-001', @po1, '@account_id', 'accepted', NOW() - INTERVAL 38 DAY),
+  (@dv2, 'DLV-002', @po2, '@account_id', 'accepted', NOW() - INTERVAL 3 DAY);
+
+INSERT INTO `delivery_line` (`id`, `delivery_id`, `receiving_order_line_id`, `quantity_id`, `unit_cost_id`, `storage_location_id`, `accepted_at`) VALUES
+  (@dvln1, @dv1, @rcorln1, @qdv1, @rtdv1, @stloc8, NOW() - INTERVAL 38 DAY),
+  (@dvln2, @dv1, @rcorln2, @qdv2, @rtdv2, @stloc8, NOW() - INTERVAL 38 DAY),
+  (@dvln3, @dv2, @rcorln3, @qdv3, @rtdv3, @stloc8, NOW() - INTERVAL 3 DAY),
+  (@dvln4, @dv2, @rcorln4, @qdv4, @rtdv4, @stloc7, NOW() - INTERVAL 3 DAY);
+
+
+-- ============================================================================
+-- SECTION 50: INVENTORY RECEIPTS
+-- ============================================================================
+-- What the deliveries put on the floor. Receipts are the costed layers inventory is
+-- consumed from, so a sandbox without them shows stock that has no cost behind it.
+
+INSERT INTO `inventory_receipt` (`id`, `owner_account_id`, `holder_account_id`, `item_id`, `storage_location_id`, `received_at`, `quantity_id`, `unit_cost_id`, `order_id`, `status_code`) VALUES
+  (@inrp1, '@account_id', '@account_id', @it21, @stloc8, NOW() - INTERVAL 38 DAY, @qdv1, @rtdv1, @po1, 'available'),
+  (@inrp2, '@account_id', '@account_id', @it22, @stloc8, NOW() - INTERVAL 38 DAY, @qdv2, @rtdv2, @po1, 'available'),
+  (@inrp3, '@account_id', '@account_id', @it23, @stloc8, NOW() - INTERVAL 3 DAY,  @qdv3, @rtdv3, @po2, 'available'),
+  (@inrp4, '@account_id', '@account_id', @it30, @stloc7, NOW() - INTERVAL 3 DAY,  @qdv4, @rtdv4, @po2, 'available');
+
+
+-- ============================================================================
+-- SECTION 51: PRODUCTION RUNS + BATCHES
+-- ============================================================================
+-- Three completed runs, one per sock size, each walking the whole flow: knit, link,
+-- wash, pack. This is the history the production schedule is built from. The solver
+-- measures a run rate by joining batch to machine, pools a knit item's demand through
+-- the batch genealogy to the finished good it becomes, and reads both from scans
+-- inside the demand window, so a sandbox with no batches generates an empty plan.
+
+INSERT INTO `production_run` (`id`, `number`, `account_id`, `responsible_user_id`, `started_at`, `completed_at`) VALUES
+  (@pnrn1, 'PR-1001', '@account_id', @acus1, NOW() - INTERVAL 100 DAY, NOW() - INTERVAL 96 DAY),
+  (@pnrn2, 'PR-1002', '@account_id', @acus1, NOW() - INTERVAL 70 DAY,  NOW() - INTERVAL 66 DAY),
+  (@pnrn3, 'PR-1003', '@account_id', @acus1, NOW() - INTERVAL 40 DAY,  NOW() - INTERVAL 36 DAY);
+
+INSERT INTO `quantity` (`id`, `value`, `unit_id`) VALUES
+  (@qbt1, 600, @un2),  (@qbt2, 600, @un2),  (@qbt3, 588, @un2),  (@qbt4, 576, @un2),
+  (@qbt5, 720, @un2),  (@qbt6, 720, @un2),  (@qbt7, 708, @un2),  (@qbt8, 696, @un2),
+  (@qbt9, 480, @un2),  (@qbt10, 480, @un2), (@qbt11, 468, @un2), (@qbt12, 456, @un2);
+
+INSERT INTO `batch` (`id`, `account_id`, `item_id`, `quantity_id`, `scanning_station_id`, `production_step_id`, `production_run_id`, `location_id`, `scanned_at`, `closed_at`) VALUES
+  -- PR-1001, small
+  (@bt1,  '@account_id', @it33, @qbt1,  @scst1, @pdst1,  @pnrn1, @stloc2, NOW() - INTERVAL 100 DAY, NOW() - INTERVAL 99 DAY),
+  (@bt2,  '@account_id', @it36, @qbt2,  @scst2, @pdst4,  @pnrn1, @stloc3, NOW() - INTERVAL 99 DAY,  NOW() - INTERVAL 98 DAY),
+  (@bt3,  '@account_id', @it39, @qbt3,  @scst3, @pdst7,  @pnrn1, @stloc4, NOW() - INTERVAL 98 DAY,  NOW() - INTERVAL 97 DAY),
+  (@bt4,  '@account_id', @it1,  @qbt4,  @scst6, @pdst16, @pnrn1, @stloc7, NOW() - INTERVAL 96 DAY,  NOW() - INTERVAL 96 DAY),
+  -- PR-1002, medium
+  (@bt5,  '@account_id', @it34, @qbt5,  @scst1, @pdst2,  @pnrn2, @stloc2, NOW() - INTERVAL 70 DAY,  NOW() - INTERVAL 69 DAY),
+  (@bt6,  '@account_id', @it37, @qbt6,  @scst2, @pdst5,  @pnrn2, @stloc3, NOW() - INTERVAL 69 DAY,  NOW() - INTERVAL 68 DAY),
+  (@bt7,  '@account_id', @it40, @qbt7,  @scst3, @pdst8,  @pnrn2, @stloc4, NOW() - INTERVAL 68 DAY,  NOW() - INTERVAL 67 DAY),
+  (@bt8,  '@account_id', @it4,  @qbt8,  @scst6, @pdst17, @pnrn2, @stloc7, NOW() - INTERVAL 66 DAY,  NOW() - INTERVAL 66 DAY),
+  -- PR-1003, large
+  (@bt9,  '@account_id', @it35, @qbt9,  @scst1, @pdst3,  @pnrn3, @stloc2, NOW() - INTERVAL 40 DAY,  NOW() - INTERVAL 39 DAY),
+  (@bt10, '@account_id', @it38, @qbt10, @scst2, @pdst6,  @pnrn3, @stloc3, NOW() - INTERVAL 39 DAY,  NOW() - INTERVAL 38 DAY),
+  (@bt11, '@account_id', @it41, @qbt11, @scst3, @pdst9,  @pnrn3, @stloc4, NOW() - INTERVAL 38 DAY,  NOW() - INTERVAL 37 DAY),
+  (@bt12, '@account_id', @it7,  @qbt12, @scst6, @pdst18, @pnrn3, @stloc7, NOW() - INTERVAL 36 DAY,  NOW() - INTERVAL 36 DAY);
+
+-- A = batch, B = machine. The constraint stage reads its run rate off this join and
+-- plans machine by machine, so a knit scan with no machine is invisible to the solver.
+INSERT INTO `_batches_machines` (`A`, `B`) VALUES
+  (@bt1, @mach1),  (@bt2, @mach3),  (@bt3, @mach5),  (@bt4, @mach11),
+  (@bt5, @mach2),  (@bt6, @mach4),  (@bt7, @mach6),  (@bt8, @mach11),
+  (@bt9, @mach13), (@bt10, @mach3), (@bt11, @mach5), (@bt12, @mach12);
+
+-- A = downstream, B = upstream, matching the Prisma orientation of _batch_flow. The
+-- knit item carries no order demand of its own, so the plan pools it from the finished
+-- good at the end of this chain.
+INSERT INTO `_batch_flow` (`A`, `B`) VALUES
+  (@bt2, @bt1),   (@bt3, @bt2),   (@bt4, @bt3),
+  (@bt6, @bt5),   (@bt7, @bt6),   (@bt8, @bt7),
+  (@bt10, @bt9),  (@bt11, @bt10), (@bt12, @bt11);
+
+
+-- ============================================================================
+-- SECTION 52: HISTORICAL DEMAND
+-- ============================================================================
+-- Three fulfilled orders spread over completed months, for the finished goods the
+-- seeded runs produce. Trailing-twelve demand deliberately ignores the current partial
+-- month, so the orders in SECTION 39 -- all inside the last two weeks -- contribute
+-- nothing to a plan. Without this history every item plans to zero.
+
+INSERT INTO `rate` (`id`, `value`, `numerator_unit_id`, `denominator_unit_id`) VALUES
+  (@rthso1, 11, @un4, @un2), (@rthso2, 11, @un4, @un2), (@rthso3, 12, @un4, @un2),
+  (@rthso4, 12, @un4, @un2), (@rthso5, 11, @un4, @un2), (@rthso6, 12, @un4, @un2);
+
+INSERT INTO `rate` (`id`, `value`, `numerator_unit_id`, `denominator_unit_id`) VALUES
+  (@rthsc1, 6.10, @un4, @un2), (@rthsc2, 6.30, @un4, @un2), (@rthsc3, 6.55, @un4, @un2),
+  (@rthsc4, 6.55, @un4, @un2), (@rthsc5, 6.10, @un4, @un2), (@rthsc6, 6.55, @un4, @un2);
+
+INSERT INTO `quantity` (`id`, `value`, `unit_id`) VALUES
+  (@qhso1, 480, @un2), (@qhso2, 360, @un2), (@qhso3, 600, @un2),
+  (@qhso4, 420, @un2), (@qhso5, 540, @un2), (@qhso6, 480, @un2);
+
+INSERT INTO `sales_order` (`id`, `number`, `sales_order_status_code`, `sales_order_type_code`, `priority_code`, `buyer_account_id`, `seller_account_id`, `owner_account_id`, `billing_address_id`, `shipping_address_id`, `carrier_id`, `carrier_option_id`, `payment_term_id`, `shipping_term_id`, `issued_at`, `completed_at`) VALUES
+  (@hso1, 'ORD-H001', 'fulfilled', 'sales_order', 'normal', @cust1, '@account_id', '@account_id', @caddr1, @caddr2, 'delivery', NULL, @pytm1, @shtm1, NOW() - INTERVAL 7 MONTH, NOW() - INTERVAL 7 MONTH + INTERVAL 12 DAY),
+  (@hso2, 'ORD-H002', 'fulfilled', 'sales_order', 'normal', @cust2, '@account_id', '@account_id', @caddr3, @caddr4, 'delivery', NULL, @pytm1, @shtm1, NOW() - INTERVAL 4 MONTH, NOW() - INTERVAL 4 MONTH + INTERVAL 9 DAY),
+  (@hso3, 'ORD-H003', 'fulfilled', 'sales_order', 'normal', @cust3, '@account_id', '@account_id', @caddr5, @caddr6, 'delivery', NULL, @pytm2, @shtm1, NOW() - INTERVAL 2 MONTH, NOW() - INTERVAL 2 MONTH + INTERVAL 11 DAY);
+
+INSERT INTO `sales_order_line` (`id`, `product_sku`, `product_description`, `line_item_number`, `product_id`, `item_id`, `sales_order_id`, `quantity_id`, `unit_price_id`, `unit_cost_id`) VALUES
+  (@hsol1, 'FG-CRW-S-WHT', 'Crew Sock Small White',  1, @pd1, @it1, @hso1, @qhso1, @rthso1, @rthsc1),
+  (@hsol2, 'FG-CRW-M-WHT', 'Crew Sock Medium White', 2, @pd4, @it4, @hso1, @qhso2, @rthso2, @rthsc2),
+  (@hsol3, 'FG-CRW-M-WHT', 'Crew Sock Medium White', 1, @pd4, @it4, @hso2, @qhso3, @rthso3, @rthsc3),
+  (@hsol4, 'FG-CRW-L-WHT', 'Crew Sock Large White',  2, @pd7, @it7, @hso2, @qhso4, @rthso4, @rthsc4),
+  (@hsol5, 'FG-CRW-S-WHT', 'Crew Sock Small White',  1, @pd1, @it1, @hso3, @qhso5, @rthso5, @rthsc5),
+  (@hsol6, 'FG-CRW-L-WHT', 'Crew Sock Large White',  2, @pd7, @it7, @hso3, @qhso6, @rthso6, @rthsc6);
+
+
+-- ============================================================================
+-- SECTION 53: MACHINE DOWNTIME EVENTS
+-- ============================================================================
+-- Closed events across the three OEE buckets, dated against the seeded runs so
+-- availability, performance and quality all have something to report.
+
+INSERT INTO `machine_downtime_event` (`id`, `account_id`, `machine_id`, `department_id`, `production_step_id`, `reason_code`, `started_at`, `ended_at`, `duration_seconds`, `shift_date`, `shift_code`, `item_id`, `production_run_id`, `note`, `reported_by_id`, `source_code`) VALUES
+  (@mcdt1, '@account_id', @mach1,  @dept1, @pdst1, 'breakdown',         NOW() - INTERVAL 100 DAY, NOW() - INTERVAL 100 DAY + INTERVAL 45 MINUTE, 2700, DATE(NOW() - INTERVAL 100 DAY), 'day',   @it33, @pnrn1, 'Needle bar jam on cylinder 3', @acus1, 'manual'),
+  (@mcdt2, '@account_id', @mach2,  @dept1, @pdst2, 'changeover',        NOW() - INTERVAL 70 DAY,  NOW() - INTERVAL 70 DAY + INTERVAL 35 MINUTE,  2100, DATE(NOW() - INTERVAL 70 DAY),  'day',   @it34, @pnrn2, 'Yarn colour changeover',       @acus1, 'manual'),
+  (@mcdt3, '@account_id', @mach13, @dept1, @pdst3, 'material_shortage', NOW() - INTERVAL 40 DAY,  NOW() - INTERVAL 40 DAY + INTERVAL 90 MINUTE,  5400, DATE(NOW() - INTERVAL 40 DAY),  'swing', @it35, @pnrn3, 'Waiting on cotton yarn delivery', @acus1, 'manual'),
+  (@mcdt4, '@account_id', @mach5,  @dept3, @pdst7, 'minor_stop',        NOW() - INTERVAL 98 DAY,  NOW() - INTERVAL 98 DAY + INTERVAL 12 MINUTE,   720, DATE(NOW() - INTERVAL 98 DAY),  'day',   @it39, @pnrn1, 'Drum sensor fault, cleared on site', @acus1, 'manual'),
+  (@mcdt5, '@account_id', @mach11, @dept6, @pdst17, 'quality_hold',     NOW() - INTERVAL 66 DAY,  NOW() - INTERVAL 66 DAY + INTERVAL 60 MINUTE,  3600, DATE(NOW() - INTERVAL 66 DAY),  'day',   @it4,  @pnrn2, 'Pairing check on boarded stock', @acus1, 'manual');
+
+
+-- ============================================================================
+-- SECTION 54: SALES TARGETS
+-- ============================================================================
+-- Quarter-to-date and year-to-date revenue targets for the sandbox admin, who is the
+-- sales rep on every seeded order.
+
+INSERT INTO `quantity` (`id`, `value`, `unit_id`) VALUES
+  (@qta1, 250000, @un4),
+  (@qta2, 900000, @un4);
+
+INSERT INTO `target` (`id`, `start_date`, `end_date`, `sales_rep_id`, `account_id`, `amount_id`) VALUES
+  (@ta1, DATE(NOW() - INTERVAL 3 MONTH), DATE(NOW() + INTERVAL 1 MONTH), @acus1, '@account_id', @qta1),
+  (@ta2, DATE(NOW() - INTERVAL 9 MONTH), DATE(NOW() + INTERVAL 3 MONTH), @acus1, '@account_id', @qta2);
+
+
+-- ============================================================================
+-- SECTION 55: CUSTOMER PRICES
+-- ============================================================================
+-- A negotiated price per product line for the two wholesale customers, which is what
+-- the pricing views compare a quoted line against.
+
+INSERT INTO `rate` (`id`, `value`, `numerator_unit_id`, `denominator_unit_id`) VALUES
+  (@rtacpr1, 9.50,  @un4, @un2),
+  (@rtacpr2, 8.75,  @un4, @un2),
+  (@rtacpr3, 10.25, @un4, @un2);
+
+INSERT INTO `account_price` (`id`, `owner_account_id`, `recipient_account_id`, `product_line_id`, `unit_value_id`) VALUES
+  (@acpr1, '@account_id', @cust1, @pdln1, @rtacpr1),
+  (@acpr2, '@account_id', @cust1, @pdln2, @rtacpr2),
+  (@acpr3, '@account_id', @cust2, @pdln1, @rtacpr3);
+
+
+-- ============================================================================
+-- SECTION 56: PRODUCTION SCHEDULE SETTINGS
+-- ============================================================================
+-- Knitting is the constraint: it sets the pace of the plant, and everything downstream
+-- is derived from what it can turn out. Naming the department rather than the machines
+-- means a machine added to it is planned without anyone ticking a box.
+--
+-- The per-machine rows below are the department's own machines, written explicitly so
+-- the settings page shows what is being planned rather than an empty list. They carry
+-- the defaults, so they change nothing on their own -- the absence of a row already
+-- means planned -- and are the rows a user edits to take a machine out for a rebuild.
+--
+-- is_enabled is what turns scheduling on for the account. Seeded on, so a sandbox can
+-- generate a schedule without visiting settings first.
+
+INSERT INTO `account_production_schedule_setting` (`id`, `account_id`, `constraint_department_id`, `is_enabled`, `shifts_per_day`, `hours_per_shift`, `work_days_per_week`, `planning_horizon_weeks`, `frozen_weeks`, `default_lot_units`) VALUES
+  (@acpnscsd1, '@account_id', @dept1, 1, 2, 8.000, 5, 13, 1, 60.000000);
+
+INSERT INTO `production_schedule_resource_setting` (`id`, `account_id`, `scope_code`, `scope_ref_id`, `is_excluded`, `is_enabled`, `sort_order`) VALUES
+  (@pnscrrsd1, '@account_id', 'machine', @mach1,  0, 1, 1),
+  (@pnscrrsd2, '@account_id', 'machine', @mach2,  0, 1, 2),
+  (@pnscrrsd3, '@account_id', 'machine', @mach13, 0, 1, 3);

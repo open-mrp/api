@@ -86,12 +86,27 @@ func (r *SandboxSeeder) Seed(ctx context.Context, accountID string) error {
 }
 
 func parseUserVarSet(stmt string) (string, string, bool) {
-	matches := userVarSetRe.FindStringSubmatch(strings.TrimSpace(stmt))
+	matches := userVarSetRe.FindStringSubmatch(stripLeadingLineComments(stmt))
 	if len(matches) != 3 {
 		return "", "", false
 	}
 
 	return matches[1], strings.TrimSpace(matches[2]), true
+}
+
+// stripLeadingLineComments drops the leading `--` lines a statement carries in from the text ahead of it. The seed is split on `;`, so a section header or a group note lands at the head of the following statement, and a SET sitting behind one would not be recognised as a variable assignment: it would go to the database as a raw `SET @var`, which is exactly what resolving variables in Go exists to avoid. The original statement is still what gets executed, so comments ahead of anything else are left alone.
+func stripLeadingLineComments(stmt string) string {
+	for {
+		stmt = strings.TrimSpace(stmt)
+		if !strings.HasPrefix(stmt, "--") {
+			return stmt
+		}
+		_, rest, found := strings.Cut(stmt, "\n")
+		if !found {
+			return ""
+		}
+		stmt = rest
+	}
 }
 
 func resolveSetExpression(ctx context.Context, tx *sql.Tx, expr string) (string, error) {

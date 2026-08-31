@@ -100,11 +100,39 @@ func TestVitessCompat_NoRawUserVarStatementsReachDB(t *testing.T) {
 		}
 
 		// Any explicit user-variable SET statement must be intercepted by parseUserVarSet.
-		if strings.HasPrefix(strings.ToUpper(stmt), "SET @") {
+		// The seed is split on `;`, so a comment ahead of a SET arrives as part of that
+		// statement: the check reads past leading comments rather than only looking at
+		// statements that happen to open with SET.
+		if strings.HasPrefix(strings.ToUpper(stripLeadingLineComments(stmt)), "SET @") {
 			_, _, ok := parseUserVarSet(stmt)
 			if !ok {
 				t.Fatalf("unrecognized SET @var statement would reach DB: %s", stmt)
 			}
 		}
+	}
+}
+
+func TestStripLeadingLineComments_ExposesACommentedSet(t *testing.T) {
+	t.Parallel()
+	stmt := "-- Invoice line quantities (4)\nSET @qty257 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12))"
+
+	name, expr, ok := parseUserVarSet(stmt)
+	if !ok {
+		t.Fatal("a SET behind a comment must still be recognized as a variable assignment")
+	}
+	if name != "qty257" {
+		t.Fatalf("unexpected var name: %s", name)
+	}
+	if expr != "CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12))" {
+		t.Fatalf("unexpected expression: %s", expr)
+	}
+}
+
+func TestStripLeadingLineComments_LeavesOtherStatementsUnmatched(t *testing.T) {
+	t.Parallel()
+	stmt := "-- SECTION 44\nINSERT INTO production_shift (id) VALUES (@pnsf1)"
+
+	if _, _, ok := parseUserVarSet(stmt); ok {
+		t.Fatal("a commented INSERT must not be treated as a variable assignment")
 	}
 }

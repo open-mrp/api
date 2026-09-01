@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.0](https://github.com/open-mrp/api/compare/v2.4.1...v2.5.0) (2026-09-01)
+
+
+### Features
+
+* **email:** add new email sending capabilities for invoices, sales orders, and purchase orders; implement document email consumer ([#111](https://github.com/open-mrp/api/issues/111)) ([7ec62fe](https://github.com/open-mrp/api/commit/7ec62fe5cfac49db0b6c8d88568ffb108444d07d))
+
 ## [2.4.1](https://github.com/open-mrp/api/compare/v2.4.0...v2.4.1) (2026-09-01)
 
 

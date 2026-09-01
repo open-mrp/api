@@ -129,6 +129,13 @@
                                                 </td>
                                             </tr>
                                             {{end}}
+                                            {{if .SupportEmail}}
+                                            <tr>
+                                                <td style="padding: 4px 0; font-size: 13px; color: #64748B;">
+                                                    <strong>Support Email:</strong> {{.SupportEmail}}
+                                                </td>
+                                            </tr>
+                                            {{end}}
                                             {{if .TargetAccountID}}
                                             <tr>
                                                 <td style="padding: 4px 0; font-size: 13px; color: #64748B;">

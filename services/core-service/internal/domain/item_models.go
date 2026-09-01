@@ -50,6 +50,16 @@ type AllocateOpenIssuesEvent struct {
 	AfterID        string    `json:"after_id"`
 }
 
+// OpenIssueRef is one open issue named by discovery: the keyset, and nothing else.
+//
+// Deliberately not the issue's quantity or unit. Discovery is a non-locking read, and feeding its
+// values into arithmetic is what 3e99b962 did — the values are re-read under FOR UPDATE when the
+// issue is claimed, so anything carried here would only be a staler copy of them.
+type OpenIssueRef struct {
+	ID        string
+	CreatedAt time.Time
+}
+
 // ItemCategory represents an item category (joined data).
 type ItemCategory struct {
 	ID                   string

@@ -39,19 +39,15 @@ func TestFreshness_SecondAllocatorSeesTheFirstsDraw(t *testing.T) {
 	loser := f.actor(t, "loser")
 	ctx := context.Background()
 
-	// The winner takes its page — one issue — and draws 60 of the receipt's 100. Not committed yet, so
-	// the loser cannot see it by any means other than a current read taken after the winner commits.
-	_, _, count, apiErr := winner.repo.AllocateOpenIssuesForItemPage(ctx, f.accountID, f.itemID, time.Time{}, "", 1)
-	require.Nil(t, apiErr, "winner: allocating the first issue")
-	require.Equal(t, 1, count, "the winner's page must name exactly the first issue")
+	// The winner covers the first issue, drawing 60 of the receipt's 100. Not committed yet, so the
+	// loser cannot see it by any means other than a current read taken after the winner commits.
+	require.Nil(t, winner.repo.AllocateOneOpenIssue(ctx, f.accountID, f.itemID, issueA),
+		"winner: allocating the first issue")
 
 	// The loser starts on the second issue. Its own reads happen now, while the winner's draw is still
 	// uncommitted, and it then blocks on the receipt the winner holds.
 	loserDone := make(chan *apierror.APIError, 1)
-	go func() {
-		_, _, _, apiErr := loser.repo.AllocateOpenIssuesForItemPage(ctx, f.accountID, f.itemID, base, issueA, 1)
-		loserDone <- apiErr
-	}()
+	go func() { loserDone <- loser.repo.AllocateOneOpenIssue(ctx, f.accountID, f.itemID, issueB) }()
 	loser.waitUntilBlocked(t, f.db)
 
 	winner.commit(t)
@@ -90,8 +86,8 @@ func TestVerification_UnlockedWriterDoesNotCauseAnOverDraw(t *testing.T) {
 	f := newFixture(t)
 	base := time.Now().UTC().Add(-time.Hour).Truncate(time.Millisecond)
 
-	// `issue` is the oldest, so a page of one names it and nothing else. `other` exists only to hang
-	// the other writer's allocation off, since an allocation needs an issue to point at.
+	// `other` exists only to hang the other writer's allocation off, since an allocation needs an issue
+	// to point at.
 	issue := f.insertIssue(t, "open", "100", f.each, base)
 	other := f.insertIssue(t, "open", "100", f.each, base.Add(time.Second))
 	receipt := f.insertReceipt(t, "available", "100", f.each, base)
@@ -114,11 +110,9 @@ func TestVerification_UnlockedWriterDoesNotCauseAnOverDraw(t *testing.T) {
 	// and having taken no locking read. Our snapshot still says the receipt is untouched.
 	f.writeRawAllocation(t, other, receipt, "100", f.each)
 
-	_, _, count, apiErr := ours.repo.AllocateOpenIssuesForItemPage(ctx, f.accountID, f.itemID, time.Time{}, "", 1)
-	require.Nil(t, apiErr,
+	require.Nil(t, ours.repo.AllocateOneOpenIssue(ctx, f.accountID, f.itemID, issue),
 		"a receipt exhausted by an unlocked writer must be skipped, not fail the transaction: failing "+
 			"would poison this issue on every later pass for a row we did not write")
-	require.Equal(t, 1, count, "the page must actually have named the issue, or this test proves nothing")
 	ours.commit(t)
 
 	assertReceiptNotOverDrawn(t, f, receipt)

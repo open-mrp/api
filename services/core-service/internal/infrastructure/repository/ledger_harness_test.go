@@ -598,20 +598,29 @@ func (f *fixture) probeCanInsertOpenIssue(t *testing.T, createdAt time.Time) boo
 	return false
 }
 
-// findOpenIssuesPagedParams drives the paged read from the epoch cursor, the way both producers of
+// discoveryParams drives the discovery read from the epoch cursor, the way both producers of
 // core.cmd.allocate_open_issues do — every chain starts over from the beginning of the range.
-func findOpenIssuesPagedParams(f *fixture, limit int32) sqlc.FindOpenIssuesForItemPagedParams {
-	return findOpenIssuesPagedParamsAfter(f, openIssueCursorEpoch, "", limit)
+func discoveryParams(f *fixture, limit int32) sqlc.ListOpenIssueIDsForItemPagedParams {
+	return discoveryParamsAfter(f, openIssueCursorEpoch, "", limit)
 }
 
-func findOpenIssuesPagedParamsAfter(f *fixture, after time.Time, afterID string, limit int32) sqlc.FindOpenIssuesForItemPagedParams {
-	return sqlc.FindOpenIssuesForItemPagedParams{
+func discoveryParamsAfter(f *fixture, after time.Time, afterID string, limit int32) sqlc.ListOpenIssueIDsForItemPagedParams {
+	return sqlc.ListOpenIssueIDsForItemPagedParams{
 		AccountID:       f.accountID,
 		ItemID:          f.itemID,
 		CursorCreatedAt: after,
 		CursorID:        afterID,
 		Limit:           limit,
 	}
+}
+
+// claim drives the real locking read an allocate transaction takes on one issue.
+func (a *actor) claim(t *testing.T, f *fixture, issueID string) error {
+	t.Helper()
+	_, err := a.q.ClaimOpenIssueForAllocation(context.Background(), sqlc.ClaimOpenIssueForAllocationParams{
+		ID: issueID, AccountID: f.accountID,
+	})
+	return err
 }
 
 func isLockWaitTimeout(err error) bool {

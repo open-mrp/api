@@ -264,7 +264,7 @@ func (c *BatchScannedConsumer) enqueueOpenIssueAllocation(ctx context.Context, a
 			continue
 		}
 		seen[itemID] = true
-		if apiErr := enqueueAllocateOpenIssues(ctx, outboxRepo, accountID, itemID, time.Time{}, ""); apiErr != nil {
+		if apiErr := enqueueAllocateOpenIssues(ctx, outboxRepo, accountID, itemID, time.Time{}, "", ""); apiErr != nil {
 			return apiErr
 		}
 	}

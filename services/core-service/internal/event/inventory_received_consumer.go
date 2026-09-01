@@ -114,7 +114,7 @@ func enqueueAllocationForItems(ctx context.Context, repos domain.RepoFactory, ac
 			continue
 		}
 		seen[itemID] = true
-		if apiErr := enqueueAllocateOpenIssues(ctx, outboxRepo, accountID, itemID, time.Time{}, ""); apiErr != nil {
+		if apiErr := enqueueAllocateOpenIssues(ctx, outboxRepo, accountID, itemID, time.Time{}, "", ""); apiErr != nil {
 			return apiErr
 		}
 	}

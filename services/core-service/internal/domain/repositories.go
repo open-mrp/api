@@ -781,8 +781,12 @@ type InventoryReservationRepo interface {
 	AllocateReservationsForConsumption(ctx context.Context, params ConsumptionAllocationParams) (*ConsumptionAllocationResult, *apierror.APIError)
 	// AllocateOpenIssuesForItem performs FIFO allocation of all open inventory issues for the given item against available receipts. Used after receiving inventory.
 	AllocateOpenIssuesForItem(ctx context.Context, accountID, itemID string) *apierror.APIError
-	// AllocateOpenIssuesForItemPage allocates one page (up to limit, oldest first, resuming after the (afterCreatedAt, afterID) cursor) of the item's open issues against available receipts. Returns the (created_at, id) of the last issue processed and how many the page held.
-	AllocateOpenIssuesForItemPage(ctx context.Context, accountID, itemID string, afterCreatedAt time.Time, afterID string, limit int32) (time.Time, string, int, *apierror.APIError)
+	// ListOpenIssueIDsForItem names one page of the item's open demand (up to limit, oldest first, resuming after the (afterCreatedAt, afterID) cursor). It takes no locks and decides nothing: every id it returns is re-read under FOR UPDATE by AllocateOneOpenIssue.
+	ListOpenIssueIDsForItem(ctx context.Context, accountID, itemID string, afterCreatedAt time.Time, afterID string, limit int32) ([]OpenIssueRef, *apierror.APIError)
+	// CountAvailableReceiptsForItem reports how many receipts the item has to draw on, so an uncoverable backlog costs one read rather than a transaction per issue.
+	CountAvailableReceiptsForItem(ctx context.Context, accountID, itemID string) (int64, *apierror.APIError)
+	// AllocateOneOpenIssue covers one open issue against available receipts. Each call is meant to be its own transaction; the issue is re-read by primary key under FOR UPDATE and skipped if it is no longer open.
+	AllocateOneOpenIssue(ctx context.Context, accountID, itemID, issueID string) *apierror.APIError
 }
 
 // MaterialDemandRepo calculates material demand from a bill of materials.

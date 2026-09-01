@@ -35,9 +35,8 @@ func TestOpenIssueDiscovery_DoesNotBlockNewDemand(t *testing.T) {
 	f.insertReceipt(t, "available", "1000", f.each, base)
 
 	scanner := f.actor(t, "discovery")
-	_, _, _, apiErr := scanner.repo.AllocateOpenIssuesForItemPage(
-		context.Background(), f.accountID, f.itemID, time.Time{}, "", 200)
-	require.Nil(t, apiErr, "the page itself must succeed; this test is about what it holds afterwards")
+	_, err := scanner.q.ListOpenIssueIDsForItemPaged(context.Background(), discoveryParams(f, 200))
+	require.NoError(t, err, "discovery itself must succeed; this test is about what it holds afterwards")
 	requireProductionPlan(t, scanner, f.db)
 
 	// New demand always arrives at NOW(3), to the right of everything the scan saw — squarely in the
@@ -68,13 +67,12 @@ func TestReservedToOpenFlip_IsNotBlockedByADiscoveryScan(t *testing.T) {
 	f.insertReceipt(t, "available", "1000", f.each, old)
 
 	scanner := f.actor(t, "discovery")
-	_, _, _, apiErr := scanner.repo.AllocateOpenIssuesForItemPage(
-		context.Background(), f.accountID, f.itemID, time.Time{}, "", 200)
-	require.Nil(t, apiErr)
+	_, err := scanner.q.ListOpenIssueIDsForItemPaged(context.Background(), discoveryParams(f, 200))
+	require.NoError(t, err)
 	requireProductionPlan(t, scanner, f.db)
 
 	flipper := f.actor(t, "consumption")
-	_, err := flipper.tx.ExecContext(context.Background(),
+	_, err = flipper.tx.ExecContext(context.Background(),
 		`UPDATE inventory_issue SET status_code = 'open', issued_at = NOW(3), updated_at = NOW(3)
 		  WHERE id = ? AND status_code = 'reserved'`, reservationID)
 	if isLockWaitTimeout(err) {
@@ -99,7 +97,7 @@ func TestOpenIssueDiscovery_TakesNoLocks(t *testing.T) {
 	}
 
 	scanner := f.actor(t, "discovery")
-	_, err := scanner.q.FindOpenIssuesForItemPaged(context.Background(), findOpenIssuesPagedParams(f, 200))
+	_, err := scanner.q.ListOpenIssueIDsForItemPaged(context.Background(), discoveryParams(f, 200))
 	require.NoError(t, err)
 	requireProductionPlan(t, scanner, f.db)
 

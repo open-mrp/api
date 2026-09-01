@@ -4,6 +4,7 @@ package repository
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -23,6 +24,13 @@ import (
 //
 // The interleaving is forced, not raced: each side takes its first lock, and the test waits for
 // InnoDB itself to report the other blocked before letting either proceed.
+//
+// EXPECTED RED until the sync allocator is gone. Shrinking the unit of work closed cycles 2, 3 and 7
+// by removing the range scan, but it does not touch this one: the async side still goes issue →
+// receipts while the receipt-first flows go receipts → CloseFullyAllocatedInventoryIssue. Deleting
+// AllocateOpenIssuesForItem so that stocking, voiding and undo enqueue instead of allocating inline
+// is what closes it; the ordering root then covers whatever is left. This test is the tracking signal
+// for that work, so it is left failing rather than skipped.
 func TestNoDeadlock_AsyncVsReceiptFirst(t *testing.T) {
 	f := newFixture(t)
 	base := time.Now().UTC().Add(-time.Hour).Truncate(time.Millisecond)
@@ -35,14 +43,11 @@ func TestNoDeadlock_AsyncVsReceiptFirst(t *testing.T) {
 
 	// --- Step 1: each side takes its FIRST lock, and only its first. -------------------------
 
-	// Async: the issue page. On HEAD a FOR UPDATE range scan; after move 1 a primary-key locking read
-	// of exactly one row.
-	_, err := async.q.FindOpenIssuesForItemPaged(ctx, findOpenIssuesPagedParams(f, 200))
-	require.NoError(t, err, "async: page read")
-	requireProductionPlan(t, async, f.db)
+	// Async: the issue it is about to cover, claimed by primary key. One row, no range, no gaps.
+	require.NoError(t, async.claim(t, f, issueID), "async: claim")
 
 	// Sync: the receipts, which is where a stocking transaction is by the time it allocates.
-	_, err = sync.q.FindReceiptsForAllocation(ctx, sqlc.FindReceiptsForAllocationParams{
+	_, err := sync.q.FindReceiptsForAllocation(ctx, sqlc.FindReceiptsForAllocationParams{
 		AccountID: f.accountID, ItemID: f.itemID,
 	})
 	require.NoError(t, err, "sync: receipt read")
@@ -71,83 +76,124 @@ func TestNoDeadlock_AsyncVsReceiptFirst(t *testing.T) {
 
 	assertNeitherDeadlocked(t, asyncErr, syncErr,
 		"the ABBA inversion between the async allocator (issues → receipts) and the receipt-first sync "+
-			"flows (receipts → CloseFullyAllocatedInventoryIssue) is live: receipt "+receiptID+", issue "+issueID)
+			"flows (receipts → CloseFullyAllocatedInventoryIssue) is live — EXPECTED until the sync "+
+			"allocator is deleted; see this test's comment: receipt "+receiptID+", issue "+issueID)
 
 	async.commit(t)
 	sync.commit(t)
 }
 
-// Cycle 2: the paged scan walks the open set in created_at order; every WHERE id IN (...) writer
-// walks the same rows in clustered PK order, and primary keys are 12-char nanoids
-// (shared/id/utils.go), so the two orders are uncorrelated. With two overlapping rows the orders
-// invert about half the time — which is why this test names the ids and forces the bad direction
-// rather than hoping for it.
-func TestNoDeadlock_ScanVersusPKOrderedRestore(t *testing.T) {
+// Cycle 2, closed by the unit of work rather than by an ordering rule.
+//
+// The paged scan walked the open set in created_at order while every WHERE id IN (...) writer walks
+// the same rows in clustered primary-key order, and primary keys are 12-char nanoids
+// (shared/id/utils.go) so the two orders are uncorrelated. Two overlapping rows inverted about half
+// the time.
+//
+// An allocate transaction now claims exactly one issue, by primary key, so it can never hold two
+// issue rows in any order at all. The multi-row writer waits for the one it wants and then proceeds.
+func TestNoDeadlock_ClaimVersusPKOrderedRestore(t *testing.T) {
 	f := newFixture(t)
 	base := time.Now().UTC().Add(-time.Hour).Truncate(time.Millisecond)
 
-	// created_at order is deliberately the reverse of id order: `late` is read first by the scan,
-	// `early` is read first by the PK-ordered writer.
+	// created_at order deliberately the reverse of id order, which is the case that used to invert.
 	late := f.insertIssueWithID(t, f.itemID+"_zzzz", "open", "10", f.each, base.Add(time.Second))
 	early := f.insertIssueWithID(t, f.itemID+"_aaaa", "open", "10", f.each, base.Add(2*time.Second))
 	f.insertReceipt(t, "available", "100", f.each, base)
 
-	scanner := f.actor(t, "discovery")      // reaches late, then early (created_at)
-	restorer := f.actor(t, "shipment-void") // reaches early, then late (id IN (...))
+	claimer := f.actor(t, "allocate-consumer")
+	restorer := f.actor(t, "shipment-void")
 	ctx := context.Background()
 
-	_, err := scanner.q.FindOpenIssuesForItemPaged(ctx, findOpenIssuesPagedParams(f, 1)) // locks `late` only
-	require.NoError(t, err)
-	requireProductionPlan(t, scanner, f.db)
-	require.NoError(t, restorer.q.RestoreIssuesToReserved(ctx, []string{early})) // locks `early` only
+	require.NoError(t, claimer.claim(t, f, late), "the claim must not block: it is one row by primary key")
 
-	scanErr, restoreErr := make(chan error, 1), make(chan error, 1)
-	go func() {
-		_, err := scanner.q.FindOpenIssuesForItemPaged(ctx,
-			findOpenIssuesPagedParamsAfter(f, base.Add(time.Second), late, 1))
-		scanErr <- err
-	}()
-	scanner.waitUntilBlockedOr(t, f.db, scanErr)
-	go func() { restoreErr <- restorer.q.RestoreIssuesToReserved(ctx, []string{late}) }()
+	restoreErr := make(chan error, 1)
+	go func() { restoreErr <- restorer.q.RestoreIssuesToReserved(ctx, []string{early, late}) }()
+	restorer.waitUntilBlockedOr(t, f.db, restoreErr)
 
-	assertNeitherDeadlocked(t, scanErr, restoreErr,
-		"the created_at-ordered page scan and a PK-ordered RestoreIssuesToReserved deadlocked over the "+
-			"same two inventory_issue rows")
+	// The claimer holds one row and wants nothing, so there is no cycle to break: it commits and the
+	// writer completes.
+	claimer.commit(t)
+	select {
+	case err := <-restoreErr:
+		checkNotDeadlock(t, err, "a PK-ordered RestoreIssuesToReserved deadlocked against an allocate "+
+			"transaction that holds a single issue row")
+	case <-time.After(20 * time.Second):
+		t.Fatal("the restore never completed after the claimer committed")
+	}
+	restorer.commit(t)
 }
 
-// Cycle 3: the clustered/secondary inversion on a single row, with no gap and no second row involved.
+// Cycle 3: the clustered/secondary inversion on one row, closed the same way.
 //
-// A locking range read over inventory_issue_open_paging_idx takes the secondary-index entry and then
-// the clustered row; UPDATE ... WHERE id = ? takes the clustered row and then maintains the secondary
-// entry, because migration 00004 put status_code — the column every status writer changes — into the
-// index the scan locks. One shared row is a cycle.
-func TestNoDeadlock_ScanVersusSingleRowStatusUpdate(t *testing.T) {
+// A locking range read over inventory_issue_open_paging_idx took the secondary-index entry and then
+// the clustered row, while UPDATE ... WHERE id = ? takes the clustered row and then maintains the
+// secondary entry — because migration 00004 put status_code, the column every status writer changes,
+// into the index the scan locked. One shared row was a cycle.
+//
+// Reaching the row by primary key takes the locks in the same direction as every status writer, so
+// there is no inversion left to exploit.
+func TestNoDeadlock_ClaimVersusSingleRowStatusUpdate(t *testing.T) {
 	f := newFixture(t)
 	base := time.Now().UTC().Add(-time.Hour).Truncate(time.Millisecond)
 	shared := f.insertIssue(t, "open", "10", f.each, base)
 	other := f.insertIssue(t, "open", "10", f.each, base.Add(time.Second))
 	f.insertReceipt(t, "available", "100", f.each, base)
 
-	scanner := f.actor(t, "discovery")
+	claimer := f.actor(t, "allocate-consumer")
 	closer := f.actor(t, "sync-allocator")
 	ctx := context.Background()
 
-	// The scanner holds the first row; the closer holds the second.
-	_, err := scanner.q.FindOpenIssuesForItemPaged(ctx, findOpenIssuesPagedParams(f, 1))
-	require.NoError(t, err)
-	requireProductionPlan(t, scanner, f.db)
+	require.NoError(t, claimer.claim(t, f, shared))
 	require.NoError(t, closer.q.CloseFullyAllocatedInventoryIssue(ctx, other))
 
-	scanErr, closeErr := make(chan error, 1), make(chan error, 1)
-	go func() {
-		_, err := scanner.q.FindOpenIssuesForItemPaged(ctx,
-			findOpenIssuesPagedParamsAfter(f, base, shared, 1))
-		scanErr <- err
-	}()
-	scanner.waitUntilBlockedOr(t, f.db, scanErr)
+	closeErr := make(chan error, 1)
 	go func() { closeErr <- closer.q.CloseFullyAllocatedInventoryIssue(ctx, shared) }()
+	closer.waitUntilBlockedOr(t, f.db, closeErr)
 
-	assertNeitherDeadlocked(t, scanErr, closeErr,
-		"the paged scan and CloseFullyAllocatedInventoryIssue deadlocked reaching the clustered row and "+
-			"its inventory_issue_open_paging_idx entry in opposite orders")
+	claimer.commit(t)
+	select {
+	case err := <-closeErr:
+		checkNotDeadlock(t, err, "CloseFullyAllocatedInventoryIssue deadlocked against a primary-key "+
+			"claim of the same row")
+	case <-time.After(20 * time.Second):
+		t.Fatal("the close never completed after the claimer committed")
+	}
+	closer.commit(t)
+}
+
+// The footprint that closes cycles 2, 3 and 7 at once, asserted directly rather than through any one
+// cycle: an allocate transaction holds exactly one inventory_issue row and no gap anywhere.
+//
+// The page used to be the transaction, so it held up to 200 issues, every index gap between and after
+// them, and 200 shared `quantity` rows, for the length of a walk over all of them.
+func TestClaim_LocksExactlyOneIssueAndNoGaps(t *testing.T) {
+	f := newFixture(t)
+	base := time.Now().UTC().Add(-time.Hour).Truncate(time.Millisecond)
+	var issues []string
+	for i := range 5 {
+		issues = append(issues, f.insertIssue(t, "open", "10", f.each, base.Add(time.Duration(i)*time.Second)))
+	}
+
+	claimer := f.actor(t, "allocate-consumer")
+	require.NoError(t, claimer.claim(t, f, issues[2]))
+
+	var issueRows int
+	for _, l := range claimer.locksHeld(t, f.db) {
+		if l.Type != "RECORD" {
+			continue
+		}
+		if strings.Contains(l.Mode, "GAP") && !strings.Contains(l.Mode, "REC_NOT_GAP") {
+			t.Errorf("the claim holds a gap lock %s on %s.%s (%s): new demand for this item cannot be "+
+				"recorded until the transaction commits", l.Mode, l.Object, l.Index, l.Data)
+		}
+		if l.Object == "inventory_issue" {
+			issueRows++
+		}
+	}
+	if issueRows > 2 {
+		// The clustered row plus its secondary-index entry is the whole expected footprint.
+		t.Errorf("the claim holds %d inventory_issue record locks; one issue is one clustered row and at "+
+			"most one index entry", issueRows)
+	}
 }

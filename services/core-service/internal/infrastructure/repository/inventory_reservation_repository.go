@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"log/slog"
 	"time"
 
@@ -696,8 +697,10 @@ func (r *inventoryReservationRepo) AllocateOpenIssuesForItem(ctx context.Context
 
 var openIssueCursorEpoch = time.Unix(0, 0).UTC()
 
-func (r *inventoryReservationRepo) AllocateOpenIssuesForItemPage(ctx context.Context, accountID, itemID string, afterCreatedAt time.Time, afterID string, limit int32) (time.Time, string, int, *apierror.APIError) {
-	ctx, span := inventoryReservationRepoTracer.Start(ctx, "repository.inventory_reservation.allocate_open_issues_for_item_page")
+// ListOpenIssueIDsForItem names a page of the item's open demand, oldest first, resuming after the
+// cursor. It takes no locks and opens no transaction of its own.
+func (r *inventoryReservationRepo) ListOpenIssueIDsForItem(ctx context.Context, accountID, itemID string, afterCreatedAt time.Time, afterID string, limit int32) ([]domain.OpenIssueRef, *apierror.APIError) {
+	ctx, span := inventoryReservationRepoTracer.Start(ctx, "repository.inventory_reservation.list_open_issue_ids_for_item")
 	defer span.End()
 
 	cursorCreatedAt := afterCreatedAt
@@ -705,7 +708,7 @@ func (r *inventoryReservationRepo) AllocateOpenIssuesForItemPage(ctx context.Con
 		cursorCreatedAt = openIssueCursorEpoch
 	}
 
-	issues, err := r.queries.FindOpenIssuesForItemPaged(ctx, sqlc.FindOpenIssuesForItemPagedParams{
+	rows, err := r.queries.ListOpenIssueIDsForItemPaged(ctx, sqlc.ListOpenIssueIDsForItemPagedParams{
 		AccountID:       accountID,
 		ItemID:          itemID,
 		CursorCreatedAt: cursorCreatedAt,
@@ -713,22 +716,61 @@ func (r *inventoryReservationRepo) AllocateOpenIssuesForItemPage(ctx context.Con
 		Limit:           limit,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return time.Time{}, "", 0, tracing.Trace(span, apiErr)
+		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// See AllocateOpenIssuesForItem: the unit ratios are resolved per issue, after its locks.
-	lastCreatedAt := afterCreatedAt
-	lastID := afterID
-	for _, issue := range issues {
-		if apiErr := r.allocateOneOpenIssue(ctx, accountID, itemID, issue.ID, issue.QuantityValue, issue.UnitID,
-			issue.StorageLocationID, issue.LotID); apiErr != nil {
-			return time.Time{}, "", 0, tracing.Trace(span, apiErr)
-		}
-		lastCreatedAt = issue.CreatedAt
-		lastID = issue.ID
+	refs := make([]domain.OpenIssueRef, 0, len(rows))
+	for _, row := range rows {
+		refs = append(refs, domain.OpenIssueRef{ID: row.ID, CreatedAt: row.CreatedAt})
+	}
+	return refs, nil
+}
+
+// CountAvailableReceiptsForItem reports whether the item has anything to draw on at all.
+func (r *inventoryReservationRepo) CountAvailableReceiptsForItem(ctx context.Context, accountID, itemID string) (int64, *apierror.APIError) {
+	ctx, span := inventoryReservationRepoTracer.Start(ctx, "repository.inventory_reservation.count_available_receipts_for_item")
+	defer span.End()
+
+	count, err := r.queries.CountAvailableReceiptsForItem(ctx, sqlc.CountAvailableReceiptsForItemParams{
+		AccountID: accountID,
+		ItemID:    itemID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return 0, tracing.Trace(span, apiErr)
+	}
+	return count, nil
+}
+
+// AllocateOneOpenIssue covers one open issue from the item's receipts. It is the whole unit of work
+// of an allocate transaction.
+//
+// The page used to BE the transaction: a locking range read over up to 200 issues, then about six
+// statements per issue plus four inserts per allocation, every one a prepare+execute pair because
+// db_pool.go forces interpolateParams=false. Well over a thousand round trips holding four tables,
+// against PlanetScale's hard 20-second transaction timeout — which killed one mid-flight on
+// 2026-08-31 (message_inbox 327850, "for tx killer rollback"). One issue is about a dozen statements,
+// so the ceiling stops being a consideration and lock-hold time stops being a lever anyone has to
+// tune.
+//
+// The issue is re-read here by primary key rather than trusted from discovery: it may have closed,
+// been reserved away or been deleted since it was named, and a row that has is skipped.
+func (r *inventoryReservationRepo) AllocateOneOpenIssue(ctx context.Context, accountID, itemID, issueID string) *apierror.APIError {
+	ctx, span := inventoryReservationRepoTracer.Start(ctx, "repository.inventory_reservation.allocate_one_open_issue")
+	defer span.End()
+
+	issue, err := r.queries.ClaimOpenIssueForAllocation(ctx, sqlc.ClaimOpenIssueForAllocationParams{
+		ID:        issueID,
+		AccountID: accountID,
+	})
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil // closed, reserved away or deleted since discovery named it
+	}
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
 	}
 
-	return lastCreatedAt, lastID, len(issues), nil
+	return tracing.Trace(span, r.allocateOneOpenIssue(ctx, accountID, itemID, issue.ID, issue.QuantityValue,
+		issue.UnitID, issue.StorageLocationID, issue.LotID))
 }
 
 // allocateOneOpenIssue covers one open issue, whatever is left of it, from the item's receipts.

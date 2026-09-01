@@ -2,8 +2,11 @@ package event
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"log/slog"
+	"strconv"
 	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
@@ -12,6 +15,7 @@ import (
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/messaging"
 	"github.com/open-mrp/api/shared/tracing"
 
@@ -94,30 +98,92 @@ func (c *AllocateOpenIssuesConsumer) handleMessage(ctx context.Context, msg amqp
 		attribute.String("cursor.after_id", evt.AfterID),
 	)
 
-	apiErr := c.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
-		return allocateOpenIssuesPage(txCtx, f, accountID, evt.ItemID, evt.AfterCreatedAt, evt.AfterID, allocateOpenIssuesPageSize)
-	})
-	if apiErr != nil {
+	// The id this delivery arrived under, read the way messaging.InboxConsumer reads it. It seeds the
+	// continuation's id below, which is what makes a retry of THIS invocation republish the same
+	// continuation while a genuinely new chain for the same item gets a new one.
+	parentMessageID := msg.MessageId
+	if parentMessageID == "" {
+		parentMessageID = amqpMsg.MessageID
+	}
+
+	if apiErr := c.allocateItem(ctx, parentMessageID, accountID, evt.ItemID, evt.AfterCreatedAt, evt.AfterID, allocateOpenIssuesPageSize); apiErr != nil {
 		span.RecordError(apiErr)
 		return apiErr
 	}
 	return nil
 }
 
-func allocateOpenIssuesPage(ctx context.Context, f domain.RepoFactory, accountID, itemID string, afterCreatedAt time.Time, afterID string, pageSize int32) *apierror.APIError {
-	lastCreatedAt, lastID, count, apiErr := f.NewInventoryReservationRepo().
-		AllocateOpenIssuesForItemPage(ctx, accountID, itemID, afterCreatedAt, afterID, pageSize)
+// allocateItem covers a page of an item's open demand, one transaction per issue.
+//
+// Discovery names up to 200 issues in a single index-only read that takes no locks; each issue is
+// then claimed and covered in its own short transaction. The page is still a message boundary, but it
+// is no longer a transaction boundary, which is what takes the 20-second platform ceiling and the
+// item-wide lock footprint out of the picture at once.
+func (c *AllocateOpenIssuesConsumer) allocateItem(ctx context.Context, parentMessageID, accountID, itemID string, afterCreatedAt time.Time, afterID string, pageSize int32) *apierror.APIError {
+	reservationRepo := c.repos.NewInventoryReservationRepo()
+
+	// An item with nothing to draw on costs one read rather than a transaction per issue. The busiest
+	// items in this database have hundreds of open issues against zero available receipts.
+	available, apiErr := reservationRepo.CountAvailableReceiptsForItem(ctx, accountID, itemID)
+	if apiErr != nil {
+		return apiErr
+	}
+	if available == 0 {
+		return nil
+	}
+
+	refs, apiErr := reservationRepo.ListOpenIssueIDsForItem(ctx, accountID, itemID, afterCreatedAt, afterID, pageSize)
 	if apiErr != nil {
 		return apiErr
 	}
 
-	if count == int(pageSize) {
-		return enqueueAllocateOpenIssues(ctx, f.NewOutboxRepo(), accountID, itemID, lastCreatedAt, lastID)
+	lastCreatedAt, lastID := afterCreatedAt, afterID
+	var failed int
+	var firstErr *apierror.APIError
+
+	for _, ref := range refs {
+		txErr := c.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
+			return f.NewInventoryReservationRepo().AllocateOneOpenIssue(txCtx, accountID, itemID, ref.ID)
+		})
+		if txErr != nil {
+			// One issue failing is not the page failing: only its own writes roll back, the row stays
+			// `open`, and stopping here would let one poisoned issue starve every issue behind it. It is
+			// still counted and still reported below, because swallowing it would take away the signal
+			// that surfaced this incident in the first place.
+			slog.ErrorContext(ctx, "allocate_open_issues: issue failed",
+				"account_id", accountID, "item_id", itemID, "issue_id", ref.ID,
+				"error_code", txErr.Code, "error", txErr)
+			failed++
+			if firstErr == nil {
+				firstErr = txErr
+			}
+		}
+		lastCreatedAt, lastID = ref.CreatedAt, ref.ID
+	}
+
+	if len(refs) == int(pageSize) {
+		if apiErr := c.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
+			return enqueueAllocateOpenIssues(txCtx, f.NewOutboxRepo(), accountID, itemID, lastCreatedAt, lastID,
+				continuationMessageID(parentMessageID, accountID, itemID, lastCreatedAt, lastID))
+		}); apiErr != nil {
+			return apiErr
+		}
+	}
+
+	if failed > 0 {
+		slog.ErrorContext(ctx, "allocate_open_issues: page finished with failures",
+			"account_id", accountID, "item_id", itemID, "failed", failed, "of", len(refs))
+		return firstErr
 	}
 	return nil
 }
 
-func enqueueAllocateOpenIssues(ctx context.Context, outboxRepo messaging.OutboxRepo, accountID, itemID string, afterCreatedAt time.Time, afterID string) *apierror.APIError {
+// enqueueAllocateOpenIssues asks for an item's open demand to be covered.
+//
+// messageID is empty for the producers that start a chain — a batch scan, a receipt landing — so the
+// outbox mints a random one and every enqueue is its own chain. Only the consumer's own continuation
+// passes one, and only to make its own retries idempotent; see continuationMessageID.
+func enqueueAllocateOpenIssues(ctx context.Context, outboxRepo messaging.OutboxRepo, accountID, itemID string, afterCreatedAt time.Time, afterID, messageID string) *apierror.APIError {
 	payload, err := json.Marshal(domain.AllocateOpenIssuesEvent{
 		AccountID:      accountID,
 		ItemID:         itemID,
@@ -144,6 +210,7 @@ func enqueueAllocateOpenIssues(ctx context.Context, outboxRepo messaging.OutboxR
 		Destination: messaging.ApplicationExchange,
 		RoutingKey:  string(contracts.CoreCmdAllocateOpenIssues),
 		Payload:     msg,
+		MessageID:   messageID,
 	}
 
 	if _, err := outboxRepo.Create(ctx, outboxInput); err != nil {
@@ -151,4 +218,23 @@ func enqueueAllocateOpenIssues(ctx context.Context, outboxRepo messaging.OutboxR
 	}
 
 	return nil
+}
+
+// continuationMessageID derives a continuation's id from the delivery that produced it, so a retry of
+// that delivery republishes the same message instead of forking the chain.
+//
+// The page and its continuation are no longer one transaction, so a handler retry — four delivery
+// attempts, each re-invoking the handler — republishes the continuation. With a random id that is
+// four chains for one item, each free to fork again at its own failing page. With this id the inbox's
+// (handler, message_id) unique key makes every republish a no-op. Duplicate rows in the OUTBOX are
+// fine and expected; the dedup that matters is on the consuming side.
+//
+// The parent id is in the hash, and it is what keeps this safe. Keyed on the cursor alone the id
+// would be stable for all time, so the second chain ever to reach a given page — after a new receipt
+// lands, say — would be deduped against the first and simply stop, leaving every issue past that page
+// uncovered forever. Each chain starts from a producer's own random id, so each gets its own series.
+func continuationMessageID(parentMessageID, accountID, itemID string, afterCreatedAt time.Time, afterID string) string {
+	sum := sha256.Sum256([]byte(parentMessageID + "\x00" + accountID + "\x00" + itemID + "\x00" +
+		strconv.FormatInt(afterCreatedAt.UnixMilli(), 10) + "\x00" + afterID))
+	return string(id.MessageIDPrefix) + "_" + hex.EncodeToString(sum[:11])
 }

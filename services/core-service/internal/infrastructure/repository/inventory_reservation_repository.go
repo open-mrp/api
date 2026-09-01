@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"log/slog"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -12,6 +13,7 @@ import (
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/ledger"
 	"github.com/open-mrp/api/shared/tracing"
 )
 
@@ -202,12 +204,26 @@ func (r *inventoryReservationRepo) AllocateReservationsForConsumption(ctx contex
 		}
 
 		if take.Equal(available) {
-			// Full consumption: change status to open and allocate
-			if err := r.queries.UpdateInventoryIssueStatusToOpen(ctx, sqlc.UpdateInventoryIssueStatusToOpenParams{
+			// Full consumption: change status to open and allocate.
+			//
+			// Guarded on `reserved` and checked for rows affected. The reservation read at the top of
+			// this function may have been deleted by an order edit since, and the unguarded UPDATE this
+			// replaces matched nothing and said nothing — so the walk below drew receipts down to cover
+			// an issue that no longer exists. There is no foreign key to object afterwards.
+			claimed, err := r.queries.ClaimReservedInventoryIssueAsOpen(ctx, sqlc.ClaimReservedInventoryIssueAsOpenParams{
 				ID:      issue.ID,
 				BatchID: producedBatchID,
-			}); err != nil {
+			})
+			if err != nil {
 				return nil, db.MapSQLError(err)
+			}
+			affected, err := claimed.RowsAffected()
+			if err != nil {
+				return nil, db.MapSQLError(err)
+			}
+			if affected == 0 {
+				// Deleted or already consumed in between. Nothing to cover.
+				continue
 			}
 			// take, not issueQty: the portion already allocated has been drawn from receipts once
 			// already, and re-issuing the whole quantity consumes it a second time.
@@ -335,38 +351,97 @@ func (r *inventoryReservationRepo) unitRatios(ctx context.Context, unitIDs []str
 	return ratios, nil
 }
 
-// allocatedSumsByReceipt returns how much each of the given receipts has already been drawn down,
-// each allocation taken through its own unit's ratio.
-//
-// A receipt with no allocations is absent from the result rather than zero; the zero value of the map
-// is what the caller wants for it anyway. An unhandled driver type used to leave the sum at zero,
-// which reads as "untouched" and let a receipt be drawn twice, so an unparseable value is an error
-// here rather than a default.
-func (r *inventoryReservationRepo) allocatedSumsByReceipt(ctx context.Context, receipts []sqlc.FindReceiptsForAllocationRow) (map[string]decimal.Decimal, *apierror.APIError) {
-	sums := make(map[string]decimal.Decimal, len(receipts))
-	if len(receipts) == 0 {
-		return sums, nil
+// allocationMeasure is one allocation row as the ledger's arithmetic needs it: a value and the unit
+// it was stamped in. Allocations against a single receipt can carry different units — the row records
+// whatever unit the code that wrote it chose — so they are summed through their own ratios rather
+// than added raw.
+type allocationMeasure struct {
+	unitID string
+	value  string
+}
+
+// sumInBase totals allocation rows in base units, each through its own unit's ratio.
+func (r *inventoryReservationRepo) sumInBase(ctx context.Context, rows []allocationMeasure) (decimal.Decimal, *apierror.APIError) {
+	if len(rows) == 0 {
+		return decimal.Zero, nil
 	}
 
-	ids := make([]string, 0, len(receipts))
-	for _, receipt := range receipts {
-		ids = append(ids, receipt.ID)
-	}
-
-	rows, err := r.queries.GetAllocationSumsForReceipts(ctx, ids)
-	if err != nil {
-		return nil, db.MapSQLError(err)
-	}
-
+	unitIDs := make([]string, 0, len(rows))
 	for _, row := range rows {
-		allocated, parseErr := decimal.NewFromString(decimalToString(row.TotalAllocated))
-		if parseErr != nil {
-			return nil, apierror.NewInternalError(parseErr, "Invalid allocated sum for receipt.")
-		}
-		sums[row.InventoryReceiptID] = allocated
+		unitIDs = append(unitIDs, row.unitID)
+	}
+	ratios, apiErr := r.unitRatios(ctx, unitIDs)
+	if apiErr != nil {
+		return decimal.Zero, apiErr
 	}
 
-	return sums, nil
+	total := decimal.Zero
+	for _, row := range rows {
+		value, parseErr := decimal.NewFromString(row.value)
+		if parseErr != nil {
+			return decimal.Zero, apierror.NewInternalError(parseErr, "Invalid allocation quantity value.")
+		}
+		total = total.Add(value.Mul(ratios[row.unitID]))
+	}
+	return total, nil
+}
+
+// drawnBaseForReceipt reports what a receipt has actually been drawn, right now, in base units.
+//
+// This is a current read, and that is the whole point of it. A locking read sees the latest committed
+// version of every row it touches regardless of when this transaction's snapshot opened, so the
+// number it returns is true even for a transaction that has been queued on a receipt lock while
+// somebody else committed against it. The plain sum it replaces is what produced the 2026-08-26
+// over-draws: a transaction woke from the receipt lock and computed what was left from a view frozen
+// before the winner committed.
+//
+// It costs a round trip per receipt this issue actually draws on, typically one to three, and it
+// replaces the single batched sum over the whole candidate set rather than adding to it.
+func (r *inventoryReservationRepo) drawnBaseForReceipt(ctx context.Context, receiptID string) (decimal.Decimal, *apierror.APIError) {
+	rows, err := r.queries.ReadReceiptAllocationsForUpdate(ctx, receiptID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return decimal.Zero, apiErr
+	}
+
+	measures := make([]allocationMeasure, 0, len(rows))
+	for _, row := range rows {
+		measures = append(measures, allocationMeasure{unitID: row.UnitID, value: row.Value})
+	}
+	return r.sumInBase(ctx, measures)
+}
+
+// coveredBaseForIssue reports what an issue has actually been covered by, right now, in base units.
+// Same mechanism and same reason as drawnBaseForReceipt, on the demand side: this is the number that
+// decides whether the issue closes.
+func (r *inventoryReservationRepo) coveredBaseForIssue(ctx context.Context, issueID string) (decimal.Decimal, *apierror.APIError) {
+	rows, err := r.queries.ReadIssueCoverageForUpdate(ctx, issueID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return decimal.Zero, apiErr
+	}
+
+	measures := make([]allocationMeasure, 0, len(rows))
+	for _, row := range rows {
+		measures = append(measures, allocationMeasure{unitID: row.UnitID, value: row.Value})
+	}
+	return r.sumInBase(ctx, measures)
+}
+
+// ledgerReceiptOverdrawnSkipped reports a receipt that was already drawn past its capacity before this
+// transaction touched it. Somebody else's breach, so it is a page rather than a failure: see the
+// delta rule in drawFromReceipts.
+func ledgerReceiptOverdrawnSkipped(ctx context.Context, receiptID string, drawn, capacity decimal.Decimal) {
+	slog.ErrorContext(ctx, "inventory receipt is already over-drawn; skipping it",
+		"receipt_id", receiptID, "drawn_base", drawn.String(), "capacity_base", capacity.String())
+}
+
+// ledgerConcurrentOverdrawDetected reports a receipt that went over capacity between this
+// transaction's own measurement and its own insert. Our draw fitted the free space we measured while
+// holding the receipt's lock, so the writer that broke it held no lock — which today means the
+// dashboard's Prisma allocator.
+func ledgerConcurrentOverdrawDetected(ctx context.Context, receiptID string, before, after, capacity decimal.Decimal) {
+	slog.ErrorContext(ctx, "inventory receipt was over-drawn by an unlocked concurrent writer",
+		"receipt_id", receiptID, "drawn_before_base", before.String(), "drawn_after_base", after.String(),
+		"capacity_base", capacity.String())
 }
 
 // allocateOpenIssue draws down receipts to cover an issue, returning how much it managed to cover.
@@ -377,6 +452,25 @@ func (r *inventoryReservationRepo) allocatedSumsByReceipt(ctx context.Context, r
 // in pounds from adjusting one — and comparing the raw values allocated 40 g against demand for
 // 40 lbs and closed the issue as covered.
 func (r *inventoryReservationRepo) allocateOpenIssue(ctx context.Context, issueID string, demand, demandRatio decimal.Decimal, accountID, itemID string, storageLocationID, lotID sql.NullString) (decimal.Decimal, *apierror.APIError) {
+	receipts, apiErr := r.lockReceiptsForAllocation(ctx, accountID, itemID, storageLocationID, lotID)
+	if apiErr != nil {
+		return decimal.Zero, apiErr
+	}
+	if len(receipts) == 0 {
+		return decimal.Zero, nil
+	}
+
+	ratios, apiErr := r.receiptUnitRatios(ctx, receipts)
+	if apiErr != nil {
+		return decimal.Zero, apiErr
+	}
+	return r.drawFromReceipts(ctx, issueID, demand, demandRatio, receipts, ratios)
+}
+
+// lockReceiptsForAllocation takes the item's candidate receipts under FOR UPDATE. Kept separate from
+// the walk so callers can take this lock before any plain read of their own: see the statement
+// ordering rule on drawFromReceipts.
+func (r *inventoryReservationRepo) lockReceiptsForAllocation(ctx context.Context, accountID, itemID string, storageLocationID, lotID sql.NullString) ([]sqlc.FindReceiptsForAllocationRow, *apierror.APIError) {
 	receipts, err := r.queries.FindReceiptsForAllocation(ctx, sqlc.FindReceiptsForAllocationParams{
 		AccountID:         accountID,
 		ItemID:            itemID,
@@ -384,30 +478,37 @@ func (r *inventoryReservationRepo) allocateOpenIssue(ctx context.Context, issueI
 		LotID:             lotID,
 	})
 	if err != nil {
-		return decimal.Zero, db.MapSQLError(err)
+		return nil, db.MapSQLError(err)
 	}
-	if len(receipts) == 0 {
-		return decimal.Zero, nil
-	}
+	return receipts, nil
+}
 
-	unitIDs := make([]string, 0, len(receipts)*2)
+// receiptUnitRatios resolves the ratios a draw needs: each receipt's own unit, and the denominator
+// unit of its unit cost, which the total-cost conversion is expressed in.
+func (r *inventoryReservationRepo) receiptUnitRatios(ctx context.Context, receipts []sqlc.FindReceiptsForAllocationRow, extra ...string) (map[string]decimal.Decimal, *apierror.APIError) {
+	unitIDs := make([]string, 0, len(receipts)*2+len(extra))
+	unitIDs = append(unitIDs, extra...)
 	for _, receipt := range receipts {
 		unitIDs = append(unitIDs, receipt.UnitID, receipt.UnitCostDenominatorUnitID)
 	}
-	ratios, apiErr := r.unitRatios(ctx, unitIDs)
-	if apiErr != nil {
-		return decimal.Zero, apiErr
-	}
+	return r.unitRatios(ctx, unitIDs)
+}
 
+// drawFromReceipts covers `demand` from already-locked receipts, returning how much it managed.
+//
+// STATEMENT ORDER IS LOAD-BEARING. Every locking read a draw depends on — the receipts here, the
+// issue's own row and coverage at the caller — runs before the first plain read. InnoDB opens the
+// REPEATABLE READ view on the first CONSISTENT read, and a locking read is not one, so the ratios and
+// sums below are read from a view no older than the locks this transaction already holds.
+//
+// What a receipt has left is then read again currently, per receipt, rather than taken from that
+// view at all. The two mechanisms answer different populations: ordering makes the arithmetic right
+// against every writer that takes the same locks, and the current read makes it right against the one
+// that does not — dashboard/apps/api's Prisma allocator, which writes these same rows on live request
+// paths with no locking read anywhere.
+func (r *inventoryReservationRepo) drawFromReceipts(ctx context.Context, issueID string, demand, demandRatio decimal.Decimal, receipts []sqlc.FindReceiptsForAllocationRow, ratios map[string]decimal.Decimal) (decimal.Decimal, *apierror.APIError) {
 	remaining := demand
 	var exhaustedReceiptIDs []string
-
-	// One aggregate for the whole candidate set. Asking per receipt put a round trip inside the walk
-	// below, which an item whose older receipts are all full pays for on every allocation.
-	allocatedByReceipt, apiErr := r.allocatedSumsByReceipt(ctx, receipts)
-	if apiErr != nil {
-		return decimal.Zero, apiErr
-	}
 
 	for _, receipt := range receipts {
 		if remaining.LessThanOrEqual(decimal.Zero) {
@@ -419,16 +520,35 @@ func (r *inventoryReservationRepo) allocateOpenIssue(ctx context.Context, issueI
 			return decimal.Zero, apierror.NewInternalError(parseErr, "Invalid receipt quantity value.")
 		}
 
+		receiptRatio := ratios[receipt.UnitID]
+		capacity := convertMeasure(receiptQty, receiptRatio, decimal.NewFromInt(1))
+
+		// Read currently, while this transaction already holds the receipt's X lock, so what is left is
+		// what is actually committed rather than what this transaction's snapshot remembers.
+		drawnBefore, apiErr := r.drawnBaseForReceipt(ctx, receipt.ID)
+		if apiErr != nil {
+			return decimal.Zero, apiErr
+		}
+
+		// A receipt already drawn past its capacity when we found it is somebody else's breach — the
+		// dashboard's, or one of the rows the 2026-08-26 over-draws left behind. Skipping and alarming
+		// is deliberate: failing here would charge this transaction for a row it did not write, and the
+		// issue behind it would then fail on every pass forever, which is a permanent inbox failure for
+		// a corruption somebody else committed.
+		free := capacity.Sub(drawnBefore)
+		if free.LessThanOrEqual(ledger.Epsilon) {
+			ledgerReceiptOverdrawnSkipped(ctx, receipt.ID, drawnBefore, capacity)
+			// Nothing left to give; it should not be offered to the next issue either.
+			exhaustedReceiptIDs = append(exhaustedReceiptIDs, receipt.ID)
+			continue
+		}
+
 		// What is left of the receipt is worked out in the receipt's own units, where it is exact; only
 		// the comparison against the demand needs converting.
-		receiptRatio := ratios[receipt.UnitID]
-		receiptLeft := receiptQty.Sub(convertMeasure(allocatedByReceipt[receipt.ID], decimal.NewFromInt(1), receiptRatio))
+		receiptLeft := convertMeasure(free, decimal.NewFromInt(1), receiptRatio)
 		available := convertMeasure(receiptLeft, receiptRatio, demandRatio)
 		take := decimal.Min(available, remaining)
-		// A receipt that is already over-allocated leaves available negative. IsZero let that through,
-		// writing a negative allocation and growing `remaining` — so the issue drew more than it asked for.
 		if take.LessThanOrEqual(decimal.Zero) {
-			// Nothing left to give; it should not be offered to the next issue either.
 			exhaustedReceiptIDs = append(exhaustedReceiptIDs, receipt.ID)
 			continue
 		}
@@ -459,18 +579,14 @@ func (r *inventoryReservationRepo) allocateOpenIssue(ctx context.Context, issueI
 			allocQty = receiptLeft
 		}
 
-		// A tripwire, not a condition that should ever hold. take is min(available, remaining) and
-		// allocQty is that converted back, so the arithmetic above cannot exceed what the receipt has
-		// left — unless receiptLeft was computed from a stale reading of the allocations, which is
-		// exactly what happened when the read that opens this transaction was not a locking one and
-		// froze the transaction's view before a sibling committed. That went unnoticed for months
-		// because nothing objected: the rows were simply written, and the damage only surfaced as
-		// stock that had left the ledger without leaving the floor. Failing here turns a silent
-		// over-draw into a message that stops and says so.
-		if allocQty.GreaterThan(receiptLeft) {
+		// Our own arithmetic, checked against the free space we measured while holding the lock. This
+		// is the half of the rule that is ours to fail on: `free` came from a current read, so a draw
+		// that exceeds it is this transaction's bug and nothing else's, and the transaction dies.
+		ourBase := convertMeasure(allocQty, receiptRatio, decimal.NewFromInt(1))
+		if drawnBefore.Add(ourBase).Sub(capacity).GreaterThan(ledger.Epsilon) {
 			return decimal.Zero, apierror.NewInvariantViolationError(
-				"Allocation would draw " + allocQty.String() + " from receipt " + receipt.ID +
-					", which has " + receiptLeft.String() + " left.")
+				"Allocation would draw receipt " + receipt.ID + " to " + drawnBefore.Add(ourBase).String() +
+					" against a capacity of " + capacity.String() + ".")
 		}
 		if err := r.queries.InsertQuantityForInventory(ctx, sqlc.InsertQuantityForInventoryParams{
 			ID:     allocQtyID,
@@ -522,6 +638,19 @@ func (r *inventoryReservationRepo) allocateOpenIssue(ctx context.Context, issueI
 			return decimal.Zero, db.MapSQLError(err)
 		}
 
+		// Read again, currently, now that our own row is committed to the transaction. Our draw fitted
+		// the free space we measured while holding this receipt's X lock, so anything that pushed it
+		// over in between was written by somebody holding no lock at all — which today means the
+		// dashboard. Alarm, never abort: our arithmetic was right and rolling it back would not undo
+		// theirs.
+		drawnAfter, apiErr := r.drawnBaseForReceipt(ctx, receipt.ID)
+		if apiErr != nil {
+			return decimal.Zero, apiErr
+		}
+		if drawnAfter.Sub(capacity).GreaterThan(ledger.Epsilon) {
+			ledgerConcurrentOverdrawDetected(ctx, receipt.ID, drawnBefore, drawnAfter, capacity)
+		}
+
 		remaining = remaining.Sub(take)
 
 		if take.Equal(available) {
@@ -552,17 +681,11 @@ func (r *inventoryReservationRepo) AllocateOpenIssuesForItem(ctx context.Context
 		return tracing.Trace(span, apiErr)
 	}
 
-	unitIDs := make([]string, 0, len(issues))
+	// The ratios are resolved per issue, after that issue's receipt lock, rather than for the whole
+	// set here. Resolving them here is a plain read, and a plain read before the locking ones opens
+	// this transaction's view early — which is the defect, not an optimisation.
 	for _, issue := range issues {
-		unitIDs = append(unitIDs, issue.UnitID)
-	}
-	ratios, apiErr := r.unitRatios(ctx, unitIDs)
-	if apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-
-	for _, issue := range issues {
-		if apiErr := r.allocateOneOpenIssue(ctx, accountID, itemID, issue.ID, issue.QuantityValue, ratios[issue.UnitID],
+		if apiErr := r.allocateOneOpenIssue(ctx, accountID, itemID, issue.ID, issue.QuantityValue, issue.UnitID,
 			issue.StorageLocationID, issue.LotID); apiErr != nil {
 			return tracing.Trace(span, apiErr)
 		}
@@ -593,19 +716,11 @@ func (r *inventoryReservationRepo) AllocateOpenIssuesForItemPage(ctx context.Con
 		return time.Time{}, "", 0, tracing.Trace(span, apiErr)
 	}
 
-	unitIDs := make([]string, 0, len(issues))
-	for _, issue := range issues {
-		unitIDs = append(unitIDs, issue.UnitID)
-	}
-	ratios, apiErr := r.unitRatios(ctx, unitIDs)
-	if apiErr != nil {
-		return time.Time{}, "", 0, tracing.Trace(span, apiErr)
-	}
-
+	// See AllocateOpenIssuesForItem: the unit ratios are resolved per issue, after its locks.
 	lastCreatedAt := afterCreatedAt
 	lastID := afterID
 	for _, issue := range issues {
-		if apiErr := r.allocateOneOpenIssue(ctx, accountID, itemID, issue.ID, issue.QuantityValue, ratios[issue.UnitID],
+		if apiErr := r.allocateOneOpenIssue(ctx, accountID, itemID, issue.ID, issue.QuantityValue, issue.UnitID,
 			issue.StorageLocationID, issue.LotID); apiErr != nil {
 			return time.Time{}, "", 0, tracing.Trace(span, apiErr)
 		}
@@ -618,36 +733,51 @@ func (r *inventoryReservationRepo) AllocateOpenIssuesForItemPage(ctx context.Con
 
 // allocateOneOpenIssue covers one open issue, whatever is left of it, from the item's receipts.
 //
-// issueRatio is the ratio of the unit the issue was recorded in, resolved by the caller through
-// GetUnitRatios rather than joined onto the issue: the read that finds these issues is a locking one
-// and must not take locks on the `unit` rows every account shares. The allocated sum below is taken
-// through each allocation's own ratio, and this is what reads it back in the issue's unit.
-func (r *inventoryReservationRepo) allocateOneOpenIssue(ctx context.Context, accountID, itemID, issueID, quantityValue string, issueRatio decimal.Decimal, storageLocationID, lotID sql.NullString) *apierror.APIError {
+// STATEMENT ORDER IS LOAD-BEARING, and this is where the ordering rule is applied:
+//
+//	1 FindReceiptsForAllocation FOR UPDATE   (locking read — no read view yet)
+//	2 ReadIssueCoverageForUpdate FOR UPDATE  (locking read — still no read view)
+//	3 GetUnitRatios                          (plain — THE VIEW OPENS HERE)
+//
+// InnoDB opens the REPEATABLE READ view on the first CONSISTENT read, and a locking read is not one.
+// So by the time anything is read for arithmetic, this transaction holds every candidate receipt and
+// every allocation already against the issue, and its view is strictly newer than every conforming
+// writer that released them.
+//
+// That is the guarantee 7044443a's comment claimed and never delivered. Its locking read was on the
+// open-issue page, but unitRatios ran next and opened the view before any receipt lock was held, so a
+// transaction that queued on a receipt lock still computed what was left from a pre-lock snapshot.
+// The unit ratios are resolved here, after the locks, rather than for the whole page by the caller,
+// which is what that plain read was.
+func (r *inventoryReservationRepo) allocateOneOpenIssue(ctx context.Context, accountID, itemID, issueID, quantityValue, issueUnitID string, storageLocationID, lotID sql.NullString) *apierror.APIError {
 	issueMeasure, pErr := decimal.NewFromString(quantityValue)
 	if pErr != nil {
 		return apierror.NewInternalError(pErr, "Failed to parse issue quantity.")
 	}
 
+	receipts, apiErr := r.lockReceiptsForAllocation(ctx, accountID, itemID, storageLocationID, lotID)
+	if apiErr != nil {
+		return apiErr
+	}
+
+	// A current read, and it is what decides the close. The plain sum it replaces read from a view
+	// frozen before the receipt locks above were held, so an issue already covered by a sibling
+	// transaction still looked untouched and was allocated in full a second time.
+	coveredBase, apiErr := r.coveredBaseForIssue(ctx, issueID)
+	if apiErr != nil {
+		return apiErr
+	}
+
+	ratios, apiErr := r.receiptUnitRatios(ctx, receipts, issueUnitID)
+	if apiErr != nil {
+		return apiErr
+	}
+	issueRatio := ratios[issueUnitID]
 	if issueRatio.LessThanOrEqual(decimal.Zero) {
 		return apierror.NewInvariantViolationError("Missing unit ratio for the unit an inventory issue was recorded in.")
 	}
 
-	allocatedRaw, aErr := r.queries.GetAllocationSumForIssue(ctx, issueID)
-	if apiErr := db.MapSQLError(aErr); apiErr != nil {
-		return apiErr
-	}
-
-	// SUM() over a DECIMAL arrives as interface{} and the driver picks the shape. Reading only
-	// []byte and string and falling back to zero for anything else — an int64 for a whole number,
-	// a float64 — reads as "nothing allocated yet" for an issue that is already covered, and
-	// allocates the whole of it a second time. That is where negative shortages come from: the
-	// issue then has more allocated against it than it ever asked for.
-	allocated, parseErr := decimal.NewFromString(decimalToString(allocatedRaw))
-	if parseErr != nil {
-		return apierror.NewInternalError(parseErr, "Invalid allocated sum for issue.")
-	}
-
-	issueRemaining := issueMeasure.Sub(convertMeasure(allocated, decimal.NewFromInt(1), issueRatio))
+	issueRemaining := issueMeasure.Sub(convertMeasure(coveredBase, decimal.NewFromInt(1), issueRatio))
 	if issueRemaining.LessThanOrEqual(decimal.Zero) {
 		// Already covered, and left open by an allocation that predates the closing below.
 		if err := r.queries.CloseFullyAllocatedInventoryIssue(ctx, issueID); err != nil {
@@ -655,9 +785,11 @@ func (r *inventoryReservationRepo) allocateOneOpenIssue(ctx context.Context, acc
 		}
 		return nil
 	}
+	if len(receipts) == 0 {
+		return nil
+	}
 
-	covered, apiErr := r.allocateOpenIssue(ctx, issueID, issueRemaining, issueRatio, accountID, itemID,
-		storageLocationID, lotID)
+	covered, apiErr := r.drawFromReceipts(ctx, issueID, issueRemaining, issueRatio, receipts, ratios)
 	if apiErr != nil {
 		return apiErr
 	}

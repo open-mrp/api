@@ -41,6 +41,40 @@ func TestAllocationClaimingQueries_AreLockingReadsWithoutUnitJoins(t *testing.T)
 	}
 }
 
+// The verification reads must lock their satellite quantity as well as the allocation row, and the
+// difference between `FOR UPDATE OF ia` and `FOR UPDATE OF ia, q` is invisible in every test that
+// does not have a concurrent unlocked writer.
+//
+// A locking read is a CURRENT read only for the tables named in OF. Everything else in the join is
+// still answered from the transaction's snapshot. Name `ia` alone and an allocation committed after
+// this transaction's view opened is found in `ia`, joined against a `quantity` row the snapshot
+// cannot see, and dropped by the INNER JOIN — so the query reports a receipt as undrawn while looking
+// directly at the row that drew it. These two statements exist precisely to see writers this service
+// never serialises against, which today means dashboard/apps/api's Prisma allocator, so that failure
+// mode is the whole surface.
+//
+// Locking the satellite is bounded: an allocation owns its quantity row outright
+// (inventory_allocation_quantity_id_key is unique), so this is not the shared-row hazard that keeps
+// `unit` out of these joins.
+func TestVerificationReads_LockTheSatelliteQuantityToo(t *testing.T) {
+	t.Parallel()
+
+	for _, name := range []string{"ReadReceiptAllocationsForUpdate", "ReadIssueCoverageForUpdate"} {
+		body := queryBody(t, "inventory_reservation.sql", name)
+		statement := body[strings.Index(body, "-- name:"):]
+
+		if !strings.Contains(statement, "FOR UPDATE OF ia, q") {
+			t.Errorf("%s does not lock its joined quantity row: with FOR UPDATE OF ia alone the join is "+
+				"still answered from the snapshot, so an allocation committed by an unlocked writer is "+
+				"silently dropped and the receipt reads as undrawn", name)
+		}
+		if unitJoinRe.MatchString(statement) {
+			t.Errorf("%s joins `unit` under a locking read, which locks rows every account shares; sum "+
+				"through GetUnitRatios instead", name)
+		}
+	}
+}
+
 // FindOpenIssuesForItem must NOT be a locking read, and the asymmetry with its paged sibling is the
 // point rather than an oversight.
 //

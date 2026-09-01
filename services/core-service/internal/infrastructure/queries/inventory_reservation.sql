@@ -50,16 +50,21 @@ AND ii.status_code = 'reserved'
 GROUP BY ii.id, q.id, q.value, q.unit_id, u.ratio_numerator, u.ratio_denominator, ii.storage_location_id, ii.lot_id, ii.batch_id
 ORDER BY ii.created_at ASC;
 
--- UpdateInventoryIssueStatusToOpen consumes a whole reservation in place. The batch that consumed it
--- is stamped on the row so deleting that batch can find the reservation and hand it back; COALESCE
--- keeps whatever tag the row already carried when no batch is supplied.
--- name: UpdateInventoryIssueStatusToOpen :exec
+-- ClaimReservedInventoryIssueAsOpen consumes a whole reservation in place.
+--
+-- Guarded on `reserved` and checked for rows affected, unlike the unguarded UPDATE it replaces: the
+-- reservation this transaction read may have been deleted in between by an order edit (ReduceReservedForOrderItem, DeleteReservedInventoryIssuesBySalesOrder,
+-- DeleteReservedInventoryIssuesByOrderID). The unguarded UPDATE then matched nothing and the caller
+-- carried on to write allocations against an issue that no longer exists, retiring the receipts they
+-- drew to cover demand that is not there. There is no foreign key on
+-- inventory_allocation.inventory_issue_id to catch it afterwards.
+-- name: ClaimReservedInventoryIssueAsOpen :execresult
 UPDATE inventory_issue
 SET status_code = 'open',
     issued_at = NOW(3),
     batch_id = COALESCE(sqlc.narg('batch_id'), batch_id),
     updated_at = NOW(3)
-WHERE id = sqlc.arg('id');
+WHERE id = sqlc.arg('id') AND status_code = 'reserved';
 
 -- name: InsertInventoryIssueForReservation :exec
 INSERT INTO inventory_issue (
@@ -137,7 +142,8 @@ UPDATE inventory_issue
 SET status_code = 'closed', issued_at = NOW(3), updated_at = NOW(3)
 WHERE id = sqlc.arg('id') AND status_code <> 'closed';
 
--- Through each row's own ratio. See GetAllocationSumsForReceipts.
+-- Through each row's own ratio: allocations against one receipt can be stamped in different units,
+-- so adding the raw column values produces a number in no unit at all.
 -- name: GetAllocationSumForReceipt :one
 SELECT COALESCE(SUM(CAST(q.value AS DECIMAL(65,30)) * (u.ratio_numerator / u.ratio_denominator)), 0) AS total_allocated
 FROM inventory_allocation ia
@@ -145,22 +151,51 @@ JOIN quantity q ON q.id = ia.quantity_id
 JOIN unit u ON u.id = q.unit_id
 WHERE ia.inventory_receipt_id = sqlc.arg('receipt_id');
 
--- GetAllocationSumsForReceipts answers for a whole candidate set at once. Allocation walks receipts
--- oldest first and needs each one's drawn-down total; asking per receipt put a round trip inside that
--- loop, so an item with a long tail of open receipts cost a query apiece to find most of them full.
--- Receipts with no allocations are absent rather than zero — the caller treats a missing row as zero.
+-- ReadReceiptAllocationsForUpdate is a CURRENT read of what a receipt has actually been drawn: a
+-- locking read sees the latest committed row versions regardless of this transaction's snapshot.
 --
--- Each row is taken through its own unit's ratio before it is added. Allocations against one receipt
--- can be recorded in different units — the row carries whatever unit the code that wrote it chose —
--- so adding the raw column values produces a number in no unit at all. Divide the total by a unit's
--- ratio to read it in that unit.
--- name: GetAllocationSumsForReceipts :many
-SELECT ia.inventory_receipt_id, COALESCE(SUM(CAST(q.value AS DECIMAL(65,30)) * (u.ratio_numerator / u.ratio_denominator)), 0) AS total_allocated
+-- It exists for one reason and has a defined end. Every writer in this service holds the receipt's
+-- own X lock before it writes an allocation against it, so for those writers the plain sum in
+-- GetAllocationSumsForReceipts is already correct. dashboard/apps/api's Prisma allocator holds
+-- neither that lock nor any other and writes these rows on live invoice-delete and order-release
+-- paths. When that allocator is gone, drop the locking clause and this becomes a plain read kept as
+-- an arithmetic regression check.
+--
+-- FOR UPDATE OF ia, q — and the `q` is load-bearing, not tidiness.
+--
+-- A locking read is current only for the tables named in OF; every other table in the join is still
+-- read from the transaction's snapshot. With OF ia alone, an allocation committed after this
+-- transaction's view opened is found in `ia` and then joined against a `quantity` row that does not
+-- exist in the snapshot, so the INNER JOIN drops it and the read reports a receipt as undrawn while
+-- looking straight at the row that drew it. That is silent, and it defeats the one query whose whole
+-- job is to see writers this transaction never serialised against.
+--
+-- Locking both is bounded and safe: an allocation's quantity row is owned by that allocation alone
+-- (inventory_allocation_quantity_id_key is unique), so this is not the shared-row problem that keeps
+-- `unit` out of the join below. It is deliberately NOT a bare FOR UPDATE, which would go on to lock
+-- rows this statement has no business holding.
+--
+-- Raw rows rather than a SUM, and no `unit` join: the sum has to go through each allocation's own
+-- ratio, and a locking read must not take locks on rows every account in the database shares.
+-- name: ReadReceiptAllocationsForUpdate :many
+SELECT ia.id, q.unit_id, q.value
 FROM inventory_allocation ia
 JOIN quantity q ON q.id = ia.quantity_id
-JOIN unit u ON u.id = q.unit_id
-WHERE ia.inventory_receipt_id IN (sqlc.slice('receipt_ids'))
-GROUP BY ia.inventory_receipt_id;
+WHERE ia.inventory_receipt_id = sqlc.arg('receipt_id')
+FOR UPDATE OF ia, q;
+
+-- ReadIssueCoverageForUpdate is ReadReceiptAllocationsForUpdate on the other side of the ledger: what
+-- an issue has actually been covered by, read currently rather than from the transaction's snapshot.
+--
+-- It decides whether the issue closes, which is the decision GetAllocationSumForIssue used to make
+-- from a view frozen before the receipt locks were held. See that query's note; the same reasoning
+-- and the same end condition apply.
+-- name: ReadIssueCoverageForUpdate :many
+SELECT ia.id, q.unit_id, q.value
+FROM inventory_allocation ia
+JOIN quantity q ON q.id = ia.quantity_id
+WHERE ia.inventory_issue_id = sqlc.arg('issue_id')
+FOR UPDATE OF ia, q;
 
 -- GetUnitRatios gives each unit its ratio, which every unit carries against the same reference for
 -- its dimension. Any two units convert directly through them: `value * ratio_from / ratio_to`.
@@ -183,14 +218,17 @@ WHERE u.id IN (sqlc.slice('unit_ids'));
 -- routinely, and this is what makes the second wait for the first and then re-evaluate `status_code`
 -- against what the first committed rather than against a page it read before the first ran.
 --
--- The subtler half: under REPEATABLE READ the transaction's read view is created by its first
--- *consistent* read, and a locking read is not one. While this was a plain SELECT it froze the
--- transaction's view of the whole ledger at the moment the page was read, so the allocated-sum reads
--- that follow — GetAllocationSumForIssue, GetAllocationSumsForReceipts — still saw an issue as
--- untouched and a receipt as undrawn however long the transaction had since sat waiting on the
--- receipt lock. Every one of the 2026-08-26 over-draws is that: the same open issue allocated in full
--- by two chains, twice its quantity against one receipt. Locking here defers the read view until the
--- locks are held, so the sums that follow read what is actually committed.
+-- It does NOT buy the read-view freshness this comment used to claim for it. Under REPEATABLE READ the
+-- view is created by the transaction's first *consistent* read and a locking read is not one, so the
+-- mechanism is real — but the placement was wrong: the caller resolved unit ratios next, a plain read,
+-- and the view opened there, before any receipt lock was held. A transaction that then queued on a
+-- receipt lock still computed what was left from a pre-lock snapshot, which is every one of the
+-- 2026-08-26 over-draws: the same open issue allocated in full by two chains, twice its quantity
+-- against one receipt.
+--
+-- Freshness is now the caller's business and is achieved two ways, neither of them here: the ratios
+-- are resolved after the receipt lock so the view opens behind it, and what a receipt has left is read
+-- currently through ReadReceiptAllocationsForUpdate rather than from the view at all.
 --
 -- The unit is deliberately not joined. A locking read takes locks on every row it touches, and `unit`
 -- rows are shared by every account in the database — see GetUnitRatios, which exists so that

@@ -61,6 +61,7 @@ import (
 
 	"github.com/open-mrp/api/shared/db"
 	"github.com/open-mrp/api/shared/env"
+	"github.com/open-mrp/api/shared/ledger"
 )
 
 // exitViolations is returned when the ledger is intact except for what the detectors found. It is
@@ -329,7 +330,7 @@ func run(ctx context.Context, args []string, getenv func(string) string, stdout 
 	fs.SetOutput(stdout)
 	accountID := fs.String("account", "", "restrict to one account id")
 	itemID := fs.String("item", "", "restrict to one item id")
-	epsilon := fs.String("epsilon", "0.000001", "ignore differences at or below this many base units")
+	epsilon := fs.String("epsilon", ledger.EpsilonFlagDefault, "ignore differences at or below this many base units")
 	samples := fs.Int("samples", 5, "offending rows to print per detector (0 = none)")
 	only := fs.String("only", "", "run one detector by name")
 	printSQL := fs.Bool("print-sql", false, "print each detector's SQL and exit")

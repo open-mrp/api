@@ -71,6 +71,7 @@ import (
 
 	"github.com/open-mrp/api/shared/db"
 	"github.com/open-mrp/api/shared/env"
+	"github.com/open-mrp/api/shared/ledger"
 )
 
 func main() {
@@ -115,7 +116,7 @@ func Run(ctx context.Context, args []string, getenv func(string) string, stdout,
 	accountID := fs.String("account", "", "restrict to a single account id")
 	itemID := fs.String("item", "", "restrict to a single item id")
 	limit := fs.Int("limit", 0, "cap receipts repaired (0 = no cap)")
-	epsilon := fs.String("epsilon", "0.000001", "ignore overshoots at or below this many base units")
+	epsilon := fs.String("epsilon", ledger.EpsilonFlagDefault, "ignore overshoots at or below this many base units")
 	if err := fs.Parse(args[1:]); err != nil {
 		return err
 	}

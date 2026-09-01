@@ -26,9 +26,11 @@ import (
 	"time"
 
 	"github.com/go-sql-driver/mysql"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/require"
 
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/ledger"
 )
 
 // The local dev MySQL from docker-compose.yml — the same instance make test-sql-prepare-smoke uses
@@ -328,6 +330,90 @@ func (f *fixture) insertReceipt(t *testing.T, status, value, unitID string, rece
 		rID, f.accountID, f.accountID, f.itemID, receivedAt, qID, rateID, status, receivedAt, receivedAt)
 	require.NoError(t, err)
 	return rID
+}
+
+// writeRawAllocation commits an allocation the way a writer outside this service does: straight in,
+// on its own connection, taking no locking read and holding no ledger lock.
+//
+// This is dashboard/apps/api's Prisma allocator (inventory-issue.repo.ts:946, :1216) reduced to what
+// matters — inventoryAllocation.createMany against the same keyspace, on a live request path. Nothing
+// in the Go service can serialise against it, which is why the allocator's arithmetic has to be
+// robust to it rather than merely locked against it.
+func (f *fixture) writeRawAllocation(t *testing.T, issueID, receiptID, value, unitID string) string {
+	t.Helper()
+	qID, rateID, costID, aID := f.nextID("qy"), f.nextID("rt"), f.nextID("qy"), f.nextID("ivia")
+
+	_, err := f.db.Exec(
+		`INSERT INTO quantity (id, value, unit_id, created_at, updated_at) VALUES (?, ?, ?, NOW(3), NOW(3))`,
+		qID, value, unitID)
+	require.NoError(t, err)
+	_, err = f.db.Exec(
+		`INSERT INTO rate (id, value, numerator_unit_id, denominator_unit_id, created_at, updated_at)
+		 VALUES (?, '7', ?, ?, NOW(3), NOW(3))`, rateID, f.dollar, unitID)
+	require.NoError(t, err)
+	_, err = f.db.Exec(
+		`INSERT INTO quantity (id, value, unit_id, created_at, updated_at) VALUES (?, '0', ?, NOW(3), NOW(3))`,
+		costID, f.dollar)
+	require.NoError(t, err)
+	_, err = f.db.Exec(
+		`INSERT INTO inventory_allocation (id, inventory_receipt_id, inventory_issue_id,
+		                                   quantity_id, unit_cost_id, total_cost_id, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, NOW(3), NOW(3))`,
+		aID, receiptID, issueID, qID, rateID, costID)
+	require.NoError(t, err)
+	return aID
+}
+
+// receiptOverDrawnBy reports how far past its own quantity a receipt has been allocated, in base
+// units. It is the detector cmd/repair-overallocated-receipts uses, in one statement: both sides
+// through their own unit's ratio, and the positive-quantity guard, because a migration wrote opening
+// balances as negative receipts.
+func (f *fixture) receiptOverDrawnBy(t *testing.T, receiptID string) decimal.Decimal {
+	t.Helper()
+	var overBy string
+	err := f.db.QueryRow(`
+		SELECT CAST(COALESCE((
+		    SELECT SUM(CAST(aq.value AS DECIMAL(65,30)) * (au.ratio_numerator / au.ratio_denominator))
+		    FROM inventory_allocation ia
+		    JOIN quantity aq ON aq.id = ia.quantity_id
+		    JOIN unit au ON au.id = aq.unit_id
+		    WHERE ia.inventory_receipt_id = ir.id
+		  ), 0)
+		  - (CAST(rq.value AS DECIMAL(65,30)) * (ru.ratio_numerator / ru.ratio_denominator)) AS CHAR)
+		FROM inventory_receipt ir
+		JOIN quantity rq ON rq.id = ir.quantity_id
+		JOIN unit ru ON ru.id = rq.unit_id
+		WHERE ir.id = ? AND rq.value > 0`, receiptID).Scan(&overBy)
+	require.NoError(t, err, "reading the over-draw for receipt %s", receiptID)
+	return decimal.RequireFromString(overBy)
+}
+
+// baseAllocatedForIssue reports what an issue has been covered by, in base units, through each
+// allocation's own unit ratio.
+func (f *fixture) baseAllocatedForIssue(t *testing.T, issueID string) decimal.Decimal {
+	t.Helper()
+	var total string
+	err := f.db.QueryRow(`
+		SELECT CAST(COALESCE(SUM(CAST(q.value AS DECIMAL(65,30)) * (u.ratio_numerator / u.ratio_denominator)), 0) AS CHAR)
+		FROM inventory_allocation ia
+		JOIN quantity q ON q.id = ia.quantity_id
+		JOIN unit u ON u.id = q.unit_id
+		WHERE ia.inventory_issue_id = ?`, issueID).Scan(&total)
+	require.NoError(t, err, "reading the coverage for issue %s", issueID)
+	return decimal.RequireFromString(total)
+}
+
+// assertReceiptNotOverDrawn is the invariant the whole exercise exists to protect: a receipt may never
+// have more allocated against it than it holds. The tolerance is the monitor's, from the same
+// constant, so nothing this permits is something the scheduled check later alarms on.
+func assertReceiptNotOverDrawn(t *testing.T, f *fixture, receiptID string) {
+	t.Helper()
+	overBy := f.receiptOverDrawnBy(t, receiptID)
+	if overBy.GreaterThan(ledger.Epsilon) {
+		t.Errorf("receipt %s is over-drawn by %s base units: more stock has been allocated off it than "+
+			"it ever held, which is the corruption class the 2026-08-26 incident left behind",
+			receiptID, overBy.String())
+	}
 }
 
 // actor is one transaction on one pinned connection, driving the real repository code. It is the

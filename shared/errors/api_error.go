@@ -284,6 +284,38 @@ func (e *APIError) Error() string {
 	return e.InternalMessage
 }
 
+// Describe renders an error for a log line or a stored failure record, and never returns an empty
+// string for a non-nil error.
+//
+// Error() is deliberately developer-facing and renders only InternalMessage, so that a nested
+// APIError carrying nothing but a client-facing message contributes nothing to its parent's text.
+// That is right for composition and wrong for reporting: most constructors — NewValidationError,
+// NewConflictError, NewResourceNotFoundError — set only a public message, so their Error() is "".
+// A handler that failed with one reached message_inbox.last_error as NULL and the log line as
+// error="", recording that a failure happened but not what it was. Five recalc_item_burn_rate rows
+// sat unexplained in e2e exactly that way.
+//
+// Use this wherever an error is being reported rather than composed.
+func Describe(err error) string {
+	if err == nil {
+		return ""
+	}
+	if text := err.Error(); text != "" {
+		return text
+	}
+
+	var apiErr *APIError
+	if errors.As(err, &apiErr) && apiErr != nil {
+		switch {
+		case apiErr.PublicMessage != "":
+			return string(apiErr.Code) + ": " + apiErr.PublicMessage
+		case apiErr.Code != "":
+			return string(apiErr.Code)
+		}
+	}
+	return fmt.Sprintf("%T with no message", err)
+}
+
 // Unwrap returns the underlying error for use with errors.Is/errors.As.
 func (e *APIError) Unwrap() error {
 	if e == nil {

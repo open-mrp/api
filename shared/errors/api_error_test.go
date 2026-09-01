@@ -1011,3 +1011,57 @@ func TestAPIError_ToJSON_NilReceiver(t *testing.T) {
 		t.Errorf("ToJSON() = %q, want nil", data)
 	}
 }
+
+// Describe exists because Error() is a composition primitive, not a reporting one. Most constructors
+// set only a public message, so their Error() is empty by design — and an empty string reaching
+// message_inbox.last_error records that a handler failed without recording what failed.
+func TestDescribe_NeverEmptyForANonNilError(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		err      error
+		expected string
+	}{
+		{
+			name:     "nil is the only empty case",
+			err:      nil,
+			expected: "",
+		},
+		{
+			name:     "an internal message is used as-is",
+			err:      NewInternalError(errors.New("db exploded"), "query failed"),
+			expected: "query failed: db exploded",
+		},
+		{
+			name:     "a public-message-only error falls back to code and message",
+			err:      NewValidationError("bad input"),
+			expected: "validation_failed: bad input",
+		},
+		{
+			name:     "a plain error is unchanged",
+			err:      errors.New("boom"),
+			expected: "boom",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := Describe(tt.err); got != tt.expected {
+				t.Errorf("Describe() = %q, want %q", got, tt.expected)
+			}
+		})
+	}
+}
+
+// The composition semantics Error() has must not change: a nested APIError with no internal message
+// still contributes nothing to its parent's text. Describe is the reporting path, not a replacement.
+func TestDescribe_DoesNotChangeErrorComposition(t *testing.T) {
+	t.Parallel()
+
+	nested := NewInternalError(NewValidationError("bad input"), "handler failed")
+	if got := nested.Error(); got != "handler failed" {
+		t.Errorf("Error() = %q, want %q — Describe must not have leaked into composition", got, "handler failed")
+	}
+}

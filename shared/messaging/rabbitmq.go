@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/shared/contracts"
+	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/retry"
 	"github.com/open-mrp/api/shared/tracing"
@@ -355,7 +356,7 @@ func (r *rabbitMQ) processDelivery(ctx context.Context, queueName string, handle
 
 		return nil
 	}); err != nil {
-		slog.Error("Error processing message", "error", err)
+		slog.Error("Error processing message", "error", apierror.Describe(err))
 	}
 }
 

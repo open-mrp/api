@@ -7,6 +7,7 @@ import (
 
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/db"
+	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/tracing"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"go.opentelemetry.io/otel/trace"
@@ -99,7 +100,7 @@ func (c *InboxConsumer) Wrap(handler string, fn MessageHandler) MessageHandler {
 // executeAndRecord invokes the handler and updates the inbox record based on the outcome. It is called both for new messages and for duplicates that need retry.
 func (c *InboxConsumer) executeAndRecord(ctx context.Context, recordID int64, messageID, handler string, fn MessageHandler, msg amqp.Delivery) error {
 	if err := fn(ctx, msg); err != nil {
-		if markErr := c.repo.MarkFailed(ctx, recordID, err.Error()); markErr != nil {
+		if markErr := c.repo.MarkFailed(ctx, recordID, apierror.Describe(err)); markErr != nil {
 			slog.Warn("Failed to mark inbox record as failed", "handler", handler, "message_id", messageID, "error", markErr)
 		}
 		return err

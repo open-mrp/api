@@ -277,6 +277,10 @@ func (f *fixture) teardown(t *testing.T) {
 	exec(`DELETE FROM inventory_issue WHERE item_id = ?`, f.itemID)
 	exec(`DELETE FROM inventory_receipt WHERE item_id = ?`, f.itemID)
 	exec(`DELETE FROM rate WHERE numerator_unit_id = ? OR denominator_unit_id = ?`, f.dollar, f.dollar)
+	// The one DELETE this table ever sees, and only here: production must never issue one, because a
+	// delete takes the gap locks the ON DUPLICATE KEY shape exists to avoid. Nothing is acquiring
+	// concurrently at teardown, and leaving a row per run to accumulate in a dev database is worse.
+	exec(`DELETE FROM inventory_item_lock WHERE item_id LIKE ?`, f.itemID+"%")
 	exec(`DELETE FROM unit WHERE account_id = ?`, f.accountID)
 }
 
@@ -330,6 +334,23 @@ func (f *fixture) insertReceipt(t *testing.T, status, value, unitID string, rece
 		rID, f.accountID, f.accountID, f.itemID, receivedAt, qID, rateID, status, receivedAt, receivedAt)
 	require.NoError(t, err)
 	return rID
+}
+
+// seedItemLockRow warms the fixture's lock row, so a test can exercise the acquisition's duplicate-key
+// branch rather than its insert branch. Both branches matter and are tested separately.
+func (f *fixture) seedItemLockRow(t *testing.T, itemID string) {
+	t.Helper()
+	_, err := f.db.Exec(`INSERT IGNORE INTO inventory_item_lock (item_id, created_at) VALUES (?, NOW(3))`, itemID)
+	require.NoError(t, err)
+}
+
+// acquireItemLock takes the ledger root exactly as production must: one statement, always this one.
+// See 00016_inventory_item_lock — every other shape deadlocks on the path this table exists to protect.
+func (a *actor) acquireItemLock(itemID string) error {
+	_, err := a.tx.ExecContext(context.Background(),
+		`INSERT INTO inventory_item_lock (item_id, created_at) VALUES (?, NOW(3))
+		 ON DUPLICATE KEY UPDATE item_id = item_id`, itemID)
+	return err
 }
 
 // writeRawAllocation commits an allocation the way a writer outside this service does: straight in,

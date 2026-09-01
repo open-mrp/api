@@ -88,3 +88,48 @@ type SubmitFeedbackParams struct {
 	Answer   string
 	PageURL  *string
 }
+
+// InvoiceIssuedEvent is the payload for CoreEventInvoiceIssued. The account rides on the envelope
+// identity, as it does for every message.
+//
+// Which copies are owed is carried rather than derived: a ship can be told not to mail the customer,
+// and a manual resend never mails the rep. Neither is recoverable from the invoice row once the
+// action that raised it has returned.
+type InvoiceIssuedEvent struct {
+	InvoiceID string `json:"invoice_id"`
+	// EmailCustomer mails the invoice's recipients and flags the invoice sent.
+	EmailCustomer bool `json:"email_customer"`
+	// EmailSalesRep copies the order's sales rep. Never flags the invoice sent — that records whether
+	// the customer received it, and the rep copy is an internal notification.
+	EmailSalesRep bool `json:"email_sales_rep"`
+}
+
+// SalesOrderAcknowledgedEvent is the payload for CoreEventSalesOrderAcknowledged.
+type SalesOrderAcknowledgedEvent struct {
+	SalesOrderID string `json:"sales_order_id"`
+}
+
+// PurchaseOrderSubmittedEvent is the payload for CoreEventPurchaseOrderSubmitted.
+type PurchaseOrderSubmittedEvent struct {
+	PurchaseOrderID string `json:"purchase_order_id"`
+}
+
+// SendInvoiceEmailParams holds parameters for mailing an invoice outside a request.
+type SendInvoiceEmailParams struct {
+	AccountID     string
+	InvoiceID     string
+	EmailCustomer bool
+	EmailSalesRep bool
+}
+
+// SendSalesOrderAcknowledgementParams holds parameters for mailing an order acknowledgement outside a request.
+type SendSalesOrderAcknowledgementParams struct {
+	AccountID    string
+	SalesOrderID string
+}
+
+// SendPurchaseOrderSubmissionParams holds parameters for mailing a purchase order submission outside a request.
+type SendPurchaseOrderSubmissionParams struct {
+	AccountID       string
+	PurchaseOrderID string
+}

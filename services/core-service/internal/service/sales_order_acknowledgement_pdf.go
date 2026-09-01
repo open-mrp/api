@@ -15,6 +15,24 @@ const (
 	ackPageTop      = 20.0
 	ackPageRight    = 195.0
 	ackContentWidth = ackPageRight - ackPageLeft
+
+	// The header splits into a letterhead on the left and the document-title block on the right. The
+	// split is fixed so every record PDF has the same shape; the text inside each half is fitted to
+	// it rather than the halves being sized to the text, which would make one document's header sit
+	// somewhere different from the next.
+	ackLetterheadW = 90.0
+	ackIdentityX   = 111.0
+	ackIdentityW   = ackPageRight - ackIdentityX
+	// ackIdentityGap separates a label from its value. Without it the two runs abut and read as one
+	// word, which is what "Purchase Order Number001000" was.
+	ackIdentityGap = 4.0
+	// ackIdentityLabelMaxW caps the label column so a long label cannot squeeze its value to nothing;
+	// past this the label itself shrinks instead.
+	ackIdentityLabelMaxW = ackIdentityW * 0.62
+
+	// ackCellPadding is the space kept clear inside every table cell. Without it a value that exactly
+	// fills its column touches the one beside it and the two read as one string.
+	ackCellPadding = 1.5
 )
 
 // buildOrderAcknowledgementPDF renders the order-acknowledgement PDF, mirroring the
@@ -43,7 +61,10 @@ func buildOrderAcknowledgementPDF(data ackData) ([]byte, error) {
 }
 
 // ackHeader renders the letterhead (left: account name + address + contact) and the
-// document-title block (right: "ORDER ACKNOWLEDGEMENT" + order/customer identity).
+// document-title block (right: the document title + the record's identity rows).
+//
+// Both halves fit their text to a fixed column rather than assuming it fits: the account name, the
+// title and every label and value here are variable-length, and the widest of them overflowed.
 func ackHeader(pdf *fpdf.Fpdf, data ackData) {
 	startY := pdf.GetY()
 
@@ -53,64 +74,55 @@ func ackHeader(pdf *fpdf.Fpdf, data ackData) {
 		nameY = startY + h + 2
 	}
 	pdf.SetXY(ackPageLeft, nameY)
-	pdf.SetFont("Helvetica", "B", 15)
-	pdf.CellFormat(98, 8, data.AccountName, "", 2, "L", false, 0, "")
-	pdf.SetFont("Helvetica", "", 10.5)
+	// A long trading name shrinks rather than running under the title block.
+	pdfCellText{W: ackLetterheadW, H: 8, Text: data.AccountName, Ln: 2, Align: "L", Style: "B", Size: 15, MinSize: 10}.draw(pdf)
 	// Address, then the merchant's support email and phone (from account branding).
 	for _, line := range nonEmpty(data.AccountAddress.Line1, data.AccountAddress.Line2, data.AccountAddress.CityStateZip, data.AccountPhone, data.AccountEmail) {
-		pdf.CellFormat(98, 5.6, line, "", 2, "L", false, 0, "")
+		pdfCellText{W: ackLetterheadW, H: 5.6, Text: line, Ln: 2, Align: "L", Size: 10.5, MinSize: 8}.draw(pdf)
 	}
 	leftEndY := pdf.GetY()
 
-	// --- Right: document title + identity block, all left-aligned within the block ---
-	title := data.DocumentTitle
-	if title == "" {
-		title = "ORDER ACKNOWLEDGEMENT"
-	}
-	numberLabel := data.NumberLabel
-	if numberLabel == "" {
-		numberLabel = "Sales Order Number"
-	}
-	titleX := 118.0
-	pdf.SetXY(titleX, startY)
-	pdf.SetFont("Helvetica", "", 18)
-	pdf.CellFormat(ackPageRight-titleX, 9, title, "", 2, "R", false, 0, "")
+	// --- Right: document title + identity rows ---
+	rows := data.identityRows()
+
+	pdf.SetXY(ackIdentityX, startY)
+	// "ORDER ACKNOWLEDGEMENT" is half again as wide as "INVOICE" at the same size, so the title is
+	// fitted to the block instead of every title being set at whatever size the shortest one allows.
+	pdfCellText{W: ackIdentityW, H: 9, Text: data.documentTitle(), Ln: 2, Align: "R", Size: 18, MinSize: 11}.draw(pdf)
 	pdf.Ln(3)
 
-	ackIdentityRow(pdf, titleX, numberLabel, data.OrderNumber, true)
-	if data.CustomerPO != "" {
-		ackIdentityRow(pdf, titleX, "PO Number", data.CustomerPO, false)
+	labelW := ackIdentityLabelWidth(pdf, rows)
+	for _, row := range rows {
+		ackIdentityRow(pdf, labelW, row)
 	}
-	if data.CustomerNumber != "" {
-		ackIdentityRow(pdf, titleX, "Customer Number", data.CustomerNumber, false)
-	}
-	ackIdentityRow(pdf, titleX, "Date", data.OrderDateLong, false)
 	rightEndY := pdf.GetY()
 
 	pdf.SetXY(ackPageLeft, maxF(leftEndY, rightEndY))
 }
 
-// ackIdentityRow renders a left-aligned "Label   Value" pair in the header block:
-// the label in a fixed-width column and the value left-aligned beside it.
-func ackIdentityRow(pdf *fpdf.Fpdf, leftX float64, label, value string, main bool) {
+// ackIdentityLabelWidth sizes the label column to the widest label actually present, so the values
+// line up with each other and never overlap the labels. Capped, past which the labels shrink.
+func ackIdentityLabelWidth(pdf *fpdf.Fpdf, rows []ackIdentityField) float64 {
+	widest := 0.0
+	for _, row := range rows {
+		pdf.SetFont("Helvetica", row.style(), row.size())
+		widest = maxF(widest, pdf.GetStringWidth(row.Label))
+	}
+	return minF(widest+ackIdentityGap, ackIdentityLabelMaxW)
+}
+
+// ackIdentityRow renders one "Label   Value" pair in the header block. Both halves are fitted to
+// their column, so a label that outgrows the column shrinks instead of running into its value.
+func ackIdentityRow(pdf *fpdf.Fpdf, labelW float64, row ackIdentityField) {
 	y := pdf.GetY()
-	const labelW = 40.0
-	valueX := leftX + labelW
-	if main {
-		pdf.SetFont("Helvetica", "B", 11.5)
-	} else {
-		pdf.SetFont("Helvetica", "", 10.5)
-	}
-	pdf.SetXY(leftX, y)
-	pdf.CellFormat(labelW, 6.4, label, "", 0, "L", false, 0, "")
-	if main {
-		pdf.SetFont("Helvetica", "B", 11.5)
-	} else {
-		pdf.SetFont("Helvetica", "", 10.5)
-	}
-	pdf.SetXY(valueX, y)
-	pdf.CellFormat(ackPageRight-valueX, 6.4, value, "", 0, "L", false, 0, "")
-	pdf.SetXY(leftX, y+6.4)
+
+	pdf.SetXY(ackIdentityX, y)
+	pdfCellText{W: labelW, H: 6.4, Text: row.Label, Align: "L", Style: row.style(), Size: row.size(), MinSize: 8, Padding: 0.5}.draw(pdf)
+
+	pdf.SetXY(ackIdentityX+labelW, y)
+	pdfCellText{W: ackIdentityW - labelW, H: 6.4, Text: row.Value, Align: "L", Style: row.style(), Size: row.size(), MinSize: 8, Padding: 0.5}.draw(pdf)
+
+	pdf.SetXY(ackIdentityX, y+6.4)
 }
 
 // ackCustomerAddresses renders the two-column Bill To / Ship To block.
@@ -181,8 +193,11 @@ func ackOrderSummary(pdf *fpdf.Fpdf, data ackData) {
 	pdf.CellFormat(0, 11, "Order Summary", "", 1, "L", false, 0, "")
 
 	// Columns: Line Item | SKU | Description | Price | Qty | Total (sum = 180mm).
-	// Price ("$8.50 / pr") and Qty ("1,200 pair") are wider to fit their units.
-	wLine, wSKU, wDesc, wPrice, wQty, wTotal := 20.0, 26.0, 51.0, 30.0, 27.0, 26.0
+	//
+	// Sized from the measured width of each column's header and its widest realistic value, plus the
+	// cell padding, so ordinary content is never shrunk: a SKU like "SOCK-CREW-BLK" is 28.3mm, which
+	// is why SKU is 32 and not the 26 that squeezed it. Description takes the remainder and wraps.
+	wLine, wSKU, wDesc, wPrice, wQty, wTotal := 18.0, 32.0, 57.0, 26.0, 23.0, 24.0
 
 	pdf.SetFont("Helvetica", "B", 9.5)
 	pdf.SetFillColor(243, 244, 246)
@@ -201,23 +216,30 @@ func ackOrderSummary(pdf *fpdf.Fpdf, data ackData) {
 		rowH := 7.5 * float64(len(desc))
 
 		x, y := pdf.GetX(), pdf.GetY()
-		pdf.CellFormat(wLine, rowH, line.LineItem, "B", 0, "L", false, 0, "")
-		pdf.CellFormat(wSKU, rowH, truncate(line.SKU, 20), "B", 0, "L", false, 0, "")
+		cell := func(w float64, text, align string) {
+			pdfCellText{W: w, H: rowH, Text: text, Border: "B", Align: align, Size: 9.5, MinSize: 6.5, Padding: ackCellPadding}.draw(pdf)
+		}
+		cell(wLine, line.LineItem, "L")
+		cell(wSKU, line.SKU, "L")
 		// Description can wrap to multiple lines; draw it as a multi-line block.
 		dx := x + wLine + wSKU
 		pdf.SetXY(dx, y)
+		pdf.SetFont("Helvetica", "", 9.5)
 		pdf.MultiCell(wDesc, 7.5, strings.Join(desc, "\n"), "B", "L", false)
 		pdf.SetXY(dx+wDesc, y)
-		pdf.CellFormat(wPrice, rowH, line.Price, "B", 0, "R", false, 0, "")
-		pdf.CellFormat(wQty, rowH, line.Qty, "B", 0, "R", false, 0, "")
-		pdf.CellFormat(wTotal, rowH, line.Total, "B", 1, "R", false, 0, "")
+		// A price carrying its pricing unit, or a quantity carrying a spelled-out unit name, is the
+		// widest thing in these rows and the first to collide with the column beside it.
+		cell(wPrice, line.Price, "R")
+		cell(wQty, line.Qty, "R")
+		cell(wTotal, line.Total, "R")
+		pdf.Ln(-1)
 	}
 
 	// Total Due footer (right-aligned into the last two columns).
 	pdf.SetFont("Helvetica", "B", 10.5)
 	pdf.CellFormat(wLine+wSKU+wDesc+wPrice, 10, "", "", 0, "R", false, 0, "")
 	pdf.CellFormat(wQty, 10, "Total Due:", "", 0, "R", false, 0, "")
-	pdf.CellFormat(wTotal, 10, data.OrderTotal, "", 1, "R", false, 0, "")
+	pdfCellText{W: wTotal, H: 10, Text: data.OrderTotal, Ln: 1, Align: "R", Style: "B", Size: 10.5, MinSize: 7}.draw(pdf)
 }
 
 // --- helpers ---
@@ -312,6 +334,13 @@ func ackWrap(pdf *fpdf.Fpdf, text string, w float64) []string {
 
 func maxF(a, b float64) float64 {
 	if a > b {
+		return a
+	}
+	return b
+}
+
+func minF(a, b float64) float64 {
+	if a < b {
 		return a
 	}
 	return b

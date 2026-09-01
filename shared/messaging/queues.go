@@ -55,6 +55,17 @@ const (
 	// The queue is named for what its consumer does, not for the event, because a topic exchange gives every bound queue its own copy while consumers sharing a queue compete for messages. A second reaction to the same scan — crediting schedule attainment, say — binds CoreEventBatchScanned on a queue of its own and both run.
 	CoreEventBatchScannedInventoryQueue = "core_event_batch_scanned_inventory"
 
+	// CoreEventInvoiceIssuedEmailQueue carries invoice-issued events to the core-service consumer that renders the invoice and mails the customer and sales-rep copies. Messages contain an InvoiceIssuedEvent payload.
+	//
+	// Named for the reaction rather than the event, for the reason CoreEventBatchScannedInventoryQueue gives: a second subscriber to the same fact binds its own queue instead of competing for these messages.
+	CoreEventInvoiceIssuedEmailQueue = "core_event_invoice_issued_email"
+
+	// CoreEventSalesOrderAcknowledgedEmailQueue carries sales-order-acknowledged events to the core-service consumer that mails the acknowledgement. Messages contain a SalesOrderAcknowledgedEvent payload.
+	CoreEventSalesOrderAcknowledgedEmailQueue = "core_event_sales_order_acknowledged_email"
+
+	// CoreEventPurchaseOrderSubmittedEmailQueue carries purchase-order-submitted events to the core-service consumer that mails the supplier submission. Messages contain a PurchaseOrderSubmittedEvent payload.
+	CoreEventPurchaseOrderSubmittedEmailQueue = "core_event_purchase_order_submitted_email"
+
 	// carries undo-batch-scan commands to the core-service, reversing the receipts, issues, and reservations a scan recorded against a deleted batch.
 	CoreCmdUndoBatchScanQueue = "core_cmd_undo_batch_scan"
 

@@ -43,6 +43,10 @@ const (
 	EmailTemplateChatMessage EmailTemplate = "chat_message"
 	// EmailTemplateMessageFailureAlert indicates that the email template is for the async message failure monitor digest (failed/stuck inbox and outbox rows).
 	EmailTemplateMessageFailureAlert EmailTemplate = "message_failure_alert"
+	// EmailTemplateDemoRequest indicates that the email template is for a demo request from the marketing site.
+	EmailTemplateDemoRequest EmailTemplate = "demo_request"
+	// EmailTemplateDashboardFeedback indicates that the email template is for in-app feedback submitted from the dashboard.
+	EmailTemplateDashboardFeedback EmailTemplate = "dashboard_feedback"
 )
 
 func (t EmailTemplate) IsValid() bool {
@@ -65,14 +69,16 @@ func (t EmailTemplate) IsValid() bool {
 		EmailTemplateOrderAcknowledgement,
 		EmailTemplateAlreadyRegistered,
 		EmailTemplateChatMessage,
-		EmailTemplateMessageFailureAlert:
+		EmailTemplateMessageFailureAlert,
+		EmailTemplateDemoRequest,
+		EmailTemplateDashboardFeedback:
 		return true
 	}
 	return false
 }
 
 func (t EmailTemplate) EnumValues() []string {
-	return []string{string(EmailTemplateWelcome), string(EmailTemplatePasswordReset), string(EmailTemplatePasswordUpdated), string(EmailTemplateRegistrationVerify), string(EmailTemplateRegistrationVerifyExisting), string(EmailTemplateEnterpriseRequest), string(EmailTemplateInternalErrorAlert), string(EmailTemplateNewRegistrationAlert), string(EmailTemplatePlanChangeAlert), string(EmailTemplateRegistrationLimitAlert), string(EmailTemplateNewUserWelcome), string(EmailTemplateOrderCheckout), string(EmailTemplatePurchaseOrderSubmission), string(EmailTemplateStatementOfAccount), string(EmailTemplateInvoice), string(EmailTemplateOrderAcknowledgement), string(EmailTemplateAlreadyRegistered), string(EmailTemplateChatMessage), string(EmailTemplateMessageFailureAlert)}
+	return []string{string(EmailTemplateWelcome), string(EmailTemplatePasswordReset), string(EmailTemplatePasswordUpdated), string(EmailTemplateRegistrationVerify), string(EmailTemplateRegistrationVerifyExisting), string(EmailTemplateEnterpriseRequest), string(EmailTemplateInternalErrorAlert), string(EmailTemplateNewRegistrationAlert), string(EmailTemplatePlanChangeAlert), string(EmailTemplateRegistrationLimitAlert), string(EmailTemplateNewUserWelcome), string(EmailTemplateOrderCheckout), string(EmailTemplatePurchaseOrderSubmission), string(EmailTemplateStatementOfAccount), string(EmailTemplateInvoice), string(EmailTemplateOrderAcknowledgement), string(EmailTemplateAlreadyRegistered), string(EmailTemplateChatMessage), string(EmailTemplateMessageFailureAlert), string(EmailTemplateDemoRequest), string(EmailTemplateDashboardFeedback)}
 }
 
 // SendsAsMerchant reports whether the template carries a merchant's own correspondence with their counterparty — an order, an invoice, a statement — rather than Augno's relationship with a user. Only these may leave from an account's configured sender: a password reset arriving from a tenant's domain reads as a spoof of exactly the mail it is meant to authenticate, and puts that tenant's sending reputation behind our credential flow.

@@ -248,20 +248,21 @@ func (r *invoiceRepoImpl) GetLines(ctx context.Context, invoiceID string) ([]*do
 	lines := make([]*domain.InvoiceLine, len(rows))
 	for i, row := range rows {
 		line := &domain.InvoiceLine{
-			ID:                  row.ID,
-			QuantityID:          row.QuantityID,
-			QuantityValue:       row.QuantityValue,
-			QuantityUnitID:      row.QuantityUnitID,
-			QuantityUnitAbbr:    row.QuantityUnitAbbreviation,
-			QuantityUnitName:    row.QuantityUnitName,
-			UnitPriceID:         row.UnitPriceID,
-			UnitPriceValue:      row.UnitPriceValue,
-			UnitPriceNumUnit:    row.UnitPriceNumeratorUnitID,
-			UnitPriceDenUnit:    row.UnitPriceDenominatorUnitID,
-			OrderLineID:         row.OrderLineID,
-			OrderLineQtyOrdered: row.OrderLineQuantityOrdered,
-			CreatedAt:           row.CreatedAt,
-			UpdatedAt:           row.UpdatedAt,
+			ID:                   row.ID,
+			QuantityID:           row.QuantityID,
+			QuantityValue:        row.QuantityValue,
+			QuantityUnitID:       row.QuantityUnitID,
+			QuantityUnitAbbr:     row.QuantityUnitAbbreviation,
+			QuantityUnitName:     row.QuantityUnitName,
+			UnitPriceID:          row.UnitPriceID,
+			UnitPriceValue:       row.UnitPriceValue,
+			UnitPriceNumUnit:     row.UnitPriceNumeratorUnitID,
+			UnitPriceDenUnit:     row.UnitPriceDenominatorUnitID,
+			UnitPriceDenUnitAbbr: row.UnitPriceDenominatorUnitAbbreviation,
+			OrderLineID:          row.OrderLineID,
+			OrderLineQtyOrdered:  row.OrderLineQuantityOrdered,
+			CreatedAt:            row.CreatedAt,
+			UpdatedAt:            row.UpdatedAt,
 		}
 		if row.OrderLineItemID.Valid {
 			line.OrderLineItemID = &row.OrderLineItemID.String

@@ -317,6 +317,7 @@ SELECT
     r.value AS unit_price_value,
     r.numerator_unit_id AS unit_price_numerator_unit_id,
     r.denominator_unit_id AS unit_price_denominator_unit_id,
+    rdu.abbreviation AS unit_price_denominator_unit_abbreviation,
     sol.id AS order_line_id,
     sol.item_id AS order_line_item_id,
     sol.line_item_number AS order_line_item_number,
@@ -330,6 +331,7 @@ JOIN unit qu ON qu.id = q.unit_id
 JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
 JOIN quantity oq ON oq.id = sol.quantity_id
 JOIN rate r ON r.id = sol.unit_price_id
+JOIN unit rdu ON rdu.id = r.denominator_unit_id
 LEFT JOIN item i ON i.id = sol.item_id
 WHERE il.invoice_id = sqlc.arg('invoice_id')
 ORDER BY sol.line_item_number ASC, il.created_at ASC, il.id ASC;

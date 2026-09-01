@@ -18,12 +18,14 @@ func invoiceDocFixture() ([]*domain.InvoiceLine, *domain.Invoice, *domain.SalesO
 	lines := []*domain.InvoiceLine{
 		{
 			QuantityValue: "6", QuantityUnitAbbr: "pr", QuantityUnitName: "pair",
-			UnitPriceValue: "8.50", OrderLineQtyOrdered: "10",
+			// The price is labelled with the rate's own denominator, which the row carries
+			// separately from the line's quantity unit.
+			UnitPriceValue: "8.50", UnitPriceDenUnitAbbr: "pr", OrderLineQtyOrdered: "10",
 			OrderLineItemNumber: &num1, OrderLineItemSKU: &sku1, OrderLineDescription: &desc1,
 		},
 		{
 			QuantityValue: "1200", QuantityUnitAbbr: "ea", QuantityUnitName: "each",
-			UnitPriceValue: "0.25", OrderLineQtyOrdered: "1200",
+			UnitPriceValue: "0.25", UnitPriceDenUnitAbbr: "ea", OrderLineQtyOrdered: "1200",
 			OrderLineItemNumber: &num2, OrderLineItemSKU: &sku2,
 		},
 	}
@@ -152,8 +154,8 @@ func TestInvoiceDoc_EmailParams(t *testing.T) {
 	emailLines, ok := params["lines"].([]map[string]any)
 	require.True(t, ok)
 	require.Len(t, emailLines, 2)
-	// The email's quantity cell carries its unit; the PDF splits the unit into its own column.
-	assert.Equal(t, "6 pr", emailLines[0]["qty"])
+	// The email's quantity cell names its unit in full; the PDF splits the unit into its own column.
+	assert.Equal(t, "6 pair", emailLines[0]["qty"])
 	assert.Equal(t, "6", doc.Lines[0].Invoiced, "the PDF column stays bare")
 	assert.Equal(t, "$51.00", emailLines[0]["total"])
 

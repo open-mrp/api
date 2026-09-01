@@ -52,11 +52,14 @@ func invoiceCaseTable(pdf *fpdf.Fpdf, doc invoiceDoc) {
 	pdf.CellFormat(wWeight, 9, "Weight", "B", 0, "L", true, 0, "")
 	pdf.CellFormat(wTracking, 9, "Tracking Number", "B", 1, "L", true, 0, "")
 
-	pdf.SetFont("Helvetica", "", 9.5)
 	for _, c := range doc.Cases {
-		pdf.CellFormat(wNumber, 7.5, c.Number, "B", 0, "L", false, 0, "")
-		pdf.CellFormat(wWeight, 7.5, c.Weight, "B", 0, "L", false, 0, "")
-		pdf.CellFormat(wTracking, 7.5, c.Tracking, "B", 1, "L", false, 0, "")
+		for _, cell := range []struct {
+			w    float64
+			text string
+			ln   int
+		}{{wNumber, c.Number, 0}, {wWeight, c.Weight, 0}, {wTracking, c.Tracking, 1}} {
+			pdfCellText{W: cell.w, H: 7.5, Text: cell.text, Border: "B", Ln: cell.ln, Align: "L", Size: 9.5, MinSize: 6.5, Padding: ackCellPadding}.draw(pdf)
+		}
 	}
 
 	pdf.Ln(4)
@@ -70,8 +73,11 @@ func invoiceSummary(pdf *fpdf.Fpdf, doc invoiceDoc) {
 	pdf.CellFormat(0, 11, "Invoice Summary", "", 1, "L", false, 0, "")
 
 	// Columns: Line Item | SKU | Description | Price | Ordered | Invoiced | Unit | Total (sum = 180mm).
-	wLine, wSKU, wDesc, wPrice := 20.0, 22.0, 50.0, 25.0
-	wOrdered, wInvoiced, wUnit, wTotal := 15.0, 15.0, 13.0, 20.0
+	//
+	// Eight columns in 180mm is the tightest table here, so each is sized to its header plus padding
+	// and the widest ordinary value it carries; Description takes what is left and wraps.
+	wLine, wSKU, wDesc, wPrice := 18.0, 32.0, 30.0, 25.0
+	wOrdered, wInvoiced, wUnit, wTotal := 18.0, 18.0, 17.0, 22.0
 
 	pdf.SetFont("Helvetica", "B", 9.5)
 	pdf.SetFillColor(243, 244, 246)
@@ -92,23 +98,30 @@ func invoiceSummary(pdf *fpdf.Fpdf, doc invoiceDoc) {
 		rowH := 7.5 * float64(len(desc))
 
 		x, y := pdf.GetX(), pdf.GetY()
-		pdf.CellFormat(wLine, rowH, line.LineItem, "B", 0, "L", false, 0, "")
-		pdf.CellFormat(wSKU, rowH, truncate(line.SKU, 14), "B", 0, "L", false, 0, "")
+		cell := func(w float64, text, align string) {
+			pdfCellText{W: w, H: rowH, Text: text, Border: "B", Align: align, Size: 9.5, MinSize: 6.5, Padding: ackCellPadding}.draw(pdf)
+		}
+		cell(wLine, line.LineItem, "L")
+		cell(wSKU, line.SKU, "L")
 		// Description can wrap to multiple lines; draw it as a multi-line block.
 		dx := x + wLine + wSKU
 		pdf.SetXY(dx, y)
+		pdf.SetFont("Helvetica", "", 9.5)
 		pdf.MultiCell(wDesc, 7.5, strings.Join(desc, "\n"), "B", "L", false)
 		pdf.SetXY(dx+wDesc, y)
-		pdf.CellFormat(wPrice, rowH, line.Price, "B", 0, "R", false, 0, "")
-		pdf.CellFormat(wOrdered, rowH, line.Ordered, "B", 0, "R", false, 0, "")
-		pdf.CellFormat(wInvoiced, rowH, line.Invoiced, "B", 0, "R", false, 0, "")
-		pdf.CellFormat(wUnit, rowH, truncate(line.Unit, 9), "B", 0, "L", false, 0, "")
-		pdf.CellFormat(wTotal, rowH, line.Total, "B", 1, "R", false, 0, "")
+		// Ordered and Invoiced are narrow columns holding numbers that can reach seven figures, and
+		// Unit holds a spelled-out unit name; all three overflowed before they were fitted.
+		cell(wPrice, line.Price, "R")
+		cell(wOrdered, line.Ordered, "R")
+		cell(wInvoiced, line.Invoiced, "R")
+		cell(wUnit, line.Unit, "L")
+		cell(wTotal, line.Total, "R")
+		pdf.Ln(-1)
 	}
 
 	// Total Due footer (right-aligned into the last columns).
 	pdf.SetFont("Helvetica", "B", 10.5)
 	pdf.CellFormat(wLine+wSKU+wDesc+wPrice+wOrdered, 10, "", "", 0, "R", false, 0, "")
 	pdf.CellFormat(wInvoiced+wUnit, 10, "Total Due:", "", 0, "R", false, 0, "")
-	pdf.CellFormat(wTotal, 10, doc.OrderTotal, "", 1, "R", false, 0, "")
+	pdfCellText{W: wTotal, H: 10, Text: doc.OrderTotal, Ln: 1, Align: "R", Style: "B", Size: 10.5, MinSize: 7}.draw(pdf)
 }

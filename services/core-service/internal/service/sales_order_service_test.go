@@ -1573,8 +1573,10 @@ func (suite *SalesOrderSvcTestSuite) TestCheckoutSalesOrder_Success() {
 			suite.Contains(params.SubmitMessage, "Seller Co")
 			suite.Contains(params.SubmitMessage, "001001")
 			suite.Equal("Seller Co — Order 001001", params.PaymentDescription)
-			// The card statement gets the order number stripped to alphanumerics.
-			suite.Equal("001001", params.StatementDescriptorSuffix)
+			// The card statement gets the order number stripped to alphanumerics, then prefixed:
+			// Stripe rejects a suffix with no Latin letter, which every zero-padded record number is.
+			// See statementDescriptorSuffix and its own table test.
+			suite.Equal("SO001001", params.StatementDescriptorSuffix)
 			// Metadata must carry orderID + customerID for webhook correlation.
 			suite.Equal("or_1", params.PaymentIntentMetadata["orderID"])
 			suite.Equal("ac_buyer", params.PaymentIntentMetadata["customerID"])

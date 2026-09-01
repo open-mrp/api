@@ -1564,6 +1564,14 @@ type MeasureSvc interface {
 type UtilsSvc interface {
 	CheckDuplicate(ctx context.Context, params CheckDuplicateParams) (*CheckDuplicateResult, *apierror.APIError)
 	EmailRecord(ctx context.Context, params EmailRecordParams) *apierror.APIError
+	// SendInvoiceEmail mails an invoice off the back of CoreEventInvoiceIssued. Unlike EmailRecord it
+	// takes the account explicitly and skips the request-scoped idempotency key: a consumer has no
+	// actor to authorize and the inbox already deduplicates redelivery.
+	SendInvoiceEmail(ctx context.Context, params SendInvoiceEmailParams) *apierror.APIError
+	// SendSalesOrderAcknowledgement mails an order acknowledgement off the back of CoreEventSalesOrderAcknowledged.
+	SendSalesOrderAcknowledgement(ctx context.Context, params SendSalesOrderAcknowledgementParams) *apierror.APIError
+	// SendPurchaseOrderSubmission mails a purchase order submission off the back of CoreEventPurchaseOrderSubmitted.
+	SendPurchaseOrderSubmission(ctx context.Context, params SendPurchaseOrderSubmissionParams) *apierror.APIError
 	RequestDemo(ctx context.Context, params RequestDemoParams) *apierror.APIError
 	SubmitFeedback(ctx context.Context, params SubmitFeedbackParams) *apierror.APIError
 }

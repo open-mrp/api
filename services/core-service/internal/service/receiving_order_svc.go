@@ -10,12 +10,14 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/services/core-service/internal/mediator"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/messaging"
 	"github.com/open-mrp/api/shared/tracing"
 )
 
@@ -25,6 +27,7 @@ type receivingOrderSvcImpl struct {
 	repos           domain.RepoFactory
 	mediatorFactory domain.MediatorFactory
 	txManager       TransactionManager
+	outboxNotifier  messaging.OutboxNotifier
 }
 
 type ReceivingOrderSvcConfig struct {
@@ -36,6 +39,9 @@ type ReceivingOrderSvcConfig struct {
 
 	// TxManager (required) wraps multi-step operations in database transactions.
 	TxManager TransactionManager
+
+	// OutboxNotifier (optional; default: nil) wakes the outbox enqueuer the instant an allocation request commits, so covering newly received stock starts on the next moment rather than on the enqueuer's next idle poll. When nil, the request is still picked up on the next poll.
+	OutboxNotifier messaging.OutboxNotifier
 }
 
 func (c *ReceivingOrderSvcConfig) validate() error {
@@ -60,6 +66,17 @@ func NewReceivingOrderSvc(config *ReceivingOrderSvcConfig) domain.ReceivingOrder
 		repos:           config.Repos,
 		mediatorFactory: config.MediatorFactory,
 		txManager:       config.TxManager,
+		outboxNotifier:  config.OutboxNotifier,
+	}
+}
+
+// kickOutbox wakes the outbox enqueuer so a just-committed allocation request is picked up
+// immediately rather than on the enqueuer's next idle poll, which can be up to MaxPollInterval away.
+// No-op when no notifier was injected. Call only after the writing transaction has committed —
+// kicking while it is still open races the poll against a row it cannot yet see.
+func (s *receivingOrderSvcImpl) kickOutbox() {
+	if s.outboxNotifier != nil {
+		s.outboxNotifier.Notify()
 	}
 }
 
@@ -271,8 +288,8 @@ func (s *receivingOrderSvcImpl) StockReceivingOrder(ctx context.Context, params 
 					return apiErr
 				}
 
-				// Allocate open inventory issues for items that received inventory
-				if apiErr := s.allocateOpenIssues(txCtx, txSvc, params); apiErr != nil {
+				// Ask for the open demand of everything this stocking received to be covered.
+				if apiErr := s.requestAllocation(txCtx, txSvc, params); apiErr != nil {
 					return apiErr
 				}
 			}
@@ -309,6 +326,11 @@ func (s *receivingOrderSvcImpl) StockReceivingOrder(ctx context.Context, params 
 		if apiErr != nil {
 			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
 		}
+
+		// After the commit, never inside it: the outbox row has to be visible to the enqueuer's poll
+		// query for the kick to find anything. Without it a stocking during a quiet period waits out
+		// the enqueuer's idle backoff before its allocation even starts.
+		s.kickOutbox()
 
 		return result, nil
 
@@ -808,10 +830,18 @@ func (s *receivingOrderSvcImpl) createInventoryChangeLogs(ctx context.Context, t
 	return nil
 }
 
-// allocateOpenIssues performs FIFO allocation of open inventory issues for each unique item that had accepted allocations during stocking.
-func (s *receivingOrderSvcImpl) allocateOpenIssues(ctx context.Context, txSvc *receivingOrderSvcImpl, params domain.StockReceivingOrderParams) *apierror.APIError {
+// requestAllocation asks for the open demand of every item this stocking received to be covered.
+//
+// It used to do the covering here, inline, inside the transaction that had just written the receipts
+// — an unbounded walk over the item's whole open backlog, holding the receipt locks, in the opposite
+// order from the consumer doing the same work asynchronously. Stocking now records the movement and
+// says that it happened; the allocate consumer covers the demand.
+//
+// The outbox row commits with this transaction, so allocation is requested if and only if the stock
+// actually landed. The caller kicks the enqueuer after the commit, so this is a moment behind rather
+// than an idle poll behind.
+func (s *receivingOrderSvcImpl) requestAllocation(ctx context.Context, txSvc *receivingOrderSvcImpl, params domain.StockReceivingOrderParams) *apierror.APIError {
 	txRepo := txSvc.repos.NewReceivingOrderRepo()
-	reservationRepo := txSvc.repos.NewInventoryReservationRepo()
 
 	unitPrices, apiErr := txRepo.GetLineUnitPrices(ctx, params.ReceivingOrderID)
 	if apiErr != nil {
@@ -822,8 +852,7 @@ func (s *receivingOrderSvcImpl) allocateOpenIssues(ctx context.Context, txSvc *r
 		unitPriceMap[up.ReceivingOrderLineID] = up
 	}
 
-	// Collect unique item IDs that received inventory
-	uniqueItemIDs := make(map[string]bool)
+	itemIDs := make([]string, 0, len(params.Data.LineItems))
 	for _, lineItem := range params.Data.LineItems {
 		if len(lineItem.Allocations) == 0 {
 			continue
@@ -832,15 +861,8 @@ func (s *receivingOrderSvcImpl) allocateOpenIssues(ctx context.Context, txSvc *r
 		if !ok {
 			continue
 		}
-		uniqueItemIDs[up.ItemID] = true
+		itemIDs = append(itemIDs, up.ItemID)
 	}
 
-	// For each unique item, allocate open issues against available receipts (FIFO)
-	for itemID := range uniqueItemIDs {
-		if apiErr := reservationRepo.AllocateOpenIssuesForItem(ctx, params.AccountID, itemID); apiErr != nil {
-			return apiErr
-		}
-	}
-
-	return nil
+	return mediator.EnqueueAllocateOpenIssues(ctx, txSvc.repos, params.AccountID, itemIDs...)
 }

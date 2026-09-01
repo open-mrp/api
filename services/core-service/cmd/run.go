@@ -330,6 +330,7 @@ func Run(
 	})
 
 	itemSvc := service.NewItemSvc(&service.ItemSvcConfig{
+		OutboxNotifier:  enqueuer,
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
 		TxManager:       txManager,
@@ -561,6 +562,7 @@ func Run(
 	})
 
 	receivingOrderSvc := service.NewReceivingOrderSvc(&service.ReceivingOrderSvcConfig{
+		OutboxNotifier:  enqueuer,
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
 		TxManager:       txManager,
@@ -667,6 +669,7 @@ func Run(
 	})
 
 	shipmentSvc := service.NewShipmentSvc(&service.ShipmentSvcConfig{
+		OutboxNotifier:       enqueuer,
 		Repos:                repoFactory,
 		MediatorFactory:      mediatorFactory,
 		TxManager:            txManager,
@@ -729,7 +732,7 @@ func Run(
 		return err
 	}
 
-	undoBatchScanConsumer := event.NewUndoBatchScanConsumer(rabbitmq, inboxRepo, repoFactory, txManager)
+	undoBatchScanConsumer := event.NewUndoBatchScanConsumer(rabbitmq, inboxRepo, repoFactory, txManager, enqueuer)
 	if err := undoBatchScanConsumer.Listen(ctx); err != nil {
 		return err
 	}

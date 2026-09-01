@@ -68,29 +68,6 @@ func TestOpenIssueDiscovery_IsNotALockingReadAndProjectsOnlyTheKeyset(t *testing
 	}
 }
 
-// FindOpenIssuesForItem must NOT be a locking read, and the asymmetry with its paged sibling is the
-// point rather than an oversight.
-//
-// Its callers — stocking a receiving order, reversing a shipment — reach it at the end of a
-// transaction that has already written the receipts, so locking here has them take receipt locks and
-// then ask for issue locks. The allocate-open-issues consumer goes the other way: issues first,
-// receipts after. Two flows acquiring the same two tables in opposite orders is a deadlock, and this
-// one reached production and started failing allocation messages within a day of shipping.
-//
-// Nothing is given up by not locking. Both callers already hold FOR UPDATE on the receipts any
-// concurrent allocation must draw from, so they serialise against the consumer there instead.
-func TestFindOpenIssuesForItem_IsNotALockingRead(t *testing.T) {
-	t.Parallel()
-
-	body := queryBody(t, "receiving_order.sql", "FindOpenIssuesForItem")
-	// The prose above the query mentions the clause; only the statement itself matters.
-	statement := body[strings.Index(body, "-- name:"):]
-
-	if strings.Contains(statement, "FOR UPDATE") {
-		t.Error("FindOpenIssuesForItem is a locking read: its callers already hold receipt locks, so asking for issue locks here inverts the order the allocate-open-issues consumer uses and deadlocks against it")
-	}
-}
-
 // FetchOnHandInventoryBulk is the item list's on-hand column and has to agree with the item detail
 // page. It read several times the true level because the receipt sum carried a LEFT JOIN onto
 // inventory_allocation that nothing referenced — fanning each receipt out once per allocation against

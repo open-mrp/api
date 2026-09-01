@@ -8575,20 +8575,6 @@ func (mr *MockInventoryReservationRepoMockRecorder) AllocateOneOpenIssue(ctx, ac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AllocateOneOpenIssue", reflect.TypeOf((*MockInventoryReservationRepo)(nil).AllocateOneOpenIssue), ctx, accountID, itemID, issueID)
 }
 
-// AllocateOpenIssuesForItem mocks base method.
-func (m *MockInventoryReservationRepo) AllocateOpenIssuesForItem(ctx context.Context, accountID, itemID string) *apierror.APIError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AllocateOpenIssuesForItem", ctx, accountID, itemID)
-	ret0, _ := ret[0].(*apierror.APIError)
-	return ret0
-}
-
-// AllocateOpenIssuesForItem indicates an expected call of AllocateOpenIssuesForItem.
-func (mr *MockInventoryReservationRepoMockRecorder) AllocateOpenIssuesForItem(ctx, accountID, itemID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AllocateOpenIssuesForItem", reflect.TypeOf((*MockInventoryReservationRepo)(nil).AllocateOpenIssuesForItem), ctx, accountID, itemID)
-}
-
 // AllocateReservationsForConsumption mocks base method.
 func (m *MockInventoryReservationRepo) AllocateReservationsForConsumption(ctx context.Context, params domain.ConsumptionAllocationParams) (*domain.ConsumptionAllocationResult, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -14570,21 +14556,6 @@ func (m *MockReceivingOrderRepo) DeleteLinesByOrderLineID(ctx context.Context, s
 func (mr *MockReceivingOrderRepoMockRecorder) DeleteLinesByOrderLineID(ctx, salesOrderLineID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteLinesByOrderLineID", reflect.TypeOf((*MockReceivingOrderRepo)(nil).DeleteLinesByOrderLineID), ctx, salesOrderLineID)
-}
-
-// FindOpenIssuesForItem mocks base method.
-func (m *MockReceivingOrderRepo) FindOpenIssuesForItem(ctx context.Context, accountID, itemID string) ([]domain.OpenInventoryIssue, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FindOpenIssuesForItem", ctx, accountID, itemID)
-	ret0, _ := ret[0].([]domain.OpenInventoryIssue)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// FindOpenIssuesForItem indicates an expected call of FindOpenIssuesForItem.
-func (mr *MockReceivingOrderRepoMockRecorder) FindOpenIssuesForItem(ctx, accountID, itemID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindOpenIssuesForItem", reflect.TypeOf((*MockReceivingOrderRepo)(nil).FindOpenIssuesForItem), ctx, accountID, itemID)
 }
 
 // FindUnstockedLineIDs mocks base method.

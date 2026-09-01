@@ -24,6 +24,16 @@ import (
 	"github.com/open-mrp/api/shared/tracing"
 )
 
+// kickOutbox wakes the outbox enqueuer so a just-committed allocation request is picked up
+// immediately rather than on the enqueuer's next idle poll, which can be up to MaxPollInterval away.
+// No-op when no notifier was injected. Call only after the writing transaction has committed —
+// kicking while it is still open races the poll against a row it cannot yet see.
+func (s *itemSvcImpl) kickOutbox() {
+	if s.outboxNotifier != nil {
+		s.outboxNotifier.Notify()
+	}
+}
+
 // enqueueInventoryReceived hands allocation to the consumer that owns it.
 //
 // Written in the transaction that moved the stock, so the handoff commits with the movement or not
@@ -61,6 +71,7 @@ type itemSvcImpl struct {
 	repos           domain.RepoFactory
 	mediatorFactory domain.MediatorFactory
 	txManager       TransactionManager
+	outboxNotifier  messaging.OutboxNotifier
 }
 
 type ItemSvcConfig struct {
@@ -72,6 +83,9 @@ type ItemSvcConfig struct {
 
 	// TxManager (required) wraps multi-step operations in database transactions.
 	TxManager TransactionManager
+
+	// OutboxNotifier (optional; default: nil) wakes the outbox enqueuer the instant an allocation request commits, so reconciled stock is offered to open demand on the next moment rather than on the enqueuer's next idle poll. When nil, the request is still picked up on the next poll.
+	OutboxNotifier messaging.OutboxNotifier
 }
 
 func (c *ItemSvcConfig) validate() error {
@@ -96,6 +110,7 @@ func NewItemSvc(config *ItemSvcConfig) domain.ItemSvc {
 		repos:           config.Repos,
 		mediatorFactory: config.MediatorFactory,
 		txManager:       config.TxManager,
+		outboxNotifier:  config.OutboxNotifier,
 	}
 }
 
@@ -2091,7 +2106,16 @@ func (s *itemSvcImpl) BulkReconcileItems(ctx context.Context, params domain.Bulk
 			batchEnd := min(batchStart+batchSize, len(validItems))
 			batch := validItems[batchStart:batchEnd]
 
+			// Built inside the callback and assigned out once, then merged into the caller's result here.
+			// transaction.go's contract is that the callback re-runs on a lock conflict, so appending
+			// straight to `result` from inside it meant a retried batch reported every one of its rows
+			// twice. tools/txaudit enforces this shape.
+			var batchErrors []domain.ReconcileError
+			var batchReconciled []domain.ReconciledItem
+
 			apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *itemSvcImpl) *apierror.APIError {
+				var errs []domain.ReconcileError
+				var reconciled []domain.ReconciledItem
 				invMutRepo := txSvc.repos.NewInventoryMutationRepo()
 
 				for _, d := range batch {
@@ -2119,14 +2143,14 @@ func (s *itemSvcImpl) BulkReconcileItems(ctx context.Context, params domain.Bulk
 						if apiErr := invMutRepo.CreateInventoryReceipt(txCtx, domain.CreateInventoryReceiptParams{
 							AccountID: accountID, ItemID: item.ItemID, Measure: measure, UnitID: unitID,
 						}); apiErr != nil {
-							result.Errors = append(result.Errors, domain.ReconcileError{SKU: d.SKU, Error: "Failed to create receipt"})
+							errs = append(errs, domain.ReconcileError{SKU: d.SKU, Error: "Failed to create receipt"})
 							continue
 						}
 					} else if delta.LessThan(decimal.Zero) {
 						if apiErr := invMutRepo.CreateInventoryIssue(txCtx, domain.CreateInventoryIssueParams{
 							AccountID: accountID, ItemID: item.ItemID, Measure: measure, UnitID: unitID,
 						}); apiErr != nil {
-							result.Errors = append(result.Errors, domain.ReconcileError{SKU: d.SKU, Error: "Failed to create issue"})
+							errs = append(errs, domain.ReconcileError{SKU: d.SKU, Error: "Failed to create issue"})
 							continue
 						}
 					}
@@ -2142,11 +2166,11 @@ func (s *itemSvcImpl) BulkReconcileItems(ctx context.Context, params domain.Bulk
 						nil,
 						params.ResponsibleUserID,
 					); apiErr != nil {
-						result.Errors = append(result.Errors, domain.ReconcileError{SKU: d.SKU, Error: "Failed to record inventory audit trail"})
+						errs = append(errs, domain.ReconcileError{SKU: d.SKU, Error: "Failed to record inventory audit trail"})
 						continue
 					}
 
-					result.ReconciledItems = append(result.ReconciledItems, domain.ReconciledItem{
+					reconciled = append(reconciled, domain.ReconciledItem{
 						ItemID: item.ItemID, SKU: d.SKU,
 						PreviousMeasure: currentQty, NewMeasure: newQty,
 					})
@@ -2164,18 +2188,50 @@ func (s *itemSvcImpl) BulkReconcileItems(ctx context.Context, params domain.Bulk
 						ResourceID:   item.ItemID,
 						Changes:      changes,
 					}); apiErr != nil {
-						result.Errors = append(result.Errors, domain.ReconcileError{SKU: d.SKU, Error: "Failed to publish audit event"})
+						errs = append(errs, domain.ReconcileError{SKU: d.SKU, Error: "Failed to publish audit event"})
 						continue
 					}
 				}
 
-				return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
+				// Reconciling writes receipts and issues and then never offered that stock to anything
+				// waiting on it: an item adjusted upward stayed short against its own open demand until
+				// something unrelated happened to trigger allocation. Inside this transaction, so the
+				// request exists if and only if the rows that justify it do.
+				requestIDs := make([]string, 0, len(reconciled))
+				for _, item := range reconciled {
+					requestIDs = append(requestIDs, item.ItemID)
+				}
+				if apiErr := mediator.EnqueueAllocateOpenIssues(txCtx, txSvc.repos, accountID, requestIDs...); apiErr != nil {
+					return apiErr
+				}
+
+				// Assigned, not appended: the callback re-runs on a lock conflict and the second run must
+				// replace the first run's rows rather than add to them.
+				batchErrors = errs
+				batchReconciled = reconciled
+				return nil
 			})
 
 			if apiErr != nil {
 				return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
 			}
+
+			result.Errors = append(result.Errors, batchErrors...)
+			result.ReconciledItems = append(result.ReconciledItems, batchReconciled...)
 		}
+
+		// Cached once, after every batch has committed, rather than once per batch from inside the
+		// callback. It was being handed the accumulating slice mid-run, so a retried batch cached a
+		// response body containing its rows twice — and the cached body is what a replay of the
+		// idempotency key returns.
+		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *itemSvcImpl) *apierror.APIError {
+			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
+		})
+		if apiErr != nil {
+			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
+		}
+
+		s.kickOutbox()
 
 		return result, nil
 

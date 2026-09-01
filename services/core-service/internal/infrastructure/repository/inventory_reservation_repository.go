@@ -669,32 +669,6 @@ func (r *inventoryReservationRepo) drawFromReceipts(ctx context.Context, issueID
 	return demand.Sub(remaining), nil
 }
 
-// AllocateOpenIssuesForItem performs FIFO allocation of all open inventory issues for the given item against available receipts.
-func (r *inventoryReservationRepo) AllocateOpenIssuesForItem(ctx context.Context, accountID, itemID string) *apierror.APIError {
-	ctx, span := inventoryReservationRepoTracer.Start(ctx, "repository.inventory_reservation.allocate_open_issues_for_item")
-	defer span.End()
-
-	issues, err := r.queries.FindOpenIssuesForItem(ctx, sqlc.FindOpenIssuesForItemParams{
-		AccountID: accountID,
-		ItemID:    itemID,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-
-	// The ratios are resolved per issue, after that issue's receipt lock, rather than for the whole
-	// set here. Resolving them here is a plain read, and a plain read before the locking ones opens
-	// this transaction's view early — which is the defect, not an optimisation.
-	for _, issue := range issues {
-		if apiErr := r.allocateOneOpenIssue(ctx, accountID, itemID, issue.ID, issue.QuantityValue, issue.UnitID,
-			issue.StorageLocationID, issue.LotID); apiErr != nil {
-			return tracing.Trace(span, apiErr)
-		}
-	}
-
-	return nil
-}
-
 var openIssueCursorEpoch = time.Unix(0, 0).UTC()
 
 // ListOpenIssueIDsForItem names a page of the item's open demand, oldest first, resuming after the

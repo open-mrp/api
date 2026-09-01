@@ -11,7 +11,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
-	"github.com/open-mrp/api/shared/appctx"
+	"github.com/open-mrp/api/services/core-service/internal/mediator"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
@@ -163,7 +163,8 @@ func (c *AllocateOpenIssuesConsumer) allocateItem(ctx context.Context, parentMes
 
 	if len(refs) == int(pageSize) {
 		if apiErr := c.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
-			return enqueueAllocateOpenIssues(txCtx, f.NewOutboxRepo(), accountID, itemID, lastCreatedAt, lastID,
+			return mediator.EnqueueAllocateOpenIssuesFrom(txCtx, f.NewOutboxRepo(), accountID, itemID,
+				lastCreatedAt, lastID,
 				continuationMessageID(parentMessageID, accountID, itemID, lastCreatedAt, lastID))
 		}); apiErr != nil {
 			return apiErr
@@ -175,48 +176,6 @@ func (c *AllocateOpenIssuesConsumer) allocateItem(ctx context.Context, parentMes
 			"account_id", accountID, "item_id", itemID, "failed", failed, "of", len(refs))
 		return firstErr
 	}
-	return nil
-}
-
-// enqueueAllocateOpenIssues asks for an item's open demand to be covered.
-//
-// messageID is empty for the producers that start a chain — a batch scan, a receipt landing — so the
-// outbox mints a random one and every enqueue is its own chain. Only the consumer's own continuation
-// passes one, and only to make its own retries idempotent; see continuationMessageID.
-func enqueueAllocateOpenIssues(ctx context.Context, outboxRepo messaging.OutboxRepo, accountID, itemID string, afterCreatedAt time.Time, afterID, messageID string) *apierror.APIError {
-	payload, err := json.Marshal(domain.AllocateOpenIssuesEvent{
-		AccountID:      accountID,
-		ItemID:         itemID,
-		AfterCreatedAt: afterCreatedAt,
-		AfterID:        afterID,
-	})
-	if err != nil {
-		return apierror.NewInternalError(err, "Failed to marshal allocate open issues event.")
-	}
-
-	msg := contracts.AmqpMessage{
-		Data: payload,
-	}
-	if identity, ok := appctx.GetIdentityFromContext(ctx); ok {
-		msg.Identity = identity
-	}
-	if requestID, ok := appctx.GetRequestID(ctx); ok {
-		msg.RequestID = requestID
-	}
-
-	outboxInput := messaging.OutboxMessageInput{
-		ServiceName: "core-service",
-		MessageType: string(contracts.CoreCmdAllocateOpenIssues),
-		Destination: messaging.ApplicationExchange,
-		RoutingKey:  string(contracts.CoreCmdAllocateOpenIssues),
-		Payload:     msg,
-		MessageID:   messageID,
-	}
-
-	if _, err := outboxRepo.Create(ctx, outboxInput); err != nil {
-		return apierror.NewInternalError(err, "Failed to create outbox message for allocate open issues.")
-	}
-
 	return nil
 }
 

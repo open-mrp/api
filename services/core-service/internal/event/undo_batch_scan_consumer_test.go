@@ -11,6 +11,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
+	"github.com/open-mrp/api/services/core-service/internal/mediator"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/tracing"
@@ -56,6 +57,7 @@ type UndoBatchScanConsumerTestSuite struct {
 	reservationRepo  *repositorymock.MockInventoryReservationRepo
 	materialRepo     *repositorymock.MockMaterialDemandRepo
 	inventoryQuery   *repositorymock.MockInventoryQueryRepo
+	requested        []string
 }
 
 func (s *UndoBatchScanConsumerTestSuite) SetupTest() {
@@ -82,7 +84,10 @@ func (s *UndoBatchScanConsumerTestSuite) SetupTest() {
 	repoFactory.EXPECT().NewMaterialDemandRepo().Return(s.materialRepo).AnyTimes()
 	repoFactory.EXPECT().NewInventoryQueryRepo().Return(s.inventoryQuery).AnyTimes()
 	repoFactory.EXPECT().NewItemRepo().Return(itemRepo).AnyTimes()
-	repoFactory.EXPECT().NewOutboxRepo().Return(stubOutboxRepo{}).AnyTimes()
+	s.requested = nil
+	repoFactory.EXPECT().NewOutboxRepo().Return(recordingOutboxRepo{
+		onAllocateOpenIssues: func(itemID string) { s.requested = append(s.requested, itemID) },
+	}).AnyTimes()
 
 	s.consumer = &UndoBatchScanConsumer{
 		repos:     repoFactory,
@@ -100,7 +105,13 @@ func TestUndoBatchScanConsumerTestSuite(t *testing.T) {
 	suite.Run(t, new(UndoBatchScanConsumerTestSuite))
 }
 
-func (s *UndoBatchScanConsumerTestSuite) TestReAllocatesEveryItemTheReversalTouched() {
+// The reversal frees receipts, so every item it touched needs its open demand looked at again.
+//
+// It asks rather than does: covering the demand inline walked every open issue of every reversed item
+// inside this consumer, in the opposite lock order from the allocate consumer doing the same work.
+// The request is sorted, because two of these taking the same items in different orders is a deadlock
+// nobody could explain from the logs.
+func (s *UndoBatchScanConsumerTestSuite) TestRequestsAllocationForEveryItemTheReversalTouched() {
 	s.inventoryMutRepo.EXPECT().ReverseInventoryForBatch(gomock.Any(), domain.ReverseInventoryForBatchParams{
 		AccountID: undoTestAccountID,
 		BatchID:   undoTestBatchID,
@@ -109,19 +120,12 @@ func (s *UndoBatchScanConsumerTestSuite) TestReAllocatesEveryItemTheReversalTouc
 		{ItemID: undoTestMaterial, Measure: decimal.NewFromInt(40), UnitID: "each"},
 	}, nil)
 
-	allocated := map[string]bool{}
-	s.reservationRepo.EXPECT().AllocateOpenIssuesForItem(gomock.Any(), undoTestAccountID, gomock.Any()).
-		DoAndReturn(func(_ context.Context, _ string, itemID string) *apierror.APIError {
-			allocated[itemID] = true
-			return nil
-		}).Times(2)
-
 	err := s.consumer.undoBatchScan(context.Background(), undoTestAccountID, domain.UndoBatchScanEvent{
 		BatchID: undoTestBatchID,
 	})
 
 	s.Require().NoError(err)
-	s.Equal(map[string]bool{undoTestProductID: true, undoTestMaterial: true}, allocated)
+	s.Equal(mediator.SortedUniqueIDs([]string{undoTestProductID, undoTestMaterial}), s.requested)
 }
 
 func (s *UndoBatchScanConsumerTestSuite) TestRefusalIsReportedRatherThanSwallowed() {

@@ -12,6 +12,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
+	"github.com/open-mrp/api/services/core-service/internal/mediator"
 	"github.com/open-mrp/api/shared/contracts"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
@@ -220,7 +221,7 @@ func (s *AllocateOpenIssuesConsumerTestSuite) TestContinuationIDIsCarriedOntoThe
 // would be identical for every enqueue that item ever gets, so the inbox would dedupe all of them
 // against the first and the item would never be allocated again.
 func (s *AllocateOpenIssuesConsumerTestSuite) TestChainStartersEnqueueWithoutADerivedID() {
-	err := enqueueAllocateOpenIssues(context.Background(),
+	err := mediator.EnqueueAllocateOpenIssuesFrom(context.Background(),
 		continuationOutboxRepo{enqueued: &s.continuations}, pageAccountID, pageItemID, time.Time{}, "", "")
 
 	s.Require().Nil(err)

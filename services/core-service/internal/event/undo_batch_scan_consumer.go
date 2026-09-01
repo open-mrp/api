@@ -27,25 +27,40 @@ import (
 //
 // The delete itself already happened synchronously — this is the ledger catching up behind it, the mirror of ExecuteProductionStepConsumer running behind a scan.
 type UndoBatchScanConsumer struct {
-	rabbitmq      messaging.MessageBroker
-	inboxConsumer *messaging.InboxConsumer
-	repos         domain.RepoFactory
-	txManager     db.TransactionManager[*sqlc.Queries, domain.RepoFactory]
-	tracer        trace.Tracer
+	rabbitmq       messaging.MessageBroker
+	inboxConsumer  *messaging.InboxConsumer
+	repos          domain.RepoFactory
+	txManager      db.TransactionManager[*sqlc.Queries, domain.RepoFactory]
+	outboxNotifier messaging.OutboxNotifier
+	tracer         trace.Tracer
 }
 
+// outboxNotifier is optional: when nil the allocation request this consumer writes is still picked up
+// on the enqueuer's next poll, just not on the next instant.
 func NewUndoBatchScanConsumer(
 	rabbitmq messaging.MessageBroker,
 	inboxRepo messaging.InboxRepo,
 	repos domain.RepoFactory,
 	txManager db.TransactionManager[*sqlc.Queries, domain.RepoFactory],
+	outboxNotifier messaging.OutboxNotifier,
 ) *UndoBatchScanConsumer {
 	return &UndoBatchScanConsumer{
-		rabbitmq:      rabbitmq,
-		inboxConsumer: messaging.NewInboxConsumer(inboxRepo, "core-service"),
-		repos:         repos,
-		txManager:     txManager,
-		tracer:        tracing.GetTracer("core-service.undo_batch_scan_consumer"),
+		rabbitmq:       rabbitmq,
+		inboxConsumer:  messaging.NewInboxConsumer(inboxRepo, "core-service"),
+		repos:          repos,
+		txManager:      txManager,
+		outboxNotifier: outboxNotifier,
+		tracer:         tracing.GetTracer("core-service.undo_batch_scan_consumer"),
+	}
+}
+
+// kickOutbox wakes the outbox enqueuer so a just-committed allocation request is picked up
+// immediately rather than on the enqueuer's next idle poll, which can be up to MaxPollInterval away.
+// No-op when no notifier was injected. Call only after the writing transaction has committed —
+// kicking while it is still open races the poll against a row it cannot yet see.
+func (c *UndoBatchScanConsumer) kickOutbox() {
+	if c.outboxNotifier != nil {
+		c.outboxNotifier.Notify()
 	}
 }
 
@@ -153,16 +168,21 @@ func (c *UndoBatchScanConsumer) undoBatchScan(ctx context.Context, accountID str
 		return apiErr
 	}
 
-	// Freed receipts can now cover issues that were short, so allocation runs again for whatever the
-	// reversal touched. Sorted because two of these transactions taking the same items in different
+	// Freed receipts can now cover issues that were short, so allocation is asked for again for
+	// whatever the reversal touched. Sorted because two of these taking the same items in different
 	// orders is a deadlock nobody would be able to explain from the logs.
+	//
+	// Its own transaction, after the reversal has committed: an allocation request that survives a
+	// reversal which did not is a request to cover demand from stock that was never freed.
 	itemIDs := reversedItemIDs(deltas)
-	reservationRepo := c.repos.NewInventoryReservationRepo()
-	for _, itemID := range itemIDs {
-		if apiErr := reservationRepo.AllocateOpenIssuesForItem(ctx, accountID, itemID); apiErr != nil {
-			log.Printf("[undo_batch_scan] Failed to re-allocate open issues for item %s: %v", itemID, apiErr)
+	if len(itemIDs) > 0 {
+		if apiErr := c.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
+			return mediator.EnqueueAllocateOpenIssues(txCtx, f, accountID, itemIDs...)
+		}); apiErr != nil {
+			log.Printf("[undo_batch_scan] Failed to request allocation for batch %s: %v", evt.BatchID, apiErr)
 			return apiErr
 		}
+		c.kickOutbox()
 	}
 
 	log.Printf("[undo_batch_scan] Completed: batch=%s account=%s corrections=%d", evt.BatchID, accountID, len(deltas))

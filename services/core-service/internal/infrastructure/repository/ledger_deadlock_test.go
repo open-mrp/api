@@ -13,52 +13,51 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 )
 
-// The lock-order inversion that has survived three patches.
+// The lock-order inversion that has survived every fix so far, in the shape it still has.
 //
-// The async allocator goes issues → receipts: FindOpenIssuesForItemPaged FOR UPDATE, then
-// FindReceiptsForAllocation FOR UPDATE. The receipt-first flows — stocking a receiving order,
-// voiding a shipment, undoing a batch scan — go the other way: they reach FindReceiptsForAllocation
-// FOR UPDATE first (their own open-issue read has been non-locking since 3e99b962) and then X-lock
-// inventory_issue at CloseFullyAllocatedInventoryIssue with the receipt locks still held. Same two
-// tables, opposite order.
+// The allocator goes issue then receipts: it claims the issue by primary key, then takes
+// FindReceiptsForAllocation FOR UPDATE. The reversal flows go the other way — ReverseInventoryForOrderItem
+// reads the issues, deletes their allocations, frees the receipts those released
+// (FreeReleasedReceipts), and only then writes the issues back with RestoreIssuesToReserved. Receipts
+// written before issues, against issues held before receipts. Same two tables, opposite order.
+//
+// The pairing used to be the allocator against the INLINE sync allocator, which reached
+// FindReceiptsForAllocation and then X-locked inventory_issue at CloseFullyAllocatedInventoryIssue.
+// That flow is gone: stocking, voiding and undo now enqueue, and CloseFullyAllocatedInventoryIssue is
+// reached only from the allocator itself, which holds the issue first. What is left is the reversal,
+// which has to write both tables and cannot be reordered into agreement with the allocator — a
+// reversal must free the receipts before it can restore the demand, and an allocator must hold the
+// demand before it can decide which receipts to draw.
+//
+// EXPECTED RED until there is an ordering root both sides take first. No amount of reordering inside
+// either flow fixes this one; that is the whole argument for the root, and this test is the tracking
+// signal for it.
 //
 // The interleaving is forced, not raced: each side takes its first lock, and the test waits for
 // InnoDB itself to report the other blocked before letting either proceed.
-//
-// EXPECTED RED until the sync allocator is gone. Shrinking the unit of work closed cycles 2, 3 and 7
-// by removing the range scan, but it does not touch this one: the async side still goes issue →
-// receipts while the receipt-first flows go receipts → CloseFullyAllocatedInventoryIssue. Deleting
-// AllocateOpenIssuesForItem so that stocking, voiding and undo enqueue instead of allocating inline
-// is what closes it; the ordering root then covers whatever is left. This test is the tracking signal
-// for that work, so it is left failing rather than skipped.
-func TestNoDeadlock_AsyncVsReceiptFirst(t *testing.T) {
+func TestNoDeadlock_ReversalVersusAllocator(t *testing.T) {
 	f := newFixture(t)
 	base := time.Now().UTC().Add(-time.Hour).Truncate(time.Millisecond)
 	issueID := f.insertIssue(t, "open", "10", f.each, base)
 	receiptID := f.insertReceipt(t, "available", "100", f.each, base)
 
 	async := f.actor(t, "allocate-consumer")
-	sync := f.actor(t, "receiving-order-stock")
+	reversal := f.actor(t, "shipment-void-reversal")
 	ctx := context.Background()
 
 	// --- Step 1: each side takes its FIRST lock, and only its first. -------------------------
 
-	// Async: the issue it is about to cover, claimed by primary key. One row, no range, no gaps.
-	require.NoError(t, async.claim(t, f, issueID), "async: claim")
-
-	// Sync: the receipts, which is where a stocking transaction is by the time it allocates.
-	_, err := sync.q.FindReceiptsForAllocation(ctx, sqlc.FindReceiptsForAllocationParams{
-		AccountID: f.accountID, ItemID: f.itemID,
-	})
-	require.NoError(t, err, "sync: receipt read")
+	require.NoError(t, async.claim(t, f, issueID), "async: claim the issue it is about to cover")
+	require.NoError(t, reversal.q.FreeReleasedReceipts(ctx, []string{receiptID}),
+		"reversal: free the receipts its deleted allocations released")
 
 	// --- Step 2: each side reaches for what the other holds. --------------------------------
 
 	asyncErr := make(chan error, 1)
-	syncErr := make(chan error, 1)
+	reversalErr := make(chan error, 1)
 
 	go func() {
-		// The async side's second lock: the receipts the sync side is holding.
+		// The allocator's second lock: the receipts the reversal is holding.
 		_, err := async.q.FindReceiptsForAllocation(ctx, sqlc.FindReceiptsForAllocationParams{
 			AccountID: f.accountID, ItemID: f.itemID,
 		})
@@ -67,20 +66,19 @@ func TestNoDeadlock_AsyncVsReceiptFirst(t *testing.T) {
 	async.waitUntilBlockedOr(t, f.db, asyncErr)
 
 	go func() {
-		// The sync side's second lock: an X lock on the issue, taken while it still holds receipts.
-		// This is CloseFullyAllocatedInventoryIssue, the statement 3e99b962 left untouched.
-		syncErr <- sync.q.CloseFullyAllocatedInventoryIssue(ctx, issueID)
+		// The reversal's second write: the issues, with the receipt locks still held.
+		reversalErr <- reversal.q.RestoreIssuesToReserved(ctx, []string{issueID})
 	}()
 
 	// --- Step 3: whichever way InnoDB breaks it, neither side may see 1213. -----------------
 
-	assertNeitherDeadlocked(t, asyncErr, syncErr,
-		"the ABBA inversion between the async allocator (issues → receipts) and the receipt-first sync "+
-			"flows (receipts → CloseFullyAllocatedInventoryIssue) is live — EXPECTED until the sync "+
-			"allocator is deleted; see this test's comment: receipt "+receiptID+", issue "+issueID)
+	assertNeitherDeadlocked(t, asyncErr, reversalErr,
+		"the ABBA inversion between the allocator (issue → receipts) and a reversal (receipts → issues) "+
+			"is live — EXPECTED until both take an ordering root first; see this test's comment: receipt "+
+			receiptID+", issue "+issueID)
 
 	async.commit(t)
-	sync.commit(t)
+	reversal.commit(t)
 }
 
 // Cycle 2, closed by the unit of work rather than by an ordering rule.

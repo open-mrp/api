@@ -819,38 +819,6 @@ func (r *receivingOrderRepoImpl) MarkPurchaseOrderFulfilled(ctx context.Context,
 	return nil
 }
 
-func (r *receivingOrderRepoImpl) FindOpenIssuesForItem(ctx context.Context, accountID, itemID string) ([]domain.OpenInventoryIssue, *apierror.APIError) {
-	ctx, span := receivingOrderRepoTracer.Start(ctx, "repository.receiving_order.find_open_issues_for_item")
-	defer span.End()
-
-	rows, err := r.queries.FindOpenIssuesForItem(ctx, sqlc.FindOpenIssuesForItemParams{
-		AccountID: accountID,
-		ItemID:    itemID,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	result := make([]domain.OpenInventoryIssue, len(rows))
-	for i, row := range rows {
-		issue := domain.OpenInventoryIssue{
-			ID:            row.ID,
-			QuantityID:    row.QuantityID,
-			QuantityValue: row.QuantityValue,
-			UnitID:        row.UnitID,
-		}
-		if row.StorageLocationID.Valid {
-			issue.LocationID = &row.StorageLocationID.String
-		}
-		if row.LotID.Valid {
-			issue.LotID = &row.LotID.String
-		}
-		result[i] = issue
-	}
-
-	return result, nil
-}
-
 func (r *receivingOrderRepoImpl) HasUnstockedLineForOrderLine(ctx context.Context, salesOrderLineID string) (bool, *apierror.APIError) {
 	ctx, span := receivingOrderRepoTracer.Start(ctx, "repository.receiving_order.has_unstocked_line_for_order_line")
 	defer span.End()

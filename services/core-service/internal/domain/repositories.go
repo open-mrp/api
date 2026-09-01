@@ -779,8 +779,6 @@ type InventoryReservationRepo interface {
 	ReduceReservedForOrderMaterials(ctx context.Context, orderID, accountID string, demands []MaterialDemandItem) *apierror.APIError
 	// AllocateReservationsForConsumption allocates existing reservations for consumed materials. Returns the remaining quantity that could not be allocated from reservations.
 	AllocateReservationsForConsumption(ctx context.Context, params ConsumptionAllocationParams) (*ConsumptionAllocationResult, *apierror.APIError)
-	// AllocateOpenIssuesForItem performs FIFO allocation of all open inventory issues for the given item against available receipts. Used after receiving inventory.
-	AllocateOpenIssuesForItem(ctx context.Context, accountID, itemID string) *apierror.APIError
 	// ListOpenIssueIDsForItem names one page of the item's open demand (up to limit, oldest first, resuming after the (afterCreatedAt, afterID) cursor). It takes no locks and decides nothing: every id it returns is re-read under FOR UPDATE by AllocateOneOpenIssue.
 	ListOpenIssueIDsForItem(ctx context.Context, accountID, itemID string, afterCreatedAt time.Time, afterID string, limit int32) ([]OpenIssueRef, *apierror.APIError)
 	// CountAvailableReceiptsForItem reports how many receipts the item has to draw on, so an uncoverable backlog costs one read rather than a transaction per issue.
@@ -1378,7 +1376,6 @@ type ReceivingOrderRepo interface {
 	UpsertLot(ctx context.Context, lotID, accountID, itemID, lotNumber string) (string, *apierror.APIError)
 	InsertInventoryReceiptForDelivery(ctx context.Context, receiptID, accountID, itemID, quantityID, unitCostID string, storageLocationID, lotID, orderID *string) *apierror.APIError
 	MarkPurchaseOrderFulfilled(ctx context.Context, purchaseOrderID, accountID string) *apierror.APIError
-	FindOpenIssuesForItem(ctx context.Context, accountID, itemID string) ([]OpenInventoryIssue, *apierror.APIError)
 	GetAllocationSumForIssue(ctx context.Context, issueID string) (string, *apierror.APIError)
 	HasUnstockedLineForOrderLine(ctx context.Context, salesOrderLineID string) (bool, *apierror.APIError)
 	CreateLineForRemainingQuantity(ctx context.Context, receivingOrderID, salesOrderLineID, accountID string) *apierror.APIError

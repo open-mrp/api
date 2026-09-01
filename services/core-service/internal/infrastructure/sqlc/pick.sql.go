@@ -93,6 +93,8 @@ AND (
     ? IS NULL
     OR p.number LIKE ?
     OR so.customer_po_number LIKE ?
+    OR ba.name LIKE ?
+    OR ar.external_number LIKE ?
 )
 AND (
     ? IS NULL
@@ -142,10 +144,14 @@ type CountPicksParams struct {
 }
 
 // Only short (< ngram token size) terms reach here as a LIKE; ListPicksSearch* serves the ngram path.
+// The same four fields either way, so a one-character term is not silently searchable over less than a
+// two-character one. `ba` and `ar` are already joined for the projection, so this adds no join.
 func (q *Queries) CountPicks(ctx context.Context, arg CountPicksParams) (int64, error) {
 	query := countPicks
 	var queryParams []interface{}
 	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
@@ -1335,6 +1341,8 @@ AND (
     ? IS NULL
     OR p.number LIKE ?
     OR so.customer_po_number LIKE ?
+    OR ba.name LIKE ?
+    OR ar.external_number LIKE ?
 )
 AND (
     ? IS NULL
@@ -1463,11 +1471,15 @@ type ListPicksBackwardRow struct {
 
 // STRAIGHT_JOIN forces `p` as the driving table; see ListPicksForward for why. Do not remove.
 // Only short (< ngram token size) terms reach here as a LIKE; ListPicksSearch* serves the ngram path.
+// The same four fields either way, so a one-character term is not silently searchable over less than a
+// two-character one. `ba` and `ar` are already joined for the projection, so this adds no join.
 // The sentinel keeps a pick whose order has no ship-by date sortable and last; the repository's cursor must use the same value.
 func (q *Queries) ListPicksBackward(ctx context.Context, arg ListPicksBackwardParams) ([]ListPicksBackwardRow, error) {
 	query := listPicksBackward
 	var queryParams []interface{}
 	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
@@ -1663,6 +1675,8 @@ AND (
     ? IS NULL
     OR p.number LIKE ?
     OR so.customer_po_number LIKE ?
+    OR ba.name LIKE ?
+    OR ar.external_number LIKE ?
 )
 AND (
     ? IS NULL
@@ -1800,11 +1814,15 @@ type ListPicksForwardRow struct {
 // stay free to pick pick_account_id_finished_at_idx for a status filter (open picks are
 // a tiny slice of a mostly-closed table). Do not remove.
 // Only short (< ngram token size) terms reach here as a LIKE; ListPicksSearch* serves the ngram path.
+// The same four fields either way, so a one-character term is not silently searchable over less than a
+// two-character one. `ba` and `ar` are already joined for the projection, so this adds no join.
 // The sentinel keeps a pick whose order has no ship-by date sortable and last; the repository's cursor must use the same value.
 func (q *Queries) ListPicksForward(ctx context.Context, arg ListPicksForwardParams) ([]ListPicksForwardRow, error) {
 	query := listPicksForward
 	var queryParams []interface{}
 	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
@@ -2007,6 +2025,21 @@ AND p.id IN (
     JOIN sales_order pso ON pso.id = pk.sales_order_id
     WHERE pk.account_id = ?
     AND MATCH(pso.customer_po_number) AGAINST(? IN BOOLEAN MODE)
+    UNION
+    SELECT pk.id FROM pick pk
+    JOIN sales_order pso ON pso.id = pk.sales_order_id
+    JOIN account pba ON pba.id = pso.buyer_account_id
+    WHERE pk.account_id = ?
+    AND MATCH(pba.name) AGAINST(? IN BOOLEAN MODE)
+    UNION
+    -- The customer's number as the merchant knows it lives on the relation, not the account: the same
+    -- counterparty is a different number to every merchant who trades with them.
+    SELECT pk.id FROM pick pk
+    JOIN sales_order pso ON pso.id = pk.sales_order_id
+    JOIN account_relation par ON par.owner_account_id = pso.owner_account_id
+        AND par.counterparty_account_id = pso.buyer_account_id
+    WHERE pk.account_id = ?
+    AND MATCH(par.external_number) AGAINST(? IN BOOLEAN MODE)
 )
 AND (
     ? IS NULL
@@ -2139,6 +2172,10 @@ func (q *Queries) ListPicksSearchBackward(ctx context.Context, arg ListPicksSear
 	query := listPicksSearchBackward
 	var queryParams []interface{}
 	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.AccountID)
 	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.AccountID)
@@ -2340,6 +2377,21 @@ AND p.id IN (
     JOIN sales_order pso ON pso.id = pk.sales_order_id
     WHERE pk.account_id = ?
     AND MATCH(pso.customer_po_number) AGAINST(? IN BOOLEAN MODE)
+    UNION
+    SELECT pk.id FROM pick pk
+    JOIN sales_order pso ON pso.id = pk.sales_order_id
+    JOIN account pba ON pba.id = pso.buyer_account_id
+    WHERE pk.account_id = ?
+    AND MATCH(pba.name) AGAINST(? IN BOOLEAN MODE)
+    UNION
+    -- The customer's number as the merchant knows it lives on the relation, not the account: the same
+    -- counterparty is a different number to every merchant who trades with them.
+    SELECT pk.id FROM pick pk
+    JOIN sales_order pso ON pso.id = pk.sales_order_id
+    JOIN account_relation par ON par.owner_account_id = pso.owner_account_id
+        AND par.counterparty_account_id = pso.buyer_account_id
+    WHERE pk.account_id = ?
+    AND MATCH(par.external_number) AGAINST(? IN BOOLEAN MODE)
 )
 AND (
     ? IS NULL
@@ -2471,15 +2523,21 @@ type ListPicksSearchForwardRow struct {
 // The search sibling of ListPicksForward. No STRAIGHT_JOIN: the `p.id IN (...)` semi-join lets the
 // optimizer drive from the ngram FULLTEXT match (a handful of rows) instead of the account's whole
 // pick range, so the join order that helps the unsearched browse would only get in the way here.
-// Substring search over the pick number and the order's customer PO number, each served by its own
-// ngram FULLTEXT index. A semi-join, not an OR of two MATCHes in the main WHERE, so each MATCH drives
-// its own index — an OR of MATCH across joined tables cannot use either. The repo only runs this query
-// when a term of at least the ngram token size is present, so the match is unconditional.
+// Substring search over the four things a picker might have in hand: the pick's own number, the
+// order's customer PO number, and the customer's name or account number. Each is served by its own
+// ngram FULLTEXT index. A semi-join of UNIONed branches, not an OR of MATCHes in the main WHERE, so
+// each MATCH drives its own index — an OR of MATCH across joined tables cannot use either. The repo
+// only runs this query when a term of at least the ngram token size is present, so the matches are
+// unconditional.
 // The sentinel keeps a pick whose order has no ship-by date sortable and last; the repository's cursor must use the same value.
 func (q *Queries) ListPicksSearchForward(ctx context.Context, arg ListPicksSearchForwardParams) ([]ListPicksSearchForwardRow, error) {
 	query := listPicksSearchForward
 	var queryParams []interface{}
 	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.AccountID)
 	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.AccountID)

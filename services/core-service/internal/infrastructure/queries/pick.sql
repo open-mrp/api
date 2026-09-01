@@ -76,10 +76,14 @@ LEFT JOIN carrier cr ON cr.id = so.carrier_id
 LEFT JOIN carrier_option co ON co.id = so.carrier_option_id
 WHERE p.account_id = sqlc.arg('account_id')
 -- Only short (< ngram token size) terms reach here as a LIKE; ListPicksSearch* serves the ngram path.
+-- The same four fields either way, so a one-character term is not silently searchable over less than a
+-- two-character one. `ba` and `ar` are already joined for the projection, so this adds no join.
 AND (
     sqlc.narg('search_query') IS NULL
     OR p.number LIKE sqlc.narg('search_query')
     OR so.customer_po_number LIKE sqlc.narg('search_query')
+    OR ba.name LIKE sqlc.narg('search_query')
+    OR ar.external_number LIKE sqlc.narg('search_query')
 )
 AND (
     sqlc.narg('status') IS NULL
@@ -206,10 +210,14 @@ LEFT JOIN carrier cr ON cr.id = so.carrier_id
 LEFT JOIN carrier_option co ON co.id = so.carrier_option_id
 WHERE p.account_id = sqlc.arg('account_id')
 -- Only short (< ngram token size) terms reach here as a LIKE; ListPicksSearch* serves the ngram path.
+-- The same four fields either way, so a one-character term is not silently searchable over less than a
+-- two-character one. `ba` and `ar` are already joined for the projection, so this adds no join.
 AND (
     sqlc.narg('search_query') IS NULL
     OR p.number LIKE sqlc.narg('search_query')
     OR so.customer_po_number LIKE sqlc.narg('search_query')
+    OR ba.name LIKE sqlc.narg('search_query')
+    OR ar.external_number LIKE sqlc.narg('search_query')
 )
 AND (
     sqlc.narg('status') IS NULL
@@ -335,10 +343,12 @@ LEFT JOIN geolocation ship_geo ON ship_geo.id = addr.geolocation_id
 LEFT JOIN carrier cr ON cr.id = so.carrier_id
 LEFT JOIN carrier_option co ON co.id = so.carrier_option_id
 WHERE p.account_id = sqlc.arg('account_id')
--- Substring search over the pick number and the order's customer PO number, each served by its own
--- ngram FULLTEXT index. A semi-join, not an OR of two MATCHes in the main WHERE, so each MATCH drives
--- its own index — an OR of MATCH across joined tables cannot use either. The repo only runs this query
--- when a term of at least the ngram token size is present, so the match is unconditional.
+-- Substring search over the four things a picker might have in hand: the pick's own number, the
+-- order's customer PO number, and the customer's name or account number. Each is served by its own
+-- ngram FULLTEXT index. A semi-join of UNIONed branches, not an OR of MATCHes in the main WHERE, so
+-- each MATCH drives its own index — an OR of MATCH across joined tables cannot use either. The repo
+-- only runs this query when a term of at least the ngram token size is present, so the matches are
+-- unconditional.
 AND p.id IN (
     SELECT pk.id FROM pick pk
     WHERE pk.account_id = sqlc.arg('account_id')
@@ -348,6 +358,21 @@ AND p.id IN (
     JOIN sales_order pso ON pso.id = pk.sales_order_id
     WHERE pk.account_id = sqlc.arg('account_id')
     AND MATCH(pso.customer_po_number) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
+    UNION
+    SELECT pk.id FROM pick pk
+    JOIN sales_order pso ON pso.id = pk.sales_order_id
+    JOIN account pba ON pba.id = pso.buyer_account_id
+    WHERE pk.account_id = sqlc.arg('account_id')
+    AND MATCH(pba.name) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
+    UNION
+    -- The customer's number as the merchant knows it lives on the relation, not the account: the same
+    -- counterparty is a different number to every merchant who trades with them.
+    SELECT pk.id FROM pick pk
+    JOIN sales_order pso ON pso.id = pk.sales_order_id
+    JOIN account_relation par ON par.owner_account_id = pso.owner_account_id
+        AND par.counterparty_account_id = pso.buyer_account_id
+    WHERE pk.account_id = sqlc.arg('account_id')
+    AND MATCH(par.external_number) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
 )
 AND (
     sqlc.narg('status') IS NULL
@@ -482,6 +507,21 @@ AND p.id IN (
     JOIN sales_order pso ON pso.id = pk.sales_order_id
     WHERE pk.account_id = sqlc.arg('account_id')
     AND MATCH(pso.customer_po_number) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
+    UNION
+    SELECT pk.id FROM pick pk
+    JOIN sales_order pso ON pso.id = pk.sales_order_id
+    JOIN account pba ON pba.id = pso.buyer_account_id
+    WHERE pk.account_id = sqlc.arg('account_id')
+    AND MATCH(pba.name) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
+    UNION
+    -- The customer's number as the merchant knows it lives on the relation, not the account: the same
+    -- counterparty is a different number to every merchant who trades with them.
+    SELECT pk.id FROM pick pk
+    JOIN sales_order pso ON pso.id = pk.sales_order_id
+    JOIN account_relation par ON par.owner_account_id = pso.owner_account_id
+        AND par.counterparty_account_id = pso.buyer_account_id
+    WHERE pk.account_id = sqlc.arg('account_id')
+    AND MATCH(par.external_number) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
 )
 AND (
     sqlc.narg('status') IS NULL
@@ -544,10 +584,14 @@ JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
 JOIN account ba ON ba.id = so.buyer_account_id
 WHERE p.account_id = sqlc.arg('account_id')
 -- Only short (< ngram token size) terms reach here as a LIKE; ListPicksSearch* serves the ngram path.
+-- The same four fields either way, so a one-character term is not silently searchable over less than a
+-- two-character one. `ba` and `ar` are already joined for the projection, so this adds no join.
 AND (
     sqlc.narg('search_query') IS NULL
     OR p.number LIKE sqlc.narg('search_query')
     OR so.customer_po_number LIKE sqlc.narg('search_query')
+    OR ba.name LIKE sqlc.narg('search_query')
+    OR ar.external_number LIKE sqlc.narg('search_query')
 )
 AND (
     sqlc.narg('status') IS NULL

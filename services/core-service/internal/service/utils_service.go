@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"strings"
 
@@ -18,7 +17,7 @@ import (
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/idempotency"
 	"github.com/open-mrp/api/shared/messaging"
-	"github.com/open-mrp/api/shared/textutil"
+	"github.com/open-mrp/api/shared/ptrutil"
 	"github.com/open-mrp/api/shared/tracing"
 )
 
@@ -280,87 +279,32 @@ func (s *utilsSvcImpl) emailRecordStarted(ctx context.Context, span trace.Span, 
 }
 
 func (s *utilsSvcImpl) emailInvoice(ctx context.Context, span trace.Span, invoiceID, accountID string, meds domain.Mediators, idempotencyKey *domain.IdempotencyKey) *apierror.APIError {
-	invoiceRepo := s.repos.NewInvoiceRepo()
-
-	// Fetch the invoice.
-	invoice, apiErr := invoiceRepo.Get(ctx, domain.GetInvoiceParams{
-		AccountID: accountID,
-		InvoiceID: invoiceID,
-	})
+	recipients, apiErr := s.repos.NewInvoiceRepo().GetEmailRecipients(ctx, invoiceID)
 	if apiErr != nil {
 		return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, tracing.Trace(span, apiErr))
 	}
 
-	// Fetch recipient emails.
-	recipients, apiErr := invoiceRepo.GetEmailRecipients(ctx, invoiceID)
-	if apiErr != nil {
-		return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, tracing.Trace(span, apiErr))
-	}
-
-	// If no recipients, just mark as sent and return.
-	if len(recipients) == 0 {
-		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *utilsSvcImpl) *apierror.APIError {
-			if apiErr := txSvc.repos.NewInvoiceRepo().MarkEmailSent(txCtx, accountID, invoiceID); apiErr != nil {
-				return apiErr
-			}
-			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, &struct{}{})
-		})
-		if apiErr != nil {
-			return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
-		}
-		return nil
-	}
-
-	// The document backs both the email body and its PDF, so assemble it once. Its lookups are
-	// best-effort, so fall back to the account name when the letterhead came back blank.
-	lines, _ := invoiceRepo.GetLines(ctx, invoiceID)
-	doc := gatherInvoiceDoc(ctx, s.repos, accountID, invoice, lines)
-	// The PDF embeds the letterhead logo, so its bytes are fetched here; this runs before the
-	// transaction below, so a slow logo host costs only this request.
-	logo := fetchAccountLogo(ctx, s.repos, s.branding, accountID)
-	doc.Header.LogoImageType, doc.Header.LogoImage = logo.ImageType, logo.Image
-
-	var shipment *domain.Shipment
-	if invoice.ShipmentID != nil {
-		shipment, _ = s.repos.NewShipmentRepo().Get(ctx, domain.GetShipmentParams{AccountID: accountID, ShipmentID: *invoice.ShipmentID})
-	}
-
-	params := doc.emailParams(shipmentMasterTrackingURL(shipment))
-	if params["account_name"] == "" {
-		accountName, apiErr := s.repos.NewAccountRepo().GetName(ctx, accountID)
+	// No recipients still flags the invoice sent: the flag records that delivery was attempted and
+	// settled, and leaving it unset offers the invoice to the resend sweep forever.
+	var emailData *messaging.EmailSendData
+	if len(recipients) > 0 {
+		// Built by the same assembler the automatic send-on-ship uses, so a manual resend delivers an
+		// identical invoice (line items, letterhead, PDF attachment).
+		built, apiErr := buildInvoiceEmail(ctx, s.repos, s.branding, accountID, invoiceID)
 		if apiErr != nil {
 			return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, tracing.Trace(span, apiErr))
 		}
-		params["account_name"] = accountName
+		addressed := built.addressedTo(recipients)
+		emailData = &addressed
 	}
 
-	subject := fmt.Sprintf("Invoice %s", textutil.FormatRecordNumber(invoice.Number))
-
-	emailData := messaging.EmailSendData{
-		To:         recipients,
-		Subject:    subject,
-		TemplateID: constants.EmailTemplateInvoice,
-		Params:     params,
-		AccountID:  &accountID,
-	}
-	applyMerchantReplyTo(&emailData, doc.Header.AccountEmail)
-
-	// Attach the rendered invoice PDF, best-effort — a render failure sends the email without it.
-	if pdfBytes, err := buildInvoicePDF(doc); err == nil {
-		encoded := base64.StdEncoding.EncodeToString(pdfBytes)
-		filename := fmt.Sprintf("invoice-%s.pdf", invoice.Number)
-		contentType := "application/pdf"
-		emailData.AttachmentData = &encoded
-		emailData.AttachmentFilename = &filename
-		emailData.AttachmentContentType = &contentType
-	}
-
-	// Publish email and mark as sent inside a transaction.
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *utilsSvcImpl) *apierror.APIError {
 		txCtx = event.WithRepos(txCtx, txSvc.repos)
 
-		if apiErr := txSvc.notificationPublisher.PublishSendEmail(txCtx, emailData); apiErr != nil {
-			return apiErr
+		if emailData != nil {
+			if apiErr := txSvc.notificationPublisher.PublishSendEmail(txCtx, *emailData); apiErr != nil {
+				return apiErr
+			}
 		}
 
 		if apiErr := txSvc.repos.NewInvoiceRepo().MarkEmailSent(txCtx, accountID, invoiceID); apiErr != nil {
@@ -418,22 +362,15 @@ func (s *utilsSvcImpl) emailSalesOrder(ctx context.Context, span trace.Span, sal
 }
 
 func (s *utilsSvcImpl) emailPurchaseOrder(ctx context.Context, span trace.Span, purchaseOrderID, accountID string, meds domain.Mediators, idempotencyKey *domain.IdempotencyKey) *apierror.APIError {
-	purchaseOrderRepo := s.repos.NewPurchaseOrderRepo()
-
-	// Fetch the purchase order.
-	po, apiErr := purchaseOrderRepo.Get(ctx, accountID, purchaseOrderID)
-	if apiErr != nil {
-		return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, tracing.Trace(span, apiErr))
-	}
-
-	// Fetch recipient emails.
-	recipients, apiErr := purchaseOrderRepo.GetSubmissionRecipients(ctx, purchaseOrderID)
+	// Built by the same assembler the automatic send-on-issue uses, so a manual resend delivers an
+	// identical submission.
+	emailData, apiErr := buildPurchaseOrderSubmissionEmail(ctx, s.repos, s.branding, accountID, purchaseOrderID)
 	if apiErr != nil {
 		return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, tracing.Trace(span, apiErr))
 	}
 
 	// If no recipients, return early.
-	if len(recipients) == 0 {
+	if emailData == nil {
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *utilsSvcImpl) *apierror.APIError {
 			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, &struct{}{})
 		})
@@ -443,31 +380,11 @@ func (s *utilsSvcImpl) emailPurchaseOrder(ctx context.Context, span trace.Span, 
 		return nil
 	}
 
-	// Fetch account name for email.
-	accountName, apiErr := s.repos.NewAccountRepo().GetName(ctx, accountID)
-	if apiErr != nil {
-		return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, tracing.Trace(span, apiErr))
-	}
-
-	subject := fmt.Sprintf("Purchase Order %s", po.Number)
-
-	letterhead := merchantLetterheadParams(ctx, s.repos, s.branding, accountID, accountName, subject)
-	letterhead.params["order_number"] = po.Number
-
-	emailData := messaging.EmailSendData{
-		To:         recipients,
-		Subject:    subject,
-		TemplateID: constants.EmailTemplatePurchaseOrderSubmission,
-		Params:     letterhead.params,
-		AccountID:  &accountID,
-	}
-	applyMerchantReplyTo(&emailData, letterhead.supportEmail)
-
 	// Publish email and mark as sent inside a transaction.
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *utilsSvcImpl) *apierror.APIError {
 		txCtx = event.WithRepos(txCtx, txSvc.repos)
 
-		if apiErr := txSvc.notificationPublisher.PublishSendEmail(txCtx, emailData); apiErr != nil {
+		if apiErr := txSvc.notificationPublisher.PublishSendEmail(txCtx, *emailData); apiErr != nil {
 			return apiErr
 		}
 
@@ -485,6 +402,13 @@ func (s *utilsSvcImpl) emailPurchaseOrder(ctx context.Context, span trace.Span, 
 	return nil
 }
 
+const (
+	// demoRequestRecipient is where marketing-site demo requests land.
+	demoRequestRecipient = "dane@augno.com"
+	// internalAlertRecipient is where operator-facing notices go, matching the registration alert.
+	internalAlertRecipient = "dev@augno.com"
+)
+
 // RequestDemo is intentionally anonymous for public OpenAPI; POST uses idempotency keys.
 func (s *utilsSvcImpl) RequestDemo(ctx context.Context, params domain.RequestDemoParams) *apierror.APIError {
 	ctx, span := utilsSvcTracer.Start(ctx, "service.utils.request_demo")
@@ -496,12 +420,26 @@ func (s *utilsSvcImpl) RequestDemo(ctx context.Context, params domain.RequestDem
 		"company", params.Company,
 	)
 
-	return nil
+	// The log line alone lost every demo request that arrived at this endpoint rather than the
+	// dashboard's, which is the whole point of the lead form.
+	emailData := messaging.EmailSendData{
+		To:         []string{demoRequestRecipient},
+		Subject:    "Demo Request",
+		TemplateID: constants.EmailTemplateDemoRequest,
+		Params: map[string]any{
+			"Name":        params.Name,
+			"Email":       params.Email,
+			"Company":     params.Company,
+			"PhoneNumber": ptrutil.Deref(params.PhoneNumber),
+			"Message":     ptrutil.Deref(params.Message),
+		},
+	}
+
+	return s.withTx(ctx, func(txCtx context.Context, txSvc *utilsSvcImpl) *apierror.APIError {
+		return txSvc.notificationPublisher.PublishSendEmail(event.WithRepos(txCtx, txSvc.repos), emailData)
+	})
 }
 
-// SubmitFeedback logs user feedback. Requires an authenticated actor.
-// Email sending will be wired later via the notification service.
-// POST endpoint — uses idempotency keys.
 func (s *utilsSvcImpl) SubmitFeedback(ctx context.Context, params domain.SubmitFeedbackParams) *apierror.APIError {
 	ctx, span := utilsSvcTracer.Start(ctx, "service.utils.submit_feedback")
 	defer span.End()
@@ -521,5 +459,28 @@ func (s *utilsSvcImpl) SubmitFeedback(ctx context.Context, params domain.SubmitF
 		"page_url", params.PageURL,
 	)
 
-	return nil
+	accountID := identity.Target.AccountID
+	emailData := messaging.EmailSendData{
+		To:         []string{internalAlertRecipient},
+		Subject:    "Dashboard Feedback",
+		TemplateID: constants.EmailTemplateDashboardFeedback,
+		Params: map[string]any{
+			"UserName":  ptrutil.Deref(identity.Actor.Name),
+			"ActorType": string(identity.Actor.RelationType),
+			// The actor's address is not on the identity, so the feedback names the account and
+			// actor id and leaves the reply route to a lookup on receipt.
+			"UserEmail": "",
+			"ActorID":   identity.Actor.ID,
+			"AccountID": accountID,
+			"PageURL":   ptrutil.Deref(params.PageURL),
+			"Question":  params.Question,
+			"Answer":    params.Answer,
+		},
+		AccountID: &accountID,
+		SentByID:  &identity.Actor.ID,
+	}
+
+	return s.withTx(ctx, func(txCtx context.Context, txSvc *utilsSvcImpl) *apierror.APIError {
+		return txSvc.notificationPublisher.PublishSendEmail(event.WithRepos(txCtx, txSvc.repos), emailData)
+	})
 }

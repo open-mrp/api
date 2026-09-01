@@ -26,7 +26,12 @@ func NewPermissionGroupRepo(queries *sqlc.Queries) domain.PermissionGroupRepo {
 func pgCreatedAt(pg *domain.PermissionGroup) time.Time { return pg.CreatedAt }
 func pgID(pg *domain.PermissionGroup) string           { return pg.ID }
 
-func mapPermissionGroupRow(row sqlc.PermissionGroup) *domain.PermissionGroup {
+// mapPermissionGroupRow maps one permission_group row to the domain.
+//
+// sqlc emits a distinct row struct per query even when the column lists are identical, so this takes
+// one of them and the other call sites convert. The conversion is compiler-checked: a query whose
+// columns ever diverge from this shape fails the build here rather than mapping the wrong field.
+func mapPermissionGroupRow(row sqlc.GetPermissionGroupsByIDsRow) *domain.PermissionGroup {
 	var description *string
 	if row.Description.Valid {
 		description = &row.Description.String
@@ -108,7 +113,7 @@ func (r *permissionGroupRepoImpl) List(ctx context.Context, params domain.ListPe
 			}
 			groups := make([]*domain.PermissionGroup, len(rows))
 			for i, row := range rows {
-				groups[i] = mapPermissionGroupRow(row)
+				groups[i] = mapPermissionGroupRow(sqlc.GetPermissionGroupsByIDsRow(row))
 			}
 			result, pageInfo := pagination.BuildPageString(groups, params.Limit, cursorDir, pgCreatedAt, pgID)
 			if apiErr := r.loadPermissions(ctx, result); apiErr != nil {
@@ -129,7 +134,7 @@ func (r *permissionGroupRepoImpl) List(ctx context.Context, params domain.ListPe
 		}
 		groups := make([]*domain.PermissionGroup, len(rows))
 		for i, row := range rows {
-			groups[i] = mapPermissionGroupRow(row)
+			groups[i] = mapPermissionGroupRow(sqlc.GetPermissionGroupsByIDsRow(row))
 		}
 		result, pageInfo := pagination.BuildPageString(groups, params.Limit, cursorDir, pgCreatedAt, pgID)
 		if apiErr := r.loadPermissions(ctx, result); apiErr != nil {
@@ -149,7 +154,7 @@ func (r *permissionGroupRepoImpl) List(ctx context.Context, params domain.ListPe
 
 	groups := make([]*domain.PermissionGroup, len(rows))
 	for i, row := range rows {
-		groups[i] = mapPermissionGroupRow(row)
+		groups[i] = mapPermissionGroupRow(sqlc.GetPermissionGroupsByIDsRow(row))
 	}
 	result, pageInfo := pagination.BuildPageString(groups, params.Limit, cursorDir, pgCreatedAt, pgID)
 	if apiErr := r.loadPermissions(ctx, result); apiErr != nil {

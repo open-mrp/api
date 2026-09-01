@@ -50,16 +50,18 @@ type Invoice struct {
 
 // InvoiceLine represents a line item in an invoice.
 type InvoiceLine struct {
-	ID                   string
-	QuantityID           string
-	QuantityValue        string
-	QuantityUnitID       string
-	QuantityUnitAbbr     string
-	QuantityUnitName     string
-	UnitPriceID          string
-	UnitPriceValue       string
-	UnitPriceNumUnit     string
-	UnitPriceDenUnit     string
+	ID               string
+	QuantityID       string
+	QuantityValue    string
+	QuantityUnitID   string
+	QuantityUnitAbbr string
+	QuantityUnitName string
+	UnitPriceID      string
+	UnitPriceValue   string
+	UnitPriceNumUnit string
+	UnitPriceDenUnit string
+	// UnitPriceDenUnitAbbr labels the price's pricing unit ("$8.50 / pr"). It is the rate's own denominator, which can differ from the line's quantity unit.
+	UnitPriceDenUnitAbbr string
 	OrderLineID          string
 	OrderLineItemID      *string
 	OrderLineItemNumber  *int32

@@ -21,7 +21,8 @@ type invoiceLineRow struct {
 	Price       string
 	Ordered     string
 	Invoiced    string
-	// InvoicedWithUnit is the email's quantity cell, which carries the unit abbreviation ("6 pr").
+	// InvoicedWithUnit is the email's quantity cell, which carries the unit's full name ("6 pair").
+	// The PDF splits the same figure across its Invoiced and Unit columns.
 	InvoicedWithUnit string
 	Unit             string
 	Total            string
@@ -187,13 +188,19 @@ func buildInvoiceDoc(
 		}
 
 		doc.Lines = append(doc.Lines, invoiceLineRow{
-			LineItem:         lineItem,
-			SKU:              ptrutil.Deref(line.OrderLineItemSKU),
-			Description:      ptrutil.Deref(line.OrderLineDescription),
-			Price:            formatPrice(price, line.QuantityUnitAbbr),
-			Ordered:          formatCount(ordered),
-			Invoiced:         formatCount(invoiced),
-			InvoicedWithUnit: formatQty(invoiced, line.QuantityUnitAbbr),
+			LineItem:    lineItem,
+			SKU:         ptrutil.Deref(line.OrderLineItemSKU),
+			Description: ptrutil.Deref(line.OrderLineDescription),
+			// The price is labelled with the rate's own denominator unit, as the dashboard's
+			// RateUtils.abbreviate does — an item priced by the dozen and stocked in pairs reads
+			// "$8.50 / dz", not "$8.50 / pr".
+			Price:    formatRateAmount(price, line.UnitPriceDenUnitAbbr, 2),
+			Ordered:  formatCount(ordered),
+			Invoiced: formatCount(invoiced),
+			// Rounded to whole units, matching the zero-digit default the legacy
+			// EmailInvoiceItemSummary rendered through, but naming the unit in full rather than
+			// abbreviating it.
+			InvoicedWithUnit: formatMeasure(invoiced, line.QuantityUnitName, 0),
 			Unit:             line.QuantityUnitName,
 			Total:            formatMoney(lineTotal),
 		})
@@ -204,7 +211,9 @@ func buildInvoiceDoc(
 	for _, c := range cases {
 		weight := ""
 		if c.FreightWeightValue != "" {
-			weight = formatQty(parseDecimalOrZero(c.FreightWeightValue), c.FreightWeightUnitAbbreviation)
+			// Printed verbatim, as the legacy PdfShipCaseTable interpolates the measure directly
+			// rather than abbreviating it.
+			weight = formatRawMeasure(parseDecimalOrZero(c.FreightWeightValue), c.FreightWeightUnitAbbreviation)
 		}
 		doc.Cases = append(doc.Cases, invoiceCaseRow{
 			Number:   c.Number,

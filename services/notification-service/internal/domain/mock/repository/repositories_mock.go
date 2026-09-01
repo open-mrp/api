@@ -21,6 +21,45 @@ import (
 	gomock "go.uber.org/mock/gomock"
 )
 
+// MockAccountRepo is a mock of AccountRepo interface.
+type MockAccountRepo struct {
+	ctrl     *gomock.Controller
+	recorder *MockAccountRepoMockRecorder
+	isgomock struct{}
+}
+
+// MockAccountRepoMockRecorder is the mock recorder for MockAccountRepo.
+type MockAccountRepoMockRecorder struct {
+	mock *MockAccountRepo
+}
+
+// NewMockAccountRepo creates a new mock instance.
+func NewMockAccountRepo(ctrl *gomock.Controller) *MockAccountRepo {
+	mock := &MockAccountRepo{ctrl: ctrl}
+	mock.recorder = &MockAccountRepoMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockAccountRepo) EXPECT() *MockAccountRepoMockRecorder {
+	return m.recorder
+}
+
+// IsSandbox mocks base method.
+func (m *MockAccountRepo) IsSandbox(ctx context.Context, accountID string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsSandbox", ctx, accountID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// IsSandbox indicates an expected call of IsSandbox.
+func (mr *MockAccountRepoMockRecorder) IsSandbox(ctx, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsSandbox", reflect.TypeOf((*MockAccountRepo)(nil).IsSandbox), ctx, accountID)
+}
+
 // MockEmailLogRepo is a mock of EmailLogRepo interface.
 type MockEmailLogRepo struct {
 	ctrl     *gomock.Controller

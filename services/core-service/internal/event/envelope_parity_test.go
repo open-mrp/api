@@ -245,3 +245,100 @@ func TestAccountFallsBackToIdentity(t *testing.T) {
 		t.Fatalf("account = %q, want the identity's", accountID)
 	}
 }
+
+func TestInvoiceIssuedPayloadDecodesFromExpress(t *testing.T) {
+	t.Parallel()
+
+	body := envelopeJSON(t, "ac_test", map[string]any{
+		"invoice_id":      "inv_1",
+		"email_customer":  true,
+		"email_sales_rep": true,
+	})
+
+	var msg contracts.AmqpMessage
+	if err := json.Unmarshal(body, &msg); err != nil {
+		t.Fatalf("unmarshal envelope: %v", err)
+	}
+
+	var evt domain.InvoiceIssuedEvent
+	if err := json.Unmarshal(msg.Data, &evt); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+
+	if evt.InvoiceID != "inv_1" {
+		t.Fatalf("invoice = %q", evt.InvoiceID)
+	}
+	if !evt.EmailCustomer || !evt.EmailSalesRep {
+		t.Fatalf("recipient flags did not decode: %+v", evt)
+	}
+}
+
+// A ship with the customer copy suppressed sends email_customer false rather than omitting it, but
+// either way the rep copy must survive on its own — losing the distinction mails the customer an
+// invoice the operator chose not to send.
+func TestInvoiceIssuedPayloadWithoutCustomerCopy(t *testing.T) {
+	t.Parallel()
+
+	body := envelopeJSON(t, "ac_test", map[string]any{
+		"invoice_id":      "inv_1",
+		"email_customer":  false,
+		"email_sales_rep": true,
+	})
+
+	var msg contracts.AmqpMessage
+	if err := json.Unmarshal(body, &msg); err != nil {
+		t.Fatalf("unmarshal envelope: %v", err)
+	}
+
+	var evt domain.InvoiceIssuedEvent
+	if err := json.Unmarshal(msg.Data, &evt); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+
+	if evt.EmailCustomer {
+		t.Fatal("email_customer should decode false")
+	}
+	if !evt.EmailSalesRep {
+		t.Fatal("email_sales_rep should decode true")
+	}
+}
+
+func TestSalesOrderAcknowledgedPayloadDecodesFromExpress(t *testing.T) {
+	t.Parallel()
+
+	body := envelopeJSON(t, "ac_test", map[string]any{"sales_order_id": "so_1"})
+
+	var msg contracts.AmqpMessage
+	if err := json.Unmarshal(body, &msg); err != nil {
+		t.Fatalf("unmarshal envelope: %v", err)
+	}
+
+	var evt domain.SalesOrderAcknowledgedEvent
+	if err := json.Unmarshal(msg.Data, &evt); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+
+	if evt.SalesOrderID != "so_1" {
+		t.Fatalf("sales order = %q", evt.SalesOrderID)
+	}
+}
+
+func TestPurchaseOrderSubmittedPayloadDecodesFromExpress(t *testing.T) {
+	t.Parallel()
+
+	body := envelopeJSON(t, "ac_test", map[string]any{"purchase_order_id": "po_1"})
+
+	var msg contracts.AmqpMessage
+	if err := json.Unmarshal(body, &msg); err != nil {
+		t.Fatalf("unmarshal envelope: %v", err)
+	}
+
+	var evt domain.PurchaseOrderSubmittedEvent
+	if err := json.Unmarshal(msg.Data, &evt); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+
+	if evt.PurchaseOrderID != "po_1" {
+		t.Fatalf("purchase order = %q", evt.PurchaseOrderID)
+	}
+}

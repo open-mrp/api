@@ -742,6 +742,17 @@ func (s *purchaseOrderSvcImpl) ChangePurchaseOrderStatus(ctx context.Context, pa
 			return nil, tracing.Trace(span, apierror.NewValidationError("Order must be in estimate status to issue."))
 		}
 
+		// Assembled before the transaction opens: it renders the PDF and fetches the letterhead logo
+		// over the network, and neither should hold the order's row locks. Nil when the order has no
+		// submission recipients.
+		var submissionEmail *messaging.EmailSendData
+		if params.SendEmail && s.notificationPublisher != nil {
+			submissionEmail, apiErr = buildPurchaseOrderSubmissionEmail(ctx, s.repos, s.branding, params.AccountID, params.PurchaseOrderID)
+			if apiErr != nil {
+				return nil, tracing.Trace(span, apiErr)
+			}
+		}
+
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *purchaseOrderSvcImpl) *apierror.APIError {
 			txRepo := txSvc.repos.NewPurchaseOrderRepo()
 			txLineRepo := txSvc.repos.NewPurchaseOrderLineRepo()
@@ -787,37 +798,16 @@ func (s *purchaseOrderSvcImpl) ChangePurchaseOrderStatus(ctx context.Context, pa
 				}
 			}
 
-			// Send email notification if requested
+			// Send email notification if requested. Built by the same assembler the manual resend
+			// uses, so both deliver an identical submission — line items, letterhead, PDF attachment.
 			if params.SendEmail && s.notificationPublisher != nil {
-				// The submission recipients are the supplier addresses the order goes to; GetEmailContacts returns internal account-user ids and cannot address an email.
-				recipients, apiErr := txRepo.GetSubmissionRecipients(txCtx, params.PurchaseOrderID)
-				if apiErr != nil {
-					return apiErr
-				}
-				if len(recipients) > 0 {
-					// The letterhead is the issuing account's own — a purchase order goes out to the supplier over the buyer's name.
-					accountName, apiErr := txSvc.repos.NewAccountRepo().GetName(txCtx, params.AccountID)
-					if apiErr != nil {
-						return apiErr
-					}
-					subject := fmt.Sprintf("Purchase Order %s", order.Number)
-					letterhead := merchantLetterheadParams(txCtx, txSvc.repos, s.branding, params.AccountID, accountName, subject)
-					letterhead.params["order_number"] = order.Number
-
-					emailData := messaging.EmailSendData{
-						To:         recipients,
-						Subject:    subject,
-						TemplateID: constants.EmailTemplatePurchaseOrderSubmission,
-						Params:     letterhead.params,
-						AccountID:  &params.AccountID,
-					}
-					applyMerchantReplyTo(&emailData, letterhead.supportEmail)
-
-					if pubErr := s.notificationPublisher.PublishSendEmail(txCtx, emailData); pubErr != nil {
+				if submissionEmail != nil {
+					if pubErr := s.notificationPublisher.PublishSendEmail(txCtx, *submissionEmail); pubErr != nil {
 						return pubErr
 					}
 				}
-				// Mark acknowledgment sent
+				// Flagged sent even with no recipients: the flag records that submission was
+				// attempted and settled, not that a particular address received it.
 				if apiErr := txRepo.UpdateAcknowledgmentSent(txCtx, params.AccountID, params.PurchaseOrderID); apiErr != nil {
 					return apiErr
 				}

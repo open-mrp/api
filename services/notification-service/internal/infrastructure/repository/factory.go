@@ -14,6 +14,10 @@ func NewRepoFactory(db *sqlc.Queries) domain.RepoFactory {
 	return &repoFactoryImpl{db: db}
 }
 
+func (f *repoFactoryImpl) NewAccountRepo() domain.AccountRepo {
+	return NewAccountRepo(f.db)
+}
+
 func (f *repoFactoryImpl) NewEmailLogRepo() domain.EmailLogRepo {
 	return NewEmailLogRepo(f.db)
 }

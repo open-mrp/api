@@ -9,6 +9,12 @@ import (
 	apierror "github.com/open-mrp/api/shared/errors"
 )
 
+// AccountRepo reads the sending account. The send path uses it to decide sandbox suppression from
+// the account itself rather than from a field the publisher had to remember to set.
+type AccountRepo interface {
+	IsSandbox(ctx context.Context, accountID string) (bool, *apierror.APIError)
+}
+
 type EmailLogRepo interface {
 	// Create persists the log and one email_recipient row per address in emailLog.Recipients.
 	Create(ctx context.Context, emailLog *EmailLog) *apierror.APIError

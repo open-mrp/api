@@ -774,6 +774,32 @@ func (r *rabbitMQ) setupExchangesAndQueues() error {
 		return err
 	}
 
+	// Core document-email event queues (handled by core-service). Each event gets its own queue so a
+	// later subscriber to the same fact binds beside these rather than competing with them.
+	if err := r.declareAndBindQueue(
+		CoreEventInvoiceIssuedEmailQueue,
+		[]string{string(contracts.CoreEventInvoiceIssued)},
+		ApplicationExchange,
+	); err != nil {
+		return err
+	}
+
+	if err := r.declareAndBindQueue(
+		CoreEventSalesOrderAcknowledgedEmailQueue,
+		[]string{string(contracts.CoreEventSalesOrderAcknowledged)},
+		ApplicationExchange,
+	); err != nil {
+		return err
+	}
+
+	if err := r.declareAndBindQueue(
+		CoreEventPurchaseOrderSubmittedEmailQueue,
+		[]string{string(contracts.CoreEventPurchaseOrderSubmitted)},
+		ApplicationExchange,
+	); err != nil {
+		return err
+	}
+
 	// Core sync-stripe-customer command queue (handled by core-service)
 	if err := r.declareAndBindQueue(
 		CoreCmdSyncStripeCustomerQueue,

@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.3](https://github.com/open-mrp/api/compare/v2.5.2...v2.5.3) (2026-09-01)
+
+
+### Bug Fixes
+
+* **picks:** drive pick search from the match set ([#117](https://github.com/open-mrp/api/issues/117)) ([97a8da3](https://github.com/open-mrp/api/commit/97a8da3de10cee6fc2144e7973038f6d748a6a67))
+
 ## [2.5.2](https://github.com/open-mrp/api/compare/v2.5.1...v2.5.2) (2026-09-01)
 
 

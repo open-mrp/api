@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -86,6 +88,41 @@ func TestParseUserVarSet_IgnoresSetNames(t *testing.T) {
 	_, _, ok := parseUserVarSet(stmt)
 	if ok {
 		t.Fatal("did not expect SET NAMES to match user-variable parser")
+	}
+}
+
+// vtgate rejects the FOR UPDATE OF clause outright, and MySQL 8 accepts it.
+//
+// Production runs PlanetScale; every test in this repository runs against plain mysql:8, including
+// the ledger concurrency suite that exists precisely to exercise locking. So this is invisible to
+// everything else here: the query passes the prepare smoke test, passes e2e, passes the lock tests,
+// and then every allocate_open_issues message dead-letters with
+// "Error 1105 (HY000): syntax error at position 191 near 'OF'".
+//
+// `FOR UPDATE OF a, b` locks exactly the named tables; a bare `FOR UPDATE` locks every table the
+// statement reads. They are the same thing whenever the OF list covers the whole FROM clause, which
+// is the only shape this codebase had, so dropping the clause cost nothing. If a future query really
+// needs to lock a strict subset of its joined tables, it cannot say so on Vitess — split the read
+// instead.
+func TestVitessCompat_NoForUpdateOfClause(t *testing.T) {
+	t.Parallel()
+
+	for _, file := range sqlFiles(t) {
+		body, err := os.ReadFile(file) // #nosec G304 -- fixed query directory
+		if err != nil {
+			t.Fatalf("read %s: %v", file, err)
+		}
+		for _, line := range strings.Split(string(body), "\n") {
+			trimmed := strings.TrimSpace(line)
+			if strings.HasPrefix(trimmed, "--") {
+				continue // prose may name the clause to explain why it is banned
+			}
+			if forUpdateOfRe.MatchString(trimmed) {
+				t.Errorf("%s: %q uses FOR UPDATE OF, which vtgate rejects with a 1105 syntax error. "+
+					"A bare FOR UPDATE locks every table the statement reads and is what production "+
+					"accepts.", filepath.Base(file), trimmed)
+			}
+		}
 	}
 }
 

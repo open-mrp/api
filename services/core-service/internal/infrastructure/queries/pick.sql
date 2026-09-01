@@ -272,10 +272,10 @@ ORDER BY
 LIMIT ?;
 
 -- name: ListPicksSearchForward :many
--- The search sibling of ListPicksForward. No STRAIGHT_JOIN: the `p.id IN (...)` semi-join lets the
--- optimizer drive from the ngram FULLTEXT match (a handful of rows) instead of the account's whole
--- pick range, so the join order that helps the unsearched browse would only get in the way here.
-SELECT
+-- The search sibling of ListPicksForward. STRAIGHT_JOIN here pins the ngram match set as the driving
+-- table rather than `p`, so a search reads the picks that matched instead of the account's whole pick
+-- range; see the FROM clause.
+SELECT STRAIGHT_JOIN
     p.id,
     p.number,
     p.sales_order_id,
@@ -332,7 +332,44 @@ SELECT
     ship_geo.country AS shipping_address_country,
     addr.created_at AS shipping_address_created_at,
     addr.updated_at AS shipping_address_updated_at
-FROM pick p
+-- Substring search over the pick number, the order's customer PO number, and the customer's name and
+-- number, each served by its own ngram FULLTEXT index. Each arm is its own MATCH in a UNION rather
+-- than an OR, because an OR of MATCH across joined tables cannot use either index. The repo only runs
+-- this query when a term of at least the ngram token size is present, so the match is unconditional.
+--
+-- The match set drives the query. Left as a `p.id IN (...)` filter it did not: the optimizer read `p`
+-- in ORDER BY index order and probed the match set per row, so a term matching two picks scanned all
+-- 123k picks of a large account and blew past the RPC deadline. STRAIGHT_JOIN pins the materialized
+-- match set as the driving table, so the FULLTEXT indexes do the seeking and the joins run over the
+-- picks that actually matched. Do not remove.
+FROM (
+    SELECT pk.id FROM pick pk
+    WHERE pk.account_id = sqlc.arg('account_id')
+    AND MATCH(pk.number) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
+    UNION
+    SELECT pk.id FROM sales_order pso
+    JOIN pick pk ON pk.sales_order_id = pso.id AND pk.account_id = sqlc.arg('account_id')
+    WHERE MATCH(pso.customer_po_number) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
+    UNION
+    -- The customer name and number live outside the account's own rows, so both arms are scoped back
+    -- to the account before they reach sales_order: an unscoped name match fans out to every tenant
+    -- that trades with a customer whose name contains the term.
+    SELECT pk.id FROM account nba
+    JOIN account_relation nar ON nar.owner_account_id = sqlc.arg('account_id')
+        AND nar.counterparty_account_id = nba.id
+    JOIN sales_order nso ON nso.owner_account_id = nar.owner_account_id
+        AND nso.buyer_account_id = nar.counterparty_account_id
+    JOIN pick pk ON pk.sales_order_id = nso.id AND pk.account_id = sqlc.arg('account_id')
+    WHERE MATCH(nba.name) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
+    UNION
+    SELECT pk.id FROM account_relation rar
+    JOIN sales_order rso ON rso.owner_account_id = rar.owner_account_id
+        AND rso.buyer_account_id = rar.counterparty_account_id
+    JOIN pick pk ON pk.sales_order_id = rso.id AND pk.account_id = sqlc.arg('account_id')
+    WHERE rar.owner_account_id = sqlc.arg('account_id')
+    AND MATCH(rar.external_number) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
+) matched
+JOIN pick p ON p.id = matched.id
 JOIN sales_order so ON so.id = p.sales_order_id
 JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
     AND ar.counterparty_account_id = so.buyer_account_id
@@ -343,33 +380,6 @@ LEFT JOIN geolocation ship_geo ON ship_geo.id = addr.geolocation_id
 LEFT JOIN carrier cr ON cr.id = so.carrier_id
 LEFT JOIN carrier_option co ON co.id = so.carrier_option_id
 WHERE p.account_id = sqlc.arg('account_id')
--- Substring search over the pick number, the order's customer PO number, and the customer's name and
--- number, each served by its own ngram FULLTEXT index. A semi-join, not an OR of two MATCHes in the main WHERE, so each MATCH drives
--- its own index — an OR of MATCH across joined tables cannot use either. The repo only runs this query
--- when a term of at least the ngram token size is present, so the match is unconditional.
-AND p.id IN (
-    SELECT pk.id FROM pick pk
-    WHERE pk.account_id = sqlc.arg('account_id')
-    AND MATCH(pk.number) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
-    UNION
-    SELECT pk.id FROM pick pk
-    JOIN sales_order pso ON pso.id = pk.sales_order_id
-    WHERE pk.account_id = sqlc.arg('account_id')
-    AND MATCH(pso.customer_po_number) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
-    UNION
-    SELECT pk.id FROM pick pk
-    JOIN sales_order nso ON nso.id = pk.sales_order_id
-    JOIN account nba ON nba.id = nso.buyer_account_id
-    WHERE pk.account_id = sqlc.arg('account_id')
-    AND MATCH(nba.name) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
-    UNION
-    SELECT pk.id FROM pick pk
-    JOIN sales_order rso ON rso.id = pk.sales_order_id
-    JOIN account_relation rar ON rar.owner_account_id = rso.owner_account_id
-        AND rar.counterparty_account_id = rso.buyer_account_id
-    WHERE pk.account_id = sqlc.arg('account_id')
-    AND MATCH(rar.external_number) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
-)
 AND (
     sqlc.narg('status') IS NULL
     OR (sqlc.narg('status') = 'open' AND p.finished_at IS NULL)
@@ -425,8 +435,8 @@ ORDER BY
 LIMIT ?;
 
 -- name: ListPicksSearchBackward :many
--- The search sibling of ListPicksBackward; see ListPicksSearchForward for why there is no STRAIGHT_JOIN.
-SELECT
+-- The search sibling of ListPicksBackward; see ListPicksSearchForward for what STRAIGHT_JOIN pins here.
+SELECT STRAIGHT_JOIN
     p.id,
     p.number,
     p.sales_order_id,
@@ -483,7 +493,32 @@ SELECT
     ship_geo.country AS shipping_address_country,
     addr.created_at AS shipping_address_created_at,
     addr.updated_at AS shipping_address_updated_at
-FROM pick p
+-- The match set, driving the query; see ListPicksSearchForward for why. Do not remove.
+FROM (
+    SELECT pk.id FROM pick pk
+    WHERE pk.account_id = sqlc.arg('account_id')
+    AND MATCH(pk.number) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
+    UNION
+    SELECT pk.id FROM sales_order pso
+    JOIN pick pk ON pk.sales_order_id = pso.id AND pk.account_id = sqlc.arg('account_id')
+    WHERE MATCH(pso.customer_po_number) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
+    UNION
+    SELECT pk.id FROM account nba
+    JOIN account_relation nar ON nar.owner_account_id = sqlc.arg('account_id')
+        AND nar.counterparty_account_id = nba.id
+    JOIN sales_order nso ON nso.owner_account_id = nar.owner_account_id
+        AND nso.buyer_account_id = nar.counterparty_account_id
+    JOIN pick pk ON pk.sales_order_id = nso.id AND pk.account_id = sqlc.arg('account_id')
+    WHERE MATCH(nba.name) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
+    UNION
+    SELECT pk.id FROM account_relation rar
+    JOIN sales_order rso ON rso.owner_account_id = rar.owner_account_id
+        AND rso.buyer_account_id = rar.counterparty_account_id
+    JOIN pick pk ON pk.sales_order_id = rso.id AND pk.account_id = sqlc.arg('account_id')
+    WHERE rar.owner_account_id = sqlc.arg('account_id')
+    AND MATCH(rar.external_number) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
+) matched
+JOIN pick p ON p.id = matched.id
 JOIN sales_order so ON so.id = p.sales_order_id
 JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
     AND ar.counterparty_account_id = so.buyer_account_id
@@ -494,29 +529,6 @@ LEFT JOIN geolocation ship_geo ON ship_geo.id = addr.geolocation_id
 LEFT JOIN carrier cr ON cr.id = so.carrier_id
 LEFT JOIN carrier_option co ON co.id = so.carrier_option_id
 WHERE p.account_id = sqlc.arg('account_id')
-AND p.id IN (
-    SELECT pk.id FROM pick pk
-    WHERE pk.account_id = sqlc.arg('account_id')
-    AND MATCH(pk.number) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
-    UNION
-    SELECT pk.id FROM pick pk
-    JOIN sales_order pso ON pso.id = pk.sales_order_id
-    WHERE pk.account_id = sqlc.arg('account_id')
-    AND MATCH(pso.customer_po_number) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
-    UNION
-    SELECT pk.id FROM pick pk
-    JOIN sales_order nso ON nso.id = pk.sales_order_id
-    JOIN account nba ON nba.id = nso.buyer_account_id
-    WHERE pk.account_id = sqlc.arg('account_id')
-    AND MATCH(nba.name) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
-    UNION
-    SELECT pk.id FROM pick pk
-    JOIN sales_order rso ON rso.id = pk.sales_order_id
-    JOIN account_relation rar ON rar.owner_account_id = rso.owner_account_id
-        AND rar.counterparty_account_id = rso.buyer_account_id
-    WHERE pk.account_id = sqlc.arg('account_id')
-    AND MATCH(rar.external_number) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
-)
 AND (
     sqlc.narg('status') IS NULL
     OR (sqlc.narg('status') = 'open' AND p.finished_at IS NULL)

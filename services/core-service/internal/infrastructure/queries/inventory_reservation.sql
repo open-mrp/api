@@ -161,19 +161,25 @@ WHERE ia.inventory_receipt_id = sqlc.arg('receipt_id');
 -- paths. When that allocator is gone, drop the locking clause and this becomes a plain read kept as
 -- an arithmetic regression check.
 --
--- FOR UPDATE OF ia, q — and the `q` is load-bearing, not tidiness.
+-- A bare FOR UPDATE, and BOTH joined tables must be locked by it.
 --
--- A locking read is current only for the tables named in OF; every other table in the join is still
--- read from the transaction's snapshot. With OF ia alone, an allocation committed after this
--- transaction's view opened is found in `ia` and then joined against a `quantity` row that does not
--- exist in the snapshot, so the INNER JOIN drops it and the read reports a receipt as undrawn while
--- looking straight at the row that drew it. That is silent, and it defeats the one query whose whole
--- job is to see writers this transaction never serialised against.
+-- A locking read is current only for the tables it locks; anything else in the join is still read
+-- from the transaction's snapshot. Lock `ia` alone and an allocation committed after this
+-- transaction's view opened is found in `ia`, joined against a `quantity` row the snapshot cannot
+-- see, and dropped by the INNER JOIN — so the read reports a receipt as undrawn while looking
+-- straight at the row that drew it. That is silent, and it defeats the one query whose whole job is
+-- to see writers this transaction never serialised against.
 --
--- Locking both is bounded and safe: an allocation's quantity row is owned by that allocation alone
+-- Locking both is bounded: an allocation owns its quantity row outright
 -- (inventory_allocation_quantity_id_key is unique), so this is not the shared-row problem that keeps
--- `unit` out of the join below. It is deliberately NOT a bare FOR UPDATE, which would go on to lock
--- rows this statement has no business holding.
+-- `unit` out of the join below. `ia` and `q` are the only tables here, so a bare FOR UPDATE locks
+-- exactly them and nothing more.
+--
+-- It was `FOR UPDATE OF ia, q`, which says the same thing and which vtgate rejects outright:
+-- "Error 1105 (HY000): syntax error at position 191 near 'OF'", on every allocate_open_issues
+-- message in production. MySQL 8 accepts the OF clause and every test here runs against plain
+-- MySQL 8, so nothing local could have caught it. Never reintroduce it — see
+-- TestVitessCompat_NoForUpdateOfClause.
 --
 -- Raw rows rather than a SUM, and no `unit` join: the sum has to go through each allocation's own
 -- ratio, and a locking read must not take locks on rows every account in the database shares.
@@ -182,7 +188,7 @@ SELECT ia.id, q.unit_id, q.value
 FROM inventory_allocation ia
 JOIN quantity q ON q.id = ia.quantity_id
 WHERE ia.inventory_receipt_id = sqlc.arg('receipt_id')
-FOR UPDATE OF ia, q;
+FOR UPDATE;
 
 -- ReadIssueCoverageForUpdate is ReadReceiptAllocationsForUpdate on the other side of the ledger: what
 -- an issue has actually been covered by, read currently rather than from the transaction's snapshot.
@@ -195,7 +201,7 @@ SELECT ia.id, q.unit_id, q.value
 FROM inventory_allocation ia
 JOIN quantity q ON q.id = ia.quantity_id
 WHERE ia.inventory_issue_id = sqlc.arg('issue_id')
-FOR UPDATE OF ia, q;
+FOR UPDATE;
 
 -- GetUnitRatios gives each unit its ratio, which every unit carries against the same reference for
 -- its dimension. Any two units convert directly through them: `value * ratio_from / ratio_to`.

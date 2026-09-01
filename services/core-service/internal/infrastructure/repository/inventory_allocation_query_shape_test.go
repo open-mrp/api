@@ -39,6 +39,42 @@ func TestAllocationClaimingQueries_AreLockingReadsWithoutUnitJoins(t *testing.T)
 	}
 }
 
+// The verification reads must lock BOTH tables they touch, and after the vtgate fix that is a
+// property of two things together rather than one clause.
+//
+// They exist to see allocations committed by writers this transaction never serialised against, which
+// only a current read can do. A locking read is current for the tables it locks and snapshot-bound for
+// everything else, so if `quantity` were reachable any other way — a subquery, a lateral, a second
+// statement — an allocation committed after this transaction's view opened would be found in `ia`,
+// joined against a quantity row the snapshot cannot see, and silently dropped by the INNER JOIN.
+//
+// It used to say FOR UPDATE OF ia, q, which stated that directly. vtgate rejects the OF clause with a
+// 1105 syntax error, so it is now a bare FOR UPDATE over a two-table join, which locks exactly the
+// same two tables. That makes the join load-bearing rather than incidental: hence the second
+// assertion.
+func TestVerificationReads_AreCurrentAndCoverTheirSatellite(t *testing.T) {
+	t.Parallel()
+
+	for _, name := range []string{"ReadReceiptAllocationsForUpdate", "ReadIssueCoverageForUpdate"} {
+		body := queryBody(t, "inventory_reservation.sql", name)
+		statement := body[strings.Index(body, "-- name:"):]
+
+		if !strings.Contains(statement, "FOR UPDATE") {
+			t.Errorf("%s is not a locking read: a snapshot read cannot see the unlocked writer this "+
+				"query exists to catch", name)
+		}
+		if !strings.Contains(statement, "JOIN quantity q") {
+			t.Errorf("%s no longer joins quantity: with a bare FOR UPDATE the join is what brings the "+
+				"satellite row under the lock, so without it an allocation committed after this "+
+				"transaction's view opened is silently dropped", name)
+		}
+		if unitJoinRe.MatchString(statement) {
+			t.Errorf("%s joins `unit` under a locking read, which locks rows every account shares; sum "+
+				"through GetUnitRatios instead", name)
+		}
+	}
+}
+
 // Discovery must NOT be a locking read, and must project nothing but the keyset.
 //
 // It names candidates and decides nothing — every id it returns is re-read by
@@ -118,6 +154,8 @@ var (
 	// Matches `ii.status_code = 'x'` and `ii.status_code IN ('x', 'y')` on an inventory_issue alias.
 	issueStatusRe = regexp.MustCompile(`(?i)\bii\.status_code\s*(?:=\s*'([a-z_]+)'|IN\s*\(([^)]*)\))`)
 	queryNameRe   = regexp.MustCompile(`(?m)^-- name: (\w+) :`)
+	// vtgate rejects the OF clause; see TestVitessCompat_NoForUpdateOfClause.
+	forUpdateOfRe = regexp.MustCompile(`(?i)\bFOR\s+UPDATE\s+OF\b`)
 )
 
 // queryBody returns one named sqlc query: its `-- name:` line and the statement below it, stopping at

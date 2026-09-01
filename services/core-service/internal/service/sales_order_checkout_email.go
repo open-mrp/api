@@ -87,18 +87,37 @@ func checkoutSubmitMessage(sellerName, orderNumber, orderDate string) string {
 	return fmt.Sprintf("Payment to %s for order %s, placed %s.", sellerName, orderNumber, orderDate)
 }
 
-// statementDescriptorSuffix renders the order number for the buyer's card statement. Stripe accepts at most 22 characters and rejects quotes, apostrophes, angle brackets, and asterisks, so the number is reduced to alphanumerics and truncated rather than passed through.
+// statementDescriptorSuffix renders the order number for the buyer's card statement. Stripe accepts at most 22 characters and rejects quotes, apostrophes, angle brackets, and asterisks, so the number is reduced to alphanumerics and truncated rather than passed through. Stripe also rejects a suffix with no Latin letter, which every all-digit order number produces, so those are prefixed.
 func statementDescriptorSuffix(orderNumber string) string {
 	const maxLength = 22
+	const digitsOnlyPrefix = "SO"
 
 	var b strings.Builder
+	hasLetter := false
 	for _, r := range orderNumber {
-		if r >= '0' && r <= '9' || r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' {
+		switch {
+		case r >= '0' && r <= '9':
 			b.WriteRune(r)
+		case r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z':
+			b.WriteRune(r)
+			hasLetter = true
+		default:
+			continue
 		}
 		if b.Len() >= maxLength {
 			break
 		}
 	}
-	return b.String()
+
+	suffix := b.String()
+	if suffix == "" {
+		return ""
+	}
+	if !hasLetter {
+		suffix = digitsOnlyPrefix + suffix
+		if len(suffix) > maxLength {
+			suffix = suffix[:maxLength]
+		}
+	}
+	return suffix
 }

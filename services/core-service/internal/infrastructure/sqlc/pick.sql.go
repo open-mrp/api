@@ -93,6 +93,10 @@ AND (
     ? IS NULL
     OR p.number LIKE ?
     OR so.customer_po_number LIKE ?
+    -- The picker often has the customer in hand rather than a number, so the box matches who the
+    -- order is for as well as what it is.
+    OR ba.name LIKE ?
+    OR ar.external_number LIKE ?
 )
 AND (
     ? IS NULL
@@ -146,6 +150,8 @@ func (q *Queries) CountPicks(ctx context.Context, arg CountPicksParams) (int64, 
 	query := countPicks
 	var queryParams []interface{}
 	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
@@ -1335,6 +1341,10 @@ AND (
     ? IS NULL
     OR p.number LIKE ?
     OR so.customer_po_number LIKE ?
+    -- The picker often has the customer in hand rather than a number, so the box matches who the
+    -- order is for as well as what it is.
+    OR ba.name LIKE ?
+    OR ar.external_number LIKE ?
 )
 AND (
     ? IS NULL
@@ -1468,6 +1478,8 @@ func (q *Queries) ListPicksBackward(ctx context.Context, arg ListPicksBackwardPa
 	query := listPicksBackward
 	var queryParams []interface{}
 	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
@@ -1663,6 +1675,10 @@ AND (
     ? IS NULL
     OR p.number LIKE ?
     OR so.customer_po_number LIKE ?
+    -- The picker often has the customer in hand rather than a number, so the box matches who the
+    -- order is for as well as what it is.
+    OR ba.name LIKE ?
+    OR ar.external_number LIKE ?
 )
 AND (
     ? IS NULL
@@ -1805,6 +1821,8 @@ func (q *Queries) ListPicksForward(ctx context.Context, arg ListPicksForwardPara
 	query := listPicksForward
 	var queryParams []interface{}
 	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.SearchQuery)
@@ -2007,6 +2025,19 @@ AND p.id IN (
     JOIN sales_order pso ON pso.id = pk.sales_order_id
     WHERE pk.account_id = ?
     AND MATCH(pso.customer_po_number) AGAINST(? IN BOOLEAN MODE)
+    UNION
+    SELECT pk.id FROM pick pk
+    JOIN sales_order nso ON nso.id = pk.sales_order_id
+    JOIN account nba ON nba.id = nso.buyer_account_id
+    WHERE pk.account_id = ?
+    AND MATCH(nba.name) AGAINST(? IN BOOLEAN MODE)
+    UNION
+    SELECT pk.id FROM pick pk
+    JOIN sales_order rso ON rso.id = pk.sales_order_id
+    JOIN account_relation rar ON rar.owner_account_id = rso.owner_account_id
+        AND rar.counterparty_account_id = rso.buyer_account_id
+    WHERE pk.account_id = ?
+    AND MATCH(rar.external_number) AGAINST(? IN BOOLEAN MODE)
 )
 AND (
     ? IS NULL
@@ -2139,6 +2170,10 @@ func (q *Queries) ListPicksSearchBackward(ctx context.Context, arg ListPicksSear
 	query := listPicksSearchBackward
 	var queryParams []interface{}
 	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.AccountID)
 	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.AccountID)
@@ -2340,6 +2375,19 @@ AND p.id IN (
     JOIN sales_order pso ON pso.id = pk.sales_order_id
     WHERE pk.account_id = ?
     AND MATCH(pso.customer_po_number) AGAINST(? IN BOOLEAN MODE)
+    UNION
+    SELECT pk.id FROM pick pk
+    JOIN sales_order nso ON nso.id = pk.sales_order_id
+    JOIN account nba ON nba.id = nso.buyer_account_id
+    WHERE pk.account_id = ?
+    AND MATCH(nba.name) AGAINST(? IN BOOLEAN MODE)
+    UNION
+    SELECT pk.id FROM pick pk
+    JOIN sales_order rso ON rso.id = pk.sales_order_id
+    JOIN account_relation rar ON rar.owner_account_id = rso.owner_account_id
+        AND rar.counterparty_account_id = rso.buyer_account_id
+    WHERE pk.account_id = ?
+    AND MATCH(rar.external_number) AGAINST(? IN BOOLEAN MODE)
 )
 AND (
     ? IS NULL
@@ -2471,8 +2519,8 @@ type ListPicksSearchForwardRow struct {
 // The search sibling of ListPicksForward. No STRAIGHT_JOIN: the `p.id IN (...)` semi-join lets the
 // optimizer drive from the ngram FULLTEXT match (a handful of rows) instead of the account's whole
 // pick range, so the join order that helps the unsearched browse would only get in the way here.
-// Substring search over the pick number and the order's customer PO number, each served by its own
-// ngram FULLTEXT index. A semi-join, not an OR of two MATCHes in the main WHERE, so each MATCH drives
+// Substring search over the pick number, the order's customer PO number, and the customer's name and
+// number, each served by its own ngram FULLTEXT index. A semi-join, not an OR of two MATCHes in the main WHERE, so each MATCH drives
 // its own index — an OR of MATCH across joined tables cannot use either. The repo only runs this query
 // when a term of at least the ngram token size is present, so the match is unconditional.
 // The sentinel keeps a pick whose order has no ship-by date sortable and last; the repository's cursor must use the same value.
@@ -2480,6 +2528,10 @@ func (q *Queries) ListPicksSearchForward(ctx context.Context, arg ListPicksSearc
 	query := listPicksSearchForward
 	var queryParams []interface{}
 	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.AccountID)
 	queryParams = append(queryParams, arg.SearchQuery)
 	queryParams = append(queryParams, arg.AccountID)

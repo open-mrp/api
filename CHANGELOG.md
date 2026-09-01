@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.2](https://github.com/open-mrp/api/compare/v2.5.1...v2.5.2) (2026-09-01)
+
+
+### Bug Fixes
+
+* **inventory:** drop FOR UPDATE OF, which vtgate rejects ([#115](https://github.com/open-mrp/api/issues/115)) ([ae5a5f6](https://github.com/open-mrp/api/commit/ae5a5f6f3ada347131c5e8c623cb6129715619f7))
+
 ## [2.5.1](https://github.com/open-mrp/api/compare/v2.5.0...v2.5.1) (2026-09-01)
 
 

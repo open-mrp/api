@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.1](https://github.com/open-mrp/api/compare/v2.5.0...v2.5.1) (2026-09-01)
+
+
+### Bug Fixes
+
+* **inventory:** harden inventory allocation process ([70800e1](https://github.com/open-mrp/api/commit/70800e18c4547db9accfd039b153e0fdf30f5a7a))
+
 ## [2.5.0](https://github.com/open-mrp/api/compare/v2.4.1...v2.5.0) (2026-09-01)
 
 

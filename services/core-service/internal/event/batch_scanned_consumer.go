@@ -10,6 +10,8 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/services/core-service/internal/ledgerlock"
+	"github.com/open-mrp/api/services/core-service/internal/mediator"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
@@ -119,7 +121,17 @@ func (c *BatchScannedConsumer) handleMessage(ctx context.Context, msg amqp.Deliv
 		attribute.String("batch.account_id", accountID),
 	)
 
-	apiErr := c.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
+	// The item set, resolved on the pool before the transaction opens. applyInventory reads the step
+	// again inside the transaction and works from that; this read decides nothing except which roots to
+	// take, and taking them after the transaction has written the ledger is the inversion (Corollary A).
+	step, apiErr := c.repos.NewProductionStepQueryRepo().Find(ctx, accountID, evt.ProductionStepID)
+	if apiErr != nil {
+		span.RecordError(apiErr)
+		return apiErr
+	}
+	itemIDs := append([]string{step.Production.ProducedItem.ID}, consumedItemIDs(step)...)
+
+	apiErr = c.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
 		txConsumer := &BatchScannedConsumer{
 			rabbitmq:      c.rabbitmq,
 			inboxConsumer: c.inboxConsumer,
@@ -127,7 +139,11 @@ func (c *BatchScannedConsumer) handleMessage(ctx context.Context, msg amqp.Deliv
 			txManager:     c.txManager,
 			tracer:        c.tracer,
 		}
-		return txConsumer.applyInventory(txCtx, accountID, evt)
+		scope, apiErr := ledgerlock.Acquire(txCtx, f.NewInventoryReservationRepo(), itemIDs)
+		if apiErr != nil {
+			return apiErr
+		}
+		return txConsumer.applyInventory(txCtx, scope, accountID, evt)
 	})
 	if apiErr != nil {
 		span.RecordError(apiErr)
@@ -150,7 +166,7 @@ func scrapMeasure(evt domain.BatchScannedEvent) (decimal.Decimal, *apierror.APIE
 }
 
 // applyInventory is the inventory reaction to one scan, and runs inside the transaction.
-func (c *BatchScannedConsumer) applyInventory(ctx context.Context, accountID string, evt domain.BatchScannedEvent) *apierror.APIError {
+func (c *BatchScannedConsumer) applyInventory(ctx context.Context, scope *ledgerlock.Scope, accountID string, evt domain.BatchScannedEvent) *apierror.APIError {
 	step, apiErr := c.repos.NewProductionStepQueryRepo().Find(ctx, accountID, evt.ProductionStepID)
 	if apiErr != nil {
 		return apiErr
@@ -237,11 +253,11 @@ func (c *BatchScannedConsumer) applyInventory(ctx context.Context, accountID str
 		}
 	}
 
-	if apiErr := c.releaseShortfallReservations(ctx, accountID, step, lineage, orderID, producedUnitID); apiErr != nil {
+	if apiErr := c.releaseShortfallReservations(ctx, scope, accountID, step, lineage, orderID, producedUnitID); apiErr != nil {
 		return apiErr
 	}
 
-	if apiErr := c.applyConsumptions(ctx, accountID, evt, step, consumptionMultiplier, orderID, audit); apiErr != nil {
+	if apiErr := c.applyConsumptions(ctx, scope, accountID, evt, step, consumptionMultiplier, orderID, audit); apiErr != nil {
 		return apiErr
 	}
 
@@ -264,7 +280,7 @@ func (c *BatchScannedConsumer) enqueueOpenIssueAllocation(ctx context.Context, a
 			continue
 		}
 		seen[itemID] = true
-		if apiErr := enqueueAllocateOpenIssues(ctx, outboxRepo, accountID, itemID, time.Time{}, ""); apiErr != nil {
+		if apiErr := mediator.EnqueueAllocateOpenIssuesFrom(ctx, outboxRepo, accountID, itemID, time.Time{}, "", ""); apiErr != nil {
 			return apiErr
 		}
 	}
@@ -283,6 +299,7 @@ func consumedItemIDs(step *domain.ProductionStepDetail) []string {
 // batch will never deliver.
 func (c *BatchScannedConsumer) releaseShortfallReservations(
 	ctx context.Context,
+	scope *ledgerlock.Scope,
 	accountID string,
 	step *domain.ProductionStepDetail,
 	lineage *domain.LineageShortfall,
@@ -299,7 +316,7 @@ func (c *BatchScannedConsumer) releaseShortfallReservations(
 	}
 
 	reservationRepo := c.repos.NewInventoryReservationRepo()
-	if apiErr := reservationRepo.ReduceReservedForOrderItem(ctx, domain.OrderReservationReductionParams{
+	if apiErr := reservationRepo.ReduceReservedForOrderItem(ctx, scope, domain.OrderReservationReductionParams{
 		OrderID:   *orderID,
 		AccountID: accountID,
 		ItemID:    step.Production.ProducedItem.ID,
@@ -318,7 +335,7 @@ func (c *BatchScannedConsumer) releaseShortfallReservations(
 		return nil
 	}
 
-	return reservationRepo.ReduceReservedForOrderMaterials(ctx, *orderID, accountID, demands)
+	return reservationRepo.ReduceReservedForOrderMaterials(ctx, scope, *orderID, accountID, demands)
 }
 
 // applyConsumptions draws down the materials the step consumed.
@@ -328,6 +345,7 @@ func (c *BatchScannedConsumer) releaseShortfallReservations(
 // with a long bill of materials was the bulk of the work.
 func (c *BatchScannedConsumer) applyConsumptions(
 	ctx context.Context,
+	scope *ledgerlock.Scope,
 	accountID string,
 	evt domain.BatchScannedEvent,
 	step *domain.ProductionStepDetail,
@@ -369,7 +387,7 @@ func (c *BatchScannedConsumer) applyConsumptions(
 			continue
 		}
 
-		result, apiErr := reservationRepo.AllocateReservationsForConsumption(ctx, domain.ConsumptionAllocationParams{
+		result, apiErr := reservationRepo.AllocateReservationsForConsumption(ctx, scope, domain.ConsumptionAllocationParams{
 			OrderID:         *orderID,
 			AccountID:       accountID,
 			ItemID:          consumption.ConsumedItem.ID,

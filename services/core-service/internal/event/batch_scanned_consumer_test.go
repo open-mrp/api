@@ -13,19 +13,12 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
+	"github.com/open-mrp/api/services/core-service/internal/ledgerlock"
 	"github.com/open-mrp/api/shared/contracts"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
 	"github.com/open-mrp/api/shared/tracing"
 )
-
-// stubOutboxRepo satisfies messaging.OutboxRepo so the best-effort burn-rate enqueue behind each
-// consumption movement stays quiet rather than becoming the subject of these tests.
-type stubOutboxRepo struct{}
-
-func (stubOutboxRepo) Create(context.Context, messaging.OutboxMessageInput) (int64, error) {
-	return 0, nil
-}
 
 type recordingOutboxRepo struct {
 	onAllocateOpenIssues func(itemID string)
@@ -219,7 +212,7 @@ func (s *BatchScannedConsumerTestSuite) TestProducesScannedQuantityWhenUnitsMatc
 	s.expectConversion("60", "60")
 	s.expectBuiltToStock()
 
-	err := s.consumer.applyInventory(context.Background(), scanAccountID, scanEvent("60", unitPair))
+	err := s.consumer.applyInventory(context.Background(), nil, scanAccountID, scanEvent("60", unitPair))
 
 	s.Require().Nil(err)
 	s.True(decimal.RequireFromString("60").Equal(s.moved(scanProducedID)),
@@ -237,7 +230,7 @@ func (s *BatchScannedConsumerTestSuite) TestConvertsScannedUnitIntoStepUnit() {
 		Return(decimal.RequireFromString("60"), nil)
 	s.expectBuiltToStock()
 
-	err := s.consumer.applyInventory(context.Background(), scanAccountID, scanEvent("5", unitDozen))
+	err := s.consumer.applyInventory(context.Background(), nil, scanAccountID, scanEvent("5", unitDozen))
 
 	s.Require().Nil(err)
 	s.True(decimal.RequireFromString("60").Equal(s.moved(scanProducedID)),
@@ -252,7 +245,7 @@ func (s *BatchScannedConsumerTestSuite) TestProducesFractionalExecution() {
 	s.expectConversion("6", "6")
 	s.expectBuiltToStock()
 
-	err := s.consumer.applyInventory(context.Background(), scanAccountID, scanEvent("6", unitPair))
+	err := s.consumer.applyInventory(context.Background(), nil, scanAccountID, scanEvent("6", unitPair))
 
 	s.Require().Nil(err)
 	s.True(decimal.RequireFromString("6").Equal(s.moved(scanProducedID)))
@@ -265,7 +258,7 @@ func (s *BatchScannedConsumerTestSuite) TestNonTerminatingMultiplierDoesNotDrift
 	s.expectConversion("10", "10")
 	s.expectBuiltToStock()
 
-	err := s.consumer.applyInventory(context.Background(), scanAccountID, scanEvent("10", unitPair))
+	err := s.consumer.applyInventory(context.Background(), nil, scanAccountID, scanEvent("10", unitPair))
 
 	s.Require().Nil(err)
 	produced := s.moved(scanProducedID)
@@ -284,7 +277,7 @@ func (s *BatchScannedConsumerTestSuite) TestConsumptionScalesWithMultiplier() {
 	s.expectConversion("60", "60")
 	s.expectBuiltToStock()
 
-	err := s.consumer.applyInventory(context.Background(), scanAccountID, scanEvent("60", unitPair))
+	err := s.consumer.applyInventory(context.Background(), nil, scanAccountID, scanEvent("60", unitPair))
 
 	s.Require().Nil(err)
 	s.True(decimal.RequireFromString("-20").Equal(s.moved(scanYarnID)),
@@ -302,7 +295,7 @@ func (s *BatchScannedConsumerTestSuite) TestConsumptionIncludesItsWaste() {
 	s.expectConversion("12", "12")
 	s.expectBuiltToStock()
 
-	err := s.consumer.applyInventory(context.Background(), scanAccountID, scanEvent("12", unitPair))
+	err := s.consumer.applyInventory(context.Background(), nil, scanAccountID, scanEvent("12", unitPair))
 
 	s.Require().Nil(err)
 	s.True(decimal.RequireFromString("-5").Equal(s.moved(scanYarnID)),
@@ -319,7 +312,7 @@ func (s *BatchScannedConsumerTestSuite) TestAppliesEveryConsumption() {
 	s.expectConversion("12", "12")
 	s.expectBuiltToStock()
 
-	err := s.consumer.applyInventory(context.Background(), scanAccountID, scanEvent("12", unitPair))
+	err := s.consumer.applyInventory(context.Background(), nil, scanAccountID, scanEvent("12", unitPair))
 
 	s.Require().Nil(err)
 	s.True(decimal.RequireFromString("-4").Equal(s.moved(scanYarnID)))
@@ -335,7 +328,7 @@ func (s *BatchScannedConsumerTestSuite) TestZeroConsumptionIsSkipped() {
 	s.expectConversion("12", "12")
 	s.expectBuiltToStock()
 
-	err := s.consumer.applyInventory(context.Background(), scanAccountID, scanEvent("12", unitPair))
+	err := s.consumer.applyInventory(context.Background(), nil, scanAccountID, scanEvent("12", unitPair))
 
 	s.Require().Nil(err)
 	_, touched := s.inventoryMoves[scanYarnID]
@@ -352,15 +345,15 @@ func (s *BatchScannedConsumerTestSuite) TestConsumptionDrawsFromReservationFirst
 	s.expectOrderBackedBatch()
 
 	// The reservation covered the whole 4 lbs.
-	s.reservationRepo.EXPECT().AllocateReservationsForConsumption(gomock.Any(), gomock.Any()).
-		DoAndReturn(func(_ context.Context, p domain.ConsumptionAllocationParams) (*domain.ConsumptionAllocationResult, *apierror.APIError) {
+	s.reservationRepo.EXPECT().AllocateReservationsForConsumption(gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ *ledgerlock.Scope, p domain.ConsumptionAllocationParams) (*domain.ConsumptionAllocationResult, *apierror.APIError) {
 			s.Equal(scanOrderID, p.OrderID)
 			s.Equal(scanBatchID, p.ProducedBatchID, "the batch tag is what makes the consumption reversible")
 			s.True(decimal.RequireFromString("4").Equal(p.Measure))
 			return &domain.ConsumptionAllocationResult{RemainingMeasure: decimal.Zero, RemainingUnitID: unitPound}, nil
 		})
 
-	err := s.consumer.applyInventory(context.Background(), scanAccountID, scanEvent("12", unitPair))
+	err := s.consumer.applyInventory(context.Background(), nil, scanAccountID, scanEvent("12", unitPair))
 
 	s.Require().Nil(err)
 	_, touched := s.inventoryMoves[scanYarnID]
@@ -375,13 +368,13 @@ func (s *BatchScannedConsumerTestSuite) TestShortfallOnReservationComesOffOpenSt
 	s.expectOrderBackedBatch()
 
 	// Only 1.5 of the 4 lbs was reserved.
-	s.reservationRepo.EXPECT().AllocateReservationsForConsumption(gomock.Any(), gomock.Any()).
+	s.reservationRepo.EXPECT().AllocateReservationsForConsumption(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(&domain.ConsumptionAllocationResult{
 			RemainingMeasure: decimal.RequireFromString("2.5"),
 			RemainingUnitID:  unitPound,
 		}, nil)
 
-	err := s.consumer.applyInventory(context.Background(), scanAccountID, scanEvent("12", unitPair))
+	err := s.consumer.applyInventory(context.Background(), nil, scanAccountID, scanEvent("12", unitPair))
 
 	s.Require().Nil(err)
 	s.True(decimal.RequireFromString("-2.5").Equal(s.moved(scanYarnID)),
@@ -412,8 +405,8 @@ func (s *BatchScannedConsumerTestSuite) TestSecondsAndWasteReleaseReservations()
 	s.orderQueryRepo.EXPECT().FindIDByProductionRun(gomock.Any(), scanAccountID, scanRunID).
 		Return(ptr(scanOrderID), nil)
 
-	s.reservationRepo.EXPECT().ReduceReservedForOrderItem(gomock.Any(), gomock.Any()).
-		DoAndReturn(func(_ context.Context, p domain.OrderReservationReductionParams) *apierror.APIError {
+	s.reservationRepo.EXPECT().ReduceReservedForOrderItem(gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ *ledgerlock.Scope, p domain.OrderReservationReductionParams) *apierror.APIError {
 			s.True(decimal.RequireFromString("5").Equal(p.Measure), "seconds + waste, got %s", p.Measure)
 			s.Equal(scanProducedID, p.ItemID)
 			return nil
@@ -423,9 +416,9 @@ func (s *BatchScannedConsumerTestSuite) TestSecondsAndWasteReleaseReservations()
 	s.materialRepo.EXPECT().GetMaterialDemand(gomock.Any(), scanAccountID, scanProducedID, gomock.Any(), unitPair).
 		Return(demands, nil)
 	s.reservationRepo.EXPECT().
-		ReduceReservedForOrderMaterials(gomock.Any(), scanOrderID, scanAccountID, demands).Return(nil)
+		ReduceReservedForOrderMaterials(gomock.Any(), gomock.Any(), scanOrderID, scanAccountID, demands).Return(nil)
 
-	err := s.consumer.applyInventory(context.Background(), scanAccountID, scanEvent("60", unitPair))
+	err := s.consumer.applyInventory(context.Background(), nil, scanAccountID, scanEvent("60", unitPair))
 
 	s.Require().Nil(err)
 	// The produced receipt is the full scanned quantity; the shortfall moves reservations, not stock.
@@ -439,7 +432,7 @@ func (s *BatchScannedConsumerTestSuite) TestNoShortfallReleaseWithoutProductionR
 	s.batchRepo.EXPECT().FindLineageShortfall(gomock.Any(), scanBatchID).
 		Return(&domain.LineageShortfall{Seconds: decimal.RequireFromString("3")}, nil)
 
-	err := s.consumer.applyInventory(context.Background(), scanAccountID, scanEvent("12", unitPair))
+	err := s.consumer.applyInventory(context.Background(), nil, scanAccountID, scanEvent("12", unitPair))
 
 	s.Require().Nil(err)
 }
@@ -453,7 +446,7 @@ func (s *BatchScannedConsumerTestSuite) TestRefusesWhenStepNoLongerProducesScann
 	other.Production.ProducedItem.ID = "it_something_else"
 	s.stepQueryRepo.EXPECT().Find(gomock.Any(), scanAccountID, scanStepID).Return(other, nil)
 
-	err := s.consumer.applyInventory(context.Background(), scanAccountID, scanEvent("12", unitPair))
+	err := s.consumer.applyInventory(context.Background(), nil, scanAccountID, scanEvent("12", unitPair))
 
 	s.Require().NotNil(err)
 	s.Empty(s.inventoryMoves, "nothing should move when the step and the scan disagree")
@@ -463,7 +456,7 @@ func (s *BatchScannedConsumerTestSuite) TestRefusesWhenStepNoLongerProducesScann
 func (s *BatchScannedConsumerTestSuite) TestRefusesZeroProductionQuantity() {
 	s.stepQueryRepo.EXPECT().Find(gomock.Any(), scanAccountID, scanStepID).Return(step("0", unitPair), nil)
 
-	err := s.consumer.applyInventory(context.Background(), scanAccountID, scanEvent("12", unitPair))
+	err := s.consumer.applyInventory(context.Background(), nil, scanAccountID, scanEvent("12", unitPair))
 
 	s.Require().NotNil(err)
 	s.Empty(s.inventoryMoves)
@@ -472,7 +465,7 @@ func (s *BatchScannedConsumerTestSuite) TestRefusesZeroProductionQuantity() {
 func (s *BatchScannedConsumerTestSuite) TestRefusesUnparseableMeasure() {
 	s.stepQueryRepo.EXPECT().Find(gomock.Any(), scanAccountID, scanStepID).Return(step("12", unitPair), nil)
 
-	err := s.consumer.applyInventory(context.Background(), scanAccountID, scanEvent("not-a-number", unitPair))
+	err := s.consumer.applyInventory(context.Background(), nil, scanAccountID, scanEvent("not-a-number", unitPair))
 
 	s.Require().NotNil(err)
 	s.Empty(s.inventoryMoves)
@@ -485,7 +478,7 @@ func (s *BatchScannedConsumerTestSuite) TestRefusesWhenConversionFails() {
 	s.unitConvRepo.EXPECT().ConvertValue(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(decimal.Zero, apierror.NewValidationError("no conversion between un_dozen and un_pair"))
 
-	err := s.consumer.applyInventory(context.Background(), scanAccountID, scanEvent("5", unitDozen))
+	err := s.consumer.applyInventory(context.Background(), nil, scanAccountID, scanEvent("5", unitDozen))
 
 	s.Require().NotNil(err)
 	s.Empty(s.inventoryMoves)
@@ -544,7 +537,7 @@ func (s *BatchScannedConsumerTestSuite) TestConsumptionCoversScrapAsWellAsGoodOu
 	evt.SecondsMeasure = "5"
 	evt.WasteMeasure = "7"
 
-	err := s.consumer.applyInventory(context.Background(), scanAccountID, evt)
+	err := s.consumer.applyInventory(context.Background(), nil, scanAccountID, evt)
 
 	s.Require().Nil(err)
 	s.True(decimal.RequireFromString("60").Equal(s.moved(scanProducedID)),
@@ -561,7 +554,7 @@ func (s *BatchScannedConsumerTestSuite) TestNoScrapMeansOneConversion() {
 		Return(decimal.RequireFromString("60"), nil).Times(1)
 	s.expectBuiltToStock()
 
-	err := s.consumer.applyInventory(context.Background(), scanAccountID, scanEvent("60", unitPair))
+	err := s.consumer.applyInventory(context.Background(), nil, scanAccountID, scanEvent("60", unitPair))
 
 	s.Require().Nil(err)
 	s.True(decimal.RequireFromString("-20").Equal(s.moved(scanYarnID)))
@@ -582,7 +575,7 @@ func (s *BatchScannedConsumerTestSuite) TestScrapIsConvertedIntoStepUnit() {
 	evt := scanEvent("5", unitDozen)
 	evt.SecondsMeasure = "1"
 
-	err := s.consumer.applyInventory(context.Background(), scanAccountID, evt)
+	err := s.consumer.applyInventory(context.Background(), nil, scanAccountID, evt)
 
 	s.Require().Nil(err)
 	s.True(decimal.RequireFromString("60").Equal(s.moved(scanProducedID)))
@@ -599,7 +592,7 @@ func (s *BatchScannedConsumerTestSuite) TestRefusesUnparseableScrap() {
 	evt := scanEvent("12", unitPair)
 	evt.WasteMeasure = "not-a-number"
 
-	err := s.consumer.applyInventory(context.Background(), scanAccountID, evt)
+	err := s.consumer.applyInventory(context.Background(), nil, scanAccountID, evt)
 
 	s.Require().NotNil(err)
 }
@@ -617,7 +610,7 @@ func (s *BatchScannedConsumerTestSuite) TestOffersProducedAndConsumedItemsToOpen
 	s.expectConversion("12", "12")
 	s.expectBuiltToStock()
 
-	err := s.consumer.applyInventory(context.Background(), scanAccountID, scanEvent("12", unitPair))
+	err := s.consumer.applyInventory(context.Background(), nil, scanAccountID, scanEvent("12", unitPair))
 
 	s.Require().Nil(err)
 	s.Equal([]string{scanProducedID, scanYarnID, scanDyeID}, s.allocatedItems,
@@ -634,7 +627,7 @@ func (s *BatchScannedConsumerTestSuite) TestOffersEachItemOnce() {
 	s.expectConversion("12", "12")
 	s.expectBuiltToStock()
 
-	err := s.consumer.applyInventory(context.Background(), scanAccountID, scanEvent("12", unitPair))
+	err := s.consumer.applyInventory(context.Background(), nil, scanAccountID, scanEvent("12", unitPair))
 
 	s.Require().Nil(err)
 	s.Equal([]string{scanProducedID, scanYarnID}, s.allocatedItems)
@@ -646,7 +639,7 @@ func (s *BatchScannedConsumerTestSuite) TestOffersProducedItemWithNoConsumptions
 	s.expectConversion("12", "12")
 	s.expectBuiltToStock()
 
-	err := s.consumer.applyInventory(context.Background(), scanAccountID, scanEvent("12", unitPair))
+	err := s.consumer.applyInventory(context.Background(), nil, scanAccountID, scanEvent("12", unitPair))
 
 	s.Require().Nil(err)
 	s.Equal([]string{scanProducedID}, s.allocatedItems)

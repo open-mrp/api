@@ -1,4 +1,4 @@
-.PHONY: help dev sqlc proto buf-lint no-binaries test test-e2e tx-audit test-verbose test-sql-prepare-smoke install-tools install-ci-tools docs mocks lint gosec gosec-fast govet static-check check-format jaeger-tracing connect-minikube version validate-openapi-specs httpie local-db local-db-cli local-db-down local-db-nuke setup teardown migrate-create migrate-create-data migrate-up migrate-down migrate-status migrate-baseline migrate-data-up migrate-data-status migrate-agent-db migrate-agent-create migrate-agent-create-data migrate-agent-data migrate-agent-status seed-agent-db seed-core seed-user-photos seed-stripe teardown-stripe teardown-all-stripe fmt stripe-webhook stripe-webhook-account view-otel e2e-up e2e-up-ci e2e e2e-down fix-minikube-dns openapi openapi-quiet gen-agent-tools stainless openapi-stainless openapi-stainless-quiet generate generate-quiet install-stlc stlc-internal-sdk stlc-public-typescript-sdk stlc-public-python-sdk stlc-public-go-sdk stlc-public-sdks stlc-sdks sdk-yalc
+.PHONY: help dev sqlc proto buf-lint no-binaries test test-e2e tx-audit test-ledger test-verbose test-sql-prepare-smoke install-tools install-ci-tools docs mocks lint gosec gosec-fast govet static-check check-format jaeger-tracing connect-minikube version validate-openapi-specs httpie local-db local-db-cli local-db-down local-db-nuke setup teardown migrate-create migrate-create-data migrate-up migrate-down migrate-status migrate-baseline migrate-data-up migrate-data-status migrate-agent-db migrate-agent-create migrate-agent-create-data migrate-agent-data migrate-agent-status seed-agent-db seed-core seed-user-photos seed-stripe teardown-stripe teardown-all-stripe fmt stripe-webhook stripe-webhook-account view-otel e2e-up e2e-up-ci e2e e2e-down fix-minikube-dns openapi openapi-quiet gen-agent-tools stainless openapi-stainless openapi-stainless-quiet generate generate-quiet install-stlc stlc-internal-sdk stlc-public-typescript-sdk stlc-public-python-sdk stlc-public-go-sdk stlc-public-sdks stlc-sdks sdk-yalc
 
 # Include .env file if it exists (optional for CI)
 -include .env
@@ -260,6 +260,11 @@ test-sql-prepare-smoke: ## Run sqlc Prepare smoke tests for MySQL services (requ
 		./services/notification-service/internal/infrastructure/sqlc \
 		./services/platform-service/internal/infrastructure/sqlc
 
+test-ledger: ## Run inventory ledger concurrency tests against the local MySQL (requires local-db)
+	@echo "Running ledger concurrency tests..."
+	@time go test -tags ledger -v -count=1 -timeout 300s -p 1 -parallel 1 \
+		./services/core-service/internal/infrastructure/repository
+
 test-verbose: ## Run tests with verbose output
 	@echo "Running tests with verbose output..."
 	@time go test -v ./...
@@ -348,11 +353,13 @@ view-otel: ## Open Jaeger UI via port-forward
 
 e2e-up: openapi-quiet ## Start the E2E stack (isolated services + seeded DBs)
 	@./scripts/run-quiet.sh "Building E2E service images" docker compose -f docker-compose.e2e.yml build --parallel
+	@./scripts/run-quiet.sh "Clearing leftover E2E containers" ./scripts/e2e-rm-named-containers.sh
 	@./scripts/run-quiet.sh "Starting E2E databases" docker compose -f docker-compose.e2e.yml up -d --wait mysql-e2e postgres-e2e rabbitmq minio-e2e
 	@./scripts/setup-e2e-db.sh
 	@./scripts/run-quiet.sh "Starting E2E services" ./scripts/start-e2e-services.sh
 
 e2e-up-ci: openapi-quiet ## Start the E2E stack using pre-built images (for CI)
+	@./scripts/run-quiet.sh "Clearing leftover E2E containers" ./scripts/e2e-rm-named-containers.sh
 	@./scripts/run-quiet.sh "Starting E2E databases" docker compose -f docker-compose.e2e.yml up -d --wait mysql-e2e postgres-e2e rabbitmq minio-e2e
 	@./scripts/setup-e2e-db.sh
 	@./scripts/run-quiet.sh "Starting E2E services" ./scripts/start-e2e-services.sh
@@ -362,6 +369,7 @@ e2e: e2e-up ## Run API E2E tests against the full stack (brings the stack up fir
 	@time ./scripts/run-e2e-tests.sh 600s
 
 e2e-down: ## Tear down the E2E stack
+	@./scripts/run-quiet.sh "Clearing leftover E2E containers" ./scripts/e2e-rm-named-containers.sh
 	@./scripts/run-quiet.sh "Tearing down E2E stack" docker compose -f docker-compose.e2e.yml down -v
 
 # Version management

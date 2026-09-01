@@ -21,6 +21,7 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/event"
+	"github.com/open-mrp/api/services/core-service/internal/ledgerlock"
 	"github.com/open-mrp/api/services/core-service/internal/mediator"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
@@ -64,6 +65,7 @@ type shipmentSvcImpl struct {
 	shippingLabelsBucket string
 	frontendURL          string
 	branding             BrandingAssets
+	outboxNotifier       messaging.OutboxNotifier
 }
 
 type ShipmentSvcConfig struct {
@@ -102,6 +104,9 @@ type ShipmentSvcConfig struct {
 
 	// Branding (optional) resolves the merchant logo for the invoice PDF letterhead. Omitted, it falls back to a text-only letterhead.
 	Branding BrandingAssets
+
+	// OutboxNotifier (optional; default: nil) wakes the outbox enqueuer the instant a void's allocation requests commit, so released stock is offered to open demand on the next moment rather than on the enqueuer's next idle poll. When nil, the requests are still picked up on the next poll.
+	OutboxNotifier messaging.OutboxNotifier
 }
 
 func (c *ShipmentSvcConfig) validate() error {
@@ -134,6 +139,17 @@ func NewShipmentSvc(config *ShipmentSvcConfig) domain.ShipmentSvc {
 		shippingLabelsBucket: config.ShippingLabelsBucket,
 		frontendURL:          config.FrontendURL,
 		branding:             config.Branding,
+		outboxNotifier:       config.OutboxNotifier,
+	}
+}
+
+// kickOutbox wakes the outbox enqueuer so a just-committed allocation request is picked up
+// immediately rather than on the enqueuer's next idle poll, which can be up to MaxPollInterval away.
+// No-op when no notifier was injected. Call only after the writing transaction has committed —
+// kicking while it is still open races the poll against a row it cannot yet see.
+func (s *shipmentSvcImpl) kickOutbox() {
+	if s.outboxNotifier != nil {
+		s.outboxNotifier.Notify()
 	}
 }
 
@@ -956,8 +972,27 @@ func (s *shipmentSvcImpl) VoidShipment(ctx context.Context, params domain.VoidSh
 		fallthrough
 
 	case domain.RecoveryPointVoidLabelsRefunded:
+		// The items this void will hand back, resolved on the pool so their ordering roots can be the
+		// transaction's first statements. Reading the lines inside the transaction and locking after the
+		// reversal has already written receipts is the inversion, not the fix (Corollary A).
+		voidLines, apiErr := s.repos.NewShipmentLineRepo().ListByShipment(ctx, params.ShipmentID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		voidItemIDs := make([]string, 0, len(voidLines))
+		for _, line := range voidLines {
+			if line.OrderLineItemID != nil {
+				voidItemIDs = append(voidItemIDs, *line.OrderLineItemID)
+			}
+		}
+
 		var result *domain.Shipment
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *shipmentSvcImpl) *apierror.APIError {
+			scope, apiErr := ledgerlock.Acquire(txCtx, txSvc.repos.NewInventoryMutationRepo(), voidItemIDs)
+			if apiErr != nil {
+				return apiErr
+			}
+
 			txShipmentRepo := txSvc.repos.NewShipmentRepo()
 			txCaseRepo := txSvc.repos.NewShippingCaseRepo()
 			txInvoiceRepo := txSvc.repos.NewInvoiceRepo()
@@ -978,7 +1013,7 @@ func (s *shipmentSvcImpl) VoidShipment(ctx context.Context, params domain.VoidSh
 				return apiErr
 			}
 			if invoiceID != nil {
-				if apiErr := txSvc.reverseInventoryOnVoid(txCtx, shipment); apiErr != nil {
+				if apiErr := txSvc.reverseInventoryOnVoid(txCtx, scope, shipment); apiErr != nil {
 					return apiErr
 				}
 
@@ -1048,6 +1083,10 @@ func (s *shipmentSvcImpl) VoidShipment(ctx context.Context, params domain.VoidSh
 		if apiErr != nil {
 			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
 		}
+
+		// After the commit, never inside it: the allocation requests the reversal wrote have to be
+		// visible to the enqueuer's poll query for this kick to find anything.
+		s.kickOutbox()
 
 		return result, nil
 
@@ -1629,6 +1668,19 @@ func equalStringPtr(a, b *string) bool {
 func (s *shipmentSvcImpl) allocateInventoryOnShip(txCtx context.Context, shipment *domain.Shipment, shipmentLines []*domain.ShipmentLine) *apierror.APIError {
 	reservationRepo := s.repos.NewInventoryReservationRepo()
 
+	// The lines are already in hand, so the whole item set is known before any of it is written. The
+	// loop below then walks them in whatever order the slice holds, which no longer matters.
+	itemIDs := make([]string, 0, len(shipmentLines))
+	for _, line := range shipmentLines {
+		if line.OrderLineItemID != nil {
+			itemIDs = append(itemIDs, *line.OrderLineItemID)
+		}
+	}
+	scope, apiErr := ledgerlock.Acquire(txCtx, reservationRepo, itemIDs)
+	if apiErr != nil {
+		return apiErr
+	}
+
 	for _, line := range shipmentLines {
 		if line.OrderLineItemID == nil || *line.OrderLineItemID == "" {
 			continue
@@ -1640,7 +1692,7 @@ func (s *shipmentSvcImpl) allocateInventoryOnShip(txCtx context.Context, shipmen
 
 		// A shortfall means stock was never reserved for this line; the shipment still stands, so
 		// the uncovered quantity is left for the inventory reconciliation rather than failing here.
-		if _, apiErr := reservationRepo.AllocateReservationsForConsumption(txCtx, domain.ConsumptionAllocationParams{
+		if _, apiErr := reservationRepo.AllocateReservationsForConsumption(txCtx, scope, domain.ConsumptionAllocationParams{
 			OrderID:   shipment.SalesOrderID,
 			AccountID: shipment.AccountID,
 			ItemID:    *line.OrderLineItemID,
@@ -1656,7 +1708,7 @@ func (s *shipmentSvcImpl) allocateInventoryOnShip(txCtx context.Context, shipmen
 
 // Puts the shipped goods back on the order's reservation, unwinding each line's consumption newest
 // first. Re-derives from the still-open issues, so a replayed void finds nothing left to reverse.
-func (s *shipmentSvcImpl) reverseInventoryOnVoid(txCtx context.Context, shipment *domain.Shipment) *apierror.APIError {
+func (s *shipmentSvcImpl) reverseInventoryOnVoid(txCtx context.Context, scope *ledgerlock.Scope, shipment *domain.Shipment) *apierror.APIError {
 	shipmentLines, apiErr := s.repos.NewShipmentLineRepo().ListByShipment(txCtx, shipment.ID)
 	if apiErr != nil {
 		return apiErr
@@ -1675,7 +1727,7 @@ func (s *shipmentSvcImpl) reverseInventoryOnVoid(txCtx context.Context, shipment
 			continue
 		}
 
-		if apiErr := mutationRepo.ReverseInventoryForOrderItem(txCtx, shipment.AccountID, shipment.SalesOrderID, *line.OrderLineItemID, measure); apiErr != nil {
+		if apiErr := mutationRepo.ReverseInventoryForOrderItem(txCtx, scope, shipment.AccountID, shipment.SalesOrderID, *line.OrderLineItemID, measure); apiErr != nil {
 			return apiErr
 		}
 
@@ -1684,21 +1736,32 @@ func (s *shipmentSvcImpl) reverseInventoryOnVoid(txCtx context.Context, shipment
 		reversedMeasures[itemID] = reversedMeasures[itemID].Add(measure)
 	}
 
-	// Receipts the reversal released can now cover issues that were short, so allocation runs again
-	// for whatever it touched.
-	reservationRepo := s.repos.NewInventoryReservationRepo()
-	for itemID, unitID := range reversedUnits {
-		if apiErr := reservationRepo.AllocateOpenIssuesForItem(txCtx, shipment.AccountID, itemID); apiErr != nil {
-			return apiErr
-		}
+	// Receipts the reversal released can now cover issues that were short, so allocation is asked for
+	// again for whatever it touched — asked for, not done here: covering the demand inline meant
+	// walking every open issue of every reversed item while holding this transaction's receipt locks,
+	// in the opposite order from the consumer doing the same work.
+	//
+	// The item ids are sorted rather than ranged off the map, whose iteration order is randomized per
+	// run. That only orders the outbox rows now, but it is the same set of ids the ledger work will
+	// take locks on, and a set taken in two different orders is a deadlock nobody can reproduce.
+	itemIDs := make([]string, 0, len(reversedUnits))
+	for itemID := range reversedUnits {
+		itemIDs = append(itemIDs, itemID)
+	}
+	itemIDs = mediator.SortedUniqueIDs(itemIDs)
 
+	if apiErr := mediator.EnqueueAllocateOpenIssues(txCtx, s.repos, shipment.AccountID, itemIDs...); apiErr != nil {
+		return apiErr
+	}
+
+	for _, itemID := range itemIDs {
 		mediator.RecordInventoryAuditTrailOrLog(
 			txCtx,
 			s.repos,
 			shipment.AccountID,
 			itemID,
 			reversedMeasures[itemID],
-			unitID,
+			reversedUnits[itemID],
 			string(constants.InventoryActionTypeUserCorrection),
 			nil,
 			nil,

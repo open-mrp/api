@@ -15,11 +15,11 @@ import (
 const getPermissionGroupsByIDs = `-- name: GetPermissionGroupsByIDs :many
 SELECT
     permission_group.id,
-    permission_group.code,
     permission_group.name,
     permission_group.description,
     permission_group.created_at,
-    permission_group.updated_at
+    permission_group.updated_at,
+    permission_group.code
 FROM permission_group
 WHERE permission_group.id IN (/*SLICE:ids*/?)
 `
@@ -54,11 +54,11 @@ func (q *Queries) GetPermissionGroupsByIDs(ctx context.Context, ids []string) ([
 		var i GetPermissionGroupsByIDsRow
 		if err := rows.Scan(
 			&i.ID,
-			&i.Code,
 			&i.Name,
 			&i.Description,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Code,
 		); err != nil {
 			return nil, err
 		}
@@ -76,11 +76,11 @@ func (q *Queries) GetPermissionGroupsByIDs(ctx context.Context, ids []string) ([
 const listPermissionGroupsBackward = `-- name: ListPermissionGroupsBackward :many
 SELECT
     permission_group.id,
-    permission_group.code,
     permission_group.name,
     permission_group.description,
     permission_group.created_at,
-    permission_group.updated_at
+    permission_group.updated_at,
+    permission_group.code
 FROM permission_group
 WHERE (
     ? IS NULL
@@ -128,11 +128,11 @@ func (q *Queries) ListPermissionGroupsBackward(ctx context.Context, arg ListPerm
 		var i ListPermissionGroupsBackwardRow
 		if err := rows.Scan(
 			&i.ID,
-			&i.Code,
 			&i.Name,
 			&i.Description,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Code,
 		); err != nil {
 			return nil, err
 		}
@@ -150,11 +150,11 @@ func (q *Queries) ListPermissionGroupsBackward(ctx context.Context, arg ListPerm
 const listPermissionGroupsForward = `-- name: ListPermissionGroupsForward :many
 SELECT
     permission_group.id,
-    permission_group.code,
     permission_group.name,
     permission_group.description,
     permission_group.created_at,
-    permission_group.updated_at
+    permission_group.updated_at,
+    permission_group.code
 FROM permission_group
 WHERE (
     ? IS NULL
@@ -204,11 +204,11 @@ func (q *Queries) ListPermissionGroupsForward(ctx context.Context, arg ListPermi
 		var i ListPermissionGroupsForwardRow
 		if err := rows.Scan(
 			&i.ID,
-			&i.Code,
 			&i.Name,
 			&i.Description,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Code,
 		); err != nil {
 			return nil, err
 		}

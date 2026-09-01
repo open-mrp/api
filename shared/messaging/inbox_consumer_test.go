@@ -6,6 +6,8 @@ import (
 	"errors"
 	"testing"
 
+	apierror "github.com/open-mrp/api/shared/errors"
+
 	"github.com/go-sql-driver/mysql"
 	"github.com/open-mrp/api/shared/contracts"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -356,4 +358,33 @@ func (s *InboxConsumerTestSuite) TestWrap_MarkFailedError_StillReturnsHandlerErr
 func TestInboxConsumerTestSuite(t *testing.T) {
 	t.Parallel()
 	suite.Run(t, new(InboxConsumerTestSuite))
+}
+
+// A handler that fails must record WHAT failed, not merely that it did.
+//
+// Most APIError constructors set only a client-facing message, and APIError.Error() renders only the
+// developer-facing InternalMessage — deliberately, so a nested error carrying nothing but a public
+// message contributes nothing to its parent's text. The consequence here was that such a failure
+// reached message_inbox.last_error as NULL: five recalc_item_burn_rate rows sat in e2e recording
+// four attempts each and no reason for any of them, which is precisely the state nobody can triage.
+func (s *InboxConsumerTestSuite) TestWrap_RecordsAReasonForAPublicMessageOnlyFailure() {
+	var recorded string
+	repo := &mockInboxRepo{
+		tryInsertFn: func(_ context.Context, _ InboxRecordInput) (int64, error) { return 7, nil },
+		markFailedFn: func(_ context.Context, _ int64, errMsg string) error {
+			recorded = errMsg
+			return nil
+		},
+	}
+
+	consumer := NewInboxConsumer(repo, "test-service")
+	wrapped := consumer.Wrap("test.handler", func(context.Context, amqp.Delivery) error {
+		return apierror.NewValidationError("bad input")
+	})
+
+	err := wrapped(context.Background(), deliveryWithMessageID("msg_public_only"))
+
+	s.Require().Error(err)
+	s.NotEmpty(recorded, "a failure recorded with no reason is a row nobody can act on")
+	s.Contains(recorded, "bad input")
 }

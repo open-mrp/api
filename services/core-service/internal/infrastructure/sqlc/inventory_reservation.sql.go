@@ -12,6 +12,80 @@ import (
 	"time"
 )
 
+const claimOpenIssueForAllocation = `-- name: ClaimOpenIssueForAllocation :one
+SELECT ii.id, q.id AS quantity_id, q.value AS quantity_value, q.unit_id,
+       ii.storage_location_id, ii.lot_id
+FROM inventory_issue ii
+JOIN quantity q ON q.id = ii.quantity_id
+WHERE ii.id = ?
+AND ii.account_id = ?
+AND ii.status_code = 'open'
+FOR UPDATE
+`
+
+type ClaimOpenIssueForAllocationParams struct {
+	ID        string
+	AccountID string
+}
+
+type ClaimOpenIssueForAllocationRow struct {
+	ID                string
+	QuantityID        string
+	QuantityValue     string
+	UnitID            string
+	StorageLocationID sql.NullString
+	LotID             sql.NullString
+}
+
+// ClaimOpenIssueForAllocation re-reads one issue by primary key, and only if it is still open.
+//
+// Reached by primary key, so it takes the clustered lock first and the secondary index entry only
+// when the close maintains it — the same direction as every other status writer. The secondary-index
+// range scan this replaces went the other way round, which is one row's worth of cycle against any
+// UPDATE ... WHERE id = ?.
+//
+// `unit` is still not joined: a locking read locks every row it touches and `unit` rows are shared by
+// every account. The ratio comes from GetUnitRatios, after this lock and after the receipt lock.
+func (q *Queries) ClaimOpenIssueForAllocation(ctx context.Context, arg ClaimOpenIssueForAllocationParams) (ClaimOpenIssueForAllocationRow, error) {
+	row := q.db.QueryRowContext(ctx, claimOpenIssueForAllocation, arg.ID, arg.AccountID)
+	var i ClaimOpenIssueForAllocationRow
+	err := row.Scan(
+		&i.ID,
+		&i.QuantityID,
+		&i.QuantityValue,
+		&i.UnitID,
+		&i.StorageLocationID,
+		&i.LotID,
+	)
+	return i, err
+}
+
+const claimReservedInventoryIssueAsOpen = `-- name: ClaimReservedInventoryIssueAsOpen :execresult
+UPDATE inventory_issue
+SET status_code = 'open',
+    issued_at = NOW(3),
+    batch_id = COALESCE(?, batch_id),
+    updated_at = NOW(3)
+WHERE id = ? AND status_code = 'reserved'
+`
+
+type ClaimReservedInventoryIssueAsOpenParams struct {
+	BatchID sql.NullString
+	ID      string
+}
+
+// ClaimReservedInventoryIssueAsOpen consumes a whole reservation in place.
+//
+// Guarded on `reserved` and checked for rows affected, unlike the unguarded UPDATE it replaces: the
+// reservation this transaction read may have been deleted in between by an order edit (ReduceReservedForOrderItem, DeleteReservedInventoryIssuesBySalesOrder,
+// DeleteReservedInventoryIssuesByOrderID). The unguarded UPDATE then matched nothing and the caller
+// carried on to write allocations against an issue that no longer exists, retiring the receipts they
+// drew to cover demand that is not there. There is no foreign key on
+// inventory_allocation.inventory_issue_id to catch it afterwards.
+func (q *Queries) ClaimReservedInventoryIssueAsOpen(ctx context.Context, arg ClaimReservedInventoryIssueAsOpenParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, claimReservedInventoryIssueAsOpen, arg.BatchID, arg.ID)
+}
+
 const closeFullyAllocatedInventoryIssue = `-- name: CloseFullyAllocatedInventoryIssue :exec
 UPDATE inventory_issue
 SET status_code = 'closed', issued_at = NOW(3), updated_at = NOW(3)
@@ -23,6 +97,32 @@ WHERE id = ? AND status_code <> 'closed'
 func (q *Queries) CloseFullyAllocatedInventoryIssue(ctx context.Context, id string) error {
 	_, err := q.db.ExecContext(ctx, closeFullyAllocatedInventoryIssue, id)
 	return err
+}
+
+const countAvailableReceiptsForItem = `-- name: CountAvailableReceiptsForItem :one
+SELECT COUNT(*) FROM inventory_receipt ir
+WHERE (ir.owner_account_id = ? OR ir.holder_account_id = ?)
+AND ir.item_id = ?
+AND ir.status_code = 'available'
+`
+
+type CountAvailableReceiptsForItemParams struct {
+	AccountID string
+	ItemID    string
+}
+
+// CountAvailableReceiptsForItem answers "is there anything to draw on at all" before any transaction
+// is opened, so an item whose whole open backlog is uncoverable costs one read rather than one
+// transaction per issue. The busiest items in this database have zero available receipts against
+// hundreds of open issues.
+//
+// It deliberately ignores the storage_location/lot pinning FindReceiptsForAllocation applies, so a
+// non-zero count does not mean a pinned issue has a candidate. It is a cost hint, never a decision.
+func (q *Queries) CountAvailableReceiptsForItem(ctx context.Context, arg CountAvailableReceiptsForItemParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countAvailableReceiptsForItem, arg.AccountID, arg.AccountID, arg.ItemID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const deleteInventoryIssueByID = `-- name: DeleteInventoryIssueByID :exec
@@ -41,106 +141,6 @@ DELETE FROM quantity WHERE id = ?
 func (q *Queries) DeleteQuantityByID(ctx context.Context, id string) error {
 	_, err := q.db.ExecContext(ctx, deleteQuantityByID, id)
 	return err
-}
-
-const findOpenIssuesForItemPaged = `-- name: FindOpenIssuesForItemPaged :many
-SELECT
-    ii.id,
-    q.id AS quantity_id,
-    q.value AS quantity_value,
-    q.unit_id,
-    ii.storage_location_id,
-    ii.lot_id,
-    ii.created_at
-FROM inventory_issue ii
-JOIN quantity q ON q.id = ii.quantity_id
-WHERE ii.account_id = ?
-AND ii.item_id = ?
-AND ii.status_code = 'open'
-AND (
-    ii.created_at > ?
-    OR (ii.created_at = ? AND ii.id > ?)
-)
-ORDER BY ii.created_at ASC, ii.id ASC
-LIMIT ?
-FOR UPDATE
-`
-
-type FindOpenIssuesForItemPagedParams struct {
-	AccountID       string
-	ItemID          string
-	CursorCreatedAt time.Time
-	CursorID        string
-	Limit           int32
-}
-
-type FindOpenIssuesForItemPagedRow struct {
-	ID                string
-	QuantityID        string
-	QuantityValue     string
-	UnitID            string
-	StorageLocationID sql.NullString
-	LotID             sql.NullString
-	CreatedAt         time.Time
-}
-
-// FindOpenIssuesForItemPaged claims a bounded page of open demand, oldest first, resuming after the
-// (created_at, id) cursor. Same columns and filters as FindOpenIssuesForItem.
-//
-// FOR UPDATE, and it has to be the transaction's first statement, for two reasons that are really one
-// reason. Allocation is driven by a command anything that moves stock can enqueue — a batch scan, a
-// receipt landing, a receiving order being stocked — so two paging chains for the same item overlap
-// routinely, and this is what makes the second wait for the first and then re-evaluate `status_code`
-// against what the first committed rather than against a page it read before the first ran.
-//
-// The subtler half: under REPEATABLE READ the transaction's read view is created by its first
-// *consistent* read, and a locking read is not one. While this was a plain SELECT it froze the
-// transaction's view of the whole ledger at the moment the page was read, so the allocated-sum reads
-// that follow — GetAllocationSumForIssue, GetAllocationSumsForReceipts — still saw an issue as
-// untouched and a receipt as undrawn however long the transaction had since sat waiting on the
-// receipt lock. Every one of the 2026-08-26 over-draws is that: the same open issue allocated in full
-// by two chains, twice its quantity against one receipt. Locking here defers the read view until the
-// locks are held, so the sums that follow read what is actually committed.
-//
-// The unit is deliberately not joined. A locking read takes locks on every row it touches, and `unit`
-// rows are shared by every account in the database — see GetUnitRatios, which exists so that
-// FindReceiptsForAllocation does not do this either. The caller resolves the ratio through it.
-func (q *Queries) FindOpenIssuesForItemPaged(ctx context.Context, arg FindOpenIssuesForItemPagedParams) ([]FindOpenIssuesForItemPagedRow, error) {
-	rows, err := q.db.QueryContext(ctx, findOpenIssuesForItemPaged,
-		arg.AccountID,
-		arg.ItemID,
-		arg.CursorCreatedAt,
-		arg.CursorCreatedAt,
-		arg.CursorID,
-		arg.Limit,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []FindOpenIssuesForItemPagedRow
-	for rows.Next() {
-		var i FindOpenIssuesForItemPagedRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.QuantityID,
-			&i.QuantityValue,
-			&i.UnitID,
-			&i.StorageLocationID,
-			&i.LotID,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const findReceiptsForAllocation = `-- name: FindReceiptsForAllocation :many
@@ -389,68 +389,13 @@ JOIN unit u ON u.id = q.unit_id
 WHERE ia.inventory_receipt_id = ?
 `
 
-// Through each row's own ratio. See GetAllocationSumsForReceipts.
+// Through each row's own ratio: allocations against one receipt can be stamped in different units,
+// so adding the raw column values produces a number in no unit at all.
 func (q *Queries) GetAllocationSumForReceipt(ctx context.Context, receiptID string) (interface{}, error) {
 	row := q.db.QueryRowContext(ctx, getAllocationSumForReceipt, receiptID)
 	var total_allocated interface{}
 	err := row.Scan(&total_allocated)
 	return total_allocated, err
-}
-
-const getAllocationSumsForReceipts = `-- name: GetAllocationSumsForReceipts :many
-SELECT ia.inventory_receipt_id, COALESCE(SUM(CAST(q.value AS DECIMAL(65,30)) * (u.ratio_numerator / u.ratio_denominator)), 0) AS total_allocated
-FROM inventory_allocation ia
-JOIN quantity q ON q.id = ia.quantity_id
-JOIN unit u ON u.id = q.unit_id
-WHERE ia.inventory_receipt_id IN (/*SLICE:receipt_ids*/?)
-GROUP BY ia.inventory_receipt_id
-`
-
-type GetAllocationSumsForReceiptsRow struct {
-	InventoryReceiptID string
-	TotalAllocated     interface{}
-}
-
-// GetAllocationSumsForReceipts answers for a whole candidate set at once. Allocation walks receipts
-// oldest first and needs each one's drawn-down total; asking per receipt put a round trip inside that
-// loop, so an item with a long tail of open receipts cost a query apiece to find most of them full.
-// Receipts with no allocations are absent rather than zero — the caller treats a missing row as zero.
-//
-// Each row is taken through its own unit's ratio before it is added. Allocations against one receipt
-// can be recorded in different units — the row carries whatever unit the code that wrote it chose —
-// so adding the raw column values produces a number in no unit at all. Divide the total by a unit's
-// ratio to read it in that unit.
-func (q *Queries) GetAllocationSumsForReceipts(ctx context.Context, receiptIds []string) ([]GetAllocationSumsForReceiptsRow, error) {
-	query := getAllocationSumsForReceipts
-	var queryParams []interface{}
-	if len(receiptIds) > 0 {
-		for _, v := range receiptIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:receipt_ids*/?", strings.Repeat(",?", len(receiptIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:receipt_ids*/?", "NULL", 1)
-	}
-	rows, err := q.db.QueryContext(ctx, query, queryParams...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetAllocationSumsForReceiptsRow
-	for rows.Next() {
-		var i GetAllocationSumsForReceiptsRow
-		if err := rows.Scan(&i.InventoryReceiptID, &i.TotalAllocated); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const getUnitRatios = `-- name: GetUnitRatios :many
@@ -591,6 +536,174 @@ func (q *Queries) InsertInventoryIssueForReservation(ctx context.Context, arg In
 	return err
 }
 
+const listOpenIssueIDsForItemPaged = `-- name: ListOpenIssueIDsForItemPaged :many
+SELECT ii.id, ii.created_at
+FROM inventory_issue ii
+WHERE ii.account_id = ?
+AND ii.item_id = ?
+AND ii.status_code = 'open'
+AND (
+    ii.created_at > ?
+    OR (ii.created_at = ? AND ii.id > ?)
+)
+ORDER BY ii.created_at ASC, ii.id ASC
+LIMIT ?
+`
+
+type ListOpenIssueIDsForItemPagedParams struct {
+	AccountID       string
+	ItemID          string
+	CursorCreatedAt time.Time
+	CursorID        string
+	Limit           int32
+}
+
+type ListOpenIssueIDsForItemPagedRow struct {
+	ID        string
+	CreatedAt time.Time
+}
+
+// ListOpenIssueIDsForItemPaged names the demand worth trying. It is deliberately not a locking read
+// and projects nothing but the keyset, so it is answered from inventory_issue_open_paging_idx alone:
+// no record locks, no gap locks, no trailing next-key lock, and no locks at all on `quantity`.
+//
+// Nothing is decided from what it returns. Every row is re-read by ClaimOpenIssueForAllocation, by
+// primary key, under FOR UPDATE, in its own transaction — a row that closed in between returns
+// nothing there and is skipped. That is the difference from 3e99b962, which made a read non-locking
+// and then fed its quantity and its allocated sum straight into the arithmetic.
+//
+// What the FOR UPDATE this replaces actually cost: the item's whole
+// (account_id, item_id, 'open', created_at) range plus every gap between and after it, and X locks on
+// up to 200 shared `quantity` rows, held for the length of a walk over every issue in the page. New
+// demand for the item lands in that trailing gap, so for the life of the transaction no batch scan,
+// shipment or reservation for that item could be recorded. What it bought — deferring the read view
+// past the receipt locks — it never delivered; see the note on ClaimOpenIssueForAllocation.
+func (q *Queries) ListOpenIssueIDsForItemPaged(ctx context.Context, arg ListOpenIssueIDsForItemPagedParams) ([]ListOpenIssueIDsForItemPagedRow, error) {
+	rows, err := q.db.QueryContext(ctx, listOpenIssueIDsForItemPaged,
+		arg.AccountID,
+		arg.ItemID,
+		arg.CursorCreatedAt,
+		arg.CursorCreatedAt,
+		arg.CursorID,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListOpenIssueIDsForItemPagedRow
+	for rows.Next() {
+		var i ListOpenIssueIDsForItemPagedRow
+		if err := rows.Scan(&i.ID, &i.CreatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listReservedIssuesForOrder = `-- name: ListReservedIssuesForOrder :many
+SELECT ii.id, ii.item_id, ii.quantity_id
+FROM inventory_issue ii
+WHERE ii.order_id = ?
+AND ii.account_id = ?
+AND ii.status_code = 'reserved'
+`
+
+type ListReservedIssuesForOrderParams struct {
+	OrderID   sql.NullString
+	AccountID string
+}
+
+type ListReservedIssuesForOrderRow struct {
+	ID         string
+	ItemID     string
+	QuantityID string
+}
+
+// ListReservedIssuesForOrder names an order's reservations, with everything releasing one needs: the
+// item whose ordering root has to be held, and the quantity row that goes with the issue.
+//
+// Answered from inventory_issue_order_id_idx, the same access path the delete it replaces used.
+func (q *Queries) ListReservedIssuesForOrder(ctx context.Context, arg ListReservedIssuesForOrderParams) ([]ListReservedIssuesForOrderRow, error) {
+	rows, err := q.db.QueryContext(ctx, listReservedIssuesForOrder, arg.OrderID, arg.AccountID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListReservedIssuesForOrderRow
+	for rows.Next() {
+		var i ListReservedIssuesForOrderRow
+		if err := rows.Scan(&i.ID, &i.ItemID, &i.QuantityID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listReservedItemIDsForOrders = `-- name: ListReservedItemIDsForOrders :many
+SELECT DISTINCT ii.item_id
+FROM inventory_issue ii
+WHERE ii.order_id IN (/*SLICE:order_ids*/?)
+AND ii.account_id = ?
+AND ii.status_code = 'reserved'
+`
+
+type ListReservedItemIDsForOrdersParams struct {
+	OrderIds  []sql.NullString
+	AccountID string
+}
+
+// ListReservedItemIDsForOrders names the items a release will write, so the caller can take their
+// ordering root as the first statement of its transaction rather than discovering the set halfway
+// through it. Read on the pool, before the transaction opens — see ledgerlock, Corollary A.
+func (q *Queries) ListReservedItemIDsForOrders(ctx context.Context, arg ListReservedItemIDsForOrdersParams) ([]string, error) {
+	query := listReservedItemIDsForOrders
+	var queryParams []interface{}
+	if len(arg.OrderIds) > 0 {
+		for _, v := range arg.OrderIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:order_ids*/?", strings.Repeat(",?", len(arg.OrderIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:order_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var item_id string
+		if err := rows.Scan(&item_id); err != nil {
+			return nil, err
+		}
+		items = append(items, item_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const markInventoryReceiptsAllocated = `-- name: MarkInventoryReceiptsAllocated :exec
 UPDATE inventory_receipt
 SET status_code = 'allocated', updated_at = NOW(3)
@@ -617,26 +730,110 @@ func (q *Queries) MarkInventoryReceiptsAllocated(ctx context.Context, ids []stri
 	return err
 }
 
-const updateInventoryIssueStatusToOpen = `-- name: UpdateInventoryIssueStatusToOpen :exec
-UPDATE inventory_issue
-SET status_code = 'open',
-    issued_at = NOW(3),
-    batch_id = COALESCE(?, batch_id),
-    updated_at = NOW(3)
-WHERE id = ?
+const readIssueCoverageForUpdate = `-- name: ReadIssueCoverageForUpdate :many
+SELECT ia.id, q.unit_id, q.value
+FROM inventory_allocation ia
+JOIN quantity q ON q.id = ia.quantity_id
+WHERE ia.inventory_issue_id = ?
+FOR UPDATE OF ia, q
 `
 
-type UpdateInventoryIssueStatusToOpenParams struct {
-	BatchID sql.NullString
-	ID      string
+type ReadIssueCoverageForUpdateRow struct {
+	ID     string
+	UnitID string
+	Value  string
 }
 
-// UpdateInventoryIssueStatusToOpen consumes a whole reservation in place. The batch that consumed it
-// is stamped on the row so deleting that batch can find the reservation and hand it back; COALESCE
-// keeps whatever tag the row already carried when no batch is supplied.
-func (q *Queries) UpdateInventoryIssueStatusToOpen(ctx context.Context, arg UpdateInventoryIssueStatusToOpenParams) error {
-	_, err := q.db.ExecContext(ctx, updateInventoryIssueStatusToOpen, arg.BatchID, arg.ID)
-	return err
+// ReadIssueCoverageForUpdate is ReadReceiptAllocationsForUpdate on the other side of the ledger: what
+// an issue has actually been covered by, read currently rather than from the transaction's snapshot.
+//
+// It decides whether the issue closes, which is the decision GetAllocationSumForIssue used to make
+// from a view frozen before the receipt locks were held. See that query's note; the same reasoning
+// and the same end condition apply.
+func (q *Queries) ReadIssueCoverageForUpdate(ctx context.Context, issueID string) ([]ReadIssueCoverageForUpdateRow, error) {
+	rows, err := q.db.QueryContext(ctx, readIssueCoverageForUpdate, issueID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ReadIssueCoverageForUpdateRow
+	for rows.Next() {
+		var i ReadIssueCoverageForUpdateRow
+		if err := rows.Scan(&i.ID, &i.UnitID, &i.Value); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const readReceiptAllocationsForUpdate = `-- name: ReadReceiptAllocationsForUpdate :many
+SELECT ia.id, q.unit_id, q.value
+FROM inventory_allocation ia
+JOIN quantity q ON q.id = ia.quantity_id
+WHERE ia.inventory_receipt_id = ?
+FOR UPDATE OF ia, q
+`
+
+type ReadReceiptAllocationsForUpdateRow struct {
+	ID     string
+	UnitID string
+	Value  string
+}
+
+// ReadReceiptAllocationsForUpdate is a CURRENT read of what a receipt has actually been drawn: a
+// locking read sees the latest committed row versions regardless of this transaction's snapshot.
+//
+// It exists for one reason and has a defined end. Every writer in this service holds the receipt's
+// own X lock before it writes an allocation against it, so for those writers the plain sum in
+// GetAllocationSumsForReceipts is already correct. dashboard/apps/api's Prisma allocator holds
+// neither that lock nor any other and writes these rows on live invoice-delete and order-release
+// paths. When that allocator is gone, drop the locking clause and this becomes a plain read kept as
+// an arithmetic regression check.
+//
+// FOR UPDATE OF ia, q — and the `q` is load-bearing, not tidiness.
+//
+// A locking read is current only for the tables named in OF; every other table in the join is still
+// read from the transaction's snapshot. With OF ia alone, an allocation committed after this
+// transaction's view opened is found in `ia` and then joined against a `quantity` row that does not
+// exist in the snapshot, so the INNER JOIN drops it and the read reports a receipt as undrawn while
+// looking straight at the row that drew it. That is silent, and it defeats the one query whose whole
+// job is to see writers this transaction never serialised against.
+//
+// Locking both is bounded and safe: an allocation's quantity row is owned by that allocation alone
+// (inventory_allocation_quantity_id_key is unique), so this is not the shared-row problem that keeps
+// `unit` out of the join below. It is deliberately NOT a bare FOR UPDATE, which would go on to lock
+// rows this statement has no business holding.
+//
+// Raw rows rather than a SUM, and no `unit` join: the sum has to go through each allocation's own
+// ratio, and a locking read must not take locks on rows every account in the database shares.
+func (q *Queries) ReadReceiptAllocationsForUpdate(ctx context.Context, receiptID string) ([]ReadReceiptAllocationsForUpdateRow, error) {
+	rows, err := q.db.QueryContext(ctx, readReceiptAllocationsForUpdate, receiptID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ReadReceiptAllocationsForUpdateRow
+	for rows.Next() {
+		var i ReadReceiptAllocationsForUpdateRow
+		if err := rows.Scan(&i.ID, &i.UnitID, &i.Value); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const updateQuantityValue = `-- name: UpdateQuantityValue :exec

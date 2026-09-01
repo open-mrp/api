@@ -81,19 +81,35 @@ DELETE FROM inventory_allocation WHERE id IN (sqlc.slice('ids'));
 -- FreeReleasedReceipts returns receipts to `available` once the allocations that closed them out are
 -- gone. Run after the allocations are deleted: the join sees only the surviving ones, so a receipt
 -- another issue still fills stays as it was.
+--
+-- Both sides go through their own unit's ratio, and the comparison is meaningless without it. An
+-- allocation carries whatever unit the code that wrote it chose, which is not always the receipt's:
+-- a receipt of 10 pairs drawn by 15 each is 7.5 pairs and should be freed, but comparing the raw
+-- column values asks whether 15 < 10 and leaves it `allocated` — real stock, on the shelf, that the
+-- allocator can no longer see. The same arithmetic run the other way frees a receipt that is fully
+-- drawn. This statement is the one place in the undo path that lost the ratios; the repair command
+-- it says it mirrors has carried them all along.
+--
+-- Joining `unit` in a statement that takes locks is normally avoided here, because unit rows are
+-- shared by every account in the database (see GetUnitRatios, which exists for that reason). It is
+-- accepted in this one: the rows are static, the lock is shared rather than exclusive, and the id
+-- list bounds the statement to the receipts one reversal touched. A locking *read* over an unbounded
+-- range is the case that rule is about.
 -- name: FreeReleasedReceipts :exec
 UPDATE inventory_receipt ir
 JOIN quantity q ON q.id = ir.quantity_id
+JOIN unit u ON u.id = q.unit_id
 SET ir.status_code = 'available', ir.updated_at = NOW(3)
 WHERE ir.id IN (sqlc.slice('ids'))
 AND ir.status_code <> 'available'
 -- Correlated per receipt: a grouped derived table cannot take the id filter and so aggregates all of inventory_allocation while the update holds its locks.
 AND COALESCE((
-    SELECT SUM(CAST(aq.value AS DECIMAL(65,30)))
+    SELECT SUM(CAST(aq.value AS DECIMAL(65,30)) * (au.ratio_numerator / au.ratio_denominator))
     FROM inventory_allocation ia
     JOIN quantity aq ON aq.id = ia.quantity_id
+    JOIN unit au ON au.id = aq.unit_id
     WHERE ia.inventory_receipt_id = ir.id
-), 0) < CAST(q.value AS DECIMAL(65,30));
+), 0) < CAST(q.value AS DECIMAL(65,30)) * (u.ratio_numerator / u.ratio_denominator);
 
 -- RestoreIssuesToReserved hands an order-linked issue back to the reservation it came out of. The
 -- batch tag goes with it: the row is no longer anything the scan owns.
@@ -138,3 +154,27 @@ SET pr.completed_at = NULL,
     END,
     pr.updated_at = NOW(3)
 WHERE pr.id = sqlc.arg('id') AND pr.account_id = sqlc.arg('account_id');
+
+-- ListItemIDsForBatchReversal names every item a batch's reversal will write, before the transaction
+-- that writes them opens.
+--
+-- The ledger lock order requires the item set to be resolved on the pool, not discovered inside the
+-- transaction: acquiring the root after the reversal has already taken ledger row locks is itself an
+-- ordering inversion (Corollary B), and it is exactly the mistake the flows this rule exists to fix
+-- were making. Non-locking on purpose — it decides nothing, and the reversal re-reads everything it
+-- touches under the root it took from this.
+--
+-- Both sides of the batch, because a scan writes both: receipts for what it produced and issues for
+-- what it consumed.
+-- name: ListItemIDsForBatchReversal :many
+SELECT DISTINCT item_id FROM (
+    SELECT ir.item_id
+    FROM inventory_receipt ir
+    WHERE ir.batch_id = sqlc.arg('batch_id')
+      AND (ir.owner_account_id = sqlc.arg('account_id') OR ir.holder_account_id = sqlc.arg('account_id'))
+    UNION
+    SELECT ii.item_id
+    FROM inventory_issue ii
+    WHERE ii.batch_id = sqlc.arg('batch_id')
+      AND ii.account_id = sqlc.arg('account_id')
+) AS batch_items;

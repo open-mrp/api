@@ -15,6 +15,8 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/event"
+	"github.com/open-mrp/api/services/core-service/internal/ledgerlock"
+	"github.com/open-mrp/api/services/core-service/internal/mediator"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
@@ -43,6 +45,7 @@ type salesOrderSvcImpl struct {
 	encryptionKey         []byte
 	frontendURL           string
 	branding              BrandingAssets
+	outboxNotifier        messaging.OutboxNotifier
 }
 
 type SalesOrderSvcConfig struct {
@@ -75,6 +78,9 @@ type SalesOrderSvcConfig struct {
 
 	// Branding (optional) resolves the merchant logo for the acknowledgement email and PDF letterhead. Omitted, both fall back to a text-only letterhead.
 	Branding BrandingAssets
+
+	// OutboxNotifier (optional; default: nil) wakes the outbox enqueuer the instant an allocation request commits, so stock released by unissuing or deleting an order is offered to open demand on the next moment rather than on the enqueuer's next idle poll. When nil, the request is still picked up on the next poll.
+	OutboxNotifier messaging.OutboxNotifier
 }
 
 func (c *SalesOrderSvcConfig) validate() error {
@@ -106,6 +112,17 @@ func NewSalesOrderSvc(config *SalesOrderSvcConfig) domain.SalesOrderSvc {
 		encryptionKey:         config.EncryptionKey,
 		frontendURL:           config.FrontendURL,
 		branding:              config.Branding,
+		outboxNotifier:        config.OutboxNotifier,
+	}
+}
+
+// kickOutbox wakes the outbox enqueuer so a just-committed allocation request is picked up immediately
+// rather than on the enqueuer's next idle poll, which can be up to MaxPollInterval away. No-op when no
+// notifier was injected. Call only after the writing transaction has committed — kicking while it is
+// still open races the poll against a row it cannot yet see.
+func (s *salesOrderSvcImpl) kickOutbox() {
+	if s.outboxNotifier != nil {
+		s.outboxNotifier.Notify()
 	}
 }
 
@@ -916,10 +933,32 @@ func (s *salesOrderSvcImpl) DeleteSalesOrder(ctx context.Context, params domain.
 		return tracing.Trace(span, apierror.NewValidationError("Cannot delete a fulfilled sales order."))
 	}
 
-	return s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderSvcImpl) *apierror.APIError {
+	// The items the release will write, resolved on the pool so the transaction below can take their ordering root as its first statement. See ledgerlock, Corollary A.
+	reservedItemIDs, apiErr := s.repos.NewInventoryReservationRepo().ListReservedItemIDsForOrders(ctx, params.AccountID, []string{params.SalesOrderID})
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderSvcImpl) *apierror.APIError {
 		txRepo := txSvc.repos.NewSalesOrderRepo()
+		txReservationRepo := txSvc.repos.NewInventoryReservationRepo()
+
+		scope, apiErr := ledgerlock.Acquire(txCtx, txReservationRepo, reservedItemIDs)
+		if apiErr != nil {
+			return apiErr
+		}
 
 		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeSalesOrder, order.ID, order); apiErr != nil {
+			return apiErr
+		}
+
+		// Before the cascade: the cascade deletes the reserved issues, and an allocation whose issue is gone can never be released again — it holds its receipt down for good.
+		releasedItemIDs, apiErr := txReservationRepo.ReleaseReservedIssuesForOrder(txCtx, scope, params.AccountID, params.SalesOrderID)
+		if apiErr != nil {
+			return apiErr
+		}
+
+		if apiErr := mediator.EnqueueAllocateOpenIssues(txCtx, txSvc.repos, params.AccountID, releasedItemIDs...); apiErr != nil {
 			return apiErr
 		}
 
@@ -943,6 +982,12 @@ func (s *salesOrderSvcImpl) DeleteSalesOrder(ctx context.Context, params domain.
 
 		return nil
 	})
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	s.kickOutbox()
+	return nil
 }
 
 func (s *salesOrderSvcImpl) BulkDeleteSalesOrders(ctx context.Context, params domain.BulkDeleteSalesOrdersParams) *apierror.APIError {
@@ -979,8 +1024,21 @@ func (s *salesOrderSvcImpl) BulkDeleteSalesOrders(ctx context.Context, params do
 		return cached.Error
 
 	case domain.RecoveryPointStarted:
+		// Every item every order in the batch holds a reservation on, resolved on the pool: one transaction covers the whole batch, so its ordering root has to span the whole batch too. See ledgerlock, Corollary A.
+		reservedItemIDs, apiErr := s.repos.NewInventoryReservationRepo().ListReservedItemIDsForOrders(ctx, params.AccountID, params.SalesOrderIDs)
+		if apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderSvcImpl) *apierror.APIError {
 			txRepo := txSvc.repos.NewSalesOrderRepo()
+			txReservationRepo := txSvc.repos.NewInventoryReservationRepo()
+
+			scope, apiErr := ledgerlock.Acquire(txCtx, txReservationRepo, reservedItemIDs)
+			if apiErr != nil {
+				return apiErr
+			}
+
 			for _, orderID := range params.SalesOrderIDs {
 				order, apiErr := txRepo.Get(txCtx, params.AccountID, orderID)
 				if apiErr != nil {
@@ -992,6 +1050,16 @@ func (s *salesOrderSvcImpl) BulkDeleteSalesOrders(ctx context.Context, params do
 				if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeSalesOrder, order.ID, order); apiErr != nil {
 					return apiErr
 				}
+				// Before the cascade: it deletes the reserved issues, and an allocation whose issue is gone can never be released again.
+				releasedItemIDs, apiErr := txReservationRepo.ReleaseReservedIssuesForOrder(txCtx, scope, params.AccountID, orderID)
+				if apiErr != nil {
+					return apiErr
+				}
+
+				if apiErr := mediator.EnqueueAllocateOpenIssues(txCtx, txSvc.repos, params.AccountID, releasedItemIDs...); apiErr != nil {
+					return apiErr
+				}
+
 				if apiErr := txRepo.DeleteCascade(txCtx, params.AccountID, orderID); apiErr != nil {
 					return apiErr
 				}
@@ -1017,6 +1085,7 @@ func (s *salesOrderSvcImpl) BulkDeleteSalesOrders(ctx context.Context, params do
 			return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
 		}
 
+		s.kickOutbox()
 		return nil
 
 	default:
@@ -1058,9 +1127,30 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 			return nil, tracing.Trace(span, apierror.NewValidationError("Order must be in estimate status to issue."))
 		}
 
+		// Everything this transaction will write the ledger for, resolved on the pool: the items it is about to reserve, and the items of any stale reservation it releases first. Both are read again inside the transaction; this pass exists to name the root, not to decide anything. See ledgerlock, Corollary A.
+		saleLineItemIDs, lineErr := repo.GetSaleLinesForIssue(ctx, params.SalesOrderID)
+		if lineErr != nil {
+			return nil, tracing.Trace(span, lineErr)
+		}
+		reservedItemIDs, listErr := s.repos.NewInventoryReservationRepo().ListReservedItemIDsForOrders(ctx, params.AccountID, []string{params.SalesOrderID})
+		if listErr != nil {
+			return nil, tracing.Trace(span, listErr)
+		}
+		for _, line := range saleLineItemIDs {
+			if line.ItemID != nil {
+				reservedItemIDs = append(reservedItemIDs, *line.ItemID)
+			}
+		}
+
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderSvcImpl) *apierror.APIError {
 			txRepo := txSvc.repos.NewSalesOrderRepo()
 			txLineRepo := txSvc.repos.NewSalesOrderLineRepo()
+			txReservationRepo := txSvc.repos.NewInventoryReservationRepo()
+
+			scope, apiErr := ledgerlock.Acquire(txCtx, txReservationRepo, reservedItemIDs)
+			if apiErr != nil {
+				return apiErr
+			}
 
 			// Update status
 			if apiErr := txRepo.UpdateStatus(txCtx, params.AccountID, params.SalesOrderID, "issued", &now, nil); apiErr != nil {
@@ -1101,8 +1191,13 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 				return apiErr
 			}
 
-			// Delete any existing reserved inventory issues for this order
-			if apiErr := txRepo.DeleteReservedInventoryIssues(txCtx, params.AccountID, params.SalesOrderID); apiErr != nil {
+			// Release any reservation this order is already carrying, rather than deleting it: a stale reservation may be covered by allocations, and deleting the issue alone strands them against a receipt that can then never be freed.
+			releasedItemIDs, apiErr := txReservationRepo.ReleaseReservedIssuesForOrder(txCtx, scope, params.AccountID, params.SalesOrderID)
+			if apiErr != nil {
+				return apiErr
+			}
+
+			if apiErr := mediator.EnqueueAllocateOpenIssues(txCtx, txSvc.repos, params.AccountID, releasedItemIDs...); apiErr != nil {
 				return apiErr
 			}
 
@@ -1184,8 +1279,20 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 			return nil, tracing.Trace(span, apierror.NewValidationError("Order must be in issued status to unissue."))
 		}
 
+		// The items the release will write, resolved on the pool so the transaction below can take their ordering root as its first statement. See ledgerlock, Corollary A.
+		reservedItemIDs, listErr := s.repos.NewInventoryReservationRepo().ListReservedItemIDsForOrders(ctx, params.AccountID, []string{params.SalesOrderID})
+		if listErr != nil {
+			return nil, tracing.Trace(span, listErr)
+		}
+
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderSvcImpl) *apierror.APIError {
 			txRepo := txSvc.repos.NewSalesOrderRepo()
+			txReservationRepo := txSvc.repos.NewInventoryReservationRepo()
+
+			scope, apiErr := ledgerlock.Acquire(txCtx, txReservationRepo, reservedItemIDs)
+			if apiErr != nil {
+				return apiErr
+			}
 
 			// Delete pick lines and pick (quantities cleaned up too)
 			if apiErr := txRepo.DeleteQuantitiesByPickLines(txCtx, params.SalesOrderID); apiErr != nil {
@@ -1198,11 +1305,14 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 				return apiErr
 			}
 
-			// Release reserved inventory: delete allocations first, then issues
-			if apiErr := txRepo.DeleteInventoryAllocationsByReservedIssues(txCtx, params.AccountID, params.SalesOrderID); apiErr != nil {
+			// Release reserved inventory: the allocations covering it, the receipts those allocations were holding down, and the issues themselves.
+			releasedItemIDs, apiErr := txReservationRepo.ReleaseReservedIssuesForOrder(txCtx, scope, params.AccountID, params.SalesOrderID)
+			if apiErr != nil {
 				return apiErr
 			}
-			if apiErr := txRepo.DeleteReservedInventoryIssues(txCtx, params.AccountID, params.SalesOrderID); apiErr != nil {
+
+			// Stock this order was sitting on is stock another order's open demand may now be coverable from. Asked for rather than done here, for the reasons on EnqueueAllocateOpenIssues.
+			if apiErr := mediator.EnqueueAllocateOpenIssues(txCtx, txSvc.repos, params.AccountID, releasedItemIDs...); apiErr != nil {
 				return apiErr
 			}
 
@@ -1332,6 +1442,9 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
+
+	// Unissuing enqueues allocation for the items it released; every other transition enqueues nothing and this is a no-op.
+	s.kickOutbox()
 
 	// On successful issue transition, optionally send acknowledgement email to the contacts on the order (matching Dashboard behavior).
 	if params.StatusChange == "issue" && params.SendEmail {
@@ -3078,8 +3191,19 @@ func (s *salesOrderSvcImpl) CreateSalesOrderProductionRun(ctx context.Context, p
 			// Create reserved inventory issue records for material demand, linked to the order
 			if len(allDemands) > 0 {
 				txReservationRepo := txSvc.repos.NewInventoryReservationRepo()
+				// The demand rows are already resolved, so the whole item set is known before any of it
+				// is written.
+				demandItemIDs := make([]string, 0, len(allDemands))
 				for _, demand := range allDemands {
-					if apiErr := txReservationRepo.CreateMaterialReservation(txCtx, domain.CreateMaterialReservationParams{
+					demandItemIDs = append(demandItemIDs, demand.ItemID)
+				}
+				scope, apiErr := ledgerlock.Acquire(txCtx, txReservationRepo, demandItemIDs)
+				if apiErr != nil {
+					return apiErr
+				}
+
+				for _, demand := range allDemands {
+					if apiErr := txReservationRepo.CreateMaterialReservation(txCtx, scope, domain.CreateMaterialReservationParams{
 						AccountID: params.AccountID,
 						ItemID:    demand.ItemID,
 						Measure:   demand.Measure,

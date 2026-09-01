@@ -316,10 +316,13 @@ var unverifiableEndpoints = map[string]string{
 
 	"retrieve_memory": "gateway loader indirection: GetMemory -> resourceloaders.LoadAgentMemories (BatchGetAgentMemoriesByIDs), not GetAgentMemory RPC; endpoint declares agent_memories:read",
 
-	"list_email_domains": "gateway-gated account-scoped auth: ListDomains resolves the target account via accountID() and scopes the read to it, with no permission check; gateway declares messaging:read",
-	"get_email_domain":   "gateway-gated account-scoped auth: GetDomain resolves the target account via accountID() and scopes the read to it, with no permission check; gateway declares messaging:read",
-	"list_email_inboxes": "gateway-gated account-scoped auth: ListInboxes resolves the target account via accountID() and scopes the read to it, with no permission check; gateway declares messaging:read",
-	"get_email_inbox":    "gateway-gated account-scoped auth: GetInbox resolves the target account via accountID() and scopes the read to it, with no permission check; gateway declares messaging:read",
+	"list_email_domains":  "gateway-gated account-scoped auth: ListDomains resolves the target account via accountID() and scopes the read to it, with no permission check; gateway declares messaging:read",
+	"get_email_domain":    "gateway-gated account-scoped auth: GetDomain resolves the target account via accountID() and scopes the read to it, with no permission check; gateway declares messaging:read",
+	"list_email_inboxes":  "gateway-gated account-scoped auth: ListInboxes resolves the target account via accountID() and scopes the read to it, with no permission check; gateway declares messaging:read",
+	"get_email_inbox":     "gateway-gated account-scoped auth: GetInbox resolves the target account via accountID() and scopes the read to it, with no permission check; gateway declares messaging:read",
+	"get_email_sender":    "gateway-gated account-scoped auth: GetSender resolves the target account via accountID() and scopes the read to it, with no permission check; gateway declares messaging:read",
+	"set_email_sender":    "gateway-gated account-scoped auth: SetSender resolves the target account via accountID() and scopes the write to it, with no permission check; gateway declares messaging:update",
+	"delete_email_sender": "gateway-gated account-scoped auth: DeleteSender resolves the target account via accountID() and scopes the delete to it, with no permission check; gateway declares messaging:delete",
 
 	"list_portal_domains": "service scope-helper indirection: ListPortalDomains -> portalDomainReadScope -> portalDomainScope, which checks CheckIsInternalActor + account:<action> with the action as a variable; endpoint declares account:read",
 	"get_portal_domain":   "service scope-helper indirection: GetPortalDomain -> portalDomainReadScope -> portalDomainScope, which checks CheckIsInternalActor + account:<action> with the action as a variable; endpoint declares account:read",

@@ -86,23 +86,6 @@ func (q *Queries) DeleteProductionRunByID(ctx context.Context, arg DeleteProduct
 	return err
 }
 
-const deleteReservedInventoryIssuesByOrderID = `-- name: DeleteReservedInventoryIssuesByOrderID :exec
-DELETE FROM inventory_issue
-WHERE order_id = ?
-AND account_id = ?
-AND status_code = 'reserved'
-`
-
-type DeleteReservedInventoryIssuesByOrderIDParams struct {
-	OrderID   sql.NullString
-	AccountID string
-}
-
-func (q *Queries) DeleteReservedInventoryIssuesByOrderID(ctx context.Context, arg DeleteReservedInventoryIssuesByOrderIDParams) error {
-	_, err := q.db.ExecContext(ctx, deleteReservedInventoryIssuesByOrderID, arg.OrderID, arg.AccountID)
-	return err
-}
-
 const exportProductionRuns = `-- name: ExportProductionRuns :many
 SELECT
     pr.id,

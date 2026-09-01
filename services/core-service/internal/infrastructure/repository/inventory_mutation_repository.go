@@ -8,6 +8,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/services/core-service/internal/ledgerlock"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
@@ -22,6 +23,15 @@ type inventoryMutationRepo struct {
 
 func NewInventoryMutationRepo(queries *sqlc.Queries) domain.InventoryMutationRepo {
 	return &inventoryMutationRepo{queries: queries}
+}
+
+// LockItemForLedger takes the item's ordering root. See internal/ledgerlock and
+// docs/patterns/architecture-patterns.md, "Inventory ledger lock order".
+func (r *inventoryMutationRepo) LockItemForLedger(ctx context.Context, itemID string) *apierror.APIError {
+	if err := r.queries.LockItemForLedger(ctx, itemID); err != nil {
+		return db.MapSQLError(err)
+	}
+	return nil
 }
 
 func (r *inventoryMutationRepo) UpdateInventory(ctx context.Context, params domain.InventoryUpdateParams) *apierror.APIError {
@@ -118,9 +128,14 @@ func (r *inventoryMutationRepo) UpdateInventory(ctx context.Context, params doma
 	return nil
 }
 
-func (r *inventoryMutationRepo) CreateInventoryReceipt(ctx context.Context, params domain.CreateInventoryReceiptParams) *apierror.APIError {
+func (r *inventoryMutationRepo) CreateInventoryReceipt(ctx context.Context, scope *ledgerlock.Scope, params domain.CreateInventoryReceiptParams) *apierror.APIError {
 	ctx, span := inventoryMutationRepoTracer.Start(ctx, "repository.inventory_mutation.create_inventory_receipt")
 	defer span.End()
+
+	// The backstop; the acquisition belongs at the top of the caller's transaction. See ledgerlock.
+	if apiErr := scope.EnsureLocked(ctx, r, params.ItemID); apiErr != nil {
+		return apiErr
+	}
 
 	absMeasure := params.Measure.Abs()
 
@@ -201,9 +216,14 @@ func (r *inventoryMutationRepo) CreateInventoryReceipt(ctx context.Context, para
 	return nil
 }
 
-func (r *inventoryMutationRepo) CreateInventoryIssue(ctx context.Context, params domain.CreateInventoryIssueParams) *apierror.APIError {
+func (r *inventoryMutationRepo) CreateInventoryIssue(ctx context.Context, scope *ledgerlock.Scope, params domain.CreateInventoryIssueParams) *apierror.APIError {
 	ctx, span := inventoryMutationRepoTracer.Start(ctx, "repository.inventory_mutation.create_inventory_issue")
 	defer span.End()
+
+	// The backstop; the acquisition belongs at the top of the caller's transaction. See ledgerlock.
+	if apiErr := scope.EnsureLocked(ctx, r, params.ItemID); apiErr != nil {
+		return apiErr
+	}
 
 	absMeasure := params.Measure.Abs()
 
@@ -356,12 +376,25 @@ func (r *inventoryMutationRepo) CountAllocatedReceiptsForBatch(ctx context.Conte
 	return count, nil
 }
 
+// ListItemIDsForBatchReversal names every item the batch's reversal will write, so the caller can take
+// their ordering roots before it opens the transaction that writes them.
+func (r *inventoryMutationRepo) ListItemIDsForBatchReversal(ctx context.Context, accountID, batchID string) ([]string, *apierror.APIError) {
+	ids, err := r.queries.ListItemIDsForBatchReversal(ctx, sqlc.ListItemIDsForBatchReversalParams{
+		BatchID:   sql.NullString{String: batchID, Valid: batchID != ""},
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, apiErr
+	}
+	return ids, nil
+}
+
 // ReverseInventoryForBatch removes the rows a scan wrote and hands back what they were holding.
 //
 // Current inventory is derived from the receipt and issue rows, so removing them is the correction —
 // nothing recalculates a stored level. An issue that came out of an order's reservation goes back to
 // `reserved` rather than being deleted; one issued against free stock is deleted outright.
-func (r *inventoryMutationRepo) ReverseInventoryForBatch(ctx context.Context, params domain.ReverseInventoryForBatchParams) ([]domain.InventoryReversalDelta, *apierror.APIError) {
+func (r *inventoryMutationRepo) ReverseInventoryForBatch(ctx context.Context, scope *ledgerlock.Scope, params domain.ReverseInventoryForBatchParams) ([]domain.InventoryReversalDelta, *apierror.APIError) {
 	ctx, span := inventoryMutationRepoTracer.Start(ctx, "repository.inventory_mutation.reverse_inventory_for_batch")
 	defer span.End()
 
@@ -509,7 +542,14 @@ func (r *inventoryMutationRepo) ReverseInventoryForBatch(ctx context.Context, pa
 
 // Gives a consumed measure back to the order's reservation, undoing the issues that took it newest
 // first: their allocations drop, releasing the receipts, and an overshooting issue is split.
-func (r *inventoryMutationRepo) ReverseInventoryForOrderItem(ctx context.Context, accountID, orderID, itemID string, measure decimal.Decimal) *apierror.APIError {
+func (r *inventoryMutationRepo) ReverseInventoryForOrderItem(ctx context.Context, scope *ledgerlock.Scope, accountID, orderID, itemID string, measure decimal.Decimal) *apierror.APIError {
+	// The backstop; the acquisition belongs at the top of the caller's transaction. A reversal writes
+	// receipts before it writes issues, which is the opposite order from the allocator, so this item's
+	// root is the only thing standing between the two.
+	if apiErr := scope.EnsureLocked(ctx, r, itemID); apiErr != nil {
+		return apiErr
+	}
+
 	ctx, span := inventoryMutationRepoTracer.Start(ctx, "repository.inventory_mutation.reverse_inventory_for_order_item")
 	defer span.End()
 

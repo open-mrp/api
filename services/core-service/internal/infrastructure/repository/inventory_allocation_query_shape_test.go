@@ -10,57 +10,61 @@ import (
 
 const queriesDir = "../queries"
 
-// Allocation is driven by a command that a batch scan, a receipt landing and a receiving order being
-// stocked all enqueue, so two paging chains for one item overlap routinely. These reads are what stop
-// the second chain drawing stock the first already took, and both properties matter:
+// The two locking reads an allocate transaction depends on, and both properties matter:
 //
-//   - FOR UPDATE makes the second chain wait and then re-evaluate against what the first committed.
-//     It also keeps the transaction's REPEATABLE READ view from being created before the locks are
-//     held, which is what let the allocated-sum reads that follow see an issue as untouched.
+//   - FOR UPDATE. The claim is what makes a second chain wait and then re-evaluate `status_code`
+//     against what the first committed; the receipt read is what stops two allocators drawing the
+//     same stock. Both are also what keep the transaction's REPEATABLE READ view from opening before
+//     the locks are held.
 //   - No join to `unit`. A locking read locks every row it touches, and `unit` rows are shared by
-//     every account in the database; joining one here serialises allocation across the whole
-//     estate. Callers resolve ratios through GetUnitRatios instead.
+//     every account in the database; joining one here serialises allocation across the whole estate.
+//     Callers resolve ratios through GetUnitRatios instead.
 //
 // Losing either is silent — the queries still return the right rows — until an account is busy enough
 // for two chains to overlap, and then it shows up as receipts drawn on for twice what they held.
 func TestAllocationClaimingQueries_AreLockingReadsWithoutUnitJoins(t *testing.T) {
 	t.Parallel()
 
-	for _, q := range []struct{ file, name string }{
-		{"inventory_reservation.sql", "FindOpenIssuesForItemPaged"},
-		{"inventory_reservation.sql", "FindReceiptsForAllocation"},
-	} {
-		body := queryBody(t, q.file, q.name)
+	for _, name := range []string{"ClaimOpenIssueForAllocation", "FindReceiptsForAllocation"} {
+		body := queryBody(t, "inventory_reservation.sql", name)
 
 		if !strings.Contains(body, "FOR UPDATE") {
-			t.Errorf("%s is not a locking read: allocation transactions running side by side will both draw the same stock", q.name)
+			t.Errorf("%s is not a locking read: allocation transactions running side by side will both "+
+				"draw the same stock", name)
 		}
 		if unitJoinRe.MatchString(body) {
-			t.Errorf("%s joins `unit` under FOR UPDATE, which locks rows every account shares; resolve the ratio through GetUnitRatios", q.name)
+			t.Errorf("%s joins `unit` under FOR UPDATE, which locks rows every account shares; resolve "+
+				"the ratio through GetUnitRatios", name)
 		}
 	}
 }
 
-// FindOpenIssuesForItem must NOT be a locking read, and the asymmetry with its paged sibling is the
-// point rather than an oversight.
+// Discovery must NOT be a locking read, and must project nothing but the keyset.
 //
-// Its callers — stocking a receiving order, reversing a shipment — reach it at the end of a
-// transaction that has already written the receipts, so locking here has them take receipt locks and
-// then ask for issue locks. The allocate-open-issues consumer goes the other way: issues first,
-// receipts after. Two flows acquiring the same two tables in opposite orders is a deadlock, and this
-// one reached production and started failing allocation messages within a day of shipping.
+// It names candidates and decides nothing — every id it returns is re-read by
+// ClaimOpenIssueForAllocation, by primary key, under FOR UPDATE, in its own transaction. That is what
+// makes a non-locking read safe here and is exactly what 3e99b962 did not do when it made
+// FindOpenIssuesForItem non-locking and then fed its quantity and allocated sum straight into the
+// arithmetic.
 //
-// Nothing is given up by not locking. Both callers already hold FOR UPDATE on the receipts any
-// concurrent allocation must draw from, so they serialise against the consumer there instead.
-func TestFindOpenIssuesForItem_IsNotALockingRead(t *testing.T) {
+// Locking here cost the item's whole (account_id, item_id, 'open', created_at) range plus every gap
+// between and after it — so no batch scan, shipment or reservation for that item could record new
+// demand for the life of the transaction — and X locks on up to 200 shared `quantity` rows. Joining
+// `quantity` would reintroduce the second half of that even without the lock, by making the read
+// touch rows it has no reason to.
+func TestOpenIssueDiscovery_IsNotALockingReadAndProjectsOnlyTheKeyset(t *testing.T) {
 	t.Parallel()
 
-	body := queryBody(t, "receiving_order.sql", "FindOpenIssuesForItem")
-	// The prose above the query mentions the clause; only the statement itself matters.
-	statement := body[strings.Index(body, "-- name:"):]
+	body := queryBody(t, "inventory_reservation.sql", "ListOpenIssueIDsForItemPaged")
 
-	if strings.Contains(statement, "FOR UPDATE") {
-		t.Error("FindOpenIssuesForItem is a locking read: its callers already hold receipt locks, so asking for issue locks here inverts the order the allocate-open-issues consumer uses and deadlocks against it")
+	if strings.Contains(body, "FOR UPDATE") {
+		t.Error("ListOpenIssueIDsForItemPaged is a locking read: it locks the item's whole open range " +
+			"and the trailing gap every new open issue lands in, which stalls every flow that records " +
+			"demand for that item until the allocate transaction commits")
+	}
+	if strings.Contains(body, "JOIN quantity") {
+		t.Error("ListOpenIssueIDsForItemPaged joins quantity: discovery must be answerable from " +
+			"inventory_issue_open_paging_idx alone, and nothing may be decided from what it returns")
 	}
 }
 
@@ -116,7 +120,15 @@ var (
 	queryNameRe   = regexp.MustCompile(`(?m)^-- name: (\w+) :`)
 )
 
-// queryBody returns the text of one named sqlc query, from its `-- name:` line to the next one.
+// queryBody returns one named sqlc query: its `-- name:` line and the statement below it, stopping at
+// the statement's terminating semicolon.
+//
+// It used to run to the NEXT `-- name:` line, which swept in the prose comment block above the
+// following query — so every assertion here was really made against two queries' worth of text. That
+// is silent in both directions: a stray "FOR UPDATE" in a neighbouring comment fails a test that
+// should pass, and a query that LOSES its FOR UPDATE keeps passing while a neighbour's comment
+// happens to mention one. These comment blocks discuss each other's locking constantly, so it was a
+// matter of time.
 func queryBody(t *testing.T, file, name string) string {
 	t.Helper()
 
@@ -126,20 +138,44 @@ func queryBody(t *testing.T, file, name string) string {
 	}
 	text := string(raw)
 
-	locs := queryNameRe.FindAllStringSubmatchIndex(text, -1)
-	for i, loc := range locs {
+	for _, loc := range queryNameRe.FindAllStringSubmatchIndex(text, -1) {
 		if text[loc[2]:loc[3]] != name {
 			continue
 		}
-		end := len(text)
-		if i+1 < len(locs) {
-			end = locs[i+1][0]
+		// The first semicolon on a line that is not a comment. The prose in these files uses
+		// semicolons freely — "may only draw from stock sitting there; an unpinned issue draws from
+		// anywhere" sits inside FindReceiptsForAllocation — so scanning for a bare ";" ends the
+		// statement in the middle of its own documentation and drops the FOR UPDATE below it.
+		rest := text[loc[0]:]
+		offset := 0
+		for _, line := range strings.SplitAfter(rest, "\n") {
+			if !strings.HasPrefix(strings.TrimSpace(line), "--") {
+				if i := strings.Index(line, ";"); i >= 0 {
+					return rest[:offset+i+1]
+				}
+			}
+			offset += len(line)
 		}
-		return text[loc[0]:end]
+		t.Fatalf("query %s in %s has no terminating semicolon", name, file)
 	}
 
 	t.Fatalf("query %s not found in %s", name, file)
 	return ""
+}
+
+// A guard on the guard. If queryBody ever runs past its own statement again, every assertion in this
+// file quietly starts testing the wrong text.
+func TestQueryBody_StopsAtItsOwnStatement(t *testing.T) {
+	t.Parallel()
+
+	body := queryBody(t, "inventory_reservation.sql", "GetUnitRatios")
+	if n := strings.Count(body, "-- name:"); n != 1 {
+		t.Errorf("queryBody returned %d queries' worth of text for GetUnitRatios; every assertion in this "+
+			"file is being made against the wrong input", n)
+	}
+	if !strings.HasSuffix(strings.TrimSpace(body), ";") {
+		t.Error("queryBody did not stop at the statement's semicolon")
+	}
 }
 
 func sqlFiles(t *testing.T) []string {

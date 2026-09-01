@@ -19,6 +19,8 @@ import (
 	"log"
 	"math"
 	"time"
+
+	apierror "github.com/open-mrp/api/shared/errors"
 )
 
 const (
@@ -172,7 +174,7 @@ func WithBackoff(ctx context.Context, cfg *Config, operation func() error) error
 			return nil
 		}
 
-		log.Printf("retry: operation failed (attempt %d/%d): %v", attempt+1, cfg.MaxRetries, err)
+		log.Printf("retry: operation failed (attempt %d/%d): %s", attempt+1, cfg.MaxRetries, apierror.Describe(err))
 	}
 
 	return err

@@ -8,6 +8,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/services/core-service/internal/ledgerlock"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
@@ -770,7 +771,19 @@ func (r *receivingOrderRepoImpl) UpsertLot(ctx context.Context, lotID, accountID
 	return existingID, nil
 }
 
-func (r *receivingOrderRepoImpl) InsertInventoryReceiptForDelivery(ctx context.Context, receiptID, accountID, itemID, quantityID, unitCostID string, storageLocationID, lotID, orderID *string) *apierror.APIError {
+func (r *receivingOrderRepoImpl) LockItemForLedger(ctx context.Context, itemID string) *apierror.APIError {
+	if err := r.queries.LockItemForLedger(ctx, itemID); err != nil {
+		return db.MapSQLError(err)
+	}
+	return nil
+}
+
+func (r *receivingOrderRepoImpl) InsertInventoryReceiptForDelivery(ctx context.Context, scope *ledgerlock.Scope, receiptID, accountID, itemID, quantityID, unitCostID string, storageLocationID, lotID, orderID *string) *apierror.APIError {
+	// The backstop; the acquisition belongs at the top of the caller's transaction. See ledgerlock.
+	if apiErr := scope.EnsureLocked(ctx, r, itemID); apiErr != nil {
+		return apiErr
+	}
+
 	ctx, span := receivingOrderRepoTracer.Start(ctx, "repository.receiving_order.insert_inventory_receipt_for_delivery")
 	defer span.End()
 
@@ -817,38 +830,6 @@ func (r *receivingOrderRepoImpl) MarkPurchaseOrderFulfilled(ctx context.Context,
 	}
 
 	return nil
-}
-
-func (r *receivingOrderRepoImpl) FindOpenIssuesForItem(ctx context.Context, accountID, itemID string) ([]domain.OpenInventoryIssue, *apierror.APIError) {
-	ctx, span := receivingOrderRepoTracer.Start(ctx, "repository.receiving_order.find_open_issues_for_item")
-	defer span.End()
-
-	rows, err := r.queries.FindOpenIssuesForItem(ctx, sqlc.FindOpenIssuesForItemParams{
-		AccountID: accountID,
-		ItemID:    itemID,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	result := make([]domain.OpenInventoryIssue, len(rows))
-	for i, row := range rows {
-		issue := domain.OpenInventoryIssue{
-			ID:            row.ID,
-			QuantityID:    row.QuantityID,
-			QuantityValue: row.QuantityValue,
-			UnitID:        row.UnitID,
-		}
-		if row.StorageLocationID.Valid {
-			issue.LocationID = &row.StorageLocationID.String
-		}
-		if row.LotID.Valid {
-			issue.LotID = &row.LotID.String
-		}
-		result[i] = issue
-	}
-
-	return result, nil
 }
 
 func (r *receivingOrderRepoImpl) HasUnstockedLineForOrderLine(ctx context.Context, salesOrderLineID string) (bool, *apierror.APIError) {

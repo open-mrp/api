@@ -8,6 +8,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/services/core-service/internal/mediator"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
@@ -114,7 +115,7 @@ func enqueueAllocationForItems(ctx context.Context, repos domain.RepoFactory, ac
 			continue
 		}
 		seen[itemID] = true
-		if apiErr := enqueueAllocateOpenIssues(ctx, outboxRepo, accountID, itemID, time.Time{}, ""); apiErr != nil {
+		if apiErr := mediator.EnqueueAllocateOpenIssuesFrom(ctx, outboxRepo, accountID, itemID, time.Time{}, "", ""); apiErr != nil {
 			return apiErr
 		}
 	}

@@ -11,6 +11,9 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
+	"github.com/open-mrp/api/services/core-service/internal/ledgerlock"
+	"github.com/open-mrp/api/services/core-service/internal/mediator"
+	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/tracing"
 )
@@ -23,6 +26,30 @@ const (
 	undoTestOrderID   = "ord_1"
 )
 
+// stubTxManager runs the callback inline against the mocked factory.
+//
+// The mocks issue no SQL, so there is no transaction to open and nothing this can verify about
+// atomicity — that is what the real-MySQL concurrency tests are for. What it does check is that the
+// consumer reaches its repositories through the factory the transaction hands it rather than through
+// the one on the struct, which is the whole substance of giving this consumer a transaction.
+type stubTxManager struct {
+	factory domain.RepoFactory
+}
+
+func (m *stubTxManager) WithTx(ctx context.Context, fn func(context.Context, domain.RepoFactory) *apierror.APIError) *apierror.APIError {
+	return fn(ctx, m.factory)
+}
+
+func (m *stubTxManager) WithTxSavepoint(ctx context.Context, fn func(context.Context, domain.RepoFactory, db.SavepointRunner) *apierror.APIError) *apierror.APIError {
+	return fn(ctx, m.factory, passthroughSavepoint{})
+}
+
+type passthroughSavepoint struct{}
+
+func (passthroughSavepoint) Run(ctx context.Context, fn func(context.Context) *apierror.APIError) *apierror.APIError {
+	return fn(ctx)
+}
+
 type UndoBatchScanConsumerTestSuite struct {
 	suite.Suite
 	ctrl             *gomock.Controller
@@ -31,6 +58,7 @@ type UndoBatchScanConsumerTestSuite struct {
 	reservationRepo  *repositorymock.MockInventoryReservationRepo
 	materialRepo     *repositorymock.MockMaterialDemandRepo
 	inventoryQuery   *repositorymock.MockInventoryQueryRepo
+	requested        []string
 }
 
 func (s *UndoBatchScanConsumerTestSuite) SetupTest() {
@@ -53,15 +81,24 @@ func (s *UndoBatchScanConsumerTestSuite) SetupTest() {
 
 	repoFactory := factorymock.NewMockRepoFactory(s.ctrl)
 	repoFactory.EXPECT().NewInventoryMutationRepo().Return(s.inventoryMutRepo).AnyTimes()
+	// The item set is resolved before the transaction, and its roots are the transaction's first
+	// statements.
+	s.inventoryMutRepo.EXPECT().ListItemIDsForBatchReversal(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]string{undoTestProductID, undoTestMaterial}, nil).AnyTimes()
+	s.inventoryMutRepo.EXPECT().LockItemForLedger(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 	repoFactory.EXPECT().NewInventoryReservationRepo().Return(s.reservationRepo).AnyTimes()
 	repoFactory.EXPECT().NewMaterialDemandRepo().Return(s.materialRepo).AnyTimes()
 	repoFactory.EXPECT().NewInventoryQueryRepo().Return(s.inventoryQuery).AnyTimes()
 	repoFactory.EXPECT().NewItemRepo().Return(itemRepo).AnyTimes()
-	repoFactory.EXPECT().NewOutboxRepo().Return(stubOutboxRepo{}).AnyTimes()
+	s.requested = nil
+	repoFactory.EXPECT().NewOutboxRepo().Return(recordingOutboxRepo{
+		onAllocateOpenIssues: func(itemID string) { s.requested = append(s.requested, itemID) },
+	}).AnyTimes()
 
 	s.consumer = &UndoBatchScanConsumer{
-		repos:  repoFactory,
-		tracer: tracing.GetTracer("test.undo_batch_scan_consumer"),
+		repos:     repoFactory,
+		txManager: &stubTxManager{factory: repoFactory},
+		tracer:    tracing.GetTracer("test.undo_batch_scan_consumer"),
 	}
 }
 
@@ -74,8 +111,14 @@ func TestUndoBatchScanConsumerTestSuite(t *testing.T) {
 	suite.Run(t, new(UndoBatchScanConsumerTestSuite))
 }
 
-func (s *UndoBatchScanConsumerTestSuite) TestReAllocatesEveryItemTheReversalTouched() {
-	s.inventoryMutRepo.EXPECT().ReverseInventoryForBatch(gomock.Any(), domain.ReverseInventoryForBatchParams{
+// The reversal frees receipts, so every item it touched needs its open demand looked at again.
+//
+// It asks rather than does: covering the demand inline walked every open issue of every reversed item
+// inside this consumer, in the opposite lock order from the allocate consumer doing the same work.
+// The request is sorted, because two of these taking the same items in different orders is a deadlock
+// nobody could explain from the logs.
+func (s *UndoBatchScanConsumerTestSuite) TestRequestsAllocationForEveryItemTheReversalTouched() {
+	s.inventoryMutRepo.EXPECT().ReverseInventoryForBatch(gomock.Any(), gomock.Any(), domain.ReverseInventoryForBatchParams{
 		AccountID: undoTestAccountID,
 		BatchID:   undoTestBatchID,
 	}).Return([]domain.InventoryReversalDelta{
@@ -83,25 +126,18 @@ func (s *UndoBatchScanConsumerTestSuite) TestReAllocatesEveryItemTheReversalTouc
 		{ItemID: undoTestMaterial, Measure: decimal.NewFromInt(40), UnitID: "each"},
 	}, nil)
 
-	allocated := map[string]bool{}
-	s.reservationRepo.EXPECT().AllocateOpenIssuesForItem(gomock.Any(), undoTestAccountID, gomock.Any()).
-		DoAndReturn(func(_ context.Context, _ string, itemID string) *apierror.APIError {
-			allocated[itemID] = true
-			return nil
-		}).Times(2)
-
 	err := s.consumer.undoBatchScan(context.Background(), undoTestAccountID, domain.UndoBatchScanEvent{
 		BatchID: undoTestBatchID,
 	})
 
 	s.Require().NoError(err)
-	s.Equal(map[string]bool{undoTestProductID: true, undoTestMaterial: true}, allocated)
+	s.Equal(mediator.SortedUniqueIDs([]string{undoTestProductID, undoTestMaterial}), s.requested)
 }
 
 func (s *UndoBatchScanConsumerTestSuite) TestRefusalIsReportedRatherThanSwallowed() {
 	// The delete checked that nothing had drawn on the output, but that was before this message was
 	// picked up. Returning the error parks it in the dead-letter queue instead of half-reversing.
-	s.inventoryMutRepo.EXPECT().ReverseInventoryForBatch(gomock.Any(), gomock.Any()).
+	s.inventoryMutRepo.EXPECT().ReverseInventoryForBatch(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil, apierror.NewValidationError("Inventory produced by this batch has already been used and cannot be reversed."))
 
 	err := s.consumer.undoBatchScan(context.Background(), undoTestAccountID, domain.UndoBatchScanEvent{
@@ -115,7 +151,7 @@ func (s *UndoBatchScanConsumerTestSuite) TestRefusalIsReportedRatherThanSwallowe
 }
 
 func (s *UndoBatchScanConsumerTestSuite) TestRestoresTheScrapReservationsTheScanReleased() {
-	s.inventoryMutRepo.EXPECT().ReverseInventoryForBatch(gomock.Any(), gomock.Any()).Return(nil, nil)
+	s.inventoryMutRepo.EXPECT().ReverseInventoryForBatch(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil)
 
 	s.materialRepo.EXPECT().GetMaterialDemand(gomock.Any(), undoTestAccountID, undoTestProductID, decimal.NewFromInt(5), "each").
 		Return([]domain.MaterialDemandItem{
@@ -123,8 +159,8 @@ func (s *UndoBatchScanConsumerTestSuite) TestRestoresTheScrapReservationsTheScan
 		}, nil)
 
 	var reserved []domain.CreateMaterialReservationParams
-	s.reservationRepo.EXPECT().CreateMaterialReservation(gomock.Any(), gomock.Any()).
-		DoAndReturn(func(_ context.Context, params domain.CreateMaterialReservationParams) *apierror.APIError {
+	s.reservationRepo.EXPECT().CreateMaterialReservation(gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ *ledgerlock.Scope, params domain.CreateMaterialReservationParams) *apierror.APIError {
 			reserved = append(reserved, params)
 			return nil
 		}).Times(2)
@@ -151,7 +187,7 @@ func (s *UndoBatchScanConsumerTestSuite) TestRestoresTheScrapReservationsTheScan
 }
 
 func (s *UndoBatchScanConsumerTestSuite) TestLeavesReservationsAloneWhenTheScanReleasedNone() {
-	s.inventoryMutRepo.EXPECT().ReverseInventoryForBatch(gomock.Any(), gomock.Any()).Return(nil, nil)
+	s.inventoryMutRepo.EXPECT().ReverseInventoryForBatch(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil)
 
 	// No CreateMaterialReservation or GetMaterialDemand expectations: calling either fails the test.
 	err := s.consumer.undoBatchScan(context.Background(), undoTestAccountID, domain.UndoBatchScanEvent{
@@ -162,7 +198,7 @@ func (s *UndoBatchScanConsumerTestSuite) TestLeavesReservationsAloneWhenTheScanR
 }
 
 func (s *UndoBatchScanConsumerTestSuite) TestIgnoresAShortfallItCannotParse() {
-	s.inventoryMutRepo.EXPECT().ReverseInventoryForBatch(gomock.Any(), gomock.Any()).Return(nil, nil)
+	s.inventoryMutRepo.EXPECT().ReverseInventoryForBatch(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil)
 
 	err := s.consumer.undoBatchScan(context.Background(), undoTestAccountID, domain.UndoBatchScanEvent{
 		BatchID:          undoTestBatchID,

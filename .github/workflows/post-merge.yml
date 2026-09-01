@@ -138,6 +138,24 @@ jobs:
           DB_URL: "root:Testing123!@tcp(localhost:3306)/openmrp?parseTime=true"
           AGENT_DB_URL: "postgres://openmrp@localhost:5432/openmrp_agents?sslmode=disable"
 
+      # These hold locks and assert on performance_schema.data_locks, so two of them at once would see
+      # each other's waits. make test-ledger runs -p 1 -parallel 1, which is a correctness requirement
+      # rather than a tuning choice, and is why they cannot live in `make test` alongside everything
+      # else.
+      #
+      # Schema only, no data migrations: the inventory_item_lock backfill is a warm-up rather than a
+      # correctness requirement (the acquisition creates the row on first use), `item` is empty here so
+      # it would insert nothing, and running it needs scripts/migrate.sh to seed goose's own
+      # bookkeeping row first — a failure mode for no benefit. The tests seed the lock rows they need.
+      #
+      # Until this existed, nothing in this repository could run two allocation transactions against a
+      # real database, and three inventory locking fixes in a row shipped incomplete because every
+      # claim about lock order was an argument from InnoDB semantics rather than a measurement.
+      - name: Run inventory ledger concurrency tests
+        run: make test-ledger
+        env:
+          LEDGER_TEST_DSN: "root:Testing123!@tcp(127.0.0.1:3306)/openmrp?parseTime=true&loc=UTC&interpolateParams=false"
+
   e2e:
     name: E2E
     if: inputs.run_e2e

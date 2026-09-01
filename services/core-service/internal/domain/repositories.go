@@ -7,6 +7,7 @@ import (
 
 	"github.com/shopspring/decimal"
 
+	"github.com/open-mrp/api/services/core-service/internal/ledgerlock"
 	"github.com/open-mrp/api/services/core-service/internal/scheduling"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
@@ -612,7 +613,6 @@ type ProductionRunRepo interface {
 	DeleteBatchesByRun(ctx context.Context, accountID, productionRunID string) *apierror.APIError
 	FindOrderIDsByRun(ctx context.Context, accountID, productionRunID string) ([]string, *apierror.APIError)
 	UnlinkOrdersFromRun(ctx context.Context, accountID, productionRunID string) *apierror.APIError
-	DeleteReservedInventoryIssuesByOrder(ctx context.Context, accountID, orderID string) *apierror.APIError
 	ListBatchesByRun(ctx context.Context, params ListBatchesByProductionRunParams) (*ListBatchesByProductionRunResult, *apierror.APIError)
 	SetBatchProductionRunID(ctx context.Context, accountID, batchID, productionRunID string) *apierror.APIError
 }
@@ -744,9 +744,9 @@ type InventoryMutationRepo interface {
 	// UpdateInventory creates an inventory receipt (positive measure) or issue (negative measure) for the given item. This is the core inventory mutation used by the executeProductionStep consumer.
 	UpdateInventory(ctx context.Context, params InventoryUpdateParams) *apierror.APIError
 	// CreateInventoryReceipt creates an inventory receipt for positive delta.
-	CreateInventoryReceipt(ctx context.Context, params CreateInventoryReceiptParams) *apierror.APIError
+	CreateInventoryReceipt(ctx context.Context, scope *ledgerlock.Scope, params CreateInventoryReceiptParams) *apierror.APIError
 	// CreateInventoryIssue creates an inventory issue for negative delta.
-	CreateInventoryIssue(ctx context.Context, params CreateInventoryIssueParams) *apierror.APIError
+	CreateInventoryIssue(ctx context.Context, scope *ledgerlock.Scope, params CreateInventoryIssueParams) *apierror.APIError
 	// CreateInventoryLog creates a point-in-time inventory snapshot log.
 	CreateInventoryLog(ctx context.Context, params CreateInventoryLogParams) *apierror.APIError
 	// CreateInventoryChangeLog creates an audit trail entry for an inventory change.
@@ -755,12 +755,16 @@ type InventoryMutationRepo interface {
 	CreateQuantityForInventory(ctx context.Context, quantityID, value, unitID string) *apierror.APIError
 	// CreateRateForInventory creates a rate record for use in inventory operations.
 	CreateRateForInventory(ctx context.Context, rateID, value, numeratorUnitID, denominatorUnitID string) *apierror.APIError
-	// ReverseInventoryForBatch undoes every inventory movement a scan recorded against a batch and returns the corrections it made, so the caller can write the audit trail and re-run allocation. Refuses when the batch's output has already been drawn on, since reversing it would drive inventory negative.
-	ReverseInventoryForBatch(ctx context.Context, params ReverseInventoryForBatchParams) ([]InventoryReversalDelta, *apierror.APIError)
+	// LockItemForLedger takes the item's ordering root. Callers do not call it directly: ledgerlock.Acquire does, as the first statement of a ledger-writing transaction. See docs/patterns/architecture-patterns.md, "Inventory ledger lock order".
+	LockItemForLedger(ctx context.Context, itemID string) *apierror.APIError
+	// ListItemIDsForBatchReversal names every item a batch's reversal will write, so the caller can take their ordering roots before opening the transaction that writes them. Non-locking; it decides nothing.
+	ListItemIDsForBatchReversal(ctx context.Context, accountID, batchID string) ([]string, *apierror.APIError)
+	// ReverseInventoryForBatch undoes every inventory movement a scan recorded against a batch and returns the corrections it made, so the caller can write the audit trail and request allocation. Refuses when the batch's output has already been drawn on, since reversing it would drive inventory negative.
+	ReverseInventoryForBatch(ctx context.Context, scope *ledgerlock.Scope, params ReverseInventoryForBatchParams) ([]InventoryReversalDelta, *apierror.APIError)
 	// CountAllocatedReceiptsForBatch reports how many of a batch's produced receipts have already been drawn against. Used as a pre-flight guard before a batch is deleted.
 	CountAllocatedReceiptsForBatch(ctx context.Context, accountID, batchID string) (int64, *apierror.APIError)
-	// ReverseInventoryForOrderItem hands a consumed measure back to the order's reservation, walking the issues it opened newest first and splitting the last one when it overshoots. The caller re-runs FIFO allocation so the freed receipts can cover other open issues.
-	ReverseInventoryForOrderItem(ctx context.Context, accountID, orderID, itemID string, measure decimal.Decimal) *apierror.APIError
+	// ReverseInventoryForOrderItem hands a consumed measure back to the order's reservation, walking the issues it opened newest first and splitting the last one when it overshoots. The caller requests allocation so the freed receipts can cover other open issues.
+	ReverseInventoryForOrderItem(ctx context.Context, scope *ledgerlock.Scope, accountID, orderID, itemID string, measure decimal.Decimal) *apierror.APIError
 }
 
 // OrderQueryRepo provides read-only queries for orders needed by the batch/production system.
@@ -772,17 +776,25 @@ type OrderQueryRepo interface {
 // InventoryReservationRepo manages inventory reservations for orders during production step execution.
 type InventoryReservationRepo interface {
 	// CreateMaterialReservation creates a reserved inventory issue for a material demand linked to an order.
-	CreateMaterialReservation(ctx context.Context, params CreateMaterialReservationParams) *apierror.APIError
+	CreateMaterialReservation(ctx context.Context, scope *ledgerlock.Scope, params CreateMaterialReservationParams) *apierror.APIError
 	// ReduceReservedForOrderItem reduces the reserved quantity for an order item by the given shortfall amount.
-	ReduceReservedForOrderItem(ctx context.Context, params OrderReservationReductionParams) *apierror.APIError
+	ReduceReservedForOrderItem(ctx context.Context, scope *ledgerlock.Scope, params OrderReservationReductionParams) *apierror.APIError
 	// ReduceReservedForOrderMaterials reduces reserved quantities for upstream materials of an order.
-	ReduceReservedForOrderMaterials(ctx context.Context, orderID, accountID string, demands []MaterialDemandItem) *apierror.APIError
+	ReduceReservedForOrderMaterials(ctx context.Context, scope *ledgerlock.Scope, orderID, accountID string, demands []MaterialDemandItem) *apierror.APIError
 	// AllocateReservationsForConsumption allocates existing reservations for consumed materials. Returns the remaining quantity that could not be allocated from reservations.
-	AllocateReservationsForConsumption(ctx context.Context, params ConsumptionAllocationParams) (*ConsumptionAllocationResult, *apierror.APIError)
-	// AllocateOpenIssuesForItem performs FIFO allocation of all open inventory issues for the given item against available receipts. Used after receiving inventory.
-	AllocateOpenIssuesForItem(ctx context.Context, accountID, itemID string) *apierror.APIError
-	// AllocateOpenIssuesForItemPage allocates one page (up to limit, oldest first, resuming after the (afterCreatedAt, afterID) cursor) of the item's open issues against available receipts. Returns the (created_at, id) of the last issue processed and how many the page held.
-	AllocateOpenIssuesForItemPage(ctx context.Context, accountID, itemID string, afterCreatedAt time.Time, afterID string, limit int32) (time.Time, string, int, *apierror.APIError)
+	AllocateReservationsForConsumption(ctx context.Context, scope *ledgerlock.Scope, params ConsumptionAllocationParams) (*ConsumptionAllocationResult, *apierror.APIError)
+	// LockItemForLedger takes the item's ordering root. Callers do not call it directly: ledgerlock.Acquire does, as the first statement of a ledger-writing transaction. See docs/patterns/architecture-patterns.md, "Inventory ledger lock order".
+	LockItemForLedger(ctx context.Context, itemID string) *apierror.APIError
+	// ListOpenIssueIDsForItem names one page of the item's open demand (up to limit, oldest first, resuming after the (afterCreatedAt, afterID) cursor). It takes no locks and decides nothing: every id it returns is re-read under FOR UPDATE by AllocateOneOpenIssue.
+	ListOpenIssueIDsForItem(ctx context.Context, accountID, itemID string, afterCreatedAt time.Time, afterID string, limit int32) ([]OpenIssueRef, *apierror.APIError)
+	// CountAvailableReceiptsForItem reports how many receipts the item has to draw on, so an uncoverable backlog costs one read rather than a transaction per issue.
+	CountAvailableReceiptsForItem(ctx context.Context, accountID, itemID string) (int64, *apierror.APIError)
+	// AllocateOneOpenIssue covers one open issue against available receipts. Each call is meant to be its own transaction; the issue is re-read by primary key under FOR UPDATE and skipped if it is no longer open.
+	AllocateOneOpenIssue(ctx context.Context, scope *ledgerlock.Scope, accountID, itemID, issueID string) *apierror.APIError
+	// ListReservedItemIDsForOrders names the items the given orders hold reservations on, so a release can take their ordering root as its transaction's first statement. Read on the pool, before the transaction opens.
+	ListReservedItemIDsForOrders(ctx context.Context, accountID string, orderIDs []string) ([]string, *apierror.APIError)
+	// ReleaseReservedIssuesForOrder deletes an order's reservations along with the allocations covering them, returning the receipts those allocations were holding down to `available`. Returns the items it touched, whose open demand the caller must enqueue allocation for after committing.
+	ReleaseReservedIssuesForOrder(ctx context.Context, scope *ledgerlock.Scope, accountID, orderID string) ([]string, *apierror.APIError)
 }
 
 // MaterialDemandRepo calculates material demand from a bill of materials.
@@ -1260,8 +1272,6 @@ type SalesOrderRepo interface {
 	SetProductionRunID(ctx context.Context, accountID, salesOrderID, productionRunID string) *apierror.APIError
 	GetSaleLinesForIssue(ctx context.Context, salesOrderID string) ([]SalesOrderSaleLineForIssue, *apierror.APIError)
 	CreateReservedInventoryIssue(ctx context.Context, id, accountID, itemID, quantityID, orderID string) *apierror.APIError
-	DeleteInventoryAllocationsByReservedIssues(ctx context.Context, accountID, salesOrderID string) *apierror.APIError
-	DeleteReservedInventoryIssues(ctx context.Context, accountID, salesOrderID string) *apierror.APIError
 	GetAcknowledgementRecipients(ctx context.Context, salesOrderID string) ([]string, *apierror.APIError)
 	MarkAcknowledgementSent(ctx context.Context, accountID, salesOrderID string) *apierror.APIError
 	CreateEmailContact(ctx context.Context, id, salesOrderID, accountUserID, notificationTypeCode string) *apierror.APIError
@@ -1372,9 +1382,10 @@ type ReceivingOrderRepo interface {
 	GetLineUnitPrices(ctx context.Context, receivingOrderID string) ([]ReceivingOrderLineUnitPrice, *apierror.APIError)
 	GetPurchaseOrderID(ctx context.Context, receivingOrderID, accountID string) (string, *apierror.APIError)
 	UpsertLot(ctx context.Context, lotID, accountID, itemID, lotNumber string) (string, *apierror.APIError)
-	InsertInventoryReceiptForDelivery(ctx context.Context, receiptID, accountID, itemID, quantityID, unitCostID string, storageLocationID, lotID, orderID *string) *apierror.APIError
+	// LockItemForLedger takes the item's ordering root; ledgerlock.Acquire calls it. See docs/patterns/architecture-patterns.md, "Inventory ledger lock order".
+	LockItemForLedger(ctx context.Context, itemID string) *apierror.APIError
+	InsertInventoryReceiptForDelivery(ctx context.Context, scope *ledgerlock.Scope, receiptID, accountID, itemID, quantityID, unitCostID string, storageLocationID, lotID, orderID *string) *apierror.APIError
 	MarkPurchaseOrderFulfilled(ctx context.Context, purchaseOrderID, accountID string) *apierror.APIError
-	FindOpenIssuesForItem(ctx context.Context, accountID, itemID string) ([]OpenInventoryIssue, *apierror.APIError)
 	GetAllocationSumForIssue(ctx context.Context, issueID string) (string, *apierror.APIError)
 	HasUnstockedLineForOrderLine(ctx context.Context, salesOrderLineID string) (bool, *apierror.APIError)
 	CreateLineForRemainingQuantity(ctx context.Context, receivingOrderID, salesOrderLineID, accountID string) *apierror.APIError

@@ -6,12 +6,15 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/services/core-service/internal/ledgerlock"
+	"github.com/open-mrp/api/services/core-service/internal/mediator"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/messaging"
 	"github.com/open-mrp/api/shared/ptrutil"
 	"github.com/open-mrp/api/shared/tracing"
 )
@@ -23,6 +26,17 @@ type productionRunSvcImpl struct {
 	mediatorFactory domain.MediatorFactory
 	jobSvcFactory   domain.JobSvcFactory
 	txManager       TransactionManager
+	outboxNotifier  messaging.OutboxNotifier
+}
+
+// kickOutbox wakes the outbox enqueuer so a just-committed allocation request is picked up immediately
+// rather than on the enqueuer's next idle poll. No-op when no notifier was injected. Call only after
+// the writing transaction has committed — kicking while it is still open races the poll against a row
+// it cannot yet see.
+func (s *productionRunSvcImpl) kickOutbox() {
+	if s.outboxNotifier != nil {
+		s.outboxNotifier.Notify()
+	}
 }
 
 type ProductionRunSvcConfig struct {
@@ -38,6 +52,9 @@ type ProductionRunSvcConfig struct {
 
 	// TxManager (required) wraps multi-step operations in database transactions.
 	TxManager TransactionManager
+
+	// OutboxNotifier (optional; default: nil) wakes the outbox enqueuer the instant an allocation request commits, so material released by deleting a run is offered to open demand on the next moment rather than on the enqueuer's next idle poll. When nil, the request is still picked up on the next poll.
+	OutboxNotifier messaging.OutboxNotifier
 }
 
 func (c *ProductionRunSvcConfig) validate() error {
@@ -66,6 +83,7 @@ func NewProductionRunSvc(config *ProductionRunSvcConfig) domain.ProductionRunSvc
 		mediatorFactory: config.MediatorFactory,
 		jobSvcFactory:   config.JobSvcFactory,
 		txManager:       config.TxManager,
+		outboxNotifier:  config.OutboxNotifier,
 	}
 }
 
@@ -362,9 +380,25 @@ func (s *productionRunSvcImpl) DeleteProductionRun(ctx context.Context, params d
 		return tracing.Trace(span, apiErr)
 	}
 
+	// The orders whose reservations this delete releases, and the items those reservations sit on, resolved on the pool so the transaction can take their ordering root as its first statement. See ledgerlock, Corollary A.
+	orderIDs, apiErr := s.repos.NewProductionRunRepo().FindOrderIDsByRun(ctx, params.AccountID, params.ProductionRunID)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	reservedItemIDs, apiErr := s.repos.NewInventoryReservationRepo().ListReservedItemIDsForOrders(ctx, params.AccountID, orderIDs)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
 	// Perform cascading delete in a transaction.
-	return s.withTx(ctx, func(txCtx context.Context, txSvc *productionRunSvcImpl) *apierror.APIError {
+	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *productionRunSvcImpl) *apierror.APIError {
 		txRepo := txSvc.repos.NewProductionRunRepo()
+		txReservationRepo := txSvc.repos.NewInventoryReservationRepo()
+
+		scope, apiErr := ledgerlock.Acquire(txCtx, txReservationRepo, reservedItemIDs)
+		if apiErr != nil {
+			return apiErr
+		}
 
 		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeProductionRun, productionRun.ID, productionRun); apiErr != nil {
 			return apiErr
@@ -382,12 +416,6 @@ func (s *productionRunSvcImpl) DeleteProductionRun(ctx context.Context, params d
 			return apiErr
 		}
 
-		// Find linked order IDs before deleting the run.
-		orderIDs, apiErr := txRepo.FindOrderIDsByRun(txCtx, params.AccountID, params.ProductionRunID)
-		if apiErr != nil {
-			return apiErr
-		}
-
 		// Delete the production run.
 		if apiErr := txRepo.Delete(txCtx, params); apiErr != nil {
 			return apiErr
@@ -398,9 +426,15 @@ func (s *productionRunSvcImpl) DeleteProductionRun(ctx context.Context, params d
 			return apiErr
 		}
 
-		// For each order, delete reserved inventory issues.
+		// Release each order's material reservations: the allocations covering them, the receipts those allocations were holding down, and the issues themselves.
 		for _, orderID := range orderIDs {
-			if apiErr := txRepo.DeleteReservedInventoryIssuesByOrder(txCtx, params.AccountID, orderID); apiErr != nil {
+			releasedItemIDs, apiErr := txReservationRepo.ReleaseReservedIssuesForOrder(txCtx, scope, params.AccountID, orderID)
+			if apiErr != nil {
+				return apiErr
+			}
+
+			// Material this run was sitting on is material another order's open demand may now be coverable from.
+			if apiErr := mediator.EnqueueAllocateOpenIssues(txCtx, txSvc.repos, params.AccountID, releasedItemIDs...); apiErr != nil {
 				return apiErr
 			}
 		}
@@ -419,6 +453,12 @@ func (s *productionRunSvcImpl) DeleteProductionRun(ctx context.Context, params d
 
 		return nil
 	})
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	s.kickOutbox()
+	return nil
 }
 
 func (s *productionRunSvcImpl) AddBatchesToProductionRun(ctx context.Context, params domain.AddBatchesToProductionRunParams) ([]*domain.BaseBatch, *apierror.APIError) {

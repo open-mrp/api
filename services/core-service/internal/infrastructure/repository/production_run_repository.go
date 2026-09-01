@@ -584,21 +584,6 @@ func (r *productionRunRepoImpl) UnlinkOrdersFromRun(ctx context.Context, account
 	return nil
 }
 
-func (r *productionRunRepoImpl) DeleteReservedInventoryIssuesByOrder(ctx context.Context, accountID, orderID string) *apierror.APIError {
-	ctx, span := productionRunRepoTracer.Start(ctx, "repository.production_run.delete_reserved_inventory_issues_by_order")
-	defer span.End()
-
-	err := r.queries.DeleteReservedInventoryIssuesByOrderID(ctx, sqlc.DeleteReservedInventoryIssuesByOrderIDParams{
-		OrderID:   gosql.NullString{String: orderID, Valid: true},
-		AccountID: accountID,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-
-	return nil
-}
-
 func (r *productionRunRepoImpl) SetBatchProductionRunID(ctx context.Context, accountID, batchID, productionRunID string) *apierror.APIError {
 	ctx, span := productionRunRepoTracer.Start(ctx, "repository.production_run.set_batch_production_run_id")
 	defer span.End()

@@ -132,6 +132,8 @@ func (suite *SalesOrderSvcTestSuite) SetupTest() {
 	suite.repoFactory.EXPECT().NewDeletedRecordRepo().Return(suite.deletedRecordRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewInvoiceRepo().Return(suite.invoiceRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewInventoryReservationRepo().Return(suite.inventoryReservationRepo).AnyTimes()
+	// Taking the ledger's ordering root is not what these tests are about; ledger_lock_test.go covers it against a real InnoDB.
+	suite.inventoryReservationRepo.EXPECT().LockItemForLedger(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 	suite.repoFactory.EXPECT().NewMaterialDemandRepo().Return(suite.materialDemandRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewOrderDiscountRepo().Return(suite.orderDiscountRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewSalesOrderRepo().Return(suite.orderRepo).AnyTimes()
@@ -214,6 +216,19 @@ func salesOrderInternalCtx(accountID string) context.Context {
 }
 
 // expectShipByCommitmentStamp declares the reads and the write that issuing an order performs to stamp its ship-by commitment. The chain resolves to nothing here, so the account default decides; the tests that care which rule won live in internal/scheduling, where the resolution is a pure function.
+
+// expectReservationRelease sets up the reservation release every order path now performs: the item set
+// resolved on the pool, the root taken, the reservations and the allocations covering them released.
+// Nothing is released here, so no allocation request is enqueued.
+func (suite *SalesOrderSvcTestSuite) expectReservationRelease(accountID, orderID string) {
+	suite.inventoryReservationRepo.EXPECT().
+		ListReservedItemIDsForOrders(gomock.Any(), accountID, []string{orderID}).
+		Return(nil, nil).Times(1)
+	suite.inventoryReservationRepo.EXPECT().
+		ReleaseReservedIssuesForOrder(gomock.Any(), gomock.Any(), accountID, orderID).
+		Return(nil, nil).Times(1)
+}
+
 func (suite *SalesOrderSvcTestSuite) expectShipByCommitmentStamp(accountID, salesOrderID string) {
 	suite.orderRepo.EXPECT().GetCustomerLeadTimeChain(gomock.Any(), accountID, gomock.Any()).
 		Return(nil, nil).Times(1)
@@ -1186,6 +1201,7 @@ func (suite *SalesOrderSvcTestSuite) TestDeleteSalesOrder_Success() {
 	suite.deletedRecordRepo.EXPECT().
 		Create(gomock.Any(), constants.DeletedRecordResourceTypeSalesOrder, "or_1", gomock.Any()).
 		Return(nil).Times(1)
+	suite.expectReservationRelease("ac_test", "or_1")
 	suite.orderRepo.EXPECT().DeleteCascade(gomock.Any(), "ac_test", "or_1").Return(nil).Times(1)
 
 	apiErr := suite.svc.DeleteSalesOrder(ctx, domain.DeleteSalesOrderParams{SalesOrderID: "or_1"})
@@ -1233,6 +1249,12 @@ func (suite *SalesOrderSvcTestSuite) TestBulkDeleteSalesOrders_RejectsIfAnyFulfi
 	suite.deletedRecordRepo.EXPECT().
 		Create(gomock.Any(), constants.DeletedRecordResourceTypeSalesOrder, "or_ok", gomock.Any()).
 		Return(nil).Times(1)
+	suite.inventoryReservationRepo.EXPECT().
+		ListReservedItemIDsForOrders(gomock.Any(), "ac_test", []string{"or_ok", "or_fulfilled"}).
+		Return(nil, nil).Times(1)
+	suite.inventoryReservationRepo.EXPECT().
+		ReleaseReservedIssuesForOrder(gomock.Any(), gomock.Any(), "ac_test", "or_ok").
+		Return(nil, nil).Times(1)
 	suite.orderRepo.EXPECT().DeleteCascade(gomock.Any(), "ac_test", "or_ok").Return(nil).Times(1)
 
 	// Second order is fulfilled → batch aborts.
@@ -1268,8 +1290,8 @@ func (suite *SalesOrderSvcTestSuite) TestChangeStatus_IssueFromEstimate_CreatesP
 	suite.orderRepo.EXPECT().GetSaleLinesForIssue(gomock.Any(), "or_1").
 		Return([]domain.SalesOrderSaleLineForIssue{
 			{ID: "orl_1", ItemID: &itemID, QuantityValue: "5", QuantityUnitID: "un_ea"},
-		}, nil).Times(1)
-	suite.orderRepo.EXPECT().DeleteReservedInventoryIssues(gomock.Any(), "ac_test", "or_1").Return(nil).Times(1)
+		}, nil).Times(2) // once on the pool to name the ledger root, once inside the transaction
+	suite.expectReservationRelease("ac_test", "or_1")
 	// Pick line seeded at 0 picked; the reserved inventory issue reserves the full ordered qty (5).
 	suite.lineRepo.EXPECT().CreateQuantity(gomock.Any(), gomock.Any(), "0", "un_ea").Return(nil).Times(1)
 	suite.orderRepo.EXPECT().CreatePickLine(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), "orl_1").Return(nil).Times(1)
@@ -1307,8 +1329,8 @@ func (suite *SalesOrderSvcTestSuite) TestChangeStatus_IssueWithoutItemID_SkipsIn
 	suite.orderRepo.EXPECT().GetSaleLinesForIssue(gomock.Any(), "or_1").
 		Return([]domain.SalesOrderSaleLineForIssue{
 			{ID: "orl_1", ItemID: nil, QuantityValue: "1", QuantityUnitID: "un_ea"},
-		}, nil).Times(1)
-	suite.orderRepo.EXPECT().DeleteReservedInventoryIssues(gomock.Any(), "ac_test", "or_1").Return(nil).Times(1)
+		}, nil).Times(2) // once on the pool to name the ledger root, once inside the transaction
+	suite.expectReservationRelease("ac_test", "or_1")
 
 	// Pick line is created for the non-item line at 0 picked (its quantity is the
 	// amount picked so far, not the ordered qty), but NO CreateReservedInventoryIssue.
@@ -1350,8 +1372,7 @@ func (suite *SalesOrderSvcTestSuite) TestChangeStatus_Unissue_ReleasesInventory(
 	suite.orderRepo.EXPECT().DeleteQuantitiesByPickLines(gomock.Any(), "or_1").Return(nil).Times(1)
 	suite.orderRepo.EXPECT().DeletePickLinesBySalesOrder(gomock.Any(), "or_1").Return(nil).Times(1)
 	suite.orderRepo.EXPECT().DeletePickBySalesOrder(gomock.Any(), "or_1").Return(nil).Times(1)
-	suite.orderRepo.EXPECT().DeleteInventoryAllocationsByReservedIssues(gomock.Any(), "ac_test", "or_1").Return(nil).Times(1)
-	suite.orderRepo.EXPECT().DeleteReservedInventoryIssues(gomock.Any(), "ac_test", "or_1").Return(nil).Times(1)
+	suite.expectReservationRelease("ac_test", "or_1")
 
 	// Status back to estimate; issuedAt cleared.
 	suite.orderRepo.EXPECT().
@@ -1455,8 +1476,8 @@ func (suite *SalesOrderSvcTestSuite) TestChangeStatus_IssueWithSendEmailFiresNot
 		Return(nil).Times(1)
 	suite.expectShipByCommitmentStamp("ac_test", "or_1")
 	suite.orderRepo.EXPECT().CreatePick(gomock.Any(), gomock.Any(), "1001", "or_1", "ac_test").Return(nil).Times(1)
-	suite.orderRepo.EXPECT().GetSaleLinesForIssue(gomock.Any(), "or_1").Return(nil, nil).Times(1)
-	suite.orderRepo.EXPECT().DeleteReservedInventoryIssues(gomock.Any(), "ac_test", "or_1").Return(nil).Times(1)
+	suite.orderRepo.EXPECT().GetSaleLinesForIssue(gomock.Any(), "or_1").Return(nil, nil).Times(2) // once on the pool to name the ledger root, once inside the transaction
+	suite.expectReservationRelease("ac_test", "or_1")
 
 	// Email branch: recipients fetched, order/lines/seller branding loaded, email published, ack marked sent.
 	suite.orderRepo.EXPECT().GetAcknowledgementRecipients(gomock.Any(), "or_1").
@@ -1500,8 +1521,8 @@ func (suite *SalesOrderSvcTestSuite) TestChangeStatus_IssueWithoutSendEmailDoesN
 		Return(nil).Times(1)
 	suite.expectShipByCommitmentStamp("ac_test", "or_1")
 	suite.orderRepo.EXPECT().CreatePick(gomock.Any(), gomock.Any(), "1001", "or_1", "ac_test").Return(nil).Times(1)
-	suite.orderRepo.EXPECT().GetSaleLinesForIssue(gomock.Any(), "or_1").Return(nil, nil).Times(1)
-	suite.orderRepo.EXPECT().DeleteReservedInventoryIssues(gomock.Any(), "ac_test", "or_1").Return(nil).Times(1)
+	suite.orderRepo.EXPECT().GetSaleLinesForIssue(gomock.Any(), "or_1").Return(nil, nil).Times(2) // once on the pool to name the ledger root, once inside the transaction
+	suite.expectReservationRelease("ac_test", "or_1")
 
 	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
 		Return(&domain.SalesOrder{ID: "or_1"}, nil).Times(1)

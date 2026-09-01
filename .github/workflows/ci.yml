@@ -159,6 +159,29 @@ jobs:
         if: steps.pkgs.outputs.pkgs != ''
         run: go vet ${{ steps.pkgs.outputs.pkgs }}
 
+  tx-audit:
+    name: Transaction Audit
+    needs: [changes]
+    if: needs.changes.outputs.go == 'true'
+    runs-on: ubuntu-latest
+    env:
+      GOTOOLCHAIN: local
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      # Static analysis over every WithTx closure: no database, no service container, seconds to run.
+      # It gates the PR rather than running post-merge because the effects it finds — a slice appended
+      # to from inside a callback that re-runs on a deadlock, a broker publish the rollback cannot
+      # undo — are silent until a retry happens in production, which is where they were being found.
+      - name: Run transaction audit
+        run: make tx-audit
+
   test:
     name: Test
     needs: [changes]

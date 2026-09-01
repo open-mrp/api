@@ -20,14 +20,6 @@ import (
 	"github.com/open-mrp/api/shared/tracing"
 )
 
-// stubOutboxRepo satisfies messaging.OutboxRepo so the best-effort burn-rate enqueue behind each
-// consumption movement stays quiet rather than becoming the subject of these tests.
-type stubOutboxRepo struct{}
-
-func (stubOutboxRepo) Create(context.Context, messaging.OutboxMessageInput) (int64, error) {
-	return 0, nil
-}
-
 type recordingOutboxRepo struct {
 	onAllocateOpenIssues func(itemID string)
 }

@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/messaging"
 	"github.com/open-mrp/api/shared/tracing"
@@ -71,7 +72,7 @@ func (c *DocumentEmailConsumer) handleInvoiceIssued(ctx context.Context, msg amq
 	defer span.End()
 
 	var evt domain.InvoiceIssuedEvent
-	accountID, ok := decodeDocumentEvent(span, "invoice_issued", msg, &evt)
+	ctx, accountID, ok := decodeDocumentEvent(ctx, span, "invoice_issued", msg, &evt)
 	if !ok {
 		return nil
 	}
@@ -109,7 +110,7 @@ func (c *DocumentEmailConsumer) handleSalesOrderAcknowledged(ctx context.Context
 	defer span.End()
 
 	var evt domain.SalesOrderAcknowledgedEvent
-	accountID, ok := decodeDocumentEvent(span, "sales_order_acknowledged", msg, &evt)
+	ctx, accountID, ok := decodeDocumentEvent(ctx, span, "sales_order_acknowledged", msg, &evt)
 	if !ok {
 		return nil
 	}
@@ -145,7 +146,7 @@ func (c *DocumentEmailConsumer) handlePurchaseOrderSubmitted(ctx context.Context
 	defer span.End()
 
 	var evt domain.PurchaseOrderSubmittedEvent
-	accountID, ok := decodeDocumentEvent(span, "purchase_order_submitted", msg, &evt)
+	ctx, accountID, ok := decodeDocumentEvent(ctx, span, "purchase_order_submitted", msg, &evt)
 	if !ok {
 		return nil
 	}
@@ -170,27 +171,38 @@ func (c *DocumentEmailConsumer) handlePurchaseOrderSubmitted(ctx context.Context
 	return nil
 }
 
-// decodeDocumentEvent unwraps the envelope into payload and account. A message that cannot yield
-// both is unprocessable rather than retryable, so it reports false and the caller acks it away
-// instead of cycling it to the dead-letter queue.
-func decodeDocumentEvent(span trace.Span, name string, msg amqp.Delivery, payload any) (string, bool) {
+// decodeDocumentEvent unwraps the envelope into payload and account, and puts the caller's identity
+// and request id back on the context. A message that cannot yield an account is unprocessable rather
+// than retryable, so it reports false and the caller acks it away instead of cycling it to the
+// dead-letter queue.
+//
+// Restoring the identity matches ExportConsumer and BulkOperationConsumer, and carries the
+// originating request through to the outbox rows this work produces. It is not what stops a sandbox
+// account mailing real customers — the identity a publisher writes need not carry an AccountMode at
+// all — that guard lives in notification-service, which asks the account directly.
+func decodeDocumentEvent(ctx context.Context, span trace.Span, name string, msg amqp.Delivery, payload any) (context.Context, string, bool) {
 	var amqpMsg contracts.AmqpMessage
 	if err := json.Unmarshal(msg.Body, &amqpMsg); err != nil {
 		log.Printf("[%s] Failed to unmarshal message: %v", name, err)
 		span.RecordError(err)
-		return "", false
+		return ctx, "", false
 	}
 
 	if err := json.Unmarshal(amqpMsg.Data, payload); err != nil {
 		log.Printf("[%s] Failed to unmarshal event payload: %v", name, err)
 		span.RecordError(err)
-		return "", false
+		return ctx, "", false
 	}
 
 	if amqpMsg.Identity == nil || amqpMsg.Identity.Target == nil || amqpMsg.Identity.Target.AccountID == "" {
 		log.Printf("[%s] No account ID in message identity", name)
-		return "", false
+		return ctx, "", false
 	}
 
-	return amqpMsg.Identity.Target.AccountID, true
+	ctx = appctx.WithIdentity(ctx, amqpMsg.Identity)
+	if amqpMsg.RequestID != "" {
+		ctx = appctx.WithRequestID(ctx, amqpMsg.RequestID)
+	}
+
+	return ctx, amqpMsg.Identity.Target.AccountID, true
 }

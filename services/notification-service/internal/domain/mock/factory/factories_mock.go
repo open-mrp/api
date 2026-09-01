@@ -55,6 +55,20 @@ func (mr *MockRepoFactoryMockRecorder) NewAccountEmailSenderRepo() *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewAccountEmailSenderRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewAccountEmailSenderRepo))
 }
 
+// NewAccountRepo mocks base method.
+func (m *MockRepoFactory) NewAccountRepo() domain.AccountRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewAccountRepo")
+	ret0, _ := ret[0].(domain.AccountRepo)
+	return ret0
+}
+
+// NewAccountRepo indicates an expected call of NewAccountRepo.
+func (mr *MockRepoFactoryMockRecorder) NewAccountRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewAccountRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewAccountRepo))
+}
+
 // NewAnnouncementRepo mocks base method.
 func (m *MockRepoFactory) NewAnnouncementRepo() domain.AnnouncementRepo {
 	m.ctrl.T.Helper()

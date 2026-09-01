@@ -27,7 +27,7 @@ type SavepointRunner interface {
 
 // TransactionManager runs a unit of work in a database transaction.
 //
-// A transaction that InnoDB picks as a deadlock victim is re-run, so callbacks must be safe to
+// A transaction that loses a lock conflict is re-run, so callbacks must be safe to
 // execute more than once. In practice that means a callback may only write to the database:
 // its writes are rolled back with the transaction, so a second run starts from the same state
 // the first one did. Anything that escapes the database does not get undone — an HTTP call to
@@ -46,10 +46,21 @@ type TransactionManager[Q TxQuerier[Q], F any] interface {
 }
 
 const (
-	// deadlockMaxAttempts bounds how many times a transaction is re-run after being chosen as a
-	// deadlock victim. Two transactions deadlocking resolve on the first retry, because the one
-	// that survived has committed by then. Needing more than this means sustained contention,
-	// which re-running cannot fix — better to surface it than to keep holding the request open.
+	// deadlockMaxAttempts bounds how many times a transaction is re-run after losing to a lock
+	// conflict. Two transactions deadlocking resolve on the first retry, because the one that
+	// survived has committed by then. Needing more than this means sustained contention, which
+	// re-running cannot fix — better to surface it than to keep holding the request open.
+	//
+	// "Lock conflict" and not just "deadlock": IsRetryableLockConflict also covers 1205, the
+	// lock-wait timeout. That is the same contention arbitrated the other way — nobody is picked as
+	// a victim, the waiter simply gives up — and it is the failure mode that replaces 1213 wherever
+	// contending transactions are given a consistent lock order. Retrying one and not the other
+	// would mean this loop quietly stopped working at exactly the point the ordering work landed.
+	//
+	// A 1205 costs the full innodb_lock_wait_timeout before it is seen (20s on PlanetScale), so a
+	// retried one is slow where a retried 1213 is immediate. Still worth retrying: the alternative
+	// is failing work that would have succeeded, and the caller above is a message that will be
+	// redelivered anyway.
 	deadlockMaxAttempts = 3
 
 	// deadlockBaseBackoff is the wait before the first retry, doubling thereafter.
@@ -101,23 +112,23 @@ func (m *transactionManagerImpl[Q, F]) WithTxSavepoint(
 	})
 }
 
-// run executes fn in a transaction, re-running it when the database rolls it back as a deadlock
-// victim.
+// run executes fn in a transaction, re-running it when the database rejects it over a lock
+// conflict — chosen as a deadlock victim (1213), or timed out waiting for a lock (1205).
 //
-// A deadlock is not a failure of the work — it is the database arbitrating between two
-// transactions that wanted the same rows in a different order, and the loser is asked to try
-// again. It rolls the victim back completely, so the retry starts from the same state the first
-// attempt did. Surfacing it instead would make every caller implement this loop, and a 500 for
-// a condition resolved in five milliseconds is not an answer worth giving.
+// Neither is a failure of the work — both are the database arbitrating between two transactions
+// that wanted the same rows, and the loser is asked to try again. The losing transaction is rolled
+// back completely, so the retry starts from the same state the first attempt did. Surfacing it
+// instead would make every caller implement this loop, and a 500 for a condition resolved in five
+// milliseconds is not an answer worth giving.
 func (m *transactionManagerImpl[Q, F]) run(
 	ctx context.Context,
 	fn func(ctx context.Context, tx *sql.Tx, f F) *apierror.APIError,
 ) *apierror.APIError {
 	for attempt := 0; ; attempt++ {
-		apiErr, deadlocked := m.attempt(ctx, fn)
-		if apiErr == nil || !deadlocked || attempt >= deadlockMaxAttempts-1 {
-			if deadlocked && apiErr != nil {
-				slog.WarnContext(ctx, "transaction abandoned after repeated deadlocks",
+		apiErr, conflicted := m.attempt(ctx, fn)
+		if apiErr == nil || !conflicted || attempt >= deadlockMaxAttempts-1 {
+			if conflicted && apiErr != nil {
+				slog.WarnContext(ctx, "transaction abandoned after repeated lock conflicts",
 					"attempts", attempt+1,
 					"error", apiErr.Error(),
 				)
@@ -125,19 +136,19 @@ func (m *transactionManagerImpl[Q, F]) run(
 			return apiErr
 		}
 
-		// A retry that outlives the caller's deadline helps nobody, and the deadlock is the
+		// A retry that outlives the caller's deadline helps nobody, and the lock conflict is the
 		// more useful thing to report than the cancellation that followed it.
 		if !sleepFor(ctx, deadlockBackoff(attempt)) {
 			return apiErr
 		}
 
-		// Logged rather than swallowed: retries hide contention, and a path that deadlocks
+		// Logged rather than swallowed: retries hide contention, and a path that conflicts
 		// constantly needs its lock ordering fixed, not its symptoms absorbed.
-		slog.WarnContext(ctx, "retrying transaction after deadlock", "attempt", attempt+1)
+		slog.WarnContext(ctx, "retrying transaction after lock conflict", "attempt", attempt+1)
 	}
 }
 
-// attempt runs fn once in its own transaction and reports whether it failed to a deadlock. It is
+// attempt runs fn once in its own transaction and reports whether it failed to a lock conflict. It is
 // a separate function so the rollback is deferred per attempt rather than accumulating across
 // the retry loop.
 func (m *transactionManagerImpl[Q, F]) attempt(
@@ -146,7 +157,7 @@ func (m *transactionManagerImpl[Q, F]) attempt(
 ) (*apierror.APIError, bool) {
 	tx, err := m.db.BeginTx(ctx, nil)
 	if err != nil {
-		return apierror.NewInternalError(err, "failed to begin transaction"), IsDeadlock(err)
+		return apierror.NewInternalError(err, "failed to begin transaction"), IsRetryableLockConflict(err)
 	}
 	defer tx.Rollback()
 
@@ -154,15 +165,15 @@ func (m *transactionManagerImpl[Q, F]) attempt(
 	factory := m.factoryCreate(qTx)
 
 	if apiErr := fn(ctx, tx, factory); apiErr != nil {
-		// MapSQLError keeps the driver error underneath, so the deadlock is still visible
+		// MapSQLError keeps the driver error underneath, so the lock conflict is still visible
 		// through the APIError the repository layer returned.
-		return apiErr, IsDeadlock(apiErr)
+		return apiErr, IsRetryableLockConflict(apiErr)
 	}
 
-	// Committing is where a deadlock most often surfaces, since that is when InnoDB resolves
+	// Committing is where a lock conflict most often surfaces, since that is when InnoDB resolves
 	// the locks the transaction has been holding.
 	if err := tx.Commit(); err != nil {
-		return apierror.NewInternalError(err, "failed to commit transaction"), IsDeadlock(err)
+		return apierror.NewInternalError(err, "failed to commit transaction"), IsRetryableLockConflict(err)
 	}
 
 	return nil, false

@@ -11,6 +11,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
+	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/tracing"
 )
@@ -22,6 +23,30 @@ const (
 	undoTestMaterial  = "it_material"
 	undoTestOrderID   = "ord_1"
 )
+
+// stubTxManager runs the callback inline against the mocked factory.
+//
+// The mocks issue no SQL, so there is no transaction to open and nothing this can verify about
+// atomicity — that is what the real-MySQL concurrency tests are for. What it does check is that the
+// consumer reaches its repositories through the factory the transaction hands it rather than through
+// the one on the struct, which is the whole substance of giving this consumer a transaction.
+type stubTxManager struct {
+	factory domain.RepoFactory
+}
+
+func (m *stubTxManager) WithTx(ctx context.Context, fn func(context.Context, domain.RepoFactory) *apierror.APIError) *apierror.APIError {
+	return fn(ctx, m.factory)
+}
+
+func (m *stubTxManager) WithTxSavepoint(ctx context.Context, fn func(context.Context, domain.RepoFactory, db.SavepointRunner) *apierror.APIError) *apierror.APIError {
+	return fn(ctx, m.factory, passthroughSavepoint{})
+}
+
+type passthroughSavepoint struct{}
+
+func (passthroughSavepoint) Run(ctx context.Context, fn func(context.Context) *apierror.APIError) *apierror.APIError {
+	return fn(ctx)
+}
 
 type UndoBatchScanConsumerTestSuite struct {
 	suite.Suite
@@ -60,8 +85,9 @@ func (s *UndoBatchScanConsumerTestSuite) SetupTest() {
 	repoFactory.EXPECT().NewOutboxRepo().Return(stubOutboxRepo{}).AnyTimes()
 
 	s.consumer = &UndoBatchScanConsumer{
-		repos:  repoFactory,
-		tracer: tracing.GetTracer("test.undo_batch_scan_consumer"),
+		repos:     repoFactory,
+		txManager: &stubTxManager{factory: repoFactory},
+		tracer:    tracing.GetTracer("test.undo_batch_scan_consumer"),
 	}
 }
 

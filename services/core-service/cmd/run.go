@@ -729,7 +729,7 @@ func Run(
 		return err
 	}
 
-	undoBatchScanConsumer := event.NewUndoBatchScanConsumer(rabbitmq, inboxRepo, repoFactory)
+	undoBatchScanConsumer := event.NewUndoBatchScanConsumer(rabbitmq, inboxRepo, repoFactory, txManager)
 	if err := undoBatchScanConsumer.Listen(ctx); err != nil {
 		return err
 	}

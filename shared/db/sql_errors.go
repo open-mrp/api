@@ -45,8 +45,14 @@ func MapSQLError(err error) *apierror.APIError {
 		switch mysqlErr.Number {
 		case 1062: // duplicate entry
 			return apierror.NewResourceExistsError("Resource already exists.")
-		case 1205, 1213: // lock wait timeout / deadlock
-			return apierror.NewInternalError(err, "Database request timed out.")
+		case 1205: // lock wait timeout
+			return apierror.NewInternalError(err, "Database lock wait timed out.")
+		case 1213: // deadlock
+			return apierror.NewInternalError(err, "Database deadlock; the transaction was rolled back.")
+		case 1105: // Vitess catch-all — only the message says what happened
+			if isVitessTxKill(mysqlErr.Message) {
+				return apierror.NewInternalError(err, "Database transaction exceeded the server time limit and was rolled back.")
+			}
 		case 1040, 2002, 2006: // too many connections / conn refused / server gone
 			return apierror.NewInternalError(err, "Database unavailable.")
 		case 1053, 1927, 2013: // server shutdown / connection killed / lost conn during query
@@ -106,6 +112,23 @@ func MapSQLErrorWithDuplicateKeys(err error, mapping DuplicateKeyMapping) *apier
 	}
 
 	return MapSQLError(err)
+}
+
+// isVitessTxKill reports whether a MySQL 1105 carries vttablet's transaction-killer message.
+//
+// 1105 is ER_UNKNOWN_ERROR, which Vitess uses as a catch-all, so the code alone says nothing and the
+// message is the only discriminator. The one worth naming is the per-transaction time limit —
+// PlanetScale rolls a transaction back once it has been open too long, and the driver error reads
+//
+//	Error 1105 (HY000): target: <keyspace>.-.primary: vttablet: rpc error: code = Aborted
+//	desc = transaction 1787579861050300718: in use: in use: for tx killer rollback
+//
+// which mapped to "Database request failed for unknown reason." That is how a core-service message
+// sat in message_inbox from 2026-08-25 to 2026-09-01 looking like a mystery rather than like a
+// transaction that was simply too big. Matching on the message is unlovely, and it is what there is.
+func isVitessTxKill(msg string) bool {
+	return strings.Contains(msg, "tx killer") ||
+		(strings.Contains(msg, "transaction") && strings.Contains(msg, "in use"))
 }
 
 // IsDeadlock reports whether err is a MySQL 1213 (deadlock) or PostgreSQL 40P01 (deadlock_detected) / 40001 (serialization_failure) error.

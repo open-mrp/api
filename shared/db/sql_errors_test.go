@@ -11,6 +11,7 @@ import (
 	"github.com/go-sql-driver/mysql"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	apierror "github.com/open-mrp/api/shared/errors"
 )
@@ -371,4 +372,55 @@ func TestMapSQLError_NetworkTimeout(t *testing.T) {
 		t.Parallel()
 		assert.False(t, IsRetryableConnectionError(&net.OpError{Op: "read", Net: "tcp", Err: netTimeoutError{}}))
 	})
+}
+
+// vitessTxKillErr is the exact error PlanetScale returned for message_inbox 327850 on 2026-08-25,
+// kept verbatim because the mapping matches on the message and nothing else identifies it: 1105 is
+// ER_UNKNOWN_ERROR, which Vitess uses for everything.
+func vitessTxKillErr() error {
+	return &mysql.MySQLError{
+		Number: 1105,
+		Message: "target: augno_core.-.primary: vttablet: rpc error: code = Aborted desc = " +
+			"transaction 1787579861050300718: in use: in use: for tx killer rollback",
+	}
+}
+
+// Each of these mapped to the same sentence before, which is how a 1213 spent an investigation
+// looking like a timeout and a killed transaction spent a week looking like nothing at all.
+func TestMapSQLError_LockAndTimeoutMessagesAreDistinct(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		err  error
+		want string
+	}{
+		{"deadlock", &mysql.MySQLError{Number: 1213, Message: "Deadlock found when trying to get lock"},
+			"Database deadlock; the transaction was rolled back."},
+		{"lock wait timeout", &mysql.MySQLError{Number: 1205, Message: "Lock wait timeout exceeded"},
+			"Database lock wait timed out."},
+		{"vitess transaction kill", vitessTxKillErr(),
+			"Database transaction exceeded the server time limit and was rolled back."},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result := MapSQLError(tt.err)
+			require.NotNil(t, result)
+			assert.Equal(t, tt.want, result.InternalMessage)
+		})
+	}
+}
+
+// A 1105 that is not the transaction killer must keep falling through to the generic message, since
+// Vitess uses the code as a catch-all and claiming otherwise would mislabel unrelated failures.
+func TestMapSQLError_UnrelatedVitessErrorIsNotReportedAsATransactionKill(t *testing.T) {
+	t.Parallel()
+
+	err := &mysql.MySQLError{Number: 1105, Message: "target: augno_core.-.primary: vttablet: some other failure"}
+	result := MapSQLError(err)
+
+	require.NotNil(t, result)
+	assert.NotContains(t, result.InternalMessage, "time limit")
 }

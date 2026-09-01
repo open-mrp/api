@@ -587,3 +587,57 @@ func TestTransactionManager_WithTxSavepoint_AbortsWhenTheDeadlockDestroyedTheSav
 	assert.Equal(t, 1, attempts, "the doomed transaction is abandoned, not re-run")
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
+
+// lockWaitErr is what the driver returns to a transaction that gave up waiting for a lock. Nobody
+// is picked as a victim — the waiter simply times out — and it is the failure mode that replaces
+// 1213 once contending transactions are given a consistent lock order.
+func lockWaitErr() error {
+	return &mysql.MySQLError{Number: 1205, Message: "Lock wait timeout exceeded; try restarting transaction"}
+}
+
+// A lock wait timeout is the same contention as a deadlock, arbitrated the other way, so it is
+// retried the same way. This pins the predicate: the manager used to test IsDeadlock, which matches
+// 1213 only, and would have stopped retrying at exactly the point the ordering work makes 1205 the
+// common outcome.
+func TestTransactionManager_WithTx_RetriesAfterLockWaitTimeout(t *testing.T) {
+	t.Parallel()
+	_, mock, txMgr := newDeadlockTestManager(t)
+
+	mock.ExpectBegin()
+	mock.ExpectRollback()
+	mock.ExpectBegin()
+	mock.ExpectCommit()
+
+	attempts := 0
+	apiErr := txMgr.WithTx(context.Background(), func(ctx context.Context, f *mockFactory) *apierror.APIError {
+		attempts++
+		if attempts == 1 {
+			return MapSQLError(lockWaitErr())
+		}
+		return nil
+	})
+
+	assert.Nil(t, apiErr, "the second attempt succeeded, so the caller sees success")
+	assert.Equal(t, 2, attempts, "a 1205 is retried, not surfaced")
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+// The transaction killer is not contention and must not be retried: the transaction was rolled back
+// for taking too long, and running the same work again just spends the limit again.
+func TestTransactionManager_WithTx_DoesNotRetryTransactionKill(t *testing.T) {
+	t.Parallel()
+	_, mock, txMgr := newDeadlockTestManager(t)
+
+	mock.ExpectBegin()
+	mock.ExpectRollback()
+
+	attempts := 0
+	apiErr := txMgr.WithTx(context.Background(), func(ctx context.Context, f *mockFactory) *apierror.APIError {
+		attempts++
+		return MapSQLError(vitessTxKillErr())
+	})
+
+	require.NotNil(t, apiErr)
+	assert.Equal(t, 1, attempts, "a killed transaction is reported, not re-run")
+	assert.NoError(t, mock.ExpectationsWereMet())
+}

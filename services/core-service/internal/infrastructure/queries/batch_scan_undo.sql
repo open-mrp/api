@@ -81,19 +81,35 @@ DELETE FROM inventory_allocation WHERE id IN (sqlc.slice('ids'));
 -- FreeReleasedReceipts returns receipts to `available` once the allocations that closed them out are
 -- gone. Run after the allocations are deleted: the join sees only the surviving ones, so a receipt
 -- another issue still fills stays as it was.
+--
+-- Both sides go through their own unit's ratio, and the comparison is meaningless without it. An
+-- allocation carries whatever unit the code that wrote it chose, which is not always the receipt's:
+-- a receipt of 10 pairs drawn by 15 each is 7.5 pairs and should be freed, but comparing the raw
+-- column values asks whether 15 < 10 and leaves it `allocated` — real stock, on the shelf, that the
+-- allocator can no longer see. The same arithmetic run the other way frees a receipt that is fully
+-- drawn. This statement is the one place in the undo path that lost the ratios; the repair command
+-- it says it mirrors has carried them all along.
+--
+-- Joining `unit` in a statement that takes locks is normally avoided here, because unit rows are
+-- shared by every account in the database (see GetUnitRatios, which exists for that reason). It is
+-- accepted in this one: the rows are static, the lock is shared rather than exclusive, and the id
+-- list bounds the statement to the receipts one reversal touched. A locking *read* over an unbounded
+-- range is the case that rule is about.
 -- name: FreeReleasedReceipts :exec
 UPDATE inventory_receipt ir
 JOIN quantity q ON q.id = ir.quantity_id
+JOIN unit u ON u.id = q.unit_id
 SET ir.status_code = 'available', ir.updated_at = NOW(3)
 WHERE ir.id IN (sqlc.slice('ids'))
 AND ir.status_code <> 'available'
 -- Correlated per receipt: a grouped derived table cannot take the id filter and so aggregates all of inventory_allocation while the update holds its locks.
 AND COALESCE((
-    SELECT SUM(CAST(aq.value AS DECIMAL(65,30)))
+    SELECT SUM(CAST(aq.value AS DECIMAL(65,30)) * (au.ratio_numerator / au.ratio_denominator))
     FROM inventory_allocation ia
     JOIN quantity aq ON aq.id = ia.quantity_id
+    JOIN unit au ON au.id = aq.unit_id
     WHERE ia.inventory_receipt_id = ir.id
-), 0) < CAST(q.value AS DECIMAL(65,30));
+), 0) < CAST(q.value AS DECIMAL(65,30)) * (u.ratio_numerator / u.ratio_denominator);
 
 -- RestoreIssuesToReserved hands an order-linked issue back to the reservation it came out of. The
 -- batch tag goes with it: the row is no longer anything the scan owns.

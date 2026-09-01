@@ -4,7 +4,7 @@
 --
 -- Not required for correctness: LockItemForLedger is INSERT ... ON DUPLICATE KEY UPDATE, so it creates
 -- the row on first acquisition and the cold branch is as safe as the warm one — see the note on
--- 00016_inventory_item_lock. This is a warm-up, so the first allocation of every existing item takes an
+-- 00017_inventory_item_lock. This is a warm-up, so the first allocation of every existing item takes an
 -- update rather than an insert, and so the table's size is a known quantity from the day it ships
 -- rather than something that grows as traffic discovers it.
 --

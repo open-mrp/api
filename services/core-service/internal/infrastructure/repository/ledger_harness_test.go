@@ -356,7 +356,7 @@ func (f *fixture) seedItemLockRow(t *testing.T, itemID string) {
 }
 
 // acquireItemLock takes the ledger root exactly as production must: one statement, always this one.
-// See 00016_inventory_item_lock — every other shape deadlocks on the path this table exists to protect.
+// See 00017_inventory_item_lock — every other shape deadlocks on the path this table exists to protect.
 func (a *actor) acquireItemLock(itemID string) error {
 	_, err := a.tx.ExecContext(context.Background(),
 		`INSERT INTO inventory_item_lock (item_id, created_at) VALUES (?, NOW(3))

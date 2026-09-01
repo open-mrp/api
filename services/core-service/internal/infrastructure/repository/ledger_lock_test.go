@@ -86,7 +86,7 @@ func TestLedgerLock_ConcurrentColdAcquire(t *testing.T) {
 //
 // This is here because "never add a SELECT to this table" is the kind of rule that gets relaxed by
 // someone who cannot see what it costs. If MySQL ever makes this shape safe, this test fails and says
-// so, and the reasoning in 00016_inventory_item_lock should be re-read before anything is changed.
+// so, and the reasoning in 00017_inventory_item_lock should be re-read before anything is changed.
 func TestLedgerLock_RejectedShapeIsUnsafe(t *testing.T) {
 	f := newFixture(t)
 	a, b := f.itemID+"_ra", f.itemID+"_rb"
@@ -125,7 +125,7 @@ func TestLedgerLock_RejectedShapeIsUnsafe(t *testing.T) {
 	}
 	if conflicts == 0 {
 		t.Error("SELECT ... FOR UPDATE followed by INSERT no longer conflicts on two different new keys. " +
-			"That is the shape 00016_inventory_item_lock rejects, and the whole reason the acquisition " +
+			"That is the shape 00017_inventory_item_lock rejects, and the whole reason the acquisition " +
 			"must stay a bare INSERT ... ON DUPLICATE KEY UPDATE. Re-read that migration's note before " +
 			"relaxing anything.")
 	}

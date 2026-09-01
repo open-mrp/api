@@ -8,12 +8,15 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/services/core-service/internal/ledgerlock"
+	"github.com/open-mrp/api/services/core-service/internal/mediator"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idempotency"
+	"github.com/open-mrp/api/shared/messaging"
 	"github.com/open-mrp/api/shared/tracing"
 )
 
@@ -23,6 +26,17 @@ type salesOrderLineSvcImpl struct {
 	repos           domain.RepoFactory
 	mediatorFactory domain.MediatorFactory
 	txManager       TransactionManager
+	outboxNotifier  messaging.OutboxNotifier
+}
+
+// kickOutbox wakes the outbox enqueuer so a just-committed allocation request is picked up immediately
+// rather than on the enqueuer's next idle poll. No-op when no notifier was injected. Call only after
+// the writing transaction has committed — kicking while it is still open races the poll against a row
+// it cannot yet see.
+func (s *salesOrderLineSvcImpl) kickOutbox() {
+	if s.outboxNotifier != nil {
+		s.outboxNotifier.Notify()
+	}
 }
 
 type SalesOrderLineSvcConfig struct {
@@ -34,6 +48,9 @@ type SalesOrderLineSvcConfig struct {
 
 	// TxManager (required) wraps multi-step operations in database transactions.
 	TxManager TransactionManager
+
+	// OutboxNotifier (optional; default: nil) wakes the outbox enqueuer the instant an allocation request commits, so stock released by deleting an order's last line is offered to open demand on the next moment rather than on the enqueuer's next idle poll. When nil, the request is still picked up on the next poll.
+	OutboxNotifier messaging.OutboxNotifier
 }
 
 func (c *SalesOrderLineSvcConfig) validate() error {
@@ -58,6 +75,7 @@ func NewSalesOrderLineSvc(config *SalesOrderLineSvcConfig) domain.SalesOrderLine
 		repos:           config.Repos,
 		mediatorFactory: config.MediatorFactory,
 		txManager:       config.TxManager,
+		outboxNotifier:  config.OutboxNotifier,
 	}
 }
 
@@ -619,10 +637,22 @@ func (s *salesOrderLineSvcImpl) DeleteSalesOrderLine(ctx context.Context, params
 		return tracing.Trace(span, apiErr)
 	}
 
-	return s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderLineSvcImpl) *apierror.APIError {
+	// Deleting the order's last line unissues it, releasing its reservations. The items that release will write are resolved here, before the transaction, so it can take their ordering root as its first statement. See ledgerlock, Corollary A.
+	reservedItemIDs, apiErr := s.repos.NewInventoryReservationRepo().ListReservedItemIDsForOrders(ctx, params.AccountID, []string{params.SalesOrderID})
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderLineSvcImpl) *apierror.APIError {
 		txLineRepo := txSvc.repos.NewSalesOrderLineRepo()
 		txOrderRepo := txSvc.repos.NewSalesOrderRepo()
 		txPickRepo := txSvc.repos.NewPickRepo()
+		txReservationRepo := txSvc.repos.NewInventoryReservationRepo()
+
+		scope, apiErr := ledgerlock.Acquire(txCtx, txReservationRepo, reservedItemIDs)
+		if apiErr != nil {
+			return apiErr
+		}
 
 		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeSalesOrderLine, salesOrderLine.ID, salesOrderLine); apiErr != nil {
 			return apiErr
@@ -673,10 +703,11 @@ func (s *salesOrderLineSvcImpl) DeleteSalesOrderLine(ctx context.Context, params
 				if apiErr := txOrderRepo.DeletePickBySalesOrder(txCtx, params.SalesOrderID); apiErr != nil {
 					return apiErr
 				}
-				if apiErr := txOrderRepo.DeleteInventoryAllocationsByReservedIssues(txCtx, params.AccountID, params.SalesOrderID); apiErr != nil {
+				releasedItemIDs, apiErr := txReservationRepo.ReleaseReservedIssuesForOrder(txCtx, scope, params.AccountID, params.SalesOrderID)
+				if apiErr != nil {
 					return apiErr
 				}
-				if apiErr := txOrderRepo.DeleteReservedInventoryIssues(txCtx, params.AccountID, params.SalesOrderID); apiErr != nil {
+				if apiErr := mediator.EnqueueAllocateOpenIssues(txCtx, txSvc.repos, params.AccountID, releasedItemIDs...); apiErr != nil {
 					return apiErr
 				}
 				if apiErr := txOrderRepo.UpdateStatus(txCtx, params.AccountID, params.SalesOrderID, string(constants.SalesOrderStatusCodeEstimate), nil, nil); apiErr != nil {
@@ -707,6 +738,12 @@ func (s *salesOrderLineSvcImpl) DeleteSalesOrderLine(ctx context.Context, params
 
 		return nil
 	})
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	s.kickOutbox()
+	return nil
 }
 
 func (s *salesOrderLineSvcImpl) ReorderSalesOrderLines(ctx context.Context, params domain.ReorderSalesOrderLinesParams) ([]*domain.SalesOrderLine, *apierror.APIError) {

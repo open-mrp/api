@@ -980,21 +980,7 @@ DELETE FROM order_email_contact
 WHERE sales_order_id = sqlc.arg('sales_order_id')
 AND notification_type_code = sqlc.arg('notification_type_code');
 
--- name: DeleteReservedInventoryIssueQuantitiesBySalesOrder :exec
--- The quantity rows created for each reserved issue on issue() are referenced only by
--- inventory_issue.quantity_id, so they must be deleted via this join BEFORE the issues are
--- deleted — otherwise unissuing (or re-issuing) leaves them orphaned in the quantity table.
-DELETE q FROM quantity q
-JOIN inventory_issue ii ON ii.quantity_id = q.id
-WHERE ii.order_id = sqlc.arg('sales_order_id')
-AND ii.account_id = sqlc.arg('account_id')
-AND ii.status_code = 'reserved';
 
--- name: DeleteReservedInventoryIssuesBySalesOrder :exec
-DELETE FROM inventory_issue
-WHERE order_id = sqlc.arg('sales_order_id')
-AND account_id = sqlc.arg('account_id')
-AND status_code = 'reserved';
 
 -- name: CreatePick :exec
 INSERT INTO pick (id, number, sales_order_id, account_id, created_at, updated_at)
@@ -1295,12 +1281,6 @@ AND p.product_type_code = 'sale';
 INSERT INTO inventory_issue (id, account_id, item_id, quantity_id, status_code, order_id, created_at, updated_at)
 VALUES (sqlc.arg('id'), sqlc.arg('account_id'), sqlc.arg('item_id'), sqlc.arg('quantity_id'), 'reserved', sqlc.arg('order_id'), NOW(3), NOW(3));
 
--- name: DeleteInventoryAllocationsByReservedSalesOrderIssues :exec
-DELETE ia FROM inventory_allocation ia
-JOIN inventory_issue ii ON ii.id = ia.inventory_issue_id
-WHERE ii.order_id = sqlc.arg('sales_order_id')
-AND ii.account_id = sqlc.arg('account_id')
-AND ii.status_code = 'reserved';
 
 -- name: HasShippedShipmentForSalesOrder :one
 SELECT EXISTS(

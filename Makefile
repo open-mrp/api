@@ -353,11 +353,13 @@ view-otel: ## Open Jaeger UI via port-forward
 
 e2e-up: openapi-quiet ## Start the E2E stack (isolated services + seeded DBs)
 	@./scripts/run-quiet.sh "Building E2E service images" docker compose -f docker-compose.e2e.yml build --parallel
+	@./scripts/run-quiet.sh "Clearing leftover E2E containers" ./scripts/e2e-rm-named-containers.sh
 	@./scripts/run-quiet.sh "Starting E2E databases" docker compose -f docker-compose.e2e.yml up -d --wait mysql-e2e postgres-e2e rabbitmq minio-e2e
 	@./scripts/setup-e2e-db.sh
 	@./scripts/run-quiet.sh "Starting E2E services" ./scripts/start-e2e-services.sh
 
 e2e-up-ci: openapi-quiet ## Start the E2E stack using pre-built images (for CI)
+	@./scripts/run-quiet.sh "Clearing leftover E2E containers" ./scripts/e2e-rm-named-containers.sh
 	@./scripts/run-quiet.sh "Starting E2E databases" docker compose -f docker-compose.e2e.yml up -d --wait mysql-e2e postgres-e2e rabbitmq minio-e2e
 	@./scripts/setup-e2e-db.sh
 	@./scripts/run-quiet.sh "Starting E2E services" ./scripts/start-e2e-services.sh
@@ -367,6 +369,7 @@ e2e: e2e-up ## Run API E2E tests against the full stack (brings the stack up fir
 	@time ./scripts/run-e2e-tests.sh 600s
 
 e2e-down: ## Tear down the E2E stack
+	@./scripts/run-quiet.sh "Clearing leftover E2E containers" ./scripts/e2e-rm-named-containers.sh
 	@./scripts/run-quiet.sh "Tearing down E2E stack" docker compose -f docker-compose.e2e.yml down -v
 
 # Version management

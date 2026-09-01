@@ -608,6 +608,102 @@ func (q *Queries) ListOpenIssueIDsForItemPaged(ctx context.Context, arg ListOpen
 	return items, nil
 }
 
+const listReservedIssuesForOrder = `-- name: ListReservedIssuesForOrder :many
+SELECT ii.id, ii.item_id, ii.quantity_id
+FROM inventory_issue ii
+WHERE ii.order_id = ?
+AND ii.account_id = ?
+AND ii.status_code = 'reserved'
+`
+
+type ListReservedIssuesForOrderParams struct {
+	OrderID   sql.NullString
+	AccountID string
+}
+
+type ListReservedIssuesForOrderRow struct {
+	ID         string
+	ItemID     string
+	QuantityID string
+}
+
+// ListReservedIssuesForOrder names an order's reservations, with everything releasing one needs: the
+// item whose ordering root has to be held, and the quantity row that goes with the issue.
+//
+// Answered from inventory_issue_order_id_idx, the same access path the delete it replaces used.
+func (q *Queries) ListReservedIssuesForOrder(ctx context.Context, arg ListReservedIssuesForOrderParams) ([]ListReservedIssuesForOrderRow, error) {
+	rows, err := q.db.QueryContext(ctx, listReservedIssuesForOrder, arg.OrderID, arg.AccountID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListReservedIssuesForOrderRow
+	for rows.Next() {
+		var i ListReservedIssuesForOrderRow
+		if err := rows.Scan(&i.ID, &i.ItemID, &i.QuantityID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listReservedItemIDsForOrders = `-- name: ListReservedItemIDsForOrders :many
+SELECT DISTINCT ii.item_id
+FROM inventory_issue ii
+WHERE ii.order_id IN (/*SLICE:order_ids*/?)
+AND ii.account_id = ?
+AND ii.status_code = 'reserved'
+`
+
+type ListReservedItemIDsForOrdersParams struct {
+	OrderIds  []sql.NullString
+	AccountID string
+}
+
+// ListReservedItemIDsForOrders names the items a release will write, so the caller can take their
+// ordering root as the first statement of its transaction rather than discovering the set halfway
+// through it. Read on the pool, before the transaction opens — see ledgerlock, Corollary A.
+func (q *Queries) ListReservedItemIDsForOrders(ctx context.Context, arg ListReservedItemIDsForOrdersParams) ([]string, error) {
+	query := listReservedItemIDsForOrders
+	var queryParams []interface{}
+	if len(arg.OrderIds) > 0 {
+		for _, v := range arg.OrderIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:order_ids*/?", strings.Repeat(",?", len(arg.OrderIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:order_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var item_id string
+		if err := rows.Scan(&item_id); err != nil {
+			return nil, err
+		}
+		items = append(items, item_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const markInventoryReceiptsAllocated = `-- name: MarkInventoryReceiptsAllocated :exec
 UPDATE inventory_receipt
 SET status_code = 'allocated', updated_at = NOW(3)

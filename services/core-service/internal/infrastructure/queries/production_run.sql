@@ -209,11 +209,6 @@ UPDATE sales_order SET production_run_id = NULL, updated_at = NOW(3)
 WHERE production_run_id = sqlc.arg('production_run_id')
 AND owner_account_id = sqlc.arg('account_id');
 
--- name: DeleteReservedInventoryIssuesByOrderID :exec
-DELETE FROM inventory_issue
-WHERE order_id = sqlc.arg('order_id')
-AND account_id = sqlc.arg('account_id')
-AND status_code = 'reserved';
 
 -- name: GetNextProductionRunNumberFull :one
 -- FOR UPDATE serializes concurrent allocators per account: without it two

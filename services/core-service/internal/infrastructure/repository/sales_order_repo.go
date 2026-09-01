@@ -991,15 +991,11 @@ func (r *salesOrderRepoImpl) DeleteCascade(ctx context.Context, accountID, sales
 		}
 	}
 
-	// Release reserved inventory issues for this sales order
-	if err := r.queries.DeleteReservedInventoryIssuesBySalesOrder(ctx, sqlc.DeleteReservedInventoryIssuesBySalesOrderParams{
-		SalesOrderID: gosql.NullString{String: salesOrderID, Valid: true},
-		AccountID:    accountID,
-	}); err != nil {
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return tracing.Trace(span, apiErr)
-		}
-	}
+	// The order's reservations are NOT released here. They are released before this cascade runs, by
+	// InventoryReservationRepo.ReleaseReservedIssuesForOrder, which also drops the allocations covering
+	// them and frees the receipts those allocations were holding down. Deleting the issues here would
+	// strand their allocations against an issue id that no longer exists, and nothing would ever be
+	// able to release the stock again.
 
 	// Delete sales order lines
 	if err := r.queries.DeleteSalesOrderLinesBySalesOrder(ctx, salesOrderID); err != nil {
@@ -1128,46 +1124,6 @@ func (r *salesOrderRepoImpl) CreateReservedInventoryIssue(ctx context.Context, i
 		ItemID:     itemID,
 		QuantityID: quantityID,
 		OrderID:    gosql.NullString{String: orderID, Valid: true},
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-
-	return nil
-}
-
-func (r *salesOrderRepoImpl) DeleteInventoryAllocationsByReservedIssues(ctx context.Context, accountID, salesOrderID string) *apierror.APIError {
-	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.delete_inventory_allocations_by_reserved_issues")
-	defer span.End()
-
-	err := r.queries.DeleteInventoryAllocationsByReservedSalesOrderIssues(ctx, sqlc.DeleteInventoryAllocationsByReservedSalesOrderIssuesParams{
-		SalesOrderID: gosql.NullString{String: salesOrderID, Valid: true},
-		AccountID:    accountID,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-
-	return nil
-}
-
-func (r *salesOrderRepoImpl) DeleteReservedInventoryIssues(ctx context.Context, accountID, salesOrderID string) *apierror.APIError {
-	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.delete_reserved_inventory_issues")
-	defer span.End()
-
-	// Delete the reserved issues' quantity rows first (referenced only by inventory_issue.quantity_id); otherwise they orphan in the quantity table once the issues are gone.
-	if err := r.queries.DeleteReservedInventoryIssueQuantitiesBySalesOrder(ctx, sqlc.DeleteReservedInventoryIssueQuantitiesBySalesOrderParams{
-		SalesOrderID: gosql.NullString{String: salesOrderID, Valid: true},
-		AccountID:    accountID,
-	}); err != nil {
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return tracing.Trace(span, apiErr)
-		}
-	}
-
-	err := r.queries.DeleteReservedInventoryIssuesBySalesOrder(ctx, sqlc.DeleteReservedInventoryIssuesBySalesOrderParams{
-		SalesOrderID: gosql.NullString{String: salesOrderID, Valid: true},
-		AccountID:    accountID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)

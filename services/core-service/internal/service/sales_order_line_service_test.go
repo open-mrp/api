@@ -29,6 +29,7 @@ type SalesOrderLineSvcTestSuite struct {
 	pickRepo          *repositorymock.MockPickRepo
 	pricingRepo       *repositorymock.MockPricingRepo
 	deletedRecordRepo *repositorymock.MockDeletedRecordRepo
+	reservationRepo   *repositorymock.MockInventoryReservationRepo
 	repoFactory       *factorymock.MockRepoFactory
 	mediatorFactory   *factorymock.MockMediatorFactory
 	idempotencyMed    *mediatormock.MockIdempotencyMed
@@ -53,6 +54,11 @@ func (suite *SalesOrderLineSvcTestSuite) SetupTest() {
 	suite.repoFactory.EXPECT().NewPickRepo().Return(suite.pickRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewPricingRepo().Return(suite.pricingRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewDeletedRecordRepo().Return(suite.deletedRecordRepo).AnyTimes()
+	suite.reservationRepo = repositorymock.NewMockInventoryReservationRepo(suite.ctrl)
+	suite.repoFactory.EXPECT().NewInventoryReservationRepo().Return(suite.reservationRepo).AnyTimes()
+	// Every line delete names the order's reserved items so the transaction can take their root; only the tests that actually release anything set up more than this.
+	suite.reservationRepo.EXPECT().ListReservedItemIDsForOrders(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+	suite.reservationRepo.EXPECT().LockItemForLedger(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 	suite.repoFactory.EXPECT().NewOutboxRepo().Return(&stubOutboxRepo{}).AnyTimes()
 
 	suite.idempotencyMed = mediatormock.NewMockIdempotencyMed(suite.ctrl)
@@ -962,8 +968,9 @@ func (suite *SalesOrderLineSvcTestSuite) TestDeleteSalesOrderLine_UnissuesWhenPi
 	// No lines remain → tear down the pick and unissue the order.
 	suite.pickRepo.EXPECT().CountLines(gomock.Any(), pickID).Return(int64(0), nil).Times(1)
 	suite.orderRepo.EXPECT().DeletePickBySalesOrder(gomock.Any(), "or_test").Return(nil).Times(1)
-	suite.orderRepo.EXPECT().DeleteInventoryAllocationsByReservedIssues(gomock.Any(), "ac_test", "or_test").Return(nil).Times(1)
-	suite.orderRepo.EXPECT().DeleteReservedInventoryIssues(gomock.Any(), "ac_test", "or_test").Return(nil).Times(1)
+	suite.reservationRepo.EXPECT().
+		ReleaseReservedIssuesForOrder(gomock.Any(), gomock.Any(), "ac_test", "or_test").
+		Return(nil, nil).Times(1)
 	suite.orderRepo.EXPECT().
 		UpdateStatus(gomock.Any(), "ac_test", "or_test", string(constants.SalesOrderStatusCodeEstimate), nil, nil).
 		Return(nil).

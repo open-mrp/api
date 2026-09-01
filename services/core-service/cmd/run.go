@@ -483,12 +483,14 @@ func Run(
 		EncryptionKey:         integrationEncryptionKey,
 		FrontendURL:           cfg.FrontendURL,
 		Branding:              brandingAssets,
+		OutboxNotifier:        enqueuer,
 	})
 
 	salesOrderLineSvc := service.NewSalesOrderLineSvc(&service.SalesOrderLineSvcConfig{
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
 		TxManager:       txManager,
+		OutboxNotifier:  enqueuer,
 	})
 
 	receivableSvc := service.NewReceivableSvc(&service.ReceivableSvcConfig{
@@ -579,6 +581,7 @@ func Run(
 		MediatorFactory: mediatorFactory,
 		JobSvcFactory:   jobSvcFactory,
 		TxManager:       txManager,
+		OutboxNotifier:  enqueuer,
 	})
 
 	productionScheduleSvc := service.NewProductionScheduleSvc(&service.ProductionScheduleSvcConfig{

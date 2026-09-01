@@ -284,3 +284,24 @@ INSERT INTO inventory_allocation (
     NOW(3),
     NOW(3)
 );
+
+-- ListReservedIssuesForOrder names an order's reservations, with everything releasing one needs: the
+-- item whose ordering root has to be held, and the quantity row that goes with the issue.
+--
+-- Answered from inventory_issue_order_id_idx, the same access path the delete it replaces used.
+-- name: ListReservedIssuesForOrder :many
+SELECT ii.id, ii.item_id, ii.quantity_id
+FROM inventory_issue ii
+WHERE ii.order_id = sqlc.arg('order_id')
+AND ii.account_id = sqlc.arg('account_id')
+AND ii.status_code = 'reserved';
+
+-- ListReservedItemIDsForOrders names the items a release will write, so the caller can take their
+-- ordering root as the first statement of its transaction rather than discovering the set halfway
+-- through it. Read on the pool, before the transaction opens — see ledgerlock, Corollary A.
+-- name: ListReservedItemIDsForOrders :many
+SELECT DISTINCT ii.item_id
+FROM inventory_issue ii
+WHERE ii.order_id IN (sqlc.slice('order_ids'))
+AND ii.account_id = sqlc.arg('account_id')
+AND ii.status_code = 'reserved';

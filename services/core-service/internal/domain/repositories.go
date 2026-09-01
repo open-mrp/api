@@ -613,7 +613,6 @@ type ProductionRunRepo interface {
 	DeleteBatchesByRun(ctx context.Context, accountID, productionRunID string) *apierror.APIError
 	FindOrderIDsByRun(ctx context.Context, accountID, productionRunID string) ([]string, *apierror.APIError)
 	UnlinkOrdersFromRun(ctx context.Context, accountID, productionRunID string) *apierror.APIError
-	DeleteReservedInventoryIssuesByOrder(ctx context.Context, accountID, orderID string) *apierror.APIError
 	ListBatchesByRun(ctx context.Context, params ListBatchesByProductionRunParams) (*ListBatchesByProductionRunResult, *apierror.APIError)
 	SetBatchProductionRunID(ctx context.Context, accountID, batchID, productionRunID string) *apierror.APIError
 }
@@ -792,6 +791,10 @@ type InventoryReservationRepo interface {
 	CountAvailableReceiptsForItem(ctx context.Context, accountID, itemID string) (int64, *apierror.APIError)
 	// AllocateOneOpenIssue covers one open issue against available receipts. Each call is meant to be its own transaction; the issue is re-read by primary key under FOR UPDATE and skipped if it is no longer open.
 	AllocateOneOpenIssue(ctx context.Context, scope *ledgerlock.Scope, accountID, itemID, issueID string) *apierror.APIError
+	// ListReservedItemIDsForOrders names the items the given orders hold reservations on, so a release can take their ordering root as its transaction's first statement. Read on the pool, before the transaction opens.
+	ListReservedItemIDsForOrders(ctx context.Context, accountID string, orderIDs []string) ([]string, *apierror.APIError)
+	// ReleaseReservedIssuesForOrder deletes an order's reservations along with the allocations covering them, returning the receipts those allocations were holding down to `available`. Returns the items it touched, whose open demand the caller must enqueue allocation for after committing.
+	ReleaseReservedIssuesForOrder(ctx context.Context, scope *ledgerlock.Scope, accountID, orderID string) ([]string, *apierror.APIError)
 }
 
 // MaterialDemandRepo calculates material demand from a bill of materials.
@@ -1269,8 +1272,6 @@ type SalesOrderRepo interface {
 	SetProductionRunID(ctx context.Context, accountID, salesOrderID, productionRunID string) *apierror.APIError
 	GetSaleLinesForIssue(ctx context.Context, salesOrderID string) ([]SalesOrderSaleLineForIssue, *apierror.APIError)
 	CreateReservedInventoryIssue(ctx context.Context, id, accountID, itemID, quantityID, orderID string) *apierror.APIError
-	DeleteInventoryAllocationsByReservedIssues(ctx context.Context, accountID, salesOrderID string) *apierror.APIError
-	DeleteReservedInventoryIssues(ctx context.Context, accountID, salesOrderID string) *apierror.APIError
 	GetAcknowledgementRecipients(ctx context.Context, salesOrderID string) ([]string, *apierror.APIError)
 	MarkAcknowledgementSent(ctx context.Context, accountID, salesOrderID string) *apierror.APIError
 	CreateEmailContact(ctx context.Context, id, salesOrderID, accountUserID, notificationTypeCode string) *apierror.APIError

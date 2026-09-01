@@ -6765,20 +6765,6 @@ func (mr *MockProductionRunRepoMockRecorder) DeleteBatchesByRun(ctx, accountID, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteBatchesByRun", reflect.TypeOf((*MockProductionRunRepo)(nil).DeleteBatchesByRun), ctx, accountID, productionRunID)
 }
 
-// DeleteReservedInventoryIssuesByOrder mocks base method.
-func (m *MockProductionRunRepo) DeleteReservedInventoryIssuesByOrder(ctx context.Context, accountID, orderID string) *apierror.APIError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteReservedInventoryIssuesByOrder", ctx, accountID, orderID)
-	ret0, _ := ret[0].(*apierror.APIError)
-	return ret0
-}
-
-// DeleteReservedInventoryIssuesByOrder indicates an expected call of DeleteReservedInventoryIssuesByOrder.
-func (mr *MockProductionRunRepoMockRecorder) DeleteReservedInventoryIssuesByOrder(ctx, accountID, orderID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteReservedInventoryIssuesByOrder", reflect.TypeOf((*MockProductionRunRepo)(nil).DeleteReservedInventoryIssuesByOrder), ctx, accountID, orderID)
-}
-
 // ExistsByNumber mocks base method.
 func (m *MockProductionRunRepo) ExistsByNumber(ctx context.Context, accountID, number string, excludeID *string) (bool, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -8664,6 +8650,21 @@ func (mr *MockInventoryReservationRepoMockRecorder) ListOpenIssueIDsForItem(ctx,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListOpenIssueIDsForItem", reflect.TypeOf((*MockInventoryReservationRepo)(nil).ListOpenIssueIDsForItem), ctx, accountID, itemID, afterCreatedAt, afterID, limit)
 }
 
+// ListReservedItemIDsForOrders mocks base method.
+func (m *MockInventoryReservationRepo) ListReservedItemIDsForOrders(ctx context.Context, accountID string, orderIDs []string) ([]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListReservedItemIDsForOrders", ctx, accountID, orderIDs)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListReservedItemIDsForOrders indicates an expected call of ListReservedItemIDsForOrders.
+func (mr *MockInventoryReservationRepoMockRecorder) ListReservedItemIDsForOrders(ctx, accountID, orderIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListReservedItemIDsForOrders", reflect.TypeOf((*MockInventoryReservationRepo)(nil).ListReservedItemIDsForOrders), ctx, accountID, orderIDs)
+}
+
 // LockItemForLedger mocks base method.
 func (m *MockInventoryReservationRepo) LockItemForLedger(ctx context.Context, itemID string) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -8704,6 +8705,21 @@ func (m *MockInventoryReservationRepo) ReduceReservedForOrderMaterials(ctx conte
 func (mr *MockInventoryReservationRepoMockRecorder) ReduceReservedForOrderMaterials(ctx, scope, orderID, accountID, demands any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReduceReservedForOrderMaterials", reflect.TypeOf((*MockInventoryReservationRepo)(nil).ReduceReservedForOrderMaterials), ctx, scope, orderID, accountID, demands)
+}
+
+// ReleaseReservedIssuesForOrder mocks base method.
+func (m *MockInventoryReservationRepo) ReleaseReservedIssuesForOrder(ctx context.Context, scope *ledgerlock.Scope, accountID, orderID string) ([]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReleaseReservedIssuesForOrder", ctx, scope, accountID, orderID)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ReleaseReservedIssuesForOrder indicates an expected call of ReleaseReservedIssuesForOrder.
+func (mr *MockInventoryReservationRepoMockRecorder) ReleaseReservedIssuesForOrder(ctx, scope, accountID, orderID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReleaseReservedIssuesForOrder", reflect.TypeOf((*MockInventoryReservationRepo)(nil).ReleaseReservedIssuesForOrder), ctx, scope, accountID, orderID)
 }
 
 // MockMaterialDemandRepo is a mock of MaterialDemandRepo interface.
@@ -13211,20 +13227,6 @@ func (mr *MockSalesOrderRepoMockRecorder) DeleteEmailContactsByOrderAndType(ctx,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEmailContactsByOrderAndType", reflect.TypeOf((*MockSalesOrderRepo)(nil).DeleteEmailContactsByOrderAndType), ctx, salesOrderID, notificationTypeCode)
 }
 
-// DeleteInventoryAllocationsByReservedIssues mocks base method.
-func (m *MockSalesOrderRepo) DeleteInventoryAllocationsByReservedIssues(ctx context.Context, accountID, salesOrderID string) *apierror.APIError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteInventoryAllocationsByReservedIssues", ctx, accountID, salesOrderID)
-	ret0, _ := ret[0].(*apierror.APIError)
-	return ret0
-}
-
-// DeleteInventoryAllocationsByReservedIssues indicates an expected call of DeleteInventoryAllocationsByReservedIssues.
-func (mr *MockSalesOrderRepoMockRecorder) DeleteInventoryAllocationsByReservedIssues(ctx, accountID, salesOrderID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteInventoryAllocationsByReservedIssues", reflect.TypeOf((*MockSalesOrderRepo)(nil).DeleteInventoryAllocationsByReservedIssues), ctx, accountID, salesOrderID)
-}
-
 // DeletePickBySalesOrder mocks base method.
 func (m *MockSalesOrderRepo) DeletePickBySalesOrder(ctx context.Context, salesOrderID string) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -13265,20 +13267,6 @@ func (m *MockSalesOrderRepo) DeleteQuantitiesByPickLines(ctx context.Context, sa
 func (mr *MockSalesOrderRepoMockRecorder) DeleteQuantitiesByPickLines(ctx, salesOrderID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteQuantitiesByPickLines", reflect.TypeOf((*MockSalesOrderRepo)(nil).DeleteQuantitiesByPickLines), ctx, salesOrderID)
-}
-
-// DeleteReservedInventoryIssues mocks base method.
-func (m *MockSalesOrderRepo) DeleteReservedInventoryIssues(ctx context.Context, accountID, salesOrderID string) *apierror.APIError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteReservedInventoryIssues", ctx, accountID, salesOrderID)
-	ret0, _ := ret[0].(*apierror.APIError)
-	return ret0
-}
-
-// DeleteReservedInventoryIssues indicates an expected call of DeleteReservedInventoryIssues.
-func (mr *MockSalesOrderRepoMockRecorder) DeleteReservedInventoryIssues(ctx, accountID, salesOrderID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteReservedInventoryIssues", reflect.TypeOf((*MockSalesOrderRepo)(nil).DeleteReservedInventoryIssues), ctx, accountID, salesOrderID)
 }
 
 // Get mocks base method.

@@ -309,24 +309,6 @@ func (q *Queries) CreateSalesOrderEmailContact(ctx context.Context, arg CreateSa
 	return err
 }
 
-const deleteInventoryAllocationsByReservedSalesOrderIssues = `-- name: DeleteInventoryAllocationsByReservedSalesOrderIssues :exec
-DELETE ia FROM inventory_allocation ia
-JOIN inventory_issue ii ON ii.id = ia.inventory_issue_id
-WHERE ii.order_id = ?
-AND ii.account_id = ?
-AND ii.status_code = 'reserved'
-`
-
-type DeleteInventoryAllocationsByReservedSalesOrderIssuesParams struct {
-	SalesOrderID sql.NullString
-	AccountID    string
-}
-
-func (q *Queries) DeleteInventoryAllocationsByReservedSalesOrderIssues(ctx context.Context, arg DeleteInventoryAllocationsByReservedSalesOrderIssuesParams) error {
-	_, err := q.db.ExecContext(ctx, deleteInventoryAllocationsByReservedSalesOrderIssues, arg.SalesOrderID, arg.AccountID)
-	return err
-}
-
 const deleteInvoiceLineQuantitiesBySalesOrder = `-- name: DeleteInvoiceLineQuantitiesBySalesOrder :exec
 DELETE q FROM quantity q
 JOIN invoice_line il ON il.quantity_id = q.id
@@ -408,44 +390,6 @@ WHERE pl.sales_order_line_id = ?
 
 func (q *Queries) DeleteQuantitiesByPickLinesForLine(ctx context.Context, salesOrderLineID string) error {
 	_, err := q.db.ExecContext(ctx, deleteQuantitiesByPickLinesForLine, salesOrderLineID)
-	return err
-}
-
-const deleteReservedInventoryIssueQuantitiesBySalesOrder = `-- name: DeleteReservedInventoryIssueQuantitiesBySalesOrder :exec
-DELETE q FROM quantity q
-JOIN inventory_issue ii ON ii.quantity_id = q.id
-WHERE ii.order_id = ?
-AND ii.account_id = ?
-AND ii.status_code = 'reserved'
-`
-
-type DeleteReservedInventoryIssueQuantitiesBySalesOrderParams struct {
-	SalesOrderID sql.NullString
-	AccountID    string
-}
-
-// The quantity rows created for each reserved issue on issue() are referenced only by
-// inventory_issue.quantity_id, so they must be deleted via this join BEFORE the issues are
-// deleted — otherwise unissuing (or re-issuing) leaves them orphaned in the quantity table.
-func (q *Queries) DeleteReservedInventoryIssueQuantitiesBySalesOrder(ctx context.Context, arg DeleteReservedInventoryIssueQuantitiesBySalesOrderParams) error {
-	_, err := q.db.ExecContext(ctx, deleteReservedInventoryIssueQuantitiesBySalesOrder, arg.SalesOrderID, arg.AccountID)
-	return err
-}
-
-const deleteReservedInventoryIssuesBySalesOrder = `-- name: DeleteReservedInventoryIssuesBySalesOrder :exec
-DELETE FROM inventory_issue
-WHERE order_id = ?
-AND account_id = ?
-AND status_code = 'reserved'
-`
-
-type DeleteReservedInventoryIssuesBySalesOrderParams struct {
-	SalesOrderID sql.NullString
-	AccountID    string
-}
-
-func (q *Queries) DeleteReservedInventoryIssuesBySalesOrder(ctx context.Context, arg DeleteReservedInventoryIssuesBySalesOrderParams) error {
-	_, err := q.db.ExecContext(ctx, deleteReservedInventoryIssuesBySalesOrder, arg.SalesOrderID, arg.AccountID)
 	return err
 }
 

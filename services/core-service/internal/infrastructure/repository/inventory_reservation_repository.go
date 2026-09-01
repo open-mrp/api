@@ -852,3 +852,122 @@ func (r *inventoryReservationRepo) allocateOneOpenIssue(ctx context.Context, acc
 
 	return nil
 }
+
+// ListReservedItemIDsForOrders names the items an order's reservations sit on, so a release can take
+// their ordering root as the first statement of its transaction. Read on the pool, before the
+// transaction opens — see ledgerlock, Corollary A.
+func (r *inventoryReservationRepo) ListReservedItemIDsForOrders(ctx context.Context, accountID string, orderIDs []string) ([]string, *apierror.APIError) {
+	ctx, span := inventoryReservationRepoTracer.Start(ctx, "repository.inventory_reservation.list_reserved_item_ids_for_orders")
+	defer span.End()
+
+	if len(orderIDs) == 0 {
+		return nil, nil
+	}
+
+	nullable := make([]sql.NullString, 0, len(orderIDs))
+	for _, orderID := range orderIDs {
+		nullable = append(nullable, sql.NullString{String: orderID, Valid: true})
+	}
+
+	itemIDs, err := r.queries.ListReservedItemIDsForOrders(ctx, sqlc.ListReservedItemIDsForOrdersParams{
+		OrderIds:  nullable,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return ledgerlock.SortedUnique(itemIDs), nil
+}
+
+// ReleaseReservedIssuesForOrder hands an order's reservations back to stock: the allocations covering
+// them, the receipts those allocations were holding down, and the issues themselves.
+//
+// Freeing the receipts is the part the two statements this replaces never did. A reservation covered
+// by an allocation closes its receipt out to `allocated`, and FindReceiptsForAllocation considers
+// nothing but `available` — so deleting the allocation without reopening the receipt leaves real
+// stock on the shelf that no later allocation can see, a shortage with no bad row to find. The
+// shipment-void path has always done this correctly; see FreeReleasedReceipts.
+//
+// The allocation's satellites go with it for the same reason they do there: a quantity or rate row is
+// reachable only through the allocation that owns it, so deleting the allocation alone leaks three
+// rows per release into tables nothing will ever join them from again.
+//
+// Callers must enqueue allocation for the returned items after committing: capacity that has just
+// been freed is capacity some other order's open demand may now be coverable from.
+func (r *inventoryReservationRepo) ReleaseReservedIssuesForOrder(ctx context.Context, scope *ledgerlock.Scope, accountID, orderID string) ([]string, *apierror.APIError) {
+	ctx, span := inventoryReservationRepoTracer.Start(ctx, "repository.inventory_reservation.release_reserved_issues_for_order")
+	defer span.End()
+
+	issues, err := r.queries.ListReservedIssuesForOrder(ctx, sqlc.ListReservedIssuesForOrderParams{
+		OrderID:   sql.NullString{String: orderID, Valid: true},
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if len(issues) == 0 {
+		return nil, nil
+	}
+
+	issueIDs := make([]string, 0, len(issues))
+	issueQuantityIDs := make([]string, 0, len(issues))
+	itemIDs := make([]string, 0, len(issues))
+	for _, issue := range issues {
+		issueIDs = append(issueIDs, issue.ID)
+		issueQuantityIDs = append(issueQuantityIDs, issue.QuantityID)
+		itemIDs = append(itemIDs, issue.ItemID)
+	}
+	itemIDs = ledgerlock.SortedUnique(itemIDs)
+
+	// The backstop, in the order Acquire would have taken them; the acquisition belongs at the top of
+	// the caller's transaction. See ledgerlock.
+	for _, itemID := range itemIDs {
+		if apiErr := scope.EnsureLocked(ctx, r, itemID); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
+
+	allocations, err := r.queries.FindAllocationsByIssueIDs(ctx, issueIDs)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	if len(allocations) > 0 {
+		allocationIDs := make([]string, 0, len(allocations))
+		quantityIDs := make([]string, 0, len(allocations)*2)
+		rateIDs := make([]string, 0, len(allocations))
+		receiptIDs := make([]string, 0, len(allocations))
+		for _, allocation := range allocations {
+			allocationIDs = append(allocationIDs, allocation.ID)
+			quantityIDs = append(quantityIDs, allocation.QuantityID, allocation.TotalCostID)
+			rateIDs = append(rateIDs, allocation.UnitCostID)
+			receiptIDs = append(receiptIDs, allocation.InventoryReceiptID)
+		}
+
+		if err := r.queries.DeleteAllocationsByIDs(ctx, allocationIDs); err != nil {
+			return nil, tracing.Trace(span, db.MapSQLError(err))
+		}
+		if err := r.queries.DeleteQuantitiesByIDs(ctx, quantityIDs); err != nil {
+			return nil, tracing.Trace(span, db.MapSQLError(err))
+		}
+		if err := r.queries.DeleteRatesByIDs(ctx, rateIDs); err != nil {
+			return nil, tracing.Trace(span, db.MapSQLError(err))
+		}
+		// Runs after the deletes so it weighs only the allocations that survived: a receipt another
+		// issue still fills stays as it was.
+		if err := r.queries.FreeReleasedReceipts(ctx, receiptIDs); err != nil {
+			return nil, tracing.Trace(span, db.MapSQLError(err))
+		}
+	}
+
+	if err := r.queries.DeleteInventoryIssuesByIDs(ctx, issueIDs); err != nil {
+		return nil, tracing.Trace(span, db.MapSQLError(err))
+	}
+	// After the issues, not before: the quantity is what inventory_issue.quantity_id points at, and
+	// deleting it first leaves the issue pointing at nothing for the rest of the transaction.
+	if err := r.queries.DeleteQuantitiesByIDs(ctx, issueQuantityIDs); err != nil {
+		return nil, tracing.Trace(span, db.MapSQLError(err))
+	}
+
+	return itemIDs, nil
+}

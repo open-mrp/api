@@ -1,11 +1,11 @@
 -- name: ListPermissionGroupsForward :many
 SELECT
     permission_group.id,
-    permission_group.code,
     permission_group.name,
     permission_group.description,
     permission_group.created_at,
-    permission_group.updated_at
+    permission_group.updated_at,
+    permission_group.code
 FROM permission_group
 WHERE (
     sqlc.narg('search_query') IS NULL
@@ -22,11 +22,11 @@ LIMIT ?;
 -- name: ListPermissionGroupsBackward :many
 SELECT
     permission_group.id,
-    permission_group.code,
     permission_group.name,
     permission_group.description,
     permission_group.created_at,
-    permission_group.updated_at
+    permission_group.updated_at,
+    permission_group.code
 FROM permission_group
 WHERE (
     sqlc.narg('search_query') IS NULL
@@ -42,11 +42,11 @@ LIMIT ?;
 -- name: GetPermissionGroupsByIDs :many
 SELECT
     permission_group.id,
-    permission_group.code,
     permission_group.name,
     permission_group.description,
     permission_group.created_at,
-    permission_group.updated_at
+    permission_group.updated_at,
+    permission_group.code
 FROM permission_group
 WHERE permission_group.id IN (sqlc.slice('ids'));
 

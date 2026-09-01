@@ -998,6 +998,11 @@ type InventoryIssue struct {
 	StatusCode        string
 }
 
+type InventoryItemLock struct {
+	ItemID    string
+	CreatedAt time.Time
+}
+
 type InventoryLog struct {
 	ID         string
 	ItemID     string

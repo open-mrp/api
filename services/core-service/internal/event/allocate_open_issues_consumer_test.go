@@ -61,6 +61,8 @@ func (s *AllocateOpenIssuesConsumerTestSuite) SetupTest() {
 	s.reservationRepo = repositorymock.NewMockInventoryReservationRepo(s.ctrl)
 	s.repoFactory = factorymock.NewMockRepoFactory(s.ctrl)
 	s.repoFactory.EXPECT().NewInventoryReservationRepo().Return(s.reservationRepo).AnyTimes()
+	// Every per-issue transaction takes the item's ordering root as its first statement.
+	s.reservationRepo.EXPECT().LockItemForLedger(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 	s.repoFactory.EXPECT().NewOutboxRepo().
 		Return(continuationOutboxRepo{enqueued: &s.continuations}).AnyTimes()
 
@@ -100,7 +102,7 @@ func (s *AllocateOpenIssuesConsumerTestSuite) TestFullPageEnqueuesContinuationFr
 		Return(refs, nil)
 	for _, ref := range refs {
 		s.reservationRepo.EXPECT().
-			AllocateOneOpenIssue(gomock.Any(), pageAccountID, pageItemID, ref.ID).Return(nil)
+			AllocateOneOpenIssue(gomock.Any(), gomock.Any(), pageAccountID, pageItemID, ref.ID).Return(nil)
 	}
 
 	err := s.consumer.allocateItem(context.Background(), pageParentMsg, pageAccountID, pageItemID, time.Time{}, "", 3)
@@ -122,7 +124,7 @@ func (s *AllocateOpenIssuesConsumerTestSuite) TestShortPageStopsPaging() {
 		Return(refs, nil)
 	for _, ref := range refs {
 		s.reservationRepo.EXPECT().
-			AllocateOneOpenIssue(gomock.Any(), pageAccountID, pageItemID, ref.ID).Return(nil)
+			AllocateOneOpenIssue(gomock.Any(), gomock.Any(), pageAccountID, pageItemID, ref.ID).Return(nil)
 	}
 
 	err := s.consumer.allocateItem(context.Background(), pageParentMsg, pageAccountID, pageItemID, at, "ii_5", 3)
@@ -160,10 +162,10 @@ func (s *AllocateOpenIssuesConsumerTestSuite) TestOneFailingIssueDoesNotStarveTh
 		ListOpenIssueIDsForItem(gomock.Any(), pageAccountID, pageItemID, time.Time{}, "", int32(3)).
 		Return(refs, nil)
 
-	s.reservationRepo.EXPECT().AllocateOneOpenIssue(gomock.Any(), pageAccountID, pageItemID, refs[0].ID).Return(nil)
-	s.reservationRepo.EXPECT().AllocateOneOpenIssue(gomock.Any(), pageAccountID, pageItemID, refs[1].ID).
+	s.reservationRepo.EXPECT().AllocateOneOpenIssue(gomock.Any(), gomock.Any(), pageAccountID, pageItemID, refs[0].ID).Return(nil)
+	s.reservationRepo.EXPECT().AllocateOneOpenIssue(gomock.Any(), gomock.Any(), pageAccountID, pageItemID, refs[1].ID).
 		Return(apierror.NewInternalError(nil, "boom"))
-	s.reservationRepo.EXPECT().AllocateOneOpenIssue(gomock.Any(), pageAccountID, pageItemID, refs[2].ID).Return(nil)
+	s.reservationRepo.EXPECT().AllocateOneOpenIssue(gomock.Any(), gomock.Any(), pageAccountID, pageItemID, refs[2].ID).Return(nil)
 
 	err := s.consumer.allocateItem(context.Background(), pageParentMsg, pageAccountID, pageItemID, time.Time{}, "", 3)
 
@@ -205,7 +207,7 @@ func (s *AllocateOpenIssuesConsumerTestSuite) TestContinuationIDIsCarriedOntoThe
 		ListOpenIssueIDsForItem(gomock.Any(), pageAccountID, pageItemID, time.Time{}, "", int32(1)).
 		Return(refs, nil)
 	s.reservationRepo.EXPECT().
-		AllocateOneOpenIssue(gomock.Any(), pageAccountID, pageItemID, refs[0].ID).Return(nil)
+		AllocateOneOpenIssue(gomock.Any(), gomock.Any(), pageAccountID, pageItemID, refs[0].ID).Return(nil)
 
 	err := s.consumer.allocateItem(context.Background(), pageParentMsg, pageAccountID, pageItemID, time.Time{}, "", 1)
 

@@ -30,6 +30,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/services/core-service/internal/ledgerlock"
 	"github.com/open-mrp/api/shared/ledger"
 )
 
@@ -334,6 +335,16 @@ func (f *fixture) insertReceipt(t *testing.T, status, value, unitID string, rece
 		rID, f.accountID, f.accountID, f.itemID, receivedAt, qID, rateID, status, receivedAt, receivedAt)
 	require.NoError(t, err)
 	return rID
+}
+
+// scope takes the fixture item's ordering root for this actor and returns the evidence, the way a
+// conforming ledger transaction opens. Tests that want to observe a LATE acquisition pass a bare
+// &ledgerlock.Scope{} instead.
+func (a *actor) scope(t *testing.T, f *fixture) *ledgerlock.Scope {
+	t.Helper()
+	s, apiErr := ledgerlock.Acquire(context.Background(), &inventoryReservationRepo{queries: a.q}, []string{f.itemID})
+	require.Nil(t, apiErr, "%s: acquiring the item's ledger root", a.name)
+	return s
 }
 
 // seedItemLockRow warms the fixture's lock row, so a test can exercise the acquisition's duplicate-key

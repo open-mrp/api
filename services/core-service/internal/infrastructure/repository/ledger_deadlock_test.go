@@ -29,12 +29,13 @@ import (
 // reversal must free the receipts before it can restore the demand, and an allocator must hold the
 // demand before it can decide which receipts to draw.
 //
-// EXPECTED RED until there is an ordering root both sides take first. No amount of reordering inside
-// either flow fixes this one; that is the whole argument for the root, and this test is the tracking
-// signal for it.
+// No amount of reordering inside either flow fixes this one, which is the whole argument for the
+// ordering root: both sides now take inventory_item_lock for the item as their first statement, so the
+// second simply waits for the first instead of meeting it head-on.
 //
-// The interleaving is forced, not raced: each side takes its first lock, and the test waits for
-// InnoDB itself to report the other blocked before letting either proceed.
+// The interleaving is still forced rather than raced. The contender is driven to the point where the
+// server reports it blocked, and only then is the holder allowed to commit — so this passes because
+// the root serialises them, not because the test was too quick to catch the overlap.
 func TestNoDeadlock_ReversalVersusAllocator(t *testing.T) {
 	f := newFixture(t)
 	base := time.Now().UTC().Add(-time.Hour).Truncate(time.Millisecond)
@@ -45,39 +46,48 @@ func TestNoDeadlock_ReversalVersusAllocator(t *testing.T) {
 	reversal := f.actor(t, "shipment-void-reversal")
 	ctx := context.Background()
 
-	// --- Step 1: each side takes its FIRST lock, and only its first. -------------------------
+	f.seedItemLockRow(t, f.itemID)
 
+	// --- Step 1: the allocator takes the root, then its own locks. ---------------------------
+
+	require.NoError(t, async.acquireItemLock(f.itemID), "async: acquire the item's ordering root")
 	require.NoError(t, async.claim(t, f, issueID), "async: claim the issue it is about to cover")
-	require.NoError(t, reversal.q.FreeReleasedReceipts(ctx, []string{receiptID}),
-		"reversal: free the receipts its deleted allocations released")
 
-	// --- Step 2: each side reaches for what the other holds. --------------------------------
+	// --- Step 2: the reversal tries to enter the same section. -------------------------------
 
-	asyncErr := make(chan error, 1)
 	reversalErr := make(chan error, 1)
-
 	go func() {
-		// The allocator's second lock: the receipts the reversal is holding.
-		_, err := async.q.FindReceiptsForAllocation(ctx, sqlc.FindReceiptsForAllocationParams{
-			AccountID: f.accountID, ItemID: f.itemID,
-		})
-		asyncErr <- err
-	}()
-	async.waitUntilBlockedOr(t, f.db, asyncErr)
-
-	go func() {
-		// The reversal's second write: the issues, with the receipt locks still held.
+		if err := reversal.acquireItemLock(f.itemID); err != nil {
+			reversalErr <- err
+			return
+		}
+		// Never reached until the allocator commits. Once it is, these run against a ledger the
+		// allocator has finished with, in whatever order the reversal likes — which is the point.
+		if err := reversal.q.FreeReleasedReceipts(ctx, []string{receiptID}); err != nil {
+			reversalErr <- err
+			return
+		}
 		reversalErr <- reversal.q.RestoreIssuesToReserved(ctx, []string{issueID})
 	}()
+	reversal.waitUntilBlockedOr(t, f.db, reversalErr)
 
-	// --- Step 3: whichever way InnoDB breaks it, neither side may see 1213. -----------------
+	// --- Step 3: the allocator finishes the work that used to deadlock. ----------------------
 
-	assertNeitherDeadlocked(t, asyncErr, reversalErr,
-		"the ABBA inversion between the allocator (issue → receipts) and a reversal (receipts → issues) "+
-			"is live — EXPECTED until both take an ordering root first; see this test's comment: receipt "+
-			receiptID+", issue "+issueID)
-
+	_, err := async.q.FindReceiptsForAllocation(ctx, sqlc.FindReceiptsForAllocationParams{
+		AccountID: f.accountID, ItemID: f.itemID,
+	})
+	require.NoError(t, err,
+		"the allocator must reach the receipts freely: it is alone inside the section for this item")
 	async.commit(t)
+
+	select {
+	case err := <-reversalErr:
+		checkNotDeadlock(t, err,
+			"the reversal (receipts → issues) and the allocator (issue → receipts) still collided over "+
+				"receipt "+receiptID+" and issue "+issueID+" despite both taking the item's ordering root")
+	case <-time.After(20 * time.Second):
+		t.Fatal("the reversal never entered the section after the allocator committed")
+	}
 	reversal.commit(t)
 }
 

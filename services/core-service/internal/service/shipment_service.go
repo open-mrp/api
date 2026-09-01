@@ -21,6 +21,7 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/event"
+	"github.com/open-mrp/api/services/core-service/internal/ledgerlock"
 	"github.com/open-mrp/api/services/core-service/internal/mediator"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
@@ -971,8 +972,27 @@ func (s *shipmentSvcImpl) VoidShipment(ctx context.Context, params domain.VoidSh
 		fallthrough
 
 	case domain.RecoveryPointVoidLabelsRefunded:
+		// The items this void will hand back, resolved on the pool so their ordering roots can be the
+		// transaction's first statements. Reading the lines inside the transaction and locking after the
+		// reversal has already written receipts is the inversion, not the fix (Corollary A).
+		voidLines, apiErr := s.repos.NewShipmentLineRepo().ListByShipment(ctx, params.ShipmentID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		voidItemIDs := make([]string, 0, len(voidLines))
+		for _, line := range voidLines {
+			if line.OrderLineItemID != nil {
+				voidItemIDs = append(voidItemIDs, *line.OrderLineItemID)
+			}
+		}
+
 		var result *domain.Shipment
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *shipmentSvcImpl) *apierror.APIError {
+			scope, apiErr := ledgerlock.Acquire(txCtx, txSvc.repos.NewInventoryMutationRepo(), voidItemIDs)
+			if apiErr != nil {
+				return apiErr
+			}
+
 			txShipmentRepo := txSvc.repos.NewShipmentRepo()
 			txCaseRepo := txSvc.repos.NewShippingCaseRepo()
 			txInvoiceRepo := txSvc.repos.NewInvoiceRepo()
@@ -993,7 +1013,7 @@ func (s *shipmentSvcImpl) VoidShipment(ctx context.Context, params domain.VoidSh
 				return apiErr
 			}
 			if invoiceID != nil {
-				if apiErr := txSvc.reverseInventoryOnVoid(txCtx, shipment); apiErr != nil {
+				if apiErr := txSvc.reverseInventoryOnVoid(txCtx, scope, shipment); apiErr != nil {
 					return apiErr
 				}
 
@@ -1675,7 +1695,7 @@ func (s *shipmentSvcImpl) allocateInventoryOnShip(txCtx context.Context, shipmen
 
 // Puts the shipped goods back on the order's reservation, unwinding each line's consumption newest
 // first. Re-derives from the still-open issues, so a replayed void finds nothing left to reverse.
-func (s *shipmentSvcImpl) reverseInventoryOnVoid(txCtx context.Context, shipment *domain.Shipment) *apierror.APIError {
+func (s *shipmentSvcImpl) reverseInventoryOnVoid(txCtx context.Context, scope *ledgerlock.Scope, shipment *domain.Shipment) *apierror.APIError {
 	shipmentLines, apiErr := s.repos.NewShipmentLineRepo().ListByShipment(txCtx, shipment.ID)
 	if apiErr != nil {
 		return apiErr
@@ -1694,7 +1714,7 @@ func (s *shipmentSvcImpl) reverseInventoryOnVoid(txCtx context.Context, shipment
 			continue
 		}
 
-		if apiErr := mutationRepo.ReverseInventoryForOrderItem(txCtx, shipment.AccountID, shipment.SalesOrderID, *line.OrderLineItemID, measure); apiErr != nil {
+		if apiErr := mutationRepo.ReverseInventoryForOrderItem(txCtx, scope, shipment.AccountID, shipment.SalesOrderID, *line.OrderLineItemID, measure); apiErr != nil {
 			return apiErr
 		}
 

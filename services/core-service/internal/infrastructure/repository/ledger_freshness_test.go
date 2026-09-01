@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/services/core-service/internal/ledgerlock"
 )
 
 // The 2026-08-26 over-draw, reproduced: a transaction that queues on a receipt lock must not compute
@@ -35,26 +35,43 @@ func TestFreshness_SecondAllocatorSeesTheFirstsDraw(t *testing.T) {
 	issueB := f.insertIssue(t, "open", "60", f.each, base.Add(time.Second))
 	receipt := f.insertReceipt(t, "available", "100", f.each, base) // covers one of them, not both
 
+	f.seedItemLockRow(t, f.itemID)
+
 	winner := f.actor(t, "winner")
 	loser := f.actor(t, "loser")
 	ctx := context.Background()
 
 	// The winner covers the first issue, drawing 60 of the receipt's 100. Not committed yet, so the
 	// loser cannot see it by any means other than a current read taken after the winner commits.
-	require.Nil(t, winner.repo.AllocateOneOpenIssue(ctx, f.accountID, f.itemID, issueA),
+	require.Nil(t, winner.repo.AllocateOneOpenIssue(ctx, winner.scope(t, f), f.accountID, f.itemID, issueA),
 		"winner: allocating the first issue")
 
-	// The loser starts on the second issue. Its own reads happen now, while the winner's draw is still
-	// uncommitted, and it then blocks on the receipt the winner holds.
-	loserDone := make(chan *apierror.APIError, 1)
-	go func() { loserDone <- loser.repo.AllocateOneOpenIssue(ctx, f.accountID, f.itemID, issueB) }()
-	loser.waitUntilBlocked(t, f.db)
+	// The loser starts on the second issue and blocks — now on the item's ordering root rather than on
+	// the receipt, since both sides take it first. Everything it goes on to read therefore happens after
+	// the winner committed, which is the freshness the ordering rule buys and the FOR UPDATE never did.
+	//
+	// The whole sequence runs inside the goroutine: acquiring the root is itself the blocking statement,
+	// so doing it on the test's own goroutine would wedge the test rather than the actor.
+	loserDone := make(chan error, 1)
+	go func() {
+		scope, apiErr := ledgerlock.Acquire(ctx, &inventoryReservationRepo{queries: loser.q}, []string{f.itemID})
+		if apiErr != nil {
+			loserDone <- apiErr
+			return
+		}
+		if apiErr := loser.repo.AllocateOneOpenIssue(ctx, scope, f.accountID, f.itemID, issueB); apiErr != nil {
+			loserDone <- apiErr
+			return
+		}
+		loserDone <- nil
+	}()
+	loser.waitUntilBlockedOr(t, f.db, loserDone)
 
 	winner.commit(t)
 
 	select {
-	case apiErr := <-loserDone:
-		require.Nil(t, apiErr, "loser: allocating the second issue after the winner committed")
+	case err := <-loserDone:
+		require.NoError(t, err, "loser: allocating the second issue after the winner committed")
 	case <-time.After(20 * time.Second):
 		t.Fatal("the loser never finished after the winner committed")
 	}
@@ -92,6 +109,8 @@ func TestVerification_UnlockedWriterDoesNotCauseAnOverDraw(t *testing.T) {
 	other := f.insertIssue(t, "open", "100", f.each, base.Add(time.Second))
 	receipt := f.insertReceipt(t, "available", "100", f.each, base)
 
+	f.seedItemLockRow(t, f.itemID)
+
 	ours := f.actor(t, "go-allocator")
 	ctx := context.Background()
 
@@ -110,7 +129,7 @@ func TestVerification_UnlockedWriterDoesNotCauseAnOverDraw(t *testing.T) {
 	// and having taken no locking read. Our snapshot still says the receipt is untouched.
 	f.writeRawAllocation(t, other, receipt, "100", f.each)
 
-	require.Nil(t, ours.repo.AllocateOneOpenIssue(ctx, f.accountID, f.itemID, issue),
+	require.Nil(t, ours.repo.AllocateOneOpenIssue(ctx, ours.scope(t, f), f.accountID, f.itemID, issue),
 		"a receipt exhausted by an unlocked writer must be skipped, not fail the transaction: failing "+
 			"would poison this issue on every later pass for a row we did not write")
 	ours.commit(t)

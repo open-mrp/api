@@ -154,3 +154,27 @@ SET pr.completed_at = NULL,
     END,
     pr.updated_at = NOW(3)
 WHERE pr.id = sqlc.arg('id') AND pr.account_id = sqlc.arg('account_id');
+
+-- ListItemIDsForBatchReversal names every item a batch's reversal will write, before the transaction
+-- that writes them opens.
+--
+-- The ledger lock order requires the item set to be resolved on the pool, not discovered inside the
+-- transaction: acquiring the root after the reversal has already taken ledger row locks is itself an
+-- ordering inversion (Corollary B), and it is exactly the mistake the flows this rule exists to fix
+-- were making. Non-locking on purpose — it decides nothing, and the reversal re-reads everything it
+-- touches under the root it took from this.
+--
+-- Both sides of the batch, because a scan writes both: receipts for what it produced and issues for
+-- what it consumed.
+-- name: ListItemIDsForBatchReversal :many
+SELECT DISTINCT item_id FROM (
+    SELECT ir.item_id
+    FROM inventory_receipt ir
+    WHERE ir.batch_id = sqlc.arg('batch_id')
+      AND (ir.owner_account_id = sqlc.arg('account_id') OR ir.holder_account_id = sqlc.arg('account_id'))
+    UNION
+    SELECT ii.item_id
+    FROM inventory_issue ii
+    WHERE ii.batch_id = sqlc.arg('batch_id')
+      AND ii.account_id = sqlc.arg('account_id')
+) AS batch_items;

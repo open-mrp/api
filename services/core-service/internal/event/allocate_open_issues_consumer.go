@@ -11,6 +11,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/services/core-service/internal/ledgerlock"
 	"github.com/open-mrp/api/services/core-service/internal/mediator"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/db"
@@ -143,7 +144,14 @@ func (c *AllocateOpenIssuesConsumer) allocateItem(ctx context.Context, parentMes
 
 	for _, ref := range refs {
 		txErr := c.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
-			return f.NewInventoryReservationRepo().AllocateOneOpenIssue(txCtx, accountID, itemID, ref.ID)
+			repo := f.NewInventoryReservationRepo()
+			// The ordering root, as the callback's first statement. The item set is one id and it is
+			// known before the transaction opens, which is what Corollary A asks for.
+			scope, apiErr := ledgerlock.Acquire(txCtx, repo, []string{itemID})
+			if apiErr != nil {
+				return apiErr
+			}
+			return repo.AllocateOneOpenIssue(txCtx, scope, accountID, itemID, ref.ID)
 		})
 		if txErr != nil {
 			// One issue failing is not the page failing: only its own writes roll back, the row stays

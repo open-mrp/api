@@ -13,6 +13,7 @@ This file provides guidance when working with code in this repository.
 | Changing **any** existing public request/response shape or behavior | `api-versioning-patterns.md` — and see the breaking-change rule below |
 | Adding or changing an endpoint's request/response shape | `api-resource-conventions.md`, `nullable-field-patterns.md` |
 | Writing a service, mediator, repository, or transaction | `architecture-patterns.md` |
+| Writing anything that touches `inventory_issue`, `inventory_receipt` or `inventory_allocation` | `architecture-patterns.md` — "Inventory ledger lock order", before writing the transaction |
 | Touching identity, permissions, or actor checks | `authentication-patterns.md`, `authorization-check-patterns.md` |
 | Adding or changing a list endpoint, filter, or sort | `performant-list-endpoint-patterns.md` |
 | Adding a domain model, mock, or entry point | `domain-layer-patterns.md` |
@@ -419,7 +420,7 @@ The complete index of `docs/patterns/`. The routing table at the top of this fil
 - `docs/patterns/api-resource-conventions.md` — API resource field conventions (object field, no omitempty, sub-objects, expandable relations, include system, list responses, sample data)
 - `docs/patterns/nullable-field-patterns.md` — **Request** field tags and nullability: `field.Optional[T]` vs. `*field.Clearable[T]` vs. value types, `omitzero` rule, the absent/null/value three-state model, the gateway null/blank-rejection pipeline, and proto/OpenAPI mapping
 - `docs/patterns/api-versioning-patterns.md` — API version scheme, the no-breaking-changes contract, gateway-edge transformers (`versiontransforms/`), forced includes, and the version deprecation/removal process
-- `docs/patterns/architecture-patterns.md` — Layered architecture (services, mediators, repositories, transaction management, idempotency, error handling, tracing)
+- `docs/patterns/architecture-patterns.md` — Layered architecture (services, mediators, repositories, transaction management, idempotency, error handling, tracing) and the inventory ledger lock order
 - `docs/patterns/authentication-patterns.md` — Identity model, authorization checks, permission model, actor types
 - `docs/patterns/authorization-check-patterns.md` — Cross-account authorization: actor vs. target account, `TargetRelationType`, and which permission domain applies when a merchant targets a customer or supplier
 - `docs/patterns/domain-layer-patterns.md` — Domain directory structure, standard files, mock generation, entry point pattern

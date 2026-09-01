@@ -11,6 +11,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/services/core-service/internal/ledgerlock"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
@@ -300,6 +301,15 @@ func convertMeasure(value, from, to decimal.Decimal) decimal.Decimal {
 		return value
 	}
 	return value.Mul(from).Div(to)
+}
+
+// LockItemForLedger takes the item's ordering root. See internal/ledgerlock and
+// docs/patterns/architecture-patterns.md, "Inventory ledger lock order".
+func (r *inventoryReservationRepo) LockItemForLedger(ctx context.Context, itemID string) *apierror.APIError {
+	if err := r.queries.LockItemForLedger(ctx, itemID); err != nil {
+		return db.MapSQLError(err)
+	}
+	return nil
 }
 
 // unitRatios looks up the given units' ratios, deduplicated.
@@ -728,9 +738,16 @@ func (r *inventoryReservationRepo) CountAvailableReceiptsForItem(ctx context.Con
 //
 // The issue is re-read here by primary key rather than trusted from discovery: it may have closed,
 // been reserved away or been deleted since it was named, and a row that has is skipped.
-func (r *inventoryReservationRepo) AllocateOneOpenIssue(ctx context.Context, accountID, itemID, issueID string) *apierror.APIError {
+func (r *inventoryReservationRepo) AllocateOneOpenIssue(ctx context.Context, scope *ledgerlock.Scope, accountID, itemID, issueID string) *apierror.APIError {
 	ctx, span := inventoryReservationRepoTracer.Start(ctx, "repository.inventory_reservation.allocate_one_open_issue")
 	defer span.End()
+
+	// The backstop, not the acquisition: a conforming caller took this item's root as the first
+	// statement of its transaction and this is a no-op. A late acquisition here means the caller's item
+	// set was wrong, and it is paged on rather than refused — see ledgerlock.Scope.EnsureLocked.
+	if apiErr := scope.EnsureLocked(ctx, r, itemID); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
 
 	issue, err := r.queries.ClaimOpenIssueForAllocation(ctx, sqlc.ClaimOpenIssueForAllocationParams{
 		ID:        issueID,

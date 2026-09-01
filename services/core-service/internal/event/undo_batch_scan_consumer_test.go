@@ -80,6 +80,11 @@ func (s *UndoBatchScanConsumerTestSuite) SetupTest() {
 
 	repoFactory := factorymock.NewMockRepoFactory(s.ctrl)
 	repoFactory.EXPECT().NewInventoryMutationRepo().Return(s.inventoryMutRepo).AnyTimes()
+	// The item set is resolved before the transaction, and its roots are the transaction's first
+	// statements.
+	s.inventoryMutRepo.EXPECT().ListItemIDsForBatchReversal(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]string{undoTestProductID, undoTestMaterial}, nil).AnyTimes()
+	s.inventoryMutRepo.EXPECT().LockItemForLedger(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 	repoFactory.EXPECT().NewInventoryReservationRepo().Return(s.reservationRepo).AnyTimes()
 	repoFactory.EXPECT().NewMaterialDemandRepo().Return(s.materialRepo).AnyTimes()
 	repoFactory.EXPECT().NewInventoryQueryRepo().Return(s.inventoryQuery).AnyTimes()
@@ -112,7 +117,7 @@ func TestUndoBatchScanConsumerTestSuite(t *testing.T) {
 // The request is sorted, because two of these taking the same items in different orders is a deadlock
 // nobody could explain from the logs.
 func (s *UndoBatchScanConsumerTestSuite) TestRequestsAllocationForEveryItemTheReversalTouched() {
-	s.inventoryMutRepo.EXPECT().ReverseInventoryForBatch(gomock.Any(), domain.ReverseInventoryForBatchParams{
+	s.inventoryMutRepo.EXPECT().ReverseInventoryForBatch(gomock.Any(), gomock.Any(), domain.ReverseInventoryForBatchParams{
 		AccountID: undoTestAccountID,
 		BatchID:   undoTestBatchID,
 	}).Return([]domain.InventoryReversalDelta{
@@ -131,7 +136,7 @@ func (s *UndoBatchScanConsumerTestSuite) TestRequestsAllocationForEveryItemTheRe
 func (s *UndoBatchScanConsumerTestSuite) TestRefusalIsReportedRatherThanSwallowed() {
 	// The delete checked that nothing had drawn on the output, but that was before this message was
 	// picked up. Returning the error parks it in the dead-letter queue instead of half-reversing.
-	s.inventoryMutRepo.EXPECT().ReverseInventoryForBatch(gomock.Any(), gomock.Any()).
+	s.inventoryMutRepo.EXPECT().ReverseInventoryForBatch(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil, apierror.NewValidationError("Inventory produced by this batch has already been used and cannot be reversed."))
 
 	err := s.consumer.undoBatchScan(context.Background(), undoTestAccountID, domain.UndoBatchScanEvent{
@@ -145,7 +150,7 @@ func (s *UndoBatchScanConsumerTestSuite) TestRefusalIsReportedRatherThanSwallowe
 }
 
 func (s *UndoBatchScanConsumerTestSuite) TestRestoresTheScrapReservationsTheScanReleased() {
-	s.inventoryMutRepo.EXPECT().ReverseInventoryForBatch(gomock.Any(), gomock.Any()).Return(nil, nil)
+	s.inventoryMutRepo.EXPECT().ReverseInventoryForBatch(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil)
 
 	s.materialRepo.EXPECT().GetMaterialDemand(gomock.Any(), undoTestAccountID, undoTestProductID, decimal.NewFromInt(5), "each").
 		Return([]domain.MaterialDemandItem{
@@ -181,7 +186,7 @@ func (s *UndoBatchScanConsumerTestSuite) TestRestoresTheScrapReservationsTheScan
 }
 
 func (s *UndoBatchScanConsumerTestSuite) TestLeavesReservationsAloneWhenTheScanReleasedNone() {
-	s.inventoryMutRepo.EXPECT().ReverseInventoryForBatch(gomock.Any(), gomock.Any()).Return(nil, nil)
+	s.inventoryMutRepo.EXPECT().ReverseInventoryForBatch(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil)
 
 	// No CreateMaterialReservation or GetMaterialDemand expectations: calling either fails the test.
 	err := s.consumer.undoBatchScan(context.Background(), undoTestAccountID, domain.UndoBatchScanEvent{
@@ -192,7 +197,7 @@ func (s *UndoBatchScanConsumerTestSuite) TestLeavesReservationsAloneWhenTheScanR
 }
 
 func (s *UndoBatchScanConsumerTestSuite) TestIgnoresAShortfallItCannotParse() {
-	s.inventoryMutRepo.EXPECT().ReverseInventoryForBatch(gomock.Any(), gomock.Any()).Return(nil, nil)
+	s.inventoryMutRepo.EXPECT().ReverseInventoryForBatch(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil)
 
 	err := s.consumer.undoBatchScan(context.Background(), undoTestAccountID, domain.UndoBatchScanEvent{
 		BatchID:          undoTestBatchID,

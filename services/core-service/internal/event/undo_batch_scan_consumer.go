@@ -10,6 +10,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/services/core-service/internal/ledgerlock"
 	"github.com/open-mrp/api/services/core-service/internal/mediator"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
@@ -136,8 +137,23 @@ func (c *UndoBatchScanConsumer) handleMessage(ctx context.Context, msg amqp.Deli
 func (c *UndoBatchScanConsumer) undoBatchScan(ctx context.Context, accountID string, evt domain.UndoBatchScanEvent) error {
 	var deltas []domain.InventoryReversalDelta
 
-	apiErr := c.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
-		reversed, apiErr := f.NewInventoryMutationRepo().ReverseInventoryForBatch(txCtx, domain.ReverseInventoryForBatchParams{
+	// The item set is resolved here, on the pool, before the transaction opens. Discovering it inside
+	// the transaction would mean taking the ordering root after the reversal already held ledger row
+	// locks, which is itself an inversion (Corollary A) — the precise mistake this rule exists to fix.
+	itemIDs, apiErr := c.repos.NewInventoryMutationRepo().ListItemIDsForBatchReversal(ctx, accountID, evt.BatchID)
+	if apiErr != nil {
+		log.Printf("[undo_batch_scan] Failed to resolve the item set for batch %s: %v", evt.BatchID, apiErr)
+		return apiErr
+	}
+
+	apiErr = c.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
+		mutationRepo := f.NewInventoryMutationRepo()
+		scope, apiErr := ledgerlock.Acquire(txCtx, mutationRepo, itemIDs)
+		if apiErr != nil {
+			return apiErr
+		}
+
+		reversed, apiErr := mutationRepo.ReverseInventoryForBatch(txCtx, scope, domain.ReverseInventoryForBatchParams{
 			AccountID:         accountID,
 			BatchID:           evt.BatchID,
 			ScanningStationID: evt.ScanningStationID,
@@ -174,10 +190,10 @@ func (c *UndoBatchScanConsumer) undoBatchScan(ctx context.Context, accountID str
 	//
 	// Its own transaction, after the reversal has committed: an allocation request that survives a
 	// reversal which did not is a request to cover demand from stock that was never freed.
-	itemIDs := reversedItemIDs(deltas)
-	if len(itemIDs) > 0 {
+	requestIDs := reversedItemIDs(deltas)
+	if len(requestIDs) > 0 {
 		if apiErr := c.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
-			return mediator.EnqueueAllocateOpenIssues(txCtx, f, accountID, itemIDs...)
+			return mediator.EnqueueAllocateOpenIssues(txCtx, f, accountID, requestIDs...)
 		}); apiErr != nil {
 			log.Printf("[undo_batch_scan] Failed to request allocation for batch %s: %v", evt.BatchID, apiErr)
 			return apiErr

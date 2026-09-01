@@ -52,6 +52,8 @@ func NewTemplateRenderer() (TemplateRenderer, *apierror.APIError) {
 		constants.EmailTemplateAlreadyRegistered:          "templates/already_registered.html",
 		constants.EmailTemplateChatMessage:                "templates/chat_message.html",
 		constants.EmailTemplateMessageFailureAlert:        "templates/message_failure_alert.html",
+		constants.EmailTemplateDemoRequest:                "templates/demo_request.html",
+		constants.EmailTemplateDashboardFeedback:          "templates/dashboard_feedback.html",
 	}
 
 	// The partials carry the shared merchant letterhead and footer, so every merchant-facing email renders the same branding. They hold only {{define}} blocks, and ParseFS names the result after the first file, so the per-template Execute still resolves to the template itself.

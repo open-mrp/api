@@ -30,6 +30,7 @@ type NotificationServiceTestSuite struct {
 	ctrl             *gomock.Controller
 	notificationSvc  domain.NotificationSvc
 	emailLogRepo     *repositorymock.MockEmailLogRepo
+	accountRepo      *repositorymock.MockAccountRepo
 	emailSender      *servicemock.MockEmailSender
 	templateRenderer email.TemplateRenderer
 }
@@ -37,11 +38,15 @@ type NotificationServiceTestSuite struct {
 func (suite *NotificationServiceTestSuite) SetupTest() {
 	suite.ctrl = gomock.NewController(suite.T())
 	suite.emailLogRepo = repositorymock.NewMockEmailLogRepo(suite.ctrl)
+	suite.accountRepo = repositorymock.NewMockAccountRepo(suite.ctrl)
+	// Most cases send as a live account; the sandbox cases override this.
+	suite.accountRepo.EXPECT().IsSandbox(gomock.Any(), gomock.Any()).Return(false, nil).AnyTimes()
 	suite.emailSender = servicemock.NewMockEmailSender(suite.ctrl)
 	suite.templateRenderer = &stubTemplateRenderer{}
 
 	suite.notificationSvc = NewNotificationSvc(&NotificationSvcConfig{
 		EmailLogRepo:     suite.emailLogRepo,
+		AccountRepo:      suite.accountRepo,
 		EmailSender:      suite.emailSender,
 		TemplateRenderer: suite.templateRenderer,
 	})

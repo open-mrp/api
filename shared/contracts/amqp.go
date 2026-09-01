@@ -111,6 +111,15 @@ const (
 	// CoreEventItemCostBasisChanged states that something an item's cost is derived from moved — the unit cost of a material, or the make-up of a production step. Costing reacts by recomputing every item downstream of the change, since a cost is only as current as the inputs it was last calculated from.
 	CoreEventItemCostBasisChanged AmqpRoutingKey = "core.event.item_cost_basis_changed"
 
+	// CoreEventInvoiceIssued states that an invoice is ready to go out to the people it concerns. The core-service consumer renders the invoice document once and mails whichever copies the event asks for; EmailCustomer and EmailSalesRep ride on it because who is owed a copy is a property of the action that raised the invoice — a ship with the customer copy suppressed, a manual resend — and cannot be recovered from the invoice row afterwards.
+	CoreEventInvoiceIssued AmqpRoutingKey = "core.event.invoice_issued"
+
+	// CoreEventSalesOrderAcknowledged states that a sales order should be acknowledged to its customer. Published on the manual resend; the automatic send on issue already runs inside core-service.
+	CoreEventSalesOrderAcknowledged AmqpRoutingKey = "core.event.sales_order_acknowledged"
+
+	// CoreEventPurchaseOrderSubmitted states that a purchase order has been issued to its supplier and the submission mail is owed.
+	CoreEventPurchaseOrderSubmitted AmqpRoutingKey = "core.event.purchase_order_submitted"
+
 	// CoreEventBatchScanned states that a batch was scanned at a station: the unit of work exists and carries the measures the operator recorded. It says nothing about what should follow, so a subscriber that wants to move inventory, credit the schedule, or notify a department binds its own queue and decides for itself.
 	//
 	// This supersedes CoreCmdExecuteProductionStep, which named one particular reaction and therefore needed a second message to carry seconds and waste. The scan is a single fact, so it is published once and its subscribers derive the rest.

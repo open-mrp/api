@@ -9008,6 +9008,48 @@ func (mr *MockUtilsSvcMockRecorder) RequestDemo(ctx, params any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestDemo", reflect.TypeOf((*MockUtilsSvc)(nil).RequestDemo), ctx, params)
 }
 
+// SendInvoiceEmail mocks base method.
+func (m *MockUtilsSvc) SendInvoiceEmail(ctx context.Context, params domain.SendInvoiceEmailParams) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SendInvoiceEmail", ctx, params)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// SendInvoiceEmail indicates an expected call of SendInvoiceEmail.
+func (mr *MockUtilsSvcMockRecorder) SendInvoiceEmail(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendInvoiceEmail", reflect.TypeOf((*MockUtilsSvc)(nil).SendInvoiceEmail), ctx, params)
+}
+
+// SendPurchaseOrderSubmission mocks base method.
+func (m *MockUtilsSvc) SendPurchaseOrderSubmission(ctx context.Context, params domain.SendPurchaseOrderSubmissionParams) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SendPurchaseOrderSubmission", ctx, params)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// SendPurchaseOrderSubmission indicates an expected call of SendPurchaseOrderSubmission.
+func (mr *MockUtilsSvcMockRecorder) SendPurchaseOrderSubmission(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendPurchaseOrderSubmission", reflect.TypeOf((*MockUtilsSvc)(nil).SendPurchaseOrderSubmission), ctx, params)
+}
+
+// SendSalesOrderAcknowledgement mocks base method.
+func (m *MockUtilsSvc) SendSalesOrderAcknowledgement(ctx context.Context, params domain.SendSalesOrderAcknowledgementParams) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SendSalesOrderAcknowledgement", ctx, params)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// SendSalesOrderAcknowledgement indicates an expected call of SendSalesOrderAcknowledgement.
+func (mr *MockUtilsSvcMockRecorder) SendSalesOrderAcknowledgement(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendSalesOrderAcknowledgement", reflect.TypeOf((*MockUtilsSvc)(nil).SendSalesOrderAcknowledgement), ctx, params)
+}
+
 // SubmitFeedback mocks base method.
 func (m *MockUtilsSvc) SubmitFeedback(ctx context.Context, params domain.SubmitFeedbackParams) *apierror.APIError {
 	m.ctrl.T.Helper()

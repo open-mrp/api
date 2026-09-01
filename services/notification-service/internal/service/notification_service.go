@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
 	"github.com/open-mrp/api/services/notification-service/internal/email"
@@ -18,7 +19,10 @@ import (
 var notificationSvcTracer = tracing.GetTracer("notification-service.notification_service")
 
 type notificationSvcImpl struct {
-	emailLogRepo     domain.EmailLogRepo
+	emailLogRepo domain.EmailLogRepo
+	// accountRepo answers whether the sending account is a sandbox. Required: it is the only check
+	// that does not depend on a publisher having populated the message correctly.
+	accountRepo      domain.AccountRepo
 	emailSender      domain.EmailSender
 	templateRenderer email.TemplateRenderer
 	// senderRepo resolves an account's own outbound identity. Nil leaves every send on the platform address.
@@ -30,6 +34,9 @@ type notificationSvcImpl struct {
 type NotificationSvcConfig struct {
 	// EmailLogRepo (required) persists email send/delivery logs.
 	EmailLogRepo domain.EmailLogRepo
+
+	// AccountRepo (required) resolves whether the sending account is a sandbox, which gates delivery.
+	AccountRepo domain.AccountRepo
 
 	// EmailSender (required) sends outbound email.
 	EmailSender domain.EmailSender
@@ -48,6 +55,9 @@ func (c *NotificationSvcConfig) validate() error {
 	if c.EmailLogRepo == nil {
 		return fmt.Errorf("notification service: email log repo is required")
 	}
+	if c.AccountRepo == nil {
+		return fmt.Errorf("notification service: account repo is required")
+	}
 	if c.EmailSender == nil {
 		return fmt.Errorf("notification service: email sender is required")
 	}
@@ -64,6 +74,7 @@ func NewNotificationSvc(config *NotificationSvcConfig) domain.NotificationSvc {
 
 	return &notificationSvcImpl{
 		emailLogRepo:     config.EmailLogRepo,
+		accountRepo:      config.AccountRepo,
 		emailSender:      config.EmailSender,
 		templateRenderer: config.TemplateRenderer,
 		senderRepo:       config.SenderRepo,
@@ -86,6 +97,7 @@ func BuildNotificationSvcConfig(repoFactory domain.RepoFactory, platformMode con
 
 	return &NotificationSvcConfig{
 		EmailLogRepo:     repoFactory.NewEmailLogRepo(),
+		AccountRepo:      repoFactory.NewAccountRepo(),
 		EmailSender:      emailSender,
 		TemplateRenderer: templateRenderer,
 		SenderRepo:       repoFactory.NewAccountEmailSenderRepo(),
@@ -102,7 +114,7 @@ func (s *notificationSvcImpl) SendEmail(ctx context.Context, data domain.EmailSe
 	ctx, span := notificationSvcTracer.Start(ctx, "service.notification.send_email")
 	defer span.End()
 
-	if s.isSandboxRequest(ctx) {
+	if s.isSandboxSend(ctx, data) {
 		return s.logSuppressedEmail(ctx, data)
 	}
 
@@ -293,6 +305,35 @@ func (s *notificationSvcImpl) SendEnterpriseRequest(ctx context.Context, req *do
 func (s *notificationSvcImpl) isSandboxRequest(ctx context.Context) bool {
 	identity, ok := appctx.GetIdentityFromContext(ctx)
 	return ok && identity.AccountMode == constants.AccountModeSandbox
+}
+
+// isSandboxSend decides whether this email must be suppressed rather than delivered.
+//
+// It asks the account, not the caller. The identity check remains as a fast path for sends that
+// carry one, but it cannot be the only check: an identity reaches this service only if every
+// publisher along the way populated AccountMode, and most do not — a message published from the
+// dashboard's outbox carries an account id and nothing else, and one republished by a consumer
+// carried no identity at all. Every one of those was a sandbox account's invoice, acknowledgement,
+// purchase order or statement going to a real customer.
+//
+// A lookup failure is logged and treated as not-sandbox: this gates delivery, so failing closed
+// would drop live mail silently the moment the query broke.
+func (s *notificationSvcImpl) isSandboxSend(ctx context.Context, data domain.EmailSendData) bool {
+	if s.isSandboxRequest(ctx) {
+		return true
+	}
+	// Platform mail (a demo request, a 5xx alert) carries no account and was never suppressed.
+	if data.AccountID == nil || *data.AccountID == "" {
+		return false
+	}
+
+	isSandbox, apiErr := s.accountRepo.IsSandbox(ctx, *data.AccountID)
+	if apiErr != nil {
+		slog.ErrorContext(ctx, "sandbox check failed; sending as a live account",
+			"account_id", *data.AccountID, "error", apiErr)
+		return false
+	}
+	return isSandbox
 }
 
 // logSuppressedEmail creates an email log entry for a sandbox-suppressed email without actually sending it. The log records HasSent=false so it is clear the email was never delivered.

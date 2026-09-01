@@ -4,6 +4,7 @@ import "github.com/open-mrp/api/shared/messaging"
 
 // RepoFactory constructs repository implementations for a single database session (typically *sqlc.Queries).
 type RepoFactory interface {
+	NewAccountRepo() AccountRepo
 	NewEmailLogRepo() EmailLogRepo
 	NewIdempotencyKeyRepo() IdempotencyKeyRepo
 	NewNotificationRepo() NotificationRepo

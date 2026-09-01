@@ -17,6 +17,65 @@ import (
 )
 
 // ackAddress is a rendered address block for the acknowledgement email/PDF.
+// ackIdentityField is one label/value pair in a document's header identity block. Main marks the
+// record's own number, which is set larger and bold.
+type ackIdentityField struct {
+	Label string
+	Value string
+	Main  bool
+}
+
+func (f ackIdentityField) style() string {
+	if f.Main {
+		return "B"
+	}
+	return ""
+}
+
+func (f ackIdentityField) size() float64 {
+	if f.Main {
+		return 11.5
+	}
+	return 10.5
+}
+
+// documentTitle is the heading over the identity block, defaulting to the acknowledgement's.
+func (d ackData) documentTitle() string {
+	if d.DocumentTitle != "" {
+		return d.DocumentTitle
+	}
+	return "ORDER ACKNOWLEDGEMENT"
+}
+
+// identityRows is the header's label/value list: the record's own number first, then whatever the
+// document carries. Rows with no value are dropped — a bare "Requested Delivery Date" with nothing
+// beside it reads as a document that failed to render, not as an order with no date requested.
+func (d ackData) identityRows() []ackIdentityField {
+	numberLabel := d.NumberLabel
+	if numberLabel == "" {
+		numberLabel = "Sales Order Number"
+	}
+
+	rows := []ackIdentityField{{Label: numberLabel, Value: d.OrderNumber, Main: true}}
+
+	extra := d.IdentityRows
+	if len(extra) == 0 {
+		// The sales-order/invoice set, which is derived rather than carried.
+		extra = []ackIdentityField{
+			{Label: "PO Number", Value: d.CustomerPO},
+			{Label: "Customer Number", Value: d.CustomerNumber},
+			{Label: "Date", Value: d.OrderDateLong},
+		}
+	}
+	for _, row := range extra {
+		if strings.TrimSpace(row.Value) == "" {
+			continue
+		}
+		rows = append(rows, row)
+	}
+	return rows
+}
+
 type ackAddress struct {
 	Name         string
 	Line1        string
@@ -37,8 +96,12 @@ type ackLine struct {
 	SKU         string
 	Description string
 	Price       string
-	Qty         string
-	Total       string
+	// Qty is the quantity cell for both the PDF and the email, carrying the unit's full name
+	// ("1,200 pair"). The legacy email abbreviated it ("1,200 pr") while its PDF spelled it out; the
+	// full name reads the same on both, so a customer comparing the mail against its attachment is
+	// not left matching "pr" to "pair".
+	Qty   string
+	Total string
 }
 
 // accountMarketingBlurbs maps an account id to the marketing sentence its customer emails carry in
@@ -59,6 +122,11 @@ type ackData struct {
 	// acknowledgement title/label when empty.
 	DocumentTitle string
 	NumberLabel   string
+
+	// IdentityRows are the label/value pairs under the document title, in order. Nil falls back to
+	// the sales-order set (PO number, customer number, date); the purchase order names a supplier
+	// and a requested delivery date instead, which no amount of reshuffling those fields expresses.
+	IdentityRows []ackIdentityField
 
 	// Seller letterhead / branding.
 	AccountName    string
@@ -197,8 +265,10 @@ func buildOrderAcknowledgementData(order *domain.SalesOrder, lines []*domain.Sal
 			SKU:         line.ProductSKU,
 			Description: ptrutil.Deref(line.ProductDescription),
 			Price:       formatPrice(price, line.UnitPriceDenominatorUnitAbbr),
-			Qty:         formatQty(qty, line.QuantityUnitName),
-			Total:       formatMoney(lineTotal),
+			// Rounded to whole units, as the dashboard's numeral('0,0') and QuantityUtils.abbreviate
+			// both are: 1199.5 pairs is a stored measure, not something a customer should read.
+			Qty:   formatMeasure(qty, line.QuantityUnitName, 0),
+			Total: formatMoney(lineTotal),
 		})
 	}
 	d.OrderTotal = formatMoney(total)
@@ -447,16 +517,6 @@ func parseDecimalOrZero(s string) decimal.Decimal {
 		return decimal.Zero
 	}
 	return d
-}
-
-func truncate(s string, max int) string {
-	if len(s) <= max {
-		return s
-	}
-	if max <= 1 {
-		return s[:max]
-	}
-	return s[:max-1] + "…"
 }
 
 func addThousandsSep(s string) string {

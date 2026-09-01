@@ -80,6 +80,10 @@ AND (
     sqlc.narg('search_query') IS NULL
     OR p.number LIKE sqlc.narg('search_query')
     OR so.customer_po_number LIKE sqlc.narg('search_query')
+    -- The picker often has the customer in hand rather than a number, so the box matches who the
+    -- order is for as well as what it is.
+    OR ba.name LIKE sqlc.narg('search_query')
+    OR ar.external_number LIKE sqlc.narg('search_query')
 )
 AND (
     sqlc.narg('status') IS NULL
@@ -210,6 +214,10 @@ AND (
     sqlc.narg('search_query') IS NULL
     OR p.number LIKE sqlc.narg('search_query')
     OR so.customer_po_number LIKE sqlc.narg('search_query')
+    -- The picker often has the customer in hand rather than a number, so the box matches who the
+    -- order is for as well as what it is.
+    OR ba.name LIKE sqlc.narg('search_query')
+    OR ar.external_number LIKE sqlc.narg('search_query')
 )
 AND (
     sqlc.narg('status') IS NULL
@@ -335,8 +343,8 @@ LEFT JOIN geolocation ship_geo ON ship_geo.id = addr.geolocation_id
 LEFT JOIN carrier cr ON cr.id = so.carrier_id
 LEFT JOIN carrier_option co ON co.id = so.carrier_option_id
 WHERE p.account_id = sqlc.arg('account_id')
--- Substring search over the pick number and the order's customer PO number, each served by its own
--- ngram FULLTEXT index. A semi-join, not an OR of two MATCHes in the main WHERE, so each MATCH drives
+-- Substring search over the pick number, the order's customer PO number, and the customer's name and
+-- number, each served by its own ngram FULLTEXT index. A semi-join, not an OR of two MATCHes in the main WHERE, so each MATCH drives
 -- its own index — an OR of MATCH across joined tables cannot use either. The repo only runs this query
 -- when a term of at least the ngram token size is present, so the match is unconditional.
 AND p.id IN (
@@ -348,6 +356,19 @@ AND p.id IN (
     JOIN sales_order pso ON pso.id = pk.sales_order_id
     WHERE pk.account_id = sqlc.arg('account_id')
     AND MATCH(pso.customer_po_number) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
+    UNION
+    SELECT pk.id FROM pick pk
+    JOIN sales_order nso ON nso.id = pk.sales_order_id
+    JOIN account nba ON nba.id = nso.buyer_account_id
+    WHERE pk.account_id = sqlc.arg('account_id')
+    AND MATCH(nba.name) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
+    UNION
+    SELECT pk.id FROM pick pk
+    JOIN sales_order rso ON rso.id = pk.sales_order_id
+    JOIN account_relation rar ON rar.owner_account_id = rso.owner_account_id
+        AND rar.counterparty_account_id = rso.buyer_account_id
+    WHERE pk.account_id = sqlc.arg('account_id')
+    AND MATCH(rar.external_number) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
 )
 AND (
     sqlc.narg('status') IS NULL
@@ -482,6 +503,19 @@ AND p.id IN (
     JOIN sales_order pso ON pso.id = pk.sales_order_id
     WHERE pk.account_id = sqlc.arg('account_id')
     AND MATCH(pso.customer_po_number) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
+    UNION
+    SELECT pk.id FROM pick pk
+    JOIN sales_order nso ON nso.id = pk.sales_order_id
+    JOIN account nba ON nba.id = nso.buyer_account_id
+    WHERE pk.account_id = sqlc.arg('account_id')
+    AND MATCH(nba.name) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
+    UNION
+    SELECT pk.id FROM pick pk
+    JOIN sales_order rso ON rso.id = pk.sales_order_id
+    JOIN account_relation rar ON rar.owner_account_id = rso.owner_account_id
+        AND rar.counterparty_account_id = rso.buyer_account_id
+    WHERE pk.account_id = sqlc.arg('account_id')
+    AND MATCH(rar.external_number) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
 )
 AND (
     sqlc.narg('status') IS NULL
@@ -548,6 +582,10 @@ AND (
     sqlc.narg('search_query') IS NULL
     OR p.number LIKE sqlc.narg('search_query')
     OR so.customer_po_number LIKE sqlc.narg('search_query')
+    -- The picker often has the customer in hand rather than a number, so the box matches who the
+    -- order is for as well as what it is.
+    OR ba.name LIKE sqlc.narg('search_query')
+    OR ar.external_number LIKE sqlc.narg('search_query')
 )
 AND (
     sqlc.narg('status') IS NULL

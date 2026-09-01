@@ -842,6 +842,11 @@ func Run(
 		return err
 	}
 
+	documentEmailConsumer := event.NewDocumentEmailConsumer(rabbitmq, inboxRepo, utilsSvc)
+	if err := documentEmailConsumer.Listen(ctx); err != nil {
+		return fmt.Errorf("failed to start document email consumer: %w", err)
+	}
+
 	syncStripeCustomerConsumer := event.NewSyncStripeCustomerConsumer(rabbitmq, inboxRepo, stripeSync)
 	if err := syncStripeCustomerConsumer.Listen(ctx); err != nil {
 		return err

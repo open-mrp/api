@@ -1668,6 +1668,19 @@ func equalStringPtr(a, b *string) bool {
 func (s *shipmentSvcImpl) allocateInventoryOnShip(txCtx context.Context, shipment *domain.Shipment, shipmentLines []*domain.ShipmentLine) *apierror.APIError {
 	reservationRepo := s.repos.NewInventoryReservationRepo()
 
+	// The lines are already in hand, so the whole item set is known before any of it is written. The
+	// loop below then walks them in whatever order the slice holds, which no longer matters.
+	itemIDs := make([]string, 0, len(shipmentLines))
+	for _, line := range shipmentLines {
+		if line.OrderLineItemID != nil {
+			itemIDs = append(itemIDs, *line.OrderLineItemID)
+		}
+	}
+	scope, apiErr := ledgerlock.Acquire(txCtx, reservationRepo, itemIDs)
+	if apiErr != nil {
+		return apiErr
+	}
+
 	for _, line := range shipmentLines {
 		if line.OrderLineItemID == nil || *line.OrderLineItemID == "" {
 			continue
@@ -1679,7 +1692,7 @@ func (s *shipmentSvcImpl) allocateInventoryOnShip(txCtx context.Context, shipmen
 
 		// A shortfall means stock was never reserved for this line; the shipment still stands, so
 		// the uncovered quantity is left for the inventory reconciliation rather than failing here.
-		if _, apiErr := reservationRepo.AllocateReservationsForConsumption(txCtx, domain.ConsumptionAllocationParams{
+		if _, apiErr := reservationRepo.AllocateReservationsForConsumption(txCtx, scope, domain.ConsumptionAllocationParams{
 			OrderID:   shipment.SalesOrderID,
 			AccountID: shipment.AccountID,
 			ItemID:    *line.OrderLineItemID,

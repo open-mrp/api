@@ -168,7 +168,7 @@ func (c *UndoBatchScanConsumer) undoBatchScan(ctx context.Context, accountID str
 			return apiErr
 		}
 
-		if apiErr := c.restoreShortfallReservations(txCtx, f, accountID, evt); apiErr != nil {
+		if apiErr := c.restoreShortfallReservations(txCtx, scope, f, accountID, evt); apiErr != nil {
 			log.Printf("[undo_batch_scan] Failed to restore reservations for batch %s: %v", evt.BatchID, apiErr)
 			return apiErr
 		}
@@ -261,7 +261,7 @@ func reversedItemIDs(deltas []domain.InventoryReversalDelta) []string {
 // restoreShortfallReservations puts back the reservations the scan released for the units its scrap
 // meant would never be produced. The amounts were snapshotted at delete time, since the lineage they
 // are read from does not survive the batch.
-func (c *UndoBatchScanConsumer) restoreShortfallReservations(ctx context.Context, repos domain.RepoFactory, accountID string, evt domain.UndoBatchScanEvent) *apierror.APIError {
+func (c *UndoBatchScanConsumer) restoreShortfallReservations(ctx context.Context, scope *ledgerlock.Scope, repos domain.RepoFactory, accountID string, evt domain.UndoBatchScanEvent) *apierror.APIError {
 	if evt.OrderID == "" || evt.ShortfallMeasure == "" {
 		return nil
 	}
@@ -279,7 +279,7 @@ func (c *UndoBatchScanConsumer) restoreShortfallReservations(ctx context.Context
 
 	// CreateMaterialReservation is the inverse of ReduceReservedForOrderItem: a reservation is a
 	// plain row, and the one that held this quantity was deleted rather than shrunk.
-	if apiErr := reservationRepo.CreateMaterialReservation(ctx, domain.CreateMaterialReservationParams{
+	if apiErr := reservationRepo.CreateMaterialReservation(ctx, scope, domain.CreateMaterialReservationParams{
 		AccountID: accountID,
 		ItemID:    evt.ProducedItemID,
 		Measure:   shortfall,
@@ -296,7 +296,7 @@ func (c *UndoBatchScanConsumer) restoreShortfallReservations(ctx context.Context
 	}
 
 	for _, demand := range demands {
-		if apiErr := reservationRepo.CreateMaterialReservation(ctx, domain.CreateMaterialReservationParams{
+		if apiErr := reservationRepo.CreateMaterialReservation(ctx, scope, domain.CreateMaterialReservationParams{
 			AccountID: accountID,
 			ItemID:    demand.ItemID,
 			Measure:   demand.Measure,

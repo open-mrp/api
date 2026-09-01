@@ -3,10 +3,10 @@ package mediator
 import (
 	"context"
 	"encoding/json"
-	"sort"
 	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/services/core-service/internal/ledgerlock"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/contracts"
 	apierror "github.com/open-mrp/api/shared/errors"
@@ -85,22 +85,9 @@ func EnqueueAllocateOpenIssuesFrom(ctx context.Context, outboxRepo messaging.Out
 
 // SortedUniqueIDs drops blanks, deduplicates and sorts.
 //
-// Several flows collect the items they touched by ranging a Go map, whose iteration order is
-// randomized per run. Any two transactions reaching the same rows in different orders is a deadlock,
-// and one produced by map iteration is one nobody can reproduce from the logs.
+// It is ledgerlock.SortedUnique under another name, deliberately: the ids an enqueue produces are the
+// ids the ledger work will take locks on, and two orderings that can drift apart are two orderings
+// that eventually will.
 func SortedUniqueIDs(ids []string) []string {
-	seen := make(map[string]struct{}, len(ids))
-	out := make([]string, 0, len(ids))
-	for _, id := range ids {
-		if id == "" {
-			continue
-		}
-		if _, dup := seen[id]; dup {
-			continue
-		}
-		seen[id] = struct{}{}
-		out = append(out, id)
-	}
-	sort.Strings(out)
-	return out
+	return ledgerlock.SortedUnique(ids)
 }

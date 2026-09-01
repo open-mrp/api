@@ -9,6 +9,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/services/core-service/internal/ledgerlock"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
@@ -112,7 +113,12 @@ func (c *ExecuteProductionStepConsumer) handleMessage(ctx context.Context, msg a
 // again on the retry, consuming stock that was never used. Committing the step as a unit means a
 // failure leaves nothing behind for the replay to duplicate.
 func (c *ExecuteProductionStepConsumer) executeProductionStep(ctx context.Context, accountID string, evt domain.ExecuteProductionStepEvent) error {
-	apiErr := c.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
+	itemIDs, apiErr := c.ledgerItemSet(ctx, accountID, evt)
+	if apiErr != nil {
+		return apiErr
+	}
+
+	apiErr = c.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
 		txConsumer := &ExecuteProductionStepConsumer{
 			rabbitmq:      c.rabbitmq,
 			inboxConsumer: c.inboxConsumer,
@@ -121,7 +127,11 @@ func (c *ExecuteProductionStepConsumer) executeProductionStep(ctx context.Contex
 			txManager:     c.txManager,
 			tracer:        c.tracer,
 		}
-		return txConsumer.executeProductionStepTx(txCtx, accountID, evt)
+		scope, apiErr := ledgerlock.Acquire(txCtx, f.NewInventoryReservationRepo(), itemIDs)
+		if apiErr != nil {
+			return apiErr
+		}
+		return txConsumer.executeProductionStepTx(txCtx, scope, accountID, evt)
 	})
 	if apiErr != nil {
 		return apiErr
@@ -129,10 +139,44 @@ func (c *ExecuteProductionStepConsumer) executeProductionStep(ctx context.Contex
 	return nil
 }
 
+// ledgerItemSet names every item this step will write, on the pool, before the transaction opens.
+//
+// Corollary A: the roots have to be the transaction's first statements, so the set cannot be
+// discovered inside it. Everything here is read again inside the transaction and nothing is decided
+// from these reads except which roots to take.
+//
+// The material demand is included because a produced batch that falls short hands its upstream
+// reservations back, and those items are not the step's own consumptions. GetMaterialDemand's measure
+// only scales the quantities it returns, not which items they are, so the step's own production
+// quantity is enough to learn the set without knowing the shortfall yet.
+func (c *ExecuteProductionStepConsumer) ledgerItemSet(ctx context.Context, accountID string, evt domain.ExecuteProductionStepEvent) ([]string, *apierror.APIError) {
+	step, apiErr := c.repos.NewProductionStepQueryRepo().Find(ctx, accountID, evt.ProductionStepID)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	itemIDs := []string{step.Production.ProducedItem.ID}
+	for _, consumption := range step.Consumptions {
+		itemIDs = append(itemIDs, consumption.ConsumedItem.ID)
+	}
+
+	if evt.ProducedBatchID != nil {
+		demands, apiErr := c.repos.NewMaterialDemandRepo().GetMaterialDemand(ctx, accountID,
+			step.Production.ProducedItem.ID, step.Production.Quantity.Measure, step.Production.Quantity.Unit.ID)
+		if apiErr != nil {
+			return nil, apiErr
+		}
+		for _, demand := range demands {
+			itemIDs = append(itemIDs, demand.ItemID)
+		}
+	}
+	return itemIDs, nil
+}
+
 // executeProductionStepTx implements the core logic ported from dashboard/apps/api/src/repositories/production-step.repo.ts:1142-1434.
 //
 // Since batch service events always use partUsageType=produced and undo=false, this consumer only implements that path.
-func (c *ExecuteProductionStepConsumer) executeProductionStepTx(ctx context.Context, accountID string, evt domain.ExecuteProductionStepEvent) *apierror.APIError {
+func (c *ExecuteProductionStepConsumer) executeProductionStepTx(ctx context.Context, scope *ledgerlock.Scope, accountID string, evt domain.ExecuteProductionStepEvent) *apierror.APIError {
 	stepRepo := c.repos.NewProductionStepQueryRepo()
 	unitConvRepo := c.repos.NewUnitConversionRepo()
 
@@ -194,7 +238,7 @@ func (c *ExecuteProductionStepConsumer) executeProductionStepTx(ctx context.Cont
 
 		// If there's a produced batch, handle seconds/waste shortfall and order reservations.
 		if evt.ProducedBatchID != nil {
-			if err := c.handleProducedBatchShortfall(ctx, accountID, evt, step, producedMeasure, producedUnitID); err != nil {
+			if err := c.handleProducedBatchShortfall(ctx, scope, accountID, evt, step, producedMeasure, producedUnitID); err != nil {
 				log.Printf("[execute_production_step] Failed to handle shortfall: %v", err)
 				return err
 			}
@@ -212,7 +256,7 @@ func (c *ExecuteProductionStepConsumer) executeProductionStepTx(ctx context.Cont
 		consumedUnitID := consumption.Quantity.Unit.ID
 
 		if evt.ProducedBatchID != nil {
-			if err := c.handleConsumptionWithOrder(ctx, accountID, evt, consumption, consumedMeasure, consumedUnitID); err != nil {
+			if err := c.handleConsumptionWithOrder(ctx, scope, accountID, evt, consumption, consumedMeasure, consumedUnitID); err != nil {
 				log.Printf("[execute_production_step] Failed to handle consumption with order: %v", err)
 				return err
 			}
@@ -243,6 +287,7 @@ func (c *ExecuteProductionStepConsumer) executeProductionStepTx(ctx context.Cont
 // When a batch has seconds or waste, the produced quantity is reduced, and we need to reduce the reservation on the associated order by the shortfall amount.
 func (c *ExecuteProductionStepConsumer) handleProducedBatchShortfall(
 	ctx context.Context,
+	scope *ledgerlock.Scope,
 	accountID string,
 	evt domain.ExecuteProductionStepEvent,
 	step *domain.ProductionStepDetail,
@@ -280,7 +325,7 @@ func (c *ExecuteProductionStepConsumer) handleProducedBatchShortfall(
 
 	// Reduce reserved quantity for the order item.
 	reservationRepo := c.repos.NewInventoryReservationRepo()
-	apiErr = reservationRepo.ReduceReservedForOrderItem(ctx, domain.OrderReservationReductionParams{
+	apiErr = reservationRepo.ReduceReservedForOrderItem(ctx, scope, domain.OrderReservationReductionParams{
 		OrderID:   *orderID,
 		AccountID: accountID,
 		ItemID:    step.Production.ProducedItem.ID,
@@ -299,7 +344,7 @@ func (c *ExecuteProductionStepConsumer) handleProducedBatchShortfall(
 	}
 
 	if len(demands) > 0 {
-		apiErr = reservationRepo.ReduceReservedForOrderMaterials(ctx, *orderID, accountID, demands)
+		apiErr = reservationRepo.ReduceReservedForOrderMaterials(ctx, scope, *orderID, accountID, demands)
 		if apiErr != nil {
 			return apiErr
 		}
@@ -311,6 +356,7 @@ func (c *ExecuteProductionStepConsumer) handleProducedBatchShortfall(
 // handleConsumptionWithOrder handles consumption inventory changes when there's an associated order. It tries to allocate from existing reservations first, then falls back to direct inventory update.
 func (c *ExecuteProductionStepConsumer) handleConsumptionWithOrder(
 	ctx context.Context,
+	scope *ledgerlock.Scope,
 	accountID string,
 	evt domain.ExecuteProductionStepEvent,
 	consumption domain.StepConsumption,
@@ -369,7 +415,7 @@ func (c *ExecuteProductionStepConsumer) handleConsumptionWithOrder(
 	// Try to allocate from existing reservations.
 	reservationRepo := c.repos.NewInventoryReservationRepo()
 	absMeasure := consumedMeasure.Abs()
-	result, apiErr := reservationRepo.AllocateReservationsForConsumption(ctx, domain.ConsumptionAllocationParams{
+	result, apiErr := reservationRepo.AllocateReservationsForConsumption(ctx, scope, domain.ConsumptionAllocationParams{
 		OrderID:         *orderID,
 		AccountID:       accountID,
 		ItemID:          consumption.ConsumedItem.ID,

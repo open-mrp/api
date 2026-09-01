@@ -8387,17 +8387,17 @@ func (mr *MockInventoryMutationRepoMockRecorder) CreateInventoryChangeLog(ctx, p
 }
 
 // CreateInventoryIssue mocks base method.
-func (m *MockInventoryMutationRepo) CreateInventoryIssue(ctx context.Context, params domain.CreateInventoryIssueParams) *apierror.APIError {
+func (m *MockInventoryMutationRepo) CreateInventoryIssue(ctx context.Context, scope *ledgerlock.Scope, params domain.CreateInventoryIssueParams) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateInventoryIssue", ctx, params)
+	ret := m.ctrl.Call(m, "CreateInventoryIssue", ctx, scope, params)
 	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
 // CreateInventoryIssue indicates an expected call of CreateInventoryIssue.
-func (mr *MockInventoryMutationRepoMockRecorder) CreateInventoryIssue(ctx, params any) *gomock.Call {
+func (mr *MockInventoryMutationRepoMockRecorder) CreateInventoryIssue(ctx, scope, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateInventoryIssue", reflect.TypeOf((*MockInventoryMutationRepo)(nil).CreateInventoryIssue), ctx, params)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateInventoryIssue", reflect.TypeOf((*MockInventoryMutationRepo)(nil).CreateInventoryIssue), ctx, scope, params)
 }
 
 // CreateInventoryLog mocks base method.
@@ -8415,17 +8415,17 @@ func (mr *MockInventoryMutationRepoMockRecorder) CreateInventoryLog(ctx, params 
 }
 
 // CreateInventoryReceipt mocks base method.
-func (m *MockInventoryMutationRepo) CreateInventoryReceipt(ctx context.Context, params domain.CreateInventoryReceiptParams) *apierror.APIError {
+func (m *MockInventoryMutationRepo) CreateInventoryReceipt(ctx context.Context, scope *ledgerlock.Scope, params domain.CreateInventoryReceiptParams) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateInventoryReceipt", ctx, params)
+	ret := m.ctrl.Call(m, "CreateInventoryReceipt", ctx, scope, params)
 	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
 // CreateInventoryReceipt indicates an expected call of CreateInventoryReceipt.
-func (mr *MockInventoryMutationRepoMockRecorder) CreateInventoryReceipt(ctx, params any) *gomock.Call {
+func (mr *MockInventoryMutationRepoMockRecorder) CreateInventoryReceipt(ctx, scope, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateInventoryReceipt", reflect.TypeOf((*MockInventoryMutationRepo)(nil).CreateInventoryReceipt), ctx, params)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateInventoryReceipt", reflect.TypeOf((*MockInventoryMutationRepo)(nil).CreateInventoryReceipt), ctx, scope, params)
 }
 
 // CreateQuantityForInventory mocks base method.
@@ -8606,18 +8606,18 @@ func (mr *MockInventoryReservationRepoMockRecorder) AllocateOneOpenIssue(ctx, sc
 }
 
 // AllocateReservationsForConsumption mocks base method.
-func (m *MockInventoryReservationRepo) AllocateReservationsForConsumption(ctx context.Context, params domain.ConsumptionAllocationParams) (*domain.ConsumptionAllocationResult, *apierror.APIError) {
+func (m *MockInventoryReservationRepo) AllocateReservationsForConsumption(ctx context.Context, scope *ledgerlock.Scope, params domain.ConsumptionAllocationParams) (*domain.ConsumptionAllocationResult, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AllocateReservationsForConsumption", ctx, params)
+	ret := m.ctrl.Call(m, "AllocateReservationsForConsumption", ctx, scope, params)
 	ret0, _ := ret[0].(*domain.ConsumptionAllocationResult)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // AllocateReservationsForConsumption indicates an expected call of AllocateReservationsForConsumption.
-func (mr *MockInventoryReservationRepoMockRecorder) AllocateReservationsForConsumption(ctx, params any) *gomock.Call {
+func (mr *MockInventoryReservationRepoMockRecorder) AllocateReservationsForConsumption(ctx, scope, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AllocateReservationsForConsumption", reflect.TypeOf((*MockInventoryReservationRepo)(nil).AllocateReservationsForConsumption), ctx, params)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AllocateReservationsForConsumption", reflect.TypeOf((*MockInventoryReservationRepo)(nil).AllocateReservationsForConsumption), ctx, scope, params)
 }
 
 // CountAvailableReceiptsForItem mocks base method.
@@ -8636,17 +8636,17 @@ func (mr *MockInventoryReservationRepoMockRecorder) CountAvailableReceiptsForIte
 }
 
 // CreateMaterialReservation mocks base method.
-func (m *MockInventoryReservationRepo) CreateMaterialReservation(ctx context.Context, params domain.CreateMaterialReservationParams) *apierror.APIError {
+func (m *MockInventoryReservationRepo) CreateMaterialReservation(ctx context.Context, scope *ledgerlock.Scope, params domain.CreateMaterialReservationParams) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateMaterialReservation", ctx, params)
+	ret := m.ctrl.Call(m, "CreateMaterialReservation", ctx, scope, params)
 	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
 // CreateMaterialReservation indicates an expected call of CreateMaterialReservation.
-func (mr *MockInventoryReservationRepoMockRecorder) CreateMaterialReservation(ctx, params any) *gomock.Call {
+func (mr *MockInventoryReservationRepoMockRecorder) CreateMaterialReservation(ctx, scope, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateMaterialReservation", reflect.TypeOf((*MockInventoryReservationRepo)(nil).CreateMaterialReservation), ctx, params)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateMaterialReservation", reflect.TypeOf((*MockInventoryReservationRepo)(nil).CreateMaterialReservation), ctx, scope, params)
 }
 
 // ListOpenIssueIDsForItem mocks base method.
@@ -8679,31 +8679,31 @@ func (mr *MockInventoryReservationRepoMockRecorder) LockItemForLedger(ctx, itemI
 }
 
 // ReduceReservedForOrderItem mocks base method.
-func (m *MockInventoryReservationRepo) ReduceReservedForOrderItem(ctx context.Context, params domain.OrderReservationReductionParams) *apierror.APIError {
+func (m *MockInventoryReservationRepo) ReduceReservedForOrderItem(ctx context.Context, scope *ledgerlock.Scope, params domain.OrderReservationReductionParams) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReduceReservedForOrderItem", ctx, params)
+	ret := m.ctrl.Call(m, "ReduceReservedForOrderItem", ctx, scope, params)
 	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
 // ReduceReservedForOrderItem indicates an expected call of ReduceReservedForOrderItem.
-func (mr *MockInventoryReservationRepoMockRecorder) ReduceReservedForOrderItem(ctx, params any) *gomock.Call {
+func (mr *MockInventoryReservationRepoMockRecorder) ReduceReservedForOrderItem(ctx, scope, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReduceReservedForOrderItem", reflect.TypeOf((*MockInventoryReservationRepo)(nil).ReduceReservedForOrderItem), ctx, params)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReduceReservedForOrderItem", reflect.TypeOf((*MockInventoryReservationRepo)(nil).ReduceReservedForOrderItem), ctx, scope, params)
 }
 
 // ReduceReservedForOrderMaterials mocks base method.
-func (m *MockInventoryReservationRepo) ReduceReservedForOrderMaterials(ctx context.Context, orderID, accountID string, demands []domain.MaterialDemandItem) *apierror.APIError {
+func (m *MockInventoryReservationRepo) ReduceReservedForOrderMaterials(ctx context.Context, scope *ledgerlock.Scope, orderID, accountID string, demands []domain.MaterialDemandItem) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReduceReservedForOrderMaterials", ctx, orderID, accountID, demands)
+	ret := m.ctrl.Call(m, "ReduceReservedForOrderMaterials", ctx, scope, orderID, accountID, demands)
 	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
 // ReduceReservedForOrderMaterials indicates an expected call of ReduceReservedForOrderMaterials.
-func (mr *MockInventoryReservationRepoMockRecorder) ReduceReservedForOrderMaterials(ctx, orderID, accountID, demands any) *gomock.Call {
+func (mr *MockInventoryReservationRepoMockRecorder) ReduceReservedForOrderMaterials(ctx, scope, orderID, accountID, demands any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReduceReservedForOrderMaterials", reflect.TypeOf((*MockInventoryReservationRepo)(nil).ReduceReservedForOrderMaterials), ctx, orderID, accountID, demands)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReduceReservedForOrderMaterials", reflect.TypeOf((*MockInventoryReservationRepo)(nil).ReduceReservedForOrderMaterials), ctx, scope, orderID, accountID, demands)
 }
 
 // MockMaterialDemandRepo is a mock of MaterialDemandRepo interface.
@@ -14723,17 +14723,17 @@ func (mr *MockReceivingOrderRepoMockRecorder) HasUnstockedLineForOrderLine(ctx, 
 }
 
 // InsertInventoryReceiptForDelivery mocks base method.
-func (m *MockReceivingOrderRepo) InsertInventoryReceiptForDelivery(ctx context.Context, receiptID, accountID, itemID, quantityID, unitCostID string, storageLocationID, lotID, orderID *string) *apierror.APIError {
+func (m *MockReceivingOrderRepo) InsertInventoryReceiptForDelivery(ctx context.Context, scope *ledgerlock.Scope, receiptID, accountID, itemID, quantityID, unitCostID string, storageLocationID, lotID, orderID *string) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InsertInventoryReceiptForDelivery", ctx, receiptID, accountID, itemID, quantityID, unitCostID, storageLocationID, lotID, orderID)
+	ret := m.ctrl.Call(m, "InsertInventoryReceiptForDelivery", ctx, scope, receiptID, accountID, itemID, quantityID, unitCostID, storageLocationID, lotID, orderID)
 	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
 // InsertInventoryReceiptForDelivery indicates an expected call of InsertInventoryReceiptForDelivery.
-func (mr *MockReceivingOrderRepoMockRecorder) InsertInventoryReceiptForDelivery(ctx, receiptID, accountID, itemID, quantityID, unitCostID, storageLocationID, lotID, orderID any) *gomock.Call {
+func (mr *MockReceivingOrderRepoMockRecorder) InsertInventoryReceiptForDelivery(ctx, scope, receiptID, accountID, itemID, quantityID, unitCostID, storageLocationID, lotID, orderID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertInventoryReceiptForDelivery", reflect.TypeOf((*MockReceivingOrderRepo)(nil).InsertInventoryReceiptForDelivery), ctx, receiptID, accountID, itemID, quantityID, unitCostID, storageLocationID, lotID, orderID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertInventoryReceiptForDelivery", reflect.TypeOf((*MockReceivingOrderRepo)(nil).InsertInventoryReceiptForDelivery), ctx, scope, receiptID, accountID, itemID, quantityID, unitCostID, storageLocationID, lotID, orderID)
 }
 
 // IsInAccount mocks base method.
@@ -14794,6 +14794,20 @@ func (m *MockReceivingOrderRepo) ListLines(ctx context.Context, receivingOrderID
 func (mr *MockReceivingOrderRepoMockRecorder) ListLines(ctx, receivingOrderID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListLines", reflect.TypeOf((*MockReceivingOrderRepo)(nil).ListLines), ctx, receivingOrderID)
+}
+
+// LockItemForLedger mocks base method.
+func (m *MockReceivingOrderRepo) LockItemForLedger(ctx context.Context, itemID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LockItemForLedger", ctx, itemID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// LockItemForLedger indicates an expected call of LockItemForLedger.
+func (mr *MockReceivingOrderRepoMockRecorder) LockItemForLedger(ctx, itemID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockItemForLedger", reflect.TypeOf((*MockReceivingOrderRepo)(nil).LockItemForLedger), ctx, itemID)
 }
 
 // MarkComplete mocks base method.

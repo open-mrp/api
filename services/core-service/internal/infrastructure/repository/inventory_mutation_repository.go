@@ -128,9 +128,14 @@ func (r *inventoryMutationRepo) UpdateInventory(ctx context.Context, params doma
 	return nil
 }
 
-func (r *inventoryMutationRepo) CreateInventoryReceipt(ctx context.Context, params domain.CreateInventoryReceiptParams) *apierror.APIError {
+func (r *inventoryMutationRepo) CreateInventoryReceipt(ctx context.Context, scope *ledgerlock.Scope, params domain.CreateInventoryReceiptParams) *apierror.APIError {
 	ctx, span := inventoryMutationRepoTracer.Start(ctx, "repository.inventory_mutation.create_inventory_receipt")
 	defer span.End()
+
+	// The backstop; the acquisition belongs at the top of the caller's transaction. See ledgerlock.
+	if apiErr := scope.EnsureLocked(ctx, r, params.ItemID); apiErr != nil {
+		return apiErr
+	}
 
 	absMeasure := params.Measure.Abs()
 
@@ -211,9 +216,14 @@ func (r *inventoryMutationRepo) CreateInventoryReceipt(ctx context.Context, para
 	return nil
 }
 
-func (r *inventoryMutationRepo) CreateInventoryIssue(ctx context.Context, params domain.CreateInventoryIssueParams) *apierror.APIError {
+func (r *inventoryMutationRepo) CreateInventoryIssue(ctx context.Context, scope *ledgerlock.Scope, params domain.CreateInventoryIssueParams) *apierror.APIError {
 	ctx, span := inventoryMutationRepoTracer.Start(ctx, "repository.inventory_mutation.create_inventory_issue")
 	defer span.End()
+
+	// The backstop; the acquisition belongs at the top of the caller's transaction. See ledgerlock.
+	if apiErr := scope.EnsureLocked(ctx, r, params.ItemID); apiErr != nil {
+		return apiErr
+	}
 
 	absMeasure := params.Measure.Abs()
 

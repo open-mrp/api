@@ -38,9 +38,14 @@ func firstValidBatchID(preferred, fallback sql.NullString) sql.NullString {
 	return fallback
 }
 
-func (r *inventoryReservationRepo) CreateMaterialReservation(ctx context.Context, params domain.CreateMaterialReservationParams) *apierror.APIError {
+func (r *inventoryReservationRepo) CreateMaterialReservation(ctx context.Context, scope *ledgerlock.Scope, params domain.CreateMaterialReservationParams) *apierror.APIError {
 	ctx, span := tracing.StartSpan(ctx, inventoryReservationRepoTracer, "repository.inventory_reservation.create_material_reservation")
 	defer span.End()
+
+	// The backstop; the acquisition belongs at the top of the caller's transaction. See ledgerlock.
+	if apiErr := scope.EnsureLocked(ctx, r, params.ItemID); apiErr != nil {
+		return apiErr
+	}
 
 	quantityID, apiErr := id.GenID(id.QuantityIDPrefix, nil)
 	if apiErr != nil {
@@ -75,9 +80,14 @@ func (r *inventoryReservationRepo) CreateMaterialReservation(ctx context.Context
 }
 
 // ReduceReservedForOrderItem reduces reserved quantity for an order item using FIFO order. It deletes or reduces reserved inventory issue records to release the specified measure.
-func (r *inventoryReservationRepo) ReduceReservedForOrderItem(ctx context.Context, params domain.OrderReservationReductionParams) *apierror.APIError {
+func (r *inventoryReservationRepo) ReduceReservedForOrderItem(ctx context.Context, scope *ledgerlock.Scope, params domain.OrderReservationReductionParams) *apierror.APIError {
 	ctx, span := tracing.StartSpan(ctx, inventoryReservationRepoTracer, "repository.inventory_reservation.reduce_reserved_for_order_item")
 	defer span.End()
+
+	// The backstop; the acquisition belongs at the top of the caller's transaction. See ledgerlock.
+	if apiErr := scope.EnsureLocked(ctx, r, params.ItemID); apiErr != nil {
+		return apiErr
+	}
 
 	issues, err := r.queries.FindReservedIssuesByOrderItem(ctx, sqlc.FindReservedIssuesByOrderItemParams{
 		OrderID:   sql.NullString{String: params.OrderID, Valid: true},
@@ -131,12 +141,12 @@ func (r *inventoryReservationRepo) ReduceReservedForOrderItem(ctx context.Contex
 }
 
 // ReduceReservedForOrderMaterials reduces reserved quantities for multiple materials.
-func (r *inventoryReservationRepo) ReduceReservedForOrderMaterials(ctx context.Context, orderID, accountID string, demands []domain.MaterialDemandItem) *apierror.APIError {
+func (r *inventoryReservationRepo) ReduceReservedForOrderMaterials(ctx context.Context, scope *ledgerlock.Scope, orderID, accountID string, demands []domain.MaterialDemandItem) *apierror.APIError {
 	ctx, span := tracing.StartSpan(ctx, inventoryReservationRepoTracer, "repository.inventory_reservation.reduce_reserved_for_order_materials")
 	defer span.End()
 
 	for _, demand := range demands {
-		if apiErr := r.ReduceReservedForOrderItem(ctx, domain.OrderReservationReductionParams{
+		if apiErr := r.ReduceReservedForOrderItem(ctx, scope, domain.OrderReservationReductionParams{
 			OrderID:   orderID,
 			AccountID: accountID,
 			ItemID:    demand.ItemID,
@@ -151,9 +161,14 @@ func (r *inventoryReservationRepo) ReduceReservedForOrderMaterials(ctx context.C
 }
 
 // AllocateReservationsForConsumption converts reserved inventory issues to open issues, performing FIFO allocation against receipts. Returns the remaining quantity that could not be allocated from reservations.
-func (r *inventoryReservationRepo) AllocateReservationsForConsumption(ctx context.Context, params domain.ConsumptionAllocationParams) (*domain.ConsumptionAllocationResult, *apierror.APIError) {
+func (r *inventoryReservationRepo) AllocateReservationsForConsumption(ctx context.Context, scope *ledgerlock.Scope, params domain.ConsumptionAllocationParams) (*domain.ConsumptionAllocationResult, *apierror.APIError) {
 	ctx, span := tracing.StartSpan(ctx, inventoryReservationRepoTracer, "repository.inventory_reservation.allocate_reservations_for_consumption")
 	defer span.End()
+
+	// The backstop; the acquisition belongs at the top of the caller's transaction. See ledgerlock.
+	if apiErr := scope.EnsureLocked(ctx, r, params.ItemID); apiErr != nil {
+		return nil, apiErr
+	}
 
 	issues, err := r.queries.FindReservedIssuesWithAllocationSums(ctx, sqlc.FindReservedIssuesWithAllocationSumsParams{
 		OrderID:   sql.NullString{String: params.OrderID, Valid: true},

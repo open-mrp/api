@@ -10,6 +10,7 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/services/core-service/internal/ledgerlock"
 	"github.com/open-mrp/api/services/core-service/internal/mediator"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
@@ -213,6 +214,14 @@ func (s *receivingOrderSvcImpl) StockReceivingOrder(ctx context.Context, params 
 		return nil, apiErr
 	}
 
+	// The items this stocking will write, resolved on the pool so their ordering roots can be the
+	// transaction's first statements. Taking them after createDeliveryRecords has written the receipts
+	// is the inversion, not the fix (Corollary A). Same read requestAllocation does at the end.
+	stockedItemIDs, apiErr := s.stockedItemIDs(ctx, params)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
 	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
 	case domain.RecoveryPointFinished:
 		cached, err := idempotency.UnmarshalCachedResponse[domain.ReceivingOrder](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
@@ -224,6 +233,11 @@ func (s *receivingOrderSvcImpl) StockReceivingOrder(ctx context.Context, params 
 	case domain.RecoveryPointStarted:
 		var result *domain.ReceivingOrder
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *receivingOrderSvcImpl) *apierror.APIError {
+			scope, apiErr := ledgerlock.Acquire(txCtx, txSvc.repos.NewReceivingOrderRepo(), stockedItemIDs)
+			if apiErr != nil {
+				return apiErr
+			}
+
 			txRepo := txSvc.repos.NewReceivingOrderRepo()
 
 			// Fetch old state for audit diff
@@ -279,7 +293,7 @@ func (s *receivingOrderSvcImpl) StockReceivingOrder(ctx context.Context, params 
 				}
 
 				// Create delivery records
-				if apiErr := s.createDeliveryRecords(txCtx, txSvc, params); apiErr != nil {
+				if apiErr := s.createDeliveryRecords(txCtx, scope, txSvc, params); apiErr != nil {
 					return apiErr
 				}
 
@@ -572,7 +586,7 @@ func (s *receivingOrderSvcImpl) VoidReceivingOrder(ctx context.Context, receivin
 }
 
 // createDeliveryRecords creates delivery and delivery line records, plus inventory receipts for each accepted allocation. This matches the Dashboard's createByReceivingOrder behavior.
-func (s *receivingOrderSvcImpl) createDeliveryRecords(ctx context.Context, txSvc *receivingOrderSvcImpl, params domain.StockReceivingOrderParams) *apierror.APIError {
+func (s *receivingOrderSvcImpl) createDeliveryRecords(ctx context.Context, scope *ledgerlock.Scope, txSvc *receivingOrderSvcImpl, params domain.StockReceivingOrderParams) *apierror.APIError {
 	txRepo := txSvc.repos.NewReceivingOrderRepo()
 	deliveryRepo := txSvc.repos.NewDeliveryRepo()
 	mutationRepo := txSvc.repos.NewInventoryMutationRepo()
@@ -715,7 +729,7 @@ func (s *receivingOrderSvcImpl) createDeliveryRecords(ctx context.Context, txSvc
 				return apiErr
 			}
 
-			if apiErr := txRepo.InsertInventoryReceiptForDelivery(ctx, receiptID, params.AccountID, up.ItemID, rcptQuantityID, rcptRateID, allocation.LocationID, lotID, &purchaseOrderID); apiErr != nil {
+			if apiErr := txRepo.InsertInventoryReceiptForDelivery(ctx, scope, receiptID, params.AccountID, up.ItemID, rcptQuantityID, rcptRateID, allocation.LocationID, lotID, &purchaseOrderID); apiErr != nil {
 				return apiErr
 			}
 		}
@@ -830,6 +844,31 @@ func (s *receivingOrderSvcImpl) createInventoryChangeLogs(ctx context.Context, t
 	return nil
 }
 
+// stockedItemIDs names the items a stocking will write, from the lines that carry accepted
+// allocations. Read on the pool: it is both the ledger lock order's item set and, later, the set whose
+// demand is asked to be covered.
+func (s *receivingOrderSvcImpl) stockedItemIDs(ctx context.Context, params domain.StockReceivingOrderParams) ([]string, *apierror.APIError) {
+	unitPrices, apiErr := s.repos.NewReceivingOrderRepo().GetLineUnitPrices(ctx, params.ReceivingOrderID)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	unitPriceMap := make(map[string]domain.ReceivingOrderLineUnitPrice, len(unitPrices))
+	for _, up := range unitPrices {
+		unitPriceMap[up.ReceivingOrderLineID] = up
+	}
+
+	itemIDs := make([]string, 0, len(params.Data.LineItems))
+	for _, lineItem := range params.Data.LineItems {
+		if len(lineItem.Allocations) == 0 {
+			continue
+		}
+		if up, ok := unitPriceMap[lineItem.ReceivingOrderLineID]; ok {
+			itemIDs = append(itemIDs, up.ItemID)
+		}
+	}
+	return itemIDs, nil
+}
+
 // requestAllocation asks for the open demand of every item this stocking received to be covered.
 //
 // It used to do the covering here, inline, inside the transaction that had just written the receipts
@@ -841,28 +880,9 @@ func (s *receivingOrderSvcImpl) createInventoryChangeLogs(ctx context.Context, t
 // actually landed. The caller kicks the enqueuer after the commit, so this is a moment behind rather
 // than an idle poll behind.
 func (s *receivingOrderSvcImpl) requestAllocation(ctx context.Context, txSvc *receivingOrderSvcImpl, params domain.StockReceivingOrderParams) *apierror.APIError {
-	txRepo := txSvc.repos.NewReceivingOrderRepo()
-
-	unitPrices, apiErr := txRepo.GetLineUnitPrices(ctx, params.ReceivingOrderID)
+	itemIDs, apiErr := s.stockedItemIDs(ctx, params)
 	if apiErr != nil {
 		return apiErr
 	}
-	unitPriceMap := make(map[string]domain.ReceivingOrderLineUnitPrice)
-	for _, up := range unitPrices {
-		unitPriceMap[up.ReceivingOrderLineID] = up
-	}
-
-	itemIDs := make([]string, 0, len(params.Data.LineItems))
-	for _, lineItem := range params.Data.LineItems {
-		if len(lineItem.Allocations) == 0 {
-			continue
-		}
-		up, ok := unitPriceMap[lineItem.ReceivingOrderLineID]
-		if !ok {
-			continue
-		}
-		itemIDs = append(itemIDs, up.ItemID)
-	}
-
 	return mediator.EnqueueAllocateOpenIssues(ctx, txSvc.repos, params.AccountID, itemIDs...)
 }

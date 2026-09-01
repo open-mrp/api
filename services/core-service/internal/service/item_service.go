@@ -11,6 +11,7 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/services/core-service/internal/ledgerlock"
 	"github.com/open-mrp/api/services/core-service/internal/mediator"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
@@ -1209,6 +1210,11 @@ func (s *itemSvcImpl) UpdateItemInventory(ctx context.Context, params domain.Upd
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *itemSvcImpl) *apierror.APIError {
 			invQueryRepo := txSvc.repos.NewInventoryQueryRepo()
 			invMutRepo := txSvc.repos.NewInventoryMutationRepo()
+			// One item, known before the transaction opened, so the root is its first statement.
+			scope, apiErr := ledgerlock.Acquire(txCtx, invMutRepo, []string{params.ItemID})
+			if apiErr != nil {
+				return apiErr
+			}
 
 			quantityChange := params.Measure
 			reconcile := params.Reconcile != nil && *params.Reconcile
@@ -1237,7 +1243,7 @@ func (s *itemSvcImpl) UpdateItemInventory(ctx context.Context, params domain.Upd
 
 			if delta.GreaterThan(decimal.Zero) {
 				// Positive delta: create inventory receipt.
-				if apiErr := invMutRepo.CreateInventoryReceipt(txCtx, domain.CreateInventoryReceiptParams{
+				if apiErr := invMutRepo.CreateInventoryReceipt(txCtx, scope, domain.CreateInventoryReceiptParams{
 					AccountID:       accountID,
 					OwnerAccountID:  inventoryOwnerAccountID,
 					HolderAccountID: accountID,
@@ -1251,7 +1257,7 @@ func (s *itemSvcImpl) UpdateItemInventory(ctx context.Context, params domain.Upd
 				}
 			} else if delta.LessThan(decimal.Zero) {
 				// Negative delta: create inventory issue.
-				if apiErr := invMutRepo.CreateInventoryIssue(txCtx, domain.CreateInventoryIssueParams{
+				if apiErr := invMutRepo.CreateInventoryIssue(txCtx, scope, domain.CreateInventoryIssueParams{
 					AccountID:  accountID,
 					ItemID:     params.ItemID,
 					Measure:    delta,
@@ -2117,6 +2123,16 @@ func (s *itemSvcImpl) BulkReconcileItems(ctx context.Context, params domain.Bulk
 				var errs []domain.ReconcileError
 				var reconciled []domain.ReconciledItem
 				invMutRepo := txSvc.repos.NewInventoryMutationRepo()
+				// Every item in the batch, so the roots are the transaction's first statements. The set
+				// comes from `batch`, which was sliced before the transaction opened (Corollary A).
+				batchItemIDs := make([]string, 0, len(batch))
+				for _, d := range batch {
+					batchItemIDs = append(batchItemIDs, itemMap[d.SKU].ItemID)
+				}
+				scope, apiErr := ledgerlock.Acquire(txCtx, invMutRepo, batchItemIDs)
+				if apiErr != nil {
+					return apiErr
+				}
 
 				for _, d := range batch {
 					item := itemMap[d.SKU]
@@ -2140,14 +2156,14 @@ func (s *itemSvcImpl) BulkReconcileItems(ctx context.Context, params domain.Bulk
 					unitID := item.BaseUnitID
 
 					if delta.GreaterThan(decimal.Zero) {
-						if apiErr := invMutRepo.CreateInventoryReceipt(txCtx, domain.CreateInventoryReceiptParams{
+						if apiErr := invMutRepo.CreateInventoryReceipt(txCtx, scope, domain.CreateInventoryReceiptParams{
 							AccountID: accountID, ItemID: item.ItemID, Measure: measure, UnitID: unitID,
 						}); apiErr != nil {
 							errs = append(errs, domain.ReconcileError{SKU: d.SKU, Error: "Failed to create receipt"})
 							continue
 						}
 					} else if delta.LessThan(decimal.Zero) {
-						if apiErr := invMutRepo.CreateInventoryIssue(txCtx, domain.CreateInventoryIssueParams{
+						if apiErr := invMutRepo.CreateInventoryIssue(txCtx, scope, domain.CreateInventoryIssueParams{
 							AccountID: accountID, ItemID: item.ItemID, Measure: measure, UnitID: unitID,
 						}); apiErr != nil {
 							errs = append(errs, domain.ReconcileError{SKU: d.SKU, Error: "Failed to create issue"})

@@ -11,6 +11,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
+	"github.com/open-mrp/api/services/core-service/internal/ledgerlock"
 	"github.com/open-mrp/api/services/core-service/internal/mediator"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
@@ -158,8 +159,8 @@ func (s *UndoBatchScanConsumerTestSuite) TestRestoresTheScrapReservationsTheScan
 		}, nil)
 
 	var reserved []domain.CreateMaterialReservationParams
-	s.reservationRepo.EXPECT().CreateMaterialReservation(gomock.Any(), gomock.Any()).
-		DoAndReturn(func(_ context.Context, params domain.CreateMaterialReservationParams) *apierror.APIError {
+	s.reservationRepo.EXPECT().CreateMaterialReservation(gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ *ledgerlock.Scope, params domain.CreateMaterialReservationParams) *apierror.APIError {
 			reserved = append(reserved, params)
 			return nil
 		}).Times(2)

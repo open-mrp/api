@@ -15,6 +15,7 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/event"
+	"github.com/open-mrp/api/services/core-service/internal/ledgerlock"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
@@ -3078,8 +3079,19 @@ func (s *salesOrderSvcImpl) CreateSalesOrderProductionRun(ctx context.Context, p
 			// Create reserved inventory issue records for material demand, linked to the order
 			if len(allDemands) > 0 {
 				txReservationRepo := txSvc.repos.NewInventoryReservationRepo()
+				// The demand rows are already resolved, so the whole item set is known before any of it
+				// is written.
+				demandItemIDs := make([]string, 0, len(allDemands))
 				for _, demand := range allDemands {
-					if apiErr := txReservationRepo.CreateMaterialReservation(txCtx, domain.CreateMaterialReservationParams{
+					demandItemIDs = append(demandItemIDs, demand.ItemID)
+				}
+				scope, apiErr := ledgerlock.Acquire(txCtx, txReservationRepo, demandItemIDs)
+				if apiErr != nil {
+					return apiErr
+				}
+
+				for _, demand := range allDemands {
+					if apiErr := txReservationRepo.CreateMaterialReservation(txCtx, scope, domain.CreateMaterialReservationParams{
 						AccountID: params.AccountID,
 						ItemID:    demand.ItemID,
 						Measure:   demand.Measure,

@@ -556,6 +556,8 @@ type GetOeeWindowParams struct {
 	AccountID string
 	StartDate time.Time
 	EndDate   time.Time
+	// WeekStartDay is the weekday the trend read buckets scans on, 0 = Sunday through 6 = Saturday, matching the account's schedule week. Unused by the window-total OEE reads, which do not bucket by week.
+	WeekStartDay int
 }
 
 // OeeDepartmentDataRow is one department's unit counts and standard time earned in the window.

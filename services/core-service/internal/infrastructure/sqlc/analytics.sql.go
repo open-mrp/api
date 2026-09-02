@@ -1522,7 +1522,7 @@ func (q *Queries) GetOeeEstimatedRuntime(ctx context.Context, arg GetOeeEstimate
 
 const getOeeTrendDepartmentDataByWeek = `-- name: GetOeeTrendDepartmentDataByWeek :many
 SELECT
-    DATE(DATE_SUB(b.scanned_at, INTERVAL WEEKDAY(b.scanned_at) DAY)) AS week_start_date,
+    DATE(DATE_SUB(b.scanned_at, INTERVAL ((DAYOFWEEK(b.scanned_at) + 6 - CAST(? AS SIGNED)) % 7) DAY)) AS week_start_date,
     COALESCE(d.id, 'unassigned') AS department_id,
     COALESCE(d.name, 'Unassigned') AS department_name,
     CAST(COALESCE(SUM(COALESCE(qf.value * (u_qf.ratio_numerator / u_qf.ratio_denominator), 0)), 0) AS DECIMAL(65,30)) AS good_units,
@@ -1567,6 +1567,7 @@ GROUP BY week_start_date, d.id, d.name
 `
 
 type GetOeeTrendDepartmentDataByWeekParams struct {
+	WeekStartDay   int64
 	OwnerAccountID string
 	StartDate      sql.NullTime
 	EndDate        sql.NullTime
@@ -1584,9 +1585,14 @@ type GetOeeTrendDepartmentDataByWeekRow struct {
 
 // GetOeeTrendDepartmentDataByWeek is GetOeeDepartmentData bucketed into production weeks, so one read covers a whole trend window instead of one round trip per week.
 //
-// The week key is the Monday of the scan week, matching SumActualsByWeek: a trend that bucketed on Sunday would disagree with schedule attainment about which week a Monday-morning batch belongs to.
+// The week key is the start of the scan's production week, following the account's configured week_start_day, exactly as SumActualsByWeek buckets it: a trend that bucketed on a different day would disagree with schedule attainment about which week a batch belongs to.
 func (q *Queries) GetOeeTrendDepartmentDataByWeek(ctx context.Context, arg GetOeeTrendDepartmentDataByWeekParams) ([]GetOeeTrendDepartmentDataByWeekRow, error) {
-	rows, err := q.db.QueryContext(ctx, getOeeTrendDepartmentDataByWeek, arg.OwnerAccountID, arg.StartDate, arg.EndDate)
+	rows, err := q.db.QueryContext(ctx, getOeeTrendDepartmentDataByWeek,
+		arg.WeekStartDay,
+		arg.OwnerAccountID,
+		arg.StartDate,
+		arg.EndDate,
+	)
 	if err != nil {
 		return nil, err
 	}

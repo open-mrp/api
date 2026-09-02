@@ -1361,10 +1361,10 @@ GROUP BY m.department_id;
 
 -- GetOeeTrendDepartmentDataByWeek is GetOeeDepartmentData bucketed into production weeks, so one read covers a whole trend window instead of one round trip per week.
 --
--- The week key is the Monday of the scan week, matching SumActualsByWeek: a trend that bucketed on Sunday would disagree with schedule attainment about which week a Monday-morning batch belongs to.
+-- The week key is the start of the scan's production week, following the account's configured week_start_day, exactly as SumActualsByWeek buckets it: a trend that bucketed on a different day would disagree with schedule attainment about which week a batch belongs to.
 -- name: GetOeeTrendDepartmentDataByWeek :many
 SELECT
-    DATE(DATE_SUB(b.scanned_at, INTERVAL WEEKDAY(b.scanned_at) DAY)) AS week_start_date,
+    DATE(DATE_SUB(b.scanned_at, INTERVAL ((DAYOFWEEK(b.scanned_at) + 6 - CAST(sqlc.arg('week_start_day') AS SIGNED)) % 7) DAY)) AS week_start_date,
     COALESCE(d.id, 'unassigned') AS department_id,
     COALESCE(d.name, 'Unassigned') AS department_name,
     CAST(COALESCE(SUM(COALESCE(qf.value * (u_qf.ratio_numerator / u_qf.ratio_denominator), 0)), 0) AS DECIMAL(65,30)) AS good_units,

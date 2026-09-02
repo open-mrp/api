@@ -6,6 +6,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/contracts"
 	pb "github.com/open-mrp/api/shared/proto/core"
+	"github.com/open-mrp/api/shared/ptrutil"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -77,14 +78,16 @@ func deliverySummaryToProto(d *domain.DeliverySummary) *pb.DeliverySummaryInfo {
 	}
 
 	info := &pb.DeliverySummaryInfo{
-		Id:                  d.ID,
-		Number:              d.Number,
-		PurchaseOrderId:     d.PurchaseOrderID,
-		PurchaseOrderNumber: d.PurchaseOrderNumber,
-		Status:              d.Status,
-		LineCount:           d.LineCount,
-		CreatedAt:           timestamppb.New(d.CreatedAt),
-		UpdatedAt:           timestamppb.New(d.UpdatedAt),
+		Id:                   d.ID,
+		Number:               d.Number,
+		PurchaseOrderId:      d.PurchaseOrderID,
+		PurchaseOrderNumber:  d.PurchaseOrderNumber,
+		ReceivingOrderId:     ptrutil.NonEmptyPtr(d.ReceivingOrderID),
+		ReceivingOrderNumber: ptrutil.NonEmptyPtr(d.ReceivingOrderNumber),
+		Status:               d.Status,
+		LineCount:            d.LineCount,
+		CreatedAt:            timestamppb.New(d.CreatedAt),
+		UpdatedAt:            timestamppb.New(d.UpdatedAt),
 	}
 
 	if d.AcceptedAt != nil {
@@ -112,14 +115,16 @@ func deliveryToProto(d *domain.Delivery) *pb.DeliveryInfo {
 	}
 
 	info := &pb.DeliveryInfo{
-		Id:                  d.ID,
-		Number:              d.Number,
-		PurchaseOrderId:     d.PurchaseOrderID,
-		PurchaseOrderNumber: d.PurchaseOrderNumber,
-		Status:              d.Status,
-		Lines:               lines,
-		CreatedAt:           timestamppb.New(d.CreatedAt),
-		UpdatedAt:           timestamppb.New(d.UpdatedAt),
+		Id:                   d.ID,
+		Number:               d.Number,
+		PurchaseOrderId:      d.PurchaseOrderID,
+		PurchaseOrderNumber:  d.PurchaseOrderNumber,
+		ReceivingOrderId:     ptrutil.NonEmptyPtr(d.ReceivingOrderID),
+		ReceivingOrderNumber: ptrutil.NonEmptyPtr(d.ReceivingOrderNumber),
+		Status:               d.Status,
+		Lines:                lines,
+		CreatedAt:            timestamppb.New(d.CreatedAt),
+		UpdatedAt:            timestamppb.New(d.UpdatedAt),
 	}
 
 	if d.AcceptedAt != nil {

@@ -26,6 +26,7 @@ message GetItemCostsResponse {
   string overhead_cost = 3;
   string total_cost = 4;
   string unit_id = 5;
+  string numerator_unit_id = 6;
 }
 message ItemTrendPoint {
   google.protobuf.Timestamp date = 1;
@@ -337,6 +338,13 @@ message GetBatchPossibleNextStepsRequest {
   string batch_id = 2;
 }
 message GetBatchPossibleNextStepsResponse {
+  repeated ScanningProductionStepInfoProto steps = 1;
+}
+message GetBatchPossibleInitStepsRequest {
+  string scanning_station_id = 1;
+  string batch_id = 2;
+}
+message GetBatchPossibleInitStepsResponse {
   repeated ScanningProductionStepInfoProto steps = 1;
 }
 message AnalyzeOpenBatchesRequest {

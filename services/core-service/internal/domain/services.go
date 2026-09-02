@@ -685,6 +685,7 @@ type BatchSvc interface {
 
 	// GetPossibleNextSteps returns the possible next production steps for a batch at a scanning station.
 	GetPossibleNextSteps(ctx context.Context, scanningStationID, batchID string) ([]ScanningProductionStepInfo, *apierror.APIError)
+	GetPossibleInitSteps(ctx context.Context, scanningStationID, batchID string) ([]ScanningProductionStepInfo, *apierror.APIError)
 
 	// AnalyzeOpenBatches returns aggregated open batch summaries for analytics.
 	AnalyzeOpenBatches(ctx context.Context, itemIDs, productLineIDs []string) ([]OpenBatchSummary, *apierror.APIError)

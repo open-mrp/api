@@ -96,7 +96,7 @@ func TestAnalyticsOee_ExposesDowntimeFields(t *testing.T) {
 			assert.True(t, ok, "downtime field %q must be a number", field)
 		}
 
-		// An estimate must be labelled as one: a department with no logged downtime computes as perfectly available.
+		// An estimate must be labeled as one: a department with no logged downtime computes as perfectly available.
 		assert.Contains(t, []string{"measured", "estimated"}, jsonField(dept, "measurement_status"),
 			"measurement_status must say whether availability was measured or estimated")
 		assert.NotNil(t, dept["anomalies"], "anomalies must serialize as [] rather than null")
@@ -209,7 +209,7 @@ func TestAnalyticsOee_QualityComputedWithoutPlannedTime(t *testing.T) {
 // Real Availability, driven by logged downtime
 // ──────────────────────────────────────────────
 
-// The headline behaviour of B3: logged downtime reduces Availability, and the arithmetic must tie out exactly.
+// The headline behavior of B3: logged downtime reduces Availability, and the arithmetic must tie out exactly.
 func TestAnalyticsOee_LoggedDowntimeReducesAvailability(t *testing.T) {
 	// Not parallel: it asserts on aggregate downtime for the seeded department, which other tests in this package also write to.
 	start := time.Now().UTC().Add(-4 * time.Hour)

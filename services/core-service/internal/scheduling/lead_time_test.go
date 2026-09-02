@@ -68,7 +68,7 @@ func TestResolveLeadTime_ZeroIsAnAnswerNotAnAbsence(t *testing.T) {
 	}
 }
 
-// A negative can only come from a hand-written row; honouring it would date a commitment before the order existed.
+// A negative can only come from a hand-written row; honoring it would date a commitment before the order existed.
 func TestResolveLeadTime_NegativeFallsThrough(t *testing.T) {
 	t.Parallel()
 

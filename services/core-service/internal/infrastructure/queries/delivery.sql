@@ -158,3 +158,11 @@ LEFT JOIN storage_location sl ON dl.storage_location_id = sl.id
 LEFT JOIN lot l ON dl.lot_id = l.id
 WHERE dl.delivery_id = sqlc.arg('delivery_id')
 ORDER BY dl.created_at ASC, dl.id ASC;
+
+-- ListReceivingOrderRefsForOrders names the receiving order created for each of the given purchase orders.
+--
+-- One receiving order exists per issued purchase order, so this is the link a delivery follows to reach the order it was received against.
+-- name: ListReceivingOrderRefsForOrders :many
+SELECT ro.order_id, ro.id, ro.number, ro.completed_at
+FROM receiving_order ro
+WHERE ro.order_id IN (sqlc.slice('order_ids'));

@@ -678,9 +678,11 @@ type DeliverySummaryInfo struct {
 	CreatedAt           *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt           *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	// Lines (populated only when the list request includes "lines").
-	Lines         []*DeliveryLineInfo `protobuf:"bytes,11,rep,name=lines,proto3" json:"lines,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Lines                []*DeliveryLineInfo `protobuf:"bytes,11,rep,name=lines,proto3" json:"lines,omitempty"`
+	ReceivingOrderId     *string             `protobuf:"bytes,12,opt,name=receiving_order_id,json=receivingOrderId,proto3,oneof" json:"receiving_order_id,omitempty"`
+	ReceivingOrderNumber *string             `protobuf:"bytes,13,opt,name=receiving_order_number,json=receivingOrderNumber,proto3,oneof" json:"receiving_order_number,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *DeliverySummaryInfo) Reset() {
@@ -790,20 +792,36 @@ func (x *DeliverySummaryInfo) GetLines() []*DeliveryLineInfo {
 	return nil
 }
 
+func (x *DeliverySummaryInfo) GetReceivingOrderId() string {
+	if x != nil && x.ReceivingOrderId != nil {
+		return *x.ReceivingOrderId
+	}
+	return ""
+}
+
+func (x *DeliverySummaryInfo) GetReceivingOrderNumber() string {
+	if x != nil && x.ReceivingOrderNumber != nil {
+		return *x.ReceivingOrderNumber
+	}
+	return ""
+}
+
 type DeliveryInfo struct {
-	state               protoimpl.MessageState `protogen:"open.v1"`
-	Id                  string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Number              string                 `protobuf:"bytes,2,opt,name=number,proto3" json:"number,omitempty"`
-	PurchaseOrderId     string                 `protobuf:"bytes,3,opt,name=purchase_order_id,json=purchaseOrderId,proto3" json:"purchase_order_id,omitempty"`
-	PurchaseOrderNumber string                 `protobuf:"bytes,4,opt,name=purchase_order_number,json=purchaseOrderNumber,proto3" json:"purchase_order_number,omitempty"`
-	Status              string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
-	Lines               []*DeliveryLineInfo    `protobuf:"bytes,6,rep,name=lines,proto3" json:"lines,omitempty"`
-	AcceptedAt          *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=accepted_at,json=acceptedAt,proto3,oneof" json:"accepted_at,omitempty"`
-	RejectedAt          *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=rejected_at,json=rejectedAt,proto3,oneof" json:"rejected_at,omitempty"`
-	CreatedAt           *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt           *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	Id                   string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Number               string                 `protobuf:"bytes,2,opt,name=number,proto3" json:"number,omitempty"`
+	PurchaseOrderId      string                 `protobuf:"bytes,3,opt,name=purchase_order_id,json=purchaseOrderId,proto3" json:"purchase_order_id,omitempty"`
+	PurchaseOrderNumber  string                 `protobuf:"bytes,4,opt,name=purchase_order_number,json=purchaseOrderNumber,proto3" json:"purchase_order_number,omitempty"`
+	Status               string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
+	Lines                []*DeliveryLineInfo    `protobuf:"bytes,6,rep,name=lines,proto3" json:"lines,omitempty"`
+	AcceptedAt           *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=accepted_at,json=acceptedAt,proto3,oneof" json:"accepted_at,omitempty"`
+	RejectedAt           *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=rejected_at,json=rejectedAt,proto3,oneof" json:"rejected_at,omitempty"`
+	CreatedAt            *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt            *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	ReceivingOrderId     *string                `protobuf:"bytes,11,opt,name=receiving_order_id,json=receivingOrderId,proto3,oneof" json:"receiving_order_id,omitempty"`
+	ReceivingOrderNumber *string                `protobuf:"bytes,12,opt,name=receiving_order_number,json=receivingOrderNumber,proto3,oneof" json:"receiving_order_number,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *DeliveryInfo) Reset() {
@@ -904,6 +922,20 @@ func (x *DeliveryInfo) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
+}
+
+func (x *DeliveryInfo) GetReceivingOrderId() string {
+	if x != nil && x.ReceivingOrderId != nil {
+		return *x.ReceivingOrderId
+	}
+	return ""
+}
+
+func (x *DeliveryInfo) GetReceivingOrderNumber() string {
+	if x != nil && x.ReceivingOrderNumber != nil {
+		return *x.ReceivingOrderNumber
+	}
+	return ""
 }
 
 type DeliveryLineInfo struct {
@@ -6014,7 +6046,7 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\x12GetDeliveryRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"E\n" +
 	"\x13GetDeliveryResponse\x12.\n" +
-	"\bdelivery\x18\x01 \x01(\v2\x12.core.DeliveryInfoR\bdelivery\"\x9c\x04\n" +
+	"\bdelivery\x18\x01 \x01(\v2\x12.core.DeliveryInfoR\bdelivery\"\xbc\x05\n" +
 	"\x13DeliverySummaryInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12*\n" +
@@ -6032,9 +6064,13 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12,\n" +
-	"\x05lines\x18\v \x03(\v2\x16.core.DeliveryLineInfoR\x05linesB\x0e\n" +
+	"\x05lines\x18\v \x03(\v2\x16.core.DeliveryLineInfoR\x05lines\x121\n" +
+	"\x12receiving_order_id\x18\f \x01(\tH\x02R\x10receivingOrderId\x88\x01\x01\x129\n" +
+	"\x16receiving_order_number\x18\r \x01(\tH\x03R\x14receivingOrderNumber\x88\x01\x01B\x0e\n" +
 	"\f_accepted_atB\x0e\n" +
-	"\f_rejected_at\"\xf6\x03\n" +
+	"\f_rejected_atB\x15\n" +
+	"\x13_receiving_order_idB\x19\n" +
+	"\x17_receiving_order_number\"\x96\x05\n" +
 	"\fDeliveryInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12*\n" +
@@ -6050,9 +6086,13 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"created_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x0e\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x121\n" +
+	"\x12receiving_order_id\x18\v \x01(\tH\x02R\x10receivingOrderId\x88\x01\x01\x129\n" +
+	"\x16receiving_order_number\x18\f \x01(\tH\x03R\x14receivingOrderNumber\x88\x01\x01B\x0e\n" +
 	"\f_accepted_atB\x0e\n" +
-	"\f_rejected_at\"\x9e\b\n" +
+	"\f_rejected_atB\x15\n" +
+	"\x13_receiving_order_idB\x19\n" +
+	"\x17_receiving_order_number\"\x9e\b\n" +
 	"\x10DeliveryLineInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1c\n" +
 	"\aitem_id\x18\x02 \x01(\tH\x00R\x06itemId\x88\x01\x01\x12\x1e\n" +

@@ -81,7 +81,7 @@ type FetchPhysicalInventoryBaseForItemsRow struct {
 // FetchPhysicalInventoryBaseForItems is the batched, base-unit form of FetchPhysicalInventoryForItem.
 //
 // It returns the same shelf figure — available receipts net of what open issues have drawn, each row
-// normalised through its own unit's ratio — but for a set of items in one pass and left in base
+// normalized through its own unit's ratio — but for a set of items in one pass and left in base
 // units, so a caller applies the per-item target-unit divide itself. The correlated per-row
 // subqueries the single-item form runs once per item are replaced by four sums grouped by item and
 // joined onto the item list, which is what lets one query stand in for the N the audit trail used to
@@ -214,7 +214,7 @@ type FetchPhysicalInventoryForItemParams struct {
 //   - Units. Receipts, issues and allocations are each recorded in whatever unit their source used;
 //     adding 120 ea to 60 pr as though they were the same number is arithmetic on labels.
 //
-// Everything is normalised through its unit's ratio and netted per row, then the total is expressed
+// Everything is normalized through its unit's ratio and netted per row, then the total is expressed
 // in `unit_id`. An unknown or empty unit leaves it in base units. Nothing is clamped: a row drawn on
 // for more than it holds nets negative and carries that into the total, which is what makes the
 // level the sum of the movements recorded against the item.

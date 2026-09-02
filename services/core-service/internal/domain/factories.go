@@ -37,6 +37,8 @@ type RepoFactory interface {
 	NewItemCategoryRepo() ItemCategoryRepo
 	NewProductLineRepo() ProductLineRepo
 	NewOutboxRepo() messaging.OutboxRepo
+	// NewInboxRepo exposes the inbox on the transaction-scoped factory so a consumer can commit its recovery point inside the same transaction as its work. See messaging.InboxRepo.Complete.
+	NewInboxRepo() messaging.InboxRepo
 	NewBatchRepo() BatchRepo
 	NewProductionStepQueryRepo() ProductionStepQueryRepo
 	NewScanningStationQueryRepo() ScanningStationQueryRepo

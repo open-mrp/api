@@ -145,7 +145,7 @@ func (c Calendar) SubtractDays(from time.Time, n int) (time.Time, bool) {
 
 // SubtractBusinessDays walks back n weekdays from a date, skipping weekends and nothing else.
 //
-// Retained as the un-configured case of Calendar.SubtractDays: it is what every account got before calendars existed, and keeping it named separately keeps that baseline behaviour pinned by its own tests.
+// Retained as the un-configured case of Calendar.SubtractDays: it is what every account got before calendars existed, and keeping it named separately keeps that baseline behavior pinned by its own tests.
 func SubtractBusinessDays(from time.Time, n int) time.Time {
 	// DefaultCalendar has open weekdays and no closures, so the walk can never exhaust the limit.
 	out, _ := DefaultCalendar().SubtractDays(from, n)

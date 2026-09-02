@@ -460,7 +460,7 @@ func TestAccountPrices_UpdateOmittedFieldsUnchanged(t *testing.T) {
 }
 
 // category_ids/attribute_ids replace the whole set rather than merging, and an empty
-// list clears it — the behaviour the details form depends on.
+// list clears it — the behavior the details form depends on.
 func TestAccountPrices_UpdateReplacesCategoriesAndAttributes(t *testing.T) {
 	t.Parallel()
 	lockPricingWrite(t)

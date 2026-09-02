@@ -8,32 +8,36 @@ import (
 
 // DeliverySummary represents a delivery with line count instead of full lines.
 type DeliverySummary struct {
-	ID                  string
-	Number              string
-	PurchaseOrderID     string
-	PurchaseOrderNumber string
-	Status              string
-	LineCount           int32
-	AcceptedAt          *time.Time
-	RejectedAt          *time.Time
-	CreatedAt           time.Time
-	UpdatedAt           time.Time
+	ID                   string
+	Number               string
+	PurchaseOrderID      string
+	PurchaseOrderNumber  string
+	ReceivingOrderID     string
+	ReceivingOrderNumber string
+	Status               string
+	LineCount            int32
+	AcceptedAt           *time.Time
+	RejectedAt           *time.Time
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
 	// Lines (populated only when the list request includes "lines").
 	Lines []*DeliveryLine
 }
 
 // Delivery represents a full delivery with its lines.
 type Delivery struct {
-	ID                  string
-	Number              string
-	PurchaseOrderID     string
-	PurchaseOrderNumber string
-	Status              string
-	Lines               []*DeliveryLine
-	AcceptedAt          *time.Time
-	RejectedAt          *time.Time
-	CreatedAt           time.Time
-	UpdatedAt           time.Time
+	ID                   string
+	Number               string
+	PurchaseOrderID      string
+	PurchaseOrderNumber  string
+	ReceivingOrderID     string
+	ReceivingOrderNumber string
+	Status               string
+	Lines                []*DeliveryLine
+	AcceptedAt           *time.Time
+	RejectedAt           *time.Time
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
 }
 
 // DeliveryLine represents a line item in a delivery.

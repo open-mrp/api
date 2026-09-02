@@ -104,7 +104,7 @@ func (*ItemInventory) SchemaExample() any {
 // The per-unit production cost breakdown for an item, computed from the production flow that produces it.
 type ItemCosts struct {
 	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=item"`
+	Object constants.ObjectType `json:"object" validate:"required,enum=item_costs"`
 	// Cost of materials consumed to produce one unit of the item, including the portion consumed as waste.
 	//
 	// Counts raw materials only. Parts and sub-products consumed along the way are not priced here; their labor, overhead, and material costs are already included through the steps that produce them.
@@ -119,17 +119,20 @@ type ItemCosts struct {
 	OverheadCost string `json:"overhead_cost" validate:"required" format:"decimal"`
 	// Total cost to produce one unit of the item (material + labor + overhead).
 	TotalCost string `json:"total_cost" validate:"required" format:"decimal"`
-	// The unit of the item the per-unit costs are expressed against.
-	Unit *Unit `json:"unit"`
+	// Unit of the costs' numerator — the currency they are counted in.
+	NumeratorUnit *Unit `json:"numerator_unit"`
+	// Unit of the costs' denominator — the item unit they are counted per, so each cost reads as currency per this unit.
+	DenominatorUnit *Unit `json:"denominator_unit"`
 }
 
 var SampleItemCosts = &ItemCosts{
-	Object:             constants.ObjectTypeItem,
+	Object:             constants.ObjectTypeItemCosts,
 	DirectMaterialCost: "5.000000000000000000000000000000",
 	DirectLaborCost:    "3.000000000000000000000000000000",
 	OverheadCost:       "2.000000000000000000000000000000",
 	TotalCost:          "10.000000000000000000000000000000",
-	Unit:               SampleUnit,
+	NumeratorUnit:      SampleCurrencyUnit,
+	DenominatorUnit:    SampleUnit,
 }
 
 func (*ItemCosts) SchemaExample() any {
@@ -149,7 +152,7 @@ type ItemTrendPoint struct {
 // Historical trend data for an item, as a time-ordered series of measurements.
 type ItemTrends struct {
 	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=item"`
+	Object constants.ObjectType `json:"object" validate:"required,enum=item_trends"`
 	// The trend type that was requested.
 	TrendType constants.ItemTrendType `json:"trend_type" validate:"required"`
 	// Trend data points, oldest first.
@@ -159,7 +162,7 @@ type ItemTrends struct {
 }
 
 var SampleItemTrends = &ItemTrends{
-	Object:    constants.ObjectTypeItem,
+	Object:    constants.ObjectTypeItemTrends,
 	TrendType: "on_hand",
 	Points: NewList([]ItemTrendPoint{
 		{
@@ -252,19 +255,21 @@ type BulkReconcileItemsResponse struct {
 //
 // Both quantities are expressed in the item's own base unit, not in the unit submitted with the request.
 type ReconciledItemResult struct {
-	// Item ID.
-	ItemID string `json:"item_id" validate:"required"`
-	// Item SKU.
-	SKU string `json:"sku" validate:"required"`
-	// Quantity before the reconciliation, as a decimal string.
-	PreviousQuantity string `json:"previous_quantity" validate:"required" format:"decimal"`
-	// Quantity after the reconciliation, as a decimal string.
-	NewQuantity string `json:"new_quantity" validate:"required" format:"decimal"`
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=reconciled_item_result"`
+	// The item that was reconciled.
+	Item *Item `json:"item" validate:"required"`
+	// Quantity before the reconciliation.
+	PreviousQuantity *ComputedQuantity `json:"previous_quantity" validate:"required"`
+	// Quantity after the reconciliation.
+	NewQuantity *ComputedQuantity `json:"new_quantity" validate:"required"`
 }
 
 // A submitted row that was skipped rather than reconciled.
 type SkippedItemResult struct {
-	// Item SKU.
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=skipped_item_result"`
+	// Item SKU, as submitted.
 	SKU string `json:"sku" validate:"required"`
 	// Human-readable reason the item was skipped.
 	Reason string `json:"reason" validate:"required"`
@@ -272,8 +277,12 @@ type SkippedItemResult struct {
 
 // A submitted row that could not be reconciled.
 type ReconcileErrorResult struct {
-	// Item SKU.
-	SKU string `json:"sku" validate:"required"`
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=reconcile_error_result"`
+	// The item the row named.
+	//
+	// Always set: a row whose SKU matched no item is reported under `skipped_items` rather than here.
+	Item *Entity `json:"item" validate:"required"`
 	// Error message.
 	Error string `json:"error" validate:"required"`
 }
@@ -282,10 +291,10 @@ var SampleBulkReconcileItemsResponse = &BulkReconcileItemsResponse{
 	Object: constants.ObjectTypeBulkReconcileItemsResponse,
 	ReconciledItems: NewList([]ReconciledItemResult{
 		{
-			ItemID:           SampleItemID,
-			SKU:              SampleItemSKU,
-			PreviousQuantity: "10",
-			NewQuantity:      "12",
+			Object:           constants.ObjectTypeReconciledItemResult,
+			Item:             SampleItem,
+			PreviousQuantity: SampleComputedQuantity,
+			NewQuantity:      SampleComputedQuantity,
 		},
 	}, PageInfo{}),
 	SkippedItems: NewList([]SkippedItemResult{}, PageInfo{}),

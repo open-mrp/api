@@ -235,7 +235,7 @@ func computeOeeRatios(dept *domain.OeeDepartment, plannedHours float64) {
 //
 // Scheduled time is machine-hours, not wall-clock hours: downtime is logged per machine, so a three-machine room measured against one machine's shift would report availability three times worse than it is.
 //
-// The shift pattern comes from the production-schedule settings — the same assumption the solver sizes capacity with — so OEE availability and schedule utilisation are answering the same question rather than quietly disagreeing.
+// The shift pattern comes from the production-schedule settings — the same assumption the solver sizes capacity with — so OEE availability and schedule utilization are answering the same question rather than quietly disagreeing.
 func derivePlannedHours(
 	settings *domain.ProductionScheduleSettings,
 	machinesByDepartment map[string]int64,

@@ -64,7 +64,7 @@ func pdfTruncateToWidth(pdf *fpdf.Fpdf, text string, maxW float64) string {
 	}
 	if lo == 0 {
 		// Not even one character plus the ellipsis fits; the column is unusably narrow, so give the
-		// marker alone rather than painting over the neighbour.
+		// marker alone rather than painting over the neighbor.
 		return ellipsis
 	}
 	return strings.TrimRight(string(runes[:lo]), " ") + ellipsis

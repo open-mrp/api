@@ -212,7 +212,7 @@ func TestParity_PlanMatchesScript(t *testing.T) {
 	in, want := loadParityFixture(t)
 	s := settingsFromFixture(in)
 
-	items := make([]LevellingItem, 0, len(in.Items))
+	items := make([]LevelingItem, 0, len(in.Items))
 	for _, item := range in.Items {
 		eligible := make(map[string]bool, len(item.EligibleMachineIDs))
 		for _, id := range item.EligibleMachineIDs {
@@ -224,7 +224,7 @@ func TestParity_PlanMatchesScript(t *testing.T) {
 			lotUnits = s.DefaultLotUnits
 		}
 
-		items = append(items, LevellingItem{
+		items = append(items, LevelingItem{
 			Policy: ComputePolicy(PolicyInput{
 				ItemID:         item.ItemID,
 				SKU:            item.SKU,
@@ -289,9 +289,9 @@ func TestParity_PlanMatchesScript(t *testing.T) {
 	}
 }
 
-// levelFixtureItems builds the fixture's levelling items, optionally attaching an order book.
-func levelFixtureItems(in *parityInput, s Settings, firm func(itemID string) []float64) []LevellingItem {
-	items := make([]LevellingItem, 0, len(in.Items))
+// levelFixtureItems builds the fixture's leveling items, optionally attaching an order book.
+func levelFixtureItems(in *parityInput, s Settings, firm func(itemID string) []float64) []LevelingItem {
+	items := make([]LevelingItem, 0, len(in.Items))
 	for _, item := range in.Items {
 		eligible := make(map[string]bool, len(item.EligibleMachineIDs))
 		for _, id := range item.EligibleMachineIDs {
@@ -301,7 +301,7 @@ func levelFixtureItems(in *parityInput, s Settings, firm func(itemID string) []f
 		if lotUnits <= 0 {
 			lotUnits = s.DefaultLotUnits
 		}
-		li := LevellingItem{
+		li := LevelingItem{
 			Policy: ComputePolicy(PolicyInput{
 				ItemID:                item.ItemID,
 				SKU:                   item.SKU,
@@ -335,7 +335,7 @@ func fixtureMachines(in *parityInput) []Machine {
 
 // An account with nothing on order must get exactly the plan it got before the order book was ever read.
 //
-// TestParity_PlanMatchesScript is what proves equivalence to the pre-firm behaviour — it compares against a fixture captured from the original script, and it still builds its items without an order book. This pins the other half: that an order book which happens to be empty is indistinguishable from no order book at all, so the feature cannot perturb a forecast-only tenant.
+// TestParity_PlanMatchesScript is what proves equivalence to the pre-firm behavior — it compares against a fixture captured from the original script, and it still builds its items without an order book. This pins the other half: that an order book which happens to be empty is indistinguishable from no order book at all, so the feature cannot perturb a forecast-only tenant.
 func TestParity_EmptyOrderBookLeavesThePlanByteIdentical(t *testing.T) {
 	in, _ := loadParityFixture(t)
 	s := settingsFromFixture(in)

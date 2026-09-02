@@ -191,7 +191,7 @@ func buildInvoiceDoc(
 			LineItem:    lineItem,
 			SKU:         ptrutil.Deref(line.OrderLineItemSKU),
 			Description: ptrutil.Deref(line.OrderLineDescription),
-			// The price is labelled with the rate's own denominator unit, as the dashboard's
+			// The price is labeled with the rate's own denominator unit, as the dashboard's
 			// RateUtils.abbreviate does — an item priced by the dozen and stocked in pairs reads
 			// "$8.50 / dz", not "$8.50 / pr".
 			Price:    formatRateAmount(price, line.UnitPriceDenUnitAbbr, 2),

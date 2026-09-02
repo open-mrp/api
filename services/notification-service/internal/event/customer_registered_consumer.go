@@ -70,7 +70,7 @@ func (c *CustomerRegisteredConsumer) handleMessage(ctx context.Context, msg amqp
 
 	if data.SellerAccountID == "" || data.CustomerAccountID == "" {
 		log.Printf("core.customer_registered: missing seller or customer account id; skipping")
-		return nil
+		return c.inboxConsumer.Discard(ctx, "missing seller or customer account id")
 	}
 
 	span.SetAttributes(

@@ -23,16 +23,9 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// BatchScannedConsumer moves inventory in reaction to a scan: it credits what the batch produced,
-// releases the reservations covering units that seconds and waste mean will never exist, and draws
-// down the materials the step consumed.
+// BatchScannedConsumer moves inventory in reaction to a scan. It credits what the batch produced, releases the reservations covering units that seconds and waste mean will never exist, and draws down the materials the step consumed.
 //
-// It is one subscriber to core.event.batch_scanned among however many the account eventually wants;
-// it owns no part of the event beyond deciding what inventory should do about it.
-//
-// The whole reaction commits as one transaction. The delivery is retried with backoff and replayed
-// from the top on failure, and none of these writes is individually idempotent — a step that failed
-// after allocating drew the same receipts again on the retry, consuming stock that never moved.
+// None of these writes is idempotent on its own, so the scan is applied exactly once by construction rather than by making each movement replayable. The whole reaction commits as one transaction, and the inbox recovery point commits inside it: a failed attempt rolls back with nothing applied, and an attempt that loses the race to a concurrent delivery rolls back too. Marking the message outside that transaction is what previously let a scan commit and then be applied a second time by a redelivery or a replay, because the marker was lost with the process.
 type BatchScannedConsumer struct {
 	rabbitmq      messaging.MessageBroker
 	inboxConsumer *messaging.InboxConsumer
@@ -61,9 +54,7 @@ func (c *BatchScannedConsumer) Listen(ctx context.Context) error {
 		c.inboxConsumer.Wrap("core.batch_scanned_inventory", c.handleMessage))
 }
 
-// ReplayMessage re-drives a single delivery through the same inbox-dedup wrapper Listen uses, so a
-// maintenance tool can re-run a message that failed permanently without re-applying one that already
-// succeeded: the wrapper skips any inbox record already marked processed.
+// ReplayMessage re-drives a single delivery through the same inbox-dedup wrapper Listen uses, so a maintenance tool can re-run a message that failed permanently without re-applying one that already succeeded: the wrapper skips any inbox record already marked processed.
 func (c *BatchScannedConsumer) ReplayMessage(ctx context.Context, msg amqp.Delivery) error {
 	return c.inboxConsumer.Wrap("core.batch_scanned_inventory", c.handleMessage)(ctx, msg)
 }
@@ -99,18 +90,17 @@ func (c *BatchScannedConsumer) handleMessage(ctx context.Context, msg amqp.Deliv
 		accountID = amqpMsg.Identity.Target.AccountID
 	}
 
-	// A malformed event will never become well-formed, so these ack rather than filling the queue
-	// with a message that cannot be handled.
+	// A malformed event will never become well-formed. Discarding records the drop as terminal and surfaces it to the failure monitor; returning nil would have ACKed it and left the inbox claiming the scan was applied.
 	switch {
 	case accountID == "":
 		slog.ErrorContext(ctx, "batch_scanned: no account on event or identity", "batch_id", evt.BatchID)
-		return nil
+		return c.inboxConsumer.Discard(ctx, "no account on event or identity")
 	case evt.ProductionStepID == "":
 		slog.ErrorContext(ctx, "batch_scanned: no production step on event", "batch_id", evt.BatchID)
-		return nil
+		return c.inboxConsumer.Discard(ctx, "no production step on event")
 	case evt.BatchID == "":
 		slog.ErrorContext(ctx, "batch_scanned: no batch on event")
-		return nil
+		return c.inboxConsumer.Discard(ctx, "no batch on event")
 	}
 
 	span.SetAttributes(
@@ -143,11 +133,14 @@ func (c *BatchScannedConsumer) handleMessage(ctx context.Context, msg amqp.Deliv
 		if apiErr != nil {
 			return apiErr
 		}
-		return txConsumer.applyInventory(txCtx, scope, accountID, evt)
+		if apiErr := txConsumer.applyInventory(txCtx, scope, accountID, evt); apiErr != nil {
+			return apiErr
+		}
+		return completeInboxRecord(txCtx, f)
 	})
 	if apiErr != nil {
 		span.RecordError(apiErr)
-		return apiErr
+		return discardIfPermanent(ctx, c.inboxConsumer, apiErr)
 	}
 	return nil
 }
@@ -172,16 +165,14 @@ func (c *BatchScannedConsumer) applyInventory(ctx context.Context, scope *ledger
 		return apiErr
 	}
 
-	// A step that no longer produces what was scanned cannot be reasoned about — the routing changed
-	// under the batch. Acking would silently drop the scan's inventory, so this fails and lands on the
-	// DLQ where it is visible.
+	// A step that no longer produces what was scanned cannot be reasoned about — the routing changed under the batch. Acking would silently drop the scan's inventory, so this rolls back; it is permanent rather than transient, so it is discarded and alerted on instead of retried three times into the DLQ.
 	if step.Production.ProducedItem.ID != evt.ItemID {
-		return apierror.NewInternalError(nil,
-			"Production step "+evt.ProductionStepID+" no longer produces the scanned item "+evt.ItemID+".")
+		return newPermanentDropError(
+			"Production step " + evt.ProductionStepID + " no longer produces the scanned item " + evt.ItemID + ".")
 	}
 	if step.Production.Quantity.Measure.IsZero() {
-		return apierror.NewInternalError(nil,
-			"Production step "+evt.ProductionStepID+" has a zero production quantity.")
+		return newPermanentDropError(
+			"Production step " + evt.ProductionStepID + " has a zero production quantity.")
 	}
 
 	scanned, parseErr := decimal.NewFromString(evt.Measure)
@@ -267,8 +258,7 @@ func (c *BatchScannedConsumer) applyInventory(ctx context.Context, scope *ledger
 
 	// Levels are stamped last, once every mutation this scan makes is written, so each is the item's
 	// final physical inventory for the scan.
-	audit.finalize(ctx, c.repos, accountID)
-	return nil
+	return audit.finalize(ctx, c.repos, accountID)
 }
 
 func (c *BatchScannedConsumer) enqueueOpenIssueAllocation(ctx context.Context, accountID string, step *domain.ProductionStepDetail) *apierror.APIError {

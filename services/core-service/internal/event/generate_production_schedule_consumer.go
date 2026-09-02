@@ -34,7 +34,7 @@ func NewGenerateProductionScheduleConsumer(
 ) *GenerateProductionScheduleConsumer {
 	return &GenerateProductionScheduleConsumer{
 		rabbitmq:      rabbitmq,
-		inboxConsumer: messaging.NewInboxConsumer(inboxRepo, "core-service"),
+		inboxConsumer: messaging.NewInboxConsumer(inboxRepo, "core-service").WithLeaseSeconds(jobInboxLeaseSeconds),
 		scheduleSvc:   scheduleSvc,
 		repos:         repos,
 		tracer:        tracing.GetTracer("core-service.generate_production_schedule_consumer"),
@@ -73,7 +73,7 @@ func (c *GenerateProductionScheduleConsumer) handleMessage(ctx context.Context, 
 	if data.AccountID == "" || data.ScheduleID == "" {
 		// A malformed message can never succeed, so it is dropped rather than retried forever.
 		log.Printf("[generate_production_schedule] Missing account or schedule ID; dropping")
-		return nil
+		return c.inboxConsumer.Discard(ctx, "missing account or schedule id")
 	}
 
 	span.SetAttributes(

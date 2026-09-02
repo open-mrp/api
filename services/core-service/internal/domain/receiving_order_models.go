@@ -9,18 +9,19 @@ import (
 
 // ReceivingOrderSummary represents a receiving order in list views.
 type ReceivingOrderSummary struct {
-	ID                   string
-	Number               string
-	PurchaseOrderID      string
-	PurchaseOrderNumber  string
-	SupplierID           *string
-	SupplierName         *string
-	SupplierNumber       *string
-	LineCount            int32
-	CompletionPercentage float64
-	CompletedAt          *time.Time
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
+	ID                  string
+	Number              string
+	PurchaseOrderID     string
+	PurchaseOrderNumber string
+	SupplierID          *string
+	SupplierName        *string
+	SupplierNumber      *string
+	LineCount           int32
+	Totals              *ReceivingOrderTotals
+	Deliveries          []DocumentRef
+	CompletedAt         *time.Time
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
 	// Lines (populated only when the list request includes "lines").
 	Lines []*ReceivingOrderLine
 }
@@ -36,6 +37,8 @@ type ReceivingOrder struct {
 	SupplierNumber      *string `audit:"supplier_number"`
 	Note                *string `audit:"note"`
 	Lines               []*ReceivingOrderLine
+	Totals              *ReceivingOrderTotals
+	Deliveries          []DocumentRef
 	CompletedAt         *time.Time `audit:"completed_at"`
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
@@ -51,6 +54,7 @@ type ReceivingOrderLine struct {
 	RejectedQuantityValue     *string `audit:"rejected_quantity_value"`
 	OrderLineID               string
 	OrderLineProductID        *string
+	OrderLineItemNumber       *int32
 	OrderLineItemID           *string `audit:"order_line_item_id"`
 	OrderLineItemSKU          *string `audit:"order_line_item_sku"`
 	OrderLineItemDescription  *string `audit:"order_line_item_description"`
@@ -60,6 +64,25 @@ type ReceivingOrderLine struct {
 	StockedAt                 *time.Time `audit:"stocked_at"`
 	CreatedAt                 time.Time
 	UpdatedAt                 time.Time
+}
+
+// ReceivingOrderTotals is what a receiving order is worth and how far it has been put away, aggregated over its lines.
+//
+// Amounts are the purchase order's agreed unit price times a quantity, so they stay comparable across lines counted in different units. Quantities are carried alongside so the caller can express each stage as a fraction of what was ordered.
+type ReceivingOrderTotals struct {
+	OrderedAmount    string
+	OrderedQuantity  string
+	StockedAmount    string
+	StockedQuantity  string
+	RejectedAmount   string
+	RejectedQuantity string
+}
+
+// DocumentRef names one purchasing document from another: the id and number a caller needs to follow the link, plus the status that makes the reference readable without fetching it.
+type DocumentRef struct {
+	ID     string
+	Number string
+	Status string
 }
 
 // ListReceivingOrdersParams holds parameters for listing receiving orders.

@@ -284,10 +284,10 @@ func ScanningProductionStepInfoPresenter(s *pb.ScanningProductionStepInfoProto) 
 	}
 
 	return apiresource.ScanningProductionStepInfo{
-		ID:          s.Id,
-		Object:      constants.ObjectTypeScanningProductionStepInfo,
-		Name:        s.Name,
-		IsMultiPart: s.IsMultiPart,
+		ID:     s.Id,
+		Object: constants.ObjectTypeScanningProductionStepInfo,
+		Name:   s.Name,
+		Type:   scanningStepType(s.IsMultiPart),
 	}
 }
 
@@ -303,4 +303,12 @@ func BatchListPresenter(ctx context.Context, resp *pb.ListBatchesByScanningStati
 	}
 
 	return apiresource.NewList(batches, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
+}
+
+// scanningStepType names what the backend reports as a multi-part flag, so the client reads a value rather than inferring one from a boolean.
+func scanningStepType(multiPart bool) constants.ScanningStepType {
+	if multiPart {
+		return constants.ScanningStepTypeMultiPart
+	}
+	return constants.ScanningStepTypeSingle
 }

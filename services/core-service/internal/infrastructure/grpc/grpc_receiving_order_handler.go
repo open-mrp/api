@@ -24,14 +24,14 @@ func receivingOrderSummaryToProto(s *domain.ReceivingOrderSummary) *pb.Receiving
 	}
 
 	info := &pb.ReceivingOrderSummaryInfo{
-		Id:                   s.ID,
-		Number:               s.Number,
-		PurchaseOrderId:      s.PurchaseOrderID,
-		PurchaseOrderNumber:  s.PurchaseOrderNumber,
-		LineCount:            s.LineCount,
-		CompletionPercentage: s.CompletionPercentage,
-		CreatedAt:            timestamppb.New(s.CreatedAt),
-		UpdatedAt:            timestamppb.New(s.UpdatedAt),
+		Id:                  s.ID,
+		Number:              s.Number,
+		PurchaseOrderId:     s.PurchaseOrderID,
+		PurchaseOrderNumber: s.PurchaseOrderNumber,
+		LineCount:           s.LineCount,
+		CreatedAt:           timestamppb.New(s.CreatedAt),
+		UpdatedAt:           timestamppb.New(s.UpdatedAt),
+		Totals:              receivingOrderTotalsToProto(s.Totals),
 	}
 
 	if s.SupplierID != nil {
@@ -64,6 +64,8 @@ func receivingOrderToProto(o *domain.ReceivingOrder) *pb.ReceivingOrderInfo {
 		Number:              o.Number,
 		PurchaseOrderId:     o.PurchaseOrderID,
 		PurchaseOrderNumber: o.PurchaseOrderNumber,
+		Totals:              receivingOrderTotalsToProto(o.Totals),
+		Deliveries:          documentRefsToProto(o.Deliveries),
 		CreatedAt:           timestamppb.New(o.CreatedAt),
 		UpdatedAt:           timestamppb.New(o.UpdatedAt),
 	}
@@ -120,6 +122,7 @@ func receivingOrderLineToProto(l *domain.ReceivingOrderLine) *pb.ReceivingOrderL
 	if l.OrderLineProductID != nil {
 		info.OrderLineProductId = l.OrderLineProductID
 	}
+	info.OrderLineItemNumber = l.OrderLineItemNumber
 	if l.OrderLineItemID != nil {
 		info.OrderLineItemId = l.OrderLineItemID
 	}
@@ -357,4 +360,29 @@ func (h *receivingGRPCHandler) ReceiveReceivingOrderLine(ctx context.Context, re
 	return &pb.ReceiveReceivingOrderLineResponse{
 		Line: receivingOrderLineToProto(line),
 	}, nil
+}
+
+func receivingOrderTotalsToProto(t *domain.ReceivingOrderTotals) *pb.ReceivingOrderTotalsInfo {
+	if t == nil {
+		return nil
+	}
+	return &pb.ReceivingOrderTotalsInfo{
+		OrderedAmount:    t.OrderedAmount,
+		OrderedQuantity:  t.OrderedQuantity,
+		StockedAmount:    t.StockedAmount,
+		StockedQuantity:  t.StockedQuantity,
+		RejectedAmount:   t.RejectedAmount,
+		RejectedQuantity: t.RejectedQuantity,
+	}
+}
+
+func documentRefsToProto(refs []domain.DocumentRef) []*pb.DocumentRefInfo {
+	if len(refs) == 0 {
+		return nil
+	}
+	out := make([]*pb.DocumentRefInfo, len(refs))
+	for i, r := range refs {
+		out[i] = &pb.DocumentRefInfo{Id: r.ID, Number: r.Number, Status: r.Status}
+	}
+	return out
 }

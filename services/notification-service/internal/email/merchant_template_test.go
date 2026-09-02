@@ -261,7 +261,7 @@ func TestPurchaseOrderSubmissionDropsOptionalSections(t *testing.T) {
 }
 
 // Template parameters carry account- and item-supplied text. html/template escapes by default, and
-// these assert it stays that way: a supplier name or product description is not a licence to inject
+// these assert it stays that way: a supplier name or product description is not a license to inject
 // markup into every recipient's inbox.
 func TestMerchantTemplatesEscapeInterpolatedText(t *testing.T) {
 	t.Parallel()

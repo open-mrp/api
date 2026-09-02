@@ -273,17 +273,18 @@ type ScanningProductionStepInfo struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=scanning_production_step_info"`
 	// Production step name.
 	Name string `json:"name" validate:"required"`
-	// Whether the step combines multiple distinct part items.
+	// How many distinct part items the step draws on, which decides how an operator scans into it.
 	//
-	// Multi-part steps consume several parts at once, so an operator must scan one batch per part before merging or splitting into the step.
-	IsMultiPart bool `json:"is_multi_part"`
+	// - `single`: the step consumes one part item, so a single scan advances a batch into it.
+	// - `multi_part`: the step consumes several parts at once, so one batch per part must be scanned before merging or splitting into it.
+	Type constants.ScanningStepType `json:"type" validate:"required"`
 }
 
 var SampleScanningProductionStepInfo = &ScanningProductionStepInfo{
-	ID:          SampleProductionStepID,
-	Object:      constants.ObjectTypeScanningProductionStepInfo,
-	Name:        "Mixing",
-	IsMultiPart: false,
+	ID:     SampleProductionStepID,
+	Object: constants.ObjectTypeScanningProductionStepInfo,
+	Name:   "Mixing",
+	Type:   constants.ScanningStepTypeSingle,
 }
 
 func (*ScanningProductionStepInfo) SchemaExample() any {

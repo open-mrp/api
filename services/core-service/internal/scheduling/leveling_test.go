@@ -12,9 +12,9 @@ func testSettings() Settings {
 	return s
 }
 
-// item builds a levelling item with a policy already computed from simple inputs.
-func item(sku string, weeklyDemand, secondsPerUnit, onHand, eoq float64) LevellingItem {
-	return LevellingItem{
+// item builds a leveling item with a policy already computed from simple inputs.
+func item(sku string, weeklyDemand, secondsPerUnit, onHand, eoq float64) LevelingItem {
+	return LevelingItem{
 		Policy: ItemPolicy{
 			ItemID:         "it_" + sku,
 			SKU:            sku,
@@ -68,7 +68,7 @@ func TestLevel_DemandDrawnDownAfterPlacement(t *testing.T) {
 
 	s := testSettings()
 	s.HorizonWeeks = 1
-	items := []LevellingItem{item("A", 100, 10, 0, 600)}
+	items := []LevelingItem{item("A", 100, 10, 0, 600)}
 	machines := []Machine{{ID: "mc_1", Name: "1"}}
 
 	got := Level(items, machines, s, nil)
@@ -90,7 +90,7 @@ func TestLevel_RespectsMachineCapacity(t *testing.T) {
 	capacity := s.MachineWeeklyCapacityHours() // 2 * 7 * 5 * 0.9 = 63h
 
 	// Each campaign is 60 units at 1800 s/unit = 30h, so only two fit in 63h.
-	items := []LevellingItem{
+	items := []LevelingItem{
 		item("A", 100, 1800, 0, 60),
 		item("B", 100, 1800, 0, 60),
 		item("C", 100, 1800, 0, 60),
@@ -116,7 +116,7 @@ func TestLevel_BalancesAcrossMachinesLeastLoadedFirst(t *testing.T) {
 
 	s := testSettings()
 	s.HorizonWeeks = 1
-	items := []LevellingItem{
+	items := []LevelingItem{
 		item("A", 100, 1800, 0, 60),
 		item("B", 100, 1800, 0, 60),
 	}
@@ -139,7 +139,7 @@ func TestLevel_HonoursMachineEligibility(t *testing.T) {
 	restricted := item("A", 100, 1800, 0, 60)
 	restricted.EligibleMachineID = map[string]bool{"mc_2": true}
 
-	got := Level([]LevellingItem{restricted}, []Machine{{ID: "mc_1", Name: "1"}, {ID: "mc_2", Name: "2"}}, s, nil)
+	got := Level([]LevelingItem{restricted}, []Machine{{ID: "mc_1", Name: "1"}, {ID: "mc_2", Name: "2"}}, s, nil)
 	if len(got.Campaigns) != 1 {
 		t.Fatalf("campaigns = %d, want 1", len(got.Campaigns))
 	}
@@ -156,7 +156,7 @@ func TestLevel_SkipsItemsAboveTrigger(t *testing.T) {
 	s := testSettings()
 	s.HorizonWeeks = 1
 	// On hand 10,000 against weekly demand of 100 is far above any trigger.
-	got := Level([]LevellingItem{item("A", 100, 1800, 10_000, 60)}, []Machine{{ID: "mc_1", Name: "1"}}, s, nil)
+	got := Level([]LevelingItem{item("A", 100, 1800, 10_000, 60)}, []Machine{{ID: "mc_1", Name: "1"}}, s, nil)
 
 	if len(got.Campaigns) != 0 {
 		t.Errorf("campaigns = %d, want 0; a fully stocked item must not consume capacity", len(got.Campaigns))
@@ -169,7 +169,7 @@ func TestLevel_ReportsCapacityStarvation(t *testing.T) {
 	s := testSettings()
 	s.HorizonWeeks = 1
 	// Two items both below trigger, but each campaign eats the whole machine-week.
-	items := []LevellingItem{
+	items := []LevelingItem{
 		item("A", 100, 3600, 0, 60),
 		item("B", 100, 3600, 0, 60),
 	}
@@ -186,7 +186,7 @@ func TestLevel_FlagsUnschedulableWhenOneLotExceedsCapacity(t *testing.T) {
 	s := testSettings()
 	s.HorizonWeeks = 1
 	// 60 units at 7200 s/unit = 120h, well past the 63h machine-week.
-	got := Level([]LevellingItem{item("A", 100, 7200, 0, 60)}, []Machine{{ID: "mc_1", Name: "1"}}, s, nil)
+	got := Level([]LevelingItem{item("A", 100, 7200, 0, 60)}, []Machine{{ID: "mc_1", Name: "1"}}, s, nil)
 
 	if len(got.Diagnostics.UnschedulableSKUs) != 1 {
 		t.Errorf("unschedulable = %v, want [A]; a lot that cannot fit must be surfaced", got.Diagnostics.UnschedulableSKUs)
@@ -199,7 +199,7 @@ func TestLevel_Deterministic(t *testing.T) {
 	t.Parallel()
 
 	s := testSettings()
-	items := []LevellingItem{
+	items := []LevelingItem{
 		item("D", 120, 900, 0, 180),
 		item("A", 100, 1800, 0, 60),
 		item("C", 80, 1200, 50, 120),
@@ -403,13 +403,13 @@ func TestLevel_PinnedCampaignRaisesPositionSoSolverBuildsLess(t *testing.T) {
 	s := testSettings()
 	// Weekly demand 10, ROP 40, on hand 0: due immediately, and without help the sweep
 	// would build in week 0.
-	unpinned := Level([]LevellingItem{item("A", 10, 600, 0, 600)}, []Machine{{ID: "mc_1", Name: "1"}}, s, nil)
+	unpinned := Level([]LevelingItem{item("A", 10, 600, 0, 600)}, []Machine{{ID: "mc_1", Name: "1"}}, s, nil)
 	if len(unpinned.Campaigns) == 0 || unpinned.Campaigns[0].WeekIndex != 0 {
 		t.Fatalf("control run should build in week 0, got %+v", unpinned.Campaigns)
 	}
 
 	// A hand-pinned 600-unit build in week 0 covers the horizon; the solver adds nothing.
-	pinned := Level([]LevellingItem{item("A", 10, 600, 0, 600)}, []Machine{{ID: "mc_1", Name: "1"}}, s,
+	pinned := Level([]LevelingItem{item("A", 10, 600, 0, 600)}, []Machine{{ID: "mc_1", Name: "1"}}, s,
 		[]PinnedCampaign{{ItemID: "it_A", MachineID: "mc_1", WeekIndex: 0, Units: 600}})
 	if len(pinned.Campaigns) != 0 {
 		t.Errorf("solver re-built despite the pinned inflow: %+v", pinned.Campaigns)
@@ -427,7 +427,7 @@ func TestLevel_ZeroUnitPinDoesNotHoldItsSlot(t *testing.T) {
 
 	s := testSettings()
 	pins := []PinnedCampaign{{ItemID: "it_A", MachineID: "mc_1", WeekIndex: 0, Units: 0}}
-	got := Level([]LevellingItem{item("A", 10, 600, 0, 600)}, []Machine{{ID: "mc_1", Name: "1"}}, s, pins)
+	got := Level([]LevelingItem{item("A", 10, 600, 0, 600)}, []Machine{{ID: "mc_1", Name: "1"}}, s, pins)
 
 	var placed bool
 	for _, c := range got.Campaigns {
@@ -450,7 +450,7 @@ func TestLevel_PinnedCampaignConsumesCapacity(t *testing.T) {
 	// (360 units x 600 s), leaving too little for B's 30-hour campaign.
 	itemB := item("B", 10, 600, 0, 180)
 	pins := []PinnedCampaign{{ItemID: "it_A", MachineID: "mc_1", WeekIndex: 0, Units: 360}}
-	got := Level([]LevellingItem{item("A", 10, 600, 900, 600), itemB}, []Machine{{ID: "mc_1", Name: "1"}}, s, pins)
+	got := Level([]LevelingItem{item("A", 10, 600, 900, 600), itemB}, []Machine{{ID: "mc_1", Name: "1"}}, s, pins)
 
 	for _, c := range got.Campaigns {
 		if c.SKU == "B" && c.WeekIndex == 0 {
@@ -461,9 +461,9 @@ func TestLevel_PinnedCampaignConsumesCapacity(t *testing.T) {
 
 // The point of the greige buffer: a family can be flush with finished goods — so its
 // echelon reads well above the reorder point — while the physical greige store it needs
-// to build the short colourways is empty. With the buffer on, that empty store must
+// to build the short colorways is empty. With the buffer on, that empty store must
 // still knit; with it off, the healthy echelon knits nothing, which is the pooled
-// behaviour the parity gate preserves.
+// behavior the parity gate preserves.
 func TestLevel_GreigeBufferKnitsWhenStoreDryDespiteHealthyEchelon(t *testing.T) {
 	t.Parallel()
 
@@ -472,8 +472,8 @@ func TestLevel_GreigeBufferKnitsWhenStoreDryDespiteHealthyEchelon(t *testing.T) 
 
 	// Echelon is far above its reorder point (stock is held downstream as finished goods),
 	// but the greige store is empty and its safety stock is 200.
-	dryGreige := func() LevellingItem {
-		return LevellingItem{
+	dryGreige := func() LevelingItem {
+		return LevelingItem{
 			Policy: ItemPolicy{
 				ItemID:             "it_A",
 				SKU:                "A",
@@ -493,7 +493,7 @@ func TestLevel_GreigeBufferKnitsWhenStoreDryDespiteHealthyEchelon(t *testing.T) 
 	machines := []Machine{{ID: "mc_1", Name: "1"}}
 
 	s.GreigeBufferEnabled = true
-	on := Level([]LevellingItem{dryGreige()}, machines, s, nil)
+	on := Level([]LevelingItem{dryGreige()}, machines, s, nil)
 	if len(on.Campaigns) != 1 {
 		t.Fatalf("buffer on: a dry greige store must knit despite a healthy echelon; campaigns = %d, want 1", len(on.Campaigns))
 	}
@@ -503,7 +503,7 @@ func TestLevel_GreigeBufferKnitsWhenStoreDryDespiteHealthyEchelon(t *testing.T) 
 	}
 
 	s.GreigeBufferEnabled = false
-	off := Level([]LevellingItem{dryGreige()}, machines, s, nil)
+	off := Level([]LevelingItem{dryGreige()}, machines, s, nil)
 	if len(off.Campaigns) != 0 {
 		t.Fatalf("buffer off: a healthy echelon knits nothing; campaigns = %d, want 0", len(off.Campaigns))
 	}
@@ -523,7 +523,7 @@ func TestLevel_MakeToOrderHoldsNoGreigeBuffer(t *testing.T) {
 	s.HorizonWeeks = 1
 	s.GreigeBufferEnabled = true
 
-	mto := LevellingItem{
+	mto := LevelingItem{
 		Policy: ItemPolicy{
 			ItemID:             "it_A",
 			SKU:                "A",
@@ -539,7 +539,7 @@ func TestLevel_MakeToOrderHoldsNoGreigeBuffer(t *testing.T) {
 		FirmByWeek: []float64{50}, // covered by the 500 on hand, so nothing is due
 	}
 
-	got := Level([]LevellingItem{mto}, []Machine{{ID: "mc_1", Name: "1"}}, s, nil)
+	got := Level([]LevelingItem{mto}, []Machine{{ID: "mc_1", Name: "1"}}, s, nil)
 	if len(got.Campaigns) != 0 {
 		t.Errorf("a make-to-order item with a dry greige store must not knit a buffer: %+v", got.Campaigns)
 	}

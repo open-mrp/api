@@ -12,7 +12,7 @@ import (
 
 var inventoryAuditTracer = tracing.GetTracer("core-service.inventory_audit")
 
-// RecordInventoryAuditTrail writes inventory_log and inventory_change_log after a mutation and recalculates burn rate when the change represents consumption.
+// RecordInventoryAuditTrail records an inventory change in the audit logs after stock is mutated. It first gets the item’s current physical inventory level, then passes that along with the change amount and metadata to the detailed audit-writing function.
 func RecordInventoryAuditTrail(
 	ctx context.Context,
 	repos domain.RepoFactory,
@@ -39,11 +39,7 @@ func RecordInventoryAuditTrail(
 	return RecordInventoryAuditTrailWithLevel(ctx, repos, accountID, itemID, delta, currentPhysical, unitID, actionType, scanningStationID, responsibleUserID)
 }
 
-// RecordInventoryAuditTrailWithLevel is RecordInventoryAuditTrail with the post-mutation level handed
-// in rather than fetched. The batch-scan consumer computes every audited item's level in one batched
-// read after all of a scan's mutations are written and passes it here, so a scan that audits N items
-// no longer runs N ledger aggregations. RecordInventoryAuditTrail fetches the level itself and calls
-// through to this, so its callers are unchanged.
+// RecordInventoryAuditTrailWithLevel writes the inventory snapshot and change log using a level that was already calculated by the caller. This avoids doing another inventory lookup for each item and can recalculate burn rate when the change represents consumption.
 func RecordInventoryAuditTrailWithLevel(
 	ctx context.Context,
 	repos domain.RepoFactory,
@@ -84,24 +80,9 @@ func RecordInventoryAuditTrailWithLevel(
 		return tracing.Trace(span, apiErr)
 	}
 
-	MaybeRecalculateAfterConsumption(ctx, repos, accountID, itemID, delta, actionType)
+	if apiErr := MaybeRecalculateAfterConsumption(ctx, repos, accountID, itemID, delta, actionType); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
 
 	return nil
-}
-
-// RecordInventoryAuditTrailOrLog traces errors from RecordInventoryAuditTrail without failing the caller.
-func RecordInventoryAuditTrailOrLog(
-	ctx context.Context,
-	repos domain.RepoFactory,
-	accountID, itemID string,
-	delta decimal.Decimal,
-	unitID, actionType string,
-	scanningStationID *string,
-	responsibleUserID *string,
-) {
-	if apiErr := RecordInventoryAuditTrail(ctx, repos, accountID, itemID, delta, unitID, actionType, scanningStationID, responsibleUserID); apiErr != nil {
-		_, span := inventoryAuditTracer.Start(ctx, "mediator.inventory_audit.record_trail_failed")
-		tracing.Trace(span, apiErr)
-		span.End()
-	}
 }

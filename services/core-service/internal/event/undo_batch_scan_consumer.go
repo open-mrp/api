@@ -96,7 +96,7 @@ func (c *UndoBatchScanConsumer) handleMessage(ctx context.Context, msg amqp.Deli
 
 	if evt.BatchID == "" {
 		log.Printf("[undo_batch_scan] Empty batch ID in event")
-		return nil
+		return c.inboxConsumer.Discard(ctx, "no batch on event")
 	}
 
 	accountID := ""
@@ -105,7 +105,7 @@ func (c *UndoBatchScanConsumer) handleMessage(ctx context.Context, msg amqp.Deli
 	}
 	if accountID == "" {
 		log.Printf("[undo_batch_scan] No account ID in message identity")
-		return nil
+		return c.inboxConsumer.Discard(ctx, "no account on message identity")
 	}
 
 	span.SetAttributes(
@@ -173,12 +173,16 @@ func (c *UndoBatchScanConsumer) undoBatchScan(ctx context.Context, accountID str
 			return apiErr
 		}
 
-		recordReversalAuditTrail(txCtx, f, accountID, evt, reversed)
+		if apiErr := recordReversalAuditTrail(txCtx, f, accountID, evt, reversed); apiErr != nil {
+			return apiErr
+		}
 
 		// Assigned, not appended: the callback re-runs on a lock conflict and the second run must
 		// start from the same state the first did.
 		deltas = reversed
-		return nil
+
+		// The recovery point rides with the reversal, not the re-allocation below, because the reversal is the half that must never be applied twice. Re-allocation is convergent and safe to repeat.
+		return completeInboxRecord(txCtx, f)
 	})
 	if apiErr != nil {
 		return apiErr
@@ -212,7 +216,7 @@ func recordReversalAuditTrail(
 	accountID string,
 	evt domain.UndoBatchScanEvent,
 	deltas []domain.InventoryReversalDelta,
-) {
+) *apierror.APIError {
 	var scanningStationID *string
 	if evt.ScanningStationID != "" {
 		stationID := evt.ScanningStationID
@@ -225,7 +229,7 @@ func recordReversalAuditTrail(
 	}
 
 	for _, delta := range deltas {
-		mediator.RecordInventoryAuditTrailOrLog(
+		if apiErr := mediator.RecordInventoryAuditTrail(
 			ctx,
 			repos,
 			accountID,
@@ -235,8 +239,11 @@ func recordReversalAuditTrail(
 			string(constants.InventoryActionTypeUserCorrection),
 			scanningStationID,
 			responsibleUserID,
-		)
+		); apiErr != nil {
+			return apiErr
+		}
 	}
+	return nil
 }
 
 // reversedItemIDs is the deduplicated item set of a reversal, in a stable order.

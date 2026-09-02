@@ -14,7 +14,7 @@ import (
 //
 // Shipping is a one-way move — void is the only route back, and it has to unwind everything
 // shipping stamped: timestamps, tracking, case labels, freight, the invoice, and the order's
-// fulfilment state. Deleting goes further and reopens the pick so the goods can be repacked.
+// fulfillment state. Deleting goes further and reopens the pick so the goods can be repacked.
 //
 // Delete, void, and line delete were all endpoints the suite never called.
 

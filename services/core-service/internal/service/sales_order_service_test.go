@@ -235,7 +235,7 @@ func (suite *SalesOrderSvcTestSuite) expectShipByCommitmentStamp(accountID, sale
 	// GetSettings is read twice: once for the account's default lead time, once for the zone the calendars fall back to.
 	suite.scheduleRepo.EXPECT().GetSettings(gomock.Any(), accountID).
 		Return(&domain.ProductionScheduleSettings{DefaultCustomerLeadTimeDays: 30}, nil).AnyTimes()
-	// No calendars configured, so all three parties fall back to Monday-to-Friday with nothing closed — the behaviour these tests were written against.
+	// No calendars configured, so all three parties fall back to Monday-to-Friday with nothing closed — the behavior these tests were written against.
 	suite.calendarRepo.EXPECT().ResolveShip(gomock.Any(), accountID).Return(nil, nil).AnyTimes()
 	suite.calendarRepo.EXPECT().ResolveReceive(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 	suite.calendarRepo.EXPECT().ListClosures(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()

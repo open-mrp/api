@@ -78,10 +78,10 @@ func (c *InventoryReceivedConsumer) handleMessage(ctx context.Context, msg amqp.
 	}
 	if accountID == "" {
 		slog.ErrorContext(ctx, "inventory_received: no account on event or identity")
-		return nil
+		return c.inboxConsumer.Discard(ctx, "no account on event or identity")
 	}
 	if len(evt.ItemIDs) == 0 {
-		return nil
+		return c.inboxConsumer.Discard(ctx, "no items on event")
 	}
 
 	span.SetAttributes(
@@ -91,7 +91,10 @@ func (c *InventoryReceivedConsumer) handleMessage(ctx context.Context, msg amqp.
 	)
 
 	apiErr := c.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
-		return enqueueAllocationForItems(txCtx, f, accountID, evt.ItemIDs)
+		if apiErr := enqueueAllocationForItems(txCtx, f, accountID, evt.ItemIDs); apiErr != nil {
+			return apiErr
+		}
+		return completeInboxRecord(txCtx, f)
 	})
 	if apiErr != nil {
 		span.RecordError(apiErr)

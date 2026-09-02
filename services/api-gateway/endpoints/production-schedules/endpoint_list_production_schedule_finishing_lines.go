@@ -25,7 +25,7 @@ type ListProductionScheduleFinishingLinesRequest struct {
 //
 // The constraint plan says how much greige to knit and deliberately does not say what to turn it into — a family's demand is pooled onto the greige precisely so the buffer can sit at the undifferentiated stage, where it is cheapest. These lines are where that pooling is undone, against each finished SKU's own stock position, its own orders, and the hours the rest of the factory has that week.
 //
-// Levelled, not merely allocated. Work that does not fit a week moves to the next one rather than being dropped, so the plan never asks the second stage for more hours than it has. Two things bound it, and they are reported separately in the schedule's diagnostics because they call for opposite responses: a SKU held back for want of greige is a knitting problem, and a SKU held back for want of hours is a finishing one.
+// Leveled, not merely allocated. Work that does not fit a week moves to the next one rather than being dropped, so the plan never asks the second stage for more hours than it has. Two things bound it, and they are reported separately in the schedule's diagnostics because they call for opposite responses: a SKU held back for want of greige is a knitting problem, and a SKU held back for want of hours is a finishing one.
 //
 // Everything is counted in the constraint item's unit, so `greige_consumed` here and `planned_quantity` on the constraint plan are directly comparable — which is what lets the two stages be reconciled rather than only read side by side.
 type ListProductionScheduleFinishingLinesEndpoint struct{}

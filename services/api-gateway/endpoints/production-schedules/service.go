@@ -723,7 +723,7 @@ func (m *productionScheduleSvcImpl) ListProductionScheduleDeviations(ctx context
 	return apiresource.NewList(deviations, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }
 
-// deviationFromProto decodes the line snapshots back into objects. They travel as JSON text so the line shape is modelled once, on the line itself, rather than frozen a second time in the deviation contract.
+// deviationFromProto decodes the line snapshots back into objects. They travel as JSON text so the line shape is modeled once, on the line itself, rather than frozen a second time in the deviation contract.
 func deviationFromProto(d *pb.ProductionScheduleDeviationInfo) apiresource.ProductionScheduleDeviation {
 	out := apiresource.ProductionScheduleDeviation{
 		ID:                 d.Id,
@@ -755,7 +755,7 @@ func orEmptyFloats(v []float64) []float64 {
 	return v
 }
 
-// rawSnapshot passes a stored snapshot through as JSON rather than decoding and re-encoding it, so the line shape is modelled once, on the line itself. An absent snapshot stays absent: a line the change created has no before, and one it removed has no after.
+// rawSnapshot passes a stored snapshot through as JSON rather than decoding and re-encoding it, so the line shape is modeled once, on the line itself. An absent snapshot stays absent: a line the change created has no before, and one it removed has no after.
 func rawSnapshot(raw *string) json.RawMessage {
 	if raw == nil || *raw == "" {
 		return nil
@@ -1156,7 +1156,7 @@ func (m *productionScheduleSvcImpl) ListProductionScheduleFinishingLines(ctx con
 	}, nil
 }
 
-// boolOrFalse reads an optional flag, where omitting it means the default behaviour rather than a third state.
+// boolOrFalse reads an optional flag, where omitting it means the default behavior rather than a third state.
 func boolOrFalse(f field.Optional[bool]) bool {
 	if v := f.Ptr(); v != nil {
 		return *v

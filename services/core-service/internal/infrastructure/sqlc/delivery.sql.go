@@ -470,3 +470,57 @@ func (q *Queries) ListDeliveryLines(ctx context.Context, deliveryID string) ([]L
 	}
 	return items, nil
 }
+
+const listReceivingOrderRefsForOrders = `-- name: ListReceivingOrderRefsForOrders :many
+SELECT ro.order_id, ro.id, ro.number, ro.completed_at
+FROM receiving_order ro
+WHERE ro.order_id IN (/*SLICE:order_ids*/?)
+`
+
+type ListReceivingOrderRefsForOrdersRow struct {
+	OrderID     string
+	ID          string
+	Number      string
+	CompletedAt sql.NullTime
+}
+
+// ListReceivingOrderRefsForOrders names the receiving order created for each of the given purchase orders.
+//
+// One receiving order exists per issued purchase order, so this is the link a delivery follows to reach the order it was received against.
+func (q *Queries) ListReceivingOrderRefsForOrders(ctx context.Context, orderIds []string) ([]ListReceivingOrderRefsForOrdersRow, error) {
+	query := listReceivingOrderRefsForOrders
+	var queryParams []interface{}
+	if len(orderIds) > 0 {
+		for _, v := range orderIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:order_ids*/?", strings.Repeat(",?", len(orderIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:order_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListReceivingOrderRefsForOrdersRow
+	for rows.Next() {
+		var i ListReceivingOrderRefsForOrdersRow
+		if err := rows.Scan(
+			&i.OrderID,
+			&i.ID,
+			&i.Number,
+			&i.CompletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

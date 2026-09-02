@@ -699,7 +699,7 @@ func shipmentLineFromProto(l *pb.ShipmentLineInfo) apiresource.ShipmentLine {
 	return result
 }
 
-// Stashes the order line a shipment line fulfils, plus that line's product FK, so the resolver can
+// Stashes the order line a shipment line fulfills, plus that line's product FK, so the resolver can
 // serve lines.sales_order_line and its product on ?include=.
 func stashShipmentLineMeta(ctx context.Context, d *apiresource.ShipmentLine, l *pb.ShipmentLineInfo) {
 	meta := resourcekit.GetLoadMeta(ctx)
@@ -713,7 +713,7 @@ func stashShipmentLineMeta(ctx context.Context, d *apiresource.ShipmentLine, l *
 	}
 }
 
-// Builds the sales order line reference a shipment line fulfils, from the fields the parent proto
+// Builds the sales order line reference a shipment line fulfills, from the fields the parent proto
 // carries — there is no standalone sales-order-line loader to resolve it against.
 func buildSalesOrderLineForShipmentLine(l *pb.ShipmentLineInfo) *apiresource.SalesOrderLine {
 	now := grpcutil.TimestampToTime(l.CreatedAt)

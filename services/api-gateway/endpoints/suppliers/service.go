@@ -19,11 +19,11 @@ import (
 )
 
 type SupplierSvc interface {
-	ListSuppliers(ctx context.Context, req *ListSuppliersRequest) (*apiresource.List[apiresource.SupplierSummary], *apierror.APIError)
-	GetSupplier(ctx context.Context, req *RetrieveSupplierRequest) (*apiresource.SupplierDetail, *apierror.APIError)
-	CreateSupplier(ctx context.Context, req *CreateSupplierRequest) (*apiresource.SupplierDetail, *apierror.APIError)
-	UpdateSupplier(ctx context.Context, req *UpdateSupplierRequest) (*apiresource.SupplierDetail, *apierror.APIError)
-	DeleteSupplier(ctx context.Context, req *DeleteSupplierRequest) (*apiresource.SupplierDetail, *apierror.APIError)
+	ListSuppliers(ctx context.Context, req *ListSuppliersRequest) (*apiresource.List[apiresource.Supplier], *apierror.APIError)
+	GetSupplier(ctx context.Context, req *RetrieveSupplierRequest) (*apiresource.Supplier, *apierror.APIError)
+	CreateSupplier(ctx context.Context, req *CreateSupplierRequest) (*apiresource.Supplier, *apierror.APIError)
+	UpdateSupplier(ctx context.Context, req *UpdateSupplierRequest) (*apiresource.Supplier, *apierror.APIError)
+	DeleteSupplier(ctx context.Context, req *DeleteSupplierRequest) (*apiresource.Supplier, *apierror.APIError)
 	BulkDeleteSuppliers(ctx context.Context, req *BulkDeleteSuppliersRequest) (*apiresource.EmptyResource, *apierror.APIError)
 }
 
@@ -54,7 +54,7 @@ func NewSupplierSvc(config *SupplierSvcConfig) SupplierSvc {
 	return &supplierSvcImpl{coreClient: config.CoreClient}
 }
 
-func (s *supplierSvcImpl) ListSuppliers(ctx context.Context, req *ListSuppliersRequest) (*apiresource.List[apiresource.SupplierSummary], *apierror.APIError) {
+func (s *supplierSvcImpl) ListSuppliers(ctx context.Context, req *ListSuppliersRequest) (*apiresource.List[apiresource.Supplier], *apierror.APIError) {
 	pbReq := &pb.ListSuppliersRequest{
 		Cursor:  req.Cursor,
 		Limit:   req.Limit,
@@ -81,7 +81,7 @@ func (s *supplierSvcImpl) ListSuppliers(ctx context.Context, req *ListSuppliersR
 	return supplierListFromProto(ctx, resp), nil
 }
 
-func (s *supplierSvcImpl) GetSupplier(ctx context.Context, req *RetrieveSupplierRequest) (*apiresource.SupplierDetail, *apierror.APIError) {
+func (s *supplierSvcImpl) GetSupplier(ctx context.Context, req *RetrieveSupplierRequest) (*apiresource.Supplier, *apierror.APIError) {
 	pbReq := &pb.GetSupplierRequest{
 		Id:       req.SupplierID,
 		Includes: resourcekit.FilterIncludes(ctx, supplierIncludes...),
@@ -101,7 +101,7 @@ func (s *supplierSvcImpl) GetSupplier(ctx context.Context, req *RetrieveSupplier
 	return &result, nil
 }
 
-func (s *supplierSvcImpl) CreateSupplier(ctx context.Context, req *CreateSupplierRequest) (*apiresource.SupplierDetail, *apierror.APIError) {
+func (s *supplierSvcImpl) CreateSupplier(ctx context.Context, req *CreateSupplierRequest) (*apiresource.Supplier, *apierror.APIError) {
 	pbReq := &pb.CreateSupplierRequest{
 		Name:     req.Name,
 		Number:   req.Number,
@@ -130,7 +130,7 @@ func (s *supplierSvcImpl) CreateSupplier(ctx context.Context, req *CreateSupplie
 	return &result, nil
 }
 
-func (s *supplierSvcImpl) UpdateSupplier(ctx context.Context, req *UpdateSupplierRequest) (*apiresource.SupplierDetail, *apierror.APIError) {
+func (s *supplierSvcImpl) UpdateSupplier(ctx context.Context, req *UpdateSupplierRequest) (*apiresource.Supplier, *apierror.APIError) {
 	pbReq := &pb.UpdateSupplierRequest{
 		Id:              req.SupplierID,
 		Name:            req.Name.Ptr(),
@@ -156,7 +156,7 @@ func (s *supplierSvcImpl) UpdateSupplier(ctx context.Context, req *UpdateSupplie
 	return &result, nil
 }
 
-func (s *supplierSvcImpl) DeleteSupplier(ctx context.Context, req *DeleteSupplierRequest) (*apiresource.SupplierDetail, *apierror.APIError) {
+func (s *supplierSvcImpl) DeleteSupplier(ctx context.Context, req *DeleteSupplierRequest) (*apiresource.Supplier, *apierror.APIError) {
 	pbReq := &pb.DeleteSupplierRequest{
 		Id: req.SupplierID,
 	}
@@ -210,24 +210,24 @@ func createAddressRequestToProto(a *apirequest.AddressInput) *pb.CreateSupplierA
 	}
 }
 
-func supplierDetailFromProto(s *pb.SupplierProto) apiresource.SupplierDetail {
+func supplierDetailFromProto(s *pb.SupplierProto) apiresource.Supplier {
 	if s == nil {
-		return apiresource.SupplierDetail{}
+		return apiresource.Supplier{}
 	}
 
-	return apiresource.SupplierDetail{
+	return apiresource.Supplier{
 		ID:            s.Id,
 		Object:        constants.ObjectTypeSupplier,
 		Name:          s.Name,
 		Number:        s.Number,
 		Note:          s.Note,
 		MaterialCount: s.MaterialCount,
-		CreatedAt:     grpcutil.TimestampToTime(s.CreatedAt),
-		UpdatedAt:     grpcutil.TimestampToTime(s.UpdatedAt),
+		CreatedAt:     grpcutil.TimestampToTimePtr(s.CreatedAt),
+		UpdatedAt:     grpcutil.TimestampToTimePtr(s.UpdatedAt),
 	}
 }
 
-func stashSupplierMeta(ctx context.Context, s *pb.SupplierProto, d *apiresource.SupplierDetail) {
+func stashSupplierMeta(ctx context.Context, s *pb.SupplierProto, d *apiresource.Supplier) {
 	if s == nil {
 		return
 	}
@@ -240,27 +240,27 @@ func stashSupplierMeta(ctx context.Context, s *pb.SupplierProto, d *apiresource.
 	}
 }
 
-func supplierSummaryFromProto(s *pb.SupplierSummaryProto) apiresource.SupplierSummary {
+func supplierSummaryFromProto(s *pb.SupplierSummaryProto) apiresource.Supplier {
 	if s == nil {
-		return apiresource.SupplierSummary{}
+		return apiresource.Supplier{}
 	}
 
-	return apiresource.SupplierSummary{
+	return apiresource.Supplier{
 		ID:            s.Id,
-		Object:        constants.ObjectTypeSupplierSummary,
+		Object:        constants.ObjectTypeSupplier,
 		Name:          s.Name,
 		Number:        s.Number,
 		MaterialCount: s.MaterialCount,
-		CreatedAt:     grpcutil.TimestampToTime(s.CreatedAt),
+		CreatedAt:     grpcutil.TimestampToTimePtr(s.CreatedAt),
 	}
 }
 
-func supplierListFromProto(ctx context.Context, resp *pb.ListSuppliersResponse) *apiresource.List[apiresource.SupplierSummary] {
+func supplierListFromProto(ctx context.Context, resp *pb.ListSuppliersResponse) *apiresource.List[apiresource.Supplier] {
 	if resp == nil {
-		return apiresource.NewList[apiresource.SupplierSummary](nil, apiresource.PageInfo{})
+		return apiresource.NewList[apiresource.Supplier](nil, apiresource.PageInfo{})
 	}
 
-	items := make([]apiresource.SupplierSummary, len(resp.Suppliers))
+	items := make([]apiresource.Supplier, len(resp.Suppliers))
 	for i, s := range resp.Suppliers {
 		items[i] = supplierSummaryFromProto(s)
 	}

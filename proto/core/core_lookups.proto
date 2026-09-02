@@ -890,6 +890,9 @@ message ReconciledItemProto {
   // Decimal strings.
   string previous_measure = 5;
   string new_measure = 6;
+  // The item's base unit, which both measures are expressed in.
+  string unit_id = 7;
+  string unit_abbreviation = 8;
 }
 message SkippedItemProto {
   string sku = 1;
@@ -898,6 +901,7 @@ message SkippedItemProto {
 message ReconcileErrorProto {
   string sku = 1;
   string error = 2;
+  string item_id = 3;
 }
 message BulkReconcileItemsResponse {
   repeated ReconciledItemProto reconciled_items = 1;

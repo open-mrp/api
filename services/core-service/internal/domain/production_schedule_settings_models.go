@@ -66,7 +66,7 @@ type UpdateProductionScheduleSettingsParams struct {
 	Settings  ProductionScheduleSettings
 }
 
-// ProductionScheduleResourceSetting overrides planning behaviour for one machine, department or production step.
+// ProductionScheduleResourceSetting overrides planning behavior for one machine, department or production step.
 type ProductionScheduleResourceSetting struct {
 	ID                  string
 	AccountID           string

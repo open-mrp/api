@@ -50,7 +50,7 @@ type ProductionScheduleSettings struct {
 
 	// Typical changeover duration.
 	//
-	// Changeover time is modelled as rising with the number of new inputs a product introduces, between the minimum and maximum below. The slope is calibrated from production history so the model reproduces this average across the transitions actually observed, which is why the value belongs at the changeover time the floor typically reports rather than at a worst case.
+	// Changeover time is modeled as rising with the number of new inputs a product introduces, between the minimum and maximum below. The slope is calibrated from production history so the model reproduces this average across the transitions actually observed, which is why the value belongs at the changeover time the floor typically reports rather than at a worst case.
 	ChangeoverAvgMinutes float64 `json:"changeover_avg_minutes"`
 	// Shortest plausible changeover, and the floor of the changeover model.
 	ChangeoverMinMinutes float64 `json:"changeover_min_minutes"`

@@ -13,7 +13,7 @@ import (
 // POST and PATCH must respect a caller-supplied Idempotency-Key; DELETE must be idempotent
 // by default without one.
 //
-// Two behaviours make up "respects the key", and each test covers both. Replaying a key with
+// Two behaviors make up "respects the key", and each test covers both. Replaying a key with
 // the SAME body returns the first response without re-applying the write. Replaying it with a
 // DIFFERENT body is refused outright by the gateway's idempotency middleware, which
 // fingerprints the request — so a key can never be silently reused for a different mutation.

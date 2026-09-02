@@ -141,12 +141,12 @@ func TestShipmentsBehavioral_UpdateLeavesUntouchedFieldsAlone(t *testing.T) {
 	freightBefore := before["freight"].(map[string]any)
 
 	status, body, err := apiClient.Patch(shipmentsPath+"/"+sbShipmentID,
-		map[string]any{"note": "behavioural note"}, newIdempotencyKey())
+		map[string]any{"note": "behavioral note"}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
 	after := readShipment(t, sbShipmentID, "freight")
-	assert.Equal(t, "behavioural note", after["note"])
+	assert.Equal(t, "behavioral note", after["note"])
 	assert.Equal(t, before["number"], after["number"], "number must be untouched")
 	assert.Equal(t, before["master_tracking_number"], after["master_tracking_number"])
 
@@ -374,12 +374,12 @@ func TestShipmentsBehavioral_ShipCreatesInvoiceForShippedGoods(t *testing.T) {
 	require.NotNil(t, invoice, "ship must create and link an invoice")
 	assert.Equal(t, "SHP-SB-001", jsonField(invoice, "number"), "invoice number is the shipment number")
 
-	// A partial shipment does not fulfil the order.
-	assert.Equal(t, "issued", readOrderStatus(t, sbOrderID), "a partial shipment must not fulfil the order")
+	// A partial shipment does not fulfill the order.
+	assert.Equal(t, "issued", readOrderStatus(t, sbOrderID), "a partial shipment must not fulfill the order")
 }
 
 func TestShipmentsBehavioral_ShippingWholeOrderFulfillsBillsFreightAndEmails(t *testing.T) {
-	// Not restored: this fixture is single-use (shipping it fulfils the order). Runs alone.
+	// Not restored: this fixture is single-use (shipping it fulfills the order). Runs alone.
 	require.Equal(t, "issued", readOrderStatus(t, sbFullOrderID), "fixture must start issued")
 
 	status, body, err := apiClient.Post(shipmentsPath+"/"+sbFullShipmentID+"/actions/ship",

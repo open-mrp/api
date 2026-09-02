@@ -145,7 +145,7 @@ func Run(
 	}
 
 	agentTokenBillingRepo := repository.NewAgentTokenBillingRepo(queries)
-	agentTokenHandler := event.NewAgentTokenBillingHandler(agentTokenBillingRepo, repoFactory)
+	agentTokenHandler := event.NewAgentTokenBillingHandler(agentTokenBillingRepo, repoFactory, service.NewTransactionManager(dbpool, queries))
 	agentRunConsumer := event.NewAgentRunCompletedConsumer(rabbitmq, inboxRepo, agentTokenHandler)
 	if err := agentRunConsumer.Listen(ctx); err != nil {
 		return err

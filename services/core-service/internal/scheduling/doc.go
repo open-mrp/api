@@ -12,7 +12,7 @@
 //	changeover calibrate the yarn-driven setup time model
 //	demand     pool finished-goods demand back onto the constraint item
 //	policy     EOQ, safety stock, reorder point, ABC class
-//	levelling  the capacity-levelled (s,S) sweep across the horizon
+//	leveling  the capacity-leveled (s,S) sweep across the horizon
 //	explode    push the constraint plan downstream through the process DAG
 //
 // # Determinism

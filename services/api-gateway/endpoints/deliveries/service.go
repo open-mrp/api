@@ -57,9 +57,8 @@ func (m *deliverySvcImpl) ListDeliveries(ctx context.Context, req *ListDeliverie
 		Status:      req.Status.StringPtr(),
 		ItemIds:     req.ItemIDs,
 		SupplierIds: req.SupplierIDs,
-		// Ask the backend to expand lines when requested (purchase_order is
-		// resolved gateway-side from the stashed FK id).
-		Includes: resourcekit.FilterIncludes(ctx, "purchase_order", "lines"),
+		// Only lines cost the backend anything; the related purchase order is carried on the row the query already returns.
+		Includes: resourcekit.FilterIncludes(ctx, "lines"),
 	}
 
 	if req.StartDate != nil {
@@ -106,9 +105,7 @@ func (m *deliverySvcImpl) GetDelivery(ctx context.Context, req *RetrieveDelivery
 	return &result, nil
 }
 
-// deliverySummaryFromProto builds the base Delivery from the list-shaped proto.
-// The purchase_order reference is left nil; the FK id is stashed via
-// stashDeliverySummaryMeta so LoadPurchaseOrders fetches real data on ?include=.
+// deliverySummaryFromProto builds the base Delivery from the list-shaped proto. Expandable sub-objects are left nil and stashed by stashDeliverySummaryMeta, so they appear only when asked for.
 func deliverySummaryFromProto(d *pb.DeliverySummaryInfo) apiresource.Delivery {
 	if d == nil {
 		return apiresource.Delivery{}
@@ -130,25 +127,20 @@ func stashDeliverySummaryMeta(ctx context.Context, d *apiresource.Delivery, info
 	if info == nil {
 		return
 	}
-	// purchase_order is an expandable reference: stash the FK id so
-	// LoadPurchaseOrders fetches real data on ?include=. Never fabricate.
-	if info.PurchaseOrderId != "" {
-		resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeDelivery, d.ID, "purchase_order_id", info.PurchaseOrderId)
-	}
+	stashDeliveryRelated(ctx, d.ID, info.PurchaseOrderId, info.PurchaseOrderNumber, info.ReceivingOrderId, info.ReceivingOrderNumber)
 	// Lines are populated on the summary only when the list request includes them.
 	if len(info.Lines) > 0 {
 		lines := make([]apiresource.DeliveryLine, len(info.Lines))
 		for i, l := range info.Lines {
 			lines[i] = deliveryLineFromProto(l)
+			stashDeliveryLineMeta(resourcekit.GetLoadMeta(ctx), l, &lines[i])
 		}
 		resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeDelivery, d.ID, "lines",
 			apiresource.NewList(lines, apiresource.PageInfo{}))
 	}
 }
 
-// deliveryFromProto builds the base Delivery from the detail-shaped proto.
-// The purchase_order reference and lines are left nil; they are stashed via
-// stashDeliveryMeta and populated only via ?include=.
+// deliveryFromProto builds the base Delivery from the detail-shaped proto. Expandable sub-objects are left nil and stashed by stashDeliveryMeta, so they appear only when asked for.
 func deliveryFromProto(d *pb.DeliveryInfo) apiresource.Delivery {
 	if d == nil {
 		return apiresource.Delivery{}
@@ -172,16 +164,13 @@ func stashDeliveryMeta(ctx context.Context, d *apiresource.Delivery, info *pb.De
 	}
 	meta := resourcekit.GetLoadMeta(ctx)
 
-	// purchase_order is an expandable reference: stash the FK id so
-	// LoadPurchaseOrders fetches real data on ?include=. Never fabricate.
-	if info.PurchaseOrderId != "" {
-		meta.Set(constants.ObjectTypeDelivery, d.ID, "purchase_order_id", info.PurchaseOrderId)
-	}
+	stashDeliveryRelated(ctx, d.ID, info.PurchaseOrderId, info.PurchaseOrderNumber, info.ReceivingOrderId, info.ReceivingOrderNumber)
 
 	if len(info.Lines) > 0 {
 		lines := make([]apiresource.DeliveryLine, len(info.Lines))
 		for i, l := range info.Lines {
 			lines[i] = deliveryLineFromProto(l)
+			stashDeliveryLineMeta(resourcekit.GetLoadMeta(ctx), l, &lines[i])
 		}
 		meta.Set(constants.ObjectTypeDelivery, d.ID, "lines",
 			apiresource.NewList(lines, apiresource.PageInfo{}))
@@ -193,7 +182,7 @@ func deliveryLineFromProto(l *pb.DeliveryLineInfo) apiresource.DeliveryLine {
 		return apiresource.DeliveryLine{}
 	}
 
-	line := apiresource.DeliveryLine{
+	return apiresource.DeliveryLine{
 		ID:     l.Id,
 		Object: constants.ObjectTypeDeliveryLine,
 		Quantity: &apiresource.Quantity{
@@ -201,66 +190,33 @@ func deliveryLineFromProto(l *pb.DeliveryLineInfo) apiresource.DeliveryLine {
 			Object:       constants.ObjectTypeQuantity,
 			Value:        l.QuantityValue,
 			DisplayValue: apiresource.FormatDisplayValue(l.QuantityValue, l.QuantityUnitAbbreviation, ""),
-			Unit: &apiresource.Unit{
-				ID:     l.QuantityUnitId,
-				Object: constants.ObjectTypeUnit,
-			},
+			// Unit left nil: expandable, loaded with real data via ?include=; never fabricated.
 		},
-		UnitCost: &apiresource.Rate{
-			ID:     l.UnitCostId,
-			Object: constants.ObjectTypeRate,
-			Value:  l.UnitCostValue,
-			NumeratorUnit: &apiresource.Unit{
-				ID:     l.UnitCostNumeratorUnitId,
-				Object: constants.ObjectTypeUnit,
-			},
-			DenominatorUnit: &apiresource.Unit{
-				ID:     l.UnitCostDenominatorUnitId,
-				Object: constants.ObjectTypeUnit,
-			},
-			DisplayValue: "",
-		},
-		CreatedAt: grpcutil.TimestampToTime(l.CreatedAt),
-		UpdatedAt: grpcutil.TimestampToTime(l.UpdatedAt),
+		// Item, unit cost, location and lot are expandable: left nil here and stashed for the
+		// include resolver, so a line carries only what it is — a quantity and when it landed.
+		AcceptedAt: grpcutil.TimestampToTimePtr(l.AcceptedAt),
+		RejectedAt: grpcutil.TimestampToTimePtr(l.RejectedAt),
+		CreatedAt:  grpcutil.TimestampToTime(l.CreatedAt),
+		UpdatedAt:  grpcutil.TimestampToTime(l.UpdatedAt),
 	}
+}
 
-	if l.ItemId != nil {
-		item := &apiresource.Item{
-			ID:     *l.ItemId,
-			Object: constants.ObjectTypeItem,
-		}
-		if l.ItemSku != nil {
-			item.SKU = *l.ItemSku
-		}
-		line.Item = item
+// stashDeliveryLineMeta carries each expandable sub-object of a line from what the query returned, so the include resolver can reveal the ones a caller asked for.
+func stashDeliveryLineMeta(meta *resourcekit.LoadMeta, l *pb.DeliveryLineInfo, line *apiresource.DeliveryLine) {
+	if l.ItemId != nil && *l.ItemId != "" {
+		meta.Set(constants.ObjectTypeDeliveryLine, line.ID, "item_id", *l.ItemId)
 	}
-
-	if l.LocationId != nil {
-		loc := &apiresource.Location{
-			ID:     *l.LocationId,
-			Object: constants.ObjectTypeLocation,
-		}
-		if l.LocationName != nil {
-			loc.Name = *l.LocationName
-		}
-		line.Location = loc
+	if l.LocationId != nil && *l.LocationId != "" {
+		meta.Set(constants.ObjectTypeDeliveryLine, line.ID, "location_id", *l.LocationId)
 	}
-
-	if l.LotId != nil {
-		lot := &apiresource.Lot{
-			ID:     *l.LotId,
-			Object: constants.ObjectTypeLot,
-		}
-		if l.LotNumber != nil {
-			lot.LotNumber = *l.LotNumber
-		}
-		line.Lot = lot
+	if l.LotId != nil && *l.LotId != "" {
+		meta.Set(constants.ObjectTypeDeliveryLine, line.ID, "lot_id", *l.LotId)
 	}
-
-	line.AcceptedAt = grpcutil.TimestampToTimePtr(l.AcceptedAt)
-	line.RejectedAt = grpcutil.TimestampToTimePtr(l.RejectedAt)
-
-	return line
+	meta.Set(constants.ObjectTypeDeliveryLine, line.ID, "unit_cost", &apiresource.Rate{
+		ID:     l.UnitCostId,
+		Object: constants.ObjectTypeRate,
+		Value:  l.UnitCostValue,
+	})
 }
 
 func deliveryListFromProto(ctx context.Context, resp *pb.ListDeliveriesResponse) *apiresource.List[apiresource.Delivery] {
@@ -275,4 +231,27 @@ func deliveryListFromProto(ctx context.Context, resp *pb.ListDeliveriesResponse)
 	}
 
 	return apiresource.NewList(deliveries, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
+}
+
+// stashDeliveryRelated carries the purchase order this delivery was received against as a record reference, built from the id and number the delivery query already returns.
+func stashDeliveryRelated(ctx context.Context, deliveryID, purchaseOrderID, purchaseOrderNumber string, receivingOrderID, receivingOrderNumber *string) {
+	related := &apiresource.DeliveryRelated{Object: constants.ObjectTypeDeliveryRelated}
+	if purchaseOrderID != "" {
+		po := apiresource.NewRecord(purchaseOrderID, constants.RecordTypePurchaseOrder)
+		if purchaseOrderNumber != "" {
+			po.Number = &purchaseOrderNumber
+		}
+		related.PurchaseOrder = po
+	}
+	if receivingOrderID != nil && *receivingOrderID != "" {
+		ro := apiresource.NewRecord(*receivingOrderID, constants.RecordTypeReceivingOrder)
+		if receivingOrderNumber != nil && *receivingOrderNumber != "" {
+			ro.Number = receivingOrderNumber
+		}
+		related.ReceivingOrder = ro
+	}
+	if related.PurchaseOrder == nil && related.ReceivingOrder == nil {
+		return
+	}
+	resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeDelivery, deliveryID, "related", related)
 }

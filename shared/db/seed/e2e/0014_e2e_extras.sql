@@ -434,7 +434,7 @@ INSERT IGNORE INTO email_sender (id, account_id, email_domain_id, local_part, fr
 -- include + the account_ids filter resolve a real account name.
 INSERT IGNORE INTO audit_event (type_id, actor_id, actor_type, identity_type, account_id, target_account_id, action, resource_type, resource_id, changes, metadata, service_name, request_id, occurred_at, created_at) VALUES
     ('adev_01seedauditevent01', 'us_1wjfmmbwg8l7', 'user', 'user', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'create', 'unit', 'un_01seedpair000000000', '[{"field":"name","old_value":null,"new_value":"Pair"}]', NULL, 'core-service', NULL, DATE_SUB(NOW(), INTERVAL 1 HOUR), NOW()),
-    ('adev_01seedauditevent02', 'us_1wjfmmbwg8l7', 'user', 'user', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'update', 'property', 'pp_01k0a7ntn1ez6aw8x850femxeh', '[{"field":"name","old_value":"Colour","new_value":"Color"}]', '{"seed":true,"note":"manual e2e seed"}', 'core-service', 'rqlog_01seedreqlog1_000', DATE_ADD(NOW(), INTERVAL 10 YEAR), DATE_ADD(NOW(), INTERVAL 10 YEAR));
+    ('adev_01seedauditevent02', 'us_1wjfmmbwg8l7', 'user', 'user', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'update', 'property', 'pp_01k0a7ntn1ez6aw8x850femxeh', '[{"field":"name","old_value":"Color","new_value":"Color"}]', '{"seed":true,"note":"manual e2e seed"}', 'core-service', 'rqlog_01seedreqlog1_000', DATE_ADD(NOW(), INTERVAL 10 YEAR), DATE_ADD(NOW(), INTERVAL 10 YEAR));
 
 -- Create event for the seed sales order so `?include=created_by` on that order
 -- resolves a real internal creator (relation=internal + actor). actor_type holds
@@ -1583,7 +1583,7 @@ INSERT IGNORE INTO production_schedule_derived_line (
      2, 2, 'planned', NOW(3), NOW(3));
 
 -- ============================================================
--- PICK-BEHAVIOUR ORDER + PICK (pick update / line ops / pick-all / void / pack e2e)
+-- PICK-BEHAVIOR ORDER + PICK (pick update / line ops / pick-all / void / pack e2e)
 -- Dedicated rows for tests that MUTATE pick state. Deliberately has NO shipment, so
 -- the void guard ("cannot void a pick with shipped items") does not fire and the
 -- happy paths are reachable. No other test may assert on these values.

@@ -159,7 +159,7 @@ func TestBuildPageString_ForwardCursor_MiddlePage(t *testing.T) {
 		t.Errorf("items = %v, want [it_d it_c it_b]", ids(items))
 	}
 	if !pi.HasNextPage || !pi.HasPrevPage {
-		t.Errorf("expected both neighbours, got %+v", pi)
+		t.Errorf("expected both neighbors, got %+v", pi)
 	}
 
 	next := mustDecodeString(t, pi.NextCursor)

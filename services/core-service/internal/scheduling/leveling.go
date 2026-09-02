@@ -26,8 +26,8 @@ type Campaign struct {
 	RunHours  float64
 }
 
-// LevellingDiagnostics records what the solver could not do. These are the numbers a planner needs in order to trust or challenge the plan, so they are part of the output rather than log lines.
-type LevellingDiagnostics struct {
+// LevelingDiagnostics records what the solver could not do. These are the numbers a planner needs in order to trust or challenge the plan, so they are part of the output rather than log lines.
+type LevelingDiagnostics struct {
 	// EOQCappedSKUs had their economic lot size reduced to fit one machine-week, meaning shorter and more frequent campaigns than the policy would prefer.
 	EOQCappedSKUs []string `json:"eoq_capped_skus"`
 	// UnschedulableSKUs cannot fit even a single minimum lot into a machine-week. They are never scheduled, so expect stockouts.
@@ -36,10 +36,10 @@ type LevellingDiagnostics struct {
 	CapacityStarvedSKUs []string `json:"capacity_starved_skus"`
 }
 
-// LevellingResult is the plan plus the per-item projected stock position.
-type LevellingResult struct {
+// LevelingResult is the plan plus the per-item projected stock position.
+type LevelingResult struct {
 	Campaigns   []Campaign
-	Diagnostics LevellingDiagnostics
+	Diagnostics LevelingDiagnostics
 	// ProjectedOnHand[itemID][weekIndex] is the echelon position at the END of that week, after that week's campaigns land and that week's demand is drawn down.
 	ProjectedOnHand map[string][]float64
 	// ProjectedGreigeOnHand[itemID][weekIndex] is the physical greige store — the constraint stage on its own, not the echelon — at the end of that week. It starts from what is knitted and waiting, rises with each campaign, and is drawn down by demand as a proxy for finishing pull. It is what the greige-buffer trigger watches, and it is always populated so the store can be shown even where the trigger is off.
@@ -62,7 +62,7 @@ type pinnedSlotKey struct {
 }
 
 // itemEligibility restricts an item to the machines that have historically run it. Empty means any machine.
-type LevellingItem struct {
+type LevelingItem struct {
 	Policy            ItemPolicy
 	EligibleMachineID map[string]bool
 	// LotUnits is the rounding granularity for this item (a doff, a pallet).
@@ -74,7 +74,7 @@ type LevellingItem struct {
 }
 
 // hasFirmDemand reports whether anything is on order for this item inside the horizon.
-func (i LevellingItem) hasFirmDemand() bool {
+func (i LevelingItem) hasFirmDemand() bool {
 	for _, units := range i.FirmByWeek {
 		if units > 0 {
 			return true
@@ -84,7 +84,7 @@ func (i LevellingItem) hasFirmDemand() bool {
 }
 
 // leadTimeWeeks is how far ahead a make-to-order item has to look: a decision made now becomes sellable stock only after the constraint stage and finishing have both run.
-func (i LevellingItem) leadTimeWeeks() int {
+func (i LevelingItem) leadTimeWeeks() int {
 	weeks := int(math.Ceil(i.Policy.ConstraintLeadTimeWeeks + i.Policy.FinishLeadTimeWeeks))
 	return max(weeks, 1)
 }
@@ -92,7 +92,7 @@ func (i LevellingItem) leadTimeWeeks() int {
 // firmRequiredThrough is the order book this item owes from the given week through its lead time.
 //
 // This is the make-to-order reorder point, and it is the same idea as the statistical one: stock has to cover demand over the lead time. The difference is where the demand comes from — a forecast averaged over a year, or the dated orders already on the book.
-func (i LevellingItem) firmRequiredThrough(week int) float64 {
+func (i LevelingItem) firmRequiredThrough(week int) float64 {
 	if len(i.FirmByWeek) == 0 {
 		return 0
 	}
@@ -109,7 +109,7 @@ func (i LevellingItem) firmRequiredThrough(week int) float64 {
 // triggerForWeek is the position below which this item needs building in the given week.
 //
 // Make-to-stock uses the (s,S) trigger it always has: a constant, the lower of the reorder point and the order-up-to ceiling. Make-to-order recomputes each week from the dated order book, because there is no average to reduce it to — an item with nothing on order this week needs nothing, and the same item needs a full campaign the week an order lands inside its lead time.
-func (i LevellingItem) triggerForWeek(week int) float64 {
+func (i LevelingItem) triggerForWeek(week int) float64 {
 	if i.Policy.IsMakeToOrder() {
 		return i.firmRequiredThrough(week)
 	}
@@ -121,7 +121,7 @@ func (i LevellingItem) triggerForWeek(week int) float64 {
 // This is forecast consumption. An order inside the forecast is served BY the forecast rather than added to it — adding them would double-count the same demand, once as history repeating and once as the order that history predicted. Taking the greater means a week with no orders still plans for the average, and a week holding a large order plans for the order.
 //
 // With no order book this returns the weekly forecast unchanged, which is what keeps the plan byte-identical to the one produced before the order book existed.
-func (i LevellingItem) demandForWeek(week int) float64 {
+func (i LevelingItem) demandForWeek(week int) float64 {
 	forecast := i.Policy.WeeklyDemand
 	if week < 0 || week >= len(i.FirmByWeek) {
 		return forecast
@@ -149,21 +149,21 @@ func maxLotsInCapacity(capacityHours, secondsPerUnit, lotUnits float64) float64 
 	return math.Max(lotUnits, math.Floor(maxUnits/lotUnits)*lotUnits)
 }
 
-// Level runs the capacity-levelled (s,S) sweep across the horizon.
+// Level runs the capacity-leveled (s,S) sweep across the horizon.
 //
 // Each week, every item whose projected position has fallen below its trigger is a candidate. Candidates are served most-depleted-first and placed on the least-loaded eligible machine that still has room. Anything that does not fit waits for the next week.
 //
 // Pinned campaigns are applied to each week before its candidates are chosen: their inflow and capacity use are facts of the plan, not proposals, so everything the sweep derives already accounts for them. Pins are not re-emitted as campaigns — they exist as lines already.
 //
 // Determinism: items are sorted by SKU and machines by name before any iteration, and the due-set sort breaks ties by SKU. Iterating the maps directly would produce a different plan on every run.
-func Level(items []LevellingItem, machines []Machine, s Settings, pinned []PinnedCampaign) LevellingResult {
-	result := LevellingResult{
+func Level(items []LevelingItem, machines []Machine, s Settings, pinned []PinnedCampaign) LevelingResult {
+	result := LevelingResult{
 		ProjectedOnHand:       make(map[string][]float64, len(items)),
 		ProjectedGreigeOnHand: make(map[string][]float64, len(items)),
 	}
 
 	// Stable ordering up front. Machine names sort numerically so "9" precedes "10" and "51" precedes "52" — plain lexical order would interleave them wrongly.
-	sortedItems := make([]LevellingItem, len(items))
+	sortedItems := make([]LevelingItem, len(items))
 	copy(sortedItems, items)
 	sort.SliceStable(sortedItems, func(i, j int) bool {
 		return sortedItems[i].Policy.SKU < sortedItems[j].Policy.SKU
@@ -178,7 +178,7 @@ func Level(items []LevellingItem, machines []Machine, s Settings, pinned []Pinne
 	capacityPerMachine := s.MachineWeeklyCapacityHours()
 
 	// Only items with real demand participate; a dead SKU should not consume capacity. Demand means either a forecast or orders already on the book — a make-to-order item has no forecast by construction, and filtering on the forecast alone would drop exactly the items this policy exists to build.
-	active := make([]LevellingItem, 0, len(sortedItems))
+	active := make([]LevelingItem, 0, len(sortedItems))
 	for _, item := range sortedItems {
 		result.ProjectedOnHand[item.Policy.ItemID] = make([]float64, s.HorizonWeeks)
 		result.ProjectedGreigeOnHand[item.Policy.ItemID] = make([]float64, s.HorizonWeeks)
@@ -284,10 +284,10 @@ func Level(items []LevellingItem, machines []Machine, s Settings, pinned []Pinne
 			}
 		}
 
-		due := make([]LevellingItem, 0, len(active))
+		due := make([]LevelingItem, 0, len(active))
 		for _, item := range active {
 			id := item.Policy.ItemID
-			// Due on either count: the echelon has fallen below its reorder point, or the physical greige store has fallen below its own floor even though the family reads covered. The second is what keeps a buffer of undifferentiated greige in front of finishing so it can build the colourways that are actually short. The greige store is tracked even when the buffer is off (so it can be shown), and it drifts negative as demand is drawn down, so the floor check is guarded by the flag rather than by the floor being zero.
+			// Due on either count: the echelon has fallen below its reorder point, or the physical greige store has fallen below its own floor even though the family reads covered. The second is what keeps a buffer of undifferentiated greige in front of finishing so it can build the colorways that are actually short. The greige store is tracked even when the buffer is off (so it can be shown), and it drifts negative as demand is drawn down, so the floor check is guarded by the flag rather than by the floor being zero.
 			greigeDry := s.GreigeBufferEnabled && greigePosition[id] < greigeFloor[id]
 			if position[id] < weekTrigger[id] || greigeDry {
 				due = append(due, item)

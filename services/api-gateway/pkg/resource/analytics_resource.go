@@ -622,7 +622,7 @@ type OeeDepartment struct {
 	QualityPct *float64 `json:"quality_pct"`
 	// Availability multiplied by performance multiplied by quality.
 	OeePct *float64 `json:"oee_pct"`
-	// Whether availability was measured from logged downtime or estimated from runtime. A department with no logged downtime computes as perfectly available, so an estimate is labelled rather than presented as a measurement.
+	// Whether availability was measured from logged downtime or estimated from runtime. A department with no logged downtime computes as perfectly available, so an estimate is labeled rather than presented as a measurement.
 	MeasurementStatus constants.OeeMeasurementStatus `json:"measurement_status" validate:"required"`
 	// Data-quality warnings for this grouping. Empty when the numbers can be taken at face value.
 	Anomalies []constants.OeeAnomaly `json:"anomalies"`

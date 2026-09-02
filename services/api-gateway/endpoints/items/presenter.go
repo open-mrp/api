@@ -164,15 +164,13 @@ func ItemCostsPresenter(resp *pb.GetItemCostsResponse) *apiresource.ItemCosts {
 		return nil
 	}
 	return &apiresource.ItemCosts{
-		Object:             constants.ObjectTypeItem,
+		Object:             constants.ObjectTypeItemCosts,
 		DirectMaterialCost: resp.DirectMaterialCost,
 		DirectLaborCost:    resp.DirectLaborCost,
 		OverheadCost:       resp.OverheadCost,
 		TotalCost:          resp.TotalCost,
-		Unit: &apiresource.Unit{
-			ID:     resp.UnitId,
-			Object: constants.ObjectTypeUnit,
-		},
+		NumeratorUnit:      unitRef(resp.NumeratorUnitId),
+		DenominatorUnit:    unitRef(resp.UnitId),
 	}
 }
 
@@ -191,7 +189,7 @@ func ItemTrendsPresenter(resp *pb.GetItemTrendsResponse) *apiresource.ItemTrends
 	}
 
 	return &apiresource.ItemTrends{
-		Object:    constants.ObjectTypeItem,
+		Object:    constants.ObjectTypeItemTrends,
 		TrendType: constants.ItemTrendType(resp.TrendType),
 		Points:    apiresource.NewList(points, apiresource.PageInfo{}),
 	}
@@ -210,19 +208,32 @@ func BulkReconcileItemsPresenter(resp *pb.BulkReconcileItemsResponse) *apiresour
 	reconciled := make([]apiresource.ReconciledItemResult, len(resp.ReconciledItems))
 	for i, r := range resp.ReconciledItems {
 		reconciled[i] = apiresource.ReconciledItemResult{
-			ItemID: r.ItemId, SKU: r.Sku,
-			PreviousQuantity: r.PreviousMeasure, NewQuantity: r.NewMeasure,
+			Object: constants.ObjectTypeReconciledItemResult,
+			// The row identifies the item it reconciled; only the id and SKU are known here, so the rest of the item stays unset rather than being invented.
+			Item:             &apiresource.Item{ID: r.ItemId, Object: constants.ObjectTypeItem, SKU: r.Sku},
+			PreviousQuantity: reconciledQuantity(r.PreviousMeasure, r.UnitId, r.UnitAbbreviation),
+			NewQuantity:      reconciledQuantity(r.NewMeasure, r.UnitId, r.UnitAbbreviation),
 		}
 	}
 
 	skipped := make([]apiresource.SkippedItemResult, len(resp.SkippedItems))
 	for i, s := range resp.SkippedItems {
-		skipped[i] = apiresource.SkippedItemResult{SKU: s.Sku, Reason: s.Reason}
+		skipped[i] = apiresource.SkippedItemResult{Object: constants.ObjectTypeSkippedItemResult, SKU: s.Sku, Reason: s.Reason}
 	}
 
 	errors := make([]apiresource.ReconcileErrorResult, len(resp.Errors))
 	for i, e := range resp.Errors {
-		errors[i] = apiresource.ReconcileErrorResult{SKU: e.Sku, Error: e.Error}
+		sku := e.Sku
+		errors[i] = apiresource.ReconcileErrorResult{
+			Object: constants.ObjectTypeReconcileErrorResult,
+			Item: &apiresource.Entity{
+				ID:     e.ItemId,
+				Object: constants.ObjectTypeEntity,
+				Type:   constants.ObjectTypeItem,
+				Name:   &sku,
+			},
+			Error: e.Error,
+		}
 	}
 
 	return &apiresource.BulkReconcileItemsResponse{
@@ -231,4 +242,25 @@ func BulkReconcileItemsPresenter(resp *pb.BulkReconcileItemsResponse) *apiresour
 		SkippedItems:    apiresource.NewList(skipped, apiresource.PageInfo{}),
 		Errors:          apiresource.NewList(errors, apiresource.PageInfo{}),
 	}
+}
+
+// unitRef names a unit by id. The unit itself is resolved by the include machinery where a caller asks for it; here it identifies which unit the figures are counted in.
+func unitRef(id string) *apiresource.Unit {
+	if id == "" {
+		return nil
+	}
+	return &apiresource.Unit{ID: id, Object: constants.ObjectTypeUnit}
+}
+
+// reconciledQuantity presents a reconciled measure, which is computed against the ledger rather than stored, so it carries no id.
+func reconciledQuantity(value, unitID, unitAbbreviation string) *apiresource.ComputedQuantity {
+	q := &apiresource.ComputedQuantity{
+		Object:       constants.ObjectTypeComputedQuantity,
+		Value:        value,
+		DisplayValue: apiresource.FormatDisplayValue(value, unitAbbreviation, ""),
+	}
+	if unitID != "" {
+		q.Unit = &apiresource.Unit{ID: unitID, Object: constants.ObjectTypeUnit}
+	}
+	return q
 }

@@ -96,7 +96,7 @@ func ResolveLotDefault(itemID string, in LotResolutionInput) (LotDefault, bool) 
 
 // inheritedLot takes a greige item's lot from the finished goods it becomes.
 //
-// Demand decides between competing lines rather than, say, count of SKUs: a greige that mostly becomes socks should be knitted in the sock line's doff even if it also feeds one low-volume armsleeve. Ties break on product line id so the same plan resolves the same way every time — the levelling is deterministic and this must not be the thing that makes it wobble.
+// Demand decides between competing lines rather than, say, count of SKUs: a greige that mostly becomes socks should be knitted in the sock line's doff even if it also feeds one low-volume armsleeve. Ties break on product line id so the same plan resolves the same way every time — the leveling is deterministic and this must not be the thing that makes it wobble.
 func inheritedLot(itemID string, in LotResolutionInput) (LotDefault, bool) {
 	demandByLine := map[string]float64{}
 	for _, finished := range in.DownstreamByItem[itemID] {

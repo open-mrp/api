@@ -34,6 +34,26 @@ func buildDeliverySearchParams(query *string) gosql.NullString {
 	return gosql.NullString{String: "%" + db.EscapeLike(*query) + "%", Valid: true}
 }
 
+// fetchReceivingOrderRefs names the receiving order created for each of the given purchase orders, keyed by order id.
+//
+// One receiving order exists per issued purchase order, so this is how a delivery reaches the order it was received against. Batched over a slice so a page of deliveries costs one query.
+func (r *deliveryRepoImpl) fetchReceivingOrderRefs(ctx context.Context, orderIDs []string) (map[string]domain.DocumentRef, *apierror.APIError) {
+	if len(orderIDs) == 0 {
+		return map[string]domain.DocumentRef{}, nil
+	}
+
+	rows, err := r.queries.ListReceivingOrderRefsForOrders(ctx, orderIDs)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, apiErr
+	}
+
+	refs := make(map[string]domain.DocumentRef, len(rows))
+	for _, row := range rows {
+		refs[row.OrderID] = domain.DocumentRef{ID: row.ID, Number: row.Number}
+	}
+	return refs, nil
+}
+
 func (r *deliveryRepoImpl) List(ctx context.Context, params domain.ListDeliveriesParams) (*domain.ListDeliveriesResult, *apierror.APIError) {
 	ctx, span := deliveryRepoTracer.Start(ctx, "repository.delivery.list")
 	defer span.End()
@@ -102,6 +122,15 @@ func (r *deliveryRepoImpl) List(ctx context.Context, params domain.ListDeliverie
 				deliveries[i] = mapBackwardDeliveryRow(row)
 			}
 			result, pageInfo := pagination.BuildPageString(deliveries, params.Limit, cursorDir, deliveryCreatedAt, deliveryID)
+			if apiErr := r.attachReceivingOrderRefs(ctx, result); apiErr != nil {
+				return nil, tracing.Trace(span, apiErr)
+			}
+			if apiErr := r.attachReceivingOrderRefs(ctx, result); apiErr != nil {
+				return nil, tracing.Trace(span, apiErr)
+			}
+			if apiErr := r.attachReceivingOrderRefs(ctx, result); apiErr != nil {
+				return nil, tracing.Trace(span, apiErr)
+			}
 			return &domain.ListDeliveriesResult{Deliveries: result, PageInfo: pageInfo}, nil
 		}
 
@@ -187,17 +216,25 @@ func (r *deliveryRepoImpl) Get(ctx context.Context, params domain.GetDeliveryPar
 		rejectedAt = &row.RejectedAt.Time
 	}
 
+	refs, apiErr := r.fetchReceivingOrderRefs(ctx, []string{row.PurchaseOrderID})
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	ref := refs[row.PurchaseOrderID]
+
 	return &domain.Delivery{
-		ID:                  row.ID,
-		Number:              row.Number,
-		PurchaseOrderID:     row.PurchaseOrderID,
-		PurchaseOrderNumber: row.PurchaseOrderNumber,
-		Status:              row.DeliveryStatusCode,
-		Lines:               lines,
-		AcceptedAt:          acceptedAt,
-		RejectedAt:          rejectedAt,
-		CreatedAt:           row.CreatedAt,
-		UpdatedAt:           row.UpdatedAt,
+		ID:                   row.ID,
+		Number:               row.Number,
+		PurchaseOrderID:      row.PurchaseOrderID,
+		PurchaseOrderNumber:  row.PurchaseOrderNumber,
+		ReceivingOrderID:     ref.ID,
+		ReceivingOrderNumber: ref.Number,
+		Status:               row.DeliveryStatusCode,
+		Lines:                lines,
+		AcceptedAt:           acceptedAt,
+		RejectedAt:           rejectedAt,
+		CreatedAt:            row.CreatedAt,
+		UpdatedAt:            row.UpdatedAt,
 	}, nil
 }
 
@@ -371,4 +408,27 @@ func mapDeliveryLineRow(row sqlc.ListDeliveryLinesRow) *domain.DeliveryLine {
 	}
 
 	return line
+}
+
+// attachReceivingOrderRefs fills in each summary's receiving order from a single lookup over the whole page.
+func (r *deliveryRepoImpl) attachReceivingOrderRefs(ctx context.Context, deliveries []*domain.DeliverySummary) *apierror.APIError {
+	if len(deliveries) == 0 {
+		return nil
+	}
+
+	orderIDs := make([]string, len(deliveries))
+	for i, d := range deliveries {
+		orderIDs[i] = d.PurchaseOrderID
+	}
+
+	refs, apiErr := r.fetchReceivingOrderRefs(ctx, orderIDs)
+	if apiErr != nil {
+		return apiErr
+	}
+	for _, d := range deliveries {
+		if ref, ok := refs[d.PurchaseOrderID]; ok {
+			d.ReceivingOrderID, d.ReceivingOrderNumber = ref.ID, ref.Number
+		}
+	}
+	return nil
 }

@@ -62,8 +62,8 @@ func (*CreateSupplierRequest) SchemaExample() any {
 // Returns a conflict error if another supplier in the account already uses the given number.
 type CreateSupplierEndpoint struct{}
 
-func (e *CreateSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSupplierRequest, *apiresource.SupplierDetail] {
-	return (&apiendpoint.APIEndpoint[*CreateSupplierRequest, *apiresource.SupplierDetail]{
+func (e *CreateSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSupplierRequest, *apiresource.Supplier] {
+	return (&apiendpoint.APIEndpoint[*CreateSupplierRequest, *apiresource.Supplier]{
 		Title:             "Create Supplier",
 		Method:            http.MethodPost,
 		Route:             "/v1/operations/suppliers",
@@ -74,10 +74,10 @@ func (e *CreateSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateS
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainSuppliers, Action: types.ActionCreate},
 		},
-		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateSupplierRequest) (*apiresource.SupplierDetail, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateSupplierRequest) (*apiresource.Supplier, *apierror.APIError) {
 			return svc.(SupplierSvc).CreateSupplier
 		},
-		LocationFunc: func(resp *apiresource.SupplierDetail) string {
+		LocationFunc: func(resp *apiresource.Supplier) string {
 			return "/v1/operations/suppliers/" + resp.ID
 		},
 	})

@@ -2,33 +2,37 @@
 
 This file provides guidance when working with code in this repository.
 
-## Read the Patterns Docs First (non-negotiable)
+## Read the Matching Skill First (non-negotiable)
 
-`docs/patterns/` is the normative spec for this codebase, not background reading. Code that contradicts a pattern doc is wrong even if it compiles, passes tests, and looks like the file next to it — neighboring code may predate the doc.
+`.claude/skills/` is the agent-facing form of the conventions in `docs/patterns/`. Code that contradicts a pattern skill (or its source doc) is wrong even if it compiles, passes tests, and looks like the file next to it — neighboring code may predate the rule.
 
-**Before writing a line of code, open the docs for the layers you are about to touch.** Do not infer conventions by copying a nearby file; a plausible-looking imitation of the wrong pattern is the single most common failure mode in this repo, and it gets caught in review rather than by the compiler. If a doc and existing code disagree, the doc wins — follow the doc and flag the drift.
+**Before writing a line of code, load the skill for the layers you are about to touch.** Do not infer conventions by copying a nearby file; a plausible-looking imitation of the wrong pattern is the single most common failure mode in this repo, and it gets caught in review rather than by the compiler. If a skill and its source doc disagree, the doc wins — follow the doc and fix the skill. If a doc and existing code disagree, the doc wins — follow the doc and flag the drift.
 
-| If you are... | Read first (in `docs/patterns/`) |
+| If you are... | Skill (in `.claude/skills/`) |
 |---|---|
-| Changing **any** existing public request/response shape or behavior | `api-versioning-patterns.md` — and see the breaking-change rule below |
-| Adding or changing an endpoint's request/response shape | `api-resource-conventions.md`, `nullable-field-patterns.md` |
-| Writing a service, mediator, repository, or transaction | `architecture-patterns.md` |
-| Writing anything that touches `inventory_issue`, `inventory_receipt` or `inventory_allocation` | `architecture-patterns.md` — "Inventory ledger lock order", before writing the transaction |
-| Touching identity, permissions, or actor checks | `authentication-patterns.md`, `authorization-check-patterns.md` |
-| Adding or changing a list endpoint, filter, or sort | `performant-list-endpoint-patterns.md` |
-| Adding a domain model, mock, or entry point | `domain-layer-patterns.md` |
-| Emitting or changing audit events | `audit-event-patterns.md` |
-| Adding a new entity or ID prefix | `entity-id-patterns.md` |
-| Adding or changing an enum | `constants-enum-patterns.md` |
-| Writing or fixing e2e tests | `e2e-test-patterns.md` |
-| Writing or editing any comment | `comment-conventions.md` |
-| Changing config structs | `config-patterns.md` |
-| Touching logging or tracing | `canonical-log-patterns.md` |
-| Touching production step graphs | `production-step-graph-patterns.md` |
+| Changing **any** existing public request/response shape or behavior | `api-versioning` — and see the breaking-change rule below |
+| Adding or changing an endpoint's request/response shape | `api-resources` |
+| Writing a service, mediator, repository, or transaction | `architecture-patterns` and `openmrp-layers` |
+| Writing anything that touches `inventory_issue`, `inventory_receipt` or `inventory_allocation` | `architecture-patterns` — "Inventory ledger lock order", before writing the transaction |
+| Touching identity, permissions, or actor checks | `authentication-authorization` |
+| Adding or changing a list endpoint, filter, or sort | `performant-lists` |
+| Adding a domain model, mock, or entry point | `domain-layer` |
+| Emitting or changing audit events | `audit-events` |
+| Adding a new entity or ID prefix | `entity-ids` |
+| Adding or changing an enum | `constants-enums` |
+| Writing or fixing e2e tests | `e2e-tests` |
+| Writing or editing any comment | `code-comments` |
+| Changing config structs | `config-patterns` |
+| Touching logging or tracing | `canonical-logs` |
+| Touching production step graphs | `production-step-graph` |
+| Adding or changing a goose migration, table, or sqlc query | `database-migrations` |
+| Adding or changing `cmd/main.go` / `Run()` | `main-delegates-to-run` |
 
-Read the doc **before** you write, not after review. Reading the section you need is enough; you do not have to read a doc end to end.
+Also always-on: `dane-api-design` (HTTP doctrine), `openmrp-layers` (what each layer may do). Bulk writes: `async-bulk-operations`.
 
-**Self-check before reporting work as done:** name the pattern docs that govern the files you changed, re-read the relevant sections, and confirm each rule actually holds in your diff. "I didn't know that doc existed" is not an acceptable outcome — the table above is the index, and `important-patterns.md` is the short list of rules that apply everywhere.
+Read the skill **before** you write, not after review. Reading the section you need is enough; follow the skill's pointer into `docs/patterns/` when you need the full examples.
+
+**Self-check before reporting work as done:** name the skills that govern the files you changed, re-read the relevant sections, and confirm each rule actually holds in your diff. "I didn't know that skill existed" is not an acceptable outcome — the table above is the index, and `docs/patterns/important-patterns.md` is the short list of rules that apply everywhere.
 
 ## Breaking Changes Require a New API Version (non-negotiable)
 
@@ -56,7 +60,7 @@ The backend only ever speaks `Latest` — no version conditionals anywhere below
 5. Version-compat e2e tests (`tests/e2e/api/version_compat_<resource>_test.go`) pinned to the previous version.
 6. `make openapi` re-run and the regenerated spec committed.
 
-Transformers reshape real data and **never** fabricate values, and a transformer is immutable once its `ToVersion` has shipped. `docs/patterns/api-versioning-patterns.md` is the full checklist — follow it, don't approximate it.
+Transformers reshape real data and **never** fabricate values, and a transformer is immutable once its `ToVersion` has shipped. The `api-versioning` skill is the checklist — follow it, don't approximate it.
 
 ## Build & Development Commands
 
@@ -126,7 +130,7 @@ services/[name]/
 
 ## Database
 
-PlanetScale (MySQL) with safe migrations. **Schema source of truth is the goose migrations in `shared/db/migrations`.** See `docs/patterns/database-migrations.md` for the full workflow — it explains the constraints the rules below come from.
+PlanetScale (MySQL) with safe migrations. **Schema source of truth is the goose migrations in `shared/db/migrations`.** See the `database-migrations` skill for the workflow — it explains the constraints the rules below come from.
 
 `00001_initial.sql` is a frozen baseline: a dump of the schema at the goose cutover. Never edit or regenerate it. It begins by dropping every table, so applying it to a populated database destroys that database.
 
@@ -142,17 +146,17 @@ The agent-service Postgres schema works the same way but lives in `services/agen
 
 Data backfills are not schema: they go in `shared/db/data-migrations` (`make migrate-create-data`) or `services/agent-service/db/data-migrations` (`make migrate-agent-create-data`). A PlanetScale deploy request diffs schema only, so DML written into a schema migration silently never reaches production. Backfills run after both schemas are live and before any image rolls.
 
-**Every query must run in under 100 ms — that is the worst-case ceiling, not a target.** Before committing a new or changed query, validate it against production-scale data in PlanetScale (Insights, or `EXPLAIN` against a branch with representative data) and confirm it stays under 100 ms. Treat a query that cannot meet this without a table scan as a bug: add or fix the supporting index (see `docs/patterns/performant-list-endpoint-patterns.md`) before merging. Do not ship a query you have not checked.
+**Every query must run in under 100 ms — that is the worst-case ceiling, not a target.** Before committing a new or changed query, validate it against production-scale data in PlanetScale (Insights, or `EXPLAIN` against a branch with representative data) and confirm it stays under 100 ms. Treat a query that cannot meet this without a table scan as a bug: add or fix the supporting index (see the `performant-lists` skill) before merging. Do not ship a query you have not checked.
 
 ## Code Style
 
 - **Never write agent-generated comments.** Do not add comments to code you write or edit unless the user explicitly asks for them. This is absolute: no explanatory comments, no narration of what the code does, no rationale blocks, no "helpful" annotations — even when they seem useful. When a comment is genuinely warranted the user will ask for it; absent that instruction, leave the code uncommented and do not remove or rewrite existing human-authored comments.
 - Do not create README files or examples unless explicitly requested
-- **Comments: never hard-wrap a prose paragraph across multiple `//` lines** — one paragraph is one physical line (let the editor soft-wrap). Distinct paragraphs get a blank `//` separator; numbered/TODO lists may use one line per item. Internal doc comments explain business intent, side effects, ordering/transactionality, idempotency, and failure modes — not the mechanics. See `docs/patterns/comment-conventions.md`.
+- **Comments: never hard-wrap a prose paragraph across multiple `//` lines** — one paragraph is one physical line (let the editor soft-wrap). Distinct paragraphs get a blank `//` separator; numbered/TODO lists may use one line per item. Internal doc comments explain business intent, side effects, ordering/transactionality, idempotency, and failure modes — not the mechanics. See the `code-comments` skill.
 - **Commits must follow the Conventional Commits conventions in `README.md` (the "Committing" section).** release-please parses these prefixes (feat:, fix:, feat!:, etc.) to calculate the next version — a non-conforming prefix is ignored, so the change won't make it into a Release PR and no release gets cut.
 - **Keep commit messages concise and free of tool attribution.** Say what changed and why in as few words as it takes; don't restate the diff or pad the body. Never add `Co-Authored-By` trailers or "Generated with Claude Code"/agent-attribution lines.
 - **Keep PR descriptions concise and follow the PR template.** Fill out the repo's PR template; say what changed and why in as few words as it takes. Don't restate the diff, pad with redundant headers, or write an exhaustive narrative — a reviewer should grasp the change quickly.
-- Review `docs/patterns/` for the conventions governing whatever you are touching — see the routing table at the top of this file. These are requirements, not suggestions.
+- Review the matching skill for the conventions governing whatever you are touching — see the routing table at the top of this file. These are requirements, not suggestions.
 
 ## End-to-end (e2e) tests
 
@@ -241,7 +245,7 @@ Notice that we define some include parameters so that the user can fetch extra d
 
 ### Request field tags (create / update bodies)
 
-Request structs model field *presence* through the field's type, not a bare pointer. A bare Go pointer can't distinguish an absent key from an explicit `null`, so we use two wrapper types. **The type picks itself based on which states the endpoint must distinguish** — see `docs/patterns/nullable-field-patterns.md` for the full rationale, decision table, runtime pipeline, and proto/OpenAPI mapping.
+Request structs model field *presence* through the field's type, not a bare pointer. A bare Go pointer can't distinguish an absent key from an explicit `null`, so we use two wrapper types. **The type picks itself based on which states the endpoint must distinguish** — see the `api-resources` skill for the decision table, runtime pipeline, and proto/OpenAPI mapping.
 
 | Context | Required / always present | Optional, not clearable | Clearable (accepts `null`) |
 |---------|---------------------------|-------------------------|----------------------------|
@@ -389,7 +393,7 @@ When we send messages we use the message inbox/outbox pattern to ensure delivery
 2. All PUT, DELETE, and GET endpoints must be designed to be idempotent by default without idempotency keys.
 3. All microservice calls should be idempotent via internal idempotency keys even if the user does not supply them.
 4. All services inside microservices should change the database atomically wherever possible.
-5. All business logic should be inside a service or mediator. See `docs/patterns/architecture-patterns.md` for more information.
+5. All business logic should be inside a service or mediator. See the `architecture-patterns` skill.
 6. All apiresources should have an "Object" field.
 7. Nested resources that are returned by the API should prefer json structures like so:
 
@@ -409,31 +413,39 @@ rather than:
 
 8. New endpoints should be added to the openapi spec generator.
 9. Sensitive HTTP request or response fields that must not appear verbatim in persisted request logs should be tagged `sensitive:"true"` on the corresponding struct field (`shared/redact` redacts logged JSON at the gateway). Omit entire request-log rows via `Extras.SkipRequestLogging` when logging the request is unacceptable.
-10. Any breaking change to an existing public request or response shape requires a new API version plus a transformer in `services/api-gateway/internal/versiontransforms/`. See the non-negotiable section at the top of this file and `docs/patterns/api-versioning-patterns.md`.
-11. **`_parent_child_production_steps` column order is fixed**: **`A` = downstream step, `B` = upstream (parent)** — matches Prisma/dashboard. Never revert queries or seeds to "`A` = parent." See `docs/patterns/production-step-graph-patterns.md`.
+10. Any breaking change to an existing public request or response shape requires a new API version plus a transformer in `services/api-gateway/internal/versiontransforms/`. See the non-negotiable section at the top of this file and the `api-versioning` skill.
+11. **`_parent_child_production_steps` column order is fixed**: **`A` = downstream step, `B` = upstream (parent)** — matches Prisma/dashboard. Never revert queries or seeds to "`A` = parent." See the `production-step-graph` skill.
 
-## Reference Doc Index
+## Skill and doc index
 
-The complete index of `docs/patterns/`. The routing table at the top of this file maps tasks to the docs you must read before writing code; this is the full set, including docs no routing row calls out.
+The routing table at the top maps tasks to skills. Skills are distilled; `docs/patterns/` remains the human spec. If they disagree, the doc wins and the skill is stale.
 
-- `docs/patterns/important-patterns.md` — the short list of rules that apply to every change, regardless of layer
-- `docs/patterns/api-resource-conventions.md` — API resource field conventions (object field, no omitempty, sub-objects, expandable relations, include system, list responses, sample data)
-- `docs/patterns/nullable-field-patterns.md` — **Request** field tags and nullability: `field.Optional[T]` vs. `*field.Clearable[T]` vs. value types, `omitzero` rule, the absent/null/value three-state model, the gateway null/blank-rejection pipeline, and proto/OpenAPI mapping
-- `docs/patterns/api-versioning-patterns.md` — API version scheme, the no-breaking-changes contract, gateway-edge transformers (`versiontransforms/`), forced includes, and the version deprecation/removal process
-- `docs/patterns/architecture-patterns.md` — Layered architecture (services, mediators, repositories, transaction management, idempotency, error handling, tracing) and the inventory ledger lock order
-- `docs/patterns/authentication-patterns.md` — Identity model, authorization checks, permission model, actor types
-- `docs/patterns/authorization-check-patterns.md` — Cross-account authorization: actor vs. target account, `TargetRelationType`, and which permission domain applies when a merchant targets a customer or supplier
-- `docs/patterns/domain-layer-patterns.md` — Domain directory structure, standard files, mock generation, entry point pattern
-- `docs/patterns/audit-event-patterns.md` — Publishing audit events from services, outbox usage, `audit` struct tags on domain models for field-level diffs
-- `docs/patterns/entity-id-patterns.md` — ID format, vocabulary codes, composable prefixes, adding new entities
-- `docs/patterns/constants-enum-patterns.md` — Enum type conventions (IsValid, EnumValues), adherence tests
-- `docs/patterns/config-patterns.md` — Config struct conventions (WithDefaults, validate, constructor pattern)
-- `docs/patterns/canonical-log-patterns.md` — Canonical log lines, interceptor chain, tracing fields
-- `docs/patterns/e2e-test-patterns.md` — E2E test conventions (CRUD lifecycle, field assertions, omitted fields, expandable fields, helpers, checklist)
-- `docs/patterns/performant-list-endpoint-patterns.md` — Keyset list queries, selective-filter composite indexes, and how to add a user-facing list filter without a table scan
-- `docs/patterns/production-step-graph-patterns.md` — `_parent_child_production_steps`: **`A` = downstream, `B` = upstream** (Prisma-aligned); flow SQL and seeds must stay consistent
-- `docs/patterns/main-delegates-to-run-pattern.md` — main() → Run() delegation pattern
-- `docs/patterns/comment-conventions.md` — internal-code comment style: one paragraph per physical line (no hard-wrapping), what doc comments must convey (intent/side effects/idempotency/failure modes), config-field optionality docs, actionable TODOs
+| Skill | Source doc |
+|---|---|
+| `dane-api-design` | (doctrine; not a patterns doc) |
+| `openmrp-layers` | (layer contract; complements `architecture-patterns`) |
+| `async-bulk-operations` | (bulk-job workflow) |
+| `api-versioning` | `docs/patterns/api-versioning-patterns.md` |
+| `api-resources` | `docs/patterns/api-resource-conventions.md`, `docs/patterns/nullable-field-patterns.md` |
+| `architecture-patterns` | `docs/patterns/architecture-patterns.md` |
+| `authentication-authorization` | `docs/patterns/authentication-patterns.md`, `docs/patterns/authorization-check-patterns.md` |
+| `performant-lists` | `docs/patterns/performant-list-endpoint-patterns.md` |
+| `domain-layer` | `docs/patterns/domain-layer-patterns.md` |
+| `audit-events` | `docs/patterns/audit-event-patterns.md` |
+| `entity-ids` | `docs/patterns/entity-id-patterns.md` |
+| `constants-enums` | `docs/patterns/constants-enum-patterns.md` |
+| `e2e-tests` | `docs/patterns/e2e-test-patterns.md` |
+| `code-comments` | `docs/patterns/comment-conventions.md` |
+| `config-patterns` | `docs/patterns/config-patterns.md` |
+| `canonical-logs` | `docs/patterns/canonical-log-patterns.md` |
+| `production-step-graph` | `docs/patterns/production-step-graph-patterns.md` |
+| `database-migrations` | `docs/patterns/database-migrations.md` |
+| `main-delegates-to-run` | `docs/patterns/main-delegates-to-run-pattern.md` |
+
+Always-on, not a skill: `docs/patterns/important-patterns.md` — the short list of rules that apply to every change.
+
+Other docs (not skills):
+
 - `docs/api-migration-instructions.md` — Dashboard API → Go API migration context
 - `docs/migration-checklist.md` — Per-endpoint checklist for the dashboard → Go migration
 - `docs/stlc-sdk-codegen.md` — Stainless SDK codegen: regeneration flow, config, and release

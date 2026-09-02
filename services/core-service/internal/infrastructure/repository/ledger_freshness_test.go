@@ -91,7 +91,7 @@ func TestFreshness_SecondAllocatorSeesTheFirstsDraw(t *testing.T) {
 // to hold, because dashboard/apps/api writes these same four tables from Prisma with no locking read
 // anywhere, on live invoice-delete and order-release paths.
 //
-// A writer we never serialise against exhausts the receipt while our transaction is open. Our own
+// A writer we never serialize against exhausts the receipt while our transaction is open. Our own
 // arithmetic then has to notice, and it can only notice through a current read: our snapshot predates
 // their commit and always will.
 //

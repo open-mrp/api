@@ -54,8 +54,8 @@ func (*UpdateSupplierRequest) SchemaExample() any {
 // Only provided fields are changed. To update or clear the note, set `update_note` to `true`.
 type UpdateSupplierEndpoint struct{}
 
-func (e *UpdateSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateSupplierRequest, *apiresource.SupplierDetail] {
-	return (&apiendpoint.APIEndpoint[*UpdateSupplierRequest, *apiresource.SupplierDetail]{
+func (e *UpdateSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateSupplierRequest, *apiresource.Supplier] {
+	return (&apiendpoint.APIEndpoint[*UpdateSupplierRequest, *apiresource.Supplier]{
 		Title:             "Update Supplier",
 		Method:            http.MethodPatch,
 		Route:             "/v1/operations/suppliers/{id}",
@@ -66,7 +66,7 @@ func (e *UpdateSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateS
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate},
 		},
-		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateSupplierRequest) (*apiresource.SupplierDetail, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateSupplierRequest) (*apiresource.Supplier, *apierror.APIError) {
 			return svc.(SupplierSvc).UpdateSupplier
 		},
 	})

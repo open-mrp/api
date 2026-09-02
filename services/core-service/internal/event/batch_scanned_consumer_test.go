@@ -97,8 +97,7 @@ func (s *BatchScannedConsumerTestSuite) SetupTest() {
 			return nil
 		}).AnyTimes()
 
-	// The audit trail runs best-effort behind each movement; these keep it quiet rather than making
-	// it the subject of these tests.
+	// The scan writes an audit trail; these keep it quiet rather than making it the subject of these tests.
 	itemRepo := repositorymock.NewMockItemRepo(s.ctrl)
 	itemRepo.EXPECT().Get(gomock.Any(), gomock.Any()).
 		Return(nil, apierror.NewResourceNotFoundError("item")).AnyTimes()

@@ -173,7 +173,18 @@ func (r *purchaseOrderRepoImpl) Get(ctx context.Context, accountID, purchaseOrde
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return mapGetPurchaseOrderRow(row), nil
+	po := mapGetPurchaseOrderRow(row)
+
+	// The deliveries booked against this order, so its detail page can list them without a second request.
+	deliveryRows, err := r.queries.ListDeliveryRefsForOrders(ctx, []string{po.ID})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	for _, d := range deliveryRows {
+		po.Deliveries = append(po.Deliveries, domain.DocumentRef{ID: d.ID, Number: d.Number, Status: d.Status})
+	}
+
+	return po, nil
 }
 
 func (r *purchaseOrderRepoImpl) GetLines(ctx context.Context, salesOrderID string) ([]*domain.PurchaseOrderLine, *apierror.APIError) {

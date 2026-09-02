@@ -384,91 +384,6 @@ func NewTransactionManager(sqlDB *sql.DB, queries *sqlc.Queries) TransactionMana
 }
 ```
 
----
-
-## Inventory ledger lock order
-
-A transaction that writes any of `inventory_issue`, `inventory_receipt`, `inventory_allocation`, or a
-`quantity`/`rate` row owned by one of them must, **before any other statement**:
-
-1. resolve the complete set of `item_id`s it will touch, and
-2. acquire `inventory_item_lock` for each of them in **ascending `item_id` order**.
-
-Inside the critical section, the order in which it reaches those tables does not matter.
-
-That last sentence is the whole reason the rule exists. The flows genuinely disagree about order and
-cannot be reconciled: an allocator must hold the demand before it can choose which receipts to draw,
-and a reversal must free the receipts before it can restore the demand they were covering. Neither is
-wrong. The only fix is to stop them overlapping.
-
-```go
-// The item set is resolved on the pool, before the transaction opens.
-itemIDs, apiErr := repo.StockedItemIDs(ctx, params)
-if apiErr != nil {
-    return apiErr
-}
-
-apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *svcImpl) *apierror.APIError {
-    scope, apiErr := ledgerlock.Acquire(txCtx, txSvc.repos.NewInventoryMutationRepo(), itemIDs)
-    if apiErr != nil {
-        return apiErr
-    }
-    // ... the transaction's work, with scope threaded to every ledger writer ...
-})
-```
-
-**Corollary A.** Never acquire the root while already holding a lock on a ledger row. Resolve the item
-set before `WithTx`. Discovering it inside the transaction and locking afterwards is the inversion,
-not the fix.
-
-**Corollary B.** A late acquisition — one taken after the transaction already holds ledger row locks —
-is itself an ordering inversion against any transaction that holds the root and is waiting for those
-rows. `Scope.EnsureLocked` permits it rather than refusing, because refusing dead-letters a shop-floor
-scan or 500s a ship, and the worst outcome is a 1213 the transaction manager retries. It is **not
-safe**: it means a flow's item pre-read is wrong, it is logged at ERROR, and every occurrence is a
-page.
-
-**Corollary C.** The root is keyed on `item_id` alone, never `(account_id, item_id)`.
-`FindReceiptsForAllocation` matches `owner_account_id = ? OR holder_account_id = ?`, so consigned stock
-under one account is drawn down by another's demand, and an account-scoped key would hand two
-contending flows two different rows over one contended receipt.
-
-**Corollary D.** Rows in `inventory_item_lock` are never deleted and never read with `SELECT`.
-`INSERT … ON DUPLICATE KEY UPDATE` must remain the only statement ever issued against that table —
-that, and nothing about the backfill, is what makes gap locks structurally impossible there.
-`TestLedgerLock_RejectedShapeIsUnsafe` measures what the alternative costs.
-
-**Corollary E.** The root is a Go-side ordering device. It is not what keeps the ledger correct while a
-second, unlocked writer exists — `dashboard/apps/api` writes these same tables from Prisma with no
-locking read at all. Never remove a server-side guard on the grounds that the root covers it.
-
-### Enforcement is the compiler, not a linter
-
-Every ledger-writing repository method takes a `*ledgerlock.Scope`, so a transaction that never called
-`Acquire` cannot compile a call to one. `tools/txaudit` deliberately does not walk transitively (see
-its own header), and every ledger write here is reached indirectly from its `WithTx` closure — the
-compiler sees that call graph; a name-based linter does not.
-
-The residual is honest: `&ledgerlock.Scope{}` is constructible by anyone, and a forged one holds
-nothing, so it degrades to a paged late acquisition rather than a silent bypass.
-
-### Statement ordering inside the section
-
-> No consistent read may precede the last locking statement of a ledger transaction.
-
-InnoDB opens the REPEATABLE READ view on the first *consistent* read, and a locking read is not one. So
-a transaction that takes its locks first has a view strictly newer than every conforming writer that
-released them. Getting this wrong is silent: commit `7044443a` made the paged open-issue read
-`FOR UPDATE` and claimed exactly this guarantee, but the caller resolved unit ratios next — a plain
-read — so the view opened before any receipt lock was held, and a transaction that queued on one woke
-up and computed what was left from a pre-lock snapshot.
-
-Ordering covers every writer that takes the same locks. It does not cover the one that takes none, so
-`ReadReceiptAllocationsForUpdate` and `ReadIssueCoverageForUpdate` read what a receipt has been drawn
-*currently*, and those must name every joined table in their `FOR UPDATE OF` list — a locking read is
-current only for the tables it names, and a satellite left out is read from the snapshot and silently
-drops its row from the join.
-
 ## Domain layer
 
 Each service defines its domain types in `internal/domain/`:
@@ -541,6 +456,20 @@ func (s *userSvcImpl) Login(ctx context.Context, ...) (...) {
 Naming pattern: `"<layer>.<entity>.<operation>"` — e.g. `service.user.login`, `mediator.api_key.create`, `repository.refresh_token.find`.
 
 Errors are recorded on spans via `tracing.Trace(span, apiErr)`.
+
+---
+
+## Inventory ledger lock order
+
+Anything that writes `inventory_issue`, `inventory_receipt`, or `inventory_allocation` must take item locks in a consistent order **before** any other ledger statement in the transaction. Package: `services/core-service/internal/ledgerlock`. Mechanism: `LockItemForLedger` in `inventory_item_lock.sql`.
+
+1. Resolve the full set of item IDs the transaction will touch.
+2. `ledgerlock.Acquire(txCtx, locker, itemIDs)` as the first ledger statement. It sorts unique IDs and locks each via `LockItemForLedger`.
+3. Pass the returned `*ledgerlock.Scope` into every ledger-writing repo method. Do not call `LockItemForLedger` yourself.
+4. The lock is `INSERT INTO inventory_item_lock … ON DUPLICATE KEY UPDATE item_id = item_id`. Never `SELECT`, range-scan, or `DELETE` that table — a gap lock on a cold insert deadlocks the ordering root.
+5. Do not join `unit` (or any shared catalog table) under `FOR UPDATE`. Do not use `FOR UPDATE OF` (vtgate rejects it).
+
+Late acquisition via `Scope.EnsureLocked` logs an error — it is a bug in the caller, not a supported path.
 
 ---
 

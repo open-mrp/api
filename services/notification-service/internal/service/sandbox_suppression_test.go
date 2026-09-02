@@ -22,7 +22,7 @@ import (
 // inside an HTTP request and failed silently for every other path: a message published from the
 // dashboard's outbox carries an account id and no AccountMode, and one republished by a consumer
 // carried no identity at all. Sandbox invoices, acknowledgements, purchase orders and statements
-// went out to live customers. These pin the behaviour to the account instead.
+// went out to live customers. These pin the behavior to the account instead.
 
 type sandboxHarness struct {
 	svc         domain.NotificationSvc
@@ -136,7 +136,7 @@ func TestSendEmail_SendsWhenTheSandboxLookupFails(t *testing.T) {
 	require.Nil(t, apiErr)
 }
 
-// An identity that does declare sandbox mode is honoured without a lookup, so an HTTP-scoped send
+// An identity that does declare sandbox mode is honored without a lookup, so an HTTP-scoped send
 // keeps its fast path.
 func TestSendEmail_IdentityAccountModeStillSuppresses(t *testing.T) {
 	t.Parallel()

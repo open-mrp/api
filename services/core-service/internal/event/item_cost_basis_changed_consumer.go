@@ -75,7 +75,7 @@ func (c *ItemCostBasisChangedConsumer) handleMessage(ctx context.Context, msg am
 	if accountID == "" || evt.ItemID == "" {
 		slog.ErrorContext(ctx, "item_cost_basis_changed: incomplete event",
 			"account_id", accountID, "item_id", evt.ItemID)
-		return nil
+		return c.inboxConsumer.Discard(ctx, "incomplete event: missing account or item")
 	}
 
 	span.SetAttributes(

@@ -179,7 +179,7 @@ func TestBuildActionPreview_CreateSkipsRead(t *testing.T) {
 	}
 }
 
-// TestBuildActionPreview_ActionRoute checks that a named operation is labelled as one and that its
+// TestBuildActionPreview_ActionRoute checks that a named operation is labeled as one and that its
 // current state is read from the record, not the action sub-route.
 func TestBuildActionPreview_ActionRoute(t *testing.T) {
 	desc := EndpointToolDescriptor{

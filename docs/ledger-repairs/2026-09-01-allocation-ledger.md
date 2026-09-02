@@ -5,7 +5,7 @@ keys and no capacity constraints: nothing in the schema explains why an issue's 
 equal its demand, so the explanation has to live somewhere a person can find it. Six months from
 now the question will be "why does `inrs_sufbtcm0xibo` read 104 of 240", and this is the answer.
 
-Found by `cmd/inventory-invariant-check` on its first run against production.
+Found by an inventory invariant check on its first run against production.
 
 ## What was wrong
 
@@ -18,15 +18,13 @@ Found by `cmd/inventory-invariant-check` on its first run against production.
 All three are now zero, as are `over_allocated_issues` and `duplicate_allocations`.
 
 `closed_issue_not_covered` matched 656 issues, 543 of them with no allocations at all. That is a
-pre-existing backlog, was not touched, and is why the detector ships report-only.
+pre-existing backlog, was not touched, and is why that check stayed report-only.
 
 ## Part 1 — the over-drawn receipt and the degenerate rows
 
 Receipt `inrp_bdchkwydwk2t` held 180.5 pairs (361 base units) and carried 363. Its two large
 allocations were written 36 seconds apart on 2026-08-25 — the double-allocation race commit
-`7044443a` was written to close, with one survivor. Repaired the way
-`cmd/repair-overallocated-receipts` does it: drop the newest allocation whole, reopen the demand it
-uncovers. `inrs_8qh1tp70h8z2` had that allocation and no other, so it went back to `open`.
+`7044443a` was written to close, with one survivor. The repair dropped the newest allocation whole and reopened the demand it uncovers. `inrs_8qh1tp70h8z2` had that allocation and no other, so it went back to `open`.
 
 Deleted alongside it: twelve allocations of exactly zero, one of -3.55e-15 (2^-48, an IEEE754
 residue from `Number()` on the dashboard's write path), and one allocation whose issue and receipt

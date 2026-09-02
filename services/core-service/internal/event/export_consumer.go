@@ -43,7 +43,7 @@ func NewExportConsumer(
 ) *ExportConsumer {
 	return &ExportConsumer{
 		rabbitmq:      rabbitmq,
-		inboxConsumer: messaging.NewInboxConsumer(inboxRepo, "core-service"),
+		inboxConsumer: messaging.NewInboxConsumer(inboxRepo, "core-service").WithLeaseSeconds(jobInboxLeaseSeconds),
 		queue:         op.Queue(),
 		handler:       op.Handler(),
 		name:          op.String(),

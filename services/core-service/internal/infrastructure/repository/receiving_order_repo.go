@@ -268,6 +268,9 @@ func (r *receivingOrderRepoImpl) List(ctx context.Context, params domain.ListRec
 		for i, row := range rows {
 			orders[i] = mapForwardReceivingOrderRow(row)
 		}
+		if apiErr := r.attachTotals(ctx, orders); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 		result, pageInfo := pagination.BuildPageString(orders, params.Limit, cursorDir, receivingOrderCreatedAt, receivingOrderID)
 		return &domain.ListReceivingOrdersResult{ReceivingOrders: result, PageInfo: pageInfo}, nil
 	}
@@ -293,8 +296,38 @@ func (r *receivingOrderRepoImpl) List(ctx context.Context, params domain.ListRec
 	for i, row := range rows {
 		orders[i] = mapForwardReceivingOrderRow(row)
 	}
+	if apiErr := r.attachTotals(ctx, orders); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 	result, pageInfo := pagination.BuildPageString(orders, params.Limit, cursorDir, receivingOrderCreatedAt, receivingOrderID)
 	return &domain.ListReceivingOrdersResult{ReceivingOrders: result, PageInfo: pageInfo}, nil
+}
+
+// fetchReceivingOrderTotals aggregates the given orders' lines in one query, keyed by order id.
+//
+// Orders whose lines carry no price, or that have no lines at all, are simply absent from the result; callers treat a missing entry as zero rather than as an error.
+func (r *receivingOrderRepoImpl) fetchReceivingOrderTotals(ctx context.Context, orderIDs []string) (map[string]*domain.ReceivingOrderTotals, *apierror.APIError) {
+	if len(orderIDs) == 0 {
+		return map[string]*domain.ReceivingOrderTotals{}, nil
+	}
+
+	rows, err := r.queries.GetReceivingOrderTotals(ctx, orderIDs)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, apiErr
+	}
+
+	totals := make(map[string]*domain.ReceivingOrderTotals, len(rows))
+	for _, row := range rows {
+		totals[row.ReceivingOrderID] = &domain.ReceivingOrderTotals{
+			OrderedAmount:    sqlValueToString(row.OrderedAmount),
+			OrderedQuantity:  sqlValueToString(row.OrderedQuantity),
+			StockedAmount:    sqlValueToString(row.StockedAmount),
+			StockedQuantity:  sqlValueToString(row.StockedQuantity),
+			RejectedAmount:   sqlValueToString(row.RejectedAmount),
+			RejectedQuantity: sqlValueToString(row.RejectedQuantity),
+		}
+	}
+	return totals, nil
 }
 
 func (r *receivingOrderRepoImpl) Get(ctx context.Context, accountID, receivingOrderID string) (*domain.ReceivingOrder, *apierror.APIError) {
@@ -340,6 +373,16 @@ func (r *receivingOrderRepoImpl) Get(ctx context.Context, accountID, receivingOr
 		note = &row.Note.String
 	}
 
+	totals, apiErr := r.fetchReceivingOrderTotals(ctx, []string{row.ID})
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	deliveries, apiErr := r.fetchDeliveryRefs(ctx, []string{row.PurchaseOrderID})
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
 	return &domain.ReceivingOrder{
 		ID:                  row.ID,
 		Number:              row.Number,
@@ -350,6 +393,8 @@ func (r *receivingOrderRepoImpl) Get(ctx context.Context, accountID, receivingOr
 		SupplierNumber:      supplierNumber,
 		Note:                note,
 		Lines:               lines,
+		Totals:              totals[row.ID],
+		Deliveries:          deliveries[row.PurchaseOrderID],
 		CompletedAt:         completedAt,
 		CreatedAt:           row.CreatedAt,
 		UpdatedAt:           row.UpdatedAt,
@@ -951,18 +996,17 @@ func mapForwardReceivingOrderRow(row sqlc.ListReceivingOrdersForwardRow) *domain
 	}
 
 	return &domain.ReceivingOrderSummary{
-		ID:                   row.ID,
-		Number:               row.Number,
-		PurchaseOrderID:      row.PurchaseOrderID,
-		PurchaseOrderNumber:  row.PurchaseOrderNumber,
-		SupplierID:           supplierID,
-		SupplierName:         supplierName,
-		SupplierNumber:       supplierNumber,
-		LineCount:            safeconv.Int64ToInt32(row.LineCount),
-		CompletionPercentage: receivingOrderInterfaceToFloat64(row.CompletionPercentage),
-		CompletedAt:          completedAt,
-		CreatedAt:            row.CreatedAt,
-		UpdatedAt:            row.UpdatedAt,
+		ID:                  row.ID,
+		Number:              row.Number,
+		PurchaseOrderID:     row.PurchaseOrderID,
+		PurchaseOrderNumber: row.PurchaseOrderNumber,
+		SupplierID:          supplierID,
+		SupplierName:        supplierName,
+		SupplierNumber:      supplierNumber,
+		LineCount:           safeconv.Int64ToInt32(row.LineCount),
+		CompletedAt:         completedAt,
+		CreatedAt:           row.CreatedAt,
+		UpdatedAt:           row.UpdatedAt,
 	}
 }
 
@@ -985,18 +1029,17 @@ func mapBackwardReceivingOrderRow(row sqlc.ListReceivingOrdersBackwardRow) *doma
 	}
 
 	return &domain.ReceivingOrderSummary{
-		ID:                   row.ID,
-		Number:               row.Number,
-		PurchaseOrderID:      row.PurchaseOrderID,
-		PurchaseOrderNumber:  row.PurchaseOrderNumber,
-		SupplierID:           supplierID,
-		SupplierName:         supplierName,
-		SupplierNumber:       supplierNumber,
-		LineCount:            safeconv.Int64ToInt32(row.LineCount),
-		CompletionPercentage: receivingOrderInterfaceToFloat64(row.CompletionPercentage),
-		CompletedAt:          completedAt,
-		CreatedAt:            row.CreatedAt,
-		UpdatedAt:            row.UpdatedAt,
+		ID:                  row.ID,
+		Number:              row.Number,
+		PurchaseOrderID:     row.PurchaseOrderID,
+		PurchaseOrderNumber: row.PurchaseOrderNumber,
+		SupplierID:          supplierID,
+		SupplierName:        supplierName,
+		SupplierNumber:      supplierNumber,
+		LineCount:           safeconv.Int64ToInt32(row.LineCount),
+		CompletedAt:         completedAt,
+		CreatedAt:           row.CreatedAt,
+		UpdatedAt:           row.UpdatedAt,
 	}
 }
 
@@ -1020,6 +1063,9 @@ func mapReceivingOrderLineRow(row sqlc.ListReceivingOrderLinesByOrderIDRow) *dom
 	}
 	if row.OrderLineProductID.Valid {
 		line.OrderLineProductID = &row.OrderLineProductID.String
+	}
+	if row.OrderLineItemNumber.Valid {
+		line.OrderLineItemNumber = &row.OrderLineItemNumber.Int32
 	}
 	if row.OrderLineItemID.Valid {
 		line.OrderLineItemID = &row.OrderLineItemID.String
@@ -1067,6 +1113,9 @@ func mapGetReceivingOrderLineRow(row sqlc.GetReceivingOrderLineRow) *domain.Rece
 	if row.OrderLineProductID.Valid {
 		line.OrderLineProductID = &row.OrderLineProductID.String
 	}
+	if row.OrderLineItemNumber.Valid {
+		line.OrderLineItemNumber = &row.OrderLineItemNumber.Int32
+	}
 	if row.OrderLineItemID.Valid {
 		line.OrderLineItemID = &row.OrderLineItemID.String
 	}
@@ -1090,4 +1139,56 @@ func mapGetReceivingOrderLineRow(row sqlc.GetReceivingOrderLineRow) *domain.Rece
 	}
 
 	return line
+}
+
+// fetchDeliveryRefs names the deliveries booked against each of the given purchase orders, keyed by order id.
+//
+// Keyed on the purchase order because that is the column deliveries carry; a receiving order is one-to-one with the order it was created for.
+func (r *receivingOrderRepoImpl) fetchDeliveryRefs(ctx context.Context, orderIDs []string) (map[string][]domain.DocumentRef, *apierror.APIError) {
+	if len(orderIDs) == 0 {
+		return map[string][]domain.DocumentRef{}, nil
+	}
+
+	rows, err := r.queries.ListDeliveryRefsForOrders(ctx, orderIDs)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, apiErr
+	}
+
+	refs := make(map[string][]domain.DocumentRef, len(orderIDs))
+	for _, row := range rows {
+		refs[row.OrderID] = append(refs[row.OrderID], domain.DocumentRef{ID: row.ID, Number: row.Number, Status: row.Status})
+	}
+	return refs, nil
+}
+
+// attachTotals fills in each summary's totals from a single aggregate over the whole page, so a list of orders costs one extra query rather than one per row.
+func (r *receivingOrderRepoImpl) attachTotals(ctx context.Context, orders []*domain.ReceivingOrderSummary) *apierror.APIError {
+	if len(orders) == 0 {
+		return nil
+	}
+
+	ids := make([]string, len(orders))
+	for i, o := range orders {
+		ids[i] = o.ID
+	}
+
+	totals, apiErr := r.fetchReceivingOrderTotals(ctx, ids)
+	if apiErr != nil {
+		return apiErr
+	}
+
+	orderIDs := make([]string, len(orders))
+	for i, o := range orders {
+		orderIDs[i] = o.PurchaseOrderID
+	}
+	deliveries, apiErr := r.fetchDeliveryRefs(ctx, orderIDs)
+	if apiErr != nil {
+		return apiErr
+	}
+
+	for _, o := range orders {
+		o.Totals = totals[o.ID]
+		o.Deliveries = deliveries[o.PurchaseOrderID]
+	}
+	return nil
 }

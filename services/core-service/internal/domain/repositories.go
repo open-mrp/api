@@ -538,6 +538,7 @@ type BatchRepo interface {
 	FindBatchFlow(ctx context.Context, accountID, batchID string) ([]BatchFlowNode, *apierror.APIError)
 	FindByScanningStation(ctx context.Context, params ListBatchesByScanningStationParams) (*ListBatchesByScanningStationResult, *apierror.APIError)
 	FindPossibleNextSteps(ctx context.Context, accountID, scanningStationID, batchID string) ([]ScanningProductionStepInfo, *apierror.APIError)
+	FindPossibleInitSteps(ctx context.Context, accountID, scanningStationID, batchID string) ([]ScanningProductionStepInfo, *apierror.APIError)
 	FindOpenBatches(ctx context.Context, accountID string, itemIDs, productLineIDs []string) ([]OpenBatchSummary, *apierror.APIError)
 	FindFurthestRightBatchInFlow(ctx context.Context, accountID, batchID string) (*BaseBatch, *apierror.APIError)
 	FindNextAvailableBatchInFlow(ctx context.Context, accountID, batchID, productionStepID string) (*BaseBatch, *apierror.APIError)

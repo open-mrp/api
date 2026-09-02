@@ -78,7 +78,7 @@ func (c *DocumentEmailConsumer) handleInvoiceIssued(ctx context.Context, msg amq
 	}
 	if evt.InvoiceID == "" {
 		log.Printf("[invoice_issued] Empty invoice ID in event")
-		return nil
+		return c.inboxConsumer.Discard(ctx, "no invoice on event")
 	}
 
 	span.SetAttributes(
@@ -116,7 +116,7 @@ func (c *DocumentEmailConsumer) handleSalesOrderAcknowledged(ctx context.Context
 	}
 	if evt.SalesOrderID == "" {
 		log.Printf("[sales_order_acknowledged] Empty sales order ID in event")
-		return nil
+		return c.inboxConsumer.Discard(ctx, "no sales order on event")
 	}
 
 	span.SetAttributes(
@@ -152,7 +152,7 @@ func (c *DocumentEmailConsumer) handlePurchaseOrderSubmitted(ctx context.Context
 	}
 	if evt.PurchaseOrderID == "" {
 		log.Printf("[purchase_order_submitted] Empty purchase order ID in event")
-		return nil
+		return c.inboxConsumer.Discard(ctx, "no purchase order on event")
 	}
 
 	span.SetAttributes(

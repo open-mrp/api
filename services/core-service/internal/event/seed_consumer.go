@@ -25,7 +25,7 @@ type SeedConsumer struct {
 func NewSeedConsumer(rabbitmq messaging.MessageBroker, inboxRepo messaging.InboxRepo, seeder *repository.SandboxSeeder) *SeedConsumer {
 	return &SeedConsumer{
 		rabbitmq:      rabbitmq,
-		inboxConsumer: messaging.NewInboxConsumer(inboxRepo, "core-service"),
+		inboxConsumer: messaging.NewInboxConsumer(inboxRepo, "core-service").WithLeaseSeconds(jobInboxLeaseSeconds),
 		seeder:        seeder,
 		tracer:        tracing.GetTracer("core-service.seed_consumer"),
 	}
@@ -62,7 +62,7 @@ func (c *SeedConsumer) handleSeedMessage(ctx context.Context, msg amqp.Delivery)
 
 	if payload.AccountID == "" {
 		log.Printf("[seed] Empty account ID in seed payload")
-		return nil
+		return c.inboxConsumer.Discard(ctx, "no account on seed payload")
 	}
 
 	span.SetAttributes(attribute.String("seed.account_id", payload.AccountID))

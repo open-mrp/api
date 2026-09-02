@@ -79,6 +79,8 @@ message DeliverySummaryInfo {
   google.protobuf.Timestamp updated_at = 10;
   // Lines (populated only when the list request includes "lines").
   repeated DeliveryLineInfo lines = 11;
+  optional string receiving_order_id = 12;
+  optional string receiving_order_number = 13;
 }
 message DeliveryInfo {
   string id = 1;
@@ -91,6 +93,8 @@ message DeliveryInfo {
   optional google.protobuf.Timestamp rejected_at = 8;
   google.protobuf.Timestamp created_at = 9;
   google.protobuf.Timestamp updated_at = 10;
+  optional string receiving_order_id = 11;
+  optional string receiving_order_number = 12;
 }
 message DeliveryLineInfo {
   string id = 1;

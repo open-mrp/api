@@ -93,6 +93,7 @@ type PurchaseOrder struct {
 
 	// Joined receiving order
 	ReceivingOrderID *string
+	Deliveries       []DocumentRef
 
 	// Lines (populated when included)
 	Lines []*PurchaseOrderLine

@@ -23,7 +23,7 @@ func TestCommitmentAnchor_ProjectsEveryBasisNotJustTheIssueDate(t *testing.T) {
 	}{
 		{"pinned ship date", scheduling.CommitmentBasis{ShipByOverrideDate: &pinned}, scheduling.LeadTimeInput{}, pinned},
 		{"promised delivery", scheduling.CommitmentBasis{PromisedAt: &promised}, scheduling.LeadTimeInput{}, promised},
-		// The case a window centred on the issue date would miss: forty-five days out is already past the window's forward edge, so its closures would silently not exist.
+		// The case a window centered on the issue date would miss: forty-five days out is already past the window's forward edge, so its closures would silently not exist.
 		{"lead-time override", scheduling.CommitmentBasis{LeadTimeOverrideDays: &override}, scheduling.LeadTimeInput{}, issued.AddDate(0, 0, 45)},
 		{"resolved chain", scheduling.CommitmentBasis{}, scheduling.LeadTimeInput{AccountLeadTimeDays: intPtr(60)}, issued.AddDate(0, 0, 60)},
 		{"nothing resolvable", scheduling.CommitmentBasis{}, scheduling.LeadTimeInput{}, issued},

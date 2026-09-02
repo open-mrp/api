@@ -8,7 +8,9 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/services/billing-service/internal/domain"
+	"github.com/open-mrp/api/services/billing-service/internal/service"
 	"github.com/open-mrp/api/shared/contracts"
+	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/messaging"
 	"github.com/open-mrp/api/shared/tracing"
@@ -21,16 +23,19 @@ import (
 type AgentTokenBillingHandler struct {
 	tokenBillingRepo domain.AgentTokenBillingRepo
 	repoFactory      domain.RepoFactory
+	txManager        service.TransactionManager
 	tracer           trace.Tracer
 }
 
 func NewAgentTokenBillingHandler(
 	tokenBillingRepo domain.AgentTokenBillingRepo,
 	repoFactory domain.RepoFactory,
+	txManager service.TransactionManager,
 ) *AgentTokenBillingHandler {
 	return &AgentTokenBillingHandler{
 		tokenBillingRepo: tokenBillingRepo,
 		repoFactory:      repoFactory,
+		txManager:        txManager,
 		tracer:           tracing.GetTracer("billing-service.agent_token_billing_handler"),
 	}
 }
@@ -94,15 +99,22 @@ func (h *AgentTokenBillingHandler) Handle(ctx context.Context, msg amqp.Delivery
 		return fmt.Errorf("failed to generate billing ID: %w", genErr)
 	}
 
-	if apiErr := h.tokenBillingRepo.UpsertAgentTokenBilling(ctx, domain.UpsertAgentTokenBillingParams{
-		ID:           billingID,
-		AccountID:    billingAcctID,
-		PeriodStart:  periodStart,
-		PeriodEnd:    periodEnd,
-		InputTokens:  int64(data.InputTokens),
-		OutputTokens: int64(data.OutputTokens),
-		TotalTokens:  int64(data.TotalTokens),
-	}); apiErr != nil {
+	// The upsert accumulates (total_tokens = total_tokens + VALUES(...)), so unlike the convergent handlers a second delivery does not land on the same total — it inflates it. The recovery point commits with the row so the delivery cannot be applied twice; without it a process killed between this commit and the marker leaves a message that looks unprocessed and is counted again.
+	apiErr = h.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
+		if apiErr := f.NewAgentTokenBillingRepo().UpsertAgentTokenBilling(txCtx, domain.UpsertAgentTokenBillingParams{
+			ID:           billingID,
+			AccountID:    billingAcctID,
+			PeriodStart:  periodStart,
+			PeriodEnd:    periodEnd,
+			InputTokens:  int64(data.InputTokens),
+			OutputTokens: int64(data.OutputTokens),
+			TotalTokens:  int64(data.TotalTokens),
+		}); apiErr != nil {
+			return apiErr
+		}
+		return completeInboxRecord(txCtx, f)
+	})
+	if apiErr != nil {
 		return fmt.Errorf("failed to upsert agent token billing: %w", apiErr)
 	}
 

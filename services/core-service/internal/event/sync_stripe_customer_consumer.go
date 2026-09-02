@@ -8,6 +8,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/stripesync"
 	"github.com/open-mrp/api/shared/contracts"
+	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
 	"github.com/open-mrp/api/shared/tracing"
 
@@ -70,7 +71,7 @@ func (c *SyncStripeCustomerConsumer) handleMessage(ctx context.Context, msg amqp
 
 	if evt.OwnerAccountID == "" || evt.CustomerAccountID == "" {
 		log.Printf("[sync_stripe_customer] Missing owner or customer account ID in event")
-		return nil
+		return c.inboxConsumer.Discard(ctx, "missing owner or customer account id")
 	}
 
 	span.SetAttributes(
@@ -92,5 +93,5 @@ func (c *SyncStripeCustomerConsumer) handleMessage(ctx context.Context, msg amqp
 	}
 	log.Printf("[sync_stripe_customer] Stripe sync permanently failed for customer %s (account %s): %v",
 		evt.CustomerAccountID, evt.OwnerAccountID, apiErr)
-	return nil
+	return c.inboxConsumer.Discard(ctx, apierror.Describe(apiErr))
 }

@@ -9,10 +9,12 @@ import (
 type InboxStatus string
 
 const (
-	// InboxStatusReceived means the message was inserted into the inbox table but the handler has not yet completed. If the process crashes at this point, the record stays in "received" and the InboxConsumer treats re-delivery as a crash-recovery retry.
+	// InboxStatusReceived means the record exists but the handler has not completed. It is held under a lease (LockOwner, LockExpiresAt): a live lease means an attempt is in flight and a re-delivery must not run the handler again, and an expired one means the attempt was abandoned and the message may be retried.
 	InboxStatusReceived InboxStatus = "received"
-	// InboxStatusProcessed means the handler ran to completion and the message should not be processed again. Duplicate deliveries with this status are silently ACKed.
+	// InboxStatusProcessed means the handler ran to completion and the message must never be processed again. Duplicate deliveries with this status are silently ACKed.
 	InboxStatusProcessed InboxStatus = "processed"
+	// InboxStatusDiscarded means the handler rejected the message as one that can never succeed — a malformed payload, or state the message can no longer be reconciled against. It is terminal and visible to the failure monitor, unlike an ACK that quietly recorded the message as processed.
+	InboxStatusDiscarded InboxStatus = "discarded"
 )
 
 // InboxRecordInput contains the data needed to create an inbox record. It is populated from the AMQP delivery metadata and message body by InboxConsumer.Wrap.
@@ -29,6 +31,10 @@ type InboxRecordInput struct {
 	RequestID string
 	// ParentMessageID links to the message that caused this one to be emitted.
 	ParentMessageID string
+	// LockOwner identifies the consumer taking the lease on the new record, so a later delivery can tell an attempt that is still running from one that was abandoned.
+	LockOwner string
+	// LockTTLSeconds is how long that lease is good for.
+	LockTTLSeconds int
 }
 
 // InboxRecord represents a row in the inbox table. It tracks delivery state, attempt count, and any error from the most recent processing attempt. The InboxConsumer reads this record on duplicate detection to decide whether to skip, retry, or trigger crash recovery.
@@ -45,6 +51,14 @@ type InboxRecord struct {
 	LastError       *string
 	ReceivedAt      time.Time
 	ProcessedAt     *time.Time
+	FailedAt        *time.Time
+	LockOwner       *string
+	LockExpiresAt   *time.Time
+}
+
+// LeaseHeld reports whether another attempt is still working this record. A re-delivery that arrives while the lease is held must leave the work alone; once it lapses the record is abandoned and may be retried.
+func (r *InboxRecord) LeaseHeld(now time.Time) bool {
+	return r.LockExpiresAt != nil && r.LockExpiresAt.After(now)
 }
 
 // InboxCheckResult contains the result of checking for a duplicate message. It is used internally by the InboxConsumer to decide the outcome for a re-delivered message.
@@ -63,17 +77,25 @@ type InboxCheckResult struct {
 
 // InboxRepo defines the persistence interface for inbox-based message deduplication. Implementations are provided by each service's repository layer, backed by the shared message_inbox table.
 type InboxRepo interface {
-	// TryInsert attempts to insert a new inbox record with status "received". On success it returns the auto-generated record ID. On duplicate (MySQL error 1062 from the unique index on message_id + handler), it returns 0 and the MySQL error so the caller can branch into duplicate-handling logic.
+	// TryInsert attempts to insert a new inbox record with status "received", holding the lease for the caller. On success it returns the auto-generated record ID. On duplicate (the unique index on message_id + handler), it returns 0 and the driver error so the caller can branch into duplicate-handling logic.
 	TryInsert(ctx context.Context, input InboxRecordInput) (int64, error)
 
 	// GetByMessageAndHandler retrieves the existing inbox record for a given message and handler combination. Used by handleDuplicate to inspect the prior record's status and decide whether to skip, retry, or trigger crash recovery.
 	GetByMessageAndHandler(ctx context.Context, messageID, handler string) (*InboxRecord, error)
 
-	// MarkProcessed transitions the record to "processed" status and sets processed_at. Called after the handler completes successfully.
-	MarkProcessed(ctx context.Context, id int64) error
+	// Claim takes the lease on an existing record whose own lease has lapsed, returning false when another attempt still holds it. Used on re-delivery to decide whether this consumer may retry an unfinished message.
+	Claim(ctx context.Context, id int64, owner string, ttlSeconds int) (bool, error)
 
-	// MarkFailed increments the attempt count and stores the error message from the most recent failed attempt. The record stays in "received" status so it can be retried on re-delivery.
+	// Complete transitions the record to "processed" and releases the lease, returning false when it was no longer "received" — meaning a concurrent attempt finished first and this one must not commit its own work.
+	//
+	// Handlers whose entire effect is one local transaction should call this on the transaction-scoped repo as the last statement inside that transaction, so the marker and the work commit together. That closes the window where the work commits and the process dies before the marker, which leaves the record indistinguishable from one that never ran and invites a replay to apply it twice.
+	Complete(ctx context.Context, id int64) (bool, error)
+
+	// MarkFailed increments the attempt count, stamps failed_at, stores the error, and releases the lease. The record stays "received" so a re-delivery can retry it.
 	MarkFailed(ctx context.Context, id int64, errMsg string) error
+
+	// MarkDiscarded moves the record to the terminal "discarded" state with the reason that made it unprocessable.
+	MarkDiscarded(ctx context.Context, id int64, reason string) error
 }
 
 // InboxPurgerRepo defines the persistence interface used by the InboxPurger to delete processed inbox records that have exceeded the retention period.

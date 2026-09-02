@@ -47,7 +47,7 @@ func TestParseDateString_AbsentAndEmptyProduceNoFilter(t *testing.T) {
 	}
 }
 
-// Documented, not endorsed: an unparseable value is dropped rather than rejected, so the caller gets an unfiltered list instead of a 400. Pinned so the behaviour is a decision rather than an accident, and so changing it is a deliberate edit to this test.
+// Documented, not endorsed: an unparseable value is dropped rather than rejected, so the caller gets an unfiltered list instead of a 400. Pinned so the behavior is a decision rather than an accident, and so changing it is a deliberate edit to this test.
 func TestParseDateString_GarbageIsSilentlyDropped(t *testing.T) {
 	t.Parallel()
 

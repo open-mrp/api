@@ -37,7 +37,7 @@ type UpsertPartInput struct {
 	// Selling price per unit — a currency numerator over a per-unit denominator. Omitted, it
 	// defaults to a zero rate in the category's base unit and is left unchanged on update.
 	UnitPrice field.Optional[apirequest.RateInput] `json:"unit_price,omitzero"`
-	// Cost per unit. Same unit rule and omission behaviour as `unit_price`.
+	// Cost per unit. Same unit rule and omission behavior as `unit_price`.
 	UnitCost field.Optional[apirequest.RateInput] `json:"unit_cost,omitzero"`
 	// Properties to attach to the part, matched/created by name + value. Additive —
 	// existing attributes are not removed.

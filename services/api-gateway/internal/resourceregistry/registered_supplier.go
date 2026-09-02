@@ -21,7 +21,7 @@ func init() {
 }
 
 func populateBillToAddressOnSupplier(ctx context.Context, parent any, _ map[string]any) {
-	s := parent.(*apiresource.SupplierDetail)
+	s := parent.(*apiresource.Supplier)
 	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeSupplier, s.ID, "bill_to_address")
 	if !ok {
 		return
@@ -30,7 +30,7 @@ func populateBillToAddressOnSupplier(ctx context.Context, parent any, _ map[stri
 }
 
 func populateShipToAddressOnSupplier(ctx context.Context, parent any, _ map[string]any) {
-	s := parent.(*apiresource.SupplierDetail)
+	s := parent.(*apiresource.Supplier)
 	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeSupplier, s.ID, "ship_to_address")
 	if !ok {
 		return

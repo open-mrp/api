@@ -7,9 +7,7 @@ import (
 	itemep "github.com/open-mrp/api/services/api-gateway/endpoints/items"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
-	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
-	"github.com/open-mrp/api/shared/id"
 	pb "github.com/open-mrp/api/shared/proto/core"
 )
 
@@ -18,24 +16,16 @@ func ListInventoriesPresenter(ctx context.Context, resp *pb.ListInventoriesRespo
 		return apiresource.NewList[apiresource.InventoryItem](nil, apiresource.PageInfo{})
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
 	items := make([]apiresource.InventoryItem, len(resp.Items))
 	for i, item := range resp.Items {
 		valueStr := strconv.FormatFloat(item.OnHandQuantity, 'f', -1, 64)
-		qid, _ := id.GenID(id.QuantityIDPrefix, nil)
-
-		// unit is an expandable reference on the quantity: stash the FK id so
-		// LoadUnits fetches the real Unit on ?include=...unit. Never fabricate.
-		if item.OnHandUnitId != "" {
-			meta.Set(constants.ObjectTypeQuantity, qid, "unit_id", item.OnHandUnitId)
-		}
 
 		items[i] = apiresource.InventoryItem{
 			Object: constants.ObjectTypeInventoryItem,
-			Item:   itemep.ItemPresenter(item.Item),
-			Quantity: &apiresource.Quantity{
-				ID:           qid,
-				Object:       constants.ObjectTypeQuantity,
+			Item:   itemPtr(itemep.ItemPresenter(item.Item)),
+			// On-hand is computed per request, so it is not a stored quantity and carries no id.
+			Quantity: &apiresource.ComputedQuantity{
+				Object:       constants.ObjectTypeComputedQuantity,
 				Value:        apiresource.NormalizeQuantityValue(valueStr, item.OnHandUnitType),
 				DisplayValue: apiresource.FormatDisplayValue(valueStr, item.OnHandUnitAbbreviation, item.OnHandUnitType),
 			},
@@ -43,4 +33,9 @@ func ListInventoriesPresenter(ctx context.Context, resp *pb.ListInventoriesRespo
 	}
 
 	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
+}
+
+// itemPtr adapts the shared item presenter, which returns a value, to the pointer the resource holds.
+func itemPtr(item apiresource.Item) *apiresource.Item {
+	return &item
 }

@@ -254,6 +254,30 @@ func (h *gRPCHandler) GetBatchPossibleNextSteps(ctx context.Context, req *pb.Get
 	}, nil
 }
 
+func (h *gRPCHandler) GetBatchPossibleInitSteps(ctx context.Context, req *pb.GetBatchPossibleInitStepsRequest) (*pb.GetBatchPossibleInitStepsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	steps, apiErr := h.batchSvc.GetPossibleInitSteps(ctx, req.ScanningStationId, req.BatchId)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	pbSteps := make([]*pb.ScanningProductionStepInfoProto, len(steps))
+	for i, s := range steps {
+		pbSteps[i] = &pb.ScanningProductionStepInfoProto{
+			Id:          s.ID,
+			Name:        s.Name,
+			IsMultiPart: s.IsMultiPart,
+		}
+	}
+
+	return &pb.GetBatchPossibleInitStepsResponse{
+		Steps: pbSteps,
+	}, nil
+}
+
 func (h *gRPCHandler) AnalyzeOpenBatches(ctx context.Context, req *pb.AnalyzeOpenBatchesRequest) (*pb.AnalyzeOpenBatchesResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()

@@ -20,6 +20,7 @@ type BatchSvc interface {
 	GetBatchFlow(ctx context.Context, req *GetBatchFlowRequest) (*apiresource.List[apiresource.BatchFlowNode], *apierror.APIError)
 	ListBatchesByScanningStation(ctx context.Context, req *ListBatchesByScanningStationRequest) (*apiresource.List[apiresource.Batch], *apierror.APIError)
 	GetPossibleNextSteps(ctx context.Context, req *GetPossibleNextStepsRequest) (*apiresource.List[apiresource.ScanningProductionStepInfo], *apierror.APIError)
+	GetPossibleInitSteps(ctx context.Context, req *GetPossibleInitStepsRequest) (*apiresource.List[apiresource.ScanningProductionStepInfo], *apierror.APIError)
 	AnalyzeOpenBatches(ctx context.Context, req *AnalyzeOpenBatchesRequest) (*apiresource.List[apiresource.OpenBatchSummary], *apierror.APIError)
 	InitializeBatch(ctx context.Context, req *InitializeBatchRequest) (*apiresource.Batch, *apierror.APIError)
 	MoveBatches(ctx context.Context, req *MoveBatchesRequest) (*apiresource.Batch, *apierror.APIError)
@@ -111,6 +112,29 @@ func (m *batchSvcImpl) GetPossibleNextSteps(ctx context.Context, req *GetPossibl
 	resp, apiErr := grpcutil.CallRPC(ctx, batchSvcTracer, "service.batches.get_possible_next_steps", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetBatchPossibleNextStepsResponse, error) {
 			return m.coreClient.GetBatchPossibleNextSteps(ctx, pbReq, opts...)
+		})
+
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	steps := make([]apiresource.ScanningProductionStepInfo, len(resp.Steps))
+	for i, s := range resp.Steps {
+		steps[i] = ScanningProductionStepInfoPresenter(s)
+	}
+
+	return apiresource.NewList(steps, apiresource.PageInfo{}), nil
+}
+
+func (m *batchSvcImpl) GetPossibleInitSteps(ctx context.Context, req *GetPossibleInitStepsRequest) (*apiresource.List[apiresource.ScanningProductionStepInfo], *apierror.APIError) {
+	pbReq := &pb.GetBatchPossibleInitStepsRequest{
+		ScanningStationId: req.ScanningStationID,
+		BatchId:           req.BatchID,
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, batchSvcTracer, "service.batches.get_possible_init_steps", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetBatchPossibleInitStepsResponse, error) {
+			return m.coreClient.GetBatchPossibleInitSteps(ctx, pbReq, opts...)
 		})
 
 	if apiErr != nil {

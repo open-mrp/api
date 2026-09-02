@@ -187,8 +187,6 @@ INSERT IGNORE INTO role_permission (id, role_id, permission_code, `create`, `rea
 
 -- Global Customer role (assigned to customer-portal users). Global (account_id
 -- NULL), role_type 'user', resolved by its fixed id (constants.GlobalCustomerRoleID).
--- Keep in sync with cmd/backfill-customer-role, which creates the identical rows in
--- production.
 INSERT IGNORE INTO role (id, name, role_type_code, account_id, created_at, updated_at) VALUES
     ('rl_7vafmsquekgt', 'Customer', 'user', NULL, NOW(), NOW());
 
@@ -199,7 +197,7 @@ INSERT IGNORE INTO role (id, name, role_type_code, account_id, created_at, updat
 -- actor on the buyer's own account): team:read (the account-user list), plus roles:read
 -- and departments:read (the ?include=role,department the picker requests). The remaining
 -- reads are inert (relation-scoped portal calls never consult them) and kept only as
--- future-proofing. Keep in sync with cmd/backfill-customer-role.
+-- future-proofing.
 INSERT IGNORE INTO role_permission (id, role_id, permission_code, `create`, `read`, `update`, `delete`, created_at, updated_at) VALUES
     ('rlpm_customer_addr000', 'rl_7vafmsquekgt', 'addresses', 1, 1, 1, 0, NOW(), NOW()),
     ('rlpm_customer_purord0', 'rl_7vafmsquekgt', 'purchase_orders', 1, 1, 0, 0, NOW(), NOW()),

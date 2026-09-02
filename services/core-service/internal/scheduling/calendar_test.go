@@ -186,7 +186,7 @@ func TestCalendar_SubtractDaysLeavesTheStartingDateUnsnapped(t *testing.T) {
 func TestDefaultCalendar_MatchesTheWeekendOnlyRuleItReplaced(t *testing.T) {
 	t.Parallel()
 
-	// The pre-calendar behaviour, pinned: an account that configures nothing must not see a single date move.
+	// The pre-calendar behavior, pinned: an account that configures nothing must not see a single date move.
 	cal := DefaultCalendar()
 	start := onDay(2026, time.September, 7)
 

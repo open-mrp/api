@@ -449,12 +449,12 @@ func TestItemPropertyColumns_OrdersByNameNotByEncounter(t *testing.T) {
 		exportItemWithProperties("Yarn", []domain.ItemCategoryProperty{
 			{ID: "pp_1", Name: "Weight"}, {ID: "pp_2", Name: "Fibre"},
 		}, nil),
-		exportItemWithProperties("Trim", []domain.ItemCategoryProperty{{ID: "pp_3", Name: "Colour"}}, nil),
+		exportItemWithProperties("Trim", []domain.ItemCategoryProperty{{ID: "pp_3", Name: "Color"}}, nil),
 	}
 
 	// Encounter order depends on which rows the query returned; sorting is what keeps
 	// two exports of the same data byte-identical.
-	assert.Equal(t, []string{"Colour", "Fibre", "Weight"}, columnHeaders(itemPropertyColumns(items)))
+	assert.Equal(t, []string{"Color", "Fibre", "Weight"}, columnHeaders(itemPropertyColumns(items)))
 }
 
 // the header is the importer's key, so two categories declaring the same property

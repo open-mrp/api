@@ -8,7 +8,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 )
 
-// Both seeded calendars must reproduce the pre-calendar behaviour exactly. A newly seeded account should see its holidays respected and nothing else change.
+// Both seeded calendars must reproduce the pre-calendar behavior exactly. A newly seeded account should see its holidays respected and nothing else change.
 func TestSeedDefaults_AreMondayToFriday(t *testing.T) {
 	t.Parallel()
 

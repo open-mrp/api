@@ -38,14 +38,14 @@ func testSection(descriptions ...string) (priceListLine, priceListSection) {
 func testDocument(rowCount int) priceListDocument {
 	rows := make([]priceListRow, 0, rowCount)
 	for i := range rowCount {
-		colour := "Black"
+		color := "Black"
 		if i%2 == 1 {
-			colour = "Khaki"
+			color = "Khaki"
 		}
 		rows = append(rows, priceListRow{
 			SKU:         "6801" + string(rune('0'+i%10)),
 			Description: "Below Knee, Closed Toe",
-			Values:      []string{colour, "Regular"},
+			Values:      []string{color, "Regular"},
 			Packing:     "10 Pairs Per Carton",
 			Prices:      []string{"$18.00"},
 		})

@@ -176,6 +176,24 @@ func (s *batchSvcImpl) GetPossibleNextSteps(ctx context.Context, scanningStation
 	return s.repos.NewBatchRepo().FindPossibleNextSteps(ctx, identity.Target.AccountID, scanningStationID, batchID)
 }
 
+func (s *batchSvcImpl) GetPossibleInitSteps(ctx context.Context, scanningStationID, batchID string) ([]domain.ScanningProductionStepInfo, *apierror.APIError) {
+	ctx, span := batchSvcTracer.Start(ctx, "service.batch.get_possible_init_steps")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainBatches, types.ActionRead); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	return s.repos.NewBatchRepo().FindPossibleInitSteps(ctx, identity.Target.AccountID, scanningStationID, batchID)
+}
+
 func (s *batchSvcImpl) AnalyzeOpenBatches(ctx context.Context, itemIDs, productLineIDs []string) ([]domain.OpenBatchSummary, *apierror.APIError) {
 	ctx, span := batchSvcTracer.Start(ctx, "service.batch.analyze_open_batches")
 	defer span.End()

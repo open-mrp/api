@@ -406,3 +406,18 @@ JOIN inventory_receipt ir ON ia.inventory_receipt_id = ir.id
 JOIN lot l ON ir.lot_id = l.id
 WHERE ii.batch_id = sqlc.arg('batch_id')
 AND l.lot_number IS NOT NULL;
+
+-- FindPossibleInitSteps returns the steps a batch can be initialized at from a given scanning station: the steps at that station that produce the batch's own item.
+--
+-- Unlike FindPossibleNextSteps this walks nothing. Initializing is the batch's first scan, so there is no prior step to advance from and no flow to traverse — the only question is which of this station's steps make the thing in front of the operator.
+-- name: FindPossibleInitSteps :many
+SELECT ps.id, ps.name
+FROM batch b
+JOIN production p ON p.item_id = b.item_id
+JOIN production_step ps ON ps.id = p.production_step_id
+WHERE b.id = sqlc.arg('batch_id')
+  AND b.account_id = sqlc.arg('account_id')
+  AND ps.account_id = sqlc.arg('account_id')
+  AND ps.scanning_station_id = sqlc.arg('scanning_station_id')
+GROUP BY ps.id, ps.name
+ORDER BY ps.name;

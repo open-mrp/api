@@ -559,7 +559,7 @@ SELECT
     ltnu.id AS labor_time_num_unit_id, ltdu.id AS labor_time_den_unit_id,
     ohr.id AS overhead_rate_id, ohr.value AS overhead_rate_value,
     ohrnu.id AS overhead_rate_num_unit_id, ohrdu.id AS overhead_rate_den_unit_id,
-    -- Base-unit ratios for the labour terms. Labour time is a duration and the rates are priced per duration, and the two are routinely entered in different ones — seconds a piece against dollars an hour — so the cost calculation needs both sides' ratios to bring them onto a common footing.
+    -- Base-unit ratios for the labor terms. Labor time is a duration and the rates are priced per duration, and the two are routinely entered in different ones — seconds a piece against dollars an hour — so the cost calculation needs both sides' ratios to bring them onto a common footing.
     CAST(COALESCE(ltnu.ratio_numerator / ltnu.ratio_denominator, 1) AS DECIMAL(65,30)) AS labor_time_num_ratio,
     CAST(COALESCE(lrdu.ratio_numerator / lrdu.ratio_denominator, 1) AS DECIMAL(65,30)) AS labor_rate_den_ratio,
     CAST(COALESCE(ohrdu.ratio_numerator / ohrdu.ratio_denominator, 1) AS DECIMAL(65,30)) AS overhead_rate_den_ratio

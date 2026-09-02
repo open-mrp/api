@@ -223,6 +223,7 @@ var typeRegistry = map[string]any{
 	"UnitType":                        UnitType(""),
 	"CarrierCode":                     CarrierCode(""),
 	"ScanningStationType":             ScanningStationType(""),
+	"ScanningStepType":                ScanningStepType(""),
 	"ItemCategoryType":                ItemCategoryType(""),
 	"CarrierBillingType":              CarrierBillingType(""),
 	"AddressType":                     AddressType(""),

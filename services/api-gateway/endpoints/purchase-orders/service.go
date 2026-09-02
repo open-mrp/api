@@ -47,7 +47,7 @@ type purchaseOrderSvcImpl struct {
 
 var purchaseOrderEpSvcTracer = tracing.GetTracer("api-gateway.endpoints.purchase-orders.service")
 
-var purchaseOrderIncludes = []string{"supplier", "bill_to_address", "ship_to_address", "freight", "payment_term", "shipping_term", "receiving_order", "lines", "contacts"}
+var purchaseOrderIncludes = []string{"supplier", "bill_to_address", "ship_to_address", "freight", "payment_term", "shipping_term", "related", "related.receiving_order", "related.deliveries", "lines", "contacts"}
 
 // enumStrings narrows typed enum filters to the plain strings the proto layer carries.
 func enumStrings[T ~string](values []T) []string {
@@ -166,6 +166,9 @@ func (m *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, req *Cre
 		PriorityCode:          string(req.PriorityCode),
 		ShippingTermId:        req.ShippingTermID.Ptr(),
 		PaymentTermId:         req.PaymentTermID.Ptr(),
+		Lines:                 lines,
+		ContactAccountUserIds: req.ContactAccountUserIDs,
+		PromisedAt:            req.PromisedAt.Ptr(),
 		BillToName:            req.BillToName.Ptr(),
 		BillToStreetLine_1:    req.BillToStreetLine1.Ptr(),
 		BillToStreetLine_2:    req.BillToStreetLine2.Ptr(),
@@ -180,9 +183,6 @@ func (m *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, req *Cre
 		ShipToState:           req.ShipToState.Ptr(),
 		ShipToPostalCode:      req.ShipToPostalCode.Ptr(),
 		ShipToCountry:         req.ShipToCountry.Ptr(),
-		Lines:                 lines,
-		ContactAccountUserIds: req.ContactAccountUserIDs,
-		PromisedAt:            req.PromisedAt.Ptr(),
 		Includes:              resourcekit.FilterIncludes(ctx, purchaseOrderIncludes...),
 	}
 
@@ -616,11 +616,29 @@ func stashPurchaseOrderDetailMeta(ctx context.Context, info *pb.PurchaseOrderInf
 		meta.Set(constants.ObjectTypePurchaseOrder, d.ID, "shipping_term", st)
 	}
 
-	// receiving_order is a document-level cross-reference: stash only the FK id
-	// so the loader fetches the real ReceivingOrder on ?include=receiving_order.
-	// Never fabricate an inline stub.
-	if info.ReceivingOrderId != nil {
-		meta.Set(constants.ObjectTypePurchaseOrder, d.ID, "receiving_order_id", *info.ReceivingOrderId)
+	// The receiving order and deliveries are document-level cross-references, carried as records so a caller can follow them without this response embedding whole other orders.
+	related := &apiresource.PurchaseOrderRelated{Object: constants.ObjectTypePurchaseOrderRelated}
+	if info.ReceivingOrderId != nil && *info.ReceivingOrderId != "" {
+		related.ReceivingOrder = apiresource.NewRecord(*info.ReceivingOrderId, constants.RecordTypeReceivingOrder)
+	}
+	if len(info.Deliveries) > 0 {
+		records := make([]apiresource.Record, len(info.Deliveries))
+		for i, r := range info.Deliveries {
+			rec := apiresource.NewRecord(r.Id, constants.RecordTypeDelivery)
+			if r.Number != "" {
+				number := r.Number
+				rec.Number = &number
+			}
+			if r.Status != "" {
+				status := r.Status
+				rec.Status = &status
+			}
+			records[i] = *rec
+		}
+		related.Deliveries = apiresource.NewList(records, apiresource.PageInfo{})
+	}
+	if related.ReceivingOrder != nil || related.Deliveries != nil {
+		meta.Set(constants.ObjectTypePurchaseOrder, d.ID, "related", related)
 	}
 
 	lines := make([]apiresource.PurchaseOrderLine, len(info.Lines))

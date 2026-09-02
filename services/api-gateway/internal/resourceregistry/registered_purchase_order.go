@@ -21,11 +21,9 @@ func init() {
 			{Key: "payment_term", Populate: populatePaymentTermOnPO},
 			{Key: "shipping_term", Populate: populateShippingTermOnPO},
 			{
-				Key:         "receiving_order",
-				Target:      constants.ObjectTypeReceivingOrder,
-				Cardinality: resourcekit.CardinalityOnePtr,
-				ExtractIDs:  extractReceivingOrderIDFromPO,
-				Populate:    populateReceivingOrderOnPO,
+				// Carried inline: the order already knows its receiving order's id, and a record reference is all a caller needs to follow it.
+				Key:      "related",
+				Populate: populateRelatedOnPO,
 			},
 			{Key: "lines", Populate: populateLinesOnPO},
 			{Key: "contacts", Populate: populateContactsOnPO},
@@ -87,24 +85,13 @@ func populateShippingTermOnPO(ctx context.Context, parent any, _ map[string]any)
 	po.ShippingTerm = v.(*apiresource.ShippingTerm)
 }
 
-func extractReceivingOrderIDFromPO(ctx context.Context, parent any) []string {
+func populateRelatedOnPO(ctx context.Context, parent any, _ map[string]any) {
 	po := parent.(*apiresource.PurchaseOrder)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypePurchaseOrder, po.ID, "receiving_order_id")
-	if id == "" {
-		return nil
-	}
-	return []string{id}
-}
-
-func populateReceivingOrderOnPO(ctx context.Context, parent any, loaded map[string]any) {
-	po := parent.(*apiresource.PurchaseOrder)
-	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypePurchaseOrder, po.ID, "receiving_order_id")
-	if id == "" {
+	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypePurchaseOrder, po.ID, "related")
+	if !ok {
 		return
 	}
-	if v, ok := loaded[id]; ok {
-		po.ReceivingOrder = v.(*apiresource.ReceivingOrder)
-	}
+	po.Related = v.(*apiresource.PurchaseOrderRelated)
 }
 
 func populateLinesOnPO(ctx context.Context, parent any, _ map[string]any) {

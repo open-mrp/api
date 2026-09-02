@@ -138,19 +138,19 @@ func (m *burnRateMedImpl) RecalculateFromHistory(ctx context.Context, accountID,
 	return nil
 }
 
-// MaybeRecalculateAfterConsumption enqueues a burn-rate recalculation when a consumption change log was recorded. The recompute runs off the caller's transaction via the outbox, so the shared rate row's lock is not held for the length of that transaction. Errors are traced but do not fail the caller's primary operation.
+// MaybeRecalculateAfterConsumption enqueues a burn-rate recalculation when a consumption change log was recorded. The recompute runs off the caller's transaction via the outbox, so the shared rate row's lock is not held for the length of that transaction.
 func MaybeRecalculateAfterConsumption(
 	ctx context.Context,
 	repos domain.RepoFactory,
 	accountID, itemID string,
 	delta decimal.Decimal,
 	actionType string,
-) {
+) *apierror.APIError {
 	if delta.GreaterThanOrEqual(decimal.Zero) {
-		return
+		return nil
 	}
 	if actionType != "scan" && actionType != "user_correction" {
-		return
+		return nil
 	}
 	ctx, span := burnRateMedTracer.Start(ctx, "mediator.burn_rate.maybe_recalculate_after_consumption")
 	defer span.End()
@@ -159,8 +159,9 @@ func MaybeRecalculateAfterConsumption(
 		attribute.String("item.id", itemID),
 	)
 	if apiErr := enqueueBurnRateRecalc(ctx, repos.NewOutboxRepo(), accountID, itemID); apiErr != nil {
-		tracing.Trace(span, apiErr)
+		return tracing.Trace(span, apiErr)
 	}
+	return nil
 }
 
 // enqueueBurnRateRecalc writes an outbox command to recompute the item's burn rate off the current transaction.

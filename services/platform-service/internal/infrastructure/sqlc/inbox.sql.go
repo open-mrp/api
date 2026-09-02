@@ -12,8 +12,47 @@ import (
 	"time"
 )
 
+const claimInboxRecord = `-- name: ClaimInboxRecord :execrows
+UPDATE message_inbox
+SET lock_owner = ?,
+    lock_expires_at = DATE_ADD(NOW(3), INTERVAL ? SECOND)
+WHERE id = ?
+  AND status = 'received'
+  AND (lock_expires_at IS NULL OR lock_expires_at <= NOW(3))
+`
+
+type ClaimInboxRecordParams struct {
+	LockOwner           sql.NullString
+	LockDurationSeconds interface{}
+	ID                  int64
+}
+
+// Conditional on the lease still being free, so two consumers racing the same abandoned record cannot both proceed to the handler.
+func (q *Queries) ClaimInboxRecord(ctx context.Context, arg ClaimInboxRecordParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, claimInboxRecord, arg.LockOwner, arg.LockDurationSeconds, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const completeInboxRecord = `-- name: CompleteInboxRecord :execrows
+UPDATE message_inbox
+SET status = 'processed', processed_at = NOW(3), lock_owner = NULL, lock_expires_at = NULL
+WHERE id = ? AND status = 'received'
+`
+
+// The status guard is what makes this safe to call inside a handler's own transaction: a second attempt's UPDATE blocks on the row lock, then matches zero rows once the winner commits, so the loser's work rolls back instead of double-applying.
+func (q *Queries) CompleteInboxRecord(ctx context.Context, id int64) (int64, error) {
+	result, err := q.db.ExecContext(ctx, completeInboxRecord, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const getInboxRecordByMessageAndHandler = `-- name: GetInboxRecordByMessageAndHandler :one
-SELECT id, message_id, service_name, handler, message_type, request_id, parent_message_id, status, attempts, last_error, received_at, processed_at
+SELECT id, message_id, service_name, handler, message_type, request_id, parent_message_id, status, attempts, last_error, received_at, processed_at, failed_at, lock_owner, lock_expires_at
 FROM message_inbox
 WHERE message_id = ? AND handler = ?
 `
@@ -36,6 +75,9 @@ type GetInboxRecordByMessageAndHandlerRow struct {
 	LastError       sql.NullString
 	ReceivedAt      time.Time
 	ProcessedAt     sql.NullTime
+	FailedAt        sql.NullTime
+	LockOwner       sql.NullString
+	LockExpiresAt   sql.NullTime
 }
 
 func (q *Queries) GetInboxRecordByMessageAndHandler(ctx context.Context, arg GetInboxRecordByMessageAndHandlerParams) (GetInboxRecordByMessageAndHandlerRow, error) {
@@ -54,16 +96,28 @@ func (q *Queries) GetInboxRecordByMessageAndHandler(ctx context.Context, arg Get
 		&i.LastError,
 		&i.ReceivedAt,
 		&i.ProcessedAt,
+		&i.FailedAt,
+		&i.LockOwner,
+		&i.LockExpiresAt,
 	)
 	return i, err
 }
 
 const listUnalertedInboxFailures = `-- name: ListUnalertedInboxFailures :many
-SELECT id, message_id, service_name, handler, message_type, attempts, last_error, received_at
-FROM message_inbox
-WHERE status = 'received'
-  AND alerted_at IS NULL
-  AND (last_error IS NOT NULL OR received_at < DATE_SUB(NOW(3), INTERVAL ? MINUTE))
+SELECT id, message_id, service_name, handler, message_type, status, attempts, last_error, received_at
+FROM (
+    SELECT id, message_id, service_name, handler, message_type, status, attempts, last_error, received_at
+    FROM message_inbox
+    WHERE status = 'received'
+      AND alerted_at IS NULL
+      AND (lock_expires_at IS NULL OR lock_expires_at <= NOW(3))
+      AND (last_error IS NOT NULL OR received_at < DATE_SUB(NOW(3), INTERVAL ? MINUTE))
+    UNION ALL
+    SELECT id, message_id, service_name, handler, message_type, status, attempts, last_error, received_at
+    FROM message_inbox
+    WHERE status = 'discarded'
+      AND alerted_at IS NULL
+) failures
 ORDER BY id ASC
 LIMIT ?
 `
@@ -79,11 +133,14 @@ type ListUnalertedInboxFailuresRow struct {
 	ServiceName string
 	Handler     string
 	MessageType string
+	Status      string
 	Attempts    int32
 	LastError   sql.NullString
 	ReceivedAt  time.Time
 }
 
+// Two index-friendly branches rather than one OR across statuses, which would not use message_inbox_alert_scan_idx.
+// A 'received' row is only stuck if nothing holds its lease; a live lease means an attempt is legitimately still running.
 func (q *Queries) ListUnalertedInboxFailures(ctx context.Context, arg ListUnalertedInboxFailuresParams) ([]ListUnalertedInboxFailuresRow, error) {
 	rows, err := q.db.QueryContext(ctx, listUnalertedInboxFailures, arg.CrashStuckMinutes, arg.Limit)
 	if err != nil {
@@ -99,6 +156,7 @@ func (q *Queries) ListUnalertedInboxFailures(ctx context.Context, arg ListUnaler
 			&i.ServiceName,
 			&i.Handler,
 			&i.MessageType,
+			&i.Status,
 			&i.Attempts,
 			&i.LastError,
 			&i.ReceivedAt,
@@ -116,9 +174,35 @@ func (q *Queries) ListUnalertedInboxFailures(ctx context.Context, arg ListUnaler
 	return items, nil
 }
 
+const markInboxRecordDiscarded = `-- name: MarkInboxRecordDiscarded :exec
+UPDATE message_inbox
+SET status = 'discarded',
+    last_error = ?,
+    failed_at = NOW(3),
+    processed_at = NOW(3),
+    lock_owner = NULL,
+    lock_expires_at = NULL
+WHERE id = ?
+`
+
+type MarkInboxRecordDiscardedParams struct {
+	LastError sql.NullString
+	ID        int64
+}
+
+// processed_at is stamped so the existing retention purge and its index cover discarded rows too; status is what distinguishes work that was dropped from work that was applied.
+func (q *Queries) MarkInboxRecordDiscarded(ctx context.Context, arg MarkInboxRecordDiscardedParams) error {
+	_, err := q.db.ExecContext(ctx, markInboxRecordDiscarded, arg.LastError, arg.ID)
+	return err
+}
+
 const markInboxRecordFailed = `-- name: MarkInboxRecordFailed :exec
 UPDATE message_inbox
-SET attempts = attempts + 1, last_error = ?
+SET attempts = attempts + 1,
+    last_error = ?,
+    failed_at = NOW(3),
+    lock_owner = NULL,
+    lock_expires_at = NULL
 WHERE id = ?
 `
 
@@ -129,17 +213,6 @@ type MarkInboxRecordFailedParams struct {
 
 func (q *Queries) MarkInboxRecordFailed(ctx context.Context, arg MarkInboxRecordFailedParams) error {
 	_, err := q.db.ExecContext(ctx, markInboxRecordFailed, arg.LastError, arg.ID)
-	return err
-}
-
-const markInboxRecordProcessed = `-- name: MarkInboxRecordProcessed :exec
-UPDATE message_inbox
-SET status = 'processed', processed_at = NOW(3)
-WHERE id = ?
-`
-
-func (q *Queries) MarkInboxRecordProcessed(ctx context.Context, id int64) error {
-	_, err := q.db.ExecContext(ctx, markInboxRecordProcessed, id)
 	return err
 }
 
@@ -166,7 +239,7 @@ func (q *Queries) MarkInboxRecordsAlerted(ctx context.Context, ids []int64) erro
 
 const purgeProcessedInboxMessages = `-- name: PurgeProcessedInboxMessages :execresult
 DELETE FROM message_inbox
-WHERE status = 'processed' AND processed_at < DATE_SUB(NOW(3), INTERVAL ? HOUR)
+WHERE status IN ('processed', 'discarded') AND processed_at < DATE_SUB(NOW(3), INTERVAL ? HOUR)
 LIMIT ?
 `
 
@@ -180,17 +253,28 @@ func (q *Queries) PurgeProcessedInboxMessages(ctx context.Context, arg PurgeProc
 }
 
 const tryInsertInboxRecord = `-- name: TryInsertInboxRecord :execresult
-INSERT INTO message_inbox (message_id, service_name, handler, message_type, request_id, parent_message_id)
-VALUES (?, ?, ?, ?, ?, ?)
+INSERT INTO message_inbox (message_id, service_name, handler, message_type, request_id, parent_message_id, lock_owner, lock_expires_at)
+VALUES (
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    DATE_ADD(NOW(3), INTERVAL ? SECOND)
+)
 `
 
 type TryInsertInboxRecordParams struct {
-	MessageID       string
-	ServiceName     string
-	Handler         string
-	MessageType     string
-	RequestID       sql.NullString
-	ParentMessageID sql.NullString
+	MessageID           string
+	ServiceName         string
+	Handler             string
+	MessageType         string
+	RequestID           sql.NullString
+	ParentMessageID     sql.NullString
+	LockOwner           sql.NullString
+	LockDurationSeconds interface{}
 }
 
 func (q *Queries) TryInsertInboxRecord(ctx context.Context, arg TryInsertInboxRecordParams) (sql.Result, error) {
@@ -201,5 +285,7 @@ func (q *Queries) TryInsertInboxRecord(ctx context.Context, arg TryInsertInboxRe
 		arg.MessageType,
 		arg.RequestID,
 		arg.ParentMessageID,
+		arg.LockOwner,
+		arg.LockDurationSeconds,
 	)
 }

@@ -103,7 +103,7 @@ type SolverOutput struct {
 
 // Diagnostics is the honest account of what the solver could not do and why the plan differs from raw history. A plan that cannot explain itself will not be trusted.
 type Diagnostics struct {
-	LevellingDiagnostics
+	LevelingDiagnostics
 	AppliedOverrides []AppliedOverride `json:"applied_overrides"`
 	// ChangeoverSlopeMinutes is the calibrated minutes per additional input.
 	ChangeoverSlopeMinutes float64 `json:"changeover_slope_minutes"`
@@ -131,7 +131,7 @@ type Diagnostics struct {
 	Finishing FinishingDiagnostics `json:"finishing"`
 	// FinishingMachineCount is how many machines the second stage was sized from. Zero means its capacity was estimated from the shift pattern alone.
 	FinishingMachineCount int `json:"finishing_machine_count"`
-	// FinishingCapacityIsEstimated says the plant has no machines outside the constraint department, so stage two was sized as a single notional resource rather than counted. A levelled plan against a guessed capacity is worth flagging as such.
+	// FinishingCapacityIsEstimated says the plant has no machines outside the constraint department, so stage two was sized as a single notional resource rather than counted. A leveled plan against a guessed capacity is worth flagging as such.
 	FinishingCapacityIsEstimated bool `json:"finishing_capacity_is_estimated"`
 }
 
@@ -204,14 +204,14 @@ func Solve(in SolverInput) SolverOutput {
 	}
 
 	policies := make([]ItemPolicy, 0, len(measurements))
-	levellingItems := make([]LevellingItem, 0, len(measurements))
+	levelingItems := make([]LevelingItem, 0, len(measurements))
 
 	for _, m := range measurements {
 		if in.ExcludedItemIDs[m.ItemID] {
 			out.Diagnostics.ExcludedItemCount++
 			continue
 		}
-		// Without a run rate there is no way to know how much machine time a campaign consumes, so the item cannot be levelled. Report it rather than plan a campaign of unknown duration.
+		// Without a run rate there is no way to know how much machine time a campaign consumes, so the item cannot be leveled. Report it rather than plan a campaign of unknown duration.
 		if m.SecondsPerUnit <= 0 {
 			out.Diagnostics.ItemsWithoutRunRate = append(out.Diagnostics.ItemsWithoutRunRate, m.SKU)
 			continue
@@ -269,7 +269,7 @@ func Solve(in SolverInput) SolverOutput {
 
 		policy.UnitID = lotUnitID
 		policies = append(policies, policy)
-		levellingItems = append(levellingItems, LevellingItem{
+		levelingItems = append(levelingItems, LevelingItem{
 			Policy:            policy,
 			EligibleMachineID: m.EligibleMachineID,
 			LotUnits:          lotUnits,
@@ -280,22 +280,22 @@ func Solve(in SolverInput) SolverOutput {
 
 	sort.Strings(out.Diagnostics.ItemsWithoutRunRate)
 
-	// ClassifyABC sorts by run hours, so classify a copy and map the classes back onto the levelling items rather than letting the reorder leak into the plan input.
+	// ClassifyABC sorts by run hours, so classify a copy and map the classes back onto the leveling items rather than letting the reorder leak into the plan input.
 	classified := ClassifyABC(policies)
 	classByItem := make(map[string]string, len(classified))
 	for _, p := range classified {
 		classByItem[p.ItemID] = p.ABCClass
 	}
-	for i := range levellingItems {
-		levellingItems[i].Policy.ABCClass = classByItem[levellingItems[i].Policy.ItemID]
+	for i := range levelingItems {
+		levelingItems[i].Policy.ABCClass = classByItem[levelingItems[i].Policy.ItemID]
 	}
 	out.Policies = classified
 
-	levelled := Level(levellingItems, in.Machines, in.Settings, in.PinnedCampaigns)
-	out.Campaigns = levelled.Campaigns
-	out.ProjectedOnHand = levelled.ProjectedOnHand
-	out.ProjectedGreigeOnHand = levelled.ProjectedGreigeOnHand
-	out.Diagnostics.LevellingDiagnostics = levelled.Diagnostics
+	leveled := Level(levelingItems, in.Machines, in.Settings, in.PinnedCampaigns)
+	out.Campaigns = leveled.Campaigns
+	out.ProjectedOnHand = leveled.ProjectedOnHand
+	out.ProjectedGreigeOnHand = leveled.ProjectedGreigeOnHand
+	out.Diagnostics.LevelingDiagnostics = leveled.Diagnostics
 
 	skuByItem := make(map[string]string, len(measurements))
 	for _, m := range measurements {
@@ -303,7 +303,7 @@ func Solve(in SolverInput) SolverOutput {
 	}
 
 	// Which campaign serves which order, and what nothing serves. The at-risk report is read off the same walk rather than derived separately: two calculations of "is this order covered" would eventually disagree, and the one on the plan grid is the one a planner would believe.
-	allocation := AllocateCampaignsToOrders(levelled.Campaigns, firm, in.OnHandByItem)
+	allocation := AllocateCampaignsToOrders(leveled.Campaigns, firm, in.OnHandByItem)
 	out.Allocations = allocation.Allocations
 	out.Diagnostics.AtRiskOrders = findAtRiskOrders(firm, allocation, skuByItem)
 
@@ -336,7 +336,7 @@ func buildFinishingInput(in SolverInput, out SolverOutput) FinishingInput {
 	capacityPerMachine := in.Settings.MachineWeeklyCapacityHours()
 	capacity := float64(len(in.FinishingMachines)) * capacityPerMachine
 	if len(in.FinishingMachines) == 0 {
-		// A plant with no machines outside the constraint still has a second stage — it just has not been modelled machine by machine. Sizing it as one notional resource keeps the plan usable, and the diagnostic says the number was estimated rather than counted.
+		// A plant with no machines outside the constraint still has a second stage — it just has not been modeled machine by machine. Sizing it as one notional resource keeps the plan usable, and the diagnostic says the number was estimated rather than counted.
 		capacity = capacityPerMachine
 	}
 
@@ -374,7 +374,7 @@ func buildFinishingInput(in SolverInput, out SolverOutput) FinishingInput {
 		rates[m.ItemID] = m.SecondsPerUnit
 	}
 
-	// The order book at the SKU it was placed for. Stage one pools these onto the greige to decide how much to knit; stage two needs them un-pooled, because which colourway was ordered is exactly what it has to decide.
+	// The order book at the SKU it was placed for. Stage one pools these onto the greige to decide how much to knit; stage two needs them un-pooled, because which colorway was ordered is exactly what it has to decide.
 	firmByFinishedItem := firmDemandByFinishedItem(in)
 
 	for _, policy := range out.FinishedPolicies {

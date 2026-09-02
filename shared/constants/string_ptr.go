@@ -27,6 +27,8 @@ func (s *ScanningStationType) StringPtr() *string {
 	return stringPtrEnum(s)
 }
 
+func (s *ScanningStepType) StringPtr() *string { return stringPtrEnum(s) }
+
 func (m *AdjustmentType) StringPtr() *string { return stringPtrEnum(m) }
 func (m *DashboardPath) StringPtr() *string  { return stringPtrEnum(m) }
 func (m *AgentTriggerType) StringPtr() *string {

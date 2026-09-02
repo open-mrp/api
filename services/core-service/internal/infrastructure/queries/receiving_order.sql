@@ -46,11 +46,7 @@ SELECT
     a.id AS supplier_id,
     a.name AS supplier_name,
     ar.external_number AS supplier_number,
-    COUNT(rol.id) AS line_count,
-    CASE
-        WHEN COUNT(rol.id) = 0 THEN 0
-        ELSE ROUND(COUNT(CASE WHEN rol.stocked_at IS NOT NULL THEN 1 END) * 100.0 / COUNT(rol.id), 2)
-    END AS completion_percentage
+    COUNT(rol.id) AS line_count
 FROM receiving_order ro
 JOIN sales_order so ON ro.order_id = so.id
 LEFT JOIN account_relation ar ON so.seller_account_id = ar.counterparty_account_id AND ar.owner_account_id = ro.account_id
@@ -109,11 +105,7 @@ SELECT
     a.id AS supplier_id,
     a.name AS supplier_name,
     ar.external_number AS supplier_number,
-    COUNT(rol.id) AS line_count,
-    CASE
-        WHEN COUNT(rol.id) = 0 THEN 0
-        ELSE ROUND(COUNT(CASE WHEN rol.stocked_at IS NOT NULL THEN 1 END) * 100.0 / COUNT(rol.id), 2)
-    END AS completion_percentage
+    COUNT(rol.id) AS line_count
 FROM receiving_order ro
 JOIN sales_order so ON ro.order_id = so.id
 LEFT JOIN account_relation ar ON so.seller_account_id = ar.counterparty_account_id AND ar.owner_account_id = ro.account_id
@@ -192,6 +184,7 @@ SELECT
     sol.id AS order_line_id,
     sol.item_id AS order_line_item_id,
     sol.product_id AS order_line_product_id,
+    sol.line_item_number AS order_line_item_number,
     i.sku AS order_line_item_sku,
     i.description AS order_line_item_description,
     oq.value AS order_line_quantity_ordered,
@@ -301,6 +294,7 @@ SELECT
     sol.id AS order_line_id,
     sol.item_id AS order_line_item_id,
     sol.product_id AS order_line_product_id,
+    sol.line_item_number AS order_line_item_number,
     i.sku AS order_line_item_sku,
     i.description AS order_line_item_description,
     oq.value AS order_line_quantity_ordered,
@@ -450,3 +444,41 @@ SET sales_order_status_code = 'fulfilled',
 WHERE id = sqlc.arg('id')
 AND buyer_account_id = sqlc.arg('account_id')
 AND sales_order_type_code = 'purchase_order';
+
+-- GetReceivingOrderTotals aggregates a page of receiving orders in one pass: what their lines were ordered for, what has been stocked, and what was refused.
+--
+-- Batched over a slice of order ids rather than run per order, because the list endpoint needs this for every row (see docs/patterns/performant-list-endpoint-patterns.md).
+--
+-- Amounts multiply the purchase order line's agreed unit price by a quantity, so they are comparable across lines whatever units those lines count in. Completion is left to the caller, which divides the stage quantity by the ordered quantity — a ratio, so it survives lines counted in different units the same way the sales-order totals do.
+-- name: GetReceivingOrderTotals :many
+SELECT
+    rol.receiving_order_id,
+    CAST(COALESCE(SUM(CAST(oq.value AS DECIMAL(30,10)) * CAST(r.value AS DECIMAL(30,10))), 0) AS CHAR) AS ordered_amount,
+    CAST(COALESCE(SUM(CAST(oq.value AS DECIMAL(30,10))), 0) AS CHAR) AS ordered_quantity,
+    CAST(COALESCE(SUM(CASE WHEN rol.stocked_at IS NOT NULL THEN CAST(q.value AS DECIMAL(30,10)) * CAST(r.value AS DECIMAL(30,10)) END), 0) AS CHAR) AS stocked_amount,
+    CAST(COALESCE(SUM(CASE WHEN rol.stocked_at IS NOT NULL THEN CAST(q.value AS DECIMAL(30,10)) END), 0) AS CHAR) AS stocked_quantity,
+    CAST(COALESCE(SUM(COALESCE(rej.value, 0) * CAST(r.value AS DECIMAL(30,10))), 0) AS CHAR) AS rejected_amount,
+    CAST(COALESCE(SUM(COALESCE(rej.value, 0)), 0) AS CHAR) AS rejected_quantity
+FROM receiving_order_line rol
+JOIN sales_order_line sol ON rol.sales_order_line_id = sol.id
+JOIN rate r ON sol.unit_price_id = r.id
+JOIN quantity oq ON sol.quantity_id = oq.id
+JOIN quantity q ON rol.quantity_id = q.id
+LEFT JOIN (
+    SELECT dl.receiving_order_line_id, SUM(CAST(rq.value AS DECIMAL(30,10))) AS value
+    FROM delivery_line dl
+    JOIN quantity rq ON dl.quantity_id = rq.id
+    WHERE dl.rejected_at IS NOT NULL
+    GROUP BY dl.receiving_order_line_id
+) rej ON rej.receiving_order_line_id = rol.id
+WHERE rol.receiving_order_id IN (sqlc.slice('receiving_order_ids'))
+GROUP BY rol.receiving_order_id;
+
+-- ListDeliveryRefsForOrders names the deliveries booked against each of the given purchase orders, oldest first.
+--
+-- Keyed on the purchase order rather than the receiving order because that is the column deliveries carry; a receiving order reaches its own deliveries through the order it was created for, which it is one-to-one with. Batched over a slice so a page of orders costs one query.
+-- name: ListDeliveryRefsForOrders :many
+SELECT d.sales_order_id AS order_id, d.id, d.number, d.delivery_status_code AS status
+FROM delivery d
+WHERE d.sales_order_id IN (sqlc.slice('order_ids'))
+ORDER BY d.created_at ASC, d.id ASC;

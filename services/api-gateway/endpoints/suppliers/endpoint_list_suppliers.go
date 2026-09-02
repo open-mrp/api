@@ -25,15 +25,15 @@ type ListSuppliersRequest struct {
 	EndDate *time.Time `query:"ends_at"`
 }
 
-// TODO: stop returning SupplierSummary; return the full Supplier apiresource and use proper includes values to control expansion.
+// TODO: stop returning Supplier; return the full Supplier apiresource and use proper includes values to control expansion.
 
 // Returns a paginated list of suppliers for the current account, newest first.
 //
 // Filters combine with AND, so an item filter and a date range narrow the list together. The `q` search term matches the supplier name and number.
 type ListSuppliersEndpoint struct{}
 
-func (e *ListSuppliersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSuppliersRequest, *apiresource.List[apiresource.SupplierSummary]] {
-	return (&apiendpoint.APIEndpoint[*ListSuppliersRequest, *apiresource.List[apiresource.SupplierSummary]]{
+func (e *ListSuppliersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSuppliersRequest, *apiresource.List[apiresource.Supplier]] {
+	return (&apiendpoint.APIEndpoint[*ListSuppliersRequest, *apiresource.List[apiresource.Supplier]]{
 		Title:             "List Suppliers",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
@@ -44,7 +44,7 @@ func (e *ListSuppliersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSupp
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainSuppliers, Action: types.ActionRead},
 		},
-		ServiceHandler: func(svc any) func(ctx context.Context, req *ListSuppliersRequest) (*apiresource.List[apiresource.SupplierSummary], *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *ListSuppliersRequest) (*apiresource.List[apiresource.Supplier], *apierror.APIError) {
 			return svc.(SupplierSvc).ListSuppliers
 		},
 	})

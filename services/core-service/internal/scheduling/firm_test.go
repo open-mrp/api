@@ -201,10 +201,10 @@ func TestBuildFirmSchedule_Deterministic(t *testing.T) {
 }
 
 // Forecast consumption: an order inside the forecast is served BY it, not added to it.
-func TestLevellingItem_DemandForWeek_TakesTheGreaterOfForecastAndOrders(t *testing.T) {
+func TestLevelingItem_DemandForWeek_TakesTheGreaterOfForecastAndOrders(t *testing.T) {
 	t.Parallel()
 
-	item := LevellingItem{
+	item := LevelingItem{
 		Policy:     ItemPolicy{WeeklyDemand: 100},
 		FirmByWeek: []float64{0, 50, 100, 250},
 	}
@@ -228,10 +228,10 @@ func TestLevellingItem_DemandForWeek_TakesTheGreaterOfForecastAndOrders(t *testi
 }
 
 // The guarantee the whole phase rests on: with no order book, every item consumes exactly its forecast, which is what the plan did before firm demand existed.
-func TestLevellingItem_DemandForWeek_NoOrderBookIsTheForecast(t *testing.T) {
+func TestLevelingItem_DemandForWeek_NoOrderBookIsTheForecast(t *testing.T) {
 	t.Parallel()
 
-	item := LevellingItem{Policy: ItemPolicy{WeeklyDemand: 137.5}}
+	item := LevelingItem{Policy: ItemPolicy{WeeklyDemand: 137.5}}
 	for week := range 13 {
 		if got := item.demandForWeek(week); got != 137.5 {
 			t.Fatalf("week %d = %v, want the plain forecast 137.5", week, got)

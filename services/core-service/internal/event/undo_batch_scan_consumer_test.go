@@ -12,7 +12,6 @@ import (
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/services/core-service/internal/ledgerlock"
-	"github.com/open-mrp/api/services/core-service/internal/mediator"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/tracing"
@@ -69,8 +68,7 @@ func (s *UndoBatchScanConsumerTestSuite) SetupTest() {
 	s.materialRepo = repositorymock.NewMockMaterialDemandRepo(s.ctrl)
 	s.inventoryQuery = repositorymock.NewMockInventoryQueryRepo(s.ctrl)
 
-	// The audit trail is written best-effort behind the reversal; these keep it from failing the
-	// test without making it the subject of one.
+	// The reversal writes an audit trail; these keep it from failing the test without making it the subject of one.
 	itemRepo := repositorymock.NewMockItemRepo(s.ctrl)
 	itemRepo.EXPECT().Get(gomock.Any(), gomock.Any()).
 		Return(nil, apierror.NewResourceNotFoundError("item")).AnyTimes()
@@ -131,7 +129,7 @@ func (s *UndoBatchScanConsumerTestSuite) TestRequestsAllocationForEveryItemTheRe
 	})
 
 	s.Require().NoError(err)
-	s.Equal(mediator.SortedUniqueIDs([]string{undoTestProductID, undoTestMaterial}), s.requested)
+	s.Equal(ledgerlock.SortedUnique([]string{undoTestProductID, undoTestMaterial}), s.requested)
 }
 
 func (s *UndoBatchScanConsumerTestSuite) TestRefusalIsReportedRatherThanSwallowed() {

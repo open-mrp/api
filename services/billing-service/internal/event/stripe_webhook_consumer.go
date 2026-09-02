@@ -183,8 +183,9 @@ func (c *StripeWebhookConsumer) handleStripeWebhook(ctx context.Context, msg amq
 	case "v2.billing.cadence.canceled":
 		handlerErr = c.handleCadenceCanceled(ctx, event.ID, objectData)
 	default:
+		// Stripe sends more than this service subscribes to. The type will not become handled on a retry, so the message ends terminally rather than being recorded as one that was acted on.
 		log.Printf("[stripe_webhook] Unhandled event type %s (event=%s)", event.Type, event.ID)
-		return nil
+		return c.inboxConsumer.Discard(ctx, "unhandled Stripe event type "+string(event.Type))
 	}
 
 	if handlerErr != nil {

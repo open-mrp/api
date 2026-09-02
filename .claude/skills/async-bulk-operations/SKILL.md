@@ -55,7 +55,7 @@ deciding, on `APIError.IsTransient` (`apierror.IsTransientError` — server-side
 `failed` is deliberately **non-terminal** (`Job.IsTerminal()` = completed/cancelled
 only) so a DLQ replay or crash-recovery retry can re-drive the job; a retry that
 succeeds lands `completed_at` beside the older `failed_at`, and `Job.Status()` resolves
-that pair in favour of the completion. **The `UpdateJob` guard must agree**: it guards
+that pair in favor of the completion. **The `UpdateJob` guard must agree**: it guards
 on `completed_at`/`cancelled_at` and deliberately *not* `failed_at`, because guarding on
 failure would freeze the row against the very retry the design promises. Nothing in the
 type system couples the SQL to `IsTerminal`, so

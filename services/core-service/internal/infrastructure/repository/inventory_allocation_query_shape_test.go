@@ -42,7 +42,7 @@ func TestAllocationClaimingQueries_AreLockingReadsWithoutUnitJoins(t *testing.T)
 // The verification reads must lock BOTH tables they touch, and after the vtgate fix that is a
 // property of two things together rather than one clause.
 //
-// They exist to see allocations committed by writers this transaction never serialised against, which
+// They exist to see allocations committed by writers this transaction never serialized against, which
 // only a current read can do. A locking read is current for the tables it locks and snapshot-bound for
 // everything else, so if `quantity` were reachable any other way — a subquery, a lateral, a second
 // statement — an allocation committed after this transaction's view opened would be found in `ia`,
@@ -164,7 +164,7 @@ var (
 // It used to run to the NEXT `-- name:` line, which swept in the prose comment block above the
 // following query — so every assertion here was really made against two queries' worth of text. That
 // is silent in both directions: a stray "FOR UPDATE" in a neighbouring comment fails a test that
-// should pass, and a query that LOSES its FOR UPDATE keeps passing while a neighbour's comment
+// should pass, and a query that LOSES its FOR UPDATE keeps passing while a neighbor's comment
 // happens to mention one. These comment blocks discuss each other's locking constantly, so it was a
 // matter of time.
 func queryBody(t *testing.T, file, name string) string {

@@ -27,21 +27,22 @@ const (
 
 // ReceivingOrderSummaryInfo represents a receiving order in list views.
 type ReceivingOrderSummaryInfo struct {
-	state                protoimpl.MessageState `protogen:"open.v1"`
-	Id                   string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Number               string                 `protobuf:"bytes,2,opt,name=number,proto3" json:"number,omitempty"`
-	PurchaseOrderId      string                 `protobuf:"bytes,3,opt,name=purchase_order_id,json=purchaseOrderId,proto3" json:"purchase_order_id,omitempty"`
-	PurchaseOrderNumber  string                 `protobuf:"bytes,4,opt,name=purchase_order_number,json=purchaseOrderNumber,proto3" json:"purchase_order_number,omitempty"`
-	SupplierId           *string                `protobuf:"bytes,5,opt,name=supplier_id,json=supplierId,proto3,oneof" json:"supplier_id,omitempty"`
-	SupplierName         *string                `protobuf:"bytes,6,opt,name=supplier_name,json=supplierName,proto3,oneof" json:"supplier_name,omitempty"`
-	LineCount            int32                  `protobuf:"varint,7,opt,name=line_count,json=lineCount,proto3" json:"line_count,omitempty"`
-	CompletionPercentage float64                `protobuf:"fixed64,8,opt,name=completion_percentage,json=completionPercentage,proto3" json:"completion_percentage,omitempty"`
-	CompletedAt          *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=completed_at,json=completedAt,proto3,oneof" json:"completed_at,omitempty"`
-	CreatedAt            *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt            *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	SupplierNumber       *string                `protobuf:"bytes,12,opt,name=supplier_number,json=supplierNumber,proto3,oneof" json:"supplier_number,omitempty"`
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	Id                  string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Number              string                 `protobuf:"bytes,2,opt,name=number,proto3" json:"number,omitempty"`
+	PurchaseOrderId     string                 `protobuf:"bytes,3,opt,name=purchase_order_id,json=purchaseOrderId,proto3" json:"purchase_order_id,omitempty"`
+	PurchaseOrderNumber string                 `protobuf:"bytes,4,opt,name=purchase_order_number,json=purchaseOrderNumber,proto3" json:"purchase_order_number,omitempty"`
+	SupplierId          *string                `protobuf:"bytes,5,opt,name=supplier_id,json=supplierId,proto3,oneof" json:"supplier_id,omitempty"`
+	SupplierName        *string                `protobuf:"bytes,6,opt,name=supplier_name,json=supplierName,proto3,oneof" json:"supplier_name,omitempty"`
+	LineCount           int32                  `protobuf:"varint,7,opt,name=line_count,json=lineCount,proto3" json:"line_count,omitempty"`
+	CompletedAt         *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=completed_at,json=completedAt,proto3,oneof" json:"completed_at,omitempty"`
+	CreatedAt           *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt           *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	SupplierNumber      *string                `protobuf:"bytes,12,opt,name=supplier_number,json=supplierNumber,proto3,oneof" json:"supplier_number,omitempty"`
 	// Lines (populated only when the list request includes "lines").
 	Lines         []*ReceivingOrderLineInfo `protobuf:"bytes,13,rep,name=lines,proto3" json:"lines,omitempty"`
+	Totals        *ReceivingOrderTotalsInfo `protobuf:"bytes,14,opt,name=totals,proto3,oneof" json:"totals,omitempty"`
+	Deliveries    []*DocumentRefInfo        `protobuf:"bytes,15,rep,name=deliveries,proto3" json:"deliveries,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -125,13 +126,6 @@ func (x *ReceivingOrderSummaryInfo) GetLineCount() int32 {
 	return 0
 }
 
-func (x *ReceivingOrderSummaryInfo) GetCompletionPercentage() float64 {
-	if x != nil {
-		return x.CompletionPercentage
-	}
-	return 0
-}
-
 func (x *ReceivingOrderSummaryInfo) GetCompletedAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.CompletedAt
@@ -167,6 +161,166 @@ func (x *ReceivingOrderSummaryInfo) GetLines() []*ReceivingOrderLineInfo {
 	return nil
 }
 
+func (x *ReceivingOrderSummaryInfo) GetTotals() *ReceivingOrderTotalsInfo {
+	if x != nil {
+		return x.Totals
+	}
+	return nil
+}
+
+func (x *ReceivingOrderSummaryInfo) GetDeliveries() []*DocumentRefInfo {
+	if x != nil {
+		return x.Deliveries
+	}
+	return nil
+}
+
+// DocumentRefInfo names one purchasing document from another.
+type DocumentRefInfo struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Number        string                 `protobuf:"bytes,2,opt,name=number,proto3" json:"number,omitempty"`
+	Status        string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DocumentRefInfo) Reset() {
+	*x = DocumentRefInfo{}
+	mi := &file_core_core_receiving_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DocumentRefInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DocumentRefInfo) ProtoMessage() {}
+
+func (x *DocumentRefInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_receiving_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DocumentRefInfo.ProtoReflect.Descriptor instead.
+func (*DocumentRefInfo) Descriptor() ([]byte, []int) {
+	return file_core_core_receiving_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *DocumentRefInfo) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *DocumentRefInfo) GetNumber() string {
+	if x != nil {
+		return x.Number
+	}
+	return ""
+}
+
+func (x *DocumentRefInfo) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+// ReceivingOrderTotalsInfo aggregates a receiving order's lines: what they were ordered for, what has been stocked, and what was refused. Amounts are decimal strings; quantities travel with them so the gateway can express each stage as a fraction of what was ordered.
+type ReceivingOrderTotalsInfo struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	OrderedAmount    string                 `protobuf:"bytes,1,opt,name=ordered_amount,json=orderedAmount,proto3" json:"ordered_amount,omitempty"`
+	OrderedQuantity  string                 `protobuf:"bytes,2,opt,name=ordered_quantity,json=orderedQuantity,proto3" json:"ordered_quantity,omitempty"`
+	StockedAmount    string                 `protobuf:"bytes,3,opt,name=stocked_amount,json=stockedAmount,proto3" json:"stocked_amount,omitempty"`
+	StockedQuantity  string                 `protobuf:"bytes,4,opt,name=stocked_quantity,json=stockedQuantity,proto3" json:"stocked_quantity,omitempty"`
+	RejectedAmount   string                 `protobuf:"bytes,5,opt,name=rejected_amount,json=rejectedAmount,proto3" json:"rejected_amount,omitempty"`
+	RejectedQuantity string                 `protobuf:"bytes,6,opt,name=rejected_quantity,json=rejectedQuantity,proto3" json:"rejected_quantity,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *ReceivingOrderTotalsInfo) Reset() {
+	*x = ReceivingOrderTotalsInfo{}
+	mi := &file_core_core_receiving_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReceivingOrderTotalsInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReceivingOrderTotalsInfo) ProtoMessage() {}
+
+func (x *ReceivingOrderTotalsInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_receiving_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReceivingOrderTotalsInfo.ProtoReflect.Descriptor instead.
+func (*ReceivingOrderTotalsInfo) Descriptor() ([]byte, []int) {
+	return file_core_core_receiving_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *ReceivingOrderTotalsInfo) GetOrderedAmount() string {
+	if x != nil {
+		return x.OrderedAmount
+	}
+	return ""
+}
+
+func (x *ReceivingOrderTotalsInfo) GetOrderedQuantity() string {
+	if x != nil {
+		return x.OrderedQuantity
+	}
+	return ""
+}
+
+func (x *ReceivingOrderTotalsInfo) GetStockedAmount() string {
+	if x != nil {
+		return x.StockedAmount
+	}
+	return ""
+}
+
+func (x *ReceivingOrderTotalsInfo) GetStockedQuantity() string {
+	if x != nil {
+		return x.StockedQuantity
+	}
+	return ""
+}
+
+func (x *ReceivingOrderTotalsInfo) GetRejectedAmount() string {
+	if x != nil {
+		return x.RejectedAmount
+	}
+	return ""
+}
+
+func (x *ReceivingOrderTotalsInfo) GetRejectedQuantity() string {
+	if x != nil {
+		return x.RejectedQuantity
+	}
+	return ""
+}
+
 // ReceivingOrderInfo represents a full receiving order with lines.
 type ReceivingOrderInfo struct {
 	state               protoimpl.MessageState    `protogen:"open.v1"`
@@ -178,6 +332,8 @@ type ReceivingOrderInfo struct {
 	SupplierName        *string                   `protobuf:"bytes,6,opt,name=supplier_name,json=supplierName,proto3,oneof" json:"supplier_name,omitempty"`
 	Note                *string                   `protobuf:"bytes,7,opt,name=note,proto3,oneof" json:"note,omitempty"`
 	Lines               []*ReceivingOrderLineInfo `protobuf:"bytes,8,rep,name=lines,proto3" json:"lines,omitempty"`
+	Totals              *ReceivingOrderTotalsInfo `protobuf:"bytes,13,opt,name=totals,proto3,oneof" json:"totals,omitempty"`
+	Deliveries          []*DocumentRefInfo        `protobuf:"bytes,18,rep,name=deliveries,proto3" json:"deliveries,omitempty"`
 	CompletedAt         *timestamppb.Timestamp    `protobuf:"bytes,9,opt,name=completed_at,json=completedAt,proto3,oneof" json:"completed_at,omitempty"`
 	CreatedAt           *timestamppb.Timestamp    `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt           *timestamppb.Timestamp    `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
@@ -188,7 +344,7 @@ type ReceivingOrderInfo struct {
 
 func (x *ReceivingOrderInfo) Reset() {
 	*x = ReceivingOrderInfo{}
-	mi := &file_core_core_receiving_proto_msgTypes[1]
+	mi := &file_core_core_receiving_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -200,7 +356,7 @@ func (x *ReceivingOrderInfo) String() string {
 func (*ReceivingOrderInfo) ProtoMessage() {}
 
 func (x *ReceivingOrderInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_receiving_proto_msgTypes[1]
+	mi := &file_core_core_receiving_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -213,7 +369,7 @@ func (x *ReceivingOrderInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReceivingOrderInfo.ProtoReflect.Descriptor instead.
 func (*ReceivingOrderInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_receiving_proto_rawDescGZIP(), []int{1}
+	return file_core_core_receiving_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *ReceivingOrderInfo) GetId() string {
@@ -272,6 +428,20 @@ func (x *ReceivingOrderInfo) GetLines() []*ReceivingOrderLineInfo {
 	return nil
 }
 
+func (x *ReceivingOrderInfo) GetTotals() *ReceivingOrderTotalsInfo {
+	if x != nil {
+		return x.Totals
+	}
+	return nil
+}
+
+func (x *ReceivingOrderInfo) GetDeliveries() []*DocumentRefInfo {
+	if x != nil {
+		return x.Deliveries
+	}
+	return nil
+}
+
 func (x *ReceivingOrderInfo) GetCompletedAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.CompletedAt
@@ -322,13 +492,15 @@ type ReceivingOrderLineInfo struct {
 	// The order line's product id, so the order_line.product.item include chain
 	// resolves (the product loader fills item/product_line from this).
 	OrderLineProductId *string `protobuf:"bytes,17,opt,name=order_line_product_id,json=orderLineProductId,proto3,oneof" json:"order_line_product_id,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// The purchase order line's position, carried onto the receiving line so the client never has to fetch that line to number this one.
+	OrderLineItemNumber *int32 `protobuf:"varint,18,opt,name=order_line_item_number,json=orderLineItemNumber,proto3,oneof" json:"order_line_item_number,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *ReceivingOrderLineInfo) Reset() {
 	*x = ReceivingOrderLineInfo{}
-	mi := &file_core_core_receiving_proto_msgTypes[2]
+	mi := &file_core_core_receiving_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -340,7 +512,7 @@ func (x *ReceivingOrderLineInfo) String() string {
 func (*ReceivingOrderLineInfo) ProtoMessage() {}
 
 func (x *ReceivingOrderLineInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_receiving_proto_msgTypes[2]
+	mi := &file_core_core_receiving_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -353,7 +525,7 @@ func (x *ReceivingOrderLineInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReceivingOrderLineInfo.ProtoReflect.Descriptor instead.
 func (*ReceivingOrderLineInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_receiving_proto_rawDescGZIP(), []int{2}
+	return file_core_core_receiving_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ReceivingOrderLineInfo) GetId() string {
@@ -475,6 +647,13 @@ func (x *ReceivingOrderLineInfo) GetOrderLineProductId() string {
 	return ""
 }
 
+func (x *ReceivingOrderLineInfo) GetOrderLineItemNumber() int32 {
+	if x != nil && x.OrderLineItemNumber != nil {
+		return *x.OrderLineItemNumber
+	}
+	return 0
+}
+
 // StockingDataInfo contains stocking data for the stock action.
 type StockingDataInfo struct {
 	state         protoimpl.MessageState  `protogen:"open.v1"`
@@ -485,7 +664,7 @@ type StockingDataInfo struct {
 
 func (x *StockingDataInfo) Reset() {
 	*x = StockingDataInfo{}
-	mi := &file_core_core_receiving_proto_msgTypes[3]
+	mi := &file_core_core_receiving_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -497,7 +676,7 @@ func (x *StockingDataInfo) String() string {
 func (*StockingDataInfo) ProtoMessage() {}
 
 func (x *StockingDataInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_receiving_proto_msgTypes[3]
+	mi := &file_core_core_receiving_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -510,7 +689,7 @@ func (x *StockingDataInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StockingDataInfo.ProtoReflect.Descriptor instead.
 func (*StockingDataInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_receiving_proto_rawDescGZIP(), []int{3}
+	return file_core_core_receiving_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *StockingDataInfo) GetLineItems() []*StockingLineItemInfo {
@@ -533,7 +712,7 @@ type StockingLineItemInfo struct {
 
 func (x *StockingLineItemInfo) Reset() {
 	*x = StockingLineItemInfo{}
-	mi := &file_core_core_receiving_proto_msgTypes[4]
+	mi := &file_core_core_receiving_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -545,7 +724,7 @@ func (x *StockingLineItemInfo) String() string {
 func (*StockingLineItemInfo) ProtoMessage() {}
 
 func (x *StockingLineItemInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_receiving_proto_msgTypes[4]
+	mi := &file_core_core_receiving_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -558,7 +737,7 @@ func (x *StockingLineItemInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StockingLineItemInfo.ProtoReflect.Descriptor instead.
 func (*StockingLineItemInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_receiving_proto_rawDescGZIP(), []int{4}
+	return file_core_core_receiving_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *StockingLineItemInfo) GetReceivingOrderLineId() string {
@@ -600,7 +779,7 @@ type StorageAllocationInfo struct {
 
 func (x *StorageAllocationInfo) Reset() {
 	*x = StorageAllocationInfo{}
-	mi := &file_core_core_receiving_proto_msgTypes[5]
+	mi := &file_core_core_receiving_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -612,7 +791,7 @@ func (x *StorageAllocationInfo) String() string {
 func (*StorageAllocationInfo) ProtoMessage() {}
 
 func (x *StorageAllocationInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_receiving_proto_msgTypes[5]
+	mi := &file_core_core_receiving_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -625,7 +804,7 @@ func (x *StorageAllocationInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StorageAllocationInfo.ProtoReflect.Descriptor instead.
 func (*StorageAllocationInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_receiving_proto_rawDescGZIP(), []int{5}
+	return file_core_core_receiving_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *StorageAllocationInfo) GetLocationId() string {
@@ -660,7 +839,7 @@ type ListReceivingOrdersRequest struct {
 
 func (x *ListReceivingOrdersRequest) Reset() {
 	*x = ListReceivingOrdersRequest{}
-	mi := &file_core_core_receiving_proto_msgTypes[6]
+	mi := &file_core_core_receiving_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -672,7 +851,7 @@ func (x *ListReceivingOrdersRequest) String() string {
 func (*ListReceivingOrdersRequest) ProtoMessage() {}
 
 func (x *ListReceivingOrdersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_receiving_proto_msgTypes[6]
+	mi := &file_core_core_receiving_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -685,7 +864,7 @@ func (x *ListReceivingOrdersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListReceivingOrdersRequest.ProtoReflect.Descriptor instead.
 func (*ListReceivingOrdersRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_receiving_proto_rawDescGZIP(), []int{6}
+	return file_core_core_receiving_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ListReceivingOrdersRequest) GetCursor() string {
@@ -761,7 +940,7 @@ type ListReceivingOrdersResponse struct {
 
 func (x *ListReceivingOrdersResponse) Reset() {
 	*x = ListReceivingOrdersResponse{}
-	mi := &file_core_core_receiving_proto_msgTypes[7]
+	mi := &file_core_core_receiving_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -773,7 +952,7 @@ func (x *ListReceivingOrdersResponse) String() string {
 func (*ListReceivingOrdersResponse) ProtoMessage() {}
 
 func (x *ListReceivingOrdersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_receiving_proto_msgTypes[7]
+	mi := &file_core_core_receiving_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -786,7 +965,7 @@ func (x *ListReceivingOrdersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListReceivingOrdersResponse.ProtoReflect.Descriptor instead.
 func (*ListReceivingOrdersResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_receiving_proto_rawDescGZIP(), []int{7}
+	return file_core_core_receiving_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ListReceivingOrdersResponse) GetReceivingOrders() []*ReceivingOrderSummaryInfo {
@@ -813,7 +992,7 @@ type GetReceivingOrderRequest struct {
 
 func (x *GetReceivingOrderRequest) Reset() {
 	*x = GetReceivingOrderRequest{}
-	mi := &file_core_core_receiving_proto_msgTypes[8]
+	mi := &file_core_core_receiving_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -825,7 +1004,7 @@ func (x *GetReceivingOrderRequest) String() string {
 func (*GetReceivingOrderRequest) ProtoMessage() {}
 
 func (x *GetReceivingOrderRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_receiving_proto_msgTypes[8]
+	mi := &file_core_core_receiving_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -838,7 +1017,7 @@ func (x *GetReceivingOrderRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetReceivingOrderRequest.ProtoReflect.Descriptor instead.
 func (*GetReceivingOrderRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_receiving_proto_rawDescGZIP(), []int{8}
+	return file_core_core_receiving_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *GetReceivingOrderRequest) GetId() string {
@@ -857,7 +1036,7 @@ type GetReceivingOrderResponse struct {
 
 func (x *GetReceivingOrderResponse) Reset() {
 	*x = GetReceivingOrderResponse{}
-	mi := &file_core_core_receiving_proto_msgTypes[9]
+	mi := &file_core_core_receiving_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -869,7 +1048,7 @@ func (x *GetReceivingOrderResponse) String() string {
 func (*GetReceivingOrderResponse) ProtoMessage() {}
 
 func (x *GetReceivingOrderResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_receiving_proto_msgTypes[9]
+	mi := &file_core_core_receiving_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -882,7 +1061,7 @@ func (x *GetReceivingOrderResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetReceivingOrderResponse.ProtoReflect.Descriptor instead.
 func (*GetReceivingOrderResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_receiving_proto_rawDescGZIP(), []int{9}
+	return file_core_core_receiving_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *GetReceivingOrderResponse) GetReceivingOrder() *ReceivingOrderInfo {
@@ -903,7 +1082,7 @@ type StockReceivingOrderRequest struct {
 
 func (x *StockReceivingOrderRequest) Reset() {
 	*x = StockReceivingOrderRequest{}
-	mi := &file_core_core_receiving_proto_msgTypes[10]
+	mi := &file_core_core_receiving_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -915,7 +1094,7 @@ func (x *StockReceivingOrderRequest) String() string {
 func (*StockReceivingOrderRequest) ProtoMessage() {}
 
 func (x *StockReceivingOrderRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_receiving_proto_msgTypes[10]
+	mi := &file_core_core_receiving_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -928,7 +1107,7 @@ func (x *StockReceivingOrderRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StockReceivingOrderRequest.ProtoReflect.Descriptor instead.
 func (*StockReceivingOrderRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_receiving_proto_rawDescGZIP(), []int{10}
+	return file_core_core_receiving_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *StockReceivingOrderRequest) GetId() string {
@@ -954,7 +1133,7 @@ type StockReceivingOrderResponse struct {
 
 func (x *StockReceivingOrderResponse) Reset() {
 	*x = StockReceivingOrderResponse{}
-	mi := &file_core_core_receiving_proto_msgTypes[11]
+	mi := &file_core_core_receiving_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -966,7 +1145,7 @@ func (x *StockReceivingOrderResponse) String() string {
 func (*StockReceivingOrderResponse) ProtoMessage() {}
 
 func (x *StockReceivingOrderResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_receiving_proto_msgTypes[11]
+	mi := &file_core_core_receiving_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -979,7 +1158,7 @@ func (x *StockReceivingOrderResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StockReceivingOrderResponse.ProtoReflect.Descriptor instead.
 func (*StockReceivingOrderResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_receiving_proto_rawDescGZIP(), []int{11}
+	return file_core_core_receiving_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *StockReceivingOrderResponse) GetReceivingOrder() *ReceivingOrderInfo {
@@ -999,7 +1178,7 @@ type ReceiveReceivingOrderRequest struct {
 
 func (x *ReceiveReceivingOrderRequest) Reset() {
 	*x = ReceiveReceivingOrderRequest{}
-	mi := &file_core_core_receiving_proto_msgTypes[12]
+	mi := &file_core_core_receiving_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1011,7 +1190,7 @@ func (x *ReceiveReceivingOrderRequest) String() string {
 func (*ReceiveReceivingOrderRequest) ProtoMessage() {}
 
 func (x *ReceiveReceivingOrderRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_receiving_proto_msgTypes[12]
+	mi := &file_core_core_receiving_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1024,7 +1203,7 @@ func (x *ReceiveReceivingOrderRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReceiveReceivingOrderRequest.ProtoReflect.Descriptor instead.
 func (*ReceiveReceivingOrderRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_receiving_proto_rawDescGZIP(), []int{12}
+	return file_core_core_receiving_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *ReceiveReceivingOrderRequest) GetId() string {
@@ -1043,7 +1222,7 @@ type ReceiveReceivingOrderResponse struct {
 
 func (x *ReceiveReceivingOrderResponse) Reset() {
 	*x = ReceiveReceivingOrderResponse{}
-	mi := &file_core_core_receiving_proto_msgTypes[13]
+	mi := &file_core_core_receiving_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1055,7 +1234,7 @@ func (x *ReceiveReceivingOrderResponse) String() string {
 func (*ReceiveReceivingOrderResponse) ProtoMessage() {}
 
 func (x *ReceiveReceivingOrderResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_receiving_proto_msgTypes[13]
+	mi := &file_core_core_receiving_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1068,7 +1247,7 @@ func (x *ReceiveReceivingOrderResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReceiveReceivingOrderResponse.ProtoReflect.Descriptor instead.
 func (*ReceiveReceivingOrderResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_receiving_proto_rawDescGZIP(), []int{13}
+	return file_core_core_receiving_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ReceiveReceivingOrderResponse) GetReceivingOrder() *ReceivingOrderInfo {
@@ -1088,7 +1267,7 @@ type VoidReceivingOrderRequest struct {
 
 func (x *VoidReceivingOrderRequest) Reset() {
 	*x = VoidReceivingOrderRequest{}
-	mi := &file_core_core_receiving_proto_msgTypes[14]
+	mi := &file_core_core_receiving_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1100,7 +1279,7 @@ func (x *VoidReceivingOrderRequest) String() string {
 func (*VoidReceivingOrderRequest) ProtoMessage() {}
 
 func (x *VoidReceivingOrderRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_receiving_proto_msgTypes[14]
+	mi := &file_core_core_receiving_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1113,7 +1292,7 @@ func (x *VoidReceivingOrderRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VoidReceivingOrderRequest.ProtoReflect.Descriptor instead.
 func (*VoidReceivingOrderRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_receiving_proto_rawDescGZIP(), []int{14}
+	return file_core_core_receiving_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *VoidReceivingOrderRequest) GetId() string {
@@ -1132,7 +1311,7 @@ type VoidReceivingOrderResponse struct {
 
 func (x *VoidReceivingOrderResponse) Reset() {
 	*x = VoidReceivingOrderResponse{}
-	mi := &file_core_core_receiving_proto_msgTypes[15]
+	mi := &file_core_core_receiving_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1144,7 +1323,7 @@ func (x *VoidReceivingOrderResponse) String() string {
 func (*VoidReceivingOrderResponse) ProtoMessage() {}
 
 func (x *VoidReceivingOrderResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_receiving_proto_msgTypes[15]
+	mi := &file_core_core_receiving_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1157,7 +1336,7 @@ func (x *VoidReceivingOrderResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VoidReceivingOrderResponse.ProtoReflect.Descriptor instead.
 func (*VoidReceivingOrderResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_receiving_proto_rawDescGZIP(), []int{15}
+	return file_core_core_receiving_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *VoidReceivingOrderResponse) GetReceivingOrder() *ReceivingOrderInfo {
@@ -1179,7 +1358,7 @@ type UpdateReceivingOrderLineRequest struct {
 
 func (x *UpdateReceivingOrderLineRequest) Reset() {
 	*x = UpdateReceivingOrderLineRequest{}
-	mi := &file_core_core_receiving_proto_msgTypes[16]
+	mi := &file_core_core_receiving_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1191,7 +1370,7 @@ func (x *UpdateReceivingOrderLineRequest) String() string {
 func (*UpdateReceivingOrderLineRequest) ProtoMessage() {}
 
 func (x *UpdateReceivingOrderLineRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_receiving_proto_msgTypes[16]
+	mi := &file_core_core_receiving_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1204,7 +1383,7 @@ func (x *UpdateReceivingOrderLineRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateReceivingOrderLineRequest.ProtoReflect.Descriptor instead.
 func (*UpdateReceivingOrderLineRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_receiving_proto_rawDescGZIP(), []int{16}
+	return file_core_core_receiving_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *UpdateReceivingOrderLineRequest) GetReceivingOrderId() string {
@@ -1237,7 +1416,7 @@ type UpdateReceivingOrderLineResponse struct {
 
 func (x *UpdateReceivingOrderLineResponse) Reset() {
 	*x = UpdateReceivingOrderLineResponse{}
-	mi := &file_core_core_receiving_proto_msgTypes[17]
+	mi := &file_core_core_receiving_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1249,7 +1428,7 @@ func (x *UpdateReceivingOrderLineResponse) String() string {
 func (*UpdateReceivingOrderLineResponse) ProtoMessage() {}
 
 func (x *UpdateReceivingOrderLineResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_receiving_proto_msgTypes[17]
+	mi := &file_core_core_receiving_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1262,7 +1441,7 @@ func (x *UpdateReceivingOrderLineResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateReceivingOrderLineResponse.ProtoReflect.Descriptor instead.
 func (*UpdateReceivingOrderLineResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_receiving_proto_rawDescGZIP(), []int{17}
+	return file_core_core_receiving_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *UpdateReceivingOrderLineResponse) GetLine() *ReceivingOrderLineInfo {
@@ -1283,7 +1462,7 @@ type VoidReceivingOrderLineRequest struct {
 
 func (x *VoidReceivingOrderLineRequest) Reset() {
 	*x = VoidReceivingOrderLineRequest{}
-	mi := &file_core_core_receiving_proto_msgTypes[18]
+	mi := &file_core_core_receiving_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1295,7 +1474,7 @@ func (x *VoidReceivingOrderLineRequest) String() string {
 func (*VoidReceivingOrderLineRequest) ProtoMessage() {}
 
 func (x *VoidReceivingOrderLineRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_receiving_proto_msgTypes[18]
+	mi := &file_core_core_receiving_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1308,7 +1487,7 @@ func (x *VoidReceivingOrderLineRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VoidReceivingOrderLineRequest.ProtoReflect.Descriptor instead.
 func (*VoidReceivingOrderLineRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_receiving_proto_rawDescGZIP(), []int{18}
+	return file_core_core_receiving_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *VoidReceivingOrderLineRequest) GetReceivingOrderId() string {
@@ -1334,7 +1513,7 @@ type VoidReceivingOrderLineResponse struct {
 
 func (x *VoidReceivingOrderLineResponse) Reset() {
 	*x = VoidReceivingOrderLineResponse{}
-	mi := &file_core_core_receiving_proto_msgTypes[19]
+	mi := &file_core_core_receiving_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1346,7 +1525,7 @@ func (x *VoidReceivingOrderLineResponse) String() string {
 func (*VoidReceivingOrderLineResponse) ProtoMessage() {}
 
 func (x *VoidReceivingOrderLineResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_receiving_proto_msgTypes[19]
+	mi := &file_core_core_receiving_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1359,7 +1538,7 @@ func (x *VoidReceivingOrderLineResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VoidReceivingOrderLineResponse.ProtoReflect.Descriptor instead.
 func (*VoidReceivingOrderLineResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_receiving_proto_rawDescGZIP(), []int{19}
+	return file_core_core_receiving_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *VoidReceivingOrderLineResponse) GetLine() *ReceivingOrderLineInfo {
@@ -1380,7 +1559,7 @@ type ReceiveReceivingOrderLineRequest struct {
 
 func (x *ReceiveReceivingOrderLineRequest) Reset() {
 	*x = ReceiveReceivingOrderLineRequest{}
-	mi := &file_core_core_receiving_proto_msgTypes[20]
+	mi := &file_core_core_receiving_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1392,7 +1571,7 @@ func (x *ReceiveReceivingOrderLineRequest) String() string {
 func (*ReceiveReceivingOrderLineRequest) ProtoMessage() {}
 
 func (x *ReceiveReceivingOrderLineRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_receiving_proto_msgTypes[20]
+	mi := &file_core_core_receiving_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1405,7 +1584,7 @@ func (x *ReceiveReceivingOrderLineRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReceiveReceivingOrderLineRequest.ProtoReflect.Descriptor instead.
 func (*ReceiveReceivingOrderLineRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_receiving_proto_rawDescGZIP(), []int{20}
+	return file_core_core_receiving_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *ReceiveReceivingOrderLineRequest) GetReceivingOrderId() string {
@@ -1431,7 +1610,7 @@ type ReceiveReceivingOrderLineResponse struct {
 
 func (x *ReceiveReceivingOrderLineResponse) Reset() {
 	*x = ReceiveReceivingOrderLineResponse{}
-	mi := &file_core_core_receiving_proto_msgTypes[21]
+	mi := &file_core_core_receiving_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1443,7 +1622,7 @@ func (x *ReceiveReceivingOrderLineResponse) String() string {
 func (*ReceiveReceivingOrderLineResponse) ProtoMessage() {}
 
 func (x *ReceiveReceivingOrderLineResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_receiving_proto_msgTypes[21]
+	mi := &file_core_core_receiving_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1456,7 +1635,7 @@ func (x *ReceiveReceivingOrderLineResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ReceiveReceivingOrderLineResponse.ProtoReflect.Descriptor instead.
 func (*ReceiveReceivingOrderLineResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_receiving_proto_rawDescGZIP(), []int{21}
+	return file_core_core_receiving_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *ReceiveReceivingOrderLineResponse) GetLine() *ReceivingOrderLineInfo {
@@ -1470,7 +1649,7 @@ var File_core_core_receiving_proto protoreflect.FileDescriptor
 
 const file_core_core_receiving_proto_rawDesc = "" +
 	"\n" +
-	"\x19core/core_receiving.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fcore/core.proto\"\xaa\x05\n" +
+	"\x19core/core_receiving.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fcore/core.proto\"\x91\x06\n" +
 	"\x19ReceivingOrderSummaryInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12*\n" +
@@ -1480,8 +1659,7 @@ const file_core_core_receiving_proto_rawDesc = "" +
 	"supplierId\x88\x01\x01\x12(\n" +
 	"\rsupplier_name\x18\x06 \x01(\tH\x01R\fsupplierName\x88\x01\x01\x12\x1d\n" +
 	"\n" +
-	"line_count\x18\a \x01(\x05R\tlineCount\x123\n" +
-	"\x15completion_percentage\x18\b \x01(\x01R\x14completionPercentage\x12B\n" +
+	"line_count\x18\a \x01(\x05R\tlineCount\x12B\n" +
 	"\fcompleted_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampH\x02R\vcompletedAt\x88\x01\x01\x129\n" +
 	"\n" +
 	"created_at\x18\n" +
@@ -1489,11 +1667,27 @@ const file_core_core_receiving_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12,\n" +
 	"\x0fsupplier_number\x18\f \x01(\tH\x03R\x0esupplierNumber\x88\x01\x01\x122\n" +
-	"\x05lines\x18\r \x03(\v2\x1c.core.ReceivingOrderLineInfoR\x05linesB\x0e\n" +
+	"\x05lines\x18\r \x03(\v2\x1c.core.ReceivingOrderLineInfoR\x05lines\x12;\n" +
+	"\x06totals\x18\x0e \x01(\v2\x1e.core.ReceivingOrderTotalsInfoH\x04R\x06totals\x88\x01\x01\x125\n" +
+	"\n" +
+	"deliveries\x18\x0f \x03(\v2\x15.core.DocumentRefInfoR\n" +
+	"deliveriesB\x0e\n" +
 	"\f_supplier_idB\x10\n" +
 	"\x0e_supplier_nameB\x0f\n" +
 	"\r_completed_atB\x12\n" +
-	"\x10_supplier_number\"\xf1\x04\n" +
+	"\x10_supplier_numberB\t\n" +
+	"\a_totalsJ\x04\b\b\x10\tR\x15completion_percentage\"Q\n" +
+	"\x0fDocumentRefInfo\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
+	"\x06number\x18\x02 \x01(\tR\x06number\x12\x16\n" +
+	"\x06status\x18\x03 \x01(\tR\x06status\"\x94\x02\n" +
+	"\x18ReceivingOrderTotalsInfo\x12%\n" +
+	"\x0eordered_amount\x18\x01 \x01(\tR\rorderedAmount\x12)\n" +
+	"\x10ordered_quantity\x18\x02 \x01(\tR\x0forderedQuantity\x12%\n" +
+	"\x0estocked_amount\x18\x03 \x01(\tR\rstockedAmount\x12)\n" +
+	"\x10stocked_quantity\x18\x04 \x01(\tR\x0fstockedQuantity\x12'\n" +
+	"\x0frejected_amount\x18\x05 \x01(\tR\x0erejectedAmount\x12+\n" +
+	"\x11rejected_quantity\x18\x06 \x01(\tR\x10rejectedQuantity\"\xf0\x05\n" +
 	"\x12ReceivingOrderInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12*\n" +
@@ -1503,19 +1697,24 @@ const file_core_core_receiving_proto_rawDesc = "" +
 	"supplierId\x88\x01\x01\x12(\n" +
 	"\rsupplier_name\x18\x06 \x01(\tH\x01R\fsupplierName\x88\x01\x01\x12\x17\n" +
 	"\x04note\x18\a \x01(\tH\x02R\x04note\x88\x01\x01\x122\n" +
-	"\x05lines\x18\b \x03(\v2\x1c.core.ReceivingOrderLineInfoR\x05lines\x12B\n" +
-	"\fcompleted_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampH\x03R\vcompletedAt\x88\x01\x01\x129\n" +
+	"\x05lines\x18\b \x03(\v2\x1c.core.ReceivingOrderLineInfoR\x05lines\x12;\n" +
+	"\x06totals\x18\r \x01(\v2\x1e.core.ReceivingOrderTotalsInfoH\x03R\x06totals\x88\x01\x01\x125\n" +
+	"\n" +
+	"deliveries\x18\x12 \x03(\v2\x15.core.DocumentRefInfoR\n" +
+	"deliveries\x12B\n" +
+	"\fcompleted_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampH\x04R\vcompletedAt\x88\x01\x01\x129\n" +
 	"\n" +
 	"created_at\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12,\n" +
-	"\x0fsupplier_number\x18\f \x01(\tH\x04R\x0esupplierNumber\x88\x01\x01B\x0e\n" +
+	"\x0fsupplier_number\x18\f \x01(\tH\x05R\x0esupplierNumber\x88\x01\x01B\x0e\n" +
 	"\f_supplier_idB\x10\n" +
 	"\x0e_supplier_nameB\a\n" +
-	"\x05_noteB\x0f\n" +
+	"\x05_noteB\t\n" +
+	"\a_totalsB\x0f\n" +
 	"\r_completed_atB\x12\n" +
-	"\x10_supplier_number\"\x92\b\n" +
+	"\x10_supplier_number\"\x85\t\n" +
 	"\x16ReceivingOrderLineInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vquantity_id\x18\x02 \x01(\tR\n" +
@@ -1538,13 +1737,15 @@ const file_core_core_receiving_proto_rawDesc = "" +
 	"created_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x126\n" +
-	"\x15order_line_product_id\x18\x11 \x01(\tH\x05R\x12orderLineProductId\x88\x01\x01B\x1a\n" +
+	"\x15order_line_product_id\x18\x11 \x01(\tH\x05R\x12orderLineProductId\x88\x01\x01\x128\n" +
+	"\x16order_line_item_number\x18\x12 \x01(\x05H\x06R\x13orderLineItemNumber\x88\x01\x01B\x1a\n" +
 	"\x18_rejected_quantity_valueB\x15\n" +
 	"\x13_order_line_item_idB\x16\n" +
 	"\x14_order_line_item_skuB\x1e\n" +
 	"\x1c_order_line_item_descriptionB\r\n" +
 	"\v_stocked_atB\x18\n" +
-	"\x16_order_line_product_id\"M\n" +
+	"\x16_order_line_product_idB\x19\n" +
+	"\x17_order_line_item_numberJ\x04\b\x13\x10\x14J\x04\b\x14\x10\x15J\x04\b\x15\x10\x16J\x04\b\x16\x10\x17J\x04\b\x17\x10\x18\"M\n" +
 	"\x10StockingDataInfo\x129\n" +
 	"\n" +
 	"line_items\x18\x01 \x03(\v2\x1a.core.StockingLineItemInfoR\tlineItems\"\x87\x02\n" +
@@ -1636,80 +1837,86 @@ func file_core_core_receiving_proto_rawDescGZIP() []byte {
 	return file_core_core_receiving_proto_rawDescData
 }
 
-var file_core_core_receiving_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
+var file_core_core_receiving_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_core_core_receiving_proto_goTypes = []any{
 	(*ReceivingOrderSummaryInfo)(nil),         // 0: core.ReceivingOrderSummaryInfo
-	(*ReceivingOrderInfo)(nil),                // 1: core.ReceivingOrderInfo
-	(*ReceivingOrderLineInfo)(nil),            // 2: core.ReceivingOrderLineInfo
-	(*StockingDataInfo)(nil),                  // 3: core.StockingDataInfo
-	(*StockingLineItemInfo)(nil),              // 4: core.StockingLineItemInfo
-	(*StorageAllocationInfo)(nil),             // 5: core.StorageAllocationInfo
-	(*ListReceivingOrdersRequest)(nil),        // 6: core.ListReceivingOrdersRequest
-	(*ListReceivingOrdersResponse)(nil),       // 7: core.ListReceivingOrdersResponse
-	(*GetReceivingOrderRequest)(nil),          // 8: core.GetReceivingOrderRequest
-	(*GetReceivingOrderResponse)(nil),         // 9: core.GetReceivingOrderResponse
-	(*StockReceivingOrderRequest)(nil),        // 10: core.StockReceivingOrderRequest
-	(*StockReceivingOrderResponse)(nil),       // 11: core.StockReceivingOrderResponse
-	(*ReceiveReceivingOrderRequest)(nil),      // 12: core.ReceiveReceivingOrderRequest
-	(*ReceiveReceivingOrderResponse)(nil),     // 13: core.ReceiveReceivingOrderResponse
-	(*VoidReceivingOrderRequest)(nil),         // 14: core.VoidReceivingOrderRequest
-	(*VoidReceivingOrderResponse)(nil),        // 15: core.VoidReceivingOrderResponse
-	(*UpdateReceivingOrderLineRequest)(nil),   // 16: core.UpdateReceivingOrderLineRequest
-	(*UpdateReceivingOrderLineResponse)(nil),  // 17: core.UpdateReceivingOrderLineResponse
-	(*VoidReceivingOrderLineRequest)(nil),     // 18: core.VoidReceivingOrderLineRequest
-	(*VoidReceivingOrderLineResponse)(nil),    // 19: core.VoidReceivingOrderLineResponse
-	(*ReceiveReceivingOrderLineRequest)(nil),  // 20: core.ReceiveReceivingOrderLineRequest
-	(*ReceiveReceivingOrderLineResponse)(nil), // 21: core.ReceiveReceivingOrderLineResponse
-	(*timestamppb.Timestamp)(nil),             // 22: google.protobuf.Timestamp
-	(*PageInfo)(nil),                          // 23: core.PageInfo
+	(*DocumentRefInfo)(nil),                   // 1: core.DocumentRefInfo
+	(*ReceivingOrderTotalsInfo)(nil),          // 2: core.ReceivingOrderTotalsInfo
+	(*ReceivingOrderInfo)(nil),                // 3: core.ReceivingOrderInfo
+	(*ReceivingOrderLineInfo)(nil),            // 4: core.ReceivingOrderLineInfo
+	(*StockingDataInfo)(nil),                  // 5: core.StockingDataInfo
+	(*StockingLineItemInfo)(nil),              // 6: core.StockingLineItemInfo
+	(*StorageAllocationInfo)(nil),             // 7: core.StorageAllocationInfo
+	(*ListReceivingOrdersRequest)(nil),        // 8: core.ListReceivingOrdersRequest
+	(*ListReceivingOrdersResponse)(nil),       // 9: core.ListReceivingOrdersResponse
+	(*GetReceivingOrderRequest)(nil),          // 10: core.GetReceivingOrderRequest
+	(*GetReceivingOrderResponse)(nil),         // 11: core.GetReceivingOrderResponse
+	(*StockReceivingOrderRequest)(nil),        // 12: core.StockReceivingOrderRequest
+	(*StockReceivingOrderResponse)(nil),       // 13: core.StockReceivingOrderResponse
+	(*ReceiveReceivingOrderRequest)(nil),      // 14: core.ReceiveReceivingOrderRequest
+	(*ReceiveReceivingOrderResponse)(nil),     // 15: core.ReceiveReceivingOrderResponse
+	(*VoidReceivingOrderRequest)(nil),         // 16: core.VoidReceivingOrderRequest
+	(*VoidReceivingOrderResponse)(nil),        // 17: core.VoidReceivingOrderResponse
+	(*UpdateReceivingOrderLineRequest)(nil),   // 18: core.UpdateReceivingOrderLineRequest
+	(*UpdateReceivingOrderLineResponse)(nil),  // 19: core.UpdateReceivingOrderLineResponse
+	(*VoidReceivingOrderLineRequest)(nil),     // 20: core.VoidReceivingOrderLineRequest
+	(*VoidReceivingOrderLineResponse)(nil),    // 21: core.VoidReceivingOrderLineResponse
+	(*ReceiveReceivingOrderLineRequest)(nil),  // 22: core.ReceiveReceivingOrderLineRequest
+	(*ReceiveReceivingOrderLineResponse)(nil), // 23: core.ReceiveReceivingOrderLineResponse
+	(*timestamppb.Timestamp)(nil),             // 24: google.protobuf.Timestamp
+	(*PageInfo)(nil),                          // 25: core.PageInfo
 }
 var file_core_core_receiving_proto_depIdxs = []int32{
-	22, // 0: core.ReceivingOrderSummaryInfo.completed_at:type_name -> google.protobuf.Timestamp
-	22, // 1: core.ReceivingOrderSummaryInfo.created_at:type_name -> google.protobuf.Timestamp
-	22, // 2: core.ReceivingOrderSummaryInfo.updated_at:type_name -> google.protobuf.Timestamp
-	2,  // 3: core.ReceivingOrderSummaryInfo.lines:type_name -> core.ReceivingOrderLineInfo
-	2,  // 4: core.ReceivingOrderInfo.lines:type_name -> core.ReceivingOrderLineInfo
-	22, // 5: core.ReceivingOrderInfo.completed_at:type_name -> google.protobuf.Timestamp
-	22, // 6: core.ReceivingOrderInfo.created_at:type_name -> google.protobuf.Timestamp
-	22, // 7: core.ReceivingOrderInfo.updated_at:type_name -> google.protobuf.Timestamp
-	22, // 8: core.ReceivingOrderLineInfo.stocked_at:type_name -> google.protobuf.Timestamp
-	22, // 9: core.ReceivingOrderLineInfo.created_at:type_name -> google.protobuf.Timestamp
-	22, // 10: core.ReceivingOrderLineInfo.updated_at:type_name -> google.protobuf.Timestamp
-	4,  // 11: core.StockingDataInfo.line_items:type_name -> core.StockingLineItemInfo
-	5,  // 12: core.StockingLineItemInfo.allocations:type_name -> core.StorageAllocationInfo
-	22, // 13: core.ListReceivingOrdersRequest.start_date:type_name -> google.protobuf.Timestamp
-	22, // 14: core.ListReceivingOrdersRequest.end_date:type_name -> google.protobuf.Timestamp
-	0,  // 15: core.ListReceivingOrdersResponse.receiving_orders:type_name -> core.ReceivingOrderSummaryInfo
-	23, // 16: core.ListReceivingOrdersResponse.page_info:type_name -> core.PageInfo
-	1,  // 17: core.GetReceivingOrderResponse.receiving_order:type_name -> core.ReceivingOrderInfo
-	3,  // 18: core.StockReceivingOrderRequest.data:type_name -> core.StockingDataInfo
-	1,  // 19: core.StockReceivingOrderResponse.receiving_order:type_name -> core.ReceivingOrderInfo
-	1,  // 20: core.ReceiveReceivingOrderResponse.receiving_order:type_name -> core.ReceivingOrderInfo
-	1,  // 21: core.VoidReceivingOrderResponse.receiving_order:type_name -> core.ReceivingOrderInfo
-	2,  // 22: core.UpdateReceivingOrderLineResponse.line:type_name -> core.ReceivingOrderLineInfo
-	2,  // 23: core.VoidReceivingOrderLineResponse.line:type_name -> core.ReceivingOrderLineInfo
-	2,  // 24: core.ReceiveReceivingOrderLineResponse.line:type_name -> core.ReceivingOrderLineInfo
-	6,  // 25: core.CoreReceivingService.ListReceivingOrders:input_type -> core.ListReceivingOrdersRequest
-	8,  // 26: core.CoreReceivingService.GetReceivingOrder:input_type -> core.GetReceivingOrderRequest
-	10, // 27: core.CoreReceivingService.StockReceivingOrder:input_type -> core.StockReceivingOrderRequest
-	12, // 28: core.CoreReceivingService.ReceiveReceivingOrder:input_type -> core.ReceiveReceivingOrderRequest
-	14, // 29: core.CoreReceivingService.VoidReceivingOrder:input_type -> core.VoidReceivingOrderRequest
-	16, // 30: core.CoreReceivingService.UpdateReceivingOrderLine:input_type -> core.UpdateReceivingOrderLineRequest
-	18, // 31: core.CoreReceivingService.VoidReceivingOrderLine:input_type -> core.VoidReceivingOrderLineRequest
-	20, // 32: core.CoreReceivingService.ReceiveReceivingOrderLine:input_type -> core.ReceiveReceivingOrderLineRequest
-	7,  // 33: core.CoreReceivingService.ListReceivingOrders:output_type -> core.ListReceivingOrdersResponse
-	9,  // 34: core.CoreReceivingService.GetReceivingOrder:output_type -> core.GetReceivingOrderResponse
-	11, // 35: core.CoreReceivingService.StockReceivingOrder:output_type -> core.StockReceivingOrderResponse
-	13, // 36: core.CoreReceivingService.ReceiveReceivingOrder:output_type -> core.ReceiveReceivingOrderResponse
-	15, // 37: core.CoreReceivingService.VoidReceivingOrder:output_type -> core.VoidReceivingOrderResponse
-	17, // 38: core.CoreReceivingService.UpdateReceivingOrderLine:output_type -> core.UpdateReceivingOrderLineResponse
-	19, // 39: core.CoreReceivingService.VoidReceivingOrderLine:output_type -> core.VoidReceivingOrderLineResponse
-	21, // 40: core.CoreReceivingService.ReceiveReceivingOrderLine:output_type -> core.ReceiveReceivingOrderLineResponse
-	33, // [33:41] is the sub-list for method output_type
-	25, // [25:33] is the sub-list for method input_type
-	25, // [25:25] is the sub-list for extension type_name
-	25, // [25:25] is the sub-list for extension extendee
-	0,  // [0:25] is the sub-list for field type_name
+	24, // 0: core.ReceivingOrderSummaryInfo.completed_at:type_name -> google.protobuf.Timestamp
+	24, // 1: core.ReceivingOrderSummaryInfo.created_at:type_name -> google.protobuf.Timestamp
+	24, // 2: core.ReceivingOrderSummaryInfo.updated_at:type_name -> google.protobuf.Timestamp
+	4,  // 3: core.ReceivingOrderSummaryInfo.lines:type_name -> core.ReceivingOrderLineInfo
+	2,  // 4: core.ReceivingOrderSummaryInfo.totals:type_name -> core.ReceivingOrderTotalsInfo
+	1,  // 5: core.ReceivingOrderSummaryInfo.deliveries:type_name -> core.DocumentRefInfo
+	4,  // 6: core.ReceivingOrderInfo.lines:type_name -> core.ReceivingOrderLineInfo
+	2,  // 7: core.ReceivingOrderInfo.totals:type_name -> core.ReceivingOrderTotalsInfo
+	1,  // 8: core.ReceivingOrderInfo.deliveries:type_name -> core.DocumentRefInfo
+	24, // 9: core.ReceivingOrderInfo.completed_at:type_name -> google.protobuf.Timestamp
+	24, // 10: core.ReceivingOrderInfo.created_at:type_name -> google.protobuf.Timestamp
+	24, // 11: core.ReceivingOrderInfo.updated_at:type_name -> google.protobuf.Timestamp
+	24, // 12: core.ReceivingOrderLineInfo.stocked_at:type_name -> google.protobuf.Timestamp
+	24, // 13: core.ReceivingOrderLineInfo.created_at:type_name -> google.protobuf.Timestamp
+	24, // 14: core.ReceivingOrderLineInfo.updated_at:type_name -> google.protobuf.Timestamp
+	6,  // 15: core.StockingDataInfo.line_items:type_name -> core.StockingLineItemInfo
+	7,  // 16: core.StockingLineItemInfo.allocations:type_name -> core.StorageAllocationInfo
+	24, // 17: core.ListReceivingOrdersRequest.start_date:type_name -> google.protobuf.Timestamp
+	24, // 18: core.ListReceivingOrdersRequest.end_date:type_name -> google.protobuf.Timestamp
+	0,  // 19: core.ListReceivingOrdersResponse.receiving_orders:type_name -> core.ReceivingOrderSummaryInfo
+	25, // 20: core.ListReceivingOrdersResponse.page_info:type_name -> core.PageInfo
+	3,  // 21: core.GetReceivingOrderResponse.receiving_order:type_name -> core.ReceivingOrderInfo
+	5,  // 22: core.StockReceivingOrderRequest.data:type_name -> core.StockingDataInfo
+	3,  // 23: core.StockReceivingOrderResponse.receiving_order:type_name -> core.ReceivingOrderInfo
+	3,  // 24: core.ReceiveReceivingOrderResponse.receiving_order:type_name -> core.ReceivingOrderInfo
+	3,  // 25: core.VoidReceivingOrderResponse.receiving_order:type_name -> core.ReceivingOrderInfo
+	4,  // 26: core.UpdateReceivingOrderLineResponse.line:type_name -> core.ReceivingOrderLineInfo
+	4,  // 27: core.VoidReceivingOrderLineResponse.line:type_name -> core.ReceivingOrderLineInfo
+	4,  // 28: core.ReceiveReceivingOrderLineResponse.line:type_name -> core.ReceivingOrderLineInfo
+	8,  // 29: core.CoreReceivingService.ListReceivingOrders:input_type -> core.ListReceivingOrdersRequest
+	10, // 30: core.CoreReceivingService.GetReceivingOrder:input_type -> core.GetReceivingOrderRequest
+	12, // 31: core.CoreReceivingService.StockReceivingOrder:input_type -> core.StockReceivingOrderRequest
+	14, // 32: core.CoreReceivingService.ReceiveReceivingOrder:input_type -> core.ReceiveReceivingOrderRequest
+	16, // 33: core.CoreReceivingService.VoidReceivingOrder:input_type -> core.VoidReceivingOrderRequest
+	18, // 34: core.CoreReceivingService.UpdateReceivingOrderLine:input_type -> core.UpdateReceivingOrderLineRequest
+	20, // 35: core.CoreReceivingService.VoidReceivingOrderLine:input_type -> core.VoidReceivingOrderLineRequest
+	22, // 36: core.CoreReceivingService.ReceiveReceivingOrderLine:input_type -> core.ReceiveReceivingOrderLineRequest
+	9,  // 37: core.CoreReceivingService.ListReceivingOrders:output_type -> core.ListReceivingOrdersResponse
+	11, // 38: core.CoreReceivingService.GetReceivingOrder:output_type -> core.GetReceivingOrderResponse
+	13, // 39: core.CoreReceivingService.StockReceivingOrder:output_type -> core.StockReceivingOrderResponse
+	15, // 40: core.CoreReceivingService.ReceiveReceivingOrder:output_type -> core.ReceiveReceivingOrderResponse
+	17, // 41: core.CoreReceivingService.VoidReceivingOrder:output_type -> core.VoidReceivingOrderResponse
+	19, // 42: core.CoreReceivingService.UpdateReceivingOrderLine:output_type -> core.UpdateReceivingOrderLineResponse
+	21, // 43: core.CoreReceivingService.VoidReceivingOrderLine:output_type -> core.VoidReceivingOrderLineResponse
+	23, // 44: core.CoreReceivingService.ReceiveReceivingOrderLine:output_type -> core.ReceiveReceivingOrderLineResponse
+	37, // [37:45] is the sub-list for method output_type
+	29, // [29:37] is the sub-list for method input_type
+	29, // [29:29] is the sub-list for extension type_name
+	29, // [29:29] is the sub-list for extension extendee
+	0,  // [0:29] is the sub-list for field type_name
 }
 
 func init() { file_core_core_receiving_proto_init() }
@@ -1719,19 +1926,19 @@ func file_core_core_receiving_proto_init() {
 	}
 	file_core_core_proto_init()
 	file_core_core_receiving_proto_msgTypes[0].OneofWrappers = []any{}
-	file_core_core_receiving_proto_msgTypes[1].OneofWrappers = []any{}
-	file_core_core_receiving_proto_msgTypes[2].OneofWrappers = []any{}
+	file_core_core_receiving_proto_msgTypes[3].OneofWrappers = []any{}
 	file_core_core_receiving_proto_msgTypes[4].OneofWrappers = []any{}
-	file_core_core_receiving_proto_msgTypes[5].OneofWrappers = []any{}
 	file_core_core_receiving_proto_msgTypes[6].OneofWrappers = []any{}
-	file_core_core_receiving_proto_msgTypes[16].OneofWrappers = []any{}
+	file_core_core_receiving_proto_msgTypes[7].OneofWrappers = []any{}
+	file_core_core_receiving_proto_msgTypes[8].OneofWrappers = []any{}
+	file_core_core_receiving_proto_msgTypes[18].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_core_receiving_proto_rawDesc), len(file_core_core_receiving_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   22,
+			NumMessages:   24,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

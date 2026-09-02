@@ -99,7 +99,7 @@ func inventoryMeasure(t *testing.T, itemID, field string) float64 {
 }
 
 // A shortage is demand no receipt has covered, and an allocation recorded in a different unit of the
-// same group covers exactly what it says once both sides are normalised through their ratios.
+// same group covers exactly what it says once both sides are normalized through their ratios.
 // Subtracting the raw columns instead reports the covered issue as short by -5.
 func TestItemInventory_ShortNetsAllocationsAcrossUnits(t *testing.T) {
 	seedCrossUnitAllocatedIssue(t)

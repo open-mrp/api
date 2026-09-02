@@ -55,7 +55,7 @@ var resourceRegistry = map[constants.ObjectType]any{
 	constants.ObjectTypeShipment:         apiresource.Shipment{},
 	constants.ObjectTypeShippingCase:     apiresource.ShippingCase{},
 	constants.ObjectTypeShippingTerm:     apiresource.ShippingTerm{},
-	constants.ObjectTypeSupplier:         apiresource.SupplierDetail{},
+	constants.ObjectTypeSupplier:         apiresource.Supplier{},
 	constants.ObjectTypeSupplierMaterial: apiresource.SupplierMaterial{},
 	constants.ObjectTypeToolGroup:        apiresource.ToolGroup{},
 	constants.ObjectTypeTransaction:      apiresource.TransactionDetail{},

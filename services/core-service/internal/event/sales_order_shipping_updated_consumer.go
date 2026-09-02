@@ -73,7 +73,7 @@ func (c *SalesOrderShippingUpdatedConsumer) handleMessage(ctx context.Context, m
 
 	if data.SalesOrderID == "" || data.AccountID == "" {
 		log.Printf("[sales_order_shipping_updated] Missing sales order ID or account ID in event")
-		return nil
+		return c.inboxConsumer.Discard(ctx, "missing sales order or account id")
 	}
 
 	span.SetAttributes(
@@ -86,11 +86,8 @@ func (c *SalesOrderShippingUpdatedConsumer) handleMessage(ctx context.Context, m
 	order, apiErr := c.repos.NewSalesOrderRepo().Get(ctx, data.AccountID, data.SalesOrderID)
 	if apiErr != nil {
 		// A missing order (deleted since the event) is terminal, not retryable.
-		if apiErr.IsTransient {
-			return apiErr
-		}
 		log.Printf("[sales_order_shipping_updated] order %s (account %s) not syncable: %v", data.SalesOrderID, data.AccountID, apiErr)
-		return nil
+		return discardIfPermanent(ctx, c.inboxConsumer, apiErr)
 	}
 
 	shipmentRepo := c.repos.NewShipmentRepo()
@@ -99,11 +96,8 @@ func (c *SalesOrderShippingUpdatedConsumer) handleMessage(ctx context.Context, m
 	// order regardless of carrier, and an order can be left without one.
 	if order.ShippingAddressID != "" {
 		if apiErr := shipmentRepo.SyncShipToForOrder(ctx, data.AccountID, data.SalesOrderID, order.ShippingAddressID); apiErr != nil {
-			if apiErr.IsTransient {
-				return apiErr
-			}
-			log.Printf("[sales_order_shipping_updated] ship-to sync permanently failed for order %s (account %s): %v", data.SalesOrderID, data.AccountID, apiErr)
-			return nil
+			log.Printf("[sales_order_shipping_updated] ship-to sync failed for order %s (account %s): %v", data.SalesOrderID, data.AccountID, apiErr)
+			return discardIfPermanent(ctx, c.inboxConsumer, apiErr)
 		}
 	}
 
@@ -123,11 +117,8 @@ func (c *SalesOrderShippingUpdatedConsumer) handleMessage(ctx context.Context, m
 		ShippingAddressID: order.ShippingAddressID,
 	})
 	if apiErr != nil {
-		if apiErr.IsTransient {
-			return apiErr
-		}
-		log.Printf("[sales_order_shipping_updated] shipment sync permanently failed for order %s (account %s): %v", data.SalesOrderID, data.AccountID, apiErr)
-		return nil
+		log.Printf("[sales_order_shipping_updated] shipment sync failed for order %s (account %s): %v", data.SalesOrderID, data.AccountID, apiErr)
+		return discardIfPermanent(ctx, c.inboxConsumer, apiErr)
 	}
 	return nil
 }

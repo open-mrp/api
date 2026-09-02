@@ -301,3 +301,70 @@ func (q *Queries) SumPlannedByWeek(ctx context.Context, arg SumPlannedByWeekPara
 	}
 	return items, nil
 }
+
+const sumScheduledHoursByDepartmentWeek = `-- name: SumScheduledHoursByDepartmentWeek :many
+SELECT
+    l.week_start_date,
+    l.department_id,
+    CAST(COALESCE(SUM(l.planned_run_hours), 0) AS DECIMAL(65,30)) AS planned_run_hours,
+    CAST(COALESCE(SUM(l.planned_changeover_minutes), 0) AS DECIMAL(65,30)) AS planned_changeover_minutes
+FROM production_schedule_line l
+WHERE l.account_id = ?
+AND l.production_schedule_id = ?
+AND l.week_start_date >= ?
+AND l.week_start_date <= ?
+AND l.status_code != 'cancelled'
+AND l.department_id IS NOT NULL
+AND l.department_id != ''
+GROUP BY l.week_start_date, l.department_id
+`
+
+type SumScheduledHoursByDepartmentWeekParams struct {
+	AccountID            string
+	ProductionScheduleID string
+	WindowStart          time.Time
+	WindowEnd            time.Time
+}
+
+type SumScheduledHoursByDepartmentWeekRow struct {
+	WeekStartDate            time.Time
+	DepartmentID             sql.NullString
+	PlannedRunHours          string
+	PlannedChangeoverMinutes string
+}
+
+// SumScheduledHoursByDepartmentWeek returns the scheduled machine time per department per week for one baseline version. It is the denominator OEE availability is measured against: the hours the plant actually put on the schedule, not a shift pattern multiplied out over the whole window.
+//
+// planned_run_hours is a campaign's run time and planned_changeover_minutes the setup between campaigns; both are time a machine was scheduled to be working, so both belong in Planned Production Time, and logged downtime — changeover included — is charged against that total. Cancelled lines are excluded, matching SumPlannedByWeek: a line nobody will run was never scheduled time. Lines with no department are dropped rather than pooled into one bucket, because OEE has no availability for an unassigned department.
+func (q *Queries) SumScheduledHoursByDepartmentWeek(ctx context.Context, arg SumScheduledHoursByDepartmentWeekParams) ([]SumScheduledHoursByDepartmentWeekRow, error) {
+	rows, err := q.db.QueryContext(ctx, sumScheduledHoursByDepartmentWeek,
+		arg.AccountID,
+		arg.ProductionScheduleID,
+		arg.WindowStart,
+		arg.WindowEnd,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SumScheduledHoursByDepartmentWeekRow
+	for rows.Next() {
+		var i SumScheduledHoursByDepartmentWeekRow
+		if err := rows.Scan(
+			&i.WeekStartDate,
+			&i.DepartmentID,
+			&i.PlannedRunHours,
+			&i.PlannedChangeoverMinutes,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

@@ -1027,6 +1027,9 @@ type ScheduleAttainmentRepo interface {
 	// SumPlannedByWeek returns planned quantity and run hours per (week, machine, item) for one baseline version.
 	SumPlannedByWeek(ctx context.Context, params SumPlannedByWeekParams) ([]AttainmentPlannedRow, *apierror.APIError)
 
+	// SumScheduledHoursByDepartmentWeek returns scheduled machine time (run + changeover) per department per week for one baseline version — the denominator OEE availability is measured against.
+	SumScheduledHoursByDepartmentWeek(ctx context.Context, params SumPlannedByWeekParams) ([]ScheduledHoursRow, *apierror.APIError)
+
 	// SumActualsByWeek returns what was actually produced, bucketed to the Monday of the scan week so it lines up with a schedule line's week_start_date. An unscanned batch was never produced, so it is excluded.
 	SumActualsByWeek(ctx context.Context, params SumActualsByWeekParams) ([]AttainmentActualRow, *apierror.APIError)
 

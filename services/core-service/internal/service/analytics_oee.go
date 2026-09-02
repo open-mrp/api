@@ -45,24 +45,19 @@ func (s *analyticsSvcImpl) buildOeeByDepartment(ctx context.Context, params doma
 
 	downtimeMap := aggregateOeeDowntime(downtimeRows)
 
-	// Scheduled time is derived from the account's shift pattern unless the caller supplied its own. Nobody should have to hand-enter a denominator the settings already state.
+	// Scheduled time is the machine-hours the plant actually put on the production schedule, unless the caller supplied its own. A department with no published plan over the window has no availability rather than a denominator guessed from a shift pattern.
 	plannedHours := params.PlannedTimeHours
 	if len(plannedHours) == 0 {
+		// Weeks bucket on the account's configured week start, the same day the schedule stores its lines against, so the hours land in the week the window actually covers.
 		settings, apiErr := s.repos.NewProductionScheduleRepo().GetSettings(ctx, params.AccountID)
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
-
-		machineRows, apiErr := repo.CountMachinesByDepartment(ctx, params.AccountID)
+		byWeek, apiErr := s.scheduledHoursByWeek(ctx, params.AccountID, params.StartDate, params.EndDate, int(settings.WeekStartDay))
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
-		machinesByDepartment := make(map[string]int64, len(machineRows))
-		for _, row := range machineRows {
-			machinesByDepartment[row.DepartmentID] = row.MachineCount
-		}
-
-		plannedHours = derivePlannedHours(settings, machinesByDepartment, params.StartDate, params.EndDate)
+		plannedHours = proratedScheduledHours(byWeek, params.StartDate, params.EndDate)
 	}
 
 	// Build department filter set for optional filtering.
@@ -231,38 +226,120 @@ func computeOeeRatios(dept *domain.OeeDepartment, plannedHours float64) {
 	}
 }
 
-// derivePlannedHours works out each department's scheduled time from the account's own shift pattern, so nobody has to type it into a browser.
+// scheduledHoursByWeek reads the account's actual production schedule and returns the Planned Production Time per department for each week in the window.
 //
-// Scheduled time is machine-hours, not wall-clock hours: downtime is logged per machine, so a three-machine room measured against one machine's shift would report availability three times worse than it is.
+// The number OEE availability divides by is the machine-hours the plant actually scheduled, not a shift pattern multiplied out over the range. This is what a shift-pattern formula got wrong three ways at once: it counted every calendar week in the range whether or not anything was scheduled, counted every machine row whether or not it still runs, and assumed the account's shift settings were current. Reading the plan removes all three — a week nobody planned contributes nothing, and only machines that received work carry hours.
 //
-// The shift pattern comes from the production-schedule settings — the same assumption the solver sizes capacity with — so OEE availability and schedule utilisation are answering the same question rather than quietly disagreeing.
-func derivePlannedHours(
-	settings *domain.ProductionScheduleSettings,
-	machinesByDepartment map[string]int64,
-	start, end time.Time,
-) map[string]float64 {
+// Each week is attributed to the baseline that was live for it — the same choice schedule attainment makes — so a mid-window republish cannot restate a past week's availability. Weeks are kept apart, keyed on the account's own week start, so the per-department table can prorate them (proratedScheduledHours) and the trend can read them one at a time.
+func (s *analyticsSvcImpl) scheduledHoursByWeek(ctx context.Context, accountID string, start, end time.Time, weekStartDay int) (map[time.Time]map[string]float64, *apierror.APIError) {
+	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.scheduled_hours_by_week")
+	defer span.End()
+
+	repo := s.repos.NewScheduleAttainmentRepo()
+	windowStart := scheduleWeekStart(start, weekStartDay)
+	windowEnd := end
+	// Read once so every week is judged against the same instant.
+	now := time.Now().UTC()
+
+	baselines, apiErr := repo.SelectAttainmentBaselines(ctx, domain.SelectAttainmentBaselinesParams{
+		AccountID:   accountID,
+		WindowStart: windowStart,
+		WindowEnd:   windowEnd,
+	})
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	byWeek := map[time.Time]map[string]float64{}
+	for i := range baselines {
+		b := &baselines[i]
+
+		rows, apiErr := repo.SumScheduledHoursByDepartmentWeek(ctx, domain.SumPlannedByWeekParams{
+			AccountID:            accountID,
+			ProductionScheduleID: b.ScheduleID,
+			WindowStart:          windowStart,
+			WindowEnd:            windowEnd,
+		})
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+
+		for _, row := range rows {
+			week := scheduleWeekStart(row.WeekStartDate, weekStartDay)
+			// One baseline owns each week; a version that covers the week but was not the live plan for it contributes nothing, exactly as in attainment.
+			chosen := baselineFor(baselines, week, now)
+			if chosen == nil || chosen.ScheduleID != b.ScheduleID {
+				continue
+			}
+
+			deptHours := byWeek[week]
+			if deptHours == nil {
+				deptHours = map[string]float64{}
+				byWeek[week] = deptHours
+			}
+			// Changeover is scheduled machine time too, so it is part of the denominator; the changeover that then runs is charged back as an availability loss. Leaving it out here while subtracting logged changeover downtime would double-count it and understate availability.
+			deptHours[row.DepartmentID] += row.PlannedRunHours + row.PlannedChangeoverMinutes/60
+		}
+	}
+	return byWeek, nil
+}
+
+// weekOverlapFraction is how much of one production week [weekMonday, weekMonday+7) falls inside [start, end], as a fraction in [0, 1].
+//
+// The plan is week-granular — it says how many hours a week held, not which day held them — so a window shorter than a week takes a proportional slice of that week's hours. This is the same slice a shift-pattern formula took by measuring days against seven; it just applies it to the hours the plant actually scheduled rather than to a theoretical weekly capacity. A window that covers a whole week takes all of it.
+func weekOverlapFraction(weekMonday, start, end time.Time) float64 {
+	weekEnd := weekMonday.AddDate(0, 0, 7)
+	from := weekMonday
+	if start.After(from) {
+		from = start
+	}
+	to := weekEnd
+	if end.Before(to) {
+		to = end
+	}
+	if !to.After(from) {
+		return 0
+	}
+	return to.Sub(from).Hours() / (7 * 24)
+}
+
+// proratedScheduledHours folds the per-week schedule down to one Planned Production Time per department for the whole window, taking each week's hours in proportion to how much of that week the window covers. It is the denominator the per-department table reports the window against.
+func proratedScheduledHours(byWeek map[time.Time]map[string]float64, start, end time.Time) map[string]float64 {
 	out := map[string]float64{}
-	if settings == nil {
-		return out
-	}
-
-	hoursPerWeek := float64(settings.ShiftsPerDay) * settings.HoursPerShift * float64(settings.WorkDaysPerWeek)
-	if hoursPerWeek <= 0 {
-		return out
-	}
-
-	// A three-day window is measured against three days of shift, not a whole week.
-	days := end.Sub(start).Hours() / 24
-	if days <= 0 {
-		return out
-	}
-	weeks := days / 7
-
-	for departmentID, machineCount := range machinesByDepartment {
-		if machineCount <= 0 {
+	for week, deptHours := range byWeek {
+		fraction := weekOverlapFraction(week, start, end)
+		if fraction <= 0 {
 			continue
 		}
-		out[departmentID] = hoursPerWeek * weeks * float64(machineCount)
+		for departmentID, hours := range deptHours {
+			out[departmentID] += hours * fraction
+		}
+	}
+	return out
+}
+
+// scaleDeptHours multiplies every department's hours by a factor, used to prorate one week's schedule to a partial-week trend bucket.
+func scaleDeptHours(hours map[string]float64, factor float64) map[string]float64 {
+	if factor == 1 {
+		return hours
+	}
+	out := make(map[string]float64, len(hours))
+	for departmentID, h := range hours {
+		out[departmentID] = h * factor
+	}
+	return out
+}
+
+// filterDeptHours drops departments the caller did not ask for. An empty filter means no filter, matching passesFilter.
+func filterDeptHours(hours map[string]float64, deptFilter map[string]bool) map[string]float64 {
+	if len(deptFilter) == 0 {
+		return hours
+	}
+	out := make(map[string]float64, len(hours))
+	for departmentID, h := range hours {
+		if deptFilter[departmentID] {
+			out[departmentID] = h
+		}
 	}
 	return out
 }

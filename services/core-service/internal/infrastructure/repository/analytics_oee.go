@@ -10,10 +10,34 @@ import (
 	"github.com/open-mrp/api/shared/tracing"
 )
 
-// GetOeeDepartmentData returns the unit counts and the standard time earned per department in the window.
+// GetOeeDepartmentData returns the unit counts and the standard time earned per department in the window. When the caller names machines, only production on those machines is counted — the scheduled-machine restriction OEE Performance needs — via a separate query so the unrestricted path carries no filter predicate. An empty IN list would be invalid SQL, so an empty set means no restriction and uses the whole-floor query.
 func (r *analyticsRepoImpl) GetOeeDepartmentData(ctx context.Context, params domain.GetOeeWindowParams) ([]domain.OeeDepartmentDataRow, *apierror.APIError) {
 	ctx, span := analyticsRepoTracer.Start(ctx, "repository.analytics.get_oee_department_data")
 	defer span.End()
+
+	if len(params.MachineIDs) > 0 {
+		rows, err := r.queries.GetOeeDepartmentDataForMachines(ctx, sqlc.GetOeeDepartmentDataForMachinesParams{
+			OwnerAccountID: params.AccountID,
+			StartDate:      toRequiredNullTime(params.StartDate),
+			EndDate:        toRequiredNullTime(params.EndDate),
+			MachineIds:     params.MachineIDs,
+		})
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		out := make([]domain.OeeDepartmentDataRow, len(rows))
+		for i, row := range rows {
+			out[i] = domain.OeeDepartmentDataRow{
+				DepartmentID:          row.DepartmentID,
+				DepartmentName:        row.DepartmentName,
+				GoodUnits:             decimalToFloat64(row.GoodUnits),
+				WasteUnits:            decimalToFloat64(row.WasteUnits),
+				SecondsUnits:          decimalToFloat64(row.SecondsUnits),
+				StandardSecondsEarned: decimalToFloat64(row.StandardSecondsEarned),
+			}
+		}
+		return out, nil
+	}
 
 	rows, err := r.queries.GetOeeDepartmentData(ctx, sqlc.GetOeeDepartmentDataParams{
 		OwnerAccountID: params.AccountID,
@@ -90,10 +114,36 @@ func (r *analyticsRepoImpl) GetOeeDowntimeByDepartment(ctx context.Context, para
 	return out, nil
 }
 
-// GetOeeTrendDepartmentDataByWeek returns unit counts and standard time earned per department per production week in the window.
+// GetOeeTrendDepartmentDataByWeek returns unit counts and standard time earned per department per production week in the window. As with GetOeeDepartmentData, naming machines restricts the counts to those machines via a separate query, so the unrestricted path carries no filter predicate.
 func (r *analyticsRepoImpl) GetOeeTrendDepartmentDataByWeek(ctx context.Context, params domain.GetOeeWindowParams) ([]domain.OeeTrendDepartmentWeekRow, *apierror.APIError) {
 	ctx, span := analyticsRepoTracer.Start(ctx, "repository.analytics.get_oee_trend_department_data_by_week")
 	defer span.End()
+
+	if len(params.MachineIDs) > 0 {
+		rows, err := r.queries.GetOeeTrendDepartmentDataByWeekForMachines(ctx, sqlc.GetOeeTrendDepartmentDataByWeekForMachinesParams{
+			OwnerAccountID: params.AccountID,
+			WeekStartDay:   int64(params.WeekStartDay),
+			StartDate:      toRequiredNullTime(params.StartDate),
+			EndDate:        toRequiredNullTime(params.EndDate),
+			MachineIds:     params.MachineIDs,
+		})
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		out := make([]domain.OeeTrendDepartmentWeekRow, len(rows))
+		for i, row := range rows {
+			out[i] = domain.OeeTrendDepartmentWeekRow{
+				WeekStart:             row.WeekStartDate,
+				DepartmentID:          row.DepartmentID,
+				DepartmentName:        row.DepartmentName,
+				GoodUnits:             decimalToFloat64(row.GoodUnits),
+				WasteUnits:            decimalToFloat64(row.WasteUnits),
+				SecondsUnits:          decimalToFloat64(row.SecondsUnits),
+				StandardSecondsEarned: decimalToFloat64(row.StandardSecondsEarned),
+			}
+		}
+		return out, nil
+	}
 
 	rows, err := r.queries.GetOeeTrendDepartmentDataByWeek(ctx, sqlc.GetOeeTrendDepartmentDataByWeekParams{
 		OwnerAccountID: params.AccountID,

@@ -1089,6 +1089,57 @@ WHERE b.account_id = sqlc.arg('owner_account_id')
   AND b.scanned_at <= sqlc.arg('end_date')
 GROUP BY d.id, d.name;
 
+-- GetOeeDepartmentDataForMachines is GetOeeDepartmentData restricted to production on a given set of machines — the machines the plan scheduled.
+--
+-- Performance divides the standard time earned by the scheduled machines' run time, so counting output from machines that were never scheduled would report a department running many times faster than the plant it was measured against. The service calls this variant for scheduled departments and the unrestricted query above for everything else; the two SELECT lists (including the standard_seconds_earned CASE) must stay identical so the scoped and whole-floor reads can never disagree about what a run rate means.
+-- name: GetOeeDepartmentDataForMachines :many
+SELECT
+    COALESCE(d.id, 'unassigned') AS department_id,
+    COALESCE(d.name, 'Unassigned') AS department_name,
+    CAST(COALESCE(SUM(COALESCE(qf.value * (u_qf.ratio_numerator / u_qf.ratio_denominator), 0)), 0) AS DECIMAL(65,30)) AS good_units,
+    CAST(COALESCE(SUM(COALESCE(qw.value * (u_qw.ratio_numerator / u_qw.ratio_denominator), 0)), 0) AS DECIMAL(65,30)) AS waste_units,
+    CAST(COALESCE(SUM(COALESCE(qs.value * (u_qs.ratio_numerator / u_qs.ratio_denominator), 0)), 0) AS DECIMAL(65,30)) AS seconds_units,
+    CAST(COALESCE(SUM(
+        (
+            COALESCE(qf.value * (u_qf.ratio_numerator / u_qf.ratio_denominator), 0)
+            + COALESCE(qw.value * (u_qw.ratio_numerator / u_qw.ratio_denominator), 0)
+            + COALESCE(qs.value * (u_qs.ratio_numerator / u_qs.ratio_denominator), 0)
+        ) * COALESCE(
+            labor_time.value * CASE LOWER(TRIM(COALESCE(labor_time_unit.abbreviation, '')))
+                WHEN 'min' THEN 60
+                WHEN 'mins' THEN 60
+                WHEN 'minute' THEN 60
+                WHEN 'minutes' THEN 60
+                WHEN 'hr' THEN 3600
+                WHEN 'h' THEN 3600
+                WHEN 'hour' THEN 3600
+                WHEN 'hours' THEN 3600
+                ELSE 1
+            END,
+            0
+        )
+    ), 0) AS DECIMAL(65,30)) AS standard_seconds_earned
+FROM batch b
+LEFT JOIN quantity qf ON qf.id = b.quantity_id
+LEFT JOIN unit u_qf ON u_qf.id = qf.unit_id
+LEFT JOIN quantity qw ON qw.id = b.waste_quantity_id
+LEFT JOIN unit u_qw ON u_qw.id = qw.unit_id
+LEFT JOIN quantity qs ON qs.id = b.seconds_quantity_id
+LEFT JOIN unit u_qs ON u_qs.id = qs.unit_id
+LEFT JOIN scanning_station ss ON ss.id = b.scanning_station_id
+LEFT JOIN department d ON d.id = ss.department_id
+LEFT JOIN production_step ps ON ps.id = b.production_step_id
+LEFT JOIN rate labor_time ON labor_time.id = ps.labor_time_id
+LEFT JOIN unit labor_time_unit ON labor_time_unit.id = labor_time.numerator_unit_id
+WHERE b.account_id = sqlc.arg('owner_account_id')
+  AND b.scanned_at >= sqlc.arg('start_date')
+  AND b.scanned_at <= sqlc.arg('end_date')
+  AND EXISTS (
+      SELECT 1 FROM _batches_machines bm
+      WHERE bm.A = b.id AND bm.B IN (sqlc.slice('machine_ids'))
+  )
+GROUP BY d.id, d.name;
+
 -- name: GetOeeEstimatedRuntime :many
 SELECT
     department_id,
@@ -1405,6 +1456,56 @@ LEFT JOIN unit labor_time_unit ON labor_time_unit.id = labor_time.numerator_unit
 WHERE b.account_id = sqlc.arg('owner_account_id')
   AND b.scanned_at >= sqlc.arg('start_date')
   AND b.scanned_at <= sqlc.arg('end_date')
+GROUP BY week_start_date, d.id, d.name;
+
+-- GetOeeTrendDepartmentDataByWeekForMachines is GetOeeTrendDepartmentDataByWeek restricted to production on a given set of machines, mirroring GetOeeDepartmentDataForMachines so a trend point measures the same machines as the table beside it. The SELECT list must stay identical to GetOeeTrendDepartmentDataByWeek.
+-- name: GetOeeTrendDepartmentDataByWeekForMachines :many
+SELECT
+    DATE(DATE_SUB(b.scanned_at, INTERVAL ((DAYOFWEEK(b.scanned_at) + 6 - CAST(sqlc.arg('week_start_day') AS SIGNED)) % 7) DAY)) AS week_start_date,
+    COALESCE(d.id, 'unassigned') AS department_id,
+    COALESCE(d.name, 'Unassigned') AS department_name,
+    CAST(COALESCE(SUM(COALESCE(qf.value * (u_qf.ratio_numerator / u_qf.ratio_denominator), 0)), 0) AS DECIMAL(65,30)) AS good_units,
+    CAST(COALESCE(SUM(COALESCE(qw.value * (u_qw.ratio_numerator / u_qw.ratio_denominator), 0)), 0) AS DECIMAL(65,30)) AS waste_units,
+    CAST(COALESCE(SUM(COALESCE(qs.value * (u_qs.ratio_numerator / u_qs.ratio_denominator), 0)), 0) AS DECIMAL(65,30)) AS seconds_units,
+    CAST(COALESCE(SUM(
+        (
+            COALESCE(qf.value * (u_qf.ratio_numerator / u_qf.ratio_denominator), 0)
+            + COALESCE(qw.value * (u_qw.ratio_numerator / u_qw.ratio_denominator), 0)
+            + COALESCE(qs.value * (u_qs.ratio_numerator / u_qs.ratio_denominator), 0)
+        ) * COALESCE(
+            labor_time.value * CASE LOWER(TRIM(COALESCE(labor_time_unit.abbreviation, '')))
+                WHEN 'min' THEN 60
+                WHEN 'mins' THEN 60
+                WHEN 'minute' THEN 60
+                WHEN 'minutes' THEN 60
+                WHEN 'hr' THEN 3600
+                WHEN 'h' THEN 3600
+                WHEN 'hour' THEN 3600
+                WHEN 'hours' THEN 3600
+                ELSE 1
+            END,
+            0
+        )
+    ), 0) AS DECIMAL(65,30)) AS standard_seconds_earned
+FROM batch b
+LEFT JOIN quantity qf ON qf.id = b.quantity_id
+LEFT JOIN unit u_qf ON u_qf.id = qf.unit_id
+LEFT JOIN quantity qw ON qw.id = b.waste_quantity_id
+LEFT JOIN unit u_qw ON u_qw.id = qw.unit_id
+LEFT JOIN quantity qs ON qs.id = b.seconds_quantity_id
+LEFT JOIN unit u_qs ON u_qs.id = qs.unit_id
+LEFT JOIN scanning_station ss ON ss.id = b.scanning_station_id
+LEFT JOIN department d ON d.id = ss.department_id
+LEFT JOIN production_step ps ON ps.id = b.production_step_id
+LEFT JOIN rate labor_time ON labor_time.id = ps.labor_time_id
+LEFT JOIN unit labor_time_unit ON labor_time_unit.id = labor_time.numerator_unit_id
+WHERE b.account_id = sqlc.arg('owner_account_id')
+  AND b.scanned_at >= sqlc.arg('start_date')
+  AND b.scanned_at <= sqlc.arg('end_date')
+  AND EXISTS (
+      SELECT 1 FROM _batches_machines bm
+      WHERE bm.A = b.id AND bm.B IN (sqlc.slice('machine_ids'))
+  )
 GROUP BY week_start_date, d.id, d.name;
 
 -- GetOeeTrendDowntimeIntervals lists logged downtime per department as raw intervals, unclipped (open events coalesce to now).

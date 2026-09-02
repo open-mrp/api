@@ -1394,6 +1394,117 @@ func (q *Queries) GetOeeDepartmentData(ctx context.Context, arg GetOeeDepartment
 	return items, nil
 }
 
+const getOeeDepartmentDataForMachines = `-- name: GetOeeDepartmentDataForMachines :many
+SELECT
+    COALESCE(d.id, 'unassigned') AS department_id,
+    COALESCE(d.name, 'Unassigned') AS department_name,
+    CAST(COALESCE(SUM(COALESCE(qf.value * (u_qf.ratio_numerator / u_qf.ratio_denominator), 0)), 0) AS DECIMAL(65,30)) AS good_units,
+    CAST(COALESCE(SUM(COALESCE(qw.value * (u_qw.ratio_numerator / u_qw.ratio_denominator), 0)), 0) AS DECIMAL(65,30)) AS waste_units,
+    CAST(COALESCE(SUM(COALESCE(qs.value * (u_qs.ratio_numerator / u_qs.ratio_denominator), 0)), 0) AS DECIMAL(65,30)) AS seconds_units,
+    CAST(COALESCE(SUM(
+        (
+            COALESCE(qf.value * (u_qf.ratio_numerator / u_qf.ratio_denominator), 0)
+            + COALESCE(qw.value * (u_qw.ratio_numerator / u_qw.ratio_denominator), 0)
+            + COALESCE(qs.value * (u_qs.ratio_numerator / u_qs.ratio_denominator), 0)
+        ) * COALESCE(
+            labor_time.value * CASE LOWER(TRIM(COALESCE(labor_time_unit.abbreviation, '')))
+                WHEN 'min' THEN 60
+                WHEN 'mins' THEN 60
+                WHEN 'minute' THEN 60
+                WHEN 'minutes' THEN 60
+                WHEN 'hr' THEN 3600
+                WHEN 'h' THEN 3600
+                WHEN 'hour' THEN 3600
+                WHEN 'hours' THEN 3600
+                ELSE 1
+            END,
+            0
+        )
+    ), 0) AS DECIMAL(65,30)) AS standard_seconds_earned
+FROM batch b
+LEFT JOIN quantity qf ON qf.id = b.quantity_id
+LEFT JOIN unit u_qf ON u_qf.id = qf.unit_id
+LEFT JOIN quantity qw ON qw.id = b.waste_quantity_id
+LEFT JOIN unit u_qw ON u_qw.id = qw.unit_id
+LEFT JOIN quantity qs ON qs.id = b.seconds_quantity_id
+LEFT JOIN unit u_qs ON u_qs.id = qs.unit_id
+LEFT JOIN scanning_station ss ON ss.id = b.scanning_station_id
+LEFT JOIN department d ON d.id = ss.department_id
+LEFT JOIN production_step ps ON ps.id = b.production_step_id
+LEFT JOIN rate labor_time ON labor_time.id = ps.labor_time_id
+LEFT JOIN unit labor_time_unit ON labor_time_unit.id = labor_time.numerator_unit_id
+WHERE b.account_id = ?
+  AND b.scanned_at >= ?
+  AND b.scanned_at <= ?
+  AND EXISTS (
+      SELECT 1 FROM _batches_machines bm
+      WHERE bm.A = b.id AND bm.B IN (/*SLICE:machine_ids*/?)
+  )
+GROUP BY d.id, d.name
+`
+
+type GetOeeDepartmentDataForMachinesParams struct {
+	OwnerAccountID string
+	StartDate      sql.NullTime
+	EndDate        sql.NullTime
+	MachineIds     []string
+}
+
+type GetOeeDepartmentDataForMachinesRow struct {
+	DepartmentID          string
+	DepartmentName        string
+	GoodUnits             string
+	WasteUnits            string
+	SecondsUnits          string
+	StandardSecondsEarned string
+}
+
+// GetOeeDepartmentDataForMachines is GetOeeDepartmentData restricted to production on a given set of machines — the machines the plan scheduled.
+//
+// Performance divides the standard time earned by the scheduled machines' run time, so counting output from machines that were never scheduled would report a department running many times faster than the plant it was measured against. The service calls this variant for scheduled departments and the unrestricted query above for everything else; the two SELECT lists (including the standard_seconds_earned CASE) must stay identical so the scoped and whole-floor reads can never disagree about what a run rate means.
+func (q *Queries) GetOeeDepartmentDataForMachines(ctx context.Context, arg GetOeeDepartmentDataForMachinesParams) ([]GetOeeDepartmentDataForMachinesRow, error) {
+	query := getOeeDepartmentDataForMachines
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.OwnerAccountID)
+	queryParams = append(queryParams, arg.StartDate)
+	queryParams = append(queryParams, arg.EndDate)
+	if len(arg.MachineIds) > 0 {
+		for _, v := range arg.MachineIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:machine_ids*/?", strings.Repeat(",?", len(arg.MachineIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:machine_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetOeeDepartmentDataForMachinesRow
+	for rows.Next() {
+		var i GetOeeDepartmentDataForMachinesRow
+		if err := rows.Scan(
+			&i.DepartmentID,
+			&i.DepartmentName,
+			&i.GoodUnits,
+			&i.WasteUnits,
+			&i.SecondsUnits,
+			&i.StandardSecondsEarned,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getOeeDowntimeByDepartment = `-- name: GetOeeDowntimeByDepartment :many
 SELECT
     COALESCE(e.department_id, 'unassigned') AS department_id,
@@ -1600,6 +1711,120 @@ func (q *Queries) GetOeeTrendDepartmentDataByWeek(ctx context.Context, arg GetOe
 	var items []GetOeeTrendDepartmentDataByWeekRow
 	for rows.Next() {
 		var i GetOeeTrendDepartmentDataByWeekRow
+		if err := rows.Scan(
+			&i.WeekStartDate,
+			&i.DepartmentID,
+			&i.DepartmentName,
+			&i.GoodUnits,
+			&i.WasteUnits,
+			&i.SecondsUnits,
+			&i.StandardSecondsEarned,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getOeeTrendDepartmentDataByWeekForMachines = `-- name: GetOeeTrendDepartmentDataByWeekForMachines :many
+SELECT
+    DATE(DATE_SUB(b.scanned_at, INTERVAL ((DAYOFWEEK(b.scanned_at) + 6 - CAST(? AS SIGNED)) % 7) DAY)) AS week_start_date,
+    COALESCE(d.id, 'unassigned') AS department_id,
+    COALESCE(d.name, 'Unassigned') AS department_name,
+    CAST(COALESCE(SUM(COALESCE(qf.value * (u_qf.ratio_numerator / u_qf.ratio_denominator), 0)), 0) AS DECIMAL(65,30)) AS good_units,
+    CAST(COALESCE(SUM(COALESCE(qw.value * (u_qw.ratio_numerator / u_qw.ratio_denominator), 0)), 0) AS DECIMAL(65,30)) AS waste_units,
+    CAST(COALESCE(SUM(COALESCE(qs.value * (u_qs.ratio_numerator / u_qs.ratio_denominator), 0)), 0) AS DECIMAL(65,30)) AS seconds_units,
+    CAST(COALESCE(SUM(
+        (
+            COALESCE(qf.value * (u_qf.ratio_numerator / u_qf.ratio_denominator), 0)
+            + COALESCE(qw.value * (u_qw.ratio_numerator / u_qw.ratio_denominator), 0)
+            + COALESCE(qs.value * (u_qs.ratio_numerator / u_qs.ratio_denominator), 0)
+        ) * COALESCE(
+            labor_time.value * CASE LOWER(TRIM(COALESCE(labor_time_unit.abbreviation, '')))
+                WHEN 'min' THEN 60
+                WHEN 'mins' THEN 60
+                WHEN 'minute' THEN 60
+                WHEN 'minutes' THEN 60
+                WHEN 'hr' THEN 3600
+                WHEN 'h' THEN 3600
+                WHEN 'hour' THEN 3600
+                WHEN 'hours' THEN 3600
+                ELSE 1
+            END,
+            0
+        )
+    ), 0) AS DECIMAL(65,30)) AS standard_seconds_earned
+FROM batch b
+LEFT JOIN quantity qf ON qf.id = b.quantity_id
+LEFT JOIN unit u_qf ON u_qf.id = qf.unit_id
+LEFT JOIN quantity qw ON qw.id = b.waste_quantity_id
+LEFT JOIN unit u_qw ON u_qw.id = qw.unit_id
+LEFT JOIN quantity qs ON qs.id = b.seconds_quantity_id
+LEFT JOIN unit u_qs ON u_qs.id = qs.unit_id
+LEFT JOIN scanning_station ss ON ss.id = b.scanning_station_id
+LEFT JOIN department d ON d.id = ss.department_id
+LEFT JOIN production_step ps ON ps.id = b.production_step_id
+LEFT JOIN rate labor_time ON labor_time.id = ps.labor_time_id
+LEFT JOIN unit labor_time_unit ON labor_time_unit.id = labor_time.numerator_unit_id
+WHERE b.account_id = ?
+  AND b.scanned_at >= ?
+  AND b.scanned_at <= ?
+  AND EXISTS (
+      SELECT 1 FROM _batches_machines bm
+      WHERE bm.A = b.id AND bm.B IN (/*SLICE:machine_ids*/?)
+  )
+GROUP BY week_start_date, d.id, d.name
+`
+
+type GetOeeTrendDepartmentDataByWeekForMachinesParams struct {
+	WeekStartDay   int64
+	OwnerAccountID string
+	StartDate      sql.NullTime
+	EndDate        sql.NullTime
+	MachineIds     []string
+}
+
+type GetOeeTrendDepartmentDataByWeekForMachinesRow struct {
+	WeekStartDate         time.Time
+	DepartmentID          string
+	DepartmentName        string
+	GoodUnits             string
+	WasteUnits            string
+	SecondsUnits          string
+	StandardSecondsEarned string
+}
+
+// GetOeeTrendDepartmentDataByWeekForMachines is GetOeeTrendDepartmentDataByWeek restricted to production on a given set of machines, mirroring GetOeeDepartmentDataForMachines so a trend point measures the same machines as the table beside it. The SELECT list must stay identical to GetOeeTrendDepartmentDataByWeek.
+func (q *Queries) GetOeeTrendDepartmentDataByWeekForMachines(ctx context.Context, arg GetOeeTrendDepartmentDataByWeekForMachinesParams) ([]GetOeeTrendDepartmentDataByWeekForMachinesRow, error) {
+	query := getOeeTrendDepartmentDataByWeekForMachines
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.WeekStartDay)
+	queryParams = append(queryParams, arg.OwnerAccountID)
+	queryParams = append(queryParams, arg.StartDate)
+	queryParams = append(queryParams, arg.EndDate)
+	if len(arg.MachineIds) > 0 {
+		for _, v := range arg.MachineIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:machine_ids*/?", strings.Repeat(",?", len(arg.MachineIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:machine_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetOeeTrendDepartmentDataByWeekForMachinesRow
+	for rows.Next() {
+		var i GetOeeTrendDepartmentDataByWeekForMachinesRow
 		if err := rows.Scan(
 			&i.WeekStartDate,
 			&i.DepartmentID,

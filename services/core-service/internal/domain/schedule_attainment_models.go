@@ -102,9 +102,11 @@ type SumActualsByWeekParams struct {
 	AccountID   string
 	WindowStart time.Time
 	WindowEnd   time.Time
+	// WeekStartDay is the weekday scans bucket on, 0 = Sunday through 6 = Saturday, matching the account's schedule week.
+	WeekStartDay int
 }
 
-// AttainmentActualRow is what was actually produced per (week, machine, item), bucketed to the Monday of the scan week.
+// AttainmentActualRow is what was actually produced per (week, machine, item), bucketed to the start of the account's production week.
 type AttainmentActualRow struct {
 	WeekStartDate  time.Time
 	MachineID      *string

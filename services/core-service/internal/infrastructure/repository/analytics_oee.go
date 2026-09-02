@@ -97,6 +97,7 @@ func (r *analyticsRepoImpl) GetOeeTrendDepartmentDataByWeek(ctx context.Context,
 
 	rows, err := r.queries.GetOeeTrendDepartmentDataByWeek(ctx, sqlc.GetOeeTrendDepartmentDataByWeekParams{
 		OwnerAccountID: params.AccountID,
+		WeekStartDay:   int64(params.WeekStartDay),
 		StartDate:      toRequiredNullTime(params.StartDate),
 		EndDate:        toRequiredNullTime(params.EndDate),
 	})

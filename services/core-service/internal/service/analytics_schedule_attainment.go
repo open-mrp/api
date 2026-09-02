@@ -63,7 +63,14 @@ func (s *analyticsSvcImpl) buildScheduleAttainment(ctx context.Context, params d
 
 	repo := s.repos.NewScheduleAttainmentRepo()
 
-	windowStart := weekStart(params.StartDate)
+	// Weeks bucket on the account's configured week start, the same day schedule horizons are built on. A fixed Monday would split a plant whose week starts midweek across two buckets, judging each plan week against a fraction of its own output.
+	settings, apiErr := s.repos.NewProductionScheduleRepo().GetSettings(ctx, params.AccountID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	weekStartDay := int(settings.WeekStartDay)
+
+	windowStart := scheduleWeekStart(params.StartDate, weekStartDay)
 	windowEnd := params.EndDate
 	// Read once so every week in the window is judged against the same instant.
 	now := time.Now().UTC()
@@ -123,7 +130,7 @@ func (s *analyticsSvcImpl) buildScheduleAttainment(ctx context.Context, params d
 		}
 
 		for _, row := range rows {
-			week := weekStart(row.WeekStartDate)
+			week := scheduleWeekStart(row.WeekStartDate, weekStartDay)
 			// Each week is attributed to exactly one baseline. A version that covers the week but was not the live plan for it contributes nothing.
 			chosen := baselineFor(baselines, week, now)
 			if chosen == nil || chosen.ScheduleID != b.ScheduleID {
@@ -155,16 +162,17 @@ func (s *analyticsSvcImpl) buildScheduleAttainment(ctx context.Context, params d
 	}
 
 	actuals, apiErr := repo.SumActualsByWeek(ctx, domain.SumActualsByWeekParams{
-		AccountID:   params.AccountID,
-		WindowStart: windowStart,
-		WindowEnd:   windowEnd,
+		AccountID:    params.AccountID,
+		WindowStart:  windowStart,
+		WindowEnd:    windowEnd,
+		WeekStartDay: weekStartDay,
 	})
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
 	for _, row := range actuals {
-		week := weekStart(row.WeekStartDate)
+		week := scheduleWeekStart(row.WeekStartDate, weekStartDay)
 		machineID := ""
 		if row.MachineID != nil {
 			machineID = *row.MachineID

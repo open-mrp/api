@@ -84,7 +84,8 @@ func (r *scheduleAttainmentRepoImpl) SumActualsByWeek(ctx context.Context, param
 	defer span.End()
 
 	rows, err := r.queries.SumActualsByWeek(ctx, sqlc.SumActualsByWeekParams{
-		AccountID: params.AccountID,
+		AccountID:    params.AccountID,
+		WeekStartDay: int64(params.WeekStartDay),
 		// scanned_at is nullable, so sqlc types the window as NullTime. An unscanned batch was never produced, so excluding it is correct.
 		WindowStart: gosql.NullTime{Time: params.WindowStart, Valid: true},
 		WindowEnd:   gosql.NullTime{Time: params.WindowEnd, Valid: true},

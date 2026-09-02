@@ -154,7 +154,7 @@ func (q *Queries) SelectAttainmentBaselines(ctx context.Context, arg SelectAttai
 
 const sumActualsByWeek = `-- name: SumActualsByWeek :many
 SELECT
-    DATE(DATE_SUB(b.scanned_at, INTERVAL WEEKDAY(b.scanned_at) DAY)) AS week_start_date,
+    DATE(DATE_SUB(b.scanned_at, INTERVAL ((DAYOFWEEK(b.scanned_at) + 6 - CAST(? AS SIGNED)) % 7) DAY)) AS week_start_date,
     bm.B AS machine_id,
     b.item_id,
     ps.department_id,
@@ -173,9 +173,10 @@ GROUP BY week_start_date, bm.B, b.item_id, ps.department_id
 `
 
 type SumActualsByWeekParams struct {
-	AccountID   string
-	WindowStart sql.NullTime
-	WindowEnd   sql.NullTime
+	WeekStartDay int64
+	AccountID    string
+	WindowStart  sql.NullTime
+	WindowEnd    sql.NullTime
 }
 
 type SumActualsByWeekRow struct {
@@ -188,11 +189,18 @@ type SumActualsByWeekRow struct {
 	BatchCount     int64
 }
 
-// SumActualsByWeek returns what was actually produced, bucketed to the Monday of the scan week so it lines up with a schedule line's week_start_date.
+// SumActualsByWeek returns what was actually produced, bucketed to the start of the scan's production week so it lines up with a schedule line's week_start_date.
+//
+// The week start follows the account's configured week_start_day (0 = Sunday through 6 = Saturday), the same day schedule horizons are built on. A fixed Monday here would split one schedule week's scans across two buckets for any plant whose week does not start on Monday, and its planned quantity would then be judged against a fraction of its own output.
 //
 // Department comes from the batch's production step, NOT from the scanning station the way AnalyzeOee does it. That is deliberate and the two are not interchangeable: a plan is expressed in the step's department, so attainment has to be measured there or a department would be judged against work it was never assigned.
 func (q *Queries) SumActualsByWeek(ctx context.Context, arg SumActualsByWeekParams) ([]SumActualsByWeekRow, error) {
-	rows, err := q.db.QueryContext(ctx, sumActualsByWeek, arg.AccountID, arg.WindowStart, arg.WindowEnd)
+	rows, err := q.db.QueryContext(ctx, sumActualsByWeek,
+		arg.WeekStartDay,
+		arg.AccountID,
+		arg.WindowStart,
+		arg.WindowEnd,
+	)
 	if err != nil {
 		return nil, err
 	}

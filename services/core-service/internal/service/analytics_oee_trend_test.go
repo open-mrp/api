@@ -11,10 +11,13 @@ import (
 // Monday 3 August 2026.
 var oeeTrendMonday = time.Date(2026, 8, 3, 0, 0, 0, 0, time.UTC)
 
+// These bucketing tests fix their fixtures to Mondays, so they exercise the Monday-start week.
+const mondayWeekStart = 1
+
 func TestOeeTrendBuckets_CutsOnMondays(t *testing.T) {
 	t.Parallel()
 
-	buckets := oeeTrendBuckets(oeeTrendMonday, oeeTrendMonday.AddDate(0, 0, 21))
+	buckets := oeeTrendBuckets(oeeTrendMonday, oeeTrendMonday.AddDate(0, 0, 21), mondayWeekStart)
 
 	if len(buckets) != 3 {
 		t.Fatalf("buckets = %d, want 3 whole weeks", len(buckets))
@@ -31,7 +34,7 @@ func TestOeeTrendBuckets_ClipsPartialWeeksAtBothEnds(t *testing.T) {
 
 	start := oeeTrendMonday.AddDate(0, 0, 2)                   // Wednesday
 	end := oeeTrendMonday.AddDate(0, 0, 10).Add(9 * time.Hour) // the Thursday after next, mid-morning
-	buckets := oeeTrendBuckets(start, end)
+	buckets := oeeTrendBuckets(start, end, mondayWeekStart)
 
 	if len(buckets) != 2 {
 		t.Fatalf("buckets = %d, want 2", len(buckets))
@@ -44,8 +47,8 @@ func TestOeeTrendBuckets_ClipsPartialWeeksAtBothEnds(t *testing.T) {
 func TestOeeTrendBuckets_EmptyWindow(t *testing.T) {
 	t.Parallel()
 
-	assert.Empty(t, oeeTrendBuckets(oeeTrendMonday, oeeTrendMonday))
-	assert.Empty(t, oeeTrendBuckets(oeeTrendMonday, oeeTrendMonday.AddDate(0, 0, -1)))
+	assert.Empty(t, oeeTrendBuckets(oeeTrendMonday, oeeTrendMonday, mondayWeekStart))
+	assert.Empty(t, oeeTrendBuckets(oeeTrendMonday, oeeTrendMonday.AddDate(0, 0, -1), mondayWeekStart))
 }
 
 // A stoppage that runs from Friday into Monday belongs partly to each week. Charging it whole to the week it started in would make one week look worse and the next look untouched.
@@ -199,7 +202,7 @@ func TestIndexOeeTrendOutput_KeysOnTheWeekMonday(t *testing.T) {
 		{WeekStart: oeeTrendMonday.AddDate(0, 0, 7), DepartmentID: "dp_a", GoodUnits: 3},
 	}
 
-	indexed := indexOeeTrendOutput(rows, nil)
+	indexed := indexOeeTrendOutput(rows, nil, mondayWeekStart)
 
 	assert.Len(t, indexed[oeeTrendMonday], 2)
 	assert.Len(t, indexed[oeeTrendMonday.AddDate(0, 0, 7)], 1)

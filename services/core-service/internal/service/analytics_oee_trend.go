@@ -21,23 +21,31 @@ func (s *analyticsSvcImpl) buildOeeTrend(ctx context.Context, params domain.Anal
 	defer span.End()
 
 	repo := s.repos.NewAnalyticsRepo()
+
+	// The week scans bucket into follows the account's configured week start, so a point on this chart covers the same days as the schedule week beside it, and the downtime and planned-hours arithmetic below charge the same weeks. Read first because the bucketed output query needs it; it is a single-row fetch, so serializing it ahead of the heavy reads costs nothing measurable.
+	settings, apiErr := s.repos.NewProductionScheduleRepo().GetSettings(ctx, params.AccountID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	weekStartDay := int(settings.WeekStartDay)
+
 	window := domain.GetOeeWindowParams{
-		AccountID: params.AccountID,
-		StartDate: params.StartDate,
-		EndDate:   params.EndDate,
+		AccountID:    params.AccountID,
+		StartDate:    params.StartDate,
+		EndDate:      params.EndDate,
+		WeekStartDay: weekStartDay,
 	}
 
-	// The four reads share no inputs, and the scan aggregate over the window dominates the other three combined — running them in sequence spends the whole chart's latency budget waiting on one query while three idle round trips queue behind it. Errors are collected and the first non-nil is returned, so failure behaves exactly as it did when these ran in order.
+	// These reads share no inputs, and the scan aggregate over the window dominates the others combined — running them in sequence spends the whole chart's latency budget waiting on one query while the rest idle. Errors are collected and the first non-nil is returned, so failure behaves exactly as it did when these ran in order.
 	var (
 		outputRows   []domain.OeeTrendDepartmentWeekRow
 		downtimeRows []domain.OeeDowntimeIntervalRow
-		settings     *domain.ProductionScheduleSettings
 		machineRows  []domain.DepartmentMachineCountRow
-		errs         [4]*apierror.APIError
+		errs         [3]*apierror.APIError
 		wg           sync.WaitGroup
 	)
 
-	wg.Add(4)
+	wg.Add(3)
 	go func() {
 		defer wg.Done()
 		outputRows, errs[0] = repo.GetOeeTrendDepartmentDataByWeek(ctx, window)
@@ -48,11 +56,7 @@ func (s *analyticsSvcImpl) buildOeeTrend(ctx context.Context, params domain.Anal
 	}()
 	go func() {
 		defer wg.Done()
-		settings, errs[2] = s.repos.NewProductionScheduleRepo().GetSettings(ctx, params.AccountID)
-	}()
-	go func() {
-		defer wg.Done()
-		machineRows, errs[3] = repo.CountMachinesByDepartment(ctx, params.AccountID)
+		machineRows, errs[2] = repo.CountMachinesByDepartment(ctx, params.AccountID)
 	}()
 	wg.Wait()
 
@@ -75,13 +79,13 @@ func (s *analyticsSvcImpl) buildOeeTrend(ctx context.Context, params domain.Anal
 		machinesByDepartment[row.DepartmentID] = row.MachineCount
 	}
 
-	outputByWeek := indexOeeTrendOutput(outputRows, deptFilter)
+	outputByWeek := indexOeeTrendOutput(outputRows, deptFilter, weekStartDay)
 
 	periods := []domain.OeeTrendPeriod{}
-	for _, bucket := range oeeTrendBuckets(params.StartDate, params.EndDate) {
+	for _, bucket := range oeeTrendBuckets(params.StartDate, params.EndDate, weekStartDay) {
 		plannedHours := derivePlannedHours(settings, machinesByDepartment, bucket.start, bucket.end)
 		downtime := oeeTrendDowntimeInBucket(downtimeRows, deptFilter, bucket.start, bucket.end)
-		periods = append(periods, buildOeeTrendPeriod(bucket, plannedHours, outputByWeek[weekStart(bucket.start)], downtime))
+		periods = append(periods, buildOeeTrendPeriod(bucket, plannedHours, outputByWeek[scheduleWeekStart(bucket.start, weekStartDay)], downtime))
 	}
 
 	return periods, nil
@@ -95,15 +99,15 @@ type oeeTrendBucket struct {
 
 // oeeTrendBuckets cuts a window into production weeks, clipped at both ends.
 //
-// Weeks start on Monday, the same key SumActualsByWeek buckets scans into, so a point on this chart covers the same days as the schedule week it sits next to. The first and last weeks of a range are usually partial — a range ending today ends mid-week — and are reported over the part that was asked for rather than padded out to a full week, because planned time scales with the days in the bucket and a padded week would report a plant that had stopped.
-func oeeTrendBuckets(start, end time.Time) []oeeTrendBucket {
+// Weeks start on the account's configured week start, the same key SumActualsByWeek buckets scans into, so a point on this chart covers the same days as the schedule week it sits next to. The first and last weeks of a range are usually partial — a range ending today ends mid-week — and are reported over the part that was asked for rather than padded out to a full week, because planned time scales with the days in the bucket and a padded week would report a plant that had stopped.
+func oeeTrendBuckets(start, end time.Time, weekStartDay int) []oeeTrendBucket {
 	if !end.After(start) {
 		return nil
 	}
 
 	var buckets []oeeTrendBucket
 	for cursor := start; cursor.Before(end); {
-		next := weekStart(cursor).AddDate(0, 0, 7)
+		next := scheduleWeekStart(cursor, weekStartDay).AddDate(0, 0, 7)
 		if next.After(end) {
 			next = end
 		}
@@ -114,13 +118,13 @@ func oeeTrendBuckets(start, end time.Time) []oeeTrendBucket {
 }
 
 // indexOeeTrendOutput groups the per-week output rows by their week key, dropping departments the caller filtered out.
-func indexOeeTrendOutput(rows []domain.OeeTrendDepartmentWeekRow, deptFilter map[string]bool) map[time.Time]map[string]domain.OeeTrendDepartmentWeekRow {
+func indexOeeTrendOutput(rows []domain.OeeTrendDepartmentWeekRow, deptFilter map[string]bool, weekStartDay int) map[time.Time]map[string]domain.OeeTrendDepartmentWeekRow {
 	out := make(map[time.Time]map[string]domain.OeeTrendDepartmentWeekRow)
 	for _, row := range rows {
 		if len(deptFilter) > 0 && !deptFilter[row.DepartmentID] {
 			continue
 		}
-		week := weekStart(row.WeekStart)
+		week := scheduleWeekStart(row.WeekStart, weekStartDay)
 		byDepartment, ok := out[week]
 		if !ok {
 			byDepartment = map[string]domain.OeeTrendDepartmentWeekRow{}

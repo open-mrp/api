@@ -29,6 +29,12 @@ func newAttainmentFixture(t *testing.T) *attainmentFixture {
 	repos := factorymock.NewMockRepoFactory(ctrl)
 	repos.EXPECT().NewScheduleAttainmentRepo().Return(repo).AnyTimes()
 
+	// The fixture's weeks are Mondays, so the account measures on a Monday-start week.
+	psRepo := repositorymock.NewMockProductionScheduleRepo(ctrl)
+	repos.EXPECT().NewProductionScheduleRepo().Return(psRepo).AnyTimes()
+	psRepo.EXPECT().GetSettings(gomock.Any(), gomock.Any()).
+		Return(&domain.ProductionScheduleSettings{WeekStartDay: 1}, nil).AnyTimes()
+
 	// A week far enough in the past that it is unambiguously history, published before it began.
 	week := weekStart(time.Now().UTC().AddDate(0, 0, -21))
 	published := week.AddDate(0, 0, -3)

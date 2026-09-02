@@ -420,8 +420,6 @@ func (s *itemSvcImpl) RecomputeItemCosts(ctx context.Context, accountID, itemID 
 		totalOverhead = totalOverhead.Add(cost.overhead.Mul(norm))
 	}
 
-	totalCost := totalMaterial.Add(totalLabor).Add(totalOverhead)
-
 	// 7. Restate the costs against the unit the item is stocked in, and write the total back as the item's unit cost.
 	stepUnitID := targetStep.Production.Quantity.Unit.ID
 	stocking, apiErr := itemRepo.GetStockingUnit(ctx, accountID, itemID)
@@ -439,7 +437,7 @@ func (s *itemSvcImpl) RecomputeItemCosts(ctx context.Context, accountID, itemID 
 	totalMaterial = totalMaterial.Mul(perStockingUnit)
 	totalLabor = totalLabor.Mul(perStockingUnit)
 	totalOverhead = totalOverhead.Mul(perStockingUnit)
-	totalCost = totalMaterial.Add(totalLabor).Add(totalOverhead)
+	totalCost := totalMaterial.Add(totalLabor).Add(totalOverhead)
 
 	if updateErr := itemRepo.UpdateUnitCost(ctx, accountID, itemID, totalCost, stocking.BaseUnitID); updateErr != nil {
 		return nil, tracing.Trace(span, updateErr)

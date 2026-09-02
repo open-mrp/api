@@ -993,17 +993,34 @@ WHERE i.id = sqlc.arg('item_id')
 
 -- name: GetCostFlowStepConsumptions :many
 -- Fetches consumption data for a production step with item type and unit cost for cost calculation.
+-- A consumption and the cost that prices it are recorded in whatever unit each was entered in, so both sides carry their unit's base ratio: multiplying a carton count by a per-each cost without them prices the step at an eighth of what it costs.
 SELECT
     ci.item_type_code AS consumed_item_type,
     cq.value AS consumption_quantity_value,
+    CAST(cqu.ratio_numerator / cqu.ratio_denominator AS DECIMAL(65,30)) AS consumption_unit_ratio,
     wq.value AS waste_quantity_value,
-    COALESCE(ucr.value, 0) AS consumed_item_unit_cost
+    CAST(wqu.ratio_numerator / wqu.ratio_denominator AS DECIMAL(65,30)) AS waste_unit_ratio,
+    COALESCE(ucr.value, 0) AS consumed_item_unit_cost,
+    CAST(COALESCE(ucru.ratio_numerator / ucru.ratio_denominator, 1) AS DECIMAL(65,30)) AS consumed_item_unit_cost_ratio
 FROM consumption c
 JOIN item ci ON c.item_id = ci.id
 JOIN quantity cq ON c.quantity_id = cq.id
+JOIN unit cqu ON cqu.id = cq.unit_id
 JOIN quantity wq ON c.waste_quantity_id = wq.id
+JOIN unit wqu ON wqu.id = wq.unit_id
 LEFT JOIN rate ucr ON ucr.id = ci.unit_cost_id
+LEFT JOIN unit ucru ON ucru.id = ucr.denominator_unit_id
 WHERE c.production_step_id = sqlc.arg('production_step_id');
+
+-- GetItemStockingUnit resolves the unit an item is counted in — its category's unit group base unit — with the group that unit belongs to. An item's unit cost is only meaningful denominated in this unit, because it is the unit its inventory is held and valued in.
+-- name: GetItemStockingUnit :one
+SELECT ic.unit_group_id, ug.base_unit_id
+FROM item i
+JOIN item_category ic ON ic.id = i.item_category_id
+JOIN unit_group ug ON ug.id = ic.unit_group_id
+WHERE i.id = sqlc.arg('item_id')
+    AND i.account_id = sqlc.arg('account_id')
+    AND i.deleted_at IS NULL;
 
 -- name: UpdateItemUnitCostRate :exec
 -- Updates an item's unit cost rate value and denominator unit.

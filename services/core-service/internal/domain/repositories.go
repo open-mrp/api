@@ -167,6 +167,8 @@ type ItemRepo interface {
 	// FindItemsProducedFromConsumed returns the items produced by every step that consumes any of the given ones — one generation outwards in the cost graph.
 	FindItemsProducedFromConsumed(ctx context.Context, accountID string, itemIDs []string) ([]string, *apierror.APIError)
 	UpdateUnitCost(ctx context.Context, accountID, itemID string, cost decimal.Decimal, denominatorUnitID string) *apierror.APIError
+	// GetStockingUnit resolves the unit an item is counted in, via its category's unit group, and that group. It is the only denominator the item's unit cost may carry, whatever unit the production step producing it is written in.
+	GetStockingUnit(ctx context.Context, accountID, itemID string) (*ItemStockingUnit, *apierror.APIError)
 	GetTrends(ctx context.Context, accountID, itemID, trendType string) (*ItemTrends, *apierror.APIError)
 	ExportWithInventory(ctx context.Context, accountID string) (*ExportItemsResult, *apierror.APIError)
 	Update(ctx context.Context, params UpdateItemParams) *apierror.APIError
@@ -250,6 +252,8 @@ type UnitRepo interface {
 	GetFreightWeightUnitID(ctx context.Context) (string, *apierror.APIError)
 	// GetDimensionCodes returns a unit-id → unit_dimension_code map for the given IDs. Used to enforce unit-type constraints (e.g., currency-only numerator on cost rates) before persisting rate rows.
 	GetDimensionCodes(ctx context.Context, ids []string) (map[string]string, *apierror.APIError)
+	// IsUnitInGroup reports whether a unit is usable as a unit group's member, counting the group's base unit. A dimension code is too coarse to answer this: a carton and an each are both counts, and only the group says how many of one make the other.
+	IsUnitInGroup(ctx context.Context, unitGroupID, unitID string) (bool, *apierror.APIError)
 	Create(ctx context.Context, id string, params CreateUnitParams) (*Unit, *apierror.APIError)
 	Update(ctx context.Context, params UpdateUnitParams) (*Unit, *apierror.APIError)
 	Delete(ctx context.Context, params DeleteUnitParams) *apierror.APIError

@@ -2005,6 +2005,21 @@ func (mr *MockItemRepoMockRecorder) GetInventory(ctx, accountID, itemID any) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInventory", reflect.TypeOf((*MockItemRepo)(nil).GetInventory), ctx, accountID, itemID)
 }
 
+// GetStockingUnit mocks base method.
+func (m *MockItemRepo) GetStockingUnit(ctx context.Context, accountID, itemID string) (*domain.ItemStockingUnit, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetStockingUnit", ctx, accountID, itemID)
+	ret0, _ := ret[0].(*domain.ItemStockingUnit)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetStockingUnit indicates an expected call of GetStockingUnit.
+func (mr *MockItemRepoMockRecorder) GetStockingUnit(ctx, accountID, itemID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStockingUnit", reflect.TypeOf((*MockItemRepo)(nil).GetStockingUnit), ctx, accountID, itemID)
+}
+
 // GetTrends mocks base method.
 func (m *MockItemRepo) GetTrends(ctx context.Context, accountID, itemID, trendType string) (*domain.ItemTrends, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -2738,6 +2753,21 @@ func (m *MockUnitRepo) GetFreightWeightUnitID(ctx context.Context) (string, *api
 func (mr *MockUnitRepoMockRecorder) GetFreightWeightUnitID(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFreightWeightUnitID", reflect.TypeOf((*MockUnitRepo)(nil).GetFreightWeightUnitID), ctx)
+}
+
+// IsUnitInGroup mocks base method.
+func (m *MockUnitRepo) IsUnitInGroup(ctx context.Context, unitGroupID, unitID string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsUnitInGroup", ctx, unitGroupID, unitID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// IsUnitInGroup indicates an expected call of IsUnitInGroup.
+func (mr *MockUnitRepoMockRecorder) IsUnitInGroup(ctx, unitGroupID, unitID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsUnitInGroup", reflect.TypeOf((*MockUnitRepo)(nil).IsUnitInGroup), ctx, unitGroupID, unitID)
 }
 
 // List mocks base method.

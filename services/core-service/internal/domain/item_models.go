@@ -175,11 +175,22 @@ type ItemCosts struct {
 }
 
 // CostFlowConsumption represents a single consumption with cost-relevant data.
+//
+// The three ratios carry each side's unit into its dimension's base unit. Quantities and the cost that prices them are each recorded in whatever unit was entered, so they can only be multiplied together on that common footing.
 type CostFlowConsumption struct {
-	ConsumedItemType    string          // e.g. "material", "part", "product"
-	ConsumptionQuantity decimal.Decimal // quantity consumed
-	WasteQuantity       decimal.Decimal // waste quantity
-	UnitCost            decimal.Decimal // consumed item's unit cost
+	ConsumedItemType         string          // e.g. "material", "part", "product"
+	ConsumptionQuantity      decimal.Decimal // quantity consumed
+	ConsumptionUnitRatio     decimal.Decimal // base units per one consumption unit
+	WasteQuantity            decimal.Decimal // waste quantity
+	WasteUnitRatio           decimal.Decimal // base units per one waste unit
+	UnitCost                 decimal.Decimal // consumed item's unit cost
+	UnitCostDenominatorRatio decimal.Decimal // base units per one unit the cost is denominated in
+}
+
+// ItemStockingUnit is the unit an item is counted in and the group that unit belongs to. Anything denominated per-item — a unit cost above all — belongs in BaseUnitID, and a unit outside UnitGroupID cannot be converted into it.
+type ItemStockingUnit struct {
+	UnitGroupID string
+	BaseUnitID  string
 }
 
 // ItemTrend represents a single trend data point.

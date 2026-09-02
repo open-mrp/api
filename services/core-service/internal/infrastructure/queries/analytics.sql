@@ -1087,6 +1087,11 @@ LEFT JOIN unit labor_time_unit ON labor_time_unit.id = labor_time.numerator_unit
 WHERE b.account_id = sqlc.arg('owner_account_id')
   AND b.scanned_at >= sqlc.arg('start_date')
   AND b.scanned_at <= sqlc.arg('end_date')
+  -- Optionally restrict output to the machines that were on the schedule: Performance divides the standard time earned by the scheduled machines' run time, so counting output from machines that were never scheduled would report a department running many times faster than the plant it was measured against. Off by default so a caller with no schedule still sees every department.
+  AND (sqlc.arg('include_machine_filter') = false OR EXISTS (
+      SELECT 1 FROM _batches_machines bm
+      WHERE bm.A = b.id AND bm.B IN (sqlc.slice('machine_ids'))
+  ))
 GROUP BY d.id, d.name;
 
 -- name: GetOeeEstimatedRuntime :many
@@ -1405,6 +1410,11 @@ LEFT JOIN unit labor_time_unit ON labor_time_unit.id = labor_time.numerator_unit
 WHERE b.account_id = sqlc.arg('owner_account_id')
   AND b.scanned_at >= sqlc.arg('start_date')
   AND b.scanned_at <= sqlc.arg('end_date')
+  -- Same scheduled-machine restriction as GetOeeDepartmentData, so a trend point measures the same machines as the table beside it.
+  AND (sqlc.arg('include_machine_filter') = false OR EXISTS (
+      SELECT 1 FROM _batches_machines bm
+      WHERE bm.A = b.id AND bm.B IN (sqlc.slice('machine_ids'))
+  ))
 GROUP BY week_start_date, d.id, d.name;
 
 -- GetOeeTrendDowntimeIntervals lists logged downtime per department as raw intervals, unclipped (open events coalesce to now).

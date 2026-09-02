@@ -1341,13 +1341,20 @@ LEFT JOIN unit labor_time_unit ON labor_time_unit.id = labor_time.numerator_unit
 WHERE b.account_id = ?
   AND b.scanned_at >= ?
   AND b.scanned_at <= ?
+  -- Optionally restrict output to the machines that were on the schedule: Performance divides the standard time earned by the scheduled machines' run time, so counting output from machines that were never scheduled would report a department running many times faster than the plant it was measured against. Off by default so a caller with no schedule still sees every department.
+  AND (? = false OR EXISTS (
+      SELECT 1 FROM _batches_machines bm
+      WHERE bm.A = b.id AND bm.B IN (/*SLICE:machine_ids*/?)
+  ))
 GROUP BY d.id, d.name
 `
 
 type GetOeeDepartmentDataParams struct {
-	OwnerAccountID string
-	StartDate      sql.NullTime
-	EndDate        sql.NullTime
+	OwnerAccountID       string
+	StartDate            sql.NullTime
+	EndDate              sql.NullTime
+	IncludeMachineFilter interface{}
+	MachineIds           []string
 }
 
 type GetOeeDepartmentDataRow struct {
@@ -1365,7 +1372,21 @@ type GetOeeDepartmentDataRow struct {
 //
 // Seconds-grade units count toward output but not toward good: they are sellable, but they are not first-pass quality, and leaving them out of the denominator would report a plant that produces nothing but irregulars as 100% quality.
 func (q *Queries) GetOeeDepartmentData(ctx context.Context, arg GetOeeDepartmentDataParams) ([]GetOeeDepartmentDataRow, error) {
-	rows, err := q.db.QueryContext(ctx, getOeeDepartmentData, arg.OwnerAccountID, arg.StartDate, arg.EndDate)
+	query := getOeeDepartmentData
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.OwnerAccountID)
+	queryParams = append(queryParams, arg.StartDate)
+	queryParams = append(queryParams, arg.EndDate)
+	queryParams = append(queryParams, arg.IncludeMachineFilter)
+	if len(arg.MachineIds) > 0 {
+		for _, v := range arg.MachineIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:machine_ids*/?", strings.Repeat(",?", len(arg.MachineIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:machine_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -1563,14 +1584,21 @@ LEFT JOIN unit labor_time_unit ON labor_time_unit.id = labor_time.numerator_unit
 WHERE b.account_id = ?
   AND b.scanned_at >= ?
   AND b.scanned_at <= ?
+  -- Same scheduled-machine restriction as GetOeeDepartmentData, so a trend point measures the same machines as the table beside it.
+  AND (? = false OR EXISTS (
+      SELECT 1 FROM _batches_machines bm
+      WHERE bm.A = b.id AND bm.B IN (/*SLICE:machine_ids*/?)
+  ))
 GROUP BY week_start_date, d.id, d.name
 `
 
 type GetOeeTrendDepartmentDataByWeekParams struct {
-	WeekStartDay   int64
-	OwnerAccountID string
-	StartDate      sql.NullTime
-	EndDate        sql.NullTime
+	WeekStartDay         int64
+	OwnerAccountID       string
+	StartDate            sql.NullTime
+	EndDate              sql.NullTime
+	IncludeMachineFilter interface{}
+	MachineIds           []string
 }
 
 type GetOeeTrendDepartmentDataByWeekRow struct {
@@ -1587,12 +1615,22 @@ type GetOeeTrendDepartmentDataByWeekRow struct {
 //
 // The week key is the start of the scan's production week, following the account's configured week_start_day, exactly as SumActualsByWeek buckets it: a trend that bucketed on a different day would disagree with schedule attainment about which week a batch belongs to.
 func (q *Queries) GetOeeTrendDepartmentDataByWeek(ctx context.Context, arg GetOeeTrendDepartmentDataByWeekParams) ([]GetOeeTrendDepartmentDataByWeekRow, error) {
-	rows, err := q.db.QueryContext(ctx, getOeeTrendDepartmentDataByWeek,
-		arg.WeekStartDay,
-		arg.OwnerAccountID,
-		arg.StartDate,
-		arg.EndDate,
-	)
+	query := getOeeTrendDepartmentDataByWeek
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.WeekStartDay)
+	queryParams = append(queryParams, arg.OwnerAccountID)
+	queryParams = append(queryParams, arg.StartDate)
+	queryParams = append(queryParams, arg.EndDate)
+	queryParams = append(queryParams, arg.IncludeMachineFilter)
+	if len(arg.MachineIds) > 0 {
+		for _, v := range arg.MachineIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:machine_ids*/?", strings.Repeat(",?", len(arg.MachineIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:machine_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}

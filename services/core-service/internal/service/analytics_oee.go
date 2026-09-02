@@ -22,9 +22,44 @@ func (s *analyticsSvcImpl) buildOeeByDepartment(ctx context.Context, params doma
 		EndDate:   params.EndDate,
 	}
 
+	// Scheduled time is the machine-hours the plant actually put on the production schedule, unless the caller supplied its own. A department with no published plan over the window has no availability rather than a denominator guessed from a shift pattern. The machines that carried those hours scope Performance and Quality to the same plant Availability is measured against.
+	plannedHours := params.PlannedTimeHours
+	var scheduledMachines map[string]bool
+	if len(plannedHours) == 0 {
+		// Weeks bucket on the account's configured week start, the same day the schedule stores its lines against, so the hours land in the week the window actually covers.
+		settings, apiErr := s.repos.NewProductionScheduleRepo().GetSettings(ctx, params.AccountID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		byWeek, apiErr := s.scheduledHoursByWeek(ctx, params.AccountID, params.StartDate, params.EndDate, int(settings.WeekStartDay))
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		plannedHours = proratedScheduledHours(byWeek, params.StartDate, params.EndDate)
+
+		scheduledMachines, apiErr = s.scheduledMachineIDs(ctx, params.AccountID, params.StartDate, params.EndDate, int(settings.WeekStartDay))
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
+
 	rows, apiErr := repo.GetOeeDepartmentData(ctx, window)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
+	}
+
+	// A scheduled department is measured on its scheduled machines alone: output scanned on machines the plan never listed would divide by a run time those machines never contributed to, reporting a department running many times its own speed. This read, scoped to those machines, is swapped in per scheduled department below; unscheduled departments keep the whole-floor read as estimated quality.
+	scopedByDept := map[string]domain.OeeDepartmentDataRow{}
+	if len(scheduledMachines) > 0 {
+		scopedWindow := window
+		scopedWindow.MachineIDs = machineSlice(scheduledMachines)
+		scopedRows, apiErr := repo.GetOeeDepartmentData(ctx, scopedWindow)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		for _, row := range scopedRows {
+			scopedByDept[row.DepartmentID] = row
+		}
 	}
 
 	runtimeRows, apiErr := repo.GetOeeEstimatedRuntime(ctx, window)
@@ -45,21 +80,6 @@ func (s *analyticsSvcImpl) buildOeeByDepartment(ctx context.Context, params doma
 
 	downtimeMap := aggregateOeeDowntime(downtimeRows)
 
-	// Scheduled time is the machine-hours the plant actually put on the production schedule, unless the caller supplied its own. A department with no published plan over the window has no availability rather than a denominator guessed from a shift pattern.
-	plannedHours := params.PlannedTimeHours
-	if len(plannedHours) == 0 {
-		// Weeks bucket on the account's configured week start, the same day the schedule stores its lines against, so the hours land in the week the window actually covers.
-		settings, apiErr := s.repos.NewProductionScheduleRepo().GetSettings(ctx, params.AccountID)
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		byWeek, apiErr := s.scheduledHoursByWeek(ctx, params.AccountID, params.StartDate, params.EndDate, int(settings.WeekStartDay))
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		plannedHours = proratedScheduledHours(byWeek, params.StartDate, params.EndDate)
-	}
-
 	// Build department filter set for optional filtering.
 	deptFilter := make(map[string]bool, len(params.DepartmentIDs))
 	for _, id := range params.DepartmentIDs {
@@ -72,15 +92,25 @@ func (s *analyticsSvcImpl) buildOeeByDepartment(ctx context.Context, params doma
 			continue
 		}
 
+		// A scheduled department reports only its scheduled machines' output; every other department keeps the whole-floor counts. A scheduled department whose machines produced nothing scopes to zero — no Performance rather than a borrowed one.
+		data := row
+		if len(scheduledMachines) > 0 && plannedHours[row.DepartmentID] > 0 {
+			scoped := scopedByDept[row.DepartmentID]
+			data.GoodUnits = scoped.GoodUnits
+			data.WasteUnits = scoped.WasteUnits
+			data.SecondsUnits = scoped.SecondsUnits
+			data.StandardSecondsEarned = scoped.StandardSecondsEarned
+		}
+
 		runtimeSeconds := runtimeMap[row.DepartmentID]
 
 		dept := domain.OeeDepartment{
 			DepartmentID:          row.DepartmentID,
 			DepartmentName:        row.DepartmentName,
-			GoodUnits:             row.GoodUnits,
-			WasteUnits:            row.WasteUnits,
-			SecondsUnits:          row.SecondsUnits,
-			StandardSecondsEarned: row.StandardSecondsEarned,
+			GoodUnits:             data.GoodUnits,
+			WasteUnits:            data.WasteUnits,
+			SecondsUnits:          data.SecondsUnits,
+			StandardSecondsEarned: data.StandardSecondsEarned,
 			EstimatedRuntimeHours: runtimeSeconds / 3600,
 		}
 		applyOeeDowntime(&dept, downtimeMap[row.DepartmentID])
@@ -341,5 +371,66 @@ func filterDeptHours(hours map[string]float64, deptFilter map[string]bool) map[s
 			out[departmentID] = h
 		}
 	}
+	return out
+}
+
+// scheduledMachineIDs returns every machine the account's live plan put on the schedule across the window — the machines OEE measures. Performance divides the standard time output earned by the scheduled machines' run time, so output from machines the plan never listed has to be kept out of the numerator or a department reads as running many times its own speed.
+//
+// Each week is attributed to the same baseline scheduledHoursByWeek and attainment choose, so all three agree on which plan owned a week and therefore on which machines it scheduled.
+func (s *analyticsSvcImpl) scheduledMachineIDs(ctx context.Context, accountID string, start, end time.Time, weekStartDay int) (map[string]bool, *apierror.APIError) {
+	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.scheduled_machine_ids")
+	defer span.End()
+
+	repo := s.repos.NewScheduleAttainmentRepo()
+	windowStart := scheduleWeekStart(start, weekStartDay)
+	windowEnd := end
+	// Read once so every week is judged against the same instant.
+	now := time.Now().UTC()
+
+	baselines, apiErr := repo.SelectAttainmentBaselines(ctx, domain.SelectAttainmentBaselinesParams{
+		AccountID:   accountID,
+		WindowStart: windowStart,
+		WindowEnd:   windowEnd,
+	})
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	machines := map[string]bool{}
+	for i := range baselines {
+		b := &baselines[i]
+
+		rows, apiErr := repo.SumPlannedByWeek(ctx, domain.SumPlannedByWeekParams{
+			AccountID:            accountID,
+			ProductionScheduleID: b.ScheduleID,
+			WindowStart:          windowStart,
+			WindowEnd:            windowEnd,
+		})
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+
+		for _, row := range rows {
+			week := scheduleWeekStart(row.WeekStartDate, weekStartDay)
+			// One baseline owns each week, exactly as in scheduledHoursByWeek: a version that covered the week but was not its plan scheduled nothing for it.
+			chosen := baselineFor(baselines, week, now)
+			if chosen == nil || chosen.ScheduleID != b.ScheduleID {
+				continue
+			}
+			if row.MachineID != "" {
+				machines[row.MachineID] = true
+			}
+		}
+	}
+	return machines, nil
+}
+
+// machineSlice is the sorted machine-id list an OEE read filters on. Sorted so the query text is stable across identical requests; empty when nothing was scheduled, which the read reads as no machine filter.
+func machineSlice(set map[string]bool) []string {
+	out := make([]string, 0, len(set))
+	for id := range set {
+		out = append(out, id)
+	}
+	sort.Strings(out)
 	return out
 }

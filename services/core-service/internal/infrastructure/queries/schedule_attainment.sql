@@ -2,9 +2,9 @@
 --
 -- Every query here is scoped by the *baseline* schedule chosen per week, never by "the current schedule". Measuring against whatever happens to be live now would let a republish rewrite last month's performance.
 
--- SelectAttainmentBaselines returns, for each week start in the window, the published version that was live for that week.
+-- SelectAttainmentBaselines returns every published version whose horizon overlaps the window; baselineFor (in Go) then picks the one that governed each week.
 --
--- `published_at <= week_start` is what stops a mid-horizon republish from rewriting history: a version published on Wednesday was not the plan the floor worked to on Monday. Newest qualifying publish wins.
+-- The per-week choice is the version that froze the week — the plan committed for it — so a version published after the week ended cannot rewrite history, while a plan published on the week's own start day still counts as the plan it froze. frozen_through_date is selected for exactly that test.
 -- name: SelectAttainmentBaselines :many
 SELECT
     s.id AS schedule_id,

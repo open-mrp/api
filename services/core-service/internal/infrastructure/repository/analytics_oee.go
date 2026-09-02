@@ -10,15 +10,26 @@ import (
 	"github.com/open-mrp/api/shared/tracing"
 )
 
+// oeeMachineFilter turns the requested machine set into the query's filter args. An empty set disables the filter; the slice still carries one sentinel value because the generated IN clause is invalid with no elements, and the disabled branch never evaluates it.
+func oeeMachineFilter(machineIDs []string) (include bool, ids []string) {
+	if len(machineIDs) == 0 {
+		return false, []string{""}
+	}
+	return true, machineIDs
+}
+
 // GetOeeDepartmentData returns the unit counts and the standard time earned per department in the window.
 func (r *analyticsRepoImpl) GetOeeDepartmentData(ctx context.Context, params domain.GetOeeWindowParams) ([]domain.OeeDepartmentDataRow, *apierror.APIError) {
 	ctx, span := analyticsRepoTracer.Start(ctx, "repository.analytics.get_oee_department_data")
 	defer span.End()
 
+	includeMachines, machineIDs := oeeMachineFilter(params.MachineIDs)
 	rows, err := r.queries.GetOeeDepartmentData(ctx, sqlc.GetOeeDepartmentDataParams{
-		OwnerAccountID: params.AccountID,
-		StartDate:      toRequiredNullTime(params.StartDate),
-		EndDate:        toRequiredNullTime(params.EndDate),
+		OwnerAccountID:       params.AccountID,
+		StartDate:            toRequiredNullTime(params.StartDate),
+		EndDate:              toRequiredNullTime(params.EndDate),
+		IncludeMachineFilter: includeMachines,
+		MachineIds:           machineIDs,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -95,11 +106,14 @@ func (r *analyticsRepoImpl) GetOeeTrendDepartmentDataByWeek(ctx context.Context,
 	ctx, span := analyticsRepoTracer.Start(ctx, "repository.analytics.get_oee_trend_department_data_by_week")
 	defer span.End()
 
+	includeMachines, machineIDs := oeeMachineFilter(params.MachineIDs)
 	rows, err := r.queries.GetOeeTrendDepartmentDataByWeek(ctx, sqlc.GetOeeTrendDepartmentDataByWeekParams{
-		OwnerAccountID: params.AccountID,
-		WeekStartDay:   int64(params.WeekStartDay),
-		StartDate:      toRequiredNullTime(params.StartDate),
-		EndDate:        toRequiredNullTime(params.EndDate),
+		OwnerAccountID:       params.AccountID,
+		WeekStartDay:         int64(params.WeekStartDay),
+		StartDate:            toRequiredNullTime(params.StartDate),
+		EndDate:              toRequiredNullTime(params.EndDate),
+		IncludeMachineFilter: includeMachines,
+		MachineIds:           machineIDs,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)

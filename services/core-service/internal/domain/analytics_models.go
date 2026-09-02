@@ -558,6 +558,8 @@ type GetOeeWindowParams struct {
 	EndDate   time.Time
 	// WeekStartDay is the weekday the trend read buckets scans on, 0 = Sunday through 6 = Saturday, matching the account's schedule week. Unused by the window-total OEE reads, which do not bucket by week.
 	WeekStartDay int
+	// MachineIDs restricts the output reads to production on these machines — the machines the plan scheduled. Empty means every machine, so a caller with no schedule still measures the whole floor.
+	MachineIDs []string
 }
 
 // OeeDepartmentDataRow is one department's unit counts and standard time earned in the window.

@@ -29,11 +29,18 @@ func (s *analyticsSvcImpl) buildOeeTrend(ctx context.Context, params domain.Anal
 	}
 	weekStartDay := int(settings.WeekStartDay)
 
+	// The trend rolls up only scheduled departments, so its output read is scoped to the machines the plan scheduled — the same machines the per-department table measures — keeping Performance on the same plant here as there. No schedule means no machines and no scoping, matching the empty roll-up that follows. Read before the parallel reads because the output query needs it; it is a handful of small queries.
+	scheduledMachines, apiErr := s.scheduledMachineIDs(ctx, params.AccountID, params.StartDate, params.EndDate, weekStartDay)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
 	window := domain.GetOeeWindowParams{
 		AccountID:    params.AccountID,
 		StartDate:    params.StartDate,
 		EndDate:      params.EndDate,
 		WeekStartDay: weekStartDay,
+		MachineIDs:   machineSlice(scheduledMachines),
 	}
 
 	// The three reads share no inputs, and the scan aggregate over the window dominates the others — running them in sequence spends the whole chart's latency budget waiting on one query while idle round trips queue behind it. Errors are collected and the first non-nil is returned, so failure behaves exactly as it did when these ran in order.

@@ -46,15 +46,17 @@ func newOeePlannedFixture(t *testing.T) *oeePlannedFixture {
 	}
 }
 
-// oneBaseline returns a single published version, live for the fixture's week, covering a wide horizon.
+// oneBaseline returns a single published version, live for the fixture's week and having frozen its whole horizon, so it owns every week the tests measure.
 func (f *oeePlannedFixture) oneBaseline() []domain.AttainmentBaselineRow {
 	published := f.week.AddDate(0, 0, -3)
+	frozenThrough := f.week.AddDate(0, 0, 70)
 	return []domain.AttainmentBaselineRow{{
-		ScheduleID:       "pnsc_1",
-		Version:          1,
-		HorizonStartDate: f.week.AddDate(0, 0, -7),
-		HorizonEndDate:   f.week.AddDate(0, 0, 70),
-		PublishedAt:      &published,
+		ScheduleID:        "pnsc_1",
+		Version:           1,
+		HorizonStartDate:  f.week.AddDate(0, 0, -7),
+		HorizonEndDate:    f.week.AddDate(0, 0, 70),
+		PublishedAt:       &published,
+		FrozenThroughDate: &frozenThrough,
 	}}
 }
 
@@ -102,16 +104,18 @@ func TestScheduledHoursByWeek_OnlyScheduledWeeksCount(t *testing.T) {
 	assert.Len(t, byWeek, 2)
 }
 
-// A version that covers a past week but was published after it began was not the plan the floor worked to; its hours must not reach the denominator. This is the same rule schedule attainment enforces, so OEE and attainment agree on what a week was.
+// A version published after a past week ended did not govern it; its hours must not reach the denominator. This is the same rule schedule attainment enforces, so OEE and attainment agree on what a week was.
 func TestScheduledHoursByWeek_IgnoresAVersionThatWasNotLive(t *testing.T) {
 	f := newOeePlannedFixture(t)
 
 	livePublished := f.week.AddDate(0, 0, -3)
-	republishedAfterWeek := f.week.AddDate(0, 0, 2) // published mid-week, so not live for this ended week
+	liveFrozen := f.week.AddDate(0, 0, 7)
+	republishedAfterWeek := f.week.AddDate(0, 0, 9) // published after the week closed, so it never governed it
+	republishedFrozen := f.week.AddDate(0, 0, 16)
 	baselines := []domain.AttainmentBaselineRow{
 		// Newest-publish first, matching the query's ORDER BY.
-		{ScheduleID: "pnsc_2", Version: 2, PublishedAt: &republishedAfterWeek, HorizonStartDate: f.week.AddDate(0, 0, -7), HorizonEndDate: f.week.AddDate(0, 0, 70)},
-		{ScheduleID: "pnsc_1", Version: 1, PublishedAt: &livePublished, HorizonStartDate: f.week.AddDate(0, 0, -7), HorizonEndDate: f.week.AddDate(0, 0, 70)},
+		{ScheduleID: "pnsc_2", Version: 2, PublishedAt: &republishedAfterWeek, HorizonStartDate: f.week.AddDate(0, 0, -7), HorizonEndDate: f.week.AddDate(0, 0, 70), FrozenThroughDate: &republishedFrozen},
+		{ScheduleID: "pnsc_1", Version: 1, PublishedAt: &livePublished, HorizonStartDate: f.week.AddDate(0, 0, -7), HorizonEndDate: f.week.AddDate(0, 0, 70), FrozenThroughDate: &liveFrozen},
 	}
 
 	f.schedule.EXPECT().SelectAttainmentBaselines(gomock.Any(), gomock.Any()).Return(baselines, nil).Times(1)
@@ -132,19 +136,25 @@ func TestScheduledHoursByWeek_IgnoresAVersionThatWasNotLive(t *testing.T) {
 func TestBuildOeeByDepartment_AvailabilityUsesScheduledHours(t *testing.T) {
 	f := newOeePlannedFixture(t)
 
+	// Read twice — once for the whole floor (estimated quality for unscheduled departments), once scoped to the scheduled machines — so the two return the same rows here; the assertions turn on Availability, which scoping leaves untouched.
 	f.analytics.EXPECT().GetOeeDepartmentData(gomock.Any(), gomock.Any()).Return([]domain.OeeDepartmentDataRow{
 		{DepartmentID: "dp_knit", DepartmentName: "Knitting", GoodUnits: 100, WasteUnits: 0},
 		{DepartmentID: "dp_unplanned", DepartmentName: "Sampling", GoodUnits: 50, WasteUnits: 0},
-	}, nil).Times(1)
+	}, nil).AnyTimes()
 	f.analytics.EXPECT().GetOeeEstimatedRuntime(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
 	f.analytics.EXPECT().GetOeeDowntimeByDepartment(gomock.Any(), gomock.Any()).Return([]domain.OeeDowntimeRow{
 		// 16 hours of availability-bucket downtime in the knitting room.
 		{DepartmentID: "dp_knit", ReasonCode: "breakdown", OeeBucket: domain.OeeBucketAvailability, DowntimeSeconds: 16 * 3600, EventCount: 2},
 	}, nil).Times(1)
 
-	f.schedule.EXPECT().SelectAttainmentBaselines(gomock.Any(), gomock.Any()).Return(f.oneBaseline(), nil).Times(1)
+	// Baselines are read for both the scheduled hours and the scheduled machines.
+	f.schedule.EXPECT().SelectAttainmentBaselines(gomock.Any(), gomock.Any()).Return(f.oneBaseline(), nil).AnyTimes()
 	f.schedule.EXPECT().SumScheduledHoursByDepartmentWeek(gomock.Any(), gomock.Any()).Return([]domain.ScheduledHoursRow{
 		{WeekStartDate: f.week, DepartmentID: "dp_knit", PlannedRunHours: 160},
+	}, nil).Times(1)
+	// The knitting room scheduled one machine; its output is what the scoped read measures.
+	f.schedule.EXPECT().SumPlannedByWeek(gomock.Any(), gomock.Any()).Return([]domain.AttainmentPlannedRow{
+		{WeekStartDate: f.week, MachineID: "mc_knit_1", ItemID: "it_1", PlannedQuantity: 100, PlannedRunHours: 160},
 	}, nil).Times(1)
 
 	departments, apiErr := f.svc.buildOeeByDepartment(context.Background(), domain.AnalyzeOeeParams{

@@ -758,16 +758,49 @@ func (r *itemRepoImpl) GetCostFlowConsumptions(ctx context.Context, stepID strin
 		if parseErr != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(parseErr, "Failed to parse item unit cost."))
 		}
+		consRatio, parseErr := decimal.NewFromString(row.ConsumptionUnitRatio)
+		if parseErr != nil {
+			return nil, tracing.Trace(span, apierror.NewInternalError(parseErr, "Failed to parse consumption unit ratio."))
+		}
+		wasteRatio, parseErr := decimal.NewFromString(row.WasteUnitRatio)
+		if parseErr != nil {
+			return nil, tracing.Trace(span, apierror.NewInternalError(parseErr, "Failed to parse waste unit ratio."))
+		}
+		costRatio, parseErr := decimal.NewFromString(row.ConsumedItemUnitCostRatio)
+		if parseErr != nil {
+			return nil, tracing.Trace(span, apierror.NewInternalError(parseErr, "Failed to parse item unit cost denominator ratio."))
+		}
 
 		result = append(result, domain.CostFlowConsumption{
-			ConsumedItemType:    row.ConsumedItemType,
-			ConsumptionQuantity: consQty,
-			WasteQuantity:       wasteQty,
-			UnitCost:            unitCost,
+			ConsumedItemType:         row.ConsumedItemType,
+			ConsumptionQuantity:      consQty,
+			ConsumptionUnitRatio:     consRatio,
+			WasteQuantity:            wasteQty,
+			WasteUnitRatio:           wasteRatio,
+			UnitCost:                 unitCost,
+			UnitCostDenominatorRatio: costRatio,
 		})
 	}
 
 	return result, nil
+}
+
+func (r *itemRepoImpl) GetStockingUnit(ctx context.Context, accountID, itemID string) (*domain.ItemStockingUnit, *apierror.APIError) {
+	ctx, span := itemRepoTracer.Start(ctx, "repository.item.get_stocking_unit")
+	defer span.End()
+
+	row, err := r.queries.GetItemStockingUnit(ctx, sqlc.GetItemStockingUnitParams{
+		ItemID:    itemID,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	return &domain.ItemStockingUnit{
+		UnitGroupID: row.UnitGroupID,
+		BaseUnitID:  row.BaseUnitID,
+	}, nil
 }
 
 func (r *itemRepoImpl) UpdateUnitCost(ctx context.Context, accountID, itemID string, cost decimal.Decimal, denominatorUnitID string) *apierror.APIError {

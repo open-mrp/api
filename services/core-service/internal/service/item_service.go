@@ -420,11 +420,26 @@ func (s *itemSvcImpl) RecomputeItemCosts(ctx context.Context, accountID, itemID 
 		totalOverhead = totalOverhead.Add(cost.overhead.Mul(norm))
 	}
 
+	// 7. Restate the costs against the unit the item is stocked in, and write the total back as the item's unit cost.
+	stepUnitID := targetStep.Production.Quantity.Unit.ID
+	stocking, apiErr := itemRepo.GetStockingUnit(ctx, accountID, itemID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := ValidateCostDenominatorInUnitGroup(ctx, s.repos.NewUnitRepo(), stocking.UnitGroupID, stepUnitID, "unit_cost"); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	perStockingUnit, apiErr := stepUnitsPerStockingUnit(ctx, s.repos.NewUnitConversionRepo(), stepUnitID, stocking.BaseUnitID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	totalMaterial = totalMaterial.Mul(perStockingUnit)
+	totalLabor = totalLabor.Mul(perStockingUnit)
+	totalOverhead = totalOverhead.Mul(perStockingUnit)
 	totalCost := totalMaterial.Add(totalLabor).Add(totalOverhead)
 
-	// 7. Update item's unit cost (side effect matching Dashboard behavior).
-	unitID := targetStep.Production.Quantity.Unit.ID
-	if updateErr := itemRepo.UpdateUnitCost(ctx, accountID, itemID, totalCost, unitID); updateErr != nil {
+	if updateErr := itemRepo.UpdateUnitCost(ctx, accountID, itemID, totalCost, stocking.BaseUnitID); updateErr != nil {
 		return nil, tracing.Trace(span, updateErr)
 	}
 
@@ -433,8 +448,16 @@ func (s *itemSvcImpl) RecomputeItemCosts(ctx context.Context, accountID, itemID 
 		DirectLaborCost:    totalLabor.StringFixed(30),
 		OverheadCost:       totalOverhead.StringFixed(30),
 		TotalCost:          totalCost.StringFixed(30),
-		UnitID:             unitID,
+		UnitID:             stocking.BaseUnitID,
 	}, nil
+}
+
+// stepUnitsPerStockingUnit is the factor that carries a per-step-unit amount onto a per-stocking-unit footing. A rate's denominator scales the opposite way to a measure's, so this is the quantity conversion run backwards.
+func stepUnitsPerStockingUnit(ctx context.Context, conv domain.UnitConversionRepo, stepUnitID, stockingUnitID string) (decimal.Decimal, *apierror.APIError) {
+	if stepUnitID == stockingUnitID {
+		return decimal.NewFromInt(1), nil
+	}
+	return conv.ConvertValue(ctx, decimal.NewFromInt(1), stockingUnitID, stepUnitID)
 }
 
 // itemStepCost holds the cost breakdown for a single production step.
@@ -498,12 +521,18 @@ func calculateStepCost(step *domain.ProductionFlowStep, consumptions []domain.Co
 	result.overhead = totalLaborTime.Mul(overheadRateValue)
 
 	// Material cost: sum of raw material consumption costs (exclude parts and products).
+	//
+	// Quantity and cost are each recorded in whatever unit was entered, so both go to base units before they meet: eight eaches drawn against a per-carton cost is one carton's worth of money, not eight.
 	for _, cons := range consumptions {
 		if cons.ConsumedItemType == "part" || cons.ConsumedItemType == "product" {
 			continue
 		}
-		totalUsed := cons.ConsumptionQuantity.Add(cons.WasteQuantity)
-		result.material = result.material.Add(totalUsed.Mul(cons.UnitCost))
+		if cons.UnitCostDenominatorRatio.IsZero() {
+			continue
+		}
+		usedInBaseUnits := cons.ConsumptionQuantity.Mul(cons.ConsumptionUnitRatio).Add(cons.WasteQuantity.Mul(cons.WasteUnitRatio))
+		costPerBaseUnit := cons.UnitCost.Div(cons.UnitCostDenominatorRatio)
+		result.material = result.material.Add(usedInBaseUnits.Mul(costPerBaseUnit))
 	}
 
 	result.total = result.material.Add(result.labor).Add(result.overhead)

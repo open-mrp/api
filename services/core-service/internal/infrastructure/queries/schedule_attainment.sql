@@ -64,13 +64,13 @@ GROUP BY l.week_start_date, l.department_id;
 --
 -- The week start follows the account's configured week_start_day (0 = Sunday through 6 = Saturday), the same day schedule horizons are built on. A fixed Monday here would split one schedule week's scans across two buckets for any plant whose week does not start on Monday, and its planned quantity would then be judged against a fraction of its own output.
 --
--- Department comes from the batch's production step, NOT from the scanning station the way AnalyzeOee does it. That is deliberate and the two are not interchangeable: a plan is expressed in the step's department, so attainment has to be measured there or a department would be judged against work it was never assigned.
+-- Department comes from the batch's machine (machine.department_id), the same source writeSolvedPlan populates a plan line's department from, so actuals and plan bucket into identical departments. It is deliberately NOT the scanning station AnalyzeOee uses, and deliberately not production_step.department_id: that column is nullable and unset in practice, which left every actual department blank and broke the department roll-up. The machine's department is NOT NULL and is exactly what the plan was expressed in.
 -- name: SumActualsByWeek :many
 SELECT
     DATE(DATE_SUB(b.scanned_at, INTERVAL ((DAYOFWEEK(b.scanned_at) + 6 - CAST(sqlc.arg('week_start_day') AS SIGNED)) % 7) DAY)) AS week_start_date,
     bm.B AS machine_id,
     b.item_id,
-    ps.department_id,
+    m.department_id,
     COALESCE(SUM(bq.value), 0) AS actual_quantity,
     COALESCE(SUM(wq.value), 0) AS waste_quantity,
     COUNT(*) AS batch_count
@@ -78,11 +78,11 @@ FROM batch b
 JOIN quantity bq ON bq.id = b.quantity_id
 LEFT JOIN quantity wq ON wq.id = b.waste_quantity_id
 LEFT JOIN _batches_machines bm ON bm.A = b.id
-LEFT JOIN production_step ps ON ps.id = b.production_step_id
+LEFT JOIN machine m ON m.id = bm.B
 WHERE b.account_id = sqlc.arg('account_id')
 AND b.scanned_at >= sqlc.arg('window_start')
 AND b.scanned_at < sqlc.arg('window_end')
-GROUP BY week_start_date, bm.B, b.item_id, ps.department_id;
+GROUP BY week_start_date, bm.B, b.item_id, m.department_id;
 
 -- CountDeviationsForBaselines counts frozen-week changes per baseline version, which is the numerator of frozen adherence.
 -- name: CountDeviationsForBaselines :many

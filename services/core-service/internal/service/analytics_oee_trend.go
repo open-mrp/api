@@ -36,13 +36,13 @@ func (s *analyticsSvcImpl) buildOeeTrend(ctx context.Context, params domain.Anal
 		WeekStartDay: weekStartDay,
 	}
 
-	// These reads share no inputs, and the scan aggregate over the window dominates the others combined — running them in sequence spends the whole chart's latency budget waiting on one query while the rest idle. Errors are collected and the first non-nil is returned, so failure behaves exactly as it did when these ran in order.
+	// The three reads share no inputs, and the scan aggregate over the window dominates the others — running them in sequence spends the whole chart's latency budget waiting on one query while idle round trips queue behind it. Errors are collected and the first non-nil is returned, so failure behaves exactly as it did when these ran in order.
 	var (
-		outputRows   []domain.OeeTrendDepartmentWeekRow
-		downtimeRows []domain.OeeDowntimeIntervalRow
-		machineRows  []domain.DepartmentMachineCountRow
-		errs         [3]*apierror.APIError
-		wg           sync.WaitGroup
+		outputRows    []domain.OeeTrendDepartmentWeekRow
+		downtimeRows  []domain.OeeDowntimeIntervalRow
+		scheduledWeek map[time.Time]map[string]float64
+		errs          [3]*apierror.APIError
+		wg            sync.WaitGroup
 	)
 
 	wg.Add(3)
@@ -56,7 +56,7 @@ func (s *analyticsSvcImpl) buildOeeTrend(ctx context.Context, params domain.Anal
 	}()
 	go func() {
 		defer wg.Done()
-		machineRows, errs[2] = repo.CountMachinesByDepartment(ctx, params.AccountID)
+		scheduledWeek, errs[2] = s.scheduledHoursByWeek(ctx, params.AccountID, params.StartDate, params.EndDate, weekStartDay)
 	}()
 	wg.Wait()
 
@@ -71,19 +71,13 @@ func (s *analyticsSvcImpl) buildOeeTrend(ctx context.Context, params domain.Anal
 		deptFilter[id] = true
 	}
 
-	machinesByDepartment := make(map[string]int64, len(machineRows))
-	for _, row := range machineRows {
-		if len(deptFilter) > 0 && !deptFilter[row.DepartmentID] {
-			continue
-		}
-		machinesByDepartment[row.DepartmentID] = row.MachineCount
-	}
-
 	outputByWeek := indexOeeTrendOutput(outputRows, deptFilter, weekStartDay)
 
 	periods := []domain.OeeTrendPeriod{}
 	for _, bucket := range oeeTrendBuckets(params.StartDate, params.EndDate, weekStartDay) {
-		plannedHours := derivePlannedHours(settings, machinesByDepartment, bucket.start, bucket.end)
+		// The plan is week-granular, so each bucket takes its own week's scheduled hours, prorated to the days the bucket covers — a partial first or last week is measured against the part of it that was asked for, the same days its output and downtime are read over.
+		week := scheduleWeekStart(bucket.start, weekStartDay)
+		plannedHours := scaleDeptHours(filterDeptHours(scheduledWeek[week], deptFilter), weekOverlapFraction(week, bucket.start, bucket.end))
 		downtime := oeeTrendDowntimeInBucket(downtimeRows, deptFilter, bucket.start, bucket.end)
 		periods = append(periods, buildOeeTrendPeriod(bucket, plannedHours, outputByWeek[scheduleWeekStart(bucket.start, weekStartDay)], downtime))
 	}

@@ -205,50 +205,46 @@ func TestComputeOeeRatios_PerformanceIgnoresSecondsUnits(t *testing.T) {
 	}
 }
 
-func TestDerivePlannedHours_ScalesByMachinesAndPeriod(t *testing.T) {
-	settings := &domain.ProductionScheduleSettings{
-		ShiftsPerDay:    2,
-		HoursPerShift:   7,
-		WorkDaysPerWeek: 5,
-	}
-	start := time.Date(2026, 8, 3, 0, 0, 0, 0, time.UTC)
-	end := start.AddDate(0, 0, 7)
+// The per-department table reports the whole window as one figure. A window that covers each week in full takes all of that week's hours, so the weeks add up per department.
+func TestProratedScheduledHours_SumsWholeWeeksPerDepartment(t *testing.T) {
+	w1 := time.Date(2026, 8, 3, 0, 0, 0, 0, time.UTC) // Monday
+	w2 := w1.AddDate(0, 0, 7)
 
-	got := derivePlannedHours(settings, map[string]int64{"dp_knit": 3}, start, end)
+	got := proratedScheduledHours(map[time.Time]map[string]float64{
+		w1: {"dp_knit": 80, "dp_dye": 40},
+		w2: {"dp_knit": 60},
+	}, w1, w2.AddDate(0, 0, 7))
 
-	// 2 shifts × 7 h × 5 days = 70 h a week, times three machines.
-	assert.InDelta(t, 210, got["dp_knit"], 0.001,
-		"scheduled time is machine-hours; a three-machine room is not measured against one shift")
+	assert.InDelta(t, 140, got["dp_knit"], 0.001, "two full weeks of a department add up")
+	assert.InDelta(t, 40, got["dp_dye"], 0.001)
 }
 
-// A three-day window is measured against three days of shift, not a whole week — otherwise every short range would report availability far worse than it was.
-func TestDerivePlannedHours_ScalesToAPartialWeek(t *testing.T) {
-	settings := &domain.ProductionScheduleSettings{ShiftsPerDay: 1, HoursPerShift: 8, WorkDaysPerWeek: 7}
-	start := time.Date(2026, 8, 3, 0, 0, 0, 0, time.UTC)
+// A window shorter than a week takes a proportional slice of that week's scheduled hours, the same slice the old day-count proration took — so availability is not divided by a whole week the range never covered.
+func TestProratedScheduledHours_TakesAPartialWeekInProportion(t *testing.T) {
+	monday := time.Date(2026, 8, 3, 0, 0, 0, 0, time.UTC)
 
-	got := derivePlannedHours(settings, map[string]int64{"dp": 1}, start, start.AddDate(0, 0, 7))
-	half := derivePlannedHours(settings, map[string]int64{"dp": 1}, start, start.AddDate(0, 0, 3))
+	full := proratedScheduledHours(map[time.Time]map[string]float64{monday: {"dp": 140}}, monday, monday.AddDate(0, 0, 7))
+	oneDay := proratedScheduledHours(map[time.Time]map[string]float64{monday: {"dp": 140}}, monday, monday.AddDate(0, 0, 1))
 
-	assert.InDelta(t, 56, got["dp"], 0.001)
-	assert.InDelta(t, 24, half["dp"], 0.001)
+	assert.InDelta(t, 140, full["dp"], 0.001)
+	assert.InDelta(t, 20, oneDay["dp"], 0.001, "one day of a week is a seventh of its scheduled hours")
 }
 
-// Availability has no meaning without a denominator, so an unconfigured shift pattern yields nothing rather than a guessed one.
-func TestDerivePlannedHours_NoShiftPatternYieldsNothing(t *testing.T) {
-	assert.Empty(t, derivePlannedHours(nil, map[string]int64{"dp": 1},
-		time.Now(), time.Now().AddDate(0, 0, 7)))
-
-	zero := &domain.ProductionScheduleSettings{ShiftsPerDay: 0, HoursPerShift: 0, WorkDaysPerWeek: 0}
-	assert.Empty(t, derivePlannedHours(zero, map[string]int64{"dp": 1},
-		time.Now(), time.Now().AddDate(0, 0, 7)))
+func TestProratedScheduledHours_EmptyScheduleYieldsNothing(t *testing.T) {
+	// No published plan over the window means no denominator, which computeOeeRatios turns into a nil availability rather than a fabricated one.
+	now := time.Now()
+	assert.Empty(t, proratedScheduledHours(nil, now, now.AddDate(0, 0, 7)))
+	assert.Empty(t, proratedScheduledHours(map[time.Time]map[string]float64{}, now, now.AddDate(0, 0, 7)))
 }
 
-func TestDerivePlannedHours_DepartmentWithNoMachines(t *testing.T) {
-	settings := &domain.ProductionScheduleSettings{ShiftsPerDay: 2, HoursPerShift: 7, WorkDaysPerWeek: 5}
-	start := time.Now()
+// An empty filter means every department; a non-empty one keeps only what was asked for.
+func TestFilterDeptHours_HonoursTheFilter(t *testing.T) {
+	hours := map[string]float64{"dp_knit": 80, "dp_dye": 40}
 
-	got := derivePlannedHours(settings, map[string]int64{"dp": 0}, start, start.AddDate(0, 0, 7))
-	assert.Empty(t, got, "a department with no machines has no scheduled time")
+	assert.Equal(t, hours, filterDeptHours(hours, nil), "no filter keeps everything")
+
+	got := filterDeptHours(hours, map[string]bool{"dp_knit": true})
+	assert.Equal(t, map[string]float64{"dp_knit": 80}, got)
 }
 
 // The canonical OEE example: an ideal cycle time of one minute a unit, 320 units produced, 400 minutes of run time. The department ran at 80% of its designed speed.

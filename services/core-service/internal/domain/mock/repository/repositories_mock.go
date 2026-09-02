@@ -11246,6 +11246,21 @@ func (mr *MockScheduleAttainmentRepoMockRecorder) SumPlannedByWeek(ctx, params a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SumPlannedByWeek", reflect.TypeOf((*MockScheduleAttainmentRepo)(nil).SumPlannedByWeek), ctx, params)
 }
 
+// SumScheduledHoursByDepartmentWeek mocks base method.
+func (m *MockScheduleAttainmentRepo) SumScheduledHoursByDepartmentWeek(ctx context.Context, params domain.SumPlannedByWeekParams) ([]domain.ScheduledHoursRow, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SumScheduledHoursByDepartmentWeek", ctx, params)
+	ret0, _ := ret[0].([]domain.ScheduledHoursRow)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// SumScheduledHoursByDepartmentWeek indicates an expected call of SumScheduledHoursByDepartmentWeek.
+func (mr *MockScheduleAttainmentRepoMockRecorder) SumScheduledHoursByDepartmentWeek(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SumScheduledHoursByDepartmentWeek", reflect.TypeOf((*MockScheduleAttainmentRepo)(nil).SumScheduledHoursByDepartmentWeek), ctx, params)
+}
+
 // MockProductionScheduleInputRepo is a mock of ProductionScheduleInputRepo interface.
 type MockProductionScheduleInputRepo struct {
 	ctrl     *gomock.Controller

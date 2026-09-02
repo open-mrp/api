@@ -79,6 +79,32 @@ func (r *scheduleAttainmentRepoImpl) SumPlannedByWeek(ctx context.Context, param
 	return out, nil
 }
 
+func (r *scheduleAttainmentRepoImpl) SumScheduledHoursByDepartmentWeek(ctx context.Context, params domain.SumPlannedByWeekParams) ([]domain.ScheduledHoursRow, *apierror.APIError) {
+	ctx, span := scheduleAttainmentRepoTracer.Start(ctx, "repository.schedule_attainment.sum_scheduled_hours_by_department_week")
+	defer span.End()
+
+	rows, err := r.queries.SumScheduledHoursByDepartmentWeek(ctx, sqlc.SumScheduledHoursByDepartmentWeekParams{
+		AccountID:            params.AccountID,
+		ProductionScheduleID: params.ProductionScheduleID,
+		WindowStart:          params.WindowStart,
+		WindowEnd:            params.WindowEnd,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	out := make([]domain.ScheduledHoursRow, len(rows))
+	for i, row := range rows {
+		out[i] = domain.ScheduledHoursRow{
+			WeekStartDate:            row.WeekStartDate,
+			DepartmentID:             row.DepartmentID.String,
+			PlannedRunHours:          decimalToFloat64(row.PlannedRunHours),
+			PlannedChangeoverMinutes: decimalToFloat64(row.PlannedChangeoverMinutes),
+		}
+	}
+	return out, nil
+}
+
 func (r *scheduleAttainmentRepoImpl) SumActualsByWeek(ctx context.Context, params domain.SumActualsByWeekParams) ([]domain.AttainmentActualRow, *apierror.APIError) {
 	ctx, span := scheduleAttainmentRepoTracer.Start(ctx, "repository.schedule_attainment.sum_actuals_by_week")
 	defer span.End()

@@ -41,6 +41,25 @@ AND l.week_start_date <= sqlc.arg('window_end')
 AND l.status_code != 'cancelled'
 GROUP BY l.week_start_date, l.machine_id, l.item_id, l.department_id;
 
+-- SumScheduledHoursByDepartmentWeek returns the scheduled machine time per department per week for one baseline version. It is the denominator OEE availability is measured against: the hours the plant actually put on the schedule, not a shift pattern multiplied out over the whole window.
+--
+-- planned_run_hours is a campaign's run time and planned_changeover_minutes the setup between campaigns; both are time a machine was scheduled to be working, so both belong in Planned Production Time, and logged downtime — changeover included — is charged against that total. Cancelled lines are excluded, matching SumPlannedByWeek: a line nobody will run was never scheduled time. Lines with no department are dropped rather than pooled into one bucket, because OEE has no availability for an unassigned department.
+-- name: SumScheduledHoursByDepartmentWeek :many
+SELECT
+    l.week_start_date,
+    l.department_id,
+    CAST(COALESCE(SUM(l.planned_run_hours), 0) AS DECIMAL(65,30)) AS planned_run_hours,
+    CAST(COALESCE(SUM(l.planned_changeover_minutes), 0) AS DECIMAL(65,30)) AS planned_changeover_minutes
+FROM production_schedule_line l
+WHERE l.account_id = sqlc.arg('account_id')
+AND l.production_schedule_id = sqlc.arg('production_schedule_id')
+AND l.week_start_date >= sqlc.arg('window_start')
+AND l.week_start_date <= sqlc.arg('window_end')
+AND l.status_code != 'cancelled'
+AND l.department_id IS NOT NULL
+AND l.department_id != ''
+GROUP BY l.week_start_date, l.department_id;
+
 -- SumActualsByWeek returns what was actually produced, bucketed to the start of the scan's production week so it lines up with a schedule line's week_start_date.
 --
 -- The week start follows the account's configured week_start_day (0 = Sunday through 6 = Saturday), the same day schedule horizons are built on. A fixed Monday here would split one schedule week's scans across two buckets for any plant whose week does not start on Monday, and its planned quantity would then be judged against a fraction of its own output.

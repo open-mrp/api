@@ -100,3 +100,5 @@ prompts/*.mjs
 # entry behind it, which every other clone fails to resolve. They are scratch checkouts of this same
 # repo and belong to whoever created them.
 .claude/worktrees/
+.conductor/
+.claude/settings.local.json

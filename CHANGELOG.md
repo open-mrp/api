@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.4](https://github.com/open-mrp/api/compare/v2.5.3...v2.5.4) (2026-09-02)
+
+
+### Bug Fixes
+
+* item unit cost denominator to match stocking unit ([#119](https://github.com/open-mrp/api/issues/119)) ([e7f2266](https://github.com/open-mrp/api/commit/e7f2266b3c50042bbabbddafa8f77b593e1e65bb))
+
 ## [2.5.3](https://github.com/open-mrp/api/compare/v2.5.2...v2.5.3) (2026-09-01)
 
 

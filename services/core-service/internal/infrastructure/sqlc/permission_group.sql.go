@@ -24,16 +24,7 @@ FROM permission_group
 WHERE permission_group.id IN (/*SLICE:ids*/?)
 `
 
-type GetPermissionGroupsByIDsRow struct {
-	ID          string
-	Code        string
-	Name        string
-	Description sql.NullString
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-}
-
-func (q *Queries) GetPermissionGroupsByIDs(ctx context.Context, ids []string) ([]GetPermissionGroupsByIDsRow, error) {
+func (q *Queries) GetPermissionGroupsByIDs(ctx context.Context, ids []string) ([]PermissionGroup, error) {
 	query := getPermissionGroupsByIDs
 	var queryParams []interface{}
 	if len(ids) > 0 {
@@ -49,9 +40,9 @@ func (q *Queries) GetPermissionGroupsByIDs(ctx context.Context, ids []string) ([
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetPermissionGroupsByIDsRow
+	var items []PermissionGroup
 	for rows.Next() {
-		var i GetPermissionGroupsByIDsRow
+		var i PermissionGroup
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -101,16 +92,7 @@ type ListPermissionGroupsBackwardParams struct {
 	Limit           int32
 }
 
-type ListPermissionGroupsBackwardRow struct {
-	ID          string
-	Code        string
-	Name        string
-	Description sql.NullString
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-}
-
-func (q *Queries) ListPermissionGroupsBackward(ctx context.Context, arg ListPermissionGroupsBackwardParams) ([]ListPermissionGroupsBackwardRow, error) {
+func (q *Queries) ListPermissionGroupsBackward(ctx context.Context, arg ListPermissionGroupsBackwardParams) ([]PermissionGroup, error) {
 	rows, err := q.db.QueryContext(ctx, listPermissionGroupsBackward,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -123,9 +105,9 @@ func (q *Queries) ListPermissionGroupsBackward(ctx context.Context, arg ListPerm
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListPermissionGroupsBackwardRow
+	var items []PermissionGroup
 	for rows.Next() {
-		var i ListPermissionGroupsBackwardRow
+		var i PermissionGroup
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -176,16 +158,7 @@ type ListPermissionGroupsForwardParams struct {
 	Limit           int32
 }
 
-type ListPermissionGroupsForwardRow struct {
-	ID          string
-	Code        string
-	Name        string
-	Description sql.NullString
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-}
-
-func (q *Queries) ListPermissionGroupsForward(ctx context.Context, arg ListPermissionGroupsForwardParams) ([]ListPermissionGroupsForwardRow, error) {
+func (q *Queries) ListPermissionGroupsForward(ctx context.Context, arg ListPermissionGroupsForwardParams) ([]PermissionGroup, error) {
 	rows, err := q.db.QueryContext(ctx, listPermissionGroupsForward,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -199,9 +172,9 @@ func (q *Queries) ListPermissionGroupsForward(ctx context.Context, arg ListPermi
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListPermissionGroupsForwardRow
+	var items []PermissionGroup
 	for rows.Next() {
-		var i ListPermissionGroupsForwardRow
+		var i PermissionGroup
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,

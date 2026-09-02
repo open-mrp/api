@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.5.7](https://github.com/open-mrp/api/compare/v2.5.6...v2.5.7) (2026-09-02)
+
+
+### Bug Fixes
+
+* **analytics:** bucket schedule weeks on the account's week start day ([#125](https://github.com/open-mrp/api/issues/125)) ([043f37f](https://github.com/open-mrp/api/commit/043f37feadcf138ffa2c684a21b1b496c1654eb0))
+* **analytics:** derive OEE availability from the published schedule ([#126](https://github.com/open-mrp/api/issues/126)) ([d94653d](https://github.com/open-mrp/api/commit/d94653d4cc13e0aa7ba1fd3f14f25c9e594eeae9))
+
 ## [2.5.6](https://github.com/open-mrp/api/compare/v2.5.5...v2.5.6) (2026-09-02)
 
 

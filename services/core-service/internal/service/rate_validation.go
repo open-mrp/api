@@ -72,3 +72,20 @@ func ValidateCostRateUnits(ctx context.Context, repo domain.UnitRepo, numeratorU
 
 	return nil
 }
+
+// ValidateCostDenominatorInUnitGroup ensures a cost's denominator names a unit the priced thing is actually counted in.
+//
+// A dimension code cannot stand in for a unit group: an each and a carton of eight are both "count", so ValidateCostRateUnits passes a per-each cost for an item stocked by the carton, which then prices its inventory eight times over. Group membership is also what makes a conversion between the two units defined at all.
+func ValidateCostDenominatorInUnitGroup(ctx context.Context, repo domain.UnitRepo, unitGroupID, denominatorUnitID, fieldName string) *apierror.APIError {
+	inGroup, apiErr := repo.IsUnitInGroup(ctx, unitGroupID, denominatorUnitID)
+	if apiErr != nil {
+		return apiErr
+	}
+	if !inGroup {
+		return apierror.NewValidationErrorWithParam(
+			fmt.Sprintf("%s.denominator_unit_id must be a unit in the item's unit group.", fieldName),
+			fieldName+".denominator_unit_id",
+		)
+	}
+	return nil
+}

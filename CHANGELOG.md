@@ -1,5 +1,26 @@
 # Changelog
 
+## [2.5.5](https://github.com/open-mrp/api/compare/v2.5.4...v2.5.5) (2026-09-02)
+
+
+### Bug Fixes
+
+* **items:** meet labour time and labour rates in base time units ([#121](https://github.com/open-mrp/api/issues/121)) ([5b19829](https://github.com/open-mrp/api/commit/5b1982970ce8e7c90b969f0f095f01212ea01132))
+
+## [2.5.4](https://github.com/open-mrp/api/compare/v2.5.3...v2.5.4) (2026-09-02)
+
+
+### Bug Fixes
+
+* item unit cost denominator to match stocking unit ([#119](https://github.com/open-mrp/api/issues/119)) ([e7f2266](https://github.com/open-mrp/api/commit/e7f2266b3c50042bbabbddafa8f77b593e1e65bb))
+
+## [2.5.3](https://github.com/open-mrp/api/compare/v2.5.2...v2.5.3) (2026-09-01)
+
+
+### Bug Fixes
+
+* **picks:** drive pick search from the match set ([#117](https://github.com/open-mrp/api/issues/117)) ([97a8da3](https://github.com/open-mrp/api/commit/97a8da3de10cee6fc2144e7973038f6d748a6a67))
+
 ## [2.5.2](https://github.com/open-mrp/api/compare/v2.5.1...v2.5.2) (2026-09-01)
 
 

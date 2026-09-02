@@ -290,6 +290,20 @@ func (r *unitRepoImpl) GetDimensionCodes(ctx context.Context, ids []string) (map
 	return out, nil
 }
 
+func (r *unitRepoImpl) IsUnitInGroup(ctx context.Context, unitGroupID, unitID string) (bool, *apierror.APIError) {
+	ctx, span := unitRepoTracer.Start(ctx, "repository.unit.is_unit_in_group")
+	defer span.End()
+
+	count, err := r.queries.CountUnitInGroup(ctx, sqlc.CountUnitInGroupParams{
+		UnitID:      unitID,
+		UnitGroupID: unitGroupID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return false, tracing.Trace(span, apiErr)
+	}
+	return count > 0, nil
+}
+
 func (r *unitRepoImpl) Get(ctx context.Context, params domain.GetUnitParams) (*domain.Unit, *apierror.APIError) {
 	ctx, span := unitRepoTracer.Start(ctx, "repository.unit.get")
 	defer span.End()

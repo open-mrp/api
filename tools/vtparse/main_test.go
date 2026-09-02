@@ -15,14 +15,15 @@ func TestRun_RejectsWhatVtgateRejectsAndSkipsPostgres(t *testing.T) {
 	writeService(t, root, "mysql-svc", "mysql", "mysql_queries.go.txt")
 	writeService(t, root, "pg-svc", "postgresql", "postgres_queries.go.txt")
 
-	findings, total, err := run(root)
+	result, err := run(root)
 	if err != nil {
 		t.Fatal(err)
 	}
+	findings := result.findings
 
-	// Four statements in the MySQL fixture; the bare string const is not one, and the Postgres service is not read at all.
-	if total != 4 {
-		t.Errorf("expected 4 generated queries examined, got %d", total)
+	// Five statements in the MySQL fixture; the bare string const is not one, and the Postgres service is not read at all.
+	if result.total != 5 {
+		t.Errorf("expected 5 generated queries examined, got %d", result.total)
 	}
 
 	if len(findings) != 1 {
@@ -44,7 +45,7 @@ func TestRun_RejectsWhatVtgateRejectsAndSkipsPostgres(t *testing.T) {
 
 // A root with no MySQL service is a misconfigured invocation, not a clean run: reporting "all queries parse" over zero queries is how this check silently stops running.
 func TestRun_FailsWhenNothingWasScanned(t *testing.T) {
-	if _, _, err := run(t.TempDir()); err == nil {
+	if _, err := run(t.TempDir()); err == nil {
 		t.Fatal("expected an error when no MySQL sqlc config was found")
 	}
 }
@@ -69,5 +70,61 @@ func writeService(t *testing.T, root, name, engine, fixture string) {
 	}
 	if err := os.WriteFile(filepath.Join(out, "queries.sql.go"), src, 0o600); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// Both sentinel shapes have to be caught, and a query that merely mentions OR must not be. `? IS NULL OR` is the one the corpus is full of, so missing it would make the check decorative.
+func TestRun_CountsBothOrSentinelShapes(t *testing.T) {
+	root := t.TempDir()
+	writeService(t, root, "mysql-svc", "mysql", "mysql_queries.go.txt")
+
+	result, err := run(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	const key = "services/mysql-svc/internal/infrastructure/sqlc/queries.sql.go:listWithOptionalFilters"
+	if got := result.sentinels[key]; got != 2 {
+		t.Errorf("expected 2 sentinels on the optional-filter query, got %d (all: %v)", got, result.sentinels)
+	}
+	for k := range result.sentinels {
+		if k != key {
+			t.Errorf("flagged a query with no bind-parameter sentinel: %s", k)
+		}
+	}
+}
+
+// A regression is more sentinels than the baseline allows. Fewer is the fix landing, and failing on it would make removing one a build break.
+func TestSentinelRegressions_OnlyReportsIncreases(t *testing.T) {
+	baseline := "# comment\napp/a.sql.go:queryA 2\napp/b.sql.go:queryB 1\n"
+	parsed, err := parseBaseline(baseline)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if parsed["app/a.sql.go:queryA"] != 2 {
+		t.Fatalf("baseline not parsed: %v", parsed)
+	}
+
+	got := sentinelRegressions(map[string]int{
+		"app/a.sql.go:queryA": 2, // unchanged
+		"app/b.sql.go:queryB": 0, // removed
+		"app/c.sql.go:queryC": 1, // new query, not in the baseline at all
+		"app/a.sql.go:queryD": 3, // new query in an already-listed file
+	}, parsed)
+
+	want := map[string]int{"app/c.sql.go:queryC": 1, "app/a.sql.go:queryD": 3}
+	if len(got) != len(want) {
+		t.Fatalf("expected %d regressions, got %d: %+v", len(want), len(got), got)
+	}
+	for _, r := range got {
+		if n, ok := want[r.file+":"+r.name]; !ok || n != r.found {
+			t.Errorf("unexpected regression %+v", r)
+		}
+	}
+
+	// An increase on a query the baseline already lists is the case that catches a sentinel added to an existing list endpoint.
+	grew := sentinelRegressions(map[string]int{"app/a.sql.go:queryA": 3}, parsed)
+	if len(grew) != 1 || grew[0].found != 3 || grew[0].baseline != 2 {
+		t.Errorf("expected a 2->3 increase to be reported, got %+v", grew)
 	}
 }

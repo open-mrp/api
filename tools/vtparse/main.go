@@ -12,6 +12,7 @@
 package main
 
 import (
+	_ "embed"
 	"flag"
 	"fmt"
 	"go/ast"
@@ -19,6 +20,7 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -48,17 +50,49 @@ type finding struct {
 
 func main() {
 	root := flag.String("root", ".", "directory to scan")
+	updateBaseline := flag.Bool("update-baseline", false, "rewrite or-sentinel-baseline.txt from the current corpus")
 	flag.Parse()
 
-	findings, queries, err := run(*root)
+	result, err := run(*root)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "vtparse:", err)
 		os.Exit(2)
 	}
 
-	if len(findings) == 0 {
-		fmt.Printf("vtparse: %d generated MySQL queries, all parse on Vitess\n", queries)
+	if *updateBaseline {
+		if err := writeBaseline(result.sentinels); err != nil {
+			fmt.Fprintln(os.Stderr, "vtparse:", err)
+			os.Exit(2)
+		}
+		fmt.Printf("vtparse: baseline updated — %d queries carrying OR-sentinel filters\n", len(result.sentinels))
 		return
+	}
+
+	baseline, err := parseBaseline(baselineFile)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "vtparse:", err)
+		os.Exit(2)
+	}
+	regressions := sentinelRegressions(result.sentinels, baseline)
+
+	findings, queries := result.findings, result.total
+
+	if len(findings) == 0 && len(regressions) == 0 {
+		fmt.Printf("vtparse: %d generated MySQL queries, all parse on Vitess\n", queries)
+		fmt.Printf("vtparse: %d queries carry OR-sentinel filters, all baselined\n", len(result.sentinels))
+		return
+	}
+
+	if len(regressions) > 0 {
+		fmt.Fprintf(os.Stderr, "vtparse: %d query/queries gained an OR-sentinel filter\n\n", len(regressions))
+		for _, r := range regressions {
+			fmt.Fprintf(os.Stderr, "  %s\n    %s: %d sentinel(s), baseline has %d\n", r.file, r.name, r.found, r.baseline)
+		}
+		fmt.Fprintln(os.Stderr, "\n`? = false OR ...` and `? IS NULL OR ...` are not sargable, and they cost more than the predicate they guard: the optimizer abandons the keyset composite for the whole query. Build the SQL in Go so an absent filter emits no predicate — see inventory_change_log_list_query.go. If the query was rewritten to remove sentinels, refresh with --update-baseline.")
+		if len(findings) == 0 {
+			os.Exit(1)
+		}
+		fmt.Fprintln(os.Stderr)
 	}
 
 	sort.Slice(findings, func(i, j int) bool { return findings[i].pos.String() < findings[j].pos.String() })
@@ -71,49 +105,66 @@ func main() {
 	os.Exit(1)
 }
 
+// scanResult is one pass over the corpus: what vtgate cannot parse, and what carries OR-sentinel filters.
+type scanResult struct {
+	findings  []finding
+	total     int
+	sentinels map[string]int // "<path relative to root>:<const name>" -> sentinel count
+}
+
+// sentinelRe matches the two shapes sqlc reaches for when a filter is optional. Both compare a bind parameter to a constant, so the predicate is decided before any row is read and no index can serve it.
+var sentinelRe = regexp.MustCompile(`(?is)\?\s*(?:=\s*(?:false|true|0|1)|IS\s+NULL)\s+OR\b`)
+
 // run parses every generated query belonging to a MySQL service and returns the ones vtgate rejects, along with the total examined.
-func run(root string) ([]finding, int, error) {
+func run(root string) (scanResult, error) {
 	dirs, err := generatedDirs(root)
 	if err != nil {
-		return nil, 0, err
+		return scanResult{}, err
 	}
 	if len(dirs) == 0 {
-		return nil, 0, fmt.Errorf("no MySQL sqlc configs found under %s; is --root pointing at the repository?", root)
+		return scanResult{}, fmt.Errorf("no MySQL sqlc configs found under %s; is --root pointing at the repository?", root)
 	}
 
 	p, err := sqlparser.New(sqlparser.Options{})
 	if err != nil {
-		return nil, 0, fmt.Errorf("creating parser: %w", err)
+		return scanResult{}, fmt.Errorf("creating parser: %w", err)
 	}
 
 	fset := token.NewFileSet()
-	var findings []finding
-	var total int
+	result := scanResult{sentinels: map[string]int{}}
 	for _, dir := range dirs {
 		paths, err := filepath.Glob(filepath.Join(dir, "*.sql.go"))
 		if err != nil {
-			return nil, 0, err
+			return scanResult{}, err
 		}
 		sort.Strings(paths)
 		for _, path := range paths {
 			file, err := parser.ParseFile(fset, path, nil, 0)
 			if err != nil {
-				return nil, 0, fmt.Errorf("parsing %s: %w", path, err)
+				return scanResult{}, fmt.Errorf("parsing %s: %w", path, err)
 			}
+			rel, err := filepath.Rel(root, path)
+			if err != nil {
+				rel = path
+			}
+			rel = filepath.ToSlash(rel)
 			for _, decl := range queryConsts(file) {
-				total++
+				result.total++
 				if _, err := p.Parse(decl.query); err != nil {
-					findings = append(findings, finding{
+					result.findings = append(result.findings, finding{
 						pos:   fset.Position(decl.pos),
 						name:  decl.name,
 						query: decl.query,
 						err:   err,
 					})
 				}
+				if n := len(sentinelRe.FindAllString(decl.query, -1)); n > 0 {
+					result.sentinels[rel+":"+decl.name] = n
+				}
 			}
 		}
 	}
-	return findings, total, nil
+	return result, nil
 }
 
 // generatedDirs returns the output directory of every service whose sqlc.yaml declares engine: mysql. Reading the config rather than listing services is what keeps a Postgres service out without naming it: agent-service generates $1 placeholders, which this parser would reject for the wrong reason.
@@ -217,4 +268,77 @@ func firstLine(query string) string {
 		line = line[:120] + "..."
 	}
 	return line
+}
+
+// baselineFile records the OR-sentinel filters already in the corpus, as "<path>:<query> <count>".
+//
+// Embedded rather than read from disk so the check does not depend on the working directory it is invoked from, and checked in so that adding a sentinel shows up as a reviewable line in the diff rather than a silently rising number.
+//
+//go:embed or-sentinel-baseline.txt
+var baselineFile string
+
+// baselinePath is where --update-baseline writes, relative to the tools module the Makefile runs this from.
+const baselinePath = "vtparse/or-sentinel-baseline.txt"
+
+type regression struct {
+	file     string
+	name     string
+	found    int
+	baseline int
+}
+
+// sentinelRegressions reports queries carrying more sentinels than the baseline allows. A query with fewer is not reported: removing them is the point, and failing the build for it would punish the fix.
+func sentinelRegressions(found, baseline map[string]int) []regression {
+	var out []regression
+	for key, n := range found {
+		if n <= baseline[key] {
+			continue
+		}
+		file, name, _ := strings.Cut(key, ":")
+		out = append(out, regression{file: file, name: name, found: n, baseline: baseline[key]})
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].file != out[j].file {
+			return out[i].file < out[j].file
+		}
+		return out[i].name < out[j].name
+	})
+	return out
+}
+
+func parseBaseline(body string) (map[string]int, error) {
+	baseline := map[string]int{}
+	for _, line := range strings.Split(body, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		key, count, ok := strings.Cut(line, " ")
+		if !ok {
+			return nil, fmt.Errorf("malformed baseline line %q; want \"<path>:<query> <count>\"", line)
+		}
+		n, err := strconv.Atoi(count)
+		if err != nil {
+			return nil, fmt.Errorf("malformed count in baseline line %q: %w", line, err)
+		}
+		baseline[key] = n
+	}
+	return baseline, nil
+}
+
+func writeBaseline(found map[string]int) error {
+	keys := make([]string, 0, len(found))
+	for k := range found {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	var b strings.Builder
+	b.WriteString("# OR-sentinel filters already in the corpus, written by `go run ./vtparse --root .. --update-baseline`.\n")
+	b.WriteString("# Each is an optional filter sqlc could not express conditionally, and each costs the query its keyset composite.\n")
+	b.WriteString("# Lines only ever come off this list. A new one fails the build; see the vtparse package doc.\n")
+	for _, k := range keys {
+		fmt.Fprintf(&b, "%s %d\n", k, found[k])
+	}
+	return os.WriteFile(baselinePath, []byte(b.String()), 0o600)
 }

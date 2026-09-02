@@ -28,3 +28,12 @@ INSERT INTO inventory_allocation (id, quantity_id) VALUES (?, ?)
 
 // Not a statement, and must not be reported as one.
 const tableName = "inventory_allocation"
+
+const listWithOptionalFilters = `-- name: ListWithOptionalFilters :many
+SELECT p.id
+FROM permission_group p
+WHERE p.account_id = ?
+  AND (? = false OR p.id IN (/*SLICE:ids*/?))
+  AND (? IS NULL OR p.name = ?)
+ORDER BY p.id
+`

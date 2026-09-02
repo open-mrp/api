@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.6](https://github.com/open-mrp/api/compare/v2.5.5...v2.5.6) (2026-09-02)
+
+
+### Bug Fixes
+
+* pick search match set ([#123](https://github.com/open-mrp/api/issues/123)) ([b242894](https://github.com/open-mrp/api/commit/b2428949dcea33d1409c2b35c47e6181962aa6bd))
+
 ## [2.5.5](https://github.com/open-mrp/api/compare/v2.5.4...v2.5.5) (2026-09-02)
 
 

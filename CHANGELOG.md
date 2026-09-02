@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.8](https://github.com/open-mrp/api/compare/v2.5.7...v2.5.8) (2026-09-02)
+
+
+### Bug Fixes
+
+* **analytics:** scope OEE performance to scheduled machines and fix baseline selection ([#128](https://github.com/open-mrp/api/issues/128)) ([b7e1909](https://github.com/open-mrp/api/commit/b7e1909561cdec8698a105de081138854cab0b75))
+
 ## [2.5.7](https://github.com/open-mrp/api/compare/v2.5.6...v2.5.7) (2026-09-02)
 
 

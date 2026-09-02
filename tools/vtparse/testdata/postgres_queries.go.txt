@@ -1,0 +1,5 @@
+package sqlc
+
+const getAgentRun = `-- name: GetAgentRun :one
+SELECT id, status FROM agent_run WHERE id = $1
+`

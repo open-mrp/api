@@ -13,6 +13,7 @@ require (
 	github.com/open-mrp/api v1.1.6
 	github.com/stretchr/testify v1.12.1
 	gopkg.in/yaml.v3 v3.0.1
+	vitess.io/vitess v0.24.2
 )
 
 require (
@@ -27,17 +28,22 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.30.3 // indirect
 	github.com/go-sql-driver/mysql v1.10.0 // indirect
+	github.com/golang/glog v1.2.5 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.30.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/pgx/v5 v5.10.0 // indirect
 	github.com/leodido/go-urn v1.5.0 // indirect
+	github.com/lmittmann/tint v1.1.3 // indirect
 	github.com/matoous/go-nanoid/v2 v2.1.0 // indirect
+	github.com/mattn/go-isatty v0.0.21 // indirect
+	github.com/planetscale/vtprotobuf v0.6.1-0.20250313105119-ba97887b0a25 // indirect
 	github.com/rabbitmq/amqp091-go v1.14.0 // indirect
 	github.com/richardlehane/mscfb v1.0.8 // indirect
 	github.com/richardlehane/msoleps v1.0.6 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
+	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/tiendc/go-deepcopy v1.7.2 // indirect
 	github.com/xuri/efp v0.0.1 // indirect
 	github.com/xuri/excelize/v2 v2.11.0 // indirect

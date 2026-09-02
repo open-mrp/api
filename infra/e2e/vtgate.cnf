@@ -1,0 +1,10 @@
+# Extra mysqld settings for the e2e vttestserver, layered over /vt/config/mycnf/test-suite.cnf.
+
+# Long-running e2e stacks accumulate thousands of rows in message_outbox and request_log. The outbox
+# poller's `ORDER BY next_run_at LIMIT N` under an UPDATE resorts to filesort, which exceeds the 256K
+# default and breaks outbox delivery (audit events, etc.).
+sort_buffer_size = 8M
+
+# vttestserver's test-suite.cnf sets 32M, which is sized for a single test rather than a six-service
+# stack working through a seeded dataset.
+innodb_buffer_pool_size = 256M

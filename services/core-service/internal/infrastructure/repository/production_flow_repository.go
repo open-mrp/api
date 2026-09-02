@@ -260,6 +260,7 @@ func (r *productionFlowRepoImpl) GetFlowStep(ctx context.Context, accountID, ste
 			Value:             row.LaborRateValue.String,
 			NumeratorUnitID:   row.LaborRateNumUnitID.String,
 			DenominatorUnitID: row.LaborRateDenUnitID.String,
+			DenominatorRatio:  row.LaborRateDenRatio,
 		}
 	}
 
@@ -269,6 +270,7 @@ func (r *productionFlowRepoImpl) GetFlowStep(ctx context.Context, accountID, ste
 			Value:             row.LaborTimeValue.String,
 			NumeratorUnitID:   row.LaborTimeNumUnitID.String,
 			DenominatorUnitID: row.LaborTimeDenUnitID.String,
+			NumeratorRatio:    row.LaborTimeNumRatio,
 		}
 	}
 
@@ -278,6 +280,7 @@ func (r *productionFlowRepoImpl) GetFlowStep(ctx context.Context, accountID, ste
 			Value:             row.OverheadRateValue.String,
 			NumeratorUnitID:   row.OverheadRateNumUnitID.String,
 			DenominatorUnitID: row.OverheadRateDenUnitID.String,
+			DenominatorRatio:  row.OverheadRateDenRatio,
 		}
 	}
 

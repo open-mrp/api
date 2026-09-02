@@ -73,6 +73,7 @@
 //	--limit            cap the number of item costs relabelled (0 = no cap); layers and recomputes are not capped.
 //	--skip-recompute   relabel only, and print the recompute plan instead of running it.
 //	--halt-on-error    stop at the first item the rollup refuses, rather than recording it and going on.
+//	--concurrency      recompute this many items at a time within a dependency level (default 8).
 package main
 
 import (
@@ -85,10 +86,12 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/shopspring/decimal"
 
+	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/repository"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/services/core-service/internal/mediator"
@@ -162,6 +165,7 @@ func Run(ctx context.Context, args []string, getenv func(string) string, stdout,
 	limit := fs.Int("limit", 0, "cap item costs relabelled (0 = no cap); layers and recomputes are not capped")
 	skipRecompute := fs.Bool("skip-recompute", false, "relabel only; print the recompute plan instead of running it")
 	haltOnError := fs.Bool("halt-on-error", false, "stop at the first item the rollup refuses")
+	concurrency := fs.Int("concurrency", defaultConcurrency, "recompute this many items at a time within a dependency level")
 	if err := fs.Parse(args[1:]); err != nil {
 		return err
 	}
@@ -217,7 +221,11 @@ func Run(ctx context.Context, args []string, getenv func(string) string, stdout,
 		return err
 	}
 
-	var derived []itemRef
+	if *concurrency < 1 {
+		*concurrency = 1
+	}
+
+	var derived [][]itemRef
 	if !*skipRecompute {
 		derived, err = findDerivedItems(ctx, pool, *accountID, *itemID, p)
 		if err != nil {
@@ -228,18 +236,28 @@ func Run(ctx context.Context, args []string, getenv func(string) string, stdout,
 	p.stage("Summary")
 	fmt.Fprintf(stdout, "  Item costs to relabel:     %d\n", len(items))
 	fmt.Fprintf(stdout, "  Receipt layers to restate: %d\n", len(layers))
-	fmt.Fprintf(stdout, "  Derived items to recompute: %d\n", len(derived))
+	derivedItems := flattenLevels(derived)
+	fmt.Fprintf(stdout, "  Derived items to recompute: %d\n", len(derivedItems))
 
 	printItemPlan(stdout, items)
 	printLayerPlan(stdout, layers)
-	printRecomputePlan(stdout, derived, *skipRecompute)
+	printRecomputePlan(stdout, derivedItems, *skipRecompute)
 
-	if len(items) == 0 && len(layers) == 0 && len(derived) == 0 {
+	if len(items) == 0 && len(layers) == 0 && len(derivedItems) == 0 {
 		p.stage("Nothing to do")
 		return nil
 	}
 
 	if *dryRun {
+		// The rollup is the thing being trusted to restate 5000-odd costs, so a plan that only names the
+		// items is not a plan: run it read-only and show what each cost would become.
+		if len(derivedItems) > 0 && !*skipRecompute {
+			planned, planErr := recomputeAll(ctx, pool, *accountID, derived, *concurrency, *haltOnError, true, p)
+			if planErr != nil {
+				return planErr
+			}
+			printRecomputeResults(stdout, planned)
+		}
 		p.stage("--dry-run: no writes made (pass --dry-run=false to apply)")
 		return nil
 	}
@@ -251,8 +269,8 @@ func Run(ctx context.Context, args []string, getenv func(string) string, stdout,
 	}
 
 	var results []recomputeResult
-	if len(derived) > 0 {
-		results, err = recomputeAll(ctx, pool, *accountID, derived, *haltOnError, p)
+	if len(derivedItems) > 0 {
+		results, err = recomputeAll(ctx, pool, *accountID, derived, *concurrency, *haltOnError, false, p)
 		if err != nil {
 			return err
 		}
@@ -426,7 +444,7 @@ ORDER BY ir.received_at`
 // Deliberately the whole account rather than the mislabelled ones. The material term's missing
 // normalisation left costs with a correct denominator and a wrong number, which no scan of the rate
 // row can find; recomputing everything derived is the only thing that reaches them.
-func findDerivedItems(ctx context.Context, pool *sql.DB, accountID, itemID string, p *progress) ([]itemRef, error) {
+func findDerivedItems(ctx context.Context, pool *sql.DB, accountID, itemID string, p *progress) ([][]itemRef, error) {
 	where, params := scopeFilter(accountID, itemID)
 
 	// #nosec G202 -- the only interpolation is `where`, built from fixed literals by scopeFilter; the
@@ -459,13 +477,13 @@ ORDER BY i.sku`
 		return nil, fmt.Errorf("iterate derived items: %w", err)
 	}
 
-	ordered, err := leavesFirst(ctx, pool, []string{accountID}, refs, p)
+	levels, err := leavesFirstLevels(ctx, pool, []string{accountID}, refs, p)
 	if err != nil {
 		return nil, err
 	}
 
-	p.stagef("Found %d derived item(s)", len(ordered))
-	return ordered, nil
+	p.stagef("Found %d derived item(s) across %d dependency level(s)", len(refs), len(levels))
+	return levels, nil
 }
 
 // orderCostsLeavesFirst puts the relabels into the same dependency order the recompute pass uses, so
@@ -505,8 +523,31 @@ func orderCostsLeavesFirst(ctx context.Context, pool *sql.DB, items []mislabelle
 // Items left in a cycle — a routing that consumes its own output — keep their scan order and are
 // appended last, since no order satisfies them and dropping them would strand the rest of the chain.
 func leavesFirst(ctx context.Context, pool *sql.DB, accountIDs []string, items []itemRef, p *progress) ([]itemRef, error) {
+	levels, err := leavesFirstLevels(ctx, pool, accountIDs, items, p)
+	if err != nil {
+		return nil, err
+	}
+	return flattenLevels(levels), nil
+}
+
+// flattenLevels drops the level boundaries, leaving the order they impose.
+func flattenLevels(levels [][]itemRef) []itemRef {
+	out := make([]itemRef, 0, len(levels))
+	for _, level := range levels {
+		out = append(out, level...)
+	}
+	return out
+}
+
+// leavesFirstLevels groups the items so everything in a level depends only on earlier levels. That is
+// the same order leavesFirst returns, with the boundaries kept: a level's items have no edges between
+// them, so the rollup can run them in any order, or all at once.
+func leavesFirstLevels(ctx context.Context, pool *sql.DB, accountIDs []string, items []itemRef, p *progress) ([][]itemRef, error) {
 	if len(items) < 2 {
-		return items, nil
+		if len(items) == 0 {
+			return nil, nil
+		}
+		return [][]itemRef{items}, nil
 	}
 
 	index := make(map[string]itemRef, len(items))
@@ -558,9 +599,9 @@ WHERE ps.account_id = ?`
 		_ = rows.Close()
 	}
 
-	ordered := make([]itemRef, 0, len(items))
+	var levels [][]itemRef
 	placed := make(map[string]struct{}, len(items))
-	for len(ordered) < len(items) {
+	for len(placed) < len(items) {
 		ready := make([]string, 0, len(items))
 		for _, it := range items {
 			if _, done := placed[it.ID]; done {
@@ -578,9 +619,11 @@ WHERE ps.account_id = ?`
 			}
 		}
 		if len(ready) == 0 {
+			// A cycle satisfies no order, so each item goes in a level of its own: running them one at
+			// a time is the closest thing to the dependency order they refuse to have.
 			for _, it := range items {
 				if _, done := placed[it.ID]; !done {
-					ordered = append(ordered, it)
+					levels = append(levels, []itemRef{it})
 					placed[it.ID] = struct{}{}
 				}
 			}
@@ -588,57 +631,107 @@ WHERE ps.account_id = ?`
 			break
 		}
 		sort.Strings(ready)
+		level := make([]itemRef, 0, len(ready))
 		for _, id := range ready {
-			ordered = append(ordered, index[id])
+			level = append(level, index[id])
 			placed[id] = struct{}{}
 		}
+		levels = append(levels, level)
 	}
 
-	return ordered, nil
+	return levels, nil
 }
 
-// applyRelabels moves every mislabelled denominator in one transaction, items before the layers that
-// copied them, so a failure leaves the costs as they were rather than half-moved.
+// applyRelabels moves every mislabelled denominator, items before the layers that copied them.
+//
+// Committed in batches rather than as one transaction: vtgate aborts a transaction at 20s, and the
+// whole repair does not fit in that on a large account. A batch that fails leaves the batches before
+// it standing, which is safe to re-run — the scan only ever finds rates that are still mislabelled.
+// Batch order stays leaves-first, so a partial run holds the same invariant a full one does: no
+// item's denominator moves before its inputs'.
 func applyRelabels(ctx context.Context, pool *sql.DB, items []mislabelledCost, layers []mislabelledLayer, p *progress) error {
+	pending := make([]pendingRelabel, 0, len(items)+len(layers))
+	for _, it := range items {
+		pending = append(pending, pendingRelabel{RateID: it.RateID, StockingID: it.StockingID})
+	}
+	for _, l := range layers {
+		pending = append(pending, pendingRelabel{RateID: l.Cost.RateID, StockingID: l.Cost.StockingID})
+	}
+
+	p.stagef("Relabelling %d item cost(s) then %d receipt layer(s), in batches of %d...", len(items), len(layers), relabelBatchSize)
+
+	for start := 0; start < len(pending); start += relabelBatchSize {
+		end := min(start+relabelBatchSize, len(pending))
+		if err := relabelBatch(ctx, pool, pending[start:end]); err != nil {
+			return fmt.Errorf("%d of %d rate(s) relabelled and committed; re-run to finish the rest: %w", start, len(pending), err)
+		}
+		p.step(end, len(pending), "rates relabelled")
+	}
+	return nil
+}
+
+// pendingRelabel is one rate and the stocking unit its denominator moves onto.
+type pendingRelabel struct {
+	RateID     string
+	StockingID string
+}
+
+// relabelBatchSize caps how many rates commit together, keeping a transaction well inside vtgate's
+// 20s limit.
+const relabelBatchSize = 500
+
+// relabelBatch commits one batch, grouped so the rates heading for the same unit move together.
+func relabelBatch(ctx context.Context, pool *sql.DB, batch []pendingRelabel) error {
+	byUnit := make(map[string][]string, len(batch))
+	units := make([]string, 0, len(batch))
+	for _, r := range batch {
+		if _, seen := byUnit[r.StockingID]; !seen {
+			units = append(units, r.StockingID)
+		}
+		byUnit[r.StockingID] = append(byUnit[r.StockingID], r.RateID)
+	}
+
 	tx, err := pool.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	p.stage("Relabelling (single transaction; nothing commits until the end)")
-
-	p.stagef("  %d item unit cost(s), leaves first...", len(items))
-	for i, it := range items {
-		if err := relabel(ctx, tx, it.RateID, it.StockingID); err != nil {
+	for _, unitID := range units {
+		if err := relabel(ctx, tx, byUnit[unitID], unitID); err != nil {
 			return err
 		}
-		p.step(i+1, len(items), "item costs relabelled")
 	}
 
-	p.stagef("  %d receipt layer(s)...", len(layers))
-	for i, l := range layers {
-		if err := relabel(ctx, tx, l.Cost.RateID, l.Cost.StockingID); err != nil {
-			return err
-		}
-		p.step(i+1, len(layers), "receipt layers restated")
-	}
-
-	p.stage("  Committing...")
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit: %w", err)
 	}
 	return nil
 }
 
-// relabel moves a rate's denominator without touching its value, which is the whole repair: the value
-// was already the number the stocking unit wanted.
-func relabel(ctx context.Context, tx *sql.Tx, rateID, stockingUnitID string) error {
-	const query = `UPDATE rate SET denominator_unit_id = ?, updated_at = NOW(3) WHERE id = ?`
-	if _, err := tx.ExecContext(ctx, query, stockingUnitID, rateID); err != nil {
-		return fmt.Errorf("relabel rate %s: %w", rateID, err)
+// relabel moves rates onto a denominator without touching their values, which is the whole repair:
+// the value was already the number the stocking unit wanted. One statement per destination unit — the
+// per-row form spent vtgate's whole transaction budget on round trips.
+func relabel(ctx context.Context, tx *sql.Tx, rateIDs []string, stockingUnitID string) error {
+	if len(rateIDs) == 0 {
+		return nil
+	}
+	// #nosec G202 -- the only interpolation is the placeholder list, sized from len(rateIDs); the ids
+	// themselves are bound as parameters.
+	query := `UPDATE rate SET denominator_unit_id = ?, updated_at = NOW(3) WHERE id IN (` + placeholders(len(rateIDs)) + `)`
+	args := make([]any, 0, len(rateIDs)+1)
+	args = append(args, stockingUnitID)
+	for _, id := range rateIDs {
+		args = append(args, id)
+	}
+	if _, err := tx.ExecContext(ctx, query, args...); err != nil {
+		return fmt.Errorf("relabel %d rate(s) onto unit %s: %w", len(rateIDs), stockingUnitID, err)
 	}
 	return nil
+}
+
+func placeholders(n int) string {
+	return strings.TrimSuffix(strings.Repeat("?,", n), ",")
 }
 
 // recomputeAll restates each derived cost through the service's own rollup, in dependency order.
@@ -647,7 +740,11 @@ func relabel(ctx context.Context, tx *sql.Tx, rateID, stockingUnitID string) err
 // independent calculations, and one item the rollup refuses — a step producing in a unit outside the
 // item's group, say — should not withhold every other corrected cost. Refusals are collected and
 // reported, since they name real misconfiguration for someone to fix by hand.
-func recomputeAll(ctx context.Context, pool *sql.DB, accountID string, items []itemRef, haltOnError bool, p *progress) ([]recomputeResult, error) {
+//
+// A level's items have no edges between them, so they run concurrently; levels stay strictly ordered,
+// because an item rolled up before its inputs reads numbers that are still wrong. The work is round
+// trips to a remote database rather than local computation, which is what makes the width pay.
+func recomputeAll(ctx context.Context, pool *sql.DB, accountID string, levels [][]itemRef, concurrency int, haltOnError, computeOnly bool, p *progress) ([]recomputeResult, error) {
 	queries := sqlc.New(pool)
 	itemSvc := service.NewItemSvc(&service.ItemSvcConfig{
 		Repos:           repository.NewRepoFactory(queries),
@@ -655,40 +752,147 @@ func recomputeAll(ctx context.Context, pool *sql.DB, accountID string, items []i
 		TxManager:       service.NewTransactionManager(pool, queries),
 	})
 
-	p.stagef("Recomputing %d derived item cost(s), leaves first...", len(items))
+	total := 0
+	for _, level := range levels {
+		total += len(level)
+	}
 
-	results := make([]recomputeResult, 0, len(items))
-	for i, ref := range items {
-		before, err := readUnitCost(ctx, pool, accountID, ref.ID)
+	verb := "Recomputing"
+	if computeOnly {
+		verb = "Costing (no writes)"
+	}
+	p.stagef("%s %d derived item cost(s), leaves first, %d at a time...", verb, total, concurrency)
+
+	results := make([]recomputeResult, 0, total)
+	for _, level := range levels {
+		levelResults, err := recomputeLevel(ctx, pool, itemSvc, accountID, level, concurrency, haltOnError, computeOnly)
+		results = append(results, levelResults...)
+		p.step(len(results), total, "items recomputed")
 		if err != nil {
-			return nil, err
+			return results, err
 		}
-
-		res := recomputeResult{Item: ref, Before: before}
-		if _, apiErr := itemSvc.RecomputeItemCosts(ctx, accountID, ref.ID); apiErr != nil {
-			res.Err = apiErr.PublicMessage
-			results = append(results, res)
-			if haltOnError {
-				return results, fmt.Errorf("halted at item %s (%s): %s", ref.SKU, ref.ID, apiErr.PublicMessage)
-			}
-			p.step(i+1, len(items), "items recomputed")
-			continue
-		}
-
-		after, err := readUnitCost(ctx, pool, accountID, ref.ID)
-		if err != nil {
-			return nil, err
-		}
-		res.After = after
-		results = append(results, res)
-		p.step(i+1, len(items), "items recomputed")
 	}
 
 	return results, nil
 }
 
-// readUnitCost renders an item's stored cost the way the report compares them, value and denominator
-// together — a value on its own says nothing about whether the pair moved.
+// recomputeLevel runs one level, up to concurrency items at a time, and returns the results in the
+// level's own order so a run reports the same way whatever order the workers finish in.
+func recomputeLevel(ctx context.Context, pool *sql.DB, itemSvc domain.ItemSvc, accountID string, level []itemRef, concurrency int, haltOnError, computeOnly bool) ([]recomputeResult, error) {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	out := make([]recomputeResult, len(level))
+	failed := make([]error, len(level))
+
+	sem := make(chan struct{}, concurrency)
+	var wg sync.WaitGroup
+	for i, ref := range level {
+		select {
+		case sem <- struct{}{}:
+		case <-ctx.Done():
+			// haltOnError cancelled the level; the items already running finish and report.
+			wg.Wait()
+			return collectLevel(out, level, failed)
+		}
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			defer func() { <-sem }()
+
+			res, err := recomputeOne(ctx, pool, itemSvc, accountID, ref, computeOnly)
+			if err != nil {
+				failed[i] = err
+				cancel()
+				return
+			}
+			out[i] = res
+			if res.Err != "" && haltOnError {
+				failed[i] = fmt.Errorf("halted at item %s (%s): %s", ref.SKU, ref.ID, res.Err)
+				cancel()
+			}
+		}()
+	}
+	wg.Wait()
+
+	return collectLevel(out, level, failed)
+}
+
+// collectLevel keeps the results that were reached and reports the first failure in level order, so
+// the error a run stops on does not depend on which worker lost the race.
+func collectLevel(out []recomputeResult, level []itemRef, failed []error) ([]recomputeResult, error) {
+	done := make([]recomputeResult, 0, len(out))
+	for i := range out {
+		if out[i].Item.ID != "" {
+			done = append(done, out[i])
+		}
+	}
+	for i := range failed {
+		if failed[i] != nil {
+			return done, failed[i]
+		}
+	}
+	return done, nil
+}
+
+// recomputeOne restates a single item, reading the cost either side so the run can report what moved.
+// A rollup the service refuses is recorded on the result rather than returned: it names a
+// misconfigured item, not a broken run.
+func recomputeOne(ctx context.Context, pool *sql.DB, itemSvc domain.ItemSvc, accountID string, ref itemRef, computeOnly bool) (recomputeResult, error) {
+	before, err := readUnitCost(ctx, pool, accountID, ref.ID)
+	if err != nil {
+		return recomputeResult{}, err
+	}
+	res := recomputeResult{Item: ref, Before: before}
+
+	// Compute-only is the plan: the same rollup the write path runs, reported against the stored cost
+	// so the money is on the page before anything moves.
+	if computeOnly {
+		costs, apiErr := itemSvc.ComputeItemCosts(ctx, accountID, ref.ID)
+		if apiErr != nil {
+			res.Err = apiErr.PublicMessage
+			return res, nil
+		}
+		computed, parseErr := decimal.NewFromString(costs.TotalCost)
+		if parseErr != nil {
+			return recomputeResult{}, fmt.Errorf("parse computed cost for %s: %w", ref.SKU, parseErr)
+		}
+		unitAbbrev, err := readUnitAbbreviation(ctx, pool, costs.UnitID)
+		if err != nil {
+			return recomputeResult{}, err
+		}
+		res.After = computed.String() + "/" + unitAbbrev
+		return res, nil
+	}
+
+	if _, apiErr := itemSvc.RecomputeItemCosts(ctx, accountID, ref.ID); apiErr != nil {
+		res.Err = apiErr.PublicMessage
+		return res, nil
+	}
+
+	after, err := readUnitCost(ctx, pool, accountID, ref.ID)
+	if err != nil {
+		return recomputeResult{}, err
+	}
+	res.After = after
+	return res, nil
+}
+
+// readUnitAbbreviation names a unit for the plan, so a computed cost reports in the same shape as a
+// stored one.
+func readUnitAbbreviation(ctx context.Context, pool *sql.DB, unitID string) (string, error) {
+	var abbreviation string
+	err := pool.QueryRowContext(ctx, `SELECT abbreviation FROM unit WHERE id = ?`, unitID).Scan(&abbreviation)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return unitID, nil
+		}
+		return "", fmt.Errorf("read unit %s: %w", unitID, err)
+	}
+	return abbreviation, nil
+}
+
 func readUnitCost(ctx context.Context, pool *sql.DB, accountID, itemID string) (string, error) {
 	const query = `
 SELECT r.value, du.abbreviation
@@ -793,6 +997,15 @@ func printRecomputeResults(out io.Writer, results []recomputeResult) {
 	fmt.Fprintf(out, "  Recomputed %d item(s): %d changed, %d unchanged, %d refused.\n",
 		len(results), changed, unchanged, len(refused))
 
+	// A small run is being read item by item, so show every line: "unchanged" is the answer under test
+	// when someone is checking one SKU, not noise to be summarised away.
+	if len(moved) == 0 && len(results) <= planLines {
+		fmt.Fprintf(out, "\n  Costs (SKU, stored -> computed):\n")
+		for _, r := range results {
+			fmt.Fprintf(out, "    %-24s %s -> %s\n", r.Item.SKU, r.Before, r.After)
+		}
+	}
+
 	if len(moved) > 0 {
 		fmt.Fprintf(out, "\n  Costs that moved (SKU, before -> after):\n")
 		for i, r := range moved {
@@ -823,8 +1036,10 @@ const planLines = 40
 // minutes in these loops and is indistinguishable from a hang without it. Every line carries elapsed
 // time so a run that is merely slow can be told apart from one that is stuck.
 type progress struct {
-	out   io.Writer
-	start time.Time
+	out      io.Writer
+	start    time.Time
+	mu       sync.Mutex
+	lastStep time.Time
 }
 
 func (p *progress) elapsed() string {
@@ -839,16 +1054,36 @@ func (p *progress) stagef(format string, args ...any) {
 	p.stage(fmt.Sprintf(format, args...))
 }
 
-// step prints a counter line every progressEvery items, and always on the final item, so the last
-// line of a loop matches its total rather than stopping short at the nearest interval.
+// step prints a counter line every progressEvery items, once progressInterval has passed since the
+// last one, and always on the final item — so the last line of a loop matches its total rather than
+// stopping short at the nearest interval.
+//
+// The interval is what carries a slow loop. A rollup spends seconds on an item, so a count-gated line
+// every progressEvery is minutes of silence, which is the hang this type exists to rule out.
 func (p *progress) step(done, total int, noun string) {
-	if done%progressEvery != 0 && done != total {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	since := p.lastStep
+	if since.IsZero() {
+		since = p.start
+	}
+	if done%progressEvery != 0 && done != total && time.Since(since) < progressInterval {
 		return
 	}
+	p.lastStep = time.Now()
 	fmt.Fprintf(p.out, "[%s]   %d/%d %s\n", p.elapsed(), done, total, noun)
 }
 
-const progressEvery = 100
+const (
+	progressEvery    = 100
+	progressInterval = 5 * time.Second
+)
+
+// defaultConcurrency is how many items a level recomputes at once. The rollup is round trips to a
+// remote database, not local work, so the width buys latency back; it stays well inside the pool's
+// 50 connections, which each in-flight rollup draws from.
+const defaultConcurrency = 8
 
 // normalizeDSN accepts either a driver DSN (user:pass@tcp(host:port)/db) — returned unchanged — or a
 // PlanetScale/URL form (mysql://user:pass@host[:port]/db[?...]), which it rewrites into the DSN form

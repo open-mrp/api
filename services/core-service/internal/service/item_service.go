@@ -236,7 +236,7 @@ func (s *itemSvcImpl) GetItemCosts(ctx context.Context, itemID string) (*domain.
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return s.RecomputeItemCosts(ctx, identity.Target.AccountID, itemID)
+	return s.ComputeItemCosts(ctx, identity.Target.AccountID, itemID)
 }
 
 // RecomputeItemCosts is GetItemCosts with the account named rather than read off the caller.
@@ -248,6 +248,33 @@ func (s *itemSvcImpl) GetItemCosts(ctx context.Context, itemID string) (*domain.
 // permission gate stays where a request enters.
 func (s *itemSvcImpl) RecomputeItemCosts(ctx context.Context, accountID, itemID string) (*domain.ItemCosts, *apierror.APIError) {
 	ctx, span := itemSvcTracer.Start(ctx, "service.item.recompute_costs")
+	defer span.End()
+
+	costs, apiErr := s.ComputeItemCosts(ctx, accountID, itemID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	total, err := decimal.NewFromString(costs.TotalCost)
+	if err != nil {
+		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Rolled-up cost is not a number."))
+	}
+
+	if updateErr := s.repos.NewItemRepo().UpdateUnitCost(ctx, accountID, itemID, total, costs.UnitID); updateErr != nil {
+		return nil, tracing.Trace(span, updateErr)
+	}
+
+	return costs, nil
+}
+
+// ComputeItemCosts rolls an item's cost up from its production steps and the unit costs of what they
+// consume, and returns it without storing anything.
+//
+// Separate from RecomputeItemCosts because the read path must not write: GET item costs served the
+// rollup and persisted it on the way out, so every page view restated the item, and a rollup defect
+// reached the database as fast as anyone could look at a page.
+func (s *itemSvcImpl) ComputeItemCosts(ctx context.Context, accountID, itemID string) (*domain.ItemCosts, *apierror.APIError) {
+	ctx, span := itemSvcTracer.Start(ctx, "service.item.compute_costs")
 	defer span.End()
 
 	flowRepo := s.repos.NewProductionFlowRepo()
@@ -439,10 +466,6 @@ func (s *itemSvcImpl) RecomputeItemCosts(ctx context.Context, accountID, itemID 
 	totalOverhead = totalOverhead.Mul(perStockingUnit)
 	totalCost := totalMaterial.Add(totalLabor).Add(totalOverhead)
 
-	if updateErr := itemRepo.UpdateUnitCost(ctx, accountID, itemID, totalCost, stocking.BaseUnitID); updateErr != nil {
-		return nil, tracing.Trace(span, updateErr)
-	}
-
 	return &domain.ItemCosts{
 		DirectMaterialCost: totalMaterial.StringFixed(30),
 		DirectLaborCost:    totalLabor.StringFixed(30),
@@ -458,6 +481,16 @@ func stepUnitsPerStockingUnit(ctx context.Context, conv domain.UnitConversionRep
 		return decimal.NewFromInt(1), nil
 	}
 	return conv.ConvertValue(ctx, decimal.NewFromInt(1), stockingUnitID, stepUnitID)
+}
+
+// baseUnitRatio reads a unit's base ratio, defaulting to 1 so a rate with no unit recorded prices the
+// same as it always did rather than collapsing the term to zero.
+func baseUnitRatio(ratio string) decimal.Decimal {
+	parsed, err := decimal.NewFromString(ratio)
+	if err != nil || parsed.IsZero() {
+		return decimal.NewFromInt(1)
+	}
+	return parsed
 }
 
 // itemStepCost holds the cost breakdown for a single production step.
@@ -487,22 +520,28 @@ func calculateStepCost(step *domain.ProductionFlowStep, consumptions []domain.Co
 	levelingFactor, _ := decimal.NewFromString(step.LevelingFactor)
 	allowances, _ := decimal.NewFromString(step.Allowances)
 
-	// Labor time (seconds per piece).
+	// Labour time, carried into the base time unit. A duration and the rate pricing it are each entered
+	// in whatever unit suited whoever entered them — seconds a piece against dollars an hour — so both
+	// go to base units before they meet, exactly as the material term does. Multiplying them raw prices
+	// an hour's labour for every second of it.
 	var laborTimeMeasure decimal.Decimal
 	if step.LaborTime != nil {
 		laborTimeMeasure, _ = decimal.NewFromString(step.LaborTime.Value)
+		laborTimeMeasure = laborTimeMeasure.Mul(baseUnitRatio(step.LaborTime.NumeratorRatio))
 	}
 
-	// Labor rate ($ per second).
+	// Labour rate, per base time unit.
 	var laborRateValue decimal.Decimal
 	if step.LaborRate != nil {
 		laborRateValue, _ = decimal.NewFromString(step.LaborRate.Value)
+		laborRateValue = laborRateValue.Div(baseUnitRatio(step.LaborRate.DenominatorRatio))
 	}
 
-	// Overhead rate ($ per second).
+	// Overhead rate, per base time unit.
 	var overheadRateValue decimal.Decimal
 	if step.OverheadRate != nil {
 		overheadRateValue, _ = decimal.NewFromString(step.OverheadRate.Value)
+		overheadRateValue = overheadRateValue.Div(baseUnitRatio(step.OverheadRate.DenominatorRatio))
 	}
 
 	// Corrective factor: (levelingFactor * allowances) + levelingFactor + allowances + 1

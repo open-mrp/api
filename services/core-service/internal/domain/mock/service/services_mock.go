@@ -2976,6 +2976,21 @@ func (mr *MockItemSvcMockRecorder) ChangeItemCategory(ctx, itemID, categoryID, i
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeItemCategory", reflect.TypeOf((*MockItemSvc)(nil).ChangeItemCategory), ctx, itemID, categoryID, includes)
 }
 
+// ComputeItemCosts mocks base method.
+func (m *MockItemSvc) ComputeItemCosts(ctx context.Context, accountID, itemID string) (*domain.ItemCosts, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ComputeItemCosts", ctx, accountID, itemID)
+	ret0, _ := ret[0].(*domain.ItemCosts)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ComputeItemCosts indicates an expected call of ComputeItemCosts.
+func (mr *MockItemSvcMockRecorder) ComputeItemCosts(ctx, accountID, itemID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ComputeItemCosts", reflect.TypeOf((*MockItemSvc)(nil).ComputeItemCosts), ctx, accountID, itemID)
+}
+
 // ExportItems mocks base method.
 func (m *MockItemSvc) ExportItems(ctx context.Context) (*domain.ExportItemsResult, *apierror.APIError) {
 	m.ctrl.T.Helper()

@@ -55,6 +55,13 @@ func (c *AllocateOpenIssuesConsumer) Listen(ctx context.Context) error {
 		c.inboxConsumer.Wrap("core.allocate_open_issues", c.handleMessage))
 }
 
+// ReplayMessage re-drives one delivery through the same inbox-dedup wrapper Listen uses, so a maintenance tool can re-run a permanently-failed message without re-applying one that already succeeded.
+//
+// A replayed full page enqueues its own continuation to the outbox exactly as a live delivery does, so the rest of the chain resumes through the normal publisher.
+func (c *AllocateOpenIssuesConsumer) ReplayMessage(ctx context.Context, msg amqp.Delivery) error {
+	return c.inboxConsumer.Wrap("core.allocate_open_issues", c.handleMessage)(ctx, msg)
+}
+
 func (c *AllocateOpenIssuesConsumer) handleMessage(ctx context.Context, msg amqp.Delivery) error {
 	ctx, span := c.tracer.Start(ctx, "consumer.allocate_open_issues",
 		trace.WithSpanKind(trace.SpanKindConsumer),

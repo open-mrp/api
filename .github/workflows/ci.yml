@@ -182,6 +182,29 @@ jobs:
       - name: Run transaction audit
         run: make tx-audit
 
+  vtparse:
+    name: Vitess Parse Check
+    needs: [changes]
+    if: needs.changes.outputs.go == 'true'
+    runs-on: ubuntu-latest
+    env:
+      GOTOOLCHAIN: local
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: tools/go.sum
+
+      # Production is PlanetScale, and vtgate rejects SQL that MySQL 8 accepts. Every test in this
+      # repository runs against plain mysql:8, so a statement like `FOR UPDATE OF a, b` passes the
+      # prepare smoke test, the ledger suite and e2e, then fails on every execution in production.
+      # This runs the generated query corpus through vtgate's own parser, which needs no database.
+      - name: Run Vitess parse check
+        run: make vtparse
+
   test:
     name: Test
     needs: [changes]

@@ -1,0 +1,30 @@
+package sqlc
+
+const readIssueCoverageForUpdate = `-- name: ReadIssueCoverageForUpdate :many
+SELECT ia.id, q.unit_id, q.value
+FROM inventory_allocation ia
+JOIN quantity q ON q.id = ia.quantity_id
+WHERE ia.inventory_issue_id = ?
+FOR UPDATE OF ia, q
+`
+
+const readReceiptAllocations = `-- name: ReadReceiptAllocations :many
+SELECT ia.id, q.unit_id, q.value
+FROM inventory_allocation ia
+JOIN quantity q ON q.id = ia.quantity_id
+WHERE ia.inventory_receipt_id = ?
+FOR UPDATE
+`
+
+const getPermissionGroupsByIDs = `-- name: GetPermissionGroupsByIDs :many
+SELECT permission_group.id
+FROM permission_group
+WHERE permission_group.id IN (/*SLICE:ids*/?)
+`
+
+const insertAllocation = `-- name: InsertAllocation :exec
+INSERT INTO inventory_allocation (id, quantity_id) VALUES (?, ?)
+`
+
+// Not a statement, and must not be reported as one.
+const tableName = "inventory_allocation"

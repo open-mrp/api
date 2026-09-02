@@ -293,7 +293,7 @@ install-ci-tools: ## Install minimum tools for CI
 mocks: ## Generate mocks. Usage: make mocks [services]
 	@$(MOCK_SCRIPT) $(ARGS)
 
-lint: gosec static-check tx-audit no-binaries ## Run gosec + staticcheck + transaction-callback audit + committed-binary check
+lint: gosec static-check tx-audit vtparse no-binaries ## Run gosec + staticcheck + transaction-callback audit + Vitess parse check + committed-binary check
 
 no-binaries: ## Check that no compiled binary or oversized file is tracked in git
 	@./scripts/check-no-binaries.sh
@@ -301,6 +301,10 @@ no-binaries: ## Check that no compiled binary or oversized file is tracked in gi
 tx-audit: ## Check that database transaction callbacks are safe to re-run after a deadlock
 	@echo "Auditing transaction callbacks..."
 	@cd tools && GOTOOLCHAIN=go1.27.0 go run ./txaudit --root ..
+
+vtparse: ## Check that every generated MySQL query parses on Vitess (PlanetScale rejects valid MySQL)
+	@echo "Parsing generated queries on Vitess..."
+	@cd tools && GOTOOLCHAIN=go1.27.0 go run ./vtparse --root ..
 
 gosec: ## Run gosec (all rules)
 	@echo "Running gosec..."
@@ -370,7 +374,7 @@ e2e: e2e-up ## Run API E2E tests against the full stack (brings the stack up fir
 
 e2e-down: ## Tear down the E2E stack
 	@./scripts/run-quiet.sh "Clearing leftover E2E containers" ./scripts/e2e-rm-named-containers.sh
-	@./scripts/run-quiet.sh "Tearing down E2E stack" docker compose -f docker-compose.e2e.yml down -v
+	@./scripts/run-quiet.sh "Tearing down E2E stack" docker compose -f docker-compose.e2e.yml down -v --remove-orphans
 
 # Version management
 version: ## Show current version

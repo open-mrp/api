@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.5](https://github.com/open-mrp/api/compare/v2.5.4...v2.5.5) (2026-09-02)
+
+
+### Bug Fixes
+
+* **items:** meet labour time and labour rates in base time units ([#121](https://github.com/open-mrp/api/issues/121)) ([5b19829](https://github.com/open-mrp/api/commit/5b1982970ce8e7c90b969f0f095f01212ea01132))
+
 ## [2.5.4](https://github.com/open-mrp/api/compare/v2.5.3...v2.5.4) (2026-09-02)
 
 

@@ -86,6 +86,68 @@ func (r *analyticsRepoImpl) GetOeeEstimatedRuntime(ctx context.Context, params d
 	return out, nil
 }
 
+// GetOeeEstimatedRuntimeForMachines returns the estimated runtime seconds per department in the window, counting only production on the named machines — the machines the plan scheduled. It is the Operating Time Availability and Performance divide by, kept on the same machines whose output fills their numerators.
+func (r *analyticsRepoImpl) GetOeeEstimatedRuntimeForMachines(ctx context.Context, params domain.GetOeeWindowParams) ([]domain.OeeEstimatedRuntimeRow, *apierror.APIError) {
+	ctx, span := analyticsRepoTracer.Start(ctx, "repository.analytics.get_oee_estimated_runtime_for_machines")
+	defer span.End()
+
+	// No scheduled machines means no scoped run time to read, and an empty IN list is invalid SQL.
+	if len(params.MachineIDs) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.queries.GetOeeEstimatedRuntimeForMachines(ctx, sqlc.GetOeeEstimatedRuntimeForMachinesParams{
+		OwnerAccountID: params.AccountID,
+		StartDate:      toRequiredNullTime(params.StartDate),
+		EndDate:        toRequiredNullTime(params.EndDate),
+		MachineIds:     params.MachineIDs,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	out := make([]domain.OeeEstimatedRuntimeRow, len(rows))
+	for i, row := range rows {
+		out[i] = domain.OeeEstimatedRuntimeRow{
+			DepartmentID:   row.DepartmentID,
+			RuntimeSeconds: decimalToFloat64(row.RuntimeSeconds),
+		}
+	}
+	return out, nil
+}
+
+// GetOeeTrendEstimatedRuntimeForMachines returns the scheduled machines' estimated runtime seconds per department per production week, the Operating Time each trend point measures its scheduled departments against.
+func (r *analyticsRepoImpl) GetOeeTrendEstimatedRuntimeForMachines(ctx context.Context, params domain.GetOeeWindowParams) ([]domain.OeeTrendEstimatedRuntimeRow, *apierror.APIError) {
+	ctx, span := analyticsRepoTracer.Start(ctx, "repository.analytics.get_oee_trend_estimated_runtime_for_machines")
+	defer span.End()
+
+	// No scheduled machines means no scoped run time to read, and an empty IN list is invalid SQL.
+	if len(params.MachineIDs) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.queries.GetOeeTrendEstimatedRuntimeForMachinesByWeek(ctx, sqlc.GetOeeTrendEstimatedRuntimeForMachinesByWeekParams{
+		OwnerAccountID: params.AccountID,
+		WeekStartDay:   int64(params.WeekStartDay),
+		StartDate:      toRequiredNullTime(params.StartDate),
+		EndDate:        toRequiredNullTime(params.EndDate),
+		MachineIds:     params.MachineIDs,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	out := make([]domain.OeeTrendEstimatedRuntimeRow, len(rows))
+	for i, row := range rows {
+		out[i] = domain.OeeTrendEstimatedRuntimeRow{
+			WeekStart:      row.WeekStartDate,
+			DepartmentID:   row.DepartmentID,
+			RuntimeSeconds: decimalToFloat64(row.RuntimeSeconds),
+		}
+	}
+	return out, nil
+}
+
 // GetOeeDowntimeByDepartment returns logged downtime per department and reason, clipped to the window.
 func (r *analyticsRepoImpl) GetOeeDowntimeByDepartment(ctx context.Context, params domain.GetOeeWindowParams) ([]domain.OeeDowntimeRow, *apierror.APIError) {
 	ctx, span := analyticsRepoTracer.Start(ctx, "repository.analytics.get_oee_downtime_by_department")

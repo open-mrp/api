@@ -43,16 +43,17 @@ func (s *analyticsSvcImpl) buildOeeTrend(ctx context.Context, params domain.Anal
 		MachineIDs:   machineSlice(scheduledMachines),
 	}
 
-	// The three reads share no inputs, and the scan aggregate over the window dominates the others — running them in sequence spends the whole chart's latency budget waiting on one query while idle round trips queue behind it. Errors are collected and the first non-nil is returned, so failure behaves exactly as it did when these ran in order.
+	// The reads share no inputs, and the scan aggregates over the window dominate the others — running them in sequence spends the whole chart's latency budget waiting on one query while idle round trips queue behind it. Errors are collected and the first non-nil is returned, so failure behaves exactly as it did when these ran in order.
 	var (
 		outputRows    []domain.OeeTrendDepartmentWeekRow
+		runtimeRows   []domain.OeeTrendEstimatedRuntimeRow
 		downtimeRows  []domain.OeeDowntimeIntervalRow
 		scheduledWeek map[time.Time]map[string]float64
-		errs          [3]*apierror.APIError
+		errs          [4]*apierror.APIError
 		wg            sync.WaitGroup
 	)
 
-	wg.Add(3)
+	wg.Add(4)
 	go func() {
 		defer wg.Done()
 		outputRows, errs[0] = repo.GetOeeTrendDepartmentDataByWeek(ctx, window)
@@ -64,6 +65,11 @@ func (s *analyticsSvcImpl) buildOeeTrend(ctx context.Context, params domain.Anal
 	go func() {
 		defer wg.Done()
 		scheduledWeek, errs[2] = s.scheduledHoursByWeek(ctx, params.AccountID, params.StartDate, params.EndDate, weekStartDay)
+	}()
+	go func() {
+		defer wg.Done()
+		// Operating Time per department per week — Performance's denominator and, capped at scheduled, Availability's. Scoped to the scheduled machines like the output read, so a week's run time and its output measure the same machines. No schedule means no machines, an empty filter, and no scoping, matching the empty roll-up.
+		runtimeRows, errs[3] = repo.GetOeeTrendEstimatedRuntimeForMachines(ctx, window)
 	}()
 	wg.Wait()
 
@@ -79,6 +85,7 @@ func (s *analyticsSvcImpl) buildOeeTrend(ctx context.Context, params domain.Anal
 	}
 
 	outputByWeek := indexOeeTrendOutput(outputRows, deptFilter, weekStartDay)
+	runtimeByWeek := indexOeeTrendRuntime(runtimeRows, deptFilter, weekStartDay)
 
 	periods := []domain.OeeTrendPeriod{}
 	for _, bucket := range oeeTrendBuckets(params.StartDate, params.EndDate, weekStartDay) {
@@ -86,7 +93,8 @@ func (s *analyticsSvcImpl) buildOeeTrend(ctx context.Context, params domain.Anal
 		week := scheduleWeekStart(bucket.start, weekStartDay)
 		plannedHours := scaleDeptHours(filterDeptHours(scheduledWeek[week], deptFilter), weekOverlapFraction(week, bucket.start, bucket.end))
 		downtime := oeeTrendDowntimeInBucket(downtimeRows, deptFilter, bucket.start, bucket.end)
-		periods = append(periods, buildOeeTrendPeriod(bucket, plannedHours, outputByWeek[scheduleWeekStart(bucket.start, weekStartDay)], downtime))
+		// Output and run time are already clipped to the window by the reads' scanned_at range, so a partial first or last week needs no proration here — only planned hours, which come from a week-granular schedule, are scaled above.
+		periods = append(periods, buildOeeTrendPeriod(bucket, plannedHours, outputByWeek[week], runtimeByWeek[week], downtime))
 	}
 
 	return periods, nil
@@ -132,6 +140,24 @@ func indexOeeTrendOutput(rows []domain.OeeTrendDepartmentWeekRow, deptFilter map
 			out[week] = byDepartment
 		}
 		byDepartment[row.DepartmentID] = row
+	}
+	return out
+}
+
+// indexOeeTrendRuntime groups the per-week Operating Time rows by their week key, dropping departments the caller filtered out. It mirrors indexOeeTrendOutput so a week's run time and its output are keyed the same way.
+func indexOeeTrendRuntime(rows []domain.OeeTrendEstimatedRuntimeRow, deptFilter map[string]bool, weekStartDay int) map[time.Time]map[string]float64 {
+	out := make(map[time.Time]map[string]float64)
+	for _, row := range rows {
+		if len(deptFilter) > 0 && !deptFilter[row.DepartmentID] {
+			continue
+		}
+		week := scheduleWeekStart(row.WeekStart, weekStartDay)
+		byDepartment, ok := out[week]
+		if !ok {
+			byDepartment = map[string]float64{}
+			out[week] = byDepartment
+		}
+		byDepartment[row.DepartmentID] += row.RuntimeSeconds
 	}
 	return out
 }
@@ -191,6 +217,7 @@ func buildOeeTrendPeriod(
 	bucket oeeTrendBucket,
 	plannedHours map[string]float64,
 	output map[string]domain.OeeTrendDepartmentWeekRow,
+	runtime map[string]float64,
 	downtime map[string]*oeeTrendDowntimeTotals,
 ) domain.OeeTrendPeriod {
 	period := domain.OeeTrendPeriod{StartsAt: bucket.start, EndsAt: bucket.end}
@@ -217,7 +244,7 @@ func buildOeeTrendPeriod(
 			period.HasDowntimeData = period.HasDowntimeData || totals.events > 0
 		}
 
-		computeOeeRatios(&dept, plannedHours[departmentID])
+		computeOeeRatios(&dept, plannedHours[departmentID], runtime[departmentID])
 		if dept.ScheduledSeconds <= 0 {
 			continue
 		}
@@ -227,7 +254,9 @@ func buildOeeTrendPeriod(
 		period.SecondsUnits += dept.SecondsUnits
 		period.StandardSecondsEarned += dept.StandardSecondsEarned
 		period.ScheduledSeconds += dept.ScheduledSeconds
+		period.OperatingTimeSeconds += dept.OperatingTimeSeconds
 		period.RunTimeSeconds += dept.RunTimeSeconds
+		period.OverrunSeconds += dept.OverrunSeconds
 		period.AvailabilityLossSeconds += dept.AvailabilityLossSeconds
 		period.NotScheduledSeconds += dept.NotScheduledSeconds
 	}
@@ -236,8 +265,9 @@ func buildOeeTrendPeriod(
 		availability := period.RunTimeSeconds / period.ScheduledSeconds
 		period.AvailabilityPct = &availability
 	}
-	if period.RunTimeSeconds > 0 && period.StandardSecondsEarned > 0 {
-		performance := period.StandardSecondsEarned / period.RunTimeSeconds
+	// Performance rolls up on the full (uncapped) operating time — the same denominator each department used — so a week's speed is not distorted by the availability cap.
+	if period.OperatingTimeSeconds > 0 && period.StandardSecondsEarned > 0 {
+		performance := period.StandardSecondsEarned / period.OperatingTimeSeconds
 		period.PerformancePct = &performance
 	}
 	if totalUnits := period.GoodUnits + period.WasteUnits + period.SecondsUnits; totalUnits > 0 {

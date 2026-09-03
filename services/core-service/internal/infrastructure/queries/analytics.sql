@@ -1159,6 +1159,30 @@ FROM (
 ) daily
 GROUP BY department_id;
 
+-- GetOeeEstimatedRuntimeForMachines is GetOeeEstimatedRuntime restricted to a set of machines — the machines the plan scheduled — and is the Operating Time OEE measures the scheduled machines against.
+--
+-- Availability and Performance both divide by the time the equipment was actually running, and that time has to be measured on the same machines whose output fills the numerator: counting run time from machines the plan never listed, or output from them, would let a department read as running many times its own speed. Run time is summed per machine per day (MIN..MAX of that machine's scans), then rolled up, so a department's Operating Time is machine-hours — the same footing as the machine-hours the schedule planned. A single scan in a day spans zero seconds, the same understatement GetOeeEstimatedRuntime carries.
+-- name: GetOeeEstimatedRuntimeForMachines :many
+SELECT
+    department_id,
+    SUM(TIMESTAMPDIFF(SECOND, day_first, day_last)) AS runtime_seconds
+FROM (
+    SELECT
+        COALESCE(ss.department_id, 'unassigned') AS department_id,
+        bm.B AS machine_id,
+        DATE(b.scanned_at) AS scan_date,
+        MIN(b.scanned_at) AS day_first,
+        MAX(b.scanned_at) AS day_last
+    FROM batch b
+    JOIN _batches_machines bm ON bm.A = b.id AND bm.B IN (sqlc.slice('machine_ids'))
+    LEFT JOIN scanning_station ss ON ss.id = b.scanning_station_id
+    WHERE b.account_id = sqlc.arg('owner_account_id')
+      AND b.scanned_at >= sqlc.arg('start_date')
+      AND b.scanned_at <= sqlc.arg('end_date')
+    GROUP BY COALESCE(ss.department_id, 'unassigned'), bm.B, DATE(b.scanned_at)
+) daily
+GROUP BY department_id;
+
 -- name: GetDemandForecastMonthlyDemand :many
 SELECT
     it.id AS item_id,
@@ -1507,6 +1531,30 @@ WHERE b.account_id = sqlc.arg('owner_account_id')
       WHERE bm.A = b.id AND bm.B IN (sqlc.slice('machine_ids'))
   )
 GROUP BY week_start_date, d.id, d.name;
+
+-- GetOeeTrendEstimatedRuntimeForMachinesByWeek is GetOeeEstimatedRuntimeForMachines bucketed into production weeks, so one read gives the trend its Operating Time per department per week. The week key follows the account's week_start_day, exactly as GetOeeTrendDepartmentDataByWeek buckets output, so a week's run time and its output describe the same days.
+-- name: GetOeeTrendEstimatedRuntimeForMachinesByWeek :many
+SELECT
+    week_start_date,
+    department_id,
+    SUM(TIMESTAMPDIFF(SECOND, day_first, day_last)) AS runtime_seconds
+FROM (
+    SELECT
+        DATE(DATE_SUB(b.scanned_at, INTERVAL ((DAYOFWEEK(b.scanned_at) + 6 - CAST(sqlc.arg('week_start_day') AS SIGNED)) % 7) DAY)) AS week_start_date,
+        COALESCE(ss.department_id, 'unassigned') AS department_id,
+        bm.B AS machine_id,
+        DATE(b.scanned_at) AS scan_date,
+        MIN(b.scanned_at) AS day_first,
+        MAX(b.scanned_at) AS day_last
+    FROM batch b
+    JOIN _batches_machines bm ON bm.A = b.id AND bm.B IN (sqlc.slice('machine_ids'))
+    LEFT JOIN scanning_station ss ON ss.id = b.scanning_station_id
+    WHERE b.account_id = sqlc.arg('owner_account_id')
+      AND b.scanned_at >= sqlc.arg('start_date')
+      AND b.scanned_at <= sqlc.arg('end_date')
+    GROUP BY week_start_date, COALESCE(ss.department_id, 'unassigned'), bm.B, DATE(b.scanned_at)
+) daily
+GROUP BY week_start_date, department_id;
 
 -- GetOeeTrendDowntimeIntervals lists logged downtime per department as raw intervals, unclipped (open events coalesce to now).
 --

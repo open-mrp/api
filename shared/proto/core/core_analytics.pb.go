@@ -1633,7 +1633,11 @@ type OeeDepartmentProto struct {
 	DowntimeEventCount      int64                     `protobuf:"varint,12,opt,name=downtime_event_count,json=downtimeEventCount,proto3" json:"downtime_event_count,omitempty"`
 	DowntimeBreakdown       []*OeeDowntimeReasonProto `protobuf:"bytes,13,rep,name=downtime_breakdown,json=downtimeBreakdown,proto3" json:"downtime_breakdown,omitempty"`
 	ScheduledSeconds        float64                   `protobuf:"fixed64,14,opt,name=scheduled_seconds,json=scheduledSeconds,proto3" json:"scheduled_seconds,omitempty"`
-	RunTimeSeconds          float64                   `protobuf:"fixed64,15,opt,name=run_time_seconds,json=runTimeSeconds,proto3" json:"run_time_seconds,omitempty"`
+	// run_time_seconds is operating_time_seconds capped at scheduled_seconds — the run
+	// time counted toward Availability. operating_time_seconds is the scheduled machines'
+	// full measured run time (Performance's denominator); overrun_seconds is the part of
+	// it beyond the schedule, a schedule-adherence signal kept out of Availability.
+	RunTimeSeconds float64 `protobuf:"fixed64,15,opt,name=run_time_seconds,json=runTimeSeconds,proto3" json:"run_time_seconds,omitempty"`
 	// Ratios are absent when their denominator is unknown, which is not the same as zero.
 	AvailabilityPct       *float64 `protobuf:"fixed64,16,opt,name=availability_pct,json=availabilityPct,proto3,oneof" json:"availability_pct,omitempty"`
 	PerformancePct        *float64 `protobuf:"fixed64,17,opt,name=performance_pct,json=performancePct,proto3,oneof" json:"performance_pct,omitempty"`
@@ -1645,8 +1649,14 @@ type OeeDepartmentProto struct {
 	// every production step multiplied by the units it produced, which is the time the
 	// period's output should have taken at the designed speed.
 	StandardSecondsEarned float64 `protobuf:"fixed64,22,opt,name=standard_seconds_earned,json=standardSecondsEarned,proto3" json:"standard_seconds_earned,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	// operating_time_seconds is the scheduled machines' measured run time (first-to-last
+	// scan per machine per day), Performance's denominator. overrun_seconds is run time
+	// beyond the scheduled window, reported apart from OEE so overtime cannot read as more
+	// than 100% Availability.
+	OperatingTimeSeconds float64 `protobuf:"fixed64,27,opt,name=operating_time_seconds,json=operatingTimeSeconds,proto3" json:"operating_time_seconds,omitempty"`
+	OverrunSeconds       float64 `protobuf:"fixed64,28,opt,name=overrun_seconds,json=overrunSeconds,proto3" json:"overrun_seconds,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *OeeDepartmentProto) Reset() {
@@ -1829,6 +1839,20 @@ func (x *OeeDepartmentProto) GetHasPerformanceAnomaly() bool {
 func (x *OeeDepartmentProto) GetStandardSecondsEarned() float64 {
 	if x != nil {
 		return x.StandardSecondsEarned
+	}
+	return 0
+}
+
+func (x *OeeDepartmentProto) GetOperatingTimeSeconds() float64 {
+	if x != nil {
+		return x.OperatingTimeSeconds
+	}
+	return 0
+}
+
+func (x *OeeDepartmentProto) GetOverrunSeconds() float64 {
+	if x != nil {
+		return x.OverrunSeconds
 	}
 	return 0
 }
@@ -2062,26 +2086,31 @@ func (x *AnalyzeOeeTrendRequest) GetDepartmentIds() []string {
 // OeeTrendPeriodProto is one production week of OEE, rolled up across the departments
 // that had scheduled time in it.
 type OeeTrendPeriodProto struct {
-	state                   protoimpl.MessageState `protogen:"open.v1"`
-	StartsAt                *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=starts_at,json=startsAt,proto3" json:"starts_at,omitempty"`
-	EndsAt                  *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=ends_at,json=endsAt,proto3" json:"ends_at,omitempty"`
-	GoodUnits               float64                `protobuf:"fixed64,3,opt,name=good_units,json=goodUnits,proto3" json:"good_units,omitempty"`
-	WasteUnits              float64                `protobuf:"fixed64,4,opt,name=waste_units,json=wasteUnits,proto3" json:"waste_units,omitempty"`
-	SecondsUnits            float64                `protobuf:"fixed64,5,opt,name=seconds_units,json=secondsUnits,proto3" json:"seconds_units,omitempty"`
-	StandardSecondsEarned   float64                `protobuf:"fixed64,6,opt,name=standard_seconds_earned,json=standardSecondsEarned,proto3" json:"standard_seconds_earned,omitempty"`
-	ScheduledSeconds        float64                `protobuf:"fixed64,7,opt,name=scheduled_seconds,json=scheduledSeconds,proto3" json:"scheduled_seconds,omitempty"`
-	RunTimeSeconds          float64                `protobuf:"fixed64,8,opt,name=run_time_seconds,json=runTimeSeconds,proto3" json:"run_time_seconds,omitempty"`
-	AvailabilityLossSeconds float64                `protobuf:"fixed64,9,opt,name=availability_loss_seconds,json=availabilityLossSeconds,proto3" json:"availability_loss_seconds,omitempty"`
-	NotScheduledSeconds     float64                `protobuf:"fixed64,10,opt,name=not_scheduled_seconds,json=notScheduledSeconds,proto3" json:"not_scheduled_seconds,omitempty"`
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	StartsAt              *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=starts_at,json=startsAt,proto3" json:"starts_at,omitempty"`
+	EndsAt                *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=ends_at,json=endsAt,proto3" json:"ends_at,omitempty"`
+	GoodUnits             float64                `protobuf:"fixed64,3,opt,name=good_units,json=goodUnits,proto3" json:"good_units,omitempty"`
+	WasteUnits            float64                `protobuf:"fixed64,4,opt,name=waste_units,json=wasteUnits,proto3" json:"waste_units,omitempty"`
+	SecondsUnits          float64                `protobuf:"fixed64,5,opt,name=seconds_units,json=secondsUnits,proto3" json:"seconds_units,omitempty"`
+	StandardSecondsEarned float64                `protobuf:"fixed64,6,opt,name=standard_seconds_earned,json=standardSecondsEarned,proto3" json:"standard_seconds_earned,omitempty"`
+	ScheduledSeconds      float64                `protobuf:"fixed64,7,opt,name=scheduled_seconds,json=scheduledSeconds,proto3" json:"scheduled_seconds,omitempty"`
+	// run_time_seconds is operating_time_seconds capped at scheduled_seconds (Availability's
+	// numerator); operating_time_seconds is the full measured run time (Performance's
+	// denominator); overrun_seconds is run time beyond the schedule, reported apart from OEE.
+	RunTimeSeconds          float64 `protobuf:"fixed64,8,opt,name=run_time_seconds,json=runTimeSeconds,proto3" json:"run_time_seconds,omitempty"`
+	AvailabilityLossSeconds float64 `protobuf:"fixed64,9,opt,name=availability_loss_seconds,json=availabilityLossSeconds,proto3" json:"availability_loss_seconds,omitempty"`
+	NotScheduledSeconds     float64 `protobuf:"fixed64,10,opt,name=not_scheduled_seconds,json=notScheduledSeconds,proto3" json:"not_scheduled_seconds,omitempty"`
 	// Ratios are absent when their denominator is unknown, which is not the same as zero.
-	AvailabilityPct    *float64 `protobuf:"fixed64,11,opt,name=availability_pct,json=availabilityPct,proto3,oneof" json:"availability_pct,omitempty"`
-	PerformancePct     *float64 `protobuf:"fixed64,12,opt,name=performance_pct,json=performancePct,proto3,oneof" json:"performance_pct,omitempty"`
-	QualityPct         *float64 `protobuf:"fixed64,13,opt,name=quality_pct,json=qualityPct,proto3,oneof" json:"quality_pct,omitempty"`
-	OeePct             *float64 `protobuf:"fixed64,14,opt,name=oee_pct,json=oeePct,proto3,oneof" json:"oee_pct,omitempty"`
-	HasDowntimeData    bool     `protobuf:"varint,15,opt,name=has_downtime_data,json=hasDowntimeData,proto3" json:"has_downtime_data,omitempty"`
-	DowntimeEventCount int64    `protobuf:"varint,16,opt,name=downtime_event_count,json=downtimeEventCount,proto3" json:"downtime_event_count,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	AvailabilityPct      *float64 `protobuf:"fixed64,11,opt,name=availability_pct,json=availabilityPct,proto3,oneof" json:"availability_pct,omitempty"`
+	PerformancePct       *float64 `protobuf:"fixed64,12,opt,name=performance_pct,json=performancePct,proto3,oneof" json:"performance_pct,omitempty"`
+	QualityPct           *float64 `protobuf:"fixed64,13,opt,name=quality_pct,json=qualityPct,proto3,oneof" json:"quality_pct,omitempty"`
+	OeePct               *float64 `protobuf:"fixed64,14,opt,name=oee_pct,json=oeePct,proto3,oneof" json:"oee_pct,omitempty"`
+	HasDowntimeData      bool     `protobuf:"varint,15,opt,name=has_downtime_data,json=hasDowntimeData,proto3" json:"has_downtime_data,omitempty"`
+	DowntimeEventCount   int64    `protobuf:"varint,16,opt,name=downtime_event_count,json=downtimeEventCount,proto3" json:"downtime_event_count,omitempty"`
+	OperatingTimeSeconds float64  `protobuf:"fixed64,17,opt,name=operating_time_seconds,json=operatingTimeSeconds,proto3" json:"operating_time_seconds,omitempty"`
+	OverrunSeconds       float64  `protobuf:"fixed64,18,opt,name=overrun_seconds,json=overrunSeconds,proto3" json:"overrun_seconds,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *OeeTrendPeriodProto) Reset() {
@@ -2222,6 +2251,20 @@ func (x *OeeTrendPeriodProto) GetHasDowntimeData() bool {
 func (x *OeeTrendPeriodProto) GetDowntimeEventCount() int64 {
 	if x != nil {
 		return x.DowntimeEventCount
+	}
+	return 0
+}
+
+func (x *OeeTrendPeriodProto) GetOperatingTimeSeconds() float64 {
+	if x != nil {
+		return x.OperatingTimeSeconds
+	}
+	return 0
+}
+
+func (x *OeeTrendPeriodProto) GetOverrunSeconds() float64 {
+	if x != nil {
+		return x.OverrunSeconds
 	}
 	return 0
 }
@@ -6750,7 +6793,8 @@ const file_core_core_analytics_proto_rawDesc = "" +
 	"oee_bucket\x18\x02 \x01(\tR\toeeBucket\x12)\n" +
 	"\x10downtime_seconds\x18\x03 \x01(\x01R\x0fdowntimeSeconds\x12\x1f\n" +
 	"\vevent_count\x18\x04 \x01(\x03R\n" +
-	"eventCount\"\xd6\t\n" +
+	"eventCount\"\xb5\n" +
+	"\n" +
 	"\x12OeeDepartmentProto\x12#\n" +
 	"\rdepartment_id\x18\x01 \x01(\tR\fdepartmentId\x12'\n" +
 	"\x0fdepartment_name\x18\x02 \x01(\tR\x0edepartmentName\x12\x1d\n" +
@@ -6777,7 +6821,9 @@ const file_core_core_analytics_proto_rawDesc = "" +
 	"\aoee_pct\x18\x13 \x01(\x01H\x03R\x06oeePct\x88\x01\x01\x12*\n" +
 	"\x11has_downtime_data\x18\x14 \x01(\bR\x0fhasDowntimeData\x126\n" +
 	"\x17has_performance_anomaly\x18\x15 \x01(\bR\x15hasPerformanceAnomaly\x126\n" +
-	"\x17standard_seconds_earned\x18\x16 \x01(\x01R\x15standardSecondsEarnedB\x13\n" +
+	"\x17standard_seconds_earned\x18\x16 \x01(\x01R\x15standardSecondsEarned\x124\n" +
+	"\x16operating_time_seconds\x18\x1b \x01(\x01R\x14operatingTimeSeconds\x12'\n" +
+	"\x0foverrun_seconds\x18\x1c \x01(\x01R\x0eoverrunSecondsB\x13\n" +
 	"\x11_availability_pctB\x12\n" +
 	"\x10_performance_pctB\x0e\n" +
 	"\f_quality_pctB\n" +
@@ -6798,7 +6844,7 @@ const file_core_core_analytics_proto_rawDesc = "" +
 	"\n" +
 	"start_date\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\tstartDate\x125\n" +
 	"\bend_date\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\aendDate\x12%\n" +
-	"\x0edepartment_ids\x18\x03 \x03(\tR\rdepartmentIds\"\xac\x06\n" +
+	"\x0edepartment_ids\x18\x03 \x03(\tR\rdepartmentIds\"\x8b\a\n" +
 	"\x13OeeTrendPeriodProto\x127\n" +
 	"\tstarts_at\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\bstartsAt\x123\n" +
 	"\aends_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\x06endsAt\x12\x1d\n" +
@@ -6819,7 +6865,9 @@ const file_core_core_analytics_proto_rawDesc = "" +
 	"qualityPct\x88\x01\x01\x12\x1c\n" +
 	"\aoee_pct\x18\x0e \x01(\x01H\x03R\x06oeePct\x88\x01\x01\x12*\n" +
 	"\x11has_downtime_data\x18\x0f \x01(\bR\x0fhasDowntimeData\x120\n" +
-	"\x14downtime_event_count\x18\x10 \x01(\x03R\x12downtimeEventCountB\x13\n" +
+	"\x14downtime_event_count\x18\x10 \x01(\x03R\x12downtimeEventCount\x124\n" +
+	"\x16operating_time_seconds\x18\x11 \x01(\x01R\x14operatingTimeSeconds\x12'\n" +
+	"\x0foverrun_seconds\x18\x12 \x01(\x01R\x0eoverrunSecondsB\x13\n" +
 	"\x11_availability_pctB\x12\n" +
 	"\x10_performance_pctB\x0e\n" +
 	"\f_quality_pctB\n" +

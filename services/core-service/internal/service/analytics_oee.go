@@ -48,8 +48,9 @@ func (s *analyticsSvcImpl) buildOeeByDepartment(ctx context.Context, params doma
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// A scheduled department is measured on its scheduled machines alone: output scanned on machines the plan never listed would divide by a run time those machines never contributed to, reporting a department running many times its own speed. This read, scoped to those machines, is swapped in per scheduled department below; unscheduled departments keep the whole-floor read as estimated quality.
+	// A scheduled department is measured on its scheduled machines alone: output scanned on machines the plan never listed would divide by a run time those machines never contributed to, reporting a department running many times its own speed. Both its output and its Operating Time (run time) are read scoped to those machines and swapped in per scheduled department below; unscheduled departments keep the whole-floor reads.
 	scopedByDept := map[string]domain.OeeDepartmentDataRow{}
+	scopedRuntimeByDept := map[string]float64{}
 	if len(scheduledMachines) > 0 {
 		scopedWindow := window
 		scopedWindow.MachineIDs = machineSlice(scheduledMachines)
@@ -59,6 +60,14 @@ func (s *analyticsSvcImpl) buildOeeByDepartment(ctx context.Context, params doma
 		}
 		for _, row := range scopedRows {
 			scopedByDept[row.DepartmentID] = row
+		}
+
+		scopedRuntimeRows, apiErr := repo.GetOeeEstimatedRuntimeForMachines(ctx, scopedWindow)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		for _, row := range scopedRuntimeRows {
+			scopedRuntimeByDept[row.DepartmentID] = row.RuntimeSeconds
 		}
 	}
 
@@ -92,17 +101,17 @@ func (s *analyticsSvcImpl) buildOeeByDepartment(ctx context.Context, params doma
 			continue
 		}
 
-		// A scheduled department reports only its scheduled machines' output; every other department keeps the whole-floor counts. A scheduled department whose machines produced nothing scopes to zero — no Performance rather than a borrowed one.
+		// A scheduled department reports only its scheduled machines' output and run time; every other department keeps the whole-floor reads. A scheduled department whose machines produced nothing scopes to zero — no Performance rather than a borrowed one.
 		data := row
+		runtimeSeconds := runtimeMap[row.DepartmentID]
 		if len(scheduledMachines) > 0 && plannedHours[row.DepartmentID] > 0 {
 			scoped := scopedByDept[row.DepartmentID]
 			data.GoodUnits = scoped.GoodUnits
 			data.WasteUnits = scoped.WasteUnits
 			data.SecondsUnits = scoped.SecondsUnits
 			data.StandardSecondsEarned = scoped.StandardSecondsEarned
+			runtimeSeconds = scopedRuntimeByDept[row.DepartmentID]
 		}
-
-		runtimeSeconds := runtimeMap[row.DepartmentID]
 
 		dept := domain.OeeDepartment{
 			DepartmentID:          row.DepartmentID,
@@ -114,7 +123,7 @@ func (s *analyticsSvcImpl) buildOeeByDepartment(ctx context.Context, params doma
 			EstimatedRuntimeHours: runtimeSeconds / 3600,
 		}
 		applyOeeDowntime(&dept, downtimeMap[row.DepartmentID])
-		computeOeeRatios(&dept, plannedHours[row.DepartmentID])
+		computeOeeRatios(&dept, plannedHours[row.DepartmentID], runtimeSeconds)
 		departments = append(departments, dept)
 	}
 
@@ -206,20 +215,24 @@ func applyOeeDowntime(dept *domain.OeeDepartment, totals *oeeDowntimeTotals) {
 	dept.HasDowntimeData = totals.events > 0
 }
 
-// computeOeeRatios derives Availability x Performance x Quality from planned time, measured downtime and the ideal cycle times the period's output earned.
+// computeOeeRatios derives Availability x Performance x Quality (Hopp & Spearman, Factory Physics) as a chain of nested time ratios over one clock — the scheduled machines' measured run time:
 //
-//	scheduled = planned - not_scheduled      (time nobody planned to run is removed,
-//	                                          not counted as a loss)
-//	run_time  = scheduled - availability_loss
-//	A = run_time / scheduled
-//	P = standard_seconds_earned / run_time   (ideal cycle time x units produced, over
-//	                                          the time the department was running)
-//	Q = good / (good + waste)
+//	scheduled  = planned - not_scheduled           (time nobody planned to run is removed,
+//	                                                not counted as a loss)
+//	operating  = measured run time of the scheduled machines   (operatingSeconds)
+//	run_time   = min(operating, scheduled)         (operating counted toward availability;
+//	                                                time run past the schedule is overrun)
+//	A = run_time / scheduled                        (<= 1)
+//	P = standard_seconds_earned / operating         (<= 1: ideal time for the output cannot
+//	                                                exceed the time it was actually running)
+//	Q = good / (good + waste + seconds)
+//
+// Operating Time is measured, not inferred from planned time minus logged downtime. That is what made Performance exceed 100%: the numerator counted every unit the scheduled machines actually scanned while the denominator was capped at planned hours, so a plant that out-ran its schedule read as running faster than its own design. Measuring run time from the same machines' scans puts numerator and denominator on one clock, so P is a true speed ratio bounded by physics.
+//
+// Availability caps run time at scheduled: run time beyond the schedule is overrun (OverrunSeconds), a schedule-adherence signal reported apart, not extra availability — so A and therefore OEE stay <= 100%. Performance divides by the full measured operating time, so overtime shows as the honest speed it was, not as availability. Because operating spans first-to-last scan, minor stops inside the run stay in Performance's denominator and surface as speed loss, which is where they belong.
 //
 // Every ratio is left nil when its denominator is zero: an unscheduled department has no OEE, which is not the same as 0% OEE. Quality needs no planned time, so it is computed whenever its own inputs exist.
-//
-// Performance shares Availability's run time deliberately. Availability answers how long the department was running, Performance how fast it ran while it was: only availability-bucket downtime leaves run time, so minor stops, idling and slow cycles stay inside the denominator and show up as speed loss, which is the only place they belong.
-func computeOeeRatios(dept *domain.OeeDepartment, plannedHours float64) {
+func computeOeeRatios(dept *domain.OeeDepartment, plannedHours, operatingSeconds float64) {
 	// Seconds-grade units count as output but not as good: they are sellable, and they are not first-pass quality. Leaving them out of the denominator would report a plant producing nothing but irregulars as 100% quality.
 	totalUnits := dept.GoodUnits + dept.WasteUnits + dept.SecondsUnits
 	if totalUnits > 0 {
@@ -232,19 +245,28 @@ func computeOeeRatios(dept *domain.OeeDepartment, plannedHours float64) {
 		if scheduled > 0 {
 			dept.ScheduledSeconds = scheduled
 
-			runTime := scheduled - dept.AvailabilityLossSeconds
-			if runTime < 0 {
-				runTime = 0
+			operating := operatingSeconds
+			if operating < 0 {
+				operating = 0
+			}
+			dept.OperatingTimeSeconds = operating
+
+			// Availability counts operating time only up to the schedule; the rest is overrun, reported apart so overtime never reads as more than 100% available.
+			runTime := operating
+			if runTime > scheduled {
+				dept.OverrunSeconds = operating - scheduled
+				runTime = scheduled
 			}
 			dept.RunTimeSeconds = runTime
 
 			availability := runTime / scheduled
 			dept.AvailabilityPct = &availability
 
-			if runTime > 0 && dept.StandardSecondsEarned > 0 {
-				performance := dept.StandardSecondsEarned / runTime
+			// Performance divides by the full measured run time, not the capped one, so a machine that ran overtime is judged on how fast it ran the whole time it was running.
+			if operating > 0 && dept.StandardSecondsEarned > 0 {
+				performance := dept.StandardSecondsEarned / operating
 				dept.PerformancePct = &performance
-				// P > 1 means the output took less time than its ideal cycle time allows, which is a stale run rate rather than a machine that beat its own design. Report it and flag it; clamping would hide the data-quality problem.
+				// P > 1 means the scheduled machines earned more standard time than they were measured running — impossible at a correct rate, so it flags a stale or optimistic labor rate. Report it rather than clamp, so the data-quality problem stays visible.
 				dept.HasPerformanceAnomaly = performance > 1
 			}
 		}

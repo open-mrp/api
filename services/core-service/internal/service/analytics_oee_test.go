@@ -77,15 +77,15 @@ func TestComputeOeeRatios_NotScheduledLeavesDenominator(t *testing.T) {
 	t.Parallel()
 
 	dept := &domain.OeeDepartment{
-		GoodUnits:               90,
-		WasteUnits:              10,
-		StandardSecondsEarned:   3600,
-		AvailabilityLossSeconds: 1800,
-		NotScheduledSeconds:     3600,
+		GoodUnits:             90,
+		WasteUnits:            10,
+		StandardSecondsEarned: 3600,
+		NotScheduledSeconds:   3600,
 	}
 
-	// 10 planned hours, 1 of which nobody scheduled -> 9h scheduled, 0.5h down.
-	computeOeeRatios(dept, 10)
+	// 10 planned hours, 1 of which nobody scheduled -> 9h scheduled. The machines ran a
+	// measured 9h less half an hour -> availability is that run time over the 9h scheduled.
+	computeOeeRatios(dept, 10, 9*3600-1800)
 
 	if dept.ScheduledSeconds != 9*3600 {
 		t.Errorf("scheduled = %v, want %v (not-scheduled time is removed, not charged)", dept.ScheduledSeconds, 9*3600)
@@ -107,7 +107,7 @@ func TestComputeOeeRatios_NilWhenPlannedTimeUnknown(t *testing.T) {
 	t.Parallel()
 
 	dept := &domain.OeeDepartment{GoodUnits: 90, WasteUnits: 10, StandardSecondsEarned: 3600}
-	computeOeeRatios(dept, 0)
+	computeOeeRatios(dept, 0, 0)
 
 	// An unscheduled department has no OEE. Reporting 0% would read as a real result.
 	if dept.AvailabilityPct != nil {
@@ -128,9 +128,11 @@ func TestComputeOeeRatios_FlagsPerformanceAnomalyWithoutClamping(t *testing.T) {
 	dept := &domain.OeeDepartment{
 		GoodUnits:             100,
 		WasteUnits:            0,
-		StandardSecondsEarned: 7200, // more standard time earned than run time available
+		StandardSecondsEarned: 7200, // more standard time earned than the machines were measured running
 	}
-	computeOeeRatios(dept, 1) // 1 planned hour, no downtime -> 3600s run time
+	// The scheduled machines were measured running 3600s but earned 7200s of standard time:
+	// impossible at a correct rate, so P > 1 flags a stale/optimistic labor rate.
+	computeOeeRatios(dept, 1, 3600)
 
 	if dept.PerformancePct == nil {
 		t.Fatal("performance = nil, want the raw over-100% value")
@@ -139,7 +141,7 @@ func TestComputeOeeRatios_FlagsPerformanceAnomalyWithoutClamping(t *testing.T) {
 		t.Errorf("performance = %v, want 2 (raw, not clamped to 1)", *dept.PerformancePct)
 	}
 	if !dept.HasPerformanceAnomaly {
-		t.Error("hasPerformanceAnomaly = false, want true; P > 1 always means a stale ideal cycle time")
+		t.Error("hasPerformanceAnomaly = false, want true; P > 1 means earned standard time exceeds measured run time")
 	}
 }
 
@@ -147,12 +149,11 @@ func TestComputeOeeRatios_OeeIsProductOfThree(t *testing.T) {
 	t.Parallel()
 
 	dept := &domain.OeeDepartment{
-		GoodUnits:               90,
-		WasteUnits:              10,
-		StandardSecondsEarned:   1800,
-		AvailabilityLossSeconds: 1800,
+		GoodUnits:             90,
+		WasteUnits:            10,
+		StandardSecondsEarned: 1800,
 	}
-	computeOeeRatios(dept, 1) // 3600s scheduled, 1800s lost -> 1800s run time
+	computeOeeRatios(dept, 1, 1800) // 3600s scheduled, machines measured running 1800s
 
 	if dept.AvailabilityPct == nil || dept.PerformancePct == nil || dept.QualityPct == nil || dept.OeePct == nil {
 		t.Fatal("expected all four ratios to be set")
@@ -183,7 +184,7 @@ func TestComputeOeeRatios_SecondsUnitsCountAgainstQuality(t *testing.T) {
 	t.Parallel()
 
 	dept := &domain.OeeDepartment{GoodUnits: 90, WasteUnits: 5, SecondsUnits: 5}
-	computeOeeRatios(dept, 0)
+	computeOeeRatios(dept, 0, 0)
 
 	if dept.QualityPct == nil {
 		t.Fatal("quality = nil, want 0.9")
@@ -198,7 +199,7 @@ func TestComputeOeeRatios_PerformanceIgnoresSecondsUnits(t *testing.T) {
 	t.Parallel()
 
 	dept := &domain.OeeDepartment{GoodUnits: 100, SecondsUnits: 7200}
-	computeOeeRatios(dept, 1)
+	computeOeeRatios(dept, 1, 3600)
 
 	if dept.PerformancePct != nil {
 		t.Errorf("performance = %v, want nil; no standard time was earned", *dept.PerformancePct)
@@ -252,12 +253,11 @@ func TestComputeOeeRatios_PerformanceIsIdealTimeOverRunTime(t *testing.T) {
 	t.Parallel()
 
 	dept := &domain.OeeDepartment{
-		GoodUnits:               320,
-		StandardSecondsEarned:   320 * 60,
-		AvailabilityLossSeconds: 200 * 60,
+		GoodUnits:             320,
+		StandardSecondsEarned: 320 * 60,
 	}
-	// 10 planned hours less 200 minutes of availability loss leaves 400 minutes running.
-	computeOeeRatios(dept, 10)
+	// 10 planned hours; the machines were measured running 400 minutes.
+	computeOeeRatios(dept, 10, 400*60)
 
 	assert.InDelta(t, 400*60.0, dept.RunTimeSeconds, 0.001)
 	if dept.PerformancePct == nil {
@@ -267,18 +267,18 @@ func TestComputeOeeRatios_PerformanceIsIdealTimeOverRunTime(t *testing.T) {
 	assert.False(t, dept.HasPerformanceAnomaly)
 }
 
-// Minor stops and reduced speed are speed losses, not downtime. They stay inside run time so they show up in Performance, which is the only OEE term they belong to; subtracting them the way availability losses are subtracted would make them invisible.
+// Minor stops and reduced speed are speed losses, not downtime. Because Operating Time spans the machine's whole run, they stay inside Performance's denominator and surface there — the only OEE term they belong to. A machine that ran a full measured hour but earned only half an hour of standard time ran at half speed.
 func TestComputeOeeRatios_PerformanceLossStaysInRunTime(t *testing.T) {
 	t.Parallel()
 
 	dept := &domain.OeeDepartment{
 		GoodUnits:              100,
 		StandardSecondsEarned:  1800,
-		PerformanceLossSeconds: 1800,
+		PerformanceLossSeconds: 1800, // logged for the Pareto; not subtracted from run time
 	}
-	computeOeeRatios(dept, 1)
+	computeOeeRatios(dept, 1, 3600) // scheduled 1h, machines measured running the full hour
 
-	assert.InDelta(t, 3600, dept.RunTimeSeconds, 0.001, "performance-bucket downtime must not leave run time")
+	assert.InDelta(t, 3600, dept.RunTimeSeconds, 0.001, "the machine ran the whole scheduled hour")
 	if dept.PerformancePct == nil {
 		t.Fatal("performance = nil, want 0.5")
 	}
@@ -288,33 +288,59 @@ func TestComputeOeeRatios_PerformanceLossStaysInRunTime(t *testing.T) {
 	}
 }
 
-// Performance divides by run time, so a department with no scheduled time has no Performance for the same reason it has no Availability. Reporting one anyway would mean two departments in the same table answering different questions.
+// Performance divides by operating time, so a department with no scheduled time has no Performance for the same reason it has no Availability. Reporting one anyway would mean two departments in the same table answering different questions.
 func TestComputeOeeRatios_PerformanceNilWithoutRunTime(t *testing.T) {
 	t.Parallel()
 
 	dept := &domain.OeeDepartment{GoodUnits: 100, StandardSecondsEarned: 3600}
-	computeOeeRatios(dept, 0)
+	computeOeeRatios(dept, 0, 0)
 
 	if dept.PerformancePct != nil {
-		t.Errorf("performance = %v, want nil when run time is unknown", *dept.PerformancePct)
+		t.Errorf("performance = %v, want nil when planned time is unknown", *dept.PerformancePct)
 	}
 }
 
-// All the run time was lost to breakdowns, so nothing could have run at any speed. Zero over zero is not 0% performance.
-func TestComputeOeeRatios_PerformanceNilWhenAllRunTimeLost(t *testing.T) {
+// The scheduled machines never scanned, so there is no measured run time: nothing could have run at any speed. Zero operating time is no Performance, not 0%.
+func TestComputeOeeRatios_PerformanceNilWhenNeverRan(t *testing.T) {
 	t.Parallel()
 
 	dept := &domain.OeeDepartment{
-		GoodUnits:               100,
-		StandardSecondsEarned:   1800,
-		AvailabilityLossSeconds: 3600,
+		GoodUnits:             100,
+		StandardSecondsEarned: 1800,
 	}
-	computeOeeRatios(dept, 1)
+	computeOeeRatios(dept, 1, 0) // scheduled 1h, but the machines were never measured running
 
 	if dept.AvailabilityPct == nil || *dept.AvailabilityPct != 0 {
 		t.Errorf("availability = %v, want 0", dept.AvailabilityPct)
 	}
 	if dept.PerformancePct != nil {
 		t.Errorf("performance = %v, want nil; there was no run time to be fast or slow in", *dept.PerformancePct)
+	}
+}
+
+// Factory Physics keeps OEE a chain of nested ratios, so Performance is bounded by physics: the ideal time for the output cannot exceed the time the machine was measured running. A plant that out-runs its schedule (Carolon's case) reads as 100% available with overrun reported apart, not >100% Performance.
+func TestComputeOeeRatios_OverrunCapsAvailabilityNotPerformance(t *testing.T) {
+	t.Parallel()
+
+	dept := &domain.OeeDepartment{
+		GoodUnits:             1000,
+		StandardSecondsEarned: 128 * 3600, // 128h of ideal work
+	}
+	// Scheduled 106h, but the machines were measured running 128h at their real rate.
+	computeOeeRatios(dept, 106, 128*3600)
+
+	assert.InDelta(t, 128*3600.0, dept.OperatingTimeSeconds, 0.001)
+	assert.InDelta(t, 106*3600.0, dept.RunTimeSeconds, 0.001, "run time counted toward availability is capped at scheduled")
+	assert.InDelta(t, 22*3600.0, dept.OverrunSeconds, 0.001, "the 22h over schedule is overrun, reported apart")
+	if dept.AvailabilityPct == nil || *dept.AvailabilityPct != 1 {
+		t.Errorf("availability = %v, want 1; overtime does not exceed 100%% available", dept.AvailabilityPct)
+	}
+	if dept.PerformancePct == nil {
+		t.Fatal("performance = nil, want 1.0")
+	}
+	assert.InDelta(t, 1.0, *dept.PerformancePct, 0.0001, "ran 128h and earned 128h of standard time: 100%%, not >100%%")
+	assert.False(t, dept.HasPerformanceAnomaly, "a plant that out-runs its schedule at rate is not a data anomaly")
+	if dept.OeePct == nil || *dept.OeePct > 1 {
+		t.Errorf("oee = %v, want <= 1", dept.OeePct)
 	}
 }

@@ -906,6 +906,21 @@ func (mr *MockNotificationRepoMockRecorder) ResolveUserID(ctx, accountUserID any
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveUserID", reflect.TypeOf((*MockNotificationRepo)(nil).ResolveUserID), ctx, accountUserID)
 }
 
+// UpsertCoalesced mocks base method.
+func (m *MockNotificationRepo) UpsertCoalesced(ctx context.Context, notifications []*domain.Notification) ([]*domain.Notification, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpsertCoalesced", ctx, notifications)
+	ret0, _ := ret[0].([]*domain.Notification)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// UpsertCoalesced indicates an expected call of UpsertCoalesced.
+func (mr *MockNotificationRepoMockRecorder) UpsertCoalesced(ctx, notifications any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertCoalesced", reflect.TypeOf((*MockNotificationRepo)(nil).UpsertCoalesced), ctx, notifications)
+}
+
 // MockAnnouncementRepo is a mock of AnnouncementRepo interface.
 type MockAnnouncementRepo struct {
 	ctrl     *gomock.Controller

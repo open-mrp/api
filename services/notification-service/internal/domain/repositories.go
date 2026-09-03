@@ -89,6 +89,11 @@ type NotificationRepo interface {
 	Create(ctx context.Context, notification *Notification) *apierror.APIError
 	// CreateBatch inserts many notifications (fan-out). Call within a transaction.
 	CreateBatch(ctx context.Context, notifications []*Notification) *apierror.APIError
+	// UpsertCoalesced folds notifications that share a rolling dedupe key onto one row per recipient (see
+	// the repository query): a new key inserts, an existing one refreshes and resurfaces the row as
+	// unread. It returns the notifications that were newly inserted, so the caller can raise a realtime
+	// alert only on the first event in the window.
+	UpsertCoalesced(ctx context.Context, notifications []*Notification) ([]*Notification, *apierror.APIError)
 	GetByID(ctx context.Context, id, recipientAccountUserID string) (*Notification, *apierror.APIError)
 	List(ctx context.Context, filter NotificationListFilter) ([]*Notification, *apierror.APIError)
 	CountUnseen(ctx context.Context, recipientAccountUserID string) (int64, *apierror.APIError)

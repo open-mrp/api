@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.2](https://github.com/open-mrp/api/compare/v2.6.1...v2.6.2) (2026-09-03)
+
+
+### Bug Fixes
+
+* **picks:** index ship-by list sort; feat(notifications): change count ([#137](https://github.com/open-mrp/api/issues/137)) ([f488ab2](https://github.com/open-mrp/api/commit/f488ab2ff8b4571029231594698538251efcdd96))
+
 ## [2.6.1](https://github.com/open-mrp/api/compare/v2.6.0...v2.6.1) (2026-09-03)
 
 

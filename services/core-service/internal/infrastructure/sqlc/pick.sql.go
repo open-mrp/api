@@ -1002,6 +1002,146 @@ func (q *Queries) GetPickLines(ctx context.Context, pickID string) ([]GetPickLin
 	return items, nil
 }
 
+const getPickLinesForPicks = `-- name: GetPickLinesForPicks :many
+SELECT
+    pl.id,
+    pl.pick_id,
+    pl.sales_order_line_id,
+    pl.packed_at,
+    pl.created_at,
+    pl.updated_at,
+    -- Pick line quantity
+    q.id AS quantity_id,
+    q.value AS quantity_value,
+    u.id AS quantity_unit_id,
+    u.name AS quantity_unit_name,
+    u.abbreviation AS quantity_unit_abbreviation,
+    -- Sales order line info
+    sol.line_item_number,
+    sol.product_sku,
+    sol.product_description,
+    sol.product_id,
+    sol.item_id AS order_line_item_id,
+    -- Ordered quantity
+    sol_q.id AS ordered_quantity_id,
+    sol_q.value AS ordered_quantity_value,
+    sol_u.id AS ordered_quantity_unit_id,
+    sol_u.name AS ordered_quantity_unit_name,
+    sol_u.abbreviation AS ordered_quantity_unit_abbreviation,
+    -- Unit price (sales order line)
+    up.id AS unit_price_id,
+    up.value AS unit_price_value,
+    up_nu.id AS unit_price_numerator_unit_id,
+    up_nu.abbreviation AS unit_price_numerator_unit_abbreviation,
+    up_du.id AS unit_price_denominator_unit_id,
+    up_du.abbreviation AS unit_price_denominator_unit_abbreviation
+FROM pick_line pl
+JOIN quantity q ON q.id = pl.quantity_id
+JOIN unit u ON u.id = q.unit_id
+JOIN sales_order_line sol ON sol.id = pl.sales_order_line_id
+JOIN quantity sol_q ON sol_q.id = sol.quantity_id
+JOIN unit sol_u ON sol_u.id = sol_q.unit_id
+JOIN rate up ON up.id = sol.unit_price_id
+JOIN unit up_nu ON up_nu.id = up.numerator_unit_id
+JOIN unit up_du ON up_du.id = up.denominator_unit_id
+WHERE pl.pick_id IN (/*SLICE:pick_ids*/?)
+ORDER BY pl.pick_id, sol.line_item_number ASC
+`
+
+type GetPickLinesForPicksRow struct {
+	ID                                   string
+	PickID                               string
+	SalesOrderLineID                     string
+	PackedAt                             sql.NullTime
+	CreatedAt                            time.Time
+	UpdatedAt                            time.Time
+	QuantityID                           string
+	QuantityValue                        string
+	QuantityUnitID                       string
+	QuantityUnitName                     string
+	QuantityUnitAbbreviation             string
+	LineItemNumber                       sql.NullInt32
+	ProductSku                           string
+	ProductDescription                   sql.NullString
+	ProductID                            sql.NullString
+	OrderLineItemID                      sql.NullString
+	OrderedQuantityID                    string
+	OrderedQuantityValue                 string
+	OrderedQuantityUnitID                string
+	OrderedQuantityUnitName              string
+	OrderedQuantityUnitAbbreviation      string
+	UnitPriceID                          string
+	UnitPriceValue                       string
+	UnitPriceNumeratorUnitID             string
+	UnitPriceNumeratorUnitAbbreviation   string
+	UnitPriceDenominatorUnitID           string
+	UnitPriceDenominatorUnitAbbreviation string
+}
+
+// The batched form of GetPickLines: one query for a page of picks instead of one per pick, so the
+// list endpoint's lines expansion does not fan out into N round trips. Ordered by pick then line
+// number so callers can group the flat result back onto each pick.
+func (q *Queries) GetPickLinesForPicks(ctx context.Context, pickIds []string) ([]GetPickLinesForPicksRow, error) {
+	query := getPickLinesForPicks
+	var queryParams []interface{}
+	if len(pickIds) > 0 {
+		for _, v := range pickIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:pick_ids*/?", strings.Repeat(",?", len(pickIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:pick_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPickLinesForPicksRow
+	for rows.Next() {
+		var i GetPickLinesForPicksRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.PickID,
+			&i.SalesOrderLineID,
+			&i.PackedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.QuantityID,
+			&i.QuantityValue,
+			&i.QuantityUnitID,
+			&i.QuantityUnitName,
+			&i.QuantityUnitAbbreviation,
+			&i.LineItemNumber,
+			&i.ProductSku,
+			&i.ProductDescription,
+			&i.ProductID,
+			&i.OrderLineItemID,
+			&i.OrderedQuantityID,
+			&i.OrderedQuantityValue,
+			&i.OrderedQuantityUnitID,
+			&i.OrderedQuantityUnitName,
+			&i.OrderedQuantityUnitAbbreviation,
+			&i.UnitPriceID,
+			&i.UnitPriceValue,
+			&i.UnitPriceNumeratorUnitID,
+			&i.UnitPriceNumeratorUnitAbbreviation,
+			&i.UnitPriceDenominatorUnitID,
+			&i.UnitPriceDenominatorUnitAbbreviation,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getPickProgress = `-- name: GetPickProgress :many
 SELECT
     pl.pick_id,
@@ -1137,6 +1277,62 @@ func (q *Queries) GetShipmentIDsByPick(ctx context.Context, arg GetShipmentIDsBy
 			return nil, err
 		}
 		items = append(items, id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getShipmentIDsForPicks = `-- name: GetShipmentIDsForPicks :many
+SELECT pk.id AS pick_id, s.id AS shipment_id
+FROM shipment s
+JOIN pick pk ON pk.sales_order_id = s.sales_order_id
+WHERE pk.id IN (/*SLICE:pick_ids*/?)
+AND pk.account_id = ?
+ORDER BY pk.id, s.created_at, s.id
+`
+
+type GetShipmentIDsForPicksParams struct {
+	PickIds   []string
+	AccountID string
+}
+
+type GetShipmentIDsForPicksRow struct {
+	PickID     string
+	ShipmentID string
+}
+
+// The batched form of GetShipmentIDsByPick: shipment ids for a page of picks in one query, so the
+// list endpoint's shipments expansion does not fan out into N round trips. Returns the pick id so
+// callers can group the shipments back onto each pick; oldest shipment first within each pick.
+func (q *Queries) GetShipmentIDsForPicks(ctx context.Context, arg GetShipmentIDsForPicksParams) ([]GetShipmentIDsForPicksRow, error) {
+	query := getShipmentIDsForPicks
+	var queryParams []interface{}
+	if len(arg.PickIds) > 0 {
+		for _, v := range arg.PickIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:pick_ids*/?", strings.Repeat(",?", len(arg.PickIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:pick_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetShipmentIDsForPicksRow
+	for rows.Next() {
+		var i GetShipmentIDsForPicksRow
+		if err := rows.Scan(&i.PickID, &i.ShipmentID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err

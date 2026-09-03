@@ -547,6 +547,27 @@ func (r *pickRepoImpl) GetLines(ctx context.Context, pickID string) ([]*domain.P
 	return lines, nil
 }
 
+func (r *pickRepoImpl) GetLinesForPicks(ctx context.Context, pickIDs []string) (map[string][]*domain.PickLine, *apierror.APIError) {
+	ctx, span := pickRepoTracer.Start(ctx, "repository.pick.get_lines_for_picks")
+	defer span.End()
+
+	if len(pickIDs) == 0 {
+		return map[string][]*domain.PickLine{}, nil
+	}
+
+	rows, err := r.queries.GetPickLinesForPicks(ctx, pickIDs)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	// The row type matches GetPickLinesRow field-for-field, so convert and reuse the single-pick mapper.
+	byPick := make(map[string][]*domain.PickLine, len(pickIDs))
+	for _, row := range rows {
+		byPick[row.PickID] = append(byPick[row.PickID], mapGetPickLinesRow(sqlc.GetPickLinesRow(row)))
+	}
+	return byPick, nil
+}
+
 func (r *pickRepoImpl) GetProgress(ctx context.Context, pickIDs []string) (map[string]domain.PickProgress, *apierror.APIError) {
 	ctx, span := pickRepoTracer.Start(ctx, "repository.pick.get_progress")
 	defer span.End()
@@ -855,6 +876,29 @@ func (r *pickRepoImpl) GetShipmentIDs(ctx context.Context, accountID, pickID str
 		return nil, apierror.NewInternalError(err, "failed to list shipment ids for pick")
 	}
 	return ids, nil
+}
+
+func (r *pickRepoImpl) GetShipmentIDsForPicks(ctx context.Context, accountID string, pickIDs []string) (map[string][]string, *apierror.APIError) {
+	ctx, span := pickRepoTracer.Start(ctx, "repository.pick.get_shipment_ids_for_picks")
+	defer span.End()
+
+	if len(pickIDs) == 0 {
+		return map[string][]string{}, nil
+	}
+
+	rows, err := r.queries.GetShipmentIDsForPicks(ctx, sqlc.GetShipmentIDsForPicksParams{
+		PickIds:   pickIDs,
+		AccountID: accountID,
+	})
+	if err != nil {
+		return nil, tracing.Trace(span, apierror.NewInternalError(err, "failed to list shipment ids for picks"))
+	}
+
+	byPick := make(map[string][]string, len(pickIDs))
+	for _, row := range rows {
+		byPick[row.PickID] = append(byPick[row.PickID], row.ShipmentID)
+	}
+	return byPick, nil
 }
 
 // Converts the stored lead-time source code, which is nullable, into the typed constant the

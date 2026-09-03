@@ -747,6 +747,54 @@ JOIN unit up_du ON up_du.id = up.denominator_unit_id
 WHERE pl.pick_id = sqlc.arg('pick_id')
 ORDER BY sol.line_item_number ASC;
 
+-- name: GetPickLinesForPicks :many
+-- The batched form of GetPickLines: one query for a page of picks instead of one per pick, so the
+-- list endpoint's lines expansion does not fan out into N round trips. Ordered by pick then line
+-- number so callers can group the flat result back onto each pick.
+SELECT
+    pl.id,
+    pl.pick_id,
+    pl.sales_order_line_id,
+    pl.packed_at,
+    pl.created_at,
+    pl.updated_at,
+    -- Pick line quantity
+    q.id AS quantity_id,
+    q.value AS quantity_value,
+    u.id AS quantity_unit_id,
+    u.name AS quantity_unit_name,
+    u.abbreviation AS quantity_unit_abbreviation,
+    -- Sales order line info
+    sol.line_item_number,
+    sol.product_sku,
+    sol.product_description,
+    sol.product_id,
+    sol.item_id AS order_line_item_id,
+    -- Ordered quantity
+    sol_q.id AS ordered_quantity_id,
+    sol_q.value AS ordered_quantity_value,
+    sol_u.id AS ordered_quantity_unit_id,
+    sol_u.name AS ordered_quantity_unit_name,
+    sol_u.abbreviation AS ordered_quantity_unit_abbreviation,
+    -- Unit price (sales order line)
+    up.id AS unit_price_id,
+    up.value AS unit_price_value,
+    up_nu.id AS unit_price_numerator_unit_id,
+    up_nu.abbreviation AS unit_price_numerator_unit_abbreviation,
+    up_du.id AS unit_price_denominator_unit_id,
+    up_du.abbreviation AS unit_price_denominator_unit_abbreviation
+FROM pick_line pl
+JOIN quantity q ON q.id = pl.quantity_id
+JOIN unit u ON u.id = q.unit_id
+JOIN sales_order_line sol ON sol.id = pl.sales_order_line_id
+JOIN quantity sol_q ON sol_q.id = sol.quantity_id
+JOIN unit sol_u ON sol_u.id = sol_q.unit_id
+JOIN rate up ON up.id = sol.unit_price_id
+JOIN unit up_nu ON up_nu.id = up.numerator_unit_id
+JOIN unit up_du ON up_du.id = up.denominator_unit_id
+WHERE pl.pick_id IN (sqlc.slice('pick_ids'))
+ORDER BY pl.pick_id, sol.line_item_number ASC;
+
 -- name: GetPickProgress :many
 -- Aggregates ordered/picked/packed quantities per pick in one batched pass, keyed by
 -- pick ID. Backs the pick-level picked/packed completion fractions on both the list and
@@ -1189,3 +1237,14 @@ JOIN pick pk ON pk.sales_order_id = s.sales_order_id
 WHERE pk.id = sqlc.arg('pick_id')
 AND pk.account_id = sqlc.arg('account_id')
 ORDER BY s.created_at, s.id;
+
+-- name: GetShipmentIDsForPicks :many
+-- The batched form of GetShipmentIDsByPick: shipment ids for a page of picks in one query, so the
+-- list endpoint's shipments expansion does not fan out into N round trips. Returns the pick id so
+-- callers can group the shipments back onto each pick; oldest shipment first within each pick.
+SELECT pk.id AS pick_id, s.id AS shipment_id
+FROM shipment s
+JOIN pick pk ON pk.sales_order_id = s.sales_order_id
+WHERE pk.id IN (sqlc.slice('pick_ids'))
+AND pk.account_id = sqlc.arg('account_id')
+ORDER BY pk.id, s.created_at, s.id;

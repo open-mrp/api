@@ -1454,6 +1454,9 @@ type PickRepo interface {
 	List(ctx context.Context, params ListPicksParams) (*ListPicksResult, *apierror.APIError)
 	Get(ctx context.Context, accountID, pickID string) (*Pick, *apierror.APIError)
 	GetLines(ctx context.Context, pickID string) ([]*PickLine, *apierror.APIError)
+	// GetLinesForPicks returns the lines for a page of picks in one query, keyed by pick id, so the
+	// list endpoint's lines expansion does not fan out into one query per pick.
+	GetLinesForPicks(ctx context.Context, pickIDs []string) (map[string][]*PickLine, *apierror.APIError)
 	UpdateFinishedAt(ctx context.Context, accountID, pickID string, finishedAt time.Time) *apierror.APIError
 	HasShippedItems(ctx context.Context, accountID, pickID string) (bool, *apierror.APIError)
 	VoidAllLines(ctx context.Context, pickID string) *apierror.APIError
@@ -1462,6 +1465,10 @@ type PickRepo interface {
 	PickAllLines(ctx context.Context, pickID string) *apierror.APIError
 	// GetShipmentIDs returns the ids of shipments raised against the pick's order, oldest first.
 	GetShipmentIDs(ctx context.Context, accountID, pickID string) ([]string, *apierror.APIError)
+	// GetShipmentIDsForPicks returns shipment ids for a page of picks in one query, keyed by pick
+	// id (oldest first within each), so the list endpoint's shipments expansion does not fan out
+	// into one query per pick.
+	GetShipmentIDsForPicks(ctx context.Context, accountID string, pickIDs []string) (map[string][]string, *apierror.APIError)
 	IsInAccount(ctx context.Context, accountID, pickID string) (bool, *apierror.APIError)
 	FindLinesToPack(ctx context.Context, pickID string) ([]*PickLine, *apierror.APIError)
 	PackLines(ctx context.Context, pickID string) *apierror.APIError

@@ -15780,6 +15780,21 @@ func (mr *MockPickRepoMockRecorder) GetLines(ctx, pickID any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLines", reflect.TypeOf((*MockPickRepo)(nil).GetLines), ctx, pickID)
 }
 
+// GetLinesForPicks mocks base method.
+func (m *MockPickRepo) GetLinesForPicks(ctx context.Context, pickIDs []string) (map[string][]*domain.PickLine, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetLinesForPicks", ctx, pickIDs)
+	ret0, _ := ret[0].(map[string][]*domain.PickLine)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetLinesForPicks indicates an expected call of GetLinesForPicks.
+func (mr *MockPickRepoMockRecorder) GetLinesForPicks(ctx, pickIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLinesForPicks", reflect.TypeOf((*MockPickRepo)(nil).GetLinesForPicks), ctx, pickIDs)
+}
+
 // GetSalesOrderForPick mocks base method.
 func (m *MockPickRepo) GetSalesOrderForPick(ctx context.Context, accountID, pickID string) (*domain.PickSalesOrder, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -15808,6 +15823,21 @@ func (m *MockPickRepo) GetShipmentIDs(ctx context.Context, accountID, pickID str
 func (mr *MockPickRepoMockRecorder) GetShipmentIDs(ctx, accountID, pickID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetShipmentIDs", reflect.TypeOf((*MockPickRepo)(nil).GetShipmentIDs), ctx, accountID, pickID)
+}
+
+// GetShipmentIDsForPicks mocks base method.
+func (m *MockPickRepo) GetShipmentIDsForPicks(ctx context.Context, accountID string, pickIDs []string) (map[string][]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetShipmentIDsForPicks", ctx, accountID, pickIDs)
+	ret0, _ := ret[0].(map[string][]string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetShipmentIDsForPicks indicates an expected call of GetShipmentIDsForPicks.
+func (mr *MockPickRepoMockRecorder) GetShipmentIDsForPicks(ctx, accountID, pickIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetShipmentIDsForPicks", reflect.TypeOf((*MockPickRepo)(nil).GetShipmentIDsForPicks), ctx, accountID, pickIDs)
 }
 
 // HasShippedItems mocks base method.

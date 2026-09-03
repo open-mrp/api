@@ -32,6 +32,7 @@ func receivingOrderSummaryToProto(s *domain.ReceivingOrderSummary) *pb.Receiving
 		CreatedAt:           timestamppb.New(s.CreatedAt),
 		UpdatedAt:           timestamppb.New(s.UpdatedAt),
 		Totals:              receivingOrderTotalsToProto(s.Totals),
+		Deliveries:          documentRefsToProto(s.Deliveries),
 	}
 
 	if s.SupplierID != nil {

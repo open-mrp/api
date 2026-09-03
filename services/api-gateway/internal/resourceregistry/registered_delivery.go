@@ -46,11 +46,9 @@ func init() {
 				Populate:    populateLocationOnDeliveryLine,
 			},
 			{
-				Key:         "lot",
-				Target:      constants.ObjectTypeLot,
-				Cardinality: resourcekit.CardinalityOnePtr,
-				ExtractIDs:  extractLotIDFromDeliveryLine,
-				Populate:    populateLotOnDeliveryLine,
+				// Carried inline: the delivery query returns the lot's number alongside its id.
+				Key:      "lot",
+				Populate: populateLotOnDeliveryLine,
 			},
 			{
 				// Carried inline: the delivery query already returns the cost the goods were stocked at.
@@ -113,15 +111,13 @@ func populateLocationOnDeliveryLine(ctx context.Context, parent any, loaded map[
 	}
 }
 
-func extractLotIDFromDeliveryLine(ctx context.Context, parent any) []string {
-	return deliveryLineMetaID(ctx, parent, "lot_id")
-}
-
-func populateLotOnDeliveryLine(ctx context.Context, parent any, loaded map[string]any) {
+func populateLotOnDeliveryLine(ctx context.Context, parent any, _ map[string]any) {
 	l := parent.(*apiresource.DeliveryLine)
-	if v, ok := loadedByMetaID(ctx, l.ID, "lot_id", loaded); ok {
-		l.Lot = v.(*apiresource.Lot)
+	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeDeliveryLine, l.ID, "lot")
+	if !ok {
+		return
 	}
+	l.Lot = v.(*apiresource.Lot)
 }
 
 func populateUnitCostOnDeliveryLine(ctx context.Context, parent any, _ map[string]any) {

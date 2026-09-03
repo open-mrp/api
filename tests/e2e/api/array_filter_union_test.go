@@ -106,8 +106,10 @@ func arrayFilterCases() []arrayFilterCase {
 		{name: "settlements/invoice_ids", path: "/v1/finance/settlements", param: "invoice_ids", valuePath: "id", fromSelf: false, fromPath: "/v1/finance/invoices"},
 
 		// --- operations ---
-		{name: "deliveries/supplier_ids", path: "/v1/operations/deliveries", param: "supplier_ids", valuePath: "purchase_order.supplier.id", include: "purchase_order.supplier", fromSelf: true},
-		{name: "deliveries/item_ids", path: "/v1/operations/deliveries", param: "item_ids", valuePath: "lines.data[].item.id", include: "lines", fromSelf: true},
+		// A delivery names its purchase order as a bare record, so the supplier is not reachable
+		// from the delivery itself; the candidate ids come from the suppliers feed instead.
+		{name: "deliveries/supplier_ids", path: "/v1/operations/deliveries", param: "supplier_ids", valuePath: "id", fromSelf: false, fromPath: "/v1/operations/suppliers"},
+		{name: "deliveries/item_ids", path: "/v1/operations/deliveries", param: "item_ids", valuePath: "lines.data[].item.id", include: "lines,lines.item", fromSelf: true},
 
 		{name: "picks/customer_ids", path: "/v1/operations/picks", param: "customer_ids", valuePath: "customer.id", include: "customer", fromSelf: true},
 
@@ -120,7 +122,7 @@ func arrayFilterCases() []arrayFilterCase {
 		{name: "suppliers/item_ids", path: "/v1/operations/suppliers", param: "item_ids", valuePath: "item.id", fromSelf: false, fromPath: "/v1/catalog/materials", fromInclude: "item"},
 
 		{name: "receiving-orders/supplier_ids", path: "/v1/operations/receiving-orders", param: "supplier_ids", valuePath: "supplier.id", include: "supplier", fromSelf: true},
-		{name: "receiving-orders/item_ids", path: "/v1/operations/receiving-orders", param: "item_ids", valuePath: "lines.data[].item.id", include: "lines", fromSelf: true},
+		{name: "receiving-orders/item_ids", path: "/v1/operations/receiving-orders", param: "item_ids", valuePath: "lines.data[].item.id", include: "lines,lines.item", fromSelf: true},
 
 		{name: "purchase-orders/status_codes", path: "/v1/operations/purchase-orders", param: "status_codes", valuePath: "status", fromSelf: true},
 		{name: "purchase-orders/supplier_ids", path: "/v1/operations/purchase-orders", param: "supplier_ids", valuePath: "supplier.id", include: "supplier", fromSelf: true},

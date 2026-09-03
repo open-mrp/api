@@ -879,9 +879,23 @@ INSERT IGNORE INTO delivery (id, number, sales_order_id, account_id, delivery_st
     ('dv_01seeddelivery1_0000', 'DLV-001', 'or_01seedpurchord1_000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'accepted', NOW(), NOW()),
     ('dv_01seeddelivery2_0000', 'DLV-002', 'or_01seedpurchord2_000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'accepted', NOW(), NOW());
 
-INSERT IGNORE INTO delivery_line (id, delivery_id, receiving_order_line_id, quantity_id, unit_cost_id, created_at, updated_at) VALUES
-    ('dvln_01seeddlvln1_0000', 'dv_01seeddelivery1_0000', 'rcln_01seedrecvln1_0000', 'qu_01seeddlvln1_qty000', 'rt_01seeddlvln1_cost00', NOW(), NOW()),
-    ('dvln_01seeddlvln2_0000', 'dv_01seeddelivery1_0000', 'rcln_01seedrecvln2_0000', 'qu_01seeddlvln2_qty000', 'rt_01seeddlvln2_cost00', NOW(), NOW());
+-- The lot the first delivery line's goods were received under. Stocking creates one per item and
+-- lot number; seeded directly here because deliveries are not created through the API.
+INSERT IGNORE INTO lot (id, account_id, item_id, lot_number, created_at, updated_at) VALUES
+    ('lot_01seeddlvlot1_000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'it_01seedyrn1item00000', 'LOT-DLV-001', NOW(), NOW());
+
+-- Line 1 carries a storage location and a lot, line 2 neither: both are expandable and both states
+-- have to be reachable, since a line stocked without a location is a supported path.
+-- accepted_at is deliberately left unset: these lines stand in for delivery records only, and
+-- stamping them as accepted would fold their quantities into the seeded inventory position that
+-- the item-inventory and shipment tests measure against.
+INSERT IGNORE INTO delivery_line (id, delivery_id, receiving_order_line_id, quantity_id, unit_cost_id, storage_location_id, lot_id, created_at, updated_at) VALUES
+    ('dvln_01seeddlvln1_0000', 'dv_01seeddelivery1_0000', 'rcln_01seedrecvln1_0000', 'qu_01seeddlvln1_qty000', 'rt_01seeddlvln1_cost00', 'sglc_01seedbuilding0000', 'lot_01seeddlvlot1_000', NOW(), NOW()),
+    ('dvln_01seeddlvln2_0000', 'dv_01seeddelivery1_0000', 'rcln_01seedrecvln2_0000', 'qu_01seeddlvln2_qty000', 'rt_01seeddlvln2_cost00', NULL, NULL, NOW(), NOW());
+
+-- Re-runs against an already-seeded database: INSERT IGNORE above leaves existing rows untouched.
+UPDATE delivery_line SET storage_location_id = 'sglc_01seedbuilding0000', lot_id = 'lot_01seeddlvlot1_000'
+    WHERE id = 'dvln_01seeddlvln1_0000';
 
 -- ============================================================
 -- CUSTOMER RICH LINKS (seed-gap fill for `?include=` coverage)

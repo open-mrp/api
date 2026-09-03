@@ -210,7 +210,11 @@ func stashDeliveryLineMeta(meta *resourcekit.LoadMeta, l *pb.DeliveryLineInfo, l
 		meta.Set(constants.ObjectTypeDeliveryLine, line.ID, "location_id", *l.LocationId)
 	}
 	if l.LotId != nil && *l.LotId != "" {
-		meta.Set(constants.ObjectTypeDeliveryLine, line.ID, "lot_id", *l.LotId)
+		meta.Set(constants.ObjectTypeDeliveryLine, line.ID, "lot", &apiresource.Lot{
+			ID:        *l.LotId,
+			Object:    constants.ObjectTypeLot,
+			LotNumber: l.GetLotNumber(),
+		})
 	}
 	meta.Set(constants.ObjectTypeDeliveryLine, line.ID, "unit_cost", &apiresource.Rate{
 		ID:     l.UnitCostId,

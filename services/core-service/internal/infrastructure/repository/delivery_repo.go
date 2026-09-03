@@ -125,12 +125,6 @@ func (r *deliveryRepoImpl) List(ctx context.Context, params domain.ListDeliverie
 			if apiErr := r.attachReceivingOrderRefs(ctx, result); apiErr != nil {
 				return nil, tracing.Trace(span, apiErr)
 			}
-			if apiErr := r.attachReceivingOrderRefs(ctx, result); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			if apiErr := r.attachReceivingOrderRefs(ctx, result); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
 			return &domain.ListDeliveriesResult{Deliveries: result, PageInfo: pageInfo}, nil
 		}
 
@@ -157,6 +151,9 @@ func (r *deliveryRepoImpl) List(ctx context.Context, params domain.ListDeliverie
 			deliveries[i] = mapForwardDeliveryRow(row)
 		}
 		result, pageInfo := pagination.BuildPageString(deliveries, params.Limit, cursorDir, deliveryCreatedAt, deliveryID)
+		if apiErr := r.attachReceivingOrderRefs(ctx, result); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 		return &domain.ListDeliveriesResult{Deliveries: result, PageInfo: pageInfo}, nil
 	}
 
@@ -182,6 +179,9 @@ func (r *deliveryRepoImpl) List(ctx context.Context, params domain.ListDeliverie
 		deliveries[i] = mapForwardDeliveryRow(row)
 	}
 	result, pageInfo := pagination.BuildPageString(deliveries, params.Limit, cursorDir, deliveryCreatedAt, deliveryID)
+	if apiErr := r.attachReceivingOrderRefs(ctx, result); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 	return &domain.ListDeliveriesResult{Deliveries: result, PageInfo: pageInfo}, nil
 }
 

@@ -65,7 +65,29 @@ func init() {
 				Populate:    populateShipmentOnInvoiceRelated,
 			},
 			{Key: "lines", Target: constants.ObjectTypeInvoiceLine, ExtractRefs: extractLineRefsFromInvoice, Populate: populateLinesOnInvoice},
-			{Key: "allocations", Populate: populateAllocationsOnInvoice},
+			{Key: "allocations", Target: constants.ObjectTypeInvoiceAllocation, ExtractRefs: extractAllocationRefsFromInvoice, Populate: populateAllocationsOnInvoice},
+		},
+	})
+
+	resourcekit.Register(&resourcekit.Definition{
+		ObjectType: constants.ObjectTypeInvoiceAllocation,
+		Load:       stubLoadInvoiceAllocations,
+		Subs: []resourcekit.SubField{
+			{
+				// The amount is already on the allocation — this exists so a caller can reach through
+				// it to the currency it is counted in.
+				Key:         "amount",
+				Target:      constants.ObjectTypeQuantity,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractRefs: extractAmountRefFromInvoiceAllocation,
+			},
+			{
+				Key:         "transaction",
+				Target:      constants.ObjectTypeTransaction,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractIDs:  extractTransactionIDFromInvoiceAllocation,
+				Populate:    populateTransactionOnInvoiceAllocation,
+			},
 		},
 	})
 
@@ -80,6 +102,27 @@ func init() {
 				Target:      constants.ObjectTypeSalesOrderLine,
 				ExtractRefs: extractOrderLineRefFromInvoiceLine,
 				Populate:    populateOrderLineOnInvoiceLine,
+			},
+			{
+				Key:         "item",
+				Target:      constants.ObjectTypeItem,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractIDs:  extractItemIDFromInvoiceLine,
+				Populate:    populateItemOnInvoiceLine,
+			},
+			{
+				// The quantity and the price are already on the line — these exist so a caller can
+				// reach through them to the units they are counted in.
+				Key:         "quantity",
+				Target:      constants.ObjectTypeQuantity,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractRefs: extractQuantityRefFromInvoiceLine,
+			},
+			{
+				Key:         "unit_price",
+				Target:      constants.ObjectTypeRate,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractRefs: extractUnitPriceRefFromInvoiceLine,
 			},
 		},
 	})
@@ -102,7 +145,7 @@ func init() {
 				ExtractIDs:  extractParentAccountIDFromInvoiceForPayment,
 				Populate:    populateParentAccountOnInvoiceForPayment,
 			},
-			{Key: "allocations", Populate: populateAllocationsOnInvoiceForPayment},
+			{Key: "allocations", Target: constants.ObjectTypeInvoiceAllocation, ExtractRefs: extractAllocationRefsFromInvoiceForPayment, Populate: populateAllocationsOnInvoiceForPayment},
 		},
 	})
 }
@@ -242,6 +285,89 @@ func stubLoadInvoiceLines(_ context.Context, _ []string) (map[string]any, *apier
 	return nil, nil
 }
 
+func stubLoadInvoiceAllocations(_ context.Context, _ []string) (map[string]any, *apierror.APIError) {
+	return nil, nil
+}
+
+// The resolver runs Populate before gathering refs, so the allocations are already on the invoice.
+func extractAllocationRefsFromInvoice(_ context.Context, parent any) []any {
+	inv := parent.(*apiresource.Invoice)
+	if inv.Allocations == nil {
+		return nil
+	}
+	refs := make([]any, len(inv.Allocations.Data))
+	for i := range inv.Allocations.Data {
+		refs[i] = &inv.Allocations.Data[i]
+	}
+	return refs
+}
+
+func extractTransactionIDFromInvoiceAllocation(ctx context.Context, parent any) []string {
+	a := parent.(*apiresource.InvoiceAllocation)
+	id, _ := resourcekit.GetLoadMeta(ctx).
+		GetString(constants.ObjectTypeInvoiceAllocation, a.ID, "transaction_id")
+	if id == "" {
+		return nil
+	}
+	return []string{id}
+}
+
+func populateTransactionOnInvoiceAllocation(ctx context.Context, parent any, loaded map[string]any) {
+	a := parent.(*apiresource.InvoiceAllocation)
+	id, _ := resourcekit.GetLoadMeta(ctx).
+		GetString(constants.ObjectTypeInvoiceAllocation, a.ID, "transaction_id")
+	if id == "" {
+		return
+	}
+	if v, ok := loaded[id]; ok {
+		a.Transaction = v.(*apiresource.TransactionDetail)
+	}
+}
+
+func extractAmountRefFromInvoiceAllocation(_ context.Context, parent any) []any {
+	a := parent.(*apiresource.InvoiceAllocation)
+	if a.Amount == nil {
+		return nil
+	}
+	return []any{a.Amount}
+}
+
+func extractItemIDFromInvoiceLine(ctx context.Context, parent any) []string {
+	l := parent.(*apiresource.InvoiceLine)
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeInvoiceLine, l.ID, "item_id")
+	if id == "" {
+		return nil
+	}
+	return []string{id}
+}
+
+func populateItemOnInvoiceLine(ctx context.Context, parent any, loaded map[string]any) {
+	l := parent.(*apiresource.InvoiceLine)
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeInvoiceLine, l.ID, "item_id")
+	if id == "" {
+		return
+	}
+	if v, ok := loaded[id]; ok {
+		l.Item = v.(*apiresource.Item)
+	}
+}
+
+func extractQuantityRefFromInvoiceLine(_ context.Context, parent any) []any {
+	l := parent.(*apiresource.InvoiceLine)
+	if l.Quantity == nil {
+		return nil
+	}
+	return []any{l.Quantity}
+}
+
+func extractUnitPriceRefFromInvoiceLine(_ context.Context, parent any) []any {
+	l := parent.(*apiresource.InvoiceLine)
+	if l.UnitPrice == nil {
+		return nil
+	}
+	return []any{l.UnitPrice}
+}
+
 // Hands the resolver the stashed order line so nested includes below it resolve.
 func extractOrderLineRefFromInvoiceLine(ctx context.Context, parent any) []any {
 	l := parent.(*apiresource.InvoiceLine)
@@ -355,4 +481,16 @@ func populateShipmentOnInvoiceRelated(ctx context.Context, parent any, loaded ma
 	status := string(s.Status)
 	rec.Status = &status
 	ensureInvoiceRelated(inv).Shipment = rec
+}
+
+func extractAllocationRefsFromInvoiceForPayment(_ context.Context, parent any) []any {
+	inv := parent.(*apiresource.InvoiceForPayment)
+	if inv.Allocations == nil {
+		return nil
+	}
+	refs := make([]any, len(inv.Allocations.Data))
+	for i := range inv.Allocations.Data {
+		refs[i] = &inv.Allocations.Data[i]
+	}
+	return refs
 }

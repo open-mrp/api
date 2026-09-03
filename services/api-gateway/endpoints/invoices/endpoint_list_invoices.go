@@ -79,6 +79,12 @@ func (e *ListInvoicesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListInvoi
 				"lines",
 				"lines.order_line",
 				"lines.order_line.product",
+				"lines.item",
+				"lines.quantity",
+				"lines.quantity.unit",
+				"lines.unit_price",
+				"lines.unit_price.numerator_unit",
+				"lines.unit_price.denominator_unit",
 			},
 		}),
 	})

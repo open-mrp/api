@@ -130,24 +130,38 @@ func ItemPresenter(i *pb.ItemInfo) apiresource.Item {
 	return item
 }
 
-func ItemInventoryPresenter(ctx context.Context, resp *pb.GetItemInventoryResponse) *apiresource.ItemInventory {
+func ItemInventoryPresenter(ctx context.Context, resp *pb.GetItemInventoryResponse, units map[string]*apiresource.Unit) *apiresource.ItemInventory {
 	if resp == nil {
 		return nil
 	}
 	meta := resourcekit.GetLoadMeta(ctx)
-	stashItemInventoryQuantity(ctx, meta, "on_hand", resp.OnHand)
-	stashItemInventoryQuantity(ctx, meta, "reserved", resp.Reserved)
-	stashItemInventoryQuantity(ctx, meta, "available_to_promise", resp.AvailableToPromise)
-	stashItemInventoryQuantity(ctx, meta, "short", resp.Short)
+	stashItemInventoryQuantity(meta, "on_hand", resp.OnHand, units)
+	stashItemInventoryQuantity(meta, "reserved", resp.Reserved, units)
+	stashItemInventoryQuantity(meta, "available_to_promise", resp.AvailableToPromise, units)
+	stashItemInventoryQuantity(meta, "short", resp.Short, units)
 
 	return &apiresource.ItemInventory{
 		Object: constants.ObjectTypeItemInventory,
 	}
 }
 
+// ItemInventoryUnitIDs names the units the four inventory figures are counted in, so the caller can resolve them before presenting.
+func ItemInventoryUnitIDs(resp *pb.GetItemInventoryResponse) []string {
+	if resp == nil {
+		return nil
+	}
+	ids := make([]string, 0, 4)
+	for _, q := range []*pb.QuantityInfo{resp.OnHand, resp.Reserved, resp.AvailableToPromise, resp.Short} {
+		if q != nil {
+			ids = append(ids, q.UnitId)
+		}
+	}
+	return ids
+}
+
 // The four inventory figures are netted out of the ledger at read time, so each is a computed
-// quantity: there is no row behind it to carry an id, and the unit rides in `display_value`.
-func stashItemInventoryQuantity(ctx context.Context, meta *resourcekit.LoadMeta, key string, q *pb.QuantityInfo) {
+// quantity: there is no row behind it to carry an id, but it still arrives with its unit.
+func stashItemInventoryQuantity(meta *resourcekit.LoadMeta, key string, q *pb.QuantityInfo, units map[string]*apiresource.Unit) {
 	if q == nil {
 		return
 	}
@@ -155,11 +169,13 @@ func stashItemInventoryQuantity(ctx context.Context, meta *resourcekit.LoadMeta,
 		Object:       constants.ObjectTypeComputedQuantity,
 		Value:        apiresource.NormalizeQuantityValue(q.Value, q.UnitType),
 		DisplayValue: apiresource.FormatDisplayValue(q.Value, q.UnitAbbreviation, q.UnitType),
+		Unit:         units[q.UnitId],
 	}
 	meta.Set(constants.ObjectTypeItemInventory, "singleton", key, quantity)
 }
 
-func ItemCostsPresenter(resp *pb.GetItemCostsResponse) *apiresource.ItemCosts {
+// ItemCostsPresenter renders a cost breakdown against units the caller has already resolved. Costs read as currency per item unit, so both units are part of the figure rather than a sub-resource to ask for separately.
+func ItemCostsPresenter(resp *pb.GetItemCostsResponse, units map[string]*apiresource.Unit) *apiresource.ItemCosts {
 	if resp == nil {
 		return nil
 	}
@@ -169,8 +185,8 @@ func ItemCostsPresenter(resp *pb.GetItemCostsResponse) *apiresource.ItemCosts {
 		DirectLaborCost:    resp.DirectLaborCost,
 		OverheadCost:       resp.OverheadCost,
 		TotalCost:          resp.TotalCost,
-		NumeratorUnit:      unitRef(resp.NumeratorUnitId),
-		DenominatorUnit:    unitRef(resp.UnitId),
+		NumeratorUnit:      units[resp.NumeratorUnitId],
+		DenominatorUnit:    units[resp.UnitId],
 	}
 }
 
@@ -195,7 +211,19 @@ func ItemTrendsPresenter(resp *pb.GetItemTrendsResponse) *apiresource.ItemTrends
 	}
 }
 
-func BulkReconcileItemsPresenter(resp *pb.BulkReconcileItemsResponse) *apiresource.BulkReconcileItemsResponse {
+// BulkReconcileUnitIDs names the units the reconciled measures are counted in, so the caller can resolve them before presenting.
+func BulkReconcileUnitIDs(resp *pb.BulkReconcileItemsResponse) []string {
+	if resp == nil {
+		return nil
+	}
+	ids := make([]string, 0, len(resp.ReconciledItems))
+	for _, r := range resp.ReconciledItems {
+		ids = append(ids, r.UnitId)
+	}
+	return ids
+}
+
+func BulkReconcileItemsPresenter(resp *pb.BulkReconcileItemsResponse, units map[string]*apiresource.Unit) *apiresource.BulkReconcileItemsResponse {
 	if resp == nil {
 		return &apiresource.BulkReconcileItemsResponse{
 			Object:          constants.ObjectTypeBulkReconcileItemsResponse,
@@ -208,11 +236,10 @@ func BulkReconcileItemsPresenter(resp *pb.BulkReconcileItemsResponse) *apiresour
 	reconciled := make([]apiresource.ReconciledItemResult, len(resp.ReconciledItems))
 	for i, r := range resp.ReconciledItems {
 		reconciled[i] = apiresource.ReconciledItemResult{
-			Object: constants.ObjectTypeReconciledItemResult,
-			// The row identifies the item it reconciled; only the id and SKU are known here, so the rest of the item stays unset rather than being invented.
-			Item:             &apiresource.Item{ID: r.ItemId, Object: constants.ObjectTypeItem, SKU: r.Sku},
-			PreviousQuantity: reconciledQuantity(r.PreviousMeasure, r.UnitId, r.UnitAbbreviation),
-			NewQuantity:      reconciledQuantity(r.NewMeasure, r.UnitId, r.UnitAbbreviation),
+			Object:           constants.ObjectTypeReconciledItemResult,
+			Item:             itemEntity(r.ItemId, r.Sku),
+			PreviousQuantity: reconciledQuantity(r.PreviousMeasure, r.UnitAbbreviation, units[r.UnitId]),
+			NewQuantity:      reconciledQuantity(r.NewMeasure, r.UnitAbbreviation, units[r.UnitId]),
 		}
 	}
 
@@ -223,16 +250,10 @@ func BulkReconcileItemsPresenter(resp *pb.BulkReconcileItemsResponse) *apiresour
 
 	errors := make([]apiresource.ReconcileErrorResult, len(resp.Errors))
 	for i, e := range resp.Errors {
-		sku := e.Sku
 		errors[i] = apiresource.ReconcileErrorResult{
 			Object: constants.ObjectTypeReconcileErrorResult,
-			Item: &apiresource.Entity{
-				ID:     e.ItemId,
-				Object: constants.ObjectTypeEntity,
-				Type:   constants.ObjectTypeItem,
-				Name:   &sku,
-			},
-			Error: e.Error,
+			Item:   itemEntity(e.ItemId, e.Sku),
+			Error:  e.Error,
 		}
 	}
 
@@ -244,23 +265,18 @@ func BulkReconcileItemsPresenter(resp *pb.BulkReconcileItemsResponse) *apiresour
 	}
 }
 
-// unitRef names a unit by id. The unit itself is resolved by the include machinery where a caller asks for it; here it identifies which unit the figures are counted in.
-func unitRef(id string) *apiresource.Unit {
-	if id == "" {
-		return nil
-	}
-	return &apiresource.Unit{ID: id, Object: constants.ObjectTypeUnit}
+// itemEntity names the item a reconcile row acted on. Every list in the response identifies its item the same way, and an id with a SKU is all a reconcile run knows about one.
+func itemEntity(id, sku string) *apiresource.Entity {
+	name := sku
+	return apiresource.NewEntity(id, constants.ObjectTypeItem, &name, nil)
 }
 
-// reconciledQuantity presents a reconciled measure, which is computed against the ledger rather than stored, so it carries no id.
-func reconciledQuantity(value, unitID, unitAbbreviation string) *apiresource.ComputedQuantity {
-	q := &apiresource.ComputedQuantity{
+// reconciledQuantity presents a reconciled measure, which is computed against the ledger rather than stored, so it carries no id — but it does carry the unit it is counted in.
+func reconciledQuantity(value, unitAbbreviation string, unit *apiresource.Unit) *apiresource.ComputedQuantity {
+	return &apiresource.ComputedQuantity{
 		Object:       constants.ObjectTypeComputedQuantity,
 		Value:        value,
 		DisplayValue: apiresource.FormatDisplayValue(value, unitAbbreviation, ""),
+		Unit:         unit,
 	}
-	if unitID != "" {
-		q.Unit = &apiresource.Unit{ID: unitID, Object: constants.ObjectTypeUnit}
-	}
-	return q
 }

@@ -8,6 +8,7 @@ import (
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/field"
 )
@@ -78,6 +79,12 @@ func (e *AddBatchesToProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoi
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainProductionRuns, Action: types.ActionUpdate},
 		},
+		ObjectType: constants.ObjectTypeBatch,
+		// A batch reports three measures; the units they are counted in are records of their own.
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeBatch,
+			Fields:     []string{"quantity.unit", "seconds.unit", "waste.unit"},
+		}),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AddBatchesToProductionRunRequest) (*apiresource.List[apiresource.Batch], *apierror.APIError) {
 			return svc.(ProductionRunSvc).AddBatchesToProductionRun
 		},

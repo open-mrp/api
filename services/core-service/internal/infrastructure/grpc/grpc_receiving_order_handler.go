@@ -110,6 +110,7 @@ func receivingOrderLineToProto(l *domain.ReceivingOrderLine) *pb.ReceivingOrderL
 		QuantityUnitId:            l.QuantityUnitID,
 		QuantityUnitAbbreviation:  l.QuantityUnitAbbreviation,
 		OrderLineId:               l.OrderLineID,
+		OrderLineQuantityId:       l.OrderLineQuantityID,
 		OrderLineQuantityOrdered:  l.OrderLineQuantityOrdered,
 		OrderLineUnitId:           l.OrderLineUnitID,
 		OrderLineUnitAbbreviation: l.OrderLineUnitAbbreviation,

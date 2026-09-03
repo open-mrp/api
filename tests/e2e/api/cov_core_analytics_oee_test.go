@@ -195,13 +195,17 @@ func TestAnalyticsOee_QualityComputedWithoutPlannedTime(t *testing.T) {
 
 		good, _ := dept["good_units"].(float64)
 		waste, _ := dept["waste_units"].(float64)
-		if good+waste <= 0 {
+		// Seconds are produced units that are not first quality, so they count against quality
+		// exactly as scrap does — the denominator is everything the department produced.
+		seconds, _ := dept["seconds_units"].(float64)
+		produced := good + waste + seconds
+		if produced <= 0 {
 			continue // nothing produced, so quality is genuinely unmeasurable
 		}
 
 		quality, ok := dept["quality_pct"].(float64)
 		require.True(t, ok, "quality must be measured when units were produced")
-		assert.InDelta(t, good/(good+waste), quality, 1e-6, "quality must be good / (good + waste)")
+		assert.InDelta(t, good/produced, quality, 1e-6, "quality must be good / (good + waste + seconds)")
 	}
 }
 

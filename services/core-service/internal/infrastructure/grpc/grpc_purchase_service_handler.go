@@ -262,8 +262,16 @@ func purchaseOrderLineToProto(l *domain.PurchaseOrderLine) *pb.PurchaseOrderLine
 		UnitCostNumeratorUnitAbbreviation:    l.UnitCostNumeratorUnitAbbr,
 		UnitCostDenominatorUnitId:            l.UnitCostDenominatorUnitID,
 		UnitCostDenominatorUnitAbbreviation:  l.UnitCostDenominatorUnitAbbr,
+		UnitPriceCreatedAt:                   timestamppb.New(l.UnitPriceCreatedAt),
+		UnitPriceUpdatedAt:                   timestamppb.New(l.UnitPriceUpdatedAt),
 		CreatedAt:                            timestamppb.New(l.CreatedAt),
 		UpdatedAt:                            timestamppb.New(l.UpdatedAt),
+	}
+	if l.UnitCostCreatedAt != nil {
+		info.UnitCostCreatedAt = timestamppb.New(*l.UnitCostCreatedAt)
+	}
+	if l.UnitCostUpdatedAt != nil {
+		info.UnitCostUpdatedAt = timestamppb.New(*l.UnitCostUpdatedAt)
 	}
 
 	return info

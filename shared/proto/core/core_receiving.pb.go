@@ -494,6 +494,9 @@ type ReceivingOrderLineInfo struct {
 	OrderLineProductId *string `protobuf:"bytes,17,opt,name=order_line_product_id,json=orderLineProductId,proto3,oneof" json:"order_line_product_id,omitempty"`
 	// The purchase order line's position, carried onto the receiving line so the client never has to fetch that line to number this one.
 	OrderLineItemNumber *int32 `protobuf:"varint,18,opt,name=order_line_item_number,json=orderLineItemNumber,proto3,oneof" json:"order_line_item_number,omitempty"`
+	// The purchase order line's own quantity record. The receiving line reports
+	// the ordered figure as that quantity, not as a copy of its value.
+	OrderLineQuantityId string `protobuf:"bytes,24,opt,name=order_line_quantity_id,json=orderLineQuantityId,proto3" json:"order_line_quantity_id,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -652,6 +655,13 @@ func (x *ReceivingOrderLineInfo) GetOrderLineItemNumber() int32 {
 		return *x.OrderLineItemNumber
 	}
 	return 0
+}
+
+func (x *ReceivingOrderLineInfo) GetOrderLineQuantityId() string {
+	if x != nil {
+		return x.OrderLineQuantityId
+	}
+	return ""
 }
 
 // StockingDataInfo contains stocking data for the stock action.
@@ -1714,7 +1724,7 @@ const file_core_core_receiving_proto_rawDesc = "" +
 	"\x05_noteB\t\n" +
 	"\a_totalsB\x0f\n" +
 	"\r_completed_atB\x12\n" +
-	"\x10_supplier_number\"\x85\t\n" +
+	"\x10_supplier_number\"\xba\t\n" +
 	"\x16ReceivingOrderLineInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vquantity_id\x18\x02 \x01(\tR\n" +
@@ -1738,7 +1748,8 @@ const file_core_core_receiving_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x126\n" +
 	"\x15order_line_product_id\x18\x11 \x01(\tH\x05R\x12orderLineProductId\x88\x01\x01\x128\n" +
-	"\x16order_line_item_number\x18\x12 \x01(\x05H\x06R\x13orderLineItemNumber\x88\x01\x01B\x1a\n" +
+	"\x16order_line_item_number\x18\x12 \x01(\x05H\x06R\x13orderLineItemNumber\x88\x01\x01\x123\n" +
+	"\x16order_line_quantity_id\x18\x18 \x01(\tR\x13orderLineQuantityIdB\x1a\n" +
 	"\x18_rejected_quantity_valueB\x15\n" +
 	"\x13_order_line_item_idB\x16\n" +
 	"\x14_order_line_item_skuB\x1e\n" +

@@ -43,7 +43,7 @@ type Delivery struct {
 	// The first delivery against a purchase order takes that order's number; each later delivery appends a sequence suffix, such as `PO-001-2`.
 	Number string `json:"number" validate:"required"`
 	// The records this delivery sits between.
-	Related *DeliveryRelated `json:"related"`
+	Related *DeliveryRelated `json:"related" expandable:"true"`
 	// Whether any of the delivered goods were accepted into inventory.
 	//
 	// - `accepted`: at least part of the shipment was put into inventory. Quantities refused on inspection can still appear on the delivery's lines.

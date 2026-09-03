@@ -60,6 +60,9 @@ func (s *supplierSvcImpl) ListSuppliers(ctx context.Context, req *ListSuppliersR
 		Limit:   req.Limit,
 		Query:   req.Query,
 		ItemIds: req.ItemIDs,
+		// The addresses are joined by the backend rather than resolved here: they belong to the
+		// supplier's account, which the account-scoped address loader cannot read.
+		Includes: resourcekit.FilterIncludes(ctx, supplierIncludes...),
 	}
 
 	if req.StartDate != nil {
@@ -250,8 +253,31 @@ func supplierSummaryFromProto(s *pb.SupplierSummaryProto) apiresource.Supplier {
 		Object:        constants.ObjectTypeSupplier,
 		Name:          s.Name,
 		Number:        s.Number,
+		Note:          s.Note,
 		MaterialCount: s.MaterialCount,
 		CreatedAt:     grpcutil.TimestampToTimePtr(s.CreatedAt),
+		UpdatedAt:     grpcutil.TimestampToTimePtr(s.UpdatedAt),
+	}
+}
+
+// stashSupplierSummaryMeta records which addresses a list row defaults to, so the include resolver
+// can fetch them for a caller that asks. The list itself never joins them.
+func stashSupplierSummaryMeta(ctx context.Context, s *pb.SupplierSummaryProto) {
+	if s == nil {
+		return
+	}
+	meta := resourcekit.GetLoadMeta(ctx)
+	if s.BillToAddressId != nil && *s.BillToAddressId != "" {
+		meta.Set(constants.ObjectTypeSupplier, s.Id, "bill_to_address_id", *s.BillToAddressId)
+	}
+	if s.ShipToAddressId != nil && *s.ShipToAddressId != "" {
+		meta.Set(constants.ObjectTypeSupplier, s.Id, "ship_to_address_id", *s.ShipToAddressId)
+	}
+	if s.BillToAddress != nil {
+		meta.Set(constants.ObjectTypeSupplier, s.Id, "bill_to_address", addressProtoToResource(s.BillToAddress))
+	}
+	if s.ShipToAddress != nil {
+		meta.Set(constants.ObjectTypeSupplier, s.Id, "ship_to_address", addressProtoToResource(s.ShipToAddress))
 	}
 }
 
@@ -263,6 +289,7 @@ func supplierListFromProto(ctx context.Context, resp *pb.ListSuppliersResponse) 
 	items := make([]apiresource.Supplier, len(resp.Suppliers))
 	for i, s := range resp.Suppliers {
 		items[i] = supplierSummaryFromProto(s)
+		stashSupplierSummaryMeta(ctx, s)
 	}
 
 	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))

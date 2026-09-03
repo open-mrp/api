@@ -21,7 +21,7 @@ func init() {
 				ExtractIDs:  extractResponsibleUserIDFromSettlement,
 				Populate:    populateResponsibleUserOnSettlement,
 			},
-			{Key: "allocations", Cardinality: resourcekit.CardinalityList, Populate: populateAllocationsOnSettlement},
+			{Key: "allocations", Cardinality: resourcekit.CardinalityList, Target: constants.ObjectTypeTransactionAllocation, ExtractRefs: extractAllocationRefsFromSettlement, Populate: populateAllocationsOnSettlement},
 		},
 	})
 	resourcekit.Register(&resourcekit.Definition{
@@ -60,4 +60,17 @@ func populateAllocationsOnSettlement(ctx context.Context, parent any, _ map[stri
 		return
 	}
 	s.Allocations = v.(*apiresource.List[apiresource.TransactionAllocation])
+}
+
+// The resolver runs Populate before gathering refs, so the allocations are already on the settlement.
+func extractAllocationRefsFromSettlement(_ context.Context, parent any) []any {
+	s := parent.(*apiresource.Settlement)
+	if s.Allocations == nil {
+		return nil
+	}
+	refs := make([]any, len(s.Allocations.Data))
+	for i := range s.Allocations.Data {
+		refs[i] = &s.Allocations.Data[i]
+	}
+	return refs
 }

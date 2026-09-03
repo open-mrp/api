@@ -263,6 +263,8 @@ SELECT
     up_nu.abbreviation AS unit_price_numerator_unit_abbreviation,
     up_du.id AS unit_price_denominator_unit_id,
     up_du.abbreviation AS unit_price_denominator_unit_abbreviation,
+    up.created_at AS unit_price_created_at,
+    up.updated_at AS unit_price_updated_at,
     -- Unit cost
     uc.id AS unit_cost_id,
     uc.value AS unit_cost_value,
@@ -270,6 +272,8 @@ SELECT
     uc_nu.abbreviation AS unit_cost_numerator_unit_abbreviation,
     uc_du.id AS unit_cost_denominator_unit_id,
     uc_du.abbreviation AS unit_cost_denominator_unit_abbreviation,
+    uc.created_at AS unit_cost_created_at,
+    uc.updated_at AS unit_cost_updated_at,
     -- Timestamps
     sol.created_at,
     sol.updated_at

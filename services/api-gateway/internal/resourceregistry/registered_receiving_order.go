@@ -48,12 +48,39 @@ func init() {
 				Populate:    populateItemOnReceivingOrderLine,
 			},
 			{
-				// Carried from the purchase order line alongside the receiving line, so there is nothing to fetch.
-				Key:      "quantity_ordered",
-				Populate: populateQuantityOrderedOnReceivingOrderLine,
+				// Carried from the purchase order line alongside the receiving line, so there is nothing to fetch. Traversed rather than loaded so `quantity_ordered.unit` still resolves.
+				Key:         "quantity_ordered",
+				Target:      constants.ObjectTypeQuantity,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				Populate:    populateQuantityOrderedOnReceivingOrderLine,
+				ExtractRefs: extractQuantityOrderedRefFromReceivingOrderLine,
+			},
+			{
+				// The quantity is already on the line — this exists so a caller can reach through it to the unit.
+				Key:         "quantity",
+				Target:      constants.ObjectTypeQuantity,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractRefs: extractQuantityRefFromReceivingOrderLine,
 			},
 		},
 	})
+}
+
+// The resolver runs Populate before gathering refs, so the ordered quantity is already on the line by the time this is called.
+func extractQuantityOrderedRefFromReceivingOrderLine(_ context.Context, parent any) []any {
+	l := parent.(*apiresource.ReceivingOrderLine)
+	if l.QuantityOrdered == nil {
+		return nil
+	}
+	return []any{l.QuantityOrdered}
+}
+
+func extractQuantityRefFromReceivingOrderLine(_ context.Context, parent any) []any {
+	l := parent.(*apiresource.ReceivingOrderLine)
+	if l.Quantity == nil {
+		return nil
+	}
+	return []any{l.Quantity}
 }
 
 func populateSupplierOnReceivingOrder(ctx context.Context, parent any, _ map[string]any) {

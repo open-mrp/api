@@ -20,12 +20,22 @@ type Supplier struct {
 }
 
 // SupplierSummary is a lightweight supplier record for list results.
+//
+// The two default addresses are always carried as ids, and as whole records when the caller asked
+// for them. They cannot be resolved downstream: a supplier's addresses belong to the supplier's own
+// account, which the gateway's account-scoped address loader cannot read.
 type SupplierSummary struct {
-	ID            string
-	Name          string
-	Number        string
-	MaterialCount int64
-	CreatedAt     time.Time
+	ID              string
+	Name            string
+	Number          string
+	Note            *string
+	BillToAddressID *string
+	ShipToAddressID *string
+	BillToAddress   *CustomerAddress
+	ShipToAddress   *CustomerAddress
+	MaterialCount   int64
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 // ListSuppliersParams holds the parameters for listing suppliers.

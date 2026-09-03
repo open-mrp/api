@@ -114,6 +114,9 @@ message ReceivingOrderLineInfo {
   // The purchase order line's position, carried onto the receiving line so the client never has to fetch that line to number this one.
   optional int32 order_line_item_number = 18;
   reserved 19, 20, 21, 22, 23;
+  // The purchase order line's own quantity record. The receiving line reports
+  // the ordered figure as that quantity, not as a copy of its value.
+  string order_line_quantity_id = 24;
 }
 
 // StockingDataInfo contains stocking data for the stock action.

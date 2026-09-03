@@ -68,7 +68,10 @@ func TestInventories_ListResponseShape(t *testing.T) {
 
 // --- Expandable fields ---
 
-func TestInventories_QuantityUnitIsAlwaysNull(t *testing.T) {
+// The on-hand figure is netted out of the ledger per request, so it has no row and no id a caller
+// could follow to its unit. The unit therefore travels with the figure, always — a bare "1200" with
+// no unit is not a stock position.
+func TestInventories_QuantityAlwaysCarriesItsUnit(t *testing.T) {
 	t.Parallel()
 
 	list, status, err := apiClient.GetList(inventoriesPath, url.Values{"limit": {"1"}})
@@ -78,12 +81,11 @@ func TestInventories_QuantityUnitIsAlwaysNull(t *testing.T) {
 
 	quantity := jsonObject(parseJSON(list.Data[0]), "quantity")
 	require.NotNil(t, quantity)
-	assertNilField(t, quantity, "unit")
+	assertUnitHydrated(t, jsonObject(quantity, "unit"), "quantity.unit")
 }
 
-// The on-hand figure is computed per request and the core service returns only the unit's
-// abbreviation and type with it, never an id, so there is nothing to resolve a Unit from. The
-// endpoint used to advertise `quantity.unit` anyway and panicked when asked for it; it now says no.
+// The unit is already on every row, so there is nothing to ask for: the endpoint offers no includes
+// at all and refuses `quantity.unit` rather than accepting a key that would change nothing.
 func TestInventories_RejectsTheQuantityUnitInclude(t *testing.T) {
 	t.Parallel()
 

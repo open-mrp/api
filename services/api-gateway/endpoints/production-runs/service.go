@@ -198,7 +198,7 @@ func (m *productionRunSvcImpl) AddBatchesToProductionRun(ctx context.Context, re
 		return nil, apiErr
 	}
 
-	return addBatchesFromProto(resp), nil
+	return addBatchesFromProto(ctx, resp), nil
 }
 
 func (m *productionRunSvcImpl) BulkCreateProductionRuns(ctx context.Context, req *BulkCreateProductionRunsRequest) (*apiresource.Job, *apierror.APIError) {
@@ -323,19 +323,21 @@ func StashProductionRunMeta(meta *resourcekit.LoadMeta, info *pb.ProductionRunIn
 	meta.Set(constants.ObjectTypeProductionRun, info.Id, "responsible_user_id", info.ResponsibleUserId)
 }
 
-func addBatchesFromProto(resp *pb.AddBatchesToProductionRunResponse) *apiresource.List[apiresource.Batch] {
+func addBatchesFromProto(ctx context.Context, resp *pb.AddBatchesToProductionRunResponse) *apiresource.List[apiresource.Batch] {
+	meta := resourcekit.GetLoadMeta(ctx)
 	batches := make([]apiresource.Batch, len(resp.Batches))
 	for i, b := range resp.Batches {
-		batches[i] = batchep.BaseBatchPresenter(b)
+		batches[i] = batchep.BaseBatchPresenter(meta, b)
 	}
 
 	return apiresource.NewList(batches, apiresource.PageInfo{})
 }
 
 func listBatchesFromProto(ctx context.Context, resp *pb.ListBatchesByProductionRunResponse) *apiresource.List[apiresource.Batch] {
+	meta := resourcekit.GetLoadMeta(ctx)
 	batches := make([]apiresource.Batch, len(resp.Batches))
 	for i, b := range resp.Batches {
-		batches[i] = batchep.BatchPresenter(b)
+		batches[i] = batchep.BatchPresenter(meta, b)
 	}
 
 	var pi apiresource.PageInfo

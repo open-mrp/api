@@ -38,7 +38,7 @@ type ReceivingOrder struct {
 	// What the order is worth and how far it has been put away.
 	Totals *ReceivingOrderTotals `json:"totals" expandable:"true"`
 	// The records this receiving order sits between.
-	Related *ReceivingOrderRelated `json:"related"`
+	Related *ReceivingOrderRelated `json:"related" expandable:"true"`
 	// Timestamp when the receiving order was completed.
 	//
 	// Set automatically once every line has been stocked, and also when the originating purchase order is closed. It is cleared again when the receiving order is voided or that purchase order is re-opened.
@@ -144,8 +144,8 @@ type ReceivingOrderLine struct {
 	Quantity *Quantity `json:"quantity" validate:"required"`
 	// Quantity refused on inspection and never taken into inventory.
 	//
-	// Accumulated from the rejected quantities recorded against this line each time the order is stocked.
-	RejectedQuantity *Quantity `json:"rejected_quantity"`
+	// Accumulated from the rejected quantities recorded against this line each time the order is stocked, so it is summed at read time rather than stored: it carries no id, and arrives with the unit it was summed in.
+	RejectedQuantity *ComputedQuantity `json:"rejected_quantity"`
 	// Position of the originating purchase order line within its order, starting at 1.
 	LineItemNumber *int32 `json:"line_item_number"`
 	// The item being received.
@@ -154,7 +154,7 @@ type ReceivingOrderLine struct {
 	QuantityOrdered *Quantity `json:"quantity_ordered" expandable:"true"`
 	// Timestamp when the received quantity was stocked into inventory.
 	//
-	// Once set, the line counts toward the order's `completion_percentage`. Voiding the line or the whole order clears it, but does not reverse the inventory that was already received.
+	// Once set, the line counts toward the order's `totals.stocked.completion`. Voiding the line or the whole order clears it, but does not reverse the inventory that was already received.
 	StockedAt *time.Time `json:"stocked_at"`
 	// Timestamp when the line was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

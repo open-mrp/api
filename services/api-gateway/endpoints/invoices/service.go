@@ -253,7 +253,7 @@ func stashInvoiceMeta(ctx context.Context, d *pb.InvoiceInfo, inv *apiresource.I
 
 	allocations := make([]apiresource.InvoiceAllocation, len(d.Allocations))
 	for i, a := range d.Allocations {
-		allocations[i] = invoiceAllocationFromProto(a)
+		allocations[i] = invoiceAllocationFromProto(meta, a)
 	}
 	meta.Set(constants.ObjectTypeInvoice, inv.ID, "allocations", apiresource.NewList(allocations, apiresource.PageInfo{}))
 }
@@ -289,25 +289,31 @@ func invoiceLineFromProto(ctx context.Context, l *pb.InvoiceLineInfo) apiresourc
 		UpdatedAt: grpcutil.TimestampToTime(l.UpdatedAt),
 	}
 
+	meta := resourcekit.GetLoadMeta(ctx)
+
+	// The quantity and the price ride on the line, but the units they are counted in are records of
+	// their own — stashed as ids so `lines.quantity.unit` and the price's two units resolve in full,
+	// rather than the line shipping a unit carrying nothing but an abbreviation.
+	meta.Set(constants.ObjectTypeQuantity, l.QuantityId, "unit_id", l.QuantityUnitId)
+	meta.Set(constants.ObjectTypeRate, l.UnitPriceId, "numerator_unit_id", l.UnitPriceNumeratorUnitId)
+	meta.Set(constants.ObjectTypeRate, l.UnitPriceId, "denominator_unit_id", l.UnitPriceDenominatorUnitId)
+
 	// order_line is a line-level expandable reference. There is no standalone
 	// sales-order-line loader, so build a pre-built, new-shape SalesOrderLine from
 	// the line's identifying proto fields and stash it for populate on ?include=.
 	if l.OrderLineId != "" {
-		resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeInvoiceLine, line.ID, "order_line", buildSalesOrderLineForInvoice(l))
+		meta.Set(constants.ObjectTypeInvoiceLine, line.ID, "order_line", buildSalesOrderLineForInvoice(l))
 
 		// Keyed by the order line, not the invoice line, because the product loader runs against the
 		// sales_order_line resource once the resolver recurses into it.
 		if l.OrderLineProductId != nil && *l.OrderLineProductId != "" {
-			resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypeSalesOrderLine, l.OrderLineId, "product_id", *l.OrderLineProductId)
+			meta.Set(constants.ObjectTypeSalesOrderLine, l.OrderLineId, "product_id", *l.OrderLineProductId)
 		}
 	}
-	// Item carried inline (the order line's item) so lines.item.id resolves.
+	// The item is the order line's, and expandable: the line carries its id and the item loader
+	// fills the rest, rather than the line shipping an item that is only an id and a SKU.
 	if l.OrderLineItemId != nil && *l.OrderLineItemId != "" {
-		item := &apiresource.Item{ID: *l.OrderLineItemId, Object: constants.ObjectTypeItem}
-		if l.OrderLineItemSku != nil {
-			item.SKU = *l.OrderLineItemSku
-		}
-		line.Item = item
+		meta.Set(constants.ObjectTypeInvoiceLine, line.ID, "item_id", *l.OrderLineItemId)
 	}
 	return line
 }
@@ -328,10 +334,16 @@ func buildSalesOrderLineForInvoice(l *pb.InvoiceLineInfo) *apiresource.SalesOrde
 	}
 }
 
-func invoiceAllocationFromProto(a *pb.InvoiceAllocationInfo) apiresource.InvoiceAllocation {
+func invoiceAllocationFromProto(meta *resourcekit.LoadMeta, a *pb.InvoiceAllocationInfo) apiresource.InvoiceAllocation {
 	if a == nil {
 		return apiresource.InvoiceAllocation{}
 	}
+
+	// The currency the amount is counted in is a record of its own — stashed as an id so
+	// `allocations.amount.unit` resolves it in full rather than the allocation shipping a unit
+	// carrying nothing but an abbreviation.
+	meta.Set(constants.ObjectTypeQuantity, a.AmountId, "unit_id", a.AmountUnitId)
+	meta.Set(constants.ObjectTypeInvoiceAllocation, a.Id, "transaction_id", a.TransactionId)
 
 	return apiresource.InvoiceAllocation{
 		ID:     a.Id,
@@ -356,9 +368,10 @@ func invoiceForPaymentFromProto(ctx context.Context, d *pb.InvoiceForPaymentInfo
 
 	createdAt := grpcutil.TimestampToTime(d.CreatedAt)
 
+	meta := resourcekit.GetLoadMeta(ctx)
 	allocations := make([]apiresource.InvoiceAllocation, len(d.Allocations))
 	for i, a := range d.Allocations {
-		allocations[i] = invoiceAllocationFromProto(a)
+		allocations[i] = invoiceAllocationFromProto(meta, a)
 	}
 
 	inv := apiresource.InvoiceForPayment{
@@ -378,7 +391,6 @@ func invoiceForPaymentFromProto(ctx context.Context, d *pb.InvoiceForPaymentInfo
 	// customer, parent_account, and billing_address are expandable references:
 	// left nil (null) and populated with real data by registered loaders on
 	// ?include=. Never fabricate.
-	meta := resourcekit.GetLoadMeta(ctx)
 	if d.CustomerId != "" {
 		meta.Set(constants.ObjectTypeInvoiceForPayment, inv.ID, "customer_id", d.CustomerId)
 	}

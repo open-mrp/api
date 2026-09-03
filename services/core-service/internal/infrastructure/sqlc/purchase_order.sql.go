@@ -477,6 +477,8 @@ SELECT
     up_nu.abbreviation AS unit_price_numerator_unit_abbreviation,
     up_du.id AS unit_price_denominator_unit_id,
     up_du.abbreviation AS unit_price_denominator_unit_abbreviation,
+    up.created_at AS unit_price_created_at,
+    up.updated_at AS unit_price_updated_at,
     -- Unit cost
     uc.id AS unit_cost_id,
     uc.value AS unit_cost_value,
@@ -484,6 +486,8 @@ SELECT
     uc_nu.abbreviation AS unit_cost_numerator_unit_abbreviation,
     uc_du.id AS unit_cost_denominator_unit_id,
     uc_du.abbreviation AS unit_cost_denominator_unit_abbreviation,
+    uc.created_at AS unit_cost_created_at,
+    uc.updated_at AS unit_cost_updated_at,
     -- Timestamps
     sol.created_at,
     sol.updated_at
@@ -523,12 +527,16 @@ type GetPurchaseOrderLinesRow struct {
 	UnitPriceNumeratorUnitAbbreviation   string
 	UnitPriceDenominatorUnitID           string
 	UnitPriceDenominatorUnitAbbreviation string
+	UnitPriceCreatedAt                   time.Time
+	UnitPriceUpdatedAt                   time.Time
 	UnitCostID                           sql.NullString
 	UnitCostValue                        sql.NullString
 	UnitCostNumeratorUnitID              sql.NullString
 	UnitCostNumeratorUnitAbbreviation    sql.NullString
 	UnitCostDenominatorUnitID            sql.NullString
 	UnitCostDenominatorUnitAbbreviation  sql.NullString
+	UnitCostCreatedAt                    sql.NullTime
+	UnitCostUpdatedAt                    sql.NullTime
 	CreatedAt                            time.Time
 	UpdatedAt                            time.Time
 }
@@ -564,12 +572,16 @@ func (q *Queries) GetPurchaseOrderLines(ctx context.Context, salesOrderID string
 			&i.UnitPriceNumeratorUnitAbbreviation,
 			&i.UnitPriceDenominatorUnitID,
 			&i.UnitPriceDenominatorUnitAbbreviation,
+			&i.UnitPriceCreatedAt,
+			&i.UnitPriceUpdatedAt,
 			&i.UnitCostID,
 			&i.UnitCostValue,
 			&i.UnitCostNumeratorUnitID,
 			&i.UnitCostNumeratorUnitAbbreviation,
 			&i.UnitCostDenominatorUnitID,
 			&i.UnitCostDenominatorUnitAbbreviation,
+			&i.UnitCostCreatedAt,
+			&i.UnitCostUpdatedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {

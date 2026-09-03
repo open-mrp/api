@@ -109,6 +109,12 @@ message DeliveryLineInfo {
   string unit_cost_value = 10;
   string unit_cost_numerator_unit_id = 11;
   string unit_cost_denominator_unit_id = 12;
+  // The rate's own record, so the gateway can present a complete unit cost
+  // rather than an id and a bare number.
+  string unit_cost_numerator_unit_abbreviation = 21;
+  string unit_cost_denominator_unit_abbreviation = 22;
+  google.protobuf.Timestamp unit_cost_created_at = 23;
+  google.protobuf.Timestamp unit_cost_updated_at = 24;
   optional string location_id = 13;
   optional string location_name = 14;
   optional string lot_id = 15;
@@ -337,6 +343,15 @@ message SupplierSummaryProto {
   string number = 3;
   int64 material_count = 4;
   google.protobuf.Timestamp created_at = 5;
+  optional string note = 6;
+  google.protobuf.Timestamp updated_at = 7;
+  // The default addresses as ids, always present.
+  optional string bill_to_address_id = 8;
+  optional string ship_to_address_id = 9;
+  // The addresses themselves, joined when the caller asked for them. They belong to the
+  // supplier's account, so the gateway cannot resolve them from the ids alone.
+  CustomerAddressProto bill_to_address = 10;
+  CustomerAddressProto ship_to_address = 11;
 }
 message SupplierProto {
   string id = 1;

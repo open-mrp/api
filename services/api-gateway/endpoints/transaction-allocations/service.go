@@ -7,6 +7,7 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
@@ -98,7 +99,7 @@ func (m *transactionAllocationSvcImpl) UpdateTransactionAllocation(ctx context.C
 		return nil, apiErr
 	}
 
-	result := transactionAllocationFromProto(resp.Allocation)
+	result := transactionAllocationFromProto(resourcekit.GetLoadMeta(ctx), resp.Allocation)
 	return &result, nil
 }
 
@@ -202,10 +203,13 @@ func allocationEntryListFromProto(ctx context.Context, resp *pb.ListAllocationEn
 	return apiresource.NewList(entries, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }
 
-func transactionAllocationFromProto(a *pb.TransactionAllocationInfo) apiresource.TransactionAllocation {
+func transactionAllocationFromProto(meta *resourcekit.LoadMeta, a *pb.TransactionAllocationInfo) apiresource.TransactionAllocation {
 	if a == nil {
 		return apiresource.TransactionAllocation{}
 	}
+
+	meta.Set(constants.ObjectTypeQuantity, a.AmountId, "unit_id", a.AmountUnitId)
+	meta.Set(constants.ObjectTypeTransactionAllocation, a.Id, "transaction_id", a.TransactionId)
 
 	alloc := apiresource.TransactionAllocation{
 		ID:     a.Id,
@@ -215,16 +219,12 @@ func transactionAllocationFromProto(a *pb.TransactionAllocationInfo) apiresource
 			Object:       constants.ObjectTypeQuantity,
 			Value:        a.AmountValue,
 			DisplayValue: apiresource.FormatDisplayValue(a.AmountValue, a.AmountUnitAbbreviation, string(constants.UnitTypeCurrency)),
-			Unit: &apiresource.Unit{
-				ID:     a.AmountUnitId,
-				Object: constants.ObjectTypeUnit,
-			},
+			// Unit left nil: its id is stashed so `allocations.amount.unit` resolves the real unit; never fabricated.
 		},
 		Note: a.Note,
-		Transaction: &apiresource.TransactionDetail{
-			ID:     a.TransactionId,
-			Object: constants.ObjectTypeTransaction,
-		},
+		// Transaction left nil: its id is stashed so `transaction` resolves the real record through
+		// the transaction loader, rather than the allocation shipping an id with a blank number and
+		// amount that no include could ever fill in.
 		CreatedAt: grpcutil.TimestampToTime(a.CreatedAt),
 		UpdatedAt: grpcutil.TimestampToTime(a.UpdatedAt),
 	}

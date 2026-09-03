@@ -15,9 +15,9 @@ func assertQuantityInfoShape(t *testing.T, qi map[string]any, label string) {
 	require.NotNil(t, qi, "%s should be present", label)
 	assert.NotEmpty(t, jsonField(qi, "value"), "%s.value should be a non-empty decimal string", label)
 	assert.NotEmpty(t, jsonField(qi, "display_value"), "%s.display_value should convey the unit", label)
-	// unit is an expandable sub-resource of a quantity: null unless explicitly
-	// requested. The unit abbreviation is still conveyed via display_value.
-	assert.Nil(t, qi["unit"], "%s.unit should be null without an explicit unit include", label)
+	// Each figure is netted out of the ledger, so it has no row and no id a caller could follow to
+	// its unit. The unit travels with the figure instead of sitting behind an include of its own.
+	assertUnitHydrated(t, jsonObject(qi, "unit"), label+".unit")
 }
 
 // ──────────────────────────────────────────────

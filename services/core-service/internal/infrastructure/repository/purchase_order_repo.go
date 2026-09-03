@@ -669,6 +669,8 @@ func mapPurchaseOrderLinesRow(row sqlc.GetPurchaseOrderLinesRow) *domain.Purchas
 		UnitPriceNumeratorUnitAbbr:   row.UnitPriceNumeratorUnitAbbreviation,
 		UnitPriceDenominatorUnitID:   row.UnitPriceDenominatorUnitID,
 		UnitPriceDenominatorUnitAbbr: row.UnitPriceDenominatorUnitAbbreviation,
+		UnitPriceCreatedAt:           row.UnitPriceCreatedAt,
+		UnitPriceUpdatedAt:           row.UnitPriceUpdatedAt,
 		CreatedAt:                    row.CreatedAt,
 		UpdatedAt:                    row.UpdatedAt,
 	}
@@ -711,6 +713,12 @@ func mapPurchaseOrderLinesRow(row sqlc.GetPurchaseOrderLinesRow) *domain.Purchas
 	}
 	if row.UnitCostDenominatorUnitAbbreviation.Valid {
 		line.UnitCostDenominatorUnitAbbr = &row.UnitCostDenominatorUnitAbbreviation.String
+	}
+	if row.UnitCostCreatedAt.Valid {
+		line.UnitCostCreatedAt = &row.UnitCostCreatedAt.Time
+	}
+	if row.UnitCostUpdatedAt.Valid {
+		line.UnitCostUpdatedAt = &row.UnitCostUpdatedAt.Time
 	}
 
 	return line

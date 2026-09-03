@@ -43,7 +43,7 @@ func (e *ListCustomerInvoicesEndpoint) Materialize() *apiendpoint.APIEndpoint[*L
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeInvoiceForPayment,
-			Fields:     []string{"customer", "parent_account", "allocations"},
+			Fields:     []string{"customer", "parent_account", "allocations", "allocations.amount", "allocations.amount.unit", "allocations.transaction", "allocations.transaction.amount", "allocations.transaction.amount.unit"},
 		}),
 	})
 }

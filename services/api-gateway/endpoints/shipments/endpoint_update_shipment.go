@@ -62,7 +62,7 @@ func (e *UpdateShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateS
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeShipment,
-			Fields:     []string{"lines", "shipping_cases", "related.sales_order", "customer", "freight", "shipping_address", "shipped_by", "related.invoice", "related.pick"},
+			Fields:     []string{"lines", "lines.item", "lines.quantity", "lines.quantity.unit", "lines.sales_order_line", "lines.sales_order_line.product", "shipping_cases", "related.sales_order", "customer", "freight", "shipping_address", "shipped_by", "related.invoice", "related.pick"},
 		}),
 	})
 }

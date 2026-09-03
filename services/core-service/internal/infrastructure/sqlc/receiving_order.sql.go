@@ -430,6 +430,7 @@ SELECT
     sol.line_item_number AS order_line_item_number,
     i.sku AS order_line_item_sku,
     i.description AS order_line_item_description,
+    oq.id AS order_line_quantity_id,
     oq.value AS order_line_quantity_ordered,
     ou.id AS order_line_unit_id,
     ou.abbreviation AS order_line_unit_abbreviation,
@@ -459,6 +460,7 @@ type GetReceivingOrderLineRow struct {
 	OrderLineItemNumber       sql.NullInt32
 	OrderLineItemSku          sql.NullString
 	OrderLineItemDescription  sql.NullString
+	OrderLineQuantityID       string
 	OrderLineQuantityOrdered  string
 	OrderLineUnitID           string
 	OrderLineUnitAbbreviation string
@@ -483,6 +485,7 @@ func (q *Queries) GetReceivingOrderLine(ctx context.Context, lineID string) (Get
 		&i.OrderLineItemNumber,
 		&i.OrderLineItemSku,
 		&i.OrderLineItemDescription,
+		&i.OrderLineQuantityID,
 		&i.OrderLineQuantityOrdered,
 		&i.OrderLineUnitID,
 		&i.OrderLineUnitAbbreviation,
@@ -862,6 +865,7 @@ SELECT
     sol.line_item_number AS order_line_item_number,
     i.sku AS order_line_item_sku,
     i.description AS order_line_item_description,
+    oq.id AS order_line_quantity_id,
     oq.value AS order_line_quantity_ordered,
     ou.id AS order_line_unit_id,
     ou.abbreviation AS order_line_unit_abbreviation,
@@ -892,6 +896,7 @@ type ListReceivingOrderLinesByOrderIDRow struct {
 	OrderLineItemNumber       sql.NullInt32
 	OrderLineItemSku          sql.NullString
 	OrderLineItemDescription  sql.NullString
+	OrderLineQuantityID       string
 	OrderLineQuantityOrdered  string
 	OrderLineUnitID           string
 	OrderLineUnitAbbreviation string
@@ -922,6 +927,7 @@ func (q *Queries) ListReceivingOrderLinesByOrderID(ctx context.Context, receivin
 			&i.OrderLineItemNumber,
 			&i.OrderLineItemSku,
 			&i.OrderLineItemDescription,
+			&i.OrderLineQuantityID,
 			&i.OrderLineQuantityOrdered,
 			&i.OrderLineUnitID,
 			&i.OrderLineUnitAbbreviation,

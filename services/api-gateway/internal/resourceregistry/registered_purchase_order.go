@@ -25,10 +25,105 @@ func init() {
 				Key:      "related",
 				Populate: populateRelatedOnPO,
 			},
-			{Key: "lines", Populate: populateLinesOnPO},
+			{
+				Key:         "lines",
+				Target:      constants.ObjectTypePurchaseOrderLine,
+				Cardinality: resourcekit.CardinalityList,
+				Populate:    populateLinesOnPO,
+				ExtractRefs: extractLineRefsFromPO,
+			},
 			{Key: "contacts", Populate: populateContactsOnPO},
 		},
 	})
+	resourcekit.Register(&resourcekit.Definition{
+		ObjectType: constants.ObjectTypePurchaseOrderLine,
+		Load:       resourceloaders.LoadPurchaseOrderLines,
+		Subs: []resourcekit.SubField{
+			{
+				Key:         "item",
+				Target:      constants.ObjectTypeItem,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractIDs:  extractItemIDFromPOLine,
+				Populate:    populateItemOnPOLine,
+			},
+			// The quantity and the two rates already ride on the line; these exist so a caller can
+			// reach through them to the units they are counted in.
+			{
+				Key:         "quantity_ordered",
+				Target:      constants.ObjectTypeQuantity,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractRefs: extractQuantityOrderedRefFromPOLine,
+			},
+			{
+				Key:         "unit_price",
+				Target:      constants.ObjectTypeRate,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractRefs: extractUnitPriceRefFromPOLine,
+			},
+			{
+				Key:         "unit_cost",
+				Target:      constants.ObjectTypeRate,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractRefs: extractUnitCostRefFromPOLine,
+			},
+		},
+	})
+}
+
+func extractLineRefsFromPO(_ context.Context, parent any) []any {
+	po := parent.(*apiresource.PurchaseOrder)
+	if po.Lines == nil {
+		return nil
+	}
+	refs := make([]any, len(po.Lines.Data))
+	for i := range po.Lines.Data {
+		refs[i] = &po.Lines.Data[i]
+	}
+	return refs
+}
+
+func extractItemIDFromPOLine(ctx context.Context, parent any) []string {
+	l := parent.(*apiresource.PurchaseOrderLine)
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypePurchaseOrderLine, l.ID, "item_id")
+	if id == "" {
+		return nil
+	}
+	return []string{id}
+}
+
+func populateItemOnPOLine(ctx context.Context, parent any, loaded map[string]any) {
+	l := parent.(*apiresource.PurchaseOrderLine)
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypePurchaseOrderLine, l.ID, "item_id")
+	if id == "" {
+		return
+	}
+	if v, ok := loaded[id]; ok {
+		l.Item = v.(*apiresource.Item)
+	}
+}
+
+func extractQuantityOrderedRefFromPOLine(_ context.Context, parent any) []any {
+	l := parent.(*apiresource.PurchaseOrderLine)
+	if l.QuantityOrdered == nil {
+		return nil
+	}
+	return []any{l.QuantityOrdered}
+}
+
+func extractUnitPriceRefFromPOLine(_ context.Context, parent any) []any {
+	l := parent.(*apiresource.PurchaseOrderLine)
+	if l.UnitPrice == nil {
+		return nil
+	}
+	return []any{l.UnitPrice}
+}
+
+func extractUnitCostRefFromPOLine(_ context.Context, parent any) []any {
+	l := parent.(*apiresource.PurchaseOrderLine)
+	if l.UnitCost == nil {
+		return nil
+	}
+	return []any{l.UnitCost}
 }
 
 func populateSupplierOnPO(ctx context.Context, parent any, _ map[string]any) {

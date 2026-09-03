@@ -51,12 +51,39 @@ func init() {
 				Populate: populateLotOnDeliveryLine,
 			},
 			{
-				// Carried inline: the delivery query already returns the cost the goods were stocked at.
-				Key:      "unit_cost",
-				Populate: populateUnitCostOnDeliveryLine,
+				// Carried inline: the delivery query already returns the cost the goods were stocked at, in full. Traversed rather than loaded so `unit_cost.numerator_unit` still resolves.
+				Key:         "unit_cost",
+				Target:      constants.ObjectTypeRate,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				Populate:    populateUnitCostOnDeliveryLine,
+				ExtractRefs: extractUnitCostRefFromDeliveryLine,
+			},
+			{
+				// The quantity is already on the line — this exists so a caller can reach through it to the unit.
+				Key:         "quantity",
+				Target:      constants.ObjectTypeQuantity,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractRefs: extractQuantityRefFromDeliveryLine,
 			},
 		},
 	})
+}
+
+// The resolver runs Populate before gathering refs, so the rate is already on the line by the time this is called.
+func extractUnitCostRefFromDeliveryLine(_ context.Context, parent any) []any {
+	l := parent.(*apiresource.DeliveryLine)
+	if l.UnitCost == nil {
+		return nil
+	}
+	return []any{l.UnitCost}
+}
+
+func extractQuantityRefFromDeliveryLine(_ context.Context, parent any) []any {
+	l := parent.(*apiresource.DeliveryLine)
+	if l.Quantity == nil {
+		return nil
+	}
+	return []any{l.Quantity}
 }
 
 func populateRelatedOnDelivery(ctx context.Context, parent any, _ map[string]any) {

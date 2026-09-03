@@ -190,7 +190,7 @@ func deliveryLineFromProto(l *pb.DeliveryLineInfo) apiresource.DeliveryLine {
 			Object:       constants.ObjectTypeQuantity,
 			Value:        l.QuantityValue,
 			DisplayValue: apiresource.FormatDisplayValue(l.QuantityValue, l.QuantityUnitAbbreviation, ""),
-			// Unit left nil: expandable, loaded with real data via ?include=; never fabricated.
+			// Unit left nil: expandable, loaded with real data via `lines.quantity.unit`; never fabricated.
 		},
 		// Item, unit cost, location and lot are expandable: left nil here and stashed for the
 		// include resolver, so a line carries only what it is — a quantity and when it landed.
@@ -203,6 +203,9 @@ func deliveryLineFromProto(l *pb.DeliveryLineInfo) apiresource.DeliveryLine {
 
 // stashDeliveryLineMeta carries each expandable sub-object of a line from what the query returned, so the include resolver can reveal the ones a caller asked for.
 func stashDeliveryLineMeta(meta *resourcekit.LoadMeta, l *pb.DeliveryLineInfo, line *apiresource.DeliveryLine) {
+	if l == nil || line.Quantity == nil {
+		return
+	}
 	if l.ItemId != nil && *l.ItemId != "" {
 		meta.Set(constants.ObjectTypeDeliveryLine, line.ID, "item_id", *l.ItemId)
 	}
@@ -216,11 +219,26 @@ func stashDeliveryLineMeta(meta *resourcekit.LoadMeta, l *pb.DeliveryLineInfo, l
 			LotNumber: l.GetLotNumber(),
 		})
 	}
+	// The unit the line's quantity is counted in, for `lines.quantity.unit`.
+	meta.Set(constants.ObjectTypeQuantity, line.Quantity.ID, "unit_id", l.QuantityUnitId)
+
+	// The delivery query returns the rate in full, so `lines.unit_cost` is a complete rate rather
+	// than an id and a bare number. Its two units stay behind their own includes, the same as on
+	// any other rate.
 	meta.Set(constants.ObjectTypeDeliveryLine, line.ID, "unit_cost", &apiresource.Rate{
 		ID:     l.UnitCostId,
 		Object: constants.ObjectTypeRate,
-		Value:  l.UnitCostValue,
+		Value:  apiresource.NormalizeRateValue(l.UnitCostValue),
+		DisplayValue: apiresource.FormatRateDisplay(
+			l.UnitCostValue,
+			l.UnitCostNumeratorUnitAbbreviation,
+			l.UnitCostDenominatorUnitAbbreviation,
+		),
+		CreatedAt: grpcutil.TimestampToTime(l.UnitCostCreatedAt),
+		UpdatedAt: grpcutil.TimestampToTime(l.UnitCostUpdatedAt),
 	})
+	meta.Set(constants.ObjectTypeRate, l.UnitCostId, "numerator_unit_id", l.UnitCostNumeratorUnitId)
+	meta.Set(constants.ObjectTypeRate, l.UnitCostId, "denominator_unit_id", l.UnitCostDenominatorUnitId)
 }
 
 func deliveryListFromProto(ctx context.Context, resp *pb.ListDeliveriesResponse) *apiresource.List[apiresource.Delivery] {

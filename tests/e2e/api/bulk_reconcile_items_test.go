@@ -97,14 +97,43 @@ func TestBulkReconcileItems_ResponseShape(t *testing.T) {
 	require.True(t, ok)
 	assertObjectField(t, row, "reconciled_item_result")
 
+	// Every list in the response names its item the same way — as an entity carrying the SKU —
+	// so the importer needs one code path to label a row whatever became of it.
 	item := jsonObject(row, "item")
 	require.NotNil(t, item, "a reconciled row names its item: %v", row)
-	assert.Equal(t, sku, jsonField(item, "sku"))
+	assertObjectField(t, item, "entity")
+	assert.Equal(t, "item", jsonField(item, "type"))
+	assert.NotEmpty(t, jsonField(item, "id"))
+	assert.Equal(t, sku, jsonField(item, "name"), "the entity's name carries the SKU")
 
 	for _, key := range []string{"previous_quantity", "new_quantity"} {
 		quantity := jsonObject(row, key)
 		require.NotNil(t, quantity, "%s is required on a reconciled row: %v", key, row)
 		assert.NotEmpty(t, jsonField(quantity, "value"))
+		assertObjectField(t, quantity, "computed_quantity")
+	}
+}
+
+// A reconciled figure is meaningless without the unit it was recorded in, and the unit is not
+// behind an include — a computed quantity carries it. Before this, the unit came back as an id
+// with every other field blank, which the importer could not render.
+func TestBulkReconcileItems_ReconciledQuantitiesCarryAFullyResolvedUnit(t *testing.T) {
+	t.Parallel()
+
+	sku, _ := newReconcilableItem(t)
+	resp := bulkReconcile(t, []map[string]any{
+		{"sku": sku, "unit": "ea", "quantity": "5"},
+	}, "force")
+
+	reconciled := jsonListData(resp, "reconciled_items")
+	require.Len(t, reconciled, 1, "%v", resp)
+	row, ok := reconciled[0].(map[string]any)
+	require.True(t, ok)
+
+	for _, key := range []string{"previous_quantity", "new_quantity"} {
+		quantity := jsonObject(row, key)
+		require.NotNil(t, quantity, "%s: %v", key, row)
+		assertUnitHydrated(t, jsonObject(quantity, "unit"), key+".unit")
 	}
 }
 

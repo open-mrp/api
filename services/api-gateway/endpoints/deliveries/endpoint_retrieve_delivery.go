@@ -38,7 +38,7 @@ func (e *RetrieveDeliveryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeDelivery,
-			Fields:     []string{"related", "related.purchase_order", "related.receiving_order", "lines", "lines.item", "lines.unit_cost", "lines.location", "lines.lot"},
+			Fields:     []string{"related", "related.purchase_order", "related.receiving_order", "lines", "lines.item", "lines.quantity", "lines.quantity.unit", "lines.unit_cost", "lines.unit_cost.numerator_unit", "lines.unit_cost.denominator_unit", "lines.location", "lines.lot"},
 		}),
 	})
 }

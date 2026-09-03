@@ -6,6 +6,7 @@ import (
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
+	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
@@ -89,7 +90,7 @@ func (m *volumeDiscountSvcImpl) GetVolumeDiscount(ctx context.Context, req *Retr
 
 	meta := resourcekit.GetLoadMeta(ctx)
 	result := volumeDiscountFromProto(resp.VolumeDiscount)
-	stashVolumeDiscountMeta(meta, resp.VolumeDiscount)
+	stashVolumeDiscountMeta(ctx, meta, resp.VolumeDiscount)
 	return &result, nil
 }
 
@@ -126,7 +127,7 @@ func (m *volumeDiscountSvcImpl) CreateVolumeDiscount(ctx context.Context, req *C
 
 	meta := resourcekit.GetLoadMeta(ctx)
 	result := volumeDiscountFromProto(resp.VolumeDiscount)
-	stashVolumeDiscountMeta(meta, resp.VolumeDiscount)
+	stashVolumeDiscountMeta(ctx, meta, resp.VolumeDiscount)
 	return &result, nil
 }
 
@@ -171,7 +172,7 @@ func (m *volumeDiscountSvcImpl) UpdateVolumeDiscount(ctx context.Context, req *U
 
 	meta := resourcekit.GetLoadMeta(ctx)
 	result := volumeDiscountFromProto(resp.VolumeDiscount)
-	stashVolumeDiscountMeta(meta, resp.VolumeDiscount)
+	stashVolumeDiscountMeta(ctx, meta, resp.VolumeDiscount)
 	return &result, nil
 }
 
@@ -222,7 +223,7 @@ func volumeDiscountFromProto(d *pb.VolumeDiscountInfo) apiresource.VolumeDiscoun
 	}
 }
 
-func stashVolumeDiscountMeta(meta *resourcekit.LoadMeta, d *pb.VolumeDiscountInfo) {
+func stashVolumeDiscountMeta(ctx context.Context, meta *resourcekit.LoadMeta, d *pb.VolumeDiscountInfo) {
 	if d == nil {
 		return
 	}
@@ -284,6 +285,18 @@ func stashVolumeDiscountMeta(meta *resourcekit.LoadMeta, d *pb.VolumeDiscountInf
 	meta.Set(constants.ObjectTypeVolumeDiscount, d.Id, "categories",
 		apiresource.NewList(categories, apiresource.PageInfo{}))
 
+	// The discount's attributes name their properties by id only, so the properties are resolved in
+	// one batch: an attribute reporting a property with a blank name reads as a nameless property
+	// rather than as one nobody looked up.
+	propertyIDs := make([]string, 0, len(d.Attributes))
+	for _, attr := range d.Attributes {
+		propertyIDs = append(propertyIDs, attr.PropertyId)
+	}
+	properties, apiErr := resourceloaders.LoadPropertiesByID(ctx, propertyIDs...)
+	if apiErr != nil {
+		properties = nil
+	}
+
 	attributes := make([]apiresource.Attribute, len(d.Attributes))
 	for i, attr := range d.Attributes {
 		attributes[i] = apiresource.Attribute{
@@ -296,12 +309,7 @@ func stashVolumeDiscountMeta(meta *resourcekit.LoadMeta, d *pb.VolumeDiscountInf
 		if attr.ColorCode != nil {
 			attributes[i].ColorCode = constants.Color(*attr.ColorCode)
 		}
-		if attr.PropertyId != "" {
-			attributes[i].Property = &apiresource.Property{
-				ID:     attr.PropertyId,
-				Object: constants.ObjectTypeProperty,
-			}
-		}
+		attributes[i].Property = properties[attr.PropertyId]
 	}
 	meta.Set(constants.ObjectTypeVolumeDiscount, d.Id, "attributes",
 		apiresource.NewList(attributes, apiresource.PageInfo{}))
@@ -335,7 +343,7 @@ func volumeDiscountListFromProto(ctx context.Context, resp *pb.ListVolumeDiscoun
 	discounts := make([]apiresource.VolumeDiscount, len(resp.VolumeDiscounts))
 	for i, d := range resp.VolumeDiscounts {
 		discounts[i] = volumeDiscountFromProto(d)
-		stashVolumeDiscountMeta(meta, d)
+		stashVolumeDiscountMeta(ctx, meta, d)
 	}
 
 	return apiresource.NewList(discounts, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))

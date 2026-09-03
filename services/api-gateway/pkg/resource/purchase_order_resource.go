@@ -74,7 +74,7 @@ type PurchaseOrder struct {
 	// Shipping terms for the order.
 	ShippingTerm *ShippingTerm `json:"shipping_term" expandable:"true"`
 	// The records produced from this purchase order.
-	Related *PurchaseOrderRelated `json:"related"`
+	Related *PurchaseOrderRelated `json:"related" expandable:"true"`
 	// Line items on the order.
 	Lines *List[PurchaseOrderLine] `json:"lines" expandable:"true"`
 	// Total number of lines on the order.

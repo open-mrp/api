@@ -4,6 +4,35 @@ SELECT
     ar.counterparty_account_id AS account_id,
     a.name AS account_name,
     ar.external_number,
+    ar.notes,
+    ba.id AS default_billing_address_id,
+    ba.name AS default_billing_address_name,
+    ba.phone AS default_billing_address_phone,
+    ba.email AS default_billing_address_email,
+    ba.is_drop_ship AS default_billing_is_drop_ship,
+    bg.id AS default_billing_geolocation_id,
+    bg.street_line_1 AS default_billing_street_line_1,
+    bg.street_line_2 AS default_billing_street_line_2,
+    bg.locality AS default_billing_locality,
+    bg.state AS default_billing_state,
+    bg.postal_code AS default_billing_postal_code,
+    bg.country AS default_billing_country,
+    ba.created_at AS default_billing_address_created_at,
+    ba.updated_at AS default_billing_address_updated_at,
+    sa.id AS default_shipping_address_id,
+    sa.name AS default_shipping_address_name,
+    sa.phone AS default_shipping_address_phone,
+    sa.email AS default_shipping_address_email,
+    sa.is_drop_ship AS default_shipping_is_drop_ship,
+    sg.id AS default_shipping_geolocation_id,
+    sg.street_line_1 AS default_shipping_street_line_1,
+    sg.street_line_2 AS default_shipping_street_line_2,
+    sg.locality AS default_shipping_locality,
+    sg.state AS default_shipping_state,
+    sg.postal_code AS default_shipping_postal_code,
+    sg.country AS default_shipping_country,
+    sa.created_at AS default_shipping_address_created_at,
+    sa.updated_at AS default_shipping_address_updated_at,
     (
         SELECT COUNT(*) FROM supplier_material sm
         WHERE sm.supplier_account_id = ar.counterparty_account_id
@@ -13,6 +42,10 @@ SELECT
     ar.updated_at
 FROM account_relation ar
 INNER JOIN account a ON a.id = ar.counterparty_account_id
+LEFT JOIN address ba ON ba.id = ar.default_billing_address_id
+LEFT JOIN geolocation bg ON bg.id = ba.geolocation_id
+LEFT JOIN address sa ON sa.id = ar.default_shipping_address_id
+LEFT JOIN geolocation sg ON sg.id = sa.geolocation_id
 WHERE ar.owner_account_id = sqlc.arg('owner_account_id')
   AND ar.account_relation_role_code = 'supplier'
   AND (
@@ -52,6 +85,35 @@ SELECT
     ar.counterparty_account_id AS account_id,
     a.name AS account_name,
     ar.external_number,
+    ar.notes,
+    ba.id AS default_billing_address_id,
+    ba.name AS default_billing_address_name,
+    ba.phone AS default_billing_address_phone,
+    ba.email AS default_billing_address_email,
+    ba.is_drop_ship AS default_billing_is_drop_ship,
+    bg.id AS default_billing_geolocation_id,
+    bg.street_line_1 AS default_billing_street_line_1,
+    bg.street_line_2 AS default_billing_street_line_2,
+    bg.locality AS default_billing_locality,
+    bg.state AS default_billing_state,
+    bg.postal_code AS default_billing_postal_code,
+    bg.country AS default_billing_country,
+    ba.created_at AS default_billing_address_created_at,
+    ba.updated_at AS default_billing_address_updated_at,
+    sa.id AS default_shipping_address_id,
+    sa.name AS default_shipping_address_name,
+    sa.phone AS default_shipping_address_phone,
+    sa.email AS default_shipping_address_email,
+    sa.is_drop_ship AS default_shipping_is_drop_ship,
+    sg.id AS default_shipping_geolocation_id,
+    sg.street_line_1 AS default_shipping_street_line_1,
+    sg.street_line_2 AS default_shipping_street_line_2,
+    sg.locality AS default_shipping_locality,
+    sg.state AS default_shipping_state,
+    sg.postal_code AS default_shipping_postal_code,
+    sg.country AS default_shipping_country,
+    sa.created_at AS default_shipping_address_created_at,
+    sa.updated_at AS default_shipping_address_updated_at,
     (
         SELECT COUNT(*) FROM supplier_material sm
         WHERE sm.supplier_account_id = ar.counterparty_account_id
@@ -61,6 +123,10 @@ SELECT
     ar.updated_at
 FROM account_relation ar
 INNER JOIN account a ON a.id = ar.counterparty_account_id
+LEFT JOIN address ba ON ba.id = ar.default_billing_address_id
+LEFT JOIN geolocation bg ON bg.id = ba.geolocation_id
+LEFT JOIN address sa ON sa.id = ar.default_shipping_address_id
+LEFT JOIN geolocation sg ON sg.id = sa.geolocation_id
 WHERE ar.owner_account_id = sqlc.arg('owner_account_id')
   AND ar.account_relation_role_code = 'supplier'
   AND (

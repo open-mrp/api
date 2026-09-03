@@ -45,7 +45,7 @@ func (e *ListAccountTransactionsEndpoint) Materialize() *apiendpoint.APIEndpoint
 		ObjectType: constants.ObjectTypeTransaction,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeTransaction,
-			Fields:     []string{"allocations", "customer", "responsible_user", "responsible_user.user"},
+			Fields:     []string{"allocations", "allocations.amount", "allocations.amount.unit", "allocations.transaction", "allocations.transaction.amount", "allocations.transaction.amount.unit", "customer", "responsible_user", "responsible_user.user"},
 		}),
 	})
 }

@@ -2436,23 +2436,28 @@ func sqlToAgentDefinitionInfo(def *sqlc.AgentDefinition, tools []sqlc.ListToolsB
 		domainTools = make([]domain.AgentDefinitionToolInfo, 0, len(tools))
 		for _, t := range tools {
 			// Linked tools are built-in tools, granted by slug. Display metadata comes from the code catalog (agents.BuiltinTools), not the database.
-			info := domain.AgentDefinitionToolInfo{
-				ID:            t.ID,
-				ToolSlug:      t.ToolSlug,
-				Category:      "built_in",
-				ConfigSchema:  json.RawMessage(`{}`),
-				Config:        t.Config,
-				SortOrder:     t.SortOrder,
-				RequireReview: t.RequireReview,
+			//
+			// A grant whose slug the catalog no longer carries is skipped rather than reported: the
+			// runtime has no descriptor for it, so the agent cannot call it, and emitting it would
+			// put a tool with a blank name and no schema in front of the caller.
+			bt, ok := agents.LookupBuiltinTool(t.ToolSlug)
+			if !ok {
+				continue
 			}
-			if bt, ok := agents.LookupBuiltinTool(t.ToolSlug); ok {
-				info.DisplayName = bt.DisplayName
-				info.Description = bt.Description
-				info.GroupID = bt.Group.ID
-				info.GroupName = bt.Group.Name
-				info.RequiredPermissions = bt.RequiredPermissions
-			}
-			domainTools = append(domainTools, info)
+			domainTools = append(domainTools, domain.AgentDefinitionToolInfo{
+				ID:                  t.ID,
+				ToolSlug:            t.ToolSlug,
+				Category:            "built_in",
+				ConfigSchema:        json.RawMessage(`{}`),
+				Config:              t.Config,
+				SortOrder:           t.SortOrder,
+				RequireReview:       t.RequireReview,
+				DisplayName:         bt.DisplayName,
+				Description:         bt.Description,
+				GroupID:             bt.Group.ID,
+				GroupName:           bt.Group.Name,
+				RequiredPermissions: bt.RequiredPermissions,
+			})
 		}
 	}
 

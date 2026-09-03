@@ -14,8 +14,11 @@ func init() {
 		ObjectType: constants.ObjectTypeProductionStep,
 		Load:       resourceloaders.LoadProductionSteps,
 		Subs: []resourcekit.SubField{
-			{Key: "production", Populate: populateProductionOnProductionStep},
-			{Key: "consumptions", Populate: populateConsumptionsOnProductionStep},
+			// Target + ExtractRefs (not a loader) because both are already stashed by the step
+			// presenter; they exist so the resolver descends for production.produced_item and
+			// consumptions.consumed_item.
+			{Key: "production", Target: constants.ObjectTypeProduction, ExtractRefs: extractProductionRefFromProductionStep, Populate: populateProductionOnProductionStep},
+			{Key: "consumptions", Target: constants.ObjectTypeConsumption, ExtractRefs: extractConsumptionRefsFromProductionStep, Populate: populateConsumptionsOnProductionStep},
 			{Key: "machines", Populate: populateMachinesOnProductionStep},
 			{
 				Key:         "scanning_station",
@@ -40,7 +43,7 @@ func init() {
 		ObjectType: constants.ObjectTypeProduction,
 		Load:       resourceloaders.LoadProductions,
 		Subs: []resourcekit.SubField{
-			{Key: "produced_item", Populate: populateProducedItemOnProduction},
+			{Key: "produced_item", Target: constants.ObjectTypeItem, Cardinality: resourcekit.CardinalityOnePtr, ExtractIDs: extractProducedItemIDFromProduction, Populate: populateProducedItemOnProduction},
 		},
 	})
 }
@@ -133,12 +136,46 @@ func populateOutStepsOnProductionStep(ctx context.Context, parent any, _ map[str
 	ps.OutSteps = v.(*apiresource.List[apiresource.ProductionStep])
 }
 
-func populateProducedItemOnProduction(ctx context.Context, parent any, _ map[string]any) {
+// The resolver runs Populate before gathering refs, so both are already on the step by the time
+// these are called.
+func extractProductionRefFromProductionStep(_ context.Context, parent any) []any {
+	ps := parent.(*apiresource.ProductionStep)
+	if ps.Production == nil {
+		return nil
+	}
+	return []any{ps.Production}
+}
+
+func extractConsumptionRefsFromProductionStep(_ context.Context, parent any) []any {
+	ps := parent.(*apiresource.ProductionStep)
+	if ps.Consumptions == nil {
+		return nil
+	}
+	refs := make([]any, len(ps.Consumptions.Data))
+	for i := range ps.Consumptions.Data {
+		refs[i] = &ps.Consumptions.Data[i]
+	}
+	return refs
+}
+
+func extractProducedItemIDFromProduction(ctx context.Context, parent any) []string {
 	p := parent.(*apiresource.ProductionOutput)
-	v, ok := resourcekit.GetLoadMeta(ctx).
-		Get(constants.ObjectTypeProduction, p.ID, "produced_item")
-	if !ok {
+	id, _ := resourcekit.GetLoadMeta(ctx).
+		GetString(constants.ObjectTypeProduction, p.ID, "produced_item_id")
+	if id == "" {
+		return nil
+	}
+	return []string{id}
+}
+
+func populateProducedItemOnProduction(ctx context.Context, parent any, loaded map[string]any) {
+	p := parent.(*apiresource.ProductionOutput)
+	id, _ := resourcekit.GetLoadMeta(ctx).
+		GetString(constants.ObjectTypeProduction, p.ID, "produced_item_id")
+	if id == "" {
 		return
 	}
-	p.ProducedItem = v.(*apiresource.Item)
+	if v, ok := loaded[id]; ok {
+		p.ProducedItem = v.(*apiresource.Item)
+	}
 }

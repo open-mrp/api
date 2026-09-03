@@ -255,11 +255,15 @@ INSERT IGNORE INTO carrier_option (id, code, name, service_level_token, default_
 
 INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
     ('qu_01seedbatch1_qty0000', 10, 'un_01seedpair000000000', NOW(), NOW()),
-    ('qu_01seedbatch2_qty0000', 8, 'un_01seedpair000000000', NOW(), NOW());
+    ('qu_01seedbatch2_qty0000', 8, 'un_01seedpair000000000', NOW(), NOW()),
+    -- Batch 1 carries a seconds and a scrap measure, the two figures a split records, so
+    -- `?include=seconds.unit` and `waste.unit` have a row to resolve against.
+    ('qu_01seedbatch1_sec0000', 2, 'un_01seedpair000000000', NOW(), NOW()),
+    ('qu_01seedbatch1_wst0000', 1, 'un_01seedpair000000000', NOW(), NOW());
 
-INSERT IGNORE INTO batch (id, account_id, item_id, quantity_id, scanning_station_id, production_step_id, production_run_id, scanned_at, created_at, updated_at) VALUES
-    ('bt_01seedbatch1_0000000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'it_01seedlknitem000000', 'qu_01seedbatch1_qty0000', 'sgsn_01k0a8201zegarjfsjaw5n7yfv', 'prs_01k0a51qxceydax5036pegvzzy', 'pnrn_01seedprod_run0000', NOW(), NOW(), NOW()),
-    ('bt_01seedbatch2_0000000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'it_01seedsknitem000000', 'qu_01seedbatch2_qty0000', 'sgsn_01k0a8201zegarjfsjaw5n7yfv', 'prs_01k0a575j3fqr97khk36v114nj', 'pnrn_01seedprod_run0000', NOW(), NOW(), NOW());
+INSERT IGNORE INTO batch (id, account_id, item_id, quantity_id, seconds_quantity_id, waste_quantity_id, scanning_station_id, production_step_id, production_run_id, scanned_at, created_at, updated_at) VALUES
+    ('bt_01seedbatch1_0000000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'it_01seedlknitem000000', 'qu_01seedbatch1_qty0000', 'qu_01seedbatch1_sec0000', 'qu_01seedbatch1_wst0000', 'sgsn_01k0a8201zegarjfsjaw5n7yfv', 'prs_01k0a51qxceydax5036pegvzzy', 'pnrn_01seedprod_run0000', NOW(), NOW(), NOW()),
+    ('bt_01seedbatch2_0000000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'it_01seedsknitem000000', 'qu_01seedbatch2_qty0000', NULL, NULL, 'sgsn_01k0a8201zegarjfsjaw5n7yfv', 'prs_01k0a575j3fqr97khk36v114nj', 'pnrn_01seedprod_run0000', NOW(), NOW(), NOW());
 
 -- ============================================================
 -- EDI RUNS (2 rows for pagination)

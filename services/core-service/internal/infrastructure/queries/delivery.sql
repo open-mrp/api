@@ -140,6 +140,10 @@ SELECT
     r.value AS unit_cost_value,
     r.numerator_unit_id AS unit_cost_numerator_unit_id,
     r.denominator_unit_id AS unit_cost_denominator_unit_id,
+    rnu.abbreviation AS unit_cost_numerator_unit_abbreviation,
+    rdu.abbreviation AS unit_cost_denominator_unit_abbreviation,
+    r.created_at AS unit_cost_created_at,
+    r.updated_at AS unit_cost_updated_at,
     sol.item_id,
     i.sku AS item_sku,
     i.description AS item_description,
@@ -151,6 +155,8 @@ FROM delivery_line dl
 JOIN quantity q ON dl.quantity_id = q.id
 JOIN unit qu ON q.unit_id = qu.id
 JOIN rate r ON dl.unit_cost_id = r.id
+JOIN unit rnu ON r.numerator_unit_id = rnu.id
+JOIN unit rdu ON r.denominator_unit_id = rdu.id
 JOIN receiving_order_line rol ON dl.receiving_order_line_id = rol.id
 JOIN sales_order_line sol ON rol.sales_order_line_id = sol.id
 LEFT JOIN item i ON sol.item_id = i.id

@@ -120,8 +120,12 @@ type ItemCosts struct {
 	// Total cost to produce one unit of the item (material + labor + overhead).
 	TotalCost string `json:"total_cost" validate:"required" format:"decimal"`
 	// Unit of the costs' numerator — the currency they are counted in.
+	//
+	// Always resolved in full. A cost is unreadable without the currency it is priced in, so neither unit sits behind an include.
 	NumeratorUnit *Unit `json:"numerator_unit"`
 	// Unit of the costs' denominator — the item unit they are counted per, so each cost reads as currency per this unit.
+	//
+	// Always resolved in full, for the same reason as `numerator_unit`.
 	DenominatorUnit *Unit `json:"denominator_unit"`
 }
 
@@ -253,12 +257,12 @@ type BulkReconcileItemsResponse struct {
 
 // An item whose on-hand quantity was successfully reconciled.
 //
-// Both quantities are expressed in the item's own base unit, not in the unit submitted with the request.
+// Both quantities are expressed in the item's own base unit, not in the unit submitted with the request, and both arrive with that unit resolved.
 type ReconciledItemResult struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=reconciled_item_result"`
-	// The item that was reconciled.
-	Item *Item `json:"item" validate:"required"`
+	// The item that was reconciled, named by id and SKU.
+	Item *Entity `json:"item" validate:"required"`
 	// Quantity before the reconciliation.
 	PreviousQuantity *ComputedQuantity `json:"previous_quantity" validate:"required"`
 	// Quantity after the reconciliation.
@@ -266,6 +270,8 @@ type ReconciledItemResult struct {
 }
 
 // A submitted row that was skipped rather than reconciled.
+//
+// A skipped row is reported by the SKU it was submitted under rather than as an item reference, because the usual reason to skip one is that no item carries that SKU — there is nothing to point at.
 type SkippedItemResult struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=skipped_item_result"`
@@ -279,7 +285,7 @@ type SkippedItemResult struct {
 type ReconcileErrorResult struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=reconcile_error_result"`
-	// The item the row named.
+	// The item the row named, named by id and SKU.
 	//
 	// Always set: a row whose SKU matched no item is reported under `skipped_items` rather than here.
 	Item *Entity `json:"item" validate:"required"`
@@ -292,7 +298,7 @@ var SampleBulkReconcileItemsResponse = &BulkReconcileItemsResponse{
 	ReconciledItems: NewList([]ReconciledItemResult{
 		{
 			Object:           constants.ObjectTypeReconciledItemResult,
-			Item:             SampleItem,
+			Item:             SampleItemEntity,
 			PreviousQuantity: SampleComputedQuantity,
 			NewQuantity:      SampleComputedQuantity,
 		},

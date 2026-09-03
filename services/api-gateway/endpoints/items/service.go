@@ -132,7 +132,12 @@ func (m *itemSvcImpl) GetItemInventory(ctx context.Context, req *RetrieveItemInv
 		return nil, apiErr
 	}
 
-	return ItemInventoryPresenter(ctx, resp), nil
+	units, apiErr := resourceloaders.LoadUnitsByID(ctx, ItemInventoryUnitIDs(resp)...)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return ItemInventoryPresenter(ctx, resp, units), nil
 }
 
 func (m *itemSvcImpl) GetItemLotDefault(ctx context.Context, req *RetrieveItemLotDefaultRequest) (*apiresource.ItemLotDefault, *apierror.APIError) {
@@ -177,7 +182,12 @@ func (m *itemSvcImpl) GetItemCosts(ctx context.Context, req *GetItemCostsRequest
 		return nil, apiErr
 	}
 
-	return ItemCostsPresenter(resp), nil
+	units, apiErr := resourceloaders.LoadUnitsByID(ctx, resp.NumeratorUnitId, resp.UnitId)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return ItemCostsPresenter(resp, units), nil
 }
 
 func (m *itemSvcImpl) GetItemTrends(ctx context.Context, req *GetItemTrendsRequest) (*apiresource.ItemTrends, *apierror.APIError) {
@@ -374,7 +384,12 @@ func (m *itemSvcImpl) BulkReconcileItems(ctx context.Context, req *BulkReconcile
 		return nil, apiErr
 	}
 
-	return BulkReconcileItemsPresenter(resp), nil
+	units, apiErr := resourceloaders.LoadUnitsByID(ctx, BulkReconcileUnitIDs(resp)...)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return BulkReconcileItemsPresenter(resp, units), nil
 }
 
 func loadItemByID(ctx context.Context, id string) (*apiresource.Item, *apierror.APIError) {

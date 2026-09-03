@@ -72,7 +72,7 @@ type AuditEvent struct {
 	// Only fields OpenMRP tracks for that resource type are compared, and only those whose value actually differs are listed. Actions that do not alter stored fields, such as `approve` and `deny`, generally record no changes.
 	Changes *List[AuditFieldChange] `json:"changes" expandable:"true"`
 	// Arbitrary JSON metadata for the mutation (e.g. reason, source, tags).
-	Metadata json.RawMessage `json:"metadata"`
+	Metadata json.RawMessage `json:"metadata" expandable:"true"`
 	// Log of the API request that caused the mutation.
 	//
 	// Changes that did not originate from an API request have no originating request log.

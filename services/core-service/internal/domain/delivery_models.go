@@ -54,14 +54,20 @@ type DeliveryLine struct {
 	UnitCostValue             string
 	UnitCostNumeratorUnitID   string
 	UnitCostDenominatorUnitID string
-	LocationID                *string
-	LocationName              *string
-	LotID                     *string
-	LotNumber                 *string
-	AcceptedAt                *time.Time
-	RejectedAt                *time.Time
-	CreatedAt                 time.Time
-	UpdatedAt                 time.Time
+	// The rate's own record, so a delivery line can present a complete unit cost
+	// rather than an id and a bare number.
+	UnitCostNumeratorUnitAbbreviation   string
+	UnitCostDenominatorUnitAbbreviation string
+	UnitCostCreatedAt                   time.Time
+	UnitCostUpdatedAt                   time.Time
+	LocationID                          *string
+	LocationName                        *string
+	LotID                               *string
+	LotNumber                           *string
+	AcceptedAt                          *time.Time
+	RejectedAt                          *time.Time
+	CreatedAt                           time.Time
+	UpdatedAt                           time.Time
 }
 
 // ListDeliveriesParams holds parameters for listing deliveries.

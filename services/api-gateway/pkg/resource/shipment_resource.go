@@ -89,8 +89,9 @@ type ShipmentLine struct {
 	Item *Item `json:"item" expandable:"true"`
 	// Quantity shipped on this line.
 	Quantity *Quantity `json:"quantity" validate:"required"`
-	// TODO: get this setup
-	Totals ShipmentLineTotals ``
+	// TODO: get this setup. Kept off the wire until it is: an empty tag would publish it under its
+	// Go field name, as a totals object nothing populates.
+	Totals ShipmentLineTotals `json:"-"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.

@@ -86,15 +86,10 @@ func LoadItems(ctx context.Context, ids []string) (map[string]any, *apierror.API
 			if a.ColorCode != nil {
 				attr.ColorCode = constants.Color(*a.ColorCode)
 			}
+			// Left nil when the property did not resolve: an attribute naming a property whose
+			// record is missing says so by omitting it, not by inventing one with a blank name.
 			if a.PropertyId != "" {
-				if p, ok := propertyMap[a.PropertyId]; ok {
-					attr.Property = p
-				} else {
-					attr.Property = &apiresource.Property{
-						ID:     a.PropertyId,
-						Object: constants.ObjectTypeProperty,
-					}
-				}
+				attr.Property = propertyMap[a.PropertyId]
 			}
 			attrs = append(attrs, attr)
 		}

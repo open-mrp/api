@@ -97,15 +97,11 @@ func AnalyzeOpenBatchesPresenter(resp *pb.AnalyzeOpenBatchesResponse) *apiresour
 			Unit:           s.Unit,
 		}
 		if s.Item != nil {
-			summary.Item = &apiresource.Item{
-				ID:  s.Item.Id,
-				SKU: s.Item.Sku,
-			}
+			sku := s.Item.Sku
+			summary.Item = apiresource.NewEntity(s.Item.Id, constants.ObjectTypeItem, &sku, nil)
 		}
 		if s.ScanningStation != nil {
-			summary.ScanningStation = &apiresource.ScanningStation{
-				ID: s.ScanningStation.Id,
-			}
+			summary.ScanningStation = apiresource.NewEntity(s.ScanningStation.Id, constants.ObjectTypeScanningStation, nil, nil)
 		}
 		summaries[i] = summary
 	}

@@ -199,6 +199,12 @@ message PurchaseOrderLineInfo {
   optional string unit_cost_numerator_unit_abbreviation = 24;
   optional string unit_cost_denominator_unit_id = 25;
   optional string unit_cost_denominator_unit_abbreviation = 26;
+  // The rates' own timestamps, so a line can present a complete rate rather than one
+  // reporting the zero time for when it was priced.
+  google.protobuf.Timestamp unit_price_created_at = 29;
+  google.protobuf.Timestamp unit_price_updated_at = 30;
+  google.protobuf.Timestamp unit_cost_created_at = 31;
+  google.protobuf.Timestamp unit_cost_updated_at = 32;
   // Timestamps
   google.protobuf.Timestamp created_at = 27;
   google.protobuf.Timestamp updated_at = 28;

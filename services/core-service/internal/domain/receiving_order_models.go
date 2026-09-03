@@ -46,19 +46,22 @@ type ReceivingOrder struct {
 
 // ReceivingOrderLine represents a line item in a receiving order.
 type ReceivingOrderLine struct {
-	ID                        string
-	QuantityID                string
-	QuantityValue             string `audit:"quantity_value"`
-	QuantityUnitID            string
-	QuantityUnitAbbreviation  string  `audit:"quantity_unit_abbreviation"`
-	RejectedQuantityValue     *string `audit:"rejected_quantity_value"`
-	OrderLineID               string
-	OrderLineProductID        *string
-	OrderLineItemNumber       *int32
-	OrderLineItemID           *string `audit:"order_line_item_id"`
-	OrderLineItemSKU          *string `audit:"order_line_item_sku"`
-	OrderLineItemDescription  *string `audit:"order_line_item_description"`
-	OrderLineQuantityOrdered  string  `audit:"order_line_quantity_ordered"`
+	ID                       string
+	QuantityID               string
+	QuantityValue            string `audit:"quantity_value"`
+	QuantityUnitID           string
+	QuantityUnitAbbreviation string  `audit:"quantity_unit_abbreviation"`
+	RejectedQuantityValue    *string `audit:"rejected_quantity_value"`
+	OrderLineID              string
+	OrderLineProductID       *string
+	OrderLineItemNumber      *int32
+	OrderLineItemID          *string `audit:"order_line_item_id"`
+	OrderLineItemSKU         *string `audit:"order_line_item_sku"`
+	OrderLineItemDescription *string `audit:"order_line_item_description"`
+	// The purchase order line's own quantity record, so the receiving line reports
+	// the ordered figure as that quantity rather than as a copy of its value.
+	OrderLineQuantityID       string `audit:"order_line_quantity_id"`
+	OrderLineQuantityOrdered  string `audit:"order_line_quantity_ordered"`
 	OrderLineUnitID           string
 	OrderLineUnitAbbreviation string     `audit:"order_line_unit_abbreviation"`
 	StockedAt                 *time.Time `audit:"stocked_at"`

@@ -366,17 +366,21 @@ func mapBackwardDeliveryRow(row sqlc.ListDeliveriesBackwardRow) *domain.Delivery
 
 func mapDeliveryLineRow(row sqlc.ListDeliveryLinesRow) *domain.DeliveryLine {
 	line := &domain.DeliveryLine{
-		ID:                        row.ID,
-		QuantityID:                row.QuantityID,
-		QuantityValue:             row.QuantityValue,
-		QuantityUnitID:            row.QuantityUnitID,
-		QuantityUnitAbbreviation:  row.QuantityUnitAbbreviation,
-		UnitCostID:                row.UnitCostID,
-		UnitCostValue:             row.UnitCostValue,
-		UnitCostNumeratorUnitID:   row.UnitCostNumeratorUnitID,
-		UnitCostDenominatorUnitID: row.UnitCostDenominatorUnitID,
-		CreatedAt:                 row.CreatedAt,
-		UpdatedAt:                 row.UpdatedAt,
+		ID:                                  row.ID,
+		QuantityID:                          row.QuantityID,
+		QuantityValue:                       row.QuantityValue,
+		QuantityUnitID:                      row.QuantityUnitID,
+		QuantityUnitAbbreviation:            row.QuantityUnitAbbreviation,
+		UnitCostID:                          row.UnitCostID,
+		UnitCostValue:                       row.UnitCostValue,
+		UnitCostNumeratorUnitID:             row.UnitCostNumeratorUnitID,
+		UnitCostDenominatorUnitID:           row.UnitCostDenominatorUnitID,
+		UnitCostNumeratorUnitAbbreviation:   row.UnitCostNumeratorUnitAbbreviation,
+		UnitCostDenominatorUnitAbbreviation: row.UnitCostDenominatorUnitAbbreviation,
+		UnitCostCreatedAt:                   row.UnitCostCreatedAt,
+		UnitCostUpdatedAt:                   row.UnitCostUpdatedAt,
+		CreatedAt:                           row.CreatedAt,
+		UpdatedAt:                           row.UpdatedAt,
 	}
 
 	if row.AcceptedAt.Valid {

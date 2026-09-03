@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.6.1](https://github.com/open-mrp/api/compare/v2.6.0...v2.6.1) (2026-09-03)
+
+
+### Bug Fixes
+
+* **analytics:** measure OEE performance against scheduled machines' actual run time ([#136](https://github.com/open-mrp/api/issues/136)) ([619d65b](https://github.com/open-mrp/api/commit/619d65b872f1072fa7b490ce40b074c259e73ff8))
+* **release:** make PlanetScale prepare step idempotent to an already-deployed release ([#134](https://github.com/open-mrp/api/issues/134)) ([2b2d809](https://github.com/open-mrp/api/commit/2b2d8092cfcdf81ece3ddd086e92289473e9d399))
+
 ## [2.6.0](https://github.com/open-mrp/api/compare/v2.5.8...v2.6.0) (2026-09-03)
 
 

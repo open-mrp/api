@@ -197,11 +197,20 @@ func (s *messagingSvcImpl) FanOut(ctx context.Context, dedupeSeed string, data m
 		return nil
 	}
 
+	// A DedupeKey turns fan-out into coalescing: instead of one row per event, all events sharing the key
+	// (e.g. every change to one order on one day) fold onto a single rolling row per recipient. The row id
+	// is seeded from the key rather than the per-message seed, so repeated events collide on the same PK.
+	coalesce := data.DedupeKey != ""
+	seed := dedupeSeed
+	if coalesce {
+		seed = data.DedupeKey
+	}
+
 	notifications := make([]*domain.Notification, 0, len(recipients))
 	userIDByNotificationID := make(map[string]string, len(recipients))
 	for _, rc := range recipients {
 		n := &domain.Notification{
-			ID:                     deterministicNotificationID(dedupeSeed, rc.accountUserID),
+			ID:                     deterministicNotificationID(seed, rc.accountUserID),
 			AccountID:              data.AccountID,
 			RecipientAccountUserID: rc.accountUserID,
 			Category:               data.Category,
@@ -216,8 +225,28 @@ func (s *messagingSvcImpl) FanOut(ctx context.Context, dedupeSeed string, data m
 			SenderName:             strPtrIfNotEmpty(data.SenderName),
 			Priority:               data.Priority,
 		}
+		// A coalesced row starts its change tally at 1; the upsert bumps it on each later event so the feed
+		// can show "N updates" without a row per change.
+		if coalesce && len(n.Metadata) == 0 {
+			n.Metadata = json.RawMessage(`{"change_count":1}`)
+		}
 		notifications = append(notifications, n)
 		userIDByNotificationID[n.ID] = rc.userID
+	}
+
+	if coalesce {
+		// Coalesced fan-out refreshes one rolling row per recipient and pushes a realtime alert only for
+		// rows it freshly inserted — the first change in the window alerts, later changes accumulate silently.
+		inserted, apiErr := notifRepo.UpsertCoalesced(ctx, notifications)
+		if apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+		for _, n := range inserted {
+			if apiErr := s.publishRealtime(ctx, n, userIDByNotificationID[n.ID]); apiErr != nil {
+				return tracing.Trace(span, apiErr)
+			}
+		}
+		return nil
 	}
 
 	if apiErr := notifRepo.CreateBatch(ctx, notifications); apiErr != nil {

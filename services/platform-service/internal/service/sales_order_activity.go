@@ -57,6 +57,7 @@ func (s *auditEventSvcImpl) notifySalesOrderFollowers(ctx context.Context, event
 		Priority:         string(constants.NotificationPriorityNormal),
 		SenderType:       string(constants.NotificationSenderTypeSystem),
 		RecipientUserIDs: recipients,
+		DedupeKey:        salesOrderActivityDedupeKey(orderID),
 	}
 
 	dataJSON, err := json.Marshal(data)
@@ -108,6 +109,17 @@ func salesOrderActivityMessageID(event *domain.AuditEvent, orderID string) strin
 		return "msg_ordact_" + *event.RequestID + "_" + orderID
 	}
 	return "msg_ordact_" + event.ID
+}
+
+// salesOrderActivityDedupeKey collapses a day's activity on one order into a single rolling bell row per
+// follower. notification-service coalesces every fan-out that shares this key (per recipient) onto one
+// notification: the first change of the day inserts it and raises a realtime alert, and each later change
+// refreshes the row silently and re-marks it unread (see messaging.AlertFanoutData.DedupeKey). A follower
+// who dismisses the row mutes the order for the rest of the day. The day is bucketed in UTC — a business
+// working across UTC midnight rolls onto a fresh row — which is coarse but avoids a per-event account
+// timezone lookup on this hot path; revisit with the account's timezone if the boundary proves noticeable.
+func salesOrderActivityDedupeKey(orderID string) string {
+	return "ordact_" + orderID + "_" + time.Now().UTC().Format("20060102")
 }
 
 // salesOrderNumber recovers the order's human-facing number from its create audit event's field snapshot. Best-effort: platform-service has no core-service client, and an order that predates auditing simply yields "".

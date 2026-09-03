@@ -898,6 +898,8 @@ type AnalyticsRepo interface {
 	GetDemandForecastMonthlyRevenue(ctx context.Context, params GetDemandForecastWindowParams) ([]DemandForecastMonthlyRevenueRow, *apierror.APIError)
 	GetOeeDepartmentData(ctx context.Context, params GetOeeWindowParams) ([]OeeDepartmentDataRow, *apierror.APIError)
 	GetOeeEstimatedRuntime(ctx context.Context, params GetOeeWindowParams) ([]OeeEstimatedRuntimeRow, *apierror.APIError)
+	GetOeeEstimatedRuntimeForMachines(ctx context.Context, params GetOeeWindowParams) ([]OeeEstimatedRuntimeRow, *apierror.APIError)
+	GetOeeTrendEstimatedRuntimeForMachines(ctx context.Context, params GetOeeWindowParams) ([]OeeTrendEstimatedRuntimeRow, *apierror.APIError)
 	GetOeeDowntimeByDepartment(ctx context.Context, params GetOeeWindowParams) ([]OeeDowntimeRow, *apierror.APIError)
 	GetOeeTrendDepartmentDataByWeek(ctx context.Context, params GetOeeWindowParams) ([]OeeTrendDepartmentWeekRow, *apierror.APIError)
 	GetOeeTrendDowntimeIntervals(ctx context.Context, params GetOeeWindowParams) ([]OeeDowntimeIntervalRow, *apierror.APIError)

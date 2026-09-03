@@ -1631,6 +1631,79 @@ func (q *Queries) GetOeeEstimatedRuntime(ctx context.Context, arg GetOeeEstimate
 	return items, nil
 }
 
+const getOeeEstimatedRuntimeForMachines = `-- name: GetOeeEstimatedRuntimeForMachines :many
+SELECT
+    department_id,
+    SUM(TIMESTAMPDIFF(SECOND, day_first, day_last)) AS runtime_seconds
+FROM (
+    SELECT
+        COALESCE(ss.department_id, 'unassigned') AS department_id,
+        bm.B AS machine_id,
+        DATE(b.scanned_at) AS scan_date,
+        MIN(b.scanned_at) AS day_first,
+        MAX(b.scanned_at) AS day_last
+    FROM batch b
+    JOIN _batches_machines bm ON bm.A = b.id AND bm.B IN (/*SLICE:machine_ids*/?)
+    LEFT JOIN scanning_station ss ON ss.id = b.scanning_station_id
+    WHERE b.account_id = ?
+      AND b.scanned_at >= ?
+      AND b.scanned_at <= ?
+    GROUP BY COALESCE(ss.department_id, 'unassigned'), bm.B, DATE(b.scanned_at)
+) daily
+GROUP BY department_id
+`
+
+type GetOeeEstimatedRuntimeForMachinesParams struct {
+	MachineIds     []string
+	OwnerAccountID string
+	StartDate      sql.NullTime
+	EndDate        sql.NullTime
+}
+
+type GetOeeEstimatedRuntimeForMachinesRow struct {
+	DepartmentID   string
+	RuntimeSeconds interface{}
+}
+
+// GetOeeEstimatedRuntimeForMachines is GetOeeEstimatedRuntime restricted to a set of machines — the machines the plan scheduled — and is the Operating Time OEE measures the scheduled machines against.
+//
+// Availability and Performance both divide by the time the equipment was actually running, and that time has to be measured on the same machines whose output fills the numerator: counting run time from machines the plan never listed, or output from them, would let a department read as running many times its own speed. Run time is summed per machine per day (MIN..MAX of that machine's scans), then rolled up, so a department's Operating Time is machine-hours — the same footing as the machine-hours the schedule planned. A single scan in a day spans zero seconds, the same understatement GetOeeEstimatedRuntime carries.
+func (q *Queries) GetOeeEstimatedRuntimeForMachines(ctx context.Context, arg GetOeeEstimatedRuntimeForMachinesParams) ([]GetOeeEstimatedRuntimeForMachinesRow, error) {
+	query := getOeeEstimatedRuntimeForMachines
+	var queryParams []interface{}
+	if len(arg.MachineIds) > 0 {
+		for _, v := range arg.MachineIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:machine_ids*/?", strings.Repeat(",?", len(arg.MachineIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:machine_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.OwnerAccountID)
+	queryParams = append(queryParams, arg.StartDate)
+	queryParams = append(queryParams, arg.EndDate)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetOeeEstimatedRuntimeForMachinesRow
+	for rows.Next() {
+		var i GetOeeEstimatedRuntimeForMachinesRow
+		if err := rows.Scan(&i.DepartmentID, &i.RuntimeSeconds); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getOeeTrendDepartmentDataByWeek = `-- name: GetOeeTrendDepartmentDataByWeek :many
 SELECT
     DATE(DATE_SUB(b.scanned_at, INTERVAL ((DAYOFWEEK(b.scanned_at) + 6 - CAST(? AS SIGNED)) % 7) DAY)) AS week_start_date,
@@ -1893,6 +1966,82 @@ func (q *Queries) GetOeeTrendDowntimeIntervals(ctx context.Context, arg GetOeeTr
 			&i.StartedAt,
 			&i.EndedAt,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getOeeTrendEstimatedRuntimeForMachinesByWeek = `-- name: GetOeeTrendEstimatedRuntimeForMachinesByWeek :many
+SELECT
+    week_start_date,
+    department_id,
+    SUM(TIMESTAMPDIFF(SECOND, day_first, day_last)) AS runtime_seconds
+FROM (
+    SELECT
+        DATE(DATE_SUB(b.scanned_at, INTERVAL ((DAYOFWEEK(b.scanned_at) + 6 - CAST(? AS SIGNED)) % 7) DAY)) AS week_start_date,
+        COALESCE(ss.department_id, 'unassigned') AS department_id,
+        bm.B AS machine_id,
+        DATE(b.scanned_at) AS scan_date,
+        MIN(b.scanned_at) AS day_first,
+        MAX(b.scanned_at) AS day_last
+    FROM batch b
+    JOIN _batches_machines bm ON bm.A = b.id AND bm.B IN (/*SLICE:machine_ids*/?)
+    LEFT JOIN scanning_station ss ON ss.id = b.scanning_station_id
+    WHERE b.account_id = ?
+      AND b.scanned_at >= ?
+      AND b.scanned_at <= ?
+    GROUP BY week_start_date, COALESCE(ss.department_id, 'unassigned'), bm.B, DATE(b.scanned_at)
+) daily
+GROUP BY week_start_date, department_id
+`
+
+type GetOeeTrendEstimatedRuntimeForMachinesByWeekParams struct {
+	WeekStartDay   int64
+	MachineIds     []string
+	OwnerAccountID string
+	StartDate      sql.NullTime
+	EndDate        sql.NullTime
+}
+
+type GetOeeTrendEstimatedRuntimeForMachinesByWeekRow struct {
+	WeekStartDate  time.Time
+	DepartmentID   string
+	RuntimeSeconds interface{}
+}
+
+// GetOeeTrendEstimatedRuntimeForMachinesByWeek is GetOeeEstimatedRuntimeForMachines bucketed into production weeks, so one read gives the trend its Operating Time per department per week. The week key follows the account's week_start_day, exactly as GetOeeTrendDepartmentDataByWeek buckets output, so a week's run time and its output describe the same days.
+func (q *Queries) GetOeeTrendEstimatedRuntimeForMachinesByWeek(ctx context.Context, arg GetOeeTrendEstimatedRuntimeForMachinesByWeekParams) ([]GetOeeTrendEstimatedRuntimeForMachinesByWeekRow, error) {
+	query := getOeeTrendEstimatedRuntimeForMachinesByWeek
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.WeekStartDay)
+	if len(arg.MachineIds) > 0 {
+		for _, v := range arg.MachineIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:machine_ids*/?", strings.Repeat(",?", len(arg.MachineIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:machine_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.OwnerAccountID)
+	queryParams = append(queryParams, arg.StartDate)
+	queryParams = append(queryParams, arg.EndDate)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetOeeTrendEstimatedRuntimeForMachinesByWeekRow
+	for rows.Next() {
+		var i GetOeeTrendEstimatedRuntimeForMachinesByWeekRow
+		if err := rows.Scan(&i.WeekStartDate, &i.DepartmentID, &i.RuntimeSeconds); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

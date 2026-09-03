@@ -163,6 +163,10 @@ message OeeDepartmentProto {
   int64 downtime_event_count = 12;
   repeated OeeDowntimeReasonProto downtime_breakdown = 13;
   double scheduled_seconds = 14;
+  // run_time_seconds is operating_time_seconds capped at scheduled_seconds — the run
+  // time counted toward Availability. operating_time_seconds is the scheduled machines'
+  // full measured run time (Performance's denominator); overrun_seconds is the part of
+  // it beyond the schedule, a schedule-adherence signal kept out of Availability.
   double run_time_seconds = 15;
   // Ratios are absent when their denominator is unknown, which is not the same as zero.
   optional double availability_pct = 16;
@@ -179,6 +183,12 @@ message OeeDepartmentProto {
   // Performance became ideal-time-over-run-time.
   reserved 23, 24, 25, 26;
   reserved "measured_ideal_seconds", "measured_run_seconds", "performance_ticket_count", "performance_basis";
+  // operating_time_seconds is the scheduled machines' measured run time (first-to-last
+  // scan per machine per day), Performance's denominator. overrun_seconds is run time
+  // beyond the scheduled window, reported apart from OEE so overtime cannot read as more
+  // than 100% Availability.
+  double operating_time_seconds = 27;
+  double overrun_seconds = 28;
 }
 // OeeDepartmentPlannedTimeProto supplies the scheduled production time Availability
 // is measured against. Without it the OEE ratios cannot be computed.
@@ -210,6 +220,9 @@ message OeeTrendPeriodProto {
   double seconds_units = 5;
   double standard_seconds_earned = 6;
   double scheduled_seconds = 7;
+  // run_time_seconds is operating_time_seconds capped at scheduled_seconds (Availability's
+  // numerator); operating_time_seconds is the full measured run time (Performance's
+  // denominator); overrun_seconds is run time beyond the schedule, reported apart from OEE.
   double run_time_seconds = 8;
   double availability_loss_seconds = 9;
   double not_scheduled_seconds = 10;
@@ -220,6 +233,8 @@ message OeeTrendPeriodProto {
   optional double oee_pct = 14;
   bool has_downtime_data = 15;
   int64 downtime_event_count = 16;
+  double operating_time_seconds = 17;
+  double overrun_seconds = 18;
 }
 message AnalyzeOeeTrendResponse {
   repeated OeeTrendPeriodProto periods = 1;

@@ -132,7 +132,7 @@ func TestScheduledHoursByWeek_IgnoresAVersionThatWasNotLive(t *testing.T) {
 		"only the version that was live for the week may set its denominator")
 }
 
-// The end-to-end guard: availability is (scheduled - downtime) / scheduled, and scheduled is the plan's machine-hours. A department the plan never scheduled has no availability at all rather than a fabricated 100%.
+// The end-to-end guard: availability is measured run time (capped at scheduled) over scheduled machine-hours, and scheduled is the plan's machine-hours. A department the plan never scheduled has no availability at all rather than a fabricated 100%.
 func TestBuildOeeByDepartment_AvailabilityUsesScheduledHours(t *testing.T) {
 	f := newOeePlannedFixture(t)
 
@@ -142,8 +142,12 @@ func TestBuildOeeByDepartment_AvailabilityUsesScheduledHours(t *testing.T) {
 		{DepartmentID: "dp_unplanned", DepartmentName: "Sampling", GoodUnits: 50, WasteUnits: 0},
 	}, nil).AnyTimes()
 	f.analytics.EXPECT().GetOeeEstimatedRuntime(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+	// The scheduled machines' measured run time is what Availability divides: they ran 144 of the 160 scheduled hours.
+	f.analytics.EXPECT().GetOeeEstimatedRuntimeForMachines(gomock.Any(), gomock.Any()).Return([]domain.OeeEstimatedRuntimeRow{
+		{DepartmentID: "dp_knit", RuntimeSeconds: 144 * 3600},
+	}, nil).Times(1)
 	f.analytics.EXPECT().GetOeeDowntimeByDepartment(gomock.Any(), gomock.Any()).Return([]domain.OeeDowntimeRow{
-		// 16 hours of availability-bucket downtime in the knitting room.
+		// 16 hours of availability-bucket downtime in the knitting room — logged for the Pareto; availability is measured from run time.
 		{DepartmentID: "dp_knit", ReasonCode: "breakdown", OeeBucket: domain.OeeBucketAvailability, DowntimeSeconds: 16 * 3600, EventCount: 2},
 	}, nil).Times(1)
 
@@ -152,7 +156,7 @@ func TestBuildOeeByDepartment_AvailabilityUsesScheduledHours(t *testing.T) {
 	f.schedule.EXPECT().SumScheduledHoursByDepartmentWeek(gomock.Any(), gomock.Any()).Return([]domain.ScheduledHoursRow{
 		{WeekStartDate: f.week, DepartmentID: "dp_knit", PlannedRunHours: 160},
 	}, nil).Times(1)
-	// The knitting room scheduled one machine; its output is what the scoped read measures.
+	// The knitting room scheduled one machine; its output and run time are what the scoped reads measure.
 	f.schedule.EXPECT().SumPlannedByWeek(gomock.Any(), gomock.Any()).Return([]domain.AttainmentPlannedRow{
 		{WeekStartDate: f.week, MachineID: "mc_knit_1", ItemID: "it_1", PlannedQuantity: 100, PlannedRunHours: 160},
 	}, nil).Times(1)
@@ -172,7 +176,7 @@ func TestBuildOeeByDepartment_AvailabilityUsesScheduledHours(t *testing.T) {
 	knit := byID["dp_knit"]
 	assert.InDelta(t, 160*3600, knit.ScheduledSeconds, 0.001, "the denominator is the scheduled machine-hours")
 	require.NotNil(t, knit.AvailabilityPct)
-	assert.InDelta(t, 0.9, *knit.AvailabilityPct, 0.0001, "(160 - 16) / 160")
+	assert.InDelta(t, 0.9, *knit.AvailabilityPct, 0.0001, "144 measured run hours / 160 scheduled")
 
 	// The plan never scheduled the sampling room, so it has no denominator and therefore no availability — not a fabricated 100%.
 	unplanned := byID["dp_unplanned"]

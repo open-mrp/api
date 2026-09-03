@@ -129,6 +129,30 @@ pscale_cmd() {
     pscale "$@" --org "$PS_ORG"
 }
 
+# --- Already deployed? ---
+
+# Once this release's deploy request has been applied, prod carries the release's migrations. Re-cutting
+# the branch from prod and replaying `up` would then collide on the first non-idempotent DDL — mark-shipped
+# only records migrations from the *previous* release, so a current-release migration already live in prod
+# gets replayed (deploy request #209: 00018 re-added an index prod already had, errno 1061). The deploy
+# step (planetscale-deploy-release.sh) already treats a completed deploy request as "nothing to do"; the
+# prepare step has to be just as idempotent. `deploy-request show` resolves the branch name to its most
+# recent deploy request even after --auto-delete-branch has removed the branch.
+DEPLOYED_STATE="$(pscale_cmd deploy-request show "$PS_DATABASE" "$BRANCH" --format json 2>/dev/null \
+    | jq -r '.deployment_state // .deployment.state // empty' || true)"
+
+case "$DEPLOYED_STATE" in
+    # complete / complete_pending_revert both mean the schema is live in prod (the latter is just inside
+    # the 30-minute revert window). A reverted deploy is deliberately not matched: prod no longer carries
+    # the schema, so a fresh branch and deploy request still need to be cut.
+    complete|complete_pending_revert)
+        info "Release $RELEASE_VERSION schema is already live in prod (deploy request state '$DEPLOYED_STATE'). Nothing to prepare."
+        exit 0
+        ;;
+esac
+
+# --- Recreate the branch ---
+
 # The branch is recreated rather than reused. A release PR is rebuilt every time a commit lands on
 # main, and a branch left over from an earlier run may have had a since-edited migration applied to
 # it. Cutting fresh from prod means the deploy request diff always describes exactly the migrations

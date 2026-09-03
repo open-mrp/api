@@ -983,8 +983,15 @@ AND notification_type_code = sqlc.arg('notification_type_code');
 
 
 -- name: CreatePick :exec
-INSERT INTO pick (id, number, sales_order_id, account_id, created_at, updated_at)
-VALUES (sqlc.arg('id'), sqlc.arg('number'), sqlc.arg('sales_order_id'), sqlc.arg('account_id'), NOW(3), NOW(3));
+-- ship_by_sort_date is read from the order rather than passed in: the issue path stamps the order's
+-- commitment (SetShipByCommitment) in the same transaction just before this runs, so the value is
+-- already there, and reading it here keeps the denormalized sort key from ever diverging on insert.
+-- COALESCE preserves the no-commitment sentinel. See pick.sql ListPicksShipByForward.
+INSERT INTO pick (id, number, sales_order_id, account_id, ship_by_sort_date, created_at, updated_at)
+SELECT sqlc.arg('id'), sqlc.arg('number'), sqlc.arg('sales_order_id'), sqlc.arg('account_id'),
+       COALESCE(so.ship_by_date, '9999-12-31'), NOW(3), NOW(3)
+FROM sales_order so
+WHERE so.id = sqlc.arg('sales_order_id');
 
 -- name: CreatePickLineForOrderLine :exec
 INSERT INTO pick_line (id, pick_id, quantity_id, sales_order_line_id, created_at, updated_at)
@@ -1377,3 +1384,13 @@ UPDATE sales_order SET
     updated_at = NOW(3)
 WHERE id = sqlc.arg('id')
 AND owner_account_id = sqlc.arg('account_id');
+
+-- SetPickShipByDateForOrder keeps a pick's denormalized ship-by sort key in step with its order's
+-- commitment. Paired with SetSalesOrderShipByCommitment: a no-op at issue (the pick is created just
+-- afterwards, already carrying the value via CreatePick), and the live path for an already-issued
+-- order whose commitment is re-stamped or, with a null date, cleared. COALESCE keeps the sentinel.
+-- name: SetPickShipByDateForOrder :exec
+UPDATE pick SET
+    ship_by_sort_date = COALESCE(sqlc.narg('ship_by_date'), '9999-12-31'),
+    updated_at = NOW(3)
+WHERE sales_order_id = sqlc.arg('sales_order_id');

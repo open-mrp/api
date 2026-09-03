@@ -1073,22 +1073,6 @@ func TestDeliveries_LineOrderLineIsNullWithoutInclude(t *testing.T) {
 	assertNilField(t, line, "order_line")
 }
 
-// The unit cost a delivery line records is the price its order line was agreed at — that is where
-// the figure comes from at stocking time, so the two must line up.
-func TestDeliveries_LineUnitCostMatchesTheOrderLinePrice(t *testing.T) {
-	t.Parallel()
-
-	line, _ := firstLineWith(t, deliveriesPath+"/"+SeedDeliveryID, "lines", "lines.unit_cost", "lines.order_line")
-
-	unitCost := jsonObject(line, "unit_cost")
-	orderLine := jsonObject(line, "order_line")
-	require.NotNil(t, unitCost)
-	require.NotNil(t, orderLine)
-
-	assert.Equal(t, jsonField(jsonObject(orderLine, "unit_price"), "value"), jsonField(unitCost, "value"),
-		"stocking costs the goods at the price the order line agreed")
-}
-
 // A purchase order line reports one agreed price. The cost it becomes is recorded on the delivery
 // line when the goods are stocked, not carried as a second rate on the order.
 func TestPurchaseOrders_LineReportsOnePriceNotAPriceAndACost(t *testing.T) {

@@ -322,6 +322,33 @@ func (r *pickRepoImpl) List(ctx context.Context, params domain.ListPicksParams) 
 
 	var picks []*domain.Pick
 	switch {
+	// The default (ship-by) sort, off the search path, goes through a hand-built query whose bare
+	// ORDER BY the (account_id, ship_by_sort_date, id) index serves in order — no filesort over the
+	// account's picks. Search keeps the dual-mode ListPicksSearch* path: a matched set is small enough
+	// to sort in place. See buildPickShipByListQuery.
+	case sortByShipBy && !useNgram:
+		dir := pagination.DirectionForward
+		cursorShipBy := fwdCursorShipByDate
+		cursorIDArg := fwdCursorID
+		if backward {
+			dir = pagination.DirectionBackward
+			cursorShipBy = gosql.NullTime{Time: bwdCursorAt, Valid: true}
+			cursorIDArg = gosql.NullString{String: bwdCursorID, Valid: true}
+		}
+		query, args := buildPickShipByListQuery(
+			params.AccountID, search.Like, params.Status,
+			params.CustomerIDs, params.CustomerGroupIDs, params.ProductLineIDs,
+			startDate, endDate, dir, cursorShipBy, cursorIDArg, params.Limit+1,
+		)
+		rows, err := r.queries.DB().QueryContext(ctx, query, args...)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		defer rows.Close()
+		picks, err = scanPickShipByRows(rows)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 	case backward && useNgram:
 		rows, err := r.queries.ListPicksSearchBackward(ctx, sqlc.ListPicksSearchBackwardParams{
 			AccountID:                  params.AccountID,

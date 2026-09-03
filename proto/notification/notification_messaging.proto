@@ -108,6 +108,7 @@ message NotificationInfo {
   optional string sender_type = 19;
   optional string sender_id = 20;
   optional string sender_name = 21;
+  optional uint32 change_count = 22;
 }
 
 // PageInfo carries keyset pagination cursors (notification package scope).

@@ -75,6 +75,7 @@ func TestNotificationFromProto_FullMapping(t *testing.T) {
 		SeenAt:           timestamppb.New(seen),
 		CreatedAt:        timestamppb.New(created),
 		UpdatedAt:        timestamppb.New(updated),
+		ChangeCount:      new(uint32(5)),
 	}
 
 	ctx := resourcekit.WithLoadMeta(context.Background())
@@ -94,6 +95,8 @@ func TestNotificationFromProto_FullMapping(t *testing.T) {
 	assert.Nil(t, n.DismissedAt)
 	assert.True(t, created.Equal(n.CreatedAt))
 	assert.True(t, updated.Equal(n.UpdatedAt))
+	require.NotNil(t, n.ChangeCount)
+	assert.Equal(t, int64(5), *n.ChangeCount)
 
 	// The link is expandable: nil on the base resource, stashed for ?include=resource as a
 	// polymorphic Entity reference.

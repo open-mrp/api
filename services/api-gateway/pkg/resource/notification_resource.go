@@ -63,21 +63,23 @@ type Notification struct {
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last update timestamp.
-	UpdatedAt time.Time `json:"updated_at" validate:"required"`
+	UpdatedAt   time.Time `json:"updated_at" validate:"required"`
+	ChangeCount *int64    `json:"change_count"`
 }
 
 var SampleNotification = &Notification{
-	ID:        SampleNotificationID,
-	Object:    constants.ObjectTypeNotification,
-	Category:  constants.NotificationCategoryOrderUpdated,
-	Status:    constants.NotificationStatusUnseen,
-	Title:     "Order updated",
-	Body:      new("Order #1024 changed from estimate to confirmed."),
-	Sender:    NewActor(SampleAccountUserID, constants.ActorTypeUser, new("Jie Yan"), nil),
-	Resource:  NewEntity(SampleSalesOrderID, constants.ObjectTypeSalesOrder, new(SampleSalesOrderNumber), nil),
-	Priority:  constants.NotificationPriorityNormal,
-	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:          SampleNotificationID,
+	Object:      constants.ObjectTypeNotification,
+	Category:    constants.NotificationCategoryOrderUpdated,
+	Status:      constants.NotificationStatusUnseen,
+	Title:       "Order updated",
+	Body:        new("Order #1024 changed from estimate to confirmed."),
+	Sender:      NewActor(SampleAccountUserID, constants.ActorTypeUser, new("Jie Yan"), nil),
+	Resource:    NewEntity(SampleSalesOrderID, constants.ObjectTypeSalesOrder, new(SampleSalesOrderNumber), nil),
+	Priority:    constants.NotificationPriorityNormal,
+	CreatedAt:   timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:   timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ChangeCount: new(int64(5)),
 }
 
 func (*Notification) SchemaExample() any {

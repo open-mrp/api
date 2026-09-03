@@ -1538,13 +1538,14 @@ type PermissionGroup struct {
 }
 
 type Pick struct {
-	ID           string
-	Number       string
-	SalesOrderID string
-	AccountID    string
-	FinishedAt   sql.NullTime
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID             string
+	Number         string
+	SalesOrderID   string
+	AccountID      string
+	FinishedAt     sql.NullTime
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	ShipBySortDate time.Time
 }
 
 type PickLine struct {

@@ -330,6 +330,7 @@ type NotificationInfo struct {
 	SenderType    *string `protobuf:"bytes,19,opt,name=sender_type,json=senderType,proto3,oneof" json:"sender_type,omitempty"`
 	SenderId      *string `protobuf:"bytes,20,opt,name=sender_id,json=senderId,proto3,oneof" json:"sender_id,omitempty"`
 	SenderName    *string `protobuf:"bytes,21,opt,name=sender_name,json=senderName,proto3,oneof" json:"sender_name,omitempty"`
+	ChangeCount   *uint32 `protobuf:"varint,22,opt,name=change_count,json=changeCount,proto3,oneof" json:"change_count,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -509,6 +510,13 @@ func (x *NotificationInfo) GetSenderName() string {
 		return *x.SenderName
 	}
 	return ""
+}
+
+func (x *NotificationInfo) GetChangeCount() uint32 {
+	if x != nil && x.ChangeCount != nil {
+		return *x.ChangeCount
+	}
+	return 0
 }
 
 // PageInfo carries keyset pagination cursors (notification package scope).
@@ -1699,7 +1707,7 @@ const file_notification_notification_messaging_proto_rawDesc = "" +
 	"\x0ein_app_enabled\x18\x02 \x01(\bR\finAppEnabled\x12#\n" +
 	"\remail_enabled\x18\x03 \x01(\bR\femailEnabled\x12!\n" +
 	"\fpush_enabled\x18\x04 \x01(\bR\vpushEnabled\x12\x16\n" +
-	"\x06digest\x18\x05 \x01(\tR\x06digest\"\xd8\b\n" +
+	"\x06digest\x18\x05 \x01(\tR\x06digest\"\x91\t\n" +
 	"\x10NotificationInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -1728,7 +1736,8 @@ const file_notification_notification_messaging_proto_rawDesc = "" +
 	"\tsender_id\x18\x14 \x01(\tH\n" +
 	"R\bsenderId\x88\x01\x01\x12$\n" +
 	"\vsender_name\x18\x15 \x01(\tH\vR\n" +
-	"senderName\x88\x01\x01B\x14\n" +
+	"senderName\x88\x01\x01\x12&\n" +
+	"\fchange_count\x18\x16 \x01(\rH\fR\vchangeCount\x88\x01\x01B\x14\n" +
 	"\x12_source_message_idB\x12\n" +
 	"\x10_conversation_idB\a\n" +
 	"\x05_bodyB\x0f\n" +
@@ -1743,7 +1752,8 @@ const file_notification_notification_messaging_proto_rawDesc = "" +
 	"\f_sender_typeB\f\n" +
 	"\n" +
 	"_sender_idB\x0e\n" +
-	"\f_sender_name\"\xbe\x01\n" +
+	"\f_sender_nameB\x0f\n" +
+	"\r_change_count\"\xbe\x01\n" +
 	"\bPageInfo\x12$\n" +
 	"\vnext_cursor\x18\x01 \x01(\tH\x00R\n" +
 	"nextCursor\x88\x01\x01\x12$\n" +

@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.6.0](https://github.com/open-mrp/api/compare/v2.5.8...v2.6.0) (2026-09-03)
+
+
+### Features
+
+* **notifications:** coalesce order-activity alerts per order per day ([#132](https://github.com/open-mrp/api/issues/132)) ([8577317](https://github.com/open-mrp/api/commit/8577317b0379341e5f71d27dcad08600953dee47))
+
+
+### Bug Fixes
+
+* **burn-rate:** keep item burn rate fresh via write path + periodic sweep ([#130](https://github.com/open-mrp/api/issues/130)) ([1fe0526](https://github.com/open-mrp/api/commit/1fe0526299868e6c5353c47c1ed38efc479cb6ae))
+
+
+### Performance Improvements
+
+* **picks:** batch line and shipment loads in ListPicks ([#133](https://github.com/open-mrp/api/issues/133)) ([0ef7f79](https://github.com/open-mrp/api/commit/0ef7f79959f12fe418d396c59da8541f8a35dbe1))
+
 ## [2.5.8](https://github.com/open-mrp/api/compare/v2.5.7...v2.5.8) (2026-09-02)
 
 

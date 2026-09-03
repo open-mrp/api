@@ -430,3 +430,9 @@ type BurnRateConsumptionLog struct {
 	UnitID    string
 	CreatedAt time.Time
 }
+
+// StaleBurnRateItem identifies an item whose burn rate the periodic sweeper should recompute.
+type StaleBurnRateItem struct {
+	ItemID    string
+	AccountID string
+}

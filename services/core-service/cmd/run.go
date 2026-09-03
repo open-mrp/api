@@ -838,6 +838,18 @@ func Run(
 	}
 	defer scheduleCadence.Stop()
 
+	// Backstop for burn rate: the write path recomputes on consumption, but an item nobody consumes
+	// would keep a stale rate forever. This sweeps the stalest items in bounded batches so idle items
+	// stay reasonably fresh without a herd of recomputes.
+	burnRateSweeper := service.NewBurnRateScheduler(&service.BurnRateSchedulerConfig{
+		Repos: repoFactory,
+		Lease: leaseSvc,
+	})
+	if err := burnRateSweeper.Start(ctx); err != nil {
+		return err
+	}
+	defer burnRateSweeper.Stop()
+
 	salesOrderShippingUpdatedConsumer := event.NewSalesOrderShippingUpdatedConsumer(rabbitmq, inboxRepo, repoFactory, salesOrderSvc)
 	if err := salesOrderShippingUpdatedConsumer.Listen(ctx); err != nil {
 		return err

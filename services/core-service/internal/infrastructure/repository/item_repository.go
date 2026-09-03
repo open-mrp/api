@@ -1240,6 +1240,28 @@ func (r *itemRepoImpl) ListConsumptionChangeLogsForBurnRate(ctx context.Context,
 	return logs, nil
 }
 
+func (r *itemRepoImpl) ListStaleBurnRateItems(ctx context.Context, staleBefore time.Time, limit int32) ([]domain.StaleBurnRateItem, *apierror.APIError) {
+	ctx, span := itemRepoTracer.Start(ctx, "repository.item.list_stale_burn_rate_items")
+	defer span.End()
+
+	rows, err := r.queries.ListStaleBurnRateItems(ctx, sqlc.ListStaleBurnRateItemsParams{
+		StaleBefore: staleBefore,
+		Limit:       limit,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	items := make([]domain.StaleBurnRateItem, len(rows))
+	for i, row := range rows {
+		items[i] = domain.StaleBurnRateItem{
+			ItemID:    row.ID,
+			AccountID: row.AccountID,
+		}
+	}
+	return items, nil
+}
+
 func (r *itemRepoImpl) FetchItemsBySKU(ctx context.Context, accountID string, skus []string) ([]domain.ItemSKUInfo, *apierror.APIError) {
 	ctx, span := itemRepoTracer.Start(ctx, "repository.item.fetch_items_by_sku")
 	defer span.End()

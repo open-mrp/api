@@ -152,6 +152,10 @@ type ReceivingOrderLine struct {
 	Item *Item `json:"item" expandable:"true"`
 	// Quantity the purchase order asked for on this line, which `quantity` is measured against.
 	QuantityOrdered *Quantity `json:"quantity_ordered" expandable:"true"`
+	// The purchase order line this line receives against.
+	//
+	// The receiving line is raised from a purchase order line and carries that line's item and ordered quantity directly; expand this to read the rest of it, including the agreed unit price.
+	OrderLine *PurchaseOrderLine `json:"order_line" expandable:"true"`
 	// Timestamp when the received quantity was stocked into inventory.
 	//
 	// Once set, the line counts toward the order's `totals.stocked.completion`. Voiding the line or the whole order clears it, but does not reverse the inventory that was already received.

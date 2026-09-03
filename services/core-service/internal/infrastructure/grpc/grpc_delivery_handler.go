@@ -148,6 +148,7 @@ func deliveryLineToProto(l *domain.DeliveryLine) *pb.DeliveryLineInfo {
 		QuantityValue:                       l.QuantityValue,
 		QuantityUnitId:                      l.QuantityUnitID,
 		QuantityUnitAbbreviation:            l.QuantityUnitAbbreviation,
+		OrderLineId:                         l.OrderLineID,
 		UnitCostId:                          l.UnitCostID,
 		UnitCostValue:                       l.UnitCostValue,
 		UnitCostNumeratorUnitId:             l.UnitCostNumeratorUnitID,

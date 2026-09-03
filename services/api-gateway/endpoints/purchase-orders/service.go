@@ -165,11 +165,6 @@ func (m *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, req *Cre
 			UnitPriceNumeratorUnitId:   l.UnitPrice.NumeratorUnitID,
 			UnitPriceDenominatorUnitId: l.UnitPrice.DenominatorUnitID,
 		}
-		if uc, ok := l.UnitCost.Value(); ok {
-			lines[i].UnitCostValue = &uc.Value
-			lines[i].UnitCostNumeratorUnitId = &uc.NumeratorUnitID
-			lines[i].UnitCostDenominatorUnitId = &uc.DenominatorUnitID
-		}
 	}
 
 	pbReq := &pb.CreatePurchaseOrderRequest{
@@ -316,11 +311,6 @@ func (m *purchaseOrderSvcImpl) CreatePurchaseOrderLine(ctx context.Context, req 
 		UnitPriceNumeratorUnitId:   req.UnitPrice.NumeratorUnitID,
 		UnitPriceDenominatorUnitId: req.UnitPrice.DenominatorUnitID,
 	}
-	if uc, ok := req.UnitCost.Value(); ok {
-		pbReq.UnitCostValue = &uc.Value
-		pbReq.UnitCostNumeratorUnitId = &uc.NumeratorUnitID
-		pbReq.UnitCostDenominatorUnitId = &uc.DenominatorUnitID
-	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, purchaseOrderEpSvcTracer, "service.purchase_orders.create_line", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreatePurchaseOrderLineResponse, error) {
@@ -352,9 +342,6 @@ func (m *purchaseOrderSvcImpl) UpdatePurchaseOrderLine(ctx context.Context, req 
 		UnitPriceValue:             req.UnitPriceValue.Ptr(),
 		UnitPriceNumeratorUnitId:   req.UnitPriceNumeratorUnitID.Ptr(),
 		UnitPriceDenominatorUnitId: req.UnitPriceDenominatorUnitID.Ptr(),
-		UnitCostValue:              req.UnitCostValue.Ptr(),
-		UnitCostNumeratorUnitId:    req.UnitCostNumeratorUnitID.Ptr(),
-		UnitCostDenominatorUnitId:  req.UnitCostDenominatorUnitID.Ptr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, purchaseOrderEpSvcTracer, "service.purchase_orders.update_line", domain.ServiceName,
@@ -749,20 +736,6 @@ func purchaseOrderLineDetailFromProto(ctx context.Context, info *pb.PurchaseOrde
 	}
 	meta.Set(constants.ObjectTypeRate, info.UnitPriceId, "numerator_unit_id", info.UnitPriceNumeratorUnitId)
 	meta.Set(constants.ObjectTypeRate, info.UnitPriceId, "denominator_unit_id", info.UnitPriceDenominatorUnitId)
-
-	if info.UnitCostId != nil {
-		l.UnitCost = &apiresource.Rate{
-			ID:     *info.UnitCostId,
-			Object: constants.ObjectTypeRate,
-			Value:  info.GetUnitCostValue(),
-			DisplayValue: apiresource.FormatRateDisplayValue(
-				info.GetUnitCostValue(), info.GetUnitCostNumeratorUnitAbbreviation(), "", info.GetUnitCostDenominatorUnitAbbreviation()),
-			CreatedAt: grpcutil.TimestampToTime(info.UnitCostCreatedAt),
-			UpdatedAt: grpcutil.TimestampToTime(info.UnitCostUpdatedAt),
-		}
-		meta.Set(constants.ObjectTypeRate, *info.UnitCostId, "numerator_unit_id", info.GetUnitCostNumeratorUnitId())
-		meta.Set(constants.ObjectTypeRate, *info.UnitCostId, "denominator_unit_id", info.GetUnitCostDenominatorUnitId())
-	}
 
 	return l
 }

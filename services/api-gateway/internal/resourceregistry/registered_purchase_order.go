@@ -60,12 +60,6 @@ func init() {
 				Cardinality: resourcekit.CardinalityOnePtr,
 				ExtractRefs: extractUnitPriceRefFromPOLine,
 			},
-			{
-				Key:         "unit_cost",
-				Target:      constants.ObjectTypeRate,
-				Cardinality: resourcekit.CardinalityOnePtr,
-				ExtractRefs: extractUnitCostRefFromPOLine,
-			},
 		},
 	})
 }
@@ -116,14 +110,6 @@ func extractUnitPriceRefFromPOLine(_ context.Context, parent any) []any {
 		return nil
 	}
 	return []any{l.UnitPrice}
-}
-
-func extractUnitCostRefFromPOLine(_ context.Context, parent any) []any {
-	l := parent.(*apiresource.PurchaseOrderLine)
-	if l.UnitCost == nil {
-		return nil
-	}
-	return []any{l.UnitCost}
 }
 
 func populateSupplierOnPO(ctx context.Context, parent any, _ map[string]any) {

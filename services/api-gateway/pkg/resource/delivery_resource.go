@@ -123,6 +123,10 @@ type DeliveryLine struct {
 	//
 	// Set only when a lot number was supplied while stocking, and applied to every line produced from that receiving order line, including the refused one.
 	Lot *Lot `json:"lot" expandable:"true"`
+	// The purchase order line the stocked goods were ordered on.
+	//
+	// A delivery line is stocked against a receiving order line, which is itself raised from a purchase order line. This is that line, so the unit cost recorded here can be read back against the price it was agreed at.
+	OrderLine *PurchaseOrderLine `json:"order_line" expandable:"true"`
 	// When the goods on this line were accepted into inventory.
 	AcceptedAt *time.Time `json:"accepted_at"`
 	// When the goods on this line were refused on inspection.

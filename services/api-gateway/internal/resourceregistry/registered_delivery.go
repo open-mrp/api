@@ -32,6 +32,13 @@ func init() {
 		Load:       resourceloaders.LoadDeliveryLines,
 		Subs: []resourcekit.SubField{
 			{
+				Key:         "order_line",
+				Target:      constants.ObjectTypePurchaseOrderLine,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractIDs:  extractOrderLineIDFromDeliveryLine,
+				Populate:    populateOrderLineOnDeliveryLine,
+			},
+			{
 				Key:         "item",
 				Target:      constants.ObjectTypeItem,
 				Cardinality: resourcekit.CardinalityOnePtr,
@@ -172,4 +179,24 @@ func loadedByMetaID(ctx context.Context, lineID, key string, loaded map[string]a
 	}
 	v, ok := loaded[id]
 	return v, ok
+}
+
+func extractOrderLineIDFromDeliveryLine(ctx context.Context, parent any) []string {
+	l := parent.(*apiresource.DeliveryLine)
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeDeliveryLine, l.ID, "order_line_id")
+	if id == "" {
+		return nil
+	}
+	return []string{id}
+}
+
+func populateOrderLineOnDeliveryLine(ctx context.Context, parent any, loaded map[string]any) {
+	l := parent.(*apiresource.DeliveryLine)
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeDeliveryLine, l.ID, "order_line_id")
+	if id == "" {
+		return
+	}
+	if v, ok := loaded[id]; ok {
+		l.OrderLine = v.(*apiresource.PurchaseOrderLine)
+	}
 }

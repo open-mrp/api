@@ -221,6 +221,8 @@ func stashDeliveryLineMeta(meta *resourcekit.LoadMeta, l *pb.DeliveryLineInfo, l
 	}
 	// The unit the line's quantity is counted in, for `lines.quantity.unit`.
 	meta.Set(constants.ObjectTypeQuantity, line.Quantity.ID, "unit_id", l.QuantityUnitId)
+	// The purchase order line the goods were ordered on, resolved through the PO line loader.
+	meta.Set(constants.ObjectTypeDeliveryLine, line.ID, "order_line_id", l.OrderLineId)
 
 	// The delivery query returns the rate in full, so `lines.unit_cost` is a complete rate rather
 	// than an id and a bare number. Its two units stay behind their own includes, the same as on

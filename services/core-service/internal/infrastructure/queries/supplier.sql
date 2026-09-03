@@ -33,11 +33,6 @@ SELECT
     sg.country AS default_shipping_country,
     sa.created_at AS default_shipping_address_created_at,
     sa.updated_at AS default_shipping_address_updated_at,
-    (
-        SELECT COUNT(*) FROM supplier_material sm
-        WHERE sm.supplier_account_id = ar.counterparty_account_id
-          AND sm.owner_account_id = ar.owner_account_id
-    ) AS material_count,
     ar.created_at,
     ar.updated_at
 FROM account_relation ar
@@ -114,11 +109,6 @@ SELECT
     sg.country AS default_shipping_country,
     sa.created_at AS default_shipping_address_created_at,
     sa.updated_at AS default_shipping_address_updated_at,
-    (
-        SELECT COUNT(*) FROM supplier_material sm
-        WHERE sm.supplier_account_id = ar.counterparty_account_id
-          AND sm.owner_account_id = ar.owner_account_id
-    ) AS material_count,
     ar.created_at,
     ar.updated_at
 FROM account_relation ar
@@ -236,11 +226,6 @@ SELECT
     sg.country AS default_shipping_country,
     sa.created_at AS default_shipping_address_created_at,
     sa.updated_at AS default_shipping_address_updated_at,
-    (
-        SELECT COUNT(*) FROM supplier_material sm
-        WHERE sm.supplier_account_id = ar.counterparty_account_id
-          AND sm.owner_account_id = ar.owner_account_id
-    ) AS material_count,
     ar.created_at,
     ar.updated_at
 FROM account_relation ar

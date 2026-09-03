@@ -29,12 +29,11 @@ func supplierSummaryID(s *domain.SupplierSummary) string           { return s.ID
 
 func mapSupplierForwardRow(row sqlc.ListSuppliersForwardRow, includes []string) *domain.SupplierSummary {
 	summary := &domain.SupplierSummary{
-		ID:            row.AccountID,
-		Name:          row.AccountName,
-		Number:        row.ExternalNumber,
-		MaterialCount: row.MaterialCount,
-		CreatedAt:     row.CreatedAt,
-		UpdatedAt:     row.UpdatedAt,
+		ID:        row.AccountID,
+		Name:      row.AccountName,
+		Number:    row.ExternalNumber,
+		CreatedAt: row.CreatedAt,
+		UpdatedAt: row.UpdatedAt,
 	}
 	if row.Notes.Valid {
 		summary.Note = &row.Notes.String
@@ -254,7 +253,6 @@ func (r *supplierRepoImpl) Get(ctx context.Context, params domain.GetSupplierPar
 		Note:          nullStringPtr(row.Notes),
 		BillToAddress: billToAddress,
 		ShipToAddress: shipToAddress,
-		MaterialCount: row.MaterialCount,
 		CreatedAt:     row.CreatedAt,
 		UpdatedAt:     row.UpdatedAt,
 	}, nil

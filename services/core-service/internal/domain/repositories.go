@@ -1325,6 +1325,7 @@ type PurchaseOrderRepo interface {
 	List(ctx context.Context, params ListPurchaseOrdersParams) (*ListPurchaseOrdersResult, *apierror.APIError)
 	Get(ctx context.Context, accountID, purchaseOrderID string) (*PurchaseOrder, *apierror.APIError)
 	GetLines(ctx context.Context, salesOrderID string) ([]*PurchaseOrderLine, *apierror.APIError)
+	GetLinesByIDs(ctx context.Context, accountID string, ids []string) ([]*PurchaseOrderLine, *apierror.APIError)
 	Create(ctx context.Context, id string, params CreatePurchaseOrderParams) (*PurchaseOrder, *apierror.APIError)
 	Update(ctx context.Context, params UpdatePurchaseOrderParams) (*PurchaseOrder, *apierror.APIError)
 	Delete(ctx context.Context, accountID, purchaseOrderID string) *apierror.APIError

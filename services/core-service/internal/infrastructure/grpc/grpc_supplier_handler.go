@@ -19,7 +19,6 @@ func supplierSummaryToProto(s *domain.SupplierSummary) *pb.SupplierSummaryProto 
 		Note:            s.Note,
 		BillToAddressId: s.BillToAddressID,
 		ShipToAddressId: s.ShipToAddressID,
-		MaterialCount:   s.MaterialCount,
 		CreatedAt:       timestamppb.New(s.CreatedAt),
 		UpdatedAt:       timestamppb.New(s.UpdatedAt),
 	}
@@ -34,13 +33,12 @@ func supplierSummaryToProto(s *domain.SupplierSummary) *pb.SupplierSummaryProto 
 
 func supplierToProto(s *domain.Supplier) *pb.SupplierProto {
 	p := &pb.SupplierProto{
-		Id:            s.ID,
-		Name:          s.Name,
-		Number:        s.Number,
-		Note:          s.Note,
-		MaterialCount: s.MaterialCount,
-		CreatedAt:     timestamppb.New(s.CreatedAt),
-		UpdatedAt:     timestamppb.New(s.UpdatedAt),
+		Id:        s.ID,
+		Name:      s.Name,
+		Number:    s.Number,
+		Note:      s.Note,
+		CreatedAt: timestamppb.New(s.CreatedAt),
+		UpdatedAt: timestamppb.New(s.UpdatedAt),
 	}
 
 	if s.BillToAddress != nil {

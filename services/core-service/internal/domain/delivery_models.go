@@ -42,7 +42,10 @@ type Delivery struct {
 
 // DeliveryLine represents a line item in a delivery.
 type DeliveryLine struct {
-	ID                        string
+	ID string
+	// The purchase order line the goods were ordered on, reached through the receiving line this
+	// delivery line was stocked against.
+	OrderLineID               string
 	ItemID                    *string
 	ItemSKU                   *string
 	ItemDescription           *string

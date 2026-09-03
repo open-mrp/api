@@ -465,6 +465,7 @@ func init() {
 	RegisterIncludes(&ObjectIncludes{
 		ObjectType: constants.ObjectTypeDeliveryLine,
 		Fields: []IncludeFieldDef{
+			{Key: "order_line", ObjectType: constants.ObjectTypePurchaseOrderLine},
 			{Key: "item", ObjectType: constants.ObjectTypeItem},
 			// The quantity is always on the line; naming it here is what lets a caller reach through it to the unit it is counted in.
 			{Key: "quantity", ObjectType: constants.ObjectTypeQuantity},
@@ -503,6 +504,7 @@ func init() {
 	RegisterIncludes(&ObjectIncludes{
 		ObjectType: constants.ObjectTypeReceivingOrderLine,
 		Fields: []IncludeFieldDef{
+			{Key: "order_line", ObjectType: constants.ObjectTypePurchaseOrderLine},
 			{Key: "item", ObjectType: constants.ObjectTypeItem},
 			// Both quantities are always on the line; naming them here is what lets a caller reach through to the units they are counted in. The rejected figure needs no entry — it is computed, and arrives with its unit already.
 			{Key: "quantity", ObjectType: constants.ObjectTypeQuantity},
@@ -631,7 +633,6 @@ func init() {
 			// The quantity and the two rates are always on the line; naming them here is what lets a caller reach through to the units they are counted in.
 			{Key: "quantity_ordered", ObjectType: constants.ObjectTypeQuantity},
 			{Key: "unit_price", ObjectType: constants.ObjectTypeRate},
-			{Key: "unit_cost", ObjectType: constants.ObjectTypeRate},
 		},
 	})
 

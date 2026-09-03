@@ -77,7 +77,7 @@ func (e *UpdatePurchaseOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Up
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypePurchaseOrder,
-			Fields:     []string{"supplier", "bill_to_address", "ship_to_address", "freight", "payment_term", "shipping_term", "related", "related.receiving_order", "related.deliveries", "lines", "lines.item", "lines.quantity_ordered", "lines.quantity_ordered.unit", "lines.unit_price", "lines.unit_price.numerator_unit", "lines.unit_price.denominator_unit", "lines.unit_cost", "lines.unit_cost.numerator_unit", "lines.unit_cost.denominator_unit", "contacts"},
+			Fields:     []string{"supplier", "bill_to_address", "ship_to_address", "freight", "payment_term", "shipping_term", "related", "related.receiving_order", "related.deliveries", "lines", "lines.item", "lines.quantity_ordered", "lines.quantity_ordered.unit", "lines.unit_price", "lines.unit_price.numerator_unit", "lines.unit_price.denominator_unit", "contacts"},
 		}),
 	})
 }

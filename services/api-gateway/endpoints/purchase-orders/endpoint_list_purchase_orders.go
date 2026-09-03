@@ -59,7 +59,6 @@ func (e *ListPurchaseOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*Lis
 				"supplier", "lines", "lines.item",
 				"lines.quantity_ordered", "lines.quantity_ordered.unit",
 				"lines.unit_price", "lines.unit_price.numerator_unit", "lines.unit_price.denominator_unit",
-				"lines.unit_cost", "lines.unit_cost.numerator_unit", "lines.unit_cost.denominator_unit",
 			},
 		}),
 	})

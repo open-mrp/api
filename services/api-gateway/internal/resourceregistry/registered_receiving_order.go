@@ -56,6 +56,13 @@ func init() {
 				ExtractRefs: extractQuantityOrderedRefFromReceivingOrderLine,
 			},
 			{
+				Key:         "order_line",
+				Target:      constants.ObjectTypePurchaseOrderLine,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractIDs:  extractOrderLineIDFromReceivingOrderLine,
+				Populate:    populateOrderLineOnReceivingOrderLine,
+			},
+			{
 				// The quantity is already on the line — this exists so a caller can reach through it to the unit.
 				Key:         "quantity",
 				Target:      constants.ObjectTypeQuantity,
@@ -159,4 +166,24 @@ func populateQuantityOrderedOnReceivingOrderLine(ctx context.Context, parent any
 		return
 	}
 	l.QuantityOrdered = v.(*apiresource.Quantity)
+}
+
+func extractOrderLineIDFromReceivingOrderLine(ctx context.Context, parent any) []string {
+	l := parent.(*apiresource.ReceivingOrderLine)
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeReceivingOrderLine, l.ID, "order_line_id")
+	if id == "" {
+		return nil
+	}
+	return []string{id}
+}
+
+func populateOrderLineOnReceivingOrderLine(ctx context.Context, parent any, loaded map[string]any) {
+	l := parent.(*apiresource.ReceivingOrderLine)
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeReceivingOrderLine, l.ID, "order_line_id")
+	if id == "" {
+		return
+	}
+	if v, ok := loaded[id]; ok {
+		l.OrderLine = v.(*apiresource.PurchaseOrderLine)
+	}
 }

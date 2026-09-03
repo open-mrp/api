@@ -380,6 +380,9 @@ SELECT
     q.value AS quantity_value,
     qu.id AS quantity_unit_id,
     qu.abbreviation AS quantity_unit_abbreviation,
+    -- The purchase order line the goods were ordered on, reached through the receiving line this
+    -- delivery line was stocked against.
+    sol.id AS order_line_id,
     r.id AS unit_cost_id,
     r.value AS unit_cost_value,
     r.numerator_unit_id AS unit_cost_numerator_unit_id,
@@ -420,6 +423,7 @@ type ListDeliveryLinesRow struct {
 	QuantityValue                       string
 	QuantityUnitID                      string
 	QuantityUnitAbbreviation            string
+	OrderLineID                         string
 	UnitCostID                          string
 	UnitCostValue                       string
 	UnitCostNumeratorUnitID             string
@@ -456,6 +460,7 @@ func (q *Queries) ListDeliveryLines(ctx context.Context, deliveryID string) ([]L
 			&i.QuantityValue,
 			&i.QuantityUnitID,
 			&i.QuantityUnitAbbreviation,
+			&i.OrderLineID,
 			&i.UnitCostID,
 			&i.UnitCostValue,
 			&i.UnitCostNumeratorUnitID,

@@ -371,6 +371,7 @@ func mapDeliveryLineRow(row sqlc.ListDeliveryLinesRow) *domain.DeliveryLine {
 		QuantityValue:                       row.QuantityValue,
 		QuantityUnitID:                      row.QuantityUnitID,
 		QuantityUnitAbbreviation:            row.QuantityUnitAbbreviation,
+		OrderLineID:                         row.OrderLineID,
 		UnitCostID:                          row.UnitCostID,
 		UnitCostValue:                       row.UnitCostValue,
 		UnitCostNumeratorUnitID:             row.UnitCostNumeratorUnitID,

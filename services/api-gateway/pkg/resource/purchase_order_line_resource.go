@@ -34,8 +34,6 @@ type PurchaseOrderLine struct {
 	QuantityReceived *ComputedQuantity `json:"quantity_received"`
 	// Agreed purchase price per unit for this line.
 	UnitPrice *Rate `json:"unit_price" validate:"required"`
-	// Recorded cost per unit, if captured separately from the purchase price.
-	UnitCost *Rate `json:"unit_cost"`
 	// Created timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Updated timestamp.
@@ -54,7 +52,6 @@ var SamplePurchaseOrderLine = &PurchaseOrderLine{
 	QuantityOrdered:    SampleQuantity,
 	QuantityReceived:   SampleComputedQuantity,
 	UnitPrice:          SampleRate,
-	UnitCost:           SampleRate,
 	CreatedAt:          timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:          timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }

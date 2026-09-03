@@ -492,6 +492,8 @@ func stashReceivingOrderLineMeta(meta *resourcekit.LoadMeta, info *pb.ReceivingO
 	if info.OrderLineItemId != nil && *info.OrderLineItemId != "" {
 		meta.Set(constants.ObjectTypeReceivingOrderLine, line.ID, "item_id", *info.OrderLineItemId)
 	}
+	// The purchase order line this line receives against, resolved through the PO line loader.
+	meta.Set(constants.ObjectTypeReceivingOrderLine, line.ID, "order_line_id", info.OrderLineId)
 	// The unit the line's own quantity is counted in, for `lines.quantity.unit`.
 	meta.Set(constants.ObjectTypeQuantity, line.Quantity.ID, "unit_id", info.QuantityUnitId)
 

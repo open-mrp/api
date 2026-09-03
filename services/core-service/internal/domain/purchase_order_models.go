@@ -168,8 +168,6 @@ type PurchaseOrderLine struct {
 	UnitCostNumeratorUnitAbbr   *string `audit:"unit_cost_numerator_unit_abbr"`
 	UnitCostDenominatorUnitID   *string `audit:"unit_cost_denominator_unit_id"`
 	UnitCostDenominatorUnitAbbr *string `audit:"unit_cost_denominator_unit_abbr"`
-	UnitCostCreatedAt           *time.Time
-	UnitCostUpdatedAt           *time.Time
 
 	CreatedAt time.Time
 	UpdatedAt time.Time

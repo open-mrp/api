@@ -219,14 +219,13 @@ func supplierDetailFromProto(s *pb.SupplierProto) apiresource.Supplier {
 	}
 
 	return apiresource.Supplier{
-		ID:            s.Id,
-		Object:        constants.ObjectTypeSupplier,
-		Name:          s.Name,
-		Number:        s.Number,
-		Note:          s.Note,
-		MaterialCount: s.MaterialCount,
-		CreatedAt:     grpcutil.TimestampToTimePtr(s.CreatedAt),
-		UpdatedAt:     grpcutil.TimestampToTimePtr(s.UpdatedAt),
+		ID:        s.Id,
+		Object:    constants.ObjectTypeSupplier,
+		Name:      s.Name,
+		Number:    s.Number,
+		Note:      s.Note,
+		CreatedAt: grpcutil.TimestampToTimePtr(s.CreatedAt),
+		UpdatedAt: grpcutil.TimestampToTimePtr(s.UpdatedAt),
 	}
 }
 
@@ -249,14 +248,13 @@ func supplierSummaryFromProto(s *pb.SupplierSummaryProto) apiresource.Supplier {
 	}
 
 	return apiresource.Supplier{
-		ID:            s.Id,
-		Object:        constants.ObjectTypeSupplier,
-		Name:          s.Name,
-		Number:        s.Number,
-		Note:          s.Note,
-		MaterialCount: s.MaterialCount,
-		CreatedAt:     grpcutil.TimestampToTimePtr(s.CreatedAt),
-		UpdatedAt:     grpcutil.TimestampToTimePtr(s.UpdatedAt),
+		ID:        s.Id,
+		Object:    constants.ObjectTypeSupplier,
+		Name:      s.Name,
+		Number:    s.Number,
+		Note:      s.Note,
+		CreatedAt: grpcutil.TimestampToTimePtr(s.CreatedAt),
+		UpdatedAt: grpcutil.TimestampToTimePtr(s.UpdatedAt),
 	}
 }
 

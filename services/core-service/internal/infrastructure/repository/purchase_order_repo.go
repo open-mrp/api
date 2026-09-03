@@ -187,6 +187,36 @@ func (r *purchaseOrderRepoImpl) Get(ctx context.Context, accountID, purchaseOrde
 	return po, nil
 }
 
+// GetLinesByIDs fetches purchase order lines by their own ids, for a receiving or delivery line that
+// names the line it was raised from. The query scopes them through the order they belong to, so a
+// line from another account's purchase order is simply not returned.
+func (r *purchaseOrderRepoImpl) GetLinesByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.PurchaseOrderLine, *apierror.APIError) {
+	ctx, span := purchaseOrderRepoTracer.Start(ctx, "repository.purchase_order.get_lines_by_ids")
+	defer span.End()
+
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.queries.GetPurchaseOrderLinesByIDs(ctx, sqlc.GetPurchaseOrderLinesByIDsParams{
+		Ids:       ids,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	// The two queries select the same columns, so the shared mapper covers both. SalesOrderID is
+	// left unset: the caller reached these lines from a receiving or delivery line rather than from
+	// an order, and nothing on the wire exposes it.
+	lines := make([]*domain.PurchaseOrderLine, len(rows))
+	for i, row := range rows {
+		lines[i] = mapPurchaseOrderLinesRow(sqlc.GetPurchaseOrderLinesRow(row))
+	}
+
+	return lines, nil
+}
+
 func (r *purchaseOrderRepoImpl) GetLines(ctx context.Context, salesOrderID string) ([]*domain.PurchaseOrderLine, *apierror.APIError) {
 	ctx, span := purchaseOrderRepoTracer.Start(ctx, "repository.purchase_order.get_lines")
 	defer span.End()
@@ -713,12 +743,6 @@ func mapPurchaseOrderLinesRow(row sqlc.GetPurchaseOrderLinesRow) *domain.Purchas
 	}
 	if row.UnitCostDenominatorUnitAbbreviation.Valid {
 		line.UnitCostDenominatorUnitAbbr = &row.UnitCostDenominatorUnitAbbreviation.String
-	}
-	if row.UnitCostCreatedAt.Valid {
-		line.UnitCostCreatedAt = &row.UnitCostCreatedAt.Time
-	}
-	if row.UnitCostUpdatedAt.Valid {
-		line.UnitCostUpdatedAt = &row.UnitCostUpdatedAt.Time
 	}
 
 	return line

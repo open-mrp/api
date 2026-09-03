@@ -123,6 +123,9 @@ message DeliveryLineInfo {
   optional google.protobuf.Timestamp rejected_at = 18;
   google.protobuf.Timestamp created_at = 19;
   google.protobuf.Timestamp updated_at = 20;
+  // The purchase order line the goods were ordered on, reached through the receiving line this
+  // delivery line was stocked against.
+  string order_line_id = 25;
 }
 message LightScanningStationInfo {
   string id = 1;
@@ -341,7 +344,6 @@ message SupplierSummaryProto {
   string id = 1;
   string name = 2;
   string number = 3;
-  int64 material_count = 4;
   google.protobuf.Timestamp created_at = 5;
   optional string note = 6;
   google.protobuf.Timestamp updated_at = 7;
@@ -360,7 +362,6 @@ message SupplierProto {
   optional string note = 4;
   optional CustomerAddressProto bill_to_address = 5;
   optional CustomerAddressProto ship_to_address = 6;
-  int64 material_count = 7;
   google.protobuf.Timestamp created_at = 8;
   google.protobuf.Timestamp updated_at = 9;
 }

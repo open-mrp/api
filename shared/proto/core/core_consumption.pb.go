@@ -966,8 +966,11 @@ type DeliveryLineInfo struct {
 	RejectedAt                          *timestamppb.Timestamp `protobuf:"bytes,18,opt,name=rejected_at,json=rejectedAt,proto3,oneof" json:"rejected_at,omitempty"`
 	CreatedAt                           *timestamppb.Timestamp `protobuf:"bytes,19,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt                           *timestamppb.Timestamp `protobuf:"bytes,20,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields                       protoimpl.UnknownFields
-	sizeCache                           protoimpl.SizeCache
+	// The purchase order line the goods were ordered on, reached through the receiving line this
+	// delivery line was stocked against.
+	OrderLineId   string `protobuf:"bytes,25,opt,name=order_line_id,json=orderLineId,proto3" json:"order_line_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *DeliveryLineInfo) Reset() {
@@ -1166,6 +1169,13 @@ func (x *DeliveryLineInfo) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
+}
+
+func (x *DeliveryLineInfo) GetOrderLineId() string {
+	if x != nil {
+		return x.OrderLineId
+	}
+	return ""
 }
 
 type LightScanningStationInfo struct {
@@ -3718,14 +3728,13 @@ func (x *BulkUpsertLocationsResponse) GetJob() *JobInfo {
 }
 
 type SupplierSummaryProto struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Number        string                 `protobuf:"bytes,3,opt,name=number,proto3" json:"number,omitempty"`
-	MaterialCount int64                  `protobuf:"varint,4,opt,name=material_count,json=materialCount,proto3" json:"material_count,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	Note          *string                `protobuf:"bytes,6,opt,name=note,proto3,oneof" json:"note,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Id        string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name      string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Number    string                 `protobuf:"bytes,3,opt,name=number,proto3" json:"number,omitempty"`
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Note      *string                `protobuf:"bytes,6,opt,name=note,proto3,oneof" json:"note,omitempty"`
+	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	// The default addresses as ids, always present.
 	BillToAddressId *string `protobuf:"bytes,8,opt,name=bill_to_address_id,json=billToAddressId,proto3,oneof" json:"bill_to_address_id,omitempty"`
 	ShipToAddressId *string `protobuf:"bytes,9,opt,name=ship_to_address_id,json=shipToAddressId,proto3,oneof" json:"ship_to_address_id,omitempty"`
@@ -3788,13 +3797,6 @@ func (x *SupplierSummaryProto) GetNumber() string {
 	return ""
 }
 
-func (x *SupplierSummaryProto) GetMaterialCount() int64 {
-	if x != nil {
-		return x.MaterialCount
-	}
-	return 0
-}
-
 func (x *SupplierSummaryProto) GetCreatedAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.CreatedAt
@@ -3852,7 +3854,6 @@ type SupplierProto struct {
 	Note          *string                `protobuf:"bytes,4,opt,name=note,proto3,oneof" json:"note,omitempty"`
 	BillToAddress *CustomerAddressProto  `protobuf:"bytes,5,opt,name=bill_to_address,json=billToAddress,proto3,oneof" json:"bill_to_address,omitempty"`
 	ShipToAddress *CustomerAddressProto  `protobuf:"bytes,6,opt,name=ship_to_address,json=shipToAddress,proto3,oneof" json:"ship_to_address,omitempty"`
-	MaterialCount int64                  `protobuf:"varint,7,opt,name=material_count,json=materialCount,proto3" json:"material_count,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -3929,13 +3930,6 @@ func (x *SupplierProto) GetShipToAddress() *CustomerAddressProto {
 		return x.ShipToAddress
 	}
 	return nil
-}
-
-func (x *SupplierProto) GetMaterialCount() int64 {
-	if x != nil {
-		return x.MaterialCount
-	}
-	return 0
 }
 
 func (x *SupplierProto) GetCreatedAt() *timestamppb.Timestamp {
@@ -6177,8 +6171,7 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\f_accepted_atB\x0e\n" +
 	"\f_rejected_atB\x15\n" +
 	"\x13_receiving_order_idB\x19\n" +
-	"\x17_receiving_order_number\"\xe0\n" +
-	"\n" +
+	"\x17_receiving_order_number\"\x84\v\n" +
 	"\x10DeliveryLineInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1c\n" +
 	"\aitem_id\x18\x02 \x01(\tH\x00R\x06itemId\x88\x01\x01\x12\x1e\n" +
@@ -6212,7 +6205,8 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x13 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\x14 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\n" +
+	"updated_at\x18\x14 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\"\n" +
+	"\rorder_line_id\x18\x19 \x01(\tR\vorderLineIdB\n" +
 	"\n" +
 	"\b_item_idB\v\n" +
 	"\t_item_skuB\x13\n" +
@@ -6450,12 +6444,11 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\x1aBulkUpsertLocationsRequest\x12;\n" +
 	"\tlocations\x18\x01 \x03(\v2\x1d.core.BulkUpsertLocationInputR\tlocations\">\n" +
 	"\x1bBulkUpsertLocationsResponse\x12\x1f\n" +
-	"\x03job\x18\x01 \x01(\v2\r.core.JobInfoR\x03job\"\xab\x04\n" +
+	"\x03job\x18\x01 \x01(\v2\r.core.JobInfoR\x03job\"\x84\x04\n" +
 	"\x14SupplierSummaryProto\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x16\n" +
-	"\x06number\x18\x03 \x01(\tR\x06number\x12%\n" +
-	"\x0ematerial_count\x18\x04 \x01(\x03R\rmaterialCount\x129\n" +
+	"\x06number\x18\x03 \x01(\tR\x06number\x129\n" +
 	"\n" +
 	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12\x17\n" +
 	"\x04note\x18\x06 \x01(\tH\x00R\x04note\x88\x01\x01\x129\n" +
@@ -6468,15 +6461,14 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\x0fship_to_address\x18\v \x01(\v2\x1a.core.CustomerAddressProtoR\rshipToAddressB\a\n" +
 	"\x05_noteB\x15\n" +
 	"\x13_bill_to_address_idB\x15\n" +
-	"\x13_ship_to_address_id\"\xc4\x03\n" +
+	"\x13_ship_to_address_id\"\x9d\x03\n" +
 	"\rSupplierProto\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x16\n" +
 	"\x06number\x18\x03 \x01(\tR\x06number\x12\x17\n" +
 	"\x04note\x18\x04 \x01(\tH\x00R\x04note\x88\x01\x01\x12G\n" +
 	"\x0fbill_to_address\x18\x05 \x01(\v2\x1a.core.CustomerAddressProtoH\x01R\rbillToAddress\x88\x01\x01\x12G\n" +
-	"\x0fship_to_address\x18\x06 \x01(\v2\x1a.core.CustomerAddressProtoH\x02R\rshipToAddress\x88\x01\x01\x12%\n" +
-	"\x0ematerial_count\x18\a \x01(\x03R\rmaterialCount\x129\n" +
+	"\x0fship_to_address\x18\x06 \x01(\v2\x1a.core.CustomerAddressProtoH\x02R\rshipToAddress\x88\x01\x01\x129\n" +
 	"\n" +
 	"created_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +

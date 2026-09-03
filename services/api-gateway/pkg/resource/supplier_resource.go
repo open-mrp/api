@@ -32,8 +32,6 @@ type Supplier struct {
 	ShipToAddress *Address `json:"ship_to_address" expandable:"true"`
 	// Number of materials sourced from this supplier.
 	//
-	// Counts every material linked to the supplier, including links whose status is `inactive`. Zero on a supplier named from another document, which does not count them.
-	MaterialCount int64 `json:"material_count"`
 	// Creation timestamp.
 	//
 	// Null on a supplier named from another document, which carries its identity rather than its record.
@@ -52,7 +50,6 @@ var SampleSupplier = &Supplier{
 	Number:        SampleSupplierNumber,
 	BillToAddress: SampleAddress,
 	ShipToAddress: SampleAddress,
-	MaterialCount: 5,
 	CreatedAt:     &sampleSupplierCreatedAt,
 	UpdatedAt:     &sampleSupplierUpdatedAt,
 }

@@ -36,12 +36,6 @@ type UpdatePurchaseOrderLineRequest struct {
 	UnitPriceNumeratorUnitID field.Optional[string] `json:"unit_price_numerator_unit_id,omitzero" validate:"omitempty"`
 	// ID of the unit price's denominator unit (the unit the price is per).
 	UnitPriceDenominatorUnitID field.Optional[string] `json:"unit_price_denominator_unit_id,omitzero" validate:"omitempty"`
-	// Recorded cost per unit, as a decimal string.
-	UnitCostValue field.Optional[string] `json:"unit_cost_value,omitzero" format:"decimal"`
-	// ID of the unit cost's numerator unit (e.g. a currency unit).
-	UnitCostNumeratorUnitID field.Optional[string] `json:"unit_cost_numerator_unit_id,omitzero" validate:"omitempty"`
-	// ID of the unit cost's denominator unit (the unit the cost is per).
-	UnitCostDenominatorUnitID field.Optional[string] `json:"unit_cost_denominator_unit_id,omitzero" validate:"omitempty"`
 }
 
 var sampleUpdatePOLineProductID = apiresource.SampleProductID

@@ -120,7 +120,6 @@ var includeHydrationSkipFields = map[string]bool{
 // Keyed by object type: these are properties of a resource's reference shape, shared across every
 // endpoint that includes it. An empty map (all entries removed) is the goal.
 var includeHydrationKnownGaps = map[string]map[string]string{
-	"supplier":       {"material_count": "computed aggregate; reference include leaves it 0"},
 	"order_discount": {"order_count": "computed aggregate; reference include leaves it 0"},
 	"shipment":       {"case_count": "computed aggregate; reference include leaves it 0"},
 	"sales_order":    {"line_count": "computed aggregate; reference include leaves it 0"},

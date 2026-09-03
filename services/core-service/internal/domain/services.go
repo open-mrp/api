@@ -1318,6 +1318,7 @@ type SalesOrderLineSvc interface {
 type PurchaseOrderSvc interface {
 	ListPurchaseOrders(ctx context.Context, params ListPurchaseOrdersParams) (*ListPurchaseOrdersResult, *apierror.APIError)
 	GetPurchaseOrder(ctx context.Context, params GetPurchaseOrderParams) (*PurchaseOrder, *apierror.APIError)
+	BatchGetPurchaseOrderLinesByIDs(ctx context.Context, ids []string) ([]*PurchaseOrderLine, *apierror.APIError)
 	CreatePurchaseOrder(ctx context.Context, params CreatePurchaseOrderParams) (*PurchaseOrder, *apierror.APIError)
 	UpdatePurchaseOrder(ctx context.Context, params UpdatePurchaseOrderParams) (*PurchaseOrder, *apierror.APIError)
 	DeletePurchaseOrder(ctx context.Context, params DeletePurchaseOrderParams) *apierror.APIError

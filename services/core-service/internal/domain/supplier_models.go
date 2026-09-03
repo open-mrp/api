@@ -14,7 +14,6 @@ type Supplier struct {
 	Note          *string          `audit:"note"`
 	BillToAddress *CustomerAddress `audit:"bill_to_address"`
 	ShipToAddress *CustomerAddress `audit:"ship_to_address"`
-	MaterialCount int64
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 }
@@ -33,7 +32,6 @@ type SupplierSummary struct {
 	ShipToAddressID *string
 	BillToAddress   *CustomerAddress
 	ShipToAddress   *CustomerAddress
-	MaterialCount   int64
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 }

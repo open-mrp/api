@@ -275,11 +275,6 @@ SELECT
     sg.country AS default_shipping_country,
     sa.created_at AS default_shipping_address_created_at,
     sa.updated_at AS default_shipping_address_updated_at,
-    (
-        SELECT COUNT(*) FROM supplier_material sm
-        WHERE sm.supplier_account_id = ar.counterparty_account_id
-          AND sm.owner_account_id = ar.owner_account_id
-    ) AS material_count,
     ar.created_at,
     ar.updated_at
 FROM account_relation ar
@@ -332,7 +327,6 @@ type GetSupplierRow struct {
 	DefaultShippingCountry          sql.NullString
 	DefaultShippingAddressCreatedAt sql.NullTime
 	DefaultShippingAddressUpdatedAt sql.NullTime
-	MaterialCount                   int64
 	CreatedAt                       time.Time
 	UpdatedAt                       time.Time
 }
@@ -374,7 +368,6 @@ func (q *Queries) GetSupplier(ctx context.Context, arg GetSupplierParams) (GetSu
 		&i.DefaultShippingCountry,
 		&i.DefaultShippingAddressCreatedAt,
 		&i.DefaultShippingAddressUpdatedAt,
-		&i.MaterialCount,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -477,11 +470,6 @@ SELECT
     sg.country AS default_shipping_country,
     sa.created_at AS default_shipping_address_created_at,
     sa.updated_at AS default_shipping_address_updated_at,
-    (
-        SELECT COUNT(*) FROM supplier_material sm
-        WHERE sm.supplier_account_id = ar.counterparty_account_id
-          AND sm.owner_account_id = ar.owner_account_id
-    ) AS material_count,
     ar.created_at,
     ar.updated_at
 FROM account_relation ar
@@ -569,7 +557,6 @@ type ListSuppliersBackwardRow struct {
 	DefaultShippingCountry          sql.NullString
 	DefaultShippingAddressCreatedAt sql.NullTime
 	DefaultShippingAddressUpdatedAt sql.NullTime
-	MaterialCount                   int64
 	CreatedAt                       time.Time
 	UpdatedAt                       time.Time
 }
@@ -640,7 +627,6 @@ func (q *Queries) ListSuppliersBackward(ctx context.Context, arg ListSuppliersBa
 			&i.DefaultShippingCountry,
 			&i.DefaultShippingAddressCreatedAt,
 			&i.DefaultShippingAddressUpdatedAt,
-			&i.MaterialCount,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -692,11 +678,6 @@ SELECT
     sg.country AS default_shipping_country,
     sa.created_at AS default_shipping_address_created_at,
     sa.updated_at AS default_shipping_address_updated_at,
-    (
-        SELECT COUNT(*) FROM supplier_material sm
-        WHERE sm.supplier_account_id = ar.counterparty_account_id
-          AND sm.owner_account_id = ar.owner_account_id
-    ) AS material_count,
     ar.created_at,
     ar.updated_at
 FROM account_relation ar
@@ -785,7 +766,6 @@ type ListSuppliersForwardRow struct {
 	DefaultShippingCountry          sql.NullString
 	DefaultShippingAddressCreatedAt sql.NullTime
 	DefaultShippingAddressUpdatedAt sql.NullTime
-	MaterialCount                   int64
 	CreatedAt                       time.Time
 	UpdatedAt                       time.Time
 }
@@ -857,7 +837,6 @@ func (q *Queries) ListSuppliersForward(ctx context.Context, arg ListSuppliersFor
 			&i.DefaultShippingCountry,
 			&i.DefaultShippingAddressCreatedAt,
 			&i.DefaultShippingAddressUpdatedAt,
-			&i.MaterialCount,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {

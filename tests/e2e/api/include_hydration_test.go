@@ -996,3 +996,105 @@ func TestBatches_MeasureUnitIsNullWithoutInclude(t *testing.T) {
 		}
 	}
 }
+
+// --- The purchase order line a receipt was raised from ---
+
+// assertPurchaseOrderLineHydrated asserts an order line arrived as a whole record. The receiving and
+// delivery lines that name it carry only its id, so `product_sku`, the ordered quantity and the
+// agreed unit price are the tell: a presenter that builds the line itself leaves them blank.
+func assertPurchaseOrderLineHydrated(t *testing.T, line map[string]any, where string) {
+	t.Helper()
+
+	require.NotNil(t, line, "%s must be present", where)
+	assertObjectField(t, line, "purchase_order_line")
+	assert.NotEmpty(t, jsonField(line, "id"), "%s.id", where)
+	assert.NotEmpty(t, jsonField(line, "product_sku"), "%s.product_sku — required, and absent from the line that names it", where)
+	assertValidTimestamp(t, jsonField(line, "created_at"), where+".created_at")
+	assertValidTimestamp(t, jsonField(line, "updated_at"), where+".updated_at")
+
+	assertQuantityHydrated(t, jsonObject(line, "quantity_ordered"), where+".quantity_ordered")
+	assertRateHydrated(t, jsonObject(line, "unit_price"), where+".unit_price")
+
+	// A purchase line records one agreed price, and that price is the cost — there is no separate
+	// unit_cost on it.
+	assert.NotContains(t, line, "unit_cost", "%s reports one price, not a price and a cost", where)
+
+	// The line's own expandables were not asked for, so they stay null.
+	assertNilField(t, line, "item")
+}
+
+// A receiving order line is raised from a purchase order line. It carries that line's item and
+// ordered quantity directly; the line itself is an include, so the agreed price is one request away
+// rather than a second round trip to the order.
+func TestReceivingOrders_LineOrderLineExpandsFullyHydrated(t *testing.T) {
+	t.Parallel()
+
+	line, body := firstLineWith(t, receivingOrdersPath+"/"+SeedReceivingOrderID, "lines", "lines.order_line")
+	orderLine := jsonObject(line, "order_line")
+	require.NotNil(t, orderLine, "a receiving line is always raised from an order line: %s", string(body))
+	assertPurchaseOrderLineHydrated(t, orderLine, "lines.order_line")
+}
+
+func TestReceivingOrders_LineOrderLineIsNullWithoutInclude(t *testing.T) {
+	t.Parallel()
+
+	line, _ := firstLineWith(t, receivingOrdersPath+"/"+SeedReceivingOrderID, "lines")
+	assertNilField(t, line, "order_line")
+}
+
+// Reaching through the order line to the price's currency proves the loader stashes what its own
+// sub-objects need, the same way the order endpoint does.
+func TestReceivingOrders_LineOrderLineUnitPriceUnitsExpand(t *testing.T) {
+	t.Parallel()
+
+	line, _ := firstLineWith(t, receivingOrdersPath+"/"+SeedReceivingOrderID,
+		"lines", "lines.order_line", "lines.order_line.unit_price", "lines.order_line.unit_price.numerator_unit")
+
+	unitPrice := jsonObject(jsonObject(line, "order_line"), "unit_price")
+	assertRateHydrated(t, unitPrice, "lines.order_line.unit_price")
+	assertUnitHydrated(t, jsonObject(unitPrice, "numerator_unit"), "lines.order_line.unit_price.numerator_unit")
+}
+
+// A delivery line reaches the same order line, one step further along: it is stocked against a
+// receiving line, which was raised from the order line.
+func TestDeliveries_LineOrderLineExpandsFullyHydrated(t *testing.T) {
+	t.Parallel()
+
+	line, body := firstLineWith(t, deliveriesPath+"/"+SeedDeliveryID, "lines", "lines.order_line")
+	orderLine := jsonObject(line, "order_line")
+	require.NotNil(t, orderLine, "a delivery line is always stocked against an order line: %s", string(body))
+	assertPurchaseOrderLineHydrated(t, orderLine, "lines.order_line")
+}
+
+func TestDeliveries_LineOrderLineIsNullWithoutInclude(t *testing.T) {
+	t.Parallel()
+
+	line, _ := firstLineWith(t, deliveriesPath+"/"+SeedDeliveryID, "lines")
+	assertNilField(t, line, "order_line")
+}
+
+// The unit cost a delivery line records is the price its order line was agreed at — that is where
+// the figure comes from at stocking time, so the two must line up.
+func TestDeliveries_LineUnitCostMatchesTheOrderLinePrice(t *testing.T) {
+	t.Parallel()
+
+	line, _ := firstLineWith(t, deliveriesPath+"/"+SeedDeliveryID, "lines", "lines.unit_cost", "lines.order_line")
+
+	unitCost := jsonObject(line, "unit_cost")
+	orderLine := jsonObject(line, "order_line")
+	require.NotNil(t, unitCost)
+	require.NotNil(t, orderLine)
+
+	assert.Equal(t, jsonField(jsonObject(orderLine, "unit_price"), "value"), jsonField(unitCost, "value"),
+		"stocking costs the goods at the price the order line agreed")
+}
+
+// A purchase order line reports one agreed price. The cost it becomes is recorded on the delivery
+// line when the goods are stocked, not carried as a second rate on the order.
+func TestPurchaseOrders_LineReportsOnePriceNotAPriceAndACost(t *testing.T) {
+	t.Parallel()
+
+	line, body := firstLineWith(t, purchaseOrdersPath+"/"+SeedPurchaseOrderID, "lines")
+	assert.NotContains(t, line, "unit_cost", "a purchase line's price is its cost: %s", string(body))
+	assert.Contains(t, line, "unit_price", "the agreed price is always on the line")
+}

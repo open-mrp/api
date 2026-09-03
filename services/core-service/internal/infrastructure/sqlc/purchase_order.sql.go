@@ -486,8 +486,6 @@ SELECT
     uc_nu.abbreviation AS unit_cost_numerator_unit_abbreviation,
     uc_du.id AS unit_cost_denominator_unit_id,
     uc_du.abbreviation AS unit_cost_denominator_unit_abbreviation,
-    uc.created_at AS unit_cost_created_at,
-    uc.updated_at AS unit_cost_updated_at,
     -- Timestamps
     sol.created_at,
     sol.updated_at
@@ -535,8 +533,6 @@ type GetPurchaseOrderLinesRow struct {
 	UnitCostNumeratorUnitAbbreviation    sql.NullString
 	UnitCostDenominatorUnitID            sql.NullString
 	UnitCostDenominatorUnitAbbreviation  sql.NullString
-	UnitCostCreatedAt                    sql.NullTime
-	UnitCostUpdatedAt                    sql.NullTime
 	CreatedAt                            time.Time
 	UpdatedAt                            time.Time
 }
@@ -580,8 +576,171 @@ func (q *Queries) GetPurchaseOrderLines(ctx context.Context, salesOrderID string
 			&i.UnitCostNumeratorUnitAbbreviation,
 			&i.UnitCostDenominatorUnitID,
 			&i.UnitCostDenominatorUnitAbbreviation,
-			&i.UnitCostCreatedAt,
-			&i.UnitCostUpdatedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getPurchaseOrderLinesByIDs = `-- name: GetPurchaseOrderLinesByIDs :many
+SELECT
+    sol.id,
+    sol.line_item_number,
+    sol.product_sku,
+    sol.product_description,
+    sol.product_id,
+    sol.item_id,
+    i.sku AS item_sku,
+    sol.edi_line_item_id,
+    -- Quantity ordered
+    q.id AS quantity_id,
+    q.value AS quantity_value,
+    qu.id AS quantity_unit_id,
+    qu.name AS quantity_unit_name,
+    qu.abbreviation AS quantity_unit_abbreviation,
+    qu.unit_dimension_code AS quantity_unit_type,
+    -- Quantity received
+    (SELECT COALESCE(SUM(rolq.value), 0) FROM receiving_order_line rol
+        JOIN quantity rolq ON rolq.id = rol.quantity_id
+        WHERE rol.sales_order_line_id = sol.id) AS quantity_received_value,
+    -- Unit price
+    up.id AS unit_price_id,
+    up.value AS unit_price_value,
+    up_nu.id AS unit_price_numerator_unit_id,
+    up_nu.abbreviation AS unit_price_numerator_unit_abbreviation,
+    up_du.id AS unit_price_denominator_unit_id,
+    up_du.abbreviation AS unit_price_denominator_unit_abbreviation,
+    up.created_at AS unit_price_created_at,
+    up.updated_at AS unit_price_updated_at,
+    -- Unit cost
+    uc.id AS unit_cost_id,
+    uc.value AS unit_cost_value,
+    uc_nu.id AS unit_cost_numerator_unit_id,
+    uc_nu.abbreviation AS unit_cost_numerator_unit_abbreviation,
+    uc_du.id AS unit_cost_denominator_unit_id,
+    uc_du.abbreviation AS unit_cost_denominator_unit_abbreviation,
+    -- Timestamps
+    sol.created_at,
+    sol.updated_at
+FROM sales_order_line sol
+JOIN sales_order so ON so.id = sol.sales_order_id
+JOIN quantity q ON q.id = sol.quantity_id
+JOIN unit qu ON qu.id = q.unit_id
+JOIN rate up ON up.id = sol.unit_price_id
+JOIN unit up_nu ON up_nu.id = up.numerator_unit_id
+JOIN unit up_du ON up_du.id = up.denominator_unit_id
+LEFT JOIN rate uc ON uc.id = sol.unit_cost_id
+LEFT JOIN unit uc_nu ON uc_nu.id = uc.numerator_unit_id
+LEFT JOIN unit uc_du ON uc_du.id = uc.denominator_unit_id
+LEFT JOIN item i ON i.id = sol.item_id
+WHERE sol.id IN (/*SLICE:ids*/?)
+  AND so.owner_account_id = ?
+  AND so.sales_order_type_code = 'purchase_order'
+ORDER BY sol.line_item_number ASC
+`
+
+type GetPurchaseOrderLinesByIDsParams struct {
+	Ids       []string
+	AccountID string
+}
+
+type GetPurchaseOrderLinesByIDsRow struct {
+	ID                                   string
+	LineItemNumber                       sql.NullInt32
+	ProductSku                           string
+	ProductDescription                   sql.NullString
+	ProductID                            sql.NullString
+	ItemID                               sql.NullString
+	ItemSku                              sql.NullString
+	EdiLineItemID                        sql.NullString
+	QuantityID                           string
+	QuantityValue                        string
+	QuantityUnitID                       string
+	QuantityUnitName                     string
+	QuantityUnitAbbreviation             string
+	QuantityUnitType                     string
+	QuantityReceivedValue                interface{}
+	UnitPriceID                          string
+	UnitPriceValue                       string
+	UnitPriceNumeratorUnitID             string
+	UnitPriceNumeratorUnitAbbreviation   string
+	UnitPriceDenominatorUnitID           string
+	UnitPriceDenominatorUnitAbbreviation string
+	UnitPriceCreatedAt                   time.Time
+	UnitPriceUpdatedAt                   time.Time
+	UnitCostID                           sql.NullString
+	UnitCostValue                        sql.NullString
+	UnitCostNumeratorUnitID              sql.NullString
+	UnitCostNumeratorUnitAbbreviation    sql.NullString
+	UnitCostDenominatorUnitID            sql.NullString
+	UnitCostDenominatorUnitAbbreviation  sql.NullString
+	CreatedAt                            time.Time
+	UpdatedAt                            time.Time
+}
+
+// Fetches purchase order lines by their own ids, for a receiving or delivery line that names the
+// line it was raised from. Scoped through the order it belongs to: a line is only visible to the
+// account that owns its purchase order.
+func (q *Queries) GetPurchaseOrderLinesByIDs(ctx context.Context, arg GetPurchaseOrderLinesByIDsParams) ([]GetPurchaseOrderLinesByIDsRow, error) {
+	query := getPurchaseOrderLinesByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPurchaseOrderLinesByIDsRow
+	for rows.Next() {
+		var i GetPurchaseOrderLinesByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.LineItemNumber,
+			&i.ProductSku,
+			&i.ProductDescription,
+			&i.ProductID,
+			&i.ItemID,
+			&i.ItemSku,
+			&i.EdiLineItemID,
+			&i.QuantityID,
+			&i.QuantityValue,
+			&i.QuantityUnitID,
+			&i.QuantityUnitName,
+			&i.QuantityUnitAbbreviation,
+			&i.QuantityUnitType,
+			&i.QuantityReceivedValue,
+			&i.UnitPriceID,
+			&i.UnitPriceValue,
+			&i.UnitPriceNumeratorUnitID,
+			&i.UnitPriceNumeratorUnitAbbreviation,
+			&i.UnitPriceDenominatorUnitID,
+			&i.UnitPriceDenominatorUnitAbbreviation,
+			&i.UnitPriceCreatedAt,
+			&i.UnitPriceUpdatedAt,
+			&i.UnitCostID,
+			&i.UnitCostValue,
+			&i.UnitCostNumeratorUnitID,
+			&i.UnitCostNumeratorUnitAbbreviation,
+			&i.UnitCostDenominatorUnitID,
+			&i.UnitCostDenominatorUnitAbbreviation,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {

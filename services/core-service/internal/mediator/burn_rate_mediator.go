@@ -163,6 +163,13 @@ func MaybeRecalculateAfterConsumption(
 	}
 }
 
+// EnqueueRecalc writes an outbox command to recompute an item's burn rate. Used by the periodic
+// sweeper to refresh items no ongoing consumption has touched; the recompute runs on the shared
+// consumer, one short transaction per item, so a swept batch never contends as a single unit.
+func EnqueueRecalc(ctx context.Context, repos domain.RepoFactory, accountID, itemID string) *apierror.APIError {
+	return enqueueBurnRateRecalc(ctx, repos.NewOutboxRepo(), accountID, itemID)
+}
+
 // enqueueBurnRateRecalc writes an outbox command to recompute the item's burn rate off the current transaction.
 func enqueueBurnRateRecalc(ctx context.Context, outboxRepo messaging.OutboxRepo, accountID, itemID string) *apierror.APIError {
 	payload, err := json.Marshal(domain.RecalcItemBurnRateEvent{
@@ -196,40 +203,4 @@ func enqueueBurnRateRecalc(ctx context.Context, outboxRepo messaging.OutboxRepo,
 	}
 
 	return nil
-}
-
-// IncludesItemBurnRate reports whether API includes request item.burn_rate.
-func IncludesItemBurnRate(includes []string) bool {
-	for _, inc := range includes {
-		if inc == "item.burn_rate" {
-			return true
-		}
-	}
-	return false
-}
-
-// RefreshItemBurnRateAfterGet recalculates burn rate when item.burn_rate was included, then reloads item.BurnRate.
-func RefreshItemBurnRateAfterGet(
-	ctx context.Context,
-	repos domain.RepoFactory,
-	meds domain.Mediators,
-	accountID string,
-	item *domain.Item,
-	includes []string,
-) {
-	if !IncludesItemBurnRate(includes) || item == nil {
-		return
-	}
-	ctx, span := burnRateMedTracer.Start(ctx, "mediator.burn_rate.refresh_after_get")
-	defer span.End()
-	if apiErr := meds.BurnRate.RecalculateFromHistory(ctx, accountID, item.ID); apiErr != nil {
-		tracing.Trace(span, apiErr)
-		return
-	}
-	rate, apiErr := repos.NewRateRepo().Get(ctx, item.BurnRateID)
-	if apiErr != nil {
-		tracing.Trace(span, apiErr)
-		return
-	}
-	item.BurnRate = rate
 }

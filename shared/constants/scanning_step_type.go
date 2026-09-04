@@ -11,8 +11,8 @@ const (
 )
 
 // IsValid reports whether the value is a known scanning step type.
-func (t ScanningStepType) IsValid() bool {
-	switch t {
+func (s ScanningStepType) IsValid() bool {
+	switch s {
 	case ScanningStepTypeSingle, ScanningStepTypeMultiPart:
 		return true
 	default:
@@ -21,6 +21,6 @@ func (t ScanningStepType) IsValid() bool {
 }
 
 // EnumValues lists the scanning step types for schema generation.
-func (ScanningStepType) EnumValues() []string {
+func (s ScanningStepType) EnumValues() []string {
 	return []string{string(ScanningStepTypeSingle), string(ScanningStepTypeMultiPart)}
 }

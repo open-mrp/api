@@ -52,16 +52,6 @@ func receivingOrderInterfaceToString(v any) string {
 	}
 }
 
-func receivingOrderInterfaceToFloat64(v any) float64 {
-	s := receivingOrderInterfaceToString(v)
-	d, err := decimal.NewFromString(s)
-	if err != nil {
-		return 0
-	}
-	f, _ := d.Float64()
-	return f
-}
-
 // --- Existing methods ---
 
 func (r *receivingOrderRepoImpl) Create(ctx context.Context, id, number, orderID, accountID string) *apierror.APIError {

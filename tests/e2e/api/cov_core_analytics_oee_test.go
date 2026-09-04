@@ -3,6 +3,7 @@
 package api_test
 
 import (
+	"math"
 	"testing"
 	"time"
 
@@ -208,8 +209,15 @@ func TestAnalyticsOee_QualityComputedWithoutPlannedTime(t *testing.T) {
 // Real Availability, driven by logged downtime
 // ──────────────────────────────────────────────
 
-// The headline behavior of B3: logged downtime reduces Availability, and the arithmetic must tie out exactly.
-func TestAnalyticsOee_LoggedDowntimeReducesAvailability(t *testing.T) {
+// Logged downtime is recorded as an availability loss, and the availability arithmetic ties out
+// against measured run time.
+//
+// Run time is measured from the scheduled machines' scans, not inferred as scheduled minus logged
+// downtime. That is deliberate: inferring it capped the denominator at planned hours while the
+// numerator counted everything those machines actually ran, which is what pushed Performance over
+// 100%. So a logged breakdown moves availability_loss_seconds — the figure a planner reads to see
+// where the time went — while Availability itself follows the clock the machines were on.
+func TestAnalyticsOee_LoggedDowntimeIsRecordedAsAvailabilityLoss(t *testing.T) {
 	// Not parallel: it asserts on aggregate downtime for the seeded department, which other tests in this package also write to.
 	start := time.Now().UTC().Add(-4 * time.Hour)
 	end := time.Now().UTC()
@@ -250,21 +258,36 @@ func TestAnalyticsOee_LoggedDowntimeReducesAvailability(t *testing.T) {
 	assert.Equal(t, "measured", jsonField(dept, "measurement_status"),
 		"availability becomes a measurement once downtime is logged")
 
-	// scheduled = planned - not_scheduled; run_time = scheduled - availability_loss.
+	// scheduled = planned - not_scheduled: time nobody planned to run leaves the denominator rather
+	// than counting against it.
 	scheduled, ok := dept["scheduled_seconds"].(float64)
 	require.True(t, ok)
 	notScheduled, _ := dept["not_scheduled_seconds"].(float64)
 	assert.InDelta(t, 8*3600-notScheduled, scheduled, 1,
 		"scheduled time must be planned time net of not-scheduled downtime")
 
+	// run_time = min(operating, scheduled): operating is what the scheduled machines were measured
+	// running, and anything past the schedule is overrun rather than extra availability.
+	operating, ok := dept["operating_time_seconds"].(float64)
+	require.True(t, ok)
 	runTime, ok := dept["run_time_seconds"].(float64)
 	require.True(t, ok)
-	assert.InDelta(t, scheduled-loss, runTime, 1, "run time must be scheduled minus availability loss")
+	assert.InDelta(t, math.Min(operating, scheduled), runTime, 1,
+		"run time is the measured operating time, capped at the schedule")
+
+	overrun, _ := dept["overrun_seconds"].(float64)
+	if operating > scheduled {
+		assert.InDelta(t, operating-scheduled, overrun, 1,
+			"time run past the schedule is reported as overrun, not as availability")
+	} else {
+		assert.Zero(t, overrun, "a department that did not out-run its schedule has no overrun")
+	}
 
 	availability, ok := dept["availability_pct"].(float64)
 	require.True(t, ok, "availability must be computed once planned time is supplied")
 	assert.InDelta(t, runTime/scheduled, availability, 1e-6, "availability must be run time over scheduled time")
-	assert.Less(t, availability, 1.0, "an hour of downtime must pull availability below 100%")
+	assert.LessOrEqual(t, availability, 1.0,
+		"capping run time at the schedule is what keeps availability, and so OEE, at or below 100%")
 }
 
 // not_scheduled is removed from the denominator rather than charged as a loss: a machine nobody planned to run has no OEE, which is not the same as bad OEE.

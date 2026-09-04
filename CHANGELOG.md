@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.3](https://github.com/open-mrp/api/compare/v2.6.2...v2.6.3) (2026-09-04)
+
+
+### Bug Fixes
+
+* **burn-rate:** stop recalc sweep runaway and compute product rates ([#139](https://github.com/open-mrp/api/issues/139)) ([5438fec](https://github.com/open-mrp/api/commit/5438fec72016170534824a4c0db9eb74a2e687b6))
+
 ## [2.6.2](https://github.com/open-mrp/api/compare/v2.6.1...v2.6.2) (2026-09-03)
 
 

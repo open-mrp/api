@@ -1895,6 +1895,7 @@ resources:
           list_delivery: '#/components/schemas/List_Delivery'
           list_delivery_line: '#/components/schemas/List_DeliveryLine'
           lot: '#/components/schemas/Lot'
+          purchase_order_line: '#/components/schemas/PurchaseOrderLine'
       inventory_change_logs:
         methods:
           list: get /v1/operations/inventory-change-logs
@@ -2198,7 +2199,6 @@ resources:
           list_purchase_order_line: '#/components/schemas/List_PurchaseOrderLine'
           order_line_input: '#/components/schemas/OrderLineInput'
           purchase_order: '#/components/schemas/PurchaseOrder'
-          purchase_order_line: '#/components/schemas/PurchaseOrderLine'
           purchase_order_related: '#/components/schemas/PurchaseOrderRelated'
           update_purchase_order_request: '#/components/schemas/UpdatePurchaseOrderRequest'
       picks:

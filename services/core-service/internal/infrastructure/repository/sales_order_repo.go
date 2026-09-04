@@ -745,6 +745,15 @@ func (r *salesOrderRepoImpl) SetShipByCommitment(ctx context.Context, accountID,
 	if apiErr := db.MapSQLError(r.queries.SetSalesOrderShipByCommitment(ctx, params)); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
+
+	// Carry the same date onto the pick's denormalized sort key. A no-op at issue, where the pick does
+	// not exist yet (CreatePick fills it from the order); the live path for a re-stamp or a clear.
+	if apiErr := db.MapSQLError(r.queries.SetPickShipByDateForOrder(ctx, sqlc.SetPickShipByDateForOrderParams{
+		SalesOrderID: salesOrderID,
+		ShipByDate:   params.ShipByDate,
+	})); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
 	return nil
 }
 

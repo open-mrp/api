@@ -53,13 +53,17 @@ func NewBurnRateMed(config *BurnRateMedConfig) domain.BurnRateMed {
 	return &burnRateMedImpl{repos: config.Repos}
 }
 
-// RecalculateFromHistory updates the item's burn_rate from consumption change logs over the last 30 days. No-op when there is insufficient history.
+// RecalculateFromHistory updates the item's burn_rate from consumption change logs over the last 30 days. When there is insufficient history to compute a new rate the existing value is kept, but the burn rate is still marked fresh.
 //
 //  1. Load the item and resolve its category's base unit.
-//  2. List the item's consumption change logs; no-op when fewer than two exist.
+//  2. List the item's consumption change logs; keep the existing rate when fewer than two exist.
 //  3. Sum the absolute consumption quantities, converting each to the base unit.
 //  4. Divide the total by the days elapsed between the first and last log.
 //  5. Persist the resulting per-day rate to the item's burn rate.
+//
+// Every path marks the burn rate fresh (advances rate.updated_at). ListStaleBurnRateItems selects
+// items by rate.updated_at, so an item whose recompute yields no new value must still be touched;
+// otherwise a genuinely idle item never leaves the stale set and the sweep re-enqueues it forever.
 func (m *burnRateMedImpl) RecalculateFromHistory(ctx context.Context, accountID, itemID string) *apierror.APIError {
 	ctx, span := burnRateMedTracer.Start(ctx, "mediator.burn_rate.recalculate_from_history")
 	defer span.End()
@@ -87,7 +91,7 @@ func (m *burnRateMedImpl) RecalculateFromHistory(ctx context.Context, accountID,
 		return tracing.Trace(span, apiErr)
 	}
 	if len(logs) < 2 {
-		return nil
+		return tracing.Trace(span, m.markBurnRateFresh(ctx, item.BurnRateID))
 	}
 
 	unitConvRepo := m.repos.NewUnitConversionRepo()
@@ -106,12 +110,12 @@ func (m *burnRateMedImpl) RecalculateFromHistory(ctx context.Context, accountID,
 	}
 
 	if totalConsumption.IsZero() {
-		return nil
+		return tracing.Trace(span, m.markBurnRateFresh(ctx, item.BurnRateID))
 	}
 
 	timeSpanDays := burnRateTimeSpanDays(logs[0].CreatedAt, logs[len(logs)-1].CreatedAt)
 	if timeSpanDays <= 0 {
-		return nil
+		return tracing.Trace(span, m.markBurnRateFresh(ctx, item.BurnRateID))
 	}
 
 	burnRateMeasure := totalConsumption.Div(decimal.NewFromFloat(timeSpanDays))
@@ -138,6 +142,15 @@ func (m *burnRateMedImpl) RecalculateFromHistory(ctx context.Context, accountID,
 	return nil
 }
 
+// markBurnRateFresh advances the burn rate's updated_at without changing its value, recording that
+// the item was recomputed. Passing only the RateID relies on UpdateRateByID's COALESCE to leave the
+// value and units untouched while still setting updated_at = NOW(3), so an item with no new rate to
+// write still drops out of the stale-item sweep's window.
+func (m *burnRateMedImpl) markBurnRateFresh(ctx context.Context, rateID string) *apierror.APIError {
+	_, apiErr := m.repos.NewRateRepo().Update(ctx, domain.UpdateRateParams{RateID: rateID})
+	return apiErr
+}
+
 // MaybeRecalculateAfterConsumption enqueues a burn-rate recalculation when a consumption change log was recorded. The recompute runs off the caller's transaction via the outbox, so the shared rate row's lock is not held for the length of that transaction.
 func MaybeRecalculateAfterConsumption(
 	ctx context.Context,
@@ -149,7 +162,11 @@ func MaybeRecalculateAfterConsumption(
 	if delta.GreaterThanOrEqual(decimal.Zero) {
 		return nil
 	}
-	if actionType != "scan" && actionType != "user_correction" {
+	// Consumption is booked as 'scan' (production draw-down) for materials/parts and 'system_action'
+	// (order fulfillment) for products. 'user_correction' is excluded: manual re-baselines of on-hand
+	// counts are not demand and would skew the rate. Keep this set in sync with
+	// ListConsumptionChangeLogsForBurnRate's action_type_code filter.
+	if actionType != "scan" && actionType != "system_action" {
 		return nil
 	}
 	ctx, span := burnRateMedTracer.Start(ctx, "mediator.burn_rate.maybe_recalculate_after_consumption")
@@ -162,6 +179,13 @@ func MaybeRecalculateAfterConsumption(
 		return tracing.Trace(span, apiErr)
 	}
 	return nil
+}
+
+// EnqueueRecalc writes an outbox command to recompute an item's burn rate. Used by the periodic
+// sweeper to refresh items no ongoing consumption has touched; the recompute runs on the shared
+// consumer, one short transaction per item, so a swept batch never contends as a single unit.
+func EnqueueRecalc(ctx context.Context, repos domain.RepoFactory, accountID, itemID string) *apierror.APIError {
+	return enqueueBurnRateRecalc(ctx, repos.NewOutboxRepo(), accountID, itemID)
 }
 
 // enqueueBurnRateRecalc writes an outbox command to recompute the item's burn rate off the current transaction.
@@ -197,40 +221,4 @@ func enqueueBurnRateRecalc(ctx context.Context, outboxRepo messaging.OutboxRepo,
 	}
 
 	return nil
-}
-
-// IncludesItemBurnRate reports whether API includes request item.burn_rate.
-func IncludesItemBurnRate(includes []string) bool {
-	for _, inc := range includes {
-		if inc == "item.burn_rate" {
-			return true
-		}
-	}
-	return false
-}
-
-// RefreshItemBurnRateAfterGet recalculates burn rate when item.burn_rate was included, then reloads item.BurnRate.
-func RefreshItemBurnRateAfterGet(
-	ctx context.Context,
-	repos domain.RepoFactory,
-	meds domain.Mediators,
-	accountID string,
-	item *domain.Item,
-	includes []string,
-) {
-	if !IncludesItemBurnRate(includes) || item == nil {
-		return
-	}
-	ctx, span := burnRateMedTracer.Start(ctx, "mediator.burn_rate.refresh_after_get")
-	defer span.End()
-	if apiErr := meds.BurnRate.RecalculateFromHistory(ctx, accountID, item.ID); apiErr != nil {
-		tracing.Trace(span, apiErr)
-		return
-	}
-	rate, apiErr := repos.NewRateRepo().Get(ctx, item.BurnRateID)
-	if apiErr != nil {
-		tracing.Trace(span, apiErr)
-		return
-	}
-	item.BurnRate = rate
 }

@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/open-mrp/api/services/notification-service/internal/domain"
 	"github.com/open-mrp/api/shared/contracts"
@@ -333,5 +334,19 @@ func toProtoNotification(n *domain.Notification) *pb.NotificationInfo {
 	if n.DismissedAt != nil {
 		info.DismissedAt = timestamppb.New(*n.DismissedAt)
 	}
+	info.ChangeCount = changeCountFromMetadata(n.Metadata)
 	return info
+}
+
+func changeCountFromMetadata(raw json.RawMessage) *uint32 {
+	if len(raw) == 0 {
+		return nil
+	}
+	var meta struct {
+		ChangeCount *uint32 `json:"change_count"`
+	}
+	if err := json.Unmarshal(raw, &meta); err != nil {
+		return nil
+	}
+	return meta.ChangeCount
 }

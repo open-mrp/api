@@ -140,10 +140,10 @@ func TestAnalyticsOee_PerformanceIsStandardTimeOverRunTime(t *testing.T) {
 // The nil-vs-zero rule
 // ──────────────────────────────────────────────
 
-// Scheduled time is derived from the account's shift pattern, so nobody has to type a denominator into a browser for availability to exist.
+// Scheduled time is derived from the account's actual production schedule, not from a shift pattern multiplied out over the window — a formula that counted every calendar week and every machine row whether or not the plant scheduled them, and so reported hours it never planned.
 //
-// This used to require the caller to send planned_time and returned null without it, which meant OEE depended on numbers held in one person's localStorage — two people could read different OEE for the same plant.
-func TestAnalyticsOee_DerivesScheduledTimeFromSettings(t *testing.T) {
+// A department has availability exactly when the published plan scheduled it in the window, and none when it did not: a department with no plan has null availability, not a fabricated 100%. The two must never disagree, whatever the seed's schedule state.
+func TestAnalyticsOee_DerivesScheduledTimeFromThePublishedPlan(t *testing.T) {
 	t.Parallel()
 
 	start, end := oeeWindow()
@@ -155,28 +155,23 @@ func TestAnalyticsOee_DerivesScheduledTimeFromSettings(t *testing.T) {
 	departments := jsonListData(resp, "departments")
 	require.NotEmpty(t, departments, "the seeded account produces in at least one department")
 
-	sawScheduled := false
 	for _, raw := range departments {
 		dept, ok := raw.(map[string]any)
 		require.True(t, ok)
 
 		scheduled, _ := dept["scheduled_seconds"].(float64)
-		if scheduled <= 0 {
-			// A department with no machines has no scheduled time, which is honest rather than a failure.
-			continue
+		_, hasAvailability := dept["availability_pct"].(float64)
+
+		if scheduled > 0 {
+			availability := dept["availability_pct"].(float64)
+			assert.GreaterOrEqual(t, availability, float64(0))
+			assert.LessOrEqual(t, availability, float64(1),
+				"this endpoint reports ratios as fractions, unlike attainment which reports percentages")
+		} else {
+			assert.False(t, hasAvailability,
+				"a department the plan never scheduled has no availability, not a fabricated one: %v", dept["availability_pct"])
 		}
-		sawScheduled = true
-
-		availability, ok := dept["availability_pct"].(float64)
-		require.True(t, ok,
-			"availability must be measured once scheduled time is known: %v", dept["availability_pct"])
-		assert.GreaterOrEqual(t, availability, float64(0))
-		assert.LessOrEqual(t, availability, float64(1),
-			"this endpoint reports ratios as fractions, unlike attainment which reports percentages")
 	}
-
-	require.True(t, sawScheduled,
-		"a department with machines must get scheduled time from the account's shift pattern")
 }
 
 // Quality needs no planned time — it is good over total produced — so it must still be measured when a department produced anything.

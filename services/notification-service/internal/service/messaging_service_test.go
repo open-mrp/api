@@ -360,6 +360,47 @@ func TestFanOut_ResolvesRecipientUserIDs(t *testing.T) {
 	require.Len(t, outbox.inputs, 1)
 }
 
+func TestFanOut_DedupeKeyCoalescesAndAlertsOnlyInserts(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	notifRepo := repositorymock.NewMockNotificationRepo(ctrl)
+	outbox := &fakeOutboxRepo{}
+	svc := newSvc(t, notifRepo, outbox)
+
+	notifRepo.EXPECT().ResolveUserID(gomock.Any(), "acus_a").Return("us_a", nil)
+	notifRepo.EXPECT().ResolveUserID(gomock.Any(), "acus_b").Return("us_b", nil)
+
+	// A DedupeKey routes fan-out through the coalescing upsert instead of CreateBatch. The mock returns
+	// only the first recipient as "inserted" — the second already had a row from an earlier change.
+	var captured []*domain.Notification
+	notifRepo.EXPECT().UpsertCoalesced(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, ns []*domain.Notification) ([]*domain.Notification, *apierror.APIError) {
+			captured = ns
+			return ns[:1], nil
+		})
+
+	data := messaging.AlertFanoutData{
+		AccountID:               testAccountID,
+		Category:                "order.updated",
+		Title:                   "Sales order 1001 updated",
+		LinkResourceType:        "sales_order",
+		LinkResourceID:          "so_1",
+		RecipientAccountUserIDs: []string{"acus_a", "acus_b"},
+		DedupeKey:               "ordact_so_1_20260903",
+	}
+	// The per-message seed differs from the dedupe key; the row id must derive from the dedupe key so
+	// separate edits collide on one row.
+	require.Nil(t, svc.FanOut(context.Background(), "msg_per_request_seed", data))
+
+	require.Len(t, captured, 2, "one candidate row per recipient")
+	assert.Equal(t, deterministicNotificationID("ordact_so_1_20260903", "acus_a"), captured[0].ID,
+		"row id must be seeded from the dedupe key, not the per-message seed")
+	require.NotNil(t, captured[0].Metadata)
+	assert.JSONEq(t, `{"change_count":1}`, string(captured[0].Metadata),
+		"a coalesced row seeds its change tally at 1")
+
+	require.Len(t, outbox.inputs, 1, "realtime alert fires only for the freshly inserted row (first change)")
+}
+
 func TestNotifyCustomerRegistered_FansOutToSupportGroup(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	notifRepo := repositorymock.NewMockNotificationRepo(ctrl)

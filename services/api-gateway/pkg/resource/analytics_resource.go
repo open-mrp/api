@@ -610,13 +610,17 @@ type OeeDepartment struct {
 	DowntimeEventCount int64 `json:"downtime_event_count"`
 	// Downtime split by reason, largest first.
 	DowntimeBreakdown *List[OeeDowntimeReason] `json:"downtime_breakdown"`
-	// Planned time net of not-scheduled downtime, in seconds.
+	// Planned production time net of not-scheduled downtime, in seconds. Availability's denominator.
 	ScheduledSeconds float64 `json:"scheduled_seconds"`
-	// Scheduled time net of availability losses, in seconds.
+	// The scheduled machines' measured run time (first-to-last scan per machine per day), in seconds. Performance's denominator.
+	OperatingTimeSeconds float64 `json:"operating_time_seconds"`
+	// Operating time counted toward availability: measured run time capped at scheduled time, in seconds.
 	RunTimeSeconds float64 `json:"run_time_seconds"`
-	// Run time divided by scheduled time.
+	// Measured run time beyond the scheduled window, in seconds. A schedule-adherence signal reported apart from OEE, so overtime is not counted as extra availability.
+	OverrunSeconds float64 `json:"overrun_seconds"`
+	// Run time (capped at scheduled) divided by scheduled time.
 	AvailabilityPct *float64 `json:"availability_pct"`
-	// Standard seconds earned divided by run time: how fast the department ran against the designed speed of its production steps.
+	// Standard seconds earned divided by measured operating time: how fast the department ran against the designed speed of its production steps.
 	PerformancePct *float64 `json:"performance_pct"`
 	// Good units divided by total units produced.
 	QualityPct *float64 `json:"quality_pct"`
@@ -650,17 +654,21 @@ type OeeTrendPeriod struct {
 	SecondsUnits float64 `json:"seconds_units" validate:"required"`
 	// The time this output should have taken at each production step's own labor rate: ideal cycle time multiplied by the units produced.
 	StandardSecondsEarned float64 `json:"standard_seconds_earned" validate:"required"`
-	// Planned time net of not-scheduled downtime, in seconds.
+	// Planned production time net of not-scheduled downtime, in seconds. Availability's denominator.
 	ScheduledSeconds float64 `json:"scheduled_seconds" validate:"required"`
-	// Scheduled time net of availability losses, in seconds.
+	// The scheduled machines' measured run time, in seconds. Performance's denominator.
+	OperatingTimeSeconds float64 `json:"operating_time_seconds" validate:"required"`
+	// Operating time counted toward availability: measured run time capped at scheduled time, in seconds.
 	RunTimeSeconds float64 `json:"run_time_seconds" validate:"required"`
+	// Measured run time beyond the scheduled window, in seconds, reported apart from OEE.
+	OverrunSeconds float64 `json:"overrun_seconds" validate:"required"`
 	// Logged downtime charged against availability, in seconds.
 	AvailabilityLossSeconds float64 `json:"availability_loss_seconds" validate:"required"`
 	// Time nobody planned to run, removed from the denominator rather than counted as a loss.
 	NotScheduledSeconds float64 `json:"not_scheduled_seconds" validate:"required"`
-	// Run time divided by scheduled time.
+	// Run time (capped at scheduled) divided by scheduled time.
 	AvailabilityPct *float64 `json:"availability_pct"`
-	// Standard seconds earned divided by run time.
+	// Standard seconds earned divided by measured operating time.
 	PerformancePct *float64 `json:"performance_pct"`
 	// Good units divided by total units produced.
 	QualityPct *float64 `json:"quality_pct"`

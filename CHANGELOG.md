@@ -1,5 +1,59 @@
 # Changelog
 
+## [2.6.3](https://github.com/open-mrp/api/compare/v2.6.2...v2.6.3) (2026-09-04)
+
+
+### Bug Fixes
+
+* **burn-rate:** stop recalc sweep runaway and compute product rates ([#139](https://github.com/open-mrp/api/issues/139)) ([5438fec](https://github.com/open-mrp/api/commit/5438fec72016170534824a4c0db9eb74a2e687b6))
+
+## [2.6.2](https://github.com/open-mrp/api/compare/v2.6.1...v2.6.2) (2026-09-03)
+
+
+### Bug Fixes
+
+* **picks:** index ship-by list sort; feat(notifications): change count ([#137](https://github.com/open-mrp/api/issues/137)) ([f488ab2](https://github.com/open-mrp/api/commit/f488ab2ff8b4571029231594698538251efcdd96))
+
+## [2.6.1](https://github.com/open-mrp/api/compare/v2.6.0...v2.6.1) (2026-09-03)
+
+
+### Bug Fixes
+
+* **analytics:** measure OEE performance against scheduled machines' actual run time ([#136](https://github.com/open-mrp/api/issues/136)) ([619d65b](https://github.com/open-mrp/api/commit/619d65b872f1072fa7b490ce40b074c259e73ff8))
+* **release:** make PlanetScale prepare step idempotent to an already-deployed release ([#134](https://github.com/open-mrp/api/issues/134)) ([2b2d809](https://github.com/open-mrp/api/commit/2b2d8092cfcdf81ece3ddd086e92289473e9d399))
+
+## [2.6.0](https://github.com/open-mrp/api/compare/v2.5.8...v2.6.0) (2026-09-03)
+
+
+### Features
+
+* **notifications:** coalesce order-activity alerts per order per day ([#132](https://github.com/open-mrp/api/issues/132)) ([8577317](https://github.com/open-mrp/api/commit/8577317b0379341e5f71d27dcad08600953dee47))
+
+
+### Bug Fixes
+
+* **burn-rate:** keep item burn rate fresh via write path + periodic sweep ([#130](https://github.com/open-mrp/api/issues/130)) ([1fe0526](https://github.com/open-mrp/api/commit/1fe0526299868e6c5353c47c1ed38efc479cb6ae))
+
+
+### Performance Improvements
+
+* **picks:** batch line and shipment loads in ListPicks ([#133](https://github.com/open-mrp/api/issues/133)) ([0ef7f79](https://github.com/open-mrp/api/commit/0ef7f79959f12fe418d396c59da8541f8a35dbe1))
+
+## [2.5.8](https://github.com/open-mrp/api/compare/v2.5.7...v2.5.8) (2026-09-02)
+
+
+### Bug Fixes
+
+* **analytics:** scope OEE performance to scheduled machines and fix baseline selection ([#128](https://github.com/open-mrp/api/issues/128)) ([b7e1909](https://github.com/open-mrp/api/commit/b7e1909561cdec8698a105de081138854cab0b75))
+
+## [2.5.7](https://github.com/open-mrp/api/compare/v2.5.6...v2.5.7) (2026-09-02)
+
+
+### Bug Fixes
+
+* **analytics:** bucket schedule weeks on the account's week start day ([#125](https://github.com/open-mrp/api/issues/125)) ([043f37f](https://github.com/open-mrp/api/commit/043f37feadcf138ffa2c684a21b1b496c1654eb0))
+* **analytics:** derive OEE availability from the published schedule ([#126](https://github.com/open-mrp/api/issues/126)) ([d94653d](https://github.com/open-mrp/api/commit/d94653d4cc13e0aa7ba1fd3f14f25c9e594eeae9))
+
 ## [2.5.6](https://github.com/open-mrp/api/compare/v2.5.5...v2.5.6) (2026-09-02)
 
 

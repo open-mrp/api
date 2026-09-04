@@ -97,6 +97,14 @@ type AttainmentPlannedRow struct {
 	LineCount       int64
 }
 
+// ScheduledHoursRow is the scheduled machine time for one department in one week of a baseline version. Run hours and changeover minutes are kept apart so the service can see what each contributes; both are Planned Production Time.
+type ScheduledHoursRow struct {
+	WeekStartDate            time.Time
+	DepartmentID             string
+	PlannedRunHours          float64
+	PlannedChangeoverMinutes float64
+}
+
 // SumActualsByWeekParams scopes the actuals read to an account and scan window.
 type SumActualsByWeekParams struct {
 	AccountID   string

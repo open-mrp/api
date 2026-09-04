@@ -535,9 +535,13 @@ type OeeDepartment struct {
 	DowntimeEventCount      int64
 	DowntimeBreakdown       []OeeDowntimeReason
 
-	// ScheduledSeconds is planned time net of not-scheduled downtime; RunTimeSeconds is scheduled time net of availability losses.
+	// ScheduledSeconds is planned production time net of not-scheduled downtime — the time the plant put the scheduled machines on the schedule, and Availability's denominator.
 	ScheduledSeconds float64
-	RunTimeSeconds   float64
+	// OperatingTimeSeconds is the scheduled machines' measured run time (first-to-last scan per machine per day) — the time the equipment was actually running, and Performance's denominator. RunTimeSeconds is that same run time capped at ScheduledSeconds, which is what Availability counts: time run beyond the schedule is OverrunSeconds, not extra availability.
+	OperatingTimeSeconds float64
+	RunTimeSeconds       float64
+	// OverrunSeconds is measured run time beyond the scheduled window (OperatingTimeSeconds − ScheduledSeconds when positive). It is a schedule-adherence signal reported apart from OEE, not folded into Availability, so a plant that runs overtime cannot read as more than 100% available.
+	OverrunSeconds float64
 
 	// Ratios are nil when their denominator is zero or planned time is unknown. A department with no scheduled time has no OEE, which is not the same as 0% OEE.
 	AvailabilityPct *float64
@@ -545,9 +549,9 @@ type OeeDepartment struct {
 	QualityPct      *float64
 	OeePct          *float64
 
-	// HasDowntimeData is false when nothing was logged for this department in the window. Callers must surface that: a department that logs no downtime computes 100% Availability, which reads as an improvement rather than missing data.
+	// HasDowntimeData is false when nothing was logged for this department in the window. Callers must surface that: a department that logs no downtime still has its Availability measured from run time, but its downtime Pareto is empty.
 	HasDowntimeData bool
-	// HasPerformanceAnomaly flags Performance > 1, which always means a stale run rate. The raw value is still reported rather than clamped, so the data-quality problem stays visible.
+	// HasPerformanceAnomaly flags Performance > 1 — the scheduled machines earned more standard time than they were measured running, which can only come from a stale or optimistic labor rate. The raw value is still reported rather than clamped, so the data-quality problem stays visible.
 	HasPerformanceAnomaly bool
 }
 
@@ -558,6 +562,8 @@ type GetOeeWindowParams struct {
 	EndDate   time.Time
 	// WeekStartDay is the weekday the trend read buckets scans on, 0 = Sunday through 6 = Saturday, matching the account's schedule week. Unused by the window-total OEE reads, which do not bucket by week.
 	WeekStartDay int
+	// MachineIDs restricts the output reads to production on these machines — the machines the plan scheduled. Empty means every machine, so a caller with no schedule still measures the whole floor.
+	MachineIDs []string
 }
 
 // OeeDepartmentDataRow is one department's unit counts and standard time earned in the window.
@@ -572,6 +578,13 @@ type OeeDepartmentDataRow struct {
 
 // OeeEstimatedRuntimeRow is one department's estimated runtime in the window.
 type OeeEstimatedRuntimeRow struct {
+	DepartmentID   string
+	RuntimeSeconds float64
+}
+
+// OeeTrendEstimatedRuntimeRow is one department's estimated runtime in one production week — the Operating Time a trend point measures its scheduled machines against.
+type OeeTrendEstimatedRuntimeRow struct {
+	WeekStart      time.Time
 	DepartmentID   string
 	RuntimeSeconds float64
 }
@@ -607,7 +620,9 @@ type OeeTrendPeriod struct {
 	StandardSecondsEarned float64
 
 	ScheduledSeconds        float64
+	OperatingTimeSeconds    float64
 	RunTimeSeconds          float64
+	OverrunSeconds          float64
 	AvailabilityLossSeconds float64
 	NotScheduledSeconds     float64
 
@@ -616,7 +631,7 @@ type OeeTrendPeriod struct {
 	QualityPct      *float64
 	OeePct          *float64
 
-	// HasDowntimeData is false when nothing was logged in this week, which makes its Availability an estimate rather than a measurement — the same distinction AnalyzeOee draws per department.
+	// HasDowntimeData is false when nothing was logged in this week; its Availability is still measured from run time, but the downtime Pareto is empty — the same distinction AnalyzeOee draws per department.
 	HasDowntimeData    bool
 	DowntimeEventCount int64
 }

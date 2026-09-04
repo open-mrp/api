@@ -8,7 +8,6 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/services/core-service/internal/mediator"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
@@ -161,9 +160,6 @@ func (s *materialSvcImpl) GetMaterial(ctx context.Context, params domain.GetMate
 	})
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
-	}
-	if material != nil && material.Item != nil {
-		mediator.RefreshItemBurnRateAfterGet(ctx, s.repos, s.mediators(), identity.Target.AccountID, material.Item, params.Includes)
 	}
 	return material, nil
 }

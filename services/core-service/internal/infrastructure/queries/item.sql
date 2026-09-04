@@ -1258,3 +1258,16 @@ SELECT id
 FROM item
 WHERE account_id = sqlc.arg('account_id')
   AND sku LIKE sqlc.narg('like_query');
+
+-- ListStaleBurnRateItems backs the periodic burn-rate sweeper. Each burn-rate rate row's updated_at is
+-- set by the recompute write path, so an item kept fresh by ongoing consumption falls out of this set
+-- on its own and only genuinely idle items surface. Stalest first (so the oldest is always serviced),
+-- and capped by ? so a tick enqueues a bounded batch rather than the whole table (no thundering herd).
+-- name: ListStaleBurnRateItems :many
+SELECT i.id, i.account_id
+FROM item i
+JOIN rate r ON r.id = i.burn_rate_id
+WHERE i.deleted_at IS NULL
+  AND r.updated_at < sqlc.arg('stale_before')
+ORDER BY r.updated_at ASC
+LIMIT ?;

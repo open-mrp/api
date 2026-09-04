@@ -142,8 +142,11 @@ func (q *Queries) CountSalesOrdersForBuyerAccounts(ctx context.Context, arg Coun
 }
 
 const createPick = `-- name: CreatePick :exec
-INSERT INTO pick (id, number, sales_order_id, account_id, created_at, updated_at)
-VALUES (?, ?, ?, ?, NOW(3), NOW(3))
+INSERT INTO pick (id, number, sales_order_id, account_id, ship_by_sort_date, created_at, updated_at)
+SELECT ?, ?, ?, ?,
+       COALESCE(so.ship_by_date, '9999-12-31'), NOW(3), NOW(3)
+FROM sales_order so
+WHERE so.id = ?
 `
 
 type CreatePickParams struct {
@@ -153,12 +156,17 @@ type CreatePickParams struct {
 	AccountID    string
 }
 
+// ship_by_sort_date is read from the order rather than passed in: the issue path stamps the order's
+// commitment (SetShipByCommitment) in the same transaction just before this runs, so the value is
+// already there, and reading it here keeps the denormalized sort key from ever diverging on insert.
+// COALESCE preserves the no-commitment sentinel. See pick.sql ListPicksShipByForward.
 func (q *Queries) CreatePick(ctx context.Context, arg CreatePickParams) error {
 	_, err := q.db.ExecContext(ctx, createPick,
 		arg.ID,
 		arg.Number,
 		arg.SalesOrderID,
 		arg.AccountID,
+		arg.SalesOrderID,
 	)
 	return err
 }
@@ -3493,6 +3501,27 @@ func (q *Queries) SearchSalesOrderIDs(ctx context.Context, arg SearchSalesOrderI
 		return nil, err
 	}
 	return items, nil
+}
+
+const setPickShipByDateForOrder = `-- name: SetPickShipByDateForOrder :exec
+UPDATE pick SET
+    ship_by_sort_date = COALESCE(?, '9999-12-31'),
+    updated_at = NOW(3)
+WHERE sales_order_id = ?
+`
+
+type SetPickShipByDateForOrderParams struct {
+	ShipByDate   sql.NullTime
+	SalesOrderID string
+}
+
+// SetPickShipByDateForOrder keeps a pick's denormalized ship-by sort key in step with its order's
+// commitment. Paired with SetSalesOrderShipByCommitment: a no-op at issue (the pick is created just
+// afterwards, already carrying the value via CreatePick), and the live path for an already-issued
+// order whose commitment is re-stamped or, with a null date, cleared. COALESCE keeps the sentinel.
+func (q *Queries) SetPickShipByDateForOrder(ctx context.Context, arg SetPickShipByDateForOrderParams) error {
+	_, err := q.db.ExecContext(ctx, setPickShipByDateForOrder, arg.ShipByDate, arg.SalesOrderID)
+	return err
 }
 
 const setSalesOrderProductionRunID = `-- name: SetSalesOrderProductionRunID :exec

@@ -237,6 +237,10 @@ func notificationFromProto(ctx context.Context, n *pb.NotificationInfo) apiresou
 		CreatedAt:   tsToTime(n.CreatedAt),
 		UpdatedAt:   tsToTime(n.UpdatedAt),
 	}
+	if n.ChangeCount != nil {
+		cc := int64(*n.ChangeCount)
+		result.ChangeCount = &cc
+	}
 	stashNotificationMeta(ctx, &result, n)
 	return result
 }

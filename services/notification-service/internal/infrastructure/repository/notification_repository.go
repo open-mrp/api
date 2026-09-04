@@ -55,11 +55,40 @@ func (r *notificationRepoImpl) CreateBatch(ctx context.Context, notifications []
 }
 
 func (r *notificationRepoImpl) create(ctx context.Context, n *domain.Notification) error {
+	return r.db.CreateNotification(ctx, notificationRow(n))
+}
+
+// UpsertCoalesced folds each notification onto one rolling row per (dedupe key, recipient): the first
+// write in a window inserts, later writes refresh and resurface the same row (see
+// UpsertCoalescedNotification). It returns the notifications that were freshly inserted so the caller
+// raises a realtime alert only on the first event in the window.
+func (r *notificationRepoImpl) UpsertCoalesced(ctx context.Context, notifications []*domain.Notification) ([]*domain.Notification, *apierror.APIError) {
+	ctx, span := notificationRepoTracer.Start(ctx, "repository.notification.upsert_coalesced")
+	defer span.End()
+
+	inserted := make([]*domain.Notification, 0, len(notifications))
+	for _, n := range notifications {
+		rows, err := r.db.UpsertCoalescedNotification(ctx, sqlc.UpsertCoalescedNotificationParams(notificationRow(n)))
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		// rows_affected == 1 means the INSERT ran (first event of the window); 2 means an existing row was
+		// refreshed. Alert only on the insert.
+		if rows == 1 {
+			inserted = append(inserted, n)
+		}
+	}
+	return inserted, nil
+}
+
+// notificationRow flattens a domain notification into the column set shared by the create and
+// coalescing-upsert queries (their params structs are field-for-field identical).
+func notificationRow(n *domain.Notification) sqlc.CreateNotificationParams {
 	priority := n.Priority
 	if priority == "" {
 		priority = "normal"
 	}
-	return r.db.CreateNotification(ctx, sqlc.CreateNotificationParams{
+	return sqlc.CreateNotificationParams{
 		ID:                     n.ID,
 		AccountID:              n.AccountID,
 		RecipientAccountUserID: n.RecipientAccountUserID,
@@ -80,7 +109,7 @@ func (r *notificationRepoImpl) create(ctx context.Context, n *domain.Notificatio
 		ReadAt:                 db.NullTimePtr(n.ReadAt),
 		DismissedAt:            db.NullTimePtr(n.DismissedAt),
 		Metadata:               db.NullableRawMessage(n.Metadata),
-	})
+	}
 }
 
 func (r *notificationRepoImpl) GetByID(ctx context.Context, id, recipientAccountUserID string) (*domain.Notification, *apierror.APIError) {

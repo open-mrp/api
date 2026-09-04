@@ -200,6 +200,27 @@ func (s *AuditEventServiceTestSuite) TestSaveAuditEvent_OrderFieldChangesBody() 
 	s.Equal("Blake Doe changed the promised date to Sep 15, 2026 and changed the carrier.", data.Body)
 }
 
+func (s *AuditEventServiceTestSuite) TestSaveAuditEvent_DedupeKeyCoalescesPerOrderPerDay() {
+	event := salesOrderUpdateEvent("usr_b")
+	ctx := namedActorCtx("acct_1", "usr_b", "Blake Doe")
+
+	s.auditEventRepo.EXPECT().Create(gomock.Any(), event).Return(nil).Times(1)
+	s.auditEventRepo.EXPECT().
+		ListResourceUserActorIDs(gomock.Any(), "acct_1", constants.ObjectTypeSalesOrder, "so_1").
+		Return([]string{"usr_a", "usr_b"}, nil).Times(1)
+	s.auditEventRepo.EXPECT().
+		GetResourceCreateChanges(gomock.Any(), "acct_1", constants.ObjectTypeSalesOrder, "so_1").
+		Return(nil, nil).Times(1)
+
+	apiErr := s.svc.SaveAuditEvent(ctx, event)
+	s.Nil(apiErr)
+
+	s.Require().Len(s.outbox.inputs, 1)
+	data := s.decodeFanout(s.outbox.inputs[0])
+	// One rolling bell row per order per UTC day; every edit that day folds onto it.
+	s.Equal("ordact_so_1_"+time.Now().UTC().Format("20060102"), data.DedupeKey)
+}
+
 func (s *AuditEventServiceTestSuite) TestSaveAuditEvent_NoFollowersNoFanout() {
 	event := salesOrderUpdateEvent("usr_a")
 	ctx := namedActorCtx("acct_1", "usr_a", "Avery Doe")

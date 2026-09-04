@@ -68,14 +68,23 @@ func baselineRow(id string, version int32, publishedAt, start, end string, t *te
 	}
 }
 
-// The single most important rule in attainment: a version published *after* a week began was not the plan the floor worked to that week.
+func withFrozen(row domain.AttainmentBaselineRow, frozenThrough string, t *testing.T) domain.AttainmentBaselineRow {
+	t.Helper()
+	frozen := mustDate(t, frozenThrough)
+	row.FrozenThroughDate = &frozen
+	return row
+}
+
+// The single most important rule in attainment: a version published after a finished week ended cannot rewrite it, even if its horizon still spans that week.
 func TestBaselineFor_IgnoresVersionsPublishedAfterTheWeek(t *testing.T) {
 	week := mustDate(t, "2026-07-27T00:00:00Z")
 
 	// Newest publish first, matching the query's ORDER BY.
 	baselines := []domain.AttainmentBaselineRow{
-		baselineRow("pnsc_republished", 2, "2026-07-29T10:00:00Z", "2026-07-20T00:00:00Z", "2026-10-19T00:00:00Z", t),
-		baselineRow("pnsc_original", 1, "2026-07-24T09:00:00Z", "2026-07-20T00:00:00Z", "2026-10-19T00:00:00Z", t),
+		// Republished after this week was over; its horizon still covers the week but it cannot own a week the floor already worked.
+		withFrozen(baselineRow("pnsc_republished", 2, "2026-08-05T10:00:00Z", "2026-07-20T00:00:00Z", "2026-10-19T00:00:00Z", t), "2026-08-09T00:00:00Z", t),
+		// The version that actually froze the week.
+		withFrozen(baselineRow("pnsc_original", 1, "2026-07-24T09:00:00Z", "2026-07-20T00:00:00Z", "2026-10-19T00:00:00Z", t), "2026-08-02T00:00:00Z", t),
 	}
 
 	got := baselineFor(baselines, week, mustDate(t, "2026-12-31T00:00:00Z"))
@@ -83,7 +92,28 @@ func TestBaselineFor_IgnoresVersionsPublishedAfterTheWeek(t *testing.T) {
 		t.Fatal("expected a baseline")
 	}
 	if got.ScheduleID != "pnsc_original" {
-		t.Errorf("baseline = %s, want pnsc_original — a mid-week republish must not rewrite the week that was already worked", got.ScheduleID)
+		t.Errorf("baseline = %s, want pnsc_original — a version published after the week ended must not rewrite it", got.ScheduleID)
+	}
+}
+
+// A plan published partway into its own week still owns that week when it is the version that froze it — the publish-on-start-day cadence the old "published before the week began" rule discarded.
+func TestBaselineFor_PublishOnStartDayOwnsTheWeekItFroze(t *testing.T) {
+	week := mustDate(t, "2026-08-26T00:00:00Z") // Wednesday; the account's week starts midweek.
+	now := mustDate(t, "2026-09-05T00:00:00Z")  // the week has ended.
+
+	baselines := []domain.AttainmentBaselineRow{
+		// Published the evening of the start day and froze this week: it is the committed plan.
+		withFrozen(baselineRow("pnsc_v9", 9, "2026-08-26T19:21:00Z", "2026-08-26T00:00:00Z", "2026-11-24T00:00:00Z", t), "2026-09-01T00:00:00Z", t),
+		// Live at 00:00 but its freeze ended the prior week, so it never committed this one.
+		withFrozen(baselineRow("pnsc_v5", 5, "2026-08-19T13:46:00Z", "2026-08-19T00:00:00Z", "2026-11-17T00:00:00Z", t), "2026-08-25T00:00:00Z", t),
+	}
+
+	got := baselineFor(baselines, week, now)
+	if got == nil {
+		t.Fatal("expected a baseline")
+	}
+	if got.ScheduleID != "pnsc_v9" {
+		t.Errorf("baseline = %s, want pnsc_v9 — the version that froze the week owns it", got.ScheduleID)
 	}
 }
 
@@ -91,8 +121,8 @@ func TestBaselineFor_PicksNewestQualifyingPublish(t *testing.T) {
 	week := mustDate(t, "2026-08-10T00:00:00Z")
 
 	baselines := []domain.AttainmentBaselineRow{
-		baselineRow("pnsc_newer", 2, "2026-08-03T09:00:00Z", "2026-08-03T00:00:00Z", "2026-11-01T00:00:00Z", t),
-		baselineRow("pnsc_older", 1, "2026-07-24T09:00:00Z", "2026-07-20T00:00:00Z", "2026-10-19T00:00:00Z", t),
+		withFrozen(baselineRow("pnsc_newer", 2, "2026-08-10T09:00:00Z", "2026-08-03T00:00:00Z", "2026-11-01T00:00:00Z", t), "2026-08-16T00:00:00Z", t),
+		withFrozen(baselineRow("pnsc_older", 1, "2026-07-24T09:00:00Z", "2026-07-20T00:00:00Z", "2026-10-19T00:00:00Z", t), "2026-08-16T00:00:00Z", t),
 	}
 
 	got := baselineFor(baselines, week, mustDate(t, "2026-12-31T00:00:00Z"))
@@ -202,14 +232,16 @@ func TestBaselineFor_InProgressWeekUsesTheLivePlan(t *testing.T) {
 	}
 }
 
-// The moment the week is over it becomes history, and history keeps the plan that was live at the time rather than whatever was published since.
+// The moment the week is over it becomes history: a version published after it ended is refused in favour of the one that froze it, even just past the boundary.
 func TestBaselineFor_CompletedWeekStillRefusesALaterPublish(t *testing.T) {
 	week := mustDate(t, "2026-07-27T00:00:00Z")
 	now := mustDate(t, "2026-08-05T09:00:00Z")
 
 	baselines := []domain.AttainmentBaselineRow{
-		baselineRow("pnsc_republished", 2, "2026-07-29T10:00:00Z", "2026-07-20T00:00:00Z", "2026-10-19T00:00:00Z", t),
-		baselineRow("pnsc_original", 1, "2026-07-24T09:00:00Z", "2026-07-20T00:00:00Z", "2026-10-19T00:00:00Z", t),
+		// Published after the week closed; cannot claim it.
+		withFrozen(baselineRow("pnsc_republished", 2, "2026-08-04T10:00:00Z", "2026-07-20T00:00:00Z", "2026-10-19T00:00:00Z", t), "2026-08-09T00:00:00Z", t),
+		// Froze the week while it was live.
+		withFrozen(baselineRow("pnsc_original", 1, "2026-07-24T09:00:00Z", "2026-07-20T00:00:00Z", "2026-10-19T00:00:00Z", t), "2026-08-02T00:00:00Z", t),
 	}
 
 	got := baselineFor(baselines, week, now)

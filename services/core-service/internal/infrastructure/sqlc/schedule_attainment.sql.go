@@ -117,9 +117,9 @@ type SelectAttainmentBaselinesRow struct {
 // Schedule attainment: what was planned versus what the floor actually built.
 //
 // Every query here is scoped by the *baseline* schedule chosen per week, never by "the current schedule". Measuring against whatever happens to be live now would let a republish rewrite last month's performance.
-// SelectAttainmentBaselines returns, for each week start in the window, the published version that was live for that week.
+// SelectAttainmentBaselines returns every published version whose horizon overlaps the window; baselineFor (in Go) then picks the one that governed each week.
 //
-// `published_at <= week_start` is what stops a mid-horizon republish from rewriting history: a version published on Wednesday was not the plan the floor worked to on Monday. Newest qualifying publish wins.
+// The per-week choice is the version that froze the week — the plan committed for it — so a version published after the week ended cannot rewrite history, while a plan published on the week's own start day still counts as the plan it froze. frozen_through_date is selected for exactly that test.
 func (q *Queries) SelectAttainmentBaselines(ctx context.Context, arg SelectAttainmentBaselinesParams) ([]SelectAttainmentBaselinesRow, error) {
 	rows, err := q.db.QueryContext(ctx, selectAttainmentBaselines, arg.AccountID, arg.WindowEnd, arg.WindowStart)
 	if err != nil {
@@ -157,7 +157,7 @@ SELECT
     DATE(DATE_SUB(b.scanned_at, INTERVAL ((DAYOFWEEK(b.scanned_at) + 6 - CAST(? AS SIGNED)) % 7) DAY)) AS week_start_date,
     bm.B AS machine_id,
     b.item_id,
-    ps.department_id,
+    m.department_id,
     COALESCE(SUM(bq.value), 0) AS actual_quantity,
     COALESCE(SUM(wq.value), 0) AS waste_quantity,
     COUNT(*) AS batch_count
@@ -165,11 +165,11 @@ FROM batch b
 JOIN quantity bq ON bq.id = b.quantity_id
 LEFT JOIN quantity wq ON wq.id = b.waste_quantity_id
 LEFT JOIN _batches_machines bm ON bm.A = b.id
-LEFT JOIN production_step ps ON ps.id = b.production_step_id
+LEFT JOIN machine m ON m.id = bm.B
 WHERE b.account_id = ?
 AND b.scanned_at >= ?
 AND b.scanned_at < ?
-GROUP BY week_start_date, bm.B, b.item_id, ps.department_id
+GROUP BY week_start_date, bm.B, b.item_id, m.department_id
 `
 
 type SumActualsByWeekParams struct {
@@ -193,7 +193,7 @@ type SumActualsByWeekRow struct {
 //
 // The week start follows the account's configured week_start_day (0 = Sunday through 6 = Saturday), the same day schedule horizons are built on. A fixed Monday here would split one schedule week's scans across two buckets for any plant whose week does not start on Monday, and its planned quantity would then be judged against a fraction of its own output.
 //
-// Department comes from the batch's production step, NOT from the scanning station the way AnalyzeOee does it. That is deliberate and the two are not interchangeable: a plan is expressed in the step's department, so attainment has to be measured there or a department would be judged against work it was never assigned.
+// Department comes from the batch's machine (machine.department_id), the same source writeSolvedPlan populates a plan line's department from, so actuals and plan bucket into identical departments. It is deliberately NOT the scanning station AnalyzeOee uses, and deliberately not production_step.department_id: that column is nullable and unset in practice, which left every actual department blank and broke the department roll-up. The machine's department is NOT NULL and is exactly what the plan was expressed in.
 func (q *Queries) SumActualsByWeek(ctx context.Context, arg SumActualsByWeekParams) ([]SumActualsByWeekRow, error) {
 	rows, err := q.db.QueryContext(ctx, sumActualsByWeek,
 		arg.WeekStartDay,
@@ -288,6 +288,73 @@ func (q *Queries) SumPlannedByWeek(ctx context.Context, arg SumPlannedByWeekPara
 			&i.PlannedQuantity,
 			&i.PlannedRunHours,
 			&i.LineCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const sumScheduledHoursByDepartmentWeek = `-- name: SumScheduledHoursByDepartmentWeek :many
+SELECT
+    l.week_start_date,
+    l.department_id,
+    CAST(COALESCE(SUM(l.planned_run_hours), 0) AS DECIMAL(65,30)) AS planned_run_hours,
+    CAST(COALESCE(SUM(l.planned_changeover_minutes), 0) AS DECIMAL(65,30)) AS planned_changeover_minutes
+FROM production_schedule_line l
+WHERE l.account_id = ?
+AND l.production_schedule_id = ?
+AND l.week_start_date >= ?
+AND l.week_start_date <= ?
+AND l.status_code != 'cancelled'
+AND l.department_id IS NOT NULL
+AND l.department_id != ''
+GROUP BY l.week_start_date, l.department_id
+`
+
+type SumScheduledHoursByDepartmentWeekParams struct {
+	AccountID            string
+	ProductionScheduleID string
+	WindowStart          time.Time
+	WindowEnd            time.Time
+}
+
+type SumScheduledHoursByDepartmentWeekRow struct {
+	WeekStartDate            time.Time
+	DepartmentID             sql.NullString
+	PlannedRunHours          string
+	PlannedChangeoverMinutes string
+}
+
+// SumScheduledHoursByDepartmentWeek returns the scheduled machine time per department per week for one baseline version. It is the denominator OEE availability is measured against: the hours the plant actually put on the schedule, not a shift pattern multiplied out over the whole window.
+//
+// planned_run_hours is a campaign's run time and planned_changeover_minutes the setup between campaigns; both are time a machine was scheduled to be working, so both belong in Planned Production Time, and logged downtime — changeover included — is charged against that total. Cancelled lines are excluded, matching SumPlannedByWeek: a line nobody will run was never scheduled time. Lines with no department are dropped rather than pooled into one bucket, because OEE has no availability for an unassigned department.
+func (q *Queries) SumScheduledHoursByDepartmentWeek(ctx context.Context, arg SumScheduledHoursByDepartmentWeekParams) ([]SumScheduledHoursByDepartmentWeekRow, error) {
+	rows, err := q.db.QueryContext(ctx, sumScheduledHoursByDepartmentWeek,
+		arg.AccountID,
+		arg.ProductionScheduleID,
+		arg.WindowStart,
+		arg.WindowEnd,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SumScheduledHoursByDepartmentWeekRow
+	for rows.Next() {
+		var i SumScheduledHoursByDepartmentWeekRow
+		if err := rows.Scan(
+			&i.WeekStartDate,
+			&i.DepartmentID,
+			&i.PlannedRunHours,
+			&i.PlannedChangeoverMinutes,
 		); err != nil {
 			return nil, err
 		}

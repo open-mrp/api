@@ -29,7 +29,7 @@ type AnalyzeScheduleAttainmentRequest struct {
 
 // Returns actual production measured against the plan that was live at the time.
 //
-// The baseline for each week is the schedule version published on or before that week began, so republishing mid-horizon cannot rewrite a week the floor has already worked. `baseline_schedules` names the versions used.
+// The baseline for each week is the version that froze it — the plan committed for that week — so a version published after the week ended cannot rewrite a week the floor has already worked, while a plan published on the week's own start day still counts as the plan it froze. `baseline_schedules` names the versions used.
 //
 // Two ratios are returned because either alone misleads: `attainment_pct` caps each campaign at what was asked for, so over-building one SKU cannot hide a miss on another, while `output_ratio_pct` is uncapped and is what reveals over-production. Production with no matching planned campaign is reported as `unplanned_quantity` rather than discarded — that number is the clearest signal a schedule is being worked around.
 //

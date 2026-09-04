@@ -6,7 +6,6 @@ import (
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/services/core-service/internal/mediator"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
@@ -244,10 +243,6 @@ func (s *productSvcImpl) GetProduct(ctx context.Context, params domain.GetProduc
 
 	if apiErr := s.attachProductIncludes(ctx, product, identity.Target.AccountID, params.Includes); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
-	}
-
-	if product != nil && product.Item != nil {
-		mediator.RefreshItemBurnRateAfterGet(ctx, s.repos, s.mediators(), identity.Target.AccountID, product.Item, params.Includes)
 	}
 
 	return product, nil

@@ -11,24 +11,34 @@ import (
 	"github.com/open-mrp/api/shared/tracing"
 )
 
-// baselineFor picks the published version that was live for a given week.
+// baselineFor picks the published version that governed a given week.
 //
-// Rows arrive newest-publish-first, so the first version whose horizon covers the week is the candidate. For a week that has already ended it must also have been published on or before that week began: skipping that test would let a mid-horizon republish silently rewrite a week the floor had already worked, and the number would change without anyone touching the past.
+// Rows arrive newest-publish-first, so the first version that owns the week wins. Ownership turns on the freeze, not the publish clock: a finished week belongs to the version that froze it — the plan that was actually committed for that week — because freezing is the explicit act of committing a week to the floor. A version whose horizon merely spanned the week but whose frozen window ended before it was superseded before the freeze and never governed it. This is what lets a plan published partway into its own week still own that week: publishing on the week's start day (a common cadence when the week starts midweek) freezes it, so it is the baseline, even though it was not live at 00:00.
 //
-// A week still in progress is not history yet, so the test does not apply to it. The plan being worked right now IS the current published version, whenever during the week it was published — requiring it to predate Monday made every schedule published mid-week report nothing planned, which reads as a broken page rather than as a rule being enforced.
+// History stays protected two ways: a version published after the week ended cannot own it, and a later republish advances its horizon past the finished week, so it no longer covers it. Either way a past week's number cannot change without someone re-committing the past.
+//
+// A week still in progress is not history yet: it has no completed freeze to judge against and the floor is working the current plan right now, so the newest published version whose horizon covers it wins, whenever during the week it was published.
 func baselineFor(baselines []domain.AttainmentBaselineRow, week time.Time, now time.Time) *domain.AttainmentBaselineRow {
-	weekHasEnded := !week.AddDate(0, 0, 7).After(now)
+	weekEnd := week.AddDate(0, 0, 7)
+	weekEnded := !weekEnd.After(now)
 
 	for i := range baselines {
 		b := &baselines[i]
 		if b.PublishedAt == nil {
 			continue
 		}
-		if weekHasEnded && b.PublishedAt.After(week) {
-			continue
-		}
 		if b.HorizonStartDate.After(week) || b.HorizonEndDate.Before(week) {
 			continue
+		}
+		if weekEnded {
+			// A version published after the week finished cannot own a week the floor has already worked.
+			if !b.PublishedAt.Before(weekEnd) {
+				continue
+			}
+			// The finished week belongs to the version that froze it, not merely one whose horizon spanned it.
+			if b.FrozenThroughDate == nil || week.After(*b.FrozenThroughDate) {
+				continue
+			}
 		}
 		return b
 	}

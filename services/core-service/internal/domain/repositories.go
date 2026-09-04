@@ -188,6 +188,9 @@ type ItemRepo interface {
 	// bulk upsert category validation.
 	GetCategoryBaseUnitIDs(ctx context.Context, categoryIDs []string) (map[string]CategoryRef, *apierror.APIError)
 	ListConsumptionChangeLogsForBurnRate(ctx context.Context, accountID, itemID string) ([]BurnRateConsumptionLog, *apierror.APIError)
+	// ListStaleBurnRateItems returns up to limit items whose burn rate has not been recomputed
+	// since staleBefore, stalest first, for the periodic sweeper to re-enqueue.
+	ListStaleBurnRateItems(ctx context.Context, staleBefore time.Time, limit int32) ([]StaleBurnRateItem, *apierror.APIError)
 	FetchItemsBySKU(ctx context.Context, accountID string, skus []string) ([]ItemSKUInfo, *apierror.APIError)
 	// FindBySKU returns the existing item's ID and its unit_value rate ID for the given SKU within the account. Returns (nil, nil, nil) when no match exists. Used by bulk upsert flows.
 	FindBySKU(ctx context.Context, accountID, sku string) (itemID *string, unitValueRateID *string, apiErr *apierror.APIError)
@@ -896,6 +899,8 @@ type AnalyticsRepo interface {
 	GetDemandForecastMonthlyRevenue(ctx context.Context, params GetDemandForecastWindowParams) ([]DemandForecastMonthlyRevenueRow, *apierror.APIError)
 	GetOeeDepartmentData(ctx context.Context, params GetOeeWindowParams) ([]OeeDepartmentDataRow, *apierror.APIError)
 	GetOeeEstimatedRuntime(ctx context.Context, params GetOeeWindowParams) ([]OeeEstimatedRuntimeRow, *apierror.APIError)
+	GetOeeEstimatedRuntimeForMachines(ctx context.Context, params GetOeeWindowParams) ([]OeeEstimatedRuntimeRow, *apierror.APIError)
+	GetOeeTrendEstimatedRuntimeForMachines(ctx context.Context, params GetOeeWindowParams) ([]OeeTrendEstimatedRuntimeRow, *apierror.APIError)
 	GetOeeDowntimeByDepartment(ctx context.Context, params GetOeeWindowParams) ([]OeeDowntimeRow, *apierror.APIError)
 	GetOeeTrendDepartmentDataByWeek(ctx context.Context, params GetOeeWindowParams) ([]OeeTrendDepartmentWeekRow, *apierror.APIError)
 	GetOeeTrendDowntimeIntervals(ctx context.Context, params GetOeeWindowParams) ([]OeeDowntimeIntervalRow, *apierror.APIError)
@@ -1027,6 +1032,9 @@ type ScheduleAttainmentRepo interface {
 
 	// SumPlannedByWeek returns planned quantity and run hours per (week, machine, item) for one baseline version.
 	SumPlannedByWeek(ctx context.Context, params SumPlannedByWeekParams) ([]AttainmentPlannedRow, *apierror.APIError)
+
+	// SumScheduledHoursByDepartmentWeek returns scheduled machine time (run + changeover) per department per week for one baseline version — the denominator OEE availability is measured against.
+	SumScheduledHoursByDepartmentWeek(ctx context.Context, params SumPlannedByWeekParams) ([]ScheduledHoursRow, *apierror.APIError)
 
 	// SumActualsByWeek returns what was actually produced, bucketed to the Monday of the scan week so it lines up with a schedule line's week_start_date. An unscanned batch was never produced, so it is excluded.
 	SumActualsByWeek(ctx context.Context, params SumActualsByWeekParams) ([]AttainmentActualRow, *apierror.APIError)
@@ -1450,6 +1458,9 @@ type PickRepo interface {
 	List(ctx context.Context, params ListPicksParams) (*ListPicksResult, *apierror.APIError)
 	Get(ctx context.Context, accountID, pickID string) (*Pick, *apierror.APIError)
 	GetLines(ctx context.Context, pickID string) ([]*PickLine, *apierror.APIError)
+	// GetLinesForPicks returns the lines for a page of picks in one query, keyed by pick id, so the
+	// list endpoint's lines expansion does not fan out into one query per pick.
+	GetLinesForPicks(ctx context.Context, pickIDs []string) (map[string][]*PickLine, *apierror.APIError)
 	UpdateFinishedAt(ctx context.Context, accountID, pickID string, finishedAt time.Time) *apierror.APIError
 	HasShippedItems(ctx context.Context, accountID, pickID string) (bool, *apierror.APIError)
 	VoidAllLines(ctx context.Context, pickID string) *apierror.APIError
@@ -1458,6 +1469,10 @@ type PickRepo interface {
 	PickAllLines(ctx context.Context, pickID string) *apierror.APIError
 	// GetShipmentIDs returns the ids of shipments raised against the pick's order, oldest first.
 	GetShipmentIDs(ctx context.Context, accountID, pickID string) ([]string, *apierror.APIError)
+	// GetShipmentIDsForPicks returns shipment ids for a page of picks in one query, keyed by pick
+	// id (oldest first within each), so the list endpoint's shipments expansion does not fan out
+	// into one query per pick.
+	GetShipmentIDsForPicks(ctx context.Context, accountID string, pickIDs []string) (map[string][]string, *apierror.APIError)
 	IsInAccount(ctx context.Context, accountID, pickID string) (bool, *apierror.APIError)
 	FindLinesToPack(ctx context.Context, pickID string) ([]*PickLine, *apierror.APIError)
 	PackLines(ctx context.Context, pickID string) *apierror.APIError

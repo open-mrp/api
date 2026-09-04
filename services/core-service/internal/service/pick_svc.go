@@ -123,24 +123,34 @@ func (s *pickSvcImpl) ListPicks(ctx context.Context, params domain.ListPicksPara
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// Lines are the one heavy expansion, so the list pays for them only on request.
-	if includesPickLines(params.Includes) {
-		for _, pick := range result.Picks {
-			lines, apiErr := repo.GetLines(ctx, pick.ID)
-			if apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			pick.Lines = lines
+	// Lines and shipments are the heavy expansions, so the list pays for them only on request, and
+	// each fetches the whole page in one batched query rather than one per pick.
+	wantLines := includesPickLines(params.Includes)
+	wantShipments := includesPickShipments(params.Includes)
+	if (wantLines || wantShipments) && len(result.Picks) > 0 {
+		pickIDs := make([]string, len(result.Picks))
+		for i, pick := range result.Picks {
+			pickIDs[i] = pick.ID
 		}
-	}
 
-	if includesPickShipments(params.Includes) {
-		for _, pick := range result.Picks {
-			ids, apiErr := repo.GetShipmentIDs(ctx, params.AccountID, pick.ID)
+		if wantLines {
+			linesByPick, apiErr := repo.GetLinesForPicks(ctx, pickIDs)
 			if apiErr != nil {
 				return nil, tracing.Trace(span, apiErr)
 			}
-			pick.ShipmentIDs = ids
+			for _, pick := range result.Picks {
+				pick.Lines = linesByPick[pick.ID]
+			}
+		}
+
+		if wantShipments {
+			shipmentsByPick, apiErr := repo.GetShipmentIDsForPicks(ctx, params.AccountID, pickIDs)
+			if apiErr != nil {
+				return nil, tracing.Trace(span, apiErr)
+			}
+			for _, pick := range result.Picks {
+				pick.ShipmentIDs = shipmentsByPick[pick.ID]
+			}
 		}
 	}
 

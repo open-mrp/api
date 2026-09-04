@@ -10,10 +10,34 @@ import (
 	"github.com/open-mrp/api/shared/tracing"
 )
 
-// GetOeeDepartmentData returns the unit counts and the standard time earned per department in the window.
+// GetOeeDepartmentData returns the unit counts and the standard time earned per department in the window. When the caller names machines, only production on those machines is counted — the scheduled-machine restriction OEE Performance needs — via a separate query so the unrestricted path carries no filter predicate. An empty IN list would be invalid SQL, so an empty set means no restriction and uses the whole-floor query.
 func (r *analyticsRepoImpl) GetOeeDepartmentData(ctx context.Context, params domain.GetOeeWindowParams) ([]domain.OeeDepartmentDataRow, *apierror.APIError) {
 	ctx, span := analyticsRepoTracer.Start(ctx, "repository.analytics.get_oee_department_data")
 	defer span.End()
+
+	if len(params.MachineIDs) > 0 {
+		rows, err := r.queries.GetOeeDepartmentDataForMachines(ctx, sqlc.GetOeeDepartmentDataForMachinesParams{
+			OwnerAccountID: params.AccountID,
+			StartDate:      toRequiredNullTime(params.StartDate),
+			EndDate:        toRequiredNullTime(params.EndDate),
+			MachineIds:     params.MachineIDs,
+		})
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		out := make([]domain.OeeDepartmentDataRow, len(rows))
+		for i, row := range rows {
+			out[i] = domain.OeeDepartmentDataRow{
+				DepartmentID:          row.DepartmentID,
+				DepartmentName:        row.DepartmentName,
+				GoodUnits:             decimalToFloat64(row.GoodUnits),
+				WasteUnits:            decimalToFloat64(row.WasteUnits),
+				SecondsUnits:          decimalToFloat64(row.SecondsUnits),
+				StandardSecondsEarned: decimalToFloat64(row.StandardSecondsEarned),
+			}
+		}
+		return out, nil
+	}
 
 	rows, err := r.queries.GetOeeDepartmentData(ctx, sqlc.GetOeeDepartmentDataParams{
 		OwnerAccountID: params.AccountID,
@@ -62,6 +86,68 @@ func (r *analyticsRepoImpl) GetOeeEstimatedRuntime(ctx context.Context, params d
 	return out, nil
 }
 
+// GetOeeEstimatedRuntimeForMachines returns the estimated runtime seconds per department in the window, counting only production on the named machines — the machines the plan scheduled. It is the Operating Time Availability and Performance divide by, kept on the same machines whose output fills their numerators.
+func (r *analyticsRepoImpl) GetOeeEstimatedRuntimeForMachines(ctx context.Context, params domain.GetOeeWindowParams) ([]domain.OeeEstimatedRuntimeRow, *apierror.APIError) {
+	ctx, span := analyticsRepoTracer.Start(ctx, "repository.analytics.get_oee_estimated_runtime_for_machines")
+	defer span.End()
+
+	// No scheduled machines means no scoped run time to read, and an empty IN list is invalid SQL.
+	if len(params.MachineIDs) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.queries.GetOeeEstimatedRuntimeForMachines(ctx, sqlc.GetOeeEstimatedRuntimeForMachinesParams{
+		OwnerAccountID: params.AccountID,
+		StartDate:      toRequiredNullTime(params.StartDate),
+		EndDate:        toRequiredNullTime(params.EndDate),
+		MachineIds:     params.MachineIDs,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	out := make([]domain.OeeEstimatedRuntimeRow, len(rows))
+	for i, row := range rows {
+		out[i] = domain.OeeEstimatedRuntimeRow{
+			DepartmentID:   row.DepartmentID,
+			RuntimeSeconds: decimalToFloat64(row.RuntimeSeconds),
+		}
+	}
+	return out, nil
+}
+
+// GetOeeTrendEstimatedRuntimeForMachines returns the scheduled machines' estimated runtime seconds per department per production week, the Operating Time each trend point measures its scheduled departments against.
+func (r *analyticsRepoImpl) GetOeeTrendEstimatedRuntimeForMachines(ctx context.Context, params domain.GetOeeWindowParams) ([]domain.OeeTrendEstimatedRuntimeRow, *apierror.APIError) {
+	ctx, span := analyticsRepoTracer.Start(ctx, "repository.analytics.get_oee_trend_estimated_runtime_for_machines")
+	defer span.End()
+
+	// No scheduled machines means no scoped run time to read, and an empty IN list is invalid SQL.
+	if len(params.MachineIDs) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.queries.GetOeeTrendEstimatedRuntimeForMachinesByWeek(ctx, sqlc.GetOeeTrendEstimatedRuntimeForMachinesByWeekParams{
+		OwnerAccountID: params.AccountID,
+		WeekStartDay:   int64(params.WeekStartDay),
+		StartDate:      toRequiredNullTime(params.StartDate),
+		EndDate:        toRequiredNullTime(params.EndDate),
+		MachineIds:     params.MachineIDs,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	out := make([]domain.OeeTrendEstimatedRuntimeRow, len(rows))
+	for i, row := range rows {
+		out[i] = domain.OeeTrendEstimatedRuntimeRow{
+			WeekStart:      row.WeekStartDate,
+			DepartmentID:   row.DepartmentID,
+			RuntimeSeconds: decimalToFloat64(row.RuntimeSeconds),
+		}
+	}
+	return out, nil
+}
+
 // GetOeeDowntimeByDepartment returns logged downtime per department and reason, clipped to the window.
 func (r *analyticsRepoImpl) GetOeeDowntimeByDepartment(ctx context.Context, params domain.GetOeeWindowParams) ([]domain.OeeDowntimeRow, *apierror.APIError) {
 	ctx, span := analyticsRepoTracer.Start(ctx, "repository.analytics.get_oee_downtime_by_department")
@@ -90,10 +176,36 @@ func (r *analyticsRepoImpl) GetOeeDowntimeByDepartment(ctx context.Context, para
 	return out, nil
 }
 
-// GetOeeTrendDepartmentDataByWeek returns unit counts and standard time earned per department per production week in the window.
+// GetOeeTrendDepartmentDataByWeek returns unit counts and standard time earned per department per production week in the window. As with GetOeeDepartmentData, naming machines restricts the counts to those machines via a separate query, so the unrestricted path carries no filter predicate.
 func (r *analyticsRepoImpl) GetOeeTrendDepartmentDataByWeek(ctx context.Context, params domain.GetOeeWindowParams) ([]domain.OeeTrendDepartmentWeekRow, *apierror.APIError) {
 	ctx, span := analyticsRepoTracer.Start(ctx, "repository.analytics.get_oee_trend_department_data_by_week")
 	defer span.End()
+
+	if len(params.MachineIDs) > 0 {
+		rows, err := r.queries.GetOeeTrendDepartmentDataByWeekForMachines(ctx, sqlc.GetOeeTrendDepartmentDataByWeekForMachinesParams{
+			OwnerAccountID: params.AccountID,
+			WeekStartDay:   int64(params.WeekStartDay),
+			StartDate:      toRequiredNullTime(params.StartDate),
+			EndDate:        toRequiredNullTime(params.EndDate),
+			MachineIds:     params.MachineIDs,
+		})
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		out := make([]domain.OeeTrendDepartmentWeekRow, len(rows))
+		for i, row := range rows {
+			out[i] = domain.OeeTrendDepartmentWeekRow{
+				WeekStart:             row.WeekStartDate,
+				DepartmentID:          row.DepartmentID,
+				DepartmentName:        row.DepartmentName,
+				GoodUnits:             decimalToFloat64(row.GoodUnits),
+				WasteUnits:            decimalToFloat64(row.WasteUnits),
+				SecondsUnits:          decimalToFloat64(row.SecondsUnits),
+				StandardSecondsEarned: decimalToFloat64(row.StandardSecondsEarned),
+			}
+		}
+		return out, nil
+	}
 
 	rows, err := r.queries.GetOeeTrendDepartmentDataByWeek(ctx, sqlc.GetOeeTrendDepartmentDataByWeekParams{
 		OwnerAccountID: params.AccountID,

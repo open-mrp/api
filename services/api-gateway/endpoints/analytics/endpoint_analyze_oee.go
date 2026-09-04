@@ -19,7 +19,7 @@ type AnalyzeOeeRequest struct {
 	EndDate time.Time `json:"ends_at" validate:"required"`
 	// Optional department IDs to filter by.
 	DepartmentIDs []string `json:"department_ids,omitzero"`
-	// Scheduled production time per department for the period. Availability, performance and OEE are only returned for departments this covers.
+	// Overrides the scheduled production time per department for the period. When omitted it is taken from the published production schedule, so this is only needed to measure a period the schedule does not cover. Availability, performance and OEE are only returned for departments the scheduled time covers.
 	PlannedTime []OeeDepartmentPlannedTime `json:"planned_time,omitzero"`
 }
 
@@ -33,7 +33,7 @@ type OeeDepartmentPlannedTime struct {
 
 // Returns Overall Equipment Effectiveness (OEE) metrics by department.
 //
-// Availability is measured from logged machine downtime rather than inferred, so it requires both `planned_time` for the department and downtime events in the period. Departments with `has_downtime_data` false have no availability measurement, and their ratios are returned as null rather than as 100%.
+// Availability is the scheduled machine time the plant actually planned, net of logged machine downtime — the planned time comes from the published production schedule (or `planned_time` when supplied), and a department the schedule never covered has no availability rather than a fabricated one. Departments with `has_downtime_data` false have no downtime measured, and their ratios are returned as null rather than as 100%.
 type AnalyzeOeeEndpoint struct{}
 
 func (e *AnalyzeOeeEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeOeeRequest, *apiresource.AnalyzeOeeResponse] {

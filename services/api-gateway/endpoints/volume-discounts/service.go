@@ -6,6 +6,7 @@ import (
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
+	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
@@ -69,7 +70,7 @@ func (m *volumeDiscountSvcImpl) ListVolumeDiscounts(ctx context.Context, req *Li
 		return nil, apiErr
 	}
 
-	return volumeDiscountListFromProto(ctx, resp), nil
+	return volumeDiscountListFromProto(ctx, resp)
 }
 
 func (m *volumeDiscountSvcImpl) GetVolumeDiscount(ctx context.Context, req *RetrieveVolumeDiscountRequest) (*apiresource.VolumeDiscount, *apierror.APIError) {
@@ -87,9 +88,14 @@ func (m *volumeDiscountSvcImpl) GetVolumeDiscount(ctx context.Context, req *Retr
 		return nil, apiErr
 	}
 
+	properties, apiErr := loadVolumeDiscountProperties(ctx, resp.VolumeDiscount)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
 	meta := resourcekit.GetLoadMeta(ctx)
 	result := volumeDiscountFromProto(resp.VolumeDiscount)
-	stashVolumeDiscountMeta(meta, resp.VolumeDiscount)
+	stashVolumeDiscountMeta(ctx, meta, resp.VolumeDiscount, properties)
 	return &result, nil
 }
 
@@ -124,9 +130,14 @@ func (m *volumeDiscountSvcImpl) CreateVolumeDiscount(ctx context.Context, req *C
 		return nil, apiErr
 	}
 
+	properties, apiErr := loadVolumeDiscountProperties(ctx, resp.VolumeDiscount)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
 	meta := resourcekit.GetLoadMeta(ctx)
 	result := volumeDiscountFromProto(resp.VolumeDiscount)
-	stashVolumeDiscountMeta(meta, resp.VolumeDiscount)
+	stashVolumeDiscountMeta(ctx, meta, resp.VolumeDiscount, properties)
 	return &result, nil
 }
 
@@ -169,9 +180,14 @@ func (m *volumeDiscountSvcImpl) UpdateVolumeDiscount(ctx context.Context, req *U
 		return nil, apiErr
 	}
 
+	properties, apiErr := loadVolumeDiscountProperties(ctx, resp.VolumeDiscount)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
 	meta := resourcekit.GetLoadMeta(ctx)
 	result := volumeDiscountFromProto(resp.VolumeDiscount)
-	stashVolumeDiscountMeta(meta, resp.VolumeDiscount)
+	stashVolumeDiscountMeta(ctx, meta, resp.VolumeDiscount, properties)
 	return &result, nil
 }
 
@@ -222,7 +238,31 @@ func volumeDiscountFromProto(d *pb.VolumeDiscountInfo) apiresource.VolumeDiscoun
 	}
 }
 
-func stashVolumeDiscountMeta(meta *resourcekit.LoadMeta, d *pb.VolumeDiscountInfo) {
+// volumeDiscountPropertyIDs names every property the given discounts' attributes point at, so a page can resolve them in one call instead of one per discount.
+func volumeDiscountPropertyIDs(discounts []*pb.VolumeDiscountInfo) []string {
+	ids := make([]string, 0, len(discounts))
+	for _, d := range discounts {
+		if d == nil {
+			continue
+		}
+		for _, attr := range d.Attributes {
+			ids = append(ids, attr.PropertyId)
+		}
+	}
+	return ids
+}
+
+// loadVolumeDiscountProperties resolves the properties for a whole page of discounts.
+//
+// Hoisted out of stashVolumeDiscountMeta because that runs per discount: resolving there cost one
+// property RPC per row of a list, unconditionally. The error is returned rather than swallowed —
+// presenting `property: null` on a transient failure is indistinguishable from a deleted property,
+// and the caller has no way to tell it should retry.
+func loadVolumeDiscountProperties(ctx context.Context, discounts ...*pb.VolumeDiscountInfo) (map[string]*apiresource.Property, *apierror.APIError) {
+	return resourceloaders.LoadPropertiesByID(ctx, volumeDiscountPropertyIDs(discounts)...)
+}
+
+func stashVolumeDiscountMeta(ctx context.Context, meta *resourcekit.LoadMeta, d *pb.VolumeDiscountInfo, properties map[string]*apiresource.Property) {
 	if d == nil {
 		return
 	}
@@ -284,6 +324,8 @@ func stashVolumeDiscountMeta(meta *resourcekit.LoadMeta, d *pb.VolumeDiscountInf
 	meta.Set(constants.ObjectTypeVolumeDiscount, d.Id, "categories",
 		apiresource.NewList(categories, apiresource.PageInfo{}))
 
+	// The discount's attributes name their properties by id only; the resolved properties are handed
+	// in so a page of discounts costs one lookup rather than one per row.
 	attributes := make([]apiresource.Attribute, len(d.Attributes))
 	for i, attr := range d.Attributes {
 		attributes[i] = apiresource.Attribute{
@@ -296,12 +338,7 @@ func stashVolumeDiscountMeta(meta *resourcekit.LoadMeta, d *pb.VolumeDiscountInf
 		if attr.ColorCode != nil {
 			attributes[i].ColorCode = constants.Color(*attr.ColorCode)
 		}
-		if attr.PropertyId != "" {
-			attributes[i].Property = &apiresource.Property{
-				ID:     attr.PropertyId,
-				Object: constants.ObjectTypeProperty,
-			}
-		}
+		attributes[i].Property = properties[attr.PropertyId]
 	}
 	meta.Set(constants.ObjectTypeVolumeDiscount, d.Id, "attributes",
 		apiresource.NewList(attributes, apiresource.PageInfo{}))
@@ -326,17 +363,22 @@ func stashVolumeDiscountMeta(meta *resourcekit.LoadMeta, d *pb.VolumeDiscountInf
 		apiresource.NewList(units, apiresource.PageInfo{}))
 }
 
-func volumeDiscountListFromProto(ctx context.Context, resp *pb.ListVolumeDiscountsResponse) *apiresource.List[apiresource.VolumeDiscount] {
+func volumeDiscountListFromProto(ctx context.Context, resp *pb.ListVolumeDiscountsResponse) (*apiresource.List[apiresource.VolumeDiscount], *apierror.APIError) {
 	if resp == nil {
-		return apiresource.NewList[apiresource.VolumeDiscount](nil, apiresource.PageInfo{})
+		return apiresource.NewList[apiresource.VolumeDiscount](nil, apiresource.PageInfo{}), nil
+	}
+
+	properties, apiErr := loadVolumeDiscountProperties(ctx, resp.VolumeDiscounts...)
+	if apiErr != nil {
+		return nil, apiErr
 	}
 
 	meta := resourcekit.GetLoadMeta(ctx)
 	discounts := make([]apiresource.VolumeDiscount, len(resp.VolumeDiscounts))
 	for i, d := range resp.VolumeDiscounts {
 		discounts[i] = volumeDiscountFromProto(d)
-		stashVolumeDiscountMeta(meta, d)
+		stashVolumeDiscountMeta(ctx, meta, d, properties)
 	}
 
-	return apiresource.NewList(discounts, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
+	return apiresource.NewList(discounts, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }

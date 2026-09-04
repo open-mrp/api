@@ -65,7 +65,7 @@ func (e *UpdateShippingCaseEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upd
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeShippingCase,
-			Fields:     []string{"carrier", "shipment", "freight_amount.unit", "freight_weight.unit"},
+			Fields:     []string{"carrier", "shipment", "freight_amount", "freight_amount.unit", "freight_weight", "freight_weight.unit"},
 		}),
 	})
 }

@@ -46,7 +46,7 @@ type agentConfig struct {
 	Tier string `json:"tier"`
 	// EndpointToolSlugs is the explicit per-agent allow-list of api-gateway endpoint-tools the agent may discover and use. Entries are endpoint-tool slugs; the single entry "*" grants the whole catalog. Empty (default) means the agent gets no endpoint-tools at all. Stored in the agent_definition.config JSON, so granting endpoints needs no migration.
 	EndpointToolSlugs []string `json:"endpoint_tool_slugs"`
-	// EndpointToolReview is the per-agent override of which granted endpoint-tools require human approval before they execute, keyed by endpoint-tool slug. A true value gates the tool (the run pauses in awaiting_approval when the agent calls it); absent or false means no review, matching the default-off behaviour of linked built-in tools. Stored alongside EndpointToolSlugs in the agent_definition.config JSON, so it needs no migration.
+	// EndpointToolReview is the per-agent override of which granted endpoint-tools require human approval before they execute, keyed by endpoint-tool slug. A true value gates the tool (the run pauses in awaiting_approval when the agent calls it); absent or false means no review, matching the default-off behavior of linked built-in tools. Stored alongside EndpointToolSlugs in the agent_definition.config JSON, so it needs no migration.
 	EndpointToolReview map[string]bool `json:"endpoint_tool_review"`
 }
 

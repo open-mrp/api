@@ -541,6 +541,7 @@ type BatchRepo interface {
 	FindBatchFlow(ctx context.Context, accountID, batchID string) ([]BatchFlowNode, *apierror.APIError)
 	FindByScanningStation(ctx context.Context, params ListBatchesByScanningStationParams) (*ListBatchesByScanningStationResult, *apierror.APIError)
 	FindPossibleNextSteps(ctx context.Context, accountID, scanningStationID, batchID string) ([]ScanningProductionStepInfo, *apierror.APIError)
+	FindPossibleInitSteps(ctx context.Context, accountID, scanningStationID, batchID string) ([]ScanningProductionStepInfo, *apierror.APIError)
 	FindOpenBatches(ctx context.Context, accountID string, itemIDs, productLineIDs []string) ([]OpenBatchSummary, *apierror.APIError)
 	FindFurthestRightBatchInFlow(ctx context.Context, accountID, batchID string) (*BaseBatch, *apierror.APIError)
 	FindNextAvailableBatchInFlow(ctx context.Context, accountID, batchID, productionStepID string) (*BaseBatch, *apierror.APIError)
@@ -1332,6 +1333,7 @@ type PurchaseOrderRepo interface {
 	List(ctx context.Context, params ListPurchaseOrdersParams) (*ListPurchaseOrdersResult, *apierror.APIError)
 	Get(ctx context.Context, accountID, purchaseOrderID string) (*PurchaseOrder, *apierror.APIError)
 	GetLines(ctx context.Context, salesOrderID string) ([]*PurchaseOrderLine, *apierror.APIError)
+	GetLinesByIDs(ctx context.Context, accountID string, ids []string) ([]*PurchaseOrderLine, *apierror.APIError)
 	Create(ctx context.Context, id string, params CreatePurchaseOrderParams) (*PurchaseOrder, *apierror.APIError)
 	Update(ctx context.Context, params UpdatePurchaseOrderParams) (*PurchaseOrder, *apierror.APIError)
 	Delete(ctx context.Context, accountID, purchaseOrderID string) *apierror.APIError

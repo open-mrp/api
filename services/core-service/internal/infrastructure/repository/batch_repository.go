@@ -678,6 +678,27 @@ func (r *batchRepoImpl) FindPossibleNextSteps(ctx context.Context, accountID, sc
 	return results, nil
 }
 
+func (r *batchRepoImpl) FindPossibleInitSteps(ctx context.Context, accountID, scanningStationID, batchID string) ([]domain.ScanningProductionStepInfo, *apierror.APIError) {
+	ctx, span := batchRepoTracer.Start(ctx, "repository.batch.find_possible_init_steps")
+	defer span.End()
+
+	rows, err := r.queries.FindPossibleInitSteps(ctx, sqlc.FindPossibleInitStepsParams{
+		BatchID:           batchID,
+		AccountID:         accountID,
+		ScanningStationID: gosql.NullString{String: scanningStationID, Valid: scanningStationID != ""},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	results := make([]domain.ScanningProductionStepInfo, len(rows))
+	for i, row := range rows {
+		// IsMultiPart is about advancing a batch through a step that consumes several inputs. An initializing batch has consumed nothing yet, so there is no multi-part choice to offer.
+		results[i] = domain.ScanningProductionStepInfo{ID: row.ID, Name: row.Name}
+	}
+	return results, nil
+}
+
 func (r *batchRepoImpl) FindOpenBatches(ctx context.Context, accountID string, itemIDs, productLineIDs []string) ([]domain.OpenBatchSummary, *apierror.APIError) {
 	ctx, span := batchRepoTracer.Start(ctx, "repository.batch.find_open_batches")
 	defer span.End()

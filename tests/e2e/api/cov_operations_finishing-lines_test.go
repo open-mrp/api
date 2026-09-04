@@ -62,11 +62,11 @@ func TestFinishingLines_ShapeAndParentage(t *testing.T) {
 
 		hours, ok := line["planned_run_hours"].(float64)
 		require.True(t, ok)
-		assert.Positive(t, hours, "a levelled line has to cost the department hours, or capacity means nothing")
+		assert.Positive(t, hours, "a leveled line has to cost the department hours, or capacity means nothing")
 	}
 }
 
-// Levelled means the plan never asks the second stage for more hours than it has in a week.
+// Leveled means the plan never asks the second stage for more hours than it has in a week.
 func TestFinishingLines_NoWeekExceedsTheStagesCapacity(t *testing.T) {
 	t.Parallel()
 
@@ -76,7 +76,7 @@ func TestFinishingLines_NoWeekExceedsTheStagesCapacity(t *testing.T) {
 	require.NotEmpty(t, lines)
 
 	capacity := finishingCapacityHours(t, scheduleID)
-	require.Positive(t, capacity, "a levelled stage must report the capacity it was levelled against")
+	require.Positive(t, capacity, "a leveled stage must report the capacity it was leveled against")
 
 	hoursByWeek := map[float64]float64{}
 	for _, line := range lines {
@@ -145,7 +145,7 @@ func TestFinishingLines_DiagnosticsExplainTheStage(t *testing.T) {
 	}
 
 	capacity, ok := diagnostics["weekly_capacity_hours"].(float64)
-	require.True(t, ok, "the stage must report the capacity it was levelled against")
+	require.True(t, ok, "the stage must report the capacity it was leveled against")
 	assert.Positive(t, capacity)
 }
 

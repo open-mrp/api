@@ -96,7 +96,7 @@ func (c *UndoBatchScanConsumer) handleMessage(ctx context.Context, msg amqp.Deli
 
 	if evt.BatchID == "" {
 		log.Printf("[undo_batch_scan] Empty batch ID in event")
-		return nil
+		return c.inboxConsumer.Discard(ctx, "no batch on event")
 	}
 
 	accountID := ""
@@ -105,7 +105,7 @@ func (c *UndoBatchScanConsumer) handleMessage(ctx context.Context, msg amqp.Deli
 	}
 	if accountID == "" {
 		log.Printf("[undo_batch_scan] No account ID in message identity")
-		return nil
+		return c.inboxConsumer.Discard(ctx, "no account on message identity")
 	}
 
 	span.SetAttributes(
@@ -173,31 +173,35 @@ func (c *UndoBatchScanConsumer) undoBatchScan(ctx context.Context, accountID str
 			return apiErr
 		}
 
-		recordReversalAuditTrail(txCtx, f, accountID, evt, reversed)
+		if apiErr := recordReversalAuditTrail(txCtx, f, accountID, evt, reversed); apiErr != nil {
+			return apiErr
+		}
 
 		// Assigned, not appended: the callback re-runs on a lock conflict and the second run must
 		// start from the same state the first did.
 		deltas = reversed
-		return nil
+
+		// Freed receipts can now cover issues that were short, so allocation is asked for again for
+		// whatever the reversal touched. The outbox row commits with the reversal, which is the
+		// guarantee wanted here — the request exists if and only if the stock was actually freed —
+		// so this belongs in the reversal's transaction rather than one of its own after it.
+		//
+		// A second transaction after the recovery point cannot be retried: the record is already
+		// 'processed', so the redelivery is skipped and the re-allocation is lost with nothing
+		// alerting on it.
+		if apiErr := mediator.EnqueueAllocateOpenIssues(txCtx, f, accountID, reversedItemIDs(reversed)...); apiErr != nil {
+			log.Printf("[undo_batch_scan] Failed to request allocation for batch %s: %v", evt.BatchID, apiErr)
+			return apiErr
+		}
+
+		// The recovery point is the last statement, so the marker commits with everything above it.
+		return completeInboxRecord(txCtx, f)
 	})
 	if apiErr != nil {
 		return apiErr
 	}
 
-	// Freed receipts can now cover issues that were short, so allocation is asked for again for
-	// whatever the reversal touched. Sorted because two of these taking the same items in different
-	// orders is a deadlock nobody would be able to explain from the logs.
-	//
-	// Its own transaction, after the reversal has committed: an allocation request that survives a
-	// reversal which did not is a request to cover demand from stock that was never freed.
-	requestIDs := reversedItemIDs(deltas)
-	if len(requestIDs) > 0 {
-		if apiErr := c.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
-			return mediator.EnqueueAllocateOpenIssues(txCtx, f, accountID, requestIDs...)
-		}); apiErr != nil {
-			log.Printf("[undo_batch_scan] Failed to request allocation for batch %s: %v", evt.BatchID, apiErr)
-			return apiErr
-		}
+	if len(reversedItemIDs(deltas)) > 0 {
 		c.kickOutbox()
 	}
 
@@ -212,7 +216,7 @@ func recordReversalAuditTrail(
 	accountID string,
 	evt domain.UndoBatchScanEvent,
 	deltas []domain.InventoryReversalDelta,
-) {
+) *apierror.APIError {
 	var scanningStationID *string
 	if evt.ScanningStationID != "" {
 		stationID := evt.ScanningStationID
@@ -225,7 +229,7 @@ func recordReversalAuditTrail(
 	}
 
 	for _, delta := range deltas {
-		mediator.RecordInventoryAuditTrailOrLog(
+		if apiErr := mediator.RecordInventoryAuditTrail(
 			ctx,
 			repos,
 			accountID,
@@ -235,8 +239,11 @@ func recordReversalAuditTrail(
 			string(constants.InventoryActionTypeUserCorrection),
 			scanningStationID,
 			responsibleUserID,
-		)
+		); apiErr != nil {
+			return apiErr
+		}
 	}
+	return nil
 }
 
 // reversedItemIDs is the deduplicated item set of a reversal, in a stable order.

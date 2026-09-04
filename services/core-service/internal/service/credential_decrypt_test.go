@@ -59,7 +59,7 @@ func TestDecryptShippoAPIKey_LegacyCamelCaseKey(t *testing.T) {
 }
 
 // TestDecryptShippoAPIKey_NilAADFails documents the exact defect that was fixed:
-// credentials are sealed with the account ID as AAD, so the previous behaviour of
+// credentials are sealed with the account ID as AAD, so the previous behavior of
 // decrypting with no AAD cannot open them. A blob sealed the correct way must fail
 // to decrypt when the AAD is dropped.
 func TestDecryptShippoAPIKey_NilAADFails(t *testing.T) {
@@ -68,7 +68,7 @@ func TestDecryptShippoAPIKey_NilAADFails(t *testing.T) {
 
 	encoded := sealShippoCreds(t, key, accountID, `{"api_key":"shippo_live_abc123"}`)
 
-	// Decrypting with an empty AAD (the old, broken behaviour) must fail.
+	// Decrypting with an empty AAD (the old, broken behavior) must fail.
 	_, err := crypto.DecryptAESGCM(encoded, key, nil)
 	require.Error(t, err)
 }

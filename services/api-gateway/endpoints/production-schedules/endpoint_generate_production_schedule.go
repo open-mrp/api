@@ -29,7 +29,7 @@ type GenerateProductionScheduleRequest struct {
 	DemandBasis field.Optional[constants.ScheduleDemandBasis] `json:"demand_basis,omitzero"`
 	// Human-readable label for the version, such as the week it was cut for.
 	//
-	// Purely for recognising the version in a list; versions are numbered automatically and the number is what identifies them.
+	// Purely for recognizing the version in a list; versions are numbered automatically and the number is what identifies them.
 	Name field.Optional[string] `json:"name,omitzero" validate:"omitempty,max=255"`
 }
 

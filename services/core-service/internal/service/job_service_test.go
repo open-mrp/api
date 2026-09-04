@@ -401,7 +401,7 @@ func (suite *JobSvcSystemSurfaceTestSuite) TestCancelJob_SettlesTheJobAndReturns
 	suite.True(cancelled.IsTerminal())
 }
 
-// Reading a job is not licence to stop it. The identity here can see the job but
+// Reading a job is not license to stop it. The identity here can see the job but
 // holds no jobs:delete.
 func (suite *JobSvcSystemSurfaceTestSuite) TestCancelJob_RequiresDeletePermission() {
 	jobID := genTestID(suite.T(), id.JobIDPrefix)

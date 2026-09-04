@@ -237,10 +237,10 @@ func TestPurchaseOrders_IssueCreatesTheReceivingOrder(t *testing.T) {
 	requireStatus(t, 200, status, body)
 	assert.Equal(t, "issued", jsonField(parseJSON(body), "status"))
 
-	resp, err := apiClient.GetFull(purchaseOrdersPath+"/"+orderID+"?include=receiving_order", nil)
+	resp, err := apiClient.GetFull(purchaseOrdersPath+"/"+orderID+"?include=related&include=related.receiving_order", nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, resp.StatusCode, resp.Body)
-	receiving := jsonObject(parseJSON(resp.Body), "receiving_order")
+	receiving := jsonObject(jsonObject(parseJSON(resp.Body), "related"), "receiving_order")
 	require.NotNil(t, receiving, "issuing must create the receiving order: %s", string(resp.Body))
 	assert.NotEmpty(t, jsonField(receiving, "id"))
 
@@ -261,10 +261,10 @@ func TestPurchaseOrders_UnissueRemovesTheReceivingOrder(t *testing.T) {
 	requireStatus(t, 200, status, body)
 	assert.Equal(t, "estimate", jsonField(parseJSON(body), "status"))
 
-	resp, err := apiClient.GetFull(purchaseOrdersPath+"/"+orderID+"?include=receiving_order", nil)
+	resp, err := apiClient.GetFull(purchaseOrdersPath+"/"+orderID+"?include=related&include=related.receiving_order", nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, resp.StatusCode, resp.Body)
-	assert.Nil(t, jsonObject(parseJSON(resp.Body), "receiving_order"),
+	assert.Nil(t, jsonObject(jsonObject(parseJSON(resp.Body), "related"), "receiving_order"),
 		"unissuing must take the receiving order with it: %s", string(resp.Body))
 }
 

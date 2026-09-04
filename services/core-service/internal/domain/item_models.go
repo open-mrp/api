@@ -172,6 +172,8 @@ type ItemCosts struct {
 	OverheadCost       string
 	TotalCost          string
 	UnitID             string
+	// NumeratorUnitID is the currency the four costs are expressed in; UnitID is what they are per.
+	NumeratorUnitID string
 }
 
 // CostFlowConsumption represents a single consumption with cost-relevant data.
@@ -191,6 +193,8 @@ type CostFlowConsumption struct {
 type ItemStockingUnit struct {
 	UnitGroupID string
 	BaseUnitID  string
+	// CostNumeratorUnitID is the currency the item's costs are expressed in, from its unit-cost rate. Empty when the item has no unit cost recorded yet.
+	CostNumeratorUnitID string
 }
 
 // ItemTrend represents a single trend data point.
@@ -328,6 +332,8 @@ type ReconciledItem struct {
 	SKU             string
 	PreviousMeasure decimal.Decimal
 	NewMeasure      decimal.Decimal
+	// UnitID is the item's base unit, which both measures are expressed in.
+	UnitID string
 }
 
 // SkippedItem represents an item that was skipped during reconciliation.
@@ -338,8 +344,10 @@ type SkippedItem struct {
 
 // ReconcileError represents an error that occurred during reconciliation.
 type ReconcileError struct {
-	SKU   string
-	Error string
+	// ItemID is the item the row named. Always set: a row whose SKU matched nothing is skipped rather than errored.
+	ItemID string
+	SKU    string
+	Error  string
 }
 
 // InventoryItemResult represents an item with its on-hand inventory quantity.

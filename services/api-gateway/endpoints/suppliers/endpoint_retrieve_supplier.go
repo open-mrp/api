@@ -21,8 +21,8 @@ type RetrieveSupplierRequest struct {
 // Returns a supplier by ID.
 type RetrieveSupplierEndpoint struct{}
 
-func (e *RetrieveSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveSupplierRequest, *apiresource.SupplierDetail] {
-	return (&apiendpoint.APIEndpoint[*RetrieveSupplierRequest, *apiresource.SupplierDetail]{
+func (e *RetrieveSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveSupplierRequest, *apiresource.Supplier] {
+	return (&apiendpoint.APIEndpoint[*RetrieveSupplierRequest, *apiresource.Supplier]{
 		Title:             "Retrieve Supplier",
 		Method:            http.MethodGet,
 		Route:             "/v1/operations/suppliers/{id}",
@@ -34,7 +34,7 @@ func (e *RetrieveSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainSuppliers, Action: types.ActionRead},
 		},
-		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveSupplierRequest) (*apiresource.SupplierDetail, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveSupplierRequest) (*apiresource.Supplier, *apierror.APIError) {
 			return svc.(SupplierSvc).GetSupplier
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{

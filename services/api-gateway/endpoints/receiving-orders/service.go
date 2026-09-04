@@ -4,8 +4,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/shopspring/decimal"
+
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
+	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
@@ -92,9 +95,18 @@ func (m *receivingOrderSvcImpl) ListReceivingOrders(ctx context.Context, req *Li
 		return apiresource.NewList[apiresource.ReceivingOrder](nil, apiresource.PageInfo{}), nil
 	}
 
+	var lineInfos []*pb.ReceivingOrderLineInfo
+	for _, o := range resp.ReceivingOrders {
+		lineInfos = append(lineInfos, o.GetLines()...)
+	}
+	units, apiErr := resourceloaders.LoadUnitsByID(ctx, receivingOrderLineUnitIDs(lineInfos...)...)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
 	orders := make([]apiresource.ReceivingOrder, len(resp.ReceivingOrders))
 	for i, o := range resp.ReceivingOrders {
-		orders[i] = receivingOrderSummaryFromProto(ctx, o)
+		orders[i] = receivingOrderSummaryFromProto(ctx, o, units)
 	}
 
 	return apiresource.NewList(orders, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
@@ -113,7 +125,12 @@ func (m *receivingOrderSvcImpl) GetReceivingOrder(ctx context.Context, req *Retr
 		return nil, apiErr
 	}
 
-	result := receivingOrderFromProto(ctx, resp.ReceivingOrder)
+	units, apiErr := resourceloaders.LoadUnitsByID(ctx, receivingOrderLineUnitIDs(resp.ReceivingOrder.GetLines()...)...)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	result := receivingOrderFromProto(ctx, resp.ReceivingOrder, units)
 	return &result, nil
 }
 
@@ -150,7 +167,12 @@ func (m *receivingOrderSvcImpl) StockReceivingOrder(ctx context.Context, req *St
 		return nil, apiErr
 	}
 
-	result := receivingOrderFromProto(ctx, resp.ReceivingOrder)
+	units, apiErr := resourceloaders.LoadUnitsByID(ctx, receivingOrderLineUnitIDs(resp.ReceivingOrder.GetLines()...)...)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	result := receivingOrderFromProto(ctx, resp.ReceivingOrder, units)
 	return &result, nil
 }
 
@@ -165,7 +187,12 @@ func (m *receivingOrderSvcImpl) ReceiveReceivingOrder(ctx context.Context, req *
 		return nil, apiErr
 	}
 
-	result := receivingOrderFromProto(ctx, resp.ReceivingOrder)
+	units, apiErr := resourceloaders.LoadUnitsByID(ctx, receivingOrderLineUnitIDs(resp.ReceivingOrder.GetLines()...)...)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	result := receivingOrderFromProto(ctx, resp.ReceivingOrder, units)
 	return &result, nil
 }
 
@@ -180,7 +207,12 @@ func (m *receivingOrderSvcImpl) VoidReceivingOrder(ctx context.Context, req *Voi
 		return nil, apiErr
 	}
 
-	result := receivingOrderFromProto(ctx, resp.ReceivingOrder)
+	units, apiErr := resourceloaders.LoadUnitsByID(ctx, receivingOrderLineUnitIDs(resp.ReceivingOrder.GetLines()...)...)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	result := receivingOrderFromProto(ctx, resp.ReceivingOrder, units)
 	return &result, nil
 }
 
@@ -201,7 +233,12 @@ func (m *receivingOrderSvcImpl) UpdateReceivingOrderLine(ctx context.Context, re
 		return nil, apiErr
 	}
 
-	result := receivingOrderLineFromProto(resp.Line)
+	units, apiErr := resourceloaders.LoadUnitsByID(ctx, receivingOrderLineUnitIDs(resp.Line)...)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	result := receivingOrderLineFromProto(resp.Line, units)
 	return &result, nil
 }
 
@@ -219,7 +256,12 @@ func (m *receivingOrderSvcImpl) VoidReceivingOrderLine(ctx context.Context, req 
 		return nil, apiErr
 	}
 
-	result := receivingOrderLineFromProto(resp.Line)
+	units, apiErr := resourceloaders.LoadUnitsByID(ctx, receivingOrderLineUnitIDs(resp.Line)...)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	result := receivingOrderLineFromProto(resp.Line, units)
 	return &result, nil
 }
 
@@ -237,37 +279,41 @@ func (m *receivingOrderSvcImpl) ReceiveReceivingOrderLine(ctx context.Context, r
 		return nil, apiErr
 	}
 
-	result := receivingOrderLineFromProto(resp.Line)
+	units, apiErr := resourceloaders.LoadUnitsByID(ctx, receivingOrderLineUnitIDs(resp.Line)...)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	result := receivingOrderLineFromProto(resp.Line, units)
 	return &result, nil
 }
 
 // receivingOrderSummaryFromProto maps a list-view ReceivingOrderSummaryInfo to
 // the merged ReceivingOrder. Expandable references (purchase_order, supplier)
 // are left nil and populated via the include resolver from stashed FK ids.
-func receivingOrderSummaryFromProto(ctx context.Context, info *pb.ReceivingOrderSummaryInfo) apiresource.ReceivingOrder {
+func receivingOrderSummaryFromProto(ctx context.Context, info *pb.ReceivingOrderSummaryInfo, units map[string]*apiresource.Unit) apiresource.ReceivingOrder {
 	if info == nil {
 		return apiresource.ReceivingOrder{}
 	}
 
 	r := apiresource.ReceivingOrder{
-		ID:                   info.Id,
-		Object:               constants.ObjectTypeReceivingOrder,
-		Number:               info.Number,
-		LineCount:            info.LineCount,
-		CompletionPercentage: info.CompletionPercentage,
-		CompletedAt:          grpcutil.TimestampToTimePtr(info.CompletedAt),
-		CreatedAt:            grpcutil.TimestampToTime(info.CreatedAt),
-		UpdatedAt:            grpcutil.TimestampToTime(info.UpdatedAt),
+		ID:          info.Id,
+		Object:      constants.ObjectTypeReceivingOrder,
+		Number:      info.Number,
+		LineCount:   info.LineCount,
+		CompletedAt: grpcutil.TimestampToTimePtr(info.CompletedAt),
+		CreatedAt:   grpcutil.TimestampToTime(info.CreatedAt),
+		UpdatedAt:   grpcutil.TimestampToTime(info.UpdatedAt),
 	}
 
-	stashReceivingOrderFKs(ctx, info.Id, info.SupplierId, info.SupplierName, info.SupplierNumber, info.PurchaseOrderId)
+	stashReceivingOrderFKs(ctx, info.Id, info.SupplierId, info.SupplierName, info.SupplierNumber, info.PurchaseOrderId, info.PurchaseOrderNumber, info.PurchaseOrderStatus, info.Totals, info.Deliveries)
 
 	// Lines are populated on the summary only when the list includes them.
 	if len(info.Lines) > 0 {
 		meta := resourcekit.GetLoadMeta(ctx)
 		lines := make([]apiresource.ReceivingOrderLine, len(info.Lines))
 		for i, l := range info.Lines {
-			lines[i] = receivingOrderLineFromProto(l)
+			lines[i] = receivingOrderLineFromProto(l, units)
 			stashReceivingOrderLineMeta(meta, l, &lines[i])
 		}
 		meta.Set(constants.ObjectTypeReceivingOrder, info.Id, "lines",
@@ -280,7 +326,7 @@ func receivingOrderSummaryFromProto(ctx context.Context, info *pb.ReceivingOrder
 // receivingOrderFromProto maps a detail ReceivingOrderInfo to the merged
 // ReceivingOrder. Expandable references (purchase_order, supplier, lines) are
 // left nil and populated via the include resolver from stashed meta.
-func receivingOrderFromProto(ctx context.Context, info *pb.ReceivingOrderInfo) apiresource.ReceivingOrder {
+func receivingOrderFromProto(ctx context.Context, info *pb.ReceivingOrderInfo, units map[string]*apiresource.Unit) apiresource.ReceivingOrder {
 	if info == nil {
 		return apiresource.ReceivingOrder{}
 	}
@@ -296,7 +342,7 @@ func receivingOrderFromProto(ctx context.Context, info *pb.ReceivingOrderInfo) a
 		UpdatedAt:   grpcutil.TimestampToTime(info.UpdatedAt),
 	}
 
-	stashReceivingOrderFKs(ctx, info.Id, info.SupplierId, info.SupplierName, info.SupplierNumber, info.PurchaseOrderId)
+	stashReceivingOrderFKs(ctx, info.Id, info.SupplierId, info.SupplierName, info.SupplierNumber, info.PurchaseOrderId, info.PurchaseOrderNumber, info.PurchaseOrderStatus, info.Totals, info.Deliveries)
 
 	// Lines (expandable): stash the pre-built list plus each line's order_line
 	// reference so the include resolver can populate them on ?include=lines and
@@ -305,7 +351,7 @@ func receivingOrderFromProto(ctx context.Context, info *pb.ReceivingOrderInfo) a
 		meta := resourcekit.GetLoadMeta(ctx)
 		lines := make([]apiresource.ReceivingOrderLine, len(info.Lines))
 		for i, l := range info.Lines {
-			lines[i] = receivingOrderLineFromProto(l)
+			lines[i] = receivingOrderLineFromProto(l, units)
 			stashReceivingOrderLineMeta(meta, l, &lines[i])
 		}
 		meta.Set(constants.ObjectTypeReceivingOrder, info.Id, "lines",
@@ -315,12 +361,10 @@ func receivingOrderFromProto(ctx context.Context, info *pb.ReceivingOrderInfo) a
 	return r
 }
 
-// stashReceivingOrderFKs stashes the purchase_order FK id (loader-backed, same
-// account) and the supplier as a prebuilt object. The supplier is the seller
-// account — cross-account and not resolvable via the account-scoped loader — so
-// it is carried inline from the data the receiving-order query already joined,
-// mirroring PurchaseOrder. Never fabricate the referenced documents.
-func stashReceivingOrderFKs(ctx context.Context, id string, supplierID, supplierName, supplierNumber *string, purchaseOrderID string) {
+// stashReceivingOrderFKs stashes the sub-objects the include resolver reveals on request.
+//
+// The supplier is the seller account — cross-account, so not resolvable through the account-scoped loader — and totals and related are computed with the order rather than fetched, so all three are carried inline from what the query already returned. Never fabricate the referenced documents.
+func stashReceivingOrderFKs(ctx context.Context, id string, supplierID, supplierName, supplierNumber *string, purchaseOrderID, purchaseOrderNumber, purchaseOrderStatus string, totals *pb.ReceivingOrderTotalsInfo, deliveries []*pb.DocumentRefInfo) {
 	meta := resourcekit.GetLoadMeta(ctx)
 	if supplierID != nil {
 		meta.Set(constants.ObjectTypeReceivingOrder, id, "supplier", &apiresource.Supplier{
@@ -330,85 +374,162 @@ func stashReceivingOrderFKs(ctx context.Context, id string, supplierID, supplier
 			Number: ptrutil.Deref(supplierNumber),
 		})
 	}
+	related := &apiresource.ReceivingOrderRelated{Object: constants.ObjectTypeReceivingOrderRelated}
 	if purchaseOrderID != "" {
-		meta.Set(constants.ObjectTypeReceivingOrder, id, "purchase_order_id", purchaseOrderID)
+		po := apiresource.NewRecord(purchaseOrderID, constants.RecordTypePurchaseOrder)
+		if purchaseOrderNumber != "" {
+			po.Number = &purchaseOrderNumber
+		}
+		if purchaseOrderStatus != "" {
+			po.Status = &purchaseOrderStatus
+		}
+		related.PurchaseOrder = po
+	}
+	if recs := documentRecords(deliveries, constants.RecordTypeDelivery); recs != nil {
+		related.Deliveries = recs
+	}
+	if related.PurchaseOrder != nil || related.Deliveries != nil {
+		meta.Set(constants.ObjectTypeReceivingOrder, id, "related", related)
+	}
+	if t := receivingOrderTotalsFromProto(totals); t != nil {
+		meta.Set(constants.ObjectTypeReceivingOrder, id, "totals", t)
 	}
 }
 
-func receivingOrderLineFromProto(info *pb.ReceivingOrderLineInfo) apiresource.ReceivingOrderLine {
+// receivingOrderTotalsFromProto turns the aggregated amounts into the resource's totals, dividing each stage's amount by the ordered amount to get its completion.
+//
+// Completion is a ratio of amounts rather than of quantities because a receiving order's lines can each count in a different unit; summing those quantities would add pairs to metres, and the ratio would be meaningless.
+//
+// An order whose lines total nothing ordered has no meaningful completion, so the stages report zero rather than dividing by it.
+func receivingOrderTotalsFromProto(info *pb.ReceivingOrderTotalsInfo) *apiresource.ReceivingOrderTotals {
+	if info == nil {
+		return nil
+	}
+
+	ordered := decimalOrZero(info.OrderedAmount)
+	stage := func(amount string) apiresource.ReceivingOrderStageTotal {
+		total := apiresource.ReceivingOrderStageTotal{
+			Object: constants.ObjectTypeReceivingOrderStageTotal,
+			Amount: amountOrZero(amount),
+		}
+		if ordered.IsPositive() {
+			completion, _ := decimalOrZero(amount).Div(ordered).Float64()
+			total.Completion = completion
+		}
+		return total
+	}
+
+	return &apiresource.ReceivingOrderTotals{
+		Object:   constants.ObjectTypeReceivingOrderTotals,
+		Ordered:  amountOrZero(info.OrderedAmount),
+		Stocked:  stage(info.StockedAmount),
+		Rejected: stage(info.RejectedAmount),
+	}
+}
+
+func decimalOrZero(v string) decimal.Decimal {
+	d, err := decimal.NewFromString(v)
+	if err != nil {
+		return decimal.Zero
+	}
+	return d
+}
+
+func amountOrZero(v string) string {
+	if v == "" {
+		return "0"
+	}
+	return v
+}
+
+func receivingOrderLineFromProto(info *pb.ReceivingOrderLineInfo, units map[string]*apiresource.Unit) apiresource.ReceivingOrderLine {
 	if info == nil {
 		return apiresource.ReceivingOrderLine{}
 	}
 
-	ts := grpcutil.TimestampToTime(info.CreatedAt)
-
 	line := apiresource.ReceivingOrderLine{
-		ID:     info.Id,
-		Object: constants.ObjectTypeReceivingOrderLine,
+		ID:             info.Id,
+		Object:         constants.ObjectTypeReceivingOrderLine,
+		LineItemNumber: info.OrderLineItemNumber,
 		Quantity: &apiresource.Quantity{
 			ID:           info.QuantityId,
 			Object:       constants.ObjectTypeQuantity,
 			Value:        info.QuantityValue,
 			DisplayValue: apiresource.FormatDisplayValue(info.QuantityValue, info.QuantityUnitAbbreviation, ""),
-			// Unit left nil: expandable, loaded with real data via ?include=; never fabricated.
+			// Unit left nil: expandable, loaded with real data via `lines.quantity.unit`; never fabricated.
 		},
-		// OrderLine is expandable: left nil here, populated from stashed meta on
-		// ?include=lines.order_line.
 		StockedAt: grpcutil.TimestampToTimePtr(info.StockedAt),
-		CreatedAt: ts,
+		CreatedAt: grpcutil.TimestampToTime(info.CreatedAt),
 		UpdatedAt: grpcutil.TimestampToTime(info.UpdatedAt),
 	}
 
-	// Item carried inline (the order line's item) — RO lines are item-based.
-	if info.OrderLineItemId != nil && *info.OrderLineItemId != "" {
-		item := &apiresource.Item{ID: *info.OrderLineItemId, Object: constants.ObjectTypeItem}
-		if info.OrderLineItemSku != nil {
-			item.SKU = *info.OrderLineItemSku
-		}
-		line.Item = item
-	}
-
+	// What was refused is summed across the line's deliveries rather than stored, so it is a
+	// computed quantity — no id, and it carries the unit it was summed in.
 	if info.RejectedQuantityValue != nil {
-		line.RejectedQuantity = &apiresource.Quantity{
-			ID:           info.Id + "_rejected",
-			Object:       constants.ObjectTypeQuantity,
+		line.RejectedQuantity = &apiresource.ComputedQuantity{
+			Object:       constants.ObjectTypeComputedQuantity,
 			Value:        *info.RejectedQuantityValue,
 			DisplayValue: apiresource.FormatDisplayValue(*info.RejectedQuantityValue, info.QuantityUnitAbbreviation, ""),
-			// Unit left nil: expandable, loaded with real data via ?include=; never fabricated.
+			Unit:         units[info.QuantityUnitId],
 		}
 	}
 
 	return line
 }
 
-// buildOrderLineForReceivingLine builds a pre-built, new-shape SalesOrderLine
-// reference from the receiving line's identifying proto fields. There is no
-// standalone sales-order-line loader, so the parent proto carries the line's
-// identifying fields. Only the required base fields are set; the expandable
-// money/quantity fields (Product, QuantityOrdered, UnitPrice, UnitCost, Totals)
-// are left nil and are never fabricated.
-func buildOrderLineForReceivingLine(info *pb.ReceivingOrderLineInfo) *apiresource.SalesOrderLine {
-	ts := grpcutil.TimestampToTime(info.CreatedAt)
-	line := &apiresource.SalesOrderLine{
-		ID:                 info.OrderLineId,
-		Object:             constants.ObjectTypeSalesOrderLine,
-		LineItemNumber:     1,
-		ProductSKU:         info.GetOrderLineItemSku(),
-		ProductDescription: info.OrderLineItemDescription,
-		CreatedAt:          ts,
-		UpdatedAt:          ts,
+// receivingOrderLineUnitIDs names the units a set of lines is measured in, so a caller can resolve them before presenting.
+func receivingOrderLineUnitIDs(lines ...*pb.ReceivingOrderLineInfo) []string {
+	ids := make([]string, 0, len(lines)*2)
+	for _, l := range lines {
+		if l == nil {
+			continue
+		}
+		ids = append(ids, l.QuantityUnitId, l.OrderLineUnitId)
 	}
-	// Carry the product as a lightweight reference so the sales-order-line product
-	// loader can resolve order_line.product(.item/.product_line) on ?include=.
-	if info.OrderLineProductId != nil && *info.OrderLineProductId != "" {
-		line.Product = &apiresource.Product{ID: *info.OrderLineProductId, Object: constants.ObjectTypeProduct}
-	}
-	return line
+	return ids
 }
 
-// stashReceivingOrderLineMeta stashes a line's expandable order_line reference
-// so the include resolver can populate it on ?include=lines.order_line.
+// stashReceivingOrderLineMeta stashes the sub-objects a line reveals on request: the item it receives, and the quantity the purchase order asked for.
 func stashReceivingOrderLineMeta(meta *resourcekit.LoadMeta, info *pb.ReceivingOrderLineInfo, line *apiresource.ReceivingOrderLine) {
-	meta.Set(constants.ObjectTypeReceivingOrderLine, line.ID, "order_line",
-		buildOrderLineForReceivingLine(info))
+	if info == nil || line.Quantity == nil {
+		return
+	}
+	if info.OrderLineItemId != nil && *info.OrderLineItemId != "" {
+		meta.Set(constants.ObjectTypeReceivingOrderLine, line.ID, "item_id", *info.OrderLineItemId)
+	}
+	// The purchase order line this line receives against, resolved through the PO line loader.
+	meta.Set(constants.ObjectTypeReceivingOrderLine, line.ID, "order_line_id", info.OrderLineId)
+	// The unit the line's own quantity is counted in, for `lines.quantity.unit`.
+	meta.Set(constants.ObjectTypeQuantity, line.Quantity.ID, "unit_id", info.QuantityUnitId)
+
+	// What the purchase order asked for is the order line's own quantity, reported here under that
+	// quantity's id rather than as a copy of its value.
+	meta.Set(constants.ObjectTypeReceivingOrderLine, line.ID, "quantity_ordered", &apiresource.Quantity{
+		ID:           info.OrderLineQuantityId,
+		Object:       constants.ObjectTypeQuantity,
+		Value:        info.OrderLineQuantityOrdered,
+		DisplayValue: apiresource.FormatDisplayValue(info.OrderLineQuantityOrdered, info.OrderLineUnitAbbreviation, ""),
+	})
+	meta.Set(constants.ObjectTypeQuantity, info.OrderLineQuantityId, "unit_id", info.OrderLineUnitId)
+}
+
+// documentRecords turns the cross-links a purchasing document carries into record references. The ids, numbers and statuses are what the query already returned, so nothing here is invented.
+func documentRecords(refs []*pb.DocumentRefInfo, recordType constants.RecordType) *apiresource.List[apiresource.Record] {
+	if len(refs) == 0 {
+		return nil
+	}
+	records := make([]apiresource.Record, len(refs))
+	for i, r := range refs {
+		rec := apiresource.NewRecord(r.Id, recordType)
+		if r.Number != "" {
+			number := r.Number
+			rec.Number = &number
+		}
+		if r.Status != "" {
+			status := r.Status
+			rec.Status = &status
+		}
+		records[i] = *rec
+	}
+	return apiresource.NewList(records, apiresource.PageInfo{})
 }

@@ -40,7 +40,7 @@ func deviationToProto(d *domain.ProductionScheduleDeviation) *pb.ProductionSched
 	info.ItemId = d.ItemID
 	info.ReasonCode = d.ReasonCode
 	info.ReasonNote = d.ReasonNote
-	// The snapshots cross the wire as JSON text so the gateway can hand them to the client untouched; re-modelling them in proto would freeze the line shape twice.
+	// The snapshots cross the wire as JSON text so the gateway can hand them to the client untouched; re-modeling them in proto would freeze the line shape twice.
 	if len(d.BeforeJSON) > 0 {
 		before := string(d.BeforeJSON)
 		info.BeforeJson = &before

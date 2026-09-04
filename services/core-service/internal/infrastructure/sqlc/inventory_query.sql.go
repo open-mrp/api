@@ -78,7 +78,7 @@ type FetchCurrentInventoryForItemRow struct {
 //
 // Allocations come off each side for the same reason FetchPhysicalInventoryForItem takes them off:
 // an issue drawn from a receipt appears on both, so whole receipts minus whole issues counts every
-// allocated unit twice. Every row is normalised through its own unit's ratio and the total expressed
+// allocated unit twice. Every row is normalized through its own unit's ratio and the total expressed
 // in the item's base unit, the unit returned beside it.
 func (q *Queries) FetchCurrentInventoryForItem(ctx context.Context, arg FetchCurrentInventoryForItemParams) (FetchCurrentInventoryForItemRow, error) {
 	row := q.db.QueryRowContext(ctx, fetchCurrentInventoryForItem,

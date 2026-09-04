@@ -51,7 +51,8 @@ func (e *ListReceivingOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*Li
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeReceivingOrder,
-			Fields:     []string{"supplier", "purchase_order", "lines", "lines.order_line"},
+			// The item's unit group is offered because the receiving screens measure against it: a line is checked off in the unit it was ordered in, and the stocking dialog offers that group's units to put it away in.
+			Fields: []string{"supplier", "totals", "related", "related.purchase_order", "related.deliveries", "lines", "lines.item", "lines.order_line", "lines.order_line.item", "lines.order_line.quantity_ordered", "lines.order_line.quantity_ordered.unit", "lines.order_line.unit_price", "lines.order_line.unit_price.numerator_unit", "lines.order_line.unit_price.denominator_unit", "lines.quantity", "lines.quantity.unit", "lines.quantity_ordered", "lines.quantity_ordered.unit", "lines.item.category", "lines.item.category.unit_group", "lines.item.category.unit_group.base_unit", "lines.item.category.unit_group.associated_units", "lines.item.category.unit_group.associated_units.unit"},
 		}),
 	})
 }

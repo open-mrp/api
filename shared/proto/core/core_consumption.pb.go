@@ -678,9 +678,13 @@ type DeliverySummaryInfo struct {
 	CreatedAt           *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt           *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	// Lines (populated only when the list request includes "lines").
-	Lines         []*DeliveryLineInfo `protobuf:"bytes,11,rep,name=lines,proto3" json:"lines,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Lines                []*DeliveryLineInfo `protobuf:"bytes,11,rep,name=lines,proto3" json:"lines,omitempty"`
+	ReceivingOrderId     *string             `protobuf:"bytes,12,opt,name=receiving_order_id,json=receivingOrderId,proto3,oneof" json:"receiving_order_id,omitempty"`
+	ReceivingOrderNumber *string             `protobuf:"bytes,13,opt,name=receiving_order_number,json=receivingOrderNumber,proto3,oneof" json:"receiving_order_number,omitempty"`
+	ReceivingOrderStatus *string             `protobuf:"bytes,14,opt,name=receiving_order_status,json=receivingOrderStatus,proto3,oneof" json:"receiving_order_status,omitempty"`
+	PurchaseOrderStatus  string              `protobuf:"bytes,15,opt,name=purchase_order_status,json=purchaseOrderStatus,proto3" json:"purchase_order_status,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *DeliverySummaryInfo) Reset() {
@@ -790,20 +794,52 @@ func (x *DeliverySummaryInfo) GetLines() []*DeliveryLineInfo {
 	return nil
 }
 
+func (x *DeliverySummaryInfo) GetReceivingOrderId() string {
+	if x != nil && x.ReceivingOrderId != nil {
+		return *x.ReceivingOrderId
+	}
+	return ""
+}
+
+func (x *DeliverySummaryInfo) GetReceivingOrderNumber() string {
+	if x != nil && x.ReceivingOrderNumber != nil {
+		return *x.ReceivingOrderNumber
+	}
+	return ""
+}
+
+func (x *DeliverySummaryInfo) GetReceivingOrderStatus() string {
+	if x != nil && x.ReceivingOrderStatus != nil {
+		return *x.ReceivingOrderStatus
+	}
+	return ""
+}
+
+func (x *DeliverySummaryInfo) GetPurchaseOrderStatus() string {
+	if x != nil {
+		return x.PurchaseOrderStatus
+	}
+	return ""
+}
+
 type DeliveryInfo struct {
-	state               protoimpl.MessageState `protogen:"open.v1"`
-	Id                  string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Number              string                 `protobuf:"bytes,2,opt,name=number,proto3" json:"number,omitempty"`
-	PurchaseOrderId     string                 `protobuf:"bytes,3,opt,name=purchase_order_id,json=purchaseOrderId,proto3" json:"purchase_order_id,omitempty"`
-	PurchaseOrderNumber string                 `protobuf:"bytes,4,opt,name=purchase_order_number,json=purchaseOrderNumber,proto3" json:"purchase_order_number,omitempty"`
-	Status              string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
-	Lines               []*DeliveryLineInfo    `protobuf:"bytes,6,rep,name=lines,proto3" json:"lines,omitempty"`
-	AcceptedAt          *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=accepted_at,json=acceptedAt,proto3,oneof" json:"accepted_at,omitempty"`
-	RejectedAt          *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=rejected_at,json=rejectedAt,proto3,oneof" json:"rejected_at,omitempty"`
-	CreatedAt           *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt           *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	Id                   string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Number               string                 `protobuf:"bytes,2,opt,name=number,proto3" json:"number,omitempty"`
+	PurchaseOrderId      string                 `protobuf:"bytes,3,opt,name=purchase_order_id,json=purchaseOrderId,proto3" json:"purchase_order_id,omitempty"`
+	PurchaseOrderNumber  string                 `protobuf:"bytes,4,opt,name=purchase_order_number,json=purchaseOrderNumber,proto3" json:"purchase_order_number,omitempty"`
+	Status               string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
+	Lines                []*DeliveryLineInfo    `protobuf:"bytes,6,rep,name=lines,proto3" json:"lines,omitempty"`
+	AcceptedAt           *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=accepted_at,json=acceptedAt,proto3,oneof" json:"accepted_at,omitempty"`
+	RejectedAt           *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=rejected_at,json=rejectedAt,proto3,oneof" json:"rejected_at,omitempty"`
+	CreatedAt            *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt            *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	ReceivingOrderId     *string                `protobuf:"bytes,11,opt,name=receiving_order_id,json=receivingOrderId,proto3,oneof" json:"receiving_order_id,omitempty"`
+	ReceivingOrderNumber *string                `protobuf:"bytes,12,opt,name=receiving_order_number,json=receivingOrderNumber,proto3,oneof" json:"receiving_order_number,omitempty"`
+	ReceivingOrderStatus *string                `protobuf:"bytes,13,opt,name=receiving_order_status,json=receivingOrderStatus,proto3,oneof" json:"receiving_order_status,omitempty"`
+	PurchaseOrderStatus  string                 `protobuf:"bytes,14,opt,name=purchase_order_status,json=purchaseOrderStatus,proto3" json:"purchase_order_status,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *DeliveryInfo) Reset() {
@@ -906,6 +942,34 @@ func (x *DeliveryInfo) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *DeliveryInfo) GetReceivingOrderId() string {
+	if x != nil && x.ReceivingOrderId != nil {
+		return *x.ReceivingOrderId
+	}
+	return ""
+}
+
+func (x *DeliveryInfo) GetReceivingOrderNumber() string {
+	if x != nil && x.ReceivingOrderNumber != nil {
+		return *x.ReceivingOrderNumber
+	}
+	return ""
+}
+
+func (x *DeliveryInfo) GetReceivingOrderStatus() string {
+	if x != nil && x.ReceivingOrderStatus != nil {
+		return *x.ReceivingOrderStatus
+	}
+	return ""
+}
+
+func (x *DeliveryInfo) GetPurchaseOrderStatus() string {
+	if x != nil {
+		return x.PurchaseOrderStatus
+	}
+	return ""
+}
+
 type DeliveryLineInfo struct {
 	state                     protoimpl.MessageState `protogen:"open.v1"`
 	Id                        string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -920,16 +984,25 @@ type DeliveryLineInfo struct {
 	UnitCostValue             string                 `protobuf:"bytes,10,opt,name=unit_cost_value,json=unitCostValue,proto3" json:"unit_cost_value,omitempty"`
 	UnitCostNumeratorUnitId   string                 `protobuf:"bytes,11,opt,name=unit_cost_numerator_unit_id,json=unitCostNumeratorUnitId,proto3" json:"unit_cost_numerator_unit_id,omitempty"`
 	UnitCostDenominatorUnitId string                 `protobuf:"bytes,12,opt,name=unit_cost_denominator_unit_id,json=unitCostDenominatorUnitId,proto3" json:"unit_cost_denominator_unit_id,omitempty"`
-	LocationId                *string                `protobuf:"bytes,13,opt,name=location_id,json=locationId,proto3,oneof" json:"location_id,omitempty"`
-	LocationName              *string                `protobuf:"bytes,14,opt,name=location_name,json=locationName,proto3,oneof" json:"location_name,omitempty"`
-	LotId                     *string                `protobuf:"bytes,15,opt,name=lot_id,json=lotId,proto3,oneof" json:"lot_id,omitempty"`
-	LotNumber                 *string                `protobuf:"bytes,16,opt,name=lot_number,json=lotNumber,proto3,oneof" json:"lot_number,omitempty"`
-	AcceptedAt                *timestamppb.Timestamp `protobuf:"bytes,17,opt,name=accepted_at,json=acceptedAt,proto3,oneof" json:"accepted_at,omitempty"`
-	RejectedAt                *timestamppb.Timestamp `protobuf:"bytes,18,opt,name=rejected_at,json=rejectedAt,proto3,oneof" json:"rejected_at,omitempty"`
-	CreatedAt                 *timestamppb.Timestamp `protobuf:"bytes,19,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt                 *timestamppb.Timestamp `protobuf:"bytes,20,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields             protoimpl.UnknownFields
-	sizeCache                 protoimpl.SizeCache
+	// The rate's own record, so the gateway can present a complete unit cost
+	// rather than an id and a bare number.
+	UnitCostNumeratorUnitAbbreviation   string                 `protobuf:"bytes,21,opt,name=unit_cost_numerator_unit_abbreviation,json=unitCostNumeratorUnitAbbreviation,proto3" json:"unit_cost_numerator_unit_abbreviation,omitempty"`
+	UnitCostDenominatorUnitAbbreviation string                 `protobuf:"bytes,22,opt,name=unit_cost_denominator_unit_abbreviation,json=unitCostDenominatorUnitAbbreviation,proto3" json:"unit_cost_denominator_unit_abbreviation,omitempty"`
+	UnitCostCreatedAt                   *timestamppb.Timestamp `protobuf:"bytes,23,opt,name=unit_cost_created_at,json=unitCostCreatedAt,proto3" json:"unit_cost_created_at,omitempty"`
+	UnitCostUpdatedAt                   *timestamppb.Timestamp `protobuf:"bytes,24,opt,name=unit_cost_updated_at,json=unitCostUpdatedAt,proto3" json:"unit_cost_updated_at,omitempty"`
+	LocationId                          *string                `protobuf:"bytes,13,opt,name=location_id,json=locationId,proto3,oneof" json:"location_id,omitempty"`
+	LocationName                        *string                `protobuf:"bytes,14,opt,name=location_name,json=locationName,proto3,oneof" json:"location_name,omitempty"`
+	LotId                               *string                `protobuf:"bytes,15,opt,name=lot_id,json=lotId,proto3,oneof" json:"lot_id,omitempty"`
+	LotNumber                           *string                `protobuf:"bytes,16,opt,name=lot_number,json=lotNumber,proto3,oneof" json:"lot_number,omitempty"`
+	AcceptedAt                          *timestamppb.Timestamp `protobuf:"bytes,17,opt,name=accepted_at,json=acceptedAt,proto3,oneof" json:"accepted_at,omitempty"`
+	RejectedAt                          *timestamppb.Timestamp `protobuf:"bytes,18,opt,name=rejected_at,json=rejectedAt,proto3,oneof" json:"rejected_at,omitempty"`
+	CreatedAt                           *timestamppb.Timestamp `protobuf:"bytes,19,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt                           *timestamppb.Timestamp `protobuf:"bytes,20,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	// The purchase order line the goods were ordered on, reached through the receiving line this
+	// delivery line was stocked against.
+	OrderLineId   string `protobuf:"bytes,25,opt,name=order_line_id,json=orderLineId,proto3" json:"order_line_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *DeliveryLineInfo) Reset() {
@@ -1046,6 +1119,34 @@ func (x *DeliveryLineInfo) GetUnitCostDenominatorUnitId() string {
 	return ""
 }
 
+func (x *DeliveryLineInfo) GetUnitCostNumeratorUnitAbbreviation() string {
+	if x != nil {
+		return x.UnitCostNumeratorUnitAbbreviation
+	}
+	return ""
+}
+
+func (x *DeliveryLineInfo) GetUnitCostDenominatorUnitAbbreviation() string {
+	if x != nil {
+		return x.UnitCostDenominatorUnitAbbreviation
+	}
+	return ""
+}
+
+func (x *DeliveryLineInfo) GetUnitCostCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UnitCostCreatedAt
+	}
+	return nil
+}
+
+func (x *DeliveryLineInfo) GetUnitCostUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UnitCostUpdatedAt
+	}
+	return nil
+}
+
 func (x *DeliveryLineInfo) GetLocationId() string {
 	if x != nil && x.LocationId != nil {
 		return *x.LocationId
@@ -1100,6 +1201,13 @@ func (x *DeliveryLineInfo) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
+}
+
+func (x *DeliveryLineInfo) GetOrderLineId() string {
+	if x != nil {
+		return x.OrderLineId
+	}
+	return ""
 }
 
 type LightScanningStationInfo struct {
@@ -3652,12 +3760,20 @@ func (x *BulkUpsertLocationsResponse) GetJob() *JobInfo {
 }
 
 type SupplierSummaryProto struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Number        string                 `protobuf:"bytes,3,opt,name=number,proto3" json:"number,omitempty"`
-	MaterialCount int64                  `protobuf:"varint,4,opt,name=material_count,json=materialCount,proto3" json:"material_count,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Id        string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name      string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Number    string                 `protobuf:"bytes,3,opt,name=number,proto3" json:"number,omitempty"`
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Note      *string                `protobuf:"bytes,6,opt,name=note,proto3,oneof" json:"note,omitempty"`
+	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	// The default addresses as ids, always present.
+	BillToAddressId *string `protobuf:"bytes,8,opt,name=bill_to_address_id,json=billToAddressId,proto3,oneof" json:"bill_to_address_id,omitempty"`
+	ShipToAddressId *string `protobuf:"bytes,9,opt,name=ship_to_address_id,json=shipToAddressId,proto3,oneof" json:"ship_to_address_id,omitempty"`
+	// The addresses themselves, joined when the caller asked for them. They belong to the
+	// supplier's account, so the gateway cannot resolve them from the ids alone.
+	BillToAddress *CustomerAddressProto `protobuf:"bytes,10,opt,name=bill_to_address,json=billToAddress,proto3" json:"bill_to_address,omitempty"`
+	ShipToAddress *CustomerAddressProto `protobuf:"bytes,11,opt,name=ship_to_address,json=shipToAddress,proto3" json:"ship_to_address,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3713,16 +3829,51 @@ func (x *SupplierSummaryProto) GetNumber() string {
 	return ""
 }
 
-func (x *SupplierSummaryProto) GetMaterialCount() int64 {
-	if x != nil {
-		return x.MaterialCount
-	}
-	return 0
-}
-
 func (x *SupplierSummaryProto) GetCreatedAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *SupplierSummaryProto) GetNote() string {
+	if x != nil && x.Note != nil {
+		return *x.Note
+	}
+	return ""
+}
+
+func (x *SupplierSummaryProto) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+func (x *SupplierSummaryProto) GetBillToAddressId() string {
+	if x != nil && x.BillToAddressId != nil {
+		return *x.BillToAddressId
+	}
+	return ""
+}
+
+func (x *SupplierSummaryProto) GetShipToAddressId() string {
+	if x != nil && x.ShipToAddressId != nil {
+		return *x.ShipToAddressId
+	}
+	return ""
+}
+
+func (x *SupplierSummaryProto) GetBillToAddress() *CustomerAddressProto {
+	if x != nil {
+		return x.BillToAddress
+	}
+	return nil
+}
+
+func (x *SupplierSummaryProto) GetShipToAddress() *CustomerAddressProto {
+	if x != nil {
+		return x.ShipToAddress
 	}
 	return nil
 }
@@ -3735,7 +3886,6 @@ type SupplierProto struct {
 	Note          *string                `protobuf:"bytes,4,opt,name=note,proto3,oneof" json:"note,omitempty"`
 	BillToAddress *CustomerAddressProto  `protobuf:"bytes,5,opt,name=bill_to_address,json=billToAddress,proto3,oneof" json:"bill_to_address,omitempty"`
 	ShipToAddress *CustomerAddressProto  `protobuf:"bytes,6,opt,name=ship_to_address,json=shipToAddress,proto3,oneof" json:"ship_to_address,omitempty"`
-	MaterialCount int64                  `protobuf:"varint,7,opt,name=material_count,json=materialCount,proto3" json:"material_count,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -3812,13 +3962,6 @@ func (x *SupplierProto) GetShipToAddress() *CustomerAddressProto {
 		return x.ShipToAddress
 	}
 	return nil
-}
-
-func (x *SupplierProto) GetMaterialCount() int64 {
-	if x != nil {
-		return x.MaterialCount
-	}
-	return 0
 }
 
 func (x *SupplierProto) GetCreatedAt() *timestamppb.Timestamp {
@@ -6014,7 +6157,7 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\x12GetDeliveryRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"E\n" +
 	"\x13GetDeliveryResponse\x12.\n" +
-	"\bdelivery\x18\x01 \x01(\v2\x12.core.DeliveryInfoR\bdelivery\"\x9c\x04\n" +
+	"\bdelivery\x18\x01 \x01(\v2\x12.core.DeliveryInfoR\bdelivery\"\xc6\x06\n" +
 	"\x13DeliverySummaryInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12*\n" +
@@ -6032,9 +6175,16 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12,\n" +
-	"\x05lines\x18\v \x03(\v2\x16.core.DeliveryLineInfoR\x05linesB\x0e\n" +
+	"\x05lines\x18\v \x03(\v2\x16.core.DeliveryLineInfoR\x05lines\x121\n" +
+	"\x12receiving_order_id\x18\f \x01(\tH\x02R\x10receivingOrderId\x88\x01\x01\x129\n" +
+	"\x16receiving_order_number\x18\r \x01(\tH\x03R\x14receivingOrderNumber\x88\x01\x01\x129\n" +
+	"\x16receiving_order_status\x18\x0e \x01(\tH\x04R\x14receivingOrderStatus\x88\x01\x01\x122\n" +
+	"\x15purchase_order_status\x18\x0f \x01(\tR\x13purchaseOrderStatusB\x0e\n" +
 	"\f_accepted_atB\x0e\n" +
-	"\f_rejected_at\"\xf6\x03\n" +
+	"\f_rejected_atB\x15\n" +
+	"\x13_receiving_order_idB\x19\n" +
+	"\x17_receiving_order_numberB\x19\n" +
+	"\x17_receiving_order_status\"\xa0\x06\n" +
 	"\fDeliveryInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12*\n" +
@@ -6050,9 +6200,16 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"created_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x0e\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x121\n" +
+	"\x12receiving_order_id\x18\v \x01(\tH\x02R\x10receivingOrderId\x88\x01\x01\x129\n" +
+	"\x16receiving_order_number\x18\f \x01(\tH\x03R\x14receivingOrderNumber\x88\x01\x01\x129\n" +
+	"\x16receiving_order_status\x18\r \x01(\tH\x04R\x14receivingOrderStatus\x88\x01\x01\x122\n" +
+	"\x15purchase_order_status\x18\x0e \x01(\tR\x13purchaseOrderStatusB\x0e\n" +
 	"\f_accepted_atB\x0e\n" +
-	"\f_rejected_at\"\x9e\b\n" +
+	"\f_rejected_atB\x15\n" +
+	"\x13_receiving_order_idB\x19\n" +
+	"\x17_receiving_order_numberB\x19\n" +
+	"\x17_receiving_order_status\"\x84\v\n" +
 	"\x10DeliveryLineInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1c\n" +
 	"\aitem_id\x18\x02 \x01(\tH\x00R\x06itemId\x88\x01\x01\x12\x1e\n" +
@@ -6068,7 +6225,11 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\x0funit_cost_value\x18\n" +
 	" \x01(\tR\runitCostValue\x12<\n" +
 	"\x1bunit_cost_numerator_unit_id\x18\v \x01(\tR\x17unitCostNumeratorUnitId\x12@\n" +
-	"\x1dunit_cost_denominator_unit_id\x18\f \x01(\tR\x19unitCostDenominatorUnitId\x12$\n" +
+	"\x1dunit_cost_denominator_unit_id\x18\f \x01(\tR\x19unitCostDenominatorUnitId\x12P\n" +
+	"%unit_cost_numerator_unit_abbreviation\x18\x15 \x01(\tR!unitCostNumeratorUnitAbbreviation\x12T\n" +
+	"'unit_cost_denominator_unit_abbreviation\x18\x16 \x01(\tR#unitCostDenominatorUnitAbbreviation\x12K\n" +
+	"\x14unit_cost_created_at\x18\x17 \x01(\v2\x1a.google.protobuf.TimestampR\x11unitCostCreatedAt\x12K\n" +
+	"\x14unit_cost_updated_at\x18\x18 \x01(\v2\x1a.google.protobuf.TimestampR\x11unitCostUpdatedAt\x12$\n" +
 	"\vlocation_id\x18\r \x01(\tH\x03R\n" +
 	"locationId\x88\x01\x01\x12(\n" +
 	"\rlocation_name\x18\x0e \x01(\tH\x04R\flocationName\x88\x01\x01\x12\x1a\n" +
@@ -6082,7 +6243,8 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x13 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\x14 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\n" +
+	"updated_at\x18\x14 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\"\n" +
+	"\rorder_line_id\x18\x19 \x01(\tR\vorderLineIdB\n" +
 	"\n" +
 	"\b_item_idB\v\n" +
 	"\t_item_skuB\x13\n" +
@@ -6320,22 +6482,31 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\x1aBulkUpsertLocationsRequest\x12;\n" +
 	"\tlocations\x18\x01 \x03(\v2\x1d.core.BulkUpsertLocationInputR\tlocations\">\n" +
 	"\x1bBulkUpsertLocationsResponse\x12\x1f\n" +
-	"\x03job\x18\x01 \x01(\v2\r.core.JobInfoR\x03job\"\xb4\x01\n" +
+	"\x03job\x18\x01 \x01(\v2\r.core.JobInfoR\x03job\"\x84\x04\n" +
 	"\x14SupplierSummaryProto\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x16\n" +
-	"\x06number\x18\x03 \x01(\tR\x06number\x12%\n" +
-	"\x0ematerial_count\x18\x04 \x01(\x03R\rmaterialCount\x129\n" +
+	"\x06number\x18\x03 \x01(\tR\x06number\x129\n" +
 	"\n" +
-	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\xc4\x03\n" +
+	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12\x17\n" +
+	"\x04note\x18\x06 \x01(\tH\x00R\x04note\x88\x01\x01\x129\n" +
+	"\n" +
+	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x120\n" +
+	"\x12bill_to_address_id\x18\b \x01(\tH\x01R\x0fbillToAddressId\x88\x01\x01\x120\n" +
+	"\x12ship_to_address_id\x18\t \x01(\tH\x02R\x0fshipToAddressId\x88\x01\x01\x12B\n" +
+	"\x0fbill_to_address\x18\n" +
+	" \x01(\v2\x1a.core.CustomerAddressProtoR\rbillToAddress\x12B\n" +
+	"\x0fship_to_address\x18\v \x01(\v2\x1a.core.CustomerAddressProtoR\rshipToAddressB\a\n" +
+	"\x05_noteB\x15\n" +
+	"\x13_bill_to_address_idB\x15\n" +
+	"\x13_ship_to_address_id\"\x9d\x03\n" +
 	"\rSupplierProto\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x16\n" +
 	"\x06number\x18\x03 \x01(\tR\x06number\x12\x17\n" +
 	"\x04note\x18\x04 \x01(\tH\x00R\x04note\x88\x01\x01\x12G\n" +
 	"\x0fbill_to_address\x18\x05 \x01(\v2\x1a.core.CustomerAddressProtoH\x01R\rbillToAddress\x88\x01\x01\x12G\n" +
-	"\x0fship_to_address\x18\x06 \x01(\v2\x1a.core.CustomerAddressProtoH\x02R\rshipToAddress\x88\x01\x01\x12%\n" +
-	"\x0ematerial_count\x18\a \x01(\x03R\rmaterialCount\x129\n" +
+	"\x0fship_to_address\x18\x06 \x01(\v2\x1a.core.CustomerAddressProtoH\x02R\rshipToAddress\x88\x01\x01\x129\n" +
 	"\n" +
 	"created_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
@@ -6676,94 +6847,99 @@ var file_core_core_consumption_proto_depIdxs = []int32{
 	94,  // 15: core.DeliveryInfo.rejected_at:type_name -> google.protobuf.Timestamp
 	94,  // 16: core.DeliveryInfo.created_at:type_name -> google.protobuf.Timestamp
 	94,  // 17: core.DeliveryInfo.updated_at:type_name -> google.protobuf.Timestamp
-	94,  // 18: core.DeliveryLineInfo.accepted_at:type_name -> google.protobuf.Timestamp
-	94,  // 19: core.DeliveryLineInfo.rejected_at:type_name -> google.protobuf.Timestamp
-	94,  // 20: core.DeliveryLineInfo.created_at:type_name -> google.protobuf.Timestamp
-	94,  // 21: core.DeliveryLineInfo.updated_at:type_name -> google.protobuf.Timestamp
-	94,  // 22: core.LightScanningStationInfo.created_at:type_name -> google.protobuf.Timestamp
-	94,  // 23: core.LightScanningStationInfo.updated_at:type_name -> google.protobuf.Timestamp
-	94,  // 24: core.LightProductionStepInfo.created_at:type_name -> google.protobuf.Timestamp
-	94,  // 25: core.LightProductionStepInfo.updated_at:type_name -> google.protobuf.Timestamp
-	94,  // 26: core.ScanningStationInfo.department_created_at:type_name -> google.protobuf.Timestamp
-	94,  // 27: core.ScanningStationInfo.department_updated_at:type_name -> google.protobuf.Timestamp
-	14,  // 28: core.ScanningStationInfo.production_steps:type_name -> core.LightProductionStepInfo
-	94,  // 29: core.ScanningStationInfo.created_at:type_name -> google.protobuf.Timestamp
-	94,  // 30: core.ScanningStationInfo.updated_at:type_name -> google.protobuf.Timestamp
-	15,  // 31: core.ListScanningStationsResponse.scanning_stations:type_name -> core.ScanningStationInfo
-	95,  // 32: core.ListScanningStationsResponse.page_info:type_name -> core.PageInfo
-	96,  // 33: core.ExportScanningStationsResponse.job:type_name -> core.JobInfo
-	15,  // 34: core.GetScanningStationResponse.scanning_station:type_name -> core.ScanningStationInfo
-	15,  // 35: core.CreateScanningStationResponse.scanning_station:type_name -> core.ScanningStationInfo
-	97,  // 36: core.UpdateScanningStationRequest.notes:type_name -> core.StringPatch
-	97,  // 37: core.UpdateScanningStationRequest.label_size_code:type_name -> core.StringPatch
-	97,  // 38: core.UpdateScanningStationRequest.label_type_code:type_name -> core.StringPatch
-	15,  // 39: core.UpdateScanningStationResponse.scanning_station:type_name -> core.ScanningStationInfo
-	98,  // 40: core.UpsertScanningStationInput.department:type_name -> core.ObjectIdentifier
-	97,  // 41: core.UpsertScanningStationInput.label_size_code:type_name -> core.StringPatch
-	97,  // 42: core.UpsertScanningStationInput.label_type_code:type_name -> core.StringPatch
-	27,  // 43: core.BulkUpsertScanningStationsRequest.scanning_stations:type_name -> core.UpsertScanningStationInput
-	96,  // 44: core.BulkUpsertScanningStationsResponse.job:type_name -> core.JobInfo
-	15,  // 45: core.BatchGetScanningStationsByIDsResponse.scanning_stations:type_name -> core.ScanningStationInfo
-	33,  // 46: core.LocationInfo.children:type_name -> core.LocationChildInfo
-	94,  // 47: core.LocationInfo.created_at:type_name -> google.protobuf.Timestamp
-	94,  // 48: core.LocationInfo.updated_at:type_name -> google.protobuf.Timestamp
-	94,  // 49: core.LocationTypeInfo.created_at:type_name -> google.protobuf.Timestamp
-	94,  // 50: core.LocationTypeInfo.updated_at:type_name -> google.protobuf.Timestamp
-	34,  // 51: core.ListLocationsResponse.locations:type_name -> core.LocationInfo
-	95,  // 52: core.ListLocationsResponse.page_info:type_name -> core.PageInfo
-	96,  // 53: core.ExportLocationsResponse.job:type_name -> core.JobInfo
-	34,  // 54: core.GetLocationResponse.location:type_name -> core.LocationInfo
-	34,  // 55: core.CreateLocationResponse.location:type_name -> core.LocationInfo
-	97,  // 56: core.UpdateLocationRequest.parent_id:type_name -> core.StringPatch
-	99,  // 57: core.UpdateLocationRequest.child_ids:type_name -> core.StringListPatch
-	34,  // 58: core.UpdateLocationResponse.location:type_name -> core.LocationInfo
-	35,  // 59: core.ListLocationTypesResponse.location_types:type_name -> core.LocationTypeInfo
-	95,  // 60: core.ListLocationTypesResponse.page_info:type_name -> core.PageInfo
-	35,  // 61: core.GetLocationTypeResponse.location_type:type_name -> core.LocationTypeInfo
-	34,  // 62: core.BatchGetLocationsByIDsResponse.locations:type_name -> core.LocationInfo
-	98,  // 63: core.BulkUpsertLocationInput.parent:type_name -> core.ObjectIdentifier
-	98,  // 64: core.BulkUpsertLocationInput.children:type_name -> core.ObjectIdentifier
-	53,  // 65: core.BulkUpsertLocationsRequest.locations:type_name -> core.BulkUpsertLocationInput
-	96,  // 66: core.BulkUpsertLocationsResponse.job:type_name -> core.JobInfo
-	94,  // 67: core.SupplierSummaryProto.created_at:type_name -> google.protobuf.Timestamp
-	100, // 68: core.SupplierProto.bill_to_address:type_name -> core.CustomerAddressProto
-	100, // 69: core.SupplierProto.ship_to_address:type_name -> core.CustomerAddressProto
-	94,  // 70: core.SupplierProto.created_at:type_name -> google.protobuf.Timestamp
-	94,  // 71: core.SupplierProto.updated_at:type_name -> google.protobuf.Timestamp
-	94,  // 72: core.ListSuppliersRequest.start_date:type_name -> google.protobuf.Timestamp
-	94,  // 73: core.ListSuppliersRequest.end_date:type_name -> google.protobuf.Timestamp
-	56,  // 74: core.ListSuppliersResponse.suppliers:type_name -> core.SupplierSummaryProto
-	95,  // 75: core.ListSuppliersResponse.page_info:type_name -> core.PageInfo
-	57,  // 76: core.GetSupplierResponse.supplier:type_name -> core.SupplierProto
-	58,  // 77: core.CreateSupplierRequest.bill_to_address:type_name -> core.CreateSupplierAddressInput
-	58,  // 78: core.CreateSupplierRequest.ship_to_address:type_name -> core.CreateSupplierAddressInput
-	57,  // 79: core.CreateSupplierResponse.supplier:type_name -> core.SupplierProto
-	57,  // 80: core.UpdateSupplierResponse.supplier:type_name -> core.SupplierProto
-	57,  // 81: core.DeleteSupplierResponse.supplier:type_name -> core.SupplierProto
-	94,  // 82: core.SysPropertyInfo.created_at:type_name -> google.protobuf.Timestamp
-	94,  // 83: core.SysPropertyInfo.updated_at:type_name -> google.protobuf.Timestamp
-	70,  // 84: core.ListSysPropertiesResponse.sys_properties:type_name -> core.SysPropertyInfo
-	95,  // 85: core.ListSysPropertiesResponse.page_info:type_name -> core.PageInfo
-	70,  // 86: core.GetSysPropertyResponse.sys_property:type_name -> core.SysPropertyInfo
-	70,  // 87: core.UpdateSysPropertyResponse.sys_property:type_name -> core.SysPropertyInfo
-	70,  // 88: core.BatchGetSysPropertiesByIDsResponse.sys_properties:type_name -> core.SysPropertyInfo
-	94,  // 89: core.TenancyRoleProto.created_at:type_name -> google.protobuf.Timestamp
-	94,  // 90: core.TenancyRoleProto.updated_at:type_name -> google.protobuf.Timestamp
-	82,  // 91: core.TenancyAccountPlanProto.limits:type_name -> core.TenancyAccountPlanLimitProto
-	92,  // 92: core.TenancyAccountPlanProto.features:type_name -> core.TenancyAccountPlanProto.FeaturesEntry
-	81,  // 93: core.TenancyCurrentAccountProto.role:type_name -> core.TenancyRoleProto
-	83,  // 94: core.TenancyCurrentAccountProto.account_plan:type_name -> core.TenancyAccountPlanProto
-	94,  // 95: core.TenancyPendingRegistrationProto.created_at:type_name -> google.protobuf.Timestamp
-	84,  // 96: core.GetTenancyResponse.current_account:type_name -> core.TenancyCurrentAccountProto
-	85,  // 97: core.GetTenancyResponse.owner_account:type_name -> core.TenancyAccountSummaryProto
-	85,  // 98: core.GetTenancyResponse.sandboxes:type_name -> core.TenancyAccountSummaryProto
-	86,  // 99: core.GetTenancyResponse.other_accounts:type_name -> core.TenancyOtherAccountProto
-	87,  // 100: core.GetTenancyResponse.pending_registration:type_name -> core.TenancyPendingRegistrationProto
-	101, // [101:101] is the sub-list for method output_type
-	101, // [101:101] is the sub-list for method input_type
-	101, // [101:101] is the sub-list for extension type_name
-	101, // [101:101] is the sub-list for extension extendee
-	0,   // [0:101] is the sub-list for field type_name
+	94,  // 18: core.DeliveryLineInfo.unit_cost_created_at:type_name -> google.protobuf.Timestamp
+	94,  // 19: core.DeliveryLineInfo.unit_cost_updated_at:type_name -> google.protobuf.Timestamp
+	94,  // 20: core.DeliveryLineInfo.accepted_at:type_name -> google.protobuf.Timestamp
+	94,  // 21: core.DeliveryLineInfo.rejected_at:type_name -> google.protobuf.Timestamp
+	94,  // 22: core.DeliveryLineInfo.created_at:type_name -> google.protobuf.Timestamp
+	94,  // 23: core.DeliveryLineInfo.updated_at:type_name -> google.protobuf.Timestamp
+	94,  // 24: core.LightScanningStationInfo.created_at:type_name -> google.protobuf.Timestamp
+	94,  // 25: core.LightScanningStationInfo.updated_at:type_name -> google.protobuf.Timestamp
+	94,  // 26: core.LightProductionStepInfo.created_at:type_name -> google.protobuf.Timestamp
+	94,  // 27: core.LightProductionStepInfo.updated_at:type_name -> google.protobuf.Timestamp
+	94,  // 28: core.ScanningStationInfo.department_created_at:type_name -> google.protobuf.Timestamp
+	94,  // 29: core.ScanningStationInfo.department_updated_at:type_name -> google.protobuf.Timestamp
+	14,  // 30: core.ScanningStationInfo.production_steps:type_name -> core.LightProductionStepInfo
+	94,  // 31: core.ScanningStationInfo.created_at:type_name -> google.protobuf.Timestamp
+	94,  // 32: core.ScanningStationInfo.updated_at:type_name -> google.protobuf.Timestamp
+	15,  // 33: core.ListScanningStationsResponse.scanning_stations:type_name -> core.ScanningStationInfo
+	95,  // 34: core.ListScanningStationsResponse.page_info:type_name -> core.PageInfo
+	96,  // 35: core.ExportScanningStationsResponse.job:type_name -> core.JobInfo
+	15,  // 36: core.GetScanningStationResponse.scanning_station:type_name -> core.ScanningStationInfo
+	15,  // 37: core.CreateScanningStationResponse.scanning_station:type_name -> core.ScanningStationInfo
+	97,  // 38: core.UpdateScanningStationRequest.notes:type_name -> core.StringPatch
+	97,  // 39: core.UpdateScanningStationRequest.label_size_code:type_name -> core.StringPatch
+	97,  // 40: core.UpdateScanningStationRequest.label_type_code:type_name -> core.StringPatch
+	15,  // 41: core.UpdateScanningStationResponse.scanning_station:type_name -> core.ScanningStationInfo
+	98,  // 42: core.UpsertScanningStationInput.department:type_name -> core.ObjectIdentifier
+	97,  // 43: core.UpsertScanningStationInput.label_size_code:type_name -> core.StringPatch
+	97,  // 44: core.UpsertScanningStationInput.label_type_code:type_name -> core.StringPatch
+	27,  // 45: core.BulkUpsertScanningStationsRequest.scanning_stations:type_name -> core.UpsertScanningStationInput
+	96,  // 46: core.BulkUpsertScanningStationsResponse.job:type_name -> core.JobInfo
+	15,  // 47: core.BatchGetScanningStationsByIDsResponse.scanning_stations:type_name -> core.ScanningStationInfo
+	33,  // 48: core.LocationInfo.children:type_name -> core.LocationChildInfo
+	94,  // 49: core.LocationInfo.created_at:type_name -> google.protobuf.Timestamp
+	94,  // 50: core.LocationInfo.updated_at:type_name -> google.protobuf.Timestamp
+	94,  // 51: core.LocationTypeInfo.created_at:type_name -> google.protobuf.Timestamp
+	94,  // 52: core.LocationTypeInfo.updated_at:type_name -> google.protobuf.Timestamp
+	34,  // 53: core.ListLocationsResponse.locations:type_name -> core.LocationInfo
+	95,  // 54: core.ListLocationsResponse.page_info:type_name -> core.PageInfo
+	96,  // 55: core.ExportLocationsResponse.job:type_name -> core.JobInfo
+	34,  // 56: core.GetLocationResponse.location:type_name -> core.LocationInfo
+	34,  // 57: core.CreateLocationResponse.location:type_name -> core.LocationInfo
+	97,  // 58: core.UpdateLocationRequest.parent_id:type_name -> core.StringPatch
+	99,  // 59: core.UpdateLocationRequest.child_ids:type_name -> core.StringListPatch
+	34,  // 60: core.UpdateLocationResponse.location:type_name -> core.LocationInfo
+	35,  // 61: core.ListLocationTypesResponse.location_types:type_name -> core.LocationTypeInfo
+	95,  // 62: core.ListLocationTypesResponse.page_info:type_name -> core.PageInfo
+	35,  // 63: core.GetLocationTypeResponse.location_type:type_name -> core.LocationTypeInfo
+	34,  // 64: core.BatchGetLocationsByIDsResponse.locations:type_name -> core.LocationInfo
+	98,  // 65: core.BulkUpsertLocationInput.parent:type_name -> core.ObjectIdentifier
+	98,  // 66: core.BulkUpsertLocationInput.children:type_name -> core.ObjectIdentifier
+	53,  // 67: core.BulkUpsertLocationsRequest.locations:type_name -> core.BulkUpsertLocationInput
+	96,  // 68: core.BulkUpsertLocationsResponse.job:type_name -> core.JobInfo
+	94,  // 69: core.SupplierSummaryProto.created_at:type_name -> google.protobuf.Timestamp
+	94,  // 70: core.SupplierSummaryProto.updated_at:type_name -> google.protobuf.Timestamp
+	100, // 71: core.SupplierSummaryProto.bill_to_address:type_name -> core.CustomerAddressProto
+	100, // 72: core.SupplierSummaryProto.ship_to_address:type_name -> core.CustomerAddressProto
+	100, // 73: core.SupplierProto.bill_to_address:type_name -> core.CustomerAddressProto
+	100, // 74: core.SupplierProto.ship_to_address:type_name -> core.CustomerAddressProto
+	94,  // 75: core.SupplierProto.created_at:type_name -> google.protobuf.Timestamp
+	94,  // 76: core.SupplierProto.updated_at:type_name -> google.protobuf.Timestamp
+	94,  // 77: core.ListSuppliersRequest.start_date:type_name -> google.protobuf.Timestamp
+	94,  // 78: core.ListSuppliersRequest.end_date:type_name -> google.protobuf.Timestamp
+	56,  // 79: core.ListSuppliersResponse.suppliers:type_name -> core.SupplierSummaryProto
+	95,  // 80: core.ListSuppliersResponse.page_info:type_name -> core.PageInfo
+	57,  // 81: core.GetSupplierResponse.supplier:type_name -> core.SupplierProto
+	58,  // 82: core.CreateSupplierRequest.bill_to_address:type_name -> core.CreateSupplierAddressInput
+	58,  // 83: core.CreateSupplierRequest.ship_to_address:type_name -> core.CreateSupplierAddressInput
+	57,  // 84: core.CreateSupplierResponse.supplier:type_name -> core.SupplierProto
+	57,  // 85: core.UpdateSupplierResponse.supplier:type_name -> core.SupplierProto
+	57,  // 86: core.DeleteSupplierResponse.supplier:type_name -> core.SupplierProto
+	94,  // 87: core.SysPropertyInfo.created_at:type_name -> google.protobuf.Timestamp
+	94,  // 88: core.SysPropertyInfo.updated_at:type_name -> google.protobuf.Timestamp
+	70,  // 89: core.ListSysPropertiesResponse.sys_properties:type_name -> core.SysPropertyInfo
+	95,  // 90: core.ListSysPropertiesResponse.page_info:type_name -> core.PageInfo
+	70,  // 91: core.GetSysPropertyResponse.sys_property:type_name -> core.SysPropertyInfo
+	70,  // 92: core.UpdateSysPropertyResponse.sys_property:type_name -> core.SysPropertyInfo
+	70,  // 93: core.BatchGetSysPropertiesByIDsResponse.sys_properties:type_name -> core.SysPropertyInfo
+	94,  // 94: core.TenancyRoleProto.created_at:type_name -> google.protobuf.Timestamp
+	94,  // 95: core.TenancyRoleProto.updated_at:type_name -> google.protobuf.Timestamp
+	82,  // 96: core.TenancyAccountPlanProto.limits:type_name -> core.TenancyAccountPlanLimitProto
+	92,  // 97: core.TenancyAccountPlanProto.features:type_name -> core.TenancyAccountPlanProto.FeaturesEntry
+	81,  // 98: core.TenancyCurrentAccountProto.role:type_name -> core.TenancyRoleProto
+	83,  // 99: core.TenancyCurrentAccountProto.account_plan:type_name -> core.TenancyAccountPlanProto
+	94,  // 100: core.TenancyPendingRegistrationProto.created_at:type_name -> google.protobuf.Timestamp
+	84,  // 101: core.GetTenancyResponse.current_account:type_name -> core.TenancyCurrentAccountProto
+	85,  // 102: core.GetTenancyResponse.owner_account:type_name -> core.TenancyAccountSummaryProto
+	85,  // 103: core.GetTenancyResponse.sandboxes:type_name -> core.TenancyAccountSummaryProto
+	86,  // 104: core.GetTenancyResponse.other_accounts:type_name -> core.TenancyOtherAccountProto
+	87,  // 105: core.GetTenancyResponse.pending_registration:type_name -> core.TenancyPendingRegistrationProto
+	106, // [106:106] is the sub-list for method output_type
+	106, // [106:106] is the sub-list for method input_type
+	106, // [106:106] is the sub-list for extension type_name
+	106, // [106:106] is the sub-list for extension extendee
+	0,   // [0:106] is the sub-list for field type_name
 }
 
 func init() { file_core_core_consumption_proto_init() }
@@ -6795,6 +6971,7 @@ func file_core_core_consumption_proto_init() {
 	file_core_core_consumption_proto_msgTypes[42].OneofWrappers = []any{}
 	file_core_core_consumption_proto_msgTypes[44].OneofWrappers = []any{}
 	file_core_core_consumption_proto_msgTypes[47].OneofWrappers = []any{}
+	file_core_core_consumption_proto_msgTypes[56].OneofWrappers = []any{}
 	file_core_core_consumption_proto_msgTypes[57].OneofWrappers = []any{}
 	file_core_core_consumption_proto_msgTypes[58].OneofWrappers = []any{}
 	file_core_core_consumption_proto_msgTypes[59].OneofWrappers = []any{}

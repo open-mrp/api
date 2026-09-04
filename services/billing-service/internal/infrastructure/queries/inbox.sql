@@ -1,23 +1,77 @@
 -- name: TryInsertInboxRecord :execresult
-INSERT INTO message_inbox (message_id, service_name, handler, message_type, request_id, parent_message_id)
-VALUES (?, ?, ?, ?, ?, ?);
+INSERT INTO message_inbox (message_id, service_name, handler, message_type, request_id, parent_message_id, lock_owner, lock_expires_at)
+VALUES (
+    sqlc.arg('message_id'),
+    sqlc.arg('service_name'),
+    sqlc.arg('handler'),
+    sqlc.arg('message_type'),
+    sqlc.arg('request_id'),
+    sqlc.arg('parent_message_id'),
+    sqlc.arg('lock_owner'),
+    DATE_ADD(NOW(3), INTERVAL sqlc.arg('lock_duration_seconds') SECOND)
+);
 
 -- name: GetInboxRecordByMessageAndHandler :one
-SELECT id, message_id, service_name, handler, message_type, request_id, parent_message_id, status, attempts, last_error, received_at, processed_at
+SELECT id, message_id, service_name, handler, message_type, request_id, parent_message_id, status, attempts, last_error, received_at, processed_at, failed_at, lock_owner, lock_expires_at
 FROM message_inbox
 WHERE message_id = ? AND handler = ?;
 
--- name: MarkInboxRecordProcessed :exec
+-- Conditional on the lease still being free, so two consumers racing the same abandoned record cannot both proceed to the handler.
+-- name: ClaimInboxRecord :execrows
 UPDATE message_inbox
-SET status = 'processed', processed_at = NOW(3)
-WHERE id = ?;
+SET lock_owner = sqlc.arg('lock_owner'),
+    lock_expires_at = DATE_ADD(NOW(3), INTERVAL sqlc.arg('lock_duration_seconds') SECOND)
+WHERE id = sqlc.arg('id')
+  AND status = 'received'
+  AND (lock_expires_at IS NULL OR lock_expires_at <= NOW(3));
 
--- name: MarkInboxRecordFailed :exec
+-- The status guard is what makes this safe to call inside a handler's own transaction: a second attempt's UPDATE blocks on the row lock, then matches zero rows once the winner commits, so the loser's work rolls back instead of double-applying.
+-- name: CompleteInboxRecord :execrows
 UPDATE message_inbox
-SET attempts = attempts + 1, last_error = ?
-WHERE id = ?;
+SET status = 'processed', processed_at = NOW(3), lock_owner = NULL, lock_expires_at = NULL
+WHERE id = sqlc.arg('id')
+  AND status = 'received'
+  AND lock_owner = sqlc.arg('lock_owner');
+
+-- Guarded on status and owner: an attempt whose lease already lapsed must not clear the lease of the consumer that claimed the record after it, nor stamp a failure over a record another attempt has already completed or discarded.
+-- name: MarkInboxRecordFailed :execrows
+UPDATE message_inbox
+SET attempts = attempts + 1,
+    last_error = sqlc.arg('last_error'),
+    failed_at = NOW(3),
+    lock_owner = NULL,
+    lock_expires_at = NULL
+WHERE id = sqlc.arg('id')
+  AND status = 'received'
+  AND lock_owner = sqlc.arg('lock_owner');
+
+-- processed_at is stamped so the existing retention purge and its index cover discarded rows too; status is what distinguishes work that was dropped from work that was applied.
+-- Guarded like MarkInboxRecordFailed, so a lapsed attempt cannot overwrite a record another attempt has already completed.
+-- name: MarkInboxRecordDiscarded :execrows
+UPDATE message_inbox
+SET status = 'discarded',
+    last_error = sqlc.arg('last_error'),
+    failed_at = NOW(3),
+    processed_at = NOW(3),
+    lock_owner = NULL,
+    lock_expires_at = NULL
+WHERE id = sqlc.arg('id')
+  AND status = 'received'
+  AND lock_owner = sqlc.arg('lock_owner');
+
+-- Terminal like a discard, but not a failure: the failure monitor scans 'discarded' and never this.
+-- name: MarkInboxRecordIgnored :execrows
+UPDATE message_inbox
+SET status = 'ignored',
+    last_error = sqlc.arg('last_error'),
+    processed_at = NOW(3),
+    lock_owner = NULL,
+    lock_expires_at = NULL
+WHERE id = sqlc.arg('id')
+  AND status = 'received'
+  AND lock_owner = sqlc.arg('lock_owner');
 
 -- name: PurgeProcessedInboxMessages :execresult
 DELETE FROM message_inbox
-WHERE status = 'processed' AND processed_at < DATE_SUB(NOW(3), INTERVAL ? HOUR)
+WHERE status IN ('processed', 'discarded', 'ignored') AND processed_at < DATE_SUB(NOW(3), INTERVAL ? HOUR)
 LIMIT ?;

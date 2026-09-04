@@ -51,7 +51,7 @@ func (e *ListDeliveriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListDel
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeDelivery,
-			Fields:     []string{"purchase_order", "purchase_order.supplier", "lines"},
+			Fields:     []string{"related", "related.purchase_order", "related.receiving_order", "lines", "lines.item", "lines.order_line", "lines.order_line.item", "lines.order_line.quantity_ordered", "lines.order_line.quantity_ordered.unit", "lines.order_line.unit_price", "lines.order_line.unit_price.numerator_unit", "lines.order_line.unit_price.denominator_unit", "lines.quantity", "lines.quantity.unit", "lines.unit_cost", "lines.unit_cost.numerator_unit", "lines.unit_cost.denominator_unit", "lines.location", "lines.lot"},
 		}),
 	})
 }

@@ -685,6 +685,7 @@ type BatchSvc interface {
 
 	// GetPossibleNextSteps returns the possible next production steps for a batch at a scanning station.
 	GetPossibleNextSteps(ctx context.Context, scanningStationID, batchID string) ([]ScanningProductionStepInfo, *apierror.APIError)
+	GetPossibleInitSteps(ctx context.Context, scanningStationID, batchID string) ([]ScanningProductionStepInfo, *apierror.APIError)
 
 	// AnalyzeOpenBatches returns aggregated open batch summaries for analytics.
 	AnalyzeOpenBatches(ctx context.Context, itemIDs, productLineIDs []string) ([]OpenBatchSummary, *apierror.APIError)
@@ -1317,6 +1318,7 @@ type SalesOrderLineSvc interface {
 type PurchaseOrderSvc interface {
 	ListPurchaseOrders(ctx context.Context, params ListPurchaseOrdersParams) (*ListPurchaseOrdersResult, *apierror.APIError)
 	GetPurchaseOrder(ctx context.Context, params GetPurchaseOrderParams) (*PurchaseOrder, *apierror.APIError)
+	BatchGetPurchaseOrderLinesByIDs(ctx context.Context, ids []string) ([]*PurchaseOrderLine, *apierror.APIError)
 	CreatePurchaseOrder(ctx context.Context, params CreatePurchaseOrderParams) (*PurchaseOrder, *apierror.APIError)
 	UpdatePurchaseOrder(ctx context.Context, params UpdatePurchaseOrderParams) (*PurchaseOrder, *apierror.APIError)
 	DeletePurchaseOrder(ctx context.Context, params DeletePurchaseOrderParams) *apierror.APIError

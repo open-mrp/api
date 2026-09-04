@@ -5,25 +5,22 @@ import (
 
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"github.com/open-mrp/api/shared/ptrutil"
 )
 
 // BatchQuantityPresenter converts a proto BatchQuantityInfo to an apiresource.Quantity.
-func BatchQuantityPresenter(q *pb.BatchQuantityInfo) *apiresource.Quantity {
+func BatchQuantityPresenter(meta *resourcekit.LoadMeta, q *pb.BatchQuantityInfo) *apiresource.Quantity {
 	if q == nil {
 		return nil
 	}
 
-	var unit *apiresource.Unit
-	if q.UnitId != "" {
-		unit = &apiresource.Unit{
-			ID:           q.UnitId,
-			Object:       constants.ObjectTypeUnit,
-			Abbreviation: q.UnitAbbreviation,
-			Type:         constants.UnitType(q.UnitType),
-		}
+	// Unit left nil: the batch query carries only the unit's id, abbreviation and dimension, so the
+	// id is stashed and the real unit is resolved on `?include=quantity.unit`; never fabricated.
+	if meta != nil {
+		meta.Set(constants.ObjectTypeQuantity, q.Id, "unit_id", q.UnitId)
 	}
 
 	norm := apiresource.NormalizeQuantityValue(q.Measure, q.UnitType)
@@ -37,42 +34,20 @@ func BatchQuantityPresenter(q *pb.BatchQuantityInfo) *apiresource.Quantity {
 		Object:       constants.ObjectTypeQuantity,
 		Value:        norm,
 		DisplayValue: displayValue,
-		Unit:         unit,
 	}
 }
 
 // BatchPresenter converts a proto BatchInfo to an apiresource.Batch.
-func BatchPresenter(b *pb.BatchInfo) apiresource.Batch {
+func BatchPresenter(meta *resourcekit.LoadMeta, b *pb.BatchInfo) apiresource.Batch {
 	if b == nil {
 		return apiresource.Batch{}
 	}
 
-	var item *apiresource.Item
-	if b.ItemId != "" {
-		item = &apiresource.Item{
-			ID:     b.ItemId,
-			Object: constants.ObjectTypeItem,
-			SKU:    b.ItemSku,
-		}
-	}
+	item := batchRef(b.ItemId, constants.ObjectTypeItem, b.ItemSku)
 
-	var scanningStation *apiresource.ScanningStation
-	if b.ScanningStationId != nil && *b.ScanningStationId != "" {
-		scanningStation = &apiresource.ScanningStation{
-			ID:     *b.ScanningStationId,
-			Object: constants.ObjectTypeScanningStation,
-			Name:   ptrutil.Deref(b.ScanningStationName),
-		}
-	}
+	scanningStation := batchRef(ptrutil.Deref(b.ScanningStationId), constants.ObjectTypeScanningStation, ptrutil.Deref(b.ScanningStationName))
 
-	var productionStep *apiresource.ProductionStep
-	if b.ProductionStepId != nil && *b.ProductionStepId != "" {
-		productionStep = &apiresource.ProductionStep{
-			ID:     *b.ProductionStepId,
-			Object: constants.ObjectTypeProductionStep,
-			Name:   ptrutil.Deref(b.ProductionStepName),
-		}
-	}
+	productionStep := batchRef(ptrutil.Deref(b.ProductionStepId), constants.ObjectTypeProductionStep, ptrutil.Deref(b.ProductionStepName))
 
 	var productionRun *apiresource.ProductionRunReference
 	if b.ProductionRunId != nil && *b.ProductionRunId != "" {
@@ -83,23 +58,14 @@ func BatchPresenter(b *pb.BatchInfo) apiresource.Batch {
 		}
 	}
 
-	machines := make([]apiresource.Machine, len(b.Machines))
-	for i, m := range b.Machines {
-		machines[i] = apiresource.Machine{
-			ID:     m.Id,
-			Object: constants.ObjectTypeMachine,
-			Name:   m.Name,
+	machines := make([]apiresource.Entity, 0, len(b.Machines))
+	for _, m := range b.Machines {
+		if ref := batchRef(m.Id, constants.ObjectTypeMachine, m.Name); ref != nil {
+			machines = append(machines, *ref)
 		}
 	}
 
-	var department *apiresource.Department
-	if b.DepartmentId != nil && *b.DepartmentId != "" {
-		department = &apiresource.Department{
-			ID:     *b.DepartmentId,
-			Object: constants.ObjectTypeDepartment,
-			Name:   ptrutil.Deref(b.DepartmentName),
-		}
-	}
+	department := batchRef(ptrutil.Deref(b.DepartmentId), constants.ObjectTypeDepartment, ptrutil.Deref(b.DepartmentName))
 
 	lots := make([]apiresource.BatchLot, len(b.Lots))
 	for i, l := range b.Lots {
@@ -114,9 +80,9 @@ func BatchPresenter(b *pb.BatchInfo) apiresource.Batch {
 		ID:              b.Id,
 		Object:          constants.ObjectTypeBatch,
 		Item:            item,
-		Quantity:        BatchQuantityPresenter(b.Quantity),
-		Seconds:         BatchQuantityPresenter(b.Seconds),
-		Waste:           BatchQuantityPresenter(b.Waste),
+		Quantity:        BatchQuantityPresenter(meta, b.Quantity),
+		Seconds:         BatchQuantityPresenter(meta, b.Seconds),
+		Waste:           BatchQuantityPresenter(meta, b.Waste),
 		ScanningStation: scanningStation,
 		Department:      department,
 		ProductionStep:  productionStep,
@@ -134,37 +100,16 @@ func BatchPresenter(b *pb.BatchInfo) apiresource.Batch {
 
 // BaseBatchPresenter converts a proto BaseBatchInfo to an apiresource.Batch.
 // BaseBatchInfo is used for mutation responses and does not include machines.
-func BaseBatchPresenter(b *pb.BaseBatchInfo) apiresource.Batch {
+func BaseBatchPresenter(meta *resourcekit.LoadMeta, b *pb.BaseBatchInfo) apiresource.Batch {
 	if b == nil {
 		return apiresource.Batch{}
 	}
 
-	var item *apiresource.Item
-	if b.ItemId != "" {
-		item = &apiresource.Item{
-			ID:     b.ItemId,
-			Object: constants.ObjectTypeItem,
-			SKU:    b.ItemSku,
-		}
-	}
+	item := batchRef(b.ItemId, constants.ObjectTypeItem, b.ItemSku)
 
-	var scanningStation *apiresource.ScanningStation
-	if b.ScanningStationId != nil && *b.ScanningStationId != "" {
-		scanningStation = &apiresource.ScanningStation{
-			ID:     *b.ScanningStationId,
-			Object: constants.ObjectTypeScanningStation,
-			Name:   ptrutil.Deref(b.ScanningStationName),
-		}
-	}
+	scanningStation := batchRef(ptrutil.Deref(b.ScanningStationId), constants.ObjectTypeScanningStation, ptrutil.Deref(b.ScanningStationName))
 
-	var productionStep *apiresource.ProductionStep
-	if b.ProductionStepId != nil && *b.ProductionStepId != "" {
-		productionStep = &apiresource.ProductionStep{
-			ID:     *b.ProductionStepId,
-			Object: constants.ObjectTypeProductionStep,
-			Name:   ptrutil.Deref(b.ProductionStepName),
-		}
-	}
+	productionStep := batchRef(ptrutil.Deref(b.ProductionStepId), constants.ObjectTypeProductionStep, ptrutil.Deref(b.ProductionStepName))
 
 	var productionRun *apiresource.ProductionRunReference
 	if b.ProductionRunId != nil && *b.ProductionRunId != "" {
@@ -175,27 +120,20 @@ func BaseBatchPresenter(b *pb.BaseBatchInfo) apiresource.Batch {
 		}
 	}
 
-	var department *apiresource.Department
-	if b.DepartmentId != nil && *b.DepartmentId != "" {
-		department = &apiresource.Department{
-			ID:     *b.DepartmentId,
-			Object: constants.ObjectTypeDepartment,
-			Name:   ptrutil.Deref(b.DepartmentName),
-		}
-	}
+	department := batchRef(ptrutil.Deref(b.DepartmentId), constants.ObjectTypeDepartment, ptrutil.Deref(b.DepartmentName))
 
 	return apiresource.Batch{
 		ID:              b.Id,
 		Object:          constants.ObjectTypeBatch,
 		Item:            item,
-		Quantity:        BatchQuantityPresenter(b.Quantity),
-		Seconds:         BatchQuantityPresenter(b.Seconds),
-		Waste:           BatchQuantityPresenter(b.Waste),
+		Quantity:        BatchQuantityPresenter(meta, b.Quantity),
+		Seconds:         BatchQuantityPresenter(meta, b.Seconds),
+		Waste:           BatchQuantityPresenter(meta, b.Waste),
 		ScanningStation: scanningStation,
 		Department:      department,
 		ProductionStep:  productionStep,
 		ProductionRun:   productionRun,
-		Machines:        apiresource.NewList([]apiresource.Machine{}, apiresource.PageInfo{}),
+		Machines:        apiresource.NewList([]apiresource.Entity{}, apiresource.PageInfo{}),
 		ClosedAt:        grpcutil.TimestampToTimePtr(b.ClosedAt),
 		ScannedAt:       grpcutil.TimestampToTimePtr(b.ScannedAt),
 		CreatedAt:       grpcutil.TimestampToTime(b.CreatedAt),
@@ -204,14 +142,14 @@ func BaseBatchPresenter(b *pb.BaseBatchInfo) apiresource.Batch {
 }
 
 // BatchFlowNodePresenter converts a proto BatchFlowNodeInfo to an apiresource.BatchFlowNode.
-func BatchFlowNodePresenter(n *pb.BatchFlowNodeInfo) apiresource.BatchFlowNode {
+func BatchFlowNodePresenter(meta *resourcekit.LoadMeta, n *pb.BatchFlowNodeInfo) apiresource.BatchFlowNode {
 	if n == nil {
 		return apiresource.BatchFlowNode{}
 	}
 
 	return apiresource.BatchFlowNode{
 		Object:        constants.ObjectTypeBatchFlowNode,
-		Batch:         BatchPresenter(n.Batch),
+		Batch:         BatchPresenter(meta, n.Batch),
 		InputBatches:  batchReferenceList(n.InputBatchIds),
 		OutputBatches: batchReferenceList(n.OutputBatchIds),
 	}
@@ -250,22 +188,10 @@ func OpenBatchSummaryPresenter(s *pb.OpenBatchSummaryInfo) apiresource.OpenBatch
 		return apiresource.OpenBatchSummary{}
 	}
 
-	var item *apiresource.Item
-	if s.Item != nil {
-		item = &apiresource.Item{
-			ID:     s.Item.Id,
-			Object: constants.ObjectTypeItem,
-			SKU:    s.Item.Sku,
-		}
-	}
-
-	var scanningStation *apiresource.ScanningStation
-	if s.ScanningStation != nil {
-		scanningStation = &apiresource.ScanningStation{
-			ID:     s.ScanningStation.Id,
-			Object: constants.ObjectTypeScanningStation,
-		}
-	}
+	// References, not records: the summary groups open batches and knows only which item and station
+	// they sit at, so it names them rather than shipping catalog objects with every other field blank.
+	item := openBatchSummaryItem(s.Item)
+	scanningStation := openBatchSummaryStation(s.ScanningStation)
 
 	return apiresource.OpenBatchSummary{
 		Object:          constants.ObjectTypeOpenBatchSummary,
@@ -284,23 +210,61 @@ func ScanningProductionStepInfoPresenter(s *pb.ScanningProductionStepInfoProto) 
 	}
 
 	return apiresource.ScanningProductionStepInfo{
-		ID:          s.Id,
-		Object:      constants.ObjectTypeScanningProductionStepInfo,
-		Name:        s.Name,
-		IsMultiPart: s.IsMultiPart,
+		ID:     s.Id,
+		Object: constants.ObjectTypeScanningProductionStepInfo,
+		Name:   s.Name,
+		Type:   scanningStepType(s.IsMultiPart),
 	}
 }
 
 // BatchListPresenter converts a proto ListBatchesByScanningStationResponse to a paginated list.
 func BatchListPresenter(ctx context.Context, resp *pb.ListBatchesByScanningStationResponse) *apiresource.List[apiresource.Batch] {
+	meta := resourcekit.GetLoadMeta(ctx)
 	if resp == nil {
 		return apiresource.NewList[apiresource.Batch](nil, apiresource.PageInfo{})
 	}
 
 	batches := make([]apiresource.Batch, len(resp.Batches))
 	for i, b := range resp.Batches {
-		batches[i] = BatchPresenter(b)
+		batches[i] = BatchPresenter(meta, b)
 	}
 
 	return apiresource.NewList(batches, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
+}
+
+// scanningStepType names what the backend reports as a multi-part flag, so the client reads a value rather than inferring one from a boolean.
+func scanningStepType(multiPart bool) constants.ScanningStepType {
+	if multiPart {
+		return constants.ScanningStepTypeMultiPart
+	}
+	return constants.ScanningStepTypeSingle
+}
+
+func openBatchSummaryItem(i *pb.OpenBatchSummaryItemProto) *apiresource.Entity {
+	if i == nil {
+		return nil
+	}
+	sku := i.Sku
+	return apiresource.NewEntity(i.Id, constants.ObjectTypeItem, &sku, nil)
+}
+
+func openBatchSummaryStation(st *pb.OpenBatchSummaryScanningStationProto) *apiresource.Entity {
+	if st == nil {
+		return nil
+	}
+	return apiresource.NewEntity(st.Id, constants.ObjectTypeScanningStation, nil, nil)
+}
+
+// batchRef names one of the records a batch points at. The batch query carries an id and a label
+// for each and nothing more, so they are named rather than shipped as records with every other
+// required field blank.
+func batchRef(id string, entityType constants.ObjectType, label string) *apiresource.Entity {
+	if id == "" {
+		return nil
+	}
+	var name *string
+	if label != "" {
+		name = &label
+	}
+	return apiresource.NewEntity(id, entityType, name, nil)
 }

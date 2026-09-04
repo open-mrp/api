@@ -42,8 +42,8 @@ type Delivery struct {
 	//
 	// The first delivery against a purchase order takes that order's number; each later delivery appends a sequence suffix, such as `PO-001-2`.
 	Number string `json:"number" validate:"required"`
-	// The purchase order this delivery was received against.
-	PurchaseOrder *PurchaseOrder `json:"purchase_order" expandable:"true"`
+	// The records this delivery sits between.
+	Related *DeliveryRelated `json:"related" expandable:"true"`
 	// Whether any of the delivered goods were accepted into inventory.
 	//
 	// - `accepted`: at least part of the shipment was put into inventory. Quantities refused on inspection can still appear on the delivery's lines.
@@ -64,19 +64,37 @@ type Delivery struct {
 }
 
 var SampleDelivery = &Delivery{
-	ID:            SampleDeliveryID,
-	Object:        constants.ObjectTypeDelivery,
-	Number:        "DLV-001",
-	PurchaseOrder: SamplePurchaseOrder,
-	Status:        constants.DeliveryStatusAccepted,
-	Lines:         NewList([]DeliveryLine{*SampleDeliveryLine}, PageInfo{}),
-	AcceptedAt:    timeutil.TimestampToTimePtr(sampleUpdatedAtTimestamp),
-	CreatedAt:     timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:     timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:         SampleDeliveryID,
+	Object:     constants.ObjectTypeDelivery,
+	Number:     "DLV-001",
+	Related:    SampleDeliveryRelated,
+	Status:     constants.DeliveryStatusAccepted,
+	Lines:      NewList([]DeliveryLine{*SampleDeliveryLine}, PageInfo{}),
+	AcceptedAt: timeutil.TimestampToTimePtr(sampleUpdatedAtTimestamp),
+	CreatedAt:  timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:  timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*Delivery) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleDelivery)
+}
+
+// DeliveryRelated names the records a delivery sits between.
+type DeliveryRelated struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=delivery_related"`
+	// The purchase order this delivery was received against.
+	PurchaseOrder *Record `json:"purchase_order" expandable:"true"`
+	// The receiving order this delivery was stocked through.
+	ReceivingOrder *Record `json:"receiving_order" expandable:"true"`
+}
+
+var SampleDeliveryRelated = &DeliveryRelated{
+	Object: constants.ObjectTypeDeliveryRelated,
+}
+
+func (*DeliveryRelated) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleDeliveryRelated)
 }
 
 // A quantity of one item recorded on a delivery.
@@ -88,7 +106,7 @@ type DeliveryLine struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=delivery_line"`
 	// The item received on this line.
-	Item *Item `json:"item"`
+	Item *Item `json:"item" expandable:"true"`
 	// Quantity recorded on this line.
 	//
 	// On a refused line this is the quantity rejected rather than the quantity taken into inventory.
@@ -96,15 +114,19 @@ type DeliveryLine struct {
 	// Cost per unit of the goods on this line.
 	//
 	// Copied from the originating purchase order line's unit price at the moment of stocking, so later price changes on the purchase order leave it untouched.
-	UnitCost *Rate `json:"unit_cost" validate:"required"`
+	UnitCost *Rate `json:"unit_cost" expandable:"true"`
 	// Storage location the goods on this line were put away at.
 	//
 	// Not set on refused lines, or when the quantity was stocked without naming a location.
-	Location *Location `json:"location"`
+	Location *Location `json:"location" expandable:"true"`
 	// Lot the goods on this line were assigned to.
 	//
 	// Set only when a lot number was supplied while stocking, and applied to every line produced from that receiving order line, including the refused one.
-	Lot *Lot `json:"lot"`
+	Lot *Lot `json:"lot" expandable:"true"`
+	// The purchase order line the stocked goods were ordered on.
+	//
+	// A delivery line is stocked against a receiving order line, which is itself raised from a purchase order line. This is that line, so the unit cost recorded here can be read back against the price it was agreed at.
+	OrderLine *PurchaseOrderLine `json:"order_line" expandable:"true"`
 	// When the goods on this line were accepted into inventory.
 	AcceptedAt *time.Time `json:"accepted_at"`
 	// When the goods on this line were refused on inspection.

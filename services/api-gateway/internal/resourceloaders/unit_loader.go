@@ -59,3 +59,41 @@ func unitFromProto(u *pb.UnitInfo) *apiresource.Unit {
 		UpdatedAt:         grpcutil.TimestampToTime(u.UpdatedAt),
 	}
 }
+
+// LoadUnitsByID resolves units into their API resources, keyed by id. Ids are
+// deduplicated and blanks dropped, so callers can pass whatever their proto handed
+// them.
+//
+// Use it wherever a response carries unit ids but the unit is not behind an
+// include — a computed figure has to arrive with the unit it is counted in, or the
+// client has nothing to render it against.
+func LoadUnitsByID(ctx context.Context, ids ...string) (map[string]*apiresource.Unit, *apierror.APIError) {
+	unique := make([]string, 0, len(ids))
+	seen := make(map[string]struct{}, len(ids))
+	for _, id := range ids {
+		if id == "" {
+			continue
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		unique = append(unique, id)
+	}
+	if len(unique) == 0 {
+		return map[string]*apiresource.Unit{}, nil
+	}
+
+	loaded, apiErr := LoadUnits(ctx, unique)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	out := make(map[string]*apiresource.Unit, len(loaded))
+	for id, v := range loaded {
+		if u, ok := v.(*apiresource.Unit); ok {
+			out[id] = u
+		}
+	}
+	return out, nil
+}

@@ -11,12 +11,12 @@ import (
 // Stage one is the constraint — the knitting room — and it is planned machine by machine, because
 // which machine runs which yarn is the decision that sets the pace of everything else. Stage two is
 // the rest of the factory, and it is planned as one pool: dyeing, finishing, boarding and packing
-// are steps a unit passes through rather than choices between, so modelling each machine would put a
+// are steps a unit passes through rather than choices between, so modeling each machine would put a
 // precision on the plan that the plan does not have.
 //
 // What stage two decides is the thing stage one deliberately does not: **which finished goods to
 // make from the knitted parts**. A greige item becomes several SKUs — the same sock body in four
-// colourways — and the knit plan pools their demand into one campaign precisely so the buffer can
+// colorways — and the knit plan pools their demand into one campaign precisely so the buffer can
 // sit at the undifferentiated stage. That pooling is what makes the buffer cheap, and it is also why
 // the mix has to be decided again, later, against each finished SKU's own position.
 
@@ -29,13 +29,13 @@ type FinishingItem struct {
 	GreigeSKU     string
 	ProductLineID string
 
-	// WeeklyDemand and OnHand are this SKU's own, not the family's. The pooled figures behind the knit plan cannot answer "is this colourway short", which is the whole question stage two exists to answer.
+	// WeeklyDemand and OnHand are this SKU's own, not the family's. The pooled figures behind the knit plan cannot answer "is this colorway short", which is the whole question stage two exists to answer.
 	WeeklyDemand float64
 	OnHand       float64
 	ReorderPoint float64
 	SafetyStock  float64
 
-	// SecondsPerUnit is the measured finishing run rate. Without one the SKU cannot be levelled, because there is no way to know what an hour of the department buys.
+	// SecondsPerUnit is the measured finishing run rate. Without one the SKU cannot be leveled, because there is no way to know what an hour of the department buys.
 	SecondsPerUnit float64
 	LotUnits       float64
 	LotUnitID      string
@@ -116,7 +116,7 @@ type FinishingDiagnostics struct {
 	GreigeStarvedSKUs []string `json:"greige_starved_skus"`
 	// CapacityStarvedSKUs had greige and no hours.
 	CapacityStarvedSKUs []string `json:"capacity_starved_skus"`
-	// ItemsWithoutRunRate never got a measured finishing rate and cannot be levelled.
+	// ItemsWithoutRunRate never got a measured finishing rate and cannot be leveled.
 	ItemsWithoutRunRate []string `json:"items_without_run_rate"`
 	// UnusedGreigeUnits is stage-one output the horizon never converts. A large number means the two stages are planned against different demand, which is worth surfacing rather than leaving as an unexplained pile of greige.
 	UnusedGreigeUnits float64 `json:"unused_greige_units"`
@@ -225,12 +225,12 @@ func unitsWithinHours(hours, secondsPerUnit float64) float64 {
 	return hours * 3600 / secondsPerUnit
 }
 
-// LevelFinishing runs the capacity-levelled sweep over the second stage.
+// LevelFinishing runs the capacity-leveled sweep over the second stage.
 //
 // Each week: greige arrives, every SKU whose projected position has fallen below its trigger becomes
 // a candidate, and candidates are served most-depleted-first out of two shared pools — the greige
 // their family knitted, and the department's hours. What does not fit waits for the next week, which
-// is what makes this a levelling rather than an allocation.
+// is what makes this a leveling rather than an allocation.
 //
 // Determinism: SKUs are sorted before any iteration and every tie breaks on SKU, so the same plan
 // solves to the same mix twice. Go randomizes map iteration, and a mix that wobbled between runs
@@ -267,7 +267,7 @@ func LevelFinishing(in FinishingInput) FinishingResult {
 		result.ProjectedOnHand[item.ItemID] = make([]float64, weeks)
 		position[item.ItemID] = item.OnHand
 
-		// A SKU with no measured finishing rate cannot be levelled: there is no way to know what it costs the department, and guessing would let one SKU quietly consume a week nobody planned for it.
+		// A SKU with no measured finishing rate cannot be leveled: there is no way to know what it costs the department, and guessing would let one SKU quietly consume a week nobody planned for it.
 		if item.SecondsPerUnit <= 0 {
 			result.Diagnostics.ItemsWithoutRunRate = append(result.Diagnostics.ItemsWithoutRunRate, item.SKU)
 			continue
@@ -347,7 +347,7 @@ func LevelFinishing(in FinishingInput) FinishingResult {
 
 			units := math.Min(want, math.Min(fitsGreige, fitsCapacity))
 			if units <= 0 {
-				// A SKU that has already been built this horizon is queued behind a busier week, not starved. Reporting it would make every levelled plan look like a shortage, since being pushed out of one week is the normal working of a sweep.
+				// A SKU that has already been built this horizon is queued behind a busier week, not starved. Reporting it would make every leveled plan look like a shortage, since being pushed out of one week is the normal working of a sweep.
 				if served[item.SKU] {
 					continue
 				}

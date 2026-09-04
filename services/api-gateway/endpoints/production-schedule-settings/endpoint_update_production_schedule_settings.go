@@ -48,7 +48,7 @@ type UpdateProductionScheduleSettingsRequest struct {
 	ForecastZ float64 `json:"forecast_z"`
 	// Typical changeover duration.
 	//
-	// Changeover time is modelled as rising with the number of new inputs a product introduces, between the minimum and maximum below. The slope is calibrated from production history so the model reproduces this average across the transitions actually observed; set it to the changeover time the floor typically reports rather than to a worst case.
+	// Changeover time is modeled as rising with the number of new inputs a product introduces, between the minimum and maximum below. The slope is calibrated from production history so the model reproduces this average across the transitions actually observed; set it to the changeover time the floor typically reports rather than to a worst case.
 	ChangeoverAvgMinutes float64 `json:"changeover_avg_minutes" validate:"gte=0"`
 	// Shortest plausible changeover, and the floor of the changeover model.
 	//

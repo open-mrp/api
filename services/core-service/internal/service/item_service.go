@@ -466,12 +466,26 @@ func (s *itemSvcImpl) ComputeItemCosts(ctx context.Context, accountID, itemID st
 	totalOverhead = totalOverhead.Mul(perStockingUnit)
 	totalCost := totalMaterial.Add(totalLabor).Add(totalOverhead)
 
+	// The currency comes off the item's own unit-cost rate so a computed cost and the stored one name
+	// the same money. An item priced from its step graph for the first time has no such rate yet, and
+	// reporting a money figure with no currency is worse than reporting the default one: the total is
+	// derived from step costs that are all denominated in it.
+	numeratorUnitID := stocking.CostNumeratorUnitID
+	if numeratorUnitID == "" {
+		currencyUnitID, apiErr := s.repos.NewUnitRepo().GetCurrencyBaseUnitID(ctx)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		numeratorUnitID = currencyUnitID
+	}
+
 	return &domain.ItemCosts{
 		DirectMaterialCost: totalMaterial.StringFixed(30),
 		DirectLaborCost:    totalLabor.StringFixed(30),
 		OverheadCost:       totalOverhead.StringFixed(30),
 		TotalCost:          totalCost.StringFixed(30),
 		UnitID:             stocking.BaseUnitID,
+		NumeratorUnitID:    numeratorUnitID,
 	}, nil
 }
 
@@ -520,17 +534,17 @@ func calculateStepCost(step *domain.ProductionFlowStep, consumptions []domain.Co
 	levelingFactor, _ := decimal.NewFromString(step.LevelingFactor)
 	allowances, _ := decimal.NewFromString(step.Allowances)
 
-	// Labour time, carried into the base time unit. A duration and the rate pricing it are each entered
+	// Labor time, carried into the base time unit. A duration and the rate pricing it are each entered
 	// in whatever unit suited whoever entered them — seconds a piece against dollars an hour — so both
 	// go to base units before they meet, exactly as the material term does. Multiplying them raw prices
-	// an hour's labour for every second of it.
+	// an hour's labor for every second of it.
 	var laborTimeMeasure decimal.Decimal
 	if step.LaborTime != nil {
 		laborTimeMeasure, _ = decimal.NewFromString(step.LaborTime.Value)
 		laborTimeMeasure = laborTimeMeasure.Mul(baseUnitRatio(step.LaborTime.NumeratorRatio))
 	}
 
-	// Labour rate, per base time unit.
+	// Labor rate, per base time unit.
 	var laborRateValue decimal.Decimal
 	if step.LaborRate != nil {
 		laborRateValue, _ = decimal.NewFromString(step.LaborRate.Value)
@@ -2139,7 +2153,7 @@ func (s *itemSvcImpl) BulkReconcileItems(ctx context.Context, params domain.Bulk
 				continue
 			}
 			if _, ok := unitMap[d.Unit]; !ok {
-				result.Errors = append(result.Errors, domain.ReconcileError{SKU: d.SKU, Error: fmt.Sprintf("Unit '%s' not found", d.Unit)})
+				result.Errors = append(result.Errors, domain.ReconcileError{ItemID: itemMap[d.SKU].ItemID, SKU: d.SKU, Error: fmt.Sprintf("Unit '%s' not found", d.Unit)})
 				continue
 			}
 			validItems = append(validItems, d)
@@ -2250,13 +2264,14 @@ func (s *itemSvcImpl) BulkReconcileItems(ctx context.Context, params domain.Bulk
 						nil,
 						params.ResponsibleUserID,
 					); apiErr != nil {
-						errs = append(errs, domain.ReconcileError{SKU: d.SKU, Error: "Failed to record inventory audit trail"})
+						errs = append(errs, domain.ReconcileError{ItemID: item.ItemID, SKU: d.SKU, Error: "Failed to record inventory audit trail"})
 						continue
 					}
 
 					reconciled = append(reconciled, domain.ReconciledItem{
 						ItemID: item.ItemID, SKU: d.SKU,
 						PreviousMeasure: currentQty, NewMeasure: newQty,
+						UnitID: item.BaseUnitID,
 					})
 
 					// Empty when the reconciled quantity equals the current quantity; the publisher skips the event as a no-op.

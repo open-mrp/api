@@ -101,7 +101,7 @@ func unissueOrder(t *testing.T, orderID string) {
 // shows up in the stamped commitment.
 //
 // A commitment is stamped at issue and never recomputed, so an order issued
-// before its lane warmed keeps a transit-free date forever — correct behaviour,
+// before its lane warmed keeps a transit-free date forever — correct behavior,
 // and exactly what makes the cache unobservable by any other route. Withdrawing
 // and re-issuing is the only way a client can ask again.
 func issueOnceWarm(t *testing.T, orderID string) map[string]any {

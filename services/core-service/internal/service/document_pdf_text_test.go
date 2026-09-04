@@ -158,7 +158,7 @@ func TestHeaderTextFitsItsColumns(t *testing.T) {
 			for _, row := range rows {
 				if name == "pathological" {
 					// Nothing could hold these at full size; the guarantee is only that they are
-					// fitted and truncated into their column rather than painted over the neighbour.
+					// fitted and truncated into their column rather than painted over the neighbor.
 					assertFitsAfterFitting(t, pdf, "label "+row.Label, row.Label, row.style(), row.size(), labelW, 0.5)
 					assertFitsAfterFitting(t, pdf, "value "+row.Value, row.Value, row.style(), row.size(), valueW, 0.5)
 					continue

@@ -6,7 +6,8 @@ description: The OpenMRP layer contract — what each layer (edge/transport, con
 # The OpenMRP layer contract
 
 Both APIs implement the same doctrine (see the `dane-api-design` skill for
-the philosophy) with different embodiments:
+the philosophy) with different embodiments. Go implementation details
+(`withTx`, recovery points, inventory ledger lock) live in `architecture-patterns`.
 
 - **Go API** (`api/`): HTTP edge = api-gateway (middleware chain + declarative
   `APIEndpoint.Execute`), then per backend service:

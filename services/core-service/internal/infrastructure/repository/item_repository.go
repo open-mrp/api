@@ -798,8 +798,9 @@ func (r *itemRepoImpl) GetStockingUnit(ctx context.Context, accountID, itemID st
 	}
 
 	return &domain.ItemStockingUnit{
-		UnitGroupID: row.UnitGroupID,
-		BaseUnitID:  row.BaseUnitID,
+		UnitGroupID:         row.UnitGroupID,
+		BaseUnitID:          row.BaseUnitID,
+		CostNumeratorUnitID: row.CostNumeratorUnitID.String,
 	}, nil
 }
 

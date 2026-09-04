@@ -6,6 +6,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/contracts"
 	pb "github.com/open-mrp/api/shared/proto/core"
+	"github.com/open-mrp/api/shared/ptrutil"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -77,14 +78,18 @@ func deliverySummaryToProto(d *domain.DeliverySummary) *pb.DeliverySummaryInfo {
 	}
 
 	info := &pb.DeliverySummaryInfo{
-		Id:                  d.ID,
-		Number:              d.Number,
-		PurchaseOrderId:     d.PurchaseOrderID,
-		PurchaseOrderNumber: d.PurchaseOrderNumber,
-		Status:              d.Status,
-		LineCount:           d.LineCount,
-		CreatedAt:           timestamppb.New(d.CreatedAt),
-		UpdatedAt:           timestamppb.New(d.UpdatedAt),
+		Id:                   d.ID,
+		Number:               d.Number,
+		PurchaseOrderId:      d.PurchaseOrderID,
+		PurchaseOrderNumber:  d.PurchaseOrderNumber,
+		ReceivingOrderId:     ptrutil.NonEmptyPtr(d.ReceivingOrderID),
+		ReceivingOrderNumber: ptrutil.NonEmptyPtr(d.ReceivingOrderNumber),
+		ReceivingOrderStatus: ptrutil.NonEmptyPtr(d.ReceivingOrderStatus),
+		PurchaseOrderStatus:  d.PurchaseOrderStatus,
+		Status:               d.Status,
+		LineCount:            d.LineCount,
+		CreatedAt:            timestamppb.New(d.CreatedAt),
+		UpdatedAt:            timestamppb.New(d.UpdatedAt),
 	}
 
 	if d.AcceptedAt != nil {
@@ -112,14 +117,18 @@ func deliveryToProto(d *domain.Delivery) *pb.DeliveryInfo {
 	}
 
 	info := &pb.DeliveryInfo{
-		Id:                  d.ID,
-		Number:              d.Number,
-		PurchaseOrderId:     d.PurchaseOrderID,
-		PurchaseOrderNumber: d.PurchaseOrderNumber,
-		Status:              d.Status,
-		Lines:               lines,
-		CreatedAt:           timestamppb.New(d.CreatedAt),
-		UpdatedAt:           timestamppb.New(d.UpdatedAt),
+		Id:                   d.ID,
+		Number:               d.Number,
+		PurchaseOrderId:      d.PurchaseOrderID,
+		PurchaseOrderNumber:  d.PurchaseOrderNumber,
+		ReceivingOrderId:     ptrutil.NonEmptyPtr(d.ReceivingOrderID),
+		ReceivingOrderNumber: ptrutil.NonEmptyPtr(d.ReceivingOrderNumber),
+		ReceivingOrderStatus: ptrutil.NonEmptyPtr(d.ReceivingOrderStatus),
+		PurchaseOrderStatus:  d.PurchaseOrderStatus,
+		Status:               d.Status,
+		Lines:                lines,
+		CreatedAt:            timestamppb.New(d.CreatedAt),
+		UpdatedAt:            timestamppb.New(d.UpdatedAt),
 	}
 
 	if d.AcceptedAt != nil {
@@ -138,17 +147,22 @@ func deliveryLineToProto(l *domain.DeliveryLine) *pb.DeliveryLineInfo {
 	}
 
 	info := &pb.DeliveryLineInfo{
-		Id:                        l.ID,
-		QuantityId:                l.QuantityID,
-		QuantityValue:             l.QuantityValue,
-		QuantityUnitId:            l.QuantityUnitID,
-		QuantityUnitAbbreviation:  l.QuantityUnitAbbreviation,
-		UnitCostId:                l.UnitCostID,
-		UnitCostValue:             l.UnitCostValue,
-		UnitCostNumeratorUnitId:   l.UnitCostNumeratorUnitID,
-		UnitCostDenominatorUnitId: l.UnitCostDenominatorUnitID,
-		CreatedAt:                 timestamppb.New(l.CreatedAt),
-		UpdatedAt:                 timestamppb.New(l.UpdatedAt),
+		Id:                                  l.ID,
+		QuantityId:                          l.QuantityID,
+		QuantityValue:                       l.QuantityValue,
+		QuantityUnitId:                      l.QuantityUnitID,
+		QuantityUnitAbbreviation:            l.QuantityUnitAbbreviation,
+		OrderLineId:                         l.OrderLineID,
+		UnitCostId:                          l.UnitCostID,
+		UnitCostValue:                       l.UnitCostValue,
+		UnitCostNumeratorUnitId:             l.UnitCostNumeratorUnitID,
+		UnitCostDenominatorUnitId:           l.UnitCostDenominatorUnitID,
+		UnitCostNumeratorUnitAbbreviation:   l.UnitCostNumeratorUnitAbbreviation,
+		UnitCostDenominatorUnitAbbreviation: l.UnitCostDenominatorUnitAbbreviation,
+		UnitCostCreatedAt:                   timestamppb.New(l.UnitCostCreatedAt),
+		UnitCostUpdatedAt:                   timestamppb.New(l.UnitCostUpdatedAt),
+		CreatedAt:                           timestamppb.New(l.CreatedAt),
+		UpdatedAt:                           timestamppb.New(l.UpdatedAt),
 	}
 
 	if l.ItemID != nil {

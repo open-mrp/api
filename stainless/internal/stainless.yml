@@ -1742,14 +1742,14 @@ resources:
               bulk_delete_suppliers_request: '#/components/schemas/BulkDeleteSuppliersRequest'
         models:
           create_supplier_request: '#/components/schemas/CreateSupplierRequest'
-          list_supplier_summary: '#/components/schemas/List_SupplierSummary'
-          supplier_detail: '#/components/schemas/SupplierDetail'
-          supplier_summary: '#/components/schemas/SupplierSummary'
+          list_supplier: '#/components/schemas/List_Supplier'
+          supplier: '#/components/schemas/Supplier'
           update_supplier_request: '#/components/schemas/UpdateSupplierRequest'
       batches:
         methods:
           retrieve_flow: get /v1/operations/batches/{id}/flow
           next_steps: post /v1/operations/batches/{id}/next-steps
+          init_steps: post /v1/operations/batches/{id}/init-steps
           remaining_quantities: post /v1/operations/batches/remaining-quantities
           delete: delete /v1/operations/batches/{id}
         subresources:
@@ -1774,6 +1774,7 @@ resources:
           batch_flow_node: '#/components/schemas/BatchFlowNode'
           batch_lot: '#/components/schemas/BatchLot'
           batch_reference: '#/components/schemas/BatchReference'
+          get_possible_init_steps_request: '#/components/schemas/GetPossibleInitStepsRequest'
           get_possible_next_steps_request: '#/components/schemas/GetPossibleNextStepsRequest'
           get_remaining_quantity_to_split_request: '#/components/schemas/GetRemainingQuantityToSplitRequest'
           list_batch_flow_node: '#/components/schemas/List_BatchFlowNode'
@@ -1890,18 +1891,11 @@ resources:
         models:
           delivery: '#/components/schemas/Delivery'
           delivery_line: '#/components/schemas/DeliveryLine'
-          email_contact: '#/components/schemas/EmailContact'
+          delivery_related: '#/components/schemas/DeliveryRelated'
           list_delivery: '#/components/schemas/List_Delivery'
           list_delivery_line: '#/components/schemas/List_DeliveryLine'
-          list_email_contact: '#/components/schemas/List_EmailContact'
-          list_purchase_order_line: '#/components/schemas/List_PurchaseOrderLine'
-          list_receiving_order_line: '#/components/schemas/List_ReceivingOrderLine'
           lot: '#/components/schemas/Lot'
-          purchase_order: '#/components/schemas/PurchaseOrder'
           purchase_order_line: '#/components/schemas/PurchaseOrderLine'
-          receiving_order: '#/components/schemas/ReceivingOrder'
-          receiving_order_line: '#/components/schemas/ReceivingOrderLine'
-          supplier: '#/components/schemas/Supplier'
       inventory_change_logs:
         methods:
           list: get /v1/operations/inventory-change-logs
@@ -1958,6 +1952,12 @@ resources:
               update_receiving_order_line_request: '#/components/schemas/UpdateReceivingOrderLineRequest'
         models:
           list_receiving_order: '#/components/schemas/List_ReceivingOrder'
+          list_receiving_order_line: '#/components/schemas/List_ReceivingOrderLine'
+          receiving_order: '#/components/schemas/ReceivingOrder'
+          receiving_order_line: '#/components/schemas/ReceivingOrderLine'
+          receiving_order_related: '#/components/schemas/ReceivingOrderRelated'
+          receiving_order_stage_total: '#/components/schemas/ReceivingOrderStageTotal'
+          receiving_order_totals: '#/components/schemas/ReceivingOrderTotals'
       production_flows:
         methods:
           retrieve_by_item: get /v1/operations/production-flows/by-item/{item_id}
@@ -2193,8 +2193,13 @@ resources:
         models:
           create_purchase_order_line_input: '#/components/schemas/CreatePurchaseOrderLineInput'
           create_purchase_order_request: '#/components/schemas/CreatePurchaseOrderRequest'
+          email_contact: '#/components/schemas/EmailContact'
+          list_email_contact: '#/components/schemas/List_EmailContact'
           list_purchase_order: '#/components/schemas/List_PurchaseOrder'
+          list_purchase_order_line: '#/components/schemas/List_PurchaseOrderLine'
           order_line_input: '#/components/schemas/OrderLineInput'
+          purchase_order: '#/components/schemas/PurchaseOrder'
+          purchase_order_related: '#/components/schemas/PurchaseOrderRelated'
           update_purchase_order_request: '#/components/schemas/UpdatePurchaseOrderRequest'
       picks:
         methods:

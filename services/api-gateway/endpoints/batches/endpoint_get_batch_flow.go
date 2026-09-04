@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 )
 
@@ -31,6 +32,12 @@ func (e *GetBatchFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetBatchF
 		Public:              false,
 		Preview:             true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainBatches, Action: types.ActionRead}},
+		ObjectType:          constants.ObjectTypeBatchFlowNode,
+		// Each node carries a whole batch, so its measures are reached through that batch.
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeBatchFlowNode,
+			Fields:     []string{"batch.quantity.unit", "batch.seconds.unit", "batch.waste.unit"},
+		}),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetBatchFlowRequest) (*apiresource.List[apiresource.BatchFlowNode], *apierror.APIError) {
 			return svc.(BatchSvc).GetBatchFlow
 		},

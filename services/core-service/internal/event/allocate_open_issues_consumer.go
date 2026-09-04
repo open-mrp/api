@@ -94,10 +94,10 @@ func (c *AllocateOpenIssuesConsumer) handleMessage(ctx context.Context, msg amqp
 	switch {
 	case accountID == "":
 		slog.ErrorContext(ctx, "allocate_open_issues: no account on event or identity", "item_id", evt.ItemID)
-		return nil
+		return c.inboxConsumer.Discard(ctx, "no account on event or identity")
 	case evt.ItemID == "":
 		slog.ErrorContext(ctx, "allocate_open_issues: no item on event")
-		return nil
+		return c.inboxConsumer.Discard(ctx, "no item on event")
 	}
 
 	span.SetAttributes(
@@ -122,6 +122,12 @@ func (c *AllocateOpenIssuesConsumer) handleMessage(ctx context.Context, msg amqp
 }
 
 // allocateItem covers a page of an item's open demand, one transaction per issue.
+//
+// This is the one inventory consumer that does not commit an inbox recovery point, because it has no
+// single transaction to commit one into: it walks pages, one transaction per issue, and a partial walk
+// is a legitimate intermediate state. It relies on the inbox lease instead, which is sound here because
+// allocation is convergent — covering an issue that is already covered allocates nothing — where a
+// repeated scan or reversal is not.
 //
 // Discovery names up to 200 issues in a single index-only read that takes no locks; each issue is
 // then claimed and covered in its own short transaction. The page is still a message boundary, but it

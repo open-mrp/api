@@ -50,12 +50,14 @@ func (r *inboxRepoImpl) TryInsert(ctx context.Context, input messaging.InboxReco
 	defer span.End()
 
 	result, err := r.queries.TryInsertInboxRecord(ctx, sqlc.TryInsertInboxRecordParams{
-		MessageID:       input.MessageID,
-		ServiceName:     input.ServiceName,
-		Handler:         input.Handler,
-		MessageType:     input.MessageType,
-		RequestID:       db.NullString(input.RequestID),
-		ParentMessageID: db.NullString(input.ParentMessageID),
+		MessageID:           input.MessageID,
+		ServiceName:         input.ServiceName,
+		Handler:             input.Handler,
+		MessageType:         input.MessageType,
+		RequestID:           db.NullString(input.RequestID),
+		ParentMessageID:     db.NullString(input.ParentMessageID),
+		LockOwner:           db.NullString(input.LockOwner),
+		LockDurationSeconds: input.LockTTLSeconds,
 	})
 	if err != nil {
 		span.RecordError(err)
@@ -97,16 +99,56 @@ func (r *inboxRepoImpl) GetByMessageAndHandler(ctx context.Context, messageID, h
 		LastError:       db.StringFromNullString(row.LastError),
 		ReceivedAt:      row.ReceivedAt,
 		ProcessedAt:     db.TimeFromNullTime(row.ProcessedAt),
+		FailedAt:        db.TimeFromNullTime(row.FailedAt),
+		LockOwner:       db.StringFromNullString(row.LockOwner),
+		LockExpiresAt:   db.TimeFromNullTime(row.LockExpiresAt),
 	}
 
 	return record, nil
 }
 
-func (r *inboxRepoImpl) MarkProcessed(ctx context.Context, id int64) error {
-	ctx, span := inboxRepoTracer.Start(ctx, "repository.inbox.mark_processed")
+func (r *inboxRepoImpl) Claim(ctx context.Context, id int64, owner string, ttlSeconds int) (bool, error) {
+	ctx, span := inboxRepoTracer.Start(ctx, "repository.inbox.claim")
 	defer span.End()
 
-	err := r.queries.MarkInboxRecordProcessed(ctx, id)
+	rows, err := r.queries.ClaimInboxRecord(ctx, sqlc.ClaimInboxRecordParams{
+		ID:                  id,
+		LockOwner:           db.NullString(owner),
+		LockDurationSeconds: ttlSeconds,
+	})
+	if err != nil {
+		span.RecordError(err)
+		return false, err
+	}
+
+	return rows > 0, nil
+}
+
+func (r *inboxRepoImpl) Complete(ctx context.Context, id int64, owner string) (bool, error) {
+	ctx, span := inboxRepoTracer.Start(ctx, "repository.inbox.complete")
+	defer span.End()
+
+	rows, err := r.queries.CompleteInboxRecord(ctx, sqlc.CompleteInboxRecordParams{
+		ID:        id,
+		LockOwner: db.NullString(owner),
+	})
+	if err != nil {
+		span.RecordError(err)
+		return false, err
+	}
+
+	return rows > 0, nil
+}
+
+func (r *inboxRepoImpl) MarkFailed(ctx context.Context, id int64, owner, errMsg string) error {
+	ctx, span := inboxRepoTracer.Start(ctx, "repository.inbox.mark_failed")
+	defer span.End()
+
+	_, err := r.queries.MarkInboxRecordFailed(ctx, sqlc.MarkInboxRecordFailedParams{
+		ID:        id,
+		LastError: db.NullString(errMsg),
+		LockOwner: db.NullString(owner),
+	})
 	if err != nil {
 		span.RecordError(err)
 		return err
@@ -115,13 +157,31 @@ func (r *inboxRepoImpl) MarkProcessed(ctx context.Context, id int64) error {
 	return nil
 }
 
-func (r *inboxRepoImpl) MarkFailed(ctx context.Context, id int64, errMsg string) error {
-	ctx, span := inboxRepoTracer.Start(ctx, "repository.inbox.mark_failed")
+func (r *inboxRepoImpl) MarkDiscarded(ctx context.Context, id int64, owner, reason string) error {
+	ctx, span := inboxRepoTracer.Start(ctx, "repository.inbox.mark_discarded")
 	defer span.End()
 
-	err := r.queries.MarkInboxRecordFailed(ctx, sqlc.MarkInboxRecordFailedParams{
+	_, err := r.queries.MarkInboxRecordDiscarded(ctx, sqlc.MarkInboxRecordDiscardedParams{
 		ID:        id,
-		LastError: db.NullString(errMsg),
+		LastError: db.NullString(reason),
+		LockOwner: db.NullString(owner),
+	})
+	if err != nil {
+		span.RecordError(err)
+		return err
+	}
+
+	return nil
+}
+
+func (r *inboxRepoImpl) MarkIgnored(ctx context.Context, id int64, owner, reason string) error {
+	ctx, span := inboxRepoTracer.Start(ctx, "repository.inbox.mark_ignored")
+	defer span.End()
+
+	_, err := r.queries.MarkInboxRecordIgnored(ctx, sqlc.MarkInboxRecordIgnoredParams{
+		ID:        id,
+		LastError: db.NullString(reason),
+		LockOwner: db.NullString(owner),
 	})
 	if err != nil {
 		span.RecordError(err)

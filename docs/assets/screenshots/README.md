@@ -18,7 +18,7 @@ Shots of the product for the root `README.md`. It references five today: `landin
 | `dashboard.png` | `/dashboard` | shot, unused | **Hero.** Full app chrome — nav rail, header, widgets. The current shot has an empty alerts card and a single message; re-shoot against a busier tenant when one exists. |
 | `production-flow-full.png` | `/dashboard/production-flow` | shot | **Hero #2.** The whole BOM / production-step graph, zoomed to fit. The most distinctive screen in the product and the one no spreadsheet can imitate. |
 | `production-flow.png` | `/dashboard/production-flow` | shot, unused | The same graph at close range, so per-edge quantities and node labels stay legible at README width. |
-| `production-schedule.png` | `/dashboard/production-schedules/[id]` | shot | Scheduled work by SKU across weeks, with run hours and utilisation. Show enough columns that the scheduling is obviously non-trivial. |
+| `production-schedule.png` | `/dashboard/production-schedules/[id]` | shot | Scheduled work by SKU across weeks, with run hours and utilization. Show enough columns that the scheduling is obviously non-trivial. |
 | `sales-order.png` | `/dashboard/sales-orders` | shot, unused | The order list with filters engaged — status, ship-by, payment terms, row actions. The screen most readers map to their own business. |
 | `scanning-stations.png` | `/dashboard/scanning-stations` | shot, unused | Stations with their batch operations and label formats, one per shop-floor step. |
 | `agent-chat.png` | `/dashboard/inbox` | shot, unused | An agent @mentioned in a thread, asking a clarifying question instead of guessing. |

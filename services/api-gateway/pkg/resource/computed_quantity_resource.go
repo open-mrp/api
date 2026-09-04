@@ -18,13 +18,16 @@ type ComputedQuantity struct {
 	// Formatted value with unit abbreviation (e.g. "1,200 pr").
 	DisplayValue string `json:"display_value" validate:"required"`
 	// Unit of measure for this value.
-	Unit *Unit `json:"unit" expandable:"true"`
+	//
+	// Resolved in full rather than expandable: a computed quantity is not a stored row a caller could fetch on its own, so the unit it is counted in travels with it. Null only where the figure was derived without a unit record behind it.
+	Unit *Unit `json:"unit"`
 }
 
 var SampleComputedQuantity = &ComputedQuantity{
 	Object:       constants.ObjectTypeComputedQuantity,
 	Value:        "1200",
 	DisplayValue: "1,200 " + SampleUnitAbbreviation,
+	Unit:         SampleUnit,
 }
 
 func (*ComputedQuantity) SchemaExample() any {

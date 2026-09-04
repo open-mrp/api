@@ -35,7 +35,7 @@ type CreateProductionScheduleLineRequest struct {
 	Lots field.Optional[int32] `json:"lots,omitzero" validate:"omitempty,gte=0"`
 	// Machine hours the campaign will take.
 	//
-	// Left unset, it is estimated from the rate this version was solved with for this item, so the week's utilisation still reflects the added work. An item the version holds no policy for estimates to zero.
+	// Left unset, it is estimated from the rate this version was solved with for this item, so the week's utilization still reflects the added work. An item the version holds no policy for estimates to zero.
 	RunHours field.Optional[float64] `json:"run_hours,omitzero" validate:"omitempty,gte=0"`
 	// Why the campaign was added.
 	//

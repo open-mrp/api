@@ -116,7 +116,7 @@ type PolicyInput struct {
 	OnHandEchelon      float64
 	OnHandGreige       float64
 
-	// FulfillmentPolicy decides whether this item carries a statistical buffer at all. Empty means make-to-stock, so a caller that has not adopted policies gets the behaviour it had before they existed.
+	// FulfillmentPolicy decides whether this item carries a statistical buffer at all. Empty means make-to-stock, so a caller that has not adopted policies gets the behavior it had before they existed.
 	FulfillmentPolicy string
 	PolicySource      string
 	// FirmDemandUnits and ForecastDemandUnits are carried through onto the policy for reporting; neither changes the arithmetic.
@@ -200,7 +200,7 @@ func ComputePolicy(in PolicyInput, s Settings) ItemPolicy {
 	return p
 }
 
-// policyOrDefault treats an unset policy as make-to-stock, so a caller that predates policies gets exactly the behaviour it had before them.
+// policyOrDefault treats an unset policy as make-to-stock, so a caller that predates policies gets exactly the behavior it had before them.
 func policyOrDefault(policy string) string {
 	if policy == "" {
 		return PolicyMakeToStock

@@ -517,6 +517,7 @@ service CoreService {
   rpc ListBatchesByScanningStation(ListBatchesByScanningStationRequest) returns (ListBatchesByScanningStationResponse);
   // Returns possible next production steps for a batch at a scanning station.
   rpc GetBatchPossibleNextSteps(GetBatchPossibleNextStepsRequest) returns (GetBatchPossibleNextStepsResponse);
+  rpc GetBatchPossibleInitSteps(GetBatchPossibleInitStepsRequest) returns (GetBatchPossibleInitStepsResponse);
   // Returns aggregated open batch summaries for analytics.
   rpc AnalyzeOpenBatches(AnalyzeOpenBatchesRequest) returns (AnalyzeOpenBatchesResponse);
   // Initializes a batch at a scanning station.

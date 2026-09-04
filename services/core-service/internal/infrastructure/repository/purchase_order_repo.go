@@ -13,6 +13,7 @@ import (
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/api/shared/ptrutil"
 	"github.com/open-mrp/api/shared/safeconv"
 	"github.com/open-mrp/api/shared/tracing"
 )
@@ -173,7 +174,48 @@ func (r *purchaseOrderRepoImpl) Get(ctx context.Context, accountID, purchaseOrde
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return mapGetPurchaseOrderRow(row), nil
+	po := mapGetPurchaseOrderRow(row)
+
+	// The deliveries booked against this order, so its detail page can list them without a second request.
+	deliveryRows, err := r.queries.ListDeliveryRefsForOrders(ctx, []string{po.ID})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	for _, d := range deliveryRows {
+		po.Deliveries = append(po.Deliveries, domain.DocumentRef{ID: d.ID, Number: d.Number, Status: d.Status})
+	}
+
+	return po, nil
+}
+
+// GetLinesByIDs fetches purchase order lines by their own ids, for a receiving or delivery line that
+// names the line it was raised from. The query scopes them through the order they belong to, so a
+// line from another account's purchase order is simply not returned.
+func (r *purchaseOrderRepoImpl) GetLinesByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.PurchaseOrderLine, *apierror.APIError) {
+	ctx, span := purchaseOrderRepoTracer.Start(ctx, "repository.purchase_order.get_lines_by_ids")
+	defer span.End()
+
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.queries.GetPurchaseOrderLinesByIDs(ctx, sqlc.GetPurchaseOrderLinesByIDsParams{
+		Ids:       ids,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	// The two queries select the same columns, so the shared mapper covers both. SalesOrderID is
+	// left unset: the caller reached these lines from a receiving or delivery line rather than from
+	// an order, and nothing on the wire exposes it.
+	lines := make([]*domain.PurchaseOrderLine, len(rows))
+	for i, row := range rows {
+		lines[i] = mapPurchaseOrderLinesRow(sqlc.GetPurchaseOrderLinesRow(row))
+	}
+
+	return lines, nil
 }
 
 func (r *purchaseOrderRepoImpl) GetLines(ctx context.Context, salesOrderID string) ([]*domain.PurchaseOrderLine, *apierror.APIError) {
@@ -581,6 +623,8 @@ func mapGetPurchaseOrderRow(row sqlc.GetPurchaseOrderRow) *domain.PurchaseOrder 
 	po.ShippingTermCreatedAt = nullTimePtr(row.ShippingTermCreatedAt)
 	po.ShippingTermUpdatedAt = nullTimePtr(row.ShippingTermUpdatedAt)
 	po.ReceivingOrderID = nullStringToPtr(row.ReceivingOrderID)
+	po.ReceivingOrderNumber = nullStringToPtr(row.ReceivingOrderNumber)
+	po.ReceivingOrderStatus = ptrutil.NonEmptyPtr(row.ReceivingOrderStatus)
 	po.PriorityID = &row.PriorityID
 
 	return po
@@ -658,6 +702,8 @@ func mapPurchaseOrderLinesRow(row sqlc.GetPurchaseOrderLinesRow) *domain.Purchas
 		UnitPriceNumeratorUnitAbbr:   row.UnitPriceNumeratorUnitAbbreviation,
 		UnitPriceDenominatorUnitID:   row.UnitPriceDenominatorUnitID,
 		UnitPriceDenominatorUnitAbbr: row.UnitPriceDenominatorUnitAbbreviation,
+		UnitPriceCreatedAt:           row.UnitPriceCreatedAt,
+		UnitPriceUpdatedAt:           row.UnitPriceUpdatedAt,
 		CreatedAt:                    row.CreatedAt,
 		UpdatedAt:                    row.UpdatedAt,
 	}

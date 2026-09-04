@@ -105,7 +105,7 @@ func TestInvoiceDocMatchesLegacyFields(t *testing.T) {
 		}
 	})
 
-	t.Run("the price is labelled with the rate's pricing unit", func(t *testing.T) {
+	t.Run("the price is labeled with the rate's pricing unit", func(t *testing.T) {
 		// Legacy reads RateUtils.abbreviate(unitPrice), whose denominator is the rate's own unit.
 		if got := doc.Lines[0].Price; got != "$8.50 / dz" {
 			t.Errorf("Price = %q, want the rate's denominator, not the line's stocking unit", got)
@@ -260,7 +260,7 @@ func TestInvoicePDFRendersLegacyLayout(t *testing.T) {
 		}
 	})
 
-	t.Run("the cases table lists what the shipment travelled in", func(t *testing.T) {
+	t.Run("the cases table lists what the shipment traveled in", func(t *testing.T) {
 		for _, want := range []string{"Cases", "Case Number", "Weight", "Tracking Number", "CASE-1", "1200 lb", "1Z999"} {
 			if !pdfContains(runs, want) {
 				t.Errorf("PDF missing %q\n%s", want, pdfJoined(runs))

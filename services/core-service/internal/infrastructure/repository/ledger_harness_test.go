@@ -369,7 +369,7 @@ func (a *actor) acquireItemLock(itemID string) error {
 //
 // This is dashboard/apps/api's Prisma allocator (inventory-issue.repo.ts:946, :1216) reduced to what
 // matters — inventoryAllocation.createMany against the same keyspace, on a live request path. Nothing
-// in the Go service can serialise against it, which is why the allocator's arithmetic has to be
+// in the Go service can serialize against it, which is why the allocator's arithmetic has to be
 // robust to it rather than merely locked against it.
 func (f *fixture) writeRawAllocation(t *testing.T, issueID, receiptID, value, unitID string) string {
 	t.Helper()
@@ -396,10 +396,7 @@ func (f *fixture) writeRawAllocation(t *testing.T, issueID, receiptID, value, un
 	return aID
 }
 
-// receiptOverDrawnBy reports how far past its own quantity a receipt has been allocated, in base
-// units. It is the detector cmd/repair-overallocated-receipts uses, in one statement: both sides
-// through their own unit's ratio, and the positive-quantity guard, because a migration wrote opening
-// balances as negative receipts.
+// receiptOverDrawnBy reports how far past its own quantity a receipt has been allocated, in base units. Both sides go through their own unit's ratio, and the positive-quantity guard, because a migration wrote opening balances as negative receipts.
 func (f *fixture) receiptOverDrawnBy(t *testing.T, receiptID string) decimal.Decimal {
 	t.Helper()
 	var overBy string

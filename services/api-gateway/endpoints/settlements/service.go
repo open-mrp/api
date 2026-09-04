@@ -210,17 +210,22 @@ func stashSettlementMeta(meta *resourcekit.LoadMeta, d *pb.SettlementInfo) {
 	if d.Allocations != nil {
 		allocations := make([]apiresource.TransactionAllocation, len(d.Allocations))
 		for i, a := range d.Allocations {
-			allocations[i] = transactionAllocationFromProto(a)
+			allocations[i] = transactionAllocationFromProto(meta, a)
 		}
 		meta.Set(constants.ObjectTypeSettlement, d.Id, "allocations",
 			apiresource.NewList(allocations, apiresource.PageInfo{}))
 	}
 }
 
-func transactionAllocationFromProto(a *pb.TransactionAllocationInfo) apiresource.TransactionAllocation {
+func transactionAllocationFromProto(meta *resourcekit.LoadMeta, a *pb.TransactionAllocationInfo) apiresource.TransactionAllocation {
 	if a == nil {
 		return apiresource.TransactionAllocation{}
 	}
+
+	// The currency the amount is counted in is a record of its own — stashed as an id so
+	// `allocations.amount.unit` resolves it in full.
+	meta.Set(constants.ObjectTypeQuantity, a.AmountId, "unit_id", a.AmountUnitId)
+	meta.Set(constants.ObjectTypeTransactionAllocation, a.Id, "transaction_id", a.TransactionId)
 
 	alloc := apiresource.TransactionAllocation{
 		ID:     a.Id,

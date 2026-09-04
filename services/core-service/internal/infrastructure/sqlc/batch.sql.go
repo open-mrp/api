@@ -248,6 +248,61 @@ func (q *Queries) FindBatchProductionRunID(ctx context.Context, arg FindBatchPro
 	return production_run_id, err
 }
 
+const findPossibleInitSteps = `-- name: FindPossibleInitSteps :many
+SELECT ps.id, ps.name
+FROM batch b
+JOIN production p ON p.item_id = b.item_id
+JOIN production_step ps ON ps.id = p.production_step_id
+WHERE b.id = ?
+  AND b.account_id = ?
+  AND ps.account_id = ?
+  AND ps.scanning_station_id = ?
+GROUP BY ps.id, ps.name
+ORDER BY ps.name
+`
+
+type FindPossibleInitStepsParams struct {
+	BatchID           string
+	AccountID         string
+	ScanningStationID sql.NullString
+}
+
+type FindPossibleInitStepsRow struct {
+	ID   string
+	Name string
+}
+
+// FindPossibleInitSteps returns the steps a batch can be initialized at from a given scanning station: the steps at that station that produce the batch's own item.
+//
+// Unlike FindPossibleNextSteps this walks nothing. Initializing is the batch's first scan, so there is no prior step to advance from and no flow to traverse — the only question is which of this station's steps make the thing in front of the operator.
+func (q *Queries) FindPossibleInitSteps(ctx context.Context, arg FindPossibleInitStepsParams) ([]FindPossibleInitStepsRow, error) {
+	rows, err := q.db.QueryContext(ctx, findPossibleInitSteps,
+		arg.BatchID,
+		arg.AccountID,
+		arg.AccountID,
+		arg.ScanningStationID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FindPossibleInitStepsRow
+	for rows.Next() {
+		var i FindPossibleInitStepsRow
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getBatch = `-- name: GetBatch :one
 SELECT
     b.id,

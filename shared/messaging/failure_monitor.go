@@ -22,13 +22,14 @@ const defaultFailureAlertRecipient = "dev@augno.com"
 // maxFailureErrorLen caps how much of a row's last_error is embedded in the alert email so a single verbose stack trace cannot bloat the message.
 const maxFailureErrorLen = 500
 
-// InboxFailure describes a message_inbox row the monitor considers failed or stuck: either the handler recorded an error (last_error set) or the row was inserted but never processed within the crash-stuck window.
+// InboxFailure describes a message_inbox row the monitor considers failed, stuck, or discarded: the handler recorded an error, the row was inserted and left unleased past the crash-stuck window, or the handler rejected the message as unprocessable.
 type InboxFailure struct {
 	ID          int64
 	MessageID   string
 	ServiceName string
 	Handler     string
 	MessageType string
+	Status      InboxStatus
 	Attempts    int
 	LastError   *string
 	ReceivedAt  time.Time
@@ -50,7 +51,7 @@ type OutboxFailure struct {
 
 // FailureMonitorRepo defines the persistence interface used by the FailureMonitor to find un-alerted failed/stuck messages and mark them alerted. It is backed by the shared message_inbox and message_outbox tables; a single implementation scans the whole MySQL fleet's messages because those services share one database.
 type FailureMonitorRepo interface {
-	// ListUnalertedInboxFailures returns inbox rows still in 'received' status with alerted_at IS NULL that either carry a last_error or have sat unprocessed longer than crashStuckMinutes, up to limit rows.
+	// ListUnalertedInboxFailures returns un-alerted inbox rows that need a human: 'received' rows whose lease has lapsed and that either carry a last_error or have sat unprocessed longer than crashStuckMinutes, plus every 'discarded' row. Up to limit rows.
 	ListUnalertedInboxFailures(ctx context.Context, crashStuckMinutes int, limit int32) ([]InboxFailure, error)
 
 	// ListUnalertedOutboxFailures returns outbox rows in 'failed' status with alerted_at IS NULL, up to limit rows.
@@ -313,6 +314,7 @@ func inboxFailureParams(failures []InboxFailure) []map[string]any {
 			"ServiceName": f.ServiceName,
 			"Handler":     f.Handler,
 			"MessageType": f.MessageType,
+			"Status":      string(f.Status),
 			"Attempts":    f.Attempts,
 			"Error":       truncateError(f.LastError),
 			"ReceivedAt":  f.ReceivedAt.UTC().Format("2006-01-02 15:04:05 UTC"),

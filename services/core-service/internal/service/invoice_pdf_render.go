@@ -31,7 +31,7 @@ func buildInvoicePDF(doc invoiceDoc) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// Renders the Cases table listing what the shipment travelled in. Skipped when the shipment has no
+// Renders the Cases table listing what the shipment traveled in. Skipped when the shipment has no
 // cases, matching legacy, which renders nothing rather than an empty table.
 func invoiceCaseTable(pdf *fpdf.Fpdf, doc invoiceDoc) {
 	if len(doc.Cases) == 0 {

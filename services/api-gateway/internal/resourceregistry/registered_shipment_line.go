@@ -22,8 +22,50 @@ func init() {
 				ExtractRefs: extractSalesOrderLineRefFromShipmentLine,
 				Populate:    populateSalesOrderLineOnShipmentLine,
 			},
+			{
+				Key:         "item",
+				Target:      constants.ObjectTypeItem,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractIDs:  extractItemIDFromShipmentLine,
+				Populate:    populateItemOnShipmentLine,
+			},
+			{
+				// The quantity is already on the line — this exists so a caller can reach through it to the unit.
+				Key:         "quantity",
+				Target:      constants.ObjectTypeQuantity,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractRefs: extractQuantityRefFromShipmentLine,
+			},
 		},
 	})
+}
+
+func extractItemIDFromShipmentLine(ctx context.Context, parent any) []string {
+	l := parent.(*apiresource.ShipmentLine)
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeShipmentLine, l.ID, "item_id")
+	if id == "" {
+		return nil
+	}
+	return []string{id}
+}
+
+func populateItemOnShipmentLine(ctx context.Context, parent any, loaded map[string]any) {
+	l := parent.(*apiresource.ShipmentLine)
+	id, _ := resourcekit.GetLoadMeta(ctx).GetString(constants.ObjectTypeShipmentLine, l.ID, "item_id")
+	if id == "" {
+		return
+	}
+	if v, ok := loaded[id]; ok {
+		l.Item = v.(*apiresource.Item)
+	}
+}
+
+func extractQuantityRefFromShipmentLine(_ context.Context, parent any) []any {
+	l := parent.(*apiresource.ShipmentLine)
+	if l.Quantity == nil {
+		return nil
+	}
+	return []any{l.Quantity}
 }
 
 func populateSalesOrderLineOnShipmentLine(ctx context.Context, parent any, _ map[string]any) {

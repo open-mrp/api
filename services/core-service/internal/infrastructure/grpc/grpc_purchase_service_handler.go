@@ -89,6 +89,9 @@ func purchaseOrderToProto(o *domain.PurchaseOrder) *pb.PurchaseOrderInfo {
 		ShippingTermId:        o.ShippingTermID,
 		ShippingTermName:      o.ShippingTermName,
 		ReceivingOrderId:      o.ReceivingOrderID,
+		ReceivingOrderNumber:  o.ReceivingOrderNumber,
+		ReceivingOrderStatus:  o.ReceivingOrderStatus,
+		Deliveries:            deliveryRefsToProto(o.Deliveries),
 		BillToName:            o.BillToName,
 		BillToStreetLine_1:    o.BillToStreetLine1,
 		BillToStreetLine_2:    o.BillToStreetLine2,
@@ -261,6 +264,8 @@ func purchaseOrderLineToProto(l *domain.PurchaseOrderLine) *pb.PurchaseOrderLine
 		UnitCostNumeratorUnitAbbreviation:    l.UnitCostNumeratorUnitAbbr,
 		UnitCostDenominatorUnitId:            l.UnitCostDenominatorUnitID,
 		UnitCostDenominatorUnitAbbreviation:  l.UnitCostDenominatorUnitAbbr,
+		UnitPriceCreatedAt:                   timestamppb.New(l.UnitPriceCreatedAt),
+		UnitPriceUpdatedAt:                   timestamppb.New(l.UnitPriceUpdatedAt),
 		CreatedAt:                            timestamppb.New(l.CreatedAt),
 		UpdatedAt:                            timestamppb.New(l.UpdatedAt),
 	}
@@ -356,6 +361,28 @@ func (h *purchaseGRPCHandler) BatchGetPurchaseOrdersByIDs(ctx context.Context, r
 	}
 
 	return &pb.BatchGetPurchaseOrdersByIDsResponse{PurchaseOrders: orders}, nil
+}
+
+// BatchGetPurchaseOrderLinesByIDs returns purchase order lines by ID for the api-gateway include
+// resolver, so a receiving or delivery line can name the line it was raised from. The service scopes
+// them through the order they belong to; a line the caller cannot reach is omitted rather than an
+// error, so the resolver leaves that reference null.
+func (h *purchaseGRPCHandler) BatchGetPurchaseOrderLinesByIDs(ctx context.Context, req *pb.BatchGetPurchaseOrderLinesByIDsRequest) (*pb.BatchGetPurchaseOrderLinesByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	lines, apiErr := h.purchaseOrderSvc.BatchGetPurchaseOrderLinesByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	infos := make([]*pb.PurchaseOrderLineInfo, 0, len(lines))
+	for _, l := range lines {
+		infos = append(infos, purchaseOrderLineToProto(l))
+	}
+
+	return &pb.BatchGetPurchaseOrderLinesByIDsResponse{Lines: infos}, nil
 }
 
 func (h *purchaseGRPCHandler) CreatePurchaseOrder(ctx context.Context, req *pb.CreatePurchaseOrderRequest) (*pb.CreatePurchaseOrderResponse, error) {
@@ -587,4 +614,15 @@ func (h *purchaseGRPCHandler) DeletePurchaseOrderLine(ctx context.Context, req *
 	}
 
 	return &emptypb.Empty{}, nil
+}
+
+func deliveryRefsToProto(refs []domain.DocumentRef) []*pb.DocumentRefInfo {
+	if len(refs) == 0 {
+		return nil
+	}
+	out := make([]*pb.DocumentRefInfo, len(refs))
+	for i, r := range refs {
+		out[i] = &pb.DocumentRefInfo{Id: r.ID, Number: r.Number, Status: r.Status}
+	}
+	return out
 }

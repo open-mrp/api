@@ -8,6 +8,7 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/field"
 	pb "github.com/open-mrp/api/shared/proto/core"
@@ -20,6 +21,7 @@ type BatchSvc interface {
 	GetBatchFlow(ctx context.Context, req *GetBatchFlowRequest) (*apiresource.List[apiresource.BatchFlowNode], *apierror.APIError)
 	ListBatchesByScanningStation(ctx context.Context, req *ListBatchesByScanningStationRequest) (*apiresource.List[apiresource.Batch], *apierror.APIError)
 	GetPossibleNextSteps(ctx context.Context, req *GetPossibleNextStepsRequest) (*apiresource.List[apiresource.ScanningProductionStepInfo], *apierror.APIError)
+	GetPossibleInitSteps(ctx context.Context, req *GetPossibleInitStepsRequest) (*apiresource.List[apiresource.ScanningProductionStepInfo], *apierror.APIError)
 	AnalyzeOpenBatches(ctx context.Context, req *AnalyzeOpenBatchesRequest) (*apiresource.List[apiresource.OpenBatchSummary], *apierror.APIError)
 	InitializeBatch(ctx context.Context, req *InitializeBatchRequest) (*apiresource.Batch, *apierror.APIError)
 	MoveBatches(ctx context.Context, req *MoveBatchesRequest) (*apiresource.Batch, *apierror.APIError)
@@ -76,7 +78,7 @@ func (m *batchSvcImpl) GetBatchFlow(ctx context.Context, req *GetBatchFlowReques
 
 	nodes := make([]apiresource.BatchFlowNode, len(resp.Nodes))
 	for i, n := range resp.Nodes {
-		nodes[i] = BatchFlowNodePresenter(n)
+		nodes[i] = BatchFlowNodePresenter(resourcekit.GetLoadMeta(ctx), n)
 	}
 
 	return apiresource.NewList(nodes, apiresource.PageInfo{}), nil
@@ -111,6 +113,29 @@ func (m *batchSvcImpl) GetPossibleNextSteps(ctx context.Context, req *GetPossibl
 	resp, apiErr := grpcutil.CallRPC(ctx, batchSvcTracer, "service.batches.get_possible_next_steps", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetBatchPossibleNextStepsResponse, error) {
 			return m.coreClient.GetBatchPossibleNextSteps(ctx, pbReq, opts...)
+		})
+
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	steps := make([]apiresource.ScanningProductionStepInfo, len(resp.Steps))
+	for i, s := range resp.Steps {
+		steps[i] = ScanningProductionStepInfoPresenter(s)
+	}
+
+	return apiresource.NewList(steps, apiresource.PageInfo{}), nil
+}
+
+func (m *batchSvcImpl) GetPossibleInitSteps(ctx context.Context, req *GetPossibleInitStepsRequest) (*apiresource.List[apiresource.ScanningProductionStepInfo], *apierror.APIError) {
+	pbReq := &pb.GetBatchPossibleInitStepsRequest{
+		ScanningStationId: req.ScanningStationID,
+		BatchId:           req.BatchID,
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, batchSvcTracer, "service.batches.get_possible_init_steps", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetBatchPossibleInitStepsResponse, error) {
+			return m.coreClient.GetBatchPossibleInitSteps(ctx, pbReq, opts...)
 		})
 
 	if apiErr != nil {
@@ -163,7 +188,7 @@ func (m *batchSvcImpl) InitializeBatch(ctx context.Context, req *InitializeBatch
 		return nil, apiErr
 	}
 
-	result := BaseBatchPresenter(resp.Batch)
+	result := BaseBatchPresenter(resourcekit.GetLoadMeta(ctx), resp.Batch)
 	return &result, nil
 }
 
@@ -183,7 +208,7 @@ func (m *batchSvcImpl) MoveBatches(ctx context.Context, req *MoveBatchesRequest)
 		return nil, apiErr
 	}
 
-	result := BaseBatchPresenter(resp.Batch)
+	result := BaseBatchPresenter(resourcekit.GetLoadMeta(ctx), resp.Batch)
 	return &result, nil
 }
 
@@ -203,7 +228,7 @@ func (m *batchSvcImpl) MergeBatches(ctx context.Context, req *MergeBatchesReques
 		return nil, apiErr
 	}
 
-	result := BaseBatchPresenter(resp.Batch)
+	result := BaseBatchPresenter(resourcekit.GetLoadMeta(ctx), resp.Batch)
 	return &result, nil
 }
 
@@ -259,7 +284,7 @@ func (m *batchSvcImpl) SplitBatch(ctx context.Context, req *SplitBatchRequest) (
 		return nil, apiErr
 	}
 
-	result := BaseBatchPresenter(resp.Batch)
+	result := BaseBatchPresenter(resourcekit.GetLoadMeta(ctx), resp.Batch)
 	return &result, nil
 }
 
@@ -278,7 +303,7 @@ func (m *batchSvcImpl) GetRemainingQuantityToSplit(ctx context.Context, req *Get
 		return nil, apiErr
 	}
 
-	return BatchQuantityPresenter(resp.Quantity), nil
+	return BatchQuantityPresenter(resourcekit.GetLoadMeta(ctx), resp.Quantity), nil
 }
 
 func (m *batchSvcImpl) GetScanningStationConsumption(ctx context.Context, req *GetScanningStationConsumptionRequest) (*apiresource.List[apiresource.ScanningConsumption], *apierror.APIError) {
@@ -331,7 +356,7 @@ func (m *batchSvcImpl) CloseBatch(ctx context.Context, req *CloseBatchRequest) (
 		return nil, apiErr
 	}
 
-	result := BaseBatchPresenter(resp.Batch)
+	result := BaseBatchPresenter(resourcekit.GetLoadMeta(ctx), resp.Batch)
 	return &result, nil
 }
 
@@ -349,7 +374,7 @@ func (m *batchSvcImpl) DeleteBatch(ctx context.Context, req *DeleteBatchRequest)
 		return nil, apiErr
 	}
 
-	result := BaseBatchPresenter(resp.Batch)
+	result := BaseBatchPresenter(resourcekit.GetLoadMeta(ctx), resp.Batch)
 	return &result, nil
 }
 

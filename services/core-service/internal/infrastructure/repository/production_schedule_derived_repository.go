@@ -54,7 +54,7 @@ func (r *productionScheduleRepoImpl) LoadStepGraph(ctx context.Context, accountI
 		info := scheduling.StepInfo{
 			StepID: step.ID,
 			Name:   step.Name,
-			// Yield is not modelled per step yet, so no loss is assumed. Inventing a ratio would put a number on the plan that nobody configured.
+			// Yield is not modeled per step yet, so no loss is assumed. Inventing a ratio would put a number on the plan that nobody configured.
 			YieldRatio:          1,
 			LeadTimeOffsetWeeks: offsetByStep[step.ID],
 		}

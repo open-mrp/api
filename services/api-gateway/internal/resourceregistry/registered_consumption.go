@@ -14,17 +14,29 @@ func init() {
 		ObjectType: constants.ObjectTypeConsumption,
 		Load:       resourceloaders.LoadConsumptions,
 		Subs: []resourcekit.SubField{
-			{Key: "consumed_item", Populate: populateConsumedItemOnConsumption},
+			{Key: "consumed_item", Target: constants.ObjectTypeItem, Cardinality: resourcekit.CardinalityOnePtr, ExtractIDs: extractConsumedItemIDFromConsumption, Populate: populateConsumedItemOnConsumption},
 		},
 	})
 }
 
-func populateConsumedItemOnConsumption(ctx context.Context, parent any, _ map[string]any) {
+func extractConsumedItemIDFromConsumption(ctx context.Context, parent any) []string {
 	c := parent.(*apiresource.Consumption)
-	v, ok := resourcekit.GetLoadMeta(ctx).
-		Get(constants.ObjectTypeConsumption, c.ID, "consumed_item")
-	if !ok {
+	id, _ := resourcekit.GetLoadMeta(ctx).
+		GetString(constants.ObjectTypeConsumption, c.ID, "consumed_item_id")
+	if id == "" {
+		return nil
+	}
+	return []string{id}
+}
+
+func populateConsumedItemOnConsumption(ctx context.Context, parent any, loaded map[string]any) {
+	c := parent.(*apiresource.Consumption)
+	id, _ := resourcekit.GetLoadMeta(ctx).
+		GetString(constants.ObjectTypeConsumption, c.ID, "consumed_item_id")
+	if id == "" {
 		return
 	}
-	c.ConsumedItem = v.(*apiresource.Item)
+	if v, ok := loaded[id]; ok {
+		c.ConsumedItem = v.(*apiresource.Item)
+	}
 }

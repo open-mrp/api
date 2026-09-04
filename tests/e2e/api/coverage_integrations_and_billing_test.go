@@ -392,7 +392,7 @@ func TestReceivables_ExportByCustomer(t *testing.T) {
 	assert.Contains(t, string(resp.Body), "Invoice Number", "the export must carry a header row: %s", string(resp.Body))
 }
 
-// The cutoff is what makes an ageing report reproducible, so an unparseable one must be
+// The cutoff is what makes an aging report reproducible, so an unparseable one must be
 // rejected rather than silently treated as "now".
 func TestReceivables_ExportRejectsAnUnparseableCutoff(t *testing.T) {
 	t.Parallel()

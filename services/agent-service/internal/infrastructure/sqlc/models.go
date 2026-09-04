@@ -185,6 +185,9 @@ type MessageInbox struct {
 	LastError       pgtype.Text
 	ReceivedAt      pgtype.Timestamptz
 	ProcessedAt     pgtype.Timestamptz
+	FailedAt        pgtype.Timestamptz
+	LockOwner       pgtype.Text
+	LockExpiresAt   pgtype.Timestamptz
 }
 
 type MessageOutbox struct {

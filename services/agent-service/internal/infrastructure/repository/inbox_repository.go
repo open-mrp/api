@@ -51,6 +51,8 @@ func (r *inboxRepoImpl) TryInsert(ctx context.Context, input messaging.InboxReco
 		MessageType:     input.MessageType,
 		RequestID:       agentdb.PgText(input.RequestID),
 		ParentMessageID: agentdb.PgText(input.ParentMessageID),
+		LockOwner:       agentdb.PgText(input.LockOwner),
+		Column8:         agentdb.PgText(fmt.Sprintf("%d", input.LockTTLSeconds)),
 	})
 	if err != nil {
 		span.RecordError(err)
@@ -86,16 +88,56 @@ func (r *inboxRepoImpl) GetByMessageAndHandler(ctx context.Context, messageID, h
 		LastError:       agentdb.StringFromPgText(row.LastError),
 		ReceivedAt:      row.ReceivedAt.Time,
 		ProcessedAt:     agentdb.TimeFromPgTimestamptz(row.ProcessedAt),
+		FailedAt:        agentdb.TimeFromPgTimestamptz(row.FailedAt),
+		LockOwner:       agentdb.StringFromPgText(row.LockOwner),
+		LockExpiresAt:   agentdb.TimeFromPgTimestamptz(row.LockExpiresAt),
 	}
 
 	return record, nil
 }
 
-func (r *inboxRepoImpl) MarkProcessed(ctx context.Context, id int64) error {
-	ctx, span := inboxRepoTracer.Start(ctx, "repository.inbox.mark_processed")
+func (r *inboxRepoImpl) Claim(ctx context.Context, id int64, owner string, ttlSeconds int) (bool, error) {
+	ctx, span := inboxRepoTracer.Start(ctx, "repository.inbox.claim")
 	defer span.End()
 
-	err := r.queries.MarkInboxRecordProcessed(ctx, id)
+	rows, err := r.queries.ClaimInboxRecord(ctx, sqlc.ClaimInboxRecordParams{
+		ID:        id,
+		LockOwner: agentdb.PgText(owner),
+		Column3:   agentdb.PgText(fmt.Sprintf("%d", ttlSeconds)),
+	})
+	if err != nil {
+		span.RecordError(err)
+		return false, err
+	}
+
+	return rows > 0, nil
+}
+
+func (r *inboxRepoImpl) Complete(ctx context.Context, id int64, owner string) (bool, error) {
+	ctx, span := inboxRepoTracer.Start(ctx, "repository.inbox.complete")
+	defer span.End()
+
+	rows, err := r.queries.CompleteInboxRecord(ctx, sqlc.CompleteInboxRecordParams{
+		ID:        id,
+		LockOwner: agentdb.PgText(owner),
+	})
+	if err != nil {
+		span.RecordError(err)
+		return false, err
+	}
+
+	return rows > 0, nil
+}
+
+func (r *inboxRepoImpl) MarkFailed(ctx context.Context, id int64, owner, errMsg string) error {
+	ctx, span := inboxRepoTracer.Start(ctx, "repository.inbox.mark_failed")
+	defer span.End()
+
+	_, err := r.queries.MarkInboxRecordFailed(ctx, sqlc.MarkInboxRecordFailedParams{
+		ID:        id,
+		LastError: agentdb.PgText(errMsg),
+		LockOwner: agentdb.PgText(owner),
+	})
 	if err != nil {
 		span.RecordError(err)
 		return err
@@ -104,13 +146,31 @@ func (r *inboxRepoImpl) MarkProcessed(ctx context.Context, id int64) error {
 	return nil
 }
 
-func (r *inboxRepoImpl) MarkFailed(ctx context.Context, id int64, errMsg string) error {
-	ctx, span := inboxRepoTracer.Start(ctx, "repository.inbox.mark_failed")
+func (r *inboxRepoImpl) MarkDiscarded(ctx context.Context, id int64, owner, reason string) error {
+	ctx, span := inboxRepoTracer.Start(ctx, "repository.inbox.mark_discarded")
 	defer span.End()
 
-	err := r.queries.MarkInboxRecordFailed(ctx, sqlc.MarkInboxRecordFailedParams{
+	_, err := r.queries.MarkInboxRecordDiscarded(ctx, sqlc.MarkInboxRecordDiscardedParams{
 		ID:        id,
-		LastError: agentdb.PgText(errMsg),
+		LastError: agentdb.PgText(reason),
+		LockOwner: agentdb.PgText(owner),
+	})
+	if err != nil {
+		span.RecordError(err)
+		return err
+	}
+
+	return nil
+}
+
+func (r *inboxRepoImpl) MarkIgnored(ctx context.Context, id int64, owner, reason string) error {
+	ctx, span := inboxRepoTracer.Start(ctx, "repository.inbox.mark_ignored")
+	defer span.End()
+
+	_, err := r.queries.MarkInboxRecordIgnored(ctx, sqlc.MarkInboxRecordIgnoredParams{
+		ID:        id,
+		LastError: agentdb.PgText(reason),
+		LockOwner: agentdb.PgText(owner),
 	})
 	if err != nil {
 		span.RecordError(err)

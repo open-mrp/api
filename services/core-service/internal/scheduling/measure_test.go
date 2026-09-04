@@ -249,7 +249,7 @@ func TestSolve_ProducesAPlanFromRawHistory(t *testing.T) {
 	}
 }
 
-// An item with no measured run rate cannot be levelled — there is no way to know how
+// An item with no measured run rate cannot be leveled — there is no way to know how
 // much machine time it needs. It must be reported, not silently dropped.
 func TestSolve_ReportsItemsWithoutRunRate(t *testing.T) {
 	t.Parallel()

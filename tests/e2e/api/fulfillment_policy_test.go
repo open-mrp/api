@@ -71,7 +71,7 @@ func TestFulfillmentPolicy_ClearingAndDeleting(t *testing.T) {
 	t.Parallel()
 
 	// Its own item: the seeded one is shared with tests that assert on how it is planned.
-	itemID := createItemsViaMaterials(t, uniqueName("e2e-fulfil"), 1)[0]
+	itemID := createItemsViaMaterials(t, uniqueName("e2e-fulfill"), 1)[0]
 	setItemPolicy(t, itemID, "make_to_order")
 
 	cleared := setItemPolicy(t, itemID, "")

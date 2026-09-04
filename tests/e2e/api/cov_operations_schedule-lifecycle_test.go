@@ -664,7 +664,7 @@ func plannedItem(t *testing.T, scheduleID string) (itemID, machineID string, sec
 	return "", "", 0
 }
 
-// A campaign added by hand has to be priced in constraint time like any other, or the week's utilisation reads low — which is the very number a planner adds a campaign against.
+// A campaign added by hand has to be priced in constraint time like any other, or the week's utilization reads low — which is the very number a planner adds a campaign against.
 func TestScheduleLifecycle_AddedLineIsPricedInConstraintTime(t *testing.T) {
 	t.Parallel()
 
@@ -767,7 +767,7 @@ func TestScheduleLifecycle_SubLotCampaignStillPlansALot(t *testing.T) {
 		"a campaign under one lot is one lot, which is what releasing the week will issue")
 }
 
-// Resizing a campaign has to reprice it. A campaign that keeps the hours it was first sized at makes the week's utilisation report work that is no longer planned.
+// Resizing a campaign has to reprice it. A campaign that keeps the hours it was first sized at makes the week's utilization report work that is no longer planned.
 func TestScheduleLifecycle_ResizingALineRepricesIt(t *testing.T) {
 	t.Parallel()
 

@@ -804,7 +804,7 @@ type ReadReceiptAllocationsForUpdateRow struct {
 // transaction's view opened is found in `ia`, joined against a `quantity` row the snapshot cannot
 // see, and dropped by the INNER JOIN — so the read reports a receipt as undrawn while looking
 // straight at the row that drew it. That is silent, and it defeats the one query whose whole job is
-// to see writers this transaction never serialised against.
+// to see writers this transaction never serialized against.
 //
 // Locking both is bounded: an allocation owns its quantity row outright
 // (inventory_allocation_quantity_id_key is unique), so this is not the shared-row problem that keeps

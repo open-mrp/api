@@ -12,24 +12,33 @@ import (
 )
 
 func supplierSummaryToProto(s *domain.SupplierSummary) *pb.SupplierSummaryProto {
-	return &pb.SupplierSummaryProto{
-		Id:            s.ID,
-		Name:          s.Name,
-		Number:        s.Number,
-		MaterialCount: s.MaterialCount,
-		CreatedAt:     timestamppb.New(s.CreatedAt),
+	p := &pb.SupplierSummaryProto{
+		Id:              s.ID,
+		Name:            s.Name,
+		Number:          s.Number,
+		Note:            s.Note,
+		BillToAddressId: s.BillToAddressID,
+		ShipToAddressId: s.ShipToAddressID,
+		CreatedAt:       timestamppb.New(s.CreatedAt),
+		UpdatedAt:       timestamppb.New(s.UpdatedAt),
 	}
+	if s.BillToAddress != nil {
+		p.BillToAddress = customerAddressToProto(s.BillToAddress)
+	}
+	if s.ShipToAddress != nil {
+		p.ShipToAddress = customerAddressToProto(s.ShipToAddress)
+	}
+	return p
 }
 
 func supplierToProto(s *domain.Supplier) *pb.SupplierProto {
 	p := &pb.SupplierProto{
-		Id:            s.ID,
-		Name:          s.Name,
-		Number:        s.Number,
-		Note:          s.Note,
-		MaterialCount: s.MaterialCount,
-		CreatedAt:     timestamppb.New(s.CreatedAt),
-		UpdatedAt:     timestamppb.New(s.UpdatedAt),
+		Id:        s.ID,
+		Name:      s.Name,
+		Number:    s.Number,
+		Note:      s.Note,
+		CreatedAt: timestamppb.New(s.CreatedAt),
+		UpdatedAt: timestamppb.New(s.UpdatedAt),
 	}
 
 	if s.BillToAddress != nil {
@@ -68,6 +77,7 @@ func (h *gRPCHandler) ListSuppliers(ctx context.Context, req *pb.ListSuppliersRe
 	}
 
 	params.ItemIDs = req.ItemIds
+	params.Includes = req.Includes
 
 	result, apiErr := h.supplierSvc.ListSuppliers(ctx, params)
 	if apiErr != nil {

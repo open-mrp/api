@@ -18,7 +18,7 @@ func invoiceDocFixture() ([]*domain.InvoiceLine, *domain.Invoice, *domain.SalesO
 	lines := []*domain.InvoiceLine{
 		{
 			QuantityValue: "6", QuantityUnitAbbr: "pr", QuantityUnitName: "pair",
-			// The price is labelled with the rate's own denominator, which the row carries
+			// The price is labeled with the rate's own denominator, which the row carries
 			// separately from the line's quantity unit.
 			UnitPriceValue: "8.50", UnitPriceDenUnitAbbr: "pr", OrderLineQtyOrdered: "10",
 			OrderLineItemNumber: &num1, OrderLineItemSKU: &sku1, OrderLineDescription: &desc1,

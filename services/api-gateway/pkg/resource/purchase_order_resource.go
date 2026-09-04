@@ -15,29 +15,6 @@ const SampleSupplierID = "ac_gwy8tfbc074f"
 const SampleSupplierName = "Acme Supplies Inc."
 const SampleSupplierNumber = "SUP-001"
 
-// The supplier (selling account) an order is placed with.
-type Supplier struct {
-	// Supplier ID.
-	ID string `json:"id" validate:"required"`
-	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=supplier"`
-	// Name of the supplier account.
-	Name string `json:"name" validate:"required"`
-	// Human-facing supplier code, unique per account (e.g. `SUP-001`).
-	Number string `json:"number" validate:"required"`
-}
-
-var SampleSupplier = &Supplier{
-	ID:     SampleSupplierID,
-	Object: constants.ObjectTypeSupplier,
-	Name:   SampleSupplierName,
-	Number: SampleSupplierNumber,
-}
-
-func (*Supplier) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(SampleSupplier)
-}
-
 // A contact that receives the purchase order email when an order is issued with the `send_email` option.
 type EmailContact struct {
 	// Email contact ID.
@@ -96,10 +73,8 @@ type PurchaseOrder struct {
 	PaymentTerm *PaymentTerm `json:"payment_term" expandable:"true"`
 	// Shipping terms for the order.
 	ShippingTerm *ShippingTerm `json:"shipping_term" expandable:"true"`
-	// Receiving order used to receive inventory against this purchase order.
-	//
-	// Created automatically, with a line per order line, when the order is issued, and deleted again if the order is unissued.
-	ReceivingOrder *ReceivingOrder `json:"receiving_order" expandable:"true"`
+	// The records produced from this purchase order.
+	Related *PurchaseOrderRelated `json:"related" expandable:"true"`
 	// Line items on the order.
 	Lines *List[PurchaseOrderLine] `json:"lines" expandable:"true"`
 	// Total number of lines on the order.
@@ -125,6 +100,26 @@ type PurchaseOrder struct {
 }
 
 var samplePurchaseOrderNote = "Please expedite"
+
+// PurchaseOrderRelated names the records produced from a purchase order.
+type PurchaseOrderRelated struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=purchase_order_related"`
+	// Receiving order used to receive inventory against this purchase order.
+	//
+	// Created automatically, with a line per order line, when the order is issued, and deleted again if the order is unissued.
+	ReceivingOrder *Record `json:"receiving_order" expandable:"true"`
+	// The deliveries booked against this order, oldest first.
+	Deliveries *List[Record] `json:"deliveries" expandable:"true"`
+}
+
+var SamplePurchaseOrderRelated = &PurchaseOrderRelated{
+	Object: constants.ObjectTypePurchaseOrderRelated,
+}
+
+func (*PurchaseOrderRelated) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SamplePurchaseOrderRelated)
+}
 
 var SamplePurchaseOrder = &PurchaseOrder{
 	ID:                   SamplePurchaseOrderID,

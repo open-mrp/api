@@ -9,18 +9,20 @@ import (
 
 // ReceivingOrderSummary represents a receiving order in list views.
 type ReceivingOrderSummary struct {
-	ID                   string
-	Number               string
-	PurchaseOrderID      string
-	PurchaseOrderNumber  string
-	SupplierID           *string
-	SupplierName         *string
-	SupplierNumber       *string
-	LineCount            int32
-	CompletionPercentage float64
-	CompletedAt          *time.Time
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
+	ID                  string
+	Number              string
+	PurchaseOrderID     string
+	PurchaseOrderNumber string
+	PurchaseOrderStatus string
+	SupplierID          *string
+	SupplierName        *string
+	SupplierNumber      *string
+	LineCount           int32
+	Totals              *ReceivingOrderTotals
+	Deliveries          []DocumentRef
+	CompletedAt         *time.Time
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
 	// Lines (populated only when the list request includes "lines").
 	Lines []*ReceivingOrderLine
 }
@@ -30,12 +32,15 @@ type ReceivingOrder struct {
 	ID                  string
 	Number              string `audit:"number"`
 	PurchaseOrderID     string
-	PurchaseOrderNumber string  `audit:"purchase_order_number"`
+	PurchaseOrderNumber string `audit:"purchase_order_number"`
+	PurchaseOrderStatus string
 	SupplierID          *string `audit:"supplier_id"`
 	SupplierName        *string `audit:"supplier_name"`
 	SupplierNumber      *string `audit:"supplier_number"`
 	Note                *string `audit:"note"`
 	Lines               []*ReceivingOrderLine
+	Totals              *ReceivingOrderTotals
+	Deliveries          []DocumentRef
 	CompletedAt         *time.Time `audit:"completed_at"`
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
@@ -43,23 +48,43 @@ type ReceivingOrder struct {
 
 // ReceivingOrderLine represents a line item in a receiving order.
 type ReceivingOrderLine struct {
-	ID                        string
-	QuantityID                string
-	QuantityValue             string `audit:"quantity_value"`
-	QuantityUnitID            string
-	QuantityUnitAbbreviation  string  `audit:"quantity_unit_abbreviation"`
-	RejectedQuantityValue     *string `audit:"rejected_quantity_value"`
-	OrderLineID               string
-	OrderLineProductID        *string
-	OrderLineItemID           *string `audit:"order_line_item_id"`
-	OrderLineItemSKU          *string `audit:"order_line_item_sku"`
-	OrderLineItemDescription  *string `audit:"order_line_item_description"`
-	OrderLineQuantityOrdered  string  `audit:"order_line_quantity_ordered"`
+	ID                       string
+	QuantityID               string
+	QuantityValue            string `audit:"quantity_value"`
+	QuantityUnitID           string
+	QuantityUnitAbbreviation string  `audit:"quantity_unit_abbreviation"`
+	RejectedQuantityValue    *string `audit:"rejected_quantity_value"`
+	OrderLineID              string
+	OrderLineProductID       *string
+	OrderLineItemNumber      *int32
+	OrderLineItemID          *string `audit:"order_line_item_id"`
+	OrderLineItemSKU         *string `audit:"order_line_item_sku"`
+	OrderLineItemDescription *string `audit:"order_line_item_description"`
+	// The purchase order line's own quantity record, so the receiving line reports
+	// the ordered figure as that quantity rather than as a copy of its value.
+	OrderLineQuantityID       string `audit:"order_line_quantity_id"`
+	OrderLineQuantityOrdered  string `audit:"order_line_quantity_ordered"`
 	OrderLineUnitID           string
 	OrderLineUnitAbbreviation string     `audit:"order_line_unit_abbreviation"`
 	StockedAt                 *time.Time `audit:"stocked_at"`
 	CreatedAt                 time.Time
 	UpdatedAt                 time.Time
+}
+
+// ReceivingOrderTotals is what a receiving order is worth and how far it has been put away, aggregated over its lines.
+//
+// Every figure is an amount — the purchase order's agreed unit price times a quantity — because a receiving order's lines can each count in a different unit, and money is the only common denominator they have. Completion is a ratio of two of these amounts for the same reason: summing quantities across lines would add pairs to metres.
+type ReceivingOrderTotals struct {
+	OrderedAmount  string
+	StockedAmount  string
+	RejectedAmount string
+}
+
+// DocumentRef names one purchasing document from another: the id and number a caller needs to follow the link, plus the status that makes the reference readable without fetching it.
+type DocumentRef struct {
+	ID     string
+	Number string
+	Status string
 }
 
 // ListReceivingOrdersParams holds parameters for listing receiving orders.

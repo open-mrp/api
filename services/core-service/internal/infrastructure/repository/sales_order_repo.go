@@ -94,7 +94,7 @@ func buildSalesOrderSearchParams(query *string) gosql.NullString {
 //
 // Both are accepted because both are documented: these params are described as YYYY-MM-DD, while the OpenAPI examples for several of them are RFC3339, and a caller copying either one must get the filter they asked for. Accepting only the first meant an RFC3339 value parsed as nothing, and the filter was then dropped entirely — the endpoint answered a question nobody asked, with more rows rather than fewer.
 //
-// An unparseable value still yields no filter rather than an error, which is the pre-existing behaviour of every caller here; see parse_date_string_test.go for what that does and does not cover.
+// An unparseable value still yields no filter rather than an error, which is the pre-existing behavior of every caller here; see parse_date_string_test.go for what that does and does not cover.
 func parseDateString(s *string) gosql.NullTime {
 	if s == nil || *s == "" {
 		return gosql.NullTime{}

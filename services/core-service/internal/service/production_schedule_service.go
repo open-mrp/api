@@ -227,7 +227,7 @@ func (s *productionScheduleSvcImpl) loadEffectiveSettings(
 		DefaultCustomerLeadTimeDays: scheduling.DefaultSettings().DefaultCustomerLeadTimeDays,
 	}
 
-	// Hold a physical greige buffer at the constraint. Off in DefaultSettings so the parity gate reproduces the script, which pools the buffer into finished goods; on for every real solve, because a plant that keeps no undifferentiated greige cannot rebalance its finished mix when demand shifts to a colourway it is not already sitting on.
+	// Hold a physical greige buffer at the constraint. Off in DefaultSettings so the parity gate reproduces the script, which pools the buffer into finished goods; on for every real solve, because a plant that keeps no undifferentiated greige cannot rebalance its finished mix when demand shifts to a colorway it is not already sitting on.
 	effective.Settings.GreigeBufferEnabled = true
 
 	repo := s.repos.NewProductionScheduleInputRepo()
@@ -904,7 +904,7 @@ func (s *productionScheduleSvcImpl) loadDemand(
 
 // loadOpenOrderBook attaches the outstanding order book to the solve, pooled onto constraint items exactly the way historical demand is.
 //
-// It walks the same contributor sets and applies the same unit ratio, because the order book and the forecast are compared week by week during levelling: expressing them in different units would make the greater-of rule pick whichever happened to be scaled larger.
+// It walks the same contributor sets and applies the same unit ratio, because the order book and the forecast are compared week by week during leveling: expressing them in different units would make the greater-of rule pick whichever happened to be scaled larger.
 func loadOpenOrderBook(
 	ctx context.Context,
 	repo domain.ProductionScheduleInputRepo,

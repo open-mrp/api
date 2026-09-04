@@ -1748,14 +1748,14 @@ func (s *shipmentSvcImpl) reverseInventoryOnVoid(txCtx context.Context, scope *l
 	for itemID := range reversedUnits {
 		itemIDs = append(itemIDs, itemID)
 	}
-	itemIDs = mediator.SortedUniqueIDs(itemIDs)
+	itemIDs = ledgerlock.SortedUnique(itemIDs)
 
 	if apiErr := mediator.EnqueueAllocateOpenIssues(txCtx, s.repos, shipment.AccountID, itemIDs...); apiErr != nil {
 		return apiErr
 	}
 
 	for _, itemID := range itemIDs {
-		mediator.RecordInventoryAuditTrailOrLog(
+		if apiErr := mediator.RecordInventoryAuditTrail(
 			txCtx,
 			s.repos,
 			shipment.AccountID,
@@ -1765,7 +1765,9 @@ func (s *shipmentSvcImpl) reverseInventoryOnVoid(txCtx context.Context, scope *l
 			string(constants.InventoryActionTypeUserCorrection),
 			nil,
 			nil,
-		)
+		); apiErr != nil {
+			return apiErr
+		}
 	}
 
 	return nil

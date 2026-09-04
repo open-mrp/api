@@ -6,6 +6,7 @@ import (
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
+	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
@@ -61,5 +62,10 @@ func (m *inventorySvcImpl) ListInventories(ctx context.Context, req *ListInvento
 		return nil, apiErr
 	}
 
-	return ListInventoriesPresenter(ctx, resp), nil
+	units, apiErr := resourceloaders.LoadUnitsByID(ctx, ListInventoriesUnitIDs(resp)...)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return ListInventoriesPresenter(ctx, resp, units), nil
 }

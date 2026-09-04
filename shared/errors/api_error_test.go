@@ -497,7 +497,7 @@ func TestAPIErrorFromJSON_UnknownCode(t *testing.T) {
 		t.Error("Type.IsValid() = true for an unknown type, want false")
 	}
 	if !apiErr.IsTransient {
-		t.Error("IsTransient = false, want true — the sender's judgement is carried, not recomputed")
+		t.Error("IsTransient = false, want true — the sender's judgment is carried, not recomputed")
 	}
 	if apiErr.PublicMessage != "Flux capacitor overloaded." {
 		t.Errorf("PublicMessage = %q, want %q", apiErr.PublicMessage, "Flux capacitor overloaded.")

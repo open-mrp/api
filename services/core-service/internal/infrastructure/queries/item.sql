@@ -917,7 +917,7 @@ WHERE ia.B IN (sqlc.slice('item_ids'));
 
 -- GetItemInventory reports what is on the shelf, what is spoken for, and what demand is still short.
 --
--- Every quantity is normalised through its own unit's ratio before anything is subtracted, then
+-- Every quantity is normalized through its own unit's ratio before anything is subtracted, then
 -- expressed in the unit the item is stocked in. Netting the raw column values instead assumes a
 -- receipt, an issue and an allocation are all recorded in the same unit, and they are not: an
 -- allocation is written in the unit of the receipt it draws from, and the issue it covers in whatever
@@ -1013,11 +1013,15 @@ LEFT JOIN unit ucru ON ucru.id = ucr.denominator_unit_id
 WHERE c.production_step_id = sqlc.arg('production_step_id');
 
 -- GetItemStockingUnit resolves the unit an item is counted in — its category's unit group base unit — with the group that unit belongs to. An item's unit cost is only meaningful denominated in this unit, because it is the unit its inventory is held and valued in.
+-- GetItemStockingUnit returns the unit an item is counted in, plus the currency its costs are expressed in.
+--
+-- The currency comes off the item's own unit-cost rate, which is where a recomputed cost is written back to, so a computed cost and the stored one always name the same money.
 -- name: GetItemStockingUnit :one
-SELECT ic.unit_group_id, ug.base_unit_id
+SELECT ic.unit_group_id, ug.base_unit_id, rc.numerator_unit_id AS cost_numerator_unit_id
 FROM item i
 JOIN item_category ic ON ic.id = i.item_category_id
 JOIN unit_group ug ON ug.id = ic.unit_group_id
+LEFT JOIN rate rc ON rc.id = i.unit_cost_id
 WHERE i.id = sqlc.arg('item_id')
     AND i.account_id = sqlc.arg('account_id')
     AND i.deleted_at IS NULL;

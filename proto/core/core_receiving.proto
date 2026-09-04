@@ -43,13 +43,37 @@ message ReceivingOrderSummaryInfo {
   optional string supplier_id = 5;
   optional string supplier_name = 6;
   int32 line_count = 7;
-  double completion_percentage = 8;
+  reserved 8;
+  reserved "completion_percentage";
   optional google.protobuf.Timestamp completed_at = 9;
   google.protobuf.Timestamp created_at = 10;
   google.protobuf.Timestamp updated_at = 11;
   optional string supplier_number = 12;
   // Lines (populated only when the list request includes "lines").
   repeated ReceivingOrderLineInfo lines = 13;
+  optional ReceivingOrderTotalsInfo totals = 14;
+  repeated DocumentRefInfo deliveries = 15;
+  // The purchase order's status, so the order's `related` reference to it is readable without
+  // fetching it.
+  string purchase_order_status = 16;
+}
+
+// DocumentRefInfo names one purchasing document from another.
+message DocumentRefInfo {
+  string id = 1;
+  string number = 2;
+  string status = 3;
+}
+
+// ReceivingOrderTotalsInfo aggregates a receiving order's lines: what they were ordered for, what has been stocked, and what was refused, as decimal strings.
+//
+// Every figure is an amount — the purchase order's agreed unit price times a quantity — because a receiving order's lines can each count in a different unit, and money is the only common denominator they have. The gateway divides two of these for completion, rather than dividing quantities that may not share a unit.
+message ReceivingOrderTotalsInfo {
+  string ordered_amount = 1;
+  string stocked_amount = 3;
+  string rejected_amount = 5;
+  reserved 2, 4, 6;
+  reserved "ordered_quantity", "stocked_quantity", "rejected_quantity";
 }
 
 // ReceivingOrderInfo represents a full receiving order with lines.
@@ -62,6 +86,11 @@ message ReceivingOrderInfo {
   optional string supplier_name = 6;
   optional string note = 7;
   repeated ReceivingOrderLineInfo lines = 8;
+  optional ReceivingOrderTotalsInfo totals = 13;
+  repeated DocumentRefInfo deliveries = 18;
+  // The purchase order's status, so the order's `related` reference to it is readable without
+  // fetching it.
+  string purchase_order_status = 19;
   optional google.protobuf.Timestamp completed_at = 9;
   google.protobuf.Timestamp created_at = 10;
   google.protobuf.Timestamp updated_at = 11;
@@ -89,6 +118,12 @@ message ReceivingOrderLineInfo {
   // The order line's product id, so the order_line.product.item include chain
   // resolves (the product loader fills item/product_line from this).
   optional string order_line_product_id = 17;
+  // The purchase order line's position, carried onto the receiving line so the client never has to fetch that line to number this one.
+  optional int32 order_line_item_number = 18;
+  reserved 19, 20, 21, 22, 23;
+  // The purchase order line's own quantity record. The receiving line reports
+  // the ordered figure as that quantity, not as a copy of its value.
+  string order_line_quantity_id = 24;
 }
 
 // StockingDataInfo contains stocking data for the stock action.

@@ -20,10 +20,6 @@ type OrderLineInput struct {
 	Quantity QuantityInput `json:"quantity" validate:"required"`
 	// Agreed purchase price per unit for this line.
 	//
-	// This is also the cost carried into inventory: stock received against the line is costed at this rate.
+	// This is also the cost carried into inventory: stock received against the line is costed at this rate, and the delivery line records it as its unit cost when the goods are stocked.
 	UnitPrice RateInput `json:"unit_price" validate:"required"`
-	// Cost per unit recorded on the line, if you capture it separately from the agreed purchase price.
-	//
-	// Kept for reference only; it does not affect how stock received against the line is costed.
-	UnitCost field.Optional[RateInput] `json:"unit_cost,omitzero"`
 }

@@ -22,6 +22,7 @@ func TransactionDetailPresenter(ctx context.Context, d *pb.TransactionInfo) apir
 
 	createdAt := grpcutil.TimestampToTime(d.CreatedAt)
 	updatedAt := grpcutil.TimestampToTime(d.UpdatedAt)
+	meta := resourcekit.GetLoadMeta(ctx)
 
 	tx := apiresource.TransactionDetail{
 		ID:               d.Id,
@@ -40,9 +41,9 @@ func TransactionDetailPresenter(ctx context.Context, d *pb.TransactionInfo) apir
 		Object:       constants.ObjectTypeQuantity,
 		Value:        d.AmountValue,
 		DisplayValue: apiresource.FormatDisplayValue(d.AmountValue, d.AmountUnitAbbreviation, string(constants.UnitTypeCurrency)),
-		// Unit left nil: the expandable unit loads real data via ?include= and is
-		// never fabricated; display_value already carries the formatted amount.
+		// Unit left nil: its id is stashed so `amount.unit` resolves the real unit; never fabricated.
 	}
+	meta.Set(constants.ObjectTypeQuantity, d.AmountId, "unit_id", d.AmountUnitId)
 
 	tx.TransactionType = &apiresource.TransactionType{
 		ID:     d.TransactionTypeId,
@@ -81,8 +82,6 @@ func TransactionDetailPresenter(ctx context.Context, d *pb.TransactionInfo) apir
 		}
 	}
 
-	meta := resourcekit.GetLoadMeta(ctx)
-
 	if d.CustomerId != nil && *d.CustomerId != "" {
 		meta.Set(constants.ObjectTypeTransaction, tx.ID, "customer_id", *d.CustomerId)
 	}
@@ -94,7 +93,7 @@ func TransactionDetailPresenter(ctx context.Context, d *pb.TransactionInfo) apir
 	if d.Allocations != nil {
 		allocations := make([]apiresource.TransactionAllocation, len(d.Allocations))
 		for i, a := range d.Allocations {
-			allocations[i] = TransactionAllocationPresenter(a)
+			allocations[i] = TransactionAllocationPresenter(meta, a)
 		}
 		meta.Set(constants.ObjectTypeTransaction, tx.ID, "allocations",
 			apiresource.NewList(allocations, apiresource.PageInfo{}))
@@ -172,10 +171,15 @@ func TransactionSummaryPresenter(d *pb.TransactionSummaryInfo) apiresource.Trans
 	return ts
 }
 
-func TransactionAllocationPresenter(a *pb.TransactionAllocationInfo) apiresource.TransactionAllocation {
+func TransactionAllocationPresenter(meta *resourcekit.LoadMeta, a *pb.TransactionAllocationInfo) apiresource.TransactionAllocation {
 	if a == nil {
 		return apiresource.TransactionAllocation{}
 	}
+
+	// The currency the amount is counted in is a record of its own — stashed as an id so
+	// `allocations.amount.unit` resolves it in full.
+	meta.Set(constants.ObjectTypeQuantity, a.AmountId, "unit_id", a.AmountUnitId)
+	meta.Set(constants.ObjectTypeTransactionAllocation, a.Id, "transaction_id", a.TransactionId)
 
 	alloc := apiresource.TransactionAllocation{
 		ID:     a.Id,
@@ -185,7 +189,7 @@ func TransactionAllocationPresenter(a *pb.TransactionAllocationInfo) apiresource
 			Object:       constants.ObjectTypeQuantity,
 			Value:        a.AmountValue,
 			DisplayValue: apiresource.FormatDisplayValue(a.AmountValue, a.AmountUnitAbbreviation, string(constants.UnitTypeCurrency)),
-			// Unit left nil: expandable, loaded with real data via ?include=; never fabricated.
+			// Unit left nil: its id is stashed so `allocations.amount.unit` resolves the real unit; never fabricated.
 		},
 		Note:      a.Note,
 		CreatedAt: grpcutil.TimestampToTime(a.CreatedAt),

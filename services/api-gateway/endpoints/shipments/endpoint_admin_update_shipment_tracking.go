@@ -22,7 +22,7 @@ type AdminUpdateShipmentTrackingRequest struct {
 	MasterTrackingNumber field.Optional[string] `json:"master_tracking_number,omitzero" validate:"omitempty,max=255"`
 	// ID of the carrier that actually carried the shipment; the shipment's cases move with it.
 	CarrierID field.Optional[string] `json:"carrier_id,omitzero" validate:"omitempty"`
-	// ID of the carrier service level the shipment actually travelled on.
+	// ID of the carrier service level the shipment actually traveled on.
 	// Sending this without `carrier_id` keeps the existing carrier, so the service level should belong to that carrier; send `null` to drop the service level entirely.
 	ServiceLevelID field.Clearable[string] `json:"service_level_id,omitzero" validate:"omitempty"`
 }
@@ -55,7 +55,7 @@ func (e *AdminUpdateShipmentTrackingEndpoint) Materialize() *apiendpoint.APIEndp
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeShipment,
-			Fields:     []string{"lines", "shipping_cases", "related.sales_order", "customer", "freight", "shipping_address", "shipped_by", "related.invoice", "related.pick"},
+			Fields:     []string{"lines", "lines.item", "lines.quantity", "lines.quantity.unit", "lines.sales_order_line", "lines.sales_order_line.product", "shipping_cases", "related.sales_order", "customer", "freight", "shipping_address", "shipped_by", "related.invoice", "related.pick"},
 		}),
 	})
 }

@@ -1,4 +1,4 @@
-.PHONY: help dev sqlc proto buf-lint no-binaries test test-e2e tx-audit test-ledger test-verbose test-sql-prepare-smoke install-tools install-ci-tools docs mocks lint gosec gosec-fast govet static-check check-format jaeger-tracing connect-minikube version validate-openapi-specs httpie local-db local-db-cli local-db-down local-db-nuke setup teardown migrate-create migrate-create-data migrate-up migrate-down migrate-status migrate-baseline migrate-data-up migrate-data-status migrate-agent-db migrate-agent-create migrate-agent-create-data migrate-agent-data migrate-agent-status seed-agent-db seed-core seed-user-photos seed-stripe teardown-stripe teardown-all-stripe fmt stripe-webhook stripe-webhook-account view-otel e2e-up e2e-up-ci e2e e2e-down fix-minikube-dns openapi openapi-quiet gen-agent-tools stainless openapi-stainless openapi-stainless-quiet generate generate-quiet install-stlc stlc-internal-sdk stlc-public-typescript-sdk stlc-public-python-sdk stlc-public-go-sdk stlc-public-sdks stlc-sdks sdk-yalc
+.PHONY: help dev sqlc proto buf-lint no-binaries test test-e2e test-inbox tx-audit test-ledger test-verbose test-sql-prepare-smoke install-tools install-ci-tools docs mocks lint gosec gosec-fast govet static-check check-format jaeger-tracing connect-minikube version validate-openapi-specs httpie local-db local-db-cli local-db-down local-db-nuke setup teardown migrate-create migrate-create-data migrate-up migrate-down migrate-status migrate-baseline migrate-data-up migrate-data-status migrate-agent-db migrate-agent-create migrate-agent-create-data migrate-agent-data migrate-agent-status seed-agent-db seed-core seed-user-photos seed-stripe teardown-stripe teardown-all-stripe fmt stripe-webhook stripe-webhook-account view-otel e2e-up e2e-up-ci e2e e2e-down fix-minikube-dns openapi openapi-quiet gen-agent-tools stainless openapi-stainless openapi-stainless-quiet generate generate-quiet install-stlc stlc-internal-sdk stlc-public-typescript-sdk stlc-public-python-sdk stlc-public-go-sdk stlc-public-sdks stlc-sdks sdk-yalc
 
 # Include .env file if it exists (optional for CI)
 -include .env
@@ -249,6 +249,11 @@ test: ## Run tests
 test-e2e: ## Run E2E tests against a running stack (requires e2e-up)
 	@echo "Running E2E tests..."
 	@time ./scripts/run-e2e-tests.sh 300s
+
+test-inbox: ## Run message-inbox lease/recovery-point tests against the real database (requires local-db)
+	@echo "Running inbox integration tests..."
+	@time go test -tags integration -count=1 -timeout 120s \
+		./services/core-service/internal/infrastructure/repository
 
 test-sql-prepare-smoke: ## Run sqlc Prepare smoke tests for MySQL services (requires local-db)
 	@echo "Running SQL prepare smoke tests..."

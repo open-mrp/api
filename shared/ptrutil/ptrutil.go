@@ -31,3 +31,11 @@ func ApplyIfSet[T any](dst *T, src *T) {
 		*dst = *src
 	}
 }
+
+// NonEmptyPtr returns a pointer to s, or nil when s is empty, for proto optional fields that should be absent rather than blank.
+func NonEmptyPtr(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}

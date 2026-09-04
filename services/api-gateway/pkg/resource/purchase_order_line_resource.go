@@ -25,17 +25,15 @@ type PurchaseOrderLine struct {
 	// Free-text description of the ordered product.
 	ProductDescription *string `json:"product_description"`
 	// Catalog item this line references, if it is linked to one.
-	Item *Item `json:"item"`
+	Item *Item `json:"item" expandable:"true"`
 	// Quantity ordered from the supplier.
 	QuantityOrdered *Quantity `json:"quantity_ordered" validate:"required"`
 	// Quantity booked against this line on the order's receiving order.
 	//
-	// Rolled up from the receiving order lines linked to this line, so it stays at zero until the order is issued and receiving lines are created for it.
-	QuantityReceived *Quantity `json:"quantity_received"`
+	// Rolled up from the receiving order lines linked to this line, so it stays at zero until the order is issued and receiving lines are created for it. Summed at read time rather than stored: it carries no id, and arrives with the unit it was summed in.
+	QuantityReceived *ComputedQuantity `json:"quantity_received"`
 	// Agreed purchase price per unit for this line.
 	UnitPrice *Rate `json:"unit_price" validate:"required"`
-	// Recorded cost per unit, if captured separately from the purchase price.
-	UnitCost *Rate `json:"unit_cost"`
 	// Created timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Updated timestamp.
@@ -52,9 +50,8 @@ var SamplePurchaseOrderLine = &PurchaseOrderLine{
 	ProductDescription: &samplePurchaseOrderLineProductDescription,
 	Item:               SampleItem,
 	QuantityOrdered:    SampleQuantity,
-	QuantityReceived:   SampleQuantity,
+	QuantityReceived:   SampleComputedQuantity,
 	UnitPrice:          SampleRate,
-	UnitCost:           SampleRate,
 	CreatedAt:          timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:          timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }

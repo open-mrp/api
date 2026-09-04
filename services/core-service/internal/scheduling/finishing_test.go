@@ -99,7 +99,7 @@ func TestLevelFinishing_CapacityStarvationIsDistinctFromGreigeStarvation(t *test
 	assert.Empty(t, result.Diagnostics.GreigeStarvedSKUs)
 }
 
-// What does not fit this week waits for the next one. That is what makes this a levelling rather than a one-shot allocation.
+// What does not fit this week waits for the next one. That is what makes this a leveling rather than a one-shot allocation.
 func TestLevelFinishing_OverflowIsPushedToTheNextWeek(t *testing.T) {
 	in := FinishingInput{
 		Settings: finishingSettings(3),
@@ -145,7 +145,7 @@ func TestLevelFinishing_SupplyArrivesInItsOwnWeek(t *testing.T) {
 		assert.GreaterOrEqual(t, line.WeekIndex, 2,
 			"nothing can be finished before its greige is knitted")
 	}
-	// Waiting two weeks for greige is being queued, not being starved. A SKU the horizon does build is never reported as short, or every levelled plan would read as a shortage.
+	// Waiting two weeks for greige is being queued, not being starved. A SKU the horizon does build is never reported as short, or every leveled plan would read as a shortage.
 	assert.Empty(t, result.Diagnostics.GreigeStarvedSKUs)
 }
 

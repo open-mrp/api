@@ -6319,6 +6319,21 @@ func (mr *MockBatchRepoMockRecorder) FindOutputBatches(ctx, accountID, batchID a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindOutputBatches", reflect.TypeOf((*MockBatchRepo)(nil).FindOutputBatches), ctx, accountID, batchID)
 }
 
+// FindPossibleInitSteps mocks base method.
+func (m *MockBatchRepo) FindPossibleInitSteps(ctx context.Context, accountID, scanningStationID, batchID string) ([]domain.ScanningProductionStepInfo, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindPossibleInitSteps", ctx, accountID, scanningStationID, batchID)
+	ret0, _ := ret[0].([]domain.ScanningProductionStepInfo)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// FindPossibleInitSteps indicates an expected call of FindPossibleInitSteps.
+func (mr *MockBatchRepoMockRecorder) FindPossibleInitSteps(ctx, accountID, scanningStationID, batchID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindPossibleInitSteps", reflect.TypeOf((*MockBatchRepo)(nil).FindPossibleInitSteps), ctx, accountID, scanningStationID, batchID)
+}
+
 // FindPossibleNextSteps mocks base method.
 func (m *MockBatchRepo) FindPossibleNextSteps(ctx context.Context, accountID, scanningStationID, batchID string) ([]domain.ScanningProductionStepInfo, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -14197,6 +14212,21 @@ func (m *MockPurchaseOrderRepo) GetLines(ctx context.Context, salesOrderID strin
 func (mr *MockPurchaseOrderRepoMockRecorder) GetLines(ctx, salesOrderID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLines", reflect.TypeOf((*MockPurchaseOrderRepo)(nil).GetLines), ctx, salesOrderID)
+}
+
+// GetLinesByIDs mocks base method.
+func (m *MockPurchaseOrderRepo) GetLinesByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.PurchaseOrderLine, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetLinesByIDs", ctx, accountID, ids)
+	ret0, _ := ret[0].([]*domain.PurchaseOrderLine)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetLinesByIDs indicates an expected call of GetLinesByIDs.
+func (mr *MockPurchaseOrderRepoMockRecorder) GetLinesByIDs(ctx, accountID, ids any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLinesByIDs", reflect.TypeOf((*MockPurchaseOrderRepo)(nil).GetLinesByIDs), ctx, accountID, ids)
 }
 
 // GetNextOrderNumber mocks base method.

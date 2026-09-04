@@ -4,7 +4,7 @@ package scheduling
 //
 //	minutes(added) = clamp(min + slope * added, min, max)
 //
-// The slope is calibrated from history rather than configured, so the modelled average lands on the number the floor actually reports.
+// The slope is calibrated from history rather than configured, so the modeled average lands on the number the floor actually reports.
 type Changeover struct {
 	minMinutes float64
 	maxMinutes float64
@@ -27,7 +27,7 @@ func CalibrateChangeover(minMinutes, avgMinutes, maxMinutes, avgInputsAdded floa
 	return c
 }
 
-// Minutes returns the modelled changeover time for a transition that introduces inputsAdded new inputs.
+// Minutes returns the modeled changeover time for a transition that introduces inputsAdded new inputs.
 func (c Changeover) Minutes(inputsAdded int) float64 {
 	if inputsAdded < 0 {
 		inputsAdded = 0

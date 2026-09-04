@@ -18,7 +18,7 @@ import (
 type AdminUpdateShippingCaseTrackingRequest struct {
 	// Shipping case ID.
 	ShippingCaseID string `path:"id" validate:"required"`
-	// Carrier tracking number the case actually travelled under, replacing any number already recorded.
+	// Carrier tracking number the case actually traveled under, replacing any number already recorded.
 	TrackingNumber field.Optional[string] `json:"tracking_number,omitzero" validate:"omitempty,max=255"`
 }
 
@@ -51,7 +51,7 @@ func (e *AdminUpdateShippingCaseTrackingEndpoint) Materialize() *apiendpoint.API
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeShippingCase,
-			Fields:     []string{"carrier", "shipment", "freight_amount.unit", "freight_weight.unit"},
+			Fields:     []string{"carrier", "shipment", "freight_amount", "freight_amount.unit", "freight_weight", "freight_weight.unit"},
 		}),
 	})
 }

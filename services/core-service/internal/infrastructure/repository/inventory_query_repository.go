@@ -95,7 +95,7 @@ func (r *inventoryQueryRepoImpl) FetchOnHandInventoryBulk(ctx context.Context, i
 // The ledger is decimal from the column to the arithmetic, and a round trip through float64 in the
 // middle of it does not survive contact with a reconcile: 9959.03214 comes back 9959.032140000001,
 // and a correction to the figure already on screen writes a receipt of 0.000000000003 instead of
-// recognising there is nothing to do.
+// recognizing there is nothing to do.
 func (r *inventoryQueryRepoImpl) FetchPhysicalInventory(ctx context.Context, itemID, ownerAccountID, unitID string) (decimal.Decimal, *apierror.APIError) {
 	ctx, span := inventoryQueryRepoTracer.Start(ctx, "repository.inventory_query.fetch_physical_inventory")
 	defer span.End()
@@ -117,7 +117,7 @@ func (r *inventoryQueryRepoImpl) FetchPhysicalInventory(ctx context.Context, ite
 }
 
 // FetchPhysicalInventoryBaseForItems returns each item's physical inventory in base units, netting
-// allocations and normalising every row through its own unit's ratio exactly as FetchPhysicalInventory
+// allocations and normalizing every row through its own unit's ratio exactly as FetchPhysicalInventory
 // does, but for many items in one query. The target-unit divide is left to the caller, which applies
 // it per event. Items with no receipts or issues are absent from the map.
 func (r *inventoryQueryRepoImpl) FetchPhysicalInventoryBaseForItems(ctx context.Context, accountID string, itemIDs []string) (map[string]decimal.Decimal, *apierror.APIError) {

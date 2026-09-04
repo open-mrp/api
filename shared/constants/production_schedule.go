@@ -296,7 +296,7 @@ func (s AttainmentBaselineStatus) EnumValues() []string {
 	return []string{string(AttainmentBaselineStatusMeasured), string(AttainmentBaselineStatusNoBaseline)}
 }
 
-// SchedulePolicyConstraint names a limit the solver hit while sizing a SKU's campaigns. Modelled as a list of named constraints rather than one boolean per limit so a new limit does not add another flag to every response.
+// SchedulePolicyConstraint names a limit the solver hit while sizing a SKU's campaigns. Modeled as a list of named constraints rather than one boolean per limit so a new limit does not add another flag to every response.
 type SchedulePolicyConstraint string
 
 const (

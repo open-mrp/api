@@ -138,10 +138,10 @@ func TestComputePolicy_UnsetPolicyIsMakeToStock(t *testing.T) {
 }
 
 // A make-to-order item is triggered by the order book over its lead time, not by an average.
-func TestLevellingItem_MakeToOrderTriggerIsTheDatedOrderBook(t *testing.T) {
+func TestLevelingItem_MakeToOrderTriggerIsTheDatedOrderBook(t *testing.T) {
 	t.Parallel()
 
-	item := LevellingItem{
+	item := LevelingItem{
 		Policy: ItemPolicy{
 			FulfillmentPolicy:       PolicyMakeToOrder,
 			ConstraintLeadTimeWeeks: 1,
@@ -158,17 +158,17 @@ func TestLevellingItem_MakeToOrderTriggerIsTheDatedOrderBook(t *testing.T) {
 		t.Fatalf("week 2 trigger = %v, want 1650 (weeks 2..4)", got)
 	}
 	// Nothing on the book in range means nothing to build.
-	empty := LevellingItem{Policy: ItemPolicy{FulfillmentPolicy: PolicyMakeToOrder}}
+	empty := LevelingItem{Policy: ItemPolicy{FulfillmentPolicy: PolicyMakeToOrder}}
 	if got := empty.triggerForWeek(0); got != 0 {
 		t.Fatalf("an empty order book should trigger nothing, got %v", got)
 	}
 }
 
 // Make-to-stock keeps the constant (s,S) trigger it always had.
-func TestLevellingItem_MakeToStockTriggerIsUnchanged(t *testing.T) {
+func TestLevelingItem_MakeToStockTriggerIsUnchanged(t *testing.T) {
 	t.Parallel()
 
-	item := LevellingItem{Policy: ItemPolicy{ReorderPoint: 500, OrderUpTo: 300}}
+	item := LevelingItem{Policy: ItemPolicy{ReorderPoint: 500, OrderUpTo: 300}}
 	for week := range 5 {
 		if got := item.triggerForWeek(week); got != 300 {
 			t.Fatalf("week %d = %v, want the lower of ROP and order-up-to (300)", week, got)
@@ -183,7 +183,7 @@ func TestLevel_MakeToOrderBuildsOnlyWhatIsOrdered(t *testing.T) {
 	s := DefaultSettings()
 	s.HorizonWeeks = 8
 
-	base := LevellingItem{
+	base := LevelingItem{
 		Policy: ItemPolicy{
 			ItemID: "itm_a", SKU: "SKU-A",
 			FulfillmentPolicy:       PolicyMakeToOrder,
@@ -196,7 +196,7 @@ func TestLevel_MakeToOrderBuildsOnlyWhatIsOrdered(t *testing.T) {
 	}
 	machines := []Machine{{ID: "mc_1", Name: "1"}}
 
-	idle := Level([]LevellingItem{base}, machines, s, nil)
+	idle := Level([]LevelingItem{base}, machines, s, nil)
 	if len(idle.Campaigns) != 0 {
 		t.Fatalf("a make-to-order item with an empty order book must not be built, got %d campaigns", len(idle.Campaigns))
 	}
@@ -205,7 +205,7 @@ func TestLevel_MakeToOrderBuildsOnlyWhatIsOrdered(t *testing.T) {
 	ordered.FirmByWeek = make([]float64, s.HorizonWeeks)
 	ordered.FirmByWeek[3] = 300
 
-	got := Level([]LevellingItem{ordered}, machines, s, nil)
+	got := Level([]LevelingItem{ordered}, machines, s, nil)
 	if len(got.Campaigns) == 0 {
 		t.Fatal("an order on the book must produce a campaign")
 	}
@@ -231,7 +231,7 @@ func TestLevel_MakeToOrderIsServedBeforeMakeToStock(t *testing.T) {
 	s.CapacityHeadroomPct = 1
 
 	// One machine-hour, and each item wants all of it, so only one can be served.
-	mto := LevellingItem{
+	mto := LevelingItem{
 		Policy: ItemPolicy{
 			ItemID: "itm_mto", SKU: "AAA-first-alphabetically",
 			FulfillmentPolicy: PolicyMakeToOrder,
@@ -240,7 +240,7 @@ func TestLevel_MakeToOrderIsServedBeforeMakeToStock(t *testing.T) {
 		LotUnits:   60,
 		FirmByWeek: []float64{60},
 	}
-	mts := LevellingItem{
+	mts := LevelingItem{
 		Policy: ItemPolicy{
 			ItemID: "itm_mts", SKU: "ZZZ-last-alphabetically",
 			FulfillmentPolicy: PolicyMakeToStock,
@@ -253,7 +253,7 @@ func TestLevel_MakeToOrderIsServedBeforeMakeToStock(t *testing.T) {
 		LotUnits: 60,
 	}
 
-	got := Level([]LevellingItem{mts, mto}, []Machine{{ID: "mc_1", Name: "1"}}, s, nil)
+	got := Level([]LevelingItem{mts, mto}, []Machine{{ID: "mc_1", Name: "1"}}, s, nil)
 	if len(got.Campaigns) != 1 {
 		t.Fatalf("only one campaign fits the hour, got %d", len(got.Campaigns))
 	}

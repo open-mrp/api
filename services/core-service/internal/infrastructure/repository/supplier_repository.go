@@ -27,24 +27,69 @@ func NewSupplierRepo(queries *sqlc.Queries) domain.SupplierRepo {
 func supplierSummaryCreatedAt(s *domain.SupplierSummary) time.Time { return s.CreatedAt }
 func supplierSummaryID(s *domain.SupplierSummary) string           { return s.ID }
 
-func mapSupplierForwardRow(row sqlc.ListSuppliersForwardRow) *domain.SupplierSummary {
-	return &domain.SupplierSummary{
-		ID:            row.AccountID,
-		Name:          row.AccountName,
-		Number:        row.ExternalNumber,
-		MaterialCount: row.MaterialCount,
-		CreatedAt:     row.CreatedAt,
+func mapSupplierForwardRow(row sqlc.ListSuppliersForwardRow, includes []string) *domain.SupplierSummary {
+	summary := &domain.SupplierSummary{
+		ID:        row.AccountID,
+		Name:      row.AccountName,
+		Number:    row.ExternalNumber,
+		CreatedAt: row.CreatedAt,
+		UpdatedAt: row.UpdatedAt,
 	}
+	if row.Notes.Valid {
+		summary.Note = &row.Notes.String
+	}
+	if row.DefaultBillingAddressID.Valid {
+		summary.BillToAddressID = &row.DefaultBillingAddressID.String
+	}
+	if row.DefaultShippingAddressID.Valid {
+		summary.ShipToAddressID = &row.DefaultShippingAddressID.String
+	}
+	// A supplier's default addresses belong to the supplier's own account, so the gateway's
+	// account-scoped address loader cannot reach them. The list joins them here, as Get does.
+	if slices.Contains(includes, "bill_to_address") && row.DefaultBillingAddressID.Valid {
+		summary.BillToAddress = buildCustomerAddress(
+			row.DefaultBillingAddressID.String,
+			row.DefaultBillingAddressName.String,
+			row.DefaultBillingAddressPhone,
+			row.DefaultBillingAddressEmail,
+			row.DefaultBillingIsDropShip.Bool,
+			row.DefaultBillingGeolocationID,
+			row.DefaultBillingStreetLine1,
+			row.DefaultBillingStreetLine2,
+			row.DefaultBillingLocality,
+			row.DefaultBillingState,
+			row.DefaultBillingPostalCode,
+			row.DefaultBillingCountry,
+			row.DefaultBillingAddressCreatedAt.Time,
+			row.DefaultBillingAddressUpdatedAt.Time,
+		)
+	}
+	if slices.Contains(includes, "ship_to_address") && row.DefaultShippingAddressID.Valid {
+		summary.ShipToAddress = buildCustomerAddress(
+			row.DefaultShippingAddressID.String,
+			row.DefaultShippingAddressName.String,
+			row.DefaultShippingAddressPhone,
+			row.DefaultShippingAddressEmail,
+			row.DefaultShippingIsDropShip.Bool,
+			row.DefaultShippingGeolocationID,
+			row.DefaultShippingStreetLine1,
+			row.DefaultShippingStreetLine2,
+			row.DefaultShippingLocality,
+			row.DefaultShippingState,
+			row.DefaultShippingPostalCode,
+			row.DefaultShippingCountry,
+			row.DefaultShippingAddressCreatedAt.Time,
+			row.DefaultShippingAddressUpdatedAt.Time,
+		)
+	}
+	return summary
 }
 
-func mapSupplierBackwardRow(row sqlc.ListSuppliersBackwardRow) *domain.SupplierSummary {
-	return &domain.SupplierSummary{
-		ID:            row.AccountID,
-		Name:          row.AccountName,
-		Number:        row.ExternalNumber,
-		MaterialCount: row.MaterialCount,
-		CreatedAt:     row.CreatedAt,
-	}
+// The two list queries select the same columns in the same order, so a backward page is mapped
+// through the forward mapper rather than a second copy that can drift from it — as it had, dropping
+// the note, the updated timestamp and both addresses from every backward page.
+func mapSupplierBackwardRow(row sqlc.ListSuppliersBackwardRow, includes []string) *domain.SupplierSummary {
+	return mapSupplierForwardRow(sqlc.ListSuppliersForwardRow(row), includes)
 }
 
 func (r *supplierRepoImpl) List(ctx context.Context, params domain.ListSuppliersParams) (*domain.ListSuppliersResult, *apierror.APIError) {
@@ -98,7 +143,7 @@ func (r *supplierRepoImpl) List(ctx context.Context, params domain.ListSuppliers
 			}
 			items := make([]*domain.SupplierSummary, len(rows))
 			for i, row := range rows {
-				items[i] = mapSupplierBackwardRow(row)
+				items[i] = mapSupplierBackwardRow(row, params.Includes)
 			}
 			result, pageInfo := pagination.BuildPageString(items, params.Limit, cursorDir, supplierSummaryCreatedAt, supplierSummaryID)
 			return &domain.ListSuppliersResult{Items: result, PageInfo: pageInfo}, nil
@@ -121,7 +166,7 @@ func (r *supplierRepoImpl) List(ctx context.Context, params domain.ListSuppliers
 		}
 		items := make([]*domain.SupplierSummary, len(rows))
 		for i, row := range rows {
-			items[i] = mapSupplierForwardRow(row)
+			items[i] = mapSupplierForwardRow(row, params.Includes)
 		}
 		result, pageInfo := pagination.BuildPageString(items, params.Limit, cursorDir, supplierSummaryCreatedAt, supplierSummaryID)
 		return &domain.ListSuppliersResult{Items: result, PageInfo: pageInfo}, nil
@@ -143,7 +188,7 @@ func (r *supplierRepoImpl) List(ctx context.Context, params domain.ListSuppliers
 
 	items := make([]*domain.SupplierSummary, len(rows))
 	for i, row := range rows {
-		items[i] = mapSupplierForwardRow(row)
+		items[i] = mapSupplierForwardRow(row, params.Includes)
 	}
 	result, pageInfo := pagination.BuildPageString(items, params.Limit, cursorDir, supplierSummaryCreatedAt, supplierSummaryID)
 	return &domain.ListSuppliersResult{Items: result, PageInfo: pageInfo}, nil
@@ -208,7 +253,6 @@ func (r *supplierRepoImpl) Get(ctx context.Context, params domain.GetSupplierPar
 		Note:          nullStringPtr(row.Notes),
 		BillToAddress: billToAddress,
 		ShipToAddress: shipToAddress,
-		MaterialCount: row.MaterialCount,
 		CreatedAt:     row.CreatedAt,
 		UpdatedAt:     row.UpdatedAt,
 	}, nil

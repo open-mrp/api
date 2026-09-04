@@ -83,7 +83,7 @@ func TestResolveLotDefault_CompetingLinesAreDecidedByDemand(t *testing.T) {
 		"a greige that mostly becomes socks is knitted in the sock line's doff")
 }
 
-// The levelling is deterministic and the lot must not be the thing that makes it wobble.
+// The leveling is deterministic and the lot must not be the thing that makes it wobble.
 func TestResolveLotDefault_TiesResolveTheSameWayEveryTime(t *testing.T) {
 	t.Parallel()
 

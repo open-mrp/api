@@ -49,7 +49,7 @@ func TestPurchaseOrders_ExpandableFieldsNullWithoutInclude(t *testing.T) {
 	assert.Nil(t, got["service_level"], "service_level should be null without ?include=service_level")
 	assert.Nil(t, got["payment_term"], "payment_term should be null without ?include=payment_term")
 	assert.Nil(t, got["shipping_term"], "shipping_term should be null without ?include=shipping_term")
-	assert.Nil(t, got["receiving_order"], "receiving_order should be null without ?include=receiving_order")
+	assert.Nil(t, got["related"], "related should be null without ?include=related")
 	assert.Nil(t, got["lines"], "lines should be null without ?include=lines")
 	assert.Nil(t, got["contacts"], "contacts should be null without ?include=contacts")
 }
@@ -162,13 +162,16 @@ func TestPurchaseOrders_IncludeShippingTerm(t *testing.T) {
 func TestPurchaseOrders_IncludeReceivingOrder(t *testing.T) {
 	t.Parallel()
 	id := firstPurchaseOrderID(t)
-	status, body, err := apiClient.GetListRaw(purchaseOrdersPath+"/"+id, url.Values{"include": {"receiving_order"}})
+	status, body, err := apiClient.GetListRaw(purchaseOrdersPath+"/"+id, url.Values{
+		"include": {"related", "related.receiving_order"},
+	})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
-	got := parseJSON(body)
-	_, ok := got["receiving_order"]
-	assert.True(t, ok, "receiving_order key should be present with ?include=receiving_order")
+	related := jsonObject(parseJSON(body), "related")
+	require.NotNil(t, related, "related must expand when asked for: %s", string(body))
+	_, ok := related["receiving_order"]
+	assert.True(t, ok, "receiving_order key should be present with ?include=related.receiving_order")
 }
 
 func TestPurchaseOrders_IncludeLines(t *testing.T) {

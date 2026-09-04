@@ -94,7 +94,7 @@ func parseUserVarSet(stmt string) (string, string, bool) {
 	return matches[1], strings.TrimSpace(matches[2]), true
 }
 
-// stripLeadingLineComments drops the leading `--` lines a statement carries in from the text ahead of it. The seed is split on `;`, so a section header or a group note lands at the head of the following statement, and a SET sitting behind one would not be recognised as a variable assignment: it would go to the database as a raw `SET @var`, which is exactly what resolving variables in Go exists to avoid. The original statement is still what gets executed, so comments ahead of anything else are left alone.
+// stripLeadingLineComments drops the leading `--` lines a statement carries in from the text ahead of it. The seed is split on `;`, so a section header or a group note lands at the head of the following statement, and a SET sitting behind one would not be recognized as a variable assignment: it would go to the database as a raw `SET @var`, which is exactly what resolving variables in Go exists to avoid. The original statement is still what gets executed, so comments ahead of anything else are left alone.
 func stripLeadingLineComments(stmt string) string {
 	for {
 		stmt = strings.TrimSpace(stmt)

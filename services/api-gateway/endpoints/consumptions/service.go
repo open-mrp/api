@@ -184,19 +184,10 @@ func stashConsumptionMeta(meta *resourcekit.LoadMeta, c *pb.ConsumptionInfo) {
 		return
 	}
 
+	// Only the id is stashed: the consumption query knows the item's SKU and description but not its
+	// type or its own timestamps, so the item loader fills it in on `?include=consumed_item` rather
+	// than the consumption guessing a type and reporting its own timestamps as the item's.
 	if c.ItemId != "" {
-		itemType := constants.ItemTypeCode(c.ItemTypeCode)
-		if !itemType.IsValid() {
-			itemType = constants.ItemTypeCodeProduct
-		}
-		meta.Set(constants.ObjectTypeConsumption, c.Id, "consumed_item", &apiresource.Item{
-			ID:           c.ItemId,
-			Object:       constants.ObjectTypeItem,
-			SKU:          c.ItemSku,
-			Description:  c.ItemDescription,
-			ItemTypeCode: itemType,
-			CreatedAt:    grpcutil.TimestampToTime(c.CreatedAt),
-			UpdatedAt:    grpcutil.TimestampToTime(c.UpdatedAt),
-		})
+		meta.Set(constants.ObjectTypeConsumption, c.Id, "consumed_item_id", c.ItemId)
 	}
 }

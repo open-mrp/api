@@ -476,16 +476,10 @@ func stashProductionOutputMeta(meta *resourcekit.LoadMeta, p *pb.ProductionInfo)
 	if p == nil || p.ItemId == "" {
 		return
 	}
-	itemTS := grpcutil.TimestampToTime(p.CreatedAt)
-	meta.Set(constants.ObjectTypeProduction, p.Id, "produced_item", &apiresource.Item{
-		ID:           p.ItemId,
-		Object:       constants.ObjectTypeItem,
-		SKU:          p.ItemSku,
-		Description:  p.ItemDescription,
-		ItemTypeCode: constants.ItemTypeCode(p.ItemTypeCode),
-		CreatedAt:    itemTS,
-		UpdatedAt:    itemTS,
-	})
+	// Only the id is stashed: the production query knows the item's SKU and description but not its
+	// own timestamps, so the item loader fills it in rather than the step reporting the production's
+	// timestamps as the item's.
+	meta.Set(constants.ObjectTypeProduction, p.Id, "produced_item_id", p.ItemId)
 }
 
 func stashProductionStepMeta(meta *resourcekit.LoadMeta, s *pb.ProductionStepInfo) {
@@ -496,25 +490,15 @@ func stashProductionStepMeta(meta *resourcekit.LoadMeta, s *pb.ProductionStepInf
 	stepTS := grpcutil.TimestampToTime(s.CreatedAt)
 
 	if s.Production != nil {
-		prod := productionOutputFromProto(s.Production)
-		if s.Production.ItemId != "" {
-			itemTS := grpcutil.TimestampToTime(s.Production.CreatedAt)
-			prod.ProducedItem = &apiresource.Item{
-				ID:           s.Production.ItemId,
-				Object:       constants.ObjectTypeItem,
-				SKU:          s.Production.ItemSku,
-				Description:  s.Production.ItemDescription,
-				ItemTypeCode: constants.ItemTypeCode(s.Production.ItemTypeCode),
-				CreatedAt:    itemTS,
-				UpdatedAt:    itemTS,
-			}
-		}
-		meta.Set(constants.ObjectTypeProductionStep, s.Id, "production", prod)
+		// ProducedItem is left nil and its id stashed, so `produced_item` resolves through the item
+		// loader like every other expandable rather than arriving pre-built.
+		stashProductionOutputMeta(meta, s.Production)
+		meta.Set(constants.ObjectTypeProductionStep, s.Id, "production", productionOutputFromProto(s.Production))
 	}
 
 	consumptions := make([]apiresource.Consumption, len(s.Consumptions))
 	for i, c := range s.Consumptions {
-		consumptions[i] = stepConsumptionFromProto(c)
+		consumptions[i] = stepConsumptionFromProto(meta, c)
 	}
 	meta.Set(constants.ObjectTypeProductionStep, s.Id, "consumptions", apiresource.NewList(consumptions, apiresource.PageInfo{}))
 
@@ -567,23 +551,16 @@ func stashProductionStepMeta(meta *resourcekit.LoadMeta, s *pb.ProductionStepInf
 	meta.Set(constants.ObjectTypeProductionStep, s.Id, "out_steps", apiresource.NewList(outSteps, apiresource.PageInfo{}))
 }
 
-func stepConsumptionFromProto(c *pb.ConsumptionInfo) apiresource.Consumption {
+func stepConsumptionFromProto(meta *resourcekit.LoadMeta, c *pb.ConsumptionInfo) apiresource.Consumption {
 	if c == nil {
 		return apiresource.Consumption{}
 	}
 
-	itemTS := grpcutil.TimestampToTime(c.CreatedAt)
-	var consumedItem *apiresource.Item
+	// ConsumedItem is left nil and its id stashed: the consumption query knows the item's SKU and
+	// description but not its own timestamps, so the item loader fills it in on ?include= rather
+	// than the consumption reporting its own timestamps as the item's.
 	if c.ItemId != "" {
-		consumedItem = &apiresource.Item{
-			ID:           c.ItemId,
-			Object:       constants.ObjectTypeItem,
-			SKU:          c.ItemSku,
-			Description:  c.ItemDescription,
-			ItemTypeCode: constants.ItemTypeCode(c.ItemTypeCode),
-			CreatedAt:    itemTS,
-			UpdatedAt:    itemTS,
-		}
+		meta.Set(constants.ObjectTypeConsumption, c.Id, "consumed_item_id", c.ItemId)
 	}
 
 	return apiresource.Consumption{
@@ -591,9 +568,8 @@ func stepConsumptionFromProto(c *pb.ConsumptionInfo) apiresource.Consumption {
 		Object:        constants.ObjectTypeConsumption,
 		Quantity:      quantityFromStepProto(c.Quantity),
 		WasteQuantity: quantityFromStepProto(c.WasteQuantity),
-		ConsumedItem:  consumedItem,
 		Instructions:  c.Instructions,
-		CreatedAt:     itemTS,
+		CreatedAt:     grpcutil.TimestampToTime(c.CreatedAt),
 		UpdatedAt:     grpcutil.TimestampToTime(c.UpdatedAt),
 	}
 }

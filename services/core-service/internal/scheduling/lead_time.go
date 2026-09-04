@@ -65,7 +65,7 @@ type Transit struct {
 
 // CommitmentBasis is the explicit input somebody pinned on one order, displacing the standing lead-time chain.
 //
-// At most one field may be set. The three are alternative answers to the same question and combining them has no meaning — a delivery date and a ship date cannot both be the thing being promised — so the service layer rejects more than one rather than inventing a precedence nobody could predict. The ordering ResolveCommitment applies is a defence against a bad row, not a documented rule.
+// At most one field may be set. The three are alternative answers to the same question and combining them has no meaning — a delivery date and a ship date cannot both be the thing being promised — so the service layer rejects more than one rather than inventing a precedence nobody could predict. The ordering ResolveCommitment applies is a defense against a bad row, not a documented rule.
 type CommitmentBasis struct {
 	// PromisedAt is a promised *delivery* date. The order has to leave early enough for the carrier to cover the lane, so this is the only basis transit is subtracted from.
 	PromisedAt *time.Time
@@ -130,7 +130,7 @@ type LeadTimeInput struct {
 //
 // The parent outranks the group because it is the narrower statement: a group is a segment somebody sorted customers into, while a parent is the head office that negotiated the terms every one of its locations buys on. Putting the group first would mean a lead time set on a head office silently failed to reach exactly the grouped locations it was set for.
 //
-// A negative value is skipped rather than honoured. It can only arrive from a hand-written database row (the write path rejects it), and a commitment that falls before the order was placed is worse than falling through to the next rule.
+// A negative value is skipped rather than honored. It can only arrive from a hand-written database row (the write path rejects it), and a commitment that falls before the order was placed is worse than falling through to the next rule.
 func ResolveLeadTime(in LeadTimeInput) (days int, source string, ok bool) {
 	for _, candidate := range []struct {
 		days   *int

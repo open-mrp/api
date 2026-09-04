@@ -3650,6 +3650,21 @@ func (mr *MockBatchSvcMockRecorder) GetBatchFlow(ctx, batchID any) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBatchFlow", reflect.TypeOf((*MockBatchSvc)(nil).GetBatchFlow), ctx, batchID)
 }
 
+// GetPossibleInitSteps mocks base method.
+func (m *MockBatchSvc) GetPossibleInitSteps(ctx context.Context, scanningStationID, batchID string) ([]domain.ScanningProductionStepInfo, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPossibleInitSteps", ctx, scanningStationID, batchID)
+	ret0, _ := ret[0].([]domain.ScanningProductionStepInfo)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetPossibleInitSteps indicates an expected call of GetPossibleInitSteps.
+func (mr *MockBatchSvcMockRecorder) GetPossibleInitSteps(ctx, scanningStationID, batchID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPossibleInitSteps", reflect.TypeOf((*MockBatchSvc)(nil).GetPossibleInitSteps), ctx, scanningStationID, batchID)
+}
+
 // GetPossibleNextSteps mocks base method.
 func (m *MockBatchSvc) GetPossibleNextSteps(ctx context.Context, scanningStationID, batchID string) ([]domain.ScanningProductionStepInfo, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -7354,6 +7369,21 @@ func NewMockPurchaseOrderSvc(ctrl *gomock.Controller) *MockPurchaseOrderSvc {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockPurchaseOrderSvc) EXPECT() *MockPurchaseOrderSvcMockRecorder {
 	return m.recorder
+}
+
+// BatchGetPurchaseOrderLinesByIDs mocks base method.
+func (m *MockPurchaseOrderSvc) BatchGetPurchaseOrderLinesByIDs(ctx context.Context, ids []string) ([]*domain.PurchaseOrderLine, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchGetPurchaseOrderLinesByIDs", ctx, ids)
+	ret0, _ := ret[0].([]*domain.PurchaseOrderLine)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// BatchGetPurchaseOrderLinesByIDs indicates an expected call of BatchGetPurchaseOrderLinesByIDs.
+func (mr *MockPurchaseOrderSvcMockRecorder) BatchGetPurchaseOrderLinesByIDs(ctx, ids any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetPurchaseOrderLinesByIDs", reflect.TypeOf((*MockPurchaseOrderSvc)(nil).BatchGetPurchaseOrderLinesByIDs), ctx, ids)
 }
 
 // BulkDeletePurchaseOrders mocks base method.

@@ -195,7 +195,7 @@ type ListScheduleLinesForStatusRow struct {
 
 // ListScheduleLinesForStatus returns the plan from the current week forward, with how much of each campaign the floor has already scanned.
 //
-// Progress is aggregated per (run, item) in a derived table: a run holds every SKU in its week, so joining batches directly would both multiply the line and credit each campaign with its neighbours' work.
+// Progress is aggregated per (run, item) in a derived table: a run holds every SKU in its week, so joining batches directly would both multiply the line and credit each campaign with its neighbors' work.
 func (q *Queries) ListScheduleLinesForStatus(ctx context.Context, arg ListScheduleLinesForStatusParams) ([]ListScheduleLinesForStatusRow, error) {
 	rows, err := q.db.QueryContext(ctx, listScheduleLinesForStatus,
 		arg.AccountID,

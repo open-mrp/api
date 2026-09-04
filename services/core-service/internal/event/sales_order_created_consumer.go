@@ -8,6 +8,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/hubspotsync"
 	"github.com/open-mrp/api/shared/contracts"
+	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
 	"github.com/open-mrp/api/shared/tracing"
 
@@ -71,7 +72,7 @@ func (c *SalesOrderCreatedConsumer) handleMessage(ctx context.Context, msg amqp.
 
 	if data.SalesOrderID == "" || data.AccountID == "" {
 		log.Printf("[sales_order_created] Missing sales order ID or account ID in event")
-		return nil
+		return c.inboxConsumer.Discard(ctx, "missing sales order or account id")
 	}
 
 	span.SetAttributes(
@@ -114,5 +115,5 @@ func (c *SalesOrderCreatedConsumer) syncHubspot(ctx context.Context, data messag
 	}
 	log.Printf("[sales_order_created] HubSpot sync permanently failed for order %s (account %s): %v",
 		data.SalesOrderID, data.AccountID, apiErr)
-	return nil
+	return c.inboxConsumer.Discard(ctx, apierror.Describe(apiErr))
 }

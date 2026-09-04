@@ -22,7 +22,8 @@ SELECT
     d.created_at,
     d.updated_at,
     so.id AS purchase_order_id,
-    so.number AS purchase_order_number
+    so.number AS purchase_order_number,
+    so.sales_order_status_code AS purchase_order_status
 FROM delivery d
 JOIN sales_order so ON d.sales_order_id = so.id
 WHERE d.id = ?
@@ -44,6 +45,7 @@ type GetDeliveryRow struct {
 	UpdatedAt           time.Time
 	PurchaseOrderID     string
 	PurchaseOrderNumber string
+	PurchaseOrderStatus string
 }
 
 func (q *Queries) GetDelivery(ctx context.Context, arg GetDeliveryParams) (GetDeliveryRow, error) {
@@ -59,6 +61,7 @@ func (q *Queries) GetDelivery(ctx context.Context, arg GetDeliveryParams) (GetDe
 		&i.UpdatedAt,
 		&i.PurchaseOrderID,
 		&i.PurchaseOrderNumber,
+		&i.PurchaseOrderStatus,
 	)
 	return i, err
 }
@@ -74,6 +77,7 @@ SELECT
     d.updated_at,
     so.id AS purchase_order_id,
     so.number AS purchase_order_number,
+    so.sales_order_status_code AS purchase_order_status,
     COUNT(dl.id) AS line_count
 FROM delivery d
 JOIN sales_order so ON d.sales_order_id = so.id
@@ -114,7 +118,7 @@ AND (
     d.created_at > ?
     OR (d.created_at = ? AND d.id > ?)
 )
-GROUP BY d.id, d.number, d.delivery_status_code, d.accepted_at, d.rejected_at, d.created_at, d.updated_at, so.id, so.number
+GROUP BY d.id, d.number, d.delivery_status_code, d.accepted_at, d.rejected_at, d.created_at, d.updated_at, so.id, so.number, so.sales_order_status_code
 ORDER BY d.created_at ASC, d.id ASC
 LIMIT ?
 `
@@ -144,6 +148,7 @@ type ListDeliveriesBackwardRow struct {
 	UpdatedAt           time.Time
 	PurchaseOrderID     string
 	PurchaseOrderNumber string
+	PurchaseOrderStatus string
 	LineCount           int64
 }
 
@@ -200,6 +205,7 @@ func (q *Queries) ListDeliveriesBackward(ctx context.Context, arg ListDeliveries
 			&i.UpdatedAt,
 			&i.PurchaseOrderID,
 			&i.PurchaseOrderNumber,
+			&i.PurchaseOrderStatus,
 			&i.LineCount,
 		); err != nil {
 			return nil, err
@@ -226,6 +232,7 @@ SELECT
     d.updated_at,
     so.id AS purchase_order_id,
     so.number AS purchase_order_number,
+    so.sales_order_status_code AS purchase_order_status,
     COUNT(dl.id) AS line_count
 FROM delivery d
 JOIN sales_order so ON d.sales_order_id = so.id
@@ -267,7 +274,7 @@ AND (
     OR d.created_at < ?
     OR (d.created_at = ? AND d.id < ?)
 )
-GROUP BY d.id, d.number, d.delivery_status_code, d.accepted_at, d.rejected_at, d.created_at, d.updated_at, so.id, so.number
+GROUP BY d.id, d.number, d.delivery_status_code, d.accepted_at, d.rejected_at, d.created_at, d.updated_at, so.id, so.number, so.sales_order_status_code
 ORDER BY d.created_at DESC, d.id DESC
 LIMIT ?
 `
@@ -297,6 +304,7 @@ type ListDeliveriesForwardRow struct {
 	UpdatedAt           time.Time
 	PurchaseOrderID     string
 	PurchaseOrderNumber string
+	PurchaseOrderStatus string
 	LineCount           int64
 }
 
@@ -354,6 +362,7 @@ func (q *Queries) ListDeliveriesForward(ctx context.Context, arg ListDeliveriesF
 			&i.UpdatedAt,
 			&i.PurchaseOrderID,
 			&i.PurchaseOrderNumber,
+			&i.PurchaseOrderStatus,
 			&i.LineCount,
 		); err != nil {
 			return nil, err
@@ -380,10 +389,17 @@ SELECT
     q.value AS quantity_value,
     qu.id AS quantity_unit_id,
     qu.abbreviation AS quantity_unit_abbreviation,
+    -- The purchase order line the goods were ordered on, reached through the receiving line this
+    -- delivery line was stocked against.
+    sol.id AS order_line_id,
     r.id AS unit_cost_id,
     r.value AS unit_cost_value,
     r.numerator_unit_id AS unit_cost_numerator_unit_id,
     r.denominator_unit_id AS unit_cost_denominator_unit_id,
+    rnu.abbreviation AS unit_cost_numerator_unit_abbreviation,
+    rdu.abbreviation AS unit_cost_denominator_unit_abbreviation,
+    r.created_at AS unit_cost_created_at,
+    r.updated_at AS unit_cost_updated_at,
     sol.item_id,
     i.sku AS item_sku,
     i.description AS item_description,
@@ -395,6 +411,8 @@ FROM delivery_line dl
 JOIN quantity q ON dl.quantity_id = q.id
 JOIN unit qu ON q.unit_id = qu.id
 JOIN rate r ON dl.unit_cost_id = r.id
+JOIN unit rnu ON r.numerator_unit_id = rnu.id
+JOIN unit rdu ON r.denominator_unit_id = rdu.id
 JOIN receiving_order_line rol ON dl.receiving_order_line_id = rol.id
 JOIN sales_order_line sol ON rol.sales_order_line_id = sol.id
 LEFT JOIN item i ON sol.item_id = i.id
@@ -405,26 +423,31 @@ ORDER BY dl.created_at ASC, dl.id ASC
 `
 
 type ListDeliveryLinesRow struct {
-	ID                        string
-	AcceptedAt                sql.NullTime
-	RejectedAt                sql.NullTime
-	CreatedAt                 time.Time
-	UpdatedAt                 time.Time
-	QuantityID                string
-	QuantityValue             string
-	QuantityUnitID            string
-	QuantityUnitAbbreviation  string
-	UnitCostID                string
-	UnitCostValue             string
-	UnitCostNumeratorUnitID   string
-	UnitCostDenominatorUnitID string
-	ItemID                    sql.NullString
-	ItemSku                   sql.NullString
-	ItemDescription           sql.NullString
-	StorageLocationID         sql.NullString
-	StorageLocationName       sql.NullString
-	LotID                     sql.NullString
-	LotNumber                 sql.NullString
+	ID                                  string
+	AcceptedAt                          sql.NullTime
+	RejectedAt                          sql.NullTime
+	CreatedAt                           time.Time
+	UpdatedAt                           time.Time
+	QuantityID                          string
+	QuantityValue                       string
+	QuantityUnitID                      string
+	QuantityUnitAbbreviation            string
+	OrderLineID                         string
+	UnitCostID                          string
+	UnitCostValue                       string
+	UnitCostNumeratorUnitID             string
+	UnitCostDenominatorUnitID           string
+	UnitCostNumeratorUnitAbbreviation   string
+	UnitCostDenominatorUnitAbbreviation string
+	UnitCostCreatedAt                   time.Time
+	UnitCostUpdatedAt                   time.Time
+	ItemID                              sql.NullString
+	ItemSku                             sql.NullString
+	ItemDescription                     sql.NullString
+	StorageLocationID                   sql.NullString
+	StorageLocationName                 sql.NullString
+	LotID                               sql.NullString
+	LotNumber                           sql.NullString
 }
 
 func (q *Queries) ListDeliveryLines(ctx context.Context, deliveryID string) ([]ListDeliveryLinesRow, error) {
@@ -446,10 +469,15 @@ func (q *Queries) ListDeliveryLines(ctx context.Context, deliveryID string) ([]L
 			&i.QuantityValue,
 			&i.QuantityUnitID,
 			&i.QuantityUnitAbbreviation,
+			&i.OrderLineID,
 			&i.UnitCostID,
 			&i.UnitCostValue,
 			&i.UnitCostNumeratorUnitID,
 			&i.UnitCostDenominatorUnitID,
+			&i.UnitCostNumeratorUnitAbbreviation,
+			&i.UnitCostDenominatorUnitAbbreviation,
+			&i.UnitCostCreatedAt,
+			&i.UnitCostUpdatedAt,
 			&i.ItemID,
 			&i.ItemSku,
 			&i.ItemDescription,
@@ -457,6 +485,61 @@ func (q *Queries) ListDeliveryLines(ctx context.Context, deliveryID string) ([]L
 			&i.StorageLocationName,
 			&i.LotID,
 			&i.LotNumber,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listReceivingOrderRefsForOrders = `-- name: ListReceivingOrderRefsForOrders :many
+SELECT ro.order_id, ro.id, ro.number,
+    CASE WHEN ro.completed_at IS NULL THEN 'open' ELSE 'completed' END AS status
+FROM receiving_order ro
+WHERE ro.order_id IN (/*SLICE:order_ids*/?)
+`
+
+type ListReceivingOrderRefsForOrdersRow struct {
+	OrderID string
+	ID      string
+	Number  string
+	Status  string
+}
+
+// ListReceivingOrderRefsForOrders names the receiving order created for each of the given purchase orders.
+//
+// One receiving order exists per issued purchase order, so this is the link a delivery follows to reach the order it was received against.
+func (q *Queries) ListReceivingOrderRefsForOrders(ctx context.Context, orderIds []string) ([]ListReceivingOrderRefsForOrdersRow, error) {
+	query := listReceivingOrderRefsForOrders
+	var queryParams []interface{}
+	if len(orderIds) > 0 {
+		for _, v := range orderIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:order_ids*/?", strings.Repeat(",?", len(orderIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:order_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListReceivingOrderRefsForOrdersRow
+	for rows.Next() {
+		var i ListReceivingOrderRefsForOrdersRow
+		if err := rows.Scan(
+			&i.OrderID,
+			&i.ID,
+			&i.Number,
+			&i.Status,
 		); err != nil {
 			return nil, err
 		}

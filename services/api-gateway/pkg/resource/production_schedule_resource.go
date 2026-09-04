@@ -150,7 +150,7 @@ type ScheduleDiagnostics struct {
 	MachinesWithoutStep int32 `json:"machines_without_step"`
 	// Minutes of changeover the model adds for each new input a product transition introduces.
 	//
-	// Calibrated from measured production against `average_inputs_added`, so the modelled changeover lands on the time the floor actually reports rather than on a fixed allowance.
+	// Calibrated from measured production against `average_inputs_added`, so the modeled changeover lands on the time the floor actually reports rather than on a fixed allowance.
 	ChangeoverSlopeMinutes float64 `json:"changeover_slope_minutes"`
 	// Average inputs a product transition introduces, measured from history.
 	AverageInputsAdded float64 `json:"average_inputs_added"`
@@ -192,7 +192,7 @@ type ScheduleFinishingDiagnostics struct {
 	GreigeStarvedSKUs []string `json:"greige_starved_skus"`
 	// Finished goods that had greige and never had hours.
 	CapacityStarvedSKUs []string `json:"capacity_starved_skus"`
-	// Finished goods with no measured finishing rate, which cannot be levelled because the hours they cost are unknown.
+	// Finished goods with no measured finishing rate, which cannot be leveled because the hours they cost are unknown.
 	ItemsWithoutRunRate []string `json:"items_without_run_rate"`
 	// Constraint output the horizon never converts into anything.
 	//
@@ -554,7 +554,7 @@ type ProductionScheduleLine struct {
 	PlannedLotUnits float64 `json:"planned_lot_units"`
 	// Constraint hours the campaign consumes.
 	PlannedRunHours float64 `json:"planned_run_hours"`
-	// Modelled changeover time before the campaign.
+	// Modeled changeover time before the campaign.
 	PlannedChangeoverMinutes float64 `json:"planned_changeover_minutes"`
 	// Order the campaign runs within its week.
 	SequenceIndex int32 `json:"sequence_index"`

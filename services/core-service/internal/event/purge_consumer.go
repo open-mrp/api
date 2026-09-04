@@ -25,7 +25,7 @@ type PurgeConsumer struct {
 func NewPurgeConsumer(rabbitmq messaging.MessageBroker, inboxRepo messaging.InboxRepo, purgeRepo *repository.PurgeRepo) *PurgeConsumer {
 	return &PurgeConsumer{
 		rabbitmq:      rabbitmq,
-		inboxConsumer: messaging.NewInboxConsumer(inboxRepo, "core-service"),
+		inboxConsumer: messaging.NewInboxConsumer(inboxRepo, "core-service").WithLeaseSeconds(jobInboxLeaseSeconds),
 		purgeRepo:     purgeRepo,
 		tracer:        tracing.GetTracer("core-service.purge_consumer"),
 	}
@@ -62,7 +62,7 @@ func (c *PurgeConsumer) handlePurgeMessage(ctx context.Context, msg amqp.Deliver
 
 	if payload.AccountID == "" {
 		log.Printf("[purge] Empty account ID in purge payload")
-		return nil
+		return c.inboxConsumer.Discard(ctx, "no account on purge payload")
 	}
 
 	span.SetAttributes(attribute.String("purge.account_id", payload.AccountID))

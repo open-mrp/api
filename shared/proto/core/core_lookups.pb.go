@@ -10086,8 +10086,11 @@ type ReconciledItemProto struct {
 	// Decimal strings.
 	PreviousMeasure string `protobuf:"bytes,5,opt,name=previous_measure,json=previousMeasure,proto3" json:"previous_measure,omitempty"`
 	NewMeasure      string `protobuf:"bytes,6,opt,name=new_measure,json=newMeasure,proto3" json:"new_measure,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// The item's base unit, which both measures are expressed in.
+	UnitId           string `protobuf:"bytes,7,opt,name=unit_id,json=unitId,proto3" json:"unit_id,omitempty"`
+	UnitAbbreviation string `protobuf:"bytes,8,opt,name=unit_abbreviation,json=unitAbbreviation,proto3" json:"unit_abbreviation,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *ReconciledItemProto) Reset() {
@@ -10148,6 +10151,20 @@ func (x *ReconciledItemProto) GetNewMeasure() string {
 	return ""
 }
 
+func (x *ReconciledItemProto) GetUnitId() string {
+	if x != nil {
+		return x.UnitId
+	}
+	return ""
+}
+
+func (x *ReconciledItemProto) GetUnitAbbreviation() string {
+	if x != nil {
+		return x.UnitAbbreviation
+	}
+	return ""
+}
+
 type SkippedItemProto struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Sku           string                 `protobuf:"bytes,1,opt,name=sku,proto3" json:"sku,omitempty"`
@@ -10204,6 +10221,7 @@ type ReconcileErrorProto struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Sku           string                 `protobuf:"bytes,1,opt,name=sku,proto3" json:"sku,omitempty"`
 	Error         string                 `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
+	ItemId        string                 `protobuf:"bytes,3,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -10248,6 +10266,13 @@ func (x *ReconcileErrorProto) GetSku() string {
 func (x *ReconcileErrorProto) GetError() string {
 	if x != nil {
 		return x.Error
+	}
+	return ""
+}
+
+func (x *ReconcileErrorProto) GetItemId() string {
+	if x != nil {
+		return x.ItemId
 	}
 	return ""
 }
@@ -11286,19 +11311,22 @@ const file_core_core_lookups_proto_rawDesc = "" +
 	"\ameasure\x18\x04 \x01(\tR\ameasureJ\x04\b\x03\x10\x04R\bquantity\"t\n" +
 	"\x19BulkReconcileItemsRequest\x12%\n" +
 	"\x0ereconcile_type\x18\x01 \x01(\tR\rreconcileType\x120\n" +
-	"\x04data\x18\x02 \x03(\v2\x1c.core.BulkReconcileItemInputR\x04data\"\xb9\x01\n" +
+	"\x04data\x18\x02 \x03(\v2\x1c.core.BulkReconcileItemInputR\x04data\"\xff\x01\n" +
 	"\x13ReconciledItemProto\x12\x17\n" +
 	"\aitem_id\x18\x01 \x01(\tR\x06itemId\x12\x10\n" +
 	"\x03sku\x18\x02 \x01(\tR\x03sku\x12)\n" +
 	"\x10previous_measure\x18\x05 \x01(\tR\x0fpreviousMeasure\x12\x1f\n" +
 	"\vnew_measure\x18\x06 \x01(\tR\n" +
-	"newMeasureJ\x04\b\x03\x10\x04J\x04\b\x04\x10\x05R\x11previous_quantityR\fnew_quantity\"<\n" +
+	"newMeasure\x12\x17\n" +
+	"\aunit_id\x18\a \x01(\tR\x06unitId\x12+\n" +
+	"\x11unit_abbreviation\x18\b \x01(\tR\x10unitAbbreviationJ\x04\b\x03\x10\x04J\x04\b\x04\x10\x05R\x11previous_quantityR\fnew_quantity\"<\n" +
 	"\x10SkippedItemProto\x12\x10\n" +
 	"\x03sku\x18\x01 \x01(\tR\x03sku\x12\x16\n" +
-	"\x06reason\x18\x02 \x01(\tR\x06reason\"=\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\"V\n" +
 	"\x13ReconcileErrorProto\x12\x10\n" +
 	"\x03sku\x18\x01 \x01(\tR\x03sku\x12\x14\n" +
-	"\x05error\x18\x02 \x01(\tR\x05error\"\xd2\x01\n" +
+	"\x05error\x18\x02 \x01(\tR\x05error\x12\x17\n" +
+	"\aitem_id\x18\x03 \x01(\tR\x06itemId\"\xd2\x01\n" +
 	"\x1aBulkReconcileItemsResponse\x12D\n" +
 	"\x10reconciled_items\x18\x01 \x03(\v2\x19.core.ReconciledItemProtoR\x0freconciledItems\x12;\n" +
 	"\rskipped_items\x18\x02 \x03(\v2\x16.core.SkippedItemProtoR\fskippedItems\x121\n" +

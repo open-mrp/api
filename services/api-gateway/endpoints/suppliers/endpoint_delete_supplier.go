@@ -22,8 +22,8 @@ type DeleteSupplierRequest struct {
 // The supplier's saved addresses and any users belonging to the supplier are deleted along with it. Returns the supplier as it looked immediately before deletion. Deleting a supplier that has already been deleted returns an error rather than succeeding again.
 type DeleteSupplierEndpoint struct{}
 
-func (e *DeleteSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteSupplierRequest, *apiresource.SupplierDetail] {
-	return (&apiendpoint.APIEndpoint[*DeleteSupplierRequest, *apiresource.SupplierDetail]{
+func (e *DeleteSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteSupplierRequest, *apiresource.Supplier] {
+	return (&apiendpoint.APIEndpoint[*DeleteSupplierRequest, *apiresource.Supplier]{
 		Title:             "Delete Supplier",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
@@ -35,7 +35,7 @@ func (e *DeleteSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteS
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainSuppliers, Action: types.ActionUpdate},
 		},
-		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteSupplierRequest) (*apiresource.SupplierDetail, *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteSupplierRequest) (*apiresource.Supplier, *apierror.APIError) {
 			return svc.(SupplierSvc).DeleteSupplier
 		},
 	})

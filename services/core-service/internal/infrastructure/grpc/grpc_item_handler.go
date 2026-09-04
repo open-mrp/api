@@ -302,6 +302,7 @@ func (h *gRPCHandler) GetItemCosts(ctx context.Context, req *pb.GetItemCostsRequ
 		OverheadCost:       costs.OverheadCost,
 		TotalCost:          costs.TotalCost,
 		UnitId:             costs.UnitID,
+		NumeratorUnitId:    costs.NumeratorUnitID,
 	}, nil
 }
 
@@ -581,13 +582,14 @@ func (h *gRPCHandler) BulkReconcileItems(ctx context.Context, req *pb.BulkReconc
 		resp.ReconciledItems = append(resp.ReconciledItems, &pb.ReconciledItemProto{
 			ItemId: r.ItemID, Sku: r.SKU,
 			PreviousMeasure: r.PreviousMeasure.String(), NewMeasure: r.NewMeasure.String(),
+			UnitId: r.UnitID,
 		})
 	}
 	for _, s := range result.SkippedItems {
 		resp.SkippedItems = append(resp.SkippedItems, &pb.SkippedItemProto{Sku: s.SKU, Reason: s.Reason})
 	}
 	for _, e := range result.Errors {
-		resp.Errors = append(resp.Errors, &pb.ReconcileErrorProto{Sku: e.SKU, Error: e.Error})
+		resp.Errors = append(resp.Errors, &pb.ReconcileErrorProto{Sku: e.SKU, Error: e.Error, ItemId: e.ItemID})
 	}
 
 	return resp, nil

@@ -253,6 +253,10 @@ func (r *repoFactoryImpl) NewOutboxRepo() messaging.OutboxRepo {
 	return NewOutboxRepo(r.queries)
 }
 
+func (r *repoFactoryImpl) NewInboxRepo() messaging.InboxRepo {
+	return NewInboxRepo(r.queries)
+}
+
 func (r *repoFactoryImpl) NewDeliveryRepo() domain.DeliveryRepo {
 	return NewDeliveryRepo(r.queries)
 }

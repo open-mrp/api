@@ -1,27 +1,50 @@
 -- name: TryInsertInboxRecord :one
-INSERT INTO message_inbox (message_id, service_name, handler, message_type, request_id, parent_message_id)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO message_inbox (message_id, service_name, handler, message_type, request_id, parent_message_id, lock_owner, lock_expires_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, now() + ($8 || ' seconds')::interval)
 RETURNING id;
 
 -- name: GetInboxRecordByMessageAndHandler :one
-SELECT id, message_id, service_name, handler, message_type, request_id, parent_message_id, status, attempts, last_error, received_at, processed_at
+SELECT id, message_id, service_name, handler, message_type, request_id, parent_message_id, status, attempts, last_error, received_at, processed_at, failed_at, lock_owner, lock_expires_at
 FROM message_inbox
 WHERE message_id = $1 AND handler = $2;
 
--- name: MarkInboxRecordProcessed :exec
+-- Conditional on the lease still being free, so two consumers racing the same abandoned record cannot both proceed to the handler.
+-- name: ClaimInboxRecord :execrows
 UPDATE message_inbox
-SET status = 'processed', processed_at = now()
-WHERE id = $1;
+SET lock_owner = $2, lock_expires_at = now() + ($3 || ' seconds')::interval
+WHERE id = $1
+  AND status = 'received'
+  AND (lock_expires_at IS NULL OR lock_expires_at <= now());
 
--- name: MarkInboxRecordFailed :exec
+-- The status guard is what makes this safe to call inside a handler's own transaction: a second attempt's UPDATE blocks on the row lock, then matches zero rows once the winner commits, so the loser's work rolls back instead of double-applying.
+-- name: CompleteInboxRecord :execrows
 UPDATE message_inbox
-SET attempts = attempts + 1, last_error = $1
-WHERE id = $2;
+SET status = 'processed', processed_at = now(), lock_owner = NULL, lock_expires_at = NULL
+WHERE id = $1 AND status = 'received' AND lock_owner = $2;
+
+-- Guarded on status and owner: an attempt whose lease already lapsed must not clear the lease of the consumer that claimed the record after it, nor stamp a failure over a record another attempt has already completed or discarded.
+-- name: MarkInboxRecordFailed :execrows
+UPDATE message_inbox
+SET attempts = attempts + 1, last_error = $1, failed_at = now(), lock_owner = NULL, lock_expires_at = NULL
+WHERE id = $2 AND status = 'received' AND lock_owner = $3;
+
+-- processed_at is stamped so the existing retention purge and its index cover discarded rows too; status is what distinguishes work that was dropped from work that was applied.
+-- Guarded like MarkInboxRecordFailed, so a lapsed attempt cannot overwrite a record another attempt has already completed.
+-- name: MarkInboxRecordDiscarded :execrows
+UPDATE message_inbox
+SET status = 'discarded', last_error = $1, failed_at = now(), processed_at = now(), lock_owner = NULL, lock_expires_at = NULL
+WHERE id = $2 AND status = 'received' AND lock_owner = $3;
+
+-- Terminal like a discard, but not a failure: the failure monitor scans 'discarded' and never this.
+-- name: MarkInboxRecordIgnored :execrows
+UPDATE message_inbox
+SET status = 'ignored', last_error = $1, processed_at = now(), lock_owner = NULL, lock_expires_at = NULL
+WHERE id = $2 AND status = 'received' AND lock_owner = $3;
 
 -- name: PurgeProcessedInboxMessages :execrows
 WITH rows AS (
     SELECT id FROM message_inbox
-    WHERE status = 'processed' AND processed_at < now() - ($1 || ' hours')::interval
+    WHERE status IN ('processed', 'discarded', 'ignored') AND processed_at < now() - ($1 || ' hours')::interval
     LIMIT $2
 )
 DELETE FROM message_inbox

@@ -28,7 +28,15 @@ func init() {
 				ExtractIDs:  extractResponsibleUserIDFromTransaction,
 				Populate:    populateResponsibleUserOnTransaction,
 			},
-			{Key: "allocations", Cardinality: resourcekit.CardinalityList, Populate: populateAllocationsOnTransaction},
+			{Key: "allocations", Cardinality: resourcekit.CardinalityList, Target: constants.ObjectTypeTransactionAllocation, ExtractRefs: extractAllocationRefsFromTransaction, Populate: populateAllocationsOnTransaction},
+			{
+				// The amount is already on the transaction — this exists so a caller can reach
+				// through it to the currency it is counted in.
+				Key:         "amount",
+				Target:      constants.ObjectTypeQuantity,
+				Cardinality: resourcekit.CardinalityOnePtr,
+				ExtractRefs: extractAmountRefFromTransaction,
+			},
 		},
 	})
 	// The transactions LIST returns TransactionSummary (a distinct resource), so it needs its own definition — the detail's customer funcs cast to *TransactionDetail.
@@ -118,4 +126,25 @@ func populateAllocationsOnTransaction(ctx context.Context, parent any, _ map[str
 		return
 	}
 	tx.Allocations = v.(*apiresource.List[apiresource.TransactionAllocation])
+}
+
+// The resolver runs Populate before gathering refs, so the allocations are already on the transaction.
+func extractAllocationRefsFromTransaction(_ context.Context, parent any) []any {
+	tx := parent.(*apiresource.TransactionDetail)
+	if tx.Allocations == nil {
+		return nil
+	}
+	refs := make([]any, len(tx.Allocations.Data))
+	for i := range tx.Allocations.Data {
+		refs[i] = &tx.Allocations.Data[i]
+	}
+	return refs
+}
+
+func extractAmountRefFromTransaction(_ context.Context, parent any) []any {
+	tx := parent.(*apiresource.TransactionDetail)
+	if tx.Amount == nil {
+		return nil
+	}
+	return []any{tx.Amount}
 }

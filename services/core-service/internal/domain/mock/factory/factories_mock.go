@@ -433,6 +433,20 @@ func (mr *MockRepoFactoryMockRecorder) NewIdempotencyKeyRepo() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewIdempotencyKeyRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewIdempotencyKeyRepo))
 }
 
+// NewInboxRepo mocks base method.
+func (m *MockRepoFactory) NewInboxRepo() messaging.InboxRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewInboxRepo")
+	ret0, _ := ret[0].(messaging.InboxRepo)
+	return ret0
+}
+
+// NewInboxRepo indicates an expected call of NewInboxRepo.
+func (mr *MockRepoFactoryMockRecorder) NewInboxRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewInboxRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewInboxRepo))
+}
+
 // NewInventoryChangeLogRepo mocks base method.
 func (m *MockRepoFactory) NewInventoryChangeLogRepo() domain.InventoryChangeLogRepo {
 	m.ctrl.T.Helper()

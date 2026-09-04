@@ -43,6 +43,7 @@ func (*BatchesEndpointGroup) Materialize(config *BatchesEndpointGroupConfig) *Ba
 	getBatchFlowEndpoint := apiendpoint.From(&batchep.GetBatchFlowEndpoint{}).WithService(inner, batchSvc)
 	listByScanningStationEndpoint := apiendpoint.From(&batchep.ListBatchesByScanningStationEndpoint{}).WithService(inner, batchSvc)
 	getPossibleNextStepsEndpoint := apiendpoint.From(&batchep.GetPossibleNextStepsEndpoint{}).WithService(inner, batchSvc)
+	getPossibleInitStepsEndpoint := apiendpoint.From(&batchep.GetPossibleInitStepsEndpoint{}).WithService(inner, batchSvc)
 	analyzeOpenBatchesEndpoint := apiendpoint.From(&batchep.AnalyzeOpenBatchesEndpoint{}).WithService(inner, batchSvc)
 	initializeBatchEndpoint := apiendpoint.From(&batchep.InitializeBatchEndpoint{}).WithService(inner, batchSvc)
 	moveBatchesEndpoint := apiendpoint.From(&batchep.MoveBatchesEndpoint{}).WithService(inner, batchSvc)
@@ -58,6 +59,7 @@ func (*BatchesEndpointGroup) Materialize(config *BatchesEndpointGroupConfig) *Ba
 		getBatchFlowEndpoint,
 		listByScanningStationEndpoint,
 		getPossibleNextStepsEndpoint,
+		getPossibleInitStepsEndpoint,
 		analyzeOpenBatchesEndpoint,
 		initializeBatchEndpoint,
 		moveBatchesEndpoint,

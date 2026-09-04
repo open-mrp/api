@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Closes the coverage gaps across /v1/operations/picks that the behavioural, filter, sort and
+// Closes the coverage gaps across /v1/operations/picks that the behavioral, filter, sort and
 // lifecycle suites leave open: the shipments listing beyond "it is empty", the rejection paths on
 // every write endpoint, and the request-shape guards (unknown include, unknown query parameter,
 // unknown JSON field) each route is supposed to enforce.

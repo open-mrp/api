@@ -248,13 +248,6 @@ func init() {
 	})
 
 	RegisterIncludes(&ObjectIncludes{
-		ObjectType: constants.ObjectTypeInventoryItem,
-		Fields: []IncludeFieldDef{
-			{Key: "quantity", ObjectType: constants.ObjectTypeQuantity},
-		},
-	})
-
-	RegisterIncludes(&ObjectIncludes{
 		ObjectType: constants.ObjectTypeItemInventory,
 		Fields: []IncludeFieldDef{
 			{Key: "on_hand", ObjectType: constants.ObjectTypeComputedQuantity},
@@ -436,6 +429,10 @@ func init() {
 		ObjectType: constants.ObjectTypeInvoiceLine,
 		Fields: []IncludeFieldDef{
 			{Key: "order_line", ObjectType: constants.ObjectTypeSalesOrderLine},
+			{Key: "item", ObjectType: constants.ObjectTypeItem},
+			// The quantity and the price are always on the line; naming them here is what lets a caller reach through to the units they are counted in.
+			{Key: "quantity", ObjectType: constants.ObjectTypeQuantity},
+			{Key: "unit_price", ObjectType: constants.ObjectTypeRate},
 		},
 	})
 
@@ -443,6 +440,8 @@ func init() {
 		ObjectType: constants.ObjectTypeInvoiceAllocation,
 		Fields: []IncludeFieldDef{
 			{Key: "transaction", ObjectType: constants.ObjectTypeTransaction},
+			// The amount is always on the allocation; naming it here is what lets a caller reach through to the currency it is counted in.
+			{Key: "amount", ObjectType: constants.ObjectTypeQuantity},
 		},
 	})
 
@@ -450,30 +449,66 @@ func init() {
 		ObjectType: constants.ObjectTypeTransactionAllocation,
 		Fields: []IncludeFieldDef{
 			{Key: "transaction", ObjectType: constants.ObjectTypeTransaction},
+			// The amount is always on the allocation; naming it here is what lets a caller reach through to the currency it is counted in.
+			{Key: "amount", ObjectType: constants.ObjectTypeQuantity},
 		},
 	})
 
 	RegisterIncludes(&ObjectIncludes{
 		ObjectType: constants.ObjectTypeDelivery,
 		Fields: []IncludeFieldDef{
-			{Key: "purchase_order", ObjectType: constants.ObjectTypePurchaseOrder},
+			{Key: "related", ObjectType: constants.ObjectTypeDeliveryRelated},
 			{Key: "lines", ObjectType: constants.ObjectTypeDeliveryLine},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeDeliveryLine,
+		Fields: []IncludeFieldDef{
+			{Key: "order_line", ObjectType: constants.ObjectTypePurchaseOrderLine},
+			{Key: "item", ObjectType: constants.ObjectTypeItem},
+			// The quantity is always on the line; naming it here is what lets a caller reach through it to the unit it is counted in.
+			{Key: "quantity", ObjectType: constants.ObjectTypeQuantity},
+			{Key: "unit_cost", ObjectType: constants.ObjectTypeRate},
+			{Key: "location", ObjectType: constants.ObjectTypeLocation},
+			{Key: "lot", ObjectType: constants.ObjectTypeLot},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeDeliveryRelated,
+		Fields: []IncludeFieldDef{
+			{Key: "purchase_order", ObjectType: constants.ObjectTypeRecord},
+			{Key: "receiving_order", ObjectType: constants.ObjectTypeRecord},
 		},
 	})
 
 	RegisterIncludes(&ObjectIncludes{
 		ObjectType: constants.ObjectTypeReceivingOrder,
 		Fields: []IncludeFieldDef{
-			{Key: "purchase_order", ObjectType: constants.ObjectTypePurchaseOrder},
 			{Key: "supplier", ObjectType: constants.ObjectTypeAccount},
 			{Key: "lines", ObjectType: constants.ObjectTypeReceivingOrderLine},
+			{Key: "totals", ObjectType: constants.ObjectTypeReceivingOrderTotals},
+			{Key: "related", ObjectType: constants.ObjectTypeReceivingOrderRelated},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeReceivingOrderRelated,
+		Fields: []IncludeFieldDef{
+			{Key: "purchase_order", ObjectType: constants.ObjectTypeRecord},
+			{Key: "deliveries", ObjectType: constants.ObjectTypeRecord},
 		},
 	})
 
 	RegisterIncludes(&ObjectIncludes{
 		ObjectType: constants.ObjectTypeReceivingOrderLine,
 		Fields: []IncludeFieldDef{
-			{Key: "order_line", ObjectType: constants.ObjectTypeSalesOrderLine},
+			{Key: "order_line", ObjectType: constants.ObjectTypePurchaseOrderLine},
+			{Key: "item", ObjectType: constants.ObjectTypeItem},
+			// Both quantities are always on the line; naming them here is what lets a caller reach through to the units they are counted in. The rejected figure needs no entry — it is computed, and arrives with its unit already.
+			{Key: "quantity", ObjectType: constants.ObjectTypeQuantity},
+			{Key: "quantity_ordered", ObjectType: constants.ObjectTypeQuantity},
 		},
 	})
 
@@ -585,9 +620,27 @@ func init() {
 			{Key: "freight", ObjectType: constants.ObjectTypeFreight},
 			{Key: "payment_term", ObjectType: constants.ObjectTypePaymentTerm},
 			{Key: "shipping_term", ObjectType: constants.ObjectTypeShippingTerm},
-			{Key: "receiving_order", ObjectType: constants.ObjectTypeReceivingOrder},
+			{Key: "related", ObjectType: constants.ObjectTypePurchaseOrderRelated},
 			{Key: "lines", ObjectType: constants.ObjectTypePurchaseOrderLine},
 			{Key: "contacts", ObjectType: constants.ObjectTypeEmailContact},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypePurchaseOrderLine,
+		Fields: []IncludeFieldDef{
+			{Key: "item", ObjectType: constants.ObjectTypeItem},
+			// The quantity and the two rates are always on the line; naming them here is what lets a caller reach through to the units they are counted in.
+			{Key: "quantity_ordered", ObjectType: constants.ObjectTypeQuantity},
+			{Key: "unit_price", ObjectType: constants.ObjectTypeRate},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypePurchaseOrderRelated,
+		Fields: []IncludeFieldDef{
+			{Key: "receiving_order", ObjectType: constants.ObjectTypeRecord},
+			{Key: "deliveries", ObjectType: constants.ObjectTypeRecord},
 		},
 	})
 
@@ -666,6 +719,9 @@ func init() {
 		ObjectType: constants.ObjectTypeShipmentLine,
 		Fields: []IncludeFieldDef{
 			{Key: "sales_order_line", ObjectType: constants.ObjectTypeSalesOrderLine},
+			{Key: "item", ObjectType: constants.ObjectTypeItem},
+			// The quantity is always on the line; naming it here is what lets a caller reach through it to the unit it is counted in.
+			{Key: "quantity", ObjectType: constants.ObjectTypeQuantity},
 		},
 	})
 
@@ -693,9 +749,14 @@ func init() {
 	RegisterIncludes(&ObjectIncludes{
 		ObjectType: constants.ObjectTypeTransaction,
 		Fields: []IncludeFieldDef{
-			{Key: "allocations", ObjectType: constants.ObjectTypeAllocationEntry},
+			{Key: "allocations", ObjectType: constants.ObjectTypeTransactionAllocation},
 			{Key: "customer", ObjectType: constants.ObjectTypeCustomer},
 			{Key: "responsible_user", ObjectType: constants.ObjectTypeAccountUser},
+			// The amount is always on the transaction, so it is never requested on its own — an
+			// endpoint that returns a transaction directly offers no `amount` key. It is named here
+			// only so a caller reaching a transaction through an allocation can go on to the
+			// currency the amount is counted in.
+			{Key: "amount", ObjectType: constants.ObjectTypeQuantity},
 		},
 	})
 
@@ -711,7 +772,25 @@ func init() {
 		ObjectType: constants.ObjectTypeSettlement,
 		Fields: []IncludeFieldDef{
 			{Key: "responsible_user", ObjectType: constants.ObjectTypeAccountUser},
-			{Key: "allocations", ObjectType: constants.ObjectTypeAllocationEntry},
+			{Key: "allocations", ObjectType: constants.ObjectTypeTransactionAllocation},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeBatch,
+		Fields: []IncludeFieldDef{
+			// The three measures are always on the batch; naming them here is what lets a caller reach through to the unit each is counted in.
+			{Key: "quantity", ObjectType: constants.ObjectTypeQuantity},
+			{Key: "seconds", ObjectType: constants.ObjectTypeQuantity},
+			{Key: "waste", ObjectType: constants.ObjectTypeQuantity},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeBatchFlowNode,
+		Fields: []IncludeFieldDef{
+			// The batch is already on the node; naming it is what lets a caller reach through to its measures' units.
+			{Key: "batch", ObjectType: constants.ObjectTypeBatch},
 		},
 	})
 

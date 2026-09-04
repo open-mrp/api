@@ -458,7 +458,7 @@ func (s *productionScheduleSvcImpl) createProductionScheduleLineTx(
 		if params.RunHours != nil {
 			line.PlannedRunHours = *params.RunHours
 		} else {
-			// Derived from the version's own measured rate for this SKU rather than left at zero. A campaign that claims no constraint time makes the week's utilisation read low, which is exactly the number a planner adds a campaign against.
+			// Derived from the version's own measured rate for this SKU rather than left at zero. A campaign that claims no constraint time makes the week's utilization read low, which is exactly the number a planner adds a campaign against.
 			runHours, apiErr := txSvc.estimatedRunHours(txCtx, accountID, params.ScheduleID, params.ItemID, params.MachineID, params.Quantity, machine.ProductionStepID)
 			if apiErr != nil {
 				return apiErr
@@ -619,7 +619,7 @@ func (s *productionScheduleSvcImpl) updateProductionScheduleLineTx(
 			}
 		}
 
-		// Machine time and lot count follow the quantity unless the caller prices the campaign itself. Left alone, a resized campaign keeps the hours it was originally sized at, and the week's utilisation — the number a planner resizes a campaign against — goes on reporting work that is no longer planned.
+		// Machine time and lot count follow the quantity unless the caller prices the campaign itself. Left alone, a resized campaign keeps the hours it was originally sized at, and the week's utilization — the number a planner resizes a campaign against — goes on reporting work that is no longer planned.
 		if params.Quantity != nil {
 			if params.RunHours == nil {
 				// The machine this edit is moving the campaign to, not the one it is leaving: the hours being booked are the new machine's.

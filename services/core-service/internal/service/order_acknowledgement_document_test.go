@@ -113,7 +113,7 @@ func TestOrderAcknowledgementDocMatchesLegacyFields(t *testing.T) {
 		}
 	})
 
-	t.Run("the price is labelled with the rate's pricing unit", func(t *testing.T) {
+	t.Run("the price is labeled with the rate's pricing unit", func(t *testing.T) {
 		if data.Lines[0].Price != "$8.50 / dz" {
 			t.Errorf("Price = %q, want the rate's denominator at two decimals", data.Lines[0].Price)
 		}

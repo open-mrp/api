@@ -136,9 +136,9 @@ func (s *salesOrderSvcImpl) stampShipByCommitment(ctx context.Context, accountID
 	return s.repos.NewSalesOrderRepo().SetShipByCommitment(ctx, accountID, order.ID, commitment)
 }
 
-// commitmentAnchor is the date the closure window is centred on: roughly where the commitment is expected to land, before any calendar has moved it.
+// commitmentAnchor is the date the closure window is centered on: roughly where the commitment is expected to land, before any calendar has moved it.
 //
-// Every basis is projected rather than defaulting to the issue date, because a lead time of any length puts the ship-by date outside a window centred on issue — a forty-five day lead time would already miss it, and the closures the walk runs through would silently not exist. The estimate only has to be close: the window is months wide, and being a few days out costs nothing.
+// Every basis is projected rather than defaulting to the issue date, because a lead time of any length puts the ship-by date outside a window centered on issue — a forty-five day lead time would already miss it, and the closures the walk runs through would silently not exist. The estimate only has to be close: the window is months wide, and being a few days out costs nothing.
 func commitmentAnchor(basis scheduling.CommitmentBasis, in scheduling.LeadTimeInput, issuedAt time.Time) time.Time {
 	switch {
 	case basis.ShipByOverrideDate != nil:

@@ -255,11 +255,15 @@ INSERT IGNORE INTO carrier_option (id, code, name, service_level_token, default_
 
 INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
     ('qu_01seedbatch1_qty0000', 10, 'un_01seedpair000000000', NOW(), NOW()),
-    ('qu_01seedbatch2_qty0000', 8, 'un_01seedpair000000000', NOW(), NOW());
+    ('qu_01seedbatch2_qty0000', 8, 'un_01seedpair000000000', NOW(), NOW()),
+    -- Batch 1 carries a seconds and a scrap measure, the two figures a split records, so
+    -- `?include=seconds.unit` and `waste.unit` have a row to resolve against.
+    ('qu_01seedbatch1_sec0000', 2, 'un_01seedpair000000000', NOW(), NOW()),
+    ('qu_01seedbatch1_wst0000', 1, 'un_01seedpair000000000', NOW(), NOW());
 
-INSERT IGNORE INTO batch (id, account_id, item_id, quantity_id, scanning_station_id, production_step_id, production_run_id, scanned_at, created_at, updated_at) VALUES
-    ('bt_01seedbatch1_0000000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'it_01seedlknitem000000', 'qu_01seedbatch1_qty0000', 'sgsn_01k0a8201zegarjfsjaw5n7yfv', 'prs_01k0a51qxceydax5036pegvzzy', 'pnrn_01seedprod_run0000', NOW(), NOW(), NOW()),
-    ('bt_01seedbatch2_0000000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'it_01seedsknitem000000', 'qu_01seedbatch2_qty0000', 'sgsn_01k0a8201zegarjfsjaw5n7yfv', 'prs_01k0a575j3fqr97khk36v114nj', 'pnrn_01seedprod_run0000', NOW(), NOW(), NOW());
+INSERT IGNORE INTO batch (id, account_id, item_id, quantity_id, seconds_quantity_id, waste_quantity_id, scanning_station_id, production_step_id, production_run_id, scanned_at, created_at, updated_at) VALUES
+    ('bt_01seedbatch1_0000000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'it_01seedlknitem000000', 'qu_01seedbatch1_qty0000', 'qu_01seedbatch1_sec0000', 'qu_01seedbatch1_wst0000', 'sgsn_01k0a8201zegarjfsjaw5n7yfv', 'prs_01k0a51qxceydax5036pegvzzy', 'pnrn_01seedprod_run0000', NOW(), NOW(), NOW()),
+    ('bt_01seedbatch2_0000000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'it_01seedsknitem000000', 'qu_01seedbatch2_qty0000', NULL, NULL, 'sgsn_01k0a8201zegarjfsjaw5n7yfv', 'prs_01k0a575j3fqr97khk36v114nj', 'pnrn_01seedprod_run0000', NOW(), NOW(), NOW());
 
 -- ============================================================
 -- EDI RUNS (2 rows for pagination)
@@ -434,7 +438,7 @@ INSERT IGNORE INTO email_sender (id, account_id, email_domain_id, local_part, fr
 -- include + the account_ids filter resolve a real account name.
 INSERT IGNORE INTO audit_event (type_id, actor_id, actor_type, identity_type, account_id, target_account_id, action, resource_type, resource_id, changes, metadata, service_name, request_id, occurred_at, created_at) VALUES
     ('adev_01seedauditevent01', 'us_1wjfmmbwg8l7', 'user', 'user', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'create', 'unit', 'un_01seedpair000000000', '[{"field":"name","old_value":null,"new_value":"Pair"}]', NULL, 'core-service', NULL, DATE_SUB(NOW(), INTERVAL 1 HOUR), NOW()),
-    ('adev_01seedauditevent02', 'us_1wjfmmbwg8l7', 'user', 'user', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'update', 'property', 'pp_01k0a7ntn1ez6aw8x850femxeh', '[{"field":"name","old_value":"Colour","new_value":"Color"}]', '{"seed":true,"note":"manual e2e seed"}', 'core-service', 'rqlog_01seedreqlog1_000', DATE_ADD(NOW(), INTERVAL 10 YEAR), DATE_ADD(NOW(), INTERVAL 10 YEAR));
+    ('adev_01seedauditevent02', 'us_1wjfmmbwg8l7', 'user', 'user', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'update', 'property', 'pp_01k0a7ntn1ez6aw8x850femxeh', '[{"field":"name","old_value":"Color","new_value":"Color"}]', '{"seed":true,"note":"manual e2e seed"}', 'core-service', 'rqlog_01seedreqlog1_000', DATE_ADD(NOW(), INTERVAL 10 YEAR), DATE_ADD(NOW(), INTERVAL 10 YEAR));
 
 -- Create event for the seed sales order so `?include=created_by` on that order
 -- resolves a real internal creator (relation=internal + actor). actor_type holds
@@ -879,9 +883,23 @@ INSERT IGNORE INTO delivery (id, number, sales_order_id, account_id, delivery_st
     ('dv_01seeddelivery1_0000', 'DLV-001', 'or_01seedpurchord1_000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'accepted', NOW(), NOW()),
     ('dv_01seeddelivery2_0000', 'DLV-002', 'or_01seedpurchord2_000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'accepted', NOW(), NOW());
 
-INSERT IGNORE INTO delivery_line (id, delivery_id, receiving_order_line_id, quantity_id, unit_cost_id, created_at, updated_at) VALUES
-    ('dvln_01seeddlvln1_0000', 'dv_01seeddelivery1_0000', 'rcln_01seedrecvln1_0000', 'qu_01seeddlvln1_qty000', 'rt_01seeddlvln1_cost00', NOW(), NOW()),
-    ('dvln_01seeddlvln2_0000', 'dv_01seeddelivery1_0000', 'rcln_01seedrecvln2_0000', 'qu_01seeddlvln2_qty000', 'rt_01seeddlvln2_cost00', NOW(), NOW());
+-- The lot the first delivery line's goods were received under. Stocking creates one per item and
+-- lot number; seeded directly here because deliveries are not created through the API.
+INSERT IGNORE INTO lot (id, account_id, item_id, lot_number, created_at, updated_at) VALUES
+    ('lot_01seeddlvlot1_000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'it_01seedyrn1item00000', 'LOT-DLV-001', NOW(), NOW());
+
+-- Line 1 carries a storage location and a lot, line 2 neither: both are expandable and both states
+-- have to be reachable, since a line stocked without a location is a supported path.
+-- accepted_at is deliberately left unset: these lines stand in for delivery records only, and
+-- stamping them as accepted would fold their quantities into the seeded inventory position that
+-- the item-inventory and shipment tests measure against.
+INSERT IGNORE INTO delivery_line (id, delivery_id, receiving_order_line_id, quantity_id, unit_cost_id, storage_location_id, lot_id, created_at, updated_at) VALUES
+    ('dvln_01seeddlvln1_0000', 'dv_01seeddelivery1_0000', 'rcln_01seedrecvln1_0000', 'qu_01seeddlvln1_qty000', 'rt_01seeddlvln1_cost00', 'sglc_01seedbuilding0000', 'lot_01seeddlvlot1_000', NOW(), NOW()),
+    ('dvln_01seeddlvln2_0000', 'dv_01seeddelivery1_0000', 'rcln_01seedrecvln2_0000', 'qu_01seeddlvln2_qty000', 'rt_01seeddlvln2_cost00', NULL, NULL, NOW(), NOW());
+
+-- Re-runs against an already-seeded database: INSERT IGNORE above leaves existing rows untouched.
+UPDATE delivery_line SET storage_location_id = 'sglc_01seedbuilding0000', lot_id = 'lot_01seeddlvlot1_000'
+    WHERE id = 'dvln_01seeddlvln1_0000';
 
 -- ============================================================
 -- CUSTOMER RICH LINKS (seed-gap fill for `?include=` coverage)
@@ -1583,7 +1601,7 @@ INSERT IGNORE INTO production_schedule_derived_line (
      2, 2, 'planned', NOW(3), NOW(3));
 
 -- ============================================================
--- PICK-BEHAVIOUR ORDER + PICK (pick update / line ops / pick-all / void / pack e2e)
+-- PICK-BEHAVIOR ORDER + PICK (pick update / line ops / pick-all / void / pack e2e)
 -- Dedicated rows for tests that MUTATE pick state. Deliberately has NO shipment, so
 -- the void guard ("cannot void a pick with shipped items") does not fire and the
 -- happy paths are reachable. No other test may assert on these values.

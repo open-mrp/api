@@ -188,7 +188,7 @@ func (s *OeeMeasurementStatus) StringPtr() *string {
 
 // OeeAnomaly is a data-quality warning attached to an OEE result.
 //
-// Modelled as a list of named anomalies rather than one boolean per condition so a new warning does not add another flag to every department in every response.
+// Modeled as a list of named anomalies rather than one boolean per condition so a new warning does not add another flag to every department in every response.
 type OeeAnomaly string
 
 const (

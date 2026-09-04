@@ -2,7 +2,7 @@ package constants
 
 // ActivationStatus is whether a configuration row is currently applied.
 //
-// Modelled as a status rather than an `is_active` boolean so that a third state — say `scheduled` or `expired` — can be added without changing the field's shape or meaning.
+// Modeled as a status rather than an `is_active` boolean so that a third state — say `scheduled` or `expired` — can be added without changing the field's shape or meaning.
 type ActivationStatus string
 
 const (

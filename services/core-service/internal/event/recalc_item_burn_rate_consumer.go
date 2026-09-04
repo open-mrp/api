@@ -85,15 +85,14 @@ func (c *RecalcItemBurnRateConsumer) handleMessage(ctx context.Context, msg amqp
 		accountID = amqpMsg.Identity.Target.AccountID
 	}
 
-	// A malformed command will never become well-formed, so these ack rather than filling the queue
-	// with a message that cannot be handled.
+	// A malformed command will never become well-formed. Discarding records the drop as terminal and surfaces it to the failure monitor, rather than ACKing it as if the recalculation had run.
 	switch {
 	case accountID == "":
 		slog.ErrorContext(ctx, "recalc_item_burn_rate: no account on event or identity", "item_id", evt.ItemID)
-		return nil
+		return c.inboxConsumer.Discard(ctx, "no account on event or identity")
 	case evt.ItemID == "":
 		slog.ErrorContext(ctx, "recalc_item_burn_rate: no item on event")
-		return nil
+		return c.inboxConsumer.Discard(ctx, "no item on event")
 	}
 
 	span.SetAttributes(
@@ -102,7 +101,10 @@ func (c *RecalcItemBurnRateConsumer) handleMessage(ctx context.Context, msg amqp
 	)
 
 	apiErr := c.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
-		return mediator.NewMediatorFactory().Build(f).BurnRate.RecalculateFromHistory(txCtx, accountID, evt.ItemID)
+		if apiErr := mediator.NewMediatorFactory().Build(f).BurnRate.RecalculateFromHistory(txCtx, accountID, evt.ItemID); apiErr != nil {
+			return apiErr
+		}
+		return completeInboxRecord(txCtx, f)
 	})
 	if apiErr != nil {
 		span.RecordError(apiErr)

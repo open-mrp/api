@@ -61,9 +61,7 @@ func (e *UpdatePickLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateP
 			Fields: []string{
 				"sales_order_line",
 				"sales_order_line.product",
-				"quantity",
 				"quantity.unit",
-				"ordered_quantity",
 				"ordered_quantity.unit",
 			},
 		}),

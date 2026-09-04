@@ -43,14 +43,11 @@ SELECT
     ro.updated_at,
     so.id AS purchase_order_id,
     so.number AS purchase_order_number,
+    so.sales_order_status_code AS purchase_order_status,
     a.id AS supplier_id,
     a.name AS supplier_name,
     ar.external_number AS supplier_number,
-    COUNT(rol.id) AS line_count,
-    CASE
-        WHEN COUNT(rol.id) = 0 THEN 0
-        ELSE ROUND(COUNT(CASE WHEN rol.stocked_at IS NOT NULL THEN 1 END) * 100.0 / COUNT(rol.id), 2)
-    END AS completion_percentage
+    COUNT(rol.id) AS line_count
 FROM receiving_order ro
 JOIN sales_order so ON ro.order_id = so.id
 LEFT JOIN account_relation ar ON so.seller_account_id = ar.counterparty_account_id AND ar.owner_account_id = ro.account_id
@@ -106,14 +103,11 @@ SELECT
     ro.updated_at,
     so.id AS purchase_order_id,
     so.number AS purchase_order_number,
+    so.sales_order_status_code AS purchase_order_status,
     a.id AS supplier_id,
     a.name AS supplier_name,
     ar.external_number AS supplier_number,
-    COUNT(rol.id) AS line_count,
-    CASE
-        WHEN COUNT(rol.id) = 0 THEN 0
-        ELSE ROUND(COUNT(CASE WHEN rol.stocked_at IS NOT NULL THEN 1 END) * 100.0 / COUNT(rol.id), 2)
-    END AS completion_percentage
+    COUNT(rol.id) AS line_count
 FROM receiving_order ro
 JOIN sales_order so ON ro.order_id = so.id
 LEFT JOIN account_relation ar ON so.seller_account_id = ar.counterparty_account_id AND ar.owner_account_id = ro.account_id
@@ -168,6 +162,7 @@ SELECT
     ro.updated_at,
     so.id AS purchase_order_id,
     so.number AS purchase_order_number,
+    so.sales_order_status_code AS purchase_order_status,
     a.id AS supplier_id,
     a.name AS supplier_name,
     ar.external_number AS supplier_number,
@@ -192,8 +187,10 @@ SELECT
     sol.id AS order_line_id,
     sol.item_id AS order_line_item_id,
     sol.product_id AS order_line_product_id,
+    sol.line_item_number AS order_line_item_number,
     i.sku AS order_line_item_sku,
     i.description AS order_line_item_description,
+    oq.id AS order_line_quantity_id,
     oq.value AS order_line_quantity_ordered,
     ou.id AS order_line_unit_id,
     ou.abbreviation AS order_line_unit_abbreviation,
@@ -301,8 +298,10 @@ SELECT
     sol.id AS order_line_id,
     sol.item_id AS order_line_item_id,
     sol.product_id AS order_line_product_id,
+    sol.line_item_number AS order_line_item_number,
     i.sku AS order_line_item_sku,
     i.description AS order_line_item_description,
+    oq.id AS order_line_quantity_id,
     oq.value AS order_line_quantity_ordered,
     ou.id AS order_line_unit_id,
     ou.abbreviation AS order_line_unit_abbreviation,
@@ -450,3 +449,51 @@ SET sales_order_status_code = 'fulfilled',
 WHERE id = sqlc.arg('id')
 AND buyer_account_id = sqlc.arg('account_id')
 AND sales_order_type_code = 'purchase_order';
+
+-- GetReceivingOrderTotals aggregates a page of receiving orders in one pass: what their lines were ordered for, what has been stocked, and what was refused.
+--
+-- Batched over a slice of order ids rather than run per order, because the list endpoint needs this for every row (see docs/patterns/performant-list-endpoint-patterns.md).
+--
+-- Every figure is an amount — the purchase order line's agreed unit price times a quantity — because a receiving order's lines can each count in a different unit, and money is the only common denominator they have. Summing the quantities instead would add pairs to metres.
+--
+-- The inner grouping is per purchase order line, not per receiving line. A line received in installments carries one receiving line per installment (see CreateLineForRemainingQuantity), and the ordered figure is a property of the purchase order line, so it is taken once per line with MAX rather than summed once per receipt against it.
+-- name: GetReceivingOrderTotals :many
+SELECT
+    g.receiving_order_id,
+    CAST(COALESCE(SUM(g.ordered_amount), 0) AS CHAR) AS ordered_amount,
+    CAST(COALESCE(SUM(g.stocked_amount), 0) AS CHAR) AS stocked_amount,
+    CAST(COALESCE(SUM(g.rejected_amount), 0) AS CHAR) AS rejected_amount
+FROM (
+    SELECT
+        rol.receiving_order_id,
+        rol.sales_order_line_id,
+        MAX(CAST(oq.value AS DECIMAL(30,10)) * CAST(r.value AS DECIMAL(30,10))) AS ordered_amount,
+        SUM(CASE WHEN rol.stocked_at IS NOT NULL THEN CAST(q.value AS DECIMAL(30,10)) * CAST(r.value AS DECIMAL(30,10)) END) AS stocked_amount,
+        -- Correlated rather than a derived table joined on receiving_order_line_id: a derived table
+        -- has nothing to scope it to this page, so it aggregates every rejected delivery line in the
+        -- table on every list request. Correlated, each row is an index lookup on
+        -- delivery_line_receiving_order_line_id_idx and the work stays proportional to the page.
+        SUM(COALESCE((
+            SELECT SUM(CAST(rq.value AS DECIMAL(30,10)))
+            FROM delivery_line dl
+            JOIN quantity rq ON dl.quantity_id = rq.id
+            WHERE dl.receiving_order_line_id = rol.id AND dl.rejected_at IS NOT NULL
+        ), 0) * CAST(r.value AS DECIMAL(30,10))) AS rejected_amount
+    FROM receiving_order_line rol
+    JOIN sales_order_line sol ON rol.sales_order_line_id = sol.id
+    JOIN rate r ON sol.unit_price_id = r.id
+    JOIN quantity oq ON sol.quantity_id = oq.id
+    JOIN quantity q ON rol.quantity_id = q.id
+    WHERE rol.receiving_order_id IN (sqlc.slice('receiving_order_ids'))
+    GROUP BY rol.receiving_order_id, rol.sales_order_line_id
+) g
+GROUP BY g.receiving_order_id;
+
+-- ListDeliveryRefsForOrders names the deliveries booked against each of the given purchase orders, oldest first.
+--
+-- Keyed on the purchase order rather than the receiving order because that is the column deliveries carry; a receiving order reaches its own deliveries through the order it was created for, which it is one-to-one with. Batched over a slice so a page of orders costs one query.
+-- name: ListDeliveryRefsForOrders :many
+SELECT d.sales_order_id AS order_id, d.id, d.number, d.delivery_status_code AS status
+FROM delivery d
+WHERE d.sales_order_id IN (sqlc.slice('order_ids'))
+ORDER BY d.created_at ASC, d.id ASC;

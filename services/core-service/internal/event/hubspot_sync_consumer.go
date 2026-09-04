@@ -27,7 +27,7 @@ type HubspotSyncConsumer struct {
 func NewHubspotSyncConsumer(rabbitmq messaging.MessageBroker, inboxRepo messaging.InboxRepo, hubspotSync hubspotsync.Service) *HubspotSyncConsumer {
 	return &HubspotSyncConsumer{
 		rabbitmq:      rabbitmq,
-		inboxConsumer: messaging.NewInboxConsumer(inboxRepo, "core-service"),
+		inboxConsumer: messaging.NewInboxConsumer(inboxRepo, "core-service").WithLeaseSeconds(jobInboxLeaseSeconds),
 		hubspotSync:   hubspotSync,
 		tracer:        tracing.GetTracer("core-service.hubspot_sync_consumer"),
 	}
@@ -62,7 +62,7 @@ func (c *HubspotSyncConsumer) handleMessage(ctx context.Context, msg amqp.Delive
 	}
 	if data.JobID == "" || data.AccountID == "" {
 		log.Printf("[hubspot_sync] Missing job or account id in command; dropping")
-		return nil
+		return c.inboxConsumer.Discard(ctx, "missing job or account id")
 	}
 	span.SetAttributes(
 		attribute.String("hubspot_sync.job_id", data.JobID),
@@ -79,7 +79,10 @@ func (c *HubspotSyncConsumer) handleMessage(ctx context.Context, msg amqp.Delive
 			return c.handleRunError(span, "execute", data.JobID, apiErr)
 		}
 	default:
+		// Not this handler's work rather than work it failed at, so it is ignored: terminal and
+		// visible in the inbox, but not an alert.
 		log.Printf("[hubspot_sync] unknown routing key %q; dropping", msg.RoutingKey)
+		return c.inboxConsumer.Ignore(ctx, "unknown routing key "+msg.RoutingKey)
 	}
 	return nil
 }

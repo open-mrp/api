@@ -8,37 +8,48 @@ import (
 
 // DeliverySummary represents a delivery with line count instead of full lines.
 type DeliverySummary struct {
-	ID                  string
-	Number              string
-	PurchaseOrderID     string
-	PurchaseOrderNumber string
-	Status              string
-	LineCount           int32
-	AcceptedAt          *time.Time
-	RejectedAt          *time.Time
-	CreatedAt           time.Time
-	UpdatedAt           time.Time
+	ID                   string
+	Number               string
+	PurchaseOrderID      string
+	PurchaseOrderNumber  string
+	PurchaseOrderStatus  string
+	ReceivingOrderID     string
+	ReceivingOrderNumber string
+	ReceivingOrderStatus string
+	Status               string
+	LineCount            int32
+	AcceptedAt           *time.Time
+	RejectedAt           *time.Time
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
 	// Lines (populated only when the list request includes "lines").
 	Lines []*DeliveryLine
 }
 
 // Delivery represents a full delivery with its lines.
 type Delivery struct {
-	ID                  string
-	Number              string
-	PurchaseOrderID     string
-	PurchaseOrderNumber string
-	Status              string
-	Lines               []*DeliveryLine
-	AcceptedAt          *time.Time
-	RejectedAt          *time.Time
-	CreatedAt           time.Time
-	UpdatedAt           time.Time
+	ID                   string
+	Number               string
+	PurchaseOrderID      string
+	PurchaseOrderNumber  string
+	PurchaseOrderStatus  string
+	ReceivingOrderID     string
+	ReceivingOrderNumber string
+	ReceivingOrderStatus string
+	Status               string
+	Lines                []*DeliveryLine
+	AcceptedAt           *time.Time
+	RejectedAt           *time.Time
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
 }
 
 // DeliveryLine represents a line item in a delivery.
 type DeliveryLine struct {
-	ID                        string
+	ID string
+	// The purchase order line the goods were ordered on, reached through the receiving line this
+	// delivery line was stocked against.
+	OrderLineID               string
 	ItemID                    *string
 	ItemSKU                   *string
 	ItemDescription           *string
@@ -50,14 +61,20 @@ type DeliveryLine struct {
 	UnitCostValue             string
 	UnitCostNumeratorUnitID   string
 	UnitCostDenominatorUnitID string
-	LocationID                *string
-	LocationName              *string
-	LotID                     *string
-	LotNumber                 *string
-	AcceptedAt                *time.Time
-	RejectedAt                *time.Time
-	CreatedAt                 time.Time
-	UpdatedAt                 time.Time
+	// The rate's own record, so a delivery line can present a complete unit cost
+	// rather than an id and a bare number.
+	UnitCostNumeratorUnitAbbreviation   string
+	UnitCostDenominatorUnitAbbreviation string
+	UnitCostCreatedAt                   time.Time
+	UnitCostUpdatedAt                   time.Time
+	LocationID                          *string
+	LocationName                        *string
+	LotID                               *string
+	LotNumber                           *string
+	AcceptedAt                          *time.Time
+	RejectedAt                          *time.Time
+	CreatedAt                           time.Time
+	UpdatedAt                           time.Time
 }
 
 // ListDeliveriesParams holds parameters for listing deliveries.

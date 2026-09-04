@@ -48,6 +48,13 @@ var SampleCustomerEntity = &Entity{
 	Handle: new(SampleCustomerNumber),
 }
 
+var SampleItemEntity = &Entity{
+	ID:     SampleItemID,
+	Object: constants.ObjectTypeEntity,
+	Type:   constants.ObjectTypeItem,
+	Name:   new(SampleItemSKU),
+}
+
 func (*Entity) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleUserEntity)
 }

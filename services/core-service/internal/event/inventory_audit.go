@@ -33,7 +33,7 @@ func updateInventoryWithAudit(
 		scanningStationID = &id
 	}
 
-	mediator.RecordInventoryAuditTrailOrLog(
+	return mediator.RecordInventoryAuditTrail(
 		ctx,
 		repos,
 		accountID,
@@ -44,7 +44,6 @@ func updateInventoryWithAudit(
 		scanningStationID,
 		params.ResponsibleUserID,
 	)
-	return nil
 }
 
 func (c *ExecuteProductionStepConsumer) updateInventoryWithAudit(
@@ -76,8 +75,7 @@ type inventoryAuditCollector struct {
 	pending []pendingInventoryAudit
 }
 
-// mutate applies a movement and records it for later levelling. The mutation itself must not fail
-// silently, so its error is returned; the audit trail is best-effort, matching updateInventoryWithAudit.
+// mutate applies a movement and records it for later leveling. A failed write would leave the scan's ledger half-applied, so the error is returned.
 func (col *inventoryAuditCollector) mutate(
 	ctx context.Context,
 	repos domain.RepoFactory,
@@ -109,16 +107,12 @@ func (col *inventoryAuditCollector) mutate(
 	return nil
 }
 
-// finalize levels every recorded movement and writes the audit trail. It runs after all of a scan's
-// mutations, so each item's level is its final physical inventory for the scan — endpoint-consistent
-// with what the item's inventory query would return now. It is best-effort throughout, as the inline
-// path was: a failure to level or log is traced, never surfaced to fail the scan.
+// finalize levels every recorded movement and writes the audit trail. It runs after all of a scan's mutations, so each item's level is its final physical inventory for the scan — endpoint-consistent with what the item's inventory query would return now.
 //
-// An item moved more than once in a single scan gets that same final level on each of its entries;
-// the intermediate levels the inline path recorded are not reproduced, which no consumer depends on.
-func (col *inventoryAuditCollector) finalize(ctx context.Context, repos domain.RepoFactory, accountID string) {
+// An item moved more than once in a single scan gets that same final level on each of its entries; the intermediate levels the inline path recorded are not reproduced, which no consumer depends on.
+func (col *inventoryAuditCollector) finalize(ctx context.Context, repos domain.RepoFactory, accountID string) *apierror.APIError {
 	if len(col.pending) == 0 {
-		return
+		return nil
 	}
 
 	ctx, span := inventoryAuditCollectorTracer.Start(ctx, "event.inventory_audit_collector.finalize")
@@ -144,14 +138,12 @@ func (col *inventoryAuditCollector) finalize(ctx context.Context, repos domain.R
 
 	baseByItem, apiErr := repos.NewInventoryQueryRepo().FetchPhysicalInventoryBaseForItems(ctx, accountID, itemIDs)
 	if apiErr != nil {
-		tracing.Trace(span, apiErr)
-		return
+		return tracing.Trace(span, apiErr)
 	}
 
 	factorsByUnit, apiErr := repos.NewUnitConversionRepo().GetUnitFactors(ctx, accountID, unitIDs)
 	if apiErr != nil {
-		tracing.Trace(span, apiErr)
-		return
+		return tracing.Trace(span, apiErr)
 	}
 
 	for _, p := range col.pending {
@@ -169,9 +161,10 @@ func (col *inventoryAuditCollector) finalize(ctx context.Context, repos domain.R
 			p.scanningStationID,
 			p.responsibleUserID,
 		); apiErr != nil {
-			tracing.Trace(span, apiErr)
+			return tracing.Trace(span, apiErr)
 		}
 	}
+	return nil
 }
 
 // levelInUnit expresses a base-unit physical inventory in unitID, dividing by the unit's ratio exactly

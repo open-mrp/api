@@ -134,7 +134,7 @@ func TestPricingFindingIncludes_AttributesRoundTrip(t *testing.T) {
 	}
 }
 
-// A unit loaded for the price attaches to every rate on the finding, so the peer median is labelled on the same basis as the price it is compared against.
+// A unit loaded for the price attaches to every rate on the finding, so the peer median is labeled on the same basis as the price it is compared against.
 func TestPricingFindingIncludes_UnitAttachesToEveryRate(t *testing.T) {
 	ctx := resourcekit.WithLoadMeta(context.Background())
 	median := "10.0000"

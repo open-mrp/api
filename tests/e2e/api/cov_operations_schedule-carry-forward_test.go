@@ -73,7 +73,7 @@ func carriedBatchIDs(result map[string]any) map[string]bool {
 	return out
 }
 
-// releaseWeekWith releases a week with the carry-forward behaviour spelled out.
+// releaseWeekWith releases a week with the carry-forward behavior spelled out.
 func releaseWeekWith(t *testing.T, scheduleID string, weekIndex int, skipCarryForward bool) map[string]any {
 	t.Helper()
 

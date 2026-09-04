@@ -37,7 +37,7 @@ type FlowRate struct {
 	DenominatorUnitID string
 
 	// NumeratorRatio and DenominatorRatio carry each side's unit into its dimension's base unit. A
-	// labour time is a duration and a labour rate is priced per duration; entered in different units —
+	// labor time is a duration and a labor rate is priced per duration; entered in different units —
 	// seconds a piece against dollars an hour — they can only be multiplied on a common footing.
 	NumeratorRatio   string
 	DenominatorRatio string

@@ -79,7 +79,7 @@ func (c *ExecuteProductionStepConsumer) handleMessage(ctx context.Context, msg a
 
 	if evt.ProductionStepID == "" {
 		log.Printf("[execute_production_step] Empty production step ID in event")
-		return nil
+		return c.inboxConsumer.Discard(ctx, "no production step on event")
 	}
 
 	// Extract account ID from identity.
@@ -89,7 +89,7 @@ func (c *ExecuteProductionStepConsumer) handleMessage(ctx context.Context, msg a
 	}
 	if accountID == "" {
 		log.Printf("[execute_production_step] No account ID in message identity")
-		return nil
+		return c.inboxConsumer.Discard(ctx, "no account on message identity")
 	}
 
 	span.SetAttributes(
@@ -108,10 +108,7 @@ func (c *ExecuteProductionStepConsumer) handleMessage(ctx context.Context, msg a
 
 // executeProductionStep runs the whole step in one transaction.
 //
-// The delivery is retried with backoff on failure and replayed from the top, and none of the ledger
-// writes below are individually idempotent: a step that failed after allocating drew the same receipts
-// again on the retry, consuming stock that was never used. Committing the step as a unit means a
-// failure leaves nothing behind for the replay to duplicate.
+// None of the ledger writes below is individually idempotent: a step that failed after allocating drew the same receipts again on the retry, consuming stock that was never used. Committing the step as a unit means a failure leaves nothing behind for the replay to duplicate, and committing the inbox recovery point with it means a success leaves nothing for a replay to apply a second time.
 func (c *ExecuteProductionStepConsumer) executeProductionStep(ctx context.Context, accountID string, evt domain.ExecuteProductionStepEvent) error {
 	itemIDs, apiErr := c.ledgerItemSet(ctx, accountID, evt)
 	if apiErr != nil {
@@ -131,12 +128,12 @@ func (c *ExecuteProductionStepConsumer) executeProductionStep(ctx context.Contex
 		if apiErr != nil {
 			return apiErr
 		}
-		return txConsumer.executeProductionStepTx(txCtx, scope, accountID, evt)
+		if apiErr := txConsumer.executeProductionStepTx(txCtx, scope, accountID, evt); apiErr != nil {
+			return apiErr
+		}
+		return completeInboxRecord(txCtx, f)
 	})
-	if apiErr != nil {
-		return apiErr
-	}
-	return nil
+	return discardIfPermanent(ctx, c.inboxConsumer, apiErr)
 }
 
 // ledgerItemSet names every item this step will write, on the pool, before the transaction opens.
@@ -196,10 +193,11 @@ func (c *ExecuteProductionStepConsumer) executeProductionStepTx(ctx context.Cont
 
 	// 3. Calculate execution multiplier by production.
 	// multiplier = convertedMeasure / step.production.quantity.measure
+	// The routing changed under the batch. Returning nil here committed a transaction that moved nothing and recorded the message as processed, so a step whose inventory was never applied looked identical to one that was. It is terminal — the step will not start producing the scanned item again — so it rolls back and is discarded rather than retried.
 	if step.Production.ProducedItem.ID != evt.ItemID {
 		log.Printf("[execute_production_step] Item mismatch: step produces %s but event has %s",
 			step.Production.ProducedItem.ID, evt.ItemID)
-		return nil
+		return newPermanentDropError("Production step " + evt.ProductionStepID + " no longer produces item " + evt.ItemID + ".")
 	}
 
 	convertedMeasure, apiErr := unitConvRepo.ConvertValue(ctx, batchMeasure, evt.BatchUnitID, step.Production.Quantity.Unit.ID)
@@ -210,7 +208,7 @@ func (c *ExecuteProductionStepConsumer) executeProductionStepTx(ctx context.Cont
 
 	if step.Production.Quantity.Measure.IsZero() {
 		log.Printf("[execute_production_step] Production quantity measure is zero for step %s", evt.ProductionStepID)
-		return nil
+		return newPermanentDropError("Production step " + evt.ProductionStepID + " has a zero production quantity.")
 	}
 
 	multiplier := convertedMeasure.Div(step.Production.Quantity.Measure)

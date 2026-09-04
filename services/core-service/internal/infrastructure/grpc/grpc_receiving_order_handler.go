@@ -24,14 +24,16 @@ func receivingOrderSummaryToProto(s *domain.ReceivingOrderSummary) *pb.Receiving
 	}
 
 	info := &pb.ReceivingOrderSummaryInfo{
-		Id:                   s.ID,
-		Number:               s.Number,
-		PurchaseOrderId:      s.PurchaseOrderID,
-		PurchaseOrderNumber:  s.PurchaseOrderNumber,
-		LineCount:            s.LineCount,
-		CompletionPercentage: s.CompletionPercentage,
-		CreatedAt:            timestamppb.New(s.CreatedAt),
-		UpdatedAt:            timestamppb.New(s.UpdatedAt),
+		Id:                  s.ID,
+		Number:              s.Number,
+		PurchaseOrderId:     s.PurchaseOrderID,
+		PurchaseOrderNumber: s.PurchaseOrderNumber,
+		PurchaseOrderStatus: s.PurchaseOrderStatus,
+		LineCount:           s.LineCount,
+		CreatedAt:           timestamppb.New(s.CreatedAt),
+		UpdatedAt:           timestamppb.New(s.UpdatedAt),
+		Totals:              receivingOrderTotalsToProto(s.Totals),
+		Deliveries:          documentRefsToProto(s.Deliveries),
 	}
 
 	if s.SupplierID != nil {
@@ -64,6 +66,9 @@ func receivingOrderToProto(o *domain.ReceivingOrder) *pb.ReceivingOrderInfo {
 		Number:              o.Number,
 		PurchaseOrderId:     o.PurchaseOrderID,
 		PurchaseOrderNumber: o.PurchaseOrderNumber,
+		PurchaseOrderStatus: o.PurchaseOrderStatus,
+		Totals:              receivingOrderTotalsToProto(o.Totals),
+		Deliveries:          documentRefsToProto(o.Deliveries),
 		CreatedAt:           timestamppb.New(o.CreatedAt),
 		UpdatedAt:           timestamppb.New(o.UpdatedAt),
 	}
@@ -107,6 +112,7 @@ func receivingOrderLineToProto(l *domain.ReceivingOrderLine) *pb.ReceivingOrderL
 		QuantityUnitId:            l.QuantityUnitID,
 		QuantityUnitAbbreviation:  l.QuantityUnitAbbreviation,
 		OrderLineId:               l.OrderLineID,
+		OrderLineQuantityId:       l.OrderLineQuantityID,
 		OrderLineQuantityOrdered:  l.OrderLineQuantityOrdered,
 		OrderLineUnitId:           l.OrderLineUnitID,
 		OrderLineUnitAbbreviation: l.OrderLineUnitAbbreviation,
@@ -120,6 +126,7 @@ func receivingOrderLineToProto(l *domain.ReceivingOrderLine) *pb.ReceivingOrderL
 	if l.OrderLineProductID != nil {
 		info.OrderLineProductId = l.OrderLineProductID
 	}
+	info.OrderLineItemNumber = l.OrderLineItemNumber
 	if l.OrderLineItemID != nil {
 		info.OrderLineItemId = l.OrderLineItemID
 	}
@@ -357,4 +364,26 @@ func (h *receivingGRPCHandler) ReceiveReceivingOrderLine(ctx context.Context, re
 	return &pb.ReceiveReceivingOrderLineResponse{
 		Line: receivingOrderLineToProto(line),
 	}, nil
+}
+
+func receivingOrderTotalsToProto(t *domain.ReceivingOrderTotals) *pb.ReceivingOrderTotalsInfo {
+	if t == nil {
+		return nil
+	}
+	return &pb.ReceivingOrderTotalsInfo{
+		OrderedAmount:  t.OrderedAmount,
+		StockedAmount:  t.StockedAmount,
+		RejectedAmount: t.RejectedAmount,
+	}
+}
+
+func documentRefsToProto(refs []domain.DocumentRef) []*pb.DocumentRefInfo {
+	if len(refs) == 0 {
+		return nil
+	}
+	out := make([]*pb.DocumentRefInfo, len(refs))
+	for i, r := range refs {
+		out[i] = &pb.DocumentRefInfo{Id: r.ID, Number: r.Number, Status: r.Status}
+	}
+	return out
 }

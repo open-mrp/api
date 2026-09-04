@@ -52,3 +52,38 @@ func PropertyFromProto(p *pb.PropertyInfo) *apiresource.Property {
 		UpdatedAt: grpcutil.TimestampToTime(p.UpdatedAt),
 	}
 }
+
+// LoadPropertiesByID resolves the properties a set of attributes name. An attribute carries only its
+// property's id, so a caller that wants to print the property's name has to fetch the record; the
+// alternative — an attribute shipping a property that is an id and a blank name — reads as a
+// property that has no name rather than as one nobody looked up.
+func LoadPropertiesByID(ctx context.Context, ids ...string) (map[string]*apiresource.Property, *apierror.APIError) {
+	unique := make([]string, 0, len(ids))
+	seen := make(map[string]struct{}, len(ids))
+	for _, id := range ids {
+		if id == "" {
+			continue
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		unique = append(unique, id)
+	}
+	if len(unique) == 0 {
+		return map[string]*apiresource.Property{}, nil
+	}
+
+	loaded, apiErr := LoadProperties(ctx, unique)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	out := make(map[string]*apiresource.Property, len(loaded))
+	for id, v := range loaded {
+		if p, ok := v.(*apiresource.Property); ok {
+			out[id] = p
+		}
+	}
+	return out, nil
+}

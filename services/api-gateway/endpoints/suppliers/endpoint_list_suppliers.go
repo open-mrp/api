@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/constants"
 
 	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
@@ -25,15 +26,13 @@ type ListSuppliersRequest struct {
 	EndDate *time.Time `query:"ends_at"`
 }
 
-// TODO: stop returning SupplierSummary; return the full Supplier apiresource and use proper includes values to control expansion.
-
 // Returns a paginated list of suppliers for the current account, newest first.
 //
 // Filters combine with AND, so an item filter and a date range narrow the list together. The `q` search term matches the supplier name and number.
 type ListSuppliersEndpoint struct{}
 
-func (e *ListSuppliersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSuppliersRequest, *apiresource.List[apiresource.SupplierSummary]] {
-	return (&apiendpoint.APIEndpoint[*ListSuppliersRequest, *apiresource.List[apiresource.SupplierSummary]]{
+func (e *ListSuppliersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSuppliersRequest, *apiresource.List[apiresource.Supplier]] {
+	return (&apiendpoint.APIEndpoint[*ListSuppliersRequest, *apiresource.List[apiresource.Supplier]]{
 		Title:             "List Suppliers",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
@@ -41,11 +40,16 @@ func (e *ListSuppliersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSupp
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
+		ObjectType:        constants.ObjectTypeSupplier,
 		RequiredPermissions: []types.Permission{
 			{Domain: types.PermissionDomainSuppliers, Action: types.ActionRead},
 		},
-		ServiceHandler: func(svc any) func(ctx context.Context, req *ListSuppliersRequest) (*apiresource.List[apiresource.SupplierSummary], *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *ListSuppliersRequest) (*apiresource.List[apiresource.Supplier], *apierror.APIError) {
 			return svc.(SupplierSvc).ListSuppliers
 		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeSupplier,
+			Fields:     []string{"bill_to_address", "ship_to_address"},
+		}),
 	})
 }

@@ -16,12 +16,13 @@ import (
 // A carton of eight, an each, and an item stocked by the carton whose only production step is written
 // in eaches — the shape every corrupted SKU in the incident had.
 const (
-	testCostAccountID   = "ac_cost"
-	testCostItemID      = "itm_hotmitt"
-	testCostStepID      = "ps_sew"
-	testCostUnitGroupID = "ug_case_of_eight"
-	testCostUnitEach    = "un_ea"
-	testCostUnitCarton  = "un_ct8ea"
+	testCostAccountID    = "ac_cost"
+	testCostItemID       = "itm_hotmitt"
+	testCostStepID       = "ps_sew"
+	testCostUnitGroupID  = "ug_case_of_eight"
+	testCostUnitEach     = "un_ea"
+	testCostUnitCarton   = "un_ct8ea"
+	testCostCurrencyUnit = "un_usd"
 )
 
 // eachesPerCarton is what the unit group says, and the factor every assertion below turns on.
@@ -36,8 +37,8 @@ type rolloutStubs struct {
 	consumptions    []domain.CostFlowConsumption
 	stepUnitInGroup bool
 
-	// The labour terms, each as the value and the base ratio of the unit it was entered in. Left unset
-	// they price nothing, which is the shape of a step with no labour recorded against it.
+	// The labor terms, each as the value and the base ratio of the unit it was entered in. Left unset
+	// they price nothing, which is the shape of a step with no labor recorded against it.
 	laborTime, laborTimeRatio   string
 	laborRate, laborRateRatio   string
 	overheadRate, overheadRatio string
@@ -112,6 +113,8 @@ func newCostRollupHarness(t *testing.T, stubs rolloutStubs) *costRollupHarness {
 	unitRepo := repositorymock.NewMockUnitRepo(ctrl)
 	unitRepo.EXPECT().IsUnitInGroup(gomock.Any(), testCostUnitGroupID, stubs.stepUnitID).
 		Return(stubs.stepUnitInGroup, nil).AnyTimes()
+	// The stubbed item has no unit-cost rate, so the currency comes from the fallback.
+	unitRepo.EXPECT().GetCurrencyBaseUnitID(gomock.Any()).Return(testCostCurrencyUnit, nil).AnyTimes()
 
 	convRepo := repositorymock.NewMockUnitConversionRepo(ctrl)
 	convRepo.EXPECT().ConvertValue(gomock.Any(), gomock.Any(), testCostUnitCarton, testCostUnitEach).
@@ -317,7 +320,7 @@ func consumedAgainstItsOwnUnit(qty, costPerUnit, baseRatio string) domain.CostFl
 }
 
 // Greige 110S, reproduced from production: five pounds-denominated materials, a batch of 24 eaches,
-// no labour, an item stocked by the carton of eight. $31.105457 of material over 24 eaches is
+// no labor, an item stocked by the carton of eight. $31.105457 of material over 24 eaches is
 // $1.29606 an each, and eight of those is $10.3685 a carton.
 //
 // The pound's base ratio appears on both sides of every term and must cancel: a quantity carried into
@@ -365,7 +368,7 @@ const (
 )
 
 // Greige 110S exactly as production holds it: 410 seconds a piece against $2.51 and $5.12 an hour.
-// Multiplying those raw prices an hour of labour for every second of it — 3600 times the wage bill —
+// Multiplying those raw prices an hour of labor for every second of it — 3600 times the wage bill —
 // and it put a $17 carton on the books at $25,036.
 func TestRecomputeItemCosts_LabourTimeAndRateMeetInBaseTimeUnits(t *testing.T) {
 	t.Parallel()
@@ -391,7 +394,7 @@ func TestRecomputeItemCosts_LabourTimeAndRateMeetInBaseTimeUnits(t *testing.T) {
 		t.Fatalf("RecomputeItemCosts: %v", apiErr)
 	}
 
-	// $1.29606 of material, $0.28586 of labour and $0.58311 of overhead an each, eight to the carton.
+	// $1.29606 of material, $0.28586 of labor and $0.58311 of overhead an each, eight to the carton.
 	want := decimal.RequireFromString("17.3202634444")
 	got := h.written[0].Cost
 	if got.Sub(want).Abs().GreaterThan(decimal.RequireFromString("0.0001")) {
@@ -399,7 +402,7 @@ func TestRecomputeItemCosts_LabourTimeAndRateMeetInBaseTimeUnits(t *testing.T) {
 	}
 }
 
-// A rate entered per minute has to price a per-minute wage, not an hourly one — the normalisation has
+// A rate entered per minute has to price a per-minute wage, not an hourly one — the normalization has
 // to read the unit, not assume the one that happened to be common.
 func TestRecomputeItemCosts_LabourRateIsReadInTheUnitItWasEnteredIn(t *testing.T) {
 	t.Parallel()
@@ -422,7 +425,7 @@ func TestRecomputeItemCosts_LabourRateIsReadInTheUnitItWasEnteredIn(t *testing.T
 	}
 }
 
-// A step with no labour recorded prices its material and nothing else; the normalisation must not
+// A step with no labor recorded prices its material and nothing else; the normalization must not
 // turn a missing rate into a zeroed-out or exploded cost.
 func TestRecomputeItemCosts_AbsentLabourPricesMaterialOnly(t *testing.T) {
 	t.Parallel()
@@ -442,5 +445,36 @@ func TestRecomputeItemCosts_AbsentLabourPricesMaterialOnly(t *testing.T) {
 	want := decimal.RequireFromString("48") // $6 of material an each, eight to the carton.
 	if got := h.written[0].Cost; got.Sub(want).Abs().GreaterThan(decimal.RequireFromString("0.0001")) {
 		t.Errorf("persisted %s, want %s", got, want)
+	}
+}
+
+// A cost is a number and the money it is counted in. The currency normally comes off the item's own
+// unit-cost rate, so a computed cost and the stored one name the same money — but an item priced from
+// its step graph for the first time has no such rate yet. Reporting the total with no currency at all
+// is the worse answer: the step costs it was summed from are all denominated in the default one.
+func TestRecomputeItemCosts_FallsBackToTheCurrencyBaseUnitWhenTheItemHasNoUnitCostYet(t *testing.T) {
+	t.Parallel()
+
+	h := newCostRollupHarness(t, rolloutStubs{
+		stepUnitID:      testCostUnitEach,
+		stepQuantity:    decimal.NewFromInt(1),
+		stepUnitInGroup: true,
+		consumptions: []domain.CostFlowConsumption{
+			consumedAgainstItsOwnUnit("2", "3", "453.59237"),
+		},
+	})
+
+	costs, apiErr := h.svc.RecomputeItemCosts(context.Background(), testCostAccountID, testCostItemID)
+	if apiErr != nil {
+		t.Fatalf("RecomputeItemCosts: %v", apiErr)
+	}
+
+	if costs.NumeratorUnitID != testCostCurrencyUnit {
+		t.Errorf("NumeratorUnitID = %q, want %q: a money figure with no currency is not a money figure",
+			costs.NumeratorUnitID, testCostCurrencyUnit)
+	}
+	if costs.UnitID != testCostUnitCarton {
+		t.Errorf("UnitID = %q, want %q: it is still stated per the unit the item is stocked in",
+			costs.UnitID, testCostUnitCarton)
 	}
 }

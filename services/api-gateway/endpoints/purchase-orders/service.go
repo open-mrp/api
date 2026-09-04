@@ -6,11 +6,13 @@ import (
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
+	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
+	"github.com/open-mrp/api/shared/ptrutil"
 	"github.com/open-mrp/api/shared/safeconv"
 	"github.com/open-mrp/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -47,7 +49,9 @@ type purchaseOrderSvcImpl struct {
 
 var purchaseOrderEpSvcTracer = tracing.GetTracer("api-gateway.endpoints.purchase-orders.service")
 
-var purchaseOrderIncludes = []string{"supplier", "bill_to_address", "ship_to_address", "freight", "payment_term", "shipping_term", "receiving_order", "lines", "contacts"}
+// What the backend understands. The nested unit includes are resolved gateway-side from ids the
+// order already returns, so they are deliberately absent here.
+var purchaseOrderIncludes = []string{"supplier", "bill_to_address", "ship_to_address", "freight", "payment_term", "shipping_term", "related", "related.receiving_order", "related.deliveries", "lines", "contacts"}
 
 // enumStrings narrows typed enum filters to the plain strings the proto layer carries.
 func enumStrings[T ~string](values []T) []string {
@@ -106,10 +110,19 @@ func (m *purchaseOrderSvcImpl) ListPurchaseOrders(ctx context.Context, req *List
 		return nil, apiErr
 	}
 
+	var lineInfos []*pb.PurchaseOrderLineInfo
+	for _, o := range resp.PurchaseOrders {
+		lineInfos = append(lineInfos, o.GetLines()...)
+	}
+	units, apiErr := resourceloaders.LoadUnitsByID(ctx, purchaseOrderLineUnitIDs(lineInfos...)...)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
 	orders := make([]apiresource.PurchaseOrder, len(resp.PurchaseOrders))
 	for i, o := range resp.PurchaseOrders {
 		orders[i] = purchaseOrderSummaryFromProto(o)
-		stashPurchaseOrderSummaryMeta(ctx, o, &orders[i])
+		stashPurchaseOrderSummaryMeta(ctx, o, &orders[i], units)
 	}
 
 	return apiresource.NewList(orders, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
@@ -131,7 +144,11 @@ func (m *purchaseOrderSvcImpl) GetPurchaseOrder(ctx context.Context, req *Retrie
 	}
 
 	result := purchaseOrderDetailFromProto(resp.PurchaseOrder)
-	stashPurchaseOrderDetailMeta(ctx, resp.PurchaseOrder, &result)
+	units, apiErr := resourceloaders.LoadUnitsByID(ctx, purchaseOrderLineUnitIDs(resp.PurchaseOrder.GetLines()...)...)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	stashPurchaseOrderDetailMeta(ctx, resp.PurchaseOrder, &result, units)
 	return &result, nil
 }
 
@@ -149,11 +166,6 @@ func (m *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, req *Cre
 			UnitPriceNumeratorUnitId:   l.UnitPrice.NumeratorUnitID,
 			UnitPriceDenominatorUnitId: l.UnitPrice.DenominatorUnitID,
 		}
-		if uc, ok := l.UnitCost.Value(); ok {
-			lines[i].UnitCostValue = &uc.Value
-			lines[i].UnitCostNumeratorUnitId = &uc.NumeratorUnitID
-			lines[i].UnitCostDenominatorUnitId = &uc.DenominatorUnitID
-		}
 	}
 
 	pbReq := &pb.CreatePurchaseOrderRequest{
@@ -166,6 +178,9 @@ func (m *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, req *Cre
 		PriorityCode:          string(req.PriorityCode),
 		ShippingTermId:        req.ShippingTermID.Ptr(),
 		PaymentTermId:         req.PaymentTermID.Ptr(),
+		Lines:                 lines,
+		ContactAccountUserIds: req.ContactAccountUserIDs,
+		PromisedAt:            req.PromisedAt.Ptr(),
 		BillToName:            req.BillToName.Ptr(),
 		BillToStreetLine_1:    req.BillToStreetLine1.Ptr(),
 		BillToStreetLine_2:    req.BillToStreetLine2.Ptr(),
@@ -180,9 +195,6 @@ func (m *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, req *Cre
 		ShipToState:           req.ShipToState.Ptr(),
 		ShipToPostalCode:      req.ShipToPostalCode.Ptr(),
 		ShipToCountry:         req.ShipToCountry.Ptr(),
-		Lines:                 lines,
-		ContactAccountUserIds: req.ContactAccountUserIDs,
-		PromisedAt:            req.PromisedAt.Ptr(),
 		Includes:              resourcekit.FilterIncludes(ctx, purchaseOrderIncludes...),
 	}
 
@@ -195,7 +207,11 @@ func (m *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, req *Cre
 	}
 
 	result := purchaseOrderDetailFromProto(resp.PurchaseOrder)
-	stashPurchaseOrderDetailMeta(ctx, resp.PurchaseOrder, &result)
+	units, apiErr := resourceloaders.LoadUnitsByID(ctx, purchaseOrderLineUnitIDs(resp.PurchaseOrder.GetLines()...)...)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	stashPurchaseOrderDetailMeta(ctx, resp.PurchaseOrder, &result, units)
 	return &result, nil
 }
 
@@ -222,7 +238,11 @@ func (m *purchaseOrderSvcImpl) UpdatePurchaseOrder(ctx context.Context, req *Upd
 	}
 
 	result := purchaseOrderDetailFromProto(resp.PurchaseOrder)
-	stashPurchaseOrderDetailMeta(ctx, resp.PurchaseOrder, &result)
+	units, apiErr := resourceloaders.LoadUnitsByID(ctx, purchaseOrderLineUnitIDs(resp.PurchaseOrder.GetLines()...)...)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	stashPurchaseOrderDetailMeta(ctx, resp.PurchaseOrder, &result, units)
 	return &result, nil
 }
 
@@ -271,7 +291,11 @@ func (m *purchaseOrderSvcImpl) ChangePurchaseOrderStatus(ctx context.Context, re
 	}
 
 	result := purchaseOrderDetailFromProto(resp.PurchaseOrder)
-	stashPurchaseOrderDetailMeta(ctx, resp.PurchaseOrder, &result)
+	units, apiErr := resourceloaders.LoadUnitsByID(ctx, purchaseOrderLineUnitIDs(resp.PurchaseOrder.GetLines()...)...)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	stashPurchaseOrderDetailMeta(ctx, resp.PurchaseOrder, &result, units)
 	return &result, nil
 }
 
@@ -288,11 +312,6 @@ func (m *purchaseOrderSvcImpl) CreatePurchaseOrderLine(ctx context.Context, req 
 		UnitPriceNumeratorUnitId:   req.UnitPrice.NumeratorUnitID,
 		UnitPriceDenominatorUnitId: req.UnitPrice.DenominatorUnitID,
 	}
-	if uc, ok := req.UnitCost.Value(); ok {
-		pbReq.UnitCostValue = &uc.Value
-		pbReq.UnitCostNumeratorUnitId = &uc.NumeratorUnitID
-		pbReq.UnitCostDenominatorUnitId = &uc.DenominatorUnitID
-	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, purchaseOrderEpSvcTracer, "service.purchase_orders.create_line", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreatePurchaseOrderLineResponse, error) {
@@ -302,7 +321,12 @@ func (m *purchaseOrderSvcImpl) CreatePurchaseOrderLine(ctx context.Context, req 
 		return nil, apiErr
 	}
 
-	result := purchaseOrderLineDetailFromProto(resp.PurchaseOrderLine)
+	units, apiErr := resourceloaders.LoadUnitsByID(ctx, purchaseOrderLineUnitIDs(resp.PurchaseOrderLine)...)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	result := purchaseOrderLineDetailFromProto(ctx, resp.PurchaseOrderLine, units)
 	return &result, nil
 }
 
@@ -319,9 +343,6 @@ func (m *purchaseOrderSvcImpl) UpdatePurchaseOrderLine(ctx context.Context, req 
 		UnitPriceValue:             req.UnitPriceValue.Ptr(),
 		UnitPriceNumeratorUnitId:   req.UnitPriceNumeratorUnitID.Ptr(),
 		UnitPriceDenominatorUnitId: req.UnitPriceDenominatorUnitID.Ptr(),
-		UnitCostValue:              req.UnitCostValue.Ptr(),
-		UnitCostNumeratorUnitId:    req.UnitCostNumeratorUnitID.Ptr(),
-		UnitCostDenominatorUnitId:  req.UnitCostDenominatorUnitID.Ptr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, purchaseOrderEpSvcTracer, "service.purchase_orders.update_line", domain.ServiceName,
@@ -332,7 +353,12 @@ func (m *purchaseOrderSvcImpl) UpdatePurchaseOrderLine(ctx context.Context, req 
 		return nil, apiErr
 	}
 
-	result := purchaseOrderLineDetailFromProto(resp.PurchaseOrderLine)
+	units, apiErr := resourceloaders.LoadUnitsByID(ctx, purchaseOrderLineUnitIDs(resp.PurchaseOrderLine)...)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	result := purchaseOrderLineDetailFromProto(ctx, resp.PurchaseOrderLine, units)
 	return &result, nil
 }
 
@@ -458,7 +484,7 @@ func acknowledgmentStatusFromBool(sent bool) constants.AcknowledgmentStatus {
 
 // stashPurchaseOrderSummaryMeta stashes the FK ids exposed by a list-view
 // summary so the include resolver can fetch the real expandable resources.
-func stashPurchaseOrderSummaryMeta(ctx context.Context, info *pb.PurchaseOrderSummaryInfo, d *apiresource.PurchaseOrder) {
+func stashPurchaseOrderSummaryMeta(ctx context.Context, info *pb.PurchaseOrderSummaryInfo, d *apiresource.PurchaseOrder, units map[string]*apiresource.Unit) {
 	if info == nil {
 		return
 	}
@@ -476,14 +502,14 @@ func stashPurchaseOrderSummaryMeta(ctx context.Context, info *pb.PurchaseOrderSu
 	if len(info.Lines) > 0 {
 		lines := make([]apiresource.PurchaseOrderLine, len(info.Lines))
 		for i, l := range info.Lines {
-			lines[i] = purchaseOrderLineDetailFromProto(l)
+			lines[i] = purchaseOrderLineDetailFromProto(ctx, l, units)
 		}
 		resourcekit.GetLoadMeta(ctx).Set(constants.ObjectTypePurchaseOrder, d.ID, "lines",
 			apiresource.NewList(lines, apiresource.PageInfo{}))
 	}
 }
 
-func stashPurchaseOrderDetailMeta(ctx context.Context, info *pb.PurchaseOrderInfo, d *apiresource.PurchaseOrder) {
+func stashPurchaseOrderDetailMeta(ctx context.Context, info *pb.PurchaseOrderInfo, d *apiresource.PurchaseOrder, units map[string]*apiresource.Unit) {
 	if info == nil {
 		return
 	}
@@ -616,16 +642,37 @@ func stashPurchaseOrderDetailMeta(ctx context.Context, info *pb.PurchaseOrderInf
 		meta.Set(constants.ObjectTypePurchaseOrder, d.ID, "shipping_term", st)
 	}
 
-	// receiving_order is a document-level cross-reference: stash only the FK id
-	// so the loader fetches the real ReceivingOrder on ?include=receiving_order.
-	// Never fabricate an inline stub.
-	if info.ReceivingOrderId != nil {
-		meta.Set(constants.ObjectTypePurchaseOrder, d.ID, "receiving_order_id", *info.ReceivingOrderId)
+	// The receiving order and deliveries are document-level cross-references, carried as records so a caller can follow them without this response embedding whole other orders.
+	related := &apiresource.PurchaseOrderRelated{Object: constants.ObjectTypePurchaseOrderRelated}
+	if info.ReceivingOrderId != nil && *info.ReceivingOrderId != "" {
+		ro := apiresource.NewRecord(*info.ReceivingOrderId, constants.RecordTypeReceivingOrder)
+		ro.Number = ptrutil.NonEmptyPtr(ptrutil.Deref(info.ReceivingOrderNumber))
+		ro.Status = ptrutil.NonEmptyPtr(ptrutil.Deref(info.ReceivingOrderStatus))
+		related.ReceivingOrder = ro
+	}
+	if len(info.Deliveries) > 0 {
+		records := make([]apiresource.Record, len(info.Deliveries))
+		for i, r := range info.Deliveries {
+			rec := apiresource.NewRecord(r.Id, constants.RecordTypeDelivery)
+			if r.Number != "" {
+				number := r.Number
+				rec.Number = &number
+			}
+			if r.Status != "" {
+				status := r.Status
+				rec.Status = &status
+			}
+			records[i] = *rec
+		}
+		related.Deliveries = apiresource.NewList(records, apiresource.PageInfo{})
+	}
+	if related.ReceivingOrder != nil || related.Deliveries != nil {
+		meta.Set(constants.ObjectTypePurchaseOrder, d.ID, "related", related)
 	}
 
 	lines := make([]apiresource.PurchaseOrderLine, len(info.Lines))
 	for i, l := range info.Lines {
-		lines[i] = purchaseOrderLineDetailFromProto(l)
+		lines[i] = purchaseOrderLineDetailFromProto(ctx, l, units)
 	}
 	meta.Set(constants.ObjectTypePurchaseOrder, d.ID, "lines", apiresource.NewList(lines, apiresource.PageInfo{}))
 
@@ -643,7 +690,7 @@ func stashPurchaseOrderDetailMeta(ctx context.Context, info *pb.PurchaseOrderInf
 	meta.Set(constants.ObjectTypePurchaseOrder, d.ID, "contacts", apiresource.NewList(contactItems, apiresource.PageInfo{}))
 }
 
-func purchaseOrderLineDetailFromProto(info *pb.PurchaseOrderLineInfo) apiresource.PurchaseOrderLine {
+func purchaseOrderLineDetailFromProto(ctx context.Context, info *pb.PurchaseOrderLineInfo, units map[string]*apiresource.Unit) apiresource.PurchaseOrderLine {
 	l := apiresource.PurchaseOrderLine{
 		ID:                 info.Id,
 		Object:             constants.ObjectTypePurchaseOrderLine,
@@ -653,40 +700,32 @@ func purchaseOrderLineDetailFromProto(info *pb.PurchaseOrderLineInfo) apiresourc
 		CreatedAt:          grpcutil.TimestampToTime(info.CreatedAt),
 		UpdatedAt:          grpcutil.TimestampToTime(info.UpdatedAt),
 	}
+	meta := resourcekit.GetLoadMeta(ctx)
 
-	if info.ItemId != nil {
-		item := &apiresource.Item{
-			ID:     *info.ItemId,
-			Object: constants.ObjectTypeItem,
-		}
-		if info.ItemSku != nil {
-			item.SKU = *info.ItemSku
-		}
-		l.Item = item
+	// The item is expandable: the line knows its id, and the item loader fills the rest.
+	if info.ItemId != nil && *info.ItemId != "" {
+		meta.Set(constants.ObjectTypePurchaseOrderLine, l.ID, "item_id", *info.ItemId)
 	}
 
+	// The quantities and rates ride on the line, but the units they are counted in are records of
+	// their own — stashed as ids so `quantity_ordered.unit` and its peers resolve them in full,
+	// rather than the line shipping a unit carrying nothing but an abbreviation.
 	l.QuantityOrdered = &apiresource.Quantity{
-		ID:     info.QuantityId,
-		Object: constants.ObjectTypeQuantity,
-		Value:  info.QuantityValue,
-		Unit: &apiresource.Unit{
-			ID:           info.QuantityUnitId,
-			Object:       constants.ObjectTypeUnit,
-			Name:         info.QuantityUnitName,
-			Abbreviation: info.QuantityUnitAbbreviation,
-		},
+		ID:           info.QuantityId,
+		Object:       constants.ObjectTypeQuantity,
+		Value:        info.QuantityValue,
+		DisplayValue: apiresource.FormatDisplayValue(info.QuantityValue, info.QuantityUnitAbbreviation, info.QuantityUnitType),
 	}
+	meta.Set(constants.ObjectTypeQuantity, info.QuantityId, "unit_id", info.QuantityUnitId)
 
+	// What has been received is rolled up from the receiving order's lines rather than stored, so
+	// it is a computed quantity: no id, and the unit travels with it.
 	if info.QuantityReceivedValue != nil {
-		l.QuantityReceived = &apiresource.Quantity{
-			Object: constants.ObjectTypeQuantity,
-			Value:  *info.QuantityReceivedValue,
-			Unit: &apiresource.Unit{
-				ID:           info.QuantityUnitId,
-				Object:       constants.ObjectTypeUnit,
-				Name:         info.QuantityUnitName,
-				Abbreviation: info.QuantityUnitAbbreviation,
-			},
+		l.QuantityReceived = &apiresource.ComputedQuantity{
+			Object:       constants.ObjectTypeComputedQuantity,
+			Value:        *info.QuantityReceivedValue,
+			DisplayValue: apiresource.FormatDisplayValue(*info.QuantityReceivedValue, info.QuantityUnitAbbreviation, info.QuantityUnitType),
+			Unit:         units[info.QuantityUnitId],
 		}
 	}
 
@@ -694,51 +733,13 @@ func purchaseOrderLineDetailFromProto(info *pb.PurchaseOrderLineInfo) apiresourc
 		ID:     info.UnitPriceId,
 		Object: constants.ObjectTypeRate,
 		Value:  info.UnitPriceValue,
-		NumeratorUnit: &apiresource.Unit{
-			ID:           info.UnitPriceNumeratorUnitId,
-			Object:       constants.ObjectTypeUnit,
-			Abbreviation: info.UnitPriceNumeratorUnitAbbreviation,
-		},
-		DenominatorUnit: &apiresource.Unit{
-			ID:           info.UnitPriceDenominatorUnitId,
-			Object:       constants.ObjectTypeUnit,
-			Abbreviation: info.UnitPriceDenominatorUnitAbbreviation,
-		},
-		DisplayValue: apiresource.FormatRateDisplayValue(info.UnitPriceValue, info.UnitPriceNumeratorUnitAbbreviation, "", info.UnitPriceDenominatorUnitAbbreviation),
+		DisplayValue: apiresource.FormatRateDisplayValue(
+			info.UnitPriceValue, info.UnitPriceNumeratorUnitAbbreviation, "", info.UnitPriceDenominatorUnitAbbreviation),
+		CreatedAt: grpcutil.TimestampToTime(info.UnitPriceCreatedAt),
+		UpdatedAt: grpcutil.TimestampToTime(info.UnitPriceUpdatedAt),
 	}
-
-	if info.UnitCostId != nil {
-		l.UnitCost = &apiresource.Rate{
-			ID:     *info.UnitCostId,
-			Object: constants.ObjectTypeRate,
-		}
-		var unitCostValue, unitCostNumeratorAbbr, unitCostDenominatorAbbr string
-		if info.UnitCostValue != nil {
-			l.UnitCost.Value = *info.UnitCostValue
-			unitCostValue = *info.UnitCostValue
-		}
-		if info.UnitCostNumeratorUnitId != nil {
-			l.UnitCost.NumeratorUnit = &apiresource.Unit{
-				ID:     *info.UnitCostNumeratorUnitId,
-				Object: constants.ObjectTypeUnit,
-			}
-			if info.UnitCostNumeratorUnitAbbreviation != nil {
-				l.UnitCost.NumeratorUnit.Abbreviation = *info.UnitCostNumeratorUnitAbbreviation
-				unitCostNumeratorAbbr = *info.UnitCostNumeratorUnitAbbreviation
-			}
-		}
-		if info.UnitCostDenominatorUnitId != nil {
-			l.UnitCost.DenominatorUnit = &apiresource.Unit{
-				ID:     *info.UnitCostDenominatorUnitId,
-				Object: constants.ObjectTypeUnit,
-			}
-			if info.UnitCostDenominatorUnitAbbreviation != nil {
-				l.UnitCost.DenominatorUnit.Abbreviation = *info.UnitCostDenominatorUnitAbbreviation
-				unitCostDenominatorAbbr = *info.UnitCostDenominatorUnitAbbreviation
-			}
-		}
-		l.UnitCost.DisplayValue = apiresource.FormatRateDisplayValue(unitCostValue, unitCostNumeratorAbbr, "", unitCostDenominatorAbbr)
-	}
+	meta.Set(constants.ObjectTypeRate, info.UnitPriceId, "numerator_unit_id", info.UnitPriceNumeratorUnitId)
+	meta.Set(constants.ObjectTypeRate, info.UnitPriceId, "denominator_unit_id", info.UnitPriceDenominatorUnitId)
 
 	return l
 }
@@ -787,4 +788,16 @@ func buildAddressFromProto(
 	}
 
 	return addr
+}
+
+// purchaseOrderLineUnitIDs names the units a set of lines is measured in, so a caller can resolve them before presenting.
+func purchaseOrderLineUnitIDs(lines ...*pb.PurchaseOrderLineInfo) []string {
+	ids := make([]string, 0, len(lines))
+	for _, l := range lines {
+		if l == nil {
+			continue
+		}
+		ids = append(ids, l.QuantityUnitId)
+	}
+	return ids
 }

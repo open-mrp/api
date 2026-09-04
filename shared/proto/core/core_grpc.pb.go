@@ -198,6 +198,7 @@ const (
 	CoreService_GetBatchFlow_FullMethodName                               = "/core.CoreService/GetBatchFlow"
 	CoreService_ListBatchesByScanningStation_FullMethodName               = "/core.CoreService/ListBatchesByScanningStation"
 	CoreService_GetBatchPossibleNextSteps_FullMethodName                  = "/core.CoreService/GetBatchPossibleNextSteps"
+	CoreService_GetBatchPossibleInitSteps_FullMethodName                  = "/core.CoreService/GetBatchPossibleInitSteps"
 	CoreService_AnalyzeOpenBatches_FullMethodName                         = "/core.CoreService/AnalyzeOpenBatches"
 	CoreService_InitializeBatch_FullMethodName                            = "/core.CoreService/InitializeBatch"
 	CoreService_MoveBatches_FullMethodName                                = "/core.CoreService/MoveBatches"
@@ -780,6 +781,7 @@ type CoreServiceClient interface {
 	ListBatchesByScanningStation(ctx context.Context, in *ListBatchesByScanningStationRequest, opts ...grpc.CallOption) (*ListBatchesByScanningStationResponse, error)
 	// Returns possible next production steps for a batch at a scanning station.
 	GetBatchPossibleNextSteps(ctx context.Context, in *GetBatchPossibleNextStepsRequest, opts ...grpc.CallOption) (*GetBatchPossibleNextStepsResponse, error)
+	GetBatchPossibleInitSteps(ctx context.Context, in *GetBatchPossibleInitStepsRequest, opts ...grpc.CallOption) (*GetBatchPossibleInitStepsResponse, error)
 	// Returns aggregated open batch summaries for analytics.
 	AnalyzeOpenBatches(ctx context.Context, in *AnalyzeOpenBatchesRequest, opts ...grpc.CallOption) (*AnalyzeOpenBatchesResponse, error)
 	// Initializes a batch at a scanning station.
@@ -2801,6 +2803,16 @@ func (c *coreServiceClient) GetBatchPossibleNextSteps(ctx context.Context, in *G
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetBatchPossibleNextStepsResponse)
 	err := c.cc.Invoke(ctx, CoreService_GetBatchPossibleNextSteps_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) GetBatchPossibleInitSteps(ctx context.Context, in *GetBatchPossibleInitStepsRequest, opts ...grpc.CallOption) (*GetBatchPossibleInitStepsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetBatchPossibleInitStepsResponse)
+	err := c.cc.Invoke(ctx, CoreService_GetBatchPossibleInitSteps_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -5466,6 +5478,7 @@ type CoreServiceServer interface {
 	ListBatchesByScanningStation(context.Context, *ListBatchesByScanningStationRequest) (*ListBatchesByScanningStationResponse, error)
 	// Returns possible next production steps for a batch at a scanning station.
 	GetBatchPossibleNextSteps(context.Context, *GetBatchPossibleNextStepsRequest) (*GetBatchPossibleNextStepsResponse, error)
+	GetBatchPossibleInitSteps(context.Context, *GetBatchPossibleInitStepsRequest) (*GetBatchPossibleInitStepsResponse, error)
 	// Returns aggregated open batch summaries for analytics.
 	AnalyzeOpenBatches(context.Context, *AnalyzeOpenBatchesRequest) (*AnalyzeOpenBatchesResponse, error)
 	// Initializes a batch at a scanning station.
@@ -6295,6 +6308,9 @@ func (UnimplementedCoreServiceServer) ListBatchesByScanningStation(context.Conte
 }
 func (UnimplementedCoreServiceServer) GetBatchPossibleNextSteps(context.Context, *GetBatchPossibleNextStepsRequest) (*GetBatchPossibleNextStepsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetBatchPossibleNextSteps not implemented")
+}
+func (UnimplementedCoreServiceServer) GetBatchPossibleInitSteps(context.Context, *GetBatchPossibleInitStepsRequest) (*GetBatchPossibleInitStepsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetBatchPossibleInitSteps not implemented")
 }
 func (UnimplementedCoreServiceServer) AnalyzeOpenBatches(context.Context, *AnalyzeOpenBatchesRequest) (*AnalyzeOpenBatchesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AnalyzeOpenBatches not implemented")
@@ -10084,6 +10100,24 @@ func _CoreService_GetBatchPossibleNextSteps_Handler(srv interface{}, ctx context
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CoreServiceServer).GetBatchPossibleNextSteps(ctx, req.(*GetBatchPossibleNextStepsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_GetBatchPossibleInitSteps_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetBatchPossibleInitStepsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).GetBatchPossibleInitSteps(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_GetBatchPossibleInitSteps_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).GetBatchPossibleInitSteps(ctx, req.(*GetBatchPossibleInitStepsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -14936,6 +14970,10 @@ var CoreService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetBatchPossibleNextSteps",
 			Handler:    _CoreService_GetBatchPossibleNextSteps_Handler,
+		},
+		{
+			MethodName: "GetBatchPossibleInitSteps",
+			Handler:    _CoreService_GetBatchPossibleInitSteps_Handler,
 		},
 		{
 			MethodName: "AnalyzeOpenBatches",

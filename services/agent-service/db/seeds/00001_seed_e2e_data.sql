@@ -41,9 +41,9 @@ ON CONFLICT (id) DO NOTHING;
 -- against SeedAgentRunID (run #1, which targets orderbot0).
 INSERT INTO agent_definition_tool (id, agent_definition_id, tool_slug, config, sort_order, require_review)
 VALUES
-    ('agdtl_01seede2e_tool001', 'agdf_01seede2e_custom00', 'save_memory', '{}', 0, false),
-    ('agdtl_01seede2e_tool002', 'agdf_01seede2e_custom00', 'create_alert', '{}', 1, false),
-    ('agdtl_01seede2e_tool003', 'agdf_01seede2e_orderbot0', 'create_alert', '{}', 0, false)
+    ('agdtl_01seede2e_tool001', 'agdf_01seede2e_custom00', 'create_artifact', '{}', 0, false),
+    ('agdtl_01seede2e_tool002', 'agdf_01seede2e_custom00', 'send_email', '{}', 1, false),
+    ('agdtl_01seede2e_tool003', 'agdf_01seede2e_orderbot0', 'draft_reply', '{}', 0, false)
 ON CONFLICT (id) DO NOTHING;
 
 -- orderbot0 is a system definition but still needs a role_id so

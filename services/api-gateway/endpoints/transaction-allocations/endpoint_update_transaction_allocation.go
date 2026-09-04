@@ -53,5 +53,11 @@ func (e *UpdateTransactionAllocationEndpoint) Materialize() *apiendpoint.APIEndp
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateTransactionAllocationRequest) (*apiresource.TransactionAllocation, *apierror.APIError) {
 			return svc.(TransactionAllocationSvc).UpdateTransactionAllocation
 		},
+		// The allocation names the transaction the money came from; without this it could only ever
+		// report its id.
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeTransactionAllocation,
+			Fields:     []string{"transaction", "transaction.amount", "transaction.amount.unit"},
+		}),
 	})
 }

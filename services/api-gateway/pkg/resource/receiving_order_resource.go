@@ -27,8 +27,6 @@ type ReceivingOrder struct {
 	//
 	// Not returned in list results.
 	Note *string `json:"note"`
-	// The purchase order whose issuance created this receiving order.
-	PurchaseOrder *PurchaseOrder `json:"purchase_order" expandable:"true"`
 	// The supplier (seller) account the originating purchase order was placed with.
 	Supplier *Supplier `json:"supplier" expandable:"true"`
 	// Line items in this receiving order.
@@ -37,10 +35,10 @@ type ReceivingOrder struct {
 	//
 	// Always populated, even when `lines` is not expanded.
 	LineCount int32 `json:"line_count"`
-	// Percentage of lines that have been stocked, from `0` to `100`, rounded to two decimal places.
-	//
-	// A line counts toward completion once its `stocked_at` is set, and the order is marked complete when the figure reaches `100`. It is calculated for list results only; on responses that return a single receiving order it is `0`, and progress is best read from the lines' `stocked_at` values.
-	CompletionPercentage float64 `json:"completion_percentage"`
+	// What the order is worth and how far it has been put away.
+	Totals *ReceivingOrderTotals `json:"totals" expandable:"true"`
+	// The records this receiving order sits between.
+	Related *ReceivingOrderRelated `json:"related" expandable:"true"`
 	// Timestamp when the receiving order was completed.
 	//
 	// Set automatically once every line has been stocked, and also when the originating purchase order is closed. It is cleared again when the receiving order is voided or that purchase order is re-opened.
@@ -51,20 +49,81 @@ type ReceivingOrder struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
+// ReceivingOrderTotals is what the order is worth and how far it has been put away.
+//
+// A receiving order's lines can each count in a different unit, so the amounts — the purchase order's agreed unit price times a quantity — are what make the stages comparable, and completion is a ratio of two of them.
+type ReceivingOrderTotals struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=receiving_order_totals"`
+	// Total value the purchase order asked for across this order's lines, as a decimal string.
+	//
+	// This is the baseline the stage completions are measured against.
+	Ordered string `json:"ordered" validate:"required" format:"decimal"`
+	// Value taken into inventory, and how far stocking has progressed.
+	Stocked ReceivingOrderStageTotal `json:"stocked"`
+	// Value refused on inspection, and how much of the order that accounts for.
+	Rejected ReceivingOrderStageTotal `json:"rejected"`
+}
+
+var SampleReceivingOrderTotals = &ReceivingOrderTotals{
+	Object:   constants.ObjectTypeReceivingOrderTotals,
+	Ordered:  "12480.00",
+	Stocked:  ReceivingOrderStageTotal{Object: constants.ObjectTypeReceivingOrderStageTotal, Amount: "6240.00", Completion: 0.5},
+	Rejected: ReceivingOrderStageTotal{Object: constants.ObjectTypeReceivingOrderStageTotal, Amount: "0.00", Completion: 0},
+}
+
+func (*ReceivingOrderTotals) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleReceivingOrderTotals)
+}
+
+// ReceivingOrderStageTotal is how much of a receiving order has reached one stage.
+type ReceivingOrderStageTotal struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=receiving_order_stage_total"`
+	// Value that has reached this stage, as a decimal string.
+	Amount string `json:"amount" validate:"required" format:"decimal"`
+	// Progress through this stage, as a fraction between 0 and 1.
+	//
+	// Calculated as this stage's amount divided by `totals.ordered`, so `1` means the whole order has cleared the stage. It is a ratio of amounts rather than of quantities because a receiving order's lines can each count in a different unit.
+	Completion float64 `json:"completion"`
+}
+
+func (*ReceivingOrderStageTotal) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleReceivingOrderTotals.Stocked)
+}
+
+// ReceivingOrderRelated names the records a receiving order sits between.
+type ReceivingOrderRelated struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=receiving_order_related"`
+	// The purchase order whose issuance created this receiving order.
+	PurchaseOrder *Record `json:"purchase_order" expandable:"true"`
+	// The deliveries booked against this order, oldest first.
+	Deliveries *List[Record] `json:"deliveries" expandable:"true"`
+}
+
+var SampleReceivingOrderRelated = &ReceivingOrderRelated{
+	Object: constants.ObjectTypeReceivingOrderRelated,
+}
+
+func (*ReceivingOrderRelated) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleReceivingOrderRelated)
+}
+
 var sampleReceivingOrderNote = "Please expedite"
 
 var SampleReceivingOrder = &ReceivingOrder{
-	ID:                   SampleReceivingOrderID,
-	Object:               constants.ObjectTypeReceivingOrder,
-	Number:               "RO-001",
-	Note:                 &sampleReceivingOrderNote,
-	PurchaseOrder:        SamplePurchaseOrder,
-	Supplier:             SampleSupplier,
-	Lines:                NewList([]ReceivingOrderLine{*SampleReceivingOrderLine}, PageInfo{}),
-	LineCount:            2,
-	CompletionPercentage: 50.0,
-	CreatedAt:            timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:            timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:        SampleReceivingOrderID,
+	Object:    constants.ObjectTypeReceivingOrder,
+	Number:    "RO-001",
+	Note:      &sampleReceivingOrderNote,
+	Supplier:  SampleSupplier,
+	Lines:     NewList([]ReceivingOrderLine{*SampleReceivingOrderLine}, PageInfo{}),
+	LineCount: 2,
+	Totals:    SampleReceivingOrderTotals,
+	Related:   SampleReceivingOrderRelated,
+	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*ReceivingOrder) SchemaExample() any {
@@ -85,15 +144,21 @@ type ReceivingOrderLine struct {
 	Quantity *Quantity `json:"quantity" validate:"required"`
 	// Quantity refused on inspection and never taken into inventory.
 	//
-	// Accumulated from the rejected quantities recorded against this line each time the order is stocked.
-	RejectedQuantity *Quantity `json:"rejected_quantity"`
-	// The purchase order line this receiving line was created from.
-	OrderLine *SalesOrderLine `json:"order_line" expandable:"true"`
-	// The item being received (the originating order line's item).
-	Item *Item `json:"item"`
+	// Accumulated from the rejected quantities recorded against this line each time the order is stocked, so it is summed at read time rather than stored: it carries no id, and arrives with the unit it was summed in.
+	RejectedQuantity *ComputedQuantity `json:"rejected_quantity"`
+	// Position of the originating purchase order line within its order, starting at 1.
+	LineItemNumber *int32 `json:"line_item_number"`
+	// The item being received.
+	Item *Item `json:"item" expandable:"true"`
+	// Quantity the purchase order asked for on this line, which `quantity` is measured against.
+	QuantityOrdered *Quantity `json:"quantity_ordered" expandable:"true"`
+	// The purchase order line this line receives against.
+	//
+	// The receiving line is raised from a purchase order line and carries that line's item and ordered quantity directly; expand this to read the rest of it, including the agreed unit price.
+	OrderLine *PurchaseOrderLine `json:"order_line" expandable:"true"`
 	// Timestamp when the received quantity was stocked into inventory.
 	//
-	// Once set, the line counts toward the order's `completion_percentage`. Voiding the line or the whole order clears it, but does not reverse the inventory that was already received.
+	// Once set, the line counts toward the order's `totals.stocked.completion`. Voiding the line or the whole order clears it, but does not reverse the inventory that was already received.
 	StockedAt *time.Time `json:"stocked_at"`
 	// Timestamp when the line was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -105,7 +170,6 @@ var SampleReceivingOrderLine = &ReceivingOrderLine{
 	ID:        SampleReceivingOrderLineID,
 	Object:    constants.ObjectTypeReceivingOrderLine,
 	Quantity:  SampleQuantity,
-	OrderLine: SampleSalesOrderLine,
 	Item:      SampleItem,
 	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),

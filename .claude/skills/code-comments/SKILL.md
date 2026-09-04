@@ -75,7 +75,7 @@ Never hard-wrap a paragraph across `//` lines (conventions doc, rule 1) — but 
 long enough for that question to arise is usually one that should be cut instead. Wrapped
 prose in a diff is the signal that rule 3 was broken before rule 1 was.
 
-## 4. Comments may organise a long file
+## 4. Comments may organize a long file
 
 Navigation is a readability job, so section markers earn their place where a file has
 enough in it to get lost in. The forms already in use:

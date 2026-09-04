@@ -91,7 +91,7 @@ func TestProperties_BulkUpsert_AllCreates(t *testing.T) {
 }
 
 // defines a property's selectable values in the same request, in the order given, with
-// the swatch honoured where supplied
+// the swatch honored where supplied
 func TestProperties_BulkUpsert_CreatesAttributes(t *testing.T) {
 	t.Parallel()
 
@@ -114,7 +114,7 @@ func TestProperties_BulkUpsert_CreatesAttributes(t *testing.T) {
 	list, _, err := apiClient.GetList(propertiesPath+"/"+created[0]+"/attributes", nil)
 	require.NoError(t, err)
 	require.Len(t, list.Data, 2)
-	assert.Equal(t, "red", DataItemField(list.Data[0], "color"), "an explicit swatch is honoured")
+	assert.Equal(t, "red", DataItemField(list.Data[0], "color"), "an explicit swatch is honored")
 	assert.NotEmpty(t, DataItemField(list.Data[1], "color"), "an omitted swatch is assigned")
 }
 

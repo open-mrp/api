@@ -385,7 +385,7 @@ func (m *shipmentSvcImpl) ListShipmentLines(ctx context.Context, req *ListShipme
 
 	lines := make([]apiresource.ShipmentLine, len(resp.ShipmentLines))
 	for i, l := range resp.ShipmentLines {
-		lines[i] = shipmentLineFromProto(l)
+		lines[i] = shipmentLineFromProto(ctx, l)
 	}
 
 	return apiresource.NewList(lines, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
@@ -406,7 +406,7 @@ func (m *shipmentSvcImpl) GetShipmentLine(ctx context.Context, req *RetrieveShip
 		return nil, apiErr
 	}
 
-	result := shipmentLineFromProto(resp.ShipmentLine)
+	result := shipmentLineFromProto(ctx, resp.ShipmentLine)
 	return &result, nil
 }
 
@@ -427,7 +427,7 @@ func (m *shipmentSvcImpl) CreateShipmentLine(ctx context.Context, req *CreateShi
 		return nil, apiErr
 	}
 
-	result := shipmentLineFromProto(resp.ShipmentLine)
+	result := shipmentLineFromProto(ctx, resp.ShipmentLine)
 	return &result, nil
 }
 
@@ -448,7 +448,7 @@ func (m *shipmentSvcImpl) UpdateShipmentLine(ctx context.Context, req *UpdateShi
 		return nil, apiErr
 	}
 
-	result := shipmentLineFromProto(resp.ShipmentLine)
+	result := shipmentLineFromProto(ctx, resp.ShipmentLine)
 	return &result, nil
 }
 
@@ -557,7 +557,7 @@ func stashShipmentMeta(ctx context.Context, s *pb.ShipmentInfo, d *apiresource.S
 	if s.Lines != nil {
 		lines := make([]apiresource.ShipmentLine, len(s.Lines))
 		for i, l := range s.Lines {
-			lines[i] = shipmentLineFromProto(l)
+			lines[i] = shipmentLineFromProto(ctx, l)
 			stashShipmentLineMeta(ctx, &lines[i], l)
 		}
 		meta.Set(constants.ObjectTypeShipment, d.ID, "lines", apiresource.NewList(lines, apiresource.PageInfo{}))
@@ -669,7 +669,7 @@ func shipmentFreightFromProto(s *pb.ShipmentInfo) *apiresource.Freight {
 	return freight
 }
 
-func shipmentLineFromProto(l *pb.ShipmentLineInfo) apiresource.ShipmentLine {
+func shipmentLineFromProto(ctx context.Context, l *pb.ShipmentLineInfo) apiresource.ShipmentLine {
 	if l == nil {
 		return apiresource.ShipmentLine{}
 	}
@@ -681,25 +681,25 @@ func shipmentLineFromProto(l *pb.ShipmentLineInfo) apiresource.ShipmentLine {
 			ID:           l.QuantityId,
 			Object:       constants.ObjectTypeQuantity,
 			Value:        l.QuantityValue,
-			DisplayValue: fmt.Sprintf("%s %s", l.QuantityValue, l.QuantityUnitAbbreviation),
+			DisplayValue: apiresource.FormatDisplayValue(l.QuantityValue, l.QuantityUnitAbbreviation, l.QuantityUnitType),
+			// Unit left nil: expandable, loaded with real data via `lines.quantity.unit`; never fabricated.
 		},
 		CreatedAt: grpcutil.TimestampToTime(l.CreatedAt),
 		UpdatedAt: grpcutil.TimestampToTime(l.UpdatedAt),
 	}
 
-	// Item carried inline (the order line's item) so lines.item.id resolves.
+	meta := resourcekit.GetLoadMeta(ctx)
+	meta.Set(constants.ObjectTypeQuantity, l.QuantityId, "unit_id", l.QuantityUnitId)
+	// The item is the order line's, and expandable: the line carries its id and the item loader
+	// fills the rest, rather than the line shipping an item that is only an id and a SKU.
 	if l.OrderLineItemId != nil && *l.OrderLineItemId != "" {
-		item := &apiresource.Item{ID: *l.OrderLineItemId, Object: constants.ObjectTypeItem}
-		if l.OrderLineSku != "" {
-			item.SKU = l.OrderLineSku
-		}
-		result.Item = item
+		meta.Set(constants.ObjectTypeShipmentLine, l.Id, "item_id", *l.OrderLineItemId)
 	}
 
 	return result
 }
 
-// Stashes the order line a shipment line fulfils, plus that line's product FK, so the resolver can
+// Stashes the order line a shipment line fulfills, plus that line's product FK, so the resolver can
 // serve lines.sales_order_line and its product on ?include=.
 func stashShipmentLineMeta(ctx context.Context, d *apiresource.ShipmentLine, l *pb.ShipmentLineInfo) {
 	meta := resourcekit.GetLoadMeta(ctx)
@@ -713,7 +713,7 @@ func stashShipmentLineMeta(ctx context.Context, d *apiresource.ShipmentLine, l *
 	}
 }
 
-// Builds the sales order line reference a shipment line fulfils, from the fields the parent proto
+// Builds the sales order line reference a shipment line fulfills, from the fields the parent proto
 // carries — there is no standalone sales-order-line loader to resolve it against.
 func buildSalesOrderLineForShipmentLine(l *pb.ShipmentLineInfo) *apiresource.SalesOrderLine {
 	now := grpcutil.TimestampToTime(l.CreatedAt)

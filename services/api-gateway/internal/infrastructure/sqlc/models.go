@@ -1317,6 +1317,9 @@ type MessageInbox struct {
 	ReceivedAt      time.Time
 	ProcessedAt     sql.NullTime
 	AlertedAt       sql.NullTime
+	FailedAt        sql.NullTime
+	LockOwner       sql.NullString
+	LockExpiresAt   sql.NullTime
 }
 
 type MessageOutbox struct {
@@ -1538,13 +1541,14 @@ type PermissionGroup struct {
 }
 
 type Pick struct {
-	ID           string
-	Number       string
-	SalesOrderID string
-	AccountID    string
-	FinishedAt   sql.NullTime
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID             string
+	Number         string
+	SalesOrderID   string
+	AccountID      string
+	FinishedAt     sql.NullTime
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	ShipBySortDate time.Time
 }
 
 type PickLine struct {

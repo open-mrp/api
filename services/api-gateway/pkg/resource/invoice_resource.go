@@ -141,7 +141,7 @@ type InvoiceLine struct {
 	UnitPrice *Rate `json:"unit_price" validate:"required"`
 	// Sales order line this invoice line bills against.
 	//
-	// Expand with `lines.order_line` for the sold `product_sku` and the ordered quantities, and with `lines.order_line.product` for the product itself. To show only the SKU, read `item` below instead — it needs no expansion.
+	// Expand with `lines.order_line` for the sold `product_sku` and the ordered quantities, and with `lines.order_line.product` for the product itself. To show only what was billed, expand `lines.item` instead.
 	OrderLine *SalesOrderLine `json:"order_line" expandable:"true"`
 	// What this line bills, as recorded on the originating sales order line.
 	Item *Item `json:"item" expandable:"true"`

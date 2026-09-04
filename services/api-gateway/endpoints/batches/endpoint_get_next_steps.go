@@ -8,6 +8,7 @@ import (
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
+	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 )
 
@@ -41,7 +42,9 @@ func (e *GetPossibleNextStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*G
 		SuccessStatusCode:   http.StatusOK,
 		Public:              false,
 		Preview:             true,
+		ReadOnly:            true,
 		RequiredPermissions: []types.Permission{{Domain: types.PermissionDomainBatches, Action: types.ActionRead}},
+		ObjectType:          constants.ObjectTypeScanningProductionStepInfo,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetPossibleNextStepsRequest) (*apiresource.List[apiresource.ScanningProductionStepInfo], *apierror.APIError) {
 			return svc.(BatchSvc).GetPossibleNextSteps
 		},

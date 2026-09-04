@@ -33,11 +33,13 @@ func issuedPurchaseOrderReceiving(t *testing.T) (purchaseOrderID, receivingOrder
 	status, body := changePurchaseOrderStatus(t, purchaseOrderID, "issue")
 	requireStatus(t, 200, status, body)
 
-	getStatus, getBody, err := apiClient.GetListRaw(purchaseOrdersPath+"/"+purchaseOrderID, url.Values{"include": {"receiving_order"}})
+	getStatus, getBody, err := apiClient.GetListRaw(purchaseOrdersPath+"/"+purchaseOrderID, url.Values{
+		"include": {"related", "related.receiving_order"},
+	})
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus, getBody)
 
-	receiving := jsonObject(parseJSON(getBody), "receiving_order")
+	receiving := jsonObject(jsonObject(parseJSON(getBody), "related"), "receiving_order")
 	require.NotNil(t, receiving, "issuing a purchase order must create its receiving order: %s", string(getBody))
 	receivingOrderID = jsonField(receiving, "id")
 	require.NotEmpty(t, receivingOrderID)

@@ -43,7 +43,7 @@ Browse the [API reference](https://docs.openmrp.ai/api-reference), or read the O
 
 ![A production flow running from raw yarn through knitting, dyeing, boarding, and packing to a finished SKU](docs/assets/screenshots/production-flow-full.png)
 
-**Production schedules.** A solver turns forecast demand into a week-by-week plan per SKU — run hours, utilisation, and what freezes when. It stays a draft until you publish it.
+**Production schedules.** A solver turns forecast demand into a week-by-week plan per SKU — run hours, utilization, and what freezes when. It stays a draft until you publish it.
 
 ![A draft production schedule laid out by SKU across thirteen weeks](docs/assets/screenshots/production-schedule.png)
 

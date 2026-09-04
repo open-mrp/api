@@ -130,6 +130,31 @@ func (s *purchaseOrderSvcImpl) ListPurchaseOrders(ctx context.Context, params do
 	return result, nil
 }
 
+// BatchGetPurchaseOrderLinesByIDs resolves purchase order lines named by a receiving or delivery
+// line. The repository scopes them through the order they belong to, so a line the caller's account
+// does not own is absent from the result rather than an error — the same shape as the other batch
+// reads the include resolver drives.
+func (s *purchaseOrderSvcImpl) BatchGetPurchaseOrderLinesByIDs(ctx context.Context, ids []string) ([]*domain.PurchaseOrderLine, *apierror.APIError) {
+	ctx, span := purchaseOrderSvcTracer.Start(ctx, "service.purchase_order.batch_get_lines_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainPurchaseOrders, types.ActionRead); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	return s.repos.NewPurchaseOrderRepo().GetLinesByIDs(ctx, identity.Target.AccountID, ids)
+}
+
 func (s *purchaseOrderSvcImpl) GetPurchaseOrder(ctx context.Context, params domain.GetPurchaseOrderParams) (*domain.PurchaseOrder, *apierror.APIError) {
 	ctx, span := purchaseOrderSvcTracer.Start(ctx, "service.purchase_order.get")
 	defer span.End()

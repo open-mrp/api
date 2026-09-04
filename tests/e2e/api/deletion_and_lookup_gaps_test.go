@@ -69,7 +69,7 @@ func TestShippingCases_DeleteUnknownCaseIs404(t *testing.T) {
 	assert.Equal(t, 404, status, "deleting an unknown shipping case must 404: %s", string(body))
 }
 
-// A case that has never been labelled answers with a null URL rather than an error: the resource documents the link as absent until a carrier has produced one, so the case existing and the label existing are deliberately separate questions.
+// A case that has never been labeled answers with a null URL rather than an error: the resource documents the link as absent until a carrier has produced one, so the case existing and the label existing are deliberately separate questions.
 func TestShippingCases_LabelIsNullUntilOneIsGenerated(t *testing.T) {
 	t.Parallel()
 

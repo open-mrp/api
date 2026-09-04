@@ -92,7 +92,10 @@ type PurchaseOrder struct {
 	PriorityID *string
 
 	// Joined receiving order
-	ReceivingOrderID *string
+	ReceivingOrderID     *string
+	ReceivingOrderNumber *string
+	ReceivingOrderStatus *string
+	Deliveries           []DocumentRef
 
 	// Lines (populated when included)
 	Lines []*PurchaseOrderLine
@@ -157,6 +160,8 @@ type PurchaseOrderLine struct {
 	UnitPriceNumeratorUnitAbbr   string `audit:"unit_price_numerator_unit_abbr"`
 	UnitPriceDenominatorUnitID   string `audit:"unit_price_denominator_unit_id"`
 	UnitPriceDenominatorUnitAbbr string `audit:"unit_price_denominator_unit_abbr"`
+	UnitPriceCreatedAt           time.Time
+	UnitPriceUpdatedAt           time.Time
 
 	// Unit cost (nullable)
 	UnitCostID                  *string

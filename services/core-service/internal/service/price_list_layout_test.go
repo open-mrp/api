@@ -161,7 +161,7 @@ func TestMergeSpansNested_InnerRunStopsAtOuterBoundary(t *testing.T) {
 	if spans[0][0] != 2 || spans[2][0] != 2 {
 		t.Errorf("outer spans = %d, %d; want 2, 2", spans[0][0], spans[2][0])
 	}
-	// Without the nesting rule this would be a single span of 4 crossing the colour change.
+	// Without the nesting rule this would be a single span of 4 crossing the color change.
 	if spans[0][1] != 2 || spans[2][1] != 2 {
 		t.Errorf("inner spans = %d, %d; want 2, 2", spans[0][1], spans[2][1])
 	}

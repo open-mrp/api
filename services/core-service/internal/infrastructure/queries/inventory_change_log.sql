@@ -100,6 +100,9 @@ JOIN quantity q ON q.id = icl.quantity_id
 WHERE icl.item_id = sqlc.arg('item_id')
 AND icl.account_id = sqlc.arg('account_id')
 AND icl.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-AND icl.action_type_code IN ('scan', 'user_correction')
+-- Consumption is booked as 'scan' (production draw-down) for materials/parts and 'system_action'
+-- (order fulfillment) for products. 'user_correction' is excluded: manual re-baselines of on-hand
+-- counts are not demand and would skew the rate (a single large correction dwarfs real usage).
+AND icl.action_type_code IN ('scan', 'system_action')
 AND CAST(q.value AS DECIMAL(65,30)) < 0
 ORDER BY icl.created_at ASC;

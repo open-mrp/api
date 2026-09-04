@@ -43,6 +43,7 @@ SELECT
     ro.updated_at,
     so.id AS purchase_order_id,
     so.number AS purchase_order_number,
+    so.sales_order_status_code AS purchase_order_status,
     a.id AS supplier_id,
     a.name AS supplier_name,
     ar.external_number AS supplier_number,
@@ -102,6 +103,7 @@ SELECT
     ro.updated_at,
     so.id AS purchase_order_id,
     so.number AS purchase_order_number,
+    so.sales_order_status_code AS purchase_order_status,
     a.id AS supplier_id,
     a.name AS supplier_name,
     ar.external_number AS supplier_number,
@@ -160,6 +162,7 @@ SELECT
     ro.updated_at,
     so.id AS purchase_order_id,
     so.number AS purchase_order_number,
+    so.sales_order_status_code AS purchase_order_status,
     a.id AS supplier_id,
     a.name AS supplier_name,
     ar.external_number AS supplier_number,
@@ -451,30 +454,40 @@ AND sales_order_type_code = 'purchase_order';
 --
 -- Batched over a slice of order ids rather than run per order, because the list endpoint needs this for every row (see docs/patterns/performant-list-endpoint-patterns.md).
 --
--- Amounts multiply the purchase order line's agreed unit price by a quantity, so they are comparable across lines whatever units those lines count in. Completion is left to the caller, which divides the stage quantity by the ordered quantity — a ratio, so it survives lines counted in different units the same way the sales-order totals do.
+-- Every figure is an amount — the purchase order line's agreed unit price times a quantity — because a receiving order's lines can each count in a different unit, and money is the only common denominator they have. Summing the quantities instead would add pairs to metres.
+--
+-- The inner grouping is per purchase order line, not per receiving line. A line received in installments carries one receiving line per installment (see CreateLineForRemainingQuantity), and the ordered figure is a property of the purchase order line, so it is taken once per line with MAX rather than summed once per receipt against it.
 -- name: GetReceivingOrderTotals :many
 SELECT
-    rol.receiving_order_id,
-    CAST(COALESCE(SUM(CAST(oq.value AS DECIMAL(30,10)) * CAST(r.value AS DECIMAL(30,10))), 0) AS CHAR) AS ordered_amount,
-    CAST(COALESCE(SUM(CAST(oq.value AS DECIMAL(30,10))), 0) AS CHAR) AS ordered_quantity,
-    CAST(COALESCE(SUM(CASE WHEN rol.stocked_at IS NOT NULL THEN CAST(q.value AS DECIMAL(30,10)) * CAST(r.value AS DECIMAL(30,10)) END), 0) AS CHAR) AS stocked_amount,
-    CAST(COALESCE(SUM(CASE WHEN rol.stocked_at IS NOT NULL THEN CAST(q.value AS DECIMAL(30,10)) END), 0) AS CHAR) AS stocked_quantity,
-    CAST(COALESCE(SUM(COALESCE(rej.value, 0) * CAST(r.value AS DECIMAL(30,10))), 0) AS CHAR) AS rejected_amount,
-    CAST(COALESCE(SUM(COALESCE(rej.value, 0)), 0) AS CHAR) AS rejected_quantity
-FROM receiving_order_line rol
-JOIN sales_order_line sol ON rol.sales_order_line_id = sol.id
-JOIN rate r ON sol.unit_price_id = r.id
-JOIN quantity oq ON sol.quantity_id = oq.id
-JOIN quantity q ON rol.quantity_id = q.id
-LEFT JOIN (
-    SELECT dl.receiving_order_line_id, SUM(CAST(rq.value AS DECIMAL(30,10))) AS value
-    FROM delivery_line dl
-    JOIN quantity rq ON dl.quantity_id = rq.id
-    WHERE dl.rejected_at IS NOT NULL
-    GROUP BY dl.receiving_order_line_id
-) rej ON rej.receiving_order_line_id = rol.id
-WHERE rol.receiving_order_id IN (sqlc.slice('receiving_order_ids'))
-GROUP BY rol.receiving_order_id;
+    g.receiving_order_id,
+    CAST(COALESCE(SUM(g.ordered_amount), 0) AS CHAR) AS ordered_amount,
+    CAST(COALESCE(SUM(g.stocked_amount), 0) AS CHAR) AS stocked_amount,
+    CAST(COALESCE(SUM(g.rejected_amount), 0) AS CHAR) AS rejected_amount
+FROM (
+    SELECT
+        rol.receiving_order_id,
+        rol.sales_order_line_id,
+        MAX(CAST(oq.value AS DECIMAL(30,10)) * CAST(r.value AS DECIMAL(30,10))) AS ordered_amount,
+        SUM(CASE WHEN rol.stocked_at IS NOT NULL THEN CAST(q.value AS DECIMAL(30,10)) * CAST(r.value AS DECIMAL(30,10)) END) AS stocked_amount,
+        -- Correlated rather than a derived table joined on receiving_order_line_id: a derived table
+        -- has nothing to scope it to this page, so it aggregates every rejected delivery line in the
+        -- table on every list request. Correlated, each row is an index lookup on
+        -- delivery_line_receiving_order_line_id_idx and the work stays proportional to the page.
+        SUM(COALESCE((
+            SELECT SUM(CAST(rq.value AS DECIMAL(30,10)))
+            FROM delivery_line dl
+            JOIN quantity rq ON dl.quantity_id = rq.id
+            WHERE dl.receiving_order_line_id = rol.id AND dl.rejected_at IS NOT NULL
+        ), 0) * CAST(r.value AS DECIMAL(30,10))) AS rejected_amount
+    FROM receiving_order_line rol
+    JOIN sales_order_line sol ON rol.sales_order_line_id = sol.id
+    JOIN rate r ON sol.unit_price_id = r.id
+    JOIN quantity oq ON sol.quantity_id = oq.id
+    JOIN quantity q ON rol.quantity_id = q.id
+    WHERE rol.receiving_order_id IN (sqlc.slice('receiving_order_ids'))
+    GROUP BY rol.receiving_order_id, rol.sales_order_line_id
+) g
+GROUP BY g.receiving_order_id;
 
 -- ListDeliveryRefsForOrders names the deliveries booked against each of the given purchase orders, oldest first.
 --

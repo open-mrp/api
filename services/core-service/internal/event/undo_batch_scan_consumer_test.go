@@ -33,9 +33,13 @@ const (
 // the one on the struct, which is the whole substance of giving this consumer a transaction.
 type stubTxManager struct {
 	factory domain.RepoFactory
+	// calls counts the transactions the consumer opened. The reversal and the allocation request it
+	// justifies belong to the same one; see TestAllocationIsRequestedInsideTheReversalTransaction.
+	calls int
 }
 
 func (m *stubTxManager) WithTx(ctx context.Context, fn func(context.Context, domain.RepoFactory) *apierror.APIError) *apierror.APIError {
+	m.calls++
 	return fn(ctx, m.factory)
 }
 
@@ -57,6 +61,7 @@ type UndoBatchScanConsumerTestSuite struct {
 	reservationRepo  *repositorymock.MockInventoryReservationRepo
 	materialRepo     *repositorymock.MockMaterialDemandRepo
 	inventoryQuery   *repositorymock.MockInventoryQueryRepo
+	txManager        *stubTxManager
 	requested        []string
 }
 
@@ -89,13 +94,14 @@ func (s *UndoBatchScanConsumerTestSuite) SetupTest() {
 	repoFactory.EXPECT().NewInventoryQueryRepo().Return(s.inventoryQuery).AnyTimes()
 	repoFactory.EXPECT().NewItemRepo().Return(itemRepo).AnyTimes()
 	s.requested = nil
+	s.txManager = &stubTxManager{factory: repoFactory}
 	repoFactory.EXPECT().NewOutboxRepo().Return(recordingOutboxRepo{
 		onAllocateOpenIssues: func(itemID string) { s.requested = append(s.requested, itemID) },
 	}).AnyTimes()
 
 	s.consumer = &UndoBatchScanConsumer{
 		repos:     repoFactory,
-		txManager: &stubTxManager{factory: repoFactory},
+		txManager: s.txManager,
 		tracer:    tracing.GetTracer("test.undo_batch_scan_consumer"),
 	}
 }
@@ -207,4 +213,41 @@ func (s *UndoBatchScanConsumerTestSuite) TestIgnoresAShortfallItCannotParse() {
 	})
 
 	s.Require().NoError(err)
+}
+
+// The allocation request rides with the reversal rather than following it in a transaction of its own.
+//
+// The outbox row commits with the reversal, which is the guarantee wanted here: the request exists if
+// and only if the stock was actually freed. Split into a second transaction after the inbox recovery
+// point, a failure there could not be retried — the record is already 'processed', so the redelivery
+// is skipped, MarkFailed is refused on a terminal record, and the failure monitor scans neither. The
+// freed receipts would sit uncovered with nothing anywhere saying so.
+func (s *UndoBatchScanConsumerTestSuite) TestAllocationIsRequestedInsideTheReversalTransaction() {
+	s.inventoryMutRepo.EXPECT().ReverseInventoryForBatch(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]domain.InventoryReversalDelta{
+			{ItemID: undoTestProductID, Measure: decimal.NewFromInt(-10), UnitID: "each"},
+		}, nil)
+
+	err := s.consumer.undoBatchScan(context.Background(), undoTestAccountID, domain.UndoBatchScanEvent{
+		BatchID: undoTestBatchID,
+	})
+
+	s.Require().NoError(err)
+	s.Equal([]string{undoTestProductID}, s.requested, "the reversal asks for the item to be re-covered")
+	s.Equal(1, s.txManager.calls,
+		"one transaction: a second one after the recovery point cannot be retried if it fails")
+}
+
+// A reversal that never happened must not leave an allocation request behind asking to cover demand
+// from stock that was never freed.
+func (s *UndoBatchScanConsumerTestSuite) TestNoAllocationIsRequestedWhenTheReversalFails() {
+	s.inventoryMutRepo.EXPECT().ReverseInventoryForBatch(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil, apierror.NewValidationError("Inventory produced by this batch has already been used and cannot be reversed."))
+
+	err := s.consumer.undoBatchScan(context.Background(), undoTestAccountID, domain.UndoBatchScanEvent{
+		BatchID: undoTestBatchID,
+	})
+
+	s.Require().Error(err)
+	s.Empty(s.requested, "nothing was freed, so nothing is asked to be covered")
 }

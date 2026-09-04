@@ -30,8 +30,6 @@ type Supplier struct {
 	//
 	// When a supplier is created with only a bill-to address, that same address also becomes the default shipping address.
 	ShipToAddress *Address `json:"ship_to_address" expandable:"true"`
-	// Number of materials sourced from this supplier.
-	//
 	// Creation timestamp.
 	//
 	// Null on a supplier named from another document, which carries its identity rather than its record.

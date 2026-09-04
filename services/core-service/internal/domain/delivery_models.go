@@ -12,8 +12,10 @@ type DeliverySummary struct {
 	Number               string
 	PurchaseOrderID      string
 	PurchaseOrderNumber  string
+	PurchaseOrderStatus  string
 	ReceivingOrderID     string
 	ReceivingOrderNumber string
+	ReceivingOrderStatus string
 	Status               string
 	LineCount            int32
 	AcceptedAt           *time.Time
@@ -30,8 +32,10 @@ type Delivery struct {
 	Number               string
 	PurchaseOrderID      string
 	PurchaseOrderNumber  string
+	PurchaseOrderStatus  string
 	ReceivingOrderID     string
 	ReceivingOrderNumber string
+	ReceivingOrderStatus string
 	Status               string
 	Lines                []*DeliveryLine
 	AcceptedAt           *time.Time

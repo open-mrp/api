@@ -243,6 +243,9 @@ func (r *receivingOrderRepoImpl) List(ctx context.Context, params domain.ListRec
 				orders[i] = mapBackwardReceivingOrderRow(row)
 			}
 			result, pageInfo := pagination.BuildPageString(orders, params.Limit, cursorDir, receivingOrderCreatedAt, receivingOrderID)
+			if apiErr := r.attachTotals(ctx, result); apiErr != nil {
+				return nil, tracing.Trace(span, apiErr)
+			}
 			return &domain.ListReceivingOrdersResult{ReceivingOrders: result, PageInfo: pageInfo}, nil
 		}
 
@@ -319,12 +322,9 @@ func (r *receivingOrderRepoImpl) fetchReceivingOrderTotals(ctx context.Context, 
 	totals := make(map[string]*domain.ReceivingOrderTotals, len(rows))
 	for _, row := range rows {
 		totals[row.ReceivingOrderID] = &domain.ReceivingOrderTotals{
-			OrderedAmount:    sqlValueToString(row.OrderedAmount),
-			OrderedQuantity:  sqlValueToString(row.OrderedQuantity),
-			StockedAmount:    sqlValueToString(row.StockedAmount),
-			StockedQuantity:  sqlValueToString(row.StockedQuantity),
-			RejectedAmount:   sqlValueToString(row.RejectedAmount),
-			RejectedQuantity: sqlValueToString(row.RejectedQuantity),
+			OrderedAmount:  sqlValueToString(row.OrderedAmount),
+			StockedAmount:  sqlValueToString(row.StockedAmount),
+			RejectedAmount: sqlValueToString(row.RejectedAmount),
 		}
 	}
 	return totals, nil
@@ -388,6 +388,7 @@ func (r *receivingOrderRepoImpl) Get(ctx context.Context, accountID, receivingOr
 		Number:              row.Number,
 		PurchaseOrderID:     row.PurchaseOrderID,
 		PurchaseOrderNumber: row.PurchaseOrderNumber,
+		PurchaseOrderStatus: row.PurchaseOrderStatus,
 		SupplierID:          supplierID,
 		SupplierName:        supplierName,
 		SupplierNumber:      supplierNumber,
@@ -1000,6 +1001,7 @@ func mapForwardReceivingOrderRow(row sqlc.ListReceivingOrdersForwardRow) *domain
 		Number:              row.Number,
 		PurchaseOrderID:     row.PurchaseOrderID,
 		PurchaseOrderNumber: row.PurchaseOrderNumber,
+		PurchaseOrderStatus: row.PurchaseOrderStatus,
 		SupplierID:          supplierID,
 		SupplierName:        supplierName,
 		SupplierNumber:      supplierNumber,
@@ -1033,6 +1035,7 @@ func mapBackwardReceivingOrderRow(row sqlc.ListReceivingOrdersBackwardRow) *doma
 		Number:              row.Number,
 		PurchaseOrderID:     row.PurchaseOrderID,
 		PurchaseOrderNumber: row.PurchaseOrderNumber,
+		PurchaseOrderStatus: row.PurchaseOrderStatus,
 		SupplierID:          supplierID,
 		SupplierName:        supplierName,
 		SupplierNumber:      supplierNumber,

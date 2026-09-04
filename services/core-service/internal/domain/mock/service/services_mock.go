@@ -7371,6 +7371,21 @@ func (m *MockPurchaseOrderSvc) EXPECT() *MockPurchaseOrderSvcMockRecorder {
 	return m.recorder
 }
 
+// BatchGetPurchaseOrderLinesByIDs mocks base method.
+func (m *MockPurchaseOrderSvc) BatchGetPurchaseOrderLinesByIDs(ctx context.Context, ids []string) ([]*domain.PurchaseOrderLine, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchGetPurchaseOrderLinesByIDs", ctx, ids)
+	ret0, _ := ret[0].([]*domain.PurchaseOrderLine)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// BatchGetPurchaseOrderLinesByIDs indicates an expected call of BatchGetPurchaseOrderLinesByIDs.
+func (mr *MockPurchaseOrderSvcMockRecorder) BatchGetPurchaseOrderLinesByIDs(ctx, ids any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetPurchaseOrderLinesByIDs", reflect.TypeOf((*MockPurchaseOrderSvc)(nil).BatchGetPurchaseOrderLinesByIDs), ctx, ids)
+}
+
 // BulkDeletePurchaseOrders mocks base method.
 func (m *MockPurchaseOrderSvc) BulkDeletePurchaseOrders(ctx context.Context, params domain.BulkDeletePurchaseOrdersParams) *apierror.APIError {
 	m.ctrl.T.Helper()

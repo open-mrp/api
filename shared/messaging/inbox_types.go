@@ -15,6 +15,8 @@ const (
 	InboxStatusProcessed InboxStatus = "processed"
 	// InboxStatusDiscarded means the handler rejected the message as one that can never succeed — a malformed payload, or state the message can no longer be reconciled against. It is terminal and visible to the failure monitor, unlike an ACK that quietly recorded the message as processed.
 	InboxStatusDiscarded InboxStatus = "discarded"
+	// InboxStatusIgnored means the message was never this handler's work: an event type the service does not subscribe to, a routing key it does not serve. It is terminal like "discarded" and equally distinguishable from work that was applied, but it is not a failure and the failure monitor does not alert on it — these arrive constantly, and alerting on them buries the records that do need a human.
+	InboxStatusIgnored InboxStatus = "ignored"
 )
 
 // InboxRecordInput contains the data needed to create an inbox record. It is populated from the AMQP delivery metadata and message body by InboxConsumer.Wrap.
@@ -86,16 +88,19 @@ type InboxRepo interface {
 	// Claim takes the lease on an existing record whose own lease has lapsed, returning false when another attempt still holds it. Used on re-delivery to decide whether this consumer may retry an unfinished message.
 	Claim(ctx context.Context, id int64, owner string, ttlSeconds int) (bool, error)
 
-	// Complete transitions the record to "processed" and releases the lease, returning false when it was no longer "received" — meaning a concurrent attempt finished first and this one must not commit its own work.
+	// Complete transitions the record to "processed" and releases the lease, returning false when the caller no longer holds the lease on a "received" record — meaning a concurrent attempt finished first and this one must not commit its own work.
 	//
 	// Handlers whose entire effect is one local transaction should call this on the transaction-scoped repo as the last statement inside that transaction, so the marker and the work commit together. That closes the window where the work commits and the process dies before the marker, which leaves the record indistinguishable from one that never ran and invites a replay to apply it twice.
-	Complete(ctx context.Context, id int64) (bool, error)
+	Complete(ctx context.Context, id int64, owner string) (bool, error)
 
-	// MarkFailed increments the attempt count, stamps failed_at, stores the error, and releases the lease. The record stays "received" so a re-delivery can retry it.
-	MarkFailed(ctx context.Context, id int64, errMsg string) error
+	// MarkFailed increments the attempt count, stamps failed_at, stores the error, and releases the lease. The record stays "received" so a re-delivery can retry it. It is a no-op unless the caller still holds the lease: an attempt whose lease already lapsed must not clear the lease of the consumer that claimed the record after it.
+	MarkFailed(ctx context.Context, id int64, owner, errMsg string) error
 
-	// MarkDiscarded moves the record to the terminal "discarded" state with the reason that made it unprocessable.
-	MarkDiscarded(ctx context.Context, id int64, reason string) error
+	// MarkDiscarded moves the record to the terminal "discarded" state with the reason that made it unprocessable, releasing the lease. It is a no-op unless the caller still holds the lease on a "received" record.
+	MarkDiscarded(ctx context.Context, id int64, owner, reason string) error
+
+	// MarkIgnored moves the record to the terminal "ignored" state, for a message that was never this handler's work. Guarded like MarkDiscarded.
+	MarkIgnored(ctx context.Context, id int64, owner, reason string) error
 }
 
 // InboxPurgerRepo defines the persistence interface used by the InboxPurger to delete processed inbox records that have exceeded the retention period.

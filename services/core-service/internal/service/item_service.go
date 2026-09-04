@@ -466,13 +466,26 @@ func (s *itemSvcImpl) ComputeItemCosts(ctx context.Context, accountID, itemID st
 	totalOverhead = totalOverhead.Mul(perStockingUnit)
 	totalCost := totalMaterial.Add(totalLabor).Add(totalOverhead)
 
+	// The currency comes off the item's own unit-cost rate so a computed cost and the stored one name
+	// the same money. An item priced from its step graph for the first time has no such rate yet, and
+	// reporting a money figure with no currency is worse than reporting the default one: the total is
+	// derived from step costs that are all denominated in it.
+	numeratorUnitID := stocking.CostNumeratorUnitID
+	if numeratorUnitID == "" {
+		currencyUnitID, apiErr := s.repos.NewUnitRepo().GetCurrencyBaseUnitID(ctx)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		numeratorUnitID = currencyUnitID
+	}
+
 	return &domain.ItemCosts{
 		DirectMaterialCost: totalMaterial.StringFixed(30),
 		DirectLaborCost:    totalLabor.StringFixed(30),
 		OverheadCost:       totalOverhead.StringFixed(30),
 		TotalCost:          totalCost.StringFixed(30),
 		UnitID:             stocking.BaseUnitID,
-		NumeratorUnitID:    stocking.CostNumeratorUnitID,
+		NumeratorUnitID:    numeratorUnitID,
 	}, nil
 }
 

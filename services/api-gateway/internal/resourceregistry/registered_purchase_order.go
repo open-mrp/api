@@ -20,11 +20,13 @@ func init() {
 			{Key: "freight", Populate: populateFreightOnPO},
 			{Key: "payment_term", Populate: populatePaymentTermOnPO},
 			{Key: "shipping_term", Populate: populateShippingTermOnPO},
-			{
-				// Carried inline: the order already knows its receiving order's id, and a record reference is all a caller needs to follow it.
-				Key:      "related",
-				Populate: populateRelatedOnPO,
-			},
+			// `related` is expandable and so is each reference on it: the bare key reveals the object,
+			// the child keys fill in one reference each. All carried inline — the order already knows
+			// its receiving order and its deliveries, and a record reference is all a caller needs to
+			// follow either.
+			{Key: "related", Populate: populateRelatedOnPO},
+			{Key: "related.receiving_order", Populate: populateReceivingOrderOnPORelated},
+			{Key: "related.deliveries", Populate: populateDeliveriesOnPORelated},
 			{
 				Key:         "lines",
 				Target:      constants.ObjectTypePurchaseOrderLine,
@@ -166,13 +168,43 @@ func populateShippingTermOnPO(ctx context.Context, parent any, _ map[string]any)
 	po.ShippingTerm = v.(*apiresource.ShippingTerm)
 }
 
+// populateRelatedOnPO reveals the object itself, leaving every reference on it to its own key.
 func populateRelatedOnPO(ctx context.Context, parent any, _ map[string]any) {
 	po := parent.(*apiresource.PurchaseOrder)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypePurchaseOrder, po.ID, "related")
-	if !ok {
-		return
+	if stashedPORelated(ctx, po.ID) != nil {
+		poRelated(po)
 	}
-	po.Related = v.(*apiresource.PurchaseOrderRelated)
+}
+
+func populateReceivingOrderOnPORelated(ctx context.Context, parent any, _ map[string]any) {
+	po := parent.(*apiresource.PurchaseOrder)
+	if stashed := stashedPORelated(ctx, po.ID); stashed != nil {
+		poRelated(po).ReceivingOrder = stashed.ReceivingOrder
+	}
+}
+
+func populateDeliveriesOnPORelated(ctx context.Context, parent any, _ map[string]any) {
+	po := parent.(*apiresource.PurchaseOrder)
+	if stashed := stashedPORelated(ctx, po.ID); stashed != nil {
+		poRelated(po).Deliveries = stashed.Deliveries
+	}
+}
+
+func stashedPORelated(ctx context.Context, orderID string) *apiresource.PurchaseOrderRelated {
+	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypePurchaseOrder, orderID, "related")
+	if !ok {
+		return nil
+	}
+	return v.(*apiresource.PurchaseOrderRelated)
+}
+
+// poRelated returns the order's related object, creating it on first use so two independently
+// requested children populate into the same one.
+func poRelated(po *apiresource.PurchaseOrder) *apiresource.PurchaseOrderRelated {
+	if po.Related == nil {
+		po.Related = &apiresource.PurchaseOrderRelated{Object: constants.ObjectTypePurchaseOrderRelated}
+	}
+	return po.Related
 }
 
 func populateLinesOnPO(ctx context.Context, parent any, _ map[string]any) {

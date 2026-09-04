@@ -168,7 +168,7 @@ func TestInbox_CompleteMarksAndReleases(t *testing.T) {
 
 	id := insertRecord(t, pool, repo, "test.complete", 300)
 
-	completed, err := repo.Complete(context.Background(), id)
+	completed, err := repo.Complete(context.Background(), id, "owner-a")
 	if err != nil {
 		t.Fatalf("Complete: %v", err)
 	}
@@ -205,11 +205,11 @@ func TestInbox_CompleteIsRefusedOnAnAlreadyCompletedRecord(t *testing.T) {
 
 	id := insertRecord(t, pool, repo, "test.complete_twice", 300)
 
-	first, err := repo.Complete(context.Background(), id)
+	first, err := repo.Complete(context.Background(), id, "owner-a")
 	if err != nil {
 		t.Fatalf("first Complete: %v", err)
 	}
-	second, err := repo.Complete(context.Background(), id)
+	second, err := repo.Complete(context.Background(), id, "owner-a")
 	if err != nil {
 		t.Fatalf("second Complete: %v", err)
 	}
@@ -244,7 +244,7 @@ func TestInbox_ConcurrentCompletesSerialiseAndExactlyOneWins(t *testing.T) {
 	repoB := NewInboxRepo(queries.WithTx(txB))
 
 	// A takes the row lock first and holds it.
-	wonA, err := repoA.Complete(ctx, id)
+	wonA, err := repoA.Complete(ctx, id, "owner-a")
 	if err != nil {
 		t.Fatalf("A Complete: %v", err)
 	}
@@ -261,7 +261,7 @@ func TestInbox_ConcurrentCompletesSerialiseAndExactlyOneWins(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		close(started)
-		wonB, errB = repoB.Complete(ctx, id)
+		wonB, errB = repoB.Complete(ctx, id, "owner-a")
 		returned.Store(true)
 	}()
 
@@ -345,7 +345,7 @@ func TestInbox_MarkFailedReleasesTheLease(t *testing.T) {
 
 	id := insertRecord(t, pool, repo, "test.mark_failed", 300)
 
-	if err := repo.MarkFailed(context.Background(), id, "handler exploded"); err != nil {
+	if err := repo.MarkFailed(context.Background(), id, "owner-a", "handler exploded"); err != nil {
 		t.Fatalf("MarkFailed: %v", err)
 	}
 
@@ -393,7 +393,7 @@ func TestInbox_MarkDiscardedIsTerminalAndPurgeable(t *testing.T) {
 
 	id := insertRecord(t, pool, repo, "test.discarded", 300)
 
-	if err := repo.MarkDiscarded(context.Background(), id, "no account on event"); err != nil {
+	if err := repo.MarkDiscarded(context.Background(), id, "owner-a", "no account on event"); err != nil {
 		t.Fatalf("MarkDiscarded: %v", err)
 	}
 
@@ -420,11 +420,132 @@ func TestInbox_MarkDiscardedIsTerminalAndPurgeable(t *testing.T) {
 	}
 
 	// Completing a discarded record must be refused, so a late redelivery cannot resurrect it.
-	completed, err := repo.Complete(context.Background(), id)
+	completed, err := repo.Complete(context.Background(), id, "owner-a")
 	if err != nil {
 		t.Fatalf("Complete: %v", err)
 	}
 	if completed {
 		t.Error("a discarded record was completed")
+	}
+}
+
+// The lease is only worth something if the writes that release it check who holds it. An attempt
+// whose own lease lapsed while it was still running must not be able to clear the lease of the
+// consumer that legitimately claimed the record after it — doing so lets a third delivery claim a
+// record that is actively being worked, and the message is applied twice.
+
+func TestInbox_MarkFailedIsRefusedForAnAttemptThatLostItsLease(t *testing.T) {
+	pool := testDB(t)
+	repo := NewInboxRepo(sqlc.New(pool))
+
+	id := insertRecord(t, pool, repo, "test.failed_wrong_owner", 300)
+
+	// owner-b takes over after owner-a's lease lapses.
+	if _, err := pool.Exec(
+		"UPDATE message_inbox SET lock_expires_at = DATE_SUB(NOW(3), INTERVAL 1 SECOND) WHERE id = ?", id,
+	); err != nil {
+		t.Fatalf("expiring the lease: %v", err)
+	}
+	claimed, err := repo.Claim(context.Background(), id, "owner-b", 300)
+	if err != nil || !claimed {
+		t.Fatalf("Claim by owner-b: claimed=%v err=%v", claimed, err)
+	}
+
+	// owner-a finally fails, long after it stopped holding the record.
+	if err := repo.MarkFailed(context.Background(), id, "owner-a", "late failure"); err != nil {
+		t.Fatalf("MarkFailed: %v", err)
+	}
+
+	var owner sql.NullString
+	var expires sql.NullTime
+	var lastError sql.NullString
+	row := pool.QueryRow("SELECT lock_owner, lock_expires_at, last_error FROM message_inbox WHERE id = ?", id)
+	if err := row.Scan(&owner, &expires, &lastError); err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+
+	if owner.String != "owner-b" {
+		t.Errorf("lock_owner = %q, want owner-b: a lapsed attempt released the live holder's lease", owner.String)
+	}
+	if !expires.Valid {
+		t.Error("lock_expires_at was cleared, leaving the record claimable while owner-b is working it")
+	}
+	if lastError.Valid {
+		t.Errorf("last_error = %q, want none: owner-a's failure is not owner-b's attempt", lastError.String)
+	}
+}
+
+func TestInbox_CompleteIsRefusedForAnAttemptThatLostItsLease(t *testing.T) {
+	pool := testDB(t)
+	repo := NewInboxRepo(sqlc.New(pool))
+
+	id := insertRecord(t, pool, repo, "test.complete_wrong_owner", 300)
+
+	completed, err := repo.Complete(context.Background(), id, "owner-b")
+	if err != nil {
+		t.Fatalf("Complete: %v", err)
+	}
+	if completed {
+		t.Error("Complete succeeded for an owner that does not hold the lease; a slow attempt can " +
+			"steal the completion from the consumer that replaced it")
+	}
+}
+
+func TestInbox_MarkDiscardedIsRefusedForAnAttemptThatLostItsLease(t *testing.T) {
+	pool := testDB(t)
+	repo := NewInboxRepo(sqlc.New(pool))
+
+	id := insertRecord(t, pool, repo, "test.discard_wrong_owner", 300)
+
+	if err := repo.MarkDiscarded(context.Background(), id, "owner-b", "not mine to end"); err != nil {
+		t.Fatalf("MarkDiscarded: %v", err)
+	}
+
+	var status string
+	if err := pool.QueryRow("SELECT status FROM message_inbox WHERE id = ?", id).Scan(&status); err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+	if status != "received" {
+		t.Errorf("status = %q, want received: an attempt with no lease ended someone else's message", status)
+	}
+}
+
+// A message this handler was never going to act on is terminal and purgeable like a discard, but it
+// is not a failure — the monitor scans 'discarded' and never 'ignored'.
+func TestInbox_MarkIgnoredIsTerminalAndPurgeable(t *testing.T) {
+	pool := testDB(t)
+	repo := NewInboxRepo(sqlc.New(pool))
+
+	id := insertRecord(t, pool, repo, "test.ignored", 300)
+
+	if err := repo.MarkIgnored(context.Background(), id, "owner-a", "unhandled event type"); err != nil {
+		t.Fatalf("MarkIgnored: %v", err)
+	}
+
+	var status string
+	var processedAt sql.NullTime
+	var owner sql.NullString
+	row := pool.QueryRow("SELECT status, processed_at, lock_owner FROM message_inbox WHERE id = ?", id)
+	if err := row.Scan(&status, &processedAt, &owner); err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+
+	if status != "ignored" {
+		t.Errorf("status = %q, want ignored", status)
+	}
+	if !processedAt.Valid {
+		t.Error("processed_at is unset, so the retention purge and its index will never reach this row")
+	}
+	if owner.Valid {
+		t.Errorf("lock_owner = %q, want released", owner.String)
+	}
+
+	// A terminal record is not re-runnable: the next delivery must find nothing to claim.
+	claimed, err := repo.Claim(context.Background(), id, "owner-b", 300)
+	if err != nil {
+		t.Fatalf("Claim: %v", err)
+	}
+	if claimed {
+		t.Error("an ignored record was claimed; the handler would run on a message already ended")
 	}
 }

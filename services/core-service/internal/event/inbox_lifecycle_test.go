@@ -143,7 +143,7 @@ func (r *journalInboxRepo) Claim(context.Context, int64, string, int) (bool, err
 	return false, errors.New("not used inside a transaction")
 }
 
-func (r *journalInboxRepo) Complete(_ context.Context, id int64) (bool, error) {
+func (r *journalInboxRepo) Complete(_ context.Context, id int64, _ string) (bool, error) {
 	r.completeCalls++
 	if r.completeErr != nil {
 		return false, r.completeErr
@@ -155,9 +155,11 @@ func (r *journalInboxRepo) Complete(_ context.Context, id int64) (bool, error) {
 	return true, nil
 }
 
-func (r *journalInboxRepo) MarkFailed(context.Context, int64, string) error { return nil }
+func (r *journalInboxRepo) MarkFailed(context.Context, int64, string, string) error { return nil }
 
-func (r *journalInboxRepo) MarkDiscarded(context.Context, int64, string) error { return nil }
+func (r *journalInboxRepo) MarkDiscarded(context.Context, int64, string, string) error { return nil }
+
+func (r *journalInboxRepo) MarkIgnored(context.Context, int64, string, string) error { return nil }
 
 // outerInboxRepo is the pool-scoped inbox the wrapper itself uses, outside any transaction.
 type outerInboxRepo struct {
@@ -167,6 +169,8 @@ type outerInboxRepo struct {
 	failed       int
 	discarded    int
 	discardedFor []string
+	ignored      int
+	ignoredFor   []string
 	insertErr    error
 }
 
@@ -187,19 +191,25 @@ func (r *outerInboxRepo) GetByMessageAndHandler(context.Context, string, string)
 
 func (r *outerInboxRepo) Claim(context.Context, int64, string, int) (bool, error) { return true, nil }
 
-func (r *outerInboxRepo) Complete(context.Context, int64) (bool, error) {
+func (r *outerInboxRepo) Complete(context.Context, int64, string) (bool, error) {
 	r.completed++
 	return true, nil
 }
 
-func (r *outerInboxRepo) MarkFailed(context.Context, int64, string) error {
+func (r *outerInboxRepo) MarkFailed(context.Context, int64, string, string) error {
 	r.failed++
 	return nil
 }
 
-func (r *outerInboxRepo) MarkDiscarded(_ context.Context, _ int64, reason string) error {
+func (r *outerInboxRepo) MarkDiscarded(_ context.Context, _ int64, _ string, reason string) error {
 	r.discarded++
 	r.discardedFor = append(r.discardedFor, reason)
+	return nil
+}
+
+func (r *outerInboxRepo) MarkIgnored(_ context.Context, _ int64, _ string, reason string) error {
+	r.ignored++
+	r.ignoredFor = append(r.ignoredFor, reason)
 	return nil
 }
 

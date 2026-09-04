@@ -124,11 +124,14 @@ func (r *inboxRepoImpl) Claim(ctx context.Context, id int64, owner string, ttlSe
 	return rows > 0, nil
 }
 
-func (r *inboxRepoImpl) Complete(ctx context.Context, id int64) (bool, error) {
+func (r *inboxRepoImpl) Complete(ctx context.Context, id int64, owner string) (bool, error) {
 	ctx, span := inboxRepoTracer.Start(ctx, "repository.inbox.complete")
 	defer span.End()
 
-	rows, err := r.queries.CompleteInboxRecord(ctx, id)
+	rows, err := r.queries.CompleteInboxRecord(ctx, sqlc.CompleteInboxRecordParams{
+		ID:        id,
+		LockOwner: db.NullString(owner),
+	})
 	if err != nil {
 		span.RecordError(err)
 		return false, err
@@ -137,13 +140,14 @@ func (r *inboxRepoImpl) Complete(ctx context.Context, id int64) (bool, error) {
 	return rows > 0, nil
 }
 
-func (r *inboxRepoImpl) MarkFailed(ctx context.Context, id int64, errMsg string) error {
+func (r *inboxRepoImpl) MarkFailed(ctx context.Context, id int64, owner, errMsg string) error {
 	ctx, span := inboxRepoTracer.Start(ctx, "repository.inbox.mark_failed")
 	defer span.End()
 
-	err := r.queries.MarkInboxRecordFailed(ctx, sqlc.MarkInboxRecordFailedParams{
+	_, err := r.queries.MarkInboxRecordFailed(ctx, sqlc.MarkInboxRecordFailedParams{
 		ID:        id,
 		LastError: db.NullString(errMsg),
+		LockOwner: db.NullString(owner),
 	})
 	if err != nil {
 		span.RecordError(err)
@@ -153,13 +157,31 @@ func (r *inboxRepoImpl) MarkFailed(ctx context.Context, id int64, errMsg string)
 	return nil
 }
 
-func (r *inboxRepoImpl) MarkDiscarded(ctx context.Context, id int64, reason string) error {
+func (r *inboxRepoImpl) MarkDiscarded(ctx context.Context, id int64, owner, reason string) error {
 	ctx, span := inboxRepoTracer.Start(ctx, "repository.inbox.mark_discarded")
 	defer span.End()
 
-	err := r.queries.MarkInboxRecordDiscarded(ctx, sqlc.MarkInboxRecordDiscardedParams{
+	_, err := r.queries.MarkInboxRecordDiscarded(ctx, sqlc.MarkInboxRecordDiscardedParams{
 		ID:        id,
 		LastError: db.NullString(reason),
+		LockOwner: db.NullString(owner),
+	})
+	if err != nil {
+		span.RecordError(err)
+		return err
+	}
+
+	return nil
+}
+
+func (r *inboxRepoImpl) MarkIgnored(ctx context.Context, id int64, owner, reason string) error {
+	ctx, span := inboxRepoTracer.Start(ctx, "repository.inbox.mark_ignored")
+	defer span.End()
+
+	_, err := r.queries.MarkInboxRecordIgnored(ctx, sqlc.MarkInboxRecordIgnoredParams{
+		ID:        id,
+		LastError: db.NullString(reason),
+		LockOwner: db.NullString(owner),
 	})
 	if err != nil {
 		span.RecordError(err)

@@ -681,6 +681,8 @@ type DeliverySummaryInfo struct {
 	Lines                []*DeliveryLineInfo `protobuf:"bytes,11,rep,name=lines,proto3" json:"lines,omitempty"`
 	ReceivingOrderId     *string             `protobuf:"bytes,12,opt,name=receiving_order_id,json=receivingOrderId,proto3,oneof" json:"receiving_order_id,omitempty"`
 	ReceivingOrderNumber *string             `protobuf:"bytes,13,opt,name=receiving_order_number,json=receivingOrderNumber,proto3,oneof" json:"receiving_order_number,omitempty"`
+	ReceivingOrderStatus *string             `protobuf:"bytes,14,opt,name=receiving_order_status,json=receivingOrderStatus,proto3,oneof" json:"receiving_order_status,omitempty"`
+	PurchaseOrderStatus  string              `protobuf:"bytes,15,opt,name=purchase_order_status,json=purchaseOrderStatus,proto3" json:"purchase_order_status,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -806,6 +808,20 @@ func (x *DeliverySummaryInfo) GetReceivingOrderNumber() string {
 	return ""
 }
 
+func (x *DeliverySummaryInfo) GetReceivingOrderStatus() string {
+	if x != nil && x.ReceivingOrderStatus != nil {
+		return *x.ReceivingOrderStatus
+	}
+	return ""
+}
+
+func (x *DeliverySummaryInfo) GetPurchaseOrderStatus() string {
+	if x != nil {
+		return x.PurchaseOrderStatus
+	}
+	return ""
+}
+
 type DeliveryInfo struct {
 	state                protoimpl.MessageState `protogen:"open.v1"`
 	Id                   string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -820,6 +836,8 @@ type DeliveryInfo struct {
 	UpdatedAt            *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	ReceivingOrderId     *string                `protobuf:"bytes,11,opt,name=receiving_order_id,json=receivingOrderId,proto3,oneof" json:"receiving_order_id,omitempty"`
 	ReceivingOrderNumber *string                `protobuf:"bytes,12,opt,name=receiving_order_number,json=receivingOrderNumber,proto3,oneof" json:"receiving_order_number,omitempty"`
+	ReceivingOrderStatus *string                `protobuf:"bytes,13,opt,name=receiving_order_status,json=receivingOrderStatus,proto3,oneof" json:"receiving_order_status,omitempty"`
+	PurchaseOrderStatus  string                 `protobuf:"bytes,14,opt,name=purchase_order_status,json=purchaseOrderStatus,proto3" json:"purchase_order_status,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -934,6 +952,20 @@ func (x *DeliveryInfo) GetReceivingOrderId() string {
 func (x *DeliveryInfo) GetReceivingOrderNumber() string {
 	if x != nil && x.ReceivingOrderNumber != nil {
 		return *x.ReceivingOrderNumber
+	}
+	return ""
+}
+
+func (x *DeliveryInfo) GetReceivingOrderStatus() string {
+	if x != nil && x.ReceivingOrderStatus != nil {
+		return *x.ReceivingOrderStatus
+	}
+	return ""
+}
+
+func (x *DeliveryInfo) GetPurchaseOrderStatus() string {
+	if x != nil {
+		return x.PurchaseOrderStatus
 	}
 	return ""
 }
@@ -6125,7 +6157,7 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\x12GetDeliveryRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"E\n" +
 	"\x13GetDeliveryResponse\x12.\n" +
-	"\bdelivery\x18\x01 \x01(\v2\x12.core.DeliveryInfoR\bdelivery\"\xbc\x05\n" +
+	"\bdelivery\x18\x01 \x01(\v2\x12.core.DeliveryInfoR\bdelivery\"\xc6\x06\n" +
 	"\x13DeliverySummaryInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12*\n" +
@@ -6145,11 +6177,14 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12,\n" +
 	"\x05lines\x18\v \x03(\v2\x16.core.DeliveryLineInfoR\x05lines\x121\n" +
 	"\x12receiving_order_id\x18\f \x01(\tH\x02R\x10receivingOrderId\x88\x01\x01\x129\n" +
-	"\x16receiving_order_number\x18\r \x01(\tH\x03R\x14receivingOrderNumber\x88\x01\x01B\x0e\n" +
+	"\x16receiving_order_number\x18\r \x01(\tH\x03R\x14receivingOrderNumber\x88\x01\x01\x129\n" +
+	"\x16receiving_order_status\x18\x0e \x01(\tH\x04R\x14receivingOrderStatus\x88\x01\x01\x122\n" +
+	"\x15purchase_order_status\x18\x0f \x01(\tR\x13purchaseOrderStatusB\x0e\n" +
 	"\f_accepted_atB\x0e\n" +
 	"\f_rejected_atB\x15\n" +
 	"\x13_receiving_order_idB\x19\n" +
-	"\x17_receiving_order_number\"\x96\x05\n" +
+	"\x17_receiving_order_numberB\x19\n" +
+	"\x17_receiving_order_status\"\xa0\x06\n" +
 	"\fDeliveryInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12*\n" +
@@ -6167,11 +6202,14 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"updated_at\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x121\n" +
 	"\x12receiving_order_id\x18\v \x01(\tH\x02R\x10receivingOrderId\x88\x01\x01\x129\n" +
-	"\x16receiving_order_number\x18\f \x01(\tH\x03R\x14receivingOrderNumber\x88\x01\x01B\x0e\n" +
+	"\x16receiving_order_number\x18\f \x01(\tH\x03R\x14receivingOrderNumber\x88\x01\x01\x129\n" +
+	"\x16receiving_order_status\x18\r \x01(\tH\x04R\x14receivingOrderStatus\x88\x01\x01\x122\n" +
+	"\x15purchase_order_status\x18\x0e \x01(\tR\x13purchaseOrderStatusB\x0e\n" +
 	"\f_accepted_atB\x0e\n" +
 	"\f_rejected_atB\x15\n" +
 	"\x13_receiving_order_idB\x19\n" +
-	"\x17_receiving_order_number\"\x84\v\n" +
+	"\x17_receiving_order_numberB\x19\n" +
+	"\x17_receiving_order_status\"\x84\v\n" +
 	"\x10DeliveryLineInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1c\n" +
 	"\aitem_id\x18\x02 \x01(\tH\x00R\x06itemId\x88\x01\x01\x12\x1e\n" +

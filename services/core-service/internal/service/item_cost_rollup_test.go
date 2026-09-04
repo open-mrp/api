@@ -16,12 +16,13 @@ import (
 // A carton of eight, an each, and an item stocked by the carton whose only production step is written
 // in eaches — the shape every corrupted SKU in the incident had.
 const (
-	testCostAccountID   = "ac_cost"
-	testCostItemID      = "itm_hotmitt"
-	testCostStepID      = "ps_sew"
-	testCostUnitGroupID = "ug_case_of_eight"
-	testCostUnitEach    = "un_ea"
-	testCostUnitCarton  = "un_ct8ea"
+	testCostAccountID    = "ac_cost"
+	testCostItemID       = "itm_hotmitt"
+	testCostStepID       = "ps_sew"
+	testCostUnitGroupID  = "ug_case_of_eight"
+	testCostUnitEach     = "un_ea"
+	testCostUnitCarton   = "un_ct8ea"
+	testCostCurrencyUnit = "un_usd"
 )
 
 // eachesPerCarton is what the unit group says, and the factor every assertion below turns on.
@@ -112,6 +113,8 @@ func newCostRollupHarness(t *testing.T, stubs rolloutStubs) *costRollupHarness {
 	unitRepo := repositorymock.NewMockUnitRepo(ctrl)
 	unitRepo.EXPECT().IsUnitInGroup(gomock.Any(), testCostUnitGroupID, stubs.stepUnitID).
 		Return(stubs.stepUnitInGroup, nil).AnyTimes()
+	// The stubbed item has no unit-cost rate, so the currency comes from the fallback.
+	unitRepo.EXPECT().GetCurrencyBaseUnitID(gomock.Any()).Return(testCostCurrencyUnit, nil).AnyTimes()
 
 	convRepo := repositorymock.NewMockUnitConversionRepo(ctrl)
 	convRepo.EXPECT().ConvertValue(gomock.Any(), gomock.Any(), testCostUnitCarton, testCostUnitEach).
@@ -442,5 +445,36 @@ func TestRecomputeItemCosts_AbsentLabourPricesMaterialOnly(t *testing.T) {
 	want := decimal.RequireFromString("48") // $6 of material an each, eight to the carton.
 	if got := h.written[0].Cost; got.Sub(want).Abs().GreaterThan(decimal.RequireFromString("0.0001")) {
 		t.Errorf("persisted %s, want %s", got, want)
+	}
+}
+
+// A cost is a number and the money it is counted in. The currency normally comes off the item's own
+// unit-cost rate, so a computed cost and the stored one name the same money — but an item priced from
+// its step graph for the first time has no such rate yet. Reporting the total with no currency at all
+// is the worse answer: the step costs it was summed from are all denominated in the default one.
+func TestRecomputeItemCosts_FallsBackToTheCurrencyBaseUnitWhenTheItemHasNoUnitCostYet(t *testing.T) {
+	t.Parallel()
+
+	h := newCostRollupHarness(t, rolloutStubs{
+		stepUnitID:      testCostUnitEach,
+		stepQuantity:    decimal.NewFromInt(1),
+		stepUnitInGroup: true,
+		consumptions: []domain.CostFlowConsumption{
+			consumedAgainstItsOwnUnit("2", "3", "453.59237"),
+		},
+	})
+
+	costs, apiErr := h.svc.RecomputeItemCosts(context.Background(), testCostAccountID, testCostItemID)
+	if apiErr != nil {
+		t.Fatalf("RecomputeItemCosts: %v", apiErr)
+	}
+
+	if costs.NumeratorUnitID != testCostCurrencyUnit {
+		t.Errorf("NumeratorUnitID = %q, want %q: a money figure with no currency is not a money figure",
+			costs.NumeratorUnitID, testCostCurrencyUnit)
+	}
+	if costs.UnitID != testCostUnitCarton {
+		t.Errorf("UnitID = %q, want %q: it is still stated per the unit the item is stocked in",
+			costs.UnitID, testCostUnitCarton)
 	}
 }

@@ -92,8 +92,10 @@ type PurchaseOrder struct {
 	PriorityID *string
 
 	// Joined receiving order
-	ReceivingOrderID *string
-	Deliveries       []DocumentRef
+	ReceivingOrderID     *string
+	ReceivingOrderNumber *string
+	ReceivingOrderStatus *string
+	Deliveries           []DocumentRef
 
 	// Lines (populated when included)
 	Lines []*PurchaseOrderLine

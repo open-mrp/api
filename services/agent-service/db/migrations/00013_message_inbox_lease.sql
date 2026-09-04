@@ -6,11 +6,7 @@ ALTER TABLE message_inbox
   ADD COLUMN lock_owner varchar(64) DEFAULT NULL,
   ADD COLUMN lock_expires_at timestamptz DEFAULT NULL;
 
-CREATE INDEX message_inbox_lock_expires_at_idx ON message_inbox (status, lock_expires_at);
-
 -- +goose Down
-
-DROP INDEX IF EXISTS message_inbox_lock_expires_at_idx;
 
 ALTER TABLE message_inbox
   DROP COLUMN lock_expires_at,

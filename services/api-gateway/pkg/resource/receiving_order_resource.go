@@ -51,7 +51,7 @@ type ReceivingOrder struct {
 
 // ReceivingOrderTotals is what the order is worth and how far it has been put away.
 //
-// A receiving order's lines can each count in a different unit, so the amounts — the purchase order's agreed unit price times a quantity — are what make the stages comparable. Completion stays a ratio of quantities, which survives the mixed units the same way it does on a sales order.
+// A receiving order's lines can each count in a different unit, so the amounts — the purchase order's agreed unit price times a quantity — are what make the stages comparable, and completion is a ratio of two of them.
 type ReceivingOrderTotals struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=receiving_order_totals"`
@@ -84,7 +84,7 @@ type ReceivingOrderStageTotal struct {
 	Amount string `json:"amount" validate:"required" format:"decimal"`
 	// Progress through this stage, as a fraction between 0 and 1.
 	//
-	// Calculated as the quantity that has reached this stage divided by the quantity ordered, so `1` means the whole order has cleared the stage.
+	// Calculated as this stage's amount divided by `totals.ordered`, so `1` means the whole order has cleared the stage. It is a ratio of amounts rather than of quantities because a receiving order's lines can each count in a different unit.
 	Completion float64 `json:"completion"`
 }
 

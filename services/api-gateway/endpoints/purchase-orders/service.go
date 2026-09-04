@@ -12,6 +12,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
+	"github.com/open-mrp/api/shared/ptrutil"
 	"github.com/open-mrp/api/shared/safeconv"
 	"github.com/open-mrp/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -644,7 +645,10 @@ func stashPurchaseOrderDetailMeta(ctx context.Context, info *pb.PurchaseOrderInf
 	// The receiving order and deliveries are document-level cross-references, carried as records so a caller can follow them without this response embedding whole other orders.
 	related := &apiresource.PurchaseOrderRelated{Object: constants.ObjectTypePurchaseOrderRelated}
 	if info.ReceivingOrderId != nil && *info.ReceivingOrderId != "" {
-		related.ReceivingOrder = apiresource.NewRecord(*info.ReceivingOrderId, constants.RecordTypeReceivingOrder)
+		ro := apiresource.NewRecord(*info.ReceivingOrderId, constants.RecordTypeReceivingOrder)
+		ro.Number = ptrutil.NonEmptyPtr(ptrutil.Deref(info.ReceivingOrderNumber))
+		ro.Status = ptrutil.NonEmptyPtr(ptrutil.Deref(info.ReceivingOrderStatus))
+		related.ReceivingOrder = ro
 	}
 	if len(info.Deliveries) > 0 {
 		records := make([]apiresource.Record, len(info.Deliveries))

@@ -53,6 +53,9 @@ message ReceivingOrderSummaryInfo {
   repeated ReceivingOrderLineInfo lines = 13;
   optional ReceivingOrderTotalsInfo totals = 14;
   repeated DocumentRefInfo deliveries = 15;
+  // The purchase order's status, so the order's `related` reference to it is readable without
+  // fetching it.
+  string purchase_order_status = 16;
 }
 
 // DocumentRefInfo names one purchasing document from another.
@@ -62,14 +65,15 @@ message DocumentRefInfo {
   string status = 3;
 }
 
-// ReceivingOrderTotalsInfo aggregates a receiving order's lines: what they were ordered for, what has been stocked, and what was refused. Amounts are decimal strings; quantities travel with them so the gateway can express each stage as a fraction of what was ordered.
+// ReceivingOrderTotalsInfo aggregates a receiving order's lines: what they were ordered for, what has been stocked, and what was refused, as decimal strings.
+//
+// Every figure is an amount — the purchase order's agreed unit price times a quantity — because a receiving order's lines can each count in a different unit, and money is the only common denominator they have. The gateway divides two of these for completion, rather than dividing quantities that may not share a unit.
 message ReceivingOrderTotalsInfo {
   string ordered_amount = 1;
-  string ordered_quantity = 2;
   string stocked_amount = 3;
-  string stocked_quantity = 4;
   string rejected_amount = 5;
-  string rejected_quantity = 6;
+  reserved 2, 4, 6;
+  reserved "ordered_quantity", "stocked_quantity", "rejected_quantity";
 }
 
 // ReceivingOrderInfo represents a full receiving order with lines.
@@ -84,6 +88,9 @@ message ReceivingOrderInfo {
   repeated ReceivingOrderLineInfo lines = 8;
   optional ReceivingOrderTotalsInfo totals = 13;
   repeated DocumentRefInfo deliveries = 18;
+  // The purchase order's status, so the order's `related` reference to it is readable without
+  // fetching it.
+  string purchase_order_status = 19;
   optional google.protobuf.Timestamp completed_at = 9;
   google.protobuf.Timestamp created_at = 10;
   google.protobuf.Timestamp updated_at = 11;

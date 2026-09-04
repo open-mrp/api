@@ -24,9 +24,10 @@ type mockInboxRepo struct {
 	tryInsertFn            func(ctx context.Context, input InboxRecordInput) (int64, error)
 	getByMessageAndHandler func(ctx context.Context, messageID, handler string) (*InboxRecord, error)
 	claimFn                func(ctx context.Context, id int64, owner string, ttlSeconds int) (bool, error)
-	completeFn             func(ctx context.Context, id int64) (bool, error)
-	markFailedFn           func(ctx context.Context, id int64, errMsg string) error
-	markDiscardedFn        func(ctx context.Context, id int64, reason string) error
+	completeFn             func(ctx context.Context, id int64, owner string) (bool, error)
+	markFailedFn           func(ctx context.Context, id int64, owner, errMsg string) error
+	markDiscardedFn        func(ctx context.Context, id int64, owner, reason string) error
+	markIgnoredFn          func(ctx context.Context, id int64, owner, reason string) error
 }
 
 func (m *mockInboxRepo) TryInsert(ctx context.Context, input InboxRecordInput) (int64, error) {
@@ -50,23 +51,30 @@ func (m *mockInboxRepo) Claim(ctx context.Context, id int64, owner string, ttlSe
 	return true, nil
 }
 
-func (m *mockInboxRepo) Complete(ctx context.Context, id int64) (bool, error) {
+func (m *mockInboxRepo) Complete(ctx context.Context, id int64, owner string) (bool, error) {
 	if m.completeFn != nil {
-		return m.completeFn(ctx, id)
+		return m.completeFn(ctx, id, owner)
 	}
 	return true, nil
 }
 
-func (m *mockInboxRepo) MarkDiscarded(ctx context.Context, id int64, reason string) error {
+func (m *mockInboxRepo) MarkDiscarded(ctx context.Context, id int64, owner, reason string) error {
 	if m.markDiscardedFn != nil {
-		return m.markDiscardedFn(ctx, id, reason)
+		return m.markDiscardedFn(ctx, id, owner, reason)
 	}
 	return nil
 }
 
-func (m *mockInboxRepo) MarkFailed(ctx context.Context, id int64, errMsg string) error {
+func (m *mockInboxRepo) MarkIgnored(ctx context.Context, id int64, owner, reason string) error {
+	if m.markIgnoredFn != nil {
+		return m.markIgnoredFn(ctx, id, owner, reason)
+	}
+	return nil
+}
+
+func (m *mockInboxRepo) MarkFailed(ctx context.Context, id int64, owner, errMsg string) error {
 	if m.markFailedFn != nil {
-		return m.markFailedFn(ctx, id, errMsg)
+		return m.markFailedFn(ctx, id, owner, errMsg)
 	}
 	return nil
 }
@@ -126,7 +134,7 @@ func (s *InboxConsumerTestSuite) TestWrap_NewMessage_ProcessedSuccessfully() {
 			s.Equal("test-handler", input.Handler)
 			return 42, nil
 		},
-		completeFn: func(_ context.Context, id int64) (bool, error) {
+		completeFn: func(_ context.Context, id int64, _ string) (bool, error) {
 			s.Equal(int64(42), id)
 			markProcessedCalled = true
 			return true, nil
@@ -153,7 +161,7 @@ func (s *InboxConsumerTestSuite) TestWrap_NewMessage_HandlerFails() {
 		tryInsertFn: func(_ context.Context, _ InboxRecordInput) (int64, error) {
 			return 42, nil
 		},
-		markFailedFn: func(_ context.Context, id int64, errMsg string) error {
+		markFailedFn: func(_ context.Context, id int64, _ string, errMsg string) error {
 			markFailedID = id
 			markFailedMsg = errMsg
 			return nil
@@ -348,16 +356,16 @@ func (s *InboxConsumerTestSuite) TestWrap_Discard_RecordsReasonAndAcks() {
 	var reason string
 	repo := &mockInboxRepo{
 		tryInsertFn: func(_ context.Context, _ InboxRecordInput) (int64, error) { return 9, nil },
-		markDiscardedFn: func(_ context.Context, id int64, r string) error {
+		markDiscardedFn: func(_ context.Context, id int64, _ string, r string) error {
 			discardedID = id
 			reason = r
 			return nil
 		},
-		completeFn: func(_ context.Context, _ int64) (bool, error) {
+		completeFn: func(_ context.Context, _ int64, _ string) (bool, error) {
 			s.Fail("a discarded message must not also be marked processed")
 			return false, nil
 		},
-		markFailedFn: func(_ context.Context, _ int64, _ string) error {
+		markFailedFn: func(_ context.Context, _ int64, _ string, _ string) error {
 			s.Fail("a deliberate discard is not a failure to retry")
 			return nil
 		},
@@ -375,29 +383,31 @@ func (s *InboxConsumerTestSuite) TestWrap_Discard_RecordsReasonAndAcks() {
 }
 
 // The handler sees the record id, which is what lets it commit its recovery point inside its own transaction.
-func (s *InboxConsumerTestSuite) TestWrap_HandlerReceivesRecordID() {
+func (s *InboxConsumerTestSuite) TestWrap_HandlerReceivesTheLease() {
 	repo := &mockInboxRepo{
 		tryInsertFn: func(_ context.Context, _ InboxRecordInput) (int64, error) { return 77, nil },
 	}
 
 	consumer := NewInboxConsumer(repo, "test-service")
-	var seen int64
+	var lease InboxLease
 	var ok bool
 	wrapped := consumer.Wrap("test-handler", func(ctx context.Context, _ amqp.Delivery) error {
-		seen, ok = InboxRecordIDFromContext(ctx)
+		lease, ok = InboxLeaseFromContext(ctx)
 		return nil
 	})
 
 	s.NoError(wrapped(context.Background(), deliveryWithMessageID("msg_ctx")))
 	s.True(ok)
-	s.Equal(int64(77), seen)
+	s.Equal(int64(77), lease.RecordID)
+	// The owner travels with the record id: every write that closes the record out is conditional on it.
+	s.NotEmpty(lease.Owner)
 }
 
 // A handler that rolled back because another attempt won the race reports no error: nothing failed and nothing is owed.
 func (s *InboxConsumerTestSuite) TestWrap_AlreadyCompletedByConcurrentAttempt_Acks() {
 	repo := &mockInboxRepo{
 		tryInsertFn: func(_ context.Context, _ InboxRecordInput) (int64, error) { return 5, nil },
-		markFailedFn: func(_ context.Context, _ int64, _ string) error {
+		markFailedFn: func(_ context.Context, _ int64, _ string, _ string) error {
 			s.Fail("losing a completion race is not a failure")
 			return nil
 		},
@@ -494,7 +504,7 @@ func (s *InboxConsumerTestSuite) TestWrap_MarkProcessedError_StillReturnsNil() {
 		tryInsertFn: func(_ context.Context, _ InboxRecordInput) (int64, error) {
 			return 42, nil
 		},
-		completeFn: func(_ context.Context, _ int64) (bool, error) {
+		completeFn: func(_ context.Context, _ int64, _ string) (bool, error) {
 			return false, errors.New("mark failed")
 		},
 	}
@@ -513,7 +523,7 @@ func (s *InboxConsumerTestSuite) TestWrap_MarkFailedError_StillReturnsHandlerErr
 		tryInsertFn: func(_ context.Context, _ InboxRecordInput) (int64, error) {
 			return 42, nil
 		},
-		markFailedFn: func(_ context.Context, _ int64, _ string) error {
+		markFailedFn: func(_ context.Context, _ int64, _ string, _ string) error {
 			return errors.New("mark failed error")
 		},
 	}
@@ -548,7 +558,7 @@ func (s *InboxConsumerTestSuite) TestWrap_RecordsAReasonForAPublicMessageOnlyFai
 	var recorded string
 	repo := &mockInboxRepo{
 		tryInsertFn: func(_ context.Context, _ InboxRecordInput) (int64, error) { return 7, nil },
-		markFailedFn: func(_ context.Context, _ int64, errMsg string) error {
+		markFailedFn: func(_ context.Context, _ int64, _ string, errMsg string) error {
 			recorded = errMsg
 			return nil
 		},
@@ -694,7 +704,7 @@ func (s *InboxConsumerTestSuite) TestWrap_HandlerFails_RecordsFailureEvenWhenCon
 	var markedFailed bool
 	repo := &mockInboxRepo{
 		tryInsertFn: func(context.Context, InboxRecordInput) (int64, error) { return 42, nil },
-		markFailedFn: func(ctx context.Context, _ int64, _ string) error {
+		markFailedFn: func(ctx context.Context, _ int64, _ string, _ string) error {
 			s.NoError(ctx.Err(), "the outcome must not be written with the cancelled delivery context")
 			markedFailed = true
 			return nil
@@ -718,7 +728,7 @@ func (s *InboxConsumerTestSuite) TestWrap_Success_CompletesEvenWhenContextIsCanc
 	var completed bool
 	repo := &mockInboxRepo{
 		tryInsertFn: func(context.Context, InboxRecordInput) (int64, error) { return 42, nil },
-		completeFn: func(ctx context.Context, _ int64) (bool, error) {
+		completeFn: func(ctx context.Context, _ int64, _ string) (bool, error) {
 			s.NoError(ctx.Err())
 			completed = true
 			return true, nil
@@ -741,7 +751,7 @@ func (s *InboxConsumerTestSuite) TestWrap_Discard_RecordsEvenWhenContextIsCancel
 	var discarded bool
 	repo := &mockInboxRepo{
 		tryInsertFn: func(context.Context, InboxRecordInput) (int64, error) { return 42, nil },
-		markDiscardedFn: func(ctx context.Context, _ int64, _ string) error {
+		markDiscardedFn: func(ctx context.Context, _ int64, _ string, _ string) error {
 			s.NoError(ctx.Err())
 			discarded = true
 			return nil
@@ -767,10 +777,10 @@ func (s *InboxConsumerTestSuite) TestWrap_Discard_RecordsEvenWhenContextIsCancel
 func (s *InboxConsumerTestSuite) TestWrap_DiscardWriteFails_StillAcks() {
 	repo := &mockInboxRepo{
 		tryInsertFn: func(context.Context, InboxRecordInput) (int64, error) { return 42, nil },
-		markDiscardedFn: func(context.Context, int64, string) error {
+		markDiscardedFn: func(context.Context, int64, string, string) error {
 			return errors.New("db unavailable")
 		},
-		markFailedFn: func(context.Context, int64, string) error {
+		markFailedFn: func(context.Context, int64, string, string) error {
 			s.Fail("a discard whose write failed is still not a retryable failure")
 			return nil
 		},
@@ -791,7 +801,7 @@ func (s *InboxConsumerTestSuite) TestDiscard_WithoutARecord_Acks() {
 			s.Fail("TryInsert should not be called when there is no message ID")
 			return 0, nil
 		},
-		markDiscardedFn: func(context.Context, int64, string) error {
+		markDiscardedFn: func(context.Context, int64, string, string) error {
 			s.Fail("there is no record to discard")
 			return nil
 		},
@@ -809,11 +819,11 @@ func (s *InboxConsumerTestSuite) TestDiscard_WithoutARecord_Acks() {
 func (s *InboxConsumerTestSuite) TestWrap_Discard_DoesNotRecordAFailure() {
 	repo := &mockInboxRepo{
 		tryInsertFn: func(context.Context, InboxRecordInput) (int64, error) { return 42, nil },
-		markFailedFn: func(context.Context, int64, string) error {
+		markFailedFn: func(context.Context, int64, string, string) error {
 			s.Fail("a deliberate discard must not be recorded as a failed attempt")
 			return nil
 		},
-		completeFn: func(context.Context, int64) (bool, error) {
+		completeFn: func(context.Context, int64, string) (bool, error) {
 			s.Fail("a discarded message was not processed")
 			return false, nil
 		},
@@ -831,7 +841,7 @@ func (s *InboxConsumerTestSuite) TestWrap_Discard_DoesNotRecordAFailure() {
 func (s *InboxConsumerTestSuite) TestWrap_AlreadyCompleted_DoesNotRecordAFailure() {
 	repo := &mockInboxRepo{
 		tryInsertFn: func(context.Context, InboxRecordInput) (int64, error) { return 5, nil },
-		markFailedFn: func(context.Context, int64, string) error {
+		markFailedFn: func(context.Context, int64, string, string) error {
 			s.Fail("losing a completion race is not a failure")
 			return nil
 		},
@@ -843,4 +853,147 @@ func (s *InboxConsumerTestSuite) TestWrap_AlreadyCompleted_DoesNotRecordAFailure
 	})
 
 	s.NoError(wrapped(context.Background(), deliveryWithMessageID("msg_lost_race")))
+}
+
+// ---------------------------------------------------------------------------
+// lease ownership
+// ---------------------------------------------------------------------------
+
+// Every write that closes a record out is conditional on the lease, so each carries the owner that
+// holds it. Without that, an attempt whose lease already lapsed can clear the lease of the consumer
+// that claimed the record after it, and two handlers end up running the same message at once.
+
+func (s *InboxConsumerTestSuite) TestWrap_CompletePassesTheLeaseOwner() {
+	var completedWith string
+	repo := &mockInboxRepo{
+		tryInsertFn: func(context.Context, InboxRecordInput) (int64, error) { return 9, nil },
+		completeFn: func(_ context.Context, _ int64, owner string) (bool, error) {
+			completedWith = owner
+			return true, nil
+		},
+	}
+
+	consumer := NewInboxConsumer(repo, "test-service")
+	var handlerSaw InboxLease
+	wrapped := consumer.Wrap("test-handler", func(ctx context.Context, _ amqp.Delivery) error {
+		handlerSaw, _ = InboxLeaseFromContext(ctx)
+		return nil
+	})
+
+	s.NoError(wrapped(context.Background(), deliveryWithMessageID("msg_complete_owner")))
+	s.NotEmpty(completedWith, "Complete is conditional on the lease, so it must say who holds it")
+	s.Equal(handlerSaw.Owner, completedWith,
+		"the owner the handler could commit with is the one the wrapper completes with")
+}
+
+func (s *InboxConsumerTestSuite) TestWrap_MarkFailedPassesTheLeaseOwner() {
+	var failedWith string
+	repo := &mockInboxRepo{
+		tryInsertFn: func(context.Context, InboxRecordInput) (int64, error) { return 9, nil },
+		markFailedFn: func(_ context.Context, _ int64, owner, _ string) error {
+			failedWith = owner
+			return nil
+		},
+	}
+
+	consumer := NewInboxConsumer(repo, "test-service")
+	wrapped := consumer.Wrap("test-handler", func(context.Context, amqp.Delivery) error {
+		return errors.New("handler blew up")
+	})
+
+	s.Error(wrapped(context.Background(), deliveryWithMessageID("msg_failed_owner")))
+	s.NotEmpty(failedWith,
+		"releasing the lease on failure must name the holder, or it can release someone else's")
+}
+
+func (s *InboxConsumerTestSuite) TestDiscard_PassesTheLeaseOwner() {
+	var discardedWith string
+	repo := &mockInboxRepo{
+		tryInsertFn: func(context.Context, InboxRecordInput) (int64, error) { return 9, nil },
+		markDiscardedFn: func(_ context.Context, _ int64, owner, _ string) error {
+			discardedWith = owner
+			return nil
+		},
+	}
+
+	consumer := NewInboxConsumer(repo, "test-service")
+	wrapped := consumer.Wrap("test-handler", func(ctx context.Context, _ amqp.Delivery) error {
+		return consumer.Discard(ctx, "malformed")
+	})
+
+	s.NoError(wrapped(context.Background(), deliveryWithMessageID("msg_discard_owner")))
+	s.NotEmpty(discardedWith, "a terminal write is conditional on the lease too")
+}
+
+// ---------------------------------------------------------------------------
+// ignored
+// ---------------------------------------------------------------------------
+
+// A message this handler was never going to act on is terminal like a discard, but it is not a
+// failure. The distinction is what keeps the monitor's alerts about records that need a human:
+// unsubscribed event types arrive constantly, and alerting on each one buries everything else.
+
+func (s *InboxConsumerTestSuite) TestIgnore_RecordsIgnoredNotDiscarded() {
+	var ignoredFor string
+	repo := &mockInboxRepo{
+		tryInsertFn: func(context.Context, InboxRecordInput) (int64, error) { return 11, nil },
+		markIgnoredFn: func(_ context.Context, _ int64, _, reason string) error {
+			ignoredFor = reason
+			return nil
+		},
+		markDiscardedFn: func(context.Context, int64, string, string) error {
+			s.Fail("a message that was never this handler's work is not a discard")
+			return nil
+		},
+		markFailedFn: func(context.Context, int64, string, string) error {
+			s.Fail("nor is it a failed attempt")
+			return nil
+		},
+		completeFn: func(context.Context, int64, string) (bool, error) {
+			s.Fail("and it must not be recorded as work that was applied")
+			return false, nil
+		},
+	}
+
+	consumer := NewInboxConsumer(repo, "test-service")
+	wrapped := consumer.Wrap("test-handler", func(ctx context.Context, _ amqp.Delivery) error {
+		return consumer.Ignore(ctx, "unhandled event type")
+	})
+
+	s.NoError(wrapped(context.Background(), deliveryWithMessageID("msg_ignored")),
+		"the delivery is acked: there is nothing to retry")
+	s.Equal("unhandled event type", ignoredFor)
+}
+
+// An ignored record is terminal, so a redelivery skips it rather than running the handler again.
+func (s *InboxConsumerTestSuite) TestWrap_IgnoredRecordIsSkippedOnRedelivery() {
+	repo := &mockInboxRepo{
+		tryInsertFn: func(context.Context, InboxRecordInput) (int64, error) { return 0, mysqlDupError() },
+		getByMessageAndHandler: func(context.Context, string, string) (*InboxRecord, error) {
+			return &InboxRecord{ID: 11, Status: InboxStatusIgnored}, nil
+		},
+		claimFn: func(context.Context, int64, string, int) (bool, error) {
+			s.Fail("a terminal record is never claimed")
+			return false, nil
+		},
+	}
+
+	consumer := NewInboxConsumer(repo, "test-service")
+	wrapped := consumer.Wrap("test-handler", func(context.Context, amqp.Delivery) error {
+		s.Fail("an ignored message must not be handled again")
+		return nil
+	})
+
+	s.NoError(wrapped(context.Background(), deliveryWithMessageID("msg_ignored_again")))
+}
+
+// A delivery whose message id could not be resolved has no record to end. Ending it must not reach
+// for a repository the consumer may not have — the old Discard returned early for exactly this case.
+func (s *InboxConsumerTestSuite) TestIgnore_WithNoLeaseInContextDoesNotTouchTheRepo() {
+	consumer := NewInboxConsumer(nil, "test-service")
+
+	s.NotPanics(func() {
+		s.NoError(consumer.Ignore(context.Background(), "no record"))
+		s.NoError(consumer.Discard(context.Background(), "no record"))
+	})
 }

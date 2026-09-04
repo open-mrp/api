@@ -181,27 +181,27 @@ func (c *UndoBatchScanConsumer) undoBatchScan(ctx context.Context, accountID str
 		// start from the same state the first did.
 		deltas = reversed
 
-		// The recovery point rides with the reversal, not the re-allocation below, because the reversal is the half that must never be applied twice. Re-allocation is convergent and safe to repeat.
+		// Freed receipts can now cover issues that were short, so allocation is asked for again for
+		// whatever the reversal touched. The outbox row commits with the reversal, which is the
+		// guarantee wanted here — the request exists if and only if the stock was actually freed —
+		// so this belongs in the reversal's transaction rather than one of its own after it.
+		//
+		// A second transaction after the recovery point cannot be retried: the record is already
+		// 'processed', so the redelivery is skipped and the re-allocation is lost with nothing
+		// alerting on it.
+		if apiErr := mediator.EnqueueAllocateOpenIssues(txCtx, f, accountID, reversedItemIDs(reversed)...); apiErr != nil {
+			log.Printf("[undo_batch_scan] Failed to request allocation for batch %s: %v", evt.BatchID, apiErr)
+			return apiErr
+		}
+
+		// The recovery point is the last statement, so the marker commits with everything above it.
 		return completeInboxRecord(txCtx, f)
 	})
 	if apiErr != nil {
 		return apiErr
 	}
 
-	// Freed receipts can now cover issues that were short, so allocation is asked for again for
-	// whatever the reversal touched. Sorted because two of these taking the same items in different
-	// orders is a deadlock nobody would be able to explain from the logs.
-	//
-	// Its own transaction, after the reversal has committed: an allocation request that survives a
-	// reversal which did not is a request to cover demand from stock that was never freed.
-	requestIDs := reversedItemIDs(deltas)
-	if len(requestIDs) > 0 {
-		if apiErr := c.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
-			return mediator.EnqueueAllocateOpenIssues(txCtx, f, accountID, requestIDs...)
-		}); apiErr != nil {
-			log.Printf("[undo_batch_scan] Failed to request allocation for batch %s: %v", evt.BatchID, apiErr)
-			return apiErr
-		}
+	if len(reversedItemIDs(deltas)) > 0 {
 		c.kickOutbox()
 	}
 

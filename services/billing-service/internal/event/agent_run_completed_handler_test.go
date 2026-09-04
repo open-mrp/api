@@ -102,7 +102,7 @@ func (r *billingTxInbox) Claim(context.Context, int64, string, int) (bool, error
 	return false, errors.New("not used inside a transaction")
 }
 
-func (r *billingTxInbox) Complete(context.Context, int64) (bool, error) {
+func (r *billingTxInbox) Complete(context.Context, int64, string) (bool, error) {
 	r.completeCalls++
 	if r.completeErr != nil {
 		return false, r.completeErr
@@ -114,9 +114,11 @@ func (r *billingTxInbox) Complete(context.Context, int64) (bool, error) {
 	return true, nil
 }
 
-func (r *billingTxInbox) MarkFailed(context.Context, int64, string) error { return nil }
+func (r *billingTxInbox) MarkFailed(context.Context, int64, string, string) error { return nil }
 
-func (r *billingTxInbox) MarkDiscarded(context.Context, int64, string) error { return nil }
+func (r *billingTxInbox) MarkDiscarded(context.Context, int64, string, string) error { return nil }
+
+func (r *billingTxInbox) MarkIgnored(context.Context, int64, string, string) error { return nil }
 
 type billingOuterInbox struct {
 	record    *messaging.InboxRecord
@@ -143,14 +145,19 @@ func (r *billingOuterInbox) Claim(context.Context, int64, string, int) (bool, er
 	return true, nil
 }
 
-func (r *billingOuterInbox) Complete(context.Context, int64) (bool, error) {
+func (r *billingOuterInbox) Complete(context.Context, int64, string) (bool, error) {
 	r.completed++
 	return true, nil
 }
 
-func (r *billingOuterInbox) MarkFailed(context.Context, int64, string) error { r.failed++; return nil }
+func (r *billingOuterInbox) MarkFailed(context.Context, int64, string, string) error {
+	r.failed++
+	return nil
+}
 
-func (r *billingOuterInbox) MarkDiscarded(context.Context, int64, string) error { return nil }
+func (r *billingOuterInbox) MarkDiscarded(context.Context, int64, string, string) error { return nil }
+
+func (r *billingOuterInbox) MarkIgnored(context.Context, int64, string, string) error { return nil }
 
 // ─── suite ─────────────────────────────────────────────────────────────────
 

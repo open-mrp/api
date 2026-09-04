@@ -9,6 +9,7 @@ SELECT
     d.updated_at,
     so.id AS purchase_order_id,
     so.number AS purchase_order_number,
+    so.sales_order_status_code AS purchase_order_status,
     COUNT(dl.id) AS line_count
 FROM delivery d
 JOIN sales_order so ON d.sales_order_id = so.id
@@ -50,7 +51,7 @@ AND (
     OR d.created_at < sqlc.narg('cursor_created_at')
     OR (d.created_at = sqlc.narg('cursor_created_at') AND d.id < sqlc.narg('cursor_id'))
 )
-GROUP BY d.id, d.number, d.delivery_status_code, d.accepted_at, d.rejected_at, d.created_at, d.updated_at, so.id, so.number
+GROUP BY d.id, d.number, d.delivery_status_code, d.accepted_at, d.rejected_at, d.created_at, d.updated_at, so.id, so.number, so.sales_order_status_code
 ORDER BY d.created_at DESC, d.id DESC
 LIMIT ?;
 
@@ -65,6 +66,7 @@ SELECT
     d.updated_at,
     so.id AS purchase_order_id,
     so.number AS purchase_order_number,
+    so.sales_order_status_code AS purchase_order_status,
     COUNT(dl.id) AS line_count
 FROM delivery d
 JOIN sales_order so ON d.sales_order_id = so.id
@@ -105,7 +107,7 @@ AND (
     d.created_at > sqlc.arg('cursor_created_at')
     OR (d.created_at = sqlc.arg('cursor_created_at') AND d.id > sqlc.arg('cursor_id'))
 )
-GROUP BY d.id, d.number, d.delivery_status_code, d.accepted_at, d.rejected_at, d.created_at, d.updated_at, so.id, so.number
+GROUP BY d.id, d.number, d.delivery_status_code, d.accepted_at, d.rejected_at, d.created_at, d.updated_at, so.id, so.number, so.sales_order_status_code
 ORDER BY d.created_at ASC, d.id ASC
 LIMIT ?;
 
@@ -119,7 +121,8 @@ SELECT
     d.created_at,
     d.updated_at,
     so.id AS purchase_order_id,
-    so.number AS purchase_order_number
+    so.number AS purchase_order_number,
+    so.sales_order_status_code AS purchase_order_status
 FROM delivery d
 JOIN sales_order so ON d.sales_order_id = so.id
 WHERE d.id = sqlc.arg('id')
@@ -172,6 +175,7 @@ ORDER BY dl.created_at ASC, dl.id ASC;
 --
 -- One receiving order exists per issued purchase order, so this is the link a delivery follows to reach the order it was received against.
 -- name: ListReceivingOrderRefsForOrders :many
-SELECT ro.order_id, ro.id, ro.number, ro.completed_at
+SELECT ro.order_id, ro.id, ro.number,
+    CASE WHEN ro.completed_at IS NULL THEN 'open' ELSE 'completed' END AS status
 FROM receiving_order ro
 WHERE ro.order_id IN (sqlc.slice('order_ids'));

@@ -28,6 +28,7 @@ func receivingOrderSummaryToProto(s *domain.ReceivingOrderSummary) *pb.Receiving
 		Number:              s.Number,
 		PurchaseOrderId:     s.PurchaseOrderID,
 		PurchaseOrderNumber: s.PurchaseOrderNumber,
+		PurchaseOrderStatus: s.PurchaseOrderStatus,
 		LineCount:           s.LineCount,
 		CreatedAt:           timestamppb.New(s.CreatedAt),
 		UpdatedAt:           timestamppb.New(s.UpdatedAt),
@@ -65,6 +66,7 @@ func receivingOrderToProto(o *domain.ReceivingOrder) *pb.ReceivingOrderInfo {
 		Number:              o.Number,
 		PurchaseOrderId:     o.PurchaseOrderID,
 		PurchaseOrderNumber: o.PurchaseOrderNumber,
+		PurchaseOrderStatus: o.PurchaseOrderStatus,
 		Totals:              receivingOrderTotalsToProto(o.Totals),
 		Deliveries:          documentRefsToProto(o.Deliveries),
 		CreatedAt:           timestamppb.New(o.CreatedAt),
@@ -369,12 +371,9 @@ func receivingOrderTotalsToProto(t *domain.ReceivingOrderTotals) *pb.ReceivingOr
 		return nil
 	}
 	return &pb.ReceivingOrderTotalsInfo{
-		OrderedAmount:    t.OrderedAmount,
-		OrderedQuantity:  t.OrderedQuantity,
-		StockedAmount:    t.StockedAmount,
-		StockedQuantity:  t.StockedQuantity,
-		RejectedAmount:   t.RejectedAmount,
-		RejectedQuantity: t.RejectedQuantity,
+		OrderedAmount:  t.OrderedAmount,
+		StockedAmount:  t.StockedAmount,
+		RejectedAmount: t.RejectedAmount,
 	}
 }
 

@@ -1317,6 +1317,9 @@ type MessageInbox struct {
 	ReceivedAt      time.Time
 	ProcessedAt     sql.NullTime
 	AlertedAt       sql.NullTime
+	FailedAt        sql.NullTime
+	LockOwner       sql.NullString
+	LockExpiresAt   sql.NullTime
 }
 
 type MessageOutbox struct {

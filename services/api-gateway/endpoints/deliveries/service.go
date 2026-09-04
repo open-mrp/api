@@ -127,7 +127,7 @@ func stashDeliverySummaryMeta(ctx context.Context, d *apiresource.Delivery, info
 	if info == nil {
 		return
 	}
-	stashDeliveryRelated(ctx, d.ID, info.PurchaseOrderId, info.PurchaseOrderNumber, info.ReceivingOrderId, info.ReceivingOrderNumber)
+	stashDeliveryRelated(ctx, d.ID, info.PurchaseOrderId, info.PurchaseOrderNumber, info.PurchaseOrderStatus, info.ReceivingOrderId, info.ReceivingOrderNumber, info.ReceivingOrderStatus)
 	// Lines are populated on the summary only when the list request includes them.
 	if len(info.Lines) > 0 {
 		lines := make([]apiresource.DeliveryLine, len(info.Lines))
@@ -164,7 +164,7 @@ func stashDeliveryMeta(ctx context.Context, d *apiresource.Delivery, info *pb.De
 	}
 	meta := resourcekit.GetLoadMeta(ctx)
 
-	stashDeliveryRelated(ctx, d.ID, info.PurchaseOrderId, info.PurchaseOrderNumber, info.ReceivingOrderId, info.ReceivingOrderNumber)
+	stashDeliveryRelated(ctx, d.ID, info.PurchaseOrderId, info.PurchaseOrderNumber, info.PurchaseOrderStatus, info.ReceivingOrderId, info.ReceivingOrderNumber, info.ReceivingOrderStatus)
 
 	if len(info.Lines) > 0 {
 		lines := make([]apiresource.DeliveryLine, len(info.Lines))
@@ -257,13 +257,16 @@ func deliveryListFromProto(ctx context.Context, resp *pb.ListDeliveriesResponse)
 	return apiresource.NewList(deliveries, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }
 
-// stashDeliveryRelated carries the purchase order this delivery was received against as a record reference, built from the id and number the delivery query already returns.
-func stashDeliveryRelated(ctx context.Context, deliveryID, purchaseOrderID, purchaseOrderNumber string, receivingOrderID, receivingOrderNumber *string) {
+// stashDeliveryRelated carries the documents this delivery sits between as record references, built from the ids, numbers and statuses the delivery query already returns. Each reference is complete, so a client reading `related` never has to fetch the document to label it.
+func stashDeliveryRelated(ctx context.Context, deliveryID, purchaseOrderID, purchaseOrderNumber, purchaseOrderStatus string, receivingOrderID, receivingOrderNumber, receivingOrderStatus *string) {
 	related := &apiresource.DeliveryRelated{Object: constants.ObjectTypeDeliveryRelated}
 	if purchaseOrderID != "" {
 		po := apiresource.NewRecord(purchaseOrderID, constants.RecordTypePurchaseOrder)
 		if purchaseOrderNumber != "" {
 			po.Number = &purchaseOrderNumber
+		}
+		if purchaseOrderStatus != "" {
+			po.Status = &purchaseOrderStatus
 		}
 		related.PurchaseOrder = po
 	}
@@ -271,6 +274,9 @@ func stashDeliveryRelated(ctx context.Context, deliveryID, purchaseOrderID, purc
 		ro := apiresource.NewRecord(*receivingOrderID, constants.RecordTypeReceivingOrder)
 		if receivingOrderNumber != nil && *receivingOrderNumber != "" {
 			ro.Number = receivingOrderNumber
+		}
+		if receivingOrderStatus != nil && *receivingOrderStatus != "" {
+			ro.Status = receivingOrderStatus
 		}
 		related.ReceivingOrder = ro
 	}

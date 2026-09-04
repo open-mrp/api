@@ -22,7 +22,8 @@ SELECT
     d.created_at,
     d.updated_at,
     so.id AS purchase_order_id,
-    so.number AS purchase_order_number
+    so.number AS purchase_order_number,
+    so.sales_order_status_code AS purchase_order_status
 FROM delivery d
 JOIN sales_order so ON d.sales_order_id = so.id
 WHERE d.id = ?
@@ -44,6 +45,7 @@ type GetDeliveryRow struct {
 	UpdatedAt           time.Time
 	PurchaseOrderID     string
 	PurchaseOrderNumber string
+	PurchaseOrderStatus string
 }
 
 func (q *Queries) GetDelivery(ctx context.Context, arg GetDeliveryParams) (GetDeliveryRow, error) {
@@ -59,6 +61,7 @@ func (q *Queries) GetDelivery(ctx context.Context, arg GetDeliveryParams) (GetDe
 		&i.UpdatedAt,
 		&i.PurchaseOrderID,
 		&i.PurchaseOrderNumber,
+		&i.PurchaseOrderStatus,
 	)
 	return i, err
 }
@@ -74,6 +77,7 @@ SELECT
     d.updated_at,
     so.id AS purchase_order_id,
     so.number AS purchase_order_number,
+    so.sales_order_status_code AS purchase_order_status,
     COUNT(dl.id) AS line_count
 FROM delivery d
 JOIN sales_order so ON d.sales_order_id = so.id
@@ -114,7 +118,7 @@ AND (
     d.created_at > ?
     OR (d.created_at = ? AND d.id > ?)
 )
-GROUP BY d.id, d.number, d.delivery_status_code, d.accepted_at, d.rejected_at, d.created_at, d.updated_at, so.id, so.number
+GROUP BY d.id, d.number, d.delivery_status_code, d.accepted_at, d.rejected_at, d.created_at, d.updated_at, so.id, so.number, so.sales_order_status_code
 ORDER BY d.created_at ASC, d.id ASC
 LIMIT ?
 `
@@ -144,6 +148,7 @@ type ListDeliveriesBackwardRow struct {
 	UpdatedAt           time.Time
 	PurchaseOrderID     string
 	PurchaseOrderNumber string
+	PurchaseOrderStatus string
 	LineCount           int64
 }
 
@@ -200,6 +205,7 @@ func (q *Queries) ListDeliveriesBackward(ctx context.Context, arg ListDeliveries
 			&i.UpdatedAt,
 			&i.PurchaseOrderID,
 			&i.PurchaseOrderNumber,
+			&i.PurchaseOrderStatus,
 			&i.LineCount,
 		); err != nil {
 			return nil, err
@@ -226,6 +232,7 @@ SELECT
     d.updated_at,
     so.id AS purchase_order_id,
     so.number AS purchase_order_number,
+    so.sales_order_status_code AS purchase_order_status,
     COUNT(dl.id) AS line_count
 FROM delivery d
 JOIN sales_order so ON d.sales_order_id = so.id
@@ -267,7 +274,7 @@ AND (
     OR d.created_at < ?
     OR (d.created_at = ? AND d.id < ?)
 )
-GROUP BY d.id, d.number, d.delivery_status_code, d.accepted_at, d.rejected_at, d.created_at, d.updated_at, so.id, so.number
+GROUP BY d.id, d.number, d.delivery_status_code, d.accepted_at, d.rejected_at, d.created_at, d.updated_at, so.id, so.number, so.sales_order_status_code
 ORDER BY d.created_at DESC, d.id DESC
 LIMIT ?
 `
@@ -297,6 +304,7 @@ type ListDeliveriesForwardRow struct {
 	UpdatedAt           time.Time
 	PurchaseOrderID     string
 	PurchaseOrderNumber string
+	PurchaseOrderStatus string
 	LineCount           int64
 }
 
@@ -354,6 +362,7 @@ func (q *Queries) ListDeliveriesForward(ctx context.Context, arg ListDeliveriesF
 			&i.UpdatedAt,
 			&i.PurchaseOrderID,
 			&i.PurchaseOrderNumber,
+			&i.PurchaseOrderStatus,
 			&i.LineCount,
 		); err != nil {
 			return nil, err
@@ -491,16 +500,17 @@ func (q *Queries) ListDeliveryLines(ctx context.Context, deliveryID string) ([]L
 }
 
 const listReceivingOrderRefsForOrders = `-- name: ListReceivingOrderRefsForOrders :many
-SELECT ro.order_id, ro.id, ro.number, ro.completed_at
+SELECT ro.order_id, ro.id, ro.number,
+    CASE WHEN ro.completed_at IS NULL THEN 'open' ELSE 'completed' END AS status
 FROM receiving_order ro
 WHERE ro.order_id IN (/*SLICE:order_ids*/?)
 `
 
 type ListReceivingOrderRefsForOrdersRow struct {
-	OrderID     string
-	ID          string
-	Number      string
-	CompletedAt sql.NullTime
+	OrderID string
+	ID      string
+	Number  string
+	Status  string
 }
 
 // ListReceivingOrderRefsForOrders names the receiving order created for each of the given purchase orders.
@@ -529,7 +539,7 @@ func (q *Queries) ListReceivingOrderRefsForOrders(ctx context.Context, orderIds 
 			&i.OrderID,
 			&i.ID,
 			&i.Number,
-			&i.CompletedAt,
+			&i.Status,
 		); err != nil {
 			return nil, err
 		}

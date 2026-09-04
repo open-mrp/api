@@ -21,6 +21,20 @@ func init() {
 			{Key: "waste", Target: constants.ObjectTypeQuantity, Cardinality: resourcekit.CardinalityOnePtr, ExtractRefs: extractWasteRefFromBatch},
 		},
 	})
+
+	resourcekit.Register(&resourcekit.Definition{
+		ObjectType: constants.ObjectTypeBatchFlowNode,
+		Load:       resourceloaders.LoadBatchFlowNodes,
+		Subs: []resourcekit.SubField{
+			{Key: "batch", Target: constants.ObjectTypeBatch, Cardinality: resourcekit.CardinalityOnePtr, ExtractRefs: extractBatchRefFromFlowNode},
+		},
+	})
+}
+
+// A flow node's batch is a value on the node, so the node reaches its measures through a pointer into
+// that field rather than through a fetch: the batch is already whole, only its units are not.
+func extractBatchRefFromFlowNode(_ context.Context, parent any) []any {
+	return []any{&parent.(*apiresource.BatchFlowNode).Batch}
 }
 
 func extractQuantityRefFromBatch(_ context.Context, parent any) []any {

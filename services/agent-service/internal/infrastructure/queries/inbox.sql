@@ -20,23 +20,31 @@ WHERE id = $1
 -- name: CompleteInboxRecord :execrows
 UPDATE message_inbox
 SET status = 'processed', processed_at = now(), lock_owner = NULL, lock_expires_at = NULL
-WHERE id = $1 AND status = 'received';
+WHERE id = $1 AND status = 'received' AND lock_owner = $2;
 
--- name: MarkInboxRecordFailed :exec
+-- Guarded on status and owner: an attempt whose lease already lapsed must not clear the lease of the consumer that claimed the record after it, nor stamp a failure over a record another attempt has already completed or discarded.
+-- name: MarkInboxRecordFailed :execrows
 UPDATE message_inbox
 SET attempts = attempts + 1, last_error = $1, failed_at = now(), lock_owner = NULL, lock_expires_at = NULL
-WHERE id = $2;
+WHERE id = $2 AND status = 'received' AND lock_owner = $3;
 
 -- processed_at is stamped so the existing retention purge and its index cover discarded rows too; status is what distinguishes work that was dropped from work that was applied.
--- name: MarkInboxRecordDiscarded :exec
+-- Guarded like MarkInboxRecordFailed, so a lapsed attempt cannot overwrite a record another attempt has already completed.
+-- name: MarkInboxRecordDiscarded :execrows
 UPDATE message_inbox
 SET status = 'discarded', last_error = $1, failed_at = now(), processed_at = now(), lock_owner = NULL, lock_expires_at = NULL
-WHERE id = $2;
+WHERE id = $2 AND status = 'received' AND lock_owner = $3;
+
+-- Terminal like a discard, but not a failure: the failure monitor scans 'discarded' and never this.
+-- name: MarkInboxRecordIgnored :execrows
+UPDATE message_inbox
+SET status = 'ignored', last_error = $1, processed_at = now(), lock_owner = NULL, lock_expires_at = NULL
+WHERE id = $2 AND status = 'received' AND lock_owner = $3;
 
 -- name: PurgeProcessedInboxMessages :execrows
 WITH rows AS (
     SELECT id FROM message_inbox
-    WHERE status IN ('processed', 'discarded') AND processed_at < now() - ($1 || ' hours')::interval
+    WHERE status IN ('processed', 'discarded', 'ignored') AND processed_at < now() - ($1 || ' hours')::interval
     LIMIT $2
 )
 DELETE FROM message_inbox

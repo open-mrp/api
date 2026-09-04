@@ -267,7 +267,13 @@ SELECT
     st.created_at AS shipping_term_created_at,
     st.updated_at AS shipping_term_updated_at,
     -- Receiving order
-    ro.id AS receiving_order_id
+    ro.id AS receiving_order_id,
+    ro.number AS receiving_order_number,
+    -- Empty rather than NULL for an order with no receiving order, so the column is a plain string:
+    -- the gateway turns an empty status into an absent one.
+    CASE WHEN ro.id IS NULL THEN ''
+         WHEN ro.completed_at IS NULL THEN 'open'
+         ELSE 'completed' END AS receiving_order_status
 FROM sales_order so
 JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
     AND ar.counterparty_account_id = so.seller_account_id
@@ -367,6 +373,8 @@ type GetPurchaseOrderRow struct {
 	ShippingTermCreatedAt       sql.NullTime
 	ShippingTermUpdatedAt       sql.NullTime
 	ReceivingOrderID            sql.NullString
+	ReceivingOrderNumber        sql.NullString
+	ReceivingOrderStatus        string
 }
 
 func (q *Queries) GetPurchaseOrder(ctx context.Context, arg GetPurchaseOrderParams) (GetPurchaseOrderRow, error) {
@@ -445,6 +453,8 @@ func (q *Queries) GetPurchaseOrder(ctx context.Context, arg GetPurchaseOrderPara
 		&i.ShippingTermCreatedAt,
 		&i.ShippingTermUpdatedAt,
 		&i.ReceivingOrderID,
+		&i.ReceivingOrderNumber,
+		&i.ReceivingOrderStatus,
 	)
 	return i, err
 }

@@ -45,11 +45,15 @@ func LoadItems(ctx context.Context, ids []string) (map[string]any, *apierror.API
 		for id := range propertyIDs {
 			ids = append(ids, id)
 		}
+		// Returned rather than swallowed: presenting every attribute's property as null on a
+		// transient lookup failure is indistinguishable from a property that was deleted, so the
+		// caller cannot tell it should retry.
 		loaded, apiErr := LoadProperties(ctx, ids)
-		if apiErr == nil {
-			for id, v := range loaded {
-				propertyMap[id] = v.(*apiresource.Property)
-			}
+		if apiErr != nil {
+			return nil, apiErr
+		}
+		for id, v := range loaded {
+			propertyMap[id] = v.(*apiresource.Property)
 		}
 	}
 

@@ -81,6 +81,8 @@ message DeliverySummaryInfo {
   repeated DeliveryLineInfo lines = 11;
   optional string receiving_order_id = 12;
   optional string receiving_order_number = 13;
+  optional string receiving_order_status = 14;
+  string purchase_order_status = 15;
 }
 message DeliveryInfo {
   string id = 1;
@@ -95,6 +97,8 @@ message DeliveryInfo {
   google.protobuf.Timestamp updated_at = 10;
   optional string receiving_order_id = 11;
   optional string receiving_order_number = 12;
+  optional string receiving_order_status = 13;
+  string purchase_order_status = 14;
 }
 message DeliveryLineInfo {
   string id = 1;

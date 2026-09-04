@@ -40,11 +40,14 @@ type ReceivingOrderSummaryInfo struct {
 	UpdatedAt           *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	SupplierNumber      *string                `protobuf:"bytes,12,opt,name=supplier_number,json=supplierNumber,proto3,oneof" json:"supplier_number,omitempty"`
 	// Lines (populated only when the list request includes "lines").
-	Lines         []*ReceivingOrderLineInfo `protobuf:"bytes,13,rep,name=lines,proto3" json:"lines,omitempty"`
-	Totals        *ReceivingOrderTotalsInfo `protobuf:"bytes,14,opt,name=totals,proto3,oneof" json:"totals,omitempty"`
-	Deliveries    []*DocumentRefInfo        `protobuf:"bytes,15,rep,name=deliveries,proto3" json:"deliveries,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Lines      []*ReceivingOrderLineInfo `protobuf:"bytes,13,rep,name=lines,proto3" json:"lines,omitempty"`
+	Totals     *ReceivingOrderTotalsInfo `protobuf:"bytes,14,opt,name=totals,proto3,oneof" json:"totals,omitempty"`
+	Deliveries []*DocumentRefInfo        `protobuf:"bytes,15,rep,name=deliveries,proto3" json:"deliveries,omitempty"`
+	// The purchase order's status, so the order's `related` reference to it is readable without
+	// fetching it.
+	PurchaseOrderStatus string `protobuf:"bytes,16,opt,name=purchase_order_status,json=purchaseOrderStatus,proto3" json:"purchase_order_status,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *ReceivingOrderSummaryInfo) Reset() {
@@ -175,6 +178,13 @@ func (x *ReceivingOrderSummaryInfo) GetDeliveries() []*DocumentRefInfo {
 	return nil
 }
 
+func (x *ReceivingOrderSummaryInfo) GetPurchaseOrderStatus() string {
+	if x != nil {
+		return x.PurchaseOrderStatus
+	}
+	return ""
+}
+
 // DocumentRefInfo names one purchasing document from another.
 type DocumentRefInfo struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -236,17 +246,16 @@ func (x *DocumentRefInfo) GetStatus() string {
 	return ""
 }
 
-// ReceivingOrderTotalsInfo aggregates a receiving order's lines: what they were ordered for, what has been stocked, and what was refused. Amounts are decimal strings; quantities travel with them so the gateway can express each stage as a fraction of what was ordered.
+// ReceivingOrderTotalsInfo aggregates a receiving order's lines: what they were ordered for, what has been stocked, and what was refused, as decimal strings.
+//
+// Every figure is an amount — the purchase order's agreed unit price times a quantity — because a receiving order's lines can each count in a different unit, and money is the only common denominator they have. The gateway divides two of these for completion, rather than dividing quantities that may not share a unit.
 type ReceivingOrderTotalsInfo struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	OrderedAmount    string                 `protobuf:"bytes,1,opt,name=ordered_amount,json=orderedAmount,proto3" json:"ordered_amount,omitempty"`
-	OrderedQuantity  string                 `protobuf:"bytes,2,opt,name=ordered_quantity,json=orderedQuantity,proto3" json:"ordered_quantity,omitempty"`
-	StockedAmount    string                 `protobuf:"bytes,3,opt,name=stocked_amount,json=stockedAmount,proto3" json:"stocked_amount,omitempty"`
-	StockedQuantity  string                 `protobuf:"bytes,4,opt,name=stocked_quantity,json=stockedQuantity,proto3" json:"stocked_quantity,omitempty"`
-	RejectedAmount   string                 `protobuf:"bytes,5,opt,name=rejected_amount,json=rejectedAmount,proto3" json:"rejected_amount,omitempty"`
-	RejectedQuantity string                 `protobuf:"bytes,6,opt,name=rejected_quantity,json=rejectedQuantity,proto3" json:"rejected_quantity,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrderedAmount  string                 `protobuf:"bytes,1,opt,name=ordered_amount,json=orderedAmount,proto3" json:"ordered_amount,omitempty"`
+	StockedAmount  string                 `protobuf:"bytes,3,opt,name=stocked_amount,json=stockedAmount,proto3" json:"stocked_amount,omitempty"`
+	RejectedAmount string                 `protobuf:"bytes,5,opt,name=rejected_amount,json=rejectedAmount,proto3" json:"rejected_amount,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *ReceivingOrderTotalsInfo) Reset() {
@@ -286,13 +295,6 @@ func (x *ReceivingOrderTotalsInfo) GetOrderedAmount() string {
 	return ""
 }
 
-func (x *ReceivingOrderTotalsInfo) GetOrderedQuantity() string {
-	if x != nil {
-		return x.OrderedQuantity
-	}
-	return ""
-}
-
 func (x *ReceivingOrderTotalsInfo) GetStockedAmount() string {
 	if x != nil {
 		return x.StockedAmount
@@ -300,23 +302,9 @@ func (x *ReceivingOrderTotalsInfo) GetStockedAmount() string {
 	return ""
 }
 
-func (x *ReceivingOrderTotalsInfo) GetStockedQuantity() string {
-	if x != nil {
-		return x.StockedQuantity
-	}
-	return ""
-}
-
 func (x *ReceivingOrderTotalsInfo) GetRejectedAmount() string {
 	if x != nil {
 		return x.RejectedAmount
-	}
-	return ""
-}
-
-func (x *ReceivingOrderTotalsInfo) GetRejectedQuantity() string {
-	if x != nil {
-		return x.RejectedQuantity
 	}
 	return ""
 }
@@ -334,10 +322,13 @@ type ReceivingOrderInfo struct {
 	Lines               []*ReceivingOrderLineInfo `protobuf:"bytes,8,rep,name=lines,proto3" json:"lines,omitempty"`
 	Totals              *ReceivingOrderTotalsInfo `protobuf:"bytes,13,opt,name=totals,proto3,oneof" json:"totals,omitempty"`
 	Deliveries          []*DocumentRefInfo        `protobuf:"bytes,18,rep,name=deliveries,proto3" json:"deliveries,omitempty"`
-	CompletedAt         *timestamppb.Timestamp    `protobuf:"bytes,9,opt,name=completed_at,json=completedAt,proto3,oneof" json:"completed_at,omitempty"`
-	CreatedAt           *timestamppb.Timestamp    `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt           *timestamppb.Timestamp    `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	SupplierNumber      *string                   `protobuf:"bytes,12,opt,name=supplier_number,json=supplierNumber,proto3,oneof" json:"supplier_number,omitempty"`
+	// The purchase order's status, so the order's `related` reference to it is readable without
+	// fetching it.
+	PurchaseOrderStatus string                 `protobuf:"bytes,19,opt,name=purchase_order_status,json=purchaseOrderStatus,proto3" json:"purchase_order_status,omitempty"`
+	CompletedAt         *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=completed_at,json=completedAt,proto3,oneof" json:"completed_at,omitempty"`
+	CreatedAt           *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt           *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	SupplierNumber      *string                `protobuf:"bytes,12,opt,name=supplier_number,json=supplierNumber,proto3,oneof" json:"supplier_number,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -440,6 +431,13 @@ func (x *ReceivingOrderInfo) GetDeliveries() []*DocumentRefInfo {
 		return x.Deliveries
 	}
 	return nil
+}
+
+func (x *ReceivingOrderInfo) GetPurchaseOrderStatus() string {
+	if x != nil {
+		return x.PurchaseOrderStatus
+	}
+	return ""
 }
 
 func (x *ReceivingOrderInfo) GetCompletedAt() *timestamppb.Timestamp {
@@ -1659,7 +1657,7 @@ var File_core_core_receiving_proto protoreflect.FileDescriptor
 
 const file_core_core_receiving_proto_rawDesc = "" +
 	"\n" +
-	"\x19core/core_receiving.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fcore/core.proto\"\x91\x06\n" +
+	"\x19core/core_receiving.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fcore/core.proto\"\xc5\x06\n" +
 	"\x19ReceivingOrderSummaryInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12*\n" +
@@ -1681,7 +1679,8 @@ const file_core_core_receiving_proto_rawDesc = "" +
 	"\x06totals\x18\x0e \x01(\v2\x1e.core.ReceivingOrderTotalsInfoH\x04R\x06totals\x88\x01\x01\x125\n" +
 	"\n" +
 	"deliveries\x18\x0f \x03(\v2\x15.core.DocumentRefInfoR\n" +
-	"deliveriesB\x0e\n" +
+	"deliveries\x122\n" +
+	"\x15purchase_order_status\x18\x10 \x01(\tR\x13purchaseOrderStatusB\x0e\n" +
 	"\f_supplier_idB\x10\n" +
 	"\x0e_supplier_nameB\x0f\n" +
 	"\r_completed_atB\x12\n" +
@@ -1690,14 +1689,11 @@ const file_core_core_receiving_proto_rawDesc = "" +
 	"\x0fDocumentRefInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12\x16\n" +
-	"\x06status\x18\x03 \x01(\tR\x06status\"\x94\x02\n" +
+	"\x06status\x18\x03 \x01(\tR\x06status\"\xda\x01\n" +
 	"\x18ReceivingOrderTotalsInfo\x12%\n" +
-	"\x0eordered_amount\x18\x01 \x01(\tR\rorderedAmount\x12)\n" +
-	"\x10ordered_quantity\x18\x02 \x01(\tR\x0forderedQuantity\x12%\n" +
-	"\x0estocked_amount\x18\x03 \x01(\tR\rstockedAmount\x12)\n" +
-	"\x10stocked_quantity\x18\x04 \x01(\tR\x0fstockedQuantity\x12'\n" +
-	"\x0frejected_amount\x18\x05 \x01(\tR\x0erejectedAmount\x12+\n" +
-	"\x11rejected_quantity\x18\x06 \x01(\tR\x10rejectedQuantity\"\xf0\x05\n" +
+	"\x0eordered_amount\x18\x01 \x01(\tR\rorderedAmount\x12%\n" +
+	"\x0estocked_amount\x18\x03 \x01(\tR\rstockedAmount\x12'\n" +
+	"\x0frejected_amount\x18\x05 \x01(\tR\x0erejectedAmountJ\x04\b\x02\x10\x03J\x04\b\x04\x10\x05J\x04\b\x06\x10\aR\x10ordered_quantityR\x10stocked_quantityR\x11rejected_quantity\"\xa4\x06\n" +
 	"\x12ReceivingOrderInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12*\n" +
@@ -1711,7 +1707,8 @@ const file_core_core_receiving_proto_rawDesc = "" +
 	"\x06totals\x18\r \x01(\v2\x1e.core.ReceivingOrderTotalsInfoH\x03R\x06totals\x88\x01\x01\x125\n" +
 	"\n" +
 	"deliveries\x18\x12 \x03(\v2\x15.core.DocumentRefInfoR\n" +
-	"deliveries\x12B\n" +
+	"deliveries\x122\n" +
+	"\x15purchase_order_status\x18\x13 \x01(\tR\x13purchaseOrderStatus\x12B\n" +
 	"\fcompleted_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampH\x04R\vcompletedAt\x88\x01\x01\x129\n" +
 	"\n" +
 	"created_at\x18\n" +

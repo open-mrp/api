@@ -787,6 +787,14 @@ func init() {
 	})
 
 	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeBatchFlowNode,
+		Fields: []IncludeFieldDef{
+			// The batch is already on the node; naming it is what lets a caller reach through to its measures' units.
+			{Key: "batch", ObjectType: constants.ObjectTypeBatch},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
 		ObjectType: constants.ObjectTypeRate,
 		Fields: []IncludeFieldDef{
 			{Key: "numerator_unit", ObjectType: constants.ObjectTypeUnit},

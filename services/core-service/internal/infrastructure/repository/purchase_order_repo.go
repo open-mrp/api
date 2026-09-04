@@ -13,6 +13,7 @@ import (
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/api/shared/ptrutil"
 	"github.com/open-mrp/api/shared/safeconv"
 	"github.com/open-mrp/api/shared/tracing"
 )
@@ -622,6 +623,8 @@ func mapGetPurchaseOrderRow(row sqlc.GetPurchaseOrderRow) *domain.PurchaseOrder 
 	po.ShippingTermCreatedAt = nullTimePtr(row.ShippingTermCreatedAt)
 	po.ShippingTermUpdatedAt = nullTimePtr(row.ShippingTermUpdatedAt)
 	po.ReceivingOrderID = nullStringToPtr(row.ReceivingOrderID)
+	po.ReceivingOrderNumber = nullStringToPtr(row.ReceivingOrderNumber)
+	po.ReceivingOrderStatus = ptrutil.NonEmptyPtr(row.ReceivingOrderStatus)
 	po.PriorityID = &row.PriorityID
 
 	return po

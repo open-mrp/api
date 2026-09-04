@@ -29,19 +29,25 @@ WHERE id = sqlc.arg('id')
 -- name: CompleteInboxRecord :execrows
 UPDATE message_inbox
 SET status = 'processed', processed_at = NOW(3), lock_owner = NULL, lock_expires_at = NULL
-WHERE id = ? AND status = 'received';
+WHERE id = sqlc.arg('id')
+  AND status = 'received'
+  AND lock_owner = sqlc.arg('lock_owner');
 
--- name: MarkInboxRecordFailed :exec
+-- Guarded on status and owner: an attempt whose lease already lapsed must not clear the lease of the consumer that claimed the record after it, nor stamp a failure over a record another attempt has already completed or discarded.
+-- name: MarkInboxRecordFailed :execrows
 UPDATE message_inbox
 SET attempts = attempts + 1,
     last_error = sqlc.arg('last_error'),
     failed_at = NOW(3),
     lock_owner = NULL,
     lock_expires_at = NULL
-WHERE id = sqlc.arg('id');
+WHERE id = sqlc.arg('id')
+  AND status = 'received'
+  AND lock_owner = sqlc.arg('lock_owner');
 
 -- processed_at is stamped so the existing retention purge and its index cover discarded rows too; status is what distinguishes work that was dropped from work that was applied.
--- name: MarkInboxRecordDiscarded :exec
+-- Guarded like MarkInboxRecordFailed, so a lapsed attempt cannot overwrite a record another attempt has already completed.
+-- name: MarkInboxRecordDiscarded :execrows
 UPDATE message_inbox
 SET status = 'discarded',
     last_error = sqlc.arg('last_error'),
@@ -49,11 +55,25 @@ SET status = 'discarded',
     processed_at = NOW(3),
     lock_owner = NULL,
     lock_expires_at = NULL
-WHERE id = sqlc.arg('id');
+WHERE id = sqlc.arg('id')
+  AND status = 'received'
+  AND lock_owner = sqlc.arg('lock_owner');
+
+-- Terminal like a discard, but not a failure: the failure monitor scans 'discarded' and never this.
+-- name: MarkInboxRecordIgnored :execrows
+UPDATE message_inbox
+SET status = 'ignored',
+    last_error = sqlc.arg('last_error'),
+    processed_at = NOW(3),
+    lock_owner = NULL,
+    lock_expires_at = NULL
+WHERE id = sqlc.arg('id')
+  AND status = 'received'
+  AND lock_owner = sqlc.arg('lock_owner');
 
 -- name: PurgeProcessedInboxMessages :execresult
 DELETE FROM message_inbox
-WHERE status IN ('processed', 'discarded') AND processed_at < DATE_SUB(NOW(3), INTERVAL ? HOUR)
+WHERE status IN ('processed', 'discarded', 'ignored') AND processed_at < DATE_SUB(NOW(3), INTERVAL ? HOUR)
 LIMIT ?;
 
 -- Two index-friendly branches rather than one OR across statuses, which would not use message_inbox_alert_scan_idx.

@@ -89,6 +89,8 @@ func purchaseOrderToProto(o *domain.PurchaseOrder) *pb.PurchaseOrderInfo {
 		ShippingTermId:        o.ShippingTermID,
 		ShippingTermName:      o.ShippingTermName,
 		ReceivingOrderId:      o.ReceivingOrderID,
+		ReceivingOrderNumber:  o.ReceivingOrderNumber,
+		ReceivingOrderStatus:  o.ReceivingOrderStatus,
 		Deliveries:            deliveryRefsToProto(o.Deliveries),
 		BillToName:            o.BillToName,
 		BillToStreetLine_1:    o.BillToStreetLine1,
@@ -614,13 +616,13 @@ func (h *purchaseGRPCHandler) DeletePurchaseOrderLine(ctx context.Context, req *
 	return &emptypb.Empty{}, nil
 }
 
-func deliveryRefsToProto(refs []domain.DocumentRef) []*pb.DeliveryRefInfo {
+func deliveryRefsToProto(refs []domain.DocumentRef) []*pb.DocumentRefInfo {
 	if len(refs) == 0 {
 		return nil
 	}
-	out := make([]*pb.DeliveryRefInfo, len(refs))
+	out := make([]*pb.DocumentRefInfo, len(refs))
 	for i, r := range refs {
-		out[i] = &pb.DeliveryRefInfo{Id: r.ID, Number: r.Number, Status: r.Status}
+		out[i] = &pb.DocumentRefInfo{Id: r.ID, Number: r.Number, Status: r.Status}
 	}
 	return out
 }

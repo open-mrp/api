@@ -14,11 +14,16 @@ func init() {
 		ObjectType: constants.ObjectTypeDelivery,
 		Load:       resourceloaders.LoadDeliveries,
 		Subs: []resourcekit.SubField{
-			{
-				// Carried inline from the delivery query, which already returns the order's id and number.
-				Key:      "related",
-				Populate: populateRelatedOnDelivery,
-			},
+			// `related` is expandable and so is each reference on it. The bare key reveals the object;
+			// the child keys fill in one reference each. A single sub attaching every reference it holds
+			// would make the children unconditional, which is the same as not having made them
+			// expandable at all.
+			//
+			// All of it is carried inline from the delivery query, which already returns each document's
+			// id, number and status, so none of it needs a Target to fetch through.
+			{Key: "related", Populate: populateRelatedOnDelivery},
+			{Key: "related.purchase_order", Populate: populatePurchaseOrderOnDeliveryRelated},
+			{Key: "related.receiving_order", Populate: populateReceivingOrderOnDeliveryRelated},
 			{
 				Key:         "lines",
 				Target:      constants.ObjectTypeDeliveryLine,
@@ -93,13 +98,47 @@ func extractQuantityRefFromDeliveryLine(_ context.Context, parent any) []any {
 	return []any{l.Quantity}
 }
 
+// populateRelatedOnDelivery reveals the object itself, leaving every reference on it to its own key.
 func populateRelatedOnDelivery(ctx context.Context, parent any, _ map[string]any) {
 	d := parent.(*apiresource.Delivery)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeDelivery, d.ID, "related")
-	if !ok {
+	if stashedDeliveryRelated(ctx, d.ID) != nil {
+		deliveryRelated(d)
+	}
+}
+
+func populatePurchaseOrderOnDeliveryRelated(ctx context.Context, parent any, _ map[string]any) {
+	d := parent.(*apiresource.Delivery)
+	stashed := stashedDeliveryRelated(ctx, d.ID)
+	if stashed == nil {
 		return
 	}
-	d.Related = v.(*apiresource.DeliveryRelated)
+	deliveryRelated(d).PurchaseOrder = stashed.PurchaseOrder
+}
+
+func populateReceivingOrderOnDeliveryRelated(ctx context.Context, parent any, _ map[string]any) {
+	d := parent.(*apiresource.Delivery)
+	stashed := stashedDeliveryRelated(ctx, d.ID)
+	if stashed == nil {
+		return
+	}
+	deliveryRelated(d).ReceivingOrder = stashed.ReceivingOrder
+}
+
+func stashedDeliveryRelated(ctx context.Context, deliveryID string) *apiresource.DeliveryRelated {
+	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeDelivery, deliveryID, "related")
+	if !ok {
+		return nil
+	}
+	return v.(*apiresource.DeliveryRelated)
+}
+
+// deliveryRelated returns the delivery's related object, creating it on first use so two independently
+// requested children populate into the same one.
+func deliveryRelated(d *apiresource.Delivery) *apiresource.DeliveryRelated {
+	if d.Related == nil {
+		d.Related = &apiresource.DeliveryRelated{Object: constants.ObjectTypeDeliveryRelated}
+	}
+	return d.Related
 }
 
 func populateLinesOnDelivery(ctx context.Context, parent any, _ map[string]any) {

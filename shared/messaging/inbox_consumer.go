@@ -24,25 +24,31 @@ const DefaultInboxLeaseSeconds = 300
 // The consumer's backoff ladder is far shorter than a lease, so in practice this dead-letters the delivery rather than waiting the lease out. That is the intended trade: a message parked on the DLQ is visible, alerted on, and re-drivable by the replay commands, where running it alongside the attempt that holds the lease is how the same work gets applied twice. It should be rare — an attempt that ends normally releases its lease, so this only fires for a redelivery that lands while a genuinely live attempt is running, or inside the lease window after a process was killed outright.
 var ErrInboxLeaseHeld = errors.New("inbox record is leased by another attempt")
 
-// ErrInboxDiscarded is returned by Discard. It signals that the message ended deliberately in a terminal state, so Wrap ACKs it instead of recording a failure that would invite a retry.
+// ErrInboxDiscarded is returned by Discard and Ignore. It signals that the message ended deliberately in a terminal state, so Wrap ACKs it instead of recording a failure that would invite a retry.
 var ErrInboxDiscarded = errors.New("inbox record was discarded")
 
 // ErrInboxAlreadyCompleted is returned from a transactional recovery point when the record was no longer "received", meaning a concurrent attempt completed the message first. Handlers must let it abort their transaction so the duplicate work rolls back.
 var ErrInboxAlreadyCompleted = errors.New("inbox record was already completed by another attempt")
 
-type inboxRecordIDKey struct{}
+type inboxLeaseKey struct{}
 
-// WithInboxRecordID puts the record id on the context so a handler can commit its own recovery point.
-func WithInboxRecordID(ctx context.Context, recordID int64) context.Context {
-	return context.WithValue(ctx, inboxRecordIDKey{}, recordID)
+// InboxLease identifies the record being handled and the attempt holding it. Every write that closes a record out is conditional on both, so a lapsed attempt cannot overwrite the record the consumer that replaced it is working.
+type InboxLease struct {
+	RecordID int64
+	Owner    string
 }
 
-// InboxRecordIDFromContext returns the inbox record id for the delivery being handled.
+// WithInboxLease puts the record id and lease owner on the context so a handler can commit its own recovery point.
+func WithInboxLease(ctx context.Context, lease InboxLease) context.Context {
+	return context.WithValue(ctx, inboxLeaseKey{}, lease)
+}
+
+// InboxLeaseFromContext returns the lease for the delivery being handled.
 //
 // A handler whose entire effect is one local transaction uses this to call InboxRepo.Complete on the transaction-scoped repo inside that transaction, so the marker commits with the work. Handlers that mutate foreign state cannot do this — there is no transaction spanning the foreign call — and rely on the lease instead.
-func InboxRecordIDFromContext(ctx context.Context) (int64, bool) {
-	recordID, ok := ctx.Value(inboxRecordIDKey{}).(int64)
-	return recordID, ok
+func InboxLeaseFromContext(ctx context.Context) (InboxLease, bool) {
+	lease, ok := ctx.Value(inboxLeaseKey{}).(InboxLease)
+	return lease, ok
 }
 
 // InboxConsumer wraps message handlers with inbox-based deduplication. For each delivery it:
@@ -163,7 +169,7 @@ func bookkeepingContext(ctx context.Context) (context.Context, context.CancelFun
 //
 // Complete is best-effort here: a handler that committed its own recovery point has already marked the record inside its transaction, and this call is then a no-op repeat. For handlers that did not, this is the only marker, and the window between the handler returning and this write is exactly why those handlers get at-most-once rather than exactly-once.
 func (c *InboxConsumer) executeAndRecord(ctx context.Context, recordID int64, messageID, handler string, fn MessageHandler, msg amqp.Delivery) error {
-	if err := fn(WithInboxRecordID(ctx, recordID), msg); err != nil {
+	if err := fn(WithInboxLease(ctx, InboxLease{RecordID: recordID, Owner: c.owner}), msg); err != nil {
 		// The handler ended the message deliberately; the terminal state is already recorded and must not be overwritten with a failure that invites a retry.
 		if errors.Is(err, ErrInboxDiscarded) {
 			return nil
@@ -175,7 +181,7 @@ func (c *InboxConsumer) executeAndRecord(ctx context.Context, recordID int64, me
 		}
 		markCtx, cancel := bookkeepingContext(ctx)
 		defer cancel()
-		if markErr := c.repo.MarkFailed(markCtx, recordID, apierror.Describe(err)); markErr != nil {
+		if markErr := c.repo.MarkFailed(markCtx, recordID, c.owner, apierror.Describe(err)); markErr != nil {
 			slog.Warn("Failed to mark inbox record as failed", "handler", handler, "message_id", messageID, "error", markErr)
 		}
 		return err
@@ -183,7 +189,7 @@ func (c *InboxConsumer) executeAndRecord(ctx context.Context, recordID int64, me
 
 	completeCtx, cancel := bookkeepingContext(ctx)
 	defer cancel()
-	if _, err := c.repo.Complete(completeCtx, recordID); err != nil {
+	if _, err := c.repo.Complete(completeCtx, recordID, c.owner); err != nil {
 		slog.Warn("Failed to mark inbox record as processed", "handler", handler, "message_id", messageID, "error", err)
 	}
 
@@ -191,7 +197,7 @@ func (c *InboxConsumer) executeAndRecord(ctx context.Context, recordID int64, me
 }
 
 // handleDuplicate is called when the inbox insert fails with a duplicate-key error, meaning this (message_id, handler) pair was seen before. It fetches the existing record and decides the outcome from its status and lease:
-//   - "processed" or "discarded": terminal — skip silently (return nil so the delivery is ACKed).
+//   - "processed", "discarded" or "ignored": terminal — skip silently (return nil so the delivery is ACKed).
 //   - "received" with a live lease: another attempt is working it — return ErrInboxLeaseHeld so this delivery backs off rather than running the handler alongside it.
 //   - "received" with a lapsed lease: the previous attempt was abandoned — claim the lease and retry.
 func (c *InboxConsumer) handleDuplicate(ctx context.Context, messageID, handler string, fn MessageHandler, msg amqp.Delivery) error {
@@ -208,6 +214,9 @@ func (c *InboxConsumer) handleDuplicate(ctx context.Context, messageID, handler 
 		return nil
 	case InboxStatusDiscarded:
 		slog.Info("Skipping discarded message", "handler", handler, "message_id", messageID)
+		return nil
+	case InboxStatusIgnored:
+		slog.Info("Skipping ignored message", "handler", handler, "message_id", messageID)
 		return nil
 	}
 
@@ -240,17 +249,43 @@ func (c *InboxConsumer) handleDuplicate(ctx context.Context, messageID, handler 
 
 // Discard ends the in-flight message in the terminal "discarded" state and returns ErrInboxDiscarded.
 //
-// Use it wherever a handler would otherwise return nil to drop an unprocessable message. Returning nil ACKs the delivery and lets Wrap record it as processed, which claims work was applied that never was; the message then looks identical to a successful one in the inbox, in the failure monitor, and to the replay tools.
+// Use it wherever a handler would otherwise return nil to drop a message it tried and could not process. Returning nil ACKs the delivery and lets Wrap record it as processed, which claims work was applied that never was; the message then looks identical to a successful one in the inbox, in the failure monitor, and to the replay tools.
+//
+// A discard is a failure the monitor alerts on. For a message that was never this handler's work in the first place, use Ignore.
 func (c *InboxConsumer) Discard(ctx context.Context, reason string) error {
-	recordID, ok := InboxRecordIDFromContext(ctx)
+	return c.terminate(ctx, reason, InboxStatusDiscarded)
+}
+
+// Ignore ends the in-flight message in the terminal "ignored" state and returns ErrInboxDiscarded.
+//
+// Use it for a message this handler was never going to act on — an event type the service does not subscribe to, a routing key it does not serve. The record is still terminal and still distinguishable from work that was applied, but it is not a failure: these arrive as a matter of course, and alerting on them would bury the records that need a human.
+func (c *InboxConsumer) Ignore(ctx context.Context, reason string) error {
+	return c.terminate(ctx, reason, InboxStatusIgnored)
+}
+
+// terminate records the message's terminal state and reports that it ended deliberately.
+//
+// The repository is reached only after the lease check, so a delivery with no inbox record — one
+// whose message id could not be resolved — ends the same way it always did rather than touching a
+// repository the consumer may not have.
+func (c *InboxConsumer) terminate(ctx context.Context, reason string, state InboxStatus) error {
+	lease, ok := InboxLeaseFromContext(ctx)
 	if !ok {
-		slog.WarnContext(ctx, "Discarding message with no inbox record", "reason", reason)
+		slog.WarnContext(ctx, "Ending message with no inbox record", "state", string(state), "reason", reason)
 		return nil
 	}
-	discardCtx, cancel := bookkeepingContext(ctx)
+	markCtx, cancel := bookkeepingContext(ctx)
 	defer cancel()
-	if err := c.repo.MarkDiscarded(discardCtx, recordID, reason); err != nil {
-		slog.WarnContext(ctx, "Failed to mark inbox record as discarded", "reason", reason, "error", err)
+
+	var err error
+	switch state {
+	case InboxStatusIgnored:
+		err = c.repo.MarkIgnored(markCtx, lease.RecordID, lease.Owner, reason)
+	default:
+		err = c.repo.MarkDiscarded(markCtx, lease.RecordID, lease.Owner, reason)
+	}
+	if err != nil {
+		slog.WarnContext(ctx, "Failed to mark inbox record", "state", string(state), "reason", reason, "error", err)
 	}
 	return ErrInboxDiscarded
 }

@@ -12,12 +12,12 @@ import (
 //
 // A zero-row update means a concurrent attempt completed the message first. Returning an error rolls this transaction back, discarding the duplicate work.
 func completeInboxRecord(ctx context.Context, f domain.RepoFactory) *apierror.APIError {
-	recordID, ok := messaging.InboxRecordIDFromContext(ctx)
+	lease, ok := messaging.InboxLeaseFromContext(ctx)
 	if !ok {
 		return nil
 	}
 
-	completed, err := f.NewInboxRepo().Complete(ctx, recordID)
+	completed, err := f.NewInboxRepo().Complete(ctx, lease.RecordID, lease.Owner)
 	if err != nil {
 		return apierror.NewInternalError(err, "Failed to record inbox recovery point.")
 	}

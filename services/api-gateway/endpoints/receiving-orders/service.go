@@ -306,7 +306,7 @@ func receivingOrderSummaryFromProto(ctx context.Context, info *pb.ReceivingOrder
 		UpdatedAt:   grpcutil.TimestampToTime(info.UpdatedAt),
 	}
 
-	stashReceivingOrderFKs(ctx, info.Id, info.SupplierId, info.SupplierName, info.SupplierNumber, info.PurchaseOrderId, info.PurchaseOrderNumber, info.Totals, info.Deliveries)
+	stashReceivingOrderFKs(ctx, info.Id, info.SupplierId, info.SupplierName, info.SupplierNumber, info.PurchaseOrderId, info.PurchaseOrderNumber, info.PurchaseOrderStatus, info.Totals, info.Deliveries)
 
 	// Lines are populated on the summary only when the list includes them.
 	if len(info.Lines) > 0 {
@@ -342,7 +342,7 @@ func receivingOrderFromProto(ctx context.Context, info *pb.ReceivingOrderInfo, u
 		UpdatedAt:   grpcutil.TimestampToTime(info.UpdatedAt),
 	}
 
-	stashReceivingOrderFKs(ctx, info.Id, info.SupplierId, info.SupplierName, info.SupplierNumber, info.PurchaseOrderId, info.PurchaseOrderNumber, info.Totals, info.Deliveries)
+	stashReceivingOrderFKs(ctx, info.Id, info.SupplierId, info.SupplierName, info.SupplierNumber, info.PurchaseOrderId, info.PurchaseOrderNumber, info.PurchaseOrderStatus, info.Totals, info.Deliveries)
 
 	// Lines (expandable): stash the pre-built list plus each line's order_line
 	// reference so the include resolver can populate them on ?include=lines and
@@ -364,7 +364,7 @@ func receivingOrderFromProto(ctx context.Context, info *pb.ReceivingOrderInfo, u
 // stashReceivingOrderFKs stashes the sub-objects the include resolver reveals on request.
 //
 // The supplier is the seller account — cross-account, so not resolvable through the account-scoped loader — and totals and related are computed with the order rather than fetched, so all three are carried inline from what the query already returned. Never fabricate the referenced documents.
-func stashReceivingOrderFKs(ctx context.Context, id string, supplierID, supplierName, supplierNumber *string, purchaseOrderID, purchaseOrderNumber string, totals *pb.ReceivingOrderTotalsInfo, deliveries []*pb.DocumentRefInfo) {
+func stashReceivingOrderFKs(ctx context.Context, id string, supplierID, supplierName, supplierNumber *string, purchaseOrderID, purchaseOrderNumber, purchaseOrderStatus string, totals *pb.ReceivingOrderTotalsInfo, deliveries []*pb.DocumentRefInfo) {
 	meta := resourcekit.GetLoadMeta(ctx)
 	if supplierID != nil {
 		meta.Set(constants.ObjectTypeReceivingOrder, id, "supplier", &apiresource.Supplier{
@@ -380,6 +380,9 @@ func stashReceivingOrderFKs(ctx context.Context, id string, supplierID, supplier
 		if purchaseOrderNumber != "" {
 			po.Number = &purchaseOrderNumber
 		}
+		if purchaseOrderStatus != "" {
+			po.Status = &purchaseOrderStatus
+		}
 		related.PurchaseOrder = po
 	}
 	if recs := documentRecords(deliveries, constants.RecordTypeDelivery); recs != nil {
@@ -393,7 +396,9 @@ func stashReceivingOrderFKs(ctx context.Context, id string, supplierID, supplier
 	}
 }
 
-// receivingOrderTotalsFromProto turns the aggregated amounts and quantities into the resource's totals, dividing each stage's quantity by the ordered quantity to get its completion.
+// receivingOrderTotalsFromProto turns the aggregated amounts into the resource's totals, dividing each stage's amount by the ordered amount to get its completion.
+//
+// Completion is a ratio of amounts rather than of quantities because a receiving order's lines can each count in a different unit; summing those quantities would add pairs to metres, and the ratio would be meaningless.
 //
 // An order whose lines total nothing ordered has no meaningful completion, so the stages report zero rather than dividing by it.
 func receivingOrderTotalsFromProto(info *pb.ReceivingOrderTotalsInfo) *apiresource.ReceivingOrderTotals {
@@ -401,14 +406,14 @@ func receivingOrderTotalsFromProto(info *pb.ReceivingOrderTotalsInfo) *apiresour
 		return nil
 	}
 
-	ordered := decimalOrZero(info.OrderedQuantity)
-	stage := func(amount, quantity string) apiresource.ReceivingOrderStageTotal {
+	ordered := decimalOrZero(info.OrderedAmount)
+	stage := func(amount string) apiresource.ReceivingOrderStageTotal {
 		total := apiresource.ReceivingOrderStageTotal{
 			Object: constants.ObjectTypeReceivingOrderStageTotal,
 			Amount: amountOrZero(amount),
 		}
 		if ordered.IsPositive() {
-			completion, _ := decimalOrZero(quantity).Div(ordered).Float64()
+			completion, _ := decimalOrZero(amount).Div(ordered).Float64()
 			total.Completion = completion
 		}
 		return total
@@ -417,8 +422,8 @@ func receivingOrderTotalsFromProto(info *pb.ReceivingOrderTotalsInfo) *apiresour
 	return &apiresource.ReceivingOrderTotals{
 		Object:   constants.ObjectTypeReceivingOrderTotals,
 		Ordered:  amountOrZero(info.OrderedAmount),
-		Stocked:  stage(info.StockedAmount, info.StockedQuantity),
-		Rejected: stage(info.RejectedAmount, info.RejectedQuantity),
+		Stocked:  stage(info.StockedAmount),
+		Rejected: stage(info.RejectedAmount),
 	}
 }
 

@@ -49,7 +49,7 @@ func (r *deliveryRepoImpl) fetchReceivingOrderRefs(ctx context.Context, orderIDs
 
 	refs := make(map[string]domain.DocumentRef, len(rows))
 	for _, row := range rows {
-		refs[row.OrderID] = domain.DocumentRef{ID: row.ID, Number: row.Number}
+		refs[row.OrderID] = domain.DocumentRef{ID: row.ID, Number: row.Number, Status: row.Status}
 	}
 	return refs, nil
 }
@@ -227,8 +227,10 @@ func (r *deliveryRepoImpl) Get(ctx context.Context, params domain.GetDeliveryPar
 		Number:               row.Number,
 		PurchaseOrderID:      row.PurchaseOrderID,
 		PurchaseOrderNumber:  row.PurchaseOrderNumber,
+		PurchaseOrderStatus:  row.PurchaseOrderStatus,
 		ReceivingOrderID:     ref.ID,
 		ReceivingOrderNumber: ref.Number,
+		ReceivingOrderStatus: ref.Status,
 		Status:               row.DeliveryStatusCode,
 		Lines:                lines,
 		AcceptedAt:           acceptedAt,
@@ -332,6 +334,7 @@ func mapForwardDeliveryRow(row sqlc.ListDeliveriesForwardRow) *domain.DeliverySu
 		Number:              row.Number,
 		PurchaseOrderID:     row.PurchaseOrderID,
 		PurchaseOrderNumber: row.PurchaseOrderNumber,
+		PurchaseOrderStatus: row.PurchaseOrderStatus,
 		Status:              row.DeliveryStatusCode,
 		LineCount:           safeconv.Int64ToInt32(row.LineCount),
 		AcceptedAt:          acceptedAt,
@@ -355,6 +358,7 @@ func mapBackwardDeliveryRow(row sqlc.ListDeliveriesBackwardRow) *domain.Delivery
 		Number:              row.Number,
 		PurchaseOrderID:     row.PurchaseOrderID,
 		PurchaseOrderNumber: row.PurchaseOrderNumber,
+		PurchaseOrderStatus: row.PurchaseOrderStatus,
 		Status:              row.DeliveryStatusCode,
 		LineCount:           safeconv.Int64ToInt32(row.LineCount),
 		AcceptedAt:          acceptedAt,
@@ -432,7 +436,7 @@ func (r *deliveryRepoImpl) attachReceivingOrderRefs(ctx context.Context, deliver
 	}
 	for _, d := range deliveries {
 		if ref, ok := refs[d.PurchaseOrderID]; ok {
-			d.ReceivingOrderID, d.ReceivingOrderNumber = ref.ID, ref.Number
+			d.ReceivingOrderID, d.ReceivingOrderNumber, d.ReceivingOrderStatus = ref.ID, ref.Number, ref.Status
 		}
 	}
 	return nil

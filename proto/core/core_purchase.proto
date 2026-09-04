@@ -74,13 +74,6 @@ message PurchaseOrderSummaryInfo {
 }
 
 // PurchaseOrderInfo represents a full purchase order with all detail.
-// DeliveryRefInfo names a delivery booked against a purchase order.
-message DeliveryRefInfo {
-  string id = 1;
-  string number = 2;
-  string status = 3;
-}
-
 message PurchaseOrderInfo {
   string id = 1;
   string number = 2;
@@ -168,7 +161,12 @@ message PurchaseOrderInfo {
   optional google.protobuf.Timestamp ship_to_address_updated_at = 71;
   // Full receiving order (populated when included)
   optional ReceivingOrderInfo receiving_order = 72;
-  repeated DeliveryRefInfo deliveries = 73;
+  // The receiving order's own number and status, so the order's `related` reference to it is
+  // readable without fetching it.
+  optional string receiving_order_number = 74;
+  optional string receiving_order_status = 75;
+  // The deliveries booked against this order, oldest first.
+  repeated DocumentRefInfo deliveries = 73;
 }
 
 // PurchaseOrderLineInfo represents a purchase order line.

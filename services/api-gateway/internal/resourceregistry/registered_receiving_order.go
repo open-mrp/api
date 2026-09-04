@@ -24,10 +24,11 @@ func init() {
 				Key:      "totals",
 				Populate: populateTotalsOnReceivingOrder,
 			},
-			{
-				Key:      "related",
-				Populate: populateRelatedOnReceivingOrder,
-			},
+			// `related` is expandable and so is each reference on it: the bare key reveals the object,
+			// the child keys fill in one reference each. All carried inline from the order's own query.
+			{Key: "related", Populate: populateRelatedOnReceivingOrder},
+			{Key: "related.purchase_order", Populate: populatePurchaseOrderOnRORelated},
+			{Key: "related.deliveries", Populate: populateDeliveriesOnRORelated},
 			{
 				Key:         "lines",
 				Target:      constants.ObjectTypeReceivingOrderLine,
@@ -130,13 +131,43 @@ func populateTotalsOnReceivingOrder(ctx context.Context, parent any, _ map[strin
 	ro.Totals = v.(*apiresource.ReceivingOrderTotals)
 }
 
+// populateRelatedOnReceivingOrder reveals the object itself, leaving every reference on it to its own key.
 func populateRelatedOnReceivingOrder(ctx context.Context, parent any, _ map[string]any) {
 	ro := parent.(*apiresource.ReceivingOrder)
-	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeReceivingOrder, ro.ID, "related")
-	if !ok {
-		return
+	if stashedRORelated(ctx, ro.ID) != nil {
+		roRelated(ro)
 	}
-	ro.Related = v.(*apiresource.ReceivingOrderRelated)
+}
+
+func populatePurchaseOrderOnRORelated(ctx context.Context, parent any, _ map[string]any) {
+	ro := parent.(*apiresource.ReceivingOrder)
+	if stashed := stashedRORelated(ctx, ro.ID); stashed != nil {
+		roRelated(ro).PurchaseOrder = stashed.PurchaseOrder
+	}
+}
+
+func populateDeliveriesOnRORelated(ctx context.Context, parent any, _ map[string]any) {
+	ro := parent.(*apiresource.ReceivingOrder)
+	if stashed := stashedRORelated(ctx, ro.ID); stashed != nil {
+		roRelated(ro).Deliveries = stashed.Deliveries
+	}
+}
+
+func stashedRORelated(ctx context.Context, orderID string) *apiresource.ReceivingOrderRelated {
+	v, ok := resourcekit.GetLoadMeta(ctx).Get(constants.ObjectTypeReceivingOrder, orderID, "related")
+	if !ok {
+		return nil
+	}
+	return v.(*apiresource.ReceivingOrderRelated)
+}
+
+// roRelated returns the order's related object, creating it on first use so two independently
+// requested children populate into the same one.
+func roRelated(ro *apiresource.ReceivingOrder) *apiresource.ReceivingOrderRelated {
+	if ro.Related == nil {
+		ro.Related = &apiresource.ReceivingOrderRelated{Object: constants.ObjectTypeReceivingOrderRelated}
+	}
+	return ro.Related
 }
 
 func extractItemIDFromReceivingOrderLine(ctx context.Context, parent any) []string {

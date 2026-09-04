@@ -2,6 +2,8 @@ package event
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	apierror "github.com/open-mrp/api/shared/errors"
@@ -14,12 +16,12 @@ import (
 //
 // A zero-row update means a concurrent attempt completed the message first. Returning an error rolls this transaction back, discarding the duplicate work.
 func completeInboxRecord(ctx context.Context, f domain.RepoFactory) *apierror.APIError {
-	recordID, ok := messaging.InboxRecordIDFromContext(ctx)
+	lease, ok := messaging.InboxLeaseFromContext(ctx)
 	if !ok {
 		return nil
 	}
 
-	completed, err := f.NewInboxRepo().Complete(ctx, recordID)
+	completed, err := f.NewInboxRepo().Complete(ctx, lease.RecordID, lease.Owner)
 	if err != nil {
 		return apierror.NewInternalError(err, "Failed to record inbox recovery point.")
 	}
@@ -30,19 +32,24 @@ func completeInboxRecord(ctx context.Context, f domain.RepoFactory) *apierror.AP
 	return nil
 }
 
-// newPermanentDropError builds the non-transient failure a handler returns when the message describes work that can never be done — state the event no longer matches, a measure that cannot be interpreted. Returning it from inside a transaction rolls that transaction back; discardIfPermanent then records the message as terminal.
+// errPermanentDrop marks the errors a handler raises deliberately to end a message. Only these are discarded; see discardIfPermanent for why the error's transience is not enough on its own.
+var errPermanentDrop = errors.New("message describes work that can never be done")
+
+// newPermanentDropError builds the failure a handler returns when the message describes work that can never be done — state the event no longer matches, a measure that cannot be interpreted. Returning it from inside a transaction rolls that transaction back; discardIfPermanent then records the message as terminal.
 func newPermanentDropError(reason string) *apierror.APIError {
-	return apierror.NewValidationError(reason)
+	return apierror.NewValidationError(reason).WithInternal(fmt.Errorf("%w: %s", errPermanentDrop, reason))
 }
 
-// discardIfPermanent decides a failed message's fate from the error's own classification, which is the only thing that knows whether a retry could ever succeed.
+// discardIfPermanent ends a message only when the handler said to, and otherwise lets it retry.
 //
-// A transient failure is returned unchanged so the delivery retries. A permanent one is recorded as discarded: terminal, alerted on by the failure monitor, and not retried. The alternative these replaced — logging and returning nil — marked the message processed, so a sync that permanently failed and a sync that worked were indistinguishable afterwards.
+// The classification cannot come from IsTransient. That flag is false for every validation, not-found and conflict error, so keying on it discards a message because a repository lookup missed — a step not yet visible, a unit conversion an operator has not configured — and those are exactly the cases that succeed once someone fixes the data. A discarded record is terminal and skipped by handleDuplicate, so replay cannot re-drive it either: the message is simply gone.
+//
+// So only errPermanentDrop discards. Everything else is returned unchanged and retries, reaching the dead-letter queue if it keeps failing, where it stays visible and re-drivable.
 func discardIfPermanent(ctx context.Context, inbox *messaging.InboxConsumer, apiErr *apierror.APIError) error {
 	if apiErr == nil {
 		return nil
 	}
-	if apiErr.IsTransient {
+	if !errors.Is(apiErr, errPermanentDrop) {
 		return apiErr
 	}
 	return inbox.Discard(ctx, apierror.Describe(apiErr))

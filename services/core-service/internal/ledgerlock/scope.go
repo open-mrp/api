@@ -1,6 +1,6 @@
 // Package ledgerlock ensures inventory ledger writes acquire locks in a consistent order.
 //
-// Scope represents the set of inventory items that have already been locked for a transaction. Every repository method that writes to the inventory ledger requires a *Scope. This makes it difficult to write to the ledger without first calling Acquire.
+// Scope is evidence that the lock has been taken for a known set of items. Every ledger-writing repository method takes one, so a transaction that never called Acquire cannot compile a call to them.
 //
 // Acquire is the intended way to create a Scope. Its fields are private, so creating &Scope{} manually does not mark any items as locked. If that happens, EnsureLocked will detect the missing lock, acquire it late, and log an error so the problem is visible.
 package ledgerlock
@@ -25,7 +25,9 @@ type Scope struct {
 	items map[string]struct{}
 }
 
-// Acquire locks all the inventory items this transaction plans to change in a consistent sorted order. These items are recorded in a `Scope` so two transactions cannot touch the same item.
+// Acquire takes the lock for every item the transaction will write, in ascending id order, and must be the first statement of the WithTx callback.
+//
+// One direction, so two transactions wanting the same two items can never take them in opposite orders — which is exactly what ranging a Go map does. Never call this while already holding a lock on a ledger row: resolve the item set on the pool, before WithTx.
 func Acquire(ctx context.Context, l Locker, itemIDs []string) (*Scope, *apierror.APIError) {
 	s := &Scope{items: make(map[string]struct{}, len(itemIDs))}
 	for _, itemID := range SortedUnique(itemIDs) {
@@ -48,9 +50,9 @@ func (s *Scope) Holds(itemID string) bool {
 	return held
 }
 
-// EnsureLocked checks whether the current transaction already holds the item's inventory lock. If not, it acquires the lock late and logs an error.
+// EnsureLocked is the backstop at every ledger-writing repository entry point: a no-op when the lock is already held, a late acquisition when it is not.
 //
-// An error here means that we failed to acquire a lock when we should have, meaning a deadlock is possible.
+// A late acquisition takes the lock while ledger row locks are already held, inverting the order against any transaction holding the lock and waiting for those rows. It is taken anyway rather than refused, because refusing dead-letters a shop-floor scan or 500s a ship, and the worst case is a 1213 the transaction manager retries. It is NOT safe: every occurrence means some flow's item pre-read is incomplete, and is logged at ERROR to be paged on.
 func (s *Scope) EnsureLocked(ctx context.Context, l Locker, itemID string) *apierror.APIError {
 	if itemID == "" {
 		return nil
@@ -77,7 +79,7 @@ func (s *Scope) EnsureLocked(ctx context.Context, l Locker, itemID string) *apie
 	return nil
 }
 
-// SortedUnique drops blanks, deduplicates and sorts.
+// SortedUnique drops blanks, deduplicates and sorts. The acquisition order is the whole point: see Acquire.
 func SortedUnique(ids []string) []string {
 	seen := make(map[string]struct{}, len(ids))
 	out := make([]string, 0, len(ids))

@@ -79,8 +79,10 @@ func (c *HubspotSyncConsumer) handleMessage(ctx context.Context, msg amqp.Delive
 			return c.handleRunError(span, "execute", data.JobID, apiErr)
 		}
 	default:
+		// Not this handler's work rather than work it failed at, so it is ignored: terminal and
+		// visible in the inbox, but not an alert.
 		log.Printf("[hubspot_sync] unknown routing key %q; dropping", msg.RoutingKey)
-		return c.inboxConsumer.Discard(ctx, "unknown routing key "+msg.RoutingKey)
+		return c.inboxConsumer.Ignore(ctx, "unknown routing key "+msg.RoutingKey)
 	}
 	return nil
 }

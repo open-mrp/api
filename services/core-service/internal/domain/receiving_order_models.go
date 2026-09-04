@@ -13,6 +13,7 @@ type ReceivingOrderSummary struct {
 	Number              string
 	PurchaseOrderID     string
 	PurchaseOrderNumber string
+	PurchaseOrderStatus string
 	SupplierID          *string
 	SupplierName        *string
 	SupplierNumber      *string
@@ -31,7 +32,8 @@ type ReceivingOrder struct {
 	ID                  string
 	Number              string `audit:"number"`
 	PurchaseOrderID     string
-	PurchaseOrderNumber string  `audit:"purchase_order_number"`
+	PurchaseOrderNumber string `audit:"purchase_order_number"`
+	PurchaseOrderStatus string
 	SupplierID          *string `audit:"supplier_id"`
 	SupplierName        *string `audit:"supplier_name"`
 	SupplierNumber      *string `audit:"supplier_number"`
@@ -71,14 +73,11 @@ type ReceivingOrderLine struct {
 
 // ReceivingOrderTotals is what a receiving order is worth and how far it has been put away, aggregated over its lines.
 //
-// Amounts are the purchase order's agreed unit price times a quantity, so they stay comparable across lines counted in different units. Quantities are carried alongside so the caller can express each stage as a fraction of what was ordered.
+// Every figure is an amount — the purchase order's agreed unit price times a quantity — because a receiving order's lines can each count in a different unit, and money is the only common denominator they have. Completion is a ratio of two of these amounts for the same reason: summing quantities across lines would add pairs to metres.
 type ReceivingOrderTotals struct {
-	OrderedAmount    string
-	OrderedQuantity  string
-	StockedAmount    string
-	StockedQuantity  string
-	RejectedAmount   string
-	RejectedQuantity string
+	OrderedAmount  string
+	StockedAmount  string
+	RejectedAmount string
 }
 
 // DocumentRef names one purchasing document from another: the id and number a caller needs to follow the link, plus the status that makes the reference readable without fetching it.

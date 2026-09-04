@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.4](https://github.com/open-mrp/api/compare/v2.6.3...v2.6.4) (2026-09-04)
+
+
+### Bug Fixes
+
+* **inventory:** prepare remaining endpoints that touch inventory to move to go ([#141](https://github.com/open-mrp/api/issues/141)) ([e36d1ca](https://github.com/open-mrp/api/commit/e36d1ca5dc1bb54e99cb45290126c2e8da2f35a1))
+
 ## [2.6.3](https://github.com/open-mrp/api/compare/v2.6.2...v2.6.3) (2026-09-04)
 
 

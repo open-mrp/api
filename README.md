@@ -1,7 +1,6 @@
 **Programmable operations for people who make things.**
 
-An open source manufacturing platform built to make factories  
-programmable, reliable, and increasingly autonomous.
+An open source manufacturing platform built to make factories programmable, reliable, and increasingly autonomous.
 
 [Website](https://openmrp.ai)  ·  [Documentation](https://docs.openmrp.ai)  ·  [API reference](https://docs.openmrp.ai/api-reference)  ·  [All repos](https://github.com/open-mrp)
 

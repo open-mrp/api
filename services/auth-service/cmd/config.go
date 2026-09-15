@@ -96,19 +96,18 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 	}
 
 	return &config{
-		Port:                   port,
-		DBURL:                  env.GetEnv(envDBURL, getenv),
-		FrontendURL:            env.GetEnv(envFrontendURL, getenv),
-		JWTSecret:              env.GetEnv(envJWTSecret, getenv),
-		Pepper:                 []byte(env.GetEnv(envPepper, getenv)),
-		RabbitMQURI:            cmp.Or(env.GetEnv(envRabbitMQURI, getenv), defaultRabbitMQURI),
-		CoreServiceURL:         cmp.Or(env.GetEnv(envCoreServiceURL, getenv), defaultCoreServiceURL),
-		PlatformServiceURL:     env.GetEnv(envPlatformServiceURL, getenv),
-		DocAPIKeyEncryptionKey: key,
-		BillingServiceURL:      cmp.Or(env.GetEnv(envBillingServiceURL, getenv), defaultBillingServiceURL),
-		CursorHMACKey:          []byte(env.GetEnv(envCursorHMACKey, getenv)),
-		PlatformMode:           platformMode,
-
+		Port:                      port,
+		DBURL:                     env.GetEnv(envDBURL, getenv),
+		FrontendURL:               env.GetEnv(envFrontendURL, getenv),
+		JWTSecret:                 env.GetEnv(envJWTSecret, getenv),
+		Pepper:                    []byte(env.GetEnv(envPepper, getenv)),
+		RabbitMQURI:               cmp.Or(env.GetEnv(envRabbitMQURI, getenv), defaultRabbitMQURI),
+		CoreServiceURL:            cmp.Or(env.GetEnv(envCoreServiceURL, getenv), defaultCoreServiceURL),
+		PlatformServiceURL:        env.GetEnv(envPlatformServiceURL, getenv),
+		DocAPIKeyEncryptionKey:    key,
+		BillingServiceURL:         cmp.Or(env.GetEnv(envBillingServiceURL, getenv), defaultBillingServiceURL),
+		CursorHMACKey:             []byte(env.GetEnv(envCursorHMACKey, getenv)),
+		PlatformMode:              platformMode,
 		docAPIKeyEncryptionKeyErr: keyErr,
 	}
 }

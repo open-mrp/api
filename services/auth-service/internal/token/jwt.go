@@ -56,12 +56,10 @@ func EncodeJWT(ctx context.Context, jwtSecret, userID string, expiresIn time.Dur
 
 	now := time.Now().UTC()
 	claims := JWTClaims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Subject:   userID,
-			Issuer:    defaultJWTIssuer,
-			IssuedAt:  jwt.NewNumericDate(now),
-			ExpiresAt: jwt.NewNumericDate(now.Add(expiresIn)),
-		},
+		Subject:   userID,
+		Issuer:    defaultJWTIssuer,
+		IssuedAt:  jwt.NewNumericDate(now),
+		ExpiresAt: jwt.NewNumericDate(now.Add(expiresIn)),
 		TokenType: tokenType,
 	}
 

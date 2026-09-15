@@ -14,6 +14,7 @@ type EmailSender struct {
 	sent atomic.Uint64
 }
 
+// TODO: This needs rethought and old params removed if not needed
 // Send returns a distinct message ID per call, the way SES does.
 //
 // It used to return one constant. The email log deduplicates on the SES message ID, so

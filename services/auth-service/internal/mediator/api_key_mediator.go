@@ -15,7 +15,7 @@ import (
 var apiKeyMedTracer = tracing.GetTracer("auth-service.api_key_mediator")
 
 // maxRevokeScheduleWindow caps how far in the future a rotation may schedule the old key's revocation. Beyond this, the request is rejected.
-const maxRevokeScheduleWindow = 30 * 24 * time.Hour
+const maxRevokeScheduleWindow = 30 * 24 * time.Hour // 30 days
 
 type apiKeyMedImpl struct {
 	repos      domain.RepoFactory

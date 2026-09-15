@@ -7,6 +7,7 @@ import (
 	apierror "github.com/open-mrp/api/shared/errors"
 )
 
+// TODO: This should be rethought as it seems much of this is no longer in use.
 // EmailIdentityProvider is a no-op EmailIdentityProvider for test mode: it returns placeholder DKIM tokens and reports every domain as already verified so the bridge can be exercised without SES.
 type EmailIdentityProvider struct{}
 

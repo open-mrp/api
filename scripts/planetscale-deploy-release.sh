@@ -8,8 +8,8 @@
 # failed schema deploy must stop the release — new code against an old schema is the failure this
 # ordering exists to prevent.
 #
-# Exits 0 with nothing to do when the release carries no migrations, so the pipeline is not gated on
-# a deploy request that was never created.
+# Only called when the release changes shared/db/migrations, so a missing deploy request is a
+# failure: the rollout must not run against a schema the release PR never prepared.
 #
 # Required env:
 #   RELEASE_VERSION              version being released, e.g. 1.2.0 or v1.2.0
@@ -55,13 +55,20 @@ pscale_cmd() {
 info "Looking for the deploy request on branch $BRANCH..."
 
 # `show` takes a branch name as readily as a number, so the branch name derived from the version is
-# the only thing this needs from the run that prepared it. A release with no migrations never had a
-# branch cut, and a re-run of an already-deployed release has had its branch auto-deleted — both
-# surface here as "not found", and both mean there is nothing to apply.
-if ! DR_JSON="$(pscale_cmd deploy-request show "$PS_DATABASE" "$BRANCH" --format json 2>/dev/null)"; then
-    info "No deploy request for $BRANCH — this release carries no schema changes."
-    exit 0
+# the only thing this needs from the run that prepared it. It still resolves after
+# --auto-delete-branch has removed the branch, so an already-deployed re-run lands in the state
+# checks below. The workflow only calls this when the release changes shared/db/migrations, so a
+# missing deploy request means the prepare step never produced one — not that there is nothing to
+# apply. v2.6.4 passed here while goose was panicking in prepare, and shipped without its schema.
+SHOW_ERR="$(mktemp)"
+if ! DR_JSON="$(pscale_cmd deploy-request show "$PS_DATABASE" "$BRANCH" --format json 2>"$SHOW_ERR")"; then
+    error "No deploy request found for $BRANCH, but this release changes schema migrations."
+    error "The prepare step on the release PR must have failed; fix it and re-run before releasing."
+    cat "$SHOW_ERR" >&2
+    rm -f "$SHOW_ERR"
+    exit 1
 fi
+rm -f "$SHOW_ERR"
 
 DR_NUMBER="$(echo "$DR_JSON" | jq -r '.number // empty')"
 DR_STATE="$(echo "$DR_JSON" | jq -r '.state // empty')"

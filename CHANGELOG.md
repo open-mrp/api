@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.6.5](https://github.com/open-mrp/api/compare/v2.6.4...v2.6.5) (2026-09-16)
+
+
+### Bug Fixes
+
+* **migrations:** renumber message_inbox lease migration and guard migration versions ([#148](https://github.com/open-mrp/api/issues/148)) ([b3e780a](https://github.com/open-mrp/api/commit/b3e780a31ec85fe5a9ca5c91f196b7befaf4e049))
+* **picks:** index the open-pick ship-by list so it stops scanning closed history ([#146](https://github.com/open-mrp/api/issues/146)) ([627970a](https://github.com/open-mrp/api/commit/627970a6f7081ecd978c6cf196a5ca6ac8533e4c))
+
 ## [2.6.4](https://github.com/open-mrp/api/compare/v2.6.3...v2.6.4) (2026-09-04)
 
 

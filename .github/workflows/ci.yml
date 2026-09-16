@@ -29,6 +29,24 @@ jobs:
               - 'tools/tool-versions'
               - 'shared/db/migrations/**'
 
+  migration-versions:
+    name: Migration Versions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The ordering check compares against the base branch, so it needs its history.
+          fetch-depth: 0
+
+      # goose refuses a directory with a duplicate version, and the release step that opens the
+      # PlanetScale deploy request runs goose. A reused version merged green here and v2.6.4 then
+      # shipped without its schema. Not gated on the Go filter: data and agent-service migrations
+      # live outside it.
+      - name: Check migration versions
+        env:
+          BASE_REF: origin/${{ github.base_ref }}
+        run: ./scripts/check-migration-versions.sh
+
   validate-version:
     name: Validate Version
     needs: [changes]

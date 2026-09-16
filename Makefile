@@ -1,4 +1,4 @@
-.PHONY: help dev sqlc proto buf-lint no-binaries test test-e2e test-inbox tx-audit test-ledger test-verbose test-sql-prepare-smoke install-tools install-ci-tools docs mocks lint gosec gosec-fast govet static-check check-format jaeger-tracing connect-minikube version validate-openapi-specs httpie local-db local-db-cli local-db-down local-db-nuke setup teardown migrate-create migrate-create-data migrate-up migrate-down migrate-status migrate-baseline migrate-data-up migrate-data-status migrate-agent-db migrate-agent-create migrate-agent-create-data migrate-agent-data migrate-agent-status seed-agent-db seed-core seed-user-photos seed-stripe teardown-stripe teardown-all-stripe fmt stripe-webhook stripe-webhook-account view-otel e2e-up e2e-up-ci e2e e2e-down fix-minikube-dns openapi openapi-quiet gen-agent-tools stainless openapi-stainless openapi-stainless-quiet generate generate-quiet install-stlc stlc-internal-sdk stlc-public-typescript-sdk stlc-public-python-sdk stlc-public-go-sdk stlc-public-sdks stlc-sdks sdk-yalc
+.PHONY: help dev sqlc proto buf-lint no-binaries migration-versions test test-e2e test-inbox tx-audit test-ledger test-verbose test-sql-prepare-smoke install-tools install-ci-tools docs mocks lint gosec gosec-fast govet static-check check-format jaeger-tracing connect-minikube version validate-openapi-specs httpie local-db local-db-cli local-db-down local-db-nuke setup teardown migrate-create migrate-create-data migrate-up migrate-down migrate-status migrate-baseline migrate-data-up migrate-data-status migrate-agent-db migrate-agent-create migrate-agent-create-data migrate-agent-data migrate-agent-status seed-agent-db seed-core seed-user-photos seed-stripe teardown-stripe teardown-all-stripe fmt stripe-webhook stripe-webhook-account view-otel e2e-up e2e-up-ci e2e e2e-down fix-minikube-dns openapi openapi-quiet gen-agent-tools stainless openapi-stainless openapi-stainless-quiet generate generate-quiet install-stlc stlc-internal-sdk stlc-public-typescript-sdk stlc-public-python-sdk stlc-public-go-sdk stlc-public-sdks stlc-sdks sdk-yalc
 
 # Include .env file if it exists (optional for CI)
 -include .env
@@ -298,7 +298,10 @@ install-ci-tools: ## Install minimum tools for CI
 mocks: ## Generate mocks. Usage: make mocks [services]
 	@$(MOCK_SCRIPT) $(ARGS)
 
-lint: gosec static-check tx-audit vtparse no-binaries ## Run gosec + staticcheck + transaction-callback audit + Vitess parse check + committed-binary check
+lint: gosec static-check tx-audit vtparse no-binaries migration-versions ## Run gosec + staticcheck + transaction-callback audit + Vitess parse check + committed-binary check + migration version check
+
+migration-versions: ## Check that goose migration versions are unique and new ones sort after origin/main
+	@./scripts/check-migration-versions.sh
 
 no-binaries: ## Check that no compiled binary or oversized file is tracked in git
 	@./scripts/check-no-binaries.sh

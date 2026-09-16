@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.6.8](https://github.com/open-mrp/api/compare/v2.6.7...v2.6.8) (2026-09-16)
+
+
+### Bug Fixes
+
+* **messaging:** drain consumers on shutdown and requeue lease-held deliveries ([#155](https://github.com/open-mrp/api/issues/155)) ([0bbe97f](https://github.com/open-mrp/api/commit/0bbe97f31ba2916feafe4d01071125490d687c7e))
+* **messaging:** record why messages dead-letter and stop feeding unconsumed queues ([#156](https://github.com/open-mrp/api/issues/156)) ([64af311](https://github.com/open-mrp/api/commit/64af311bdca60ce72294e04144858a3ae2f1abf4))
+* **picks:** serve the created-at pick list from an index so it stops timing out ([#153](https://github.com/open-mrp/api/issues/153)) ([943fd83](https://github.com/open-mrp/api/commit/943fd837362d9774ed2fe2a4fc0ed86e6bc733cd))
+
 ## [2.6.7](https://github.com/open-mrp/api/compare/v2.6.6...v2.6.7) (2026-09-16)
 
 

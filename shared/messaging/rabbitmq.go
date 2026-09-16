@@ -225,6 +225,8 @@ func (r *rabbitMQ) consume(ctx context.Context, queueName string, declareQueue f
 
 	ctx, stop := r.untilClosed(ctx)
 	consumerTag := queueName + "." + instanceSuffix()
+	// Instance fan-out queues have no dead-letter routing: dropping a failed realtime event is their contract.
+	deadLetters := declareQueue == nil
 
 	r.consumers.Add(1)
 	go func() {
@@ -317,7 +319,7 @@ func (r *rabbitMQ) consume(ctx context.Context, queueName string, declareQueue f
 			for range concurrency {
 				wg.Go(func() {
 					for msg := range msgs {
-						r.processDelivery(ctx, queueName, handler, msg)
+						r.processDelivery(ctx, queueName, handler, msg, deadLetters)
 					}
 				})
 			}
@@ -349,8 +351,8 @@ func (r *rabbitMQ) consume(ctx context.Context, queueName string, declareQueue f
 	return nil
 }
 
-// processDelivery handles one AMQP delivery: traced span, handler invocation with backoff retries, ACK on success, requeue when the inbox lease is held or shutdown cuts retries short, and dead-lettering (with diagnostic headers) otherwise.
-func (r *rabbitMQ) processDelivery(ctx context.Context, queueName string, handler MessageHandler, msg amqp.Delivery) {
+// processDelivery handles one AMQP delivery: traced span, handler invocation with backoff retries, ACK on success, requeue when the inbox lease is held or shutdown cuts retries short, and otherwise dead-lettering with diagnostic headers, or dropping when the queue has no dead-letter routing.
+func (r *rabbitMQ) processDelivery(ctx context.Context, queueName string, handler MessageHandler, msg amqp.Delivery, deadLetters bool) {
 	select {
 	case <-ctx.Done():
 		return
@@ -386,6 +388,10 @@ func (r *rabbitMQ) processDelivery(ctx context.Context, queueName string, handle
 			if nackErr := d.Nack(false, true); nackErr != nil {
 				slog.Warn("Failed to requeue message at shutdown", "queue", queueName, "error", nackErr)
 			}
+			return err
+		}
+		if err != nil && !deadLetters {
+			_ = d.Reject(false)
 			return err
 		}
 		if err != nil {

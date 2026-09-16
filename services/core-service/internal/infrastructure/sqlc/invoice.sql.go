@@ -498,7 +498,8 @@ SELECT
     sol.line_item_number AS order_line_item_number,
     sol.product_id AS order_line_product_id,
     oq.value AS order_line_quantity_ordered,
-    i.sku AS order_line_item_sku,
+    -- The order line's own SKU, which the order acknowledgement prints too; not every line has an item.
+    sol.product_sku AS order_line_item_sku,
     sol.product_description AS order_line_description
 FROM invoice_line il
 JOIN quantity q ON q.id = il.quantity_id
@@ -508,7 +509,6 @@ JOIN quantity oq ON oq.id = sol.quantity_id
 JOIN rate r ON r.id = sol.unit_price_id
 JOIN unit rdu ON rdu.id = r.denominator_unit_id
 JOIN unit rnu ON rnu.id = r.numerator_unit_id
-LEFT JOIN item i ON i.id = sol.item_id
 WHERE il.invoice_id = ?
 ORDER BY sol.line_item_number ASC, il.created_at ASC, il.id ASC
 `
@@ -536,7 +536,7 @@ type GetInvoiceLinesRow struct {
 	OrderLineItemNumber                  sql.NullInt32
 	OrderLineProductID                   sql.NullString
 	OrderLineQuantityOrdered             string
-	OrderLineItemSku                     sql.NullString
+	OrderLineItemSku                     string
 	OrderLineDescription                 sql.NullString
 }
 

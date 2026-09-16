@@ -202,6 +202,10 @@ func TestInvoiceEmailParamsCoverTheTemplate(t *testing.T) {
 	if rows[0]["qty"] != "1,200 pair" || rows[0]["total"] != "$10,200.00" {
 		t.Errorf("line row = %#v", rows[0])
 	}
+	// Every line names its SKU above the description.
+	if rows[0]["sku"] != "SOCK-CREW-BLK" || rows[1]["sku"] != "SOCK-ANK-WHT" {
+		t.Errorf("line skus = %v, %v", rows[0]["sku"], rows[1]["sku"])
+	}
 }
 
 // Without a tracking number the Track Shipment button has no destination, so the parameter is empty
@@ -271,7 +275,8 @@ func TestInvoicePDFRendersLegacyLayout(t *testing.T) {
 	t.Run("invoice summary carries both quantity columns", func(t *testing.T) {
 		for _, want := range []string{
 			"Invoice Summary", "Line Item", "SKU", "Description", "Price", "Ordered", "Invoiced", "Unit", "Total",
-			"001", "$8.50 / dz", "1,500", "1,200", "pair", "$10,200.00",
+			"001", "SOCK-CREW-BLK", "$8.50 / dz", "1,500", "1,200", "pair", "$10,200.00",
+			"002", "SOCK-ANK-WHT",
 			"Total Due:", "$11,475.00",
 		} {
 			if !pdfContains(runs, want) {

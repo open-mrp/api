@@ -580,9 +580,11 @@ func addThousandsSep(s string) string {
 type ackLogo struct {
 	ImageType string
 	Image     []byte
+	// URL is the signed link an email's <img> loads; the stored value is an object key a mail client can't fetch.
+	URL string
 }
 
-// Fetches the account's letterhead logo for embedding, best-effort: a miss leaves a text letterhead.
+// Fetches the account's letterhead logo for embedding and emailing, best-effort: a miss leaves a text letterhead.
 func fetchAccountLogo(ctx context.Context, repos domain.RepoFactory, branding BrandingAssets, accountID string) ackLogo {
 	account, apiErr := repos.NewAccountRepo().GetByID(ctx, accountID)
 	if apiErr != nil || account == nil || account.Branding == nil {
@@ -594,5 +596,6 @@ func fetchAccountLogo(ctx context.Context, repos domain.RepoFactory, branding Br
 	}
 	var logo ackLogo
 	logo.ImageType, logo.Image = branding.LogoImage(ctx, stored)
+	logo.URL = branding.LogoURL(ctx, stored)
 	return logo
 }

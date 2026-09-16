@@ -279,6 +279,14 @@ func TestInvoices_RetrieveHydratesDeepIncludes(t *testing.T) {
 	assert.NotEmpty(t, jsonField(orderLine, "id"))
 	assert.NotEmpty(t, jsonField(orderLine, "id"), "the order line resolves to a real row")
 
+	// The invoice PDF and email print this SKU, so it must be the order line's own, in line order.
+	require.Len(t, lines, 3)
+	for i, want := range []string{"SCK-005", "SCK-006", "Freight"} {
+		l, ok := lines[i].(map[string]any)
+		require.True(t, ok)
+		assert.Equal(t, want, jsonField(jsonObject(l, "order_line"), "product_sku"), "lines[%d].order_line.product_sku", i)
+	}
+
 	product := jsonObject(orderLine, "product")
 	require.NotNil(t, product, "lines.order_line.product must expand")
 	assert.Equal(t, "product", jsonField(product, "object"))

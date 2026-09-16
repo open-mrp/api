@@ -277,8 +277,8 @@ func (r *invoiceRepoImpl) GetLines(ctx context.Context, invoiceID string) ([]*do
 		if row.OrderLineProductID.Valid {
 			line.OrderLineProductID = &row.OrderLineProductID.String
 		}
-		if row.OrderLineItemSku.Valid {
-			line.OrderLineItemSKU = &row.OrderLineItemSku.String
+		if row.OrderLineItemSku != "" {
+			line.OrderLineItemSKU = &row.OrderLineItemSku
 		}
 		if row.OrderLineDescription.Valid {
 			line.OrderLineDescription = &row.OrderLineDescription.String

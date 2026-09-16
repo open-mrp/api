@@ -120,6 +120,7 @@ func TestRabbitMQConfigValidate(t *testing.T) {
 			MaxRetryWait:      2 * time.Second,
 			PrefetchCount:     1,
 			ReconnectDelay:    time.Second,
+			DrainTimeout:      time.Second,
 		}
 	}
 
@@ -138,6 +139,7 @@ func TestRabbitMQConfigValidate(t *testing.T) {
 		{name: "non-positive prefetch count", mutate: func(c *RabbitMQConfig) { c.PrefetchCount = 0 }, wantErr: "prefetch count must be positive"},
 		{name: "negative prefetch count", mutate: func(c *RabbitMQConfig) { c.PrefetchCount = -8 }, wantErr: "prefetch count must be positive"},
 		{name: "non-positive reconnect delay", mutate: func(c *RabbitMQConfig) { c.ReconnectDelay = 0 }, wantErr: "reconnect delay must be positive"},
+		{name: "non-positive drain timeout", mutate: func(c *RabbitMQConfig) { c.DrainTimeout = 0 }, wantErr: "drain timeout must be positive"},
 	}
 
 	for _, tt := range tests {
@@ -348,4 +350,40 @@ func TestConsumeRetriesWhenReconnectFails(t *testing.T) {
 	mu.Lock()
 	defer mu.Unlock()
 	require.False(t, declared, "queue must not be declared while there is no channel")
+}
+
+func TestCloseStopsConsumersStartedWithALiveContext(t *testing.T) {
+	t.Parallel()
+
+	var mu sync.Mutex
+	attempts := 0
+
+	rmq := &rabbitMQ{reconnectDelay: time.Millisecond, drainTimeout: 5 * time.Second}
+	rmq.reconnectFunc = func(context.Context) error {
+		mu.Lock()
+		defer mu.Unlock()
+		attempts++
+		return errors.New("broker down")
+	}
+
+	require.NoError(t, rmq.consume(context.Background(), "some.queue", nil, func(context.Context, amqp.Delivery) error { return nil }))
+
+	require.Eventually(t, func() bool {
+		mu.Lock()
+		defer mu.Unlock()
+		return attempts >= 1
+	}, 5*time.Second, time.Millisecond)
+
+	start := time.Now()
+	rmq.Close()
+	// Returning well inside the drain timeout shows the loop exited rather than Close giving up on it.
+	require.Less(t, time.Since(start), time.Second)
+
+	mu.Lock()
+	after := attempts
+	mu.Unlock()
+	time.Sleep(20 * time.Millisecond)
+	mu.Lock()
+	defer mu.Unlock()
+	require.Equal(t, after, attempts, "consumer kept looping after Close")
 }

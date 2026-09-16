@@ -38,6 +38,12 @@ const (
 	defaultMaxRetryWait      = 10 * time.Second
 	defaultPrefetchCount     = 1
 	defaultReconnectDelay    = 5 * time.Second
+	// defaultDrainTimeout fits the ~10s a pod has between SIGTERM (after its 20s preStop) and SIGKILL.
+	defaultDrainTimeout = 8 * time.Second
+	// leaseRequeueMinWait keeps a delivery from cycling hot while pod and database clocks disagree on lease expiry.
+	leaseRequeueMinWait = 1 * time.Second
+	// defaultLeaseRequeueMaxWait caps how long a worker holds a delivery whose inbox lease is held elsewhere.
+	defaultLeaseRequeueMaxWait = 30 * time.Second
 )
 
 // rabbitMQ manages a single AMQP connection and channel to a rabbitMQ broker. It implements the MessageBroker interface and handles automatic reconnection on channel/connection failures, declares the full exchange and queue topology on each (re)connect, and provides thread-safe publish and consume operations.
@@ -49,6 +55,7 @@ type rabbitMQ struct {
 	maxRetryWait      time.Duration
 	prefetchCount     int
 	reconnectDelay    time.Duration
+	drainTimeout      time.Duration
 
 	conn    *amqp.Connection
 	Channel *amqp.Channel
@@ -59,6 +66,14 @@ type rabbitMQ struct {
 
 	// consumerRetry overrides the per-delivery handler retry policy; nil means the package retry defaults. Indirected for testability.
 	consumerRetry *retry.Config
+	// leaseRequeueMaxWait overrides defaultLeaseRequeueMaxWait. Indirected for testability.
+	leaseRequeueMaxWait time.Duration
+
+	// consumers tracks running consume loops so Close can let their in-flight deliveries settle.
+	consumers   sync.WaitGroup
+	closing     chan struct{}
+	closingInit sync.Once
+	closeOnce   sync.Once
 }
 
 // RabbitMQConfig represents the configuration for the rabbitMQ client.
@@ -83,6 +98,9 @@ type RabbitMQConfig struct {
 
 	// ReconnectDelay (optional; default: 5s) is how long to wait before retrying after a consumer failure.
 	ReconnectDelay time.Duration
+
+	// DrainTimeout (optional; default: 8s) is how long shutdown waits for in-flight deliveries before closing the connection.
+	DrainTimeout time.Duration
 }
 
 // WithDefaults returns a new RabbitMQConfig with all zero-value optional fields replaced by production defaults. It is safe to call on a nil receiver. The original config is not mutated; a copy is always returned.
@@ -99,6 +117,7 @@ func (c *RabbitMQConfig) WithDefaults() *RabbitMQConfig {
 		MaxRetryWait:      cmp.Or(c.MaxRetryWait, defaultMaxRetryWait),
 		PrefetchCount:     cmp.Or(c.PrefetchCount, defaultPrefetchCount),
 		ReconnectDelay:    cmp.Or(c.ReconnectDelay, defaultReconnectDelay),
+		DrainTimeout:      cmp.Or(c.DrainTimeout, defaultDrainTimeout),
 	}
 }
 
@@ -127,6 +146,9 @@ func (c *RabbitMQConfig) validate() error {
 	if c.ReconnectDelay <= 0 {
 		return fmt.Errorf("rabbitMQ: reconnect delay must be positive")
 	}
+	if c.DrainTimeout <= 0 {
+		return fmt.Errorf("rabbitMQ: drain timeout must be positive")
+	}
 	return nil
 }
 
@@ -145,6 +167,7 @@ func NewRabbitMQ(ctx context.Context, config *RabbitMQConfig) (MessageBroker, er
 		maxRetryWait:      config.MaxRetryWait,
 		prefetchCount:     config.PrefetchCount,
 		reconnectDelay:    config.ReconnectDelay,
+		drainTimeout:      config.DrainTimeout,
 	}
 
 	connectCtx, cancel := context.WithTimeout(ctx, config.ConnectionTimeout)
@@ -167,6 +190,10 @@ func NewRabbitMQ(ctx context.Context, config *RabbitMQConfig) (MessageBroker, er
 //  3. On success the delivery is ACKed. On exhausted retries the delivery is rejected
 //     without requeue, sending it to the dead-letter queue with diagnostic headers
 //     (x-death-reason, x-retry-count, etc.).
+//  4. A delivery whose inbox lease is held elsewhere, or whose retries were cut short by
+//     shutdown, is requeued instead.
+//
+// Cancelling ctx or calling Close stops new deliveries and waits up to DrainTimeout for in-flight ones before the channel closes.
 //
 // With the default Concurrency of 1, QoS prefetch is the broker default (1) and each message is fully processed before the next is delivered — strict in-order consumption. With Concurrency > 1, prefetch is raised to 2x the worker count so workers stay fed, and messages on this queue are processed (and ACKed) out of order; see ConsumeOptions.Concurrency for when that is safe.
 func (r *rabbitMQ) ConsumeMessages(ctx context.Context, queueName string, handler MessageHandler, opts ...ConsumeOption) error {
@@ -195,7 +222,13 @@ func (r *rabbitMQ) consume(ctx context.Context, queueName string, declareQueue f
 		prefetch = concurrency * 2
 	}
 
+	ctx, stop := r.untilClosed(ctx)
+	consumerTag := queueName + "." + instanceSuffix()
+
+	r.consumers.Add(1)
 	go func() {
+		defer r.consumers.Done()
+		defer stop()
 		for {
 			select {
 			case <-ctx.Done():
@@ -257,13 +290,13 @@ func (r *rabbitMQ) consume(ctx context.Context, queueName string, declareQueue f
 			}
 
 			msgs, err := ch.Consume(
-				queueName, // queue
-				"",        // consumer
-				false,     // auto-ack
-				false,     // exclusive
-				false,     // no-local
-				false,     // no-wait
-				nil,       // args
+				queueName,   // queue
+				consumerTag, // consumer
+				false,       // auto-ack
+				false,       // exclusive
+				false,       // no-local
+				false,       // no-wait
+				nil,         // args
 			)
 			if err != nil {
 				slog.Error("Failed to start consume, retrying", "queue", queueName, "error", err, "retry_delay", r.reconnectDelay)
@@ -296,8 +329,8 @@ func (r *rabbitMQ) consume(ctx context.Context, queueName string, declareQueue f
 
 			select {
 			case <-ctx.Done():
-				slog.Info("Context cancelled, stopping consumer", "queue", queueName)
-				_ = ch.Close()
+				slog.Info("Context cancelled, draining consumer", "queue", queueName)
+				r.drain(ch, consumerTag, queueName, workersDone)
 				return
 			case <-workersDone:
 			}
@@ -315,7 +348,7 @@ func (r *rabbitMQ) consume(ctx context.Context, queueName string, declareQueue f
 	return nil
 }
 
-// processDelivery handles one AMQP delivery: traced span, handler invocation with backoff retries, ACK on success, and rejection to the dead-letter queue (with diagnostic headers) when retries are exhausted.
+// processDelivery handles one AMQP delivery: traced span, handler invocation with backoff retries, ACK on success, requeue when the inbox lease is held or shutdown cuts retries short, and rejection to the dead-letter queue (with diagnostic headers) otherwise.
 func (r *rabbitMQ) processDelivery(ctx context.Context, queueName string, handler MessageHandler, msg amqp.Delivery) {
 	select {
 	case <-ctx.Done():
@@ -323,14 +356,37 @@ func (r *rabbitMQ) processDelivery(ctx context.Context, queueName string, handle
 	default:
 	}
 
-	if err := tracing.TracedConsumer(msg, queueName, func(ctx context.Context, d amqp.Delivery) error {
+	if err := tracing.TracedConsumer(msg, queueName, func(handlerCtx context.Context, d amqp.Delivery) error {
 		retryCfg := r.consumerRetry
 		if retryCfg == nil {
 			retryCfg = new(retry.Config).WithDefaults()
 		}
-		err := retry.WithBackoff(ctx, retryCfg, func() error {
-			return handler(ctx, d)
+
+		// Shutdown stops further retries but not the attempt already running on handlerCtx.
+		retryCtx, cancelRetry := context.WithCancel(handlerCtx)
+		defer cancelRetry()
+		defer context.AfterFunc(ctx, cancelRetry)()
+
+		var leaseHeld *InboxLeaseHeldError
+		err := retry.WithBackoff(retryCtx, retryCfg, func() error {
+			err := handler(handlerCtx, d)
+			if errors.As(err, &leaseHeld) {
+				// Retrying cannot succeed while the lease is held; stop the ladder and requeue below.
+				return nil
+			}
+			return err
 		})
+		if leaseHeld != nil {
+			r.requeueAfterLease(ctx, d, leaseHeld, queueName)
+			return nil
+		}
+		if err != nil && ctx.Err() != nil {
+			// Its retries were cut short, so let another consumer have it rather than dead-lettering it.
+			if nackErr := d.Nack(false, true); nackErr != nil {
+				slog.Warn("Failed to requeue message at shutdown", "queue", queueName, "error", nackErr)
+			}
+			return err
+		}
 		if err != nil {
 			// Add failure context before sending to the DLQ
 			headers := amqp.Table{}
@@ -358,6 +414,69 @@ func (r *rabbitMQ) processDelivery(ctx context.Context, queueName string, handle
 	}); err != nil {
 		slog.Error("Error processing message", "error", apierror.Describe(err))
 	}
+}
+
+// requeueAfterLease holds the delivery until the lease blocking it should have lapsed, so the redelivery can claim an abandoned attempt.
+func (r *rabbitMQ) requeueAfterLease(ctx context.Context, d amqp.Delivery, held *InboxLeaseHeldError, queueName string) {
+	maxWait := cmp.Or(r.leaseRequeueMaxWait, defaultLeaseRequeueMaxWait)
+	wait := maxWait
+	if !held.ExpiresAt.IsZero() {
+		wait = min(max(time.Until(held.ExpiresAt), leaseRequeueMinWait), maxWait)
+	}
+
+	slog.Info("Inbox lease held by another attempt, requeueing", "queue", queueName, "lock_expires_at", held.ExpiresAt, "wait", wait)
+
+	timer := time.NewTimer(wait)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+	case <-timer.C:
+	}
+
+	if err := d.Nack(false, true); err != nil {
+		slog.Warn("Failed to requeue lease-held message", "queue", queueName, "error", err)
+	}
+}
+
+// drain stops new deliveries and lets in-flight ones settle before closing the channel, which would otherwise hand them to another consumer mid-run.
+func (r *rabbitMQ) drain(ch *amqp.Channel, consumerTag, queueName string, workersDone <-chan struct{}) {
+	if err := ch.Cancel(consumerTag, false); err != nil {
+		slog.Warn("Failed to cancel consumer", "queue", queueName, "error", err)
+	}
+
+	timeout := r.drainBudget()
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+	select {
+	case <-workersDone:
+	case <-timer.C:
+		slog.Warn("Consumer did not drain before shutdown", "queue", queueName, "timeout", timeout)
+	}
+
+	_ = ch.Close()
+}
+
+func (r *rabbitMQ) drainBudget() time.Duration {
+	return cmp.Or(r.drainTimeout, defaultDrainTimeout)
+}
+
+func (r *rabbitMQ) closingCh() chan struct{} {
+	r.closingInit.Do(func() { r.closing = make(chan struct{}) })
+	return r.closing
+}
+
+// untilClosed derives a context that Close also cancels, since callers' contexts can outlive the broker.
+func (r *rabbitMQ) untilClosed(parent context.Context) (context.Context, context.CancelFunc) {
+	ctx, cancel := context.WithCancel(parent)
+	closing := r.closingCh()
+	go func() {
+		select {
+		case <-closing:
+			cancel()
+		case <-ctx.Done():
+		}
+	}()
+	return ctx, cancel
 }
 
 // PublishMessage serializes an AmqpMessage to JSON and publishes it to the given exchange with the specified routing key. If the message has no MessageID, one is auto-generated using the shared id package (msg_ prefix, 22 chars). The publish is traced via tracing.TracedPublisher and uses publishWithReconnect to transparently recover from connection failures.
@@ -499,7 +618,7 @@ func (r *rabbitMQ) reconnect(ctx context.Context) error {
 	r.Channel = ch
 
 	if err := r.setupExchangesAndQueues(); err != nil {
-		r.Close()
+		r.closeLocked()
 		return fmt.Errorf("failed to setup exchanges and queues: %v", err)
 	}
 
@@ -1056,11 +1175,34 @@ func (r *rabbitMQ) IsReady() bool {
 	return r.conn != nil && !r.conn.IsClosed() && r.Channel != nil && !r.Channel.IsClosed()
 }
 
-// Close shuts down the AMQP channel and connection. Safe to call multiple times.
+// Close stops consumers, waits up to the drain timeout for their in-flight deliveries, then closes the channel and connection. Safe to call multiple times.
 func (r *rabbitMQ) Close() {
+	r.closeOnce.Do(func() { close(r.closingCh()) })
+	r.waitForConsumers()
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	r.closeLocked()
+}
 
+func (r *rabbitMQ) waitForConsumers() {
+	done := make(chan struct{})
+	go func() {
+		r.consumers.Wait()
+		close(done)
+	}()
+
+	timer := time.NewTimer(r.drainBudget())
+	defer timer.Stop()
+	select {
+	case <-done:
+	case <-timer.C:
+		slog.Warn("Closing broker before consumers drained", "timeout", r.drainBudget())
+	}
+}
+
+// closeLocked requires r.mu.
+func (r *rabbitMQ) closeLocked() {
 	if r.Channel != nil {
 		_ = r.Channel.Close()
 	}

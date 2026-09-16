@@ -21,8 +21,17 @@ const DefaultInboxLeaseSeconds = 300
 
 // ErrInboxLeaseHeld is returned when a re-delivery arrives while another attempt still holds the record's lease.
 //
-// The consumer's backoff ladder is far shorter than a lease, so in practice this dead-letters the delivery rather than waiting the lease out. That is the intended trade: a message parked on the DLQ is visible, alerted on, and re-drivable by the replay commands, where running it alongside the attempt that holds the lease is how the same work gets applied twice. It should be rare — an attempt that ends normally releases its lease, so this only fires for a redelivery that lands while a genuinely live attempt is running, or inside the lease window after a process was killed outright.
+// The consumer requeues such a delivery once the lease should have lapsed, so an attempt abandoned by a killed process is retried rather than dead-lettered.
 var ErrInboxLeaseHeld = errors.New("inbox record is leased by another attempt")
+
+// InboxLeaseHeldError is the ErrInboxLeaseHeld a handler returns, carrying when the lease lapses; ExpiresAt is zero when unknown.
+type InboxLeaseHeldError struct {
+	ExpiresAt time.Time
+}
+
+func (e *InboxLeaseHeldError) Error() string { return ErrInboxLeaseHeld.Error() }
+
+func (e *InboxLeaseHeldError) Is(target error) bool { return target == ErrInboxLeaseHeld }
 
 // ErrInboxDiscarded is returned by Discard and Ignore. It signals that the message ended deliberately in a terminal state, so Wrap ACKs it instead of recording a failure that would invite a retry.
 var ErrInboxDiscarded = errors.New("inbox record was discarded")
@@ -198,7 +207,7 @@ func (c *InboxConsumer) executeAndRecord(ctx context.Context, recordID int64, me
 
 // handleDuplicate is called when the inbox insert fails with a duplicate-key error, meaning this (message_id, handler) pair was seen before. It fetches the existing record and decides the outcome from its status and lease:
 //   - "processed", "discarded" or "ignored": terminal — skip silently (return nil so the delivery is ACKed).
-//   - "received" with a live lease: another attempt is working it — return ErrInboxLeaseHeld so this delivery backs off rather than running the handler alongside it.
+//   - "received" with a live lease: another attempt is working it — return an InboxLeaseHeldError so this delivery waits rather than running the handler alongside it.
 //   - "received" with a lapsed lease: the previous attempt was abandoned — claim the lease and retry.
 func (c *InboxConsumer) handleDuplicate(ctx context.Context, messageID, handler string, fn MessageHandler, msg amqp.Delivery) error {
 	record, err := c.repo.GetByMessageAndHandler(ctx, messageID, handler)
@@ -223,7 +232,7 @@ func (c *InboxConsumer) handleDuplicate(ctx context.Context, messageID, handler 
 	if record.LeaseHeld(time.Now()) {
 		slog.Info("Message is leased by another attempt, backing off",
 			"handler", handler, "message_id", messageID, "lock_expires_at", record.LockExpiresAt)
-		return ErrInboxLeaseHeld
+		return &InboxLeaseHeldError{ExpiresAt: *record.LockExpiresAt}
 	}
 
 	// Claim is conditional on the lease still being free, so two consumers racing the same abandoned record cannot both proceed.
@@ -233,7 +242,7 @@ func (c *InboxConsumer) handleDuplicate(ctx context.Context, messageID, handler 
 		return err
 	}
 	if !claimed {
-		return ErrInboxLeaseHeld
+		return &InboxLeaseHeldError{}
 	}
 
 	if record.LastError != nil {

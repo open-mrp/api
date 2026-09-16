@@ -234,7 +234,7 @@ func TestProcessDeliveryStampsDeadLetterHeaders(t *testing.T) {
 	}
 }
 
-func TestProcessDeliveryHandlerContextIsDetachedFromConsumer(t *testing.T) {
+func TestProcessDeliveryRequeuesInsteadOfRetryingWhenShuttingDown(t *testing.T) {
 	t.Parallel()
 
 	r := &rabbitMQ{consumerRetry: fastConsumerRetry()}
@@ -245,22 +245,90 @@ func TestProcessDeliveryHandlerContextIsDetachedFromConsumer(t *testing.T) {
 	defer cancel()
 
 	calls := 0
-	var lastHandlerErr error
+	var handlerCtxErr error
 	r.processDelivery(ctx, "test-queue", func(handlerCtx context.Context, _ amqp.Delivery) error {
 		calls++
 		cancel()
-		lastHandlerErr = handlerCtx.Err()
+		handlerCtxErr = handlerCtx.Err()
 		return errors.New("handler failure")
 	}, delivery)
 
-	// TracedConsumer starts the handler context from context.Background(), so shutdown cannot interrupt an in-flight handler or its retries.
-	if lastHandlerErr != nil {
-		t.Errorf("expected the handler context to be unaffected by consumer cancellation, got %v", lastHandlerErr)
+	// The attempt already running must finish, so shutdown cannot cancel its context.
+	if handlerCtxErr != nil {
+		t.Errorf("expected the handler context to be unaffected by consumer cancellation, got %v", handlerCtxErr)
 	}
-	if calls != 2 {
-		t.Errorf("expected the handler to be retried after consumer cancellation, got %d calls", calls)
+	if calls != 1 {
+		t.Errorf("expected no retries after consumer cancellation, got %d calls", calls)
 	}
-	if !ack.rejected {
-		t.Error("expected the delivery to be dead-lettered after retry exhaustion")
+	if !ack.rejected || !ack.requeue {
+		t.Error("expected the delivery to be requeued for another consumer, not dead-lettered")
+	}
+}
+
+func TestProcessDeliveryRequeuesLeaseHeldWithoutRetrying(t *testing.T) {
+	t.Parallel()
+
+	r := &rabbitMQ{consumerRetry: fastConsumerRetry(), leaseRequeueMaxWait: time.Millisecond}
+	ack := &fakeAcknowledger{}
+	delivery := amqp.Delivery{Acknowledger: ack, Body: []byte(`{}`)}
+
+	calls := 0
+	r.processDelivery(context.Background(), "test-queue", func(context.Context, amqp.Delivery) error {
+		calls++
+		return &InboxLeaseHeldError{ExpiresAt: time.Now().Add(time.Minute)}
+	}, delivery)
+
+	if calls != 1 {
+		t.Errorf("expected a held lease to skip the retry ladder, got %d calls", calls)
+	}
+	if !ack.rejected || !ack.requeue {
+		t.Error("expected a lease-held delivery to be requeued, not dead-lettered")
+	}
+	if delivery.Headers != nil {
+		t.Errorf("expected no dead-letter headers, got %v", delivery.Headers)
+	}
+}
+
+func TestProcessDeliveryRequeuesLeaseHeldPromptlyWhenShuttingDown(t *testing.T) {
+	t.Parallel()
+
+	r := &rabbitMQ{consumerRetry: fastConsumerRetry()}
+	ack := &fakeAcknowledger{}
+	delivery := amqp.Delivery{Acknowledger: ack, Body: []byte(`{}`)}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	start := time.Now()
+	r.processDelivery(ctx, "test-queue", func(context.Context, amqp.Delivery) error {
+		cancel()
+		return &InboxLeaseHeldError{ExpiresAt: time.Now().Add(time.Minute)}
+	}, delivery)
+
+	if elapsed := time.Since(start); elapsed > time.Second {
+		t.Errorf("expected shutdown to cut the lease wait short, waited %v", elapsed)
+	}
+	if !ack.rejected || !ack.requeue {
+		t.Error("expected the delivery to be requeued at shutdown")
+	}
+}
+
+func TestLeaseRequeueWaitIsBounded(t *testing.T) {
+	t.Parallel()
+
+	r := &rabbitMQ{leaseRequeueMaxWait: 20 * time.Millisecond}
+
+	for name, held := range map[string]*InboxLeaseHeldError{
+		"unknown expiry": {},
+		"distant expiry": {ExpiresAt: time.Now().Add(time.Hour)},
+	} {
+		ack := &fakeAcknowledger{}
+		start := time.Now()
+		r.requeueAfterLease(context.Background(), amqp.Delivery{Acknowledger: ack}, held, "test-queue")
+
+		if elapsed := time.Since(start); elapsed < 20*time.Millisecond || elapsed > time.Second {
+			t.Errorf("%s: expected the wait to be capped at 20ms, waited %v", name, elapsed)
+		}
+		if !ack.requeue {
+			t.Errorf("%s: expected the delivery to be requeued", name)
+		}
 	}
 }

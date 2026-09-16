@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.7](https://github.com/open-mrp/api/compare/v2.6.6...v2.6.7) (2026-09-16)
+
+
+### Bug Fixes
+
+* **invoice:** update SKU handling in invoice queries and related services ([#151](https://github.com/open-mrp/api/issues/151)) ([34f453e](https://github.com/open-mrp/api/commit/34f453e4d1ecb9937fddc4237483a3fc4e075dcb))
+
 ## [2.6.6](https://github.com/open-mrp/api/compare/v2.6.5...v2.6.6) (2026-09-16)
 
 

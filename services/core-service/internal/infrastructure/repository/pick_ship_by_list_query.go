@@ -28,11 +28,10 @@ const pickListColumns = `p.id, p.number, p.sales_order_id, so.number, ` +
 	`ship_geo.id, ship_geo.street_line_1, ship_geo.street_line_2, ship_geo.locality, ship_geo.state, ` +
 	`ship_geo.postal_code, ship_geo.country, addr.created_at, addr.updated_at`
 
-// pickListFrom is the join graph, identical to ListPicksForward. Every joined table is reached by
+// pickListJoins is the join graph, identical to ListPicksForward. Every joined table is reached by
 // primary key or a unique key, so the joins are nested-loop lookups over whatever the driving index
-// on `pick` yields.
-const pickListFrom = ` FROM pick p` +
-	` JOIN sales_order so ON so.id = p.sales_order_id` +
+// on `pick` yields. The driving table and its index hint are written by the builder.
+const pickListJoins = ` JOIN sales_order so ON so.id = p.sales_order_id` +
 	` JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id AND ar.counterparty_account_id = so.buyer_account_id` +
 	` JOIN account ba ON ba.id = so.buyer_account_id` +
 	` JOIN priority pr ON pr.code = so.priority_code` +
@@ -40,6 +39,14 @@ const pickListFrom = ` FROM pick p` +
 	` LEFT JOIN geolocation ship_geo ON ship_geo.id = addr.geolocation_id` +
 	` LEFT JOIN carrier cr ON cr.id = so.carrier_id` +
 	` LEFT JOIN carrier_option co ON co.id = so.carrier_option_id`
+
+// The two driving indexes on `pick` that read the ship-by order straight out of the B-tree.
+// pickOpenShipByIndex leads with finished_at so `status=open` is an index equality rather than a
+// residual filter; see buildPickShipByListQuery for why the choice is made here and not by MySQL.
+const (
+	pickShipByIndex     = "pick_account_ship_by_idx"
+	pickOpenShipByIndex = "pick_account_finished_ship_by_idx"
+)
 
 // buildPickShipByListQuery assembles the default (ship-by) pick listing and its bind args. It exists
 // because the sqlc ListPicksForward/Backward serve this sort through a CASE-wrapped ORDER BY and a
@@ -53,6 +60,14 @@ const pickListFrom = ` FROM pick p` +
 // LIMIT, and every other table is a primary-/unique-key lookup. STRAIGHT_JOIN pins `p` as the driver
 // so the index supplies the sort directly rather than MySQL starting from a small joined table and
 // filesorting; see inventory_change_log_list_query.go for the same pattern and its measured win.
+//
+// The driving index is named rather than left to the optimizer, because both candidates read the
+// ship-by order and it chose between them on row estimates. `status=open` must take
+// pick_account_finished_ship_by_idx: open picks are a tiny slice of a mostly-closed table, and on
+// pick_account_ship_by_idx the filter is residual, so the scan starts at the earliest ship-by date —
+// the oldest, long-finished picks — and reads most of the account before a page fills. Every other
+// combination takes pick_account_ship_by_idx: with no status filter there is nothing to pin, and
+// `status=closed` matches nearly every row it reads, so filtering in order fills a page immediately.
 //
 // Direction matches the sqlc queries this path replaced: forward pages ascending (soonest ship-by
 // first), backward descending, reversed by BuildPageString. The cursor predicate is emitted only when
@@ -73,10 +88,20 @@ func buildPickShipByListQuery(
 ) (string, []any) {
 	args := make([]any, 0, 8+len(customerIDs)+len(customerGroupIDs)+len(productLineIDs))
 
+	// Any status other than "closed" is the open filter, matching the predicate emitted below.
+	openOnly := status != nil && *status != "closed"
+	drivingIndex := pickShipByIndex
+	if openOnly {
+		drivingIndex = pickOpenShipByIndex
+	}
+
 	var b strings.Builder
 	b.WriteString("SELECT STRAIGHT_JOIN ")
 	b.WriteString(pickListColumns)
-	b.WriteString(pickListFrom)
+	b.WriteString(" FROM pick p FORCE INDEX (")
+	b.WriteString(drivingIndex)
+	b.WriteString(")")
+	b.WriteString(pickListJoins)
 	b.WriteString(" WHERE p.account_id = ?")
 	args = append(args, accountID)
 
@@ -88,10 +113,10 @@ func buildPickShipByListQuery(
 		args = append(args, searchLike.String, searchLike.String, searchLike.String, searchLike.String)
 	}
 	if status != nil {
-		if *status == "closed" {
-			b.WriteString(" AND p.finished_at IS NOT NULL")
-		} else {
+		if openOnly {
 			b.WriteString(" AND p.finished_at IS NULL")
+		} else {
+			b.WriteString(" AND p.finished_at IS NOT NULL")
 		}
 	}
 	if len(customerIDs) > 0 {

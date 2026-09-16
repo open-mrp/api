@@ -467,23 +467,30 @@ FROM (
     SELECT
         rol.receiving_order_id,
         rol.sales_order_line_id,
-        MAX(CAST(oq.value AS DECIMAL(30,10)) * CAST(r.value AS DECIMAL(30,10))) AS ordered_amount,
-        SUM(CASE WHEN rol.stocked_at IS NOT NULL THEN CAST(q.value AS DECIMAL(30,10)) * CAST(r.value AS DECIMAL(30,10)) END) AS stocked_amount,
+        -- Each quantity is priced in the rate's unit as the dashboard's multiplyRate does (see the
+        -- line-pricing skill); a receipt or a rejection can be counted in a different unit from the
+        -- order line.
+        MAX(CAST(CASE WHEN oq.unit_id = r.denominator_unit_id THEN oq.value * r.value ELSE (oq.value * oqu.ratio_numerator / oqu.ratio_denominator) * (r.value / (ru.ratio_numerator / ru.ratio_denominator)) END AS DECIMAL(30,10))) AS ordered_amount,
+        SUM(CASE WHEN rol.stocked_at IS NOT NULL THEN CAST(CASE WHEN q.unit_id = r.denominator_unit_id THEN q.value * r.value ELSE (q.value * qu.ratio_numerator / qu.ratio_denominator) * (r.value / (ru.ratio_numerator / ru.ratio_denominator)) END AS DECIMAL(30,10)) END) AS stocked_amount,
         -- Correlated rather than a derived table joined on receiving_order_line_id: a derived table
         -- has nothing to scope it to this page, so it aggregates every rejected delivery line in the
         -- table on every list request. Correlated, each row is an index lookup on
         -- delivery_line_receiving_order_line_id_idx and the work stays proportional to the page.
         SUM(COALESCE((
-            SELECT SUM(CAST(rq.value AS DECIMAL(30,10)))
+            SELECT SUM(CAST(CASE WHEN rq.unit_id = r.denominator_unit_id THEN rq.value * r.value ELSE (rq.value * rqu.ratio_numerator / rqu.ratio_denominator) * (r.value / (ru.ratio_numerator / ru.ratio_denominator)) END AS DECIMAL(30,10)))
             FROM delivery_line dl
             JOIN quantity rq ON dl.quantity_id = rq.id
+            JOIN unit rqu ON rqu.id = rq.unit_id
             WHERE dl.receiving_order_line_id = rol.id AND dl.rejected_at IS NOT NULL
-        ), 0) * CAST(r.value AS DECIMAL(30,10))) AS rejected_amount
+        ), 0)) AS rejected_amount
     FROM receiving_order_line rol
     JOIN sales_order_line sol ON rol.sales_order_line_id = sol.id
     JOIN rate r ON sol.unit_price_id = r.id
+    JOIN unit ru ON ru.id = r.denominator_unit_id
     JOIN quantity oq ON sol.quantity_id = oq.id
+    JOIN unit oqu ON oqu.id = oq.unit_id
     JOIN quantity q ON rol.quantity_id = q.id
+    JOIN unit qu ON qu.id = q.unit_id
     WHERE rol.receiving_order_id IN (sqlc.slice('receiving_order_ids'))
     GROUP BY rol.receiving_order_id, rol.sales_order_line_id
 ) g

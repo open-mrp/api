@@ -42,7 +42,10 @@ func buildInvoiceEmail(ctx context.Context, repos domain.RepoFactory, branding B
 	// The document backs both the email body and its PDF, so assemble it once. Its lookups are
 	// best-effort, so fall back to the account name when the letterhead came back blank.
 	lines, _ := invoiceRepo.GetLines(ctx, invoiceID)
-	doc := gatherInvoiceDoc(ctx, repos, accountID, invoice, lines)
+	doc, apiErr := gatherInvoiceDoc(ctx, repos, accountID, invoice, lines)
+	if apiErr != nil {
+		return nil, apiErr
+	}
 	// The PDF embeds the letterhead logo, so its bytes are fetched here rather than inside the
 	// transaction the caller opens: a slow logo host must not hold the invoice's row locks.
 	logo := fetchAccountLogo(ctx, repos, branding, accountID)

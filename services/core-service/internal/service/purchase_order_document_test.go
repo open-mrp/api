@@ -45,26 +45,28 @@ func poFixture() (*domain.PurchaseOrder, []*domain.PurchaseOrderLine) {
 	lines := []*domain.PurchaseOrderLine{
 		// Deliberately out of order: the document must sort by line item number.
 		{
-			LineItemNumber:               2,
-			ProductSKU:                   "PRD-2",
-			ItemSKU:                      poPtr("BOLT-M6"),
-			ProductDescription:           poPtr("Hex bolt M6x40, zinc"),
-			QuantityValue:                "5000",
-			QuantityUnitName:             "each",
-			QuantityUnitAbbreviation:     "ea",
-			UnitPriceValue:               "0.0125",
-			UnitPriceDenominatorUnitAbbr: "ea",
+			LineItemNumber:                2,
+			ProductSKU:                    "PRD-2",
+			ItemSKU:                       poPtr("BOLT-M6"),
+			ProductDescription:            poPtr("Hex bolt M6x40, zinc"),
+			QuantityValue:                 "5000",
+			QuantityUnitName:              "each",
+			QuantityUnitAbbreviation:      "ea",
+			UnitPriceValue:                "0.0125",
+			UnitPriceDenominatorUnitAbbr:  "ea",
+			PricingQuantityRatioNumerator: "1", PricingQuantityRatioDenominator: "1", PricingPriceRatioNumerator: "1", PricingPriceRatioDenominator: "1",
 		},
 		{
-			LineItemNumber:               1,
-			ProductSKU:                   "PRD-1",
-			ItemSKU:                      poPtr("WSHR-M6"),
-			ProductDescription:           poPtr("Flat washer M6"),
-			QuantityValue:                "1200",
-			QuantityUnitName:             "pair",
-			QuantityUnitAbbreviation:     "pr",
-			UnitPriceValue:               "8.5",
-			UnitPriceDenominatorUnitAbbr: "pr",
+			LineItemNumber:                1,
+			ProductSKU:                    "PRD-1",
+			ItemSKU:                       poPtr("WSHR-M6"),
+			ProductDescription:            poPtr("Flat washer M6"),
+			QuantityValue:                 "1200",
+			QuantityUnitName:              "pair",
+			QuantityUnitAbbreviation:      "pr",
+			UnitPriceValue:                "8.5",
+			UnitPriceDenominatorUnitAbbr:  "pr",
+			PricingQuantityRatioNumerator: "1", PricingQuantityRatioDenominator: "1", PricingPriceRatioNumerator: "1", PricingPriceRatioDenominator: "1",
 		},
 	}
 	return order, lines
@@ -75,7 +77,7 @@ func TestPurchaseOrderDocMatchesLegacyFields(t *testing.T) {
 
 	order, lines := poFixture()
 	account := &domain.Account{Name: "Augno Manufacturing"}
-	doc := buildPurchaseOrderDoc(order, lines, account, nil, []string{"Buyer@Augno.com"})
+	doc := buildPurchaseOrderDoc(order, lines, nil, account, nil, []string{"Buyer@Augno.com"})
 
 	t.Run("document identity names the purchase order", func(t *testing.T) {
 		if doc.Header.DocumentTitle != "PURCHASE ORDER" {
@@ -172,7 +174,7 @@ func TestPurchaseOrderDocWithoutRequestedDeliveryDate(t *testing.T) {
 
 	order, lines := poFixture()
 	order.PromisedAt = nil
-	doc := buildPurchaseOrderDoc(order, lines, nil, nil, nil)
+	doc := buildPurchaseOrderDoc(order, lines, nil, nil, nil, nil)
 
 	if doc.RequestedDeliveryDate != "" {
 		t.Errorf("RequestedDeliveryDate = %q, want empty", doc.RequestedDeliveryDate)
@@ -194,7 +196,7 @@ func TestPurchaseOrderEmailParamsCoverTheTemplate(t *testing.T) {
 			InstagramHandle: poPtr("augno"),
 		},
 	}
-	params := buildPurchaseOrderDoc(order, lines, account, nil, nil).emailParams()
+	params := buildPurchaseOrderDoc(order, lines, nil, account, nil, nil).emailParams()
 
 	// Every key the template dereferences. A rename on either side silently blanks a section, which
 	// is exactly the failure this guards.
@@ -239,7 +241,7 @@ func TestPurchaseOrderPDFRendersLegacyLayout(t *testing.T) {
 
 	order, lines := poFixture()
 	account := &domain.Account{Name: "Augno Manufacturing"}
-	doc := buildPurchaseOrderDoc(order, lines, account, nil, []string{"buyer@augno.com"})
+	doc := buildPurchaseOrderDoc(order, lines, nil, account, nil, []string{"buyer@augno.com"})
 
 	pdfBytes, err := buildPurchaseOrderPDF(doc.Header)
 	if err != nil {
@@ -296,7 +298,7 @@ func TestPurchaseOrderPDFDegradesWithoutOptionalData(t *testing.T) {
 	t.Parallel()
 
 	order := &domain.PurchaseOrder{Number: "1", CreatedAt: time.Now().UTC()}
-	doc := buildPurchaseOrderDoc(order, nil, nil, nil, nil)
+	doc := buildPurchaseOrderDoc(order, nil, nil, nil, nil, nil)
 
 	pdfBytes, err := buildPurchaseOrderPDF(doc.Header)
 	if err != nil {

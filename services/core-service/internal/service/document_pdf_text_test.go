@@ -19,10 +19,7 @@ import (
 
 // measuringPDF matches the page setup the record renderers use, for measuring text the way they do.
 func measuringPDF() *fpdf.Fpdf {
-	pdf := fpdf.New("P", "mm", "A4", "")
-	pdf.SetMargins(ackPageLeft, ackPageTop, 15)
-	pdf.AddPage()
-	return pdf
+	return newRecordPDF()
 }
 
 func TestPDFFitSizeShrinksOnlyAsFarAsNeeded(t *testing.T) {
@@ -36,12 +33,12 @@ func TestPDFFitSizeShrinksOnlyAsFarAsNeeded(t *testing.T) {
 	})
 
 	t.Run("a wide title shrinks until it fits", func(t *testing.T) {
-		const maxW = 84.0
+		const maxW = 60.0
 		got := pdfFitSize(pdf, "ORDER ACKNOWLEDGEMENT", "", 18, 11, maxW)
 		if got >= 18 {
 			t.Fatalf("size = %v, want a reduction", got)
 		}
-		pdf.SetFont("Helvetica", "", got)
+		pdfSetFont(pdf, "", got)
 		if w := pdf.GetStringWidth("ORDER ACKNOWLEDGEMENT"); w > maxW {
 			t.Errorf("width %.1fmm still exceeds %.1fmm at size %v", w, maxW, got)
 		}
@@ -57,7 +54,7 @@ func TestPDFFitSizeShrinksOnlyAsFarAsNeeded(t *testing.T) {
 func TestPDFTruncateToWidthMeasuresRatherThanCounts(t *testing.T) {
 	t.Parallel()
 	pdf := measuringPDF()
-	pdf.SetFont("Helvetica", "", 9.5)
+	pdfSetFont(pdf, "", 9.5)
 
 	t.Run("text that fits is returned unchanged", func(t *testing.T) {
 		if got := pdfTruncateToWidth(pdf, "SKU-1", 30); got != "SKU-1" {
@@ -138,19 +135,11 @@ func TestHeaderTextFitsItsColumns(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			pdf := measuringPDF()
 
-			title := data.documentTitle()
-			size := pdfFitSize(pdf, title, "", 18, 11, ackIdentityW-2)
-			pdf.SetFont("Helvetica", "", size)
-			if w := pdf.GetStringWidth(pdfTruncateToWidth(pdf, title, ackIdentityW-2)); w > ackIdentityW {
-				t.Errorf("title %q is %.1fmm wide in a %.1fmm block", title, w, ackIdentityW)
-			}
-
 			rows := data.identityRows()
-			labelW := ackIdentityLabelWidth(pdf, rows)
-			if labelW > ackIdentityW {
-				t.Fatalf("label column %.1fmm exceeds the %.1fmm block", labelW, ackIdentityW)
+			labelW, valueW := ackIdentityColumns(pdf, rows)
+			if labelW+valueW > docIdentityMaxW+0.001 {
+				t.Fatalf("identity block is %.1fmm, past its %.1fmm cap", labelW+valueW, docIdentityMaxW)
 			}
-			valueW := ackIdentityW - labelW
 			if valueW <= 0 {
 				t.Fatalf("label column %.1fmm leaves no room for values", labelW)
 			}
@@ -159,32 +148,29 @@ func TestHeaderTextFitsItsColumns(t *testing.T) {
 				if name == "pathological" {
 					// Nothing could hold these at full size; the guarantee is only that they are
 					// fitted and truncated into their column rather than painted over the neighbor.
-					assertFitsAfterFitting(t, pdf, "label "+row.Label, row.Label, row.style(), row.size(), labelW, 0.5)
-					assertFitsAfterFitting(t, pdf, "value "+row.Value, row.Value, row.style(), row.size(), valueW, 0.5)
+					assertFitsAfterFitting(t, pdf, "label "+row.Label, row.Label, row.style(), row.labelSize(), labelW-docIdentityGap, 0)
+					assertFitsAfterFitting(t, pdf, "value "+row.Value, row.Value, row.style(), row.valueSize(), valueW, 0)
 					continue
 				}
 				// A real document must fit at its intended size, with no shrinking at all: the
-				// columns are supposed to be sized for the labels these documents actually carry.
-				assertFitsNaturally(t, pdf, "label "+row.Label, row.Label, row.style(), row.size(), labelW, 0.5)
-				assertFitsNaturally(t, pdf, "value "+row.Value, row.Value, row.style(), row.size(), valueW, 0.5)
+				// columns are sized to the labels these documents actually carry.
+				assertFitsNaturally(t, pdf, "label "+row.Label, row.Label, row.style(), row.labelSize(), labelW-docIdentityGap, 0)
+				assertFitsNaturally(t, pdf, "value "+row.Value, row.Value, row.style(), row.valueSize(), valueW, 0)
 			}
 
-			if name != "pathological" {
-				assertFitsNaturally(t, pdf, "account name", data.AccountName, "B", 15, ackLetterheadW, 1)
+			if name == "pathological" {
+				return
 			}
+			title := data.documentTitle()
+			pdfSetFont(pdf, "", docFontXL)
+			titleW := pdfTrackedWidth(pdf, title, docTrackingFor(docFontXL))
+			if titleW > docIdentityMaxW {
+				t.Errorf("title %q is %.1fmm at full size, past the %.1fmm block", title, titleW, docIdentityMaxW)
+			}
+			// The letterhead takes what the identity block leaves, and a real account name fits it.
+			letterheadW := docContentWidth - max(labelW+valueW, titleW) - docSectionGap
+			assertFitsNaturally(t, pdf, "account name", data.AccountName, pdfStyleSemiBold, docFontLG, letterheadW, 0)
 		})
-	}
-}
-
-// The letterhead and the identity block must not overlap, whatever either contains.
-func TestHeaderColumnsDoNotOverlap(t *testing.T) {
-	t.Parallel()
-
-	if ackPageLeft+ackLetterheadW > ackIdentityX {
-		t.Errorf("letterhead ends at %.1fmm, past the identity block at %.1fmm", ackPageLeft+ackLetterheadW, ackIdentityX)
-	}
-	if ackIdentityX+ackIdentityW != ackPageRight {
-		t.Errorf("identity block ends at %.1fmm, not the %.1fmm page edge", ackIdentityX+ackIdentityW, ackPageRight)
 	}
 }
 
@@ -235,7 +221,7 @@ func TestRecordPDFsSurviveOverflowingContent(t *testing.T) {
 			Number: "CASE-000000000000001", FreightWeightValue: "1200000",
 			FreightWeightUnitAbbreviation: longUnit, TrackingNumber: poPtr(strings.Repeat("9", 40)),
 		}}
-		doc := buildInvoiceDoc(invoice, lines, order, &domain.Account{Name: "Carolon Co"}, nil, cases, nil)
+		doc := buildInvoiceDoc(invoice, lines, order, &domain.Account{Name: "Carolon Co"}, nil, cases, nil, invoiceDocLookups{})
 		assertRenders(t, func() ([]byte, error) { return buildInvoicePDF(doc) })
 	})
 
@@ -246,7 +232,7 @@ func TestRecordPDFsSurviveOverflowingContent(t *testing.T) {
 		lines[0].QuantityValue = "1200000"
 		order.CustomerPONumber = poPtr(strings.Repeat("PO-", 20))
 		assertRenders(t, func() ([]byte, error) {
-			return buildOrderAcknowledgementPDF(buildOrderAcknowledgementData(order, lines, &domain.Account{Name: "Carolon Co"}, nil))
+			return buildOrderAcknowledgementPDF(buildOrderAcknowledgementData(order, lines, nil, &domain.Account{Name: "Carolon Co"}, nil))
 		})
 	})
 
@@ -257,7 +243,7 @@ func TestRecordPDFsSurviveOverflowingContent(t *testing.T) {
 		lines[0].QuantityValue = "1200000"
 		order.SupplierNumber = strings.Repeat("9", 30)
 		order.PromisedAt = poPtr(time.Now())
-		doc := buildPurchaseOrderDoc(order, lines, &domain.Account{Name: "Augno Manufacturing"}, nil, nil)
+		doc := buildPurchaseOrderDoc(order, lines, nil, &domain.Account{Name: "Augno Manufacturing"}, nil, nil)
 		assertRenders(t, func() ([]byte, error) { return buildPurchaseOrderPDF(doc.Header) })
 	})
 }
@@ -268,7 +254,7 @@ func TestRecordPDFsSurviveOverflowingContent(t *testing.T) {
 func assertFitsNaturally(t *testing.T, pdf *fpdf.Fpdf, what, text, style string, size, colW, padding float64) {
 	t.Helper()
 	avail := colW - 2*padding
-	pdf.SetFont("Helvetica", style, size)
+	pdfSetFont(pdf, style, size)
 	if w := pdf.GetStringWidth(text); w > avail {
 		t.Errorf("%s is %.1fmm at its intended %vpt, in a %.1fmm column", what, w, size, avail)
 	}
@@ -309,52 +295,49 @@ func assertRenders(t *testing.T, build func() ([]byte, error)) {
 func TestTableColumnsHoldOrdinaryContent(t *testing.T) {
 	t.Parallel()
 
-	type col struct {
-		name   string
-		w      float64
-		header string
-		values []string
-	}
-
-	tables := map[string][]col{
+	desc := "20-30 mmHg, Full Length Thigh, Open Toe, Silky Nude, Size 2"
+	tables := map[string]pdfTable{
 		"order summary": {
-			{"Line Item", 18, "Line Item", []string{"001", "999"}},
-			{"SKU", 32, "SKU", []string{"SOCK-CREW-BLK", "WSHR-M6"}},
-			{"Price", 26, "Price", []string{"$8.5000 / pr", "$1,234.56 / dz"}},
-			{"Qty", 23, "Qty", []string{"1,200 pair", "5,000 each"}},
-			{"Total", 24, "Total", []string{"$10,262.50", "$123,456.78"}},
+			Columns: []pdfColumn{{Title: "Line Item"}, {Title: "SKU", Wrap: true}, {Title: "Description", Wrap: true}, {Title: "Price"}, {Title: "Qty"}, {Title: "Total"}},
+			Rows: [][]string{
+				{"001", "SOCK-CREW-BLK", desc, "$8.5000 / pr", "1,200 pair", "$10,262.50"},
+				{"999", "WSHR-M6", "", "$1,234.56 / dz", "5,000 each", "$123,456.78"},
+			},
+			Footer: []string{"Total Due:", "$133,719.28"},
 		},
-		// Eight columns share the same 180mm, so Description is the one that gives way: it wraps,
-		// where every other column would have to shrink or truncate.
 		"invoice summary": {
-			{"Line Item", 18, "Line Item", []string{"001"}},
-			{"SKU", 32, "SKU", []string{"WSHR-M6", "SOCK-ANK-WHT", "SOCK-CREW-BLK"}},
-			{"Price", 25, "Price", []string{"$8.50 / dz", "$1,234.56 / dz"}},
-			{"Ordered", 18, "Ordered", []string{"1,500", "1,200,000"}},
-			{"Invoiced", 18, "Invoiced", []string{"1,200"}},
-			{"Unit", 17, "Unit", []string{"pair", "each", "carton"}},
-			{"Total", 22, "Total", []string{"$10,200.00", "$123,456.78"}},
+			Columns: []pdfColumn{
+				{Title: "Line Item"}, {Title: "SKU", Wrap: true}, {Title: "Description", Wrap: true, MaxWidth: docDescriptionMaxW}, {Title: "Price"},
+				{Title: "Ordered"}, {Title: "Invoiced"}, {Title: "Unit"}, {Title: "Total"},
+			},
+			Rows: [][]string{
+				{"001", "SOCK-CREW-BLK", desc, "$1,234.56 / dz", "1,200,000", "1,200", "Carton (12 pr)", "$123,456.78"},
+				{"002", "SOCK-ANK-WHT", "Shipping charges", "$8.50 / dz", "1,500", "1,200", "pair", "$10,200.00"},
+			},
+			Footer: []string{"Total Due:", "$133,656.78"},
 		},
 		"cases": {
-			{"Case Number", 55, "Case Number", []string{"CASE-000123"}},
-			{"Weight", 35, "Weight", []string{"1200 lb"}},
-			{"Tracking Number", 90, "Tracking Number", []string{"1Z999AA10123456784"}},
+			Columns: []pdfColumn{{Title: "Case Number", Wrap: true}, {Title: "Weight", Wrap: true}, {Title: "Tracking Number", Wrap: true}},
+			Rows:    [][]string{{"CASE-000123", "1200 lb", "1Z999AA10123456784"}},
 		},
 	}
 
-	for table, cols := range tables {
-		t.Run(table, func(t *testing.T) {
+	for name, table := range tables {
+		t.Run(name, func(t *testing.T) {
 			pdf := measuringPDF()
-			total := 0.0
-			for _, c := range cols {
-				total += c.w
-				assertFitsNaturally(t, pdf, table+" header "+c.header, c.header, "B", 9.5, c.w, ackCellPadding)
-				for _, v := range c.values {
-					assertFitsNaturally(t, pdf, table+" value "+v, v, "", 9.5, c.w, ackCellPadding)
-				}
+			widths := table.columnWidths(pdf)
+			if total := sum(widths); total > docContentWidth+0.001 {
+				t.Errorf("columns total %.1fmm, past the %.1fmm content width", total, docContentWidth)
 			}
-			if total > ackContentWidth {
-				t.Errorf("fixed columns total %.1fmm, past the %.1fmm content width", total, ackContentWidth)
+			for i, c := range table.Columns {
+				assertFitsNaturally(t, pdf, name+" header "+c.Title, c.Title, pdfStyleBold, docFontXS, widths[i], docCellPadding)
+				for _, row := range table.Rows {
+					if c.Title == "Description" {
+						// The one column that wraps rather than widening the table.
+						continue
+					}
+					assertFitsNaturally(t, pdf, name+" value "+row[i], row[i], pdfStyleRegular, docFontXS, widths[i], docCellPadding)
+				}
 			}
 		})
 	}

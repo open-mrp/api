@@ -6,6 +6,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/field"
 	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/api/shared/pricing"
 )
 
 // Bills a customer for goods shipped against a sales order; read, list and update all return it.
@@ -62,15 +63,21 @@ type InvoiceLine struct {
 	UnitPriceDenUnit string
 	// UnitPriceDenUnitAbbr labels the price's pricing unit ("$8.50 / pr"). It is the rate's own denominator, which can differ from the line's quantity unit.
 	UnitPriceDenUnitAbbr string
-	OrderLineID          string
-	OrderLineItemID      *string
-	OrderLineItemNumber  *int32
-	OrderLineProductID   *string
-	OrderLineQtyOrdered  string
-	OrderLineItemSKU     *string
-	OrderLineDescription *string
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
+	// Pricing* are the base ratios of the quantity's unit and of the unit the price is quoted per, as
+	// decimal strings, empty when the line cannot be priced. Read them through PriceUnitConversion.
+	PricingQuantityRatioNumerator   string
+	PricingQuantityRatioDenominator string
+	PricingPriceRatioNumerator      string
+	PricingPriceRatioDenominator    string
+	OrderLineID                     string
+	OrderLineItemID                 *string
+	OrderLineItemNumber             *int32
+	OrderLineProductID              *string
+	OrderLineQtyOrdered             string
+	OrderLineItemSKU                *string
+	OrderLineDescription            *string
+	CreatedAt                       time.Time
+	UpdatedAt                       time.Time
 }
 
 // InvoiceAllocation represents a transaction allocation against an invoice.
@@ -184,4 +191,9 @@ type InvoiceLineDraft struct {
 	SalesOrderLineID string
 	QuantityValue    string
 	QuantityUnitID   string
+}
+
+// PriceUnitConversion is the factor pricing uses to restate the line's quantity in its price's unit.
+func (l *InvoiceLine) PriceUnitConversion() (pricing.UnitConversion, error) {
+	return pricing.ParseUnitConversion(l.PricingQuantityRatioNumerator, l.PricingQuantityRatioDenominator, l.PricingPriceRatioNumerator, l.PricingPriceRatioDenominator)
 }

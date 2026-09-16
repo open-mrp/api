@@ -15,6 +15,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/pricing"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"github.com/open-mrp/api/shared/tracing"
 	"github.com/shopspring/decimal"
@@ -797,7 +798,9 @@ func withLinesForTotals(includes []string) []string {
 // fractions come from the order's PickedCompletion/PackedCompletion/
 // InvoicedCompletion, computed server-side over all line items. Returns nil when
 // no lines are present on the proto (i.e. the `lines` include was not requested),
-// since the amounts cannot be derived without them.
+// since the amounts cannot be derived without them, and when a line cannot be
+// priced, since a null total is better than a wrong one. Each line is rounded to
+// the cent before summing, as the dashboard's calculateTotalOrdered does.
 func salesOrderTotalsFromOrder(info *pb.SalesOrderInfo) *apiresource.SalesOrderTotals {
 	if len(info.Lines) == 0 {
 		return nil
@@ -807,15 +810,19 @@ func salesOrderTotalsFromOrder(info *pb.SalesOrderInfo) *apiresource.SalesOrderT
 
 	for _, l := range info.Lines {
 		price := parseDecimal(l.UnitPriceValue)
-		totalOrdered = totalOrdered.Add(price.Mul(parseDecimal(l.QuantityValue)))
+		conv, ok := linePriceUnitConversion(l)
+		if !ok {
+			return nil
+		}
+		totalOrdered = totalOrdered.Add(pricing.LineTotal(parseDecimal(l.QuantityValue), price, conv))
 		if l.QuantityPickedValue != nil {
-			totalPicked = totalPicked.Add(price.Mul(parseDecimal(*l.QuantityPickedValue)))
+			totalPicked = totalPicked.Add(pricing.LineTotal(parseDecimal(*l.QuantityPickedValue), price, conv))
 		}
 		if l.QuantityPackedValue != nil {
-			totalPacked = totalPacked.Add(price.Mul(parseDecimal(*l.QuantityPackedValue)))
+			totalPacked = totalPacked.Add(pricing.LineTotal(parseDecimal(*l.QuantityPackedValue), price, conv))
 		}
 		if l.QuantityInvoicedValue != nil {
-			totalInvoiced = totalInvoiced.Add(price.Mul(parseDecimal(*l.QuantityInvoicedValue)))
+			totalInvoiced = totalInvoiced.Add(pricing.LineTotal(parseDecimal(*l.QuantityInvoicedValue), price, conv))
 		}
 	}
 
@@ -1178,9 +1185,31 @@ func buildLineUnitCost(info *pb.SalesOrderLineInfo, createdAt, updatedAt time.Ti
 	}
 }
 
+// linePriceUnitConversion reads the factor that restates the line's quantities in
+// its price's unit. ok is false when the line carries a conversion that cannot be
+// used, in which case its money cannot be stated.
+func linePriceUnitConversion(info *pb.SalesOrderLineInfo) (pricing.UnitConversion, bool) {
+	if info.PricingUnavailable {
+		return pricing.UnitConversion{}, false
+	}
+	if info.PricingQuantityRatioNumerator == "" {
+		// A core-service that predates the fields; its lines price as they always did.
+		return pricing.Identity, true
+	}
+	conv, err := pricing.ParseUnitConversion(info.PricingQuantityRatioNumerator, info.PricingQuantityRatioDenominator,
+		info.PricingPriceRatioNumerator, info.PricingPriceRatioDenominator)
+	return conv, err == nil
+}
+
 // buildLineTotals derives the per-line monetary totals, pairing each downstream
-// stage's amount with its completion (stage quantity / ordered quantity).
+// stage's amount with its completion (stage quantity / ordered quantity). Each
+// amount is rounded to the cent, as the dashboard's OrderLineUtils totals are.
+// Returns nil when the line cannot be priced.
 func buildLineTotals(info *pb.SalesOrderLineInfo) *apiresource.SalesOrderTotals {
+	conv, ok := linePriceUnitConversion(info)
+	if !ok {
+		return nil
+	}
 	price := parseDecimal(info.UnitPriceValue)
 	ordered := parseDecimal(info.QuantityValue)
 	var picked, packed, invoiced decimal.Decimal
@@ -1195,10 +1224,10 @@ func buildLineTotals(info *pb.SalesOrderLineInfo) *apiresource.SalesOrderTotals 
 	}
 	return &apiresource.SalesOrderTotals{
 		Object:   constants.ObjectTypeSalesOrderTotals,
-		Ordered:  price.Mul(ordered).String(),
-		Picked:   apiresource.SalesOrderStageTotal{Object: constants.ObjectTypeSalesOrderStageTotal, Amount: price.Mul(picked).String(), Completion: completionFraction(picked, ordered)},
-		Packed:   apiresource.SalesOrderStageTotal{Object: constants.ObjectTypeSalesOrderStageTotal, Amount: price.Mul(packed).String(), Completion: completionFraction(packed, ordered)},
-		Invoiced: apiresource.SalesOrderStageTotal{Object: constants.ObjectTypeSalesOrderStageTotal, Amount: price.Mul(invoiced).String(), Completion: completionFraction(invoiced, ordered)},
+		Ordered:  pricing.LineTotal(ordered, price, conv).String(),
+		Picked:   apiresource.SalesOrderStageTotal{Object: constants.ObjectTypeSalesOrderStageTotal, Amount: pricing.LineTotal(picked, price, conv).String(), Completion: completionFraction(picked, ordered)},
+		Packed:   apiresource.SalesOrderStageTotal{Object: constants.ObjectTypeSalesOrderStageTotal, Amount: pricing.LineTotal(packed, price, conv).String(), Completion: completionFraction(packed, ordered)},
+		Invoiced: apiresource.SalesOrderStageTotal{Object: constants.ObjectTypeSalesOrderStageTotal, Amount: pricing.LineTotal(invoiced, price, conv).String(), Completion: completionFraction(invoiced, ordered)},
 	}
 }
 
@@ -1252,7 +1281,9 @@ func stashSalesOrderLineMeta(meta *resourcekit.LoadMeta, info *pb.SalesOrderLine
 			meta.Set(constants.ObjectTypeRate, unitCost.ID, "denominator_unit_id", *info.UnitCostDenominatorUnitId)
 		}
 	}
-	meta.Set(constants.ObjectTypeSalesOrderLine, line.ID, "totals", buildLineTotals(info))
+	if totals := buildLineTotals(info); totals != nil {
+		meta.Set(constants.ObjectTypeSalesOrderLine, line.ID, "totals", totals)
+	}
 }
 
 func buildSOAddressFromProto(

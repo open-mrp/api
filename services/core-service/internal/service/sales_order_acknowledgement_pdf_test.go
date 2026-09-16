@@ -42,7 +42,7 @@ func TestBuildOrderAcknowledgementPDF(t *testing.T) {
 	}
 
 	account := &domain.Account{Name: "Seller Co"}
-	data := buildOrderAcknowledgementData(order, lines, account, nil)
+	data := buildOrderAcknowledgementData(order, lines, nil, account, nil)
 	pdfBytes, err := buildOrderAcknowledgementPDF(data)
 	require.NoError(t, err)
 	require.NotEmpty(t, pdfBytes)
@@ -54,7 +54,7 @@ func TestBuildOrderAcknowledgementPDF_NoLinesNoAddresses(t *testing.T) {
 	t.Parallel()
 	// Must not panic on a bare order with no lines / no addresses.
 	order := &domain.SalesOrder{Number: "1", CreatedAt: time.Now().UTC()}
-	data := buildOrderAcknowledgementData(order, nil, nil, nil)
+	data := buildOrderAcknowledgementData(order, nil, nil, nil, nil)
 	pdfBytes, err := buildOrderAcknowledgementPDF(data)
 	require.NoError(t, err)
 	assert.True(t, bytes.HasPrefix(pdfBytes, []byte("%PDF")))

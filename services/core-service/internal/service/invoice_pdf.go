@@ -7,6 +7,8 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/constants"
+	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/pricing"
 	"github.com/open-mrp/api/shared/ptrutil"
 	"github.com/open-mrp/api/shared/textutil"
 	"github.com/shopspring/decimal"
@@ -93,9 +95,10 @@ func (d invoiceDoc) emailParams(masterTrackingURL string) map[string]any {
 	}
 }
 
-// Gathers everything the invoice document renders. Every lookup is best-effort: a failure blanks its
-// own section rather than costing the customer the document.
-func gatherInvoiceDoc(ctx context.Context, repos domain.RepoFactory, accountID string, invoice *domain.Invoice, lines []*domain.InvoiceLine) invoiceDoc {
+// Gathers everything the invoice document renders. The letterhead, addresses and cases are
+// best-effort: a failure blanks its own section rather than costing the customer the document. The
+// line pricing is not, because an invoice showing the wrong amount is worse than a late one.
+func gatherInvoiceDoc(ctx context.Context, repos domain.RepoFactory, accountID string, invoice *domain.Invoice, lines []*domain.InvoiceLine) (invoiceDoc, *apierror.APIError) {
 	account, _ := repos.NewAccountRepo().GetByID(ctx, accountID)
 	originAddr, _ := repos.NewSalesOrderRepo().GetAccountOriginAddress(ctx, accountID)
 
@@ -111,7 +114,25 @@ func gatherInvoiceDoc(ctx context.Context, repos domain.RepoFactory, accountID s
 
 	contacts, _ := repos.NewInvoiceRepo().GetEmailRecipients(ctx, invoice.ID)
 
-	return buildInvoiceDoc(invoice, lines, order, account, originAddr, cases, contacts)
+	convs, apiErr := invoiceLineConversions(lines)
+	if apiErr != nil {
+		return invoiceDoc{}, apiErr
+	}
+	lookups := invoiceDocLookups{Conversions: convs}
+
+	if customer, _ := repos.NewCustomerRepo().Get(ctx, accountID, invoice.CustomerID, nil); customer != nil {
+		lookups.CustomerPhone = ptrutil.Deref(customer.Phone)
+	}
+
+	return buildInvoiceDoc(invoice, lines, order, account, originAddr, cases, contacts, lookups), nil
+}
+
+// invoiceDocLookups carries what the invoice document needs from beyond the invoice and its order.
+type invoiceDocLookups struct {
+	// Conversions restate each line's quantity in its price's unit, keyed by line ID.
+	Conversions map[string]pricing.UnitConversion
+	// CustomerPhone is listed under the bill-to contacts, as the dashboard does.
+	CustomerPhone string
 }
 
 // Assembles the invoice document from the invoice, its lines, the order behind it, and the shipment's
@@ -124,12 +145,13 @@ func buildInvoiceDoc(
 	originAddr *domain.ShippingAddress,
 	cases []*domain.ShippingCase,
 	contactEmails []string,
+	lookups invoiceDocLookups,
 ) invoiceDoc {
 	// The letterhead, addresses and terms are the order's, so build them once from the shared model
 	// and then stamp the invoice's own identity over the top.
 	var header ackData
 	if order != nil {
-		header = buildOrderAcknowledgementData(order, nil, account, originAddr)
+		header = buildOrderAcknowledgementData(order, nil, nil, account, originAddr)
 		header.Lines = nil
 		header.OrderTotal = ""
 	} else {
@@ -163,12 +185,14 @@ func buildInvoiceDoc(
 	header.NumberLabel = "Invoice Number"
 	header.OrderNumber = textutil.FormatRecordNumber(invoice.Number)
 	// The date carries the time on an invoice, which is stamped at the moment of shipping.
-	header.OrderDateShort = invoice.CreatedAt.Local().Format("1/2/2006")
-	header.OrderDateLong = invoice.CreatedAt.Local().Format("01/02/2006 03:04 PM")
+	createdAt := inDocumentZone(invoice.CreatedAt, originAddr)
+	header.OrderDateShort = createdAt.Format("1/2/2006")
+	header.OrderDateLong = createdAt.Format("01/02/2006 03:04 PM")
 	// The copyright line carries the year the mail goes out, not the invoice's.
 	header.Year = time.Now().Format("2006")
 	header.EmailSubject = "Invoice " + textutil.FormatRecordNumber(invoice.Number)
 	header.ContactEmails = contactEmails
+	header.ContactPhone = lookups.CustomerPhone
 
 	doc := invoiceDoc{Header: header}
 
@@ -177,7 +201,9 @@ func buildInvoiceDoc(
 		price := parseDecimalOrZero(line.UnitPriceValue)
 		invoiced := parseDecimalOrZero(line.QuantityValue)
 		ordered := parseDecimalOrZero(line.OrderLineQtyOrdered)
-		lineTotal := price.Mul(invoiced)
+		// Rounded per line before summing, as the dashboard's calculateTotalInvoiced is, so the
+		// footer always equals the sum of the totals printed above it.
+		lineTotal := pricing.LineTotal(invoiced, price, conversionFor(lookups.Conversions, line.ID))
 		total = total.Add(lineTotal)
 
 		// Fall back to the row's position when the order line carries no number, so the column is

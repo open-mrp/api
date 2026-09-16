@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/pricing"
 )
 
 // SalesOrderLine represents a sales order line domain model.
@@ -39,6 +40,12 @@ type SalesOrderLine struct {
 	UnitPriceNumeratorUnitAbbr   string `audit:"unit_price_numerator_unit_abbr"`
 	UnitPriceDenominatorUnitID   string `audit:"unit_price_denominator_unit_id"`
 	UnitPriceDenominatorUnitAbbr string `audit:"unit_price_denominator_unit_abbr"`
+	// Pricing* are the base ratios of the quantity's unit and of the unit the price is quoted per, as
+	// decimal strings, empty when the line cannot be priced. Read them through PriceUnitConversion.
+	PricingQuantityRatioNumerator   string
+	PricingQuantityRatioDenominator string
+	PricingPriceRatioNumerator      string
+	PricingPriceRatioDenominator    string
 
 	// Unit cost (nullable)
 	UnitCostID                  *string
@@ -112,4 +119,9 @@ type SalesOrderLinePosition struct {
 	ID             string
 	LineItemNumber int32
 	IsSystem       bool
+}
+
+// PriceUnitConversion is the factor pricing uses to restate the line's quantity in its price's unit.
+func (l *SalesOrderLine) PriceUnitConversion() (pricing.UnitConversion, error) {
+	return pricing.ParseUnitConversion(l.PricingQuantityRatioNumerator, l.PricingQuantityRatioDenominator, l.PricingPriceRatioNumerator, l.PricingPriceRatioDenominator)
 }

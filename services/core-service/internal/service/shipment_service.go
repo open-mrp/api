@@ -1854,7 +1854,14 @@ func (s *shipmentSvcImpl) createInvoiceAndStampOrderOnShip(txCtx context.Context
 
 	// The invoice document backs both the PDF and the customer email, so assemble it once. A render
 	// failure degrades to an attachment-free email rather than failing the ship.
-	doc, attachment := s.buildInvoiceDocument(txCtx, shipment.AccountID, invoiceID, logo)
+	doc, attachment, apiErr := s.buildInvoiceDocument(txCtx, shipment.AccountID, invoiceID, logo)
+	if apiErr != nil {
+		// The lines could not be priced, so any email would state the wrong amount. The invoice itself
+		// is sound and can be emailed once the units are fixed; the ship should not fail over it.
+		slog.WarnContext(txCtx, "invoice lines could not be priced; skipping the ship's invoice emails",
+			"account_id", shipment.AccountID, "invoice_id", invoiceID, "error", apiErr.Error())
+		return nil
+	}
 
 	// The sales rep is notified on every ship, independent of email_customer (legacy postShipActions
 	// always emails the rep); the customer receives it only when asked.
@@ -1886,17 +1893,22 @@ func (s *shipmentSvcImpl) meterInvoiceCreated(txCtx context.Context, accountID, 
 
 // Renders the invoice PDF and base64-encodes it for email attachment, or returns nil on any failure
 // — the email still goes out, just without the document, matching the acknowledgement's best-effort.
-func (s *shipmentSvcImpl) buildInvoiceDocument(txCtx context.Context, accountID, invoiceID string, logo ackLogo) (invoiceDoc, *string) {
+//
+// An error means the lines could not be priced, and the document must not be sent.
+func (s *shipmentSvcImpl) buildInvoiceDocument(txCtx context.Context, accountID, invoiceID string, logo ackLogo) (invoiceDoc, *string, *apierror.APIError) {
 	invoice, apiErr := s.repos.NewInvoiceRepo().Get(txCtx, domain.GetInvoiceParams{AccountID: accountID, InvoiceID: invoiceID})
 	if apiErr != nil {
-		return invoiceDoc{}, nil
+		return invoiceDoc{}, nil, nil
 	}
 	lines, apiErr := s.repos.NewInvoiceRepo().GetLines(txCtx, invoiceID)
 	if apiErr != nil {
-		return invoiceDoc{}, nil
+		return invoiceDoc{}, nil, nil
 	}
 
-	doc := gatherInvoiceDoc(txCtx, s.repos, accountID, invoice, lines)
+	doc, apiErr := gatherInvoiceDoc(txCtx, s.repos, accountID, invoice, lines)
+	if apiErr != nil {
+		return invoiceDoc{}, nil, apiErr
+	}
 	doc.Header.OrderOnlineLink = portalRegisterLink(txCtx, s.repos, s.frontendURL, accountID)
 	// Fetched before the transaction opened, because embedding needs the bytes and a stalled logo
 	// host must not hold the ship's row locks.
@@ -1904,10 +1916,10 @@ func (s *shipmentSvcImpl) buildInvoiceDocument(txCtx context.Context, accountID,
 
 	pdfBytes, err := buildInvoicePDF(doc)
 	if err != nil {
-		return doc, nil
+		return doc, nil, nil
 	}
 	encoded := base64.StdEncoding.EncodeToString(pdfBytes)
-	return doc, &encoded
+	return doc, &encoded, nil
 }
 
 // Emails the customer the invoice and flags it sent. Gated on email_customer by the caller.

@@ -26,6 +26,7 @@ import (
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idempotency"
 	"github.com/open-mrp/api/shared/messaging"
+	"github.com/open-mrp/api/shared/pricing"
 	"github.com/open-mrp/api/shared/ptrutil"
 	"github.com/open-mrp/api/shared/safeconv"
 	"github.com/open-mrp/api/shared/textutil"
@@ -508,7 +509,11 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 		}
 
 		// Order total (product lines only), computed from the resolved unit prices — used by the shipping-rate minimum-order check and the discount line.
-		orderTotal := calculateResolvedLinesTotal(resolvedLines)
+		resolvedConvs, apiErr := resolvedLineConversions(ctx, s.repos, params.AccountID, resolvedLines)
+		if apiErr != nil {
+			return nil, cacheErr(apiErr)
+		}
+		orderTotal := calculateResolvedLinesTotal(resolvedLines, resolvedConvs)
 
 		// Estimate the shipping rate via the freight-exemption / flat-rate / minimum-order / live-Shippo cascade (matches Dashboard). This is the only external call in the create path; computing it here on the outer receiver keeps the live Shippo HTTP request out of the transaction and uses the real Shippo factory.
 		shippingRate, apiErr := s.estimateOrderShippingRate(ctx, params, billAddr, shipAddr, orderTotal)
@@ -1622,6 +1627,10 @@ func (s *salesOrderSvcImpl) estimateFreightForOrder(ctx context.Context, account
 	if apiErr != nil {
 		return "", apiErr
 	}
+	convs, apiErr := salesOrderLineConversions(lines)
+	if apiErr != nil {
+		return "", apiErr
+	}
 
 	// Rebuild the create-path line inputs (product lines only) that drive the parcel weight and product-line freight exemption, and sum the minimum-order total.
 	lineInputs := make([]domain.CreateSalesOrderLineInput, 0, len(lines))
@@ -1633,7 +1642,7 @@ func (s *salesOrderSvcImpl) estimateFreightForOrder(ctx context.Context, account
 		// The minimum-order total mirrors legacy update's calculateTotalOrdered: it sums EVERY line, including the order's existing shipping charge and the (negative) discount line — not just the product lines.
 		if qty, err := decimal.NewFromString(l.QuantityValue); err == nil {
 			if price, err := decimal.NewFromString(l.UnitPriceValue); err == nil {
-				total = total.Add(qty.Mul(price))
+				total = total.Add(pricing.LineTotal(qty, price, conversionFor(convs, l.ID)))
 			}
 		}
 		// Weight + product-line freight-exemption inputs are the product lines only — exclude the synthesized shipping / discount lines, matching the create path.
@@ -1865,8 +1874,10 @@ func (s *salesOrderSvcImpl) estimateOrderShippingRate(ctx context.Context, param
 	return strconv.FormatFloat(rate, 'f', -1, 64), nil
 }
 
-// calculateResolvedLinesTotal sums quantity × (computed) unit price over the resolved product lines, rounded to cents (matches Dashboard's calculateTotalOrdered used for the shipping min-order threshold and the order discount).
-func calculateResolvedLinesTotal(lines []domain.ResolvedSalesOrderLine) float64 {
+// calculateResolvedLinesTotal sums quantity × (computed) unit price over the resolved product lines, each rounded to the cent (matches Dashboard's calculateTotalOrdered used for the shipping min-order threshold and the order discount).
+//
+// convs holds each line's price-unit conversion (see resolvedLineConversions); a pair it lacks is priced as if its units matched.
+func calculateResolvedLinesTotal(lines []domain.ResolvedSalesOrderLine, convs map[unitPair]pricing.UnitConversion) float64 {
 	total := decimal.Zero
 	for _, l := range lines {
 		qty, err1 := decimal.NewFromString(l.QuantityValue)
@@ -1874,7 +1885,11 @@ func calculateResolvedLinesTotal(lines []domain.ResolvedSalesOrderLine) float64 
 		if err1 != nil || err2 != nil {
 			continue
 		}
-		total = total.Add(qty.Mul(price))
+		conv, ok := convs[resolvedLineUnits(l)]
+		if !ok {
+			conv = pricing.Identity
+		}
+		total = total.Add(pricing.LineTotal(qty, price, conv))
 	}
 	f, _ := total.Round(2).Float64()
 	return f
@@ -2415,8 +2430,13 @@ func (s *salesOrderSvcImpl) CheckoutSalesOrder(ctx context.Context, params domai
 			return nil, tracing.Trace(span, apiErr)
 		}
 
-		// Fetch order lines for pricing
+		// Fetch order lines for pricing. Their conversions are read before anything reaches Stripe, so
+		// a line that cannot be priced stops the checkout rather than charging the wrong amount.
 		lines, apiErr := orderRepo.GetLines(ctx, params.SalesOrderID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		convs, apiErr := salesOrderLineConversions(lines)
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
@@ -2487,7 +2507,7 @@ func (s *salesOrderSvcImpl) CheckoutSalesOrder(ctx context.Context, params domai
 
 		// Charge a single aggregate line item for the order's net total — the sum of
 		// every line's extended price (including the negative discount credit line and
-		// the shipping line), rounded once to the nearest cent. This matches legacy
+		// the shipping line), each rounded to the cent before summing. This matches legacy
 		// calculateTotalOrdered + stripe.ts. Emitting one Stripe line item per order
 		// line would send the discount line's negative unit_amount, which Stripe
 		// rejects, failing checkout for every discounted order.
@@ -2498,7 +2518,7 @@ func (s *salesOrderSvcImpl) CheckoutSalesOrder(ctx context.Context, params domai
 			if err1 != nil || err2 != nil {
 				continue
 			}
-			total = total.Add(unitPrice.Mul(qty))
+			total = total.Add(pricing.LineTotal(qty, unitPrice, conversionFor(convs, line.ID)))
 		}
 		amountCents := total.Mul(decimal.NewFromInt(100)).Round(0).IntPart()
 
@@ -2566,7 +2586,7 @@ func (s *salesOrderSvcImpl) CheckoutSalesOrder(ctx context.Context, params domai
 			if s.notificationPublisher != nil {
 				// The outbox publisher reads the RepoFactory from the context; inject it before publishing.
 				pubCtx := event.WithRepos(txCtx, txSvc.repos)
-				emailData := buildOrderCheckoutEmail(ctx, s.repos, s.branding, order, lines, params.AccountID, sellerName, params.Email, checkoutSession.URL)
+				emailData := buildOrderCheckoutEmail(ctx, s.repos, s.branding, order, lines, convs, params.AccountID, sellerName, params.Email, checkoutSession.URL)
 				// Without AccountID the log row is written against account_id = '', and the email log lists by account, so the sent checkout link would never appear in it.
 				emailData.SentByID = &identity.Actor.ID
 				if pubErr := s.notificationPublisher.PublishSendEmail(pubCtx, *emailData); pubErr != nil {

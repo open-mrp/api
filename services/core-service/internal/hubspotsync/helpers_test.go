@@ -1,77 +1,44 @@
 package hubspotsync
 
 import (
-	"context"
-	"errors"
 	"testing"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
-	apierror "github.com/open-mrp/api/shared/errors"
-
-	"github.com/shopspring/decimal"
 )
 
 func strptr(s string) *string { return &s }
 
 func TestOrderTotal(t *testing.T) {
-	// identityConvert returns the measure unchanged and records that conversion was attempted.
-	// caseToEach converts a quantity in "case" to "ea" at 12:1.
-	caseToEach := func(_ context.Context, m decimal.Decimal, from, to string) (decimal.Decimal, *apierror.APIError) {
-		if from == "case" && to == "ea" {
-			return m.Mul(decimal.NewFromInt(12)), nil
-		}
-		return m, nil
-	}
-	convertErr := func(_ context.Context, m decimal.Decimal, _, _ string) (decimal.Decimal, *apierror.APIError) {
-		return decimal.Zero, apierror.NewInternalError(errors.New("no factors"), "conversion failed")
+	// line builds an order line whose quantity unit is num/den of the unit its price is quoted per.
+	line := func(qty, price, num, den string) *domain.SalesOrderLine {
+		return &domain.SalesOrderLine{QuantityValue: qty, UnitPriceValue: price,
+			PricingQuantityRatioNumerator: num, PricingQuantityRatioDenominator: den, PricingPriceRatioNumerator: "1", PricingPriceRatioDenominator: "1"}
 	}
 
 	tests := []struct {
 		name    string
 		lines   []*domain.SalesOrderLine
-		convert unitConvertFunc
 		want    string
 		wantErr bool
 	}{
-		{name: "empty", lines: nil, convert: caseToEach, want: "0.00"},
-		{
-			name: "matching units multiply directly",
-			lines: []*domain.SalesOrderLine{
-				{QuantityValue: "3", QuantityUnitID: "ea", UnitPriceValue: "10.00", UnitPriceDenominatorUnitID: "ea"},
-			},
-			convert: caseToEach,
-			want:    "30.00",
-		},
+		{name: "empty", lines: nil, want: "0.00"},
+		{name: "matching units multiply directly", lines: []*domain.SalesOrderLine{line("3", "10.00", "1", "1")}, want: "30.00"},
 		{
 			name: "mismatched units convert quantity into the price denominator unit",
-			lines: []*domain.SalesOrderLine{
-				// 3 cases at $10/ea → 36 ea × $10 = $360.00
-				{QuantityValue: "3", QuantityUnitID: "case", UnitPriceValue: "10.00", UnitPriceDenominatorUnitID: "ea"},
-			},
-			convert: caseToEach,
-			want:    "360.00",
+			// 3 cases of 12 at $10/ea → 36 ea × $10 = $360.00
+			lines: []*domain.SalesOrderLine{line("3", "10.00", "12", "1")},
+			want:  "360.00",
 		},
 		{
-			name: "unparseable line is skipped",
-			lines: []*domain.SalesOrderLine{
-				{QuantityValue: "abc", QuantityUnitID: "ea", UnitPriceValue: "10.00", UnitPriceDenominatorUnitID: "ea"},
-				{QuantityValue: "5", QuantityUnitID: "ea", UnitPriceValue: "2.00", UnitPriceDenominatorUnitID: "ea"},
-			},
-			convert: caseToEach,
-			want:    "10.00",
+			name:  "unparseable line is skipped",
+			lines: []*domain.SalesOrderLine{line("abc", "10.00", "1", "1"), line("5", "2.00", "1", "1")},
+			want:  "10.00",
 		},
-		{
-			name: "conversion failure aborts the total",
-			lines: []*domain.SalesOrderLine{
-				{QuantityValue: "3", QuantityUnitID: "case", UnitPriceValue: "10.00", UnitPriceDenominatorUnitID: "ea"},
-			},
-			convert: convertErr,
-			wantErr: true,
-		},
+		{name: "an unusable conversion aborts the total", lines: []*domain.SalesOrderLine{line("3", "10.00", "12", "0")}, wantErr: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, apiErr := orderTotal(context.Background(), tt.lines, tt.convert)
+			got, apiErr := orderTotal(tt.lines)
 			if tt.wantErr {
 				if apiErr == nil {
 					t.Fatalf("orderTotal() expected error, got nil")

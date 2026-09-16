@@ -2354,8 +2354,18 @@ type SalesOrderLineInfo struct {
 	UpdatedAt                           *timestamppb.Timestamp `protobuf:"bytes,32,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	// Product type code (e.g. "sale", "service", "shipping", "credit", "tax"), used to distinguish physical sale lines from charge/adjustment lines.
 	ProductTypeCode *string `protobuf:"bytes,33,opt,name=product_type_code,json=productTypeCode,proto3,oneof" json:"product_type_code,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// The base ratios of the quantity's unit and of the unit the price is quoted per, as decimal
+	// strings (shared/pricing.UnitConversion). They price the ordered, picked, packed and invoiced
+	// quantities alike.
+	PricingQuantityRatioNumerator   string `protobuf:"bytes,34,opt,name=pricing_quantity_ratio_numerator,json=pricingQuantityRatioNumerator,proto3" json:"pricing_quantity_ratio_numerator,omitempty"`
+	PricingQuantityRatioDenominator string `protobuf:"bytes,35,opt,name=pricing_quantity_ratio_denominator,json=pricingQuantityRatioDenominator,proto3" json:"pricing_quantity_ratio_denominator,omitempty"`
+	PricingPriceRatioNumerator      string `protobuf:"bytes,36,opt,name=pricing_price_ratio_numerator,json=pricingPriceRatioNumerator,proto3" json:"pricing_price_ratio_numerator,omitempty"`
+	PricingPriceRatioDenominator    string `protobuf:"bytes,37,opt,name=pricing_price_ratio_denominator,json=pricingPriceRatioDenominator,proto3" json:"pricing_price_ratio_denominator,omitempty"`
+	// Set when the line's units cannot be priced the way the dashboard prices them, in which case the
+	// ratios are empty and no money can be stated for the line.
+	PricingUnavailable bool `protobuf:"varint,38,opt,name=pricing_unavailable,json=pricingUnavailable,proto3" json:"pricing_unavailable,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *SalesOrderLineInfo) Reset() {
@@ -2610,6 +2620,41 @@ func (x *SalesOrderLineInfo) GetProductTypeCode() string {
 		return *x.ProductTypeCode
 	}
 	return ""
+}
+
+func (x *SalesOrderLineInfo) GetPricingQuantityRatioNumerator() string {
+	if x != nil {
+		return x.PricingQuantityRatioNumerator
+	}
+	return ""
+}
+
+func (x *SalesOrderLineInfo) GetPricingQuantityRatioDenominator() string {
+	if x != nil {
+		return x.PricingQuantityRatioDenominator
+	}
+	return ""
+}
+
+func (x *SalesOrderLineInfo) GetPricingPriceRatioNumerator() string {
+	if x != nil {
+		return x.PricingPriceRatioNumerator
+	}
+	return ""
+}
+
+func (x *SalesOrderLineInfo) GetPricingPriceRatioDenominator() string {
+	if x != nil {
+		return x.PricingPriceRatioDenominator
+	}
+	return ""
+}
+
+func (x *SalesOrderLineInfo) GetPricingUnavailable() bool {
+	if x != nil {
+		return x.PricingUnavailable
+	}
+	return false
 }
 
 type ListSalesOrdersRequest struct {
@@ -7067,7 +7112,7 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"\x18_lead_time_override_daysB\x18\n" +
 	"\x16_ship_by_override_dateB\x14\n" +
 	"\x12_ship_by_cutoff_atB\x1b\n" +
-	"\x19_calendar_adjustment_days\"\xa3\x10\n" +
+	"\x19_calendar_adjustment_days\"\xf4\x12\n" +
 	"\x12SalesOrderLineInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12(\n" +
 	"\x10line_item_number\x18\x02 \x01(\x05R\x0elineItemNumber\x12\x1f\n" +
@@ -7108,7 +7153,12 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"created_at\x18\x1f \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18  \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12/\n" +
-	"\x11product_type_code\x18! \x01(\tH\x0eR\x0fproductTypeCode\x88\x01\x01B\x16\n" +
+	"\x11product_type_code\x18! \x01(\tH\x0eR\x0fproductTypeCode\x88\x01\x01\x12G\n" +
+	" pricing_quantity_ratio_numerator\x18\" \x01(\tR\x1dpricingQuantityRatioNumerator\x12K\n" +
+	"\"pricing_quantity_ratio_denominator\x18# \x01(\tR\x1fpricingQuantityRatioDenominator\x12A\n" +
+	"\x1dpricing_price_ratio_numerator\x18$ \x01(\tR\x1apricingPriceRatioNumerator\x12E\n" +
+	"\x1fpricing_price_ratio_denominator\x18% \x01(\tR\x1cpricingPriceRatioDenominator\x12/\n" +
+	"\x13pricing_unavailable\x18& \x01(\bR\x12pricingUnavailableB\x16\n" +
 	"\x14_product_descriptionB\r\n" +
 	"\v_product_idB\n" +
 	"\n" +

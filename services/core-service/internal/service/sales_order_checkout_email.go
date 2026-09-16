@@ -8,6 +8,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/messaging"
+	"github.com/open-mrp/api/shared/pricing"
 )
 
 // checkoutEmailParams renders the payment-request email from the shared order view model. It differs from emailParams only in showing Bill To rather than Ship To — the mail asks for money, so the party being billed is the relevant one — and in carrying the Stripe session URL.
@@ -52,11 +53,11 @@ func (d ackData) checkoutEmailParams(checkoutURL string) map[string]any {
 // buildOrderCheckoutEmail assembles the payment-request email for an order on the same branded letterhead as the acknowledgement and the invoice. The recipient is the address the checkout link was requested for, which may be a one-off contact rather than the customer's billing address, so it is passed in rather than read from the order.
 //
 // The letterhead lookups are best-effort, matching buildOrderAcknowledgementEmail: a missing account or origin address degrades to a blank letterhead rather than failing a checkout the buyer is waiting on.
-func buildOrderCheckoutEmail(ctx context.Context, repos domain.RepoFactory, branding BrandingAssets, order *domain.SalesOrder, lines []*domain.SalesOrderLine, accountID, sellerName, recipient, checkoutURL string) *messaging.EmailSendData {
+func buildOrderCheckoutEmail(ctx context.Context, repos domain.RepoFactory, branding BrandingAssets, order *domain.SalesOrder, lines []*domain.SalesOrderLine, convs map[string]pricing.UnitConversion, accountID, sellerName, recipient, checkoutURL string) *messaging.EmailSendData {
 	account, _ := repos.NewAccountRepo().GetByID(ctx, accountID)
 	originAddr, _ := repos.NewSalesOrderRepo().GetAccountOriginAddress(ctx, accountID)
 
-	data := buildOrderAcknowledgementData(order, lines, account, originAddr)
+	data := buildOrderAcknowledgementData(order, lines, convs, account, originAddr)
 	// buildOrderAcknowledgementData falls back to the buyer's name when the seller account cannot be read. That fallback is how a payment request came to greet the customer by their own name with the merchant nowhere on it, so the seller name resolved at the call site wins, and an unresolvable seller leaves the letterhead blank rather than wearing the buyer's identity.
 	data.AccountName = sellerName
 	if data.LogoURL != "" {

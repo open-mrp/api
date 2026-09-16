@@ -23,11 +23,15 @@ FROM (
         ar.external_number AS customer_number,
         ROUND(
             COALESCE((
-                SELECT SUM(q.value * rt.value)
+                -- Each line priced as the dashboard's multiplyRate does, summed unrounded: the balance is
+                -- rounded once, as the dashboard's receivables report does (see the line-pricing skill).
+                SELECT SUM(CASE WHEN q.unit_id = rt.denominator_unit_id THEN q.value * rt.value ELSE (q.value * qu.ratio_numerator / qu.ratio_denominator) * (rt.value / (rtu.ratio_numerator / rtu.ratio_denominator)) END)
                 FROM invoice_line il
                 JOIN quantity q ON q.id = il.quantity_id
                 JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
                 JOIN rate rt ON rt.id = sol.unit_price_id
+                JOIN unit qu ON qu.id = q.unit_id
+                JOIN unit rtu ON rtu.id = rt.denominator_unit_id
                 WHERE il.invoice_id = inv.id
             ), 0)
             -
@@ -88,11 +92,15 @@ FROM (
         ar.external_number AS customer_number,
         ROUND(
             COALESCE((
-                SELECT SUM(q.value * rt.value)
+                -- Each line priced as the dashboard's multiplyRate does, summed unrounded: the balance is
+                -- rounded once, as the dashboard's receivables report does (see the line-pricing skill).
+                SELECT SUM(CASE WHEN q.unit_id = rt.denominator_unit_id THEN q.value * rt.value ELSE (q.value * qu.ratio_numerator / qu.ratio_denominator) * (rt.value / (rtu.ratio_numerator / rtu.ratio_denominator)) END)
                 FROM invoice_line il
                 JOIN quantity q ON q.id = il.quantity_id
                 JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
                 JOIN rate rt ON rt.id = sol.unit_price_id
+                JOIN unit qu ON qu.id = q.unit_id
+                JOIN unit rtu ON rtu.id = rt.denominator_unit_id
                 WHERE il.invoice_id = inv.id
             ), 0)
             -
@@ -152,11 +160,15 @@ FROM (
         ar.external_number AS customer_number,
         ROUND(
             COALESCE((
-                SELECT SUM(q.value * rt.value)
+                -- Each line priced as the dashboard's multiplyRate does, summed unrounded: the balance is
+                -- rounded once, as the dashboard's receivables report does (see the line-pricing skill).
+                SELECT SUM(CASE WHEN q.unit_id = rt.denominator_unit_id THEN q.value * rt.value ELSE (q.value * qu.ratio_numerator / qu.ratio_denominator) * (rt.value / (rtu.ratio_numerator / rtu.ratio_denominator)) END)
                 FROM invoice_line il
                 JOIN quantity q ON q.id = il.quantity_id
                 JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
                 JOIN rate rt ON rt.id = sol.unit_price_id
+                JOIN unit qu ON qu.id = q.unit_id
+                JOIN unit rtu ON rtu.id = rt.denominator_unit_id
                 WHERE il.invoice_id = inv.id
             ), 0)
             -
@@ -218,11 +230,15 @@ FROM (
         ar.external_number AS customer_number,
         ROUND(
             COALESCE((
-                SELECT SUM(q.value * rt.value)
+                -- Each line priced as the dashboard's multiplyRate does, summed unrounded: the balance is
+                -- rounded once, as the dashboard's receivables report does (see the line-pricing skill).
+                SELECT SUM(CASE WHEN q.unit_id = rt.denominator_unit_id THEN q.value * rt.value ELSE (q.value * qu.ratio_numerator / qu.ratio_denominator) * (rt.value / (rtu.ratio_numerator / rtu.ratio_denominator)) END)
                 FROM invoice_line il
                 JOIN quantity q ON q.id = il.quantity_id
                 JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
                 JOIN rate rt ON rt.id = sol.unit_price_id
+                JOIN unit qu ON qu.id = q.unit_id
+                JOIN unit rtu ON rtu.id = rt.denominator_unit_id
                 WHERE il.invoice_id = inv.id
             ), 0)
             -

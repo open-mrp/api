@@ -49,7 +49,7 @@ func buildInvoiceEmail(ctx context.Context, repos domain.RepoFactory, branding B
 	// The PDF embeds the letterhead logo, so its bytes are fetched here rather than inside the
 	// transaction the caller opens: a slow logo host must not hold the invoice's row locks.
 	logo := fetchAccountLogo(ctx, repos, branding, accountID)
-	doc.Header.LogoImageType, doc.Header.LogoImage = logo.ImageType, logo.Image
+	doc.Header.LogoImageType, doc.Header.LogoImage, doc.Header.LogoURL = logo.ImageType, logo.Image, logo.URL
 
 	var shipment *domain.Shipment
 	if invoice.ShipmentID != nil {
@@ -253,7 +253,7 @@ func buildPurchaseOrderSubmissionEmail(ctx context.Context, repos domain.RepoFac
 	// The PDF embeds the letterhead logo, so its bytes are fetched here rather than inside the
 	// transaction the caller opens: a slow logo host must not hold the order's row locks.
 	logo := fetchAccountLogo(ctx, repos, branding, accountID)
-	doc.Header.LogoImageType, doc.Header.LogoImage = logo.ImageType, logo.Image
+	doc.Header.LogoImageType, doc.Header.LogoImage, doc.Header.LogoURL = logo.ImageType, logo.Image, logo.URL
 
 	emailData := &messaging.EmailSendData{
 		To:         recipients,

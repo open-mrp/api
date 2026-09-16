@@ -1912,7 +1912,7 @@ func (s *shipmentSvcImpl) buildInvoiceDocument(txCtx context.Context, accountID,
 	doc.Header.OrderOnlineLink = portalRegisterLink(txCtx, s.repos, s.frontendURL, accountID)
 	// Fetched before the transaction opened, because embedding needs the bytes and a stalled logo
 	// host must not hold the ship's row locks.
-	doc.Header.LogoImageType, doc.Header.LogoImage = logo.ImageType, logo.Image
+	doc.Header.LogoImageType, doc.Header.LogoImage, doc.Header.LogoURL = logo.ImageType, logo.Image, logo.URL
 
 	pdfBytes, err := buildInvoicePDF(doc)
 	if err != nil {

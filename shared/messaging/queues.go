@@ -14,9 +14,6 @@ const (
 	// NotificationCmdSendEmailQueue carries send-email commands to the notification-service. Messages on this queue contain an EmailSendData payload and trigger an outbound email via SES.
 	NotificationCmdSendEmailQueue = "notification_cmd_send_email"
 
-	// NotifyEmailStatusQueue carries email delivery status updates (bounces, complaints, delivery confirmations) back from SES via SNS webhook. The notification-service consumes these to update email delivery records.
-	NotifyEmailStatusQueue = "notify_email_status"
-
 	// NotificationEventEmailLogQueue carries email-logged events emitted by the notification-service after successfully sending an email. Downstream consumers use these to maintain email audit records.
 	NotificationEventEmailLogQueue = "notification_event_email_log"
 
@@ -111,9 +108,6 @@ const (
 
 	// AgentEventRunStepQueue is the base name for the queue that carries individual run step events for real-time WebSocket streaming. Each API gateway instance appends a unique suffix to create its own exclusive auto-delete queue so that every instance receives every event via RabbitMQ fanout.
 	AgentEventRunStepQueue = "agent_event_run_step"
-
-	// BillingCmdSyncSeatsQueue carries sync-seats commands to the billing-service. Messages on this queue trigger a seat count reconciliation with Stripe.
-	BillingCmdSyncSeatsQueue = "billing_cmd_sync_seats"
 
 	// BillingCmdReportSeatChangeQueue carries report-seat-change commands to the billing-service. Messages on this queue trigger a usage meter report to Stripe.
 	BillingCmdReportSeatChangeQueue = "billing_cmd_report_seat_change"
@@ -258,12 +252,6 @@ type AgentRunStepData struct {
 	ActorName  string          `json:"actor_name,omitempty"`
 	// Terminal marks this step as the run's final event (e.g. the "Run failed" error step). The WS gateway, on seeing it, also emits a terminal run_complete frame on the run topic so the frontend leaves its loading state. Successful/awaiting runs already get that frame from the run-completed event; a failed run only emits this step, so without this flag the live run view stays stuck loading until a hard refresh re-fetches the persisted "failed" status.
 	Terminal bool `json:"terminal,omitempty"`
-}
-
-// SeatSyncData is the payload for BillingCmdSyncSeatsQueue messages. It identifies the account whose seat count should be reconciled with the billing provider.
-type SeatSyncData struct {
-	// AccountID is the account whose seat count changed.
-	AccountID string `json:"account_id"`
 }
 
 // SeatChangeReportData is the payload for BillingCmdReportSeatChangeQueue messages. It identifies the account whose seat count change should be reported to the billing provider's usage meters.

@@ -332,3 +332,67 @@ func TestLeaseRequeueWaitIsBounded(t *testing.T) {
 		}
 	}
 }
+
+func TestProcessDeliveryPublishesDeadLetterWithReason(t *testing.T) {
+	t.Parallel()
+
+	var exchange, routingKey string
+	var published amqp.Publishing
+	r := &rabbitMQ{consumerRetry: fastConsumerRetry()}
+	r.reconnectFunc = func(context.Context) error { return nil }
+	r.publishFunc = func(_ context.Context, ex, rk string, msg amqp.Publishing) error {
+		exchange, routingKey, published = ex, rk, msg
+		return nil
+	}
+
+	ack := &fakeAcknowledger{}
+	delivery := amqp.Delivery{
+		Acknowledger: ack,
+		RoutingKey:   "logging.event.request_logged",
+		MessageId:    "mg_1",
+		Body:         []byte(`{}`),
+	}
+
+	r.processDelivery(context.Background(), "logging_event_request_log", func(context.Context, amqp.Delivery) error {
+		return errors.New("handler failure")
+	}, delivery)
+
+	if exchange != deadLetterExchange || routingKey != "logging.event.request_logged" {
+		t.Errorf("expected a publish to %s with the original routing key, got %q %q", deadLetterExchange, exchange, routingKey)
+	}
+	if got := published.Headers["x-death-reason"]; got != "handler failure" {
+		t.Errorf("expected the handler error as x-death-reason, got %v", got)
+	}
+	if got := published.Headers["x-original-queue"]; got != "logging_event_request_log" {
+		t.Errorf("expected x-original-queue, got %v", got)
+	}
+	if published.MessageId != "mg_1" || string(published.Body) != `{}` || published.DeliveryMode != amqp.Persistent {
+		t.Errorf("expected the copy to preserve the message, got %+v", published)
+	}
+	// The copy is parked, so the original must be acked rather than rejected into a second DLQ entry.
+	if !ack.acked || ack.rejected {
+		t.Errorf("expected the original to be acked only, got acked=%v rejected=%v", ack.acked, ack.rejected)
+	}
+}
+
+func TestProcessDeliveryRejectsWhenDeadLetterPublishFails(t *testing.T) {
+	t.Parallel()
+
+	r := &rabbitMQ{consumerRetry: fastConsumerRetry()}
+	r.reconnectFunc = func(context.Context) error { return nil }
+	r.publishFunc = func(context.Context, string, string, amqp.Publishing) error {
+		return errors.New("not confirmed")
+	}
+
+	ack := &fakeAcknowledger{}
+	r.processDelivery(context.Background(), "test-queue", func(context.Context, amqp.Delivery) error {
+		return errors.New("handler failure")
+	}, amqp.Delivery{Acknowledger: ack, Body: []byte(`{}`)})
+
+	if ack.acked {
+		t.Error("expected no ack when the dead-letter copy was not confirmed")
+	}
+	if !ack.rejected || ack.requeue {
+		t.Error("expected a reject without requeue so the broker still dead-letters the message")
+	}
+}

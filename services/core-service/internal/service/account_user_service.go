@@ -484,10 +484,7 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 				}
 			}
 
-			// Publish seat sync and seat change report via outbox.
-			if apiErr := txSvc.billingPublisher.PublishSyncSeats(txCtx, params.AccountID); apiErr != nil {
-				return apiErr
-			}
+			// Publish seat change report via outbox.
 			if apiErr := txSvc.billingPublisher.PublishReportSeatChange(txCtx, params.AccountID); apiErr != nil {
 				return apiErr
 			}
@@ -925,10 +922,7 @@ func (s *accountUserSvcImpl) UpdateAccountUserStatus(ctx context.Context, accoun
 			return apiErr
 		}
 
-		if apiErr := txSvc.billingPublisher.PublishReportSeatChange(txCtx, accountID); apiErr != nil {
-			return apiErr
-		}
-		return txSvc.billingPublisher.PublishSyncSeats(txCtx, accountID)
+		return txSvc.billingPublisher.PublishReportSeatChange(txCtx, accountID)
 	})
 
 	if apiErr != nil {

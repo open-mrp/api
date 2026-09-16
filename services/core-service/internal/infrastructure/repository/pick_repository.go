@@ -298,9 +298,9 @@ func (r *pickRepoImpl) List(ctx context.Context, params domain.ListPicksParams) 
 	}
 
 	var cursorDir *pagination.Direction
-	// The forward queries read the cursor through nullable args; the backward queries take it directly.
-	var fwdCursorCreatedAt, fwdCursorShipByDate gosql.NullTime
-	var fwdCursorID gosql.NullString
+	// The forward queries read the cursor through nullable args; the backward search query takes it directly.
+	var cursorAt gosql.NullTime
+	var cursorID gosql.NullString
 	var bwdCursorAt time.Time
 	var bwdCursorID string
 	backward := false
@@ -312,40 +312,35 @@ func (r *pickRepoImpl) List(ctx context.Context, params domain.ListPicksParams) 
 		}
 		cursorDir = &cur.Direction
 		backward = cur.Direction == pagination.DirectionBackward
-		// Only one of the two cursor columns is read; the sort decides which.
-		fwdCursorCreatedAt = gosql.NullTime{Time: cur.OccurredAt, Valid: true}
-		fwdCursorShipByDate = gosql.NullTime{Time: cur.OccurredAt, Valid: true}
-		fwdCursorID = gosql.NullString{String: cur.ID, Valid: true}
+		// The cursor holds the value of whichever column the sort reads.
+		cursorAt = gosql.NullTime{Time: cur.OccurredAt, Valid: true}
+		cursorID = gosql.NullString{String: cur.ID, Valid: true}
 		bwdCursorAt = cur.OccurredAt
 		bwdCursorID = cur.ID
 	}
 
 	var picks []*domain.Pick
 	switch {
-	// The default (ship-by) sort, off the search path, goes through a hand-built query whose bare
-	// ORDER BY the (account_id, ship_by_sort_date, id) index serves in order — no filesort over the
-	// account's picks. Search keeps the dual-mode ListPicksSearch* path: a matched set is small enough
-	// to sort in place. See buildPickShipByListQuery.
-	case sortByShipBy && !useNgram:
+	// Off the search path, both sorts go through a hand-built query whose bare ORDER BY an
+	// (account_id, <sort column>, id) index serves in order — no filesort over the account's picks.
+	// Search keeps the dual-mode ListPicksSearch* path: a matched set is small enough to sort in place.
+	// See buildPickListQuery.
+	case !useNgram:
 		dir := pagination.DirectionForward
-		cursorShipBy := fwdCursorShipByDate
-		cursorIDArg := fwdCursorID
 		if backward {
 			dir = pagination.DirectionBackward
-			cursorShipBy = gosql.NullTime{Time: bwdCursorAt, Valid: true}
-			cursorIDArg = gosql.NullString{String: bwdCursorID, Valid: true}
 		}
-		query, args := buildPickShipByListQuery(
-			params.AccountID, search.Like, params.Status,
+		query, args := buildPickListQuery(
+			sortByShipBy, params.AccountID, search.Like, params.Status,
 			params.CustomerIDs, params.CustomerGroupIDs, params.ProductLineIDs,
-			startDate, endDate, dir, cursorShipBy, cursorIDArg, params.Limit+1,
+			startDate, endDate, dir, cursorAt, cursorID, params.Limit+1,
 		)
 		rows, err := r.queries.DB().QueryContext(ctx, query, args...)
 		if apiErr := db.MapSQLError(err); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 		defer rows.Close()
-		picks, err = scanPickShipByRows(rows)
+		picks, err = scanPickListRows(rows)
 		if apiErr := db.MapSQLError(err); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
@@ -375,33 +370,7 @@ func (r *pickRepoImpl) List(ctx context.Context, params domain.ListPicksParams) 
 		for i, row := range rows {
 			picks[i] = mapPickBackwardRow(sqlc.ListPicksBackwardRow(row))
 		}
-	case backward:
-		rows, err := r.queries.ListPicksBackward(ctx, sqlc.ListPicksBackwardParams{
-			AccountID:                  params.AccountID,
-			SearchQuery:                search.Like,
-			Status:                     statusFilter,
-			IncludeCustomerFilter:      includeCustomerFilter,
-			CustomerIds:                customerIDs,
-			IncludeCustomerGroupFilter: includeCustomerGroupFilter,
-			CustomerGroupIds:           customerGroupIDs,
-			IncludeProductLineFilter:   includeProductLineFilter,
-			ProductLineIds:             productLineIDs,
-			StartDate:                  startDate,
-			EndDate:                    endDate,
-			SortByShipBy:               sortByShipBy,
-			CursorCreatedAt:            bwdCursorAt,
-			CursorShipByDate:           bwdCursorAt,
-			CursorID:                   bwdCursorID,
-			Limit:                      params.Limit + 1,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		picks = make([]*domain.Pick, len(rows))
-		for i, row := range rows {
-			picks[i] = mapPickBackwardRow(row)
-		}
-	case useNgram:
+	default:
 		rows, err := r.queries.ListPicksSearchForward(ctx, sqlc.ListPicksSearchForwardParams{
 			AccountID:                  params.AccountID,
 			SearchQuery:                search.Fulltext,
@@ -415,9 +384,9 @@ func (r *pickRepoImpl) List(ctx context.Context, params domain.ListPicksParams) 
 			StartDate:                  startDate,
 			EndDate:                    endDate,
 			SortByShipBy:               sortByShipBy,
-			CursorCreatedAt:            fwdCursorCreatedAt,
-			CursorShipByDate:           fwdCursorShipByDate,
-			CursorID:                   fwdCursorID,
+			CursorCreatedAt:            cursorAt,
+			CursorShipByDate:           cursorAt,
+			CursorID:                   cursorID,
 			Limit:                      params.Limit + 1,
 		})
 		if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -426,32 +395,6 @@ func (r *pickRepoImpl) List(ctx context.Context, params domain.ListPicksParams) 
 		picks = make([]*domain.Pick, len(rows))
 		for i, row := range rows {
 			picks[i] = mapPickForwardRow(sqlc.ListPicksForwardRow(row))
-		}
-	default:
-		rows, err := r.queries.ListPicksForward(ctx, sqlc.ListPicksForwardParams{
-			AccountID:                  params.AccountID,
-			SearchQuery:                search.Like,
-			Status:                     statusFilter,
-			IncludeCustomerFilter:      includeCustomerFilter,
-			CustomerIds:                customerIDs,
-			IncludeCustomerGroupFilter: includeCustomerGroupFilter,
-			CustomerGroupIds:           customerGroupIDs,
-			IncludeProductLineFilter:   includeProductLineFilter,
-			ProductLineIds:             productLineIDs,
-			StartDate:                  startDate,
-			EndDate:                    endDate,
-			SortByShipBy:               sortByShipBy,
-			CursorCreatedAt:            fwdCursorCreatedAt,
-			CursorShipByDate:           fwdCursorShipByDate,
-			CursorID:                   fwdCursorID,
-			Limit:                      params.Limit + 1,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		picks = make([]*domain.Pick, len(rows))
-		for i, row := range rows {
-			picks[i] = mapPickForwardRow(row)
 		}
 	}
 

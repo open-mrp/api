@@ -9,8 +9,8 @@ import (
 	"github.com/open-mrp/api/shared/pagination"
 )
 
-// pickListColumns is the SELECT list for the ship-by pick listing, in the exact order
-// scanPickShipByRows reads it — which is the field order of sqlc.ListPicksForwardRow, so the scan can
+// pickListColumns is the SELECT list for the pick listing, in the exact order
+// scanPickListRows reads it — which is the field order of sqlc.ListPicksForwardRow, so the scan can
 // reuse mapPickForwardRow and never drift from the sqlc-generated projection it mirrors.
 const pickListColumns = `p.id, p.number, p.sales_order_id, so.number, ` +
 	`ar.counterparty_account_id, ba.name, ar.external_number, ` +
@@ -40,39 +40,43 @@ const pickListJoins = ` JOIN sales_order so ON so.id = p.sales_order_id` +
 	` LEFT JOIN carrier cr ON cr.id = so.carrier_id` +
 	` LEFT JOIN carrier_option co ON co.id = so.carrier_option_id`
 
-// The two driving indexes on `pick` that read the ship-by order straight out of the B-tree.
-// pickOpenShipByIndex leads with finished_at so `status=open` is an index equality rather than a
-// residual filter; see buildPickShipByListQuery for why the choice is made here and not by MySQL.
+// The driving indexes on `pick`, one pair per sort, that read the list order straight out of the
+// B-tree. The finished variants lead with finished_at so `status=open` is an index equality rather
+// than a residual filter; see buildPickListQuery for why the choice is made here and not by MySQL.
 const (
-	pickShipByIndex     = "pick_account_ship_by_idx"
-	pickOpenShipByIndex = "pick_account_finished_ship_by_idx"
+	pickShipByIndex      = "pick_account_ship_by_idx"
+	pickOpenShipByIndex  = "pick_account_finished_ship_by_idx"
+	pickCreatedIndex     = "pick_account_created_idx"
+	pickOpenCreatedIndex = "pick_account_finished_created_idx"
 )
 
-// buildPickShipByListQuery assembles the default (ship-by) pick listing and its bind args. It exists
-// because the sqlc ListPicksForward/Backward serve this sort through a CASE-wrapped ORDER BY and a
-// wall of `? IS NULL OR ...` / `? = false OR ...` filter guards. Neither is sargable: the CASE cannot
-// be index-ordered and the guards make the optimizer abandon the composite, so the list filesorted
-// every one of an account's picks and read ~1.3M rows to return 51 (10-16s, past the RPC deadline).
+// buildPickListQuery assembles the pick listing (ship-by or created-at sort, off the search path) and
+// its bind args. It exists because the sqlc ListPicksForward/Backward serve both sorts through a
+// CASE-wrapped ORDER BY and a wall of `? IS NULL OR ...` / `? = false OR ...` filter guards. Neither
+// is sargable: the CASE cannot be index-ordered and the guards make the optimizer abandon the
+// composite, so the list filesorted every one of an account's picks and read ~180k-1.3M rows to
+// return 51 (10-16s, past the RPC deadline).
 //
-// Emitting only the predicates the caller actually set, over the denormalized p.ship_by_sort_date
-// (COALESCE(so.ship_by_date, '9999-12-31'), sentinel sorts last), lets a bare ORDER BY land on
-// pick_account_ship_by_idx (account_id, ship_by_sort_date, id): the scan reads in order and stops at
-// LIMIT, and every other table is a primary-/unique-key lookup. STRAIGHT_JOIN pins `p` as the driver
-// so the index supplies the sort directly rather than MySQL starting from a small joined table and
-// filesorting; see inventory_change_log_list_query.go for the same pattern and its measured win.
+// Emitting only the predicates the caller actually set lets a bare ORDER BY land on an
+// (account_id, <sort column>, id) index: the scan reads in order and stops at LIMIT, and every other
+// table is a primary-/unique-key lookup. The ship-by sort reads the denormalized p.ship_by_sort_date
+// (COALESCE(so.ship_by_date, '9999-12-31'), sentinel sorts last). STRAIGHT_JOIN pins `p` as the
+// driver so the index supplies the sort directly rather than MySQL starting from a small joined table
+// and filesorting; see inventory_change_log_list_query.go for the same pattern and its measured win.
 //
-// The driving index is named rather than left to the optimizer, because both candidates read the
-// ship-by order and it chose between them on row estimates. `status=open` must take
-// pick_account_finished_ship_by_idx: open picks are a tiny slice of a mostly-closed table, and on
-// pick_account_ship_by_idx the filter is residual, so the scan starts at the earliest ship-by date —
-// the oldest, long-finished picks — and reads most of the account before a page fills. Every other
-// combination takes pick_account_ship_by_idx: with no status filter there is nothing to pin, and
-// `status=closed` matches nearly every row it reads, so filtering in order fills a page immediately.
+// The driving index is named rather than left to the optimizer, because it chose between candidates
+// on row estimates. `status=open` must take the finished_at-led index: open picks are a tiny slice of
+// a mostly-closed table, and on the plain index the filter is residual, so the scan reads the
+// account's closed history before a page fills. Every other combination takes the plain index: with
+// no status filter there is nothing to pin, and `status=closed` matches nearly every row it reads, so
+// filtering in order fills a page immediately.
 //
-// Direction matches the sqlc queries this path replaced: forward pages ascending (soonest ship-by
-// first), backward descending, reversed by BuildPageString. The cursor predicate is emitted only when
-// a cursor was supplied, so the first page is a clean range scan.
-func buildPickShipByListQuery(
+// Direction matches the sqlc queries this path replaced: ship-by pages forward ascending (soonest
+// first), created-at forward descending (newest first); backward is the reverse, undone by
+// BuildPageString. The cursor predicate is emitted only when a cursor was supplied, so the first page
+// is a clean range scan.
+func buildPickListQuery(
+	sortByShipBy bool,
 	accountID string,
 	searchLike gosql.NullString,
 	status *string,
@@ -82,7 +86,7 @@ func buildPickShipByListQuery(
 	startDate gosql.NullTime,
 	endDate gosql.NullTime,
 	dir pagination.Direction,
-	cursorShipBy gosql.NullTime,
+	cursorAt gosql.NullTime,
 	cursorID gosql.NullString,
 	limit int32,
 ) (string, []any) {
@@ -90,9 +94,16 @@ func buildPickShipByListQuery(
 
 	// Any status other than "closed" is the open filter, matching the predicate emitted below.
 	openOnly := status != nil && *status != "closed"
-	drivingIndex := pickShipByIndex
-	if openOnly {
+	var drivingIndex string
+	switch {
+	case sortByShipBy && openOnly:
 		drivingIndex = pickOpenShipByIndex
+	case sortByShipBy:
+		drivingIndex = pickShipByIndex
+	case openOnly:
+		drivingIndex = pickOpenCreatedIndex
+	default:
+		drivingIndex = pickCreatedIndex
 	}
 
 	var b strings.Builder
@@ -155,21 +166,28 @@ func buildPickShipByListQuery(
 		args = append(args, endDate.Time)
 	}
 
-	// Keyset over (ship_by_sort_date, id). CAST keeps the param a DATE while the column stays bare, so
-	// the composite is still usable.
-	if cursorShipBy.Valid {
-		if dir == pagination.DirectionBackward {
-			b.WriteString(" AND (p.ship_by_sort_date < CAST(? AS DATE) OR (p.ship_by_sort_date = CAST(? AS DATE) AND p.id < ?))")
-		} else {
-			b.WriteString(" AND (p.ship_by_sort_date > CAST(? AS DATE) OR (p.ship_by_sort_date = CAST(? AS DATE) AND p.id > ?))")
-		}
-		args = append(args, cursorShipBy.Time, cursorShipBy.Time, cursorID.String)
+	// Ship-by reads ascending on a forward page, created-at descending.
+	ascending := sortByShipBy == (dir == pagination.DirectionForward)
+	cmp, order := "<", "DESC"
+	if ascending {
+		cmp, order = ">", "ASC"
 	}
 
-	if dir == pagination.DirectionBackward {
-		b.WriteString(" ORDER BY p.ship_by_sort_date DESC, p.id DESC")
+	// Keyset over (sort column, id). For ship-by, CAST keeps the param a DATE while the column stays
+	// bare, so the composite is still usable.
+	if cursorAt.Valid {
+		col, param := "p.created_at", "?"
+		if sortByShipBy {
+			col, param = "p.ship_by_sort_date", "CAST(? AS DATE)"
+		}
+		b.WriteString(" AND (" + col + " " + cmp + " " + param + " OR (" + col + " = " + param + " AND p.id " + cmp + " ?))")
+		args = append(args, cursorAt.Time, cursorAt.Time, cursorID.String)
+	}
+
+	if sortByShipBy {
+		b.WriteString(" ORDER BY p.ship_by_sort_date " + order + ", p.id " + order)
 	} else {
-		b.WriteString(" ORDER BY p.ship_by_sort_date ASC, p.id ASC")
+		b.WriteString(" ORDER BY p.created_at " + order + ", p.id " + order)
 	}
 	b.WriteString(" LIMIT ?")
 	args = append(args, limit)
@@ -177,10 +195,10 @@ func buildPickShipByListQuery(
 	return b.String(), args
 }
 
-// scanPickShipByRows reads rows from buildPickShipByListQuery into domain picks. It scans into the
+// scanPickListRows reads rows from buildPickListQuery into domain picks. It scans into the
 // sqlc row type so the projection, the scan, and mapPickForwardRow share one source of truth for
 // column order and types; pickListColumns must stay in sqlc.ListPicksForwardRow field order.
-func scanPickShipByRows(rows *gosql.Rows) ([]*domain.Pick, error) {
+func scanPickListRows(rows *gosql.Rows) ([]*domain.Pick, error) {
 	var out []*domain.Pick
 	for rows.Next() {
 		var row sqlc.ListPicksForwardRow

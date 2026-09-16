@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.6](https://github.com/open-mrp/api/compare/v2.6.5...v2.6.6) (2026-09-16)
+
+
+### Bug Fixes
+
+* **pricing:** price mixed-unit lines like the dashboard and match its invoice PDF ([#149](https://github.com/open-mrp/api/issues/149)) ([e236493](https://github.com/open-mrp/api/commit/e236493e9f78d40cc7de272534032438e40637a4))
+
 ## [2.6.5](https://github.com/open-mrp/api/compare/v2.6.4...v2.6.5) (2026-09-16)
 
 

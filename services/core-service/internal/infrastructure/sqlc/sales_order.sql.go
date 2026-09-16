@@ -1620,6 +1620,22 @@ SELECT
     up_nu.abbreviation AS unit_price_numerator_unit_abbreviation,
     up_du.id AS unit_price_denominator_unit_id,
     up_du.abbreviation AS unit_price_denominator_unit_abbreviation,
+    -- The base ratios of the quantity's unit and of the unit the price is quoted per, which
+    -- shared/pricing converts between the way the dashboard's multiplyRate does. Null where the
+    -- dashboard would price the line differently: units of different dimensions, a unit with an
+    -- offset, or a price in a non-base currency unit.
+    CASE WHEN qu.id = up_du.id AND qu.id <> up_nu.id THEN '1'
+        WHEN qu.unit_dimension_code = up_du.unit_dimension_code AND qu.unit_dimension_code <> up_nu.unit_dimension_code AND qu.offset_numerator = 0 AND up_du.offset_numerator = 0 AND (qu.is_base_unit = 0 OR qu.ratio_numerator = qu.ratio_denominator) AND (up_du.is_base_unit = 0 OR up_du.ratio_numerator = up_du.ratio_denominator) AND (up_nu.is_base_unit = 1 OR (up_nu.ratio_numerator = up_nu.ratio_denominator AND up_nu.offset_numerator = 0))
+        THEN CAST(qu.ratio_numerator AS CHAR) END AS pricing_quantity_ratio_numerator,
+    CASE WHEN qu.id = up_du.id AND qu.id <> up_nu.id THEN '1'
+        WHEN qu.unit_dimension_code = up_du.unit_dimension_code AND qu.unit_dimension_code <> up_nu.unit_dimension_code AND qu.offset_numerator = 0 AND up_du.offset_numerator = 0 AND (qu.is_base_unit = 0 OR qu.ratio_numerator = qu.ratio_denominator) AND (up_du.is_base_unit = 0 OR up_du.ratio_numerator = up_du.ratio_denominator) AND (up_nu.is_base_unit = 1 OR (up_nu.ratio_numerator = up_nu.ratio_denominator AND up_nu.offset_numerator = 0))
+        THEN CAST(qu.ratio_denominator AS CHAR) END AS pricing_quantity_ratio_denominator,
+    CASE WHEN qu.id = up_du.id AND qu.id <> up_nu.id THEN '1'
+        WHEN qu.unit_dimension_code = up_du.unit_dimension_code AND qu.unit_dimension_code <> up_nu.unit_dimension_code AND qu.offset_numerator = 0 AND up_du.offset_numerator = 0 AND (qu.is_base_unit = 0 OR qu.ratio_numerator = qu.ratio_denominator) AND (up_du.is_base_unit = 0 OR up_du.ratio_numerator = up_du.ratio_denominator) AND (up_nu.is_base_unit = 1 OR (up_nu.ratio_numerator = up_nu.ratio_denominator AND up_nu.offset_numerator = 0))
+        THEN CAST(up_du.ratio_numerator AS CHAR) END AS pricing_price_ratio_numerator,
+    CASE WHEN qu.id = up_du.id AND qu.id <> up_nu.id THEN '1'
+        WHEN qu.unit_dimension_code = up_du.unit_dimension_code AND qu.unit_dimension_code <> up_nu.unit_dimension_code AND qu.offset_numerator = 0 AND up_du.offset_numerator = 0 AND (qu.is_base_unit = 0 OR qu.ratio_numerator = qu.ratio_denominator) AND (up_du.is_base_unit = 0 OR up_du.ratio_numerator = up_du.ratio_denominator) AND (up_nu.is_base_unit = 1 OR (up_nu.ratio_numerator = up_nu.ratio_denominator AND up_nu.offset_numerator = 0))
+        THEN CAST(up_du.ratio_denominator AS CHAR) END AS pricing_price_ratio_denominator,
     -- Unit cost
     uc.id AS unit_cost_id,
     uc.value AS unit_cost_value,
@@ -1671,6 +1687,10 @@ type GetSalesOrderLinesRow struct {
 	UnitPriceNumeratorUnitAbbreviation   string
 	UnitPriceDenominatorUnitID           string
 	UnitPriceDenominatorUnitAbbreviation string
+	PricingQuantityRatioNumerator        interface{}
+	PricingQuantityRatioDenominator      interface{}
+	PricingPriceRatioNumerator           interface{}
+	PricingPriceRatioDenominator         interface{}
 	UnitCostID                           sql.NullString
 	UnitCostValue                        sql.NullString
 	UnitCostNumeratorUnitID              sql.NullString
@@ -1715,6 +1735,10 @@ func (q *Queries) GetSalesOrderLines(ctx context.Context, salesOrderID string) (
 			&i.UnitPriceNumeratorUnitAbbreviation,
 			&i.UnitPriceDenominatorUnitID,
 			&i.UnitPriceDenominatorUnitAbbreviation,
+			&i.PricingQuantityRatioNumerator,
+			&i.PricingQuantityRatioDenominator,
+			&i.PricingPriceRatioNumerator,
+			&i.PricingPriceRatioDenominator,
 			&i.UnitCostID,
 			&i.UnitCostValue,
 			&i.UnitCostNumeratorUnitID,

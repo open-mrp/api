@@ -135,7 +135,7 @@ func (s *service) syncOrderWithClient(ctx context.Context, client domain.Hubspot
 	if apiErr != nil {
 		return apiErr
 	}
-	amount, apiErr := orderTotal(ctx, lines, s.repos.NewUnitConversionRepo().ConvertValue)
+	amount, apiErr := orderTotal(lines)
 	if apiErr != nil {
 		return apiErr
 	}

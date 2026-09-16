@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"unicode/utf16"
 )
 
 // Reading text back out of a generated PDF, so the document tests can assert what a supplier or
@@ -40,7 +41,7 @@ func pdfText(t *testing.T, pdfBytes []byte) []string {
 			continue
 		}
 		for _, lit := range pdfShowRe.FindAll(content, -1) {
-			s := unescapePDFString(string(lit[1 : len(lit)-1]))
+			s := decodePDFText(unescapePDFString(string(lit[1 : len(lit)-1])))
 			if strings.TrimSpace(s) != "" {
 				out = append(out, s)
 			}
@@ -64,6 +65,20 @@ func pdfContains(runs []string, want string) bool {
 // cells (a wrapped description, say).
 func pdfJoined(runs []string) string {
 	return strings.Join(runs, "\n")
+}
+
+// decodePDFText turns a run back into UTF-8. The record PDFs are set in an embedded UTF-8 font,
+// whose runs fpdf writes as UTF-16BE.
+func decodePDFText(s string) string {
+	b := []byte(s)
+	if len(b)%2 != 0 {
+		return s
+	}
+	units := make([]uint16, len(b)/2)
+	for i := range units {
+		units[i] = uint16(b[2*i])<<8 | uint16(b[2*i+1])
+	}
+	return string(utf16.Decode(units))
 }
 
 func inflate(b []byte) ([]byte, error) {

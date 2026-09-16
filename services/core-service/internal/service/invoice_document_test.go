@@ -84,7 +84,7 @@ func TestInvoiceDocMatchesLegacyFields(t *testing.T) {
 	cases := []*domain.ShippingCase{
 		{Number: "CASE-1", FreightWeightValue: "1200", FreightWeightUnitAbbreviation: "lb", TrackingNumber: poPtr("1Z999")},
 	}
-	doc := buildInvoiceDoc(invoice, lines, order, account, nil, cases, []string{"ap@northwind.com"})
+	doc := buildInvoiceDoc(invoice, lines, order, account, nil, cases, []string{"ap@northwind.com"}, invoiceDocLookups{})
 
 	t.Run("document identity names the invoice, not the order behind it", func(t *testing.T) {
 		if doc.Header.DocumentTitle != "INVOICE" {
@@ -168,7 +168,7 @@ func TestInvoiceEmailParamsCoverTheTemplate(t *testing.T) {
 			WebsiteURL:   poPtr("https://carolon.com"),
 		},
 	}
-	doc := buildInvoiceDoc(invoice, lines, order, account, nil, nil, nil)
+	doc := buildInvoiceDoc(invoice, lines, order, account, nil, nil, nil, invoiceDocLookups{})
 	params := doc.emailParams("https://track.example/1Z999")
 
 	for _, key := range []string{
@@ -210,7 +210,7 @@ func TestInvoiceEmailWithoutTracking(t *testing.T) {
 	t.Parallel()
 
 	invoice, lines, order := invoiceFixture()
-	params := buildInvoiceDoc(invoice, lines, order, nil, nil, nil, nil).emailParams("")
+	params := buildInvoiceDoc(invoice, lines, order, nil, nil, nil, nil, invoiceDocLookups{}).emailParams("")
 	if params["master_tracking_url"] != "" {
 		t.Errorf("master_tracking_url = %v, want empty", params["master_tracking_url"])
 	}
@@ -227,7 +227,7 @@ func TestInvoicePDFRendersLegacyLayout(t *testing.T) {
 	cases := []*domain.ShippingCase{
 		{Number: "CASE-1", FreightWeightValue: "1200", FreightWeightUnitAbbreviation: "lb", TrackingNumber: poPtr("1Z999")},
 	}
-	doc := buildInvoiceDoc(invoice, lines, order, account, nil, cases, []string{"ap@northwind.com"})
+	doc := buildInvoiceDoc(invoice, lines, order, account, nil, cases, []string{"ap@northwind.com"}, invoiceDocLookups{})
 
 	pdfBytes, err := buildInvoicePDF(doc)
 	if err != nil {
@@ -287,7 +287,7 @@ func TestInvoicePDFOmitsEmptyCasesTable(t *testing.T) {
 	t.Parallel()
 
 	invoice, lines, order := invoiceFixture()
-	doc := buildInvoiceDoc(invoice, lines, order, nil, nil, nil, nil)
+	doc := buildInvoiceDoc(invoice, lines, order, nil, nil, nil, nil, invoiceDocLookups{})
 
 	pdfBytes, err := buildInvoicePDF(doc)
 	if err != nil {
@@ -316,7 +316,7 @@ func TestInvoiceDocWithoutOrder(t *testing.T) {
 	invoice.BillingAddressState = poPtr("WA")
 	invoice.BillingAddressZip = poPtr("98101")
 
-	doc := buildInvoiceDoc(invoice, lines, nil, nil, nil, nil, nil)
+	doc := buildInvoiceDoc(invoice, lines, nil, nil, nil, nil, nil, invoiceDocLookups{})
 
 	if doc.Header.BillTo.CityStateZip != "Seattle, WA 98101" {
 		t.Errorf("BillTo = %q, want the invoice's own billing address", doc.Header.BillTo.CityStateZip)

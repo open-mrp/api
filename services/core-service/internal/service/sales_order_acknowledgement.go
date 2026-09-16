@@ -11,6 +11,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
+	"github.com/open-mrp/api/shared/pricing"
 	"github.com/open-mrp/api/shared/ptrutil"
 	"github.com/open-mrp/api/shared/textutil"
 	"github.com/shopspring/decimal"
@@ -25,18 +26,29 @@ type ackIdentityField struct {
 	Main  bool
 }
 
+// The record's own number leads in bold, its label a step larger than its value (text-base over
+// text-sm); every other row is text-sm throughout.
 func (f ackIdentityField) style() string {
 	if f.Main {
-		return "B"
+		return pdfStyleBold
 	}
-	return ""
+	return pdfStyleRegular
 }
 
-func (f ackIdentityField) size() float64 {
+func (f ackIdentityField) labelSize() float64 {
 	if f.Main {
-		return 11.5
+		return docFontBase
 	}
-	return 10.5
+	return docFontSM
+}
+
+func (f ackIdentityField) valueSize() float64 { return docFontSM }
+
+func (f ackIdentityField) lineHeight() float64 {
+	if f.Main {
+		return docLineBase
+	}
+	return docLineSM
 }
 
 // documentTitle is the heading over the identity block, defaulting to the acknowledgement's.
@@ -164,6 +176,9 @@ type ackData struct {
 	// ContactEmails are the order's acknowledgement recipient emails, shown under
 	// the Bill To block (mirrors the legacy PDF). Set by the caller.
 	ContactEmails []string
+	// ContactPhone is the customer's phone, listed after the contact emails. Set by the caller; the
+	// purchase order leaves it empty, as its dashboard counterpart shows no supplier phone.
+	ContactPhone string
 
 	// Order terms.
 	Carrier      string
@@ -190,10 +205,10 @@ type ackData struct {
 }
 
 // buildOrderAcknowledgementData assembles the shared acknowledgement view model
-// from the order, its lines, the seller account (branding), and the seller's
-// origin address. account and originAddr are optional; nil values degrade to an
+// from the order, its lines and their price-unit conversions (by line ID),
+// the seller account (branding), and the seller's origin address. account and originAddr are optional; nil values degrade to an
 // empty letterhead rather than failing.
-func buildOrderAcknowledgementData(order *domain.SalesOrder, lines []*domain.SalesOrderLine, account *domain.Account, originAddr *domain.ShippingAddress) ackData {
+func buildOrderAcknowledgementData(order *domain.SalesOrder, lines []*domain.SalesOrderLine, convs map[string]pricing.UnitConversion, account *domain.Account, originAddr *domain.ShippingAddress) ackData {
 	d := ackData{
 		AccountName:       accountDisplayName(account, order.CustomerName),
 		OrderNumber:       textutil.FormatRecordNumber(order.Number),
@@ -201,15 +216,14 @@ func buildOrderAcknowledgementData(order *domain.SalesOrder, lines []*domain.Sal
 		CustomerNumber:    textutil.FormatAccountNumber(order.CustomerNumber),
 		CustomerNumberRaw: order.CustomerNumber,
 		CustomerName:      order.CustomerName,
-		// Rendered in the server's zone, as the dashboard's date-fns and toLocaleDateString are.
-		OrderDateShort: order.CreatedAt.Local().Format("1/2/2006"),
-		OrderDateLong:  order.CreatedAt.Local().Format("01/02/2006 03:04 PM"),
-		Carrier:        ackCarrier(order),
-		Priority:       order.PriorityName,
-		PaymentTerms:   ptrutil.Deref(order.PaymentTermName),
-		SalesRep:       ptrutil.Deref(order.SalesRepName),
-		Year:           time.Now().Format("2006"),
-		EmailSubject:   "Sales Order " + textutil.FormatRecordNumber(order.Number),
+		OrderDateShort:    inDocumentZone(order.CreatedAt, originAddr).Format("1/2/2006"),
+		OrderDateLong:     inDocumentZone(order.CreatedAt, originAddr).Format("01/02/2006 03:04 PM"),
+		Carrier:           ackCarrier(order),
+		Priority:          order.PriorityName,
+		PaymentTerms:      ptrutil.Deref(order.PaymentTermName),
+		SalesRep:          ptrutil.Deref(order.SalesRepName),
+		Year:              time.Now().Format("2006"),
+		EmailSubject:      "Sales Order " + textutil.FormatRecordNumber(order.Number),
 	}
 
 	if account != nil && account.Branding != nil {
@@ -257,7 +271,8 @@ func buildOrderAcknowledgementData(order *domain.SalesOrder, lines []*domain.Sal
 	for _, line := range lines {
 		price := parseDecimalOrZero(line.UnitPriceValue)
 		qty := parseDecimalOrZero(line.QuantityValue)
-		lineTotal := price.Mul(qty)
+		// Rounded per line before summing, as the dashboard's calculateTotalOrdered is.
+		lineTotal := pricing.LineTotal(qty, price, conversionFor(convs, line.ID))
 		total = total.Add(lineTotal)
 
 		d.Lines = append(d.Lines, ackLine{
@@ -344,9 +359,17 @@ func buildOrderAcknowledgementEmail(ctx context.Context, repos domain.RepoFactor
 	account, _ := repos.NewAccountRepo().GetByID(ctx, accountID)
 	originAddr, _ := repo.GetAccountOriginAddress(ctx, accountID)
 
-	data := buildOrderAcknowledgementData(order, lines, account, originAddr)
-	// The acknowledgement recipients are shown as contact emails under Bill To.
+	convs, apiErr := salesOrderLineConversions(lines)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	data := buildOrderAcknowledgementData(order, lines, convs, account, originAddr)
+	// The acknowledgement recipients and the customer's phone are shown under Bill To.
 	data.ContactEmails = recipients
+	if customer, _ := repos.NewCustomerRepo().Get(ctx, accountID, order.BuyerAccountID, nil); customer != nil {
+		data.ContactPhone = ptrutil.Deref(customer.Phone)
+	}
 	// Gate the "Order Online" CTA on the account having a customer portal.
 	data.OrderOnlineLink = portalRegisterLink(ctx, repos, frontendURL, accountID)
 	// The stored branding value is an object key, so it has to be signed for the email and read for the PDF. Both are best-effort.
@@ -391,6 +414,19 @@ func portalRegisterLink(ctx context.Context, repos domain.RepoFactory, frontendU
 		return fmt.Sprintf("%s/%s%s", frontendURL, *slug, registerPath)
 	}
 	return ""
+}
+
+// inDocumentZone reads a record's timestamp in the merchant's zone, taken from its origin address.
+// The dashboard renders these in the viewer's browser, which for the merchant is their own zone;
+// the server runs in UTC, which printed an afternoon invoice as the early evening. Falls back to the
+// server's zone when the origin has no resolved zone.
+func inDocumentZone(t time.Time, originAddr *domain.ShippingAddress) time.Time {
+	if originAddr != nil && originAddr.Timezone != nil {
+		if loc, err := time.LoadLocation(*originAddr.Timezone); err == nil {
+			return t.In(loc)
+		}
+	}
+	return t.Local()
 }
 
 func accountDisplayName(account *domain.Account, fallback string) string {

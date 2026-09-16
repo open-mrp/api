@@ -457,6 +457,16 @@ message SalesOrderLineInfo {
   google.protobuf.Timestamp updated_at = 32;
   // Product type code (e.g. "sale", "service", "shipping", "credit", "tax"), used to distinguish physical sale lines from charge/adjustment lines.
   optional string product_type_code = 33;
+  // The base ratios of the quantity's unit and of the unit the price is quoted per, as decimal
+  // strings (shared/pricing.UnitConversion). They price the ordered, picked, packed and invoiced
+  // quantities alike.
+  string pricing_quantity_ratio_numerator = 34;
+  string pricing_quantity_ratio_denominator = 35;
+  string pricing_price_ratio_numerator = 36;
+  string pricing_price_ratio_denominator = 37;
+  // Set when the line's units cannot be priced the way the dashboard prices them, in which case the
+  // ratios are empty and no money can be stated for the line.
+  bool pricing_unavailable = 38;
 }
 
 // --- Sales Order Request/Response messages ---

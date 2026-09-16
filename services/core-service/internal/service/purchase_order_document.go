@@ -7,11 +7,11 @@ import (
 	"sort"
 	"time"
 
-	"github.com/go-pdf/fpdf"
 	"github.com/shopspring/decimal"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/pricing"
 	"github.com/open-mrp/api/shared/ptrutil"
 	"github.com/open-mrp/api/shared/textutil"
 )
@@ -41,9 +41,9 @@ type purchaseOrderDoc struct {
 	SubmittedOn string
 }
 
-// gatherPurchaseOrderDoc collects everything the purchase order document renders. Every lookup
-// except the order itself is best-effort: a failure blanks its own section rather than costing the
-// supplier the order.
+// gatherPurchaseOrderDoc collects everything the purchase order document renders. The order and
+// its line pricing must succeed; every other lookup is best-effort, and a failure blanks its own
+// section rather than costing the supplier the order.
 func gatherPurchaseOrderDoc(ctx context.Context, repos domain.RepoFactory, accountID, purchaseOrderID string, recipients []string) (purchaseOrderDoc, *apierror.APIError) {
 	repo := repos.NewPurchaseOrderRepo()
 
@@ -58,7 +58,12 @@ func gatherPurchaseOrderDoc(ctx context.Context, repos domain.RepoFactory, accou
 	// ordering, so the address block is ours, not theirs.
 	originAddr, _ := repos.NewSalesOrderRepo().GetAccountOriginAddress(ctx, accountID)
 
-	return buildPurchaseOrderDoc(order, lines, account, originAddr, recipients), nil
+	convs, apiErr := purchaseOrderLineConversions(lines)
+	if apiErr != nil {
+		return purchaseOrderDoc{}, apiErr
+	}
+
+	return buildPurchaseOrderDoc(order, lines, convs, account, originAddr, recipients), nil
 }
 
 // buildPurchaseOrderDoc assembles the purchase order document. Everything but the order is optional
@@ -66,6 +71,7 @@ func gatherPurchaseOrderDoc(ctx context.Context, repos domain.RepoFactory, accou
 func buildPurchaseOrderDoc(
 	order *domain.PurchaseOrder,
 	lines []*domain.PurchaseOrderLine,
+	convs map[string]pricing.UnitConversion,
 	account *domain.Account,
 	originAddr *domain.ShippingAddress,
 	contactEmails []string,
@@ -74,13 +80,12 @@ func buildPurchaseOrderDoc(
 	subject := "Purchase Order " + number + " Submission"
 
 	d := ackData{
-		DocumentTitle: "PURCHASE ORDER",
-		NumberLabel:   "Purchase Order Number",
-		AccountName:   accountDisplayName(account, order.SupplierName),
-		OrderNumber:   number,
-		// Rendered in the server's zone, as the dashboard's date-fns and toLocaleDateString are.
-		OrderDateShort: order.CreatedAt.Local().Format("1/2/2006"),
-		OrderDateLong:  order.CreatedAt.Local().Format("01/02/2006"),
+		DocumentTitle:  "PURCHASE ORDER",
+		NumberLabel:    "Purchase Order Number",
+		AccountName:    accountDisplayName(account, order.SupplierName),
+		OrderNumber:    number,
+		OrderDateShort: inDocumentZone(order.CreatedAt, originAddr).Format("1/2/2006"),
+		OrderDateLong:  inDocumentZone(order.CreatedAt, originAddr).Format("01/02/2006"),
 		Year:           time.Now().Format("2006"),
 		EmailSubject:   subject,
 	}
@@ -89,7 +94,7 @@ func buildPurchaseOrderDoc(
 	// order names the customer and its PO.
 	requested := ""
 	if order.PromisedAt != nil {
-		requested = order.PromisedAt.Local().Format("01/02/2006")
+		requested = inDocumentZone(*order.PromisedAt, originAddr).Format("01/02/2006")
 	}
 	d.IdentityRows = []ackIdentityField{
 		{Label: "Supplier Number", Value: textutil.FormatAccountNumber(order.SupplierNumber)},
@@ -156,7 +161,8 @@ func buildPurchaseOrderDoc(
 	for _, line := range sorted {
 		price := parseDecimalOrZero(line.UnitPriceValue)
 		qty := parseDecimalOrZero(line.QuantityValue)
-		lineTotal := price.Mul(qty)
+		// Rounded per line before summing, as the dashboard's PurchaseOrderUtils.calculateTotalOrdered is.
+		lineTotal := pricing.LineTotal(qty, price, conversionFor(convs, line.ID))
 		total = total.Add(lineTotal)
 
 		d.Lines = append(d.Lines, ackLine{
@@ -244,10 +250,7 @@ func (d purchaseOrderDoc) emailParams() map[string]any {
 // It has no order-terms band. A purchase order carries no carrier, priority or sales rep for the
 // supplier to act on — those belong to the sales order this may be fulfilling, not to the purchase.
 func buildPurchaseOrderPDF(data ackData) ([]byte, error) {
-	pdf := fpdf.New("P", "mm", "A4", "")
-	pdf.SetMargins(ackPageLeft, ackPageTop, 15)
-	pdf.SetAutoPageBreak(true, 15)
-	pdf.AddPage()
+	pdf := newRecordPDF()
 
 	ackHeader(pdf, data)
 	ackHR(pdf)

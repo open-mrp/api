@@ -1172,7 +1172,7 @@ func (suite *SalesOrderSvcTestSuite) TestQuoteSalesOrderFreight_NoCarrierReturns
 	suite.productRepo.EXPECT().GetSystemProduct(gomock.Any(), "ac_test", "credit").
 		Return(nil, nil).AnyTimes()
 	suite.orderRepo.EXPECT().GetLines(gomock.Any(), "or_1").
-		Return([]*domain.SalesOrderLine{{ID: "sol_ship", ProductID: new("prod_ship"), QuantityValue: "1", UnitPriceValue: "0"}}, nil).AnyTimes()
+		Return([]*domain.SalesOrderLine{{ID: "sol_ship", ProductID: new("prod_ship"), QuantityValue: "1", UnitPriceValue: "0", PricingQuantityRatioNumerator: "1", PricingQuantityRatioDenominator: "1", PricingPriceRatioNumerator: "1", PricingPriceRatioDenominator: "1"}}, nil).AnyTimes()
 	suite.unitRepo.EXPECT().GetCurrencyBaseUnitID(gomock.Any()).Return("un_usd", nil).AnyTimes()
 
 	quote, apiErr := suite.svc.QuoteSalesOrderFreight(ctx, domain.QuoteSalesOrderFreightParams{SalesOrderID: "or_1"})
@@ -1489,6 +1489,9 @@ func (suite *SalesOrderSvcTestSuite) TestChangeStatus_IssueWithSendEmailFiresNot
 		Return(&domain.Account{ID: "ac_test", Name: "Test Seller"}, nil).Times(1)
 	suite.orderRepo.EXPECT().GetAccountOriginAddress(gomock.Any(), "ac_test").
 		Return(nil, nil).Times(1)
+	// The customer's phone is listed under Bill To.
+	suite.customerRepo.EXPECT().Get(gomock.Any(), "ac_test", "", gomock.Nil()).
+		Return(&domain.Customer{Phone: poPtr("555-0100")}, nil).Times(1)
 
 	portalDomainRepo := repositorymock.NewMockPortalDomainRepo(suite.ctrl)
 	suite.repoFactory.EXPECT().NewPortalDomainRepo().Return(portalDomainRepo).AnyTimes()
@@ -1559,10 +1562,12 @@ func (suite *SalesOrderSvcTestSuite) TestCheckoutSalesOrder_Success() {
 		Return([]*domain.SalesOrderLine{
 			// Fractional quantity: the line's full extended price must be charged, not a
 			// truncated integer quantity (2.5 → 2 would under-charge).
-			{ProductSKU: "SKU-1", QuantityValue: "2.5", UnitPriceValue: "20.00"},
+			{ProductSKU: "SKU-1", QuantityValue: "2.5", UnitPriceValue: "20.00", PricingQuantityRatioNumerator: "1", PricingQuantityRatioDenominator: "1", PricingPriceRatioNumerator: "1", PricingPriceRatioDenominator: "1"},
 			// A negative-priced discount credit line must net into the single aggregate
 			// charge, never become its own (negative) Stripe line item.
-			{ProductSKU: "DISCOUNT", QuantityValue: "1", UnitPriceValue: "-10.00"},
+			{ProductSKU: "DISCOUNT", QuantityValue: "1", UnitPriceValue: "-10.00", PricingQuantityRatioNumerator: "1", PricingQuantityRatioDenominator: "1", PricingPriceRatioNumerator: "1", PricingPriceRatioDenominator: "1"},
+			// Two cartons of twelve pairs priced per pair: charged as 24 pairs, not 2.
+			{ID: "sol_carton", ProductSKU: "SKU-2", QuantityValue: "2", UnitPriceValue: "1.50", PricingQuantityRatioNumerator: "12", PricingQuantityRatioDenominator: "1", PricingPriceRatioNumerator: "1", PricingPriceRatioDenominator: "1"},
 		}, nil).Times(1)
 
 	// The buyer is already a Stripe customer; the session bills to it (not a bare email).
@@ -1585,8 +1590,8 @@ func (suite *SalesOrderSvcTestSuite) TestCheckoutSalesOrder_Success() {
 			suite.Equal("cus_123", params.StripeCustomerID)
 			suite.Empty(params.CustomerEmail)
 			suite.Require().Len(params.LineItems, 1)
-			// Single aggregate line item: (2.5 × $20.00) + (1 × -$10.00) = $40.00 → 4000 cents.
-			suite.Equal(int64(4000), params.LineItems[0].AmountCents)
+			// Single aggregate line item: (2.5 × $20.00) + (1 × -$10.00) + (2 cartons = 24 pr × $1.50) = $76.00 → 7600 cents.
+			suite.Equal(int64(7600), params.LineItems[0].AmountCents)
 			suite.Equal(int64(1), params.LineItems[0].Quantity)
 			// The buyer arrives from an email, so the line item names the seller alongside the zero-padded record number (formatRecordNumber("1001")), and the description dates the order.
 			suite.Equal("Seller Co — Order 001001", params.LineItems[0].Name)
@@ -1656,7 +1661,7 @@ func (suite *SalesOrderSvcTestSuite) TestCheckoutSalesOrder_CreatesStripeCustome
 		Return(&domain.SalesOrder{ID: "or_1", Number: "1001", BuyerAccountID: "ac_buyer"}, nil).Times(1)
 	suite.orderRepo.EXPECT().GetLines(gomock.Any(), "or_1").
 		Return([]*domain.SalesOrderLine{
-			{ProductSKU: "SKU-1", QuantityValue: "1", UnitPriceValue: "40.00"},
+			{ProductSKU: "SKU-1", QuantityValue: "1", UnitPriceValue: "40.00", PricingQuantityRatioNumerator: "1", PricingQuantityRatioDenominator: "1", PricingPriceRatioNumerator: "1", PricingPriceRatioDenominator: "1"},
 		}, nil).Times(1)
 
 	suite.customerRepo.EXPECT().GetStripeCustomerID(gomock.Any(), "ac_test", "ac_buyer").
@@ -1735,7 +1740,7 @@ func (suite *SalesOrderSvcTestSuite) TestCheckoutSalesOrder_CreatesStripeCustome
 		Return(&domain.SalesOrder{ID: "or_1", Number: "1001", BuyerAccountID: "ac_buyer"}, nil).Times(1)
 	suite.orderRepo.EXPECT().GetLines(gomock.Any(), "or_1").
 		Return([]*domain.SalesOrderLine{
-			{ProductSKU: "SKU-1", QuantityValue: "1", UnitPriceValue: "40.00"},
+			{ProductSKU: "SKU-1", QuantityValue: "1", UnitPriceValue: "40.00", PricingQuantityRatioNumerator: "1", PricingQuantityRatioDenominator: "1", PricingPriceRatioNumerator: "1", PricingPriceRatioDenominator: "1"},
 		}, nil).Times(1)
 
 	suite.customerRepo.EXPECT().GetStripeCustomerID(gomock.Any(), "ac_test", "ac_buyer").

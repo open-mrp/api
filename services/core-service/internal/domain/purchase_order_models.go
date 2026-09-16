@@ -5,6 +5,7 @@ import (
 
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/pagination"
+	"github.com/open-mrp/api/shared/pricing"
 )
 
 // PurchaseOrder represents a full purchase order domain model.
@@ -160,8 +161,14 @@ type PurchaseOrderLine struct {
 	UnitPriceNumeratorUnitAbbr   string `audit:"unit_price_numerator_unit_abbr"`
 	UnitPriceDenominatorUnitID   string `audit:"unit_price_denominator_unit_id"`
 	UnitPriceDenominatorUnitAbbr string `audit:"unit_price_denominator_unit_abbr"`
-	UnitPriceCreatedAt           time.Time
-	UnitPriceUpdatedAt           time.Time
+	// Pricing* are the base ratios of the quantity's unit and of the unit the price is quoted per, as
+	// decimal strings, empty when the line cannot be priced. Read them through PriceUnitConversion.
+	PricingQuantityRatioNumerator   string
+	PricingQuantityRatioDenominator string
+	PricingPriceRatioNumerator      string
+	PricingPriceRatioDenominator    string
+	UnitPriceCreatedAt              time.Time
+	UnitPriceUpdatedAt              time.Time
 
 	// Unit cost (nullable)
 	UnitCostID                  *string
@@ -346,3 +353,8 @@ const (
 	PurchaseOrderStatusChangeClose   = "close"
 	PurchaseOrderStatusChangeOpen    = "open"
 )
+
+// PriceUnitConversion is the factor pricing uses to restate the line's quantity in its price's unit.
+func (l *PurchaseOrderLine) PriceUnitConversion() (pricing.UnitConversion, error) {
+	return pricing.ParseUnitConversion(l.PricingQuantityRatioNumerator, l.PricingQuantityRatioDenominator, l.PricingPriceRatioNumerator, l.PricingPriceRatioDenominator)
+}

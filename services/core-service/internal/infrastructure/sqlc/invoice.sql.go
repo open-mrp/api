@@ -174,11 +174,15 @@ SELECT
     pt.is_active AS payment_term_is_active,
     (SELECT COUNT(*) FROM invoice_line il WHERE il.invoice_id = inv.id) AS line_count,
     COALESCE((
-        SELECT SUM(q.value * r.value)
+        -- Each line priced as the dashboard's multiplyRate does and rounded to the cent, as its
+        -- calculateTotalInvoiced sums them (see the line-pricing skill).
+        SELECT SUM(ROUND(CASE WHEN q.unit_id = r.denominator_unit_id THEN q.value * r.value ELSE (q.value * qu.ratio_numerator / qu.ratio_denominator) * (r.value / (ru.ratio_numerator / ru.ratio_denominator)) END, 2))
         FROM invoice_line il2
         JOIN quantity q ON q.id = il2.quantity_id
         JOIN sales_order_line sol ON sol.id = il2.sales_order_line_id
         JOIN rate r ON r.id = sol.unit_price_id
+        JOIN unit qu ON qu.id = q.unit_id
+        JOIN unit ru ON ru.id = r.denominator_unit_id
         WHERE il2.invoice_id = inv.id
     ), 0) AS total_invoiced,
     CASE WHEN EXISTS (
@@ -473,6 +477,22 @@ SELECT
     r.numerator_unit_id AS unit_price_numerator_unit_id,
     r.denominator_unit_id AS unit_price_denominator_unit_id,
     rdu.abbreviation AS unit_price_denominator_unit_abbreviation,
+    -- The base ratios of the quantity's unit and of the unit the price is quoted per, which
+    -- shared/pricing converts between the way the dashboard's multiplyRate does. Null where the
+    -- dashboard would price the line differently: units of different dimensions, a unit with an
+    -- offset, or a price in a non-base currency unit.
+    CASE WHEN qu.id = rdu.id AND qu.id <> rnu.id THEN '1'
+        WHEN qu.unit_dimension_code = rdu.unit_dimension_code AND qu.unit_dimension_code <> rnu.unit_dimension_code AND qu.offset_numerator = 0 AND rdu.offset_numerator = 0 AND (qu.is_base_unit = 0 OR qu.ratio_numerator = qu.ratio_denominator) AND (rdu.is_base_unit = 0 OR rdu.ratio_numerator = rdu.ratio_denominator) AND (rnu.is_base_unit = 1 OR (rnu.ratio_numerator = rnu.ratio_denominator AND rnu.offset_numerator = 0))
+        THEN CAST(qu.ratio_numerator AS CHAR) END AS pricing_quantity_ratio_numerator,
+    CASE WHEN qu.id = rdu.id AND qu.id <> rnu.id THEN '1'
+        WHEN qu.unit_dimension_code = rdu.unit_dimension_code AND qu.unit_dimension_code <> rnu.unit_dimension_code AND qu.offset_numerator = 0 AND rdu.offset_numerator = 0 AND (qu.is_base_unit = 0 OR qu.ratio_numerator = qu.ratio_denominator) AND (rdu.is_base_unit = 0 OR rdu.ratio_numerator = rdu.ratio_denominator) AND (rnu.is_base_unit = 1 OR (rnu.ratio_numerator = rnu.ratio_denominator AND rnu.offset_numerator = 0))
+        THEN CAST(qu.ratio_denominator AS CHAR) END AS pricing_quantity_ratio_denominator,
+    CASE WHEN qu.id = rdu.id AND qu.id <> rnu.id THEN '1'
+        WHEN qu.unit_dimension_code = rdu.unit_dimension_code AND qu.unit_dimension_code <> rnu.unit_dimension_code AND qu.offset_numerator = 0 AND rdu.offset_numerator = 0 AND (qu.is_base_unit = 0 OR qu.ratio_numerator = qu.ratio_denominator) AND (rdu.is_base_unit = 0 OR rdu.ratio_numerator = rdu.ratio_denominator) AND (rnu.is_base_unit = 1 OR (rnu.ratio_numerator = rnu.ratio_denominator AND rnu.offset_numerator = 0))
+        THEN CAST(rdu.ratio_numerator AS CHAR) END AS pricing_price_ratio_numerator,
+    CASE WHEN qu.id = rdu.id AND qu.id <> rnu.id THEN '1'
+        WHEN qu.unit_dimension_code = rdu.unit_dimension_code AND qu.unit_dimension_code <> rnu.unit_dimension_code AND qu.offset_numerator = 0 AND rdu.offset_numerator = 0 AND (qu.is_base_unit = 0 OR qu.ratio_numerator = qu.ratio_denominator) AND (rdu.is_base_unit = 0 OR rdu.ratio_numerator = rdu.ratio_denominator) AND (rnu.is_base_unit = 1 OR (rnu.ratio_numerator = rnu.ratio_denominator AND rnu.offset_numerator = 0))
+        THEN CAST(rdu.ratio_denominator AS CHAR) END AS pricing_price_ratio_denominator,
     sol.id AS order_line_id,
     sol.item_id AS order_line_item_id,
     sol.line_item_number AS order_line_item_number,
@@ -487,6 +507,7 @@ JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
 JOIN quantity oq ON oq.id = sol.quantity_id
 JOIN rate r ON r.id = sol.unit_price_id
 JOIN unit rdu ON rdu.id = r.denominator_unit_id
+JOIN unit rnu ON rnu.id = r.numerator_unit_id
 LEFT JOIN item i ON i.id = sol.item_id
 WHERE il.invoice_id = ?
 ORDER BY sol.line_item_number ASC, il.created_at ASC, il.id ASC
@@ -506,6 +527,10 @@ type GetInvoiceLinesRow struct {
 	UnitPriceNumeratorUnitID             string
 	UnitPriceDenominatorUnitID           string
 	UnitPriceDenominatorUnitAbbreviation string
+	PricingQuantityRatioNumerator        interface{}
+	PricingQuantityRatioDenominator      interface{}
+	PricingPriceRatioNumerator           interface{}
+	PricingPriceRatioDenominator         interface{}
 	OrderLineID                          string
 	OrderLineItemID                      sql.NullString
 	OrderLineItemNumber                  sql.NullInt32
@@ -538,6 +563,10 @@ func (q *Queries) GetInvoiceLines(ctx context.Context, invoiceID string) ([]GetI
 			&i.UnitPriceNumeratorUnitID,
 			&i.UnitPriceDenominatorUnitID,
 			&i.UnitPriceDenominatorUnitAbbreviation,
+			&i.PricingQuantityRatioNumerator,
+			&i.PricingQuantityRatioDenominator,
+			&i.PricingPriceRatioNumerator,
+			&i.PricingPriceRatioDenominator,
 			&i.OrderLineID,
 			&i.OrderLineItemID,
 			&i.OrderLineItemNumber,
@@ -574,11 +603,15 @@ FROM (
             WHERE ta.invoice_id = i.id
         ), 0) AS allocated_total,
         COALESCE((
-            SELECT SUM(ilq.value * solr.value)
+            -- Each line priced as the dashboard's multiplyRate does and rounded to the cent, as its
+            -- calculateTotalInvoiced sums them (see the line-pricing skill).
+            SELECT SUM(ROUND(CASE WHEN ilq.unit_id = solr.denominator_unit_id THEN ilq.value * solr.value ELSE (ilq.value * ilqu.ratio_numerator / ilqu.ratio_denominator) * (solr.value / (solru.ratio_numerator / solru.ratio_denominator)) END, 2))
             FROM invoice_line il
             JOIN quantity ilq ON ilq.id = il.quantity_id
             JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
             JOIN rate solr ON solr.id = sol.unit_price_id
+            JOIN unit ilqu ON ilqu.id = ilq.unit_id
+            JOIN unit solru ON solru.id = solr.denominator_unit_id
             WHERE il.invoice_id = i.id
         ), 0) AS invoiced_total
     FROM invoice i
@@ -724,11 +757,15 @@ SELECT
     addr.name AS billing_address_name,
     COALESCE((
         -- Correlated per invoice: a grouped derived table cannot take the account filter and so aggregates every invoice_line in the database to return one page.
-        SELECT SUM(q2.value * r2.value)
+        -- Each line priced as the dashboard's multiplyRate does and rounded to the cent, as its
+        -- calculateTotalInvoiced sums them (see the line-pricing skill).
+        SELECT SUM(ROUND(CASE WHEN q2.unit_id = r2.denominator_unit_id THEN q2.value * r2.value ELSE (q2.value * q2u.ratio_numerator / q2u.ratio_denominator) * (r2.value / (r2u.ratio_numerator / r2u.ratio_denominator)) END, 2))
         FROM invoice_line il2
         JOIN quantity q2 ON q2.id = il2.quantity_id
         JOIN sales_order_line sol2 ON sol2.id = il2.sales_order_line_id
         JOIN rate r2 ON r2.id = sol2.unit_price_id
+        JOIN unit q2u ON q2u.id = q2.unit_id
+        JOIN unit r2u ON r2u.id = r2.denominator_unit_id
         WHERE il2.invoice_id = inv.id
     ), 0) AS total_invoiced
 FROM invoice inv
@@ -872,11 +909,15 @@ SELECT
     addr.name AS billing_address_name,
     COALESCE((
         -- Correlated per invoice: a grouped derived table cannot take the account filter and so aggregates every invoice_line in the database to return one page.
-        SELECT SUM(q2.value * r2.value)
+        -- Each line priced as the dashboard's multiplyRate does and rounded to the cent, as its
+        -- calculateTotalInvoiced sums them (see the line-pricing skill).
+        SELECT SUM(ROUND(CASE WHEN q2.unit_id = r2.denominator_unit_id THEN q2.value * r2.value ELSE (q2.value * q2u.ratio_numerator / q2u.ratio_denominator) * (r2.value / (r2u.ratio_numerator / r2u.ratio_denominator)) END, 2))
         FROM invoice_line il2
         JOIN quantity q2 ON q2.id = il2.quantity_id
         JOIN sales_order_line sol2 ON sol2.id = il2.sales_order_line_id
         JOIN rate r2 ON r2.id = sol2.unit_price_id
+        JOIN unit q2u ON q2u.id = q2.unit_id
+        JOIN unit r2u ON r2u.id = r2.denominator_unit_id
         WHERE il2.invoice_id = inv.id
     ), 0) AS total_invoiced
 FROM invoice inv
@@ -1038,11 +1079,15 @@ SELECT
     -- Counts and sums through scalar subqueries: joining invoice_line fans out rows and breaks the cursor.
     (SELECT COUNT(*) FROM invoice_line il WHERE il.invoice_id = inv.id) AS line_count,
     COALESCE((
-        SELECT SUM(q.value * r.value)
+        -- Each line priced as the dashboard's multiplyRate does and rounded to the cent, as its
+        -- calculateTotalInvoiced sums them (see the line-pricing skill).
+        SELECT SUM(ROUND(CASE WHEN q.unit_id = r.denominator_unit_id THEN q.value * r.value ELSE (q.value * qu.ratio_numerator / qu.ratio_denominator) * (r.value / (ru.ratio_numerator / ru.ratio_denominator)) END, 2))
         FROM invoice_line il2
         JOIN quantity q ON q.id = il2.quantity_id
         JOIN sales_order_line sol ON sol.id = il2.sales_order_line_id
         JOIN rate r ON r.id = sol.unit_price_id
+        JOIN unit qu ON qu.id = q.unit_id
+        JOIN unit ru ON ru.id = r.denominator_unit_id
         WHERE il2.invoice_id = inv.id
     ), 0) AS total_invoiced,
     CASE WHEN EXISTS (
@@ -1343,11 +1388,15 @@ SELECT
     -- Counts and sums through scalar subqueries: joining invoice_line fans out rows and breaks the cursor.
     (SELECT COUNT(*) FROM invoice_line il WHERE il.invoice_id = inv.id) AS line_count,
     COALESCE((
-        SELECT SUM(q.value * r.value)
+        -- Each line priced as the dashboard's multiplyRate does and rounded to the cent, as its
+        -- calculateTotalInvoiced sums them (see the line-pricing skill).
+        SELECT SUM(ROUND(CASE WHEN q.unit_id = r.denominator_unit_id THEN q.value * r.value ELSE (q.value * qu.ratio_numerator / qu.ratio_denominator) * (r.value / (ru.ratio_numerator / ru.ratio_denominator)) END, 2))
         FROM invoice_line il2
         JOIN quantity q ON q.id = il2.quantity_id
         JOIN sales_order_line sol ON sol.id = il2.sales_order_line_id
         JOIN rate r ON r.id = sol.unit_price_id
+        JOIN unit qu ON qu.id = q.unit_id
+        JOIN unit ru ON ru.id = r.denominator_unit_id
         WHERE il2.invoice_id = inv.id
     ), 0) AS total_invoiced,
     CASE WHEN EXISTS (

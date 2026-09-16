@@ -68,7 +68,7 @@ func TestBuildInvoiceDoc_IdentityComesFromTheInvoiceAndCustomer(t *testing.T) {
 	t.Parallel()
 
 	lines, invoice, order := invoiceDocFixture()
-	doc := buildInvoiceDoc(invoice, lines, order, &domain.Account{Name: "Seller Co"}, nil, nil, nil)
+	doc := buildInvoiceDoc(invoice, lines, order, &domain.Account{Name: "Seller Co"}, nil, nil, nil, invoiceDocLookups{})
 
 	assert.Equal(t, "INVOICE", doc.Header.DocumentTitle)
 	assert.Equal(t, "Invoice Number", doc.Header.NumberLabel)
@@ -95,7 +95,7 @@ func TestBuildInvoiceDoc_LinesSplitOrderedFromInvoiced(t *testing.T) {
 	t.Parallel()
 
 	lines, invoice, order := invoiceDocFixture()
-	doc := buildInvoiceDoc(invoice, lines, order, nil, nil, nil, nil)
+	doc := buildInvoiceDoc(invoice, lines, order, nil, nil, nil, nil, invoiceDocLookups{})
 
 	require.Len(t, doc.Lines, 2)
 
@@ -125,7 +125,7 @@ func TestBuildInvoiceDoc_CasesTable(t *testing.T) {
 		{Number: "INV-9-2"},
 	}
 
-	doc := buildInvoiceDoc(invoice, lines, order, nil, nil, cases, nil)
+	doc := buildInvoiceDoc(invoice, lines, order, nil, nil, cases, nil, invoiceDocLookups{})
 
 	require.Len(t, doc.Cases, 2)
 	assert.Equal(t, "INV-9-1", doc.Cases[0].Number)
@@ -140,7 +140,7 @@ func TestInvoiceDoc_EmailParams(t *testing.T) {
 	t.Parallel()
 
 	lines, invoice, order := invoiceDocFixture()
-	doc := buildInvoiceDoc(invoice, lines, order, &domain.Account{Name: "Seller Co"}, nil, nil, nil)
+	doc := buildInvoiceDoc(invoice, lines, order, &domain.Account{Name: "Seller Co"}, nil, nil, nil, invoiceDocLookups{})
 
 	params := doc.emailParams("https://track.example/1Z")
 
@@ -169,7 +169,7 @@ func TestBuildInvoiceDoc_CustomerNumberUsesAccountPadding(t *testing.T) {
 
 	lines, invoice, order := invoiceDocFixture()
 	order.CustomerNumber = "8841"
-	doc := buildInvoiceDoc(invoice, lines, order, nil, nil, nil, nil)
+	doc := buildInvoiceDoc(invoice, lines, order, nil, nil, nil, nil, invoiceDocLookups{})
 
 	assert.Equal(t, "08841", doc.Header.CustomerNumber)
 	assert.Equal(t, "8841", doc.Header.CustomerNumberRaw)
@@ -190,12 +190,12 @@ func TestBuildInvoicePDF_RendersAndDegrades(t *testing.T) {
 	t.Parallel()
 
 	lines, invoice, order := invoiceDocFixture()
-	pdfBytes, err := buildInvoicePDF(buildInvoiceDoc(invoice, lines, order, &domain.Account{Name: "Seller Co"}, nil, nil, nil))
+	pdfBytes, err := buildInvoicePDF(buildInvoiceDoc(invoice, lines, order, &domain.Account{Name: "Seller Co"}, nil, nil, nil, invoiceDocLookups{}))
 	require.NoError(t, err)
 	assert.True(t, bytes.HasPrefix(pdfBytes, []byte("%PDF")))
 
 	// A bare invoice with no order, lines or cases must still produce a document.
-	bare, err := buildInvoicePDF(buildInvoiceDoc(&domain.Invoice{Number: "1", CreatedAt: time.Now().UTC()}, nil, nil, nil, nil, nil, nil))
+	bare, err := buildInvoicePDF(buildInvoiceDoc(&domain.Invoice{Number: "1", CreatedAt: time.Now().UTC()}, nil, nil, nil, nil, nil, nil, invoiceDocLookups{}))
 	require.NoError(t, err)
 	assert.True(t, bytes.HasPrefix(bare, []byte("%PDF")))
 }

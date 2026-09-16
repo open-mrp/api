@@ -187,9 +187,10 @@ func NewRabbitMQ(ctx context.Context, config *RabbitMQConfig) (MessageBroker, er
 // ConsumeMessages starts consuming from the given queue in a background goroutine. The goroutine runs an infinite loop that re-establishes the channel and consumer on any connection interruption. Deliveries are processed by a pool of Concurrency worker goroutines (default 1); for each delivery:
 //  1. The message is wrapped in a traced span via tracing.TracedConsumer.
 //  2. The handler is called with exponential backoff retries (via retry.WithBackoff).
-//  3. On success the delivery is ACKed. On exhausted retries the delivery is rejected
-//     without requeue, sending it to the dead-letter queue with diagnostic headers
-//     (x-death-reason, x-retry-count, etc.).
+//  3. On success the delivery is ACKed. On exhausted retries a copy carrying diagnostic
+//     headers (x-death-reason, x-original-queue, x-retry-count, etc.) is published to the
+//     dead-letter exchange and the delivery is ACKed; if that publish fails it is rejected
+//     to the dead-letter queue without them.
 //  4. A delivery whose inbox lease is held elsewhere, or whose retries were cut short by
 //     shutdown, is requeued instead.
 //
@@ -224,6 +225,8 @@ func (r *rabbitMQ) consume(ctx context.Context, queueName string, declareQueue f
 
 	ctx, stop := r.untilClosed(ctx)
 	consumerTag := queueName + "." + instanceSuffix()
+	// Instance fan-out queues have no dead-letter routing: dropping a failed realtime event is their contract.
+	deadLetters := declareQueue == nil
 
 	r.consumers.Add(1)
 	go func() {
@@ -316,7 +319,7 @@ func (r *rabbitMQ) consume(ctx context.Context, queueName string, declareQueue f
 			for range concurrency {
 				wg.Go(func() {
 					for msg := range msgs {
-						r.processDelivery(ctx, queueName, handler, msg)
+						r.processDelivery(ctx, queueName, handler, msg, deadLetters)
 					}
 				})
 			}
@@ -348,8 +351,8 @@ func (r *rabbitMQ) consume(ctx context.Context, queueName string, declareQueue f
 	return nil
 }
 
-// processDelivery handles one AMQP delivery: traced span, handler invocation with backoff retries, ACK on success, requeue when the inbox lease is held or shutdown cuts retries short, and rejection to the dead-letter queue (with diagnostic headers) otherwise.
-func (r *rabbitMQ) processDelivery(ctx context.Context, queueName string, handler MessageHandler, msg amqp.Delivery) {
+// processDelivery handles one AMQP delivery: traced span, handler invocation with backoff retries, ACK on success, requeue when the inbox lease is held or shutdown cuts retries short, and otherwise dead-lettering with diagnostic headers, or dropping when the queue has no dead-letter routing.
+func (r *rabbitMQ) processDelivery(ctx context.Context, queueName string, handler MessageHandler, msg amqp.Delivery, deadLetters bool) {
 	select {
 	case <-ctx.Done():
 		return
@@ -387,21 +390,12 @@ func (r *rabbitMQ) processDelivery(ctx context.Context, queueName string, handle
 			}
 			return err
 		}
-		if err != nil {
-			// Add failure context before sending to the DLQ
-			headers := amqp.Table{}
-			if d.Headers != nil {
-				headers = d.Headers
-			}
-
-			headers["x-death-reason"] = err.Error()
-			headers["x-origin-exchange"] = d.Exchange
-			headers["x-original-routing-key"] = d.RoutingKey
-			headers["x-retry-count"] = retryCfg.MaxRetries
-			d.Headers = headers
-
-			// Reject without requeue - message will go to the DLQ
+		if err != nil && !deadLetters {
 			_ = d.Reject(false)
+			return err
+		}
+		if err != nil {
+			r.deadLetter(handlerCtx, queueName, d, err, retryCfg.MaxRetries)
 			return err
 		}
 
@@ -414,6 +408,48 @@ func (r *rabbitMQ) processDelivery(ctx context.Context, queueName string, handle
 	}); err != nil {
 		slog.Error("Error processing message", "error", apierror.Describe(err))
 	}
+}
+
+// deadLetterPublishTimeout bounds the publish that parks a failed delivery.
+const deadLetterPublishTimeout = 5 * time.Second
+
+// deadLetter parks a failed delivery with the reason it failed. A reject cannot carry that — the broker dead-letters the delivery exactly as received — so a copy carrying the reason is published to the dead-letter exchange, and the original is acked only once the broker confirms the copy.
+func (r *rabbitMQ) deadLetter(ctx context.Context, queueName string, d amqp.Delivery, cause error, retries int) {
+	headers := d.Headers
+	if headers == nil {
+		headers = amqp.Table{}
+	}
+	headers["x-death-reason"] = cause.Error()
+	headers["x-origin-exchange"] = d.Exchange
+	headers["x-original-routing-key"] = d.RoutingKey
+	headers["x-original-queue"] = queueName
+	headers["x-retry-count"] = retries
+
+	if err := r.publishDeadLetter(ctx, d, headers); err != nil {
+		slog.Warn("Failed to dead-letter message with its reason, rejecting instead", "queue", queueName, "error", err)
+		_ = d.Reject(false)
+		return
+	}
+	if err := d.Ack(false); err != nil {
+		// The copy is parked but the original will be redelivered, so a later success leaves a stale copy in the DLQ.
+		slog.Error("Failed to ack dead-lettered message", "queue", queueName, "message_id", d.MessageId, "error", err)
+	}
+}
+
+func (r *rabbitMQ) publishDeadLetter(ctx context.Context, d amqp.Delivery, headers amqp.Table) error {
+	if r.publishFunc == nil || r.reconnectFunc == nil {
+		return errors.New("broker is not connected")
+	}
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), deadLetterPublishTimeout)
+	defer cancel()
+	return r.publishWithReconnect(ctx, deadLetterExchange, d.RoutingKey, amqp.Publishing{
+		Headers:      headers,
+		ContentType:  d.ContentType,
+		DeliveryMode: amqp.Persistent,
+		MessageId:    d.MessageId,
+		Timestamp:    d.Timestamp,
+		Body:         d.Body,
+	})
 }
 
 // requeueAfterLease holds the delivery until the lease blocking it should have lapsed, so the redelivery can claim an abandoned attempt.
@@ -749,15 +785,6 @@ func (r *rabbitMQ) setupExchangesAndQueues() error {
 		return err
 	}
 
-	// Notification event queues
-	if err := r.declareAndBindQueue(
-		NotifyEmailStatusQueue,
-		[]string{string(contracts.NotificationEventEmailSent), string(contracts.NotificationEventEmailFailed)},
-		ApplicationExchange,
-	); err != nil {
-		return err
-	}
-
 	// Email log event queue (internal to notification service)
 	if err := r.declareAndBindQueue(
 		NotificationEventEmailLogQueue,
@@ -1000,15 +1027,6 @@ func (r *rabbitMQ) setupExchangesAndQueues() error {
 	if err := r.declareAndBindQueue(
 		BillingEventStripeWebhookQueue,
 		[]string{string(contracts.BillingEventStripeWebhook)},
-		ApplicationExchange,
-	); err != nil {
-		return err
-	}
-
-	// Billing sync seats command queue (handled by billing-service)
-	if err := r.declareAndBindQueue(
-		BillingCmdSyncSeatsQueue,
-		[]string{string(contracts.BillingCmdSyncSeats)},
 		ApplicationExchange,
 	); err != nil {
 		return err

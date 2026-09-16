@@ -92,6 +92,10 @@ func (r *requestLogRepoImpl) Create(ctx context.Context, rl *domain.RequestLog) 
 		RequestBodyJson:      bodyJSON,
 		ResponseBodyJson:     responseJSON,
 	})
+	// The id is the request's own, so a duplicate is a redelivery of a log already stored.
+	if db.IsDuplicateEntry(err) {
+		return nil
+	}
 	if err != nil {
 		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to create request log."))
 	}

@@ -151,9 +151,6 @@ const (
 	// AgentEventRunStep is an event carrying a single run step for real-time WebSocket streaming to the frontend.
 	AgentEventRunStep AmqpRoutingKey = "agent.event.run_step"
 
-	// BillingCmdSyncSeats is a command to synchronize seat counts with the billing provider after account user changes.
-	BillingCmdSyncSeats AmqpRoutingKey = "billing.cmd.sync_seats"
-
 	// BillingCmdReportSeatChange is a command to report a seat count change to the billing provider's usage metering system.
 	BillingCmdReportSeatChange AmqpRoutingKey = "billing.cmd.report_seat_change"
 

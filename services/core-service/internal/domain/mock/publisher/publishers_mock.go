@@ -213,20 +213,6 @@ func (mr *MockBillingPublisherMockRecorder) PublishReportSeatChange(ctx, account
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishReportSeatChange", reflect.TypeOf((*MockBillingPublisher)(nil).PublishReportSeatChange), ctx, accountID)
 }
 
-// PublishSyncSeats mocks base method.
-func (m *MockBillingPublisher) PublishSyncSeats(ctx context.Context, accountID string) *apierror.APIError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PublishSyncSeats", ctx, accountID)
-	ret0, _ := ret[0].(*apierror.APIError)
-	return ret0
-}
-
-// PublishSyncSeats indicates an expected call of PublishSyncSeats.
-func (mr *MockBillingPublisherMockRecorder) PublishSyncSeats(ctx, accountID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishSyncSeats", reflect.TypeOf((*MockBillingPublisher)(nil).PublishSyncSeats), ctx, accountID)
-}
-
 // MockProductionScheduleEnqueuer is a mock of ProductionScheduleEnqueuer interface.
 type MockProductionScheduleEnqueuer struct {
 	ctrl     *gomock.Controller

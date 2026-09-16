@@ -72,7 +72,7 @@ func TestProcessDeliveryAcksOnSuccess(t *testing.T) {
 
 	r.processDelivery(context.Background(), "test-queue", func(context.Context, amqp.Delivery) error {
 		return nil
-	}, delivery)
+	}, delivery, true)
 
 	if !ack.acked {
 		t.Error("expected delivery to be acked on handler success")
@@ -93,7 +93,7 @@ func TestProcessDeliveryRejectsToDLQOnFailure(t *testing.T) {
 	r.processDelivery(context.Background(), "test-queue", func(context.Context, amqp.Delivery) error {
 		calls++
 		return errors.New("handler failure")
-	}, delivery)
+	}, delivery, true)
 
 	if !ack.rejected {
 		t.Error("expected delivery to be rejected after retry exhaustion")
@@ -123,7 +123,7 @@ func TestProcessDeliverySkipsWhenContextCancelled(t *testing.T) {
 	r.processDelivery(ctx, "test-queue", func(context.Context, amqp.Delivery) error {
 		called = true
 		return nil
-	}, delivery)
+	}, delivery, true)
 
 	if called {
 		t.Error("expected handler to be skipped when context is cancelled")
@@ -169,7 +169,7 @@ func TestProcessDeliverySwallowsAckFailure(t *testing.T) {
 
 	r.processDelivery(context.Background(), "test-queue", func(context.Context, amqp.Delivery) error {
 		return nil
-	}, delivery)
+	}, delivery, true)
 
 	if ack.acks != 1 {
 		t.Errorf("expected exactly one ack attempt, got %d", ack.acks)
@@ -189,7 +189,7 @@ func TestProcessDeliverySwallowsRejectFailure(t *testing.T) {
 
 	r.processDelivery(context.Background(), "test-queue", func(context.Context, amqp.Delivery) error {
 		return errors.New("handler failure")
-	}, delivery)
+	}, delivery, true)
 
 	if ack.rejects != 1 {
 		t.Errorf("expected exactly one reject attempt, got %d", ack.rejects)
@@ -215,7 +215,7 @@ func TestProcessDeliveryStampsDeadLetterHeaders(t *testing.T) {
 
 	r.processDelivery(context.Background(), "test-queue", func(context.Context, amqp.Delivery) error {
 		return errors.New("handler failure")
-	}, delivery)
+	}, delivery, true)
 
 	if got := headers["x-death-reason"]; got != "handler failure" {
 		t.Errorf("expected the handler error as x-death-reason, got %v", got)
@@ -251,7 +251,7 @@ func TestProcessDeliveryRequeuesInsteadOfRetryingWhenShuttingDown(t *testing.T) 
 		cancel()
 		handlerCtxErr = handlerCtx.Err()
 		return errors.New("handler failure")
-	}, delivery)
+	}, delivery, true)
 
 	// The attempt already running must finish, so shutdown cannot cancel its context.
 	if handlerCtxErr != nil {
@@ -276,7 +276,7 @@ func TestProcessDeliveryRequeuesLeaseHeldWithoutRetrying(t *testing.T) {
 	r.processDelivery(context.Background(), "test-queue", func(context.Context, amqp.Delivery) error {
 		calls++
 		return &InboxLeaseHeldError{ExpiresAt: time.Now().Add(time.Minute)}
-	}, delivery)
+	}, delivery, true)
 
 	if calls != 1 {
 		t.Errorf("expected a held lease to skip the retry ladder, got %d calls", calls)
@@ -301,7 +301,7 @@ func TestProcessDeliveryRequeuesLeaseHeldPromptlyWhenShuttingDown(t *testing.T) 
 	r.processDelivery(ctx, "test-queue", func(context.Context, amqp.Delivery) error {
 		cancel()
 		return &InboxLeaseHeldError{ExpiresAt: time.Now().Add(time.Minute)}
-	}, delivery)
+	}, delivery, true)
 
 	if elapsed := time.Since(start); elapsed > time.Second {
 		t.Errorf("expected shutdown to cut the lease wait short, waited %v", elapsed)
@@ -330,5 +330,94 @@ func TestLeaseRequeueWaitIsBounded(t *testing.T) {
 		if !ack.requeue {
 			t.Errorf("%s: expected the delivery to be requeued", name)
 		}
+	}
+}
+
+func TestProcessDeliveryPublishesDeadLetterWithReason(t *testing.T) {
+	t.Parallel()
+
+	var exchange, routingKey string
+	var published amqp.Publishing
+	r := &rabbitMQ{consumerRetry: fastConsumerRetry()}
+	r.reconnectFunc = func(context.Context) error { return nil }
+	r.publishFunc = func(_ context.Context, ex, rk string, msg amqp.Publishing) error {
+		exchange, routingKey, published = ex, rk, msg
+		return nil
+	}
+
+	ack := &fakeAcknowledger{}
+	delivery := amqp.Delivery{
+		Acknowledger: ack,
+		RoutingKey:   "logging.event.request_logged",
+		MessageId:    "mg_1",
+		Body:         []byte(`{}`),
+	}
+
+	r.processDelivery(context.Background(), "logging_event_request_log", func(context.Context, amqp.Delivery) error {
+		return errors.New("handler failure")
+	}, delivery, true)
+
+	if exchange != deadLetterExchange || routingKey != "logging.event.request_logged" {
+		t.Errorf("expected a publish to %s with the original routing key, got %q %q", deadLetterExchange, exchange, routingKey)
+	}
+	if got := published.Headers["x-death-reason"]; got != "handler failure" {
+		t.Errorf("expected the handler error as x-death-reason, got %v", got)
+	}
+	if got := published.Headers["x-original-queue"]; got != "logging_event_request_log" {
+		t.Errorf("expected x-original-queue, got %v", got)
+	}
+	if published.MessageId != "mg_1" || string(published.Body) != `{}` || published.DeliveryMode != amqp.Persistent {
+		t.Errorf("expected the copy to preserve the message, got %+v", published)
+	}
+	// The copy is parked, so the original must be acked rather than rejected into a second DLQ entry.
+	if !ack.acked || ack.rejected {
+		t.Errorf("expected the original to be acked only, got acked=%v rejected=%v", ack.acked, ack.rejected)
+	}
+}
+
+func TestProcessDeliveryRejectsWhenDeadLetterPublishFails(t *testing.T) {
+	t.Parallel()
+
+	r := &rabbitMQ{consumerRetry: fastConsumerRetry()}
+	r.reconnectFunc = func(context.Context) error { return nil }
+	r.publishFunc = func(context.Context, string, string, amqp.Publishing) error {
+		return errors.New("not confirmed")
+	}
+
+	ack := &fakeAcknowledger{}
+	r.processDelivery(context.Background(), "test-queue", func(context.Context, amqp.Delivery) error {
+		return errors.New("handler failure")
+	}, amqp.Delivery{Acknowledger: ack, Body: []byte(`{}`)}, true)
+
+	if ack.acked {
+		t.Error("expected no ack when the dead-letter copy was not confirmed")
+	}
+	if !ack.rejected || ack.requeue {
+		t.Error("expected a reject without requeue so the broker still dead-letters the message")
+	}
+}
+
+func TestProcessDeliveryDropsFanoutFailuresWithoutDeadLettering(t *testing.T) {
+	t.Parallel()
+
+	published := false
+	r := &rabbitMQ{consumerRetry: fastConsumerRetry()}
+	r.reconnectFunc = func(context.Context) error { return nil }
+	r.publishFunc = func(context.Context, string, string, amqp.Publishing) error {
+		published = true
+		return nil
+	}
+
+	ack := &fakeAcknowledger{}
+	r.processDelivery(context.Background(), "agent_event_run_step.host.abcd", func(context.Context, amqp.Delivery) error {
+		return errors.New("handler failure")
+	}, amqp.Delivery{Acknowledger: ack, Body: []byte(`{}`)}, false)
+
+	// Fan-out queues have no dead-letter routing, so a realtime event that fails is dropped rather than parked.
+	if published {
+		t.Error("expected no dead-letter publish for a fan-out queue")
+	}
+	if !ack.rejected || ack.requeue || ack.acked {
+		t.Errorf("expected a plain reject without requeue, got acked=%v rejected=%v requeue=%v", ack.acked, ack.rejected, ack.requeue)
 	}
 }

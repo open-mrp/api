@@ -36,6 +36,6 @@ type MessageBroker interface {
 	ConsumeFanout(ctx context.Context, baseName string, routingKeys []string, handler MessageHandler, opts ...ConsumeOption) error
 	// IsReady reports whether the broker connection and channel are ready for use.
 	IsReady() bool
-	// Close shuts down the AMQP channel and connection. Safe to call multiple times.
+	// Close stops consumers, waits briefly for their in-flight deliveries, then shuts down the AMQP channel and connection. Safe to call multiple times.
 	Close()
 }

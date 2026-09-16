@@ -270,12 +270,12 @@ func (s *InboxConsumerTestSuite) TestWrap_DuplicateMessage_LeaseLapsed_ClaimsAnd
 
 // The case the lease exists for: a redelivery arriving while the first attempt is still running must not run the handler alongside it. Re-invoking here is what applied a committed-but-unmarked message a second time.
 func (s *InboxConsumerTestSuite) TestWrap_DuplicateMessage_LeaseHeld_DoesNotRunHandler() {
+	live := time.Now().Add(time.Minute)
 	repo := &mockInboxRepo{
 		tryInsertFn: func(_ context.Context, _ InboxRecordInput) (int64, error) {
 			return 0, mysqlDupError()
 		},
 		getByMessageAndHandler: func(_ context.Context, _, _ string) (*InboxRecord, error) {
-			live := time.Now().Add(time.Minute)
 			return &InboxRecord{
 				ID:            1,
 				Status:        InboxStatusReceived,
@@ -298,6 +298,10 @@ func (s *InboxConsumerTestSuite) TestWrap_DuplicateMessage_LeaseHeld_DoesNotRunH
 
 	err := wrapped(context.Background(), deliveryWithMessageID("msg_inflight"))
 	s.ErrorIs(err, ErrInboxLeaseHeld)
+	// The consumer times its requeue from the expiry, so it must come through.
+	var held *InboxLeaseHeldError
+	s.Require().ErrorAs(err, &held)
+	s.True(held.ExpiresAt.Equal(live))
 	s.False(handlerCalled)
 }
 

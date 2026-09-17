@@ -424,13 +424,13 @@ func (s *productionScheduleSvcImpl) loadSolverInput(
 
 	itemIDs := scheduleSortedKeys(constraintItemIDs)
 
-	// 4. Walk the batch genealogy forward to the finished goods each item becomes.
-	descendantItemsByItem, apiErr := s.walkDescendants(ctx, repo, params.AccountID, itemIDs, windowStart, params.PlanningAsOf, params.Settings.MaxFlowDepthOrDefault())
+	// 4. Walk the production-flow graph forward to every downstream stage each constraint item becomes.
+	descendantItemsByItem, apiErr := s.walkDescendants(ctx, repo, params.AccountID, itemIDs, params.Settings.MaxFlowDepthOrDefault())
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// 5. Echelon on hand: the constraint item plus everything downstream of it. The buffer is pooled at the constraint, so stock held as finished goods still counts against the decision to build more.
+	// 5. Echelon on hand: the constraint item plus every downstream stage of it. The buffer is pooled at the constraint, so stock sitting anywhere ahead — sewn, washed, or packed as a finished good — is already on its way to becoming sellable and still counts against the decision to build more.
 	allInventoryItems := map[string]bool{}
 	for _, id := range itemIDs {
 		allInventoryItems[id] = true
@@ -547,7 +547,7 @@ func (s *productionScheduleSvcImpl) loadFinishingInput(
 			}
 			finishedItemIDs[finished.ItemID] = true
 			if _, taken := greigeByFinished[finished.ItemID]; !taken {
-				// First wins, matching how the genealogy walk attributes a descendant reachable from two constraint items.
+				// First wins, matching how the flow walk attributes a descendant reachable from two constraint items.
 				greigeByFinished[finished.ItemID] = greigeItemID
 			}
 		}
@@ -679,72 +679,55 @@ func (s *productionScheduleSvcImpl) loadLotResolutionInput(
 	return lotInput, nil
 }
 
-// walkDescendants follows the batch genealogy forward, one level at a time with the whole frontier batched into each query. Returns the finished-good item ids reachable from each constraint item.
+// walkDescendants follows the production-flow graph forward, one level at a time with the whole frontier batched into each query. Returns the downstream stage item ids reachable from each constraint item.
 //
-// Attribution is first-wins when a descendant is reachable from more than one constraint item, and the walk starts from SKU-sorted items so that choice is stable. The script left this to JavaScript map ordering, which is why the same input could produce different echelon stock between runs.
+// The routing graph, not batch genealogy, is what defines the echelon: a step consumes greige and produces sewn, sewn is consumed and washed produced, and so on down to the packed finished good. Every one of those stages holds stock that will become a finished good, so it has to count against the decision to build more. Genealogy could not see it — its edges (_batch_flow) are written only when the floor links batches through move/split/merge, so a plant that scans each stage as its own batch produced no edges and the walk collapsed to the constraint item alone.
+//
+// Attribution is first-wins when a stage is reachable from more than one constraint item, and the walk starts from SKU-sorted items so that choice is stable. A constraint item that is itself downstream of another is left rooted to itself rather than folded into the other's echelon, so its stock is never counted twice. The visited set doubles as the cycle guard: a routing loop cannot re-expand an item already reached.
 func (s *productionScheduleSvcImpl) walkDescendants(
 	ctx context.Context,
 	repo domain.ProductionScheduleInputRepo,
 	accountID string,
 	itemIDs []string,
-	windowStart, windowEnd time.Time,
 	maxDepth int,
 ) (map[string][]string, *apierror.APIError) {
-	// Every scan in the demand window seeds the walk. Sampling recent batches misses finished goods that only older batches flowed to, and stock held that way still has to count against the decision to build more.
-	seedRows, apiErr := repo.GetSeedBatchesForItems(ctx, domain.GetSeedBatchesParams{
-		AccountID:   accountID,
-		ItemIDs:     itemIDs,
-		WindowStart: windowStart,
-		WindowEnd:   windowEnd,
-	})
-	if apiErr != nil {
-		return nil, apiErr
-	}
-
-	// Batch -> the constraint item it descends from. First writer wins.
-	rootByBatch := map[string]string{}
-	frontier := make([]string, 0, len(seedRows))
-
-	for _, row := range seedRows {
-		if _, taken := rootByBatch[row.BatchID]; taken {
+	// Item -> the constraint item whose echelon it belongs to. Also the visited set: an item present here has been reached and must not be expanded again. Each constraint item roots itself.
+	rootByItem := make(map[string]string, len(itemIDs))
+	frontier := make([]string, 0, len(itemIDs))
+	for _, itemID := range itemIDs {
+		if _, taken := rootByItem[itemID]; taken {
 			continue
 		}
-		rootByBatch[row.BatchID] = row.ItemID
-		frontier = append(frontier, row.BatchID)
+		rootByItem[itemID] = itemID
+		frontier = append(frontier, itemID)
 	}
 
 	descendants := map[string]map[string]bool{}
-	claimedItem := map[string]string{} // descendant item -> owning constraint item
 
 	for depth := 0; depth < maxDepth && len(frontier) > 0; depth++ {
 		sort.Strings(frontier)
 
-		childRows, apiErr := repo.GetBatchFlowChildren(ctx, accountID, frontier)
+		childRows, apiErr := repo.GetProductionFlowChildrenByItem(ctx, accountID, frontier)
 		if apiErr != nil {
 			return nil, apiErr
 		}
 
 		next := make([]string, 0, len(childRows))
 		for _, row := range childRows {
-			rootItemID, ok := rootByBatch[row.ParentBatchID]
+			rootItemID, ok := rootByItem[row.ParentItemID]
 			if !ok {
 				continue
 			}
-			if _, seen := rootByBatch[row.BatchID]; seen {
-				continue // already reached by another path
+			if _, seen := rootByItem[row.ChildItemID]; seen {
+				continue // already reached by another path, or a constraint item in its own right; first-wins
 			}
-			rootByBatch[row.BatchID] = rootItemID
-			next = append(next, row.BatchID)
+			rootByItem[row.ChildItemID] = rootItemID
+			next = append(next, row.ChildItemID)
 
-			// Attribute the item to the first constraint item that reaches it, so a shared finished good is not double-counted into two echelons.
-			if owner, taken := claimedItem[row.ItemID]; taken && owner != rootItemID {
-				continue
-			}
-			claimedItem[row.ItemID] = rootItemID
 			if descendants[rootItemID] == nil {
 				descendants[rootItemID] = map[string]bool{}
 			}
-			descendants[rootItemID][row.ItemID] = true
+			descendants[rootItemID][row.ChildItemID] = true
 		}
 		frontier = next
 	}

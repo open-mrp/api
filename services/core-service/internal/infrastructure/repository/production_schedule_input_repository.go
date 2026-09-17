@@ -294,54 +294,28 @@ func (r *productionScheduleInputRepoImpl) GetStepConsumptionItems(
 	return out, nil
 }
 
-// GetSeedBatchesForItems returns every scanned batch for the given items inside the window, most recent first per item, to start the genealogy walk from.
-func (r *productionScheduleInputRepoImpl) GetSeedBatchesForItems(
-	ctx context.Context,
-	params domain.GetSeedBatchesParams,
-) ([]domain.SeedBatchRow, *apierror.APIError) {
-	ctx, span := scheduleInputRepoTracer.Start(ctx, "repository.production_schedule_input.get_seed_batches")
-	defer span.End()
-
-	rows, err := r.queries.GetSeedBatchesForItems(ctx, sqlc.GetSeedBatchesForItemsParams{
-		AccountID:   params.AccountID,
-		ItemIds:     params.ItemIDs,
-		WindowStart: gosql.NullTime{Time: params.WindowStart, Valid: true},
-		WindowEnd:   gosql.NullTime{Time: params.WindowEnd, Valid: true},
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	var out []domain.SeedBatchRow
-	for _, row := range rows {
-		out = append(out, domain.SeedBatchRow{BatchID: row.BatchID, ItemID: row.ItemID})
-	}
-	return out, nil
-}
-
-// GetBatchFlowChildren returns the immediate downstream batches of the given parent batches, one genealogy level in one query.
-func (r *productionScheduleInputRepoImpl) GetBatchFlowChildren(
+// GetProductionFlowChildrenByItem returns the immediate downstream stage of each given item in the routing graph, one level in one query: the item each consuming step produces.
+func (r *productionScheduleInputRepoImpl) GetProductionFlowChildrenByItem(
 	ctx context.Context,
 	accountID string,
-	parentBatchIDs []string,
-) ([]domain.BatchFlowChildRow, *apierror.APIError) {
-	ctx, span := scheduleInputRepoTracer.Start(ctx, "repository.production_schedule_input.get_batch_flow_children")
+	parentItemIDs []string,
+) ([]domain.ProductionFlowChildRow, *apierror.APIError) {
+	ctx, span := scheduleInputRepoTracer.Start(ctx, "repository.production_schedule_input.get_production_flow_children_by_item")
 	defer span.End()
 
-	rows, err := r.queries.GetBatchFlowChildren(ctx, sqlc.GetBatchFlowChildrenParams{
-		AccountID:      accountID,
-		ParentBatchIds: parentBatchIDs,
+	rows, err := r.queries.GetProductionFlowChildrenByItem(ctx, sqlc.GetProductionFlowChildrenByItemParams{
+		AccountID:     accountID,
+		ParentItemIds: parentItemIDs,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	var out []domain.BatchFlowChildRow
+	var out []domain.ProductionFlowChildRow
 	for _, row := range rows {
-		out = append(out, domain.BatchFlowChildRow{
-			ParentBatchID: row.ParentBatchID,
-			BatchID:       row.BatchID,
-			ItemID:        row.ItemID,
+		out = append(out, domain.ProductionFlowChildRow{
+			ParentItemID: row.ParentItemID,
+			ChildItemID:  row.ChildItemID,
 		})
 	}
 	return out, nil

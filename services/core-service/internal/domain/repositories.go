@@ -1052,7 +1052,7 @@ type ScheduleAttainmentRepo interface {
 	GetItemLabels(ctx context.Context, accountID string, ids []string) ([]AttainmentLabelRow, *apierror.APIError)
 }
 
-// ProductionScheduleInputRepo is the thin read surface behind solver-input assembly. Each method is one query mapped to domain or scheduling types; the assembly itself — genealogy attribution, demand pooling, settings defaulting — lives in the production schedule service.
+// ProductionScheduleInputRepo is the thin read surface behind solver-input assembly. Each method is one query mapped to domain or scheduling types; the assembly itself — flow-graph attribution, demand pooling, settings defaulting — lives in the production schedule service.
 type ProductionScheduleInputRepo interface {
 	// GetConstraintMachines returns every planned machine in the constraint department, in name order.
 	GetConstraintMachines(ctx context.Context, accountID, departmentID string) ([]scheduling.Machine, *apierror.APIError)
@@ -1075,11 +1075,8 @@ type ProductionScheduleInputRepo interface {
 	// GetStepConsumptionItems returns the input items each production step consumes.
 	GetStepConsumptionItems(ctx context.Context, stepIDs []string) ([]StepConsumptionRow, *apierror.APIError)
 
-	// GetSeedBatchesForItems returns every scanned batch for the given items inside the demand window, to start the genealogy walk from.
-	GetSeedBatchesForItems(ctx context.Context, params GetSeedBatchesParams) ([]SeedBatchRow, *apierror.APIError)
-
-	// GetBatchFlowChildren returns the immediate downstream batches of the given parent batches.
-	GetBatchFlowChildren(ctx context.Context, accountID string, parentBatchIDs []string) ([]BatchFlowChildRow, *apierror.APIError)
+	// GetProductionFlowChildrenByItem returns the immediate downstream stage of each given item in the routing graph: the item each consuming step produces.
+	GetProductionFlowChildrenByItem(ctx context.Context, accountID string, parentItemIDs []string) ([]ProductionFlowChildRow, *apierror.APIError)
 
 	// GetEchelonOnHand returns available inventory per item, net of allocations, normalized through the unit ratio.
 	GetEchelonOnHand(ctx context.Context, accountID string, itemIDs []string) (map[string]float64, *apierror.APIError)

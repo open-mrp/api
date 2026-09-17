@@ -1312,17 +1312,13 @@ SELECT
             + COALESCE(qw.value * (u_qw.ratio_numerator / u_qw.ratio_denominator), 0)
             + COALESCE(qs.value * (u_qs.ratio_numerator / u_qs.ratio_denominator), 0)
         ) * COALESCE(
-            labor_time.value * CASE LOWER(TRIM(COALESCE(labor_time_unit.abbreviation, '')))
-                WHEN 'min' THEN 60
-                WHEN 'mins' THEN 60
-                WHEN 'minute' THEN 60
-                WHEN 'minutes' THEN 60
-                WHEN 'hr' THEN 3600
-                WHEN 'h' THEN 3600
-                WHEN 'hour' THEN 3600
-                WHEN 'hours' THEN 3600
-                ELSE 1
-            END,
+            -- Labor time to seconds via the numerator unit's own conversion columns, not a fixed
+            -- abbreviation table: ratio_numerator/ratio_denominator is the unit's size in the time
+            -- dimension's base (the hour), so seconds = value * (ratio) * 3600. Handles day and any
+            -- account-defined time unit, and stays in step with the solver's SecondsPerUnitFromLaborTime,
+            -- which reads the same columns. A missing numerator unit leaves the product NULL, so the
+            -- COALESCE books no standard time rather than guessing a scale.
+            labor_time.value * (labor_time_unit.ratio_numerator / labor_time_unit.ratio_denominator) * 3600,
             0
         )
     ), 0) AS DECIMAL(65,30)) AS standard_seconds_earned
@@ -1361,7 +1357,7 @@ type GetOeeDepartmentDataRow struct {
 
 // GetOeeDepartmentData returns the unit counts and the standard time earned per department.
 //
-// standard_seconds_earned is the numerator of OEE Performance: the time the work *should* have taken at the production step's own labor rate. The rate is a Rate whose numerator unit decides its scale, so it is converted to seconds here rather than in Go — the same conversion the solver applies in SecondsPerUnitFromLaborTime. An unrecognized unit is treated as seconds, matching the solver, so the two never disagree about what a run rate means.
+// standard_seconds_earned is the numerator of OEE Performance: the time the work *should* have taken at the production step's own labor rate. The rate is a Rate whose numerator unit decides its scale, converted to seconds via that unit's ratio_numerator/ratio_denominator (its size in the time base, the hour) rather than a hardcoded abbreviation table — the same conversion the solver applies in SecondsPerUnitFromLaborTime, which now reads the same columns, so the two never disagree about what a run rate means and both handle day and account-defined time units.
 //
 // Seconds-grade units count toward output but not toward good: they are sellable, but they are not first-pass quality, and leaving them out of the denominator would report a plant that produces nothing but irregulars as 100% quality.
 func (q *Queries) GetOeeDepartmentData(ctx context.Context, arg GetOeeDepartmentDataParams) ([]GetOeeDepartmentDataRow, error) {
@@ -1407,17 +1403,13 @@ SELECT
             + COALESCE(qw.value * (u_qw.ratio_numerator / u_qw.ratio_denominator), 0)
             + COALESCE(qs.value * (u_qs.ratio_numerator / u_qs.ratio_denominator), 0)
         ) * COALESCE(
-            labor_time.value * CASE LOWER(TRIM(COALESCE(labor_time_unit.abbreviation, '')))
-                WHEN 'min' THEN 60
-                WHEN 'mins' THEN 60
-                WHEN 'minute' THEN 60
-                WHEN 'minutes' THEN 60
-                WHEN 'hr' THEN 3600
-                WHEN 'h' THEN 3600
-                WHEN 'hour' THEN 3600
-                WHEN 'hours' THEN 3600
-                ELSE 1
-            END,
+            -- Labor time to seconds via the numerator unit's own conversion columns, not a fixed
+            -- abbreviation table: ratio_numerator/ratio_denominator is the unit's size in the time
+            -- dimension's base (the hour), so seconds = value * (ratio) * 3600. Handles day and any
+            -- account-defined time unit, and stays in step with the solver's SecondsPerUnitFromLaborTime,
+            -- which reads the same columns. A missing numerator unit leaves the product NULL, so the
+            -- COALESCE books no standard time rather than guessing a scale.
+            labor_time.value * (labor_time_unit.ratio_numerator / labor_time_unit.ratio_denominator) * 3600,
             0
         )
     ), 0) AS DECIMAL(65,30)) AS standard_seconds_earned
@@ -1461,7 +1453,7 @@ type GetOeeDepartmentDataForMachinesRow struct {
 
 // GetOeeDepartmentDataForMachines is GetOeeDepartmentData restricted to production on a given set of machines — the machines the plan scheduled.
 //
-// Performance divides the standard time earned by the scheduled machines' run time, so counting output from machines that were never scheduled would report a department running many times faster than the plant it was measured against. The service calls this variant for scheduled departments and the unrestricted query above for everything else; the two SELECT lists (including the standard_seconds_earned CASE) must stay identical so the scoped and whole-floor reads can never disagree about what a run rate means.
+// Performance divides the standard time earned by the scheduled machines' run time, so counting output from machines that were never scheduled would report a department running many times faster than the plant it was measured against. The service calls this variant for scheduled departments and the unrestricted query above for everything else; the two SELECT lists (including the standard_seconds_earned conversion) must stay identical so the scoped and whole-floor reads can never disagree about what a run rate means.
 func (q *Queries) GetOeeDepartmentDataForMachines(ctx context.Context, arg GetOeeDepartmentDataForMachinesParams) ([]GetOeeDepartmentDataForMachinesRow, error) {
 	query := getOeeDepartmentDataForMachines
 	var queryParams []interface{}
@@ -1577,133 +1569,6 @@ func (q *Queries) GetOeeDowntimeByDepartment(ctx context.Context, arg GetOeeDown
 	return items, nil
 }
 
-const getOeeEstimatedRuntime = `-- name: GetOeeEstimatedRuntime :many
-SELECT
-    department_id,
-    SUM(TIMESTAMPDIFF(SECOND, day_first, day_last)) AS runtime_seconds
-FROM (
-    SELECT
-        COALESCE(ss.department_id, 'unassigned') AS department_id,
-        DATE(b.scanned_at) AS scan_date,
-        MIN(b.scanned_at) AS day_first,
-        MAX(b.scanned_at) AS day_last
-    FROM batch b
-    LEFT JOIN scanning_station ss ON ss.id = b.scanning_station_id
-    WHERE b.account_id = ?
-      AND b.scanned_at >= ?
-      AND b.scanned_at <= ?
-    GROUP BY COALESCE(ss.department_id, 'unassigned'), DATE(b.scanned_at)
-) daily
-GROUP BY department_id
-`
-
-type GetOeeEstimatedRuntimeParams struct {
-	OwnerAccountID string
-	StartDate      sql.NullTime
-	EndDate        sql.NullTime
-}
-
-type GetOeeEstimatedRuntimeRow struct {
-	DepartmentID   string
-	RuntimeSeconds interface{}
-}
-
-func (q *Queries) GetOeeEstimatedRuntime(ctx context.Context, arg GetOeeEstimatedRuntimeParams) ([]GetOeeEstimatedRuntimeRow, error) {
-	rows, err := q.db.QueryContext(ctx, getOeeEstimatedRuntime, arg.OwnerAccountID, arg.StartDate, arg.EndDate)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetOeeEstimatedRuntimeRow
-	for rows.Next() {
-		var i GetOeeEstimatedRuntimeRow
-		if err := rows.Scan(&i.DepartmentID, &i.RuntimeSeconds); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getOeeEstimatedRuntimeForMachines = `-- name: GetOeeEstimatedRuntimeForMachines :many
-SELECT
-    department_id,
-    SUM(TIMESTAMPDIFF(SECOND, day_first, day_last)) AS runtime_seconds
-FROM (
-    SELECT
-        COALESCE(ss.department_id, 'unassigned') AS department_id,
-        bm.B AS machine_id,
-        DATE(b.scanned_at) AS scan_date,
-        MIN(b.scanned_at) AS day_first,
-        MAX(b.scanned_at) AS day_last
-    FROM batch b
-    JOIN _batches_machines bm ON bm.A = b.id AND bm.B IN (/*SLICE:machine_ids*/?)
-    LEFT JOIN scanning_station ss ON ss.id = b.scanning_station_id
-    WHERE b.account_id = ?
-      AND b.scanned_at >= ?
-      AND b.scanned_at <= ?
-    GROUP BY COALESCE(ss.department_id, 'unassigned'), bm.B, DATE(b.scanned_at)
-) daily
-GROUP BY department_id
-`
-
-type GetOeeEstimatedRuntimeForMachinesParams struct {
-	MachineIds     []string
-	OwnerAccountID string
-	StartDate      sql.NullTime
-	EndDate        sql.NullTime
-}
-
-type GetOeeEstimatedRuntimeForMachinesRow struct {
-	DepartmentID   string
-	RuntimeSeconds interface{}
-}
-
-// GetOeeEstimatedRuntimeForMachines is GetOeeEstimatedRuntime restricted to a set of machines — the machines the plan scheduled — and is the Operating Time OEE measures the scheduled machines against.
-//
-// Availability and Performance both divide by the time the equipment was actually running, and that time has to be measured on the same machines whose output fills the numerator: counting run time from machines the plan never listed, or output from them, would let a department read as running many times its own speed. Run time is summed per machine per day (MIN..MAX of that machine's scans), then rolled up, so a department's Operating Time is machine-hours — the same footing as the machine-hours the schedule planned. A single scan in a day spans zero seconds, the same understatement GetOeeEstimatedRuntime carries.
-func (q *Queries) GetOeeEstimatedRuntimeForMachines(ctx context.Context, arg GetOeeEstimatedRuntimeForMachinesParams) ([]GetOeeEstimatedRuntimeForMachinesRow, error) {
-	query := getOeeEstimatedRuntimeForMachines
-	var queryParams []interface{}
-	if len(arg.MachineIds) > 0 {
-		for _, v := range arg.MachineIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:machine_ids*/?", strings.Repeat(",?", len(arg.MachineIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:machine_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.OwnerAccountID)
-	queryParams = append(queryParams, arg.StartDate)
-	queryParams = append(queryParams, arg.EndDate)
-	rows, err := q.db.QueryContext(ctx, query, queryParams...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetOeeEstimatedRuntimeForMachinesRow
-	for rows.Next() {
-		var i GetOeeEstimatedRuntimeForMachinesRow
-		if err := rows.Scan(&i.DepartmentID, &i.RuntimeSeconds); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getOeeTrendDepartmentDataByWeek = `-- name: GetOeeTrendDepartmentDataByWeek :many
 SELECT
     DATE(DATE_SUB(b.scanned_at, INTERVAL ((DAYOFWEEK(b.scanned_at) + 6 - CAST(? AS SIGNED)) % 7) DAY)) AS week_start_date,
@@ -1718,17 +1583,13 @@ SELECT
             + COALESCE(qw.value * (u_qw.ratio_numerator / u_qw.ratio_denominator), 0)
             + COALESCE(qs.value * (u_qs.ratio_numerator / u_qs.ratio_denominator), 0)
         ) * COALESCE(
-            labor_time.value * CASE LOWER(TRIM(COALESCE(labor_time_unit.abbreviation, '')))
-                WHEN 'min' THEN 60
-                WHEN 'mins' THEN 60
-                WHEN 'minute' THEN 60
-                WHEN 'minutes' THEN 60
-                WHEN 'hr' THEN 3600
-                WHEN 'h' THEN 3600
-                WHEN 'hour' THEN 3600
-                WHEN 'hours' THEN 3600
-                ELSE 1
-            END,
+            -- Labor time to seconds via the numerator unit's own conversion columns, not a fixed
+            -- abbreviation table: ratio_numerator/ratio_denominator is the unit's size in the time
+            -- dimension's base (the hour), so seconds = value * (ratio) * 3600. Handles day and any
+            -- account-defined time unit, and stays in step with the solver's SecondsPerUnitFromLaborTime,
+            -- which reads the same columns. A missing numerator unit leaves the product NULL, so the
+            -- COALESCE books no standard time rather than guessing a scale.
+            labor_time.value * (labor_time_unit.ratio_numerator / labor_time_unit.ratio_denominator) * 3600,
             0
         )
     ), 0) AS DECIMAL(65,30)) AS standard_seconds_earned
@@ -1820,17 +1681,13 @@ SELECT
             + COALESCE(qw.value * (u_qw.ratio_numerator / u_qw.ratio_denominator), 0)
             + COALESCE(qs.value * (u_qs.ratio_numerator / u_qs.ratio_denominator), 0)
         ) * COALESCE(
-            labor_time.value * CASE LOWER(TRIM(COALESCE(labor_time_unit.abbreviation, '')))
-                WHEN 'min' THEN 60
-                WHEN 'mins' THEN 60
-                WHEN 'minute' THEN 60
-                WHEN 'minutes' THEN 60
-                WHEN 'hr' THEN 3600
-                WHEN 'h' THEN 3600
-                WHEN 'hour' THEN 3600
-                WHEN 'hours' THEN 3600
-                ELSE 1
-            END,
+            -- Labor time to seconds via the numerator unit's own conversion columns, not a fixed
+            -- abbreviation table: ratio_numerator/ratio_denominator is the unit's size in the time
+            -- dimension's base (the hour), so seconds = value * (ratio) * 3600. Handles day and any
+            -- account-defined time unit, and stays in step with the solver's SecondsPerUnitFromLaborTime,
+            -- which reads the same columns. A missing numerator unit leaves the product NULL, so the
+            -- COALESCE books no standard time rather than guessing a scale.
+            labor_time.value * (labor_time_unit.ratio_numerator / labor_time_unit.ratio_denominator) * 3600,
             0
         )
     ), 0) AS DECIMAL(65,30)) AS standard_seconds_earned
@@ -1966,82 +1823,6 @@ func (q *Queries) GetOeeTrendDowntimeIntervals(ctx context.Context, arg GetOeeTr
 			&i.StartedAt,
 			&i.EndedAt,
 		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getOeeTrendEstimatedRuntimeForMachinesByWeek = `-- name: GetOeeTrendEstimatedRuntimeForMachinesByWeek :many
-SELECT
-    week_start_date,
-    department_id,
-    SUM(TIMESTAMPDIFF(SECOND, day_first, day_last)) AS runtime_seconds
-FROM (
-    SELECT
-        DATE(DATE_SUB(b.scanned_at, INTERVAL ((DAYOFWEEK(b.scanned_at) + 6 - CAST(? AS SIGNED)) % 7) DAY)) AS week_start_date,
-        COALESCE(ss.department_id, 'unassigned') AS department_id,
-        bm.B AS machine_id,
-        DATE(b.scanned_at) AS scan_date,
-        MIN(b.scanned_at) AS day_first,
-        MAX(b.scanned_at) AS day_last
-    FROM batch b
-    JOIN _batches_machines bm ON bm.A = b.id AND bm.B IN (/*SLICE:machine_ids*/?)
-    LEFT JOIN scanning_station ss ON ss.id = b.scanning_station_id
-    WHERE b.account_id = ?
-      AND b.scanned_at >= ?
-      AND b.scanned_at <= ?
-    GROUP BY week_start_date, COALESCE(ss.department_id, 'unassigned'), bm.B, DATE(b.scanned_at)
-) daily
-GROUP BY week_start_date, department_id
-`
-
-type GetOeeTrendEstimatedRuntimeForMachinesByWeekParams struct {
-	WeekStartDay   int64
-	MachineIds     []string
-	OwnerAccountID string
-	StartDate      sql.NullTime
-	EndDate        sql.NullTime
-}
-
-type GetOeeTrendEstimatedRuntimeForMachinesByWeekRow struct {
-	WeekStartDate  time.Time
-	DepartmentID   string
-	RuntimeSeconds interface{}
-}
-
-// GetOeeTrendEstimatedRuntimeForMachinesByWeek is GetOeeEstimatedRuntimeForMachines bucketed into production weeks, so one read gives the trend its Operating Time per department per week. The week key follows the account's week_start_day, exactly as GetOeeTrendDepartmentDataByWeek buckets output, so a week's run time and its output describe the same days.
-func (q *Queries) GetOeeTrendEstimatedRuntimeForMachinesByWeek(ctx context.Context, arg GetOeeTrendEstimatedRuntimeForMachinesByWeekParams) ([]GetOeeTrendEstimatedRuntimeForMachinesByWeekRow, error) {
-	query := getOeeTrendEstimatedRuntimeForMachinesByWeek
-	var queryParams []interface{}
-	queryParams = append(queryParams, arg.WeekStartDay)
-	if len(arg.MachineIds) > 0 {
-		for _, v := range arg.MachineIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:machine_ids*/?", strings.Repeat(",?", len(arg.MachineIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:machine_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.OwnerAccountID)
-	queryParams = append(queryParams, arg.StartDate)
-	queryParams = append(queryParams, arg.EndDate)
-	rows, err := q.db.QueryContext(ctx, query, queryParams...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetOeeTrendEstimatedRuntimeForMachinesByWeekRow
-	for rows.Next() {
-		var i GetOeeTrendEstimatedRuntimeForMachinesByWeekRow
-		if err := rows.Scan(&i.WeekStartDate, &i.DepartmentID, &i.RuntimeSeconds); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

@@ -13,7 +13,7 @@ import (
 
 // buildOeeTrend measures the same OEE arithmetic as buildOeeByDepartment, one production week at a time, so a plant can see whether a number is moving rather than only what it is today.
 //
-// Everything is read once for the whole window and bucketed in memory: a week-per-round-trip loop would multiply four queries by the length of the range, and a year of weekly points would be 200 queries for one chart.
+// Everything is read once for the whole window and bucketed in memory: a week-per-round-trip loop would multiply the queries by the length of the range, and a year of weekly points would be hundreds of queries for one chart.
 //
 // Only departments with scheduled time take part. A department with no machines — including the 'unassigned' bucket that batches with no scanning-station department fall into — has no Availability and therefore no OEE, exactly as in the per-department table; counting its output in Quality while it cannot appear in Availability or Performance would make the three terms describe different plants.
 func (s *analyticsSvcImpl) buildOeeTrend(ctx context.Context, params domain.AnalyzeOeeTrendParams) ([]domain.OeeTrendPeriod, *apierror.APIError) {
@@ -29,8 +29,9 @@ func (s *analyticsSvcImpl) buildOeeTrend(ctx context.Context, params domain.Anal
 	}
 	weekStartDay := int(settings.WeekStartDay)
 
-	// The trend rolls up only scheduled departments, so its output read is scoped to the machines the plan scheduled — the same machines the per-department table measures — keeping Performance on the same plant here as there. No schedule means no machines and no scoping, matching the empty roll-up that follows. Read before the parallel reads because the output query needs it; it is a handful of small queries.
-	scheduledMachines, apiErr := s.scheduledMachineIDs(ctx, params.AccountID, params.StartDate, params.EndDate, weekStartDay)
+	// Capacity per department per week comes from the shift configuration, and the same read gives the flat set of scheduled machines the output read is scoped to — the same machines and the same weekly capacity the per-department table uses, so the trend and the table agree on the window. Read before the parallel reads because the output query needs the machine filter; it is a handful of small queries. No schedule means no machines and no scoping, matching the empty roll-up that follows.
+	perMachineWeekly := machineWeeklyCapacityHours(settings)
+	capacityWeek, scheduledMachines, apiErr := s.scheduledCapacity(ctx, params.AccountID, params.StartDate, params.EndDate, weekStartDay, perMachineWeekly)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -43,17 +44,15 @@ func (s *analyticsSvcImpl) buildOeeTrend(ctx context.Context, params domain.Anal
 		MachineIDs:   machineSlice(scheduledMachines),
 	}
 
-	// The reads share no inputs, and the scan aggregates over the window dominate the others — running them in sequence spends the whole chart's latency budget waiting on one query while idle round trips queue behind it. Errors are collected and the first non-nil is returned, so failure behaves exactly as it did when these ran in order.
+	// The two reads share no inputs, and the scan aggregate over the window dominates — running them in sequence spends the whole chart's latency budget waiting on one query while the other idles. Errors are collected and the first non-nil is returned, so failure behaves exactly as it did when these ran in order.
 	var (
-		outputRows    []domain.OeeTrendDepartmentWeekRow
-		runtimeRows   []domain.OeeTrendEstimatedRuntimeRow
-		downtimeRows  []domain.OeeDowntimeIntervalRow
-		scheduledWeek map[time.Time]map[string]float64
-		errs          [4]*apierror.APIError
-		wg            sync.WaitGroup
+		outputRows   []domain.OeeTrendDepartmentWeekRow
+		downtimeRows []domain.OeeDowntimeIntervalRow
+		errs         [2]*apierror.APIError
+		wg           sync.WaitGroup
 	)
 
-	wg.Add(4)
+	wg.Add(2)
 	go func() {
 		defer wg.Done()
 		outputRows, errs[0] = repo.GetOeeTrendDepartmentDataByWeek(ctx, window)
@@ -61,15 +60,6 @@ func (s *analyticsSvcImpl) buildOeeTrend(ctx context.Context, params domain.Anal
 	go func() {
 		defer wg.Done()
 		downtimeRows, errs[1] = repo.GetOeeTrendDowntimeIntervals(ctx, window)
-	}()
-	go func() {
-		defer wg.Done()
-		scheduledWeek, errs[2] = s.scheduledHoursByWeek(ctx, params.AccountID, params.StartDate, params.EndDate, weekStartDay)
-	}()
-	go func() {
-		defer wg.Done()
-		// Operating Time per department per week — Performance's denominator and, capped at scheduled, Availability's. Scoped to the scheduled machines like the output read, so a week's run time and its output measure the same machines. No schedule means no machines, an empty filter, and no scoping, matching the empty roll-up.
-		runtimeRows, errs[3] = repo.GetOeeTrendEstimatedRuntimeForMachines(ctx, window)
 	}()
 	wg.Wait()
 
@@ -85,16 +75,15 @@ func (s *analyticsSvcImpl) buildOeeTrend(ctx context.Context, params domain.Anal
 	}
 
 	outputByWeek := indexOeeTrendOutput(outputRows, deptFilter, weekStartDay)
-	runtimeByWeek := indexOeeTrendRuntime(runtimeRows, deptFilter, weekStartDay)
 
 	periods := []domain.OeeTrendPeriod{}
 	for _, bucket := range oeeTrendBuckets(params.StartDate, params.EndDate, weekStartDay) {
-		// The plan is week-granular, so each bucket takes its own week's scheduled hours, prorated to the days the bucket covers — a partial first or last week is measured against the part of it that was asked for, the same days its output and downtime are read over.
+		// Capacity is week-granular, so each bucket takes its own week's capacity, prorated to the days the bucket covers — a partial first or last week is measured against the part of it that was asked for, the same days its output and downtime are read over.
 		week := scheduleWeekStart(bucket.start, weekStartDay)
-		plannedHours := scaleDeptHours(filterDeptHours(scheduledWeek[week], deptFilter), weekOverlapFraction(week, bucket.start, bucket.end))
+		capacityHours := scaleDeptHours(filterDeptHours(capacityWeek[week], deptFilter), weekOverlapFraction(week, bucket.start, bucket.end))
 		downtime := oeeTrendDowntimeInBucket(downtimeRows, deptFilter, bucket.start, bucket.end)
-		// Output and run time are already clipped to the window by the reads' scanned_at range, so a partial first or last week needs no proration here — only planned hours, which come from a week-granular schedule, are scaled above.
-		periods = append(periods, buildOeeTrendPeriod(bucket, plannedHours, outputByWeek[week], runtimeByWeek[week], downtime))
+		// Output is already clipped to the window by the read's scanned_at range, so a partial first or last week needs no proration here — only capacity, which is week-granular, is scaled above.
+		periods = append(periods, buildOeeTrendPeriod(bucket, capacityHours, outputByWeek[week], downtime))
 	}
 
 	return periods, nil
@@ -140,24 +129,6 @@ func indexOeeTrendOutput(rows []domain.OeeTrendDepartmentWeekRow, deptFilter map
 			out[week] = byDepartment
 		}
 		byDepartment[row.DepartmentID] = row
-	}
-	return out
-}
-
-// indexOeeTrendRuntime groups the per-week Operating Time rows by their week key, dropping departments the caller filtered out. It mirrors indexOeeTrendOutput so a week's run time and its output are keyed the same way.
-func indexOeeTrendRuntime(rows []domain.OeeTrendEstimatedRuntimeRow, deptFilter map[string]bool, weekStartDay int) map[time.Time]map[string]float64 {
-	out := make(map[time.Time]map[string]float64)
-	for _, row := range rows {
-		if len(deptFilter) > 0 && !deptFilter[row.DepartmentID] {
-			continue
-		}
-		week := scheduleWeekStart(row.WeekStart, weekStartDay)
-		byDepartment, ok := out[week]
-		if !ok {
-			byDepartment = map[string]float64{}
-			out[week] = byDepartment
-		}
-		byDepartment[row.DepartmentID] += row.RuntimeSeconds
 	}
 	return out
 }
@@ -215,16 +186,15 @@ func oeeTrendDowntimeInBucket(rows []domain.OeeDowntimeIntervalRow, deptFilter m
 // Each department's scheduled and run time is derived by computeOeeRatios — the same function the per-department table uses — and only then summed, so the trend and the table can never disagree about what a week was worth. The ratios are recomputed from the summed seconds rather than averaged: averaging department percentages would let a room that ran an hour weigh as heavily as one that ran all week.
 func buildOeeTrendPeriod(
 	bucket oeeTrendBucket,
-	plannedHours map[string]float64,
+	capacityHours map[string]float64,
 	output map[string]domain.OeeTrendDepartmentWeekRow,
-	runtime map[string]float64,
 	downtime map[string]*oeeTrendDowntimeTotals,
 ) domain.OeeTrendPeriod {
 	period := domain.OeeTrendPeriod{StartsAt: bucket.start, EndsAt: bucket.end}
 
 	// Sorted so the roll-up sums in a stable order and two identical requests cannot differ in the last float digit.
-	departmentIDs := make([]string, 0, len(plannedHours))
-	for departmentID := range plannedHours {
+	departmentIDs := make([]string, 0, len(capacityHours))
+	for departmentID := range capacityHours {
 		departmentIDs = append(departmentIDs, departmentID)
 	}
 	sort.Strings(departmentIDs)
@@ -244,7 +214,7 @@ func buildOeeTrendPeriod(
 			period.HasDowntimeData = period.HasDowntimeData || totals.events > 0
 		}
 
-		computeOeeRatios(&dept, plannedHours[departmentID], runtime[departmentID])
+		computeOeeRatios(&dept, capacityHours[departmentID])
 		if dept.ScheduledSeconds <= 0 {
 			continue
 		}
@@ -256,7 +226,6 @@ func buildOeeTrendPeriod(
 		period.ScheduledSeconds += dept.ScheduledSeconds
 		period.OperatingTimeSeconds += dept.OperatingTimeSeconds
 		period.RunTimeSeconds += dept.RunTimeSeconds
-		period.OverrunSeconds += dept.OverrunSeconds
 		period.AvailabilityLossSeconds += dept.AvailabilityLossSeconds
 		period.NotScheduledSeconds += dept.NotScheduledSeconds
 	}
@@ -265,7 +234,7 @@ func buildOeeTrendPeriod(
 		availability := period.RunTimeSeconds / period.ScheduledSeconds
 		period.AvailabilityPct = &availability
 	}
-	// Performance rolls up on the full (uncapped) operating time — the same denominator each department used — so a week's speed is not distorted by the availability cap.
+	// Performance rolls up on the same run time Availability uses — capacity minus downtime — so the week's speed and its uptime describe one clock.
 	if period.OperatingTimeSeconds > 0 && period.StandardSecondsEarned > 0 {
 		performance := period.StandardSecondsEarned / period.OperatingTimeSeconds
 		period.PerformancePct = &performance

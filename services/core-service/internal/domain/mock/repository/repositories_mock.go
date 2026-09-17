@@ -9994,36 +9994,6 @@ func (mr *MockAnalyticsRepoMockRecorder) GetOeeDowntimeByDepartment(ctx, params 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOeeDowntimeByDepartment", reflect.TypeOf((*MockAnalyticsRepo)(nil).GetOeeDowntimeByDepartment), ctx, params)
 }
 
-// GetOeeEstimatedRuntime mocks base method.
-func (m *MockAnalyticsRepo) GetOeeEstimatedRuntime(ctx context.Context, params domain.GetOeeWindowParams) ([]domain.OeeEstimatedRuntimeRow, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetOeeEstimatedRuntime", ctx, params)
-	ret0, _ := ret[0].([]domain.OeeEstimatedRuntimeRow)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// GetOeeEstimatedRuntime indicates an expected call of GetOeeEstimatedRuntime.
-func (mr *MockAnalyticsRepoMockRecorder) GetOeeEstimatedRuntime(ctx, params any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOeeEstimatedRuntime", reflect.TypeOf((*MockAnalyticsRepo)(nil).GetOeeEstimatedRuntime), ctx, params)
-}
-
-// GetOeeEstimatedRuntimeForMachines mocks base method.
-func (m *MockAnalyticsRepo) GetOeeEstimatedRuntimeForMachines(ctx context.Context, params domain.GetOeeWindowParams) ([]domain.OeeEstimatedRuntimeRow, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetOeeEstimatedRuntimeForMachines", ctx, params)
-	ret0, _ := ret[0].([]domain.OeeEstimatedRuntimeRow)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// GetOeeEstimatedRuntimeForMachines indicates an expected call of GetOeeEstimatedRuntimeForMachines.
-func (mr *MockAnalyticsRepoMockRecorder) GetOeeEstimatedRuntimeForMachines(ctx, params any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOeeEstimatedRuntimeForMachines", reflect.TypeOf((*MockAnalyticsRepo)(nil).GetOeeEstimatedRuntimeForMachines), ctx, params)
-}
-
 // GetOeeTrendDepartmentDataByWeek mocks base method.
 func (m *MockAnalyticsRepo) GetOeeTrendDepartmentDataByWeek(ctx context.Context, params domain.GetOeeWindowParams) ([]domain.OeeTrendDepartmentWeekRow, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -10052,21 +10022,6 @@ func (m *MockAnalyticsRepo) GetOeeTrendDowntimeIntervals(ctx context.Context, pa
 func (mr *MockAnalyticsRepoMockRecorder) GetOeeTrendDowntimeIntervals(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOeeTrendDowntimeIntervals", reflect.TypeOf((*MockAnalyticsRepo)(nil).GetOeeTrendDowntimeIntervals), ctx, params)
-}
-
-// GetOeeTrendEstimatedRuntimeForMachines mocks base method.
-func (m *MockAnalyticsRepo) GetOeeTrendEstimatedRuntimeForMachines(ctx context.Context, params domain.GetOeeWindowParams) ([]domain.OeeTrendEstimatedRuntimeRow, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetOeeTrendEstimatedRuntimeForMachines", ctx, params)
-	ret0, _ := ret[0].([]domain.OeeTrendEstimatedRuntimeRow)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// GetOeeTrendEstimatedRuntimeForMachines indicates an expected call of GetOeeTrendEstimatedRuntimeForMachines.
-func (mr *MockAnalyticsRepoMockRecorder) GetOeeTrendEstimatedRuntimeForMachines(ctx, params any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOeeTrendEstimatedRuntimeForMachines", reflect.TypeOf((*MockAnalyticsRepo)(nil).GetOeeTrendEstimatedRuntimeForMachines), ctx, params)
 }
 
 // GetOpenBatchEntries mocks base method.
@@ -11396,21 +11351,6 @@ func (mr *MockScheduleAttainmentRepoMockRecorder) SumPlannedByWeek(ctx, params a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SumPlannedByWeek", reflect.TypeOf((*MockScheduleAttainmentRepo)(nil).SumPlannedByWeek), ctx, params)
 }
 
-// SumScheduledHoursByDepartmentWeek mocks base method.
-func (m *MockScheduleAttainmentRepo) SumScheduledHoursByDepartmentWeek(ctx context.Context, params domain.SumPlannedByWeekParams) ([]domain.ScheduledHoursRow, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SumScheduledHoursByDepartmentWeek", ctx, params)
-	ret0, _ := ret[0].([]domain.ScheduledHoursRow)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// SumScheduledHoursByDepartmentWeek indicates an expected call of SumScheduledHoursByDepartmentWeek.
-func (mr *MockScheduleAttainmentRepoMockRecorder) SumScheduledHoursByDepartmentWeek(ctx, params any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SumScheduledHoursByDepartmentWeek", reflect.TypeOf((*MockScheduleAttainmentRepo)(nil).SumScheduledHoursByDepartmentWeek), ctx, params)
-}
-
 // MockProductionScheduleInputRepo is a mock of ProductionScheduleInputRepo interface.
 type MockProductionScheduleInputRepo struct {
 	ctrl     *gomock.Controller
@@ -11508,21 +11448,6 @@ func (m *MockProductionScheduleInputRepo) GetAllSellableProducts(ctx context.Con
 func (mr *MockProductionScheduleInputRepoMockRecorder) GetAllSellableProducts(ctx, accountID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllSellableProducts", reflect.TypeOf((*MockProductionScheduleInputRepo)(nil).GetAllSellableProducts), ctx, accountID)
-}
-
-// GetBatchFlowChildren mocks base method.
-func (m *MockProductionScheduleInputRepo) GetBatchFlowChildren(ctx context.Context, accountID string, parentBatchIDs []string) ([]domain.BatchFlowChildRow, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetBatchFlowChildren", ctx, accountID, parentBatchIDs)
-	ret0, _ := ret[0].([]domain.BatchFlowChildRow)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// GetBatchFlowChildren indicates an expected call of GetBatchFlowChildren.
-func (mr *MockProductionScheduleInputRepoMockRecorder) GetBatchFlowChildren(ctx, accountID, parentBatchIDs any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBatchFlowChildren", reflect.TypeOf((*MockProductionScheduleInputRepo)(nil).GetBatchFlowChildren), ctx, accountID, parentBatchIDs)
 }
 
 // GetConstraintBatchMeasurements mocks base method.
@@ -11720,6 +11645,21 @@ func (mr *MockProductionScheduleInputRepoMockRecorder) GetProductDemandByCustome
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProductDemandByCustomer", reflect.TypeOf((*MockProductionScheduleInputRepo)(nil).GetProductDemandByCustomer), ctx, params)
 }
 
+// GetProductionFlowChildrenByItem mocks base method.
+func (m *MockProductionScheduleInputRepo) GetProductionFlowChildrenByItem(ctx context.Context, accountID string, parentItemIDs []string) ([]domain.ProductionFlowChildRow, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetProductionFlowChildrenByItem", ctx, accountID, parentItemIDs)
+	ret0, _ := ret[0].([]domain.ProductionFlowChildRow)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetProductionFlowChildrenByItem indicates an expected call of GetProductionFlowChildrenByItem.
+func (mr *MockProductionScheduleInputRepoMockRecorder) GetProductionFlowChildrenByItem(ctx, accountID, parentItemIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProductionFlowChildrenByItem", reflect.TypeOf((*MockProductionScheduleInputRepo)(nil).GetProductionFlowChildrenByItem), ctx, accountID, parentItemIDs)
+}
+
 // GetProductsForItems mocks base method.
 func (m *MockProductionScheduleInputRepo) GetProductsForItems(ctx context.Context, accountID string, itemIDs []string) ([]domain.SellableProductRow, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -11733,21 +11673,6 @@ func (m *MockProductionScheduleInputRepo) GetProductsForItems(ctx context.Contex
 func (mr *MockProductionScheduleInputRepoMockRecorder) GetProductsForItems(ctx, accountID, itemIDs any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProductsForItems", reflect.TypeOf((*MockProductionScheduleInputRepo)(nil).GetProductsForItems), ctx, accountID, itemIDs)
-}
-
-// GetSeedBatchesForItems mocks base method.
-func (m *MockProductionScheduleInputRepo) GetSeedBatchesForItems(ctx context.Context, params domain.GetSeedBatchesParams) ([]domain.SeedBatchRow, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSeedBatchesForItems", ctx, params)
-	ret0, _ := ret[0].([]domain.SeedBatchRow)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// GetSeedBatchesForItems indicates an expected call of GetSeedBatchesForItems.
-func (mr *MockProductionScheduleInputRepoMockRecorder) GetSeedBatchesForItems(ctx, params any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSeedBatchesForItems", reflect.TypeOf((*MockProductionScheduleInputRepo)(nil).GetSeedBatchesForItems), ctx, params)
 }
 
 // GetStepConsumptionItems mocks base method.

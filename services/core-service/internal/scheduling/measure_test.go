@@ -11,30 +11,30 @@ func at(hoursAgo int) time.Time {
 	return time.Date(2026, time.June, 1, 0, 0, 0, 0, time.UTC).Add(-time.Duration(hoursAgo) * time.Hour)
 }
 
-// The unit abbreviation on the labor-time rate decides its scale. Getting this wrong
-// silently rescales every run hour in the plan by 60x.
+// The numerator unit's ratio columns give its size in the time base (the hour), so
+// seconds = value * (num/den) * 3600. Getting this wrong silently rescales every run
+// hour in the plan. A non-positive ratio (a scan with no usable time unit) is read as
+// raw seconds rather than zeroing the rate.
 func TestSecondsPerUnitFromLaborTime(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
-		value float64
-		unit  string
-		want  float64
+		name     string
+		value    float64
+		num, den float64
+		want     float64
 	}{
-		{2, "min", 120},
-		{2, "MIN", 120},
-		{2, "minutes", 120},
-		{1.5, "hr", 5400},
-		{1.5, "h", 5400},
-		{1.5, "hour", 5400},
-		{30, "sec", 30},
-		{30, "", 30},
-		{30, "unrecognized", 30},
+		{"minute", 2, 1, 60, 120},
+		{"hour", 1.5, 1, 1, 5400},
+		{"second", 30, 1, 3600, 30},
+		{"day", 2, 24, 1, 172800},
+		{"missing unit falls back to seconds", 30, 0, 0, 30},
+		{"zero denominator falls back to seconds", 30, 1, 0, 30},
 	}
 
 	for _, c := range cases {
-		if got := SecondsPerUnitFromLaborTime(c.value, c.unit); got != c.want {
-			t.Errorf("SecondsPerUnitFromLaborTime(%v, %q) = %v, want %v", c.value, c.unit, got, c.want)
+		if got := SecondsPerUnitFromLaborTime(c.value, c.num, c.den); got != c.want {
+			t.Errorf("%s: SecondsPerUnitFromLaborTime(%v, %v, %v) = %v, want %v", c.name, c.value, c.num, c.den, got, c.want)
 		}
 	}
 }
@@ -206,11 +206,11 @@ func TestSolve_ProducesAPlanFromRawHistory(t *testing.T) {
 		Batches: []BatchMeasurement{
 			{BatchID: "bt_1", ItemID: "it_A", SKU: "A", ScannedAt: scanned, Quantity: 60,
 				MachineID: "mc_1", ProductionStepID: "prs_A", UnitCost: 4,
-				LaborTimeValue: 30, LaborTimeUnit: "min", LaborRate: 18, OverheadRate: 2,
+				LaborTimeValue: 30, LaborTimeRatioNumerator: 1, LaborTimeRatioDenominator: 60, LaborRate: 18, OverheadRate: 2,
 				RunCreatedAt: &opened},
 			{BatchID: "bt_2", ItemID: "it_B", SKU: "B", ScannedAt: scanned, Quantity: 60,
 				MachineID: "mc_2", ProductionStepID: "prs_B", UnitCost: 6,
-				LaborTimeValue: 20, LaborTimeUnit: "min", LaborRate: 18, OverheadRate: 2,
+				LaborTimeValue: 20, LaborTimeRatioNumerator: 1, LaborTimeRatioDenominator: 60, LaborRate: 18, OverheadRate: 2,
 				RunCreatedAt: &opened},
 		},
 		StepInputs: map[string]map[string]bool{
@@ -284,7 +284,7 @@ func TestSolve_HonoursExcludedItems(t *testing.T) {
 		Batches: []BatchMeasurement{
 			{BatchID: "bt_1", ItemID: "it_A", SKU: "A", ScannedAt: at(1), Quantity: 60,
 				MachineID: "mc_1", ProductionStepID: "prs_A", UnitCost: 4,
-				LaborTimeValue: 10, LaborTimeUnit: "min"},
+				LaborTimeValue: 10, LaborTimeRatioNumerator: 1, LaborTimeRatioDenominator: 60},
 		},
 		MonthlyByItem:   map[string][]MonthlyDemand{"it_A": series(2026, time.May, 12, 100)},
 		ExcludedItemIDs: map[string]bool{"it_A": true},
@@ -312,11 +312,11 @@ func TestSolve_Deterministic(t *testing.T) {
 		Machines:     []Machine{{ID: "mc_2", Name: "2"}, {ID: "mc_10", Name: "10"}, {ID: "mc_1", Name: "1"}},
 		Batches: []BatchMeasurement{
 			{BatchID: "bt_1", ItemID: "it_C", SKU: "C", ScannedAt: at(4), Quantity: 60, MachineID: "mc_1",
-				ProductionStepID: "prs_C", UnitCost: 3, LaborTimeValue: 25, LaborTimeUnit: "min"},
+				ProductionStepID: "prs_C", UnitCost: 3, LaborTimeValue: 25, LaborTimeRatioNumerator: 1, LaborTimeRatioDenominator: 60},
 			{BatchID: "bt_2", ItemID: "it_A", SKU: "A", ScannedAt: at(3), Quantity: 60, MachineID: "mc_2",
-				ProductionStepID: "prs_A", UnitCost: 4, LaborTimeValue: 30, LaborTimeUnit: "min"},
+				ProductionStepID: "prs_A", UnitCost: 4, LaborTimeValue: 30, LaborTimeRatioNumerator: 1, LaborTimeRatioDenominator: 60},
 			{BatchID: "bt_3", ItemID: "it_B", SKU: "B", ScannedAt: at(2), Quantity: 60, MachineID: "mc_10",
-				ProductionStepID: "prs_B", UnitCost: 5, LaborTimeValue: 20, LaborTimeUnit: "min"},
+				ProductionStepID: "prs_B", UnitCost: 5, LaborTimeValue: 20, LaborTimeRatioNumerator: 1, LaborTimeRatioDenominator: 60},
 		},
 		MonthlyByItem: map[string][]MonthlyDemand{
 			"it_A": series(2026, time.May, 24, 400),

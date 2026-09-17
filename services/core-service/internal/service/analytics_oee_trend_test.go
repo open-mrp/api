@@ -105,17 +105,15 @@ func TestBuildOeeTrendPeriod_WeightsBySecondsNotByDepartment(t *testing.T) {
 	t.Parallel()
 
 	bucket := oeeTrendBucket{start: oeeTrendMonday, end: oeeTrendMonday.AddDate(0, 0, 7)}
-	planned := map[string]float64{"dp_big": 100, "dp_small": 1}
+	capacity := map[string]float64{"dp_big": 100, "dp_small": 1}
 	output := map[string]domain.OeeTrendDepartmentWeekRow{
 		// The big room runs at half speed, the small one at full speed.
 		"dp_big":   {GoodUnits: 100, StandardSecondsEarned: 100 * 3600 / 2},
 		"dp_small": {GoodUnits: 10, StandardSecondsEarned: 1 * 3600},
 	}
-	// Each room's measured operating time: the big room ran its full 100 scheduled hours (so
-	// half its ideal time is speed loss), the small room its full hour.
-	runtime := map[string]float64{"dp_big": 100 * 3600, "dp_small": 1 * 3600}
-
-	period := buildOeeTrendPeriod(bucket, planned, output, runtime, nil)
+	// No downtime, so each room's run time is its full capacity: the big room's 100h (half its
+	// ideal time is speed loss), the small room's one hour.
+	period := buildOeeTrendPeriod(bucket, capacity, output, nil)
 
 	if period.PerformancePct == nil {
 		t.Fatal("performance = nil, want a weighted value")
@@ -135,9 +133,9 @@ func TestBuildOeeTrendPeriod_ExcludesDepartmentsWithoutScheduledTime(t *testing.
 		"dp_scheduled": {GoodUnits: 90, WasteUnits: 10, StandardSecondsEarned: 3600},
 		"unassigned":   {GoodUnits: 0, WasteUnits: 500, StandardSecondsEarned: 3600},
 	}
-	runtime := map[string]float64{"dp_scheduled": 3600}
 
-	period := buildOeeTrendPeriod(bucket, map[string]float64{"dp_scheduled": 1}, output, runtime, nil)
+	// Only dp_scheduled has capacity; the unassigned department is absent from the map and so drops out.
+	period := buildOeeTrendPeriod(bucket, map[string]float64{"dp_scheduled": 1}, output, nil)
 
 	assert.InDelta(t, 100, period.GoodUnits+period.WasteUnits, 0.001, "the unscheduled department's output is not counted")
 	if period.QualityPct == nil {
@@ -146,7 +144,7 @@ func TestBuildOeeTrendPeriod_ExcludesDepartmentsWithoutScheduledTime(t *testing.
 	assert.InDelta(t, 0.9, *period.QualityPct, 0.0001)
 }
 
-// Not-scheduled time leaves the denominator; run time is the scheduled machines' measured operating time. The trend has to agree with the per-department table on both, which is why it runs the same computeOeeRatios per department before summing.
+// Not-scheduled time leaves Planned Production Time; availability downtime then comes out of run time. The trend has to agree with the per-department table on both, which is why it runs the same computeOeeRatios per department before summing.
 func TestBuildOeeTrendPeriod_AppliesDowntimeToTheRightDenominator(t *testing.T) {
 	t.Parallel()
 
@@ -155,13 +153,12 @@ func TestBuildOeeTrendPeriod_AppliesDowntimeToTheRightDenominator(t *testing.T) 
 		"dp": {availability: 3600, notScheduled: 7200, events: 4},
 	}
 	output := map[string]domain.OeeTrendDepartmentWeekRow{"dp": {GoodUnits: 100, StandardSecondsEarned: 3600}}
-	// 10 planned hours less 2 nobody scheduled leaves 8h scheduled; the machines were measured running 7 of those hours.
-	runtime := map[string]float64{"dp": 7 * 3600}
 
-	period := buildOeeTrendPeriod(bucket, map[string]float64{"dp": 10}, output, runtime, downtime)
+	// 10h capacity less 2h nobody scheduled leaves 8h Planned Production Time; 1h of availability downtime leaves 7h run time.
+	period := buildOeeTrendPeriod(bucket, map[string]float64{"dp": 10}, output, downtime)
 
-	assert.InDelta(t, 8*3600.0, period.ScheduledSeconds, 0.001, "10 planned hours less 2 nobody scheduled")
-	assert.InDelta(t, 7*3600.0, period.RunTimeSeconds, 0.001, "the machines' measured run time inside the scheduled window")
+	assert.InDelta(t, 8*3600.0, period.ScheduledSeconds, 0.001, "10h capacity less 2h nobody scheduled")
+	assert.InDelta(t, 7*3600.0, period.RunTimeSeconds, 0.001, "Planned Production Time less availability downtime")
 	assert.True(t, period.HasDowntimeData)
 	assert.Equal(t, int64(4), period.DowntimeEventCount)
 	assert.InDelta(t, 7.0/8.0, *period.AvailabilityPct, 0.0001)
@@ -173,7 +170,7 @@ func TestBuildOeeTrendPeriod_NilRatiosWithoutScheduledTime(t *testing.T) {
 	t.Parallel()
 
 	bucket := oeeTrendBucket{start: oeeTrendMonday, end: oeeTrendMonday.AddDate(0, 0, 7)}
-	period := buildOeeTrendPeriod(bucket, nil, nil, nil, nil)
+	period := buildOeeTrendPeriod(bucket, nil, nil, nil)
 
 	assert.Nil(t, period.AvailabilityPct)
 	assert.Nil(t, period.PerformancePct)
@@ -189,10 +186,8 @@ func TestBuildOeeTrendPeriod_OeeIsProductOfThree(t *testing.T) {
 	bucket := oeeTrendBucket{start: oeeTrendMonday, end: oeeTrendMonday.AddDate(0, 0, 7)}
 	output := map[string]domain.OeeTrendDepartmentWeekRow{"dp": {GoodUnits: 90, WasteUnits: 10, StandardSecondsEarned: 1800}}
 	downtime := map[string]*oeeTrendDowntimeTotals{"dp": {availability: 1800, events: 1}}
-	// Scheduled an hour, measured running half of it.
-	runtime := map[string]float64{"dp": 1800}
-
-	period := buildOeeTrendPeriod(bucket, map[string]float64{"dp": 1}, output, runtime, downtime)
+	// 1h capacity, half of it lost to availability downtime, so run time is half an hour.
+	period := buildOeeTrendPeriod(bucket, map[string]float64{"dp": 1}, output, downtime)
 
 	if period.OeePct == nil {
 		t.Fatal("oee = nil, want the product of the three terms")

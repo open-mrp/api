@@ -907,9 +907,6 @@ type AnalyticsRepo interface {
 	GetDemandForecastMonthlyDemand(ctx context.Context, params GetDemandForecastWindowParams) ([]DemandForecastMonthlyDemandRow, *apierror.APIError)
 	GetDemandForecastMonthlyRevenue(ctx context.Context, params GetDemandForecastWindowParams) ([]DemandForecastMonthlyRevenueRow, *apierror.APIError)
 	GetOeeDepartmentData(ctx context.Context, params GetOeeWindowParams) ([]OeeDepartmentDataRow, *apierror.APIError)
-	GetOeeEstimatedRuntime(ctx context.Context, params GetOeeWindowParams) ([]OeeEstimatedRuntimeRow, *apierror.APIError)
-	GetOeeEstimatedRuntimeForMachines(ctx context.Context, params GetOeeWindowParams) ([]OeeEstimatedRuntimeRow, *apierror.APIError)
-	GetOeeTrendEstimatedRuntimeForMachines(ctx context.Context, params GetOeeWindowParams) ([]OeeTrendEstimatedRuntimeRow, *apierror.APIError)
 	GetOeeDowntimeByDepartment(ctx context.Context, params GetOeeWindowParams) ([]OeeDowntimeRow, *apierror.APIError)
 	GetOeeTrendDepartmentDataByWeek(ctx context.Context, params GetOeeWindowParams) ([]OeeTrendDepartmentWeekRow, *apierror.APIError)
 	GetOeeTrendDowntimeIntervals(ctx context.Context, params GetOeeWindowParams) ([]OeeDowntimeIntervalRow, *apierror.APIError)
@@ -1044,9 +1041,6 @@ type ScheduleAttainmentRepo interface {
 	// SumPlannedByWeek returns planned quantity and run hours per (week, machine, item) for one baseline version.
 	SumPlannedByWeek(ctx context.Context, params SumPlannedByWeekParams) ([]AttainmentPlannedRow, *apierror.APIError)
 
-	// SumScheduledHoursByDepartmentWeek returns scheduled machine time (run + changeover) per department per week for one baseline version — the denominator OEE availability is measured against.
-	SumScheduledHoursByDepartmentWeek(ctx context.Context, params SumPlannedByWeekParams) ([]ScheduledHoursRow, *apierror.APIError)
-
 	// SumActualsByWeek returns what was actually produced, bucketed to the Monday of the scan week so it lines up with a schedule line's week_start_date. An unscanned batch was never produced, so it is excluded.
 	SumActualsByWeek(ctx context.Context, params SumActualsByWeekParams) ([]AttainmentActualRow, *apierror.APIError)
 
@@ -1063,7 +1057,7 @@ type ScheduleAttainmentRepo interface {
 	GetItemLabels(ctx context.Context, accountID string, ids []string) ([]AttainmentLabelRow, *apierror.APIError)
 }
 
-// ProductionScheduleInputRepo is the thin read surface behind solver-input assembly. Each method is one query mapped to domain or scheduling types; the assembly itself — genealogy attribution, demand pooling, settings defaulting — lives in the production schedule service.
+// ProductionScheduleInputRepo is the thin read surface behind solver-input assembly. Each method is one query mapped to domain or scheduling types; the assembly itself — flow-graph attribution, demand pooling, settings defaulting — lives in the production schedule service.
 type ProductionScheduleInputRepo interface {
 	// GetConstraintMachines returns every planned machine in the constraint department, in name order.
 	GetConstraintMachines(ctx context.Context, accountID, departmentID string) ([]scheduling.Machine, *apierror.APIError)
@@ -1086,11 +1080,8 @@ type ProductionScheduleInputRepo interface {
 	// GetStepConsumptionItems returns the input items each production step consumes.
 	GetStepConsumptionItems(ctx context.Context, stepIDs []string) ([]StepConsumptionRow, *apierror.APIError)
 
-	// GetSeedBatchesForItems returns every scanned batch for the given items inside the demand window, to start the genealogy walk from.
-	GetSeedBatchesForItems(ctx context.Context, params GetSeedBatchesParams) ([]SeedBatchRow, *apierror.APIError)
-
-	// GetBatchFlowChildren returns the immediate downstream batches of the given parent batches.
-	GetBatchFlowChildren(ctx context.Context, accountID string, parentBatchIDs []string) ([]BatchFlowChildRow, *apierror.APIError)
+	// GetProductionFlowChildrenByItem returns the immediate downstream stage of each given item in the routing graph: the item each consuming step produces.
+	GetProductionFlowChildrenByItem(ctx context.Context, accountID string, parentItemIDs []string) ([]ProductionFlowChildRow, *apierror.APIError)
 
 	// GetEchelonOnHand returns available inventory per item, net of allocations, normalized through the unit ratio.
 	GetEchelonOnHand(ctx context.Context, accountID string, itemIDs []string) (map[string]float64, *apierror.APIError)

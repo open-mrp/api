@@ -285,66 +285,6 @@ func (q *Queries) GetAllSellableProducts(ctx context.Context, accountID string) 
 	return items, nil
 }
 
-const getBatchFlowChildren = `-- name: GetBatchFlowChildren :many
-SELECT
-    bf.B AS parent_batch_id,
-    child.id AS batch_id,
-    child.item_id
-FROM _batch_flow bf
-JOIN batch child ON child.id = bf.A
-WHERE child.account_id = ?
-  AND bf.B IN (/*SLICE:parent_batch_ids*/?)
-ORDER BY bf.B, child.id
-`
-
-type GetBatchFlowChildrenParams struct {
-	AccountID      string
-	ParentBatchIds []string
-}
-
-type GetBatchFlowChildrenRow struct {
-	ParentBatchID string
-	BatchID       string
-	ItemID        string
-}
-
-// GetBatchFlowChildren returns the immediate downstream batches for a set of batches.
-//
-// The caller walks the genealogy one level at a time, passing the whole frontier each round. That is O(depth) queries total regardless of how many items are being planned, where the TS script issued one query per depth PER item. A recursive CTE would be nicer still, but sqlc's MySQL parser cannot resolve the self-reference. Per the Prisma orientation of _batch_flow (row (A, B): A = downstream/target, B = upstream/source; see docs/patterns/production-step-graph-patterns.md and InsertBatchFlow in batch.sql), a batch's children are the A side of rows where it is B.
-func (q *Queries) GetBatchFlowChildren(ctx context.Context, arg GetBatchFlowChildrenParams) ([]GetBatchFlowChildrenRow, error) {
-	query := getBatchFlowChildren
-	var queryParams []interface{}
-	queryParams = append(queryParams, arg.AccountID)
-	if len(arg.ParentBatchIds) > 0 {
-		for _, v := range arg.ParentBatchIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:parent_batch_ids*/?", strings.Repeat(",?", len(arg.ParentBatchIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:parent_batch_ids*/?", "NULL", 1)
-	}
-	rows, err := q.db.QueryContext(ctx, query, queryParams...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetBatchFlowChildrenRow
-	for rows.Next() {
-		var i GetBatchFlowChildrenRow
-		if err := rows.Scan(&i.ParentBatchID, &i.BatchID, &i.ItemID); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getConstraintBatchMeasurements = `-- name: GetConstraintBatchMeasurements :many
 SELECT
     b.id AS batch_id,
@@ -361,7 +301,8 @@ SELECT
     mc.name AS machine_name,
     cost_rate.value AS unit_cost,
     labor_time.value AS labor_time_value,
-    labor_time_unit.abbreviation AS labor_time_unit,
+    labor_time_unit.ratio_numerator AS labor_time_ratio_numerator,
+    labor_time_unit.ratio_denominator AS labor_time_ratio_denominator,
     labor_rate.value AS labor_rate,
     overhead_rate.value AS overhead_rate,
     pr.created_at AS run_created_at
@@ -398,24 +339,25 @@ type GetConstraintBatchMeasurementsParams struct {
 }
 
 type GetConstraintBatchMeasurementsRow struct {
-	BatchID          string
-	ItemID           string
-	Sku              string
-	ScannedAt        sql.NullTime
-	QuantityValue    sql.NullString
-	QuantityUnit     sql.NullString
-	QuantityUnitID   sql.NullString
-	RatioNumerator   sql.NullString
-	RatioDenominator sql.NullString
-	ProductionStepID sql.NullString
-	MachineID        string
-	MachineName      string
-	UnitCost         sql.NullString
-	LaborTimeValue   sql.NullString
-	LaborTimeUnit    sql.NullString
-	LaborRate        sql.NullString
-	OverheadRate     sql.NullString
-	RunCreatedAt     sql.NullTime
+	BatchID                   string
+	ItemID                    string
+	Sku                       string
+	ScannedAt                 sql.NullTime
+	QuantityValue             sql.NullString
+	QuantityUnit              sql.NullString
+	QuantityUnitID            sql.NullString
+	RatioNumerator            sql.NullString
+	RatioDenominator          sql.NullString
+	ProductionStepID          sql.NullString
+	MachineID                 string
+	MachineName               string
+	UnitCost                  sql.NullString
+	LaborTimeValue            sql.NullString
+	LaborTimeRatioNumerator   sql.NullString
+	LaborTimeRatioDenominator sql.NullString
+	LaborRate                 sql.NullString
+	OverheadRate              sql.NullString
+	RunCreatedAt              sql.NullTime
 }
 
 // GetConstraintBatchMeasurements returns one row per historical batch produced on the constraint machines, which is what the run rate, cost, lot count, machine affinity and measured lead time are all derived from.
@@ -459,7 +401,8 @@ func (q *Queries) GetConstraintBatchMeasurements(ctx context.Context, arg GetCon
 			&i.MachineName,
 			&i.UnitCost,
 			&i.LaborTimeValue,
-			&i.LaborTimeUnit,
+			&i.LaborTimeRatioNumerator,
+			&i.LaborTimeRatioDenominator,
 			&i.LaborRate,
 			&i.OverheadRate,
 			&i.RunCreatedAt,
@@ -738,7 +681,8 @@ SELECT
     COALESCE(mc.name, '') AS machine_name,
     cost_rate.value AS unit_cost,
     labor_time.value AS labor_time_value,
-    labor_time_unit.abbreviation AS labor_time_unit,
+    labor_time_unit.ratio_numerator AS labor_time_ratio_numerator,
+    labor_time_unit.ratio_denominator AS labor_time_ratio_denominator,
     labor_rate.value AS labor_rate,
     overhead_rate.value AS overhead_rate,
     pr.created_at AS run_created_at
@@ -774,25 +718,26 @@ type GetFinishingBatchMeasurementsParams struct {
 }
 
 type GetFinishingBatchMeasurementsRow struct {
-	BatchID          string
-	ItemID           string
-	Sku              string
-	ScannedAt        sql.NullTime
-	QuantityValue    sql.NullString
-	QuantityUnit     sql.NullString
-	QuantityUnitID   sql.NullString
-	RatioNumerator   sql.NullString
-	RatioDenominator sql.NullString
-	ProductionStepID sql.NullString
-	StepDepartmentID string
-	MachineID        string
-	MachineName      string
-	UnitCost         sql.NullString
-	LaborTimeValue   sql.NullString
-	LaborTimeUnit    sql.NullString
-	LaborRate        sql.NullString
-	OverheadRate     sql.NullString
-	RunCreatedAt     sql.NullTime
+	BatchID                   string
+	ItemID                    string
+	Sku                       string
+	ScannedAt                 sql.NullTime
+	QuantityValue             sql.NullString
+	QuantityUnit              sql.NullString
+	QuantityUnitID            sql.NullString
+	RatioNumerator            sql.NullString
+	RatioDenominator          sql.NullString
+	ProductionStepID          sql.NullString
+	StepDepartmentID          string
+	MachineID                 string
+	MachineName               string
+	UnitCost                  sql.NullString
+	LaborTimeValue            sql.NullString
+	LaborTimeRatioNumerator   sql.NullString
+	LaborTimeRatioDenominator sql.NullString
+	LaborRate                 sql.NullString
+	OverheadRate              sql.NullString
+	RunCreatedAt              sql.NullTime
 }
 
 // GetFinishingBatchMeasurements returns one row per historical batch produced outside the constraint department, which is what the second stage's run rates are measured from.
@@ -839,7 +784,8 @@ func (q *Queries) GetFinishingBatchMeasurements(ctx context.Context, arg GetFini
 			&i.MachineName,
 			&i.UnitCost,
 			&i.LaborTimeValue,
-			&i.LaborTimeUnit,
+			&i.LaborTimeRatioNumerator,
+			&i.LaborTimeRatioDenominator,
 			&i.LaborRate,
 			&i.OverheadRate,
 			&i.RunCreatedAt,
@@ -926,7 +872,8 @@ const getItemRunRateHistory = `-- name: GetItemRunRateHistory :many
 SELECT
     bm.B AS machine_id,
     labor_time.value AS labor_time_value,
-    labor_time_unit.abbreviation AS labor_time_unit
+    labor_time_unit.ratio_numerator AS labor_time_ratio_numerator,
+    labor_time_unit.ratio_denominator AS labor_time_ratio_denominator
 FROM batch b
 LEFT JOIN _batches_machines bm ON bm.A = b.id
 JOIN production_step ps ON ps.id = b.production_step_id
@@ -946,9 +893,10 @@ type GetItemRunRateHistoryParams struct {
 }
 
 type GetItemRunRateHistoryRow struct {
-	MachineID      sql.NullString
-	LaborTimeValue string
-	LaborTimeUnit  string
+	MachineID                 sql.NullString
+	LaborTimeValue            string
+	LaborTimeRatioNumerator   string
+	LaborTimeRatioDenominator string
 }
 
 // GetItemRunRateHistory returns the labor time behind this item's most recent scans, newest first, so a SKU no version holds a policy for can still be priced off its own history.
@@ -965,7 +913,12 @@ func (q *Queries) GetItemRunRateHistory(ctx context.Context, arg GetItemRunRateH
 	var items []GetItemRunRateHistoryRow
 	for rows.Next() {
 		var i GetItemRunRateHistoryRow
-		if err := rows.Scan(&i.MachineID, &i.LaborTimeValue, &i.LaborTimeUnit); err != nil {
+		if err := rows.Scan(
+			&i.MachineID,
+			&i.LaborTimeValue,
+			&i.LaborTimeRatioNumerator,
+			&i.LaborTimeRatioDenominator,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -1353,6 +1306,65 @@ func (q *Queries) GetProductDemandByCustomer(ctx context.Context, arg GetProduct
 	return items, nil
 }
 
+const getProductionFlowChildrenByItem = `-- name: GetProductionFlowChildrenByItem :many
+SELECT DISTINCT
+    c.item_id AS parent_item_id,
+    prod.item_id AS child_item_id
+FROM consumption c
+JOIN production_step ps ON ps.id = c.production_step_id
+JOIN production prod ON prod.production_step_id = c.production_step_id
+WHERE ps.account_id = ?
+  AND c.item_id IN (/*SLICE:parent_item_ids*/?)
+ORDER BY c.item_id, prod.item_id
+`
+
+type GetProductionFlowChildrenByItemParams struct {
+	AccountID     string
+	ParentItemIds []string
+}
+
+type GetProductionFlowChildrenByItemRow struct {
+	ParentItemID string
+	ChildItemID  string
+}
+
+// GetProductionFlowChildrenByItem returns one edge per (consumed item -> item the same step produces): the immediate downstream stage of each given item in the production-flow graph.
+//
+// This is the routing/BOM graph, not batch history. The echelon is defined by what an item is structurally turned into — a step consumes greige and produces sewn, sewn is consumed and washed produced, and so on — so downstream stock is counted whether or not the floor ever linked the batches that produced it. That linkage (_batch_flow) is written only by move/split/merge, so a walk that depended on it collapsed to the constraint item alone whenever the stages were scanned as independent batches. The caller walks one level at a time, passing the whole frontier each round: O(depth) queries regardless of how many items are planned. A recursive CTE would be nicer, but sqlc's MySQL parser cannot resolve the self-reference. A step with no production row produces nothing and drops out of the join, which correctly ends that branch.
+func (q *Queries) GetProductionFlowChildrenByItem(ctx context.Context, arg GetProductionFlowChildrenByItemParams) ([]GetProductionFlowChildrenByItemRow, error) {
+	query := getProductionFlowChildrenByItem
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	if len(arg.ParentItemIds) > 0 {
+		for _, v := range arg.ParentItemIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:parent_item_ids*/?", strings.Repeat(",?", len(arg.ParentItemIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:parent_item_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetProductionFlowChildrenByItemRow
+	for rows.Next() {
+		var i GetProductionFlowChildrenByItemRow
+		if err := rows.Scan(&i.ParentItemID, &i.ChildItemID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getProductionScheduleItemSettings = `-- name: GetProductionScheduleItemSettings :many
 SELECT
     s.item_id,
@@ -1451,68 +1463,6 @@ func (q *Queries) GetProductsForItems(ctx context.Context, arg GetProductsForIte
 			&i.Sku,
 			&i.ProductLineID,
 		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getSeedBatchesForItems = `-- name: GetSeedBatchesForItems :many
-SELECT
-    b.id AS batch_id,
-    b.item_id
-FROM batch b
-WHERE b.account_id = ?
-  AND b.item_id IN (/*SLICE:item_ids*/?)
-  AND b.scanned_at IS NOT NULL
-  AND b.scanned_at >= ?
-  AND b.scanned_at <= ?
-ORDER BY b.item_id, b.scanned_at DESC, b.id DESC
-`
-
-type GetSeedBatchesForItemsParams struct {
-	AccountID   string
-	ItemIds     []string
-	WindowStart sql.NullTime
-	WindowEnd   sql.NullTime
-}
-
-type GetSeedBatchesForItemsRow struct {
-	BatchID string
-	ItemID  string
-}
-
-// GetSeedBatchesForItems returns the batches to start the genealogy walk from: every scan of the item inside the demand window. Seeding from the whole window rather than a recent sample is what keeps the echelon complete — stock held as a finished good only an older batch flowed to still has to count against the decision to build more.
-func (q *Queries) GetSeedBatchesForItems(ctx context.Context, arg GetSeedBatchesForItemsParams) ([]GetSeedBatchesForItemsRow, error) {
-	query := getSeedBatchesForItems
-	var queryParams []interface{}
-	queryParams = append(queryParams, arg.AccountID)
-	if len(arg.ItemIds) > 0 {
-		for _, v := range arg.ItemIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(arg.ItemIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.WindowStart)
-	queryParams = append(queryParams, arg.WindowEnd)
-	rows, err := q.db.QueryContext(ctx, query, queryParams...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetSeedBatchesForItemsRow
-	for rows.Next() {
-		var i GetSeedBatchesForItemsRow
-		if err := rows.Scan(&i.BatchID, &i.ItemID); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

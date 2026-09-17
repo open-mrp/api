@@ -57,7 +57,9 @@ type ItemRunRateSample struct {
 	// MachineID is empty for a scan recorded against no machine.
 	MachineID      string
 	LaborTimeValue float64
-	LaborTimeUnit  string
+	// LaborTimeRatioNumerator and LaborTimeRatioDenominator convert LaborTimeValue's unit to seconds via the time dimension's base (the hour); see scheduling.SecondsPerUnitFromLaborTime.
+	LaborTimeRatioNumerator   float64
+	LaborTimeRatioDenominator float64
 }
 
 // ConstraintBatchRow is one historical batch as read from the database: the measurement the solver consumes plus the raw scan metadata the input assembly needs alongside it.
@@ -99,25 +101,10 @@ type StepConsumptionRow struct {
 	ItemID           string
 }
 
-// GetSeedBatchesParams bounds the genealogy seeds to the demand window, matching the batch-measurement window.
-type GetSeedBatchesParams struct {
-	AccountID   string
-	ItemIDs     []string
-	WindowStart time.Time
-	WindowEnd   time.Time
-}
-
-// SeedBatchRow is one scanned batch a genealogy walk can start from.
-type SeedBatchRow struct {
-	BatchID string
-	ItemID  string
-}
-
-// BatchFlowChildRow is one immediate downstream batch in the genealogy.
-type BatchFlowChildRow struct {
-	ParentBatchID string
-	BatchID       string
-	ItemID        string
+// ProductionFlowChildRow is one edge in the routing graph: the item a step produces from a consumed item, i.e. that item's immediate downstream stage.
+type ProductionFlowChildRow struct {
+	ParentItemID string
+	ChildItemID  string
 }
 
 // SellableProductRow is one sellable product carried by an item.

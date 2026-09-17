@@ -65,7 +65,7 @@ func DefaultSettings() Settings {
 	}
 }
 
-// MaxFlowDepthOrDefault bounds the genealogy walk so a rework cycle cannot loop forever.
+// MaxFlowDepthOrDefault bounds the routing-graph walk so a rework cycle cannot loop forever. It has to be deep enough to reach the finished good through every intermediate stage — a knit → sew → wash → board → pack route is five hops, not the single knit → pack hop the old genealogy walk saw.
 func (s Settings) MaxFlowDepthOrDefault() int {
 	if s.MaxFlowDepth > 0 {
 		return s.MaxFlowDepth

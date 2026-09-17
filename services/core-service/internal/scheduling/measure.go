@@ -3,7 +3,6 @@ package scheduling
 import (
 	"math"
 	"sort"
-	"strings"
 	"time"
 )
 
@@ -19,11 +18,13 @@ type BatchMeasurement struct {
 	MachineName      string
 	UnitCost         float64
 
-	// LaborTimeValue is the production step's labor time in LaborTimeUnit per unit.
+	// LaborTimeValue is the production step's labor time per unit, in the time unit its ratio columns describe.
 	LaborTimeValue float64
-	LaborTimeUnit  string
-	LaborRate      float64
-	OverheadRate   float64
+	// LaborTimeRatioNumerator and LaborTimeRatioDenominator convert that unit to seconds — the unit's size in the time dimension's base, the hour — so SecondsPerUnitFromLaborTime yields value * (num/den) * 3600. Both are zero when the scan carried no labor-time unit, which SecondsPerUnitFromLaborTime then treats as raw seconds.
+	LaborTimeRatioNumerator   float64
+	LaborTimeRatioDenominator float64
+	LaborRate                 float64
+	OverheadRate              float64
 
 	// RunCreatedAt is when the production run was opened; paired with ScannedAt it gives the observed lead time for this batch.
 	RunCreatedAt *time.Time
@@ -57,18 +58,17 @@ type ItemMeasurement struct {
 // leadTimeSampleMaxDays discards implausible lead-time samples. A run left open for months is a data-entry artifact, not a real lead time, and a handful of them would dominate the mean.
 const leadTimeSampleMaxDays = 120
 
-// SecondsPerUnitFromLaborTime converts a production step's labor time to seconds.
+// secondsPerHour is the time dimension's base (the hour) expressed in seconds; a labor-time unit's ratio gives its size in hours, so multiplying by this yields seconds.
+const secondsPerHour = 3600
+
+// SecondsPerUnitFromLaborTime converts a production step's labor time to seconds using the numerator unit's own conversion columns.
 //
-// The unit abbreviation decides the scale. An unrecognized unit is treated as seconds, matching the script — a wrong guess here silently rescales every run hour in the plan, so the recognized set is kept explicit.
-func SecondsPerUnitFromLaborTime(value float64, unitAbbreviation string) float64 {
-	switch strings.ToLower(strings.TrimSpace(unitAbbreviation)) {
-	case "min", "mins", "minute", "minutes":
-		return value * 60
-	case "hr", "h", "hour", "hours":
-		return value * 3600
-	default:
+// ratioNumerator/ratioDenominator are the unit's size in the time dimension's base unit, the hour, so seconds = value * (ratioNumerator/ratioDenominator) * 3600 — minute (1/60) gives 60, hour (1/1) gives 3600, day (24/1) gives 86400, and any account-defined time unit converts by the same rule. This reads the same columns as the OEE standard_seconds_earned query, so the plan and the dashboard never disagree about what a run rate means. A non-positive ratio (a scan that carried no usable time unit) falls back to treating the value as raw seconds rather than zeroing a run rate.
+func SecondsPerUnitFromLaborTime(value, ratioNumerator, ratioDenominator float64) float64 {
+	if ratioNumerator <= 0 || ratioDenominator <= 0 {
 		return value
 	}
+	return value * (ratioNumerator / ratioDenominator) * secondsPerHour
 }
 
 // MeasureItems aggregates batch history into per-item measurements.
@@ -105,7 +105,7 @@ func MeasureItems(batches []BatchMeasurement) []ItemMeasurement {
 
 		// Rates come off the production step and are identical across that step's batches; take the first non-zero rather than averaging noise.
 		if !acc.sawMeasurable && b.LaborTimeValue > 0 {
-			acc.m.SecondsPerUnit = SecondsPerUnitFromLaborTime(b.LaborTimeValue, b.LaborTimeUnit)
+			acc.m.SecondsPerUnit = SecondsPerUnitFromLaborTime(b.LaborTimeValue, b.LaborTimeRatioNumerator, b.LaborTimeRatioDenominator)
 			acc.m.OverheadRate = b.OverheadRate
 			acc.sawMeasurable = true
 		}

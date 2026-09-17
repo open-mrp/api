@@ -2,7 +2,6 @@ package service
 
 import (
 	"testing"
-	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/stretchr/testify/assert"
@@ -219,17 +218,6 @@ func TestMachineWeeklyCapacityHours_RawShiftConfig(t *testing.T) {
 	settings := &domain.ProductionScheduleSettings{ShiftsPerDay: 2, HoursPerShift: 8, WorkDaysPerWeek: 5}
 	assert.InDelta(t, 80, machineWeeklyCapacityHours(settings), 0.001, "2 shifts x 8h x 5 days = 80h, no headroom")
 	assert.Equal(t, 0.0, machineWeeklyCapacityHours(nil), "nil settings yield no capacity")
-}
-
-// A window's capacity is one machine-week times the number of weeks it spans, so a partial
-// window is measured against the part of a week it covers.
-func TestOeeWindowWeeks(t *testing.T) {
-	t.Parallel()
-
-	monday := time.Date(2026, 8, 3, 0, 0, 0, 0, time.UTC)
-	assert.InDelta(t, 4, oeeWindowWeeks(monday, monday.AddDate(0, 0, 28)), 0.001, "28 days is four weeks")
-	assert.InDelta(t, 1.0/7.0, oeeWindowWeeks(monday, monday.AddDate(0, 0, 1)), 0.001, "one day is a seventh of a week")
-	assert.Equal(t, 0.0, oeeWindowWeeks(monday, monday), "an empty window spans no weeks")
 }
 
 // An empty filter means every department; a non-empty one keeps only what was asked for.

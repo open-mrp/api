@@ -65,8 +65,8 @@ func (f *oeePlannedFixture) oneBaseline() []domain.AttainmentBaselineRow {
 
 func oeeDeptPtr(s string) *string { return &s }
 
-// Capacity scales with how many machines the plan scheduled: two knitting machines are two machines' capacity, and a department the plan never touched simply is not there.
-func TestScheduledMachinesByDept_CountsPlanMachinesPerDepartment(t *testing.T) {
+// Capacity scales with how many machines the plan scheduled: two knitting machines are two machines' capacity, and a department the plan never touched simply is not there. The flat machine set — what output is scoped to — keeps the scheduled machines and drops the department-less one.
+func TestScheduledCapacity_CountsDistinctMachinesPerDepartment(t *testing.T) {
 	f := newOeePlannedFixture(t)
 
 	f.schedule.EXPECT().SelectAttainmentBaselines(gomock.Any(), gomock.Any()).
@@ -82,17 +82,18 @@ func TestScheduledMachinesByDept_CountsPlanMachinesPerDepartment(t *testing.T) {
 			{WeekStartDate: f.week, MachineID: "mc_orphan", ItemID: "it_5", DepartmentID: nil},
 		}, nil).Times(1)
 
-	byDept, apiErr := f.svc.scheduledMachinesByDept(context.Background(), "acc_1", f.week, f.week.AddDate(0, 0, 7), 1)
+	capacityByWeek, flat, apiErr := f.svc.scheduledCapacity(context.Background(), "acc_1", f.week, f.week.AddDate(0, 0, 7), 1, oeeFixtureMachineWeekly)
 	require.Nil(t, apiErr)
 
-	assert.Len(t, byDept["dp_knit"], 2, "two distinct machines, not three lines")
-	assert.Len(t, byDept["dp_dye"], 1)
-	_, orphan := byDept[""]
-	assert.False(t, orphan, "a machine with no department is dropped")
+	assert.InDelta(t, 2*oeeFixtureMachineWeekly, capacityByWeek[f.week]["dp_knit"], 0.001, "two distinct machines, not three lines")
+	assert.InDelta(t, 1*oeeFixtureMachineWeekly, capacityByWeek[f.week]["dp_dye"], 0.001)
+	assert.True(t, flat["mc_knit_1"])
+	assert.True(t, flat["mc_dye_1"])
+	assert.False(t, flat["mc_orphan"], "a machine with no department is dropped")
 }
 
-// A week's capacity is its distinct scheduled machines times one machine's shift-configuration hours, per week, so the trend can prorate it.
-func TestScheduledCapacityByWeek_ScalesByMachineCount(t *testing.T) {
+// Capacity is kept per week, not unioned across the window: a machine scheduled only in one week must carry only that week's capacity, or Planned Production Time is inflated and the table disagrees with the trend.
+func TestScheduledCapacity_PerWeekNotUnioned(t *testing.T) {
 	f := newOeePlannedFixture(t)
 	weekTwo := f.week.AddDate(0, 0, 7)
 
@@ -105,15 +106,15 @@ func TestScheduledCapacityByWeek_ScalesByMachineCount(t *testing.T) {
 			{WeekStartDate: weekTwo, MachineID: "mc_1", ItemID: "it_1", DepartmentID: oeeDeptPtr("dp_knit")},
 		}, nil).Times(1)
 
-	byWeek, apiErr := f.svc.scheduledCapacityByWeek(context.Background(), "acc_1", f.week, weekTwo.AddDate(0, 0, 7), 1, oeeFixtureMachineWeekly)
+	capacityByWeek, _, apiErr := f.svc.scheduledCapacity(context.Background(), "acc_1", f.week, weekTwo.AddDate(0, 0, 7), 1, oeeFixtureMachineWeekly)
 	require.Nil(t, apiErr)
 
-	assert.InDelta(t, 2*oeeFixtureMachineWeekly, byWeek[f.week]["dp_knit"], 0.001, "two machines scheduled that week")
-	assert.InDelta(t, 1*oeeFixtureMachineWeekly, byWeek[weekTwo]["dp_knit"], 0.001, "only one the next week")
+	assert.InDelta(t, 2*oeeFixtureMachineWeekly, capacityByWeek[f.week]["dp_knit"], 0.001, "two machines scheduled that week")
+	assert.InDelta(t, 1*oeeFixtureMachineWeekly, capacityByWeek[weekTwo]["dp_knit"], 0.001, "only one the next week — not unioned to two")
 }
 
 // A version published after a past week ended did not govern it; its machines must not reach capacity. This is the same rule schedule attainment enforces, so OEE and attainment agree on what a week was.
-func TestScheduledMachinesByDept_IgnoresAVersionThatWasNotLive(t *testing.T) {
+func TestScheduledCapacity_IgnoresAVersionThatWasNotLive(t *testing.T) {
 	f := newOeePlannedFixture(t)
 
 	livePublished := f.week.AddDate(0, 0, -3)
@@ -133,12 +134,12 @@ func TestScheduledMachinesByDept_IgnoresAVersionThatWasNotLive(t *testing.T) {
 	f.schedule.EXPECT().SumPlannedByWeek(gomock.Any(), matchScheduleID("pnsc_1")).
 		Return([]domain.AttainmentPlannedRow{{WeekStartDate: f.week, MachineID: "mc_knit_1", ItemID: "it_1", DepartmentID: oeeDeptPtr("dp_knit")}}, nil).Times(1)
 
-	byDept, apiErr := f.svc.scheduledMachinesByDept(context.Background(), "acc_1", f.week, f.week.AddDate(0, 0, 7), 1)
+	capacityByWeek, flat, apiErr := f.svc.scheduledCapacity(context.Background(), "acc_1", f.week, f.week.AddDate(0, 0, 7), 1, oeeFixtureMachineWeekly)
 	require.Nil(t, apiErr)
 
-	assert.Len(t, byDept["dp_knit"], 1, "only the live version's machine counts")
-	assert.True(t, byDept["dp_knit"]["mc_knit_1"])
-	assert.False(t, byDept["dp_knit"]["mc_phantom"], "a version that did not govern the week schedules nothing for it")
+	assert.InDelta(t, 1*oeeFixtureMachineWeekly, capacityByWeek[f.week]["dp_knit"], 0.001, "only the live version's machine counts")
+	assert.True(t, flat["mc_knit_1"])
+	assert.False(t, flat["mc_phantom"], "a version that did not govern the week schedules nothing for it")
 }
 
 // The end-to-end guard: availability is run time (capacity net of downtime) over Planned Production Time (the scheduled machines' capacity). A department the plan never scheduled has no availability at all rather than a fabricated 100%.
@@ -183,6 +184,40 @@ func TestBuildOeeByDepartment_AvailabilityUsesCapacityMinusDowntime(t *testing.T
 	// The plan never scheduled the sampling room, so it has no capacity and therefore no availability — not a fabricated 100%.
 	unplanned := byID["dp_unplanned"]
 	assert.Nil(t, unplanned.AvailabilityPct, "a department with no plan has no availability")
+}
+
+// Regression: a machine scheduled for only part of the window must not carry the whole window's capacity. Two machines in week one and one in week two is 3 machine-weeks (240h), not the union of two machines times a two-week window (320h) — which is what the per-department table used to compute, disagreeing with the trend.
+func TestBuildOeeByDepartment_ProratesMachinesScheduledPartOfWindow(t *testing.T) {
+	f := newOeePlannedFixture(t)
+	weekTwo := f.week.AddDate(0, 0, 7)
+
+	f.analytics.EXPECT().GetOeeDepartmentData(gomock.Any(), gomock.Any()).Return([]domain.OeeDepartmentDataRow{
+		{DepartmentID: "dp_knit", DepartmentName: "Knitting", GoodUnits: 100},
+	}, nil).AnyTimes()
+	f.analytics.EXPECT().GetOeeDowntimeByDepartment(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+
+	f.schedule.EXPECT().SelectAttainmentBaselines(gomock.Any(), gomock.Any()).Return(f.oneBaseline(), nil).AnyTimes()
+	// mc_2 is scheduled only in week one; the union is two machines, but the second week has just one.
+	f.schedule.EXPECT().SumPlannedByWeek(gomock.Any(), gomock.Any()).Return([]domain.AttainmentPlannedRow{
+		{WeekStartDate: f.week, MachineID: "mc_1", ItemID: "it_1", DepartmentID: oeeDeptPtr("dp_knit")},
+		{WeekStartDate: f.week, MachineID: "mc_2", ItemID: "it_2", DepartmentID: oeeDeptPtr("dp_knit")},
+		{WeekStartDate: weekTwo, MachineID: "mc_1", ItemID: "it_1", DepartmentID: oeeDeptPtr("dp_knit")},
+	}, nil).Times(1)
+
+	departments, apiErr := f.svc.buildOeeByDepartment(context.Background(), domain.AnalyzeOeeParams{
+		AccountID: "acc_1",
+		StartDate: f.week,
+		EndDate:   f.week.AddDate(0, 0, 14),
+	})
+	require.Nil(t, apiErr)
+
+	var knit domain.OeeDepartment
+	for _, d := range departments {
+		if d.DepartmentID == "dp_knit" {
+			knit = d
+		}
+	}
+	assert.InDelta(t, 240*3600, knit.ScheduledSeconds, 0.001, "capacity is summed per week (2+1 machine-weeks x 80h), not unioned across the window (2 machines x 80h x 2 weeks)")
 }
 
 // matchScheduleID matches a SumPlannedByWeekParams carrying the given production schedule id, so the two per-baseline reads can return different rows.

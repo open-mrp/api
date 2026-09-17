@@ -29,8 +29,9 @@ func (s *analyticsSvcImpl) buildOeeTrend(ctx context.Context, params domain.Anal
 	}
 	weekStartDay := int(settings.WeekStartDay)
 
-	// The trend rolls up only scheduled departments, so its output read is scoped to the machines the plan scheduled — the same machines the per-department table measures — keeping Performance on the same plant here as there. No schedule means no machines and no scoping, matching the empty roll-up that follows. Read before the parallel reads because the output query needs it; it is a handful of small queries.
-	scheduledMachines, apiErr := s.scheduledMachineIDs(ctx, params.AccountID, params.StartDate, params.EndDate, weekStartDay)
+	// Capacity per department per week comes from the shift configuration, and the same read gives the flat set of scheduled machines the output read is scoped to — the same machines and the same weekly capacity the per-department table uses, so the trend and the table agree on the window. Read before the parallel reads because the output query needs the machine filter; it is a handful of small queries. No schedule means no machines and no scoping, matching the empty roll-up that follows.
+	perMachineWeekly := machineWeeklyCapacityHours(settings)
+	capacityWeek, scheduledMachines, apiErr := s.scheduledCapacity(ctx, params.AccountID, params.StartDate, params.EndDate, weekStartDay, perMachineWeekly)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -43,19 +44,15 @@ func (s *analyticsSvcImpl) buildOeeTrend(ctx context.Context, params domain.Anal
 		MachineIDs:   machineSlice(scheduledMachines),
 	}
 
-	// Capacity per department per week comes from the shift configuration, so one machine's weekly hours scales by how many machines the plan scheduled. Availability and Performance divide by that capacity net of downtime; run time is no longer read from scans.
-	perMachineWeekly := machineWeeklyCapacityHours(settings)
-
-	// The reads share no inputs, and the scan aggregate over the window dominates the others — running them in sequence spends the whole chart's latency budget waiting on one query while idle round trips queue behind it. Errors are collected and the first non-nil is returned, so failure behaves exactly as it did when these ran in order.
+	// The two reads share no inputs, and the scan aggregate over the window dominates — running them in sequence spends the whole chart's latency budget waiting on one query while the other idles. Errors are collected and the first non-nil is returned, so failure behaves exactly as it did when these ran in order.
 	var (
 		outputRows   []domain.OeeTrendDepartmentWeekRow
 		downtimeRows []domain.OeeDowntimeIntervalRow
-		capacityWeek map[time.Time]map[string]float64
-		errs         [3]*apierror.APIError
+		errs         [2]*apierror.APIError
 		wg           sync.WaitGroup
 	)
 
-	wg.Add(3)
+	wg.Add(2)
 	go func() {
 		defer wg.Done()
 		outputRows, errs[0] = repo.GetOeeTrendDepartmentDataByWeek(ctx, window)
@@ -63,10 +60,6 @@ func (s *analyticsSvcImpl) buildOeeTrend(ctx context.Context, params domain.Anal
 	go func() {
 		defer wg.Done()
 		downtimeRows, errs[1] = repo.GetOeeTrendDowntimeIntervals(ctx, window)
-	}()
-	go func() {
-		defer wg.Done()
-		capacityWeek, errs[2] = s.scheduledCapacityByWeek(ctx, params.AccountID, params.StartDate, params.EndDate, weekStartDay, perMachineWeekly)
 	}()
 	wg.Wait()
 

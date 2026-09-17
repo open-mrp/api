@@ -30,20 +30,25 @@ func (s *analyticsSvcImpl) buildOeeByDepartment(ctx context.Context, params doma
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
-		// Weeks bucket on the account's configured week start, the same day the schedule stores its lines against, so a machine is attributed to the plan that governed each week it was scheduled in.
-		machinesByDept, apiErr := s.scheduledMachinesByDept(ctx, params.AccountID, params.StartDate, params.EndDate, int(settings.WeekStartDay))
+		perMachineWeekly := machineWeeklyCapacityHours(settings)
+		capacityByWeek, machines, apiErr := s.scheduledCapacity(ctx, params.AccountID, params.StartDate, params.EndDate, int(settings.WeekStartDay), perMachineWeekly)
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
+		scheduledMachines = machines
 
-		perMachineWeekly := machineWeeklyCapacityHours(settings)
-		windowWeeks := oeeWindowWeeks(params.StartDate, params.EndDate)
-		capacityHours = make(map[string]float64, len(machinesByDept))
-		scheduledMachines = map[string]bool{}
-		for departmentID, machines := range machinesByDept {
-			capacityHours[departmentID] = float64(len(machines)) * perMachineWeekly * windowWeeks
-			for machineID := range machines {
-				scheduledMachines[machineID] = true
+		// Fold the per-week capacity down to one window figure per department, prorating a partial
+		// first or last week. Capacity is summed per week rather than as (machines unioned over the
+		// window) x window length, so a machine scheduled for only part of the range carries only the
+		// weeks it was actually planned for — the same figure the trend reports for the same window.
+		capacityHours = map[string]float64{}
+		for week, deptHours := range capacityByWeek {
+			fraction := weekOverlapFraction(week, params.StartDate, params.EndDate)
+			if fraction <= 0 {
+				continue
+			}
+			for departmentID, hours := range deptHours {
+				capacityHours[departmentID] += hours * fraction
 			}
 		}
 	}
@@ -122,14 +127,6 @@ func machineWeeklyCapacityHours(settings *domain.ProductionScheduleSettings) flo
 		return 0
 	}
 	return float64(settings.ShiftsPerDay) * settings.HoursPerShift * float64(settings.WorkDaysPerWeek)
-}
-
-// oeeWindowWeeks is how many weeks the window spans, so a per-machine weekly capacity can be prorated to a window of any length. A 28-day window is four weeks; a three-day window is 3/7 of one.
-func oeeWindowWeeks(start, end time.Time) float64 {
-	if !end.After(start) {
-		return 0
-	}
-	return end.Sub(start).Hours() / (7 * 24)
 }
 
 // oeeDowntimeTotals is one department's downtime, already split by the OEE term each reason charges.
@@ -320,11 +317,27 @@ func filterDeptHours(hours map[string]float64, deptFilter map[string]bool) map[s
 	return out
 }
 
-// scheduledMachineIDs returns every machine the account's live plan put on the schedule across the window — the machines OEE measures. Performance divides the standard time output earned by the scheduled machines' run time, so output from machines the plan never listed has to be kept out of the numerator or a department reads as running many times its own speed.
+// scheduledCapacity reads the account's live plan once and returns two things over the window:
+// the Planned Production Time capacity per department for each production week, and the flat set of
+// every machine the plan scheduled anywhere in the window.
 //
-// Each week is attributed to the same baseline scheduledHoursByWeek and attainment choose, so all three agree on which plan owned a week and therefore on which machines it scheduled.
-func (s *analyticsSvcImpl) scheduledMachineIDs(ctx context.Context, accountID string, start, end time.Time, weekStartDay int) (map[string]bool, *apierror.APIError) {
-	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.scheduled_machine_ids")
+// Capacity is kept per week — a department's distinct scheduled machines that week times one
+// machine's shift-configuration hours — rather than unioned across the window and multiplied out.
+// A machine planned for only part of the range must carry only the weeks it was scheduled for, or
+// Planned Production Time is inflated and the per-department table disagrees with the trend on the
+// same window. The per-department table folds these weeks down with weekOverlapFraction; the trend
+// reads them one at a time. A machine listed on several lines in a week counts its capacity once.
+//
+// The flat machine set scopes the output reads: Performance divides the standard time earned by the
+// scheduled machines' run time, so output from machines the plan never listed has to be kept out of
+// the numerator. It is unioned across the window on purpose — a machine's output is measured wherever
+// it scanned, even in a week it was idle by plan.
+//
+// Each week is attributed to the baseline that governed it, the same choice attainment makes, so all
+// three agree on which plan owned a week. A machine scheduled under no department is dropped from
+// capacity: an unassigned department has no availability.
+func (s *analyticsSvcImpl) scheduledCapacity(ctx context.Context, accountID string, start, end time.Time, weekStartDay int, perMachineWeekly float64) (map[time.Time]map[string]float64, map[string]bool, *apierror.APIError) {
+	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.scheduled_capacity")
 	defer span.End()
 
 	repo := s.repos.NewScheduleAttainmentRepo()
@@ -339,10 +352,12 @@ func (s *analyticsSvcImpl) scheduledMachineIDs(ctx context.Context, accountID st
 		WindowEnd:   windowEnd,
 	})
 	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+		return nil, nil, tracing.Trace(span, apiErr)
 	}
 
-	machines := map[string]bool{}
+	// Distinct scheduled machines per (week, department), plus the flat union for output scoping.
+	machinesByWeekDept := map[time.Time]map[string]map[string]bool{}
+	flat := map[string]bool{}
 	for i := range baselines {
 		b := &baselines[i]
 
@@ -353,63 +368,12 @@ func (s *analyticsSvcImpl) scheduledMachineIDs(ctx context.Context, accountID st
 			WindowEnd:            windowEnd,
 		})
 		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
+			return nil, nil, tracing.Trace(span, apiErr)
 		}
 
 		for _, row := range rows {
 			week := scheduleWeekStart(row.WeekStartDate, weekStartDay)
-			// One baseline owns each week, exactly as in scheduledHoursByWeek: a version that covered the week but was not its plan scheduled nothing for it.
-			chosen := baselineFor(baselines, week, now)
-			if chosen == nil || chosen.ScheduleID != b.ScheduleID {
-				continue
-			}
-			if row.MachineID != "" {
-				machines[row.MachineID] = true
-			}
-		}
-	}
-	return machines, nil
-}
-
-// scheduledMachinesByDept returns, per department, the set of machines the account's live plan scheduled across the window. It is what OEE capacity scales on: a department's Planned Production Time is its scheduled machine count times one machine's shift-configuration hours, so a three-machine room is measured against three machines' capacity and a one-machine room against one.
-//
-// Each week is attributed to the same baseline scheduledHoursByWeek and attainment choose, so all three agree on which plan owned a week and therefore on which machines it scheduled. A machine scheduled under no department is dropped: an unassigned department has no availability, exactly as SumScheduledHoursByDepartmentWeek drops it.
-func (s *analyticsSvcImpl) scheduledMachinesByDept(ctx context.Context, accountID string, start, end time.Time, weekStartDay int) (map[string]map[string]bool, *apierror.APIError) {
-	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.scheduled_machines_by_dept")
-	defer span.End()
-
-	repo := s.repos.NewScheduleAttainmentRepo()
-	windowStart := scheduleWeekStart(start, weekStartDay)
-	windowEnd := end
-	// Read once so every week is judged against the same instant.
-	now := time.Now().UTC()
-
-	baselines, apiErr := repo.SelectAttainmentBaselines(ctx, domain.SelectAttainmentBaselinesParams{
-		AccountID:   accountID,
-		WindowStart: windowStart,
-		WindowEnd:   windowEnd,
-	})
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	byDept := map[string]map[string]bool{}
-	for i := range baselines {
-		b := &baselines[i]
-
-		rows, apiErr := repo.SumPlannedByWeek(ctx, domain.SumPlannedByWeekParams{
-			AccountID:            accountID,
-			ProductionScheduleID: b.ScheduleID,
-			WindowStart:          windowStart,
-			WindowEnd:            windowEnd,
-		})
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-
-		for _, row := range rows {
-			week := scheduleWeekStart(row.WeekStartDate, weekStartDay)
-			// One baseline owns each week, exactly as in scheduledHoursByWeek.
+			// One baseline owns each week: a version that covered the week but was not its live plan scheduled nothing for it.
 			chosen := baselineFor(baselines, week, now)
 			if chosen == nil || chosen.ScheduleID != b.ScheduleID {
 				continue
@@ -417,65 +381,11 @@ func (s *analyticsSvcImpl) scheduledMachinesByDept(ctx context.Context, accountI
 			if row.MachineID == "" || row.DepartmentID == nil || *row.DepartmentID == "" {
 				continue
 			}
-			machines := byDept[*row.DepartmentID]
-			if machines == nil {
-				machines = map[string]bool{}
-				byDept[*row.DepartmentID] = machines
-			}
-			machines[row.MachineID] = true
-		}
-	}
-	return byDept, nil
-}
-
-// scheduledCapacityByWeek returns the Planned Production Time capacity per department for each week in the window: the department's distinct scheduled machines that week times one machine's shift-configuration hours. The trend prorates each week's value to the days its bucket covers, exactly as scheduledHoursByWeek's output was prorated.
-func (s *analyticsSvcImpl) scheduledCapacityByWeek(ctx context.Context, accountID string, start, end time.Time, weekStartDay int, perMachineWeekly float64) (map[time.Time]map[string]float64, *apierror.APIError) {
-	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.scheduled_capacity_by_week")
-	defer span.End()
-
-	repo := s.repos.NewScheduleAttainmentRepo()
-	windowStart := scheduleWeekStart(start, weekStartDay)
-	windowEnd := end
-	// Read once so every week is judged against the same instant.
-	now := time.Now().UTC()
-
-	baselines, apiErr := repo.SelectAttainmentBaselines(ctx, domain.SelectAttainmentBaselinesParams{
-		AccountID:   accountID,
-		WindowStart: windowStart,
-		WindowEnd:   windowEnd,
-	})
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	// Distinct scheduled machines per (week, department), so a machine listed on several lines in a week counts its capacity once.
-	machines := map[time.Time]map[string]map[string]bool{}
-	for i := range baselines {
-		b := &baselines[i]
-
-		rows, apiErr := repo.SumPlannedByWeek(ctx, domain.SumPlannedByWeekParams{
-			AccountID:            accountID,
-			ProductionScheduleID: b.ScheduleID,
-			WindowStart:          windowStart,
-			WindowEnd:            windowEnd,
-		})
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-
-		for _, row := range rows {
-			week := scheduleWeekStart(row.WeekStartDate, weekStartDay)
-			chosen := baselineFor(baselines, week, now)
-			if chosen == nil || chosen.ScheduleID != b.ScheduleID {
-				continue
-			}
-			if row.MachineID == "" || row.DepartmentID == nil || *row.DepartmentID == "" {
-				continue
-			}
-			byDept := machines[week]
+			flat[row.MachineID] = true
+			byDept := machinesByWeekDept[week]
 			if byDept == nil {
 				byDept = map[string]map[string]bool{}
-				machines[week] = byDept
+				machinesByWeekDept[week] = byDept
 			}
 			set := byDept[*row.DepartmentID]
 			if set == nil {
@@ -486,15 +396,15 @@ func (s *analyticsSvcImpl) scheduledCapacityByWeek(ctx context.Context, accountI
 		}
 	}
 
-	out := make(map[time.Time]map[string]float64, len(machines))
-	for week, byDept := range machines {
+	capacityByWeek := make(map[time.Time]map[string]float64, len(machinesByWeekDept))
+	for week, byDept := range machinesByWeekDept {
 		deptHours := make(map[string]float64, len(byDept))
 		for departmentID, set := range byDept {
 			deptHours[departmentID] = float64(len(set)) * perMachineWeekly
 		}
-		out[week] = deptHours
+		capacityByWeek[week] = deptHours
 	}
-	return out, nil
+	return capacityByWeek, flat, nil
 }
 
 // machineSlice is the sorted machine-id list an OEE read filters on. Sorted so the query text is stable across identical requests; empty when nothing was scheduled, which the read reads as no machine filter.

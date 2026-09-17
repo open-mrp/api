@@ -2770,6 +2770,36 @@ func (mr *MockUnitRepoMockRecorder) GetFreightWeightUnitID(ctx any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFreightWeightUnitID", reflect.TypeOf((*MockUnitRepo)(nil).GetFreightWeightUnitID), ctx)
 }
 
+// IsBaseUnit mocks base method.
+func (m *MockUnitRepo) IsBaseUnit(ctx context.Context, unitID string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsBaseUnit", ctx, unitID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// IsBaseUnit indicates an expected call of IsBaseUnit.
+func (mr *MockUnitRepoMockRecorder) IsBaseUnit(ctx, unitID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsBaseUnit", reflect.TypeOf((*MockUnitRepo)(nil).IsBaseUnit), ctx, unitID)
+}
+
+// IsReferenced mocks base method.
+func (m *MockUnitRepo) IsReferenced(ctx context.Context, unitID string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsReferenced", ctx, unitID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// IsReferenced indicates an expected call of IsReferenced.
+func (mr *MockUnitRepoMockRecorder) IsReferenced(ctx, unitID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsReferenced", reflect.TypeOf((*MockUnitRepo)(nil).IsReferenced), ctx, unitID)
+}
+
 // IsUnitInGroup mocks base method.
 func (m *MockUnitRepo) IsUnitInGroup(ctx context.Context, unitGroupID, unitID string) (bool, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -6349,6 +6379,22 @@ func (mr *MockBatchRepoMockRecorder) FindPossibleNextSteps(ctx, accountID, scann
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindPossibleNextSteps", reflect.TypeOf((*MockBatchRepo)(nil).FindPossibleNextSteps), ctx, accountID, scanningStationID, batchID)
 }
 
+// LockScan mocks base method.
+func (m *MockBatchRepo) LockScan(ctx context.Context, accountID, batchID string) (*time.Time, bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LockScan", ctx, accountID, batchID)
+	ret0, _ := ret[0].(*time.Time)
+	ret1, _ := ret[1].(bool)
+	ret2, _ := ret[2].(*apierror.APIError)
+	return ret0, ret1, ret2
+}
+
+// LockScan indicates an expected call of LockScan.
+func (mr *MockBatchRepoMockRecorder) LockScan(ctx, accountID, batchID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockScan", reflect.TypeOf((*MockBatchRepo)(nil).LockScan), ctx, accountID, batchID)
+}
+
 // MarkAsScanned mocks base method.
 func (m *MockBatchRepo) MarkAsScanned(ctx context.Context, accountID, batchID string) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -6913,6 +6959,21 @@ func (m *MockProductionRunRepo) GetNextNumbers(ctx context.Context, accountID st
 func (mr *MockProductionRunRepoMockRecorder) GetNextNumbers(ctx, accountID, count any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNextNumbers", reflect.TypeOf((*MockProductionRunRepo)(nil).GetNextNumbers), ctx, accountID, count)
+}
+
+// HasScannedBatches mocks base method.
+func (m *MockProductionRunRepo) HasScannedBatches(ctx context.Context, accountID, productionRunID string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HasScannedBatches", ctx, accountID, productionRunID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// HasScannedBatches indicates an expected call of HasScannedBatches.
+func (mr *MockProductionRunRepoMockRecorder) HasScannedBatches(ctx, accountID, productionRunID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasScannedBatches", reflect.TypeOf((*MockProductionRunRepo)(nil).HasScannedBatches), ctx, accountID, productionRunID)
 }
 
 // IsCompleted mocks base method.
@@ -8049,6 +8110,20 @@ func (m *MockProductionStepRepo) DeleteConsumptionsByStepID(ctx context.Context,
 func (mr *MockProductionStepRepoMockRecorder) DeleteConsumptionsByStepID(ctx, stepID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteConsumptionsByStepID", reflect.TypeOf((*MockProductionStepRepo)(nil).DeleteConsumptionsByStepID), ctx, stepID)
+}
+
+// DeleteOwnedRows mocks base method.
+func (m *MockProductionStepRepo) DeleteOwnedRows(ctx context.Context, id string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteOwnedRows", ctx, id)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// DeleteOwnedRows indicates an expected call of DeleteOwnedRows.
+func (mr *MockProductionStepRepoMockRecorder) DeleteOwnedRows(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteOwnedRows", reflect.TypeOf((*MockProductionStepRepo)(nil).DeleteOwnedRows), ctx, id)
 }
 
 // DeleteParentChildLinks mocks base method.
@@ -10875,6 +10950,21 @@ func (m *MockProductionScheduleRepo) ListResourceSettings(ctx context.Context, a
 func (mr *MockProductionScheduleRepoMockRecorder) ListResourceSettings(ctx, accountID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListResourceSettings", reflect.TypeOf((*MockProductionScheduleRepo)(nil).ListResourceSettings), ctx, accountID)
+}
+
+// ListRunItemBatchIDsOnMachine mocks base method.
+func (m *MockProductionScheduleRepo) ListRunItemBatchIDsOnMachine(ctx context.Context, accountID, productionRunID, itemID, machineID string) ([]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListRunItemBatchIDsOnMachine", ctx, accountID, productionRunID, itemID, machineID)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListRunItemBatchIDsOnMachine indicates an expected call of ListRunItemBatchIDsOnMachine.
+func (mr *MockProductionScheduleRepoMockRecorder) ListRunItemBatchIDsOnMachine(ctx, accountID, productionRunID, itemID, machineID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRunItemBatchIDsOnMachine", reflect.TypeOf((*MockProductionScheduleRepo)(nil).ListRunItemBatchIDsOnMachine), ctx, accountID, productionRunID, itemID, machineID)
 }
 
 // ListScheduleDeviationTypes mocks base method.

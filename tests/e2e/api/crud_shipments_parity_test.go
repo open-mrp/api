@@ -38,6 +38,15 @@ func TestShipmentsParity_ListRowCarriesEveryColumnTheTableRenders(t *testing.T) 
 	var sawCases bool
 	for _, r := range rows {
 		row := r.(map[string]any)
+		// Parallel tests delete the shipments and orders they made; a row deleted while the page
+		// was being read can come back without its relations. Only a row that still exists counts.
+		if jsonObject(row, "related") == nil || row["customer"] == nil {
+			status, _, err := apiClient.GetListRaw(shipmentsPath+"/"+jsonField(row, "id"), nil)
+			require.NoError(t, err)
+			if status == 404 {
+				continue
+			}
+		}
 
 		// Base scalars — computed server-side, so the row never has to expand shipping_cases.
 		assert.Contains(t, []any{"low", "normal", "high"}, row["priority"], "priority must be a code")

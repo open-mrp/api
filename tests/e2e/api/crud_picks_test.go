@@ -77,11 +77,23 @@ func TestPicks_List_IncludeRelatedSalesOrder(t *testing.T) {
 	require.Equal(t, 200, status, "picks list should return 200")
 	require.GreaterOrEqual(t, len(list.Data), 1, "at least one pick must be seeded")
 
-	var first map[string]any
-	require.NoError(t, json.Unmarshal(list.Data[0], &first))
-	related, ok := first["related"].(map[string]any)
-	require.True(t, ok, "related should be an object with ?include=related.sales_order")
-	so, ok := related["sales_order"].(map[string]any)
-	require.True(t, ok, "related.sales_order should be an object")
-	assert.Equal(t, "record", so["object"])
+	// A parallel test can delete a pick and its order while the page is read, leaving that row
+	// without the relation. Only a pick that still exists must carry its order.
+	checked := 0
+	for _, raw := range list.Data {
+		var pick map[string]any
+		require.NoError(t, json.Unmarshal(raw, &pick))
+		related, ok := pick["related"].(map[string]any)
+		if !ok {
+			status, body, err := apiClient.GetListRaw(picksPath+"/"+jsonField(pick, "id"), nil)
+			require.NoError(t, err)
+			require.Equal(t, 404, status, "a pick that still exists must carry related with ?include=related.sales_order: %s", string(body))
+			continue
+		}
+		so, ok := related["sales_order"].(map[string]any)
+		require.True(t, ok, "related.sales_order should be an object")
+		assert.Equal(t, "record", so["object"])
+		checked++
+	}
+	assert.Positive(t, checked, "at least one listed pick carries its order")
 }

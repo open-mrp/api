@@ -566,6 +566,38 @@ func (r *productionStepRepoImpl) DeleteParentChildLinks(ctx context.Context, id 
 	return nil
 }
 
+// DeleteOwnedRows removes what only exists under the step — its productions, consumptions, and their
+// quantities — and unassigns it from machines, so deleting the step leaves nothing pointing at it.
+func (r *productionStepRepoImpl) DeleteOwnedRows(ctx context.Context, id string) *apierror.APIError {
+	ctx, span := productionStepRepoTracer.Start(ctx, "repository.production_step.delete_owned_rows")
+	defer span.End()
+
+	stepID := sql.NullString{String: id, Valid: true}
+	quantityIDs, err := r.queries.ListProductionStepOwnedQuantityIDs(ctx, sqlc.ListProductionStepOwnedQuantityIDsParams{StepID: stepID})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	steps := []func() error{
+		func() error {
+			if len(quantityIDs) == 0 {
+				return nil
+			}
+			return r.queries.DeleteProductionStepQuantities(ctx, quantityIDs)
+		},
+		func() error { return r.queries.DeleteProductionStepProductions(ctx, stepID) },
+		func() error { return r.queries.DeleteProductionStepConsumptions(ctx, stepID) },
+		func() error { return r.queries.ClearProductionStepFromMachines(ctx, stepID) },
+	}
+	for _, step := range steps {
+		if apiErr := db.MapSQLError(step()); apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+	}
+
+	return nil
+}
+
 func (r *productionStepRepoImpl) GetInputSteps(ctx context.Context, id string) ([]domain.LightProductionStep, *apierror.APIError) {
 	ctx, span := productionStepRepoTracer.Start(ctx, "repository.production_step.get_input_steps")
 	defer span.End()

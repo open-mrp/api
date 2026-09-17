@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
 	authtypes "github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/platform-service/internal/domain"
@@ -120,7 +121,27 @@ func (s *auditEventSvcImpl) ListAuditEvents(ctx context.Context, filter *domain.
 		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account header is required."))
 	}
 
+	withDefaultAuditEventWindow(filter, time.Now().UTC())
 	return s.auditEventRepo.List(ctx, identity.Target.AccountID, filter, includes)
+}
+
+// defaultAuditEventWindow is how far back a list reaches when the caller gives no start. The scope is
+// an OR of two indexes, so a filter that matches nothing otherwise reads the account's whole history.
+const defaultAuditEventWindow = 24 * time.Hour
+
+// withDefaultAuditEventWindow bounds an unanchored list. A list of specific records' events is a
+// record's history, which is wanted whole and is already served by the resource indexes.
+func withDefaultAuditEventWindow(filter *domain.ListAuditEventsFilter, now time.Time) {
+	anchored := len(filter.ResourceIDs) > 0 || (filter.RootResourceType != "" && filter.RootResourceID != "")
+	if filter.StartDate != nil || anchored {
+		return
+	}
+	end := now
+	if filter.EndDate != nil {
+		end = *filter.EndDate
+	}
+	start := end.Add(-defaultAuditEventWindow)
+	filter.StartDate = &start
 }
 
 func (s *auditEventSvcImpl) ListAuditEventResourceTypes(ctx context.Context) ([]string, *apierror.APIError) {

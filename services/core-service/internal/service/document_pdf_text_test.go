@@ -105,13 +105,13 @@ func TestHeaderTextFitsItsColumns(t *testing.T) {
 	docs := map[string]ackData{
 		"invoice": {
 			DocumentTitle: "INVOICE", NumberLabel: "Invoice Number", OrderNumber: "005821",
-			AccountName: "Carolon Co", CustomerPO: "PO-77321", CustomerNumber: "00042",
+			AccountName: "Acme Co", CustomerPO: "PO-77321", CustomerNumber: "00042",
 			OrderDateLong: "07/14/2026 02:30 PM",
 		},
 		"acknowledgement": {
 			// The longest title of the three, and the one that ran off the page.
 			DocumentTitle: "ORDER ACKNOWLEDGEMENT", NumberLabel: "Sales Order Number", OrderNumber: "009001",
-			AccountName: "Carolon Co", CustomerPO: "PO-77321", CustomerNumber: "00042",
+			AccountName: "Acme Co", CustomerPO: "PO-77321", CustomerNumber: "00042",
 			OrderDateLong: "05/10/2026 09:05 AM",
 		},
 		"purchase order": {
@@ -221,7 +221,7 @@ func TestRecordPDFsSurviveOverflowingContent(t *testing.T) {
 			Number: "CASE-000000000000001", FreightWeightValue: "1200000",
 			FreightWeightUnitAbbreviation: longUnit, TrackingNumber: poPtr(strings.Repeat("9", 40)),
 		}}
-		doc := buildInvoiceDoc(invoice, lines, order, &domain.Account{Name: "Carolon Co"}, nil, cases, nil, invoiceDocLookups{})
+		doc := buildInvoiceDoc(invoice, lines, order, &domain.Account{Name: "Acme Co"}, nil, cases, nil, invoiceDocLookups{})
 		assertRenders(t, func() ([]byte, error) { return buildInvoicePDF(doc) })
 	})
 
@@ -232,7 +232,7 @@ func TestRecordPDFsSurviveOverflowingContent(t *testing.T) {
 		lines[0].QuantityValue = "1200000"
 		order.CustomerPONumber = poPtr(strings.Repeat("PO-", 20))
 		assertRenders(t, func() ([]byte, error) {
-			return buildOrderAcknowledgementPDF(buildOrderAcknowledgementData(order, lines, nil, &domain.Account{Name: "Carolon Co"}, nil))
+			return buildOrderAcknowledgementPDF(buildOrderAcknowledgementData(order, lines, nil, &domain.Account{Name: "Acme Co"}, nil))
 		})
 	})
 

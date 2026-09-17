@@ -133,17 +133,36 @@ func (c *BatchScannedConsumer) handleMessage(ctx context.Context, msg amqp.Deliv
 		if apiErr != nil {
 			return apiErr
 		}
+		// The scan committed before this message was sent, and an undo can commit before it is handled.
+		// Locking the row settles which came first: an undo already applied has cleared or removed the
+		// scan, and one still to come waits here, so its reversal will see what this writes.
+		scannedAt, exists, apiErr := f.NewBatchRepo().LockScan(txCtx, accountID, evt.BatchID)
+		if apiErr != nil {
+			return apiErr
+		}
+		// Only presence is compared: the publisher stamps the row and the event separately, so their
+		// times can differ by a millisecond.
+		if !exists || scannedAt == nil {
+			return errScanSuperseded
+		}
 		if apiErr := txConsumer.applyInventory(txCtx, scope, accountID, evt); apiErr != nil {
 			return apiErr
 		}
 		return completeInboxRecord(txCtx, f)
 	})
+	if apiErr == errScanSuperseded {
+		// Nothing to apply and nothing wrong: the operator undid or redid the scan first.
+		return c.inboxConsumer.Ignore(ctx, "scan was undone before its inventory was applied")
+	}
 	if apiErr != nil {
 		span.RecordError(apiErr)
 		return discardIfPermanent(ctx, c.inboxConsumer, apiErr)
 	}
 	return nil
 }
+
+// errScanSuperseded marks an event whose scan no longer stands: the batch is gone or unscanned.
+var errScanSuperseded = apierror.NewValidationError("The scan this event describes no longer stands.")
 
 // scrapMeasure is the part of the scan that will never ship, in the unit the scan was recorded in.
 func scrapMeasure(evt domain.BatchScannedEvent) (decimal.Decimal, *apierror.APIError) {

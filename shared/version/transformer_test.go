@@ -2,6 +2,7 @@ package version
 
 import (
 	"fmt"
+	"net/url"
 	"reflect"
 	"testing"
 
@@ -787,5 +788,57 @@ func TestDefaultRegistry_ForcedIncludes(t *testing.T) {
 	t.Parallel()
 	if keys := ForcedIncludes(Latest, Latest, constants.ObjectTypeUser); keys != nil {
 		t.Errorf("Expected nil forced includes from default registry for equal versions, got %v", keys)
+	}
+}
+
+// queryUpgradingTransformer is a mockTransformer that also upgrades query strings.
+type queryUpgradingTransformer struct {
+	mockTransformer
+	upgrade func(route string, query url.Values) url.Values
+}
+
+func (t *queryUpgradingTransformer) TransformQuery(_ constants.ObjectType, route string, query url.Values) url.Values {
+	return t.upgrade(route, query)
+}
+
+func TestTransformerRegistry_TransformQueryChainsOldestToNewest(t *testing.T) {
+	t.Parallel()
+	v1 := APIVersion{Version: "1.0.a", Minor: 1, Patch: 0, Codename: "a"}
+	v2 := APIVersion{Version: "1.1.b", Minor: 1, Patch: 1, Codename: "b"}
+	v3 := APIVersion{Version: "1.2.c", Minor: 1, Patch: 2, Codename: "c"}
+
+	var order []string
+	registry := NewTransformerRegistry()
+	registry.Register(&queryUpgradingTransformer{
+		mockTransformer: mockTransformer{from: v3, to: v2, objectTypes: []constants.ObjectType{constants.ObjectTypeRequestLog}},
+		upgrade: func(route string, query url.Values) url.Values {
+			order = append(order, "v2->v3:"+route)
+			return query
+		},
+	})
+	registry.Register(&queryUpgradingTransformer{
+		mockTransformer: mockTransformer{from: v2, to: v1, objectTypes: []constants.ObjectType{constants.ObjectTypeRequestLog}},
+		upgrade: func(route string, query url.Values) url.Values {
+			order = append(order, "v1->v2:"+route)
+			query.Set("upgraded", "true")
+			return query
+		},
+	})
+	// A transformer without the optional interface is skipped rather than failing the chain.
+	registry.Register(&mockTransformer{from: v2, to: v1, objectTypes: []constants.ObjectType{constants.ObjectTypeRequestLog}})
+
+	result := registry.TransformQuery(v1, v3, constants.ObjectTypeRequestLog, "/v1/things", url.Values{})
+	if !reflect.DeepEqual(order, []string{"v1->v2:/v1/things", "v2->v3:/v1/things"}) {
+		t.Errorf("upgrades ran as %v, want oldest first with the route passed through", order)
+	}
+	if result.Get("upgraded") != "true" {
+		t.Errorf("the upgraded query was not returned: %v", result)
+	}
+
+	order = nil
+	registry.TransformQuery(v3, v3, constants.ObjectTypeRequestLog, "/v1/things", url.Values{})
+	registry.TransformQuery(v1, v3, constants.ObjectTypeUser, "/v1/things", url.Values{})
+	if len(order) != 0 {
+		t.Errorf("no upgrade should run for the latest version or another object type, ran %v", order)
 	}
 }

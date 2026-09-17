@@ -34,7 +34,26 @@ func releaseWeek(t *testing.T, scheduleID string, weekIndex int) (int, []byte, m
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, resp.StatusCode, 500, "must not 5xx: %s", string(resp.Body))
-	return resp.StatusCode, resp.Body, parseJSON(resp.Body)
+	result := parseJSON(resp.Body)
+	if resp.StatusCode == 201 {
+		deleteReleasedRun(t, result)
+	}
+	return resp.StatusCode, resp.Body, result
+}
+
+// deleteReleasedRun removes a release's run, and the batches it minted, when the test ends. Unscanned
+// batches are supply to every later solve, so left behind they eventually cover the seeded demand and
+// the solver plans nothing. A test that deletes the run itself makes this a no-op.
+func deleteReleasedRun(t *testing.T, result map[string]any) {
+	t.Helper()
+	runID := jsonField(jsonObject(result, "production_run"), "id")
+	require.NotEmpty(t, runID, "a release names its production run: %v", result)
+	t.Cleanup(func() {
+		// Planning reads on-hand, so the delete takes the planning write lock like the release did.
+		planningMu.Lock()
+		defer planningMu.Unlock()
+		_, _, _ = apiClient.Delete("/v1/operations/production-runs/" + runID)
+	})
 }
 
 // The point of the feature: a week arrives on the floor as the doffs it will actually be knitted in, not as one undifferentiated instruction.
@@ -178,23 +197,26 @@ func TestScheduleRelease_EmptyWeekIsNotReleasable(t *testing.T) {
 	horizonWeeks, ok := schedule["horizon_weeks"].(float64)
 	require.True(t, ok)
 
-	// Which weeks the solver leaves empty depends on the seeded stock, so the empty one is found rather than assumed. Pinning a week index would make this silently stop testing anything the moment the seed changes.
-	emptyWeek := -1
-	var preview map[string]any
-	for week := int(horizonWeeks) - 1; week >= 0; week-- {
-		candidate := weekReleasePreview(t, scheduleID, week)
-		if jsonField(candidate, "is_releasable") != "true" {
-			emptyWeek = week
-			preview = candidate
-			break
-		}
+	// Whether the solver leaves any week empty depends on how much stock the account holds, so the test
+	// empties its own draft's last week rather than hoping to find one.
+	emptyWeek := int(horizonWeeks) - 1
+	status, body, err := apiClient.GetListRaw(schedulePath(scheduleID)+"/lines",
+		url.Values{"week_index": {strconv.Itoa(emptyWeek)}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	for _, raw := range jsonArray(parseJSON(body), "data") {
+		lineID := jsonField(raw.(map[string]any), "id")
+		status, body, err := apiClient.Delete(schedulePath(scheduleID) + "/lines/" + lineID)
+		require.NoError(t, err)
+		requireStatus(t, 200, status, body)
 	}
-	require.NotEqual(t, -1, emptyWeek, "a 13-week horizon must leave at least one week unplanned")
 
+	preview := weekReleasePreview(t, scheduleID, emptyWeek)
+	require.NotEqual(t, "true", jsonField(preview, "is_releasable"), "a week with no campaigns is not releasable: %v", preview)
 	assert.Zero(t, preview["batch_count"])
 	assert.NotEmpty(t, jsonField(preview, "blocked_reason"))
 
-	status, body, _ := releaseWeek(t, scheduleID, emptyWeek)
+	status, body, _ = releaseWeek(t, scheduleID, emptyWeek)
 	assert.Equal(t, 400, status,
 		"releasing an empty week must fail rather than create an empty run: %s", string(body))
 }
@@ -387,4 +409,46 @@ func TestScheduleRelease_DeletingTheRunReturnsTheWeekToPlanned(t *testing.T) {
 	preview := weekReleasePreview(t, scheduleID, 9)
 	assert.Equal(t, "true", jsonField(preview, "is_releasable"),
 		"a week whose run was deleted must be releasable again: %v", preview["blocked_reason"])
+}
+
+// A scanned batch has received its output into inventory, which deleting the run's rows would not
+// undo. The run stays until the scan is reversed by deleting the batch, and then it can go.
+func TestScheduleRelease_RunWithAScannedBatchCannotBeDeleted(t *testing.T) {
+	t.Parallel()
+
+	schedule := ownedSchedule(t, uniqueName("e2e-release-scanned"))
+	scheduleID := jsonField(schedule, "id")
+	// A knit item, because its batches start at the seeded knitting station.
+	addLine(t, scheduleID, map[string]any{"week_index": 10, "item_id": SeedGreigeItemID, "quantity": 120})
+
+	status, raw, result := releaseWeek(t, scheduleID, 10)
+	requireStatus(t, 201, status, raw)
+	runID := jsonField(jsonObject(result, "production_run"), "id")
+	batchIDs := releasedBatchIDs(result)
+	require.NotEmpty(t, batchIDs)
+	var batchID string
+	for id := range batchIDs {
+		batchID = id
+		break
+	}
+
+	resp, err := apiClient.PostFull("/v1/operations/batches/actions/initialize", map[string]any{
+		"batch_id":            batchID,
+		"scanning_station_id": SeedScanningStationID,
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	require.Contains(t, []int{200, 201}, resp.StatusCode, "the batch scans at the knitting station: %s", string(resp.Body))
+
+	status, body, err := apiClient.Delete("/v1/operations/production-runs/" + runID)
+	require.NoError(t, err)
+	requireStatus(t, 409, status, body)
+	requireErrorResponse(t, body, "resource_conflict", "invalid_request_error")
+
+	status, body, err = apiClient.Delete("/v1/operations/batches/" + batchID)
+	require.NoError(t, err)
+	require.Contains(t, []int{200, 204}, status, "deleting the batch reverses its scan: %s", string(body))
+
+	status, body, err = apiClient.Delete("/v1/operations/production-runs/" + runID)
+	require.NoError(t, err)
+	require.Contains(t, []int{200, 204}, status, "with the scan reversed the run can go: %s", string(body))
 }

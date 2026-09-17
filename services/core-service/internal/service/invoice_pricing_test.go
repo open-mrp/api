@@ -136,7 +136,7 @@ func TestInvoicePDFBillToContactsAndEncoding(t *testing.T) {
 
 	invoice, lines, order := invoiceFixture()
 	lines[0].OrderLineItemSKU = poPtr("SOCK-CREW-BLACK-LARGE-EXTENDED-CALF-0000000000000000000000000000000000001")
-	doc := buildInvoiceDoc(invoice, lines, order, &domain.Account{Name: "Carolon Company"}, nil, nil,
+	doc := buildInvoiceDoc(invoice, lines, order, &domain.Account{Name: "Acme Company"}, nil, nil,
 		[]string{"AP@TexasEva.com"}, invoiceDocLookups{CustomerPhone: "832-677-6212 (AP & Purchasing)"})
 
 	out, err := buildInvoicePDF(doc)
@@ -163,7 +163,7 @@ func invoiceDocRepos(ctrl *gomock.Controller) invoiceDocRepoMocks {
 	}
 
 	accounts := repositorymock.NewMockAccountRepo(ctrl)
-	accounts.EXPECT().GetByID(gomock.Any(), gomock.Any()).Return(&domain.Account{Name: "Carolon Company"}, nil).AnyTimes()
+	accounts.EXPECT().GetByID(gomock.Any(), gomock.Any()).Return(&domain.Account{Name: "Acme Company"}, nil).AnyTimes()
 	orders := repositorymock.NewMockSalesOrderRepo(ctrl)
 	orders.EXPECT().GetAccountOriginAddress(gomock.Any(), gomock.Any()).
 		Return(&domain.ShippingAddress{Street1: "601 Forum Parkway", City: "Rural Hall", State: "NC", Zip: "27045", Timezone: poPtr("America/New_York")}, nil).AnyTimes()

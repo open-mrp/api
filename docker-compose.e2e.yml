@@ -48,9 +48,12 @@ services:
     # an UPDATE resorts to filesort, which exceeds the 256K default
     # sort_buffer_size and breaks outbox delivery (audit events, etc.).
     # Bumping both sort and the connection cap keeps long sessions stable.
+    # Binary logs serve replication, which the e2e database has none of, and they grow about 1GB per
+    # suite run — enough to fill Docker's disk after a few reruns on one stack.
     command:
       - --sort-buffer-size=8M
       - --max-connections=500
+      - --disable-log-bin
     # Published on 3307 (3306 is the local dev MySQL) so host-side e2e tests can
     # read backend state directly — e.g. the registration verification token,
     # which is intentionally never exposed through the API.

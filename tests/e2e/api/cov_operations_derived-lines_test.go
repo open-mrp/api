@@ -119,19 +119,33 @@ func TestDerivedLines_FiltersByWeek(t *testing.T) {
 }
 
 // Derived work is a pure function of the constraint plan, so regenerating must not accumulate rows from previous runs.
+//
+// Firm demand is a solver input that the rest of the suite moves without planningMu (see TestScheduleRegenerate_PreviewOfUntouchedDraftIsQuiet), so a pair of solves that straddles an order can legitimately differ. The pair is retried: accumulation grows on every attempt, a lost race settles.
 func TestDerivedLines_RegeneratedNotAccumulated(t *testing.T) {
 	t.Parallel()
 
-	first := ownedSchedule(t, uniqueName("e2e-derived-regen-1"))
-	firstRows := derivedLines(t, jsonField(first, "id"), nil)
-	require.NotEmpty(t, firstRows)
+	const attempts = 3
+	for attempt := 1; ; attempt++ {
+		firstCount, secondCount := func() (int, int) {
+			defer lockPlanningRead()()
 
-	second := ownedSchedule(t, uniqueName("e2e-derived-regen-2"))
-	secondRows := derivedLines(t, jsonField(second, "id"), nil)
+			first := ownedScheduleLocked(t, uniqueName("e2e-derived-regen-1"))
+			firstRows := derivedLines(t, jsonField(first, "id"), nil)
+			require.NotEmpty(t, firstRows)
 
-	// Two versions of the same plan derive the same amount of work; a version that accumulated rows would grow without bound across regenerations.
-	assert.Equal(t, len(firstRows), len(secondRows),
-		"two versions of the same plan must derive the same amount of work")
+			second := ownedScheduleLocked(t, uniqueName("e2e-derived-regen-2"))
+			return len(firstRows), len(derivedLines(t, jsonField(second, "id"), nil))
+		}()
+
+		// Two versions of the same plan derive the same amount of work; a version that accumulated rows would grow without bound across regenerations.
+		if firstCount == secondCount {
+			return
+		}
+		if attempt == attempts {
+			t.Fatalf("two versions of the same plan must derive the same amount of work: %d vs %d after %d attempts",
+				firstCount, secondCount, attempts)
+		}
+	}
 }
 
 // mustGetBody fetches a path and fails the test on anything but 200.

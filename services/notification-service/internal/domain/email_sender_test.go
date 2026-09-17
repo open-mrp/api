@@ -21,7 +21,7 @@ func TestAccountEmailSenderFromHeader(t *testing.T) {
 		want     string
 	}{
 		{"no display name sends the bare address", "", "orders@carolon.com"},
-		{"plain name is quoted", "Carolon Co.", `"Carolon Co." <orders@carolon.com>`},
+		{"plain name is quoted", "Acme Co.", `"Acme Co." <orders@carolon.com>`},
 		{"embedded quotes are escaped", `He said "hi"`, `"He said \"hi\"" <orders@carolon.com>`},
 		{"angle brackets cannot open a second address", "a<b>c", `"a<b>c" <orders@carolon.com>`},
 	}

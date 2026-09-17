@@ -122,6 +122,85 @@ func TestDeleteBehavior_CustomerDeleteConflictWhenSalesOrdersExist(t *testing.T)
 	requireStatus(t, 200, delCustStatus, delCustBody)
 }
 
+// Product line access hangs off the customer relation with no foreign key to cascade from, so
+// deleting the customer must delete it too rather than leave rows pointing at nothing.
+func TestDeleteBehavior_CustomerDeleteRemovesProductLineAccess(t *testing.T) {
+	t.Parallel()
+
+	status, body, err := apiClient.Post(customersPath, validCustomerBody(uniqueName("e2e-cust-pl-cascade")), newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, body)
+	customerID := jsonField(parseJSON(body), "id")
+
+	status, body, err = apiClient.Post("/v1/sales/product-line-access/customers", map[string]any{
+		"customer_id":      customerID,
+		"product_line_ids": []string{SeedProductLineID},
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, body)
+
+	var relationID string
+	require.NoError(t, authDB(t).QueryRow(
+		"SELECT id FROM account_relation WHERE owner_account_id = ? AND counterparty_account_id = ?",
+		SeedAccountID, customerID).Scan(&relationID))
+
+	status, body, err = apiClient.Delete(customersPath + "/" + customerID)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	var remaining int
+	require.NoError(t, authDB(t).QueryRow(
+		"SELECT COUNT(*) FROM account_relation_product_line WHERE account_relation_id = ?", relationID).Scan(&remaining))
+	assert.Zero(t, remaining, "the deleted customer's product line access must go with it")
+}
+
+// Productions and consumptions only exist under their step and nothing cascades on Vitess, so deleting the
+// step must take them and their quantities along; left behind, every step ever deleted would still read as
+// "produces this item" to anything that joins production on item.
+func TestDeleteBehavior_ProductionStepDeleteRemovesItsProductionsAndConsumptions(t *testing.T) {
+	t.Parallel()
+
+	row := bulkStepRow(uniqueName("e2e-step-delete-owned"))
+	row["consumptions"] = []any{
+		map[string]any{
+			"item":                 refSKU("LKN"),
+			"quantity_value":       "2",
+			"quantity_unit":        refAbbr("ea"),
+			"waste_quantity_value": "0.1",
+		},
+	}
+	created, _ := acceptBulkUpsertSteps(t, row)
+	require.Len(t, created, 1)
+	stepID := created[0]
+
+	db := authDB(t)
+	var quantityIDs []any
+	rows, err := db.Query(`SELECT quantity_id FROM production WHERE production_step_id = ?
+		UNION ALL SELECT quantity_id FROM consumption WHERE production_step_id = ?
+		UNION ALL SELECT waste_quantity_id FROM consumption WHERE production_step_id = ?`, stepID, stepID, stepID)
+	require.NoError(t, err)
+	for rows.Next() {
+		var id string
+		require.NoError(t, rows.Scan(&id))
+		quantityIDs = append(quantityIDs, id)
+	}
+	require.NoError(t, rows.Err())
+	require.NoError(t, rows.Close())
+	require.Len(t, quantityIDs, 3, "the step was created with one production and one consumption with waste")
+
+	status, body, err := apiClient.Delete(productionStepsPath + "/" + stepID)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	var productions, consumptions, quantities int
+	require.NoError(t, db.QueryRow("SELECT COUNT(*) FROM production WHERE production_step_id = ?", stepID).Scan(&productions))
+	require.NoError(t, db.QueryRow("SELECT COUNT(*) FROM consumption WHERE production_step_id = ?", stepID).Scan(&consumptions))
+	require.NoError(t, db.QueryRow("SELECT COUNT(*) FROM quantity WHERE id IN (?, ?, ?)", quantityIDs...).Scan(&quantities))
+	assert.Zero(t, productions, "the deleted step's production must go with it")
+	assert.Zero(t, consumptions, "the deleted step's consumptions must go with it")
+	assert.Zero(t, quantities, "the quantities only those rows used must go with them")
+}
+
 // ──────────────────────────────────────────────
 // Soft-delete list exclusion
 // ──────────────────────────────────────────────

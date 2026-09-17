@@ -3,6 +3,7 @@
 package api_test
 
 import (
+	"encoding/json"
 	"net/url"
 	"testing"
 
@@ -164,10 +165,20 @@ func TestItemInventory_FiguresAreNullWithoutInclude(t *testing.T) {
 func TestInventories_EveryRowCarriesAResolvedQuantityAndUnit(t *testing.T) {
 	t.Parallel()
 
-	list, status, err := apiClient.GetList(inventoriesPath, url.Values{"limit": {"5"}})
-	require.NoError(t, err)
-	require.Less(t, status, 500, "inventories list must not 5xx")
-	requireStatus(t, 200, status, nil)
+	// The list reads items and their on-hand in two statements, so an item a parallel test deletes in
+	// between is listed without a unit. That clears on a re-read; a unit that is really missing does not.
+	var list *ListResponse
+	for attempt := 0; attempt < 3; attempt++ {
+		var status int
+		var err error
+		list, status, err = apiClient.GetList(inventoriesPath, url.Values{"limit": {"5"}})
+		require.NoError(t, err)
+		require.Less(t, status, 500, "inventories list must not 5xx")
+		requireStatus(t, 200, status, nil)
+		if everyInventoryRowHasAUnit(list.Data) {
+			break
+		}
+	}
 	require.NotEmpty(t, list.Data, "the seeded account has inventory")
 
 	for _, raw := range list.Data {
@@ -181,6 +192,15 @@ func TestInventories_EveryRowCarriesAResolvedQuantityAndUnit(t *testing.T) {
 
 		assertComputedQuantityHydrated(t, jsonObject(row, "quantity"), "quantity")
 	}
+}
+
+func everyInventoryRowHasAUnit(rows []json.RawMessage) bool {
+	for _, raw := range rows {
+		if jsonObject(jsonObject(parseJSON(raw), "quantity"), "unit") == nil {
+			return false
+		}
+	}
+	return true
 }
 
 // --- Deliveries ---

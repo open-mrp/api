@@ -527,6 +527,14 @@ func (suite *UnitSvcTestSuite) TestDeleteUnit_Success() {
 		Get(gomock.Any(), domain.GetUnitParams{AccountID: "ac_test123", UnitID: "un_abc123"}).
 		Return(&domain.Unit{ID: "un_abc123", Name: "Custom Unit", AccountID: new("ac_test123")}, nil).
 		Times(1)
+	suite.unitRepo.EXPECT().
+		IsBaseUnit(gomock.Any(), "un_abc123").
+		Return(false, nil).
+		Times(1)
+	suite.unitRepo.EXPECT().
+		IsReferenced(gomock.Any(), "un_abc123").
+		Return(false, nil).
+		Times(1)
 	suite.deletedRecordRepo.EXPECT().
 		Create(gomock.Any(), constants.DeletedRecordResourceTypeUnit, "un_abc123", gomock.Any()).
 		Return(nil).
@@ -539,6 +547,48 @@ func (suite *UnitSvcTestSuite) TestDeleteUnit_Success() {
 	err := suite.unitSvc.DeleteUnit(ctx, "un_abc123")
 
 	suite.Nil(err)
+}
+
+// A unit group converts every quantity in it through its base unit, so that unit stays until the group lets go of it.
+func (suite *UnitSvcTestSuite) TestDeleteUnit_BaseUnitOfAGroupConflicts() {
+	ctx := internalIdentityCtx("ac_test123")
+
+	suite.unitRepo.EXPECT().
+		Get(gomock.Any(), domain.GetUnitParams{AccountID: "ac_test123", UnitID: "un_abc123"}).
+		Return(&domain.Unit{ID: "un_abc123", Name: "Custom Unit", AccountID: new("ac_test123")}, nil).
+		Times(1)
+	suite.unitRepo.EXPECT().
+		IsBaseUnit(gomock.Any(), "un_abc123").
+		Return(true, nil).
+		Times(1)
+
+	err := suite.unitSvc.DeleteUnit(ctx, "un_abc123")
+
+	suite.NotNil(err)
+	suite.Equal(apierror.ErrorCodeResourceConflict, err.Code)
+}
+
+// Quantities and prices convert and display through their unit, so a unit any of them names stays.
+func (suite *UnitSvcTestSuite) TestDeleteUnit_ReferencedUnitConflicts() {
+	ctx := internalIdentityCtx("ac_test123")
+
+	suite.unitRepo.EXPECT().
+		Get(gomock.Any(), domain.GetUnitParams{AccountID: "ac_test123", UnitID: "un_abc123"}).
+		Return(&domain.Unit{ID: "un_abc123", Name: "Custom Unit", AccountID: new("ac_test123")}, nil).
+		Times(1)
+	suite.unitRepo.EXPECT().
+		IsBaseUnit(gomock.Any(), "un_abc123").
+		Return(false, nil).
+		Times(1)
+	suite.unitRepo.EXPECT().
+		IsReferenced(gomock.Any(), "un_abc123").
+		Return(true, nil).
+		Times(1)
+
+	err := suite.unitSvc.DeleteUnit(ctx, "un_abc123")
+
+	suite.NotNil(err)
+	suite.Equal(apierror.ErrorCodeResourceConflict, err.Code)
 }
 
 func (suite *UnitSvcTestSuite) TestDeleteUnit_MissingIdentity() {

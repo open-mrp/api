@@ -444,6 +444,33 @@ func (r *unitRepoImpl) FindByAbbreviations(ctx context.Context, accountID string
 	return out, nil
 }
 
+func (r *unitRepoImpl) IsBaseUnit(ctx context.Context, unitID string) (bool, *apierror.APIError) {
+	ctx, span := unitRepoTracer.Start(ctx, "repository.unit.is_base_unit")
+	defer span.End()
+
+	isBase, err := r.queries.IsUnitABaseUnit(ctx, unitID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return false, tracing.Trace(span, apiErr)
+	}
+	return isBase, nil
+}
+
+func (r *unitRepoImpl) IsReferenced(ctx context.Context, unitID string) (bool, *apierror.APIError) {
+	ctx, span := unitRepoTracer.Start(ctx, "repository.unit.is_referenced")
+	defer span.End()
+
+	referenced, err := r.queries.IsUnitReferenced(ctx, sqlc.IsUnitReferencedParams{
+		QuantityUnitID:    unitID,
+		NumeratorUnitID:   unitID,
+		DenominatorUnitID: unitID,
+		OverrideUnitID:    gosql.NullString{String: unitID, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return false, tracing.Trace(span, apiErr)
+	}
+	return referenced.Valid && referenced.Bool, nil
+}
+
 func (r *unitRepoImpl) Delete(ctx context.Context, params domain.DeleteUnitParams) *apierror.APIError {
 	ctx, span := unitRepoTracer.Start(ctx, "repository.unit.delete")
 	defer span.End()

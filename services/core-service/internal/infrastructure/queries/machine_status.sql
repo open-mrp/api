@@ -16,7 +16,7 @@ ORDER BY m.name ASC, m.id ASC;
 
 -- ListScheduleLinesForStatus returns the plan from the current week forward, with how much of each campaign the floor has already scanned.
 --
--- Progress is aggregated per (run, item) in a derived table: a run holds every SKU in its week, so joining batches directly would both multiply the line and credit each campaign with its neighbors' work.
+-- Progress is aggregated per (run, item, machine) in a derived table: a run holds every SKU in its week, so joining batches directly would both multiply the line and credit each campaign with its neighbors' work — including the same item's campaign on another machine.
 -- name: ListScheduleLinesForStatus :many
 SELECT
     l.id,
@@ -41,11 +41,15 @@ LEFT JOIN (
     SELECT
         b.production_run_id,
         b.item_id,
+        bm.B AS machine_id,
         COUNT(*) AS released_batches,
         COALESCE(SUM(CASE WHEN b.scanned_at IS NOT NULL THEN 1 ELSE 0 END), 0) AS scanned_batches,
         COALESCE(SUM(CASE WHEN b.scanned_at IS NOT NULL THEN bq.value ELSE 0 END), 0) AS scanned_quantity
     FROM batch b
     JOIN quantity bq ON bq.id = b.quantity_id
+    -- Released batches carry exactly one machine (release and carry-forward both reassign it), so
+    -- this join neither drops nor multiplies them.
+    JOIN _batches_machines bm ON bm.A = b.id
     WHERE b.account_id = sqlc.arg('account_id')
     AND b.production_run_id IS NOT NULL
     -- Restrict the aggregate to the schedule's own runs: without this, the derived table scans and groups the tenant's entire batch history on every read of a polled status board, instead of only the runs the published schedule references.
@@ -56,8 +60,8 @@ LEFT JOIN (
         AND l2.production_schedule_id = sqlc.arg('production_schedule_id')
         AND l2.production_run_id IS NOT NULL
     )
-    GROUP BY b.production_run_id, b.item_id
-) prog ON prog.production_run_id = l.production_run_id AND prog.item_id = l.item_id
+    GROUP BY b.production_run_id, b.item_id, bm.B
+) prog ON prog.production_run_id = l.production_run_id AND prog.item_id = l.item_id AND prog.machine_id = l.machine_id
 WHERE l.account_id = sqlc.arg('account_id')
 AND l.production_schedule_id = sqlc.arg('production_schedule_id')
 AND l.week_start_date >= sqlc.arg('from_week')

@@ -209,6 +209,9 @@ func TestMachineStatus_ScanningAdvancesProgress(t *testing.T) {
 	require.Less(t, resp.StatusCode, 500, "must not 5xx: %s", string(resp.Body))
 	require.Contains(t, []int{200, 201}, resp.StatusCode,
 		"a released batch initializes at the seeded station: %s", string(resp.Body))
+	// The scan received the batch into inventory. Deleting the batch reverses that, and the run's own
+	// cleanup (registered earlier, so it runs after this) refuses while a batch is still scanned.
+	t.Cleanup(func() { _, _, _ = apiClient.Delete("/v1/operations/batches/" + batchID) })
 
 	after := lineProgressFor(t, scheduleID, 0)
 	assert.Equal(t, before.released, after.released, "scanning does not change what was issued")

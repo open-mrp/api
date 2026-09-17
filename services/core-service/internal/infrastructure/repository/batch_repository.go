@@ -1290,6 +1290,20 @@ func (r *batchRepoImpl) FindLineageShortfall(ctx context.Context, batchID string
 	return result, nil
 }
 
+func (r *batchRepoImpl) LockScan(ctx context.Context, accountID, batchID string) (*time.Time, bool, *apierror.APIError) {
+	ctx, span := batchRepoTracer.Start(ctx, "repository.batch.lock_scan")
+	defer span.End()
+
+	rows, err := r.queries.LockBatchScan(ctx, sqlc.LockBatchScanParams{ID: batchID, AccountID: accountID})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, false, tracing.Trace(span, apiErr)
+	}
+	if len(rows) == 0 {
+		return nil, false, nil
+	}
+	return db.TimeFromNullTime(rows[0]), true, nil
+}
+
 func (r *batchRepoImpl) Unscan(ctx context.Context, accountID, batchID string) (*domain.BaseBatch, *apierror.APIError) {
 	ctx, span := batchRepoTracer.Start(ctx, "repository.batch.unscan")
 	defer span.End()

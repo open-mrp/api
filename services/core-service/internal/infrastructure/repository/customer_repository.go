@@ -1107,6 +1107,10 @@ func (r *customerRepoImpl) Delete(ctx context.Context, ownerAccountID, customerA
 		return tracing.Trace(span, apiErr)
 	}
 
+	if apiErr := r.deleteRelationChildren(ctx, ownerAccountID, []string{customerAccountID}); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
 	// Delete the account relation.
 	err = r.queries.DeleteCustomerByAccountID(ctx, sqlc.DeleteCustomerByAccountIDParams{
 		OwnerAccountID:        ownerAccountID,
@@ -1119,9 +1123,37 @@ func (r *customerRepoImpl) Delete(ctx context.Context, ownerAccountID, customerA
 	return nil
 }
 
+// deleteRelationChildren deletes the product line access, price groups, and notification preferences
+// of the customers' relations, which nothing else removes once the relation row is gone.
+func (r *customerRepoImpl) deleteRelationChildren(ctx context.Context, ownerAccountID string, customerIDs []string) *apierror.APIError {
+	err := r.queries.DeleteCustomerRelationProductLines(ctx, sqlc.DeleteCustomerRelationProductLinesParams{
+		OwnerAccountID:         ownerAccountID,
+		CounterpartyAccountIds: customerIDs,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return apiErr
+	}
+	err = r.queries.DeleteCustomerRelationPriceGroups(ctx, sqlc.DeleteCustomerRelationPriceGroupsParams{
+		OwnerAccountID:         ownerAccountID,
+		CounterpartyAccountIds: customerIDs,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return apiErr
+	}
+	err = r.queries.DeleteCustomerRelationNotificationPreferences(ctx, sqlc.DeleteCustomerRelationNotificationPreferencesParams{
+		OwnerAccountID:         ownerAccountID,
+		CounterpartyAccountIds: customerIDs,
+	})
+	return db.MapSQLError(err)
+}
+
 func (r *customerRepoImpl) BulkDelete(ctx context.Context, ownerAccountID string, customerIDs []string) *apierror.APIError {
 	ctx, span := customerRepoTracer.Start(ctx, "repository.customer.bulk_delete")
 	defer span.End()
+
+	if apiErr := r.deleteRelationChildren(ctx, ownerAccountID, customerIDs); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
 
 	err := r.queries.BulkDeleteCustomerRelations(ctx, sqlc.BulkDeleteCustomerRelationsParams{
 		OwnerAccountID:         ownerAccountID,

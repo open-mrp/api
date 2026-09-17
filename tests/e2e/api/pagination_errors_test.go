@@ -10,10 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// maxEndpointsToTest limits the number of endpoints tested for pagination errors
-// to avoid excessive test runtime while still validating the behavior.
-const maxEndpointsToTest = 3
-
 func eligibleListEndpoints() []ListEndpointSpec {
 	var eligible []ListEndpointSpec
 	for _, ep := range listEndpoints {
@@ -27,11 +23,7 @@ func eligibleListEndpoints() []ListEndpointSpec {
 // TestListEndpoints_InvalidLimit_Zero validates that limit=0 is rejected.
 func TestListEndpoints_InvalidLimit_Zero(t *testing.T) {
 	t.Parallel()
-	tested := 0
 	for _, ep := range eligibleListEndpoints() {
-		if tested >= maxEndpointsToTest {
-			break
-		}
 
 		t.Run(ep.OperationID, func(t *testing.T) {
 			t.Parallel()
@@ -56,18 +48,13 @@ func TestListEndpoints_InvalidLimit_Zero(t *testing.T) {
 					"GET %s?limit=0: error.code should be validation_failed, invalid_format, or parameter_invalid, got %v", path, code)
 			}
 		})
-		tested++
 	}
 }
 
 // TestListEndpoints_InvalidLimit_Negative validates that negative limit is rejected.
 func TestListEndpoints_InvalidLimit_Negative(t *testing.T) {
 	t.Parallel()
-	tested := 0
 	for _, ep := range eligibleListEndpoints() {
-		if tested >= maxEndpointsToTest {
-			break
-		}
 
 		t.Run(ep.OperationID, func(t *testing.T) {
 			t.Parallel()
@@ -91,18 +78,13 @@ func TestListEndpoints_InvalidLimit_Negative(t *testing.T) {
 					"GET %s?limit=-1: error.code should be validation_failed, invalid_format, or parameter_invalid, got %v", path, code)
 			}
 		})
-		tested++
 	}
 }
 
 // TestListEndpoints_InvalidLimit_TooLarge validates that excessively large limit is rejected.
 func TestListEndpoints_InvalidLimit_TooLarge(t *testing.T) {
 	t.Parallel()
-	tested := 0
 	for _, ep := range eligibleListEndpoints() {
-		if tested >= maxEndpointsToTest {
-			break
-		}
 
 		t.Run(ep.OperationID, func(t *testing.T) {
 			t.Parallel()
@@ -126,23 +108,18 @@ func TestListEndpoints_InvalidLimit_TooLarge(t *testing.T) {
 					"GET %s?limit=999999: error.code should be validation_failed, invalid_format, or parameter_invalid, got %v", path, code)
 			}
 		})
-		tested++
 	}
 }
 
 // TestListEndpoints_InvalidCursor validates that a garbage cursor value is rejected.
 func TestListEndpoints_InvalidCursor(t *testing.T) {
 	t.Parallel()
-	tested := 0
 	for _, ep := range listEndpoints {
 		if !ep.HasParam("cursor") {
 			continue
 		}
 		if isExcludedFromPagination(ep.Path, ep.OperationID) {
 			continue
-		}
-		if tested >= maxEndpointsToTest {
-			break
 		}
 
 		t.Run(ep.OperationID, func(t *testing.T) {
@@ -173,6 +150,5 @@ func TestListEndpoints_InvalidCursor(t *testing.T) {
 					"GET %s?cursor=invalid: error.code should be parameter_invalid or validation_failed, got %v", path, code)
 			}
 		})
-		tested++
 	}
 }

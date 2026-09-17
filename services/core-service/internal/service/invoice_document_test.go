@@ -80,7 +80,7 @@ func TestInvoiceDocMatchesLegacyFields(t *testing.T) {
 	t.Parallel()
 
 	invoice, lines, order := invoiceFixture()
-	account := &domain.Account{Name: "Carolon Co"}
+	account := &domain.Account{Name: "Acme Co"}
 	cases := []*domain.ShippingCase{
 		{Number: "CASE-1", FreightWeightValue: "1200", FreightWeightUnitAbbreviation: "lb", TrackingNumber: poPtr("1Z999")},
 	}
@@ -162,7 +162,7 @@ func TestInvoiceEmailParamsCoverTheTemplate(t *testing.T) {
 
 	invoice, lines, order := invoiceFixture()
 	account := &domain.Account{
-		Name: "Carolon Co",
+		Name: "Acme Co",
 		Branding: &domain.AccountBranding{
 			SupportEmail: poPtr("service@carolon.com"),
 			WebsiteURL:   poPtr("https://carolon.com"),
@@ -227,7 +227,7 @@ func TestInvoicePDFRendersLegacyLayout(t *testing.T) {
 	t.Parallel()
 
 	invoice, lines, order := invoiceFixture()
-	account := &domain.Account{Name: "Carolon Co"}
+	account := &domain.Account{Name: "Acme Co"}
 	cases := []*domain.ShippingCase{
 		{Number: "CASE-1", FreightWeightValue: "1200", FreightWeightUnitAbbreviation: "lb", TrackingNumber: poPtr("1Z999")},
 	}
@@ -245,7 +245,7 @@ func TestInvoicePDFRendersLegacyLayout(t *testing.T) {
 			"PO Number", "PO-77321",
 			"Customer Number", "00042",
 			"Date", "07/14/2026 02:30 PM",
-			"Carolon Co",
+			"Acme Co",
 		} {
 			if !pdfContains(runs, want) {
 				t.Errorf("PDF missing %q\n%s", want, pdfJoined(runs))

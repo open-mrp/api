@@ -487,7 +487,7 @@ func TestAccountUsers_AuditEvents(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
 	id := jsonField(parseJSON(body), "id")
-	t.Cleanup(func() { apiClient.Delete(accountUsersPath + "/" + id) })
+	t.Cleanup(func() { removeAccountUser(id) })
 
 	expectAuditEvent(t, id, "account_user", "create")
 
@@ -513,7 +513,7 @@ func TestAccountUsers_RequestLogs(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
 	id := jsonField(parseJSON(body), "id")
-	t.Cleanup(func() { apiClient.Delete(accountUsersPath + "/" + id) })
+	t.Cleanup(func() { removeAccountUser(id) })
 
 	expectRequestLog(t, "POST", "201", accountUsersPath)
 }
@@ -539,7 +539,7 @@ func TestAccountUsers_WelcomeEmailLog(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
 	id := jsonField(parseJSON(body), "id")
-	t.Cleanup(func() { apiClient.Delete(accountUsersPath + "/" + id) })
+	t.Cleanup(func() { removeAccountUser(id) })
 
 	// Poll the email-log list (scoped to the requesting account) until the welcome
 	// email surfaces. A match proves the log was scoped to the actor account.

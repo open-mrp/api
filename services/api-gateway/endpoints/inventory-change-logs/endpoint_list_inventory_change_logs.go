@@ -24,6 +24,8 @@ type ListInventoryChangeLogsRequest struct {
 	// Changes that were recorded without a responsible user are excluded whenever this filter is set.
 	ChangedByUserIDs []string `query:"changed_by_user_ids"`
 	// Restricts results to change logs created on or after this timestamp.
+	//
+	// Defaults to 90 days before `ends_at`, or before now when `ends_at` is also omitted, unless `item_ids` is given — an item's history is returned whole. Pass an earlier timestamp to search further back.
 	StartsAt *time.Time `query:"starts_at"`
 	// Restricts results to change logs created on or before this timestamp.
 	EndsAt *time.Time `query:"ends_at"`

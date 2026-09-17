@@ -16,6 +16,8 @@ import (
 type ListRequestLogsRequest struct {
 	apiresource.PaginationRequest
 	// Restricts results to request logs on or after this timestamp.
+	//
+	// Defaults to 24 hours before `ends_at`, or before now when `ends_at` is also omitted. Pass an earlier timestamp to search further back.
 	StartDate *time.Time `query:"starts_at"`
 	// Restricts results to request logs on or before this timestamp.
 	EndDate *time.Time `query:"ends_at"`

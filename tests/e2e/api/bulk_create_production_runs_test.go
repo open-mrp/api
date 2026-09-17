@@ -60,8 +60,14 @@ func bulkCreatedRuns(body []byte) []map[string]any {
 	return jobResults(parseJSON(body))
 }
 
-// cleanupBulkCreatedRuns deletes every run in a bulk-create response.
-func cleanupBulkCreatedRuns(body []byte) {
+// cleanupBulkCreatedRuns deletes every run in a bulk-create response. The runs are created by a
+// background job, so it waits for the job first: a delete that beats the job finds nothing, and the
+// run it meant to remove appears afterwards and stays.
+func cleanupBulkCreatedRuns(t *testing.T, body []byte) {
+	t.Helper()
+	if jobID := jsonField(parseJSON(body), "id"); jobID != "" {
+		pollJobUntilTerminal(t, jobID)
+	}
 	for _, run := range bulkCreatedRuns(body) {
 		{
 			if runID := jobResultResourceID(run); runID != "" {
@@ -94,7 +100,7 @@ func TestProductionRuns_BulkCreate_AllCreates(t *testing.T) {
 
 	status, body := bulkCreateProductionRuns(t, bulkRunRow(), bulkRunRow())
 	requireStatus(t, 202, status, body)
-	defer cleanupBulkCreatedRuns(body)
+	defer cleanupBulkCreatedRuns(t, body)
 
 	m := parseJSON(body)
 	assert.Equal(t, "job", jsonField(m, "object"), "202 returns the canonical job resource")
@@ -144,7 +150,7 @@ func TestProductionRuns_BulkCreate_CreateWithAllFields(t *testing.T) {
 		},
 	})
 	requireStatus(t, 202, status, body)
-	defer cleanupBulkCreatedRuns(body)
+	defer cleanupBulkCreatedRuns(t, body)
 
 	runs := bulkCreatedRuns(body)
 	require.Len(t, runs, 1)
@@ -179,7 +185,7 @@ func TestProductionRuns_BulkCreate_IdempotentReplayReturnsSameAcknowledgment(t *
 	status, body, err := apiClient.Post(productionRunsBulkCreatePath, payload, key)
 	require.NoError(t, err)
 	requireStatus(t, 202, status, body)
-	defer cleanupBulkCreatedRuns(body)
+	defer cleanupBulkCreatedRuns(t, body)
 
 	replayStatus, replayBody, err := apiClient.Post(productionRunsBulkCreatePath, payload, key)
 	require.NoError(t, err)
@@ -261,7 +267,7 @@ func TestProductionRuns_BulkCreate_ResolvesUnitByNameAndAbbreviation(t *testing.
 		},
 	})
 	requireStatus(t, 202, status, body)
-	defer cleanupBulkCreatedRuns(body)
+	defer cleanupBulkCreatedRuns(t, body)
 
 	runs := bulkCreatedRuns(body)
 	require.Len(t, runs, 1)
@@ -314,7 +320,7 @@ func TestProductionRuns_BulkCreate_ResolvesStationByName(t *testing.T) {
 	}
 	status, body := bulkCreateProductionRuns(t, row)
 	requireStatus(t, 202, status, body)
-	defer cleanupBulkCreatedRuns(body)
+	defer cleanupBulkCreatedRuns(t, body)
 
 	runs := bulkCreatedRuns(body)
 	require.Len(t, runs, 1)

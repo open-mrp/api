@@ -59,7 +59,23 @@ func TestIncludes_HydratedToOneMatchesCanonical(t *testing.T) {
 				got := parseJSON(body)
 				require.NotNil(t, got, "GET %s?include=%s should be valid JSON", path, include)
 
+				// A relation only some rows carry can be null on every row of the newest page once earlier
+				// runs' rows pile up ahead of the seeded ones, so read on while it is null everywhere.
+				// A value object is present rather than null, so it stops at the first page.
 				leaves := collectIncludeLeafResources(got, include)
+				for page := 0; len(leaves) == 0 && !includeHasAnyValue(got, include) && page < maxListScanPages; page++ {
+					next := jsonField(jsonObject(got, "page_info"), "next_page_url")
+					if next == "" {
+						break
+					}
+					nextPath, nextQuery, ok := ListURLPathQuery(&next)
+					require.True(t, ok, "next_page_url %q", next)
+					status, body, err = apiClient.GetListRaw(nextPath, nextQuery)
+					require.NoError(t, err, "GET %s failed", next)
+					require.Equalf(t, 200, status, "GET %s: %s", next, string(body))
+					path, query, got = nextPath, nextQuery, parseJSON(body)
+					leaves = collectIncludeLeafResources(got, include)
+				}
 				if len(leaves) == 0 {
 					continue // a value object, list, or primitive: no canonical resource to compare with
 				}
@@ -355,6 +371,36 @@ func findSchemaProperty(spec *openAPISpec, schema *openAPISchema, name string, d
 		}
 	}
 	return nil, false
+}
+
+// includeHasAnyValue reports whether any row carries a non-null value at the include path.
+func includeHasAnyValue(resp map[string]any, include string) bool {
+	parts := strings.Split(include, ".")
+	var walk func(cur any, i int) bool
+	walk = func(cur any, i int) bool {
+		m, ok := cur.(map[string]any)
+		if !ok {
+			return false
+		}
+		if obj, _ := m["object"].(string); obj == "list" {
+			data, _ := m["data"].([]any)
+			for _, item := range data {
+				if walk(item, i) {
+					return true
+				}
+			}
+			return false
+		}
+		v, present := m[parts[i]]
+		if !present || v == nil {
+			return false
+		}
+		if i == len(parts)-1 {
+			return true
+		}
+		return walk(v, i+1)
+	}
+	return walk(resp, 0)
 }
 
 // collectIncludeLeafResources navigates the dot-separated include path and returns every terminal

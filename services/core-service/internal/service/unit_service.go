@@ -422,6 +422,24 @@ func (s *unitSvcImpl) DeleteUnit(ctx context.Context, unitID string) *apierror.A
 	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *unitSvcImpl) *apierror.APIError {
+		// Checked inside the transaction so a group adopting the unit concurrently is seen. Deleting a base
+		// unit leaves every quantity in its group without the unit it converts through.
+		isBase, apiErr := txSvc.repos.NewUnitRepo().IsBaseUnit(txCtx, unit.ID)
+		if apiErr != nil {
+			return apiErr
+		}
+		if isBase {
+			return apierror.NewResourceConflictError("This unit is the base unit of a unit group. Change the group's base unit or delete the group first.")
+		}
+		// Every quantity or price recorded in the unit converts and displays through it.
+		referenced, apiErr := txSvc.repos.NewUnitRepo().IsReferenced(txCtx, unit.ID)
+		if apiErr != nil {
+			return apiErr
+		}
+		if referenced {
+			return apierror.NewResourceConflictError("This unit is in use: quantities or prices are recorded in it. Remove it from its unit groups instead so it can no longer be chosen.")
+		}
+
 		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeUnit, unit.ID, unit); apiErr != nil {
 			return apiErr
 		}

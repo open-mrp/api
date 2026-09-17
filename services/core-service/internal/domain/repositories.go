@@ -260,6 +260,10 @@ type UnitRepo interface {
 	Create(ctx context.Context, id string, params CreateUnitParams) (*Unit, *apierror.APIError)
 	Update(ctx context.Context, params UpdateUnitParams) (*Unit, *apierror.APIError)
 	Delete(ctx context.Context, params DeleteUnitParams) *apierror.APIError
+	// IsBaseUnit reports whether any unit group converts through this unit.
+	IsBaseUnit(ctx context.Context, unitID string) (bool, *apierror.APIError)
+	// IsReferenced reports whether any quantity, rate, or demand override is recorded in this unit.
+	IsReferenced(ctx context.Context, unitID string) (bool, *apierror.APIError)
 	ExistsByName(ctx context.Context, accountID, name string, excludeID *string) (bool, *apierror.APIError)
 	ExistsByAbbreviation(ctx context.Context, accountID, abbreviation string, excludeID *string) (bool, *apierror.APIError)
 	FindByAbbreviations(ctx context.Context, accountID string, abbreviations []string) ([]*Unit, *apierror.APIError)
@@ -537,6 +541,8 @@ type ServiceLevelRepo interface {
 
 // BatchRepo handles all batch data access.
 type BatchRepo interface {
+	// LockScan locks the batch row and reports when it was scanned. exists is false for a deleted batch.
+	LockScan(ctx context.Context, accountID, batchID string) (scannedAt *time.Time, exists bool, apiErr *apierror.APIError)
 	Find(ctx context.Context, accountID, batchID string) (*Batch, *apierror.APIError)
 	FindBatchFlow(ctx context.Context, accountID, batchID string) ([]BatchFlowNode, *apierror.APIError)
 	FindByScanningStation(ctx context.Context, params ListBatchesByScanningStationParams) (*ListBatchesByScanningStationResult, *apierror.APIError)
@@ -619,6 +625,8 @@ type ProductionRunRepo interface {
 	GetNextNumbers(ctx context.Context, accountID string, count int) ([]string, *apierror.APIError)
 	IsCompleted(ctx context.Context, accountID, id string) (bool, *apierror.APIError)
 	DeleteBatchesByRun(ctx context.Context, accountID, productionRunID string) *apierror.APIError
+	// HasScannedBatches reports whether any of the run's batches has been scanned.
+	HasScannedBatches(ctx context.Context, accountID, productionRunID string) (bool, *apierror.APIError)
 	FindOrderIDsByRun(ctx context.Context, accountID, productionRunID string) ([]string, *apierror.APIError)
 	UnlinkOrdersFromRun(ctx context.Context, accountID, productionRunID string) *apierror.APIError
 	ListBatchesByRun(ctx context.Context, params ListBatchesByProductionRunParams) (*ListBatchesByProductionRunResult, *apierror.APIError)
@@ -722,6 +730,7 @@ type ProductionStepRepo interface {
 	ExistsByName(ctx context.Context, accountID, name string, excludeID *string) (bool, *apierror.APIError)
 	FindIDByName(ctx context.Context, accountID, name string) (*string, *apierror.APIError)
 	DeleteParentChildLinks(ctx context.Context, id string) *apierror.APIError
+	DeleteOwnedRows(ctx context.Context, id string) *apierror.APIError
 	GetInputSteps(ctx context.Context, id string) ([]LightProductionStep, *apierror.APIError)
 	GetOutputSteps(ctx context.Context, id string) ([]LightProductionStep, *apierror.APIError)
 	GetMachines(ctx context.Context, id string) ([]LightMachine, *apierror.APIError)
@@ -985,6 +994,8 @@ type ProductionScheduleRepo interface {
 	UnreleaseLinesForRun(ctx context.Context, accountID, productionRunID string) *apierror.APIError
 	// MarkLineReleased links a campaign to the run now carrying it. It is a no-op on a line that is already released, so a racing double release cannot re-point work.
 	MarkLineReleased(ctx context.Context, accountID, lineID, productionRunID string) *apierror.APIError
+	// ListRunItemBatchIDsOnMachine returns the released batches of one campaign: its run, item and machine.
+	ListRunItemBatchIDsOnMachine(ctx context.Context, accountID, productionRunID, itemID, machineID string) ([]string, *apierror.APIError)
 	// ListCarryForwardBatches returns an item's unworked tickets from weeks that have already begun, oldest first, so a release can move them rather than print their replacements.
 	ListCarryForwardBatches(ctx context.Context, params ListCarryForwardBatchesParams) ([]*CarryForwardBatch, *apierror.APIError)
 

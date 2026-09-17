@@ -318,7 +318,7 @@ func TestComputeOeeRatios_PerformanceNilWhenNeverRan(t *testing.T) {
 	}
 }
 
-// Factory Physics keeps OEE a chain of nested ratios, so Performance is bounded by physics: the ideal time for the output cannot exceed the time the machine was measured running. A plant that out-runs its schedule (Carolon's case) reads as 100% available with overrun reported apart, not >100% Performance.
+// Factory Physics keeps OEE a chain of nested ratios, so Performance is bounded by physics: the ideal time for the output cannot exceed the time the machine was measured running. A plant that out-runs its schedule (Acme's case) reads as 100% available with overrun reported apart, not >100% Performance.
 func TestComputeOeeRatios_OverrunCapsAvailabilityNotPerformance(t *testing.T) {
 	t.Parallel()
 

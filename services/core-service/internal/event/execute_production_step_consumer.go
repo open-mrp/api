@@ -128,11 +128,25 @@ func (c *ExecuteProductionStepConsumer) executeProductionStep(ctx context.Contex
 		if apiErr != nil {
 			return apiErr
 		}
+		// An undo that committed first has already reversed what it found, which was nothing yet; one
+		// still to come waits on this lock and reverses what this writes. See BatchScannedConsumer.
+		if evt.ProducedBatchID != nil {
+			scannedAt, exists, apiErr := f.NewBatchRepo().LockScan(txCtx, accountID, *evt.ProducedBatchID)
+			if apiErr != nil {
+				return apiErr
+			}
+			if !exists || scannedAt == nil {
+				return errScanSuperseded
+			}
+		}
 		if apiErr := txConsumer.executeProductionStepTx(txCtx, scope, accountID, evt); apiErr != nil {
 			return apiErr
 		}
 		return completeInboxRecord(txCtx, f)
 	})
+	if apiErr == errScanSuperseded {
+		return c.inboxConsumer.Ignore(ctx, "scan was undone before its inventory was applied")
+	}
 	return discardIfPermanent(ctx, c.inboxConsumer, apiErr)
 }
 

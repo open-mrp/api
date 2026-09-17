@@ -88,7 +88,7 @@ func Run(
 	defer inboxPurger.Stop()
 
 	consumerTracer := workerTracer.Tracer(domain.ServiceName + ".request_log_consumer")
-	consumer := event.NewRequestLogConsumer(rabbitmq, loggingSvc, inboxRepo, consumerTracer)
+	consumer := event.NewRequestLogConsumer(rabbitmq, loggingSvc, consumerTracer)
 	if err := consumer.Listen(ctx); err != nil {
 		return err
 	}

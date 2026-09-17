@@ -117,6 +117,27 @@ func resetAgentRun(t *testing.T, runID, status string) {
 	require.NoError(t, err, "resetting agent run %s", runID)
 }
 
+// trimPublishedOutbox deletes outbox messages earlier runs already delivered. Services purge them only
+// after a week, and every API call adds one, so a stack reused for several runs carries hundreds of
+// thousands of dead rows that slow the outbox poller and fill Docker's disk. Undelivered rows stay.
+func trimPublishedOutbox() error {
+	conn, err := sql.Open("mysql", envOr("E2E_DB_URL", defaultE2EDBURL))
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	for {
+		result, err := conn.Exec("DELETE FROM message_outbox WHERE status = 'published' LIMIT 5000")
+		if err != nil {
+			return err
+		}
+		if n, _ := result.RowsAffected(); n == 0 {
+			return nil
+		}
+	}
+}
+
 // trimRuntimeRequestLogs deletes the request logs earlier runs produced, keeping the seeded rqlog_
 // rows. request_log has no retention, and on a stack reused for several runs a filter that matches
 // nothing walks every row the account has ever logged, which outgrows the request deadline.

@@ -88,8 +88,10 @@ func TestCovAiRuns_TriggerCancelLifecycle(t *testing.T) {
 	status, body, err := apiClient.GetListRaw(agentRunsPath+"/"+id, nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
-	// The runner may already have claimed the run by the time this GET lands (pending -> running), a race that surfaces under the parallel suite. Both are valid pre-cancel states; the lifecycle assertion that matters is the cancelled terminal state below.
-	assert.Contains(t, []string{"pending", "running"}, jsonField(parseJSON(body), "status"))
+	// The runner may already have claimed the run by the time this GET lands, and in e2e it can reach its
+	// first pause just as fast. Every one of these is still cancellable; the lifecycle assertion that
+	// matters is the cancelled terminal state below.
+	assert.Contains(t, []string{"pending", "running", "awaiting_input", "awaiting_approval"}, jsonField(parseJSON(body), "status"))
 
 	status, body, err = apiClient.Post(agentRunsPath+"/"+id+"/actions/cancel", nil, newIdempotencyKey())
 	require.NoError(t, err)

@@ -470,6 +470,30 @@ AND account_id = sqlc.arg('account_id');
 DELETE FROM _parent_child_production_steps
 WHERE A = sqlc.arg('step_id') OR B = sqlc.arg('step_id');
 
+-- A step owns its productions and consumptions (and their quantities); nothing cascades on Vitess, so the step delete removes them itself.
+-- Read first and deleted by primary key: a DELETE with IN (subquery) on quantity scans and locks the whole table.
+-- name: ListProductionStepOwnedQuantityIDs :many
+SELECT p.quantity_id AS id FROM production p WHERE p.production_step_id = sqlc.arg('step_id')
+UNION ALL
+SELECT c.quantity_id AS id FROM consumption c WHERE c.production_step_id = sqlc.arg('step_id')
+UNION ALL
+SELECT c.waste_quantity_id AS id FROM consumption c WHERE c.production_step_id = sqlc.arg('step_id');
+
+-- name: DeleteProductionStepQuantities :exec
+DELETE FROM quantity WHERE id IN (sqlc.slice('ids'));
+
+-- name: DeleteProductionStepProductions :exec
+DELETE FROM production WHERE production_step_id = sqlc.arg('step_id');
+
+-- name: DeleteProductionStepConsumptions :exec
+DELETE FROM consumption WHERE production_step_id = sqlc.arg('step_id');
+
+-- Machines outlive the step they were assigned to. Keyed on the step alone (ownership is checked before the delete) so the
+-- step index drives it; an account filter lets the optimizer lock every machine in the account.
+-- name: ClearProductionStepFromMachines :exec
+UPDATE machine SET production_step_id = NULL, updated_at = NOW(3)
+WHERE production_step_id = sqlc.arg('step_id');
+
 -- name: ExistsProductionStepByName :one
 SELECT COUNT(*) FROM production_step
 WHERE name = sqlc.arg('name') AND account_id = sqlc.arg('account_id')

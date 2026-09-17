@@ -49,7 +49,7 @@ func assertOmits(t *testing.T, html string, unwanted ...string) {
 
 func invoiceParams() map[string]any {
 	return map[string]any{
-		"account_name":        "Carolon Co",
+		"account_name":        "Acme Co",
 		"logo_url":            "https://cdn.example/logo.png",
 		"invoice_number":      "005821",
 		"invoice_date":        "7/14/2026",
@@ -125,7 +125,7 @@ func TestInvoiceEmailRendersLegacyContent(t *testing.T) {
 			"https://www.instagram.com/carolon/",
 			"service@carolon.com",
 			"https://carolon.com",
-			"&copy; 2026 Carolon Co. All rights reserved.",
+			"&copy; 2026 Acme Co. All rights reserved.",
 		)
 		// Handles that are blank must not render an empty link.
 		assertOmits(t, html, "https://www.x.com//", "https://www.facebook.com//", "https://www.linkedin.com//")
@@ -316,7 +316,7 @@ func TestMerchantFacingTemplatesSendAsMerchant(t *testing.T) {
 
 func acknowledgementParams() map[string]any {
 	return map[string]any{
-		"account_name":    "Carolon Co",
+		"account_name":    "Acme Co",
 		"logo_url":        "https://cdn.example/logo.png",
 		"order_number":    "009001",
 		"order_date":      "5/10/2026",

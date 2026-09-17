@@ -176,6 +176,23 @@ AND account_id = sqlc.arg('account_id');
 -- name: DeleteUnitGroupUnitsByUnitID :exec
 DELETE FROM unit_group_unit WHERE unit_id = sqlc.arg('unit_id');
 
+-- name: IsUnitABaseUnit :one
+-- A unit group converts every quantity in it through its base unit, so a group's base unit cannot be deleted out from under it.
+SELECT EXISTS (SELECT 1 FROM unit_group WHERE base_unit_id = sqlc.arg('unit_id')) AS is_base_unit;
+
+-- name: IsUnitReferenced :one
+-- Quantities, rates and demand overrides carry their unit by id, and each reads it back to convert and
+-- display the value, so a unit any of them names cannot be deleted. Every probe is an index lookup
+-- except demand_override, which holds a handful of rows per account. Plan snapshots (the
+-- production_schedule_* planned units) are left out: they are regenerated and read the unit through a
+-- LEFT JOIN, so a missing one only blanks a label.
+SELECT (
+    EXISTS (SELECT 1 FROM quantity q WHERE q.unit_id = sqlc.arg('quantity_unit_id'))
+    OR EXISTS (SELECT 1 FROM rate rn WHERE rn.numerator_unit_id = sqlc.arg('numerator_unit_id'))
+    OR EXISTS (SELECT 1 FROM rate rd WHERE rd.denominator_unit_id = sqlc.arg('denominator_unit_id'))
+    OR EXISTS (SELECT 1 FROM demand_override d WHERE d.unit_id = sqlc.arg('override_unit_id'))
+) AS is_referenced;
+
 -- name: DeleteUnit :execresult
 DELETE FROM unit
 WHERE id = sqlc.arg('id')

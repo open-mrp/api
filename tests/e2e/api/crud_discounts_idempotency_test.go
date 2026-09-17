@@ -20,6 +20,8 @@ import (
 
 func TestAccountPrices_UpdateIsIdempotent(t *testing.T) {
 	t.Parallel()
+	// It prices the seeded customer on the seeded line, which every quote reads.
+	lockPricingWrite(t)
 	created := createAccountPrice(t, SeedCustomerAccountID, "20.00")
 	priceID := jsonField(created, "id")
 
@@ -139,6 +141,7 @@ func TestDiscounts_DeleteIsIdempotentWithoutKey(t *testing.T) {
 			name: "account price",
 			path: accountPricesPath,
 			create: func(t *testing.T) string {
+				lockPricingWrite(t)
 				return jsonField(createAccountPrice(t, SeedCustomerAccountID, "31.00"), "id")
 			},
 		},

@@ -9919,36 +9919,6 @@ func (mr *MockAnalyticsRepoMockRecorder) GetOeeDowntimeByDepartment(ctx, params 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOeeDowntimeByDepartment", reflect.TypeOf((*MockAnalyticsRepo)(nil).GetOeeDowntimeByDepartment), ctx, params)
 }
 
-// GetOeeEstimatedRuntime mocks base method.
-func (m *MockAnalyticsRepo) GetOeeEstimatedRuntime(ctx context.Context, params domain.GetOeeWindowParams) ([]domain.OeeEstimatedRuntimeRow, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetOeeEstimatedRuntime", ctx, params)
-	ret0, _ := ret[0].([]domain.OeeEstimatedRuntimeRow)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// GetOeeEstimatedRuntime indicates an expected call of GetOeeEstimatedRuntime.
-func (mr *MockAnalyticsRepoMockRecorder) GetOeeEstimatedRuntime(ctx, params any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOeeEstimatedRuntime", reflect.TypeOf((*MockAnalyticsRepo)(nil).GetOeeEstimatedRuntime), ctx, params)
-}
-
-// GetOeeEstimatedRuntimeForMachines mocks base method.
-func (m *MockAnalyticsRepo) GetOeeEstimatedRuntimeForMachines(ctx context.Context, params domain.GetOeeWindowParams) ([]domain.OeeEstimatedRuntimeRow, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetOeeEstimatedRuntimeForMachines", ctx, params)
-	ret0, _ := ret[0].([]domain.OeeEstimatedRuntimeRow)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// GetOeeEstimatedRuntimeForMachines indicates an expected call of GetOeeEstimatedRuntimeForMachines.
-func (mr *MockAnalyticsRepoMockRecorder) GetOeeEstimatedRuntimeForMachines(ctx, params any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOeeEstimatedRuntimeForMachines", reflect.TypeOf((*MockAnalyticsRepo)(nil).GetOeeEstimatedRuntimeForMachines), ctx, params)
-}
-
 // GetOeeTrendDepartmentDataByWeek mocks base method.
 func (m *MockAnalyticsRepo) GetOeeTrendDepartmentDataByWeek(ctx context.Context, params domain.GetOeeWindowParams) ([]domain.OeeTrendDepartmentWeekRow, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -9977,21 +9947,6 @@ func (m *MockAnalyticsRepo) GetOeeTrendDowntimeIntervals(ctx context.Context, pa
 func (mr *MockAnalyticsRepoMockRecorder) GetOeeTrendDowntimeIntervals(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOeeTrendDowntimeIntervals", reflect.TypeOf((*MockAnalyticsRepo)(nil).GetOeeTrendDowntimeIntervals), ctx, params)
-}
-
-// GetOeeTrendEstimatedRuntimeForMachines mocks base method.
-func (m *MockAnalyticsRepo) GetOeeTrendEstimatedRuntimeForMachines(ctx context.Context, params domain.GetOeeWindowParams) ([]domain.OeeTrendEstimatedRuntimeRow, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetOeeTrendEstimatedRuntimeForMachines", ctx, params)
-	ret0, _ := ret[0].([]domain.OeeTrendEstimatedRuntimeRow)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// GetOeeTrendEstimatedRuntimeForMachines indicates an expected call of GetOeeTrendEstimatedRuntimeForMachines.
-func (mr *MockAnalyticsRepoMockRecorder) GetOeeTrendEstimatedRuntimeForMachines(ctx, params any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOeeTrendEstimatedRuntimeForMachines", reflect.TypeOf((*MockAnalyticsRepo)(nil).GetOeeTrendEstimatedRuntimeForMachines), ctx, params)
 }
 
 // GetOpenBatchEntries mocks base method.
@@ -11304,21 +11259,6 @@ func (m *MockScheduleAttainmentRepo) SumPlannedByWeek(ctx context.Context, param
 func (mr *MockScheduleAttainmentRepoMockRecorder) SumPlannedByWeek(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SumPlannedByWeek", reflect.TypeOf((*MockScheduleAttainmentRepo)(nil).SumPlannedByWeek), ctx, params)
-}
-
-// SumScheduledHoursByDepartmentWeek mocks base method.
-func (m *MockScheduleAttainmentRepo) SumScheduledHoursByDepartmentWeek(ctx context.Context, params domain.SumPlannedByWeekParams) ([]domain.ScheduledHoursRow, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SumScheduledHoursByDepartmentWeek", ctx, params)
-	ret0, _ := ret[0].([]domain.ScheduledHoursRow)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// SumScheduledHoursByDepartmentWeek indicates an expected call of SumScheduledHoursByDepartmentWeek.
-func (mr *MockScheduleAttainmentRepoMockRecorder) SumScheduledHoursByDepartmentWeek(ctx, params any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SumScheduledHoursByDepartmentWeek", reflect.TypeOf((*MockScheduleAttainmentRepo)(nil).SumScheduledHoursByDepartmentWeek), ctx, params)
 }
 
 // MockProductionScheduleInputRepo is a mock of ProductionScheduleInputRepo interface.

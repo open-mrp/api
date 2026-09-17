@@ -535,12 +535,12 @@ type OeeDepartment struct {
 	DowntimeEventCount      int64
 	DowntimeBreakdown       []OeeDowntimeReason
 
-	// ScheduledSeconds is planned production time net of not-scheduled downtime — the time the plant put the scheduled machines on the schedule, and Availability's denominator.
+	// ScheduledSeconds is Planned Production Time: the scheduled machines' shift-configuration capacity net of not-scheduled downtime, and Availability's denominator.
 	ScheduledSeconds float64
-	// OperatingTimeSeconds is the scheduled machines' measured run time (first-to-last scan per machine per day) — the time the equipment was actually running, and Performance's denominator. RunTimeSeconds is that same run time capped at ScheduledSeconds, which is what Availability counts: time run beyond the schedule is OverrunSeconds, not extra availability.
+	// OperatingTimeSeconds is run time — Planned Production Time net of availability-loss downtime — the time the equipment was actually running, and Performance's denominator. It equals RunTimeSeconds: run time is derived from capacity minus downtime, so numerator and denominator share one clock and Performance cannot exceed 100% by measurement error.
 	OperatingTimeSeconds float64
 	RunTimeSeconds       float64
-	// OverrunSeconds is measured run time beyond the scheduled window (OperatingTimeSeconds − ScheduledSeconds when positive). It is a schedule-adherence signal reported apart from OEE, not folded into Availability, so a plant that runs overtime cannot read as more than 100% available.
+	// OverrunSeconds is retired: run time is capacity minus downtime and so can never exceed Planned Production Time. The field stays for response compatibility and is always zero.
 	OverrunSeconds float64
 
 	// Ratios are nil when their denominator is zero or planned time is unknown. A department with no scheduled time has no OEE, which is not the same as 0% OEE.
@@ -574,19 +574,6 @@ type OeeDepartmentDataRow struct {
 	WasteUnits            float64
 	SecondsUnits          float64
 	StandardSecondsEarned float64
-}
-
-// OeeEstimatedRuntimeRow is one department's estimated runtime in the window.
-type OeeEstimatedRuntimeRow struct {
-	DepartmentID   string
-	RuntimeSeconds float64
-}
-
-// OeeTrendEstimatedRuntimeRow is one department's estimated runtime in one production week — the Operating Time a trend point measures its scheduled machines against.
-type OeeTrendEstimatedRuntimeRow struct {
-	WeekStart      time.Time
-	DepartmentID   string
-	RuntimeSeconds float64
 }
 
 // OeeDowntimeRow is one department-reason aggregate of logged downtime, clipped to the reporting window.

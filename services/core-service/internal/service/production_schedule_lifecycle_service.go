@@ -293,7 +293,7 @@ func (s *productionScheduleSvcImpl) measuredSecondsPerUnit(ctx context.Context, 
 		if sample.LaborTimeValue <= 0 {
 			continue
 		}
-		secondsPerUnit := scheduling.SecondsPerUnitFromLaborTime(sample.LaborTimeValue, sample.LaborTimeUnit)
+		secondsPerUnit := scheduling.SecondsPerUnitFromLaborTime(sample.LaborTimeValue, sample.LaborTimeRatioNumerator, sample.LaborTimeRatioDenominator)
 		if secondsPerUnit <= 0 {
 			continue
 		}
@@ -322,7 +322,10 @@ func (s *productionScheduleSvcImpl) stepSecondsPerUnit(ctx context.Context, acco
 	if err != nil || value <= 0 {
 		return 0, nil
 	}
-	return scheduling.SecondsPerUnitFromLaborTime(value, step.LaborTime.NumeratorUnit.Abbreviation), nil
+	// The numerator unit's ratio columns convert the labor time to seconds, the same conversion the OEE query and MeasureItems apply; a blank ratio parses to zero, which SecondsPerUnitFromLaborTime reads as raw seconds.
+	ratioNumerator, _ := strconv.ParseFloat(step.LaborTime.NumeratorUnit.RatioNumerator, 64)
+	ratioDenominator, _ := strconv.ParseFloat(step.LaborTime.NumeratorUnit.RatioDenominator, 64)
+	return scheduling.SecondsPerUnitFromLaborTime(value, ratioNumerator, ratioDenominator), nil
 }
 
 // CreateProductionScheduleLine adds a campaign by hand and logs a deviation.

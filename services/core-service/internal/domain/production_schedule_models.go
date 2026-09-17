@@ -99,25 +99,10 @@ type StepConsumptionRow struct {
 	ItemID           string
 }
 
-// GetSeedBatchesParams bounds the genealogy seeds to the demand window, matching the batch-measurement window.
-type GetSeedBatchesParams struct {
-	AccountID   string
-	ItemIDs     []string
-	WindowStart time.Time
-	WindowEnd   time.Time
-}
-
-// SeedBatchRow is one scanned batch a genealogy walk can start from.
-type SeedBatchRow struct {
-	BatchID string
-	ItemID  string
-}
-
-// BatchFlowChildRow is one immediate downstream batch in the genealogy.
-type BatchFlowChildRow struct {
-	ParentBatchID string
-	BatchID       string
-	ItemID        string
+// ProductionFlowChildRow is one edge in the routing graph: the item a step produces from a consumed item, i.e. that item's immediate downstream stage.
+type ProductionFlowChildRow struct {
+	ParentItemID string
+	ChildItemID  string
 }
 
 // SellableProductRow is one sellable product carried by an item.

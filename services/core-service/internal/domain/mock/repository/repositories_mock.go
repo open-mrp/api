@@ -11420,21 +11420,6 @@ func (mr *MockProductionScheduleInputRepoMockRecorder) GetAllSellableProducts(ct
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllSellableProducts", reflect.TypeOf((*MockProductionScheduleInputRepo)(nil).GetAllSellableProducts), ctx, accountID)
 }
 
-// GetBatchFlowChildren mocks base method.
-func (m *MockProductionScheduleInputRepo) GetBatchFlowChildren(ctx context.Context, accountID string, parentBatchIDs []string) ([]domain.BatchFlowChildRow, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetBatchFlowChildren", ctx, accountID, parentBatchIDs)
-	ret0, _ := ret[0].([]domain.BatchFlowChildRow)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// GetBatchFlowChildren indicates an expected call of GetBatchFlowChildren.
-func (mr *MockProductionScheduleInputRepoMockRecorder) GetBatchFlowChildren(ctx, accountID, parentBatchIDs any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBatchFlowChildren", reflect.TypeOf((*MockProductionScheduleInputRepo)(nil).GetBatchFlowChildren), ctx, accountID, parentBatchIDs)
-}
-
 // GetConstraintBatchMeasurements mocks base method.
 func (m *MockProductionScheduleInputRepo) GetConstraintBatchMeasurements(ctx context.Context, params domain.GetConstraintBatchMeasurementsParams) ([]domain.ConstraintBatchRow, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -11630,6 +11615,21 @@ func (mr *MockProductionScheduleInputRepoMockRecorder) GetProductDemandByCustome
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProductDemandByCustomer", reflect.TypeOf((*MockProductionScheduleInputRepo)(nil).GetProductDemandByCustomer), ctx, params)
 }
 
+// GetProductionFlowChildrenByItem mocks base method.
+func (m *MockProductionScheduleInputRepo) GetProductionFlowChildrenByItem(ctx context.Context, accountID string, parentItemIDs []string) ([]domain.ProductionFlowChildRow, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetProductionFlowChildrenByItem", ctx, accountID, parentItemIDs)
+	ret0, _ := ret[0].([]domain.ProductionFlowChildRow)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetProductionFlowChildrenByItem indicates an expected call of GetProductionFlowChildrenByItem.
+func (mr *MockProductionScheduleInputRepoMockRecorder) GetProductionFlowChildrenByItem(ctx, accountID, parentItemIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProductionFlowChildrenByItem", reflect.TypeOf((*MockProductionScheduleInputRepo)(nil).GetProductionFlowChildrenByItem), ctx, accountID, parentItemIDs)
+}
+
 // GetProductsForItems mocks base method.
 func (m *MockProductionScheduleInputRepo) GetProductsForItems(ctx context.Context, accountID string, itemIDs []string) ([]domain.SellableProductRow, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -11643,21 +11643,6 @@ func (m *MockProductionScheduleInputRepo) GetProductsForItems(ctx context.Contex
 func (mr *MockProductionScheduleInputRepoMockRecorder) GetProductsForItems(ctx, accountID, itemIDs any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProductsForItems", reflect.TypeOf((*MockProductionScheduleInputRepo)(nil).GetProductsForItems), ctx, accountID, itemIDs)
-}
-
-// GetSeedBatchesForItems mocks base method.
-func (m *MockProductionScheduleInputRepo) GetSeedBatchesForItems(ctx context.Context, params domain.GetSeedBatchesParams) ([]domain.SeedBatchRow, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSeedBatchesForItems", ctx, params)
-	ret0, _ := ret[0].([]domain.SeedBatchRow)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// GetSeedBatchesForItems indicates an expected call of GetSeedBatchesForItems.
-func (mr *MockProductionScheduleInputRepoMockRecorder) GetSeedBatchesForItems(ctx, params any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSeedBatchesForItems", reflect.TypeOf((*MockProductionScheduleInputRepo)(nil).GetSeedBatchesForItems), ctx, params)
 }
 
 // GetStepConsumptionItems mocks base method.

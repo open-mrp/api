@@ -90,32 +90,19 @@ JOIN item i ON i.id = c.item_id
 WHERE c.production_step_id IN (sqlc.slice('production_step_ids'))
 ORDER BY c.production_step_id, i.sku;
 
--- GetBatchFlowChildren returns the immediate downstream batches for a set of batches.
+-- GetProductionFlowChildrenByItem returns one edge per (consumed item -> item the same step produces): the immediate downstream stage of each given item in the production-flow graph.
 --
--- The caller walks the genealogy one level at a time, passing the whole frontier each round. That is O(depth) queries total regardless of how many items are being planned, where the TS script issued one query per depth PER item. A recursive CTE would be nicer still, but sqlc's MySQL parser cannot resolve the self-reference. Per the Prisma orientation of _batch_flow (row (A, B): A = downstream/target, B = upstream/source; see docs/patterns/production-step-graph-patterns.md and InsertBatchFlow in batch.sql), a batch's children are the A side of rows where it is B.
--- name: GetBatchFlowChildren :many
-SELECT
-    bf.B AS parent_batch_id,
-    child.id AS batch_id,
-    child.item_id
-FROM _batch_flow bf
-JOIN batch child ON child.id = bf.A
-WHERE child.account_id = sqlc.arg('account_id')
-  AND bf.B IN (sqlc.slice('parent_batch_ids'))
-ORDER BY bf.B, child.id;
-
--- GetSeedBatchesForItems returns the batches to start the genealogy walk from: every scan of the item inside the demand window. Seeding from the whole window rather than a recent sample is what keeps the echelon complete — stock held as a finished good only an older batch flowed to still has to count against the decision to build more.
--- name: GetSeedBatchesForItems :many
-SELECT
-    b.id AS batch_id,
-    b.item_id
-FROM batch b
-WHERE b.account_id = sqlc.arg('account_id')
-  AND b.item_id IN (sqlc.slice('item_ids'))
-  AND b.scanned_at IS NOT NULL
-  AND b.scanned_at >= sqlc.arg('window_start')
-  AND b.scanned_at <= sqlc.arg('window_end')
-ORDER BY b.item_id, b.scanned_at DESC, b.id DESC;
+-- This is the routing/BOM graph, not batch history. The echelon is defined by what an item is structurally turned into — a step consumes greige and produces sewn, sewn is consumed and washed produced, and so on — so downstream stock is counted whether or not the floor ever linked the batches that produced it. That linkage (_batch_flow) is written only by move/split/merge, so a walk that depended on it collapsed to the constraint item alone whenever the stages were scanned as independent batches. The caller walks one level at a time, passing the whole frontier each round: O(depth) queries regardless of how many items are planned. A recursive CTE would be nicer, but sqlc's MySQL parser cannot resolve the self-reference. A step with no production row produces nothing and drops out of the join, which correctly ends that branch.
+-- name: GetProductionFlowChildrenByItem :many
+SELECT DISTINCT
+    c.item_id AS parent_item_id,
+    prod.item_id AS child_item_id
+FROM consumption c
+JOIN production_step ps ON ps.id = c.production_step_id
+JOIN production prod ON prod.production_step_id = c.production_step_id
+WHERE ps.account_id = sqlc.arg('account_id')
+  AND c.item_id IN (sqlc.slice('parent_item_ids'))
+ORDER BY c.item_id, prod.item_id;
 
 -- GetProductsForItems returns the sellable products for a set of items, with the SKU and product line each one carries so a finished good can be reported by name rather than by ID. Only items with a product carry order demand.
 -- name: GetProductsForItems :many

@@ -135,7 +135,7 @@ func (c *ExecuteProductionStepConsumer) executeProductionStep(ctx context.Contex
 			if apiErr != nil {
 				return apiErr
 			}
-			if !exists || scannedAt == nil {
+			if !scanStillStands(scannedAt, exists, evt.ScannedAt) {
 				return errScanSuperseded
 			}
 		}

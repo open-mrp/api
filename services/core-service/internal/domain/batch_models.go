@@ -319,4 +319,10 @@ type ExecuteProductionStepEvent struct {
 	ResponsibleUserID *string `json:"responsible_user_id,omitempty"`
 	ProducedBatchID   *string `json:"produced_batch_id,omitempty"`
 	ProduceInventory  bool    `json:"produce_inventory"`
+
+	// ScannedAt is the stamp the produced batch carried when this was published, and it is what tells a
+	// scan that was undone and made again from the one this event describes: both leave a stamped row,
+	// and only the time separates them. Zero on an event whose batch was not scanned into being, and on
+	// one published before the stamp was carried.
+	ScannedAt time.Time `json:"scanned_at,omitzero"`
 }

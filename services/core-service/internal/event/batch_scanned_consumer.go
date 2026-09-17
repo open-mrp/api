@@ -140,9 +140,7 @@ func (c *BatchScannedConsumer) handleMessage(ctx context.Context, msg amqp.Deliv
 		if apiErr != nil {
 			return apiErr
 		}
-		// Only presence is compared: the publisher stamps the row and the event separately, so their
-		// times can differ by a millisecond.
-		if !exists || scannedAt == nil {
+		if !scanStillStands(scannedAt, exists, evt.ScannedAt) {
 			return errScanSuperseded
 		}
 		if apiErr := txConsumer.applyInventory(txCtx, scope, accountID, evt); apiErr != nil {
@@ -161,8 +159,31 @@ func (c *BatchScannedConsumer) handleMessage(ctx context.Context, msg amqp.Deliv
 	return nil
 }
 
-// errScanSuperseded marks an event whose scan no longer stands: the batch is gone or unscanned.
+// errScanSuperseded marks an event whose scan no longer stands: the batch is gone, unscanned, or scanned again since.
 var errScanSuperseded = apierror.NewValidationError("The scan this event describes no longer stands.")
+
+// scanStampDrift is how far apart the row's scan stamp and the event's may be and still describe the
+// same scan. An init-station scan writes the column and the payload from two clock reads inside one
+// request, so they differ by milliseconds; anything beyond this is a different scan of the same row.
+const scanStampDrift = 5 * time.Second
+
+// scanStillStands decides whether the batch row still carries the scan this event describes.
+//
+// Presence alone does not settle it. An undo clears the stamp and leaves the batch scannable again, so
+// an operator who undoes and re-scans leaves a freshly stamped row that a stale event would read as its
+// own — and apply the first scan's quantities on top of the second's. A stamp materially later than the
+// event's belongs to that later scan, and this event has nothing left to apply.
+//
+// An event published before the stamp was carried has none to compare, and falls back to presence.
+func scanStillStands(rowScannedAt *time.Time, exists bool, eventScannedAt time.Time) bool {
+	if !exists || rowScannedAt == nil {
+		return false
+	}
+	if eventScannedAt.IsZero() {
+		return true
+	}
+	return !rowScannedAt.After(eventScannedAt.Add(scanStampDrift))
+}
 
 // scrapMeasure is the part of the scan that will never ship, in the unit the scan was recorded in.
 func scrapMeasure(evt domain.BatchScannedEvent) (decimal.Decimal, *apierror.APIError) {

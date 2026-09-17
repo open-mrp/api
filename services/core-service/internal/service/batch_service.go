@@ -716,6 +716,14 @@ func (s *batchSvcImpl) InitializeBatch(ctx context.Context, batchID, scanningSta
 				return apiErr
 			}
 
+			// Fetch the updated batch. Read before the event is enqueued so the event can carry the stamp
+			// the row was just given: an undo clears it and leaves the batch scannable, so the stamp is
+			// what tells this scan from a later one of the same row.
+			updatedRow, apiErr := txSvc.repos.NewBatchRepo().Find(txCtx, accountID, batchID)
+			if apiErr != nil {
+				return apiErr
+			}
+
 			// Enqueue outbox message for executeProductionStep.
 			evt := domain.ExecuteProductionStepEvent{
 				ProductionStepID:  productionStepID,
@@ -727,16 +735,13 @@ func (s *batchSvcImpl) InitializeBatch(ctx context.Context, batchID, scanningSta
 				ProducedBatchID:   &batchID,
 				ProduceInventory:  true,
 			}
+			if updatedRow.ScannedAt != nil {
+				evt.ScannedAt = *updatedRow.ScannedAt
+			}
 			if identity.Actor != nil {
 				evt.ResponsibleUserID = &identity.Actor.ID
 			}
 			if apiErr := txSvc.enqueueExecuteProductionStep(txCtx, txSvc.repos, evt); apiErr != nil {
-				return apiErr
-			}
-
-			// Fetch the updated batch.
-			updatedRow, apiErr := txSvc.repos.NewBatchRepo().Find(ctx, accountID, batchID)
-			if apiErr != nil {
 				return apiErr
 			}
 			result = &domain.BaseBatch{

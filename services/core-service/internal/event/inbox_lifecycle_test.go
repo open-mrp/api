@@ -361,6 +361,31 @@ func (s *InboxLifecycleTestSuite) TestUndoneScan_IsIgnoredWithoutMovingInventory
 	}
 }
 
+// An undo leaves the batch scannable, so an operator who undoes and scans again leaves a row that is
+// stamped once more. The first scan's event must not read that stamp as its own and apply the first
+// scan's quantities on top of the second's.
+func (s *InboxLifecycleTestSuite) TestScanUndoneThenMadeAgain_IsIgnoredWithoutMovingInventory() {
+	rescanned := scanEvent("1", unitPair).ScannedAt.Add(30 * time.Second)
+	s.batchScannedAt = &rescanned
+
+	s.NoError(s.deliver(scanEvent("10", unitPair), "msg_rescanned"))
+
+	s.Empty(s.journal.committedOf(effectInventory), "the row carries a later scan; this one has nothing to apply")
+	s.Equal(1, s.outerInbox.ignored, "the message ends ignored, not failed")
+	s.Zero(s.outerInbox.discarded)
+}
+
+// An event published before the stamp was carried has none to compare, and must still apply rather than
+// be dropped as superseded.
+func (s *InboxLifecycleTestSuite) TestScanWithoutAStamp_StillApplies() {
+	evt := scanEvent("10", unitPair)
+	evt.ScannedAt = time.Time{}
+
+	s.NoError(s.deliver(evt, "msg_unstamped"))
+
+	s.NotEmpty(s.journal.committedOf(effectInventory))
+}
+
 // A failure part-way must leave nothing: no movements, and no marker claiming there were any.
 func (s *InboxLifecycleTestSuite) TestHandlerFails_NothingCommits() {
 	s.stepRepo = repositorymock.NewMockProductionStepQueryRepo(s.ctrl)

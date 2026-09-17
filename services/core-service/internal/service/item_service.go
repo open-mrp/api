@@ -355,24 +355,28 @@ func (s *itemSvcImpl) ComputeItemCosts(ctx context.Context, accountID, itemID st
 		}
 		step.Consumptions = stepDetail.Consumptions
 
-		// Compute InStepIDs/OutStepIDs.
+		stepDataMap[stepID] = &flowStepData{step: step, consumptions: consumptions}
+	}
+
+	// Edges are resolved once every step is loaded, against the steps that actually loaded rather than
+	// against the ids the graph offered. A step deleted mid-read is skipped above, and an edge left
+	// pointing at it would be followed by the normalization walk into a step it has no data for.
+	for stepID, data := range stepDataMap {
 		inIDs := make([]string, 0)
 		for _, parentID := range parentMap[stepID] {
-			if relevantStepIDs[parentID] {
+			if _, loaded := stepDataMap[parentID]; loaded {
 				inIDs = append(inIDs, parentID)
 			}
 		}
-		step.InStepIDs = inIDs
+		data.step.InStepIDs = inIDs
 
 		outIDs := make([]string, 0)
 		for _, childID := range childMap[stepID] {
-			if relevantStepIDs[childID] {
+			if _, loaded := stepDataMap[childID]; loaded {
 				outIDs = append(outIDs, childID)
 			}
 		}
-		step.OutStepIDs = outIDs
-
-		stepDataMap[stepID] = &flowStepData{step: step, consumptions: consumptions}
+		data.step.OutStepIDs = outIDs
 	}
 
 	// 4. Calculate per-step costs.

@@ -141,10 +141,15 @@ INSERT IGNORE INTO unit_type (id, code, name, created_at, updated_at) VALUES
     ('untp_01seedarea00000000', 'area', 'Area', NOW(), NOW());
 
 -- unit (default/global units, account_id = NULL)
+--
+-- Time units are ratios to the HOUR, the time dimension's base unit, matching production and the
+-- hour-based time_group in 0005_measures.sql. Everything that reads these columns as a run rate — the
+-- OEE standard-seconds query, the scheduler's seconds-per-unit — converts value * ratio * 3600, so a
+-- second-based set here reads every labor time as 3600x longer than it is.
 INSERT IGNORE INTO unit (id, name, abbreviation, unit_dimension_code, ratio_numerator, ratio_denominator, offset_numerator, offset_denominator, is_base_unit, account_id, created_at, updated_at) VALUES
     ('celcius',        'Celsius',        '°C',   'temperature', 1, 1, 0, 1, 1, NULL, NOW(), NOW()),
     ('cup',            'Cup',            'cup',  'volume',      236.588, 1000000, 0, 1, 0, NULL, NOW(), NOW()),
-    ('day',            'Day',            'day',  'time',        86400, 1, 0, 1, 0, NULL, NOW(), NOW()),
+    ('day',            'Day',            'day',  'time',        24, 1, 0, 1, 0, NULL, NOW(), NOW()),
     ('dollar',         'Dollar',         '$',    'currency',    1, 1, 0, 1, 1, NULL, NOW(), NOW()),
     ('dozen',          'Dozen',          'dz',   'quantity',    12, 1, 0, 1, 0, NULL, NOW(), NOW()),
     ('each',           'Each',           'ea',   'quantity',    1, 1, 0, 1, 1, NULL, NOW(), NOW()),
@@ -153,17 +158,17 @@ INSERT IGNORE INTO unit (id, name, abbreviation, unit_dimension_code, ratio_nume
     ('gallon',         'Gallon',         'gal',  'volume',      3785410, 1000000, 0, 1, 0, NULL, NOW(), NOW()),
     ('grain',          'Grain',          'gr',   'mass',        64799, 1000000, 0, 1, 0, NULL, NOW(), NOW()),
     ('gram',           'Gram',           'g',    'mass',        1, 1, 0, 1, 1, NULL, NOW(), NOW()),
-    ('hour',           'Hour',           'hr',   'time',        3600, 1, 0, 1, 0, NULL, NOW(), NOW()),
+    ('hour',           'Hour',           'hr',   'time',        1, 1, 0, 1, 1, NULL, NOW(), NOW()),
     ('liter',          'Liter',          'L',    'volume',      1, 1, 0, 1, 1, NULL, NOW(), NOW()),
     ('meter',          'Meter',          'm',    'length',      1, 1, 0, 1, 1, NULL, NOW(), NOW()),
     ('meters_squared', 'Square Meter',   'm²',   'area',        1, 1, 0, 1, 1, NULL, NOW(), NOW()),
-    ('minute',         'Minute',         'min',  'time',        60, 1, 0, 1, 0, NULL, NOW(), NOW()),
-    ('month',          'Month',          'mo',   'time',        2592000, 1, 0, 1, 0, NULL, NOW(), NOW()),
+    ('minute',         'Minute',         'min',  'time',        1, 60, 0, 1, 0, NULL, NOW(), NOW()),
+    ('month',          'Month',          'mth',  'time',        730, 1, 0, 1, 0, NULL, NOW(), NOW()),
     ('pair',           'Pair',           'pr',   'quantity',    2, 1, 0, 1, 0, NULL, NOW(), NOW()),
     ('pound',          'Pound',          'lb',   'mass',        453592, 1000, 0, 1, 0, NULL, NOW(), NOW()),
-    ('quarter',        'Quarter',        'qtr',  'time',        7776000, 1, 0, 1, 0, NULL, NOW(), NOW()),
-    ('second',         'Second',         's',    'time',        1, 1, 0, 1, 1, NULL, NOW(), NOW()),
-    ('week',           'Week',           'wk',   'time',        604800, 1, 0, 1, 0, NULL, NOW(), NOW()),
+    ('quarter',        'Quarter',        'qtr',  'time',        2190, 1, 0, 1, 0, NULL, NOW(), NOW()),
+    ('second',         'Second',         'sec',  'time',        1, 3600, 0, 1, 0, NULL, NOW(), NOW()),
+    ('week',           'Week',           'wk',   'time',        168, 1, 0, 1, 0, NULL, NOW(), NOW()),
     ('yard',           'Yard',           'yd',   'length',      914400, 1000000, 0, 1, 0, NULL, NOW(), NOW());
 
 -- onboarding_status (prefix: obss)

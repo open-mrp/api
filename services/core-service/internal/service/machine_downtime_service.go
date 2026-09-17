@@ -99,6 +99,9 @@ func downtimeDuration(startedAt time.Time, endedAt *time.Time) *int32 {
 	return &seconds
 }
 
+// downtimeSecondsPerHour is the time dimension's base unit, the hour, expressed in seconds. A duration converted to base is a number of hours; the event stores seconds.
+const downtimeSecondsPerHour = 3600
+
 // maxDowntimeDuration bounds a single stoppage. A machine down for a year is a mistyped unit — "90" entered against days rather than minutes — and storing it would drag every availability figure it touches down with it.
 const maxDowntimeDuration = 365 * 24 * time.Hour
 
@@ -126,8 +129,10 @@ func (s *machineDowntimeSvcImpl) resolveDowntimeEnd(ctx context.Context, account
 		return nil, apierror.NewValidationErrorWithParam("The downtime duration must be expressed in a unit of time.", "duration")
 	}
 
-	// Seconds is the base unit of the time dimension, which is also what the event stores its duration in.
-	seconds := unit.ToBase(value)
+	// The time dimension's base unit is the hour, so converting to base gives hours and the event's own
+	// duration is that in seconds. Reading the base as seconds stored a 45-minute stoppage as 0.75s and
+	// left every availability figure it fed reading as though the machine had barely stopped.
+	seconds := unit.ToBase(value).Mul(decimal.NewFromInt(downtimeSecondsPerHour))
 	if seconds.LessThanOrEqual(decimal.Zero) {
 		return nil, apierror.NewValidationErrorWithParam("The downtime duration must be greater than zero.", "duration")
 	}

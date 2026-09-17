@@ -1,6 +1,7 @@
 package version
 
 import (
+	"net/url"
 	"slices"
 
 	"github.com/open-mrp/api/shared/constants"
@@ -26,6 +27,11 @@ type Transformer interface {
 type IncludeForcer interface {
 	// ForcedIncludes returns include keys (dot-paths relative to the root object type) that must be resolved when downgrading a response of the given object type.
 	ForcedIncludes(objectType constants.ObjectType) []string
+}
+
+// QueryUpgrader is an optional interface a Transformer can implement when a version changed what a query parameter means, including what omitting it means. It upgrades the query string of a request made at ToVersion to the FromVersion meaning; request bodies go through TransformRequest. The route is the endpoint's template, because one object type is served by endpoints that accept different parameters.
+type QueryUpgrader interface {
+	TransformQuery(objectType constants.ObjectType, route string, query url.Values) url.Values
 }
 
 // TransformerRegistry manages a collection of version transformers.
@@ -92,6 +98,25 @@ func (r *TransformerRegistry) TransformRequest(from, to APIVersion, objectType c
 	return result
 }
 
+// TransformQuery applies, oldest to newest, the query upgrades of every transformer between the 'from' and 'to' versions for the given object type.
+func (r *TransformerRegistry) TransformQuery(from, to APIVersion, objectType constants.ObjectType, route string, query url.Values) url.Values {
+	if from.Equal(to) || from.After(to) {
+		return query
+	}
+
+	result := query
+	for i := len(r.transformers) - 1; i >= 0; i-- {
+		t := r.transformers[i]
+		if t.ToVersion().Before(from) || t.FromVersion().After(to) || !r.handlesObjectType(t, objectType) {
+			continue
+		}
+		if upgrader, ok := t.(QueryUpgrader); ok {
+			result = upgrader.TransformQuery(objectType, route, result)
+		}
+	}
+	return result
+}
+
 // ForcedIncludes collects the include keys required by every transformer that would run when downgrading a response of the given object type from the 'from' version to the 'to' version.
 func (r *TransformerRegistry) ForcedIncludes(from, to APIVersion, objectType constants.ObjectType) []string {
 	if from.Equal(to) || to.After(from) {
@@ -130,6 +155,11 @@ func Register(t Transformer) {
 // Transform applies response transformers from the default registry.
 func Transform(from, to APIVersion, objectType constants.ObjectType, data map[string]any) map[string]any {
 	return DefaultRegistry.Transform(from, to, objectType, data)
+}
+
+// TransformQuery applies query upgrades from the default registry.
+func TransformQuery(from, to APIVersion, objectType constants.ObjectType, route string, query url.Values) url.Values {
+	return DefaultRegistry.TransformQuery(from, to, objectType, route, query)
 }
 
 // TransformRequest applies request transformers from the default registry.

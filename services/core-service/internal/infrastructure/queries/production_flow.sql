@@ -21,7 +21,8 @@ JOIN production p ON p.production_step_id = ps.id
 JOIN item i ON p.item_id = i.id
 WHERE ps.account_id = sqlc.arg('account_id')
 AND p.item_id = sqlc.arg('item_id')
-AND i.deleted_at IS NULL;
+AND i.deleted_at IS NULL
+ORDER BY ps.created_at, ps.id;
 
 -- name: FindStepsThatConsumeItem :many
 SELECT ps.id

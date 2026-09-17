@@ -135,6 +135,11 @@ func TestRegistration_FullJourney(t *testing.T) {
 	assert.Equal(t, "account", jsonField(completed, "object"))
 	accountID := jsonField(completed, "id")
 	require.NotEmpty(t, accountID)
+	// The free plan admits a handful of active accounts, so each run's account is shut down afterwards
+	// to free its place for the next run on the same stack.
+	t.Cleanup(func() {
+		_, _ = authDB(t).Exec("UPDATE account SET onboarding_status_code = 'deactivated' WHERE id = ?", accountID)
+	})
 
 	// 7. Completing registration provisions a sandbox account alongside the new
 	//    production account, named "<account> Sandbox".

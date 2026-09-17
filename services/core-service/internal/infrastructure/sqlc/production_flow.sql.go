@@ -128,6 +128,7 @@ JOIN item i ON p.item_id = i.id
 WHERE ps.account_id = ?
 AND p.item_id = ?
 AND i.deleted_at IS NULL
+ORDER BY ps.created_at, ps.id
 `
 
 type FindStepsByProducedItemParams struct {

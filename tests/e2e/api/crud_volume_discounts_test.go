@@ -139,6 +139,8 @@ func TestVolumeDiscounts_ListSearchByName(t *testing.T) {
 
 func TestVolumeDiscounts_ListWithIncludesHydratesEveryRow(t *testing.T) {
 	t.Parallel()
+	// It prices the seeded customer group and product line, which every quote reads.
+	lockPricingWrite(t)
 	// Guarantees at least one row carries every scope, so the assertions below are not
 	// vacuously true against discounts that happen to have empty scopes.
 	createVolumeDiscount(t, map[string]any{
@@ -186,6 +188,8 @@ func createVolumeDiscount(t *testing.T, overrides map[string]any) map[string]any
 
 func TestVolumeDiscounts_CreateAllFieldsAndResponseShape(t *testing.T) {
 	t.Parallel()
+	// It prices the seeded customer group and product line, which every quote reads.
+	lockPricingWrite(t)
 
 	name := uniqueName("e2e-quds-allf")
 	resp, err := apiClient.PostFull(volumeDiscountsPath+"?include=customer_groups&include=product_lines&include=categories&include=attributes&include=acceptable_units", map[string]any{
@@ -225,6 +229,8 @@ func TestVolumeDiscounts_CreateAllFieldsAndResponseShape(t *testing.T) {
 // pins that the Go endpoint actually persists them.
 func TestVolumeDiscounts_CreatePersistsCustomerGroups(t *testing.T) {
 	t.Parallel()
+	// It prices the seeded customer group and product line, which every quote reads.
+	lockPricingWrite(t)
 	created := createVolumeDiscount(t, map[string]any{
 		"customer_group_ids": []string{SeedCustomerGroupID},
 	})
@@ -314,6 +320,8 @@ func TestVolumeDiscounts_CreateIdempotent(t *testing.T) {
 // ignored entirely, which is what lets a caller PATCH the name without wiping its scopes.
 func TestVolumeDiscounts_UpdateWithoutFlagsPreservesScopes(t *testing.T) {
 	t.Parallel()
+	// It prices the seeded customer group and product line, which every quote reads.
+	lockPricingWrite(t)
 	created := createVolumeDiscount(t, map[string]any{
 		"customer_group_ids": []string{SeedCustomerGroupID},
 		"product_line_ids":   []string{SeedProductLineID},
@@ -338,6 +346,8 @@ func TestVolumeDiscounts_UpdateWithoutFlagsPreservesScopes(t *testing.T) {
 
 func TestVolumeDiscounts_UpdateWithFlagReplacesScope(t *testing.T) {
 	t.Parallel()
+	// It prices the seeded customer group and product line, which every quote reads.
+	lockPricingWrite(t)
 	created := createVolumeDiscount(t, map[string]any{
 		"product_line_ids": []string{SeedProductLineID},
 	})
@@ -415,6 +425,8 @@ func TestVolumeDiscounts_UpdateNonexistentReturns404(t *testing.T) {
 
 func TestVolumeDiscounts_DeleteRemovesDiscount(t *testing.T) {
 	t.Parallel()
+	// It prices the seeded customer group and product line, which every quote reads.
+	lockPricingWrite(t)
 	created := createVolumeDiscount(t, map[string]any{
 		"customer_group_ids": []string{SeedCustomerGroupID},
 		"product_line_ids":   []string{SeedProductLineID},

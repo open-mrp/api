@@ -31,6 +31,10 @@ func LoadEmailDomains(ctx context.Context, ids []string) (map[string]any, *apier
 				return emailBridgeClient.GetEmailDomain(ctx, &notifpb.GetEmailDomainRequest{Id: domainID}, opts...)
 			})
 		if apiErr != nil {
+			// Deleted after the including rows were read: leave this one reference null (see pick_loader.go).
+			if apierror.IsNotFound(apiErr) {
+				continue
+			}
 			return nil, apiErr
 		}
 		if resp == nil {

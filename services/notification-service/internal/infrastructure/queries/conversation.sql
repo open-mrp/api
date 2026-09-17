@@ -88,10 +88,16 @@ WHERE c.account_id = sqlc.arg('account_id')
     OR sqlc.narg('status') = 'hidden' AND p.hidden_at IS NOT NULL
   )
   AND (sqlc.narg('type') IS NULL OR c.type = sqlc.narg('type'))
+  -- Conversations with no messages have no last_message_at and sort after every other row, so a
+  -- cursor taken in that tail pages them by id alone.
   AND (
-    sqlc.narg('cursor_last_message_at') IS NULL
-    OR c.last_message_at < sqlc.narg('cursor_last_message_at')
-    OR (c.last_message_at = sqlc.narg('cursor_last_message_at') AND c.id < sqlc.narg('cursor_id'))
+    sqlc.narg('cursor_id') IS NULL
+    OR (sqlc.arg('cursor_in_null_tail') = FALSE AND (
+      c.last_message_at < sqlc.narg('cursor_last_message_at')
+      OR (c.last_message_at = sqlc.narg('cursor_last_message_at') AND c.id < sqlc.narg('cursor_id'))
+      OR c.last_message_at IS NULL
+    ))
+    OR (sqlc.arg('cursor_in_null_tail') = TRUE AND c.last_message_at IS NULL AND c.id < sqlc.narg('cursor_id'))
   )
 ORDER BY c.last_message_at DESC, c.id DESC
 LIMIT ?;
@@ -264,10 +270,15 @@ WHERE account_id = sqlc.arg('account_id')
   AND (sqlc.arg('hide_resolved') = FALSE OR workflow_status <> 'resolved')
   AND (sqlc.narg('assignee_resource_id') IS NULL OR assignee_resource_id = sqlc.narg('assignee_resource_id'))
   AND (sqlc.narg('unassigned') IS NULL OR assignee_resource_id IS NULL)
+  -- A case with no messages sorts last; see ListConversationsForUser for the null-tail cursor.
   AND (
-    sqlc.narg('cursor_last_message_at') IS NULL
-    OR last_message_at < sqlc.narg('cursor_last_message_at')
-    OR (last_message_at = sqlc.narg('cursor_last_message_at') AND id < sqlc.narg('cursor_id'))
+    sqlc.narg('cursor_id') IS NULL
+    OR (sqlc.arg('cursor_in_null_tail') = FALSE AND (
+      last_message_at < sqlc.narg('cursor_last_message_at')
+      OR (last_message_at = sqlc.narg('cursor_last_message_at') AND id < sqlc.narg('cursor_id'))
+      OR last_message_at IS NULL
+    ))
+    OR (sqlc.arg('cursor_in_null_tail') = TRUE AND last_message_at IS NULL AND id < sqlc.narg('cursor_id'))
   )
 ORDER BY last_message_at DESC, id DESC
 LIMIT ?;

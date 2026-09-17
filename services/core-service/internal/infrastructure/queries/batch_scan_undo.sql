@@ -178,3 +178,11 @@ SELECT DISTINCT item_id FROM (
     WHERE ii.batch_id = sqlc.arg('batch_id')
       AND ii.account_id = sqlc.arg('account_id')
 ) AS batch_items;
+
+-- LockBatchScan reads when a batch was scanned and holds its row until the transaction ends. The
+-- inventory a scan moves is written after the scan commits; holding the row makes an undo (which
+-- writes the same row) wait for that write, so the reversal that follows always finds it.
+-- name: LockBatchScan :many
+SELECT scanned_at FROM batch
+WHERE id = sqlc.arg('id') AND account_id = sqlc.arg('account_id')
+FOR UPDATE;

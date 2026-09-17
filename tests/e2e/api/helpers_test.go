@@ -25,6 +25,12 @@ import (
 const (
 	e2eAsyncWaitTimeout  = 15 * time.Second
 	e2eAsyncPollInterval = 50 * time.Millisecond
+
+	// Every API call in the suite produces a request log, and under the full parallel run the
+	// platform consumer runs a few hundred messages behind (measured peak ~430 queued), so a log can
+	// land after the general 15s budget. The interval keeps the poll from adding to the backlog.
+	e2eRequestLogWaitTimeout  = 45 * time.Second
+	e2eRequestLogPollInterval = 250 * time.Millisecond
 )
 
 // uniqueName generates a unique name for test resources.

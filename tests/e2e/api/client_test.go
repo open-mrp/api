@@ -20,7 +20,7 @@ type Response struct {
 	Header     http.Header
 }
 
-const defaultAPIVersion = "1.0.forge-preview.4"
+const defaultAPIVersion = "1.0.forge-preview.5"
 
 // Client is an HTTP client for the OpenMRP API configured with authentication.
 type Client struct {

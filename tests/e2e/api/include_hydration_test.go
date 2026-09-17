@@ -3,6 +3,7 @@
 package api_test
 
 import (
+	"encoding/json"
 	"net/url"
 	"testing"
 
@@ -164,10 +165,20 @@ func TestItemInventory_FiguresAreNullWithoutInclude(t *testing.T) {
 func TestInventories_EveryRowCarriesAResolvedQuantityAndUnit(t *testing.T) {
 	t.Parallel()
 
-	list, status, err := apiClient.GetList(inventoriesPath, url.Values{"limit": {"5"}})
-	require.NoError(t, err)
-	require.Less(t, status, 500, "inventories list must not 5xx")
-	requireStatus(t, 200, status, nil)
+	// The list reads items and their on-hand in two statements, so an item a parallel test deletes in
+	// between is listed without a unit. That clears on a re-read; a unit that is really missing does not.
+	var list *ListResponse
+	for attempt := 0; attempt < 3; attempt++ {
+		var status int
+		var err error
+		list, status, err = apiClient.GetList(inventoriesPath, url.Values{"limit": {"5"}})
+		require.NoError(t, err)
+		require.Less(t, status, 500, "inventories list must not 5xx")
+		requireStatus(t, 200, status, nil)
+		if everyInventoryRowHasAUnit(list.Data) {
+			break
+		}
+	}
 	require.NotEmpty(t, list.Data, "the seeded account has inventory")
 
 	for _, raw := range list.Data {
@@ -181,6 +192,15 @@ func TestInventories_EveryRowCarriesAResolvedQuantityAndUnit(t *testing.T) {
 
 		assertComputedQuantityHydrated(t, jsonObject(row, "quantity"), "quantity")
 	}
+}
+
+func everyInventoryRowHasAUnit(rows []json.RawMessage) bool {
+	for _, raw := range rows {
+		if jsonObject(jsonObject(parseJSON(raw), "quantity"), "unit") == nil {
+			return false
+		}
+	}
+	return true
 }
 
 // --- Deliveries ---
@@ -256,13 +276,9 @@ func TestReceivingOrders_LineQuantityOrderedIsThePurchaseOrderQuantity(t *testin
 	// The same quantity, reached the other way: through the purchase order the receiving order was
 	// created from. Both routes must name the same row.
 	related := jsonObject(parseJSON(body), "related")
-	if related == nil {
-		t.Skip("this receiving order carries no related purchase order")
-	}
+	require.NotNil(t, related, "the seeded receiving order was created from a purchase order: %s", string(body))
 	purchaseOrder := jsonObject(related, "purchase_order")
-	if purchaseOrder == nil {
-		t.Skip("this receiving order carries no related purchase order")
-	}
+	require.NotNil(t, purchaseOrder, "the seeded receiving order was created from a purchase order: %s", string(body))
 
 	poLine, _ := firstLineWith(t, purchaseOrdersPath+"/"+jsonField(purchaseOrder, "id"), "lines", "lines.quantity_ordered")
 	assert.Equal(t, jsonField(jsonObject(poLine, "quantity_ordered"), "id"), orderedID,
@@ -376,9 +392,7 @@ func TestPurchaseOrders_LineItemExpandsFullyHydrated(t *testing.T) {
 	line, body := firstLineWith(t, purchaseOrdersPath+"/"+SeedPurchaseOrderID, "lines", "lines.item")
 
 	item := jsonObject(line, "item")
-	if item == nil {
-		t.Skip("this purchase order line is not linked to a catalog item")
-	}
+	require.NotNil(t, item, "every seeded purchase order line buys a catalog item: %s", string(body))
 	assertObjectField(t, item, "item")
 	assert.NotEmpty(t, jsonField(item, "id"))
 	assert.NotEmpty(t, jsonField(item, "sku"))
@@ -559,9 +573,7 @@ func TestInvoices_AllocationAmountUnitExpandsWithInclude(t *testing.T) {
 	requireStatus(t, 200, status, body)
 
 	allocations := jsonListData(parseJSON(body), "allocations")
-	if len(allocations) == 0 {
-		t.Skip("the seeded invoice has no allocations")
-	}
+	require.NotEmpty(t, allocations, "the seeded invoice is paid by a seeded allocation: %s", string(body))
 	for _, raw := range allocations {
 		allocation, ok := raw.(map[string]any)
 		require.True(t, ok)
@@ -598,9 +610,7 @@ func assertAllocationAmountsCarryTheirUnit(t *testing.T, path, objectType string
 	requireStatus(t, 200, status, body)
 
 	allocations := jsonListData(parseJSON(body), "allocations")
-	if len(allocations) == 0 {
-		t.Skipf("%s has no allocations", path)
-	}
+	require.NotEmpty(t, allocations, "%s is seeded with allocations: %s", path, string(body))
 	for _, raw := range allocations {
 		allocation, ok := raw.(map[string]any)
 		require.True(t, ok)
@@ -654,9 +664,7 @@ func TestProductionSteps_ConsumedItemExpandsFullyHydrated(t *testing.T) {
 	requireStatus(t, 200, status, body)
 
 	consumptions := jsonListData(parseJSON(body), "consumptions")
-	if len(consumptions) == 0 {
-		t.Skip("the seeded production step consumes nothing")
-	}
+	require.NotEmpty(t, consumptions, "the seeded production step consumes two yarns: %s", string(body))
 	for _, raw := range consumptions {
 		consumption, ok := raw.(map[string]any)
 		require.True(t, ok)
@@ -805,9 +813,7 @@ func TestInvoices_AllocationTransactionExpandsFullyHydrated(t *testing.T) {
 	requireStatus(t, 200, status, body)
 
 	allocations := jsonListData(parseJSON(body), "allocations")
-	if len(allocations) == 0 {
-		t.Skip("the seeded invoice has no allocations")
-	}
+	require.NotEmpty(t, allocations, "the seeded invoice is paid by a seeded allocation: %s", string(body))
 	for _, raw := range allocations {
 		allocation, ok := raw.(map[string]any)
 		require.True(t, ok)

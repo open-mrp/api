@@ -45,9 +45,7 @@ func TestProductLines_ListResponseShape(t *testing.T) {
 
 func TestProductLines_ListPagination(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(productLinesPath, url.Values{"limit": {"1"}})
-	require.NoError(t, err)
-	assert.Len(t, list.Data, 1)
+	assertListPageLen(t, productLinesPath, url.Values{"limit": {"1"}}, 1)
 }
 
 func TestProductLines_ListCursorPagination(t *testing.T) {

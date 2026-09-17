@@ -281,6 +281,25 @@ func TestInventoryChangeLogs_FiltersByCreatedWindow(t *testing.T) {
 	}), "a window that closed decades ago must exclude every change log")
 }
 
+// Without a start the list covers the 90 days before ends_at. The fixtures sit at the end of 2099, so an
+// end ten days later reaches them and one a hundred days later does not.
+func TestInventoryChangeLogs_EndAloneCoversNinetyDays(t *testing.T) {
+	t.Parallel()
+
+	near := inventoryChangeLogIDsFiltered(t, url.Values{"ends_at": {"2100-01-10T00:00:00Z"}})
+	assert.Contains(t, near, SeedInventoryChangeLogID, "ten days before the end is inside the default window")
+
+	far := inventoryChangeLogIDsFiltered(t, url.Values{"ends_at": {"2100-04-10T00:00:00Z"}})
+	assert.NotContains(t, far, SeedInventoryChangeLogID, "a hundred days before the end is outside the default window")
+
+	// An item's history is wanted whole, so naming the item lifts the window.
+	forItem := inventoryChangeLogIDsFiltered(t, url.Values{
+		"ends_at":  {"2100-04-10T00:00:00Z"},
+		"item_ids": {SeedInventoryChangeLogItemID},
+	})
+	assert.Contains(t, forItem, SeedInventoryChangeLogID, "an item-scoped list reaches its whole history")
+}
+
 // Filters combine with AND, so a pairing that matches nothing returns nothing even though each half
 // matches on its own.
 func TestInventoryChangeLogs_FiltersCombineWithAnd(t *testing.T) {

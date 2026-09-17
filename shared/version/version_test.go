@@ -341,8 +341,8 @@ func TestMustParse_Invalid(t *testing.T) {
 
 func TestLatest(t *testing.T) {
 	t.Parallel()
-	if Latest.Version != "1.0.forge-preview.4" {
-		t.Errorf("Expected Latest to be 1.0.forge-preview.4, got %s", Latest.Version)
+	if Latest.Version != "1.0.forge-preview.5" {
+		t.Errorf("Expected Latest to be 1.0.forge-preview.5, got %s", Latest.Version)
 	}
 }
 

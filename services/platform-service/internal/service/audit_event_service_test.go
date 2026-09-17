@@ -317,3 +317,43 @@ func TestAuditEventServiceTestSuite(t *testing.T) {
 	t.Parallel()
 	suite.Run(t, new(AuditEventServiceTestSuite))
 }
+
+func TestWithDefaultAuditEventWindow(t *testing.T) {
+	now := time.Date(2026, 9, 17, 12, 0, 0, 0, time.UTC)
+	explicitStart := now.Add(-72 * time.Hour)
+	end := now.Add(-6 * time.Hour)
+
+	cases := map[string]struct {
+		filter    domain.ListAuditEventsFilter
+		wantStart time.Time
+	}{
+		"no bounds reaches back a day from now":    {filter: domain.ListAuditEventsFilter{}, wantStart: now.Add(-24 * time.Hour)},
+		"an end alone reaches back a day from it":  {filter: domain.ListAuditEventsFilter{EndDate: &end}, wantStart: end.Add(-24 * time.Hour)},
+		"an explicit start is the caller's choice": {filter: domain.ListAuditEventsFilter{StartDate: &explicitStart}, wantStart: explicitStart},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			filter := tc.filter
+			withDefaultAuditEventWindow(&filter, now)
+			if filter.StartDate == nil || !filter.StartDate.Equal(tc.wantStart) {
+				t.Errorf("start = %v, want %v", filter.StartDate, tc.wantStart)
+			}
+		})
+	}
+}
+
+// A record's history is wanted whole, so a list anchored to records gets no default window.
+func TestWithDefaultAuditEventWindow_AnchoredListsAreWhole(t *testing.T) {
+	now := time.Date(2026, 9, 17, 12, 0, 0, 0, time.UTC)
+	for name, filter := range map[string]domain.ListAuditEventsFilter{
+		"resource ids":  {ResourceIDs: []string{"or_1"}},
+		"root resource": {RootResourceType: "sales_order", RootResourceID: "or_1"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			withDefaultAuditEventWindow(&filter, now)
+			if filter.StartDate != nil {
+				t.Errorf("an anchored list gained a start: %v", filter.StartDate)
+			}
+		})
+	}
+}

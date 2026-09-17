@@ -12,6 +12,18 @@ import (
 	"time"
 )
 
+const clearProductionStepFromMachines = `-- name: ClearProductionStepFromMachines :exec
+UPDATE machine SET production_step_id = NULL, updated_at = NOW(3)
+WHERE production_step_id = ?
+`
+
+// Machines outlive the step they were assigned to. Keyed on the step alone (ownership is checked before the delete) so the
+// step index drives it; an account filter lets the optimizer lock every machine in the account.
+func (q *Queries) ClearProductionStepFromMachines(ctx context.Context, stepID sql.NullString) error {
+	_, err := q.db.ExecContext(ctx, clearProductionStepFromMachines, stepID)
+	return err
+}
+
 const countProductionStepConsumptions = `-- name: CountProductionStepConsumptions :one
 SELECT COUNT(*) FROM consumption WHERE production_step_id = ?
 `
@@ -68,6 +80,15 @@ func (q *Queries) DeleteProductionQuantitiesByStepID(ctx context.Context, stepID
 	return err
 }
 
+const deleteProductionStepConsumptions = `-- name: DeleteProductionStepConsumptions :exec
+DELETE FROM consumption WHERE production_step_id = ?
+`
+
+func (q *Queries) DeleteProductionStepConsumptions(ctx context.Context, stepID sql.NullString) error {
+	_, err := q.db.ExecContext(ctx, deleteProductionStepConsumptions, stepID)
+	return err
+}
+
 const deleteProductionStepParentChildLinks = `-- name: DeleteProductionStepParentChildLinks :exec
 DELETE FROM _parent_child_production_steps
 WHERE A = ? OR B = ?
@@ -79,6 +100,34 @@ type DeleteProductionStepParentChildLinksParams struct {
 
 func (q *Queries) DeleteProductionStepParentChildLinks(ctx context.Context, arg DeleteProductionStepParentChildLinksParams) error {
 	_, err := q.db.ExecContext(ctx, deleteProductionStepParentChildLinks, arg.StepID, arg.StepID)
+	return err
+}
+
+const deleteProductionStepProductions = `-- name: DeleteProductionStepProductions :exec
+DELETE FROM production WHERE production_step_id = ?
+`
+
+func (q *Queries) DeleteProductionStepProductions(ctx context.Context, stepID sql.NullString) error {
+	_, err := q.db.ExecContext(ctx, deleteProductionStepProductions, stepID)
+	return err
+}
+
+const deleteProductionStepQuantities = `-- name: DeleteProductionStepQuantities :exec
+DELETE FROM quantity WHERE id IN (/*SLICE:ids*/?)
+`
+
+func (q *Queries) DeleteProductionStepQuantities(ctx context.Context, ids []string) error {
+	query := deleteProductionStepQuantities
+	var queryParams []interface{}
+	if len(ids) > 0 {
+		for _, v := range ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
 	return err
 }
 
@@ -1308,6 +1357,43 @@ func (q *Queries) IsProductionStepInAccount(ctx context.Context, arg IsProductio
 	var count int64
 	err := row.Scan(&count)
 	return count, err
+}
+
+const listProductionStepOwnedQuantityIDs = `-- name: ListProductionStepOwnedQuantityIDs :many
+SELECT p.quantity_id AS id FROM production p WHERE p.production_step_id = ?
+UNION ALL
+SELECT c.quantity_id AS id FROM consumption c WHERE c.production_step_id = ?
+UNION ALL
+SELECT c.waste_quantity_id AS id FROM consumption c WHERE c.production_step_id = ?
+`
+
+type ListProductionStepOwnedQuantityIDsParams struct {
+	StepID sql.NullString
+}
+
+// A step owns its productions and consumptions (and their quantities); nothing cascades on Vitess, so the step delete removes them itself.
+// Read first and deleted by primary key: a DELETE with IN (subquery) on quantity scans and locks the whole table.
+func (q *Queries) ListProductionStepOwnedQuantityIDs(ctx context.Context, arg ListProductionStepOwnedQuantityIDsParams) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, listProductionStepOwnedQuantityIDs, arg.StepID, arg.StepID, arg.StepID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listProductionStepsBackward = `-- name: ListProductionStepsBackward :many

@@ -479,6 +479,102 @@ func (q *Queries) DeleteCustomerProductLineAccess(ctx context.Context, relationI
 	return err
 }
 
+const deleteCustomerRelationNotificationPreferences = `-- name: DeleteCustomerRelationNotificationPreferences :exec
+DELETE FROM account_relation_notification_preference
+WHERE account_relation_id IN (
+    SELECT id FROM account_relation
+    WHERE owner_account_id = ?
+      AND counterparty_account_id IN (/*SLICE:counterparty_account_ids*/?)
+      AND account_relation_role_code = 'customer'
+)
+`
+
+type DeleteCustomerRelationNotificationPreferencesParams struct {
+	OwnerAccountID         string
+	CounterpartyAccountIds []string
+}
+
+func (q *Queries) DeleteCustomerRelationNotificationPreferences(ctx context.Context, arg DeleteCustomerRelationNotificationPreferencesParams) error {
+	query := deleteCustomerRelationNotificationPreferences
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.OwnerAccountID)
+	if len(arg.CounterpartyAccountIds) > 0 {
+		for _, v := range arg.CounterpartyAccountIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:counterparty_account_ids*/?", strings.Repeat(",?", len(arg.CounterpartyAccountIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:counterparty_account_ids*/?", "NULL", 1)
+	}
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
+	return err
+}
+
+const deleteCustomerRelationPriceGroups = `-- name: DeleteCustomerRelationPriceGroups :exec
+DELETE FROM account_relation_price_group
+WHERE account_relation_id IN (
+    SELECT id FROM account_relation
+    WHERE owner_account_id = ?
+      AND counterparty_account_id IN (/*SLICE:counterparty_account_ids*/?)
+      AND account_relation_role_code = 'customer'
+)
+`
+
+type DeleteCustomerRelationPriceGroupsParams struct {
+	OwnerAccountID         string
+	CounterpartyAccountIds []string
+}
+
+func (q *Queries) DeleteCustomerRelationPriceGroups(ctx context.Context, arg DeleteCustomerRelationPriceGroupsParams) error {
+	query := deleteCustomerRelationPriceGroups
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.OwnerAccountID)
+	if len(arg.CounterpartyAccountIds) > 0 {
+		for _, v := range arg.CounterpartyAccountIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:counterparty_account_ids*/?", strings.Repeat(",?", len(arg.CounterpartyAccountIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:counterparty_account_ids*/?", "NULL", 1)
+	}
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
+	return err
+}
+
+const deleteCustomerRelationProductLines = `-- name: DeleteCustomerRelationProductLines :exec
+
+DELETE FROM account_relation_product_line
+WHERE account_relation_id IN (
+    SELECT id FROM account_relation
+    WHERE owner_account_id = ?
+      AND counterparty_account_id IN (/*SLICE:counterparty_account_ids*/?)
+      AND account_relation_role_code = 'customer'
+)
+`
+
+type DeleteCustomerRelationProductLinesParams struct {
+	OwnerAccountID         string
+	CounterpartyAccountIds []string
+}
+
+// The relation's children have no foreign key to cascade from, so deleting a customer deletes them
+// first; otherwise they outlive the relation they belong to.
+func (q *Queries) DeleteCustomerRelationProductLines(ctx context.Context, arg DeleteCustomerRelationProductLinesParams) error {
+	query := deleteCustomerRelationProductLines
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.OwnerAccountID)
+	if len(arg.CounterpartyAccountIds) > 0 {
+		for _, v := range arg.CounterpartyAccountIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:counterparty_account_ids*/?", strings.Repeat(",?", len(arg.CounterpartyAccountIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:counterparty_account_ids*/?", "NULL", 1)
+	}
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
+	return err
+}
+
 const getAccountAddressIDs = `-- name: GetAccountAddressIDs :many
 SELECT address_id FROM account_address
 WHERE account_id = ?

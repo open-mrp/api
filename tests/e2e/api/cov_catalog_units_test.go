@@ -654,3 +654,72 @@ func TestCovCatalogUnits_ListUnitGroupIDsSeeded(t *testing.T) {
 	}
 	assert.True(t, found, "SeedUnitID should be in the unit_group_ids=%s filtered list", SeedUnitGroupID)
 }
+
+// A unit group converts every quantity in it through its base unit, so that unit cannot be deleted
+// while the group still uses it; once the group is gone, it can.
+func TestCovCatalogUnits_DeleteBaseUnitOfAGroupConflicts(t *testing.T) {
+	t.Parallel()
+
+	unitName := uniqueName("e2e-base-unit")
+	status, body, err := apiClient.Post(unitsPath, covCatalogUnitsCreateBody(unitName, uniqueName("bu")), newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, body)
+	unitID := jsonField(parseJSON(body), "id")
+	t.Cleanup(func() { apiClient.Delete(unitsPath + "/" + unitID) })
+
+	status, body, err = apiClient.Post(unitGroupsPath, map[string]any{
+		"name":         uniqueName("e2e-base-unit-group"),
+		"type":         "mass",
+		"base_unit_id": unitID,
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, body)
+	groupID := jsonField(parseJSON(body), "id")
+
+	status, body, err = apiClient.Delete(unitsPath + "/" + unitID)
+	require.NoError(t, err)
+	requireStatus(t, 409, status, body)
+	requireErrorResponse(t, body, "resource_conflict", "invalid_request_error")
+
+	status, body, err = apiClient.GetListRaw(unitsPath+"/"+unitID, nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	status, body, err = apiClient.Delete(unitGroupsPath + "/" + groupID)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	status, body, err = apiClient.Delete(unitsPath + "/" + unitID)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+}
+
+// A quantity converts and displays through its unit, so a unit anything is recorded in cannot be
+// deleted; once nothing names it, it can.
+func TestCovCatalogUnits_DeleteUnitInUseConflicts(t *testing.T) {
+	t.Parallel()
+
+	status, body, err := apiClient.Post(unitsPath, covCatalogUnitsCreateBody(uniqueName("e2e-used-unit"), uniqueName("uu")), newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, body)
+	unitID := jsonField(parseJSON(body), "id")
+	t.Cleanup(func() { apiClient.Delete(unitsPath + "/" + unitID) })
+
+	quantityID := "qu_" + uniqueName("e2eused")
+	_, err = authDB(t).Exec("INSERT INTO quantity (id, value, unit_id, created_at, updated_at) VALUES (?, 1, ?, NOW(3), NOW(3))", quantityID, unitID)
+	require.NoError(t, err)
+	removeQuantity := func() {
+		_, _ = authDB(t).Exec("DELETE FROM quantity WHERE id = ?", quantityID)
+	}
+	t.Cleanup(removeQuantity)
+
+	status, body, err = apiClient.Delete(unitsPath + "/" + unitID)
+	require.NoError(t, err)
+	requireStatus(t, 409, status, body)
+	requireErrorResponse(t, body, "resource_conflict", "invalid_request_error")
+
+	removeQuantity()
+	status, body, err = apiClient.Delete(unitsPath + "/" + unitID)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+}

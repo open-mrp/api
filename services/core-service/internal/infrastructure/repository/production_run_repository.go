@@ -554,6 +554,20 @@ func (r *productionRunRepoImpl) DeleteBatchesByRun(ctx context.Context, accountI
 	return nil
 }
 
+func (r *productionRunRepoImpl) HasScannedBatches(ctx context.Context, accountID, productionRunID string) (bool, *apierror.APIError) {
+	ctx, span := productionRunRepoTracer.Start(ctx, "repository.production_run.has_scanned_batches")
+	defer span.End()
+
+	hasScanned, err := r.queries.RunHasScannedBatches(ctx, sqlc.RunHasScannedBatchesParams{
+		AccountID:       accountID,
+		ProductionRunID: gosql.NullString{String: productionRunID, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return false, tracing.Trace(span, apiErr)
+	}
+	return hasScanned, nil
+}
+
 func (r *productionRunRepoImpl) FindOrderIDsByRun(ctx context.Context, accountID, productionRunID string) ([]string, *apierror.APIError) {
 	ctx, span := productionRunRepoTracer.Start(ctx, "repository.production_run.find_order_ids_by_run")
 	defer span.End()

@@ -10,7 +10,9 @@ import (
 // A consumer that skips the inbox wrapper has no deduplication at all: a redelivery runs the handler
 // again with nothing to stop it. This reads the consumers themselves so a new one cannot quietly opt
 // out of the guarantee the rest of them rely on.
-var consumersExemptFromInbox = map[string]string{}
+var consumersExemptFromInbox = map[string]string{
+	"request_log_consumer.go": "the log's id is the request's own, so a redelivery is a duplicate insert the repository treats as already stored",
+}
 
 func TestEveryConsumerRegistersThroughTheInbox(t *testing.T) {
 	t.Parallel()

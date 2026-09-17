@@ -196,6 +196,15 @@ SELECT CASE WHEN completed_at IS NOT NULL THEN true ELSE false END AS is_complet
 FROM production_run
 WHERE id = sqlc.arg('id') AND account_id = sqlc.arg('account_id');
 
+-- name: RunHasScannedBatches :one
+-- A scanned batch has moved inventory, which deleting its row does not undo.
+SELECT EXISTS (
+    SELECT 1 FROM batch b
+    WHERE b.account_id = sqlc.arg('account_id')
+      AND b.production_run_id = sqlc.arg('production_run_id')
+      AND b.scanned_at IS NOT NULL
+) AS has_scanned;
+
 -- name: DeleteBatchesByProductionRunID :exec
 DELETE FROM batch WHERE production_run_id = sqlc.arg('production_run_id') AND account_id = sqlc.arg('account_id');
 

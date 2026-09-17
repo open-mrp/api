@@ -164,6 +164,11 @@ func TestListEndpoints_PaginationCursor(t *testing.T) {
 				require.NoError(t, json.Unmarshal(body, &page1))
 
 				if len(page1.Data) == 0 || !page1.PageInfo.HasNextPage {
+					// The same churn can hydrate page 1 down to nothing.
+					if attempt < pageFetchAttempts {
+						t.Logf("page 1 of %s had no next page on attempt %d (likely parallel deletes); retrying", path, attempt)
+						continue
+					}
 					t.Fatalf("Not enough data for pagination test on %s", path)
 					return
 				}

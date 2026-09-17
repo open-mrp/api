@@ -404,6 +404,16 @@ func (s *productionRunSvcImpl) DeleteProductionRun(ctx context.Context, params d
 			return apiErr
 		}
 
+		// A scanned batch received its output into inventory, and deleting the row would leave that stock
+		// counted with nothing behind it. Deleting a batch undoes its scan; the run has to wait for that.
+		hasScanned, apiErr := txRepo.HasScannedBatches(txCtx, params.AccountID, params.ProductionRunID)
+		if apiErr != nil {
+			return apiErr
+		}
+		if hasScanned {
+			return apierror.NewResourceConflictError("This production run has scanned batches. Delete those batches first to reverse their scans.")
+		}
+
 		// Delete all batches for this run.
 		if apiErr := txRepo.DeleteBatchesByRun(txCtx, params.AccountID, params.ProductionRunID); apiErr != nil {
 			return apiErr

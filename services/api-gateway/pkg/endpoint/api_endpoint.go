@@ -258,6 +258,16 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 	var req TReq
 	req = httptransport.AllocIfPtr(req)
 
+	// An older version's query string is upgraded before binding, the same way its body is before decoding.
+	if e.ObjectType != "" {
+		if requestVersion, ok := appctx.GetAPIVersionFromContext(ctx); ok && !requestVersion.Equal(version.Latest) {
+			before := r.URL.Query().Encode()
+			if after := version.TransformQuery(requestVersion, version.Latest, e.ObjectType, e.Route, r.URL.Query()).Encode(); after != before {
+				r.URL.RawQuery = after
+			}
+		}
+	}
+
 	includesEnabled := e.IncludeConfig != nil
 	if err := httptransport.BindIncomingRequest(r, any(req), includesEnabled); err != nil {
 		recordAndRespondAPIError(ctx, w, span, "incoming_request_binding", coercePlainExecuteError(err))

@@ -652,6 +652,21 @@ func (s *productionScheduleSvcImpl) updateProductionScheduleLineTx(
 		}
 		result = updated
 
+		// Progress is credited through the batch-machine link, so a released campaign's tickets move
+		// with it; left behind, the campaign would read as unstarted on its new machine.
+		if existing.ProductionRunID != nil && params.MachineID != nil && *params.MachineID != existing.MachineID {
+			batchIDs, apiErr := repo.ListRunItemBatchIDsOnMachine(txCtx, accountID, *existing.ProductionRunID, existing.ItemID, existing.MachineID)
+			if apiErr != nil {
+				return apiErr
+			}
+			batchRepo := txSvc.repos.NewBatchRepo()
+			for _, batchID := range batchIDs {
+				if apiErr := batchRepo.ReassignMachine(txCtx, accountID, batchID, *params.MachineID); apiErr != nil {
+					return apiErr
+				}
+			}
+		}
+
 		if apiErr := txSvc.recordDeviation(txCtx, schedule, before, snapshotLine(updated), existing.WeekStartDate,
 			params.ReasonCode.ValuePtr(), params.ReasonNote, actorIDOf(identity)); apiErr != nil {
 			return apiErr

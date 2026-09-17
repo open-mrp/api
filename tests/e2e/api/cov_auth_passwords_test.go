@@ -115,6 +115,9 @@ func covAuthPasswordsNewAccountMember(t *testing.T, prefix string) (client *Clie
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
+	accountUserID := jsonField(parseJSON(body), "id")
+	require.NotEmpty(t, accountUserID)
+	t.Cleanup(func() { removeAccountUser(accountUserID) })
 
 	client = loginAsUser(t, email, covAuthUsersPassword, SeedAccountID)
 	return client, userID, email, covAuthUsersPassword

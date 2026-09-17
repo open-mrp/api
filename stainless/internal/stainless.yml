@@ -53,7 +53,7 @@ client_settings:
   # info.version by `make stainless` (see tools/apidocs/stainless.go).
   default_headers:
     OpenMRP-Version:
-      value: "1.0.forge-preview.4"
+      value: "1.0.forge-preview.5"
       version_header: true
   bearer_token_refresh:
     method: PUT

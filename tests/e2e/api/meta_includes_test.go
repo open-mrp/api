@@ -52,6 +52,23 @@ func TestIncludes_PopulateNestedResources(t *testing.T) {
 					got := parseJSON(body)
 					require.NotNil(t, got, "response should be valid JSON")
 
+					// Rows earlier runs left behind can fill a page with rows that lack the relation,
+					// so a list is read page by page until one row carries it.
+					for page := 0; ; page++ {
+						if obj, _ := got["object"].(string); obj != "list" || listHasIncludePopulated(got, include) {
+							break
+						}
+						pageInfo := jsonObject(got, "page_info")
+						next := jsonField(pageInfo, "next_page_url")
+						if next == "" || page >= maxListScanPages {
+							break
+						}
+						status, body, err = apiClient.GetListRawFromPageURL(&next)
+						require.NoError(t, err, "GET %s failed", next)
+						requireStatus(t, 200, status, body)
+						got = parseJSON(body)
+					}
+
 					assertIncludePopulated(t, got, include)
 				})
 			}
@@ -74,6 +91,16 @@ func assertIncludePopulated(t *testing.T, resp map[string]any, include string) {
 		return
 	}
 	assertIncludePopulatedOnObject(t, resp, include, "")
+}
+
+func listHasIncludePopulated(resp map[string]any, include string) bool {
+	rawItems, _ := resp["data"].([]any)
+	for _, raw := range rawItems {
+		if item, ok := raw.(map[string]any); ok && checkIncludePopulated(item, include) == nil {
+			return true
+		}
+	}
+	return false
 }
 
 func assertIncludePopulatedOnList(t *testing.T, resp map[string]any, include string) {

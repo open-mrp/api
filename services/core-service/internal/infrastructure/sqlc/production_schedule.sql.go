@@ -1195,11 +1195,15 @@ LEFT JOIN (
     SELECT
         b.production_run_id,
         b.item_id,
+        bm.B AS machine_id,
         COUNT(*) AS released_batches,
         COALESCE(SUM(CASE WHEN b.scanned_at IS NOT NULL THEN 1 ELSE 0 END), 0) AS scanned_batches,
         COALESCE(SUM(CASE WHEN b.scanned_at IS NOT NULL THEN bq.value ELSE 0 END), 0) AS scanned_quantity
     FROM batch b
     JOIN quantity bq ON bq.id = b.quantity_id
+    -- Released batches carry exactly one machine (release and carry-forward both reassign it), so
+    -- this join neither drops nor multiplies them.
+    JOIN _batches_machines bm ON bm.A = b.id
     WHERE b.account_id = ?
     AND b.production_run_id IS NOT NULL
     AND b.production_run_id IN (
@@ -1209,8 +1213,8 @@ LEFT JOIN (
         AND l2.production_schedule_id = ?
         AND l2.production_run_id IS NOT NULL
     )
-    GROUP BY b.production_run_id, b.item_id
-) prog ON prog.production_run_id = l.production_run_id AND prog.item_id = l.item_id
+    GROUP BY b.production_run_id, b.item_id, bm.B
+) prog ON prog.production_run_id = l.production_run_id AND prog.item_id = l.item_id AND prog.machine_id = l.machine_id
 WHERE l.account_id = ?
 AND l.production_schedule_id = ?
 AND (
@@ -1266,7 +1270,7 @@ type ListProductionScheduleLinesRow struct {
 
 // ListProductionScheduleLines reads the plan FORWARD in time, matching prod_sched_line_sched_week_idx so the read is filesort-free.
 // LEFT JOIN on a NOT NULL key deliberately: it pins l as the driving table, and this read only stays filesort-free while the plan starts from the line index.
-// Progress comes from the run the week was released as, matched on the item the campaign is for: a run holds every SKU in its week, so the run alone would credit one campaign with another's work. Aggregated in a derived table rather than joined directly, or the batch rows would multiply the line. The aggregate is bounded to the runs this schedule's lines were released as, so it scans per-run batches rather than the tenant's entire batch history.
+// Progress comes from the run the week was released as, matched on the item and machine the campaign is for: a run holds every SKU in its week, and one item can be planned on two machines in a week, so anything coarser credits one campaign with another's work. Aggregated in a derived table rather than joined directly, or the batch rows would multiply the line. The aggregate is bounded to the runs this schedule's lines were released as, so it scans per-run batches rather than the tenant's entire batch history.
 func (q *Queries) ListProductionScheduleLines(ctx context.Context, arg ListProductionScheduleLinesParams) ([]ListProductionScheduleLinesRow, error) {
 	query := listProductionScheduleLines
 	var queryParams []interface{}
@@ -1576,6 +1580,52 @@ func (q *Queries) ListProductionSchedulesForward(ctx context.Context, arg ListPr
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listRunItemBatchIDsOnMachine = `-- name: ListRunItemBatchIDsOnMachine :many
+SELECT b.id
+FROM batch b
+JOIN _batches_machines bm ON bm.A = b.id
+WHERE b.account_id = ?
+AND b.production_run_id = ?
+AND b.item_id = ?
+AND bm.B = ?
+`
+
+type ListRunItemBatchIDsOnMachineParams struct {
+	AccountID       string
+	ProductionRunID sql.NullString
+	ItemID          string
+	MachineID       string
+}
+
+// ListRunItemBatchIDsOnMachine returns the released batches a campaign owns, so moving the campaign to another machine can move its tickets with it.
+func (q *Queries) ListRunItemBatchIDsOnMachine(ctx context.Context, arg ListRunItemBatchIDsOnMachineParams) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, listRunItemBatchIDsOnMachine,
+		arg.AccountID,
+		arg.ProductionRunID,
+		arg.ItemID,
+		arg.MachineID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err

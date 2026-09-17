@@ -311,7 +311,7 @@ func TestComputeOeeRatios_PerformanceNilWhenNeverRan(t *testing.T) {
 
 // Run time is capacity minus downtime, so it can never exceed Planned Production Time: there is
 // no overrun, Availability stays <= 100%, and Performance is a true speed ratio. This is what
-// makes Carolon's Performance read at rate instead of over 100% — the scan-span denominator that
+// makes Acme's Performance read at rate instead of over 100% — the scan-span denominator that
 // caused that is gone.
 func TestComputeOeeRatios_RunTimeCannotExceedCapacity(t *testing.T) {
 	t.Parallel()

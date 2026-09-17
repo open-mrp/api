@@ -99,7 +99,25 @@ func runProductionForOrder(t *testing.T, client *Client, orderID string) (int, [
 	t.Helper()
 	status, body, err := client.Post(salesOrdersPath+"/"+orderID+"/actions/create-production-run", nil, newIdempotencyKey())
 	require.NoError(t, err)
+	if status == 201 {
+		deleteOrderProductionRun(t, orderID)
+	}
 	return status, body
+}
+
+// deleteOrderProductionRun removes the run an order produced, and its batches, when the test ends.
+// Deleting the order leaves the run behind, and its unscanned batches are supply to every later
+// solve, so enough reruns on one stack would cover the seeded demand and leave nothing to plan.
+func deleteOrderProductionRun(t *testing.T, orderID string) {
+	t.Helper()
+	related := jsonObject(getSalesOrder(t, orderID, url.Values{"include": {"related.production_run"}}), "related")
+	runID := jsonField(jsonObject(related, "production_run"), "id")
+	require.NotEmpty(t, runID, "a created production run is linked from its order")
+	t.Cleanup(func() {
+		planningMu.Lock()
+		defer planningMu.Unlock()
+		_, _, _ = apiClient.Delete(productionRunsPath + "/" + runID)
+	})
 }
 
 func TestProductionRun_ExplodesBOMToLeafMaterialsWithWaste(t *testing.T) {

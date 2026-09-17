@@ -22,14 +22,50 @@ func listContainsConversation(t *testing.T, c *Client, conversationID string, pa
 	for k, v := range params {
 		merged[k] = v
 	}
-	list, _, err := c.GetList(conversationsPath, merged)
-	require.NoError(t, err)
-	for _, raw := range list.Data {
-		if jsonField(parseJSON(raw), "id") == conversationID {
-			return true
+	list, status, err := c.GetList(conversationsPath, merged)
+	// Conversations accumulate across runs on the same stack, so the one sought may be past page one.
+	for page := 0; ; page++ {
+		require.NoError(t, err)
+		require.Equal(t, 200, status, "listing conversations")
+		for _, raw := range list.Data {
+			if jsonField(parseJSON(raw), "id") == conversationID {
+				return true
+			}
 		}
+		if !list.PageInfo.HasNextPage || page >= maxListScanPages {
+			return false
+		}
+		list, status, err = c.GetListFromPageURL(list.PageInfo.NextPageURL)
 	}
-	return false
+}
+
+// A conversation nobody has written in has no last-message time. Pages used to stop at the first
+// one with has_next_page still true and no next_page_url, stranding every older empty conversation.
+func TestChat_ListPagesThroughConversationsWithoutMessages(t *testing.T) {
+	owner := chatUserClient(t)
+	member := chatUser2Client(t)
+
+	want := map[string]bool{}
+	for i := 0; i < 3; i++ {
+		id := jsonField(createGroupConversation(t, owner, uniqueName("e2e-empty-page"), SeedAccountUser2ID), "id")
+		want[id] = true
+	}
+
+	list, status, err := member.GetList(conversationsPath, url.Values{"limit": {"2"}})
+	for page := 0; len(want) > 0; page++ {
+		require.NoError(t, err)
+		require.Equal(t, 200, status)
+		for _, raw := range list.Data {
+			delete(want, jsonField(parseJSON(raw), "id"))
+		}
+		if !list.PageInfo.HasNextPage {
+			break
+		}
+		require.NotNil(t, list.PageInfo.NextPageURL, "a page with more after it must say where the next one is")
+		require.Less(t, page, 5000, "the walk must end")
+		list, status, err = member.GetListFromPageURL(list.PageInfo.NextPageURL)
+	}
+	assert.Empty(t, want, "every conversation is reachable by paging")
 }
 
 func TestChat_DMDedupIsOrderIndependent(t *testing.T) {

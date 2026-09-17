@@ -55,6 +55,13 @@ func TestMain(m *testing.M) {
 	}
 	log.Println("Authentication verified")
 
+	if err := trimRuntimeRequestLogs(); err != nil {
+		log.Fatalf("Trimming request logs from earlier runs failed: %v", err)
+	}
+	if err := trimPublishedOutbox(); err != nil {
+		log.Fatalf("Trimming delivered outbox messages from earlier runs failed: %v", err)
+	}
+
 	// Warm the notification fan-out pipeline before running tests. /healthz only reflects the API
 	// gateway being up; it does not guarantee the notification-service RabbitMQ fan-out consumer has
 	// connected and begun materializing rows. On a cold stack that consumer can take longer than a

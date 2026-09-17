@@ -747,6 +747,28 @@ func (q *Queries) ListProductionRunsForward(ctx context.Context, arg ListProduct
 	return items, nil
 }
 
+const runHasScannedBatches = `-- name: RunHasScannedBatches :one
+SELECT EXISTS (
+    SELECT 1 FROM batch b
+    WHERE b.account_id = ?
+      AND b.production_run_id = ?
+      AND b.scanned_at IS NOT NULL
+) AS has_scanned
+`
+
+type RunHasScannedBatchesParams struct {
+	AccountID       string
+	ProductionRunID sql.NullString
+}
+
+// A scanned batch has moved inventory, which deleting its row does not undo.
+func (q *Queries) RunHasScannedBatches(ctx context.Context, arg RunHasScannedBatchesParams) (bool, error) {
+	row := q.db.QueryRowContext(ctx, runHasScannedBatches, arg.AccountID, arg.ProductionRunID)
+	var has_scanned bool
+	err := row.Scan(&has_scanned)
+	return has_scanned, err
+}
+
 const seedProductionRunNumberCounter = `-- name: SeedProductionRunNumberCounter :exec
 INSERT INTO sys_property (id, account_id, sys_property_type_code, value, created_at, updated_at)
 SELECT ?, ?, 'production_run_number',

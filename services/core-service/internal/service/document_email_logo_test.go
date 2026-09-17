@@ -22,7 +22,7 @@ const (
 func logoAccount() *domain.Account {
 	return &domain.Account{
 		ID:       "ac_1",
-		Name:     "Carolon Company",
+		Name:     "Acme Company",
 		Branding: &domain.AccountBranding{LogoURL: poPtr(storedLogoKey)},
 	}
 }

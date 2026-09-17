@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/platform-service/internal/domain"
@@ -280,4 +281,28 @@ func (s *LoggingServiceTestSuite) TestListRequestLogs_RepoError() {
 func TestLoggingServiceTestSuite(t *testing.T) {
 	t.Parallel()
 	suite.Run(t, new(LoggingServiceTestSuite))
+}
+
+func TestWithDefaultRequestLogWindow(t *testing.T) {
+	now := time.Date(2026, 9, 17, 12, 0, 0, 0, time.UTC)
+	explicitStart := now.Add(-72 * time.Hour)
+	end := now.Add(-6 * time.Hour)
+
+	cases := map[string]struct {
+		filter    domain.ListRequestLogsFilter
+		wantStart time.Time
+	}{
+		"no bounds reaches back a day from now":    {filter: domain.ListRequestLogsFilter{}, wantStart: now.Add(-24 * time.Hour)},
+		"an end alone reaches back a day from it":  {filter: domain.ListRequestLogsFilter{EndDate: &end}, wantStart: end.Add(-24 * time.Hour)},
+		"an explicit start is the caller's choice": {filter: domain.ListRequestLogsFilter{StartDate: &explicitStart}, wantStart: explicitStart},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			filter := tc.filter
+			withDefaultRequestLogWindow(&filter, now)
+			if filter.StartDate == nil || !filter.StartDate.Equal(tc.wantStart) {
+				t.Errorf("start = %v, want %v", filter.StartDate, tc.wantStart)
+			}
+		})
+	}
 }

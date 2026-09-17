@@ -492,6 +492,22 @@ func (r *productionScheduleRepoImpl) MarkLineReleased(ctx context.Context, accou
 	return nil
 }
 
+func (r *productionScheduleRepoImpl) ListRunItemBatchIDsOnMachine(ctx context.Context, accountID, productionRunID, itemID, machineID string) ([]string, *apierror.APIError) {
+	ctx, span := productionScheduleRepoTracer.Start(ctx, "repository.production_schedule.list_run_item_batch_ids_on_machine")
+	defer span.End()
+
+	ids, err := r.queries.ListRunItemBatchIDsOnMachine(ctx, sqlc.ListRunItemBatchIDsOnMachineParams{
+		AccountID:       accountID,
+		ProductionRunID: gosql.NullString{String: productionRunID, Valid: true},
+		ItemID:          itemID,
+		MachineID:       machineID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return ids, nil
+}
+
 func (r *productionScheduleRepoImpl) UnreleaseLinesForRun(ctx context.Context, accountID, productionRunID string) *apierror.APIError {
 	ctx, span := productionScheduleRepoTracer.Start(ctx, "repository.production_schedule.unrelease_lines_for_run")
 	defer span.End()

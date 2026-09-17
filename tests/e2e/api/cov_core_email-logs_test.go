@@ -61,12 +61,18 @@ func TestCovCoreEmailLogs_List_IncludeSentBy(t *testing.T) {
 	list, _, err := apiClient.GetList(emailLogsPath, url.Values{"include": {"sent_by"}})
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, len(list.Data), 2, "should have at least 2 seeded email logs")
+	items := list.Data
+	for page := 0; list.PageInfo.HasNextPage && page < maxListScanPages; page++ {
+		list, _, err = apiClient.GetListFromPageURL(list.PageInfo.NextPageURL)
+		require.NoError(t, err)
+		items = append(items, list.Data...)
+	}
 
 	validActorTypes := map[string]bool{"user": true, "api_key": true, "agent": true, "group": true}
 
 	foundPopulated := false
 	sawSeedUser := false
-	for _, item := range list.Data {
+	for _, item := range items {
 		parsed := parseJSON(item)
 		sentBy := jsonObject(parsed, "sent_by")
 		if sentBy == nil {

@@ -843,7 +843,7 @@ func TestRequestLogs_ListFilterByErrorCodeExcludesNonMatching(t *testing.T) {
 	require.Equal(t, 404, resp.StatusCode,
 		"GET non-existent customer should 404 so the gateway records error_code=%s on the request log", wantErrorCode)
 
-	eventually(t, e2eAsyncWaitTimeout, e2eAsyncPollInterval, func() error {
+	eventually(t, e2eRequestLogWaitTimeout, e2eRequestLogPollInterval, func() error {
 		list, _, err := apiClient.GetList(requestLogsPath, url.Values{
 			"error_codes":  {wantErrorCode},
 			"methods":      {"GET"},
@@ -989,7 +989,7 @@ func TestRequestLogs_CapturesPayloads(t *testing.T) {
 	t.Cleanup(func() { apiClient.Delete(itemCategoriesPath + "/" + createdID) })
 
 	var logID string
-	eventually(t, e2eAsyncWaitTimeout, e2eAsyncPollInterval, func() error {
+	eventually(t, e2eRequestLogWaitTimeout, e2eRequestLogPollInterval, func() error {
 		list, _, err := apiClient.GetList(requestLogsPath, url.Values{
 			"idempotency_key": {idemKey},
 			"limit":           {"1"},
@@ -1088,12 +1088,19 @@ func assertRequestLogMembership(t *testing.T, data []json.RawMessage, wantPresen
 	}
 }
 
+// requestLogSeedEra is earlier than every seeded request log.
+const requestLogSeedEra = "2000-01-01T00:00:00Z"
+
 // fetchScopedRequestLogs runs a cohort-scoped list query with a high limit so the
 // whole (small) cohort fits on one page, and fails the test on transport error.
 func fetchScopedRequestLogs(t *testing.T, params url.Values) *ListResponse {
 	t.Helper()
 	if params.Get("limit") == "" {
 		params.Set("limit", "50")
+	}
+	// The cohorts are seeded at fixed past dates, so reach back past them; a list otherwise covers only the last day.
+	if params.Get("starts_at") == "" {
+		params.Set("starts_at", requestLogSeedEra)
 	}
 	list, _, err := apiClient.GetList(requestLogsPath, params)
 	require.NoError(t, err)
@@ -1303,6 +1310,9 @@ func assertStrictlyDescendingIDs(t *testing.T, ids []string) {
 func paginateAllRequestLogIDs(t *testing.T, params url.Values) []string {
 	t.Helper()
 	params.Set("limit", "1")
+	if params.Get("starts_at") == "" {
+		params.Set("starts_at", requestLogSeedEra)
+	}
 	list, _, err := apiClient.GetList(requestLogsPath, params)
 	require.NoError(t, err)
 
@@ -1386,6 +1396,7 @@ func TestRequestLogs_DualScopePagination_BackwardReturnsPriorPage(t *testing.T) 
 	page1, _, err := apiClient.GetList(requestLogsPath, url.Values{
 		"normalized_routes": {SeedReqLogScopeRoute},
 		"limit":             {"1"},
+		"starts_at":         {requestLogSeedEra},
 	})
 	require.NoError(t, err)
 	requirePageLen(t, page1.Data, 1)
@@ -1522,6 +1533,36 @@ func TestRequestLogs_FilterByStartDate_IncludesAndExcludes(t *testing.T) {
 	assertRequestLogMembership(t, list.Data,
 		[]string{SeedReqLogFilterDateMid, SeedReqLogFilterDateNew},
 		[]string{SeedReqLogFilterDateOld})
+}
+
+// A list without starts_at covers the day before now: the dated cohort is years old, so none of it appears
+// until the caller reaches back for it.
+func TestRequestLogs_OmittedStartCoversTheLastDay(t *testing.T) {
+	t.Parallel()
+	list, status, err := apiClient.GetList(requestLogsPath, url.Values{
+		"normalized_routes": {SeedReqLogFilterDatesRoute},
+	})
+	require.NoError(t, err)
+	require.Equal(t, 200, status)
+	assertEmptyListData(t, list.Data, "logs older than a day are outside the default window")
+
+	all := fetchScopedRequestLogs(t, url.Values{"normalized_routes": {SeedReqLogFilterDatesRoute}})
+	assert.Len(t, all.Data, 3, "an explicit start reaches the whole cohort")
+}
+
+// With only ends_at, the window is the day before it.
+func TestRequestLogs_EndDateAloneCoversTheDayBeforeIt(t *testing.T) {
+	t.Parallel()
+	list, status, err := apiClient.GetList(requestLogsPath, url.Values{
+		"normalized_routes": {SeedReqLogFilterDatesRoute},
+		"ends_at":           {"2023-06-01T12:00:00Z"},
+	})
+	require.NoError(t, err)
+	require.Equal(t, 200, status)
+	assert.Len(t, list.Data, 1, "only the row in the day before ends_at")
+	assertRequestLogMembership(t, list.Data,
+		[]string{SeedReqLogFilterDateMid},
+		[]string{SeedReqLogFilterDateOld, SeedReqLogFilterDateNew})
 }
 
 func TestRequestLogs_FilterByEndDate_IncludesAndExcludes(t *testing.T) {

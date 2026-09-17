@@ -46,9 +46,7 @@ func TestItemCategories_ListResponseShape(t *testing.T) {
 
 func TestItemCategories_ListPagination(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(itemCategoriesPath, url.Values{"limit": {"1"}})
-	require.NoError(t, err)
-	requirePageLen(t, list.Data, 1)
+	assertListPageLen(t, itemCategoriesPath, url.Values{"limit": {"1"}}, 1)
 }
 
 func TestItemCategories_ListCursorPagination(t *testing.T) {

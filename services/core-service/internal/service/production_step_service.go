@@ -425,11 +425,15 @@ func (s *productionStepSvcImpl) DeleteProductionStep(ctx context.Context, stepID
 		return tracing.Trace(span, apiErr)
 	}
 
-	// Disconnect parent-child links, then delete — atomically.
+	// Disconnect parent-child links and owned rows, then delete — atomically.
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *productionStepSvcImpl) *apierror.APIError {
 		repo := txSvc.repos.NewProductionStepRepo()
 
 		if apiErr := repo.DeleteParentChildLinks(txCtx, stepID); apiErr != nil {
+			return apiErr
+		}
+
+		if apiErr := repo.DeleteOwnedRows(txCtx, stepID); apiErr != nil {
 			return apiErr
 		}
 

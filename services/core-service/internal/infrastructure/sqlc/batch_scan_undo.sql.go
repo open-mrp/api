@@ -506,6 +506,43 @@ func (q *Queries) ListItemIDsForBatchReversal(ctx context.Context, arg ListItemI
 	return items, nil
 }
 
+const lockBatchScan = `-- name: LockBatchScan :many
+SELECT scanned_at FROM batch
+WHERE id = ? AND account_id = ?
+FOR UPDATE
+`
+
+type LockBatchScanParams struct {
+	ID        string
+	AccountID string
+}
+
+// LockBatchScan reads when a batch was scanned and holds its row until the transaction ends. The
+// inventory a scan moves is written after the scan commits; holding the row makes an undo (which
+// writes the same row) wait for that write, so the reversal that follows always finds it.
+func (q *Queries) LockBatchScan(ctx context.Context, arg LockBatchScanParams) ([]sql.NullTime, error) {
+	rows, err := q.db.QueryContext(ctx, lockBatchScan, arg.ID, arg.AccountID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []sql.NullTime
+	for rows.Next() {
+		var scanned_at sql.NullTime
+		if err := rows.Scan(&scanned_at); err != nil {
+			return nil, err
+		}
+		items = append(items, scanned_at)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const reopenBatch = `-- name: ReopenBatch :exec
 UPDATE batch SET closed_at = NULL, updated_at = NOW(3)
 WHERE id = ? AND account_id = ?

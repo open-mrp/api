@@ -73,6 +73,7 @@ func (r *conversationRepoImpl) ListForUser(ctx context.Context, filter domain.Co
 		Status:              sql.NullString{String: filter.Status, Valid: filter.Status != ""},
 		CursorLastMessageAt: db.NullTimePtr(filter.CursorLastMessageAt),
 		CursorID:            db.NullStringPtr(filter.CursorID),
+		CursorInNullTail:    filter.CursorInNullTail,
 		Limit:               filter.Limit,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -323,6 +324,7 @@ func (r *conversationRepoImpl) ListInbox(ctx context.Context, filter domain.Supp
 		Unassigned:          unassigned,
 		CursorLastMessageAt: db.NullTimePtr(filter.CursorLastMessageAt),
 		CursorID:            db.NullStringPtr(filter.CursorID),
+		CursorInNullTail:    filter.CursorInNullTail,
 		Limit:               filter.Limit,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {

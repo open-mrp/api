@@ -280,16 +280,20 @@ FROM production_schedule_line l
 -- LEFT JOIN on a NOT NULL key deliberately: it pins l as the driving table, and this read only stays filesort-free while the plan starts from the line index.
 LEFT JOIN item i ON i.id = l.item_id
 LEFT JOIN unit lu ON lu.id = l.planned_unit_id
--- Progress comes from the run the week was released as, matched on the item the campaign is for: a run holds every SKU in its week, so the run alone would credit one campaign with another's work. Aggregated in a derived table rather than joined directly, or the batch rows would multiply the line. The aggregate is bounded to the runs this schedule's lines were released as, so it scans per-run batches rather than the tenant's entire batch history.
+-- Progress comes from the run the week was released as, matched on the item and machine the campaign is for: a run holds every SKU in its week, and one item can be planned on two machines in a week, so anything coarser credits one campaign with another's work. Aggregated in a derived table rather than joined directly, or the batch rows would multiply the line. The aggregate is bounded to the runs this schedule's lines were released as, so it scans per-run batches rather than the tenant's entire batch history.
 LEFT JOIN (
     SELECT
         b.production_run_id,
         b.item_id,
+        bm.B AS machine_id,
         COUNT(*) AS released_batches,
         COALESCE(SUM(CASE WHEN b.scanned_at IS NOT NULL THEN 1 ELSE 0 END), 0) AS scanned_batches,
         COALESCE(SUM(CASE WHEN b.scanned_at IS NOT NULL THEN bq.value ELSE 0 END), 0) AS scanned_quantity
     FROM batch b
     JOIN quantity bq ON bq.id = b.quantity_id
+    -- Released batches carry exactly one machine (release and carry-forward both reassign it), so
+    -- this join neither drops nor multiplies them.
+    JOIN _batches_machines bm ON bm.A = b.id
     WHERE b.account_id = sqlc.arg('account_id')
     AND b.production_run_id IS NOT NULL
     AND b.production_run_id IN (
@@ -299,8 +303,8 @@ LEFT JOIN (
         AND l2.production_schedule_id = sqlc.arg('production_schedule_id')
         AND l2.production_run_id IS NOT NULL
     )
-    GROUP BY b.production_run_id, b.item_id
-) prog ON prog.production_run_id = l.production_run_id AND prog.item_id = l.item_id
+    GROUP BY b.production_run_id, b.item_id, bm.B
+) prog ON prog.production_run_id = l.production_run_id AND prog.item_id = l.item_id AND prog.machine_id = l.machine_id
 WHERE l.account_id = sqlc.arg('account_id')
 AND l.production_schedule_id = sqlc.arg('production_schedule_id')
 AND (
@@ -544,3 +548,13 @@ WHERE f.account_id = sqlc.arg('account_id')
   AND (sqlc.narg('week_index') IS NULL OR f.week_index = sqlc.narg('week_index'))
   AND (sqlc.narg('item_id') IS NULL OR f.item_id = sqlc.narg('item_id'))
 ORDER BY f.week_start_date, f.sku, f.id;
+
+-- ListRunItemBatchIDsOnMachine returns the released batches a campaign owns, so moving the campaign to another machine can move its tickets with it.
+-- name: ListRunItemBatchIDsOnMachine :many
+SELECT b.id
+FROM batch b
+JOIN _batches_machines bm ON bm.A = b.id
+WHERE b.account_id = sqlc.arg('account_id')
+AND b.production_run_id = sqlc.arg('production_run_id')
+AND b.item_id = sqlc.arg('item_id')
+AND bm.B = sqlc.arg('machine_id');

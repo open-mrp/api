@@ -68,7 +68,7 @@ func TestOrderAcknowledgementQuantityNamesTheUnit(t *testing.T) {
 	t.Parallel()
 
 	order, lines := ackFixture()
-	data := buildOrderAcknowledgementData(order, lines, nil, &domain.Account{Name: "Carolon Co"}, nil)
+	data := buildOrderAcknowledgementData(order, lines, nil, &domain.Account{Name: "Acme Co"}, nil)
 
 	first := data.Lines[0]
 
@@ -96,7 +96,7 @@ func TestOrderAcknowledgementDocMatchesLegacyFields(t *testing.T) {
 	t.Parallel()
 
 	order, lines := ackFixture()
-	data := buildOrderAcknowledgementData(order, lines, nil, &domain.Account{Name: "Carolon Co"}, nil)
+	data := buildOrderAcknowledgementData(order, lines, nil, &domain.Account{Name: "Acme Co"}, nil)
 
 	t.Run("identity and terms come from the order", func(t *testing.T) {
 		if data.OrderNumber != "009001" {
@@ -134,7 +134,7 @@ func TestOrderAcknowledgementPDFRendersLegacyLayout(t *testing.T) {
 	t.Parallel()
 
 	order, lines := ackFixture()
-	data := buildOrderAcknowledgementData(order, lines, nil, &domain.Account{Name: "Carolon Co"}, nil)
+	data := buildOrderAcknowledgementData(order, lines, nil, &domain.Account{Name: "Acme Co"}, nil)
 	data.ContactEmails = []string{"ap@northwind.com"}
 
 	pdfBytes, err := buildOrderAcknowledgementPDF(data)

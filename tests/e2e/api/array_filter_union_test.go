@@ -210,21 +210,31 @@ func runArrayFilterUnion(t *testing.T, c arrayFilterCase) {
 	}
 }
 
-// discoverFieldValues fetches a page from path and returns up to n distinct
-// string values found at the dotted valuePath across the returned items.
+// discoverFieldValues pages through path and returns up to n distinct string values found at the
+// dotted valuePath. It pages rather than reading one page because rows earlier runs left behind can
+// fill the newest page with a single value.
 func discoverFieldValues(t *testing.T, path, include, valuePath string, n int) []string {
 	t.Helper()
 	params := url.Values{"limit": {"50"}}
 	if include != "" {
 		params.Set("include", include)
 	}
-	list, _, err := apiClient.GetList(path, params)
-	if err != nil {
-		return nil
-	}
+	list, status, err := apiClient.GetList(path, params)
 	seen := map[string]struct{}{}
 	var out []string
-	for _, item := range list.Data {
+	for page := 0; ; page++ {
+		require.NoError(t, err, "listing %s", path)
+		require.Equal(t, 200, status, "listing %s", path)
+		out = appendFieldValues(out, seen, list.Data, valuePath, n)
+		if len(out) >= n || !list.PageInfo.HasNextPage || page >= maxListScanPages {
+			return out
+		}
+		list, status, err = apiClient.GetListFromPageURL(list.PageInfo.NextPageURL)
+	}
+}
+
+func appendFieldValues(out []string, seen map[string]struct{}, items []json.RawMessage, valuePath string, n int) []string {
+	for _, item := range items {
 		var row map[string]any
 		if json.Unmarshal(item, &row) != nil {
 			continue
@@ -251,15 +261,24 @@ func filteredIDSet(t *testing.T, path, param string, values ...string) map[strin
 	t.Helper()
 	params := url.Values{"limit": {"1000"}}
 	params[param] = values
-	list, _, err := apiClient.GetList(path, params)
-	require.NoError(t, err, "%s filter %s=%v request failed", path, param, values)
-	out := make(map[string]struct{}, len(list.Data))
-	for _, item := range list.Data {
-		if id := DataItemField(item, "id"); id != "" {
-			out[id] = struct{}{}
+	list, status, err := apiClient.GetList(path, params)
+	// Every page: rows accumulate across runs, and comparing capped pages would find rows "missing"
+	// that are only past the cap.
+	out := map[string]struct{}{}
+	for page := 0; ; page++ {
+		require.NoError(t, err, "%s filter %s=%v request failed", path, param, values)
+		require.Equal(t, 200, status, "%s filter %s=%v", path, param, values)
+		for _, item := range list.Data {
+			if id := DataItemField(item, "id"); id != "" {
+				out[id] = struct{}{}
+			}
 		}
+		if !list.PageInfo.HasNextPage {
+			return out
+		}
+		require.Less(t, page, maxListScanPages, "%s filter %s=%v has more rows than the scan allows", path, param, values)
+		list, status, err = apiClient.GetListFromPageURL(list.PageInfo.NextPageURL)
 	}
-	return out
 }
 
 // valuesAtPath walks a decoded JSON object along tokens and returns all string

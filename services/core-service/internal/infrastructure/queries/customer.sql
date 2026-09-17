@@ -810,6 +810,36 @@ WHERE owner_account_id = sqlc.arg('owner_account_id')
   AND counterparty_account_id IN (sqlc.slice('counterparty_account_ids'))
   AND account_relation_role_code = 'customer';
 
+-- The relation's children have no foreign key to cascade from, so deleting a customer deletes them
+-- first; otherwise they outlive the relation they belong to.
+
+-- name: DeleteCustomerRelationProductLines :exec
+DELETE FROM account_relation_product_line
+WHERE account_relation_id IN (
+    SELECT id FROM account_relation
+    WHERE owner_account_id = sqlc.arg('owner_account_id')
+      AND counterparty_account_id IN (sqlc.slice('counterparty_account_ids'))
+      AND account_relation_role_code = 'customer'
+);
+
+-- name: DeleteCustomerRelationPriceGroups :exec
+DELETE FROM account_relation_price_group
+WHERE account_relation_id IN (
+    SELECT id FROM account_relation
+    WHERE owner_account_id = sqlc.arg('owner_account_id')
+      AND counterparty_account_id IN (sqlc.slice('counterparty_account_ids'))
+      AND account_relation_role_code = 'customer'
+);
+
+-- name: DeleteCustomerRelationNotificationPreferences :exec
+DELETE FROM account_relation_notification_preference
+WHERE account_relation_id IN (
+    SELECT id FROM account_relation
+    WHERE owner_account_id = sqlc.arg('owner_account_id')
+      AND counterparty_account_id IN (sqlc.slice('counterparty_account_ids'))
+      AND account_relation_role_code = 'customer'
+);
+
 -- name: GetCustomerRelationID :one
 SELECT id FROM account_relation
 WHERE owner_account_id = sqlc.arg('owner_account_id')

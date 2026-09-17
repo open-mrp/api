@@ -329,7 +329,12 @@ func (s *itemSvcImpl) ComputeItemCosts(ctx context.Context, accountID, itemID st
 	stepDataMap := make(map[string]*flowStepData, len(relevantStepIDs))
 
 	for stepID := range relevantStepIDs {
+		// The graph was read a moment ago and steps come and go under it; a step deleted since then
+		// simply is not part of the flow any more, and must not fail the whole rollup.
 		step, apiErr := flowRepo.GetFlowStep(ctx, accountID, stepID)
+		if apierror.IsNotFound(apiErr) {
+			continue
+		}
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
@@ -342,29 +347,36 @@ func (s *itemSvcImpl) ComputeItemCosts(ctx context.Context, accountID, itemID st
 
 		// Also get structural consumptions for the flow graph.
 		stepDetail, apiErr := stepQueryRepo.Find(ctx, accountID, stepID)
+		if apierror.IsNotFound(apiErr) {
+			continue
+		}
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 		step.Consumptions = stepDetail.Consumptions
 
-		// Compute InStepIDs/OutStepIDs.
+		stepDataMap[stepID] = &flowStepData{step: step, consumptions: consumptions}
+	}
+
+	// Edges are resolved once every step is loaded, against the steps that actually loaded rather than
+	// against the ids the graph offered. A step deleted mid-read is skipped above, and an edge left
+	// pointing at it would be followed by the normalization walk into a step it has no data for.
+	for stepID, data := range stepDataMap {
 		inIDs := make([]string, 0)
 		for _, parentID := range parentMap[stepID] {
-			if relevantStepIDs[parentID] {
+			if _, loaded := stepDataMap[parentID]; loaded {
 				inIDs = append(inIDs, parentID)
 			}
 		}
-		step.InStepIDs = inIDs
+		data.step.InStepIDs = inIDs
 
 		outIDs := make([]string, 0)
 		for _, childID := range childMap[stepID] {
-			if relevantStepIDs[childID] {
+			if _, loaded := stepDataMap[childID]; loaded {
 				outIDs = append(outIDs, childID)
 			}
 		}
-		step.OutStepIDs = outIDs
-
-		stepDataMap[stepID] = &flowStepData{step: step, consumptions: consumptions}
+		data.step.OutStepIDs = outIDs
 	}
 
 	// 4. Calculate per-step costs.
@@ -376,8 +388,17 @@ func (s *itemSvcImpl) ComputeItemCosts(ctx context.Context, accountID, itemID st
 	}
 
 	// 5. Calculate normalization factors.
-	// The target step is the one that produces our item.
-	targetStepID := initialStepIDs[0]
+	// The target step is the one that produces our item: the oldest that still exists, so the answer does not depend on read order.
+	targetStepID := ""
+	for _, id := range initialStepIDs {
+		if _, ok := stepDataMap[id]; ok {
+			targetStepID = id
+			break
+		}
+	}
+	if targetStepID == "" {
+		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Production flow not found."))
+	}
 	targetStep := stepDataMap[targetStepID].step
 	targetProdQty := targetStep.Production.Quantity.Measure
 

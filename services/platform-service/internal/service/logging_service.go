@@ -1,6 +1,8 @@
 package service
 
 import (
+	"time"
+
 	"context"
 	"fmt"
 
@@ -98,5 +100,23 @@ func (s *loggingSvcImpl) ListRequestLogs(ctx context.Context, filter *domain.Lis
 		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account header is required."))
 	}
 
+	withDefaultRequestLogWindow(filter, time.Now().UTC())
 	return s.requestLogRepo.List(ctx, identity.Target.AccountID, filter, includes)
+}
+
+// defaultRequestLogWindow is how far back a list reaches when the caller gives no start. Logs are
+// walked newest first and filtered as they are read, so an unbounded filter that matches nothing
+// reads the account's entire history; the window caps that walk.
+const defaultRequestLogWindow = 24 * time.Hour
+
+func withDefaultRequestLogWindow(filter *domain.ListRequestLogsFilter, now time.Time) {
+	if filter.StartDate != nil {
+		return
+	}
+	end := now
+	if filter.EndDate != nil {
+		end = *filter.EndDate
+	}
+	start := end.Add(-defaultRequestLogWindow)
+	filter.StartDate = &start
 }

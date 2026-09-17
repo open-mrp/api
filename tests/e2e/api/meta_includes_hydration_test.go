@@ -3,7 +3,9 @@
 package api_test
 
 import (
+	"net/url"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -23,8 +25,8 @@ import (
 //
 // It is data-driven off the OpenAPI spec, so every current and future include is covered
 // automatically. Includes with no canonical single-id retrieve (polymorphic Entity/Actor references,
-// value objects like Owner, list-valued includes) have nothing to cross-check and are passed over;
-// their presence is already guarded by TestIncludes_PopulateNestedResources.
+// value objects like Quantity or Owner, list-valued includes) have nothing to cross-check and get no
+// subtest; their presence is already guarded by TestIncludes_PopulateNestedResources.
 func TestIncludes_HydratedToOneMatchesCanonical(t *testing.T) {
 	t.Parallel()
 
@@ -37,62 +39,167 @@ func TestIncludes_HydratedToOneMatchesCanonical(t *testing.T) {
 	require.NoError(t, err, "load include-supporting GET endpoints")
 	require.NotEmpty(t, endpoints, "spec contained no GET endpoints with include[] enums")
 
+	var crossChecked atomic.Int64
+	t.Cleanup(func() {
+		assert.Positive(t, crossChecked.Load(), "no include resolved to a resource with a canonical retrieve")
+	})
+
 	for _, ep := range endpoints {
-		ep := ep
 		t.Run(ep.OperationID, func(t *testing.T) {
 			t.Parallel()
 
 			for _, include := range ep.IncludeEnum {
-				include := include
+				path, query, ok := resolveGetScenario(ep, include)
+				require.True(t, ok, "resolveGetScenario(%s) operationId=%s include=%s", ep.Path, ep.OperationID, include)
+
+				status, body, err := apiClient.GetListRaw(path, withIncludeQuery(query, include))
+				require.NoError(t, err, "GET %s?include=%s failed", path, include)
+				require.Equalf(t, 200, status, "GET %s?include=%s: %s", path, include, string(body))
+
+				got := parseJSON(body)
+				require.NotNil(t, got, "GET %s?include=%s should be valid JSON", path, include)
+
+				// A relation only some rows carry can be null on every row of the newest page once earlier
+				// runs' rows pile up ahead of the seeded ones, so read on while it is null everywhere.
+				// A value object is present rather than null, so it stops at the first page.
+				leaves := collectIncludeLeafResources(got, include)
+				for page := 0; len(leaves) == 0 && !includeHasAnyValue(got, include) && page < maxListScanPages; page++ {
+					next := jsonField(jsonObject(got, "page_info"), "next_page_url")
+					if next == "" {
+						break
+					}
+					nextPath, nextQuery, ok := ListURLPathQuery(&next)
+					require.True(t, ok, "next_page_url %q", next)
+					status, body, err = apiClient.GetListRaw(nextPath, nextQuery)
+					require.NoError(t, err, "GET %s failed", next)
+					require.Equalf(t, 200, status, "GET %s: %s", next, string(body))
+					path, query, got = nextPath, nextQuery, parseJSON(body)
+					leaves = collectIncludeLeafResources(got, include)
+				}
+				if len(leaves) == 0 {
+					continue // a value object, list, or primitive: no canonical resource to compare with
+				}
+				if _, ok := retrieveByType[jsonField(leaves[0], "object")]; !ok {
+					continue // polymorphic or nested-only type: no canonical retrieve to compare with
+				}
+
 				t.Run(include, func(t *testing.T) {
 					t.Parallel()
+					crossChecked.Add(1)
 
-					path, query, ok := resolveGetScenario(ep, include)
-					require.True(t, ok, "resolveGetScenario(%s) operationId=%s include=%s", ep.Path, ep.OperationID, include)
-
-					status, body, err := apiClient.GetListRaw(path, withIncludeQuery(query, include))
-					require.NoError(t, err, "GET %s?include=%s failed", path, include)
-					requireStatus(t, 200, status, body)
-
-					got := parseJSON(body)
-					require.NotNil(t, got, "response should be valid JSON")
-
-					leaves := collectIncludeLeafResources(got, include)
-					if len(leaves) == 0 {
-						// The include resolves to a value object, a list, or a primitive rather than a
-						// single id-bearing resource — nothing to cross-check against a canonical
-						// retrieve. Presence is covered by TestIncludes_PopulateNestedResources.
-						t.Skipf("include %q resolves to no id-bearing resource to cross-check", include)
+					owners := func() []string {
+						// The owning account is often itself an expandable (a sales order's customer), so
+						// look again with every top-level include expanded.
+						status, body, err := apiClient.GetListRaw(path, withIncludesQuery(query, topLevelIncludes(ep.IncludeEnum)))
+						require.NoError(t, err)
+						require.Less(t, status, 500, "GET %s with every include must not 5xx: %s", path, string(body))
+						return append(collectAccountIDs(got), collectAccountIDs(parseJSON(body))...)
+					}
+					// A parallel test may delete a listed row between the two reads. A leaf the including
+					// endpoint no longer hands out is that race; one it still hands out must be retrievable.
+					stillIncluded := func(id string) bool {
+						status, body, err := apiClient.GetListRaw(path, withIncludeQuery(query, include))
+						require.NoError(t, err)
+						requireStatus(t, 200, status, body)
+						for _, leaf := range collectIncludeLeafResources(parseJSON(body), include) {
+							if jsonField(leaf, "id") == id {
+								return true
+							}
+						}
+						return false
 					}
 
-					leaf := leaves[0]
-					objType := jsonField(leaf, "object")
-					id := jsonField(leaf, "id")
-
-					rt, ok := retrieveByType[objType]
-					if !ok {
-						// No canonical single-id GET for this object type (polymorphic reference, or a
-						// type only ever returned nested). The stub contract can't be cross-checked.
-						t.Skipf("no canonical retrieve endpoint for object %q (include %q)", objType, include)
+					for _, leaf := range leaves {
+						rt, ok := retrieveByType[jsonField(leaf, "object")]
+						require.True(t, ok, "include %q mixes object types: %v", include, leaf)
+						id := jsonField(leaf, "id")
+						canonPath, status, canon := retrieveCanonical(t, rt, id, owners)
+						if status == 200 {
+							assertHydratedMatchesCanonical(t, include, leaf, canon)
+							return
+						}
+						require.Falsef(t, stillIncluded(id),
+							"the include hands out %s, which no account in the response can retrieve (status %d)", canonPath, status)
 					}
-
-					canonPath := strings.ReplaceAll(rt.path, "{"+rt.param+"}", id)
-					cstatus, cbody, err := apiClient.GetListRaw(canonPath, nil)
-					require.NoError(t, err, "canonical GET %s failed", canonPath)
-					require.Less(t, cstatus, 500, "canonical GET %s must not 5xx: %s", canonPath, string(cbody))
-					if cstatus != 200 {
-						// The id came from the include, so a 4xx here means the resource isn't retrievable
-						// by this path under the API key (different scope). Record it rather than fail.
-						t.Skipf("canonical GET %s returned %d, cannot cross-check include %q", canonPath, cstatus, include)
-					}
-
-					canon := parseJSON(cbody)
-					require.NotNil(t, canon, "canonical response should be valid JSON")
-					assertHydratedMatchesCanonical(t, include, leaf, canon)
+					t.Fatalf("every %q the include handed out was deleted before it could be cross-checked", include)
 				})
 			}
 		})
 	}
+}
+
+// retrieveCanonical fetches the resource through its own retrieve endpoint. A counterparty's
+// resource, such as a customer's address, is only retrievable while targeting that account, so the
+// accounts named in the including response are tried when the caller's own scope does not have it.
+func retrieveCanonical(t *testing.T, rt retrieveEndpoint, id string, owners func() []string) (string, int, map[string]any) {
+	t.Helper()
+
+	canonPath := strings.ReplaceAll(rt.path, "{"+rt.param+"}", id)
+	status, body, err := apiClient.GetListRaw(canonPath, nil)
+	require.NoError(t, err, "canonical GET %s failed", canonPath)
+	require.Less(t, status, 500, "canonical GET %s must not 5xx: %s", canonPath, string(body))
+
+	if status != 200 {
+		for _, accountID := range owners() {
+			status, body, err = apiClient.WithAccountID(accountID).GetListRaw(canonPath, nil)
+			require.NoError(t, err, "canonical GET %s as %s failed", canonPath, accountID)
+			require.Less(t, status, 500, "canonical GET %s as %s must not 5xx: %s", canonPath, accountID, string(body))
+			if status == 200 {
+				break
+			}
+		}
+	}
+	if status != 200 {
+		return canonPath, status, nil
+	}
+	canon := parseJSON(body)
+	require.NotNil(t, canon, "canonical response should be valid JSON")
+	return canonPath, status, canon
+}
+
+func topLevelIncludes(includes []string) []string {
+	var out []string
+	for _, include := range includes {
+		if !strings.Contains(include, ".") {
+			out = append(out, include)
+		}
+	}
+	return out
+}
+
+func withIncludesQuery(base url.Values, includes []string) url.Values {
+	out := cloneQuery(base)
+	if out == nil {
+		out = url.Values{}
+	}
+	out["include"] = includes
+	return out
+}
+
+// collectAccountIDs returns every distinct account id anywhere in a response, in the order found.
+func collectAccountIDs(v any) []string {
+	var out []string
+	seen := map[string]bool{}
+	var walk func(any)
+	walk = func(v any) {
+		switch v := v.(type) {
+		case map[string]any:
+			for _, child := range v {
+				walk(child)
+			}
+		case []any:
+			for _, child := range v {
+				walk(child)
+			}
+		case string:
+			if strings.HasPrefix(v, "ac_") && !seen[v] {
+				seen[v] = true
+				out = append(out, v)
+			}
+		}
+	}
+	walk(v)
+	return out
 }
 
 // includeHydrationSkipFields are base scalar fields excluded from the cross-check. Timestamps are
@@ -264,6 +371,36 @@ func findSchemaProperty(spec *openAPISpec, schema *openAPISchema, name string, d
 		}
 	}
 	return nil, false
+}
+
+// includeHasAnyValue reports whether any row carries a non-null value at the include path.
+func includeHasAnyValue(resp map[string]any, include string) bool {
+	parts := strings.Split(include, ".")
+	var walk func(cur any, i int) bool
+	walk = func(cur any, i int) bool {
+		m, ok := cur.(map[string]any)
+		if !ok {
+			return false
+		}
+		if obj, _ := m["object"].(string); obj == "list" {
+			data, _ := m["data"].([]any)
+			for _, item := range data {
+				if walk(item, i) {
+					return true
+				}
+			}
+			return false
+		}
+		v, present := m[parts[i]]
+		if !present || v == nil {
+			return false
+		}
+		if i == len(parts)-1 {
+			return true
+		}
+		return walk(v, i+1)
+	}
+	return walk(resp, 0)
 }
 
 // collectIncludeLeafResources navigates the dot-separated include path and returns every terminal

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
@@ -57,8 +58,28 @@ func (s *inventoryChangeLogSvcImpl) ListInventoryChangeLogs(ctx context.Context,
 	}
 
 	params.AccountID = identity.Target.AccountID
+	withDefaultInventoryChangeLogWindow(&params, time.Now().UTC())
 
 	return s.repos.NewInventoryChangeLogRepo().List(ctx, params)
+}
+
+// defaultInventoryChangeLogWindow is how far back a list reaches when the caller gives no start. Stock
+// moves are looked back on for weeks, not hours, but a busy account logs tens of thousands a month, and
+// a combination of filters the indexes cannot order walks every one of them.
+const defaultInventoryChangeLogWindow = 90 * 24 * time.Hour
+
+// withDefaultInventoryChangeLogWindow bounds a list that is not about particular items. An item's
+// history is wanted whole and is already served by the item index.
+func withDefaultInventoryChangeLogWindow(params *domain.ListInventoryChangeLogsParams, now time.Time) {
+	if params.StartDate != nil || len(params.ItemIDs) > 0 {
+		return
+	}
+	end := now
+	if params.EndDate != nil {
+		end = *params.EndDate
+	}
+	start := end.Add(-defaultInventoryChangeLogWindow)
+	params.StartDate = &start
 }
 
 // GetInventoryChangeLog returns a single inventory change log by ID.

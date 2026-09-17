@@ -700,6 +700,51 @@ func (q *Queries) InsertUnit(ctx context.Context, arg InsertUnitParams) error {
 	return err
 }
 
+const isUnitABaseUnit = `-- name: IsUnitABaseUnit :one
+SELECT EXISTS (SELECT 1 FROM unit_group WHERE base_unit_id = ?) AS is_base_unit
+`
+
+// A unit group converts every quantity in it through its base unit, so a group's base unit cannot be deleted out from under it.
+func (q *Queries) IsUnitABaseUnit(ctx context.Context, unitID string) (bool, error) {
+	row := q.db.QueryRowContext(ctx, isUnitABaseUnit, unitID)
+	var is_base_unit bool
+	err := row.Scan(&is_base_unit)
+	return is_base_unit, err
+}
+
+const isUnitReferenced = `-- name: IsUnitReferenced :one
+SELECT (
+    EXISTS (SELECT 1 FROM quantity q WHERE q.unit_id = ?)
+    OR EXISTS (SELECT 1 FROM rate rn WHERE rn.numerator_unit_id = ?)
+    OR EXISTS (SELECT 1 FROM rate rd WHERE rd.denominator_unit_id = ?)
+    OR EXISTS (SELECT 1 FROM demand_override d WHERE d.unit_id = ?)
+) AS is_referenced
+`
+
+type IsUnitReferencedParams struct {
+	QuantityUnitID    string
+	NumeratorUnitID   string
+	DenominatorUnitID string
+	OverrideUnitID    sql.NullString
+}
+
+// Quantities, rates and demand overrides carry their unit by id, and each reads it back to convert and
+// display the value, so a unit any of them names cannot be deleted. Every probe is an index lookup
+// except demand_override, which holds a handful of rows per account. Plan snapshots (the
+// production_schedule_* planned units) are left out: they are regenerated and read the unit through a
+// LEFT JOIN, so a missing one only blanks a label.
+func (q *Queries) IsUnitReferenced(ctx context.Context, arg IsUnitReferencedParams) (sql.NullBool, error) {
+	row := q.db.QueryRowContext(ctx, isUnitReferenced,
+		arg.QuantityUnitID,
+		arg.NumeratorUnitID,
+		arg.DenominatorUnitID,
+		arg.OverrideUnitID,
+	)
+	var is_referenced sql.NullBool
+	err := row.Scan(&is_referenced)
+	return is_referenced, err
+}
+
 const listUnitsBackward = `-- name: ListUnitsBackward :many
 SELECT
     unit.id,

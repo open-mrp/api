@@ -27,19 +27,14 @@ func lockPlanningRead() func() {
 }
 
 // The solver is unusable without at least one machine marked as the planning constraint. That is a configuration problem, so it must be a clear 4xx rather than a blank plan that reads as "nothing to do".
+// The main seed account has a constraint, so this runs as Tenant B, which is never configured for planning.
 func TestProductionSchedulePreview_RequiresAConstraintMachine(t *testing.T) {
 	t.Parallel()
 
-	status, body, err := apiClient.Put(productionSchedulePreviewPath, map[string]any{})
+	tenantB := apiClient.WithBearerToken(SeedTenantBAPIKey, SeedTenantBAccountID)
+	status, body, err := tenantB.Put(productionSchedulePreviewPath, map[string]any{})
 	require.NoError(t, err)
 	require.Less(t, status, 500, "the preview must not 5xx: %s", string(body))
-
-	if status == 200 {
-		// A constraint is configured in this environment, so the solve should have run.
-		preview := parseJSON(body)
-		assert.Equal(t, "production_schedule_preview", jsonField(preview, "object"))
-		return
-	}
 
 	assert.Equal(t, 400, status,
 		"with no constraint machine configured the preview should be a 400, got %d: %s", status, string(body))
@@ -91,10 +86,7 @@ func TestProductionSchedulePreview_ShapeWhenSolved(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Less(t, status, 500, "the preview must not 5xx: %s", string(body))
-
-	if status != 200 {
-		t.Skipf("no constraint machine configured in this environment (status %d)", status)
-	}
+	requireStatus(t, 200, status, body)
 
 	preview := parseJSON(body)
 	assert.Equal(t, "production_schedule_preview", jsonField(preview, "object"))
@@ -140,9 +132,7 @@ func TestProductionSchedulePreview_Deterministic(t *testing.T) {
 	status, first, err := apiClient.Put(productionSchedulePreviewPath, req)
 	require.NoError(t, err)
 	require.Less(t, status, 500, "the preview must not 5xx: %s", string(first))
-	if status != 200 {
-		t.Skipf("no constraint machine configured in this environment (status %d)", status)
-	}
+	requireStatus(t, 200, status, first)
 
 	status2, second, err := apiClient.Put(productionSchedulePreviewPath, req)
 	require.NoError(t, err)
@@ -184,9 +174,6 @@ func generateScheduleLocked(t *testing.T, body map[string]any) map[string]any {
 	resp, err := apiClient.PostFull(productionSchedulesPath, body, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, resp.StatusCode, 500, "generate must not 5xx: %s", string(resp.Body))
-	if resp.StatusCode == 400 {
-		t.Skipf("no constraint machine configured in this environment: %s", string(resp.Body))
-	}
 	requireStatus(t, 201, resp.StatusCode, resp.Body)
 	return parseJSON(resp.Body)
 }
@@ -299,9 +286,6 @@ func TestProductionSchedules_GenerateIdempotent(t *testing.T) {
 	resp1, err := apiClient.PostFull(productionSchedulesPath, body, idemKey)
 	require.NoError(t, err)
 	require.Less(t, resp1.StatusCode, 500, "generate must not 5xx: %s", string(resp1.Body))
-	if resp1.StatusCode == 400 {
-		t.Skipf("no constraint machine configured in this environment: %s", string(resp1.Body))
-	}
 	requireStatus(t, 201, resp1.StatusCode, resp1.Body)
 	id1 := jsonField(parseJSON(resp1.Body), "id")
 	require.NotEmpty(t, id1)

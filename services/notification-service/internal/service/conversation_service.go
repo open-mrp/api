@@ -302,7 +302,7 @@ func (s *conversationSvcImpl) ListConversations(ctx context.Context, input domai
 	}
 
 	limit := clampLimit(input.Limit, defaultNotificationPageSize, maxNotificationPageSize)
-	cursorAt, cursorID, apiErr := decodeCursor(input.Cursor)
+	cursor, apiErr := decodeConversationCursor(input.Cursor)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -322,8 +322,9 @@ func (s *conversationSvcImpl) ListConversations(ctx context.Context, input domai
 		Type:                input.Type,
 		Status:              status,
 		Limit:               limit + 1,
-		CursorLastMessageAt: cursorAt,
-		CursorID:            cursorID,
+		CursorLastMessageAt: cursor.lastMessageAt,
+		CursorID:            cursor.id,
+		CursorInNullTail:    cursor.inNullTail,
 	})
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -333,11 +334,8 @@ func (s *conversationSvcImpl) ListConversations(ctx context.Context, input domai
 	if len(rows) > int(limit) {
 		rows = rows[:limit]
 		page.HasNextPage = true
-		last := rows[len(rows)-1]
-		if last.LastMessageAt != nil {
-			next := encodeCursor(*last.LastMessageAt, last.ID)
-			page.NextCursor = &next
-		}
+		next := encodeConversationCursor(rows[len(rows)-1])
+		page.NextCursor = &next
 	}
 	// Hydrate participants for the returned page so the inbox UI can render DM/group names + avatars without an N+1 GET per row (which trips the gateway rate limit for large teams). Bounded by the page size.
 	partRepo := s.repoFactory.NewParticipantRepo()

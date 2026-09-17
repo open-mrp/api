@@ -205,6 +205,9 @@ INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
     ('qu_01seedprod_pcksmbg0', 1, 'un_01seedpair000000000', NOW(), NOW()),
     ('qu_01seedprod_pcksmbk0', 1, 'un_01seedpair000000000', NOW(), NOW());
 
+-- Each pack step produces the finished SKU its own chain ends at: the large chain (LWB) packs SCK-002
+-- "Large white sock", the small chain (SWB) packs SCK-001 "Small white sock". Pointing both at one SKU
+-- collapses the two echelons onto whichever constraint item reaches it first, and starves the other of demand.
 INSERT IGNORE INTO production (id, item_id, quantity_id, production_step_id, created_at, updated_at) VALUES
     ('pn_01seedprod_knitlg00', 'it_01seedlknitem000000', 'qu_01seedprod_knitlg00', 'prs_01k0a51qxceydax5036pegvzzy', NOW(), NOW()),
     ('pn_01seedprod_sewlg000', 'it_01seedlsnitem000000', 'qu_01seedprod_sewlg000', 'prs_01k0a56yc1e8wag6wexn4pp8t9', NOW(), NOW()),
@@ -221,7 +224,7 @@ INSERT IGNORE INTO production (id, item_id, quantity_id, production_step_id, cre
     ('pn_01seedprod_brdlgbk0', 'it_01seedlbkbitem00000', 'qu_01seedprod_brdlgbk0', 'prs_01k0a5m985fhzbasqkt6sx22a0', NOW(), NOW()),
     ('pn_01seedprod_brdsmbg0', 'it_01seedsbgbitem00000', 'qu_01seedprod_brdsmbg0', 'prs_01k0a5mgq1fq5a9cvgev5zsf57', NOW(), NOW()),
     ('pn_01seedprod_brdsmbk0', 'it_01seedsbkbitem00000', 'qu_01seedprod_brdsmbk0', 'prs_01k0a5ncadf1tbcb91kae06tvq', NOW(), NOW()),
-    ('pn_01seedprod_pcklgwh0', 'it_01k0a7100aeysrs9vxpeq14yxj', 'qu_01seedprod_pcklgwh0', 'prs_01k0a5nzd2f3a9cffpw38qken6', NOW(), NOW()),
+    ('pn_01seedprod_pcklgwh0', 'it_01k0a7100aedgv8416p4p2v9ks', 'qu_01seedprod_pcklgwh0', 'prs_01k0a5nzd2f3a9cffpw38qken6', NOW(), NOW()),
     ('pn_01seedprod_pcklgbg0', 'it_01k0a7100ae85v16mmxx5gx2w3', 'qu_01seedprod_pcklgbg0', 'prs_01k0a5nzd2fxnv34tm431kr7vv', NOW(), NOW()),
     ('pn_01seedprod_pcklgbk0', 'it_01k0a7100af709nn7sgg8tbxte', 'qu_01seedprod_pcklgbk0', 'prs_01k0a5nzd2e55rw1bwmt8sdwye', NOW(), NOW()),
     ('pn_01seedprod_pcksmwh0', 'it_01k0a7100aeysrs9vxpeq14yxj', 'qu_01seedprod_pcksmwh0', 'prs_01k0a5nzd2e5fs4d3yvf8ehk41', NOW(), NOW()),

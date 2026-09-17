@@ -114,7 +114,9 @@ func TestSalesOrderLineUpdate_SyncsFulfillmentLineQuantities(t *testing.T) {
 	// pick line; a decrease back below the packed amount removes it) — the seeded
 	// packed line asserted here is untouched by that churn.
 
-	// Baseline sanity: everything mirrors the seeded order line (25 pair).
+	// Baseline sanity: everything mirrors the seeded order line (25 pair). The test leaves it at
+	// 12, so it is put back first; the mirrors follow the order line, which is what restores them.
+	patchSyncOrderLineQuantity(t, "25", pairUnitID)
 	requireSyncState(t, 25, " pr", "baseline")
 
 	// 1. Change value and unit together: 25 pair → 30 dozen.

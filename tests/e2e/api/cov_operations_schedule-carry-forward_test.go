@@ -93,7 +93,9 @@ func releaseWeekWith(t *testing.T, scheduleID string, weekIndex int, skipCarryFo
 	require.NoError(t, err)
 	require.Less(t, resp.StatusCode, 500, "must not 5xx: %s", string(resp.Body))
 	requireStatus(t, 201, resp.StatusCode, resp.Body)
-	return parseJSON(resp.Body)
+	result := parseJSON(resp.Body)
+	deleteReleasedRun(t, result)
+	return result
 }
 
 // The whole point: a week that fell short leaves printed tickets on the floor, and the next week reuses them rather than issuing their replacements.

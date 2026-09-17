@@ -4,8 +4,10 @@ package api_test
 
 import (
 	"net/url"
+	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -269,20 +271,37 @@ func TestCovMessagingContacts_QueryTooLong(t *testing.T) {
 func TestCovMessagingContacts_CursorAcceptedButInert(t *testing.T) {
 	t.Parallel()
 
-	baseline, status, err := apiClient.GetList(covMessagingContactsPath, nil)
-	require.NoError(t, err)
-	require.Equal(t, 200, status)
-
-	withCursor, status, err := apiClient.GetList(covMessagingContactsPath, url.Values{"cursor": {"totally-arbitrary-opaque-value"}})
-	require.NoError(t, err)
-	require.Equal(t, 200, status)
-
-	require.Equal(t, len(baseline.Data), len(withCursor.Data), "an arbitrary cursor must not change the result set")
-	for i := range baseline.Data {
-		baseRow := parseJSON(baseline.Data[i])
-		curRow := parseJSON(withCursor.Data[i])
-		assert.Equal(t, covContactActorID(baseRow), covContactActorID(curRow), "row order/identity must be unaffected by cursor at index %d", i)
+	// Parallel tests add and remove account users between the two reads, so a differing pair is
+	// retried with a pause between attempts; a cursor that really changes the result differs on
+	// every attempt, while churn eventually leaves a quiet window.
+	actorIDs := func(list *ListResponse) []string {
+		ids := make([]string, 0, len(list.Data))
+		for _, raw := range list.Data {
+			ids = append(ids, covContactActorID(parseJSON(raw)))
+		}
+		return ids
 	}
+
+	var baseline, withCursor []string
+	for attempt := 0; attempt < 10; attempt++ {
+		if attempt > 0 {
+			time.Sleep(300 * time.Millisecond)
+		}
+		first, status, err := apiClient.GetList(covMessagingContactsPath, nil)
+		require.NoError(t, err)
+		require.Equal(t, 200, status)
+
+		second, status, err := apiClient.GetList(covMessagingContactsPath, url.Values{"cursor": {"totally-arbitrary-opaque-value"}})
+		require.NoError(t, err)
+		require.Equal(t, 200, status)
+
+		baseline, withCursor = actorIDs(first), actorIDs(second)
+		if slices.Equal(baseline, withCursor) {
+			return
+		}
+	}
+
+	assert.Equal(t, baseline, withCursor, "an arbitrary cursor must not change the result set or its order")
 }
 
 // TestCovMessagingContacts_IncludeBogusRejected asserts an unrecognized

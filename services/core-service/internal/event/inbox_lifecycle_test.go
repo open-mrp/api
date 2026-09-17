@@ -225,6 +225,10 @@ type InboxLifecycleTestSuite struct {
 	outerInbox *outerInboxRepo
 	consumer   *BatchScannedConsumer
 	stepRepo   *repositorymock.MockProductionStepQueryRepo
+
+	// What the batch row says when the handler locks it: by default, the scan being delivered.
+	batchScannedAt *time.Time
+	batchExists    bool
 }
 
 func (s *InboxLifecycleTestSuite) SetupTest() {
@@ -259,6 +263,12 @@ func (s *InboxLifecycleTestSuite) SetupTest() {
 
 	batchRepo := repositorymock.NewMockBatchRepo(s.ctrl)
 	batchRepo.EXPECT().FindLineageShortfall(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+	batchRepo.EXPECT().LockScan(gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(context.Context, string, string) (*time.Time, bool, *apierror.APIError) {
+			return s.batchScannedAt, s.batchExists, nil
+		}).AnyTimes()
+	standing := scanEvent("1", unitPair).ScannedAt
+	s.batchScannedAt, s.batchExists = &standing, true
 
 	itemRepo := repositorymock.NewMockItemRepo(s.ctrl)
 	itemRepo.EXPECT().Get(gomock.Any(), gomock.Any()).
@@ -319,6 +329,61 @@ func (s *InboxLifecycleTestSuite) TestSuccess_MovementsAndMarkerCommitTogether()
 	s.NotEmpty(s.journal.committedOf(effectInventory), "the scan should have moved inventory")
 	s.Len(s.journal.committedOf(effectInboxComplete), 1,
 		"the marker must commit with the movements, not after them")
+}
+
+// The row's scan time is stamped separately from the event's, so a scan whose times differ still applies.
+func (s *InboxLifecycleTestSuite) TestScanTimeDrift_StillApplies() {
+	drifted := scanEvent("1", unitPair).ScannedAt.Add(time.Millisecond)
+	s.batchScannedAt = &drifted
+
+	s.NoError(s.deliver(scanEvent("10", unitPair), "msg_drift"))
+
+	s.NotEmpty(s.journal.committedOf(effectInventory))
+}
+
+// An operator can undo a scan before its inventory is applied. The row then no longer carries the scan,
+// and applying it anyway would leave stock behind that the undo has already finished reversing.
+func (s *InboxLifecycleTestSuite) TestUndoneScan_IsIgnoredWithoutMovingInventory() {
+	for name, set := range map[string]func(){
+		"batch deleted":   func() { s.batchExists = false },
+		"batch unscanned": func() { s.batchScannedAt = nil },
+	} {
+		s.Run(name, func() {
+			s.SetupTest()
+			set()
+
+			s.NoError(s.deliver(scanEvent("10", unitPair), "msg_undone"))
+
+			s.Empty(s.journal.committedOf(effectInventory), "an undone scan moves nothing")
+			s.Equal(1, s.outerInbox.ignored, "the message ends ignored, not failed")
+			s.Zero(s.outerInbox.discarded)
+		})
+	}
+}
+
+// An undo leaves the batch scannable, so an operator who undoes and scans again leaves a row that is
+// stamped once more. The first scan's event must not read that stamp as its own and apply the first
+// scan's quantities on top of the second's.
+func (s *InboxLifecycleTestSuite) TestScanUndoneThenMadeAgain_IsIgnoredWithoutMovingInventory() {
+	rescanned := scanEvent("1", unitPair).ScannedAt.Add(30 * time.Second)
+	s.batchScannedAt = &rescanned
+
+	s.NoError(s.deliver(scanEvent("10", unitPair), "msg_rescanned"))
+
+	s.Empty(s.journal.committedOf(effectInventory), "the row carries a later scan; this one has nothing to apply")
+	s.Equal(1, s.outerInbox.ignored, "the message ends ignored, not failed")
+	s.Zero(s.outerInbox.discarded)
+}
+
+// An event published before the stamp was carried has none to compare, and must still apply rather than
+// be dropped as superseded.
+func (s *InboxLifecycleTestSuite) TestScanWithoutAStamp_StillApplies() {
+	evt := scanEvent("10", unitPair)
+	evt.ScannedAt = time.Time{}
+
+	s.NoError(s.deliver(evt, "msg_unstamped"))
+
+	s.NotEmpty(s.journal.committedOf(effectInventory))
 }
 
 // A failure part-way must leave nothing: no movements, and no marker claiming there were any.

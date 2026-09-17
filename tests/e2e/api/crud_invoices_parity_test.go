@@ -313,22 +313,31 @@ func TestCustomerInvoices_AllocationsExpandOnRequest(t *testing.T) {
 
 	status, body, err = apiClient.GetListRaw(customerInvoicesPath,
 		url.Values{"limit": {"25"}, "include": {"allocations"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
 
+	// Invoices earlier runs created sort ahead of the seeded paid one, so read on until it turns up.
 	sawAllocation := false
-	for _, raw := range jsonArray(parseJSON(body), "data") {
-		row, ok := raw.(map[string]any)
-		require.True(t, ok)
-		allocations := jsonObject(row, "allocations")
-		require.NotNil(t, allocations, "allocations must expand on request")
-		if entries := jsonArray(allocations, "data"); len(entries) > 0 {
-			sawAllocation = true
-			entry, ok := entries[0].(map[string]any)
+	for page := 0; ; page++ {
+		require.NoError(t, err)
+		requireStatus(t, 200, status, body)
+		got := parseJSON(body)
+		for _, raw := range jsonArray(got, "data") {
+			row, ok := raw.(map[string]any)
 			require.True(t, ok)
-			assert.NotNil(t, jsonObject(entry, "amount"),
-				"each allocation carries its amount, which is what the balance is worked out from")
+			allocations := jsonObject(row, "allocations")
+			require.NotNil(t, allocations, "allocations must expand on request")
+			if entries := jsonArray(allocations, "data"); len(entries) > 0 {
+				sawAllocation = true
+				entry, ok := entries[0].(map[string]any)
+				require.True(t, ok)
+				assert.NotNil(t, jsonObject(entry, "amount"),
+					"each allocation carries its amount, which is what the balance is worked out from")
+			}
 		}
+		next := jsonField(jsonObject(got, "page_info"), "next_page_url")
+		if sawAllocation || next == "" || page >= maxListScanPages {
+			break
+		}
+		status, body, err = apiClient.GetListRawFromPageURL(&next)
 	}
 	assert.True(t, sawAllocation, "a partially paid invoice is seeded, so at least one allocation must appear")
 }

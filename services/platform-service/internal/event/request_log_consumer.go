@@ -17,32 +17,33 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
+// RequestLogConsumer persists request logs. It runs without the inbox: a log's id is the request's own,
+// so a redelivery is a duplicate insert the repository already treats as stored, and the inbox's two
+// extra writes per message were what let the consumer fall thousands of messages behind under load.
 type RequestLogConsumer struct {
-	rabbitmq      messaging.MessageBroker
-	loggingSvc    domain.LoggingSvc
-	tracer        trace.Tracer
-	messageCodec  protojson.UnmarshalOptions
-	inboxConsumer *messaging.InboxConsumer
+	rabbitmq     messaging.MessageBroker
+	loggingSvc   domain.LoggingSvc
+	tracer       trace.Tracer
+	messageCodec protojson.UnmarshalOptions
 }
 
-func NewRequestLogConsumer(rabbitmq messaging.MessageBroker, loggingSvc domain.LoggingSvc, inboxRepo messaging.InboxRepo, tracer trace.Tracer) *RequestLogConsumer {
+func NewRequestLogConsumer(rabbitmq messaging.MessageBroker, loggingSvc domain.LoggingSvc, tracer trace.Tracer) *RequestLogConsumer {
 	return &RequestLogConsumer{
-		rabbitmq:      rabbitmq,
-		loggingSvc:    loggingSvc,
-		tracer:        tracer,
-		messageCodec:  protojson.UnmarshalOptions{DiscardUnknown: true},
-		inboxConsumer: messaging.NewInboxConsumer(inboxRepo, "platform-service"),
+		rabbitmq:     rabbitmq,
+		loggingSvc:   loggingSvc,
+		tracer:       tracer,
+		messageCodec: protojson.UnmarshalOptions{DiscardUnknown: true},
 	}
 }
 
-// persistenceConsumerConcurrency is the worker count for the request-log and audit-event consumers. Each message is an independent insert (no cross-message ordering) deduplicated by the inbox pattern, so concurrent processing is safe; the gateway produces these in bursts proportional to HTTP traffic, and a serial consumer falls behind.
+// persistenceConsumerConcurrency is the worker count for the request-log and audit-event consumers. Each message is an independent, deduplicated insert (no cross-message ordering), so concurrent processing is safe; the gateway produces these in bursts proportional to HTTP traffic, and a serial consumer falls behind.
 const persistenceConsumerConcurrency = 8
 
 func (c *RequestLogConsumer) Listen(ctx context.Context) error {
 	return c.rabbitmq.ConsumeMessages(
 		ctx,
 		messaging.LoggingEventRequestLogQueue,
-		c.inboxConsumer.Wrap("platform.request_log", c.handleMessage),
+		c.handleMessage,
 		messaging.WithConcurrency(persistenceConsumerConcurrency),
 	)
 }

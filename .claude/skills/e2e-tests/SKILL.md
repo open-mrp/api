@@ -42,6 +42,7 @@ Helpers: `uniqueName`, `newIdempotencyKey`, `parseJSON`, `jsonField`, `jsonObjec
 - `t.Parallel()` on every top-level test. Subtests sharing a resource ID do **not**.
 - `defer apiClient.Delete(...)` unless the test is the delete path.
 - Seed IDs in `seed.go` for GET/list and FKs. Never mutate seeds in a way that breaks parallel tests.
+- The suite must pass when rerun on the same stack (`make test-e2e` again). A test whose effect cannot be undone builds its own fixture through the API; if it must use a one-shot seed row, reset that row first (`authDB` for MySQL, `agentDB` for agent Postgres). Never assume a seeded row is on page one — page with `listFindByField` / `next_page_url`.
 - File sections: `// --- List ---`, `// --- CRUD ---`, `// --- Expandable Fields ---`, …
 
 ```bash

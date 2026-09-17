@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.7.0](https://github.com/open-mrp/api/compare/v2.6.8...v2.7.0) (2026-09-17)
+
+
+### Features
+
+* **analytics:** base OEE on shift capacity minus downtime, not scan spans ([#158](https://github.com/open-mrp/api/issues/158)) ([f66e794](https://github.com/open-mrp/api/commit/f66e79442d6c30a04309b7a96d6d9cf731b5c736))
+* improve e2e performance and apply default starting filters for some endpoints ([#160](https://github.com/open-mrp/api/issues/160)) ([2ce44d2](https://github.com/open-mrp/api/commit/2ce44d2dfb6eac25b526442521c83404ba04fa4a))
+
+
+### Bug Fixes
+
+* **scheduling:** count on-hand at every production stage, not just linked batches ([#157](https://github.com/open-mrp/api/issues/157)) ([c2d95fd](https://github.com/open-mrp/api/commit/c2d95fd2da41d70a4620aede62491d4ce62fd807))
+
 ## [2.6.8](https://github.com/open-mrp/api/compare/v2.6.7...v2.6.8) (2026-09-16)
 
 

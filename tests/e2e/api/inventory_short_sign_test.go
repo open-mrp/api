@@ -102,10 +102,13 @@ func inventoryMeasure(t *testing.T, itemID, field string) float64 {
 // same group covers exactly what it says once both sides are normalized through their ratios.
 // Subtracting the raw columns instead reports the covered issue as short by -5.
 func TestItemInventory_ShortNetsAllocationsAcrossUnits(t *testing.T) {
+	// Orders earlier runs could not delete leave their own demand on the item, so the figure is
+	// compared with itself rather than with zero.
+	before := inventoryMeasure(t, SeedItemID, "short")
 	seedCrossUnitAllocatedIssue(t)
 
-	// 10 each is exactly the 5 pair the issue asked for, so the demand is covered and nothing is
-	// short. Reading -5 here is the raw subtraction of two different units.
-	assert.Equal(t, 0.0, inventoryMeasure(t, SeedItemID, "short"),
+	// 10 each is exactly the 5 pair the issue asked for, so the demand is covered and the shortage
+	// does not move. A change of -5 here is the raw subtraction of two different units.
+	assert.Equal(t, before, inventoryMeasure(t, SeedItemID, "short"),
 		"an issue covered in another unit of the same group is not short")
 }

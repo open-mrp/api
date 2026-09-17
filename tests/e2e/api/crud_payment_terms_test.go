@@ -46,9 +46,7 @@ func TestPaymentTerms_ListResponseShape(t *testing.T) {
 
 func TestPaymentTerms_ListPagination(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(paymentTermsPath, url.Values{"limit": {"1"}})
-	require.NoError(t, err)
-	assert.Len(t, list.Data, 1)
+	assertListPageLen(t, paymentTermsPath, url.Values{"limit": {"1"}}, 1)
 }
 
 func TestPaymentTerms_ListCursorPagination(t *testing.T) {

@@ -256,13 +256,9 @@ func TestReceivingOrders_LineQuantityOrderedIsThePurchaseOrderQuantity(t *testin
 	// The same quantity, reached the other way: through the purchase order the receiving order was
 	// created from. Both routes must name the same row.
 	related := jsonObject(parseJSON(body), "related")
-	if related == nil {
-		t.Skip("this receiving order carries no related purchase order")
-	}
+	require.NotNil(t, related, "the seeded receiving order was created from a purchase order: %s", string(body))
 	purchaseOrder := jsonObject(related, "purchase_order")
-	if purchaseOrder == nil {
-		t.Skip("this receiving order carries no related purchase order")
-	}
+	require.NotNil(t, purchaseOrder, "the seeded receiving order was created from a purchase order: %s", string(body))
 
 	poLine, _ := firstLineWith(t, purchaseOrdersPath+"/"+jsonField(purchaseOrder, "id"), "lines", "lines.quantity_ordered")
 	assert.Equal(t, jsonField(jsonObject(poLine, "quantity_ordered"), "id"), orderedID,
@@ -376,9 +372,7 @@ func TestPurchaseOrders_LineItemExpandsFullyHydrated(t *testing.T) {
 	line, body := firstLineWith(t, purchaseOrdersPath+"/"+SeedPurchaseOrderID, "lines", "lines.item")
 
 	item := jsonObject(line, "item")
-	if item == nil {
-		t.Skip("this purchase order line is not linked to a catalog item")
-	}
+	require.NotNil(t, item, "every seeded purchase order line buys a catalog item: %s", string(body))
 	assertObjectField(t, item, "item")
 	assert.NotEmpty(t, jsonField(item, "id"))
 	assert.NotEmpty(t, jsonField(item, "sku"))
@@ -559,9 +553,7 @@ func TestInvoices_AllocationAmountUnitExpandsWithInclude(t *testing.T) {
 	requireStatus(t, 200, status, body)
 
 	allocations := jsonListData(parseJSON(body), "allocations")
-	if len(allocations) == 0 {
-		t.Skip("the seeded invoice has no allocations")
-	}
+	require.NotEmpty(t, allocations, "the seeded invoice is paid by a seeded allocation: %s", string(body))
 	for _, raw := range allocations {
 		allocation, ok := raw.(map[string]any)
 		require.True(t, ok)
@@ -598,9 +590,7 @@ func assertAllocationAmountsCarryTheirUnit(t *testing.T, path, objectType string
 	requireStatus(t, 200, status, body)
 
 	allocations := jsonListData(parseJSON(body), "allocations")
-	if len(allocations) == 0 {
-		t.Skipf("%s has no allocations", path)
-	}
+	require.NotEmpty(t, allocations, "%s is seeded with allocations: %s", path, string(body))
 	for _, raw := range allocations {
 		allocation, ok := raw.(map[string]any)
 		require.True(t, ok)
@@ -654,9 +644,7 @@ func TestProductionSteps_ConsumedItemExpandsFullyHydrated(t *testing.T) {
 	requireStatus(t, 200, status, body)
 
 	consumptions := jsonListData(parseJSON(body), "consumptions")
-	if len(consumptions) == 0 {
-		t.Skip("the seeded production step consumes nothing")
-	}
+	require.NotEmpty(t, consumptions, "the seeded production step consumes two yarns: %s", string(body))
 	for _, raw := range consumptions {
 		consumption, ok := raw.(map[string]any)
 		require.True(t, ok)
@@ -805,9 +793,7 @@ func TestInvoices_AllocationTransactionExpandsFullyHydrated(t *testing.T) {
 	requireStatus(t, 200, status, body)
 
 	allocations := jsonListData(parseJSON(body), "allocations")
-	if len(allocations) == 0 {
-		t.Skip("the seeded invoice has no allocations")
-	}
+	require.NotEmpty(t, allocations, "the seeded invoice is paid by a seeded allocation: %s", string(body))
 	for _, raw := range allocations {
 		allocation, ok := raw.(map[string]any)
 		require.True(t, ok)

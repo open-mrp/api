@@ -843,7 +843,7 @@ func TestRequestLogs_ListFilterByErrorCodeExcludesNonMatching(t *testing.T) {
 	require.Equal(t, 404, resp.StatusCode,
 		"GET non-existent customer should 404 so the gateway records error_code=%s on the request log", wantErrorCode)
 
-	eventually(t, e2eAsyncWaitTimeout, e2eAsyncPollInterval, func() error {
+	eventually(t, e2eRequestLogWaitTimeout, e2eRequestLogPollInterval, func() error {
 		list, _, err := apiClient.GetList(requestLogsPath, url.Values{
 			"error_codes":  {wantErrorCode},
 			"methods":      {"GET"},
@@ -989,7 +989,7 @@ func TestRequestLogs_CapturesPayloads(t *testing.T) {
 	t.Cleanup(func() { apiClient.Delete(itemCategoriesPath + "/" + createdID) })
 
 	var logID string
-	eventually(t, e2eAsyncWaitTimeout, e2eAsyncPollInterval, func() error {
+	eventually(t, e2eRequestLogWaitTimeout, e2eRequestLogPollInterval, func() error {
 		list, _, err := apiClient.GetList(requestLogsPath, url.Values{
 			"idempotency_key": {idemKey},
 			"limit":           {"1"},

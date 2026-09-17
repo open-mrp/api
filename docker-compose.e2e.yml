@@ -80,8 +80,13 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    # Published on 5433 (5432 is the local dev Postgres) so host-side e2e tests
+    # can put agent-service fixtures back to their seeded state before using them.
+    ports:
+      - "5433:5432"
     networks:
       - e2e
+      - edge
 
   rabbitmq:
     image: rabbitmq:3-management
@@ -354,10 +359,11 @@ networks:
     driver: bridge
     internal: true
   # Minimal non-internal bridge used ONLY to publish host-facing ports for the
-  # two containers the e2e test runner connects to from the host (mysql-e2e:3307
-  # and api-gateway:8082). These two retain outbound connectivity as a side
-  # effect of port publishing, but neither makes external integration calls
-  # (mysql is passive; the gateway only routes to internal services). Do not
+  # containers the e2e test runner connects to from the host (mysql-e2e:3307,
+  # postgres-e2e:5433, and api-gateway:8082). These retain outbound connectivity
+  # as a side effect of port publishing, but none makes external integration
+  # calls (the databases are passive; the gateway only routes to internal
+  # services). Do not
   # attach billing/notification/agent/etc. here — they must stay fully isolated.
   edge:
     driver: bridge

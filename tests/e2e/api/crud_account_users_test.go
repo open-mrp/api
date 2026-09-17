@@ -92,9 +92,7 @@ func TestAccountUsers_UserIDFiltersRequestLogs(t *testing.T) {
 
 func TestAccountUsers_ListPagination(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(accountUsersPath, url.Values{"limit": {"1"}})
-	require.NoError(t, err)
-	requirePageLen(t, list.Data, 1)
+	assertListPageLen(t, accountUsersPath, url.Values{"limit": {"1"}}, 1)
 }
 
 func TestAccountUsers_ListFilterByRoleType(t *testing.T) {

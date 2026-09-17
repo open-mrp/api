@@ -144,6 +144,7 @@ func TestStripeIntegration_StatusIsReported(t *testing.T) {
 // is what lets the dashboard offer the connect flow instead of rendering a broken checkout.
 func TestStripeIntegration_PublishableKeyAbsentUntilConnected(t *testing.T) {
 	t.Parallel()
+	lockStripeUnconnected(t)
 
 	status, body, err := apiClient.GetListRaw(stripeIntPath+"/publishable-key", nil)
 	require.NoError(t, err)
@@ -211,6 +212,7 @@ func TestStripeWebhook_RejectsAMalformedPayload(t *testing.T) {
 // connected Stripe has no secret to verify against, so there is nothing to accept.
 func TestStripeAccountWebhook_UnconnectedAccountIsRefused(t *testing.T) {
 	t.Parallel()
+	lockStripeUnconnected(t)
 
 	status, body, err := apiClient.PostSigned(stripeWebhookPath+"/accounts/"+SeedAccountID, StubStripeSignature,
 		[]byte(`{"id":"evt_e2e_acct","type":"payment_intent.succeeded","data":{"object":{"id":"pi_e2e"}}}`))
@@ -319,6 +321,7 @@ func TestHubspotSync_RecordsFilterByType(t *testing.T) {
 
 func TestHubspotSync_CancelStopsAnInFlightJob(t *testing.T) {
 	t.Parallel()
+	resetHubspotJob(t, SeedHubspotCancelJobID)
 
 	status, body, err := apiClient.Post(hubspotSyncPath+"/"+SeedHubspotCancelJobID+"/actions/cancel", nil, newIdempotencyKey())
 	require.NoError(t, err)

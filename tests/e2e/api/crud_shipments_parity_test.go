@@ -129,18 +129,10 @@ func TestShipmentsParity_ListAndDetailAgreeOnTheSameShipment(t *testing.T) {
 	for _, inc := range shipmentPageIncludes {
 		params.Add("include", inc)
 	}
-	status, body, err := apiClient.GetListRaw(shipmentsPath, params)
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-
-	var row map[string]any
-	for _, r := range parseJSON(body)["data"].([]any) {
-		if jsonField(r.(map[string]any), "id") == SeedShipmentID {
-			row = r.(map[string]any)
-			break
-		}
-	}
-	require.NotNil(t, row, "seed shipment must appear in the unfiltered list")
+	// Earlier runs' shipments sort ahead of the seeded one, so page until it turns up.
+	raw := listFindByField(t, shipmentsPath, params, "id", SeedShipmentID)
+	require.NotNil(t, raw, "seed shipment must appear in the unfiltered list")
+	row := parseJSON(raw)
 
 	detail := readShipment(t, SeedShipmentID, shipmentPageIncludes...)
 	for _, field := range []string{

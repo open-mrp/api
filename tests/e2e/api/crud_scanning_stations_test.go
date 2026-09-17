@@ -160,9 +160,7 @@ func TestScanningStations_List(t *testing.T) {
 
 func TestScanningStations_ListWithLimit(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(scanningStationsPath, url.Values{"limit": {"1"}})
-	require.NoError(t, err)
-	assert.Len(t, list.Data, 1)
+	assertListPageLen(t, scanningStationsPath, url.Values{"limit": {"1"}}, 1)
 }
 
 func TestScanningStations_ListPagination(t *testing.T) {

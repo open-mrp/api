@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -49,6 +50,23 @@ import (
 // row (confirmed live: a 400-rejected PUT does not mutate the stored row).
 
 const covSettingsIntegrationsPath = "/v1/settings/integrations"
+
+// stripeConnectionMu guards the main account's Stripe connection. The tests that connect Stripe
+// hold the write side; tests asserting the account is unconnected hold the read side, or they
+// would see this file's credentials mid-flight.
+var stripeConnectionMu sync.RWMutex
+
+func lockStripeConnected(t *testing.T) {
+	t.Helper()
+	stripeConnectionMu.Lock()
+	t.Cleanup(stripeConnectionMu.Unlock)
+}
+
+func lockStripeUnconnected(t *testing.T) {
+	t.Helper()
+	stripeConnectionMu.RLock()
+	t.Cleanup(stripeConnectionMu.RUnlock)
+}
 
 // covSettingsIntegrationsHubspotCredentials returns a valid hubspot credentials JSON string.
 func covSettingsIntegrationsHubspotCredentials(suffix string) string {
@@ -180,6 +198,7 @@ func TestCovSettingsIntegrations_CRUD(t *testing.T) {
 
 func TestCovSettingsIntegrations_CreateAndUpdateAllFields(t *testing.T) {
 	t.Parallel()
+	lockStripeConnected(t)
 
 	name := uniqueName("e2e-covsi-allf")
 	status, body, err := apiClient.Post(covSettingsIntegrationsPath, map[string]any{

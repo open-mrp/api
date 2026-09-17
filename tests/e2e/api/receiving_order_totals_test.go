@@ -3,6 +3,7 @@
 package api_test
 
 import (
+	"encoding/json"
 	"net/url"
 	"strconv"
 	"testing"
@@ -246,43 +247,49 @@ func TestReceivingOrders_TotalsSurviveBackwardPagination(t *testing.T) {
 
 	_, receivingOrderID := issuedPurchaseOrderReceiving(t)
 
-	forward, forwardBody := listReceivingOrdersPage(t, url.Values{
-		"limit":   {"25"},
-		"include": {"totals"},
-	})
-	forwardOrder := findReceivingOrder(forward, receivingOrderID)
-	require.NotNil(t, forwardOrder,
-		"the order just issued is on the newest page: %s", string(forwardBody))
+	// One order per page, so the seeded orders (older than this one) always leave a page after it
+	// to walk back from, however many orders the rest of the suite creates.
+	var forwardOrder map[string]any
+	var forwardInfo PageInfo
+	var forwardBody []byte
+	status, forwardBody, err := apiClient.GetListRaw(receivingOrdersPath, url.Values{"limit": {"1"}, "include": {"totals"}})
+	for range 200 {
+		require.NoError(t, err)
+		requireStatus(t, 200, status, forwardBody)
+		forwardInfo = receivingOrdersPageInfo(t, forwardBody)
+		if forwardOrder = findReceivingOrder(jsonArray(parseJSON(forwardBody), "data"), receivingOrderID); forwardOrder != nil {
+			break
+		}
+		require.True(t, forwardInfo.HasNextPage, "the order just issued is on some page: %s", string(forwardBody))
+		status, forwardBody, err = apiClient.GetListRawFromPageURL(forwardInfo.NextPageURL)
+	}
+	require.NotNil(t, forwardOrder, "the order just issued is within the first 200 orders")
 	require.NotNil(t, forwardOrder["totals"],
 		"an order with a line has totals when they are asked for: %s", string(forwardBody))
+	require.True(t, forwardInfo.HasNextPage, "the seeded orders are older, so a page follows this one: %s", string(forwardBody))
 
-	pageInfo := jsonObject(parseJSON(forwardBody), "page_info")
-	require.NotNil(t, pageInfo, "a list response carries page info: %s", string(forwardBody))
-	if jsonField(pageInfo, "next_cursor") == "" {
-		t.Skip("only one page of receiving orders; there is no cursor to walk back from")
-	}
+	status, secondBody, err := apiClient.GetListRawFromPageURL(forwardInfo.NextPageURL)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, secondBody)
+	secondInfo := receivingOrdersPageInfo(t, secondBody)
+	require.True(t, secondInfo.HasPrevPage, "the next page can be walked back from: %s", string(secondBody))
 
-	_, secondBody := listReceivingOrdersPage(t, url.Values{
-		"limit":          {"25"},
-		"include":        {"totals"},
-		"starting_after": {jsonField(pageInfo, "next_cursor")},
-	})
-	secondPageInfo := jsonObject(parseJSON(secondBody), "page_info")
-	require.NotNil(t, secondPageInfo)
-	backCursor := jsonField(secondPageInfo, "previous_cursor")
-	require.NotEmpty(t, backCursor, "the second page can be walked back from: %s", string(secondBody))
-
-	backward, backwardBody := listReceivingOrdersPage(t, url.Values{
-		"limit":         {"25"},
-		"include":       {"totals"},
-		"ending_before": {backCursor},
-	})
-	backwardOrder := findReceivingOrder(backward, receivingOrderID)
+	status, backwardBody, err := apiClient.GetListRawFromPageURL(secondInfo.PreviousPageURL)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, backwardBody)
+	backwardOrder := findReceivingOrder(jsonArray(parseJSON(backwardBody), "data"), receivingOrderID)
 	require.NotNil(t, backwardOrder,
 		"walking back returns the page the order is on: %s", string(backwardBody))
 
 	assert.Equal(t, forwardOrder["totals"], backwardOrder["totals"],
 		"the same order reports the same totals whichever direction it was paged: %s", string(backwardBody))
+}
+
+func receivingOrdersPageInfo(t *testing.T, body []byte) PageInfo {
+	t.Helper()
+	var list ListResponse
+	require.NoError(t, json.Unmarshal(body, &list), "a list response: %s", string(body))
+	return list.PageInfo
 }
 
 // findReceivingOrder picks one order out of a page by id, or nil when the page does not hold it.
@@ -294,14 +301,4 @@ func findReceivingOrder(page []any, receivingOrderID string) map[string]any {
 		}
 	}
 	return nil
-}
-
-func listReceivingOrdersPage(t *testing.T, query url.Values) ([]any, []byte) {
-	t.Helper()
-
-	status, body, err := apiClient.GetListRaw(receivingOrdersPath, query)
-	require.NoError(t, err)
-	require.Less(t, status, 500, "listing receiving orders must not 5xx: %s", string(body))
-	requireStatus(t, 200, status, body)
-	return jsonArray(parseJSON(body), "data"), body
 }

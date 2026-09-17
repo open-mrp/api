@@ -61,6 +61,7 @@ func TestMachineStatus_ShowsProgressOnReleasedWork(t *testing.T) {
 
 	schedule := ownedSchedule(t, uniqueName("e2e-machine-status"))
 	scheduleID := jsonField(schedule, "id")
+	ensureWeekZeroWork(t, scheduleID)
 
 	// Only a published version drives the floor; a draft regenerating underneath a wall display would make machines appear to change job on their own.
 	status, body, err := apiClient.Put(schedulePath(scheduleID)+"/actions/publish", map[string]any{})
@@ -68,9 +69,7 @@ func TestMachineStatus_ShowsProgressOnReleasedWork(t *testing.T) {
 	requireStatus(t, 200, status, body)
 
 	status, raw, result := releaseWeek(t, scheduleID, 0)
-	if status != 201 {
-		t.Skipf("week 0 is not releasable on this seed: %s", string(raw))
-	}
+	requireStatus(t, 201, status, raw)
 	releasedLines := jsonListData(result, "lines")
 	require.NotEmpty(t, releasedLines)
 
@@ -161,9 +160,7 @@ func TestMachineStatus_FiltersByDepartment(t *testing.T) {
 			break
 		}
 	}
-	if departmentID == "" {
-		t.Skip("no machine on this seed belongs to a department")
-	}
+	require.NotEmpty(t, departmentID, "every machine belongs to a department, so the status view must name it")
 
 	filtered := machineStatus(t, url.Values{"department_ids": {departmentID}})
 	require.NotEmpty(t, filtered)
@@ -180,15 +177,14 @@ func TestMachineStatus_ScanningAdvancesProgress(t *testing.T) {
 
 	schedule := ownedSchedule(t, uniqueName("e2e-scan-progress"))
 	scheduleID := jsonField(schedule, "id")
+	ensureWeekZeroWork(t, scheduleID)
 
 	status, body, err := apiClient.Put(schedulePath(scheduleID)+"/actions/publish", map[string]any{})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
 	status, raw, result := releaseWeek(t, scheduleID, 0)
-	if status != 201 {
-		t.Skipf("week 0 is not releasable on this seed: %s", string(raw))
-	}
+	requireStatus(t, 201, status, raw)
 	run := jsonObject(result, "production_run")
 	require.NotNil(t, run, "release must return its production run: %v", result)
 	runID := jsonField(run, "id")
@@ -211,9 +207,8 @@ func TestMachineStatus_ScanningAdvancesProgress(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	require.Less(t, resp.StatusCode, 500, "must not 5xx: %s", string(resp.Body))
-	if resp.StatusCode != 200 && resp.StatusCode != 201 {
-		t.Skipf("this batch cannot be scanned at the seeded station: %s", string(resp.Body))
-	}
+	require.Contains(t, []int{200, 201}, resp.StatusCode,
+		"a released batch initializes at the seeded station: %s", string(resp.Body))
 
 	after := lineProgressFor(t, scheduleID, 0)
 	assert.Equal(t, before.released, after.released, "scanning does not change what was issued")
@@ -221,6 +216,22 @@ func TestMachineStatus_ScanningAdvancesProgress(t *testing.T) {
 		"a scan must show up on the schedule without anyone editing the plan")
 	assert.Greater(t, after.scannedQuantity, before.scannedQuantity,
 		"the quantity made must move with the batch")
+}
+
+// ensureWeekZeroWork plants a campaign in week 0 when the solver left it empty, which it does once
+// earlier runs' releases already cover the demand. Only then: progress is credited by item, so a
+// second line for an item the solver already planned would count each scan twice.
+func ensureWeekZeroWork(t *testing.T, scheduleID string) {
+	t.Helper()
+
+	status, body, err := apiClient.GetListRaw(schedulePath(scheduleID)+"/lines", url.Values{"week_index": {"0"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	if len(jsonArray(parseJSON(body), "data")) > 0 {
+		return
+	}
+	// A knit item, because its batches start at the seeded knitting station.
+	addLine(t, scheduleID, map[string]any{"week_index": 0, "item_id": SeedGreigeItemID, "quantity": 360})
 }
 
 type weekProgress struct {

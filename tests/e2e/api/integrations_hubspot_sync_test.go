@@ -19,11 +19,10 @@ import (
 // only publish the preview/execute commands to an async worker, so the whole
 // area is testable without live HubSpot credentials.
 //
-// Resolving the single seeded review is destructive and `make e2e` reuses the
-// seeded DB across runs, so this suite is written to be re-run tolerant: it
-// derives expectations from the observed state rather than assuming the review
-// starts pending or the job starts in-flight. Read-only assertions run first,
-// then the (idempotent-outcome) link mutation, then execute.
+// Resolving the seeded review and executing the job are destructive, and
+// `make test-e2e` can run against a stack an earlier run already used, so the
+// test puts both rows back to their seeded state before it starts. Read-only
+// assertions run first, then the link mutation, then execute.
 
 const hubspotSyncPath = "/v1/settings/integrations/hubspot/sync"
 
@@ -61,9 +60,25 @@ func hubspotReviewByID(t *testing.T, c *Client, jobID, reviewID string, status s
 	return nil
 }
 
+// resetHubspotJob puts a seeded sync job back to review_pending, the in-flight state it is seeded in.
+func resetHubspotJob(t *testing.T, jobID string) {
+	t.Helper()
+	_, err := authDB(t).Exec(`UPDATE hubspot_sync_job SET status = 'review_pending', last_error = NULL, started_at = NULL, completed_at = NULL WHERE id = ?`, jobID)
+	require.NoError(t, err)
+}
+
+// resetHubspotSeed restores the seeded job to review_pending and its review to pending.
+func resetHubspotSeed(t *testing.T) {
+	t.Helper()
+	resetHubspotJob(t, SeedHubspotSyncJobID)
+	_, err := authDB(t).Exec(`UPDATE hubspot_company_review SET status = 'pending', resolution = NULL, resolved_hubspot_id = NULL WHERE id = ?`, SeedHubspotCompanyReviewID)
+	require.NoError(t, err)
+}
+
 func TestHubspotSync_ReadThenResolve(t *testing.T) {
 	// Sequential (no t.Parallel): the subtests share and mutate the single seeded
 	// review/job, so they must run in order.
+	resetHubspotSeed(t)
 
 	t.Run("get-current-returns-seed-job", func(t *testing.T) {
 		resp, err := apiClient.GetFull(hubspotSyncPath+"/current", nil)
@@ -131,9 +146,8 @@ func TestHubspotSync_ReadThenResolve(t *testing.T) {
 
 	t.Run("start-while-in-flight-conflicts", func(t *testing.T) {
 		job, _ := getHubspotJob(t, apiClient, SeedHubspotSyncJobID)
-		if !hubspotInFlightStatuses[jsonField(job, "status")] {
-			t.Skipf("seed job is %q (not in-flight on this run); skipping conflict assertion to avoid creating a second job", jsonField(job, "status"))
-		}
+		require.True(t, hubspotInFlightStatuses[jsonField(job, "status")],
+			"the seed job is reset to review_pending, got %q", jsonField(job, "status"))
 		status, body, err := apiClient.Post(hubspotSyncPath, map[string]any{}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 400, status, body)
@@ -141,10 +155,8 @@ func TestHubspotSync_ReadThenResolve(t *testing.T) {
 	})
 
 	t.Run("execute-with-pending-reviews-rejected", func(t *testing.T) {
-		// Only meaningful while a pending review still blocks the sync.
-		if hubspotReviewByID(t, apiClient, SeedHubspotSyncJobID, SeedHubspotCompanyReviewID, "pending") == nil {
-			t.Skip("no pending review on this run; covered by the resolve+execute subtests below")
-		}
+		require.NotNil(t, hubspotReviewByID(t, apiClient, SeedHubspotSyncJobID, SeedHubspotCompanyReviewID, "pending"),
+			"the seed review is reset to pending, so it blocks execute")
 		status, body, err := apiClient.Post(hubspotSyncPath+"/"+SeedHubspotSyncJobID+"/actions/execute", map[string]any{}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 400, status, body)

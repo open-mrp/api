@@ -98,11 +98,21 @@ func changeForField(changes []any, field string) (map[string]any, bool) {
 // given method, status code, and path appears (or the timeout expires).
 func expectRequestLog(t *testing.T, method, statusCode, path string) {
 	t.Helper()
-	eventually(t, e2eAsyncWaitTimeout, e2eAsyncPollInterval, func() error {
+	expectRequestLogOnRoute(t, method, statusCode, path, path)
+}
+
+// expectRequestLogOnRoute is expectRequestLog for a path with ids in it, which the log files under
+// its route template (route) rather than the path itself.
+func expectRequestLogOnRoute(t *testing.T, method, statusCode, route, path string) {
+	t.Helper()
+	eventually(t, e2eRequestLogWaitTimeout, e2eRequestLogPollInterval, func() error {
 		list, _, err := apiClient.GetList(requestLogsPath, url.Values{
 			"methods":      {method},
 			"status_codes": {statusCode},
-			"limit":        {"100"},
+			// Without the route filter the log is one of every POST 201 the parallel suite
+			// makes, and falls off the page before the poll sees it.
+			"normalized_routes": {route},
+			"limit":             {"100"},
 		})
 		if err != nil {
 			return err
@@ -640,7 +650,7 @@ func TestAttributes_RequestLogs(t *testing.T) {
 	id := jsonField(parseJSON(body), "id")
 	t.Cleanup(func() { apiClient.Delete(path + "/" + id) })
 
-	expectRequestLog(t, "POST", "201", path)
+	expectRequestLogOnRoute(t, "POST", "201", "/v1/catalog/properties/{property_id}/attributes", path)
 }
 
 // ── Carriers ───────────────────────────────────

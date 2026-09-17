@@ -269,9 +269,7 @@ func TestAPIKeys_ListFilterByStatusRevoked(t *testing.T) {
 
 func TestAPIKeys_ListPagination(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(apiKeysPath, url.Values{"limit": {"1"}})
-	require.NoError(t, err)
-	requirePageLen(t, list.Data, 1)
+	assertListPageLen(t, apiKeysPath, url.Values{"limit": {"1"}}, 1)
 }
 
 func TestAPIKeys_GetNotFound(t *testing.T) {

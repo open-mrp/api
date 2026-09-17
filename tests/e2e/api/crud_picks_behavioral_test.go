@@ -27,10 +27,6 @@ const (
 	// Ordered quantities on the two order lines behind those pick lines.
 	pbLine1Ordered = 10.0
 	pbLine2Ordered = 4.0
-
-	// Packing marks lines packed permanently, so it gets its own pick rather than poisoning the
-	// one the reversible tests share.
-	pbPackPickID = "pk_01seedpb2pick00000"
 )
 
 // Returns each pick line's current quantity, keyed by pick line id.
@@ -169,21 +165,34 @@ func TestPicks_Void_RejectedWhenOrderHasShipments(t *testing.T) {
 
 // --- item 9: pack ---------------------------------------------------------
 
-func TestPicks_Pack_CreatesShipmentAndSynthesizesRemainingLine(t *testing.T) {
-	// Pack the line only partially. Packing marks a line packed for good, so packing the full
-	// quantity would leave nothing to pack and make this test single-use; a partial pack also
-	// exercises the remaining-quantity line the flow synthesizes.
-	before := len(readPickLineQuantities(t, pbPackPickID))
+// packablePick issues a fresh order and returns its pick and the order's number. Packing marks
+// lines packed for good, so a shared pick would run out of work after a few runs.
+func packablePick(t *testing.T) (pickID, orderNumber string) {
+	t.Helper()
 
-	unpacked := firstUnpackedPickLine(t, pbPackPickID)
+	pickID = pickForOrderBody(t, orderBodyForQuantity(t, "5"))
+	pick := retrievePick(t, pickID, "related.sales_order")
+	orderNumber = jsonField(jsonObject(jsonObject(pick, "related"), "sales_order"), "number")
+	require.NotEmpty(t, orderNumber, "a pick names its order: %v", pick)
+	return pickID, orderNumber
+}
+
+func TestPicks_Pack_CreatesShipmentAndSynthesizesRemainingLine(t *testing.T) {
+	t.Parallel()
+
+	// Pack the line only partially, which exercises the remaining-quantity line the flow synthesizes.
+	pickID, orderNumber := packablePick(t)
+	before := len(readPickLineQuantities(t, pickID))
+
+	unpacked := firstUnpackedPickLine(t, pickID)
 	require.NotEmpty(t, unpacked, "the pack pick has an unpacked line to work with")
 
-	status, body, err := apiClient.Patch(picksPath+"/"+pbPackPickID+"/lines/"+unpacked,
+	status, body, err := apiClient.Patch(picksPath+"/"+pickID+"/lines/"+unpacked,
 		map[string]any{"quantity_value": "1"}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
-	job := acceptPackPick(t, pbPackPickID, 2)
+	job := acceptPackPick(t, pickID, 2)
 
 	results := jobResults(job)
 	require.Len(t, results, 1, "one pack, one result")
@@ -198,12 +207,12 @@ func TestPicks_Pack_CreatesShipmentAndSynthesizesRemainingLine(t *testing.T) {
 	assert.Equal(t, jsonField(readShipment(t, shipmentID), "number"), shipmentNumber,
 		"the name on the result is the shipment's own number")
 	// First shipment for an order takes the order number; later ones append a suffix.
-	assert.True(t, strings.HasPrefix(shipmentNumber, "ORD-PB-002"),
-		"shipment number derives from the order number, got %q", shipmentNumber)
+	assert.True(t, strings.HasPrefix(shipmentNumber, orderNumber),
+		"shipment number derives from the order number %q, got %q", orderNumber, shipmentNumber)
 
 	// Quantity is still outstanding, so the flow adds a fresh zero-quantity line for the rest
 	// rather than reopening the packed one.
-	assert.Greater(t, len(readPickLineQuantities(t, pbPackPickID)), before,
+	assert.Greater(t, len(readPickLineQuantities(t, pickID)), before,
 		"packing a partial quantity synthesizes a remaining-quantity line")
 }
 
@@ -276,15 +285,18 @@ func otherQuantityUnitID(t *testing.T, currentID string) string {
 // case then drops out of the shipping_cases expansion, which inner-joins the unit, while case_count
 // still counts it — so this asserts the units resolve AND that every counted case expands.
 func TestPicks_Pack_CreatesCasesWithResolvedUnits(t *testing.T) {
-	unpacked := firstUnpackedPickLine(t, pbPackPickID)
+	t.Parallel()
+
+	pickID, _ := packablePick(t)
+	unpacked := firstUnpackedPickLine(t, pickID)
 	require.NotEmpty(t, unpacked, "the pack pick has an unpacked line to work with")
 
-	status, body, err := apiClient.Patch(picksPath+"/"+pbPackPickID+"/lines/"+unpacked,
+	status, body, err := apiClient.Patch(picksPath+"/"+pickID+"/lines/"+unpacked,
 		map[string]any{"quantity_value": "1"}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
-	job := acceptPackPick(t, pbPackPickID, 2)
+	job := acceptPackPick(t, pickID, 2)
 
 	results := jobResults(job)
 	require.Len(t, results, 1)

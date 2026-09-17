@@ -15,7 +15,9 @@ import (
 // rather than the shared SHP-001/2/3 the include tests read.
 //
 // SHP-SB-001 is cased and weighed, so it is the only fixture that can actually ship. Ship and void
-// are inverses, so the tests that use it restore it; they are deliberately NOT parallel.
+// are inverses, so the tests that use it restore it; they are deliberately NOT parallel. Tests whose
+// effect cannot be undone (delete, shipping a whole order) build their own order instead, so the
+// suite can run again on the same stack.
 const (
 	sbShipmentID    = "sh_01seedsbship00000"
 	sbOrderID       = "or_01seedsborder00000"
@@ -26,10 +28,6 @@ const (
 	// Ordered on line 1, and how much of it SHP-SB-001 already ships.
 	sbLine1Ordered = 10.0
 	sbLine1Shipped = 6.0
-
-	// Delete cascades and cannot be undone, so it gets its own shipment.
-	sbDeleteShipmentID = "sh_01seedsb2ship0000"
-	sbDeletePickLineID = "pkln_01seedsb2_ln1_00"
 
 	// The unit the SB fixtures' quantities are denominated in.
 	sbQuantityUnitID = "un_01seedpair000000000"
@@ -281,75 +279,109 @@ func TestShipmentsBehavioral_LineCreateUpdateDeleteRoundTrip(t *testing.T) {
 	requireStatus(t, 400, status, body)
 }
 
+// packedOrder issues an order from body, picks all of it, packs it into one shipment, and returns
+// the order, pick, and shipment ids.
+func packedOrder(t *testing.T, body map[string]any) (orderID, pickID, shipmentID string) {
+	t.Helper()
+
+	pickID = pickForOrderBody(t, body)
+	pickAllLines(t, pickID)
+	packPick(t, pickID)
+
+	pick := retrievePick(t, pickID, "related.sales_order", "related.shipments")
+	related := jsonObject(pick, "related")
+	orderID = jsonField(jsonObject(related, "sales_order"), "id")
+	require.NotEmpty(t, orderID, "a pick names its order: %v", pick)
+	shipments := jsonArray(jsonObject(related, "shipments"), "data")
+	require.Len(t, shipments, 1, "packing the whole pick makes one shipment: %v", pick)
+	shipmentID = jsonField(shipments[0].(map[string]any), "id")
+	require.NotEmpty(t, shipmentID)
+	return orderID, pickID, shipmentID
+}
+
+// orderBodyForQuantity is a single-line order for the seed product at the given quantity.
+func orderBodyForQuantity(t *testing.T, quantity string) map[string]any {
+	t.Helper()
+	body := minimalSalesOrderCreateBody(t, SeedCustomerAccountID)
+	body["lines"] = []map[string]any{{
+		"product_id": SeedProductID,
+		"quantity":   map[string]any{"value": quantity, "unit_id": SeedUnitID},
+	}}
+	return body
+}
+
 func TestShipmentsBehavioral_DeleteCascadesAndUnpacksPick(t *testing.T) {
-	// Destructive and unrepeatable, so it owns SHP-SB-002.
-	before := readShipment(t, sbDeleteShipmentID, "lines", "shipping_cases")
+	t.Parallel()
+
+	_, pickID, shipmentID := packedOrder(t, orderBodyForQuantity(t, "5"))
+	before := readShipment(t, shipmentID, "lines", "shipping_cases")
 	require.NotEmpty(t, before["lines"].(map[string]any)["data"])
 	require.NotEmpty(t, before["shipping_cases"].(map[string]any)["data"])
 
-	status, body, err := apiClient.Delete(shipmentsPath + "/" + sbDeleteShipmentID)
+	status, body, err := apiClient.Delete(shipmentsPath + "/" + shipmentID)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
-	status, body, err = apiClient.GetListRaw(shipmentsPath+"/"+sbDeleteShipmentID, nil)
+	status, body, err = apiClient.GetListRaw(shipmentsPath+"/"+shipmentID, nil)
 	require.NoError(t, err)
 	requireStatus(t, 404, status, body)
 
 	// Deleting a shipment unpacks the pick it was packed from, so the goods can be re-packed.
-	status, body, err = apiClient.GetListRaw(picksPath+"/"+"pk_01seedsb2pick00000", url.Values{"include": {"lines"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-	lines := parseJSON(body)["lines"].(map[string]any)["data"].([]any)
+	lines := pickLines(t, pickID)
 	require.Len(t, lines, 1)
-	assert.Nil(t, lines[0].(map[string]any)["packed_at"], "delete must clear the pick line's packed stamp")
+	line := lines[0].(map[string]any)
+	assert.Nil(t, line["packed_at"], "delete must clear the pick line's packed stamp")
 
 	// The whole order line comes back, not just the packed stamp: the goods are unshipped again.
-	assert.InDelta(t, 5.0, readPickLineQuantities(t, "pk_01seedsb2pick00000")[sbDeletePickLineID], 0.001,
+	assert.InDelta(t, 5.0, readPickLineQuantities(t, pickID)[jsonField(line, "id")], 0.001,
 		"delete must restore the pick line to the order line's full unshipped quantity")
 }
 
 // Proves a deleted partial shipment folds its backorder line into the reopened one, rather than
-// leaving both behind to double-count the outstanding goods. SHP-SB-004 packs 6 of 10.
+// leaving both behind to double-count the outstanding goods. The shipment packs 6 of 10.
 func TestShipmentsBehavioral_DeleteFoldsBackorderLineIntoTheReopenedOne(t *testing.T) {
-	// Destructive and unrepeatable, so it owns SHP-SB-004.
-	const (
-		sb4ShipmentID  = "sh_01seedsb4ship0000"
-		sb4PickID      = "pk_01seedsb4pick00000"
-		sb4PackedLine  = "pkln_01seedsb4_ln1_00"
-		sb4BackorderLn = "pkln_01seedsb4_ln2_00"
-	)
+	t.Parallel()
 
-	before := readPickLineQuantities(t, sb4PickID)
-	require.Len(t, before, 2, "fixture must start with a packed line and a backorder line")
-	require.InDelta(t, 6.0, before[sb4PackedLine], 0.001)
-	require.InDelta(t, 4.0, before[sb4BackorderLn], 0.001)
+	pickID := pickForOrderBody(t, orderBodyForQuantity(t, "10"))
+	pickAllLines(t, pickID)
+	packedLine := firstUnpackedPickLine(t, pickID)
+	require.NotEmpty(t, packedLine)
+	number := packPartOfPick(t, pickID, "6")
 
-	status, body, err := apiClient.Delete(shipmentsPath + "/" + sb4ShipmentID)
+	before := readPickLineQuantities(t, pickID)
+	require.Len(t, before, 2, "a partial pack leaves the packed line and a backorder line")
+	require.InDelta(t, 6.0, before[packedLine], 0.001)
+	var backorderLine string
+	for id, quantity := range before {
+		if id != packedLine {
+			backorderLine = id
+			require.InDelta(t, 0.0, quantity, 0.001, "the backorder line has nothing picked for it yet")
+		}
+	}
+
+	status, body, err := apiClient.GetListRaw(shipmentsPath, url.Values{"q": {number}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	found := jsonArray(parseJSON(body), "data")
+	require.Len(t, found, 1, "the packed shipment is findable by its number: %s", string(body))
+	shipmentID := jsonField(found[0].(map[string]any), "id")
+
+	status, body, err = apiClient.Delete(shipmentsPath + "/" + shipmentID)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
-	after := readPickLineQuantities(t, sb4PickID)
+	after := readPickLineQuantities(t, pickID)
 	require.Len(t, after, 1, "the backorder line must be deleted, leaving one open line per order line")
-	assert.NotContains(t, after, sb4BackorderLn, "the backorder line is the one that goes")
-	assert.InDelta(t, 10.0, after[sb4PackedLine], 0.001,
+	assert.NotContains(t, after, backorderLine, "the backorder line is the one that goes")
+	assert.InDelta(t, 10.0, after[packedLine], 0.001,
 		"the reopened line absorbs the backorder quantity, restoring the full ordered 10")
 
-	status, body, err = apiClient.GetListRaw(picksPath+"/"+sb4PickID, url.Values{"include": {"lines"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-	remaining := parseJSON(body)["lines"].(map[string]any)["data"].([]any)
+	remaining := pickLines(t, pickID)
 	require.Len(t, remaining, 1)
 	assert.Nil(t, remaining[0].(map[string]any)["packed_at"], "the surviving line must be open again")
 }
 
 // --- invoice-on-ship (item 1) ---
-
-const (
-	// SHP-SB-003 ships its order in full (one sale line ordered 5, shipped 5) plus a freight line,
-	// so shipping it creates the invoice AND marks the order fulfilled.
-	sbFullShipmentID = "sh_01seedsb3ship0000"
-	sbFullOrderID    = "or_01seedsb3order0000"
-)
 
 // Reads the sales order's status straight from the API.
 func readOrderStatus(t *testing.T, orderID string) string {
@@ -379,24 +411,32 @@ func TestShipmentsBehavioral_ShipCreatesInvoiceForShippedGoods(t *testing.T) {
 }
 
 func TestShipmentsBehavioral_ShippingWholeOrderFulfillsBillsFreightAndEmails(t *testing.T) {
-	// Not restored: this fixture is single-use (shipping it fulfills the order). Runs alone.
-	require.Equal(t, "issued", readOrderStatus(t, sbFullOrderID), "fixture must start issued")
+	t.Parallel()
 
-	status, body, err := apiClient.Post(shipmentsPath+"/"+sbFullShipmentID+"/actions/ship",
+	// One sale line shipped in full, plus the freight line every order is created with, so shipping
+	// creates the invoice AND fulfills the order. The invoice contact and sales rep are who the
+	// invoice is emailed to.
+	body := orderBodyForQuantity(t, "5")
+	body["invoice_email_contacts"] = []map[string]any{{"account_user_id": SeedCustomerAccountUserID}}
+	body["sales_rep_id"] = SeedAccountUserID
+	orderID, _, shipmentID := packedOrder(t, body)
+	require.Equal(t, "issued", readOrderStatus(t, orderID), "a packed order has not shipped yet")
+
+	status, respBody, err := apiClient.Post(shipmentsPath+"/"+shipmentID+"/actions/ship",
 		map[string]any{"email_customer": true}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
+	requireStatus(t, 200, status, respBody)
 
-	shipment := readShipment(t, sbFullShipmentID, "related.invoice")
+	shipment := readShipment(t, shipmentID, "related.invoice")
 	linked := jsonObject(jsonObject(shipment, "related"), "invoice")
 	require.NotNil(t, linked)
 	invoiceID := jsonField(linked, "id")
 
 	// The invoice bills the shipped sale line AND the non-shipping freight line.
-	status, body, err = apiClient.GetListRaw(invoicesPath+"/"+invoiceID, url.Values{"include": {"lines"}})
+	status, respBody, err = apiClient.GetListRaw(invoicesPath+"/"+invoiceID, url.Values{"include": {"lines"}})
 	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-	invoice := parseJSON(body)
+	requireStatus(t, 200, status, respBody)
+	invoice := parseJSON(respBody)
 	lines := invoice["lines"].(map[string]any)["data"].([]any)
 	assert.Len(t, lines, 2, "invoice must bill the shipped good plus the non-shipping freight line")
 
@@ -404,7 +444,7 @@ func TestShipmentsBehavioral_ShippingWholeOrderFulfillsBillsFreightAndEmails(t *
 	assert.Equal(t, true, invoice["has_been_sent"], "email_customer must email the invoice")
 
 	// Every sale line is now invoiced, so the order is fulfilled.
-	assert.Equal(t, "fulfilled", readOrderStatus(t, sbFullOrderID),
+	assert.Equal(t, "fulfilled", readOrderStatus(t, orderID),
 		"shipping the whole order must mark it fulfilled")
 }
 

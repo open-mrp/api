@@ -748,6 +748,38 @@ func decodeCursor(cursor *string) (*time.Time, *string, *apierror.APIError) {
 	return &createdAt, &parts[1], nil
 }
 
+// conversationCursorNullTail stands in for the timestamp of a conversation with no messages, which
+// sorts after every conversation that has one.
+const conversationCursorNullTail = "none"
+
+type conversationCursor struct {
+	lastMessageAt *time.Time
+	id            *string
+	inNullTail    bool
+}
+
+func encodeConversationCursor(last *domain.Conversation) string {
+	if last.LastMessageAt == nil {
+		return base64.RawURLEncoding.EncodeToString([]byte(conversationCursorNullTail + "|" + last.ID))
+	}
+	return encodeCursor(*last.LastMessageAt, last.ID)
+}
+
+func decodeConversationCursor(cursor *string) (conversationCursor, *apierror.APIError) {
+	if cursor != nil && *cursor != "" {
+		if raw, err := base64.RawURLEncoding.DecodeString(*cursor); err == nil {
+			if id, ok := strings.CutPrefix(string(raw), conversationCursorNullTail+"|"); ok && id != "" {
+				return conversationCursor{id: &id, inNullTail: true}, nil
+			}
+		}
+	}
+	at, id, apiErr := decodeCursor(cursor)
+	if apiErr != nil {
+		return conversationCursor{}, apiErr
+	}
+	return conversationCursor{lastMessageAt: at, id: id}, nil
+}
+
 func strPtrIfNotEmpty(s string) *string {
 	if s == "" {
 		return nil

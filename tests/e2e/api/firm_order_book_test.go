@@ -20,8 +20,8 @@ import (
 // real plan is built from. Solves take the read side of planningMu so a settings
 // write elsewhere cannot move the plan mid-test.
 
-// previewPlan runs a solve and returns the parsed preview, skipping when the
-// environment has no constraint department configured to plan against.
+// previewPlan runs a solve and returns the parsed preview. The e2e seed configures a
+// constraint department, so a refusal to plan is a failure.
 func previewPlan(t *testing.T) map[string]any {
 	t.Helper()
 	defer lockPlanningRead()()
@@ -29,9 +29,6 @@ func previewPlan(t *testing.T) map[string]any {
 	status, body, err := apiClient.Put(productionSchedulePreviewPath, map[string]any{})
 	require.NoError(t, err)
 	require.Less(t, status, 500, "preview must not 5xx: %s", string(body))
-	if status == 400 {
-		t.Skip("no constraint department configured in this environment")
-	}
 	requireStatus(t, 200, status, body)
 	return parseJSON(body)
 }
@@ -227,11 +224,8 @@ func TestFirmOrderBook_AnImpossibleCommitmentIsReportedAtRisk(t *testing.T) {
 		}
 	}
 
-	if !found {
-		// The seeded product may not descend from any constraint item, in which case
-		// nothing in the plan produces it and it correctly cannot be at risk.
-		t.Skipf("order %s is not produced by the constraint department in this environment", orderNumber)
-	}
+	// The seeded product descends from a knit item, so the constraint department produces it.
+	assert.True(t, found, "order %s is due inside the lead time and must be reported at risk", orderNumber)
 }
 
 // firmOrderProbeUnits is far larger than the seeded order book (~415 units at the

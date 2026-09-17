@@ -269,13 +269,23 @@ func TestCovMessagingContacts_QueryTooLong(t *testing.T) {
 func TestCovMessagingContacts_CursorAcceptedButInert(t *testing.T) {
 	t.Parallel()
 
-	baseline, status, err := apiClient.GetList(covMessagingContactsPath, nil)
-	require.NoError(t, err)
-	require.Equal(t, 200, status)
+	// Parallel tests add and remove account users between the two reads, so a differing pair is
+	// retried; a cursor that really changes the result differs on every attempt.
+	var baseline, withCursor *ListResponse
+	for attempt := 0; attempt < 3; attempt++ {
+		var status int
+		var err error
+		baseline, status, err = apiClient.GetList(covMessagingContactsPath, nil)
+		require.NoError(t, err)
+		require.Equal(t, 200, status)
 
-	withCursor, status, err := apiClient.GetList(covMessagingContactsPath, url.Values{"cursor": {"totally-arbitrary-opaque-value"}})
-	require.NoError(t, err)
-	require.Equal(t, 200, status)
+		withCursor, status, err = apiClient.GetList(covMessagingContactsPath, url.Values{"cursor": {"totally-arbitrary-opaque-value"}})
+		require.NoError(t, err)
+		require.Equal(t, 200, status)
+		if len(baseline.Data) == len(withCursor.Data) {
+			break
+		}
+	}
 
 	require.Equal(t, len(baseline.Data), len(withCursor.Data), "an arbitrary cursor must not change the result set")
 	for i := range baseline.Data {

@@ -98,9 +98,7 @@ func TestLocations_ListResponseShape(t *testing.T) {
 
 func TestLocations_ListPagination(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(locationsPath, url.Values{"limit": {"1"}})
-	require.NoError(t, err)
-	assert.Len(t, list.Data, 1)
+	assertListPageLen(t, locationsPath, url.Values{"limit": {"1"}}, 1)
 }
 
 func TestLocations_ListCursorPagination(t *testing.T) {

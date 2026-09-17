@@ -140,9 +140,6 @@ func TestFulfillmentPolicy_MakeToOrderPolicyHoldsNoBuffer(t *testing.T) {
 	status, body, err := apiClient.Put(productionSchedulePreviewPath, map[string]any{})
 	require.NoError(t, err)
 	require.Less(t, status, 500, "preview must not 5xx: %s", string(body))
-	if status == 400 {
-		t.Skip("no constraint department configured in this environment")
-	}
 	requireStatus(t, 200, status, body)
 
 	policies, ok := parseJSON(body)["policies"].(map[string]any)

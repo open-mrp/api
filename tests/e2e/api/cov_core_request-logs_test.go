@@ -105,7 +105,7 @@ func TestCovCoreRequestLogs_GetResponseShape_RealID(t *testing.T) {
 	t.Cleanup(func() { apiClient.Delete(itemCategoriesPath + "/" + createdID) })
 
 	var logID string
-	eventually(t, e2eAsyncWaitTimeout, e2eAsyncPollInterval, func() error {
+	eventually(t, e2eRequestLogWaitTimeout, e2eRequestLogPollInterval, func() error {
 		list, _, err := apiClient.GetList(requestLogsPath, url.Values{
 			"idempotency_key": {idemKey},
 			"limit":           {"1"},

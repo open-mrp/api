@@ -770,10 +770,16 @@ WHERE c.account_id = ?
     OR ? = 'hidden' AND p.hidden_at IS NOT NULL
   )
   AND (? IS NULL OR c.type = ?)
+  -- Conversations with no messages have no last_message_at and sort after every other row, so a
+  -- cursor taken in that tail pages them by id alone.
   AND (
     ? IS NULL
-    OR c.last_message_at < ?
-    OR (c.last_message_at = ? AND c.id < ?)
+    OR (? = FALSE AND (
+      c.last_message_at < ?
+      OR (c.last_message_at = ? AND c.id < ?)
+      OR c.last_message_at IS NULL
+    ))
+    OR (? = TRUE AND c.last_message_at IS NULL AND c.id < ?)
   )
 ORDER BY c.last_message_at DESC, c.id DESC
 LIMIT ?
@@ -784,8 +790,9 @@ type ListConversationsForUserParams struct {
 	AccountID           string
 	Status              interface{}
 	Type                sql.NullString
-	CursorLastMessageAt sql.NullTime
 	CursorID            sql.NullString
+	CursorInNullTail    interface{}
+	CursorLastMessageAt sql.NullTime
 	Limit               int32
 }
 
@@ -838,9 +845,12 @@ func (q *Queries) ListConversationsForUser(ctx context.Context, arg ListConversa
 		arg.Status,
 		arg.Type,
 		arg.Type,
+		arg.CursorID,
+		arg.CursorInNullTail,
 		arg.CursorLastMessageAt,
 		arg.CursorLastMessageAt,
-		arg.CursorLastMessageAt,
+		arg.CursorID,
+		arg.CursorInNullTail,
 		arg.CursorID,
 		arg.Limit,
 	)
@@ -953,10 +963,15 @@ WHERE account_id = ?
   AND (? = FALSE OR workflow_status <> 'resolved')
   AND (? IS NULL OR assignee_resource_id = ?)
   AND (? IS NULL OR assignee_resource_id IS NULL)
+  -- A case with no messages sorts last; see ListConversationsForUser for the null-tail cursor.
   AND (
     ? IS NULL
-    OR last_message_at < ?
-    OR (last_message_at = ? AND id < ?)
+    OR (? = FALSE AND (
+      last_message_at < ?
+      OR (last_message_at = ? AND id < ?)
+      OR last_message_at IS NULL
+    ))
+    OR (? = TRUE AND last_message_at IS NULL AND id < ?)
   )
 ORDER BY last_message_at DESC, id DESC
 LIMIT ?
@@ -969,8 +984,9 @@ type ListSupportInboxParams struct {
 	HideResolved        interface{}
 	AssigneeResourceID  sql.NullString
 	Unassigned          interface{}
-	CursorLastMessageAt sql.NullTime
 	CursorID            sql.NullString
+	CursorInNullTail    interface{}
+	CursorLastMessageAt sql.NullTime
 	Limit               int32
 }
 
@@ -987,9 +1003,12 @@ func (q *Queries) ListSupportInbox(ctx context.Context, arg ListSupportInboxPara
 		arg.AssigneeResourceID,
 		arg.AssigneeResourceID,
 		arg.Unassigned,
+		arg.CursorID,
+		arg.CursorInNullTail,
 		arg.CursorLastMessageAt,
 		arg.CursorLastMessageAt,
-		arg.CursorLastMessageAt,
+		arg.CursorID,
+		arg.CursorInNullTail,
 		arg.CursorID,
 		arg.Limit,
 	)

@@ -1658,8 +1658,8 @@ INSERT IGNORE INTO pick_line (id, pick_id, quantity_id, sales_order_line_id, cre
 -- SHIPPING BEHAVIOURAL FIXTURES (crud_shipments_behavioral_test.go)
 -- Three dedicated shipments on their own orders. SHP-SB-001 is cased and weighed so it is
 -- is_ready_to_ship, and ship/void return it to packed — the reversible tests share it.
--- SHP-SB-002 exists only for delete, which cascades and cannot be undone.
--- SHP-SB-003 ships its order in full, so shipping it creates the invoice and marks it fulfilled.
+-- SHP-SB-002/003/004 were single-use fixtures for delete and full-order shipping; those tests now
+-- build their own orders so the suite can rerun, and these rows remain only as list/include data.
 -- ============================================================
 
 INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES

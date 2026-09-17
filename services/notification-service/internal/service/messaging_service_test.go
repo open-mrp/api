@@ -119,6 +119,49 @@ func TestCursor_Malformed(t *testing.T) {
 	}
 }
 
+// A conversation with no messages has no timestamp to page from, and it used to end pagination with
+// has_next_page set and no cursor, stranding every older empty conversation.
+func TestConversationCursor_NullTailRoundTrip(t *testing.T) {
+	cursor := encodeConversationCursor(&domain.Conversation{ID: "cv_empty"})
+	got, apiErr := decodeConversationCursor(&cursor)
+	require.Nil(t, apiErr)
+	assert.True(t, got.inNullTail)
+	assert.Nil(t, got.lastMessageAt)
+	require.NotNil(t, got.id)
+	assert.Equal(t, "cv_empty", *got.id)
+}
+
+func TestConversationCursor_TimestampRoundTrip(t *testing.T) {
+	at := time.Date(2026, 6, 20, 8, 30, 0, 0, time.UTC)
+	cursor := encodeConversationCursor(&domain.Conversation{ID: "cv_active", LastMessageAt: &at})
+	got, apiErr := decodeConversationCursor(&cursor)
+	require.Nil(t, apiErr)
+	assert.False(t, got.inNullTail)
+	require.NotNil(t, got.lastMessageAt)
+	assert.True(t, at.Equal(*got.lastMessageAt))
+	require.NotNil(t, got.id)
+	assert.Equal(t, "cv_active", *got.id)
+}
+
+func TestConversationCursor_NoneAndMalformed(t *testing.T) {
+	got, apiErr := decodeConversationCursor(nil)
+	require.Nil(t, apiErr)
+	assert.Nil(t, got.id)
+	assert.False(t, got.inNullTail)
+
+	for name, cursor := range map[string]string{
+		"null tail without an id": base64Raw(conversationCursorNullTail + "|"),
+		"bad timestamp":           base64Raw("not-a-time|cv_x"),
+	} {
+		t.Run(name, func(t *testing.T) {
+			c := cursor
+			_, apiErr := decodeConversationCursor(&c)
+			require.NotNil(t, apiErr)
+			assert.Equal(t, apierror.ErrorCodeParameterInvalid, apiErr.Code)
+		})
+	}
+}
+
 // base64Raw mirrors encodeCursor's encoding for crafting malformed-but-decodable payloads.
 func base64Raw(s string) string {
 	return base64.RawURLEncoding.EncodeToString([]byte(s))

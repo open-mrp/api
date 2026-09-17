@@ -173,6 +173,8 @@ type ConversationListFilter struct {
 	Limit               int32
 	CursorLastMessageAt *time.Time
 	CursorID            *string
+	// CursorInNullTail is set when the cursor row has no messages, which sorts it after every row that has.
+	CursorInNullTail bool
 }
 
 // ConversationPage is one page of the caller's conversations plus the next opaque cursor.
@@ -321,6 +323,8 @@ type SupportInboxFilter struct {
 	Limit               int32
 	CursorLastMessageAt *time.Time
 	CursorID            *string
+	// CursorInNullTail is set when the cursor row has no messages, which sorts it after every row that has.
+	CursorInNullTail bool
 }
 
 // MessageReport is a minimal abuse report filed by a participant against a conversation (optionally a specific message). MessageID is empty when the whole conversation is reported.

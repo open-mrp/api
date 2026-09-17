@@ -35,7 +35,8 @@ import (
 //
 // SeedAgentRunFailedID and SeedAgentRunAwaitingInputID are dedicated,
 // one-shot seed rows (continue/retry permanently flip their status) so each
-// is consumed by exactly one happy-path test here, which also folds in that
+// is consumed by exactly one happy-path test here, which resets the row
+// first so the suite can run again on the same stack, and also folds in that
 // verb's idempotency assertion (replaying the same Idempotency-Key) rather
 // than spending a second seed row on it.
 
@@ -319,6 +320,7 @@ func TestCovAiRuns_CancelIdempotent(t *testing.T) {
 // seed-row consumption rather than spending a second dedicated row on it).
 func TestCovAiRuns_ContinueHappyPathAndIdempotent(t *testing.T) {
 	t.Parallel()
+	resetAgentRun(t, SeedAgentRunAwaitingInputID, "awaiting_input")
 
 	key := newIdempotencyKey()
 	body := map[string]any{
@@ -400,6 +402,7 @@ func TestCovAiRuns_ContinueNotFound(t *testing.T) {
 // unchanged.
 func TestCovAiRuns_RetryHappyPathAndIdempotent(t *testing.T) {
 	t.Parallel()
+	resetAgentRun(t, SeedAgentRunFailedID, "failed")
 
 	key := newIdempotencyKey()
 

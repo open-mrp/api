@@ -81,9 +81,10 @@ func (r *productionScheduleInputRepoImpl) GetItemRunRateHistory(ctx context.Cont
 	out := make([]domain.ItemRunRateSample, len(rows))
 	for i, row := range rows {
 		out[i] = domain.ItemRunRateSample{
-			MachineID:      row.MachineID.String,
-			LaborTimeValue: decimalToFloat64(row.LaborTimeValue),
-			LaborTimeUnit:  row.LaborTimeUnit,
+			MachineID:                 row.MachineID.String,
+			LaborTimeValue:            decimalToFloat64(row.LaborTimeValue),
+			LaborTimeRatioNumerator:   decimalToFloat64(row.LaborTimeRatioNumerator),
+			LaborTimeRatioDenominator: decimalToFloat64(row.LaborTimeRatioDenominator),
 		}
 	}
 	return out, nil
@@ -133,8 +134,11 @@ func (r *productionScheduleInputRepoImpl) GetConstraintBatchMeasurements(
 		if row.LaborTimeValue.Valid {
 			measurement.LaborTimeValue = decimalToFloat64(row.LaborTimeValue.String)
 		}
-		if row.LaborTimeUnit.Valid {
-			measurement.LaborTimeUnit = row.LaborTimeUnit.String
+		if row.LaborTimeRatioNumerator.Valid {
+			measurement.LaborTimeRatioNumerator = decimalToFloat64(row.LaborTimeRatioNumerator.String)
+		}
+		if row.LaborTimeRatioDenominator.Valid {
+			measurement.LaborTimeRatioDenominator = decimalToFloat64(row.LaborTimeRatioDenominator.String)
 		}
 		if row.LaborRate.Valid {
 			measurement.LaborRate = decimalToFloat64(row.LaborRate.String)
@@ -234,8 +238,11 @@ func (r *productionScheduleInputRepoImpl) GetFinishingBatchMeasurements(
 		if row.LaborTimeValue.Valid {
 			measurement.LaborTimeValue = decimalToFloat64(row.LaborTimeValue.String)
 		}
-		if row.LaborTimeUnit.Valid {
-			measurement.LaborTimeUnit = row.LaborTimeUnit.String
+		if row.LaborTimeRatioNumerator.Valid {
+			measurement.LaborTimeRatioNumerator = decimalToFloat64(row.LaborTimeRatioNumerator.String)
+		}
+		if row.LaborTimeRatioDenominator.Valid {
+			measurement.LaborTimeRatioDenominator = decimalToFloat64(row.LaborTimeRatioDenominator.String)
 		}
 		if row.LaborRate.Valid {
 			measurement.LaborRate = decimalToFloat64(row.LaborRate.String)

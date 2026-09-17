@@ -52,7 +52,8 @@ SELECT
     mc.name AS machine_name,
     cost_rate.value AS unit_cost,
     labor_time.value AS labor_time_value,
-    labor_time_unit.abbreviation AS labor_time_unit,
+    labor_time_unit.ratio_numerator AS labor_time_ratio_numerator,
+    labor_time_unit.ratio_denominator AS labor_time_ratio_denominator,
     labor_rate.value AS labor_rate,
     overhead_rate.value AS overhead_rate,
     pr.created_at AS run_created_at
@@ -435,7 +436,8 @@ SELECT
     COALESCE(mc.name, '') AS machine_name,
     cost_rate.value AS unit_cost,
     labor_time.value AS labor_time_value,
-    labor_time_unit.abbreviation AS labor_time_unit,
+    labor_time_unit.ratio_numerator AS labor_time_ratio_numerator,
+    labor_time_unit.ratio_denominator AS labor_time_ratio_denominator,
     labor_rate.value AS labor_rate,
     overhead_rate.value AS overhead_rate,
     pr.created_at AS run_created_at
@@ -470,7 +472,8 @@ ORDER BY b.item_id, b.scanned_at, b.id;
 SELECT
     bm.B AS machine_id,
     labor_time.value AS labor_time_value,
-    labor_time_unit.abbreviation AS labor_time_unit
+    labor_time_unit.ratio_numerator AS labor_time_ratio_numerator,
+    labor_time_unit.ratio_denominator AS labor_time_ratio_denominator
 FROM batch b
 LEFT JOIN _batches_machines bm ON bm.A = b.id
 JOIN production_step ps ON ps.id = b.production_step_id

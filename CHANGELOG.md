@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.7.1](https://github.com/open-mrp/api/compare/v2.7.0...v2.7.1) (2026-09-18)
+
+
+### Bug Fixes
+
+* **packlist:** enhance pack list generation with account address and update minikube setup instructions ([#161](https://github.com/open-mrp/api/issues/161)) ([f33d8c8](https://github.com/open-mrp/api/commit/f33d8c844b77eb004c3bc5abfc134ff7a1dcafb4))
+
 ## [2.7.0](https://github.com/open-mrp/api/compare/v2.6.8...v2.7.0) (2026-09-17)
 
 

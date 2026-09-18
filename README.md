@@ -299,7 +299,7 @@ stringData:
 
 Both `api-gateway` and `agent-service` already consume this secret (as `INTERNAL_SERVICE_TOKEN`) and the `API_GATEWAY_INTERNAL_URL` config value. In production the token is generated and delivered by Terraform in the private infra repo.
 
-> **minikube acting up?** `minikube delete && minikube start` clears most of it.
+> **minikube acting up?** `minikube delete && make setup` clears most of it. Tilt needs the Docker container runtime (`--container-runtime=docker`, set by `make setup`); on containerd it tries to push images to docker.io and fails.
 
 
 

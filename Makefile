@@ -172,7 +172,7 @@ local-db-nuke: ## Tear down local databases, clean up Stripe resources, and dele
 	@docker compose down -v --remove-orphans
 
 setup: ## Start minikube and local databases
-	@minikube start --cpus=4 --memory=8192 --driver=docker && $(MAKE) local-db
+	@minikube start --cpus=4 --memory=8192 --driver=docker --container-runtime=docker && $(MAKE) local-db
 
 teardown: ## Delete minikube, nuke local databases, and tear down the E2E stack
 	@minikube delete && $(MAKE) local-db-nuke && $(MAKE) e2e-down

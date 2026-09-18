@@ -20,6 +20,10 @@ type PackList struct {
 	//
 	// The URL expires one hour after it is generated, so render it promptly rather than caching it. Logo lookup is best effort: if the account has no logo or it cannot be resolved, the rest of the document is still returned.
 	AccountLogoURL *string `json:"account_logo_url"`
+	// The selling account's default billing address, shown under its logo.
+	//
+	// Address lookup is best effort: if the account has no default billing address or it cannot be resolved, this is `null` and the rest of the document is still returned.
+	AccountAddress *PackListParty `json:"account_address"`
 	// Parent sales order number.
 	SalesOrderNumber string `json:"sales_order_number" validate:"required"`
 	// Customer's purchase order number.
@@ -161,6 +165,24 @@ var SamplePackListParty = &PackListParty{
 	Phone:       &samplePackListBillPhone,
 }
 
+var (
+	samplePackListSellerStreet1 = "100 Commerce Dr"
+	samplePackListSellerCity    = "Dayton"
+	samplePackListSellerState   = "OH"
+	samplePackListSellerZip     = "45402"
+	samplePackListSellerCountry = "US"
+)
+
+var SamplePackListAccountAddress = &PackListParty{
+	Object:      constants.ObjectTypePackListParty,
+	Name:        "Widget Works HQ",
+	StreetLine1: &samplePackListSellerStreet1,
+	Locality:    &samplePackListSellerCity,
+	State:       &samplePackListSellerState,
+	PostalCode:  &samplePackListSellerZip,
+	Country:     &samplePackListSellerCountry,
+}
+
 var SamplePackListLineItem = &PackListLineItem{
 	Object:         constants.ObjectTypePackListLineItem,
 	LineItemNumber: &samplePackListLineNumber,
@@ -196,6 +218,7 @@ var SamplePackList = &PackList{
 	Object:             constants.ObjectTypePackList,
 	AccountName:        "Acme Manufacturing",
 	AccountLogoURL:     &samplePackListLogoURL,
+	AccountAddress:     SamplePackListAccountAddress,
 	SalesOrderNumber:   "000123",
 	CustomerPO:         &samplePackListCustomerPO,
 	ShipmentNumber:     SampleShipmentNumber,

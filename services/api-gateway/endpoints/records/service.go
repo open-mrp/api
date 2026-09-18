@@ -69,7 +69,7 @@ func NewRecordsSvc(config *RecordsSvcConfig) RecordsSvc {
 
 // GenPackList assembles a pack-list document for a shipment by composing the
 // shipment (with its lines and shipping cases), its parent sales order (with
-// lines and email contacts), and the selling account's name and presigned logo.
+// lines and email contacts), and the selling account's letterhead.
 func (m *recordsSvcImpl) GenPackList(ctx context.Context, req *GenPackListRequest) (*apiresource.PackList, *apierror.APIError) {
 	shipResp, apiErr := grpcutil.CallRPC(ctx, recordsSvcTracer, "service.records.gen_pack_list.get_shipment", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetShipmentResponse, error) {
@@ -101,39 +101,74 @@ func (m *recordsSvcImpl) GenPackList(ctx context.Context, req *GenPackListReques
 	}
 	o := orderResp.SalesOrder
 
-	accountName, logoURL := m.loadAccountHeader(ctx, s.AccountId)
-
-	return assemblePackList(s, o, accountName, logoURL), nil
+	return assemblePackList(s, o, m.loadAccountHeader(ctx, s.AccountId)), nil
 }
 
-// loadAccountHeader resolves the selling account's display name and a presigned
-// logo URL. The logo is best-effort: a missing logo or presign failure yields a
-// nil URL rather than failing the whole document, mirroring the legacy behavior.
-func (m *recordsSvcImpl) loadAccountHeader(ctx context.Context, accountID string) (string, *string) {
-	name := ""
+// accountHeader is the selling account's letterhead: name, presigned logo, and default billing address.
+type accountHeader struct {
+	name    string
+	logoURL *string
+	address *apiresource.PackListParty
+}
+
+// loadAccountHeader resolves the selling account's letterhead. The logo and
+// address are best-effort: a missing value or failed lookup yields nil rather
+// than failing the whole document, mirroring the legacy behavior.
+func (m *recordsSvcImpl) loadAccountHeader(ctx context.Context, accountID string) accountHeader {
+	var header accountHeader
 	acctResp, apiErr := grpcutil.CallRPC(ctx, recordsSvcTracer, "service.records.gen_pack_list.get_account", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetAccountResponse, error) {
 			return m.accountClient.GetAccount(ctx, &pb.GetAccountRequest{Id: accountID}, opts...)
 		})
 	if apiErr == nil && acctResp != nil && acctResp.Account != nil {
-		name = acctResp.Account.Name
+		header.name = acctResp.Account.Name
+		if addressID := acctResp.Account.GetDefaultBillingAddressId(); addressID != "" {
+			header.address = m.loadAccountAddress(ctx, addressID)
+		}
 	}
 
-	var logoURL *string
 	logoResp, apiErr := grpcutil.CallRPC(ctx, recordsSvcTracer, "service.records.gen_pack_list.get_logo", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetAccountLogoURLResponse, error) {
 			return m.accountClient.GetAccountLogoURL(ctx, &pb.GetAccountLogoURLRequest{Id: accountID}, opts...)
 		})
 	if apiErr == nil && logoResp != nil && logoResp.GetUrl() != "" {
 		url := logoResp.GetUrl()
-		logoURL = &url
+		header.logoURL = &url
 	}
 
-	return name, logoURL
+	return header
+}
+
+// loadAccountAddress resolves the account's default billing address, or nil if it cannot be read.
+func (m *recordsSvcImpl) loadAccountAddress(ctx context.Context, addressID string) *apiresource.PackListParty {
+	resp, apiErr := grpcutil.CallRPC(ctx, recordsSvcTracer, "service.records.gen_pack_list.get_account_address", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetAddressResponse, error) {
+			return m.accountClient.GetAddress(ctx, &pb.GetAddressRequest{Id: addressID}, opts...)
+		})
+	if apiErr != nil || resp == nil || resp.Address == nil {
+		return nil
+	}
+	return addressParty(resp.Address)
+}
+
+func addressParty(a *pb.AddressInfo) *apiresource.PackListParty {
+	g := a.GetGeolocation()
+	return &apiresource.PackListParty{
+		Object:      constants.ObjectTypePackListParty,
+		Name:        a.GetName(),
+		StreetLine1: strPtrOrNil(g.GetStreetLine_1()),
+		StreetLine2: strPtrOrNil(g.GetStreetLine_2()),
+		Locality:    strPtrOrNil(g.GetLocality()),
+		State:       strPtrOrNil(g.GetState()),
+		PostalCode:  strPtrOrNil(g.GetPostalCode()),
+		Country:     strPtrOrNil(g.GetCountry()),
+		Phone:       strPtrOrNil(a.GetPhone()),
+		Email:       strPtrOrNil(a.GetEmail()),
+	}
 }
 
 // assemblePackList maps a shipment + its sales order into the pack-list document.
-func assemblePackList(s *pb.ShipmentInfo, o *pb.SalesOrderInfo, accountName string, logoURL *string) *apiresource.PackList {
+func assemblePackList(s *pb.ShipmentInfo, o *pb.SalesOrderInfo, account accountHeader) *apiresource.PackList {
 	// Line numbers live on the sales-order line, not the shipment line; index them
 	// by sales-order-line id so each packed shipment line can carry its number.
 	lineNumberByOrderLineID := make(map[string]int32, len(o.Lines))
@@ -148,8 +183,9 @@ func assemblePackList(s *pb.ShipmentInfo, o *pb.SalesOrderInfo, accountName stri
 
 	pl := &apiresource.PackList{
 		Object:             constants.ObjectTypePackList,
-		AccountName:        accountName,
-		AccountLogoURL:     logoURL,
+		AccountName:        account.name,
+		AccountLogoURL:     account.logoURL,
+		AccountAddress:     account.address,
 		SalesOrderNumber:   salesOrderNumber,
 		CustomerPO:         strPtrOrNil(o.GetCustomerPoNumber()),
 		ShipmentNumber:     s.GetNumber(),

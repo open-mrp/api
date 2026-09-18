@@ -18,6 +18,10 @@ INSERT IGNORE INTO address (id, name, geolocation_id, created_at, updated_at) VA
 INSERT IGNORE INTO account (id, name, account_type_code, onboarding_status_code, account_billing_id, default_billing_address_id, default_shipping_address_id, created_at, updated_at) VALUES
     ('ac_01k0a5smf9ekb8rqg12555zjqa', 'Acme Inc.', 'company', 'active', 'acbl_01seedacmebilling0000', 'ad_01k0a5smf9enr81a4zvyht3zw0', 'ad_01k0a5smf9enr81a4zvyht3zw0', NOW(), NOW());
 
+-- Link the default address to the account, as registration does; address reads are scoped through this junction.
+INSERT IGNORE INTO account_address (id, account_id, address_id, created_at, updated_at) VALUES
+    ('acad_01seedacmedefault00', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ad_01k0a5smf9enr81a4zvyht3zw0', NOW(), NOW());
+
 -- Account branding
 INSERT IGNORE INTO account_branding (id, owner_account_id, support_email, logo_url, created_at, updated_at) VALUES
     ('acbr_01seedacmebranding00', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'support@acme.com', 'https://augno-public-images.s3.us-east-2.amazonaws.com/acme-logo.webp', NOW(), NOW());

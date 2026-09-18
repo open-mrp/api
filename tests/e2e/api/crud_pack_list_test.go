@@ -62,6 +62,18 @@ func TestGenPackList_AssemblesShipmentDocument(t *testing.T) {
 	assert.Equal(t, "SHP-001", jsonField(pl, "shipment_number"))
 	assert.Nil(t, pl["customer_po"], "ORD-002 has no customer PO")
 
+	// The seller's default billing address (0003_accounts.sql), shown under its logo.
+	accountAddress := jsonObject(pl, "account_address")
+	require.NotNil(t, accountAddress, "account_address should be present")
+	assert.Equal(t, "pack_list_party", jsonField(accountAddress, "object"))
+	assert.Equal(t, "Acme Inc.", jsonField(accountAddress, "name"))
+	assert.Equal(t, "123 Main St", jsonField(accountAddress, "street_line_1"))
+	assert.Nil(t, accountAddress["street_line_2"])
+	assert.Equal(t, "New York", jsonField(accountAddress, "locality"))
+	assert.Equal(t, "NY", jsonField(accountAddress, "state"))
+	assert.Equal(t, "10001", jsonField(accountAddress, "postal_code"))
+	assert.Equal(t, "US", jsonField(accountAddress, "country"))
+
 	// Parties.
 	billTo := jsonObject(pl, "bill_to")
 	require.NotNil(t, billTo, "bill_to should be present")

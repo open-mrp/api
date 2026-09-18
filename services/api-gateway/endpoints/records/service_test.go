@@ -53,7 +53,7 @@ func sampleOrder() *pb.SalesOrderInfo {
 }
 
 func TestAssemblePackList_SalesOrderNumberFromShipment(t *testing.T) {
-	pl := assemblePackList(sampleShipment(), sampleOrder(), "Acme", nil)
+	pl := assemblePackList(sampleShipment(), sampleOrder(), accountHeader{name: "Acme"})
 
 	if pl.SalesOrderNumber != "000123" {
 		t.Errorf("sales order number = %q; want 000123", pl.SalesOrderNumber)
@@ -68,7 +68,7 @@ func TestAssemblePackList_SalesOrderNumberSurvivesEmptyOrderNumber(t *testing.T)
 	order := sampleOrder()
 	order.Number = ""
 
-	pl := assemblePackList(ship, order, "Acme", nil)
+	pl := assemblePackList(ship, order, accountHeader{name: "Acme"})
 
 	if pl.SalesOrderNumber != "000123" {
 		t.Errorf("sales order number = %q; want 000123 from the shipment's joined number", pl.SalesOrderNumber)
@@ -79,7 +79,7 @@ func TestAssemblePackList_SalesOrderNumberFallsBackToOrder(t *testing.T) {
 	ship := sampleShipment()
 	ship.SalesOrderNumber = ""
 
-	pl := assemblePackList(ship, sampleOrder(), "Acme", nil)
+	pl := assemblePackList(ship, sampleOrder(), accountHeader{name: "Acme"})
 
 	if pl.SalesOrderNumber != "000123" {
 		t.Errorf("sales order number = %q; want 000123 from the order fallback", pl.SalesOrderNumber)
@@ -87,7 +87,7 @@ func TestAssemblePackList_SalesOrderNumberFallsBackToOrder(t *testing.T) {
 }
 
 func TestAssemblePackList_LineItemNumbersJoinedAndSorted(t *testing.T) {
-	pl := assemblePackList(sampleShipment(), sampleOrder(), "Acme", strp("https://logo"))
+	pl := assemblePackList(sampleShipment(), sampleOrder(), accountHeader{name: "Acme", logoURL: strp("https://logo")})
 
 	items := pl.LineItems.Data
 	if len(items) != 2 {
@@ -103,7 +103,7 @@ func TestAssemblePackList_LineItemNumbersJoinedAndSorted(t *testing.T) {
 }
 
 func TestAssemblePackList_BackOrdersOnlySaleAndUnderpacked(t *testing.T) {
-	pl := assemblePackList(sampleShipment(), sampleOrder(), "Acme", nil)
+	pl := assemblePackList(sampleShipment(), sampleOrder(), accountHeader{name: "Acme"})
 
 	bo := pl.BackOrders.Data
 	if len(bo) != 1 {
@@ -119,7 +119,7 @@ func TestAssemblePackList_BackOrdersOnlySaleAndUnderpacked(t *testing.T) {
 }
 
 func TestAssemblePackList_ContactInfoAndCases(t *testing.T) {
-	pl := assemblePackList(sampleShipment(), sampleOrder(), "Acme", nil)
+	pl := assemblePackList(sampleShipment(), sampleOrder(), accountHeader{name: "Acme"})
 
 	// Emails lowercased, then the bill-to phone.
 	want := []string{"ar@acme.com", "555-0100"}
@@ -142,5 +142,37 @@ func TestAssemblePackList_ContactInfoAndCases(t *testing.T) {
 	}
 	if cases[1].TrackingNumber == nil || *cases[1].TrackingNumber != "1ZB" {
 		t.Errorf("CASE-002 tracking = %v; want 1ZB", cases[1].TrackingNumber)
+	}
+}
+
+func TestAssemblePackList_AccountAddress(t *testing.T) {
+	address := addressParty(&pb.AddressInfo{
+		Name:  "Widget Works HQ",
+		Phone: strp("555-0199"),
+		Geolocation: &pb.GeolocationInfo{
+			StreetLine_1: strp("100 Commerce Dr"),
+			Locality:     strp("Dayton"),
+			State:        strp("OH"),
+			PostalCode:   strp("45402"),
+			Country:      "US",
+		},
+	})
+	pl := assemblePackList(sampleShipment(), sampleOrder(), accountHeader{name: "Acme", address: address})
+
+	got := pl.AccountAddress
+	if got == nil {
+		t.Fatal("account address = nil; want the account's default billing address")
+	}
+	if got.Name != "Widget Works HQ" || *got.StreetLine1 != "100 Commerce Dr" || got.StreetLine2 != nil ||
+		*got.Locality != "Dayton" || *got.State != "OH" || *got.PostalCode != "45402" || *got.Country != "US" ||
+		*got.Phone != "555-0199" || got.Email != nil {
+		t.Errorf("account address = %+v; want the mapped billing address", got)
+	}
+}
+
+func TestAssemblePackList_AccountAddressAbsent(t *testing.T) {
+	pl := assemblePackList(sampleShipment(), sampleOrder(), accountHeader{name: "Acme"})
+	if pl.AccountAddress != nil {
+		t.Errorf("account address = %+v; want nil when the account has none", pl.AccountAddress)
 	}
 }

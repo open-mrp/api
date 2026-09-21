@@ -11,30 +11,47 @@ func at(hoursAgo int) time.Time {
 	return time.Date(2026, time.June, 1, 0, 0, 0, 0, time.UTC).Add(-time.Duration(hoursAgo) * time.Hour)
 }
 
-// The numerator unit's ratio columns give its size in the time base (the hour), so
-// seconds = value * (num/den) * 3600. Getting this wrong silently rescales every run
-// hour in the plan. A non-positive ratio (a scan with no usable time unit) is read as
-// raw seconds rather than zeroing the rate.
+// A labor time is a rate with a unit on BOTH halves: the numerator unit's ratio gives its
+// size in the time base (the hour), so seconds = value * (num/den) * 3600, and the
+// denominator unit's ratio gives the quantity that time buys, which the rate is divided by
+// to reach seconds per base unit. Getting either half wrong silently rescales every run
+// hour in the plan; dropping the quantity half is what counted every pair-rated step twice
+// and put OEE Performance over 100%. A non-positive ratio (no usable unit on that half) is
+// left unconverted rather than zeroing the rate.
 func TestSecondsPerUnitFromLaborTime(t *testing.T) {
 	t.Parallel()
 
+	// perEach is the quantity half of a rate already quoted per one base unit.
+	perEach := LaborTimeConversion{QuantityRatioNumerator: 1, QuantityRatioDenominator: 1}
+	withTime := func(conv LaborTimeConversion, num, den float64) LaborTimeConversion {
+		conv.TimeRatioNumerator, conv.TimeRatioDenominator = num, den
+		return conv
+	}
+
 	cases := []struct {
-		name     string
-		value    float64
-		num, den float64
-		want     float64
+		name  string
+		value float64
+		conv  LaborTimeConversion
+		want  float64
 	}{
-		{"minute", 2, 1, 60, 120},
-		{"hour", 1.5, 1, 1, 5400},
-		{"second", 30, 1, 3600, 30},
-		{"day", 2, 24, 1, 172800},
-		{"missing unit falls back to seconds", 30, 0, 0, 30},
-		{"zero denominator falls back to seconds", 30, 1, 0, 30},
+		{"minute per each", 2, withTime(perEach, 1, 60), 120},
+		{"hour per each", 1.5, withTime(perEach, 1, 1), 5400},
+		{"second per each", 30, withTime(perEach, 1, 3600), 30},
+		{"day per each", 2, withTime(perEach, 24, 1), 172800},
+		{"missing unit falls back to seconds", 30, LaborTimeConversion{}, 30},
+		{"zero time denominator leaves the time half alone", 30, LaborTimeConversion{TimeRatioNumerator: 1, QuantityRatioNumerator: 1, QuantityRatioDenominator: 1}, 30},
+
+		// The quantity half. A pair is two eaches, so a rate quoted per pair buys twice the
+		// base units and is half as many seconds each.
+		{"seconds per pair halves to per each", 554, withTime(LaborTimeConversion{QuantityRatioNumerator: 2, QuantityRatioDenominator: 1}, 1, 3600), 277},
+		{"minutes per dozen", 6, withTime(LaborTimeConversion{QuantityRatioNumerator: 12, QuantityRatioDenominator: 1}, 1, 60), 30},
+		{"seconds per case of 50", 500, withTime(LaborTimeConversion{QuantityRatioNumerator: 50, QuantityRatioDenominator: 1}, 1, 3600), 10},
+		{"missing quantity unit leaves the quantity half alone", 30, withTime(LaborTimeConversion{}, 1, 3600), 30},
 	}
 
 	for _, c := range cases {
-		if got := SecondsPerUnitFromLaborTime(c.value, c.num, c.den); got != c.want {
-			t.Errorf("%s: SecondsPerUnitFromLaborTime(%v, %v, %v) = %v, want %v", c.name, c.value, c.num, c.den, got, c.want)
+		if got := SecondsPerUnitFromLaborTime(c.value, c.conv); got != c.want {
+			t.Errorf("%s: SecondsPerUnitFromLaborTime(%v, %+v) = %v, want %v", c.name, c.value, c.conv, got, c.want)
 		}
 	}
 }
@@ -206,11 +223,11 @@ func TestSolve_ProducesAPlanFromRawHistory(t *testing.T) {
 		Batches: []BatchMeasurement{
 			{BatchID: "bt_1", ItemID: "it_A", SKU: "A", ScannedAt: scanned, Quantity: 60,
 				MachineID: "mc_1", ProductionStepID: "prs_A", UnitCost: 4,
-				LaborTimeValue: 30, LaborTimeRatioNumerator: 1, LaborTimeRatioDenominator: 60, LaborRate: 18, OverheadRate: 2,
+				LaborTimeValue: 30, LaborTime: LaborTimeConversion{TimeRatioNumerator: 1, TimeRatioDenominator: 60, QuantityRatioNumerator: 1, QuantityRatioDenominator: 1}, LaborRate: 18, OverheadRate: 2,
 				RunCreatedAt: &opened},
 			{BatchID: "bt_2", ItemID: "it_B", SKU: "B", ScannedAt: scanned, Quantity: 60,
 				MachineID: "mc_2", ProductionStepID: "prs_B", UnitCost: 6,
-				LaborTimeValue: 20, LaborTimeRatioNumerator: 1, LaborTimeRatioDenominator: 60, LaborRate: 18, OverheadRate: 2,
+				LaborTimeValue: 20, LaborTime: LaborTimeConversion{TimeRatioNumerator: 1, TimeRatioDenominator: 60, QuantityRatioNumerator: 1, QuantityRatioDenominator: 1}, LaborRate: 18, OverheadRate: 2,
 				RunCreatedAt: &opened},
 		},
 		StepInputs: map[string]map[string]bool{
@@ -284,7 +301,7 @@ func TestSolve_HonoursExcludedItems(t *testing.T) {
 		Batches: []BatchMeasurement{
 			{BatchID: "bt_1", ItemID: "it_A", SKU: "A", ScannedAt: at(1), Quantity: 60,
 				MachineID: "mc_1", ProductionStepID: "prs_A", UnitCost: 4,
-				LaborTimeValue: 10, LaborTimeRatioNumerator: 1, LaborTimeRatioDenominator: 60},
+				LaborTimeValue: 10, LaborTime: LaborTimeConversion{TimeRatioNumerator: 1, TimeRatioDenominator: 60, QuantityRatioNumerator: 1, QuantityRatioDenominator: 1}},
 		},
 		MonthlyByItem:   map[string][]MonthlyDemand{"it_A": series(2026, time.May, 12, 100)},
 		ExcludedItemIDs: map[string]bool{"it_A": true},
@@ -312,11 +329,11 @@ func TestSolve_Deterministic(t *testing.T) {
 		Machines:     []Machine{{ID: "mc_2", Name: "2"}, {ID: "mc_10", Name: "10"}, {ID: "mc_1", Name: "1"}},
 		Batches: []BatchMeasurement{
 			{BatchID: "bt_1", ItemID: "it_C", SKU: "C", ScannedAt: at(4), Quantity: 60, MachineID: "mc_1",
-				ProductionStepID: "prs_C", UnitCost: 3, LaborTimeValue: 25, LaborTimeRatioNumerator: 1, LaborTimeRatioDenominator: 60},
+				ProductionStepID: "prs_C", UnitCost: 3, LaborTimeValue: 25, LaborTime: LaborTimeConversion{TimeRatioNumerator: 1, TimeRatioDenominator: 60, QuantityRatioNumerator: 1, QuantityRatioDenominator: 1}},
 			{BatchID: "bt_2", ItemID: "it_A", SKU: "A", ScannedAt: at(3), Quantity: 60, MachineID: "mc_2",
-				ProductionStepID: "prs_A", UnitCost: 4, LaborTimeValue: 30, LaborTimeRatioNumerator: 1, LaborTimeRatioDenominator: 60},
+				ProductionStepID: "prs_A", UnitCost: 4, LaborTimeValue: 30, LaborTime: LaborTimeConversion{TimeRatioNumerator: 1, TimeRatioDenominator: 60, QuantityRatioNumerator: 1, QuantityRatioDenominator: 1}},
 			{BatchID: "bt_3", ItemID: "it_B", SKU: "B", ScannedAt: at(2), Quantity: 60, MachineID: "mc_10",
-				ProductionStepID: "prs_B", UnitCost: 5, LaborTimeValue: 20, LaborTimeRatioNumerator: 1, LaborTimeRatioDenominator: 60},
+				ProductionStepID: "prs_B", UnitCost: 5, LaborTimeValue: 20, LaborTime: LaborTimeConversion{TimeRatioNumerator: 1, TimeRatioDenominator: 60, QuantityRatioNumerator: 1, QuantityRatioDenominator: 1}},
 		},
 		MonthlyByItem: map[string][]MonthlyDemand{
 			"it_A": series(2026, time.May, 24, 400),

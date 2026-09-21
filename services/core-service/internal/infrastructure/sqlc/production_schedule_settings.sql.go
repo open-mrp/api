@@ -271,6 +271,8 @@ type UpsertAccountProductionScheduleSettingParams struct {
 // UpsertAccountProductionScheduleSetting writes the whole settings row.
 //
 // Upsert rather than update: an account that has never opened the settings page has no row, and the API must not make a merchant save twice to change one number.
+//
+// shift_start_time, shift_timezone and shift_days_of_week are deliberately absent from both halves. Nothing can edit them yet — OEE only reads them — so a settings save that does not know about them must not blank them. They move into the column list with the endpoint that sets them.
 func (q *Queries) UpsertAccountProductionScheduleSetting(ctx context.Context, arg UpsertAccountProductionScheduleSettingParams) error {
 	_, err := q.db.ExecContext(ctx, upsertAccountProductionScheduleSetting,
 		arg.ID,

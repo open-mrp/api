@@ -241,6 +241,9 @@ type AccountProductionScheduleSetting struct {
 	RecommendationSlowMoverCogs     string
 	ReceiveCalendarID               sql.NullString
 	ShipCalendarID                  sql.NullString
+	ShiftStartTime                  sql.NullString
+	ShiftTimezone                   sql.NullString
+	ShiftDaysOfWeek                 string
 }
 
 type AccountRelation struct {

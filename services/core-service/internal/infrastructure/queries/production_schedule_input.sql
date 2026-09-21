@@ -35,7 +35,7 @@ WHERE m.account_id = sqlc.arg('account_id')
 
 -- GetConstraintBatchMeasurements returns one row per historical batch produced on the constraint machines, which is what the run rate, cost, lot count, machine affinity and measured lead time are all derived from.
 --
--- labor_time is a Rate whose numerator unit decides its scale (min/hr/sec); the caller converts. production_run.created_at paired with scanned_at gives the observed lead time for that batch.
+-- labor_time is a Rate quoted as a time per a quantity, and BOTH halves carry a unit: the numerator sets the time scale (min/hr/sec) and the denominator sets what quantity that time buys (per each, per pair, per case). Both ratio pairs come out so the caller can reach seconds per base unit; converting only the time half counts a pair-rated step twice. production_run.created_at paired with scanned_at gives the observed lead time for that batch.
 -- name: GetConstraintBatchMeasurements :many
 SELECT
     b.id AS batch_id,
@@ -54,6 +54,8 @@ SELECT
     labor_time.value AS labor_time_value,
     labor_time_unit.ratio_numerator AS labor_time_ratio_numerator,
     labor_time_unit.ratio_denominator AS labor_time_ratio_denominator,
+    labor_time_qty_unit.ratio_numerator AS labor_time_qty_ratio_numerator,
+    labor_time_qty_unit.ratio_denominator AS labor_time_qty_ratio_denominator,
     labor_rate.value AS labor_rate,
     overhead_rate.value AS overhead_rate,
     pr.created_at AS run_created_at
@@ -68,6 +70,7 @@ LEFT JOIN production_step ps ON ps.id = b.production_step_id
 LEFT JOIN scanning_station ss ON ss.id = ps.scanning_station_id
 LEFT JOIN rate labor_time ON labor_time.id = ps.labor_time_id
 LEFT JOIN unit labor_time_unit ON labor_time_unit.id = labor_time.numerator_unit_id
+LEFT JOIN unit labor_time_qty_unit ON labor_time_qty_unit.id = labor_time.denominator_unit_id
 LEFT JOIN rate labor_rate ON labor_rate.id = ps.labor_rate_id
 LEFT JOIN rate overhead_rate ON overhead_rate.id = ps.overhead_rate_id
 LEFT JOIN production_run pr ON pr.id = b.production_run_id
@@ -228,6 +231,10 @@ SELECT
     s.shifts_per_day,
     s.hours_per_shift,
     s.work_days_per_week,
+    -- The shift calendar: how much capacity the three columns above describe, and WHEN it sits on the clock. OEE intersects logged downtime with it so an overnight stop is not charged hours the plant was shut.
+    s.shift_start_time,
+    s.shift_timezone,
+    s.shift_days_of_week,
     s.weeks_per_year,
     s.capacity_headroom_pct,
     s.default_lot_units,
@@ -425,6 +432,8 @@ SELECT
     labor_time.value AS labor_time_value,
     labor_time_unit.ratio_numerator AS labor_time_ratio_numerator,
     labor_time_unit.ratio_denominator AS labor_time_ratio_denominator,
+    labor_time_qty_unit.ratio_numerator AS labor_time_qty_ratio_numerator,
+    labor_time_qty_unit.ratio_denominator AS labor_time_qty_ratio_denominator,
     labor_rate.value AS labor_rate,
     overhead_rate.value AS overhead_rate,
     pr.created_at AS run_created_at
@@ -439,6 +448,7 @@ LEFT JOIN production_step ps ON ps.id = b.production_step_id
 LEFT JOIN scanning_station ss ON ss.id = ps.scanning_station_id
 LEFT JOIN rate labor_time ON labor_time.id = ps.labor_time_id
 LEFT JOIN unit labor_time_unit ON labor_time_unit.id = labor_time.numerator_unit_id
+LEFT JOIN unit labor_time_qty_unit ON labor_time_qty_unit.id = labor_time.denominator_unit_id
 LEFT JOIN rate labor_rate ON labor_rate.id = ps.labor_rate_id
 LEFT JOIN rate overhead_rate ON overhead_rate.id = ps.overhead_rate_id
 LEFT JOIN production_run pr ON pr.id = b.production_run_id
@@ -460,12 +470,15 @@ SELECT
     bm.B AS machine_id,
     labor_time.value AS labor_time_value,
     labor_time_unit.ratio_numerator AS labor_time_ratio_numerator,
-    labor_time_unit.ratio_denominator AS labor_time_ratio_denominator
+    labor_time_unit.ratio_denominator AS labor_time_ratio_denominator,
+    labor_time_qty_unit.ratio_numerator AS labor_time_qty_ratio_numerator,
+    labor_time_qty_unit.ratio_denominator AS labor_time_qty_ratio_denominator
 FROM batch b
 LEFT JOIN _batches_machines bm ON bm.A = b.id
 JOIN production_step ps ON ps.id = b.production_step_id
 JOIN rate labor_time ON labor_time.id = ps.labor_time_id
 JOIN unit labor_time_unit ON labor_time_unit.id = labor_time.numerator_unit_id
+LEFT JOIN unit labor_time_qty_unit ON labor_time_qty_unit.id = labor_time.denominator_unit_id
 WHERE b.account_id = sqlc.arg('account_id')
   AND b.item_id = sqlc.arg('item_id')
   AND b.scanned_at IS NOT NULL

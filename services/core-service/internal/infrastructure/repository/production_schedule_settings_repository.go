@@ -15,6 +15,9 @@ import (
 	"github.com/open-mrp/api/shared/tracing"
 )
 
+// defaultShiftDaysOfWeek is Monday to Friday, matching both the column default and operating_calendar.days_of_week. It says which days the shift capacity falls on; without a start time and zone beside it, nothing reads it.
+const defaultShiftDaysOfWeek = "1111100"
+
 // defaultSettings returns the settings an account gets before it saves any, taken from the solver's own defaults so the API can never advertise assumptions the solver would not actually apply.
 func defaultSettings(accountID string) *domain.ProductionScheduleSettings {
 	d := scheduling.DefaultSettings()
@@ -41,6 +44,8 @@ func defaultSettings(accountID string) *domain.ProductionScheduleSettings {
 		ShiftsPerDay:                   safeconv.IntToInt32(d.ShiftsPerDay),
 		HoursPerShift:                  d.HoursPerShift,
 		WorkDaysPerWeek:                safeconv.IntToInt32(d.WorkDaysPerWeek),
+		// No stored row means no shift calendar, which leaves OEE downtime unclipped rather than assuming a start hour nobody chose.
+		ShiftDaysOfWeek:                defaultShiftDaysOfWeek,
 		WeeksPerYear:                   safeconv.IntToInt32(d.WeeksPerYear),
 		CapacityHeadroomPct:            d.CapacityHeadroomPct,
 		DefaultLotUnits:                d.DefaultLotUnits,
@@ -87,6 +92,9 @@ func (r *productionScheduleRepoImpl) GetSettings(ctx context.Context, accountID 
 		ShiftsPerDay:                   row.ShiftsPerDay,
 		HoursPerShift:                  decimalToFloat64(row.HoursPerShift),
 		WorkDaysPerWeek:                row.WorkDaysPerWeek,
+		ShiftStartTime:                 nullStringToPtr(row.ShiftStartTime),
+		ShiftTimezone:                  nullStringToPtr(row.ShiftTimezone),
+		ShiftDaysOfWeek:                row.ShiftDaysOfWeek,
 		WeeksPerYear:                   row.WeeksPerYear,
 		CapacityHeadroomPct:            decimalToFloat64(row.CapacityHeadroomPct),
 		DefaultLotUnits:                decimalToFloat64(row.DefaultLotUnits),

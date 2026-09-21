@@ -576,15 +576,6 @@ type OeeDepartmentDataRow struct {
 	StandardSecondsEarned float64
 }
 
-// OeeDowntimeRow is one department-reason aggregate of logged downtime, clipped to the reporting window.
-type OeeDowntimeRow struct {
-	DepartmentID    string
-	ReasonCode      string
-	OeeBucket       string
-	DowntimeSeconds int64
-	EventCount      int64
-}
-
 // AnalyzeOeeTrendParams bounds an OEE trend read: the same window and department filter as AnalyzeOee, bucketed into production weeks.
 type AnalyzeOeeTrendParams struct {
 	AccountID     string
@@ -634,9 +625,10 @@ type OeeTrendDepartmentWeekRow struct {
 	StandardSecondsEarned float64
 }
 
-// OeeDowntimeIntervalRow is one department's logged downtime window, unclipped: open events arrive already coalesced to now.
+// OeeDowntimeIntervalRow is one logged downtime window, unclipped: open events arrive already coalesced to now. The caller clips it to the reporting period and to the plant's shift window before charging it to any OEE term.
 type OeeDowntimeIntervalRow struct {
 	DepartmentID string
+	ReasonCode   string
 	OeeBucket    string
 	StartedAt    time.Time
 	EndedAt      time.Time

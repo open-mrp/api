@@ -151,9 +151,16 @@ func TestBuildOeeByDepartment_AvailabilityUsesCapacityMinusDowntime(t *testing.T
 		{DepartmentID: "dp_knit", DepartmentName: "Knitting", GoodUnits: 100, WasteUnits: 0},
 		{DepartmentID: "dp_unplanned", DepartmentName: "Sampling", GoodUnits: 50, WasteUnits: 0},
 	}, nil).AnyTimes()
-	f.analytics.EXPECT().GetOeeDowntimeByDepartment(gomock.Any(), gomock.Any()).Return([]domain.OeeDowntimeRow{
-		// 16 hours of availability-bucket downtime in the knitting room comes out of run time.
-		{DepartmentID: "dp_knit", ReasonCode: "breakdown", OeeBucket: domain.OeeBucketAvailability, DowntimeSeconds: 16 * 3600, EventCount: 2},
+	f.analytics.EXPECT().GetOeeDowntimeIntervals(gomock.Any(), gomock.Any()).Return([]domain.OeeDowntimeIntervalRow{
+		// 16 hours of availability-bucket downtime in the knitting room comes out of run time. The fixture
+		// account configures no shift window, so the whole logged span counts.
+		{
+			DepartmentID: "dp_knit",
+			ReasonCode:   "breakdown",
+			OeeBucket:    domain.OeeBucketAvailability,
+			StartedAt:    f.week,
+			EndedAt:      f.week.Add(16 * time.Hour),
+		},
 	}, nil).Times(1)
 
 	f.schedule.EXPECT().SelectAttainmentBaselines(gomock.Any(), gomock.Any()).Return(f.oneBaseline(), nil).AnyTimes()
@@ -194,7 +201,7 @@ func TestBuildOeeByDepartment_ProratesMachinesScheduledPartOfWindow(t *testing.T
 	f.analytics.EXPECT().GetOeeDepartmentData(gomock.Any(), gomock.Any()).Return([]domain.OeeDepartmentDataRow{
 		{DepartmentID: "dp_knit", DepartmentName: "Knitting", GoodUnits: 100},
 	}, nil).AnyTimes()
-	f.analytics.EXPECT().GetOeeDowntimeByDepartment(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+	f.analytics.EXPECT().GetOeeDowntimeIntervals(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
 
 	f.schedule.EXPECT().SelectAttainmentBaselines(gomock.Any(), gomock.Any()).Return(f.oneBaseline(), nil).AnyTimes()
 	// mc_2 is scheduled only in week one; the union is two machines, but the second week has just one.

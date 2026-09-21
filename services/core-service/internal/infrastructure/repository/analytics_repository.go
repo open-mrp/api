@@ -1159,8 +1159,15 @@ func (r *analyticsRepoImpl) GetOrderQuantityByProductLine(ctx context.Context, p
 }
 
 // decimalToFloat64 converts a decimal string (from CAST AS DECIMAL) to float64.
+//
+// It takes `any` because sqlc types the same column differently per query, so the sql.NullString case is not optional: whether a ratio column arrives bare or wrapped depends on whether its query happened to LEFT JOIN the table, and the unknown-type default silently returns 0. That cost a real bug — a nullable rate-denominator ratio read as zero, which skipped the unit conversion and left every pair-rated step at twice its true seconds per unit. Handling the wrapper here means a caller cannot lose a number by passing the type sqlc actually gave it.
 func decimalToFloat64(v any) float64 {
 	switch val := v.(type) {
+	case sql.NullString:
+		if !val.Valid {
+			return 0
+		}
+		return decimalToFloat64(val.String)
 	case string:
 		f := 0.0
 		negative := false

@@ -1509,64 +1509,54 @@ func (q *Queries) GetOeeDepartmentDataForMachines(ctx context.Context, arg GetOe
 	return items, nil
 }
 
-const getOeeDowntimeByDepartment = `-- name: GetOeeDowntimeByDepartment :many
+const getOeeDowntimeIntervals = `-- name: GetOeeDowntimeIntervals :many
 SELECT
     COALESCE(e.department_id, 'unassigned') AS department_id,
     e.reason_code,
     r.oee_bucket,
-    CAST(COALESCE(SUM(
-        TIMESTAMPDIFF(
-            SECOND,
-            GREATEST(e.started_at, ?),
-            LEAST(COALESCE(e.ended_at, NOW(3)), ?)
-        )
-    ), 0) AS SIGNED) AS downtime_seconds,
-    COUNT(*) AS event_count
+    e.started_at,
+    COALESCE(e.ended_at, NOW(3)) AS ended_at
 FROM machine_downtime_event e
 JOIN machine_downtime_reason r ON r.code = e.reason_code
 WHERE e.account_id = ?
   -- Overlap test rather than containment: an event that started before the window and is still running must still contribute its in-window seconds.
   AND e.started_at <= ?
   AND COALESCE(e.ended_at, NOW(3)) >= ?
-GROUP BY COALESCE(e.department_id, 'unassigned'), e.reason_code, r.oee_bucket
+ORDER BY e.started_at
 `
 
-type GetOeeDowntimeByDepartmentParams struct {
-	StartDate sql.NullTime
-	EndDate   time.Time
+type GetOeeDowntimeIntervalsParams struct {
 	AccountID string
+	EndDate   time.Time
+	StartDate sql.NullTime
 }
 
-type GetOeeDowntimeByDepartmentRow struct {
-	DepartmentID    string
-	ReasonCode      string
-	OeeBucket       string
-	DowntimeSeconds int64
-	EventCount      int64
+type GetOeeDowntimeIntervalsRow struct {
+	DepartmentID string
+	ReasonCode   string
+	OeeBucket    string
+	StartedAt    time.Time
+	EndedAt      sql.NullTime
 }
 
-// GetOeeDowntimeByDepartment aggregates logged downtime for the OEE calculation, clipped to the reporting window so an event that straddles the boundary only contributes the overlapping part. Open events (ended_at IS NULL) clip at now. Grouped by reason so the caller can roll up to OEE buckets and still render a reason Pareto without a second query.
-func (q *Queries) GetOeeDowntimeByDepartment(ctx context.Context, arg GetOeeDowntimeByDepartmentParams) ([]GetOeeDowntimeByDepartmentRow, error) {
-	rows, err := q.db.QueryContext(ctx, getOeeDowntimeByDepartment,
-		arg.StartDate,
-		arg.EndDate,
-		arg.AccountID,
-		arg.EndDate,
-		arg.StartDate,
-	)
+// GetOeeDowntimeIntervals lists logged downtime per department and reason as raw intervals, unclipped (open events coalesce to now). Both OEE reads use it: the per-department table and the trend.
+//
+// Nothing is totalled here because a logged span is not the same as lost capacity, and neither clip can be expressed in one SQL sum. An event that crosses a week boundary belongs partly to each week, and an event that runs overnight belongs to the plant's shift window only for the part the plant was open. Both are exact interval arithmetic in Go (see oeeShiftWindow) and need no calendar table.
+func (q *Queries) GetOeeDowntimeIntervals(ctx context.Context, arg GetOeeDowntimeIntervalsParams) ([]GetOeeDowntimeIntervalsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getOeeDowntimeIntervals, arg.AccountID, arg.EndDate, arg.StartDate)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetOeeDowntimeByDepartmentRow
+	var items []GetOeeDowntimeIntervalsRow
 	for rows.Next() {
-		var i GetOeeDowntimeByDepartmentRow
+		var i GetOeeDowntimeIntervalsRow
 		if err := rows.Scan(
 			&i.DepartmentID,
 			&i.ReasonCode,
 			&i.OeeBucket,
-			&i.DowntimeSeconds,
-			&i.EventCount,
+			&i.StartedAt,
+			&i.EndedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -1787,65 +1777,6 @@ func (q *Queries) GetOeeTrendDepartmentDataByWeekForMachines(ctx context.Context
 			&i.WasteUnits,
 			&i.SecondsUnits,
 			&i.StandardSecondsEarned,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getOeeTrendDowntimeIntervals = `-- name: GetOeeTrendDowntimeIntervals :many
-SELECT
-    COALESCE(e.department_id, 'unassigned') AS department_id,
-    r.oee_bucket,
-    e.started_at,
-    COALESCE(e.ended_at, NOW(3)) AS ended_at
-FROM machine_downtime_event e
-JOIN machine_downtime_reason r ON r.code = e.reason_code
-WHERE e.account_id = ?
-  -- Overlap test rather than containment, matching GetOeeDowntimeByDepartment.
-  AND e.started_at <= ?
-  AND COALESCE(e.ended_at, NOW(3)) >= ?
-ORDER BY e.started_at
-`
-
-type GetOeeTrendDowntimeIntervalsParams struct {
-	AccountID string
-	EndDate   time.Time
-	StartDate sql.NullTime
-}
-
-type GetOeeTrendDowntimeIntervalsRow struct {
-	DepartmentID string
-	OeeBucket    string
-	StartedAt    time.Time
-	EndedAt      sql.NullTime
-}
-
-// GetOeeTrendDowntimeIntervals lists logged downtime per department as raw intervals, unclipped (open events coalesce to now).
-//
-// Aggregating in SQL the way GetOeeDowntimeByDepartment does would need a per-week clip, and an event that spans a week boundary belongs partly to each week. Splitting the interval in Go is exact and needs no calendar table.
-func (q *Queries) GetOeeTrendDowntimeIntervals(ctx context.Context, arg GetOeeTrendDowntimeIntervalsParams) ([]GetOeeTrendDowntimeIntervalsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getOeeTrendDowntimeIntervals, arg.AccountID, arg.EndDate, arg.StartDate)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetOeeTrendDowntimeIntervalsRow
-	for rows.Next() {
-		var i GetOeeTrendDowntimeIntervalsRow
-		if err := rows.Scan(
-			&i.DepartmentID,
-			&i.OeeBucket,
-			&i.StartedAt,
-			&i.EndedAt,
 		); err != nil {
 			return nil, err
 		}

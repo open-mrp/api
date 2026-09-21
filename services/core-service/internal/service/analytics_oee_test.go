@@ -2,23 +2,49 @@ package service
 
 import (
 	"testing"
+	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/stretchr/testify/assert"
 )
 
+// dtWindow is a reporting window wide enough that nothing in these tests clips against it; each case
+// sets the seconds it means through the interval length.
+var (
+	dtWindowStart = time.Date(2026, time.June, 1, 0, 0, 0, 0, time.UTC)
+	dtWindowEnd   = time.Date(2026, time.July, 1, 0, 0, 0, 0, time.UTC)
+)
+
+// downtime builds one logged interval of the given length, offset far enough into the window that
+// several can sit side by side without touching its edges.
+func downtime(departmentID, reasonCode, bucket string, hoursIn int, seconds int) domain.OeeDowntimeIntervalRow {
+	start := dtWindowStart.Add(time.Duration(hoursIn) * time.Hour)
+	return domain.OeeDowntimeIntervalRow{
+		DepartmentID: departmentID,
+		ReasonCode:   reasonCode,
+		OeeBucket:    bucket,
+		StartedAt:    start,
+		EndedAt:      start.Add(time.Duration(seconds) * time.Second),
+	}
+}
+
 func TestAggregateOeeDowntime_SplitsByBucket(t *testing.T) {
 	t.Parallel()
 
-	rows := []domain.OeeDowntimeRow{
-		{DepartmentID: "dp_1", ReasonCode: "breakdown", OeeBucket: domain.OeeBucketAvailability, DowntimeSeconds: 600, EventCount: 2},
-		{DepartmentID: "dp_1", ReasonCode: "changeover", OeeBucket: domain.OeeBucketAvailability, DowntimeSeconds: 1800, EventCount: 3},
-		{DepartmentID: "dp_1", ReasonCode: "minor_stop", OeeBucket: domain.OeeBucketPerformance, DowntimeSeconds: 120, EventCount: 1},
-		{DepartmentID: "dp_1", ReasonCode: "quality_hold", OeeBucket: domain.OeeBucketQuality, DowntimeSeconds: 300, EventCount: 1},
-		{DepartmentID: "dp_1", ReasonCode: "no_schedule", OeeBucket: domain.OeeBucketNotScheduled, DowntimeSeconds: 7200, EventCount: 1},
+	// Two breakdowns totalling 600s and three changeovers totalling 1800s, so the folded per-reason
+	// rows carry the same totals and event counts the SQL aggregate used to return.
+	rows := []domain.OeeDowntimeIntervalRow{
+		downtime("dp_1", "breakdown", domain.OeeBucketAvailability, 0, 300),
+		downtime("dp_1", "breakdown", domain.OeeBucketAvailability, 1, 300),
+		downtime("dp_1", "changeover", domain.OeeBucketAvailability, 2, 600),
+		downtime("dp_1", "changeover", domain.OeeBucketAvailability, 3, 600),
+		downtime("dp_1", "changeover", domain.OeeBucketAvailability, 4, 600),
+		downtime("dp_1", "minor_stop", domain.OeeBucketPerformance, 5, 120),
+		downtime("dp_1", "quality_hold", domain.OeeBucketQuality, 6, 300),
+		downtime("dp_1", "no_schedule", domain.OeeBucketNotScheduled, 7, 7200),
 	}
 
-	got := aggregateOeeDowntime(rows)
+	got := aggregateOeeDowntime(rows, dtWindowStart, dtWindowEnd, nil)
 	totals, ok := got["dp_1"]
 	if !ok {
 		t.Fatal("expected totals for dp_1")
@@ -48,27 +74,55 @@ func TestAggregateOeeDowntime_SplitsByBucket(t *testing.T) {
 func TestAggregateOeeDowntime_SortsBreakdownByLossDescending(t *testing.T) {
 	t.Parallel()
 
-	rows := []domain.OeeDowntimeRow{
-		{DepartmentID: "dp_1", ReasonCode: "minor_stop", OeeBucket: domain.OeeBucketPerformance, DowntimeSeconds: 120, EventCount: 1},
-		{DepartmentID: "dp_1", ReasonCode: "breakdown", OeeBucket: domain.OeeBucketAvailability, DowntimeSeconds: 600, EventCount: 1},
+	rows := []domain.OeeDowntimeIntervalRow{
+		downtime("dp_1", "minor_stop", domain.OeeBucketPerformance, 0, 120),
+		downtime("dp_1", "breakdown", domain.OeeBucketAvailability, 1, 600),
 	}
 
-	totals := aggregateOeeDowntime(rows)["dp_1"]
+	totals := aggregateOeeDowntime(rows, dtWindowStart, dtWindowEnd, nil)["dp_1"]
 	if totals.reasons[0].ReasonCode != "breakdown" {
 		t.Errorf("first reason = %q, want breakdown (largest loss first)", totals.reasons[0].ReasonCode)
 	}
 }
 
-func TestAggregateOeeDowntime_ClampsNegativeClip(t *testing.T) {
+// An event that ended before the window opened contributes nothing and must not create a department
+// entry at all — a zero-second stop in the Pareto reads as a loss that cost nothing.
+func TestAggregateOeeDowntime_DropsEventOutsideWindow(t *testing.T) {
 	t.Parallel()
 
-	rows := []domain.OeeDowntimeRow{
-		{DepartmentID: "dp_1", ReasonCode: "breakdown", OeeBucket: domain.OeeBucketAvailability, DowntimeSeconds: -60, EventCount: 1},
+	rows := []domain.OeeDowntimeIntervalRow{
+		{
+			DepartmentID: "dp_1",
+			ReasonCode:   "breakdown",
+			OeeBucket:    domain.OeeBucketAvailability,
+			StartedAt:    dtWindowStart.Add(-2 * time.Hour),
+			EndedAt:      dtWindowStart.Add(-1 * time.Hour),
+		},
 	}
 
-	totals := aggregateOeeDowntime(rows)["dp_1"]
-	if totals.availability != 0 {
-		t.Errorf("availability = %v, want 0; a negative clip must not subtract from a loss total", totals.availability)
+	if _, ok := aggregateOeeDowntime(rows, dtWindowStart, dtWindowEnd, nil)["dp_1"]; ok {
+		t.Error("an event wholly before the window must not be counted")
+	}
+}
+
+// The reporting clip is applied before the shift clip: only the in-window part of a straddling event
+// is a loss for this window.
+func TestAggregateOeeDowntime_ClipsToWindow(t *testing.T) {
+	t.Parallel()
+
+	rows := []domain.OeeDowntimeIntervalRow{
+		{
+			DepartmentID: "dp_1",
+			ReasonCode:   "breakdown",
+			OeeBucket:    domain.OeeBucketAvailability,
+			StartedAt:    dtWindowStart.Add(-1 * time.Hour),
+			EndedAt:      dtWindowStart.Add(1 * time.Hour),
+		},
+	}
+
+	totals := aggregateOeeDowntime(rows, dtWindowStart, dtWindowEnd, nil)["dp_1"]
+	if totals.availability != 3600 {
+		t.Errorf("availability = %v, want 3600; only the in-window hour is a loss", totals.availability)
 	}
 }
 

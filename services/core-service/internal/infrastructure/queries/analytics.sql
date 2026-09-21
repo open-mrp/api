@@ -1361,28 +1361,6 @@ JOIN account a ON a.id = sm.supplier_account_id
 WHERE sm.owner_account_id = sqlc.arg('owner_account_id')
   AND sm.supplier_account_id IN (sqlc.slice('supplier_ids'));
 
--- GetOeeDowntimeByDepartment aggregates logged downtime for the OEE calculation, clipped to the reporting window so an event that straddles the boundary only contributes the overlapping part. Open events (ended_at IS NULL) clip at now. Grouped by reason so the caller can roll up to OEE buckets and still render a reason Pareto without a second query.
--- name: GetOeeDowntimeByDepartment :many
-SELECT
-    COALESCE(e.department_id, 'unassigned') AS department_id,
-    e.reason_code,
-    r.oee_bucket,
-    CAST(COALESCE(SUM(
-        TIMESTAMPDIFF(
-            SECOND,
-            GREATEST(e.started_at, sqlc.arg('start_date')),
-            LEAST(COALESCE(e.ended_at, NOW(3)), sqlc.arg('end_date'))
-        )
-    ), 0) AS SIGNED) AS downtime_seconds,
-    COUNT(*) AS event_count
-FROM machine_downtime_event e
-JOIN machine_downtime_reason r ON r.code = e.reason_code
-WHERE e.account_id = sqlc.arg('account_id')
-  -- Overlap test rather than containment: an event that started before the window and is still running must still contribute its in-window seconds.
-  AND e.started_at <= sqlc.arg('end_date')
-  AND COALESCE(e.ended_at, NOW(3)) >= sqlc.arg('start_date')
-GROUP BY COALESCE(e.department_id, 'unassigned'), e.reason_code, r.oee_bucket;
-
 -- CountMachinesByDepartment gives the scheduled-time denominator for OEE.
 --
 -- Availability is machine-hours run over machine-hours scheduled, and downtime is logged per machine, so a department's scheduled time has to scale with how many machines it has or a three-machine room would be measured against one machine's shift.
@@ -1497,19 +1475,20 @@ WHERE b.account_id = sqlc.arg('owner_account_id')
   )
 GROUP BY week_start_date, d.id, d.name;
 
--- GetOeeTrendDowntimeIntervals lists logged downtime per department as raw intervals, unclipped (open events coalesce to now).
+-- GetOeeDowntimeIntervals lists logged downtime per department and reason as raw intervals, unclipped (open events coalesce to now). Both OEE reads use it: the per-department table and the trend.
 --
--- Aggregating in SQL the way GetOeeDowntimeByDepartment does would need a per-week clip, and an event that spans a week boundary belongs partly to each week. Splitting the interval in Go is exact and needs no calendar table.
--- name: GetOeeTrendDowntimeIntervals :many
+-- Nothing is totalled here because a logged span is not the same as lost capacity, and neither clip can be expressed in one SQL sum. An event that crosses a week boundary belongs partly to each week, and an event that runs overnight belongs to the plant's shift window only for the part the plant was open. Both are exact interval arithmetic in Go (see oeeShiftWindow) and need no calendar table.
+-- name: GetOeeDowntimeIntervals :many
 SELECT
     COALESCE(e.department_id, 'unassigned') AS department_id,
+    e.reason_code,
     r.oee_bucket,
     e.started_at,
     COALESCE(e.ended_at, NOW(3)) AS ended_at
 FROM machine_downtime_event e
 JOIN machine_downtime_reason r ON r.code = e.reason_code
 WHERE e.account_id = sqlc.arg('account_id')
-  -- Overlap test rather than containment, matching GetOeeDowntimeByDepartment.
+  -- Overlap test rather than containment: an event that started before the window and is still running must still contribute its in-window seconds.
   AND e.started_at <= sqlc.arg('end_date')
   AND COALESCE(e.ended_at, NOW(3)) >= sqlc.arg('start_date')
 ORDER BY e.started_at;

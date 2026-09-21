@@ -22,14 +22,17 @@ func (s *analyticsSvcImpl) buildOeeByDepartment(ctx context.Context, params doma
 		EndDate:   params.EndDate,
 	}
 
+	// Read unconditionally: the shift window comes off the same settings row and is needed to clip downtime even when the caller supplied its own capacity.
+	settings, apiErr := s.repos.NewProductionScheduleRepo().GetSettings(ctx, params.AccountID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	shiftWindow := newOeeShiftWindow(settings)
+
 	// Capacity is the machine-hours the scheduled machines could run over the window — their shift configuration, not a scan span — unless the caller supplied its own. A department with no published plan has no scheduled machines and so no capacity, which is no OEE rather than a guessed denominator. The scheduled machines scope Performance and Quality to the same plant Availability is measured against.
 	capacityHours := params.PlannedTimeHours
 	var scheduledMachines map[string]bool
 	if len(capacityHours) == 0 {
-		settings, apiErr := s.repos.NewProductionScheduleRepo().GetSettings(ctx, params.AccountID)
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
 		perMachineWeekly := machineWeeklyCapacityHours(settings)
 		capacityByWeek, machines, apiErr := s.scheduledCapacity(ctx, params.AccountID, params.StartDate, params.EndDate, int(settings.WeekStartDay), perMachineWeekly)
 		if apiErr != nil {
@@ -72,12 +75,12 @@ func (s *analyticsSvcImpl) buildOeeByDepartment(ctx context.Context, params doma
 		}
 	}
 
-	downtimeRows, apiErr := repo.GetOeeDowntimeByDepartment(ctx, window)
+	downtimeRows, apiErr := repo.GetOeeDowntimeIntervals(ctx, window)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	downtimeMap := aggregateOeeDowntime(downtimeRows)
+	downtimeMap := aggregateOeeDowntime(downtimeRows, params.StartDate, params.EndDate, shiftWindow)
 
 	// Build department filter set for optional filtering.
 	deptFilter := make(map[string]bool, len(params.DepartmentIDs))
@@ -140,20 +143,31 @@ type oeeDowntimeTotals struct {
 	reasons      []domain.OeeDowntimeReason
 }
 
-// aggregateOeeDowntime rolls the per-reason downtime rows up per department. Reasons are kept alongside the bucket totals so a Pareto can be rendered without a second query.
-func aggregateOeeDowntime(rows []domain.OeeDowntimeRow) map[string]*oeeDowntimeTotals {
+// aggregateOeeDowntime rolls logged downtime intervals up per department, charging each only the part that falls inside the reporting window AND inside the plant's shift window. Reasons are kept alongside the bucket totals so a Pareto can be rendered without a second query.
+//
+// Both clips matter and neither is optional. The reporting clip is obvious. The shift clip is what keeps run time honest: capacity counts only the hours the plant is open, so a stop has to be measured against the same hours or it removes time the denominator never held. A 16-hour breakdown logged 15:00 Thursday to 07:00 Friday against a 06:00-22:00 plant is 7 hours of lost Thursday and 1 of Friday, not 16. A nil window (an account that has never configured one) charges the whole span, which is the behaviour before the window existed.
+func aggregateOeeDowntime(rows []domain.OeeDowntimeIntervalRow, windowStart, windowEnd time.Time, shift *oeeShiftWindow) map[string]*oeeDowntimeTotals {
 	out := make(map[string]*oeeDowntimeTotals)
 	for _, row := range rows {
+		start := row.StartedAt
+		if start.Before(windowStart) {
+			start = windowStart
+		}
+		end := row.EndedAt
+		if end.After(windowEnd) {
+			end = windowEnd
+		}
+
+		seconds := shift.OverlapSeconds(start, end)
+		// An event wholly outside the shift is not a loss and must not be counted as an occurrence either, or the Pareto fills with stops that cost nothing.
+		if seconds <= 0 {
+			continue
+		}
+
 		totals, ok := out[row.DepartmentID]
 		if !ok {
 			totals = &oeeDowntimeTotals{}
 			out[row.DepartmentID] = totals
-		}
-
-		// A clipped interval can only be negative if the overlap guard in the query failed; treat that as zero rather than letting it subtract from a loss total.
-		seconds := float64(row.DowntimeSeconds)
-		if seconds < 0 {
-			seconds = 0
 		}
 
 		switch row.OeeBucket {
@@ -171,13 +185,36 @@ func aggregateOeeDowntime(rows []domain.OeeDowntimeRow) map[string]*oeeDowntimeT
 			totals.changeover += seconds
 		}
 
-		totals.events += row.EventCount
+		// One interval is one event. The reasons list is per-event here and folded below, because two events sharing a reason can clip to different seconds.
+		totals.events++
 		totals.reasons = append(totals.reasons, domain.OeeDowntimeReason{
 			ReasonCode:      row.ReasonCode,
 			OeeBucket:       row.OeeBucket,
 			DowntimeSeconds: seconds,
-			EventCount:      row.EventCount,
+			EventCount:      1,
 		})
+	}
+
+	// Fold the per-event rows down to one row per reason, the shape the Pareto is rendered from and the shape the SQL aggregate used to return.
+	for departmentID, totals := range out {
+		byReason := make(map[string]*domain.OeeDowntimeReason, len(totals.reasons))
+		order := make([]string, 0, len(totals.reasons))
+		for _, reason := range totals.reasons {
+			existing, ok := byReason[reason.ReasonCode]
+			if !ok {
+				copied := reason
+				byReason[reason.ReasonCode] = &copied
+				order = append(order, reason.ReasonCode)
+				continue
+			}
+			existing.DowntimeSeconds += reason.DowntimeSeconds
+			existing.EventCount++
+		}
+		folded := make([]domain.OeeDowntimeReason, 0, len(order))
+		for _, code := range order {
+			folded = append(folded, *byReason[code])
+		}
+		out[departmentID].reasons = folded
 	}
 
 	// Largest loss first, then by code so the order is stable across identical totals.

@@ -231,6 +231,10 @@ SELECT
     s.shifts_per_day,
     s.hours_per_shift,
     s.work_days_per_week,
+    -- The shift calendar: how much capacity the three columns above describe, and WHEN it sits on the clock. OEE intersects logged downtime with it so an overnight stop is not charged hours the plant was shut.
+    s.shift_start_time,
+    s.shift_timezone,
+    s.shift_days_of_week,
     s.weeks_per_year,
     s.capacity_headroom_pct,
     s.default_lot_units,

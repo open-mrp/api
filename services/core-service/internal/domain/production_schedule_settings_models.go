@@ -39,6 +39,12 @@ type ProductionScheduleSettings struct {
 	CapacityHeadroomPct float64 `audit:"capacity_headroom_pct"`
 	DefaultLotUnits     float64 `audit:"default_lot_units"`
 
+	// ShiftStartTime and ShiftTimezone place the shift capacity above on the clock — when the plant's first shift begins, as a local "HH:MM", and the IANA zone that time is read in. Both nil means the account has never said, which leaves OEE downtime unclipped rather than guessing a window; see OeeShiftWindow.
+	ShiftStartTime *string `audit:"shift_start_time"`
+	ShiftTimezone  *string `audit:"shift_timezone"`
+	// ShiftDaysOfWeek is the open days as seven characters of '0'/'1', Monday first, exactly as operating_calendar.days_of_week encodes them. WorkDaysPerWeek says how many days the capacity holds; this says which ones, which is what an overnight stop has to be clipped against.
+	ShiftDaysOfWeek string `audit:"shift_days_of_week"`
+
 	// DefaultCustomerLeadTimeDays is the last fallback in an order's ship-by chain, behind the customer and its account group.
 	DefaultCustomerLeadTimeDays int32 `audit:"default_customer_lead_time_days"`
 	// ShipCalendarID and ReceiveCalendarID are the account-wide fallbacks behind the per-customer and per-address links, and the last stop before Monday to Friday. They sit with the planning assumptions because they answer the same question the lead time does — when can this order actually leave.

@@ -9979,19 +9979,19 @@ func (mr *MockAnalyticsRepoMockRecorder) GetOeeDepartmentData(ctx, params any) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOeeDepartmentData", reflect.TypeOf((*MockAnalyticsRepo)(nil).GetOeeDepartmentData), ctx, params)
 }
 
-// GetOeeDowntimeByDepartment mocks base method.
-func (m *MockAnalyticsRepo) GetOeeDowntimeByDepartment(ctx context.Context, params domain.GetOeeWindowParams) ([]domain.OeeDowntimeRow, *apierror.APIError) {
+// GetOeeDowntimeIntervals mocks base method.
+func (m *MockAnalyticsRepo) GetOeeDowntimeIntervals(ctx context.Context, params domain.GetOeeWindowParams) ([]domain.OeeDowntimeIntervalRow, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetOeeDowntimeByDepartment", ctx, params)
-	ret0, _ := ret[0].([]domain.OeeDowntimeRow)
+	ret := m.ctrl.Call(m, "GetOeeDowntimeIntervals", ctx, params)
+	ret0, _ := ret[0].([]domain.OeeDowntimeIntervalRow)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
-// GetOeeDowntimeByDepartment indicates an expected call of GetOeeDowntimeByDepartment.
-func (mr *MockAnalyticsRepoMockRecorder) GetOeeDowntimeByDepartment(ctx, params any) *gomock.Call {
+// GetOeeDowntimeIntervals indicates an expected call of GetOeeDowntimeIntervals.
+func (mr *MockAnalyticsRepoMockRecorder) GetOeeDowntimeIntervals(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOeeDowntimeByDepartment", reflect.TypeOf((*MockAnalyticsRepo)(nil).GetOeeDowntimeByDepartment), ctx, params)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOeeDowntimeIntervals", reflect.TypeOf((*MockAnalyticsRepo)(nil).GetOeeDowntimeIntervals), ctx, params)
 }
 
 // GetOeeTrendDepartmentDataByWeek mocks base method.
@@ -10007,21 +10007,6 @@ func (m *MockAnalyticsRepo) GetOeeTrendDepartmentDataByWeek(ctx context.Context,
 func (mr *MockAnalyticsRepoMockRecorder) GetOeeTrendDepartmentDataByWeek(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOeeTrendDepartmentDataByWeek", reflect.TypeOf((*MockAnalyticsRepo)(nil).GetOeeTrendDepartmentDataByWeek), ctx, params)
-}
-
-// GetOeeTrendDowntimeIntervals mocks base method.
-func (m *MockAnalyticsRepo) GetOeeTrendDowntimeIntervals(ctx context.Context, params domain.GetOeeWindowParams) ([]domain.OeeDowntimeIntervalRow, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetOeeTrendDowntimeIntervals", ctx, params)
-	ret0, _ := ret[0].([]domain.OeeDowntimeIntervalRow)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// GetOeeTrendDowntimeIntervals indicates an expected call of GetOeeTrendDowntimeIntervals.
-func (mr *MockAnalyticsRepoMockRecorder) GetOeeTrendDowntimeIntervals(ctx, params any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOeeTrendDowntimeIntervals", reflect.TypeOf((*MockAnalyticsRepo)(nil).GetOeeTrendDowntimeIntervals), ctx, params)
 }
 
 // GetOpenBatchEntries mocks base method.

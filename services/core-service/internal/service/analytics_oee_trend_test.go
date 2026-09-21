@@ -62,8 +62,8 @@ func TestOeeTrendDowntimeInBucket_SplitsAcrossWeekBoundary(t *testing.T) {
 		EndedAt:      oeeTrendMonday.AddDate(0, 0, 7).Add(6 * time.Hour),  // Monday 06:00
 	}}
 
-	first := oeeTrendDowntimeInBucket(rows, nil, oeeTrendMonday, oeeTrendMonday.AddDate(0, 0, 7))
-	second := oeeTrendDowntimeInBucket(rows, nil, oeeTrendMonday.AddDate(0, 0, 7), oeeTrendMonday.AddDate(0, 0, 14))
+	first := oeeTrendDowntimeInBucket(rows, nil, oeeTrendMonday, oeeTrendMonday.AddDate(0, 0, 7), nil)
+	second := oeeTrendDowntimeInBucket(rows, nil, oeeTrendMonday.AddDate(0, 0, 7), oeeTrendMonday.AddDate(0, 0, 14), nil)
 
 	assert.InDelta(t, 4*3600.0, first["dp_knit"].availability, 0.001, "the four hours before midnight belong to week one")
 	assert.InDelta(t, 6*3600.0, second["dp_knit"].availability, 0.001, "the six hours after it belong to week two")
@@ -79,7 +79,7 @@ func TestOeeTrendDowntimeInBucket_OnlyAvailabilityAndNotScheduledChargeDenominat
 		{DepartmentID: "dp", OeeBucket: domain.OeeBucketNotScheduled, StartedAt: oeeTrendMonday, EndedAt: oeeTrendMonday.Add(2 * time.Hour)},
 	}
 
-	totals := oeeTrendDowntimeInBucket(rows, nil, oeeTrendMonday, oeeTrendMonday.AddDate(0, 0, 7))["dp"]
+	totals := oeeTrendDowntimeInBucket(rows, nil, oeeTrendMonday, oeeTrendMonday.AddDate(0, 0, 7), nil)["dp"]
 
 	assert.Zero(t, totals.availability)
 	assert.InDelta(t, 2*3600.0, totals.notScheduled, 0.001)
@@ -94,7 +94,7 @@ func TestOeeTrendDowntimeInBucket_HonoursDepartmentFilter(t *testing.T) {
 		{DepartmentID: "dp_drop", OeeBucket: domain.OeeBucketAvailability, StartedAt: oeeTrendMonday, EndedAt: oeeTrendMonday.Add(time.Hour)},
 	}
 
-	totals := oeeTrendDowntimeInBucket(rows, map[string]bool{"dp_keep": true}, oeeTrendMonday, oeeTrendMonday.AddDate(0, 0, 7))
+	totals := oeeTrendDowntimeInBucket(rows, map[string]bool{"dp_keep": true}, oeeTrendMonday, oeeTrendMonday.AddDate(0, 0, 7), nil)
 
 	assert.Len(t, totals, 1)
 	assert.NotNil(t, totals["dp_keep"])

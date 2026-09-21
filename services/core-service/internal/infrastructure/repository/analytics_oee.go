@@ -62,34 +62,6 @@ func (r *analyticsRepoImpl) GetOeeDepartmentData(ctx context.Context, params dom
 	return out, nil
 }
 
-// GetOeeDowntimeByDepartment returns logged downtime per department and reason, clipped to the window.
-func (r *analyticsRepoImpl) GetOeeDowntimeByDepartment(ctx context.Context, params domain.GetOeeWindowParams) ([]domain.OeeDowntimeRow, *apierror.APIError) {
-	ctx, span := analyticsRepoTracer.Start(ctx, "repository.analytics.get_oee_downtime_by_department")
-	defer span.End()
-
-	rows, err := r.queries.GetOeeDowntimeByDepartment(ctx, sqlc.GetOeeDowntimeByDepartmentParams{
-		AccountID: params.AccountID,
-		// sqlc infers these two asymmetrically from their use in GREATEST/LEAST.
-		StartDate: toRequiredNullTime(params.StartDate),
-		EndDate:   params.EndDate,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	out := make([]domain.OeeDowntimeRow, len(rows))
-	for i, row := range rows {
-		out[i] = domain.OeeDowntimeRow{
-			DepartmentID:    row.DepartmentID,
-			ReasonCode:      row.ReasonCode,
-			OeeBucket:       row.OeeBucket,
-			DowntimeSeconds: row.DowntimeSeconds,
-			EventCount:      row.EventCount,
-		}
-	}
-	return out, nil
-}
-
 // GetOeeTrendDepartmentDataByWeek returns unit counts and standard time earned per department per production week in the window. As with GetOeeDepartmentData, naming machines restricts the counts to those machines via a separate query, so the unrestricted path carries no filter predicate.
 func (r *analyticsRepoImpl) GetOeeTrendDepartmentDataByWeek(ctx context.Context, params domain.GetOeeWindowParams) ([]domain.OeeTrendDepartmentWeekRow, *apierror.APIError) {
 	ctx, span := analyticsRepoTracer.Start(ctx, "repository.analytics.get_oee_trend_department_data_by_week")
@@ -146,12 +118,12 @@ func (r *analyticsRepoImpl) GetOeeTrendDepartmentDataByWeek(ctx context.Context,
 	return out, nil
 }
 
-// GetOeeTrendDowntimeIntervals returns logged downtime per department as raw intervals so the caller can split them across week buckets.
-func (r *analyticsRepoImpl) GetOeeTrendDowntimeIntervals(ctx context.Context, params domain.GetOeeWindowParams) ([]domain.OeeDowntimeIntervalRow, *apierror.APIError) {
-	ctx, span := analyticsRepoTracer.Start(ctx, "repository.analytics.get_oee_trend_downtime_intervals")
+// GetOeeDowntimeIntervals returns logged downtime as raw intervals so the caller can clip them to its own period and to the plant's shift window.
+func (r *analyticsRepoImpl) GetOeeDowntimeIntervals(ctx context.Context, params domain.GetOeeWindowParams) ([]domain.OeeDowntimeIntervalRow, *apierror.APIError) {
+	ctx, span := analyticsRepoTracer.Start(ctx, "repository.analytics.get_oee_downtime_intervals")
 	defer span.End()
 
-	rows, err := r.queries.GetOeeTrendDowntimeIntervals(ctx, sqlc.GetOeeTrendDowntimeIntervalsParams{
+	rows, err := r.queries.GetOeeDowntimeIntervals(ctx, sqlc.GetOeeDowntimeIntervalsParams{
 		AccountID: params.AccountID,
 		StartDate: toRequiredNullTime(params.StartDate),
 		EndDate:   params.EndDate,
@@ -168,6 +140,7 @@ func (r *analyticsRepoImpl) GetOeeTrendDowntimeIntervals(ctx context.Context, pa
 		}
 		out = append(out, domain.OeeDowntimeIntervalRow{
 			DepartmentID: row.DepartmentID,
+			ReasonCode:   row.ReasonCode,
 			OeeBucket:    row.OeeBucket,
 			StartedAt:    row.StartedAt,
 			EndedAt:      row.EndedAt.Time,

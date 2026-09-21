@@ -28,6 +28,8 @@ func (s *analyticsSvcImpl) buildOeeTrend(ctx context.Context, params domain.Anal
 		return nil, tracing.Trace(span, apiErr)
 	}
 	weekStartDay := int(settings.WeekStartDay)
+	// The same shift calendar the per-department table clips against, so a week on the chart and the same week in the table charge a stop identically.
+	shiftWindow := newOeeShiftWindow(settings)
 
 	// Capacity per department per week comes from the shift configuration, and the same read gives the flat set of scheduled machines the output read is scoped to — the same machines and the same weekly capacity the per-department table uses, so the trend and the table agree on the window. Read before the parallel reads because the output query needs the machine filter; it is a handful of small queries. No schedule means no machines and no scoping, matching the empty roll-up that follows.
 	perMachineWeekly := machineWeeklyCapacityHours(settings)
@@ -59,7 +61,7 @@ func (s *analyticsSvcImpl) buildOeeTrend(ctx context.Context, params domain.Anal
 	}()
 	go func() {
 		defer wg.Done()
-		downtimeRows, errs[1] = repo.GetOeeTrendDowntimeIntervals(ctx, window)
+		downtimeRows, errs[1] = repo.GetOeeDowntimeIntervals(ctx, window)
 	}()
 	wg.Wait()
 
@@ -81,7 +83,7 @@ func (s *analyticsSvcImpl) buildOeeTrend(ctx context.Context, params domain.Anal
 		// Capacity is week-granular, so each bucket takes its own week's capacity, prorated to the days the bucket covers — a partial first or last week is measured against the part of it that was asked for, the same days its output and downtime are read over.
 		week := scheduleWeekStart(bucket.start, weekStartDay)
 		capacityHours := scaleDeptHours(filterDeptHours(capacityWeek[week], deptFilter), weekOverlapFraction(week, bucket.start, bucket.end))
-		downtime := oeeTrendDowntimeInBucket(downtimeRows, deptFilter, bucket.start, bucket.end)
+		downtime := oeeTrendDowntimeInBucket(downtimeRows, deptFilter, bucket.start, bucket.end, shiftWindow)
 		// Output is already clipped to the window by the read's scanned_at range, so a partial first or last week needs no proration here — only capacity, which is week-granular, is scaled above.
 		periods = append(periods, buildOeeTrendPeriod(bucket, capacityHours, outputByWeek[week], downtime))
 	}
@@ -143,7 +145,9 @@ type oeeTrendDowntimeTotals struct {
 // oeeTrendDowntimeInBucket clips every logged interval to one week and totals it per department.
 //
 // An event that spans midnight on Sunday belongs partly to each week, so it is clipped rather than assigned whole to the week it started in — otherwise a Friday breakdown running into Monday would make one week look worse and the next look untouched.
-func oeeTrendDowntimeInBucket(rows []domain.OeeDowntimeIntervalRow, deptFilter map[string]bool, bucketStart, bucketEnd time.Time) map[string]*oeeTrendDowntimeTotals {
+//
+// It is then clipped again to the plant's shift window, for the reason aggregateOeeDowntime gives: capacity counts only the hours the plant is open, so a stop measured over hours it was closed removes time the denominator never held.
+func oeeTrendDowntimeInBucket(rows []domain.OeeDowntimeIntervalRow, deptFilter map[string]bool, bucketStart, bucketEnd time.Time, shift *oeeShiftWindow) map[string]*oeeTrendDowntimeTotals {
 	out := make(map[string]*oeeTrendDowntimeTotals)
 	for _, row := range rows {
 		if len(deptFilter) > 0 && !deptFilter[row.DepartmentID] {
@@ -158,7 +162,8 @@ func oeeTrendDowntimeInBucket(rows []domain.OeeDowntimeIntervalRow, deptFilter m
 		if end.After(bucketEnd) {
 			end = bucketEnd
 		}
-		if !end.After(start) {
+		seconds := shift.OverlapSeconds(start, end)
+		if seconds <= 0 {
 			continue
 		}
 
@@ -168,7 +173,6 @@ func oeeTrendDowntimeInBucket(rows []domain.OeeDowntimeIntervalRow, deptFilter m
 			out[row.DepartmentID] = totals
 		}
 
-		seconds := end.Sub(start).Seconds()
 		switch row.OeeBucket {
 		case domain.OeeBucketAvailability:
 			totals.availability += seconds

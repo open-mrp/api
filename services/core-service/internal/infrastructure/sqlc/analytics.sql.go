@@ -1327,7 +1327,7 @@ SELECT
             0
         )
     ), 0) AS DECIMAL(65,30)) AS standard_seconds_earned
-FROM batch b
+FROM batch b FORCE INDEX (batch_account_id_scanned_at_idx)
 LEFT JOIN quantity qf ON qf.id = b.quantity_id
 LEFT JOIN unit u_qf ON u_qf.id = qf.unit_id
 LEFT JOIN quantity qw ON qw.id = b.waste_quantity_id
@@ -1366,6 +1366,11 @@ type GetOeeDepartmentDataRow struct {
 // standard_seconds_earned is the numerator of OEE Performance: the time the work *should* have taken at the production step's own labor rate. The rate is a Rate whose numerator unit decides its scale, converted to seconds via that unit's ratio_numerator/ratio_denominator (its size in the time base, the hour) rather than a hardcoded abbreviation table — the same conversion the solver applies in SecondsPerUnitFromLaborTime, which now reads the same columns, so the two never disagree about what a run rate means and both handle day and account-defined time units.
 //
 // Seconds-grade units count toward output but not toward good: they are sellable, but they are not first-pass quality, and leaving them out of the denominator would report a plant that produces nothing but irregulars as 100% quality.
+// FORCE INDEX pins the (account_id, scanned_at) range scan. With a year window on a
+// plant with several years of scans the optimizer otherwise picks the wider
+// (account_id, scanning_station_id, scanned_at, id) composite, which cannot use scanned_at
+// as a range bound and so reads every batch the account ever scanned — the 14s read that
+// times the trend out.
 func (q *Queries) GetOeeDepartmentData(ctx context.Context, arg GetOeeDepartmentDataParams) ([]GetOeeDepartmentDataRow, error) {
 	rows, err := q.db.QueryContext(ctx, getOeeDepartmentData, arg.OwnerAccountID, arg.StartDate, arg.EndDate)
 	if err != nil {
@@ -1424,7 +1429,7 @@ SELECT
             0
         )
     ), 0) AS DECIMAL(65,30)) AS standard_seconds_earned
-FROM batch b
+FROM batch b FORCE INDEX (batch_account_id_scanned_at_idx)
 LEFT JOIN quantity qf ON qf.id = b.quantity_id
 LEFT JOIN unit u_qf ON u_qf.id = qf.unit_id
 LEFT JOIN quantity qw ON qw.id = b.waste_quantity_id
@@ -1466,6 +1471,7 @@ type GetOeeDepartmentDataForMachinesRow struct {
 // GetOeeDepartmentDataForMachines is GetOeeDepartmentData restricted to production on a given set of machines — the machines the plan scheduled.
 //
 // Performance divides the standard time earned by the scheduled machines' run time, so counting output from machines that were never scheduled would report a department running many times faster than the plant it was measured against. The service calls this variant for scheduled departments and the unrestricted query above for everything else; the two SELECT lists (including the standard_seconds_earned conversion) must stay identical so the scoped and whole-floor reads can never disagree about what a run rate means.
+// FORCE INDEX pins the (account_id, scanned_at) range scan; see GetOeeDepartmentData.
 func (q *Queries) GetOeeDepartmentDataForMachines(ctx context.Context, arg GetOeeDepartmentDataForMachinesParams) ([]GetOeeDepartmentDataForMachinesRow, error) {
 	query := getOeeDepartmentDataForMachines
 	var queryParams []interface{}
@@ -1600,7 +1606,7 @@ SELECT
             0
         )
     ), 0) AS DECIMAL(65,30)) AS standard_seconds_earned
-FROM batch b
+FROM batch b FORCE INDEX (batch_account_id_scanned_at_idx)
 LEFT JOIN quantity qf ON qf.id = b.quantity_id
 LEFT JOIN unit u_qf ON u_qf.id = qf.unit_id
 LEFT JOIN quantity qw ON qw.id = b.waste_quantity_id
@@ -1639,6 +1645,7 @@ type GetOeeTrendDepartmentDataByWeekRow struct {
 // GetOeeTrendDepartmentDataByWeek is GetOeeDepartmentData bucketed into production weeks, so one read covers a whole trend window instead of one round trip per week.
 //
 // The week key is the start of the scan's production week, following the account's configured week_start_day, exactly as SumActualsByWeek buckets it: a trend that bucketed on a different day would disagree with schedule attainment about which week a batch belongs to.
+// FORCE INDEX pins the (account_id, scanned_at) range scan; see GetOeeDepartmentData.
 func (q *Queries) GetOeeTrendDepartmentDataByWeek(ctx context.Context, arg GetOeeTrendDepartmentDataByWeekParams) ([]GetOeeTrendDepartmentDataByWeekRow, error) {
 	rows, err := q.db.QueryContext(ctx, getOeeTrendDepartmentDataByWeek,
 		arg.WeekStartDay,
@@ -1704,7 +1711,7 @@ SELECT
             0
         )
     ), 0) AS DECIMAL(65,30)) AS standard_seconds_earned
-FROM batch b
+FROM batch b FORCE INDEX (batch_account_id_scanned_at_idx)
 LEFT JOIN quantity qf ON qf.id = b.quantity_id
 LEFT JOIN unit u_qf ON u_qf.id = qf.unit_id
 LEFT JOIN quantity qw ON qw.id = b.waste_quantity_id
@@ -1746,6 +1753,7 @@ type GetOeeTrendDepartmentDataByWeekForMachinesRow struct {
 }
 
 // GetOeeTrendDepartmentDataByWeekForMachines is GetOeeTrendDepartmentDataByWeek restricted to production on a given set of machines, mirroring GetOeeDepartmentDataForMachines so a trend point measures the same machines as the table beside it. The SELECT list must stay identical to GetOeeTrendDepartmentDataByWeek.
+// FORCE INDEX pins the (account_id, scanned_at) range scan; see GetOeeDepartmentData.
 func (q *Queries) GetOeeTrendDepartmentDataByWeekForMachines(ctx context.Context, arg GetOeeTrendDepartmentDataByWeekForMachinesParams) ([]GetOeeTrendDepartmentDataByWeekForMachinesRow, error) {
 	query := getOeeTrendDepartmentDataByWeekForMachines
 	var queryParams []interface{}

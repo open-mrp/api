@@ -1073,7 +1073,12 @@ SELECT
             0
         )
     ), 0) AS DECIMAL(65,30)) AS standard_seconds_earned
-FROM batch b
+-- FORCE INDEX pins the (account_id, scanned_at) range scan. With a year window on a
+-- plant with several years of scans the optimizer otherwise picks the wider
+-- (account_id, scanning_station_id, scanned_at, id) composite, which cannot use scanned_at
+-- as a range bound and so reads every batch the account ever scanned — the 14s read that
+-- times the trend out.
+FROM batch b FORCE INDEX (batch_account_id_scanned_at_idx)
 LEFT JOIN quantity qf ON qf.id = b.quantity_id
 LEFT JOIN unit u_qf ON u_qf.id = qf.unit_id
 LEFT JOIN quantity qw ON qw.id = b.waste_quantity_id
@@ -1122,7 +1127,8 @@ SELECT
             0
         )
     ), 0) AS DECIMAL(65,30)) AS standard_seconds_earned
-FROM batch b
+-- FORCE INDEX pins the (account_id, scanned_at) range scan; see GetOeeDepartmentData.
+FROM batch b FORCE INDEX (batch_account_id_scanned_at_idx)
 LEFT JOIN quantity qf ON qf.id = b.quantity_id
 LEFT JOIN unit u_qf ON u_qf.id = qf.unit_id
 LEFT JOIN quantity qw ON qw.id = b.waste_quantity_id
@@ -1405,7 +1411,8 @@ SELECT
             0
         )
     ), 0) AS DECIMAL(65,30)) AS standard_seconds_earned
-FROM batch b
+-- FORCE INDEX pins the (account_id, scanned_at) range scan; see GetOeeDepartmentData.
+FROM batch b FORCE INDEX (batch_account_id_scanned_at_idx)
 LEFT JOIN quantity qf ON qf.id = b.quantity_id
 LEFT JOIN unit u_qf ON u_qf.id = qf.unit_id
 LEFT JOIN quantity qw ON qw.id = b.waste_quantity_id
@@ -1453,7 +1460,8 @@ SELECT
             0
         )
     ), 0) AS DECIMAL(65,30)) AS standard_seconds_earned
-FROM batch b
+-- FORCE INDEX pins the (account_id, scanned_at) range scan; see GetOeeDepartmentData.
+FROM batch b FORCE INDEX (batch_account_id_scanned_at_idx)
 LEFT JOIN quantity qf ON qf.id = b.quantity_id
 LEFT JOIN unit u_qf ON u_qf.id = qf.unit_id
 LEFT JOIN quantity qw ON qw.id = b.waste_quantity_id

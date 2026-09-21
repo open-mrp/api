@@ -171,7 +171,6 @@ INSERT INTO account_production_schedule_setting (
     holding_rate_pct, service_level_z, finish_lead_time_weeks,
     default_constraint_lead_time_weeks, max_weeks_supply, max_flow_depth,
     shifts_per_day, hours_per_shift, work_days_per_week, weeks_per_year,
-    shift_start_time, shift_timezone, shift_days_of_week,
     capacity_headroom_pct, default_lot_units,
     default_customer_lead_time_days, default_fulfillment_policy_code,
     ship_calendar_id, receive_calendar_id,
@@ -186,7 +185,6 @@ INSERT INTO account_production_schedule_setting (
     ?, ?, ?,
     ?, ?, ?,
     ?, ?, ?, ?,
-    ?, ?, ?,
     ?, ?,
     ?, ?,
     ?, ?,
@@ -216,9 +214,6 @@ ON DUPLICATE KEY UPDATE
     shifts_per_day = VALUES(shifts_per_day),
     hours_per_shift = VALUES(hours_per_shift),
     work_days_per_week = VALUES(work_days_per_week),
-    shift_start_time = VALUES(shift_start_time),
-    shift_timezone = VALUES(shift_timezone),
-    shift_days_of_week = VALUES(shift_days_of_week),
     weeks_per_year = VALUES(weeks_per_year),
     capacity_headroom_pct = VALUES(capacity_headroom_pct),
     default_lot_units = VALUES(default_lot_units),
@@ -259,9 +254,6 @@ type UpsertAccountProductionScheduleSettingParams struct {
 	HoursPerShift                  string
 	WorkDaysPerWeek                int32
 	WeeksPerYear                   int32
-	ShiftStartTime                 sql.NullString
-	ShiftTimezone                  sql.NullString
-	ShiftDaysOfWeek                string
 	CapacityHeadroomPct            string
 	DefaultLotUnits                string
 	DefaultCustomerLeadTimeDays    int32
@@ -279,6 +271,8 @@ type UpsertAccountProductionScheduleSettingParams struct {
 // UpsertAccountProductionScheduleSetting writes the whole settings row.
 //
 // Upsert rather than update: an account that has never opened the settings page has no row, and the API must not make a merchant save twice to change one number.
+//
+// shift_start_time, shift_timezone and shift_days_of_week are deliberately absent from both halves. Nothing can edit them yet — OEE only reads them — so a settings save that does not know about them must not blank them. They move into the column list with the endpoint that sets them.
 func (q *Queries) UpsertAccountProductionScheduleSetting(ctx context.Context, arg UpsertAccountProductionScheduleSettingParams) error {
 	_, err := q.db.ExecContext(ctx, upsertAccountProductionScheduleSetting,
 		arg.ID,
@@ -306,9 +300,6 @@ func (q *Queries) UpsertAccountProductionScheduleSetting(ctx context.Context, ar
 		arg.HoursPerShift,
 		arg.WorkDaysPerWeek,
 		arg.WeeksPerYear,
-		arg.ShiftStartTime,
-		arg.ShiftTimezone,
-		arg.ShiftDaysOfWeek,
 		arg.CapacityHeadroomPct,
 		arg.DefaultLotUnits,
 		arg.DefaultCustomerLeadTimeDays,

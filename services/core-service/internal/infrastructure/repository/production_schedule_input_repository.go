@@ -84,10 +84,11 @@ func (r *productionScheduleInputRepoImpl) GetItemRunRateHistory(ctx context.Cont
 			MachineID:      row.MachineID.String,
 			LaborTimeValue: decimalToFloat64(row.LaborTimeValue),
 			LaborTime: scheduling.LaborTimeConversion{
-				TimeRatioNumerator:       decimalToFloat64(row.LaborTimeRatioNumerator),
-				TimeRatioDenominator:     decimalToFloat64(row.LaborTimeRatioDenominator),
-				QuantityRatioNumerator:   decimalToFloat64(row.LaborTimeQtyRatioNumerator),
-				QuantityRatioDenominator: decimalToFloat64(row.LaborTimeQtyRatioDenominator),
+				TimeRatioNumerator:   decimalToFloat64(row.LaborTimeRatioNumerator),
+				TimeRatioDenominator: decimalToFloat64(row.LaborTimeRatioDenominator),
+				// The rate's denominator unit is LEFT JOINed, so these arrive as sql.NullString while the time half is a plain string. decimalToFloat64 takes `any` and returns 0 for a type it does not know, so passing the wrapper straight in would silently skip the quantity conversion and leave every pair-rated step at twice its real seconds — the bug this whole change exists to fix. Unwrap: an absent unit gives "", which reads as 0 and leaves that half unconverted.
+				QuantityRatioNumerator:   decimalToFloat64(row.LaborTimeQtyRatioNumerator.String),
+				QuantityRatioDenominator: decimalToFloat64(row.LaborTimeQtyRatioDenominator.String),
 			},
 		}
 	}

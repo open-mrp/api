@@ -1312,13 +1312,18 @@ SELECT
             + COALESCE(qw.value * (u_qw.ratio_numerator / u_qw.ratio_denominator), 0)
             + COALESCE(qs.value * (u_qs.ratio_numerator / u_qs.ratio_denominator), 0)
         ) * COALESCE(
-            -- Labor time to seconds via the numerator unit's own conversion columns, not a fixed
-            -- abbreviation table: ratio_numerator/ratio_denominator is the unit's size in the time
-            -- dimension's base (the hour), so seconds = value * (ratio) * 3600. Handles day and any
-            -- account-defined time unit, and stays in step with the solver's SecondsPerUnitFromLaborTime,
-            -- which reads the same columns. A missing numerator unit leaves the product NULL, so the
-            -- COALESCE books no standard time rather than guessing a scale.
-            labor_time.value * (labor_time_unit.ratio_numerator / labor_time_unit.ratio_denominator) * 3600,
+            -- Labor time to seconds per BASE quantity unit, via both of the rate's unit ratios, not a
+            -- fixed abbreviation table. The numerator unit's ratio is its size in the time dimension's
+            -- base (the hour), so value * (ratio) * 3600 gives seconds; handles day and any
+            -- account-defined time unit. The denominator unit's ratio is its size in the quantity base,
+            -- and the rate is DIVIDED by it because the quantities above are already normalized to that
+            -- base: a step rated 554 sec/pr is 277 sec per each, and skipping this division counts every
+            -- pair-rated step twice. Stays in step with the solver's SecondsPerUnitFromLaborTime, which
+            -- reads the same four columns. A missing numerator unit leaves the product NULL, so the
+            -- COALESCE books no standard time rather than guessing a scale; a missing denominator unit
+            -- divides by one, leaving a rate already quoted per base unit alone.
+            labor_time.value * (labor_time_unit.ratio_numerator / labor_time_unit.ratio_denominator) * 3600
+                / COALESCE(NULLIF(labor_time_qty_unit.ratio_numerator / labor_time_qty_unit.ratio_denominator, 0), 1),
             0
         )
     ), 0) AS DECIMAL(65,30)) AS standard_seconds_earned
@@ -1334,6 +1339,7 @@ LEFT JOIN department d ON d.id = ss.department_id
 LEFT JOIN production_step ps ON ps.id = b.production_step_id
 LEFT JOIN rate labor_time ON labor_time.id = ps.labor_time_id
 LEFT JOIN unit labor_time_unit ON labor_time_unit.id = labor_time.numerator_unit_id
+LEFT JOIN unit labor_time_qty_unit ON labor_time_qty_unit.id = labor_time.denominator_unit_id
 WHERE b.account_id = ?
   AND b.scanned_at >= ?
   AND b.scanned_at <= ?
@@ -1403,13 +1409,18 @@ SELECT
             + COALESCE(qw.value * (u_qw.ratio_numerator / u_qw.ratio_denominator), 0)
             + COALESCE(qs.value * (u_qs.ratio_numerator / u_qs.ratio_denominator), 0)
         ) * COALESCE(
-            -- Labor time to seconds via the numerator unit's own conversion columns, not a fixed
-            -- abbreviation table: ratio_numerator/ratio_denominator is the unit's size in the time
-            -- dimension's base (the hour), so seconds = value * (ratio) * 3600. Handles day and any
-            -- account-defined time unit, and stays in step with the solver's SecondsPerUnitFromLaborTime,
-            -- which reads the same columns. A missing numerator unit leaves the product NULL, so the
-            -- COALESCE books no standard time rather than guessing a scale.
-            labor_time.value * (labor_time_unit.ratio_numerator / labor_time_unit.ratio_denominator) * 3600,
+            -- Labor time to seconds per BASE quantity unit, via both of the rate's unit ratios, not a
+            -- fixed abbreviation table. The numerator unit's ratio is its size in the time dimension's
+            -- base (the hour), so value * (ratio) * 3600 gives seconds; handles day and any
+            -- account-defined time unit. The denominator unit's ratio is its size in the quantity base,
+            -- and the rate is DIVIDED by it because the quantities above are already normalized to that
+            -- base: a step rated 554 sec/pr is 277 sec per each, and skipping this division counts every
+            -- pair-rated step twice. Stays in step with the solver's SecondsPerUnitFromLaborTime, which
+            -- reads the same four columns. A missing numerator unit leaves the product NULL, so the
+            -- COALESCE books no standard time rather than guessing a scale; a missing denominator unit
+            -- divides by one, leaving a rate already quoted per base unit alone.
+            labor_time.value * (labor_time_unit.ratio_numerator / labor_time_unit.ratio_denominator) * 3600
+                / COALESCE(NULLIF(labor_time_qty_unit.ratio_numerator / labor_time_qty_unit.ratio_denominator, 0), 1),
             0
         )
     ), 0) AS DECIMAL(65,30)) AS standard_seconds_earned
@@ -1425,6 +1436,7 @@ LEFT JOIN department d ON d.id = ss.department_id
 LEFT JOIN production_step ps ON ps.id = b.production_step_id
 LEFT JOIN rate labor_time ON labor_time.id = ps.labor_time_id
 LEFT JOIN unit labor_time_unit ON labor_time_unit.id = labor_time.numerator_unit_id
+LEFT JOIN unit labor_time_qty_unit ON labor_time_qty_unit.id = labor_time.denominator_unit_id
 WHERE b.account_id = ?
   AND b.scanned_at >= ?
   AND b.scanned_at <= ?
@@ -1583,13 +1595,18 @@ SELECT
             + COALESCE(qw.value * (u_qw.ratio_numerator / u_qw.ratio_denominator), 0)
             + COALESCE(qs.value * (u_qs.ratio_numerator / u_qs.ratio_denominator), 0)
         ) * COALESCE(
-            -- Labor time to seconds via the numerator unit's own conversion columns, not a fixed
-            -- abbreviation table: ratio_numerator/ratio_denominator is the unit's size in the time
-            -- dimension's base (the hour), so seconds = value * (ratio) * 3600. Handles day and any
-            -- account-defined time unit, and stays in step with the solver's SecondsPerUnitFromLaborTime,
-            -- which reads the same columns. A missing numerator unit leaves the product NULL, so the
-            -- COALESCE books no standard time rather than guessing a scale.
-            labor_time.value * (labor_time_unit.ratio_numerator / labor_time_unit.ratio_denominator) * 3600,
+            -- Labor time to seconds per BASE quantity unit, via both of the rate's unit ratios, not a
+            -- fixed abbreviation table. The numerator unit's ratio is its size in the time dimension's
+            -- base (the hour), so value * (ratio) * 3600 gives seconds; handles day and any
+            -- account-defined time unit. The denominator unit's ratio is its size in the quantity base,
+            -- and the rate is DIVIDED by it because the quantities above are already normalized to that
+            -- base: a step rated 554 sec/pr is 277 sec per each, and skipping this division counts every
+            -- pair-rated step twice. Stays in step with the solver's SecondsPerUnitFromLaborTime, which
+            -- reads the same four columns. A missing numerator unit leaves the product NULL, so the
+            -- COALESCE books no standard time rather than guessing a scale; a missing denominator unit
+            -- divides by one, leaving a rate already quoted per base unit alone.
+            labor_time.value * (labor_time_unit.ratio_numerator / labor_time_unit.ratio_denominator) * 3600
+                / COALESCE(NULLIF(labor_time_qty_unit.ratio_numerator / labor_time_qty_unit.ratio_denominator, 0), 1),
             0
         )
     ), 0) AS DECIMAL(65,30)) AS standard_seconds_earned
@@ -1605,6 +1622,7 @@ LEFT JOIN department d ON d.id = ss.department_id
 LEFT JOIN production_step ps ON ps.id = b.production_step_id
 LEFT JOIN rate labor_time ON labor_time.id = ps.labor_time_id
 LEFT JOIN unit labor_time_unit ON labor_time_unit.id = labor_time.numerator_unit_id
+LEFT JOIN unit labor_time_qty_unit ON labor_time_qty_unit.id = labor_time.denominator_unit_id
 WHERE b.account_id = ?
   AND b.scanned_at >= ?
   AND b.scanned_at <= ?
@@ -1681,13 +1699,18 @@ SELECT
             + COALESCE(qw.value * (u_qw.ratio_numerator / u_qw.ratio_denominator), 0)
             + COALESCE(qs.value * (u_qs.ratio_numerator / u_qs.ratio_denominator), 0)
         ) * COALESCE(
-            -- Labor time to seconds via the numerator unit's own conversion columns, not a fixed
-            -- abbreviation table: ratio_numerator/ratio_denominator is the unit's size in the time
-            -- dimension's base (the hour), so seconds = value * (ratio) * 3600. Handles day and any
-            -- account-defined time unit, and stays in step with the solver's SecondsPerUnitFromLaborTime,
-            -- which reads the same columns. A missing numerator unit leaves the product NULL, so the
-            -- COALESCE books no standard time rather than guessing a scale.
-            labor_time.value * (labor_time_unit.ratio_numerator / labor_time_unit.ratio_denominator) * 3600,
+            -- Labor time to seconds per BASE quantity unit, via both of the rate's unit ratios, not a
+            -- fixed abbreviation table. The numerator unit's ratio is its size in the time dimension's
+            -- base (the hour), so value * (ratio) * 3600 gives seconds; handles day and any
+            -- account-defined time unit. The denominator unit's ratio is its size in the quantity base,
+            -- and the rate is DIVIDED by it because the quantities above are already normalized to that
+            -- base: a step rated 554 sec/pr is 277 sec per each, and skipping this division counts every
+            -- pair-rated step twice. Stays in step with the solver's SecondsPerUnitFromLaborTime, which
+            -- reads the same four columns. A missing numerator unit leaves the product NULL, so the
+            -- COALESCE books no standard time rather than guessing a scale; a missing denominator unit
+            -- divides by one, leaving a rate already quoted per base unit alone.
+            labor_time.value * (labor_time_unit.ratio_numerator / labor_time_unit.ratio_denominator) * 3600
+                / COALESCE(NULLIF(labor_time_qty_unit.ratio_numerator / labor_time_qty_unit.ratio_denominator, 0), 1),
             0
         )
     ), 0) AS DECIMAL(65,30)) AS standard_seconds_earned
@@ -1703,6 +1726,7 @@ LEFT JOIN department d ON d.id = ss.department_id
 LEFT JOIN production_step ps ON ps.id = b.production_step_id
 LEFT JOIN rate labor_time ON labor_time.id = ps.labor_time_id
 LEFT JOIN unit labor_time_unit ON labor_time_unit.id = labor_time.numerator_unit_id
+LEFT JOIN unit labor_time_qty_unit ON labor_time_qty_unit.id = labor_time.denominator_unit_id
 WHERE b.account_id = ?
   AND b.scanned_at >= ?
   AND b.scanned_at <= ?

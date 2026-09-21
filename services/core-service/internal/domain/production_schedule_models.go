@@ -57,9 +57,8 @@ type ItemRunRateSample struct {
 	// MachineID is empty for a scan recorded against no machine.
 	MachineID      string
 	LaborTimeValue float64
-	// LaborTimeRatioNumerator and LaborTimeRatioDenominator convert LaborTimeValue's unit to seconds via the time dimension's base (the hour); see scheduling.SecondsPerUnitFromLaborTime.
-	LaborTimeRatioNumerator   float64
-	LaborTimeRatioDenominator float64
+	// LaborTime converts LaborTimeValue to seconds per base quantity unit, via both of the rate's unit ratios; see scheduling.SecondsPerUnitFromLaborTime.
+	LaborTime scheduling.LaborTimeConversion
 }
 
 // ConstraintBatchRow is one historical batch as read from the database: the measurement the solver consumes plus the raw scan metadata the input assembly needs alongside it.

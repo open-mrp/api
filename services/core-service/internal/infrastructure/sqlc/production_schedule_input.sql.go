@@ -303,6 +303,8 @@ SELECT
     labor_time.value AS labor_time_value,
     labor_time_unit.ratio_numerator AS labor_time_ratio_numerator,
     labor_time_unit.ratio_denominator AS labor_time_ratio_denominator,
+    labor_time_qty_unit.ratio_numerator AS labor_time_qty_ratio_numerator,
+    labor_time_qty_unit.ratio_denominator AS labor_time_qty_ratio_denominator,
     labor_rate.value AS labor_rate,
     overhead_rate.value AS overhead_rate,
     pr.created_at AS run_created_at
@@ -317,6 +319,7 @@ LEFT JOIN production_step ps ON ps.id = b.production_step_id
 LEFT JOIN scanning_station ss ON ss.id = ps.scanning_station_id
 LEFT JOIN rate labor_time ON labor_time.id = ps.labor_time_id
 LEFT JOIN unit labor_time_unit ON labor_time_unit.id = labor_time.numerator_unit_id
+LEFT JOIN unit labor_time_qty_unit ON labor_time_qty_unit.id = labor_time.denominator_unit_id
 LEFT JOIN rate labor_rate ON labor_rate.id = ps.labor_rate_id
 LEFT JOIN rate overhead_rate ON overhead_rate.id = ps.overhead_rate_id
 LEFT JOIN production_run pr ON pr.id = b.production_run_id
@@ -339,30 +342,32 @@ type GetConstraintBatchMeasurementsParams struct {
 }
 
 type GetConstraintBatchMeasurementsRow struct {
-	BatchID                   string
-	ItemID                    string
-	Sku                       string
-	ScannedAt                 sql.NullTime
-	QuantityValue             sql.NullString
-	QuantityUnit              sql.NullString
-	QuantityUnitID            sql.NullString
-	RatioNumerator            sql.NullString
-	RatioDenominator          sql.NullString
-	ProductionStepID          sql.NullString
-	MachineID                 string
-	MachineName               string
-	UnitCost                  sql.NullString
-	LaborTimeValue            sql.NullString
-	LaborTimeRatioNumerator   sql.NullString
-	LaborTimeRatioDenominator sql.NullString
-	LaborRate                 sql.NullString
-	OverheadRate              sql.NullString
-	RunCreatedAt              sql.NullTime
+	BatchID                      string
+	ItemID                       string
+	Sku                          string
+	ScannedAt                    sql.NullTime
+	QuantityValue                sql.NullString
+	QuantityUnit                 sql.NullString
+	QuantityUnitID               sql.NullString
+	RatioNumerator               sql.NullString
+	RatioDenominator             sql.NullString
+	ProductionStepID             sql.NullString
+	MachineID                    string
+	MachineName                  string
+	UnitCost                     sql.NullString
+	LaborTimeValue               sql.NullString
+	LaborTimeRatioNumerator      sql.NullString
+	LaborTimeRatioDenominator    sql.NullString
+	LaborTimeQtyRatioNumerator   sql.NullString
+	LaborTimeQtyRatioDenominator sql.NullString
+	LaborRate                    sql.NullString
+	OverheadRate                 sql.NullString
+	RunCreatedAt                 sql.NullTime
 }
 
 // GetConstraintBatchMeasurements returns one row per historical batch produced on the constraint machines, which is what the run rate, cost, lot count, machine affinity and measured lead time are all derived from.
 //
-// labor_time is a Rate whose numerator unit decides its scale (min/hr/sec); the caller converts. production_run.created_at paired with scanned_at gives the observed lead time for that batch.
+// labor_time is a Rate quoted as a time per a quantity, and BOTH halves carry a unit: the numerator sets the time scale (min/hr/sec) and the denominator sets what quantity that time buys (per each, per pair, per case). Both ratio pairs come out so the caller can reach seconds per base unit; converting only the time half counts a pair-rated step twice. production_run.created_at paired with scanned_at gives the observed lead time for that batch.
 func (q *Queries) GetConstraintBatchMeasurements(ctx context.Context, arg GetConstraintBatchMeasurementsParams) ([]GetConstraintBatchMeasurementsRow, error) {
 	query := getConstraintBatchMeasurements
 	var queryParams []interface{}
@@ -403,6 +408,8 @@ func (q *Queries) GetConstraintBatchMeasurements(ctx context.Context, arg GetCon
 			&i.LaborTimeValue,
 			&i.LaborTimeRatioNumerator,
 			&i.LaborTimeRatioDenominator,
+			&i.LaborTimeQtyRatioNumerator,
+			&i.LaborTimeQtyRatioDenominator,
 			&i.LaborRate,
 			&i.OverheadRate,
 			&i.RunCreatedAt,
@@ -683,6 +690,8 @@ SELECT
     labor_time.value AS labor_time_value,
     labor_time_unit.ratio_numerator AS labor_time_ratio_numerator,
     labor_time_unit.ratio_denominator AS labor_time_ratio_denominator,
+    labor_time_qty_unit.ratio_numerator AS labor_time_qty_ratio_numerator,
+    labor_time_qty_unit.ratio_denominator AS labor_time_qty_ratio_denominator,
     labor_rate.value AS labor_rate,
     overhead_rate.value AS overhead_rate,
     pr.created_at AS run_created_at
@@ -697,6 +706,7 @@ LEFT JOIN production_step ps ON ps.id = b.production_step_id
 LEFT JOIN scanning_station ss ON ss.id = ps.scanning_station_id
 LEFT JOIN rate labor_time ON labor_time.id = ps.labor_time_id
 LEFT JOIN unit labor_time_unit ON labor_time_unit.id = labor_time.numerator_unit_id
+LEFT JOIN unit labor_time_qty_unit ON labor_time_qty_unit.id = labor_time.denominator_unit_id
 LEFT JOIN rate labor_rate ON labor_rate.id = ps.labor_rate_id
 LEFT JOIN rate overhead_rate ON overhead_rate.id = ps.overhead_rate_id
 LEFT JOIN production_run pr ON pr.id = b.production_run_id
@@ -718,26 +728,28 @@ type GetFinishingBatchMeasurementsParams struct {
 }
 
 type GetFinishingBatchMeasurementsRow struct {
-	BatchID                   string
-	ItemID                    string
-	Sku                       string
-	ScannedAt                 sql.NullTime
-	QuantityValue             sql.NullString
-	QuantityUnit              sql.NullString
-	QuantityUnitID            sql.NullString
-	RatioNumerator            sql.NullString
-	RatioDenominator          sql.NullString
-	ProductionStepID          sql.NullString
-	StepDepartmentID          string
-	MachineID                 string
-	MachineName               string
-	UnitCost                  sql.NullString
-	LaborTimeValue            sql.NullString
-	LaborTimeRatioNumerator   sql.NullString
-	LaborTimeRatioDenominator sql.NullString
-	LaborRate                 sql.NullString
-	OverheadRate              sql.NullString
-	RunCreatedAt              sql.NullTime
+	BatchID                      string
+	ItemID                       string
+	Sku                          string
+	ScannedAt                    sql.NullTime
+	QuantityValue                sql.NullString
+	QuantityUnit                 sql.NullString
+	QuantityUnitID               sql.NullString
+	RatioNumerator               sql.NullString
+	RatioDenominator             sql.NullString
+	ProductionStepID             sql.NullString
+	StepDepartmentID             string
+	MachineID                    string
+	MachineName                  string
+	UnitCost                     sql.NullString
+	LaborTimeValue               sql.NullString
+	LaborTimeRatioNumerator      sql.NullString
+	LaborTimeRatioDenominator    sql.NullString
+	LaborTimeQtyRatioNumerator   sql.NullString
+	LaborTimeQtyRatioDenominator sql.NullString
+	LaborRate                    sql.NullString
+	OverheadRate                 sql.NullString
+	RunCreatedAt                 sql.NullTime
 }
 
 // GetFinishingBatchMeasurements returns one row per historical batch produced outside the constraint department, which is what the second stage's run rates are measured from.
@@ -786,6 +798,8 @@ func (q *Queries) GetFinishingBatchMeasurements(ctx context.Context, arg GetFini
 			&i.LaborTimeValue,
 			&i.LaborTimeRatioNumerator,
 			&i.LaborTimeRatioDenominator,
+			&i.LaborTimeQtyRatioNumerator,
+			&i.LaborTimeQtyRatioDenominator,
 			&i.LaborRate,
 			&i.OverheadRate,
 			&i.RunCreatedAt,
@@ -873,12 +887,15 @@ SELECT
     bm.B AS machine_id,
     labor_time.value AS labor_time_value,
     labor_time_unit.ratio_numerator AS labor_time_ratio_numerator,
-    labor_time_unit.ratio_denominator AS labor_time_ratio_denominator
+    labor_time_unit.ratio_denominator AS labor_time_ratio_denominator,
+    labor_time_qty_unit.ratio_numerator AS labor_time_qty_ratio_numerator,
+    labor_time_qty_unit.ratio_denominator AS labor_time_qty_ratio_denominator
 FROM batch b
 LEFT JOIN _batches_machines bm ON bm.A = b.id
 JOIN production_step ps ON ps.id = b.production_step_id
 JOIN rate labor_time ON labor_time.id = ps.labor_time_id
 JOIN unit labor_time_unit ON labor_time_unit.id = labor_time.numerator_unit_id
+LEFT JOIN unit labor_time_qty_unit ON labor_time_qty_unit.id = labor_time.denominator_unit_id
 WHERE b.account_id = ?
   AND b.item_id = ?
   AND b.scanned_at IS NOT NULL
@@ -893,10 +910,12 @@ type GetItemRunRateHistoryParams struct {
 }
 
 type GetItemRunRateHistoryRow struct {
-	MachineID                 sql.NullString
-	LaborTimeValue            string
-	LaborTimeRatioNumerator   string
-	LaborTimeRatioDenominator string
+	MachineID                    sql.NullString
+	LaborTimeValue               string
+	LaborTimeRatioNumerator      string
+	LaborTimeRatioDenominator    string
+	LaborTimeQtyRatioNumerator   sql.NullString
+	LaborTimeQtyRatioDenominator sql.NullString
 }
 
 // GetItemRunRateHistory returns the labor time behind this item's most recent scans, newest first, so a SKU no version holds a policy for can still be priced off its own history.
@@ -918,6 +937,8 @@ func (q *Queries) GetItemRunRateHistory(ctx context.Context, arg GetItemRunRateH
 			&i.LaborTimeValue,
 			&i.LaborTimeRatioNumerator,
 			&i.LaborTimeRatioDenominator,
+			&i.LaborTimeQtyRatioNumerator,
+			&i.LaborTimeQtyRatioDenominator,
 		); err != nil {
 			return nil, err
 		}

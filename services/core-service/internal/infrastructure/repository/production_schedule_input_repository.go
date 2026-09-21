@@ -81,10 +81,14 @@ func (r *productionScheduleInputRepoImpl) GetItemRunRateHistory(ctx context.Cont
 	out := make([]domain.ItemRunRateSample, len(rows))
 	for i, row := range rows {
 		out[i] = domain.ItemRunRateSample{
-			MachineID:                 row.MachineID.String,
-			LaborTimeValue:            decimalToFloat64(row.LaborTimeValue),
-			LaborTimeRatioNumerator:   decimalToFloat64(row.LaborTimeRatioNumerator),
-			LaborTimeRatioDenominator: decimalToFloat64(row.LaborTimeRatioDenominator),
+			MachineID:      row.MachineID.String,
+			LaborTimeValue: decimalToFloat64(row.LaborTimeValue),
+			LaborTime: scheduling.LaborTimeConversion{
+				TimeRatioNumerator:       decimalToFloat64(row.LaborTimeRatioNumerator),
+				TimeRatioDenominator:     decimalToFloat64(row.LaborTimeRatioDenominator),
+				QuantityRatioNumerator:   decimalToFloat64(row.LaborTimeQtyRatioNumerator),
+				QuantityRatioDenominator: decimalToFloat64(row.LaborTimeQtyRatioDenominator),
+			},
 		}
 	}
 	return out, nil
@@ -135,10 +139,16 @@ func (r *productionScheduleInputRepoImpl) GetConstraintBatchMeasurements(
 			measurement.LaborTimeValue = decimalToFloat64(row.LaborTimeValue.String)
 		}
 		if row.LaborTimeRatioNumerator.Valid {
-			measurement.LaborTimeRatioNumerator = decimalToFloat64(row.LaborTimeRatioNumerator.String)
+			measurement.LaborTime.TimeRatioNumerator = decimalToFloat64(row.LaborTimeRatioNumerator.String)
 		}
 		if row.LaborTimeRatioDenominator.Valid {
-			measurement.LaborTimeRatioDenominator = decimalToFloat64(row.LaborTimeRatioDenominator.String)
+			measurement.LaborTime.TimeRatioDenominator = decimalToFloat64(row.LaborTimeRatioDenominator.String)
+		}
+		if row.LaborTimeQtyRatioNumerator.Valid {
+			measurement.LaborTime.QuantityRatioNumerator = decimalToFloat64(row.LaborTimeQtyRatioNumerator.String)
+		}
+		if row.LaborTimeQtyRatioDenominator.Valid {
+			measurement.LaborTime.QuantityRatioDenominator = decimalToFloat64(row.LaborTimeQtyRatioDenominator.String)
 		}
 		if row.LaborRate.Valid {
 			measurement.LaborRate = decimalToFloat64(row.LaborRate.String)
@@ -239,10 +249,16 @@ func (r *productionScheduleInputRepoImpl) GetFinishingBatchMeasurements(
 			measurement.LaborTimeValue = decimalToFloat64(row.LaborTimeValue.String)
 		}
 		if row.LaborTimeRatioNumerator.Valid {
-			measurement.LaborTimeRatioNumerator = decimalToFloat64(row.LaborTimeRatioNumerator.String)
+			measurement.LaborTime.TimeRatioNumerator = decimalToFloat64(row.LaborTimeRatioNumerator.String)
 		}
 		if row.LaborTimeRatioDenominator.Valid {
-			measurement.LaborTimeRatioDenominator = decimalToFloat64(row.LaborTimeRatioDenominator.String)
+			measurement.LaborTime.TimeRatioDenominator = decimalToFloat64(row.LaborTimeRatioDenominator.String)
+		}
+		if row.LaborTimeQtyRatioNumerator.Valid {
+			measurement.LaborTime.QuantityRatioNumerator = decimalToFloat64(row.LaborTimeQtyRatioNumerator.String)
+		}
+		if row.LaborTimeQtyRatioDenominator.Valid {
+			measurement.LaborTime.QuantityRatioDenominator = decimalToFloat64(row.LaborTimeQtyRatioDenominator.String)
 		}
 		if row.LaborRate.Valid {
 			measurement.LaborRate = decimalToFloat64(row.LaborRate.String)

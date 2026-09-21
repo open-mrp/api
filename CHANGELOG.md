@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.7.3](https://github.com/open-mrp/api/compare/v2.7.2...v2.7.3) (2026-09-21)
+
+
+### Bug Fixes
+
+* **analytics:** force (account_id, scanned_at) index on OEE batch aggregates ([#167](https://github.com/open-mrp/api/issues/167)) ([3939572](https://github.com/open-mrp/api/commit/3939572a8d62b80e26330a66a60660976f92bc0b))
+
 ## [2.7.2](https://github.com/open-mrp/api/compare/v2.7.1...v2.7.2) (2026-09-21)
 
 

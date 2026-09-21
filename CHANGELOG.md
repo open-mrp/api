@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.7.2](https://github.com/open-mrp/api/compare/v2.7.1...v2.7.2) (2026-09-21)
+
+
+### Bug Fixes
+
+* **analytics:** resolve issues where performance figures were not properly calculated ([#164](https://github.com/open-mrp/api/issues/164)) ([0780047](https://github.com/open-mrp/api/commit/0780047d79a2389150fbcc444893749d991d48f5))
+
 ## [2.7.1](https://github.com/open-mrp/api/compare/v2.7.0...v2.7.1) (2026-09-18)
 
 

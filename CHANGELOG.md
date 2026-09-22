@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.7.4](https://github.com/open-mrp/api/compare/v2.7.3...v2.7.4) (2026-09-22)
+
+
+### Bug Fixes
+
+* **schedule:** price run rate per scan unit, not per base unit ([#169](https://github.com/open-mrp/api/issues/169)) ([33a4d4d](https://github.com/open-mrp/api/commit/33a4d4d1d26a8474fa77491fdd0a00a1734da2a0))
+
 ## [2.7.3](https://github.com/open-mrp/api/compare/v2.7.2...v2.7.3) (2026-09-21)
 
 

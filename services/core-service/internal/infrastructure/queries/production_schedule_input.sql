@@ -464,6 +464,8 @@ ORDER BY b.item_id, b.scanned_at, b.id;
 --
 -- The plan's run rate is a production step's configured labor time, picked out by the step history says the item was actually produced at — the same derivation MeasureItems applies to the solver's own batches. Reaching outside any measurement window is the point: a rarely-made SKU is exactly the one with no recent scan.
 --
+-- The batch's own quantity unit comes out too: a campaign is counted in the item's scan unit, so the rate is rescaled into it the way the solver's is.
+--
 -- Filtered on the item first, which batch_item_id_idx makes selective, and bounded by LIMIT because only the newest usable sample is read.
 -- name: GetItemRunRateHistory :many
 SELECT
@@ -472,13 +474,17 @@ SELECT
     labor_time_unit.ratio_numerator AS labor_time_ratio_numerator,
     labor_time_unit.ratio_denominator AS labor_time_ratio_denominator,
     labor_time_qty_unit.ratio_numerator AS labor_time_qty_ratio_numerator,
-    labor_time_qty_unit.ratio_denominator AS labor_time_qty_ratio_denominator
+    labor_time_qty_unit.ratio_denominator AS labor_time_qty_ratio_denominator,
+    u.ratio_numerator AS quantity_ratio_numerator,
+    u.ratio_denominator AS quantity_ratio_denominator
 FROM batch b
 LEFT JOIN _batches_machines bm ON bm.A = b.id
 JOIN production_step ps ON ps.id = b.production_step_id
 JOIN rate labor_time ON labor_time.id = ps.labor_time_id
 JOIN unit labor_time_unit ON labor_time_unit.id = labor_time.numerator_unit_id
 LEFT JOIN unit labor_time_qty_unit ON labor_time_qty_unit.id = labor_time.denominator_unit_id
+LEFT JOIN quantity q ON q.id = b.quantity_id
+LEFT JOIN unit u ON u.id = q.unit_id
 WHERE b.account_id = sqlc.arg('account_id')
   AND b.item_id = sqlc.arg('item_id')
   AND b.scanned_at IS NOT NULL

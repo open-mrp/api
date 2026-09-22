@@ -21,9 +21,11 @@ type BatchMeasurement struct {
 	// LaborTimeValue is the production step's labor time, in the units LaborTime describes: a time per a quantity, not necessarily per one base unit.
 	LaborTimeValue float64
 	// LaborTime converts LaborTimeValue to seconds per base quantity unit; see SecondsPerUnitFromLaborTime.
-	LaborTime    LaborTimeConversion
-	LaborRate    float64
-	OverheadRate float64
+	LaborTime LaborTimeConversion
+	// QuantityUnitRatio is the size, in base units, of the unit Quantity is counted in (2 for a pair). The plan is denominated in each item's scan unit, so the run rate is rescaled into it; zero reads as a batch already counted in base units.
+	QuantityUnitRatio float64
+	LaborRate         float64
+	OverheadRate      float64
 
 	// RunCreatedAt is when the production run was opened; paired with ScannedAt it gives the observed lead time for this batch.
 	RunCreatedAt *time.Time
@@ -76,7 +78,7 @@ type LaborTimeConversion struct {
 //
 // The time half: the numerator unit's ratio is its size in the time dimension's base, the hour, so seconds = value * (num/den) * 3600 — minute (1/60) gives 60, hour (1/1) gives 3600, day (24/1) gives 86400, and any account-defined time unit converts by the same rule.
 //
-// The quantity half: the denominator unit's ratio is its size in the quantity base, so a rate quoted per that unit is divided by it to reach seconds per base unit. A step rated 554 sec/pr is 277 sec per each, because a pair is two eaches. Callers measure quantity in base units — the scan quantity is normalized the same way — so skipping this division counts every pair-rated step twice, which is what put OEE Performance over 100%.
+// The quantity half: the denominator unit's ratio is its size in the quantity base, so a rate quoted per that unit is divided by it to reach seconds per base unit. A step rated 554 sec/pr is 277 sec per each, because a pair is two eaches. The OEE query measures quantity in base units, so skipping this division there counts every pair-rated step twice. The solver counts in each item's scan unit instead, and converts back through SecondsPerCountedUnit.
 //
 // A non-positive ratio (a scan that carried no usable unit on that half) leaves that half unconverted rather than zeroing a run rate.
 func SecondsPerUnitFromLaborTime(value float64, conv LaborTimeConversion) float64 {
@@ -86,6 +88,15 @@ func SecondsPerUnitFromLaborTime(value float64, conv LaborTimeConversion) float6
 	}
 	if conv.QuantityRatioNumerator > 0 && conv.QuantityRatioDenominator > 0 {
 		seconds = seconds / (conv.QuantityRatioNumerator / conv.QuantityRatioDenominator)
+	}
+	return seconds
+}
+
+// SecondsPerCountedUnit is SecondsPerUnitFromLaborTime rescaled from one base unit to one unit of size unitRatio, the unit the plan counts the item in. A 554 sec/pr step is 277 sec per each and back to 554 per pair; dropping this step halves every pair-counted campaign's run hours. A non-positive unitRatio leaves the rate per base unit.
+func SecondsPerCountedUnit(value float64, conv LaborTimeConversion, unitRatio float64) float64 {
+	seconds := SecondsPerUnitFromLaborTime(value, conv)
+	if unitRatio > 0 {
+		seconds *= unitRatio
 	}
 	return seconds
 }
@@ -124,7 +135,7 @@ func MeasureItems(batches []BatchMeasurement) []ItemMeasurement {
 
 		// Rates come off the production step and are identical across that step's batches; take the first non-zero rather than averaging noise.
 		if !acc.sawMeasurable && b.LaborTimeValue > 0 {
-			acc.m.SecondsPerUnit = SecondsPerUnitFromLaborTime(b.LaborTimeValue, b.LaborTime)
+			acc.m.SecondsPerUnit = SecondsPerCountedUnit(b.LaborTimeValue, b.LaborTime, b.QuantityUnitRatio)
 			acc.m.OverheadRate = b.OverheadRate
 			acc.sawMeasurable = true
 		}

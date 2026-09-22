@@ -90,6 +90,7 @@ func (r *productionScheduleInputRepoImpl) GetItemRunRateHistory(ctx context.Cont
 				QuantityRatioNumerator:   decimalToFloat64(row.LaborTimeQtyRatioNumerator.String),
 				QuantityRatioDenominator: decimalToFloat64(row.LaborTimeQtyRatioDenominator.String),
 			},
+			QuantityUnitRatio: scheduleUnitRatio(row.QuantityRatioNumerator, row.QuantityRatioDenominator),
 		}
 	}
 	return out, nil

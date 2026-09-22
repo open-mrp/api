@@ -59,6 +59,8 @@ type ItemRunRateSample struct {
 	LaborTimeValue float64
 	// LaborTime converts LaborTimeValue to seconds per base quantity unit, via both of the rate's unit ratios; see scheduling.SecondsPerUnitFromLaborTime.
 	LaborTime scheduling.LaborTimeConversion
+	// QuantityUnitRatio is the sampled batch's scan unit in base units (2 for a pair), the unit a campaign for this item is counted in.
+	QuantityUnitRatio float64
 }
 
 // ConstraintBatchRow is one historical batch as read from the database: the measurement the solver consumes plus the raw scan metadata the input assembly needs alongside it.

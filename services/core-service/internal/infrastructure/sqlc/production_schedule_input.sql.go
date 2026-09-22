@@ -899,13 +899,17 @@ SELECT
     labor_time_unit.ratio_numerator AS labor_time_ratio_numerator,
     labor_time_unit.ratio_denominator AS labor_time_ratio_denominator,
     labor_time_qty_unit.ratio_numerator AS labor_time_qty_ratio_numerator,
-    labor_time_qty_unit.ratio_denominator AS labor_time_qty_ratio_denominator
+    labor_time_qty_unit.ratio_denominator AS labor_time_qty_ratio_denominator,
+    u.ratio_numerator AS quantity_ratio_numerator,
+    u.ratio_denominator AS quantity_ratio_denominator
 FROM batch b
 LEFT JOIN _batches_machines bm ON bm.A = b.id
 JOIN production_step ps ON ps.id = b.production_step_id
 JOIN rate labor_time ON labor_time.id = ps.labor_time_id
 JOIN unit labor_time_unit ON labor_time_unit.id = labor_time.numerator_unit_id
 LEFT JOIN unit labor_time_qty_unit ON labor_time_qty_unit.id = labor_time.denominator_unit_id
+LEFT JOIN quantity q ON q.id = b.quantity_id
+LEFT JOIN unit u ON u.id = q.unit_id
 WHERE b.account_id = ?
   AND b.item_id = ?
   AND b.scanned_at IS NOT NULL
@@ -926,11 +930,15 @@ type GetItemRunRateHistoryRow struct {
 	LaborTimeRatioDenominator    string
 	LaborTimeQtyRatioNumerator   sql.NullString
 	LaborTimeQtyRatioDenominator sql.NullString
+	QuantityRatioNumerator       sql.NullString
+	QuantityRatioDenominator     sql.NullString
 }
 
 // GetItemRunRateHistory returns the labor time behind this item's most recent scans, newest first, so a SKU no version holds a policy for can still be priced off its own history.
 //
 // The plan's run rate is a production step's configured labor time, picked out by the step history says the item was actually produced at — the same derivation MeasureItems applies to the solver's own batches. Reaching outside any measurement window is the point: a rarely-made SKU is exactly the one with no recent scan.
+//
+// The batch's own quantity unit comes out too: a campaign is counted in the item's scan unit, so the rate is rescaled into it the way the solver's is.
 //
 // Filtered on the item first, which batch_item_id_idx makes selective, and bounded by LIMIT because only the newest usable sample is read.
 func (q *Queries) GetItemRunRateHistory(ctx context.Context, arg GetItemRunRateHistoryParams) ([]GetItemRunRateHistoryRow, error) {
@@ -949,6 +957,8 @@ func (q *Queries) GetItemRunRateHistory(ctx context.Context, arg GetItemRunRateH
 			&i.LaborTimeRatioDenominator,
 			&i.LaborTimeQtyRatioNumerator,
 			&i.LaborTimeQtyRatioDenominator,
+			&i.QuantityRatioNumerator,
+			&i.QuantityRatioDenominator,
 		); err != nil {
 			return nil, err
 		}

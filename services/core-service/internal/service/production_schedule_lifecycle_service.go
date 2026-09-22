@@ -293,7 +293,7 @@ func (s *productionScheduleSvcImpl) measuredSecondsPerUnit(ctx context.Context, 
 		if sample.LaborTimeValue <= 0 {
 			continue
 		}
-		secondsPerUnit := scheduling.SecondsPerUnitFromLaborTime(sample.LaborTimeValue, sample.LaborTime)
+		secondsPerUnit := scheduling.SecondsPerCountedUnit(sample.LaborTimeValue, sample.LaborTime, sample.QuantityUnitRatio)
 		if secondsPerUnit <= 0 {
 			continue
 		}
@@ -322,12 +322,10 @@ func (s *productionScheduleSvcImpl) stepSecondsPerUnit(ctx context.Context, acco
 	if err != nil || value <= 0 {
 		return 0, nil
 	}
-	// Both of the rate's unit ratios convert the labor time to seconds per base unit, the same conversion the OEE query and MeasureItems apply; a blank ratio parses to zero, which SecondsPerUnitFromLaborTime leaves unconverted on that half.
+	// Only the time half converts. An item that never ran has no scan unit to count the campaign in, so the rate is read per its own quantity unit: 554 sec/pr prices a campaign in pairs, not eaches. A blank ratio parses to zero, which SecondsPerUnitFromLaborTime leaves unconverted.
 	conv := scheduling.LaborTimeConversion{}
 	conv.TimeRatioNumerator, _ = strconv.ParseFloat(step.LaborTime.NumeratorUnit.RatioNumerator, 64)
 	conv.TimeRatioDenominator, _ = strconv.ParseFloat(step.LaborTime.NumeratorUnit.RatioDenominator, 64)
-	conv.QuantityRatioNumerator, _ = strconv.ParseFloat(step.LaborTime.DenominatorUnit.RatioNumerator, 64)
-	conv.QuantityRatioDenominator, _ = strconv.ParseFloat(step.LaborTime.DenominatorUnit.RatioDenominator, 64)
 	return scheduling.SecondsPerUnitFromLaborTime(value, conv), nil
 }
 

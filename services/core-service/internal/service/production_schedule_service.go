@@ -401,7 +401,9 @@ func (s *productionScheduleSvcImpl) loadSolverInput(
 	}
 	// Batch quantities arrive normalized to base units; bring each back into its item's scan unit so mixed-unit scan history still sums coherently.
 	for i := range in.Batches {
-		in.Batches[i].Quantity /= nativeRatioOf(in.Batches[i].ItemID)
+		ratio := nativeRatioOf(in.Batches[i].ItemID)
+		in.Batches[i].Quantity /= ratio
+		in.Batches[i].QuantityUnitRatio = ratio
 	}
 
 	if len(constraintItemIDs) == 0 {
@@ -593,6 +595,7 @@ func (s *productionScheduleSvcImpl) loadFinishingInput(
 	for i := range in.FinishingBatches {
 		if ratio, ok := finishedRatio[in.FinishingBatches[i].ItemID]; ok && ratio > 0 {
 			in.FinishingBatches[i].Quantity /= ratio
+			in.FinishingBatches[i].QuantityUnitRatio = ratio
 		}
 	}
 

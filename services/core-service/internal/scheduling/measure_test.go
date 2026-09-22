@@ -56,6 +56,37 @@ func TestSecondsPerUnitFromLaborTime(t *testing.T) {
 	}
 }
 
+// The solver counts an item in its scan unit, so the run rate must be per that unit too. A
+// 554 sec/pr step scanned in pairs stays 554 sec per planned pair; reading it per each
+// halved Carolon's knitting hours (420 pr at 32.3h instead of 64.6h).
+func TestMeasureItems_RunRateIsPerScanUnit(t *testing.T) {
+	t.Parallel()
+
+	secPer := func(qtyRatio float64) LaborTimeConversion {
+		return LaborTimeConversion{TimeRatioNumerator: 1, TimeRatioDenominator: 3600, QuantityRatioNumerator: qtyRatio, QuantityRatioDenominator: 1}
+	}
+	cases := []struct {
+		name      string
+		conv      LaborTimeConversion
+		scanRatio float64
+		want      float64
+	}{
+		{"pair-rated, scanned in pairs", secPer(2), 2, 554},
+		{"each-rated, scanned in pairs", secPer(1), 2, 1108},
+		{"pair-rated, scanned in eaches", secPer(2), 1, 277},
+		{"no scan unit reads as base", secPer(2), 0, 277},
+	}
+	for _, c := range cases {
+		got := MeasureItems([]BatchMeasurement{{
+			BatchID: "bt_1", ItemID: "it_A", SKU: "A", ScannedAt: at(1), Quantity: 60,
+			LaborTimeValue: 554, LaborTime: c.conv, QuantityUnitRatio: c.scanRatio,
+		}})
+		if got[0].SecondsPerUnit != c.want {
+			t.Errorf("%s: seconds per unit = %v, want %v", c.name, got[0].SecondsPerUnit, c.want)
+		}
+	}
+}
+
 func TestMeasureItems_OneBatchIsOneLot(t *testing.T) {
 	t.Parallel()
 

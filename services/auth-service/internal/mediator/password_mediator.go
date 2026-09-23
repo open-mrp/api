@@ -102,7 +102,7 @@ func (s *passwordMedImpl) Validate(ctx context.Context, identifier, password str
 
 	if user.HashedPassword == nil {
 		if user.Email != nil {
-			if err := s.sendPasswordResetEmail(ctx, user, nil, nil); err != nil {
+			if err := s.sendPasswordResetEmail(ctx, user, nil); err != nil {
 				return nil, tracing.Trace(span, err)
 			}
 		}
@@ -212,7 +212,7 @@ func (s *passwordMedImpl) ValidatePasswordResetToken(ctx context.Context, token 
 //
 // Side effects:
 //   - Sends a password reset email.
-func (s *passwordMedImpl) RequestReset(ctx context.Context, identifier string, accountSlug, portalBaseURL *string) *apierror.APIError {
+func (s *passwordMedImpl) RequestReset(ctx context.Context, identifier string, accountSlug *string) *apierror.APIError {
 	ctx, span := passwordMedTracer.Start(ctx, "mediator.password.request_reset")
 	defer span.End()
 
@@ -233,11 +233,11 @@ func (s *passwordMedImpl) RequestReset(ctx context.Context, identifier string, a
 		return nil
 	}
 
-	return s.sendPasswordResetEmail(ctx, user, accountSlug, portalBaseURL)
+	return s.sendPasswordResetEmail(ctx, user, accountSlug)
 }
 
 // sendPasswordResetEmail mints a short-lived password reset JWT (15 minutes), builds a reset link optionally scoped to an account slug, and publishes the password reset email via the outbox. Caller must ensure user.Email is non-nil.
-func (s *passwordMedImpl) sendPasswordResetEmail(ctx context.Context, user *types.User, accountSlug, portalBaseURL *string) *apierror.APIError {
+func (s *passwordMedImpl) sendPasswordResetEmail(ctx context.Context, user *types.User, accountSlug *string) *apierror.APIError {
 	ctx, span := passwordMedTracer.Start(ctx, "mediator.password.send_password_reset_email")
 	defer span.End()
 
@@ -246,11 +246,8 @@ func (s *passwordMedImpl) sendPasswordResetEmail(ctx context.Context, user *type
 		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to generate password reset token."))
 	}
 
-	// A verified custom portal domain serves the portal without the slug path prefix, so its links drop the slug segment.
 	var resetLink string
 	switch {
-	case portalBaseURL != nil && *portalBaseURL != "":
-		resetLink = fmt.Sprintf("%s%s?t=%s", *portalBaseURL, constants.DashboardPathResetPassword, resetToken)
 	case accountSlug != nil && *accountSlug != "":
 		resetLink = fmt.Sprintf("%s/%s%s?t=%s", s.frontendURL, *accountSlug, constants.DashboardPathResetPassword, resetToken)
 	default:

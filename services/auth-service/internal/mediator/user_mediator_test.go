@@ -2,6 +2,7 @@ package mediator
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -10,15 +11,41 @@ import (
 	clientmock "github.com/open-mrp/api/services/auth-service/internal/domain/mock/client"
 	factorymock "github.com/open-mrp/api/services/auth-service/internal/domain/mock/factory"
 	mediatormock "github.com/open-mrp/api/services/auth-service/internal/domain/mock/mediator"
+	publishermock "github.com/open-mrp/api/services/auth-service/internal/domain/mock/publisher"
 	repositorymock "github.com/open-mrp/api/services/auth-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/services/auth-service/internal/testutil"
 	"github.com/open-mrp/api/services/auth-service/internal/token"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/messaging"
 
 	"go.uber.org/mock/gomock"
 )
+
+func TestSendAlreadyRegisteredEmail_LinkStaysFirstParty(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	publisher := publishermock.NewMockNotificationPublisher(ctrl)
+	email := "user@example.com"
+	accountSlug := "customer"
+	user := &types.User{ID: testutil.EntityIDUser, Email: &email}
+	med := &userMedImpl{jwtSecret: testutil.JWTSecret, frontendURL: "https://test.example.com", notificationPublisher: publisher}
+
+	publisher.EXPECT().PublishSendEmail(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, data messaging.EmailSendData) *apierror.APIError {
+		loginURL, ok := data.Params["LoginURL"].(string)
+		if !ok {
+			t.Fatalf("expected string login URL, got %T", data.Params["LoginURL"])
+		}
+		want := "https://test.example.com/customer" + string(constants.DashboardPathMagicLogin)
+		if !strings.HasPrefix(loginURL, want) {
+			t.Fatalf("expected login URL to start with %q, got %q", want, loginURL)
+		}
+		return nil
+	})
+
+	med.SendAlreadyRegisteredEmail(context.Background(), user, &accountSlug)
+}
 
 func TestValidateCredential_EmptyToken(t *testing.T) {
 	t.Parallel()

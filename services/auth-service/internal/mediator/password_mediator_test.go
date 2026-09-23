@@ -2,6 +2,7 @@ package mediator
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -360,6 +361,32 @@ func (suite *PasswordMedTestSuite) TestValidate_NoHashedPassword_WithEmail_Sends
 	suite.Nil(result)
 	suite.NotNil(apiErr)
 	suite.Equal(apierror.ErrorCodeInvalidCredentials, apiErr.Code)
+}
+
+func (suite *PasswordMedTestSuite) TestRequestReset_LinkStaysFirstParty() {
+	ctx := context.Background()
+	identifier := "user@example.com"
+	accountSlug := "customer"
+	user := &types.User{ID: testutil.EntityIDUser, Email: &identifier}
+
+	suite.userRepo.EXPECT().
+		Find(gomock.Any(), identifier).
+		Return(user, nil).
+		Times(1)
+
+	suite.notificationPublisher.EXPECT().
+		PublishSendEmail(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, data messaging.EmailSendData) *apierror.APIError {
+			resetLink, ok := data.Params["ResetLink"].(string)
+			suite.Require().True(ok)
+			suite.True(strings.HasPrefix(resetLink, "https://test.example.com/customer"+string(constants.DashboardPathResetPassword)))
+			return nil
+		}).
+		Times(1)
+
+	apiErr := suite.passwordMed.RequestReset(ctx, identifier, &accountSlug)
+
+	suite.Nil(apiErr)
 }
 
 func (suite *PasswordMedTestSuite) TestValidate_NoHashedPassword_WithoutEmail_NoEmailSent() {

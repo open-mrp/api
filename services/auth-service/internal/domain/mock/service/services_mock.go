@@ -207,17 +207,17 @@ func (m *MockPasswordSvc) EXPECT() *MockPasswordSvcMockRecorder {
 }
 
 // RequestPasswordReset mocks base method.
-func (m *MockPasswordSvc) RequestPasswordReset(ctx context.Context, identifier string, accountSlug, portalBaseURL *string) *apierror.APIError {
+func (m *MockPasswordSvc) RequestPasswordReset(ctx context.Context, identifier string, accountSlug *string) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RequestPasswordReset", ctx, identifier, accountSlug, portalBaseURL)
+	ret := m.ctrl.Call(m, "RequestPasswordReset", ctx, identifier, accountSlug)
 	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
 // RequestPasswordReset indicates an expected call of RequestPasswordReset.
-func (mr *MockPasswordSvcMockRecorder) RequestPasswordReset(ctx, identifier, accountSlug, portalBaseURL any) *gomock.Call {
+func (mr *MockPasswordSvcMockRecorder) RequestPasswordReset(ctx, identifier, accountSlug any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestPasswordReset", reflect.TypeOf((*MockPasswordSvc)(nil).RequestPasswordReset), ctx, identifier, accountSlug, portalBaseURL)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestPasswordReset", reflect.TypeOf((*MockPasswordSvc)(nil).RequestPasswordReset), ctx, identifier, accountSlug)
 }
 
 // ResetPassword mocks base method.

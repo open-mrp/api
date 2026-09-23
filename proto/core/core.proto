@@ -265,7 +265,7 @@ service CoreService {
   // Transitions an account user to the target status (active, disabled, or removed).
   rpc UpdateAccountUserStatus(UpdateAccountUserStatusRequest) returns (google.protobuf.Empty);
 
-  // Updates the password for an account user (scanner-role targets only).
+  // Updates the password for an account user (non-admin users without an email address only).
   rpc UpdateAccountUserPassword(UpdateAccountUserPasswordRequest) returns (google.protobuf.Empty);
 
   // Batched read for the api-gateway resourcekit resolver.

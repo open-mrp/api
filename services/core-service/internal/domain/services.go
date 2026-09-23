@@ -294,7 +294,7 @@ type AccountUserSvc interface {
 	// UpdateAccountUserStatus transitions an account user to the given target status.
 	UpdateAccountUserStatus(ctx context.Context, accountUserID string, targetStatus constants.AccountUserStatus) *apierror.APIError
 
-	// UpdateAccountUserPassword updates the password for a scanner-role account user.
+	// UpdateAccountUserPassword sets the password for a non-admin account user who has no email address.
 	UpdateAccountUserPassword(ctx context.Context, accountUserID, requesterPassword, newPassword string) *apierror.APIError
 
 	// BatchGetAccountUsersByIDs returns account users matching the given IDs.

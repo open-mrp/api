@@ -599,7 +599,7 @@ type CoreServiceClient interface {
 	UpdateAccountUser(ctx context.Context, in *UpdateAccountUserRequest, opts ...grpc.CallOption) (*UpdateAccountUserResponse, error)
 	// Transitions an account user to the target status (active, disabled, or removed).
 	UpdateAccountUserStatus(ctx context.Context, in *UpdateAccountUserStatusRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	// Updates the password for an account user (scanner-role targets only).
+	// Updates the password for an account user (non-admin users without an email address only).
 	UpdateAccountUserPassword(ctx context.Context, in *UpdateAccountUserPasswordRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Batched read for the api-gateway resourcekit resolver.
 	BatchGetAccountUsersByIDs(ctx context.Context, in *BatchGetAccountUsersByIDsRequest, opts ...grpc.CallOption) (*BatchGetAccountUsersByIDsResponse, error)
@@ -5296,7 +5296,7 @@ type CoreServiceServer interface {
 	UpdateAccountUser(context.Context, *UpdateAccountUserRequest) (*UpdateAccountUserResponse, error)
 	// Transitions an account user to the target status (active, disabled, or removed).
 	UpdateAccountUserStatus(context.Context, *UpdateAccountUserStatusRequest) (*emptypb.Empty, error)
-	// Updates the password for an account user (scanner-role targets only).
+	// Updates the password for an account user (non-admin users without an email address only).
 	UpdateAccountUserPassword(context.Context, *UpdateAccountUserPasswordRequest) (*emptypb.Empty, error)
 	// Batched read for the api-gateway resourcekit resolver.
 	BatchGetAccountUsersByIDs(context.Context, *BatchGetAccountUsersByIDsRequest) (*BatchGetAccountUsersByIDsResponse, error)

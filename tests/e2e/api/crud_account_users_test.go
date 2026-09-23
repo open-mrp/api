@@ -652,9 +652,9 @@ func TestAccountUsers_StatusLockAfterRemoveFails(t *testing.T) {
 // the auth group with session-based middleware, and requires a requester
 // password. The e2e harness authenticates with an API key (no password), so
 // the endpoint cannot be fully exercised here. A schema-level happy-path test
-// is sufficient at the e2e layer; the behavioral guards (scanner-role only,
-// requester-password verification) are covered by unit tests in the core
-// service and the auth middleware tests.
+// is sufficient at the e2e layer; the behavioral guards (email-less non-admin
+// targets only, requester-password verification) are covered by unit tests in
+// the core service and the auth middleware tests.
 
 func TestAuth_ScannerPasswordsEndpointRegistered(t *testing.T) {
 	t.Parallel()

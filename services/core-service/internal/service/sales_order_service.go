@@ -2659,6 +2659,11 @@ func (s *salesOrderSvcImpl) CreateCustomerCheckoutSession(ctx context.Context, p
 		return cached.Data, cached.Error
 
 	case domain.RecoveryPointStarted:
+		order, orderTotalCents, apiErr := s.resolveCustomerCheckoutOrder(ctx, targetAccountID, customerAccountID, params.OrderID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+
 		// 1. Check Stripe integration exists
 		integrationRepo := s.repos.NewAccountIntegrationRepo()
 		hasIntegration, apiErr := integrationRepo.HasIntegration(ctx, targetAccountID, constants.IntegrationCodeStripe)
@@ -2771,9 +2776,9 @@ func (s *salesOrderSvcImpl) CreateCustomerCheckoutSession(ctx context.Context, p
 			StripeCustomerID: *stripeCustomerID,
 			AccountSlug:      *slug,
 			CustomerID:       customerAccountID,
-			OrderNumber:      params.OrderNumber,
+			OrderNumber:      textutil.FormatRecordNumber(order.Number),
 			CustomerPO:       params.CustomerPO,
-			OrderTotalCents:  params.OrderTotalCents,
+			OrderTotalCents:  orderTotalCents,
 			OrderID:          params.OrderID,
 			ReturnURL:        returnURL,
 		})
@@ -2799,6 +2804,37 @@ func (s *salesOrderSvcImpl) CreateCustomerCheckoutSession(ctx context.Context, p
 	default:
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
 	}
+}
+
+func (s *salesOrderSvcImpl) resolveCustomerCheckoutOrder(ctx context.Context, accountID, buyerAccountID, salesOrderID string) (*domain.SalesOrder, int64, *apierror.APIError) {
+	orderRepo := s.repos.NewSalesOrderRepo()
+
+	order, apiErr := orderRepo.GetForCustomer(ctx, accountID, buyerAccountID, salesOrderID)
+	if apiErr != nil {
+		return nil, 0, apiErr
+	}
+
+	lines, apiErr := orderRepo.GetLines(ctx, salesOrderID)
+	if apiErr != nil {
+		return nil, 0, apiErr
+	}
+	convs, apiErr := salesOrderLineConversions(lines)
+	if apiErr != nil {
+		return nil, 0, apiErr
+	}
+
+	total := decimal.Zero
+	for _, line := range lines {
+		unitPrice, err1 := decimal.NewFromString(line.UnitPriceValue)
+		qty, err2 := decimal.NewFromString(line.QuantityValue)
+		if err1 != nil || err2 != nil {
+			continue
+		}
+		total = total.Add(pricing.LineTotal(qty, unitPrice, conversionFor(convs, line.ID)))
+	}
+	amountCents := total.Mul(decimal.NewFromInt(100)).Round(0).IntPart()
+
+	return order, amountCents, nil
 }
 
 func (s *salesOrderSvcImpl) RecordOrderPayment(ctx context.Context, salesOrderID, paymentIntentID string) *apierror.APIError {

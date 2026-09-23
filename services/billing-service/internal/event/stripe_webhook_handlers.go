@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/open-mrp/api/shared/constants"
@@ -56,6 +58,9 @@ type checkoutSessionObject struct {
 	ID            string            `json:"id"`
 	PaymentIntent string            `json:"payment_intent"`
 	PaymentStatus string            `json:"payment_status"`
+	AmountTotal   int64             `json:"amount_total"`
+	Currency      string            `json:"currency"`
+	Customer      string            `json:"customer"`
 	Metadata      map[string]string `json:"metadata"`
 }
 
@@ -80,6 +85,28 @@ func (c *StripeWebhookConsumer) handleCheckoutSessionCompleted(ctx context.Conte
 
 	if sess.PaymentIntent == "" {
 		log.Printf("[stripe_webhook] checkout.session.completed for order %s has no payment_intent, skipping", orderID)
+		return nil
+	}
+
+	expectedAmount, err := strconv.ParseInt(sess.Metadata["expectedAmountCents"], 10, 64)
+	if err != nil || expectedAmount <= 0 {
+		log.Printf("[stripe_webhook] checkout.session.completed for order %s has invalid expected amount metadata, skipping", orderID)
+		return nil
+	}
+	if sess.AmountTotal != expectedAmount {
+		log.Printf("[stripe_webhook] checkout.session.completed for order %s amount mismatch (paid=%d expected=%d), skipping", orderID, sess.AmountTotal, expectedAmount)
+		return nil
+	}
+
+	expectedCurrency := strings.ToLower(sess.Metadata["expectedCurrency"])
+	if expectedCurrency == "" || strings.ToLower(sess.Currency) != expectedCurrency {
+		log.Printf("[stripe_webhook] checkout.session.completed for order %s currency mismatch (paid=%s expected=%s), skipping", orderID, sess.Currency, expectedCurrency)
+		return nil
+	}
+
+	expectedStripeCustomerID := sess.Metadata["stripeCustomerID"]
+	if expectedStripeCustomerID == "" || sess.Customer != expectedStripeCustomerID {
+		log.Printf("[stripe_webhook] checkout.session.completed for order %s customer mismatch, skipping", orderID)
 		return nil
 	}
 

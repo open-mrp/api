@@ -445,7 +445,15 @@ func TestHandleCheckoutSessionCompleted_RecordsPayment(t *testing.T) {
 		ID:            "cs_1",
 		PaymentIntent: "pi_1",
 		PaymentStatus: "paid",
-		Metadata:      map[string]string{"orderID": "or_1"},
+		AmountTotal:   50000,
+		Currency:      "usd",
+		Customer:      "cus_1",
+		Metadata: map[string]string{
+			"orderID":             "or_1",
+			"expectedAmountCents": "50000",
+			"expectedCurrency":    "usd",
+			"stripeCustomerID":    "cus_1",
+		},
 	})
 
 	err := consumer.handleCheckoutSessionCompleted(ctx, "evt_co", rawObject)
@@ -467,6 +475,10 @@ func TestHandleCheckoutSessionCompleted_SkipsWhenNotPaidOrNoOrder(t *testing.T) 
 		{"unpaid", checkoutSessionObject{ID: "cs_2", PaymentIntent: "pi_2", PaymentStatus: "unpaid", Metadata: map[string]string{"orderID": "or_2"}}},
 		{"no order metadata", checkoutSessionObject{ID: "cs_3", PaymentIntent: "pi_3", PaymentStatus: "paid"}},
 		{"no payment intent", checkoutSessionObject{ID: "cs_4", PaymentStatus: "paid", Metadata: map[string]string{"orderID": "or_4"}}},
+		{"missing expected amount", checkoutSessionObject{ID: "cs_5", PaymentIntent: "pi_5", PaymentStatus: "paid", AmountTotal: 1, Currency: "usd", Customer: "cus_5", Metadata: map[string]string{"orderID": "or_5", "expectedCurrency": "usd", "stripeCustomerID": "cus_5"}}},
+		{"amount mismatch", checkoutSessionObject{ID: "cs_6", PaymentIntent: "pi_6", PaymentStatus: "paid", AmountTotal: 1, Currency: "usd", Customer: "cus_6", Metadata: map[string]string{"orderID": "or_6", "expectedAmountCents": "50000", "expectedCurrency": "usd", "stripeCustomerID": "cus_6"}}},
+		{"currency mismatch", checkoutSessionObject{ID: "cs_7", PaymentIntent: "pi_7", PaymentStatus: "paid", AmountTotal: 50000, Currency: "eur", Customer: "cus_7", Metadata: map[string]string{"orderID": "or_7", "expectedAmountCents": "50000", "expectedCurrency": "usd", "stripeCustomerID": "cus_7"}}},
+		{"customer mismatch", checkoutSessionObject{ID: "cs_8", PaymentIntent: "pi_8", PaymentStatus: "paid", AmountTotal: 50000, Currency: "usd", Customer: "cus_attacker", Metadata: map[string]string{"orderID": "or_8", "expectedAmountCents": "50000", "expectedCurrency": "usd", "stripeCustomerID": "cus_8"}}},
 	}
 
 	for _, tc := range cases {

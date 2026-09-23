@@ -2618,6 +2618,28 @@ func (s *salesOrderSvcImpl) CheckoutSalesOrder(ctx context.Context, params domai
 	}
 }
 
+func salesOrderTotalCents(lines []*domain.SalesOrderLine) (int64, *apierror.APIError) {
+	convs, apiErr := salesOrderLineConversions(lines)
+	if apiErr != nil {
+		return 0, apiErr
+	}
+
+	total := decimal.Zero
+	for _, line := range lines {
+		qty, err := decimal.NewFromString(line.QuantityValue)
+		if err != nil {
+			return 0, apierror.NewInvariantViolationError("Sales order line has an invalid quantity.")
+		}
+		price, err := decimal.NewFromString(line.UnitPriceValue)
+		if err != nil {
+			return 0, apierror.NewInvariantViolationError("Sales order line has an invalid unit price.")
+		}
+		total = total.Add(pricing.LineTotal(qty, price, conversionFor(convs, line.ID)))
+	}
+
+	return total.Mul(decimal.NewFromInt(100)).IntPart(), nil
+}
+
 func (s *salesOrderSvcImpl) CreateCustomerCheckoutSession(ctx context.Context, params domain.CreateCustomerCheckoutSessionParams) (*domain.CreateCustomerCheckoutSessionResult, *apierror.APIError) {
 	ctx, span := salesOrderSvcTracer.Start(ctx, "service.sales_order.create_customer_checkout_session")
 	defer span.End()
@@ -2828,21 +2850,11 @@ func (s *salesOrderSvcImpl) resolveCustomerCheckoutOrder(ctx context.Context, ac
 	if apiErr != nil {
 		return nil, 0, apiErr
 	}
-	convs, apiErr := salesOrderLineConversions(lines)
+
+	amountCents, apiErr := salesOrderTotalCents(lines)
 	if apiErr != nil {
 		return nil, 0, apiErr
 	}
-
-	total := decimal.Zero
-	for _, line := range lines {
-		unitPrice, err1 := decimal.NewFromString(line.UnitPriceValue)
-		qty, err2 := decimal.NewFromString(line.QuantityValue)
-		if err1 != nil || err2 != nil {
-			continue
-		}
-		total = total.Add(pricing.LineTotal(qty, unitPrice, conversionFor(convs, line.ID)))
-	}
-	amountCents := total.Mul(decimal.NewFromInt(100)).Round(0).IntPart()
 
 	return order, amountCents, nil
 }

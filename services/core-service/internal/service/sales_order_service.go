@@ -480,6 +480,16 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 				return nil, cacheErr(apiErr)
 			}
 			params.OrderDiscountID = &resolvedDiscountID
+
+			if identity.IsCustomerUser() {
+				isDuplicate, apiErr := s.repos.NewOrderDiscountRepo().CheckDuplicateUsage(ctx, params.AccountID, params.BuyerAccountID, resolvedDiscountID, nil)
+				if apiErr != nil {
+					return nil, cacheErr(apiErr)
+				}
+				if isDuplicate {
+					return nil, cacheErr(apierror.NewResourceNotFoundError("Order discount not found."))
+				}
+			}
 		}
 
 		// Fill carrier, service level, shipping term, and payment term from the buyer's customer-relation defaults whenever the caller omits them, mirroring the Dashboard create form (which pre-fills these from the selected customer). Carrier, shipping term, and payment term are mandatory on a readable order — the Dashboard order adapter rejects any order missing one — so an API create that omits them without a customer default to fall back on is failed here rather than persisted as a record that 500s on every read.

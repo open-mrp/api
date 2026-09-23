@@ -1,0 +1,79 @@
+name: Rollback (manual)
+
+# On-demand rollback of production to a previously-released image tag.
+#
+# Every release pushes its service images to ECR under their semver tag, so a rollback rebuilds
+# nothing: it re-pins the affected services at an older tag and asks open-mrp/infra to re-roll them.
+# scripts/rollback.sh detects which services changed between the target tag and the live release
+# (override with `services`), resolves each to a tag ECR actually has an image for, and dispatches the
+# rollout to the private open-mrp/infra repo, which owns the manifest and the only credential that can
+# touch the cluster — same path release.yml's deploy job uses. The run blocks on that rollout and
+# inherits infra's `production` approval gate.
+#
+# Image rollback only. It does NOT revert database migrations; the script warns when the window
+# between the tags contains any. Roll back to a tag whose schema the target images can still speak.
+on:
+  workflow_dispatch:
+    inputs:
+      to_tag:
+        description: Release tag to roll back to (e.g. v2.6.1). Its images must be in ECR.
+        required: true
+        type: string
+      services:
+        description: >-
+          Comma-separated services to roll back. Leave empty to auto-detect every service that
+          changed between to_tag and the live release.
+        required: false
+        type: string
+        default: ""
+      current_tag:
+        description: >-
+          The live release being rolled back from. Defaults to the highest release tag; only set this
+          to roll back from a specific tag.
+        required: false
+        type: string
+        default: ""
+
+# One rollback at a time. This cannot order a rollback against a release deploy — the rollout runs in
+# open-mrp/infra, so only that repo's deploy workflow can serialize the two.
+concurrency:
+  group: rollback
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  rollback:
+    name: Roll back production
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          # Full history and tags so rollback.sh can diff the target tag against the live release.
+          # Credentials stay persisted: detect-release-changes fetches tags from origin.
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # Read-only use of the push role: the rollback asks ECR which tags exist before pinning one.
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ECR_PUSH }}
+          aws-region: us-east-2
+
+      - name: Roll back
+        run: ./scripts/rollback.sh
+        env:
+          GH_TOKEN: ${{ secrets.INFRA_DISPATCH_TOKEN }}
+          TO_TAG: ${{ inputs.to_tag }}
+          SERVICES: ${{ inputs.services }}
+          CURRENT_TAG: ${{ inputs.current_tag }}

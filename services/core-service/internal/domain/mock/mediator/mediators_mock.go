@@ -349,3 +349,69 @@ func (mr *MockSandboxMedMockRecorder) Delete(ctx, ownerAccountID, sandboxTypeID 
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockSandboxMed)(nil).Delete), ctx, ownerAccountID, sandboxTypeID)
 }
+
+// MockProductionRunActivityMed is a mock of ProductionRunActivityMed interface.
+type MockProductionRunActivityMed struct {
+	ctrl     *gomock.Controller
+	recorder *MockProductionRunActivityMedMockRecorder
+	isgomock struct{}
+}
+
+// MockProductionRunActivityMedMockRecorder is the mock recorder for MockProductionRunActivityMed.
+type MockProductionRunActivityMedMockRecorder struct {
+	mock *MockProductionRunActivityMed
+}
+
+// NewMockProductionRunActivityMed creates a new mock instance.
+func NewMockProductionRunActivityMed(ctrl *gomock.Controller) *MockProductionRunActivityMed {
+	mock := &MockProductionRunActivityMed{ctrl: ctrl}
+	mock.recorder = &MockProductionRunActivityMedMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockProductionRunActivityMed) EXPECT() *MockProductionRunActivityMedMockRecorder {
+	return m.recorder
+}
+
+// NotifyBatchDeleted mocks base method.
+func (m *MockProductionRunActivityMed) NotifyBatchDeleted(ctx context.Context, identity *types.Identity, accountID string, batch *domain.Batch) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NotifyBatchDeleted", ctx, identity, accountID, batch)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// NotifyBatchDeleted indicates an expected call of NotifyBatchDeleted.
+func (mr *MockProductionRunActivityMedMockRecorder) NotifyBatchDeleted(ctx, identity, accountID, batch any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyBatchDeleted", reflect.TypeOf((*MockProductionRunActivityMed)(nil).NotifyBatchDeleted), ctx, identity, accountID, batch)
+}
+
+// NotifyBatchesAdded mocks base method.
+func (m *MockProductionRunActivityMed) NotifyBatchesAdded(ctx context.Context, identity *types.Identity, run *domain.ProductionRun, count int) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NotifyBatchesAdded", ctx, identity, run, count)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// NotifyBatchesAdded indicates an expected call of NotifyBatchesAdded.
+func (mr *MockProductionRunActivityMedMockRecorder) NotifyBatchesAdded(ctx, identity, run, count any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyBatchesAdded", reflect.TypeOf((*MockProductionRunActivityMed)(nil).NotifyBatchesAdded), ctx, identity, run, count)
+}
+
+// NotifyRunDeleted mocks base method.
+func (m *MockProductionRunActivityMed) NotifyRunDeleted(ctx context.Context, identity *types.Identity, run *domain.ProductionRun) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NotifyRunDeleted", ctx, identity, run)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// NotifyRunDeleted indicates an expected call of NotifyRunDeleted.
+func (mr *MockProductionRunActivityMedMockRecorder) NotifyRunDeleted(ctx, identity, run any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyRunDeleted", reflect.TypeOf((*MockProductionRunActivityMed)(nil).NotifyRunDeleted), ctx, identity, run)
+}

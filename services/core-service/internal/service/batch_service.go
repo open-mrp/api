@@ -2062,6 +2062,10 @@ func (s *batchSvcImpl) undoBatch(ctx context.Context, identity *types.Identity, 
 			}); apiErr != nil {
 				return apiErr
 			}
+
+			if apiErr := txSvc.mediators().ProductionRunActivity.NotifyBatchDeleted(txCtx, identity, accountID, batch); apiErr != nil {
+				return apiErr
+			}
 		}
 
 		// With the batch gone its inputs are no longer spoken for, so any that were closed only
@@ -2145,7 +2149,7 @@ func (s *batchSvcImpl) planScanUndo(ctx context.Context, identity *types.Identit
 
 // deleteBatchRow removes a batch that was never scanned. Nothing to unwind: it is a ticket the floor
 // never ran.
-func (s *batchSvcImpl) deleteBatchRow(ctx context.Context, _ *types.Identity, accountID string, batch *domain.Batch) (*domain.BaseBatch, *apierror.APIError) {
+func (s *batchSvcImpl) deleteBatchRow(ctx context.Context, identity *types.Identity, accountID string, batch *domain.Batch) (*domain.BaseBatch, *apierror.APIError) {
 	var deleted *domain.BaseBatch
 
 	apiErr := s.withTx(ctx, func(txCtx context.Context, txSvc *batchSvcImpl) *apierror.APIError {
@@ -2161,13 +2165,17 @@ func (s *batchSvcImpl) deleteBatchRow(ctx context.Context, _ *types.Identity, ac
 			return apiErr
 		}
 
-		return audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 			ServiceName:  domain.ServiceName,
 			Action:       constants.AuditActionDelete,
 			ResourceType: constants.ObjectTypeBatch,
 			ResourceID:   batch.ID,
 			Changes:      audit.ComputeChanges(batch, (*domain.Batch)(nil)),
-		})
+		}); apiErr != nil {
+			return apiErr
+		}
+
+		return txSvc.mediators().ProductionRunActivity.NotifyBatchDeleted(txCtx, identity, accountID, batch)
 	})
 	if apiErr != nil {
 		return nil, apiErr

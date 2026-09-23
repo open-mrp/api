@@ -110,3 +110,27 @@ type SandboxMed interface {
 	// 5. Return the deleted account ID for downstream purge processing.
 	Delete(ctx context.Context, ownerAccountID, sandboxTypeID string) (accountID string, apiErr *apierror.APIError)
 }
+
+type ProductionRunActivityMed interface {
+	// NotifyBatchesAdded alerts the run's responsible user that someone else added batches to it.
+	//
+	//  1. Resolve the responsible user to an active account user; no-op when there is none.
+	//  2. No-op when the actor is the responsible user.
+	//  3. Enqueue a bell alert linking to the run, folded into one rolling row per run per day.
+	NotifyBatchesAdded(ctx context.Context, identity *types.Identity, run *ProductionRun, count int) *apierror.APIError
+
+	// NotifyBatchDeleted alerts the responsible user of the batch's run that someone else deleted it. No-op for a batch not on a run.
+	//
+	//  1. Load the batch's run.
+	//  2. Resolve the responsible user to an active account user; no-op when there is none.
+	//  3. No-op when the actor is the responsible user.
+	//  4. Enqueue a bell alert linking to the run, folded into one rolling row per run per day.
+	NotifyBatchDeleted(ctx context.Context, identity *types.Identity, accountID string, batch *Batch) *apierror.APIError
+
+	// NotifyRunDeleted alerts the run's responsible user that someone else deleted the run and its batches.
+	//
+	//  1. Resolve the responsible user to an active account user; no-op when there is none.
+	//  2. No-op when the actor is the responsible user.
+	//  3. Enqueue a standalone bell alert with no link.
+	NotifyRunDeleted(ctx context.Context, identity *types.Identity, run *ProductionRun) *apierror.APIError
+}

@@ -13,6 +13,7 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	factorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/factory"
+	mediatormock "github.com/open-mrp/api/services/core-service/internal/domain/mock/mediator"
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
@@ -77,6 +78,7 @@ type BatchUndoTestSuite struct {
 	runRepo           *repositorymock.MockProductionRunQueryRepo
 	orderRepo         *repositorymock.MockOrderQueryRepo
 	deletedRecordRepo *repositorymock.MockDeletedRecordRepo
+	runActivity       *mediatormock.MockProductionRunActivityMed
 	outbox            *recordingOutboxRepo
 }
 
@@ -89,6 +91,7 @@ func (s *BatchUndoTestSuite) SetupTest() {
 	s.runRepo = repositorymock.NewMockProductionRunQueryRepo(s.ctrl)
 	s.orderRepo = repositorymock.NewMockOrderQueryRepo(s.ctrl)
 	s.deletedRecordRepo = repositorymock.NewMockDeletedRecordRepo(s.ctrl)
+	s.runActivity = mediatormock.NewMockProductionRunActivityMed(s.ctrl)
 	s.outbox = &recordingOutboxRepo{}
 
 	repoFactory := factorymock.NewMockRepoFactory(s.ctrl)
@@ -101,7 +104,7 @@ func (s *BatchUndoTestSuite) SetupTest() {
 	repoFactory.EXPECT().NewOutboxRepo().Return(s.outbox).AnyTimes()
 
 	mediatorFactory := factorymock.NewMockMediatorFactory(s.ctrl)
-	mediatorFactory.EXPECT().Build(gomock.Any()).Return(domain.Mediators{}).AnyTimes()
+	mediatorFactory.EXPECT().Build(gomock.Any()).Return(domain.Mediators{ProductionRunActivity: s.runActivity}).AnyTimes()
 
 	s.svc = NewBatchSvc(&BatchSvcConfig{
 		Repos:           repoFactory,
@@ -204,6 +207,7 @@ func (s *BatchUndoTestSuite) TestDeletesAPlannedBatchWithoutQueueingAnUndo() {
 	s.inventoryMutRepo.EXPECT().CountAllocatedReceiptsForBatch(gomock.Any(), undoAccountID, batch.ID).Return(int64(0), nil)
 	s.deletedRecordRepo.EXPECT().Create(gomock.Any(), gomock.Any(), batch.ID, gomock.Any()).Return(nil)
 	s.batchRepo.EXPECT().Delete(gomock.Any(), undoAccountID, batch.ID).Return(&domain.BaseBatch{ID: batch.ID}, nil)
+	s.runActivity.EXPECT().NotifyBatchDeleted(gomock.Any(), gomock.Any(), undoAccountID, batch).Return(nil)
 	s.runRepo.EXPECT().CloseIfAllBatchesScannedOrDeleted(gomock.Any(), undoAccountID, undoRunID).Return(nil)
 
 	result, apiErr := s.svc.DeleteBatch(undoIdentityCtx(), batch.ID)
@@ -248,6 +252,7 @@ func (s *BatchUndoTestSuite) TestDeletesABatchAScanCreatedAndReleasesItsInputs()
 
 	s.deletedRecordRepo.EXPECT().Create(gomock.Any(), gomock.Any(), batch.ID, gomock.Any()).Return(nil)
 	s.batchRepo.EXPECT().Delete(gomock.Any(), undoAccountID, batch.ID).Return(&domain.BaseBatch{ID: batch.ID}, nil)
+	s.runActivity.EXPECT().NotifyBatchDeleted(gomock.Any(), gomock.Any(), undoAccountID, batch).Return(nil)
 
 	for _, inputID := range inputs {
 		s.batchRepo.EXPECT().Find(gomock.Any(), undoAccountID, inputID).Return(scannedBatch(inputID), nil)
@@ -284,6 +289,7 @@ func (s *BatchUndoTestSuite) TestCarriesTheScrapSnapshotWhenTheRunIsBuildingForA
 	}, nil)
 	s.deletedRecordRepo.EXPECT().Create(gomock.Any(), gomock.Any(), batch.ID, gomock.Any()).Return(nil)
 	s.batchRepo.EXPECT().Delete(gomock.Any(), undoAccountID, batch.ID).Return(&domain.BaseBatch{ID: batch.ID}, nil)
+	s.runActivity.EXPECT().NotifyBatchDeleted(gomock.Any(), gomock.Any(), undoAccountID, batch).Return(nil)
 
 	_, apiErr := s.svc.DeleteBatch(undoIdentityCtx(), batch.ID)
 
@@ -320,6 +326,8 @@ func (s *BatchUndoTestSuite) TestBulkDeleteUndoesAChainFromItsDownstreamEnd() {
 			undone = append(undone, batchID)
 			return &domain.BaseBatch{ID: batchID}, nil
 		}).Times(2)
+	s.runActivity.EXPECT().NotifyBatchDeleted(gomock.Any(), gomock.Any(), undoAccountID, child).Return(nil)
+	s.runActivity.EXPECT().NotifyBatchDeleted(gomock.Any(), gomock.Any(), undoAccountID, parent).Return(nil)
 
 	// Listed parent-first on purpose: undoing the parent while the child still feeds on it would be refused.
 	apiErr := s.svc.DeleteManyBatches(undoIdentityCtx(), []string{parent.ID, child.ID})

@@ -115,12 +115,13 @@ type RepoFactory interface {
 
 // Mediators groups all mediator dependencies built for a specific repository factory.
 type Mediators struct {
-	Sandbox        SandboxMed
-	Idempotency    IdempotencyMed
-	ReadAccess     ReadAccessMed
-	EditAccess     EditAccessMed
-	ProductionFlow ProductionFlowMed
-	BurnRate       BurnRateMed
+	Sandbox               SandboxMed
+	Idempotency           IdempotencyMed
+	ReadAccess            ReadAccessMed
+	EditAccess            EditAccessMed
+	ProductionFlow        ProductionFlowMed
+	BurnRate              BurnRateMed
+	ProductionRunActivity ProductionRunActivityMed
 }
 
 // MediatorFactory builds mediators bound to a given repository factory (e.g., per transaction).

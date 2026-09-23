@@ -449,6 +449,10 @@ func (s *productionRunSvcImpl) DeleteProductionRun(ctx context.Context, params d
 			}
 		}
 
+		if apiErr := txSvc.mediators().ProductionRunActivity.NotifyRunDeleted(txCtx, identity, productionRun); apiErr != nil {
+			return apiErr
+		}
+
 		changes := audit.ComputeChanges(productionRun, (*domain.ProductionRun)(nil))
 
 		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
@@ -492,7 +496,7 @@ func (s *productionRunSvcImpl) AddBatchesToProductionRun(ctx context.Context, pa
 	repo := s.repos.NewProductionRunRepo()
 
 	// Verify run exists.
-	_, apiErr := repo.Get(ctx, domain.GetProductionRunParams{
+	run, apiErr := repo.Get(ctx, domain.GetProductionRunParams{
 		ProductionRunID: params.ProductionRunID,
 		AccountID:       params.AccountID,
 	})
@@ -562,6 +566,10 @@ func (s *productionRunSvcImpl) AddBatchesToProductionRun(ctx context.Context, pa
 				batch.ProductionRunID = &params.ProductionRunID
 
 				created = append(created, batch)
+			}
+
+			if apiErr := txSvc.mediators().ProductionRunActivity.NotifyBatchesAdded(txCtx, identity, run, len(created)); apiErr != nil {
+				return apiErr
 			}
 
 			results = created

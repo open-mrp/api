@@ -203,6 +203,8 @@ message RegisterRequest {
   // When registering from a customer portal, the account slug scopes the
   // magic-login link in the "already registered" email.
   optional string account_slug = 4;
+  reserved 5;
+  reserved "portal_base_url";
 }
 
 message MagicLoginRequest {
@@ -221,6 +223,8 @@ message RequestPasswordResetRequest {
   string identifier = 1;
   // Scopes the reset email's branding/links to a specific account context.
   optional string account_slug = 2;
+  reserved 3;
+  reserved "portal_base_url";
 }
 
 message ResetPasswordRequest {

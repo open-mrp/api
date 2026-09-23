@@ -193,10 +193,9 @@ func (s *userMedImpl) SendAlreadyRegisteredEmail(ctx context.Context, user *type
 	}
 
 	var loginURL string
-	switch {
-	case accountSlug != nil && *accountSlug != "":
+	if accountSlug != nil && *accountSlug != "" {
 		loginURL = fmt.Sprintf("%s/%s%s?t=%s", s.frontendURL, *accountSlug, constants.DashboardPathMagicLogin, magicToken)
-	default:
+	} else {
 		loginURL = fmt.Sprintf("%s%s?t=%s", s.frontendURL, constants.DashboardPathMagicLogin, magicToken)
 	}
 

@@ -3487,25 +3487,25 @@ const file_auth_auth_proto_rawDesc = "" +
 	"\b_role_idB\x11\n" +
 	"\x0f_role_type_codeB\f\n" +
 	"\n" +
-	"_role_name\"\x90\x01\n" +
+	"_role_name\"\xa7\x01\n" +
 	"\x0fRegisterRequest\x12\x14\n" +
 	"\x05email\x18\x01 \x01(\tR\x05email\x12\x1a\n" +
 	"\bpassword\x18\x02 \x01(\tR\bpassword\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12&\n" +
 	"\faccount_slug\x18\x04 \x01(\tH\x00R\vaccountSlug\x88\x01\x01B\x0f\n" +
-	"\r_account_slug\")\n" +
+	"\r_account_slugJ\x04\b\x05\x10\x06R\x0fportal_base_url\")\n" +
 	"\x11MagicLoginRequest\x12\x14\n" +
 	"\x05token\x18\x01 \x01(\tR\x05token\":\n" +
 	"\x13RefreshTokenRequest\x12#\n" +
 	"\rrefresh_token\x18\x01 \x01(\tR\frefreshToken\"9\n" +
 	"\x14RefreshTokenResponse\x12!\n" +
-	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\"v\n" +
+	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\"\x8d\x01\n" +
 	"\x1bRequestPasswordResetRequest\x12\x1e\n" +
 	"\n" +
 	"identifier\x18\x01 \x01(\tR\n" +
 	"identifier\x12&\n" +
 	"\faccount_slug\x18\x02 \x01(\tH\x00R\vaccountSlug\x88\x01\x01B\x0f\n" +
-	"\r_account_slug\"H\n" +
+	"\r_account_slugJ\x04\b\x03\x10\x04R\x0fportal_base_url\"H\n" +
 	"\x14ResetPasswordRequest\x12\x14\n" +
 	"\x05token\x18\x01 \x01(\tR\x05token\x12\x1a\n" +
 	"\bpassword\x18\x02 \x01(\tR\bpassword\"@\n" +

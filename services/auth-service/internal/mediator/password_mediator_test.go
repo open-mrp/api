@@ -64,6 +64,42 @@ func TestPasswordMedTestSuite(t *testing.T) {
 	suite.Run(t, new(PasswordMedTestSuite))
 }
 
+// TestRequestReset_ResetLinkStaysFirstParty guards the fix for the portal-domain
+// token-exfiltration finding: a client-controlled account slug may scope the link
+// path but must never move the token off the first-party frontend host.
+func (suite *PasswordMedTestSuite) TestRequestReset_ResetLinkStaysFirstParty() {
+	ctx := context.Background()
+	identifier := "victim@example.com"
+	accountSlug := "attacker-tenant"
+	userID := testutil.EntityIDUser
+	email := identifier
+	user := &types.User{
+		ID:        userID,
+		Email:     &email,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	suite.userRepo.EXPECT().
+		Find(gomock.Any(), identifier).
+		Return(user, nil).
+		Times(1)
+
+	suite.notificationPublisher.EXPECT().
+		PublishSendEmail(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(ctx context.Context, data messaging.EmailSendData) *apierror.APIError {
+			resetLink, ok := data.Params["ResetLink"].(string)
+			suite.True(ok)
+			suite.True(strings.HasPrefix(resetLink, "https://test.example.com/"+accountSlug+string(constants.DashboardPathResetPassword)))
+			return nil
+		}).
+		Times(1)
+
+	apiErr := suite.passwordMed.RequestReset(ctx, identifier, &accountSlug)
+
+	suite.Nil(apiErr)
+}
+
 func (suite *PasswordMedTestSuite) TestUpdatePassword_Success() {
 	ctx := context.Background()
 	userID := testutil.EntityIDUser
@@ -361,32 +397,6 @@ func (suite *PasswordMedTestSuite) TestValidate_NoHashedPassword_WithEmail_Sends
 	suite.Nil(result)
 	suite.NotNil(apiErr)
 	suite.Equal(apierror.ErrorCodeInvalidCredentials, apiErr.Code)
-}
-
-func (suite *PasswordMedTestSuite) TestRequestReset_LinkStaysFirstParty() {
-	ctx := context.Background()
-	identifier := "user@example.com"
-	accountSlug := "customer"
-	user := &types.User{ID: testutil.EntityIDUser, Email: &identifier}
-
-	suite.userRepo.EXPECT().
-		Find(gomock.Any(), identifier).
-		Return(user, nil).
-		Times(1)
-
-	suite.notificationPublisher.EXPECT().
-		PublishSendEmail(gomock.Any(), gomock.Any()).
-		DoAndReturn(func(_ context.Context, data messaging.EmailSendData) *apierror.APIError {
-			resetLink, ok := data.Params["ResetLink"].(string)
-			suite.Require().True(ok)
-			suite.True(strings.HasPrefix(resetLink, "https://test.example.com/customer"+string(constants.DashboardPathResetPassword)))
-			return nil
-		}).
-		Times(1)
-
-	apiErr := suite.passwordMed.RequestReset(ctx, identifier, &accountSlug)
-
-	suite.Nil(apiErr)
 }
 
 func (suite *PasswordMedTestSuite) TestValidate_NoHashedPassword_WithoutEmail_NoEmailSent() {

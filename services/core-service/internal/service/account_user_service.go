@@ -932,7 +932,7 @@ func (s *accountUserSvcImpl) UpdateAccountUserStatus(ctx context.Context, accoun
 	return nil
 }
 
-// UpdateAccountUserPassword updates the password for a scanner-role account user after verifying the requester's password.
+// UpdateAccountUserPassword sets the password for an account user who has no email address (and so cannot use the email reset flow) after verifying the requester's password.
 func (s *accountUserSvcImpl) UpdateAccountUserPassword(ctx context.Context, accountUserID, requesterPassword, newPassword string) *apierror.APIError {
 	ctx, span := accountUserSvcTracer.Start(ctx, "service.account_user.update_password")
 	defer span.End()
@@ -988,15 +988,19 @@ func (s *accountUserSvcImpl) UpdateAccountUserPassword(ctx context.Context, acco
 		}
 
 		// Verify that the target account user belongs to the requester's account.
-		// Include "role" so RoleType is populated for the scanner-role check below.
+		// Include "role" so RoleType is populated for the admin check below.
 		targetAccountUser, apiErr := s.repos.NewAccountUserRepo().GetDetailByAccountAndID(ctx, identity.Target.AccountID, accountUserID, []string{"role"})
 		if apiErr != nil {
 			return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
 		}
 
-		// Passwords may only be rotated for scanner-role (scanning station) users.
-		if targetAccountUser.RoleType == nil || *targetAccountUser.RoleType != string(constants.RoleTypeScanner) {
-			return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apierror.NewValidationError("Password updates are only supported for scanner-role users."))
+		// Users with an email reset their own password through the email flow; only email-less (username-only) users are set here.
+		if targetAccountUser.Email != nil && *targetAccountUser.Email != "" {
+			return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apierror.NewValidationError("Password updates are only supported for users without an email address. Users with an email address must use the password reset flow."))
+		}
+		// Admin credentials cannot be set by other team managers.
+		if targetAccountUser.RoleType != nil && *targetAccountUser.RoleType == string(constants.RoleTypeAdmin) {
+			return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apierror.NewValidationError("Admin user passwords cannot be set by another user."))
 		}
 
 		// Hash the new password.

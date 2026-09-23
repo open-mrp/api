@@ -3,6 +3,7 @@ package stripe
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	apierror "github.com/open-mrp/api/shared/errors"
@@ -145,13 +146,19 @@ func (c *checkoutClientImpl) CreateEmbeddedCheckoutSession(ctx context.Context, 
 		},
 		// Session-level metadata so checkout.session.completed webhooks carry the order reference directly (the session object does not echo payment_intent_data.metadata).
 		Metadata: map[string]string{
-			"orderID":    params.OrderID,
-			"customerID": params.CustomerID,
+			"orderID":             params.OrderID,
+			"customerID":          params.CustomerID,
+			"stripeCustomerID":    params.StripeCustomerID,
+			"expectedAmountCents": strconv.FormatInt(params.OrderTotalCents, 10),
+			"expectedCurrency":    "usd",
 		},
 		PaymentIntentData: &gostripe.CheckoutSessionPaymentIntentDataParams{
 			Metadata: map[string]string{
-				"orderID":    params.OrderID,
-				"customerID": params.CustomerID,
+				"orderID":             params.OrderID,
+				"customerID":          params.CustomerID,
+				"stripeCustomerID":    params.StripeCustomerID,
+				"expectedAmountCents": strconv.FormatInt(params.OrderTotalCents, 10),
+				"expectedCurrency":    "usd",
 			},
 		},
 	}

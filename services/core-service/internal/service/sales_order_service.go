@@ -2608,6 +2608,28 @@ func (s *salesOrderSvcImpl) CheckoutSalesOrder(ctx context.Context, params domai
 	}
 }
 
+func salesOrderTotalCents(lines []*domain.SalesOrderLine) (int64, *apierror.APIError) {
+	convs, apiErr := salesOrderLineConversions(lines)
+	if apiErr != nil {
+		return 0, apiErr
+	}
+
+	total := decimal.Zero
+	for _, line := range lines {
+		qty, err := decimal.NewFromString(line.QuantityValue)
+		if err != nil {
+			return 0, apierror.NewInvariantViolationError("Sales order line has an invalid quantity.")
+		}
+		price, err := decimal.NewFromString(line.UnitPriceValue)
+		if err != nil {
+			return 0, apierror.NewInvariantViolationError("Sales order line has an invalid unit price.")
+		}
+		total = total.Add(pricing.LineTotal(qty, price, conversionFor(convs, line.ID)))
+	}
+
+	return total.Mul(decimal.NewFromInt(100)).IntPart(), nil
+}
+
 func (s *salesOrderSvcImpl) CreateCustomerCheckoutSession(ctx context.Context, params domain.CreateCustomerCheckoutSessionParams) (*domain.CreateCustomerCheckoutSessionResult, *apierror.APIError) {
 	ctx, span := salesOrderSvcTracer.Start(ctx, "service.sales_order.create_customer_checkout_session")
 	defer span.End()
@@ -2659,6 +2681,25 @@ func (s *salesOrderSvcImpl) CreateCustomerCheckoutSession(ctx context.Context, p
 		return cached.Data, cached.Error
 
 	case domain.RecoveryPointStarted:
+		orderRepo := s.repos.NewSalesOrderRepo()
+		order, apiErr := orderRepo.GetForCustomer(ctx, targetAccountID, customerAccountID, params.OrderID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+
+		lines, apiErr := orderRepo.GetLines(ctx, order.ID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+
+		orderTotalCents, apiErr := salesOrderTotalCents(lines)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		if orderTotalCents <= 0 {
+			return nil, tracing.Trace(span, apierror.NewValidationError("This order has no payable balance."))
+		}
+
 		// 1. Check Stripe integration exists
 		integrationRepo := s.repos.NewAccountIntegrationRepo()
 		hasIntegration, apiErr := integrationRepo.HasIntegration(ctx, targetAccountID, constants.IntegrationCodeStripe)
@@ -2764,17 +2805,17 @@ func (s *salesOrderSvcImpl) CreateCustomerCheckoutSession(ctx context.Context, p
 			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Account not found."))
 		}
 
-		returnURL := fmt.Sprintf("%s/%s/dashboard/sales-orders/%s", s.frontendURL, *slug, params.OrderID)
+		returnURL := fmt.Sprintf("%s/%s/dashboard/sales-orders/%s", s.frontendURL, *slug, order.ID)
 
 		// 6. Create embedded checkout session (foreign mutation)
 		session, apiErr := checkoutClient.CreateEmbeddedCheckoutSession(ctx, domain.CreateEmbeddedCheckoutSessionParams{
 			StripeCustomerID: *stripeCustomerID,
 			AccountSlug:      *slug,
 			CustomerID:       customerAccountID,
-			OrderNumber:      params.OrderNumber,
+			OrderNumber:      order.Number,
 			CustomerPO:       params.CustomerPO,
-			OrderTotalCents:  params.OrderTotalCents,
-			OrderID:          params.OrderID,
+			OrderTotalCents:  orderTotalCents,
+			OrderID:          order.ID,
 			ReturnURL:        returnURL,
 		})
 		if apiErr != nil {

@@ -50,12 +50,16 @@ func Run(
 	stdout, stderr io.Writer,
 ) error {
 	var currentTag string
+	var baseTag string
 	var repoRoot string
 	var allServices bool
 
 	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	flags.StringVar(&currentTag, "current-tag", "", "Current release tag, for example v0.18.3")
+	flags.StringVar(&baseTag, "base-tag", "",
+		"Diff against this tag instead of the release immediately before --current-tag. Used by "+
+			"rollback to select every service that changed across a multi-release window.")
 	flags.StringVar(&repoRoot, "repo-root", ".", "Repository root")
 	flags.BoolVar(&allServices, "all-services", false,
 		"Select every service regardless of the diff. Use when a release must reach the "+
@@ -84,9 +88,17 @@ func Run(
 		return fmt.Errorf("fetch git tags: %w", err)
 	}
 
-	previousTag, err := previousReleaseTag(ctx, absRepoRoot, currentTag)
-	if err != nil {
-		return fmt.Errorf("find previous release tag: %w", err)
+	var previousTag string
+	if baseTag != "" {
+		if err := requireTagExists(ctx, absRepoRoot, baseTag); err != nil {
+			return fmt.Errorf("resolve base tag: %w", err)
+		}
+		previousTag = baseTag
+	} else {
+		previousTag, err = previousReleaseTag(ctx, absRepoRoot, currentTag)
+		if err != nil {
+			return fmt.Errorf("find previous release tag: %w", err)
+		}
 	}
 
 	currentRef, err := currentRefForTag(ctx, absRepoRoot, currentTag)
@@ -152,6 +164,15 @@ func previousReleaseTag(ctx context.Context, repoRoot, currentTag string) (strin
 	}
 
 	return "", scanner.Err()
+}
+
+func requireTagExists(ctx context.Context, repoRoot, tag string) error {
+	cmd := exec.CommandContext(ctx, "git", "rev-parse", "-q", "--verify", tag+"^{commit}") // #nosec G204 -- args are controlled
+	cmd.Dir = repoRoot
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("tag %q not found", tag)
+	}
+	return nil
 }
 
 func currentRefForTag(ctx context.Context, repoRoot, currentTag string) (string, error) {

@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.8.1](https://github.com/open-mrp/api/compare/v2.8.0...v2.8.1) (2026-09-23)
+
+
+### Bug Fixes
+
+* **release:** check out release jobs from qualified tag ref ([#175](https://github.com/open-mrp/api/issues/175)) ([ef73e4a](https://github.com/open-mrp/api/commit/ef73e4a65495cbb3852cd02a4d18463e41a571a1))
+
 ## [2.8.0](https://github.com/open-mrp/api/compare/v2.7.4...v2.8.0) (2026-09-23)
 
 

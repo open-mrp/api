@@ -736,6 +736,38 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_CustomerWithPurchaseOr
 	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
 }
 
+func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_CustomerCannotReuseOrderDiscount() {
+	ctx := salesOrderIdempotencyCtx(
+		salesOrderCustomerCtxWithPerms("ac_target", "ac_customer", map[string]bool{"purchase_orders:create": true}),
+		"/core.CoreService/CreateSalesOrder",
+	)
+
+	suite.customerRepo.EXPECT().Get(gomock.Any(), "ac_target", "ac_customer", gomock.Any()).
+		Return(&domain.Customer{}, nil).Times(1)
+	suite.expectPlanLimitAllows()
+	suite.expectIdempotencyStarted()
+	suite.expectCacheError()
+
+	suite.addressRepo.EXPECT().IsInAccount(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
+	suite.addressRepo.EXPECT().Get(gomock.Any(), gomock.Any()).Return(&domain.Address{}, nil).Times(2)
+
+	suite.orderDiscountRepo.EXPECT().Get(gomock.Any(), domain.GetOrderDiscountParams{
+		AccountID:       "ac_target",
+		OrderDiscountID: "discount-code",
+	}).Return(&domain.OrderDiscount{ID: "od_used"}, nil).Times(1)
+	suite.orderDiscountRepo.EXPECT().
+		CheckDuplicateUsage(gomock.Any(), "ac_target", "ac_customer", "od_used", (*string)(nil)).
+		Return(true, nil).Times(1)
+
+	params := baseCreateOrderParams()
+	params.BuyerAccountID = "ac_customer"
+	params.OrderDiscountID = new("discount-code")
+
+	_, apiErr := suite.svc.CreateSalesOrder(ctx, params)
+	suite.Require().NotNil(apiErr)
+	suite.Equal(apierror.ErrorCodeResourceNotFound, apiErr.Code)
+}
+
 func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_PlanLimitExceeded_NonSandbox() {
 	ctx := salesOrderIdempotencyCtx(salesOrderInternalCtx("ac_test"), "/core.CoreService/CreateSalesOrder")
 

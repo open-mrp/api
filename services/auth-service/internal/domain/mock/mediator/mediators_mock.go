@@ -243,17 +243,17 @@ func (m *MockPasswordMed) EXPECT() *MockPasswordMedMockRecorder {
 }
 
 // RequestReset mocks base method.
-func (m *MockPasswordMed) RequestReset(ctx context.Context, identifier string, accountSlug, portalBaseURL *string) *apierror.APIError {
+func (m *MockPasswordMed) RequestReset(ctx context.Context, identifier string, accountSlug *string) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RequestReset", ctx, identifier, accountSlug, portalBaseURL)
+	ret := m.ctrl.Call(m, "RequestReset", ctx, identifier, accountSlug)
 	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
 // RequestReset indicates an expected call of RequestReset.
-func (mr *MockPasswordMedMockRecorder) RequestReset(ctx, identifier, accountSlug, portalBaseURL any) *gomock.Call {
+func (mr *MockPasswordMedMockRecorder) RequestReset(ctx, identifier, accountSlug any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestReset", reflect.TypeOf((*MockPasswordMed)(nil).RequestReset), ctx, identifier, accountSlug, portalBaseURL)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestReset", reflect.TypeOf((*MockPasswordMed)(nil).RequestReset), ctx, identifier, accountSlug)
 }
 
 // Update mocks base method.
@@ -437,15 +437,15 @@ func (mr *MockUserMedMockRecorder) Register(ctx, input any) *gomock.Call {
 }
 
 // SendAlreadyRegisteredEmail mocks base method.
-func (m *MockUserMed) SendAlreadyRegisteredEmail(ctx context.Context, user *types.User, accountSlug, portalBaseURL *string) {
+func (m *MockUserMed) SendAlreadyRegisteredEmail(ctx context.Context, user *types.User, accountSlug *string) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SendAlreadyRegisteredEmail", ctx, user, accountSlug, portalBaseURL)
+	m.ctrl.Call(m, "SendAlreadyRegisteredEmail", ctx, user, accountSlug)
 }
 
 // SendAlreadyRegisteredEmail indicates an expected call of SendAlreadyRegisteredEmail.
-func (mr *MockUserMedMockRecorder) SendAlreadyRegisteredEmail(ctx, user, accountSlug, portalBaseURL any) *gomock.Call {
+func (mr *MockUserMedMockRecorder) SendAlreadyRegisteredEmail(ctx, user, accountSlug any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendAlreadyRegisteredEmail", reflect.TypeOf((*MockUserMed)(nil).SendAlreadyRegisteredEmail), ctx, user, accountSlug, portalBaseURL)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendAlreadyRegisteredEmail", reflect.TypeOf((*MockUserMed)(nil).SendAlreadyRegisteredEmail), ctx, user, accountSlug)
 }
 
 // ValidateCredential mocks base method.

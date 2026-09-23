@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.8.0](https://github.com/open-mrp/api/compare/v2.7.4...v2.8.0) (2026-09-23)
+
+
+### Features
+
+* **identity:** let admins set passwords for any email-less user ([#172](https://github.com/open-mrp/api/issues/172)) ([8adea7d](https://github.com/open-mrp/api/commit/8adea7db9b9fd863b2030be73b29c367ea7314bb))
+* **production-runs:** alert the responsible user when someone else adds or deletes batches ([#173](https://github.com/open-mrp/api/issues/173)) ([b1ab60c](https://github.com/open-mrp/api/commit/b1ab60c1c3ea56b6b6321190ef503affe5f4f6a5))
+
 ## [2.7.4](https://github.com/open-mrp/api/compare/v2.7.3...v2.7.4) (2026-09-22)
 
 

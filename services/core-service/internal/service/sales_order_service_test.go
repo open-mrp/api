@@ -1816,6 +1816,78 @@ func (suite *SalesOrderSvcTestSuite) TestCheckoutSalesOrder_AlreadyPaidRejected(
 	suite.Equal(apierror.ErrorCodeResourceConflict, apiErr.Code)
 }
 
+func (suite *SalesOrderSvcTestSuite) TestCreateCustomerCheckoutSession_ChargesStoredOrderTotal() {
+	ctx := salesOrderIdempotencyCtx(salesOrderCustomerCtx("ac_target", "ac_customer"), "/core.CoreService/CreateCustomerCheckoutSession")
+
+	suite.expectReadAccessAllowed("ac_customer", "ac_target")
+	suite.expectIdempotencyStarted()
+
+	suite.orderRepo.EXPECT().
+		GetForCustomer(gomock.Any(), "ac_target", "ac_customer", "or_1").
+		Return(&domain.SalesOrder{ID: "or_1", Number: "1001", BuyerAccountID: "ac_customer"}, nil).Times(1)
+	suite.orderRepo.EXPECT().GetLines(gomock.Any(), "or_1").
+		Return([]*domain.SalesOrderLine{
+			{ID: "sol_carton", QuantityValue: "2", UnitPriceValue: "1.50", PricingQuantityRatioNumerator: "12", PricingQuantityRatioDenominator: "1", PricingPriceRatioNumerator: "1", PricingPriceRatioDenominator: "1"},
+		}, nil).Times(1)
+
+	credsJSON, _ := json.Marshal(domain.StripeCredentials{PrivateKey: "sk_test_xxx"})
+	encrypted, err := crypto.EncryptAESGCM(credsJSON, suite.encryptionKey, []byte("ac_target"), "k1")
+	suite.Require().NoError(err)
+	suite.accountIntegrationRepo.EXPECT().
+		HasIntegration(gomock.Any(), "ac_target", constants.IntegrationCodeStripe).
+		Return(true, nil).Times(1)
+	suite.accountIntegrationRepo.EXPECT().
+		GetEncryptedCredentials(gomock.Any(), "ac_target", constants.IntegrationCodeStripe).
+		Return(encrypted, true, nil).Times(1)
+
+	stripeCustomerID := "cus_123"
+	stripeEmail := "buyer@example.com"
+	suite.customerRepo.EXPECT().GetStripeCustomerID(gomock.Any(), "ac_target", "ac_customer").
+		Return(&stripeCustomerID, &stripeEmail, nil).Times(1)
+
+	portalSlug := "acme"
+	suite.accountRepo.EXPECT().GetPortalSlug(gomock.Any(), "ac_target").Return(&portalSlug, nil).Times(1)
+
+	suite.checkoutFactory.EXPECT().Build("sk_test_xxx").Return(suite.checkoutClient).Times(1)
+	suite.checkoutClient.EXPECT().
+		CreateEmbeddedCheckoutSession(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, params domain.CreateEmbeddedCheckoutSessionParams) (*domain.StripeEmbeddedCheckoutSession, *apierror.APIError) {
+			suite.Equal(int64(3600), params.OrderTotalCents)
+			suite.Equal("001001", params.OrderNumber)
+			suite.Equal("or_1", params.OrderID)
+			return &domain.StripeEmbeddedCheckoutSession{ClientSecret: "cs_secret"}, nil
+		}).Times(1)
+
+	suite.expectCacheSuccess()
+
+	result, apiErr := suite.svc.CreateCustomerCheckoutSession(ctx, domain.CreateCustomerCheckoutSessionParams{
+		OrderID:         "or_1",
+		OrderNumber:     "HACKED",
+		OrderTotalCents: 1,
+	})
+	suite.Nil(apiErr)
+	suite.Equal("cs_secret", result.ClientSecret)
+}
+
+func (suite *SalesOrderSvcTestSuite) TestCreateCustomerCheckoutSession_ForeignOrderRejected() {
+	ctx := salesOrderIdempotencyCtx(salesOrderCustomerCtx("ac_target", "ac_customer"), "/core.CoreService/CreateCustomerCheckoutSession")
+
+	suite.expectReadAccessAllowed("ac_customer", "ac_target")
+	suite.expectIdempotencyStarted()
+
+	suite.orderRepo.EXPECT().
+		GetForCustomer(gomock.Any(), "ac_target", "ac_customer", "or_foreign").
+		Return(nil, apierror.NewResourceNotFoundError("Sales order not found.")).Times(1)
+
+	_, apiErr := suite.svc.CreateCustomerCheckoutSession(ctx, domain.CreateCustomerCheckoutSessionParams{
+		OrderID:         "or_foreign",
+		OrderNumber:     "SO-1",
+		OrderTotalCents: 100,
+	})
+	suite.NotNil(apiErr)
+	suite.Equal(apierror.ErrorCodeResourceNotFound, apiErr.Code)
+}
+
 // --- CreateSalesOrderProductionRun ---
 
 func (suite *SalesOrderSvcTestSuite) TestCreateProductionRun_RejectsIfOrderAlreadyHasRun() {

@@ -69,14 +69,17 @@ func Run(
 	leaseSvc := lease.New(repository.NewLeaseRepo(queries))
 
 	outboxRepo := repository.NewOutboxEnqueuerRepo(pgpool, queries)
-	enqueuer, err := messaging.NewEnqueuer(&messaging.EnqueuerConfig{
+	enqueuerCfg := &messaging.EnqueuerConfig{
 		ServiceName:  domain.ServiceName,
 		PlatformMode: cfg.PlatformMode,
-		// Chat runs kick the enqueuer (OutboxNotifier below) so they start instantly; this tightens the
-		// idle-backoff ceiling below the shared default so an un-kicked streaming event still posts
-		// within 500ms rather than waiting out a longer idle poll.
-		MaxPollInterval: 500 * time.Millisecond,
-	}, outboxRepo, rabbitmq, leaseSvc)
+	}
+	if !cfg.PlatformMode.IsTest() {
+		// Every outbox write wakes the enqueuer on commit (messaging.NotifyOnCommit), so this ceiling
+		// only paces rows nothing kicked: delayed auto-retry resumes and failed-publish retries. Kept
+		// below the 30s shared default so a resume isn't held much past its next_run_at.
+		enqueuerCfg.MaxPollInterval = 5 * time.Second
+	}
+	enqueuer, err := messaging.NewEnqueuer(enqueuerCfg, outboxRepo, rabbitmq, leaseSvc)
 	if err != nil {
 		return err
 	}

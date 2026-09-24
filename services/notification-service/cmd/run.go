@@ -76,13 +76,15 @@ func Run(
 	leaseSvc := lease.New(repository.NewLeaseRepo(queries))
 
 	outboxEnqueuerRepo := repository.NewOutboxEnqueuerRepo(db, queries)
-	enqueuer, err := messaging.NewEnqueuer(&messaging.EnqueuerConfig{
+	enqueuerCfg := &messaging.EnqueuerConfig{
 		ServiceName:  domain.ServiceName,
 		PlatformMode: cfg.PlatformMode,
-		// Posting a message kicks the enqueuer (see NewConversationSvc) so agent dispatch and realtime delivery fire instantly; this ceiling covers the un-kicked ones, above all the realtime events that carry agent streaming bubbles to the gateway WS.
-		// Because the poll is not scoped by service_name, these pollers also drain what api-gateway, auth, billing, core, and platform write — those run at the 30s default rather than duplicating this sweep. Raising this ceiling therefore slows every service's outbox, not just this one.
-		MaxPollInterval: 500 * time.Millisecond,
-	}, outboxEnqueuerRepo, rabbitmq, leaseSvc)
+	}
+	if !cfg.PlatformMode.IsTest() {
+		// Every outbox write wakes its own service's enqueuer on commit (messaging.NotifyOnCommit), so this ceiling only paces failed-publish retries and rows orphaned by a crashed pod. It stays below the 30s default because the poll is not scoped by service_name: this is the sweep that recovers those rows for every service on augno_core.
+		enqueuerCfg.MaxPollInterval = 5 * time.Second
+	}
+	enqueuer, err := messaging.NewEnqueuer(enqueuerCfg, outboxEnqueuerRepo, rabbitmq, leaseSvc)
 	if err != nil {
 		return err
 	}

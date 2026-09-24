@@ -69,6 +69,8 @@ func (r *outboxRepoImpl) Create(ctx context.Context, input messaging.OutboxMessa
 		return 0, err
 	}
 
+	messaging.NotifyOnCommit(ctx, input)
+
 	return result, nil
 }
 

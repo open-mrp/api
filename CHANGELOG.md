@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.9.1](https://github.com/open-mrp/api/compare/v2.9.0...v2.9.1) (2026-09-24)
+
+
+### Code Refactoring
+
+* **outbox:** enhance enqueuer configuration and commit notification ([#184](https://github.com/open-mrp/api/issues/184)) ([c906e35](https://github.com/open-mrp/api/commit/c906e35a8fb2d994b91e447b30dcecfc96ae6f56))
+
 ## [2.9.0](https://github.com/open-mrp/api/compare/v2.8.1...v2.9.0) (2026-09-23)
 
 

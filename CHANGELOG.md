@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.9.2](https://github.com/open-mrp/api/compare/v2.9.1...v2.9.2) (2026-09-24)
+
+
+### Code Refactoring
+
+* **queries:** optimize SQL queries for performance ([#186](https://github.com/open-mrp/api/issues/186)) ([f9e2112](https://github.com/open-mrp/api/commit/f9e211215ce1ab9ef3831a346f56261765a6f2b8))
+
 ## [2.9.1](https://github.com/open-mrp/api/compare/v2.9.0...v2.9.1) (2026-09-24)
 
 

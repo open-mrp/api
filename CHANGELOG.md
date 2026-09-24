@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.10.1](https://github.com/open-mrp/api/compare/v2.10.0...v2.10.1) (2026-09-24)
+
+
+### Code Refactoring
+
+* **redis:** implement asynchronous monitoring for Redis connection in analytics cache ([#190](https://github.com/open-mrp/api/issues/190)) ([f767802](https://github.com/open-mrp/api/commit/f767802f251a206ccf5c043f35403401412871f8))
+
 ## [2.10.0](https://github.com/open-mrp/api/compare/v2.9.2...v2.10.0) (2026-09-24)
 
 

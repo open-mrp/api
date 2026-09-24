@@ -54,11 +54,15 @@ func (r *scheduleAttainmentRepoImpl) SumPlannedByWeek(ctx context.Context, param
 	ctx, span := scheduleAttainmentRepoTracer.Start(ctx, "repository.schedule_attainment.sum_planned_by_week")
 	defer span.End()
 
+	if len(params.ProductionScheduleIDs) == 0 {
+		return []domain.AttainmentPlannedRow{}, nil
+	}
+
 	rows, err := r.queries.SumPlannedByWeek(ctx, sqlc.SumPlannedByWeekParams{
-		AccountID:            params.AccountID,
-		ProductionScheduleID: params.ProductionScheduleID,
-		WindowStart:          params.WindowStart,
-		WindowEnd:            params.WindowEnd,
+		AccountID:             params.AccountID,
+		ProductionScheduleIds: params.ProductionScheduleIDs,
+		WindowStart:           params.WindowStart,
+		WindowEnd:             params.WindowEnd,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -67,13 +71,14 @@ func (r *scheduleAttainmentRepoImpl) SumPlannedByWeek(ctx context.Context, param
 	out := make([]domain.AttainmentPlannedRow, len(rows))
 	for i, row := range rows {
 		out[i] = domain.AttainmentPlannedRow{
-			WeekStartDate:   row.WeekStartDate,
-			MachineID:       row.MachineID,
-			ItemID:          row.ItemID,
-			DepartmentID:    nullStringPtr(row.DepartmentID),
-			PlannedQuantity: decimalToFloat64(row.PlannedQuantity),
-			PlannedRunHours: decimalToFloat64(row.PlannedRunHours),
-			LineCount:       row.LineCount,
+			ProductionScheduleID: row.ProductionScheduleID,
+			WeekStartDate:        row.WeekStartDate,
+			MachineID:            row.MachineID,
+			ItemID:               row.ItemID,
+			DepartmentID:         nullStringPtr(row.DepartmentID),
+			PlannedQuantity:      decimalToFloat64(row.PlannedQuantity),
+			PlannedRunHours:      decimalToFloat64(row.PlannedRunHours),
+			LineCount:            row.LineCount,
 		}
 	}
 	return out, nil

@@ -36,6 +36,22 @@ func (s *analyticsSvcImpl) AnalyzeDeliveryPerformance(ctx context.Context, param
 	}
 	accountID := identity.Target.AccountID
 
+	return cachedReport(ctx, s.reportCache().delivery, analyticsReport{
+		accountID: accountID,
+		family:    analyticsFamilyDelivery,
+		method:    "delivery_performance",
+		params:    params,
+		ttl:       s.reportCache().cfg.LiveTTL,
+	}, func(ctx context.Context) (*domain.DeliveryPerformanceResult, *apierror.APIError) {
+		return s.buildDeliveryPerformance(ctx, accountID, params)
+	})
+}
+
+// buildDeliveryPerformance judges lateness as of now, so its result drifts with the clock.
+func (s *analyticsSvcImpl) buildDeliveryPerformance(ctx context.Context, accountID string, params domain.AnalyzeDeliveryPerformanceParams) (*domain.DeliveryPerformanceResult, *apierror.APIError) {
+	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.build_delivery_performance")
+	defer span.End()
+
 	repo := s.repos.NewProductionScheduleInputRepo()
 	outcomes, apiErr := repo.ListDeliveryOutcomes(ctx, accountID, params.StartDate, params.EndDate, params.DeliveryFilters)
 	if apiErr != nil {

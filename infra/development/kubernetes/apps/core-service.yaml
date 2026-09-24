@@ -61,6 +61,11 @@ spec:
                 secretKeyRef:
                   name: rabbitmq-credentials
                   key: uri
+            - name: REDIS_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: REDIS_URL
+                  name: app-config
             - name: PLATFORM
               valueFrom:
                 configMapKeyRef:

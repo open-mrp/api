@@ -31,6 +31,7 @@ const (
 	envBillingServiceURL      = "BILLING_SERVICE_URL"
 	envCursorHMACKey          = "CURSOR_HMAC_KEY" // #nosec G101 - Env var name, not a credential
 	envPlatformMode           = "PLATFORM"
+	envLookupCacheDisabled    = "LOOKUP_CACHE_DISABLED"
 )
 
 // config represents the configuration for the auth service.
@@ -75,6 +76,9 @@ type config struct {
 
 	// PlatformMode (optional; default: "production") determines the platform mode.
 	PlatformMode constants.PlatformMode
+
+	// LookupCacheDisabled (optional; default: false) sends every credential lookup to core-service uncached; the kill switch if the cache is ever suspected of serving stale access.
+	LookupCacheDisabled bool
 }
 
 // withDefaults sets the default values for the configuration.
@@ -108,6 +112,7 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		BillingServiceURL:         cmp.Or(env.GetEnv(envBillingServiceURL, getenv), defaultBillingServiceURL),
 		CursorHMACKey:             []byte(env.GetEnv(envCursorHMACKey, getenv)),
 		PlatformMode:              platformMode,
+		LookupCacheDisabled:       env.GetEnv(envLookupCacheDisabled, getenv) == "true",
 		docAPIKeyEncryptionKeyErr: keyErr,
 	}
 }

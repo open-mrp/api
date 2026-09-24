@@ -699,10 +699,10 @@ func TestScheduleLifecycle_AddedLineIsPricedInConstraintTime(t *testing.T) {
 		"a hand-added campaign must name its SKU like every other line, or the plan grid labels its row with a raw item id")
 }
 
-// sewLargeSockSecondsPerUnit is the labor time of the step SeedItemID's one scan was produced at: five minutes a pair, on Sewing Machine 1.
+// sewLargeSockSecondsPerPair is the rate SeedItemID's one scan ran at: Sew Large Sock's five minutes a sock, counted per pair as the plan counts the item.
 //
-// Deliberately not the step the campaign's machine carries — Knitting Machine 1 is nominally the ten-minute "Knit Large Sock" step — so an assertion on this number can only pass if the rate came from the item's own history.
-const sewLargeSockSecondsPerUnit = 300.0
+// Neither fallback lands here. The step that produces the item (Pack Small White Sock, two minutes) would price this campaign at 4h, so an assertion on this number can only pass if the rate came from the item's own history.
+const sewLargeSockSecondsPerPair = 600.0
 
 // A SKU no version planned is still priced, off its own scans.
 //
@@ -728,7 +728,7 @@ func TestScheduleLifecycle_AddedLineIsPricedFromScanHistory(t *testing.T) {
 
 	runHours, ok := line["planned_run_hours"].(float64)
 	require.True(t, ok, "planned_run_hours must be present: %v", line)
-	assert.InDelta(t, 120*sewLargeSockSecondsPerUnit/3600, runHours, 0.01,
+	assert.InDelta(t, 120*sewLargeSockSecondsPerPair/3600, runHours, 0.01,
 		"a SKU with scans must be priced at the rate it actually ran at, not left at zero and not taken off whatever step its new machine happens to name")
 }
 

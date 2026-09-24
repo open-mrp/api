@@ -366,13 +366,13 @@ view-otel: ## Open Jaeger UI via port-forward
 e2e-up: openapi-quiet ## Start the E2E stack (isolated services + seeded DBs)
 	@./scripts/run-quiet.sh "Building E2E service images" docker compose -f docker-compose.e2e.yml build --parallel
 	@./scripts/run-quiet.sh "Clearing leftover E2E containers" ./scripts/e2e-rm-named-containers.sh
-	@./scripts/run-quiet.sh "Starting E2E databases" docker compose -f docker-compose.e2e.yml up -d --wait mysql-e2e postgres-e2e rabbitmq minio-e2e
+	@./scripts/run-quiet.sh "Starting E2E databases" docker compose -f docker-compose.e2e.yml up -d --wait mysql-e2e postgres-e2e rabbitmq redis minio-e2e
 	@./scripts/setup-e2e-db.sh
 	@./scripts/run-quiet.sh "Starting E2E services" ./scripts/start-e2e-services.sh
 
 e2e-up-ci: openapi-quiet ## Start the E2E stack using pre-built images (for CI)
 	@./scripts/run-quiet.sh "Clearing leftover E2E containers" ./scripts/e2e-rm-named-containers.sh
-	@./scripts/run-quiet.sh "Starting E2E databases" docker compose -f docker-compose.e2e.yml up -d --wait mysql-e2e postgres-e2e rabbitmq minio-e2e
+	@./scripts/run-quiet.sh "Starting E2E databases" docker compose -f docker-compose.e2e.yml up -d --wait mysql-e2e postgres-e2e rabbitmq redis minio-e2e
 	@./scripts/setup-e2e-db.sh
 	@./scripts/run-quiet.sh "Starting E2E services" ./scripts/start-e2e-services.sh
 

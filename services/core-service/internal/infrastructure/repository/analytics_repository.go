@@ -1137,25 +1137,40 @@ func (r *analyticsRepoImpl) GetProductLineInfo(ctx context.Context, accountID st
 }
 
 // GetOrderQuantityByProductLine returns the aggregate ordered quantity for one product line in a window.
-func (r *analyticsRepoImpl) GetOrderQuantityByProductLine(ctx context.Context, params domain.GetOrderQuantityByProductLineParams) (*domain.OrderQuantityByProductLineRow, *apierror.APIError) {
-	ctx, span := analyticsRepoTracer.Start(ctx, "repository.analytics.get_order_quantity_by_product_line")
+func (r *analyticsRepoImpl) GetOrderQuantitiesByProductLines(ctx context.Context, params domain.GetOrderQuantitiesByProductLinesParams) ([]domain.OrderQuantityByProductLineRow, *apierror.APIError) {
+	ctx, span := analyticsRepoTracer.Start(ctx, "repository.analytics.get_order_quantities_by_product_lines")
 	defer span.End()
 
-	row, err := r.queries.GetOrderQuantityByProductLine(ctx, sqlc.GetOrderQuantityByProductLineParams{
-		TargetProductLineID: params.ProductLineID,
-		OwnerAccountID:      params.AccountID,
-		StartDate:           sql.NullTime{Time: params.StartDate, Valid: true},
-		EndDate:             sql.NullTime{Time: params.EndDate, Valid: true},
+	if len(params.ProductLineIDs) == 0 {
+		return []domain.OrderQuantityByProductLineRow{}, nil
+	}
+
+	demandIDs := make([]sql.NullString, len(params.ProductLineIDs))
+	for i, id := range params.ProductLineIDs {
+		demandIDs[i] = sql.NullString{String: id, Valid: true}
+	}
+
+	rows, err := r.queries.GetOrderQuantitiesByProductLines(ctx, sqlc.GetOrderQuantitiesByProductLinesParams{
+		OwnerAccountID:       params.AccountID,
+		DemandProductLineIds: demandIDs,
+		StartDate:            sql.NullTime{Time: params.StartDate, Valid: true},
+		EndDate:              sql.NullTime{Time: params.EndDate, Valid: true},
+		ProductLineIds:       params.ProductLineIDs,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return &domain.OrderQuantityByProductLineRow{
-		TotalQuantity:    decimalToFloat64(row.TotalQuantity),
-		UnitAbbreviation: fmt.Sprintf("%v", row.UnitAbbreviation),
-		UnitType:         fmt.Sprintf("%v", row.UnitType),
-	}, nil
+	out := make([]domain.OrderQuantityByProductLineRow, len(rows))
+	for i, row := range rows {
+		out[i] = domain.OrderQuantityByProductLineRow{
+			ProductLineID:    row.ProductLineID,
+			TotalQuantity:    decimalToFloat64(row.TotalQuantity),
+			UnitAbbreviation: row.UnitAbbreviation,
+			UnitType:         row.UnitType,
+		}
+	}
+	return out, nil
 }
 
 // decimalToFloat64 converts a decimal string (from CAST AS DECIMAL) to float64.

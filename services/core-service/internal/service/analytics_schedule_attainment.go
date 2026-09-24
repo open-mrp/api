@@ -11,6 +11,14 @@ import (
 	"github.com/open-mrp/api/shared/tracing"
 )
 
+func baselineScheduleIDs(baselines []domain.AttainmentBaselineRow) []string {
+	ids := make([]string, len(baselines))
+	for i := range baselines {
+		ids[i] = baselines[i].ScheduleID
+	}
+	return ids
+}
+
 // baselineFor picks the published version that governed a given week.
 //
 // Rows arrive newest-publish-first, so the first version that owns the week wins. Ownership turns on the freeze, not the publish clock: a finished week belongs to the version that froze it — the plan that was actually committed for that week — because freezing is the explicit act of committing a week to the floor. A version whose horizon merely spanned the week but whose frozen window ended before it was superseded before the freeze and never governed it. This is what lets a plan published partway into its own week still own that week: publishing on the week's start day (a common cadence when the week starts midweek) freezes it, so it is the baseline, even though it was not live at 00:00.
@@ -126,48 +134,45 @@ func (s *analyticsSvcImpl) buildScheduleAttainment(ctx context.Context, params d
 	// Window-wide rather than per week on purpose. A scheduled machine that was given no work in some week is idle by plan, so what it ran that week is unplanned output — which is the signal. Scoping per week would hide that production entirely instead.
 	scheduledMachines := map[string]bool{}
 
-	for i := range baselines {
-		b := &baselines[i]
+	plannedRows, apiErr := repo.SumPlannedByWeek(ctx, domain.SumPlannedByWeekParams{
+		AccountID:             params.AccountID,
+		ProductionScheduleIDs: baselineScheduleIDs(baselines),
+		WindowStart:           windowStart,
+		WindowEnd:             windowEnd,
+	})
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 
-		rows, apiErr := repo.SumPlannedByWeek(ctx, domain.SumPlannedByWeekParams{
-			AccountID:            params.AccountID,
-			ProductionScheduleID: b.ScheduleID,
-			WindowStart:          windowStart,
-			WindowEnd:            windowEnd,
-		})
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
+	for _, row := range plannedRows {
+		week := scheduleWeekStart(row.WeekStartDate, weekStartDay)
+		// Each week is attributed to exactly one baseline. A version that covers the week but was not the live plan for it contributes nothing.
+		chosen := baselineFor(baselines, week, now)
+		if chosen == nil || chosen.ScheduleID != row.ProductionScheduleID {
+			continue
+		}
+		b := chosen
+		if !passesFilter(machineFilter, row.MachineID) {
+			continue
+		}
+		if row.DepartmentID != nil && !passesFilter(departmentFilter, *row.DepartmentID) {
+			continue
 		}
 
-		for _, row := range rows {
-			week := scheduleWeekStart(row.WeekStartDate, weekStartDay)
-			// Each week is attributed to exactly one baseline. A version that covers the week but was not the live plan for it contributes nothing.
-			chosen := baselineFor(baselines, week, now)
-			if chosen == nil || chosen.ScheduleID != b.ScheduleID {
-				continue
-			}
-			if !passesFilter(machineFilter, row.MachineID) {
-				continue
-			}
-			if row.DepartmentID != nil && !passesFilter(departmentFilter, *row.DepartmentID) {
-				continue
-			}
+		usedBaselines[b.ScheduleID] = b
+		scheduledMachines[row.MachineID] = true
 
-			usedBaselines[b.ScheduleID] = b
-			scheduledMachines[row.MachineID] = true
-
-			key := plannedKey{week: week, machine: row.MachineID, item: row.ItemID}
-			acc := planned[key]
-			if acc == nil {
-				acc = &attainmentAccumulator{week: &week}
-				planned[key] = acc
-			}
-			acc.planned += row.PlannedQuantity
-			acc.runHours += row.PlannedRunHours
-			acc.lines += row.LineCount
-			if row.DepartmentID != nil {
-				departmentByKey[key] = *row.DepartmentID
-			}
+		key := plannedKey{week: week, machine: row.MachineID, item: row.ItemID}
+		acc := planned[key]
+		if acc == nil {
+			acc = &attainmentAccumulator{week: &week}
+			planned[key] = acc
+		}
+		acc.planned += row.PlannedQuantity
+		acc.runHours += row.PlannedRunHours
+		acc.lines += row.LineCount
+		if row.DepartmentID != nil {
+			departmentByKey[key] = *row.DepartmentID
 		}
 	}
 

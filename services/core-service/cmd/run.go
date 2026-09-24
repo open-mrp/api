@@ -24,6 +24,8 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/mediator"
 	"github.com/open-mrp/api/services/core-service/internal/service"
 	"github.com/open-mrp/api/services/core-service/internal/stripesync"
+	"github.com/open-mrp/api/shared/audit"
+	"github.com/open-mrp/api/shared/cache"
 	s3client "github.com/open-mrp/api/shared/cloud/s3"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/db"
@@ -405,9 +407,16 @@ func Run(
 		TxManager:       txManager,
 	})
 
+	analyticsCache, closeAnalyticsCache, err := newAnalyticsCache(ctx, cfg.RedisURL, rabbitmq, logger)
+	if err != nil {
+		return err
+	}
+	defer closeAnalyticsCache()
+
 	analyticsSvc := service.NewAnalyticsSvc(&service.AnalyticsSvcConfig{
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
+		Cache:           analyticsCache,
 	})
 
 	catalogSvc := service.NewCatalogSvc(&service.CatalogSvcConfig{
@@ -920,4 +929,33 @@ func Run(
 	logger.Info("Core service started", "port", cfg.Port)
 
 	return server.Serve(ctx, cfg.Port)
+}
+
+// newAnalyticsCache shares computed reports across replicas through Redis, invalidated by this replica's subscription to audit events. Without a Redis URL every report is computed on request.
+func newAnalyticsCache(ctx context.Context, redisURL string, broker messaging.MessageBroker, logger *slog.Logger) (*service.AnalyticsCache, func(), error) {
+	if redisURL == "" {
+		logger.Info("Analytics cache disabled: REDIS_URL is not set")
+		return nil, func() {}, nil
+	}
+	store, err := cache.NewRedisStore(&cache.RedisStoreConfig{URL: redisURL, KeyPrefix: "core:"})
+	if err != nil {
+		return nil, nil, err
+	}
+	if err := store.Ping(ctx); err != nil {
+		logger.Warn("Redis unreachable at startup; analytics reports are computed uncached until it recovers", "error", err)
+	}
+	analyticsCache, err := service.NewAnalyticsCache(&service.AnalyticsCacheConfig{Store: store})
+	if err != nil {
+		_ = store.Close()
+		return nil, nil, err
+	}
+	if err := audit.Subscribe(ctx, broker, audit.SubscribeConfig{
+		QueueBaseName: messaging.CoreEventCacheInvalidationQueue,
+		OnEvent:       analyticsCache.HandleAuditEvent,
+		OnResync:      analyticsCache.Flush,
+	}); err != nil {
+		_ = store.Close()
+		return nil, nil, err
+	}
+	return analyticsCache, func() { _ = store.Close() }, nil
 }

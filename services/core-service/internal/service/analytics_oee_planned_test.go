@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -73,13 +75,13 @@ func TestScheduledCapacity_CountsDistinctMachinesPerDepartment(t *testing.T) {
 		Return(f.oneBaseline(), nil).Times(1)
 	f.schedule.EXPECT().SumPlannedByWeek(gomock.Any(), gomock.Any()).
 		Return([]domain.AttainmentPlannedRow{
-			{WeekStartDate: f.week, MachineID: "mc_knit_1", ItemID: "it_1", DepartmentID: oeeDeptPtr("dp_knit")},
-			{WeekStartDate: f.week, MachineID: "mc_knit_2", ItemID: "it_2", DepartmentID: oeeDeptPtr("dp_knit")},
+			{ProductionScheduleID: "pnsc_1", WeekStartDate: f.week, MachineID: "mc_knit_1", ItemID: "it_1", DepartmentID: oeeDeptPtr("dp_knit")},
+			{ProductionScheduleID: "pnsc_1", WeekStartDate: f.week, MachineID: "mc_knit_2", ItemID: "it_2", DepartmentID: oeeDeptPtr("dp_knit")},
 			// Same machine on a second line in the week counts once.
-			{WeekStartDate: f.week, MachineID: "mc_knit_1", ItemID: "it_3", DepartmentID: oeeDeptPtr("dp_knit")},
-			{WeekStartDate: f.week, MachineID: "mc_dye_1", ItemID: "it_4", DepartmentID: oeeDeptPtr("dp_dye")},
+			{ProductionScheduleID: "pnsc_1", WeekStartDate: f.week, MachineID: "mc_knit_1", ItemID: "it_3", DepartmentID: oeeDeptPtr("dp_knit")},
+			{ProductionScheduleID: "pnsc_1", WeekStartDate: f.week, MachineID: "mc_dye_1", ItemID: "it_4", DepartmentID: oeeDeptPtr("dp_dye")},
 			// A machine scheduled under no department has no availability, so it is dropped.
-			{WeekStartDate: f.week, MachineID: "mc_orphan", ItemID: "it_5", DepartmentID: nil},
+			{ProductionScheduleID: "pnsc_1", WeekStartDate: f.week, MachineID: "mc_orphan", ItemID: "it_5", DepartmentID: nil},
 		}, nil).Times(1)
 
 	capacityByWeek, flat, apiErr := f.svc.scheduledCapacity(context.Background(), "acc_1", f.week, f.week.AddDate(0, 0, 7), 1, oeeFixtureMachineWeekly)
@@ -101,9 +103,9 @@ func TestScheduledCapacity_PerWeekNotUnioned(t *testing.T) {
 		Return(f.oneBaseline(), nil).Times(1)
 	f.schedule.EXPECT().SumPlannedByWeek(gomock.Any(), gomock.Any()).
 		Return([]domain.AttainmentPlannedRow{
-			{WeekStartDate: f.week, MachineID: "mc_1", ItemID: "it_1", DepartmentID: oeeDeptPtr("dp_knit")},
-			{WeekStartDate: f.week, MachineID: "mc_2", ItemID: "it_2", DepartmentID: oeeDeptPtr("dp_knit")},
-			{WeekStartDate: weekTwo, MachineID: "mc_1", ItemID: "it_1", DepartmentID: oeeDeptPtr("dp_knit")},
+			{ProductionScheduleID: "pnsc_1", WeekStartDate: f.week, MachineID: "mc_1", ItemID: "it_1", DepartmentID: oeeDeptPtr("dp_knit")},
+			{ProductionScheduleID: "pnsc_1", WeekStartDate: f.week, MachineID: "mc_2", ItemID: "it_2", DepartmentID: oeeDeptPtr("dp_knit")},
+			{ProductionScheduleID: "pnsc_1", WeekStartDate: weekTwo, MachineID: "mc_1", ItemID: "it_1", DepartmentID: oeeDeptPtr("dp_knit")},
 		}, nil).Times(1)
 
 	capacityByWeek, _, apiErr := f.svc.scheduledCapacity(context.Background(), "acc_1", f.week, weekTwo.AddDate(0, 0, 7), 1, oeeFixtureMachineWeekly)
@@ -129,10 +131,11 @@ func TestScheduledCapacity_IgnoresAVersionThatWasNotLive(t *testing.T) {
 
 	f.schedule.EXPECT().SelectAttainmentBaselines(gomock.Any(), gomock.Any()).Return(baselines, nil).Times(1)
 	// The non-live republish scheduled a different machine; if it leaked in, capacity would double.
-	f.schedule.EXPECT().SumPlannedByWeek(gomock.Any(), matchScheduleID("pnsc_2")).
-		Return([]domain.AttainmentPlannedRow{{WeekStartDate: f.week, MachineID: "mc_phantom", ItemID: "it_1", DepartmentID: oeeDeptPtr("dp_knit")}}, nil).Times(1)
-	f.schedule.EXPECT().SumPlannedByWeek(gomock.Any(), matchScheduleID("pnsc_1")).
-		Return([]domain.AttainmentPlannedRow{{WeekStartDate: f.week, MachineID: "mc_knit_1", ItemID: "it_1", DepartmentID: oeeDeptPtr("dp_knit")}}, nil).Times(1)
+	f.schedule.EXPECT().SumPlannedByWeek(gomock.Any(), matchScheduleIDs("pnsc_2", "pnsc_1")).
+		Return([]domain.AttainmentPlannedRow{
+			{ProductionScheduleID: "pnsc_2", WeekStartDate: f.week, MachineID: "mc_phantom", ItemID: "it_1", DepartmentID: oeeDeptPtr("dp_knit")},
+			{ProductionScheduleID: "pnsc_1", WeekStartDate: f.week, MachineID: "mc_knit_1", ItemID: "it_1", DepartmentID: oeeDeptPtr("dp_knit")},
+		}, nil).Times(1)
 
 	capacityByWeek, flat, apiErr := f.svc.scheduledCapacity(context.Background(), "acc_1", f.week, f.week.AddDate(0, 0, 7), 1, oeeFixtureMachineWeekly)
 	require.Nil(t, apiErr)
@@ -166,8 +169,8 @@ func TestBuildOeeByDepartment_AvailabilityUsesCapacityMinusDowntime(t *testing.T
 	f.schedule.EXPECT().SelectAttainmentBaselines(gomock.Any(), gomock.Any()).Return(f.oneBaseline(), nil).AnyTimes()
 	// The knitting room scheduled two machines: 2 x 80 capacity hours over a one-week window = 160h Planned Production Time.
 	f.schedule.EXPECT().SumPlannedByWeek(gomock.Any(), gomock.Any()).Return([]domain.AttainmentPlannedRow{
-		{WeekStartDate: f.week, MachineID: "mc_knit_1", ItemID: "it_1", DepartmentID: oeeDeptPtr("dp_knit")},
-		{WeekStartDate: f.week, MachineID: "mc_knit_2", ItemID: "it_2", DepartmentID: oeeDeptPtr("dp_knit")},
+		{ProductionScheduleID: "pnsc_1", WeekStartDate: f.week, MachineID: "mc_knit_1", ItemID: "it_1", DepartmentID: oeeDeptPtr("dp_knit")},
+		{ProductionScheduleID: "pnsc_1", WeekStartDate: f.week, MachineID: "mc_knit_2", ItemID: "it_2", DepartmentID: oeeDeptPtr("dp_knit")},
 	}, nil).Times(1)
 
 	departments, apiErr := f.svc.buildOeeByDepartment(context.Background(), domain.AnalyzeOeeParams{
@@ -206,9 +209,9 @@ func TestBuildOeeByDepartment_ProratesMachinesScheduledPartOfWindow(t *testing.T
 	f.schedule.EXPECT().SelectAttainmentBaselines(gomock.Any(), gomock.Any()).Return(f.oneBaseline(), nil).AnyTimes()
 	// mc_2 is scheduled only in week one; the union is two machines, but the second week has just one.
 	f.schedule.EXPECT().SumPlannedByWeek(gomock.Any(), gomock.Any()).Return([]domain.AttainmentPlannedRow{
-		{WeekStartDate: f.week, MachineID: "mc_1", ItemID: "it_1", DepartmentID: oeeDeptPtr("dp_knit")},
-		{WeekStartDate: f.week, MachineID: "mc_2", ItemID: "it_2", DepartmentID: oeeDeptPtr("dp_knit")},
-		{WeekStartDate: weekTwo, MachineID: "mc_1", ItemID: "it_1", DepartmentID: oeeDeptPtr("dp_knit")},
+		{ProductionScheduleID: "pnsc_1", WeekStartDate: f.week, MachineID: "mc_1", ItemID: "it_1", DepartmentID: oeeDeptPtr("dp_knit")},
+		{ProductionScheduleID: "pnsc_1", WeekStartDate: f.week, MachineID: "mc_2", ItemID: "it_2", DepartmentID: oeeDeptPtr("dp_knit")},
+		{ProductionScheduleID: "pnsc_1", WeekStartDate: weekTwo, MachineID: "mc_1", ItemID: "it_1", DepartmentID: oeeDeptPtr("dp_knit")},
 	}, nil).Times(1)
 
 	departments, apiErr := f.svc.buildOeeByDepartment(context.Background(), domain.AnalyzeOeeParams{
@@ -227,16 +230,16 @@ func TestBuildOeeByDepartment_ProratesMachinesScheduledPartOfWindow(t *testing.T
 	assert.InDelta(t, 240*3600, knit.ScheduledSeconds, 0.001, "capacity is summed per week (2+1 machine-weeks x 80h), not unioned across the window (2 machines x 80h x 2 weeks)")
 }
 
-// matchScheduleID matches a SumPlannedByWeekParams carrying the given production schedule id, so the two per-baseline reads can return different rows.
-func matchScheduleID(id string) gomock.Matcher {
-	return scheduleIDMatcher{id: id}
+// matchScheduleIDs matches a SumPlannedByWeekParams asking for exactly the given baselines in one read.
+func matchScheduleIDs(ids ...string) gomock.Matcher {
+	return scheduleIDsMatcher{ids: ids}
 }
 
-type scheduleIDMatcher struct{ id string }
+type scheduleIDsMatcher struct{ ids []string }
 
-func (m scheduleIDMatcher) Matches(x any) bool {
+func (m scheduleIDsMatcher) Matches(x any) bool {
 	params, ok := x.(domain.SumPlannedByWeekParams)
-	return ok && params.ProductionScheduleID == m.id
+	return ok && slices.Equal(params.ProductionScheduleIDs, m.ids)
 }
 
-func (m scheduleIDMatcher) String() string { return "schedule id " + m.id }
+func (m scheduleIDsMatcher) String() string { return "schedule ids " + strings.Join(m.ids, ",") }

@@ -14,6 +14,9 @@ type MessageHandler func(context.Context, amqp.Delivery) error
 type ConsumeOptions struct {
 	// Concurrency is the number of worker goroutines processing deliveries for this queue. The default of 1 preserves strict in-order, one-at-a-time processing. Values above 1 are only safe for queues whose messages are independently processable — no cross-message ordering requirements — such as request-log and audit-event persistence, where each message is an independent row and the inbox pattern deduplicates redeliveries.
 	Concurrency int
+
+	// OnBound runs each time a ConsumeFanout instance queue is (re)declared and bound. Events published while the queue did not exist were never delivered to it, so a consumer that derives state from the stream can use this to resynchronise.
+	OnBound func()
 }
 
 // ConsumeOption mutates ConsumeOptions. Pass options to ConsumeMessages to override the per-queue defaults.
@@ -23,6 +26,13 @@ type ConsumeOption func(*ConsumeOptions)
 func WithConcurrency(n int) ConsumeOption {
 	return func(o *ConsumeOptions) {
 		o.Concurrency = n
+	}
+}
+
+// WithOnBound sets ConsumeOptions.OnBound.
+func WithOnBound(fn func()) ConsumeOption {
+	return func(o *ConsumeOptions) {
+		o.OnBound = fn
 	}
 }
 

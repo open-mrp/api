@@ -1210,29 +1210,32 @@ WHERE i.account_id = sqlc.arg('owner_account_id')
   AND p.product_type_code = 'sale'
   AND i.deleted_at IS NULL;
 
--- name: GetOrderQuantityByProductLine :one
+-- GetOrderQuantitiesByProductLines returns, for each requested product line, the quantity ordered in the window and the line's base unit. A line with no orders still returns a row with zero demand.
+-- name: GetOrderQuantitiesByProductLines :many
 SELECT
-    COALESCE(SUM(CAST(sol_q.value AS DECIMAL(65,30))), 0) AS total_quantity,
-    COALESCE(
-        (SELECT bu.abbreviation FROM product_line pl2
-         JOIN unit_group ug ON pl2.unit_group_id = ug.id
-         JOIN unit bu ON ug.base_unit_id = bu.id
-         WHERE pl2.id COLLATE utf8mb4_general_ci = CAST(sqlc.arg('target_product_line_id') AS CHAR(191)) LIMIT 1), ''
-    ) AS unit_abbreviation,
-    COALESCE(
-        (SELECT ug.unit_type_code FROM product_line pl3
-         JOIN unit_group ug ON pl3.unit_group_id = ug.id
-         WHERE pl3.id COLLATE utf8mb4_general_ci = CAST(sqlc.arg('target_product_line_id') AS CHAR(191)) LIMIT 1), ''
-    ) AS unit_type
-FROM sales_order so
-JOIN sales_order_line sol ON sol.sales_order_id = so.id
-JOIN product p ON p.id = sol.product_id
-JOIN item i ON i.id = p.item_id
-JOIN quantity sol_q ON sol_q.id = sol.quantity_id
-WHERE so.owner_account_id = sqlc.arg('owner_account_id')
-  AND p.product_line_id COLLATE utf8mb4_general_ci = CAST(sqlc.arg('target_product_line_id') AS CHAR(191))
-  AND so.issued_at >= sqlc.arg('start_date')
-  AND so.issued_at <= sqlc.arg('end_date');
+    pl.id AS product_line_id,
+    CAST(COALESCE(demand.total_quantity, 0) AS DECIMAL(65,30)) AS total_quantity,
+    COALESCE(bu.abbreviation, '') AS unit_abbreviation,
+    COALESCE(ug.unit_type_code, '') AS unit_type
+FROM product_line pl
+LEFT JOIN unit_group ug ON ug.id = pl.unit_group_id
+LEFT JOIN unit bu ON bu.id = ug.base_unit_id
+LEFT JOIN (
+    SELECT
+        p.product_line_id,
+        SUM(CAST(sol_q.value AS DECIMAL(65,30))) AS total_quantity
+    FROM sales_order so
+    JOIN sales_order_line sol ON sol.sales_order_id = so.id
+    JOIN product p ON p.id = sol.product_id
+    JOIN item i ON i.id = p.item_id
+    JOIN quantity sol_q ON sol_q.id = sol.quantity_id
+    WHERE so.owner_account_id = sqlc.arg('owner_account_id')
+      AND p.product_line_id IN (sqlc.slice('demand_product_line_ids'))
+      AND so.issued_at >= sqlc.arg('start_date')
+      AND so.issued_at <= sqlc.arg('end_date')
+    GROUP BY p.product_line_id
+) demand ON demand.product_line_id = pl.id
+WHERE pl.id IN (sqlc.slice('product_line_ids'));
 
 -- name: GetProductLineInfo :many
 SELECT

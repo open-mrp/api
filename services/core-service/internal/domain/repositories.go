@@ -912,7 +912,7 @@ type AnalyticsRepo interface {
 	CountMachinesByDepartment(ctx context.Context, accountID string) ([]DepartmentMachineCountRow, *apierror.APIError)
 	GetSaleProductItemIDs(ctx context.Context, accountID string) ([]SaleProductItemRow, *apierror.APIError)
 	GetProductLineInfo(ctx context.Context, accountID string, productLineIDs []string) ([]ProductLineInfoRow, *apierror.APIError)
-	GetOrderQuantityByProductLine(ctx context.Context, params GetOrderQuantityByProductLineParams) (*OrderQuantityByProductLineRow, *apierror.APIError)
+	GetOrderQuantitiesByProductLines(ctx context.Context, params GetOrderQuantitiesByProductLinesParams) ([]OrderQuantityByProductLineRow, *apierror.APIError)
 }
 
 // MachineStatusRepo reads the raw pieces the floor-status view is assembled from.
@@ -1037,7 +1037,7 @@ type ScheduleAttainmentRepo interface {
 	// SelectAttainmentBaselines returns every published version whose horizon overlaps the window, newest publish first.
 	SelectAttainmentBaselines(ctx context.Context, params SelectAttainmentBaselinesParams) ([]AttainmentBaselineRow, *apierror.APIError)
 
-	// SumPlannedByWeek returns planned quantity and run hours per (week, machine, item) for one baseline version.
+	// SumPlannedByWeek returns planned quantity and run hours per (baseline, week, machine, item) for the given baseline versions in one read.
 	SumPlannedByWeek(ctx context.Context, params SumPlannedByWeekParams) ([]AttainmentPlannedRow, *apierror.APIError)
 
 	// SumActualsByWeek returns what was actually produced, bucketed to the Monday of the scan week so it lines up with a schedule line's week_start_date. An unscanned batch was never produced, so it is excluded.

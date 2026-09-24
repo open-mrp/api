@@ -232,6 +232,7 @@ func (q *Queries) SumActualsByWeek(ctx context.Context, arg SumActualsByWeekPara
 
 const sumPlannedByWeek = `-- name: SumPlannedByWeek :many
 SELECT
+    l.production_schedule_id,
     l.week_start_date,
     l.machine_id,
     l.item_id,
@@ -241,38 +242,47 @@ SELECT
     COUNT(*) AS line_count
 FROM production_schedule_line l
 WHERE l.account_id = ?
-AND l.production_schedule_id = ?
+AND l.production_schedule_id IN (/*SLICE:production_schedule_ids*/?)
 AND l.week_start_date >= ?
 AND l.week_start_date <= ?
 AND l.status_code != 'cancelled'
-GROUP BY l.week_start_date, l.machine_id, l.item_id, l.department_id
+GROUP BY l.production_schedule_id, l.week_start_date, l.machine_id, l.item_id, l.department_id
 `
 
 type SumPlannedByWeekParams struct {
-	AccountID            string
-	ProductionScheduleID string
-	WindowStart          time.Time
-	WindowEnd            time.Time
+	AccountID             string
+	ProductionScheduleIds []string
+	WindowStart           time.Time
+	WindowEnd             time.Time
 }
 
 type SumPlannedByWeekRow struct {
-	WeekStartDate   time.Time
-	MachineID       string
-	ItemID          string
-	DepartmentID    sql.NullString
-	PlannedQuantity interface{}
-	PlannedRunHours interface{}
-	LineCount       int64
+	ProductionScheduleID string
+	WeekStartDate        time.Time
+	MachineID            string
+	ItemID               string
+	DepartmentID         sql.NullString
+	PlannedQuantity      interface{}
+	PlannedRunHours      interface{}
+	LineCount            int64
 }
 
-// SumPlannedByWeek returns planned quantity and run hours per (week, machine, item) for one baseline version.
+// SumPlannedByWeek returns planned quantity and run hours per (baseline, week, machine, item) for a set of baseline versions.
 func (q *Queries) SumPlannedByWeek(ctx context.Context, arg SumPlannedByWeekParams) ([]SumPlannedByWeekRow, error) {
-	rows, err := q.db.QueryContext(ctx, sumPlannedByWeek,
-		arg.AccountID,
-		arg.ProductionScheduleID,
-		arg.WindowStart,
-		arg.WindowEnd,
-	)
+	query := sumPlannedByWeek
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	if len(arg.ProductionScheduleIds) > 0 {
+		for _, v := range arg.ProductionScheduleIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:production_schedule_ids*/?", strings.Repeat(",?", len(arg.ProductionScheduleIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:production_schedule_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.WindowStart)
+	queryParams = append(queryParams, arg.WindowEnd)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -281,6 +291,7 @@ func (q *Queries) SumPlannedByWeek(ctx context.Context, arg SumPlannedByWeekPara
 	for rows.Next() {
 		var i SumPlannedByWeekRow
 		if err := rows.Scan(
+			&i.ProductionScheduleID,
 			&i.WeekStartDate,
 			&i.MachineID,
 			&i.ItemID,

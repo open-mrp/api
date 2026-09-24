@@ -37,6 +37,10 @@ k8s_resource('jaeger', port_forwards='16686', labels='tooling')
 k8s_yaml('./infra/development/kubernetes/platform/rabbitmq.yaml')
 k8s_resource('rabbitmq', port_forwards=['5672', '15672'], labels='tooling')
 ### End RabbitMQ ###
+### Redis ###
+k8s_yaml('./infra/development/kubernetes/platform/redis.yaml')
+k8s_resource('redis', port_forwards=['6379'], labels='tooling')
+### End Redis ###
 ### API Gateway ###
 
 gateway_compile_cmd = 'CGO_ENABLED=0 GOOS=linux GOARCH=$(go env GOARCH) go build -o build/api-gateway ./services/api-gateway/cmd'

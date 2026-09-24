@@ -10039,19 +10039,19 @@ func (mr *MockAnalyticsRepoMockRecorder) GetOrderEntries(ctx, params any) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOrderEntries", reflect.TypeOf((*MockAnalyticsRepo)(nil).GetOrderEntries), ctx, params)
 }
 
-// GetOrderQuantityByProductLine mocks base method.
-func (m *MockAnalyticsRepo) GetOrderQuantityByProductLine(ctx context.Context, params domain.GetOrderQuantityByProductLineParams) (*domain.OrderQuantityByProductLineRow, *apierror.APIError) {
+// GetOrderQuantitiesByProductLines mocks base method.
+func (m *MockAnalyticsRepo) GetOrderQuantitiesByProductLines(ctx context.Context, params domain.GetOrderQuantitiesByProductLinesParams) ([]domain.OrderQuantityByProductLineRow, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetOrderQuantityByProductLine", ctx, params)
-	ret0, _ := ret[0].(*domain.OrderQuantityByProductLineRow)
+	ret := m.ctrl.Call(m, "GetOrderQuantitiesByProductLines", ctx, params)
+	ret0, _ := ret[0].([]domain.OrderQuantityByProductLineRow)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
-// GetOrderQuantityByProductLine indicates an expected call of GetOrderQuantityByProductLine.
-func (mr *MockAnalyticsRepoMockRecorder) GetOrderQuantityByProductLine(ctx, params any) *gomock.Call {
+// GetOrderQuantitiesByProductLines indicates an expected call of GetOrderQuantitiesByProductLines.
+func (mr *MockAnalyticsRepoMockRecorder) GetOrderQuantitiesByProductLines(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOrderQuantityByProductLine", reflect.TypeOf((*MockAnalyticsRepo)(nil).GetOrderQuantityByProductLine), ctx, params)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOrderQuantitiesByProductLines", reflect.TypeOf((*MockAnalyticsRepo)(nil).GetOrderQuantitiesByProductLines), ctx, params)
 }
 
 // GetProductLineInfo mocks base method.

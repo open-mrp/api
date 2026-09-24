@@ -464,16 +464,17 @@ type ProductLineInfoRow struct {
 	Name string
 }
 
-// GetOrderQuantityByProductLineParams scopes ordered-quantity aggregation to one product line and time window.
-type GetOrderQuantityByProductLineParams struct {
-	AccountID     string
-	ProductLineID string
-	StartDate     time.Time
-	EndDate       time.Time
+// GetOrderQuantitiesByProductLinesParams scopes ordered-quantity aggregation to a set of product lines and a time window.
+type GetOrderQuantitiesByProductLinesParams struct {
+	AccountID      string
+	ProductLineIDs []string
+	StartDate      time.Time
+	EndDate        time.Time
 }
 
 // OrderQuantityByProductLineRow is the aggregate ordered quantity for a product line within a window.
 type OrderQuantityByProductLineRow struct {
+	ProductLineID    string
 	TotalQuantity    float64
 	UnitAbbreviation string
 	UnitType         string

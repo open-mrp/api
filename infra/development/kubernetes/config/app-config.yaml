@@ -25,6 +25,7 @@ data:
     BILLING_SERVICE_URL: "billing-service:9092"
     PLATFORM_SERVICE_URL: "platform-service:9092"
     AGENT_SERVICE_URL: "agent-service:9092"
+    REDIS_URL: "redis://redis:6379/0"
     # api-gateway internal listener (agent-service → api-gateway endpoint-tools).
     INTERNAL_PORT: "8091"
     API_GATEWAY_INTERNAL_URL: "http://api-gateway-internal:8091"

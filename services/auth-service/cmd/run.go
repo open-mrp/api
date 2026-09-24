@@ -13,6 +13,8 @@ import (
 	"github.com/open-mrp/api/services/auth-service/internal/infrastructure/repository"
 	"github.com/open-mrp/api/services/auth-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/services/auth-service/internal/service"
+	"github.com/open-mrp/api/shared/audit"
+	"github.com/open-mrp/api/shared/cache"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/db"
 	"github.com/open-mrp/api/shared/lease"
@@ -71,15 +73,24 @@ func Run(
 	}
 	defer enqueuer.Stop()
 
-	coreClient, apiErr := grpc.NewAuthCoreClient(cfg.CoreServiceURL)
+	grpcCoreClient, apiErr := grpc.NewAuthCoreClient(cfg.CoreServiceURL)
 	if apiErr != nil {
 		return apiErr
 	}
-	defer coreClient.Close()
+	defer grpcCoreClient.Close()
 
 	logger.Info("Waiting for Core Service to be ready...")
-	if apiErr := coreClient.WaitForReady(ctx); apiErr != nil {
+	if apiErr := grpcCoreClient.WaitForReady(ctx); apiErr != nil {
 		return apiErr
+	}
+
+	var coreClient domain.AuthCoreClient = grpcCoreClient
+	if !cfg.LookupCacheDisabled {
+		cachedCoreClient, err := newCachedCoreClient(ctx, grpcCoreClient, rabbitmq)
+		if err != nil {
+			return err
+		}
+		coreClient = cachedCoreClient
 	}
 
 	// Billing service client (optional — only if billing service is configured)
@@ -136,4 +147,24 @@ func Run(
 	logger.Info("Auth service started", "port", cfg.Port)
 
 	return server.Serve(ctx, cfg.Port)
+}
+
+// newCachedCoreClient puts a per-replica cache in front of the credential lookups every authenticated request makes, invalidated by this replica's own subscription to audit events.
+func newCachedCoreClient(ctx context.Context, client domain.AuthCoreClient, broker messaging.MessageBroker) (*grpc.CachedCoreClient, error) {
+	store, err := cache.NewMemoryStore(&cache.MemoryStoreConfig{MaxEntries: 20_000})
+	if err != nil {
+		return nil, err
+	}
+	cached, err := grpc.NewCachedCoreClient(&grpc.CachedCoreClientConfig{Client: client, Store: store})
+	if err != nil {
+		return nil, err
+	}
+	if err := audit.Subscribe(ctx, broker, audit.SubscribeConfig{
+		QueueBaseName: messaging.AuthEventCacheInvalidationQueue,
+		OnEvent:       cached.HandleAuditEvent,
+		OnResync:      cached.Flush,
+	}); err != nil {
+		return nil, err
+	}
+	return cached, nil
 }

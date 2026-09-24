@@ -80,21 +80,22 @@ type AttainmentBaselineRow struct {
 
 // SumPlannedByWeekParams scopes the planned read to one baseline version within the window.
 type SumPlannedByWeekParams struct {
-	AccountID            string
-	ProductionScheduleID string
-	WindowStart          time.Time
-	WindowEnd            time.Time
+	AccountID             string
+	ProductionScheduleIDs []string
+	WindowStart           time.Time
+	WindowEnd             time.Time
 }
 
 // AttainmentPlannedRow is planned quantity and run hours per (week, machine, item) for one baseline version.
 type AttainmentPlannedRow struct {
-	WeekStartDate   time.Time
-	MachineID       string
-	ItemID          string
-	DepartmentID    *string
-	PlannedQuantity float64
-	PlannedRunHours float64
-	LineCount       int64
+	ProductionScheduleID string
+	WeekStartDate        time.Time
+	MachineID            string
+	ItemID               string
+	DepartmentID         *string
+	PlannedQuantity      float64
+	PlannedRunHours      float64
+	LineCount            int64
 }
 
 // SumActualsByWeekParams scopes the actuals read to an account and scan window.

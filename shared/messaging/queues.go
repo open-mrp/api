@@ -127,6 +127,12 @@ const (
 	// NotificationEventDeliveredQueue is the base name for the realtime push queue consumed by api-gateway. Like AgentEventRunStepQueue, each gateway instance appends a unique suffix to create its own exclusive auto-delete queue (bound to NotificationEventDelivered and NotificationEventConversationUpdated) so every instance receives every event via RabbitMQ fanout.
 	NotificationEventDeliveredQueue = "notification_event_delivered"
 
+	// AuthEventCacheInvalidationQueue is the base name for auth-service's per-replica audit-event queue. Each replica keeps its own credential-lookup cache, so each needs every audit event to drop its own stale entries.
+	AuthEventCacheInvalidationQueue = "auth_event_cache_invalidation"
+
+	// CoreEventCacheInvalidationQueue is the base name for core-service's per-replica audit-event queue, which invalidates the shared analytics cache. Every replica rotating the same scope is redundant but harmless, and keeps invalidation flowing while any one replica is connected.
+	CoreEventCacheInvalidationQueue = "core_event_cache_invalidation"
+
 	// DeadLetterQueue is the catch-all queue for messages that could not be processed after exhausting retries. It is bound to the dead-letter exchange ("dlx") so rejected or expired messages from any queue land here for manual inspection.
 	DeadLetterQueue = "dead_letter_queue"
 )

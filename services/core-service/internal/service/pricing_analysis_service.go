@@ -45,6 +45,21 @@ func (s *analyticsSvcImpl) AnalyzeCustomerPricing(ctx context.Context, params do
 		return nil, tracing.Trace(span, apiErr)
 	}
 
+	return cachedReport(ctx, s.reportCache().pricing, analyticsReport{
+		accountID: accountID,
+		family:    analyticsFamilyPricing,
+		method:    "customer_pricing",
+		params:    params,
+		ttl:       s.reportCache().cfg.ClosedTTL,
+	}, func(ctx context.Context) (*domain.CustomerPricingAnalysis, *apierror.APIError) {
+		return s.buildCustomerPricing(ctx, accountID, params, targetMargin, outlierTolerance)
+	})
+}
+
+func (s *analyticsSvcImpl) buildCustomerPricing(ctx context.Context, accountID string, params domain.AnalyzeCustomerPricingParams, targetMargin, outlierTolerance decimal.Decimal) (*domain.CustomerPricingAnalysis, *apierror.APIError) {
+	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.build_customer_pricing")
+	defer span.End()
+
 	prices, apiErr := s.sweepAccountPrices(ctx, accountID)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)

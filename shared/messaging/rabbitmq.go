@@ -261,6 +261,9 @@ func (r *rabbitMQ) consume(ctx context.Context, queueName string, declareQueue f
 					}
 					continue
 				}
+				if options.OnBound != nil {
+					options.OnBound()
+				}
 			}
 
 			// Each consumer needs its own channel: concurrent Qos/Consume on a shared one

@@ -23,9 +23,10 @@ AND s.horizon_start_date <= sqlc.arg('window_end')
 AND s.horizon_end_date >= sqlc.arg('window_start')
 ORDER BY s.published_at DESC, s.id DESC;
 
--- SumPlannedByWeek returns planned quantity and run hours per (week, machine, item) for one baseline version.
+-- SumPlannedByWeek returns planned quantity and run hours per (baseline, week, machine, item) for a set of baseline versions.
 -- name: SumPlannedByWeek :many
 SELECT
+    l.production_schedule_id,
     l.week_start_date,
     l.machine_id,
     l.item_id,
@@ -35,11 +36,11 @@ SELECT
     COUNT(*) AS line_count
 FROM production_schedule_line l
 WHERE l.account_id = sqlc.arg('account_id')
-AND l.production_schedule_id = sqlc.arg('production_schedule_id')
+AND l.production_schedule_id IN (sqlc.slice('production_schedule_ids'))
 AND l.week_start_date >= sqlc.arg('window_start')
 AND l.week_start_date <= sqlc.arg('window_end')
 AND l.status_code != 'cancelled'
-GROUP BY l.week_start_date, l.machine_id, l.item_id, l.department_id;
+GROUP BY l.production_schedule_id, l.week_start_date, l.machine_id, l.item_id, l.department_id;
 
 -- SumActualsByWeek returns what was actually produced, bucketed to the start of the scan's production week so it lines up with a schedule line's week_start_date.
 --

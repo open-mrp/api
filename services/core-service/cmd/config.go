@@ -21,6 +21,7 @@ const (
 	envPort                       = "PORT"
 	envDBURL                      = "DB_URL"
 	envRabbitMQURI                = "RABBITMQ_URI"
+	envRedisURL                   = "REDIS_URL"
 	envPlatformMode               = "PLATFORM"
 	envCursorHMACKey              = "CURSOR_HMAC_KEY"               // #nosec G101 - Env var name, not a credential
 	envGoogleMapsAPIKey           = "GOOGLE_MAPS_API_KEY"           // #nosec G101 -- env var name, not a credential
@@ -53,6 +54,9 @@ type config struct {
 
 	// PlatformMode (optional; default: "production") determines the platform mode.
 	PlatformMode constants.PlatformMode
+
+	// RedisURL (optional; default: "") is the Redis that caches analytics reports across replicas. Empty disables the cache.
+	RedisURL string
 
 	// CursorHMACKey (required) is the key used to HMAC-sign pagination cursors.
 	CursorHMACKey []byte
@@ -135,6 +139,7 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		Port:                       port,
 		DBURL:                      env.GetEnv(envDBURL, getenv),
 		RabbitMQURI:                cmp.Or(env.GetEnv(envRabbitMQURI, getenv), defaultRabbitMQURI),
+		RedisURL:                   env.GetEnv(envRedisURL, getenv),
 		PlatformMode:               platformMode,
 		CursorHMACKey:              []byte(env.GetEnv(envCursorHMACKey, getenv)),
 		GoogleMapsAPIKey:           env.GetEnv(envGoogleMapsAPIKey, getenv),

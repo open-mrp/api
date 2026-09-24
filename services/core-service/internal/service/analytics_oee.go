@@ -395,42 +395,38 @@ func (s *analyticsSvcImpl) scheduledCapacity(ctx context.Context, accountID stri
 	// Distinct scheduled machines per (week, department), plus the flat union for output scoping.
 	machinesByWeekDept := map[time.Time]map[string]map[string]bool{}
 	flat := map[string]bool{}
-	for i := range baselines {
-		b := &baselines[i]
+	rows, apiErr := repo.SumPlannedByWeek(ctx, domain.SumPlannedByWeekParams{
+		AccountID:             accountID,
+		ProductionScheduleIDs: baselineScheduleIDs(baselines),
+		WindowStart:           windowStart,
+		WindowEnd:             windowEnd,
+	})
+	if apiErr != nil {
+		return nil, nil, tracing.Trace(span, apiErr)
+	}
 
-		rows, apiErr := repo.SumPlannedByWeek(ctx, domain.SumPlannedByWeekParams{
-			AccountID:            accountID,
-			ProductionScheduleID: b.ScheduleID,
-			WindowStart:          windowStart,
-			WindowEnd:            windowEnd,
-		})
-		if apiErr != nil {
-			return nil, nil, tracing.Trace(span, apiErr)
+	for _, row := range rows {
+		week := scheduleWeekStart(row.WeekStartDate, weekStartDay)
+		// One baseline owns each week: a version that covered the week but was not its live plan scheduled nothing for it.
+		chosen := baselineFor(baselines, week, now)
+		if chosen == nil || chosen.ScheduleID != row.ProductionScheduleID {
+			continue
 		}
-
-		for _, row := range rows {
-			week := scheduleWeekStart(row.WeekStartDate, weekStartDay)
-			// One baseline owns each week: a version that covered the week but was not its live plan scheduled nothing for it.
-			chosen := baselineFor(baselines, week, now)
-			if chosen == nil || chosen.ScheduleID != b.ScheduleID {
-				continue
-			}
-			if row.MachineID == "" || row.DepartmentID == nil || *row.DepartmentID == "" {
-				continue
-			}
-			flat[row.MachineID] = true
-			byDept := machinesByWeekDept[week]
-			if byDept == nil {
-				byDept = map[string]map[string]bool{}
-				machinesByWeekDept[week] = byDept
-			}
-			set := byDept[*row.DepartmentID]
-			if set == nil {
-				set = map[string]bool{}
-				byDept[*row.DepartmentID] = set
-			}
-			set[row.MachineID] = true
+		if row.MachineID == "" || row.DepartmentID == nil || *row.DepartmentID == "" {
+			continue
 		}
+		flat[row.MachineID] = true
+		byDept := machinesByWeekDept[week]
+		if byDept == nil {
+			byDept = map[string]map[string]bool{}
+			machinesByWeekDept[week] = byDept
+		}
+		set := byDept[*row.DepartmentID]
+		if set == nil {
+			set = map[string]bool{}
+			byDept[*row.DepartmentID] = set
+		}
+		set[row.MachineID] = true
 	}
 
 	capacityByWeek := make(map[time.Time]map[string]float64, len(machinesByWeekDept))

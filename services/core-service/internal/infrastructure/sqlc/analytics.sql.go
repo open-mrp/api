@@ -2277,56 +2277,96 @@ func (q *Queries) GetOrderEntries(ctx context.Context, arg GetOrderEntriesParams
 	return items, nil
 }
 
-const getOrderQuantityByProductLine = `-- name: GetOrderQuantityByProductLine :one
+const getOrderQuantitiesByProductLines = `-- name: GetOrderQuantitiesByProductLines :many
 SELECT
-    COALESCE(SUM(CAST(sol_q.value AS DECIMAL(65,30))), 0) AS total_quantity,
-    COALESCE(
-        (SELECT bu.abbreviation FROM product_line pl2
-         JOIN unit_group ug ON pl2.unit_group_id = ug.id
-         JOIN unit bu ON ug.base_unit_id = bu.id
-         WHERE pl2.id COLLATE utf8mb4_general_ci = CAST(? AS CHAR(191)) LIMIT 1), ''
-    ) AS unit_abbreviation,
-    COALESCE(
-        (SELECT ug.unit_type_code FROM product_line pl3
-         JOIN unit_group ug ON pl3.unit_group_id = ug.id
-         WHERE pl3.id COLLATE utf8mb4_general_ci = CAST(? AS CHAR(191)) LIMIT 1), ''
-    ) AS unit_type
-FROM sales_order so
-JOIN sales_order_line sol ON sol.sales_order_id = so.id
-JOIN product p ON p.id = sol.product_id
-JOIN item i ON i.id = p.item_id
-JOIN quantity sol_q ON sol_q.id = sol.quantity_id
-WHERE so.owner_account_id = ?
-  AND p.product_line_id COLLATE utf8mb4_general_ci = CAST(? AS CHAR(191))
-  AND so.issued_at >= ?
-  AND so.issued_at <= ?
+    pl.id AS product_line_id,
+    CAST(COALESCE(demand.total_quantity, 0) AS DECIMAL(65,30)) AS total_quantity,
+    COALESCE(bu.abbreviation, '') AS unit_abbreviation,
+    COALESCE(ug.unit_type_code, '') AS unit_type
+FROM product_line pl
+LEFT JOIN unit_group ug ON ug.id = pl.unit_group_id
+LEFT JOIN unit bu ON bu.id = ug.base_unit_id
+LEFT JOIN (
+    SELECT
+        p.product_line_id,
+        SUM(CAST(sol_q.value AS DECIMAL(65,30))) AS total_quantity
+    FROM sales_order so
+    JOIN sales_order_line sol ON sol.sales_order_id = so.id
+    JOIN product p ON p.id = sol.product_id
+    JOIN item i ON i.id = p.item_id
+    JOIN quantity sol_q ON sol_q.id = sol.quantity_id
+    WHERE so.owner_account_id = ?
+      AND p.product_line_id IN (/*SLICE:demand_product_line_ids*/?)
+      AND so.issued_at >= ?
+      AND so.issued_at <= ?
+    GROUP BY p.product_line_id
+) demand ON demand.product_line_id = pl.id
+WHERE pl.id IN (/*SLICE:product_line_ids*/?)
 `
 
-type GetOrderQuantityByProductLineParams struct {
-	TargetProductLineID interface{}
-	OwnerAccountID      string
-	StartDate           sql.NullTime
-	EndDate             sql.NullTime
+type GetOrderQuantitiesByProductLinesParams struct {
+	OwnerAccountID       string
+	DemandProductLineIds []sql.NullString
+	StartDate            sql.NullTime
+	EndDate              sql.NullTime
+	ProductLineIds       []string
 }
 
-type GetOrderQuantityByProductLineRow struct {
-	TotalQuantity    interface{}
-	UnitAbbreviation interface{}
-	UnitType         interface{}
+type GetOrderQuantitiesByProductLinesRow struct {
+	ProductLineID    string
+	TotalQuantity    string
+	UnitAbbreviation string
+	UnitType         string
 }
 
-func (q *Queries) GetOrderQuantityByProductLine(ctx context.Context, arg GetOrderQuantityByProductLineParams) (GetOrderQuantityByProductLineRow, error) {
-	row := q.db.QueryRowContext(ctx, getOrderQuantityByProductLine,
-		arg.TargetProductLineID,
-		arg.TargetProductLineID,
-		arg.OwnerAccountID,
-		arg.TargetProductLineID,
-		arg.StartDate,
-		arg.EndDate,
-	)
-	var i GetOrderQuantityByProductLineRow
-	err := row.Scan(&i.TotalQuantity, &i.UnitAbbreviation, &i.UnitType)
-	return i, err
+// GetOrderQuantitiesByProductLines returns, for each requested product line, the quantity ordered in the window and the line's base unit. A line with no orders still returns a row with zero demand.
+func (q *Queries) GetOrderQuantitiesByProductLines(ctx context.Context, arg GetOrderQuantitiesByProductLinesParams) ([]GetOrderQuantitiesByProductLinesRow, error) {
+	query := getOrderQuantitiesByProductLines
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.OwnerAccountID)
+	if len(arg.DemandProductLineIds) > 0 {
+		for _, v := range arg.DemandProductLineIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:demand_product_line_ids*/?", strings.Repeat(",?", len(arg.DemandProductLineIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:demand_product_line_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.StartDate)
+	queryParams = append(queryParams, arg.EndDate)
+	if len(arg.ProductLineIds) > 0 {
+		for _, v := range arg.ProductLineIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:product_line_ids*/?", strings.Repeat(",?", len(arg.ProductLineIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:product_line_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetOrderQuantitiesByProductLinesRow
+	for rows.Next() {
+		var i GetOrderQuantitiesByProductLinesRow
+		if err := rows.Scan(
+			&i.ProductLineID,
+			&i.TotalQuantity,
+			&i.UnitAbbreviation,
+			&i.UnitType,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getProductLineInfo = `-- name: GetProductLineInfo :many

@@ -363,7 +363,8 @@ func (s *accountSvcImpl) UpdateAccountSubscription(ctx context.Context, accountI
 			changes = append(changes, audit.NewFieldChange("collection_status", nil, *collectionStatus))
 		}
 
-		if len(changes) > 0 {
+		// Stripe webhooks change billing state with no caller to attribute it to, so those changes are saved unaudited rather than rolled back.
+		if len(changes) > 0 && hasAuditableCaller(txCtx) {
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:  domain.ServiceName,
 				Action:       constants.AuditActionUpdate,
@@ -386,6 +387,12 @@ func (s *accountSvcImpl) UpdateAccountSubscription(ctx context.Context, accountI
 	}
 
 	return nil
+}
+
+// hasAuditableCaller reports whether ctx carries a caller an audit event can be attributed to.
+func hasAuditableCaller(ctx context.Context) bool {
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	return ok && identity.IsTargetAccountSet() && identity.Actor != nil
 }
 
 // publishPlanChangeAlert sends a best-effort admin email when an account's plan changes.

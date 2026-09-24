@@ -52,12 +52,13 @@ func newAttainmentFixture(t *testing.T) *attainmentFixture {
 	}}, nil).AnyTimes()
 
 	repo.EXPECT().SumPlannedByWeek(gomock.Any(), gomock.Any()).Return([]domain.AttainmentPlannedRow{{
-		WeekStartDate:   week,
-		MachineID:       "mc_51",
-		ItemID:          "it_a",
-		PlannedQuantity: 1000,
-		PlannedRunHours: 40,
-		LineCount:       1,
+		ProductionScheduleID: "pnsc_1",
+		WeekStartDate:        week,
+		MachineID:            "mc_51",
+		ItemID:               "it_a",
+		PlannedQuantity:      1000,
+		PlannedRunHours:      40,
+		LineCount:            1,
 	}}, nil).AnyTimes()
 
 	repo.EXPECT().GetMachineLabels(gomock.Any(), gomock.Any(), gomock.Any()).

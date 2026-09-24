@@ -18,6 +18,7 @@ var analyticsSvcTracer = tracing.GetTracer("core-service.service.analytics")
 type analyticsSvcImpl struct {
 	repos           domain.RepoFactory
 	mediatorFactory domain.MediatorFactory
+	cache           *AnalyticsCache
 }
 
 type AnalyticsSvcConfig struct {
@@ -26,6 +27,9 @@ type AnalyticsSvcConfig struct {
 
 	// MediatorFactory (required) builds the mediators used by this service.
 	MediatorFactory domain.MediatorFactory
+
+	// Cache (optional; default: caching disabled) holds computed reports.
+	Cache *AnalyticsCache
 }
 
 func (c *AnalyticsSvcConfig) validate() error {
@@ -46,7 +50,23 @@ func NewAnalyticsSvc(config *AnalyticsSvcConfig) domain.AnalyticsSvc {
 	return &analyticsSvcImpl{
 		repos:           config.Repos,
 		mediatorFactory: config.MediatorFactory,
+		cache:           config.Cache,
 	}
+}
+
+var disabledAnalyticsCache = func() *AnalyticsCache {
+	c, err := NewAnalyticsCache(nil)
+	if err != nil {
+		panic(err)
+	}
+	return c
+}()
+
+func (s *analyticsSvcImpl) reportCache() *AnalyticsCache {
+	if s.cache == nil {
+		return disabledAnalyticsCache
+	}
+	return s.cache
 }
 
 func (s *analyticsSvcImpl) mediators() domain.Mediators {
@@ -83,7 +103,15 @@ func (s *analyticsSvcImpl) AnalyzeSales(ctx context.Context, params domain.Analy
 		}
 	}
 
-	entries, apiErr := s.repos.NewAnalyticsRepo().GetSalesEntries(ctx, params)
+	entries, apiErr := cachedReport(ctx, s.reportCache().sales, analyticsReport{
+		accountID: params.AccountID,
+		family:    analyticsFamilySales,
+		method:    "sales",
+		params:    params,
+		ttl:       s.reportCache().ttlForWindow(params.EndDate),
+	}, func(ctx context.Context) ([]domain.SalesEntry, *apierror.APIError) {
+		return s.repos.NewAnalyticsRepo().GetSalesEntries(ctx, params)
+	})
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -386,7 +414,15 @@ func (s *analyticsSvcImpl) GetDemandForecast(ctx context.Context, params domain.
 
 	params.AccountID = identity.Target.AccountID
 
-	return s.buildDemandForecast(ctx, params)
+	return cachedReport(ctx, s.reportCache().forecast, analyticsReport{
+		accountID: params.AccountID,
+		family:    analyticsFamilySales,
+		method:    "demand_forecast",
+		params:    params,
+		ttl:       s.reportCache().cfg.LiveTTL,
+	}, func(ctx context.Context) (*domain.DemandForecastResult, *apierror.APIError) {
+		return s.buildDemandForecast(ctx, params)
+	})
 }
 
 // AnalyzeOee computes Availability x Performance x Quality per department from planned time, logged downtime and the ideal cycle times the period's output earned.
@@ -408,7 +444,15 @@ func (s *analyticsSvcImpl) AnalyzeOee(ctx context.Context, params domain.Analyze
 
 	params.AccountID = identity.Target.AccountID
 
-	return s.buildOeeByDepartment(ctx, params)
+	return cachedReport(ctx, s.reportCache().oee, analyticsReport{
+		accountID: params.AccountID,
+		family:    analyticsFamilyProduction,
+		method:    "oee",
+		params:    params,
+		ttl:       s.reportCache().ttlForWindow(params.EndDate),
+	}, func(ctx context.Context) ([]domain.OeeDepartment, *apierror.APIError) {
+		return s.buildOeeByDepartment(ctx, params)
+	})
 }
 
 // AnalyzeOeeTrend computes the same OEE terms per production week over a window, rolled up across departments.
@@ -430,7 +474,15 @@ func (s *analyticsSvcImpl) AnalyzeOeeTrend(ctx context.Context, params domain.An
 
 	params.AccountID = identity.Target.AccountID
 
-	return s.buildOeeTrend(ctx, params)
+	return cachedReport(ctx, s.reportCache().oeeTrend, analyticsReport{
+		accountID: params.AccountID,
+		family:    analyticsFamilyProduction,
+		method:    "oee_trend",
+		params:    params,
+		ttl:       s.reportCache().ttlForWindow(params.EndDate),
+	}, func(ctx context.Context) ([]domain.OeeTrendPeriod, *apierror.APIError) {
+		return s.buildOeeTrend(ctx, params)
+	})
 }
 
 // AnalyzeWeeksOfSales returns on-hand inventory expressed as weeks of average sales per product line.
@@ -451,6 +503,22 @@ func (s *analyticsSvcImpl) AnalyzeWeeksOfSales(ctx context.Context, params domai
 	}
 
 	params.AccountID = identity.Target.AccountID
+
+	return cachedReport(ctx, s.reportCache().weeksOfSales, analyticsReport{
+		accountID: params.AccountID,
+		family:    analyticsFamilySales,
+		method:    "weeks_of_sales",
+		params:    params,
+		ttl:       s.reportCache().cfg.LiveTTL,
+	}, func(ctx context.Context) (*domain.WeeksOfSalesResult, *apierror.APIError) {
+		return s.buildWeeksOfSales(ctx, params)
+	})
+}
+
+// buildWeeksOfSales measures the trailing PeriodInWeeks up to now, so its result drifts with the clock.
+func (s *analyticsSvcImpl) buildWeeksOfSales(ctx context.Context, params domain.AnalyzeWeeksOfSalesParams) (*domain.WeeksOfSalesResult, *apierror.APIError) {
+	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.build_weeks_of_sales")
+	defer span.End()
 
 	repo := s.repos.NewAnalyticsRepo()
 
@@ -510,19 +578,23 @@ func (s *analyticsSvcImpl) AnalyzeWeeksOfSales(ctx context.Context, params domai
 	endDate := time.Now()
 	startDate := endDate.Add(-time.Duration(weeks) * 7 * 24 * time.Hour)
 
+	orderRows, apiErr := repo.GetOrderQuantitiesByProductLines(ctx, domain.GetOrderQuantitiesByProductLinesParams{
+		AccountID:      params.AccountID,
+		ProductLineIDs: plIDs,
+		StartDate:      startDate,
+		EndDate:        endDate,
+	})
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	ordersByProductLine := make(map[string]domain.OrderQuantityByProductLineRow, len(orderRows))
+	for _, row := range orderRows {
+		ordersByProductLine[row.ProductLineID] = row
+	}
+
 	var items []domain.WeeksOfSalesItem
 	for _, plInfo := range plInfoRows {
-		// Get order quantity for this product line in the period.
-		orderRow, apiErr := repo.GetOrderQuantityByProductLine(ctx, domain.GetOrderQuantityByProductLineParams{
-			AccountID:     params.AccountID,
-			ProductLineID: plInfo.ID,
-			StartDate:     startDate,
-			EndDate:       endDate,
-		})
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-
+		orderRow := ordersByProductLine[plInfo.ID]
 		totalDemand := orderRow.TotalQuantity
 		unitAbbrev := orderRow.UnitAbbreviation
 		unitType := orderRow.UnitType
@@ -586,5 +658,13 @@ func (s *analyticsSvcImpl) AnalyzeScheduleAttainment(ctx context.Context, params
 		params.GroupBy = string(constants.AttainmentGroupByWeek)
 	}
 
-	return s.buildScheduleAttainment(ctx, params)
+	return cachedReport(ctx, s.reportCache().attainment, analyticsReport{
+		accountID: params.AccountID,
+		family:    analyticsFamilyProduction,
+		method:    "schedule_attainment",
+		params:    params,
+		ttl:       s.reportCache().ttlForWindow(params.EndDate),
+	}, func(ctx context.Context) (*domain.ScheduleAttainmentResult, *apierror.APIError) {
+		return s.buildScheduleAttainment(ctx, params)
+	})
 }

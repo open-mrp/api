@@ -102,6 +102,18 @@ services:
     networks:
       - e2e
 
+  redis:
+    image: redis:8-alpine
+    container_name: openmrp-redis-e2e
+    command: ["redis-server", "--maxmemory", "64mb", "--maxmemory-policy", "allkeys-lru", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - e2e
+
   platform-service:
     image: openmrp-e2e-platform-service
     build:
@@ -156,10 +168,13 @@ services:
       USER_PHOTOS_BUCKET: augno-user-photos
       SHIPPING_LABELS_BUCKET: augno-shipping-labels
       EXPORTS_BUCKET: augno-exports
+      REDIS_URL: redis://redis:6379/0
     depends_on:
       mysql-e2e:
         condition: service_healthy
       rabbitmq:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       minio-e2e-init:
         condition: service_completed_successfully

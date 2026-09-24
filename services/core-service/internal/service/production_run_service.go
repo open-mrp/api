@@ -14,7 +14,6 @@ import (
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/messaging"
 	"github.com/open-mrp/api/shared/ptrutil"
 	"github.com/open-mrp/api/shared/tracing"
 )
@@ -26,17 +25,6 @@ type productionRunSvcImpl struct {
 	mediatorFactory domain.MediatorFactory
 	jobSvcFactory   domain.JobSvcFactory
 	txManager       TransactionManager
-	outboxNotifier  messaging.OutboxNotifier
-}
-
-// kickOutbox wakes the outbox enqueuer so a just-committed allocation request is picked up immediately
-// rather than on the enqueuer's next idle poll. No-op when no notifier was injected. Call only after
-// the writing transaction has committed — kicking while it is still open races the poll against a row
-// it cannot yet see.
-func (s *productionRunSvcImpl) kickOutbox() {
-	if s.outboxNotifier != nil {
-		s.outboxNotifier.Notify()
-	}
 }
 
 type ProductionRunSvcConfig struct {
@@ -52,9 +40,6 @@ type ProductionRunSvcConfig struct {
 
 	// TxManager (required) wraps multi-step operations in database transactions.
 	TxManager TransactionManager
-
-	// OutboxNotifier (optional; default: nil) wakes the outbox enqueuer the instant an allocation request commits, so material released by deleting a run is offered to open demand on the next moment rather than on the enqueuer's next idle poll. When nil, the request is still picked up on the next poll.
-	OutboxNotifier messaging.OutboxNotifier
 }
 
 func (c *ProductionRunSvcConfig) validate() error {
@@ -83,7 +68,6 @@ func NewProductionRunSvc(config *ProductionRunSvcConfig) domain.ProductionRunSvc
 		mediatorFactory: config.MediatorFactory,
 		jobSvcFactory:   config.JobSvcFactory,
 		txManager:       config.TxManager,
-		outboxNotifier:  config.OutboxNotifier,
 	}
 }
 
@@ -471,7 +455,6 @@ func (s *productionRunSvcImpl) DeleteProductionRun(ctx context.Context, params d
 		return tracing.Trace(span, apiErr)
 	}
 
-	s.kickOutbox()
 	return nil
 }
 

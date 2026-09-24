@@ -46,7 +46,6 @@ type salesOrderSvcImpl struct {
 	encryptionKey         []byte
 	frontendURL           string
 	branding              BrandingAssets
-	outboxNotifier        messaging.OutboxNotifier
 }
 
 type SalesOrderSvcConfig struct {
@@ -79,9 +78,6 @@ type SalesOrderSvcConfig struct {
 
 	// Branding (optional) resolves the merchant logo for the acknowledgement email and PDF letterhead. Omitted, both fall back to a text-only letterhead.
 	Branding BrandingAssets
-
-	// OutboxNotifier (optional; default: nil) wakes the outbox enqueuer the instant an allocation request commits, so stock released by unissuing or deleting an order is offered to open demand on the next moment rather than on the enqueuer's next idle poll. When nil, the request is still picked up on the next poll.
-	OutboxNotifier messaging.OutboxNotifier
 }
 
 func (c *SalesOrderSvcConfig) validate() error {
@@ -113,17 +109,6 @@ func NewSalesOrderSvc(config *SalesOrderSvcConfig) domain.SalesOrderSvc {
 		encryptionKey:         config.EncryptionKey,
 		frontendURL:           config.FrontendURL,
 		branding:              config.Branding,
-		outboxNotifier:        config.OutboxNotifier,
-	}
-}
-
-// kickOutbox wakes the outbox enqueuer so a just-committed allocation request is picked up immediately
-// rather than on the enqueuer's next idle poll, which can be up to MaxPollInterval away. No-op when no
-// notifier was injected. Call only after the writing transaction has committed — kicking while it is
-// still open races the poll against a row it cannot yet see.
-func (s *salesOrderSvcImpl) kickOutbox() {
-	if s.outboxNotifier != nil {
-		s.outboxNotifier.Notify()
 	}
 }
 
@@ -1001,7 +986,6 @@ func (s *salesOrderSvcImpl) DeleteSalesOrder(ctx context.Context, params domain.
 		return tracing.Trace(span, apiErr)
 	}
 
-	s.kickOutbox()
 	return nil
 }
 
@@ -1100,7 +1084,6 @@ func (s *salesOrderSvcImpl) BulkDeleteSalesOrders(ctx context.Context, params do
 			return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
 		}
 
-		s.kickOutbox()
 		return nil
 
 	default:
@@ -1457,9 +1440,6 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-
-	// Unissuing enqueues allocation for the items it released; every other transition enqueues nothing and this is a no-op.
-	s.kickOutbox()
 
 	// On successful issue transition, optionally send acknowledgement email to the contacts on the order (matching Dashboard behavior).
 	if params.StatusChange == "issue" && params.SendEmail {

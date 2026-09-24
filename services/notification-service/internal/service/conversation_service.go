@@ -44,9 +44,6 @@ type conversationSvcImpl struct {
 	chatBucket  string
 	// broker publishes ephemeral realtime events (typing) directly to the fanout exchange, bypassing the transactional outbox. May be nil in tests/contexts that never call SendTyping.
 	broker messaging.MessageBroker
-	// outboxNotifier wakes the outbox enqueuer the instant a message (and any agent-dispatch command it triggers) commits, so the agent run starts without waiting out the enqueuer's idle poll backoff.
-	// May be nil in tests/contexts that never post messages.
-	outboxNotifier messaging.OutboxNotifier
 	// Per-actor anti-abuse rate limiters (§12.10). Generous defaults: a backstop against runaway senders, not a tight quota. Customers get a stricter send bucket than internal staff.
 	sendLimiter         *ratelimit.Limiter
 	customerSendLimiter *ratelimit.Limiter
@@ -60,8 +57,8 @@ type conversationSvcImpl struct {
 	inboundEmailDomain string
 }
 
-// NewConversationSvc constructs the chat (conversations + messages) service. objectStore and chatBucket back the attachment upload pipeline (presigned PUT/GET against the chat bucket); broker carries ephemeral typing events to the realtime fanout (outside the outbox); outboxNotifier wakes the outbox enqueuer after a message commits so agent dispatch isn't delayed by the idle poll backoff (may be nil); bridgeEmailSender sends outbound email-bridge replies via SES (may be nil where the bridge isn't configured).
-func NewConversationSvc(repoFactory domain.RepoFactory, txManager TransactionManager, objectStore s3.ObjectStore, chatBucket string, broker messaging.MessageBroker, outboxNotifier messaging.OutboxNotifier, bridgeEmailSender domain.EmailSender, inboundEmailDomain string) domain.ConversationSvc {
+// NewConversationSvc constructs the chat (conversations + messages) service. objectStore and chatBucket back the attachment upload pipeline (presigned PUT/GET against the chat bucket); broker carries ephemeral typing events to the realtime fanout (outside the outbox); bridgeEmailSender sends outbound email-bridge replies via SES (may be nil where the bridge isn't configured).
+func NewConversationSvc(repoFactory domain.RepoFactory, txManager TransactionManager, objectStore s3.ObjectStore, chatBucket string, broker messaging.MessageBroker, bridgeEmailSender domain.EmailSender, inboundEmailDomain string) domain.ConversationSvc {
 	// Rates are static, known-valid configs, so a construction error is a programming error: fail fast at init.
 	sendLimiter, err := ratelimit.New(&ratelimit.Config{Capacity: 300, RefillPerSec: 50})
 	if err != nil {
@@ -81,19 +78,11 @@ func NewConversationSvc(repoFactory domain.RepoFactory, txManager TransactionMan
 		objectStore:         objectStore,
 		chatBucket:          chatBucket,
 		broker:              broker,
-		outboxNotifier:      outboxNotifier,
 		sendLimiter:         sendLimiter,
 		customerSendLimiter: customerSendLimiter,
 		createLimiter:       createLimiter,
 		bridgeEmailSender:   bridgeEmailSender,
 		inboundEmailDomain:  inboundEmailDomain,
-	}
-}
-
-// kickOutbox wakes the outbox enqueuer so a just-committed outbox row (e.g. an agent-dispatch command) is published immediately rather than on the enqueuer's next idle poll. No-op when no notifier was injected. Call only after the writing transaction has committed.
-func (s *conversationSvcImpl) kickOutbox() {
-	if s.outboxNotifier != nil {
-		s.outboxNotifier.Notify()
 	}
 }
 
@@ -1132,9 +1121,6 @@ func (s *conversationSvcImpl) SendMessage(ctx context.Context, input domain.Send
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// The message and any agent-dispatch command it enqueued are committed — wake the enqueuer so the agent run starts (and its live "thinking" indicator appears) immediately rather than after an idle poll backoff. Also shortens realtime delivery of the message itself.
-	s.kickOutbox()
-
 	s.resolveSenders(ctx, input.ConversationID, accountID, []*domain.Message{result}, identity.IsRelationActor())
 	s.resolveAttachments(ctx, []*domain.Message{result})
 
@@ -1621,8 +1607,6 @@ func (s *conversationSvcImpl) PostAgentReply(ctx context.Context, in domain.Agen
 	}); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
-	// Committed — wake the enqueuer so the agent reply's realtime/bell fanout is published immediately rather than after an idle poll backoff (customer-portal streaming latency).
-	s.kickOutbox()
 	return nil
 }
 
@@ -1647,8 +1631,6 @@ func (s *conversationSvcImpl) PostAgentReplyStart(ctx context.Context, in domain
 	}); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
-	// Committed — wake the enqueuer so the empty streaming bubble (message.created) appears immediately; the fast direct-publish token patches then have a bubble to fill.
-	s.kickOutbox()
 	return nil
 }
 
@@ -1714,8 +1696,6 @@ func (s *conversationSvcImpl) PostAgentReplyComplete(ctx context.Context, in dom
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
-	// Committed — wake the enqueuer so the finalized reply (message.updated + bell) is delivered immediately rather than after an idle poll backoff.
-	s.kickOutbox()
 	return nil
 }
 

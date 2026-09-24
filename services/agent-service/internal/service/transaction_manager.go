@@ -7,6 +7,7 @@ import (
 	"github.com/open-mrp/api/services/agent-service/internal/domain"
 	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/repository"
 	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
 )
 
@@ -33,13 +34,16 @@ func (m *pgxTxManager) WithTx(ctx context.Context, fn func(ctx context.Context, 
 	txQueries := m.queries.WithTx(tx)
 	factory := repository.NewRepoFactory(txQueries)
 
-	if apiErr := fn(ctx, factory); apiErr != nil {
+	txCtx, afterCommit := db.BeginAfterCommitScope(ctx)
+
+	if apiErr := fn(txCtx, factory); apiErr != nil {
 		return apiErr
 	}
 
 	if err := tx.Commit(ctx); err != nil {
 		return apierror.NewInternalError(err, "failed to commit transaction")
 	}
+	afterCommit.Committed()
 
 	return nil
 }

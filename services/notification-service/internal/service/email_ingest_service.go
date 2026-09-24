@@ -215,7 +215,6 @@ func (s *conversationSvcImpl) IngestInboundEmail(ctx context.Context, in domain.
 		s.advanceCaseOnCustomerInbound(ctx, conversationID, accountID)
 	}
 
-	s.kickOutbox()
 	return nil
 }
 

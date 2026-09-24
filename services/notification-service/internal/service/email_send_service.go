@@ -144,7 +144,6 @@ func (s *conversationSvcImpl) deliverInboxReply(ctx context.Context, conversatio
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	s.kickOutbox()
 	return result, nil
 }
 
@@ -219,7 +218,6 @@ func (s *conversationSvcImpl) PostReplyDraft(ctx context.Context, in domain.Post
 	// its viewers so the reply-drafts bar (and inbox lane) refresh live.
 	s.autoSetCaseWorkflow(ctx, in.ConversationID, accountID, constants.ConversationWorkflowStatusNeedsApproval)
 	s.fanoutConversationEvent(ctx, in.ConversationID, accountID, "conversation.updated", "")
-	s.kickOutbox()
 	return result, nil
 }
 

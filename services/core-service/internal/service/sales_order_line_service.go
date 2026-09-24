@@ -16,7 +16,6 @@ import (
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/messaging"
 	"github.com/open-mrp/api/shared/tracing"
 )
 
@@ -26,17 +25,6 @@ type salesOrderLineSvcImpl struct {
 	repos           domain.RepoFactory
 	mediatorFactory domain.MediatorFactory
 	txManager       TransactionManager
-	outboxNotifier  messaging.OutboxNotifier
-}
-
-// kickOutbox wakes the outbox enqueuer so a just-committed allocation request is picked up immediately
-// rather than on the enqueuer's next idle poll. No-op when no notifier was injected. Call only after
-// the writing transaction has committed — kicking while it is still open races the poll against a row
-// it cannot yet see.
-func (s *salesOrderLineSvcImpl) kickOutbox() {
-	if s.outboxNotifier != nil {
-		s.outboxNotifier.Notify()
-	}
 }
 
 type SalesOrderLineSvcConfig struct {
@@ -48,9 +36,6 @@ type SalesOrderLineSvcConfig struct {
 
 	// TxManager (required) wraps multi-step operations in database transactions.
 	TxManager TransactionManager
-
-	// OutboxNotifier (optional; default: nil) wakes the outbox enqueuer the instant an allocation request commits, so stock released by deleting an order's last line is offered to open demand on the next moment rather than on the enqueuer's next idle poll. When nil, the request is still picked up on the next poll.
-	OutboxNotifier messaging.OutboxNotifier
 }
 
 func (c *SalesOrderLineSvcConfig) validate() error {
@@ -75,7 +60,6 @@ func NewSalesOrderLineSvc(config *SalesOrderLineSvcConfig) domain.SalesOrderLine
 		repos:           config.Repos,
 		mediatorFactory: config.MediatorFactory,
 		txManager:       config.TxManager,
-		outboxNotifier:  config.OutboxNotifier,
 	}
 }
 
@@ -742,7 +726,6 @@ func (s *salesOrderLineSvcImpl) DeleteSalesOrderLine(ctx context.Context, params
 		return tracing.Trace(span, apiErr)
 	}
 
-	s.kickOutbox()
 	return nil
 }
 

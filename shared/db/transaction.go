@@ -164,6 +164,8 @@ func (m *transactionManagerImpl[Q, F]) attempt(
 	qTx := m.queries.WithTx(tx)
 	factory := m.factoryCreate(qTx)
 
+	ctx, afterCommit := BeginAfterCommitScope(ctx)
+
 	if apiErr := fn(ctx, tx, factory); apiErr != nil {
 		// MapSQLError keeps the driver error underneath, so the lock conflict is still visible
 		// through the APIError the repository layer returned.
@@ -175,6 +177,7 @@ func (m *transactionManagerImpl[Q, F]) attempt(
 	if err := tx.Commit(); err != nil {
 		return apierror.NewInternalError(err, "failed to commit transaction"), IsRetryableLockConflict(err)
 	}
+	afterCommit.Committed()
 
 	return nil, false
 }

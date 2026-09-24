@@ -6,10 +6,12 @@ import (
 	"log/slog"
 	"os"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/db"
 	"github.com/open-mrp/api/shared/lease"
 	"github.com/open-mrp/api/shared/retry"
 )
@@ -30,7 +32,7 @@ type EnqueuerConfig struct {
 
 	// MaxPollInterval (optional; default: 30s in production, == PollInterval in test) is the ceiling for idle backoff. When consecutive polls find nothing, the interval doubles from PollInterval up to this value so an empty outbox is not queried at full rate. Any poll that finds work resets the interval to PollInterval, so pickup latency and throughput under load are unchanged; only the steady-state idle poll rate drops. The tradeoff is that the first message after a sustained idle period waits up to MaxPollInterval to be picked up. Must be >= PollInterval (clamped in WithDefaults).
 	//
-	// The default is deliberately slow because the poll query is not scoped by service_name: every enqueuer on a given database competes for every pending row, so a service that overrides this to a tighter ceiling (notification-service, agent-service) drains the whole table on behalf of the services that do not. Latency-sensitive producers should call Notify() after commit rather than lowering this, and anything that must publish promptly without a kick belongs on a service that overrides the ceiling.
+	// The default can be this slow because outbox writes wake their own process's enqueuer on commit (NotifyOnCommit, called by every outbox repo's Create), so the idle poll only paces rows nothing kicked: DelaySeconds retries, failed-publish retries, and rows orphaned by a crashed pod. The poll query is not scoped by service_name, so a service that overrides this to a tighter ceiling also sweeps every other service's rows on the same database.
 	MaxPollInterval time.Duration
 
 	// BatchSize (optional; default: 100) is the maximum number of outbox messages to lock and publish in a single poll cycle.
@@ -191,11 +193,6 @@ type Enqueuer struct {
 	wg     sync.WaitGroup
 }
 
-// OutboxNotifier is the producer-facing handle for waking an Enqueuer after an outbox write commits. *Enqueuer satisfies it. Inject it into services that write latency-sensitive outbox rows (e.g. starting an agent chat run) so the row is picked up on the next instant rather than on the next idle poll, which can be as long as MaxPollInterval away.
-type OutboxNotifier interface {
-	Notify()
-}
-
 // NewEnqueuer creates a new outbox enqueuer. Pass a config with at least ServiceName set; zero-value fields are filled with production defaults.
 //
 // The poll and cleanup loops continue to run on every pod — they coordinate through per-message optimistic locking, and running them in parallel increases publishing throughput and cross-pod recovery of stuck locks. The purge loop is wrapped in a distributed lease so only one pod per service deletes old rows.
@@ -217,7 +214,18 @@ func NewEnqueuer(config *EnqueuerConfig, repo OutboxEnqueuerRepo, broker Message
 	}, nil
 }
 
-// Notify wakes the poll loop to drain the outbox immediately rather than waiting for the next (possibly idle-backed-off) tick. Call it AFTER the transaction that wrote the outbox row commits — the row must be visible to the poll query, so kicking from inside the still-open transaction would race the poll and be wasted. It is non-blocking and coalescing: a kick that lands while one is already pending is dropped (the pending wake-up's drain handles every available row), and kicking before Start or after Stop is harmless. Safe for concurrent callers; the nil receiver guard lets callers hold a possibly-unset OutboxNotifier without nil-checking.
+// runningEnqueuer is the enqueuer started in this process, woken by NotifyOnCommit. Each service runs one; tests that start several get the most recent.
+var runningEnqueuer atomic.Pointer[Enqueuer]
+
+// NotifyOnCommit wakes this process's running enqueuer once the transaction carried by ctx commits (immediately for an autocommit write), so the row is published at once instead of on the next idle poll. Every outbox repo's Create calls it, which is what lets MaxPollInterval stay slow without delaying anything a user is waiting on. Rows deferred with DelaySeconds are skipped: waking early for them would find nothing due.
+func NotifyOnCommit(ctx context.Context, input OutboxMessageInput) {
+	if input.DelaySeconds > 0 {
+		return
+	}
+	db.AfterCommit(ctx, func() { runningEnqueuer.Load().Notify() })
+}
+
+// Notify wakes the poll loop to drain the outbox immediately rather than waiting for the next (possibly idle-backed-off) tick. Producers don't call it directly: NotifyOnCommit does, after the writing transaction commits, since a kick from inside a still-open transaction would race the poll against a row it cannot yet see. It is non-blocking and coalescing: a kick that lands while one is already pending is dropped (the pending wake-up's drain handles every available row), and kicking before Start or after Stop is harmless. Safe for concurrent callers; the nil receiver guard covers NotifyOnCommit firing when no enqueuer is running.
 func (e *Enqueuer) Notify() {
 	if e == nil {
 		return
@@ -238,6 +246,7 @@ func (e *Enqueuer) Start(ctx context.Context) error {
 	go e.pollLoop()
 	go e.cleanupLoop()
 	go e.purgeLoop()
+	runningEnqueuer.Store(e)
 
 	slog.Info("Outbox enqueuer started",
 		"service", e.config.ServiceName,
@@ -252,6 +261,7 @@ func (e *Enqueuer) Start(ctx context.Context) error {
 
 // Stop cancels the background context and blocks until both the poll and cleanup goroutines have exited. It is safe to call from a deferred shutdown path.
 func (e *Enqueuer) Stop() {
+	runningEnqueuer.CompareAndSwap(e, nil)
 	if e.cancel != nil {
 		e.cancel()
 	}
@@ -259,7 +269,7 @@ func (e *Enqueuer) Stop() {
 	slog.Info("Outbox enqueuer stopped", "service", e.config.ServiceName)
 }
 
-// pollLoop polls at PollInterval while there is work, and backs off exponentially up to MaxPollInterval while the outbox is idle (see EnqueuerConfig.MaxPollInterval). A poll that finds work resets the interval to PollInterval immediately, so behavior under load is identical to a fixed PollInterval ticker. A Notify() kick (sent by a producer right after it commits an outbox row) wakes the loop out of an idle backoff to drain at once, so the first message after a quiet period isn't stuck waiting up to MaxPollInterval — the backoff only governs the unkicked steady state. In test platform mode it also processes once immediately so the first outbox row is not delayed by a full poll interval. Exits when the enqueuer's context is cancelled.
+// pollLoop polls at PollInterval while there is work, and backs off exponentially up to MaxPollInterval while the outbox is idle (see EnqueuerConfig.MaxPollInterval). A poll that finds work resets the interval to PollInterval immediately, so behavior under load is identical to a fixed PollInterval ticker. A Notify() kick (sent by NotifyOnCommit once an outbox row commits) wakes the loop out of an idle backoff to drain at once, so the first message after a quiet period isn't stuck waiting up to MaxPollInterval — the backoff only governs the unkicked steady state. In test platform mode it also processes once immediately so the first outbox row is not delayed by a full poll interval. Exits when the enqueuer's context is cancelled.
 func (e *Enqueuer) pollLoop() {
 	defer e.wg.Done()
 
@@ -276,7 +286,7 @@ func (e *Enqueuer) pollLoop() {
 		case <-e.ctx.Done():
 			return
 		case <-e.notify:
-			// A producer committed an outbox row and kicked us — drain now instead of waiting out the timer (which may be deep in its idle backoff), then resume polling at the base interval. Stop-and-drain the timer before resetting so an already-expired tick doesn't fire a redundant drain immediately after.
+			// An outbox row committed and NotifyOnCommit kicked us — drain now instead of waiting out the timer (which may be deep in its idle backoff), then resume polling at the base interval. Stop-and-drain the timer before resetting so an already-expired tick doesn't fire a redundant drain immediately after.
 			if !timer.Stop() {
 				select {
 				case <-timer.C:

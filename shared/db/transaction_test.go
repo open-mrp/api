@@ -641,3 +641,93 @@ func TestTransactionManager_WithTx_DoesNotRetryTransactionKill(t *testing.T) {
 	assert.Equal(t, 1, attempts, "a killed transaction is reported, not re-run")
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
+
+func newAfterCommitTxMgr(db *sql.DB) TransactionManager[*mockQueries, *mockFactory] {
+	return NewTransactionManager(db, &mockQueries{db: db}, func(q *mockQueries) *mockFactory {
+		return &mockFactory{queries: q}
+	})
+}
+
+// A hook registered inside the callback must not fire until the commit has landed — firing
+// earlier would let a poller look for a row that is not yet visible.
+func TestTransactionManager_AfterCommit_RunsOnlyAfterCommit(t *testing.T) {
+	t.Parallel()
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	mock.ExpectBegin()
+	mock.ExpectCommit()
+
+	ran := false
+	apiErr := newAfterCommitTxMgr(db).WithTx(context.Background(), func(ctx context.Context, _ *mockFactory) *apierror.APIError {
+		AfterCommit(ctx, func() { ran = true })
+		assert.False(t, ran, "hook must wait for commit")
+		return nil
+	})
+
+	assert.Nil(t, apiErr)
+	assert.True(t, ran)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestTransactionManager_AfterCommit_SkippedOnRollback(t *testing.T) {
+	t.Parallel()
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	mock.ExpectBegin()
+	mock.ExpectRollback()
+
+	ran := false
+	apiErr := newAfterCommitTxMgr(db).WithTx(context.Background(), func(ctx context.Context, _ *mockFactory) *apierror.APIError {
+		AfterCommit(ctx, func() { ran = true })
+		return apierror.NewInternalError(errors.New("boom"), "callback failed")
+	})
+
+	assert.NotNil(t, apiErr)
+	assert.False(t, ran)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+// A lock-conflict retry re-runs the callback, so each attempt registers its own hook; only the
+// attempt that commits may fire.
+func TestTransactionManager_AfterCommit_OnlyCommittedAttemptFires(t *testing.T) {
+	t.Parallel()
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	mock.ExpectBegin()
+	mock.ExpectCommit().WillReturnError(deadlockErr())
+	mock.ExpectBegin()
+	mock.ExpectCommit()
+
+	fired := 0
+	apiErr := newAfterCommitTxMgr(db).WithTx(context.Background(), func(ctx context.Context, _ *mockFactory) *apierror.APIError {
+		AfterCommit(ctx, func() { fired++ })
+		return nil
+	})
+
+	assert.Nil(t, apiErr)
+	assert.Equal(t, 1, fired)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestAfterCommit_RunsImmediatelyOutsideTransaction(t *testing.T) {
+	t.Parallel()
+	ran := false
+	AfterCommit(context.Background(), func() { ran = true })
+	assert.True(t, ran)
+}
+
+func TestAfterCommit_RunsImmediatelyWhenRegisteredAfterCommit(t *testing.T) {
+	t.Parallel()
+	ctx, scope := BeginAfterCommitScope(context.Background())
+	scope.Committed()
+
+	ran := false
+	AfterCommit(ctx, func() { ran = true })
+	assert.True(t, ran)
+}

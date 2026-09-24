@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.10.0](https://github.com/open-mrp/api/compare/v2.9.2...v2.10.0) (2026-09-24)
+
+
+### Features
+
+* **redis:** add Redis service and update configurations ([#188](https://github.com/open-mrp/api/issues/188)) ([65bd748](https://github.com/open-mrp/api/commit/65bd748da4ee1e7d05969f8fa98bfda9b1f18c1e))
+
 ## [2.9.2](https://github.com/open-mrp/api/compare/v2.9.1...v2.9.2) (2026-09-24)
 
 

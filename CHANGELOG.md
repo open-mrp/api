@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.9.0](https://github.com/open-mrp/api/compare/v2.8.1...v2.9.0) (2026-09-23)
+
+
+### Features
+
+* **deploy:** add a manual production rollback workflow ([#177](https://github.com/open-mrp/api/issues/177)) ([56b4c0d](https://github.com/open-mrp/api/commit/56b4c0d30466177e50977968805caec312fc9fc9))
+
+
+### Bug Fixes
+
+* **auth:** keep password-reset and magic-login links on the first-party domain ([#181](https://github.com/open-mrp/api/issues/181)) ([3644378](https://github.com/open-mrp/api/commit/36443783244dc7481a869111a98f5b95d8e05c99))
+* **checkout:** compute customer checkout charge server-side ([#180](https://github.com/open-mrp/api/issues/180)) ([a61fa22](https://github.com/open-mrp/api/commit/a61fa22933a839660c6a6280c88226696857335a))
+* **checkout:** derive customer checkout amount and order from stored data ([#182](https://github.com/open-mrp/api/issues/182)) ([a272ef8](https://github.com/open-mrp/api/commit/a272ef87561c8a0352c4e2ab976fdf4f31bed664))
+* **sales-orders:** enforce discount reuse check on customer self-create ([#179](https://github.com/open-mrp/api/issues/179)) ([690210a](https://github.com/open-mrp/api/commit/690210a9e42324d2938ded869ceb5b2ad39ad4e1))
+
 ## [2.8.1](https://github.com/open-mrp/api/compare/v2.8.0...v2.8.1) (2026-09-23)
 
 

@@ -1263,6 +1263,9 @@ WHERE account_id = sqlc.arg('account_id')
 -- set by the recompute write path, so an item kept fresh by ongoing consumption falls out of this set
 -- on its own and only genuinely idle items surface. Stalest first (so the oldest is always serviced),
 -- and capped by ? so a tick enqueues a bounded batch rather than the whole table (no thundering herd).
+-- Do not add an index on rate(updated_at) for this: rate also holds every price and cost, nearly all of
+-- them older than stale_before, so leading with it walks ~1M non-burn rows to find a few hundred. Driving
+-- from item (thousands of rows) with a PK lookup into rate is the cheap plan.
 -- name: ListStaleBurnRateItems :many
 SELECT i.id, i.account_id
 FROM item i

@@ -941,9 +941,7 @@ func newAnalyticsCache(ctx context.Context, redisURL string, broker messaging.Me
 	if err != nil {
 		return nil, nil, err
 	}
-	if err := store.Ping(ctx); err != nil {
-		logger.Warn("Redis unreachable at startup; analytics reports are computed uncached until it recovers", "error", err)
-	}
+	go func() { _ = store.Monitor(ctx, &cache.MonitorConfig{Logger: logger}) }()
 	analyticsCache, err := service.NewAnalyticsCache(&service.AnalyticsCacheConfig{Store: store})
 	if err != nil {
 		_ = store.Close()

@@ -2955,14 +2955,15 @@ LEFT JOIN (
     SELECT
         pl_sum.sales_order_line_id,
         SUM(q_sum.value) AS total_picked_value
-    FROM pick_line pl_sum
-    JOIN quantity q_sum ON q_sum.id = pl_sum.quantity_id
     -- Restrict the aggregate to this pick's own lines: without this the derived table groups every pick_line in the database while the update holds its locks. It stays a derived table rather than a correlated subquery because ` + "`" + `quantity` + "`" + ` is the table being updated.
-    WHERE pl_sum.sales_order_line_id IN (
-        SELECT pl_scope.sales_order_line_id
+    -- The scope is a join, not ` + "`" + `IN (SELECT ...)` + "`" + `: MySQL does not semi-join subqueries inside a multi-table UPDATE, so the IN form table-scans pick_line (~400k rows, ~800ms) instead of seeking by sales_order_line_id. DISTINCT keeps two lines on one order line from double-counting.
+    FROM (
+        SELECT DISTINCT pl_scope.sales_order_line_id
         FROM pick_line pl_scope
         WHERE pl_scope.pick_id = ?
-    )
+    ) scope
+    JOIN pick_line pl_sum ON pl_sum.sales_order_line_id = scope.sales_order_line_id
+    JOIN quantity q_sum ON q_sum.id = pl_sum.quantity_id
     GROUP BY pl_sum.sales_order_line_id
 ) picked ON picked.sales_order_line_id = pl.sales_order_line_id
 JOIN pick p ON p.id = pl.pick_id
@@ -2992,14 +2993,12 @@ LEFT JOIN (
     SELECT
         pl_sum.sales_order_line_id,
         SUM(q_sum.value) AS total_picked_value
-    FROM pick_line pl_sum
-    JOIN quantity q_sum ON q_sum.id = pl_sum.quantity_id
     -- Restrict the aggregate to the line being picked: without this the derived table groups every pick_line in the database while the update holds its locks. It stays a derived table rather than a correlated subquery because ` + "`" + `quantity` + "`" + ` is the table being updated.
-    WHERE pl_sum.sales_order_line_id IN (
-        SELECT pl_scope.sales_order_line_id
-        FROM pick_line pl_scope
-        WHERE pl_scope.id = ?
-    )
+    -- The scope is a join, not ` + "`" + `IN (SELECT ...)` + "`" + `: MySQL does not semi-join subqueries inside a multi-table UPDATE, so the IN form table-scans pick_line instead of seeking by sales_order_line_id.
+    FROM pick_line pl_scope
+    JOIN pick_line pl_sum ON pl_sum.sales_order_line_id = pl_scope.sales_order_line_id
+    JOIN quantity q_sum ON q_sum.id = pl_sum.quantity_id
+    WHERE pl_scope.id = ?
     -- The line being picked is excluded from its own outstanding calculation. Counting it would subtract what it already holds, so picking an already-picked line set it back to zero — a second click wiping a picker's work rather than doing nothing.
     AND pl_sum.id != ?
     GROUP BY pl_sum.sales_order_line_id

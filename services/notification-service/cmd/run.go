@@ -129,7 +129,7 @@ func Run(
 		}
 		objectStore = s3Client
 	}
-	chatSvc := service.NewConversationSvc(repoFactory, txManager, objectStore, cfg.ChatBucket, rabbitmq, enqueuer, bridgeEmailSender, cfg.InboundEmailDomain)
+	chatSvc := service.NewConversationSvc(repoFactory, txManager, objectStore, cfg.ChatBucket, rabbitmq, bridgeEmailSender, cfg.InboundEmailDomain)
 
 	var emailIdentityProvider domain.EmailIdentityProvider
 	if cfg.PlatformMode.IsTest() {

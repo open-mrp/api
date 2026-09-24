@@ -487,7 +487,6 @@ func (s *conversationSvcImpl) promoteDraftViaPortal(ctx context.Context, draft *
 	if apiErr != nil {
 		return apiErr
 	}
-	s.kickOutbox()
 	return nil
 }
 
@@ -584,7 +583,6 @@ func (s *conversationSvcImpl) promoteDraftViaEmail(ctx context.Context, draft *d
 	if apiErr != nil {
 		return apiErr
 	}
-	s.kickOutbox()
 	return nil
 }
 

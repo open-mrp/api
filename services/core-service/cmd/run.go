@@ -330,7 +330,6 @@ func Run(
 	})
 
 	itemSvc := service.NewItemSvc(&service.ItemSvcConfig{
-		OutboxNotifier:  enqueuer,
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
 		TxManager:       txManager,
@@ -483,14 +482,12 @@ func Run(
 		EncryptionKey:         integrationEncryptionKey,
 		FrontendURL:           cfg.FrontendURL,
 		Branding:              brandingAssets,
-		OutboxNotifier:        enqueuer,
 	})
 
 	salesOrderLineSvc := service.NewSalesOrderLineSvc(&service.SalesOrderLineSvcConfig{
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
 		TxManager:       txManager,
-		OutboxNotifier:  enqueuer,
 	})
 
 	receivableSvc := service.NewReceivableSvc(&service.ReceivableSvcConfig{
@@ -564,7 +561,6 @@ func Run(
 	})
 
 	receivingOrderSvc := service.NewReceivingOrderSvc(&service.ReceivingOrderSvcConfig{
-		OutboxNotifier:  enqueuer,
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
 		TxManager:       txManager,
@@ -581,7 +577,6 @@ func Run(
 		MediatorFactory: mediatorFactory,
 		JobSvcFactory:   jobSvcFactory,
 		TxManager:       txManager,
-		OutboxNotifier:  enqueuer,
 	})
 
 	productionScheduleSvc := service.NewProductionScheduleSvc(&service.ProductionScheduleSvcConfig{
@@ -672,7 +667,6 @@ func Run(
 	})
 
 	shipmentSvc := service.NewShipmentSvc(&service.ShipmentSvcConfig{
-		OutboxNotifier:       enqueuer,
 		Repos:                repoFactory,
 		MediatorFactory:      mediatorFactory,
 		TxManager:            txManager,
@@ -735,7 +729,7 @@ func Run(
 		return err
 	}
 
-	undoBatchScanConsumer := event.NewUndoBatchScanConsumer(rabbitmq, inboxRepo, repoFactory, txManager, enqueuer)
+	undoBatchScanConsumer := event.NewUndoBatchScanConsumer(rabbitmq, inboxRepo, repoFactory, txManager)
 	if err := undoBatchScanConsumer.Listen(ctx); err != nil {
 		return err
 	}

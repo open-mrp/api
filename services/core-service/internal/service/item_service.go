@@ -25,16 +25,6 @@ import (
 	"github.com/open-mrp/api/shared/tracing"
 )
 
-// kickOutbox wakes the outbox enqueuer so a just-committed allocation request is picked up
-// immediately rather than on the enqueuer's next idle poll, which can be up to MaxPollInterval away.
-// No-op when no notifier was injected. Call only after the writing transaction has committed —
-// kicking while it is still open races the poll against a row it cannot yet see.
-func (s *itemSvcImpl) kickOutbox() {
-	if s.outboxNotifier != nil {
-		s.outboxNotifier.Notify()
-	}
-}
-
 // enqueueInventoryReceived hands allocation to the consumer that owns it.
 //
 // Written in the transaction that moved the stock, so the handoff commits with the movement or not
@@ -72,7 +62,6 @@ type itemSvcImpl struct {
 	repos           domain.RepoFactory
 	mediatorFactory domain.MediatorFactory
 	txManager       TransactionManager
-	outboxNotifier  messaging.OutboxNotifier
 }
 
 type ItemSvcConfig struct {
@@ -84,9 +73,6 @@ type ItemSvcConfig struct {
 
 	// TxManager (required) wraps multi-step operations in database transactions.
 	TxManager TransactionManager
-
-	// OutboxNotifier (optional; default: nil) wakes the outbox enqueuer the instant an allocation request commits, so reconciled stock is offered to open demand on the next moment rather than on the enqueuer's next idle poll. When nil, the request is still picked up on the next poll.
-	OutboxNotifier messaging.OutboxNotifier
 }
 
 func (c *ItemSvcConfig) validate() error {
@@ -111,7 +97,6 @@ func NewItemSvc(config *ItemSvcConfig) domain.ItemSvc {
 		repos:           config.Repos,
 		mediatorFactory: config.MediatorFactory,
 		txManager:       config.TxManager,
-		outboxNotifier:  config.OutboxNotifier,
 	}
 }
 
@@ -2350,8 +2335,6 @@ func (s *itemSvcImpl) BulkReconcileItems(ctx context.Context, params domain.Bulk
 		if apiErr != nil {
 			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
 		}
-
-		s.kickOutbox()
 
 		return result, nil
 

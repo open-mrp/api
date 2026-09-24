@@ -28,40 +28,25 @@ import (
 //
 // The delete itself already happened synchronously — this is the ledger catching up behind it, the mirror of ExecuteProductionStepConsumer running behind a scan.
 type UndoBatchScanConsumer struct {
-	rabbitmq       messaging.MessageBroker
-	inboxConsumer  *messaging.InboxConsumer
-	repos          domain.RepoFactory
-	txManager      db.TransactionManager[*sqlc.Queries, domain.RepoFactory]
-	outboxNotifier messaging.OutboxNotifier
-	tracer         trace.Tracer
+	rabbitmq      messaging.MessageBroker
+	inboxConsumer *messaging.InboxConsumer
+	repos         domain.RepoFactory
+	txManager     db.TransactionManager[*sqlc.Queries, domain.RepoFactory]
+	tracer        trace.Tracer
 }
 
-// outboxNotifier is optional: when nil the allocation request this consumer writes is still picked up
-// on the enqueuer's next poll, just not on the next instant.
 func NewUndoBatchScanConsumer(
 	rabbitmq messaging.MessageBroker,
 	inboxRepo messaging.InboxRepo,
 	repos domain.RepoFactory,
 	txManager db.TransactionManager[*sqlc.Queries, domain.RepoFactory],
-	outboxNotifier messaging.OutboxNotifier,
 ) *UndoBatchScanConsumer {
 	return &UndoBatchScanConsumer{
-		rabbitmq:       rabbitmq,
-		inboxConsumer:  messaging.NewInboxConsumer(inboxRepo, "core-service"),
-		repos:          repos,
-		txManager:      txManager,
-		outboxNotifier: outboxNotifier,
-		tracer:         tracing.GetTracer("core-service.undo_batch_scan_consumer"),
-	}
-}
-
-// kickOutbox wakes the outbox enqueuer so a just-committed allocation request is picked up
-// immediately rather than on the enqueuer's next idle poll, which can be up to MaxPollInterval away.
-// No-op when no notifier was injected. Call only after the writing transaction has committed —
-// kicking while it is still open races the poll against a row it cannot yet see.
-func (c *UndoBatchScanConsumer) kickOutbox() {
-	if c.outboxNotifier != nil {
-		c.outboxNotifier.Notify()
+		rabbitmq:      rabbitmq,
+		inboxConsumer: messaging.NewInboxConsumer(inboxRepo, "core-service"),
+		repos:         repos,
+		txManager:     txManager,
+		tracer:        tracing.GetTracer("core-service.undo_batch_scan_consumer"),
 	}
 }
 
@@ -199,10 +184,6 @@ func (c *UndoBatchScanConsumer) undoBatchScan(ctx context.Context, accountID str
 	})
 	if apiErr != nil {
 		return apiErr
-	}
-
-	if len(reversedItemIDs(deltas)) > 0 {
-		c.kickOutbox()
 	}
 
 	log.Printf("[undo_batch_scan] Completed: batch=%s account=%s corrections=%d", evt.BatchID, accountID, len(deltas))

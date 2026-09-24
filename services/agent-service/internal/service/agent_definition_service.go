@@ -59,7 +59,6 @@ type agentDefSvcImpl struct {
 	txManager       TransactionManager
 	mediatorFactory domain.MediatorFactory
 	planGate        PlanGate
-	outboxNotifier  messaging.OutboxNotifier
 }
 
 type AgentDefinitionSvcConfig struct {
@@ -74,9 +73,6 @@ type AgentDefinitionSvcConfig struct {
 
 	// PlanGate (optional; default: nil) checks whether an account's plan allows agents. When nil, plan gating is skipped and all accounts are allowed.
 	PlanGate PlanGate
-
-	// OutboxNotifier (optional; default: nil) wakes the outbox enqueuer the instant a chat run is enqueued, so the run starts (and its "thinking" indicator appears) without waiting out the enqueuer's idle poll backoff. When nil, the run is still picked up on the next poll.
-	OutboxNotifier messaging.OutboxNotifier
 }
 
 func (c *AgentDefinitionSvcConfig) WithDefaults() *AgentDefinitionSvcConfig {
@@ -110,19 +106,11 @@ func NewAgentDefinitionSvc(config *AgentDefinitionSvcConfig) domain.AgentDefinit
 		mediatorFactory: config.MediatorFactory,
 		txManager:       config.TxManager,
 		planGate:        config.PlanGate,
-		outboxNotifier:  config.OutboxNotifier,
 	}
 }
 
 func (s *agentDefSvcImpl) mediators() domain.Mediators {
 	return s.mediatorFactory.Build(s.repos)
-}
-
-// kickOutbox wakes the outbox enqueuer so a just-committed command (e.g. a chat-run execution) is published immediately rather than on the enqueuer's next idle poll, which can be up to MaxPollInterval away. No-op when no notifier was injected. Call only after the writing transaction has committed — kicking mid-transaction would race the poll against an as-yet-invisible row.
-func (s *agentDefSvcImpl) kickOutbox() {
-	if s.outboxNotifier != nil {
-		s.outboxNotifier.Notify()
-	}
 }
 
 func (s *agentDefSvcImpl) withTx(ctx context.Context, fn func(context.Context, *agentDefSvcImpl) *apierror.APIError) *apierror.APIError {
@@ -132,7 +120,6 @@ func (s *agentDefSvcImpl) withTx(ctx context.Context, fn func(context.Context, *
 			mediatorFactory: s.mediatorFactory,
 			txManager:       s.txManager,
 			planGate:        s.planGate,
-			outboxNotifier:  s.outboxNotifier,
 		}
 		return fn(txCtx, txSvc)
 	})
@@ -1201,8 +1188,6 @@ func (s *agentDefSvcImpl) CreateChatRun(ctx context.Context, in domain.ChatRunIn
 			return tracing.Trace(span, apiErr)
 		}
 		if continued {
-			// The continuation command committed inside continueChatRun — kick the enqueuer so the next turn starts at once.
-			s.kickOutbox()
 			return nil
 		}
 	}
@@ -1300,8 +1285,6 @@ func (s *agentDefSvcImpl) CreateChatRun(ctx context.Context, in domain.ChatRunIn
 		return apiErr
 	}
 
-	// Run row + execute command are committed — wake the enqueuer so the run starts (and its live "thinking" indicator appears) right away instead of after an idle poll backoff.
-	s.kickOutbox()
 	return nil
 }
 
@@ -1819,9 +1802,6 @@ func (s *agentDefSvcImpl) ContinueRun(ctx context.Context, params domain.Continu
 			return "", meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
 		}
 
-		// Kick the enqueuer so the resume command (e.g. a chat tool-approval) is published immediately rather than waiting out the enqueuer's idle backoff — otherwise the thinking bubble lags ~MaxPollInterval after the user approves. Post-commit only: the outbox row must be visible to the poll.
-		s.kickOutbox()
-
 		return params.AgentRunID, nil
 
 	default:
@@ -1957,9 +1937,6 @@ func (s *agentDefSvcImpl) RetryRun(ctx context.Context, params domain.RetryRunPa
 		if apiErr != nil {
 			return "", meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
 		}
-
-		// Kick the enqueuer so the resume command is published immediately rather than waiting out the enqueuer's idle backoff. Post-commit only: the outbox row must be visible to the poll.
-		s.kickOutbox()
 
 		return params.AgentRunID, nil
 

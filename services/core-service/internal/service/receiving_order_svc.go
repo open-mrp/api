@@ -18,7 +18,6 @@ import (
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idempotency"
-	"github.com/open-mrp/api/shared/messaging"
 	"github.com/open-mrp/api/shared/tracing"
 )
 
@@ -28,7 +27,6 @@ type receivingOrderSvcImpl struct {
 	repos           domain.RepoFactory
 	mediatorFactory domain.MediatorFactory
 	txManager       TransactionManager
-	outboxNotifier  messaging.OutboxNotifier
 }
 
 type ReceivingOrderSvcConfig struct {
@@ -40,9 +38,6 @@ type ReceivingOrderSvcConfig struct {
 
 	// TxManager (required) wraps multi-step operations in database transactions.
 	TxManager TransactionManager
-
-	// OutboxNotifier (optional; default: nil) wakes the outbox enqueuer the instant an allocation request commits, so covering newly received stock starts on the next moment rather than on the enqueuer's next idle poll. When nil, the request is still picked up on the next poll.
-	OutboxNotifier messaging.OutboxNotifier
 }
 
 func (c *ReceivingOrderSvcConfig) validate() error {
@@ -67,17 +62,6 @@ func NewReceivingOrderSvc(config *ReceivingOrderSvcConfig) domain.ReceivingOrder
 		repos:           config.Repos,
 		mediatorFactory: config.MediatorFactory,
 		txManager:       config.TxManager,
-		outboxNotifier:  config.OutboxNotifier,
-	}
-}
-
-// kickOutbox wakes the outbox enqueuer so a just-committed allocation request is picked up
-// immediately rather than on the enqueuer's next idle poll, which can be up to MaxPollInterval away.
-// No-op when no notifier was injected. Call only after the writing transaction has committed —
-// kicking while it is still open races the poll against a row it cannot yet see.
-func (s *receivingOrderSvcImpl) kickOutbox() {
-	if s.outboxNotifier != nil {
-		s.outboxNotifier.Notify()
 	}
 }
 
@@ -340,11 +324,6 @@ func (s *receivingOrderSvcImpl) StockReceivingOrder(ctx context.Context, params 
 		if apiErr != nil {
 			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
 		}
-
-		// After the commit, never inside it: the outbox row has to be visible to the enqueuer's poll
-		// query for the kick to find anything. Without it a stocking during a quiet period waits out
-		// the enqueuer's idle backoff before its allocation even starts.
-		s.kickOutbox()
 
 		return result, nil
 

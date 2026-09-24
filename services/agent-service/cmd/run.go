@@ -182,7 +182,6 @@ func Run(
 		NotificationClient: notificationClient,
 		Broker:             rabbitmq,
 		BillingClient:      billingClient,
-		OutboxNotifier:     enqueuer,
 	})
 
 	// Run consumer
@@ -218,7 +217,6 @@ func Run(
 		MediatorFactory: mediatorFactory,
 		TxManager:       txManager,
 		PlanGate:        planGate,
-		OutboxNotifier:  enqueuer,
 	})
 
 	// Chat-run consumer: notification-service signals an agent participant's trigger fired.

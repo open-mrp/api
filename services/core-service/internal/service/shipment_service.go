@@ -65,7 +65,6 @@ type shipmentSvcImpl struct {
 	shippingLabelsBucket string
 	frontendURL          string
 	branding             BrandingAssets
-	outboxNotifier       messaging.OutboxNotifier
 }
 
 type ShipmentSvcConfig struct {
@@ -104,9 +103,6 @@ type ShipmentSvcConfig struct {
 
 	// Branding (optional) resolves the merchant logo for the invoice PDF letterhead. Omitted, it falls back to a text-only letterhead.
 	Branding BrandingAssets
-
-	// OutboxNotifier (optional; default: nil) wakes the outbox enqueuer the instant a void's allocation requests commit, so released stock is offered to open demand on the next moment rather than on the enqueuer's next idle poll. When nil, the requests are still picked up on the next poll.
-	OutboxNotifier messaging.OutboxNotifier
 }
 
 func (c *ShipmentSvcConfig) validate() error {
@@ -139,17 +135,6 @@ func NewShipmentSvc(config *ShipmentSvcConfig) domain.ShipmentSvc {
 		shippingLabelsBucket: config.ShippingLabelsBucket,
 		frontendURL:          config.FrontendURL,
 		branding:             config.Branding,
-		outboxNotifier:       config.OutboxNotifier,
-	}
-}
-
-// kickOutbox wakes the outbox enqueuer so a just-committed allocation request is picked up
-// immediately rather than on the enqueuer's next idle poll, which can be up to MaxPollInterval away.
-// No-op when no notifier was injected. Call only after the writing transaction has committed —
-// kicking while it is still open races the poll against a row it cannot yet see.
-func (s *shipmentSvcImpl) kickOutbox() {
-	if s.outboxNotifier != nil {
-		s.outboxNotifier.Notify()
 	}
 }
 
@@ -1083,10 +1068,6 @@ func (s *shipmentSvcImpl) VoidShipment(ctx context.Context, params domain.VoidSh
 		if apiErr != nil {
 			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
 		}
-
-		// After the commit, never inside it: the allocation requests the reversal wrote have to be
-		// visible to the enqueuer's poll query for this kick to find anything.
-		s.kickOutbox()
 
 		return result, nil
 

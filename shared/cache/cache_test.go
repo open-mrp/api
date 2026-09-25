@@ -394,3 +394,29 @@ func TestCache_OversizeValuesAreReturnedButNotStored(t *testing.T) {
 		t.Fatalf("oversize value was cached: loader ran %d times", calls.Load())
 	}
 }
+
+func TestCache_PeekNeverLoads(t *testing.T) {
+	c := newTestCache[string](t, newMemory(t, nil))
+	key := Key{ID: "x"}
+
+	if _, ok := c.Peek(context.Background(), key); ok {
+		t.Fatal("Peek hit an empty cache")
+	}
+	var calls atomic.Int32
+	if _, err := c.GetOrLoad(context.Background(), key, countingLoader(&calls, "v")); err != nil {
+		t.Fatalf("GetOrLoad: %v", err)
+	}
+	if v, ok := c.Peek(context.Background(), key); !ok || v != "v" {
+		t.Fatalf("Peek = (%q, %v), want the loaded value", v, ok)
+	}
+	if calls.Load() != 1 {
+		t.Fatalf("loader ran %d times, want 1", calls.Load())
+	}
+}
+
+func TestCache_PeekWithoutStoreMisses(t *testing.T) {
+	c := newTestCache[string](t, nil)
+	if _, ok := c.Peek(context.Background(), Key{ID: "x"}); ok {
+		t.Fatal("a cache with no store must always miss")
+	}
+}

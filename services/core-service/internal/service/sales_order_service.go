@@ -20,6 +20,7 @@ import (
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/crypto"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/field"
@@ -506,9 +507,10 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 		}
 		orderTotal := calculateResolvedLinesTotal(resolvedLines, resolvedConvs)
 
-		// Estimate the shipping rate via the freight-exemption / flat-rate / minimum-order / live-Shippo cascade (matches Dashboard). This is the only external call in the create path; computing it here on the outer receiver keeps the live Shippo HTTP request out of the transaction and uses the real Shippo factory.
-		shippingRate, apiErr := s.estimateOrderShippingRate(ctx, params, billAddr, shipAddr, orderTotal)
-		if apiErr != nil {
+		// Estimate the shipping rate via the freight-exemption / flat-rate / minimum-order / carrier-rate cascade (matches Dashboard). The carrier rate is taken only from the rate cache, which the checkout's rate-shop warms for the same shipment: a miss creates the order without its freight line and the freight consumer adds it (FinishPendingFreight), so create never waits on the carrier.
+		shippingRate, apiErr := s.estimateOrderShippingRate(ctx, params, billAddr, shipAddr, orderTotal, true)
+		freightPending := apiErr == domain.ErrShippingRateNotCached
+		if apiErr != nil && !freightPending {
 			return nil, cacheErr(apiErr)
 		}
 
@@ -603,8 +605,12 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 				}
 			}
 
-			// Synthesize a shipping line (matches Dashboard, which always attaches one) using the rate estimated before the transaction.
-			if apiErr := txSvc.synthesizeShippingLine(txCtx, orderID, params, shippingRate); apiErr != nil {
+			// Synthesize a shipping line (matches Dashboard, which always attaches one) using the rate estimated before the transaction, or leave it to the freight consumer.
+			if freightPending {
+				if apiErr := txOrderRepo.MarkFreightPending(txCtx, params.AccountID, orderID); apiErr != nil {
+					return apiErr
+				}
+			} else if _, apiErr := txSvc.synthesizeShippingLine(txCtx, orderID, params, shippingRate); apiErr != nil {
 				return apiErr
 			}
 
@@ -1491,23 +1497,23 @@ func (s *salesOrderSvcImpl) checkInvoicePlanLimit(ctx context.Context, accountID
 }
 
 // synthesizeShippingLine inserts the order's shipping line using the account's "shipping" system product and a rate already estimated by the caller (see estimateOrderShippingRate), matching Dashboard behavior where every sales order carries a dedicated shipping line. The rate is computed before the transaction so the live Shippo call does not run inside it. No-ops cleanly if the account has no shipping system product configured.
-func (s *salesOrderSvcImpl) synthesizeShippingLine(ctx context.Context, orderID string, params domain.CreateSalesOrderParams, rate string) *apierror.APIError {
+func (s *salesOrderSvcImpl) synthesizeShippingLine(ctx context.Context, orderID string, params domain.CreateSalesOrderParams, rate string) (*domain.SalesOrderLine, *apierror.APIError) {
 	shippingProduct, apiErr := s.repos.NewProductRepo().GetSystemProduct(ctx, params.AccountID, "shipping")
 	if apiErr != nil {
-		return apiErr
+		return nil, apiErr
 	}
 	if shippingProduct == nil {
-		return nil
+		return nil, nil
 	}
 
 	currencyUnitID, apiErr := s.repos.NewUnitRepo().GetCurrencyBaseUnitID(ctx)
 	if apiErr != nil {
-		return apiErr
+		return nil, apiErr
 	}
 
 	lineID, apiErr := id.GenID(id.OrderLineIDPrefix, nil)
 	if apiErr != nil {
-		return apiErr
+		return nil, apiErr
 	}
 
 	// Carry the shipping product's description onto the line (matches product lines, which default their description from the product). Falls back to the SKU so the freight line is never left blank when the system product has no description configured.
@@ -1516,7 +1522,7 @@ func (s *salesOrderSvcImpl) synthesizeShippingLine(ctx context.Context, orderID 
 		description = &shippingProduct.ProductSKU
 	}
 
-	_, apiErr = s.repos.NewSalesOrderLineRepo().Create(ctx, lineID, domain.CreateSalesOrderLineParams{
+	return s.repos.NewSalesOrderLineRepo().Create(ctx, lineID, domain.CreateSalesOrderLineParams{
 		SalesOrderID:               orderID,
 		AccountID:                  params.AccountID,
 		ProductID:                  shippingProduct.ProductID,
@@ -1528,7 +1534,71 @@ func (s *salesOrderSvcImpl) synthesizeShippingLine(ctx context.Context, orderID 
 		UnitPriceNumeratorUnitID:   currencyUnitID,
 		UnitPriceDenominatorUnitID: shippingProduct.QuantityUnitID,
 	})
-	return apiErr
+}
+
+// FinishPendingFreight adds the freight line an order was created without (see CreateSalesOrder),
+// quoting the carrier live. An order not waiting on freight is a no-op, so the freight consumer and
+// checkout can both call it; a freight line added by hand in the meantime wins over the quote.
+func (s *salesOrderSvcImpl) FinishPendingFreight(ctx context.Context, accountID, salesOrderID string) *apierror.APIError {
+	ctx, span := salesOrderSvcTracer.Start(ctx, "service.sales_order.finish_pending_freight")
+	defer span.End()
+
+	pending, apiErr := s.repos.NewSalesOrderRepo().IsFreightPending(ctx, accountID, salesOrderID, false)
+	if apierror.IsNotFound(apiErr) {
+		// Deleted before its freight was quoted: nothing is owed.
+		return nil
+	}
+	if apiErr != nil || !pending {
+		return tracing.Trace(span, apiErr)
+	}
+
+	// Quoted before the transaction so the carrier call holds no row lock.
+	rate, apiErr := s.estimateFreightForOrder(ctx, accountID, salesOrderID, true)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	return tracing.Trace(span, s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderSvcImpl) *apierror.APIError {
+		txOrderRepo := txSvc.repos.NewSalesOrderRepo()
+		stillPending, apiErr := txOrderRepo.IsFreightPending(txCtx, accountID, salesOrderID, true)
+		if apiErr != nil || !stillPending {
+			return apiErr
+		}
+
+		lines, apiErr := txOrderRepo.GetLines(txCtx, salesOrderID)
+		if apiErr != nil {
+			return apiErr
+		}
+		hasFreight := slices.ContainsFunc(lines, func(l *domain.SalesOrderLine) bool {
+			return l.ProductTypeCode != nil && *l.ProductTypeCode == systemProductCodeShipping
+		})
+		if !hasFreight {
+			line, apiErr := txSvc.synthesizeShippingLine(txCtx, salesOrderID, domain.CreateSalesOrderParams{AccountID: accountID}, rate)
+			if apiErr != nil {
+				return apiErr
+			}
+			if line != nil {
+				if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+					ServiceName:      domain.ServiceName,
+					Action:           constants.AuditActionCreate,
+					ResourceType:     constants.ObjectTypeSalesOrderLine,
+					ResourceID:       line.ID,
+					RootResourceType: constants.ObjectTypeSalesOrder,
+					RootResourceID:   salesOrderID,
+					Changes:          audit.ComputeChanges(nil, line),
+				}); apiErr != nil {
+					return apiErr
+				}
+			}
+		}
+		return txOrderRepo.ClearFreightPending(txCtx, accountID, salesOrderID)
+	}))
+}
+
+// AbandonPendingFreight stops waiting on an order's freight when the carrier cannot quote it, leaving
+// the freight to be quoted by hand (quote-freight) rather than holding checkout forever.
+func (s *salesOrderSvcImpl) AbandonPendingFreight(ctx context.Context, accountID, salesOrderID string) *apierror.APIError {
+	return s.repos.NewSalesOrderRepo().ClearFreightPending(ctx, accountID, salesOrderID)
 }
 
 // Returns the order's freight line, creating it from the account's "shipping" system product when the order
@@ -1585,7 +1655,9 @@ func findOrAddFreightLine(ctx context.Context, repos domain.RepoFactory, account
 }
 
 // estimateFreightForOrder re-estimates an existing order's freight (shipping) charge from its CURRENT persisted ship-to, carrier, service level, and lines, using the same freight-exemption / flat-rate / minimum-order / live-Shippo cascade as the create path. Returns the rate rounded to cents (matching Dashboard's update path). Read-only: it does not mutate the order — the caller (the quote-freight endpoint) returns it for the user to review and approve. Runs on the outer receiver so the live Shippo call stays out of any write transaction.
-func (s *salesOrderSvcImpl) estimateFreightForOrder(ctx context.Context, accountID, salesOrderID string) (string, *apierror.APIError) {
+//
+// productLinesOnlyTotal sums only product lines for the minimum-order check, as create does; otherwise every line counts, as update does.
+func (s *salesOrderSvcImpl) estimateFreightForOrder(ctx context.Context, accountID, salesOrderID string, productLinesOnlyTotal bool) (string, *apierror.APIError) {
 	existing, apiErr := s.repos.NewSalesOrderRepo().Get(ctx, accountID, salesOrderID)
 	if apiErr != nil {
 		return "", apiErr
@@ -1625,14 +1697,18 @@ func (s *salesOrderSvcImpl) estimateFreightForOrder(ctx context.Context, account
 		if l.ProductID == nil {
 			continue
 		}
+		isSystemLine := *l.ProductID == shippingProductID || *l.ProductID == creditProductID
 		// The minimum-order total mirrors legacy update's calculateTotalOrdered: it sums EVERY line, including the order's existing shipping charge and the (negative) discount line — not just the product lines.
+		if productLinesOnlyTotal && isSystemLine {
+			continue
+		}
 		if qty, err := decimal.NewFromString(l.QuantityValue); err == nil {
 			if price, err := decimal.NewFromString(l.UnitPriceValue); err == nil {
 				total = total.Add(pricing.LineTotal(qty, price, conversionFor(convs, l.ID)))
 			}
 		}
 		// Weight + product-line freight-exemption inputs are the product lines only — exclude the synthesized shipping / discount lines, matching the create path.
-		if *l.ProductID == shippingProductID || *l.ProductID == creditProductID {
+		if isSystemLine {
 			continue
 		}
 		lineInputs = append(lineInputs, domain.CreateSalesOrderLineInput{
@@ -1657,7 +1733,7 @@ func (s *salesOrderSvcImpl) estimateFreightForOrder(ctx context.Context, account
 		CarrierBillingType:    existing.CarrierBillingType,
 		CarrierBillingAccount: existing.CarrierBillingAccount,
 		Lines:                 lineInputs,
-	}, billAddr, shipAddr, orderTotal)
+	}, billAddr, shipAddr, orderTotal, false)
 	if apiErr != nil {
 		return "", apiErr
 	}
@@ -1779,7 +1855,9 @@ func salesOrderShippingChanged(existing *domain.SalesOrder, params domain.Update
 }
 
 // estimateOrderShippingRate computes the posted shipping rate for a new order using the shared freight-exemption / flat-rate / minimum-order / live-Shippo cascade, mirroring Dashboard's estimatePostedShippingRate. Returns the rate as a decimal string (not rounded to cents, matching Dashboard's create path). The live Shippo rate already includes the 10% markup applied by the Shippo client.
-func (s *salesOrderSvcImpl) estimateOrderShippingRate(ctx context.Context, params domain.CreateSalesOrderParams, billTo, shipTo domain.ShippingAddress, orderTotal float64) (string, *apierror.APIError) {
+//
+// With cachedOnly the carrier rate comes only from the rate cache, and a miss is domain.ErrShippingRateNotCached; every exemption and validation above the carrier call still applies.
+func (s *salesOrderSvcImpl) estimateOrderShippingRate(ctx context.Context, params domain.CreateSalesOrderParams, billTo, shipTo domain.ShippingAddress, orderTotal float64, cachedOnly bool) (string, *apierror.APIError) {
 	// Third-party-billed orders pass the third party's account + bill-to country/zip
 	// through to the carrier, matching Dashboard's createShippingLine.
 	var billing *domain.ShippingBilling
@@ -1852,6 +1930,7 @@ func (s *salesOrderSvcImpl) estimateOrderShippingRate(ctx context.Context, param
 			Width:  "13",
 			Height: "9.5",
 		}},
+		CachedOnly: cachedOnly,
 	})
 	if apiErr != nil {
 		return "", apiErr
@@ -2002,7 +2081,7 @@ func (s *salesOrderSvcImpl) QuoteSalesOrderFreight(ctx context.Context, params d
 
 	accountID := identity.Target.AccountID
 
-	rate, apiErr := s.estimateFreightForOrder(ctx, accountID, params.SalesOrderID)
+	rate, apiErr := s.estimateFreightForOrder(ctx, accountID, params.SalesOrderID, false)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -2416,6 +2495,11 @@ func (s *salesOrderSvcImpl) CheckoutSalesOrder(ctx context.Context, params domai
 			return nil, tracing.Trace(span, apiErr)
 		}
 
+		// The charge is the sum of the lines, so an order still waiting on its freight line gets it first.
+		if apiErr := s.FinishPendingFreight(ctx, params.AccountID, params.SalesOrderID); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+
 		// Fetch order lines for pricing. Their conversions are read before anything reaches Stripe, so
 		// a line that cannot be priced stops the checkout rather than charging the wrong amount.
 		lines, apiErr := orderRepo.GetLines(ctx, params.SalesOrderID)
@@ -2822,6 +2906,11 @@ func (s *salesOrderSvcImpl) resolveCustomerCheckoutOrder(ctx context.Context, ac
 		return nil, 0, apiErr
 	}
 
+	// The charge is the sum of the lines, so an order still waiting on its freight line gets it first.
+	if apiErr := s.FinishPendingFreight(ctx, accountID, salesOrderID); apiErr != nil {
+		return nil, 0, apiErr
+	}
+
 	lines, apiErr := orderRepo.GetLines(ctx, salesOrderID)
 	if apiErr != nil {
 		return nil, 0, apiErr
@@ -2865,23 +2954,9 @@ func (s *salesOrderSvcImpl) ProcessAccountStripeWebhook(ctx context.Context, acc
 	ctx, span := salesOrderSvcTracer.Start(ctx, "service.sales_order.process_account_stripe_webhook")
 	defer span.End()
 
-	integrationRepo := s.repos.NewAccountIntegrationRepo()
-	encryptedCreds, isActive, apiErr := integrationRepo.GetEncryptedCredentials(ctx, accountID, constants.IntegrationCodeStripe)
+	stripeCreds, apiErr := s.accountStripeCredentials(ctx, accountID)
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
-	}
-	if !isActive {
-		return tracing.Trace(span, apierror.NewValidationError("Stripe integration is not active for this account."))
-	}
-
-	// Decrypt Stripe credentials. The credential blob is sealed with the account ID as additional authenticated data (matching how both this service and the legacy dashboard API encrypt integration credentials), so the same account ID must be supplied here.
-	decrypted, err := crypto.DecryptAESGCM(encryptedCreds, s.encryptionKey, []byte(accountID))
-	if err != nil {
-		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to decrypt Stripe credentials."))
-	}
-	var stripeCreds domain.StripeCredentials
-	if err := json.Unmarshal(decrypted, &stripeCreds); err != nil {
-		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to parse Stripe credentials."))
 	}
 	if stripeCreds.WebhookSecret == "" {
 		return tracing.Trace(span, apierror.NewValidationError("Stripe integration has no webhook secret configured for this account."))
@@ -2911,10 +2986,66 @@ func (s *salesOrderSvcImpl) ProcessAccountStripeWebhook(ctx context.Context, acc
 		}
 		return tracing.Trace(span, s.handleAccountPaymentIntentCanceled(ctx, paymentIntent.ID))
 	case "payout.paid":
-		return tracing.Trace(span, s.handleAccountPayoutPaid(ctx, accountID, checkoutClient, event.RawJSON))
+		return tracing.Trace(span, s.enqueueAccountPayoutPaid(ctx, accountID, event))
 	default:
 		return nil
 	}
+}
+
+// accountStripeCredentials decrypts an account's active Stripe integration credentials. The blob is sealed with the account ID as additional authenticated data (matching how both this service and the legacy dashboard API encrypt integration credentials), so the same account ID must be supplied here.
+func (s *salesOrderSvcImpl) accountStripeCredentials(ctx context.Context, accountID string) (domain.StripeCredentials, *apierror.APIError) {
+	var creds domain.StripeCredentials
+	encryptedCreds, isActive, apiErr := s.repos.NewAccountIntegrationRepo().GetEncryptedCredentials(ctx, accountID, constants.IntegrationCodeStripe)
+	if apiErr != nil {
+		return creds, apiErr
+	}
+	if !isActive {
+		return creds, apierror.NewValidationError("Stripe integration is not active for this account.")
+	}
+	decrypted, err := crypto.DecryptAESGCM(encryptedCreds, s.encryptionKey, []byte(accountID))
+	if err != nil {
+		return creds, apierror.NewInternalError(err, "Failed to decrypt Stripe credentials.")
+	}
+	if err := json.Unmarshal(decrypted, &creds); err != nil {
+		return creds, apierror.NewInternalError(err, "Failed to parse Stripe credentials.")
+	}
+	return creds, nil
+}
+
+// enqueueAccountPayoutPaid hands a verified payout.paid event to ReconcileAccountStripePayout. Stripe
+// retries the webhook if this fails, so nothing is lost.
+func (s *salesOrderSvcImpl) enqueueAccountPayoutPaid(ctx context.Context, accountID string, event *domain.StripeWebhookEvent) *apierror.APIError {
+	payload, err := json.Marshal(messaging.AccountStripePayoutPaidData{AccountID: accountID, EventID: event.ID, Event: event.RawJSON})
+	if err != nil {
+		return apierror.NewInternalError(err, "Failed to marshal Stripe payout event.")
+	}
+	msg := contracts.AmqpMessage{Data: payload}
+	if requestID, ok := appctx.GetRequestID(ctx); ok {
+		msg.RequestID = requestID
+	}
+	if _, err := s.repos.NewOutboxRepo().Create(ctx, messaging.OutboxMessageInput{
+		ServiceName: "core-service",
+		MessageType: string(contracts.CoreEventAccountStripePayoutPaid),
+		Destination: messaging.ApplicationExchange,
+		RoutingKey:  string(contracts.CoreEventAccountStripePayoutPaid),
+		Payload:     msg,
+	}); err != nil {
+		return apierror.NewInternalError(err, "Failed to create outbox message for Stripe payout.")
+	}
+	return nil
+}
+
+// ReconcileAccountStripePayout stamps when a payout's funds landed on the transactions it paid out,
+// reading the payout's charges from the account's Stripe. The event was verified by the webhook.
+func (s *salesOrderSvcImpl) ReconcileAccountStripePayout(ctx context.Context, accountID string, event []byte) *apierror.APIError {
+	ctx, span := salesOrderSvcTracer.Start(ctx, "service.sales_order.reconcile_account_stripe_payout")
+	defer span.End()
+
+	stripeCreds, apiErr := s.accountStripeCredentials(ctx, accountID)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return tracing.Trace(span, s.handleAccountPayoutPaid(ctx, accountID, s.checkoutClientFactory.Build(stripeCreds.PrivateKey), event))
 }
 
 // handleAccountPaymentIntentSucceeded links the payment intent to its order and records the receivables payment transaction, mirroring the legacy webhook. Both steps are idempotent so Stripe retries and duplicate deliveries are safe.

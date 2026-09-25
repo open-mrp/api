@@ -1649,3 +1649,21 @@ UPDATE pick SET
     ship_by_sort_date = COALESCE(sqlc.narg('ship_by_date'), '9999-12-31'),
     updated_at = NOW(3)
 WHERE sales_order_id = sqlc.arg('sales_order_id');
+
+-- name: MarkSalesOrderFreightPending :exec
+UPDATE sales_order SET freight_pending_since = NOW(3)
+WHERE id = sqlc.arg('sales_order_id') AND owner_account_id = sqlc.arg('account_id');
+
+-- name: GetSalesOrderFreightPendingSince :one
+SELECT freight_pending_since FROM sales_order
+WHERE id = sqlc.arg('sales_order_id') AND owner_account_id = sqlc.arg('account_id');
+
+-- name: LockSalesOrderFreightPendingSince :one
+-- Serializes the freight consumer against checkout finishing the same order's freight.
+SELECT freight_pending_since FROM sales_order
+WHERE id = sqlc.arg('sales_order_id') AND owner_account_id = sqlc.arg('account_id')
+FOR UPDATE;
+
+-- name: ClearSalesOrderFreightPending :exec
+UPDATE sales_order SET freight_pending_since = NULL
+WHERE id = sqlc.arg('sales_order_id') AND owner_account_id = sqlc.arg('account_id');

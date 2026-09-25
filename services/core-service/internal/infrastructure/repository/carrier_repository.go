@@ -467,6 +467,29 @@ func (r *carrierRepoImpl) ListOptionsByCarrierID(ctx context.Context, accountID,
 	return levels, nil
 }
 
+// ListOptionsByCarrierIDs is the batched form of ListOptionsByCarrierID, keyed by carrier id.
+func (r *carrierRepoImpl) ListOptionsByCarrierIDs(ctx context.Context, accountID string, carrierIDs []string) (map[string][]*domain.ServiceLevel, *apierror.APIError) {
+	ctx, span := carrierRepoTracer.Start(ctx, "repository.carrier.list_options_by_carrier_ids")
+	defer span.End()
+
+	byCarrier := make(map[string][]*domain.ServiceLevel, len(carrierIDs))
+	if len(carrierIDs) == 0 {
+		return byCarrier, nil
+	}
+	rows, err := r.queries.ListCarrierOptionsByCarrierIDs(ctx, sqlc.ListCarrierOptionsByCarrierIDsParams{
+		CarrierIds: carrierIDs,
+		AccountID:  gosql.NullString{String: accountID, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	for _, row := range rows {
+		level := mapServiceLevelListByCarrierRow(sqlc.ListCarrierOptionsByCarrierIDRow(row))
+		byCarrier[row.CarrierID] = append(byCarrier[row.CarrierID], level)
+	}
+	return byCarrier, nil
+}
+
 func mapServiceLevelListByCarrierRow(row sqlc.ListCarrierOptionsByCarrierIDRow) *domain.ServiceLevel {
 	var accountID *string
 	if row.AccountID.Valid {

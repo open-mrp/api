@@ -2186,6 +2186,7 @@ type SalesOrder struct {
 	SalesOrderStatusCode   string
 	PriorityCode           string
 	CarrierBillingType     sql.NullString
+	FreightPendingSince    sql.NullTime
 }
 
 type SalesOrderLine struct {

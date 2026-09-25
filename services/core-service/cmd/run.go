@@ -256,6 +256,13 @@ func Run(
 		TxManager:       txManager,
 	})
 
+	// One Redis store backs every cross-replica cache; nil (no REDIS_URL) turns them all off.
+	cacheStore, closeCacheStore, err := newCacheStore(ctx, cfg.RedisURL, logger)
+	if err != nil {
+		return err
+	}
+	defer closeCacheStore()
+
 	var shippoFactory domain.ShippoClientFactory
 	var stripeCheckoutFactory domain.StripeCheckoutClientFactory
 	var hubspotFactory domain.HubspotClientFactory
@@ -264,7 +271,11 @@ func Run(
 		stripeCheckoutFactory = &stub.StripeCheckoutClientFactory{}
 		hubspotFactory = &stub.HubspotClientFactory{}
 	} else {
-		shippoFactory = shippo.NewClientFactory()
+		realShippo, err := shippo.NewClientFactory(&shippo.ClientFactoryConfig{Store: cacheStore})
+		if err != nil {
+			return err
+		}
+		shippoFactory = realShippo
 		stripeCheckoutFactory = stripeinfra.NewCheckoutClientFactory()
 		hubspotFactory = hubspot.NewClientFactory()
 	}
@@ -407,11 +418,10 @@ func Run(
 		TxManager:       txManager,
 	})
 
-	analyticsCache, closeAnalyticsCache, err := newAnalyticsCache(ctx, cfg.RedisURL, rabbitmq, logger)
+	analyticsCache, err := newAnalyticsCache(ctx, cacheStore, rabbitmq)
 	if err != nil {
 		return err
 	}
-	defer closeAnalyticsCache()
 
 	analyticsSvc := service.NewAnalyticsSvc(&service.AnalyticsSvcConfig{
 		Repos:           repoFactory,
@@ -825,6 +835,16 @@ func Run(
 		return err
 	}
 
+	salesOrderFreightConsumer := event.NewSalesOrderFreightConsumer(rabbitmq, inboxRepo, salesOrderSvc)
+	if err := salesOrderFreightConsumer.Listen(ctx); err != nil {
+		return err
+	}
+
+	accountStripePayoutConsumer := event.NewAccountStripePayoutConsumer(rabbitmq, inboxRepo, salesOrderSvc)
+	if err := accountStripePayoutConsumer.Listen(ctx); err != nil {
+		return err
+	}
+
 	// Drains the queue the generation cadence publishes to. Registered unconditionally: a declared queue that nothing consumes accumulates messages forever.
 	generateScheduleConsumer := event.NewGenerateProductionScheduleConsumer(rabbitmq, inboxRepo, productionScheduleSvc, repoFactory)
 	if err := generateScheduleConsumer.Listen(ctx); err != nil {
@@ -931,10 +951,11 @@ func Run(
 	return server.Serve(ctx, cfg.Port)
 }
 
-// newAnalyticsCache shares computed reports across replicas through Redis, invalidated by this replica's subscription to audit events. Without a Redis URL every report is computed on request.
-func newAnalyticsCache(ctx context.Context, redisURL string, broker messaging.MessageBroker, logger *slog.Logger) (*service.AnalyticsCache, func(), error) {
+// newCacheStore connects the Redis store the caches share. Without a Redis URL it returns a nil
+// store, which every cache treats as disabled.
+func newCacheStore(ctx context.Context, redisURL string, logger *slog.Logger) (cache.Store, func(), error) {
 	if redisURL == "" {
-		logger.Info("Analytics cache disabled: REDIS_URL is not set")
+		logger.Info("Caching disabled: REDIS_URL is not set")
 		return nil, func() {}, nil
 	}
 	store, err := cache.NewRedisStore(&cache.RedisStoreConfig{URL: redisURL, KeyPrefix: "core:"})
@@ -942,18 +963,24 @@ func newAnalyticsCache(ctx context.Context, redisURL string, broker messaging.Me
 		return nil, nil, err
 	}
 	go func() { _ = store.Monitor(ctx, &cache.MonitorConfig{Logger: logger}) }()
+	return store, func() { _ = store.Close() }, nil
+}
+
+// newAnalyticsCache shares computed reports across replicas, invalidated by this replica's subscription to audit events. Without a store every report is computed on request.
+func newAnalyticsCache(ctx context.Context, store cache.Store, broker messaging.MessageBroker) (*service.AnalyticsCache, error) {
+	if store == nil {
+		return nil, nil
+	}
 	analyticsCache, err := service.NewAnalyticsCache(&service.AnalyticsCacheConfig{Store: store})
 	if err != nil {
-		_ = store.Close()
-		return nil, nil, err
+		return nil, err
 	}
 	if err := audit.Subscribe(ctx, broker, audit.SubscribeConfig{
 		QueueBaseName: messaging.CoreEventCacheInvalidationQueue,
 		OnEvent:       analyticsCache.HandleAuditEvent,
 		OnResync:      analyticsCache.Flush,
 	}); err != nil {
-		_ = store.Close()
-		return nil, nil, err
+		return nil, err
 	}
-	return analyticsCache, func() { _ = store.Close() }, nil
+	return analyticsCache, nil
 }

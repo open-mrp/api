@@ -606,12 +606,12 @@ func (r *productLineRepoImpl) GetUnitGroups(ctx context.Context, accountID strin
 	baseUnitIDs := make([]string, 0, len(rows))
 	for i, row := range rows {
 		groups[row.ID] = &domain.ProductLineUnitGroup{
-			ID:              row.ID,
-			Name:            row.Name,
-			BaseUnitID:      row.BaseUnitID,
-			Type:            row.UnitTypeCode,
-			CreatedAt:       row.CreatedAt,
-			UpdatedAt:       row.UpdatedAt,
+			ID:         row.ID,
+			Name:       row.Name,
+			BaseUnitID: row.BaseUnitID,
+			Type:       row.UnitTypeCode,
+			CreatedAt:  row.CreatedAt,
+			UpdatedAt:  row.UpdatedAt,
 		}
 		groupIDs[i] = row.ID
 		if row.BaseUnitID != "" {

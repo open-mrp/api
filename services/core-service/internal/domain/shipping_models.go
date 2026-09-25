@@ -1,5 +1,11 @@
 package domain
 
+import (
+	"errors"
+
+	apierror "github.com/open-mrp/api/shared/errors"
+)
+
 // EstimateRateParams holds the parameters for estimating a shipping rate.
 type EstimateRateParams struct {
 	AccountID      string
@@ -15,6 +21,8 @@ type EstimateRateParams struct {
 	// createShippingLine, which passes THIRD_PARTY billing to Shippo for
 	// third-party-billed orders).
 	Billing *ShippingBilling
+	// CachedOnly answers from the rate cache without calling the carrier; a miss is ErrShippingRateNotCached.
+	CachedOnly bool
 }
 
 // ShippingBilling carries third-party freight-billing details passed through to
@@ -76,6 +84,8 @@ type FetchShippingRateParams struct {
 	Parcels                []Parcel
 	// Billing, when set, bills freight to a third party (Shippo shipment extra).
 	Billing *ShippingBilling
+	// CachedOnly answers from the rate cache without calling Shippo; a miss is ErrShippingRateNotCached.
+	CachedOnly bool
 }
 
 // FetchAllShippingRatesParams contains the parameters for fetching all shipping rates.
@@ -162,3 +172,7 @@ type LabelPackage struct {
 	LabelURL            string
 	ShippoTransactionID string
 }
+
+// ErrShippingRateNotCached is returned by a CachedOnly rate lookup when no rate is cached for the
+// shipment; the caller defers the live quote instead of waiting on the carrier.
+var ErrShippingRateNotCached = apierror.NewInternalError(errors.New("shipping rate not cached"), "Shipping rate not cached.")

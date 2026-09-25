@@ -1263,6 +1263,7 @@ func estimateShippingRate(ctx context.Context, repos domain.RepoFactory, shippoF
 		ToAddress:              params.ToAddress,
 		Parcels:                params.Parcels,
 		Billing:                params.Billing,
+		CachedOnly:             params.CachedOnly,
 	})
 	if apiErr != nil {
 		return 0, apiErr
@@ -1432,13 +1433,16 @@ func (s *shipmentSvcImpl) RateShop(ctx context.Context, params domain.RateShopPa
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// Load options for each carrier.
+	carrierIDs := make([]string, len(carriersResult.Carriers))
+	for i, carrier := range carriersResult.Carriers {
+		carrierIDs[i] = carrier.ID
+	}
+	optionsByCarrier, apiErr := carrierRepo.ListOptionsByCarrierIDs(ctx, params.AccountID, carrierIDs)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 	for _, carrier := range carriersResult.Carriers {
-		options, apiErr := carrierRepo.ListOptionsByCarrierID(ctx, params.AccountID, carrier.ID)
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		carrier.ServiceLevels = options
+		carrier.ServiceLevels = optionsByCarrier[carrier.ID]
 	}
 
 	// Filter for portal-enabled carriers/options when called by customer actor.

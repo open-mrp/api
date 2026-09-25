@@ -594,6 +594,41 @@ func (r *salesOrderRepoImpl) GetInvoiceIDsForOrders(ctx context.Context, salesOr
 	return byOrder, nil
 }
 
+func (r *salesOrderRepoImpl) MarkFreightPending(ctx context.Context, accountID, salesOrderID string) *apierror.APIError {
+	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.mark_freight_pending")
+	defer span.End()
+
+	err := r.queries.MarkSalesOrderFreightPending(ctx, sqlc.MarkSalesOrderFreightPendingParams{SalesOrderID: salesOrderID, AccountID: accountID})
+	return tracing.Trace(span, db.MapSQLError(err))
+}
+
+// IsFreightPending reports whether the order is still waiting on its freight line. With lock the row
+// is held FOR UPDATE until the transaction ends.
+func (r *salesOrderRepoImpl) IsFreightPending(ctx context.Context, accountID, salesOrderID string, lock bool) (bool, *apierror.APIError) {
+	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.is_freight_pending")
+	defer span.End()
+
+	var since gosql.NullTime
+	var err error
+	if lock {
+		since, err = r.queries.LockSalesOrderFreightPendingSince(ctx, sqlc.LockSalesOrderFreightPendingSinceParams{SalesOrderID: salesOrderID, AccountID: accountID})
+	} else {
+		since, err = r.queries.GetSalesOrderFreightPendingSince(ctx, sqlc.GetSalesOrderFreightPendingSinceParams{SalesOrderID: salesOrderID, AccountID: accountID})
+	}
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return false, tracing.Trace(span, apiErr)
+	}
+	return since.Valid, nil
+}
+
+func (r *salesOrderRepoImpl) ClearFreightPending(ctx context.Context, accountID, salesOrderID string) *apierror.APIError {
+	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.clear_freight_pending")
+	defer span.End()
+
+	err := r.queries.ClearSalesOrderFreightPending(ctx, sqlc.ClearSalesOrderFreightPendingParams{SalesOrderID: salesOrderID, AccountID: accountID})
+	return tracing.Trace(span, db.MapSQLError(err))
+}
+
 // GetContactsByOrders resolves the email recipients for a set of sales orders in a single batched query, grouping them per order by notification type so list pages avoid a per-order N+1.
 func (r *salesOrderRepoImpl) GetContactsByOrders(ctx context.Context, salesOrderIDs []string) (map[string]*domain.SalesOrderContacts, *apierror.APIError) {
 	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.get_contacts_by_orders")

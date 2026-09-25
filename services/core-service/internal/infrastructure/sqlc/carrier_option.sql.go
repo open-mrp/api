@@ -523,6 +523,91 @@ func (q *Queries) ListCarrierOptionsByCarrierID(ctx context.Context, arg ListCar
 	return items, nil
 }
 
+const listCarrierOptionsByCarrierIDs = `-- name: ListCarrierOptionsByCarrierIDs :many
+SELECT
+    carrier_option.id,
+    carrier_option.name,
+    carrier_option.code,
+    carrier_option.service_level_token,
+    carrier_option.is_portal_enabled,
+    carrier_option.is_default,
+    carrier_option.default_transit_days,
+    carrier_option.carrier_id,
+    carrier_option.account_id,
+    carrier_option.created_at,
+    carrier_option.updated_at
+FROM carrier_option
+WHERE carrier_option.carrier_id IN (/*SLICE:carrier_ids*/?)
+AND (carrier_option.account_id = ? OR carrier_option.account_id IS NULL)
+`
+
+type ListCarrierOptionsByCarrierIDsParams struct {
+	CarrierIds []string
+	AccountID  sql.NullString
+}
+
+type ListCarrierOptionsByCarrierIDsRow struct {
+	ID                 string
+	Name               string
+	Code               string
+	ServiceLevelToken  sql.NullString
+	IsPortalEnabled    bool
+	IsDefault          bool
+	DefaultTransitDays sql.NullInt32
+	CarrierID          string
+	AccountID          sql.NullString
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+}
+
+// The batched form of ListCarrierOptionsByCarrierID; the columns must stay identical so the rows
+// convert to ListCarrierOptionsByCarrierIDRow.
+func (q *Queries) ListCarrierOptionsByCarrierIDs(ctx context.Context, arg ListCarrierOptionsByCarrierIDsParams) ([]ListCarrierOptionsByCarrierIDsRow, error) {
+	query := listCarrierOptionsByCarrierIDs
+	var queryParams []interface{}
+	if len(arg.CarrierIds) > 0 {
+		for _, v := range arg.CarrierIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:carrier_ids*/?", strings.Repeat(",?", len(arg.CarrierIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:carrier_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListCarrierOptionsByCarrierIDsRow
+	for rows.Next() {
+		var i ListCarrierOptionsByCarrierIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Code,
+			&i.ServiceLevelToken,
+			&i.IsPortalEnabled,
+			&i.IsDefault,
+			&i.DefaultTransitDays,
+			&i.CarrierID,
+			&i.AccountID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listCarrierOptionsForward = `-- name: ListCarrierOptionsForward :many
 SELECT
     carrier_option.id,

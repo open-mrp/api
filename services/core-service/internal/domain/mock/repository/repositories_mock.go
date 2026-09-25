@@ -5580,6 +5580,21 @@ func (mr *MockCarrierRepoMockRecorder) ListOptionsByCarrierID(ctx, accountID, ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListOptionsByCarrierID", reflect.TypeOf((*MockCarrierRepo)(nil).ListOptionsByCarrierID), ctx, accountID, carrierID)
 }
 
+// ListOptionsByCarrierIDs mocks base method.
+func (m *MockCarrierRepo) ListOptionsByCarrierIDs(ctx context.Context, accountID string, carrierIDs []string) (map[string][]*domain.ServiceLevel, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListOptionsByCarrierIDs", ctx, accountID, carrierIDs)
+	ret0, _ := ret[0].(map[string][]*domain.ServiceLevel)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListOptionsByCarrierIDs indicates an expected call of ListOptionsByCarrierIDs.
+func (mr *MockCarrierRepoMockRecorder) ListOptionsByCarrierIDs(ctx, accountID, carrierIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListOptionsByCarrierIDs", reflect.TypeOf((*MockCarrierRepo)(nil).ListOptionsByCarrierIDs), ctx, accountID, carrierIDs)
+}
+
 // SoftDelete mocks base method.
 func (m *MockCarrierRepo) SoftDelete(ctx context.Context, accountID, carrierID string) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -13294,6 +13309,20 @@ func (mr *MockSalesOrderRepoMockRecorder) CheckPaymentStatus(ctx, salesOrderID a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckPaymentStatus", reflect.TypeOf((*MockSalesOrderRepo)(nil).CheckPaymentStatus), ctx, salesOrderID)
 }
 
+// ClearFreightPending mocks base method.
+func (m *MockSalesOrderRepo) ClearFreightPending(ctx context.Context, accountID, salesOrderID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ClearFreightPending", ctx, accountID, salesOrderID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// ClearFreightPending indicates an expected call of ClearFreightPending.
+func (mr *MockSalesOrderRepoMockRecorder) ClearFreightPending(ctx, accountID, salesOrderID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClearFreightPending", reflect.TypeOf((*MockSalesOrderRepo)(nil).ClearFreightPending), ctx, accountID, salesOrderID)
+}
+
 // CountSalesOrdersForBuyerAccounts mocks base method.
 func (m *MockSalesOrderRepo) CountSalesOrdersForBuyerAccounts(ctx context.Context, ownerAccountID string, buyerAccountIDs []string) (int64, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -13839,6 +13868,21 @@ func (mr *MockSalesOrderRepoMockRecorder) IsDuplicateOrderNumber(ctx, accountID,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsDuplicateOrderNumber", reflect.TypeOf((*MockSalesOrderRepo)(nil).IsDuplicateOrderNumber), ctx, accountID, number, excludeID)
 }
 
+// IsFreightPending mocks base method.
+func (m *MockSalesOrderRepo) IsFreightPending(ctx context.Context, accountID, salesOrderID string, lock bool) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsFreightPending", ctx, accountID, salesOrderID, lock)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// IsFreightPending indicates an expected call of IsFreightPending.
+func (mr *MockSalesOrderRepoMockRecorder) IsFreightPending(ctx, accountID, salesOrderID, lock any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsFreightPending", reflect.TypeOf((*MockSalesOrderRepo)(nil).IsFreightPending), ctx, accountID, salesOrderID, lock)
+}
+
 // IsOrderForCustomer mocks base method.
 func (m *MockSalesOrderRepo) IsOrderForCustomer(ctx context.Context, salesOrderID, buyerAccountID string) (bool, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -13881,6 +13925,20 @@ func (m *MockSalesOrderRepo) MarkAcknowledgementSent(ctx context.Context, accoun
 func (mr *MockSalesOrderRepoMockRecorder) MarkAcknowledgementSent(ctx, accountID, salesOrderID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkAcknowledgementSent", reflect.TypeOf((*MockSalesOrderRepo)(nil).MarkAcknowledgementSent), ctx, accountID, salesOrderID)
+}
+
+// MarkFreightPending mocks base method.
+func (m *MockSalesOrderRepo) MarkFreightPending(ctx context.Context, accountID, salesOrderID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkFreightPending", ctx, accountID, salesOrderID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// MarkFreightPending indicates an expected call of MarkFreightPending.
+func (mr *MockSalesOrderRepoMockRecorder) MarkFreightPending(ctx, accountID, salesOrderID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkFreightPending", reflect.TypeOf((*MockSalesOrderRepo)(nil).MarkFreightPending), ctx, accountID, salesOrderID)
 }
 
 // MarkFulfilled mocks base method.

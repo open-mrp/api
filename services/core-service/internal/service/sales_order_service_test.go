@@ -15,6 +15,7 @@ import (
 	repositorymock "github.com/open-mrp/api/services/core-service/internal/domain/mock/repository"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/crypto"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/field"
@@ -34,6 +35,9 @@ import (
 type SalesOrderSvcTestSuite struct {
 	suite.Suite
 	svc domain.SalesOrderSvc
+
+	// outbox records what the service published.
+	outbox *recordingOutboxRepo
 
 	// Repos (everything the service touches).
 	accountRepo              *repositorymock.MockAccountRepo
@@ -151,7 +155,8 @@ func (suite *SalesOrderSvcTestSuite) SetupTest() {
 	suite.repoFactory.EXPECT().NewServiceLevelRepo().Return(suite.serviceLevelRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewShippingTermRepo().Return(suite.shippingTermRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewPaymentTermRepo().Return(suite.paymentTermRepo).AnyTimes()
-	suite.repoFactory.EXPECT().NewOutboxRepo().Return(&stubOutboxRepo{}).AnyTimes()
+	suite.outbox = &recordingOutboxRepo{}
+	suite.repoFactory.EXPECT().NewOutboxRepo().Return(suite.outbox).AnyTimes()
 	suite.repoFactory.EXPECT().NewTransactionRepo().Return(suite.transactionRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewOrderPaymentIntentRepo().Return(suite.opiRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewProductionFlowRepo().Return(suite.productionFlowRepo).AnyTimes()
@@ -537,6 +542,11 @@ func (suite *SalesOrderSvcTestSuite) TestGetSalesOrder_LinesInclude() {
 	})
 	suite.Nil(apiErr)
 	suite.Len(result.Lines, 1)
+}
+
+// expectFreightSettled has checkout find the order's freight line already in place.
+func (suite *SalesOrderSvcTestSuite) expectFreightSettled(accountID, orderID string) {
+	suite.orderRepo.EXPECT().IsFreightPending(gomock.Any(), accountID, orderID, false).Return(false, nil).Times(1)
 }
 
 // --- BatchGetSalesOrders ---
@@ -1671,6 +1681,7 @@ func (suite *SalesOrderSvcTestSuite) TestCheckoutSalesOrder_Success() {
 	suite.orderRepo.EXPECT().CheckPaymentStatus(gomock.Any(), "or_1").Return(false, nil).Times(1)
 	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
 		Return(&domain.SalesOrder{ID: "or_1", Number: "1001", BuyerAccountID: "ac_buyer"}, nil).Times(1)
+	suite.expectFreightSettled("ac_test", "or_1")
 	suite.orderRepo.EXPECT().GetLines(gomock.Any(), "or_1").
 		Return([]*domain.SalesOrderLine{
 			// Fractional quantity: the line's full extended price must be charged, not a
@@ -1772,6 +1783,7 @@ func (suite *SalesOrderSvcTestSuite) TestCheckoutSalesOrder_CreatesStripeCustome
 	suite.orderRepo.EXPECT().CheckPaymentStatus(gomock.Any(), "or_1").Return(false, nil).Times(1)
 	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
 		Return(&domain.SalesOrder{ID: "or_1", Number: "1001", BuyerAccountID: "ac_buyer"}, nil).Times(1)
+	suite.expectFreightSettled("ac_test", "or_1")
 	suite.orderRepo.EXPECT().GetLines(gomock.Any(), "or_1").
 		Return([]*domain.SalesOrderLine{
 			{ProductSKU: "SKU-1", QuantityValue: "1", UnitPriceValue: "40.00", PricingQuantityRatioNumerator: "1", PricingQuantityRatioDenominator: "1", PricingPriceRatioNumerator: "1", PricingPriceRatioDenominator: "1"},
@@ -1851,6 +1863,7 @@ func (suite *SalesOrderSvcTestSuite) TestCheckoutSalesOrder_CreatesStripeCustome
 	suite.orderRepo.EXPECT().CheckPaymentStatus(gomock.Any(), "or_1").Return(false, nil).Times(1)
 	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
 		Return(&domain.SalesOrder{ID: "or_1", Number: "1001", BuyerAccountID: "ac_buyer"}, nil).Times(1)
+	suite.expectFreightSettled("ac_test", "or_1")
 	suite.orderRepo.EXPECT().GetLines(gomock.Any(), "or_1").
 		Return([]*domain.SalesOrderLine{
 			{ProductSKU: "SKU-1", QuantityValue: "1", UnitPriceValue: "40.00", PricingQuantityRatioNumerator: "1", PricingQuantityRatioDenominator: "1", PricingPriceRatioNumerator: "1", PricingPriceRatioDenominator: "1"},
@@ -1938,6 +1951,7 @@ func (suite *SalesOrderSvcTestSuite) TestCreateCustomerCheckoutSession_ChargesSt
 	suite.orderRepo.EXPECT().
 		GetForCustomer(gomock.Any(), "ac_target", "ac_customer", "or_1").
 		Return(&domain.SalesOrder{ID: "or_1", Number: "1001", BuyerAccountID: "ac_customer"}, nil).Times(1)
+	suite.expectFreightSettled("ac_target", "or_1")
 	suite.orderRepo.EXPECT().GetLines(gomock.Any(), "or_1").
 		Return([]*domain.SalesOrderLine{
 			{ID: "sol_carton", QuantityValue: "2", UnitPriceValue: "1.50", PricingQuantityRatioNumerator: "12", PricingQuantityRatioDenominator: "1", PricingPriceRatioNumerator: "1", PricingPriceRatioDenominator: "1"},
@@ -2084,4 +2098,15 @@ func (suite *SalesOrderSvcTestSuite) TestCreateProductionRun_SuccessUsesBOMLines
 	suite.Nil(apiErr)
 	suite.Require().NotNil(result.ProductionRun)
 	suite.Equal("pnrn_1", result.ProductionRun.ID)
+}
+
+// published returns the messages sent to routingKey.
+func (r *recordingOutboxRepo) published(routingKey contracts.AmqpRoutingKey) []messaging.OutboxMessageInput {
+	var out []messaging.OutboxMessageInput
+	for _, m := range r.messages {
+		if m.RoutingKey == string(routingKey) {
+			out = append(out, m)
+		}
+	}
+	return out
 }

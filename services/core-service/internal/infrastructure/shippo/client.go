@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/cache"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/tracing"
 )
@@ -32,16 +33,29 @@ type clientImpl struct {
 	// Points every call at the Shippo API; tests redirect it at a stub server.
 	baseURL string
 
-	// Rate shopping resolves a published-rate account per carrier off the same list. The client is per-request, so one fetch serves them all.
+	// Rate shopping resolves a published-rate account per carrier off the same list, so one fetch serves the whole client.
 	carrierAccountsOnce sync.Once
 	carrierAccounts     []CarrierAccount
+
+	// caches is nil when the factory has no store; every quote then calls Shippo.
+	caches *rateCaches
 }
 
 // ClientFactory creates ShippoClient instances from API keys.
-type ClientFactory struct{}
+type ClientFactory struct {
+	caches *rateCaches
+}
 
-func NewClientFactory() *ClientFactory {
-	return &ClientFactory{}
+func NewClientFactory(cfg *ClientFactoryConfig) (*ClientFactory, error) {
+	cfg = cfg.WithDefaults()
+	if err := cfg.validate(); err != nil {
+		return nil, err
+	}
+	caches, err := newRateCaches(cfg)
+	if err != nil {
+		return nil, err
+	}
+	return &ClientFactory{caches: caches}, nil
 }
 
 func (f *ClientFactory) Build(apiKey string) domain.ShippoClient {
@@ -49,6 +63,7 @@ func (f *ClientFactory) Build(apiKey string) domain.ShippoClient {
 		apiKey:     apiKey,
 		httpClient: &http.Client{Timeout: shippoRequestTimeout},
 		baseURL:    shippoBaseURL,
+		caches:     f.caches,
 	}
 }
 
@@ -546,45 +561,76 @@ func (c *clientImpl) createShipmentForRates(ctx context.Context, carrierAccountO
 }
 
 // resolvePublishedRateCarrierAccountID maps a BYOA (bring-your-own-account) carrier account object ID to the carrier's Shippo default (published/retail) account object ID, mirroring Dashboard's resolvePublishedRateCarrierAccountId. BYOA accounts return the account's negotiated rates; customer-facing estimates should quote published rates instead. Best-effort: if the BYOA account cannot be read or no Shippo default account exists for that carrier, the original BYOA object ID is returned so a quote is still produced.
-func (c *clientImpl) resolvePublishedRateCarrierAccountID(ctx context.Context, byoaObjectID string) string {
-	accounts := c.listCarrierAccounts(ctx)
+//
+// With cachedOnly nothing is fetched: resolving needs the cached account list and an account on it,
+// and anything else is domain.ErrShippingRateNotCached.
+func (c *clientImpl) resolvePublishedRateCarrierAccountID(ctx context.Context, byoaObjectID string, cachedOnly bool) (string, *apierror.APIError) {
+	var accounts []CarrierAccount
+	if cachedOnly {
+		cached, ok := c.cachedCarrierAccounts(ctx)
+		if !ok {
+			return "", domain.ErrShippingRateNotCached
+		}
+		accounts = cached
+	} else {
+		accounts = c.listCarrierAccounts(ctx)
+	}
 
 	carrier := carrierOf(accounts, byoaObjectID)
 	if carrier == "" {
+		if cachedOnly {
+			return "", domain.ErrShippingRateNotCached
+		}
 		// The account is past the page fetched above, so read it directly.
 		byoa, apiErr := c.GetCarrierAccount(ctx, byoaObjectID)
 		if apiErr != nil {
-			return byoaObjectID
+			return byoaObjectID, nil
 		}
 		carrier = byoa.Carrier
 	}
 
 	if match := findDefaultCarrierAccount(accounts, carrier); match != nil && match.ObjectID != "" {
-		return match.ObjectID
+		return match.ObjectID, nil
 	}
-	return byoaObjectID
+	return byoaObjectID, nil
 }
 
-// listCarrierAccounts returns the carrier accounts on this token, fetched once per client. Returns nil when the fetch fails; callers fall back to the account they were given.
+// listCarrierAccounts returns the carrier accounts on this token. Returns nil when the fetch fails;
+// callers fall back to the account they were given.
 func (c *clientImpl) listCarrierAccounts(ctx context.Context) []CarrierAccount {
 	c.carrierAccountsOnce.Do(func() {
-		resp, apiErr := c.doRequest(ctx, http.MethodGet, "/carrier_accounts/?results=100", nil)
-		if apiErr != nil {
+		if c.caches == nil {
+			c.carrierAccounts, _ = c.fetchCarrierAccounts(ctx)
 			return
 		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			return
-		}
-
-		var listResp CarrierAccountListResponse
-		if err := json.NewDecoder(resp.Body).Decode(&listResp); err != nil {
-			return
-		}
-		c.carrierAccounts = listResp.Results
+		c.carrierAccounts, _ = c.caches.accounts.GetOrLoad(ctx, cache.Key{ID: tokenKey(c.apiKey)}, c.fetchCarrierAccounts)
 	})
 	return c.carrierAccounts
+}
+
+func (c *clientImpl) cachedCarrierAccounts(ctx context.Context) ([]CarrierAccount, bool) {
+	if c.caches == nil {
+		return nil, false
+	}
+	return c.caches.accounts.Peek(ctx, cache.Key{ID: tokenKey(c.apiKey)})
+}
+
+func (c *clientImpl) fetchCarrierAccounts(ctx context.Context) ([]CarrierAccount, *apierror.APIError) {
+	resp, apiErr := c.doRequest(ctx, http.MethodGet, "/carrier_accounts/?results=100", nil)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, c.parseErrorResponse(resp)
+	}
+
+	var listResp CarrierAccountListResponse
+	if err := json.NewDecoder(resp.Body).Decode(&listResp); err != nil {
+		return nil, apierror.NewInternalError(err, "Failed to parse Shippo carrier account list.")
+	}
+	return listResp.Results, nil
 }
 
 // carrierOf returns the carrier type of the named account, or "" when it is not in the list.
@@ -619,23 +665,38 @@ func (c *clientImpl) FetchShippingRate(ctx context.Context, params domain.FetchS
 	defer span.End()
 
 	// Customer-facing estimates quote the carrier's Shippo default (published/retail) account rather than the BYOA account's negotiated rates.
-	carrierAccountObjectID := c.resolvePublishedRateCarrierAccountID(ctx, params.CarrierAccountObjectID)
-	shipment, apiErr := c.createShipmentForRates(ctx, carrierAccountObjectID, params.FromAddress, params.ToAddress, params.Parcels, params.Billing)
+	carrierAccountObjectID, apiErr := c.resolvePublishedRateCarrierAccountID(ctx, params.CarrierAccountObjectID, params.CachedOnly)
+	if apiErr != nil {
+		return 0, apiErr
+	}
+	rates, apiErr := c.shipmentRates(ctx, carrierAccountObjectID, params.FromAddress, params.ToAddress, params.Parcels, params.Billing, params.CachedOnly)
+	if apiErr == domain.ErrShippingRateNotCached {
+		return 0, apiErr
+	}
 	if apiErr != nil {
 		return 0, tracing.Trace(span, apiErr)
 	}
 
-	if len(shipment.Rates) == 0 {
+	rate, apiErr := pickShippingRate(rates, params.ServiceLevelToken)
+	if apiErr != nil {
+		return 0, tracing.Trace(span, apiErr)
+	}
+	return rate, nil
+}
+
+// pickShippingRate selects the requested service level's rate, else Shippo's BESTVALUE, else the
+// cheapest, marked up. No matching rate is 0.
+func pickShippingRate(rates []ShipmentRate, serviceLevelToken string) (float64, *apierror.APIError) {
+	if len(rates) == 0 {
 		return 0, nil
 	}
 
-	// If a specific service level token is requested, find that rate
-	if params.ServiceLevelToken != "" {
-		for _, r := range shipment.Rates {
-			if r.ServiceLevel != nil && r.ServiceLevel.Token == params.ServiceLevelToken {
+	if serviceLevelToken != "" {
+		for _, r := range rates {
+			if r.ServiceLevel != nil && r.ServiceLevel.Token == serviceLevelToken {
 				amount, err := parseFloat(r.Amount)
 				if err != nil {
-					return 0, tracing.Trace(span, apierror.NewInternalError(err, "Failed to parse Shippo rate amount."))
+					return 0, apierror.NewInternalError(err, "Failed to parse Shippo rate amount.")
 				}
 				return applyShippingMarkup(amount), nil
 			}
@@ -643,22 +704,20 @@ func (c *clientImpl) FetchShippingRate(ctx context.Context, params domain.FetchS
 		return 0, nil
 	}
 
-	// Prefer BESTVALUE attribute
-	for _, r := range shipment.Rates {
+	for _, r := range rates {
 		for _, attr := range r.Attributes {
 			if attr == "BESTVALUE" {
 				amount, err := parseFloat(r.Amount)
 				if err != nil {
-					return 0, tracing.Trace(span, apierror.NewInternalError(err, "Failed to parse Shippo rate amount."))
+					return 0, apierror.NewInternalError(err, "Failed to parse Shippo rate amount.")
 				}
 				return applyShippingMarkup(amount), nil
 			}
 		}
 	}
 
-	// Fallback to cheapest rate
 	var cheapest float64 = -1
-	for _, r := range shipment.Rates {
+	for _, r := range rates {
 		amount, err := parseFloat(r.Amount)
 		if err != nil {
 			continue
@@ -667,7 +726,6 @@ func (c *clientImpl) FetchShippingRate(ctx context.Context, params domain.FetchS
 			cheapest = amount
 		}
 	}
-
 	if cheapest < 0 {
 		return 0, nil
 	}
@@ -679,14 +737,17 @@ func (c *clientImpl) FetchAllShippingRates(ctx context.Context, params domain.Fe
 	defer span.End()
 
 	// Customer-facing estimates quote the carrier's Shippo default (published/retail) account rather than the BYOA account's negotiated rates.
-	carrierAccountObjectID := c.resolvePublishedRateCarrierAccountID(ctx, params.CarrierAccountObjectID)
-	shipment, apiErr := c.createShipmentForRates(ctx, carrierAccountObjectID, params.FromAddress, params.ToAddress, params.Parcels, nil)
+	carrierAccountObjectID, apiErr := c.resolvePublishedRateCarrierAccountID(ctx, params.CarrierAccountObjectID, false)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	rates, apiErr := c.shipmentRates(ctx, carrierAccountObjectID, params.FromAddress, params.ToAddress, params.Parcels, nil, false)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
 	var options []domain.ShippoRateOption
-	for _, r := range shipment.Rates {
+	for _, r := range rates {
 		if r.ServiceLevel == nil || r.ServiceLevel.Token == "" || r.ServiceLevel.Name == "" {
 			continue
 		}

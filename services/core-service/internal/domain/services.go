@@ -1258,6 +1258,9 @@ type VolumeDiscountSvc interface {
 type SalesOrderSvc interface {
 	// TransitWarmer is embedded so the order-event consumers can drive lane warming through the same service that reads the cache back when a commitment is stamped.
 	TransitWarmer
+	// FreightFinisher is embedded so the freight consumer completes an order's freight through the same service checkout does.
+	FreightFinisher
+	StripePayoutReconciler
 
 	// ListSalesOrders returns a paginated list of sales orders for the caller's account. Supports customer actor access via BuyerAccountID filter.
 	ListSalesOrders(ctx context.Context, params ListSalesOrdersParams) (*ListSalesOrdersResult, *apierror.APIError)

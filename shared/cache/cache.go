@@ -161,6 +161,24 @@ func (c *Cache[T]) GetOrLoad(ctx context.Context, key Key, load func(context.Con
 	}
 }
 
+// Peek returns the cached value for key without loading on a miss, for callers that would rather
+// defer the work than pay for it now.
+func (c *Cache[T]) Peek(ctx context.Context, key Key) (T, bool) {
+	var zero T
+	if c.cfg.Store == nil {
+		return zero, false
+	}
+	span := trace.SpanFromContext(ctx)
+	storeKey, err := c.storeKey(ctx, key)
+	if err != nil {
+		c.recordStoreError(span, "generation", err)
+		return zero, false
+	}
+	value, ok := c.get(ctx, span, storeKey)
+	c.recordLookup(span, ok)
+	return value, ok
+}
+
 func (c *Cache[T]) get(ctx context.Context, span trace.Span, storeKey string) (T, bool) {
 	var value T
 	raw, ok, err := c.cfg.Store.Get(ctx, storeKey)

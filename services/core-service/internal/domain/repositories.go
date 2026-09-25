@@ -491,6 +491,7 @@ type CarrierRepo interface {
 	DeleteOptionsByCarrierID(ctx context.Context, accountID, carrierID string) *apierror.APIError
 	ExistsByName(ctx context.Context, accountID, name string, excludeID *string) (bool, *apierror.APIError)
 	ListOptionsByCarrierID(ctx context.Context, accountID, carrierID string) ([]*ServiceLevel, *apierror.APIError)
+	ListOptionsByCarrierIDs(ctx context.Context, accountID string, carrierIDs []string) (map[string][]*ServiceLevel, *apierror.APIError)
 	// ListOptionIDsForCarriers returns all carrier_option IDs grouped by carrier_id, ordered (carrier_id, created_at ASC, id ASC) — callers truncate to a per-carrier preview limit in Go.
 	ListOptionIDsForCarriers(ctx context.Context, accountID string, carrierIDs []string) (map[string][]string, *apierror.APIError)
 	// GetOptionsByIDs returns full ServiceLevel records by id with the same account-scoping rule as ListOptionsByCarrierID (the parent carrier must be the caller's own or a system carrier).
@@ -1262,6 +1263,9 @@ type SalesOrderRepo interface {
 	GetInvoiceIDs(ctx context.Context, salesOrderID string) ([]string, *apierror.APIError)
 	GetByIDs(ctx context.Context, accountID string, buyerAccountID *string, salesOrderIDs []string) ([]*SalesOrder, *apierror.APIError)
 	GetLinesForOrders(ctx context.Context, salesOrderIDs []string) (map[string][]*SalesOrderLine, *apierror.APIError)
+	MarkFreightPending(ctx context.Context, accountID, salesOrderID string) *apierror.APIError
+	IsFreightPending(ctx context.Context, accountID, salesOrderID string, lock bool) (bool, *apierror.APIError)
+	ClearFreightPending(ctx context.Context, accountID, salesOrderID string) *apierror.APIError
 	GetShipmentIDsForOrders(ctx context.Context, salesOrderIDs []string) (map[string][]string, *apierror.APIError)
 	GetInvoiceIDsForOrders(ctx context.Context, salesOrderIDs []string) (map[string][]string, *apierror.APIError)
 	GetContactsByOrders(ctx context.Context, salesOrderIDs []string) (map[string]*SalesOrderContacts, *apierror.APIError)

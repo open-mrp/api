@@ -74,6 +74,21 @@ func (q *Queries) CheckSalesOrderPaymentStatus(ctx context.Context, arg CheckSal
 	return has_payment_intent, err
 }
 
+const clearSalesOrderFreightPending = `-- name: ClearSalesOrderFreightPending :exec
+UPDATE sales_order SET freight_pending_since = NULL
+WHERE id = ? AND owner_account_id = ?
+`
+
+type ClearSalesOrderFreightPendingParams struct {
+	SalesOrderID string
+	AccountID    string
+}
+
+func (q *Queries) ClearSalesOrderFreightPending(ctx context.Context, arg ClearSalesOrderFreightPendingParams) error {
+	_, err := q.db.ExecContext(ctx, clearSalesOrderFreightPending, arg.SalesOrderID, arg.AccountID)
+	return err
+}
+
 const countCommissionExemptProductLines = `-- name: CountCommissionExemptProductLines :one
 SELECT
     COUNT(pl.id) AS total,
@@ -1498,6 +1513,23 @@ func (q *Queries) GetSalesOrderForCustomer(ctx context.Context, arg GetSalesOrde
 		&i.LineCount,
 	)
 	return i, err
+}
+
+const getSalesOrderFreightPendingSince = `-- name: GetSalesOrderFreightPendingSince :one
+SELECT freight_pending_since FROM sales_order
+WHERE id = ? AND owner_account_id = ?
+`
+
+type GetSalesOrderFreightPendingSinceParams struct {
+	SalesOrderID string
+	AccountID    string
+}
+
+func (q *Queries) GetSalesOrderFreightPendingSince(ctx context.Context, arg GetSalesOrderFreightPendingSinceParams) (sql.NullTime, error) {
+	row := q.db.QueryRowContext(ctx, getSalesOrderFreightPendingSince, arg.SalesOrderID, arg.AccountID)
+	var freight_pending_since sql.NullTime
+	err := row.Scan(&freight_pending_since)
+	return freight_pending_since, err
 }
 
 const getSalesOrderFulfillmentProgress = `-- name: GetSalesOrderFulfillmentProgress :many
@@ -3895,6 +3927,25 @@ func (q *Queries) ListSalesOrdersForward(ctx context.Context, arg ListSalesOrder
 	return items, nil
 }
 
+const lockSalesOrderFreightPendingSince = `-- name: LockSalesOrderFreightPendingSince :one
+SELECT freight_pending_since FROM sales_order
+WHERE id = ? AND owner_account_id = ?
+FOR UPDATE
+`
+
+type LockSalesOrderFreightPendingSinceParams struct {
+	SalesOrderID string
+	AccountID    string
+}
+
+// Serializes the freight consumer against checkout finishing the same order's freight.
+func (q *Queries) LockSalesOrderFreightPendingSince(ctx context.Context, arg LockSalesOrderFreightPendingSinceParams) (sql.NullTime, error) {
+	row := q.db.QueryRowContext(ctx, lockSalesOrderFreightPendingSince, arg.SalesOrderID, arg.AccountID)
+	var freight_pending_since sql.NullTime
+	err := row.Scan(&freight_pending_since)
+	return freight_pending_since, err
+}
+
 const markAcknowledgementSent = `-- name: MarkAcknowledgementSent :exec
 UPDATE sales_order SET
     is_acknowledgment_sent = true,
@@ -3910,6 +3961,21 @@ type MarkAcknowledgementSentParams struct {
 
 func (q *Queries) MarkAcknowledgementSent(ctx context.Context, arg MarkAcknowledgementSentParams) error {
 	_, err := q.db.ExecContext(ctx, markAcknowledgementSent, arg.ID, arg.AccountID)
+	return err
+}
+
+const markSalesOrderFreightPending = `-- name: MarkSalesOrderFreightPending :exec
+UPDATE sales_order SET freight_pending_since = NOW(3)
+WHERE id = ? AND owner_account_id = ?
+`
+
+type MarkSalesOrderFreightPendingParams struct {
+	SalesOrderID string
+	AccountID    string
+}
+
+func (q *Queries) MarkSalesOrderFreightPending(ctx context.Context, arg MarkSalesOrderFreightPendingParams) error {
+	_, err := q.db.ExecContext(ctx, markSalesOrderFreightPending, arg.SalesOrderID, arg.AccountID)
 	return err
 }
 

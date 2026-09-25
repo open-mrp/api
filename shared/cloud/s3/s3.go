@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"log/slog"
 	"os"
 	"time"
 
@@ -62,10 +63,14 @@ func NewClient(ctx context.Context, region string) (*Client, *apierror.APIError)
 	cfg, err := awsconfig.LoadDefaultConfig(ctx,
 		awsconfig.WithRegion(region),
 		awsconfig.WithEC2IMDSClientEnableState(imds.ClientDisabled),
+		awsconfig.WithCredentialsCacheOptions(func(o *aws.CredentialsCacheOptions) {
+			o.ExpiryWindow = credentialRefreshLead
+		}),
 	)
 	if err != nil {
 		return nil, apierror.NewInternalError(err, "Failed to load AWS configuration for S3.")
 	}
+	go keepCredentialsFresh(ctx, cfg.Credentials, credentialRefreshInterval)
 
 	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
 		endpoint := os.Getenv(endpointEnvVar)
@@ -87,6 +92,30 @@ func NewClient(ctx context.Context, region string) (*Client, *apierror.APIError)
 			})
 		}),
 	}, nil
+}
+
+// The SDK's credential cache refreshes on whichever call finds the credentials expired, which puts
+// an STS round trip (~100ms under IRSA) on a request. Treating them as expired credentialRefreshLead
+// early lets keepCredentialsFresh do that refresh in the background instead.
+const (
+	credentialRefreshLead     = 5 * time.Minute
+	credentialRefreshInterval = time.Minute
+)
+
+// keepCredentialsFresh runs until ctx is done.
+func keepCredentialsFresh(ctx context.Context, credentials aws.CredentialsProvider, every time.Duration) {
+	ticker := time.NewTicker(every)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			if _, err := credentials.Retrieve(ctx); err != nil && ctx.Err() == nil {
+				slog.WarnContext(ctx, "s3: refreshing AWS credentials failed", "error", err)
+			}
+		}
+	}
 }
 
 // Upload uploads a file to S3.

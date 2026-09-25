@@ -1552,6 +1552,7 @@ type Pick struct {
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 	ShipBySortDate time.Time
+	BuyerAccountID sql.NullString
 }
 
 type PickLine struct {

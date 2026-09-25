@@ -3123,6 +3123,28 @@ func (q *Queries) MergeCustomerOrders(ctx context.Context, arg MergeCustomerOrde
 	return err
 }
 
+const mergeCustomerPicks = `-- name: MergeCustomerPicks :exec
+UPDATE pick p
+JOIN sales_order so ON so.id = p.sales_order_id
+SET p.buyer_account_id = so.buyer_account_id
+WHERE so.owner_account_id = ?
+  AND so.buyer_account_id = ?
+  AND p.account_id = ?
+  AND (p.buyer_account_id IS NULL OR p.buyer_account_id <> so.buyer_account_id)
+`
+
+type MergeCustomerPicksParams struct {
+	OwnerAccountID  string
+	TargetAccountID string
+}
+
+// Runs after MergeCustomerOrders so picks follow their orders' new buyer (pick.buyer_account_id is
+// denormalized from the order).
+func (q *Queries) MergeCustomerPicks(ctx context.Context, arg MergeCustomerPicksParams) error {
+	_, err := q.db.ExecContext(ctx, mergeCustomerPicks, arg.OwnerAccountID, arg.TargetAccountID, arg.OwnerAccountID)
+	return err
+}
+
 const mergeCustomerReceivingOrders = `-- name: MergeCustomerReceivingOrders :exec
 UPDATE receiving_order ro
 JOIN sales_order so ON so.id = ro.order_id

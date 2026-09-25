@@ -1296,6 +1296,14 @@ func (r *customerRepoImpl) MergeOrders(ctx context.Context, ownerAccountID, targ
 		return tracing.Trace(span, apiErr)
 	}
 
+	err = r.queries.MergeCustomerPicks(ctx, sqlc.MergeCustomerPicksParams{
+		OwnerAccountID:  ownerAccountID,
+		TargetAccountID: targetAccountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
 	return nil
 }
 

@@ -142,9 +142,9 @@ func (q *Queries) CountSalesOrdersForBuyerAccounts(ctx context.Context, arg Coun
 }
 
 const createPick = `-- name: CreatePick :exec
-INSERT INTO pick (id, number, sales_order_id, account_id, ship_by_sort_date, created_at, updated_at)
+INSERT INTO pick (id, number, sales_order_id, account_id, buyer_account_id, ship_by_sort_date, created_at, updated_at)
 SELECT ?, ?, ?, ?,
-       COALESCE(so.ship_by_date, '9999-12-31'), NOW(3), NOW(3)
+       so.buyer_account_id, COALESCE(so.ship_by_date, '9999-12-31'), NOW(3), NOW(3)
 FROM sales_order so
 WHERE so.id = ?
 `
@@ -159,7 +159,8 @@ type CreatePickParams struct {
 // ship_by_sort_date is read from the order rather than passed in: the issue path stamps the order's
 // commitment (SetShipByCommitment) in the same transaction just before this runs, so the value is
 // already there, and reading it here keeps the denormalized sort key from ever diverging on insert.
-// COALESCE preserves the no-commitment sentinel. See pick.sql ListPicksShipByForward.
+// COALESCE preserves the no-commitment sentinel. buyer_account_id is denormalized the same way, for
+// the pick list's customer filter.
 func (q *Queries) CreatePick(ctx context.Context, arg CreatePickParams) error {
 	_, err := q.db.ExecContext(ctx, createPick,
 		arg.ID,

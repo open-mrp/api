@@ -880,6 +880,17 @@ UPDATE sales_order SET buyer_account_id = sqlc.arg('target_account_id'), updated
 WHERE owner_account_id = sqlc.arg('owner_account_id')
   AND buyer_account_id IN (sqlc.slice('source_account_ids'));
 
+-- name: MergeCustomerPicks :exec
+-- Runs after MergeCustomerOrders so picks follow their orders' new buyer (pick.buyer_account_id is
+-- denormalized from the order).
+UPDATE pick p
+JOIN sales_order so ON so.id = p.sales_order_id
+SET p.buyer_account_id = so.buyer_account_id
+WHERE so.owner_account_id = sqlc.arg('owner_account_id')
+  AND so.buyer_account_id = sqlc.arg('target_account_id')
+  AND p.account_id = sqlc.arg('owner_account_id')
+  AND (p.buyer_account_id IS NULL OR p.buyer_account_id <> so.buyer_account_id);
+
 -- name: MergeCustomerInvoices :exec
 UPDATE invoice i
 JOIN sales_order so ON so.id = i.sales_order_id

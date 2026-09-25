@@ -527,8 +527,8 @@ func (suite *SalesOrderSvcTestSuite) TestGetSalesOrder_LinesInclude() {
 		Times(1)
 
 	suite.orderRepo.EXPECT().
-		GetLines(gomock.Any(), "or_1").
-		Return([]*domain.SalesOrderLine{{ID: "orl_1"}}, nil).
+		GetLinesForOrders(gomock.Any(), []string{"or_1"}).
+		Return(map[string][]*domain.SalesOrderLine{"or_1": {{ID: "orl_1"}}}, nil).
 		Times(1)
 
 	result, apiErr := suite.svc.GetSalesOrder(ctx, domain.GetSalesOrderParams{
@@ -537,6 +537,46 @@ func (suite *SalesOrderSvcTestSuite) TestGetSalesOrder_LinesInclude() {
 	})
 	suite.Nil(apiErr)
 	suite.Len(result.Lines, 1)
+}
+
+// --- BatchGetSalesOrders ---
+
+// A page of includes is one read and one round of enrichment, whatever the page size.
+func (suite *SalesOrderSvcTestSuite) TestBatchGetSalesOrders_OneQueryForTheSet() {
+	ctx := salesOrderInternalCtx("ac_test")
+	ids := []string{"or_1", "or_2"}
+
+	suite.orderRepo.EXPECT().
+		GetByIDs(gomock.Any(), "ac_test", (*string)(nil), ids).
+		Return([]*domain.SalesOrder{{ID: "or_1"}, {ID: "or_2"}}, nil).
+		Times(1)
+	suite.orderRepo.EXPECT().GetPaymentStatuses(gomock.Any(), "ac_test", ids).Return(nil, nil).Times(1)
+	suite.orderRepo.EXPECT().GetPaymentIntentIDs(gomock.Any(), "ac_test", ids).Return(nil, nil).Times(1)
+	suite.orderRepo.EXPECT().GetFulfillmentProgress(gomock.Any(), ids).Return(nil, nil).Times(1)
+
+	orders, apiErr := suite.svc.BatchGetSalesOrders(ctx, ids, nil)
+	suite.Require().Nil(apiErr)
+	suite.Len(orders, 2)
+	suite.Equal(constants.SalesOrderPaymentStatusUnpaid, orders[0].PaymentStatus)
+}
+
+// A customer user resolving references sees only their own orders, as on the single get.
+func (suite *SalesOrderSvcTestSuite) TestBatchGetSalesOrders_CustomerUserScopedToOwnOrders() {
+	ctx := salesOrderCustomerCtx("ac_target", "ac_customer")
+	suite.expectReadAccessAllowed("ac_customer", "ac_target")
+
+	suite.orderRepo.EXPECT().
+		GetByIDs(gomock.Any(), "ac_target", gomock.Any(), []string{"or_1"}).
+		DoAndReturn(func(_ context.Context, _ string, buyer *string, _ []string) ([]*domain.SalesOrder, *apierror.APIError) {
+			suite.Require().NotNil(buyer)
+			suite.Equal("ac_customer", *buyer)
+			return nil, nil
+		}).
+		Times(1)
+
+	orders, apiErr := suite.svc.BatchGetSalesOrders(ctx, []string{"or_1"}, nil)
+	suite.Require().Nil(apiErr)
+	suite.Empty(orders)
 }
 
 // --- CreateSalesOrder ---

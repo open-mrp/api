@@ -830,6 +830,8 @@ type CustomerSvc interface {
 
 	// GetCustomer returns a single customer by account ID. Supports customer actor access.
 	GetCustomer(ctx context.Context, customerAccountID string, includes []string) (*Customer, *apierror.APIError)
+	// BatchGetCustomers returns the customers the caller may read; others are omitted rather than failing the batch.
+	BatchGetCustomers(ctx context.Context, customerAccountIDs []string) ([]*Customer, *apierror.APIError)
 
 	// CreateCustomer creates a new customer account.
 	CreateCustomer(ctx context.Context, params CreateCustomerParams) (*Customer, *apierror.APIError)
@@ -1262,6 +1264,8 @@ type SalesOrderSvc interface {
 
 	// GetSalesOrder returns a single sales order by ID. Lines are fetched conditionally based on the includes parameter.
 	GetSalesOrder(ctx context.Context, params GetSalesOrderParams) (*SalesOrder, *apierror.APIError)
+	// BatchGetSalesOrders returns the orders the caller may read; others are omitted rather than failing the batch.
+	BatchGetSalesOrders(ctx context.Context, salesOrderIDs []string, includes []string) ([]*SalesOrder, *apierror.APIError)
 
 	// CreateSalesOrder creates a new sales order with lines, addresses, and optional discount.
 	CreateSalesOrder(ctx context.Context, params CreateSalesOrderParams) (*SalesOrder, *apierror.APIError)
@@ -1318,6 +1322,8 @@ type SalesOrderLineSvc interface {
 type PurchaseOrderSvc interface {
 	ListPurchaseOrders(ctx context.Context, params ListPurchaseOrdersParams) (*ListPurchaseOrdersResult, *apierror.APIError)
 	GetPurchaseOrder(ctx context.Context, params GetPurchaseOrderParams) (*PurchaseOrder, *apierror.APIError)
+	// BatchGetPurchaseOrders returns the purchase orders of the caller's account among the ids; others are omitted.
+	BatchGetPurchaseOrders(ctx context.Context, purchaseOrderIDs []string) ([]*PurchaseOrder, *apierror.APIError)
 	BatchGetPurchaseOrderLinesByIDs(ctx context.Context, ids []string) ([]*PurchaseOrderLine, *apierror.APIError)
 	CreatePurchaseOrder(ctx context.Context, params CreatePurchaseOrderParams) (*PurchaseOrder, *apierror.APIError)
 	UpdatePurchaseOrder(ctx context.Context, params UpdatePurchaseOrderParams) (*PurchaseOrder, *apierror.APIError)

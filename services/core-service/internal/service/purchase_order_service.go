@@ -209,6 +209,29 @@ func (s *purchaseOrderSvcImpl) GetPurchaseOrder(ctx context.Context, params doma
 	return order, nil
 }
 
+func (s *purchaseOrderSvcImpl) BatchGetPurchaseOrders(ctx context.Context, purchaseOrderIDs []string) ([]*domain.PurchaseOrder, *apierror.APIError) {
+	ctx, span := purchaseOrderSvcTracer.Start(ctx, "service.purchase_order.batch_get")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainPurchaseOrders, types.ActionRead); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	orders, apiErr := s.repos.NewPurchaseOrderRepo().GetByIDs(ctx, identity.Target.AccountID, purchaseOrderIDs)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return orders, nil
+}
+
 func (s *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, params domain.CreatePurchaseOrderParams) (*domain.PurchaseOrder, *apierror.APIError) {
 	ctx, span := purchaseOrderSvcTracer.Start(ctx, "service.purchase_order.create")
 	defer span.End()

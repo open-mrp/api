@@ -169,77 +169,8 @@ func (s *salesOrderSvcImpl) ListSalesOrders(ctx context.Context, params domain.L
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// Populate the derived payment status and linked payment intent IDs for the whole page in batched queries (no per-order N+1), defaulting any order without payment activity to unpaid.
-	if len(result.SalesOrders) > 0 {
-		orderIDs := make([]string, len(result.SalesOrders))
-		for i, order := range result.SalesOrders {
-			orderIDs[i] = order.ID
-		}
-		statuses, apiErr := repo.GetPaymentStatuses(ctx, params.AccountID, orderIDs)
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		paymentIntentIDs, apiErr := repo.GetPaymentIntentIDs(ctx, params.AccountID, orderIDs)
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		progress, apiErr := repo.GetFulfillmentProgress(ctx, orderIDs)
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		for _, order := range result.SalesOrders {
-			if status, ok := statuses[order.ID]; ok {
-				order.PaymentStatus = status
-			} else {
-				order.PaymentStatus = constants.SalesOrderPaymentStatusUnpaid
-			}
-			order.PaymentIntentIDs = paymentIntentIDs[order.ID]
-			p := progress[order.ID]
-			order.PickedCompletion = p.PickedCompletion
-			order.PackedCompletion = p.PackedCompletion
-			order.InvoicedCompletion = p.InvoicedCompletion
-		}
-	}
-
-	orderIDs := make([]string, len(result.SalesOrders))
-	for i, order := range result.SalesOrders {
-		orderIDs[i] = order.ID
-	}
-
-	if includesSalesOrderLines(params.Includes) {
-		linesByOrder, apiErr := repo.GetLinesForOrders(ctx, orderIDs)
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		for _, order := range result.SalesOrders {
-			order.Lines = linesByOrder[order.ID]
-		}
-	}
-
-	if includesSalesOrderShipments(params.Includes) {
-		shipmentsByOrder, apiErr := repo.GetShipmentIDsForOrders(ctx, orderIDs)
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		for _, order := range result.SalesOrders {
-			order.ShipmentIDs = shipmentsByOrder[order.ID]
-		}
-	}
-
-	if includesSalesOrderInvoices(params.Includes) {
-		invoicesByOrder, apiErr := repo.GetInvoiceIDsForOrders(ctx, orderIDs)
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		for _, order := range result.SalesOrders {
-			order.InvoiceIDs = invoicesByOrder[order.ID]
-		}
-	}
-
-	if includesSalesOrderContacts(params.Includes) {
-		if apiErr := attachSalesOrderContacts(ctx, repo, result.SalesOrders); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
+	if apiErr := enrichSalesOrders(ctx, repo, params.AccountID, result.SalesOrders, params.Includes); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 
 	return result, nil
@@ -290,62 +221,123 @@ func (s *salesOrderSvcImpl) GetSalesOrder(ctx context.Context, params domain.Get
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// Populate the derived payment status and linked payment intent IDs (always present on the resource).
-	statuses, apiErr := repo.GetPaymentStatuses(ctx, params.AccountID, []string{order.ID})
-	if apiErr != nil {
+	if apiErr := enrichSalesOrders(ctx, repo, params.AccountID, []*domain.SalesOrder{order}, params.Includes); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
-	}
-	if status, ok := statuses[order.ID]; ok {
-		order.PaymentStatus = status
-	} else {
-		order.PaymentStatus = constants.SalesOrderPaymentStatusUnpaid
-	}
-	paymentIntentIDs, apiErr := repo.GetPaymentIntentIDs(ctx, params.AccountID, []string{order.ID})
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	order.PaymentIntentIDs = paymentIntentIDs[order.ID]
-
-	progress, apiErr := repo.GetFulfillmentProgress(ctx, []string{order.ID})
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	p := progress[order.ID]
-	order.PickedCompletion = p.PickedCompletion
-	order.PackedCompletion = p.PackedCompletion
-	order.InvoicedCompletion = p.InvoicedCompletion
-
-	if includesSalesOrderLines(params.Includes) {
-		lines, apiErr := repo.GetLines(ctx, params.SalesOrderID)
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		order.Lines = lines
-	}
-
-	if includesSalesOrderShipments(params.Includes) {
-		ids, apiErr := repo.GetShipmentIDs(ctx, params.SalesOrderID)
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		order.ShipmentIDs = ids
-	}
-
-	if includesSalesOrderInvoices(params.Includes) {
-		ids, apiErr := repo.GetInvoiceIDs(ctx, params.SalesOrderID)
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		order.InvoiceIDs = ids
-	}
-
-	if includesSalesOrderContacts(params.Includes) {
-		if apiErr := attachSalesOrderContacts(ctx, repo, []*domain.SalesOrder{order}); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
 	}
 
 	return order, nil
+}
+
+func (s *salesOrderSvcImpl) BatchGetSalesOrders(ctx context.Context, salesOrderIDs []string, includes []string) ([]*domain.SalesOrder, *apierror.APIError) {
+	ctx, span := salesOrderSvcTracer.Start(ctx, "service.sales_order.batch_get")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+
+	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := checkSalesOrderReadPermission(identity); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account header is required."))
+	}
+	if identity.IsExternalTarget() {
+		meds := s.mediators()
+		if apiErr := meds.ReadAccess.CheckCounterpartyReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
+
+	// Customer users see only their own orders.
+	var buyerAccountID *string
+	if identity.IsCustomerUser() {
+		buyerAccountID = identity.ActorAccountID()
+	}
+
+	accountID := identity.Target.AccountID
+	repo := s.repos.NewSalesOrderRepo()
+	orders, apiErr := repo.GetByIDs(ctx, accountID, buyerAccountID, salesOrderIDs)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := enrichSalesOrders(ctx, repo, accountID, orders, includes); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return orders, nil
+}
+
+// enrichSalesOrders fills the derived fields every sales-order read carries (payment status and
+// intents, fulfillment progress) and the requested expansions, one query each for the whole set.
+func enrichSalesOrders(ctx context.Context, repo domain.SalesOrderRepo, accountID string, orders []*domain.SalesOrder, includes []string) *apierror.APIError {
+	if len(orders) == 0 {
+		return nil
+	}
+	orderIDs := make([]string, len(orders))
+	for i, order := range orders {
+		orderIDs[i] = order.ID
+	}
+
+	statuses, apiErr := repo.GetPaymentStatuses(ctx, accountID, orderIDs)
+	if apiErr != nil {
+		return apiErr
+	}
+	paymentIntentIDs, apiErr := repo.GetPaymentIntentIDs(ctx, accountID, orderIDs)
+	if apiErr != nil {
+		return apiErr
+	}
+	progress, apiErr := repo.GetFulfillmentProgress(ctx, orderIDs)
+	if apiErr != nil {
+		return apiErr
+	}
+	for _, order := range orders {
+		if status, ok := statuses[order.ID]; ok {
+			order.PaymentStatus = status
+		} else {
+			order.PaymentStatus = constants.SalesOrderPaymentStatusUnpaid
+		}
+		order.PaymentIntentIDs = paymentIntentIDs[order.ID]
+		p := progress[order.ID]
+		order.PickedCompletion = p.PickedCompletion
+		order.PackedCompletion = p.PackedCompletion
+		order.InvoicedCompletion = p.InvoicedCompletion
+	}
+
+	if includesSalesOrderLines(includes) {
+		linesByOrder, apiErr := repo.GetLinesForOrders(ctx, orderIDs)
+		if apiErr != nil {
+			return apiErr
+		}
+		for _, order := range orders {
+			order.Lines = linesByOrder[order.ID]
+		}
+	}
+	if includesSalesOrderShipments(includes) {
+		shipmentsByOrder, apiErr := repo.GetShipmentIDsForOrders(ctx, orderIDs)
+		if apiErr != nil {
+			return apiErr
+		}
+		for _, order := range orders {
+			order.ShipmentIDs = shipmentsByOrder[order.ID]
+		}
+	}
+	if includesSalesOrderInvoices(includes) {
+		invoicesByOrder, apiErr := repo.GetInvoiceIDsForOrders(ctx, orderIDs)
+		if apiErr != nil {
+			return apiErr
+		}
+		for _, order := range orders {
+			order.InvoiceIDs = invoicesByOrder[order.ID]
+		}
+	}
+	if includesSalesOrderContacts(includes) {
+		return attachSalesOrderContacts(ctx, repo, orders)
+	}
+	return nil
 }
 
 func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.CreateSalesOrderParams) (*domain.SalesOrder, *apierror.APIError) {

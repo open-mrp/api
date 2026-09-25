@@ -221,22 +221,27 @@ func (s *itemCategorySvcImpl) BatchGetItemCategoriesByIDs(ctx context.Context, i
 
 	allIncludes := []string{"unit_group", "unit_group.base_unit", "unit_group.associated_units", "unit_group.associated_units.unit"}
 
+	categoryIDs := make([]string, len(categories))
+	unitGroupIDs := make([]string, len(categories))
+	for i, cat := range categories {
+		categoryIDs[i] = cat.ID
+		unitGroupIDs[i] = cat.UnitGroupID
+	}
+	properties, apiErr := repo.GetPropertiesForCategories(ctx, categoryIDs)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	unitGroups, apiErr := repo.GetUnitGroups(ctx, unitGroupIDs, allIncludes)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 	for _, cat := range categories {
-		properties, apiErr := repo.GetProperties(ctx, cat.ID)
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
+		cat.Properties = properties[cat.ID]
+		if cat.Properties == nil {
+			cat.Properties = []*domain.ItemCategoryProperty{}
 		}
-		cat.Properties = properties
-
-		unitGroup, apiErr := repo.GetUnitGroup(ctx, cat.UnitGroupID, allIncludes)
-		if apiErr != nil {
-			// An orphaned unit_group reference (the unit group was deleted after the category was created) must not fail the whole batch and 404 the entire list. Surface the category with a nil unit_group instead.
-			if apierror.IsNotFound(apiErr) {
-				continue
-			}
-			return nil, tracing.Trace(span, apiErr)
-		}
-		cat.UnitGroup = unitGroup
+		// An orphaned unit_group reference (deleted after the category was created) leaves unit_group nil rather than failing the whole batch.
+		cat.UnitGroup = unitGroups[cat.UnitGroupID]
 	}
 
 	return categories, nil

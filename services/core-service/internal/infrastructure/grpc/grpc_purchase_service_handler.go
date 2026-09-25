@@ -6,6 +6,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
+	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
 
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -342,25 +343,27 @@ func (h *purchaseGRPCHandler) GetPurchaseOrder(ctx context.Context, req *pb.GetP
 	}, nil
 }
 
-// BatchGetPurchaseOrdersByIDs returns purchase orders by ID for the api-gateway include resolver. It reuses the authorized single-get path per id; ids the caller cannot access or that no longer exist are omitted so the resolver leaves those references null.
+// BatchGetPurchaseOrdersByIDs returns purchase orders by ID for the api-gateway include resolver. Ids
+// the caller cannot access or that no longer exist are omitted so the resolver leaves those
+// references null; a server-side failure is returned rather than passed off as missing orders.
 func (h *purchaseGRPCHandler) BatchGetPurchaseOrdersByIDs(ctx context.Context, req *pb.BatchGetPurchaseOrdersByIDsRequest) (*pb.BatchGetPurchaseOrdersByIDsResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	orders := make([]*pb.PurchaseOrderInfo, 0, len(req.Ids))
-	for _, poID := range req.Ids {
-		if poID == "" {
-			continue
+	orders, apiErr := h.purchaseOrderSvc.BatchGetPurchaseOrders(ctx, req.Ids)
+	if apiErr != nil {
+		if apierror.Is5XXErrorCode(apiErr.Code) {
+			return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 		}
-		order, apiErr := h.purchaseOrderSvc.GetPurchaseOrder(ctx, domain.GetPurchaseOrderParams{PurchaseOrderID: poID})
-		if apiErr != nil {
-			continue
-		}
-		orders = append(orders, purchaseOrderToProto(order))
+		return &pb.BatchGetPurchaseOrdersByIDsResponse{}, nil
 	}
 
-	return &pb.BatchGetPurchaseOrdersByIDsResponse{PurchaseOrders: orders}, nil
+	out := make([]*pb.PurchaseOrderInfo, len(orders))
+	for i, order := range orders {
+		out[i] = purchaseOrderToProto(order)
+	}
+	return &pb.BatchGetPurchaseOrdersByIDsResponse{PurchaseOrders: out}, nil
 }
 
 // BatchGetPurchaseOrderLinesByIDs returns purchase order lines by ID for the api-gateway include

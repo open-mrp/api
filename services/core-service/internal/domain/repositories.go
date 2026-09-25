@@ -111,6 +111,7 @@ type AccountRelationRepo interface {
 	FindCustomerByEmail(ctx context.Context, ownerAccountID, email string) (*CustomerByEmail, *apierror.APIError)
 	FindContactsByEmail(ctx context.Context, ownerAccountID, email string) ([]ContactMatch, *apierror.APIError)
 	HasRelation(ctx context.Context, ownerAccountID, counterpartyAccountID string) (bool, *apierror.APIError)
+	RelatedCounterpartyIDs(ctx context.Context, ownerAccountID string, counterpartyAccountIDs []string) (map[string]bool, *apierror.APIError)
 	CountOtherOwnerRelations(ctx context.Context, counterpartyAccountID, excludeOwnerAccountID string) (int64, *apierror.APIError)
 	FindRelationByOwnerAndCounterparty(ctx context.Context, ownerAccountID, counterpartyAccountID string) (string, *apierror.APIError)
 	CreateNotificationPreference(ctx context.Context, id, accountRelationID, recipientAccountUserID string, notificationTypeCode string) *apierror.APIError
@@ -162,6 +163,7 @@ type ItemRepo interface {
 	List(ctx context.Context, params ListItemsParams) (*ListItemsResult, *apierror.APIError)
 	Get(ctx context.Context, params GetItemParams) (*Item, *apierror.APIError)
 	GetByIDs(ctx context.Context, accountID string, ids []string) ([]*Item, *apierror.APIError)
+	GetByIDsWithIncludes(ctx context.Context, accountID string, ids []string, includes []string) ([]*Item, *apierror.APIError)
 	GetInventory(ctx context.Context, accountID, itemID string) (*ItemInventory, *apierror.APIError)
 	GetCostFlowConsumptions(ctx context.Context, stepID string) ([]CostFlowConsumption, *apierror.APIError)
 	// FindItemsProducedFromConsumed returns the items produced by every step that consumes any of the given ones — one generation outwards in the cost graph.
@@ -663,6 +665,7 @@ type ProductLineRepo interface {
 	ExistsByName(ctx context.Context, accountID, name string, excludeID *string) (bool, *apierror.APIError)
 	FindByNames(ctx context.Context, accountID string, names []string) ([]*ProductLineFull, *apierror.APIError)
 	GetUnitGroup(ctx context.Context, accountID, unitGroupID string, includes []string) (*ProductLineUnitGroup, *apierror.APIError)
+	GetUnitGroups(ctx context.Context, accountID string, unitGroupIDs []string, includes []string) (map[string]*ProductLineUnitGroup, *apierror.APIError)
 	GetByIDs(ctx context.Context, accountID string, ids []string) ([]*ProductLineFull, *apierror.APIError)
 	// IsUnitInGroup reports whether a unit can be used by a line on this unit group. A lot counted in a unit the line cannot express is not a lot anybody can act on.
 	IsUnitInGroup(ctx context.Context, unitGroupID, unitID string) (bool, *apierror.APIError)
@@ -694,6 +697,8 @@ type ItemCategoryRepo interface {
 	GetByIDs(ctx context.Context, accountID string, ids []string) ([]*ItemCategoryFull, *apierror.APIError)
 	GetProperties(ctx context.Context, itemCategoryID string) ([]*ItemCategoryProperty, *apierror.APIError)
 	GetUnitGroup(ctx context.Context, unitGroupID string, includes []string) (*ItemCategoryUnitGroup, *apierror.APIError)
+	GetUnitGroups(ctx context.Context, unitGroupIDs []string, includes []string) (map[string]*ItemCategoryUnitGroup, *apierror.APIError)
+	GetPropertiesForCategories(ctx context.Context, itemCategoryIDs []string) (map[string][]*ItemCategoryProperty, *apierror.APIError)
 	IsPropertyInAccount(ctx context.Context, accountID, propertyID string) (bool, *apierror.APIError)
 	PropertyExistsByNameInCategory(ctx context.Context, accountID, itemCategoryID, name string, excludePropertyID *string) (bool, *apierror.APIError)
 }
@@ -844,6 +849,7 @@ type ProductionFlowRepo interface {
 type CustomerRepo interface {
 	List(ctx context.Context, params ListCustomersParams) (*ListCustomersResult, *apierror.APIError)
 	Get(ctx context.Context, ownerAccountID, customerAccountID string, includes []string) (*Customer, *apierror.APIError)
+	GetByIDs(ctx context.Context, ownerAccountID string, customerAccountIDs []string) ([]*Customer, *apierror.APIError)
 	Create(ctx context.Context, accountID, relationID, brandingID string, params CreateCustomerParams, customerNumber string) (*Customer, *apierror.APIError)
 	Update(ctx context.Context, relationID string, params UpdateCustomerParams) *apierror.APIError
 	UpdateName(ctx context.Context, customerAccountID, name string) *apierror.APIError
@@ -1254,6 +1260,7 @@ type SalesOrderRepo interface {
 	GetLines(ctx context.Context, salesOrderID string) ([]*SalesOrderLine, *apierror.APIError)
 	GetShipmentIDs(ctx context.Context, salesOrderID string) ([]string, *apierror.APIError)
 	GetInvoiceIDs(ctx context.Context, salesOrderID string) ([]string, *apierror.APIError)
+	GetByIDs(ctx context.Context, accountID string, buyerAccountID *string, salesOrderIDs []string) ([]*SalesOrder, *apierror.APIError)
 	GetLinesForOrders(ctx context.Context, salesOrderIDs []string) (map[string][]*SalesOrderLine, *apierror.APIError)
 	GetShipmentIDsForOrders(ctx context.Context, salesOrderIDs []string) (map[string][]string, *apierror.APIError)
 	GetInvoiceIDsForOrders(ctx context.Context, salesOrderIDs []string) (map[string][]string, *apierror.APIError)
@@ -1336,6 +1343,7 @@ type SalesOrderLineRepo interface {
 type PurchaseOrderRepo interface {
 	List(ctx context.Context, params ListPurchaseOrdersParams) (*ListPurchaseOrdersResult, *apierror.APIError)
 	Get(ctx context.Context, accountID, purchaseOrderID string) (*PurchaseOrder, *apierror.APIError)
+	GetByIDs(ctx context.Context, accountID string, purchaseOrderIDs []string) ([]*PurchaseOrder, *apierror.APIError)
 	GetLines(ctx context.Context, salesOrderID string) ([]*PurchaseOrderLine, *apierror.APIError)
 	GetLinesByIDs(ctx context.Context, accountID string, ids []string) ([]*PurchaseOrderLine, *apierror.APIError)
 	Create(ctx context.Context, id string, params CreatePurchaseOrderParams) (*PurchaseOrder, *apierror.APIError)

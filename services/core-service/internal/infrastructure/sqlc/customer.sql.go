@@ -1123,6 +1123,374 @@ func (q *Queries) GetCustomerStripeCustomerID(ctx context.Context, arg GetCustom
 	return i, err
 }
 
+const getCustomersByIDs = `-- name: GetCustomersByIDs :many
+SELECT
+    ar.id AS relation_id,
+    ar.counterparty_account_id AS account_id,
+    COALESCE(NULLIF(ar.alias, ''), a.name) AS account_name,
+    ar.external_number,
+    ar.is_edi_enabled,
+    ar.notes,
+    ar.account_status_code AS status,
+    ar.commission_status_code,
+    ar.freight_status_code,
+    ar.default_lead_time_days,
+    ar.receive_calendar_id,
+    ar.fulfillment_policy_code,
+    ar.carrier_billing_type,
+    ar.carrier_billing_account,
+    ar.stripe_customer_id,
+    ar.stripe_email,
+    ab.support_email AS email,
+    ab.phone_number,
+    ab.website_url,
+    EXISTS (SELECT 1 FROM account_relation car WHERE car.parent_account_relation_id = ar.id) AS is_parent_account,
+    ar.parent_account_relation_id,
+    pa.name AS parent_account_name,
+    par.counterparty_account_id AS parent_account_id,
+    c.id AS default_carrier_id,
+    c.name AS default_carrier_name,
+    c.is_portal_enabled AS default_carrier_is_portal_enabled,
+    c.created_at AS default_carrier_created_at,
+    c.updated_at AS default_carrier_updated_at,
+    co.id AS default_carrier_option_id,
+    co.name AS default_carrier_option_name,
+    co.service_level_token AS default_carrier_option_service_level_token,
+    co.is_portal_enabled AS default_carrier_option_is_portal_enabled,
+    co.created_at AS default_carrier_option_created_at,
+    co.updated_at AS default_carrier_option_updated_at,
+    pt.id AS payment_term_id,
+    pt.name AS payment_term_name,
+    pt.is_active AS payment_term_is_active,
+    pt.created_at AS payment_term_created_at,
+    pt.updated_at AS payment_term_updated_at,
+    st.id AS shipping_term_id,
+    st.name AS shipping_term_name,
+    st.is_freight_exempt AS shipping_term_is_freight_exempt,
+    st.is_carrier_rate AS shipping_term_is_carrier_rate,
+    st.created_at AS shipping_term_created_at,
+    st.updated_at AS shipping_term_updated_at,
+    p.id AS priority_id,
+    p.code AS priority_code,
+    p.name AS priority_name,
+    sr.id AS default_sales_rep_id,
+    sru.name AS default_sales_rep_name,
+    sr.status_code AS default_sales_rep_status_code,
+    sr.created_at AS default_sales_rep_created_at,
+    sr.updated_at AS default_sales_rep_updated_at,
+    tg.id AS type_group_id,
+    tg.name AS type_group_name,
+    tg.commission_status_code AS type_group_commission_status_code,
+    tg.freight_status_code AS type_group_freight_status_code,
+    tg.account_group_type_code AS type_group_type_code,
+    tg.created_at AS type_group_created_at,
+    tg.updated_at AS type_group_updated_at,
+    par.external_number AS parent_account_number,
+    par.created_at AS parent_account_created_at,
+    par.updated_at AS parent_account_updated_at,
+    ba.id AS default_billing_address_id,
+    ba.name AS default_billing_address_name,
+    ba.phone AS default_billing_address_phone,
+    ba.email AS default_billing_address_email,
+    ba.is_drop_ship AS default_billing_is_drop_ship,
+    bg.id AS default_billing_geolocation_id,
+    bg.street_line_1 AS default_billing_street_line_1,
+    bg.street_line_2 AS default_billing_street_line_2,
+    bg.locality AS default_billing_locality,
+    bg.state AS default_billing_state,
+    bg.postal_code AS default_billing_postal_code,
+    bg.country AS default_billing_country,
+    ba.created_at AS default_billing_address_created_at,
+    ba.updated_at AS default_billing_address_updated_at,
+    sa.id AS default_shipping_address_id,
+    sa.name AS default_shipping_address_name,
+    sa.phone AS default_shipping_address_phone,
+    sa.email AS default_shipping_address_email,
+    sa.is_drop_ship AS default_shipping_is_drop_ship,
+    sg.id AS default_shipping_geolocation_id,
+    sg.street_line_1 AS default_shipping_street_line_1,
+    sg.street_line_2 AS default_shipping_street_line_2,
+    sg.locality AS default_shipping_locality,
+    sg.state AS default_shipping_state,
+    sg.postal_code AS default_shipping_postal_code,
+    sg.country AS default_shipping_country,
+    sa.created_at AS default_shipping_address_created_at,
+    sa.updated_at AS default_shipping_address_updated_at,
+    clq.id AS credit_limit_id,
+    clq.value AS credit_limit_value,
+    clu.id AS credit_limit_unit_id,
+    clu.abbreviation AS credit_limit_unit_abbreviation,
+    clu.name AS credit_limit_unit_name,
+    clu.unit_dimension_code AS credit_limit_unit_type,
+    ar.created_at,
+    ar.updated_at
+FROM account_relation ar
+INNER JOIN account a ON a.id = ar.counterparty_account_id
+LEFT JOIN account_branding ab ON ab.owner_account_id = ar.counterparty_account_id
+LEFT JOIN account_relation par ON par.id = ar.parent_account_relation_id
+LEFT JOIN account pa ON pa.id = par.counterparty_account_id
+LEFT JOIN carrier c ON c.id = ar.default_carrier_id
+LEFT JOIN carrier_option co ON co.id = ar.default_carrier_option_id
+LEFT JOIN payment_term pt ON pt.id = ar.payment_term_id
+LEFT JOIN shipping_term st ON st.id = ar.shipping_term_id
+LEFT JOIN priority p ON p.code = ar.priority_code
+LEFT JOIN account_user sr ON sr.id = ar.default_sales_rep_id
+LEFT JOIN ` + "`" + `user` + "`" + ` sru ON sru.id = sr.user_id
+LEFT JOIN account_group tg ON tg.id = ar.account_group_id AND tg.account_group_type_code = 'type_group'
+LEFT JOIN address ba ON ba.id = ar.default_billing_address_id
+LEFT JOIN geolocation bg ON bg.id = ba.geolocation_id
+LEFT JOIN address sa ON sa.id = ar.default_shipping_address_id
+LEFT JOIN geolocation sg ON sg.id = sa.geolocation_id
+LEFT JOIN quantity clq ON clq.id = ar.credit_limit_id
+LEFT JOIN unit clu ON clu.id = clq.unit_id
+WHERE ar.owner_account_id = ?
+  AND ar.counterparty_account_id IN (/*SLICE:counterparty_account_ids*/?)
+  AND ar.account_relation_role_code = 'customer'
+`
+
+type GetCustomersByIDsParams struct {
+	OwnerAccountID         string
+	CounterpartyAccountIds []string
+}
+
+type GetCustomersByIDsRow struct {
+	RelationID                            string
+	AccountID                             string
+	AccountName                           string
+	ExternalNumber                        string
+	IsEdiEnabled                          bool
+	Notes                                 sql.NullString
+	Status                                sql.NullString
+	CommissionStatusCode                  sql.NullString
+	FreightStatusCode                     sql.NullString
+	DefaultLeadTimeDays                   sql.NullInt32
+	ReceiveCalendarID                     sql.NullString
+	FulfillmentPolicyCode                 sql.NullString
+	CarrierBillingType                    sql.NullString
+	CarrierBillingAccount                 sql.NullString
+	StripeCustomerID                      sql.NullString
+	StripeEmail                           sql.NullString
+	Email                                 sql.NullString
+	PhoneNumber                           sql.NullString
+	WebsiteUrl                            sql.NullString
+	IsParentAccount                       bool
+	ParentAccountRelationID               sql.NullString
+	ParentAccountName                     sql.NullString
+	ParentAccountID                       sql.NullString
+	DefaultCarrierID                      sql.NullString
+	DefaultCarrierName                    sql.NullString
+	DefaultCarrierIsPortalEnabled         sql.NullBool
+	DefaultCarrierCreatedAt               sql.NullTime
+	DefaultCarrierUpdatedAt               sql.NullTime
+	DefaultCarrierOptionID                sql.NullString
+	DefaultCarrierOptionName              sql.NullString
+	DefaultCarrierOptionServiceLevelToken sql.NullString
+	DefaultCarrierOptionIsPortalEnabled   sql.NullBool
+	DefaultCarrierOptionCreatedAt         sql.NullTime
+	DefaultCarrierOptionUpdatedAt         sql.NullTime
+	PaymentTermID                         sql.NullString
+	PaymentTermName                       sql.NullString
+	PaymentTermIsActive                   sql.NullBool
+	PaymentTermCreatedAt                  sql.NullTime
+	PaymentTermUpdatedAt                  sql.NullTime
+	ShippingTermID                        sql.NullString
+	ShippingTermName                      sql.NullString
+	ShippingTermIsFreightExempt           sql.NullBool
+	ShippingTermIsCarrierRate             sql.NullBool
+	ShippingTermCreatedAt                 sql.NullTime
+	ShippingTermUpdatedAt                 sql.NullTime
+	PriorityID                            sql.NullString
+	PriorityCode                          sql.NullString
+	PriorityName                          sql.NullString
+	DefaultSalesRepID                     sql.NullString
+	DefaultSalesRepName                   sql.NullString
+	DefaultSalesRepStatusCode             sql.NullString
+	DefaultSalesRepCreatedAt              sql.NullTime
+	DefaultSalesRepUpdatedAt              sql.NullTime
+	TypeGroupID                           sql.NullString
+	TypeGroupName                         sql.NullString
+	TypeGroupCommissionStatusCode         sql.NullString
+	TypeGroupFreightStatusCode            sql.NullString
+	TypeGroupTypeCode                     sql.NullString
+	TypeGroupCreatedAt                    sql.NullTime
+	TypeGroupUpdatedAt                    sql.NullTime
+	ParentAccountNumber                   sql.NullString
+	ParentAccountCreatedAt                sql.NullTime
+	ParentAccountUpdatedAt                sql.NullTime
+	DefaultBillingAddressID               sql.NullString
+	DefaultBillingAddressName             sql.NullString
+	DefaultBillingAddressPhone            sql.NullString
+	DefaultBillingAddressEmail            sql.NullString
+	DefaultBillingIsDropShip              sql.NullBool
+	DefaultBillingGeolocationID           sql.NullString
+	DefaultBillingStreetLine1             sql.NullString
+	DefaultBillingStreetLine2             sql.NullString
+	DefaultBillingLocality                sql.NullString
+	DefaultBillingState                   sql.NullString
+	DefaultBillingPostalCode              sql.NullString
+	DefaultBillingCountry                 sql.NullString
+	DefaultBillingAddressCreatedAt        sql.NullTime
+	DefaultBillingAddressUpdatedAt        sql.NullTime
+	DefaultShippingAddressID              sql.NullString
+	DefaultShippingAddressName            sql.NullString
+	DefaultShippingAddressPhone           sql.NullString
+	DefaultShippingAddressEmail           sql.NullString
+	DefaultShippingIsDropShip             sql.NullBool
+	DefaultShippingGeolocationID          sql.NullString
+	DefaultShippingStreetLine1            sql.NullString
+	DefaultShippingStreetLine2            sql.NullString
+	DefaultShippingLocality               sql.NullString
+	DefaultShippingState                  sql.NullString
+	DefaultShippingPostalCode             sql.NullString
+	DefaultShippingCountry                sql.NullString
+	DefaultShippingAddressCreatedAt       sql.NullTime
+	DefaultShippingAddressUpdatedAt       sql.NullTime
+	CreditLimitID                         sql.NullString
+	CreditLimitValue                      sql.NullString
+	CreditLimitUnitID                     sql.NullString
+	CreditLimitUnitAbbreviation           sql.NullString
+	CreditLimitUnitName                   sql.NullString
+	CreditLimitUnitType                   sql.NullString
+	CreatedAt                             time.Time
+	UpdatedAt                             time.Time
+}
+
+// The batched form of GetCustomer for include expansion; the columns must stay identical so the rows
+// convert to GetCustomerRow.
+func (q *Queries) GetCustomersByIDs(ctx context.Context, arg GetCustomersByIDsParams) ([]GetCustomersByIDsRow, error) {
+	query := getCustomersByIDs
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.OwnerAccountID)
+	if len(arg.CounterpartyAccountIds) > 0 {
+		for _, v := range arg.CounterpartyAccountIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:counterparty_account_ids*/?", strings.Repeat(",?", len(arg.CounterpartyAccountIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:counterparty_account_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetCustomersByIDsRow
+	for rows.Next() {
+		var i GetCustomersByIDsRow
+		if err := rows.Scan(
+			&i.RelationID,
+			&i.AccountID,
+			&i.AccountName,
+			&i.ExternalNumber,
+			&i.IsEdiEnabled,
+			&i.Notes,
+			&i.Status,
+			&i.CommissionStatusCode,
+			&i.FreightStatusCode,
+			&i.DefaultLeadTimeDays,
+			&i.ReceiveCalendarID,
+			&i.FulfillmentPolicyCode,
+			&i.CarrierBillingType,
+			&i.CarrierBillingAccount,
+			&i.StripeCustomerID,
+			&i.StripeEmail,
+			&i.Email,
+			&i.PhoneNumber,
+			&i.WebsiteUrl,
+			&i.IsParentAccount,
+			&i.ParentAccountRelationID,
+			&i.ParentAccountName,
+			&i.ParentAccountID,
+			&i.DefaultCarrierID,
+			&i.DefaultCarrierName,
+			&i.DefaultCarrierIsPortalEnabled,
+			&i.DefaultCarrierCreatedAt,
+			&i.DefaultCarrierUpdatedAt,
+			&i.DefaultCarrierOptionID,
+			&i.DefaultCarrierOptionName,
+			&i.DefaultCarrierOptionServiceLevelToken,
+			&i.DefaultCarrierOptionIsPortalEnabled,
+			&i.DefaultCarrierOptionCreatedAt,
+			&i.DefaultCarrierOptionUpdatedAt,
+			&i.PaymentTermID,
+			&i.PaymentTermName,
+			&i.PaymentTermIsActive,
+			&i.PaymentTermCreatedAt,
+			&i.PaymentTermUpdatedAt,
+			&i.ShippingTermID,
+			&i.ShippingTermName,
+			&i.ShippingTermIsFreightExempt,
+			&i.ShippingTermIsCarrierRate,
+			&i.ShippingTermCreatedAt,
+			&i.ShippingTermUpdatedAt,
+			&i.PriorityID,
+			&i.PriorityCode,
+			&i.PriorityName,
+			&i.DefaultSalesRepID,
+			&i.DefaultSalesRepName,
+			&i.DefaultSalesRepStatusCode,
+			&i.DefaultSalesRepCreatedAt,
+			&i.DefaultSalesRepUpdatedAt,
+			&i.TypeGroupID,
+			&i.TypeGroupName,
+			&i.TypeGroupCommissionStatusCode,
+			&i.TypeGroupFreightStatusCode,
+			&i.TypeGroupTypeCode,
+			&i.TypeGroupCreatedAt,
+			&i.TypeGroupUpdatedAt,
+			&i.ParentAccountNumber,
+			&i.ParentAccountCreatedAt,
+			&i.ParentAccountUpdatedAt,
+			&i.DefaultBillingAddressID,
+			&i.DefaultBillingAddressName,
+			&i.DefaultBillingAddressPhone,
+			&i.DefaultBillingAddressEmail,
+			&i.DefaultBillingIsDropShip,
+			&i.DefaultBillingGeolocationID,
+			&i.DefaultBillingStreetLine1,
+			&i.DefaultBillingStreetLine2,
+			&i.DefaultBillingLocality,
+			&i.DefaultBillingState,
+			&i.DefaultBillingPostalCode,
+			&i.DefaultBillingCountry,
+			&i.DefaultBillingAddressCreatedAt,
+			&i.DefaultBillingAddressUpdatedAt,
+			&i.DefaultShippingAddressID,
+			&i.DefaultShippingAddressName,
+			&i.DefaultShippingAddressPhone,
+			&i.DefaultShippingAddressEmail,
+			&i.DefaultShippingIsDropShip,
+			&i.DefaultShippingGeolocationID,
+			&i.DefaultShippingStreetLine1,
+			&i.DefaultShippingStreetLine2,
+			&i.DefaultShippingLocality,
+			&i.DefaultShippingState,
+			&i.DefaultShippingPostalCode,
+			&i.DefaultShippingCountry,
+			&i.DefaultShippingAddressCreatedAt,
+			&i.DefaultShippingAddressUpdatedAt,
+			&i.CreditLimitID,
+			&i.CreditLimitValue,
+			&i.CreditLimitUnitID,
+			&i.CreditLimitUnitAbbreviation,
+			&i.CreditLimitUnitName,
+			&i.CreditLimitUnitType,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getFrequentlyOrderedProducts = `-- name: GetFrequentlyOrderedProducts :many
 SELECT STRAIGHT_JOIN
     fg.item_id AS item_id,

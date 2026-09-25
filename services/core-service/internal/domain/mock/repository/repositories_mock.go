@@ -1497,6 +1497,21 @@ func (mr *MockAccountRelationRepoMockRecorder) ListNotificationRecipients(ctx, a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListNotificationRecipients", reflect.TypeOf((*MockAccountRelationRepo)(nil).ListNotificationRecipients), ctx, accountRelationID)
 }
 
+// RelatedCounterpartyIDs mocks base method.
+func (m *MockAccountRelationRepo) RelatedCounterpartyIDs(ctx context.Context, ownerAccountID string, counterpartyAccountIDs []string) (map[string]bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RelatedCounterpartyIDs", ctx, ownerAccountID, counterpartyAccountIDs)
+	ret0, _ := ret[0].(map[string]bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// RelatedCounterpartyIDs indicates an expected call of RelatedCounterpartyIDs.
+func (mr *MockAccountRelationRepoMockRecorder) RelatedCounterpartyIDs(ctx, ownerAccountID, counterpartyAccountIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RelatedCounterpartyIDs", reflect.TypeOf((*MockAccountRelationRepo)(nil).RelatedCounterpartyIDs), ctx, ownerAccountID, counterpartyAccountIDs)
+}
+
 // SetParentRelation mocks base method.
 func (m *MockAccountRelationRepo) SetParentRelation(ctx context.Context, ownerAccountID, childRelationID, parentRelationID string) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -1942,6 +1957,21 @@ func (m *MockItemRepo) GetByIDs(ctx context.Context, accountID string, ids []str
 func (mr *MockItemRepoMockRecorder) GetByIDs(ctx, accountID, ids any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByIDs", reflect.TypeOf((*MockItemRepo)(nil).GetByIDs), ctx, accountID, ids)
+}
+
+// GetByIDsWithIncludes mocks base method.
+func (m *MockItemRepo) GetByIDsWithIncludes(ctx context.Context, accountID string, ids, includes []string) ([]*domain.Item, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByIDsWithIncludes", ctx, accountID, ids, includes)
+	ret0, _ := ret[0].([]*domain.Item)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetByIDsWithIncludes indicates an expected call of GetByIDsWithIncludes.
+func (mr *MockItemRepoMockRecorder) GetByIDsWithIncludes(ctx, accountID, ids, includes any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByIDsWithIncludes", reflect.TypeOf((*MockItemRepo)(nil).GetByIDsWithIncludes), ctx, accountID, ids, includes)
 }
 
 // GetCategoryBaseUnitID mocks base method.
@@ -7444,6 +7474,21 @@ func (mr *MockProductLineRepoMockRecorder) GetUnitGroup(ctx, accountID, unitGrou
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUnitGroup", reflect.TypeOf((*MockProductLineRepo)(nil).GetUnitGroup), ctx, accountID, unitGroupID, includes)
 }
 
+// GetUnitGroups mocks base method.
+func (m *MockProductLineRepo) GetUnitGroups(ctx context.Context, accountID string, unitGroupIDs, includes []string) (map[string]*domain.ProductLineUnitGroup, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUnitGroups", ctx, accountID, unitGroupIDs, includes)
+	ret0, _ := ret[0].(map[string]*domain.ProductLineUnitGroup)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetUnitGroups indicates an expected call of GetUnitGroups.
+func (mr *MockProductLineRepoMockRecorder) GetUnitGroups(ctx, accountID, unitGroupIDs, includes any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUnitGroups", reflect.TypeOf((*MockProductLineRepo)(nil).GetUnitGroups), ctx, accountID, unitGroupIDs, includes)
+}
+
 // IsUnitInGroup mocks base method.
 func (m *MockProductLineRepo) IsUnitInGroup(ctx context.Context, unitGroupID, unitID string) (bool, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -7645,6 +7690,21 @@ func (mr *MockItemCategoryRepoMockRecorder) GetProperties(ctx, itemCategoryID an
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProperties", reflect.TypeOf((*MockItemCategoryRepo)(nil).GetProperties), ctx, itemCategoryID)
 }
 
+// GetPropertiesForCategories mocks base method.
+func (m *MockItemCategoryRepo) GetPropertiesForCategories(ctx context.Context, itemCategoryIDs []string) (map[string][]*domain.ItemCategoryProperty, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPropertiesForCategories", ctx, itemCategoryIDs)
+	ret0, _ := ret[0].(map[string][]*domain.ItemCategoryProperty)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetPropertiesForCategories indicates an expected call of GetPropertiesForCategories.
+func (mr *MockItemCategoryRepoMockRecorder) GetPropertiesForCategories(ctx, itemCategoryIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPropertiesForCategories", reflect.TypeOf((*MockItemCategoryRepo)(nil).GetPropertiesForCategories), ctx, itemCategoryIDs)
+}
+
 // GetUnitGroup mocks base method.
 func (m *MockItemCategoryRepo) GetUnitGroup(ctx context.Context, unitGroupID string, includes []string) (*domain.ItemCategoryUnitGroup, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -7658,6 +7718,21 @@ func (m *MockItemCategoryRepo) GetUnitGroup(ctx context.Context, unitGroupID str
 func (mr *MockItemCategoryRepoMockRecorder) GetUnitGroup(ctx, unitGroupID, includes any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUnitGroup", reflect.TypeOf((*MockItemCategoryRepo)(nil).GetUnitGroup), ctx, unitGroupID, includes)
+}
+
+// GetUnitGroups mocks base method.
+func (m *MockItemCategoryRepo) GetUnitGroups(ctx context.Context, unitGroupIDs, includes []string) (map[string]*domain.ItemCategoryUnitGroup, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUnitGroups", ctx, unitGroupIDs, includes)
+	ret0, _ := ret[0].(map[string]*domain.ItemCategoryUnitGroup)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetUnitGroups indicates an expected call of GetUnitGroups.
+func (mr *MockItemCategoryRepoMockRecorder) GetUnitGroups(ctx, unitGroupIDs, includes any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUnitGroups", reflect.TypeOf((*MockItemCategoryRepo)(nil).GetUnitGroups), ctx, unitGroupIDs, includes)
 }
 
 // IsInAccount mocks base method.
@@ -9358,6 +9433,21 @@ func (m *MockCustomerRepo) GetAccountUsers(ctx context.Context, accountID string
 func (mr *MockCustomerRepoMockRecorder) GetAccountUsers(ctx, accountID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountUsers", reflect.TypeOf((*MockCustomerRepo)(nil).GetAccountUsers), ctx, accountID)
+}
+
+// GetByIDs mocks base method.
+func (m *MockCustomerRepo) GetByIDs(ctx context.Context, ownerAccountID string, customerAccountIDs []string) ([]*domain.Customer, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByIDs", ctx, ownerAccountID, customerAccountIDs)
+	ret0, _ := ret[0].([]*domain.Customer)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetByIDs indicates an expected call of GetByIDs.
+func (mr *MockCustomerRepoMockRecorder) GetByIDs(ctx, ownerAccountID, customerAccountIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByIDs", reflect.TypeOf((*MockCustomerRepo)(nil).GetByIDs), ctx, ownerAccountID, customerAccountIDs)
 }
 
 // GetCustomerEmail mocks base method.
@@ -13419,6 +13509,21 @@ func (mr *MockSalesOrderRepoMockRecorder) GetAcknowledgementRecipients(ctx, sale
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAcknowledgementRecipients", reflect.TypeOf((*MockSalesOrderRepo)(nil).GetAcknowledgementRecipients), ctx, salesOrderID)
 }
 
+// GetByIDs mocks base method.
+func (m *MockSalesOrderRepo) GetByIDs(ctx context.Context, accountID string, buyerAccountID *string, salesOrderIDs []string) ([]*domain.SalesOrder, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByIDs", ctx, accountID, buyerAccountID, salesOrderIDs)
+	ret0, _ := ret[0].([]*domain.SalesOrder)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetByIDs indicates an expected call of GetByIDs.
+func (mr *MockSalesOrderRepoMockRecorder) GetByIDs(ctx, accountID, buyerAccountID, salesOrderIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByIDs", reflect.TypeOf((*MockSalesOrderRepo)(nil).GetByIDs), ctx, accountID, buyerAccountID, salesOrderIDs)
+}
+
 // GetContactsByOrders mocks base method.
 func (m *MockSalesOrderRepo) GetContactsByOrders(ctx context.Context, salesOrderIDs []string) (map[string]*domain.SalesOrderContacts, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -14227,6 +14332,21 @@ func (m *MockPurchaseOrderRepo) Get(ctx context.Context, accountID, purchaseOrde
 func (mr *MockPurchaseOrderRepoMockRecorder) Get(ctx, accountID, purchaseOrderID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockPurchaseOrderRepo)(nil).Get), ctx, accountID, purchaseOrderID)
+}
+
+// GetByIDs mocks base method.
+func (m *MockPurchaseOrderRepo) GetByIDs(ctx context.Context, accountID string, purchaseOrderIDs []string) ([]*domain.PurchaseOrder, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByIDs", ctx, accountID, purchaseOrderIDs)
+	ret0, _ := ret[0].([]*domain.PurchaseOrder)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetByIDs indicates an expected call of GetByIDs.
+func (mr *MockPurchaseOrderRepoMockRecorder) GetByIDs(ctx, accountID, purchaseOrderIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByIDs", reflect.TypeOf((*MockPurchaseOrderRepo)(nil).GetByIDs), ctx, accountID, purchaseOrderIDs)
 }
 
 // GetEmailContacts mocks base method.

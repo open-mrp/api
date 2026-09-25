@@ -543,6 +543,99 @@ func (r *itemCategoryRepoImpl) GetUnitGroup(ctx context.Context, unitGroupID str
 	return ug, nil
 }
 
+// GetUnitGroups is the batched form of GetUnitGroup, keyed by unit group id. Missing groups are absent.
+func (r *itemCategoryRepoImpl) GetUnitGroups(ctx context.Context, unitGroupIDs []string, includes []string) (map[string]*domain.ItemCategoryUnitGroup, *apierror.APIError) {
+	ctx, span := itemCategoryRepoTracer.Start(ctx, "repository.item_category.get_unit_groups")
+	defer span.End()
+
+	groups := make(map[string]*domain.ItemCategoryUnitGroup, len(unitGroupIDs))
+	if len(unitGroupIDs) == 0 {
+		return groups, nil
+	}
+
+	rows, err := r.queries.GetUnitGroupsForCategoriesByIDs(ctx, unitGroupIDs)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if len(rows) == 0 {
+		return groups, nil
+	}
+
+	groupIDs := make([]string, len(rows))
+	baseUnitIDs := make([]string, 0, len(rows))
+	for i, row := range rows {
+		groups[row.ID] = &domain.ItemCategoryUnitGroup{
+			ID:         row.ID,
+			Name:       row.Name,
+			BaseUnitID: row.BaseUnitID,
+			Type:       row.UnitTypeCode,
+			CreatedAt:  row.CreatedAt,
+			UpdatedAt:  row.UpdatedAt,
+		}
+		groupIDs[i] = row.ID
+		if row.BaseUnitID != "" {
+			baseUnitIDs = append(baseUnitIDs, row.BaseUnitID)
+		}
+	}
+
+	if slices.Contains(includes, "unit_group.base_unit") && len(baseUnitIDs) > 0 {
+		unitRows, err := r.queries.GetUnitsByIDs(ctx, baseUnitIDs)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		units := make(map[string]domain.LightUnit, len(unitRows))
+		for _, row := range unitRows {
+			units[row.ID] = mapGetUnitsByIDsRowToLightUnit(row)
+		}
+		for _, ug := range groups {
+			if lu, ok := units[ug.BaseUnitID]; ok {
+				ug.BaseUnit = &lu
+			}
+		}
+	}
+
+	if slices.Contains(includes, "unit_group.associated_units") {
+		ugUnitRows, err := r.queries.ListUnitGroupUnitsByUnitGroupIDs(ctx, groupIDs)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		for _, ug := range groups {
+			ug.AssociatedUnits = []*domain.UnitGroupUnit{}
+		}
+		for _, row := range ugUnitRows {
+			if ug := groups[row.UnitGroupID]; ug != nil {
+				ug.AssociatedUnits = append(ug.AssociatedUnits, mapUnitGroupUnitsByUnitGroupIDsRow(row))
+			}
+		}
+	}
+
+	return groups, nil
+}
+
+// GetPropertiesForCategories is the batched form of GetProperties, keyed by item category id.
+func (r *itemCategoryRepoImpl) GetPropertiesForCategories(ctx context.Context, itemCategoryIDs []string) (map[string][]*domain.ItemCategoryProperty, *apierror.APIError) {
+	ctx, span := itemCategoryRepoTracer.Start(ctx, "repository.item_category.get_properties_for_categories")
+	defer span.End()
+
+	byCategory := make(map[string][]*domain.ItemCategoryProperty, len(itemCategoryIDs))
+	if len(itemCategoryIDs) == 0 {
+		return byCategory, nil
+	}
+	rows, err := r.queries.ListItemCategoryPropertiesForCategories(ctx, itemCategoryIDs)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	for _, row := range rows {
+		byCategory[row.ItemCategoryID] = append(byCategory[row.ItemCategoryID], &domain.ItemCategoryProperty{
+			ID:        row.PropertyID,
+			Name:      row.PropertyName,
+			CreatedAt: row.PropertyCreatedAt,
+			UpdatedAt: row.PropertyUpdatedAt,
+		})
+	}
+	return byCategory, nil
+}
+
 func mapFindItemCategoriesByNamesRow(row sqlc.FindItemCategoriesByNamesRow) *domain.ItemCategoryFull {
 	var accountID *string
 	if row.AccountID.Valid {

@@ -51,8 +51,10 @@ func TestBatchGetAccountsByIDs_FiltersToCallerAccount(t *testing.T) {
 	// The smuggled ids are checked for an account_relation; with none, they are
 	// dropped and never reach GetByIDs.
 	mockRelationRepo := repositorymock.NewMockAccountRelationRepo(ctrl)
-	mockRelationRepo.EXPECT().HasRelation(gomock.Any(), targetAcct, "acct_other_1").Return(false, nil)
-	mockRelationRepo.EXPECT().HasRelation(gomock.Any(), targetAcct, "acct_other_2").Return(false, nil)
+	mockRelationRepo.EXPECT().
+		RelatedCounterpartyIDs(gomock.Any(), targetAcct, []string{"acct_other_1", "acct_other_2"}).
+		Return(map[string]bool{}, nil).
+		Times(1)
 
 	svc := &accountSvcImpl{accountRepo: mockRepo, accountRelationRepo: mockRelationRepo}
 
@@ -80,8 +82,10 @@ func TestBatchGetAccountsByIDs_NoMatchingIDs_ShortCircuits(t *testing.T) {
 	// Both smuggled ids have no relation to the caller, so after filtering the
 	// allowed set is empty and the account repo is never consulted.
 	mockRelationRepo := repositorymock.NewMockAccountRelationRepo(ctrl)
-	mockRelationRepo.EXPECT().HasRelation(gomock.Any(), targetAcct, "acct_other_1").Return(false, nil)
-	mockRelationRepo.EXPECT().HasRelation(gomock.Any(), targetAcct, "acct_other_2").Return(false, nil)
+	mockRelationRepo.EXPECT().
+		RelatedCounterpartyIDs(gomock.Any(), targetAcct, []string{"acct_other_1", "acct_other_2"}).
+		Return(map[string]bool{}, nil).
+		Times(1)
 
 	svc := &accountSvcImpl{accountRepo: mockRepo, accountRelationRepo: mockRelationRepo}
 	ctx := internalAdminCtx(targetAcct)
@@ -114,4 +118,28 @@ func TestBatchGetAccountsByIDs_NoIdentity_Fails(t *testing.T) {
 	svc := &accountSvcImpl{accountRepo: mockRepo}
 	_, apiErr := svc.BatchGetAccountsByIDs(context.Background(), []string{"acct_x"})
 	require.NotNil(t, apiErr)
+}
+
+// A related customer or supplier hydrates alongside the caller's own account; an unrelated id in the
+// same batch is still dropped.
+func TestBatchGetAccountsByIDs_IncludesRelatedCounterparties(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	const targetAcct = "acct_target"
+	mockRelationRepo := repositorymock.NewMockAccountRelationRepo(ctrl)
+	mockRelationRepo.EXPECT().
+		RelatedCounterpartyIDs(gomock.Any(), targetAcct, []string{"acct_customer", "acct_stranger"}).
+		Return(map[string]bool{"acct_customer": true}, nil).
+		Times(1)
+	mockRepo := repositorymock.NewMockAccountRepo(ctrl)
+	mockRepo.EXPECT().
+		GetByIDs(gomock.Any(), []string{targetAcct, "acct_customer"}).
+		Return(nil, nil).
+		Times(1)
+
+	svc := &accountSvcImpl{accountRepo: mockRepo, accountRelationRepo: mockRelationRepo}
+	_, apiErr := svc.BatchGetAccountsByIDs(internalAdminCtx(targetAcct), []string{"acct_customer", targetAcct, "acct_stranger"})
+	require.Nil(t, apiErr)
 }

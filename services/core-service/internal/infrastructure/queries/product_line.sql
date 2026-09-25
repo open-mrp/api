@@ -208,6 +208,19 @@ FROM unit_group ug
 WHERE ug.id = sqlc.arg('id')
 AND (ug.account_id = sqlc.arg('account_id') OR ug.account_id IS NULL);
 
+-- name: GetUnitGroupsForProductLinesByIDs :many
+-- The batched form of GetUnitGroupForProductLine.
+SELECT
+    ug.id,
+    ug.name,
+    ug.base_unit_id,
+    ug.unit_type_code,
+    ug.created_at,
+    ug.updated_at
+FROM unit_group ug
+WHERE ug.id IN (sqlc.slice('ids'))
+AND (ug.account_id = sqlc.arg('account_id') OR ug.account_id IS NULL);
+
 -- name: ExportProductLines :many
 -- Unpaginated by design; the caller passes a row cap as the limit. System rows
 -- (account_id IS NULL) are in scope, matching what the list endpoint returns.

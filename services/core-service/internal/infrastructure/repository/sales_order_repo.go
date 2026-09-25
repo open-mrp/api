@@ -450,6 +450,32 @@ func (r *salesOrderRepoImpl) Get(ctx context.Context, accountID, salesOrderID st
 	return mapGetSalesOrderRow(row), nil
 }
 
+// GetByIDs is the batched form of Get, or of GetForCustomer when buyerAccountID is set. Ids outside
+// that scope are absent from the result.
+func (r *salesOrderRepoImpl) GetByIDs(ctx context.Context, accountID string, buyerAccountID *string, salesOrderIDs []string) ([]*domain.SalesOrder, *apierror.APIError) {
+	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.get_by_ids")
+	defer span.End()
+
+	if len(salesOrderIDs) == 0 {
+		return []*domain.SalesOrder{}, nil
+	}
+
+	rows, err := r.queries.GetSalesOrdersByIDs(ctx, sqlc.GetSalesOrdersByIDsParams{
+		SalesOrderIds:  salesOrderIDs,
+		AccountID:      accountID,
+		BuyerAccountID: toNullString(buyerAccountID),
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	orders := make([]*domain.SalesOrder, len(rows))
+	for i, row := range rows {
+		orders[i] = mapGetSalesOrderRow(sqlc.GetSalesOrderRow(row))
+	}
+	return orders, nil
+}
+
 func (r *salesOrderRepoImpl) GetForCustomer(ctx context.Context, accountID, buyerAccountID, salesOrderID string) (*domain.SalesOrder, *apierror.APIError) {
 	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.get_for_customer")
 	defer span.End()

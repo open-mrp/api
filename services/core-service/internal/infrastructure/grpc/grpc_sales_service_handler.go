@@ -5,6 +5,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/contracts"
+	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/field"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"github.com/open-mrp/api/shared/safeconv"
@@ -563,19 +564,21 @@ func (h *salesGRPCHandler) BatchGetSalesOrdersByIDs(ctx context.Context, req *pb
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	orders := make([]*pb.SalesOrderInfo, 0, len(req.Ids))
-	for _, soID := range req.Ids {
-		if soID == "" {
-			continue
+	// Orders the caller cannot read are omitted so the resolver leaves those references null; a
+	// server-side failure is returned rather than passed off as missing orders.
+	orders, apiErr := h.salesOrderSvc.BatchGetSalesOrders(ctx, req.Ids, req.Includes)
+	if apiErr != nil {
+		if apierror.Is5XXErrorCode(apiErr.Code) {
+			return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 		}
-		order, apiErr := h.salesOrderSvc.GetSalesOrder(ctx, domain.GetSalesOrderParams{SalesOrderID: soID, Includes: req.Includes})
-		if apiErr != nil {
-			continue
-		}
-		orders = append(orders, salesOrderToProto(order))
+		return &pb.BatchGetSalesOrdersByIDsResponse{}, nil
 	}
 
-	return &pb.BatchGetSalesOrdersByIDsResponse{SalesOrders: orders}, nil
+	out := make([]*pb.SalesOrderInfo, len(orders))
+	for i, order := range orders {
+		out[i] = salesOrderToProto(order)
+	}
+	return &pb.BatchGetSalesOrdersByIDsResponse{SalesOrders: out}, nil
 }
 
 func (h *salesGRPCHandler) FindOrderDiscountByCode(ctx context.Context, req *pb.FindOrderDiscountByCodeRequest) (*pb.FindOrderDiscountByCodeResponse, error) {

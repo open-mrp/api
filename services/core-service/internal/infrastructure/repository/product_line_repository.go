@@ -566,14 +566,103 @@ func (r *productLineRepoImpl) GetByIDs(ctx context.Context, accountID string, id
 	// Stitch unit group data — always include base_unit and associated_units so the API gateway's SubField resolver has everything it needs.
 	//
 	// A group the tenant cannot see leaves the line's UnitGroup nil rather than failing the batch: this backs the list loader, so one line pointing at a group scoped to another account would otherwise 404 the entire page.
+	unitGroupIDs := make([]string, 0, len(out))
 	for _, pl := range out {
-		ug, apiErr := r.GetUnitGroup(ctx, accountID, pl.UnitGroupID, []string{"unit_group.base_unit", "unit_group.associated_units"})
-		if apiErr != nil && !apierror.IsNotFound(apiErr) {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		pl.UnitGroup = ug
+		unitGroupIDs = append(unitGroupIDs, pl.UnitGroupID)
+	}
+	unitGroups, apiErr := r.GetUnitGroups(ctx, accountID, unitGroupIDs, []string{"unit_group.base_unit", "unit_group.associated_units"})
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	for _, pl := range out {
+		pl.UnitGroup = unitGroups[pl.UnitGroupID]
 	}
 	return out, nil
+}
+
+// GetUnitGroups is the batched form of GetUnitGroup, keyed by id: at most three queries however many
+// groups are asked for. Groups the account cannot see are absent.
+func (r *productLineRepoImpl) GetUnitGroups(ctx context.Context, accountID string, ids []string, includes []string) (map[string]*domain.ProductLineUnitGroup, *apierror.APIError) {
+	ctx, span := productLineRepoTracer.Start(ctx, "repository.product_line.get_unit_groups")
+	defer span.End()
+
+	groups := make(map[string]*domain.ProductLineUnitGroup, len(ids))
+	if len(ids) == 0 {
+		return groups, nil
+	}
+
+	rows, err := r.queries.GetUnitGroupsForProductLinesByIDs(ctx, sqlc.GetUnitGroupsForProductLinesByIDsParams{
+		Ids:       ids,
+		AccountID: gosql.NullString{String: accountID, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if len(rows) == 0 {
+		return groups, nil
+	}
+
+	groupIDs := make([]string, len(rows))
+	baseUnitIDs := make([]string, 0, len(rows))
+	for i, row := range rows {
+		groups[row.ID] = &domain.ProductLineUnitGroup{
+			ID:              row.ID,
+			Name:            row.Name,
+			BaseUnitID:      row.BaseUnitID,
+			Type:            row.UnitTypeCode,
+			CreatedAt:       row.CreatedAt,
+			UpdatedAt:       row.UpdatedAt,
+		}
+		groupIDs[i] = row.ID
+		if row.BaseUnitID != "" {
+			baseUnitIDs = append(baseUnitIDs, row.BaseUnitID)
+		}
+	}
+
+	if unitGroupIncludeCovers(includes, "base_unit") && len(baseUnitIDs) > 0 {
+		unitRows, err := r.queries.GetUnitsByIDs(ctx, baseUnitIDs)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		units := make(map[string]domain.LightUnit, len(unitRows))
+		for _, row := range unitRows {
+			units[row.ID] = mapGetUnitsByIDsRowToLightUnit(row)
+		}
+		for _, ug := range groups {
+			if lu, ok := units[ug.BaseUnitID]; ok {
+				ug.BaseUnit = &lu
+			}
+		}
+	}
+
+	if unitGroupIncludeCovers(includes, "associated_units") {
+		ugUnitRows, err := r.queries.ListUnitGroupUnitsByUnitGroupIDs(ctx, groupIDs)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		for _, ug := range groups {
+			ug.AssociatedUnits = []*domain.UnitGroupUnit{}
+		}
+		for _, row := range ugUnitRows {
+			if ug := groups[row.UnitGroupID]; ug != nil {
+				ug.AssociatedUnits = append(ug.AssociatedUnits, mapUnitGroupUnitsByUnitGroupIDsRow(row))
+			}
+		}
+	}
+	return groups, nil
+}
+
+// unitGroupIncludeCovers reports whether includes ask for a unit group's sub-resource, addressed from
+// the unit group or through a product line; includes may nest further (…associated_units.unit).
+func unitGroupIncludeCovers(includes []string, subResource string) bool {
+	for _, frag := range []string{"unit_group." + subResource, "product_line.unit_group." + subResource} {
+		for _, inc := range includes {
+			if inc == frag || strings.HasPrefix(inc, frag+".") {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func mapGetProductLinesByIDsScopedRow(row sqlc.GetProductLinesByIDsScopedRow) *domain.ProductLineFull {

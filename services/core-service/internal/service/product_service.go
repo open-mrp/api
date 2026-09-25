@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"fmt"
+	"maps"
+	"slices"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
@@ -196,10 +198,8 @@ func (s *productSvcImpl) ListProductsFull(ctx context.Context, params domain.Lis
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	for _, p := range result.Products {
-		if apiErr := s.attachProductIncludes(ctx, p, identity.Target.AccountID, params.Includes); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
+	if apiErr := s.attachProductIncludes(ctx, result.Products, identity.Target.AccountID, params.Includes); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 
 	return result, nil
@@ -241,7 +241,7 @@ func (s *productSvcImpl) GetProduct(ctx context.Context, params domain.GetProduc
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	if apiErr := s.attachProductIncludes(ctx, product, identity.Target.AccountID, params.Includes); apiErr != nil {
+	if apiErr := s.attachProductIncludes(ctx, []*domain.ProductFull{product}, identity.Target.AccountID, params.Includes); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
@@ -249,23 +249,40 @@ func (s *productSvcImpl) GetProduct(ctx context.Context, params domain.GetProduc
 }
 
 // attachProductIncludes populates expandable sub-resources on a product that the product queries don't join. Specifically: item.attributes (loaded via item repo) and product_line.unit_group (loaded via product_line repo).
-func (s *productSvcImpl) attachProductIncludes(ctx context.Context, product *domain.ProductFull, accountID string, includes []string) *apierror.APIError {
-	if product == nil {
-		return nil
+// attachProductIncludes enriches products with their item's attributes and rates and their product
+// line's unit group, one batched read each for the whole set.
+func (s *productSvcImpl) attachProductIncludes(ctx context.Context, products []*domain.ProductFull, accountID string, includes []string) *apierror.APIError {
+	var itemIDs, unitGroupIDs []string
+	for _, product := range products {
+		if product == nil {
+			continue
+		}
+		if product.Item != nil {
+			itemIDs = append(itemIDs, product.Item.ID)
+		}
+		if product.ProductLine != nil && product.ProductLine.UnitGroupID != "" {
+			unitGroupIDs = append(unitGroupIDs, product.ProductLine.UnitGroupID)
+		}
 	}
 
-	if product.Item != nil {
-		item, apiErr := s.repos.NewItemRepo().Get(ctx, domain.GetItemParams{
-			AccountID: accountID,
-			ItemID:    product.Item.ID,
-			Includes:  []string{"attributes"},
-		})
+	if len(itemIDs) > 0 {
+		items, apiErr := s.repos.NewItemRepo().GetByIDsWithIncludes(ctx, accountID, itemIDs, []string{"attributes"})
 		if apiErr != nil {
-			// The item was concurrently soft-deleted between the list/get query and this enrichment call. Skip enrichment rather than surfacing a spurious 404 to the caller.
-			if !apierror.IsNotFound(apiErr) {
-				return apiErr
+			return apiErr
+		}
+		byID := make(map[string]*domain.Item, len(items))
+		for _, item := range items {
+			byID[item.ID] = item
+		}
+		for _, product := range products {
+			if product == nil || product.Item == nil {
+				continue
 			}
-		} else {
+			// An item soft-deleted since the product was read is absent; leave the product unenriched.
+			item, ok := byID[product.Item.ID]
+			if !ok {
+				continue
+			}
 			product.Item.Attributes = item.Attributes
 			if item.UnitValue != nil {
 				product.Item.UnitValue = item.UnitValue
@@ -279,12 +296,16 @@ func (s *productSvcImpl) attachProductIncludes(ctx context.Context, product *dom
 		}
 	}
 
-	if product.ProductLine != nil && product.ProductLine.UnitGroupID != "" {
-		unitGroup, apiErr := s.repos.NewProductLineRepo().GetUnitGroup(ctx, accountID, product.ProductLine.UnitGroupID, includes)
+	if len(unitGroupIDs) > 0 {
+		unitGroups, apiErr := s.repos.NewProductLineRepo().GetUnitGroups(ctx, accountID, unitGroupIDs, includes)
 		if apiErr != nil {
 			return apiErr
 		}
-		product.ProductLine.UnitGroup = unitGroup
+		for _, product := range products {
+			if product != nil && product.ProductLine != nil && product.ProductLine.UnitGroupID != "" {
+				product.ProductLine.UnitGroup = unitGroups[product.ProductLine.UnitGroupID]
+			}
+		}
 	}
 
 	return nil
@@ -503,7 +524,7 @@ func (s *productSvcImpl) createProductInTx(txCtx context.Context, params domain.
 		return nil, apiErr
 	}
 
-	if apiErr := s.attachProductIncludes(txCtx, created, params.AccountID, params.Includes); apiErr != nil {
+	if apiErr := s.attachProductIncludes(txCtx, []*domain.ProductFull{created}, params.AccountID, params.Includes); apiErr != nil {
 		return nil, apiErr
 	}
 
@@ -636,7 +657,7 @@ func (s *productSvcImpl) updateProductInTx(txCtx context.Context, params domain.
 		return nil, apiErr
 	}
 
-	if apiErr := s.attachProductIncludes(txCtx, updated, params.AccountID, params.Includes); apiErr != nil {
+	if apiErr := s.attachProductIncludes(txCtx, []*domain.ProductFull{updated}, params.AccountID, params.Includes); apiErr != nil {
 		return nil, apiErr
 	}
 
@@ -781,7 +802,7 @@ func (s *productSvcImpl) ChangeProductProductLine(ctx context.Context, params do
 				return apiErr
 			}
 
-			if apiErr := txSvc.attachProductIncludes(txCtx, result, params.AccountID, params.Includes); apiErr != nil {
+			if apiErr := txSvc.attachProductIncludes(txCtx, []*domain.ProductFull{result}, params.AccountID, params.Includes); apiErr != nil {
 				return apiErr
 			}
 
@@ -834,10 +855,8 @@ func (s *productSvcImpl) ValidateProducts(ctx context.Context, params domain.Val
 		return nil, apiErr
 	}
 
-	for _, p := range result.Products {
-		if apiErr := s.attachProductIncludes(ctx, p, params.AccountID, params.Includes); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
+	if apiErr := s.attachProductIncludes(ctx, slices.Collect(maps.Values(result.Products)), params.AccountID, params.Includes); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 
 	return result, nil

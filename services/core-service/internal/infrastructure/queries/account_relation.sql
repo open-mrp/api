@@ -55,6 +55,14 @@ SELECT EXISTS(
       AND counterparty_account_id = ?
 ) AS has_relation;
 
+-- name: ListRelatedCounterpartyIDs :many
+-- The set form of HasRelationByOwnerAndCounterparty: which of the given accounts the owner has any
+-- relation to.
+SELECT DISTINCT counterparty_account_id
+FROM account_relation
+WHERE owner_account_id = sqlc.arg('owner_account_id')
+  AND counterparty_account_id IN (sqlc.slice('counterparty_account_ids'));
+
 -- name: CountCounterpartyRelationsExcluding :one
 SELECT COUNT(*) AS cnt
 FROM account_relation

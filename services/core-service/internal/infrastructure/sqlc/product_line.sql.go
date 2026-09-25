@@ -575,6 +575,75 @@ func (q *Queries) GetUnitGroupForProductLine(ctx context.Context, arg GetUnitGro
 	return i, err
 }
 
+const getUnitGroupsForProductLinesByIDs = `-- name: GetUnitGroupsForProductLinesByIDs :many
+SELECT
+    ug.id,
+    ug.name,
+    ug.base_unit_id,
+    ug.unit_type_code,
+    ug.created_at,
+    ug.updated_at
+FROM unit_group ug
+WHERE ug.id IN (/*SLICE:ids*/?)
+AND (ug.account_id = ? OR ug.account_id IS NULL)
+`
+
+type GetUnitGroupsForProductLinesByIDsParams struct {
+	Ids       []string
+	AccountID sql.NullString
+}
+
+type GetUnitGroupsForProductLinesByIDsRow struct {
+	ID           string
+	Name         string
+	BaseUnitID   string
+	UnitTypeCode string
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+}
+
+// The batched form of GetUnitGroupForProductLine.
+func (q *Queries) GetUnitGroupsForProductLinesByIDs(ctx context.Context, arg GetUnitGroupsForProductLinesByIDsParams) ([]GetUnitGroupsForProductLinesByIDsRow, error) {
+	query := getUnitGroupsForProductLinesByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetUnitGroupsForProductLinesByIDsRow
+	for rows.Next() {
+		var i GetUnitGroupsForProductLinesByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.BaseUnitID,
+			&i.UnitTypeCode,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const insertProductLine = `-- name: InsertProductLine :exec
 INSERT INTO product_line (
     id,

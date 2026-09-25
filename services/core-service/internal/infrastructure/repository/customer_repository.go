@@ -707,6 +707,49 @@ func (r *customerRepoImpl) Get(ctx context.Context, ownerAccountID, customerAcco
 		}
 	}
 
+	customer := customerFromRow(row, incs)
+	customer.PriceGroups = priceGroups
+	customer.AcceptsInvoiceEmails = acceptsInvoiceEmails
+
+	if wantsInclude(incs, "child_accounts") {
+		childrenByRelation, apiErr := r.fetchChildAccountsByRelationIDs(ctx, ownerAccountID, []string{row.RelationID})
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		customer.ChildAccounts = childrenByRelation[row.RelationID]
+	}
+
+	return customer, nil
+}
+
+// GetByIDs is the batched form of Get with no includes. Ids that are not customers of the owner are
+// absent from the result.
+func (r *customerRepoImpl) GetByIDs(ctx context.Context, ownerAccountID string, customerAccountIDs []string) ([]*domain.Customer, *apierror.APIError) {
+	ctx, span := customerRepoTracer.Start(ctx, "repository.customer.get_by_ids")
+	defer span.End()
+
+	if len(customerAccountIDs) == 0 {
+		return []*domain.Customer{}, nil
+	}
+
+	rows, err := r.queries.GetCustomersByIDs(ctx, sqlc.GetCustomersByIDsParams{
+		OwnerAccountID:         ownerAccountID,
+		CounterpartyAccountIds: customerAccountIDs,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	customers := make([]*domain.Customer, len(rows))
+	for i, row := range rows {
+		customers[i] = customerFromRow(sqlc.GetCustomerRow(row), nil)
+	}
+	return customers, nil
+}
+
+// customerFromRow maps the columns every customer read carries. The bill-to and ship-to addresses
+// are populated only when requested in incs.
+func customerFromRow(row sqlc.GetCustomerRow, incs []string) *domain.Customer {
 	var billToAddress *domain.CustomerAddress
 	if slices.Contains(incs, "bill_to_address") && row.DefaultBillingAddressID.Valid {
 		billToAddress = buildCustomerAddress(
@@ -747,7 +790,7 @@ func (r *customerRepoImpl) Get(ctx context.Context, ownerAccountID, customerAcco
 		)
 	}
 
-	customer := &domain.Customer{
+	return &domain.Customer{
 		ID:                                 row.AccountID,
 		Name:                               row.AccountName,
 		Number:                             row.ExternalNumber,
@@ -771,7 +814,6 @@ func (r *customerRepoImpl) Get(ctx context.Context, ownerAccountID, customerAcco
 		CreditLimitUnitAbbreviation:        nullStringPtr(row.CreditLimitUnitAbbreviation),
 		CreditLimitUnitName:                nullStringPtr(row.CreditLimitUnitName),
 		CreditLimitUnitType:                nullStringPtr(row.CreditLimitUnitType),
-		AcceptsInvoiceEmails:               acceptsInvoiceEmails,
 		DefaultCarrierID:                   nullStringPtr(row.DefaultCarrierID),
 		DefaultCarrierName:                 nullStringPtr(row.DefaultCarrierName),
 		DefaultCarrierIsPortalEnabled:      nullBoolPtr(row.DefaultCarrierIsPortalEnabled),
@@ -812,7 +854,6 @@ func (r *customerRepoImpl) Get(ctx context.Context, ownerAccountID, customerAcco
 		TypeGroupType:                      nullAccountGroupType(row.TypeGroupTypeCode),
 		TypeGroupCreatedAt:                 nullTimePtr(row.TypeGroupCreatedAt),
 		TypeGroupUpdatedAt:                 nullTimePtr(row.TypeGroupUpdatedAt),
-		PriceGroups:                        priceGroups,
 		ParentAccountID:                    nullStringPtr(row.ParentAccountID),
 		ParentAccountName:                  nullStringPtr(row.ParentAccountName),
 		ParentAccountNumber:                nullStringPtr(row.ParentAccountNumber),
@@ -821,16 +862,6 @@ func (r *customerRepoImpl) Get(ctx context.Context, ownerAccountID, customerAcco
 		CreatedAt:                          row.CreatedAt,
 		UpdatedAt:                          row.UpdatedAt,
 	}
-
-	if wantsInclude(incs, "child_accounts") {
-		childrenByRelation, apiErr := r.fetchChildAccountsByRelationIDs(ctx, ownerAccountID, []string{row.RelationID})
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		customer.ChildAccounts = childrenByRelation[row.RelationID]
-	}
-
-	return customer, nil
 }
 
 // wantsInclude returns true if the include key is present in the include list.

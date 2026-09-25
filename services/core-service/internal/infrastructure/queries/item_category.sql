@@ -207,6 +207,18 @@ SELECT
 FROM unit_group ug
 WHERE ug.id = sqlc.arg('id');
 
+-- name: GetUnitGroupsForCategoriesByIDs :many
+-- The batched form of GetUnitGroupForCategory.
+SELECT
+    ug.id,
+    ug.name,
+    ug.base_unit_id,
+    ug.unit_type_code,
+    ug.created_at,
+    ug.updated_at
+FROM unit_group ug
+WHERE ug.id IN (sqlc.slice('ids'));
+
 -- name: GetCategoryBaseUnitID :one
 -- The base unit is the one configured on the category's unit group
 -- (unit_group.base_unit_id), NOT a group member flagged is_base_unit — that flag

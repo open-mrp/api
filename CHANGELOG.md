@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.10.2](https://github.com/open-mrp/api/compare/v2.10.1...v2.10.2) (2026-09-25)
+
+
+### Performance Improvements
+
+* cut API latency toward sub-100ms p99 ([#193](https://github.com/open-mrp/api/issues/193)) ([6335c3a](https://github.com/open-mrp/api/commit/6335c3ad8da1164e398d0f1eef9043924ecbf880))
+
 ## [2.10.1](https://github.com/open-mrp/api/compare/v2.10.0...v2.10.1) (2026-09-24)
 
 

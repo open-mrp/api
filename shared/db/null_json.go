@@ -12,8 +12,13 @@ func (n *NullableRawMessage) Scan(value any) error {
 		*n = nil
 		return nil
 	}
-	b, ok := value.([]byte)
-	if !ok {
+	var b []byte
+	switch v := value.(type) {
+	case []byte:
+		b = v
+	case string:
+		b = []byte(v)
+	default:
 		return fmt.Errorf("cannot scan %T into NullableRawMessage", value)
 	}
 	// Copy, don't alias. database/sql hands a Scanner the driver's own buffer, which is
@@ -28,9 +33,11 @@ func (n *NullableRawMessage) Scan(value any) error {
 	return nil
 }
 
+// Value is a string, not []byte: with interpolateParams the driver writes []byte as a _binary
+// literal, which MySQL refuses to store in a JSON column.
 func (n NullableRawMessage) Value() (driver.Value, error) {
 	if n == nil {
 		return nil, nil
 	}
-	return []byte(n), nil
+	return string(n), nil
 }

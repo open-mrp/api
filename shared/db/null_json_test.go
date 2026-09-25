@@ -67,17 +67,16 @@ func TestNullableRawMessage_Value(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Value(): %v", err)
 	}
-	b, ok := got.([]byte)
+	// A []byte would be interpolated as a _binary literal, which a JSON column rejects.
+	s, ok := got.(string)
 	if !ok {
-		t.Fatalf("Value() = %T, want []byte", got)
+		t.Fatalf("Value() = %T, want string", got)
 	}
-	if string(b) != `{"a":1}` {
-		t.Fatalf("Value() = %q, want %q", string(b), `{"a":1}`)
+	if s != `{"a":1}` {
+		t.Fatalf("Value() = %q, want %q", s, `{"a":1}`)
 	}
 }
 
-// Value hands the driver the same backing array, so a caller that reuses its buffer after the
-// write would change what is being written.
 func TestNullableRawMessage_RoundTrip(t *testing.T) {
 	t.Parallel()
 	original := NullableRawMessage(`{"production_runs":[]}`)

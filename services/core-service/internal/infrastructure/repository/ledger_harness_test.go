@@ -35,12 +35,9 @@ import (
 )
 
 // The local dev MySQL from docker-compose.yml — the same instance make test-sql-prepare-smoke uses
-// and the same one post-merge.yml stands up as a service container.
-//
-// interpolateParams=false matches shared/db/db_pool.go, and it matters here rather than being
-// cosmetic: it is what makes every statement a prepare+execute pair, which is what the statement
-// budget is counted in.
-const defaultLedgerDSN = "root:Testing123!@tcp(127.0.0.1:3306)/openmrp?parseTime=true&loc=UTC&interpolateParams=false"
+// and the same one post-merge.yml stands up as a service container. interpolateParams matches
+// shared/db/db_pool.go, so statements reach MySQL the way production sends them.
+const defaultLedgerDSN = "root:Testing123!@tcp(127.0.0.1:3306)/openmrp?parseTime=true&loc=UTC&interpolateParams=true"
 
 var (
 	ledgerDBOnce sync.Once

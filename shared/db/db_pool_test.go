@@ -77,6 +77,13 @@ func TestConfigWithDefaults(t *testing.T) {
 		assert.Equal(t, defaultConnectionMaxIdleTime, got.ConnectionMaxIdleTime)
 		assert.Equal(t, defaultMaxOpenConnections, got.MaxOpenConnections)
 		assert.Equal(t, defaultMaxIdleConnections, got.MaxIdleConnections)
+		assert.Equal(t, defaultWarmConnections, got.WarmConnections)
+		assert.Equal(t, defaultWarmInterval, got.WarmInterval)
+	})
+
+	t.Run("a negative warm count is kept, so warming can be turned off", func(t *testing.T) {
+		t.Parallel()
+		assert.Equal(t, -1, (&Config{WarmConnections: -1}).WithDefaults().WarmConnections)
 	})
 
 	t.Run("zero fields are replaced and the URI is carried over", func(t *testing.T) {
@@ -134,6 +141,13 @@ func TestConfigValidate(t *testing.T) {
 	t.Run("empty URI is rejected", func(t *testing.T) {
 		t.Parallel()
 		assert.ErrorContains(t, (&Config{}).validate(), "database URI is empty")
+	})
+
+	// Connections returned beyond MaxIdleConnections are closed, so the extra warm ones would reconnect every round.
+	t.Run("more warm connections than idle slots is rejected", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{DBURI: "user:pass@tcp(host:3306)/app", WarmConnections: 5, MaxIdleConnections: 4}
+		assert.ErrorContains(t, cfg.validate(), "exceed max idle connections")
 	})
 
 	t.Run("a URI is all that is required", func(t *testing.T) {

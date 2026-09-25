@@ -94,8 +94,9 @@ const (
 	// AgentCmdExecuteRunQueue carries execute-run commands to the agent-service. Messages trigger an agent run for a specific account and agent configuration.
 	AgentCmdExecuteRunQueue = "agent_cmd_execute_run"
 
-	// AgentCmdExecuteActionQueue carries execute-action commands to the agent-service. Messages trigger execution of a proposed agent action after optional human review.
-	AgentCmdExecuteActionQueue = "agent_cmd_execute_action"
+	// Retired: no publisher and no consumer. Superseded by the in-run approval flow.
+	// // AgentCmdExecuteActionQueue carries execute-action commands to the agent-service. Messages trigger execution of a proposed agent action after optional human review.
+	// AgentCmdExecuteActionQueue = "agent_cmd_execute_action"
 
 	// AgentCmdContinueRunQueue carries continue-run commands to the agent-service. Messages trigger continuation of an agent run that is awaiting user input.
 	AgentCmdContinueRunQueue = "agent_cmd_continue_run"
@@ -210,13 +211,14 @@ type ChatHistoryMessage struct {
 	Body          string `json:"body"`
 }
 
-// AgentExecuteActionData is the payload for AgentCmdExecuteActionQueue messages. It carries a proposed action for execution after optional human review.
-type AgentExecuteActionData struct {
-	AgentActionID   string          `json:"agent_action_id"`
-	ToolSlug        string          `json:"tool_slug"`
-	ProposedPayload json.RawMessage `json:"proposed_payload"`
-	AccountID       string          `json:"account_id"`
-}
+// Retired: no publisher and no consumer. Superseded by the in-run approval flow.
+// // AgentExecuteActionData is the payload for AgentCmdExecuteActionQueue messages. It carries a proposed action for execution after optional human review.
+// type AgentExecuteActionData struct {
+// 	AgentActionID   string          `json:"agent_action_id"`
+// 	ToolSlug        string          `json:"tool_slug"`
+// 	ProposedPayload json.RawMessage `json:"proposed_payload"`
+// 	AccountID       string          `json:"account_id"`
+// }
 
 // AgentContinueRunData is the payload for AgentCmdContinueRunQueue messages. It carries the run ID, account ID, and user message for continuing a run.
 type AgentContinueRunData struct {

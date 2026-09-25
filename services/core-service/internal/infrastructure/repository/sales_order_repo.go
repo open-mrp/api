@@ -461,17 +461,21 @@ func (r *salesOrderRepoImpl) GetByIDs(ctx context.Context, accountID string, buy
 	}
 
 	rows, err := r.queries.GetSalesOrdersByIDs(ctx, sqlc.GetSalesOrdersByIDsParams{
-		SalesOrderIds:  salesOrderIDs,
-		AccountID:      accountID,
-		BuyerAccountID: toNullString(buyerAccountID),
+		SalesOrderIds: salesOrderIDs,
+		AccountID:     accountID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	orders := make([]*domain.SalesOrder, len(rows))
-	for i, row := range rows {
-		orders[i] = mapGetSalesOrderRow(sqlc.GetSalesOrderRow(row))
+	// The buyer is matched here rather than in SQL: the rows are already bounded by the ids, and an
+	// optional predicate would be an OR-sentinel filter.
+	orders := make([]*domain.SalesOrder, 0, len(rows))
+	for _, row := range rows {
+		if buyerAccountID != nil && row.BuyerAccountID != *buyerAccountID {
+			continue
+		}
+		orders = append(orders, mapGetSalesOrderRow(sqlc.GetSalesOrderRow(row)))
 	}
 	return orders, nil
 }

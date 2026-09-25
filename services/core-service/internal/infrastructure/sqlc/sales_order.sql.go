@@ -2396,13 +2396,11 @@ LEFT JOIN pick pk ON pk.sales_order_id = so.id
 WHERE so.id IN (/*SLICE:sales_order_ids*/?)
 AND so.owner_account_id = ?
 AND so.seller_account_id = so.owner_account_id
-AND (? IS NULL OR so.buyer_account_id = ?)
 `
 
 type GetSalesOrdersByIDsParams struct {
-	SalesOrderIds  []string
-	AccountID      string
-	BuyerAccountID sql.NullString
+	SalesOrderIds []string
+	AccountID     string
 }
 
 type GetSalesOrdersByIDsRow struct {
@@ -2511,8 +2509,8 @@ type GetSalesOrdersByIDsRow struct {
 	LineCount                   int64
 }
 
-// The batched form of GetSalesOrder (and, with a buyer, GetSalesOrderForCustomer) for include
-// expansion; the columns must stay identical so the rows convert to GetSalesOrderRow.
+// The batched form of GetSalesOrder for include expansion; the columns must stay identical so the
+// rows convert to GetSalesOrderRow.
 func (q *Queries) GetSalesOrdersByIDs(ctx context.Context, arg GetSalesOrdersByIDsParams) ([]GetSalesOrdersByIDsRow, error) {
 	query := getSalesOrdersByIDs
 	var queryParams []interface{}
@@ -2525,8 +2523,6 @@ func (q *Queries) GetSalesOrdersByIDs(ctx context.Context, arg GetSalesOrdersByI
 		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", "NULL", 1)
 	}
 	queryParams = append(queryParams, arg.AccountID)
-	queryParams = append(queryParams, arg.BuyerAccountID)
-	queryParams = append(queryParams, arg.BuyerAccountID)
 	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err

@@ -588,8 +588,8 @@ AND so.owner_account_id = sqlc.arg('account_id')
 AND so.seller_account_id = so.owner_account_id;
 
 -- name: GetSalesOrdersByIDs :many
--- The batched form of GetSalesOrder (and, with a buyer, GetSalesOrderForCustomer) for include
--- expansion; the columns must stay identical so the rows convert to GetSalesOrderRow.
+-- The batched form of GetSalesOrder for include expansion; the columns must stay identical so the
+-- rows convert to GetSalesOrderRow.
 SELECT
     so.id,
     so.number,
@@ -728,8 +728,7 @@ LEFT JOIN order_discount od ON od.id = so.order_discount_id
 LEFT JOIN pick pk ON pk.sales_order_id = so.id
 WHERE so.id IN (sqlc.slice('sales_order_ids'))
 AND so.owner_account_id = sqlc.arg('account_id')
-AND so.seller_account_id = so.owner_account_id
-AND (sqlc.narg('buyer_account_id') IS NULL OR so.buyer_account_id = sqlc.narg('buyer_account_id'));
+AND so.seller_account_id = so.owner_account_id;
 
 -- name: GetSalesOrderForCustomer :one
 SELECT

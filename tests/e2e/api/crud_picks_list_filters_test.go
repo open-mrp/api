@@ -4,10 +4,12 @@ package api_test
 
 import (
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // Covers the filter set the picking index page sends (pick.api.ts fetchPicks): q, status,
@@ -93,4 +95,51 @@ func TestPicksList_FiltersByCreatedDateWindow(t *testing.T) {
 
 	assert.Empty(t, pickIDsFiltered(t, url.Values{"starts_at": {"2000-01-01"}, "ends_at": {"2000-01-02"}}),
 		"a window that closed decades ago must exclude every pick")
+}
+
+// A 1-2 character term is too common as a substring to page quickly, so it matches pick numbers by
+// prefix only; 3+ characters keep substring search. Scoped to a fresh customer so the result is
+// exactly one pick or none.
+func TestPicksList_ShortSearchMatchesPickNumberPrefix(t *testing.T) {
+	t.Parallel()
+
+	customerID := leadTimeCustomer(t, "e2e-pick-prefix", nil, "")
+	_, pickID := issuedOrderAndPick(t, customerID, nil)
+	number := jsonField(retrievePick(t, pickID), "number")
+	require.GreaterOrEqual(t, len(number), 4, "the pick number must be long enough to split into a prefix and a non-prefix")
+
+	search := func(q string) []string {
+		return pickIDsFiltered(t, url.Values{"q": {q}, "customer_ids": {customerID}})
+	}
+
+	assert.Equal(t, []string{pickID}, search(number[:1]), "a one-character prefix of the number should match")
+	assert.Equal(t, []string{pickID}, search(number[:2]), "a two-character prefix of the number should match")
+
+	tail := number[len(number)-2:]
+	if !strings.HasPrefix(strings.ToLower(number), strings.ToLower(tail)) {
+		assert.Empty(t, search(tail), "a two-character term that is not a prefix must not match")
+	}
+	assert.Equal(t, []string{pickID}, search(number[len(number)-3:]), "three characters match anywhere in the number")
+}
+
+// The customer filter reads the pick's own copy of its order's buyer, so a merge that moves the
+// order to another customer has to move the pick with it.
+func TestPicksList_CustomerFilterFollowsAMerge(t *testing.T) {
+	t.Parallel()
+
+	targetID := leadTimeCustomer(t, "e2e-pick-merge-target", nil, "")
+	sourceID := leadTimeCustomer(t, "e2e-pick-merge-source", nil, "")
+	_, pickID := issuedOrderAndPick(t, sourceID, nil)
+	require.Equal(t, []string{pickID}, pickIDsFiltered(t, url.Values{"customer_ids": {sourceID}}))
+
+	status, body, err := apiClient.Post(customersPath+"/"+targetID+"/actions/merge", map[string]any{
+		"source_customer_ids": []string{sourceID},
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	assert.Equal(t, []string{pickID}, pickIDsFiltered(t, url.Values{"customer_ids": {targetID}}),
+		"the merged customer's pick should list under the target")
+	assert.Empty(t, pickIDsFiltered(t, url.Values{"customer_ids": {sourceID}}),
+		"nothing should list under the merged-away customer")
 }

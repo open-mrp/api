@@ -3,171 +3,167 @@ package repository
 import (
 	gosql "database/sql"
 	"strings"
+	"unicode/utf8"
 
-	"github.com/open-mrp/api/services/core-service/internal/domain"
-	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/db"
 	"github.com/open-mrp/api/shared/pagination"
 )
 
-// pickListColumns is the SELECT list for the pick listing, in the exact order
-// scanPickListRows reads it — which is the field order of sqlc.ListPicksForwardRow, so the scan can
-// reuse mapPickForwardRow and never drift from the sqlc-generated projection it mirrors.
-const pickListColumns = `p.id, p.number, p.sales_order_id, so.number, ` +
-	`ar.counterparty_account_id, ba.name, ar.external_number, ` +
-	`so.priority_code, pr.id, pr.name, ` +
-	`p.finished_at, p.created_at, p.updated_at, ` +
-	`(SELECT COUNT(*) FROM pick_line plc WHERE plc.pick_id = p.id), ` +
-	`(SELECT MAX(sh.shipped_at) FROM shipment sh WHERE sh.sales_order_id = so.id), ` +
-	`so.promised_at, so.customer_po_number, so.note, ` +
-	`so.carrier_id, cr.name, cr.is_portal_enabled, cr.created_at, cr.updated_at, ` +
-	`so.carrier_option_id, co.name, co.is_portal_enabled, co.service_level_token, co.created_at, co.updated_at, ` +
-	`so.carrier_billing_type, so.carrier_billing_account, ` +
-	`so.ship_by_date, so.ship_by_cutoff_at, ` +
-	`so.lead_time_days, so.lead_time_source_code, so.transit_days, so.transit_source_code, ` +
-	`so.shipping_address_id, addr.name, addr.phone, addr.email, addr.is_drop_ship, ` +
-	`ship_geo.id, ship_geo.street_line_1, ship_geo.street_line_2, ship_geo.locality, ship_geo.state, ` +
-	`ship_geo.postal_code, ship_geo.country, addr.created_at, addr.updated_at`
-
-// pickListJoins is the join graph, identical to ListPicksForward. Every joined table is reached by
-// primary key or a unique key, so the joins are nested-loop lookups over whatever the driving index
-// on `pick` yields. The driving table and its index hint are written by the builder.
-const pickListJoins = ` JOIN sales_order so ON so.id = p.sales_order_id` +
-	` JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id AND ar.counterparty_account_id = so.buyer_account_id` +
-	` JOIN account ba ON ba.id = so.buyer_account_id` +
-	` JOIN priority pr ON pr.code = so.priority_code` +
-	` LEFT JOIN address addr ON addr.id = so.shipping_address_id` +
-	` LEFT JOIN geolocation ship_geo ON ship_geo.id = addr.geolocation_id` +
-	` LEFT JOIN carrier cr ON cr.id = so.carrier_id` +
-	` LEFT JOIN carrier_option co ON co.id = so.carrier_option_id`
-
-// The driving indexes on `pick`, one pair per sort, that read the list order straight out of the
-// B-tree. The finished variants lead with finished_at so `status=open` is an index equality rather
-// than a residual filter; see buildPickListQuery for why the choice is made here and not by MySQL.
+// The pick list is a deferred join: buildPickListQuery pages pick ids using only the pick table, and
+// the page is hydrated by id afterwards. Every filter is a pick column (buyer_account_id is
+// denormalized from the order), so an (account_id, [filter], <sort>, id) index can serve the ORDER
+// BY and stop at LIMIT, and the order/customer/carrier joins run for one page instead of for every
+// candidate row.
 const (
-	pickShipByIndex      = "pick_account_ship_by_idx"
-	pickOpenShipByIndex  = "pick_account_finished_ship_by_idx"
-	pickCreatedIndex     = "pick_account_created_idx"
-	pickOpenCreatedIndex = "pick_account_finished_created_idx"
+	pickShipByIndex        = "pick_account_ship_by_idx"
+	pickOpenShipByIndex    = "pick_account_finished_ship_by_idx"
+	pickCreatedIndex       = "pick_account_created_idx"
+	pickOpenCreatedIndex   = "pick_account_finished_created_idx"
+	pickBuyerShipByIndex   = "pick_account_buyer_ship_by_idx"
+	pickBuyerCreatedIndex  = "pick_account_buyer_created_idx"
+	pickAccountNumberIndex = "pick_account_number_idx"
 )
 
-// buildPickListQuery assembles the pick listing (ship-by or created-at sort, off the search path) and
-// its bind args. It exists because the sqlc ListPicksForward/Backward serve both sorts through a
-// CASE-wrapped ORDER BY and a wall of `? IS NULL OR ...` / `? = false OR ...` filter guards. Neither
-// is sargable: the CASE cannot be index-ordered and the guards make the optimizer abandon the
-// composite, so the list filesorted every one of an account's picks and read ~180k-1.3M rows to
-// return 51 (10-16s, past the RPC deadline).
-//
-// Emitting only the predicates the caller actually set lets a bare ORDER BY land on an
-// (account_id, <sort column>, id) index: the scan reads in order and stops at LIMIT, and every other
-// table is a primary-/unique-key lookup. The ship-by sort reads the denormalized p.ship_by_sort_date
-// (COALESCE(so.ship_by_date, '9999-12-31'), sentinel sorts last). STRAIGHT_JOIN pins `p` as the
-// driver so the index supplies the sort directly rather than MySQL starting from a small joined table
-// and filesorting; see inventory_change_log_list_query.go for the same pattern and its measured win.
-//
-// The driving index is named rather than left to the optimizer, because it chose between candidates
-// on row estimates. `status=open` must take the finished_at-led index: open picks are a tiny slice of
-// a mostly-closed table, and on the plain index the filter is residual, so the scan reads the
-// account's closed history before a page fills. Every other combination takes the plain index: with
-// no status filter there is nothing to pin, and `status=closed` matches nearly every row it reads, so
-// filtering in order fills a page immediately.
-//
-// Direction matches the sqlc queries this path replaced: ship-by pages forward ascending (soonest
-// first), created-at forward descending (newest first); backward is the reverse, undone by
-// BuildPageString. The cursor predicate is emitted only when a cursor was supplied, so the first page
-// is a clean range scan.
-func buildPickListQuery(
-	sortByShipBy bool,
-	accountID string,
-	searchLike gosql.NullString,
-	status *string,
-	customerIDs []string,
-	customerGroupIDs []string,
-	productLineIDs []string,
-	startDate gosql.NullTime,
-	endDate gosql.NullTime,
-	dir pagination.Direction,
-	cursorAt gosql.NullTime,
-	cursorID gosql.NullString,
-	limit int32,
-) (string, []any) {
-	args := make([]any, 0, 8+len(customerIDs)+len(customerGroupIDs)+len(productLineIDs))
+// Shorter terms are too common as substrings to page quickly ("22" is in ~9k of the largest
+// account's picks), so they match pick numbers by prefix instead.
+const pickSubstringSearchMinRunes = 3
 
-	// Any status other than "closed" is the open filter, matching the predicate emitted below.
-	openOnly := status != nil && *status != "closed"
-	var drivingIndex string
-	switch {
-	case sortByShipBy && openOnly:
-		drivingIndex = pickOpenShipByIndex
-	case sortByShipBy:
-		drivingIndex = pickShipByIndex
-	case openOnly:
-		drivingIndex = pickOpenCreatedIndex
-	default:
-		drivingIndex = pickCreatedIndex
+type pickSearch struct {
+	// NumberPrefix is a LIKE pattern anchored at the start of the pick number.
+	NumberPrefix string
+	// Phrase is an ngram boolean-mode phrase, matched as a substring of the pick number, the order's
+	// PO number, and the customer's name and number.
+	Phrase string
+}
+
+func newPickSearch(q *string) pickSearch {
+	if q == nil || *q == "" {
+		return pickSearch{}
 	}
+	if utf8.RuneCountInString(*q) < pickSubstringSearchMinRunes {
+		return pickSearch{NumberPrefix: db.EscapeLike(*q) + "%"}
+	}
+	return pickSearch{Phrase: db.NewNgramSearch(q).Fulltext.String}
+}
+
+type pickListQuery struct {
+	AccountID        string
+	SortByShipBy     bool
+	Search           pickSearch
+	Status           *string
+	CustomerIDs      []string
+	CustomerGroupIDs []string
+	ProductLineIDs   []string
+	StartDate        gosql.NullTime
+	EndDate          gosql.NullTime
+	Direction        pagination.Direction
+	CursorAt         gosql.NullTime
+	CursorID         gosql.NullString
+	Limit            int32
+}
+
+// openOnly reports the open filter; any status other than "closed" is open.
+func (q pickListQuery) openOnly() bool {
+	return q.Status != nil && *q.Status != "closed"
+}
+
+// indexHint names the indexes the scan may drive from, so MySQL cannot pick one that filesorts the
+// account or walks it for a rare filter value. A customer filter pins its buyer; status=open pins
+// finished_at because open picks are a tiny slice of a mostly-closed table. Where the better choice
+// depends on how many rows match (a number prefix, a customer group), MySQL chooses among the listed
+// indexes from its range estimates. A phrase search drives from its match set and takes no hint.
+func (q pickListQuery) indexHint() []string {
+	if q.Search.Phrase != "" {
+		return nil
+	}
+
+	sortIndex, buyerIndex := pickCreatedIndex, pickBuyerCreatedIndex
+	switch {
+	case q.SortByShipBy && q.openOnly():
+		sortIndex, buyerIndex = pickOpenShipByIndex, pickBuyerShipByIndex
+	case q.SortByShipBy:
+		sortIndex, buyerIndex = pickShipByIndex, pickBuyerShipByIndex
+	case q.openOnly():
+		sortIndex = pickOpenCreatedIndex
+	}
+
+	switch {
+	case len(q.CustomerIDs) > 0:
+		return []string{buyerIndex}
+	case q.Search.NumberPrefix != "":
+		return []string{sortIndex, pickAccountNumberIndex}
+	case len(q.CustomerGroupIDs) > 0:
+		return []string{sortIndex, buyerIndex}
+	default:
+		return []string{sortIndex}
+	}
+}
+
+// buildPickListQuery returns the query for one page of pick ids (Limit rows, in list order) and its
+// bind args. Only the predicates the caller set are emitted, so a bare ORDER BY can land on an index.
+//
+// Ship-by pages forward ascending (soonest first), created-at forward descending (newest first);
+// backward is the reverse, undone by BuildPageString.
+func buildPickListQuery(q pickListQuery) (string, []any) {
+	args := make([]any, 0, 16+len(q.CustomerIDs)+len(q.CustomerGroupIDs)+len(q.ProductLineIDs))
 
 	var b strings.Builder
-	b.WriteString("SELECT STRAIGHT_JOIN ")
-	b.WriteString(pickListColumns)
-	b.WriteString(" FROM pick p FORCE INDEX (")
-	b.WriteString(drivingIndex)
-	b.WriteString(")")
-	b.WriteString(pickListJoins)
-	b.WriteString(" WHERE p.account_id = ?")
-	args = append(args, accountID)
-
-	// Short (< ngram token size) terms reach the list as a LIKE; longer terms take the ngram path and
-	// never call this builder. The picker often has the customer in hand rather than a number, so the
-	// box matches who the order is for as well as what it is.
-	if searchLike.Valid {
-		b.WriteString(" AND (p.number LIKE ? OR so.customer_po_number LIKE ? OR ba.name LIKE ? OR ar.external_number LIKE ?)")
-		args = append(args, searchLike.String, searchLike.String, searchLike.String, searchLike.String)
+	b.WriteString("SELECT STRAIGHT_JOIN p.id FROM ")
+	if q.Search.Phrase != "" {
+		b.WriteString("(" + pickPhraseMatches + ") matched JOIN pick p ON p.id = matched.id")
+		for range 4 {
+			args = append(args, q.AccountID, q.Search.Phrase)
+		}
+	} else {
+		b.WriteString("pick p FORCE INDEX (" + strings.Join(q.indexHint(), ", ") + ")")
 	}
-	if status != nil {
-		if openOnly {
+	b.WriteString(" WHERE p.account_id = ?")
+	args = append(args, q.AccountID)
+
+	if q.Search.NumberPrefix != "" {
+		b.WriteString(" AND p.number LIKE ?")
+		args = append(args, q.Search.NumberPrefix)
+	}
+	if q.Status != nil {
+		if q.openOnly() {
 			b.WriteString(" AND p.finished_at IS NULL")
 		} else {
 			b.WriteString(" AND p.finished_at IS NOT NULL")
 		}
 	}
-	if len(customerIDs) > 0 {
-		b.WriteString(" AND so.buyer_account_id IN (")
-		b.WriteString(iclPlaceholders(len(customerIDs)))
-		b.WriteString(")")
-		for _, id := range customerIDs {
+	if len(q.CustomerIDs) > 0 {
+		b.WriteString(" AND p.buyer_account_id IN (" + iclPlaceholders(len(q.CustomerIDs)) + ")")
+		for _, id := range q.CustomerIDs {
 			args = append(args, id)
 		}
 	}
-	if len(customerGroupIDs) > 0 {
-		b.WriteString(" AND ar.account_group_id IN (")
-		b.WriteString(iclPlaceholders(len(customerGroupIDs)))
-		b.WriteString(")")
-		for _, id := range customerGroupIDs {
+	if len(q.CustomerGroupIDs) > 0 {
+		b.WriteString(" AND p.buyer_account_id IN (SELECT gar.counterparty_account_id FROM account_relation gar" +
+			" WHERE gar.owner_account_id = ? AND gar.account_group_id IN (" + iclPlaceholders(len(q.CustomerGroupIDs)) + "))")
+		args = append(args, q.AccountID)
+		for _, id := range q.CustomerGroupIDs {
 			args = append(args, id)
 		}
 	}
-	if len(productLineIDs) > 0 {
+	if len(q.ProductLineIDs) > 0 {
 		b.WriteString(" AND EXISTS (SELECT 1 FROM pick_line pl2" +
 			" JOIN sales_order_line sol2 ON sol2.id = pl2.sales_order_line_id" +
 			" JOIN product prod ON prod.id = sol2.product_id" +
-			" WHERE pl2.pick_id = p.id AND prod.product_line_id IN (")
-		b.WriteString(iclPlaceholders(len(productLineIDs)))
-		b.WriteString("))")
-		for _, id := range productLineIDs {
+			" WHERE pl2.pick_id = p.id AND prod.product_line_id IN (" + iclPlaceholders(len(q.ProductLineIDs)) + "))")
+		for _, id := range q.ProductLineIDs {
 			args = append(args, id)
 		}
 	}
-	if startDate.Valid {
+	if q.StartDate.Valid {
 		b.WriteString(" AND p.created_at >= ?")
-		args = append(args, startDate.Time)
+		args = append(args, q.StartDate.Time)
 	}
-	if endDate.Valid {
+	if q.EndDate.Valid {
 		b.WriteString(" AND p.created_at <= ?")
-		args = append(args, endDate.Time)
+		args = append(args, q.EndDate.Time)
 	}
 
-	// Ship-by reads ascending on a forward page, created-at descending.
-	ascending := sortByShipBy == (dir == pagination.DirectionForward)
+	ascending := q.SortByShipBy == (q.Direction == pagination.DirectionForward)
 	cmp, order := "<", "DESC"
 	if ascending {
 		cmp, order = ">", "ASC"
@@ -175,52 +171,33 @@ func buildPickListQuery(
 
 	// Keyset over (sort column, id). For ship-by, CAST keeps the param a DATE while the column stays
 	// bare, so the composite is still usable.
-	if cursorAt.Valid {
-		col, param := "p.created_at", "?"
-		if sortByShipBy {
-			col, param = "p.ship_by_sort_date", "CAST(? AS DATE)"
-		}
+	col, param := "p.created_at", "?"
+	if q.SortByShipBy {
+		col, param = "p.ship_by_sort_date", "CAST(? AS DATE)"
+	}
+	if q.CursorAt.Valid {
 		b.WriteString(" AND (" + col + " " + cmp + " " + param + " OR (" + col + " = " + param + " AND p.id " + cmp + " ?))")
-		args = append(args, cursorAt.Time, cursorAt.Time, cursorID.String)
+		args = append(args, q.CursorAt.Time, q.CursorAt.Time, q.CursorID.String)
 	}
 
-	if sortByShipBy {
-		b.WriteString(" ORDER BY p.ship_by_sort_date " + order + ", p.id " + order)
-	} else {
-		b.WriteString(" ORDER BY p.created_at " + order + ", p.id " + order)
-	}
-	b.WriteString(" LIMIT ?")
-	args = append(args, limit)
+	b.WriteString(" ORDER BY " + col + " " + order + ", p.id " + order + " LIMIT ?")
+	args = append(args, q.Limit)
 
 	return b.String(), args
 }
 
-// scanPickListRows reads rows from buildPickListQuery into domain picks. It scans into the
-// sqlc row type so the projection, the scan, and mapPickForwardRow share one source of truth for
-// column order and types; pickListColumns must stay in sqlc.ListPicksForwardRow field order.
-func scanPickListRows(rows *gosql.Rows) ([]*domain.Pick, error) {
-	var out []*domain.Pick
-	for rows.Next() {
-		var row sqlc.ListPicksForwardRow
-		if err := rows.Scan(
-			&row.ID, &row.Number, &row.SalesOrderID, &row.SalesOrderNumber,
-			&row.CustomerID, &row.CustomerName, &row.CustomerNumber,
-			&row.PriorityCode, &row.PriorityID, &row.PriorityName,
-			&row.FinishedAt, &row.CreatedAt, &row.UpdatedAt,
-			&row.LineCount, &row.LastShippedAt,
-			&row.PromisedAt, &row.CustomerPoNumber, &row.Note,
-			&row.CarrierID, &row.CarrierName, &row.CarrierIsPortalEnabled, &row.CarrierCreatedAt, &row.CarrierUpdatedAt,
-			&row.ServiceLevelID, &row.ServiceLevelName, &row.ServiceLevelIsPortalEnabled, &row.ServiceLevelToken, &row.ServiceLevelCreatedAt, &row.ServiceLevelUpdatedAt,
-			&row.CarrierBillingType, &row.CarrierBillingAccount,
-			&row.ShipByDate, &row.ShipByCutoffAt,
-			&row.LeadTimeDays, &row.LeadTimeSourceCode, &row.TransitDays, &row.TransitSourceCode,
-			&row.ShippingAddressID, &row.ShippingAddressName, &row.ShippingAddressPhone, &row.ShippingAddressEmail, &row.ShippingAddressIsDropShip,
-			&row.ShippingAddressGeolocationID, &row.ShippingAddressStreetLine1, &row.ShippingAddressStreetLine2, &row.ShippingAddressLocality, &row.ShippingAddressState,
-			&row.ShippingAddressPostalCode, &row.ShippingAddressCountry, &row.ShippingAddressCreatedAt, &row.ShippingAddressUpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		out = append(out, mapPickForwardRow(row))
-	}
-	return out, rows.Err()
-}
+// pickPhraseMatches is the set of the account's pick ids whose number, PO number, customer name or
+// customer number contains the phrase. Each arm is its own MATCH in a UNION because an OR of MATCH
+// across joined tables cannot use any of the FULLTEXT indexes. Placeholders per arm: account id,
+// then phrase.
+const pickPhraseMatches = `SELECT pk.id FROM pick pk` +
+	` WHERE pk.account_id = ? AND MATCH(pk.number) AGAINST(? IN BOOLEAN MODE)` +
+	` UNION SELECT pk.id FROM sales_order pso JOIN pick pk ON pk.sales_order_id = pso.id` +
+	` WHERE pk.account_id = ? AND MATCH(pso.customer_po_number) AGAINST(? IN BOOLEAN MODE)` +
+	` UNION SELECT pk.id FROM account nba` +
+	` JOIN account_relation nar ON nar.owner_account_id = ? AND nar.counterparty_account_id = nba.id` +
+	` JOIN pick pk ON pk.account_id = nar.owner_account_id AND pk.buyer_account_id = nba.id` +
+	` WHERE MATCH(nba.name) AGAINST(? IN BOOLEAN MODE)` +
+	` UNION SELECT pk.id FROM account_relation rar` +
+	` JOIN pick pk ON pk.account_id = rar.owner_account_id AND pk.buyer_account_id = rar.counterparty_account_id` +
+	` WHERE rar.owner_account_id = ? AND MATCH(rar.external_number) AGAINST(? IN BOOLEAN MODE)`

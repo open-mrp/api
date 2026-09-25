@@ -55,126 +55,6 @@ func parseEndDateFilter(s *string) gosql.NullTime {
 	return end
 }
 
-func mapPickForwardRow(row sqlc.ListPicksForwardRow) *domain.Pick {
-	var finishedAt *time.Time
-	if row.FinishedAt.Valid {
-		finishedAt = &row.FinishedAt.Time
-	}
-	return &domain.Pick{
-		ID:                          row.ID,
-		Number:                      row.Number,
-		SalesOrderID:                row.SalesOrderID,
-		SalesOrderNumber:            row.SalesOrderNumber,
-		CustomerID:                  row.CustomerID,
-		CustomerName:                row.CustomerName,
-		CustomerNumber:              row.CustomerNumber,
-		PriorityID:                  row.PriorityID,
-		PriorityCode:                constants.PriorityCode(row.PriorityCode),
-		PriorityName:                row.PriorityName,
-		FinishedAt:                  finishedAt,
-		CreatedAt:                   row.CreatedAt,
-		UpdatedAt:                   row.UpdatedAt,
-		LineCount:                   safeconv.Int64ToInt32(row.LineCount),
-		LastShippedAt:               interfaceToTimePtr(row.LastShippedAt),
-		PromisedAt:                  nullTimePtr(row.PromisedAt),
-		CustomerPONumber:            nullStringToPtr(row.CustomerPoNumber),
-		Note:                        nullStringToPtr(row.Note),
-		CarrierID:                   nullStringToPtr(row.CarrierID),
-		CarrierName:                 nullStringToPtr(row.CarrierName),
-		CarrierIsPortalEnabled:      nullBoolPtr(row.CarrierIsPortalEnabled),
-		CarrierCreatedAt:            nullTimePtr(row.CarrierCreatedAt),
-		CarrierUpdatedAt:            nullTimePtr(row.CarrierUpdatedAt),
-		ServiceLevelID:              nullStringToPtr(row.ServiceLevelID),
-		ServiceLevelName:            nullStringToPtr(row.ServiceLevelName),
-		ServiceLevelIsPortalEnabled: nullBoolPtr(row.ServiceLevelIsPortalEnabled),
-		ServiceLevelToken:           nullStringToPtr(row.ServiceLevelToken),
-		ServiceLevelCreatedAt:       nullTimePtr(row.ServiceLevelCreatedAt),
-		ServiceLevelUpdatedAt:       nullTimePtr(row.ServiceLevelUpdatedAt),
-		CarrierBillingType:          nullStringToPtr(row.CarrierBillingType),
-		CarrierBillingAccount:       nullStringToPtr(row.CarrierBillingAccount),
-		ShipByDate:                  nullTimePtr(row.ShipByDate),
-		ShipByCutoffAt:              nullTimePtr(row.ShipByCutoffAt),
-		LeadTimeDays:                nullInt32Ptr(row.LeadTimeDays),
-		LeadTimeSource:              leadTimeSourcePtr(row.LeadTimeSourceCode),
-		TransitDays:                 nullInt32Ptr(row.TransitDays),
-		TransitSource:               transitSourcePtr(row.TransitSourceCode),
-		ShippingAddressID:           row.ShippingAddressID,
-		ShippingAddressName:         nullStringToPtr(row.ShippingAddressName),
-		ShippingAddressPhone:        nullStringToPtr(row.ShippingAddressPhone),
-		ShippingAddressEmail:        nullStringToPtr(row.ShippingAddressEmail),
-		ShippingAddressIsDropShip:   nullBoolPtr(row.ShippingAddressIsDropShip),
-		ShippingAddressGeolocation:  nullStringToPtr(row.ShippingAddressGeolocationID),
-		ShippingAddressStreetLine1:  nullStringToPtr(row.ShippingAddressStreetLine1),
-		ShippingAddressStreetLine2:  nullStringToPtr(row.ShippingAddressStreetLine2),
-		ShippingAddressLocality:     nullStringToPtr(row.ShippingAddressLocality),
-		ShippingAddressState:        nullStringToPtr(row.ShippingAddressState),
-		ShippingAddressPostalCode:   nullStringToPtr(row.ShippingAddressPostalCode),
-		ShippingAddressCountry:      nullStringToPtr(row.ShippingAddressCountry),
-		ShippingAddressCreatedAt:    nullTimePtr(row.ShippingAddressCreatedAt),
-		ShippingAddressUpdatedAt:    nullTimePtr(row.ShippingAddressUpdatedAt),
-	}
-}
-
-func mapPickBackwardRow(row sqlc.ListPicksBackwardRow) *domain.Pick {
-	var finishedAt *time.Time
-	if row.FinishedAt.Valid {
-		finishedAt = &row.FinishedAt.Time
-	}
-	return &domain.Pick{
-		ID:                          row.ID,
-		Number:                      row.Number,
-		SalesOrderID:                row.SalesOrderID,
-		SalesOrderNumber:            row.SalesOrderNumber,
-		CustomerID:                  row.CustomerID,
-		CustomerName:                row.CustomerName,
-		CustomerNumber:              row.CustomerNumber,
-		PriorityID:                  row.PriorityID,
-		PriorityCode:                constants.PriorityCode(row.PriorityCode),
-		PriorityName:                row.PriorityName,
-		FinishedAt:                  finishedAt,
-		CreatedAt:                   row.CreatedAt,
-		UpdatedAt:                   row.UpdatedAt,
-		LineCount:                   safeconv.Int64ToInt32(row.LineCount),
-		LastShippedAt:               interfaceToTimePtr(row.LastShippedAt),
-		PromisedAt:                  nullTimePtr(row.PromisedAt),
-		CustomerPONumber:            nullStringToPtr(row.CustomerPoNumber),
-		Note:                        nullStringToPtr(row.Note),
-		CarrierID:                   nullStringToPtr(row.CarrierID),
-		CarrierName:                 nullStringToPtr(row.CarrierName),
-		CarrierIsPortalEnabled:      nullBoolPtr(row.CarrierIsPortalEnabled),
-		CarrierCreatedAt:            nullTimePtr(row.CarrierCreatedAt),
-		CarrierUpdatedAt:            nullTimePtr(row.CarrierUpdatedAt),
-		ServiceLevelID:              nullStringToPtr(row.ServiceLevelID),
-		ServiceLevelName:            nullStringToPtr(row.ServiceLevelName),
-		ServiceLevelIsPortalEnabled: nullBoolPtr(row.ServiceLevelIsPortalEnabled),
-		ServiceLevelToken:           nullStringToPtr(row.ServiceLevelToken),
-		ServiceLevelCreatedAt:       nullTimePtr(row.ServiceLevelCreatedAt),
-		ServiceLevelUpdatedAt:       nullTimePtr(row.ServiceLevelUpdatedAt),
-		CarrierBillingType:          nullStringToPtr(row.CarrierBillingType),
-		CarrierBillingAccount:       nullStringToPtr(row.CarrierBillingAccount),
-		ShipByDate:                  nullTimePtr(row.ShipByDate),
-		ShipByCutoffAt:              nullTimePtr(row.ShipByCutoffAt),
-		LeadTimeDays:                nullInt32Ptr(row.LeadTimeDays),
-		LeadTimeSource:              leadTimeSourcePtr(row.LeadTimeSourceCode),
-		TransitDays:                 nullInt32Ptr(row.TransitDays),
-		TransitSource:               transitSourcePtr(row.TransitSourceCode),
-		ShippingAddressID:           row.ShippingAddressID,
-		ShippingAddressName:         nullStringToPtr(row.ShippingAddressName),
-		ShippingAddressPhone:        nullStringToPtr(row.ShippingAddressPhone),
-		ShippingAddressEmail:        nullStringToPtr(row.ShippingAddressEmail),
-		ShippingAddressIsDropShip:   nullBoolPtr(row.ShippingAddressIsDropShip),
-		ShippingAddressGeolocation:  nullStringToPtr(row.ShippingAddressGeolocationID),
-		ShippingAddressStreetLine1:  nullStringToPtr(row.ShippingAddressStreetLine1),
-		ShippingAddressStreetLine2:  nullStringToPtr(row.ShippingAddressStreetLine2),
-		ShippingAddressLocality:     nullStringToPtr(row.ShippingAddressLocality),
-		ShippingAddressState:        nullStringToPtr(row.ShippingAddressState),
-		ShippingAddressPostalCode:   nullStringToPtr(row.ShippingAddressPostalCode),
-		ShippingAddressCountry:      nullStringToPtr(row.ShippingAddressCountry),
-		ShippingAddressCreatedAt:    nullTimePtr(row.ShippingAddressCreatedAt),
-		ShippingAddressUpdatedAt:    nullTimePtr(row.ShippingAddressUpdatedAt),
-	}
-}
-
 func mapGetPickLinesRow(row sqlc.GetPickLinesRow) *domain.PickLine {
 	var packedAt *time.Time
 	if row.PackedAt.Valid {
@@ -263,33 +143,6 @@ func (r *pickRepoImpl) List(ctx context.Context, params domain.ListPicksParams) 
 	ctx, span := pickRepoTracer.Start(ctx, "repository.pick.list")
 	defer span.End()
 
-	// Substring search runs through the ngram FULLTEXT queries (ListPicksSearch*) for terms long enough to
-	// have an ngram token; shorter terms and the no-search case use the LIKE column on the plain list
-	// queries. See db.NewNgramSearch.
-	search := db.NewNgramSearch(params.Query)
-	useNgram := search.Fulltext.Valid
-
-	statusFilter := toNullString(params.Status)
-	startDate := parseDateFilter(params.StartDate)
-	endDate := parseEndDateFilter(params.EndDate)
-
-	customerIDs := params.CustomerIDs
-	if customerIDs == nil {
-		customerIDs = []string{}
-	}
-	customerGroupIDs := toNullStringSlice(params.CustomerGroupIDs)
-	if customerGroupIDs == nil {
-		customerGroupIDs = []gosql.NullString{}
-	}
-	productLineIDs := toNullStringSlice(params.ProductLineIDs)
-	if productLineIDs == nil {
-		productLineIDs = []gosql.NullString{}
-	}
-
-	includeCustomerFilter := len(params.CustomerIDs) > 0
-	includeCustomerGroupFilter := len(params.CustomerGroupIDs) > 0
-	includeProductLineFilter := len(params.ProductLineIDs) > 0
-
 	// An unset sort means ship-by date, so a caller that never sends the parameter still gets the urgent-first order.
 	sortByShipBy := params.Sort != constants.PickSortCreatedAt
 	sortKey := pickCreatedAt
@@ -297,112 +150,85 @@ func (r *pickRepoImpl) List(ctx context.Context, params domain.ListPicksParams) 
 		sortKey = pickShipByDate
 	}
 
-	var cursorDir *pagination.Direction
-	// The forward queries read the cursor through nullable args; the backward search query takes it directly.
-	var cursorAt gosql.NullTime
-	var cursorID gosql.NullString
-	var bwdCursorAt time.Time
-	var bwdCursorID string
-	backward := false
+	q := pickListQuery{
+		AccountID:        params.AccountID,
+		SortByShipBy:     sortByShipBy,
+		Search:           newPickSearch(params.Query),
+		Status:           params.Status,
+		CustomerIDs:      params.CustomerIDs,
+		CustomerGroupIDs: params.CustomerGroupIDs,
+		ProductLineIDs:   params.ProductLineIDs,
+		StartDate:        parseDateFilter(params.StartDate),
+		EndDate:          parseEndDateFilter(params.EndDate),
+		Direction:        pagination.DirectionForward,
+		Limit:            params.Limit + 1,
+	}
 
+	var cursorDir *pagination.Direction
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
 		if err != nil {
 			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
 		}
 		cursorDir = &cur.Direction
-		backward = cur.Direction == pagination.DirectionBackward
+		q.Direction = cur.Direction
 		// The cursor holds the value of whichever column the sort reads.
-		cursorAt = gosql.NullTime{Time: cur.OccurredAt, Valid: true}
-		cursorID = gosql.NullString{String: cur.ID, Valid: true}
-		bwdCursorAt = cur.OccurredAt
-		bwdCursorID = cur.ID
+		q.CursorAt = gosql.NullTime{Time: cur.OccurredAt, Valid: true}
+		q.CursorID = gosql.NullString{String: cur.ID, Valid: true}
 	}
 
-	var picks []*domain.Pick
-	switch {
-	// Off the search path, both sorts go through a hand-built query whose bare ORDER BY an
-	// (account_id, <sort column>, id) index serves in order — no filesort over the account's picks.
-	// Search keeps the dual-mode ListPicksSearch* path: a matched set is small enough to sort in place.
-	// See buildPickListQuery.
-	case !useNgram:
-		dir := pagination.DirectionForward
-		if backward {
-			dir = pagination.DirectionBackward
-		}
-		query, args := buildPickListQuery(
-			sortByShipBy, params.AccountID, search.Like, params.Status,
-			params.CustomerIDs, params.CustomerGroupIDs, params.ProductLineIDs,
-			startDate, endDate, dir, cursorAt, cursorID, params.Limit+1,
-		)
-		rows, err := r.queries.DB().QueryContext(ctx, query, args...)
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		defer rows.Close()
-		picks, err = scanPickListRows(rows)
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-	case backward && useNgram:
-		rows, err := r.queries.ListPicksSearchBackward(ctx, sqlc.ListPicksSearchBackwardParams{
-			AccountID:                  params.AccountID,
-			SearchQuery:                search.Fulltext,
-			Status:                     statusFilter,
-			IncludeCustomerFilter:      includeCustomerFilter,
-			CustomerIds:                customerIDs,
-			IncludeCustomerGroupFilter: includeCustomerGroupFilter,
-			CustomerGroupIds:           customerGroupIDs,
-			IncludeProductLineFilter:   includeProductLineFilter,
-			ProductLineIds:             productLineIDs,
-			StartDate:                  startDate,
-			EndDate:                    endDate,
-			SortByShipBy:               sortByShipBy,
-			CursorCreatedAt:            bwdCursorAt,
-			CursorShipByDate:           bwdCursorAt,
-			CursorID:                   bwdCursorID,
-			Limit:                      params.Limit + 1,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		picks = make([]*domain.Pick, len(rows))
-		for i, row := range rows {
-			picks[i] = mapPickBackwardRow(sqlc.ListPicksBackwardRow(row))
-		}
-	default:
-		rows, err := r.queries.ListPicksSearchForward(ctx, sqlc.ListPicksSearchForwardParams{
-			AccountID:                  params.AccountID,
-			SearchQuery:                search.Fulltext,
-			Status:                     statusFilter,
-			IncludeCustomerFilter:      includeCustomerFilter,
-			CustomerIds:                customerIDs,
-			IncludeCustomerGroupFilter: includeCustomerGroupFilter,
-			CustomerGroupIds:           customerGroupIDs,
-			IncludeProductLineFilter:   includeProductLineFilter,
-			ProductLineIds:             productLineIDs,
-			StartDate:                  startDate,
-			EndDate:                    endDate,
-			SortByShipBy:               sortByShipBy,
-			CursorCreatedAt:            cursorAt,
-			CursorShipByDate:           cursorAt,
-			CursorID:                   cursorID,
-			Limit:                      params.Limit + 1,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		picks = make([]*domain.Pick, len(rows))
-		for i, row := range rows {
-			picks[i] = mapPickForwardRow(sqlc.ListPicksForwardRow(row))
-		}
+	ids, apiErr := r.listIDs(ctx, q)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	picks, apiErr := r.getByIDsInOrder(ctx, params.AccountID, ids)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 
 	result, pageInfo := pagination.BuildPageString(picks, params.Limit, cursorDir, sortKey, pickID)
-	if apiErr := r.attachProgress(ctx, result); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
 	return &domain.ListPicksResult{Picks: result, PageInfo: pageInfo}, nil
+}
+
+func (r *pickRepoImpl) listIDs(ctx context.Context, q pickListQuery) ([]string, *apierror.APIError) {
+	query, args := buildPickListQuery(q)
+	rows, err := r.queries.DB().QueryContext(ctx, query, args...)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, apiErr
+	}
+	defer rows.Close()
+
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, db.MapSQLError(err)
+		}
+		ids = append(ids, id)
+	}
+	if apiErr := db.MapSQLError(rows.Err()); apiErr != nil {
+		return nil, apiErr
+	}
+	return ids, nil
+}
+
+// getByIDsInOrder hydrates ids in the order given. A pick deleted since its id was read is skipped.
+func (r *pickRepoImpl) getByIDsInOrder(ctx context.Context, accountID string, ids []string) ([]*domain.Pick, *apierror.APIError) {
+	picks, apiErr := r.GetByIDs(ctx, accountID, ids)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	byID := make(map[string]*domain.Pick, len(picks))
+	for _, pick := range picks {
+		byID[pick.ID] = pick
+	}
+	ordered := make([]*domain.Pick, 0, len(ids))
+	for _, id := range ids {
+		if pick, ok := byID[id]; ok {
+			ordered = append(ordered, pick)
+		}
+	}
+	return ordered, nil
 }
 
 func (r *pickRepoImpl) Get(ctx context.Context, accountID, pickID string) (*domain.Pick, *apierror.APIError) {

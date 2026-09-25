@@ -151,17 +151,32 @@ func (r *pickRepoImpl) List(ctx context.Context, params domain.ListPicksParams) 
 	}
 
 	q := pickListQuery{
-		AccountID:        params.AccountID,
-		SortByShipBy:     sortByShipBy,
-		Search:           newPickSearch(params.Query),
-		Status:           params.Status,
-		CustomerIDs:      params.CustomerIDs,
-		CustomerGroupIDs: params.CustomerGroupIDs,
-		ProductLineIDs:   params.ProductLineIDs,
-		StartDate:        parseDateFilter(params.StartDate),
-		EndDate:          parseEndDateFilter(params.EndDate),
-		Direction:        pagination.DirectionForward,
-		Limit:            params.Limit + 1,
+		AccountID:      params.AccountID,
+		SortByShipBy:   sortByShipBy,
+		Search:         newPickSearch(params.Query),
+		Status:         params.Status,
+		ProductLineIDs: params.ProductLineIDs,
+		StartDate:      parseDateFilter(params.StartDate),
+		EndDate:        parseEndDateFilter(params.EndDate),
+		Direction:      pagination.DirectionForward,
+		Limit:          params.Limit + 1,
+	}
+
+	buyerIDs, apiErr := r.buyerFilter(ctx, params.AccountID, params.CustomerIDs, params.CustomerGroupIDs)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	q.BuyerIDs = buyerIDs
+	switch {
+	case q.Search.Phrase != "" || q.mergesBuyers():
+	case len(buyerIDs) == 1:
+		q.DriveFromBuyers = true
+	case len(buyerIDs) > pickBuyerMergeMax:
+		count, apiErr := r.countPicksForBuyers(ctx, params.AccountID, buyerIDs)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		q.DriveFromBuyers = count < pickBuyerScanCap
 	}
 
 	var cursorDir *pagination.Direction
@@ -177,9 +192,13 @@ func (r *pickRepoImpl) List(ctx context.Context, params domain.ListPicksParams) 
 		q.CursorID = gosql.NullString{String: cur.ID, Valid: true}
 	}
 
-	ids, apiErr := r.listIDs(ctx, q)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+	// A non-nil empty buyer set is a filter nothing can match.
+	var ids []string
+	if buyerIDs == nil || len(buyerIDs) > 0 {
+		ids, apiErr = r.listIDs(ctx, q)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 	}
 	picks, apiErr := r.getByIDsInOrder(ctx, params.AccountID, ids)
 	if apiErr != nil {
@@ -188,6 +207,47 @@ func (r *pickRepoImpl) List(ctx context.Context, params domain.ListPicksParams) 
 
 	result, pageInfo := pagination.BuildPageString(picks, params.Limit, cursorDir, sortKey, pickID)
 	return &domain.ListPicksResult{Picks: result, PageInfo: pageInfo}, nil
+}
+
+// buyerFilter resolves the customer and customer-group filters to the set of customers a pick may be
+// for. Nil means no filter; an empty, non-nil set means the filters exclude every customer.
+func (r *pickRepoImpl) buyerFilter(ctx context.Context, accountID string, customerIDs, groupIDs []string) ([]string, *apierror.APIError) {
+	if len(groupIDs) == 0 {
+		if len(customerIDs) == 0 {
+			return nil, nil
+		}
+		return customerIDs, nil
+	}
+	members, err := r.queries.ListCounterpartyIDsInGroups(ctx, sqlc.ListCounterpartyIDsInGroupsParams{
+		OwnerAccountID:  accountID,
+		AccountGroupIds: toNullStringSlice(groupIDs),
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, apiErr
+	}
+	if len(customerIDs) == 0 {
+		return append([]string{}, members...), nil
+	}
+	wanted := make(map[string]bool, len(customerIDs))
+	for _, id := range customerIDs {
+		wanted[id] = true
+	}
+	both := []string{}
+	for _, id := range members {
+		if wanted[id] {
+			both = append(both, id)
+		}
+	}
+	return both, nil
+}
+
+func (r *pickRepoImpl) countPicksForBuyers(ctx context.Context, accountID string, buyerIDs []string) (int, *apierror.APIError) {
+	query, args := buildPickBuyerCountQuery(accountID, buyerIDs)
+	var count int
+	if err := r.queries.DB().QueryRowContext(ctx, query, args...).Scan(&count); err != nil {
+		return 0, db.MapSQLError(err)
+	}
+	return count, nil
 }
 
 func (r *pickRepoImpl) listIDs(ctx context.Context, q pickListQuery) ([]string, *apierror.APIError) {

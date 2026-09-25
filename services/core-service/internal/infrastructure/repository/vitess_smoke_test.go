@@ -5,6 +5,7 @@ package repository
 import (
 	"context"
 	gosql "database/sql"
+	"fmt"
 	"os"
 	"testing"
 
@@ -129,21 +130,30 @@ func TestVitessSmoke(t *testing.T) {
 	t.Run("pick list", func(t *testing.T) {
 		repo := NewPickRepo(q)
 		open, closed := "open", "closed"
+		// More customers than are merged, so the list counts the set's picks to choose its index.
+		manyCustomers := append([]string{}, buyers...)
+		for i := 0; len(manyCustomers) <= pickBuyerMergeMax; i++ {
+			manyCustomers = append(manyCustomers, fmt.Sprintf("ac_smoke_%03d", i))
+		}
 		prefix, phrase := "PI", "ICK-00"
 		start, end := "2000-01-01", "2100-01-01"
 		cases := map[string]domain.ListPicksParams{
-			"default ship-by":       {AccountID: account, Limit: 50},
-			"created":               {AccountID: account, Limit: 50, Sort: constants.PickSortCreatedAt},
-			"open ship-by":          {AccountID: account, Limit: 50, Status: &open},
-			"closed created":        {AccountID: account, Limit: 50, Status: &closed, Sort: constants.PickSortCreatedAt},
-			"customer":              {AccountID: account, Limit: 50, CustomerIDs: buyers},
-			"customer open created": {AccountID: account, Limit: 50, CustomerIDs: buyers[:1], Status: &open, Sort: constants.PickSortCreatedAt},
-			"customer group":        {AccountID: account, Limit: 50, CustomerGroupIDs: groups},
-			"product line":          {AccountID: account, Limit: 50, ProductLineIDs: productLines},
-			"date window":           {AccountID: account, Limit: 50, StartDate: &start, EndDate: &end},
-			"number prefix":         {AccountID: account, Limit: 50, Query: &prefix},
-			"phrase":                {AccountID: account, Limit: 50, Query: &phrase},
-			"phrase + filters":      {AccountID: account, Limit: 50, Query: &phrase, Status: &closed, CustomerIDs: buyers, CustomerGroupIDs: groups, ProductLineIDs: productLines},
+			"default ship-by":        {AccountID: account, Limit: 50},
+			"created":                {AccountID: account, Limit: 50, Sort: constants.PickSortCreatedAt},
+			"open ship-by":           {AccountID: account, Limit: 50, Status: &open},
+			"closed created":         {AccountID: account, Limit: 50, Status: &closed, Sort: constants.PickSortCreatedAt},
+			"customer":               {AccountID: account, Limit: 50, CustomerIDs: buyers},
+			"one customer open":      {AccountID: account, Limit: 50, CustomerIDs: buyers[:1], Status: &open},
+			"customers merged open":  {AccountID: account, Limit: 50, CustomerIDs: append([]string{"ac_merge_other"}, buyers...), Status: &open},
+			"many customers counted": {AccountID: account, Limit: 50, CustomerIDs: manyCustomers},
+			"group and customer":     {AccountID: account, Limit: 50, CustomerIDs: buyers, CustomerGroupIDs: groups},
+			"customer open created":  {AccountID: account, Limit: 50, CustomerIDs: buyers[:1], Status: &open, Sort: constants.PickSortCreatedAt},
+			"customer group":         {AccountID: account, Limit: 50, CustomerGroupIDs: groups},
+			"product line":           {AccountID: account, Limit: 50, ProductLineIDs: productLines},
+			"date window":            {AccountID: account, Limit: 50, StartDate: &start, EndDate: &end},
+			"number prefix":          {AccountID: account, Limit: 50, Query: &prefix},
+			"phrase":                 {AccountID: account, Limit: 50, Query: &phrase},
+			"phrase + filters":       {AccountID: account, Limit: 50, Query: &phrase, Status: &closed, CustomerIDs: buyers, CustomerGroupIDs: groups, ProductLineIDs: productLines},
 		}
 		for name, params := range cases {
 			result, apiErr := repo.List(ctx, params)

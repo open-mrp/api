@@ -63,6 +63,13 @@ FROM account_relation
 WHERE owner_account_id = sqlc.arg('owner_account_id')
   AND counterparty_account_id IN (sqlc.slice('counterparty_account_ids'));
 
+-- name: ListCounterpartyIDsInGroups :many
+-- The owner's counterparties in any of the given account groups.
+SELECT DISTINCT counterparty_account_id
+FROM account_relation
+WHERE owner_account_id = sqlc.arg('owner_account_id')
+  AND account_group_id IN (sqlc.slice('account_group_ids'));
+
 -- name: CountCounterpartyRelationsExcluding :one
 SELECT COUNT(*) AS cnt
 FROM account_relation

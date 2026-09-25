@@ -37,15 +37,17 @@ const (
 
 	// NotificationEventEmailSent is an event that indicates that an email has been sent successfully.
 	NotificationEventEmailSent AmqpRoutingKey = "notification.event.email_sent"
-	// NotificationEventEmailFailed is an event that indicates that an email has failed to send.
-	NotificationEventEmailFailed AmqpRoutingKey = "notification.event.email_failed"
+	// Retired: no consumer. Send failures are already recorded synchronously via notification-service's LogFailedEmail, so this event was published to no bound queue and dropped.
+	// // NotificationEventEmailFailed is an event that indicates that an email has failed to send.
+	// NotificationEventEmailFailed AmqpRoutingKey = "notification.event.email_failed"
 
 	// In-app messaging / notifications
 
 	// NotificationCmdFanout instructs notification-service to turn an alert/message intent into a message plus per-recipient notification rows (system/agent/event alerts, broadcasts).
 	NotificationCmdFanout AmqpRoutingKey = "notification.cmd.fanout"
-	// NotificationCmdSendMessage is the async chat-send path used for heavy group/broadcast fan-out.
-	NotificationCmdSendMessage AmqpRoutingKey = "notification.cmd.send_message"
+	// Retired: no publisher. Fan-out is served by NotificationCmdFanout; this parallel key was never emitted.
+	// // NotificationCmdSendMessage is the async chat-send path used for heavy group/broadcast fan-out.
+	// NotificationCmdSendMessage AmqpRoutingKey = "notification.cmd.send_message"
 	// NotificationCmdAgentReply instructs notification-service to post an agent's reply into a conversation as the agent participant (attributed + linked to the producing run). Emitted by agent-service after a chat-triggered run. Carries a Phase ("start" creates the streaming row,
 	// "final"/empty finalizes it) so the reply renders as one record that streams in.
 	NotificationCmdAgentReply AmqpRoutingKey = "notification.cmd.agent_reply"
@@ -93,8 +95,9 @@ const (
 	// asks the core-service to solve and persist one production schedule version. Published by the generation cadence, which only enqueues: a solve takes minutes, and running it inside the scheduler lease would block every other account behind whichever one is solving.
 	CoreCmdGenerateProductionSchedule AmqpRoutingKey = "core.cmd.generate_production_schedule"
 
-	// indicates a schedule version was published and its first weeks frozen. Consumers notify the departments that now have a committed plan to work to.
-	CoreEventProductionSchedulePublished AmqpRoutingKey = "core.event.production_schedule_published"
+	// Retired: no publisher and no consumer. The department-notification feature this was meant for was never built.
+	// // indicates a schedule version was published and its first weeks frozen. Consumers notify the departments that now have a committed plan to work to.
+	// CoreEventProductionSchedulePublished AmqpRoutingKey = "core.event.production_schedule_published"
 
 	// indicates a sales order was created. Consumers use it to run out-of-band side effects (e.g. syncing the order to a third-party CRM such as HubSpot) without blocking the create response.
 	CoreEventSalesOrderCreated AmqpRoutingKey = "core.event.sales_order_created"
@@ -139,8 +142,9 @@ const (
 
 	// AgentCmdExecuteRun is a command to execute an agent run.
 	AgentCmdExecuteRun AmqpRoutingKey = "agent.cmd.execute_run"
-	// AgentCmdExecuteAction is a command to execute a proposed agent action.
-	AgentCmdExecuteAction AmqpRoutingKey = "agent.cmd.execute_action"
+	// Retired: no publisher and no consumer. Superseded by the in-run approval flow (AgentContinueRunData's ApprovedToolSlugs / RejectedToolSlugs).
+	// // AgentCmdExecuteAction is a command to execute a proposed agent action.
+	// AgentCmdExecuteAction AmqpRoutingKey = "agent.cmd.execute_action"
 	// AgentCmdContinueRun is a command to continue an agent run awaiting input.
 	AgentCmdContinueRun AmqpRoutingKey = "agent.cmd.continue_run"
 	// AgentCmdChatRun starts an agent run from a chat message: agent-service creates a chat-linked run

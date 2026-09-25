@@ -800,7 +800,7 @@ func (r *rabbitMQ) setupExchangesAndQueues() error {
 	// In-app messaging fan-out command queue (handled by notification-service)
 	if err := r.declareAndBindQueue(
 		NotificationCmdFanoutQueue,
-		[]string{string(contracts.NotificationCmdFanout), string(contracts.NotificationCmdSendMessage)},
+		[]string{string(contracts.NotificationCmdFanout)}, // NotificationCmdSendMessage retired: no publisher.
 		ApplicationExchange,
 	); err != nil {
 		return err
@@ -1071,14 +1071,15 @@ func (r *rabbitMQ) setupExchangesAndQueues() error {
 		return err
 	}
 
-	// Agent command queue: execute action (handled by agent-service)
-	if err := r.declareAndBindQueue(
-		AgentCmdExecuteActionQueue,
-		[]string{string(contracts.AgentCmdExecuteAction)},
-		ApplicationExchange,
-	); err != nil {
-		return err
-	}
+	// Retired: no publisher and no consumer. Superseded by the in-run approval flow.
+	// // Agent command queue: execute action (handled by agent-service)
+	// if err := r.declareAndBindQueue(
+	// 	AgentCmdExecuteActionQueue,
+	// 	[]string{string(contracts.AgentCmdExecuteAction)},
+	// 	ApplicationExchange,
+	// ); err != nil {
+	// 	return err
+	// }
 
 	// Agent command queue: continue run (handled by agent-service)
 	if err := r.declareAndBindQueue(

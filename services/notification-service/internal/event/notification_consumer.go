@@ -172,14 +172,14 @@ func (c *NotificationConsumer) handleSendEmail(ctx context.Context, messageID st
 	if apiErr != nil {
 		span.RecordError(apiErr)
 		c.logFailedEmail(ctx, messageID, payload)
-		// Publish failure event
-		errorMsg := apiErr.PublicMessage
-		if apiErr.InternalMessage != "" {
-			errorMsg = apiErr.InternalMessage
-		}
-		if err := c.publishEmailStatus(ctx, payload.AccountID, false, errorMsg); err != nil {
-			log.Printf("Failed to publish email failure status: %v", err)
-		}
+		// Retired: the email_failed status event had no consumer; logFailedEmail above records the failure.
+		// errorMsg := apiErr.PublicMessage
+		// if apiErr.InternalMessage != "" {
+		// 	errorMsg = apiErr.InternalMessage
+		// }
+		// if err := c.publishEmailStatus(ctx, payload.AccountID, false, errorMsg); err != nil {
+		// 	log.Printf("Failed to publish email failure status: %v", err)
+		// }
 		return apiErr
 	}
 
@@ -191,10 +191,10 @@ func (c *NotificationConsumer) handleSendEmail(ctx context.Context, messageID st
 		log.Printf("Failed to publish email log event: %v", err)
 	}
 
-	// Publish success event for external consumers
-	if err := c.publishEmailStatus(ctx, payload.AccountID, true, ""); err != nil {
-		log.Printf("Failed to publish email success status: %v", err)
-	}
+	// Retired: the email_sent status event had no external consumer; publishEmailLogEvent above records the send.
+	// if err := c.publishEmailStatus(ctx, payload.AccountID, true, ""); err != nil {
+	// 	log.Printf("Failed to publish email success status: %v", err)
+	// }
 
 	return nil
 }
@@ -270,35 +270,36 @@ func (c *NotificationConsumer) handleEmailLog(ctx context.Context, logData messa
 	return nil
 }
 
-func (c *NotificationConsumer) publishEmailStatus(ctx context.Context, userID *string, success bool, errorMsg string) error {
-	statusData := map[string]any{
-		"success": success,
-		"user_id": userID,
-	}
-	if !success {
-		statusData["error"] = errorMsg
-	}
-
-	statusJSON, err := json.Marshal(statusData)
-	if err != nil {
-		return err
-	}
-
-	routingKey := string(contracts.NotificationEventEmailSent)
-	if !success {
-		routingKey = string(contracts.NotificationEventEmailFailed)
-	}
-
-	msg := contracts.AmqpMessage{
-		Data: statusJSON,
-	}
-
-	if identity, ok := appctx.GetIdentityFromContext(ctx); ok {
-		msg.Identity = identity
-	}
-	if requestID, ok := appctx.GetRequestID(ctx); ok {
-		msg.RequestID = requestID
-	}
-
-	return c.rabbitmq.PublishMessage(ctx, messaging.ApplicationExchange, routingKey, msg)
-}
+// Retired: neither status event had a consumer. The email_failed key was bound to no queue (dropped), and the email_sent status payload was filtered out at handleEventMessage as a blank row. Real logging happens via logFailedEmail and publishEmailLogEvent.
+// func (c *NotificationConsumer) publishEmailStatus(ctx context.Context, userID *string, success bool, errorMsg string) error {
+// 	statusData := map[string]any{
+// 		"success": success,
+// 		"user_id": userID,
+// 	}
+// 	if !success {
+// 		statusData["error"] = errorMsg
+// 	}
+//
+// 	statusJSON, err := json.Marshal(statusData)
+// 	if err != nil {
+// 		return err
+// 	}
+//
+// 	routingKey := string(contracts.NotificationEventEmailSent)
+// 	if !success {
+// 		routingKey = string(contracts.NotificationEventEmailFailed)
+// 	}
+//
+// 	msg := contracts.AmqpMessage{
+// 		Data: statusJSON,
+// 	}
+//
+// 	if identity, ok := appctx.GetIdentityFromContext(ctx); ok {
+// 		msg.Identity = identity
+// 	}
+// 	if requestID, ok := appctx.GetRequestID(ctx); ok {
+// 		msg.RequestID = requestID
+// 	}
+//
+// 	return c.rabbitmq.PublishMessage(ctx, messaging.ApplicationExchange, routingKey, msg)
+// }

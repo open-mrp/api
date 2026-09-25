@@ -3,6 +3,7 @@ package service
 import (
 	"strings"
 
+	"github.com/open-mrp/api/shared/safeconv"
 	"github.com/shopspring/decimal"
 )
 
@@ -23,7 +24,7 @@ import (
 // digits is 0 for every quantity these documents show — the dashboard's default — so 1199.5 pairs
 // print as "1,200 pr", not "1,199.5 pr".
 func formatMeasure(d decimal.Decimal, unitAbbr string, digits int) string {
-	out := addThousandsSep2(d.Round(int32(digits)).StringFixed(int32(digits)))
+	out := addThousandsSep2(d.Round(safeconv.IntToInt32(digits)).StringFixed(safeconv.IntToInt32(digits)))
 	if strings.TrimSpace(unitAbbr) != "" {
 		out += " " + unitAbbr
 	}
@@ -37,10 +38,10 @@ func formatMeasure(d decimal.Decimal, unitAbbr string, digits int) string {
 // — an item can be stocked in pairs and priced by the dozen — so callers must pass the rate's
 // abbreviation rather than the quantity's.
 func formatRateAmount(price decimal.Decimal, denomAbbr string, digits int) string {
-	rounded := price.Round(int32(digits))
+	rounded := price.Round(safeconv.IntToInt32(digits))
 	// The sign sits outside the currency symbol, as numeral's "$0,0.00" pattern places it: a credit
 	// reads "-$8.50", never "$-8.50".
-	s := "$" + addThousandsSep2(rounded.Abs().StringFixed(int32(digits)))
+	s := "$" + addThousandsSep2(rounded.Abs().StringFixed(safeconv.IntToInt32(digits)))
 	if rounded.IsNegative() {
 		s = "-" + s
 	}

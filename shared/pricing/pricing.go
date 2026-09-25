@@ -21,6 +21,7 @@ package pricing
 import (
 	"fmt"
 
+	"github.com/open-mrp/api/shared/safeconv"
 	"github.com/shopspring/decimal"
 )
 
@@ -132,5 +133,5 @@ func significant(d decimal.Decimal) decimal.Decimal {
 
 // leadingExponent is the power of ten of d's leading digit.
 func leadingExponent(d decimal.Decimal) int32 {
-	return int32(d.NumDigits()) + d.Exponent() - 1
+	return safeconv.IntToInt32(d.NumDigits()) + d.Exponent() - 1
 }

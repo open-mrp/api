@@ -447,6 +447,53 @@ func (q *Queries) InsertAccountRelationNotificationPreference(ctx context.Contex
 	return err
 }
 
+const listCounterpartyIDsInGroups = `-- name: ListCounterpartyIDsInGroups :many
+SELECT DISTINCT counterparty_account_id
+FROM account_relation
+WHERE owner_account_id = ?
+  AND account_group_id IN (/*SLICE:account_group_ids*/?)
+`
+
+type ListCounterpartyIDsInGroupsParams struct {
+	OwnerAccountID  string
+	AccountGroupIds []sql.NullString
+}
+
+// The owner's counterparties in any of the given account groups.
+func (q *Queries) ListCounterpartyIDsInGroups(ctx context.Context, arg ListCounterpartyIDsInGroupsParams) ([]string, error) {
+	query := listCounterpartyIDsInGroups
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.OwnerAccountID)
+	if len(arg.AccountGroupIds) > 0 {
+		for _, v := range arg.AccountGroupIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:account_group_ids*/?", strings.Repeat(",?", len(arg.AccountGroupIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:account_group_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var counterparty_account_id string
+		if err := rows.Scan(&counterparty_account_id); err != nil {
+			return nil, err
+		}
+		items = append(items, counterparty_account_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listNotificationPreferences = `-- name: ListNotificationPreferences :many
 SELECT id, notification_type_code
 FROM account_relation_notification_preference

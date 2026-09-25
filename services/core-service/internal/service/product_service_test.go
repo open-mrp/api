@@ -229,24 +229,17 @@ func (s *ProductSvcTestSuite) expectCacheError() {
 
 func (s *ProductSvcTestSuite) expectAttachAttributes(itemID string) {
 	s.itemRepo.EXPECT().
-		Get(gomock.Any(), gomock.AssignableToTypeOf(domain.GetItemParams{})).
-		DoAndReturn(func(_ context.Context, params domain.GetItemParams) (*domain.Item, *apierror.APIError) {
-			s.Equal("ac_test123", params.AccountID)
-			s.Equal(itemID, params.ItemID)
-			s.Equal([]string{"attributes"}, params.Includes)
-			return &domain.Item{ID: itemID}, nil
-		}).
+		GetByIDsWithIncludes(gomock.Any(), "ac_test123", []string{itemID}, []string{"attributes"}).
+		Return([]*domain.Item{{ID: itemID}}, nil).
 		Times(1)
 }
 
 func (s *ProductSvcTestSuite) expectAttachAttributesForCreatedItem() {
 	s.itemRepo.EXPECT().
-		Get(gomock.Any(), gomock.AssignableToTypeOf(domain.GetItemParams{})).
-		DoAndReturn(func(_ context.Context, params domain.GetItemParams) (*domain.Item, *apierror.APIError) {
-			s.Equal("ac_test123", params.AccountID)
-			s.NotEmpty(params.ItemID)
-			s.Equal([]string{"attributes"}, params.Includes)
-			return &domain.Item{ID: params.ItemID}, nil
+		GetByIDsWithIncludes(gomock.Any(), "ac_test123", gomock.Len(1), []string{"attributes"}).
+		DoAndReturn(func(_ context.Context, _ string, ids []string, _ []string) ([]*domain.Item, *apierror.APIError) {
+			s.NotEmpty(ids[0])
+			return []*domain.Item{{ID: ids[0]}}, nil
 		}).
 		Times(1)
 }
@@ -1295,12 +1288,12 @@ func (s *ProductSvcTestSuite) TestListProductsFull_AttachesAttributesAndUnitGrou
 
 	attrs := []*domain.ItemAttribute{{ID: "attr_1", Value: "Red"}}
 	s.itemRepo.EXPECT().
-		Get(gomock.Any(), domain.GetItemParams{AccountID: "ac_test123", ItemID: "it_1", Includes: []string{"attributes"}}).
-		Return(&domain.Item{ID: "it_1", Attributes: attrs}, nil).
+		GetByIDsWithIncludes(gomock.Any(), "ac_test123", []string{"it_1"}, []string{"attributes"}).
+		Return([]*domain.Item{{ID: "it_1", Attributes: attrs}}, nil).
 		Times(1)
 	s.productLineRepo.EXPECT().
-		GetUnitGroup(gomock.Any(), gomock.Any(), "ug_1", gomock.Any()).
-		Return(&domain.ProductLineUnitGroup{ID: "ug_1", Name: "Mass"}, nil).
+		GetUnitGroups(gomock.Any(), gomock.Any(), []string{"ug_1"}, gomock.Any()).
+		Return(map[string]*domain.ProductLineUnitGroup{"ug_1": {ID: "ug_1", Name: "Mass"}}, nil).
 		Times(1)
 
 	result, err := s.productSvc.ListProductsFull(ctx, domain.ListProductsFullParams{Limit: 10})
@@ -1394,10 +1387,10 @@ func (s *ProductSvcTestSuite) TestGetProduct_Success_WithIncludes() {
 		Return(product, nil).
 		Times(1)
 	s.itemRepo.EXPECT().
-		Get(gomock.Any(), domain.GetItemParams{AccountID: "ac_test123", ItemID: "it_1", Includes: []string{"attributes"}}).
-		Return(&domain.Item{ID: "it_1", Attributes: []*domain.ItemAttribute{{ID: "attr_1"}}}, nil).
+		GetByIDsWithIncludes(gomock.Any(), "ac_test123", []string{"it_1"}, []string{"attributes"}).
+		Return([]*domain.Item{{ID: "it_1", Attributes: []*domain.ItemAttribute{{ID: "attr_1"}}}}, nil).
 		Times(1)
-		// No ProductLine on product → GetUnitGroup must NOT be called.
+		// No ProductLine on product → GetUnitGroups must NOT be called.
 
 	result, err := s.productSvc.GetProduct(ctx, domain.GetProductFullParams{ProductID: "it_1"})
 
@@ -1481,12 +1474,8 @@ func (s *ProductSvcTestSuite) TestValidateProducts_Success_PreservesKeys() {
 		Times(1)
 
 	s.itemRepo.EXPECT().
-		Get(gomock.Any(), domain.GetItemParams{
-			AccountID: "ac_test123",
-			ItemID:    "it_1",
-			Includes:  []string{"attributes"},
-		}).
-		Return(&domain.Item{ID: "it_1"}, nil).
+		GetByIDsWithIncludes(gomock.Any(), "ac_test123", []string{"it_1"}, []string{"attributes"}).
+		Return([]*domain.Item{{ID: "it_1"}}, nil).
 		Times(1)
 
 	result, err := s.productSvc.ValidateProducts(ctx, domain.ValidateProductsParams{ProductsMap: input})

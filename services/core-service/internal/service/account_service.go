@@ -863,17 +863,23 @@ func (s *accountSvcImpl) BatchGetAccountsByIDs(ctx context.Context, ids []string
 
 	// Authorization: always allow the caller's own target account; additionally allow any requested id the caller has an account_relation to (customer/supplier), so relationship-scoped includes hydrate cross-account. Everything else is silently dropped (the resolver treats absence as "field stays nil").
 	allowed := make([]string, 0, len(ids))
+	others := make([]string, 0, len(ids))
 	for _, id := range ids {
 		if id == identity.Target.AccountID {
 			allowed = append(allowed, id)
-			continue
+		} else {
+			others = append(others, id)
 		}
-		hasRelation, apiErr := s.accountRelationRepo.HasRelation(ctx, identity.Target.AccountID, id)
+	}
+	if len(others) > 0 {
+		related, apiErr := s.accountRelationRepo.RelatedCounterpartyIDs(ctx, identity.Target.AccountID, others)
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
-		if hasRelation {
-			allowed = append(allowed, id)
+		for _, id := range others {
+			if related[id] {
+				allowed = append(allowed, id)
+			}
 		}
 	}
 	if len(allowed) == 0 {

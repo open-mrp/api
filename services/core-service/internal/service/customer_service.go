@@ -150,6 +150,47 @@ func (s *customerSvcImpl) GetCustomer(ctx context.Context, customerAccountID str
 	return customer, nil
 }
 
+func (s *customerSvcImpl) BatchGetCustomers(ctx context.Context, customerAccountIDs []string) ([]*domain.Customer, *apierror.APIError) {
+	ctx, span := customerSvcTracer.Start(ctx, "service.customer.batch_get")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+
+	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := checkCustomerReadPermission(identity); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
+	}
+
+	ids := customerAccountIDs
+	if identity.IsCustomerUser() {
+		ids = nil
+		if slices.Contains(customerAccountIDs, *identity.ActorAccountID()) {
+			ids = []string{*identity.ActorAccountID()}
+		}
+	}
+
+	if identity.IsExternalTarget() {
+		meds := s.mediators()
+		if apiErr := meds.ReadAccess.CheckCounterpartyReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
+
+	customers, apiErr := s.repos.NewCustomerRepo().GetByIDs(ctx, identity.Target.AccountID, ids)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return customers, nil
+}
+
 // CreateCustomer creates a new customer account with idempotency.
 func (s *customerSvcImpl) CreateCustomer(ctx context.Context, params domain.CreateCustomerParams) (*domain.Customer, *apierror.APIError) {
 	ctx, span := customerSvcTracer.Start(ctx, "service.customer.create")

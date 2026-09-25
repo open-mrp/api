@@ -681,6 +681,11 @@ func mapGetItemsByIDsRow(row sqlc.GetItemsByIDsRow) *domain.Item {
 }
 
 func (r *itemRepoImpl) GetByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.Item, *apierror.APIError) {
+	return r.GetByIDsWithIncludes(ctx, accountID, ids, []string{"unit_value", "unit_cost", "burn_rate", "attributes"})
+}
+
+// GetByIDsWithIncludes is the batched form of Get: only the requested stitches are applied.
+func (r *itemRepoImpl) GetByIDsWithIncludes(ctx context.Context, accountID string, ids []string, includes []string) ([]*domain.Item, *apierror.APIError) {
 	ctx, span := itemRepoTracer.Start(ctx, "repository.item.get_by_ids")
 	defer span.End()
 
@@ -701,8 +706,7 @@ func (r *itemRepoImpl) GetByIDs(ctx context.Context, accountID string, ids []str
 		items[i] = mapGetItemsByIDsRow(row)
 	}
 
-	allIncludes := []string{"unit_value", "unit_cost", "burn_rate", "attributes"}
-	if apiErr := applyItemStitches(ctx, r.queries, items, allIncludes); apiErr != nil {
+	if apiErr := applyItemStitches(ctx, r.queries, items, includes); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 

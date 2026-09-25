@@ -3196,6 +3196,11 @@ INSERT INTO `pick` (`id`, `number`, `sales_order_id`, `account_id`, `finished_at
   (@pick4, 'PICK-004', @so5, '@account_id', NOW() - INTERVAL 5 DAY),     -- ORD-004: finished
   (@pick5, 'PICK-005', @so6, '@account_id', NOW() - INTERVAL 3 DAY);     -- ORD-005: finished
 
+-- The pick list's customer filter reads the pick's copy of its order's buyer.
+UPDATE `pick` p JOIN `sales_order` so ON so.id = p.sales_order_id
+SET p.buyer_account_id = so.buyer_account_id
+WHERE p.id IN (@pick1, @pick2, @pick3, @pick4, @pick5);
+
 INSERT INTO `pick_line` (`id`, `pick_id`, `quantity_id`, `sales_order_line_id`, `packed_at`) VALUES
   -- PICK-001 (open, not packed)
   (@pkl1, @pick1, @qty233, @sol4,  NULL),

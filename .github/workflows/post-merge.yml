@@ -154,7 +154,7 @@ jobs:
       - name: Run inventory ledger concurrency tests
         run: make test-ledger
         env:
-          LEDGER_TEST_DSN: "root:Testing123!@tcp(127.0.0.1:3306)/openmrp?parseTime=true&loc=UTC&interpolateParams=false"
+          LEDGER_TEST_DSN: "root:Testing123!@tcp(127.0.0.1:3306)/openmrp?parseTime=true&loc=UTC&interpolateParams=true"
 
   e2e:
     name: E2E

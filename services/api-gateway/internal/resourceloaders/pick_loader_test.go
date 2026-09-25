@@ -10,25 +10,34 @@ import (
 	"google.golang.org/grpc"
 )
 
-// stubPickClient answers GetPick from a fixed set of ids and returns not-found for
-// everything else. Only GetPick is exercised; the embedded interface satisfies the
-// rest and panics if anything else is ever called.
+// stubPickClient answers BatchGetPicksByIDs from a fixed set of ids, omitting unknown ones the way
+// core does. The embedded interface panics if anything else is called, so a per-id GetPick fan-out
+// fails the test.
 type stubPickClient struct {
 	pb.CorePickingServiceClient
-	known map[string]*pb.PickInfo
+	known   map[string]*pb.PickInfo
+	err     error
+	batches *int
 }
 
-func (s stubPickClient) GetPick(_ context.Context, req *pb.GetPickRequest, _ ...grpc.CallOption) (*pb.GetPickResponse, error) {
-	if pick, ok := s.known[req.Id]; ok {
-		return &pb.GetPickResponse{Pick: pick}, nil
+func (s stubPickClient) BatchGetPicksByIDs(_ context.Context, req *pb.BatchGetPicksByIDsRequest, _ ...grpc.CallOption) (*pb.BatchGetPicksByIDsResponse, error) {
+	if s.batches != nil {
+		*s.batches++
 	}
-	return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewResourceNotFoundError("Resource not found."))
+	if s.err != nil {
+		return nil, s.err
+	}
+	resp := &pb.BatchGetPicksByIDsResponse{}
+	for _, id := range req.Ids {
+		if pick, ok := s.known[id]; ok {
+			resp.Picks = append(resp.Picks, pick)
+		}
+	}
+	return resp, nil
 }
 
-// A pick that has been deleted by the time the include resolves must leave that one
-// row's related.pick absent, not fail the whole request. Deleting a shipment deletes
-// the pick it was packed from, so without this a single concurrent delete turns any
-// list page holding a reference read moments earlier into a 404 in full.
+// Deleting a shipment deletes the pick it was packed from, so a list page can hold a reference to
+// a pick that is gone by the time the include resolves; only that row's related.pick goes null.
 func TestLoadPicks_MissingPickIsOmittedNotFatal(t *testing.T) {
 	original := corePickingClient
 	t.Cleanup(func() { corePickingClient = original })
@@ -45,5 +54,42 @@ func TestLoadPicks_MissingPickIsOmittedNotFatal(t *testing.T) {
 	}
 	if _, ok := out["pk_deleted"]; ok {
 		t.Error("the deleted pick must be absent rather than expanded")
+	}
+}
+
+func TestLoadPicks_OneRoundTripForAPage(t *testing.T) {
+	original := corePickingClient
+	t.Cleanup(func() { corePickingClient = original })
+	batches := 0
+	corePickingClient = stubPickClient{batches: &batches, known: map[string]*pb.PickInfo{
+		"pk_1": {Id: "pk_1", Number: "PK-1"},
+		"pk_2": {Id: "pk_2", Number: "PK-2"},
+		"pk_3": {Id: "pk_3", Number: "PK-3"},
+	}}
+
+	out, apiErr := LoadPicks(context.Background(), []string{"pk_1", "pk_2", "pk_3"})
+	if apiErr != nil {
+		t.Fatalf("LoadPicks: %v", apiErr)
+	}
+	if len(out) != 3 {
+		t.Errorf("got %d picks, want 3", len(out))
+	}
+	if batches != 1 {
+		t.Errorf("made %d batch calls, want 1", batches)
+	}
+}
+
+// An actor without pick read access still gets the rest of the page, with related.pick null.
+func TestLoadPicks_UnauthorizedOmitsAll(t *testing.T) {
+	original := corePickingClient
+	t.Cleanup(func() { corePickingClient = original })
+	corePickingClient = stubPickClient{err: contracts.ConvertAPIErrorToGRPC(apierror.NewAuthorizationError("No access."))}
+
+	out, apiErr := LoadPicks(context.Background(), []string{"pk_1"})
+	if apiErr != nil {
+		t.Fatalf("LoadPicks returned %v, want an empty result", apiErr)
+	}
+	if len(out) != 0 {
+		t.Errorf("got %d picks, want none", len(out))
 	}
 }

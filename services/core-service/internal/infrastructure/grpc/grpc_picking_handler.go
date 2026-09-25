@@ -242,6 +242,23 @@ func (h *pickingGRPCHandler) GetPick(ctx context.Context, req *pb.GetPickRequest
 	}, nil
 }
 
+func (h *pickingGRPCHandler) BatchGetPicksByIDs(ctx context.Context, req *pb.BatchGetPicksByIDsRequest) (*pb.BatchGetPicksByIDsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	picks, apiErr := h.pickSvc.BatchGetPicksByIDs(ctx, req.Ids)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	out := make([]*pb.PickInfo, len(picks))
+	for i, pick := range picks {
+		out[i] = pickToProto(pick)
+	}
+	return &pb.BatchGetPicksByIDsResponse{Picks: out}, nil
+}
+
 // PickAllLines marks all lines on a pick as picked.
 func (h *pickingGRPCHandler) PickAllLines(ctx context.Context, req *pb.PickAllLinesRequest) (*pb.PickAllLinesResponse, error) {
 	if req == nil {

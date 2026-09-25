@@ -188,6 +188,46 @@ func (r *purchaseOrderRepoImpl) Get(ctx context.Context, accountID, purchaseOrde
 	return po, nil
 }
 
+// GetByIDs is the batched form of Get. Ids that are not purchase orders of the account are absent.
+func (r *purchaseOrderRepoImpl) GetByIDs(ctx context.Context, accountID string, purchaseOrderIDs []string) ([]*domain.PurchaseOrder, *apierror.APIError) {
+	ctx, span := purchaseOrderRepoTracer.Start(ctx, "repository.purchase_order.get_by_ids")
+	defer span.End()
+
+	if len(purchaseOrderIDs) == 0 {
+		return []*domain.PurchaseOrder{}, nil
+	}
+
+	rows, err := r.queries.GetPurchaseOrdersByIDs(ctx, sqlc.GetPurchaseOrdersByIDsParams{
+		SalesOrderIds: purchaseOrderIDs,
+		AccountID:     accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	orders := make([]*domain.PurchaseOrder, len(rows))
+	byID := make(map[string]*domain.PurchaseOrder, len(rows))
+	ids := make([]string, len(rows))
+	for i, row := range rows {
+		orders[i] = mapGetPurchaseOrderRow(sqlc.GetPurchaseOrderRow(row))
+		byID[orders[i].ID] = orders[i]
+		ids[i] = orders[i].ID
+	}
+
+	if len(ids) > 0 {
+		deliveryRows, err := r.queries.ListDeliveryRefsForOrders(ctx, ids)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		for _, d := range deliveryRows {
+			if po := byID[d.OrderID]; po != nil {
+				po.Deliveries = append(po.Deliveries, domain.DocumentRef{ID: d.ID, Number: d.Number, Status: d.Status})
+			}
+		}
+	}
+	return orders, nil
+}
+
 // GetLinesByIDs fetches purchase order lines by their own ids, for a receiving or delivery line that
 // names the line it was raised from. The query scopes them through the order they belong to, so a
 // line from another account's purchase order is simply not returned.

@@ -866,6 +866,310 @@ func (q *Queries) GetPurchaseOrderSupplierID(ctx context.Context, arg GetPurchas
 	return seller_account_id, err
 }
 
+const getPurchaseOrdersByIDs = `-- name: GetPurchaseOrdersByIDs :many
+SELECT
+    so.id,
+    so.number,
+    so.note,
+    so.is_acknowledgment_sent,
+    so.billing_address_id,
+    so.shipping_address_id,
+    so.carrier_id,
+    so.carrier_option_id,
+    so.carrier_billing_type,
+    so.carrier_billing_account,
+    so.priority_code,
+    so.shipping_term_id,
+    so.sales_order_status_code,
+    so.sales_order_type_code,
+    so.payment_term_id,
+    so.buyer_account_id,
+    so.seller_account_id,
+    so.owner_account_id,
+    so.issued_at,
+    so.completed_at,
+    so.promised_at,
+    so.created_at,
+    so.updated_at,
+    -- Supplier
+    sa.name AS supplier_name,
+    ar.external_number AS supplier_number,
+    -- Status
+    sos.name AS status_name,
+    -- Type
+    sot.name AS type_name,
+    -- Priority
+    pr.name AS priority_name,
+    pr.id AS priority_id,
+    -- Bill-to address
+    bill_addr.name AS bill_to_name,
+    bill_addr.is_drop_ship AS bill_to_is_drop_ship,
+    bill_addr.created_at AS bill_to_created_at,
+    bill_addr.updated_at AS bill_to_updated_at,
+    bill_geo.street_line_1 AS bill_to_street_line_1,
+    bill_geo.street_line_2 AS bill_to_street_line_2,
+    bill_geo.locality AS bill_to_locality,
+    bill_geo.state AS bill_to_state,
+    bill_geo.postal_code AS bill_to_postal_code,
+    bill_geo.country AS bill_to_country,
+    bill_addr.phone AS bill_to_phone,
+    bill_addr.email AS bill_to_email,
+    -- Ship-to address
+    ship_addr.name AS ship_to_name,
+    ship_addr.is_drop_ship AS ship_to_is_drop_ship,
+    ship_addr.created_at AS ship_to_created_at,
+    ship_addr.updated_at AS ship_to_updated_at,
+    ship_geo.street_line_1 AS ship_to_street_line_1,
+    ship_geo.street_line_2 AS ship_to_street_line_2,
+    ship_geo.locality AS ship_to_locality,
+    ship_geo.state AS ship_to_state,
+    ship_geo.postal_code AS ship_to_postal_code,
+    ship_geo.country AS ship_to_country,
+    ship_addr.phone AS ship_to_phone,
+    ship_addr.email AS ship_to_email,
+    -- Carrier
+    cr.name AS carrier_name,
+    cr.is_portal_enabled AS carrier_is_portal_enabled,
+    cr.created_at AS carrier_created_at,
+    cr.updated_at AS carrier_updated_at,
+    co.name AS carrier_option_name,
+    co.is_portal_enabled AS service_level_is_portal_enabled,
+    co.service_level_token AS service_level_token,
+    co.created_at AS service_level_created_at,
+    co.updated_at AS service_level_updated_at,
+    -- Payment term
+    pt.name AS payment_term_name,
+    pt.is_active AS payment_term_is_active,
+    pt.created_at AS payment_term_created_at,
+    pt.updated_at AS payment_term_updated_at,
+    -- Shipping term
+    st.name AS shipping_term_name,
+    st.is_freight_exempt AS shipping_term_is_freight_exempt,
+    st.is_carrier_rate AS shipping_term_is_carrier_rate,
+    st.created_at AS shipping_term_created_at,
+    st.updated_at AS shipping_term_updated_at,
+    -- Receiving order
+    ro.id AS receiving_order_id,
+    ro.number AS receiving_order_number,
+    -- Empty rather than NULL for an order with no receiving order, so the column is a plain string:
+    -- the gateway turns an empty status into an absent one.
+    CASE WHEN ro.id IS NULL THEN ''
+         WHEN ro.completed_at IS NULL THEN 'open'
+         ELSE 'completed' END AS receiving_order_status
+FROM sales_order so
+JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
+    AND ar.counterparty_account_id = so.seller_account_id
+JOIN account sa ON sa.id = so.seller_account_id
+JOIN sales_order_status sos ON sos.code = so.sales_order_status_code
+JOIN sales_order_type sot ON sot.code = so.sales_order_type_code
+JOIN priority pr ON pr.code = so.priority_code
+LEFT JOIN address bill_addr ON bill_addr.id = so.billing_address_id
+LEFT JOIN geolocation bill_geo ON bill_geo.id = bill_addr.geolocation_id
+LEFT JOIN address ship_addr ON ship_addr.id = so.shipping_address_id
+LEFT JOIN geolocation ship_geo ON ship_geo.id = ship_addr.geolocation_id
+LEFT JOIN carrier cr ON cr.id = so.carrier_id
+LEFT JOIN carrier_option co ON co.id = so.carrier_option_id
+LEFT JOIN payment_term pt ON pt.id = so.payment_term_id
+LEFT JOIN shipping_term st ON st.id = so.shipping_term_id
+LEFT JOIN receiving_order ro ON ro.order_id = so.id
+WHERE so.id IN (/*SLICE:sales_order_ids*/?)
+AND so.owner_account_id = ?
+AND so.sales_order_type_code = 'purchase_order'
+`
+
+type GetPurchaseOrdersByIDsParams struct {
+	SalesOrderIds []string
+	AccountID     string
+}
+
+type GetPurchaseOrdersByIDsRow struct {
+	ID                          string
+	Number                      string
+	Note                        sql.NullString
+	IsAcknowledgmentSent        bool
+	BillingAddressID            string
+	ShippingAddressID           string
+	CarrierID                   sql.NullString
+	CarrierOptionID             sql.NullString
+	CarrierBillingType          sql.NullString
+	CarrierBillingAccount       sql.NullString
+	PriorityCode                string
+	ShippingTermID              sql.NullString
+	SalesOrderStatusCode        string
+	SalesOrderTypeCode          string
+	PaymentTermID               sql.NullString
+	BuyerAccountID              string
+	SellerAccountID             string
+	OwnerAccountID              string
+	IssuedAt                    sql.NullTime
+	CompletedAt                 sql.NullTime
+	PromisedAt                  sql.NullTime
+	CreatedAt                   time.Time
+	UpdatedAt                   time.Time
+	SupplierName                string
+	SupplierNumber              string
+	StatusName                  string
+	TypeName                    string
+	PriorityName                string
+	PriorityID                  string
+	BillToName                  sql.NullString
+	BillToIsDropShip            sql.NullBool
+	BillToCreatedAt             sql.NullTime
+	BillToUpdatedAt             sql.NullTime
+	BillToStreetLine1           sql.NullString
+	BillToStreetLine2           sql.NullString
+	BillToLocality              sql.NullString
+	BillToState                 sql.NullString
+	BillToPostalCode            sql.NullString
+	BillToCountry               sql.NullString
+	BillToPhone                 sql.NullString
+	BillToEmail                 sql.NullString
+	ShipToName                  sql.NullString
+	ShipToIsDropShip            sql.NullBool
+	ShipToCreatedAt             sql.NullTime
+	ShipToUpdatedAt             sql.NullTime
+	ShipToStreetLine1           sql.NullString
+	ShipToStreetLine2           sql.NullString
+	ShipToLocality              sql.NullString
+	ShipToState                 sql.NullString
+	ShipToPostalCode            sql.NullString
+	ShipToCountry               sql.NullString
+	ShipToPhone                 sql.NullString
+	ShipToEmail                 sql.NullString
+	CarrierName                 sql.NullString
+	CarrierIsPortalEnabled      sql.NullBool
+	CarrierCreatedAt            sql.NullTime
+	CarrierUpdatedAt            sql.NullTime
+	CarrierOptionName           sql.NullString
+	ServiceLevelIsPortalEnabled sql.NullBool
+	ServiceLevelToken           sql.NullString
+	ServiceLevelCreatedAt       sql.NullTime
+	ServiceLevelUpdatedAt       sql.NullTime
+	PaymentTermName             sql.NullString
+	PaymentTermIsActive         sql.NullBool
+	PaymentTermCreatedAt        sql.NullTime
+	PaymentTermUpdatedAt        sql.NullTime
+	ShippingTermName            sql.NullString
+	ShippingTermIsFreightExempt sql.NullBool
+	ShippingTermIsCarrierRate   sql.NullBool
+	ShippingTermCreatedAt       sql.NullTime
+	ShippingTermUpdatedAt       sql.NullTime
+	ReceivingOrderID            sql.NullString
+	ReceivingOrderNumber        sql.NullString
+	ReceivingOrderStatus        string
+}
+
+// The batched form of GetPurchaseOrder for include expansion; the columns must stay identical so the
+// rows convert to GetPurchaseOrderRow.
+func (q *Queries) GetPurchaseOrdersByIDs(ctx context.Context, arg GetPurchaseOrdersByIDsParams) ([]GetPurchaseOrdersByIDsRow, error) {
+	query := getPurchaseOrdersByIDs
+	var queryParams []interface{}
+	if len(arg.SalesOrderIds) > 0 {
+		for _, v := range arg.SalesOrderIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", strings.Repeat(",?", len(arg.SalesOrderIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPurchaseOrdersByIDsRow
+	for rows.Next() {
+		var i GetPurchaseOrdersByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Number,
+			&i.Note,
+			&i.IsAcknowledgmentSent,
+			&i.BillingAddressID,
+			&i.ShippingAddressID,
+			&i.CarrierID,
+			&i.CarrierOptionID,
+			&i.CarrierBillingType,
+			&i.CarrierBillingAccount,
+			&i.PriorityCode,
+			&i.ShippingTermID,
+			&i.SalesOrderStatusCode,
+			&i.SalesOrderTypeCode,
+			&i.PaymentTermID,
+			&i.BuyerAccountID,
+			&i.SellerAccountID,
+			&i.OwnerAccountID,
+			&i.IssuedAt,
+			&i.CompletedAt,
+			&i.PromisedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.SupplierName,
+			&i.SupplierNumber,
+			&i.StatusName,
+			&i.TypeName,
+			&i.PriorityName,
+			&i.PriorityID,
+			&i.BillToName,
+			&i.BillToIsDropShip,
+			&i.BillToCreatedAt,
+			&i.BillToUpdatedAt,
+			&i.BillToStreetLine1,
+			&i.BillToStreetLine2,
+			&i.BillToLocality,
+			&i.BillToState,
+			&i.BillToPostalCode,
+			&i.BillToCountry,
+			&i.BillToPhone,
+			&i.BillToEmail,
+			&i.ShipToName,
+			&i.ShipToIsDropShip,
+			&i.ShipToCreatedAt,
+			&i.ShipToUpdatedAt,
+			&i.ShipToStreetLine1,
+			&i.ShipToStreetLine2,
+			&i.ShipToLocality,
+			&i.ShipToState,
+			&i.ShipToPostalCode,
+			&i.ShipToCountry,
+			&i.ShipToPhone,
+			&i.ShipToEmail,
+			&i.CarrierName,
+			&i.CarrierIsPortalEnabled,
+			&i.CarrierCreatedAt,
+			&i.CarrierUpdatedAt,
+			&i.CarrierOptionName,
+			&i.ServiceLevelIsPortalEnabled,
+			&i.ServiceLevelToken,
+			&i.ServiceLevelCreatedAt,
+			&i.ServiceLevelUpdatedAt,
+			&i.PaymentTermName,
+			&i.PaymentTermIsActive,
+			&i.PaymentTermCreatedAt,
+			&i.PaymentTermUpdatedAt,
+			&i.ShippingTermName,
+			&i.ShippingTermIsFreightExempt,
+			&i.ShippingTermIsCarrierRate,
+			&i.ShippingTermCreatedAt,
+			&i.ShippingTermUpdatedAt,
+			&i.ReceivingOrderID,
+			&i.ReceivingOrderNumber,
+			&i.ReceivingOrderStatus,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const isDuplicatePurchaseOrderNumber = `-- name: IsDuplicatePurchaseOrderNumber :one
 SELECT COUNT(*) AS cnt FROM sales_order
 WHERE owner_account_id = ?

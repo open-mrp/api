@@ -16,6 +16,9 @@ service CorePickingService {
   // GetPick returns a single pick by its ID.
   rpc GetPick(GetPickRequest) returns (GetPickResponse);
 
+  // BatchGetPicksByIDs returns the picks with the given IDs in the target account, omitting unknown IDs.
+  rpc BatchGetPicksByIDs(BatchGetPicksByIDsRequest) returns (BatchGetPicksByIDsResponse);
+
 
   // PickAllLines picks all unpacked lines in a pick to their remaining quantities.
   rpc PickAllLines(PickAllLinesRequest) returns (PickAllLinesResponse);
@@ -170,6 +173,14 @@ message GetPickRequest {
 
 message GetPickResponse {
   PickInfo pick = 1;
+}
+
+message BatchGetPicksByIDsRequest {
+  repeated string ids = 1;
+}
+
+message BatchGetPicksByIDsResponse {
+  repeated PickInfo picks = 1;
 }
 
 // Pick all lines

@@ -118,13 +118,13 @@ SELECT STRAIGHT_JOIN
     od.updated_at AS order_discount_updated_at,
     -- Pick
     pk.id AS pick_id
--- FORCE INDEX restricts the optimizer to the two indexes that satisfy the ORDER BY
--- (created_at, id) without a filesort: sales_order_owner_created_idx when there is no
--- status filter, sales_order_owner_status_created_idx when there is. Excluding the
--- single-column sales_order_status_code index is the point — with a status filter the
--- optimizer otherwise picks it, reads every matching row, runs them all through the
--- joins, and filesorts the lot (~5s for large accounts even with LIMIT 10). Do not remove.
-FROM sales_order so FORCE INDEX (sales_order_owner_created_idx, sales_order_owner_status_created_idx)
+-- FORCE INDEX restricts the optimizer to the indexes that satisfy the ORDER BY (created_at, id)
+-- without a filesort: owner_created with no filter, owner_status_created with a status filter,
+-- owner_buyer_created with a customer filter. Excluding the single-column indexes is the point:
+-- with a status filter the optimizer otherwise picks sales_order_status_code and filesorts every
+-- match (~5s for large accounts even with LIMIT 10). Without owner_buyer_created, a customer
+-- filter walks the account's whole created_at index (1.3s for Carolon). Do not remove.
+FROM sales_order so FORCE INDEX (sales_order_owner_created_idx, sales_order_owner_status_created_idx, sales_order_owner_buyer_created_idx)
 JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
     AND ar.counterparty_account_id = so.buyer_account_id
 JOIN account ba ON ba.id = so.buyer_account_id
@@ -341,13 +341,13 @@ SELECT STRAIGHT_JOIN
     od.updated_at AS order_discount_updated_at,
     -- Pick
     pk.id AS pick_id
--- FORCE INDEX restricts the optimizer to the two indexes that satisfy the ORDER BY
--- (created_at, id) without a filesort: sales_order_owner_created_idx when there is no
--- status filter, sales_order_owner_status_created_idx when there is. Excluding the
--- single-column sales_order_status_code index is the point — with a status filter the
--- optimizer otherwise picks it, reads every matching row, runs them all through the
--- joins, and filesorts the lot (~5s for large accounts even with LIMIT 10). Do not remove.
-FROM sales_order so FORCE INDEX (sales_order_owner_created_idx, sales_order_owner_status_created_idx)
+-- FORCE INDEX restricts the optimizer to the indexes that satisfy the ORDER BY (created_at, id)
+-- without a filesort: owner_created with no filter, owner_status_created with a status filter,
+-- owner_buyer_created with a customer filter. Excluding the single-column indexes is the point:
+-- with a status filter the optimizer otherwise picks sales_order_status_code and filesorts every
+-- match (~5s for large accounts even with LIMIT 10). Without owner_buyer_created, a customer
+-- filter walks the account's whole created_at index (1.3s for Carolon). Do not remove.
+FROM sales_order so FORCE INDEX (sales_order_owner_created_idx, sales_order_owner_status_created_idx, sales_order_owner_buyer_created_idx)
 JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
     AND ar.counterparty_account_id = so.buyer_account_id
 JOIN account ba ON ba.id = so.buyer_account_id
@@ -587,6 +587,149 @@ WHERE so.id = sqlc.arg('sales_order_id')
 AND so.owner_account_id = sqlc.arg('account_id')
 AND so.seller_account_id = so.owner_account_id;
 
+-- name: GetSalesOrdersByIDs :many
+-- The batched form of GetSalesOrder for include expansion; the columns must stay identical so the
+-- rows convert to GetSalesOrderRow.
+SELECT
+    so.id,
+    so.number,
+    so.customer_po_number,
+    so.note,
+    so.is_acknowledgment_sent,
+    so.billing_address_id,
+    so.shipping_address_id,
+    so.carrier_id,
+    so.carrier_option_id,
+    so.carrier_billing_type,
+    so.carrier_billing_account,
+    so.priority_code,
+    so.sales_rep_id,
+    so.shipping_term_id,
+    so.sales_order_status_code,
+    so.sales_order_type_code,
+    so.payment_term_id,
+    so.production_run_id,
+    so.order_discount_id,
+    so.buyer_account_id,
+    so.seller_account_id,
+    so.owner_account_id,
+    so.issued_at,
+    so.completed_at,
+    so.first_ship_at,
+    so.expired_at,
+    so.promised_at,
+    so.ship_by_date,
+    so.lead_time_days,
+    so.lead_time_source_code,
+    so.transit_days,
+    so.transit_source_code,
+    so.lead_time_override_days,
+    so.ship_by_override_date,
+    so.ship_by_cutoff_at,
+    so.calendar_adjustment_days,
+    so.created_at,
+    so.updated_at,
+    -- Customer
+    ba.name AS customer_name,
+    ar.external_number AS customer_number,
+    ar.account_status_code AS customer_status_code,
+    ar.commission_status_code AS customer_commission_policy,
+    ar.created_at AS customer_created_at,
+    ar.updated_at AS customer_updated_at,
+    -- Status
+    sos.name AS status_name,
+    -- Type
+    sot.name AS type_name,
+    -- Priority
+    pr.name AS priority_name,
+    pr.id AS priority_id,
+    -- Bill-to address
+    bill_addr.name AS bill_to_name,
+    bill_addr.is_drop_ship AS bill_to_is_drop_ship,
+    bill_geo.id AS bill_to_geolocation_id,
+    bill_geo.street_line_1 AS bill_to_street_line_1,
+    bill_geo.street_line_2 AS bill_to_street_line_2,
+    bill_geo.locality AS bill_to_locality,
+    bill_geo.state AS bill_to_state,
+    bill_geo.postal_code AS bill_to_postal_code,
+    bill_geo.country AS bill_to_country,
+    bill_addr.phone AS bill_to_phone,
+    bill_addr.email AS bill_to_email,
+    bill_addr.created_at AS bill_to_created_at,
+    bill_addr.updated_at AS bill_to_updated_at,
+    -- Ship-to address
+    ship_addr.name AS ship_to_name,
+    ship_addr.is_drop_ship AS ship_to_is_drop_ship,
+    ship_geo.id AS ship_to_geolocation_id,
+    ship_geo.street_line_1 AS ship_to_street_line_1,
+    ship_geo.street_line_2 AS ship_to_street_line_2,
+    ship_geo.locality AS ship_to_locality,
+    ship_geo.state AS ship_to_state,
+    ship_geo.postal_code AS ship_to_postal_code,
+    ship_geo.country AS ship_to_country,
+    ship_addr.phone AS ship_to_phone,
+    ship_addr.email AS ship_to_email,
+    ship_addr.created_at AS ship_to_created_at,
+    ship_addr.updated_at AS ship_to_updated_at,
+    -- Carrier
+    cr.name AS carrier_name,
+    cr.is_portal_enabled AS carrier_is_portal_enabled,
+    cr.created_at AS carrier_created_at,
+    cr.updated_at AS carrier_updated_at,
+    co.name AS carrier_option_name,
+    co.is_portal_enabled AS service_level_is_portal_enabled,
+    co.service_level_token AS service_level_token,
+    co.created_at AS service_level_created_at,
+    co.updated_at AS service_level_updated_at,
+    -- Sales rep
+    sr_user.name AS sales_rep_name,
+    -- Payment term
+    pt.name AS payment_term_name,
+    pt.is_active AS payment_term_is_active,
+    pt.created_at AS payment_term_created_at,
+    pt.updated_at AS payment_term_updated_at,
+    -- Shipping term
+    st.name AS shipping_term_name,
+    st.is_freight_exempt AS shipping_term_is_freight_exempt,
+    st.is_carrier_rate AS shipping_term_is_carrier_rate,
+    st.created_at AS shipping_term_created_at,
+    st.updated_at AS shipping_term_updated_at,
+    -- Order discount
+    od.name AS order_discount_name,
+    od.code AS order_discount_code,
+    od.percentage AS order_discount_percentage,
+    od.value AS order_discount_amount,
+    od.discount_type_code AS order_discount_discount_type,
+    (SELECT COUNT(*) FROM sales_order so2 WHERE so2.order_discount_id = od.id) AS order_discount_order_count,
+    od.created_at AS order_discount_created_at,
+    od.updated_at AS order_discount_updated_at,
+    -- Pick
+    pk.id AS pick_id,
+    -- Line count
+    (SELECT COUNT(*) FROM sales_order_line sol_count WHERE sol_count.sales_order_id = so.id) AS line_count
+FROM sales_order so
+JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
+    AND ar.counterparty_account_id = so.buyer_account_id
+JOIN account ba ON ba.id = so.buyer_account_id
+JOIN sales_order_status sos ON sos.code = so.sales_order_status_code
+JOIN sales_order_type sot ON sot.code = so.sales_order_type_code
+JOIN priority pr ON pr.code = so.priority_code
+LEFT JOIN address bill_addr ON bill_addr.id = so.billing_address_id
+LEFT JOIN geolocation bill_geo ON bill_geo.id = bill_addr.geolocation_id
+LEFT JOIN address ship_addr ON ship_addr.id = so.shipping_address_id
+LEFT JOIN geolocation ship_geo ON ship_geo.id = ship_addr.geolocation_id
+LEFT JOIN carrier cr ON cr.id = so.carrier_id
+LEFT JOIN carrier_option co ON co.id = so.carrier_option_id
+LEFT JOIN account_user sr_au ON sr_au.id = so.sales_rep_id
+LEFT JOIN user sr_user ON sr_user.id = sr_au.user_id
+LEFT JOIN payment_term pt ON pt.id = so.payment_term_id
+LEFT JOIN shipping_term st ON st.id = so.shipping_term_id
+LEFT JOIN order_discount od ON od.id = so.order_discount_id
+LEFT JOIN pick pk ON pk.sales_order_id = so.id
+WHERE so.id IN (sqlc.slice('sales_order_ids'))
+AND so.owner_account_id = sqlc.arg('account_id')
+AND so.seller_account_id = so.owner_account_id;
+
 -- name: GetSalesOrderForCustomer :one
 SELECT
     so.id,
@@ -732,6 +875,7 @@ AND so.buyer_account_id = sqlc.arg('buyer_account_id');
 -- name: GetSalesOrderLines :many
 SELECT
     sol.id,
+    sol.sales_order_id,
     sol.line_item_number,
     sol.product_sku,
     sol.product_description,
@@ -806,6 +950,87 @@ LEFT JOIN item i ON i.id = sol.item_id
 LEFT JOIN product p ON p.id = sol.product_id
 WHERE sol.sales_order_id = sqlc.arg('sales_order_id')
 ORDER BY sol.line_item_number ASC;
+
+-- name: GetSalesOrderLinesForOrders :many
+-- The batched form of GetSalesOrderLines for a page of orders; the columns must stay identical so
+-- the rows convert to GetSalesOrderLinesRow.
+SELECT
+    sol.id,
+    sol.sales_order_id,
+    sol.line_item_number,
+    sol.product_sku,
+    sol.product_description,
+    sol.product_id,
+    sol.item_id,
+    i.sku AS item_sku,
+    sol.edi_line_item_id,
+    -- Quantity ordered
+    q.id AS quantity_id,
+    q.value AS quantity_value,
+    qu.id AS quantity_unit_id,
+    qu.name AS quantity_unit_name,
+    qu.abbreviation AS quantity_unit_abbreviation,
+    qu.unit_dimension_code AS quantity_unit_type,
+    -- Quantity picked
+    (SELECT COALESCE(SUM(plq.value), 0) FROM pick_line pl
+        JOIN quantity plq ON plq.id = pl.quantity_id
+        WHERE pl.sales_order_line_id = sol.id) AS quantity_picked_value,
+    -- Quantity packed
+    (SELECT COALESCE(SUM(plq2.value), 0) FROM pick_line pl2
+        JOIN quantity plq2 ON plq2.id = pl2.quantity_id
+        WHERE pl2.sales_order_line_id = sol.id AND pl2.packed_at IS NOT NULL) AS quantity_packed_value,
+    -- Quantity invoiced
+    (SELECT COALESCE(SUM(ilq.value), 0) FROM invoice_line il
+        JOIN quantity ilq ON ilq.id = il.quantity_id
+        WHERE il.sales_order_line_id = sol.id) AS quantity_invoiced_value,
+    -- Unit price
+    up.id AS unit_price_id,
+    up.value AS unit_price_value,
+    up_nu.id AS unit_price_numerator_unit_id,
+    up_nu.abbreviation AS unit_price_numerator_unit_abbreviation,
+    up_du.id AS unit_price_denominator_unit_id,
+    up_du.abbreviation AS unit_price_denominator_unit_abbreviation,
+    -- The base ratios of the quantity's unit and of the unit the price is quoted per, which
+    -- shared/pricing converts between the way the dashboard's multiplyRate does. Null where the
+    -- dashboard would price the line differently: units of different dimensions, a unit with an
+    -- offset, or a price in a non-base currency unit.
+    CASE WHEN qu.id = up_du.id AND qu.id <> up_nu.id THEN '1'
+        WHEN qu.unit_dimension_code = up_du.unit_dimension_code AND qu.unit_dimension_code <> up_nu.unit_dimension_code AND qu.offset_numerator = 0 AND up_du.offset_numerator = 0 AND (qu.is_base_unit = 0 OR qu.ratio_numerator = qu.ratio_denominator) AND (up_du.is_base_unit = 0 OR up_du.ratio_numerator = up_du.ratio_denominator) AND (up_nu.is_base_unit = 1 OR (up_nu.ratio_numerator = up_nu.ratio_denominator AND up_nu.offset_numerator = 0))
+        THEN CAST(qu.ratio_numerator AS CHAR) END AS pricing_quantity_ratio_numerator,
+    CASE WHEN qu.id = up_du.id AND qu.id <> up_nu.id THEN '1'
+        WHEN qu.unit_dimension_code = up_du.unit_dimension_code AND qu.unit_dimension_code <> up_nu.unit_dimension_code AND qu.offset_numerator = 0 AND up_du.offset_numerator = 0 AND (qu.is_base_unit = 0 OR qu.ratio_numerator = qu.ratio_denominator) AND (up_du.is_base_unit = 0 OR up_du.ratio_numerator = up_du.ratio_denominator) AND (up_nu.is_base_unit = 1 OR (up_nu.ratio_numerator = up_nu.ratio_denominator AND up_nu.offset_numerator = 0))
+        THEN CAST(qu.ratio_denominator AS CHAR) END AS pricing_quantity_ratio_denominator,
+    CASE WHEN qu.id = up_du.id AND qu.id <> up_nu.id THEN '1'
+        WHEN qu.unit_dimension_code = up_du.unit_dimension_code AND qu.unit_dimension_code <> up_nu.unit_dimension_code AND qu.offset_numerator = 0 AND up_du.offset_numerator = 0 AND (qu.is_base_unit = 0 OR qu.ratio_numerator = qu.ratio_denominator) AND (up_du.is_base_unit = 0 OR up_du.ratio_numerator = up_du.ratio_denominator) AND (up_nu.is_base_unit = 1 OR (up_nu.ratio_numerator = up_nu.ratio_denominator AND up_nu.offset_numerator = 0))
+        THEN CAST(up_du.ratio_numerator AS CHAR) END AS pricing_price_ratio_numerator,
+    CASE WHEN qu.id = up_du.id AND qu.id <> up_nu.id THEN '1'
+        WHEN qu.unit_dimension_code = up_du.unit_dimension_code AND qu.unit_dimension_code <> up_nu.unit_dimension_code AND qu.offset_numerator = 0 AND up_du.offset_numerator = 0 AND (qu.is_base_unit = 0 OR qu.ratio_numerator = qu.ratio_denominator) AND (up_du.is_base_unit = 0 OR up_du.ratio_numerator = up_du.ratio_denominator) AND (up_nu.is_base_unit = 1 OR (up_nu.ratio_numerator = up_nu.ratio_denominator AND up_nu.offset_numerator = 0))
+        THEN CAST(up_du.ratio_denominator AS CHAR) END AS pricing_price_ratio_denominator,
+    -- Unit cost
+    uc.id AS unit_cost_id,
+    uc.value AS unit_cost_value,
+    uc_nu.id AS unit_cost_numerator_unit_id,
+    uc_nu.abbreviation AS unit_cost_numerator_unit_abbreviation,
+    uc_du.id AS unit_cost_denominator_unit_id,
+    uc_du.abbreviation AS unit_cost_denominator_unit_abbreviation,
+    -- Product type
+    p.product_type_code AS product_type_code,
+    -- Timestamps
+    sol.created_at,
+    sol.updated_at
+FROM sales_order_line sol
+JOIN quantity q ON q.id = sol.quantity_id
+JOIN unit qu ON qu.id = q.unit_id
+JOIN rate up ON up.id = sol.unit_price_id
+JOIN unit up_nu ON up_nu.id = up.numerator_unit_id
+JOIN unit up_du ON up_du.id = up.denominator_unit_id
+LEFT JOIN rate uc ON uc.id = sol.unit_cost_id
+LEFT JOIN unit uc_nu ON uc_nu.id = uc.numerator_unit_id
+LEFT JOIN unit uc_du ON uc_du.id = uc.denominator_unit_id
+LEFT JOIN item i ON i.id = sol.item_id
+LEFT JOIN product p ON p.id = sol.product_id
+WHERE sol.sales_order_id IN (sqlc.slice('sales_order_ids'))
+ORDER BY sol.sales_order_id, sol.line_item_number ASC;
 
 -- name: CreateSalesOrder :exec
 INSERT INTO sales_order (
@@ -1002,10 +1227,11 @@ AND notification_type_code = sqlc.arg('notification_type_code');
 -- ship_by_sort_date is read from the order rather than passed in: the issue path stamps the order's
 -- commitment (SetShipByCommitment) in the same transaction just before this runs, so the value is
 -- already there, and reading it here keeps the denormalized sort key from ever diverging on insert.
--- COALESCE preserves the no-commitment sentinel. See pick.sql ListPicksShipByForward.
-INSERT INTO pick (id, number, sales_order_id, account_id, ship_by_sort_date, created_at, updated_at)
+-- COALESCE preserves the no-commitment sentinel. buyer_account_id is denormalized the same way, for
+-- the pick list's customer filter.
+INSERT INTO pick (id, number, sales_order_id, account_id, buyer_account_id, ship_by_sort_date, created_at, updated_at)
 SELECT sqlc.arg('id'), sqlc.arg('number'), sqlc.arg('sales_order_id'), sqlc.arg('account_id'),
-       COALESCE(so.ship_by_date, '9999-12-31'), NOW(3), NOW(3)
+       so.buyer_account_id, COALESCE(so.ship_by_date, '9999-12-31'), NOW(3), NOW(3)
 FROM sales_order so
 WHERE so.id = sqlc.arg('sales_order_id');
 
@@ -1324,6 +1550,18 @@ FROM invoice inv
 WHERE inv.sales_order_id = sqlc.arg('sales_order_id')
 ORDER BY inv.created_at, inv.id;
 
+-- name: GetShipmentIDsForSalesOrders :many
+SELECT s.sales_order_id, s.id
+FROM shipment s
+WHERE s.sales_order_id IN (sqlc.slice('sales_order_ids'))
+ORDER BY s.sales_order_id, s.created_at, s.id;
+
+-- name: GetInvoiceIDsForSalesOrders :many
+SELECT inv.sales_order_id, inv.id
+FROM invoice inv
+WHERE inv.sales_order_id IN (sqlc.slice('sales_order_ids'))
+ORDER BY inv.sales_order_id, inv.created_at, inv.id;
+
 -- name: CountCommissionExemptProductLines :one
 -- For the given products, returns the number that have a product line (total) and
 -- how many of those product lines are commission-exempt (exempt). Mirrors Dashboard's
@@ -1410,3 +1648,21 @@ UPDATE pick SET
     ship_by_sort_date = COALESCE(sqlc.narg('ship_by_date'), '9999-12-31'),
     updated_at = NOW(3)
 WHERE sales_order_id = sqlc.arg('sales_order_id');
+
+-- name: MarkSalesOrderFreightPending :exec
+UPDATE sales_order SET freight_pending_since = NOW(3)
+WHERE id = sqlc.arg('sales_order_id') AND owner_account_id = sqlc.arg('account_id');
+
+-- name: GetSalesOrderFreightPendingSince :one
+SELECT freight_pending_since FROM sales_order
+WHERE id = sqlc.arg('sales_order_id') AND owner_account_id = sqlc.arg('account_id');
+
+-- name: LockSalesOrderFreightPendingSince :one
+-- Serializes the freight consumer against checkout finishing the same order's freight.
+SELECT freight_pending_since FROM sales_order
+WHERE id = sqlc.arg('sales_order_id') AND owner_account_id = sqlc.arg('account_id')
+FOR UPDATE;
+
+-- name: ClearSalesOrderFreightPending :exec
+UPDATE sales_order SET freight_pending_since = NULL
+WHERE id = sqlc.arg('sales_order_id') AND owner_account_id = sqlc.arg('account_id');

@@ -254,7 +254,7 @@ func TestJobRepo_Update_EncodesAnEmptyResultsListDistinctlyFromNone(t *testing.T
 		{
 			name:    "an empty list records an empty array",
 			results: []domain.RowResult{},
-			want:    []byte(`{"rows":[],"truncated":false}`),
+			want:    `{"rows":[],"truncated":false}`,
 		},
 	}
 

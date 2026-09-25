@@ -111,6 +111,7 @@ type AccountRelationRepo interface {
 	FindCustomerByEmail(ctx context.Context, ownerAccountID, email string) (*CustomerByEmail, *apierror.APIError)
 	FindContactsByEmail(ctx context.Context, ownerAccountID, email string) ([]ContactMatch, *apierror.APIError)
 	HasRelation(ctx context.Context, ownerAccountID, counterpartyAccountID string) (bool, *apierror.APIError)
+	RelatedCounterpartyIDs(ctx context.Context, ownerAccountID string, counterpartyAccountIDs []string) (map[string]bool, *apierror.APIError)
 	CountOtherOwnerRelations(ctx context.Context, counterpartyAccountID, excludeOwnerAccountID string) (int64, *apierror.APIError)
 	FindRelationByOwnerAndCounterparty(ctx context.Context, ownerAccountID, counterpartyAccountID string) (string, *apierror.APIError)
 	CreateNotificationPreference(ctx context.Context, id, accountRelationID, recipientAccountUserID string, notificationTypeCode string) *apierror.APIError
@@ -162,6 +163,7 @@ type ItemRepo interface {
 	List(ctx context.Context, params ListItemsParams) (*ListItemsResult, *apierror.APIError)
 	Get(ctx context.Context, params GetItemParams) (*Item, *apierror.APIError)
 	GetByIDs(ctx context.Context, accountID string, ids []string) ([]*Item, *apierror.APIError)
+	GetByIDsWithIncludes(ctx context.Context, accountID string, ids []string, includes []string) ([]*Item, *apierror.APIError)
 	GetInventory(ctx context.Context, accountID, itemID string) (*ItemInventory, *apierror.APIError)
 	GetCostFlowConsumptions(ctx context.Context, stepID string) ([]CostFlowConsumption, *apierror.APIError)
 	// FindItemsProducedFromConsumed returns the items produced by every step that consumes any of the given ones — one generation outwards in the cost graph.
@@ -489,6 +491,7 @@ type CarrierRepo interface {
 	DeleteOptionsByCarrierID(ctx context.Context, accountID, carrierID string) *apierror.APIError
 	ExistsByName(ctx context.Context, accountID, name string, excludeID *string) (bool, *apierror.APIError)
 	ListOptionsByCarrierID(ctx context.Context, accountID, carrierID string) ([]*ServiceLevel, *apierror.APIError)
+	ListOptionsByCarrierIDs(ctx context.Context, accountID string, carrierIDs []string) (map[string][]*ServiceLevel, *apierror.APIError)
 	// ListOptionIDsForCarriers returns all carrier_option IDs grouped by carrier_id, ordered (carrier_id, created_at ASC, id ASC) — callers truncate to a per-carrier preview limit in Go.
 	ListOptionIDsForCarriers(ctx context.Context, accountID string, carrierIDs []string) (map[string][]string, *apierror.APIError)
 	// GetOptionsByIDs returns full ServiceLevel records by id with the same account-scoping rule as ListOptionsByCarrierID (the parent carrier must be the caller's own or a system carrier).
@@ -663,6 +666,7 @@ type ProductLineRepo interface {
 	ExistsByName(ctx context.Context, accountID, name string, excludeID *string) (bool, *apierror.APIError)
 	FindByNames(ctx context.Context, accountID string, names []string) ([]*ProductLineFull, *apierror.APIError)
 	GetUnitGroup(ctx context.Context, accountID, unitGroupID string, includes []string) (*ProductLineUnitGroup, *apierror.APIError)
+	GetUnitGroups(ctx context.Context, accountID string, unitGroupIDs []string, includes []string) (map[string]*ProductLineUnitGroup, *apierror.APIError)
 	GetByIDs(ctx context.Context, accountID string, ids []string) ([]*ProductLineFull, *apierror.APIError)
 	// IsUnitInGroup reports whether a unit can be used by a line on this unit group. A lot counted in a unit the line cannot express is not a lot anybody can act on.
 	IsUnitInGroup(ctx context.Context, unitGroupID, unitID string) (bool, *apierror.APIError)
@@ -694,6 +698,8 @@ type ItemCategoryRepo interface {
 	GetByIDs(ctx context.Context, accountID string, ids []string) ([]*ItemCategoryFull, *apierror.APIError)
 	GetProperties(ctx context.Context, itemCategoryID string) ([]*ItemCategoryProperty, *apierror.APIError)
 	GetUnitGroup(ctx context.Context, unitGroupID string, includes []string) (*ItemCategoryUnitGroup, *apierror.APIError)
+	GetUnitGroups(ctx context.Context, unitGroupIDs []string, includes []string) (map[string]*ItemCategoryUnitGroup, *apierror.APIError)
+	GetPropertiesForCategories(ctx context.Context, itemCategoryIDs []string) (map[string][]*ItemCategoryProperty, *apierror.APIError)
 	IsPropertyInAccount(ctx context.Context, accountID, propertyID string) (bool, *apierror.APIError)
 	PropertyExistsByNameInCategory(ctx context.Context, accountID, itemCategoryID, name string, excludePropertyID *string) (bool, *apierror.APIError)
 }
@@ -844,6 +850,7 @@ type ProductionFlowRepo interface {
 type CustomerRepo interface {
 	List(ctx context.Context, params ListCustomersParams) (*ListCustomersResult, *apierror.APIError)
 	Get(ctx context.Context, ownerAccountID, customerAccountID string, includes []string) (*Customer, *apierror.APIError)
+	GetByIDs(ctx context.Context, ownerAccountID string, customerAccountIDs []string) ([]*Customer, *apierror.APIError)
 	Create(ctx context.Context, accountID, relationID, brandingID string, params CreateCustomerParams, customerNumber string) (*Customer, *apierror.APIError)
 	Update(ctx context.Context, relationID string, params UpdateCustomerParams) *apierror.APIError
 	UpdateName(ctx context.Context, customerAccountID, name string) *apierror.APIError
@@ -1254,6 +1261,13 @@ type SalesOrderRepo interface {
 	GetLines(ctx context.Context, salesOrderID string) ([]*SalesOrderLine, *apierror.APIError)
 	GetShipmentIDs(ctx context.Context, salesOrderID string) ([]string, *apierror.APIError)
 	GetInvoiceIDs(ctx context.Context, salesOrderID string) ([]string, *apierror.APIError)
+	GetByIDs(ctx context.Context, accountID string, buyerAccountID *string, salesOrderIDs []string) ([]*SalesOrder, *apierror.APIError)
+	GetLinesForOrders(ctx context.Context, salesOrderIDs []string) (map[string][]*SalesOrderLine, *apierror.APIError)
+	MarkFreightPending(ctx context.Context, accountID, salesOrderID string) *apierror.APIError
+	IsFreightPending(ctx context.Context, accountID, salesOrderID string, lock bool) (bool, *apierror.APIError)
+	ClearFreightPending(ctx context.Context, accountID, salesOrderID string) *apierror.APIError
+	GetShipmentIDsForOrders(ctx context.Context, salesOrderIDs []string) (map[string][]string, *apierror.APIError)
+	GetInvoiceIDsForOrders(ctx context.Context, salesOrderIDs []string) (map[string][]string, *apierror.APIError)
 	GetContactsByOrders(ctx context.Context, salesOrderIDs []string) (map[string]*SalesOrderContacts, *apierror.APIError)
 	Create(ctx context.Context, id string, params CreateSalesOrderParams) (*SalesOrder, *apierror.APIError)
 	Update(ctx context.Context, params UpdateSalesOrderParams) (*SalesOrder, *apierror.APIError)
@@ -1333,6 +1347,7 @@ type SalesOrderLineRepo interface {
 type PurchaseOrderRepo interface {
 	List(ctx context.Context, params ListPurchaseOrdersParams) (*ListPurchaseOrdersResult, *apierror.APIError)
 	Get(ctx context.Context, accountID, purchaseOrderID string) (*PurchaseOrder, *apierror.APIError)
+	GetByIDs(ctx context.Context, accountID string, purchaseOrderIDs []string) ([]*PurchaseOrder, *apierror.APIError)
 	GetLines(ctx context.Context, salesOrderID string) ([]*PurchaseOrderLine, *apierror.APIError)
 	GetLinesByIDs(ctx context.Context, accountID string, ids []string) ([]*PurchaseOrderLine, *apierror.APIError)
 	Create(ctx context.Context, id string, params CreatePurchaseOrderParams) (*PurchaseOrder, *apierror.APIError)
@@ -1458,6 +1473,8 @@ type ReceivableRepo interface {
 type PickRepo interface {
 	List(ctx context.Context, params ListPicksParams) (*ListPicksResult, *apierror.APIError)
 	Get(ctx context.Context, accountID, pickID string) (*Pick, *apierror.APIError)
+	// GetByIDs omits ids that do not exist in the account.
+	GetByIDs(ctx context.Context, accountID string, pickIDs []string) ([]*Pick, *apierror.APIError)
 	GetLines(ctx context.Context, pickID string) ([]*PickLine, *apierror.APIError)
 	// GetLinesForPicks returns the lines for a page of picks in one query, keyed by pick id, so the
 	// list endpoint's lines expansion does not fan out into one query per pick.

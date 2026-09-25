@@ -104,6 +104,8 @@ const (
 
 	// CoreEventSalesOrderShippingUpdated indicates a sales order's carrier, service level, or ship-to address changed. The core-service consumer re-syncs the order's existing shipment records to match, out-of-band from the update response.
 	CoreEventSalesOrderShippingUpdated AmqpRoutingKey = "core.event.sales_order_shipping_updated"
+	// CoreEventAccountStripePayoutPaid carries a verified payout.paid event from an account's Stripe webhook. Reconciling a payout reads every charge in it from Stripe, too slow to answer the webhook with.
+	CoreEventAccountStripePayoutPaid AmqpRoutingKey = "core.event.account_stripe_payout_paid"
 
 	// CoreEventCustomerRegistered indicates a buyer completed registration on a seller's customer portal (a brand-new customer account or a new login joining an existing one). The notification-service consumer notifies the seller's customer-service support-route group so they can follow up.
 	CoreEventCustomerRegistered AmqpRoutingKey = "core.event.customer_registered"

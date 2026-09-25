@@ -830,6 +830,8 @@ type CustomerSvc interface {
 
 	// GetCustomer returns a single customer by account ID. Supports customer actor access.
 	GetCustomer(ctx context.Context, customerAccountID string, includes []string) (*Customer, *apierror.APIError)
+	// BatchGetCustomers returns the customers the caller may read; others are omitted rather than failing the batch.
+	BatchGetCustomers(ctx context.Context, customerAccountIDs []string) ([]*Customer, *apierror.APIError)
 
 	// CreateCustomer creates a new customer account.
 	CreateCustomer(ctx context.Context, params CreateCustomerParams) (*Customer, *apierror.APIError)
@@ -1256,12 +1258,17 @@ type VolumeDiscountSvc interface {
 type SalesOrderSvc interface {
 	// TransitWarmer is embedded so the order-event consumers can drive lane warming through the same service that reads the cache back when a commitment is stamped.
 	TransitWarmer
+	// FreightFinisher is embedded so the freight consumer completes an order's freight through the same service checkout does.
+	FreightFinisher
+	StripePayoutReconciler
 
 	// ListSalesOrders returns a paginated list of sales orders for the caller's account. Supports customer actor access via BuyerAccountID filter.
 	ListSalesOrders(ctx context.Context, params ListSalesOrdersParams) (*ListSalesOrdersResult, *apierror.APIError)
 
 	// GetSalesOrder returns a single sales order by ID. Lines are fetched conditionally based on the includes parameter.
 	GetSalesOrder(ctx context.Context, params GetSalesOrderParams) (*SalesOrder, *apierror.APIError)
+	// BatchGetSalesOrders returns the orders the caller may read; others are omitted rather than failing the batch.
+	BatchGetSalesOrders(ctx context.Context, salesOrderIDs []string, includes []string) ([]*SalesOrder, *apierror.APIError)
 
 	// CreateSalesOrder creates a new sales order with lines, addresses, and optional discount.
 	CreateSalesOrder(ctx context.Context, params CreateSalesOrderParams) (*SalesOrder, *apierror.APIError)
@@ -1318,6 +1325,8 @@ type SalesOrderLineSvc interface {
 type PurchaseOrderSvc interface {
 	ListPurchaseOrders(ctx context.Context, params ListPurchaseOrdersParams) (*ListPurchaseOrdersResult, *apierror.APIError)
 	GetPurchaseOrder(ctx context.Context, params GetPurchaseOrderParams) (*PurchaseOrder, *apierror.APIError)
+	// BatchGetPurchaseOrders returns the purchase orders of the caller's account among the ids; others are omitted.
+	BatchGetPurchaseOrders(ctx context.Context, purchaseOrderIDs []string) ([]*PurchaseOrder, *apierror.APIError)
 	BatchGetPurchaseOrderLinesByIDs(ctx context.Context, ids []string) ([]*PurchaseOrderLine, *apierror.APIError)
 	CreatePurchaseOrder(ctx context.Context, params CreatePurchaseOrderParams) (*PurchaseOrder, *apierror.APIError)
 	UpdatePurchaseOrder(ctx context.Context, params UpdatePurchaseOrderParams) (*PurchaseOrder, *apierror.APIError)
@@ -1426,6 +1435,9 @@ type PickSvc interface {
 
 	// GetPick returns a single pick by ID, optionally including lines.
 	GetPick(ctx context.Context, pickID string, includes []string) (*Pick, *apierror.APIError)
+
+	// BatchGetPicksByIDs returns pick headers for include expansion; ids not in the account are omitted.
+	BatchGetPicksByIDs(ctx context.Context, pickIDs []string) ([]*Pick, *apierror.APIError)
 
 	// PickAllLines picks all unpacked lines to their remaining quantities.
 	PickAllLines(ctx context.Context, pickID string) (*Pick, *apierror.APIError)

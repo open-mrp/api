@@ -79,6 +79,12 @@ const (
 	// carries sales-order-created events back to the core-service for out-of-band processing (e.g. CRM sync). Messages on this queue contain a SalesOrderCreatedData payload.
 	CoreEventSalesOrderCreatedQueue = "core_event_sales_order_created"
 
+	// CoreEventSalesOrderFreightQueue also receives sales-order-created events, for the core-service to add the freight line of an order created before its carrier rate was quoted. Its own queue so a carrier retry never replays the CRM sync on CoreEventSalesOrderCreatedQueue.
+	CoreEventSalesOrderFreightQueue = "core_event_sales_order_freight"
+
+	// CoreEventAccountStripePayoutPaidQueue carries verified payout.paid events for the core-service to stamp funds_received_at on the payout's transactions. Messages contain an AccountStripePayoutPaidData payload.
+	CoreEventAccountStripePayoutPaidQueue = "core_event_account_stripe_payout_paid"
+
 	// CoreEventSalesOrderShippingUpdatedQueue carries sales-order shipping-changed events back to the core-service, which re-syncs the order's shipment records' carrier / service level / ship-to. Messages contain a SalesOrderShippingUpdatedData payload.
 	CoreEventSalesOrderShippingUpdatedQueue = "core_event_sales_order_shipping_updated"
 
@@ -285,6 +291,16 @@ type GenerateProductionScheduleData struct {
 	PlanningAsOf time.Time `json:"planning_as_of"`
 	// AutoPublish publishes the version as soon as it solves, for merchants who want the cadence to be the whole workflow.
 	AutoPublish bool `json:"auto_publish"`
+}
+
+// AccountStripePayoutPaidData is the payload for CoreEventAccountStripePayoutPaidQueue messages.
+type AccountStripePayoutPaidData struct {
+	// AccountID is the account whose Stripe integration received the webhook.
+	AccountID string `json:"account_id"`
+	// EventID is the Stripe event id, for tracing a payout back to its webhook.
+	EventID string `json:"event_id"`
+	// Event is the verified event's raw JSON.
+	Event json.RawMessage `json:"event"`
 }
 
 // SalesOrderCreatedData is the payload for CoreEventSalesOrderCreatedQueue messages. It identifies a newly created sales order so consumers can run out-of-band side effects (e.g. CRM sync). Consumers re-fetch the full order by ID when they need more than these identifiers.

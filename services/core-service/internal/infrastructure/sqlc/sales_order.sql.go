@@ -74,6 +74,21 @@ func (q *Queries) CheckSalesOrderPaymentStatus(ctx context.Context, arg CheckSal
 	return has_payment_intent, err
 }
 
+const clearSalesOrderFreightPending = `-- name: ClearSalesOrderFreightPending :exec
+UPDATE sales_order SET freight_pending_since = NULL
+WHERE id = ? AND owner_account_id = ?
+`
+
+type ClearSalesOrderFreightPendingParams struct {
+	SalesOrderID string
+	AccountID    string
+}
+
+func (q *Queries) ClearSalesOrderFreightPending(ctx context.Context, arg ClearSalesOrderFreightPendingParams) error {
+	_, err := q.db.ExecContext(ctx, clearSalesOrderFreightPending, arg.SalesOrderID, arg.AccountID)
+	return err
+}
+
 const countCommissionExemptProductLines = `-- name: CountCommissionExemptProductLines :one
 SELECT
     COUNT(pl.id) AS total,
@@ -142,9 +157,9 @@ func (q *Queries) CountSalesOrdersForBuyerAccounts(ctx context.Context, arg Coun
 }
 
 const createPick = `-- name: CreatePick :exec
-INSERT INTO pick (id, number, sales_order_id, account_id, ship_by_sort_date, created_at, updated_at)
+INSERT INTO pick (id, number, sales_order_id, account_id, buyer_account_id, ship_by_sort_date, created_at, updated_at)
 SELECT ?, ?, ?, ?,
-       COALESCE(so.ship_by_date, '9999-12-31'), NOW(3), NOW(3)
+       so.buyer_account_id, COALESCE(so.ship_by_date, '9999-12-31'), NOW(3), NOW(3)
 FROM sales_order so
 WHERE so.id = ?
 `
@@ -159,7 +174,8 @@ type CreatePickParams struct {
 // ship_by_sort_date is read from the order rather than passed in: the issue path stamps the order's
 // commitment (SetShipByCommitment) in the same transaction just before this runs, so the value is
 // already there, and reading it here keeps the denormalized sort key from ever diverging on insert.
-// COALESCE preserves the no-commitment sentinel. See pick.sql ListPicksShipByForward.
+// COALESCE preserves the no-commitment sentinel. buyer_account_id is denormalized the same way, for
+// the pick list's customer filter.
 func (q *Queries) CreatePick(ctx context.Context, arg CreatePickParams) error {
 	_, err := q.db.ExecContext(ctx, createPick,
 		arg.ID,
@@ -583,6 +599,51 @@ func (q *Queries) GetInvoiceIDsBySalesOrder(ctx context.Context, salesOrderID st
 			return nil, err
 		}
 		items = append(items, id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getInvoiceIDsForSalesOrders = `-- name: GetInvoiceIDsForSalesOrders :many
+SELECT inv.sales_order_id, inv.id
+FROM invoice inv
+WHERE inv.sales_order_id IN (/*SLICE:sales_order_ids*/?)
+ORDER BY inv.sales_order_id, inv.created_at, inv.id
+`
+
+type GetInvoiceIDsForSalesOrdersRow struct {
+	SalesOrderID string
+	ID           string
+}
+
+func (q *Queries) GetInvoiceIDsForSalesOrders(ctx context.Context, salesOrderIds []string) ([]GetInvoiceIDsForSalesOrdersRow, error) {
+	query := getInvoiceIDsForSalesOrders
+	var queryParams []interface{}
+	if len(salesOrderIds) > 0 {
+		for _, v := range salesOrderIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", strings.Repeat(",?", len(salesOrderIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetInvoiceIDsForSalesOrdersRow
+	for rows.Next() {
+		var i GetInvoiceIDsForSalesOrdersRow
+		if err := rows.Scan(&i.SalesOrderID, &i.ID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
@@ -1454,6 +1515,23 @@ func (q *Queries) GetSalesOrderForCustomer(ctx context.Context, arg GetSalesOrde
 	return i, err
 }
 
+const getSalesOrderFreightPendingSince = `-- name: GetSalesOrderFreightPendingSince :one
+SELECT freight_pending_since FROM sales_order
+WHERE id = ? AND owner_account_id = ?
+`
+
+type GetSalesOrderFreightPendingSinceParams struct {
+	SalesOrderID string
+	AccountID    string
+}
+
+func (q *Queries) GetSalesOrderFreightPendingSince(ctx context.Context, arg GetSalesOrderFreightPendingSinceParams) (sql.NullTime, error) {
+	row := q.db.QueryRowContext(ctx, getSalesOrderFreightPendingSince, arg.SalesOrderID, arg.AccountID)
+	var freight_pending_since sql.NullTime
+	err := row.Scan(&freight_pending_since)
+	return freight_pending_since, err
+}
+
 const getSalesOrderFulfillmentProgress = `-- name: GetSalesOrderFulfillmentProgress :many
 SELECT
     sol.sales_order_id,
@@ -1587,6 +1665,7 @@ func (q *Queries) GetSalesOrderLineCounts(ctx context.Context, salesOrderIds []s
 const getSalesOrderLines = `-- name: GetSalesOrderLines :many
 SELECT
     sol.id,
+    sol.sales_order_id,
     sol.line_item_number,
     sol.product_sku,
     sol.product_description,
@@ -1665,6 +1744,7 @@ ORDER BY sol.line_item_number ASC
 
 type GetSalesOrderLinesRow struct {
 	ID                                   string
+	SalesOrderID                         string
 	LineItemNumber                       sql.NullInt32
 	ProductSku                           string
 	ProductDescription                   sql.NullString
@@ -1713,6 +1793,7 @@ func (q *Queries) GetSalesOrderLines(ctx context.Context, salesOrderID string) (
 		var i GetSalesOrderLinesRow
 		if err := rows.Scan(
 			&i.ID,
+			&i.SalesOrderID,
 			&i.LineItemNumber,
 			&i.ProductSku,
 			&i.ProductDescription,
@@ -1795,6 +1876,199 @@ func (q *Queries) GetSalesOrderLinesForBOM(ctx context.Context, salesOrderID str
 			&i.ItemID,
 			&i.QuantityValue,
 			&i.QuantityUnitID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getSalesOrderLinesForOrders = `-- name: GetSalesOrderLinesForOrders :many
+SELECT
+    sol.id,
+    sol.sales_order_id,
+    sol.line_item_number,
+    sol.product_sku,
+    sol.product_description,
+    sol.product_id,
+    sol.item_id,
+    i.sku AS item_sku,
+    sol.edi_line_item_id,
+    -- Quantity ordered
+    q.id AS quantity_id,
+    q.value AS quantity_value,
+    qu.id AS quantity_unit_id,
+    qu.name AS quantity_unit_name,
+    qu.abbreviation AS quantity_unit_abbreviation,
+    qu.unit_dimension_code AS quantity_unit_type,
+    -- Quantity picked
+    (SELECT COALESCE(SUM(plq.value), 0) FROM pick_line pl
+        JOIN quantity plq ON plq.id = pl.quantity_id
+        WHERE pl.sales_order_line_id = sol.id) AS quantity_picked_value,
+    -- Quantity packed
+    (SELECT COALESCE(SUM(plq2.value), 0) FROM pick_line pl2
+        JOIN quantity plq2 ON plq2.id = pl2.quantity_id
+        WHERE pl2.sales_order_line_id = sol.id AND pl2.packed_at IS NOT NULL) AS quantity_packed_value,
+    -- Quantity invoiced
+    (SELECT COALESCE(SUM(ilq.value), 0) FROM invoice_line il
+        JOIN quantity ilq ON ilq.id = il.quantity_id
+        WHERE il.sales_order_line_id = sol.id) AS quantity_invoiced_value,
+    -- Unit price
+    up.id AS unit_price_id,
+    up.value AS unit_price_value,
+    up_nu.id AS unit_price_numerator_unit_id,
+    up_nu.abbreviation AS unit_price_numerator_unit_abbreviation,
+    up_du.id AS unit_price_denominator_unit_id,
+    up_du.abbreviation AS unit_price_denominator_unit_abbreviation,
+    -- The base ratios of the quantity's unit and of the unit the price is quoted per, which
+    -- shared/pricing converts between the way the dashboard's multiplyRate does. Null where the
+    -- dashboard would price the line differently: units of different dimensions, a unit with an
+    -- offset, or a price in a non-base currency unit.
+    CASE WHEN qu.id = up_du.id AND qu.id <> up_nu.id THEN '1'
+        WHEN qu.unit_dimension_code = up_du.unit_dimension_code AND qu.unit_dimension_code <> up_nu.unit_dimension_code AND qu.offset_numerator = 0 AND up_du.offset_numerator = 0 AND (qu.is_base_unit = 0 OR qu.ratio_numerator = qu.ratio_denominator) AND (up_du.is_base_unit = 0 OR up_du.ratio_numerator = up_du.ratio_denominator) AND (up_nu.is_base_unit = 1 OR (up_nu.ratio_numerator = up_nu.ratio_denominator AND up_nu.offset_numerator = 0))
+        THEN CAST(qu.ratio_numerator AS CHAR) END AS pricing_quantity_ratio_numerator,
+    CASE WHEN qu.id = up_du.id AND qu.id <> up_nu.id THEN '1'
+        WHEN qu.unit_dimension_code = up_du.unit_dimension_code AND qu.unit_dimension_code <> up_nu.unit_dimension_code AND qu.offset_numerator = 0 AND up_du.offset_numerator = 0 AND (qu.is_base_unit = 0 OR qu.ratio_numerator = qu.ratio_denominator) AND (up_du.is_base_unit = 0 OR up_du.ratio_numerator = up_du.ratio_denominator) AND (up_nu.is_base_unit = 1 OR (up_nu.ratio_numerator = up_nu.ratio_denominator AND up_nu.offset_numerator = 0))
+        THEN CAST(qu.ratio_denominator AS CHAR) END AS pricing_quantity_ratio_denominator,
+    CASE WHEN qu.id = up_du.id AND qu.id <> up_nu.id THEN '1'
+        WHEN qu.unit_dimension_code = up_du.unit_dimension_code AND qu.unit_dimension_code <> up_nu.unit_dimension_code AND qu.offset_numerator = 0 AND up_du.offset_numerator = 0 AND (qu.is_base_unit = 0 OR qu.ratio_numerator = qu.ratio_denominator) AND (up_du.is_base_unit = 0 OR up_du.ratio_numerator = up_du.ratio_denominator) AND (up_nu.is_base_unit = 1 OR (up_nu.ratio_numerator = up_nu.ratio_denominator AND up_nu.offset_numerator = 0))
+        THEN CAST(up_du.ratio_numerator AS CHAR) END AS pricing_price_ratio_numerator,
+    CASE WHEN qu.id = up_du.id AND qu.id <> up_nu.id THEN '1'
+        WHEN qu.unit_dimension_code = up_du.unit_dimension_code AND qu.unit_dimension_code <> up_nu.unit_dimension_code AND qu.offset_numerator = 0 AND up_du.offset_numerator = 0 AND (qu.is_base_unit = 0 OR qu.ratio_numerator = qu.ratio_denominator) AND (up_du.is_base_unit = 0 OR up_du.ratio_numerator = up_du.ratio_denominator) AND (up_nu.is_base_unit = 1 OR (up_nu.ratio_numerator = up_nu.ratio_denominator AND up_nu.offset_numerator = 0))
+        THEN CAST(up_du.ratio_denominator AS CHAR) END AS pricing_price_ratio_denominator,
+    -- Unit cost
+    uc.id AS unit_cost_id,
+    uc.value AS unit_cost_value,
+    uc_nu.id AS unit_cost_numerator_unit_id,
+    uc_nu.abbreviation AS unit_cost_numerator_unit_abbreviation,
+    uc_du.id AS unit_cost_denominator_unit_id,
+    uc_du.abbreviation AS unit_cost_denominator_unit_abbreviation,
+    -- Product type
+    p.product_type_code AS product_type_code,
+    -- Timestamps
+    sol.created_at,
+    sol.updated_at
+FROM sales_order_line sol
+JOIN quantity q ON q.id = sol.quantity_id
+JOIN unit qu ON qu.id = q.unit_id
+JOIN rate up ON up.id = sol.unit_price_id
+JOIN unit up_nu ON up_nu.id = up.numerator_unit_id
+JOIN unit up_du ON up_du.id = up.denominator_unit_id
+LEFT JOIN rate uc ON uc.id = sol.unit_cost_id
+LEFT JOIN unit uc_nu ON uc_nu.id = uc.numerator_unit_id
+LEFT JOIN unit uc_du ON uc_du.id = uc.denominator_unit_id
+LEFT JOIN item i ON i.id = sol.item_id
+LEFT JOIN product p ON p.id = sol.product_id
+WHERE sol.sales_order_id IN (/*SLICE:sales_order_ids*/?)
+ORDER BY sol.sales_order_id, sol.line_item_number ASC
+`
+
+type GetSalesOrderLinesForOrdersRow struct {
+	ID                                   string
+	SalesOrderID                         string
+	LineItemNumber                       sql.NullInt32
+	ProductSku                           string
+	ProductDescription                   sql.NullString
+	ProductID                            sql.NullString
+	ItemID                               sql.NullString
+	ItemSku                              sql.NullString
+	EdiLineItemID                        sql.NullString
+	QuantityID                           string
+	QuantityValue                        string
+	QuantityUnitID                       string
+	QuantityUnitName                     string
+	QuantityUnitAbbreviation             string
+	QuantityUnitType                     string
+	QuantityPickedValue                  interface{}
+	QuantityPackedValue                  interface{}
+	QuantityInvoicedValue                interface{}
+	UnitPriceID                          string
+	UnitPriceValue                       string
+	UnitPriceNumeratorUnitID             string
+	UnitPriceNumeratorUnitAbbreviation   string
+	UnitPriceDenominatorUnitID           string
+	UnitPriceDenominatorUnitAbbreviation string
+	PricingQuantityRatioNumerator        interface{}
+	PricingQuantityRatioDenominator      interface{}
+	PricingPriceRatioNumerator           interface{}
+	PricingPriceRatioDenominator         interface{}
+	UnitCostID                           sql.NullString
+	UnitCostValue                        sql.NullString
+	UnitCostNumeratorUnitID              sql.NullString
+	UnitCostNumeratorUnitAbbreviation    sql.NullString
+	UnitCostDenominatorUnitID            sql.NullString
+	UnitCostDenominatorUnitAbbreviation  sql.NullString
+	ProductTypeCode                      sql.NullString
+	CreatedAt                            time.Time
+	UpdatedAt                            time.Time
+}
+
+// The batched form of GetSalesOrderLines for a page of orders; the columns must stay identical so
+// the rows convert to GetSalesOrderLinesRow.
+func (q *Queries) GetSalesOrderLinesForOrders(ctx context.Context, salesOrderIds []string) ([]GetSalesOrderLinesForOrdersRow, error) {
+	query := getSalesOrderLinesForOrders
+	var queryParams []interface{}
+	if len(salesOrderIds) > 0 {
+		for _, v := range salesOrderIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", strings.Repeat(",?", len(salesOrderIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetSalesOrderLinesForOrdersRow
+	for rows.Next() {
+		var i GetSalesOrderLinesForOrdersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.SalesOrderID,
+			&i.LineItemNumber,
+			&i.ProductSku,
+			&i.ProductDescription,
+			&i.ProductID,
+			&i.ItemID,
+			&i.ItemSku,
+			&i.EdiLineItemID,
+			&i.QuantityID,
+			&i.QuantityValue,
+			&i.QuantityUnitID,
+			&i.QuantityUnitName,
+			&i.QuantityUnitAbbreviation,
+			&i.QuantityUnitType,
+			&i.QuantityPickedValue,
+			&i.QuantityPackedValue,
+			&i.QuantityInvoicedValue,
+			&i.UnitPriceID,
+			&i.UnitPriceValue,
+			&i.UnitPriceNumeratorUnitID,
+			&i.UnitPriceNumeratorUnitAbbreviation,
+			&i.UnitPriceDenominatorUnitID,
+			&i.UnitPriceDenominatorUnitAbbreviation,
+			&i.PricingQuantityRatioNumerator,
+			&i.PricingQuantityRatioDenominator,
+			&i.PricingPriceRatioNumerator,
+			&i.PricingPriceRatioDenominator,
+			&i.UnitCostID,
+			&i.UnitCostValue,
+			&i.UnitCostNumeratorUnitID,
+			&i.UnitCostNumeratorUnitAbbreviation,
+			&i.UnitCostDenominatorUnitID,
+			&i.UnitCostDenominatorUnitAbbreviation,
+			&i.ProductTypeCode,
+			&i.CreatedAt,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -1982,6 +2256,399 @@ func (q *Queries) GetSalesOrderSalesRepEmail(ctx context.Context, arg GetSalesOr
 	return email, err
 }
 
+const getSalesOrdersByIDs = `-- name: GetSalesOrdersByIDs :many
+SELECT
+    so.id,
+    so.number,
+    so.customer_po_number,
+    so.note,
+    so.is_acknowledgment_sent,
+    so.billing_address_id,
+    so.shipping_address_id,
+    so.carrier_id,
+    so.carrier_option_id,
+    so.carrier_billing_type,
+    so.carrier_billing_account,
+    so.priority_code,
+    so.sales_rep_id,
+    so.shipping_term_id,
+    so.sales_order_status_code,
+    so.sales_order_type_code,
+    so.payment_term_id,
+    so.production_run_id,
+    so.order_discount_id,
+    so.buyer_account_id,
+    so.seller_account_id,
+    so.owner_account_id,
+    so.issued_at,
+    so.completed_at,
+    so.first_ship_at,
+    so.expired_at,
+    so.promised_at,
+    so.ship_by_date,
+    so.lead_time_days,
+    so.lead_time_source_code,
+    so.transit_days,
+    so.transit_source_code,
+    so.lead_time_override_days,
+    so.ship_by_override_date,
+    so.ship_by_cutoff_at,
+    so.calendar_adjustment_days,
+    so.created_at,
+    so.updated_at,
+    -- Customer
+    ba.name AS customer_name,
+    ar.external_number AS customer_number,
+    ar.account_status_code AS customer_status_code,
+    ar.commission_status_code AS customer_commission_policy,
+    ar.created_at AS customer_created_at,
+    ar.updated_at AS customer_updated_at,
+    -- Status
+    sos.name AS status_name,
+    -- Type
+    sot.name AS type_name,
+    -- Priority
+    pr.name AS priority_name,
+    pr.id AS priority_id,
+    -- Bill-to address
+    bill_addr.name AS bill_to_name,
+    bill_addr.is_drop_ship AS bill_to_is_drop_ship,
+    bill_geo.id AS bill_to_geolocation_id,
+    bill_geo.street_line_1 AS bill_to_street_line_1,
+    bill_geo.street_line_2 AS bill_to_street_line_2,
+    bill_geo.locality AS bill_to_locality,
+    bill_geo.state AS bill_to_state,
+    bill_geo.postal_code AS bill_to_postal_code,
+    bill_geo.country AS bill_to_country,
+    bill_addr.phone AS bill_to_phone,
+    bill_addr.email AS bill_to_email,
+    bill_addr.created_at AS bill_to_created_at,
+    bill_addr.updated_at AS bill_to_updated_at,
+    -- Ship-to address
+    ship_addr.name AS ship_to_name,
+    ship_addr.is_drop_ship AS ship_to_is_drop_ship,
+    ship_geo.id AS ship_to_geolocation_id,
+    ship_geo.street_line_1 AS ship_to_street_line_1,
+    ship_geo.street_line_2 AS ship_to_street_line_2,
+    ship_geo.locality AS ship_to_locality,
+    ship_geo.state AS ship_to_state,
+    ship_geo.postal_code AS ship_to_postal_code,
+    ship_geo.country AS ship_to_country,
+    ship_addr.phone AS ship_to_phone,
+    ship_addr.email AS ship_to_email,
+    ship_addr.created_at AS ship_to_created_at,
+    ship_addr.updated_at AS ship_to_updated_at,
+    -- Carrier
+    cr.name AS carrier_name,
+    cr.is_portal_enabled AS carrier_is_portal_enabled,
+    cr.created_at AS carrier_created_at,
+    cr.updated_at AS carrier_updated_at,
+    co.name AS carrier_option_name,
+    co.is_portal_enabled AS service_level_is_portal_enabled,
+    co.service_level_token AS service_level_token,
+    co.created_at AS service_level_created_at,
+    co.updated_at AS service_level_updated_at,
+    -- Sales rep
+    sr_user.name AS sales_rep_name,
+    -- Payment term
+    pt.name AS payment_term_name,
+    pt.is_active AS payment_term_is_active,
+    pt.created_at AS payment_term_created_at,
+    pt.updated_at AS payment_term_updated_at,
+    -- Shipping term
+    st.name AS shipping_term_name,
+    st.is_freight_exempt AS shipping_term_is_freight_exempt,
+    st.is_carrier_rate AS shipping_term_is_carrier_rate,
+    st.created_at AS shipping_term_created_at,
+    st.updated_at AS shipping_term_updated_at,
+    -- Order discount
+    od.name AS order_discount_name,
+    od.code AS order_discount_code,
+    od.percentage AS order_discount_percentage,
+    od.value AS order_discount_amount,
+    od.discount_type_code AS order_discount_discount_type,
+    (SELECT COUNT(*) FROM sales_order so2 WHERE so2.order_discount_id = od.id) AS order_discount_order_count,
+    od.created_at AS order_discount_created_at,
+    od.updated_at AS order_discount_updated_at,
+    -- Pick
+    pk.id AS pick_id,
+    -- Line count
+    (SELECT COUNT(*) FROM sales_order_line sol_count WHERE sol_count.sales_order_id = so.id) AS line_count
+FROM sales_order so
+JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
+    AND ar.counterparty_account_id = so.buyer_account_id
+JOIN account ba ON ba.id = so.buyer_account_id
+JOIN sales_order_status sos ON sos.code = so.sales_order_status_code
+JOIN sales_order_type sot ON sot.code = so.sales_order_type_code
+JOIN priority pr ON pr.code = so.priority_code
+LEFT JOIN address bill_addr ON bill_addr.id = so.billing_address_id
+LEFT JOIN geolocation bill_geo ON bill_geo.id = bill_addr.geolocation_id
+LEFT JOIN address ship_addr ON ship_addr.id = so.shipping_address_id
+LEFT JOIN geolocation ship_geo ON ship_geo.id = ship_addr.geolocation_id
+LEFT JOIN carrier cr ON cr.id = so.carrier_id
+LEFT JOIN carrier_option co ON co.id = so.carrier_option_id
+LEFT JOIN account_user sr_au ON sr_au.id = so.sales_rep_id
+LEFT JOIN user sr_user ON sr_user.id = sr_au.user_id
+LEFT JOIN payment_term pt ON pt.id = so.payment_term_id
+LEFT JOIN shipping_term st ON st.id = so.shipping_term_id
+LEFT JOIN order_discount od ON od.id = so.order_discount_id
+LEFT JOIN pick pk ON pk.sales_order_id = so.id
+WHERE so.id IN (/*SLICE:sales_order_ids*/?)
+AND so.owner_account_id = ?
+AND so.seller_account_id = so.owner_account_id
+`
+
+type GetSalesOrdersByIDsParams struct {
+	SalesOrderIds []string
+	AccountID     string
+}
+
+type GetSalesOrdersByIDsRow struct {
+	ID                          string
+	Number                      string
+	CustomerPoNumber            sql.NullString
+	Note                        sql.NullString
+	IsAcknowledgmentSent        bool
+	BillingAddressID            string
+	ShippingAddressID           string
+	CarrierID                   sql.NullString
+	CarrierOptionID             sql.NullString
+	CarrierBillingType          sql.NullString
+	CarrierBillingAccount       sql.NullString
+	PriorityCode                string
+	SalesRepID                  sql.NullString
+	ShippingTermID              sql.NullString
+	SalesOrderStatusCode        string
+	SalesOrderTypeCode          string
+	PaymentTermID               sql.NullString
+	ProductionRunID             sql.NullString
+	OrderDiscountID             sql.NullString
+	BuyerAccountID              string
+	SellerAccountID             string
+	OwnerAccountID              string
+	IssuedAt                    sql.NullTime
+	CompletedAt                 sql.NullTime
+	FirstShipAt                 sql.NullTime
+	ExpiredAt                   sql.NullTime
+	PromisedAt                  sql.NullTime
+	ShipByDate                  sql.NullTime
+	LeadTimeDays                sql.NullInt32
+	LeadTimeSourceCode          sql.NullString
+	TransitDays                 sql.NullInt32
+	TransitSourceCode           sql.NullString
+	LeadTimeOverrideDays        sql.NullInt32
+	ShipByOverrideDate          sql.NullTime
+	ShipByCutoffAt              sql.NullTime
+	CalendarAdjustmentDays      sql.NullInt32
+	CreatedAt                   time.Time
+	UpdatedAt                   time.Time
+	CustomerName                string
+	CustomerNumber              string
+	CustomerStatusCode          sql.NullString
+	CustomerCommissionPolicy    sql.NullString
+	CustomerCreatedAt           time.Time
+	CustomerUpdatedAt           time.Time
+	StatusName                  string
+	TypeName                    string
+	PriorityName                string
+	PriorityID                  string
+	BillToName                  sql.NullString
+	BillToIsDropShip            sql.NullBool
+	BillToGeolocationID         sql.NullString
+	BillToStreetLine1           sql.NullString
+	BillToStreetLine2           sql.NullString
+	BillToLocality              sql.NullString
+	BillToState                 sql.NullString
+	BillToPostalCode            sql.NullString
+	BillToCountry               sql.NullString
+	BillToPhone                 sql.NullString
+	BillToEmail                 sql.NullString
+	BillToCreatedAt             sql.NullTime
+	BillToUpdatedAt             sql.NullTime
+	ShipToName                  sql.NullString
+	ShipToIsDropShip            sql.NullBool
+	ShipToGeolocationID         sql.NullString
+	ShipToStreetLine1           sql.NullString
+	ShipToStreetLine2           sql.NullString
+	ShipToLocality              sql.NullString
+	ShipToState                 sql.NullString
+	ShipToPostalCode            sql.NullString
+	ShipToCountry               sql.NullString
+	ShipToPhone                 sql.NullString
+	ShipToEmail                 sql.NullString
+	ShipToCreatedAt             sql.NullTime
+	ShipToUpdatedAt             sql.NullTime
+	CarrierName                 sql.NullString
+	CarrierIsPortalEnabled      sql.NullBool
+	CarrierCreatedAt            sql.NullTime
+	CarrierUpdatedAt            sql.NullTime
+	CarrierOptionName           sql.NullString
+	ServiceLevelIsPortalEnabled sql.NullBool
+	ServiceLevelToken           sql.NullString
+	ServiceLevelCreatedAt       sql.NullTime
+	ServiceLevelUpdatedAt       sql.NullTime
+	SalesRepName                sql.NullString
+	PaymentTermName             sql.NullString
+	PaymentTermIsActive         sql.NullBool
+	PaymentTermCreatedAt        sql.NullTime
+	PaymentTermUpdatedAt        sql.NullTime
+	ShippingTermName            sql.NullString
+	ShippingTermIsFreightExempt sql.NullBool
+	ShippingTermIsCarrierRate   sql.NullBool
+	ShippingTermCreatedAt       sql.NullTime
+	ShippingTermUpdatedAt       sql.NullTime
+	OrderDiscountName           sql.NullString
+	OrderDiscountCode           sql.NullString
+	OrderDiscountPercentage     sql.NullFloat64
+	OrderDiscountAmount         sql.NullFloat64
+	OrderDiscountDiscountType   sql.NullString
+	OrderDiscountOrderCount     int64
+	OrderDiscountCreatedAt      sql.NullTime
+	OrderDiscountUpdatedAt      sql.NullTime
+	PickID                      sql.NullString
+	LineCount                   int64
+}
+
+// The batched form of GetSalesOrder for include expansion; the columns must stay identical so the
+// rows convert to GetSalesOrderRow.
+func (q *Queries) GetSalesOrdersByIDs(ctx context.Context, arg GetSalesOrdersByIDsParams) ([]GetSalesOrdersByIDsRow, error) {
+	query := getSalesOrdersByIDs
+	var queryParams []interface{}
+	if len(arg.SalesOrderIds) > 0 {
+		for _, v := range arg.SalesOrderIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", strings.Repeat(",?", len(arg.SalesOrderIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetSalesOrdersByIDsRow
+	for rows.Next() {
+		var i GetSalesOrdersByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Number,
+			&i.CustomerPoNumber,
+			&i.Note,
+			&i.IsAcknowledgmentSent,
+			&i.BillingAddressID,
+			&i.ShippingAddressID,
+			&i.CarrierID,
+			&i.CarrierOptionID,
+			&i.CarrierBillingType,
+			&i.CarrierBillingAccount,
+			&i.PriorityCode,
+			&i.SalesRepID,
+			&i.ShippingTermID,
+			&i.SalesOrderStatusCode,
+			&i.SalesOrderTypeCode,
+			&i.PaymentTermID,
+			&i.ProductionRunID,
+			&i.OrderDiscountID,
+			&i.BuyerAccountID,
+			&i.SellerAccountID,
+			&i.OwnerAccountID,
+			&i.IssuedAt,
+			&i.CompletedAt,
+			&i.FirstShipAt,
+			&i.ExpiredAt,
+			&i.PromisedAt,
+			&i.ShipByDate,
+			&i.LeadTimeDays,
+			&i.LeadTimeSourceCode,
+			&i.TransitDays,
+			&i.TransitSourceCode,
+			&i.LeadTimeOverrideDays,
+			&i.ShipByOverrideDate,
+			&i.ShipByCutoffAt,
+			&i.CalendarAdjustmentDays,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.CustomerName,
+			&i.CustomerNumber,
+			&i.CustomerStatusCode,
+			&i.CustomerCommissionPolicy,
+			&i.CustomerCreatedAt,
+			&i.CustomerUpdatedAt,
+			&i.StatusName,
+			&i.TypeName,
+			&i.PriorityName,
+			&i.PriorityID,
+			&i.BillToName,
+			&i.BillToIsDropShip,
+			&i.BillToGeolocationID,
+			&i.BillToStreetLine1,
+			&i.BillToStreetLine2,
+			&i.BillToLocality,
+			&i.BillToState,
+			&i.BillToPostalCode,
+			&i.BillToCountry,
+			&i.BillToPhone,
+			&i.BillToEmail,
+			&i.BillToCreatedAt,
+			&i.BillToUpdatedAt,
+			&i.ShipToName,
+			&i.ShipToIsDropShip,
+			&i.ShipToGeolocationID,
+			&i.ShipToStreetLine1,
+			&i.ShipToStreetLine2,
+			&i.ShipToLocality,
+			&i.ShipToState,
+			&i.ShipToPostalCode,
+			&i.ShipToCountry,
+			&i.ShipToPhone,
+			&i.ShipToEmail,
+			&i.ShipToCreatedAt,
+			&i.ShipToUpdatedAt,
+			&i.CarrierName,
+			&i.CarrierIsPortalEnabled,
+			&i.CarrierCreatedAt,
+			&i.CarrierUpdatedAt,
+			&i.CarrierOptionName,
+			&i.ServiceLevelIsPortalEnabled,
+			&i.ServiceLevelToken,
+			&i.ServiceLevelCreatedAt,
+			&i.ServiceLevelUpdatedAt,
+			&i.SalesRepName,
+			&i.PaymentTermName,
+			&i.PaymentTermIsActive,
+			&i.PaymentTermCreatedAt,
+			&i.PaymentTermUpdatedAt,
+			&i.ShippingTermName,
+			&i.ShippingTermIsFreightExempt,
+			&i.ShippingTermIsCarrierRate,
+			&i.ShippingTermCreatedAt,
+			&i.ShippingTermUpdatedAt,
+			&i.OrderDiscountName,
+			&i.OrderDiscountCode,
+			&i.OrderDiscountPercentage,
+			&i.OrderDiscountAmount,
+			&i.OrderDiscountDiscountType,
+			&i.OrderDiscountOrderCount,
+			&i.OrderDiscountCreatedAt,
+			&i.OrderDiscountUpdatedAt,
+			&i.PickID,
+			&i.LineCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getShipmentIDsBySalesOrder = `-- name: GetShipmentIDsBySalesOrder :many
 SELECT s.id
 FROM shipment s
@@ -2002,6 +2669,51 @@ func (q *Queries) GetShipmentIDsBySalesOrder(ctx context.Context, salesOrderID s
 			return nil, err
 		}
 		items = append(items, id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getShipmentIDsForSalesOrders = `-- name: GetShipmentIDsForSalesOrders :many
+SELECT s.sales_order_id, s.id
+FROM shipment s
+WHERE s.sales_order_id IN (/*SLICE:sales_order_ids*/?)
+ORDER BY s.sales_order_id, s.created_at, s.id
+`
+
+type GetShipmentIDsForSalesOrdersRow struct {
+	SalesOrderID string
+	ID           string
+}
+
+func (q *Queries) GetShipmentIDsForSalesOrders(ctx context.Context, salesOrderIds []string) ([]GetShipmentIDsForSalesOrdersRow, error) {
+	query := getShipmentIDsForSalesOrders
+	var queryParams []interface{}
+	if len(salesOrderIds) > 0 {
+		for _, v := range salesOrderIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", strings.Repeat(",?", len(salesOrderIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetShipmentIDsForSalesOrdersRow
+	for rows.Next() {
+		var i GetShipmentIDsForSalesOrdersRow
+		if err := rows.Scan(&i.SalesOrderID, &i.ID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
@@ -2219,7 +2931,7 @@ SELECT STRAIGHT_JOIN
     od.updated_at AS order_discount_updated_at,
     -- Pick
     pk.id AS pick_id
-FROM sales_order so FORCE INDEX (sales_order_owner_created_idx, sales_order_owner_status_created_idx)
+FROM sales_order so FORCE INDEX (sales_order_owner_created_idx, sales_order_owner_status_created_idx, sales_order_owner_buyer_created_idx)
 JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
     AND ar.counterparty_account_id = so.buyer_account_id
 JOIN account ba ON ba.id = so.buyer_account_id
@@ -2449,12 +3161,12 @@ type ListSalesOrdersBackwardRow struct {
 
 // STRAIGHT_JOIN forces `so` as the driving table; see ListSalesOrdersForward for why.
 // Do not remove.
-// FORCE INDEX restricts the optimizer to the two indexes that satisfy the ORDER BY
-// (created_at, id) without a filesort: sales_order_owner_created_idx when there is no
-// status filter, sales_order_owner_status_created_idx when there is. Excluding the
-// single-column sales_order_status_code index is the point — with a status filter the
-// optimizer otherwise picks it, reads every matching row, runs them all through the
-// joins, and filesorts the lot (~5s for large accounts even with LIMIT 10). Do not remove.
+// FORCE INDEX restricts the optimizer to the indexes that satisfy the ORDER BY (created_at, id)
+// without a filesort: owner_created with no filter, owner_status_created with a status filter,
+// owner_buyer_created with a customer filter. Excluding the single-column indexes is the point:
+// with a status filter the optimizer otherwise picks sales_order_status_code and filesorts every
+// match (~5s for large accounts even with LIMIT 10). Without owner_buyer_created, a customer
+// filter walks the account's whole created_at index (1.3s for Carolon). Do not remove.
 // Past due is a fact about work still owed, so it is scoped to issued orders. A fulfilled order that shipped late is a delivery-performance question, not a backlog one, and leaving it here would make the queue never empty.
 func (q *Queries) ListSalesOrdersBackward(ctx context.Context, arg ListSalesOrdersBackwardParams) ([]ListSalesOrdersBackwardRow, error) {
 	query := listSalesOrdersBackward
@@ -2770,7 +3482,7 @@ SELECT STRAIGHT_JOIN
     od.updated_at AS order_discount_updated_at,
     -- Pick
     pk.id AS pick_id
-FROM sales_order so FORCE INDEX (sales_order_owner_created_idx, sales_order_owner_status_created_idx)
+FROM sales_order so FORCE INDEX (sales_order_owner_created_idx, sales_order_owner_status_created_idx, sales_order_owner_buyer_created_idx)
 JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
     AND ar.counterparty_account_id = so.buyer_account_id
 JOIN account ba ON ba.id = so.buyer_account_id
@@ -3004,12 +3716,12 @@ type ListSalesOrdersForwardRow struct {
 // before sorting (filesort) — ~7s for large accounts. With `so` first it uses
 // sales_order_owner_created_idx (owner_account_id, created_at DESC, id DESC) to read
 // only the LIMIT rows in order. Do not remove.
-// FORCE INDEX restricts the optimizer to the two indexes that satisfy the ORDER BY
-// (created_at, id) without a filesort: sales_order_owner_created_idx when there is no
-// status filter, sales_order_owner_status_created_idx when there is. Excluding the
-// single-column sales_order_status_code index is the point — with a status filter the
-// optimizer otherwise picks it, reads every matching row, runs them all through the
-// joins, and filesorts the lot (~5s for large accounts even with LIMIT 10). Do not remove.
+// FORCE INDEX restricts the optimizer to the indexes that satisfy the ORDER BY (created_at, id)
+// without a filesort: owner_created with no filter, owner_status_created with a status filter,
+// owner_buyer_created with a customer filter. Excluding the single-column indexes is the point:
+// with a status filter the optimizer otherwise picks sales_order_status_code and filesorts every
+// match (~5s for large accounts even with LIMIT 10). Without owner_buyer_created, a customer
+// filter walks the account's whole created_at index (1.3s for Carolon). Do not remove.
 // Past due is a fact about work still owed, so it is scoped to issued orders. A fulfilled order that shipped late is a delivery-performance question, not a backlog one, and leaving it here would make the queue never empty.
 func (q *Queries) ListSalesOrdersForward(ctx context.Context, arg ListSalesOrdersForwardParams) ([]ListSalesOrdersForwardRow, error) {
 	query := listSalesOrdersForward
@@ -3211,6 +3923,25 @@ func (q *Queries) ListSalesOrdersForward(ctx context.Context, arg ListSalesOrder
 	return items, nil
 }
 
+const lockSalesOrderFreightPendingSince = `-- name: LockSalesOrderFreightPendingSince :one
+SELECT freight_pending_since FROM sales_order
+WHERE id = ? AND owner_account_id = ?
+FOR UPDATE
+`
+
+type LockSalesOrderFreightPendingSinceParams struct {
+	SalesOrderID string
+	AccountID    string
+}
+
+// Serializes the freight consumer against checkout finishing the same order's freight.
+func (q *Queries) LockSalesOrderFreightPendingSince(ctx context.Context, arg LockSalesOrderFreightPendingSinceParams) (sql.NullTime, error) {
+	row := q.db.QueryRowContext(ctx, lockSalesOrderFreightPendingSince, arg.SalesOrderID, arg.AccountID)
+	var freight_pending_since sql.NullTime
+	err := row.Scan(&freight_pending_since)
+	return freight_pending_since, err
+}
+
 const markAcknowledgementSent = `-- name: MarkAcknowledgementSent :exec
 UPDATE sales_order SET
     is_acknowledgment_sent = true,
@@ -3226,6 +3957,21 @@ type MarkAcknowledgementSentParams struct {
 
 func (q *Queries) MarkAcknowledgementSent(ctx context.Context, arg MarkAcknowledgementSentParams) error {
 	_, err := q.db.ExecContext(ctx, markAcknowledgementSent, arg.ID, arg.AccountID)
+	return err
+}
+
+const markSalesOrderFreightPending = `-- name: MarkSalesOrderFreightPending :exec
+UPDATE sales_order SET freight_pending_since = NOW(3)
+WHERE id = ? AND owner_account_id = ?
+`
+
+type MarkSalesOrderFreightPendingParams struct {
+	SalesOrderID string
+	AccountID    string
+}
+
+func (q *Queries) MarkSalesOrderFreightPending(ctx context.Context, arg MarkSalesOrderFreightPendingParams) error {
+	_, err := q.db.ExecContext(ctx, markSalesOrderFreightPending, arg.SalesOrderID, arg.AccountID)
 	return err
 }
 

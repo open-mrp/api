@@ -4415,6 +4415,21 @@ func (m *MockCustomerSvc) EXPECT() *MockCustomerSvcMockRecorder {
 	return m.recorder
 }
 
+// BatchGetCustomers mocks base method.
+func (m *MockCustomerSvc) BatchGetCustomers(ctx context.Context, customerAccountIDs []string) ([]*domain.Customer, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchGetCustomers", ctx, customerAccountIDs)
+	ret0, _ := ret[0].([]*domain.Customer)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// BatchGetCustomers indicates an expected call of BatchGetCustomers.
+func (mr *MockCustomerSvcMockRecorder) BatchGetCustomers(ctx, customerAccountIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetCustomers", reflect.TypeOf((*MockCustomerSvc)(nil).BatchGetCustomers), ctx, customerAccountIDs)
+}
+
 // BulkDeleteCustomers mocks base method.
 func (m *MockCustomerSvc) BulkDeleteCustomers(ctx context.Context, params domain.BulkDeleteCustomersParams) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -7029,6 +7044,35 @@ func (m *MockSalesOrderSvc) EXPECT() *MockSalesOrderSvcMockRecorder {
 	return m.recorder
 }
 
+// AbandonPendingFreight mocks base method.
+func (m *MockSalesOrderSvc) AbandonPendingFreight(ctx context.Context, accountID, salesOrderID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AbandonPendingFreight", ctx, accountID, salesOrderID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// AbandonPendingFreight indicates an expected call of AbandonPendingFreight.
+func (mr *MockSalesOrderSvcMockRecorder) AbandonPendingFreight(ctx, accountID, salesOrderID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AbandonPendingFreight", reflect.TypeOf((*MockSalesOrderSvc)(nil).AbandonPendingFreight), ctx, accountID, salesOrderID)
+}
+
+// BatchGetSalesOrders mocks base method.
+func (m *MockSalesOrderSvc) BatchGetSalesOrders(ctx context.Context, salesOrderIDs, includes []string) ([]*domain.SalesOrder, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchGetSalesOrders", ctx, salesOrderIDs, includes)
+	ret0, _ := ret[0].([]*domain.SalesOrder)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// BatchGetSalesOrders indicates an expected call of BatchGetSalesOrders.
+func (mr *MockSalesOrderSvcMockRecorder) BatchGetSalesOrders(ctx, salesOrderIDs, includes any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetSalesOrders", reflect.TypeOf((*MockSalesOrderSvc)(nil).BatchGetSalesOrders), ctx, salesOrderIDs, includes)
+}
+
 // BulkDeleteSalesOrders mocks base method.
 func (m *MockSalesOrderSvc) BulkDeleteSalesOrders(ctx context.Context, params domain.BulkDeleteSalesOrdersParams) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -7132,6 +7176,20 @@ func (mr *MockSalesOrderSvcMockRecorder) DeleteSalesOrder(ctx, params any) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSalesOrder", reflect.TypeOf((*MockSalesOrderSvc)(nil).DeleteSalesOrder), ctx, params)
 }
 
+// FinishPendingFreight mocks base method.
+func (m *MockSalesOrderSvc) FinishPendingFreight(ctx context.Context, accountID, salesOrderID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FinishPendingFreight", ctx, accountID, salesOrderID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// FinishPendingFreight indicates an expected call of FinishPendingFreight.
+func (mr *MockSalesOrderSvcMockRecorder) FinishPendingFreight(ctx, accountID, salesOrderID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FinishPendingFreight", reflect.TypeOf((*MockSalesOrderSvc)(nil).FinishPendingFreight), ctx, accountID, salesOrderID)
+}
+
 // GetSalesOrder mocks base method.
 func (m *MockSalesOrderSvc) GetSalesOrder(ctx context.Context, params domain.GetSalesOrderParams) (*domain.SalesOrder, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -7219,6 +7277,20 @@ func (m *MockSalesOrderSvc) QuoteSalesOrderLinePrices(ctx context.Context, param
 func (mr *MockSalesOrderSvcMockRecorder) QuoteSalesOrderLinePrices(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QuoteSalesOrderLinePrices", reflect.TypeOf((*MockSalesOrderSvc)(nil).QuoteSalesOrderLinePrices), ctx, params)
+}
+
+// ReconcileAccountStripePayout mocks base method.
+func (m *MockSalesOrderSvc) ReconcileAccountStripePayout(ctx context.Context, accountID string, event []byte) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReconcileAccountStripePayout", ctx, accountID, event)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// ReconcileAccountStripePayout indicates an expected call of ReconcileAccountStripePayout.
+func (mr *MockSalesOrderSvcMockRecorder) ReconcileAccountStripePayout(ctx, accountID, event any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileAccountStripePayout", reflect.TypeOf((*MockSalesOrderSvc)(nil).ReconcileAccountStripePayout), ctx, accountID, event)
 }
 
 // RecordOrderPayment mocks base method.
@@ -7384,6 +7456,21 @@ func (m *MockPurchaseOrderSvc) BatchGetPurchaseOrderLinesByIDs(ctx context.Conte
 func (mr *MockPurchaseOrderSvcMockRecorder) BatchGetPurchaseOrderLinesByIDs(ctx, ids any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetPurchaseOrderLinesByIDs", reflect.TypeOf((*MockPurchaseOrderSvc)(nil).BatchGetPurchaseOrderLinesByIDs), ctx, ids)
+}
+
+// BatchGetPurchaseOrders mocks base method.
+func (m *MockPurchaseOrderSvc) BatchGetPurchaseOrders(ctx context.Context, purchaseOrderIDs []string) ([]*domain.PurchaseOrder, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchGetPurchaseOrders", ctx, purchaseOrderIDs)
+	ret0, _ := ret[0].([]*domain.PurchaseOrder)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// BatchGetPurchaseOrders indicates an expected call of BatchGetPurchaseOrders.
+func (mr *MockPurchaseOrderSvcMockRecorder) BatchGetPurchaseOrders(ctx, purchaseOrderIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetPurchaseOrders", reflect.TypeOf((*MockPurchaseOrderSvc)(nil).BatchGetPurchaseOrders), ctx, purchaseOrderIDs)
 }
 
 // BulkDeletePurchaseOrders mocks base method.
@@ -8078,6 +8165,21 @@ func NewMockPickSvc(ctrl *gomock.Controller) *MockPickSvc {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockPickSvc) EXPECT() *MockPickSvcMockRecorder {
 	return m.recorder
+}
+
+// BatchGetPicksByIDs mocks base method.
+func (m *MockPickSvc) BatchGetPicksByIDs(ctx context.Context, pickIDs []string) ([]*domain.Pick, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchGetPicksByIDs", ctx, pickIDs)
+	ret0, _ := ret[0].([]*domain.Pick)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// BatchGetPicksByIDs indicates an expected call of BatchGetPicksByIDs.
+func (mr *MockPickSvcMockRecorder) BatchGetPicksByIDs(ctx, pickIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetPicksByIDs", reflect.TypeOf((*MockPickSvc)(nil).BatchGetPicksByIDs), ctx, pickIDs)
 }
 
 // ExecutePackPick mocks base method.

@@ -1,5 +1,11 @@
 package domain
 
+import (
+	"context"
+
+	apierror "github.com/open-mrp/api/shared/errors"
+)
+
 // StripeEventLog represents a deduplicated record of a processed Stripe event.
 type StripeEventLog struct {
 	ID        string
@@ -102,3 +108,9 @@ const (
 	TransactionMethodCreditCard TransactionMethodCode = "credit_card"
 	TransactionMethodACH        TransactionMethodCode = "ach"
 )
+
+// StripePayoutReconciler records when an account's Stripe payout landed, off the webhook that announced it.
+type StripePayoutReconciler interface {
+	// ReconcileAccountStripePayout processes a verified payout.paid event's raw JSON.
+	ReconcileAccountStripePayout(ctx context.Context, accountID string, event []byte) *apierror.APIError
+}

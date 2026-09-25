@@ -31,6 +31,9 @@ const (
 	ZipStubSameDay = "99913"
 	// ZipStubUnknownService returns a service level token no account carries, so the quote has nowhere to be filed.
 	ZipStubUnknownService = "99914"
+	// ZipStubUncached has no cached rate, standing in for an order placed without the checkout's rate
+	// quote: order create defers its freight to the freight consumer, which quotes it live.
+	ZipStubUncached = "99915"
 )
 
 // Tokens the stub quotes against. They match the service levels seeded for the e2e transit carrier.
@@ -121,6 +124,9 @@ func (s *shippoClient) InitiateOAuth(_ context.Context, _, _ string, _ *string) 
 // ZipStubError is the deliberate exception: it fails only the all-rates call that warming uses. Order pricing calls this method synchronously and propagates its error, so failing here would abort order create and the order whose warm was meant to fail would never exist. Scoping the outage to the warm path is what makes it observable at all.
 func (s *shippoClient) FetchShippingRate(_ context.Context, params domain.FetchShippingRateParams) (float64, *apierror.APIError) {
 	zip := normalizeStubZip(params.ToAddress.Zip)
+	if params.CachedOnly && zip == ZipStubUncached {
+		return 0, domain.ErrShippingRateNotCached
+	}
 	if zip == ZipStubError {
 		return transitStubDefaultRates()[0].Amount, nil
 	}

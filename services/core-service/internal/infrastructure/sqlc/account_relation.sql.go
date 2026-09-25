@@ -520,3 +520,51 @@ func (q *Queries) ListNotificationPreferencesByRelation(ctx context.Context, acc
 	}
 	return items, nil
 }
+
+const listRelatedCounterpartyIDs = `-- name: ListRelatedCounterpartyIDs :many
+SELECT DISTINCT counterparty_account_id
+FROM account_relation
+WHERE owner_account_id = ?
+  AND counterparty_account_id IN (/*SLICE:counterparty_account_ids*/?)
+`
+
+type ListRelatedCounterpartyIDsParams struct {
+	OwnerAccountID         string
+	CounterpartyAccountIds []string
+}
+
+// The set form of HasRelationByOwnerAndCounterparty: which of the given accounts the owner has any
+// relation to.
+func (q *Queries) ListRelatedCounterpartyIDs(ctx context.Context, arg ListRelatedCounterpartyIDsParams) ([]string, error) {
+	query := listRelatedCounterpartyIDs
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.OwnerAccountID)
+	if len(arg.CounterpartyAccountIds) > 0 {
+		for _, v := range arg.CounterpartyAccountIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:counterparty_account_ids*/?", strings.Repeat(",?", len(arg.CounterpartyAccountIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:counterparty_account_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var counterparty_account_id string
+		if err := rows.Scan(&counterparty_account_id); err != nil {
+			return nil, err
+		}
+		items = append(items, counterparty_account_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

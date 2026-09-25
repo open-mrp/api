@@ -450,6 +450,36 @@ func (r *salesOrderRepoImpl) Get(ctx context.Context, accountID, salesOrderID st
 	return mapGetSalesOrderRow(row), nil
 }
 
+// GetByIDs is the batched form of Get, or of GetForCustomer when buyerAccountID is set. Ids outside
+// that scope are absent from the result.
+func (r *salesOrderRepoImpl) GetByIDs(ctx context.Context, accountID string, buyerAccountID *string, salesOrderIDs []string) ([]*domain.SalesOrder, *apierror.APIError) {
+	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.get_by_ids")
+	defer span.End()
+
+	if len(salesOrderIDs) == 0 {
+		return []*domain.SalesOrder{}, nil
+	}
+
+	rows, err := r.queries.GetSalesOrdersByIDs(ctx, sqlc.GetSalesOrdersByIDsParams{
+		SalesOrderIds: salesOrderIDs,
+		AccountID:     accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	// The buyer is matched here rather than in SQL: the rows are already bounded by the ids, and an
+	// optional predicate would be an OR-sentinel filter.
+	orders := make([]*domain.SalesOrder, 0, len(rows))
+	for _, row := range rows {
+		if buyerAccountID != nil && row.BuyerAccountID != *buyerAccountID {
+			continue
+		}
+		orders = append(orders, mapGetSalesOrderRow(sqlc.GetSalesOrderRow(row)))
+	}
+	return orders, nil
+}
+
 func (r *salesOrderRepoImpl) GetForCustomer(ctx context.Context, accountID, buyerAccountID, salesOrderID string) (*domain.SalesOrder, *apierror.APIError) {
 	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.get_for_customer")
 	defer span.End()
@@ -504,6 +534,103 @@ func (r *salesOrderRepoImpl) GetInvoiceIDs(ctx context.Context, salesOrderID str
 		return nil, tracing.Trace(span, apiErr)
 	}
 	return ids, nil
+}
+
+func (r *salesOrderRepoImpl) GetLinesForOrders(ctx context.Context, salesOrderIDs []string) (map[string][]*domain.SalesOrderLine, *apierror.APIError) {
+	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.get_lines_for_orders")
+	defer span.End()
+
+	if len(salesOrderIDs) == 0 {
+		return map[string][]*domain.SalesOrderLine{}, nil
+	}
+
+	rows, err := r.queries.GetSalesOrderLinesForOrders(ctx, salesOrderIDs)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	byOrder := make(map[string][]*domain.SalesOrderLine, len(salesOrderIDs))
+	for _, row := range rows {
+		line := mapSalesOrderLinesRow(sqlc.GetSalesOrderLinesRow(row))
+		line.SalesOrderID = row.SalesOrderID
+		byOrder[row.SalesOrderID] = append(byOrder[row.SalesOrderID], line)
+	}
+	return byOrder, nil
+}
+
+func (r *salesOrderRepoImpl) GetShipmentIDsForOrders(ctx context.Context, salesOrderIDs []string) (map[string][]string, *apierror.APIError) {
+	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.get_shipment_ids_for_orders")
+	defer span.End()
+
+	if len(salesOrderIDs) == 0 {
+		return map[string][]string{}, nil
+	}
+
+	rows, err := r.queries.GetShipmentIDsForSalesOrders(ctx, salesOrderIDs)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	byOrder := make(map[string][]string, len(salesOrderIDs))
+	for _, row := range rows {
+		byOrder[row.SalesOrderID] = append(byOrder[row.SalesOrderID], row.ID)
+	}
+	return byOrder, nil
+}
+
+func (r *salesOrderRepoImpl) GetInvoiceIDsForOrders(ctx context.Context, salesOrderIDs []string) (map[string][]string, *apierror.APIError) {
+	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.get_invoice_ids_for_orders")
+	defer span.End()
+
+	if len(salesOrderIDs) == 0 {
+		return map[string][]string{}, nil
+	}
+
+	rows, err := r.queries.GetInvoiceIDsForSalesOrders(ctx, salesOrderIDs)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	byOrder := make(map[string][]string, len(salesOrderIDs))
+	for _, row := range rows {
+		byOrder[row.SalesOrderID] = append(byOrder[row.SalesOrderID], row.ID)
+	}
+	return byOrder, nil
+}
+
+func (r *salesOrderRepoImpl) MarkFreightPending(ctx context.Context, accountID, salesOrderID string) *apierror.APIError {
+	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.mark_freight_pending")
+	defer span.End()
+
+	err := r.queries.MarkSalesOrderFreightPending(ctx, sqlc.MarkSalesOrderFreightPendingParams{SalesOrderID: salesOrderID, AccountID: accountID})
+	return tracing.Trace(span, db.MapSQLError(err))
+}
+
+// IsFreightPending reports whether the order is still waiting on its freight line. With lock the row
+// is held FOR UPDATE until the transaction ends.
+func (r *salesOrderRepoImpl) IsFreightPending(ctx context.Context, accountID, salesOrderID string, lock bool) (bool, *apierror.APIError) {
+	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.is_freight_pending")
+	defer span.End()
+
+	var since gosql.NullTime
+	var err error
+	if lock {
+		since, err = r.queries.LockSalesOrderFreightPendingSince(ctx, sqlc.LockSalesOrderFreightPendingSinceParams{SalesOrderID: salesOrderID, AccountID: accountID})
+	} else {
+		since, err = r.queries.GetSalesOrderFreightPendingSince(ctx, sqlc.GetSalesOrderFreightPendingSinceParams{SalesOrderID: salesOrderID, AccountID: accountID})
+	}
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return false, tracing.Trace(span, apiErr)
+	}
+	return since.Valid, nil
+}
+
+func (r *salesOrderRepoImpl) ClearFreightPending(ctx context.Context, accountID, salesOrderID string) *apierror.APIError {
+	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.clear_freight_pending")
+	defer span.End()
+
+	err := r.queries.ClearSalesOrderFreightPending(ctx, sqlc.ClearSalesOrderFreightPendingParams{SalesOrderID: salesOrderID, AccountID: accountID})
+	return tracing.Trace(span, db.MapSQLError(err))
 }
 
 // GetContactsByOrders resolves the email recipients for a set of sales orders in a single batched query, grouping them per order by notification type so list pages avoid a per-order N+1.

@@ -150,6 +150,25 @@ FROM carrier_option
 WHERE carrier_option.carrier_id = sqlc.arg('carrier_id')
 AND (carrier_option.account_id = sqlc.arg('account_id') OR carrier_option.account_id IS NULL);
 
+-- name: ListCarrierOptionsByCarrierIDs :many
+-- The batched form of ListCarrierOptionsByCarrierID; the columns must stay identical so the rows
+-- convert to ListCarrierOptionsByCarrierIDRow.
+SELECT
+    carrier_option.id,
+    carrier_option.name,
+    carrier_option.code,
+    carrier_option.service_level_token,
+    carrier_option.is_portal_enabled,
+    carrier_option.is_default,
+    carrier_option.default_transit_days,
+    carrier_option.carrier_id,
+    carrier_option.account_id,
+    carrier_option.created_at,
+    carrier_option.updated_at
+FROM carrier_option
+WHERE carrier_option.carrier_id IN (sqlc.slice('carrier_ids'))
+AND (carrier_option.account_id = sqlc.arg('account_id') OR carrier_option.account_id IS NULL);
+
 -- name: ListCarrierOptionIDsForCarriers :many
 -- Returns all carrier_option IDs for the given carriers, deterministically
 -- ordered. The api-gateway groups results by carrier_id and truncates to

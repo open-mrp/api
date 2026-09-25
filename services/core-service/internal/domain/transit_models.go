@@ -43,6 +43,14 @@ type TransitWarmer interface {
 	WarmForOrder(ctx context.Context, accountID, salesOrderID string) *apierror.APIError
 }
 
+// FreightFinisher completes the freight line of an order created before its carrier rate was quoted.
+type FreightFinisher interface {
+	// FinishPendingFreight quotes the order's freight and adds its freight line; an order not waiting on freight is a no-op.
+	FinishPendingFreight(ctx context.Context, accountID, salesOrderID string) *apierror.APIError
+	// AbandonPendingFreight stops waiting on an order the carrier cannot quote.
+	AbandonPendingFreight(ctx context.Context, accountID, salesOrderID string) *apierror.APIError
+}
+
 // UpsertTransitEstimateParams writes a harvested estimate for a lane. Operator-entered rows are never overwritten, so SourceCode decides whether the write lands.
 type UpsertTransitEstimateParams struct {
 	ID          string

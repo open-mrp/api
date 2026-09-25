@@ -999,6 +999,22 @@ func (r *rabbitMQ) setupExchangesAndQueues() error {
 		return err
 	}
 
+	if err := r.declareAndBindQueue(
+		CoreEventSalesOrderFreightQueue,
+		[]string{string(contracts.CoreEventSalesOrderCreated)},
+		ApplicationExchange,
+	); err != nil {
+		return err
+	}
+
+	if err := r.declareAndBindQueue(
+		CoreEventAccountStripePayoutPaidQueue,
+		[]string{string(contracts.CoreEventAccountStripePayoutPaid)},
+		ApplicationExchange,
+	); err != nil {
+		return err
+	}
+
 	// Core sales order shipping-updated event queue (handled by core-service)
 	if err := r.declareAndBindQueue(
 		CoreEventSalesOrderShippingUpdatedQueue,

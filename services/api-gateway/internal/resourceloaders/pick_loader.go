@@ -15,35 +15,27 @@ import (
 
 var pickLoaderTracer = tracing.GetTracer("api-gateway.resourceloaders.pick")
 
-// LoadPicks fetches picks by ID via GetPick and builds expandable Pick references with real header data. There is no batch RPC for picks, so each ID is fetched individually. Nested sub-resources (lines, sales_order, customer) are their own expandable relations and are not populated here.
+// LoadPicks builds expandable Pick references with real header data. Nested sub-resources (lines,
+// sales_order, customer) are their own expandable relations and are not populated here. A pick
+// deleted since the reference was read (deleting a shipment deletes its pick) is simply absent, so
+// its row's related.pick stays null rather than failing the page.
 func LoadPicks(ctx context.Context, ids []string) (map[string]any, *apierror.APIError) {
 	if len(ids) == 0 {
 		return nil, nil
 	}
-	out := make(map[string]any, len(ids))
-	for _, id := range ids {
-		resp, apiErr := grpcutil.CallRPC(ctx, pickLoaderTracer, "loader.picks.get", domain.ServiceName,
-			func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetPickResponse, error) {
-				return corePickingClient.GetPick(ctx, &pb.GetPickRequest{Id: id}, opts...)
-			})
-		if apiErr != nil {
-			if omitOnUnauthorized(apiErr) {
-				return out, nil
-			}
-			// A pick that is gone by the time the include resolves leaves that one row's
-			// related.pick null rather than failing the request. Deleting a shipment deletes
-			// the pick it was packed from, so any list page holding a reference read moments
-			// earlier would otherwise 404 in full — one concurrent delete elsewhere in the
-			// account blanking a planner's whole shipping table.
-			if apierror.IsNotFound(apiErr) {
-				continue
-			}
-			return nil, apiErr
+	resp, apiErr := grpcutil.CallRPC(ctx, pickLoaderTracer, "loader.picks.batch_get", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.BatchGetPicksByIDsResponse, error) {
+			return corePickingClient.BatchGetPicksByIDs(ctx, &pb.BatchGetPicksByIDsRequest{Ids: ids}, opts...)
+		})
+	if apiErr != nil {
+		if omitOnUnauthorized(apiErr) {
+			return map[string]any{}, nil
 		}
-		if resp.Pick == nil {
-			continue
-		}
-		out[resp.Pick.Id] = pickReferenceFromProto(resp.Pick)
+		return nil, apiErr
+	}
+	out := make(map[string]any, len(resp.Picks))
+	for _, pick := range resp.Picks {
+		out[pick.Id] = pickReferenceFromProto(pick)
 	}
 	return out, nil
 }

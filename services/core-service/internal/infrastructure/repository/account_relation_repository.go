@@ -118,6 +118,28 @@ func (r *accountRelationRepoImpl) FindByCounterpartyAccountAndAPIKeyID(ctx conte
 	}, nil
 }
 
+// RelatedCounterpartyIDs returns which of counterpartyAccountIDs the owner has any relation to.
+func (r *accountRelationRepoImpl) RelatedCounterpartyIDs(ctx context.Context, ownerAccountID string, counterpartyAccountIDs []string) (map[string]bool, *apierror.APIError) {
+	ctx, span := accountRelationRepoTracer.Start(ctx, "repository.account_relation.related_counterparty_ids")
+	defer span.End()
+
+	related := make(map[string]bool, len(counterpartyAccountIDs))
+	if len(counterpartyAccountIDs) == 0 {
+		return related, nil
+	}
+	ids, err := r.queries.ListRelatedCounterpartyIDs(ctx, sqlc.ListRelatedCounterpartyIDsParams{
+		OwnerAccountID:         ownerAccountID,
+		CounterpartyAccountIds: counterpartyAccountIDs,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	for _, id := range ids {
+		related[id] = true
+	}
+	return related, nil
+}
+
 func (r *accountRelationRepoImpl) HasRelation(ctx context.Context, ownerAccountID, counterpartyAccountID string) (bool, *apierror.APIError) {
 	ctx, span := accountRelationRepoTracer.Start(ctx, "repository.account_relation.has_relation")
 	defer span.End()

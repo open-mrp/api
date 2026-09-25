@@ -743,13 +743,8 @@ func (r *inventoryReservationRepo) CountAvailableReceiptsForItem(ctx context.Con
 // AllocateOneOpenIssue covers one open issue from the item's receipts. It is the whole unit of work
 // of an allocate transaction.
 //
-// The page used to BE the transaction: a locking range read over up to 200 issues, then about six
-// statements per issue plus four inserts per allocation, every one a prepare+execute pair because
-// db_pool.go forces interpolateParams=false. Well over a thousand round trips holding four tables,
-// against PlanetScale's hard 20-second transaction timeout — which killed one mid-flight on
-// 2026-08-31 (message_inbox 327850, "for tx killer rollback"). One issue is about a dozen statements,
-// so the ceiling stops being a consideration and lock-hold time stops being a lever anyone has to
-// tune.
+// One issue per transaction keeps it to about a dozen statements, far inside PlanetScale's hard
+// 20-second transaction timeout; a whole page of issues in one transaction ran into it.
 //
 // The issue is re-read here by primary key rather than trusted from discovery: it may have closed,
 // been reserved away or been deleted since it was named, and a row that has is skipped.

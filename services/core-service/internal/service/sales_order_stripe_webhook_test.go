@@ -8,8 +8,10 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/constants"
+	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/crypto"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/messaging"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -337,11 +339,28 @@ func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_Canceled_NoTransactionIs
 
 // --- payout.paid ---
 
-func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_PayoutPaid_StampsFundsReceived() {
+// Reconciling a payout reads every charge in it from Stripe, so the webhook only queues it.
+func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_PayoutPaid_IsQueuedNotProcessed() {
+	suite.expectStripeWebhookCreds("ac_test")
+	rawPayout, _ := json.Marshal(map[string]any{"id": "po_test", "arrival_date": 1783500000})
+	suite.expectWebhookEvent(&domain.StripeWebhookEvent{ID: "evt_1", Type: "payout.paid", RawJSON: rawPayout}, nil)
+	// No ListPayoutPaymentIntentIDs expectation: a Stripe read here fails the test.
+
+	suite.Nil(suite.svc.ProcessAccountStripeWebhook(context.Background(), "ac_test", []byte("{}"), "sig_test"))
+
+	queued := suite.outbox.published(contracts.CoreEventAccountStripePayoutPaid)
+	suite.Require().Len(queued, 1)
+	var data messaging.AccountStripePayoutPaidData
+	suite.Require().NoError(json.Unmarshal(queued[0].Payload.Data, &data))
+	suite.Equal("ac_test", data.AccountID)
+	suite.Equal("evt_1", data.EventID)
+	suite.JSONEq(string(rawPayout), string(data.Event))
+}
+
+func (suite *SalesOrderSvcTestSuite) TestReconcileAccountStripePayout_StampsFundsReceived() {
 	suite.expectStripeWebhookCreds("ac_test")
 	arrival := int64(1783500000)
 	rawPayout, _ := json.Marshal(map[string]any{"id": "po_test", "arrival_date": arrival})
-	suite.expectWebhookEvent(&domain.StripeWebhookEvent{ID: "evt_1", Type: "payout.paid", RawJSON: rawPayout}, nil)
 
 	suite.checkoutClient.EXPECT().ListPayoutPaymentIntentIDs(gomock.Any(), "po_test").
 		Return([]string{"pi_a", "pi_b"}, nil).Times(1)
@@ -349,38 +368,36 @@ func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_PayoutPaid_StampsFundsRe
 		UpdateFundsReceivedByStripePaymentIDs(gomock.Any(), "ac_test", []string{"pi_a", "pi_b"}, time.Unix(arrival, 0)).
 		Return(nil).Times(1)
 
-	suite.Nil(suite.svc.ProcessAccountStripeWebhook(context.Background(), "ac_test", []byte("{}"), "sig_test"))
+	suite.Nil(suite.svc.ReconcileAccountStripePayout(context.Background(), "ac_test", rawPayout))
 }
 
-func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_PayoutPaid_NoFundedPaymentsIsNoop() {
+func (suite *SalesOrderSvcTestSuite) TestReconcileAccountStripePayout_NoFundedPaymentsIsNoop() {
 	suite.expectStripeWebhookCreds("ac_test")
 	rawPayout, _ := json.Marshal(map[string]any{"id": "po_test", "arrival_date": 1783500000})
-	suite.expectWebhookEvent(&domain.StripeWebhookEvent{ID: "evt_1", Type: "payout.paid", RawJSON: rawPayout}, nil)
 
 	suite.checkoutClient.EXPECT().ListPayoutPaymentIntentIDs(gomock.Any(), "po_test").
 		Return(nil, nil).Times(1)
 
-	suite.Nil(suite.svc.ProcessAccountStripeWebhook(context.Background(), "ac_test", []byte("{}"), "sig_test"))
+	suite.Nil(suite.svc.ReconcileAccountStripePayout(context.Background(), "ac_test", rawPayout))
 }
 
-func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_PayoutPaid_UnparseablePayloadAcked() {
+func (suite *SalesOrderSvcTestSuite) TestReconcileAccountStripePayout_UnparseablePayloadAcked() {
 	suite.expectStripeWebhookCreds("ac_test")
 	// A payout object we can't parse is acknowledged (logged, no retry storm) rather
 	// than failed.
-	suite.expectWebhookEvent(&domain.StripeWebhookEvent{ID: "evt_1", Type: "payout.paid", RawJSON: []byte("not-json")}, nil)
+	rawPayout := []byte("not-json")
 
-	suite.Nil(suite.svc.ProcessAccountStripeWebhook(context.Background(), "ac_test", []byte("{}"), "sig_test"))
+	suite.Nil(suite.svc.ReconcileAccountStripePayout(context.Background(), "ac_test", rawPayout))
 }
 
-func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_PayoutPaid_StripeErrorPropagates() {
+func (suite *SalesOrderSvcTestSuite) TestReconcileAccountStripePayout_StripeErrorPropagates() {
 	suite.expectStripeWebhookCreds("ac_test")
 	rawPayout, _ := json.Marshal(map[string]any{"id": "po_test", "arrival_date": 1783500000})
-	suite.expectWebhookEvent(&domain.StripeWebhookEvent{ID: "evt_1", Type: "payout.paid", RawJSON: rawPayout}, nil)
 
 	suite.checkoutClient.EXPECT().ListPayoutPaymentIntentIDs(gomock.Any(), "po_test").
 		Return(nil, apierror.NewInternalError(nil, "stripe unavailable")).Times(1)
 
-	apiErr := suite.svc.ProcessAccountStripeWebhook(context.Background(), "ac_test", []byte("{}"), "sig_test")
+	apiErr := suite.svc.ReconcileAccountStripePayout(context.Background(), "ac_test", rawPayout)
 	suite.Require().NotNil(apiErr)
 	suite.Equal(apierror.ErrorCodeInternalError, apiErr.Code)
 }

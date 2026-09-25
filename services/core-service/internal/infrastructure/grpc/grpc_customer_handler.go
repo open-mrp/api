@@ -6,6 +6,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
+	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/field"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"github.com/open-mrp/api/shared/safeconv"
@@ -369,25 +370,27 @@ func (h *gRPCHandler) GetCustomer(ctx context.Context, req *pb.GetCustomerReques
 	}, nil
 }
 
-// BatchGetCustomersByIDs returns customers by ID for the api-gateway include resolver. It reuses the authorized single-get path per id; ids the caller cannot access or that no longer exist are omitted so the resolver leaves those references null.
+// BatchGetCustomersByIDs returns customers by ID for the api-gateway include resolver. Ids the caller
+// cannot access or that no longer exist are omitted so the resolver leaves those references null;
+// a server-side failure is returned rather than passed off as missing customers.
 func (h *gRPCHandler) BatchGetCustomersByIDs(ctx context.Context, req *pb.BatchGetCustomersByIDsRequest) (*pb.BatchGetCustomersByIDsResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	customers := make([]*pb.CustomerProto, 0, len(req.Ids))
-	for _, id := range req.Ids {
-		if id == "" {
-			continue
+	customers, apiErr := h.customerSvc.BatchGetCustomers(ctx, req.Ids)
+	if apiErr != nil {
+		if apierror.Is5XXErrorCode(apiErr.Code) {
+			return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 		}
-		customer, apiErr := h.customerSvc.GetCustomer(ctx, id, nil)
-		if apiErr != nil {
-			continue
-		}
-		customers = append(customers, customerToProto(customer))
+		return &pb.BatchGetCustomersByIDsResponse{}, nil
 	}
 
-	return &pb.BatchGetCustomersByIDsResponse{Customers: customers}, nil
+	out := make([]*pb.CustomerProto, len(customers))
+	for i, customer := range customers {
+		out[i] = customerToProto(customer)
+	}
+	return &pb.BatchGetCustomersByIDsResponse{Customers: out}, nil
 }
 
 func (h *gRPCHandler) CreateCustomer(ctx context.Context, req *pb.CreateCustomerRequest) (*pb.CreateCustomerResponse, error) {

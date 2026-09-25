@@ -702,6 +702,79 @@ LEFT JOIN carrier_option co ON co.id = so.carrier_option_id
 WHERE p.id = sqlc.arg('pick_id')
 AND p.account_id = sqlc.arg('account_id');
 
+-- name: GetPicksByIDs :many
+-- The batched form of GetPick for include expansion; the columns must stay identical so the rows
+-- convert to GetPickRow.
+SELECT
+    p.id,
+    p.number,
+    p.sales_order_id,
+    so.number AS sales_order_number,
+    ar.counterparty_account_id AS customer_id,
+    ba.name AS customer_name,
+    ar.external_number AS customer_number,
+    so.priority_code,
+    pr.id AS priority_id,
+    pr.name AS priority_name,
+    p.finished_at,
+    p.created_at,
+    p.updated_at,
+    (SELECT COUNT(*) FROM pick_line plc WHERE plc.pick_id = p.id) AS line_count,
+    -- Latest ship date across the order's shipments; drives the date in the pick header.
+    (SELECT MAX(sh.shipped_at) FROM shipment sh WHERE sh.sales_order_id = so.id) AS last_shipped_at,
+    so.promised_at,
+    -- The order's cross-reference and instructions, carried so the floor works the pick without opening the order.
+    so.customer_po_number,
+    so.note,
+    -- Freight is the order's, carried so a pick shows the carrier it ships on.
+    so.carrier_id,
+    cr.name AS carrier_name,
+    cr.is_portal_enabled AS carrier_is_portal_enabled,
+    cr.created_at AS carrier_created_at,
+    cr.updated_at AS carrier_updated_at,
+    so.carrier_option_id AS service_level_id,
+    co.name AS service_level_name,
+    co.is_portal_enabled AS service_level_is_portal_enabled,
+    co.service_level_token,
+    co.created_at AS service_level_created_at,
+    co.updated_at AS service_level_updated_at,
+    so.carrier_billing_type,
+    so.carrier_billing_account,
+    -- The order's delivery commitment and how it was derived, so a pick can explain its dates.
+    so.ship_by_date,
+    so.ship_by_cutoff_at,
+    so.lead_time_days,
+    so.lead_time_source_code,
+    so.transit_days,
+    so.transit_source_code,
+    -- Ship-to is the order's, denormalized so a pick header needs no second fetch.
+    so.shipping_address_id,
+    addr.name AS shipping_address_name,
+    addr.phone AS shipping_address_phone,
+    addr.email AS shipping_address_email,
+    addr.is_drop_ship AS shipping_address_is_drop_ship,
+    ship_geo.id AS shipping_address_geolocation_id,
+    ship_geo.street_line_1 AS shipping_address_street_line_1,
+    ship_geo.street_line_2 AS shipping_address_street_line_2,
+    ship_geo.locality AS shipping_address_locality,
+    ship_geo.state AS shipping_address_state,
+    ship_geo.postal_code AS shipping_address_postal_code,
+    ship_geo.country AS shipping_address_country,
+    addr.created_at AS shipping_address_created_at,
+    addr.updated_at AS shipping_address_updated_at
+FROM pick p
+JOIN sales_order so ON so.id = p.sales_order_id
+JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
+    AND ar.counterparty_account_id = so.buyer_account_id
+JOIN account ba ON ba.id = so.buyer_account_id
+JOIN priority pr ON pr.code = so.priority_code
+LEFT JOIN address addr ON addr.id = so.shipping_address_id
+LEFT JOIN geolocation ship_geo ON ship_geo.id = addr.geolocation_id
+LEFT JOIN carrier cr ON cr.id = so.carrier_id
+LEFT JOIN carrier_option co ON co.id = so.carrier_option_id
+WHERE p.id IN (sqlc.slice('pick_ids'))
+AND p.account_id = sqlc.arg('account_id');
+
 -- name: GetPickLines :many
 SELECT
     pl.id,

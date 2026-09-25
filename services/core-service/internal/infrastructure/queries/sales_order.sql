@@ -118,13 +118,13 @@ SELECT STRAIGHT_JOIN
     od.updated_at AS order_discount_updated_at,
     -- Pick
     pk.id AS pick_id
--- FORCE INDEX restricts the optimizer to the two indexes that satisfy the ORDER BY
--- (created_at, id) without a filesort: sales_order_owner_created_idx when there is no
--- status filter, sales_order_owner_status_created_idx when there is. Excluding the
--- single-column sales_order_status_code index is the point — with a status filter the
--- optimizer otherwise picks it, reads every matching row, runs them all through the
--- joins, and filesorts the lot (~5s for large accounts even with LIMIT 10). Do not remove.
-FROM sales_order so FORCE INDEX (sales_order_owner_created_idx, sales_order_owner_status_created_idx)
+-- FORCE INDEX restricts the optimizer to the indexes that satisfy the ORDER BY (created_at, id)
+-- without a filesort: owner_created with no filter, owner_status_created with a status filter,
+-- owner_buyer_created with a customer filter. Excluding the single-column indexes is the point:
+-- with a status filter the optimizer otherwise picks sales_order_status_code and filesorts every
+-- match (~5s for large accounts even with LIMIT 10). Without owner_buyer_created, a customer
+-- filter walks the account's whole created_at index (1.3s for Carolon). Do not remove.
+FROM sales_order so FORCE INDEX (sales_order_owner_created_idx, sales_order_owner_status_created_idx, sales_order_owner_buyer_created_idx)
 JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
     AND ar.counterparty_account_id = so.buyer_account_id
 JOIN account ba ON ba.id = so.buyer_account_id
@@ -341,13 +341,13 @@ SELECT STRAIGHT_JOIN
     od.updated_at AS order_discount_updated_at,
     -- Pick
     pk.id AS pick_id
--- FORCE INDEX restricts the optimizer to the two indexes that satisfy the ORDER BY
--- (created_at, id) without a filesort: sales_order_owner_created_idx when there is no
--- status filter, sales_order_owner_status_created_idx when there is. Excluding the
--- single-column sales_order_status_code index is the point — with a status filter the
--- optimizer otherwise picks it, reads every matching row, runs them all through the
--- joins, and filesorts the lot (~5s for large accounts even with LIMIT 10). Do not remove.
-FROM sales_order so FORCE INDEX (sales_order_owner_created_idx, sales_order_owner_status_created_idx)
+-- FORCE INDEX restricts the optimizer to the indexes that satisfy the ORDER BY (created_at, id)
+-- without a filesort: owner_created with no filter, owner_status_created with a status filter,
+-- owner_buyer_created with a customer filter. Excluding the single-column indexes is the point:
+-- with a status filter the optimizer otherwise picks sales_order_status_code and filesorts every
+-- match (~5s for large accounts even with LIMIT 10). Without owner_buyer_created, a customer
+-- filter walks the account's whole created_at index (1.3s for Carolon). Do not remove.
+FROM sales_order so FORCE INDEX (sales_order_owner_created_idx, sales_order_owner_status_created_idx, sales_order_owner_buyer_created_idx)
 JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
     AND ar.counterparty_account_id = so.buyer_account_id
 JOIN account ba ON ba.id = so.buyer_account_id
@@ -732,6 +732,7 @@ AND so.buyer_account_id = sqlc.arg('buyer_account_id');
 -- name: GetSalesOrderLines :many
 SELECT
     sol.id,
+    sol.sales_order_id,
     sol.line_item_number,
     sol.product_sku,
     sol.product_description,
@@ -806,6 +807,87 @@ LEFT JOIN item i ON i.id = sol.item_id
 LEFT JOIN product p ON p.id = sol.product_id
 WHERE sol.sales_order_id = sqlc.arg('sales_order_id')
 ORDER BY sol.line_item_number ASC;
+
+-- name: GetSalesOrderLinesForOrders :many
+-- The batched form of GetSalesOrderLines for a page of orders; the columns must stay identical so
+-- the rows convert to GetSalesOrderLinesRow.
+SELECT
+    sol.id,
+    sol.sales_order_id,
+    sol.line_item_number,
+    sol.product_sku,
+    sol.product_description,
+    sol.product_id,
+    sol.item_id,
+    i.sku AS item_sku,
+    sol.edi_line_item_id,
+    -- Quantity ordered
+    q.id AS quantity_id,
+    q.value AS quantity_value,
+    qu.id AS quantity_unit_id,
+    qu.name AS quantity_unit_name,
+    qu.abbreviation AS quantity_unit_abbreviation,
+    qu.unit_dimension_code AS quantity_unit_type,
+    -- Quantity picked
+    (SELECT COALESCE(SUM(plq.value), 0) FROM pick_line pl
+        JOIN quantity plq ON plq.id = pl.quantity_id
+        WHERE pl.sales_order_line_id = sol.id) AS quantity_picked_value,
+    -- Quantity packed
+    (SELECT COALESCE(SUM(plq2.value), 0) FROM pick_line pl2
+        JOIN quantity plq2 ON plq2.id = pl2.quantity_id
+        WHERE pl2.sales_order_line_id = sol.id AND pl2.packed_at IS NOT NULL) AS quantity_packed_value,
+    -- Quantity invoiced
+    (SELECT COALESCE(SUM(ilq.value), 0) FROM invoice_line il
+        JOIN quantity ilq ON ilq.id = il.quantity_id
+        WHERE il.sales_order_line_id = sol.id) AS quantity_invoiced_value,
+    -- Unit price
+    up.id AS unit_price_id,
+    up.value AS unit_price_value,
+    up_nu.id AS unit_price_numerator_unit_id,
+    up_nu.abbreviation AS unit_price_numerator_unit_abbreviation,
+    up_du.id AS unit_price_denominator_unit_id,
+    up_du.abbreviation AS unit_price_denominator_unit_abbreviation,
+    -- The base ratios of the quantity's unit and of the unit the price is quoted per, which
+    -- shared/pricing converts between the way the dashboard's multiplyRate does. Null where the
+    -- dashboard would price the line differently: units of different dimensions, a unit with an
+    -- offset, or a price in a non-base currency unit.
+    CASE WHEN qu.id = up_du.id AND qu.id <> up_nu.id THEN '1'
+        WHEN qu.unit_dimension_code = up_du.unit_dimension_code AND qu.unit_dimension_code <> up_nu.unit_dimension_code AND qu.offset_numerator = 0 AND up_du.offset_numerator = 0 AND (qu.is_base_unit = 0 OR qu.ratio_numerator = qu.ratio_denominator) AND (up_du.is_base_unit = 0 OR up_du.ratio_numerator = up_du.ratio_denominator) AND (up_nu.is_base_unit = 1 OR (up_nu.ratio_numerator = up_nu.ratio_denominator AND up_nu.offset_numerator = 0))
+        THEN CAST(qu.ratio_numerator AS CHAR) END AS pricing_quantity_ratio_numerator,
+    CASE WHEN qu.id = up_du.id AND qu.id <> up_nu.id THEN '1'
+        WHEN qu.unit_dimension_code = up_du.unit_dimension_code AND qu.unit_dimension_code <> up_nu.unit_dimension_code AND qu.offset_numerator = 0 AND up_du.offset_numerator = 0 AND (qu.is_base_unit = 0 OR qu.ratio_numerator = qu.ratio_denominator) AND (up_du.is_base_unit = 0 OR up_du.ratio_numerator = up_du.ratio_denominator) AND (up_nu.is_base_unit = 1 OR (up_nu.ratio_numerator = up_nu.ratio_denominator AND up_nu.offset_numerator = 0))
+        THEN CAST(qu.ratio_denominator AS CHAR) END AS pricing_quantity_ratio_denominator,
+    CASE WHEN qu.id = up_du.id AND qu.id <> up_nu.id THEN '1'
+        WHEN qu.unit_dimension_code = up_du.unit_dimension_code AND qu.unit_dimension_code <> up_nu.unit_dimension_code AND qu.offset_numerator = 0 AND up_du.offset_numerator = 0 AND (qu.is_base_unit = 0 OR qu.ratio_numerator = qu.ratio_denominator) AND (up_du.is_base_unit = 0 OR up_du.ratio_numerator = up_du.ratio_denominator) AND (up_nu.is_base_unit = 1 OR (up_nu.ratio_numerator = up_nu.ratio_denominator AND up_nu.offset_numerator = 0))
+        THEN CAST(up_du.ratio_numerator AS CHAR) END AS pricing_price_ratio_numerator,
+    CASE WHEN qu.id = up_du.id AND qu.id <> up_nu.id THEN '1'
+        WHEN qu.unit_dimension_code = up_du.unit_dimension_code AND qu.unit_dimension_code <> up_nu.unit_dimension_code AND qu.offset_numerator = 0 AND up_du.offset_numerator = 0 AND (qu.is_base_unit = 0 OR qu.ratio_numerator = qu.ratio_denominator) AND (up_du.is_base_unit = 0 OR up_du.ratio_numerator = up_du.ratio_denominator) AND (up_nu.is_base_unit = 1 OR (up_nu.ratio_numerator = up_nu.ratio_denominator AND up_nu.offset_numerator = 0))
+        THEN CAST(up_du.ratio_denominator AS CHAR) END AS pricing_price_ratio_denominator,
+    -- Unit cost
+    uc.id AS unit_cost_id,
+    uc.value AS unit_cost_value,
+    uc_nu.id AS unit_cost_numerator_unit_id,
+    uc_nu.abbreviation AS unit_cost_numerator_unit_abbreviation,
+    uc_du.id AS unit_cost_denominator_unit_id,
+    uc_du.abbreviation AS unit_cost_denominator_unit_abbreviation,
+    -- Product type
+    p.product_type_code AS product_type_code,
+    -- Timestamps
+    sol.created_at,
+    sol.updated_at
+FROM sales_order_line sol
+JOIN quantity q ON q.id = sol.quantity_id
+JOIN unit qu ON qu.id = q.unit_id
+JOIN rate up ON up.id = sol.unit_price_id
+JOIN unit up_nu ON up_nu.id = up.numerator_unit_id
+JOIN unit up_du ON up_du.id = up.denominator_unit_id
+LEFT JOIN rate uc ON uc.id = sol.unit_cost_id
+LEFT JOIN unit uc_nu ON uc_nu.id = uc.numerator_unit_id
+LEFT JOIN unit uc_du ON uc_du.id = uc.denominator_unit_id
+LEFT JOIN item i ON i.id = sol.item_id
+LEFT JOIN product p ON p.id = sol.product_id
+WHERE sol.sales_order_id IN (sqlc.slice('sales_order_ids'))
+ORDER BY sol.sales_order_id, sol.line_item_number ASC;
 
 -- name: CreateSalesOrder :exec
 INSERT INTO sales_order (
@@ -1323,6 +1405,18 @@ SELECT inv.id
 FROM invoice inv
 WHERE inv.sales_order_id = sqlc.arg('sales_order_id')
 ORDER BY inv.created_at, inv.id;
+
+-- name: GetShipmentIDsForSalesOrders :many
+SELECT s.sales_order_id, s.id
+FROM shipment s
+WHERE s.sales_order_id IN (sqlc.slice('sales_order_ids'))
+ORDER BY s.sales_order_id, s.created_at, s.id;
+
+-- name: GetInvoiceIDsForSalesOrders :many
+SELECT inv.sales_order_id, inv.id
+FROM invoice inv
+WHERE inv.sales_order_id IN (sqlc.slice('sales_order_ids'))
+ORDER BY inv.sales_order_id, inv.created_at, inv.id;
 
 -- name: CountCommissionExemptProductLines :one
 -- For the given products, returns the number that have a product line (total) and

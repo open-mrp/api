@@ -359,6 +359,47 @@ func (suite *SalesOrderSvcTestSuite) TestListSalesOrders_InternalActor() {
 	suite.Equal([]string{"pi_1"}, result.SalesOrders[0].PaymentIntentIDs)
 }
 
+// A page's expansions are one query each, whatever the page size.
+func (suite *SalesOrderSvcTestSuite) TestListSalesOrders_ExpansionsAreBatchedAcrossThePage() {
+	ctx := salesOrderInternalCtx("ac_test")
+	ids := []string{"or_1", "or_2", "or_3"}
+
+	suite.orderRepo.EXPECT().
+		List(gomock.Any(), gomock.Any()).
+		Return(&domain.ListSalesOrdersResult{SalesOrders: []*domain.SalesOrder{{ID: "or_1"}, {ID: "or_2"}, {ID: "or_3"}}}, nil)
+	suite.orderRepo.EXPECT().GetPaymentStatuses(gomock.Any(), "ac_test", ids).Return(nil, nil)
+	suite.orderRepo.EXPECT().GetPaymentIntentIDs(gomock.Any(), "ac_test", ids).Return(nil, nil)
+	suite.orderRepo.EXPECT().GetFulfillmentProgress(gomock.Any(), ids).Return(nil, nil)
+
+	suite.orderRepo.EXPECT().
+		GetLinesForOrders(gomock.Any(), ids).
+		Return(map[string][]*domain.SalesOrderLine{"or_1": {{ID: "ol_1"}}, "or_3": {{ID: "ol_3a"}, {ID: "ol_3b"}}}, nil).
+		Times(1)
+	suite.orderRepo.EXPECT().
+		GetShipmentIDsForOrders(gomock.Any(), ids).
+		Return(map[string][]string{"or_2": {"sh_2"}}, nil).
+		Times(1)
+	suite.orderRepo.EXPECT().
+		GetInvoiceIDsForOrders(gomock.Any(), ids).
+		Return(map[string][]string{"or_1": {"iv_1"}}, nil).
+		Times(1)
+
+	result, apiErr := suite.svc.ListSalesOrders(ctx, domain.ListSalesOrdersParams{
+		Limit:    10,
+		Includes: []string{"lines", "related.shipments", "related.invoices"},
+	})
+	suite.Require().Nil(apiErr)
+
+	orders := result.SalesOrders
+	suite.Len(orders[0].Lines, 1)
+	suite.Empty(orders[1].Lines)
+	suite.Len(orders[2].Lines, 2)
+	suite.Equal([]string{"sh_2"}, orders[1].ShipmentIDs)
+	suite.Empty(orders[0].ShipmentIDs)
+	suite.Equal([]string{"iv_1"}, orders[0].InvoiceIDs)
+	suite.Empty(orders[2].InvoiceIDs)
+}
+
 func (suite *SalesOrderSvcTestSuite) TestListSalesOrders_CustomerActorScopedToOwnAccount() {
 	// Customer actor: the service must force BuyerAccountID = actor's account ID so
 	// a customer can only see their own orders regardless of what they request.

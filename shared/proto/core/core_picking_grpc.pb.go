@@ -22,14 +22,15 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	CorePickingService_ListPicks_FullMethodName      = "/core.CorePickingService/ListPicks"
-	CorePickingService_GetPick_FullMethodName        = "/core.CorePickingService/GetPick"
-	CorePickingService_PickAllLines_FullMethodName   = "/core.CorePickingService/PickAllLines"
-	CorePickingService_VoidPick_FullMethodName       = "/core.CorePickingService/VoidPick"
-	CorePickingService_PackPick_FullMethodName       = "/core.CorePickingService/PackPick"
-	CorePickingService_UpdatePickLine_FullMethodName = "/core.CorePickingService/UpdatePickLine"
-	CorePickingService_PickPickLine_FullMethodName   = "/core.CorePickingService/PickPickLine"
-	CorePickingService_VoidPickLine_FullMethodName   = "/core.CorePickingService/VoidPickLine"
+	CorePickingService_ListPicks_FullMethodName          = "/core.CorePickingService/ListPicks"
+	CorePickingService_GetPick_FullMethodName            = "/core.CorePickingService/GetPick"
+	CorePickingService_BatchGetPicksByIDs_FullMethodName = "/core.CorePickingService/BatchGetPicksByIDs"
+	CorePickingService_PickAllLines_FullMethodName       = "/core.CorePickingService/PickAllLines"
+	CorePickingService_VoidPick_FullMethodName           = "/core.CorePickingService/VoidPick"
+	CorePickingService_PackPick_FullMethodName           = "/core.CorePickingService/PackPick"
+	CorePickingService_UpdatePickLine_FullMethodName     = "/core.CorePickingService/UpdatePickLine"
+	CorePickingService_PickPickLine_FullMethodName       = "/core.CorePickingService/PickPickLine"
+	CorePickingService_VoidPickLine_FullMethodName       = "/core.CorePickingService/VoidPickLine"
 )
 
 // CorePickingServiceClient is the client API for CorePickingService service.
@@ -40,6 +41,8 @@ type CorePickingServiceClient interface {
 	ListPicks(ctx context.Context, in *ListPicksRequest, opts ...grpc.CallOption) (*ListPicksResponse, error)
 	// GetPick returns a single pick by its ID.
 	GetPick(ctx context.Context, in *GetPickRequest, opts ...grpc.CallOption) (*GetPickResponse, error)
+	// BatchGetPicksByIDs returns the picks with the given IDs in the target account, omitting unknown IDs.
+	BatchGetPicksByIDs(ctx context.Context, in *BatchGetPicksByIDsRequest, opts ...grpc.CallOption) (*BatchGetPicksByIDsResponse, error)
 	// PickAllLines picks all unpacked lines in a pick to their remaining quantities.
 	PickAllLines(ctx context.Context, in *PickAllLinesRequest, opts ...grpc.CallOption) (*PickAllLinesResponse, error)
 	// VoidPick voids all lines in a pick by setting quantities to zero.
@@ -76,6 +79,16 @@ func (c *corePickingServiceClient) GetPick(ctx context.Context, in *GetPickReque
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetPickResponse)
 	err := c.cc.Invoke(ctx, CorePickingService_GetPick_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *corePickingServiceClient) BatchGetPicksByIDs(ctx context.Context, in *BatchGetPicksByIDsRequest, opts ...grpc.CallOption) (*BatchGetPicksByIDsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BatchGetPicksByIDsResponse)
+	err := c.cc.Invoke(ctx, CorePickingService_BatchGetPicksByIDs_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -150,6 +163,8 @@ type CorePickingServiceServer interface {
 	ListPicks(context.Context, *ListPicksRequest) (*ListPicksResponse, error)
 	// GetPick returns a single pick by its ID.
 	GetPick(context.Context, *GetPickRequest) (*GetPickResponse, error)
+	// BatchGetPicksByIDs returns the picks with the given IDs in the target account, omitting unknown IDs.
+	BatchGetPicksByIDs(context.Context, *BatchGetPicksByIDsRequest) (*BatchGetPicksByIDsResponse, error)
 	// PickAllLines picks all unpacked lines in a pick to their remaining quantities.
 	PickAllLines(context.Context, *PickAllLinesRequest) (*PickAllLinesResponse, error)
 	// VoidPick voids all lines in a pick by setting quantities to zero.
@@ -177,6 +192,9 @@ func (UnimplementedCorePickingServiceServer) ListPicks(context.Context, *ListPic
 }
 func (UnimplementedCorePickingServiceServer) GetPick(context.Context, *GetPickRequest) (*GetPickResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetPick not implemented")
+}
+func (UnimplementedCorePickingServiceServer) BatchGetPicksByIDs(context.Context, *BatchGetPicksByIDsRequest) (*BatchGetPicksByIDsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method BatchGetPicksByIDs not implemented")
 }
 func (UnimplementedCorePickingServiceServer) PickAllLines(context.Context, *PickAllLinesRequest) (*PickAllLinesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method PickAllLines not implemented")
@@ -249,6 +267,24 @@ func _CorePickingService_GetPick_Handler(srv interface{}, ctx context.Context, d
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CorePickingServiceServer).GetPick(ctx, req.(*GetPickRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CorePickingService_BatchGetPicksByIDs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchGetPicksByIDsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CorePickingServiceServer).BatchGetPicksByIDs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CorePickingService_BatchGetPicksByIDs_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CorePickingServiceServer).BatchGetPicksByIDs(ctx, req.(*BatchGetPicksByIDsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -375,6 +411,10 @@ var CorePickingService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetPick",
 			Handler:    _CorePickingService_GetPick_Handler,
+		},
+		{
+			MethodName: "BatchGetPicksByIDs",
+			Handler:    _CorePickingService_BatchGetPicksByIDs_Handler,
 		},
 		{
 			MethodName: "PickAllLines",

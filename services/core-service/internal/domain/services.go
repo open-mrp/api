@@ -1427,6 +1427,9 @@ type PickSvc interface {
 	// GetPick returns a single pick by ID, optionally including lines.
 	GetPick(ctx context.Context, pickID string, includes []string) (*Pick, *apierror.APIError)
 
+	// BatchGetPicksByIDs returns pick headers for include expansion; ids not in the account are omitted.
+	BatchGetPicksByIDs(ctx context.Context, pickIDs []string) ([]*Pick, *apierror.APIError)
+
 	// PickAllLines picks all unpacked lines to their remaining quantities.
 	PickAllLines(ctx context.Context, pickID string) (*Pick, *apierror.APIError)
 

@@ -414,12 +414,44 @@ func (r *pickRepoImpl) Get(ctx context.Context, accountID, pickID string) (*doma
 		return nil, tracing.Trace(span, apiErr)
 	}
 
+	pick := mapGetPickRow(row, accountID)
+	if apiErr := r.attachProgress(ctx, []*domain.Pick{pick}); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return pick, nil
+}
+
+// GetByIDs is the batched form of Get. Picks that do not exist in the account are absent from the result.
+func (r *pickRepoImpl) GetByIDs(ctx context.Context, accountID string, pickIDs []string) ([]*domain.Pick, *apierror.APIError) {
+	ctx, span := pickRepoTracer.Start(ctx, "repository.pick.get_by_ids")
+	defer span.End()
+
+	if len(pickIDs) == 0 {
+		return []*domain.Pick{}, nil
+	}
+
+	rows, err := r.queries.GetPicksByIDs(ctx, sqlc.GetPicksByIDsParams{PickIds: pickIDs, AccountID: accountID})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	picks := make([]*domain.Pick, len(rows))
+	for i, row := range rows {
+		picks[i] = mapGetPickRow(sqlc.GetPickRow(row), accountID)
+	}
+	if apiErr := r.attachProgress(ctx, picks); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return picks, nil
+}
+
+func mapGetPickRow(row sqlc.GetPickRow, accountID string) *domain.Pick {
 	var finishedAt *time.Time
 	if row.FinishedAt.Valid {
 		finishedAt = &row.FinishedAt.Time
 	}
 
-	pick := &domain.Pick{
+	return &domain.Pick{
 		ID:                          row.ID,
 		Number:                      row.Number,
 		SalesOrderID:                row.SalesOrderID,
@@ -473,11 +505,6 @@ func (r *pickRepoImpl) Get(ctx context.Context, accountID, pickID string) (*doma
 		ShippingAddressCreatedAt:    nullTimePtr(row.ShippingAddressCreatedAt),
 		ShippingAddressUpdatedAt:    nullTimePtr(row.ShippingAddressUpdatedAt),
 	}
-
-	if apiErr := r.attachProgress(ctx, []*domain.Pick{pick}); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	return pick, nil
 }
 
 // Fills the picked/packed fractions on already-built picks. It sits beside the other roll-ups in

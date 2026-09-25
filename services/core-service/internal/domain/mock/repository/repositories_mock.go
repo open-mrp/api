@@ -13494,6 +13494,21 @@ func (mr *MockSalesOrderRepoMockRecorder) GetInvoiceIDs(ctx, salesOrderID any) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInvoiceIDs", reflect.TypeOf((*MockSalesOrderRepo)(nil).GetInvoiceIDs), ctx, salesOrderID)
 }
 
+// GetInvoiceIDsForOrders mocks base method.
+func (m *MockSalesOrderRepo) GetInvoiceIDsForOrders(ctx context.Context, salesOrderIDs []string) (map[string][]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetInvoiceIDsForOrders", ctx, salesOrderIDs)
+	ret0, _ := ret[0].(map[string][]string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetInvoiceIDsForOrders indicates an expected call of GetInvoiceIDsForOrders.
+func (mr *MockSalesOrderRepoMockRecorder) GetInvoiceIDsForOrders(ctx, salesOrderIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInvoiceIDsForOrders", reflect.TypeOf((*MockSalesOrderRepo)(nil).GetInvoiceIDsForOrders), ctx, salesOrderIDs)
+}
+
 // GetLines mocks base method.
 func (m *MockSalesOrderRepo) GetLines(ctx context.Context, salesOrderID string) ([]*domain.SalesOrderLine, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -13522,6 +13537,21 @@ func (m *MockSalesOrderRepo) GetLinesForBOM(ctx context.Context, salesOrderID st
 func (mr *MockSalesOrderRepoMockRecorder) GetLinesForBOM(ctx, salesOrderID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLinesForBOM", reflect.TypeOf((*MockSalesOrderRepo)(nil).GetLinesForBOM), ctx, salesOrderID)
+}
+
+// GetLinesForOrders mocks base method.
+func (m *MockSalesOrderRepo) GetLinesForOrders(ctx context.Context, salesOrderIDs []string) (map[string][]*domain.SalesOrderLine, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetLinesForOrders", ctx, salesOrderIDs)
+	ret0, _ := ret[0].(map[string][]*domain.SalesOrderLine)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetLinesForOrders indicates an expected call of GetLinesForOrders.
+func (mr *MockSalesOrderRepoMockRecorder) GetLinesForOrders(ctx, salesOrderIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLinesForOrders", reflect.TypeOf((*MockSalesOrderRepo)(nil).GetLinesForOrders), ctx, salesOrderIDs)
 }
 
 // GetNextOrderNumber mocks base method.
@@ -13642,6 +13672,21 @@ func (m *MockSalesOrderRepo) GetShipmentIDs(ctx context.Context, salesOrderID st
 func (mr *MockSalesOrderRepoMockRecorder) GetShipmentIDs(ctx, salesOrderID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetShipmentIDs", reflect.TypeOf((*MockSalesOrderRepo)(nil).GetShipmentIDs), ctx, salesOrderID)
+}
+
+// GetShipmentIDsForOrders mocks base method.
+func (m *MockSalesOrderRepo) GetShipmentIDsForOrders(ctx context.Context, salesOrderIDs []string) (map[string][]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetShipmentIDsForOrders", ctx, salesOrderIDs)
+	ret0, _ := ret[0].(map[string][]string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetShipmentIDsForOrders indicates an expected call of GetShipmentIDsForOrders.
+func (mr *MockSalesOrderRepoMockRecorder) GetShipmentIDsForOrders(ctx, salesOrderIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetShipmentIDsForOrders", reflect.TypeOf((*MockSalesOrderRepo)(nil).GetShipmentIDsForOrders), ctx, salesOrderIDs)
 }
 
 // HasShippedShipment mocks base method.
@@ -15823,6 +15868,21 @@ func (m *MockPickRepo) Get(ctx context.Context, accountID, pickID string) (*doma
 func (mr *MockPickRepoMockRecorder) Get(ctx, accountID, pickID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockPickRepo)(nil).Get), ctx, accountID, pickID)
+}
+
+// GetByIDs mocks base method.
+func (m *MockPickRepo) GetByIDs(ctx context.Context, accountID string, pickIDs []string) ([]*domain.Pick, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByIDs", ctx, accountID, pickIDs)
+	ret0, _ := ret[0].([]*domain.Pick)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetByIDs indicates an expected call of GetByIDs.
+func (mr *MockPickRepoMockRecorder) GetByIDs(ctx, accountID, pickIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByIDs", reflect.TypeOf((*MockPickRepo)(nil).GetByIDs), ctx, accountID, pickIDs)
 }
 
 // GetLines mocks base method.

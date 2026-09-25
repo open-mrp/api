@@ -201,6 +201,29 @@ func (s *pickSvcImpl) GetPick(ctx context.Context, pickID string, includes []str
 	return pick, nil
 }
 
+func (s *pickSvcImpl) BatchGetPicksByIDs(ctx context.Context, pickIDs []string) ([]*domain.Pick, *apierror.APIError) {
+	ctx, span := pickSvcTracer.Start(ctx, "service.pick.batch_get_by_ids")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainPicks, types.ActionRead); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	picks, apiErr := s.repos.NewPickRepo().GetByIDs(ctx, identity.Target.AccountID, pickIDs)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return picks, nil
+}
+
 func (s *pickSvcImpl) PickAllLines(ctx context.Context, pickID string) (*domain.Pick, *apierror.APIError) {
 	ctx, span := pickSvcTracer.Start(ctx, "service.pick.pick_all_lines")
 	defer span.End()

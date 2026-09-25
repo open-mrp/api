@@ -593,6 +593,51 @@ func (q *Queries) GetInvoiceIDsBySalesOrder(ctx context.Context, salesOrderID st
 	return items, nil
 }
 
+const getInvoiceIDsForSalesOrders = `-- name: GetInvoiceIDsForSalesOrders :many
+SELECT inv.sales_order_id, inv.id
+FROM invoice inv
+WHERE inv.sales_order_id IN (/*SLICE:sales_order_ids*/?)
+ORDER BY inv.sales_order_id, inv.created_at, inv.id
+`
+
+type GetInvoiceIDsForSalesOrdersRow struct {
+	SalesOrderID string
+	ID           string
+}
+
+func (q *Queries) GetInvoiceIDsForSalesOrders(ctx context.Context, salesOrderIds []string) ([]GetInvoiceIDsForSalesOrdersRow, error) {
+	query := getInvoiceIDsForSalesOrders
+	var queryParams []interface{}
+	if len(salesOrderIds) > 0 {
+		for _, v := range salesOrderIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", strings.Repeat(",?", len(salesOrderIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetInvoiceIDsForSalesOrdersRow
+	for rows.Next() {
+		var i GetInvoiceIDsForSalesOrdersRow
+		if err := rows.Scan(&i.SalesOrderID, &i.ID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getOrderAcknowledgementRecipients = `-- name: GetOrderAcknowledgementRecipients :many
 SELECT u.email FROM order_email_contact oec
 JOIN account_user au ON au.id = oec.account_user_id
@@ -1587,6 +1632,7 @@ func (q *Queries) GetSalesOrderLineCounts(ctx context.Context, salesOrderIds []s
 const getSalesOrderLines = `-- name: GetSalesOrderLines :many
 SELECT
     sol.id,
+    sol.sales_order_id,
     sol.line_item_number,
     sol.product_sku,
     sol.product_description,
@@ -1665,6 +1711,7 @@ ORDER BY sol.line_item_number ASC
 
 type GetSalesOrderLinesRow struct {
 	ID                                   string
+	SalesOrderID                         string
 	LineItemNumber                       sql.NullInt32
 	ProductSku                           string
 	ProductDescription                   sql.NullString
@@ -1713,6 +1760,7 @@ func (q *Queries) GetSalesOrderLines(ctx context.Context, salesOrderID string) (
 		var i GetSalesOrderLinesRow
 		if err := rows.Scan(
 			&i.ID,
+			&i.SalesOrderID,
 			&i.LineItemNumber,
 			&i.ProductSku,
 			&i.ProductDescription,
@@ -1795,6 +1843,199 @@ func (q *Queries) GetSalesOrderLinesForBOM(ctx context.Context, salesOrderID str
 			&i.ItemID,
 			&i.QuantityValue,
 			&i.QuantityUnitID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getSalesOrderLinesForOrders = `-- name: GetSalesOrderLinesForOrders :many
+SELECT
+    sol.id,
+    sol.sales_order_id,
+    sol.line_item_number,
+    sol.product_sku,
+    sol.product_description,
+    sol.product_id,
+    sol.item_id,
+    i.sku AS item_sku,
+    sol.edi_line_item_id,
+    -- Quantity ordered
+    q.id AS quantity_id,
+    q.value AS quantity_value,
+    qu.id AS quantity_unit_id,
+    qu.name AS quantity_unit_name,
+    qu.abbreviation AS quantity_unit_abbreviation,
+    qu.unit_dimension_code AS quantity_unit_type,
+    -- Quantity picked
+    (SELECT COALESCE(SUM(plq.value), 0) FROM pick_line pl
+        JOIN quantity plq ON plq.id = pl.quantity_id
+        WHERE pl.sales_order_line_id = sol.id) AS quantity_picked_value,
+    -- Quantity packed
+    (SELECT COALESCE(SUM(plq2.value), 0) FROM pick_line pl2
+        JOIN quantity plq2 ON plq2.id = pl2.quantity_id
+        WHERE pl2.sales_order_line_id = sol.id AND pl2.packed_at IS NOT NULL) AS quantity_packed_value,
+    -- Quantity invoiced
+    (SELECT COALESCE(SUM(ilq.value), 0) FROM invoice_line il
+        JOIN quantity ilq ON ilq.id = il.quantity_id
+        WHERE il.sales_order_line_id = sol.id) AS quantity_invoiced_value,
+    -- Unit price
+    up.id AS unit_price_id,
+    up.value AS unit_price_value,
+    up_nu.id AS unit_price_numerator_unit_id,
+    up_nu.abbreviation AS unit_price_numerator_unit_abbreviation,
+    up_du.id AS unit_price_denominator_unit_id,
+    up_du.abbreviation AS unit_price_denominator_unit_abbreviation,
+    -- The base ratios of the quantity's unit and of the unit the price is quoted per, which
+    -- shared/pricing converts between the way the dashboard's multiplyRate does. Null where the
+    -- dashboard would price the line differently: units of different dimensions, a unit with an
+    -- offset, or a price in a non-base currency unit.
+    CASE WHEN qu.id = up_du.id AND qu.id <> up_nu.id THEN '1'
+        WHEN qu.unit_dimension_code = up_du.unit_dimension_code AND qu.unit_dimension_code <> up_nu.unit_dimension_code AND qu.offset_numerator = 0 AND up_du.offset_numerator = 0 AND (qu.is_base_unit = 0 OR qu.ratio_numerator = qu.ratio_denominator) AND (up_du.is_base_unit = 0 OR up_du.ratio_numerator = up_du.ratio_denominator) AND (up_nu.is_base_unit = 1 OR (up_nu.ratio_numerator = up_nu.ratio_denominator AND up_nu.offset_numerator = 0))
+        THEN CAST(qu.ratio_numerator AS CHAR) END AS pricing_quantity_ratio_numerator,
+    CASE WHEN qu.id = up_du.id AND qu.id <> up_nu.id THEN '1'
+        WHEN qu.unit_dimension_code = up_du.unit_dimension_code AND qu.unit_dimension_code <> up_nu.unit_dimension_code AND qu.offset_numerator = 0 AND up_du.offset_numerator = 0 AND (qu.is_base_unit = 0 OR qu.ratio_numerator = qu.ratio_denominator) AND (up_du.is_base_unit = 0 OR up_du.ratio_numerator = up_du.ratio_denominator) AND (up_nu.is_base_unit = 1 OR (up_nu.ratio_numerator = up_nu.ratio_denominator AND up_nu.offset_numerator = 0))
+        THEN CAST(qu.ratio_denominator AS CHAR) END AS pricing_quantity_ratio_denominator,
+    CASE WHEN qu.id = up_du.id AND qu.id <> up_nu.id THEN '1'
+        WHEN qu.unit_dimension_code = up_du.unit_dimension_code AND qu.unit_dimension_code <> up_nu.unit_dimension_code AND qu.offset_numerator = 0 AND up_du.offset_numerator = 0 AND (qu.is_base_unit = 0 OR qu.ratio_numerator = qu.ratio_denominator) AND (up_du.is_base_unit = 0 OR up_du.ratio_numerator = up_du.ratio_denominator) AND (up_nu.is_base_unit = 1 OR (up_nu.ratio_numerator = up_nu.ratio_denominator AND up_nu.offset_numerator = 0))
+        THEN CAST(up_du.ratio_numerator AS CHAR) END AS pricing_price_ratio_numerator,
+    CASE WHEN qu.id = up_du.id AND qu.id <> up_nu.id THEN '1'
+        WHEN qu.unit_dimension_code = up_du.unit_dimension_code AND qu.unit_dimension_code <> up_nu.unit_dimension_code AND qu.offset_numerator = 0 AND up_du.offset_numerator = 0 AND (qu.is_base_unit = 0 OR qu.ratio_numerator = qu.ratio_denominator) AND (up_du.is_base_unit = 0 OR up_du.ratio_numerator = up_du.ratio_denominator) AND (up_nu.is_base_unit = 1 OR (up_nu.ratio_numerator = up_nu.ratio_denominator AND up_nu.offset_numerator = 0))
+        THEN CAST(up_du.ratio_denominator AS CHAR) END AS pricing_price_ratio_denominator,
+    -- Unit cost
+    uc.id AS unit_cost_id,
+    uc.value AS unit_cost_value,
+    uc_nu.id AS unit_cost_numerator_unit_id,
+    uc_nu.abbreviation AS unit_cost_numerator_unit_abbreviation,
+    uc_du.id AS unit_cost_denominator_unit_id,
+    uc_du.abbreviation AS unit_cost_denominator_unit_abbreviation,
+    -- Product type
+    p.product_type_code AS product_type_code,
+    -- Timestamps
+    sol.created_at,
+    sol.updated_at
+FROM sales_order_line sol
+JOIN quantity q ON q.id = sol.quantity_id
+JOIN unit qu ON qu.id = q.unit_id
+JOIN rate up ON up.id = sol.unit_price_id
+JOIN unit up_nu ON up_nu.id = up.numerator_unit_id
+JOIN unit up_du ON up_du.id = up.denominator_unit_id
+LEFT JOIN rate uc ON uc.id = sol.unit_cost_id
+LEFT JOIN unit uc_nu ON uc_nu.id = uc.numerator_unit_id
+LEFT JOIN unit uc_du ON uc_du.id = uc.denominator_unit_id
+LEFT JOIN item i ON i.id = sol.item_id
+LEFT JOIN product p ON p.id = sol.product_id
+WHERE sol.sales_order_id IN (/*SLICE:sales_order_ids*/?)
+ORDER BY sol.sales_order_id, sol.line_item_number ASC
+`
+
+type GetSalesOrderLinesForOrdersRow struct {
+	ID                                   string
+	SalesOrderID                         string
+	LineItemNumber                       sql.NullInt32
+	ProductSku                           string
+	ProductDescription                   sql.NullString
+	ProductID                            sql.NullString
+	ItemID                               sql.NullString
+	ItemSku                              sql.NullString
+	EdiLineItemID                        sql.NullString
+	QuantityID                           string
+	QuantityValue                        string
+	QuantityUnitID                       string
+	QuantityUnitName                     string
+	QuantityUnitAbbreviation             string
+	QuantityUnitType                     string
+	QuantityPickedValue                  interface{}
+	QuantityPackedValue                  interface{}
+	QuantityInvoicedValue                interface{}
+	UnitPriceID                          string
+	UnitPriceValue                       string
+	UnitPriceNumeratorUnitID             string
+	UnitPriceNumeratorUnitAbbreviation   string
+	UnitPriceDenominatorUnitID           string
+	UnitPriceDenominatorUnitAbbreviation string
+	PricingQuantityRatioNumerator        interface{}
+	PricingQuantityRatioDenominator      interface{}
+	PricingPriceRatioNumerator           interface{}
+	PricingPriceRatioDenominator         interface{}
+	UnitCostID                           sql.NullString
+	UnitCostValue                        sql.NullString
+	UnitCostNumeratorUnitID              sql.NullString
+	UnitCostNumeratorUnitAbbreviation    sql.NullString
+	UnitCostDenominatorUnitID            sql.NullString
+	UnitCostDenominatorUnitAbbreviation  sql.NullString
+	ProductTypeCode                      sql.NullString
+	CreatedAt                            time.Time
+	UpdatedAt                            time.Time
+}
+
+// The batched form of GetSalesOrderLines for a page of orders; the columns must stay identical so
+// the rows convert to GetSalesOrderLinesRow.
+func (q *Queries) GetSalesOrderLinesForOrders(ctx context.Context, salesOrderIds []string) ([]GetSalesOrderLinesForOrdersRow, error) {
+	query := getSalesOrderLinesForOrders
+	var queryParams []interface{}
+	if len(salesOrderIds) > 0 {
+		for _, v := range salesOrderIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", strings.Repeat(",?", len(salesOrderIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetSalesOrderLinesForOrdersRow
+	for rows.Next() {
+		var i GetSalesOrderLinesForOrdersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.SalesOrderID,
+			&i.LineItemNumber,
+			&i.ProductSku,
+			&i.ProductDescription,
+			&i.ProductID,
+			&i.ItemID,
+			&i.ItemSku,
+			&i.EdiLineItemID,
+			&i.QuantityID,
+			&i.QuantityValue,
+			&i.QuantityUnitID,
+			&i.QuantityUnitName,
+			&i.QuantityUnitAbbreviation,
+			&i.QuantityUnitType,
+			&i.QuantityPickedValue,
+			&i.QuantityPackedValue,
+			&i.QuantityInvoicedValue,
+			&i.UnitPriceID,
+			&i.UnitPriceValue,
+			&i.UnitPriceNumeratorUnitID,
+			&i.UnitPriceNumeratorUnitAbbreviation,
+			&i.UnitPriceDenominatorUnitID,
+			&i.UnitPriceDenominatorUnitAbbreviation,
+			&i.PricingQuantityRatioNumerator,
+			&i.PricingQuantityRatioDenominator,
+			&i.PricingPriceRatioNumerator,
+			&i.PricingPriceRatioDenominator,
+			&i.UnitCostID,
+			&i.UnitCostValue,
+			&i.UnitCostNumeratorUnitID,
+			&i.UnitCostNumeratorUnitAbbreviation,
+			&i.UnitCostDenominatorUnitID,
+			&i.UnitCostDenominatorUnitAbbreviation,
+			&i.ProductTypeCode,
+			&i.CreatedAt,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -2012,6 +2253,51 @@ func (q *Queries) GetShipmentIDsBySalesOrder(ctx context.Context, salesOrderID s
 	return items, nil
 }
 
+const getShipmentIDsForSalesOrders = `-- name: GetShipmentIDsForSalesOrders :many
+SELECT s.sales_order_id, s.id
+FROM shipment s
+WHERE s.sales_order_id IN (/*SLICE:sales_order_ids*/?)
+ORDER BY s.sales_order_id, s.created_at, s.id
+`
+
+type GetShipmentIDsForSalesOrdersRow struct {
+	SalesOrderID string
+	ID           string
+}
+
+func (q *Queries) GetShipmentIDsForSalesOrders(ctx context.Context, salesOrderIds []string) ([]GetShipmentIDsForSalesOrdersRow, error) {
+	query := getShipmentIDsForSalesOrders
+	var queryParams []interface{}
+	if len(salesOrderIds) > 0 {
+		for _, v := range salesOrderIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", strings.Repeat(",?", len(salesOrderIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetShipmentIDsForSalesOrdersRow
+	for rows.Next() {
+		var i GetShipmentIDsForSalesOrdersRow
+		if err := rows.Scan(&i.SalesOrderID, &i.ID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const hasShippedShipmentForSalesOrder = `-- name: HasShippedShipmentForSalesOrder :one
 SELECT EXISTS(
     SELECT 1 FROM shipment s
@@ -2219,7 +2505,7 @@ SELECT STRAIGHT_JOIN
     od.updated_at AS order_discount_updated_at,
     -- Pick
     pk.id AS pick_id
-FROM sales_order so FORCE INDEX (sales_order_owner_created_idx, sales_order_owner_status_created_idx)
+FROM sales_order so FORCE INDEX (sales_order_owner_created_idx, sales_order_owner_status_created_idx, sales_order_owner_buyer_created_idx)
 JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
     AND ar.counterparty_account_id = so.buyer_account_id
 JOIN account ba ON ba.id = so.buyer_account_id
@@ -2449,12 +2735,12 @@ type ListSalesOrdersBackwardRow struct {
 
 // STRAIGHT_JOIN forces `so` as the driving table; see ListSalesOrdersForward for why.
 // Do not remove.
-// FORCE INDEX restricts the optimizer to the two indexes that satisfy the ORDER BY
-// (created_at, id) without a filesort: sales_order_owner_created_idx when there is no
-// status filter, sales_order_owner_status_created_idx when there is. Excluding the
-// single-column sales_order_status_code index is the point — with a status filter the
-// optimizer otherwise picks it, reads every matching row, runs them all through the
-// joins, and filesorts the lot (~5s for large accounts even with LIMIT 10). Do not remove.
+// FORCE INDEX restricts the optimizer to the indexes that satisfy the ORDER BY (created_at, id)
+// without a filesort: owner_created with no filter, owner_status_created with a status filter,
+// owner_buyer_created with a customer filter. Excluding the single-column indexes is the point:
+// with a status filter the optimizer otherwise picks sales_order_status_code and filesorts every
+// match (~5s for large accounts even with LIMIT 10). Without owner_buyer_created, a customer
+// filter walks the account's whole created_at index (1.3s for Carolon). Do not remove.
 // Past due is a fact about work still owed, so it is scoped to issued orders. A fulfilled order that shipped late is a delivery-performance question, not a backlog one, and leaving it here would make the queue never empty.
 func (q *Queries) ListSalesOrdersBackward(ctx context.Context, arg ListSalesOrdersBackwardParams) ([]ListSalesOrdersBackwardRow, error) {
 	query := listSalesOrdersBackward
@@ -2770,7 +3056,7 @@ SELECT STRAIGHT_JOIN
     od.updated_at AS order_discount_updated_at,
     -- Pick
     pk.id AS pick_id
-FROM sales_order so FORCE INDEX (sales_order_owner_created_idx, sales_order_owner_status_created_idx)
+FROM sales_order so FORCE INDEX (sales_order_owner_created_idx, sales_order_owner_status_created_idx, sales_order_owner_buyer_created_idx)
 JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
     AND ar.counterparty_account_id = so.buyer_account_id
 JOIN account ba ON ba.id = so.buyer_account_id
@@ -3004,12 +3290,12 @@ type ListSalesOrdersForwardRow struct {
 // before sorting (filesort) — ~7s for large accounts. With `so` first it uses
 // sales_order_owner_created_idx (owner_account_id, created_at DESC, id DESC) to read
 // only the LIMIT rows in order. Do not remove.
-// FORCE INDEX restricts the optimizer to the two indexes that satisfy the ORDER BY
-// (created_at, id) without a filesort: sales_order_owner_created_idx when there is no
-// status filter, sales_order_owner_status_created_idx when there is. Excluding the
-// single-column sales_order_status_code index is the point — with a status filter the
-// optimizer otherwise picks it, reads every matching row, runs them all through the
-// joins, and filesorts the lot (~5s for large accounts even with LIMIT 10). Do not remove.
+// FORCE INDEX restricts the optimizer to the indexes that satisfy the ORDER BY (created_at, id)
+// without a filesort: owner_created with no filter, owner_status_created with a status filter,
+// owner_buyer_created with a customer filter. Excluding the single-column indexes is the point:
+// with a status filter the optimizer otherwise picks sales_order_status_code and filesorts every
+// match (~5s for large accounts even with LIMIT 10). Without owner_buyer_created, a customer
+// filter walks the account's whole created_at index (1.3s for Carolon). Do not remove.
 // Past due is a fact about work still owed, so it is scoped to issued orders. A fulfilled order that shipped late is a delivery-performance question, not a backlog one, and leaving it here would make the queue never empty.
 func (q *Queries) ListSalesOrdersForward(ctx context.Context, arg ListSalesOrdersForwardParams) ([]ListSalesOrdersForwardRow, error) {
 	query := listSalesOrdersForward

@@ -506,6 +506,68 @@ func (r *salesOrderRepoImpl) GetInvoiceIDs(ctx context.Context, salesOrderID str
 	return ids, nil
 }
 
+func (r *salesOrderRepoImpl) GetLinesForOrders(ctx context.Context, salesOrderIDs []string) (map[string][]*domain.SalesOrderLine, *apierror.APIError) {
+	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.get_lines_for_orders")
+	defer span.End()
+
+	if len(salesOrderIDs) == 0 {
+		return map[string][]*domain.SalesOrderLine{}, nil
+	}
+
+	rows, err := r.queries.GetSalesOrderLinesForOrders(ctx, salesOrderIDs)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	byOrder := make(map[string][]*domain.SalesOrderLine, len(salesOrderIDs))
+	for _, row := range rows {
+		line := mapSalesOrderLinesRow(sqlc.GetSalesOrderLinesRow(row))
+		line.SalesOrderID = row.SalesOrderID
+		byOrder[row.SalesOrderID] = append(byOrder[row.SalesOrderID], line)
+	}
+	return byOrder, nil
+}
+
+func (r *salesOrderRepoImpl) GetShipmentIDsForOrders(ctx context.Context, salesOrderIDs []string) (map[string][]string, *apierror.APIError) {
+	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.get_shipment_ids_for_orders")
+	defer span.End()
+
+	if len(salesOrderIDs) == 0 {
+		return map[string][]string{}, nil
+	}
+
+	rows, err := r.queries.GetShipmentIDsForSalesOrders(ctx, salesOrderIDs)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	byOrder := make(map[string][]string, len(salesOrderIDs))
+	for _, row := range rows {
+		byOrder[row.SalesOrderID] = append(byOrder[row.SalesOrderID], row.ID)
+	}
+	return byOrder, nil
+}
+
+func (r *salesOrderRepoImpl) GetInvoiceIDsForOrders(ctx context.Context, salesOrderIDs []string) (map[string][]string, *apierror.APIError) {
+	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.get_invoice_ids_for_orders")
+	defer span.End()
+
+	if len(salesOrderIDs) == 0 {
+		return map[string][]string{}, nil
+	}
+
+	rows, err := r.queries.GetInvoiceIDsForSalesOrders(ctx, salesOrderIDs)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	byOrder := make(map[string][]string, len(salesOrderIDs))
+	for _, row := range rows {
+		byOrder[row.SalesOrderID] = append(byOrder[row.SalesOrderID], row.ID)
+	}
+	return byOrder, nil
+}
+
 // GetContactsByOrders resolves the email recipients for a set of sales orders in a single batched query, grouping them per order by notification type so list pages avoid a per-order N+1.
 func (r *salesOrderRepoImpl) GetContactsByOrders(ctx context.Context, salesOrderIDs []string) (map[string]*domain.SalesOrderContacts, *apierror.APIError) {
 	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.get_contacts_by_orders")

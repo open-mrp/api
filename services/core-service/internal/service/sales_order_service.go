@@ -201,34 +201,38 @@ func (s *salesOrderSvcImpl) ListSalesOrders(ctx context.Context, params domain.L
 		}
 	}
 
-	// The list now returns the full sales-order shape; expand lines per order only when requested (inline-joined fields are always present).
+	orderIDs := make([]string, len(result.SalesOrders))
+	for i, order := range result.SalesOrders {
+		orderIDs[i] = order.ID
+	}
+
 	if includesSalesOrderLines(params.Includes) {
+		linesByOrder, apiErr := repo.GetLinesForOrders(ctx, orderIDs)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 		for _, order := range result.SalesOrders {
-			lines, apiErr := repo.GetLines(ctx, order.ID)
-			if apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			order.Lines = lines
+			order.Lines = linesByOrder[order.ID]
 		}
 	}
 
 	if includesSalesOrderShipments(params.Includes) {
+		shipmentsByOrder, apiErr := repo.GetShipmentIDsForOrders(ctx, orderIDs)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 		for _, order := range result.SalesOrders {
-			ids, apiErr := repo.GetShipmentIDs(ctx, order.ID)
-			if apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			order.ShipmentIDs = ids
+			order.ShipmentIDs = shipmentsByOrder[order.ID]
 		}
 	}
 
 	if includesSalesOrderInvoices(params.Includes) {
+		invoicesByOrder, apiErr := repo.GetInvoiceIDsForOrders(ctx, orderIDs)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 		for _, order := range result.SalesOrders {
-			ids, apiErr := repo.GetInvoiceIDs(ctx, order.ID)
-			if apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			order.InvoiceIDs = ids
+			order.InvoiceIDs = invoicesByOrder[order.ID]
 		}
 	}
 

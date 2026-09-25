@@ -1254,6 +1254,9 @@ type SalesOrderRepo interface {
 	GetLines(ctx context.Context, salesOrderID string) ([]*SalesOrderLine, *apierror.APIError)
 	GetShipmentIDs(ctx context.Context, salesOrderID string) ([]string, *apierror.APIError)
 	GetInvoiceIDs(ctx context.Context, salesOrderID string) ([]string, *apierror.APIError)
+	GetLinesForOrders(ctx context.Context, salesOrderIDs []string) (map[string][]*SalesOrderLine, *apierror.APIError)
+	GetShipmentIDsForOrders(ctx context.Context, salesOrderIDs []string) (map[string][]string, *apierror.APIError)
+	GetInvoiceIDsForOrders(ctx context.Context, salesOrderIDs []string) (map[string][]string, *apierror.APIError)
 	GetContactsByOrders(ctx context.Context, salesOrderIDs []string) (map[string]*SalesOrderContacts, *apierror.APIError)
 	Create(ctx context.Context, id string, params CreateSalesOrderParams) (*SalesOrder, *apierror.APIError)
 	Update(ctx context.Context, params UpdateSalesOrderParams) (*SalesOrder, *apierror.APIError)
@@ -1458,6 +1461,8 @@ type ReceivableRepo interface {
 type PickRepo interface {
 	List(ctx context.Context, params ListPicksParams) (*ListPicksResult, *apierror.APIError)
 	Get(ctx context.Context, accountID, pickID string) (*Pick, *apierror.APIError)
+	// GetByIDs omits ids that do not exist in the account.
+	GetByIDs(ctx context.Context, accountID string, pickIDs []string) ([]*Pick, *apierror.APIError)
 	GetLines(ctx context.Context, pickID string) ([]*PickLine, *apierror.APIError)
 	// GetLinesForPicks returns the lines for a page of picks in one query, keyed by pick id, so the
 	// list endpoint's lines expansion does not fan out into one query per pick.

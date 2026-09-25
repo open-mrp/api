@@ -8080,6 +8080,21 @@ func (m *MockPickSvc) EXPECT() *MockPickSvcMockRecorder {
 	return m.recorder
 }
 
+// BatchGetPicksByIDs mocks base method.
+func (m *MockPickSvc) BatchGetPicksByIDs(ctx context.Context, pickIDs []string) ([]*domain.Pick, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchGetPicksByIDs", ctx, pickIDs)
+	ret0, _ := ret[0].([]*domain.Pick)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// BatchGetPicksByIDs indicates an expected call of BatchGetPicksByIDs.
+func (mr *MockPickSvcMockRecorder) BatchGetPicksByIDs(ctx, pickIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetPicksByIDs", reflect.TypeOf((*MockPickSvc)(nil).BatchGetPicksByIDs), ctx, pickIDs)
+}
+
 // ExecutePackPick mocks base method.
 func (m *MockPickSvc) ExecutePackPick(ctx context.Context, event domain.BulkOperationJobEvent) *apierror.APIError {
 	m.ctrl.T.Helper()

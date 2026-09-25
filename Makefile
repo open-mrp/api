@@ -1,4 +1,4 @@
-.PHONY: help dev sqlc proto buf-lint no-binaries migration-versions test test-e2e test-inbox tx-audit test-ledger test-verbose test-sql-prepare-smoke install-tools install-ci-tools docs mocks lint gosec gosec-fast govet static-check check-format jaeger-tracing connect-minikube version validate-openapi-specs httpie local-db local-db-cli local-db-down local-db-nuke setup teardown migrate-create migrate-create-data migrate-up migrate-down migrate-status migrate-baseline migrate-data-up migrate-data-status migrate-agent-db migrate-agent-create migrate-agent-create-data migrate-agent-data migrate-agent-status seed-agent-db seed-core seed-user-photos seed-stripe teardown-stripe teardown-all-stripe fmt stripe-webhook stripe-webhook-account view-otel e2e-up e2e-up-ci e2e e2e-down fix-minikube-dns openapi openapi-quiet gen-agent-tools stainless openapi-stainless openapi-stainless-quiet generate generate-quiet install-stlc stlc-internal-sdk stlc-public-typescript-sdk stlc-public-python-sdk stlc-public-go-sdk stlc-public-sdks stlc-sdks sdk-yalc
+.PHONY: help dev sqlc proto buf-lint no-binaries migration-versions test test-e2e test-inbox tx-audit test-ledger test-verbose test-sql-prepare-smoke vitess-smoke install-tools install-ci-tools docs mocks lint gosec gosec-fast govet static-check check-format jaeger-tracing connect-minikube version validate-openapi-specs httpie local-db local-db-cli local-db-down local-db-nuke setup teardown migrate-create migrate-create-data migrate-up migrate-down migrate-status migrate-baseline migrate-data-up migrate-data-status migrate-agent-db migrate-agent-create migrate-agent-create-data migrate-agent-data migrate-agent-status seed-agent-db seed-core seed-user-photos seed-stripe teardown-stripe teardown-all-stripe fmt stripe-webhook stripe-webhook-account view-otel e2e-up e2e-up-ci e2e e2e-down fix-minikube-dns openapi openapi-quiet gen-agent-tools stainless openapi-stainless openapi-stainless-quiet generate generate-quiet install-stlc stlc-internal-sdk stlc-public-typescript-sdk stlc-public-python-sdk stlc-public-go-sdk stlc-public-sdks stlc-sdks sdk-yalc
 
 # Include .env file if it exists (optional for CI)
 -include .env
@@ -309,6 +309,9 @@ no-binaries: ## Check that no compiled binary or oversized file is tracked in gi
 tx-audit: ## Check that database transaction callbacks are safe to re-run after a deadlock
 	@echo "Auditing transaction callbacks..."
 	@cd tools && GOTOOLCHAIN=go1.27.0 go run ./txaudit --root ..
+
+vitess-smoke: ## Apply migrations and run new queries through a real vtgate (Docker; PlanetScale plans every query with vtgate)
+	@./scripts/vitess-smoke.sh
 
 vtparse: ## Check that every generated MySQL query parses on Vitess (PlanetScale rejects valid MySQL)
 	@echo "Parsing generated queries on Vitess..."

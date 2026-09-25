@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.10.3](https://github.com/open-mrp/api/compare/v2.10.2...v2.10.3) (2026-09-25)
+
+
+### Performance Improvements
+
+* **picks:** page the pick list by id, then hydrate the page ([#194](https://github.com/open-mrp/api/issues/194)) ([cc3ba05](https://github.com/open-mrp/api/commit/cc3ba050c78f8acb1aa6c63295f0847ff0264df9))
+
 ## [2.10.2](https://github.com/open-mrp/api/compare/v2.10.1...v2.10.2) (2026-09-25)
 
 

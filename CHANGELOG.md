@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.11.1](https://github.com/open-mrp/api/compare/v2.11.0...v2.11.1) (2026-09-28)
+
+
+### Code Refactoring
+
+* **db:** enhance clarity in SQL migration comments for decimal residue updates ([bd90a66](https://github.com/open-mrp/api/commit/bd90a669fadaa451dbcfcf855c646fe3271ba734))
+
 ## [2.11.0](https://github.com/open-mrp/api/compare/v2.10.4...v2.11.0) (2026-09-28)
 
 

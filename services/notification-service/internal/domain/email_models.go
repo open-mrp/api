@@ -58,7 +58,7 @@ type AccountEmailSender struct {
 	UpdatedAt      time.Time
 }
 
-// Address is the bare address the sender posts from, e.g. "orders@carolon.com".
+// Address is the bare address the sender posts from, e.g. "orders@example.com".
 func (s *AccountEmailSender) Address() string {
 	return s.LocalPart + "@" + s.Domain
 }

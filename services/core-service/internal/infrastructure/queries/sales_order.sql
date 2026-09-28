@@ -123,7 +123,7 @@ SELECT STRAIGHT_JOIN
 -- owner_buyer_created with a customer filter. Excluding the single-column indexes is the point:
 -- with a status filter the optimizer otherwise picks sales_order_status_code and filesorts every
 -- match (~5s for large accounts even with LIMIT 10). Without owner_buyer_created, a customer
--- filter walks the account's whole created_at index (1.3s for Carolon). Do not remove.
+-- filter walks the account's whole created_at index (1.3s on a large account). Do not remove.
 FROM sales_order so FORCE INDEX (sales_order_owner_created_idx, sales_order_owner_status_created_idx, sales_order_owner_buyer_created_idx)
 JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
     AND ar.counterparty_account_id = so.buyer_account_id
@@ -346,7 +346,7 @@ SELECT STRAIGHT_JOIN
 -- owner_buyer_created with a customer filter. Excluding the single-column indexes is the point:
 -- with a status filter the optimizer otherwise picks sales_order_status_code and filesorts every
 -- match (~5s for large accounts even with LIMIT 10). Without owner_buyer_created, a customer
--- filter walks the account's whole created_at index (1.3s for Carolon). Do not remove.
+-- filter walks the account's whole created_at index (1.3s on a large account). Do not remove.
 FROM sales_order so FORCE INDEX (sales_order_owner_created_idx, sales_order_owner_status_created_idx, sales_order_owner_buyer_created_idx)
 JOIN account_relation ar ON ar.owner_account_id = so.owner_account_id
     AND ar.counterparty_account_id = so.buyer_account_id

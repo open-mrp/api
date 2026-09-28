@@ -73,6 +73,41 @@ func TestTotalsWithoutAConversion(t *testing.T) {
 	})
 }
 
+// When core computes the totals it sends them on the proto; the gateway maps the amounts and pairs each
+// stage with the order-level completion fraction rather than re-summing the lines.
+func TestSalesOrderTotalsFromProto(t *testing.T) {
+	t.Parallel()
+
+	t.Run("maps computed amounts and completions", func(t *testing.T) {
+		info := &pb.SalesOrderInfo{
+			PickedCompletion:   0.5,
+			PackedCompletion:   0.25,
+			InvoicedCompletion: 0.25,
+			Totals:             &pb.SalesOrderTotalsInfo{Available: true, Ordered: "810", Picked: "540", Packed: "270", Invoiced: "270"},
+		}
+		totals, handled := salesOrderTotalsFromProto(info)
+		require.True(t, handled)
+		require.NotNil(t, totals)
+		require.Equal(t, "810", totals.Ordered)
+		require.Equal(t, "540", totals.Picked.Amount)
+		require.InDelta(t, 0.5, totals.Picked.Completion, 0)
+		require.Equal(t, "270", totals.Packed.Amount)
+		require.Equal(t, "270", totals.Invoiced.Amount)
+	})
+
+	t.Run("unavailable totals resolve to null, not a fallback", func(t *testing.T) {
+		totals, handled := salesOrderTotalsFromProto(&pb.SalesOrderInfo{Totals: &pb.SalesOrderTotalsInfo{Available: false}})
+		require.True(t, handled)
+		require.Nil(t, totals)
+	})
+
+	t.Run("an older core that sends no totals is not handled", func(t *testing.T) {
+		totals, handled := salesOrderTotalsFromProto(&pb.SalesOrderInfo{Lines: []*pb.SalesOrderLineInfo{cartonLine()}})
+		require.False(t, handled)
+		require.Nil(t, totals)
+	})
+}
+
 // Each line is rounded to the cent before it is summed, as the dashboard's calculateTotalOrdered does.
 func TestSalesOrderTotalsRoundEachLine(t *testing.T) {
 	t.Parallel()

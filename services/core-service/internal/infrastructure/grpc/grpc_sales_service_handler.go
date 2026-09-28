@@ -441,6 +441,16 @@ func salesOrderToProto(o *domain.SalesOrder) *pb.SalesOrderInfo {
 		info.Lines = lines
 	}
 
+	if o.Totals != nil {
+		info.Totals = &pb.SalesOrderTotalsInfo{
+			Available: o.Totals.Available,
+			Ordered:   o.Totals.Ordered,
+			Picked:    o.Totals.Picked,
+			Packed:    o.Totals.Packed,
+			Invoiced:  o.Totals.Invoiced,
+		}
+	}
+
 	return info
 }
 

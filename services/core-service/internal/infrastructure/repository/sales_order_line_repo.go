@@ -29,7 +29,7 @@ func (r *salesOrderLineRepoImpl) List(ctx context.Context, salesOrderID string) 
 	ctx, span := salesOrderLineRepoTracer.Start(ctx, "repository.sales_order_line.list")
 	defer span.End()
 
-	rows, err := r.queries.GetSalesOrderLines(ctx, salesOrderID)
+	rows, err := r.queries.GetSalesOrderLines(ctx, sqlc.GetSalesOrderLinesParams{SalesOrderID: salesOrderID})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}

@@ -3,7 +3,6 @@ package salesorderep
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	productionrunep "github.com/open-mrp/api/services/api-gateway/endpoints/production-runs"
@@ -127,7 +126,7 @@ func (m *salesOrderSvcImpl) ListSalesOrders(ctx context.Context, req *ListSalesO
 		PastDue:          req.PastDue,
 		// The list returns the full sales-order resource; ask the backend to
 		// expand only what the caller requested (inline fields always present).
-		Includes: withLinesForTotals(resourcekit.FilterIncludes(ctx, salesOrderIncludes...)),
+		Includes: resourcekit.FilterIncludes(ctx, salesOrderIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, salesOrderEpSvcTracer, "service.sales_orders.list", domain.ServiceName,
@@ -154,7 +153,7 @@ func (m *salesOrderSvcImpl) ListSalesOrders(ctx context.Context, req *ListSalesO
 func (m *salesOrderSvcImpl) GetSalesOrder(ctx context.Context, req *RetrieveSalesOrderRequest) (*apiresource.SalesOrder, *apierror.APIError) {
 	pbReq := &pb.GetSalesOrderRequest{
 		Id:       req.SalesOrderID,
-		Includes: withLinesForTotals(resourcekit.FilterIncludes(ctx, salesOrderIncludes...)),
+		Includes: resourcekit.FilterIncludes(ctx, salesOrderIncludes...),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, salesOrderEpSvcTracer, "service.sales_orders.get", domain.ServiceName,
@@ -772,24 +771,26 @@ func commitmentFromSalesOrderProto(info *pb.SalesOrderInfo) *apiresource.Commitm
 	return c
 }
 
-// withLinesForTotals ensures the backend returns line data whenever the
-// `totals` include is requested, since order totals are derived from line
-// values. Without this, ?include=totals alone would have no lines to sum and
-// totals would resolve to null.
-func withLinesForTotals(includes []string) []string {
-	hasTotals, hasLines := false, false
-	for _, inc := range includes {
-		switch {
-		case inc == "totals":
-			hasTotals = true
-		case inc == "lines" || strings.HasPrefix(inc, "lines."):
-			hasLines = true
-		}
+// salesOrderTotalsFromProto maps the order totals core computed onto the resource,
+// pairing each stage amount with the order-level completion fraction. handled is
+// false when the proto carries no totals (an older core that predates the field),
+// telling the caller to fall back to summing the shipped lines; when handled is
+// true but the totals are unavailable (a line core could not price), it returns a
+// nil total so the field serializes null rather than a wrong number.
+func salesOrderTotalsFromProto(info *pb.SalesOrderInfo) (*apiresource.SalesOrderTotals, bool) {
+	if info.Totals == nil {
+		return nil, false
 	}
-	if hasTotals && !hasLines {
-		includes = append(includes, "lines")
+	if !info.Totals.Available {
+		return nil, true
 	}
-	return includes
+	return &apiresource.SalesOrderTotals{
+		Object:   constants.ObjectTypeSalesOrderTotals,
+		Ordered:  info.Totals.Ordered,
+		Picked:   apiresource.SalesOrderStageTotal{Object: constants.ObjectTypeSalesOrderStageTotal, Amount: info.Totals.Picked, Completion: info.PickedCompletion},
+		Packed:   apiresource.SalesOrderStageTotal{Object: constants.ObjectTypeSalesOrderStageTotal, Amount: info.Totals.Packed, Completion: info.PackedCompletion},
+		Invoiced: apiresource.SalesOrderStageTotal{Object: constants.ObjectTypeSalesOrderStageTotal, Amount: info.Totals.Invoiced, Completion: info.InvoicedCompletion},
+	}, true
 }
 
 // salesOrderTotalsFromOrder derives the order's monetary totals — with per-stage
@@ -902,9 +903,16 @@ func stashSalesOrderMeta(ctx context.Context, info *pb.SalesOrderInfo, d *apires
 			apiresource.NewActor(*info.SalesRepId, constants.ActorTypeUser, info.SalesRepName, nil))
 	}
 
-	// Totals (expandable) — monetary amounts from line data plus order-level
-	// completion progress; populated only when lines are present.
-	if totals := salesOrderTotalsFromOrder(info); totals != nil {
+	// Totals (expandable) — monetary stage amounts plus order-level completion
+	// progress. Core computes them (in Go, matching the dashboard) when the totals
+	// include is requested; a gateway talking to an older core that sends none sums
+	// the shipped lines itself. When core computed them but a line was unpriceable,
+	// the field stays null rather than reporting a wrong number.
+	totals, handled := salesOrderTotalsFromProto(info)
+	if !handled {
+		totals = salesOrderTotalsFromOrder(info)
+	}
+	if totals != nil {
 		meta.Set(constants.ObjectTypeSalesOrder, d.ID, "totals", totals)
 	}
 

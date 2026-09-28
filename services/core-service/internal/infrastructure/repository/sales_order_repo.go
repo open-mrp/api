@@ -402,7 +402,7 @@ func (r *salesOrderRepoImpl) GetFulfillmentProgress(ctx context.Context, salesOr
 		return map[string]domain.SalesOrderFulfillmentProgress{}, nil
 	}
 
-	rows, err := r.queries.GetSalesOrderFulfillmentProgress(ctx, salesOrderIDs)
+	rows, err := r.queries.GetSalesOrderFulfillmentProgress(ctx, sqlc.GetSalesOrderFulfillmentProgressParams{SalesOrderIds: salesOrderIDs})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -500,7 +500,7 @@ func (r *salesOrderRepoImpl) GetLines(ctx context.Context, salesOrderID string) 
 	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.get_lines")
 	defer span.End()
 
-	rows, err := r.queries.GetSalesOrderLines(ctx, salesOrderID)
+	rows, err := r.queries.GetSalesOrderLines(ctx, sqlc.GetSalesOrderLinesParams{SalesOrderID: salesOrderID})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -544,7 +544,7 @@ func (r *salesOrderRepoImpl) GetLinesForOrders(ctx context.Context, salesOrderID
 		return map[string][]*domain.SalesOrderLine{}, nil
 	}
 
-	rows, err := r.queries.GetSalesOrderLinesForOrders(ctx, salesOrderIDs)
+	rows, err := r.queries.GetSalesOrderLinesForOrders(ctx, sqlc.GetSalesOrderLinesForOrdersParams{SalesOrderIds: salesOrderIDs})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}

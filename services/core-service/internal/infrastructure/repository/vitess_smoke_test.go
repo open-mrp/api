@@ -85,7 +85,7 @@ func TestVitessSmoke(t *testing.T) {
 	t.Run("sqlc batch reads", func(t *testing.T) {
 		_, err := q.GetPicksByIDs(ctx, sqlc.GetPicksByIDsParams{PickIds: pickIDs, AccountID: account})
 		check("GetPicksByIDs", err)
-		_, err = q.GetSalesOrderLinesForOrders(ctx, orderIDs)
+		_, err = q.GetSalesOrderLinesForOrders(ctx, sqlc.GetSalesOrderLinesForOrdersParams{SalesOrderIds: orderIDs})
 		check("GetSalesOrderLinesForOrders", err)
 		_, err = q.GetShipmentIDsForSalesOrders(ctx, orderIDs)
 		check("GetShipmentIDsForSalesOrders", err)

@@ -26,12 +26,6 @@ func ResolveIncludes(ctx context.Context, roots []any, objectType constants.Obje
 	return resolveIncludesAt(ctx, roots, objectType, tree, 0)
 }
 
-type loaderPlan struct {
-	sub       *SubField
-	ids       []string
-	childTree *IncludeNode
-}
-
 func resolveIncludesAt(ctx context.Context, roots []any, objectType constants.ObjectType, tree *IncludeNode, depth int) *apierror.APIError {
 	if !tree.HasChildren() || len(roots) == 0 {
 		return nil
@@ -50,7 +44,10 @@ func resolveIncludesAt(ctx context.Context, roots []any, objectType constants.Ob
 	}
 	cache := getOrCreateCache(ctx)
 
-	var loaderPlans []loaderPlan
+	// Prefetch: union the IDs every loader sub can see now and load each target
+	// concurrently. A sub whose ExtractIDs reads a field an earlier sub's
+	// Populate sets (volume_discount categories.properties) sees nothing here;
+	// the in-order pass below re-extracts and loads what the prefetch missed.
 	missingByTarget := map[constants.ObjectType]map[string]struct{}{}
 	for i := range def.Subs {
 		sub := &def.Subs[i]
@@ -70,19 +67,7 @@ func resolveIncludesAt(ctx context.Context, roots []any, objectType constants.Ob
 			continue
 		}
 
-		// Gather + dedup IDs across all roots.
-		idSet := map[string]struct{}{}
-		for _, r := range roots {
-			for _, id := range sub.ExtractIDs(ctx, r) {
-				if id != "" {
-					idSet[id] = struct{}{}
-				}
-			}
-		}
-		// Split into cached vs. missing — cached entries skip the loader.
-		ids := make([]string, 0, len(idSet))
-		for id := range idSet {
-			ids = append(ids, id)
+		for id := range extractIDSet(ctx, sub, roots) {
 			if _, cached := cache.get(sub.Target, id); !cached {
 				if missingByTarget[sub.Target] == nil {
 					missingByTarget[sub.Target] = map[string]struct{}{}
@@ -90,7 +75,6 @@ func resolveIncludesAt(ctx context.Context, roots []any, objectType constants.Ob
 				missingByTarget[sub.Target][id] = struct{}{}
 			}
 		}
-		loaderPlans = append(loaderPlans, loaderPlan{sub: sub, ids: ids, childTree: tree.Child(sub.Key)})
 	}
 
 	if len(missingByTarget) > 0 {
@@ -121,7 +105,6 @@ func resolveIncludesAt(ctx context.Context, roots []any, objectType constants.Ob
 		}
 	}
 
-	planIdx := 0
 	for i := range def.Subs {
 		sub := &def.Subs[i]
 		if !tree.Has(sub.Key) {
@@ -164,24 +147,36 @@ func resolveIncludesAt(ctx context.Context, roots []any, objectType constants.Ob
 			continue
 		}
 
-		plan := loaderPlans[planIdx]
-		planIdx++
-
-		loaded := make(map[string]any, len(plan.ids))
-		for _, id := range plan.ids {
+		idSet := extractIDSet(ctx, sub, roots)
+		loaded := make(map[string]any, len(idSet))
+		var missing []string
+		for id := range idSet {
 			if v, ok := cache.get(sub.Target, id); ok {
 				loaded[id] = v
+				continue
+			}
+			missing = append(missing, id)
+		}
+		if len(missing) > 0 {
+			fresh, apiErr := Lookup(sub.Target).Load(ctx, missing)
+			if apiErr != nil {
+				return apiErr
+			}
+			for id, v := range fresh {
+				loaded[id] = v
+				cache.set(sub.Target, id, v)
 			}
 		}
 
 		// Recurse into nested includes before stitching, so children carry
 		// their grandchildren by the time we attach them to parents.
-		if plan.childTree.HasChildren() && len(loaded) > 0 {
+		childTree := tree.Child(sub.Key)
+		if childTree.HasChildren() && len(loaded) > 0 {
 			childRoots := make([]any, 0, len(loaded))
 			for _, v := range loaded {
 				childRoots = append(childRoots, v)
 			}
-			if apiErr := resolveIncludesAt(ctx, childRoots, sub.Target, plan.childTree, depth+1); apiErr != nil {
+			if apiErr := resolveIncludesAt(ctx, childRoots, sub.Target, childTree, depth+1); apiErr != nil {
 				return apiErr
 			}
 		}
@@ -193,4 +188,17 @@ func resolveIncludesAt(ctx context.Context, roots []any, objectType constants.Ob
 		}
 	}
 	return nil
+}
+
+// extractIDSet gathers and dedups sub's non-empty IDs across all roots.
+func extractIDSet(ctx context.Context, sub *SubField, roots []any) map[string]struct{} {
+	idSet := map[string]struct{}{}
+	for _, r := range roots {
+		for _, id := range sub.ExtractIDs(ctx, r) {
+			if id != "" {
+				idSet[id] = struct{}{}
+			}
+		}
+	}
+	return idSet
 }

@@ -21,7 +21,7 @@ const (
 
 // OutboxMessageInput contains the data needed to insert a new outbox message. It is passed to OutboxRepo.Create inside the same database transaction as the business operation, ensuring atomicity between the domain write and the intent to publish.
 type OutboxMessageInput struct {
-	// MessageID is the globally unique identifier for this message (e.g. mg_abc123).
+	// MessageID (optional; default: a fresh random id) is the globally unique identifier for this message (e.g. mg_abc123). Set it only to make the enqueue idempotent: the outbox's unique message_id then rejects a repeat, and the caller must treat db.IsDuplicateEntry as success, or a retried handler fails on its own earlier enqueue until it dead-letters. On MySQL the rejected insert leaves the surrounding transaction usable; on Postgres it aborts it.
 	MessageID string
 	// ServiceName identifies the service that created the message (e.g. "auth-service").
 	ServiceName string

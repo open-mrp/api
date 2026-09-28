@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
@@ -278,6 +279,73 @@ func (s *tenancySvcImpl) loadPendingRegistration(ctx context.Context, userID str
 }
 
 func (s *tenancySvcImpl) buildTenancyResponse(ctx context.Context, currentAccount *domain.TenancyAccount, activeAccounts []domain.TenancyAccount, pendingRegistration *domain.TenancyPendingRegistration) (*domain.Tenancy, *apierror.APIError) {
+	isAdmin := currentAccount.RoleType != nil && *currentAccount.RoleType == "admin"
+	isSandbox := currentAccount.AccountTypeCode == "sandbox"
+
+	// These reads share no inputs and are I/O-bound, so they run concurrently rather than serially — the difference between one round-trip and six on the /me/tenancy hot path. Only the role/limits/features reads propagate errors (as they always have); the slug, owner-name, and sandbox-list reads stay best-effort, matching the prior sequential behavior.
+	var (
+		wg sync.WaitGroup
+
+		permMap map[string]bool
+		permErr *apierror.APIError
+
+		limits      map[string]*int32
+		limitsErr   *apierror.APIError
+		features    map[string]bool
+		featuresErr *apierror.APIError
+
+		ownerName   string
+		sandboxList *domain.ListSandboxAccountsResult
+		slug        *string
+	)
+
+	if currentAccount.RoleID != nil {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			permMap, permErr = s.rolePermissionRepo.FindByRoleID(ctx, *currentAccount.RoleID)
+		}()
+	}
+	if currentAccount.Plan != nil {
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			limits, limitsErr = s.accountRepo.ListPlanLimits(ctx, currentAccount.Plan.TypeID)
+		}()
+		go func() {
+			defer wg.Done()
+			features, featuresErr = s.accountRepo.ListPlanFeatures(ctx, currentAccount.Plan.TypeID)
+		}()
+	}
+	if isSandbox {
+		if currentAccount.OwnerAccountID != nil {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				ownerName, _ = s.accountRepo.GetName(ctx, *currentAccount.OwnerAccountID)
+			}()
+		}
+	} else if isAdmin {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sandboxList, _ = s.sandboxAccountRepo.List(ctx, currentAccount.AccountID, nil, 100, nil, nil)
+		}()
+	}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		slug, _ = s.accountRepo.GetPortalSlug(ctx, currentAccount.AccountID)
+	}()
+
+	wg.Wait()
+
+	for _, apiErr := range []*apierror.APIError{permErr, limitsErr, featuresErr} {
+		if apiErr != nil {
+			return nil, apiErr
+		}
+	}
+
 	var role *domain.TenancyRole
 	if currentAccount.RoleID != nil {
 		role = &domain.TenancyRole{
@@ -292,10 +360,6 @@ func (s *tenancySvcImpl) buildTenancyResponse(ctx context.Context, currentAccoun
 			role.UpdatedAt = *currentAccount.RoleUpdatedAt
 		}
 
-		permMap, apiErr := s.rolePermissionRepo.FindByRoleID(ctx, *currentAccount.RoleID)
-		if apiErr != nil {
-			return nil, apiErr
-		}
 		permissions := make([]string, 0, len(permMap))
 		for code := range permMap {
 			permissions = append(permissions, code)
@@ -306,14 +370,6 @@ func (s *tenancySvcImpl) buildTenancyResponse(ctx context.Context, currentAccoun
 
 	var accountPlan *domain.TenancyAccountPlan
 	if currentAccount.Plan != nil {
-		limits, apiErr := s.accountRepo.ListPlanLimits(ctx, currentAccount.Plan.TypeID)
-		if apiErr != nil {
-			return nil, apiErr
-		}
-		features, apiErr := s.accountRepo.ListPlanFeatures(ctx, currentAccount.Plan.TypeID)
-		if apiErr != nil {
-			return nil, apiErr
-		}
 		accountPlan = &domain.TenancyAccountPlan{
 			TypeID:        currentAccount.Plan.TypeID,
 			Name:          currentAccount.Plan.Name,
@@ -327,14 +383,11 @@ func (s *tenancySvcImpl) buildTenancyResponse(ctx context.Context, currentAccoun
 		}
 	}
 
-	isAdmin := currentAccount.RoleType != nil && *currentAccount.RoleType == "admin"
-
 	var sandboxes []domain.TenancySandbox
 	var ownerAccount *domain.TenancyOwnerAccount
 
-	if currentAccount.AccountTypeCode == "sandbox" {
+	if isSandbox {
 		if currentAccount.OwnerAccountID != nil {
-			ownerName, _ := s.accountRepo.GetName(ctx, *currentAccount.OwnerAccountID)
 			ownerAccount = &domain.TenancyOwnerAccount{
 				ID:   *currentAccount.OwnerAccountID,
 				Name: ownerName,
@@ -346,15 +399,12 @@ func (s *tenancySvcImpl) buildTenancyResponse(ctx context.Context, currentAccoun
 			Name: currentAccount.AccountName,
 		}
 
-		if isAdmin {
-			sandboxList, apiErr := s.sandboxAccountRepo.List(ctx, currentAccount.AccountID, nil, 100, nil, nil)
-			if apiErr == nil && sandboxList != nil {
-				for _, sb := range sandboxList.Sandboxes {
-					sandboxes = append(sandboxes, domain.TenancySandbox{
-						ID:   sb.AccountID,
-						Name: sb.Name,
-					})
-				}
+		if isAdmin && sandboxList != nil {
+			for _, sb := range sandboxList.Sandboxes {
+				sandboxes = append(sandboxes, domain.TenancySandbox{
+					ID:   sb.AccountID,
+					Name: sb.Name,
+				})
 			}
 		}
 	}
@@ -363,8 +413,6 @@ func (s *tenancySvcImpl) buildTenancyResponse(ctx context.Context, currentAccoun
 	for _, sb := range sandboxes {
 		sandboxIDs[sb.ID] = true
 	}
-
-	slug, _ := s.accountRepo.GetPortalSlug(ctx, currentAccount.AccountID)
 
 	var otherAccounts []domain.TenancyOtherAccount
 	for _, a := range activeAccounts {

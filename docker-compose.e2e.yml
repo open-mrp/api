@@ -1,8 +1,10 @@
 services:
   # An S3-compatible store so the upload and export paths run for real in e2e. Without it the
   # only way to exercise a photo upload is to point at AWS, so those endpoints went untested.
+  # MinIO no longer publishes images to Docker Hub or quay.io; Chainguard's build is free and
+  # bundles mc, so the healthcheck and bucket init below keep working.
   minio-e2e:
-    image: minio/minio:latest
+    image: cgr.dev/chainguard/minio:latest
     container_name: openmrp-minio-e2e
     command: server /data
     environment:
@@ -22,7 +24,7 @@ services:
 
   # Creates the buckets the services expect and exits. Services wait on it completing.
   minio-e2e-init:
-    image: minio/mc:latest
+    image: cgr.dev/chainguard/minio:latest
     container_name: openmrp-minio-init-e2e
     depends_on:
       minio-e2e:

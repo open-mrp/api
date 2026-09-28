@@ -14079,6 +14079,20 @@ func (mr *MockSalesOrderLineRepoMockRecorder) Create(ctx, id, params any) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockSalesOrderLineRepo)(nil).Create), ctx, id, params)
 }
 
+// CreateMany mocks base method.
+func (m *MockSalesOrderLineRepo) CreateMany(ctx context.Context, params []domain.CreateSalesOrderLineParams) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateMany", ctx, params)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// CreateMany indicates an expected call of CreateMany.
+func (mr *MockSalesOrderLineRepoMockRecorder) CreateMany(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateMany", reflect.TypeOf((*MockSalesOrderLineRepo)(nil).CreateMany), ctx, params)
+}
+
 // CreateQuantity mocks base method.
 func (m *MockSalesOrderLineRepo) CreateQuantity(ctx context.Context, quantityID, value, unitID string) *apierror.APIError {
 	m.ctrl.T.Helper()

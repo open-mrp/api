@@ -573,18 +573,14 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 				return apiErr
 			}
 
-			// Create order lines (resolved above, before the transaction).
+			// Create order lines (resolved above, before the transaction) in one batched insert per table. The order is still empty here, so the lines are numbered 1..N in resolved order.
+			lineParams := make([]domain.CreateSalesOrderLineParams, 0, len(resolvedLines))
 			for _, rl := range resolvedLines {
-				lineID, apiErr := id.GenID(id.OrderLineIDPrefix, nil)
-				if apiErr != nil {
-					return apiErr
-				}
-
 				itemID := rl.ItemID
 				costValue := rl.UnitCost.Value
 				costNum := rl.UnitCost.NumeratorUnitID
 				costDen := rl.UnitCost.DenominatorUnitID
-				_, apiErr = txLineRepo.Create(txCtx, lineID, domain.CreateSalesOrderLineParams{
+				lineParams = append(lineParams, domain.CreateSalesOrderLineParams{
 					SalesOrderID:               orderID,
 					AccountID:                  params.AccountID,
 					ProductID:                  rl.ProductID,
@@ -600,9 +596,9 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 					UnitCostNumeratorUnitID:    &costNum,
 					UnitCostDenominatorUnitID:  &costDen,
 				})
-				if apiErr != nil {
-					return apiErr
-				}
+			}
+			if apiErr := txLineRepo.CreateMany(txCtx, lineParams); apiErr != nil {
+				return apiErr
 			}
 
 			// Synthesize a shipping line (matches Dashboard, which always attaches one) using the rate estimated before the transaction, or leave it to the freight consumer.

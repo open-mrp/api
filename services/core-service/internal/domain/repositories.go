@@ -1317,6 +1317,8 @@ type SalesOrderLineRepo interface {
 	List(ctx context.Context, salesOrderID string) ([]*SalesOrderLine, *apierror.APIError)
 	Get(ctx context.Context, salesOrderLineID string) (*SalesOrderLine, *apierror.APIError)
 	Create(ctx context.Context, id string, params CreateSalesOrderLineParams) (*SalesOrderLine, *apierror.APIError)
+	// CreateMany inserts every product line for a freshly created order in three multi-row INSERTs (quantity, rate, sales_order_line) rather than a round trip per line. Lines are numbered 1..N in slice order, so it is only valid on a new, still-empty order; adding lines to an existing order must use Create, which slots the line above the credit/freight block.
+	CreateMany(ctx context.Context, params []CreateSalesOrderLineParams) *apierror.APIError
 	Update(ctx context.Context, params UpdateSalesOrderLineParams) (*SalesOrderLine, *apierror.APIError)
 	Delete(ctx context.Context, salesOrderLineID string) *apierror.APIError
 	IsInOrder(ctx context.Context, salesOrderLineID, salesOrderID, accountID string) (bool, *apierror.APIError)

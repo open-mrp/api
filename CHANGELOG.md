@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.10.4](https://github.com/open-mrp/api/compare/v2.10.3...v2.10.4) (2026-09-28)
+
+
+### Bug Fixes
+
+* **outbox:** don't fail on duplicate message, these messages should be acked ([#198](https://github.com/open-mrp/api/issues/198)) ([4415acd](https://github.com/open-mrp/api/commit/4415acd4bd75872087c1a9416b72558670dd6d9b))
+
 ## [2.10.3](https://github.com/open-mrp/api/compare/v2.10.2...v2.10.3) (2026-09-25)
 
 

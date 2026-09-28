@@ -9,6 +9,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/ledgerlock"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/contracts"
+	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
 )
@@ -57,6 +58,10 @@ func EnqueueAllocateOpenIssuesFrom(ctx context.Context, outboxRepo messaging.Out
 		Payload:     msg,
 		MessageID:   messageID,
 	}); err != nil {
+		// A duplicate continuation id means a retry of the delivery that produced it already enqueued it, so the chain continues from that message. Failing here would redeliver the handler until it dead-letters.
+		if db.IsDuplicateEntry(err) {
+			return nil
+		}
 		return apierror.NewInternalError(err, "Failed to create outbox message for allocate open issues.")
 	}
 	return nil

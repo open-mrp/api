@@ -3,9 +3,11 @@ package event
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 	"time"
 
+	"github.com/go-sql-driver/mysql"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
 
@@ -230,4 +232,31 @@ func (s *AllocateOpenIssuesConsumerTestSuite) TestChainStartersEnqueueWithoutADe
 	s.Require().Len(s.continuations, 1)
 	s.Empty(s.continuations[0].messageID,
 		"a chain starter must leave the id empty so the outbox mints a fresh one per enqueue")
+}
+
+type erroringOutboxRepo struct{ err error }
+
+func (r erroringOutboxRepo) Create(context.Context, messaging.OutboxMessageInput) (int64, error) {
+	return 0, r.err
+}
+
+// A retried delivery re-enqueues its continuation under the same derived id, so the outbox's unique
+// message_id rejects it. The continuation already exists, so the page must succeed; failing would
+// redeliver the handler until it dead-letters.
+func (s *AllocateOpenIssuesConsumerTestSuite) TestDuplicateContinuationIsNotAFailure() {
+	dup := erroringOutboxRepo{err: &mysql.MySQLError{Number: 1062, Message: "Duplicate entry 'mg_x' for key 'message_outbox.message_outbox_message_id_key'"}}
+
+	err := mediator.EnqueueAllocateOpenIssuesFrom(context.Background(), dup,
+		pageAccountID, pageItemID, time.Time{}, "ii_last", "mg_derived")
+
+	s.Nil(err)
+}
+
+func (s *AllocateOpenIssuesConsumerTestSuite) TestOtherOutboxErrorsStillFail() {
+	broken := erroringOutboxRepo{err: errors.New("connection reset")}
+
+	err := mediator.EnqueueAllocateOpenIssuesFrom(context.Background(), broken,
+		pageAccountID, pageItemID, time.Time{}, "ii_last", "mg_derived")
+
+	s.NotNil(err)
 }

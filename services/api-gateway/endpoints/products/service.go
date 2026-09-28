@@ -107,19 +107,11 @@ func (m *productSvcImpl) ListProducts(ctx context.Context, req *ListProductsRequ
 		return nil, apiErr
 	}
 
-	ids := make([]string, len(resp.Products))
-	for i, p := range resp.Products {
-		ids[i] = p.Id
-	}
-	loaded, apiErr := resourceloaders.LoadProducts(ctx, ids)
-	if apiErr != nil {
-		return nil, apiErr
-	}
-	products := make([]apiresource.Product, 0, len(ids))
-	for _, id := range ids {
-		if v, ok := loaded[id]; ok {
-			products = append(products, *(v.(*apiresource.Product)))
-		}
+	// ListProductsFull already returned each product's full row, so build the response resources from it directly rather than round-tripping through LoadProducts (BatchGetProductsByIDs) to fetch what we already hold. StashProductMeta records the item/product_line ids so the include resolver still populates those expandables on demand — the gated build leaves them nil until requested.
+	products := make([]apiresource.Product, 0, len(resp.Products))
+	for _, p := range resp.Products {
+		resourceloaders.StashProductMeta(ctx, p)
+		products = append(products, *resourceloaders.ProductFromProto(p))
 	}
 	return apiresource.NewList(products, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }

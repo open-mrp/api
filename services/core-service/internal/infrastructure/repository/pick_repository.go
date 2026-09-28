@@ -4,6 +4,7 @@ import (
 	"context"
 	gosql "database/sql"
 	"errors"
+	"sync"
 	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
@@ -316,17 +317,41 @@ func (r *pickRepoImpl) GetByIDs(ctx context.Context, accountID string, pickIDs [
 		return []*domain.Pick{}, nil
 	}
 
-	rows, err := r.queries.GetPicksByIDs(ctx, sqlc.GetPicksByIDsParams{PickIds: pickIDs, AccountID: accountID})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+	// The header rows and the progress roll-up share only pickIDs — the roll-up does not read the header rows — so they run concurrently rather than one after the other. This is a read-only path (list hydration and include expansion), never inside a transaction, so the two queries take separate pooled connections. First non-nil error wins, matching the prior sequential behavior.
+	var (
+		wg sync.WaitGroup
+
+		rows    []sqlc.GetPicksByIDsRow
+		rowsErr *apierror.APIError
+
+		progress map[string]domain.PickProgress
+		progErr  *apierror.APIError
+	)
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		res, err := r.queries.GetPicksByIDs(ctx, sqlc.GetPicksByIDsParams{PickIds: pickIDs, AccountID: accountID})
+		rows, rowsErr = res, db.MapSQLError(err)
+	}()
+	go func() {
+		defer wg.Done()
+		progress, progErr = r.GetProgress(ctx, pickIDs)
+	}()
+	wg.Wait()
+
+	if rowsErr != nil {
+		return nil, tracing.Trace(span, rowsErr)
+	}
+	if progErr != nil {
+		return nil, tracing.Trace(span, progErr)
 	}
 
 	picks := make([]*domain.Pick, len(rows))
 	for i, row := range rows {
-		picks[i] = mapGetPickRow(sqlc.GetPickRow(row), accountID)
-	}
-	if apiErr := r.attachProgress(ctx, picks); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+		p := mapGetPickRow(sqlc.GetPickRow(row), accountID)
+		p.PickedCompletion = progress[p.ID].PickedCompletion
+		p.PackedCompletion = progress[p.ID].PackedCompletion
+		picks[i] = p
 	}
 	return picks, nil
 }

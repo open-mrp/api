@@ -8,7 +8,7 @@ import (
 // The display name is account-supplied and lands in a header of every merchant-facing message, so a name carrying CR/LF must not be able to terminate the From header and inject one of its own.
 func TestAccountEmailSenderFromHeader(t *testing.T) {
 	sender := func(name string) *AccountEmailSender {
-		s := &AccountEmailSender{LocalPart: "orders", Domain: "carolon.com"}
+		s := &AccountEmailSender{LocalPart: "orders", Domain: "example.com"}
 		if name != "" {
 			s.FromName = &name
 		}
@@ -20,10 +20,10 @@ func TestAccountEmailSenderFromHeader(t *testing.T) {
 		fromName string
 		want     string
 	}{
-		{"no display name sends the bare address", "", "orders@carolon.com"},
-		{"plain name is quoted", "Acme Co.", `"Acme Co." <orders@carolon.com>`},
-		{"embedded quotes are escaped", `He said "hi"`, `"He said \"hi\"" <orders@carolon.com>`},
-		{"angle brackets cannot open a second address", "a<b>c", `"a<b>c" <orders@carolon.com>`},
+		{"no display name sends the bare address", "", "orders@example.com"},
+		{"plain name is quoted", "Acme Co.", `"Acme Co." <orders@example.com>`},
+		{"embedded quotes are escaped", `He said "hi"`, `"He said \"hi\"" <orders@example.com>`},
+		{"angle brackets cannot open a second address", "a<b>c", `"a<b>c" <orders@example.com>`},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -40,7 +40,7 @@ func TestAccountEmailSenderFromHeader(t *testing.T) {
 				t.Fatalf("FromHeader() = %q, must not carry a raw line break", got)
 			}
 		}
-		if !strings.Contains(got, "<orders@carolon.com>") {
+		if !strings.Contains(got, "<orders@example.com>") {
 			t.Errorf("FromHeader() = %q, want the real address preserved", got)
 		}
 	})

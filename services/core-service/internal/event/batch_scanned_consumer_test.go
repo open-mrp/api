@@ -250,8 +250,8 @@ func (s *BatchScannedConsumerTestSuite) TestProducesFractionalExecution() {
 	s.True(decimal.RequireFromString("6").Equal(s.moved(scanProducedID)))
 }
 
-// A non-terminating multiplier must not drift: 10 scanned against a step of 3 is 10 produced, not
-// 9.999… from 3 × (10/3) evaluated in floating point.
+// A non-terminating ratio must not drift: 10 scanned against a step of 3 is exactly 10 produced, not
+// 3 × (10 ÷ 3) with the quotient rounded to 16 places.
 func (s *BatchScannedConsumerTestSuite) TestNonTerminatingMultiplierDoesNotDrift() {
 	s.stepQueryRepo.EXPECT().Find(gomock.Any(), scanAccountID, scanStepID).Return(step("3", unitPair), nil)
 	s.expectConversion("10", "10")
@@ -260,10 +260,25 @@ func (s *BatchScannedConsumerTestSuite) TestNonTerminatingMultiplierDoesNotDrift
 	err := s.consumer.applyInventory(context.Background(), nil, scanAccountID, scanEvent("10", unitPair))
 
 	s.Require().Nil(err)
-	produced := s.moved(scanProducedID)
-	// Whatever rounding the decimal division applies, the result must stay within a hair of 10.
-	s.True(produced.Sub(decimal.RequireFromString("10")).Abs().LessThan(decimal.RequireFromString("0.0000000001")),
-		"expected ~10 produced, got %s", produced)
+	s.True(decimal.RequireFromString("10").Equal(s.moved(scanProducedID)),
+		"expected exactly 10 produced, got %s", s.moved(scanProducedID))
+}
+
+// 7 pairs off a 12-pair knit step is 7 pairs of greige and exactly 7/12 of the step's yarn.
+// Dividing first booked 6.9999999999999996 and 0.388377499999999977807.
+func (s *BatchScannedConsumerTestSuite) TestPartialExecutionIsExact() {
+	s.stepQueryRepo.EXPECT().Find(gomock.Any(), scanAccountID, scanStepID).
+		Return(step("12", unitPair, consumes(scanYarnID, "0.66579", unitPound)), nil)
+	s.expectConversion("7", "7")
+	s.expectBuiltToStock()
+
+	err := s.consumer.applyInventory(context.Background(), nil, scanAccountID, scanEvent("7", unitPair))
+
+	s.Require().Nil(err)
+	s.True(decimal.RequireFromString("7").Equal(s.moved(scanProducedID)),
+		"expected exactly 7 produced, got %s", s.moved(scanProducedID))
+	s.True(decimal.RequireFromString("-0.3883775").Equal(s.moved(scanYarnID)),
+		"expected exactly 0.3883775 lbs consumed, got %s", s.moved(scanYarnID))
 }
 
 // ─── consumption arithmetic ────────────────────────────────────────────────
@@ -545,7 +560,7 @@ func (s *BatchScannedConsumerTestSuite) TestConsumptionCoversScrapAsWellAsGoodOu
 		"yarn should cover good output and scrap, got %s", s.moved(scanYarnID))
 }
 
-// With no scrap the consumption multiplier is the production one, and no second conversion is needed.
+// With no scrap consumption scales by what was scanned, and no second conversion is needed.
 func (s *BatchScannedConsumerTestSuite) TestNoScrapMeansOneConversion() {
 	s.stepQueryRepo.EXPECT().Find(gomock.Any(), scanAccountID, scanStepID).
 		Return(step("12", unitPair, consumes(scanYarnID, "4", unitPound)), nil)

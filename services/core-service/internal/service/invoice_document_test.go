@@ -164,8 +164,8 @@ func TestInvoiceEmailParamsCoverTheTemplate(t *testing.T) {
 	account := &domain.Account{
 		Name: "Acme Co",
 		Branding: &domain.AccountBranding{
-			SupportEmail: poPtr("service@carolon.com"),
-			WebsiteURL:   poPtr("https://carolon.com"),
+			SupportEmail: poPtr("service@example.com"),
+			WebsiteURL:   poPtr("https://example.com"),
 		},
 	}
 	doc := buildInvoiceDoc(invoice, lines, order, account, nil, nil, nil, invoiceDocLookups{})

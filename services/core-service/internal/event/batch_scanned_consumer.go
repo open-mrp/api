@@ -198,6 +198,16 @@ func scrapMeasure(evt domain.BatchScannedEvent) (decimal.Decimal, *apierror.APIE
 	return seconds.Add(waste), nil
 }
 
+// ledgerScale is the scale of quantity.value, DECIMAL(65,30).
+const ledgerScale = 30
+
+// scaleByProduction is what a step that takes perExecution for every `production` it makes takes
+// for `ran` of them. Multiplying before dividing keeps the result exact whenever it can be; dividing
+// ran by production first rounds to 16 places and the multiply carries that error into the ledger.
+func scaleByProduction(perExecution, ran, production decimal.Decimal) decimal.Decimal {
+	return perExecution.Mul(ran).DivRound(production, ledgerScale)
+}
+
 // applyInventory is the inventory reaction to one scan, and runs inside the transaction.
 func (c *BatchScannedConsumer) applyInventory(ctx context.Context, scope *ledgerlock.Scope, accountID string, evt domain.BatchScannedEvent) *apierror.APIError {
 	step, apiErr := c.repos.NewProductionStepQueryRepo().Find(ctx, accountID, evt.ProductionStepID)
@@ -231,13 +241,14 @@ func (c *BatchScannedConsumer) applyInventory(ctx context.Context, scope *ledger
 		return apiErr
 	}
 
-	producedMultiplier := convertedMeasure.Div(step.Production.Quantity.Measure)
-	producedMeasure := step.Production.Quantity.Measure.Mul(producedMultiplier)
+	// The receipt is what was scanned. Deriving it as production × (scanned ÷ production) rounds the
+	// quotient to 16 places first, which books 7 pairs off a 12-pair step as 6.9999999999999996.
+	producedMeasure := convertedMeasure
 
 	// Materials are burned by everything the step ran, not just the part that came out saleable. A
 	// batch that scrapped a third of its output still consumed yarn for that third, so consumption is
 	// scaled by good output plus scrap while production is scaled by good output alone.
-	consumptionMultiplier := producedMultiplier
+	ranMeasure := convertedMeasure
 	scrap, apiErr := scrapMeasure(evt)
 	if apiErr != nil {
 		return apiErr
@@ -247,7 +258,7 @@ func (c *BatchScannedConsumer) applyInventory(ctx context.Context, scope *ledger
 		if apiErr != nil {
 			return apiErr
 		}
-		consumptionMultiplier = convertedMeasure.Add(convertedScrap).Div(step.Production.Quantity.Measure)
+		ranMeasure = convertedMeasure.Add(convertedScrap)
 	}
 
 	// One collector for the whole scan. Every movement below is applied immediately but logged only
@@ -288,7 +299,7 @@ func (c *BatchScannedConsumer) applyInventory(ctx context.Context, scope *ledger
 		return apiErr
 	}
 
-	if apiErr := c.applyConsumptions(ctx, scope, accountID, evt, step, consumptionMultiplier, orderID, audit); apiErr != nil {
+	if apiErr := c.applyConsumptions(ctx, scope, accountID, evt, step, ranMeasure, orderID, audit); apiErr != nil {
 		return apiErr
 	}
 
@@ -379,7 +390,7 @@ func (c *BatchScannedConsumer) applyConsumptions(
 	accountID string,
 	evt domain.BatchScannedEvent,
 	step *domain.ProductionStepDetail,
-	multiplier decimal.Decimal,
+	ranMeasure decimal.Decimal,
 	orderID *string,
 	audit *inventoryAuditCollector,
 ) *apierror.APIError {
@@ -393,7 +404,7 @@ func (c *BatchScannedConsumer) applyConsumptions(
 		// Waste on the consumption is material the step burns without it reaching the product, so it
 		// is drawn down alongside what the product actually takes.
 		perUnit := consumption.Quantity.Measure.Add(consumption.WasteQuantity.Measure)
-		consumedMeasure := perUnit.Mul(multiplier)
+		consumedMeasure := scaleByProduction(perUnit, ranMeasure, step.Production.Quantity.Measure)
 		if consumedMeasure.IsZero() {
 			continue
 		}

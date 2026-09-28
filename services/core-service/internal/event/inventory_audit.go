@@ -182,5 +182,5 @@ func levelInUnit(base decimal.Decimal, factorsByUnit map[string]domain.UnitFacto
 	if ratio.IsZero() {
 		return base
 	}
-	return base.DivRound(ratio, 30)
+	return base.DivRound(ratio, ledgerScale)
 }

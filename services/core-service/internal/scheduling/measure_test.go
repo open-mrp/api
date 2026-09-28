@@ -58,7 +58,7 @@ func TestSecondsPerUnitFromLaborTime(t *testing.T) {
 
 // The solver counts an item in its scan unit, so the run rate must be per that unit too. A
 // 554 sec/pr step scanned in pairs stays 554 sec per planned pair; reading it per each
-// halved Carolon's knitting hours (420 pr at 32.3h instead of 64.6h).
+// halved a knitting plant's hours (420 pr at 32.3h instead of 64.6h).
 func TestMeasureItems_RunRateIsPerScanUnit(t *testing.T) {
 	t.Parallel()
 

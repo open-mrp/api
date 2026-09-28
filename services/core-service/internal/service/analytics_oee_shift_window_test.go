@@ -9,9 +9,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// carolonSettings is the shape that made this necessary: two eight-hour shifts, Monday to Friday,
+// twoShiftWeekdaySettings is the shape that made this necessary: two eight-hour shifts, Monday to Friday,
 // starting at 06:00 Eastern. The plant is open 06:00-22:00 local and shut the other eight hours.
-func carolonSettings() *domain.ProductionScheduleSettings {
+func twoShiftWeekdaySettings() *domain.ProductionScheduleSettings {
 	start := "06:00"
 	zone := "America/New_York"
 	return &domain.ProductionScheduleSettings{
@@ -39,7 +39,7 @@ func eastern(t *testing.T, value string) time.Time {
 func TestOeeShiftWindow_UnconfiguredCountsEverything(t *testing.T) {
 	t.Parallel()
 
-	settings := carolonSettings()
+	settings := twoShiftWeekdaySettings()
 	settings.ShiftStartTime = nil
 
 	window := newOeeShiftWindow(settings)
@@ -56,7 +56,7 @@ func TestOeeShiftWindow_UnconfiguredCountsEverything(t *testing.T) {
 func TestOeeShiftWindow_ClipsOvernightStop(t *testing.T) {
 	t.Parallel()
 
-	window := newOeeShiftWindow(carolonSettings())
+	window := newOeeShiftWindow(twoShiftWeekdaySettings())
 	require.NotNil(t, window)
 
 	got := window.OverlapSeconds(eastern(t, "2026-09-10 15:00"), eastern(t, "2026-09-11 07:00"))
@@ -68,7 +68,7 @@ func TestOeeShiftWindow_ClipsOvernightStop(t *testing.T) {
 func TestOeeShiftWindow_ClosedDayTakesNothing(t *testing.T) {
 	t.Parallel()
 
-	window := newOeeShiftWindow(carolonSettings())
+	window := newOeeShiftWindow(twoShiftWeekdaySettings())
 	require.NotNil(t, window)
 
 	got := window.OverlapSeconds(eastern(t, "2026-09-11 19:00"), eastern(t, "2026-09-12 11:00"))
@@ -83,7 +83,7 @@ func TestOeeShiftWindow_ClosedDayTakesNothing(t *testing.T) {
 func TestOeeShiftWindow_InsideShiftCountsInFull(t *testing.T) {
 	t.Parallel()
 
-	window := newOeeShiftWindow(carolonSettings())
+	window := newOeeShiftWindow(twoShiftWeekdaySettings())
 	require.NotNil(t, window)
 
 	got := window.OverlapSeconds(eastern(t, "2026-09-10 09:00"), eastern(t, "2026-09-10 12:30"))
@@ -94,7 +94,7 @@ func TestOeeShiftWindow_InsideShiftCountsInFull(t *testing.T) {
 func TestOeeShiftWindow_AccumulatesAcrossDays(t *testing.T) {
 	t.Parallel()
 
-	window := newOeeShiftWindow(carolonSettings())
+	window := newOeeShiftWindow(twoShiftWeekdaySettings())
 	require.NotNil(t, window)
 
 	// Thursday 06:00 through the following Tuesday 22:00: Thu, Fri, Mon, Tue are open, Sat and Sun are not.
@@ -107,7 +107,7 @@ func TestOeeShiftWindow_AccumulatesAcrossDays(t *testing.T) {
 func TestOeeShiftWindow_DaylightSavingKeepsWallClockStart(t *testing.T) {
 	t.Parallel()
 
-	window := newOeeShiftWindow(carolonSettings())
+	window := newOeeShiftWindow(twoShiftWeekdaySettings())
 	require.NotNil(t, window)
 
 	// 2026-11-01 is the US fall-back Sunday, so Monday the 2nd is the first open day on standard time.
@@ -120,7 +120,7 @@ func TestOeeShiftWindow_DaylightSavingKeepsWallClockStart(t *testing.T) {
 func TestOeeShiftWindow_ContinuousPlantCapsAtTheDay(t *testing.T) {
 	t.Parallel()
 
-	settings := carolonSettings()
+	settings := twoShiftWeekdaySettings()
 	settings.ShiftsPerDay = 4
 	settings.HoursPerShift = 8
 
@@ -136,7 +136,7 @@ func TestOeeShiftWindow_ContinuousPlantCapsAtTheDay(t *testing.T) {
 func TestOeeShiftWindow_UnresolvableZoneDisablesClipping(t *testing.T) {
 	t.Parallel()
 
-	settings := carolonSettings()
+	settings := twoShiftWeekdaySettings()
 	zone := "Mars/Olympus_Mons"
 	settings.ShiftTimezone = &zone
 

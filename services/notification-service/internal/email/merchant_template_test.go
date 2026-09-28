@@ -64,13 +64,13 @@ func invoiceParams() map[string]any {
 			{"sku": "SOCK-CREW-BLK", "description": "Crew sock, black, size L", "qty": "1,200 pair", "price": "$8.50 / dz", "total": "$10,200.00"},
 			{"sku": "SOCK-ANK-WHT", "description": "", "qty": "300 pair", "price": "$4.25 / pr", "total": "$1,275.00"},
 		},
-		"account_email":     "service@carolon.com",
-		"account_website":   "https://carolon.com",
+		"account_email":     "service@example.com",
+		"account_website":   "https://example.com",
 		"year":              "2026",
 		"customer_number":   "42",
-		"order_online_link": "https://app.example/carolon/auth/register",
+		"order_online_link": "https://app.example/acme/auth/register",
 		"email_subject":     "Invoice 005821",
-		"instagram_handle":  "carolon",
+		"instagram_handle":  "acme",
 		"twitter_handle":    "",
 		"facebook_handle":   "",
 		"linkedin_handle":   "",
@@ -114,7 +114,7 @@ func TestInvoiceEmailRendersLegacyContent(t *testing.T) {
 		assertContains(t, html,
 			"Want to order online? Click the button below:",
 			"Order Online",
-			"https://app.example/carolon/auth/register",
+			"https://app.example/acme/auth/register",
 			"you will need your customer number 42 to link your account",
 		)
 	})
@@ -122,9 +122,9 @@ func TestInvoiceEmailRendersLegacyContent(t *testing.T) {
 	t.Run("footer carries branding, socials and copyright", func(t *testing.T) {
 		assertContains(t, html,
 			"Proudly made in North Carolina since 1948.",
-			"https://www.instagram.com/carolon/",
-			"service@carolon.com",
-			"https://carolon.com",
+			"https://www.instagram.com/acme/",
+			"service@example.com",
+			"https://example.com",
 			"&copy; 2026 Acme Co. All rights reserved.",
 		)
 		// Handles that are blank must not render an empty link.
@@ -331,8 +331,8 @@ func acknowledgementParams() map[string]any {
 		"lines": []map[string]any{
 			{"sku": "SOCK-CREW-BLK", "description": "Crew sock, black, size L", "qty": "1,200 pair", "price": "$8.50 / dz", "total": "$10,195.75"},
 		},
-		"account_email":     "service@carolon.com",
-		"account_website":   "https://carolon.com",
+		"account_email":     "service@example.com",
+		"account_website":   "https://example.com",
 		"year":              "2026",
 		"order_online_link": "",
 		"email_subject":     "Sales Order 009001",

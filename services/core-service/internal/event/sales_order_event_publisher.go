@@ -99,3 +99,40 @@ func (p *outboxSalesOrderEventPublisher) PublishSalesOrderShippingUpdated(ctx co
 
 	return nil
 }
+
+func (p *outboxSalesOrderEventPublisher) PublishSalesOrderAcknowledged(ctx context.Context, salesOrderID string) *apierror.APIError {
+	ctx, span := salesOrderEventPublisherTracer.Start(ctx, "event.outbox_sales_order_event_publisher.publish_sales_order_acknowledged")
+	defer span.End()
+
+	repos, ok := GetReposFromContext(ctx)
+	if !ok {
+		return tracing.Trace(span, apierror.NewInternalError(nil, "RepoFactory not found in context for outbox publisher."))
+	}
+
+	dataJSON, err := json.Marshal(domain.SalesOrderAcknowledgedEvent{SalesOrderID: salesOrderID})
+	if err != nil {
+		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to marshal sales order acknowledged data."))
+	}
+
+	msg := contracts.AmqpMessage{Data: dataJSON}
+	if identity, ok := appctx.GetIdentityFromContext(ctx); ok {
+		msg.Identity = identity
+	}
+	if requestID, ok := appctx.GetRequestID(ctx); ok {
+		msg.RequestID = requestID
+	}
+
+	outboxInput := messaging.OutboxMessageInput{
+		ServiceName: "core-service",
+		MessageType: string(contracts.CoreEventSalesOrderAcknowledged),
+		Destination: messaging.ApplicationExchange,
+		RoutingKey:  string(contracts.CoreEventSalesOrderAcknowledged),
+		Payload:     msg,
+	}
+
+	if _, err := repos.NewOutboxRepo().Create(ctx, outboxInput); err != nil {
+		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to create outbox message."))
+	}
+
+	return nil
+}

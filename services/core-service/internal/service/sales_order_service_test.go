@@ -76,6 +76,7 @@ type SalesOrderSvcTestSuite struct {
 	checkoutFactory *clientmock.MockStripeCheckoutClientFactory
 	checkoutClient  *clientmock.MockStripeCheckoutClient
 	notifier        *publishermock.MockNotificationPublisher
+	orderPublisher  *publishermock.MockSalesOrderEventPublisher
 
 	// Factory + mediators.
 	repoFactory     *factorymock.MockRepoFactory
@@ -125,6 +126,11 @@ func (suite *SalesOrderSvcTestSuite) SetupTest() {
 	suite.checkoutFactory = clientmock.NewMockStripeCheckoutClientFactory(suite.ctrl)
 	suite.checkoutClient = clientmock.NewMockStripeCheckoutClient(suite.ctrl)
 	suite.notifier = publishermock.NewMockNotificationPublisher(suite.ctrl)
+	suite.orderPublisher = publishermock.NewMockSalesOrderEventPublisher(suite.ctrl)
+	// The order-created and shipping-updated events fire incidentally from create/update paths these
+	// tests are not asserting; allow them. Tests that care about a specific publish add their own Times().
+	suite.orderPublisher.EXPECT().PublishSalesOrderCreated(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+	suite.orderPublisher.EXPECT().PublishSalesOrderShippingUpdated(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
 	suite.repoFactory = factorymock.NewMockRepoFactory(suite.ctrl)
 	suite.repoFactory.EXPECT().NewAccountRepo().Return(suite.accountRepo).AnyTimes()
@@ -183,6 +189,7 @@ func (suite *SalesOrderSvcTestSuite) SetupTest() {
 		TxManager:             &stubTxManager{factory: suite.repoFactory},
 		CheckoutClientFactory: suite.checkoutFactory,
 		NotificationPublisher: suite.notifier,
+		SalesOrderPublisher:   suite.orderPublisher,
 		EncryptionKey:         suite.encryptionKey,
 		FrontendURL:           "https://dash.test",
 	})
@@ -1588,10 +1595,10 @@ func (suite *SalesOrderSvcTestSuite) TestChangeStatus_InvalidAction() {
 	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
 }
 
-func (suite *SalesOrderSvcTestSuite) TestChangeStatus_IssueWithSendEmailFiresNotification() {
+func (suite *SalesOrderSvcTestSuite) TestChangeStatus_IssueWithSendEmailPublishesAcknowledged() {
 	ctx := salesOrderInternalCtx("ac_test")
 
-	// Minimum setup to reach the post-issue email branch.
+	// Minimum setup to drive the issue transaction to its acknowledgement-publish branch.
 	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
 		Return(&domain.SalesOrder{ID: "or_1", Number: "1001", SalesOrderStatusCode: "estimate"}, nil).Times(1)
 	suite.orderRepo.EXPECT().
@@ -1602,28 +1609,9 @@ func (suite *SalesOrderSvcTestSuite) TestChangeStatus_IssueWithSendEmailFiresNot
 	suite.orderRepo.EXPECT().GetSaleLinesForIssue(gomock.Any(), "or_1").Return(nil, nil).Times(2) // once on the pool to name the ledger root, once inside the transaction
 	suite.expectReservationRelease("ac_test", "or_1")
 
-	// Email branch: recipients fetched, order/lines/seller branding loaded, email published, ack marked sent.
-	suite.orderRepo.EXPECT().GetAcknowledgementRecipients(gomock.Any(), "or_1").
-		Return([]string{"buyer@example.com"}, nil).Times(1)
-	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
-		Return(&domain.SalesOrder{ID: "or_1", Number: "1001"}, nil).Times(1)
-	suite.orderRepo.EXPECT().GetLines(gomock.Any(), "or_1").Return(nil, nil).Times(1)
-	suite.accountRepo.EXPECT().GetByID(gomock.Any(), "ac_test").
-		Return(&domain.Account{ID: "ac_test", Name: "Test Seller"}, nil).Times(1)
-	suite.orderRepo.EXPECT().GetAccountOriginAddress(gomock.Any(), "ac_test").
-		Return(nil, nil).Times(1)
-	// The customer's phone is listed under Bill To.
-	suite.customerRepo.EXPECT().Get(gomock.Any(), "ac_test", "", gomock.Nil()).
-		Return(&domain.Customer{Phone: poPtr("555-0100")}, nil).Times(1)
-
-	portalDomainRepo := repositorymock.NewMockPortalDomainRepo(suite.ctrl)
-	suite.repoFactory.EXPECT().NewPortalDomainRepo().Return(portalDomainRepo).AnyTimes()
-	portalDomainRepo.EXPECT().GetByAccountID(gomock.Any(), "ac_test").Return(nil, nil).Times(1)
-	suite.expectCheckoutSellerLookups()
-	suite.accountRepo.EXPECT().GetPortalSlug(gomock.Any(), "ac_test").Return(nil, nil).Times(1)
-
-	suite.notifier.EXPECT().PublishSendEmail(gomock.Any(), gomock.Any()).Return(nil).Times(1)
-	suite.orderRepo.EXPECT().MarkAcknowledgementSent(gomock.Any(), "ac_test", "or_1").Return(nil).Times(1)
+	// The rendering and send are deferred to the document-email consumer; issuing only publishes the
+	// event inside the transaction. The notifier must not be touched on this path.
+	suite.orderPublisher.EXPECT().PublishSalesOrderAcknowledged(gomock.Any(), "or_1").Return(nil).Times(1)
 
 	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
 		Return(&domain.SalesOrder{ID: "or_1", SalesOrderStatusCode: "issued"}, nil).Times(1)
@@ -1636,8 +1624,8 @@ func (suite *SalesOrderSvcTestSuite) TestChangeStatus_IssueWithSendEmailFiresNot
 	suite.Nil(apiErr)
 }
 
-func (suite *SalesOrderSvcTestSuite) TestChangeStatus_IssueWithoutSendEmailDoesNotNotify() {
-	// Inverse of the previous: when SendEmail is false the notifier must never be called.
+func (suite *SalesOrderSvcTestSuite) TestChangeStatus_IssueWithoutSendEmailDoesNotPublishAcknowledged() {
+	// Inverse of the previous: when SendEmail is false the acknowledged event must never be published.
 	ctx := salesOrderInternalCtx("ac_test")
 
 	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
@@ -1653,7 +1641,7 @@ func (suite *SalesOrderSvcTestSuite) TestChangeStatus_IssueWithoutSendEmailDoesN
 	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_1").
 		Return(&domain.SalesOrder{ID: "or_1"}, nil).Times(1)
 
-	// No notifier expectations → gomock.Finish() fails if anything is published.
+	// No PublishSalesOrderAcknowledged expectation → gomock.Finish() fails if it is published.
 
 	_, apiErr := suite.svc.ChangeSalesOrderStatus(ctx, domain.ChangeSalesOrderStatusParams{
 		SalesOrderID: "or_1",

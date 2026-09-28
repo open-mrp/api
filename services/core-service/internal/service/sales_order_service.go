@@ -1271,6 +1271,13 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 				return apiErr
 			}
 
+			// Hand the acknowledgement email to the document-email consumer rather than rendering the PDF and mailing it on this request. The event commits with the issue, so the send is guaranteed once the order is issued; acknowledgment_status stays not_sent until the consumer marks it. No-ops when there are no recipients.
+			if params.SendEmail && txSvc.salesOrderPublisher != nil {
+				if apiErr := txSvc.salesOrderPublisher.PublishSalesOrderAcknowledged(event.WithRepos(txCtx, txSvc.repos), params.SalesOrderID); apiErr != nil {
+					return apiErr
+				}
+			}
+
 			return nil
 		})
 
@@ -1443,13 +1450,6 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// On successful issue transition, optionally send acknowledgement email to the contacts on the order (matching Dashboard behavior).
-	if params.StatusChange == "issue" && params.SendEmail {
-		if apiErr := s.sendOrderAcknowledgementEmail(ctx, params.AccountID, params.SalesOrderID); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-	}
-
 	// Re-fetch the updated order
 	updatedOrder, apiErr := repo.Get(ctx, params.AccountID, params.SalesOrderID)
 	if apiErr != nil {
@@ -1465,30 +1465,6 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 	}
 
 	return updatedOrder, nil
-}
-
-// sendOrderAcknowledgementEmail publishes the order-acknowledgement email to the contacts configured for the order and marks the order as acknowledged. No-ops if there are no recipients or the notification publisher is not configured.
-func (s *salesOrderSvcImpl) sendOrderAcknowledgementEmail(ctx context.Context, accountID, salesOrderID string) *apierror.APIError {
-	if s.notificationPublisher == nil {
-		return nil
-	}
-
-	emailData, apiErr := buildOrderAcknowledgementEmail(ctx, s.repos, s.branding, s.frontendURL, accountID, salesOrderID)
-	if apiErr != nil {
-		return apiErr
-	}
-	if emailData == nil {
-		return nil
-	}
-
-	return s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderSvcImpl) *apierror.APIError {
-		// The outbox publisher reads the RepoFactory from the context; inject it before publishing.
-		pubCtx := event.WithRepos(txCtx, txSvc.repos)
-		if apiErr := s.notificationPublisher.PublishSendEmail(pubCtx, *emailData); apiErr != nil {
-			return apiErr
-		}
-		return txSvc.repos.NewSalesOrderRepo().MarkAcknowledgementSent(txCtx, accountID, salesOrderID)
-	})
 }
 
 // checkInvoicePlanLimit enforces the account's per-billing-period invoice plan limit before allowing a new sales order (which will typically generate an invoice). Sandbox accounts and accounts with no configured limit are exempt. Returns a validation error when the current count meets or exceeds the limit.

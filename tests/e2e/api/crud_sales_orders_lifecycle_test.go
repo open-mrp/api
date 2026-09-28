@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -335,11 +336,10 @@ func TestSalesOrder_Lines_CreateUpdateDelete(t *testing.T) {
 }
 
 // TestSalesOrder_Issue_NotifyCustomer_SendsAcknowledgement pins the acknowledgement-email
-// side effect of issuing with notify_customer: true. The email is published to the outbox
-// inside the same transaction that flips is_acknowledgment_sent, so a successful 200 with
-// acknowledgment_status == "sent" proves the publish succeeded. This guards the regression
-// where the outbox publisher couldn't read the RepoFactory from context (WithRepos was not
-// injected), which 5xx'd the issue action and left acknowledgment_status stuck at "not_sent".
+// side effect of issuing with notify_customer: true. Issuing publishes a sales-order-acknowledged
+// event to the outbox inside the same transaction; the document-email consumer then renders the
+// PDF, mails the acknowledgement, and flips is_acknowledgment_sent out of band — so
+// acknowledgment_status settles to "sent" shortly after the 200 rather than during it.
 // Every other lifecycle test issues with notify_customer: false, so this path was uncovered.
 func TestSalesOrder_Issue_NotifyCustomer_SendsAcknowledgement(t *testing.T) {
 	t.Parallel()
@@ -359,12 +359,14 @@ func TestSalesOrder_Issue_NotifyCustomer_SendsAcknowledgement(t *testing.T) {
 	deleteOrder(t, orderID)
 	assert.Equal(t, "not_sent", jsonField(getSalesOrder(t, orderID, nil), "acknowledgment_status"), "new order is not acknowledged")
 
-	// Issue with notify_customer: true — must not 5xx, and must publish the ack email.
+	// Issue with notify_customer: true — must not 5xx, and must publish the ack event.
 	status, respBody = salesOrderAction(t, orderID, "issue", true)
 	requireStatus(t, 200, status, respBody)
 
-	assert.Equal(t, "sent", jsonField(getSalesOrder(t, orderID, nil), "acknowledgment_status"),
-		"issuing with notify_customer: true must send the acknowledgement email and set acknowledgment_status to sent")
+	require.Eventually(t, func() bool {
+		return jsonField(getSalesOrder(t, orderID, nil), "acknowledgment_status") == "sent"
+	}, 15*time.Second, 200*time.Millisecond,
+		"issuing with notify_customer: true must send the acknowledgement email and settle acknowledgment_status to sent")
 }
 
 func TestSalesOrder_Delete_EstimateAllowed_FulfilledBlocked(t *testing.T) {

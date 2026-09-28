@@ -1,5 +1,27 @@
 # Changelog
 
+## [2.11.0](https://github.com/open-mrp/api/compare/v2.10.4...v2.11.0) (2026-09-28)
+
+
+### Features
+
+* **resolver:** add test for Loader seeing earlier sub-populate ([#206](https://github.com/open-mrp/api/issues/206)) ([c72020c](https://github.com/open-mrp/api/commit/c72020c4346920a34005897079056b824287145a))
+
+
+### Bug Fixes
+
+* **api:** update endpoint descriptions and input schemas for clarity ([612450d](https://github.com/open-mrp/api/commit/612450d94ca4960eff27abbfdf08e04b9c192160))
+* **inventory:** scan decimal residue ([#208](https://github.com/open-mrp/api/issues/208)) ([6c1e348](https://github.com/open-mrp/api/commit/6c1e3480a47ebf1d1c85b1f419e5dde0a9a23654))
+
+
+### Performance Improvements
+
+* **gateway:** resolve include loaders per level in parallel ([#202](https://github.com/open-mrp/api/issues/202)) ([c5a7631](https://github.com/open-mrp/api/commit/c5a76319674ccb454307a6239c79d05b63e61bfb))
+* parallelize tenancy & pick reads, drop redundant products refetch ([#203](https://github.com/open-mrp/api/issues/203)) ([565d7bc](https://github.com/open-mrp/api/commit/565d7bc2136c6d07102eb4d8477a8448c15e5ff2))
+* **sales-orders:** batch order line inserts on create ([#201](https://github.com/open-mrp/api/issues/201)) ([2ac9c8f](https://github.com/open-mrp/api/commit/2ac9c8fda743208ef74cb805694732b73523060e))
+* **sales-orders:** send order acknowledgement email off the issue request path ([#200](https://github.com/open-mrp/api/issues/200)) ([3eef351](https://github.com/open-mrp/api/commit/3eef35179a771efdccb1c4c0652e4b23d8bcabc7))
+* **sales-orders:** speed up the list endpoint ([#205](https://github.com/open-mrp/api/issues/205)) ([101a79a](https://github.com/open-mrp/api/commit/101a79ae90f1d7ea3e2ea586d2c95e3dd2b835e4))
+
 ## [2.10.4](https://github.com/open-mrp/api/compare/v2.10.3...v2.10.4) (2026-09-28)
 
 

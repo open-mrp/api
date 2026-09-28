@@ -342,6 +342,64 @@ func TestResolveIncludes_DistinctTargetsAtLevel(t *testing.T) {
 	}
 }
 
+func TestResolveIncludes_LoaderSeesEarlierSubPopulate(t *testing.T) {
+	// service_levels extracts IDs from a field that the earlier no-fetch sub
+	// populates, the shape volume_discount categories.properties relies on.
+	ResetForTest()
+	c := &counters{}
+	Register(&Definition{
+		ObjectType: otCarrier,
+		Load: func(_ context.Context, _ []string) (map[string]any, *apierror.APIError) {
+			return nil, nil
+		},
+		Subs: []SubField{
+			{
+				Key: "service_level_ids", Cardinality: CardinalityList,
+				Populate: func(_ context.Context, p any, _ map[string]any) {
+					p.(*testCarrier).ServiceLevelIDs = []string{"sl1"}
+				},
+			},
+			{
+				Key: "service_levels", Target: otSL, Cardinality: CardinalityList,
+				ExtractIDs: func(_ context.Context, p any) []string {
+					return p.(*testCarrier).ServiceLevelIDs
+				},
+				Populate: func(_ context.Context, p any, loaded map[string]any) {
+					cr := p.(*testCarrier)
+					for _, id := range cr.ServiceLevelIDs {
+						if v, ok := loaded[id]; ok {
+							cr.ServiceLevels = append(cr.ServiceLevels, v.(*testServiceLevel))
+						}
+					}
+				},
+			},
+		},
+	})
+	Register(&Definition{
+		ObjectType: otSL,
+		Load: func(_ context.Context, ids []string) (map[string]any, *apierror.APIError) {
+			c.sl.Add(1)
+			out := map[string]any{}
+			for _, id := range ids {
+				out[id] = &testServiceLevel{ID: id}
+			}
+			return out, nil
+		},
+	})
+
+	carrier := &testCarrier{ID: "c1"}
+	tree := ParseIncludeTree([]string{"service_level_ids", "service_levels"})
+	if err := ResolveIncludes(context.Background(), []any{carrier}, otCarrier, tree); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(carrier.ServiceLevels) != 1 || carrier.ServiceLevels[0].ID != "sl1" {
+		t.Errorf("expected service level sl1 stitched, got %+v", carrier.ServiceLevels)
+	}
+	if c.sl.Load() != 1 {
+		t.Errorf("expected exactly 1 service-level load, got %d", c.sl.Load())
+	}
+}
+
 func TestResolveIncludes_ListCardinality(t *testing.T) {
 	ResetForTest()
 	c := &counters{}

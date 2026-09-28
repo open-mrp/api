@@ -2,8 +2,12 @@
 ARG SERVICE_NAME
 
 # --- Build Stage ---
-FROM golang:1.27 AS builder
+# Runs on the build machine's own platform and cross-compiles for the target, so a multi-arch
+# build never runs the Go compiler under emulation.
+FROM --platform=$BUILDPLATFORM golang:1.27 AS builder
 ARG SERVICE_NAME
+ARG TARGETOS
+ARG TARGETARCH
 WORKDIR /app
 
 # Cache dependencies using BuildKit cache mount
@@ -18,7 +22,7 @@ COPY services/ ./services/
 # Build the service binary with build cache
 WORKDIR /app/services/${SERVICE_NAME}/cmd
 RUN --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=0 GOOS=linux go build -o /app/main .
+    CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -o /app/main .
 
 # --- Final Stage ---
 FROM alpine:latest

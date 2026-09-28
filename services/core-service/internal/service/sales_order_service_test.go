@@ -733,9 +733,8 @@ func (suite *SalesOrderSvcTestSuite) expectCreateOrderHappyRepoChain(accountID s
 			return &domain.SalesOrder{ID: id, Number: "1001"}, nil
 		}).Times(1)
 
-	// Input lines.
-	suite.lineRepo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(&domain.SalesOrderLine{}, nil).Times(1)
+	// Input lines are inserted in one batched call.
+	suite.lineRepo.EXPECT().CreateMany(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 
 	// Synthetic shipping line: look up the "shipping" system product + currency unit
 	// then create a zero-price line item.
@@ -995,7 +994,7 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_SalesRepResolvedFromCu
 			suite.Equal("au_rep", *p.SalesRepID)
 			return &domain.SalesOrder{ID: id, Number: p.Number}, nil
 		}).Times(1)
-	suite.lineRepo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).Return(&domain.SalesOrderLine{}, nil).Times(1)
+	suite.lineRepo.EXPECT().CreateMany(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 	suite.productRepo.EXPECT().GetSystemProduct(gomock.Any(), "ac_test", "shipping").
 		Return(&domain.SystemProductInfo{ProductID: "prod_ship", ProductSKU: "SHIP", QuantityUnitID: "un_ea"}, nil).Times(1)
 	suite.unitRepo.EXPECT().GetCurrencyBaseUnitID(gomock.Any()).Return("un_usd", nil).Times(1)
@@ -1034,7 +1033,7 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_AppliesCustomerDefault
 			suite.Equal("pmtm_cust_default", *p.PaymentTermID)
 			return &domain.SalesOrder{ID: id, Number: p.Number}, nil
 		}).Times(1)
-	suite.lineRepo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).Return(&domain.SalesOrderLine{}, nil).Times(1)
+	suite.lineRepo.EXPECT().CreateMany(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 	suite.productRepo.EXPECT().GetSystemProduct(gomock.Any(), "ac_test", "shipping").
 		Return(&domain.SystemProductInfo{ProductID: "prod_ship", ProductSKU: "SHIP", QuantityUnitID: "un_ea"}, nil).Times(1)
 	suite.unitRepo.EXPECT().GetCurrencyBaseUnitID(gomock.Any()).Return("un_usd", nil).Times(1)
@@ -1075,7 +1074,7 @@ func (suite *SalesOrderSvcTestSuite) TestCreateSalesOrder_RequestValuesOverrideC
 			suite.Equal("pyt_req", *p.PaymentTermID)
 			return &domain.SalesOrder{ID: id, Number: p.Number}, nil
 		}).Times(1)
-	suite.lineRepo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).Return(&domain.SalesOrderLine{}, nil).Times(1)
+	suite.lineRepo.EXPECT().CreateMany(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 	suite.productRepo.EXPECT().GetSystemProduct(gomock.Any(), "ac_test", "shipping").
 		Return(&domain.SystemProductInfo{ProductID: "prod_ship", ProductSKU: "SHIP", QuantityUnitID: "un_ea"}, nil).Times(1)
 	suite.unitRepo.EXPECT().GetCurrencyBaseUnitID(gomock.Any()).Return("un_usd", nil).Times(1)

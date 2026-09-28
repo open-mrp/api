@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	gosql "database/sql"
+	"strings"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
@@ -143,6 +144,100 @@ func (r *salesOrderLineRepoImpl) Create(ctx context.Context, lineID string, para
 
 	// Re-fetch the created line
 	return r.Get(ctx, lineID)
+}
+
+func (r *salesOrderLineRepoImpl) CreateMany(ctx context.Context, params []domain.CreateSalesOrderLineParams) *apierror.APIError {
+	ctx, span := salesOrderLineRepoTracer.Start(ctx, "repository.sales_order_line.create_many")
+	defer span.End()
+
+	if len(params) == 0 {
+		return nil
+	}
+
+	const (
+		quantityTuple = "(?, ?, ?, NOW(3), NOW(3))"
+		rateTuple     = "(?, ?, ?, ?, NOW(3), NOW(3))"
+		lineTuple     = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3))"
+	)
+
+	quantityTuples := make([]string, 0, len(params))
+	quantityArgs := make([]any, 0, len(params)*3)
+	rateTuples := make([]string, 0, len(params)*2)
+	rateArgs := make([]any, 0, len(params)*2*4)
+	lineTuples := make([]string, 0, len(params))
+	lineArgs := make([]any, 0, len(params)*11)
+
+	for i, p := range params {
+		quantityID, apiErr := id.GenID(id.QuantityIDPrefix, nil)
+		if apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+		unitPriceID, apiErr := id.GenID(id.RateIDPrefix, nil)
+		if apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+		lineID, apiErr := id.GenID(id.OrderLineIDPrefix, nil)
+		if apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+
+		var unitCostID gosql.NullString
+		if p.UnitCostValue != nil {
+			costID, apiErr := id.GenID(id.RateIDPrefix, nil)
+			if apiErr != nil {
+				return tracing.Trace(span, apiErr)
+			}
+			unitCostID = gosql.NullString{String: costID, Valid: true}
+		}
+
+		quantityTuples = append(quantityTuples, quantityTuple)
+		quantityArgs = append(quantityArgs, quantityID, p.QuantityValue, p.QuantityUnitID)
+
+		rateTuples = append(rateTuples, rateTuple)
+		rateArgs = append(rateArgs, unitPriceID, p.UnitPriceValue, p.UnitPriceNumeratorUnitID, p.UnitPriceDenominatorUnitID)
+
+		if unitCostID.Valid {
+			rateTuples = append(rateTuples, rateTuple)
+			rateArgs = append(rateArgs, unitCostID.String, *p.UnitCostValue, *p.UnitCostNumeratorUnitID, *p.UnitCostDenominatorUnitID)
+		}
+
+		lineTuples = append(lineTuples, lineTuple)
+		lineArgs = append(lineArgs,
+			lineID,
+			p.ProductSKU,
+			toNullString(p.ProductDescription),
+			toNullString(p.EdiLineItemID),
+			safeconv.IntToInt32(i+1),
+			gosql.NullString{String: p.ProductID, Valid: p.ProductID != ""},
+			toNullString(p.ItemID),
+			p.SalesOrderID,
+			quantityID,
+			unitPriceID,
+			unitCostID,
+		)
+	}
+
+	dbtx := r.queries.DB()
+
+	quantitySQL := "INSERT INTO quantity (id, value, unit_id, created_at, updated_at) VALUES " + strings.Join(quantityTuples, ", ")
+	_, err := dbtx.ExecContext(ctx, quantitySQL, quantityArgs...)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	rateSQL := "INSERT INTO rate (id, value, numerator_unit_id, denominator_unit_id, created_at, updated_at) VALUES " + strings.Join(rateTuples, ", ")
+	_, err = dbtx.ExecContext(ctx, rateSQL, rateArgs...)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	lineSQL := "INSERT INTO sales_order_line (id, product_sku, product_description, edi_line_item_id, line_item_number, product_id, item_id, sales_order_id, quantity_id, unit_price_id, unit_cost_id, created_at, updated_at) VALUES " + strings.Join(lineTuples, ", ")
+	_, err = dbtx.ExecContext(ctx, lineSQL, lineArgs...)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	return nil
 }
 
 // resolveNewLineItemNumber computes the line_item_number for a line being added to an order. A credit/freight (shipping) line, or any line on an order that has none, appends to the end. A regular product line slots in at the first credit/freight line's position, pushing that block down by one so credit/freight stay at the bottom. Callers run this inside the create transaction so the shift and insert are atomic.

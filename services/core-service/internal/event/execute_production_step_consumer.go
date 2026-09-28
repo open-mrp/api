@@ -205,8 +205,7 @@ func (c *ExecuteProductionStepConsumer) executeProductionStepTx(ctx context.Cont
 		return apierror.NewInternalError(err, "Invalid batch measure.")
 	}
 
-	// 3. Calculate execution multiplier by production.
-	// multiplier = convertedMeasure / step.production.quantity.measure
+	// 3. Scale the step to the batch.
 	// The routing changed under the batch. Returning nil here committed a transaction that moved nothing and recorded the message as processed, so a step whose inventory was never applied looked identical to one that was. It is terminal — the step will not start producing the scanned item again — so it rolls back and is discarded rather than retried.
 	if step.Production.ProducedItem.ID != evt.ItemID {
 		log.Printf("[execute_production_step] Item mismatch: step produces %s but event has %s",
@@ -225,11 +224,9 @@ func (c *ExecuteProductionStepConsumer) executeProductionStepTx(ctx context.Cont
 		return newPermanentDropError("Production step " + evt.ProductionStepID + " has a zero production quantity.")
 	}
 
-	multiplier := convertedMeasure.Div(step.Production.Quantity.Measure)
-
 	// 4. Handle produced inventory.
 	if evt.ProduceInventory {
-		producedMeasure := step.Production.Quantity.Measure.Mul(multiplier)
+		producedMeasure := convertedMeasure
 		producedUnitID := step.Production.Quantity.Unit.ID
 
 		// Create inventory receipt for the produced item (positive = receipt).
@@ -259,9 +256,8 @@ func (c *ExecuteProductionStepConsumer) executeProductionStepTx(ctx context.Cont
 
 	// 5. Handle consumptions.
 	for _, consumption := range step.Consumptions {
-		// consumedQuantity = (consumption.quantity + consumption.wasteQuantity) * multiplier
 		totalConsumptionMeasure := consumption.Quantity.Measure.Add(consumption.WasteQuantity.Measure)
-		consumedMeasure := totalConsumptionMeasure.Mul(multiplier)
+		consumedMeasure := scaleByProduction(totalConsumptionMeasure, convertedMeasure, step.Production.Quantity.Measure)
 
 		// Negate: consumption decreases inventory (not undo, so we negate).
 		consumedMeasure = consumedMeasure.Neg()

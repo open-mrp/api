@@ -3,6 +3,7 @@ package scheduling
 import (
 	"testing"
 
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -83,4 +84,15 @@ func TestCountLots_MatchesSplit(t *testing.T) {
 	for _, quantity := range []float64{0, 30, 60, 370, 3600} {
 		assert.Equal(t, len(SplitIntoLots(quantity, 60)), CountLots(quantity, 60))
 	}
+}
+
+func TestSplitIntoLots_FractionalRemainderIsExact(t *testing.T) {
+	t.Parallel()
+
+	// 370.3 − 6 × 60 in float64 is 10.300000000000011; the short lot is a batch quantity and has
+	// to read 10.3 when it reaches the ledger.
+	lots := SplitIntoLots(370.3, 60)
+
+	assert.Len(t, lots, 7)
+	assert.Equal(t, "10.3", decimal.NewFromFloat(lots[6]).String())
 }

@@ -197,10 +197,13 @@ func (s *productionScheduleSvcImpl) buildReleasePlan(
 			return nil, apiErr
 		}
 
-		remaining := line.PlannedQuantity
+		// Decimal because what remains is split into batch quantities, and a float64 subtraction chain
+		// hands SplitIntoLots 0.30000000000001137 where the plan meant 0.3.
+		remainingDec := decimal.NewFromFloat(line.PlannedQuantity)
 		for _, batch := range carried {
-			remaining -= batch.Quantity
+			remainingDec = remainingDec.Sub(decimal.NewFromFloat(batch.Quantity))
 		}
+		remaining := remainingDec.InexactFloat64()
 		if remaining < carryForwardEpsilon {
 			remaining = 0
 		}

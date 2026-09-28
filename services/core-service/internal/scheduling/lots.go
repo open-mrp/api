@@ -1,6 +1,10 @@
 package scheduling
 
-import "math"
+import (
+	"math"
+
+	"github.com/shopspring/decimal"
+)
 
 // MaxLotsPerCampaign bounds how many batches one campaign can be split into.
 //
@@ -26,7 +30,11 @@ func SplitIntoLots(quantity, lotUnits float64) []float64 {
 	}
 
 	full := int(math.Floor(quantity/lotUnits + LotRoundingTolerance))
-	remainder := quantity - float64(full)*lotUnits
+	// The remainder becomes a batch quantity, so it is taken in decimal: 370.3 − 6 × 60 in float64 is
+	// 10.300000000000011, and that is the number a scan would later book to the ledger.
+	remainder := decimal.NewFromFloat(quantity).
+		Sub(decimal.NewFromFloat(lotUnits).Mul(decimal.NewFromInt(int64(full)))).
+		InexactFloat64()
 
 	lots := make([]float64, 0, full+1)
 	for i := 0; i < full; i++ {

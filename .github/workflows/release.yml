@@ -310,6 +310,11 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+      # The nodes are Graviton (arm64). Go cross-compiles natively; QEMU only runs the final stage's
+      # small RUN steps for arm64.
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
@@ -319,7 +324,7 @@ jobs:
           context: .
           file: infra/production/docker/Dockerfile
           push: true
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           build-args: |
             SERVICE_NAME=${{ matrix.service }}
           tags: |
@@ -611,6 +616,11 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+      # The nodes are Graviton (arm64). The generated Dockerfile builds on the target platform, so
+      # the arm64 half runs under QEMU.
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
@@ -620,7 +630,7 @@ jobs:
           context: typescript-sdk-src
           file: typescript-sdk-src/packages/mcp-server/Dockerfile
           push: true
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           tags: |
             ${{ steps.login-ecr.outputs.registry }}/augno/mcp-server:${{ env.IMAGE_TAG }}
             ${{ steps.login-ecr.outputs.registry }}/augno/mcp-server:latest

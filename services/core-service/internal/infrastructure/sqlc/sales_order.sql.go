@@ -1536,28 +1536,39 @@ const getSalesOrderFulfillmentProgress = `-- name: GetSalesOrderFulfillmentProgr
 SELECT
     sol.sales_order_id,
     COALESCE(SUM(q.value), 0) AS quantity_ordered,
-    COALESCE(SUM(
-        (SELECT COALESCE(SUM(plq.value), 0) FROM pick_line pl
-            JOIN quantity plq ON plq.id = pl.quantity_id
-            WHERE pl.sales_order_line_id = sol.id)
-    ), 0) AS quantity_picked,
-    COALESCE(SUM(
-        (SELECT COALESCE(SUM(plq2.value), 0) FROM pick_line pl2
-            JOIN quantity plq2 ON plq2.id = pl2.quantity_id
-            WHERE pl2.sales_order_line_id = sol.id AND pl2.packed_at IS NOT NULL)
-    ), 0) AS quantity_packed,
-    COALESCE(SUM(
-        (SELECT COALESCE(SUM(ilq.value), 0) FROM invoice_line il
-            JOIN quantity ilq ON ilq.id = il.quantity_id
-            WHERE il.sales_order_line_id = sol.id)
-    ), 0) AS quantity_invoiced
+    COALESCE(SUM(pk.picked), 0) AS quantity_picked,
+    COALESCE(SUM(pk.packed), 0) AS quantity_packed,
+    COALESCE(SUM(iv.invoiced), 0) AS quantity_invoiced
 FROM sales_order_line sol
 JOIN quantity q ON q.id = sol.quantity_id
 JOIN product p ON p.id = sol.product_id
+LEFT JOIN (
+    SELECT pl.sales_order_line_id AS sales_order_line_id,
+        SUM(plq.value) AS picked,
+        SUM(CASE WHEN pl.packed_at IS NOT NULL THEN plq.value END) AS packed
+    FROM sales_order_line s
+    JOIN pick_line pl ON pl.sales_order_line_id = s.id
+    JOIN quantity plq ON plq.id = pl.quantity_id
+    WHERE s.sales_order_id IN (/*SLICE:sales_order_ids*/?)
+    GROUP BY pl.sales_order_line_id
+) pk ON pk.sales_order_line_id = sol.id
+LEFT JOIN (
+    SELECT il.sales_order_line_id AS sales_order_line_id,
+        SUM(ilq.value) AS invoiced
+    FROM sales_order_line s
+    JOIN invoice_line il ON il.sales_order_line_id = s.id
+    JOIN quantity ilq ON ilq.id = il.quantity_id
+    WHERE s.sales_order_id IN (/*SLICE:sales_order_ids*/?)
+    GROUP BY il.sales_order_line_id
+) iv ON iv.sales_order_line_id = sol.id
 WHERE sol.sales_order_id IN (/*SLICE:sales_order_ids*/?)
 AND p.product_type_code = 'sale'
 GROUP BY sol.sales_order_id
 `
+
+type GetSalesOrderFulfillmentProgressParams struct {
+	SalesOrderIds []string
+}
 
 type GetSalesOrderFulfillmentProgressRow struct {
 	SalesOrderID     string
@@ -1572,17 +1583,35 @@ type GetSalesOrderFulfillmentProgressRow struct {
 // order-level picked/packed/invoiced completion fractions on both the list and
 // detail endpoints without loading each order's lines. Only product_type_code =
 // 'sale' lines are counted (freight/credit system lines and product-less custom
-// lines are excluded), matching the frontend's completion math. The picked/
-// packed/invoiced totals reuse the same per-line correlated subqueries as
-// GetSalesOrderLines. Orders with no sale lines are absent from the result.
-func (q *Queries) GetSalesOrderFulfillmentProgress(ctx context.Context, salesOrderIds []string) ([]GetSalesOrderFulfillmentProgressRow, error) {
+// lines are excluded), matching the frontend's completion math. Orders with no sale
+// lines are absent from the result.
+// Each child table is aggregated once in its own derived table, scoped to this page's
+// orders through sales_order_line, rather than with a correlated subquery re-run per line;
+// the derived tables carry one row per line so the LEFT JOINs never fan the outer group out.
+func (q *Queries) GetSalesOrderFulfillmentProgress(ctx context.Context, arg GetSalesOrderFulfillmentProgressParams) ([]GetSalesOrderFulfillmentProgressRow, error) {
 	query := getSalesOrderFulfillmentProgress
 	var queryParams []interface{}
-	if len(salesOrderIds) > 0 {
-		for _, v := range salesOrderIds {
+	if len(arg.SalesOrderIds) > 0 {
+		for _, v := range arg.SalesOrderIds {
 			queryParams = append(queryParams, v)
 		}
-		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", strings.Repeat(",?", len(salesOrderIds))[1:], 1)
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", strings.Repeat(",?", len(arg.SalesOrderIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", "NULL", 1)
+	}
+	if len(arg.SalesOrderIds) > 0 {
+		for _, v := range arg.SalesOrderIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", strings.Repeat(",?", len(arg.SalesOrderIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", "NULL", 1)
+	}
+	if len(arg.SalesOrderIds) > 0 {
+		for _, v := range arg.SalesOrderIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", strings.Repeat(",?", len(arg.SalesOrderIds))[1:], 1)
 	} else {
 		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", "NULL", 1)
 	}
@@ -1680,18 +1709,11 @@ SELECT
     qu.name AS quantity_unit_name,
     qu.abbreviation AS quantity_unit_abbreviation,
     qu.unit_dimension_code AS quantity_unit_type,
-    -- Quantity picked
-    (SELECT COALESCE(SUM(plq.value), 0) FROM pick_line pl
-        JOIN quantity plq ON plq.id = pl.quantity_id
-        WHERE pl.sales_order_line_id = sol.id) AS quantity_picked_value,
-    -- Quantity packed
-    (SELECT COALESCE(SUM(plq2.value), 0) FROM pick_line pl2
-        JOIN quantity plq2 ON plq2.id = pl2.quantity_id
-        WHERE pl2.sales_order_line_id = sol.id AND pl2.packed_at IS NOT NULL) AS quantity_packed_value,
-    -- Quantity invoiced
-    (SELECT COALESCE(SUM(ilq.value), 0) FROM invoice_line il
-        JOIN quantity ilq ON ilq.id = il.quantity_id
-        WHERE il.sales_order_line_id = sol.id) AS quantity_invoiced_value,
+    -- Quantity picked/packed/invoiced, aggregated once per child table in a derived table
+    -- (see the joins below) rather than with a correlated subquery re-run per line.
+    COALESCE(pk.picked, 0) AS quantity_picked_value,
+    COALESCE(pk.packed, 0) AS quantity_packed_value,
+    COALESCE(iv.invoiced, 0) AS quantity_invoiced_value,
     -- Unit price
     up.id AS unit_price_id,
     up.value AS unit_price_value,
@@ -1738,9 +1760,32 @@ LEFT JOIN unit uc_nu ON uc_nu.id = uc.numerator_unit_id
 LEFT JOIN unit uc_du ON uc_du.id = uc.denominator_unit_id
 LEFT JOIN item i ON i.id = sol.item_id
 LEFT JOIN product p ON p.id = sol.product_id
+LEFT JOIN (
+    SELECT pl.sales_order_line_id AS sales_order_line_id,
+        SUM(plq.value) AS picked,
+        SUM(CASE WHEN pl.packed_at IS NOT NULL THEN plq.value END) AS packed
+    FROM sales_order_line s
+    JOIN pick_line pl ON pl.sales_order_line_id = s.id
+    JOIN quantity plq ON plq.id = pl.quantity_id
+    WHERE s.sales_order_id = ?
+    GROUP BY pl.sales_order_line_id
+) pk ON pk.sales_order_line_id = sol.id
+LEFT JOIN (
+    SELECT il.sales_order_line_id AS sales_order_line_id,
+        SUM(ilq.value) AS invoiced
+    FROM sales_order_line s
+    JOIN invoice_line il ON il.sales_order_line_id = s.id
+    JOIN quantity ilq ON ilq.id = il.quantity_id
+    WHERE s.sales_order_id = ?
+    GROUP BY il.sales_order_line_id
+) iv ON iv.sales_order_line_id = sol.id
 WHERE sol.sales_order_id = ?
 ORDER BY sol.line_item_number ASC
 `
+
+type GetSalesOrderLinesParams struct {
+	SalesOrderID string
+}
 
 type GetSalesOrderLinesRow struct {
 	ID                                   string
@@ -1782,8 +1827,8 @@ type GetSalesOrderLinesRow struct {
 	UpdatedAt                            time.Time
 }
 
-func (q *Queries) GetSalesOrderLines(ctx context.Context, salesOrderID string) ([]GetSalesOrderLinesRow, error) {
-	rows, err := q.db.QueryContext(ctx, getSalesOrderLines, salesOrderID)
+func (q *Queries) GetSalesOrderLines(ctx context.Context, arg GetSalesOrderLinesParams) ([]GetSalesOrderLinesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getSalesOrderLines, arg.SalesOrderID, arg.SalesOrderID, arg.SalesOrderID)
 	if err != nil {
 		return nil, err
 	}
@@ -1908,18 +1953,11 @@ SELECT
     qu.name AS quantity_unit_name,
     qu.abbreviation AS quantity_unit_abbreviation,
     qu.unit_dimension_code AS quantity_unit_type,
-    -- Quantity picked
-    (SELECT COALESCE(SUM(plq.value), 0) FROM pick_line pl
-        JOIN quantity plq ON plq.id = pl.quantity_id
-        WHERE pl.sales_order_line_id = sol.id) AS quantity_picked_value,
-    -- Quantity packed
-    (SELECT COALESCE(SUM(plq2.value), 0) FROM pick_line pl2
-        JOIN quantity plq2 ON plq2.id = pl2.quantity_id
-        WHERE pl2.sales_order_line_id = sol.id AND pl2.packed_at IS NOT NULL) AS quantity_packed_value,
-    -- Quantity invoiced
-    (SELECT COALESCE(SUM(ilq.value), 0) FROM invoice_line il
-        JOIN quantity ilq ON ilq.id = il.quantity_id
-        WHERE il.sales_order_line_id = sol.id) AS quantity_invoiced_value,
+    -- Quantity picked/packed/invoiced, aggregated once per child table in a derived table
+    -- (see the joins below) rather than with a correlated subquery re-run per line.
+    COALESCE(pk.picked, 0) AS quantity_picked_value,
+    COALESCE(pk.packed, 0) AS quantity_packed_value,
+    COALESCE(iv.invoiced, 0) AS quantity_invoiced_value,
     -- Unit price
     up.id AS unit_price_id,
     up.value AS unit_price_value,
@@ -1966,9 +2004,32 @@ LEFT JOIN unit uc_nu ON uc_nu.id = uc.numerator_unit_id
 LEFT JOIN unit uc_du ON uc_du.id = uc.denominator_unit_id
 LEFT JOIN item i ON i.id = sol.item_id
 LEFT JOIN product p ON p.id = sol.product_id
+LEFT JOIN (
+    SELECT pl.sales_order_line_id AS sales_order_line_id,
+        SUM(plq.value) AS picked,
+        SUM(CASE WHEN pl.packed_at IS NOT NULL THEN plq.value END) AS packed
+    FROM sales_order_line s
+    JOIN pick_line pl ON pl.sales_order_line_id = s.id
+    JOIN quantity plq ON plq.id = pl.quantity_id
+    WHERE s.sales_order_id IN (/*SLICE:sales_order_ids*/?)
+    GROUP BY pl.sales_order_line_id
+) pk ON pk.sales_order_line_id = sol.id
+LEFT JOIN (
+    SELECT il.sales_order_line_id AS sales_order_line_id,
+        SUM(ilq.value) AS invoiced
+    FROM sales_order_line s
+    JOIN invoice_line il ON il.sales_order_line_id = s.id
+    JOIN quantity ilq ON ilq.id = il.quantity_id
+    WHERE s.sales_order_id IN (/*SLICE:sales_order_ids*/?)
+    GROUP BY il.sales_order_line_id
+) iv ON iv.sales_order_line_id = sol.id
 WHERE sol.sales_order_id IN (/*SLICE:sales_order_ids*/?)
 ORDER BY sol.sales_order_id, sol.line_item_number ASC
 `
+
+type GetSalesOrderLinesForOrdersParams struct {
+	SalesOrderIds []string
+}
 
 type GetSalesOrderLinesForOrdersRow struct {
 	ID                                   string
@@ -2012,14 +2073,30 @@ type GetSalesOrderLinesForOrdersRow struct {
 
 // The batched form of GetSalesOrderLines for a page of orders; the columns must stay identical so
 // the rows convert to GetSalesOrderLinesRow.
-func (q *Queries) GetSalesOrderLinesForOrders(ctx context.Context, salesOrderIds []string) ([]GetSalesOrderLinesForOrdersRow, error) {
+func (q *Queries) GetSalesOrderLinesForOrders(ctx context.Context, arg GetSalesOrderLinesForOrdersParams) ([]GetSalesOrderLinesForOrdersRow, error) {
 	query := getSalesOrderLinesForOrders
 	var queryParams []interface{}
-	if len(salesOrderIds) > 0 {
-		for _, v := range salesOrderIds {
+	if len(arg.SalesOrderIds) > 0 {
+		for _, v := range arg.SalesOrderIds {
 			queryParams = append(queryParams, v)
 		}
-		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", strings.Repeat(",?", len(salesOrderIds))[1:], 1)
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", strings.Repeat(",?", len(arg.SalesOrderIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", "NULL", 1)
+	}
+	if len(arg.SalesOrderIds) > 0 {
+		for _, v := range arg.SalesOrderIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", strings.Repeat(",?", len(arg.SalesOrderIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", "NULL", 1)
+	}
+	if len(arg.SalesOrderIds) > 0 {
+		for _, v := range arg.SalesOrderIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", strings.Repeat(",?", len(arg.SalesOrderIds))[1:], 1)
 	} else {
 		query = strings.Replace(query, "/*SLICE:sales_order_ids*/?", "NULL", 1)
 	}

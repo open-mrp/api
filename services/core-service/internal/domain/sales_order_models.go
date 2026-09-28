@@ -160,6 +160,18 @@ type SalesOrder struct {
 	PickedCompletion   float64
 	PackedCompletion   float64
 	InvoicedCompletion float64
+
+	// Monetary stage totals summed over the order's lines, populated only when the totals include is requested (nil otherwise). Computed in Go via shared/pricing so the amounts match the dashboard exactly.
+	Totals *SalesOrderTotals
+}
+
+// SalesOrderTotals holds a sales order's monetary stage totals as decimal strings. Available is false when a line cannot be priced the way the dashboard prices it, in which case the amounts are empty and callers serialize a null total rather than a wrong one.
+type SalesOrderTotals struct {
+	Available bool
+	Ordered   string
+	Picked    string
+	Packed    string
+	Invoiced  string
 }
 
 // SalesOrderFulfillmentProgress holds an order's picked/packed/invoiced completion fractions (0..1), aggregated over its sale-type lines.

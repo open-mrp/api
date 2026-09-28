@@ -412,6 +412,17 @@ message SalesOrderInfo {
   // how many days the receiving and shipping calendars pulled the date back beyond transit.
   optional google.protobuf.Timestamp ship_by_cutoff_at = 111;
   optional int32 calendar_adjustment_days = 112;
+  // Order-level monetary totals, summed over the lines in Go (shared/pricing) so the amounts match the dashboard exactly. Set only when the totals include is requested; nil otherwise (a gateway talking to an older core sums the shipped lines itself). The stage completion fractions travel on picked_completion/packed_completion/invoiced_completion above.
+  optional SalesOrderTotalsInfo totals = 113;
+}
+
+// SalesOrderTotalsInfo carries a sales order's monetary stage totals as decimal strings, summed over its lines. available is false when a line cannot be priced (its units differ from how the dashboard would price them), in which case no amounts are set and the gateway serializes null totals rather than a wrong number.
+message SalesOrderTotalsInfo {
+  bool available = 1;
+  string ordered = 2;
+  string picked = 3;
+  string packed = 4;
+  string invoiced = 5;
 }
 
 // SalesOrderLineInfo represents a sales order line.

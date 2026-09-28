@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -274,6 +275,8 @@ func (s *salesOrderSvcImpl) BatchGetSalesOrders(ctx context.Context, salesOrderI
 
 // enrichSalesOrders fills the derived fields every sales-order read carries (payment status and
 // intents, fulfillment progress) and the requested expansions, one query each for the whole set.
+//
+// The reads share no inputs and each targets a distinct table, so they run concurrently rather than serially; the first non-nil error is returned, so failure behaves exactly as it did when these ran in order. Each read stores into its own result slot and errors into its own index; the results are applied to the orders only after every read has completed.
 func enrichSalesOrders(ctx context.Context, repo domain.SalesOrderRepo, accountID string, orders []*domain.SalesOrder, includes []string) *apierror.APIError {
 	if len(orders) == 0 {
 		return nil
@@ -283,18 +286,70 @@ func enrichSalesOrders(ctx context.Context, repo domain.SalesOrderRepo, accountI
 		orderIDs[i] = order.ID
 	}
 
-	statuses, apiErr := repo.GetPaymentStatuses(ctx, accountID, orderIDs)
-	if apiErr != nil {
-		return apiErr
+	var (
+		statuses         map[string]constants.SalesOrderPaymentStatus
+		paymentIntentIDs map[string][]string
+		progress         map[string]domain.SalesOrderFulfillmentProgress
+		linesByOrder     map[string][]*domain.SalesOrderLine
+		shipmentsByOrder map[string][]string
+		invoicesByOrder  map[string][]string
+	)
+
+	reads := []func() *apierror.APIError{
+		func() (apiErr *apierror.APIError) {
+			statuses, apiErr = repo.GetPaymentStatuses(ctx, accountID, orderIDs)
+			return
+		},
+		func() (apiErr *apierror.APIError) {
+			paymentIntentIDs, apiErr = repo.GetPaymentIntentIDs(ctx, accountID, orderIDs)
+			return
+		},
+		func() (apiErr *apierror.APIError) {
+			progress, apiErr = repo.GetFulfillmentProgress(ctx, orderIDs)
+			return
+		},
 	}
-	paymentIntentIDs, apiErr := repo.GetPaymentIntentIDs(ctx, accountID, orderIDs)
-	if apiErr != nil {
-		return apiErr
+	// Totals are summed from the lines, so the lines are loaded whenever totals are requested even if the caller did not ask for the lines themselves. They are used to compute the totals below but attached to the orders (and thus serialized) only when the lines include was requested.
+	needLines := includesSalesOrderLines(includes)
+	needTotals := includesSalesOrderTotals(includes)
+	if needLines || needTotals {
+		reads = append(reads, func() (apiErr *apierror.APIError) {
+			linesByOrder, apiErr = repo.GetLinesForOrders(ctx, orderIDs)
+			return
+		})
 	}
-	progress, apiErr := repo.GetFulfillmentProgress(ctx, orderIDs)
-	if apiErr != nil {
-		return apiErr
+	if includesSalesOrderShipments(includes) {
+		reads = append(reads, func() (apiErr *apierror.APIError) {
+			shipmentsByOrder, apiErr = repo.GetShipmentIDsForOrders(ctx, orderIDs)
+			return
+		})
 	}
+	if includesSalesOrderInvoices(includes) {
+		reads = append(reads, func() (apiErr *apierror.APIError) {
+			invoicesByOrder, apiErr = repo.GetInvoiceIDsForOrders(ctx, orderIDs)
+			return
+		})
+	}
+	if includesSalesOrderContacts(includes) {
+		reads = append(reads, func() *apierror.APIError { return attachSalesOrderContacts(ctx, repo, orders) })
+	}
+
+	errs := make([]*apierror.APIError, len(reads))
+	var wg sync.WaitGroup
+	wg.Add(len(reads))
+	for i, read := range reads {
+		go func() {
+			defer wg.Done()
+			errs[i] = read()
+		}()
+	}
+	wg.Wait()
+	for _, apiErr := range errs {
+		if apiErr != nil {
+			return apiErr
+		}
+	}
+
 	for _, order := range orders {
 		if status, ok := statuses[order.ID]; ok {
 			order.PaymentStatus = status
@@ -307,36 +362,25 @@ func enrichSalesOrders(ctx context.Context, repo domain.SalesOrderRepo, accountI
 		order.PackedCompletion = p.PackedCompletion
 		order.InvoicedCompletion = p.InvoicedCompletion
 	}
-
-	if includesSalesOrderLines(includes) {
-		linesByOrder, apiErr := repo.GetLinesForOrders(ctx, orderIDs)
-		if apiErr != nil {
-			return apiErr
-		}
+	if needLines {
 		for _, order := range orders {
 			order.Lines = linesByOrder[order.ID]
 		}
 	}
-	if includesSalesOrderShipments(includes) {
-		shipmentsByOrder, apiErr := repo.GetShipmentIDsForOrders(ctx, orderIDs)
-		if apiErr != nil {
-			return apiErr
+	if needTotals {
+		for _, order := range orders {
+			order.Totals = computeSalesOrderTotals(linesByOrder[order.ID])
 		}
+	}
+	if shipmentsByOrder != nil {
 		for _, order := range orders {
 			order.ShipmentIDs = shipmentsByOrder[order.ID]
 		}
 	}
-	if includesSalesOrderInvoices(includes) {
-		invoicesByOrder, apiErr := repo.GetInvoiceIDsForOrders(ctx, orderIDs)
-		if apiErr != nil {
-			return apiErr
-		}
+	if invoicesByOrder != nil {
 		for _, order := range orders {
 			order.InvoiceIDs = invoicesByOrder[order.ID]
 		}
-	}
-	if includesSalesOrderContacts(includes) {
-		return attachSalesOrderContacts(ctx, repo, orders)
 	}
 	return nil
 }
@@ -3431,6 +3475,47 @@ func includesSalesOrderContacts(includes []string) bool {
 		}
 	}
 	return false
+}
+
+func includesSalesOrderTotals(includes []string) bool {
+	for _, inc := range includes {
+		if inc == "totals" {
+			return true
+		}
+	}
+	return false
+}
+
+// computeSalesOrderTotals sums the order's monetary stage totals over its lines, pricing each quantity in the unit its price is quoted per and rounding each line to the cent before summing, exactly as the dashboard's calculateTotalOrdered does. It returns an unavailable total (Available false, no amounts) when the order has no lines or any line cannot be priced the way the dashboard prices it, so callers serialize a null total rather than a wrong one.
+func computeSalesOrderTotals(lines []*domain.SalesOrderLine) *domain.SalesOrderTotals {
+	if len(lines) == 0 {
+		return &domain.SalesOrderTotals{Available: false}
+	}
+	var ordered, picked, packed, invoiced decimal.Decimal
+	for _, l := range lines {
+		conv, err := l.PriceUnitConversion()
+		if err != nil {
+			return &domain.SalesOrderTotals{Available: false}
+		}
+		price := parseDecimalOrZero(l.UnitPriceValue)
+		ordered = ordered.Add(pricing.LineTotal(parseDecimalOrZero(l.QuantityValue), price, conv))
+		if l.QuantityPickedValue != nil {
+			picked = picked.Add(pricing.LineTotal(parseDecimalOrZero(*l.QuantityPickedValue), price, conv))
+		}
+		if l.QuantityPackedValue != nil {
+			packed = packed.Add(pricing.LineTotal(parseDecimalOrZero(*l.QuantityPackedValue), price, conv))
+		}
+		if l.QuantityInvoicedValue != nil {
+			invoiced = invoiced.Add(pricing.LineTotal(parseDecimalOrZero(*l.QuantityInvoicedValue), price, conv))
+		}
+	}
+	return &domain.SalesOrderTotals{
+		Available: true,
+		Ordered:   ordered.String(),
+		Picked:    picked.String(),
+		Packed:    packed.String(),
+		Invoiced:  invoiced.String(),
+	}
 }
 
 // attachSalesOrderContacts batch-loads email recipients for the given orders (one query for the whole set) and assigns them per order. No-op when none are passed.

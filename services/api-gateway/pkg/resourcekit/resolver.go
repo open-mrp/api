@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 )
@@ -24,6 +26,12 @@ func ResolveIncludes(ctx context.Context, roots []any, objectType constants.Obje
 	return resolveIncludesAt(ctx, roots, objectType, tree, 0)
 }
 
+type loaderPlan struct {
+	sub       *SubField
+	ids       []string
+	childTree *IncludeNode
+}
+
 func resolveIncludesAt(ctx context.Context, roots []any, objectType constants.ObjectType, tree *IncludeNode, depth int) *apierror.APIError {
 	if !tree.HasChildren() || len(roots) == 0 {
 		return nil
@@ -42,10 +50,84 @@ func resolveIncludesAt(ctx context.Context, roots []any, objectType constants.Ob
 	}
 	cache := getOrCreateCache(ctx)
 
-	for _, sub := range def.Subs {
+	var loaderPlans []loaderPlan
+	missingByTarget := map[constants.ObjectType]map[string]struct{}{}
+	for i := range def.Subs {
+		sub := &def.Subs[i]
 		if !tree.Has(sub.Key) {
 			continue
 		}
+		if sub.Target == "" {
+			continue
+		}
+		if Lookup(sub.Target) == nil {
+			return apierror.NewInvariantViolationError(fmt.Sprintf(
+				"resourcekit: %s sub %q targets unregistered %s",
+				objectType, sub.Key, sub.Target,
+			))
+		}
+		if sub.ExtractRefs != nil {
+			continue
+		}
+
+		// Gather + dedup IDs across all roots.
+		idSet := map[string]struct{}{}
+		for _, r := range roots {
+			for _, id := range sub.ExtractIDs(ctx, r) {
+				if id != "" {
+					idSet[id] = struct{}{}
+				}
+			}
+		}
+		// Split into cached vs. missing — cached entries skip the loader.
+		ids := make([]string, 0, len(idSet))
+		for id := range idSet {
+			ids = append(ids, id)
+			if _, cached := cache.get(sub.Target, id); !cached {
+				if missingByTarget[sub.Target] == nil {
+					missingByTarget[sub.Target] = map[string]struct{}{}
+				}
+				missingByTarget[sub.Target][id] = struct{}{}
+			}
+		}
+		loaderPlans = append(loaderPlans, loaderPlan{sub: sub, ids: ids, childTree: tree.Child(sub.Key)})
+	}
+
+	if len(missingByTarget) > 0 {
+		g, gctx := errgroup.WithContext(ctx)
+		for target, idSet := range missingByTarget {
+			target := target
+			ids := make([]string, 0, len(idSet))
+			for id := range idSet {
+				ids = append(ids, id)
+			}
+			targetDef := Lookup(target)
+			g.Go(func() error {
+				fresh, apiErr := targetDef.Load(gctx, ids)
+				if apiErr != nil {
+					return apiErr
+				}
+				for id, v := range fresh {
+					cache.set(target, id, v)
+				}
+				return nil
+			})
+		}
+		if err := g.Wait(); err != nil {
+			if apiErr, ok := err.(*apierror.APIError); ok {
+				return apiErr
+			}
+			return apierror.NewInternalError(err, "resourcekit: include load failed")
+		}
+	}
+
+	planIdx := 0
+	for i := range def.Subs {
+		sub := &def.Subs[i]
+		if !tree.Has(sub.Key) {
+			continue
+		}
+
 		// No fetch: Populate runs with an empty loaded map. Used for include
 		// keys that just toggle visibility on data the parent's loader already
 		// supplied (e.g. `owner` exposing the deterministic type derived from
@@ -56,13 +138,6 @@ func resolveIncludesAt(ctx context.Context, roots []any, objectType constants.Ob
 				sub.Populate(ctx, r, empty)
 			}
 			continue
-		}
-		targetDef := Lookup(sub.Target)
-		if targetDef == nil {
-			return apierror.NewInvariantViolationError(fmt.Sprintf(
-				"resourcekit: %s sub %q targets unregistered %s",
-				objectType, sub.Key, sub.Target,
-			))
 		}
 
 		// Traversal: the child objects are already on the parent (or will
@@ -89,47 +164,24 @@ func resolveIncludesAt(ctx context.Context, roots []any, objectType constants.Ob
 			continue
 		}
 
-		// Gather + dedup IDs across all roots.
-		idSet := map[string]struct{}{}
-		for _, r := range roots {
-			for _, id := range sub.ExtractIDs(ctx, r) {
-				if id != "" {
-					idSet[id] = struct{}{}
-				}
-			}
-		}
+		plan := loaderPlans[planIdx]
+		planIdx++
 
-		// Split into cached vs. missing — cached entries skip the loader.
-		loaded := make(map[string]any, len(idSet))
-		var missing []string
-		for id := range idSet {
+		loaded := make(map[string]any, len(plan.ids))
+		for _, id := range plan.ids {
 			if v, ok := cache.get(sub.Target, id); ok {
 				loaded[id] = v
-				continue
-			}
-			missing = append(missing, id)
-		}
-
-		if len(missing) > 0 {
-			fresh, apiErr := targetDef.Load(ctx, missing)
-			if apiErr != nil {
-				return apiErr
-			}
-			for id, v := range fresh {
-				loaded[id] = v
-				cache.set(sub.Target, id, v)
 			}
 		}
 
 		// Recurse into nested includes before stitching, so children carry
 		// their grandchildren by the time we attach them to parents.
-		childTree := tree.Child(sub.Key)
-		if childTree.HasChildren() && len(loaded) > 0 {
+		if plan.childTree.HasChildren() && len(loaded) > 0 {
 			childRoots := make([]any, 0, len(loaded))
 			for _, v := range loaded {
 				childRoots = append(childRoots, v)
 			}
-			if apiErr := resolveIncludesAt(ctx, childRoots, sub.Target, childTree, depth+1); apiErr != nil {
+			if apiErr := resolveIncludesAt(ctx, childRoots, sub.Target, plan.childTree, depth+1); apiErr != nil {
 				return apiErr
 			}
 		}

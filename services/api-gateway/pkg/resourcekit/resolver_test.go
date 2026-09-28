@@ -284,6 +284,64 @@ func TestResolveIncludes_BatchesAcrossRoots(t *testing.T) {
 	}
 }
 
+func TestResolveIncludes_MergesSameTargetSubsAtLevel(t *testing.T) {
+	// child_accounts and parent_account both target the customer type. At one
+	// level they must be fetched with a single, unioned loader call — not once
+	// per sub.
+	ResetForTest()
+	c := &counters{}
+	registerCustomerCycle(t, c, []*testCustomer{
+		{ID: "c1", ChildAccountIDs: []string{"c2"}, ParentID: "c3"},
+		{ID: "c2"},
+		{ID: "c3"},
+	})
+
+	root := &testCustomer{ID: "c1", ChildAccountIDs: []string{"c2"}, ParentID: "c3"}
+	tree := ParseIncludeTree([]string{"child_accounts", "parent_account"})
+	if err := ResolveIncludes(context.Background(), []any{root}, otCustomer, tree); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(root.ChildAccounts) != 1 || root.ChildAccounts[0].ID != "c2" {
+		t.Errorf("expected child c2 stitched, got %+v", root.ChildAccounts)
+	}
+	if root.Parent == nil || root.Parent.ID != "c3" {
+		t.Errorf("expected parent c3 stitched, got %+v", root.Parent)
+	}
+	if c.customer.Load() != 1 {
+		t.Errorf("expected exactly 1 customer load (merged across same-target subs), got %d", c.customer.Load())
+	}
+}
+
+func TestResolveIncludes_DistinctTargetsAtLevel(t *testing.T) {
+	// owner and service_levels are distinct targets on the same parent. Both
+	// resolve in one call; each loader fires exactly once.
+	ResetForTest()
+	c := &counters{}
+	registerCarrierGraph(t, c,
+		[]*testCarrier{{ID: "c1", OwnerID: "o1", ServiceLevelIDs: []string{"sl1", "sl2"}}},
+		[]*testOwner{{ID: "o1", Name: "Owner One"}},
+		[]*testServiceLevel{{ID: "sl1", Name: "Ground"}, {ID: "sl2", Name: "Express"}},
+	)
+
+	carrier := &testCarrier{ID: "c1", OwnerID: "o1", ServiceLevelIDs: []string{"sl1", "sl2"}}
+	tree := ParseIncludeTree([]string{"owner", "service_levels"})
+	if err := ResolveIncludes(context.Background(), []any{carrier}, otCarrier, tree); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if carrier.Owner == nil || carrier.Owner.ID != "o1" {
+		t.Errorf("expected owner stitched, got %+v", carrier.Owner)
+	}
+	if len(carrier.ServiceLevels) != 2 {
+		t.Errorf("expected 2 service levels, got %d", len(carrier.ServiceLevels))
+	}
+	if c.owner.Load() != 1 {
+		t.Errorf("expected exactly 1 owner load, got %d", c.owner.Load())
+	}
+	if c.sl.Load() != 1 {
+		t.Errorf("expected exactly 1 service-level load, got %d", c.sl.Load())
+	}
+}
+
 func TestResolveIncludes_ListCardinality(t *testing.T) {
 	ResetForTest()
 	c := &counters{}

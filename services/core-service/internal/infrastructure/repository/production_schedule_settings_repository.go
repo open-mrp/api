@@ -45,14 +45,14 @@ func defaultSettings(accountID string) *domain.ProductionScheduleSettings {
 		HoursPerShift:                  d.HoursPerShift,
 		WorkDaysPerWeek:                safeconv.IntToInt32(d.WorkDaysPerWeek),
 		// No stored row means no shift calendar, which leaves OEE downtime unclipped rather than assuming a start hour nobody chose.
-		ShiftDaysOfWeek:                defaultShiftDaysOfWeek,
-		WeeksPerYear:                   safeconv.IntToInt32(d.WeeksPerYear),
-		CapacityHeadroomPct:            d.CapacityHeadroomPct,
-		DefaultLotUnits:                d.DefaultLotUnits,
-		DefaultCustomerLeadTimeDays:    safeconv.IntToInt32(d.DefaultCustomerLeadTimeDays),
-		DefaultFulfillmentPolicyCode:   scheduling.PolicyMakeToStock,
-		GenerationTimezone:             "UTC",
-		HasStoredSettings:              false,
+		ShiftDaysOfWeek:              defaultShiftDaysOfWeek,
+		WeeksPerYear:                 safeconv.IntToInt32(d.WeeksPerYear),
+		CapacityHeadroomPct:          d.CapacityHeadroomPct,
+		DefaultLotUnits:              d.DefaultLotUnits,
+		DefaultCustomerLeadTimeDays:  safeconv.IntToInt32(d.DefaultCustomerLeadTimeDays),
+		DefaultFulfillmentPolicyCode: scheduling.PolicyMakeToStock,
+		GenerationTimezone:           "UTC",
+		HasStoredSettings:            false,
 	}
 }
 

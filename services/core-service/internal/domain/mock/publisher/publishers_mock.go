@@ -81,6 +81,20 @@ func (m *MockSalesOrderEventPublisher) EXPECT() *MockSalesOrderEventPublisherMoc
 	return m.recorder
 }
 
+// PublishSalesOrderAcknowledged mocks base method.
+func (m *MockSalesOrderEventPublisher) PublishSalesOrderAcknowledged(ctx context.Context, salesOrderID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PublishSalesOrderAcknowledged", ctx, salesOrderID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// PublishSalesOrderAcknowledged indicates an expected call of PublishSalesOrderAcknowledged.
+func (mr *MockSalesOrderEventPublisherMockRecorder) PublishSalesOrderAcknowledged(ctx, salesOrderID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishSalesOrderAcknowledged", reflect.TypeOf((*MockSalesOrderEventPublisher)(nil).PublishSalesOrderAcknowledged), ctx, salesOrderID)
+}
+
 // PublishSalesOrderCreated mocks base method.
 func (m *MockSalesOrderEventPublisher) PublishSalesOrderCreated(ctx context.Context, data messaging.SalesOrderCreatedData) *apierror.APIError {
 	m.ctrl.T.Helper()

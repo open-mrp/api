@@ -19,6 +19,8 @@ type SalesOrderEventPublisher interface {
 	PublishSalesOrderCreated(ctx context.Context, data messaging.SalesOrderCreatedData) *apierror.APIError
 	// PublishSalesOrderShippingUpdated writes a sales-order shipping-changed event to the outbox so the shipment records are re-synced out-of-band from the update.
 	PublishSalesOrderShippingUpdated(ctx context.Context, data messaging.SalesOrderShippingUpdatedData) *apierror.APIError
+	// PublishSalesOrderAcknowledged writes a sales-order-acknowledged event to the outbox so the document-email consumer renders and mails the acknowledgement out of band, keeping the render and PDF off the issue request path.
+	PublishSalesOrderAcknowledged(ctx context.Context, salesOrderID string) *apierror.APIError
 }
 
 // HubspotSyncPublisher publishes HubSpot backfill commands via the outbox pattern, so the command commits atomically with the job row.

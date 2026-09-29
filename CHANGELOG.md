@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.12.0](https://github.com/open-mrp/api/compare/v2.11.1...v2.12.0) (2026-09-29)
+
+
+### Features
+
+* **observability:** export outbox, inbox and DB pool metrics over OTLP ([#210](https://github.com/open-mrp/api/issues/210)) ([0cd2ea0](https://github.com/open-mrp/api/commit/0cd2ea06665d6049c34b582199a19398aebeba12))
+
 ## [2.11.1](https://github.com/open-mrp/api/compare/v2.11.0...v2.11.1) (2026-09-28)
 
 

@@ -7,6 +7,7 @@ import "google/protobuf/timestamp.proto";
 import "core/core_patch.proto";
 import "core/core_accounts_carriers.proto";
 import "core/core_identity_context.proto";
+import "core/core_async.proto";
 option go_package = "shared/proto/core;core";
 
 message QuarterlyDataProto {
@@ -638,4 +639,106 @@ message AnalyzeScheduleAttainmentResponse {
   repeated FrozenAdherenceInfo frozen_adherence = 7;
   bool has_baseline = 8;
   int64 scheduled_machine_count = 9;
+}
+
+// SalesReportFilterProto selects invoiced sales; every list is empty-means-all and they combine with AND.
+message SalesReportFilterProto {
+  google.protobuf.Timestamp starts_at = 1;
+  google.protobuf.Timestamp ends_at = 2;
+  optional google.protobuf.Timestamp comparison_starts_at = 3;
+  optional google.protobuf.Timestamp comparison_ends_at = 4;
+  repeated string customer_ids = 5;
+  repeated string customer_group_ids = 6;
+  repeated string product_line_ids = 7;
+  repeated string sales_rep_ids = 8;
+  repeated string item_ids = 9;
+}
+
+message AnalyzeSalesSummaryRequest {
+  SalesReportFilterProto filter = 1;
+  // Minutes east of UTC; daily totals are bucketed by this local day.
+  int32 tz_offset_minutes = 2;
+}
+
+// SalesTotalsProto is invoiced sales over a set of lines. Amounts are exact decimal strings.
+message SalesTotalsProto {
+  optional google.protobuf.Timestamp period_start = 1;
+  string invoiced = 2;
+  // Absent when the caller may not see cost.
+  optional string cost = 3;
+  string quantity = 4;
+  int64 invoice_count = 5;
+  int64 line_count = 6;
+}
+
+message AnalyzeSalesSummaryResponse {
+  SalesTotalsProto current = 1;
+  repeated SalesTotalsProto daily = 2;
+  optional SalesTotalsProto comparison = 3;
+  repeated SalesTotalsProto comparison_daily = 4;
+}
+
+message AnalyzeSalesBreakdownRequest {
+  SalesReportFilterProto filter = 1;
+  string group_by = 2;
+  int32 limit = 3;
+  optional string cursor = 4;
+}
+
+message SalesBreakdownGroupProto {
+  string key = 1;
+  string label = 2;
+  optional string description = 3;
+  optional string unit_abbreviation = 4;
+  SalesTotalsProto totals = 5;
+  optional SalesTotalsProto comparison = 6;
+}
+
+message AnalyzeSalesBreakdownResponse {
+  repeated SalesBreakdownGroupProto groups = 1;
+  PageInfo page_info = 2;
+}
+
+message AnalyzeSalesInvoicesRequest {
+  SalesReportFilterProto filter = 1;
+  int32 limit = 2;
+  optional string cursor = 3;
+}
+
+message SalesInvoiceSummaryProto {
+  string invoice_id = 1;
+  string invoice_number = 2;
+  string customer_id = 3;
+  string customer_name = 4;
+  google.protobuf.Timestamp invoiced_at = 5;
+  int64 item_count = 6;
+  string invoiced = 7;
+}
+
+message AnalyzeSalesInvoicesResponse {
+  repeated SalesInvoiceSummaryProto invoices = 1;
+  PageInfo page_info = 2;
+}
+
+message ListSalesLinesRequest {
+  // starts_at/ends_at are ignored unless has_window is set.
+  SalesReportFilterProto filter = 1;
+  bool has_window = 2;
+  int32 limit = 3;
+  optional string cursor = 4;
+}
+
+message ListSalesLinesResponse {
+  repeated SalesEntryProto lines = 1;
+  PageInfo page_info = 2;
+}
+
+message ExportSalesLinesRequest {
+  // starts_at/ends_at are ignored unless has_window is set.
+  SalesReportFilterProto filter = 1;
+  bool has_window = 2;
+}
+
+message ExportSalesLinesResponse {
+  JobInfo job = 1;
 }

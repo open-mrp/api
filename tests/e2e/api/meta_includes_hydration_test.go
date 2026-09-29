@@ -4,6 +4,7 @@ package api_test
 
 import (
 	"net/url"
+	"reflect"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -97,17 +98,18 @@ func TestIncludes_HydratedToOneMatchesCanonical(t *testing.T) {
 					}
 					// A parallel test may delete a listed row between the two reads. A leaf the including
 					// endpoint no longer hands out is that race; one it still hands out must be retrievable.
-					stillIncluded := func(id string) bool {
+					includedLeaf := func(id string) map[string]any {
 						status, body, err := apiClient.GetListRaw(path, withIncludeQuery(query, include))
 						require.NoError(t, err)
 						requireStatus(t, 200, status, body)
 						for _, leaf := range collectIncludeLeafResources(parseJSON(body), include) {
 							if jsonField(leaf, "id") == id {
-								return true
+								return leaf
 							}
 						}
-						return false
+						return nil
 					}
+					stillIncluded := func(id string) bool { return includedLeaf(id) != nil }
 
 					for _, leaf := range leaves {
 						rt, ok := retrieveByType[jsonField(leaf, "object")]
@@ -115,6 +117,14 @@ func TestIncludes_HydratedToOneMatchesCanonical(t *testing.T) {
 						id := jsonField(leaf, "id")
 						canonPath, status, canon := retrieveCanonical(t, rt, id, owners)
 						if status == 200 {
+							// A parallel test may also edit the row between the two reads. A real hydration gap
+							// mismatches on every read; an edit settles, so compare a fresh pair before failing.
+							if !hydratedMatchesCanonical(include, leaf, canon) {
+								if fresh := includedLeaf(id); fresh != nil {
+									leaf = fresh
+								}
+								_, _, canon = retrieveCanonical(t, rt, id, owners)
+							}
 							assertHydratedMatchesCanonical(t, include, leaf, canon)
 							return
 						}
@@ -242,6 +252,20 @@ var includeHydrationKnownGaps = map[string]map[string]string{
 func isKnownHydrationGap(objType, field string) bool {
 	_, ok := includeHydrationKnownGaps[objType][field]
 	return ok
+}
+
+// hydratedMatchesCanonical reports whether assertHydratedMatchesCanonical would pass.
+func hydratedMatchesCanonical(include string, leaf, canon map[string]any) bool {
+	objType := jsonField(canon, "object")
+	for key, cval := range canon {
+		if cval == nil || !isScalarJSON(cval) || includeHydrationSkipFields[key] || isKnownHydrationGap(objType, key) {
+			continue
+		}
+		if lval, present := leaf[key]; !present || !reflect.DeepEqual(cval, lval) {
+			return false
+		}
+	}
+	return true
 }
 
 // assertHydratedMatchesCanonical requires the hydrated include to carry the same value as the

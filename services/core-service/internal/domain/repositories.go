@@ -899,6 +899,43 @@ type CustomerRepo interface {
 	DeleteCreditLimitQuantity(ctx context.Context, id string) *apierror.APIError
 }
 
+// SalesFactRepo maintains sales_line_fact, the pre-priced invoice lines sales analytics read.
+type SalesFactRepo interface {
+	// ComputeFacts prices the invoice lines of the given invoices from their source tables.
+	ComputeFacts(ctx context.Context, invoiceIDs []string) ([]SalesLineFact, *apierror.APIError)
+	// GetFacts returns the stored facts of the given invoices.
+	GetFacts(ctx context.Context, invoiceIDs []string) ([]SalesLineFact, *apierror.APIError)
+	UpsertFacts(ctx context.Context, facts []SalesLineFact) *apierror.APIError
+	DeleteFacts(ctx context.Context, invoiceLineIDs []string) *apierror.APIError
+
+	// ListInvoicesAfter pages every account's invoices in (created_at, id) order after the cursor; a nil cursor starts at the oldest.
+	ListInvoicesAfter(ctx context.Context, after *SalesFactInvoiceCursor, limit int32) ([]SalesFactInvoiceCursor, *apierror.APIError)
+	ListInvoiceIDsCreatedSince(ctx context.Context, since time.Time, limit int32) ([]string, *apierror.APIError)
+	// ListFactInvoiceIDsAfter pages the distinct invoices sales_line_fact holds, in id order.
+	ListFactInvoiceIDsAfter(ctx context.Context, afterInvoiceID string, limit int32) ([]string, *apierror.APIError)
+	// FilterExistingInvoiceIDs returns the subset of ids that still exist in invoice.
+	FilterExistingInvoiceIDs(ctx context.Context, invoiceIDs []string) ([]string, *apierror.APIError)
+	// ResolveInvoiceIDs returns the invoices whose facts depend on the given scopes.
+	ResolveInvoiceIDs(ctx context.Context, scope SalesFactScope, scopeIDs []string) ([]string, *apierror.APIError)
+
+	MarkDirty(ctx context.Context, scope SalesFactScope, scopeID, accountID string) *apierror.APIError
+	ListDirty(ctx context.Context, limit int32) ([]SalesFactDirtyMark, *apierror.APIError)
+	ClearDirty(ctx context.Context, mark SalesFactDirtyMark) *apierror.APIError
+
+	GetSync(ctx context.Context) (*SalesFactSync, *apierror.APIError)
+	SaveSync(ctx context.Context, sync SalesFactSync) *apierror.APIError
+}
+
+// SalesReportRepo reads sales analytics from sales_line_fact.
+type SalesReportRepo interface {
+	// FactsReady reports whether the backfill of sales_line_fact has completed; until then its reports would undercount.
+	FactsReady(ctx context.Context) (bool, *apierror.APIError)
+	GetSummary(ctx context.Context, params AnalyzeSalesSummaryParams, includeCost bool) (*SalesSummary, *apierror.APIError)
+	GetBreakdown(ctx context.Context, params AnalyzeSalesBreakdownParams, includeCost bool) (*SalesBreakdown, *apierror.APIError)
+	GetInvoicePage(ctx context.Context, params AnalyzeSalesInvoicesParams) (*SalesInvoicePage, *apierror.APIError)
+	GetLinePage(ctx context.Context, params ListSalesLinesParams) (*SalesLinePage, *apierror.APIError)
+}
+
 type AnalyticsRepo interface {
 	GetSalesEntries(ctx context.Context, params AnalyzeSalesParams) ([]SalesEntry, *apierror.APIError)
 	GetOpenBatchEntries(ctx context.Context, params AnalyzeOpenBatchesParams) ([]OpenBatchEntry, *apierror.APIError)

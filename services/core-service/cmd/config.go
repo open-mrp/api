@@ -20,6 +20,7 @@ var (
 const (
 	envPort                       = "PORT"
 	envDBURL                      = "DB_URL"
+	envDBReplicaURL               = "DB_REPLICA_URL"
 	envRabbitMQURI                = "RABBITMQ_URI"
 	envRedisURL                   = "REDIS_URL"
 	envPlatformMode               = "PLATFORM"
@@ -48,6 +49,9 @@ type config struct {
 
 	// DBURL (required) is the database connection URI.
 	DBURL string
+
+	// DBReplicaURL (optional; default: DBURL) is a read-replica connection URI. Analytics reports read from it, keeping their load off the primary; they tolerate replication lag.
+	DBReplicaURL string
 
 	// RabbitMQURI (optional; default: "amqp://guest:guest@rabbitmq:5672/") is the RabbitMQ connection URI.
 	RabbitMQURI string
@@ -138,6 +142,7 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 	return &config{
 		Port:                       port,
 		DBURL:                      env.GetEnv(envDBURL, getenv),
+		DBReplicaURL:               cmp.Or(env.GetEnv(envDBReplicaURL, getenv), env.GetEnv(envDBURL, getenv)),
 		RabbitMQURI:                cmp.Or(env.GetEnv(envRabbitMQURI, getenv), defaultRabbitMQURI),
 		RedisURL:                   env.GetEnv(envRedisURL, getenv),
 		PlatformMode:               platformMode,

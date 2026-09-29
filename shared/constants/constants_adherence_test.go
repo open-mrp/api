@@ -280,6 +280,7 @@ var typeRegistry = map[string]any{
 	"ScheduleLineReason":              ScheduleLineReason(""),
 	"FulfillmentRecommendationReason": FulfillmentRecommendationReason(""),
 	"DeliveryGranularity":             DeliveryGranularity(""),
+	"SalesBreakdownGroupBy":           SalesBreakdownGroupBy(""),
 	"PickStatus":                      PickStatus(""),
 	"ProductionRunStatus":             ProductionRunStatus(""),
 	"ReceivingOrderStatus":            ReceivingOrderStatus(""),

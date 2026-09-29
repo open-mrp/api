@@ -864,6 +864,19 @@ type CustomerSvc interface {
 type AnalyticsSvc interface {
 	AnalyzeSales(ctx context.Context, params AnalyzeSalesParams) ([]SalesEntry, *apierror.APIError)
 
+	// AnalyzeSalesSummary totals invoiced sales for a period (and an optional comparison period), with a running daily total.
+	AnalyzeSalesSummary(ctx context.Context, params AnalyzeSalesSummaryParams) (*SalesSummary, *apierror.APIError)
+	// AnalyzeSalesBreakdown totals invoiced sales by one dimension, largest first, a page at a time.
+	AnalyzeSalesBreakdown(ctx context.Context, params AnalyzeSalesBreakdownParams) (*SalesBreakdown, *apierror.APIError)
+	// AnalyzeSalesInvoices lists the invoices in a period with their invoiced totals, newest first.
+	AnalyzeSalesInvoices(ctx context.Context, params AnalyzeSalesInvoicesParams) (*SalesInvoicePage, *apierror.APIError)
+	// ListSalesLines lists invoiced sale lines with their pricing, newest first.
+	ListSalesLines(ctx context.Context, params ListSalesLinesParams) (*SalesLinePage, *apierror.APIError)
+	// ExportSalesLines accepts an export of the invoiced sale lines and returns the job that builds it.
+	ExportSalesLines(ctx context.Context, params ExportSalesLinesParams) (*Job, *apierror.APIError)
+	// BuildExportSalesLines renders the file an accepted sales-lines export recorded.
+	BuildExportSalesLines(ctx context.Context, accountID string, filters json.RawMessage) (*Export, *apierror.APIError)
+
 	// AnalyzeRealizedMargins rolls invoiced lines up to one row per customer and SKU and flags those priced below their peers or under target margin.
 	AnalyzeRealizedMargins(ctx context.Context, params AnalyzeRealizedMarginsParams) (*RealizedMarginAnalysis, *apierror.APIError)
 

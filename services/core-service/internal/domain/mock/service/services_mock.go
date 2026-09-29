@@ -4842,6 +4842,51 @@ func (mr *MockAnalyticsSvcMockRecorder) AnalyzeSales(ctx, params any) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AnalyzeSales", reflect.TypeOf((*MockAnalyticsSvc)(nil).AnalyzeSales), ctx, params)
 }
 
+// AnalyzeSalesBreakdown mocks base method.
+func (m *MockAnalyticsSvc) AnalyzeSalesBreakdown(ctx context.Context, params domain.AnalyzeSalesBreakdownParams) (*domain.SalesBreakdown, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AnalyzeSalesBreakdown", ctx, params)
+	ret0, _ := ret[0].(*domain.SalesBreakdown)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// AnalyzeSalesBreakdown indicates an expected call of AnalyzeSalesBreakdown.
+func (mr *MockAnalyticsSvcMockRecorder) AnalyzeSalesBreakdown(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AnalyzeSalesBreakdown", reflect.TypeOf((*MockAnalyticsSvc)(nil).AnalyzeSalesBreakdown), ctx, params)
+}
+
+// AnalyzeSalesInvoices mocks base method.
+func (m *MockAnalyticsSvc) AnalyzeSalesInvoices(ctx context.Context, params domain.AnalyzeSalesInvoicesParams) (*domain.SalesInvoicePage, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AnalyzeSalesInvoices", ctx, params)
+	ret0, _ := ret[0].(*domain.SalesInvoicePage)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// AnalyzeSalesInvoices indicates an expected call of AnalyzeSalesInvoices.
+func (mr *MockAnalyticsSvcMockRecorder) AnalyzeSalesInvoices(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AnalyzeSalesInvoices", reflect.TypeOf((*MockAnalyticsSvc)(nil).AnalyzeSalesInvoices), ctx, params)
+}
+
+// AnalyzeSalesSummary mocks base method.
+func (m *MockAnalyticsSvc) AnalyzeSalesSummary(ctx context.Context, params domain.AnalyzeSalesSummaryParams) (*domain.SalesSummary, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AnalyzeSalesSummary", ctx, params)
+	ret0, _ := ret[0].(*domain.SalesSummary)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// AnalyzeSalesSummary indicates an expected call of AnalyzeSalesSummary.
+func (mr *MockAnalyticsSvcMockRecorder) AnalyzeSalesSummary(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AnalyzeSalesSummary", reflect.TypeOf((*MockAnalyticsSvc)(nil).AnalyzeSalesSummary), ctx, params)
+}
+
 // AnalyzeScheduleAttainment mocks base method.
 func (m *MockAnalyticsSvc) AnalyzeScheduleAttainment(ctx context.Context, params domain.AnalyzeScheduleAttainmentParams) (*domain.ScheduleAttainmentResult, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -4872,6 +4917,36 @@ func (mr *MockAnalyticsSvcMockRecorder) AnalyzeWeeksOfSales(ctx, params any) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AnalyzeWeeksOfSales", reflect.TypeOf((*MockAnalyticsSvc)(nil).AnalyzeWeeksOfSales), ctx, params)
 }
 
+// BuildExportSalesLines mocks base method.
+func (m *MockAnalyticsSvc) BuildExportSalesLines(ctx context.Context, accountID string, filters json.RawMessage) (*domain.Export, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BuildExportSalesLines", ctx, accountID, filters)
+	ret0, _ := ret[0].(*domain.Export)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// BuildExportSalesLines indicates an expected call of BuildExportSalesLines.
+func (mr *MockAnalyticsSvcMockRecorder) BuildExportSalesLines(ctx, accountID, filters any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildExportSalesLines", reflect.TypeOf((*MockAnalyticsSvc)(nil).BuildExportSalesLines), ctx, accountID, filters)
+}
+
+// ExportSalesLines mocks base method.
+func (m *MockAnalyticsSvc) ExportSalesLines(ctx context.Context, params domain.ExportSalesLinesParams) (*domain.Job, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExportSalesLines", ctx, params)
+	ret0, _ := ret[0].(*domain.Job)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ExportSalesLines indicates an expected call of ExportSalesLines.
+func (mr *MockAnalyticsSvcMockRecorder) ExportSalesLines(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExportSalesLines", reflect.TypeOf((*MockAnalyticsSvc)(nil).ExportSalesLines), ctx, params)
+}
+
 // GetDemandForecast mocks base method.
 func (m *MockAnalyticsSvc) GetDemandForecast(ctx context.Context, params domain.GetDemandForecastParams) (*domain.DemandForecastResult, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -4900,6 +4975,21 @@ func (m *MockAnalyticsSvc) GetNewCustomersAnalytics(ctx context.Context, params 
 func (mr *MockAnalyticsSvcMockRecorder) GetNewCustomersAnalytics(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNewCustomersAnalytics", reflect.TypeOf((*MockAnalyticsSvc)(nil).GetNewCustomersAnalytics), ctx, params)
+}
+
+// ListSalesLines mocks base method.
+func (m *MockAnalyticsSvc) ListSalesLines(ctx context.Context, params domain.ListSalesLinesParams) (*domain.SalesLinePage, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListSalesLines", ctx, params)
+	ret0, _ := ret[0].(*domain.SalesLinePage)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListSalesLines indicates an expected call of ListSalesLines.
+func (mr *MockAnalyticsSvcMockRecorder) ListSalesLines(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSalesLines", reflect.TypeOf((*MockAnalyticsSvc)(nil).ListSalesLines), ctx, params)
 }
 
 // MockMachineStatusSvc is a mock of MachineStatusSvc interface.

@@ -79,7 +79,7 @@ func (s *analyticsSvcImpl) buildScheduleAttainment(ctx context.Context, params d
 	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.build_schedule_attainment")
 	defer span.End()
 
-	repo := s.repos.NewScheduleAttainmentRepo()
+	repo := s.reports().NewScheduleAttainmentRepo()
 
 	// Weeks bucket on the account's configured week start, the same day schedule horizons are built on. A fixed Monday would split a plant whose week starts midweek across two buckets, judging each plan week against a fraction of its own output.
 	settings, apiErr := s.repos.NewProductionScheduleRepo().GetSettings(ctx, params.AccountID)

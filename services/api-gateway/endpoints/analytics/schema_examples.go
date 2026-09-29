@@ -188,3 +188,67 @@ func (*AnalyzeRealizedMarginsRequest) SchemaExample() any {
 		OutlierTolerance:  field.Some("0.15"),
 	})
 }
+
+func sampleSalesReportFilters() SalesReportFilters {
+	return SalesReportFilters{
+		CustomerIDs:      []string{apiresource.SampleCustomerID},
+		CustomerGroupIDs: []string{apiresource.SampleAccountGroupID},
+		ProductLineIDs:   []string{apiresource.SampleProductLineID},
+		SalesRepIDs:      []string{apiresource.SampleAccountUserID},
+		ItemIDs:          []string{apiresource.SampleItemID},
+	}
+}
+
+func sampleSalesComparisonPeriod() SalesComparisonPeriod {
+	return SalesComparisonPeriod{
+		ComparisonStartDate: field.Some(apiresource.SampleAnalyticsPeriodStart.AddDate(-1, 0, 0)),
+		ComparisonEndDate:   field.Some(apiresource.SampleAnalyticsPeriodEnd.AddDate(-1, 0, 0)),
+	}
+}
+
+func (*AnalyzeSalesSummaryRequest) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(&AnalyzeSalesSummaryRequest{
+		StartDate:             apiresource.SampleAnalyticsPeriodStart,
+		EndDate:               apiresource.SampleAnalyticsPeriodEnd,
+		SalesComparisonPeriod: sampleSalesComparisonPeriod(),
+		SalesReportFilters:    sampleSalesReportFilters(),
+		TZOffsetMinutes:       field.Some(int32(-300)),
+	})
+}
+
+func (*AnalyzeSalesBreakdownRequest) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(&AnalyzeSalesBreakdownRequest{
+		GroupBy:               constants.SalesBreakdownGroupByCustomer,
+		StartDate:             apiresource.SampleAnalyticsPeriodStart,
+		EndDate:               apiresource.SampleAnalyticsPeriodEnd,
+		SalesComparisonPeriod: sampleSalesComparisonPeriod(),
+		SalesReportFilters:    sampleSalesReportFilters(),
+		Limit:                 10,
+	})
+}
+
+func (*AnalyzeSalesInvoicesRequest) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(&AnalyzeSalesInvoicesRequest{
+		StartDate:          apiresource.SampleAnalyticsPeriodStart,
+		EndDate:            apiresource.SampleAnalyticsPeriodEnd,
+		SalesReportFilters: sampleSalesReportFilters(),
+		Limit:              10,
+	})
+}
+
+func (*ListSalesLinesRequest) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(&ListSalesLinesRequest{
+		StartDate:          field.Some(apiresource.SampleAnalyticsPeriodStart),
+		EndDate:            field.Some(apiresource.SampleAnalyticsPeriodEnd),
+		SalesReportFilters: sampleSalesReportFilters(),
+		Limit:              50,
+	})
+}
+
+func (*ExportSalesLinesRequest) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(&ExportSalesLinesRequest{
+		StartDate:          field.Some(apiresource.SampleAnalyticsPeriodStart),
+		EndDate:            field.Some(apiresource.SampleAnalyticsPeriodEnd),
+		SalesReportFilters: sampleSalesReportFilters(),
+	})
+}

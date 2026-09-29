@@ -379,6 +379,9 @@ resources:
       analytics:
         methods:
           update_sales: put /v1/core/analytics/sales
+          update_sales_summary: put /v1/core/analytics/sales-summary
+          update_sales_breakdown: put /v1/core/analytics/sales-breakdown
+          update_sales_invoices: put /v1/core/analytics/sales-invoices
           update_open_batches: put /v1/core/analytics/open-batches
           update_production_costs: put /v1/core/analytics/production-costs
           update_deliveries: put /v1/core/analytics/deliveries
@@ -397,6 +400,19 @@ resources:
           retrieve_weeks_of_sales: get /v1/core/analytics/weeks-of-sales
           update_customer_pricing: put /v1/core/analytics/customer-pricing
           update_realized_margins: put /v1/core/analytics/realized-margins
+        subresources:
+          sales_lines:
+            methods:
+              update: put /v1/core/analytics/sales-lines
+            subresources:
+              actions:
+                methods:
+                  export: post /v1/core/analytics/sales-lines/actions/export
+                models:
+                  export_sales_lines_request: '#/components/schemas/ExportSalesLinesRequest'
+            models:
+              list_sales_entry: '#/components/schemas/List_SalesEntry'
+              list_sales_lines_request: '#/components/schemas/ListSalesLinesRequest'
         models:
           account_group: '#/components/schemas/AccountGroup'
           analytics_item: '#/components/schemas/AnalyticsItem'
@@ -436,8 +452,12 @@ resources:
           analyze_quarterly_orders_response: '#/components/schemas/AnalyzeQuarterlyOrdersResponse'
           analyze_realized_margins_request: '#/components/schemas/AnalyzeRealizedMarginsRequest'
           analyze_realized_margins_response: '#/components/schemas/AnalyzeRealizedMarginsResponse'
+          analyze_sales_breakdown_request: '#/components/schemas/AnalyzeSalesBreakdownRequest'
+          analyze_sales_invoices_request: '#/components/schemas/AnalyzeSalesInvoicesRequest'
           analyze_sales_request: '#/components/schemas/AnalyzeSalesRequest'
           analyze_sales_response: '#/components/schemas/AnalyzeSalesResponse'
+          analyze_sales_summary_request: '#/components/schemas/AnalyzeSalesSummaryRequest'
+          analyze_sales_summary_response: '#/components/schemas/AnalyzeSalesSummaryResponse'
           analyze_schedule_attainment_request: '#/components/schemas/AnalyzeScheduleAttainmentRequest'
           analyze_schedule_attainment_response: '#/components/schemas/AnalyzeScheduleAttainmentResponse'
           analyze_weeks_of_sales_response: '#/components/schemas/AnalyzeWeeksOfSalesResponse'
@@ -481,6 +501,9 @@ resources:
           list_oee_downtime_reason: '#/components/schemas/List_OeeDowntimeReason'
           list_oee_trend_period: '#/components/schemas/List_OeeTrendPeriod'
           list_realized_margin_finding: '#/components/schemas/List_RealizedMarginFinding'
+          list_sales_breakdown: '#/components/schemas/List_SalesBreakdown'
+          list_sales_invoice: '#/components/schemas/List_SalesInvoice'
+          list_sales_totals: '#/components/schemas/List_SalesTotals'
           list_service_level: '#/components/schemas/List_ServiceLevel'
           manufacturing_metrics: '#/components/schemas/ManufacturingMetrics'
           material_analytics_entry: '#/components/schemas/MaterialAnalyticsEntry'
@@ -498,7 +521,12 @@ resources:
           realized_margin_finding: '#/components/schemas/RealizedMarginFinding'
           realized_margin_summary: '#/components/schemas/RealizedMarginSummary'
           revenue_forecast_point: '#/components/schemas/RevenueForecastPoint'
+          sales_breakdown: '#/components/schemas/SalesBreakdown'
+          sales_comparison_period: '#/components/schemas/SalesComparisonPeriod'
           sales_entry: '#/components/schemas/SalesEntry'
+          sales_invoice: '#/components/schemas/SalesInvoice'
+          sales_report_filters: '#/components/schemas/SalesReportFilters'
+          sales_totals: '#/components/schemas/SalesTotals'
           service_level: '#/components/schemas/ServiceLevel'
           shipping_term: '#/components/schemas/ShippingTerm'
           weeks_of_sales_item: '#/components/schemas/WeeksOfSalesItem'

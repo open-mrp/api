@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
@@ -212,5 +213,85 @@ func TestVitessSmoke(t *testing.T) {
 		} else {
 			t.Log("no pick-less order in the seed; CreatePick not exercised")
 		}
+	})
+
+	// sales_line_fact maintenance and the sales reports build SQL in Go, which vtparse cannot see.
+	t.Run("sales facts and reports", func(t *testing.T) {
+		facts := NewSalesFactRepo(q)
+		invoices := ids("SELECT id FROM invoice")
+		computed, apiErr := facts.ComputeFacts(ctx, invoices)
+		checkAPI("ComputeFacts", apiErr)
+		if len(computed) == 0 {
+			t.Fatal("seed data has no invoiced sales")
+		}
+		checkAPI("UpsertFacts", facts.UpsertFacts(ctx, computed))
+		checkAPI("UpsertFacts again", facts.UpsertFacts(ctx, computed))
+		stored, apiErr := facts.GetFacts(ctx, invoices)
+		checkAPI("GetFacts", apiErr)
+		if len(stored) != len(computed) {
+			t.Errorf("stored %d facts, computed %d", len(stored), len(computed))
+		}
+		_, apiErr = facts.ListInvoicesAfter(ctx, nil, 10)
+		checkAPI("ListInvoicesAfter", apiErr)
+		_, apiErr = facts.ListFactInvoiceIDsAfter(ctx, "", 10)
+		checkAPI("ListFactInvoiceIDsAfter", apiErr)
+		_, apiErr = facts.FilterExistingInvoiceIDs(ctx, invoices)
+		checkAPI("FilterExistingInvoiceIDs", apiErr)
+		for _, scope := range []domain.SalesFactScope{domain.SalesFactScopeSalesOrder, domain.SalesFactScopeSalesOrderLine, domain.SalesFactScopeProduct} {
+			_, apiErr = facts.ResolveInvoiceIDs(ctx, scope, []string{"x_none"})
+			checkAPI("ResolveInvoiceIDs "+string(scope), apiErr)
+		}
+		checkAPI("MarkDirty", facts.MarkDirty(ctx, domain.SalesFactScopeInvoice, invoices[0], account))
+		marks, apiErr := facts.ListDirty(ctx, 10)
+		checkAPI("ListDirty", apiErr)
+		for _, m := range marks {
+			checkAPI("ClearDirty", facts.ClearDirty(ctx, m))
+		}
+		checkAPI("SaveSync", facts.SaveSync(ctx, domain.SalesFactSync{}))
+		_, apiErr = facts.GetSync(ctx)
+		checkAPI("GetSync", apiErr)
+		checkAPI("DeleteFacts", facts.DeleteFacts(ctx, []string{"ivln_none"}))
+
+		reports := NewSalesReportRepo(q)
+		start, end := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC), time.Now().UTC().Add(time.Hour)
+		filter := domain.SalesReportFilter{
+			AccountID: account, StartsAt: start, EndsAt: end,
+			ComparisonStartsAt: &start, ComparisonEndsAt: &end,
+			CustomerIDs: buyers, CustomerGroupIDs: groups, ProductLineIDs: productLines,
+			SalesRepIDs: []string{"acus_none"}, ItemIDs: []string{"it_none"},
+		}
+		_, apiErr = reports.GetSummary(ctx, domain.AnalyzeSalesSummaryParams{SalesReportFilter: filter, TZOffsetMinutes: -300}, true)
+		checkAPI("GetSummary", apiErr)
+		unfiltered := domain.SalesReportFilter{AccountID: account, StartsAt: start, EndsAt: end, ComparisonStartsAt: &start, ComparisonEndsAt: &end}
+		for _, groupBy := range constants.SalesBreakdownGroupBy("").EnumValues() {
+			for _, f := range []domain.SalesReportFilter{filter, unfiltered} {
+				page, apiErr := reports.GetBreakdown(ctx, domain.AnalyzeSalesBreakdownParams{SalesReportFilter: f, GroupBy: constants.SalesBreakdownGroupBy(groupBy), Limit: 1}, true)
+				checkAPI("GetBreakdown "+groupBy, apiErr)
+				if page != nil && page.PageInfo.NextCursor != nil {
+					_, apiErr = reports.GetBreakdown(ctx, domain.AnalyzeSalesBreakdownParams{SalesReportFilter: f, GroupBy: constants.SalesBreakdownGroupBy(groupBy), Limit: 1, Cursor: page.PageInfo.NextCursor}, true)
+					checkAPI("GetBreakdown next "+groupBy, apiErr)
+				}
+			}
+		}
+		invPage, apiErr := reports.GetInvoicePage(ctx, domain.AnalyzeSalesInvoicesParams{SalesReportFilter: unfiltered, Limit: 1})
+		checkAPI("GetInvoicePage", apiErr)
+		if invPage != nil && invPage.PageInfo.NextCursor != nil {
+			next, apiErr := reports.GetInvoicePage(ctx, domain.AnalyzeSalesInvoicesParams{SalesReportFilter: unfiltered, Limit: 1, Cursor: invPage.PageInfo.NextCursor})
+			checkAPI("GetInvoicePage next", apiErr)
+			if next != nil && next.PageInfo.PrevCursor != nil {
+				_, apiErr = reports.GetInvoicePage(ctx, domain.AnalyzeSalesInvoicesParams{SalesReportFilter: unfiltered, Limit: 1, Cursor: next.PageInfo.PrevCursor})
+				checkAPI("GetInvoicePage prev", apiErr)
+			}
+		}
+		_, apiErr = reports.GetInvoicePage(ctx, domain.AnalyzeSalesInvoicesParams{SalesReportFilter: filter, Limit: 5})
+		checkAPI("GetInvoicePage filtered", apiErr)
+		linePage, apiErr := reports.GetLinePage(ctx, domain.ListSalesLinesParams{SalesReportFilter: unfiltered, HasWindow: true, Limit: 2})
+		checkAPI("GetLinePage", apiErr)
+		if linePage != nil && linePage.PageInfo.NextCursor != nil {
+			_, apiErr = reports.GetLinePage(ctx, domain.ListSalesLinesParams{SalesReportFilter: unfiltered, Limit: 2, Cursor: linePage.PageInfo.NextCursor})
+			checkAPI("GetLinePage next", apiErr)
+		}
+		_, apiErr = reports.GetLinePage(ctx, domain.ListSalesLinesParams{SalesReportFilter: filter, Limit: 5})
+		checkAPI("GetLinePage filtered", apiErr)
 	})
 }

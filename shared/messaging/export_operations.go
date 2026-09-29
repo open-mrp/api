@@ -43,6 +43,7 @@ const (
 	ExportProperties            ExportOperation = "export_properties"
 	ExportHubspotCompanyReviews ExportOperation = "export_hubspot_company_reviews"
 	ExportPriceList             ExportOperation = "export_price_list"
+	ExportSalesData             ExportOperation = "export_sales_data"
 )
 
 // lists every registered export; the rabbitmq bindings declare a queue per entry and the
@@ -64,6 +65,7 @@ var ExportOperations = []ExportOperation{
 	ExportProperties,
 	ExportHubspotCompanyReviews,
 	ExportPriceList,
+	ExportSalesData,
 }
 
 // finds the export command for a resource slug, an export being named for its resource.

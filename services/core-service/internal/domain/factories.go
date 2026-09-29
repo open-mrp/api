@@ -93,6 +93,8 @@ type RepoFactory interface {
 	NewTransactionRepo() TransactionRepo
 	NewTransactionAllocationRepo() TransactionAllocationRepo
 	NewAnalyticsRepo() AnalyticsRepo
+	NewSalesFactRepo() SalesFactRepo
+	NewSalesReportRepo() SalesReportRepo
 	NewCatalogRepo() CatalogRepo
 	NewEDIRepo() EDIRepo
 	NewRegistrationFlowRepo() RegistrationFlowRepo

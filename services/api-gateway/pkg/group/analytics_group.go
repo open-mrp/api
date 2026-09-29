@@ -40,6 +40,11 @@ func (*AnalyticsEndpointGroup) Materialize(config *AnalyticsEndpointGroupConfig)
 	}
 
 	analyzeSalesEndpoint := apiendpoint.From(&analyticsep.AnalyzeSalesEndpoint{}).WithService(inner, analyticsSvc)
+	analyzeSalesSummaryEndpoint := apiendpoint.From(&analyticsep.AnalyzeSalesSummaryEndpoint{}).WithService(inner, analyticsSvc)
+	analyzeSalesBreakdownEndpoint := apiendpoint.From(&analyticsep.AnalyzeSalesBreakdownEndpoint{}).WithService(inner, analyticsSvc)
+	analyzeSalesInvoicesEndpoint := apiendpoint.From(&analyticsep.AnalyzeSalesInvoicesEndpoint{}).WithService(inner, analyticsSvc)
+	listSalesLinesEndpoint := apiendpoint.From(&analyticsep.ListSalesLinesEndpoint{}).WithService(inner, analyticsSvc)
+	exportSalesLinesEndpoint := apiendpoint.From(&analyticsep.ExportSalesLinesEndpoint{}).WithService(inner, analyticsSvc)
 	analyzeOpenBatchesEndpoint := apiendpoint.From(&analyticsep.AnalyzeOpenBatchesEndpoint{}).WithService(inner, analyticsSvc)
 	analyzeProductionCostsEndpoint := apiendpoint.From(&analyticsep.AnalyzeProductionCostsEndpoint{}).WithService(inner, analyticsSvc)
 	analyzeDeliveriesEndpoint := apiendpoint.From(&analyticsep.AnalyzeDeliveriesEndpoint{}).WithService(inner, analyticsSvc)
@@ -61,6 +66,11 @@ func (*AnalyticsEndpointGroup) Materialize(config *AnalyticsEndpointGroupConfig)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		analyzeSalesEndpoint,
+		analyzeSalesSummaryEndpoint,
+		analyzeSalesBreakdownEndpoint,
+		analyzeSalesInvoicesEndpoint,
+		listSalesLinesEndpoint,
+		exportSalesLinesEndpoint,
 		analyzeOpenBatchesEndpoint,
 		analyzeProductionCostsEndpoint,
 		analyzeDeliveriesEndpoint,

@@ -2147,6 +2147,41 @@ type RoleType struct {
 	UpdatedAt time.Time
 }
 
+type SalesFactDirty struct {
+	ScopeType string
+	ScopeID   string
+	AccountID string
+	MarkedAt  time.Time
+}
+
+type SalesFactSync struct {
+	Name            string
+	CursorCreatedAt sql.NullTime
+	CursorInvoiceID sql.NullString
+	PassStartedAt   sql.NullTime
+	LastCompletedAt sql.NullTime
+	UpdatedAt       time.Time
+}
+
+type SalesLineFact struct {
+	AccountID          string
+	InvoicedAt         time.Time
+	InvoiceLineID      string
+	InvoiceID          string
+	SalesOrderID       string
+	SalesOrderTypeCode string
+	BuyerAccountID     string
+	SalesRepID         sql.NullString
+	OrderDiscountID    sql.NullString
+	ProductID          string
+	ItemID             string
+	ProductLineID      string
+	QuantityBase       sql.NullString
+	TotalInvoiced      sql.NullString
+	TotalCost          sql.NullString
+	RefreshedAt        time.Time
+}
+
 type SalesOrder struct {
 	ID                     string
 	BillingAddressID       string

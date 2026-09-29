@@ -17,6 +17,9 @@ var analyticsSvcTracer = tracing.GetTracer("core-service.service.analytics")
 
 type analyticsSvcImpl struct {
 	repos           domain.RepoFactory
+	reportRepos     domain.RepoFactory
+	jobSvcFactory   domain.JobSvcFactory
+	txManager       TransactionManager
 	mediatorFactory domain.MediatorFactory
 	cache           *AnalyticsCache
 }
@@ -24,6 +27,15 @@ type analyticsSvcImpl struct {
 type AnalyticsSvcConfig struct {
 	// Repos (required) is the repository factory.
 	Repos domain.RepoFactory
+
+	// JobSvcFactory (optional; default: nil, exports unavailable) builds the job service export jobs are recorded with.
+	JobSvcFactory domain.JobSvcFactory
+
+	// TxManager (optional; default: nil, exports unavailable) runs the transaction an export job is accepted in.
+	TxManager TransactionManager
+
+	// ReportRepos (optional; default: Repos) builds the repositories reports read through; point it at a read replica. Access checks and settings still read Repos.
+	ReportRepos domain.RepoFactory
 
 	// MediatorFactory (required) builds the mediators used by this service.
 	MediatorFactory domain.MediatorFactory
@@ -49,6 +61,9 @@ func NewAnalyticsSvc(config *AnalyticsSvcConfig) domain.AnalyticsSvc {
 
 	return &analyticsSvcImpl{
 		repos:           config.Repos,
+		reportRepos:     config.ReportRepos,
+		jobSvcFactory:   config.JobSvcFactory,
+		txManager:       config.TxManager,
 		mediatorFactory: config.MediatorFactory,
 		cache:           config.Cache,
 	}
@@ -67,6 +82,14 @@ func (s *analyticsSvcImpl) reportCache() *AnalyticsCache {
 		return disabledAnalyticsCache
 	}
 	return s.cache
+}
+
+// reports is the repository factory for report reads, which may lag the primary.
+func (s *analyticsSvcImpl) reports() domain.RepoFactory {
+	if s.reportRepos == nil {
+		return s.repos
+	}
+	return s.reportRepos
 }
 
 func (s *analyticsSvcImpl) mediators() domain.Mediators {
@@ -110,7 +133,7 @@ func (s *analyticsSvcImpl) AnalyzeSales(ctx context.Context, params domain.Analy
 		params:    params,
 		ttl:       s.reportCache().ttlForWindow(params.EndDate),
 	}, func(ctx context.Context) ([]domain.SalesEntry, *apierror.APIError) {
-		return s.repos.NewAnalyticsRepo().GetSalesEntries(ctx, params)
+		return s.reports().NewAnalyticsRepo().GetSalesEntries(ctx, params)
 	})
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -144,7 +167,7 @@ func (s *analyticsSvcImpl) AnalyzeOpenBatches(ctx context.Context, params domain
 
 	params.AccountID = identity.Target.AccountID
 
-	return s.repos.NewAnalyticsRepo().GetOpenBatchEntries(ctx, params)
+	return s.reports().NewAnalyticsRepo().GetOpenBatchEntries(ctx, params)
 }
 
 func (s *analyticsSvcImpl) AnalyzeProductionCosts(ctx context.Context, params domain.AnalyzeProductionCostsParams) ([]domain.ProductionCostEntry, *apierror.APIError) {
@@ -165,7 +188,7 @@ func (s *analyticsSvcImpl) AnalyzeProductionCosts(ctx context.Context, params do
 
 	params.AccountID = identity.Target.AccountID
 
-	return s.repos.NewAnalyticsRepo().GetProductionCostEntries(ctx, params)
+	return s.reports().NewAnalyticsRepo().GetProductionCostEntries(ctx, params)
 }
 
 func (s *analyticsSvcImpl) AnalyzeDeliveries(ctx context.Context, params domain.AnalyzeDeliveriesParams) (*domain.DeliveryAnalyticsResult, *apierror.APIError) {
@@ -186,7 +209,7 @@ func (s *analyticsSvcImpl) AnalyzeDeliveries(ctx context.Context, params domain.
 
 	params.AccountID = identity.Target.AccountID
 
-	return s.repos.NewAnalyticsRepo().GetDeliveryAnalytics(ctx, params)
+	return s.reports().NewAnalyticsRepo().GetDeliveryAnalytics(ctx, params)
 }
 
 func (s *analyticsSvcImpl) AnalyzeManufacturing(ctx context.Context, params domain.AnalyzeManufacturingParams) (float64, *apierror.APIError) {
@@ -207,7 +230,7 @@ func (s *analyticsSvcImpl) AnalyzeManufacturing(ctx context.Context, params doma
 
 	params.AccountID = identity.Target.AccountID
 
-	return s.repos.NewAnalyticsRepo().GetManufacturingMetric(ctx, params)
+	return s.reports().NewAnalyticsRepo().GetManufacturingMetric(ctx, params)
 }
 
 func (s *analyticsSvcImpl) AnalyzeManufacturingBatch(ctx context.Context, params domain.AnalyzeManufacturingBatchParams) (*domain.ManufacturingBatchResult, *apierror.APIError) {
@@ -228,7 +251,7 @@ func (s *analyticsSvcImpl) AnalyzeManufacturingBatch(ctx context.Context, params
 
 	params.AccountID = identity.Target.AccountID
 
-	return s.repos.NewAnalyticsRepo().GetManufacturingBatch(ctx, params)
+	return s.reports().NewAnalyticsRepo().GetManufacturingBatch(ctx, params)
 }
 
 func (s *analyticsSvcImpl) AnalyzeOrders(ctx context.Context, params domain.AnalyzeOrdersParams) ([]domain.OrderEntry, *apierror.APIError) {
@@ -260,7 +283,7 @@ func (s *analyticsSvcImpl) AnalyzeOrders(ctx context.Context, params domain.Anal
 		}
 	}
 
-	entries, apiErr := s.repos.NewAnalyticsRepo().GetOrderEntries(ctx, params)
+	entries, apiErr := s.reports().NewAnalyticsRepo().GetOrderEntries(ctx, params)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -293,7 +316,7 @@ func (s *analyticsSvcImpl) AnalyzeQuarterlyOrders(ctx context.Context, params do
 
 	params.AccountID = identity.Target.AccountID
 
-	return s.repos.NewAnalyticsRepo().GetQuarterlyOrders(ctx, params)
+	return s.reports().NewAnalyticsRepo().GetQuarterlyOrders(ctx, params)
 }
 
 func (s *analyticsSvcImpl) AnalyzeMaterials(ctx context.Context, params domain.AnalyzeMaterialsParams) ([]domain.MaterialAnalyticsEntry, *apierror.APIError) {
@@ -314,7 +337,7 @@ func (s *analyticsSvcImpl) AnalyzeMaterials(ctx context.Context, params domain.A
 
 	params.AccountID = identity.Target.AccountID
 
-	return s.repos.NewAnalyticsRepo().GetMaterialAnalytics(ctx, params)
+	return s.reports().NewAnalyticsRepo().GetMaterialAnalytics(ctx, params)
 }
 
 // checkInventoryReceiptAnalyticsReadPermission checks the appropriate read permission based on the target context: internal actors targeting a customer or supplier account need the relationship's read permission rather than the resource domain's.
@@ -371,7 +394,7 @@ func (s *analyticsSvcImpl) AnalyzeInventoryReceipts(ctx context.Context, params 
 		return nil, tracing.Trace(span, apierror.NewValidationError("Invalid actor type."))
 	}
 
-	return s.repos.NewAnalyticsRepo().GetInventoryReceiptAnalytics(ctx, params)
+	return s.reports().NewAnalyticsRepo().GetInventoryReceiptAnalytics(ctx, params)
 }
 
 func (s *analyticsSvcImpl) GetNewCustomersAnalytics(ctx context.Context, params domain.GetNewCustomersAnalyticsParams) ([]domain.NewCustomerEntry, *apierror.APIError) {
@@ -392,7 +415,7 @@ func (s *analyticsSvcImpl) GetNewCustomersAnalytics(ctx context.Context, params 
 
 	params.AccountID = identity.Target.AccountID
 
-	return s.repos.NewAnalyticsRepo().GetNewCustomerEntries(ctx, params)
+	return s.reports().NewAnalyticsRepo().GetNewCustomerEntries(ctx, params)
 }
 
 // GetDemandForecast returns per-item demand, revenue and sales history with seasonal-EMA forecasts and confidence bands.
@@ -520,7 +543,7 @@ func (s *analyticsSvcImpl) buildWeeksOfSales(ctx context.Context, params domain.
 	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.build_weeks_of_sales")
 	defer span.End()
 
-	repo := s.repos.NewAnalyticsRepo()
+	repo := s.reports().NewAnalyticsRepo()
 
 	// 1. Get sale-type product item IDs and their product line IDs.
 	productItems, apiErr := repo.GetSaleProductItemIDs(ctx, params.AccountID)
@@ -559,7 +582,7 @@ func (s *analyticsSvcImpl) buildWeeksOfSales(ctx context.Context, params domain.
 	}
 
 	// 4. Get on-hand inventory for all items.
-	inventoryRows, apiErr := s.repos.NewInventoryQueryRepo().FetchOnHandInventoryBulk(ctx, allItemIDs, params.AccountID)
+	inventoryRows, apiErr := s.reports().NewInventoryQueryRepo().FetchOnHandInventoryBulk(ctx, allItemIDs, params.AccountID)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}

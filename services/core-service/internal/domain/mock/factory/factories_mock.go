@@ -1147,6 +1147,20 @@ func (mr *MockRepoFactoryMockRecorder) NewRoleRepo() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewRoleRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewRoleRepo))
 }
 
+// NewSalesFactRepo mocks base method.
+func (m *MockRepoFactory) NewSalesFactRepo() domain.SalesFactRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewSalesFactRepo")
+	ret0, _ := ret[0].(domain.SalesFactRepo)
+	return ret0
+}
+
+// NewSalesFactRepo indicates an expected call of NewSalesFactRepo.
+func (mr *MockRepoFactoryMockRecorder) NewSalesFactRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewSalesFactRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewSalesFactRepo))
+}
+
 // NewSalesOrderLineRepo mocks base method.
 func (m *MockRepoFactory) NewSalesOrderLineRepo() domain.SalesOrderLineRepo {
 	m.ctrl.T.Helper()
@@ -1187,6 +1201,20 @@ func (m *MockRepoFactory) NewSalesOrderStatusRepo() domain.SalesOrderStatusRepo 
 func (mr *MockRepoFactoryMockRecorder) NewSalesOrderStatusRepo() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewSalesOrderStatusRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewSalesOrderStatusRepo))
+}
+
+// NewSalesReportRepo mocks base method.
+func (m *MockRepoFactory) NewSalesReportRepo() domain.SalesReportRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewSalesReportRepo")
+	ret0, _ := ret[0].(domain.SalesReportRepo)
+	return ret0
+}
+
+// NewSalesReportRepo indicates an expected call of NewSalesReportRepo.
+func (mr *MockRepoFactoryMockRecorder) NewSalesReportRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewSalesReportRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewSalesReportRepo))
 }
 
 // NewSalesTargetRepo mocks base method.

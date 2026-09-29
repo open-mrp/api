@@ -255,6 +255,11 @@ const (
 	CoreService_UpdateCustomer_FullMethodName                             = "/core.CoreService/UpdateCustomer"
 	CoreService_MergeCustomers_FullMethodName                             = "/core.CoreService/MergeCustomers"
 	CoreService_AnalyzeSales_FullMethodName                               = "/core.CoreService/AnalyzeSales"
+	CoreService_AnalyzeSalesSummary_FullMethodName                        = "/core.CoreService/AnalyzeSalesSummary"
+	CoreService_AnalyzeSalesBreakdown_FullMethodName                      = "/core.CoreService/AnalyzeSalesBreakdown"
+	CoreService_AnalyzeSalesInvoices_FullMethodName                       = "/core.CoreService/AnalyzeSalesInvoices"
+	CoreService_ListSalesLines_FullMethodName                             = "/core.CoreService/ListSalesLines"
+	CoreService_ExportSalesLines_FullMethodName                           = "/core.CoreService/ExportSalesLines"
 	CoreService_AnalyzeRealizedMargins_FullMethodName                     = "/core.CoreService/AnalyzeRealizedMargins"
 	CoreService_AnalyzeCustomerPricing_FullMethodName                     = "/core.CoreService/AnalyzeCustomerPricing"
 	CoreService_AnalyzeProductionCosts_FullMethodName                     = "/core.CoreService/AnalyzeProductionCosts"
@@ -864,6 +869,13 @@ type CoreServiceClient interface {
 	// Merges source customers into a target customer.
 	MergeCustomers(ctx context.Context, in *MergeCustomersRequest, opts ...grpc.CallOption) (*MergeCustomersResponse, error)
 	AnalyzeSales(ctx context.Context, in *AnalyzeSalesRequest, opts ...grpc.CallOption) (*AnalyzeSalesResponse, error)
+	// Sales reports read sales_line_fact, invoice lines pre-priced for analytics.
+	AnalyzeSalesSummary(ctx context.Context, in *AnalyzeSalesSummaryRequest, opts ...grpc.CallOption) (*AnalyzeSalesSummaryResponse, error)
+	AnalyzeSalesBreakdown(ctx context.Context, in *AnalyzeSalesBreakdownRequest, opts ...grpc.CallOption) (*AnalyzeSalesBreakdownResponse, error)
+	AnalyzeSalesInvoices(ctx context.Context, in *AnalyzeSalesInvoicesRequest, opts ...grpc.CallOption) (*AnalyzeSalesInvoicesResponse, error)
+	ListSalesLines(ctx context.Context, in *ListSalesLinesRequest, opts ...grpc.CallOption) (*ListSalesLinesResponse, error)
+	// Accepts an export of the sales lines; the file is built by the export worker.
+	ExportSalesLines(ctx context.Context, in *ExportSalesLinesRequest, opts ...grpc.CallOption) (*ExportSalesLinesResponse, error)
 	// AnalyzeRealizedMargins rolls invoiced lines up to one row per customer and SKU and flags the ones priced below their peers or under target margin. Aggregated here because the raw lines are far too many to ship.
 	AnalyzeRealizedMargins(ctx context.Context, in *AnalyzeRealizedMarginsRequest, opts ...grpc.CallOption) (*AnalyzeRealizedMarginsResponse, error)
 	// AnalyzeCustomerPricing sweeps every contracted price and flags those below their peers or under target margin. Swept here because it reads the prices, the customers and the catalog end to end.
@@ -3379,6 +3391,56 @@ func (c *coreServiceClient) AnalyzeSales(ctx context.Context, in *AnalyzeSalesRe
 	return out, nil
 }
 
+func (c *coreServiceClient) AnalyzeSalesSummary(ctx context.Context, in *AnalyzeSalesSummaryRequest, opts ...grpc.CallOption) (*AnalyzeSalesSummaryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AnalyzeSalesSummaryResponse)
+	err := c.cc.Invoke(ctx, CoreService_AnalyzeSalesSummary_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) AnalyzeSalesBreakdown(ctx context.Context, in *AnalyzeSalesBreakdownRequest, opts ...grpc.CallOption) (*AnalyzeSalesBreakdownResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AnalyzeSalesBreakdownResponse)
+	err := c.cc.Invoke(ctx, CoreService_AnalyzeSalesBreakdown_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) AnalyzeSalesInvoices(ctx context.Context, in *AnalyzeSalesInvoicesRequest, opts ...grpc.CallOption) (*AnalyzeSalesInvoicesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AnalyzeSalesInvoicesResponse)
+	err := c.cc.Invoke(ctx, CoreService_AnalyzeSalesInvoices_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) ListSalesLines(ctx context.Context, in *ListSalesLinesRequest, opts ...grpc.CallOption) (*ListSalesLinesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListSalesLinesResponse)
+	err := c.cc.Invoke(ctx, CoreService_ListSalesLines_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) ExportSalesLines(ctx context.Context, in *ExportSalesLinesRequest, opts ...grpc.CallOption) (*ExportSalesLinesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ExportSalesLinesResponse)
+	err := c.cc.Invoke(ctx, CoreService_ExportSalesLines_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *coreServiceClient) AnalyzeRealizedMargins(ctx context.Context, in *AnalyzeRealizedMarginsRequest, opts ...grpc.CallOption) (*AnalyzeRealizedMarginsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(AnalyzeRealizedMarginsResponse)
@@ -5561,6 +5623,13 @@ type CoreServiceServer interface {
 	// Merges source customers into a target customer.
 	MergeCustomers(context.Context, *MergeCustomersRequest) (*MergeCustomersResponse, error)
 	AnalyzeSales(context.Context, *AnalyzeSalesRequest) (*AnalyzeSalesResponse, error)
+	// Sales reports read sales_line_fact, invoice lines pre-priced for analytics.
+	AnalyzeSalesSummary(context.Context, *AnalyzeSalesSummaryRequest) (*AnalyzeSalesSummaryResponse, error)
+	AnalyzeSalesBreakdown(context.Context, *AnalyzeSalesBreakdownRequest) (*AnalyzeSalesBreakdownResponse, error)
+	AnalyzeSalesInvoices(context.Context, *AnalyzeSalesInvoicesRequest) (*AnalyzeSalesInvoicesResponse, error)
+	ListSalesLines(context.Context, *ListSalesLinesRequest) (*ListSalesLinesResponse, error)
+	// Accepts an export of the sales lines; the file is built by the export worker.
+	ExportSalesLines(context.Context, *ExportSalesLinesRequest) (*ExportSalesLinesResponse, error)
 	// AnalyzeRealizedMargins rolls invoiced lines up to one row per customer and SKU and flags the ones priced below their peers or under target margin. Aggregated here because the raw lines are far too many to ship.
 	AnalyzeRealizedMargins(context.Context, *AnalyzeRealizedMarginsRequest) (*AnalyzeRealizedMarginsResponse, error)
 	// AnalyzeCustomerPricing sweeps every contracted price and flags those below their peers or under target margin. Swept here because it reads the prices, the customers and the catalog end to end.
@@ -6479,6 +6548,21 @@ func (UnimplementedCoreServiceServer) MergeCustomers(context.Context, *MergeCust
 }
 func (UnimplementedCoreServiceServer) AnalyzeSales(context.Context, *AnalyzeSalesRequest) (*AnalyzeSalesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AnalyzeSales not implemented")
+}
+func (UnimplementedCoreServiceServer) AnalyzeSalesSummary(context.Context, *AnalyzeSalesSummaryRequest) (*AnalyzeSalesSummaryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AnalyzeSalesSummary not implemented")
+}
+func (UnimplementedCoreServiceServer) AnalyzeSalesBreakdown(context.Context, *AnalyzeSalesBreakdownRequest) (*AnalyzeSalesBreakdownResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AnalyzeSalesBreakdown not implemented")
+}
+func (UnimplementedCoreServiceServer) AnalyzeSalesInvoices(context.Context, *AnalyzeSalesInvoicesRequest) (*AnalyzeSalesInvoicesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AnalyzeSalesInvoices not implemented")
+}
+func (UnimplementedCoreServiceServer) ListSalesLines(context.Context, *ListSalesLinesRequest) (*ListSalesLinesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListSalesLines not implemented")
+}
+func (UnimplementedCoreServiceServer) ExportSalesLines(context.Context, *ExportSalesLinesRequest) (*ExportSalesLinesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ExportSalesLines not implemented")
 }
 func (UnimplementedCoreServiceServer) AnalyzeRealizedMargins(context.Context, *AnalyzeRealizedMarginsRequest) (*AnalyzeRealizedMarginsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AnalyzeRealizedMargins not implemented")
@@ -11130,6 +11214,96 @@ func _CoreService_AnalyzeSales_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CoreService_AnalyzeSalesSummary_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AnalyzeSalesSummaryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).AnalyzeSalesSummary(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_AnalyzeSalesSummary_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).AnalyzeSalesSummary(ctx, req.(*AnalyzeSalesSummaryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_AnalyzeSalesBreakdown_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AnalyzeSalesBreakdownRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).AnalyzeSalesBreakdown(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_AnalyzeSalesBreakdown_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).AnalyzeSalesBreakdown(ctx, req.(*AnalyzeSalesBreakdownRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_AnalyzeSalesInvoices_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AnalyzeSalesInvoicesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).AnalyzeSalesInvoices(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_AnalyzeSalesInvoices_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).AnalyzeSalesInvoices(ctx, req.(*AnalyzeSalesInvoicesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_ListSalesLines_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListSalesLinesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).ListSalesLines(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_ListSalesLines_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).ListSalesLines(ctx, req.(*ListSalesLinesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_ExportSalesLines_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExportSalesLinesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).ExportSalesLines(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_ExportSalesLines_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).ExportSalesLines(ctx, req.(*ExportSalesLinesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CoreService_AnalyzeRealizedMargins_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(AnalyzeRealizedMarginsRequest)
 	if err := dec(in); err != nil {
@@ -15198,6 +15372,26 @@ var CoreService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AnalyzeSales",
 			Handler:    _CoreService_AnalyzeSales_Handler,
+		},
+		{
+			MethodName: "AnalyzeSalesSummary",
+			Handler:    _CoreService_AnalyzeSalesSummary_Handler,
+		},
+		{
+			MethodName: "AnalyzeSalesBreakdown",
+			Handler:    _CoreService_AnalyzeSalesBreakdown_Handler,
+		},
+		{
+			MethodName: "AnalyzeSalesInvoices",
+			Handler:    _CoreService_AnalyzeSalesInvoices_Handler,
+		},
+		{
+			MethodName: "ListSalesLines",
+			Handler:    _CoreService_ListSalesLines_Handler,
+		},
+		{
+			MethodName: "ExportSalesLines",
+			Handler:    _CoreService_ExportSalesLines_Handler,
 		},
 		{
 			MethodName: "AnalyzeRealizedMargins",

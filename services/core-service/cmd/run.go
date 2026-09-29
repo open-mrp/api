@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/event"
@@ -28,12 +29,16 @@ import (
 	"github.com/open-mrp/api/shared/cache"
 	s3client "github.com/open-mrp/api/shared/cloud/s3"
 	"github.com/open-mrp/api/shared/contracts"
-	"github.com/open-mrp/api/shared/db"
+	dbpkg "github.com/open-mrp/api/shared/db"
 	"github.com/open-mrp/api/shared/lease"
 	"github.com/open-mrp/api/shared/messaging"
 	"github.com/open-mrp/api/shared/pagination"
 	"github.com/open-mrp/api/shared/tracing"
 )
+
+// reportMaxOpenConnections caps the report pool. Reports are few, short and cached, so a small pool
+// is enough, and it bounds how many a burst can run at once.
+const reportMaxOpenConnections = 10
 
 func Run(
 	ctx context.Context,
@@ -60,7 +65,7 @@ func Run(
 	}
 	defer tracing.DeferShutdown(tracerShutdown)()
 
-	db, err := db.NewDbPool(&db.Config{DBURI: cfg.DBURL})
+	db, err := dbpkg.NewDbPool(&dbpkg.Config{DBURI: cfg.DBURL})
 	if err != nil {
 		return err
 	}
@@ -73,6 +78,19 @@ func Run(
 	defer rabbitmq.Close()
 
 	queries := sqlc.New(db)
+
+	// Analytics reports read from a replica through their own small pool, so a burst of reports can
+	// neither exhaust the primary's memory nor starve its pool of connections for writes.
+	reportDB, err := dbpkg.NewDbPool(&dbpkg.Config{
+		DBURI:              cfg.DBReplicaURL,
+		MaxOpenConnections: reportMaxOpenConnections,
+		MaxIdleConnections: reportMaxOpenConnections,
+	})
+	if err != nil {
+		return err
+	}
+	defer reportDB.Close()
+	reportRepoFactory := repository.NewRepoFactory(sqlc.New(reportDB))
 
 	leaseSvc := lease.New(repository.NewLeaseRepo(queries))
 
@@ -429,6 +447,9 @@ func Run(
 
 	analyticsSvc := service.NewAnalyticsSvc(&service.AnalyticsSvcConfig{
 		Repos:           repoFactory,
+		ReportRepos:     reportRepoFactory,
+		JobSvcFactory:   jobSvcFactory,
+		TxManager:       txManager,
 		MediatorFactory: mediatorFactory,
 		Cache:           analyticsCache,
 	})
@@ -820,6 +841,7 @@ func Run(
 		"properties":              propertySvc.BuildExportProperties,
 		"hubspot_company_reviews": hubspotSyncSvc.BuildExportHubspotCompanyReviews,
 		"price_list":              accountPriceSvc.BuildExportPriceList,
+		"sales_data":              analyticsSvc.BuildExportSalesLines,
 	}
 
 	exportRunner := service.NewExportRunner(&service.ExportRunnerConfig{
@@ -868,6 +890,25 @@ func Run(
 		return err
 	}
 	defer scheduleCadence.Stop()
+
+	// sales_line_fact pre-prices invoice lines for sales analytics. Audit events mark what changed; the
+	// refresher (one pod, under a lease) recomputes marked scopes, re-prices recent invoices for writes that
+	// publish no event, and reconciles every invoice daily. Its first reconcile pass is the backfill.
+	if err := audit.Subscribe(ctx, rabbitmq, audit.SubscribeConfig{
+		QueueBaseName: messaging.CoreEventSalesFactQueue,
+		OnEvent:       service.NewSalesFactMarker(repoFactory).HandleAuditEvent,
+	}); err != nil {
+		return err
+	}
+	salesFactRefresher := service.NewSalesFactRefresher(&service.SalesFactRefresherConfig{
+		Repos:          repoFactory,
+		Lease:          leaseSvc,
+		OnFactsChanged: invalidateSalesTwice(analyticsCache),
+	})
+	if err := salesFactRefresher.Start(ctx); err != nil {
+		return err
+	}
+	defer salesFactRefresher.Stop()
 
 	// Backstop for burn rate: the write path recomputes on consumption, but an item nobody consumes
 	// would keep a stale rate forever. This sweeps the stalest items in bounded batches so idle items
@@ -991,4 +1032,18 @@ func newAnalyticsCache(ctx context.Context, store cache.Store, broker messaging.
 		return nil, err
 	}
 	return analyticsCache, nil
+}
+
+// invalidateSalesTwice drops cached sales reports when facts change, then again a few seconds later:
+// reports read a replica, so one computed in the moment before the replica caught up would otherwise
+// stay cached with the old facts until its TTL.
+func invalidateSalesTwice(c *service.AnalyticsCache) func(context.Context, []string) {
+	return func(ctx context.Context, accountIDs []string) {
+		c.InvalidateSales(ctx, accountIDs)
+		time.AfterFunc(5*time.Second, func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			c.InvalidateSales(ctx, accountIDs)
+		})
+	}
 }

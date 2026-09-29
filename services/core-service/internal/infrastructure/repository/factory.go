@@ -444,3 +444,11 @@ func (r *repoFactoryImpl) NewPortalDomainRepo() domain.PortalDomainRepo {
 func (r *repoFactoryImpl) NewPortalRegistrationSessionRepo() domain.PortalRegistrationSessionRepo {
 	return NewPortalRegistrationSessionRepo(r.queries)
 }
+
+func (r *repoFactoryImpl) NewSalesFactRepo() domain.SalesFactRepo {
+	return NewSalesFactRepo(r.queries)
+}
+
+func (r *repoFactoryImpl) NewSalesReportRepo() domain.SalesReportRepo {
+	return NewSalesReportRepo(r.queries)
+}

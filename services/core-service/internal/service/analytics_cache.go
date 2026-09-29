@@ -118,14 +118,16 @@ func (c *AnalyticsCacheConfig) validate() error {
 type AnalyticsCache struct {
 	cfg AnalyticsCacheConfig
 
-	sales        *cache.Cache[[]domain.SalesEntry]
-	pricing      *cache.Cache[*domain.CustomerPricingAnalysis]
-	oee          *cache.Cache[[]domain.OeeDepartment]
-	oeeTrend     *cache.Cache[[]domain.OeeTrendPeriod]
-	attainment   *cache.Cache[*domain.ScheduleAttainmentResult]
-	forecast     *cache.Cache[*domain.DemandForecastResult]
-	weeksOfSales *cache.Cache[*domain.WeeksOfSalesResult]
-	delivery     *cache.Cache[*domain.DeliveryPerformanceResult]
+	sales          *cache.Cache[[]domain.SalesEntry]
+	salesSummary   *cache.Cache[*domain.SalesSummary]
+	salesBreakdown *cache.Cache[*domain.SalesBreakdown]
+	pricing        *cache.Cache[*domain.CustomerPricingAnalysis]
+	oee            *cache.Cache[[]domain.OeeDepartment]
+	oeeTrend       *cache.Cache[[]domain.OeeTrendPeriod]
+	attainment     *cache.Cache[*domain.ScheduleAttainmentResult]
+	forecast       *cache.Cache[*domain.DemandForecastResult]
+	weeksOfSales   *cache.Cache[*domain.WeeksOfSalesResult]
+	delivery       *cache.Cache[*domain.DeliveryPerformanceResult]
 }
 
 // NewAnalyticsCache returns an empty AnalyticsCache over cfg.Store.
@@ -137,6 +139,12 @@ func NewAnalyticsCache(cfg *AnalyticsCacheConfig) (*AnalyticsCache, error) {
 	c := &AnalyticsCache{cfg: *cfg}
 	var err error
 	if c.sales, err = newAnalyticsReportCache[[]domain.SalesEntry](cfg, "sales"); err != nil {
+		return nil, err
+	}
+	if c.salesSummary, err = newAnalyticsReportCache[*domain.SalesSummary](cfg, "sales_summary"); err != nil {
+		return nil, err
+	}
+	if c.salesBreakdown, err = newAnalyticsReportCache[*domain.SalesBreakdown](cfg, "sales_breakdown"); err != nil {
 		return nil, err
 	}
 	if c.pricing, err = newAnalyticsReportCache[*domain.CustomerPricingAnalysis](cfg, "customer_pricing"); err != nil {
@@ -182,6 +190,20 @@ func (c *AnalyticsCache) HandleAuditEvent(ctx context.Context, e audit.ObservedE
 	}
 	if err := cache.Invalidate(ctx, c.cfg.Store, scopes...); err != nil {
 		slog.WarnContext(ctx, "analytics cache: invalidation failed; entries expire by TTL", "account_id", e.AccountID, "resource_type", e.ResourceType, "error", err)
+	}
+}
+
+// InvalidateSales drops the accounts' cached sales reports. Called after sales_line_fact changes, since a report cached between an edit's audit event and the fact refresh was built from the old facts.
+func (c *AnalyticsCache) InvalidateSales(ctx context.Context, accountIDs []string) {
+	if c == nil {
+		return
+	}
+	scopes := make([]string, len(accountIDs))
+	for i, id := range accountIDs {
+		scopes[i] = analyticsScope(id, analyticsFamilySales)
+	}
+	if err := cache.Invalidate(ctx, c.cfg.Store, scopes...); err != nil {
+		slog.WarnContext(ctx, "analytics cache: sales invalidation failed; entries expire by TTL", "accounts", len(accountIDs), "error", err)
 	}
 }
 

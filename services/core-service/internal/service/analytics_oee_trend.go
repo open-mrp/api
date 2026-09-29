@@ -20,7 +20,7 @@ func (s *analyticsSvcImpl) buildOeeTrend(ctx context.Context, params domain.Anal
 	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.build_oee_trend")
 	defer span.End()
 
-	repo := s.repos.NewAnalyticsRepo()
+	repo := s.reports().NewAnalyticsRepo()
 
 	// The week scans bucket into follows the account's configured week start, so a point on this chart covers the same days as the schedule week beside it, and the downtime and planned-hours arithmetic below charge the same weeks. Read first because the bucketed output query needs it; it is a single-row fetch, so serializing it ahead of the heavy reads costs nothing measurable.
 	settings, apiErr := s.repos.NewProductionScheduleRepo().GetSettings(ctx, params.AccountID)

@@ -140,6 +140,9 @@ const (
 	// CoreEventCacheInvalidationQueue is the base name for core-service's per-replica audit-event queue, which invalidates the shared analytics cache. Every replica rotating the same scope is redundant but harmless, and keeps invalidation flowing while any one replica is connected.
 	CoreEventCacheInvalidationQueue = "core_event_cache_invalidation"
 
+	// CoreEventSalesFactQueue is the base name for core-service's per-replica audit-event queue that marks sales_line_fact scopes dirty. Every replica writes the same idempotent mark.
+	CoreEventSalesFactQueue = "core_event_sales_fact"
+
 	// DeadLetterQueue is the catch-all queue for messages that could not be processed after exhausting retries. It is bound to the dead-letter exchange ("dlx") so rejected or expired messages from any queue land here for manual inspection.
 	DeadLetterQueue = "dead_letter_queue"
 )

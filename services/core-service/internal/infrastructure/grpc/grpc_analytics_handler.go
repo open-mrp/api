@@ -126,57 +126,7 @@ func (h *gRPCHandler) AnalyzeSales(ctx context.Context, req *pb.AnalyzeSalesRequ
 
 	pbEntries := make([]*pb.SalesEntryProto, len(entries))
 	for i, e := range entries {
-		entry := &pb.SalesEntryProto{
-			Id:                  e.ID,
-			InvoiceId:           e.InvoiceID,
-			InvoiceNumber:       e.InvoiceNumber,
-			InvoicedAt:          timestamppb.New(e.InvoiceDate),
-			CustomerPo:          derefString(e.CustomerPO),
-			OrderId:             e.SalesOrderID,
-			OrderNumber:         e.SalesOrderNumber,
-			CustomerId:          e.CustomerID,
-			CustomerName:        e.CustomerName,
-			CustomerNumber:      e.CustomerNumber,
-			CustomerCreatedAt:   timestamppb.New(e.CustomerCreatedAt),
-			CustomerTypeGroupId: derefString(e.CustomerTypeGroupID),
-			CustomerGroupName:   derefString(e.CustomerGroupName),
-			ParentCustomerId:    derefString(e.ParentCustomerID),
-			ProductTypeId:       e.ProductTypeCode,
-			ItemId:              e.ItemID,
-			ProductSku:          e.ProductSku,
-			ProductDescription:  derefString(e.ProductDescription),
-			CategoryName:        e.CategoryName,
-			ProductLine:         derefString(e.ProductLine),
-			ProductLineId:       derefString(e.ProductLineID),
-			Unit:                e.Unit,
-			QuantityInvoiced:    e.QuantityInvoiced,
-			UnitPrice:           e.UnitPrice,
-			UnitCost:            e.UnitCost,
-			UnitProfit:          e.UnitProfit,
-			TotalInvoiced:       e.TotalInvoiced,
-			TotalCost:           e.TotalCost,
-			TotalProfit:         e.TotalProfit,
-			SalesRepUsername:    derefString(e.SalesRepUsername),
-			SalesRepId:          derefString(e.SalesRepID),
-			ShipToState:         derefString(e.ShipToState),
-			ShipToCity:          derefString(e.ShipToCity),
-			ShipToZipcode:       derefString(e.ShipToPostalCode),
-			ShipToCountry:       derefString(e.ShipToCountry),
-			OrderDiscountCode:   derefString(e.OrderDiscountCode),
-		}
-		if e.IssuedAt != nil {
-			entry.IssuedAt = timestamppb.New(*e.IssuedAt)
-		}
-		if e.CompletedAt != nil {
-			entry.CompletedAt = timestamppb.New(*e.CompletedAt)
-		}
-		if e.FirstShipAt != nil {
-			entry.FirstShipAt = timestamppb.New(*e.FirstShipAt)
-		}
-		if e.PromisedAt != nil {
-			entry.PromisedAt = timestamppb.New(*e.PromisedAt)
-		}
-		pbEntries[i] = entry
+		pbEntries[i] = salesEntryToProto(e)
 	}
 
 	return &pb.AnalyzeSalesResponse{
@@ -1141,4 +1091,59 @@ func (h *gRPCHandler) AnalyzeCustomerPricing(ctx context.Context, req *pb.Analyz
 		MarginNotAssessedCount: safeconv.IntToInt32(result.MarginNotAssessedCount),
 		Notes:                  result.Notes,
 	}, nil
+}
+
+// salesEntryToProto maps an invoiced sale line onto the wire shape both the row listing and AnalyzeSales use.
+func salesEntryToProto(e domain.SalesEntry) *pb.SalesEntryProto {
+	entry := &pb.SalesEntryProto{
+		Id:                  e.ID,
+		InvoiceId:           e.InvoiceID,
+		InvoiceNumber:       e.InvoiceNumber,
+		InvoicedAt:          timestamppb.New(e.InvoiceDate),
+		CustomerPo:          derefString(e.CustomerPO),
+		OrderId:             e.SalesOrderID,
+		OrderNumber:         e.SalesOrderNumber,
+		CustomerId:          e.CustomerID,
+		CustomerName:        e.CustomerName,
+		CustomerNumber:      e.CustomerNumber,
+		CustomerCreatedAt:   timestamppb.New(e.CustomerCreatedAt),
+		CustomerTypeGroupId: derefString(e.CustomerTypeGroupID),
+		CustomerGroupName:   derefString(e.CustomerGroupName),
+		ParentCustomerId:    derefString(e.ParentCustomerID),
+		ProductTypeId:       e.ProductTypeCode,
+		ItemId:              e.ItemID,
+		ProductSku:          e.ProductSku,
+		ProductDescription:  derefString(e.ProductDescription),
+		CategoryName:        e.CategoryName,
+		ProductLine:         derefString(e.ProductLine),
+		ProductLineId:       derefString(e.ProductLineID),
+		Unit:                e.Unit,
+		QuantityInvoiced:    e.QuantityInvoiced,
+		UnitPrice:           e.UnitPrice,
+		UnitCost:            e.UnitCost,
+		UnitProfit:          e.UnitProfit,
+		TotalInvoiced:       e.TotalInvoiced,
+		TotalCost:           e.TotalCost,
+		TotalProfit:         e.TotalProfit,
+		SalesRepUsername:    derefString(e.SalesRepUsername),
+		SalesRepId:          derefString(e.SalesRepID),
+		ShipToState:         derefString(e.ShipToState),
+		ShipToCity:          derefString(e.ShipToCity),
+		ShipToZipcode:       derefString(e.ShipToPostalCode),
+		ShipToCountry:       derefString(e.ShipToCountry),
+		OrderDiscountCode:   derefString(e.OrderDiscountCode),
+	}
+	if e.IssuedAt != nil {
+		entry.IssuedAt = timestamppb.New(*e.IssuedAt)
+	}
+	if e.CompletedAt != nil {
+		entry.CompletedAt = timestamppb.New(*e.CompletedAt)
+	}
+	if e.FirstShipAt != nil {
+		entry.FirstShipAt = timestamppb.New(*e.FirstShipAt)
+	}
+	if e.PromisedAt != nil {
+		entry.PromisedAt = timestamppb.New(*e.PromisedAt)
+	}
+	return entry
 }

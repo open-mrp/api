@@ -15,7 +15,7 @@ func (s *analyticsSvcImpl) buildOeeByDepartment(ctx context.Context, params doma
 	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.build_oee_by_department")
 	defer span.End()
 
-	repo := s.repos.NewAnalyticsRepo()
+	repo := s.reports().NewAnalyticsRepo()
 	window := domain.GetOeeWindowParams{
 		AccountID: params.AccountID,
 		StartDate: params.StartDate,
@@ -377,7 +377,7 @@ func (s *analyticsSvcImpl) scheduledCapacity(ctx context.Context, accountID stri
 	ctx, span := analyticsSvcTracer.Start(ctx, "service.analytics.scheduled_capacity")
 	defer span.End()
 
-	repo := s.repos.NewScheduleAttainmentRepo()
+	repo := s.reports().NewScheduleAttainmentRepo()
 	windowStart := scheduleWeekStart(start, weekStartDay)
 	windowEnd := end
 	// Read once so every week is judged against the same instant.

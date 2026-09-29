@@ -45,7 +45,7 @@ func (s *analyticsSvcImpl) buildDemandForecast(ctx context.Context, params domai
 	daysInCurrentMonth := time.Date(now.Year(), now.Month()+1, 0, 0, 0, 0, 0, time.UTC).Day()
 	currentMonthFraction := float64(now.Day()) / float64(daysInCurrentMonth)
 
-	repo := s.repos.NewAnalyticsRepo()
+	repo := s.reports().NewAnalyticsRepo()
 	window := domain.GetDemandForecastWindowParams{
 		AccountID: params.AccountID,
 		StartDate: historyStart,

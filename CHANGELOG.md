@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.13.0](https://github.com/open-mrp/api/compare/v2.12.0...v2.13.0) (2026-09-29)
+
+
+### Features
+
+* **analytics:** serve sales analytics from pre-priced sales_line_fact, on the read replica ([68ba4d0](https://github.com/open-mrp/api/commit/68ba4d0143bda438f6da0370318e900b3f0bed13))
+
 ## [2.12.0](https://github.com/open-mrp/api/compare/v2.11.1...v2.12.0) (2026-09-29)
 
 

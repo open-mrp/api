@@ -73,6 +73,10 @@ func Run(
 	}
 	defer enqueuer.Stop()
 
+	if _, err := messaging.RegisterOutboxGauges(domain.ServiceName, repository.NewOutboxStatsRepo(queries)); err != nil {
+		return err
+	}
+
 	grpcCoreClient, apiErr := grpc.NewAuthCoreClient(cfg.CoreServiceURL)
 	if apiErr != nil {
 		return apiErr

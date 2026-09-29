@@ -89,3 +89,13 @@ LIMIT ?;
 UPDATE message_outbox
 SET alerted_at = NOW(3)
 WHERE id IN (sqlc.slice('ids'));
+
+-- Leads on message_outbox_status_next_run_at_idx, so it reads only the unpublished rows, never the published history.
+-- name: GetOutboxBacklogStats :many
+SELECT status,
+       COUNT(*) AS message_count,
+       CAST(TIMESTAMPDIFF(MICROSECOND, MIN(created_at), NOW(3)) AS SIGNED) AS oldest_age_us
+FROM message_outbox
+WHERE status IN ('pending', 'failed')
+  AND service_name = ?
+GROUP BY status;

@@ -49,3 +49,15 @@ WITH rows AS (
 )
 DELETE FROM message_inbox
 WHERE id IN (SELECT id FROM rows);
+
+-- Served by the partial message_inbox_backlog_idx, so it reads only unfinished and discarded rows, never the processed history.
+-- name: GetInboxBacklogStats :many
+SELECT handler,
+       status,
+       (failed_at IS NOT NULL)::boolean AS has_failed,
+       COUNT(*)::bigint AS message_count,
+       (EXTRACT(EPOCH FROM (now() - MIN(received_at))) * 1000000)::bigint AS oldest_age_us
+FROM message_inbox
+WHERE status IN ('received', 'discarded')
+  AND service_name = $1
+GROUP BY handler, status, (failed_at IS NOT NULL);

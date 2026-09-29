@@ -88,6 +88,10 @@ func Run(
 	}
 	defer enqueuer.Stop()
 
+	if _, err := messaging.RegisterOutboxGauges(domain.ServiceName, repository.NewOutboxStatsRepo(queries)); err != nil {
+		return err
+	}
+
 	inboxPurgerRepo := repository.NewInboxPurgerRepo(queries)
 	inboxPurger, err := messaging.NewInboxPurger(&messaging.InboxPurgerConfig{ServiceName: domain.ServiceName, PlatformMode: cfg.PlatformMode}, inboxPurgerRepo, leaseSvc)
 	if err != nil {
@@ -97,6 +101,10 @@ func Run(
 		return err
 	}
 	defer inboxPurger.Stop()
+
+	if _, err := messaging.RegisterInboxGauges(domain.ServiceName, repository.NewInboxStatsRepo(queries)); err != nil {
+		return err
+	}
 
 	// Core-service gRPC client
 	coreClient, err := agentgrpc.NewAgentCoreClient(cfg.CoreServiceURL)

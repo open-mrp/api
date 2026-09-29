@@ -1,4 +1,4 @@
-// Package tracing provides OpenTelemetry tracing initialization and helpers for all microservices. It configures OTLP exporters (HTTP or gRPC), sampling strategies, and context propagation. Each service calls InitProvider at startup to install a global TracerProvider, then uses GetTracer to obtain per-package tracers.
+// Package tracing provides OpenTelemetry tracing and metrics initialization and helpers for all microservices. It configures OTLP exporters (HTTP or gRPC), sampling strategies, and context propagation. Each service calls InitProvider at startup to install a global TracerProvider and MeterProvider, then uses GetTracer to obtain per-package tracers.
 //
 // Configuration is resolved from a combination of struct fields and OTEL_* environment variables, with non-zero struct fields taking precedence. See Config for details.
 package tracing
@@ -6,9 +6,11 @@ package tracing
 import (
 	"cmp"
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -20,10 +22,13 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/propagation"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
@@ -56,7 +61,11 @@ const (
 	envInsecure         = "OTEL_EXPORTER_OTLP_INSECURE"
 	envTracesSampler    = "OTEL_TRACES_SAMPLER"
 	envTracesSamplerArg = "OTEL_TRACES_SAMPLER_ARG"
+	envHostname         = "HOSTNAME"
 )
+
+// metricExportInterval is how often the periodic reader pushes cumulative metrics to the collector.
+const metricExportInterval = 30 * time.Second
 
 // Config holds all settings needed to initialize an OTLP trace exporter and sampler. Each field can be set explicitly or left zero to fall back to the corresponding OTEL_* environment variable (resolved in withDefaults). Explicit values take precedence over environment variables, except boolean fields (Insecure), whose false zero value falls back to the env var.
 type Config struct {
@@ -83,6 +92,9 @@ type Config struct {
 
 	// SamplerArg (optional; default: OTEL_TRACES_SAMPLER_ARG or "0.1") is passed to ratio-based samplers as the sampling probability (0.0-1.0).
 	SamplerArg string
+
+	// InstanceID (optional; default: HOSTNAME, then os.Hostname) is the service.instance.id resource attribute; in Kubernetes it is the pod name, which keeps each replica's cumulative counters a distinct series.
+	InstanceID string
 }
 
 // defaultHeaders returns the first map if it has entries, otherwise falls back to the second. Used by withDefaults to prefer explicit Config.Headers over environment-parsed headers.
@@ -122,6 +134,7 @@ func (c *Config) withDefaults(serviceName string, getenv func(string) string) *C
 		Headers:     defaultHeaders(c.Headers, headers),
 		Sampler:     cmp.Or(c.Sampler, sampler),
 		SamplerArg:  cmp.Or(c.SamplerArg, samplerArg),
+		InstanceID:  cmp.Or(c.InstanceID, getenv(envHostname)),
 	}
 }
 
@@ -142,9 +155,9 @@ func (c *Config) validate() error {
 	return nil
 }
 
-// InitProvider sets up the global OpenTelemetry TracerProvider and TextMapPropagator for a service. It creates an OTLP exporter, configures sampling, and registers everything with the otel global. Call this once at service startup. The provided context is used for exporter and resource initialization so that startup can be cancelled promptly (e.g. on SIGTERM).
+// InitProvider sets up the global OpenTelemetry TracerProvider, MeterProvider and TextMapPropagator for a service. It creates OTLP trace and metric exporters on the same endpoint, configures sampling, and registers everything with the otel global. Call this once at service startup. The provided context is used for exporter and resource initialization so that startup can be cancelled promptly (e.g. on SIGTERM).
 //
-// The returned function flushes pending spans and shuts down the provider; call it during graceful shutdown (typically deferred in main).
+// Metrics are never sampled: they are the exact counterpart to the sampled traces. The returned function flushes pending spans and metrics and shuts down both providers; call it during graceful shutdown (typically deferred in main).
 func InitProvider(ctx context.Context, serviceName string, getenv func(string) string) (func(context.Context) error, error) {
 	cfg := new(Config).withDefaults(serviceName, getenv)
 	if err := cfg.validate(); err != nil {
@@ -160,12 +173,26 @@ func InitProvider(ctx context.Context, serviceName string, getenv func(string) s
 	if err != nil {
 		return nil, err
 	}
+
+	metricExporter, err := cfg.newMetricExporter(ctx)
+	if err != nil {
+		return nil, errors.Join(err, traceProvider.Shutdown(ctx))
+	}
+
+	meterProvider, err := newMeterProvider(ctx, cfg, metricExporter)
+	if err != nil {
+		return nil, errors.Join(err, traceProvider.Shutdown(ctx), metricExporter.Shutdown(ctx))
+	}
+
 	otel.SetTracerProvider(traceProvider)
+	otel.SetMeterProvider(meterProvider)
 
 	prop := newPropagator()
 	otel.SetTextMapPropagator(prop)
 
-	return traceProvider.Shutdown, nil
+	return func(ctx context.Context) error {
+		return errors.Join(traceProvider.Shutdown(ctx), meterProvider.Shutdown(ctx))
+	}, nil
 }
 
 // GetTracer returns a named tracer from the global TracerProvider. Each package should call this once at init time with its package path to get a tracer for creating spans (e.g. tracing.GetTracer("auth-service/internal/service")).
@@ -308,6 +335,76 @@ func applyHTTPEndpoint(endpoint string, opts *[]otlptracehttp.Option) {
 	*opts = append(*opts, otlptracehttp.WithEndpoint(endpoint))
 }
 
+// newMetricExporter creates an OTLP metric exporter with the same protocol, endpoint, TLS, and header settings as newExporter.
+func (c *Config) newMetricExporter(ctx context.Context) (sdkmetric.Exporter, error) {
+	if c == nil {
+		return nil, errConfigNil
+	}
+
+	switch c.Protocol {
+	case constants.ProtocolGRPC:
+		var clientOpts []otlpmetricgrpc.Option
+
+		if c.Endpoint != "" {
+			clientOpts = append(clientOpts, otlpmetricgrpc.WithEndpoint(c.Endpoint))
+		}
+
+		if c.Insecure {
+			clientOpts = append(clientOpts, otlpmetricgrpc.WithInsecure())
+		}
+
+		if len(c.Headers) > 0 {
+			clientOpts = append(clientOpts, otlpmetricgrpc.WithHeaders(c.Headers))
+		}
+
+		return otlpmetricgrpc.New(ctx, clientOpts...)
+
+	default:
+		clientOpts := []otlpmetrichttp.Option{
+			otlpmetrichttp.WithCompression(otlpmetrichttp.GzipCompression),
+		}
+
+		if c.Endpoint != "" {
+			applyMetricHTTPEndpoint(c.Endpoint, &clientOpts)
+		}
+
+		if c.Insecure {
+			clientOpts = append(clientOpts, otlpmetrichttp.WithInsecure())
+		}
+
+		if len(c.Headers) > 0 {
+			clientOpts = append(clientOpts, otlpmetrichttp.WithHeaders(c.Headers))
+		}
+
+		return otlpmetrichttp.New(ctx, clientOpts...)
+	}
+}
+
+// applyMetricHTTPEndpoint is applyHTTPEndpoint for the metric exporter's option type.
+func applyMetricHTTPEndpoint(endpoint string, opts *[]otlpmetrichttp.Option) {
+	if strings.Contains(endpoint, "://") {
+		parsed, err := url.Parse(endpoint)
+		if err != nil {
+			return
+		}
+
+		if parsed.Host != "" {
+			*opts = append(*opts, otlpmetrichttp.WithEndpoint(parsed.Host))
+		}
+
+		if parsed.Scheme == "http" {
+			*opts = append(*opts, otlpmetrichttp.WithInsecure())
+		}
+
+		if trimmedPath := strings.TrimPrefix(parsed.Path, "/"); trimmedPath != "" {
+			*opts = append(*opts, otlpmetrichttp.WithURLPath("/"+trimmedPath))
+		}
+		return
+	}
+
+	*opts = append(*opts, otlpmetrichttp.WithEndpoint(endpoint))
+}
+
 // newPropagator creates a composite propagator that injects and extracts both W3C TraceContext (traceparent/tracestate headers) and Baggage headers. This ensures trace context is carried across HTTP and gRPC service boundaries.
 func newPropagator() propagation.TextMapPropagator {
 	return propagation.NewCompositeTextMapPropagator(
@@ -316,20 +413,15 @@ func newPropagator() propagation.TextMapPropagator {
 	)
 }
 
-// newTraceProvider builds an SDK TracerProvider that batches spans to the given exporter. It tags every span with the service name and deployment environment as OpenTelemetry semantic convention resource attributes, and applies the configured sampler to control trace volume.
+// newTraceProvider builds an SDK TracerProvider that batches spans to the given exporter. It tags every span with the resource from newResource, and applies the configured sampler to control trace volume.
 func newTraceProvider(ctx context.Context, cfg *Config, exporter sdktrace.SpanExporter) (*sdktrace.TracerProvider, error) {
 	if cfg == nil {
 		return nil, errConfigNil
 	}
 
-	res, err := resource.New(ctx,
-		resource.WithAttributes(
-			semconv.ServiceNameKey.String(cfg.ServiceName),
-			semconv.DeploymentEnvironmentKey.String(string(cfg.Environment)),
-		),
-	)
+	res, err := newResource(ctx, cfg)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create resource: %w", err)
+		return nil, err
 	}
 
 	sampler := newSampler(cfg)
@@ -341,6 +433,43 @@ func newTraceProvider(ctx context.Context, cfg *Config, exporter sdktrace.SpanEx
 	)
 
 	return traceProvider, nil
+}
+
+// newMeterProvider builds an SDK MeterProvider that pushes cumulative metrics to the given exporter every metricExportInterval, under the same resource as the traces.
+func newMeterProvider(ctx context.Context, cfg *Config, exporter sdkmetric.Exporter) (*sdkmetric.MeterProvider, error) {
+	if cfg == nil {
+		return nil, errConfigNil
+	}
+
+	res, err := newResource(ctx, cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return sdkmetric.NewMeterProvider(
+		sdkmetric.WithResource(res),
+		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(exporter, sdkmetric.WithInterval(metricExportInterval))),
+	), nil
+}
+
+// newResource tags telemetry with the service name, deployment environment, and instance id. The instance id is what keeps replicas apart once the collector's Prometheus exporter folds service.name into a job label.
+func newResource(ctx context.Context, cfg *Config) (*resource.Resource, error) {
+	instanceID := cfg.InstanceID
+	if instanceID == "" {
+		instanceID, _ = os.Hostname()
+	}
+
+	res, err := resource.New(ctx,
+		resource.WithAttributes(
+			semconv.ServiceNameKey.String(cfg.ServiceName),
+			semconv.DeploymentEnvironmentKey.String(string(cfg.Environment)),
+			semconv.ServiceInstanceIDKey.String(instanceID),
+		),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create resource: %w", err)
+	}
+	return res, nil
 }
 
 // newSampler builds a trace sampler from the config's Sampler/SamplerArg fields.

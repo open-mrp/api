@@ -75,3 +75,15 @@ WHERE id = sqlc.arg('id')
 DELETE FROM message_inbox
 WHERE status IN ('processed', 'discarded', 'ignored') AND processed_at < DATE_SUB(NOW(3), INTERVAL ? HOUR)
 LIMIT ?;
+
+-- Leads on message_inbox_alert_scan_idx (status, alerted_at), so it reads only unfinished and discarded rows, never the processed history.
+-- name: GetInboxBacklogStats :many
+SELECT handler,
+       status,
+       CAST(failed_at IS NOT NULL AS SIGNED) AS has_failed,
+       COUNT(*) AS message_count,
+       CAST(TIMESTAMPDIFF(MICROSECOND, MIN(received_at), NOW(3)) AS SIGNED) AS oldest_age_us
+FROM message_inbox
+WHERE status IN ('received', 'discarded')
+  AND service_name = ?
+GROUP BY handler, status, has_failed;

@@ -535,6 +535,7 @@ func (r *rabbitMQ) PublishMessage(ctx context.Context, exchange, routingKey stri
 		MessageId:    message.MessageID,
 		DeliveryMode: amqp.Persistent,
 		ContentType:  "application/json",
+		Timestamp:    time.Now(),
 		Body:         jsonMsg,
 	}
 

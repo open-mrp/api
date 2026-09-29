@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"github.com/open-mrp/api/services/notification-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/db"
@@ -21,6 +22,35 @@ func NewInboxRepo(queries *sqlc.Queries) messaging.InboxRepo {
 
 func NewInboxPurgerRepo(queries *sqlc.Queries) messaging.InboxPurgerRepo {
 	return &inboxRepoImpl{queries: queries}
+}
+
+// NewInboxStatsRepo creates the repository the inbox gauges read this service's unfinished and discarded backlog from.
+func NewInboxStatsRepo(queries *sqlc.Queries) messaging.InboxStatsRepo {
+	return &inboxRepoImpl{queries: queries}
+}
+
+func (r *inboxRepoImpl) InboxStats(ctx context.Context, serviceName string) ([]messaging.InboxHandlerStat, error) {
+	ctx, span := tracing.StartSpan(ctx, inboxRepoTracer, "repository.inbox.stats")
+	defer span.End()
+
+	rows, err := r.queries.GetInboxBacklogStats(ctx, serviceName)
+	if err != nil {
+		span.RecordError(err)
+		return nil, err
+	}
+
+	stats := make([]messaging.InboxHandlerStat, 0, len(rows))
+	for _, row := range rows {
+		stats = append(stats, messaging.InboxHandlerStat{
+			Handler:   row.Handler,
+			Status:    messaging.InboxStatus(row.Status),
+			Failed:    row.HasFailed != 0,
+			Count:     row.MessageCount,
+			OldestAge: time.Duration(max(row.OldestAgeUs, 0)) * time.Microsecond,
+		})
+	}
+
+	return stats, nil
 }
 
 func (r *inboxRepoImpl) PurgeProcessed(ctx context.Context, retentionHours int, limit int32) (int64, error) {

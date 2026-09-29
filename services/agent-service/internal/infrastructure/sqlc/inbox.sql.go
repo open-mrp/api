@@ -54,6 +54,53 @@ func (q *Queries) CompleteInboxRecord(ctx context.Context, arg CompleteInboxReco
 	return result.RowsAffected(), nil
 }
 
+const getInboxBacklogStats = `-- name: GetInboxBacklogStats :many
+SELECT handler,
+       status,
+       (failed_at IS NOT NULL)::boolean AS has_failed,
+       COUNT(*)::bigint AS message_count,
+       (EXTRACT(EPOCH FROM (now() - MIN(received_at))) * 1000000)::bigint AS oldest_age_us
+FROM message_inbox
+WHERE status IN ('received', 'discarded')
+  AND service_name = $1
+GROUP BY handler, status, (failed_at IS NOT NULL)
+`
+
+type GetInboxBacklogStatsRow struct {
+	Handler      string
+	Status       string
+	HasFailed    bool
+	MessageCount int64
+	OldestAgeUs  int64
+}
+
+// Served by the partial message_inbox_backlog_idx, so it reads only unfinished and discarded rows, never the processed history.
+func (q *Queries) GetInboxBacklogStats(ctx context.Context, serviceName string) ([]GetInboxBacklogStatsRow, error) {
+	rows, err := q.db.Query(ctx, getInboxBacklogStats, serviceName)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetInboxBacklogStatsRow
+	for rows.Next() {
+		var i GetInboxBacklogStatsRow
+		if err := rows.Scan(
+			&i.Handler,
+			&i.Status,
+			&i.HasFailed,
+			&i.MessageCount,
+			&i.OldestAgeUs,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getInboxRecordByMessageAndHandler = `-- name: GetInboxRecordByMessageAndHandler :one
 SELECT id, message_id, service_name, handler, message_type, request_id, parent_message_id, status, attempts, last_error, received_at, processed_at, failed_at, lock_owner, lock_expires_at
 FROM message_inbox

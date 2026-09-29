@@ -87,6 +87,10 @@ func Run(
 	}
 	defer inboxPurger.Stop()
 
+	if _, err := messaging.RegisterInboxGauges(domain.ServiceName, repository.NewInboxStatsRepo(queries)); err != nil {
+		return err
+	}
+
 	consumerTracer := workerTracer.Tracer(domain.ServiceName + ".request_log_consumer")
 	consumer := event.NewRequestLogConsumer(rabbitmq, loggingSvc, consumerTracer)
 	if err := consumer.Listen(ctx); err != nil {
@@ -109,6 +113,10 @@ func Run(
 		return err
 	}
 	defer enqueuer.Stop()
+
+	if _, err := messaging.RegisterOutboxGauges(domain.ServiceName, repository.NewOutboxStatsRepo(queries)); err != nil {
+		return err
+	}
 
 	idempotencyRepo := repository.NewIdempotencyKeyRepo(dbpool, queries)
 

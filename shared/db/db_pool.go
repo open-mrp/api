@@ -13,6 +13,7 @@ import (
 	"github.com/XSAM/otelsql"
 	_ "github.com/go-sql-driver/mysql"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -153,6 +154,10 @@ func NewDbPool(config *Config) (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
+	if err := registerPoolMetrics(db, otel.GetMeterProvider()); err != nil {
+		slog.Warn("db: registering connection pool metrics failed", "error", err)
+	}
+
 	if config.WarmConnections > 0 {
 		go keepWarm(db, config.WarmConnections, config.WarmInterval)
 	}
@@ -196,6 +201,15 @@ func warm(db *sql.DB, n int, timeout time.Duration) bool {
 		_ = c.PingContext(ctx)
 	}
 	return true
+}
+
+// registerPoolMetrics reports the pool's sql.DBStats as the otelsql db.sql.connection.* instruments on every metrics collection, for the life of the process.
+func registerPoolMetrics(db *sql.DB, provider metric.MeterProvider) error {
+	_, err := otelsql.RegisterDBStatsMetrics(db,
+		otelsql.WithMeterProvider(provider),
+		otelsql.WithAttributes(semconv.DBSystemMySQL),
+	)
+	return err
 }
 
 // database/sql does not export the error it returns once DB.Close has been called.

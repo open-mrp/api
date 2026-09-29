@@ -64,3 +64,13 @@ WITH rows AS (
 )
 DELETE FROM message_outbox
 WHERE id IN (SELECT id FROM rows);
+
+-- Leads on message_outbox_status_next_run_at_idx, so it reads only the unpublished rows, never the published history.
+-- name: GetOutboxBacklogStats :many
+SELECT status,
+       COUNT(*)::bigint AS message_count,
+       (EXTRACT(EPOCH FROM (now() - MIN(created_at))) * 1000000)::bigint AS oldest_age_us
+FROM message_outbox
+WHERE status IN ('pending', 'failed')
+  AND service_name = $1
+GROUP BY status;

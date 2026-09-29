@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"time"
 
 	"github.com/open-mrp/api/services/notification-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/contracts"
@@ -21,6 +22,33 @@ type outboxRepoImpl struct {
 
 func NewOutboxRepo(queries *sqlc.Queries) messaging.OutboxRepo {
 	return &outboxRepoImpl{queries: queries}
+}
+
+// NewOutboxStatsRepo creates the repository the outbox gauges read this service's unpublished backlog from.
+func NewOutboxStatsRepo(queries *sqlc.Queries) messaging.OutboxStatsRepo {
+	return &outboxRepoImpl{queries: queries}
+}
+
+func (r *outboxRepoImpl) OutboxStats(ctx context.Context, serviceName string) ([]messaging.OutboxStatusStat, error) {
+	ctx, span := tracing.StartSpan(ctx, outboxRepoTracer, "repository.outbox.stats")
+	defer span.End()
+
+	rows, err := r.queries.GetOutboxBacklogStats(ctx, serviceName)
+	if err != nil {
+		span.RecordError(err)
+		return nil, err
+	}
+
+	stats := make([]messaging.OutboxStatusStat, 0, len(rows))
+	for _, row := range rows {
+		stats = append(stats, messaging.OutboxStatusStat{
+			Status:    messaging.OutboxStatus(row.Status),
+			Count:     row.MessageCount,
+			OldestAge: time.Duration(max(row.OldestAgeUs, 0)) * time.Microsecond,
+		})
+	}
+
+	return stats, nil
 }
 
 func (r *outboxRepoImpl) Create(ctx context.Context, input messaging.OutboxMessageInput) (int64, error) {

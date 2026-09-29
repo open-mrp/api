@@ -77,3 +77,13 @@ WHERE id IN (sqlc.slice('ids'))
   AND status = 'published'
   AND published_at < DATE_SUB(NOW(3), INTERVAL sqlc.arg('retention_hours') HOUR)
 ORDER BY id ASC;
+
+-- Leads on message_outbox_status_next_run_at_idx, so it reads only the unpublished rows, never the published history.
+-- name: GetOutboxBacklogStats :many
+SELECT status,
+       COUNT(*) AS message_count,
+       CAST(TIMESTAMPDIFF(MICROSECOND, MIN(created_at), NOW(3)) AS SIGNED) AS oldest_age_us
+FROM message_outbox
+WHERE status IN ('pending', 'failed')
+  AND service_name = ?
+GROUP BY status;

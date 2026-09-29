@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"net"
 	"testing"
@@ -11,6 +12,8 @@ import (
 	"github.com/go-sql-driver/mysql"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -237,4 +240,56 @@ func TestNewDbPool_AppendsDSNParameters(t *testing.T) {
 		_, _ = NewDbPool(cfg)
 		assert.Equal(t, "user:pass@dsntest(host:3306)/app", cfg.DBURI)
 	})
+}
+
+func TestRegisterPoolMetrics(t *testing.T) {
+	t.Parallel()
+	reader := sdkmetric.NewManualReader()
+	provider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	t.Cleanup(func() { _ = provider.Shutdown(context.Background()) })
+
+	pool, err := sql.Open("mysql", "user:pass@tcp(127.0.0.1:1)/db")
+	assert.NoError(t, err)
+	t.Cleanup(func() { _ = pool.Close() })
+	pool.SetMaxOpenConns(7)
+
+	assert.NoError(t, registerPoolMetrics(pool, provider))
+
+	var rm metricdata.ResourceMetrics
+	assert.NoError(t, reader.Collect(context.Background(), &rm))
+	byName := map[string]metricdata.Metrics{}
+	for _, sm := range rm.ScopeMetrics {
+		for _, m := range sm.Metrics {
+			byName[m.Name] = m
+		}
+	}
+
+	for _, name := range []string{
+		"db.sql.connection.max_open",
+		"db.sql.connection.open",
+		"db.sql.connection.wait",
+		"db.sql.connection.wait_duration",
+		"db.sql.connection.closed_max_idle",
+		"db.sql.connection.closed_max_idle_time",
+		"db.sql.connection.closed_max_lifetime",
+	} {
+		assert.Contains(t, byName, name)
+	}
+
+	maxOpen, ok := byName["db.sql.connection.max_open"].Data.(metricdata.Gauge[int64])
+	assert.True(t, ok)
+	if assert.Len(t, maxOpen.DataPoints, 1) {
+		assert.Equal(t, int64(7), maxOpen.DataPoints[0].Value)
+		system, _ := maxOpen.DataPoints[0].Attributes.Value("db.system")
+		assert.Equal(t, "mysql", system.AsString())
+	}
+
+	open, ok := byName["db.sql.connection.open"].Data.(metricdata.Gauge[int64])
+	assert.True(t, ok)
+	statuses := map[string]bool{}
+	for _, dp := range open.DataPoints {
+		status, _ := dp.Attributes.Value("status")
+		statuses[status.AsString()] = true
+	}
+	assert.Equal(t, map[string]bool{"idle": true, "inuse": true}, statuses)
 }

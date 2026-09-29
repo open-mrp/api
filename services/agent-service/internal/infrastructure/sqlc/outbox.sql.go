@@ -149,6 +149,43 @@ func (q *Queries) GetLockedOutboxMessages(ctx context.Context, lockOwner pgtype.
 	return items, nil
 }
 
+const getOutboxBacklogStats = `-- name: GetOutboxBacklogStats :many
+SELECT status,
+       COUNT(*)::bigint AS message_count,
+       (EXTRACT(EPOCH FROM (now() - MIN(created_at))) * 1000000)::bigint AS oldest_age_us
+FROM message_outbox
+WHERE status IN ('pending', 'failed')
+  AND service_name = $1
+GROUP BY status
+`
+
+type GetOutboxBacklogStatsRow struct {
+	Status       string
+	MessageCount int64
+	OldestAgeUs  int64
+}
+
+// Leads on message_outbox_status_next_run_at_idx, so it reads only the unpublished rows, never the published history.
+func (q *Queries) GetOutboxBacklogStats(ctx context.Context, serviceName string) ([]GetOutboxBacklogStatsRow, error) {
+	rows, err := q.db.Query(ctx, getOutboxBacklogStats, serviceName)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetOutboxBacklogStatsRow
+	for rows.Next() {
+		var i GetOutboxBacklogStatsRow
+		if err := rows.Scan(&i.Status, &i.MessageCount, &i.OldestAgeUs); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const markOutboxMessageFailed = `-- name: MarkOutboxMessageFailed :exec
 UPDATE message_outbox
 SET attempts = attempts + 1,

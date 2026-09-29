@@ -75,6 +75,10 @@ func Run(
 	}
 	defer enqueuer.Stop()
 
+	if _, err := messaging.RegisterOutboxGauges(domain.ServiceName, repository.NewOutboxStatsRepo(queries)); err != nil {
+		return err
+	}
+
 	var stripeClient domain.StripeClient
 	if cfg.PlatformMode.IsTest() {
 		stripeClient = &stub.StripeClient{}
@@ -136,6 +140,10 @@ func Run(
 		return err
 	}
 	defer inboxPurger.Stop()
+
+	if _, err := messaging.RegisterInboxGauges(domain.ServiceName, repository.NewInboxStatsRepo(queries)); err != nil {
+		return err
+	}
 
 	stripeEventLogRepo := repository.NewStripeEventLogRepo(queries)
 	accountUsageRepo := repository.NewAccountUsageRepo(queries)

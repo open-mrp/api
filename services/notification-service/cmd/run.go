@@ -93,6 +93,10 @@ func Run(
 	}
 	defer enqueuer.Stop()
 
+	if _, err := messaging.RegisterOutboxGauges(domain.ServiceName, repository.NewOutboxStatsRepo(queries)); err != nil {
+		return err
+	}
+
 	templateRenderer, apiErr := email.NewTemplateRenderer()
 	if apiErr != nil {
 		return apiErr
@@ -154,6 +158,10 @@ func Run(
 		return err
 	}
 	defer inboxPurger.Stop()
+
+	if _, err := messaging.RegisterInboxGauges(domain.ServiceName, repository.NewInboxStatsRepo(queries)); err != nil {
+		return err
+	}
 
 	messagingReaperRepo := repository.NewMessagingReaperRepo(queries)
 	messagingReaper, err := reaper.NewMessagingReaper(&reaper.MessagingReaperConfig{ServiceName: domain.ServiceName, PlatformMode: cfg.PlatformMode}, messagingReaperRepo, leaseSvc, objectStore, cfg.ChatBucket)

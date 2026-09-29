@@ -86,6 +86,10 @@ func Run(
 	}
 	defer enqueuer.Stop()
 
+	if _, err := messaging.RegisterOutboxGauges(domain.ServiceName, repository.NewOutboxStatsRepo(queries)); err != nil {
+		return err
+	}
+
 	// Test mode normally stubs object storage out, but an upload that never stores anything
 	// cannot tell you whether the read path looks where the write path put it. When the e2e
 	// stack points at a local S3-compatible server, use the real client so those round trips
@@ -715,6 +719,10 @@ func Run(
 		return err
 	}
 	defer inboxPurger.Stop()
+
+	if _, err := messaging.RegisterInboxGauges(domain.ServiceName, repository.NewInboxStatsRepo(queries)); err != nil {
+		return err
+	}
 
 	purgeRepo := repository.NewPurgeRepo(db)
 	purgeConsumer := event.NewPurgeConsumer(rabbitmq, inboxRepo, purgeRepo)

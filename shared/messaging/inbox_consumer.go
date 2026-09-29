@@ -36,6 +36,15 @@ func (e *InboxLeaseHeldError) Is(target error) bool { return target == ErrInboxL
 // ErrInboxDiscarded is returned by Discard and Ignore. It signals that the message ended deliberately in a terminal state, so Wrap ACKs it instead of recording a failure that would invite a retry.
 var ErrInboxDiscarded = errors.New("inbox record was discarded")
 
+// errInboxIgnored is the ErrInboxDiscarded that Ignore returns, so the handled counter can tell an ignored message from a discarded one.
+var errInboxIgnored error = inboxIgnoredError{}
+
+type inboxIgnoredError struct{}
+
+func (inboxIgnoredError) Error() string { return ErrInboxDiscarded.Error() }
+
+func (inboxIgnoredError) Is(target error) bool { return target == ErrInboxDiscarded }
+
 // ErrInboxAlreadyCompleted is returned from a transactional recovery point when the record was no longer "received", meaning a concurrent attempt completed the message first. Handlers must let it abort their transaction so the duplicate work rolls back.
 var ErrInboxAlreadyCompleted = errors.New("inbox record was already completed by another attempt")
 
@@ -75,6 +84,7 @@ type InboxConsumer struct {
 	owner        string
 	leaseSeconds int
 	tracer       trace.Tracer
+	metrics      *messagingMetrics
 }
 
 // NewInboxConsumer creates an InboxConsumer that uses the given repository for persistence and derives a tracer scoped to "{serviceName}.inbox_consumer". Each consumer mints its own lease owner id so a record's lease identifies the attempt holding it.
@@ -89,6 +99,7 @@ func NewInboxConsumer(repo InboxRepo, serviceName string) *InboxConsumer {
 		owner:        owner,
 		leaseSeconds: DefaultInboxLeaseSeconds,
 		tracer:       tracing.GetTracer(serviceName + ".inbox_consumer"),
+		metrics:      defaultMessagingMetrics(),
 	}
 }
 
@@ -104,6 +115,7 @@ func (c *InboxConsumer) WithLeaseSeconds(seconds int) *InboxConsumer {
 //
 // Metadata (message ID, request ID, parent message ID) is extracted from the AMQP delivery headers and body. If no message ID can be found, the handler runs without deduplication (with a warning log) to avoid silently dropping messages.
 func (c *InboxConsumer) Wrap(handler string, fn MessageHandler) MessageHandler {
+	wrappedHandlers.Store(handler, struct{}{})
 	return func(ctx context.Context, msg amqp.Delivery) error {
 		ctx, span := c.tracer.Start(ctx, "inbox.wrap."+handler)
 		defer span.End()
@@ -130,7 +142,7 @@ func (c *InboxConsumer) Wrap(handler string, fn MessageHandler) MessageHandler {
 		// If no message ID, we can't deduplicate - just process
 		if messageID == "" {
 			slog.Warn("No message ID found, processing without deduplication", "handler", handler)
-			return fn(ctx, msg)
+			return c.invoke(ctx, handler, fn, msg)
 		}
 
 		// Try to insert the inbox record
@@ -156,12 +168,20 @@ func (c *InboxConsumer) Wrap(handler string, fn MessageHandler) MessageHandler {
 			}
 			// Some other error - let the handler proceed but log the issue
 			slog.Warn("Failed to insert inbox record", "handler", handler, "message_id", messageID, "error", err)
-			return fn(ctx, msg)
+			return c.invoke(ctx, handler, fn, msg)
 		}
 
 		// New message - process it
 		return c.executeAndRecord(ctx, recordID, messageID, handler, fn, msg)
 	}
+}
+
+// invoke runs the handler and records its outcome and run time on the messaging metrics.
+func (c *InboxConsumer) invoke(ctx context.Context, handler string, fn MessageHandler, msg amqp.Delivery) error {
+	start := time.Now()
+	err := fn(ctx, msg)
+	c.metrics.recordHandled(ctx, handler, time.Since(start), err)
+	return err
 }
 
 // bookkeepingTimeout bounds the detached writes that close out a delivery.
@@ -178,7 +198,7 @@ func bookkeepingContext(ctx context.Context) (context.Context, context.CancelFun
 //
 // Complete is best-effort here: a handler that committed its own recovery point has already marked the record inside its transaction, and this call is then a no-op repeat. For handlers that did not, this is the only marker, and the window between the handler returning and this write is exactly why those handlers get at-most-once rather than exactly-once.
 func (c *InboxConsumer) executeAndRecord(ctx context.Context, recordID int64, messageID, handler string, fn MessageHandler, msg amqp.Delivery) error {
-	if err := fn(WithInboxLease(ctx, InboxLease{RecordID: recordID, Owner: c.owner}), msg); err != nil {
+	if err := c.invoke(WithInboxLease(ctx, InboxLease{RecordID: recordID, Owner: c.owner}), handler, fn, msg); err != nil {
 		// The handler ended the message deliberately; the terminal state is already recorded and must not be overwritten with a failure that invites a retry.
 		if errors.Is(err, ErrInboxDiscarded) {
 			return nil
@@ -295,6 +315,9 @@ func (c *InboxConsumer) terminate(ctx context.Context, reason string, state Inbo
 	}
 	if err != nil {
 		slog.WarnContext(ctx, "Failed to mark inbox record", "state", string(state), "reason", reason, "error", err)
+	}
+	if state == InboxStatusIgnored {
+		return errInboxIgnored
 	}
 	return ErrInboxDiscarded
 }

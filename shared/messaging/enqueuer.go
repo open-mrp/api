@@ -184,6 +184,7 @@ type Enqueuer struct {
 	broker         MessageBroker
 	lease          *lease.Lease
 	purgeLeaseName string
+	metrics        *messagingMetrics
 
 	// notify wakes the poll loop the moment a producer commits an outbox row, so the row is published immediately instead of waiting out the (idle-backed-off) poll timer. Buffered at 1 and written non-blockingly, so it coalesces a burst of writes into a single wake-up — the drain that follows picks up every pending row anyway.
 	notify chan struct{}
@@ -211,6 +212,7 @@ func NewEnqueuer(config *EnqueuerConfig, repo OutboxEnqueuerRepo, broker Message
 		lease:          l,
 		purgeLeaseName: "outbox-purge-" + config.ServiceName,
 		notify:         make(chan struct{}, 1),
+		metrics:        defaultMessagingMetrics(),
 	}, nil
 }
 
@@ -367,6 +369,7 @@ func (e *Enqueuer) processBatch() int {
 	publishedIDs := make([]int64, 0, len(messages))
 	for _, msg := range messages {
 		if err := e.publishMessage(msg); err != nil {
+			e.metrics.recordPublishError(e.ctx, msg.MessageType)
 			delay := retry.CalculateDelay(e.config.RetryBackoff, msg.Attempts)
 			delaySecs := max(int(delay.Seconds()), 1)
 			slog.Error("Failed to publish outbox message",
@@ -384,6 +387,7 @@ func (e *Enqueuer) processBatch() int {
 			continue
 		}
 
+		e.metrics.recordPublished(e.ctx, msg.MessageType)
 		publishedIDs = append(publishedIDs, msg.ID)
 	}
 

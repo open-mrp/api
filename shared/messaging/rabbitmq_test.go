@@ -273,6 +273,7 @@ func TestPublishAfterCloseReconnectsInsteadOfFailing(t *testing.T) {
 	require.Equal(t, 1, reconnects)
 	require.Len(t, published, 1)
 	require.True(t, strings.HasPrefix(published[0].MessageId, string(id.MessageIDPrefix)))
+	require.WithinDuration(t, time.Now(), published[0].Timestamp, 5*time.Second, "RabbitMQ's head_message_timestamp reads the publish timestamp")
 	require.True(t, rmq.IsReady())
 }
 

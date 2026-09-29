@@ -1,8 +1,15 @@
 package tracing
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
 	"errors"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -14,6 +21,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
@@ -271,6 +279,28 @@ func TestConfigWithDefaults(t *testing.T) {
 				ServiceName: "svc",
 				Environment: constants.PlatformModeProduction,
 				Protocol:    constants.ProtocolHTTP,
+			},
+		},
+		{
+			name: "instance id falls back to HOSTNAME",
+			cfg:  &Config{},
+			env:  map[string]string{envHostname: "core-service-7d9f-abcde"},
+			expected: &Config{
+				ServiceName: "svc",
+				Environment: constants.PlatformModeProduction,
+				Protocol:    constants.ProtocolHTTP,
+				InstanceID:  "core-service-7d9f-abcde",
+			},
+		},
+		{
+			name: "explicit instance id beats HOSTNAME",
+			cfg:  &Config{InstanceID: "explicit-pod"},
+			env:  map[string]string{envHostname: "env-pod"},
+			expected: &Config{
+				ServiceName: "svc",
+				Environment: constants.PlatformModeProduction,
+				Protocol:    constants.ProtocolHTTP,
+				InstanceID:  "explicit-pod",
 			},
 		},
 		{
@@ -594,6 +624,62 @@ func TestApplyHTTPEndpoint(t *testing.T) {
 	}
 }
 
+func TestApplyMetricHTTPEndpoint(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name            string
+		endpoint        string
+		expectedOptions int
+	}{
+		{name: "bare host and port", endpoint: "collector:4318", expectedOptions: 1},
+		{name: "http scheme adds insecure", endpoint: "http://collector:4318", expectedOptions: 2},
+		{name: "https scheme stays secure", endpoint: "https://collector:4318", expectedOptions: 1},
+		{name: "base path is applied", endpoint: "https://collector.example.com/otlp", expectedOptions: 2},
+		{name: "unparseable url yields no options", endpoint: "http://[::1", expectedOptions: 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			var opts []otlpmetrichttp.Option
+			applyMetricHTTPEndpoint(tt.endpoint, &opts)
+			require.Len(t, opts, tt.expectedOptions)
+		})
+	}
+}
+
+func TestNewResourceIdentifiesInstance(t *testing.T) {
+	t.Parallel()
+	hostname, err := os.Hostname()
+	require.NoError(t, err)
+
+	tests := []struct {
+		name       string
+		instanceID string
+		expected   string
+	}{
+		{name: "configured instance id", instanceID: "core-service-7d9f-abcde", expected: "core-service-7d9f-abcde"},
+		{name: "falls back to os hostname", instanceID: "", expected: hostname},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			res, err := newResource(context.Background(), &Config{
+				ServiceName: "svc",
+				Environment: constants.PlatformModeProduction,
+				InstanceID:  tt.instanceID,
+			})
+			require.NoError(t, err)
+
+			attrs := attrsToMap(res.Attributes())
+			require.Equal(t, "svc", attrs["service.name"])
+			require.Equal(t, string(constants.PlatformModeProduction), attrs["deployment.environment"])
+			require.Equal(t, tt.expected, attrs["service.instance.id"])
+		})
+	}
+}
+
 func TestInitProviderRejectsInvalidConfig(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -633,11 +719,13 @@ func TestInitProviderRejectsInvalidConfig(t *testing.T) {
 }
 
 func TestInitProviderSucceedsWithUnreachableCollector(t *testing.T) {
-	// Not parallel: mutates the global otel tracer provider and propagator.
+	// Not parallel: mutates the global otel tracer provider, meter provider, and propagator.
 	origTP := otel.GetTracerProvider()
+	origMP := otel.GetMeterProvider()
 	origProp := otel.GetTextMapPropagator()
 	defer func() {
 		otel.SetTracerProvider(origTP)
+		otel.SetMeterProvider(origMP)
 		otel.SetTextMapPropagator(origProp)
 	}()
 
@@ -652,10 +740,74 @@ func TestInitProviderSucceedsWithUnreachableCollector(t *testing.T) {
 
 	require.ElementsMatch(t, []string{"traceparent", "tracestate", "baggage"}, otel.GetTextMapPropagator().Fields())
 	require.NotEqual(t, origTP, otel.GetTracerProvider())
+	require.NotEqual(t, origMP, otel.GetMeterProvider())
+
+	// The final metrics flush has nowhere to go, so shutdown reports it rather than hanging past its deadline.
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	require.Error(t, shutdown(ctx))
+}
+
+func TestInitProviderFlushesMetricsOnShutdown(t *testing.T) {
+	// Not parallel: mutates the global otel tracer provider, meter provider, and propagator.
+	origTP := otel.GetTracerProvider()
+	origMP := otel.GetMeterProvider()
+	origProp := otel.GetTextMapPropagator()
+	defer func() {
+		otel.SetTracerProvider(origTP)
+		otel.SetMeterProvider(origMP)
+		otel.SetTextMapPropagator(origProp)
+	}()
+
+	var mu sync.Mutex
+	var paths []string
+	var bodies [][]byte
+	collector := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		reader := io.Reader(r.Body)
+		if r.Header.Get("Content-Encoding") == "gzip" {
+			gz, err := gzip.NewReader(r.Body)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			reader = gz
+		}
+		body, _ := io.ReadAll(reader)
+		mu.Lock()
+		paths = append(paths, r.URL.Path)
+		bodies = append(bodies, body)
+		mu.Unlock()
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer collector.Close()
+
+	shutdown, err := InitProvider(context.Background(), "svc", fakeGetenv(map[string]string{
+		envEnvironment:   string(constants.PlatformModeTest),
+		envOTLPEndpoint:  collector.URL,
+		envTracesSampler: "always_off",
+		envHostname:      "svc-pod-1",
+	}))
+	require.NoError(t, err)
+
+	counter, err := otel.Meter("test").Int64Counter("test.flushed")
+	require.NoError(t, err)
+	counter.Add(context.Background(), 3)
 
 	ctx, cancel := context.WithTimeout(context.Background(), defaultShutdownTimeout)
 	defer cancel()
 	require.NoError(t, shutdown(ctx))
+
+	mu.Lock()
+	defer mu.Unlock()
+	require.Contains(t, paths, "/v1/metrics")
+	var metricsBody []byte
+	for i, path := range paths {
+		if path == "/v1/metrics" {
+			metricsBody = bodies[i]
+		}
+	}
+	require.True(t, bytes.Contains(metricsBody, []byte("test.flushed")))
+	require.True(t, bytes.Contains(metricsBody, []byte("svc-pod-1")))
 }
 
 func TestDeferShutdownUsesFreshContext(t *testing.T) {

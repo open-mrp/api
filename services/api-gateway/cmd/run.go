@@ -99,6 +99,10 @@ func Run(
 	}
 	defer enqueuer.Stop()
 
+	if _, err := messaging.RegisterOutboxGauges(domain.ServiceName, repository.NewOutboxStatsRepo(queries)); err != nil {
+		return err
+	}
+
 	// Initialize the gRPC clients.
 
 	// Auth Service

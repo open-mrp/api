@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.15.1](https://github.com/open-mrp/api/compare/v2.15.0...v2.15.1) (2026-09-30)
+
+
+### Code Refactoring
+
+* **tests:** remove legacy rollup mark tests and related logic ([1c2bbfb](https://github.com/open-mrp/api/commit/1c2bbfbc1bbebe0889e139c38401663900374368))
+
 ## [2.15.0](https://github.com/open-mrp/api/compare/v2.14.0...v2.15.0) (2026-09-30)
 
 

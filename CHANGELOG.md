@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.15.2](https://github.com/open-mrp/api/compare/v2.15.1...v2.15.2) (2026-09-30)
+
+
+### Bug Fixes
+
+* **refresher:** optimize buyer marking logic in sales fact refresher ([eec427f](https://github.com/open-mrp/api/commit/eec427fa22a4742d0ad42fbaaf8d0b8e4aa5a966))
+* **tests:** update Pod B lease acquisition logic in sales_fact_refresher_loop_test to ensure correct retry behavior ([885589f](https://github.com/open-mrp/api/commit/885589f91d69e31a6f9baab794c92fa4671c6f7a))
+
 ## [2.15.1](https://github.com/open-mrp/api/compare/v2.15.0...v2.15.1) (2026-09-30)
 
 

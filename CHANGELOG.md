@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.15.0](https://github.com/open-mrp/api/compare/v2.14.0...v2.15.0) (2026-09-30)
+
+
+### Features
+
+* **analytics:** add ListNewCustomers endpoint and related data structures ([#215](https://github.com/open-mrp/api/issues/215)) ([44b8eaf](https://github.com/open-mrp/api/commit/44b8eaf83bd63d2d60e83e8496711e093c94cd1d))
+
 ## [2.14.0](https://github.com/open-mrp/api/compare/v2.13.0...v2.14.0) (2026-09-30)
 
 

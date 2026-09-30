@@ -335,9 +335,6 @@ func (r *salesFactRepoImpl) ListRollupDirty(ctx context.Context, limit int32) ([
 	ctx, span := salesFactRepoTracer.Start(ctx, "repository.sales_fact.list_rollup_dirty")
 	defer span.End()
 
-	if err := r.adoptLegacyRollupMarks(ctx, limit); err != nil {
-		return nil, tracing.Trace(span, db.MapSQLError(err))
-	}
 	rows, err := r.queries.DB().QueryContext(ctx, `SELECT account_id, scope_id, marked_at FROM sales_fact_dirty
 WHERE scope_type = ? ORDER BY marked_at LIMIT ?`, string(domain.SalesFactScopeRollupDay), limit)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -361,51 +358,6 @@ WHERE scope_type = ? ORDER BY marked_at LIMIT ?`, string(domain.SalesFactScopeRo
 		marks = append(marks, m)
 	}
 	return marks, tracing.Trace(span, db.MapSQLError(rows.Err()))
-}
-
-// adoptLegacyRollupMarks moves marks from sales_rollup_dirty, where the rollup day marks were kept before
-// they joined sales_fact_dirty, so pods on the previous release that mark days during a deploy are not lost.
-// A mark moves only if it was not re-marked after it was read, like any clear.
-// TODO(sales-sync): drop with sales_rollup_dirty once every deployment has moved.
-func (r *salesFactRepoImpl) adoptLegacyRollupMarks(ctx context.Context, limit int32) error {
-	rows, err := r.queries.DB().QueryContext(ctx, `SELECT account_id, day, marked_at FROM sales_rollup_dirty ORDER BY marked_at LIMIT ?`, limit)
-	if err != nil {
-		return err
-	}
-	type legacyMark struct {
-		accountID string
-		day       time.Time
-		markedAt  time.Time
-	}
-	var legacy []legacyMark
-	for rows.Next() {
-		var m legacyMark
-		if err := rows.Scan(&m.accountID, &m.day, &m.markedAt); err != nil {
-			_ = rows.Close()
-			return err
-		}
-		legacy = append(legacy, m)
-	}
-	_ = rows.Close()
-	if err := rows.Err(); err != nil || len(legacy) == 0 {
-		return err
-	}
-	args := make([]any, 0, 4*len(legacy))
-	for _, m := range legacy {
-		args = append(args, string(domain.SalesFactScopeRollupDay), rollupMarkID(domain.SalesRollupDay{AccountID: m.accountID, Day: m.day}), m.accountID, m.markedAt)
-	}
-	values := strings.TrimSuffix(strings.Repeat("(?, ?, ?, ?),", len(legacy)), ",")
-	if _, err := r.queries.DB().ExecContext(ctx, `INSERT INTO sales_fact_dirty (scope_type, scope_id, account_id, marked_at) VALUES `+
-		values+` ON DUPLICATE KEY UPDATE marked_at = GREATEST(marked_at, VALUES(marked_at))`, args...); err != nil {
-		return err
-	}
-	for _, m := range legacy {
-		if _, err := r.queries.DB().ExecContext(ctx, `DELETE FROM sales_rollup_dirty WHERE account_id = ? AND day = ? AND marked_at = ?`,
-			m.accountID, m.day, m.markedAt); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func (r *salesFactRepoImpl) ClearRollupDirty(ctx context.Context, mark domain.SalesRollupDirtyMark) *apierror.APIError {

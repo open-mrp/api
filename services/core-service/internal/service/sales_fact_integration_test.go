@@ -63,11 +63,8 @@ func newTestRefresher(repos domain.RepoFactory, pool *sql.DB) *SalesFactRefreshe
 // forceReconcile runs a complete reconcile pass now, regardless of when the last one ran.
 func forceReconcile(t *testing.T, ctx context.Context, pool *sql.DB, r *SalesFactRefresher) {
 	t.Helper()
-	// sales_fact_sync is where the state lived before sales_sync; a pass with no sales_sync row is seeded from it.
-	for _, table := range []string{"sales_sync", "sales_fact_sync"} {
-		if _, err := pool.ExecContext(ctx, `UPDATE `+table+` SET cursor_created_at = NULL, cursor_invoice_id = NULL, pass_started_at = NOW(3) - INTERVAL 2 DAY WHERE name = 'reconcile'`); err != nil {
-			t.Fatal(err)
-		}
+	if _, err := pool.ExecContext(ctx, `UPDATE sales_sync SET cursor_created_at = NULL, cursor_invoice_id = NULL, pass_started_at = NOW(3) - INTERVAL 2 DAY WHERE name = 'reconcile'`); err != nil {
+		t.Fatal(err)
 	}
 	if apiErr := r.reconcile(ctx); apiErr != nil {
 		t.Fatalf("reconcile: %v", apiErr)
@@ -351,11 +348,8 @@ func idsOf(lines []domain.SalesEntry) []string {
 // forceRollupSweep runs a complete rollup pass now, regardless of when the last one ran.
 func forceRollupSweep(t *testing.T, ctx context.Context, pool *sql.DB, r *SalesFactRefresher) {
 	t.Helper()
-	// Both, or the pass would be seeded again from the table its state lived in before sales_sync.
-	for _, table := range []string{"sales_sync", "sales_rollup_sync"} {
-		if _, err := pool.ExecContext(ctx, `DELETE FROM `+table+` WHERE name = 'rollup'`); err != nil {
-			t.Fatal(err)
-		}
+	if _, err := pool.ExecContext(ctx, `DELETE FROM sales_sync WHERE name = 'rollup'`); err != nil {
+		t.Fatal(err)
 	}
 	if apiErr := r.sweepRollups(ctx); apiErr != nil {
 		t.Fatalf("rollup sweep: %v", apiErr)

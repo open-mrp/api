@@ -18,45 +18,16 @@ type salesSyncRow struct {
 	lastCompletedAt      sql.NullTime
 }
 
-// legacySalesSync is where a pass kept its state before sales_sync, read once to seed its row there.
-// TODO(sales-sync): drop with sales_fact_sync and sales_rollup_sync once every deployment has moved.
-var legacySalesSync = map[string]string{
-	salesFactSyncName:   `SELECT cursor_created_at, cursor_invoice_id, NULL, NULL, pass_started_at, last_completed_at FROM sales_fact_sync WHERE name = ?`,
-	salesRollupSyncName: `SELECT NULL, NULL, cursor_account_id, cursor_day, pass_started_at, last_completed_at FROM sales_rollup_sync WHERE name = ?`,
-}
-
-// getSalesSync returns a pass's row; found is false before the pass has run. A pass with no row yet whose
-// state is still in its old table is carried over first, so a deploy resumes each pass where it stood.
+// getSalesSync returns a pass's row; found is false before the pass has run.
 func (r *salesFactRepoImpl) getSalesSync(ctx context.Context, name string) (row salesSyncRow, found bool, err error) {
 	err = r.queries.DB().QueryRowContext(ctx, `SELECT cursor_created_at, cursor_invoice_id, cursor_account_id, cursor_day, cursor_buyer_account_id,
     facts_since, pass_started_at, last_completed_at FROM sales_sync WHERE name = ?`, name).Scan(
 		&row.cursorCreatedAt, &row.cursorInvoiceID, &row.cursorAccountID, &row.cursorDay, &row.cursorBuyerAccountID,
 		&row.factsSince, &row.passStartedAt, &row.lastCompletedAt)
-	if err == nil {
-		return row, true, nil
-	}
-	if !errors.Is(err, sql.ErrNoRows) {
-		return row, false, err
-	}
-	legacy, ok := legacySalesSync[name]
-	if !ok {
-		return salesSyncRow{}, false, nil
-	}
-	err = r.queries.DB().QueryRowContext(ctx, legacy, name).Scan(
-		&row.cursorCreatedAt, &row.cursorInvoiceID, &row.cursorAccountID, &row.cursorDay, &row.passStartedAt, &row.lastCompletedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return salesSyncRow{}, false, nil
 	}
-	if err != nil {
-		return row, false, err
-	}
-	// INSERT IGNORE: if another pod carried it over first, its row stands.
-	if _, err := r.queries.DB().ExecContext(ctx, `INSERT IGNORE INTO sales_sync (name, cursor_created_at, cursor_invoice_id, cursor_account_id, cursor_day,
-    pass_started_at, last_completed_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(3))`,
-		name, row.cursorCreatedAt, row.cursorInvoiceID, row.cursorAccountID, row.cursorDay, row.passStartedAt, row.lastCompletedAt); err != nil {
-		return row, false, err
-	}
-	return row, true, nil
+	return row, err == nil, err
 }
 
 func (r *salesFactRepoImpl) saveSalesSync(ctx context.Context, name string, row salesSyncRow) error {

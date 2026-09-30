@@ -2147,6 +2147,14 @@ type RoleType struct {
 	UpdatedAt time.Time
 }
 
+type SalesBuyerSummary struct {
+	AccountID      string
+	BuyerAccountID string
+	FirstOrderedAt time.Time
+	TotalInvoiced  string
+	RefreshedAt    time.Time
+}
+
 type SalesFactDirty struct {
 	ScopeType string
 	ScopeID   string
@@ -2197,6 +2205,8 @@ type SalesLineFact struct {
 	QuantityBase       sql.NullString
 	TotalInvoiced      sql.NullString
 	TotalCost          sql.NullString
+	OrderedAt          sql.NullTime
+	IsPriced           bool
 }
 
 type SalesOrder struct {
@@ -2286,6 +2296,19 @@ type SalesRollupSync struct {
 	PassStartedAt   sql.NullTime
 	LastCompletedAt sql.NullTime
 	UpdatedAt       time.Time
+}
+
+type SalesSync struct {
+	Name                 string
+	CursorCreatedAt      sql.NullTime
+	CursorInvoiceID      sql.NullString
+	CursorAccountID      sql.NullString
+	CursorDay            sql.NullTime
+	CursorBuyerAccountID sql.NullString
+	FactsSince           sql.NullTime
+	PassStartedAt        sql.NullTime
+	LastCompletedAt      sql.NullTime
+	UpdatedAt            time.Time
 }
 
 type SandboxAccount struct {

@@ -21,6 +21,10 @@ type SalesLineFact struct {
 	QuantityBase       *string
 	TotalInvoiced      *string
 	TotalCost          *string
+	// OrderedAt is the sales order's issue date, nil when it has none.
+	OrderedAt *time.Time
+	// IsPriced is whether the line's unit price is above zero.
+	IsPriced bool
 }
 
 // SalesFactScope names what a dirty mark covers; the refresher resolves each to the invoices it touches.
@@ -40,6 +44,12 @@ const (
 	// SalesFactScopeBuyer is a customer whose orders moved to another (a merge): the invoices whose
 	// facts still name it as buyer.
 	SalesFactScopeBuyer SalesFactScope = "buyer"
+	// SalesFactScopeBuyerSummary is a customer whose summary (first order, lifetime sales) must be rebuilt.
+	// It shares the dirty table with the fact scopes but is drained apart from them: it names no invoices.
+	SalesFactScopeBuyerSummary SalesFactScope = "buyer_summary"
+	// SalesFactScopeRollupDay is an (account, UTC day) whose rollup buckets must be rebuilt from the facts.
+	// Like SalesFactScopeBuyerSummary it names no invoices and is drained apart from the fact scopes.
+	SalesFactScopeRollupDay SalesFactScope = "rollup_day"
 	// SalesFactScopeReconcile asks for the full reconcile pass to start again now. It covers changes that
 	// can reprice any line, such as a unit's ratio or a category's base unit; its scope id is unused.
 	SalesFactScopeReconcile SalesFactScope = "reconcile"
@@ -91,5 +101,31 @@ type SalesRollupSync struct {
 	// PassStartedAt is when the pass in progress (or the last one) began.
 	PassStartedAt *time.Time
 	// LastCompletedAt is when a pass last finished; nil until the backfill finishes.
+	LastCompletedAt *time.Time
+}
+
+// SalesBuyerKey names one customer of one account, the key of a buyer summary.
+type SalesBuyerKey struct {
+	AccountID      string
+	BuyerAccountID string
+}
+
+// SalesBuyerDirtyMark is a buyer whose summary must be rebuilt, as of when it was marked.
+type SalesBuyerDirtyMark struct {
+	Buyer    SalesBuyerKey
+	MarkedAt time.Time
+}
+
+// SalesBuyerSummarySync is the state of the buyer summary sweep.
+type SalesBuyerSummarySync struct {
+	// Cursor is the last buyer the pass in progress rebuilt; nil when no pass is running.
+	Cursor *SalesBuyerKey
+	// FactsSince is when the sweep restarted the fact reconcile to fill each fact's order date and price
+	// flag. Its first pass waits for a reconcile pass that completed after it.
+	FactsSince *time.Time
+	// PassStartedAt is when the pass in progress (or the last one) began.
+	PassStartedAt *time.Time
+	// LastCompletedAt is when a pass last finished; nil until the first one does. Reports read the
+	// summaries only once it is set.
 	LastCompletedAt *time.Time
 }

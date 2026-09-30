@@ -256,22 +256,16 @@ func (r *salesFactRepoImpl) GetRollupSync(ctx context.Context) (*domain.SalesRol
 	ctx, span := salesFactRepoTracer.Start(ctx, "repository.sales_fact.get_rollup_sync")
 	defer span.End()
 
-	var (
-		account                sql.NullString
-		day, started, finished sql.NullTime
-	)
-	err := r.queries.DB().QueryRowContext(ctx,
-		`SELECT cursor_account_id, cursor_day, pass_started_at, last_completed_at FROM sales_rollup_sync WHERE name = ?`, salesRollupSyncName,
-	).Scan(&account, &day, &started, &finished)
-	if errors.Is(err, sql.ErrNoRows) {
-		return &domain.SalesRollupSync{}, nil
-	}
+	row, found, err := r.getSalesSync(ctx, salesRollupSyncName)
 	if err != nil {
 		return nil, tracing.Trace(span, db.MapSQLError(err))
 	}
-	sync := &domain.SalesRollupSync{PassStartedAt: nullTimePtr(started), LastCompletedAt: nullTimePtr(finished)}
-	if account.Valid && day.Valid {
-		sync.Cursor = &domain.SalesRollupDay{AccountID: account.String, Day: day.Time.UTC()}
+	if !found {
+		return &domain.SalesRollupSync{}, nil
+	}
+	sync := &domain.SalesRollupSync{PassStartedAt: nullTimePtr(row.passStartedAt), LastCompletedAt: nullTimePtr(row.lastCompletedAt)}
+	if row.cursorAccountID.Valid && row.cursorDay.Valid {
+		sync.Cursor = &domain.SalesRollupDay{AccountID: row.cursorAccountID.String, Day: row.cursorDay.Time.UTC()}
 	}
 	return sync, nil
 }
@@ -280,18 +274,12 @@ func (r *salesFactRepoImpl) SaveRollupSync(ctx context.Context, sync domain.Sale
 	ctx, span := salesFactRepoTracer.Start(ctx, "repository.sales_fact.save_rollup_sync")
 	defer span.End()
 
-	var account sql.NullString
-	var day sql.NullTime
+	row := salesSyncRow{passStartedAt: toNullTime(sync.PassStartedAt), lastCompletedAt: toNullTime(sync.LastCompletedAt)}
 	if sync.Cursor != nil {
-		account = sql.NullString{String: sync.Cursor.AccountID, Valid: true}
-		day = sql.NullTime{Time: truncateUTCDay(sync.Cursor.Day), Valid: true}
+		row.cursorAccountID = sql.NullString{String: sync.Cursor.AccountID, Valid: true}
+		row.cursorDay = sql.NullTime{Time: truncateUTCDay(sync.Cursor.Day), Valid: true}
 	}
-	_, err := r.queries.DB().ExecContext(ctx, `INSERT INTO sales_rollup_sync (name, cursor_account_id, cursor_day, pass_started_at, last_completed_at, updated_at)
-VALUES (?, ?, ?, ?, ?, NOW(3))
-ON DUPLICATE KEY UPDATE cursor_account_id = VALUES(cursor_account_id), cursor_day = VALUES(cursor_day),
-    pass_started_at = VALUES(pass_started_at), last_completed_at = VALUES(last_completed_at), updated_at = VALUES(updated_at)`,
-		salesRollupSyncName, account, day, toNullTime(sync.PassStartedAt), toNullTime(sync.LastCompletedAt))
-	return tracing.Trace(span, db.MapSQLError(err))
+	return tracing.Trace(span, db.MapSQLError(r.saveSalesSync(ctx, salesRollupSyncName, row)))
 }
 
 // salesFactSweepFloor sorts before every invoice; the zero time.Time is below DATETIME's range.

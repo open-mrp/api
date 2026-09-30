@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -127,7 +128,10 @@ func TestRollupScopeFor(t *testing.T) {
 			want: rollupScope{dimension: rollupDimItem, salesRepIDs: []string{"au_1"}}},
 		{name: "one product line has its own rows", filter: domain.SalesReportFilter{ProductLineIDs: []string{"pl_1"}}, q: none, dimension: rollupDimBuyer, ok: true,
 			want: rollupScope{dimension: rollupDimBuyer, lineKey: "pl_1"}},
-		{name: "several product lines would double count invoices", filter: domain.SalesReportFilter{ProductLineIDs: []string{"pl_1", "pl_2"}}, q: none, dimension: rollupDimBuyer},
+		{name: "several product lines add up their own rows", filter: domain.SalesReportFilter{ProductLineIDs: []string{"pl_1", "pl_2"}}, q: none, dimension: rollupDimBuyer, ok: true,
+			want: rollupScope{dimension: rollupDimBuyer, lineKeys: []string{"pl_1", "pl_2"}}},
+		{name: "several product lines with a sales rep", filter: domain.SalesReportFilter{ProductLineIDs: []string{"pl_1", "pl_2"}, SalesRepIDs: []string{"au_1"}}, q: none, dimension: rollupDimTotal, ok: true,
+			want: rollupScope{dimension: rollupDimTotal, lineKeys: []string{"pl_1", "pl_2"}, salesRepIDs: []string{"au_1"}}},
 		{name: "product lines filter the product line breakdown's groups", filter: domain.SalesReportFilter{ProductLineIDs: []string{"pl_1", "pl_2"}}, q: none, dimension: rollupDimProductLine, ok: true,
 			want: rollupScope{dimension: rollupDimProductLine, dimensionIDs: []string{"pl_1", "pl_2"}}},
 		{name: "customers filter the buyer breakdown's groups", q: buyers, dimension: rollupDimBuyer, ok: true,
@@ -144,4 +148,31 @@ func TestRollupScopeFor(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestAMultiLineScopeCountsInvoicesFromTheFactsOnly(t *testing.T) {
+	q := &salesFactQuery{accountID: "ac_1"}
+	q.add("f.account_id = ?", "ac_1")
+	q.add("f.product_line_id IN (?, ?)", "pl_1", "pl_2")
+	start := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	end := time.Date(2025, 3, 15, 12, 30, 0, 0, time.UTC)
+	plan := planWindow(start, end, breakdownGrains)
+	require.NotEmpty(t, plan.rollups)
+	require.NotEmpty(t, plan.raws)
+
+	sql, args := rollupPeriodRows(q, rollupScope{dimension: rollupDimBuyer, lineKeys: []string{"pl_1", "pl_2"}}, plan, start, end, "c", "f.buyer_account_id", "r.dimension_id")
+
+	parts := strings.Split(sql, "\nUNION ALL\n")
+	require.Len(t, parts, 3, "whole buckets, raw edges, and the invoice count")
+	require.Contains(t, parts[0], "r.product_line_key IN (?,?)")
+	require.Contains(t, parts[0], "0 AS ic", "summed per-line rows would count an invoice once per line it spans")
+	require.Contains(t, parts[1], "0 AS ic")
+	require.Contains(t, parts[2], "COUNT(DISTINCT f.invoice_id) AS ic")
+	require.Contains(t, parts[2], "f.invoiced_at >= ? AND f.invoiced_at <= ?", "counted over the whole period")
+	require.Equal(t, strings.Count(sql, "?"), len(args))
+	require.Equal(t, []any{start, end}, args[len(args)-2:])
+
+	one, _ := rollupPeriodRows(q, rollupScope{dimension: rollupDimBuyer, lineKey: "pl_1"}, plan, start, end, "c", "f.buyer_account_id", "r.dimension_id")
+	require.Len(t, strings.Split(one, "\nUNION ALL\n"), 2, "one line's rows count its invoices exactly")
+	require.Contains(t, one, "r.invoice_count AS ic")
 }

@@ -137,6 +137,40 @@ func (m *analyticsSvcImpl) AnalyzeSalesInvoices(ctx context.Context, req *Analyz
 	return apiresource.NewList(invoices, grpcutil.MapProtoPageInfo(ctx, resp.GetPageInfo())), nil
 }
 
+func (m *analyticsSvcImpl) ListNewCustomers(ctx context.Context, req *ListNewCustomersRequest) (*apiresource.List[apiresource.NewCustomer], *apierror.APIError) {
+	resp, apiErr := grpcutil.CallRPC(ctx, analyticsSvcTracer, "service.analytics.list_new_customers", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListNewCustomersResponse, error) {
+			return m.coreClient.ListNewCustomers(ctx, &pb.ListNewCustomersRequest{
+				StartsAt:         timestamppb.New(req.StartDate),
+				EndsAt:           timestamppb.New(req.EndDate),
+				CustomerGroupIds: req.CustomerGroupIDs,
+				SalesRepIds:      req.SalesRepIDs,
+				Limit:            req.Limit,
+				Cursor:           req.Cursor,
+			}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	customers := make([]apiresource.NewCustomer, len(resp.GetCustomers()))
+	for i, c := range resp.GetCustomers() {
+		customers[i] = apiresource.NewCustomer{
+			Object:            constants.ObjectTypeNewCustomer,
+			ID:                c.GetCustomerId(),
+			Number:            c.GetCustomerNumber(),
+			Name:              c.GetCustomerName(),
+			CustomerGroupName: c.CustomerGroupName,
+			Location:          c.Location,
+			SalesRepName:      c.SalesRepName,
+			LifetimeRevenue:   salesAmount(c.GetTotalInvoiced(), nil),
+			FirstOrderedAt:    grpcutil.TimestampToTime(c.GetFirstOrderedAt()),
+			AddedAt:           grpcutil.TimestampToTime(c.GetCustomerCreatedAt()),
+		}
+	}
+	return apiresource.NewList(customers, grpcutil.MapProtoPageInfo(ctx, resp.GetPageInfo())), nil
+}
+
 func (m *analyticsSvcImpl) ListSalesLines(ctx context.Context, req *ListSalesLinesRequest) (*apiresource.List[apiresource.SalesEntry], *apierror.APIError) {
 	start, hasStart := req.StartDate.Value()
 	end, hasEnd := req.EndDate.Value()

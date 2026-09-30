@@ -614,6 +614,7 @@ service CoreService {
   rpc AnalyzeSalesSummary(AnalyzeSalesSummaryRequest) returns (AnalyzeSalesSummaryResponse);
   rpc AnalyzeSalesBreakdown(AnalyzeSalesBreakdownRequest) returns (AnalyzeSalesBreakdownResponse);
   rpc AnalyzeSalesInvoices(AnalyzeSalesInvoicesRequest) returns (AnalyzeSalesInvoicesResponse);
+  rpc ListNewCustomers(ListNewCustomersRequest) returns (ListNewCustomersResponse);
   rpc ListSalesLines(ListSalesLinesRequest) returns (ListSalesLinesResponse);
   // Accepts an export of the sales lines; the file is built by the export worker.
   rpc ExportSalesLines(ExportSalesLinesRequest) returns (ExportSalesLinesResponse);

@@ -382,6 +382,7 @@ resources:
           update_sales_summary: put /v1/core/analytics/sales-summary
           update_sales_breakdown: put /v1/core/analytics/sales-breakdown
           update_sales_invoices: put /v1/core/analytics/sales-invoices
+          update_new_customers_table: put /v1/core/analytics/new-customers-table
           update_open_batches: put /v1/core/analytics/open-batches
           update_production_costs: put /v1/core/analytics/production-costs
           update_deliveries: put /v1/core/analytics/deliveries
@@ -497,6 +498,8 @@ resources:
           list_delivery_performance: '#/components/schemas/List_DeliveryPerformance'
           list_demand_forecast_row: '#/components/schemas/List_DemandForecastRow'
           list_frozen_adherence: '#/components/schemas/List_FrozenAdherence'
+          list_new_customer: '#/components/schemas/List_NewCustomer'
+          list_new_customers_request: '#/components/schemas/ListNewCustomersRequest'
           list_oee_department: '#/components/schemas/List_OeeDepartment'
           list_oee_downtime_reason: '#/components/schemas/List_OeeDowntimeReason'
           list_oee_trend_period: '#/components/schemas/List_OeeTrendPeriod'
@@ -507,6 +510,7 @@ resources:
           list_service_level: '#/components/schemas/List_ServiceLevel'
           manufacturing_metrics: '#/components/schemas/ManufacturingMetrics'
           material_analytics_entry: '#/components/schemas/MaterialAnalyticsEntry'
+          new_customer: '#/components/schemas/NewCustomer'
           new_customers_data: '#/components/schemas/NewCustomersData'
           oee_department: '#/components/schemas/OeeDepartment'
           oee_department_planned_time: '#/components/schemas/OeeDepartmentPlannedTime'

@@ -38,6 +38,7 @@ type AnalyticsSvc interface {
 	AnalyzeSalesSummary(ctx context.Context, req *AnalyzeSalesSummaryRequest) (*apiresource.AnalyzeSalesSummaryResponse, *apierror.APIError)
 	AnalyzeSalesBreakdown(ctx context.Context, req *AnalyzeSalesBreakdownRequest) (*apiresource.List[apiresource.SalesBreakdown], *apierror.APIError)
 	AnalyzeSalesInvoices(ctx context.Context, req *AnalyzeSalesInvoicesRequest) (*apiresource.List[apiresource.SalesInvoice], *apierror.APIError)
+	ListNewCustomers(ctx context.Context, req *ListNewCustomersRequest) (*apiresource.List[apiresource.NewCustomer], *apierror.APIError)
 	ListSalesLines(ctx context.Context, req *ListSalesLinesRequest) (*apiresource.List[apiresource.SalesEntry], *apierror.APIError)
 	ExportSalesLines(ctx context.Context, req *ExportSalesLinesRequest) (*apiresource.Job, *apierror.APIError)
 	AnalyzeWeeksOfSales(ctx context.Context, req *AnalyzeWeeksOfSalesRequest) (*apiresource.AnalyzeWeeksOfSalesResponse, *apierror.APIError)

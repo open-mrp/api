@@ -57,7 +57,9 @@ SELECT
             / NULLIF(((COALESCE(u_cost_den.ratio_numerator, 1) / COALESCE(u_cost_den.ratio_denominator, 1)) + (COALESCE(u_cost_den.offset_numerator, 0) / COALESCE(u_cost_den.offset_denominator, 1))), 0)
         )
         AS DECIMAL(28,10)
-    ), NULL) AS total_cost
+    ), NULL) AS total_cost,
+    so.issued_at AS ordered_at,
+    CAST(COALESCE(r_price.value > 0, FALSE) AS SIGNED) AS is_priced
 FROM invoice_line il
 JOIN invoice i ON i.id = il.invoice_id
 JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
@@ -81,7 +83,7 @@ WHERE il.invoice_id IN (sqlc.slice('invoice_ids'));
 -- name: SelectSalesFactsByInvoiceIDs :many
 SELECT account_id, invoiced_at, invoice_line_id, invoice_id, sales_order_id, sales_order_type_code,
        buyer_account_id, sales_rep_id, order_discount_id, product_id, item_id, product_line_id,
-       quantity_base, total_invoiced, total_cost
+       quantity_base, total_invoiced, total_cost, ordered_at, is_priced
 FROM sales_line_fact
 WHERE invoice_id IN (sqlc.slice('invoice_ids'));
 
@@ -109,8 +111,10 @@ VALUES (?, ?, ?, NOW(3))
 ON DUPLICATE KEY UPDATE marked_at = VALUES(marked_at);
 
 -- name: ListSalesFactDirty :many
+-- The fact scopes only: 'buyer_summary' and 'rollup_day' marks share the table but are drained by their own passes.
 SELECT scope_type, scope_id, account_id, marked_at
 FROM sales_fact_dirty
+WHERE scope_type NOT IN ('buyer_summary', 'rollup_day')
 ORDER BY marked_at
 LIMIT ?;
 
@@ -129,21 +133,6 @@ SELECT DISTINCT il.invoice_id
 FROM sales_order_line sol
 JOIN invoice_line il ON il.sales_order_line_id = sol.id
 WHERE sol.product_id IN (sqlc.slice('product_ids'));
-
--- name: GetSalesFactSync :one
-SELECT name, cursor_created_at, cursor_invoice_id, pass_started_at, last_completed_at
-FROM sales_fact_sync
-WHERE name = ?;
-
--- name: UpsertSalesFactSync :exec
-INSERT INTO sales_fact_sync (name, cursor_created_at, cursor_invoice_id, pass_started_at, last_completed_at, updated_at)
-VALUES (?, ?, ?, ?, ?, NOW(3))
-ON DUPLICATE KEY UPDATE
-    cursor_created_at = VALUES(cursor_created_at),
-    cursor_invoice_id = VALUES(cursor_invoice_id),
-    pass_started_at = VALUES(pass_started_at),
-    last_completed_at = VALUES(last_completed_at),
-    updated_at = VALUES(updated_at);
 
 -- name: ListSalesFactInvoiceIDsAfter :many
 -- A page of the distinct invoices sales_line_fact holds, read from sales_line_fact_invoice_idx alone.

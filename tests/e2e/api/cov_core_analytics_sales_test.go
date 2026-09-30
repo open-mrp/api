@@ -43,21 +43,25 @@ const (
 func shipSaleToNewCustomer(t *testing.T) shippedSale {
 	t.Helper()
 
-	customerID := setupOrderCustomer(t)
-	order := issueOrderForCustomer(t, customerID, map[string]any{
-		"lines": []map[string]any{
-			{
-				"product_id": SeedProductID,
-				"quantity":   map[string]any{"value": "5", "unit_id": SeedUnitID},
-				"unit_price": map[string]any{"value": "4.25", "numerator_unit_id": dollarUnitID, "denominator_unit_id": SeedUnitID},
-			},
-			{
-				"product_id": SeedProductID,
-				"quantity":   map[string]any{"value": "2", "unit_id": seedDozenUnitID},
-				"unit_price": map[string]any{"value": "3.00", "numerator_unit_id": dollarUnitID, "denominator_unit_id": SeedUnitID},
-			},
+	return shipOrder(t, setupOrderCustomer(t), []map[string]any{
+		{
+			"product_id": SeedProductID,
+			"quantity":   map[string]any{"value": "5", "unit_id": SeedUnitID},
+			"unit_price": map[string]any{"value": "4.25", "numerator_unit_id": dollarUnitID, "denominator_unit_id": SeedUnitID},
+		},
+		{
+			"product_id": SeedProductID,
+			"quantity":   map[string]any{"value": "2", "unit_id": seedDozenUnitID},
+			"unit_price": map[string]any{"value": "3.00", "numerator_unit_id": dollarUnitID, "denominator_unit_id": SeedUnitID},
 		},
 	})
+}
+
+// shipOrder issues an order of the given lines to the customer, then picks, packs and ships it, which invoices it.
+func shipOrder(t *testing.T, customerID string, lines []map[string]any) shippedSale {
+	t.Helper()
+
+	order := issueOrderForCustomer(t, customerID, map[string]any{"lines": lines})
 	orderID := jsonField(order, "id")
 
 	status, body, err := apiClient.GetListRaw(salesOrdersPath+"/"+orderID, url.Values{"include": {"related.pick"}})

@@ -37,3 +37,12 @@ func EncodeDocumentationStringCursor(occurredAt time.Time, id string) string {
 		Direction:  DirectionForward,
 	})
 }
+
+// EncodeDocumentationValueCursor returns a signed forward cursor for OpenAPI list examples using pagination.ValueCursor (lists ranked by a computed value).
+func EncodeDocumentationValueCursor(value, id string) string {
+	return signCursorPayload(documentationHMACKey, ValueCursor{
+		Value:     value,
+		ID:        id,
+		Direction: DirectionForward,
+	})
+}

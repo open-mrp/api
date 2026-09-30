@@ -128,3 +128,43 @@ type ExportSalesLinesParams struct {
 	// HideCost drops the unit cost column, for a sales rep.
 	HideCost bool
 }
+
+// ListNewCustomersParams selects the customers added in a window, with their first order and lifetime sales.
+type ListNewCustomersParams struct {
+	AccountID string
+	// StartsAt and EndsAt bound when the customer was added, inclusive.
+	StartsAt time.Time
+	EndsAt   time.Time
+	// CustomerGroupIDs keeps customers in any of these groups, as their group or one of their price groups.
+	CustomerGroupIDs []string
+	// SalesRepIDs keeps customers whose default sales rep is one of these account users.
+	SalesRepIDs []string
+	Cursor      *string
+	Limit       int32
+}
+
+// NewCustomer is a customer added in a report's window that has ordered. Its sales count sales orders only,
+// lines priced above zero, outside the shipping and misc product lines, over the customer's whole history.
+type NewCustomer struct {
+	CustomerID     string
+	CustomerNumber string
+	// CustomerName is the customer's alias, or the account's name when it has none.
+	CustomerName string
+	// CustomerGroupName is the customer's group, nil when it has none.
+	CustomerGroupName *string
+	// Location is the default shipping address's "locality, state", nil when it has neither.
+	Location *string
+	// SalesRepName is the default sales rep's name, nil when it has none.
+	SalesRepName *string
+	// TotalInvoiced is the lifetime sales, an exact decimal string in the account's currency.
+	TotalInvoiced string
+	// FirstOrderedAt is when the earliest of those orders was issued.
+	FirstOrderedAt    time.Time
+	CustomerCreatedAt time.Time
+}
+
+// NewCustomerPage is a page of new customers, newest first order first.
+type NewCustomerPage struct {
+	Customers []NewCustomer
+	PageInfo  pagination.PageInfo
+}

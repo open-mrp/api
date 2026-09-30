@@ -923,6 +923,24 @@ type SalesFactRepo interface {
 	// refresh should take is worked off a batch per tick.
 	MarkInvoicesDirty(ctx context.Context, accountID string, invoiceIDs []string) *apierror.APIError
 	// RestartReconcile starts the full reconcile pass again from the oldest invoice.
+	// MarkBuyers marks buyers whose summary must be rebuilt; a re-mark moves marked_at forward.
+	MarkBuyers(ctx context.Context, buyers []SalesBuyerKey) *apierror.APIError
+	// ListBuyerDirty returns up to limit marked buyers, oldest mark first.
+	ListBuyerDirty(ctx context.Context, limit int32) ([]SalesBuyerDirtyMark, *apierror.APIError)
+	// ClearBuyerDirty removes a mark unless it was re-marked after it was read.
+	ClearBuyerDirty(ctx context.Context, mark SalesBuyerDirtyMark) *apierror.APIError
+	// RebuildBuyerSummaries recomputes the summaries of one account's buyers from their facts, deleting
+	// the summary of any buyer left with no qualifying sale.
+	RebuildBuyerSummaries(ctx context.Context, accountID string, buyerIDs []string) *apierror.APIError
+	// NextBuyers returns up to limit buyers with facts after the given one, in (account, buyer) order.
+	NextBuyers(ctx context.Context, after SalesBuyerKey, limit int32) ([]SalesBuyerKey, *apierror.APIError)
+	// DeleteBuyerSummariesRefreshedBefore deletes summaries no rebuild has touched since t: a completed
+	// sweep rebuilt every buyer with facts, so these are buyers who no longer have any.
+	DeleteBuyerSummariesRefreshedBefore(ctx context.Context, t time.Time) *apierror.APIError
+	// GetBuyerSummarySync returns the buyer summary sweep's state; the zero state before its first run.
+	GetBuyerSummarySync(ctx context.Context) (*SalesBuyerSummarySync, *apierror.APIError)
+	// SaveBuyerSummarySync stores the buyer summary sweep's state.
+	SaveBuyerSummarySync(ctx context.Context, sync SalesBuyerSummarySync) *apierror.APIError
 	RestartReconcile(ctx context.Context) *apierror.APIError
 
 	// MarkRollupDays marks days whose rollup buckets must be rebuilt.
@@ -954,6 +972,10 @@ type SalesReportRepo interface {
 	GetBreakdown(ctx context.Context, params AnalyzeSalesBreakdownParams, includeCost bool) (*SalesBreakdown, *apierror.APIError)
 	GetInvoicePage(ctx context.Context, params AnalyzeSalesInvoicesParams) (*SalesInvoicePage, *apierror.APIError)
 	GetLinePage(ctx context.Context, params ListSalesLinesParams) (*SalesLinePage, *apierror.APIError)
+	// BuyerSummariesReady reports whether the buyer summaries have completed their first pass; until then they are incomplete.
+	BuyerSummariesReady(ctx context.Context) (bool, *apierror.APIError)
+	// GetNewCustomers pages the customers added in a window that have ordered, from the buyer summaries.
+	GetNewCustomers(ctx context.Context, params ListNewCustomersParams) (*NewCustomerPage, *apierror.APIError)
 }
 
 type AnalyticsRepo interface {

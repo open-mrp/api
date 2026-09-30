@@ -39,8 +39,10 @@ func TestRefreshMarksTheDayBeforeWritingItsFactsAndClearsItAfterTheRebuild(t *te
 	buyer := domain.SalesBuyerKey{AccountID: "ac_1", BuyerAccountID: changed.BuyerAccountID}
 	buyerMark := domain.SalesBuyerDirtyMark{Buyer: buyer, MarkedAt: mark.MarkedAt}
 
+	started := mark.MarkedAt
 	repo.EXPECT().ComputeFacts(ctx, []string{"iv_1"}).Return([]domain.SalesLineFact{changed}, nil)
 	repo.EXPECT().GetFacts(ctx, []string{"iv_1"}).Return(nil, nil)
+	repo.EXPECT().GetBuyerSummarySync(ctx).Return(&domain.SalesBuyerSummarySync{PassStartedAt: &started}, nil)
 	gomock.InOrder(
 		repo.EXPECT().MarkRollupDays(ctx, []domain.SalesRollupDay{day}).Return(nil),
 		repo.EXPECT().MarkBuyers(ctx, []domain.SalesBuyerKey{buyer}).Return(nil),
@@ -49,10 +51,10 @@ func TestRefreshMarksTheDayBeforeWritingItsFactsAndClearsItAfterTheRebuild(t *te
 		repo.EXPECT().ListRollupDirty(gomock.Any(), int32(salesRollupDrainBatch)).Return([]domain.SalesRollupDirtyMark{mark}, nil),
 		repo.EXPECT().RebuildRollupDay(gomock.Any(), day).Return(nil),
 		repo.EXPECT().RebuildRollupMonth(gomock.Any(), "ac_1", utcMonth(day.Day)).Return(nil),
-		repo.EXPECT().ClearRollupDirty(gomock.Any(), mark).Return(nil),
+		repo.EXPECT().ClearRollupDirty(gomock.Any(), []domain.SalesRollupDirtyMark{mark}).Return(nil),
 		repo.EXPECT().ListBuyerDirty(gomock.Any(), int32(salesBuyerDrainBatch)).Return([]domain.SalesBuyerDirtyMark{buyerMark}, nil),
 		repo.EXPECT().RebuildBuyerSummaries(gomock.Any(), "ac_1", []string{buyer.BuyerAccountID}).Return(nil),
-		repo.EXPECT().ClearBuyerDirty(gomock.Any(), buyerMark).Return(nil),
+		repo.EXPECT().ClearBuyerDirty(gomock.Any(), []domain.SalesBuyerDirtyMark{buyerMark}).Return(nil),
 	)
 
 	n, apiErr := r.refreshInvoices(ctx, []string{"iv_1"})
@@ -60,6 +62,31 @@ func TestRefreshMarksTheDayBeforeWritingItsFactsAndClearsItAfterTheRebuild(t *te
 	require.Nil(t, apiErr)
 	require.Equal(t, 1, n)
 	require.Equal(t, [][]string{{"ac_1"}, {"ac_1"}, {"ac_1"}}, *invalidated, "invalidated for the facts, the rollups and the buyer summaries")
+}
+
+// Before the summary sweep's first pass, which rebuilds every buyer anyway, changed facts mark no buyers:
+// the fact backfill that precedes it rewrites every fact, and marks would rebuild each buyer per batch.
+func TestNoBuyersAreMarkedBeforeTheFirstSummaryPass(t *testing.T) {
+	r, repo, _ := newMockRefresher(t)
+	ctx := context.Background()
+	since := time.Date(2026, 9, 30, 17, 32, 0, 0, time.UTC)
+	changed := fact("il_1", "10")
+	repo.EXPECT().ComputeFacts(ctx, gomock.Any()).Return([]domain.SalesLineFact{changed}, nil).Times(2)
+	repo.EXPECT().GetFacts(ctx, gomock.Any()).Return(nil, nil).Times(2)
+	repo.EXPECT().GetBuyerSummarySync(ctx).Return(&domain.SalesBuyerSummarySync{FactsSince: &since}, nil).Times(1)
+	repo.EXPECT().MarkRollupDays(ctx, gomock.Any()).Return(nil).Times(2)
+	repo.EXPECT().MarkBuyers(gomock.Any(), gomock.Any()).Times(0)
+	repo.EXPECT().UpsertFacts(ctx, gomock.Any()).Return(nil).Times(2)
+	repo.EXPECT().DeleteFacts(ctx, gomock.Any()).Return(nil).Times(2)
+	repo.EXPECT().ListRollupDirty(gomock.Any(), gomock.Any()).Return(nil, nil)
+	repo.EXPECT().ListBuyerDirty(gomock.Any(), gomock.Any()).Return(nil, nil)
+
+	invoices := make([]string, salesFactInvoiceBatch+1) // two batches, one read of the sweep's state
+	for i := range invoices {
+		invoices[i] = fmt.Sprintf("iv_%04d", i)
+	}
+	_, apiErr := r.refreshInvoices(ctx, invoices)
+	require.Nil(t, apiErr)
 }
 
 func TestAFailedBuyerRebuildLeavesTheBuyerMarkedForTheNextTick(t *testing.T) {
@@ -136,7 +163,7 @@ func TestALargeChangeIsFannedOutIntoInvoiceMarks(t *testing.T) {
 	repo.EXPECT().ListDirty(gomock.Any(), gomock.Any()).Return([]domain.SalesFactDirtyMark{product}, nil)
 	repo.EXPECT().ResolveInvoiceIDs(gomock.Any(), "ac_1", domain.SalesFactScopeProduct, []string{"pr_1"}).Return(invoices, nil)
 	repo.EXPECT().MarkInvoicesDirty(gomock.Any(), "ac_1", invoices).Return(nil)
-	repo.EXPECT().ClearDirty(gomock.Any(), product).Return(nil)
+	repo.EXPECT().ClearDirty(gomock.Any(), []domain.SalesFactDirtyMark{product}).Return(nil)
 	repo.EXPECT().ComputeFacts(gomock.Any(), gomock.Any()).Times(0)
 
 	require.Nil(t, r.drainDirty(context.Background()))
@@ -151,7 +178,7 @@ func TestAUnitChangeRestartsTheReconcilePass(t *testing.T) {
 	repo.EXPECT().ResolveInvoiceIDs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 	repo.EXPECT().ListRollupDirty(gomock.Any(), gomock.Any()).Return(nil, nil)
 	repo.EXPECT().ListBuyerDirty(gomock.Any(), gomock.Any()).Return(nil, nil)
-	repo.EXPECT().ClearDirty(gomock.Any(), restart).Return(nil)
+	repo.EXPECT().ClearDirty(gomock.Any(), []domain.SalesFactDirtyMark{restart}).Return(nil)
 
 	require.Nil(t, r.drainDirty(context.Background()))
 }
@@ -205,13 +232,13 @@ func TestATickReportsABacklog(t *testing.T) {
 				})
 			repo.EXPECT().ComputeFacts(gomock.Any(), gomock.Any()).Return(nil, nil)
 			repo.EXPECT().GetFacts(gomock.Any(), gomock.Any()).Return(nil, nil)
-			repo.EXPECT().ClearDirty(gomock.Any(), gomock.Any()).Return(nil).Times(salesFactInvoiceBatch)
+			repo.EXPECT().ClearDirty(gomock.Any(), gomock.Len(salesFactInvoiceBatch)).Return(nil)
 		}},
 		{"more rollup days than one batch", func(repo *repositorymock.MockSalesFactRepo) {
 			repo.EXPECT().ListRollupDirty(gomock.Any(), gomock.Any()).Return(fullRollup, nil)
 			repo.EXPECT().RebuildRollupDay(gomock.Any(), gomock.Any()).Return(nil).Times(salesRollupDrainBatch)
 			repo.EXPECT().RebuildRollupMonth(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-			repo.EXPECT().ClearRollupDirty(gomock.Any(), gomock.Any()).Return(nil).Times(salesRollupDrainBatch)
+			repo.EXPECT().ClearRollupDirty(gomock.Any(), gomock.Len(salesRollupDrainBatch)).Return(nil)
 			repo.EXPECT().ListDirty(gomock.Any(), gomock.Any()).Return(nil, nil)
 		}},
 		{"a failed rollup rebuild", func(repo *repositorymock.MockSalesFactRepo) {
@@ -223,7 +250,7 @@ func TestATickReportsABacklog(t *testing.T) {
 			repo.EXPECT().ListRollupDirty(gomock.Any(), gomock.Any()).Return(nil, nil)
 			repo.EXPECT().ListBuyerDirty(gomock.Any(), gomock.Any()).Return(fullBuyers, nil)
 			repo.EXPECT().RebuildBuyerSummaries(gomock.Any(), "ac_1", gomock.Len(salesBuyerDrainBatch)).Return(nil)
-			repo.EXPECT().ClearBuyerDirty(gomock.Any(), gomock.Any()).Return(nil).Times(salesBuyerDrainBatch)
+			repo.EXPECT().ClearBuyerDirty(gomock.Any(), gomock.Len(salesBuyerDrainBatch)).Return(nil)
 			repo.EXPECT().ListDirty(gomock.Any(), gomock.Any()).Return(nil, nil)
 		}},
 		{"a failed buyer rebuild", func(repo *repositorymock.MockSalesFactRepo) {
@@ -259,7 +286,7 @@ func TestAFanOutLeavesABacklog(t *testing.T) {
 	repo.EXPECT().ListDirty(gomock.Any(), gomock.Any()).Return([]domain.SalesFactDirtyMark{product}, nil)
 	repo.EXPECT().ResolveInvoiceIDs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(invoices, nil)
 	repo.EXPECT().MarkInvoicesDirty(gomock.Any(), "ac_1", invoices).Return(nil)
-	repo.EXPECT().ClearDirty(gomock.Any(), product).Return(nil)
+	repo.EXPECT().ClearDirty(gomock.Any(), []domain.SalesFactDirtyMark{product}).Return(nil)
 
 	require.Nil(t, r.drainDirty(context.Background()))
 	require.True(t, r.backlog, "the invoice marks the fan-out wrote are drained by later runs")

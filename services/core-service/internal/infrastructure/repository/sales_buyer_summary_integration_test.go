@@ -230,14 +230,14 @@ func TestBuyerMarksShareTheFactQueueWithoutReachingTheFactDrain(t *testing.T) {
 	stale := mine[0]
 	time.Sleep(5 * time.Millisecond)
 	require.Nil(t, repo.MarkBuyers(ctx, []domain.SalesBuyerKey{stale.Buyer}))
-	require.Nil(t, repo.ClearBuyerDirty(ctx, stale))
+	require.Nil(t, repo.ClearBuyerDirty(ctx, []domain.SalesBuyerDirtyMark{stale}))
 	marks, apiErr = repo.ListBuyerDirty(ctx, 10_000)
 	require.Nil(t, apiErr)
 	found := false
 	for _, m := range marks {
 		if m.Buyer == stale.Buyer {
 			found = true
-			require.Nil(t, repo.ClearBuyerDirty(ctx, m))
+			require.Nil(t, repo.ClearBuyerDirty(ctx, []domain.SalesBuyerDirtyMark{m}))
 		}
 	}
 	require.True(t, found, "the re-mark was lost")

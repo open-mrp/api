@@ -2179,15 +2179,6 @@ type SalesFactRollup struct {
 	LineCount          int32
 }
 
-type SalesFactSync struct {
-	Name            string
-	CursorCreatedAt sql.NullTime
-	CursorInvoiceID sql.NullString
-	PassStartedAt   sql.NullTime
-	LastCompletedAt sql.NullTime
-	UpdatedAt       time.Time
-}
-
 type SalesLineFact struct {
 	AccountID          string
 	InvoicedAt         time.Time
@@ -2281,21 +2272,6 @@ type SalesOrderType struct {
 	Name      string
 	CreatedAt time.Time
 	UpdatedAt time.Time
-}
-
-type SalesRollupDirty struct {
-	AccountID string
-	Day       time.Time
-	MarkedAt  time.Time
-}
-
-type SalesRollupSync struct {
-	Name            string
-	CursorAccountID sql.NullString
-	CursorDay       sql.NullTime
-	PassStartedAt   sql.NullTime
-	LastCompletedAt sql.NullTime
-	UpdatedAt       time.Time
 }
 
 type SalesSync struct {

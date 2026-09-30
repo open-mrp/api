@@ -382,7 +382,7 @@ func TestVitessSmoke(t *testing.T) {
 		marks, apiErr := facts.ListDirty(ctx, 10)
 		checkAPI("ListDirty", apiErr)
 		for _, m := range marks {
-			checkAPI("ClearDirty", facts.ClearDirty(ctx, m))
+			checkAPI("ClearDirty", facts.ClearDirty(ctx, []domain.SalesFactDirtyMark{m}))
 		}
 		checkAPI("SaveSync", facts.SaveSync(ctx, domain.SalesFactSync{}))
 		_, apiErr = facts.GetSync(ctx)
@@ -395,7 +395,7 @@ func TestVitessSmoke(t *testing.T) {
 		rollupMarks, apiErr := facts.ListRollupDirty(ctx, 10)
 		checkAPI("ListRollupDirty", apiErr)
 		for _, m := range rollupMarks {
-			checkAPI("ClearRollupDirty", facts.ClearRollupDirty(ctx, m))
+			checkAPI("ClearRollupDirty", facts.ClearRollupDirty(ctx, []domain.SalesRollupDirtyMark{m}))
 		}
 
 		reports := NewSalesReportRepo(q)
@@ -482,7 +482,7 @@ func TestVitessSmoke(t *testing.T) {
 		buyerMarks, apiErr := facts.ListBuyerDirty(ctx, 10)
 		checkAPI("ListBuyerDirty", apiErr)
 		for _, m := range buyerMarks {
-			checkAPI("ClearBuyerDirty", facts.ClearBuyerDirty(ctx, m))
+			checkAPI("ClearBuyerDirty", facts.ClearBuyerDirty(ctx, []domain.SalesBuyerDirtyMark{m}))
 		}
 		next, apiErr := facts.NextBuyers(ctx, domain.SalesBuyerKey{}, 50)
 		checkAPI("NextBuyers", apiErr)

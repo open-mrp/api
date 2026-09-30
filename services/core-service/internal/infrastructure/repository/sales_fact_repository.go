@@ -360,13 +360,15 @@ WHERE scope_type = ? ORDER BY marked_at LIMIT ?`, string(domain.SalesFactScopeRo
 	return marks, tracing.Trace(span, db.MapSQLError(rows.Err()))
 }
 
-func (r *salesFactRepoImpl) ClearRollupDirty(ctx context.Context, mark domain.SalesRollupDirtyMark) *apierror.APIError {
+func (r *salesFactRepoImpl) ClearRollupDirty(ctx context.Context, marks []domain.SalesRollupDirtyMark) *apierror.APIError {
 	ctx, span := salesFactRepoTracer.Start(ctx, "repository.sales_fact.clear_rollup_dirty")
 	defer span.End()
 
-	_, err := r.queries.DB().ExecContext(ctx, `DELETE FROM sales_fact_dirty WHERE scope_type = ? AND scope_id = ? AND marked_at = ?`,
-		string(domain.SalesFactScopeRollupDay), rollupMarkID(mark.Day), mark.MarkedAt)
-	return tracing.Trace(span, db.MapSQLError(err))
+	keys := make([]dirtyMarkKey, len(marks))
+	for i, m := range marks {
+		keys[i] = dirtyMarkKey{scopeType: string(domain.SalesFactScopeRollupDay), scopeID: rollupMarkID(m.Day), markedAt: m.MarkedAt}
+	}
+	return tracing.Trace(span, db.MapSQLError(r.clearDirtyMarks(ctx, keys)))
 }
 
 func (r *salesFactRepoImpl) MarkDirty(ctx context.Context, scope domain.SalesFactScope, scopeID, accountID string) *apierror.APIError {
@@ -400,17 +402,36 @@ func (r *salesFactRepoImpl) ListDirty(ctx context.Context, limit int32) ([]domai
 	return out, nil
 }
 
-func (r *salesFactRepoImpl) ClearDirty(ctx context.Context, mark domain.SalesFactDirtyMark) *apierror.APIError {
+func (r *salesFactRepoImpl) ClearDirty(ctx context.Context, marks []domain.SalesFactDirtyMark) *apierror.APIError {
 	ctx, span := salesFactRepoTracer.Start(ctx, "repository.sales_fact.clear_dirty")
 	defer span.End()
 
-	err := r.queries.ClearSalesFactDirty(ctx, sqlc.ClearSalesFactDirtyParams{
-		ScopeType: string(mark.ScopeType),
-		ScopeID:   mark.ScopeID,
-		MarkedAt:  mark.MarkedAt,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return tracing.Trace(span, apiErr)
+	keys := make([]dirtyMarkKey, len(marks))
+	for i, m := range marks {
+		keys[i] = dirtyMarkKey{scopeType: string(m.ScopeType), scopeID: m.ScopeID, markedAt: m.MarkedAt}
+	}
+	return tracing.Trace(span, db.MapSQLError(r.clearDirtyMarks(ctx, keys)))
+}
+
+// dirtyMarkKey is one sales_fact_dirty mark as it was read.
+type dirtyMarkKey struct {
+	scopeType, scopeID string
+	markedAt           time.Time
+}
+
+// clearDirtyMarks deletes marks from sales_fact_dirty in batches, each only if its marked_at is unchanged:
+// a mark written again while its work ran survives for the next drain.
+func (r *salesFactRepoImpl) clearDirtyMarks(ctx context.Context, keys []dirtyMarkKey) error {
+	for start := 0; start < len(keys); start += 500 {
+		batch := keys[start:min(start+500, len(keys))]
+		args := make([]any, 0, 3*len(batch))
+		for _, k := range batch {
+			args = append(args, k.scopeType, k.scopeID, k.markedAt)
+		}
+		match := strings.TrimSuffix(strings.Repeat("(scope_type = ? AND scope_id = ? AND marked_at = ?) OR ", len(batch)), " OR ")
+		if _, err := r.queries.DB().ExecContext(ctx, `DELETE FROM sales_fact_dirty WHERE `+match, args...); err != nil {
+			return err
+		}
 	}
 	return nil
 }

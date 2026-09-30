@@ -9935,45 +9935,45 @@ func (m *MockSalesFactRepo) EXPECT() *MockSalesFactRepoMockRecorder {
 }
 
 // ClearBuyerDirty mocks base method.
-func (m *MockSalesFactRepo) ClearBuyerDirty(ctx context.Context, mark domain.SalesBuyerDirtyMark) *apierror.APIError {
+func (m *MockSalesFactRepo) ClearBuyerDirty(ctx context.Context, marks []domain.SalesBuyerDirtyMark) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ClearBuyerDirty", ctx, mark)
+	ret := m.ctrl.Call(m, "ClearBuyerDirty", ctx, marks)
 	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
 // ClearBuyerDirty indicates an expected call of ClearBuyerDirty.
-func (mr *MockSalesFactRepoMockRecorder) ClearBuyerDirty(ctx, mark any) *gomock.Call {
+func (mr *MockSalesFactRepoMockRecorder) ClearBuyerDirty(ctx, marks any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClearBuyerDirty", reflect.TypeOf((*MockSalesFactRepo)(nil).ClearBuyerDirty), ctx, mark)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClearBuyerDirty", reflect.TypeOf((*MockSalesFactRepo)(nil).ClearBuyerDirty), ctx, marks)
 }
 
 // ClearDirty mocks base method.
-func (m *MockSalesFactRepo) ClearDirty(ctx context.Context, mark domain.SalesFactDirtyMark) *apierror.APIError {
+func (m *MockSalesFactRepo) ClearDirty(ctx context.Context, marks []domain.SalesFactDirtyMark) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ClearDirty", ctx, mark)
+	ret := m.ctrl.Call(m, "ClearDirty", ctx, marks)
 	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
 // ClearDirty indicates an expected call of ClearDirty.
-func (mr *MockSalesFactRepoMockRecorder) ClearDirty(ctx, mark any) *gomock.Call {
+func (mr *MockSalesFactRepoMockRecorder) ClearDirty(ctx, marks any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClearDirty", reflect.TypeOf((*MockSalesFactRepo)(nil).ClearDirty), ctx, mark)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClearDirty", reflect.TypeOf((*MockSalesFactRepo)(nil).ClearDirty), ctx, marks)
 }
 
 // ClearRollupDirty mocks base method.
-func (m *MockSalesFactRepo) ClearRollupDirty(ctx context.Context, mark domain.SalesRollupDirtyMark) *apierror.APIError {
+func (m *MockSalesFactRepo) ClearRollupDirty(ctx context.Context, marks []domain.SalesRollupDirtyMark) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ClearRollupDirty", ctx, mark)
+	ret := m.ctrl.Call(m, "ClearRollupDirty", ctx, marks)
 	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
 // ClearRollupDirty indicates an expected call of ClearRollupDirty.
-func (mr *MockSalesFactRepoMockRecorder) ClearRollupDirty(ctx, mark any) *gomock.Call {
+func (mr *MockSalesFactRepoMockRecorder) ClearRollupDirty(ctx, marks any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClearRollupDirty", reflect.TypeOf((*MockSalesFactRepo)(nil).ClearRollupDirty), ctx, mark)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClearRollupDirty", reflect.TypeOf((*MockSalesFactRepo)(nil).ClearRollupDirty), ctx, marks)
 }
 
 // ComputeFacts mocks base method.

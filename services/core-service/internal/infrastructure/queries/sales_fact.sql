@@ -118,10 +118,6 @@ WHERE scope_type NOT IN ('buyer_summary', 'rollup_day')
 ORDER BY marked_at
 LIMIT ?;
 
--- name: ClearSalesFactDirty :exec
--- Only clears a mark that was not re-marked after it was read.
-DELETE FROM sales_fact_dirty WHERE scope_type = ? AND scope_id = ? AND marked_at = ?;
-
 -- name: ListInvoiceIDsBySalesOrders :many
 SELECT id FROM invoice WHERE sales_order_id IN (sqlc.slice('sales_order_ids'));
 

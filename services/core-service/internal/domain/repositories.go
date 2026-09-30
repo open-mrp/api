@@ -927,8 +927,8 @@ type SalesFactRepo interface {
 	MarkBuyers(ctx context.Context, buyers []SalesBuyerKey) *apierror.APIError
 	// ListBuyerDirty returns up to limit marked buyers, oldest mark first.
 	ListBuyerDirty(ctx context.Context, limit int32) ([]SalesBuyerDirtyMark, *apierror.APIError)
-	// ClearBuyerDirty removes a mark unless it was re-marked after it was read.
-	ClearBuyerDirty(ctx context.Context, mark SalesBuyerDirtyMark) *apierror.APIError
+	// ClearBuyerDirty removes the marks, each unless it was re-marked after it was read.
+	ClearBuyerDirty(ctx context.Context, marks []SalesBuyerDirtyMark) *apierror.APIError
 	// RebuildBuyerSummaries recomputes the summaries of one account's buyers from their facts, deleting
 	// the summary of any buyer left with no qualifying sale.
 	RebuildBuyerSummaries(ctx context.Context, accountID string, buyerIDs []string) *apierror.APIError
@@ -946,10 +946,11 @@ type SalesFactRepo interface {
 	// MarkRollupDays marks days whose rollup buckets must be rebuilt.
 	MarkRollupDays(ctx context.Context, days []SalesRollupDay) *apierror.APIError
 	ListRollupDirty(ctx context.Context, limit int32) ([]SalesRollupDirtyMark, *apierror.APIError)
-	// ClearRollupDirty deletes the mark only if it was not re-marked after it was read.
-	ClearRollupDirty(ctx context.Context, mark SalesRollupDirtyMark) *apierror.APIError
+	// ClearRollupDirty deletes the marks, each only if it was not re-marked after it was read.
+	ClearRollupDirty(ctx context.Context, marks []SalesRollupDirtyMark) *apierror.APIError
 	ListDirty(ctx context.Context, limit int32) ([]SalesFactDirtyMark, *apierror.APIError)
-	ClearDirty(ctx context.Context, mark SalesFactDirtyMark) *apierror.APIError
+	// ClearDirty deletes the marks, each only if it was not re-marked after it was read.
+	ClearDirty(ctx context.Context, marks []SalesFactDirtyMark) *apierror.APIError
 
 	GetSync(ctx context.Context) (*SalesFactSync, *apierror.APIError)
 	SaveSync(ctx context.Context, sync SalesFactSync) *apierror.APIError

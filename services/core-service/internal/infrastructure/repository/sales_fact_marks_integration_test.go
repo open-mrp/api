@@ -31,12 +31,12 @@ func TestRollupDirtyMarksClearOnlyWhenUnchanged(t *testing.T) {
 	// A re-mark while the rebuild ran must survive clearing the mark that was read before it.
 	time.Sleep(5 * time.Millisecond)
 	require.Nil(t, repo.MarkRollupDays(ctx, []domain.SalesRollupDay{day}))
-	require.Nil(t, repo.ClearRollupDirty(ctx, *first))
+	require.Nil(t, repo.ClearRollupDirty(ctx, []domain.SalesRollupDirtyMark{*first}))
 	second := findRollupMark(t, ctx, repo, day)
 	require.NotNil(t, second, "the re-marked day is still listed")
 	require.True(t, second.MarkedAt.After(first.MarkedAt))
 
-	require.Nil(t, repo.ClearRollupDirty(ctx, *second))
+	require.Nil(t, repo.ClearRollupDirty(ctx, []domain.SalesRollupDirtyMark{*second}))
 	require.Nil(t, findRollupMark(t, ctx, repo, day))
 }
 
@@ -156,4 +156,44 @@ func TestLockPaymentFlagRowsInsideATransaction(t *testing.T) {
 	require.NoError(t, err)
 	_, err = other.ExecContext(ctx, `SELECT id FROM invoice WHERE id = ? FOR UPDATE`, invoiceID)
 	require.Error(t, err, "the row is locked")
+}
+
+// A batch clear removes every mark as it was read, across more marks than one statement holds, and leaves
+// a mark that was written again after it was read.
+func TestABatchClearKeepsMarksWrittenAgain(t *testing.T) {
+	ctx := context.Background()
+	pool := testDB(t)
+	repo := NewSalesFactRepo(sqlc.New(pool))
+	const account = "ac_batch_clear"
+	t.Cleanup(func() { _, _ = pool.Exec(`DELETE FROM sales_fact_dirty WHERE account_id = ?`, account) })
+
+	days := make([]domain.SalesRollupDay, 600)
+	for i := range days {
+		days[i] = domain.SalesRollupDay{AccountID: account, Day: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).AddDate(0, 0, i)}
+	}
+	require.Nil(t, repo.MarkRollupDays(ctx, days))
+	marks, apiErr := repo.ListRollupDirty(ctx, 100_000)
+	require.Nil(t, apiErr)
+	var mine []domain.SalesRollupDirtyMark
+	for _, m := range marks {
+		if m.Day.AccountID == account {
+			mine = append(mine, m)
+		}
+	}
+	require.Len(t, mine, len(days))
+
+	time.Sleep(5 * time.Millisecond)
+	require.Nil(t, repo.MarkRollupDays(ctx, days[:1]), "written again while the rebuild ran")
+	require.Nil(t, repo.ClearRollupDirty(ctx, mine))
+
+	var left []string
+	rows, err := pool.Query(`SELECT scope_id FROM sales_fact_dirty WHERE account_id = ?`, account)
+	require.NoError(t, err)
+	for rows.Next() {
+		var id string
+		require.NoError(t, rows.Scan(&id))
+		left = append(left, id)
+	}
+	require.NoError(t, rows.Close())
+	require.Equal(t, []string{account + "/2020-01-01"}, left)
 }

@@ -341,26 +341,19 @@ func (s *SalesFactRefresher) drainDirty(ctx context.Context) *apierror.APIError 
 		}
 		slog.InfoContext(ctx, "Sales fact refresher: fanned a large change out into invoice marks", "invoices", len(invoiceIDs))
 		s.backlog = true
+		var broad []domain.SalesFactDirtyMark
 		for _, m := range marks {
-			if m.ScopeType == domain.SalesFactScopeInvoice {
-				continue
-			}
-			if apiErr := repo.ClearDirty(ctx, m); apiErr != nil {
-				return tracing.Trace(span, apiErr)
+			if m.ScopeType != domain.SalesFactScopeInvoice {
+				broad = append(broad, m)
 			}
 		}
-		return nil
+		return tracing.Trace(span, repo.ClearDirty(ctx, broad))
 	}
 
 	if _, apiErr := s.refreshInvoices(ctx, invoiceIDs); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
-	for _, m := range marks {
-		if apiErr := repo.ClearDirty(ctx, m); apiErr != nil {
-			return tracing.Trace(span, apiErr)
-		}
-	}
-	return nil
+	return tracing.Trace(span, repo.ClearDirty(ctx, marks))
 }
 
 func (s *SalesFactRefresher) refreshRecent(ctx context.Context, now time.Time) *apierror.APIError {
@@ -495,6 +488,8 @@ func (s *SalesFactRefresher) refreshInvoices(ctx context.Context, invoiceIDs []s
 	repo := s.cfg.Repos.NewSalesFactRepo()
 	changedLines := 0
 	changedAccounts := map[string]struct{}{}
+	// Whether buyers are marked, read once, at the first change.
+	var tracked *bool
 	for start := 0; start < len(invoiceIDs); start += salesFactInvoiceBatch {
 		batch := invoiceIDs[start:min(start+salesFactInvoiceBatch, len(invoiceIDs))]
 		computed, apiErr := repo.ComputeFacts(ctx, batch)
@@ -513,8 +508,17 @@ func (s *SalesFactRefresher) refreshInvoices(ctx context.Context, invoiceIDs []s
 		if apiErr := repo.MarkRollupDays(ctx, touchedRollupDays(upserts, deletes, stored)); apiErr != nil {
 			return changedLines, apiErr
 		}
-		if apiErr := repo.MarkBuyers(ctx, touchedBuyers(upserts, deletes, stored)); apiErr != nil {
-			return changedLines, apiErr
+		if tracked == nil {
+			t, apiErr := s.buyerSummariesTracked(ctx)
+			if apiErr != nil {
+				return changedLines, apiErr
+			}
+			tracked = &t
+		}
+		if *tracked {
+			if apiErr := repo.MarkBuyers(ctx, touchedBuyers(upserts, deletes, stored)); apiErr != nil {
+				return changedLines, apiErr
+			}
 		}
 		if apiErr := repo.UpsertFacts(ctx, upserts); apiErr != nil {
 			return changedLines, apiErr
@@ -543,6 +547,18 @@ func (s *SalesFactRefresher) refreshInvoices(ctx context.Context, invoiceIDs []s
 		return changedLines, apiErr
 	}
 	return changedLines, s.drainBuyerDirty(ctx)
+}
+
+// buyerSummariesTracked reports whether changed facts must mark their buyers: once the buyer summary sweep
+// has started its first pass. Before that the summaries are not served, and that pass rebuilds every buyer
+// anyway, so marks would only rebuild buyers again and again while the fact backfill that precedes it
+// rewrites every fact.
+func (s *SalesFactRefresher) buyerSummariesTracked(ctx context.Context) (bool, *apierror.APIError) {
+	state, apiErr := s.cfg.Repos.NewSalesFactRepo().GetBuyerSummarySync(ctx)
+	if apiErr != nil {
+		return false, apiErr
+	}
+	return state.PassStartedAt != nil, nil
 }
 
 // touchedBuyers returns every buyer a changed line belongs to, and for a line that changed buyer, the
@@ -602,10 +618,8 @@ func (s *SalesFactRefresher) drainBuyerDirty(ctx context.Context) *apierror.APIE
 		}
 		accounts = append(accounts, account)
 	}
-	for _, m := range marks {
-		if apiErr := repo.ClearBuyerDirty(ctx, m); apiErr != nil {
-			return tracing.Trace(span, apiErr)
-		}
+	if apiErr := repo.ClearBuyerDirty(ctx, marks); apiErr != nil {
+		return tracing.Trace(span, apiErr)
 	}
 	s.cfg.OnFactsChanged(ctx, accounts)
 	return nil
@@ -753,10 +767,8 @@ func (s *SalesFactRefresher) drainRollupDirty(ctx context.Context) *apierror.API
 	if apiErr := s.rebuildRollups(ctx, days); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
-	for _, m := range marks {
-		if apiErr := repo.ClearRollupDirty(ctx, m); apiErr != nil {
-			return tracing.Trace(span, apiErr)
-		}
+	if apiErr := repo.ClearRollupDirty(ctx, marks); apiErr != nil {
+		return tracing.Trace(span, apiErr)
 	}
 	ids := make([]string, 0, len(accounts))
 	for id := range accounts {

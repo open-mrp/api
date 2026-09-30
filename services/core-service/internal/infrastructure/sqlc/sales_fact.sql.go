@@ -12,22 +12,6 @@ import (
 	"time"
 )
 
-const clearSalesFactDirty = `-- name: ClearSalesFactDirty :exec
-DELETE FROM sales_fact_dirty WHERE scope_type = ? AND scope_id = ? AND marked_at = ?
-`
-
-type ClearSalesFactDirtyParams struct {
-	ScopeType string
-	ScopeID   string
-	MarkedAt  time.Time
-}
-
-// Only clears a mark that was not re-marked after it was read.
-func (q *Queries) ClearSalesFactDirty(ctx context.Context, arg ClearSalesFactDirtyParams) error {
-	_, err := q.db.ExecContext(ctx, clearSalesFactDirty, arg.ScopeType, arg.ScopeID, arg.MarkedAt)
-	return err
-}
-
 const deleteSalesFactsByLineIDs = `-- name: DeleteSalesFactsByLineIDs :exec
 DELETE FROM sales_line_fact WHERE invoice_line_id IN (/*SLICE:invoice_line_ids*/?)
 `

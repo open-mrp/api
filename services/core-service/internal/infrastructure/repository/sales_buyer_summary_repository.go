@@ -25,8 +25,12 @@ func buyerMarkID(b domain.SalesBuyerKey) string {
 // counted them: sales orders only, lines priced above zero, outside the shipping and misc product lines.
 // first_ordered_at is the earliest of those lines' order dates; a buyer whose qualifying orders have no
 // issue date has no summary. The %s is the buyer_account_id IN list.
+//
+// FORCE INDEX: left alone, the optimizer starts from product_line (for the name filter) and walks
+// sales_line_fact_product_line_idx, reading every fact the account has (460k for Carolon, ~3s) where the
+// buyer index reads only the batch's buyers.
 const salesBuyerSummarySource = `SELECT f.buyer_account_id, MIN(f.ordered_at), CAST(COALESCE(SUM(f.total_invoiced), 0) AS DECIMAL(65,30))
-FROM sales_line_fact f
+FROM sales_line_fact f FORCE INDEX (sales_line_fact_buyer_idx)
 JOIN product_line pl ON pl.id = f.product_line_id
 WHERE f.account_id = ? AND f.buyer_account_id IN (%s)
   AND f.sales_order_type_code = 'sales_order' AND f.is_priced = 1
@@ -79,13 +83,15 @@ WHERE scope_type = ? ORDER BY marked_at LIMIT ?`, string(domain.SalesFactScopeBu
 	return marks, tracing.Trace(span, db.MapSQLError(rows.Err()))
 }
 
-func (r *salesFactRepoImpl) ClearBuyerDirty(ctx context.Context, mark domain.SalesBuyerDirtyMark) *apierror.APIError {
+func (r *salesFactRepoImpl) ClearBuyerDirty(ctx context.Context, marks []domain.SalesBuyerDirtyMark) *apierror.APIError {
 	ctx, span := salesFactRepoTracer.Start(ctx, "repository.sales_fact.clear_buyer_dirty")
 	defer span.End()
 
-	_, err := r.queries.DB().ExecContext(ctx, `DELETE FROM sales_fact_dirty WHERE scope_type = ? AND scope_id = ? AND marked_at = ?`,
-		string(domain.SalesFactScopeBuyerSummary), buyerMarkID(mark.Buyer), mark.MarkedAt)
-	return tracing.Trace(span, db.MapSQLError(err))
+	keys := make([]dirtyMarkKey, len(marks))
+	for i, m := range marks {
+		keys[i] = dirtyMarkKey{scopeType: string(domain.SalesFactScopeBuyerSummary), scopeID: buyerMarkID(m.Buyer), markedAt: m.MarkedAt}
+	}
+	return tracing.Trace(span, db.MapSQLError(r.clearDirtyMarks(ctx, keys)))
 }
 
 func (r *salesFactRepoImpl) RebuildBuyerSummaries(ctx context.Context, accountID string, buyerIDs []string) *apierror.APIError {

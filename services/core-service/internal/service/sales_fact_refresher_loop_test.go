@@ -184,10 +184,13 @@ func TestAWakeIsRetriedWhileAnotherPodHoldsTheLease(t *testing.T) {
 	}, idle)
 	waitRuns(t, r, 1)
 
-	// Pod B is mid-run: it may have listed the dirty marks before this wake's mark was written.
-	ok, err := leases.Acquire(context.Background(), salesFactLeaseName, "pod-b", time.Minute)
-	require.NoError(t, err)
-	require.True(t, ok)
+	// Pod B is mid-run: it may have listed the dirty marks before this wake's mark was written. A run is
+	// counted as it starts, so pod A may still hold the lease for a moment; B takes it once A lets go.
+	require.Eventually(t, func() bool {
+		ok, err := leases.Acquire(context.Background(), salesFactLeaseName, "pod-b", time.Minute)
+		require.NoError(t, err)
+		return ok
+	}, time.Second, time.Millisecond)
 	r.Wake()
 	requireRunsStay(t, r, 1, 100*time.Millisecond)
 

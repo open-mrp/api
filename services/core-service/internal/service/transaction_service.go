@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
@@ -197,6 +198,14 @@ func (s *transactionSvcImpl) CreateTransaction(ctx context.Context, params domai
 				params.ResponsibleUserID = &accountUser.ID
 			}
 
+			exists, apiErr := txRepo.CustomerExists(txCtx, params.AccountID, params.CustomerID)
+			if apiErr != nil {
+				return apiErr
+			}
+			if !exists {
+				return apierror.NewResourceNotFoundError("Customer not found.")
+			}
+
 			// Generate transaction number
 			number, apiErr := txRepo.FetchAndIncrementTransactionNumber(txCtx, params.AccountID)
 			if apiErr != nil {
@@ -210,7 +219,7 @@ func (s *transactionSvcImpl) CreateTransaction(ctx context.Context, params domai
 			}
 
 			// Create the transaction
-			if apiErr := txRepo.Create(txCtx, txID, number, params.TransactionTypeCode, params.AccountID, params.CustomerID, params.StripePaymentID, params.TransactionMethodCode, params.AdjustmentTypeCode, params.ResponsibleUserID, params.Note, params.Amount, dollarUnitID); apiErr != nil {
+			if apiErr := txRepo.Create(txCtx, txID, number, params.TransactionTypeCode, params.AccountID, params.CustomerID, params.StripePaymentID, params.TransactionMethodCode, params.AdjustmentTypeCode, params.ResponsibleUserID, params.Note, params.Amount, dollarUnitID, params.CreatedAt, params.FundsReceivedAt); apiErr != nil {
 				return apiErr
 			}
 
@@ -291,7 +300,12 @@ func (s *transactionSvcImpl) UpdateTransaction(ctx context.Context, params domai
 			}
 
 			if params.Number != nil {
-				exists, apiErr := txRepo.ExistsByNumber(txCtx, params.AccountID, *params.Number, &params.TransactionID)
+				number := strings.TrimSpace(*params.Number)
+				if number == "" {
+					return apierror.NewValidationErrorWithParam("Number must not be blank.", "number")
+				}
+				params.Number = &number
+				exists, apiErr := txRepo.ExistsByNumber(txCtx, params.AccountID, number, &params.TransactionID)
 				if apiErr != nil {
 					return apiErr
 				}
@@ -301,11 +315,18 @@ func (s *transactionSvcImpl) UpdateTransaction(ctx context.Context, params domai
 			}
 
 			if params.ResponsibleUserID != nil {
-				resolvedID, apiErr := txRepo.ResolveResponsibleUserID(txCtx, params.AccountID, *params.ResponsibleUserID)
-				if apiErr != nil {
+				resolvedID, active, apiErr := txRepo.ResolveResponsibleUserID(txCtx, params.AccountID, *params.ResponsibleUserID)
+				unchanged := apiErr == nil && old.ResponsibleUserID != nil && *old.ResponsibleUserID == resolvedID
+				switch {
+				case unchanged:
+					// Re-sending the current responsible user is not a change, even once that user
+					// has been deactivated: the dashboard saves a transaction whole.
+					params.ResponsibleUserID = nil
+				case apiErr != nil || !active:
 					return apierror.NewResourceNotFoundError("Account user not found.")
+				default:
+					params.ResponsibleUserID = &resolvedID
 				}
-				params.ResponsibleUserID = &resolvedID
 			}
 
 			updated, apiErr := txRepo.Update(txCtx, params)
@@ -439,19 +460,11 @@ func (s *transactionSvcImpl) ListAccountTransactions(ctx context.Context, params
 
 	repo := s.repos.NewTransactionRepo()
 
+	// Settling needs what each transaction has already had applied; one read loads them for the page.
+	params.WithAllocations = true
 	result, apiErr := repo.ListByCustomer(ctx, params)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-
-	// Fetch allocations for each transaction to match legacy Dashboard behavior.
-	for _, tx := range result.Transactions {
-		allocations, apiErr := repo.GetAllocations(ctx, tx.ID)
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		tx.Allocations = allocations
-	}
-
 	return result, nil
 }

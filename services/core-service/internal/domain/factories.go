@@ -123,6 +123,7 @@ type Mediators struct {
 	EditAccess            EditAccessMed
 	ProductionFlow        ProductionFlowMed
 	BurnRate              BurnRateMed
+	PaymentFlags          PaymentFlagsMed
 	ProductionRunActivity ProductionRunActivityMed
 }
 

@@ -279,3 +279,36 @@ func TestAnalyzeSales_SalesRepNeverSharesAnotherCallersEntry(t *testing.T) {
 	require.Nil(t, apiErr)
 	require.EqualValues(t, 7, adminEntries[0].UnitCost, "zeroing a rep's copy must not touch the cached entry")
 }
+
+func TestAnalyticsCache_SalesReportsSkipTheCacheWhileSettling(t *testing.T) {
+	store, err := cache.NewMemoryStore(nil)
+	require.NoError(t, err)
+	c, err := NewAnalyticsCache(&AnalyticsCacheConfig{Store: store, SalesSettleWindow: 150 * time.Millisecond})
+	require.NoError(t, err)
+	ctx := context.Background()
+
+	var calls atomic.Int32
+	load := func(context.Context) ([]domain.SalesEntry, *apierror.APIError) {
+		calls.Add(1)
+		return []domain.SalesEntry{}, nil
+	}
+	report := func() analyticsReport {
+		return analyticsReport{accountID: "ac_1", family: analyticsFamilySales, method: "sales", params: 1, ttl: time.Minute, bypass: c.salesSettling(ctx, "ac_1")}
+	}
+
+	require.False(t, c.salesSettling(ctx, "ac_1"))
+	c.InvalidateSales(ctx, []string{"ac_1"})
+	require.True(t, c.salesSettling(ctx, "ac_1"))
+	require.False(t, c.salesSettling(ctx, "ac_2"), "another account is not settling")
+
+	// While settling, every read computes the report and nothing is cached.
+	_, _ = cachedReport(ctx, c.sales, report(), load)
+	_, _ = cachedReport(ctx, c.sales, report(), load)
+	require.EqualValues(t, 2, calls.Load())
+
+	require.Eventually(t, func() bool { return !c.salesSettling(ctx, "ac_1") }, time.Second, 10*time.Millisecond)
+	// Settled: the first read caches, the second is served from it.
+	_, _ = cachedReport(ctx, c.sales, report(), load)
+	_, _ = cachedReport(ctx, c.sales, report(), load)
+	require.EqualValues(t, 3, calls.Load())
+}

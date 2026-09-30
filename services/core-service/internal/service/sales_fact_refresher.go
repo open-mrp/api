@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -25,6 +26,17 @@ const (
 
 	// salesFactInvoiceBatch bounds one recompute: ~4 lines an invoice keeps the pricing join under ~1k rows.
 	salesFactInvoiceBatch = 200
+
+	// salesFactFanOutThreshold is the most invoices one drain refreshes itself. A scope that resolves to
+	// more (a product moved to another product line after years of sales) is fanned out into one mark
+	// per invoice, which later ticks work off a batch at a time.
+	salesFactFanOutThreshold = 1000
+
+	// salesRollupDrainBatch bounds the rollup days one drain rebuilds.
+	salesRollupDrainBatch = 500
+
+	// salesFactReconcileScopeID is the single scope id reconcile requests share, so they coalesce.
+	salesFactReconcileScopeID = "all"
 )
 
 // SalesFactRefresherConfig configures the refresher that keeps sales_line_fact equal to its source tables.
@@ -96,7 +108,7 @@ func (c *SalesFactRefresherConfig) validate() error {
 	return nil
 }
 
-// SalesFactRefresher keeps sales_line_fact in step with invoices. Three paths feed it, each covering what the one before misses:
+// SalesFactRefresher keeps sales_line_fact, and the sales_fact_rollup buckets summed from it, in step with invoices. Three paths feed it, each covering what the one before misses:
 //   - dirty marks, written from audit events within seconds of an edit made through this API;
 //   - a rolling recompute of recent invoices, for writes that publish no audit event (the dashboard, generic rate and quantity edits);
 //   - a daily reconcile pass over every invoice, which corrects anything older that drifted. Its first pass is the backfill.
@@ -151,6 +163,10 @@ func (s *SalesFactRefresher) loop(ctx context.Context) {
 
 // Tick runs one round of every path. Exported for tests; production calls it under the lease.
 func (s *SalesFactRefresher) Tick(ctx context.Context) {
+	// Days a failed or interrupted refresh left marked are rebuilt first.
+	if apiErr := s.drainRollupDirty(ctx); apiErr != nil {
+		slog.ErrorContext(ctx, "Sales fact refresher: rebuilding marked rollup days failed", "error", apiErr)
+	}
 	if apiErr := s.drainDirty(ctx); apiErr != nil {
 		slog.ErrorContext(ctx, "Sales fact refresher: draining dirty marks failed", "error", apiErr)
 	}
@@ -163,6 +179,9 @@ func (s *SalesFactRefresher) Tick(ctx context.Context) {
 	}
 	if apiErr := s.reconcile(ctx); apiErr != nil {
 		slog.ErrorContext(ctx, "Sales fact refresher: reconcile failed", "error", apiErr)
+	}
+	if apiErr := s.sweepRollups(ctx); apiErr != nil {
+		slog.ErrorContext(ctx, "Sales fact refresher: rollup sweep failed", "error", apiErr)
 	}
 }
 
@@ -180,20 +199,63 @@ func (s *SalesFactRefresher) drainDirty(ctx context.Context) *apierror.APIError 
 		return nil
 	}
 
-	byScope := make(map[domain.SalesFactScope][]string)
-	for _, m := range marks {
-		byScope[m.ScopeType] = append(byScope[m.ScopeType], m.ScopeID)
+	type scopeKey struct {
+		scope     domain.SalesFactScope
+		accountID string
 	}
+	byScope := make(map[scopeKey][]string)
+	restart := false
+	for _, m := range marks {
+		if m.ScopeType == domain.SalesFactScopeReconcile {
+			restart = true
+			continue
+		}
+		k := scopeKey{m.ScopeType, m.AccountID}
+		byScope[k] = append(byScope[k], m.ScopeID)
+	}
+	if restart {
+		// A unit or base-unit change can reprice any line; the full pass is the one path that reaches them all.
+		if apiErr := repo.RestartReconcile(ctx); apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+		slog.InfoContext(ctx, "Sales fact refresher: reconcile pass restarted by a unit change")
+	}
+
 	var invoiceIDs []string
-	for scope, ids := range byScope {
-		resolved, apiErr := repo.ResolveInvoiceIDs(ctx, scope, ids)
+	resolvedByAccount := make(map[string][]string)
+	for k, ids := range byScope {
+		resolved, apiErr := repo.ResolveInvoiceIDs(ctx, k.accountID, k.scope, ids)
 		if apiErr != nil {
 			return tracing.Trace(span, apiErr)
 		}
 		invoiceIDs = append(invoiceIDs, resolved...)
+		if k.scope != domain.SalesFactScopeInvoice {
+			resolvedByAccount[k.accountID] = append(resolvedByAccount[k.accountID], resolved...)
+		}
 	}
 	slices.Sort(invoiceIDs)
 	invoiceIDs = slices.Compact(invoiceIDs)
+	span.SetAttributes(attribute.Int("sales_fact.resolved_invoices", len(invoiceIDs)))
+
+	if len(invoiceIDs) > salesFactFanOutThreshold {
+		// Too much for one tick to hold the lease over: mark each invoice on its own and let later ticks
+		// work them off. Invoice marks already are that, so only the broader scopes are fanned out.
+		for accountID, ids := range resolvedByAccount {
+			if apiErr := repo.MarkInvoicesDirty(ctx, accountID, ids); apiErr != nil {
+				return tracing.Trace(span, apiErr)
+			}
+		}
+		slog.InfoContext(ctx, "Sales fact refresher: fanned a large change out into invoice marks", "invoices", len(invoiceIDs))
+		for _, m := range marks {
+			if m.ScopeType == domain.SalesFactScopeInvoice {
+				continue
+			}
+			if apiErr := repo.ClearDirty(ctx, m); apiErr != nil {
+				return tracing.Trace(span, apiErr)
+			}
+		}
+		return nil
+	}
 
 	if _, apiErr := s.refreshInvoices(ctx, invoiceIDs); apiErr != nil {
 		return tracing.Trace(span, apiErr)
@@ -326,7 +388,11 @@ func (s *SalesFactRefresher) deleteOrphans(ctx context.Context) (int, *apierror.
 // salesFactSweepOrigin sorts before every invoice; the zero time.Time is below DATETIME's range.
 var salesFactSweepOrigin = time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
 
-// refreshInvoices recomputes the facts of the given invoices and writes only what differs. Returns how many lines were written or deleted.
+// refreshInvoices recomputes the facts of the given invoices and writes only what differs, then rebuilds
+// the rollups of every day a changed line left or entered. Each such day is marked before its facts are
+// written and unmarked only once its buckets are rebuilt, so a crash or a failed rebuild in between is
+// repaired on the next tick rather than leaving the buckets behind their facts. Returns how many lines
+// were written or deleted.
 func (s *SalesFactRefresher) refreshInvoices(ctx context.Context, invoiceIDs []string) (int, *apierror.APIError) {
 	repo := s.cfg.Repos.NewSalesFactRepo()
 	changedLines := 0
@@ -343,6 +409,12 @@ func (s *SalesFactRefresher) refreshInvoices(ctx context.Context, invoiceIDs []s
 		}
 
 		upserts, deletes := diffSalesFacts(computed, stored)
+		if len(upserts) == 0 && len(deletes) == 0 {
+			continue
+		}
+		if apiErr := repo.MarkRollupDays(ctx, touchedRollupDays(upserts, deletes, stored)); apiErr != nil {
+			return changedLines, apiErr
+		}
 		if apiErr := repo.UpsertFacts(ctx, upserts); apiErr != nil {
 			return changedLines, apiErr
 		}
@@ -354,10 +426,7 @@ func (s *SalesFactRefresher) refreshInvoices(ctx context.Context, invoiceIDs []s
 			return changedLines, apiErr
 		}
 		changedLines += len(upserts) + len(deletes)
-		for _, f := range upserts {
-			changedAccounts[f.AccountID] = struct{}{}
-		}
-		for _, f := range deletes {
+		for _, f := range append(upserts, deletes...) {
 			changedAccounts[f.AccountID] = struct{}{}
 		}
 	}
@@ -366,9 +435,157 @@ func (s *SalesFactRefresher) refreshInvoices(ctx context.Context, invoiceIDs []s
 		for id := range changedAccounts {
 			accounts = append(accounts, id)
 		}
+		// Reports that read the facts alone are stale now, whether or not the rollups rebuild below.
 		s.cfg.OnFactsChanged(ctx, accounts)
 	}
-	return changedLines, nil
+	return changedLines, s.drainRollupDirty(ctx)
+}
+
+// touchedRollupDays returns the (account, UTC day) of every changed line, and for a line that moved,
+// the day it left.
+func touchedRollupDays(upserts, deletes, stored []domain.SalesLineFact) []domain.SalesRollupDay {
+	storedByLine := make(map[string]domain.SalesLineFact, len(stored))
+	for _, f := range stored {
+		storedByLine[f.InvoiceLineID] = f
+	}
+	seen := map[domain.SalesRollupDay]struct{}{}
+	var days []domain.SalesRollupDay
+	add := func(f domain.SalesLineFact) {
+		d := domain.SalesRollupDay{AccountID: f.AccountID, Day: utcDay(f.InvoicedAt)}
+		if _, ok := seen[d]; !ok {
+			seen[d] = struct{}{}
+			days = append(days, d)
+		}
+	}
+	for _, f := range upserts {
+		add(f)
+		if old, ok := storedByLine[f.InvoiceLineID]; ok {
+			add(old)
+		}
+	}
+	for _, f := range deletes {
+		add(f)
+	}
+	return days
+}
+
+// drainRollupDirty rebuilds a batch of marked rollup days, then the months that hold them, and clears
+// each mark that was not re-marked meanwhile.
+func (s *SalesFactRefresher) drainRollupDirty(ctx context.Context) *apierror.APIError {
+	ctx, span := salesFactTracer.Start(ctx, "service.sales_fact_refresher.drain_rollup_dirty")
+	defer span.End()
+
+	repo := s.cfg.Repos.NewSalesFactRepo()
+	marks, apiErr := repo.ListRollupDirty(ctx, salesRollupDrainBatch)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	span.SetAttributes(attribute.Int("sales_fact.rollup_marks", len(marks)))
+	if len(marks) == 0 {
+		return nil
+	}
+	days := make(map[domain.SalesRollupDay]struct{}, len(marks))
+	accounts := map[string]struct{}{}
+	for _, m := range marks {
+		days[m.Day] = struct{}{}
+		accounts[m.Day.AccountID] = struct{}{}
+	}
+	if apiErr := s.rebuildRollups(ctx, days); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	for _, m := range marks {
+		if apiErr := repo.ClearRollupDirty(ctx, m); apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+	}
+	ids := make([]string, 0, len(accounts))
+	for id := range accounts {
+		ids = append(ids, id)
+	}
+	s.cfg.OnFactsChanged(ctx, ids)
+	return nil
+}
+
+// rebuildRollups rebuilds the given days' buckets, then the months that hold them.
+func (s *SalesFactRefresher) rebuildRollups(ctx context.Context, days map[domain.SalesRollupDay]struct{}) *apierror.APIError {
+	repo := s.cfg.Repos.NewSalesFactRepo()
+	months := map[domain.SalesRollupDay]struct{}{}
+	for d := range days {
+		if apiErr := repo.RebuildRollupDay(ctx, d); apiErr != nil {
+			return apiErr
+		}
+		months[domain.SalesRollupDay{AccountID: d.AccountID, Day: utcMonth(d.Day)}] = struct{}{}
+	}
+	for m := range months {
+		if apiErr := repo.RebuildRollupMonth(ctx, m.AccountID, m.Day); apiErr != nil {
+			return apiErr
+		}
+	}
+	return nil
+}
+
+// sweepRollups advances the rollup pass by up to ReconcileBudget, rebuilding every (account, day) in order and each month it passes through. Its first pass is the backfill; later passes, started ReconcileEvery apart, repair any bucket a crash left behind its facts.
+func (s *SalesFactRefresher) sweepRollups(ctx context.Context) *apierror.APIError {
+	ctx, span := salesFactTracer.Start(ctx, "service.sales_fact_refresher.sweep_rollups")
+	defer span.End()
+
+	repo := s.cfg.Repos.NewSalesFactRepo()
+	state, apiErr := repo.GetRollupSync(ctx)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	now := s.cfg.Now().UTC()
+	if state.Cursor == nil {
+		if state.PassStartedAt != nil && now.Sub(*state.PassStartedAt) < s.cfg.ReconcileEvery {
+			return nil
+		}
+		state.Cursor = &domain.SalesRollupDay{Day: salesFactSweepOrigin}
+		state.PassStartedAt = &now
+		slog.InfoContext(ctx, "Sales fact refresher: rollup pass started", "backfill", state.LastCompletedAt == nil)
+	}
+
+	deadline := now.Add(s.cfg.ReconcileBudget)
+	days := map[domain.SalesRollupDay]struct{}{}
+	for s.cfg.Now().UTC().Before(deadline) {
+		next, apiErr := repo.NextRollupDay(ctx, *state.Cursor)
+		if apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+		if next == nil {
+			completed := s.cfg.Now().UTC()
+			state.Cursor = nil
+			state.LastCompletedAt = &completed
+			slog.InfoContext(ctx, "Sales fact refresher: rollup pass completed", "started_at", state.PassStartedAt)
+			break
+		}
+		days[*next] = struct{}{}
+		if apiErr := repo.RebuildRollupDay(ctx, *next); apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+		state.Cursor = &domain.SalesRollupDay{AccountID: next.AccountID, Day: next.Day.AddDate(0, 0, 1)}
+	}
+	span.SetAttributes(attribute.Int("sales_fact.rollup_days", len(days)))
+	// Days are already rebuilt; this brings their months in line before the cursor is saved past them.
+	months := map[domain.SalesRollupDay]struct{}{}
+	for d := range days {
+		months[domain.SalesRollupDay{AccountID: d.AccountID, Day: utcMonth(d.Day)}] = struct{}{}
+	}
+	for m := range months {
+		if apiErr := repo.RebuildRollupMonth(ctx, m.AccountID, m.Day); apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+	}
+	return tracing.Trace(span, repo.SaveRollupSync(ctx, *state))
+}
+
+func utcDay(t time.Time) time.Time {
+	t = t.UTC()
+	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
+}
+
+func utcMonth(t time.Time) time.Time {
+	t = t.UTC()
+	return time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.UTC)
 }
 
 // diffSalesFacts returns the computed facts that are new or differ from what is stored, and the stored facts no longer computed.
@@ -427,27 +644,58 @@ func NewSalesFactMarker(repos domain.RepoFactory) *SalesFactMarker {
 
 // HandleAuditEvent marks the scope an event can change facts for. Every replica receives every event, so a mark is written once per replica; marking is idempotent.
 func (m *SalesFactMarker) HandleAuditEvent(ctx context.Context, e audit.ObservedEvent) {
-	scope, ok := salesFactScopeFor(e)
-	if !ok || e.AccountID == "" || e.ResourceID == "" {
+	scope, scopeID, ok := salesFactScopeFor(e)
+	if !ok || e.AccountID == "" || scopeID == "" {
 		return
 	}
-	if apiErr := m.repos.NewSalesFactRepo().MarkDirty(ctx, scope, e.ResourceID, e.AccountID); apiErr != nil {
+	if apiErr := m.repos.NewSalesFactRepo().MarkDirty(ctx, scope, scopeID, e.AccountID); apiErr != nil {
 		// The rolling recompute and reconcile pass still pick the change up, just later.
-		slog.WarnContext(ctx, "Sales fact marker: failed to mark scope", "scope", scope, "id", e.ResourceID, "error", apiErr)
+		slog.WarnContext(ctx, "Sales fact marker: failed to mark scope", "scope", scope, "id", scopeID, "error", apiErr)
 	}
 }
 
-func salesFactScopeFor(e audit.ObservedEvent) (domain.SalesFactScope, bool) {
+// salesFactScopeFor maps an audit event to the scope whose facts it can change, and the scope id to mark.
+func salesFactScopeFor(e audit.ObservedEvent) (domain.SalesFactScope, string, bool) {
+	changed := func(fields ...string) bool {
+		for _, c := range e.ChangedFields {
+			for _, f := range fields {
+				if c == f || strings.HasPrefix(c, f+".") {
+					return true
+				}
+			}
+		}
+		return false
+	}
+	update := e.Action == constants.AuditActionUpdate
 	switch e.ResourceType {
 	case constants.ObjectTypeInvoice:
-		return domain.SalesFactScopeInvoice, true
+		return domain.SalesFactScopeInvoice, e.ResourceID, true
 	case constants.ObjectTypeSalesOrder:
-		return domain.SalesFactScopeSalesOrder, true
+		return domain.SalesFactScopeSalesOrder, e.ResourceID, true
 	case constants.ObjectTypeSalesOrderLine:
-		return domain.SalesFactScopeSalesOrderLine, true
+		return domain.SalesFactScopeSalesOrderLine, e.ResourceID, true
 	case constants.ObjectTypeProduct:
 		// Every other product edit leaves facts alone, and a product can sit on thousands of invoices.
-		return domain.SalesFactScopeProduct, slices.Contains(e.ChangedFields, "product_line_id")
+		return domain.SalesFactScopeProduct, e.ResourceID, changed("product_line_id")
+	case constants.ObjectTypeQuantity:
+		// An invoice line's quantity edited on its own, through the generic quantity endpoint.
+		return domain.SalesFactScopeQuantity, e.ResourceID, update
+	case constants.ObjectTypeRate:
+		// An order line's price or cost edited on its own, through the generic rate endpoint.
+		return domain.SalesFactScopeRate, e.ResourceID, update
+	case constants.ObjectTypeItem:
+		// A new category can mean a new base unit, and so a new base quantity on every line.
+		return domain.SalesFactScopeItem, e.ResourceID, update && changed("item_category_id")
+	case constants.ObjectTypeCustomer:
+		// A merge deletes the customers merged away; their orders now belong to another buyer.
+		return domain.SalesFactScopeBuyer, e.ResourceID, e.Action == constants.AuditActionDelete
+	case constants.ObjectTypeUnit:
+		return domain.SalesFactScopeReconcile, salesFactReconcileScopeID,
+			update && changed("ratio_numerator", "ratio_denominator", "offset_numerator", "offset_denominator")
+	case constants.ObjectTypeUnitGroup:
+		return domain.SalesFactScopeReconcile, salesFactReconcileScopeID, update && changed("base_unit")
+	case constants.ObjectTypeItemCategory:
+		return domain.SalesFactScopeReconcile, salesFactReconcileScopeID, update && changed("unit_group_id")
 	}
-	return "", false
+	return "", "", false
 }

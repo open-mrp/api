@@ -3,6 +3,7 @@ package transactionep
 import (
 	"context"
 	"net/http"
+	"time"
 
 	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
@@ -22,7 +23,7 @@ type UpdateTransactionRequest struct {
 	// Must be unique within the account; the request fails with a conflict error if another transaction already uses it.
 	Number field.Optional[string] `json:"number,omitzero" validate:"omitempty,max=255"`
 	// Free-form note attached to the transaction.
-	Note field.Optional[string] `json:"note,omitzero"`
+	Note field.Clearable[string] `json:"note,omitzero"`
 	// New transaction amount as a decimal string, in US dollars.
 	Amount field.Optional[string] `json:"amount,omitzero"`
 	// How the money moved.
@@ -49,13 +50,17 @@ type UpdateTransactionRequest struct {
 	//
 	// Set this to correct the flag by hand: editing or deleting individual allocations never recomputes it. While it is `false`, the transaction is returned by List Open Credits.
 	IsFullyAllocated field.Optional[bool] `json:"is_fully_allocated,omitzero"`
+	// When the transaction took place, reported as its `created_at`.
+	OccurredAt field.Optional[time.Time] `json:"occurred_at,omitzero"`
+	// When the money arrived; null marks it as not yet received.
+	FundsReceivedAt field.Clearable[time.Time] `json:"funds_received_at,omitzero"`
 }
 
 var sampleUpdateTransactionNote = "Updated payment note"
 var sampleUpdateTransactionAmount = "750.00"
 var sampleUpdateTransactionMethodCode = constants.TransactionMethodACH
 var sampleUpdateTransactionRequest = &UpdateTransactionRequest{
-	Note:                  field.Some(sampleUpdateTransactionNote),
+	Note:                  field.Set(sampleUpdateTransactionNote),
 	Amount:                field.Some(sampleUpdateTransactionAmount),
 	TransactionMethodCode: field.Some(sampleUpdateTransactionMethodCode),
 }

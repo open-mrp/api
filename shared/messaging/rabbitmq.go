@@ -906,6 +906,15 @@ func (r *rabbitMQ) setupExchangesAndQueues() error {
 		return err
 	}
 
+	// Payment flags re-derived off the settlement request (handled by core-service)
+	if err := r.declareAndBindQueue(
+		CoreCmdRecomputePaymentFlagsQueue,
+		[]string{string(contracts.CoreCmdRecomputePaymentFlags)},
+		ApplicationExchange,
+	); err != nil {
+		return err
+	}
+
 	// Open-issue allocation paged off the scan transaction (handled by core-service)
 	if err := r.declareAndBindQueue(
 		CoreCmdAllocateOpenIssuesQueue,

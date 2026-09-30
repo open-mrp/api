@@ -11,6 +11,7 @@ import (
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
+	"github.com/open-mrp/api/shared/querytag"
 	"github.com/open-mrp/api/shared/tracing"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"go.opentelemetry.io/otel/trace"
@@ -117,6 +118,7 @@ func (c *InboxConsumer) WithLeaseSeconds(seconds int) *InboxConsumer {
 func (c *InboxConsumer) Wrap(handler string, fn MessageHandler) MessageHandler {
 	wrappedHandlers.Store(handler, struct{}{})
 	return func(ctx context.Context, msg amqp.Delivery) error {
+		ctx = querytag.With(ctx, querytag.Consumer, handler)
 		ctx, span := c.tracer.Start(ctx, "inbox.wrap."+handler)
 		defer span.End()
 

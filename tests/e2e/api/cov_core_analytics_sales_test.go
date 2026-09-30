@@ -288,29 +288,64 @@ func TestSalesAnalytics_BreakdownByEveryDimensionResponds(t *testing.T) {
 
 func TestSalesAnalytics_BreakdownPagesByCursor(t *testing.T) {
 	t.Parallel()
-	// Unfiltered by customer, the seed data has several customers; page through them one at a time.
-	now := time.Now().UTC()
-	body := map[string]any{"group_by": "customer", "starts_at": rfc3339(now.AddDate(-5, 0, 0)), "ends_at": rfc3339(now.Add(time.Hour))}
-	awaitSalesReports(t)
-	var seen []string
-	params := url.Values{"limit": {"1"}}
-	for page := 0; page < 50; page++ {
+	// Three customers of its own, so parallel tests' sales cannot reorder the groups mid-walk. Their
+	// sales are equal, so the walk also crosses the keyset's revenue ties.
+	var customers []string
+	for range 3 {
+		sale := shipSaleToNewCustomer(t)
+		awaitSalesSummary(t, sale.customerID, 1)
+		customers = append(customers, sale.customerID)
+	}
+	body := saleFilter(customers[0])
+	body["customer_ids"], body["group_by"] = customers, "customer"
+
+	type row struct {
+		key     string
+		revenue float64
+	}
+	page := func(params url.Values) ([]row, map[string]any) {
 		status, list, raw := putSales(t, salesBreakdownPath, params, body)
 		requireStatus(t, 200, status, raw)
+		var out []row
 		for _, g := range jsonArray(list, "data") {
-			seen = append(seen, jsonField(g.(map[string]any), "key"))
+			m := g.(map[string]any)
+			rev, err := strconv.ParseFloat(computedValue(t, jsonObject(m, "totals"), "revenue"), 64)
+			require.NoError(t, err)
+			out = append(out, row{jsonField(m, "key"), rev})
 		}
-		info := jsonObject(list, "page_info")
+		return out, jsonObject(list, "page_info")
+	}
+
+	var forward []row
+	params := url.Values{"limit": {"1"}}
+	var info map[string]any
+	for i := 0; i < 50; i++ {
+		var rows []row
+		rows, info = page(params)
+		forward = append(forward, rows...)
 		if jsonField(info, "has_next_page") != "true" {
 			break
 		}
 		params = url.Values{"limit": {"1"}, "cursor": {cursorFromURL(t, jsonField(info, "next_page_url"))}}
 	}
-	unique := map[string]bool{}
-	for _, k := range seen {
-		assert.False(t, unique[k], "customer %s listed twice", k)
-		unique[k] = true
+	require.Len(t, forward, len(customers), "one page per customer")
+	seen := map[string]bool{}
+	for i, r := range forward {
+		assert.False(t, seen[r.key], "customer %s listed twice", r.key)
+		seen[r.key] = true
+		if i > 0 {
+			assert.LessOrEqual(t, r.revenue, forward[i-1].revenue, "groups are ranked by revenue")
+		}
 	}
+
+	// Walk back from the last page to the first: the same groups, in reverse.
+	var backward []row
+	for i := 0; i < 50 && jsonField(info, "has_prev_page") == "true"; i++ {
+		var rows []row
+		rows, info = page(url.Values{"limit": {"1"}, "cursor": {cursorFromURL(t, jsonField(info, "previous_page_url"))}})
+		backward = append(rows, backward...)
+	}
+	require.Equal(t, forward[:len(forward)-1], backward, "paging back retraces the pages before the last")
 }
 
 // --- Invoices ---

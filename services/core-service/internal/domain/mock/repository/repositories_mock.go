@@ -9948,6 +9948,20 @@ func (mr *MockSalesFactRepoMockRecorder) ClearDirty(ctx, mark any) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClearDirty", reflect.TypeOf((*MockSalesFactRepo)(nil).ClearDirty), ctx, mark)
 }
 
+// ClearRollupDirty mocks base method.
+func (m *MockSalesFactRepo) ClearRollupDirty(ctx context.Context, mark domain.SalesRollupDirtyMark) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ClearRollupDirty", ctx, mark)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// ClearRollupDirty indicates an expected call of ClearRollupDirty.
+func (mr *MockSalesFactRepoMockRecorder) ClearRollupDirty(ctx, mark any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClearRollupDirty", reflect.TypeOf((*MockSalesFactRepo)(nil).ClearRollupDirty), ctx, mark)
+}
+
 // ComputeFacts mocks base method.
 func (m *MockSalesFactRepo) ComputeFacts(ctx context.Context, invoiceIDs []string) ([]domain.SalesLineFact, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -10005,6 +10019,21 @@ func (m *MockSalesFactRepo) GetFacts(ctx context.Context, invoiceIDs []string) (
 func (mr *MockSalesFactRepoMockRecorder) GetFacts(ctx, invoiceIDs any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFacts", reflect.TypeOf((*MockSalesFactRepo)(nil).GetFacts), ctx, invoiceIDs)
+}
+
+// GetRollupSync mocks base method.
+func (m *MockSalesFactRepo) GetRollupSync(ctx context.Context) (*domain.SalesRollupSync, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRollupSync", ctx)
+	ret0, _ := ret[0].(*domain.SalesRollupSync)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetRollupSync indicates an expected call of GetRollupSync.
+func (mr *MockSalesFactRepoMockRecorder) GetRollupSync(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRollupSync", reflect.TypeOf((*MockSalesFactRepo)(nil).GetRollupSync), ctx)
 }
 
 // GetSync mocks base method.
@@ -10082,6 +10111,21 @@ func (mr *MockSalesFactRepoMockRecorder) ListInvoicesAfter(ctx, after, limit any
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListInvoicesAfter", reflect.TypeOf((*MockSalesFactRepo)(nil).ListInvoicesAfter), ctx, after, limit)
 }
 
+// ListRollupDirty mocks base method.
+func (m *MockSalesFactRepo) ListRollupDirty(ctx context.Context, limit int32) ([]domain.SalesRollupDirtyMark, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListRollupDirty", ctx, limit)
+	ret0, _ := ret[0].([]domain.SalesRollupDirtyMark)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListRollupDirty indicates an expected call of ListRollupDirty.
+func (mr *MockSalesFactRepoMockRecorder) ListRollupDirty(ctx, limit any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRollupDirty", reflect.TypeOf((*MockSalesFactRepo)(nil).ListRollupDirty), ctx, limit)
+}
+
 // MarkDirty mocks base method.
 func (m *MockSalesFactRepo) MarkDirty(ctx context.Context, scope domain.SalesFactScope, scopeID, accountID string) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -10096,19 +10140,118 @@ func (mr *MockSalesFactRepoMockRecorder) MarkDirty(ctx, scope, scopeID, accountI
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkDirty", reflect.TypeOf((*MockSalesFactRepo)(nil).MarkDirty), ctx, scope, scopeID, accountID)
 }
 
-// ResolveInvoiceIDs mocks base method.
-func (m *MockSalesFactRepo) ResolveInvoiceIDs(ctx context.Context, scope domain.SalesFactScope, scopeIDs []string) ([]string, *apierror.APIError) {
+// MarkInvoicesDirty mocks base method.
+func (m *MockSalesFactRepo) MarkInvoicesDirty(ctx context.Context, accountID string, invoiceIDs []string) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ResolveInvoiceIDs", ctx, scope, scopeIDs)
+	ret := m.ctrl.Call(m, "MarkInvoicesDirty", ctx, accountID, invoiceIDs)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// MarkInvoicesDirty indicates an expected call of MarkInvoicesDirty.
+func (mr *MockSalesFactRepoMockRecorder) MarkInvoicesDirty(ctx, accountID, invoiceIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkInvoicesDirty", reflect.TypeOf((*MockSalesFactRepo)(nil).MarkInvoicesDirty), ctx, accountID, invoiceIDs)
+}
+
+// MarkRollupDays mocks base method.
+func (m *MockSalesFactRepo) MarkRollupDays(ctx context.Context, days []domain.SalesRollupDay) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkRollupDays", ctx, days)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// MarkRollupDays indicates an expected call of MarkRollupDays.
+func (mr *MockSalesFactRepoMockRecorder) MarkRollupDays(ctx, days any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkRollupDays", reflect.TypeOf((*MockSalesFactRepo)(nil).MarkRollupDays), ctx, days)
+}
+
+// NextRollupDay mocks base method.
+func (m *MockSalesFactRepo) NextRollupDay(ctx context.Context, from domain.SalesRollupDay) (*domain.SalesRollupDay, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NextRollupDay", ctx, from)
+	ret0, _ := ret[0].(*domain.SalesRollupDay)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// NextRollupDay indicates an expected call of NextRollupDay.
+func (mr *MockSalesFactRepoMockRecorder) NextRollupDay(ctx, from any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NextRollupDay", reflect.TypeOf((*MockSalesFactRepo)(nil).NextRollupDay), ctx, from)
+}
+
+// RebuildRollupDay mocks base method.
+func (m *MockSalesFactRepo) RebuildRollupDay(ctx context.Context, day domain.SalesRollupDay) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RebuildRollupDay", ctx, day)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// RebuildRollupDay indicates an expected call of RebuildRollupDay.
+func (mr *MockSalesFactRepoMockRecorder) RebuildRollupDay(ctx, day any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RebuildRollupDay", reflect.TypeOf((*MockSalesFactRepo)(nil).RebuildRollupDay), ctx, day)
+}
+
+// RebuildRollupMonth mocks base method.
+func (m *MockSalesFactRepo) RebuildRollupMonth(ctx context.Context, accountID string, month time.Time) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RebuildRollupMonth", ctx, accountID, month)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// RebuildRollupMonth indicates an expected call of RebuildRollupMonth.
+func (mr *MockSalesFactRepoMockRecorder) RebuildRollupMonth(ctx, accountID, month any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RebuildRollupMonth", reflect.TypeOf((*MockSalesFactRepo)(nil).RebuildRollupMonth), ctx, accountID, month)
+}
+
+// ResolveInvoiceIDs mocks base method.
+func (m *MockSalesFactRepo) ResolveInvoiceIDs(ctx context.Context, accountID string, scope domain.SalesFactScope, scopeIDs []string) ([]string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ResolveInvoiceIDs", ctx, accountID, scope, scopeIDs)
 	ret0, _ := ret[0].([]string)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // ResolveInvoiceIDs indicates an expected call of ResolveInvoiceIDs.
-func (mr *MockSalesFactRepoMockRecorder) ResolveInvoiceIDs(ctx, scope, scopeIDs any) *gomock.Call {
+func (mr *MockSalesFactRepoMockRecorder) ResolveInvoiceIDs(ctx, accountID, scope, scopeIDs any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveInvoiceIDs", reflect.TypeOf((*MockSalesFactRepo)(nil).ResolveInvoiceIDs), ctx, scope, scopeIDs)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveInvoiceIDs", reflect.TypeOf((*MockSalesFactRepo)(nil).ResolveInvoiceIDs), ctx, accountID, scope, scopeIDs)
+}
+
+// RestartReconcile mocks base method.
+func (m *MockSalesFactRepo) RestartReconcile(ctx context.Context) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RestartReconcile", ctx)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// RestartReconcile indicates an expected call of RestartReconcile.
+func (mr *MockSalesFactRepoMockRecorder) RestartReconcile(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestartReconcile", reflect.TypeOf((*MockSalesFactRepo)(nil).RestartReconcile), ctx)
+}
+
+// SaveRollupSync mocks base method.
+func (m *MockSalesFactRepo) SaveRollupSync(ctx context.Context, sync domain.SalesRollupSync) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SaveRollupSync", ctx, sync)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// SaveRollupSync indicates an expected call of SaveRollupSync.
+func (mr *MockSalesFactRepoMockRecorder) SaveRollupSync(ctx, sync any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveRollupSync", reflect.TypeOf((*MockSalesFactRepo)(nil).SaveRollupSync), ctx, sync)
 }
 
 // SaveSync mocks base method.
@@ -17232,19 +17375,34 @@ func (mr *MockSettlementRepoMockRecorder) GetDollarUnitID(ctx any) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDollarUnitID", reflect.TypeOf((*MockSettlementRepo)(nil).GetDollarUnitID), ctx)
 }
 
-// GetInvoicePaymentFlags mocks base method.
-func (m *MockSettlementRepo) GetInvoicePaymentFlags(ctx context.Context, invoiceIDs []string) ([]domain.InvoicePaymentFlags, *apierror.APIError) {
+// GetInvoicePaymentTotals mocks base method.
+func (m *MockSettlementRepo) GetInvoicePaymentTotals(ctx context.Context, accountID string, invoiceIDs []string) ([]domain.PaymentTotals, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetInvoicePaymentFlags", ctx, invoiceIDs)
-	ret0, _ := ret[0].([]domain.InvoicePaymentFlags)
+	ret := m.ctrl.Call(m, "GetInvoicePaymentTotals", ctx, accountID, invoiceIDs)
+	ret0, _ := ret[0].([]domain.PaymentTotals)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
-// GetInvoicePaymentFlags indicates an expected call of GetInvoicePaymentFlags.
-func (mr *MockSettlementRepoMockRecorder) GetInvoicePaymentFlags(ctx, invoiceIDs any) *gomock.Call {
+// GetInvoicePaymentTotals indicates an expected call of GetInvoicePaymentTotals.
+func (mr *MockSettlementRepoMockRecorder) GetInvoicePaymentTotals(ctx, accountID, invoiceIDs any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInvoicePaymentFlags", reflect.TypeOf((*MockSettlementRepo)(nil).GetInvoicePaymentFlags), ctx, invoiceIDs)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInvoicePaymentTotals", reflect.TypeOf((*MockSettlementRepo)(nil).GetInvoicePaymentTotals), ctx, accountID, invoiceIDs)
+}
+
+// GetTransactionAllocationTotals mocks base method.
+func (m *MockSettlementRepo) GetTransactionAllocationTotals(ctx context.Context, accountID string, transactionIDs []string) ([]domain.PaymentTotals, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTransactionAllocationTotals", ctx, accountID, transactionIDs)
+	ret0, _ := ret[0].([]domain.PaymentTotals)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetTransactionAllocationTotals indicates an expected call of GetTransactionAllocationTotals.
+func (mr *MockSettlementRepoMockRecorder) GetTransactionAllocationTotals(ctx, accountID, transactionIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTransactionAllocationTotals", reflect.TypeOf((*MockSettlementRepo)(nil).GetTransactionAllocationTotals), ctx, accountID, transactionIDs)
 }
 
 // InsertSettlement mocks base method.
@@ -17291,6 +17449,20 @@ func (mr *MockSettlementRepoMockRecorder) List(ctx, params any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockSettlementRepo)(nil).List), ctx, params)
 }
 
+// LockPaymentFlagRows mocks base method.
+func (m *MockSettlementRepo) LockPaymentFlagRows(ctx context.Context, accountID string, transactionIDs, invoiceIDs []string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LockPaymentFlagRows", ctx, accountID, transactionIDs, invoiceIDs)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// LockPaymentFlagRows indicates an expected call of LockPaymentFlagRows.
+func (mr *MockSettlementRepoMockRecorder) LockPaymentFlagRows(ctx, accountID, transactionIDs, invoiceIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockPaymentFlagRows", reflect.TypeOf((*MockSettlementRepo)(nil).LockPaymentFlagRows), ctx, accountID, transactionIDs, invoiceIDs)
+}
+
 // Update mocks base method.
 func (m *MockSettlementRepo) Update(ctx context.Context, params domain.UpdateSettlementParams) (*domain.Settlement, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -17307,31 +17479,31 @@ func (mr *MockSettlementRepoMockRecorder) Update(ctx, params any) *gomock.Call {
 }
 
 // UpdateInvoicePaymentStatus mocks base method.
-func (m *MockSettlementRepo) UpdateInvoicePaymentStatus(ctx context.Context, invoiceID string, isPaidInFull, isOverPaid bool) *apierror.APIError {
+func (m *MockSettlementRepo) UpdateInvoicePaymentStatus(ctx context.Context, accountID, invoiceID string, isPaidInFull, isOverPaid bool) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateInvoicePaymentStatus", ctx, invoiceID, isPaidInFull, isOverPaid)
+	ret := m.ctrl.Call(m, "UpdateInvoicePaymentStatus", ctx, accountID, invoiceID, isPaidInFull, isOverPaid)
 	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
 // UpdateInvoicePaymentStatus indicates an expected call of UpdateInvoicePaymentStatus.
-func (mr *MockSettlementRepoMockRecorder) UpdateInvoicePaymentStatus(ctx, invoiceID, isPaidInFull, isOverPaid any) *gomock.Call {
+func (mr *MockSettlementRepoMockRecorder) UpdateInvoicePaymentStatus(ctx, accountID, invoiceID, isPaidInFull, isOverPaid any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateInvoicePaymentStatus", reflect.TypeOf((*MockSettlementRepo)(nil).UpdateInvoicePaymentStatus), ctx, invoiceID, isPaidInFull, isOverPaid)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateInvoicePaymentStatus", reflect.TypeOf((*MockSettlementRepo)(nil).UpdateInvoicePaymentStatus), ctx, accountID, invoiceID, isPaidInFull, isOverPaid)
 }
 
 // UpdateTransactionsFullyAllocated mocks base method.
-func (m *MockSettlementRepo) UpdateTransactionsFullyAllocated(ctx context.Context, transactionIDs []string, isFullyAllocated bool) *apierror.APIError {
+func (m *MockSettlementRepo) UpdateTransactionsFullyAllocated(ctx context.Context, accountID string, transactionIDs []string, isFullyAllocated bool) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateTransactionsFullyAllocated", ctx, transactionIDs, isFullyAllocated)
+	ret := m.ctrl.Call(m, "UpdateTransactionsFullyAllocated", ctx, accountID, transactionIDs, isFullyAllocated)
 	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
 // UpdateTransactionsFullyAllocated indicates an expected call of UpdateTransactionsFullyAllocated.
-func (mr *MockSettlementRepoMockRecorder) UpdateTransactionsFullyAllocated(ctx, transactionIDs, isFullyAllocated any) *gomock.Call {
+func (mr *MockSettlementRepoMockRecorder) UpdateTransactionsFullyAllocated(ctx, accountID, transactionIDs, isFullyAllocated any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTransactionsFullyAllocated", reflect.TypeOf((*MockSettlementRepo)(nil).UpdateTransactionsFullyAllocated), ctx, transactionIDs, isFullyAllocated)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTransactionsFullyAllocated", reflect.TypeOf((*MockSettlementRepo)(nil).UpdateTransactionsFullyAllocated), ctx, accountID, transactionIDs, isFullyAllocated)
 }
 
 // MockTransactionRepo is a mock of TransactionRepo interface.
@@ -17359,17 +17531,32 @@ func (m *MockTransactionRepo) EXPECT() *MockTransactionRepoMockRecorder {
 }
 
 // Create mocks base method.
-func (m *MockTransactionRepo) Create(ctx context.Context, txID, number, typeCode, accountID, customerAccountID string, stripePaymentID, methodCode, adjustmentTypeCode, responsibleUserID, note *string, amountValue, amountUnitID string) *apierror.APIError {
+func (m *MockTransactionRepo) Create(ctx context.Context, txID, number, typeCode, accountID, customerAccountID string, stripePaymentID, methodCode, adjustmentTypeCode, responsibleUserID, note *string, amountValue, amountUnitID string, createdAt, fundsReceivedAt *time.Time) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", ctx, txID, number, typeCode, accountID, customerAccountID, stripePaymentID, methodCode, adjustmentTypeCode, responsibleUserID, note, amountValue, amountUnitID)
+	ret := m.ctrl.Call(m, "Create", ctx, txID, number, typeCode, accountID, customerAccountID, stripePaymentID, methodCode, adjustmentTypeCode, responsibleUserID, note, amountValue, amountUnitID, createdAt, fundsReceivedAt)
 	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockTransactionRepoMockRecorder) Create(ctx, txID, number, typeCode, accountID, customerAccountID, stripePaymentID, methodCode, adjustmentTypeCode, responsibleUserID, note, amountValue, amountUnitID any) *gomock.Call {
+func (mr *MockTransactionRepoMockRecorder) Create(ctx, txID, number, typeCode, accountID, customerAccountID, stripePaymentID, methodCode, adjustmentTypeCode, responsibleUserID, note, amountValue, amountUnitID, createdAt, fundsReceivedAt any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockTransactionRepo)(nil).Create), ctx, txID, number, typeCode, accountID, customerAccountID, stripePaymentID, methodCode, adjustmentTypeCode, responsibleUserID, note, amountValue, amountUnitID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockTransactionRepo)(nil).Create), ctx, txID, number, typeCode, accountID, customerAccountID, stripePaymentID, methodCode, adjustmentTypeCode, responsibleUserID, note, amountValue, amountUnitID, createdAt, fundsReceivedAt)
+}
+
+// CustomerExists mocks base method.
+func (m *MockTransactionRepo) CustomerExists(ctx context.Context, accountID, customerID string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CustomerExists", ctx, accountID, customerID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CustomerExists indicates an expected call of CustomerExists.
+func (mr *MockTransactionRepoMockRecorder) CustomerExists(ctx, accountID, customerID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CustomerExists", reflect.TypeOf((*MockTransactionRepo)(nil).CustomerExists), ctx, accountID, customerID)
 }
 
 // Delete mocks base method.
@@ -17535,12 +17722,13 @@ func (mr *MockTransactionRepoMockRecorder) ListByCustomer(ctx, params any) *gomo
 }
 
 // ResolveResponsibleUserID mocks base method.
-func (m *MockTransactionRepo) ResolveResponsibleUserID(ctx context.Context, accountID, userOrAccountUserID string) (string, *apierror.APIError) {
+func (m *MockTransactionRepo) ResolveResponsibleUserID(ctx context.Context, accountID, userOrAccountUserID string) (string, bool, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ResolveResponsibleUserID", ctx, accountID, userOrAccountUserID)
 	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
+	ret1, _ := ret[1].(bool)
+	ret2, _ := ret[2].(*apierror.APIError)
+	return ret0, ret1, ret2
 }
 
 // ResolveResponsibleUserID indicates an expected call of ResolveResponsibleUserID.
@@ -17702,6 +17890,20 @@ func (m *MockTransactionAllocationRepo) UpdateAmount(ctx context.Context, amount
 func (mr *MockTransactionAllocationRepoMockRecorder) UpdateAmount(ctx, amountID, newValue any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAmount", reflect.TypeOf((*MockTransactionAllocationRepo)(nil).UpdateAmount), ctx, amountID, newValue)
+}
+
+// UpdateCreatedAt mocks base method.
+func (m *MockTransactionAllocationRepo) UpdateCreatedAt(ctx context.Context, accountID, allocationID string, createdAt time.Time) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateCreatedAt", ctx, accountID, allocationID, createdAt)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// UpdateCreatedAt indicates an expected call of UpdateCreatedAt.
+func (mr *MockTransactionAllocationRepoMockRecorder) UpdateCreatedAt(ctx, accountID, allocationID, createdAt any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateCreatedAt", reflect.TypeOf((*MockTransactionAllocationRepo)(nil).UpdateCreatedAt), ctx, accountID, allocationID, createdAt)
 }
 
 // MockCatalogRepo is a mock of CatalogRepo interface.

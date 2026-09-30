@@ -2154,6 +2154,23 @@ type SalesFactDirty struct {
 	MarkedAt  time.Time
 }
 
+type SalesFactRollup struct {
+	AccountID          string
+	SalesOrderTypeCode string
+	Dimension          string
+	ProductLineKey     string
+	Grain              string
+	BucketStart        time.Time
+	RowHash            []byte
+	DimensionID        string
+	SalesRepKey        string
+	QuantityBase       sql.NullString
+	TotalInvoiced      sql.NullString
+	TotalCost          sql.NullString
+	InvoiceCount       int32
+	LineCount          int32
+}
+
 type SalesFactSync struct {
 	Name            string
 	CursorCreatedAt sql.NullTime
@@ -2176,10 +2193,10 @@ type SalesLineFact struct {
 	ProductID          string
 	ItemID             string
 	ProductLineID      string
+	RefreshedAt        time.Time
 	QuantityBase       sql.NullString
 	TotalInvoiced      sql.NullString
 	TotalCost          sql.NullString
-	RefreshedAt        time.Time
 }
 
 type SalesOrder struct {
@@ -2254,6 +2271,21 @@ type SalesOrderType struct {
 	Name      string
 	CreatedAt time.Time
 	UpdatedAt time.Time
+}
+
+type SalesRollupDirty struct {
+	AccountID string
+	Day       time.Time
+	MarkedAt  time.Time
+}
+
+type SalesRollupSync struct {
+	Name            string
+	CursorAccountID sql.NullString
+	CursorDay       sql.NullTime
+	PassStartedAt   sql.NullTime
+	LastCompletedAt sql.NullTime
+	UpdatedAt       time.Time
 }
 
 type SandboxAccount struct {

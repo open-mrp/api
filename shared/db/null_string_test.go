@@ -130,3 +130,23 @@ func TestNewNgramSearch(t *testing.T) {
 }
 
 func ptr(s string) *string { return &s }
+
+func TestAllWordsPrefixQuery(t *testing.T) {
+	tests := map[string]string{
+		"":             "",
+		"  ":           "",
+		"-*()":         "",
+		"TX-0012 acme": "+TX* +0012* +acme*",
+		"12345":        "+12345*",
+		"o'brien+co":   "+o* +brien* +co*",
+	}
+	for in, want := range tests {
+		in := in
+		if got := AllWordsPrefixQuery(&in); got != want {
+			t.Errorf("AllWordsPrefixQuery(%q) = %q, want %q", in, got, want)
+		}
+	}
+	if got := AllWordsPrefixQuery(nil); got != "" {
+		t.Errorf("AllWordsPrefixQuery(nil) = %q", got)
+	}
+}

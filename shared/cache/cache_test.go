@@ -420,3 +420,133 @@ func TestCache_PeekWithoutStoreMisses(t *testing.T) {
 		t.Fatal("a cache with no store must always miss")
 	}
 }
+
+func TestCache_NilStoreSharesConcurrentLoads(t *testing.T) {
+	c := newTestCache[string](t, nil)
+	var calls atomic.Int32
+	release := make(chan struct{})
+	load := func(context.Context) (string, *apierror.APIError) {
+		calls.Add(1)
+		<-release
+		return "v", nil
+	}
+
+	var wg sync.WaitGroup
+	for range 10 {
+		wg.Go(func() {
+			if v, err := c.GetOrLoad(context.Background(), Key{ID: "k"}, load); err != nil || v != "v" {
+				t.Errorf("got (%q, %v)", v, err)
+			}
+		})
+	}
+	time.Sleep(20 * time.Millisecond)
+	close(release)
+	wg.Wait()
+
+	if calls.Load() != 1 {
+		t.Fatalf("loader ran %d times, want 1", calls.Load())
+	}
+}
+
+// newLeasedCache is one process's cache over a store shared with others.
+func newLeasedCache(t *testing.T, store Store, wait time.Duration) *Cache[string] {
+	t.Helper()
+	c, err := New[string](&Config{Name: "test", Store: store, TTL: time.Minute, LoadLeaseWait: wait})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	return c
+}
+
+func TestCache_LoadLeaseLetsOneProcessLoad(t *testing.T) {
+	store := newMemory(t, nil)
+	holder, waiter := newLeasedCache(t, store, 5*time.Second), newLeasedCache(t, store, 5*time.Second)
+	key := Key{Scopes: []string{"s"}, ID: "k"}
+
+	var calls atomic.Int32
+	started, release := make(chan struct{}), make(chan struct{})
+	go func() {
+		_, _ = holder.GetOrLoad(context.Background(), key, func(context.Context) (string, *apierror.APIError) {
+			calls.Add(1)
+			close(started)
+			<-release
+			return "v", nil
+		})
+	}()
+	<-started
+
+	done := make(chan string)
+	go func() {
+		v, _ := waiter.GetOrLoad(context.Background(), key, countingLoader(&calls, "other"))
+		done <- v
+	}()
+	time.Sleep(3 * loadLeasePoll)
+	close(release)
+
+	if v := <-done; v != "v" {
+		t.Fatalf("waiter got %q, want the holder's value", v)
+	}
+	if calls.Load() != 1 {
+		t.Fatalf("loaders ran %d times, want 1", calls.Load())
+	}
+}
+
+func TestCache_LoadLeaseWaiterLoadsWhenHolderFails(t *testing.T) {
+	store := newMemory(t, nil)
+	holder, waiter := newLeasedCache(t, store, 5*time.Second), newLeasedCache(t, store, 5*time.Second)
+	key := Key{ID: "k"}
+
+	started, release := make(chan struct{}), make(chan struct{})
+	go func() {
+		_, _ = holder.GetOrLoad(context.Background(), key, func(context.Context) (string, *apierror.APIError) {
+			close(started)
+			<-release
+			return "", apierror.NewInternalError(errors.New("boom"), "boom")
+		})
+	}()
+	<-started
+
+	done := make(chan string)
+	begin := time.Now()
+	go func() {
+		v, _ := waiter.GetOrLoad(context.Background(), key, func(context.Context) (string, *apierror.APIError) { return "mine", nil })
+		done <- v
+	}()
+	time.Sleep(2 * loadLeasePoll)
+	close(release)
+
+	if v := <-done; v != "mine" {
+		t.Fatalf("waiter got %q, want its own load", v)
+	}
+	if waited := time.Since(begin); waited > time.Second {
+		t.Fatalf("waiter took %v; it should stop waiting once the failed holder releases", waited)
+	}
+}
+
+func TestCache_LoadLeaseWaitIsBounded(t *testing.T) {
+	store := newMemory(t, nil)
+	key := Key{ID: "k"}
+	// A lease whose holder never finishes, as after a crash mid-load.
+	if _, err := store.Add(context.Background(), loadLeaseKeyPrefix+newLeasedCache(t, store, time.Second).mustStoreKey(t, key), []byte("x"), time.Minute); err != nil {
+		t.Fatal(err)
+	}
+
+	waiter := newLeasedCache(t, store, 300*time.Millisecond)
+	begin := time.Now()
+	v, apiErr := waiter.GetOrLoad(context.Background(), key, func(context.Context) (string, *apierror.APIError) { return "mine", nil })
+	if apiErr != nil || v != "mine" {
+		t.Fatalf("got (%q, %v), want its own load", v, apiErr)
+	}
+	if waited := time.Since(begin); waited < 300*time.Millisecond || waited > 2*time.Second {
+		t.Fatalf("waited %v, want about the configured 300ms", waited)
+	}
+}
+
+func (c *Cache[T]) mustStoreKey(t *testing.T, key Key) string {
+	t.Helper()
+	k, err := c.storeKey(context.Background(), key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return k
+}

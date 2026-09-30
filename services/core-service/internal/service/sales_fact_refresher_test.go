@@ -1,6 +1,7 @@
 package service
 
 import (
+	"slices"
 	"testing"
 	"time"
 
@@ -59,25 +60,59 @@ func TestSalesFactsEqualComparesEveryField(t *testing.T) {
 }
 
 func TestSalesFactScopeFor(t *testing.T) {
+	update := func(rt constants.ObjectType, fields ...string) audit.ObservedEvent {
+		return audit.ObservedEvent{Action: constants.AuditActionUpdate, ResourceType: rt, ResourceID: "id_1", ChangedFields: fields}
+	}
 	tests := []struct {
-		name  string
-		event audit.ObservedEvent
-		want  domain.SalesFactScope
-		ok    bool
+		name    string
+		event   audit.ObservedEvent
+		want    domain.SalesFactScope
+		wantID  string
+		matches bool
 	}{
-		{"invoice", audit.ObservedEvent{ResourceType: constants.ObjectTypeInvoice}, domain.SalesFactScopeInvoice, true},
-		{"sales order", audit.ObservedEvent{ResourceType: constants.ObjectTypeSalesOrder}, domain.SalesFactScopeSalesOrder, true},
-		{"order line", audit.ObservedEvent{ResourceType: constants.ObjectTypeSalesOrderLine}, domain.SalesFactScopeSalesOrderLine, true},
-		{"product line moved", audit.ObservedEvent{ResourceType: constants.ObjectTypeProduct, ChangedFields: []string{"name", "product_line_id"}}, domain.SalesFactScopeProduct, true},
-		{"product renamed", audit.ObservedEvent{ResourceType: constants.ObjectTypeProduct, ChangedFields: []string{"name"}}, domain.SalesFactScopeProduct, false},
-		{"unrelated", audit.ObservedEvent{ResourceType: constants.ObjectTypeShipment}, "", false},
+		{"invoice", audit.ObservedEvent{ResourceType: constants.ObjectTypeInvoice, ResourceID: "iv_1"}, domain.SalesFactScopeInvoice, "iv_1", true},
+		{"sales order", audit.ObservedEvent{ResourceType: constants.ObjectTypeSalesOrder, ResourceID: "or_1"}, domain.SalesFactScopeSalesOrder, "or_1", true},
+		{"order line", audit.ObservedEvent{ResourceType: constants.ObjectTypeSalesOrderLine, ResourceID: "sol_1"}, domain.SalesFactScopeSalesOrderLine, "sol_1", true},
+		{"product line moved", update(constants.ObjectTypeProduct, "name", "product_line_id"), domain.SalesFactScopeProduct, "id_1", true},
+		{"product renamed", update(constants.ObjectTypeProduct, "name"), "", "", false},
+		{"quantity edited", update(constants.ObjectTypeQuantity, "value"), domain.SalesFactScopeQuantity, "id_1", true},
+		{"quantity created", audit.ObservedEvent{Action: constants.AuditActionCreate, ResourceType: constants.ObjectTypeQuantity, ResourceID: "id_1"}, "", "", false},
+		{"rate edited", update(constants.ObjectTypeRate, "value"), domain.SalesFactScopeRate, "id_1", true},
+		{"item recategorized", update(constants.ObjectTypeItem, "item_category_id", "category_name"), domain.SalesFactScopeItem, "id_1", true},
+		{"item renamed", update(constants.ObjectTypeItem, "description"), "", "", false},
+		{"customer merged away", audit.ObservedEvent{Action: constants.AuditActionDelete, ResourceType: constants.ObjectTypeCustomer, ResourceID: "ac_old"}, domain.SalesFactScopeBuyer, "ac_old", true},
+		{"customer edited", update(constants.ObjectTypeCustomer, "name"), "", "", false},
+		{"unit ratio changed", update(constants.ObjectTypeUnit, "ratio_numerator"), domain.SalesFactScopeReconcile, salesFactReconcileScopeID, true},
+		{"unit renamed", update(constants.ObjectTypeUnit, "name"), "", "", false},
+		{"unit group base unit changed", update(constants.ObjectTypeUnitGroup, "base_unit.id"), domain.SalesFactScopeReconcile, salesFactReconcileScopeID, true},
+		{"category unit group changed", update(constants.ObjectTypeItemCategory, "unit_group_id"), domain.SalesFactScopeReconcile, salesFactReconcileScopeID, true},
+		{"unrelated", audit.ObservedEvent{ResourceType: constants.ObjectTypeShipment, ResourceID: "sh_1"}, "", "", false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, ok := salesFactScopeFor(tt.event)
-			if ok != tt.ok || (ok && got != tt.want) {
-				t.Fatalf("salesFactScopeFor = (%q, %v), want (%q, %v)", got, ok, tt.want, tt.ok)
+			got, id, ok := salesFactScopeFor(tt.event)
+			if ok != tt.matches || (ok && (got != tt.want || id != tt.wantID)) {
+				t.Fatalf("salesFactScopeFor = (%q, %q, %v), want (%q, %q, %v)", got, id, ok, tt.want, tt.wantID, tt.matches)
 			}
 		})
+	}
+}
+
+func TestTouchedRollupDaysIncludesTheDayALineLeft(t *testing.T) {
+	moved := fact("il_moved", "5")
+	before := moved
+	before.InvoicedAt = moved.InvoicedAt.AddDate(0, 0, -3)
+	gone := fact("il_gone", "1")
+	gone.AccountID = "ac_2"
+
+	days := touchedRollupDays([]domain.SalesLineFact{moved}, []domain.SalesLineFact{gone}, []domain.SalesLineFact{before, gone})
+
+	want := []domain.SalesRollupDay{
+		{AccountID: "ac_1", Day: utcDay(moved.InvoicedAt)},
+		{AccountID: "ac_1", Day: utcDay(before.InvoicedAt)},
+		{AccountID: "ac_2", Day: utcDay(gone.InvoicedAt)},
+	}
+	if !slices.Equal(days, want) {
+		t.Fatalf("touchedRollupDays = %v, want %v", days, want)
 	}
 }

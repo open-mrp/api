@@ -20,6 +20,14 @@ const (
 	defaultAnalyticsLiveTTL   = time.Minute
 	defaultAnalyticsClosedTTL = 15 * time.Minute
 
+	// defaultSalesSettleWindow bounds how far the report replica may trail the primary after facts change.
+	defaultSalesSettleWindow = 30 * time.Second
+
+	salesSettlingKeyPrefix = "core.analytics.sales_settling:"
+
+	// analyticsLoadLeaseWait lets a burst of identical report requests across replicas run the aggregate once; a replica waits this long for another's result before computing its own.
+	analyticsLoadLeaseWait = 15 * time.Second
+
 	// analyticsAllScope is on every entry so a replica that may have missed events can drop the whole cache.
 	analyticsAllScope = "analytics:all"
 )
@@ -85,6 +93,11 @@ type AnalyticsCacheConfig struct {
 	// ClosedTTL (optional; default: 15m) is the lifetime of a report whose window ended before yesterday; edits made without an audit event surface within it.
 	ClosedTTL time.Duration
 
+	// SalesSettleWindow (optional; default: 30s) is how long after an account's sales facts change its
+	// sales reports are computed without being cached. Reports read a replica; one computed before the
+	// replica caught up is served once rather than cached for its TTL.
+	SalesSettleWindow time.Duration
+
 	// Now (optional; default: time.Now) is the clock that decides whether a window is closed.
 	Now func() time.Time
 }
@@ -100,6 +113,9 @@ func (c *AnalyticsCacheConfig) WithDefaults() *AnalyticsCacheConfig {
 	}
 	if out.ClosedTTL == 0 {
 		out.ClosedTTL = defaultAnalyticsClosedTTL
+	}
+	if out.SalesSettleWindow == 0 {
+		out.SalesSettleWindow = defaultSalesSettleWindow
 	}
 	if out.Now == nil {
 		out.Now = time.Now
@@ -172,7 +188,7 @@ func NewAnalyticsCache(cfg *AnalyticsCacheConfig) (*AnalyticsCache, error) {
 }
 
 func newAnalyticsReportCache[T any](cfg *AnalyticsCacheConfig, name string) (*cache.Cache[T], error) {
-	return cache.New[T](&cache.Config{Name: "core.analytics." + name, Store: cfg.Store, TTL: cfg.LiveTTL})
+	return cache.New[T](&cache.Config{Name: "core.analytics." + name, Store: cfg.Store, TTL: cfg.LiveTTL, LoadLeaseWait: analyticsLoadLeaseWait})
 }
 
 // HandleAuditEvent drops the account's reports in every family the audited resource feeds.
@@ -205,6 +221,25 @@ func (c *AnalyticsCache) InvalidateSales(ctx context.Context, accountIDs []strin
 	if err := cache.Invalidate(ctx, c.cfg.Store, scopes...); err != nil {
 		slog.WarnContext(ctx, "analytics cache: sales invalidation failed; entries expire by TTL", "accounts", len(accountIDs), "error", err)
 	}
+	if c.cfg.Store == nil {
+		return
+	}
+	for _, id := range accountIDs {
+		if err := c.cfg.Store.Set(ctx, salesSettlingKeyPrefix+id, []byte{1}, c.cfg.SalesSettleWindow); err != nil {
+			slog.WarnContext(ctx, "analytics cache: marking sales as settling failed", "account_id", id, "error", err)
+		}
+	}
+}
+
+// salesSettling reports whether the account's sales facts changed within the settle window, while the
+// report replica may still be catching up. A failed lookup reads as settling: serving a report uncached
+// costs a query, caching a stale one costs a TTL of wrong numbers.
+func (c *AnalyticsCache) salesSettling(ctx context.Context, accountID string) bool {
+	if c == nil || c.cfg.Store == nil {
+		return false
+	}
+	_, ok, err := c.cfg.Store.Get(ctx, salesSettlingKeyPrefix+accountID)
+	return ok || err != nil
 }
 
 // Flush drops every cached report, for when this replica may have missed audit events.
@@ -232,10 +267,15 @@ type analyticsReport struct {
 	method    string
 	params    any
 	ttl       time.Duration
+	// bypass computes the report without reading or writing the cache.
+	bypass bool
 }
 
-// cachedReport runs load through rc, or runs it directly when caching is off. It must only be called after the caller's permission checks.
+// cachedReport runs load through rc, or runs it directly when caching is off or report.bypass is set. It must only be called after the caller's permission checks.
 func cachedReport[T any](ctx context.Context, rc *cache.Cache[T], report analyticsReport, load func(context.Context) (T, *apierror.APIError)) (T, *apierror.APIError) {
+	if report.bypass {
+		return load(ctx)
+	}
 	id, err := analyticsReportID(report.method, report.params)
 	if err != nil {
 		return load(ctx)

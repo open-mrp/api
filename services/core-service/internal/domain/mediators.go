@@ -77,6 +77,27 @@ type ProductionFlowMed interface {
 	FindDownstreamStepByItem(ctx context.Context, productionStepID, itemID, accountID string) (*string, *apierror.APIError)
 }
 
+// PaymentFlagsMed keeps the fully-allocated flag of transactions and the paid-in-full / over-paid flags
+// of invoices in step with their allocations. A change to allocations enqueues a recompute in its own
+// transaction; a consumer applies it later, so recording a settlement does not wait on the totals of
+// every transaction and invoice it touched.
+type PaymentFlagsMed interface {
+	// Enqueue writes an outbox command to recompute the flags of the given transactions and invoices.
+	// Call it inside the transaction that changed their allocations, so the command is published only if
+	// the change commits. No-op when both lists are empty.
+	Enqueue(ctx context.Context, accountID string, transactionIDs, invoiceIDs []string) *apierror.APIError
+
+	// Recompute re-derives the flags from every allocation now stored against the transactions and invoices.
+	//
+	//  1. Lock the transaction rows, then the invoice rows, each in id order, so recomputes that overlap
+	//     serialize instead of writing flags read before the other committed.
+	//  2. A transaction is fully allocated when its amount less its allocations, rounded to the cent, is
+	//     at most zero.
+	//  3. An invoice's balance (invoiced total less its allocations, rounded to the cent) of zero is paid
+	//     in full; below zero it is also over paid.
+	Recompute(ctx context.Context, accountID string, transactionIDs, invoiceIDs []string) *apierror.APIError
+}
+
 type BurnRateMed interface {
 	// RecalculateFromHistory updates the item's burn_rate from consumption change logs over the last 30 days. No-op when there is insufficient history.
 	//

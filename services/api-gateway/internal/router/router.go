@@ -9,6 +9,7 @@ import (
 
 	httptransport "github.com/open-mrp/api/services/api-gateway/internal/http"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/querytag"
 )
 
 type router struct {
@@ -94,6 +95,7 @@ func NewRouter() *router {
 				ctx = appctx.WithPathParams(ctx, matchedParams)
 			}
 			ctx = appctx.WithRoutePattern(ctx, matchedRoute.Path)
+			ctx = querytag.With(ctx, querytag.Route, req.Method+" "+matchedRoute.Path)
 			ctx = appctx.WithAllowedMethods(ctx, allowedMethods)
 			req = req.WithContext(ctx)
 

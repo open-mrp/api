@@ -916,14 +916,34 @@ type SalesFactRepo interface {
 	// FilterExistingInvoiceIDs returns the subset of ids that still exist in invoice.
 	FilterExistingInvoiceIDs(ctx context.Context, invoiceIDs []string) ([]string, *apierror.APIError)
 	// ResolveInvoiceIDs returns the invoices whose facts depend on the given scopes.
-	ResolveInvoiceIDs(ctx context.Context, scope SalesFactScope, scopeIDs []string) ([]string, *apierror.APIError)
+	ResolveInvoiceIDs(ctx context.Context, accountID string, scope SalesFactScope, scopeIDs []string) ([]string, *apierror.APIError)
 
 	MarkDirty(ctx context.Context, scope SalesFactScope, scopeID, accountID string) *apierror.APIError
+	// MarkInvoicesDirty marks each invoice on its own, so a scope that resolved to more invoices than one
+	// refresh should take is worked off a batch per tick.
+	MarkInvoicesDirty(ctx context.Context, accountID string, invoiceIDs []string) *apierror.APIError
+	// RestartReconcile starts the full reconcile pass again from the oldest invoice.
+	RestartReconcile(ctx context.Context) *apierror.APIError
+
+	// MarkRollupDays marks days whose rollup buckets must be rebuilt.
+	MarkRollupDays(ctx context.Context, days []SalesRollupDay) *apierror.APIError
+	ListRollupDirty(ctx context.Context, limit int32) ([]SalesRollupDirtyMark, *apierror.APIError)
+	// ClearRollupDirty deletes the mark only if it was not re-marked after it was read.
+	ClearRollupDirty(ctx context.Context, mark SalesRollupDirtyMark) *apierror.APIError
 	ListDirty(ctx context.Context, limit int32) ([]SalesFactDirtyMark, *apierror.APIError)
 	ClearDirty(ctx context.Context, mark SalesFactDirtyMark) *apierror.APIError
 
 	GetSync(ctx context.Context) (*SalesFactSync, *apierror.APIError)
 	SaveSync(ctx context.Context, sync SalesFactSync) *apierror.APIError
+
+	// RebuildRollupDay recomputes the hour and day buckets of one account's UTC day from its facts.
+	RebuildRollupDay(ctx context.Context, day SalesRollupDay) *apierror.APIError
+	// RebuildRollupMonth recomputes one account's month buckets from its day buckets; month is the first of the month, midnight UTC.
+	RebuildRollupMonth(ctx context.Context, accountID string, month time.Time) *apierror.APIError
+	// NextRollupDay returns the first (account, UTC day) at or after from that holds facts or rollups, or nil when none is left.
+	NextRollupDay(ctx context.Context, from SalesRollupDay) (*SalesRollupDay, *apierror.APIError)
+	GetRollupSync(ctx context.Context) (*SalesRollupSync, *apierror.APIError)
+	SaveRollupSync(ctx context.Context, sync SalesRollupSync) *apierror.APIError
 }
 
 // SalesReportRepo reads sales analytics from sales_line_fact.
@@ -1603,13 +1623,16 @@ type SettlementRepo interface {
 	AllocateNextSettlementNumber(ctx context.Context, sysPropertyID, accountID string) (int64, *apierror.APIError)
 	GetDollarUnitID(ctx context.Context) (string, *apierror.APIError)
 	DeleteOrphanedAdjustmentTransactions(ctx context.Context, settlementID string) *apierror.APIError
-	UpdateTransactionsFullyAllocated(ctx context.Context, transactionIDs []string, isFullyAllocated bool) *apierror.APIError
-	UpdateInvoicePaymentStatus(ctx context.Context, invoiceID string, isPaidInFull, isOverPaid bool) *apierror.APIError
-	GetInvoicePaymentFlags(ctx context.Context, invoiceIDs []string) ([]InvoicePaymentFlags, *apierror.APIError)
+	UpdateTransactionsFullyAllocated(ctx context.Context, accountID string, transactionIDs []string, isFullyAllocated bool) *apierror.APIError
+	UpdateInvoicePaymentStatus(ctx context.Context, accountID, invoiceID string, isPaidInFull, isOverPaid bool) *apierror.APIError
+	GetInvoicePaymentTotals(ctx context.Context, accountID string, invoiceIDs []string) ([]PaymentTotals, *apierror.APIError)
+	GetTransactionAllocationTotals(ctx context.Context, accountID string, transactionIDs []string) ([]PaymentTotals, *apierror.APIError)
+	// LockPaymentFlagRows takes row locks on the account's given transactions, then invoices, each in id order, until the caller's transaction ends.
+	LockPaymentFlagRows(ctx context.Context, accountID string, transactionIDs, invoiceIDs []string) *apierror.APIError
 }
 
 type TransactionRepo interface {
-	Create(ctx context.Context, txID, number, typeCode, accountID, customerAccountID string, stripePaymentID *string, methodCode *string, adjustmentTypeCode *string, responsibleUserID *string, note *string, amountValue string, amountUnitID string) *apierror.APIError
+	Create(ctx context.Context, txID, number, typeCode, accountID, customerAccountID string, stripePaymentID *string, methodCode *string, adjustmentTypeCode *string, responsibleUserID *string, note *string, amountValue string, amountUnitID string, createdAt, fundsReceivedAt *time.Time) *apierror.APIError
 	// FindByStripePaymentID returns the transaction linked to the given Stripe payment intent, or nil when none exists.
 	FindByStripePaymentID(ctx context.Context, stripePaymentID string) (*TransactionRecord, *apierror.APIError)
 	// UpdateFundsReceivedByStripePaymentIDs stamps funds_received_at on every transaction of the account whose stripe_payment_id is in the given set (called when a Stripe payout lands).
@@ -1624,14 +1647,17 @@ type TransactionRepo interface {
 	GetAllocations(ctx context.Context, transactionID string) ([]*TransactionAllocation, *apierror.APIError)
 	Update(ctx context.Context, params UpdateTransactionParams) (*Transaction, *apierror.APIError)
 	ExistsByNumber(ctx context.Context, accountID, number string, excludeID *string) (bool, *apierror.APIError)
-	ResolveResponsibleUserID(ctx context.Context, accountID, userOrAccountUserID string) (string, *apierror.APIError)
+	// ResolveResponsibleUserID resolves an account_user or user id to the account_user id, and reports whether that user is active.
+	ResolveResponsibleUserID(ctx context.Context, accountID, userOrAccountUserID string) (string, bool, *apierror.APIError)
 	ListByCustomer(ctx context.Context, params ListAccountTransactionsParams) (*ListAccountTransactionsResult, *apierror.APIError)
+	CustomerExists(ctx context.Context, accountID, customerID string) (bool, *apierror.APIError)
 	GetDollarUnitID(ctx context.Context) (string, *apierror.APIError)
 }
 
 type TransactionAllocationRepo interface {
 	ListEntries(ctx context.Context, params ListAllocationEntriesParams) (*ListAllocationEntriesResult, *apierror.APIError)
 	GetByID(ctx context.Context, accountID, allocationID string) (*TransactionAllocation, *apierror.APIError)
+	UpdateCreatedAt(ctx context.Context, accountID, allocationID string, createdAt time.Time) *apierror.APIError
 	UpdateAmount(ctx context.Context, amountID, newValue string) *apierror.APIError
 	Delete(ctx context.Context, accountID, allocationID string) *apierror.APIError
 	ListOpenCredits(ctx context.Context, params ListOpenCreditsParams) (*ListOpenCreditsResult, *apierror.APIError)

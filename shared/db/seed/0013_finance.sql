@@ -95,3 +95,8 @@ INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
 INSERT IGNORE INTO transaction (id, number, customer_account_id, amount_id, transaction_type_code, is_fully_allocated, account_id, created_at, updated_at) VALUES
     ('tx_01seedtransaction02', 'TXN-002', 'ac_01k09wm2fgevdsc344gpbcj30f', 'qu_01seedtx2_amount000', 'payment', 0, 'ac_01k0a5smf9ekb8rqg12555zjqa', DATE_SUB(NOW(), INTERVAL 1 DAY), DATE_SUB(NOW(), INTERVAL 1 DAY)),
     ('tx_01seedtransaction03', 'TXN-003', 'ac_01k09wm2fgevdsc344gpbcj30f', 'qu_01seedtx3_amount000', 'payment', 0, 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
+
+-- Seeded payments were received when recorded; only money that has arrived can be settled or
+-- counts as an open credit.
+UPDATE transaction SET funds_received_at = created_at
+WHERE id IN ('tx_01seedtransaction00', 'tx_01seedtransaction02', 'tx_01seedtransaction03') AND funds_received_at IS NULL;

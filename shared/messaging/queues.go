@@ -38,6 +38,9 @@ const (
 	// CoreCmdRecalcItemBurnRateQueue carries recalc-item-burn-rate commands to the core-service consumer that recomputes an item's burn rate from history in its own short transaction, off the long consumption transaction that would otherwise hold the shared rate row's lock.
 	CoreCmdRecalcItemBurnRateQueue = "core_cmd_recalc_item_burn_rate"
 
+	// CoreCmdRecomputePaymentFlagsQueue carries recompute-payment-flags commands to the core-service consumer that re-derives transaction and invoice payment flags from their allocations, off the request that recorded or changed the settlement.
+	CoreCmdRecomputePaymentFlagsQueue = "core_cmd_recompute_payment_flags"
+
 	// CoreCmdAllocateOpenIssuesQueue carries allocate-open-issues commands to the core-service consumer that allocates an item's open demand against available receipts one bounded page at a time, off the scan transaction.
 	CoreCmdAllocateOpenIssuesQueue = "core_cmd_allocate_open_issues"
 

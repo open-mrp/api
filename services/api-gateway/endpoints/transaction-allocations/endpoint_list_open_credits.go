@@ -14,17 +14,17 @@ import (
 // Request to list open credit transactions.
 type ListOpenCreditsRequest struct {
 	apiresource.PaginationRequest
-	// Only include transactions created on or after this date (`YYYY-MM-DD`).
+	// Only include credits whose funds were received on or after this date (`YYYY-MM-DD`, UTC). A full timestamp (RFC 3339) is also accepted, to bound the range at a local midnight.
 	StartDate *string `query:"starts_at"`
-	// Only include transactions created on or before this date (`YYYY-MM-DD`), covering that whole day.
+	// Only include credits whose funds were received before the end of this date (`YYYY-MM-DD`, UTC). A full timestamp (RFC 3339) is also accepted, to bound the range at a local midnight.
 	EndDate *string `query:"ends_at"`
 	// Filter by customer account IDs.
 	CustomerIDs []string `query:"customer_ids"`
 }
 
-// Returns a paginated list of customer transactions that still have money left to apply to invoices, newest first.
+// Returns a paginated list of customer transactions that still have money left to apply to invoices, most recently received first.
 //
-// Membership is driven by each transaction's `is_fully_allocated` flag rather than by a recomputed balance, so a transaction remains listed until that flag is set. Free-text search matches the transaction ID, transaction number, customer name, and note.
+// A transaction is listed once its funds have been received, while it is not marked fully allocated and its allocations leave part of its amount unapplied. Free-text search matches the transaction ID, transaction number, customer name, and note.
 type ListOpenCreditsEndpoint struct{}
 
 func (e *ListOpenCreditsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListOpenCreditsRequest, *apiresource.List[apiresource.OpenCreditEntry]] {

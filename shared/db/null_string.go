@@ -44,6 +44,23 @@ func EscapeLike(s string) string {
 	return s
 }
 
+// AllWordsPrefixQuery turns search input into a BOOLEAN MODE query that requires every word to
+// begin a word of the indexed text, as the dashboard's PrismaUtils.sanitizeQuery did: the input is
+// split on anything that is not an ASCII letter or digit, so "TX-0012 acme" becomes "+TX* +0012* +acme*".
+// It returns "" when the input has no words.
+func AllWordsPrefixQuery(query *string) string {
+	if query == nil {
+		return ""
+	}
+	words := strings.FieldsFunc(*query, func(r rune) bool {
+		return (r < 'a' || r > 'z') && (r < 'A' || r > 'Z') && (r < '0' || r > '9')
+	})
+	for i, w := range words {
+		words[i] = "+" + w + "*"
+	}
+	return strings.Join(words, " ")
+}
+
 // SanitizeFulltextBoolean strips MySQL BOOLEAN MODE operators from user input.
 func SanitizeFulltextBoolean(s string) string {
 	return strings.Map(func(r rune) rune {

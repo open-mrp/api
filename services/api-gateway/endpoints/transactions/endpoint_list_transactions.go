@@ -14,7 +14,9 @@ import (
 // Request to list transactions.
 type ListTransactionsRequest struct {
 	apiresource.PaginationRequest
-	// Filter by allocation status: `allocated` (marked fully applied to invoices) or `unallocated` (still counted as an open credit).
+	// Search matches transactions whose number contains every word of `q` as a prefix.
+	//
+	// Filter by allocation status: `allocated` (marked fully applied to invoices) or `unallocated` (not yet marked fully applied).
 	Status *constants.TransactionAllocationStatus `query:"status"`
 	// Filter by transaction type codes.
 	TypeCodes []constants.TransactionType `query:"types"`
@@ -26,9 +28,9 @@ type ListTransactionsRequest struct {
 	CustomerIDs []string `query:"customer_ids"`
 	// Filter by the account group each customer belongs to.
 	CustomerGroupIDs []string `query:"customer_group_ids"`
-	// Only include transactions created on or after this date (`YYYY-MM-DD`).
+	// Only include transactions whose funds were received on or after this date (`YYYY-MM-DD`, UTC). A full timestamp (RFC 3339) is also accepted, to bound the range at a local midnight.
 	StartDate *string `query:"starts_at"`
-	// Only include transactions created on or before this date (`YYYY-MM-DD`), covering that whole day.
+	// Only include transactions whose funds were received on or before this date (`YYYY-MM-DD`, UTC), covering that whole day. A full timestamp (RFC 3339) is also accepted, to bound the range at a local midnight.
 	EndDate *string `query:"ends_at"`
 }
 
@@ -57,7 +59,7 @@ func (e *ListTransactionsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListT
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeTransactionSummary,
-			Fields:     []string{"customer"},
+			Fields:     []string{"customer", "customer.bill_to_address"},
 		}),
 	})
 }

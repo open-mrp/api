@@ -91,72 +91,6 @@ func (q *Queries) GetOpenCreditAllocations(ctx context.Context, transactionIds [
 	return items, nil
 }
 
-const getTransactionAllocationByID = `-- name: GetTransactionAllocationByID :one
-SELECT
-    ta.id,
-    ta.note,
-    ta.created_at,
-    ta.updated_at,
-    q.id AS amount_id,
-    q.value AS amount_value,
-    qu.id AS amount_unit_id,
-    qu.abbreviation AS amount_unit_abbreviation,
-    t.id AS transaction_id,
-    t.number AS transaction_number,
-    t.transaction_type_code AS transaction_type,
-    inv.id AS invoice_id,
-    inv.number AS invoice_number
-FROM transaction_allocation ta
-JOIN quantity q ON q.id = ta.amount_id
-JOIN unit qu ON qu.id = q.unit_id
-JOIN ` + "`" + `transaction` + "`" + ` t ON t.id = ta.transaction_id
-JOIN invoice inv ON inv.id = ta.invoice_id
-WHERE ta.id = ?
-AND t.account_id = ?
-`
-
-type GetTransactionAllocationByIDParams struct {
-	ID        string
-	AccountID string
-}
-
-type GetTransactionAllocationByIDRow struct {
-	ID                     string
-	Note                   sql.NullString
-	CreatedAt              time.Time
-	UpdatedAt              time.Time
-	AmountID               string
-	AmountValue            string
-	AmountUnitID           string
-	AmountUnitAbbreviation string
-	TransactionID          string
-	TransactionNumber      string
-	TransactionType        string
-	InvoiceID              string
-	InvoiceNumber          string
-}
-
-func (q *Queries) GetTransactionAllocationByID(ctx context.Context, arg GetTransactionAllocationByIDParams) (GetTransactionAllocationByIDRow, error) {
-	row := q.db.QueryRowContext(ctx, getTransactionAllocationByID, arg.ID, arg.AccountID)
-	var i GetTransactionAllocationByIDRow
-	err := row.Scan(
-		&i.ID,
-		&i.Note,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.AmountID,
-		&i.AmountValue,
-		&i.AmountUnitID,
-		&i.AmountUnitAbbreviation,
-		&i.TransactionID,
-		&i.TransactionNumber,
-		&i.TransactionType,
-		&i.InvoiceID,
-		&i.InvoiceNumber,
-	)
-	return i, err
-}
-
 const listAllocationEntriesBackward = `-- name: ListAllocationEntriesBackward :many
 SELECT
     ta.id,
@@ -164,6 +98,7 @@ SELECT
     ta.created_at,
     q.value AS amount_value,
     qu.abbreviation AS amount_unit_abbreviation,
+    t.customer_account_id AS customer_id,
     cust_acct.name AS customer_name,
     ar.external_number AS customer_number,
     t.id AS transaction_id,
@@ -177,15 +112,16 @@ JOIN quantity q ON q.id = ta.amount_id
 JOIN unit qu ON qu.id = q.unit_id
 JOIN ` + "`" + `transaction` + "`" + ` t ON t.id = ta.transaction_id
 JOIN invoice inv ON inv.id = ta.invoice_id
-JOIN sales_order so ON so.id = inv.sales_order_id
 JOIN account cust_acct ON cust_acct.id = t.customer_account_id
 LEFT JOIN account_relation ar ON ar.counterparty_account_id = t.customer_account_id
     AND ar.owner_account_id = t.account_id
     AND ar.account_relation_role_code = 'customer'
 WHERE t.account_id = ?
 AND (? IS NULL OR (
-    MATCH(inv.number) AGAINST(? IN BOOLEAN MODE)
-    OR MATCH(t.number) AGAINST(? IN BOOLEAN MODE)
+    inv.number = ?
+    OR t.number = ?
+    OR ar.external_number = ?
+    OR cust_acct.name LIKE CONCAT('%', ?, '%')
 ))
 AND (? IS NULL OR t.transaction_type_code = ?)
 AND (? IS NULL OR ta.created_at >= ?)
@@ -202,6 +138,7 @@ LIMIT ?
 type ListAllocationEntriesBackwardParams struct {
 	AccountID       string
 	SearchQuery     sql.NullString
+	SearchLike      interface{}
 	TransactionType sql.NullString
 	StartDate       sql.NullTime
 	EndDate         sql.NullTime
@@ -216,6 +153,7 @@ type ListAllocationEntriesBackwardRow struct {
 	CreatedAt              time.Time
 	AmountValue            string
 	AmountUnitAbbreviation string
+	CustomerID             string
 	CustomerName           string
 	CustomerNumber         sql.NullString
 	TransactionID          string
@@ -226,12 +164,15 @@ type ListAllocationEntriesBackwardRow struct {
 	InvoiceNumber          string
 }
 
+// The dashboard found an entry by its invoice or transaction number, or by its customer.
 func (q *Queries) ListAllocationEntriesBackward(ctx context.Context, arg ListAllocationEntriesBackwardParams) ([]ListAllocationEntriesBackwardRow, error) {
 	rows, err := q.db.QueryContext(ctx, listAllocationEntriesBackward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
 		arg.SearchQuery,
+		arg.SearchQuery,
+		arg.SearchLike,
 		arg.TransactionType,
 		arg.TransactionType,
 		arg.StartDate,
@@ -257,6 +198,7 @@ func (q *Queries) ListAllocationEntriesBackward(ctx context.Context, arg ListAll
 			&i.CreatedAt,
 			&i.AmountValue,
 			&i.AmountUnitAbbreviation,
+			&i.CustomerID,
 			&i.CustomerName,
 			&i.CustomerNumber,
 			&i.TransactionID,
@@ -286,6 +228,7 @@ SELECT
     ta.created_at,
     q.value AS amount_value,
     qu.abbreviation AS amount_unit_abbreviation,
+    t.customer_account_id AS customer_id,
     cust_acct.name AS customer_name,
     ar.external_number AS customer_number,
     t.id AS transaction_id,
@@ -299,15 +242,16 @@ JOIN quantity q ON q.id = ta.amount_id
 JOIN unit qu ON qu.id = q.unit_id
 JOIN ` + "`" + `transaction` + "`" + ` t ON t.id = ta.transaction_id
 JOIN invoice inv ON inv.id = ta.invoice_id
-JOIN sales_order so ON so.id = inv.sales_order_id
 JOIN account cust_acct ON cust_acct.id = t.customer_account_id
 LEFT JOIN account_relation ar ON ar.counterparty_account_id = t.customer_account_id
     AND ar.owner_account_id = t.account_id
     AND ar.account_relation_role_code = 'customer'
 WHERE t.account_id = ?
 AND (? IS NULL OR (
-    MATCH(inv.number) AGAINST(? IN BOOLEAN MODE)
-    OR MATCH(t.number) AGAINST(? IN BOOLEAN MODE)
+    inv.number = ?
+    OR t.number = ?
+    OR ar.external_number = ?
+    OR cust_acct.name LIKE CONCAT('%', ?, '%')
 ))
 AND (? IS NULL OR t.transaction_type_code = ?)
 AND (? IS NULL OR ta.created_at >= ?)
@@ -324,6 +268,7 @@ LIMIT ?
 type ListAllocationEntriesForwardParams struct {
 	AccountID       string
 	SearchQuery     sql.NullString
+	SearchLike      interface{}
 	TransactionType sql.NullString
 	StartDate       sql.NullTime
 	EndDate         sql.NullTime
@@ -338,6 +283,7 @@ type ListAllocationEntriesForwardRow struct {
 	CreatedAt              time.Time
 	AmountValue            string
 	AmountUnitAbbreviation string
+	CustomerID             string
 	CustomerName           string
 	CustomerNumber         sql.NullString
 	TransactionID          string
@@ -348,12 +294,15 @@ type ListAllocationEntriesForwardRow struct {
 	InvoiceNumber          string
 }
 
+// The dashboard found an entry by its invoice or transaction number, or by its customer.
 func (q *Queries) ListAllocationEntriesForward(ctx context.Context, arg ListAllocationEntriesForwardParams) ([]ListAllocationEntriesForwardRow, error) {
 	rows, err := q.db.QueryContext(ctx, listAllocationEntriesForward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
 		arg.SearchQuery,
+		arg.SearchQuery,
+		arg.SearchLike,
 		arg.TransactionType,
 		arg.TransactionType,
 		arg.StartDate,
@@ -379,6 +328,7 @@ func (q *Queries) ListAllocationEntriesForward(ctx context.Context, arg ListAllo
 			&i.CreatedAt,
 			&i.AmountValue,
 			&i.AmountUnitAbbreviation,
+			&i.CustomerID,
 			&i.CustomerName,
 			&i.CustomerNumber,
 			&i.TransactionID,
@@ -387,153 +337,6 @@ func (q *Queries) ListAllocationEntriesForward(ctx context.Context, arg ListAllo
 			&i.AdjustmentType,
 			&i.InvoiceID,
 			&i.InvoiceNumber,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listOpenCredits = `-- name: ListOpenCredits :many
-SELECT
-    t.id,
-    t.number,
-    t.note,
-    t.stripe_payment_id,
-    t.created_at,
-    tt.name AS transaction_type,
-    q.value AS original_amount,
-    t.customer_account_id AS customer_id,
-    cust_acct.name AS customer_name,
-    ar.external_number AS customer_number,
-    tm.name AS transaction_method,
-    adjt.name AS adjustment_type,
-    COALESCE(au_user.username, '') AS responsible_user_name,
-    COALESCE((
-        -- Correlated per transaction: a grouped derived table cannot take the account filter and so aggregates every allocation in the database to return one page.
-        SELECT SUM(q2.value)
-        FROM transaction_allocation ta2
-        JOIN quantity q2 ON q2.id = ta2.amount_id
-        WHERE ta2.transaction_id = t.id
-    ), 0) AS allocated_amount
-FROM ` + "`" + `transaction` + "`" + ` t
-JOIN quantity q ON q.id = t.amount_id
-JOIN account cust_acct ON cust_acct.id = t.customer_account_id
-JOIN transaction_type tt ON tt.code = t.transaction_type_code
-LEFT JOIN account_relation ar ON ar.counterparty_account_id = t.customer_account_id
-    AND ar.owner_account_id = t.account_id
-    AND ar.account_relation_role_code = 'customer'
-LEFT JOIN transaction_method tm ON tm.code = t.transaction_method_code
-LEFT JOIN adjustment_type adjt ON adjt.code = t.adjustment_type_code
-LEFT JOIN account_user au ON au.id = t.responsible_user_id
-LEFT JOIN ` + "`" + `user` + "`" + ` au_user ON au_user.id = au.user_id
-WHERE t.account_id = ?
-AND t.is_fully_allocated = false
-AND (? = false OR t.customer_account_id IN (/*SLICE:customer_ids*/?))
-AND (? IS NULL OR t.created_at >= ?)
-AND (? IS NULL OR t.created_at < ?)
-AND (
-    ? IS NULL
-    OR t.id LIKE CONCAT('%', ?, '%')
-    OR t.number LIKE CONCAT('%', ?, '%')
-    OR cust_acct.name LIKE CONCAT('%', ?, '%')
-    OR COALESCE(t.note, '') LIKE CONCAT('%', ?, '%')
-)
-AND (
-    ? IS NULL
-    OR t.created_at < ?
-    OR (t.created_at = ? AND t.id < ?)
-)
-ORDER BY t.created_at DESC, t.id DESC
-LIMIT ?
-`
-
-type ListOpenCreditsParams struct {
-	AccountID             string
-	IncludeCustomerFilter interface{}
-	CustomerIds           []string
-	StartDate             sql.NullTime
-	EndDate               sql.NullTime
-	Search                interface{}
-	CursorCreatedAt       sql.NullTime
-	CursorID              sql.NullString
-	Limit                 int32
-}
-
-type ListOpenCreditsRow struct {
-	ID                  string
-	Number              string
-	Note                sql.NullString
-	StripePaymentID     sql.NullString
-	CreatedAt           time.Time
-	TransactionType     string
-	OriginalAmount      string
-	CustomerID          string
-	CustomerName        string
-	CustomerNumber      sql.NullString
-	TransactionMethod   sql.NullString
-	AdjustmentType      sql.NullString
-	ResponsibleUserName string
-	AllocatedAmount     interface{}
-}
-
-func (q *Queries) ListOpenCredits(ctx context.Context, arg ListOpenCreditsParams) ([]ListOpenCreditsRow, error) {
-	query := listOpenCredits
-	var queryParams []interface{}
-	queryParams = append(queryParams, arg.AccountID)
-	queryParams = append(queryParams, arg.IncludeCustomerFilter)
-	if len(arg.CustomerIds) > 0 {
-		for _, v := range arg.CustomerIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:customer_ids*/?", strings.Repeat(",?", len(arg.CustomerIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:customer_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.StartDate)
-	queryParams = append(queryParams, arg.StartDate)
-	queryParams = append(queryParams, arg.EndDate)
-	queryParams = append(queryParams, arg.EndDate)
-	queryParams = append(queryParams, arg.Search)
-	queryParams = append(queryParams, arg.Search)
-	queryParams = append(queryParams, arg.Search)
-	queryParams = append(queryParams, arg.Search)
-	queryParams = append(queryParams, arg.Search)
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorID)
-	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.db.QueryContext(ctx, query, queryParams...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListOpenCreditsRow
-	for rows.Next() {
-		var i ListOpenCreditsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Number,
-			&i.Note,
-			&i.StripePaymentID,
-			&i.CreatedAt,
-			&i.TransactionType,
-			&i.OriginalAmount,
-			&i.CustomerID,
-			&i.CustomerName,
-			&i.CustomerNumber,
-			&i.TransactionMethod,
-			&i.AdjustmentType,
-			&i.ResponsibleUserName,
-			&i.AllocatedAmount,
 		); err != nil {
 			return nil, err
 		}

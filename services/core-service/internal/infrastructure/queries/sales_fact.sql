@@ -1,8 +1,9 @@
 -- name: SelectSalesFactSource :many
 -- The legacy sales-analytics row for each invoice line of the given invoices, priced with the exact
--- expressions the dashboard's analytics used on read. Keep these expressions byte-for-byte: sums over
--- sales_line_fact equal the old report totals only while they match. The inner joins decide which lines
--- count as sales at all (a line whose product has no product line or category is not a sale).
+-- expressions the dashboard's analytics used on read, then rounded to the column's 10 places. The CAST
+-- must match the column type: the refresher compares these values to the stored ones, and any rounding
+-- difference would rewrite every line on every pass. The inner joins decide which lines count as sales
+-- at all (a line whose product has no product line or category is not a sale).
 SELECT
     i.account_id,
     i.created_at AS invoiced_at,
@@ -25,7 +26,7 @@ SELECT
             - (bu_unit.offset_numerator / bu_unit.offset_denominator)
         )
         / NULLIF((bu_unit.ratio_numerator / bu_unit.ratio_denominator), 0)
-        AS DECIMAL(65,30)
+        AS DECIMAL(28,10)
     ), NULL) AS quantity_base,
     NULLIF(CAST(
         (
@@ -40,7 +41,7 @@ SELECT
             )
             / NULLIF(((u_price_den.ratio_numerator / u_price_den.ratio_denominator) + (u_price_den.offset_numerator / u_price_den.offset_denominator)), 0)
         )
-        AS DECIMAL(65,30)
+        AS DECIMAL(28,10)
     ), NULL) AS total_invoiced,
     NULLIF(CAST(
         (
@@ -55,7 +56,7 @@ SELECT
             )
             / NULLIF(((COALESCE(u_cost_den.ratio_numerator, 1) / COALESCE(u_cost_den.ratio_denominator, 1)) + (COALESCE(u_cost_den.offset_numerator, 0) / COALESCE(u_cost_den.offset_denominator, 1))), 0)
         )
-        AS DECIMAL(65,30)
+        AS DECIMAL(28,10)
     ), NULL) AS total_cost
 FROM invoice_line il
 JOIN invoice i ON i.id = il.invoice_id
@@ -98,7 +99,9 @@ ORDER BY created_at, id
 LIMIT ?;
 
 -- name: ListInvoiceIDsCreatedSince :many
-SELECT id FROM invoice WHERE created_at >= ? ORDER BY created_at, id LIMIT ?;
+-- Newest first: when the cap bites, the invoices left out are the oldest in the window, the least
+-- likely to be changing, and the reconcile pass still reaches them.
+SELECT id FROM invoice WHERE created_at >= ? ORDER BY created_at DESC, id DESC LIMIT ?;
 
 -- name: MarkSalesFactDirty :exec
 INSERT INTO sales_fact_dirty (scope_type, scope_id, account_id, marked_at)

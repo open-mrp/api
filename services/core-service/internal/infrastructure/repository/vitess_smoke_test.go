@@ -15,6 +15,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/querytag"
 )
 
 // Runs queries through a real vtgate (vitess/vttestserver) with the production pool settings, so each
@@ -27,12 +28,13 @@ func TestVitessSmoke(t *testing.T) {
 	if dsn == "" {
 		t.Skip("VITESS_SMOKE_DSN is not set")
 	}
-	pool, err := db.NewDbPool(&db.Config{DBURI: dsn, WarmConnections: -1})
+	pool, err := db.NewDbPool(&db.Config{DBURI: dsn, WarmConnections: -1, Application: "vitess-smoke"})
 	if err != nil {
 		t.Fatalf("connect: %v", err)
 	}
 	t.Cleanup(func() { _ = pool.Close() })
-	ctx := context.Background()
+	// Tagged, so every statement below also proves vtgate accepts the trailing SQLCommenter comment.
+	ctx := querytag.With(context.Background(), querytag.Job, "vitess-smoke")
 	q := sqlc.New(pool)
 
 	ids := func(query string, args ...any) []string {
@@ -216,6 +218,97 @@ func TestVitessSmoke(t *testing.T) {
 	})
 
 	// sales_line_fact maintenance and the sales reports build SQL in Go, which vtparse cannot see.
+	// --- payments: list SQL built in Go, keyset both ways, and the flag recompute's row locks ---
+	t.Run("payments", func(t *testing.T) {
+		txAccount := ids("SELECT account_id FROM transaction LIMIT 1")
+		if len(txAccount) == 0 {
+			t.Fatal("seed data has no transactions")
+		}
+		acct := txAccount[0]
+		search, status := "TXN", "unallocated"
+		from, to := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC), time.Now().UTC().Add(time.Hour)
+
+		txs := NewTransactionRepo(q)
+		for _, p := range []domain.ListTransactionsParams{
+			{AccountID: acct, Limit: 1},
+			{AccountID: acct, Limit: 5, Query: &search, Status: &status, TypeCodes: []string{"payment"}, MethodCodes: []string{"check"},
+				AdjustmentTypeCodes: []string{"x"}, CustomerIDs: buyers, CustomerGroupIDs: groups, StartDate: &from, EndDate: &to},
+		} {
+			page, apiErr := txs.List(ctx, p)
+			checkAPI("transactions List", apiErr)
+			if page != nil && page.PageInfo.NextCursor != nil {
+				p.Cursor = page.PageInfo.NextCursor
+				next, apiErr := txs.List(ctx, p)
+				checkAPI("transactions List next", apiErr)
+				if next != nil && next.PageInfo.PrevCursor != nil {
+					p.Cursor = next.PageInfo.PrevCursor
+					_, apiErr = txs.List(ctx, p)
+					checkAPI("transactions List prev", apiErr)
+				}
+			}
+		}
+		customers := ids("SELECT customer_account_id FROM transaction WHERE account_id = ? LIMIT 1", acct)
+		if len(customers) > 0 {
+			_, apiErr := txs.ListByCustomer(ctx, domain.ListAccountTransactionsParams{AccountID: acct, CustomerAccountID: customers[0], Limit: 5, Status: &status, Query: &search, WithAllocations: true})
+			checkAPI("transactions ListByCustomer", apiErr)
+		}
+		if one := ids("SELECT id FROM transaction WHERE account_id = ? LIMIT 1", acct); len(one) > 0 {
+			_, apiErr := txs.Get(ctx, acct, one[0])
+			checkAPI("transactions Get", apiErr)
+		}
+
+		settlements := NewSettlementRepo(q)
+		for _, p := range []domain.ListSettlementsParams{
+			{AccountID: acct, Limit: 1},
+			{AccountID: acct, Limit: 5, Query: &search, TransactionIDs: []string{"tx_none"}, InvoiceIDs: []string{"iv_none"}, StartDate: &from, EndDate: &to},
+		} {
+			page, apiErr := settlements.List(ctx, p)
+			checkAPI("settlements List", apiErr)
+			if page != nil && page.PageInfo.NextCursor != nil {
+				p.Cursor = page.PageInfo.NextCursor
+				_, apiErr = settlements.List(ctx, p)
+				checkAPI("settlements List next", apiErr)
+			}
+		}
+
+		allocations := NewTransactionAllocationRepo(q)
+		credits := domain.ListOpenCreditsParams{AccountID: acct, Limit: 1}
+		page, apiErr := allocations.ListOpenCredits(ctx, credits)
+		checkAPI("ListOpenCredits", apiErr)
+		if page != nil && page.PageInfo.NextCursor != nil {
+			credits.Cursor = page.PageInfo.NextCursor
+			next, apiErr := allocations.ListOpenCredits(ctx, credits)
+			checkAPI("ListOpenCredits next", apiErr)
+			if next != nil && next.PageInfo.PrevCursor != nil {
+				credits.Cursor = next.PageInfo.PrevCursor
+				_, apiErr = allocations.ListOpenCredits(ctx, credits)
+				checkAPI("ListOpenCredits prev", apiErr)
+			}
+		}
+		_, apiErr = allocations.ListOpenCredits(ctx, domain.ListOpenCreditsParams{AccountID: acct, Limit: 5, CustomerIDs: buyers, SearchQuery: &search, StartDate: &from, EndDate: &to})
+		checkAPI("ListOpenCredits filtered", apiErr)
+		entries, apiErr := allocations.ListEntries(ctx, domain.ListAllocationEntriesParams{AccountID: acct, Limit: 1, Query: &search, StartDate: &from, EndDate: &to})
+		checkAPI("ListEntries", apiErr)
+		if entries != nil && entries.PageInfo.NextCursor != nil {
+			_, apiErr = allocations.ListEntries(ctx, domain.ListAllocationEntriesParams{AccountID: acct, Limit: 1, Query: &search, Cursor: entries.PageInfo.NextCursor})
+			checkAPI("ListEntries next", apiErr)
+		}
+
+		tx, err := pool.BeginTx(ctx, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() { _ = tx.Rollback() }()
+		locked := NewSettlementRepo(q.WithTx(tx))
+		txIDs := ids("SELECT id FROM transaction WHERE account_id = ? LIMIT 3", acct)
+		invIDs := ids("SELECT id FROM invoice WHERE account_id = ? LIMIT 3", acct)
+		checkAPI("LockPaymentFlagRows", locked.LockPaymentFlagRows(ctx, acct, txIDs, invIDs))
+		_, apiErr = locked.GetTransactionAllocationTotals(ctx, acct, txIDs)
+		checkAPI("GetTransactionAllocationTotals", apiErr)
+		_, apiErr = locked.GetInvoicePaymentTotals(ctx, acct, invIDs)
+		checkAPI("GetInvoicePaymentTotals", apiErr)
+	})
+
 	t.Run("sales facts and reports", func(t *testing.T) {
 		facts := NewSalesFactRepo(q)
 		invoices := ids("SELECT id FROM invoice")
@@ -237,8 +330,11 @@ func TestVitessSmoke(t *testing.T) {
 		checkAPI("ListFactInvoiceIDsAfter", apiErr)
 		_, apiErr = facts.FilterExistingInvoiceIDs(ctx, invoices)
 		checkAPI("FilterExistingInvoiceIDs", apiErr)
-		for _, scope := range []domain.SalesFactScope{domain.SalesFactScopeSalesOrder, domain.SalesFactScopeSalesOrderLine, domain.SalesFactScopeProduct} {
-			_, apiErr = facts.ResolveInvoiceIDs(ctx, scope, []string{"x_none"})
+		for _, scope := range []domain.SalesFactScope{
+			domain.SalesFactScopeSalesOrder, domain.SalesFactScopeSalesOrderLine, domain.SalesFactScopeProduct,
+			domain.SalesFactScopeQuantity, domain.SalesFactScopeRate, domain.SalesFactScopeItem, domain.SalesFactScopeBuyer,
+		} {
+			_, apiErr = facts.ResolveInvoiceIDs(ctx, account, scope, []string{"x_none"})
 			checkAPI("ResolveInvoiceIDs "+string(scope), apiErr)
 		}
 		checkAPI("MarkDirty", facts.MarkDirty(ctx, domain.SalesFactScopeInvoice, invoices[0], account))
@@ -251,6 +347,15 @@ func TestVitessSmoke(t *testing.T) {
 		_, apiErr = facts.GetSync(ctx)
 		checkAPI("GetSync", apiErr)
 		checkAPI("DeleteFacts", facts.DeleteFacts(ctx, []string{"ivln_none"}))
+		checkAPI("MarkInvoicesDirty", facts.MarkInvoicesDirty(ctx, account, []string{"iv_smoke_a", "iv_smoke_b"}))
+		checkAPI("RestartReconcile", facts.RestartReconcile(ctx))
+		smokeDay := domain.SalesRollupDay{AccountID: account, Day: time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC)}
+		checkAPI("MarkRollupDays", facts.MarkRollupDays(ctx, []domain.SalesRollupDay{smokeDay, smokeDay}))
+		rollupMarks, apiErr := facts.ListRollupDirty(ctx, 10)
+		checkAPI("ListRollupDirty", apiErr)
+		for _, m := range rollupMarks {
+			checkAPI("ClearRollupDirty", facts.ClearRollupDirty(ctx, m))
+		}
 
 		reports := NewSalesReportRepo(q)
 		start, end := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC), time.Now().UTC().Add(time.Hour)
@@ -268,8 +373,12 @@ func TestVitessSmoke(t *testing.T) {
 				page, apiErr := reports.GetBreakdown(ctx, domain.AnalyzeSalesBreakdownParams{SalesReportFilter: f, GroupBy: constants.SalesBreakdownGroupBy(groupBy), Limit: 1}, true)
 				checkAPI("GetBreakdown "+groupBy, apiErr)
 				if page != nil && page.PageInfo.NextCursor != nil {
-					_, apiErr = reports.GetBreakdown(ctx, domain.AnalyzeSalesBreakdownParams{SalesReportFilter: f, GroupBy: constants.SalesBreakdownGroupBy(groupBy), Limit: 1, Cursor: page.PageInfo.NextCursor}, true)
+					next, apiErr := reports.GetBreakdown(ctx, domain.AnalyzeSalesBreakdownParams{SalesReportFilter: f, GroupBy: constants.SalesBreakdownGroupBy(groupBy), Limit: 1, Cursor: page.PageInfo.NextCursor}, true)
 					checkAPI("GetBreakdown next "+groupBy, apiErr)
+					if next != nil && next.PageInfo.PrevCursor != nil {
+						_, apiErr = reports.GetBreakdown(ctx, domain.AnalyzeSalesBreakdownParams{SalesReportFilter: f, GroupBy: constants.SalesBreakdownGroupBy(groupBy), Limit: 1, Cursor: next.PageInfo.PrevCursor}, true)
+						checkAPI("GetBreakdown prev "+groupBy, apiErr)
+					}
 				}
 			}
 		}
@@ -293,5 +402,34 @@ func TestVitessSmoke(t *testing.T) {
 		}
 		_, apiErr = reports.GetLinePage(ctx, domain.ListSalesLinesParams{SalesReportFilter: filter, Limit: 5})
 		checkAPI("GetLinePage filtered", apiErr)
+
+		// The rollups: a full sweep's statements, then every report shape that reads them.
+		cursor := domain.SalesRollupDay{Day: salesFactSweepFloor}
+		for {
+			next, apiErr := facts.NextRollupDay(ctx, cursor)
+			checkAPI("NextRollupDay", apiErr)
+			if next == nil || apiErr != nil {
+				break
+			}
+			checkAPI("RebuildRollupDay", facts.RebuildRollupDay(ctx, *next))
+			checkAPI("RebuildRollupMonth", facts.RebuildRollupMonth(ctx, next.AccountID, next.Day))
+			cursor = domain.SalesRollupDay{AccountID: next.AccountID, Day: next.Day.AddDate(0, 0, 1)}
+		}
+		checkAPI("SaveRollupSync", facts.SaveRollupSync(ctx, domain.SalesRollupSync{Cursor: &cursor}))
+		_, apiErr = facts.GetRollupSync(ctx)
+		checkAPI("GetRollupSync", apiErr)
+		salesRollupsReady.Store(true)
+		defer salesRollupsReady.Store(false)
+		ragged := domain.SalesReportFilter{AccountID: account, StartsAt: start.Add(90 * time.Minute), EndsAt: end, ComparisonStartsAt: &start, ComparisonEndsAt: &end}
+		oneLine := ragged
+		oneLine.ProductLineIDs, oneLine.SalesRepIDs = productLines[:1], []string{"acus_none"}
+		for _, f := range []domain.SalesReportFilter{ragged, oneLine} {
+			_, apiErr = reports.GetSummary(ctx, domain.AnalyzeSalesSummaryParams{SalesReportFilter: f, TZOffsetMinutes: -300}, true)
+			checkAPI("GetSummary from rollups", apiErr)
+			for _, groupBy := range constants.SalesBreakdownGroupBy("").EnumValues() {
+				_, apiErr = reports.GetBreakdown(ctx, domain.AnalyzeSalesBreakdownParams{SalesReportFilter: f, GroupBy: constants.SalesBreakdownGroupBy(groupBy), Limit: 5}, true)
+				checkAPI("GetBreakdown from rollups "+groupBy, apiErr)
+			}
+		}
 	})
 }

@@ -81,16 +81,29 @@ func (h *gRPCHandler) CreateSettlement(ctx context.Context, req *pb.CreateSettle
 	allocations := make([]domain.CreateSettlementAllocationParams, len(req.Allocations))
 	for i, a := range req.Allocations {
 		allocations[i] = domain.CreateSettlementAllocationParams{
-			TransactionID: a.TransactionId,
-			InvoiceID:     a.InvoiceId,
-			Amount:        a.Amount,
-			Note:          a.Note,
+			TransactionID:  a.TransactionId,
+			TransactionKey: a.GetTransactionKey(),
+			InvoiceID:      a.InvoiceId,
+			Amount:         a.Amount,
+			Note:           a.Note,
+			CreatedAt:      timestampPtr(a.CreatedAt),
+		}
+	}
+	newTransactions := make([]domain.NewSettlementTransactionParams, len(req.NewTransactions))
+	for i, nt := range req.NewTransactions {
+		newTransactions[i] = domain.NewSettlementTransactionParams{
+			Key:                   nt.Key,
+			TransactionTypeCode:   nt.TransactionTypeCode,
+			TransactionMethodCode: nt.TransactionMethodCode,
+			AdjustmentTypeCode:    nt.AdjustmentTypeCode,
+			CustomerID:            nt.CustomerId,
 		}
 	}
 
 	settlement, apiErr := h.settlementSvc.CreateSettlement(ctx, domain.CreateSettlementParams{
 		ResponsibleUserID: req.ResponsibleUserId,
 		Allocations:       allocations,
+		NewTransactions:   newTransactions,
 	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
@@ -111,6 +124,7 @@ func (h *gRPCHandler) UpdateSettlement(ctx context.Context, req *pb.UpdateSettle
 
 	params := domain.UpdateSettlementParams{
 		SettlementID: req.Id,
+		ClearNote:    req.ClearNote,
 	}
 	if req.Number != nil {
 		params.Number = req.Number
@@ -223,5 +237,15 @@ func transactionAllocationToProto(a *domain.TransactionAllocation) *pb.Transacti
 	if a.TransactionType != "" {
 		info.TransactionType = &a.TransactionType
 	}
+	info.TransactionMethodCode = a.TransactionMethodCode
+	info.TransactionAdjustmentTypeCode = a.TransactionAdjustmentType
+	if a.TransactionCustomerID != "" {
+		info.TransactionCustomerId = &a.TransactionCustomerID
+	}
+	if !a.TransactionCreatedAt.IsZero() {
+		info.TransactionCreatedAt = timestamppb.New(a.TransactionCreatedAt)
+	}
+	info.SettlementId = a.SettlementID
+	info.SettlementNumber = a.SettlementNumber
 	return info
 }

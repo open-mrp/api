@@ -740,9 +740,11 @@ func (r *customerRepoImpl) GetByIDs(ctx context.Context, ownerAccountID string, 
 		return nil, tracing.Trace(span, apiErr)
 	}
 
+	// The addresses are in the row already; carrying them lets a customer reached through an
+	// include (a transaction's `customer.bill_to_address`) show them.
 	customers := make([]*domain.Customer, len(rows))
 	for i, row := range rows {
-		customers[i] = customerFromRow(sqlc.GetCustomerRow(row), nil)
+		customers[i] = customerFromRow(sqlc.GetCustomerRow(row), []string{"bill_to_address", "ship_to_address"})
 	}
 	return customers, nil
 }

@@ -11,11 +11,13 @@ import (
 	"time"
 
 	"github.com/XSAM/otelsql"
-	_ "github.com/go-sql-driver/mysql"
+	"github.com/go-sql-driver/mysql"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/open-mrp/api/shared/querytag"
 )
 
 const (
@@ -53,6 +55,9 @@ type Config struct {
 
 	// WarmInterval (optional; default: 1m) is how often the warm connections are pinged; keep it under the 350s AWS NAT idle timeout.
 	WarmInterval time.Duration
+
+	// Application (optional; default: "") is the app query tag on every statement, e.g. the service name, so PlanetScale Insights can attribute its load. Empty omits it.
+	Application string
 }
 
 // WithDefaults returns a new Config with all zero-value optional fields replaced by production defaults. It is safe to call on a nil receiver. The original Config is not mutated; a copy is always returned.
@@ -70,6 +75,7 @@ func (c *Config) WithDefaults() *Config {
 		MaxIdleConnections:    cmp.Or(c.MaxIdleConnections, defaultMaxIdleConnections),
 		WarmConnections:       cmp.Or(c.WarmConnections, defaultWarmConnections),
 		WarmInterval:          cmp.Or(c.WarmInterval, defaultWarmInterval),
+		Application:           c.Application,
 	}
 }
 
@@ -119,10 +125,23 @@ func NewDbPool(config *Config) (*sql.DB, error) {
 		}
 	}
 
+	dsn, err := mysql.ParseDSN(config.DBURI)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open database connection pool: %w", err)
+	}
+	base, err := mysql.NewConnector(dsn)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open database connection pool: %w", err)
+	}
+	var static map[string]string
+	if config.Application != "" {
+		static = map[string]string{querytag.App: config.Application}
+	}
+	connector := taggingConnector{base: base, static: static}
+
 	var db *sql.DB
-	var err error
 	if config.TracingEnabled {
-		db, err = otelsql.Open("mysql", config.DBURI,
+		db = otelsql.OpenDB(connector,
 			otelsql.WithTracerProvider(otel.GetTracerProvider()),
 			otelsql.WithAttributes(semconv.DBSystemMySQL),
 			otelsql.WithSpanOptions(otelsql.SpanOptions{
@@ -135,14 +154,7 @@ func NewDbPool(config *Config) (*sql.DB, error) {
 			}),
 		)
 	} else {
-		db, err = sql.Open("mysql", config.DBURI)
-		if err != nil {
-			return nil, fmt.Errorf("failed to open database connection pool: %w", err)
-		}
-	}
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to open database connection pool: %w", err)
+		db = sql.OpenDB(connector)
 	}
 
 	db.SetConnMaxLifetime(config.ConnectionMaxLifetime)

@@ -27,8 +27,11 @@ type InboxPurgerConfig struct {
 	// PurgeInterval (optional; default: 1h) controls how frequently the purger runs its purge loop to delete old processed records.
 	PurgeInterval time.Duration
 
-	// BatchSize (optional; default: 1000) is the maximum number of processed inbox records to delete in a single SQL DELETE statement.
+	// BatchSize (optional; default: 200) is the maximum number of processed inbox records to delete in a single SQL DELETE statement.
 	BatchSize int32
+
+	// MaxBatchesPerRun (optional; default: 100) caps the DELETE batches in one purge tick; a larger backlog continues on the next tick.
+	MaxBatchesPerRun int
 
 	// LeaseTTL (optional; default: 5m) bounds how long the purger holds its lease before a crashed holder's claim expires.
 	LeaseTTL time.Duration
@@ -50,12 +53,13 @@ func (c *InboxPurgerConfig) WithDefaults() *InboxPurgerConfig {
 	}
 
 	return &InboxPurgerConfig{
-		ServiceName:    c.ServiceName,
-		PlatformMode:   c.PlatformMode,
-		RetentionHours: cmp.Or(c.RetentionHours, 168), // 7 days
-		PurgeInterval:  purgeInterval,
-		BatchSize:      int32(cmp.Or(int(c.BatchSize), 1000)), // #nosec G115 - small config value
-		LeaseTTL:       lease.TTLOr(c.LeaseTTL, 5*time.Minute),
+		ServiceName:      c.ServiceName,
+		PlatformMode:     c.PlatformMode,
+		RetentionHours:   cmp.Or(c.RetentionHours, 168), // 7 days
+		PurgeInterval:    purgeInterval,
+		BatchSize:        int32(cmp.Or(int(c.BatchSize), defaultPurgeBatchSize)), // #nosec G115 - small config value
+		MaxBatchesPerRun: cmp.Or(c.MaxBatchesPerRun, defaultPurgeMaxBatches),
+		LeaseTTL:         lease.TTLOr(c.LeaseTTL, 5*time.Minute),
 	}
 }
 
@@ -71,6 +75,9 @@ func (c *InboxPurgerConfig) validate() error {
 	}
 	if c.BatchSize <= 0 {
 		return fmt.Errorf("inbox purger: batch size must be positive")
+	}
+	if c.MaxBatchesPerRun <= 0 {
+		return fmt.Errorf("inbox purger: max batches per run must be positive")
 	}
 	return nil
 }
@@ -149,7 +156,9 @@ func (p *InboxPurger) purgeLoop() {
 }
 
 func (p *InboxPurger) purgeProcessed(ctx context.Context) {
-	count, err := p.repo.PurgeProcessed(ctx, p.config.RetentionHours, p.config.BatchSize)
+	count, err := purgeInBatches(ctx, p.config.BatchSize, p.config.MaxBatchesPerRun, func(ctx context.Context, limit int32) (int64, error) {
+		return p.repo.PurgeProcessed(ctx, p.config.RetentionHours, limit)
+	})
 	if err != nil {
 		slog.Error("Failed to purge processed inbox messages", "error", err)
 		return

@@ -70,7 +70,7 @@ func Run(
 	logger := slog.New(slog.NewTextHandler(stdout, nil))
 
 	// Initialize the database pool.
-	dbPool, err := db.NewDbPool(&db.Config{DBURI: cfg.DBURI})
+	dbPool, err := db.NewDbPool(&db.Config{DBURI: cfg.DBURI, Application: domain.ServiceName})
 	if err != nil {
 		return err
 	}

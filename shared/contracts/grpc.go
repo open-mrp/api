@@ -12,6 +12,7 @@ import (
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/appctx"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/querytag"
 	"github.com/open-mrp/api/shared/version"
 	"google.golang.org/grpc"
 	grpccodes "google.golang.org/grpc/codes"
@@ -295,6 +296,13 @@ func APIVersionUnaryServerInterceptor() grpc.UnaryServerInterceptor {
 			}
 		}
 		return handler(ctx, req)
+	}
+}
+
+// QueryTagUnaryServerInterceptor tags the SQL a call runs with its gRPC method, so PlanetScale Insights attributes database load to the RPC behind it.
+func QueryTagUnaryServerInterceptor() grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+		return handler(querytag.With(ctx, querytag.GRPCMethod, info.FullMethod), req)
 	}
 }
 

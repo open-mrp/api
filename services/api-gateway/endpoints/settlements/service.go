@@ -110,17 +110,33 @@ func (m *settlementSvcImpl) GetSettlement(ctx context.Context, req *RetrieveSett
 func (m *settlementSvcImpl) CreateSettlement(ctx context.Context, req *CreateSettlementRequest) (*apiresource.Settlement, *apierror.APIError) {
 	allocations := make([]*pb.CreateSettlementAllocationParam, len(req.Allocations))
 	for i, a := range req.Allocations {
+		txID, _ := a.TransactionID.Value()
 		allocations[i] = &pb.CreateSettlementAllocationParam{
-			TransactionId: a.TransactionID,
-			InvoiceId:     a.InvoiceID,
-			Amount:        a.Amount,
-			Note:          a.Note.Ptr(),
+			TransactionId:  txID,
+			TransactionKey: a.TransactionKey.Ptr(),
+			InvoiceId:      a.InvoiceID,
+			Amount:         a.Amount,
+			Note:           a.Note.Ptr(),
+		}
+		if at, ok := a.AppliedAt.Value(); ok {
+			allocations[i].CreatedAt = timestamppb.New(at)
+		}
+	}
+	newTransactions := make([]*pb.NewSettlementTransactionParam, len(req.NewTransactions))
+	for i, nt := range req.NewTransactions {
+		newTransactions[i] = &pb.NewSettlementTransactionParam{
+			Key:                   nt.Key,
+			TransactionTypeCode:   string(nt.TransactionTypeCode),
+			TransactionMethodCode: nt.TransactionMethodCode.Ptr().StringPtr(),
+			AdjustmentTypeCode:    nt.AdjustmentTypeCode.Ptr(),
+			CustomerId:            nt.CustomerID,
 		}
 	}
 
 	pbReq := &pb.CreateSettlementRequest{
 		ResponsibleUserId: req.ResponsibleUserID,
 		Allocations:       allocations,
+		NewTransactions:   newTransactions,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, settlementSvcTracer, "service.settlements.create", domain.ServiceName,
@@ -142,8 +158,9 @@ func (m *settlementSvcImpl) UpdateSettlement(ctx context.Context, req *UpdateSet
 	pbReq := &pb.UpdateSettlementRequest{
 		Id:                req.SettlementID,
 		Number:            req.Number.Ptr(),
-		Note:              req.Note.Ptr(),
 		ResponsibleUserId: req.ResponsibleUserID.Ptr(),
+		Note:              req.Note.ValuePtr(),
+		ClearNote:         req.Note.IsClear(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, settlementSvcTracer, "service.settlements.update", domain.ServiceName,
@@ -207,14 +224,13 @@ func stashSettlementMeta(meta *resourcekit.LoadMeta, d *pb.SettlementInfo) {
 		meta.Set(constants.ObjectTypeSettlement, d.Id, "responsible_user_id", *d.ResponsibleUserId)
 	}
 
-	if d.Allocations != nil {
-		allocations := make([]apiresource.TransactionAllocation, len(d.Allocations))
-		for i, a := range d.Allocations {
-			allocations[i] = transactionAllocationFromProto(meta, a)
-		}
-		meta.Set(constants.ObjectTypeSettlement, d.Id, "allocations",
-			apiresource.NewList(allocations, apiresource.PageInfo{}))
+	// Stashed even when empty: it is only read when `allocations` was requested and loaded.
+	allocations := make([]apiresource.TransactionAllocation, len(d.Allocations))
+	for i, a := range d.Allocations {
+		allocations[i] = transactionAllocationFromProto(meta, a)
 	}
+	meta.Set(constants.ObjectTypeSettlement, d.Id, "allocations",
+		apiresource.NewList(allocations, apiresource.PageInfo{}))
 }
 
 func transactionAllocationFromProto(meta *resourcekit.LoadMeta, a *pb.TransactionAllocationInfo) apiresource.TransactionAllocation {
@@ -240,6 +256,7 @@ func transactionAllocationFromProto(meta *resourcekit.LoadMeta, a *pb.Transactio
 		CreatedAt: grpcutil.TimestampToTime(a.CreatedAt),
 		UpdatedAt: grpcutil.TimestampToTime(a.UpdatedAt),
 	}
+	alloc.Invoice, alloc.Settlement = apiresource.AllocationReferences(a.InvoiceId, a.InvoiceNumber, a.SettlementId, a.SettlementNumber)
 
 	return alloc
 }

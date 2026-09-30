@@ -22,7 +22,7 @@ type UpdateSettlementRequest struct {
 	// Must be unique within the account.
 	Number field.Optional[string] `json:"number,omitzero" validate:"omitempty,max=255"`
 	// Note for this settlement.
-	Note field.Optional[string] `json:"note,omitzero"`
+	Note field.Clearable[string] `json:"note,omitzero"`
 	// ID of the user responsible for this settlement.
 	//
 	// Accepts either an account user ID or a user ID; the value is resolved to an account user in the current account.
@@ -32,7 +32,7 @@ type UpdateSettlementRequest struct {
 var sampleUpdateSettlementNote = "Partial payment applied"
 var sampleUpdateSettlementUserID = apiresource.SampleUserID
 var sampleUpdateSettlementRequest = &UpdateSettlementRequest{
-	Note:              field.Some(sampleUpdateSettlementNote),
+	Note:              field.Set(sampleUpdateSettlementNote),
 	ResponsibleUserID: field.Some(sampleUpdateSettlementUserID),
 }
 

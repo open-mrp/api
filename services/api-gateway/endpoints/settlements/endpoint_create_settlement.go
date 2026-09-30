@@ -3,6 +3,7 @@ package settlementep
 import (
 	"context"
 	"net/http"
+	"time"
 
 	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
@@ -15,8 +16,10 @@ import (
 
 // A single allocation applying part of a transaction's amount to an invoice.
 type CreateSettlementAllocationRequest struct {
-	// ID of the transaction (payment, rebate, adjustment, or credit memo) to allocate from.
-	TransactionID string `json:"transaction_id" validate:"required"`
+	// ID of the transaction (payment, rebate, adjustment, or credit memo) to allocate from. Omit it and set `transaction_key` to allocate from one of the settlement's `new_transactions`.
+	TransactionID field.Optional[string] `json:"transaction_id,omitzero"`
+	// Key of the entry in `new_transactions` to allocate from, instead of an existing transaction.
+	TransactionKey field.Optional[string] `json:"transaction_key,omitzero"`
 	// ID of the invoice the amount is applied to.
 	InvoiceID string `json:"invoice_id" validate:"required"`
 	// The part of the transaction's amount to apply to this invoice, as a decimal string in US dollars.
@@ -25,6 +28,24 @@ type CreateSettlementAllocationRequest struct {
 	Amount string `json:"amount" validate:"required"`
 	// Free-form note about this allocation.
 	Note field.Optional[string] `json:"note,omitzero"`
+	// When the amount was applied, reported as the allocation's `created_at`; defaults to now.
+	AppliedAt field.Optional[time.Time] `json:"applied_at,omitzero"`
+}
+
+// A transaction recorded together with the settlement that applies it, such as an adjustment or credit entered while settling.
+//
+// Its amount is the sum of the allocations naming its key. It is dated, and its funds counted as received, at the first of those allocations.
+type NewSettlementTransactionRequest struct {
+	// Names the transaction within this request; allocations draw on it through `transaction_key`.
+	Key string `json:"key" validate:"required"`
+	// Type of the transaction.
+	TransactionTypeCode constants.TransactionType `json:"type" validate:"required"`
+	// How the money moved, for a payment.
+	TransactionMethodCode field.Optional[constants.TransactionMethod] `json:"method,omitzero" validate:"omitempty"`
+	// Kind of adjustment, for an adjustment.
+	AdjustmentTypeCode field.Optional[string] `json:"adjustment_type,omitzero" validate:"omitempty,max=255"`
+	// The customer the transaction belongs to.
+	CustomerID string `json:"customer_id" validate:"required"`
 }
 
 // Request to create a settlement.
@@ -35,13 +56,15 @@ type CreateSettlementRequest struct {
 	ResponsibleUserID string `json:"responsible_user_id" validate:"required"`
 	// Allocations to record in this settlement.
 	Allocations []CreateSettlementAllocationRequest `json:"allocations" validate:"required,min=1"`
+	// Transactions to record with the settlement.
+	NewTransactions []NewSettlementTransactionRequest `json:"new_transactions,omitzero"`
 }
 
 var sampleCreateSettlementRequest = &CreateSettlementRequest{
 	ResponsibleUserID: apiresource.SampleUserID,
 	Allocations: []CreateSettlementAllocationRequest{
 		{
-			TransactionID: apiresource.SampleTransactionDetailID,
+			TransactionID: field.Some(apiresource.SampleTransactionDetailID),
 			InvoiceID:     apiresource.SampleInvoiceID,
 			Amount:        "150.00",
 		},

@@ -151,6 +151,10 @@ INSERT IGNORE INTO transaction (id, number, customer_account_id, amount_id, tran
     -- open-credits/customer_ids array filter sees >=2 distinct customers.
     ('tx_01seedfctxn4_0000', 'TXN-FC-4', 'ac_01seedcustomer2_acct0',     'qu_01seedfctx4_amt00', 'credit_memo', 'ach',   NULL,        0, 'ac_01k0a5smf9ekb8rqg12555zjqa', DATE_ADD(NOW(), INTERVAL 9 YEAR), DATE_ADD(NOW(), INTERVAL 9 YEAR));
 
+-- Received, so they count as open credits.
+UPDATE transaction SET funds_received_at = created_at
+WHERE id IN ('tx_01seedfctxn1_0000', 'tx_01seedfctxn2_0000', 'tx_01seedfctxn3_0000', 'tx_01seedfctxn4_0000', 'tx_01seedtransaction01') AND funds_received_at IS NULL;
+
 -- ============================================================
 -- SETTLEMENT + ALLOCATIONS linking it to the discovered top transactions
 -- and top invoices.

@@ -57,78 +57,6 @@ func (q *Queries) CheckSettlementNumberDuplicate(ctx context.Context, arg CheckS
 	return result, err
 }
 
-const countSettlements = `-- name: CountSettlements :one
-SELECT COUNT(DISTINCT s.id) AS total_count
-FROM settlement s
-LEFT JOIN transaction_allocation ta ON ta.settlement_id = s.id
-WHERE s.account_id = ?
-AND (
-    ? IS NULL
-    OR MATCH(s.number, s.note) AGAINST (? IN BOOLEAN MODE)
-)
-AND (
-    ? = false
-    OR ta.transaction_id IN (/*SLICE:transaction_ids*/?)
-)
-AND (
-    ? = false
-    OR ta.invoice_id IN (/*SLICE:invoice_ids*/?)
-)
-AND (
-    ? IS NULL
-    OR s.created_at >= ?
-)
-AND (
-    ? IS NULL
-    OR s.created_at <= ?
-)
-`
-
-type CountSettlementsParams struct {
-	AccountID                string
-	SearchQuery              sql.NullString
-	IncludeTransactionFilter interface{}
-	TransactionIds           []string
-	IncludeInvoiceFilter     interface{}
-	InvoiceIds               []string
-	StartDate                sql.NullTime
-	EndDate                  sql.NullTime
-}
-
-func (q *Queries) CountSettlements(ctx context.Context, arg CountSettlementsParams) (int64, error) {
-	query := countSettlements
-	var queryParams []interface{}
-	queryParams = append(queryParams, arg.AccountID)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.IncludeTransactionFilter)
-	if len(arg.TransactionIds) > 0 {
-		for _, v := range arg.TransactionIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:transaction_ids*/?", strings.Repeat(",?", len(arg.TransactionIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:transaction_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeInvoiceFilter)
-	if len(arg.InvoiceIds) > 0 {
-		for _, v := range arg.InvoiceIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:invoice_ids*/?", strings.Repeat(",?", len(arg.InvoiceIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:invoice_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.StartDate)
-	queryParams = append(queryParams, arg.StartDate)
-	queryParams = append(queryParams, arg.EndDate)
-	queryParams = append(queryParams, arg.EndDate)
-	row := q.db.QueryRowContext(ctx, query, queryParams...)
-	var total_count int64
-	err := row.Scan(&total_count)
-	return total_count, err
-}
-
 const deleteOrphanedAdjustmentTransactions = `-- name: DeleteOrphanedAdjustmentTransactions :exec
 DELETE t FROM ` + "`" + `transaction` + "`" + ` t
 WHERE t.transaction_type_code = 'adjustment'
@@ -377,70 +305,57 @@ func (q *Queries) GetSettlementAllocationTransactionIDs(ctx context.Context, set
 	return items, nil
 }
 
-const getSettlementAllocations = `-- name: GetSettlementAllocations :many
+const getTransactionAllocationTotals = `-- name: GetTransactionAllocationTotals :many
 SELECT
-    ta.id,
-    ta.note,
-    ta.created_at,
-    ta.updated_at,
-    q.id AS amount_id,
-    q.value AS amount_value,
-    qu.id AS amount_unit_id,
-    qu.abbreviation AS amount_unit_abbreviation,
     t.id AS transaction_id,
-    t.number AS transaction_number,
-    t.transaction_type_code AS transaction_type,
-    inv.id AS invoice_id,
-    inv.number AS invoice_number
-FROM transaction_allocation ta
-JOIN quantity q ON q.id = ta.amount_id
-JOIN unit qu ON qu.id = q.unit_id
-JOIN ` + "`" + `transaction` + "`" + ` t ON t.id = ta.transaction_id
-JOIN invoice inv ON inv.id = ta.invoice_id
-WHERE ta.settlement_id = ?
-ORDER BY ta.created_at ASC
+    CAST(q.value AS CHAR) AS amount,
+    CAST(COALESCE((
+        SELECT SUM(aq.value)
+        FROM transaction_allocation ta
+        JOIN quantity aq ON aq.id = ta.amount_id
+        WHERE ta.transaction_id = t.id
+    ), 0) AS CHAR) AS allocated_total
+FROM ` + "`" + `transaction` + "`" + ` t
+JOIN quantity q ON q.id = t.amount_id
+WHERE t.account_id = ?
+AND t.id IN (/*SLICE:transaction_ids*/?)
 `
 
-type GetSettlementAllocationsRow struct {
-	ID                     string
-	Note                   sql.NullString
-	CreatedAt              time.Time
-	UpdatedAt              time.Time
-	AmountID               string
-	AmountValue            string
-	AmountUnitID           string
-	AmountUnitAbbreviation string
-	TransactionID          string
-	TransactionNumber      string
-	TransactionType        string
-	InvoiceID              string
-	InvoiceNumber          string
+type GetTransactionAllocationTotalsParams struct {
+	AccountID      string
+	TransactionIds []string
 }
 
-func (q *Queries) GetSettlementAllocations(ctx context.Context, settlementID sql.NullString) ([]GetSettlementAllocationsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getSettlementAllocations, settlementID)
+type GetTransactionAllocationTotalsRow struct {
+	TransactionID  string
+	Amount         interface{}
+	AllocatedTotal interface{}
+}
+
+// For a set of transactions, the amount and the sum of every allocation drawn from it, from any
+// settlement. Whether the transaction is fully allocated is decided in Go
+// (domain.TransactionFullyAllocated), which rounds the remainder the way the dashboard does.
+func (q *Queries) GetTransactionAllocationTotals(ctx context.Context, arg GetTransactionAllocationTotalsParams) ([]GetTransactionAllocationTotalsRow, error) {
+	query := getTransactionAllocationTotals
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	if len(arg.TransactionIds) > 0 {
+		for _, v := range arg.TransactionIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:transaction_ids*/?", strings.Repeat(",?", len(arg.TransactionIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:transaction_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetSettlementAllocationsRow
+	var items []GetTransactionAllocationTotalsRow
 	for rows.Next() {
-		var i GetSettlementAllocationsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Note,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.AmountID,
-			&i.AmountValue,
-			&i.AmountUnitID,
-			&i.AmountUnitAbbreviation,
-			&i.TransactionID,
-			&i.TransactionNumber,
-			&i.TransactionType,
-			&i.InvoiceID,
-			&i.InvoiceNumber,
-		); err != nil {
+		var i GetTransactionAllocationTotalsRow
+		if err := rows.Scan(&i.TransactionID, &i.Amount, &i.AllocatedTotal); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -496,7 +411,7 @@ func (q *Queries) InsertSettlement(ctx context.Context, arg InsertSettlementPara
 
 const insertTransactionAllocation = `-- name: InsertTransactionAllocation :exec
 INSERT INTO transaction_allocation (id, transaction_id, amount_id, invoice_id, settlement_id, note, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, NOW(3), NOW(3))
+VALUES (?, ?, ?, ?, ?, ?, COALESCE(?, NOW(3)), NOW(3))
 `
 
 type InsertTransactionAllocationParams struct {
@@ -506,6 +421,7 @@ type InsertTransactionAllocationParams struct {
 	InvoiceID     string
 	SettlementID  sql.NullString
 	Note          sql.NullString
+	CreatedAt     interface{}
 }
 
 func (q *Queries) InsertTransactionAllocation(ctx context.Context, arg InsertTransactionAllocationParams) error {
@@ -516,300 +432,9 @@ func (q *Queries) InsertTransactionAllocation(ctx context.Context, arg InsertTra
 		arg.InvoiceID,
 		arg.SettlementID,
 		arg.Note,
+		arg.CreatedAt,
 	)
 	return err
-}
-
-const listSettlementsBackward = `-- name: ListSettlementsBackward :many
-SELECT
-    s.id,
-    s.number,
-    s.created_at,
-    s.updated_at,
-    COUNT(ta.id) AS allocation_count,
-    SUM(CASE WHEN t.transaction_type_code = 'payment' THEN q.value ELSE 0 END) AS total_payments,
-    SUM(CASE WHEN t.transaction_type_code = 'rebate' THEN q.value ELSE 0 END) AS total_rebates,
-    SUM(CASE WHEN t.transaction_type_code = 'adjustment' THEN q.value ELSE 0 END) AS total_adjustments,
-    SUM(CASE WHEN t.transaction_type_code = 'credit_memo' THEN q.value ELSE 0 END) AS total_credits,
-    GROUP_CONCAT(DISTINCT inv.number ORDER BY inv.number SEPARATOR ',') AS invoice_numbers,
-    GROUP_CONCAT(DISTINCT buyer.name ORDER BY buyer.name SEPARATOR ',') AS customer_names
-FROM settlement s
-LEFT JOIN transaction_allocation ta ON ta.settlement_id = s.id
-LEFT JOIN ` + "`" + `transaction` + "`" + ` t ON t.id = ta.transaction_id
-LEFT JOIN quantity q ON q.id = ta.amount_id
-LEFT JOIN invoice inv ON inv.id = ta.invoice_id
-LEFT JOIN sales_order so ON so.id = inv.sales_order_id
-LEFT JOIN account buyer ON buyer.id = so.buyer_account_id
-WHERE s.account_id = ?
-AND (
-    ? IS NULL
-    OR MATCH(s.number, s.note) AGAINST (? IN BOOLEAN MODE)
-)
-AND (
-    ? = false
-    OR ta.transaction_id IN (/*SLICE:transaction_ids*/?)
-)
-AND (
-    ? = false
-    OR ta.invoice_id IN (/*SLICE:invoice_ids*/?)
-)
-AND (
-    ? IS NULL
-    OR s.created_at >= ?
-)
-AND (
-    ? IS NULL
-    OR s.created_at <= ?
-)
-AND (
-    ? IS NULL
-    OR s.created_at > ?
-    OR (s.created_at = ? AND s.id > ?)
-)
-GROUP BY s.id, s.number, s.created_at, s.updated_at
-ORDER BY s.created_at ASC, s.id ASC
-LIMIT ?
-`
-
-type ListSettlementsBackwardParams struct {
-	AccountID                string
-	SearchQuery              sql.NullString
-	IncludeTransactionFilter interface{}
-	TransactionIds           []string
-	IncludeInvoiceFilter     interface{}
-	InvoiceIds               []string
-	StartDate                sql.NullTime
-	EndDate                  sql.NullTime
-	CursorCreatedAt          sql.NullTime
-	CursorID                 sql.NullString
-	Limit                    int32
-}
-
-type ListSettlementsBackwardRow struct {
-	ID               string
-	Number           string
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
-	AllocationCount  int64
-	TotalPayments    interface{}
-	TotalRebates     interface{}
-	TotalAdjustments interface{}
-	TotalCredits     interface{}
-	InvoiceNumbers   sql.NullString
-	CustomerNames    sql.NullString
-}
-
-func (q *Queries) ListSettlementsBackward(ctx context.Context, arg ListSettlementsBackwardParams) ([]ListSettlementsBackwardRow, error) {
-	query := listSettlementsBackward
-	var queryParams []interface{}
-	queryParams = append(queryParams, arg.AccountID)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.IncludeTransactionFilter)
-	if len(arg.TransactionIds) > 0 {
-		for _, v := range arg.TransactionIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:transaction_ids*/?", strings.Repeat(",?", len(arg.TransactionIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:transaction_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeInvoiceFilter)
-	if len(arg.InvoiceIds) > 0 {
-		for _, v := range arg.InvoiceIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:invoice_ids*/?", strings.Repeat(",?", len(arg.InvoiceIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:invoice_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.StartDate)
-	queryParams = append(queryParams, arg.StartDate)
-	queryParams = append(queryParams, arg.EndDate)
-	queryParams = append(queryParams, arg.EndDate)
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorID)
-	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.db.QueryContext(ctx, query, queryParams...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListSettlementsBackwardRow
-	for rows.Next() {
-		var i ListSettlementsBackwardRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Number,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.AllocationCount,
-			&i.TotalPayments,
-			&i.TotalRebates,
-			&i.TotalAdjustments,
-			&i.TotalCredits,
-			&i.InvoiceNumbers,
-			&i.CustomerNames,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listSettlementsForward = `-- name: ListSettlementsForward :many
-SELECT
-    s.id,
-    s.number,
-    s.created_at,
-    s.updated_at,
-    COUNT(ta.id) AS allocation_count,
-    SUM(CASE WHEN t.transaction_type_code = 'payment' THEN q.value ELSE 0 END) AS total_payments,
-    SUM(CASE WHEN t.transaction_type_code = 'rebate' THEN q.value ELSE 0 END) AS total_rebates,
-    SUM(CASE WHEN t.transaction_type_code = 'adjustment' THEN q.value ELSE 0 END) AS total_adjustments,
-    SUM(CASE WHEN t.transaction_type_code = 'credit_memo' THEN q.value ELSE 0 END) AS total_credits,
-    GROUP_CONCAT(DISTINCT inv.number ORDER BY inv.number SEPARATOR ',') AS invoice_numbers,
-    GROUP_CONCAT(DISTINCT buyer.name ORDER BY buyer.name SEPARATOR ',') AS customer_names
-FROM settlement s
-LEFT JOIN transaction_allocation ta ON ta.settlement_id = s.id
-LEFT JOIN ` + "`" + `transaction` + "`" + ` t ON t.id = ta.transaction_id
-LEFT JOIN quantity q ON q.id = ta.amount_id
-LEFT JOIN invoice inv ON inv.id = ta.invoice_id
-LEFT JOIN sales_order so ON so.id = inv.sales_order_id
-LEFT JOIN account buyer ON buyer.id = so.buyer_account_id
-WHERE s.account_id = ?
-AND (
-    ? IS NULL
-    OR MATCH(s.number, s.note) AGAINST (? IN BOOLEAN MODE)
-)
-AND (
-    ? = false
-    OR ta.transaction_id IN (/*SLICE:transaction_ids*/?)
-)
-AND (
-    ? = false
-    OR ta.invoice_id IN (/*SLICE:invoice_ids*/?)
-)
-AND (
-    ? IS NULL
-    OR s.created_at >= ?
-)
-AND (
-    ? IS NULL
-    OR s.created_at <= ?
-)
-AND (
-    ? IS NULL
-    OR s.created_at < ?
-    OR (s.created_at = ? AND s.id < ?)
-)
-GROUP BY s.id, s.number, s.created_at, s.updated_at
-ORDER BY s.created_at DESC, s.id DESC
-LIMIT ?
-`
-
-type ListSettlementsForwardParams struct {
-	AccountID                string
-	SearchQuery              sql.NullString
-	IncludeTransactionFilter interface{}
-	TransactionIds           []string
-	IncludeInvoiceFilter     interface{}
-	InvoiceIds               []string
-	StartDate                sql.NullTime
-	EndDate                  sql.NullTime
-	CursorCreatedAt          sql.NullTime
-	CursorID                 sql.NullString
-	Limit                    int32
-}
-
-type ListSettlementsForwardRow struct {
-	ID               string
-	Number           string
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
-	AllocationCount  int64
-	TotalPayments    interface{}
-	TotalRebates     interface{}
-	TotalAdjustments interface{}
-	TotalCredits     interface{}
-	InvoiceNumbers   sql.NullString
-	CustomerNames    sql.NullString
-}
-
-func (q *Queries) ListSettlementsForward(ctx context.Context, arg ListSettlementsForwardParams) ([]ListSettlementsForwardRow, error) {
-	query := listSettlementsForward
-	var queryParams []interface{}
-	queryParams = append(queryParams, arg.AccountID)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.IncludeTransactionFilter)
-	if len(arg.TransactionIds) > 0 {
-		for _, v := range arg.TransactionIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:transaction_ids*/?", strings.Repeat(",?", len(arg.TransactionIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:transaction_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.IncludeInvoiceFilter)
-	if len(arg.InvoiceIds) > 0 {
-		for _, v := range arg.InvoiceIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:invoice_ids*/?", strings.Repeat(",?", len(arg.InvoiceIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:invoice_ids*/?", "NULL", 1)
-	}
-	queryParams = append(queryParams, arg.StartDate)
-	queryParams = append(queryParams, arg.StartDate)
-	queryParams = append(queryParams, arg.EndDate)
-	queryParams = append(queryParams, arg.EndDate)
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorCreatedAt)
-	queryParams = append(queryParams, arg.CursorID)
-	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.db.QueryContext(ctx, query, queryParams...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListSettlementsForwardRow
-	for rows.Next() {
-		var i ListSettlementsForwardRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Number,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.AllocationCount,
-			&i.TotalPayments,
-			&i.TotalRebates,
-			&i.TotalAdjustments,
-			&i.TotalCredits,
-			&i.InvoiceNumbers,
-			&i.CustomerNames,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const updateInvoicePaymentStatus = `-- name: UpdateInvoicePaymentStatus :exec
@@ -818,23 +443,34 @@ SET is_paid_in_full = ?,
     is_over_paid = ?,
     updated_at = NOW(3)
 WHERE id = ?
+AND account_id = ?
 `
 
 type UpdateInvoicePaymentStatusParams struct {
 	IsPaidInFull bool
 	IsOverPaid   bool
 	ID           string
+	AccountID    string
 }
 
 func (q *Queries) UpdateInvoicePaymentStatus(ctx context.Context, arg UpdateInvoicePaymentStatusParams) error {
-	_, err := q.db.ExecContext(ctx, updateInvoicePaymentStatus, arg.IsPaidInFull, arg.IsOverPaid, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateInvoicePaymentStatus,
+		arg.IsPaidInFull,
+		arg.IsOverPaid,
+		arg.ID,
+		arg.AccountID,
+	)
 	return err
 }
 
 const updateSettlement = `-- name: UpdateSettlement :exec
 UPDATE settlement SET
     number = COALESCE(?, number),
-    note = COALESCE(?, note),
+    note = CASE
+        WHEN ? = 1 THEN NULL
+        WHEN ? IS NOT NULL THEN ?
+        ELSE note
+    END,
     responsible_user_id = COALESCE(?, responsible_user_id),
     updated_at = NOW(3)
 WHERE id = ?
@@ -843,6 +479,7 @@ AND account_id = ?
 
 type UpdateSettlementParams struct {
 	Number            sql.NullString
+	ClearNote         interface{}
 	Note              sql.NullString
 	ResponsibleUserID sql.NullString
 	ID                string
@@ -852,6 +489,8 @@ type UpdateSettlementParams struct {
 func (q *Queries) UpdateSettlement(ctx context.Context, arg UpdateSettlementParams) error {
 	_, err := q.db.ExecContext(ctx, updateSettlement,
 		arg.Number,
+		arg.ClearNote,
+		arg.Note,
 		arg.Note,
 		arg.ResponsibleUserID,
 		arg.ID,
@@ -863,11 +502,13 @@ func (q *Queries) UpdateSettlement(ctx context.Context, arg UpdateSettlementPara
 const updateTransactionsFullyAllocated = `-- name: UpdateTransactionsFullyAllocated :exec
 UPDATE ` + "`" + `transaction` + "`" + `
 SET is_fully_allocated = ?, updated_at = NOW(3)
-WHERE id IN (/*SLICE:transaction_ids*/?)
+WHERE account_id = ?
+AND id IN (/*SLICE:transaction_ids*/?)
 `
 
 type UpdateTransactionsFullyAllocatedParams struct {
 	IsFullyAllocated bool
+	AccountID        string
 	TransactionIds   []string
 }
 
@@ -875,6 +516,7 @@ func (q *Queries) UpdateTransactionsFullyAllocated(ctx context.Context, arg Upda
 	query := updateTransactionsFullyAllocated
 	var queryParams []interface{}
 	queryParams = append(queryParams, arg.IsFullyAllocated)
+	queryParams = append(queryParams, arg.AccountID)
 	if len(arg.TransactionIds) > 0 {
 		for _, v := range arg.TransactionIds {
 			queryParams = append(queryParams, v)

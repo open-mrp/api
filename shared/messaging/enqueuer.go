@@ -13,6 +13,7 @@ import (
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/db"
 	"github.com/open-mrp/api/shared/lease"
+	"github.com/open-mrp/api/shared/querytag"
 	"github.com/open-mrp/api/shared/retry"
 )
 
@@ -58,6 +59,12 @@ type EnqueuerConfig struct {
 
 	// PurgeLeaseTTL (optional; default: 5m) bounds how long the purge loop holds its distributed lease. The lease ensures only one pod per service performs the bulk DELETE of published messages each tick.
 	PurgeLeaseTTL time.Duration
+
+	// PurgeBatchSize (optional; default: 200) is the most published messages one purge DELETE removes.
+	PurgeBatchSize int32
+
+	// PurgeMaxBatches (optional; default: 100) caps the DELETE batches in one purge tick; a larger backlog continues on the next tick.
+	PurgeMaxBatches int
 }
 
 // WithDefaults fills zero-value fields with production defaults and returns the config. It computes a unique lock owner from the hostname and process ID when not set.
@@ -134,6 +141,12 @@ func (c *EnqueuerConfig) WithDefaults() *EnqueuerConfig {
 	if c.PurgeLeaseTTL == 0 {
 		c.PurgeLeaseTTL = 5 * time.Minute
 	}
+	if c.PurgeBatchSize == 0 {
+		c.PurgeBatchSize = defaultPurgeBatchSize
+	}
+	if c.PurgeMaxBatches == 0 {
+		c.PurgeMaxBatches = defaultPurgeMaxBatches
+	}
 	return c
 }
 
@@ -165,6 +178,12 @@ func (c *EnqueuerConfig) validate() error {
 	}
 	if c.PurgeLeaseTTL <= 0 {
 		return fmt.Errorf("enqueuer: purge lease TTL must be positive")
+	}
+	if c.PurgeBatchSize <= 0 {
+		return fmt.Errorf("enqueuer: purge batch size must be positive")
+	}
+	if c.PurgeMaxBatches <= 0 {
+		return fmt.Errorf("enqueuer: purge max batches must be positive")
 	}
 	return nil
 }
@@ -242,6 +261,7 @@ func (e *Enqueuer) Notify() {
 func (e *Enqueuer) Start(ctx context.Context) error {
 	// Disable tracing for background outbox operations to avoid cluttering traces.
 	ctx = appctx.WithNoTrace(ctx)
+	ctx = querytag.With(ctx, querytag.Job, "outbox-enqueuer")
 	e.ctx, e.cancel = context.WithCancel(ctx)
 
 	e.wg.Add(3)
@@ -454,11 +474,14 @@ func (e *Enqueuer) purgeLoop() {
 
 // purgePublished deletes published outbox messages that are older than the configured retention period. This keeps the outbox table from growing unboundedly while still preserving recent records for debugging and audit. Failed messages are intentionally kept indefinitely for investigation.
 func (e *Enqueuer) purgePublished(ctx context.Context) {
-	var count int64
-	err := WithOutboxDBLockRetry(ctx, e.config.DBRetryBackoff, "outbox.purge_published", func() error {
-		var err error
-		count, err = e.repo.PurgePublished(ctx, e.config.RetentionHours, 1000)
-		return err
+	count, err := purgeInBatches(ctx, e.config.PurgeBatchSize, e.config.PurgeMaxBatches, func(ctx context.Context, limit int32) (int64, error) {
+		var deleted int64
+		err := WithOutboxDBLockRetry(ctx, e.config.DBRetryBackoff, "outbox.purge_published", func() error {
+			var err error
+			deleted, err = e.repo.PurgePublished(ctx, e.config.RetentionHours, limit)
+			return err
+		})
+		return deleted, err
 	})
 	if err != nil {
 		slog.Error("Failed to purge published outbox messages", "error", err)

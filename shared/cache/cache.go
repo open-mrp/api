@@ -21,6 +21,10 @@ const (
 	defaultLoadTimeout   = 2 * time.Minute
 	defaultMaxValueBytes = 4 << 20
 	generationKeyPrefix  = "gen:"
+	loadLeaseKeyPrefix   = "lease:"
+
+	// loadLeasePoll is how often a process waiting on another's load checks the store.
+	loadLeasePoll = 100 * time.Millisecond
 
 	// generationTTL is how long a scope's generation marker lives. When it lapses the scope's entries are orphaned, costing misses but never staleness.
 	generationTTL = 24 * time.Hour
@@ -42,6 +46,9 @@ type Config struct {
 
 	// MaxValueBytes (optional; default: 4 MiB) is the largest encoded value stored; larger results are returned but not cached, so one huge report cannot evict everything else.
 	MaxValueBytes int
+
+	// LoadLeaseWait (optional; default: 0, off) makes a miss take a lease in the store before loading, so across every process sharing the store one computes the value while the rest poll for it, up to this long, before loading it themselves.
+	LoadLeaseWait time.Duration
 }
 
 // WithDefaults returns a copy of the config with unset fields filled. It is safe to call on a nil receiver.
@@ -71,6 +78,9 @@ func (c *Config) validate() error {
 	}
 	if c.MaxValueBytes <= 0 {
 		return fmt.Errorf("cache %s: max value bytes must be positive", c.Name)
+	}
+	if c.LoadLeaseWait < 0 {
+		return fmt.Errorf("cache %s: load lease wait must not be negative", c.Name)
 	}
 	return nil
 }
@@ -120,10 +130,12 @@ type loadResult[T any] struct {
 	err   *apierror.APIError
 }
 
-// GetOrLoad returns the cached value for key, or runs load, caches its result, and returns it. Concurrent misses for the same key in this process share one load. Loader errors are returned and never cached.
+// GetOrLoad returns the cached value for key, or runs load, caches its result, and returns it. Concurrent misses for the same key in this process share one load, even with no store. Loader errors are returned and never cached.
 func (c *Cache[T]) GetOrLoad(ctx context.Context, key Key, load func(context.Context) (T, *apierror.APIError)) (T, *apierror.APIError) {
 	if c.cfg.Store == nil {
-		return load(ctx)
+		return c.shareLoad(ctx, c.cfg.Name+"|"+strings.Join(key.Scopes, "|")+"|"+key.ID, func(loadCtx context.Context) (T, *apierror.APIError) {
+			return load(loadCtx)
+		})
 	}
 
 	span := trace.SpanFromContext(ctx)
@@ -140,14 +152,30 @@ func (c *Cache[T]) GetOrLoad(ctx context.Context, key Key, load func(context.Con
 	}
 	c.recordLookup(span, false)
 
-	ch := c.group.DoChan(storeKey, func() (any, error) {
-		loadCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), c.cfg.LoadTimeout)
-		defer cancel()
-
+	return c.shareLoad(ctx, storeKey, func(loadCtx context.Context) (T, *apierror.APIError) {
+		if c.cfg.LoadLeaseWait > 0 {
+			leased, release := c.takeLoadLease(loadCtx, span, storeKey)
+			if !leased {
+				if value, ok := c.awaitLoad(loadCtx, span, storeKey); ok {
+					return value, nil
+				}
+			}
+			defer release()
+		}
 		value, apiErr := load(loadCtx)
 		if apiErr == nil {
 			c.set(loadCtx, span, storeKey, value, key.TTL)
 		}
+		return value, apiErr
+	})
+}
+
+// shareLoad runs load once for every concurrent caller with the same key in this process. The load outlives a caller that gives up, so the others and the cache still get its result.
+func (c *Cache[T]) shareLoad(ctx context.Context, key string, load func(context.Context) (T, *apierror.APIError)) (T, *apierror.APIError) {
+	ch := c.group.DoChan(key, func() (any, error) {
+		loadCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), c.cfg.LoadTimeout)
+		defer cancel()
+		value, apiErr := load(loadCtx)
 		return loadResult[T]{value: value, err: apiErr}, nil
 	})
 
@@ -159,6 +187,50 @@ func (c *Cache[T]) GetOrLoad(ctx context.Context, key Key, load func(context.Con
 		var zero T
 		return zero, apierror.NewRequestTimeoutError("cache: caller gave up waiting on a shared load: " + ctx.Err().Error())
 	}
+}
+
+// takeLoadLease claims the store-wide right to load storeKey. It reports true when this process holds the lease, and also when the store fails, so an outage degrades to every process loading for itself. release frees the lease early, letting a waiter whose holder failed load at once instead of after LoadLeaseWait.
+func (c *Cache[T]) takeLoadLease(ctx context.Context, span trace.Span, storeKey string) (bool, func()) {
+	leaseKey := loadLeaseKeyPrefix + storeKey
+	added, err := c.cfg.Store.Add(ctx, leaseKey, []byte(newGeneration()), c.cfg.LoadTimeout)
+	if err != nil {
+		c.recordStoreError(span, "lease", err)
+		return true, func() {}
+	}
+	if !added {
+		return false, func() {}
+	}
+	return true, func() {
+		// A value that expires at once is a delete through the Store interface.
+		if err := c.cfg.Store.Set(context.WithoutCancel(ctx), leaseKey, nil, time.Millisecond); err != nil {
+			c.recordStoreError(span, "lease_release", err)
+		}
+	}
+}
+
+// awaitLoad polls for the value another process is loading, for up to LoadLeaseWait. It gives up early once that process's lease is gone without a value.
+func (c *Cache[T]) awaitLoad(ctx context.Context, span trace.Span, storeKey string) (T, bool) {
+	span.AddEvent("cache.await_lease", trace.WithAttributes(attribute.String("cache.name", c.cfg.Name)))
+	deadline := time.Now().Add(c.cfg.LoadLeaseWait)
+	ticker := time.NewTicker(loadLeasePoll)
+	defer ticker.Stop()
+	for time.Now().Before(deadline) {
+		select {
+		case <-ctx.Done():
+			var zero T
+			return zero, false
+		case <-ticker.C:
+		}
+		if value, ok := c.get(ctx, span, storeKey); ok {
+			return value, true
+		}
+		if _, held, err := c.cfg.Store.Get(ctx, loadLeaseKeyPrefix+storeKey); err != nil || !held {
+			// The holder may have stored its value and released in the moment since the read above.
+			return c.get(ctx, span, storeKey)
+		}
+	}
+	var zero T
+	return zero, false
 }
 
 // Peek returns the cached value for key without loading on a miss, for callers that would rather

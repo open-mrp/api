@@ -3125,7 +3125,7 @@ func (s *salesOrderSvcImpl) handleAccountPaymentIntentSucceeded(ctx context.Cont
 
 		amount := decimal.NewFromInt(paymentIntent.Amount).Div(decimal.NewFromInt(100)).String()
 		note := "Payment captured by Stripe"
-		return txRepo.Create(txCtx, txID, number, string(constants.TransactionTypePayment), accountID, customerID, &paymentIntent.ID, stripeTransactionMethodCode(paymentIntent.PaymentMethodTypes), nil, nil, &note, amount, dollarUnitID)
+		return txRepo.Create(txCtx, txID, number, string(constants.TransactionTypePayment), accountID, customerID, &paymentIntent.ID, stripeTransactionMethodCode(paymentIntent.PaymentMethodTypes), nil, nil, &note, amount, dollarUnitID, nil, nil)
 	})
 }
 

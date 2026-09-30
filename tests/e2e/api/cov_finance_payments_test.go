@@ -303,6 +303,58 @@ func TestPayments_SettlementRecordsItsNewTransactions(t *testing.T) {
 	awaitFullyAllocated(t, txID, true)
 }
 
+// A settlement owns the transactions it recorded: deleting it deletes them, whatever their type, or
+// their funds would stay received and reappear as open credits to apply again. Money it drew from a
+// transaction recorded on its own is released, not deleted.
+func TestPayments_DeletingASettlementRemovesTheTransactionsItRecorded(t *testing.T) {
+	t.Parallel()
+	inv := invoiceNewCustomer(t)
+	funds := time.Now().UTC().Add(-time.Hour).Truncate(time.Second)
+	existing := createPayment(t, inv.customerID, "10.00", &funds, nil)
+
+	types := []string{"payment", "credit_memo", "rebate", "adjustment"}
+	var newTransactions, allocations []any
+	for _, typ := range types {
+		nt := map[string]any{"key": typ, "type": typ, "customer_id": inv.customerID}
+		if typ == "payment" {
+			nt["method"] = "check"
+		}
+		newTransactions = append(newTransactions, nt)
+		allocations = append(allocations, map[string]any{"transaction_key": typ, "invoice_id": inv.invoiceID, "amount": "1.00"})
+	}
+	allocations = append(allocations, allocation(jsonField(existing, "id"), inv.invoiceID, "4.00"))
+	settlement := settle(t, map[string]any{"new_transactions": newTransactions, "allocations": allocations})
+	settlementID := jsonField(settlement, "id")
+
+	status, body, err := apiClient.GetListRaw(financeSettlementsPath+"/"+settlementID, url.Values{"include": {"allocations", "allocations.transaction"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	var recorded []string
+	for _, a := range jsonArray(jsonObject(parseJSON(body), "allocations"), "data") {
+		if txID := jsonField(jsonObject(a.(map[string]any), "transaction"), "id"); txID != jsonField(existing, "id") {
+			recorded = append(recorded, txID)
+		}
+	}
+	require.Len(t, recorded, len(types), "one transaction recorded per new_transactions entry")
+	awaitFullyAllocated(t, recorded[0], true)
+
+	status, body, err = apiClient.Delete(financeSettlementsPath + "/" + settlementID)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	for _, txID := range recorded {
+		status, body, err := apiClient.GetListRaw(financeTransactionsPath+"/"+txID, nil)
+		require.NoError(t, err)
+		assert.Equal(t, 404, status, "transaction %s recorded by the deleted settlement must go with it: %s", txID, string(body))
+	}
+	assert.Equal(t, jsonField(existing, "id"), jsonField(getTransaction(t, jsonField(existing, "id")), "id"), "a transaction recorded on its own is kept")
+	awaitFullyAllocated(t, jsonField(existing, "id"), false)
+
+	rows, _ := listPayments(t, financeOpenCreditsPath, url.Values{"customer_ids": {inv.customerID}})
+	require.Equal(t, []string{jsonField(existing, "id")}, rowIDs(rows), "only the standalone payment is open again")
+	assert.True(t, decimal.RequireFromString("10").Equal(decimal.RequireFromString(jsonField(rows[0], "leftover_amount"))))
+}
+
 func TestPayments_MoneyNotYetReceivedCannotBeSettled(t *testing.T) {
 	t.Parallel()
 	inv := invoiceNewCustomer(t)

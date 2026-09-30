@@ -307,6 +307,9 @@ func TestVitessSmoke(t *testing.T) {
 		checkAPI("GetTransactionAllocationTotals", apiErr)
 		_, apiErr = locked.GetInvoicePaymentTotals(ctx, acct, invIDs)
 		checkAPI("GetInvoicePaymentTotals", apiErr)
+		// Rolled back with the transaction above.
+		checkAPI("MarkTransactionsCreatedBySettlement", locked.MarkTransactionsCreatedBySettlement(ctx, acct, "sl_smoke", txIDs))
+		checkAPI("DeleteSettlementOwnedTransactions", locked.DeleteSettlementOwnedTransactions(ctx, acct, "sl_smoke"))
 	})
 
 	t.Run("sales facts and reports", func(t *testing.T) {

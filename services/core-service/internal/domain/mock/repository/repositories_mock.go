@@ -17286,18 +17286,18 @@ func (mr *MockSettlementRepoMockRecorder) DeleteAllocations(ctx, settlementID an
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAllocations", reflect.TypeOf((*MockSettlementRepo)(nil).DeleteAllocations), ctx, settlementID)
 }
 
-// DeleteOrphanedAdjustmentTransactions mocks base method.
-func (m *MockSettlementRepo) DeleteOrphanedAdjustmentTransactions(ctx context.Context, settlementID string) *apierror.APIError {
+// DeleteSettlementOwnedTransactions mocks base method.
+func (m *MockSettlementRepo) DeleteSettlementOwnedTransactions(ctx context.Context, accountID, settlementID string) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteOrphanedAdjustmentTransactions", ctx, settlementID)
+	ret := m.ctrl.Call(m, "DeleteSettlementOwnedTransactions", ctx, accountID, settlementID)
 	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
-// DeleteOrphanedAdjustmentTransactions indicates an expected call of DeleteOrphanedAdjustmentTransactions.
-func (mr *MockSettlementRepoMockRecorder) DeleteOrphanedAdjustmentTransactions(ctx, settlementID any) *gomock.Call {
+// DeleteSettlementOwnedTransactions indicates an expected call of DeleteSettlementOwnedTransactions.
+func (mr *MockSettlementRepoMockRecorder) DeleteSettlementOwnedTransactions(ctx, accountID, settlementID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteOrphanedAdjustmentTransactions", reflect.TypeOf((*MockSettlementRepo)(nil).DeleteOrphanedAdjustmentTransactions), ctx, settlementID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSettlementOwnedTransactions", reflect.TypeOf((*MockSettlementRepo)(nil).DeleteSettlementOwnedTransactions), ctx, accountID, settlementID)
 }
 
 // Get mocks base method.
@@ -17461,6 +17461,20 @@ func (m *MockSettlementRepo) LockPaymentFlagRows(ctx context.Context, accountID 
 func (mr *MockSettlementRepoMockRecorder) LockPaymentFlagRows(ctx, accountID, transactionIDs, invoiceIDs any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockPaymentFlagRows", reflect.TypeOf((*MockSettlementRepo)(nil).LockPaymentFlagRows), ctx, accountID, transactionIDs, invoiceIDs)
+}
+
+// MarkTransactionsCreatedBySettlement mocks base method.
+func (m *MockSettlementRepo) MarkTransactionsCreatedBySettlement(ctx context.Context, accountID, settlementID string, transactionIDs []string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkTransactionsCreatedBySettlement", ctx, accountID, settlementID, transactionIDs)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// MarkTransactionsCreatedBySettlement indicates an expected call of MarkTransactionsCreatedBySettlement.
+func (mr *MockSettlementRepoMockRecorder) MarkTransactionsCreatedBySettlement(ctx, accountID, settlementID, transactionIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkTransactionsCreatedBySettlement", reflect.TypeOf((*MockSettlementRepo)(nil).MarkTransactionsCreatedBySettlement), ctx, accountID, settlementID, transactionIDs)
 }
 
 // Update mocks base method.

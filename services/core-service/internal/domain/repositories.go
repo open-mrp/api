@@ -1622,7 +1622,10 @@ type SettlementRepo interface {
 	// AllocateNextSettlementNumber reserves the account's next settlement number in one locked statement.
 	AllocateNextSettlementNumber(ctx context.Context, sysPropertyID, accountID string) (int64, *apierror.APIError)
 	GetDollarUnitID(ctx context.Context) (string, *apierror.APIError)
-	DeleteOrphanedAdjustmentTransactions(ctx context.Context, settlementID string) *apierror.APIError
+	// DeleteSettlementOwnedTransactions removes the transactions a deleted settlement recorded itself and the adjustments only it drew on, unless another allocation still draws on them. Run before its allocations are deleted.
+	DeleteSettlementOwnedTransactions(ctx context.Context, accountID, settlementID string) *apierror.APIError
+	// MarkTransactionsCreatedBySettlement records that the settlement created these transactions inline.
+	MarkTransactionsCreatedBySettlement(ctx context.Context, accountID, settlementID string, transactionIDs []string) *apierror.APIError
 	UpdateTransactionsFullyAllocated(ctx context.Context, accountID string, transactionIDs []string, isFullyAllocated bool) *apierror.APIError
 	UpdateInvoicePaymentStatus(ctx context.Context, accountID, invoiceID string, isPaidInFull, isOverPaid bool) *apierror.APIError
 	GetInvoicePaymentTotals(ctx context.Context, accountID string, invoiceIDs []string) ([]PaymentTotals, *apierror.APIError)

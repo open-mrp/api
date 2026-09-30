@@ -2555,6 +2555,7 @@ type Transaction struct {
 	TransactionTypeCode   string
 	TransactionMethodCode sql.NullString
 	AdjustmentTypeCode    sql.NullString
+	CreatedBySettlementID sql.NullString
 }
 
 type TransactionAllocation struct {

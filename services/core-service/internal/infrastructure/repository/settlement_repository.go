@@ -293,12 +293,31 @@ func (r *settlementRepoImpl) AllocateNextSettlementNumber(ctx context.Context, s
 	return number, nil
 }
 
-func (r *settlementRepoImpl) DeleteOrphanedAdjustmentTransactions(ctx context.Context, settlementID string) *apierror.APIError {
-	ctx, span := settlementRepoTracer.Start(ctx, "repository.settlement.delete_orphaned_adjustments")
+func (r *settlementRepoImpl) DeleteSettlementOwnedTransactions(ctx context.Context, accountID, settlementID string) *apierror.APIError {
+	ctx, span := settlementRepoTracer.Start(ctx, "repository.settlement.delete_owned_transactions")
 	defer span.End()
 
-	err := r.queries.DeleteOrphanedAdjustmentTransactions(ctx, sqlc.DeleteOrphanedAdjustmentTransactionsParams{
+	err := r.queries.DeleteSettlementOwnedTransactions(ctx, sqlc.DeleteSettlementOwnedTransactionsParams{
+		AccountID:    accountID,
 		SettlementID: gosql.NullString{String: settlementID, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return nil
+}
+
+func (r *settlementRepoImpl) MarkTransactionsCreatedBySettlement(ctx context.Context, accountID, settlementID string, transactionIDs []string) *apierror.APIError {
+	ctx, span := settlementRepoTracer.Start(ctx, "repository.settlement.mark_transactions_created_by_settlement")
+	defer span.End()
+
+	if len(transactionIDs) == 0 {
+		return nil
+	}
+	err := r.queries.MarkTransactionsCreatedBySettlement(ctx, sqlc.MarkTransactionsCreatedBySettlementParams{
+		SettlementID:   gosql.NullString{String: settlementID, Valid: true},
+		AccountID:      accountID,
+		TransactionIds: transactionIDs,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)

@@ -57,30 +57,6 @@ func (q *Queries) CheckSettlementNumberDuplicate(ctx context.Context, arg CheckS
 	return result, err
 }
 
-const deleteOrphanedAdjustmentTransactions = `-- name: DeleteOrphanedAdjustmentTransactions :exec
-DELETE t FROM ` + "`" + `transaction` + "`" + ` t
-WHERE t.transaction_type_code = 'adjustment'
-AND t.id IN (
-    SELECT ta.transaction_id
-    FROM transaction_allocation ta
-    WHERE ta.settlement_id = ?
-)
-AND NOT EXISTS (
-    SELECT 1 FROM transaction_allocation ta2
-    WHERE ta2.transaction_id = t.id
-    AND (ta2.settlement_id IS NULL OR ta2.settlement_id != ?)
-)
-`
-
-type DeleteOrphanedAdjustmentTransactionsParams struct {
-	SettlementID sql.NullString
-}
-
-func (q *Queries) DeleteOrphanedAdjustmentTransactions(ctx context.Context, arg DeleteOrphanedAdjustmentTransactionsParams) error {
-	_, err := q.db.ExecContext(ctx, deleteOrphanedAdjustmentTransactions, arg.SettlementID, arg.SettlementID)
-	return err
-}
-
 const deleteQuantitiesBySettlementAllocations = `-- name: DeleteQuantitiesBySettlementAllocations :exec
 DELETE q FROM quantity q
 JOIN transaction_allocation ta ON ta.amount_id = q.id
@@ -172,6 +148,44 @@ func (q *Queries) DeleteSettlementAllocations(ctx context.Context, settlementID 
 		return nil, err
 	}
 	return items, nil
+}
+
+const deleteSettlementOwnedTransactions = `-- name: DeleteSettlementOwnedTransactions :exec
+DELETE t, q FROM ` + "`" + `transaction` + "`" + ` t
+JOIN quantity q ON q.id = t.amount_id
+WHERE t.account_id = ?
+AND (
+    t.created_by_settlement_id = ?
+    OR (t.transaction_type_code = 'adjustment' AND t.id IN (
+        SELECT ta.transaction_id
+        FROM transaction_allocation ta
+        WHERE ta.settlement_id = ?
+    ))
+)
+AND NOT EXISTS (
+    SELECT 1 FROM transaction_allocation ta2
+    WHERE ta2.transaction_id = t.id
+    AND (ta2.settlement_id IS NULL OR ta2.settlement_id != ?)
+)
+`
+
+type DeleteSettlementOwnedTransactionsParams struct {
+	AccountID    string
+	SettlementID sql.NullString
+}
+
+// Removes, with their amounts, the transactions a deleted settlement leaves with nothing to show for
+// them: those it recorded itself (new_transactions, any type), and adjustments only it drew on. A
+// transaction another settlement or a standalone allocation still draws on is kept. Run before the
+// settlement's allocations are deleted.
+func (q *Queries) DeleteSettlementOwnedTransactions(ctx context.Context, arg DeleteSettlementOwnedTransactionsParams) error {
+	_, err := q.db.ExecContext(ctx, deleteSettlementOwnedTransactions,
+		arg.AccountID,
+		arg.SettlementID,
+		arg.SettlementID,
+		arg.SettlementID,
+	)
+	return err
 }
 
 const deleteTransactionAllocationsBySettlement = `-- name: DeleteTransactionAllocationsBySettlement :exec
@@ -434,6 +448,36 @@ func (q *Queries) InsertTransactionAllocation(ctx context.Context, arg InsertTra
 		arg.Note,
 		arg.CreatedAt,
 	)
+	return err
+}
+
+const markTransactionsCreatedBySettlement = `-- name: MarkTransactionsCreatedBySettlement :exec
+UPDATE ` + "`" + `transaction` + "`" + `
+SET created_by_settlement_id = ?
+WHERE account_id = ?
+AND id IN (/*SLICE:transaction_ids*/?)
+`
+
+type MarkTransactionsCreatedBySettlementParams struct {
+	SettlementID   sql.NullString
+	AccountID      string
+	TransactionIds []string
+}
+
+func (q *Queries) MarkTransactionsCreatedBySettlement(ctx context.Context, arg MarkTransactionsCreatedBySettlementParams) error {
+	query := markTransactionsCreatedBySettlement
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.SettlementID)
+	queryParams = append(queryParams, arg.AccountID)
+	if len(arg.TransactionIds) > 0 {
+		for _, v := range arg.TransactionIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:transaction_ids*/?", strings.Repeat(",?", len(arg.TransactionIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:transaction_ids*/?", "NULL", 1)
+	}
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
 	return err
 }
 

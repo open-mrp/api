@@ -93,19 +93,33 @@ DELETE q FROM quantity q
 JOIN transaction_allocation ta ON ta.amount_id = q.id
 WHERE ta.settlement_id = sqlc.arg('settlement_id');
 
--- name: DeleteOrphanedAdjustmentTransactions :exec
-DELETE t FROM `transaction` t
-WHERE t.transaction_type_code = 'adjustment'
-AND t.id IN (
-    SELECT ta.transaction_id
-    FROM transaction_allocation ta
-    WHERE ta.settlement_id = sqlc.arg('settlement_id')
+-- name: DeleteSettlementOwnedTransactions :exec
+-- Removes, with their amounts, the transactions a deleted settlement leaves with nothing to show for
+-- them: those it recorded itself (new_transactions, any type), and adjustments only it drew on. A
+-- transaction another settlement or a standalone allocation still draws on is kept. Run before the
+-- settlement's allocations are deleted.
+DELETE t, q FROM `transaction` t
+JOIN quantity q ON q.id = t.amount_id
+WHERE t.account_id = sqlc.arg('account_id')
+AND (
+    t.created_by_settlement_id = sqlc.arg('settlement_id')
+    OR (t.transaction_type_code = 'adjustment' AND t.id IN (
+        SELECT ta.transaction_id
+        FROM transaction_allocation ta
+        WHERE ta.settlement_id = sqlc.arg('settlement_id')
+    ))
 )
 AND NOT EXISTS (
     SELECT 1 FROM transaction_allocation ta2
     WHERE ta2.transaction_id = t.id
     AND (ta2.settlement_id IS NULL OR ta2.settlement_id != sqlc.arg('settlement_id'))
 );
+
+-- name: MarkTransactionsCreatedBySettlement :exec
+UPDATE `transaction`
+SET created_by_settlement_id = sqlc.arg('settlement_id')
+WHERE account_id = sqlc.arg('account_id')
+AND id IN (sqlc.slice('transaction_ids'));
 
 -- name: UpdateTransactionsFullyAllocated :exec
 UPDATE `transaction`

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strconv"
 	"time"
 
@@ -216,7 +217,7 @@ func (s *settlementSvcImpl) CreateSettlement(ctx context.Context, params domain.
 				return apiErr
 			}
 
-			if apiErr := txSvc.createSettlementTransactions(txCtx, &params, dollarUnitID); apiErr != nil {
+			if apiErr := txSvc.createSettlementTransactions(txCtx, settlementID, &params, dollarUnitID); apiErr != nil {
 				return apiErr
 			}
 
@@ -443,8 +444,9 @@ func (s *settlementSvcImpl) DeleteSettlement(ctx context.Context, params domain.
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *settlementSvcImpl) *apierror.APIError {
 		txRepo := txSvc.repos.NewSettlementRepo()
 
-		// Delete orphaned adjustment transactions
-		if apiErr := txRepo.DeleteOrphanedAdjustmentTransactions(txCtx, params.SettlementID); apiErr != nil {
+		// The transactions it recorded itself, and adjustments only it drew on, would otherwise
+		// outlive it with their funds received and reappear as open credits.
+		if apiErr := txRepo.DeleteSettlementOwnedTransactions(txCtx, params.AccountID, params.SettlementID); apiErr != nil {
 			return apiErr
 		}
 
@@ -508,8 +510,9 @@ func allocationInvoiceIDs(allocs []domain.CreateSettlementAllocationParams) []st
 
 // createSettlementTransactions records the settlement's new transactions and points the allocations
 // that name them by key at their new IDs. As the dashboard recorded them, each is dated, and its funds
-// counted as received, at its first allocation, for the sum of its allocations, in dollars.
-func (s *settlementSvcImpl) createSettlementTransactions(ctx context.Context, params *domain.CreateSettlementParams, dollarUnitID string) *apierror.APIError {
+// counted as received, at its first allocation, for the sum of its allocations, in dollars. Each is
+// marked as the settlement's own, so deleting the settlement removes it.
+func (s *settlementSvcImpl) createSettlementTransactions(ctx context.Context, settlementID string, params *domain.CreateSettlementParams, dollarUnitID string) *apierror.APIError {
 	if len(params.NewTransactions) == 0 {
 		return nil
 	}
@@ -537,6 +540,14 @@ func (s *settlementSvcImpl) createSettlementTransactions(ctx context.Context, pa
 			return apiErr
 		}
 		ids[nt.Key] = txID
+	}
+	created := make([]string, 0, len(ids))
+	for _, txID := range ids {
+		created = append(created, txID)
+	}
+	sort.Strings(created)
+	if apiErr := s.repos.NewSettlementRepo().MarkTransactionsCreatedBySettlement(ctx, params.AccountID, settlementID, created); apiErr != nil {
+		return apiErr
 	}
 
 	for i := range params.Allocations {

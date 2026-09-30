@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -59,6 +58,8 @@ func (r *salesFactRepoImpl) ComputeFacts(ctx context.Context, invoiceIDs []strin
 			QuantityBase:       decimalStringPtr(row.QuantityBase),
 			TotalInvoiced:      decimalStringPtr(row.TotalInvoiced),
 			TotalCost:          decimalStringPtr(row.TotalCost),
+			OrderedAt:          nullTimePtr(row.OrderedAt),
+			IsPriced:           row.IsPriced == 1,
 		}
 	}
 	return out, nil
@@ -93,6 +94,8 @@ func (r *salesFactRepoImpl) GetFacts(ctx context.Context, invoiceIDs []string) (
 			QuantityBase:       nullStringPtr(row.QuantityBase),
 			TotalInvoiced:      nullStringPtr(row.TotalInvoiced),
 			TotalCost:          nullStringPtr(row.TotalCost),
+			OrderedAt:          nullTimePtr(row.OrderedAt),
+			IsPriced:           row.IsPriced,
 		}
 	}
 	return out, nil
@@ -109,23 +112,23 @@ func (r *salesFactRepoImpl) UpsertFacts(ctx context.Context, facts []domain.Sale
 		var sb strings.Builder
 		sb.WriteString(`INSERT INTO sales_line_fact (account_id, invoiced_at, invoice_line_id, invoice_id, sales_order_id,
 sales_order_type_code, buyer_account_id, sales_rep_id, order_discount_id, product_id, item_id, product_line_id,
-quantity_base, total_invoiced, total_cost, refreshed_at) VALUES `)
-		args := make([]any, 0, len(batch)*16)
+quantity_base, total_invoiced, total_cost, ordered_at, is_priced, refreshed_at) VALUES `)
+		args := make([]any, 0, len(batch)*18)
 		for i, f := range batch {
 			if i > 0 {
 				sb.WriteString(",")
 			}
-			sb.WriteString("(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+			sb.WriteString("(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
 			args = append(args, f.AccountID, f.InvoicedAt, f.InvoiceLineID, f.InvoiceID, f.SalesOrderID,
 				f.SalesOrderTypeCode, f.BuyerAccountID, f.SalesRepID, f.OrderDiscountID, f.ProductID, f.ItemID, f.ProductLineID,
-				f.QuantityBase, f.TotalInvoiced, f.TotalCost, now)
+				f.QuantityBase, f.TotalInvoiced, f.TotalCost, f.OrderedAt, f.IsPriced, now)
 		}
 		sb.WriteString(` ON DUPLICATE KEY UPDATE account_id = VALUES(account_id), invoiced_at = VALUES(invoiced_at),
 invoice_id = VALUES(invoice_id), sales_order_id = VALUES(sales_order_id), sales_order_type_code = VALUES(sales_order_type_code),
 buyer_account_id = VALUES(buyer_account_id), sales_rep_id = VALUES(sales_rep_id), order_discount_id = VALUES(order_discount_id),
 product_id = VALUES(product_id), item_id = VALUES(item_id), product_line_id = VALUES(product_line_id),
 quantity_base = VALUES(quantity_base), total_invoiced = VALUES(total_invoiced), total_cost = VALUES(total_cost),
-refreshed_at = VALUES(refreshed_at)`)
+ordered_at = VALUES(ordered_at), is_priced = VALUES(is_priced), refreshed_at = VALUES(refreshed_at)`)
 		if _, err := r.queries.DB().ExecContext(ctx, sb.String(), args...); err != nil {
 			return tracing.Trace(span, db.MapSQLError(err))
 		}
@@ -289,11 +292,23 @@ func (r *salesFactRepoImpl) RestartReconcile(ctx context.Context) *apierror.APIE
 	ctx, span := salesFactRepoTracer.Start(ctx, "repository.sales_fact.restart_reconcile")
 	defer span.End()
 
+	row, found, err := r.getSalesSync(ctx, salesFactSyncName)
+	if err != nil {
+		return tracing.Trace(span, db.MapSQLError(err))
+	}
 	// Until the backfill has run there is nothing to restart: the backfill is the first pass.
-	_, err := r.queries.DB().ExecContext(ctx, `UPDATE sales_fact_sync
-SET cursor_created_at = ?, cursor_invoice_id = '', pass_started_at = NOW(3), updated_at = NOW(3)
-WHERE name = ? AND last_completed_at IS NOT NULL`, time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC), salesFactSyncName)
-	return tracing.Trace(span, db.MapSQLError(err))
+	if !found || !row.lastCompletedAt.Valid {
+		return nil
+	}
+	row.cursorCreatedAt = sql.NullTime{Time: time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC), Valid: true}
+	row.cursorInvoiceID = sql.NullString{String: "", Valid: true}
+	row.passStartedAt = sql.NullTime{Time: time.Now().UTC(), Valid: true}
+	return tracing.Trace(span, db.MapSQLError(r.saveSalesSync(ctx, salesFactSyncName, row)))
+}
+
+// rollupMarkID is a rollup day mark's scope_id in sales_fact_dirty: the account and the UTC day.
+func rollupMarkID(d domain.SalesRollupDay) string {
+	return d.AccountID + "/" + truncateUTCDay(d.Day).Format(time.DateOnly)
 }
 
 func (r *salesFactRepoImpl) MarkRollupDays(ctx context.Context, days []domain.SalesRollupDay) *apierror.APIError {
@@ -302,13 +317,13 @@ func (r *salesFactRepoImpl) MarkRollupDays(ctx context.Context, days []domain.Sa
 
 	for start := 0; start < len(days); start += 500 {
 		batch := days[start:min(start+500, len(days))]
-		values := strings.Repeat("(?, ?, NOW(3)),", len(batch))
-		args := make([]any, 0, 2*len(batch))
+		args := make([]any, 0, 3*len(batch))
 		for _, d := range batch {
-			args = append(args, d.AccountID, truncateUTCDay(d.Day))
+			args = append(args, string(domain.SalesFactScopeRollupDay), rollupMarkID(d), d.AccountID)
 		}
-		_, err := r.queries.DB().ExecContext(ctx, `INSERT INTO sales_rollup_dirty (account_id, day, marked_at) VALUES `+
-			strings.TrimSuffix(values, ",")+` ON DUPLICATE KEY UPDATE marked_at = VALUES(marked_at)`, args...)
+		values := strings.TrimSuffix(strings.Repeat("(?, ?, ?, NOW(3)),", len(batch)), ",")
+		_, err := r.queries.DB().ExecContext(ctx, `INSERT INTO sales_fact_dirty (scope_type, scope_id, account_id, marked_at) VALUES `+
+			values+` ON DUPLICATE KEY UPDATE marked_at = VALUES(marked_at)`, args...)
 		if apiErr := db.MapSQLError(err); apiErr != nil {
 			return tracing.Trace(span, apiErr)
 		}
@@ -320,29 +335,85 @@ func (r *salesFactRepoImpl) ListRollupDirty(ctx context.Context, limit int32) ([
 	ctx, span := salesFactRepoTracer.Start(ctx, "repository.sales_fact.list_rollup_dirty")
 	defer span.End()
 
-	rows, err := r.queries.DB().QueryContext(ctx, `SELECT account_id, day, marked_at FROM sales_rollup_dirty ORDER BY marked_at LIMIT ?`, limit)
+	if err := r.adoptLegacyRollupMarks(ctx, limit); err != nil {
+		return nil, tracing.Trace(span, db.MapSQLError(err))
+	}
+	rows, err := r.queries.DB().QueryContext(ctx, `SELECT account_id, scope_id, marked_at FROM sales_fact_dirty
+WHERE scope_type = ? ORDER BY marked_at LIMIT ?`, string(domain.SalesFactScopeRollupDay), limit)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	defer func() { _ = rows.Close() }()
 	var marks []domain.SalesRollupDirtyMark
 	for rows.Next() {
-		var m domain.SalesRollupDirtyMark
-		if err := rows.Scan(&m.Day.AccountID, &m.Day.Day, &m.MarkedAt); err != nil {
+		var (
+			m       domain.SalesRollupDirtyMark
+			scopeID string
+		)
+		if err := rows.Scan(&m.Day.AccountID, &scopeID, &m.MarkedAt); err != nil {
 			return nil, tracing.Trace(span, db.MapSQLError(err))
 		}
-		m.Day.Day = truncateUTCDay(m.Day.Day)
+		day, err := time.ParseInLocation(time.DateOnly, strings.TrimPrefix(scopeID, m.Day.AccountID+"/"), time.UTC)
+		if err != nil {
+			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Unreadable rollup day mark "+scopeID+"."))
+		}
+		m.Day.Day = day
 		marks = append(marks, m)
 	}
 	return marks, tracing.Trace(span, db.MapSQLError(rows.Err()))
+}
+
+// adoptLegacyRollupMarks moves marks from sales_rollup_dirty, where the rollup day marks were kept before
+// they joined sales_fact_dirty, so pods on the previous release that mark days during a deploy are not lost.
+// A mark moves only if it was not re-marked after it was read, like any clear.
+// TODO(sales-sync): drop with sales_rollup_dirty once every deployment has moved.
+func (r *salesFactRepoImpl) adoptLegacyRollupMarks(ctx context.Context, limit int32) error {
+	rows, err := r.queries.DB().QueryContext(ctx, `SELECT account_id, day, marked_at FROM sales_rollup_dirty ORDER BY marked_at LIMIT ?`, limit)
+	if err != nil {
+		return err
+	}
+	type legacyMark struct {
+		accountID string
+		day       time.Time
+		markedAt  time.Time
+	}
+	var legacy []legacyMark
+	for rows.Next() {
+		var m legacyMark
+		if err := rows.Scan(&m.accountID, &m.day, &m.markedAt); err != nil {
+			_ = rows.Close()
+			return err
+		}
+		legacy = append(legacy, m)
+	}
+	_ = rows.Close()
+	if err := rows.Err(); err != nil || len(legacy) == 0 {
+		return err
+	}
+	args := make([]any, 0, 4*len(legacy))
+	for _, m := range legacy {
+		args = append(args, string(domain.SalesFactScopeRollupDay), rollupMarkID(domain.SalesRollupDay{AccountID: m.accountID, Day: m.day}), m.accountID, m.markedAt)
+	}
+	values := strings.TrimSuffix(strings.Repeat("(?, ?, ?, ?),", len(legacy)), ",")
+	if _, err := r.queries.DB().ExecContext(ctx, `INSERT INTO sales_fact_dirty (scope_type, scope_id, account_id, marked_at) VALUES `+
+		values+` ON DUPLICATE KEY UPDATE marked_at = GREATEST(marked_at, VALUES(marked_at))`, args...); err != nil {
+		return err
+	}
+	for _, m := range legacy {
+		if _, err := r.queries.DB().ExecContext(ctx, `DELETE FROM sales_rollup_dirty WHERE account_id = ? AND day = ? AND marked_at = ?`,
+			m.accountID, m.day, m.markedAt); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (r *salesFactRepoImpl) ClearRollupDirty(ctx context.Context, mark domain.SalesRollupDirtyMark) *apierror.APIError {
 	ctx, span := salesFactRepoTracer.Start(ctx, "repository.sales_fact.clear_rollup_dirty")
 	defer span.End()
 
-	_, err := r.queries.DB().ExecContext(ctx, `DELETE FROM sales_rollup_dirty WHERE account_id = ? AND day = ? AND marked_at = ?`,
-		mark.Day.AccountID, truncateUTCDay(mark.Day.Day), mark.MarkedAt)
+	_, err := r.queries.DB().ExecContext(ctx, `DELETE FROM sales_fact_dirty WHERE scope_type = ? AND scope_id = ? AND marked_at = ?`,
+		string(domain.SalesFactScopeRollupDay), rollupMarkID(mark.Day), mark.MarkedAt)
 	return tracing.Trace(span, db.MapSQLError(err))
 }
 
@@ -396,19 +467,16 @@ func (r *salesFactRepoImpl) GetSync(ctx context.Context) (*domain.SalesFactSync,
 	ctx, span := salesFactRepoTracer.Start(ctx, "repository.sales_fact.get_sync")
 	defer span.End()
 
-	row, err := r.queries.GetSalesFactSync(ctx, salesFactSyncName)
-	if errors.Is(err, sql.ErrNoRows) {
+	row, found, err := r.getSalesSync(ctx, salesFactSyncName)
+	if err != nil {
+		return nil, tracing.Trace(span, db.MapSQLError(err))
+	}
+	if !found {
 		return &domain.SalesFactSync{}, nil
 	}
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	sync := &domain.SalesFactSync{
-		PassStartedAt:   nullTimePtr(row.PassStartedAt),
-		LastCompletedAt: nullTimePtr(row.LastCompletedAt),
-	}
-	if row.CursorCreatedAt.Valid && row.CursorInvoiceID.Valid {
-		sync.Cursor = &domain.SalesFactInvoiceCursor{InvoiceID: row.CursorInvoiceID.String, CreatedAt: row.CursorCreatedAt.Time}
+	sync := &domain.SalesFactSync{PassStartedAt: nullTimePtr(row.passStartedAt), LastCompletedAt: nullTimePtr(row.lastCompletedAt)}
+	if row.cursorCreatedAt.Valid && row.cursorInvoiceID.Valid {
+		sync.Cursor = &domain.SalesFactInvoiceCursor{InvoiceID: row.cursorInvoiceID.String, CreatedAt: row.cursorCreatedAt.Time}
 	}
 	return sync, nil
 }
@@ -417,19 +485,12 @@ func (r *salesFactRepoImpl) SaveSync(ctx context.Context, sync domain.SalesFactS
 	ctx, span := salesFactRepoTracer.Start(ctx, "repository.sales_fact.save_sync")
 	defer span.End()
 
-	params := sqlc.UpsertSalesFactSyncParams{
-		Name:            salesFactSyncName,
-		PassStartedAt:   toNullTime(sync.PassStartedAt),
-		LastCompletedAt: toNullTime(sync.LastCompletedAt),
-	}
+	row := salesSyncRow{passStartedAt: toNullTime(sync.PassStartedAt), lastCompletedAt: toNullTime(sync.LastCompletedAt)}
 	if sync.Cursor != nil {
-		params.CursorCreatedAt = sql.NullTime{Time: sync.Cursor.CreatedAt, Valid: true}
-		params.CursorInvoiceID = sql.NullString{String: sync.Cursor.InvoiceID, Valid: true}
+		row.cursorCreatedAt = sql.NullTime{Time: sync.Cursor.CreatedAt, Valid: true}
+		row.cursorInvoiceID = sql.NullString{String: sync.Cursor.InvoiceID, Valid: true}
 	}
-	if apiErr := db.MapSQLError(r.queries.UpsertSalesFactSync(ctx, params)); apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-	return nil
+	return tracing.Trace(span, db.MapSQLError(r.saveSalesSync(ctx, salesFactSyncName, row)))
 }
 
 // decimalStringPtr reads a DECIMAL expression that sqlc could only type as any: the driver returns it as text, or nil for NULL.

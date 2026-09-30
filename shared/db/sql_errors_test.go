@@ -424,3 +424,17 @@ func TestMapSQLError_UnrelatedVitessErrorIsNotReportedAsATransactionKill(t *test
 	require.NotNil(t, result)
 	assert.NotContains(t, result.InternalMessage, "time limit")
 }
+
+func TestMapSQLErrorTreatsADatabaseSideTimeoutAsARequestTimeout(t *testing.T) {
+	t.Parallel()
+	for _, e := range []*mysql.MySQLError{
+		{Number: 3024, Message: "Query execution was interrupted, maximum statement execution time exceeded"},
+		{Number: 1317, Message: "Query execution was interrupted"},
+		{Number: 1105, Message: "vttablet: rpc error: code = DeadlineExceeded desc = query timeout"},
+	} {
+		got := MapSQLError(e)
+		if got == nil || got.Code != apierror.ErrorCodeRequestTimeout {
+			t.Errorf("error %d: got %v, want request_timeout", e.Number, got)
+		}
+	}
+}

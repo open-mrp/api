@@ -258,6 +258,7 @@ const (
 	CoreService_AnalyzeSalesSummary_FullMethodName                        = "/core.CoreService/AnalyzeSalesSummary"
 	CoreService_AnalyzeSalesBreakdown_FullMethodName                      = "/core.CoreService/AnalyzeSalesBreakdown"
 	CoreService_AnalyzeSalesInvoices_FullMethodName                       = "/core.CoreService/AnalyzeSalesInvoices"
+	CoreService_ListNewCustomers_FullMethodName                           = "/core.CoreService/ListNewCustomers"
 	CoreService_ListSalesLines_FullMethodName                             = "/core.CoreService/ListSalesLines"
 	CoreService_ExportSalesLines_FullMethodName                           = "/core.CoreService/ExportSalesLines"
 	CoreService_AnalyzeRealizedMargins_FullMethodName                     = "/core.CoreService/AnalyzeRealizedMargins"
@@ -873,6 +874,7 @@ type CoreServiceClient interface {
 	AnalyzeSalesSummary(ctx context.Context, in *AnalyzeSalesSummaryRequest, opts ...grpc.CallOption) (*AnalyzeSalesSummaryResponse, error)
 	AnalyzeSalesBreakdown(ctx context.Context, in *AnalyzeSalesBreakdownRequest, opts ...grpc.CallOption) (*AnalyzeSalesBreakdownResponse, error)
 	AnalyzeSalesInvoices(ctx context.Context, in *AnalyzeSalesInvoicesRequest, opts ...grpc.CallOption) (*AnalyzeSalesInvoicesResponse, error)
+	ListNewCustomers(ctx context.Context, in *ListNewCustomersRequest, opts ...grpc.CallOption) (*ListNewCustomersResponse, error)
 	ListSalesLines(ctx context.Context, in *ListSalesLinesRequest, opts ...grpc.CallOption) (*ListSalesLinesResponse, error)
 	// Accepts an export of the sales lines; the file is built by the export worker.
 	ExportSalesLines(ctx context.Context, in *ExportSalesLinesRequest, opts ...grpc.CallOption) (*ExportSalesLinesResponse, error)
@@ -3421,6 +3423,16 @@ func (c *coreServiceClient) AnalyzeSalesInvoices(ctx context.Context, in *Analyz
 	return out, nil
 }
 
+func (c *coreServiceClient) ListNewCustomers(ctx context.Context, in *ListNewCustomersRequest, opts ...grpc.CallOption) (*ListNewCustomersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListNewCustomersResponse)
+	err := c.cc.Invoke(ctx, CoreService_ListNewCustomers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *coreServiceClient) ListSalesLines(ctx context.Context, in *ListSalesLinesRequest, opts ...grpc.CallOption) (*ListSalesLinesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListSalesLinesResponse)
@@ -5627,6 +5639,7 @@ type CoreServiceServer interface {
 	AnalyzeSalesSummary(context.Context, *AnalyzeSalesSummaryRequest) (*AnalyzeSalesSummaryResponse, error)
 	AnalyzeSalesBreakdown(context.Context, *AnalyzeSalesBreakdownRequest) (*AnalyzeSalesBreakdownResponse, error)
 	AnalyzeSalesInvoices(context.Context, *AnalyzeSalesInvoicesRequest) (*AnalyzeSalesInvoicesResponse, error)
+	ListNewCustomers(context.Context, *ListNewCustomersRequest) (*ListNewCustomersResponse, error)
 	ListSalesLines(context.Context, *ListSalesLinesRequest) (*ListSalesLinesResponse, error)
 	// Accepts an export of the sales lines; the file is built by the export worker.
 	ExportSalesLines(context.Context, *ExportSalesLinesRequest) (*ExportSalesLinesResponse, error)
@@ -6557,6 +6570,9 @@ func (UnimplementedCoreServiceServer) AnalyzeSalesBreakdown(context.Context, *An
 }
 func (UnimplementedCoreServiceServer) AnalyzeSalesInvoices(context.Context, *AnalyzeSalesInvoicesRequest) (*AnalyzeSalesInvoicesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AnalyzeSalesInvoices not implemented")
+}
+func (UnimplementedCoreServiceServer) ListNewCustomers(context.Context, *ListNewCustomersRequest) (*ListNewCustomersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListNewCustomers not implemented")
 }
 func (UnimplementedCoreServiceServer) ListSalesLines(context.Context, *ListSalesLinesRequest) (*ListSalesLinesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListSalesLines not implemented")
@@ -11268,6 +11284,24 @@ func _CoreService_AnalyzeSalesInvoices_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CoreService_ListNewCustomers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListNewCustomersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).ListNewCustomers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_ListNewCustomers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).ListNewCustomers(ctx, req.(*ListNewCustomersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CoreService_ListSalesLines_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListSalesLinesRequest)
 	if err := dec(in); err != nil {
@@ -15384,6 +15418,10 @@ var CoreService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AnalyzeSalesInvoices",
 			Handler:    _CoreService_AnalyzeSalesInvoices_Handler,
+		},
+		{
+			MethodName: "ListNewCustomers",
+			Handler:    _CoreService_ListNewCustomers_Handler,
 		},
 		{
 			MethodName: "ListSalesLines",

@@ -44,6 +44,10 @@ type rollupScope struct {
 	dimension string
 	// lineKey is '' for every product line, or the one product line the report is filtered to.
 	lineKey string
+	// lineKeys, when set, are the several product lines the report is filtered to. Their rows' money,
+	// quantities and lines add up, since a line has one product line; their invoice counts do not (an
+	// invoice can span two of them), so those are counted from the facts instead (see invoiceCountRows).
+	lineKeys []string
 	// dimensionIDs restricts the groups read; nil reads all.
 	dimensionIDs []string
 	salesRepIDs  []string
@@ -59,7 +63,7 @@ var breakdownDimension = map[constants.SalesBreakdownGroupBy]string{
 	constants.SalesBreakdownGroupByDiscount:      rollupDimDiscount,
 }
 
-// rollupScopeFor maps a report's filters onto the rollup rows of dimension, or reports false when rollups cannot answer them exactly. A filter on the dimension itself selects its groups; a sales rep filter is part of every row's key; one product line has its own rows. Any other filter needs the lines themselves.
+// rollupScopeFor maps a report's filters onto the rollup rows of dimension, or reports false when rollups cannot answer them exactly. A filter on the dimension itself selects its groups; a sales rep filter is part of every row's key; each product line has its own rows. Any other filter needs the lines themselves.
 func rollupScopeFor(f domain.SalesReportFilter, q *salesFactQuery, dimension string) (rollupScope, bool) {
 	s := rollupScope{dimension: dimension, salesRepIDs: f.SalesRepIDs}
 	if q.buyersFiltered {
@@ -81,7 +85,7 @@ func rollupScopeFor(f domain.SalesReportFilter, q *salesFactQuery, dimension str
 	case len(f.ProductLineIDs) == 1:
 		s.lineKey = f.ProductLineIDs[0]
 	default:
-		return s, false
+		s.lineKeys = f.ProductLineIDs
 	}
 	return s, true
 }
@@ -186,8 +190,13 @@ func rollupPredicate(accountID string, s rollupScope, ranges []rollupRange) (cla
 		return "", nil, false
 	}
 	var sb strings.Builder
-	sb.WriteString("r.account_id = ? AND r.sales_order_type_code = 'sales_order' AND r.dimension = ? AND r.product_line_key = ? AND (")
-	args = []any{accountID, s.dimension, s.lineKey}
+	if len(s.lineKeys) > 0 {
+		sb.WriteString("r.account_id = ? AND r.sales_order_type_code = 'sales_order' AND r.dimension = ? AND r.product_line_key IN (" + placeholders(len(s.lineKeys)) + ") AND (")
+		args = append([]any{accountID, s.dimension}, stringsToAny(s.lineKeys)...)
+	} else {
+		sb.WriteString("r.account_id = ? AND r.sales_order_type_code = 'sales_order' AND r.dimension = ? AND r.product_line_key = ? AND (")
+		args = []any{accountID, s.dimension, s.lineKey}
+	}
 	for i, rg := range ranges {
 		if i > 0 {
 			sb.WriteString(" OR ")
@@ -225,25 +234,43 @@ func rawPredicate(q *salesFactQuery, ranges []rawRange) (clause string, args []a
 	return q.where.String() + " AND (" + strings.Join(parts, " OR ") + ")", args, true
 }
 
-// rollupPeriodRows selects a period's contributions as (k, per, inv, cost, qty, ic, lc) rows: its whole buckets, and one pre-grouped row per group for its raw stretches. keyCol is the fact column the rows are keyed on and bucketKey the rollup column, so the two halves line up; "”" keys every row alike, for a period's overall totals.
-func rollupPeriodRows(q *salesFactQuery, s rollupScope, plan windowPlan, per, keyCol, bucketKey string) (string, []any) {
+// rollupPeriodRows selects a period's contributions as (k, per, inv, cost, qty, ic, lc) rows: its whole buckets, and one pre-grouped row per group for its raw stretches. keyCol is the fact column the rows are keyed on and bucketKey the rollup column, so the two halves line up; "”" keys every row alike, for a period's overall totals. start and end are the period, which a multi-line scope counts its invoices over.
+func rollupPeriodRows(q *salesFactQuery, s rollupScope, plan windowPlan, start, end time.Time, per, keyCol, bucketKey string) (string, []any) {
 	var parts []string
 	var args []any
+	// A multi-line scope takes its invoice counts from invoiceCountRows alone.
+	bucketIC, rawIC := "r.invoice_count", "COUNT(DISTINCT f.invoice_id)"
+	if len(s.lineKeys) > 0 {
+		bucketIC, rawIC = "0", "0"
+	}
 	if clause, a, ok := rollupPredicate(q.accountID, s, plan.rollups); ok {
-		parts = append(parts, fmt.Sprintf(`SELECT %s AS k, '%s' AS per, r.total_invoiced AS inv, r.total_cost AS cost, r.quantity_base AS qty, r.invoice_count AS ic, r.line_count AS lc
-FROM sales_fact_rollup r WHERE %s`, bucketKey, per, clause))
+		parts = append(parts, fmt.Sprintf(`SELECT %s AS k, '%s' AS per, r.total_invoiced AS inv, r.total_cost AS cost, r.quantity_base AS qty, %s AS ic, r.line_count AS lc
+FROM sales_fact_rollup r WHERE %s`, bucketKey, per, bucketIC, clause))
 		args = append(args, a...)
 	}
+	group := ""
+	if keyCol != "''" {
+		group = " GROUP BY " + keyCol
+	}
 	if clause, a, ok := rawPredicate(q, plan.raws); ok {
-		group := ""
-		if keyCol != "''" {
-			group = " GROUP BY " + keyCol
-		}
-		parts = append(parts, fmt.Sprintf(`SELECT %s AS k, '%s' AS per, SUM(f.total_invoiced) AS inv, SUM(f.total_cost) AS cost, SUM(f.quantity_base) AS qty, COUNT(DISTINCT f.invoice_id) AS ic, COUNT(*) AS lc
+		parts = append(parts, fmt.Sprintf(`SELECT %s AS k, '%s' AS per, SUM(f.total_invoiced) AS inv, SUM(f.total_cost) AS cost, SUM(f.quantity_base) AS qty, %s AS ic, COUNT(*) AS lc
+FROM sales_line_fact f WHERE %s%s`, keyCol, per, rawIC, clause, group))
+		args = append(args, a...)
+	}
+	if len(s.lineKeys) > 0 && len(parts) > 0 {
+		clause, a := invoiceCountPredicate(q, start, end)
+		parts = append(parts, fmt.Sprintf(`SELECT %s AS k, '%s' AS per, 0 AS inv, 0 AS cost, 0 AS qty, COUNT(DISTINCT f.invoice_id) AS ic, 0 AS lc
 FROM sales_line_fact f WHERE %s%s`, keyCol, per, clause, group))
 		args = append(args, a...)
 	}
 	return strings.Join(parts, "\nUNION ALL\n"), args
+}
+
+// invoiceCountPredicate is q's filters over the whole period [start, end], for counting a multi-line scope's
+// distinct invoices from the facts. q carries the product line filter, so sales_line_fact_product_line_idx
+// reads only those lines' entries in the period.
+func invoiceCountPredicate(q *salesFactQuery, start, end time.Time) (string, []any) {
+	return q.where.String() + " AND f.invoiced_at >= ? AND f.invoiced_at <= ?", append(append([]any{}, q.args...), start, end)
 }
 
 // rollupTotalsColumns totals a union of period rows (alias u) into the columns totalsColumns names, for the rows whose per matches.
@@ -272,7 +299,7 @@ func rollupBreakdownGrouped(q *salesFactQuery, s rollupScope, params domain.Anal
 	var parts []string
 	var args []any
 	for _, p := range periods {
-		sql, a := rollupPeriodRows(q, s, planWindow(p.start, p.end, breakdownGrains), p.per, column, "r.dimension_id")
+		sql, a := rollupPeriodRows(q, s, planWindow(p.start, p.end, breakdownGrains), p.start, p.end, p.per, column, "r.dimension_id")
 		if sql != "" {
 			parts = append(parts, sql)
 			args = append(args, a...)
@@ -290,7 +317,7 @@ var totalGrains = []string{rollupGrainMonth, rollupGrainDay, rollupGrainHour}
 
 // rollupPeriodTotals selects one period's totals as the five totals columns.
 func rollupPeriodTotals(q *salesFactQuery, s rollupScope, start, end time.Time) (string, []any) {
-	sql, args := rollupPeriodRows(q, s, planWindow(start, end, totalGrains), "c", "''", "''")
+	sql, args := rollupPeriodRows(q, s, planWindow(start, end, totalGrains), start, end, "c", "''", "''")
 	if sql == "" {
 		return "SELECT " + totalsColumns("FALSE", "") + " FROM sales_line_fact f WHERE FALSE", nil
 	}
@@ -303,18 +330,30 @@ func rollupPeriodDaily(q *salesFactQuery, s rollupScope, start, end time.Time, t
 	day := func(col string) string { return "DATE(CONVERT_TZ(" + col + ", '+00:00', ?))" }
 	var parts []string
 	var args []any
+	// A multi-line scope takes its invoice counts from the per-day count below alone.
+	bucketIC, rawIC := "r.invoice_count", "COUNT(DISTINCT f.invoice_id)"
+	if len(s.lineKeys) > 0 {
+		bucketIC, rawIC = "0", "0"
+	}
 	if clause, a, ok := rollupPredicate(q.accountID, s, plan.rollups); ok {
-		parts = append(parts, `SELECT `+day("r.bucket_start")+` AS day, r.total_invoiced AS inv, r.total_cost AS cost, r.quantity_base AS qty, r.invoice_count AS ic, r.line_count AS lc
+		parts = append(parts, `SELECT `+day("r.bucket_start")+` AS day, r.total_invoiced AS inv, r.total_cost AS cost, r.quantity_base AS qty, `+bucketIC+` AS ic, r.line_count AS lc
 FROM sales_fact_rollup r WHERE `+clause)
 		args = append(append(args, tz), a...)
 	}
 	if clause, a, ok := rawPredicate(q, plan.raws); ok {
-		parts = append(parts, `SELECT `+day("f.invoiced_at")+` AS day, SUM(f.total_invoiced) AS inv, SUM(f.total_cost) AS cost, SUM(f.quantity_base) AS qty, COUNT(DISTINCT f.invoice_id) AS ic, COUNT(*) AS lc
+		parts = append(parts, `SELECT `+day("f.invoiced_at")+` AS day, SUM(f.total_invoiced) AS inv, SUM(f.total_cost) AS cost, SUM(f.quantity_base) AS qty, `+rawIC+` AS ic, COUNT(*) AS lc
 FROM sales_line_fact f WHERE `+clause+` GROUP BY day`)
 		args = append(append(args, tz), a...)
 	}
 	if len(parts) == 0 {
 		return "", nil
+	}
+	if len(s.lineKeys) > 0 {
+		// An invoice falls on one local day, so its day's distinct count holds it exactly once.
+		clause, a := invoiceCountPredicate(q, start, end)
+		parts = append(parts, `SELECT `+day("f.invoiced_at")+` AS day, 0 AS inv, 0 AS cost, 0 AS qty, COUNT(DISTINCT f.invoice_id) AS ic, 0 AS lc
+FROM sales_line_fact f WHERE `+clause+` GROUP BY day`)
+		args = append(append(args, tz), a...)
 	}
 	return fmt.Sprintf(`SELECT u.day,
 CAST(COALESCE(SUM(u.inv), 0) AS DECIMAL(65,30)), CAST(COALESCE(SUM(u.cost), 0) AS DECIMAL(65,30)), CAST(COALESCE(SUM(u.qty), 0) AS DECIMAL(65,30)),

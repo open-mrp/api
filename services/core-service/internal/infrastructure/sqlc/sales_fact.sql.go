@@ -47,33 +47,6 @@ func (q *Queries) DeleteSalesFactsByLineIDs(ctx context.Context, invoiceLineIds 
 	return err
 }
 
-const getSalesFactSync = `-- name: GetSalesFactSync :one
-SELECT name, cursor_created_at, cursor_invoice_id, pass_started_at, last_completed_at
-FROM sales_fact_sync
-WHERE name = ?
-`
-
-type GetSalesFactSyncRow struct {
-	Name            string
-	CursorCreatedAt sql.NullTime
-	CursorInvoiceID sql.NullString
-	PassStartedAt   sql.NullTime
-	LastCompletedAt sql.NullTime
-}
-
-func (q *Queries) GetSalesFactSync(ctx context.Context, name string) (GetSalesFactSyncRow, error) {
-	row := q.db.QueryRowContext(ctx, getSalesFactSync, name)
-	var i GetSalesFactSyncRow
-	err := row.Scan(
-		&i.Name,
-		&i.CursorCreatedAt,
-		&i.CursorInvoiceID,
-		&i.PassStartedAt,
-		&i.LastCompletedAt,
-	)
-	return i, err
-}
-
 const listExistingInvoiceIDs = `-- name: ListExistingInvoiceIDs :many
 SELECT id FROM invoice WHERE id IN (/*SLICE:invoice_ids*/?)
 `
@@ -312,10 +285,12 @@ func (q *Queries) ListInvoicesForFactSweep(ctx context.Context, arg ListInvoices
 const listSalesFactDirty = `-- name: ListSalesFactDirty :many
 SELECT scope_type, scope_id, account_id, marked_at
 FROM sales_fact_dirty
+WHERE scope_type NOT IN ('buyer_summary', 'rollup_day')
 ORDER BY marked_at
 LIMIT ?
 `
 
+// The fact scopes only: 'buyer_summary' and 'rollup_day' marks share the table but are drained by their own passes.
 func (q *Queries) ListSalesFactDirty(ctx context.Context, limit int32) ([]SalesFactDirty, error) {
 	rows, err := q.db.QueryContext(ctx, listSalesFactDirty, limit)
 	if err != nil {
@@ -448,7 +423,9 @@ SELECT
             / NULLIF(((COALESCE(u_cost_den.ratio_numerator, 1) / COALESCE(u_cost_den.ratio_denominator, 1)) + (COALESCE(u_cost_den.offset_numerator, 0) / COALESCE(u_cost_den.offset_denominator, 1))), 0)
         )
         AS DECIMAL(28,10)
-    ), NULL) AS total_cost
+    ), NULL) AS total_cost,
+    so.issued_at AS ordered_at,
+    CAST(COALESCE(r_price.value > 0, FALSE) AS SIGNED) AS is_priced
 FROM invoice_line il
 JOIN invoice i ON i.id = il.invoice_id
 JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
@@ -486,6 +463,8 @@ type SelectSalesFactSourceRow struct {
 	QuantityBase       interface{}
 	TotalInvoiced      interface{}
 	TotalCost          interface{}
+	OrderedAt          sql.NullTime
+	IsPriced           int64
 }
 
 // The legacy sales-analytics row for each invoice line of the given invoices, priced with the exact
@@ -528,6 +507,8 @@ func (q *Queries) SelectSalesFactSource(ctx context.Context, invoiceIds []string
 			&i.QuantityBase,
 			&i.TotalInvoiced,
 			&i.TotalCost,
+			&i.OrderedAt,
+			&i.IsPriced,
 		); err != nil {
 			return nil, err
 		}
@@ -545,7 +526,7 @@ func (q *Queries) SelectSalesFactSource(ctx context.Context, invoiceIds []string
 const selectSalesFactsByInvoiceIDs = `-- name: SelectSalesFactsByInvoiceIDs :many
 SELECT account_id, invoiced_at, invoice_line_id, invoice_id, sales_order_id, sales_order_type_code,
        buyer_account_id, sales_rep_id, order_discount_id, product_id, item_id, product_line_id,
-       quantity_base, total_invoiced, total_cost
+       quantity_base, total_invoiced, total_cost, ordered_at, is_priced
 FROM sales_line_fact
 WHERE invoice_id IN (/*SLICE:invoice_ids*/?)
 `
@@ -566,6 +547,8 @@ type SelectSalesFactsByInvoiceIDsRow struct {
 	QuantityBase       sql.NullString
 	TotalInvoiced      sql.NullString
 	TotalCost          sql.NullString
+	OrderedAt          sql.NullTime
+	IsPriced           bool
 }
 
 func (q *Queries) SelectSalesFactsByInvoiceIDs(ctx context.Context, invoiceIds []string) ([]SelectSalesFactsByInvoiceIDsRow, error) {
@@ -603,6 +586,8 @@ func (q *Queries) SelectSalesFactsByInvoiceIDs(ctx context.Context, invoiceIds [
 			&i.QuantityBase,
 			&i.TotalInvoiced,
 			&i.TotalCost,
+			&i.OrderedAt,
+			&i.IsPriced,
 		); err != nil {
 			return nil, err
 		}
@@ -615,34 +600,4 @@ func (q *Queries) SelectSalesFactsByInvoiceIDs(ctx context.Context, invoiceIds [
 		return nil, err
 	}
 	return items, nil
-}
-
-const upsertSalesFactSync = `-- name: UpsertSalesFactSync :exec
-INSERT INTO sales_fact_sync (name, cursor_created_at, cursor_invoice_id, pass_started_at, last_completed_at, updated_at)
-VALUES (?, ?, ?, ?, ?, NOW(3))
-ON DUPLICATE KEY UPDATE
-    cursor_created_at = VALUES(cursor_created_at),
-    cursor_invoice_id = VALUES(cursor_invoice_id),
-    pass_started_at = VALUES(pass_started_at),
-    last_completed_at = VALUES(last_completed_at),
-    updated_at = VALUES(updated_at)
-`
-
-type UpsertSalesFactSyncParams struct {
-	Name            string
-	CursorCreatedAt sql.NullTime
-	CursorInvoiceID sql.NullString
-	PassStartedAt   sql.NullTime
-	LastCompletedAt sql.NullTime
-}
-
-func (q *Queries) UpsertSalesFactSync(ctx context.Context, arg UpsertSalesFactSyncParams) error {
-	_, err := q.db.ExecContext(ctx, upsertSalesFactSync,
-		arg.Name,
-		arg.CursorCreatedAt,
-		arg.CursorInvoiceID,
-		arg.PassStartedAt,
-		arg.LastCompletedAt,
-	)
-	return err
 }

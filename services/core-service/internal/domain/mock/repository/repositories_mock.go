@@ -9934,6 +9934,20 @@ func (m *MockSalesFactRepo) EXPECT() *MockSalesFactRepoMockRecorder {
 	return m.recorder
 }
 
+// ClearBuyerDirty mocks base method.
+func (m *MockSalesFactRepo) ClearBuyerDirty(ctx context.Context, mark domain.SalesBuyerDirtyMark) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ClearBuyerDirty", ctx, mark)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// ClearBuyerDirty indicates an expected call of ClearBuyerDirty.
+func (mr *MockSalesFactRepoMockRecorder) ClearBuyerDirty(ctx, mark any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClearBuyerDirty", reflect.TypeOf((*MockSalesFactRepo)(nil).ClearBuyerDirty), ctx, mark)
+}
+
 // ClearDirty mocks base method.
 func (m *MockSalesFactRepo) ClearDirty(ctx context.Context, mark domain.SalesFactDirtyMark) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -9977,6 +9991,20 @@ func (mr *MockSalesFactRepoMockRecorder) ComputeFacts(ctx, invoiceIDs any) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ComputeFacts", reflect.TypeOf((*MockSalesFactRepo)(nil).ComputeFacts), ctx, invoiceIDs)
 }
 
+// DeleteBuyerSummariesRefreshedBefore mocks base method.
+func (m *MockSalesFactRepo) DeleteBuyerSummariesRefreshedBefore(ctx context.Context, t time.Time) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteBuyerSummariesRefreshedBefore", ctx, t)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// DeleteBuyerSummariesRefreshedBefore indicates an expected call of DeleteBuyerSummariesRefreshedBefore.
+func (mr *MockSalesFactRepoMockRecorder) DeleteBuyerSummariesRefreshedBefore(ctx, t any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteBuyerSummariesRefreshedBefore", reflect.TypeOf((*MockSalesFactRepo)(nil).DeleteBuyerSummariesRefreshedBefore), ctx, t)
+}
+
 // DeleteFacts mocks base method.
 func (m *MockSalesFactRepo) DeleteFacts(ctx context.Context, invoiceLineIDs []string) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -10004,6 +10032,21 @@ func (m *MockSalesFactRepo) FilterExistingInvoiceIDs(ctx context.Context, invoic
 func (mr *MockSalesFactRepoMockRecorder) FilterExistingInvoiceIDs(ctx, invoiceIDs any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FilterExistingInvoiceIDs", reflect.TypeOf((*MockSalesFactRepo)(nil).FilterExistingInvoiceIDs), ctx, invoiceIDs)
+}
+
+// GetBuyerSummarySync mocks base method.
+func (m *MockSalesFactRepo) GetBuyerSummarySync(ctx context.Context) (*domain.SalesBuyerSummarySync, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBuyerSummarySync", ctx)
+	ret0, _ := ret[0].(*domain.SalesBuyerSummarySync)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetBuyerSummarySync indicates an expected call of GetBuyerSummarySync.
+func (mr *MockSalesFactRepoMockRecorder) GetBuyerSummarySync(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBuyerSummarySync", reflect.TypeOf((*MockSalesFactRepo)(nil).GetBuyerSummarySync), ctx)
 }
 
 // GetFacts mocks base method.
@@ -10049,6 +10092,21 @@ func (m *MockSalesFactRepo) GetSync(ctx context.Context) (*domain.SalesFactSync,
 func (mr *MockSalesFactRepoMockRecorder) GetSync(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSync", reflect.TypeOf((*MockSalesFactRepo)(nil).GetSync), ctx)
+}
+
+// ListBuyerDirty mocks base method.
+func (m *MockSalesFactRepo) ListBuyerDirty(ctx context.Context, limit int32) ([]domain.SalesBuyerDirtyMark, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListBuyerDirty", ctx, limit)
+	ret0, _ := ret[0].([]domain.SalesBuyerDirtyMark)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListBuyerDirty indicates an expected call of ListBuyerDirty.
+func (mr *MockSalesFactRepoMockRecorder) ListBuyerDirty(ctx, limit any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListBuyerDirty", reflect.TypeOf((*MockSalesFactRepo)(nil).ListBuyerDirty), ctx, limit)
 }
 
 // ListDirty mocks base method.
@@ -10126,6 +10184,20 @@ func (mr *MockSalesFactRepoMockRecorder) ListRollupDirty(ctx, limit any) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRollupDirty", reflect.TypeOf((*MockSalesFactRepo)(nil).ListRollupDirty), ctx, limit)
 }
 
+// MarkBuyers mocks base method.
+func (m *MockSalesFactRepo) MarkBuyers(ctx context.Context, buyers []domain.SalesBuyerKey) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkBuyers", ctx, buyers)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// MarkBuyers indicates an expected call of MarkBuyers.
+func (mr *MockSalesFactRepoMockRecorder) MarkBuyers(ctx, buyers any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkBuyers", reflect.TypeOf((*MockSalesFactRepo)(nil).MarkBuyers), ctx, buyers)
+}
+
 // MarkDirty mocks base method.
 func (m *MockSalesFactRepo) MarkDirty(ctx context.Context, scope domain.SalesFactScope, scopeID, accountID string) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -10168,6 +10240,21 @@ func (mr *MockSalesFactRepoMockRecorder) MarkRollupDays(ctx, days any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkRollupDays", reflect.TypeOf((*MockSalesFactRepo)(nil).MarkRollupDays), ctx, days)
 }
 
+// NextBuyers mocks base method.
+func (m *MockSalesFactRepo) NextBuyers(ctx context.Context, after domain.SalesBuyerKey, limit int32) ([]domain.SalesBuyerKey, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NextBuyers", ctx, after, limit)
+	ret0, _ := ret[0].([]domain.SalesBuyerKey)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// NextBuyers indicates an expected call of NextBuyers.
+func (mr *MockSalesFactRepoMockRecorder) NextBuyers(ctx, after, limit any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NextBuyers", reflect.TypeOf((*MockSalesFactRepo)(nil).NextBuyers), ctx, after, limit)
+}
+
 // NextRollupDay mocks base method.
 func (m *MockSalesFactRepo) NextRollupDay(ctx context.Context, from domain.SalesRollupDay) (*domain.SalesRollupDay, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -10181,6 +10268,20 @@ func (m *MockSalesFactRepo) NextRollupDay(ctx context.Context, from domain.Sales
 func (mr *MockSalesFactRepoMockRecorder) NextRollupDay(ctx, from any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NextRollupDay", reflect.TypeOf((*MockSalesFactRepo)(nil).NextRollupDay), ctx, from)
+}
+
+// RebuildBuyerSummaries mocks base method.
+func (m *MockSalesFactRepo) RebuildBuyerSummaries(ctx context.Context, accountID string, buyerIDs []string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RebuildBuyerSummaries", ctx, accountID, buyerIDs)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// RebuildBuyerSummaries indicates an expected call of RebuildBuyerSummaries.
+func (mr *MockSalesFactRepoMockRecorder) RebuildBuyerSummaries(ctx, accountID, buyerIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RebuildBuyerSummaries", reflect.TypeOf((*MockSalesFactRepo)(nil).RebuildBuyerSummaries), ctx, accountID, buyerIDs)
 }
 
 // RebuildRollupDay mocks base method.
@@ -10238,6 +10339,20 @@ func (m *MockSalesFactRepo) RestartReconcile(ctx context.Context) *apierror.APIE
 func (mr *MockSalesFactRepoMockRecorder) RestartReconcile(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestartReconcile", reflect.TypeOf((*MockSalesFactRepo)(nil).RestartReconcile), ctx)
+}
+
+// SaveBuyerSummarySync mocks base method.
+func (m *MockSalesFactRepo) SaveBuyerSummarySync(ctx context.Context, sync domain.SalesBuyerSummarySync) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SaveBuyerSummarySync", ctx, sync)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// SaveBuyerSummarySync indicates an expected call of SaveBuyerSummarySync.
+func (mr *MockSalesFactRepoMockRecorder) SaveBuyerSummarySync(ctx, sync any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveBuyerSummarySync", reflect.TypeOf((*MockSalesFactRepo)(nil).SaveBuyerSummarySync), ctx, sync)
 }
 
 // SaveRollupSync mocks base method.
@@ -10306,6 +10421,21 @@ func (m *MockSalesReportRepo) EXPECT() *MockSalesReportRepoMockRecorder {
 	return m.recorder
 }
 
+// BuyerSummariesReady mocks base method.
+func (m *MockSalesReportRepo) BuyerSummariesReady(ctx context.Context) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BuyerSummariesReady", ctx)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// BuyerSummariesReady indicates an expected call of BuyerSummariesReady.
+func (mr *MockSalesReportRepoMockRecorder) BuyerSummariesReady(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuyerSummariesReady", reflect.TypeOf((*MockSalesReportRepo)(nil).BuyerSummariesReady), ctx)
+}
+
 // FactsReady mocks base method.
 func (m *MockSalesReportRepo) FactsReady(ctx context.Context) (bool, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -10364,6 +10494,21 @@ func (m *MockSalesReportRepo) GetLinePage(ctx context.Context, params domain.Lis
 func (mr *MockSalesReportRepoMockRecorder) GetLinePage(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLinePage", reflect.TypeOf((*MockSalesReportRepo)(nil).GetLinePage), ctx, params)
+}
+
+// GetNewCustomers mocks base method.
+func (m *MockSalesReportRepo) GetNewCustomers(ctx context.Context, params domain.ListNewCustomersParams) (*domain.NewCustomerPage, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetNewCustomers", ctx, params)
+	ret0, _ := ret[0].(*domain.NewCustomerPage)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetNewCustomers indicates an expected call of GetNewCustomers.
+func (mr *MockSalesReportRepoMockRecorder) GetNewCustomers(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNewCustomers", reflect.TypeOf((*MockSalesReportRepo)(nil).GetNewCustomers), ctx, params)
 }
 
 // GetSummary mocks base method.

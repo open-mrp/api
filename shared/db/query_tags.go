@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql/driver"
+	"time"
 
 	"github.com/open-mrp/api/shared/querytag"
 )
@@ -11,6 +12,8 @@ import (
 type taggingConnector struct {
 	base   driver.Connector
 	static map[string]string
+	// maxQueryTime bounds each SELECT on the database side (see withQueryTimeout); zero leaves them unbounded.
+	maxQueryTime time.Duration
 }
 
 func (c taggingConnector) Connect(ctx context.Context) (driver.Conn, error) {
@@ -18,7 +21,7 @@ func (c taggingConnector) Connect(ctx context.Context) (driver.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &taggingConn{Conn: conn, static: c.static}, nil
+	return &taggingConn{Conn: conn, static: c.static, maxQueryTime: c.maxQueryTime}, nil
 }
 
 func (c taggingConnector) Driver() driver.Driver { return c.base.Driver() }
@@ -26,11 +29,12 @@ func (c taggingConnector) Driver() driver.Driver { return c.base.Driver() }
 // taggingConn forwards every optional interface the MySQL driver's connection implements. database/sql detects them by type assertion, so a missing one would silently change behaviour (e.g. prepare every query instead of interpolating).
 type taggingConn struct {
 	driver.Conn
-	static map[string]string
+	static       map[string]string
+	maxQueryTime time.Duration
 }
 
 func (c *taggingConn) tag(ctx context.Context, query string) string {
-	return querytag.Append(query, querytag.Comment(ctx, c.static))
+	return querytag.Append(withQueryTimeout(ctx, query, c.maxQueryTime), querytag.Comment(ctx, c.static))
 }
 
 func (c *taggingConn) Prepare(query string) (driver.Stmt, error) {

@@ -58,6 +58,9 @@ type Config struct {
 
 	// Application (optional; default: "") is the app query tag on every statement, e.g. the service name, so PlanetScale Insights can attribute its load. Empty omits it.
 	Application string
+
+	// MaxQueryTime (optional; default: 0, unbounded) stops each SELECT on the database side after this long, or just before its context's deadline when that is sooner. Set it on pools that run reports, whose queries would otherwise run on after their caller gave up.
+	MaxQueryTime time.Duration
 }
 
 // WithDefaults returns a new Config with all zero-value optional fields replaced by production defaults. It is safe to call on a nil receiver. The original Config is not mutated; a copy is always returned.
@@ -76,6 +79,7 @@ func (c *Config) WithDefaults() *Config {
 		WarmConnections:       cmp.Or(c.WarmConnections, defaultWarmConnections),
 		WarmInterval:          cmp.Or(c.WarmInterval, defaultWarmInterval),
 		Application:           c.Application,
+		MaxQueryTime:          c.MaxQueryTime,
 	}
 }
 
@@ -137,7 +141,7 @@ func NewDbPool(config *Config) (*sql.DB, error) {
 	if config.Application != "" {
 		static = map[string]string{querytag.App: config.Application}
 	}
-	connector := taggingConnector{base: base, static: static}
+	connector := taggingConnector{base: base, static: static, maxQueryTime: config.MaxQueryTime}
 
 	var db *sql.DB
 	if config.TracingEnabled {

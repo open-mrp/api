@@ -137,6 +137,7 @@ type AnalyticsCache struct {
 	sales          *cache.Cache[[]domain.SalesEntry]
 	salesSummary   *cache.Cache[*domain.SalesSummary]
 	salesBreakdown *cache.Cache[*domain.SalesBreakdown]
+	newCustomers   *cache.Cache[*domain.NewCustomerPage]
 	pricing        *cache.Cache[*domain.CustomerPricingAnalysis]
 	oee            *cache.Cache[[]domain.OeeDepartment]
 	oeeTrend       *cache.Cache[[]domain.OeeTrendPeriod]
@@ -161,6 +162,9 @@ func NewAnalyticsCache(cfg *AnalyticsCacheConfig) (*AnalyticsCache, error) {
 		return nil, err
 	}
 	if c.salesBreakdown, err = newAnalyticsReportCache[*domain.SalesBreakdown](cfg, "sales_breakdown"); err != nil {
+		return nil, err
+	}
+	if c.newCustomers, err = newAnalyticsReportCache[*domain.NewCustomerPage](cfg, "new_customers"); err != nil {
 		return nil, err
 	}
 	if c.pricing, err = newAnalyticsReportCache[*domain.CustomerPricingAnalysis](cfg, "customer_pricing"); err != nil {

@@ -5,6 +5,7 @@ import (
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/field"
+	"github.com/open-mrp/api/shared/pagination"
 )
 
 func (*AnalyzeSalesRequest) SchemaExample() any {
@@ -217,7 +218,7 @@ func (*AnalyzeSalesSummaryRequest) SchemaExample() any {
 }
 
 func (*AnalyzeSalesBreakdownRequest) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(&AnalyzeSalesBreakdownRequest{
+	ex := apiexample.ValidateAndMarshalToMap(&AnalyzeSalesBreakdownRequest{
 		GroupBy:               constants.SalesBreakdownGroupByCustomer,
 		StartDate:             apiresource.SampleAnalyticsPeriodStart,
 		EndDate:               apiresource.SampleAnalyticsPeriodEnd,
@@ -225,24 +226,45 @@ func (*AnalyzeSalesBreakdownRequest) SchemaExample() any {
 		SalesReportFilters:    sampleSalesReportFilters(),
 		Limit:                 10,
 	})
+	// The cursor is a query parameter, documented from this map by its query key.
+	ex["cursor"] = pagination.EncodeDocumentationValueCursor("16200.5", apiresource.SampleCustomerID)
+	return ex
 }
 
 func (*AnalyzeSalesInvoicesRequest) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(&AnalyzeSalesInvoicesRequest{
+	ex := apiexample.ValidateAndMarshalToMap(&AnalyzeSalesInvoicesRequest{
 		StartDate:          apiresource.SampleAnalyticsPeriodStart,
 		EndDate:            apiresource.SampleAnalyticsPeriodEnd,
 		SalesReportFilters: sampleSalesReportFilters(),
 		Limit:              10,
 	})
+	// The cursor is a query parameter, documented from this map by its query key.
+	ex["cursor"] = pagination.EncodeDocumentationStringCursor(apiresource.SampleAnalyticsPeriodStart, apiresource.SampleInvoiceID)
+	return ex
+}
+
+func (*ListNewCustomersRequest) SchemaExample() any {
+	ex := apiexample.ValidateAndMarshalToMap(&ListNewCustomersRequest{
+		StartDate:        apiresource.SampleAnalyticsPeriodStart,
+		EndDate:          apiresource.SampleAnalyticsPeriodEnd,
+		CustomerGroupIDs: []string{apiresource.SampleAccountGroupID},
+		Limit:            100,
+	})
+	// The cursor is a query parameter, documented from this map by its query key.
+	ex["cursor"] = pagination.EncodeDocumentationStringCursor(apiresource.SampleAnalyticsPeriodStart, apiresource.SampleCustomerID)
+	return ex
 }
 
 func (*ListSalesLinesRequest) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(&ListSalesLinesRequest{
+	ex := apiexample.ValidateAndMarshalToMap(&ListSalesLinesRequest{
 		StartDate:          field.Some(apiresource.SampleAnalyticsPeriodStart),
 		EndDate:            field.Some(apiresource.SampleAnalyticsPeriodEnd),
 		SalesReportFilters: sampleSalesReportFilters(),
 		Limit:              50,
 	})
+	// The cursor is a query parameter, documented from this map by its query key.
+	ex["cursor"] = pagination.EncodeDocumentationStringCursor(apiresource.SampleAnalyticsPeriodStart, apiresource.SampleInvoiceID)
+	return ex
 }
 
 func (*ExportSalesLinesRequest) SchemaExample() any {

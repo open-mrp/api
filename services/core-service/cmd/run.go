@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/event"
@@ -38,6 +39,12 @@ import (
 // reportMaxOpenConnections caps the report pool. Reports are few, short and cached, so a small pool
 // is enough, and it bounds how many a burst can run at once.
 const reportMaxOpenConnections = 10
+
+// reportMaxQueryTime stops a report query on the database after this long, or just before its
+// request's deadline when that is sooner, so a report its caller gave up on stops scanning instead
+// of running on (and piling up with retries) on the replica. Export pages run without a request
+// deadline and are small, so the cap is generous.
+const reportMaxQueryTime = 30 * time.Second
 
 func Run(
 	ctx context.Context,
@@ -85,6 +92,7 @@ func Run(
 		Application:        domain.ServiceName,
 		MaxOpenConnections: reportMaxOpenConnections,
 		MaxIdleConnections: reportMaxOpenConnections,
+		MaxQueryTime:       reportMaxQueryTime,
 	})
 	if err != nil {
 		return err
@@ -896,15 +904,9 @@ func Run(
 	}
 	defer scheduleCadence.Stop()
 
-	// sales_line_fact pre-prices invoice lines for sales analytics. Audit events mark what changed; the
-	// refresher (one pod, under a lease) recomputes marked scopes, re-prices recent invoices for writes that
-	// publish no event, and reconciles every invoice daily. Its first reconcile pass is the backfill.
-	if err := audit.Subscribe(ctx, rabbitmq, audit.SubscribeConfig{
-		QueueBaseName: messaging.CoreEventSalesFactQueue,
-		OnEvent:       service.NewSalesFactMarker(repoFactory).HandleAuditEvent,
-	}); err != nil {
-		return err
-	}
+	// sales_line_fact pre-prices invoice lines for sales analytics. Audit events mark what changed and wake
+	// the refresher (one pod, under a lease), which recomputes marked scopes, re-prices recent invoices for
+	// writes that publish no event, and reconciles every invoice daily. Its first reconcile pass is the backfill.
 	salesFactRefresher := service.NewSalesFactRefresher(&service.SalesFactRefresherConfig{
 		Repos: repoFactory,
 		Lease: leaseSvc,
@@ -916,6 +918,12 @@ func Run(
 		return err
 	}
 	defer salesFactRefresher.Stop()
+	if err := audit.Subscribe(ctx, rabbitmq, audit.SubscribeConfig{
+		QueueBaseName: messaging.CoreEventSalesFactQueue,
+		OnEvent:       service.NewSalesFactMarker(repoFactory, salesFactRefresher.Wake).HandleAuditEvent,
+	}); err != nil {
+		return err
+	}
 
 	// Backstop for burn rate: the write path recomputes on consumption, but an item nobody consumes
 	// would keep a stale rate forever. This sweeps the stalest items in bounded batches so idle items

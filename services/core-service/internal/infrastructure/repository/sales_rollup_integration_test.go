@@ -74,6 +74,11 @@ func TestSalesRollupsMatchFacts(t *testing.T) {
 	reps := distinctFactValues(t, pool, "sales_rep_id")
 	buyers := distinctFactValues(t, pool, "buyer_account_id")
 	items := distinctFactValues(t, pool, "item_id")
+	// Two product lines one invoice spans: summing their rows would count that invoice twice.
+	var sharedA, sharedB string
+	require.NoError(t, pool.QueryRow(`SELECT a.product_line_id, b.product_line_id FROM sales_line_fact a
+JOIN sales_line_fact b ON b.invoice_id = a.invoice_id AND b.product_line_id > a.product_line_id
+WHERE a.account_id = ? LIMIT 1`, rollupTestAccountID).Scan(&sharedA, &sharedB), "no invoice spans two product lines; seed one")
 
 	est := time.FixedZone("est", -5*3600)
 	windows := []struct {
@@ -97,6 +102,10 @@ func TestSalesRollupsMatchFacts(t *testing.T) {
 		{"no filter", func(*domain.SalesReportFilter) {}},
 		{"one product line", func(f *domain.SalesReportFilter) { f.ProductLineIDs = productLines[:1] }},
 		{"two product lines", func(f *domain.SalesReportFilter) { f.ProductLineIDs = productLines[:2] }},
+		{"two product lines one invoice spans", func(f *domain.SalesReportFilter) { f.ProductLineIDs = []string{sharedA, sharedB} }},
+		{"shared product lines and a rep", func(f *domain.SalesReportFilter) {
+			f.ProductLineIDs, f.SalesRepIDs = []string{sharedA, sharedB}, reps[:1]
+		}},
 		{"sales reps", func(f *domain.SalesReportFilter) { f.SalesRepIDs = reps[:2] }},
 		{"a rep and a product line", func(f *domain.SalesReportFilter) { f.SalesRepIDs, f.ProductLineIDs = reps[:1], productLines[1:2] }},
 		{"customers", func(f *domain.SalesReportFilter) { f.CustomerIDs = buyers[:3] }},

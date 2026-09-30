@@ -22,7 +22,7 @@ func TestRollupDirtyMarksClearOnlyWhenUnchanged(t *testing.T) {
 	pool := testDB(t)
 	repo := NewSalesFactRepo(sqlc.New(pool))
 	day := domain.SalesRollupDay{AccountID: "ac_marks_test", Day: time.Date(2024, 2, 29, 0, 0, 0, 0, time.UTC)}
-	t.Cleanup(func() { _, _ = pool.Exec(`DELETE FROM sales_rollup_dirty WHERE account_id = 'ac_marks_test'`) })
+	t.Cleanup(func() { _, _ = pool.Exec(`DELETE FROM sales_fact_dirty WHERE account_id = 'ac_marks_test'`) })
 
 	require.Nil(t, repo.MarkRollupDays(ctx, []domain.SalesRollupDay{day, day}))
 	first := findRollupMark(t, ctx, repo, day)

@@ -35,6 +35,12 @@ const (
 	// salesRollupDrainBatch bounds the rollup days one drain rebuilds.
 	salesRollupDrainBatch = 500
 
+	// salesBuyerDrainBatch bounds the buyer summaries one drain rebuilds.
+	salesBuyerDrainBatch = 500
+
+	// salesBuyerSweepBatch is how many buyers the summary sweep reads and rebuilds at a time.
+	salesBuyerSweepBatch = 200
+
 	// salesFactReconcileScopeID is the single scope id reconcile requests share, so they coalesce.
 	salesFactReconcileScopeID = "all"
 )
@@ -47,11 +53,20 @@ type SalesFactRefresherConfig struct {
 	// Lease (required) keeps the refresh to one pod at a time.
 	Lease *lease.Lease
 
+	// LeaseName (optional; default: "sales-fact-refresher") names the lease, for tests that must not contend with a running service.
+	LeaseName string
+
 	// OnFactsChanged (optional; default: no-op) is called with the accounts whose facts a refresh rewrote, so cached reports built from the old facts can be dropped.
 	OnFactsChanged func(ctx context.Context, accountIDs []string)
 
-	// TickInterval (optional; default: 5s) is how often dirty marks are drained. Zero or negative values are treated as unset.
+	// TickInterval (optional; default: 5s) is how soon the refresher runs again while work is left over: a backlog larger than one batch, a reconcile or rollup pass in progress, a step that failed, or a wake another pod's lease kept it from serving. Zero or negative values are treated as unset.
 	TickInterval time.Duration
+
+	// IdleInterval (optional; default: 1m) is how often the refresher runs with nothing to wake it. That run starts the rolling recompute and reconcile passes when due, and drains any mark whose wake was lost. Zero or negative values are treated as unset.
+	IdleInterval time.Duration
+
+	// WakeDelay (optional; default: 1s) is how long the refresher waits after a mark wakes it, so a burst of edits is drained in one run. Zero or negative values are treated as unset.
+	WakeDelay time.Duration
 
 	// RecentWindow (optional; default: 7d) is how far back the rolling recompute reaches. It catches writes that mark nothing, such as the dashboard's. Zero or negative values are treated as unset.
 	RecentWindow time.Duration
@@ -77,8 +92,17 @@ func (c *SalesFactRefresherConfig) WithDefaults() *SalesFactRefresherConfig {
 	if c.OnFactsChanged == nil {
 		c.OnFactsChanged = func(context.Context, []string) {}
 	}
+	if c.LeaseName == "" {
+		c.LeaseName = salesFactLeaseName
+	}
 	if c.TickInterval <= 0 {
 		c.TickInterval = 5 * time.Second
+	}
+	if c.IdleInterval <= 0 {
+		c.IdleInterval = time.Minute
+	}
+	if c.WakeDelay <= 0 {
+		c.WakeDelay = time.Second
 	}
 	if c.RecentWindow <= 0 {
 		c.RecentWindow = 7 * 24 * time.Hour
@@ -112,11 +136,20 @@ func (c *SalesFactRefresherConfig) validate() error {
 //   - dirty marks, written from audit events within seconds of an edit made through this API;
 //   - a rolling recompute of recent invoices, for writes that publish no audit event (the dashboard, generic rate and quantity edits);
 //   - a daily reconcile pass over every invoice, which corrects anything older that drifted. Its first pass is the backfill.
+//
+// Dirty marks wake it (see Wake), so it runs within WakeDelay of an edit and otherwise only every IdleInterval.
 type SalesFactRefresher struct {
 	cfg *SalesFactRefresherConfig
 
 	lastRecent time.Time
 
+	// backlog is set during a Tick by any step that left work for a later run.
+	backlog bool
+
+	// tick is Tick, replaceable so tests can drive the loop without a database.
+	tick func(ctx context.Context) bool
+
+	wake   chan struct{}
 	stopCh chan struct{}
 	wg     sync.WaitGroup
 }
@@ -126,7 +159,17 @@ func NewSalesFactRefresher(config *SalesFactRefresherConfig) *SalesFactRefresher
 	if err := config.validate(); err != nil {
 		panic(err)
 	}
-	return &SalesFactRefresher{cfg: config, stopCh: make(chan struct{})}
+	s := &SalesFactRefresher{cfg: config, wake: make(chan struct{}, 1), stopCh: make(chan struct{})}
+	s.tick = s.Tick
+	return s
+}
+
+// Wake asks for a run within WakeDelay. It never blocks: wakes that arrive before the run are served by it.
+func (s *SalesFactRefresher) Wake() {
+	select {
+	case s.wake <- struct{}{}:
+	default:
+	}
 }
 
 func (s *SalesFactRefresher) Start(ctx context.Context) error {
@@ -144,45 +187,93 @@ func (s *SalesFactRefresher) Stop() {
 
 func (s *SalesFactRefresher) loop(ctx context.Context) {
 	defer s.wg.Done()
-	ticker := time.NewTicker(s.cfg.TickInterval)
-	defer ticker.Stop()
+	timer := time.NewTimer(s.cfg.TickInterval)
+	defer timer.Stop()
+	due := time.Now().Add(s.cfg.TickInterval)
+	// woken is set by a wake until a run serves it. A run this pod could not take (another pod held the
+	// lease) has not served it: that pod may have listed marks before this wake's mark was written.
+	woken := false
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-s.stopCh:
 			return
-		case <-ticker.C:
-			_ = s.cfg.Lease.WithLease(ctx, salesFactLeaseName, salesFactLeaseTTL, func(leaseCtx context.Context) error {
-				s.Tick(leaseCtx)
+		case <-s.wake:
+			woken = true
+			if at := time.Now().Add(s.cfg.WakeDelay); at.Before(due) {
+				due = at
+				resetTimer(timer, s.cfg.WakeDelay)
+			}
+		case <-timer.C:
+			ran, more := false, false
+			_ = s.cfg.Lease.WithLease(ctx, s.cfg.LeaseName, salesFactLeaseTTL, func(leaseCtx context.Context) error {
+				ran = true
+				more = s.tick(leaseCtx)
 				return nil
 			})
+			if ran {
+				woken = false
+			}
+			next := s.cfg.IdleInterval
+			if more || woken {
+				next = s.cfg.TickInterval
+			}
+			due = time.Now().Add(next)
+			timer.Reset(next)
 		}
 	}
 }
 
-// Tick runs one round of every path. Exported for tests; production calls it under the lease.
-func (s *SalesFactRefresher) Tick(ctx context.Context) {
+// resetTimer reschedules a timer whose channel has not been received from.
+func resetTimer(t *time.Timer, d time.Duration) {
+	if !t.Stop() {
+		select {
+		case <-t.C:
+		default:
+		}
+	}
+	t.Reset(d)
+}
+
+// Tick runs one round of every path and reports whether it left work for a later run. Exported for tests; production calls it under the lease.
+func (s *SalesFactRefresher) Tick(ctx context.Context) bool {
+	s.backlog = false
 	// Days a failed or interrupted refresh left marked are rebuilt first.
 	if apiErr := s.drainRollupDirty(ctx); apiErr != nil {
+		s.backlog = true
 		slog.ErrorContext(ctx, "Sales fact refresher: rebuilding marked rollup days failed", "error", apiErr)
 	}
+	// Buyers a failed or interrupted refresh left marked are rebuilt first too.
+	if apiErr := s.drainBuyerDirty(ctx); apiErr != nil {
+		s.backlog = true
+		slog.ErrorContext(ctx, "Sales fact refresher: rebuilding marked buyer summaries failed", "error", apiErr)
+	}
 	if apiErr := s.drainDirty(ctx); apiErr != nil {
+		s.backlog = true
 		slog.ErrorContext(ctx, "Sales fact refresher: draining dirty marks failed", "error", apiErr)
 	}
 	if now := s.cfg.Now(); now.Sub(s.lastRecent) >= s.cfg.RecentInterval {
 		if apiErr := s.refreshRecent(ctx, now); apiErr != nil {
+			s.backlog = true
 			slog.ErrorContext(ctx, "Sales fact refresher: rolling recompute failed", "error", apiErr)
 		} else {
 			s.lastRecent = now
 		}
 	}
 	if apiErr := s.reconcile(ctx); apiErr != nil {
+		s.backlog = true
 		slog.ErrorContext(ctx, "Sales fact refresher: reconcile failed", "error", apiErr)
 	}
 	if apiErr := s.sweepRollups(ctx); apiErr != nil {
+		s.backlog = true
 		slog.ErrorContext(ctx, "Sales fact refresher: rollup sweep failed", "error", apiErr)
 	}
+	if apiErr := s.sweepBuyers(ctx); apiErr != nil {
+		s.backlog = true
+		slog.ErrorContext(ctx, "Sales fact refresher: buyer summary sweep failed", "error", apiErr)
+	}
+	return s.backlog
 }
 
 func (s *SalesFactRefresher) drainDirty(ctx context.Context) *apierror.APIError {
@@ -197,6 +288,9 @@ func (s *SalesFactRefresher) drainDirty(ctx context.Context) *apierror.APIError 
 	span.SetAttributes(attribute.Int("sales_fact.dirty_marks", len(marks)))
 	if len(marks) == 0 {
 		return nil
+	}
+	if len(marks) == salesFactInvoiceBatch {
+		s.backlog = true
 	}
 
 	type scopeKey struct {
@@ -246,6 +340,7 @@ func (s *SalesFactRefresher) drainDirty(ctx context.Context) *apierror.APIError 
 			}
 		}
 		slog.InfoContext(ctx, "Sales fact refresher: fanned a large change out into invoice marks", "invoices", len(invoiceIDs))
+		s.backlog = true
 		for _, m := range marks {
 			if m.ScopeType == domain.SalesFactScopeInvoice {
 				continue
@@ -339,6 +434,9 @@ func (s *SalesFactRefresher) reconcile(ctx context.Context) *apierror.APIError {
 		state.Cursor = &last
 	}
 	span.SetAttributes(attribute.Int("sales_fact.invoices", scanned), attribute.Int("sales_fact.drift_lines", drift))
+	if state.Cursor != nil {
+		s.backlog = true
+	}
 	if drift > 0 && state.LastCompletedAt != nil {
 		slog.InfoContext(ctx, "Sales fact refresher: reconcile corrected facts", "lines", drift)
 	}
@@ -415,6 +513,9 @@ func (s *SalesFactRefresher) refreshInvoices(ctx context.Context, invoiceIDs []s
 		if apiErr := repo.MarkRollupDays(ctx, touchedRollupDays(upserts, deletes, stored)); apiErr != nil {
 			return changedLines, apiErr
 		}
+		if apiErr := repo.MarkBuyers(ctx, touchedBuyers(upserts, deletes, stored)); apiErr != nil {
+			return changedLines, apiErr
+		}
 		if apiErr := repo.UpsertFacts(ctx, upserts); apiErr != nil {
 			return changedLines, apiErr
 		}
@@ -438,7 +539,159 @@ func (s *SalesFactRefresher) refreshInvoices(ctx context.Context, invoiceIDs []s
 		// Reports that read the facts alone are stale now, whether or not the rollups rebuild below.
 		s.cfg.OnFactsChanged(ctx, accounts)
 	}
-	return changedLines, s.drainRollupDirty(ctx)
+	if apiErr := s.drainRollupDirty(ctx); apiErr != nil {
+		return changedLines, apiErr
+	}
+	return changedLines, s.drainBuyerDirty(ctx)
+}
+
+// touchedBuyers returns every buyer a changed line belongs to, and for a line that changed buyer, the
+// buyer it left.
+func touchedBuyers(upserts, deletes, stored []domain.SalesLineFact) []domain.SalesBuyerKey {
+	storedByLine := make(map[string]domain.SalesLineFact, len(stored))
+	for _, f := range stored {
+		storedByLine[f.InvoiceLineID] = f
+	}
+	seen := map[domain.SalesBuyerKey]struct{}{}
+	var buyers []domain.SalesBuyerKey
+	add := func(f domain.SalesLineFact) {
+		k := domain.SalesBuyerKey{AccountID: f.AccountID, BuyerAccountID: f.BuyerAccountID}
+		if _, ok := seen[k]; !ok {
+			seen[k] = struct{}{}
+			buyers = append(buyers, k)
+		}
+	}
+	for _, f := range upserts {
+		add(f)
+		if old, ok := storedByLine[f.InvoiceLineID]; ok {
+			add(old)
+		}
+	}
+	for _, f := range deletes {
+		add(f)
+	}
+	return buyers
+}
+
+// drainBuyerDirty rebuilds a batch of marked buyers' summaries and clears each mark that was not
+// re-marked meanwhile.
+func (s *SalesFactRefresher) drainBuyerDirty(ctx context.Context) *apierror.APIError {
+	ctx, span := salesFactTracer.Start(ctx, "service.sales_fact_refresher.drain_buyer_dirty")
+	defer span.End()
+
+	repo := s.cfg.Repos.NewSalesFactRepo()
+	marks, apiErr := repo.ListBuyerDirty(ctx, salesBuyerDrainBatch)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	span.SetAttributes(attribute.Int("sales_fact.buyer_marks", len(marks)))
+	if len(marks) == 0 {
+		return nil
+	}
+	if len(marks) == salesBuyerDrainBatch {
+		s.backlog = true
+	}
+	byAccount := map[string][]string{}
+	for _, m := range marks {
+		byAccount[m.Buyer.AccountID] = append(byAccount[m.Buyer.AccountID], m.Buyer.BuyerAccountID)
+	}
+	accounts := make([]string, 0, len(byAccount))
+	for account, buyers := range byAccount {
+		if apiErr := repo.RebuildBuyerSummaries(ctx, account, buyers); apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+		accounts = append(accounts, account)
+	}
+	for _, m := range marks {
+		if apiErr := repo.ClearBuyerDirty(ctx, m); apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+	}
+	s.cfg.OnFactsChanged(ctx, accounts)
+	return nil
+}
+
+// sweepBuyers advances the buyer summary pass by up to ReconcileBudget, rebuilding every buyer with facts
+// in (account, buyer) order, then deleting the summaries of buyers the pass never reached (they have no
+// facts left). Its first pass is the backfill. It needs every fact's order date and price flag, which
+// facts written before those columns lack, so before it the sweep restarts the fact reconcile (which
+// rewrites each fact that differs from what it computes) and waits for that pass to complete. Later
+// passes start ReconcileEvery apart and repair any summary a crash left behind its facts.
+func (s *SalesFactRefresher) sweepBuyers(ctx context.Context) *apierror.APIError {
+	ctx, span := salesFactTracer.Start(ctx, "service.sales_fact_refresher.sweep_buyers")
+	defer span.End()
+
+	repo := s.cfg.Repos.NewSalesFactRepo()
+	state, apiErr := repo.GetBuyerSummarySync(ctx)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	now := s.cfg.Now().UTC()
+	if state.FactsSince == nil {
+		if apiErr := repo.RestartReconcile(ctx); apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+		state.FactsSince = &now
+		slog.InfoContext(ctx, "Sales fact refresher: fact reconcile restarted to fill order dates for the buyer summaries")
+		return tracing.Trace(span, repo.SaveBuyerSummarySync(ctx, *state))
+	}
+	if state.LastCompletedAt == nil && state.Cursor == nil {
+		facts, apiErr := repo.GetSync(ctx)
+		if apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+		if facts.LastCompletedAt == nil || !facts.LastCompletedAt.After(*state.FactsSince) {
+			return nil
+		}
+	}
+	if state.Cursor == nil {
+		if state.PassStartedAt != nil && now.Sub(*state.PassStartedAt) < s.cfg.ReconcileEvery {
+			return nil
+		}
+		state.Cursor = &domain.SalesBuyerKey{}
+		state.PassStartedAt = &now
+		slog.InfoContext(ctx, "Sales fact refresher: buyer summary pass started", "backfill", state.LastCompletedAt == nil)
+	}
+
+	deadline := now.Add(s.cfg.ReconcileBudget)
+	rebuilt := 0
+	for s.cfg.Now().UTC().Before(deadline) {
+		next, apiErr := repo.NextBuyers(ctx, *state.Cursor, salesBuyerSweepBatch)
+		if apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+		if len(next) == 0 {
+			if apiErr := repo.DeleteBuyerSummariesRefreshedBefore(ctx, *state.PassStartedAt); apiErr != nil {
+				return tracing.Trace(span, apiErr)
+			}
+			completed := s.cfg.Now().UTC()
+			state.Cursor = nil
+			state.LastCompletedAt = &completed
+			slog.InfoContext(ctx, "Sales fact refresher: buyer summary pass completed", "started_at", state.PassStartedAt)
+			break
+		}
+		byAccount := map[string][]string{}
+		var order []string
+		for _, k := range next {
+			if _, ok := byAccount[k.AccountID]; !ok {
+				order = append(order, k.AccountID)
+			}
+			byAccount[k.AccountID] = append(byAccount[k.AccountID], k.BuyerAccountID)
+		}
+		for _, account := range order {
+			if apiErr := repo.RebuildBuyerSummaries(ctx, account, byAccount[account]); apiErr != nil {
+				return tracing.Trace(span, apiErr)
+			}
+		}
+		rebuilt += len(next)
+		last := next[len(next)-1]
+		state.Cursor = &last
+	}
+	span.SetAttributes(attribute.Int("sales_fact.buyers_rebuilt", rebuilt))
+	if state.Cursor != nil {
+		s.backlog = true
+	}
+	return tracing.Trace(span, repo.SaveBuyerSummarySync(ctx, *state))
 }
 
 // touchedRollupDays returns the (account, UTC day) of every changed line, and for a line that moved,
@@ -458,8 +711,12 @@ func touchedRollupDays(upserts, deletes, stored []domain.SalesLineFact) []domain
 		}
 	}
 	for _, f := range upserts {
+		old, ok := storedByLine[f.InvoiceLineID]
+		if ok && rollupFieldsEqual(old, f) {
+			continue
+		}
 		add(f)
-		if old, ok := storedByLine[f.InvoiceLineID]; ok {
+		if ok {
 			add(old)
 		}
 	}
@@ -483,6 +740,9 @@ func (s *SalesFactRefresher) drainRollupDirty(ctx context.Context) *apierror.API
 	span.SetAttributes(attribute.Int("sales_fact.rollup_marks", len(marks)))
 	if len(marks) == 0 {
 		return nil
+	}
+	if len(marks) == salesRollupDrainBatch {
+		s.backlog = true
 	}
 	days := make(map[domain.SalesRollupDay]struct{}, len(marks))
 	accounts := map[string]struct{}{}
@@ -565,6 +825,9 @@ func (s *SalesFactRefresher) sweepRollups(ctx context.Context) *apierror.APIErro
 		state.Cursor = &domain.SalesRollupDay{AccountID: next.AccountID, Day: next.Day.AddDate(0, 0, 1)}
 	}
 	span.SetAttributes(attribute.Int("sales_fact.rollup_days", len(days)))
+	if state.Cursor != nil {
+		s.backlog = true
+	}
 	// Days are already rebuilt; this brings their months in line before the cursor is saved past them.
 	months := map[domain.SalesRollupDay]struct{}{}
 	for d := range days {
@@ -623,7 +886,24 @@ func salesFactsEqual(a, b domain.SalesLineFact) bool {
 		a.ProductLineID == b.ProductLineID &&
 		ptrEqual(a.QuantityBase, b.QuantityBase) &&
 		ptrEqual(a.TotalInvoiced, b.TotalInvoiced) &&
-		ptrEqual(a.TotalCost, b.TotalCost)
+		ptrEqual(a.TotalCost, b.TotalCost) &&
+		timePtrEqual(a.OrderedAt, b.OrderedAt) &&
+		a.IsPriced == b.IsPriced
+}
+
+// rollupFieldsEqual is whether two facts put the same amounts in the same rollup buckets. The order date
+// and price flag feed only the buyer summaries, so a change to them alone (their backfill included)
+// leaves the rollups as they are.
+func rollupFieldsEqual(a, b domain.SalesLineFact) bool {
+	a.OrderedAt, a.IsPriced = b.OrderedAt, b.IsPriced
+	return salesFactsEqual(a, b)
+}
+
+func timePtrEqual(a, b *time.Time) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return a.Equal(*b)
 }
 
 func ptrEqual(a, b *string) bool {
@@ -635,11 +915,16 @@ func ptrEqual(a, b *string) bool {
 
 // SalesFactMarker turns audit events into dirty marks for the refresher.
 type SalesFactMarker struct {
-	repos domain.RepoFactory
+	repos    domain.RepoFactory
+	onMarked func()
 }
 
-func NewSalesFactMarker(repos domain.RepoFactory) *SalesFactMarker {
-	return &SalesFactMarker{repos: repos}
+// NewSalesFactMarker returns a marker that calls onMarked (nil for none) after each mark it writes, to wake the refresher.
+func NewSalesFactMarker(repos domain.RepoFactory, onMarked func()) *SalesFactMarker {
+	if onMarked == nil {
+		onMarked = func() {}
+	}
+	return &SalesFactMarker{repos: repos, onMarked: onMarked}
 }
 
 // HandleAuditEvent marks the scope an event can change facts for. Every replica receives every event, so a mark is written once per replica; marking is idempotent.
@@ -651,7 +936,9 @@ func (m *SalesFactMarker) HandleAuditEvent(ctx context.Context, e audit.Observed
 	if apiErr := m.repos.NewSalesFactRepo().MarkDirty(ctx, scope, scopeID, e.AccountID); apiErr != nil {
 		// The rolling recompute and reconcile pass still pick the change up, just later.
 		slog.WarnContext(ctx, "Sales fact marker: failed to mark scope", "scope", scope, "id", scopeID, "error", apiErr)
+		return
 	}
+	m.onMarked()
 }
 
 // salesFactScopeFor maps an audit event to the scope whose facts it can change, and the scope id to mark.

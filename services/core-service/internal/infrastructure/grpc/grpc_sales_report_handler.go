@@ -187,3 +187,38 @@ func (h *gRPCHandler) ExportSalesLines(ctx context.Context, req *pb.ExportSalesL
 	}
 	return &pb.ExportSalesLinesResponse{Job: jobToProto(job)}, nil
 }
+
+func (h *gRPCHandler) ListNewCustomers(ctx context.Context, req *pb.ListNewCustomersRequest) (*pb.ListNewCustomersResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+	page, apiErr := h.analyticsSvc.ListNewCustomers(ctx, domain.ListNewCustomersParams{
+		StartsAt:         req.StartsAt.AsTime(),
+		EndsAt:           req.EndsAt.AsTime(),
+		CustomerGroupIDs: req.CustomerGroupIds,
+		SalesRepIDs:      req.SalesRepIds,
+		Limit:            req.Limit,
+		Cursor:           req.Cursor,
+	})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+	resp := &pb.ListNewCustomersResponse{
+		Customers: make([]*pb.NewCustomerProto, len(page.Customers)),
+		PageInfo:  pageInfoToProto(page.PageInfo),
+	}
+	for i, c := range page.Customers {
+		resp.Customers[i] = &pb.NewCustomerProto{
+			CustomerId:        c.CustomerID,
+			CustomerNumber:    c.CustomerNumber,
+			CustomerName:      c.CustomerName,
+			CustomerGroupName: c.CustomerGroupName,
+			Location:          c.Location,
+			SalesRepName:      c.SalesRepName,
+			TotalInvoiced:     c.TotalInvoiced,
+			FirstOrderedAt:    timestamppb.New(c.FirstOrderedAt),
+			CustomerCreatedAt: timestamppb.New(c.CustomerCreatedAt),
+		}
+	}
+	return resp, nil
+}

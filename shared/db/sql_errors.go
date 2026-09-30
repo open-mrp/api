@@ -49,7 +49,12 @@ func MapSQLError(err error) *apierror.APIError {
 			return apierror.NewInternalError(err, "Database lock wait timed out.")
 		case 1213: // deadlock
 			return apierror.NewInternalError(err, "Database deadlock; the transaction was rolled back.")
+		case 3024, 1317: // max execution time exceeded / query interrupted: the statement hit its database-side time limit (see Config.MaxQueryTime)
+			return apierror.NewRequestTimeoutError("Database stopped the query at its time limit: " + mysqlErr.Message)
 		case 1105: // Vitess catch-all — only the message says what happened
+			if isQueryTimeout(mysqlErr.Message) {
+				return apierror.NewRequestTimeoutError("Database stopped the query at its time limit: " + mysqlErr.Message)
+			}
 			if isVitessTxKill(mysqlErr.Message) {
 				return apierror.NewInternalError(err, "Database transaction exceeded the server time limit and was rolled back.")
 			}
@@ -197,4 +202,10 @@ func extractKeyName(message string) string {
 		keyName = keyName[dot+1:]
 	}
 	return keyName
+}
+
+// isQueryTimeout reports whether a Vitess catch-all error is vtgate stopping a statement at its QUERY_TIMEOUT_MS directive.
+func isQueryTimeout(message string) bool {
+	m := strings.ToLower(message)
+	return strings.Contains(m, "query timeout") || strings.Contains(m, "deadlineexceeded") || strings.Contains(m, "maximum statement execution time exceeded")
 }

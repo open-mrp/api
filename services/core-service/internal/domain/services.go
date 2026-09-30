@@ -870,6 +870,8 @@ type AnalyticsSvc interface {
 	AnalyzeSalesBreakdown(ctx context.Context, params AnalyzeSalesBreakdownParams) (*SalesBreakdown, *apierror.APIError)
 	// AnalyzeSalesInvoices lists the invoices in a period with their invoiced totals, newest first.
 	AnalyzeSalesInvoices(ctx context.Context, params AnalyzeSalesInvoicesParams) (*SalesInvoicePage, *apierror.APIError)
+	// ListNewCustomers pages the customers added in a window that have ordered, with their first order and lifetime sales.
+	ListNewCustomers(ctx context.Context, params ListNewCustomersParams) (*NewCustomerPage, *apierror.APIError)
 	// ListSalesLines lists invoiced sale lines with their pricing, newest first.
 	ListSalesLines(ctx context.Context, params ListSalesLinesParams) (*SalesLinePage, *apierror.APIError)
 	// ExportSalesLines accepts an export of the invoiced sale lines and returns the job that builds it.

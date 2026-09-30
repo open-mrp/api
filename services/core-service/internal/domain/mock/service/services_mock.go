@@ -4977,6 +4977,21 @@ func (mr *MockAnalyticsSvcMockRecorder) GetNewCustomersAnalytics(ctx, params any
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNewCustomersAnalytics", reflect.TypeOf((*MockAnalyticsSvc)(nil).GetNewCustomersAnalytics), ctx, params)
 }
 
+// ListNewCustomers mocks base method.
+func (m *MockAnalyticsSvc) ListNewCustomers(ctx context.Context, params domain.ListNewCustomersParams) (*domain.NewCustomerPage, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListNewCustomers", ctx, params)
+	ret0, _ := ret[0].(*domain.NewCustomerPage)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListNewCustomers indicates an expected call of ListNewCustomers.
+func (mr *MockAnalyticsSvcMockRecorder) ListNewCustomers(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListNewCustomers", reflect.TypeOf((*MockAnalyticsSvc)(nil).ListNewCustomers), ctx, params)
+}
+
 // ListSalesLines mocks base method.
 func (m *MockAnalyticsSvc) ListSalesLines(ctx context.Context, params domain.ListSalesLinesParams) (*domain.SalesLinePage, *apierror.APIError) {
 	m.ctrl.T.Helper()

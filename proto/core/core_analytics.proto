@@ -720,6 +720,34 @@ message AnalyzeSalesInvoicesResponse {
   PageInfo page_info = 2;
 }
 
+// Customers added in [starts_at, ends_at] that have ordered, with their first order and lifetime sales.
+message ListNewCustomersRequest {
+  google.protobuf.Timestamp starts_at = 1;
+  google.protobuf.Timestamp ends_at = 2;
+  repeated string customer_group_ids = 3;
+  repeated string sales_rep_ids = 4;
+  int32 limit = 5;
+  optional string cursor = 6;
+}
+
+message NewCustomerProto {
+  string customer_id = 1;
+  string customer_number = 2;
+  string customer_name = 3;
+  optional string customer_group_name = 4;
+  optional string location = 5;
+  optional string sales_rep_name = 6;
+  // Exact decimal string.
+  string total_invoiced = 7;
+  google.protobuf.Timestamp first_ordered_at = 8;
+  google.protobuf.Timestamp customer_created_at = 9;
+}
+
+message ListNewCustomersResponse {
+  repeated NewCustomerProto customers = 1;
+  PageInfo page_info = 2;
+}
+
 message ListSalesLinesRequest {
   // starts_at/ends_at are ignored unless has_window is set.
   SalesReportFilterProto filter = 1;

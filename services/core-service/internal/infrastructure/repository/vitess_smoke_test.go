@@ -84,6 +84,44 @@ func TestVitessSmoke(t *testing.T) {
 		}
 	}
 
+	// --- report pools stop their queries on the database side ---
+	t.Run("report query timeout", func(t *testing.T) {
+		reports, err := db.NewDbPool(&db.Config{DBURI: dsn, WarmConnections: -1, Application: "vitess-smoke", MaxQueryTime: 500 * time.Millisecond})
+		if err != nil {
+			t.Fatalf("connect: %v", err)
+		}
+		defer reports.Close()
+		var one int
+		if err := reports.QueryRowContext(ctx, "SELECT 1").Scan(&one); err != nil || one != 1 {
+			t.Fatalf("a quick select under the limit: %v", err)
+		}
+		// Far more work than half a second: vtgate must stop it, not merely stop waiting for it.
+		started := time.Now()
+		var n float64
+		err = reports.QueryRowContext(ctx, "SELECT SUM(a.value * b.value + c.value) FROM quantity a, quantity b, quantity c").Scan(&n)
+		if err == nil {
+			t.Fatalf("the query ran to completion (sum %v) instead of being stopped", n)
+		}
+		if took := time.Since(started); took > 5*time.Second {
+			t.Errorf("stopped after %s, want about the 500ms limit", took)
+		}
+		t.Logf("stopped after %s: %v", time.Since(started).Round(time.Millisecond), err)
+		if apiErr := db.MapSQLError(err); apiErr.Code != apierror.ErrorCodeRequestTimeout {
+			t.Errorf("maps to %s, want request_timeout", apiErr.Code)
+		}
+
+		// vtgate's own directive alone, as when it fires before MySQL's: it too must stop the query and map to a timeout.
+		started = time.Now()
+		err = pool.QueryRowContext(ctx, "SELECT /*vt+ QUERY_TIMEOUT_MS=500 */ SUM(a.value * b.value + c.value) FROM quantity a, quantity b, quantity c").Scan(&n)
+		if err == nil {
+			t.Fatal("vtgate's QUERY_TIMEOUT_MS did not stop the query")
+		}
+		t.Logf("vtgate stopped it after %s: %v", time.Since(started).Round(time.Millisecond), err)
+		if apiErr := db.MapSQLError(err); apiErr.Code != apierror.ErrorCodeRequestTimeout {
+			t.Errorf("vtgate's timeout maps to %s, want request_timeout", apiErr.Code)
+		}
+	})
+
 	// --- batched reads (sqlc) ---
 	t.Run("sqlc batch reads", func(t *testing.T) {
 		_, err := q.GetPicksByIDs(ctx, sqlc.GetPicksByIDsParams{PickIds: pickIDs, AccountID: account})
@@ -426,12 +464,53 @@ func TestVitessSmoke(t *testing.T) {
 		ragged := domain.SalesReportFilter{AccountID: account, StartsAt: start.Add(90 * time.Minute), EndsAt: end, ComparisonStartsAt: &start, ComparisonEndsAt: &end}
 		oneLine := ragged
 		oneLine.ProductLineIDs, oneLine.SalesRepIDs = productLines[:1], []string{"acus_none"}
-		for _, f := range []domain.SalesReportFilter{ragged, oneLine} {
+		// Several product lines: summed per-line rows plus an exact invoice count from the facts.
+		twoLines := ragged
+		twoLines.ProductLineIDs = productLines[:2]
+		for _, f := range []domain.SalesReportFilter{ragged, oneLine, twoLines} {
 			_, apiErr = reports.GetSummary(ctx, domain.AnalyzeSalesSummaryParams{SalesReportFilter: f, TZOffsetMinutes: -300}, true)
 			checkAPI("GetSummary from rollups", apiErr)
 			for _, groupBy := range constants.SalesBreakdownGroupBy("").EnumValues() {
 				_, apiErr = reports.GetBreakdown(ctx, domain.AnalyzeSalesBreakdownParams{SalesReportFilter: f, GroupBy: constants.SalesBreakdownGroupBy(groupBy), Limit: 5}, true)
 				checkAPI("GetBreakdown from rollups "+groupBy, apiErr)
+			}
+		}
+
+		// The buyer summaries and the new-customers report that reads them.
+		buyer := domain.SalesBuyerKey{AccountID: account, BuyerAccountID: buyers[0]}
+		checkAPI("MarkBuyers", facts.MarkBuyers(ctx, []domain.SalesBuyerKey{buyer, buyer}))
+		buyerMarks, apiErr := facts.ListBuyerDirty(ctx, 10)
+		checkAPI("ListBuyerDirty", apiErr)
+		for _, m := range buyerMarks {
+			checkAPI("ClearBuyerDirty", facts.ClearBuyerDirty(ctx, m))
+		}
+		next, apiErr := facts.NextBuyers(ctx, domain.SalesBuyerKey{}, 50)
+		checkAPI("NextBuyers", apiErr)
+		for _, k := range next {
+			checkAPI("RebuildBuyerSummaries", facts.RebuildBuyerSummaries(ctx, k.AccountID, []string{k.BuyerAccountID}))
+		}
+		checkAPI("DeleteBuyerSummariesRefreshedBefore", facts.DeleteBuyerSummariesRefreshedBefore(ctx, time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)))
+		completed := time.Now().UTC()
+		checkAPI("SaveBuyerSummarySync", facts.SaveBuyerSummarySync(ctx, domain.SalesBuyerSummarySync{Cursor: &buyer, FactsSince: &completed, LastCompletedAt: &completed}))
+		_, apiErr = facts.GetBuyerSummarySync(ctx)
+		checkAPI("GetBuyerSummarySync", apiErr)
+		_, apiErr = reports.BuyerSummariesReady(ctx)
+		checkAPI("BuyerSummariesReady", apiErr)
+		for _, p := range []domain.ListNewCustomersParams{
+			{AccountID: account, StartsAt: start, EndsAt: end, Limit: 1},
+			{AccountID: account, StartsAt: start, EndsAt: end, Limit: 5, CustomerGroupIDs: groups, SalesRepIDs: []string{"acus_none"}},
+		} {
+			page, apiErr := reports.GetNewCustomers(ctx, p)
+			checkAPI("GetNewCustomers", apiErr)
+			if page != nil && page.PageInfo.NextCursor != nil {
+				p.Cursor = page.PageInfo.NextCursor
+				back, apiErr := reports.GetNewCustomers(ctx, p)
+				checkAPI("GetNewCustomers next", apiErr)
+				if back != nil && back.PageInfo.PrevCursor != nil {
+					p.Cursor = back.PageInfo.PrevCursor
+					_, apiErr = reports.GetNewCustomers(ctx, p)
+					checkAPI("GetNewCustomers prev", apiErr)
+				}
 			}
 		}
 	})

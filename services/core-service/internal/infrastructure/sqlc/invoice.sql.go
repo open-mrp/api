@@ -588,55 +588,55 @@ func (q *Queries) GetInvoiceLines(ctx context.Context, invoiceID string) ([]GetI
 	return items, nil
 }
 
-const getInvoicePaymentFlags = `-- name: GetInvoicePaymentFlags :many
+const getInvoicePaymentTotals = `-- name: GetInvoicePaymentTotals :many
 SELECT
-    t.invoice_id,
-    (t.invoiced_total > 0 AND t.allocated_total >= t.invoiced_total) AS is_paid_in_full,
-    (t.invoiced_total > 0 AND t.allocated_total > t.invoiced_total) AS is_over_paid
-FROM (
-    SELECT
-        i.id AS invoice_id,
-        COALESCE((
-            SELECT SUM(taq.value)
-            FROM transaction_allocation ta
-            JOIN quantity taq ON taq.id = ta.amount_id
-            WHERE ta.invoice_id = i.id
-        ), 0) AS allocated_total,
-        COALESCE((
-            -- Each line priced as the dashboard's multiplyRate does and rounded to the cent, as its
-            -- calculateTotalInvoiced sums them (see the line-pricing skill).
-            SELECT SUM(ROUND(CASE WHEN ilq.unit_id = solr.denominator_unit_id THEN ilq.value * solr.value ELSE (ilq.value * ilqu.ratio_numerator / ilqu.ratio_denominator) * (solr.value / (solru.ratio_numerator / solru.ratio_denominator)) END, 2))
-            FROM invoice_line il
-            JOIN quantity ilq ON ilq.id = il.quantity_id
-            JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
-            JOIN rate solr ON solr.id = sol.unit_price_id
-            JOIN unit ilqu ON ilqu.id = ilq.unit_id
-            JOIN unit solru ON solru.id = solr.denominator_unit_id
-            WHERE il.invoice_id = i.id
-        ), 0) AS invoiced_total
-    FROM invoice i
-    WHERE i.id IN (/*SLICE:invoice_ids*/?)
-) t
+    i.id AS invoice_id,
+    CAST(COALESCE((
+        SELECT SUM(ROUND(CASE WHEN ilq.unit_id = solr.denominator_unit_id THEN ilq.value * solr.value ELSE (ilq.value * ilqu.ratio_numerator / ilqu.ratio_denominator) * (solr.value / (solru.ratio_numerator / solru.ratio_denominator)) END, 2))
+        FROM invoice_line il
+        JOIN quantity ilq ON ilq.id = il.quantity_id
+        JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
+        JOIN rate solr ON solr.id = sol.unit_price_id
+        JOIN unit ilqu ON ilqu.id = ilq.unit_id
+        JOIN unit solru ON solru.id = solr.denominator_unit_id
+        WHERE il.invoice_id = i.id
+    ), 0) AS CHAR) AS invoiced_total,
+    CAST(COALESCE((
+        SELECT SUM(taq.value)
+        FROM transaction_allocation ta
+        JOIN quantity taq ON taq.id = ta.amount_id
+        WHERE ta.invoice_id = i.id
+    ), 0) AS CHAR) AS allocated_total
+FROM invoice i
+WHERE i.account_id = ?
+AND i.id IN (/*SLICE:invoice_ids*/?)
 `
 
-type GetInvoicePaymentFlagsRow struct {
-	InvoiceID    string
-	IsPaidInFull sql.NullBool
-	IsOverPaid   sql.NullBool
+type GetInvoicePaymentTotalsParams struct {
+	AccountID  string
+	InvoiceIds []string
 }
 
-// For a set of invoices, recomputes whether each is paid in full / over paid by
-// comparing the sum of its transaction allocations against its invoiced total
-// (sum of invoice_line quantity x the order line's unit price). Used to refresh
-// the denormalized invoice flags after settlement changes.
-func (q *Queries) GetInvoicePaymentFlags(ctx context.Context, invoiceIds []string) ([]GetInvoicePaymentFlagsRow, error) {
-	query := getInvoicePaymentFlags
+type GetInvoicePaymentTotalsRow struct {
+	InvoiceID      string
+	InvoicedTotal  interface{}
+	AllocatedTotal interface{}
+}
+
+// For a set of invoices, the two totals their paid-in-full / over-paid flags are derived from: the
+// invoiced total (each line priced as the dashboard's multiplyRate does and rounded to the cent, as
+// its calculateTotalInvoiced sums them; see the line-pricing skill) and the sum of every allocation
+// against the invoice, from any settlement. The flags themselves are decided in Go
+// (domain.InvoicePaymentFlagsFor), which rounds the balance the way the dashboard does.
+func (q *Queries) GetInvoicePaymentTotals(ctx context.Context, arg GetInvoicePaymentTotalsParams) ([]GetInvoicePaymentTotalsRow, error) {
+	query := getInvoicePaymentTotals
 	var queryParams []interface{}
-	if len(invoiceIds) > 0 {
-		for _, v := range invoiceIds {
+	queryParams = append(queryParams, arg.AccountID)
+	if len(arg.InvoiceIds) > 0 {
+		for _, v := range arg.InvoiceIds {
 			queryParams = append(queryParams, v)
 		}
-		query = strings.Replace(query, "/*SLICE:invoice_ids*/?", strings.Repeat(",?", len(invoiceIds))[1:], 1)
+		query = strings.Replace(query, "/*SLICE:invoice_ids*/?", strings.Repeat(",?", len(arg.InvoiceIds))[1:], 1)
 	} else {
 		query = strings.Replace(query, "/*SLICE:invoice_ids*/?", "NULL", 1)
 	}
@@ -645,10 +645,10 @@ func (q *Queries) GetInvoicePaymentFlags(ctx context.Context, invoiceIds []strin
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetInvoicePaymentFlagsRow
+	var items []GetInvoicePaymentTotalsRow
 	for rows.Next() {
-		var i GetInvoicePaymentFlagsRow
-		if err := rows.Scan(&i.InvoiceID, &i.IsPaidInFull, &i.IsOverPaid); err != nil {
+		var i GetInvoicePaymentTotalsRow
+		if err := rows.Scan(&i.InvoiceID, &i.InvoicedTotal, &i.AllocatedTotal); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

@@ -83,7 +83,8 @@ func (s *analyticsSvcImpl) AnalyzeSalesSummary(ctx context.Context, params domai
 			P    domain.AnalyzeSalesSummaryParams
 			Cost bool
 		}{params, access.includeCost},
-		ttl: s.reportCache().ttlForWindow(latestEnd(params.SalesReportFilter)),
+		ttl:    s.reportCache().ttlForWindow(latestEnd(params.SalesReportFilter)),
+		bypass: s.reportCache().salesSettling(ctx, access.accountID),
 	}, func(ctx context.Context) (*domain.SalesSummary, *apierror.APIError) {
 		return s.reports().NewSalesReportRepo().GetSummary(ctx, params, access.includeCost)
 	})
@@ -111,7 +112,8 @@ func (s *analyticsSvcImpl) AnalyzeSalesBreakdown(ctx context.Context, params dom
 			P    domain.AnalyzeSalesBreakdownParams
 			Cost bool
 		}{params, access.includeCost},
-		ttl: s.reportCache().ttlForWindow(latestEnd(params.SalesReportFilter)),
+		ttl:    s.reportCache().ttlForWindow(latestEnd(params.SalesReportFilter)),
+		bypass: s.reportCache().salesSettling(ctx, access.accountID),
 	}, func(ctx context.Context) (*domain.SalesBreakdown, *apierror.APIError) {
 		return s.reports().NewSalesReportRepo().GetBreakdown(ctx, params, access.includeCost)
 	})

@@ -343,3 +343,86 @@ func idsOf(lines []domain.SalesEntry) []string {
 	}
 	return ids
 }
+
+// forceRollupSweep runs a complete rollup pass now, regardless of when the last one ran.
+func forceRollupSweep(t *testing.T, ctx context.Context, pool *sql.DB, r *SalesFactRefresher) {
+	t.Helper()
+	if _, err := pool.ExecContext(ctx, `DELETE FROM sales_rollup_sync WHERE name = 'rollup'`); err != nil {
+		t.Fatal(err)
+	}
+	if apiErr := r.sweepRollups(ctx); apiErr != nil {
+		t.Fatalf("rollup sweep: %v", apiErr)
+	}
+}
+
+// monthTotals returns the account's invoiced total and line count for the month holding at, from the rollups and from the facts.
+func monthTotals(t *testing.T, ctx context.Context, pool *sql.DB, at time.Time) (rollup, fact string, rollupLines, factLines int64) {
+	t.Helper()
+	month := time.Date(at.Year(), at.Month(), 1, 0, 0, 0, 0, time.UTC)
+	if err := pool.QueryRowContext(ctx, `SELECT CAST(COALESCE(SUM(total_invoiced), 0) AS CHAR), COALESCE(SUM(line_count), 0) FROM sales_fact_rollup
+WHERE account_id = ? AND dimension = 'total' AND product_line_key = '' AND grain = 'month' AND bucket_start = ?`, seedAccountID, month).Scan(&rollup, &rollupLines); err != nil {
+		t.Fatal(err)
+	}
+	if err := pool.QueryRowContext(ctx, `SELECT CAST(COALESCE(SUM(total_invoiced), 0) AS CHAR), COUNT(*) FROM sales_line_fact
+WHERE account_id = ? AND invoiced_at >= ? AND invoiced_at < ?`, seedAccountID, month, month.AddDate(0, 1, 0)).Scan(&fact, &factLines); err != nil {
+		t.Fatal(err)
+	}
+	return rollup, fact, rollupLines, factLines
+}
+
+func TestSalesRollupSweepCompletes(t *testing.T) {
+	ctx := context.Background()
+	pool, repos := salesFactDB(t)
+	r := newTestRefresher(repos, pool)
+	forceReconcile(t, ctx, pool, r)
+	forceRollupSweep(t, ctx, pool, r)
+
+	sync, apiErr := repos.NewSalesFactRepo().GetRollupSync(ctx)
+	if apiErr != nil || sync.Cursor != nil || sync.LastCompletedAt == nil {
+		t.Fatalf("rollup sync after pass = %+v, %v; want a completed pass", sync, apiErr)
+	}
+	var invoicedAt time.Time
+	if err := pool.QueryRowContext(ctx, `SELECT created_at FROM invoice WHERE id = ?`, seedInvoiceID).Scan(&invoicedAt); err != nil {
+		t.Fatal(err)
+	}
+	rollup, fact, rollupLines, factLines := monthTotals(t, ctx, pool, invoicedAt)
+	if ratOf(t, rollup).Cmp(ratOf(t, fact)) != 0 || rollupLines != factLines || factLines == 0 {
+		t.Fatalf("month rollup %s over %d lines; facts hold %s over %d", rollup, rollupLines, fact, factLines)
+	}
+}
+
+func TestSalesFactRefreshRebuildsRollups(t *testing.T) {
+	ctx := context.Background()
+	pool, repos := salesFactDB(t)
+	r := newTestRefresher(repos, pool)
+	forceReconcile(t, ctx, pool, r)
+	forceRollupSweep(t, ctx, pool, r)
+
+	var quantityID string
+	var invoicedAt time.Time
+	if err := pool.QueryRowContext(ctx, `SELECT il.quantity_id, i.created_at FROM invoice_line il JOIN invoice i ON i.id = il.invoice_id WHERE il.invoice_id = ? ORDER BY il.id LIMIT 1`, seedInvoiceID).Scan(&quantityID, &invoicedAt); err != nil {
+		t.Fatal(err)
+	}
+	before, _, _, _ := monthTotals(t, ctx, pool, invoicedAt)
+	if _, err := pool.ExecContext(ctx, `UPDATE quantity SET value = value + 1 WHERE id = ?`, quantityID); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_, _ = pool.ExecContext(ctx, `UPDATE quantity SET value = value - 1 WHERE id = ?`, quantityID)
+		_ = r.drainDirtyAfterMark(ctx, repos)
+	})
+
+	if apiErr := repos.NewSalesFactRepo().MarkDirty(ctx, domain.SalesFactScopeInvoice, seedInvoiceID, seedAccountID); apiErr != nil {
+		t.Fatal(apiErr)
+	}
+	if apiErr := r.drainDirty(ctx); apiErr != nil {
+		t.Fatal(apiErr)
+	}
+	after, fact, rollupLines, factLines := monthTotals(t, ctx, pool, invoicedAt)
+	if ratOf(t, after).Cmp(ratOf(t, fact)) != 0 || rollupLines != factLines {
+		t.Fatalf("after the refresh the month rollup is %s over %d lines; facts hold %s over %d", after, rollupLines, fact, factLines)
+	}
+	if ratOf(t, after).Cmp(ratOf(t, before)) == 0 {
+		t.Fatalf("month rollup stayed at %s after the invoice's quantity grew", before)
+	}
+}

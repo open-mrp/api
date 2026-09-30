@@ -51,6 +51,7 @@ func TestGRPCServerConfig_WithDefaults_InterceptorChain(t *testing.T) {
 		"contracts.IdempotencyKeyUnaryServerInterceptor",
 		"contracts.RequestIDUnaryServerInterceptor",
 		"contracts.ClientIPUnaryServerInterceptor",
+		"contracts.QueryTagUnaryServerInterceptor",
 		"logging.CanonicalLogInterceptor",
 	}
 

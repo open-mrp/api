@@ -400,39 +400,33 @@ JOIN unit u ON u.id = q.unit_id
 WHERE ta.invoice_id = sqlc.arg('invoice_id')
 ORDER BY ta.created_at ASC, ta.id ASC;
 
--- name: GetInvoicePaymentFlags :many
--- For a set of invoices, recomputes whether each is paid in full / over paid by
--- comparing the sum of its transaction allocations against its invoiced total
--- (sum of invoice_line quantity x the order line's unit price). Used to refresh
--- the denormalized invoice flags after settlement changes.
+-- name: GetInvoicePaymentTotals :many
+-- For a set of invoices, the two totals their paid-in-full / over-paid flags are derived from: the
+-- invoiced total (each line priced as the dashboard's multiplyRate does and rounded to the cent, as
+-- its calculateTotalInvoiced sums them; see the line-pricing skill) and the sum of every allocation
+-- against the invoice, from any settlement. The flags themselves are decided in Go
+-- (domain.InvoicePaymentFlagsFor), which rounds the balance the way the dashboard does.
 SELECT
-    t.invoice_id,
-    (t.invoiced_total > 0 AND t.allocated_total >= t.invoiced_total) AS is_paid_in_full,
-    (t.invoiced_total > 0 AND t.allocated_total > t.invoiced_total) AS is_over_paid
-FROM (
-    SELECT
-        i.id AS invoice_id,
-        COALESCE((
-            SELECT SUM(taq.value)
-            FROM transaction_allocation ta
-            JOIN quantity taq ON taq.id = ta.amount_id
-            WHERE ta.invoice_id = i.id
-        ), 0) AS allocated_total,
-        COALESCE((
-            -- Each line priced as the dashboard's multiplyRate does and rounded to the cent, as its
-            -- calculateTotalInvoiced sums them (see the line-pricing skill).
-            SELECT SUM(ROUND(CASE WHEN ilq.unit_id = solr.denominator_unit_id THEN ilq.value * solr.value ELSE (ilq.value * ilqu.ratio_numerator / ilqu.ratio_denominator) * (solr.value / (solru.ratio_numerator / solru.ratio_denominator)) END, 2))
-            FROM invoice_line il
-            JOIN quantity ilq ON ilq.id = il.quantity_id
-            JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
-            JOIN rate solr ON solr.id = sol.unit_price_id
-            JOIN unit ilqu ON ilqu.id = ilq.unit_id
-            JOIN unit solru ON solru.id = solr.denominator_unit_id
-            WHERE il.invoice_id = i.id
-        ), 0) AS invoiced_total
-    FROM invoice i
-    WHERE i.id IN (sqlc.slice('invoice_ids'))
-) t;
+    i.id AS invoice_id,
+    CAST(COALESCE((
+        SELECT SUM(ROUND(CASE WHEN ilq.unit_id = solr.denominator_unit_id THEN ilq.value * solr.value ELSE (ilq.value * ilqu.ratio_numerator / ilqu.ratio_denominator) * (solr.value / (solru.ratio_numerator / solru.ratio_denominator)) END, 2))
+        FROM invoice_line il
+        JOIN quantity ilq ON ilq.id = il.quantity_id
+        JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
+        JOIN rate solr ON solr.id = sol.unit_price_id
+        JOIN unit ilqu ON ilqu.id = ilq.unit_id
+        JOIN unit solru ON solru.id = solr.denominator_unit_id
+        WHERE il.invoice_id = i.id
+    ), 0) AS CHAR) AS invoiced_total,
+    CAST(COALESCE((
+        SELECT SUM(taq.value)
+        FROM transaction_allocation ta
+        JOIN quantity taq ON taq.id = ta.amount_id
+        WHERE ta.invoice_id = i.id
+    ), 0) AS CHAR) AS allocated_total
+FROM invoice i
+WHERE i.account_id = sqlc.arg('account_id')
+AND i.id IN (sqlc.slice('invoice_ids'));
 
 -- name: UpdateInvoice :exec
 UPDATE invoice

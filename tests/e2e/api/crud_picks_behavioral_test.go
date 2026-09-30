@@ -3,7 +3,6 @@
 package api_test
 
 import (
-	"encoding/json"
 	"net/url"
 	"strconv"
 	"strings"
@@ -259,26 +258,6 @@ func TestPicks_Pack_RejectsCaseCountBelowOne(t *testing.T) {
 }
 
 // --- pick line quantity unit ----------------------------------------------
-
-// Returns the id of another countable unit, so a unit-swap test never "changes" to what is already set.
-func otherQuantityUnitID(t *testing.T, currentID string) string {
-	t.Helper()
-
-	list, status, err := apiClient.GetList(unitsPath, url.Values{"limit": {"100"}})
-	require.NoError(t, err)
-	require.Equal(t, 200, status, "units list should return 200")
-
-	for _, raw := range list.Data {
-		var unit map[string]any
-		require.NoError(t, json.Unmarshal(raw, &unit))
-		id := jsonField(unit, "id")
-		if id != "" && id != currentID && jsonField(unit, "type") == "quantity" {
-			return id
-		}
-	}
-	require.FailNow(t, "the account needs a second countable unit to switch to")
-	return ""
-}
 
 // Packing creates each case's freight amount and weight quantities, and their unit ids are resolved
 // from the unit table rather than written into the service. A wrong id strands the quantity: the

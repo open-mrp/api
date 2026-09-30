@@ -89,6 +89,9 @@ func (m *transactionAllocationSvcImpl) UpdateTransactionAllocation(ctx context.C
 		Id:     req.AllocationID,
 		Amount: req.Amount.Ptr(),
 	}
+	if at, ok := req.AppliedAt.Value(); ok {
+		pbReq.CreatedAt = timestamppb.New(at)
+	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, transactionAllocationSvcTracer, "service.transaction-allocations.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateTransactionAllocationResponse, error) {
@@ -167,8 +170,8 @@ func allocationEntryFromProto(d *pb.AllocationEntryInfo) apiresource.AllocationE
 		Object:        constants.ObjectTypeAllocationEntry,
 		Amount:        d.AmountValue,
 		DisplayAmount: apiresource.FormatDisplayValue(d.AmountValue, d.AmountUnitAbbr, string(constants.UnitTypeCurrency)),
-		// pb.AllocationEntryInfo does not carry a customer id, so ID stays null.
 		Customer: &apiresource.AllocationCustomer{
+			ID:     &d.CustomerId,
 			Object: constants.ObjectTypeAllocationCustomer,
 			Name:   d.CustomerName,
 			Number: d.CustomerNumber,
@@ -229,17 +232,7 @@ func transactionAllocationFromProto(meta *resourcekit.LoadMeta, a *pb.Transactio
 		UpdatedAt: grpcutil.TimestampToTime(a.UpdatedAt),
 	}
 
-	if a.InvoiceId != nil && *a.InvoiceId != "" {
-		invoiceNumber := ""
-		if a.InvoiceNumber != nil {
-			invoiceNumber = *a.InvoiceNumber
-		}
-		alloc.Invoice = &apiresource.AllocationInvoice{
-			ID:     *a.InvoiceId,
-			Object: constants.ObjectTypeInvoiceSummary,
-			Number: invoiceNumber,
-		}
-	}
+	alloc.Invoice, alloc.Settlement = apiresource.AllocationReferences(a.InvoiceId, a.InvoiceNumber, a.SettlementId, a.SettlementNumber)
 
 	return alloc
 }
@@ -278,6 +271,7 @@ func openCreditEntryFromProto(d *pb.OpenCreditEntryInfo) apiresource.OpenCreditE
 		Note:                d.Note,
 		StripePaymentID:     d.StripePaymentId,
 		InvoiceAllocations:  apiresource.NewList(allocations, apiresource.PageInfo{}),
+		FundsReceivedAt:     grpcutil.TimestampToTime(d.FundsReceivedAt),
 		CreatedAt:           grpcutil.TimestampToTime(d.CreatedAt),
 	}
 }

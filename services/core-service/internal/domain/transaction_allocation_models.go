@@ -11,6 +11,7 @@ type AllocationEntry struct {
 	ID                string
 	AmountValue       string
 	AmountUnitAbbr    string
+	CustomerID        string
 	CustomerName      string
 	CustomerNumber    *string
 	TransactionID     string
@@ -40,6 +41,7 @@ type OpenCreditEntry struct {
 	Note                *string
 	StripePaymentID     *string
 	InvoiceAllocations  []InvoiceAllocationEntry
+	FundsReceivedAt     time.Time
 	CreatedAt           time.Time
 }
 
@@ -71,6 +73,8 @@ type UpdateTransactionAllocationParams struct {
 	AccountID    string
 	AllocationID string
 	Amount       *string
+	// CreatedAt re-dates the allocation (the day the payment was applied).
+	CreatedAt *time.Time
 }
 
 // DeleteTransactionAllocationParams holds parameters for deleting a transaction allocation.
@@ -81,7 +85,8 @@ type DeleteTransactionAllocationParams struct {
 
 // ListOpenCreditsParams holds parameters for listing open credits.
 type ListOpenCreditsParams struct {
-	AccountID   string
+	AccountID string
+	// StartDate (inclusive) and EndDate (exclusive) bound when the funds were received.
 	StartDate   *time.Time
 	EndDate     *time.Time
 	CustomerIDs []string

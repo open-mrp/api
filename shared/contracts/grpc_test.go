@@ -9,6 +9,8 @@ import (
 
 	"github.com/open-mrp/api/shared/appctx"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/querytag"
+	"google.golang.org/grpc"
 	grpccodes "google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	grpcstatus "google.golang.org/grpc/status"
@@ -1001,5 +1003,17 @@ func TestAPIVersionUnaryServerInterceptor_SetsVersionInContext(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestQueryTagUnaryServerInterceptorTagsTheMethod(t *testing.T) {
+	var got map[string]string
+	_, err := QueryTagUnaryServerInterceptor()(context.Background(), nil, &grpc.UnaryServerInfo{FullMethod: "/core.CoreService/AnalyzeSalesSummary"},
+		func(ctx context.Context, _ any) (any, error) {
+			got = querytag.From(ctx)
+			return nil, nil
+		})
+	if err != nil || got[querytag.GRPCMethod] != "/core.CoreService/AnalyzeSalesSummary" {
+		t.Fatalf("tags = %v, err = %v; want the method", got, err)
 	}
 }

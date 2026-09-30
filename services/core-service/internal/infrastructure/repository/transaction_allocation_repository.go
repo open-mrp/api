@@ -4,6 +4,7 @@ import (
 	"context"
 	gosql "database/sql"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
@@ -28,15 +29,22 @@ func allocationEntryCreatedAt(d *domain.AllocationEntry) time.Time { return d.Cr
 func allocationEntryID(d *domain.AllocationEntry) string           { return d.ID }
 
 func buildAllocationSearchQuery(query *string) gosql.NullString {
-	if query == nil || *query == "" {
+	if query == nil {
 		return gosql.NullString{}
 	}
-	sanitized := db.SanitizeFulltextBoolean(*query)
-	if sanitized == "" {
+	q := strings.TrimSpace(*query)
+	if q == "" {
 		return gosql.NullString{}
 	}
-	term := sanitized + "*"
-	return gosql.NullString{String: term, Valid: true}
+	return gosql.NullString{String: q, Valid: true}
+}
+
+// searchLike is the query for a contains match on the customer name, with LIKE wildcards escaped.
+func searchLike(q gosql.NullString) any {
+	if !q.Valid {
+		return nil
+	}
+	return db.EscapeLike(q.String)
 }
 
 func (r *transactionAllocationRepoImpl) ListEntries(ctx context.Context, params domain.ListAllocationEntriesParams) (*domain.ListAllocationEntriesResult, *apierror.APIError) {
@@ -72,6 +80,7 @@ func (r *transactionAllocationRepoImpl) ListEntries(ctx context.Context, params 
 			rows, err := r.queries.ListAllocationEntriesBackward(ctx, sqlc.ListAllocationEntriesBackwardParams{
 				AccountID:       params.AccountID,
 				SearchQuery:     searchQuery,
+				SearchLike:      searchLike(searchQuery),
 				TransactionType: transactionType,
 				StartDate:       startDate,
 				EndDate:         endDate,
@@ -93,6 +102,7 @@ func (r *transactionAllocationRepoImpl) ListEntries(ctx context.Context, params 
 		rows, err := r.queries.ListAllocationEntriesForward(ctx, sqlc.ListAllocationEntriesForwardParams{
 			AccountID:       params.AccountID,
 			SearchQuery:     searchQuery,
+			SearchLike:      searchLike(searchQuery),
 			TransactionType: transactionType,
 			StartDate:       startDate,
 			EndDate:         endDate,
@@ -115,6 +125,7 @@ func (r *transactionAllocationRepoImpl) ListEntries(ctx context.Context, params 
 	rows, err := r.queries.ListAllocationEntriesForward(ctx, sqlc.ListAllocationEntriesForwardParams{
 		AccountID:       params.AccountID,
 		SearchQuery:     searchQuery,
+		SearchLike:      searchLike(searchQuery),
 		TransactionType: transactionType,
 		StartDate:       startDate,
 		EndDate:         endDate,
@@ -138,6 +149,7 @@ func mapForwardAllocationEntryRow(row sqlc.ListAllocationEntriesForwardRow) *dom
 		ID:              row.ID,
 		AmountValue:     decimalToString(row.AmountValue),
 		AmountUnitAbbr:  row.AmountUnitAbbreviation,
+		CustomerID:      row.CustomerID,
 		CustomerName:    row.CustomerName,
 		TransactionID:   row.TransactionID,
 		TransactionType: row.TransactionType,
@@ -165,6 +177,7 @@ func mapBackwardAllocationEntryRow(row sqlc.ListAllocationEntriesBackwardRow) *d
 		ID:              row.ID,
 		AmountValue:     decimalToString(row.AmountValue),
 		AmountUnitAbbr:  row.AmountUnitAbbreviation,
+		CustomerID:      row.CustomerID,
 		CustomerName:    row.CustomerName,
 		TransactionID:   row.TransactionID,
 		TransactionType: row.TransactionType,
@@ -191,34 +204,30 @@ func (r *transactionAllocationRepoImpl) GetByID(ctx context.Context, accountID, 
 	ctx, span := transactionAllocationRepoTracer.Start(ctx, "repository.transaction_allocation.get_by_id")
 	defer span.End()
 
-	row, err := r.queries.GetTransactionAllocationByID(ctx, sqlc.GetTransactionAllocationByIDParams{
-		ID:        allocationID,
-		AccountID: accountID,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
+	allocations, apiErr := loadAllocations(ctx, r.queries.DB(), "ta.id = ? AND t.account_id = ?", "ta.id", allocationID, accountID)
+	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-
-	var note *string
-	if row.Note.Valid {
-		note = &row.Note.String
+	if len(allocations) == 0 {
+		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Transaction allocation not found."))
 	}
+	return allocations[0], nil
+}
 
-	return &domain.TransactionAllocation{
-		ID:                row.ID,
-		AmountID:          row.AmountID,
-		AmountValue:       decimalToString(row.AmountValue),
-		AmountUnitID:      row.AmountUnitID,
-		AmountUnitAbbr:    row.AmountUnitAbbreviation,
-		Note:              note,
-		TransactionID:     row.TransactionID,
-		TransactionNumber: row.TransactionNumber,
-		TransactionType:   row.TransactionType,
-		InvoiceID:         row.InvoiceID,
-		InvoiceNumber:     row.InvoiceNumber,
-		CreatedAt:         row.CreatedAt,
-		UpdatedAt:         row.UpdatedAt,
-	}, nil
+// UpdateCreatedAt re-dates an allocation.
+func (r *transactionAllocationRepoImpl) UpdateCreatedAt(ctx context.Context, accountID, allocationID string, createdAt time.Time) *apierror.APIError {
+	ctx, span := transactionAllocationRepoTracer.Start(ctx, "repository.transaction_allocation.update_created_at")
+	defer span.End()
+
+	_, err := r.queries.DB().ExecContext(ctx, `
+UPDATE transaction_allocation ta
+JOIN `+"`transaction`"+` t ON t.id = ta.transaction_id
+SET ta.created_at = ?, ta.updated_at = NOW(3)
+WHERE ta.id = ? AND t.account_id = ?`, createdAt, allocationID, accountID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return nil
 }
 
 func (r *transactionAllocationRepoImpl) UpdateAmount(ctx context.Context, amountID, newValue string) *apierror.APIError {
@@ -254,152 +263,6 @@ func (r *transactionAllocationRepoImpl) Delete(ctx context.Context, accountID, a
 		return tracing.Trace(span, apiErr)
 	}
 	return nil
-}
-
-func (r *transactionAllocationRepoImpl) ListOpenCredits(ctx context.Context, params domain.ListOpenCreditsParams) (*domain.ListOpenCreditsResult, *apierror.APIError) {
-	ctx, span := transactionAllocationRepoTracer.Start(ctx, "repository.transaction_allocation.list_open_credits")
-	defer span.End()
-
-	startDate := gosql.NullTime{}
-	if params.StartDate != nil {
-		startDate = gosql.NullTime{Time: *params.StartDate, Valid: true}
-	}
-	endDate := gosql.NullTime{}
-	if params.EndDate != nil {
-		endDate = gosql.NullTime{Time: *params.EndDate, Valid: true}
-	}
-
-	includeCustomerFilter := len(params.CustomerIDs) > 0
-	customerIDs := params.CustomerIDs
-	if len(customerIDs) == 0 {
-		customerIDs = []string{""}
-	}
-
-	lim := params.Limit
-	if lim <= 0 {
-		lim = 100
-	}
-	if lim > 1000 {
-		lim = 1000
-	}
-
-	var search any
-	if params.SearchQuery != nil && *params.SearchQuery != "" {
-		search = *params.SearchQuery
-	}
-
-	cursorCreatedAt := gosql.NullTime{}
-	cursorID := gosql.NullString{}
-	if params.Cursor != nil && *params.Cursor != "" {
-		cur, err := pagination.DecodeStringCursor(*params.Cursor)
-		if err != nil {
-			return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor"))
-		}
-		cursorCreatedAt = gosql.NullTime{Time: cur.OccurredAt, Valid: true}
-		cursorID = gosql.NullString{String: cur.ID, Valid: true}
-	}
-
-	rows, err := r.queries.ListOpenCredits(ctx, sqlc.ListOpenCreditsParams{
-		AccountID:             params.AccountID,
-		IncludeCustomerFilter: includeCustomerFilter,
-		CustomerIds:           customerIDs,
-		StartDate:             startDate,
-		EndDate:               endDate,
-		Search:                search,
-		CursorCreatedAt:       cursorCreatedAt,
-		CursorID:              cursorID,
-		Limit:                 lim + 1,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	if len(rows) == 0 {
-		return &domain.ListOpenCreditsResult{Entries: []*domain.OpenCreditEntry{}}, nil
-	}
-
-	// Collect transaction IDs for allocation lookup
-	transactionIDs := make([]string, len(rows))
-	for i, row := range rows {
-		transactionIDs[i] = row.ID
-	}
-
-	// Get allocations for all open credits
-	allocRows, err := r.queries.GetOpenCreditAllocations(ctx, transactionIDs)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	// Group allocations by transaction ID
-	allocsByTxn := make(map[string][]domain.InvoiceAllocationEntry)
-	for _, aRow := range allocRows {
-		allocsByTxn[aRow.TransactionID] = append(allocsByTxn[aRow.TransactionID], domain.InvoiceAllocationEntry{
-			InvoiceNumber: aRow.InvoiceNumber,
-			Amount:        decimalToString(aRow.Amount),
-		})
-	}
-
-	entries := make([]*domain.OpenCreditEntry, len(rows))
-	for i, row := range rows {
-		originalAmount := decimalToString(row.OriginalAmount)
-		allocatedAmount := decimalToString(row.AllocatedAmount)
-		leftoverAmount := subtractDecimalStrings(originalAmount, allocatedAmount)
-
-		entry := &domain.OpenCreditEntry{
-			ID:                 row.ID,
-			Number:             row.Number,
-			OriginalAmount:     originalAmount,
-			AllocatedAmount:    allocatedAmount,
-			LeftoverAmount:     leftoverAmount,
-			CustomerID:         row.CustomerID,
-			CustomerName:       row.CustomerName,
-			TransactionType:    row.TransactionType,
-			InvoiceAllocations: allocsByTxn[row.ID],
-			CreatedAt:          row.CreatedAt,
-		}
-
-		if row.CustomerNumber.Valid {
-			entry.CustomerNumber = &row.CustomerNumber.String
-		}
-		if row.TransactionMethod.Valid {
-			entry.TransactionMethod = &row.TransactionMethod.String
-		}
-		if row.AdjustmentType.Valid {
-			entry.AdjustmentType = &row.AdjustmentType.String
-		}
-		if row.ResponsibleUserName != "" {
-			entry.ResponsibleUserName = &row.ResponsibleUserName
-		}
-		if row.Note.Valid {
-			entry.Note = &row.Note.String
-		}
-		if row.StripePaymentID.Valid {
-			entry.StripePaymentID = &row.StripePaymentID.String
-		}
-		if entry.InvoiceAllocations == nil {
-			entry.InvoiceAllocations = []domain.InvoiceAllocationEntry{}
-		}
-
-		entries[i] = entry
-	}
-
-	hasExtra := len(entries) > int(lim)
-	if hasExtra {
-		entries = entries[:lim]
-	}
-	var pi pagination.PageInfo
-	pi.HasNextPage = hasExtra
-	if pi.HasNextPage && len(entries) > 0 {
-		last := entries[len(entries)-1]
-		nc := pagination.EncodeStringCursor(pagination.StringCursor{
-			OccurredAt: last.CreatedAt,
-			ID:         last.ID,
-			Direction:  pagination.DirectionForward,
-		})
-		pi.NextCursor = &nc
-	}
-
-	return &domain.ListOpenCreditsResult{Entries: entries, PageInfo: pi}, nil
 }
 
 func (r *transactionAllocationRepoImpl) GetDollarUnitID(ctx context.Context) (string, *apierror.APIError) {

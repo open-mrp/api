@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/event"
@@ -65,7 +64,7 @@ func Run(
 	}
 	defer tracing.DeferShutdown(tracerShutdown)()
 
-	db, err := dbpkg.NewDbPool(&dbpkg.Config{DBURI: cfg.DBURL})
+	db, err := dbpkg.NewDbPool(&dbpkg.Config{DBURI: cfg.DBURL, Application: domain.ServiceName})
 	if err != nil {
 		return err
 	}
@@ -83,6 +82,7 @@ func Run(
 	// neither exhaust the primary's memory nor starve its pool of connections for writes.
 	reportDB, err := dbpkg.NewDbPool(&dbpkg.Config{
 		DBURI:              cfg.DBReplicaURL,
+		Application:        domain.ServiceName,
 		MaxOpenConnections: reportMaxOpenConnections,
 		MaxIdleConnections: reportMaxOpenConnections,
 	})
@@ -787,6 +787,11 @@ func Run(
 		return err
 	}
 
+	recomputePaymentFlagsConsumer := event.NewRecomputePaymentFlagsConsumer(rabbitmq, inboxRepo, txManager)
+	if err := recomputePaymentFlagsConsumer.Listen(ctx); err != nil {
+		return err
+	}
+
 	allocateOpenIssuesConsumer := event.NewAllocateOpenIssuesConsumer(rabbitmq, inboxRepo, repoFactory, txManager)
 	if err := allocateOpenIssuesConsumer.Listen(ctx); err != nil {
 		return err
@@ -901,9 +906,11 @@ func Run(
 		return err
 	}
 	salesFactRefresher := service.NewSalesFactRefresher(&service.SalesFactRefresherConfig{
-		Repos:          repoFactory,
-		Lease:          leaseSvc,
-		OnFactsChanged: invalidateSalesTwice(analyticsCache),
+		Repos: repoFactory,
+		Lease: leaseSvc,
+		// Invalidation also opens a settle window in which the account's sales reports skip the cache,
+		// so one computed from a replica that had not caught up is never cached.
+		OnFactsChanged: analyticsCache.InvalidateSales,
 	})
 	if err := salesFactRefresher.Start(ctx); err != nil {
 		return err
@@ -1032,18 +1039,4 @@ func newAnalyticsCache(ctx context.Context, store cache.Store, broker messaging.
 		return nil, err
 	}
 	return analyticsCache, nil
-}
-
-// invalidateSalesTwice drops cached sales reports when facts change, then again a few seconds later:
-// reports read a replica, so one computed in the moment before the replica caught up would otherwise
-// stay cached with the old facts until its TTL.
-func invalidateSalesTwice(c *service.AnalyticsCache) func(context.Context, []string) {
-	return func(ctx context.Context, accountIDs []string) {
-		c.InvalidateSales(ctx, accountIDs)
-		time.AfterFunc(5*time.Second, func() {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-			c.InvalidateSales(ctx, accountIDs)
-		})
-	}
 }

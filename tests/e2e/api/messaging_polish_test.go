@@ -50,10 +50,7 @@ func TestAddedToConversation_WritesBell(t *testing.T) {
 	})
 }
 
-var (
-	errAddedBellMissing = &simpleErr{"chat.added bell not yet delivered"}
-	errBellMissing      = &simpleErr{"chat.message bell not yet delivered"}
-)
+var errAddedBellMissing = &simpleErr{"chat.added bell not yet delivered"}
 
 type simpleErr struct{ msg string }
 

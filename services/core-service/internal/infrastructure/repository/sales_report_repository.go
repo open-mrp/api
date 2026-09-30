@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -20,15 +21,20 @@ import (
 var salesReportRepoTracer = tracing.GetTracer("core-service.infrastructure.repository.sales_report")
 
 // Sales reports read sales_line_fact, whose amounts are the legacy per-line analytics expressions evaluated
-// once. Every SUM below mirrors the dashboard's former aggregate term for term (including CASE ... ELSE 0
-// for period splits and the DECIMAL(65,30) casts), so totals are digit-for-digit what it reported. Names
-// are joined after aggregation, onto a page of groups rather than every line.
+// once, and sales_fact_rollup, its per-bucket sums. Every SUM below mirrors the dashboard's former aggregate
+// term for term (including CASE ... ELSE 0 for period splits), so totals match what it reported. Names are
+// joined after aggregation, onto a page of groups rather than every line.
+//
+// Summaries and breakdowns read whole UTC buckets from the rollups and only the partial buckets at a
+// window's edges from the facts (sales_report_rollup.go); decimal sums are exact, so both paths return the
+// same totals. Filters the rollups cannot answer exactly fall back to reading the facts alone.
 type salesReportRepoImpl struct {
 	queries *sqlc.Queries
+	mode    rollupMode
 }
 
 func NewSalesReportRepo(queries *sqlc.Queries) domain.SalesReportRepo {
-	return &salesReportRepoImpl{queries: queries}
+	return &salesReportRepoImpl{queries: queries, mode: rollupAuto}
 }
 
 func (r *salesReportRepoImpl) FactsReady(ctx context.Context) (bool, *apierror.APIError) {
@@ -41,8 +47,12 @@ func (r *salesReportRepoImpl) FactsReady(ctx context.Context) (bool, *apierror.A
 
 // salesFactQuery accumulates a WHERE clause over sales_line_fact (alias f) and its arguments.
 type salesFactQuery struct {
-	where strings.Builder
-	args  []any
+	where     strings.Builder
+	args      []any
+	accountID string
+	// buyers are the buyer accounts the customer filters admit; buyersFiltered is false when neither is set.
+	buyers         []string
+	buyersFiltered bool
 	// empty is set when a filter resolved to no buyers, so nothing can match.
 	empty bool
 }
@@ -74,7 +84,7 @@ func periodCase(start, end time.Time) (string, []any) {
 
 // newSalesFactQuery scopes to the account's sales orders and the entity filters. windows adds a date predicate matching any of the given [start, end] periods; none leaves the dates unbounded.
 func (r *salesReportRepoImpl) newSalesFactQuery(ctx context.Context, f domain.SalesReportFilter, windows [][2]time.Time) (*salesFactQuery, *apierror.APIError) {
-	q := &salesFactQuery{}
+	q := &salesFactQuery{accountID: f.AccountID}
 	q.where.WriteString("f.account_id = ? AND f.sales_order_type_code = 'sales_order'")
 	q.args = append(q.args, f.AccountID)
 
@@ -105,6 +115,7 @@ func (r *salesReportRepoImpl) newSalesFactQuery(ctx context.Context, f domain.Sa
 		}
 		q.addIn("f.buyer_account_id", buyers)
 	}
+	q.buyers, q.buyersFiltered = buyers, filtered
 	return q, nil
 }
 
@@ -250,7 +261,24 @@ func (r *salesReportRepoImpl) GetSummary(ctx context.Context, params domain.Anal
 
 	// Each period is read on its own, so a line in two overlapping periods counts in both, as it did when the dashboard fetched each period separately.
 	tz := tzOffsetString(params.TZOffsetMinutes)
+	// Hour buckets split cleanly into local days only when the offset is whole hours.
+	useRollups := params.TZOffsetMinutes%60 == 0 && r.rollupsReady(ctx)
 	for i, w := range periods {
+		if useRollups {
+			q, apiErr := r.newSalesFactQuery(ctx, params.SalesReportFilter, nil)
+			if apiErr != nil {
+				return nil, tracing.Trace(span, apiErr)
+			}
+			if scope, ok := rollupScopeFor(params.SalesReportFilter, q, rollupDimTotal); ok && !q.empty {
+				totalsQuery, totalsArgs := rollupPeriodTotals(q, scope, w[0], w[1])
+				dailyQuery, dailyArgs := rollupPeriodDaily(q, scope, w[0], w[1], tz)
+				if *totals[i], *daily[i], apiErr = r.summaryPeriod(ctx, totalsQuery, totalsArgs, dailyQuery, dailyArgs, includeCost); apiErr != nil {
+					return nil, tracing.Trace(span, apiErr)
+				}
+				continue
+			}
+		}
+
 		q, apiErr := r.newSalesFactQuery(ctx, params.SalesReportFilter, [][2]time.Time{w})
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
@@ -260,41 +288,47 @@ func (r *salesReportRepoImpl) GetSummary(ctx context.Context, params domain.Anal
 			*daily[i] = []domain.SalesTotals{}
 			continue
 		}
-
-		var whole scannedTotals
-		query := "SELECT " + totalsColumns("TRUE", "") + " FROM sales_line_fact f WHERE " + q.where.String()
-		if err := r.queries.DB().QueryRowContext(ctx, query, q.args...).Scan(whole.dest()...); err != nil {
-			return nil, tracing.Trace(span, db.MapSQLError(err))
-		}
-		*totals[i] = whole.totals(includeCost)
-
-		query = "SELECT DATE(CONVERT_TZ(f.invoiced_at, '+00:00', ?)) AS day, " + totalsColumns("TRUE", "") +
+		totalsQuery := "SELECT " + totalsColumns("TRUE", "") + " FROM sales_line_fact f WHERE " + q.where.String()
+		dailyQuery := "SELECT DATE(CONVERT_TZ(f.invoiced_at, '+00:00', ?)) AS day, " + totalsColumns("TRUE", "") +
 			" FROM sales_line_fact f WHERE " + q.where.String() + " GROUP BY day ORDER BY day"
-		rows, err := r.queries.DB().QueryContext(ctx, query, append([]any{tz}, q.args...)...)
-		if err != nil {
-			return nil, tracing.Trace(span, db.MapSQLError(err))
+		if *totals[i], *daily[i], apiErr = r.summaryPeriod(ctx, totalsQuery, q.args, dailyQuery, append([]any{tz}, q.args...), includeCost); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
 		}
-		days := []domain.SalesTotals{}
-		for rows.Next() {
-			var (
-				day time.Time
-				t   scannedTotals
-			)
-			if err := rows.Scan(append([]any{&day}, t.dest()...)...); err != nil {
-				_ = rows.Close()
-				return nil, tracing.Trace(span, db.MapSQLError(err))
-			}
-			dt := t.totals(includeCost)
-			dt.PeriodStart = &day
-			days = append(days, dt)
-		}
-		_ = rows.Close()
-		if err := rows.Err(); err != nil {
-			return nil, tracing.Trace(span, db.MapSQLError(err))
-		}
-		*daily[i] = days
 	}
 	return summary, nil
+}
+
+// summaryPeriod runs a period's totals query (the five totals columns) and its daily query (a day, then the five columns, per row); an empty daily query means no days.
+func (r *salesReportRepoImpl) summaryPeriod(ctx context.Context, totalsQuery string, totalsArgs []any, dailyQuery string, dailyArgs []any, includeCost bool) (domain.SalesTotals, []domain.SalesTotals, *apierror.APIError) {
+	var whole scannedTotals
+	if err := r.queries.DB().QueryRowContext(ctx, totalsQuery, totalsArgs...).Scan(whole.dest()...); err != nil {
+		return domain.SalesTotals{}, nil, db.MapSQLError(err)
+	}
+	days := []domain.SalesTotals{}
+	if dailyQuery == "" {
+		return whole.totals(includeCost), days, nil
+	}
+	rows, err := r.queries.DB().QueryContext(ctx, dailyQuery, dailyArgs...)
+	if err != nil {
+		return domain.SalesTotals{}, nil, db.MapSQLError(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var (
+			day time.Time
+			t   scannedTotals
+		)
+		if err := rows.Scan(append([]any{&day}, t.dest()...)...); err != nil {
+			return domain.SalesTotals{}, nil, db.MapSQLError(err)
+		}
+		dt := t.totals(includeCost)
+		dt.PeriodStart = &day
+		days = append(days, dt)
+	}
+	if err := rows.Err(); err != nil {
+		return domain.SalesTotals{}, nil, db.MapSQLError(err)
+	}
+	return whole.totals(includeCost), days, nil
 }
 
 func tzOffsetString(minutes int32) string {
@@ -323,7 +357,7 @@ func (r *salesReportRepoImpl) GetBreakdown(ctx context.Context, params domain.An
 	ctx, span := salesReportRepoTracer.Start(ctx, "repository.sales_report.get_breakdown")
 	defer span.End()
 
-	offset, apiErr := decodeOffsetCursor(params.Cursor)
+	cur, apiErr := decodeBreakdownCursor(params.Cursor)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -331,7 +365,13 @@ func (r *salesReportRepoImpl) GetBreakdown(ctx context.Context, params domain.An
 	if !ok {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError(fmt.Sprintf("Unknown sales breakdown group %q.", params.GroupBy)))
 	}
-	q, apiErr := r.newSalesFactQuery(ctx, params.SalesReportFilter, reportWindows(params.SalesReportFilter))
+	// The rollup path filters facts without a window: its raw stretches bring their own.
+	var windows [][2]time.Time
+	useRollups := r.rollupsReady(ctx)
+	if !useRollups {
+		windows = reportWindows(params.SalesReportFilter)
+	}
+	q, apiErr := r.newSalesFactQuery(ctx, params.SalesReportFilter, windows)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -345,17 +385,31 @@ func (r *salesReportRepoImpl) GetBreakdown(ctx context.Context, params domain.An
 		q.add("f.order_discount_id IS NOT NULL")
 	}
 
-	cur, curArgs := periodCase(params.StartsAt, params.EndsAt)
-	args := repeatArgs(curArgs, 5)
-	// Without a comparison period its columns are all zero: FALSE matches no line.
-	cmp, cmpArgs := "FALSE", []any(nil)
-	if params.HasComparison() {
-		cmp, cmpArgs = periodCase(*params.ComparisonStartsAt, *params.ComparisonEndsAt)
+	var (
+		grouped string
+		args    []any
+	)
+	if useRollups {
+		scope, ok := rollupScopeFor(params.SalesReportFilter, q, breakdownDimension[params.GroupBy])
+		if ok {
+			grouped, args = rollupBreakdownGrouped(q, scope, params, column)
+		} else {
+			// The filters need the lines themselves; add back the window the rollup path left off.
+			q, apiErr = r.newSalesFactQuery(ctx, params.SalesReportFilter, reportWindows(params.SalesReportFilter))
+			if apiErr != nil {
+				return nil, tracing.Trace(span, apiErr)
+			}
+			switch params.GroupBy {
+			case constants.SalesBreakdownGroupBySalesRep:
+				q.add("f.sales_rep_id IS NOT NULL")
+			case constants.SalesBreakdownGroupByDiscount:
+				q.add("f.order_discount_id IS NOT NULL")
+			}
+		}
 	}
-	args = append(args, repeatArgs(cmpArgs, 5)...)
-	grouped := fmt.Sprintf("SELECT %s AS k, %s, %s FROM sales_line_fact f WHERE %s GROUP BY %s",
-		column, totalsColumns(cur, "c_"), totalsColumns(cmp, "p_"), q.where.String(), column)
-	args = append(args, q.args...)
+	if grouped == "" {
+		grouped, args = factBreakdownGrouped(q, params, column)
+	}
 
 	// Customer groups re-total their buyers' rows. Decimal addition is exact, and an invoice has one buyer, so every sum (invoice counts included) equals totalling the group's lines directly.
 	if params.GroupBy == constants.SalesBreakdownGroupByCustomerGroup {
@@ -377,12 +431,26 @@ GROUP BY ar.account_group_id`
 		having = "g.c_line_count > 0"
 	}
 
+	// Groups are ranked by current revenue, then key. A page is a keyset over that ranking, compared as
+	// exact decimals, so a group never repeats or goes missing between pages; a backward page reads the
+	// ranking in reverse and is turned back around below.
+	order, pageOrder := "g.c_invoiced DESC, g.k ASC", "p.c_invoiced DESC, p.k ASC"
+	if cur != nil {
+		if cur.Direction == pagination.DirectionBackward {
+			having += " AND (g.c_invoiced > CAST(? AS DECIMAL(65,30)) OR (g.c_invoiced = CAST(? AS DECIMAL(65,30)) AND g.k < ?))"
+			order, pageOrder = "g.c_invoiced ASC, g.k DESC", "p.c_invoiced ASC, p.k DESC"
+		} else {
+			having += " AND (g.c_invoiced < CAST(? AS DECIMAL(65,30)) OR (g.c_invoiced = CAST(? AS DECIMAL(65,30)) AND g.k > ?))"
+		}
+		args = append(args, cur.Value, cur.Value, cur.ID)
+	}
+
 	label, joins := breakdownLabel(params.GroupBy)
 	query := fmt.Sprintf(`SELECT p.k, %s, p.%s FROM (
-  SELECT g.* FROM (%s) g WHERE %s ORDER BY g.c_invoiced DESC, g.k LIMIT ? OFFSET ?
+  SELECT g.* FROM (%s) g WHERE %s ORDER BY %s LIMIT ?
 ) p %s
-ORDER BY p.c_invoiced DESC, p.k`, label, strings.Join(breakdownTotalColumns, ", p."), grouped, having, joins)
-	args = append(args, params.Limit+1, offset)
+ORDER BY %s`, label, strings.Join(breakdownTotalColumns, ", p."), grouped, having, order, joins, pageOrder)
+	args = append(args, params.Limit+1)
 
 	rows, err := r.queries.DB().QueryContext(ctx, query, args...)
 	if err != nil {
@@ -390,6 +458,7 @@ ORDER BY p.c_invoiced DESC, p.k`, label, strings.Join(breakdownTotalColumns, ", 
 	}
 	defer rows.Close()
 	out := &domain.SalesBreakdown{}
+	var ranks []string // each group's current revenue as stored, for its cursor
 	for rows.Next() {
 		var (
 			g                           domain.SalesBreakdownGroup
@@ -409,38 +478,72 @@ ORDER BY p.c_invoiced DESC, p.k`, label, strings.Join(breakdownTotalColumns, ", 
 			g.Comparison = &c
 		}
 		out.Groups = append(out.Groups, g)
+		ranks = append(ranks, current.invoiced.String)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, tracing.Trace(span, db.MapSQLError(err))
 	}
-	if len(out.Groups) > int(params.Limit) {
-		out.Groups = out.Groups[:params.Limit]
-		out.PageInfo.HasNextPage = true
-		next := encodeOffsetCursor(offset + params.Limit)
-		out.PageInfo.NextCursor = &next
-	}
-	if offset > 0 {
-		out.PageInfo.HasPrevPage = true
-		prev := encodeOffsetCursor(max(0, offset-params.Limit))
-		out.PageInfo.PrevCursor = &prev
-	}
+	out.Groups, out.PageInfo = breakdownPage(out.Groups, ranks, params.Limit, cur)
 	return out, nil
 }
 
-// Grouped totals are ordered by amount, which has no stable key to seek from, so their cursor carries an offset. The groups are computed in full either way, so an offset costs nothing extra.
-func encodeOffsetCursor(offset int32) string {
-	return pagination.EncodeCursor(pagination.Cursor{ID: int64(offset), Direction: pagination.DirectionForward})
+// factBreakdownGrouped totals the matching lines per group straight from sales_line_fact, one row per group key with c_ and p_ totals columns.
+func factBreakdownGrouped(q *salesFactQuery, params domain.AnalyzeSalesBreakdownParams, column string) (string, []any) {
+	cur, curArgs := periodCase(params.StartsAt, params.EndsAt)
+	args := repeatArgs(curArgs, 5)
+	// Without a comparison period its columns are all zero: FALSE matches no line.
+	cmp, cmpArgs := "FALSE", []any(nil)
+	if params.HasComparison() {
+		cmp, cmpArgs = periodCase(*params.ComparisonStartsAt, *params.ComparisonEndsAt)
+	}
+	args = append(args, repeatArgs(cmpArgs, 5)...)
+	grouped := fmt.Sprintf("SELECT %s AS k, %s, %s FROM sales_line_fact f WHERE %s GROUP BY %s",
+		column, totalsColumns(cur, "c_"), totalsColumns(cmp, "p_"), q.where.String(), column)
+	return grouped, append(args, q.args...)
 }
 
-func decodeOffsetCursor(cursor *string) (int32, *apierror.APIError) {
+func decodeBreakdownCursor(cursor *string) (*pagination.ValueCursor, *apierror.APIError) {
 	if cursor == nil || *cursor == "" {
-		return 0, nil
+		return nil, nil
 	}
-	c, err := pagination.DecodeCursor(*cursor)
-	if err != nil || c.ID < 0 || c.ID > 1<<31-1 {
-		return 0, apierror.NewParameterInvalidError("The cursor is invalid.", "cursor")
+	c, err := pagination.DecodeValueCursor(*cursor)
+	if err != nil {
+		return nil, apierror.NewParameterInvalidError("The cursor is invalid.", "cursor")
 	}
-	return int32(c.ID), nil
+	return &c, nil
+}
+
+// breakdownPage trims a page read one past limit (in reverse for a backward page) and cursors its ends.
+// ranks holds each group's revenue as stored, in the order read.
+func breakdownPage(groups []domain.SalesBreakdownGroup, ranks []string, limit int32, cur *pagination.ValueCursor) ([]domain.SalesBreakdownGroup, pagination.PageInfo) {
+	var info pagination.PageInfo
+	more := len(groups) > int(limit)
+	if more {
+		groups, ranks = groups[:limit], ranks[:limit]
+	}
+	backward := cur != nil && cur.Direction == pagination.DirectionBackward
+	if backward {
+		slices.Reverse(groups)
+		slices.Reverse(ranks)
+	}
+	// Forward: more rows lie ahead, and a cursor means rows lie behind. Backward, the reverse.
+	info.HasNextPage, info.HasPrevPage = more, cur != nil
+	if backward {
+		info.HasNextPage, info.HasPrevPage = true, more
+	}
+	if len(groups) == 0 {
+		return groups, pagination.PageInfo{}
+	}
+	if info.HasNextPage {
+		last := len(groups) - 1
+		next := pagination.EncodeValueCursor(pagination.ValueCursor{Value: ranks[last], ID: groups[last].Key, Direction: pagination.DirectionForward})
+		info.NextCursor = &next
+	}
+	if info.HasPrevPage {
+		prev := pagination.EncodeValueCursor(pagination.ValueCursor{Value: ranks[0], ID: groups[0].Key, Direction: pagination.DirectionBackward})
+		info.PrevCursor = &prev
+	}
+	return groups, info
 }
 
 // keysetCursor decodes a (timestamp, id) cursor, returning its direction or nil for the first page.

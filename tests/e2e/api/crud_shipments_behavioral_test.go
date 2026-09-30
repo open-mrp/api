@@ -25,10 +25,6 @@ const (
 	sbOrderLine1ID  = "orln_01seedsb_ln1_000"
 	sbOrderLine2ID  = "orln_01seedsb_ln2_000"
 	sbShipmentLine1 = "shln_01seedsb_ln1_000"
-	// Ordered on line 1, and how much of it SHP-SB-001 already ships.
-	sbLine1Ordered = 10.0
-	sbLine1Shipped = 6.0
-
 	// The unit the SB fixtures' quantities are denominated in.
 	sbQuantityUnitID = "un_01seedpair000000000"
 )

@@ -143,6 +143,15 @@ func (s *transactionAllocationSvcImpl) UpdateTransactionAllocation(ctx context.C
 				if apiErr := txRepo.UpdateAmount(txCtx, existing.AmountID, *params.Amount); apiErr != nil {
 					return apiErr
 				}
+				// A changed amount changes what its transaction has left and what its invoice owes.
+				if apiErr := txSvc.mediators().PaymentFlags.Enqueue(txCtx, params.AccountID, []string{existing.TransactionID}, []string{existing.InvoiceID}); apiErr != nil {
+					return apiErr
+				}
+			}
+			if params.CreatedAt != nil {
+				if apiErr := txRepo.UpdateCreatedAt(txCtx, params.AccountID, params.AllocationID, *params.CreatedAt); apiErr != nil {
+					return apiErr
+				}
 			}
 
 			// Fetch updated allocation
@@ -220,6 +229,11 @@ func (s *transactionAllocationSvcImpl) DeleteTransactionAllocation(ctx context.C
 
 		// Delete the allocation (quantity is deleted first inside repo)
 		if apiErr := txSvc.repos.NewTransactionAllocationRepo().Delete(txCtx, params.AccountID, params.AllocationID); apiErr != nil {
+			return apiErr
+		}
+
+		// The money is no longer applied: the transaction has it back and the invoice owes it again.
+		if apiErr := txSvc.mediators().PaymentFlags.Enqueue(txCtx, params.AccountID, []string{allocation.TransactionID}, []string{allocation.InvoiceID}); apiErr != nil {
 			return apiErr
 		}
 

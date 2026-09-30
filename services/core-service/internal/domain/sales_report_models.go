@@ -30,7 +30,7 @@ func (f SalesReportFilter) HasComparison() bool {
 	return f.ComparisonStartsAt != nil && f.ComparisonEndsAt != nil
 }
 
-// SalesTotals is invoiced sales over some set of lines. Amounts are exact decimal strings: sums of the stored DECIMAL(65,30) line amounts, never rounded.
+// SalesTotals is invoiced sales over some set of lines. Amounts are exact decimal strings: sums of the stored line amounts, never rounded.
 type SalesTotals struct {
 	// PeriodStart is the first day of a daily bucket, as midnight UTC of the caller's local day; nil on a whole period.
 	PeriodStart *time.Time

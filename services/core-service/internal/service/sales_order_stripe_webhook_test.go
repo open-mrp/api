@@ -135,8 +135,8 @@ func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_Succeeded_LinksPaymentAn
 	suite.transactionRepo.EXPECT().FetchAndIncrementTransactionNumber(gomock.Any(), "ac_test").Return("1001", nil).Times(1)
 	suite.transactionRepo.EXPECT().GetDollarUnitID(gomock.Any()).Return("un_dollar", nil).Times(1)
 	suite.transactionRepo.EXPECT().
-		Create(gomock.Any(), gomock.Any(), "1001", string(constants.TransactionTypePayment), "ac_test", "ac_buyer", gomock.Any(), gomock.Any(), gomock.Nil(), gomock.Nil(), gomock.Any(), "20", "un_dollar").
-		DoAndReturn(func(_ context.Context, _, _, _, _, _ string, stripePaymentID, methodCode, _, _, note *string, _, _ string) *apierror.APIError {
+		Create(gomock.Any(), gomock.Any(), "1001", string(constants.TransactionTypePayment), "ac_test", "ac_buyer", gomock.Any(), gomock.Any(), gomock.Nil(), gomock.Nil(), gomock.Any(), "20", "un_dollar", gomock.Nil(), gomock.Nil()).
+		DoAndReturn(func(_ context.Context, _, _, _, _, _ string, stripePaymentID, methodCode, _, _, note *string, _, _ string, _, _ *time.Time) *apierror.APIError {
 			suite.Require().NotNil(stripePaymentID)
 			suite.Equal("pi_test", *stripePaymentID)
 			suite.Require().NotNil(methodCode)
@@ -199,7 +199,7 @@ func (suite *SalesOrderSvcTestSuite) TestAccountWebhook_Succeeded_RedeliveryBack
 	suite.transactionRepo.EXPECT().FetchAndIncrementTransactionNumber(gomock.Any(), "ac_test").Return("1002", nil).Times(1)
 	suite.transactionRepo.EXPECT().GetDollarUnitID(gomock.Any()).Return("un_dollar", nil).Times(1)
 	suite.transactionRepo.EXPECT().
-		Create(gomock.Any(), gomock.Any(), "1002", string(constants.TransactionTypePayment), "ac_test", "ac_buyer", gomock.Any(), gomock.Any(), gomock.Nil(), gomock.Nil(), gomock.Any(), "20", "un_dollar").
+		Create(gomock.Any(), gomock.Any(), "1002", string(constants.TransactionTypePayment), "ac_test", "ac_buyer", gomock.Any(), gomock.Any(), gomock.Nil(), gomock.Nil(), gomock.Any(), "20", "un_dollar", gomock.Nil(), gomock.Nil()).
 		Return(nil).Times(1)
 
 	suite.Nil(suite.svc.ProcessAccountStripeWebhook(context.Background(), "ac_test", []byte("{}"), "sig_test"))

@@ -351,6 +351,8 @@ message TransactionInfo {
   optional string responsible_user_status = 33;
   optional google.protobuf.Timestamp responsible_user_created_at = 34;
   optional google.protobuf.Timestamp responsible_user_updated_at = 35;
+  // When the money arrived; unset until it has.
+  optional google.protobuf.Timestamp funds_received_at = 36;
 }
 message TransactionSummaryInfo {
   string id = 1;
@@ -380,6 +382,7 @@ message TransactionSummaryInfo {
   optional string customer_commission_policy = 25;
   optional google.protobuf.Timestamp customer_created_at = 26;
   optional google.protobuf.Timestamp customer_updated_at = 27;
+  optional google.protobuf.Timestamp funds_received_at = 28;
 }
 message TransactionAllocationInfo {
   string id = 1;
@@ -395,6 +398,13 @@ message TransactionAllocationInfo {
   google.protobuf.Timestamp updated_at = 11;
   optional string transaction_number = 12;
   optional string transaction_type = 13;
+  optional string transaction_method_code = 14;
+  optional string transaction_adjustment_type_code = 15;
+  optional string transaction_customer_id = 16;
+  optional google.protobuf.Timestamp transaction_created_at = 17;
+  // The settlement that recorded the allocation.
+  optional string settlement_id = 18;
+  optional string settlement_number = 19;
 }
 message ListTransactionsRequest {
   optional string cursor = 1;
@@ -429,6 +439,9 @@ message CreateTransactionRequest {
   optional string responsible_user_id = 6;
   optional string note = 7;
   optional string stripe_payment_id = 8;
+  // Backdates the transaction; unset records it now.
+  optional google.protobuf.Timestamp created_at = 9;
+  optional google.protobuf.Timestamp funds_received_at = 10;
 }
 message CreateTransactionResponse {
   TransactionInfo transaction = 1;
@@ -445,6 +458,10 @@ message UpdateTransactionRequest {
   bool clear_transaction_method = 9;
   bool clear_adjustment_type = 10;
   optional bool is_fully_allocated = 11;
+  optional google.protobuf.Timestamp created_at = 12;
+  optional google.protobuf.Timestamp funds_received_at = 13;
+  bool clear_funds_received_at = 14;
+  bool clear_note = 15;
 }
 message UpdateTransactionResponse {
   TransactionInfo transaction = 1;
@@ -490,12 +507,25 @@ message GetSettlementResponse {
 message CreateSettlementRequest {
   string responsible_user_id = 1;
   repeated CreateSettlementAllocationParam allocations = 2;
+  // Transactions recorded with the settlement, drawn on by allocations naming their key.
+  repeated NewSettlementTransactionParam new_transactions = 3;
 }
 message CreateSettlementAllocationParam {
+  // Exactly one of transaction_id (an existing transaction) or transaction_key (a new one).
   string transaction_id = 1;
   string invoice_id = 2;
   string amount = 3;
   optional string note = 4;
+  optional string transaction_key = 5;
+  // Dates the allocation; unset dates it now.
+  optional google.protobuf.Timestamp created_at = 6;
+}
+message NewSettlementTransactionParam {
+  string key = 1;
+  string transaction_type_code = 2;
+  optional string transaction_method_code = 3;
+  optional string adjustment_type_code = 4;
+  string customer_id = 5;
 }
 message CreateSettlementResponse {
   SettlementInfo settlement = 1;
@@ -505,6 +535,7 @@ message UpdateSettlementRequest {
   optional string number = 2;
   optional string note = 3;
   optional string responsible_user_id = 4;
+  bool clear_note = 5;
 }
 message UpdateSettlementResponse {
   SettlementInfo settlement = 1;
@@ -564,10 +595,12 @@ message AllocationEntryInfo {
   string invoice_number = 11;
   optional string note = 12;
   google.protobuf.Timestamp created_at = 13;
+  string customer_id = 14;
 }
 message UpdateTransactionAllocationRequest {
   string id = 1;
   optional string amount = 2;
+  optional google.protobuf.Timestamp created_at = 3;
 }
 message UpdateTransactionAllocationResponse {
   TransactionAllocationInfo allocation = 1;
@@ -605,6 +638,7 @@ message OpenCreditEntryInfo {
   optional string stripe_payment_id = 13;
   repeated OpenCreditInvoiceAllocationInfo invoice_allocations = 14;
   google.protobuf.Timestamp created_at = 15;
+  google.protobuf.Timestamp funds_received_at = 17;
 }
 message OpenCreditInvoiceAllocationInfo {
   string invoice_number = 1;

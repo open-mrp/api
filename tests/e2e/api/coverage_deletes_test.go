@@ -5,6 +5,7 @@ package api_test
 import (
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -235,6 +236,8 @@ func newSettlement(t *testing.T) (settlementID, allocationID string) {
 		"type":                "payment",
 		"amount":              "1.00",
 		"responsible_user_id": SeedAccountUserID,
+		// Only money that has arrived can be applied to an invoice.
+		"funds_received_at": time.Now().UTC().Format(time.RFC3339),
 	})
 
 	status, body, err := apiClient.Post(settlementsPath, map[string]any{

@@ -36,14 +36,6 @@ func catalogItem(t *testing.T, basePath, id string) map[string]any {
 	return item
 }
 
-// catalogItemID fetches a part/product by id and returns its wrapped item id.
-func catalogItemID(t *testing.T, basePath, id string) string {
-	t.Helper()
-	itemID := jsonField(catalogItem(t, basePath, id), "id")
-	require.NotEmpty(t, itemID)
-	return itemID
-}
-
 // catalogRateValue fetches a part/product and returns the decimal value of a nested
 // rate. rateInclude is e.g. "item.unit_value" or "item.unit_cost".
 func catalogRateValue(t *testing.T, basePath, id, rateInclude string) string {

@@ -3,15 +3,12 @@ package repository
 import (
 	"context"
 	gosql "database/sql"
-	"strings"
 	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
-	"github.com/open-mrp/api/shared/pagination"
-	"github.com/open-mrp/api/shared/safeconv"
 	"github.com/open-mrp/api/shared/tracing"
 )
 
@@ -27,207 +24,6 @@ func NewSettlementRepo(queries *sqlc.Queries) domain.SettlementRepo {
 
 func settlementCreatedAt(d *domain.SettlementSummary) time.Time { return d.CreatedAt }
 func settlementID(d *domain.SettlementSummary) string           { return d.ID }
-
-func buildSettlementSearchQuery(query *string) gosql.NullString {
-	if query == nil || *query == "" {
-		return gosql.NullString{}
-	}
-	sanitized := db.SanitizeFulltextBoolean(*query)
-	if sanitized == "" {
-		return gosql.NullString{}
-	}
-	term := sanitized + "*"
-	return gosql.NullString{String: term, Valid: true}
-}
-
-func (r *settlementRepoImpl) List(ctx context.Context, params domain.ListSettlementsParams) (*domain.ListSettlementsResult, *apierror.APIError) {
-	ctx, span := settlementRepoTracer.Start(ctx, "repository.settlement.list")
-	defer span.End()
-
-	searchQuery := buildSettlementSearchQuery(params.Query)
-
-	startDate := gosql.NullTime{}
-	if params.StartDate != nil {
-		startDate = gosql.NullTime{Time: *params.StartDate, Valid: true}
-	}
-	endDate := gosql.NullTime{}
-	if params.EndDate != nil {
-		endDate = gosql.NullTime{Time: *params.EndDate, Valid: true}
-	}
-
-	includeTransactionFilter := len(params.TransactionIDs) > 0
-	transactionIDs := params.TransactionIDs
-	if len(transactionIDs) == 0 {
-		transactionIDs = []string{""}
-	}
-
-	includeInvoiceFilter := len(params.InvoiceIDs) > 0
-	invoiceIDs := params.InvoiceIDs
-	if len(invoiceIDs) == 0 {
-		invoiceIDs = []string{""}
-	}
-
-	var cursorDir *pagination.Direction
-
-	if params.Cursor != nil {
-		cur, err := pagination.DecodeStringCursor(*params.Cursor)
-		if err != nil {
-			return nil, apierror.NewValidationErrorWithParam("Invalid pagination cursor.", "cursor")
-		}
-		cursorDir = &cur.Direction
-
-		if cur.Direction == pagination.DirectionBackward {
-			rows, err := r.queries.ListSettlementsBackward(ctx, sqlc.ListSettlementsBackwardParams{
-				AccountID:                params.AccountID,
-				SearchQuery:              searchQuery,
-				IncludeTransactionFilter: includeTransactionFilter,
-				TransactionIds:           transactionIDs,
-				IncludeInvoiceFilter:     includeInvoiceFilter,
-				InvoiceIds:               invoiceIDs,
-				StartDate:                startDate,
-				EndDate:                  endDate,
-				CursorCreatedAt:          gosql.NullTime{Time: cur.OccurredAt, Valid: true},
-				CursorID:                 gosql.NullString{String: cur.ID, Valid: true},
-				Limit:                    params.Limit + 1,
-			})
-			if apiErr := db.MapSQLError(err); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			settlements := make([]*domain.SettlementSummary, len(rows))
-			for i, row := range rows {
-				settlements[i] = mapBackwardSettlementRow(row)
-			}
-			result, pageInfo := pagination.BuildPageString(settlements, params.Limit, cursorDir, settlementCreatedAt, settlementID)
-			return &domain.ListSettlementsResult{Settlements: result, PageInfo: pageInfo}, nil
-		}
-
-		rows, err := r.queries.ListSettlementsForward(ctx, sqlc.ListSettlementsForwardParams{
-			AccountID:                params.AccountID,
-			SearchQuery:              searchQuery,
-			IncludeTransactionFilter: includeTransactionFilter,
-			TransactionIds:           transactionIDs,
-			IncludeInvoiceFilter:     includeInvoiceFilter,
-			InvoiceIds:               invoiceIDs,
-			StartDate:                startDate,
-			EndDate:                  endDate,
-			CursorCreatedAt:          gosql.NullTime{Time: cur.OccurredAt, Valid: true},
-			CursorID:                 gosql.NullString{String: cur.ID, Valid: true},
-			Limit:                    params.Limit + 1,
-		})
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		settlements := make([]*domain.SettlementSummary, len(rows))
-		for i, row := range rows {
-			settlements[i] = mapForwardSettlementRow(row)
-		}
-		result, pageInfo := pagination.BuildPageString(settlements, params.Limit, cursorDir, settlementCreatedAt, settlementID)
-		return &domain.ListSettlementsResult{Settlements: result, PageInfo: pageInfo}, nil
-	}
-
-	// No cursor - forward from beginning
-	rows, err := r.queries.ListSettlementsForward(ctx, sqlc.ListSettlementsForwardParams{
-		AccountID:                params.AccountID,
-		SearchQuery:              searchQuery,
-		IncludeTransactionFilter: includeTransactionFilter,
-		TransactionIds:           transactionIDs,
-		IncludeInvoiceFilter:     includeInvoiceFilter,
-		InvoiceIds:               invoiceIDs,
-		StartDate:                startDate,
-		EndDate:                  endDate,
-		CursorCreatedAt:          gosql.NullTime{},
-		CursorID:                 gosql.NullString{},
-		Limit:                    params.Limit + 1,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	settlements := make([]*domain.SettlementSummary, len(rows))
-	for i, row := range rows {
-		settlements[i] = mapForwardSettlementRow(row)
-	}
-	result, pageInfo := pagination.BuildPageString(settlements, params.Limit, cursorDir, settlementCreatedAt, settlementID)
-	return &domain.ListSettlementsResult{Settlements: result, PageInfo: pageInfo}, nil
-}
-
-func mapForwardSettlementRow(row sqlc.ListSettlementsForwardRow) *domain.SettlementSummary {
-	s := &domain.SettlementSummary{
-		ID:              row.ID,
-		Number:          row.Number,
-		AllocationCount: safeconv.Int64ToInt32(row.AllocationCount),
-		CreatedAt:       row.CreatedAt,
-		UpdatedAt:       row.UpdatedAt,
-	}
-
-	tp := decimalToString(row.TotalPayments)
-	if tp != "0" {
-		s.TotalPayments = &tp
-	}
-	tr := decimalToString(row.TotalRebates)
-	if tr != "0" {
-		s.TotalRebates = &tr
-	}
-	ta := decimalToString(row.TotalAdjustments)
-	if ta != "0" {
-		s.TotalAdjustments = &ta
-	}
-	tc := decimalToString(row.TotalCredits)
-	if tc != "0" {
-		s.TotalCredits = &tc
-	}
-
-	if row.InvoiceNumbers.Valid {
-		s.InvoiceNumbers = splitGroupConcat(row.InvoiceNumbers.String)
-	}
-	if row.CustomerNames.Valid {
-		s.CustomerNames = splitGroupConcat(row.CustomerNames.String)
-	}
-
-	return s
-}
-
-func mapBackwardSettlementRow(row sqlc.ListSettlementsBackwardRow) *domain.SettlementSummary {
-	s := &domain.SettlementSummary{
-		ID:              row.ID,
-		Number:          row.Number,
-		AllocationCount: safeconv.Int64ToInt32(row.AllocationCount),
-		CreatedAt:       row.CreatedAt,
-		UpdatedAt:       row.UpdatedAt,
-	}
-
-	tp := decimalToString(row.TotalPayments)
-	if tp != "0" {
-		s.TotalPayments = &tp
-	}
-	tr := decimalToString(row.TotalRebates)
-	if tr != "0" {
-		s.TotalRebates = &tr
-	}
-	ta := decimalToString(row.TotalAdjustments)
-	if ta != "0" {
-		s.TotalAdjustments = &ta
-	}
-	tc := decimalToString(row.TotalCredits)
-	if tc != "0" {
-		s.TotalCredits = &tc
-	}
-
-	if row.InvoiceNumbers.Valid {
-		s.InvoiceNumbers = splitGroupConcat(row.InvoiceNumbers.String)
-	}
-	if row.CustomerNames.Valid {
-		s.CustomerNames = splitGroupConcat(row.CustomerNames.String)
-	}
-
-	return s
-}
-
-func splitGroupConcat(s string) []string {
-	if s == "" {
-		return nil
-	}
-	return strings.Split(s, ",")
-}
 
 func (r *settlementRepoImpl) Get(ctx context.Context, accountID, settlementID string) (*domain.Settlement, *apierror.APIError) {
 	ctx, span := settlementRepoTracer.Start(ctx, "repository.settlement.get")
@@ -270,34 +66,10 @@ func (r *settlementRepoImpl) GetAllocations(ctx context.Context, settlementID st
 	ctx, span := settlementRepoTracer.Start(ctx, "repository.settlement.get_allocations")
 	defer span.End()
 
-	rows, err := r.queries.GetSettlementAllocations(ctx, gosql.NullString{String: settlementID, Valid: true})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
+	allocations, apiErr := loadAllocations(ctx, r.queries.DB(), "ta.settlement_id = ?", "ta.created_at ASC, ta.id ASC", settlementID)
+	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-
-	allocations := make([]*domain.TransactionAllocation, len(rows))
-	for i, row := range rows {
-		var allocNote *string
-		if row.Note.Valid {
-			allocNote = &row.Note.String
-		}
-		allocations[i] = &domain.TransactionAllocation{
-			ID:                row.ID,
-			AmountID:          row.AmountID,
-			AmountValue:       decimalToString(row.AmountValue),
-			AmountUnitID:      row.AmountUnitID,
-			AmountUnitAbbr:    row.AmountUnitAbbreviation,
-			Note:              allocNote,
-			TransactionID:     row.TransactionID,
-			TransactionNumber: row.TransactionNumber,
-			TransactionType:   row.TransactionType,
-			InvoiceID:         row.InvoiceID,
-			InvoiceNumber:     row.InvoiceNumber,
-			CreatedAt:         row.CreatedAt,
-			UpdatedAt:         row.UpdatedAt,
-		}
-	}
-
 	return allocations, nil
 }
 
@@ -329,6 +101,7 @@ func (r *settlementRepoImpl) Update(ctx context.Context, params domain.UpdateSet
 	updateParams := sqlc.UpdateSettlementParams{
 		ID:        params.SettlementID,
 		AccountID: params.AccountID,
+		ClearNote: params.ClearNote,
 	}
 	if params.Number != nil {
 		updateParams.Number = gosql.NullString{String: *params.Number, Valid: true}
@@ -420,6 +193,7 @@ func (r *settlementRepoImpl) CreateAllocation(ctx context.Context, allocationID,
 		InvoiceID:     params.InvoiceID,
 		SettlementID:  gosql.NullString{String: settlementID, Valid: true},
 		Note:          note,
+		CreatedAt:     toNullTime(params.CreatedAt),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
@@ -519,11 +293,12 @@ func (r *settlementRepoImpl) AllocateNextSettlementNumber(ctx context.Context, s
 	return number, nil
 }
 
-func (r *settlementRepoImpl) DeleteOrphanedAdjustmentTransactions(ctx context.Context, settlementID string) *apierror.APIError {
-	ctx, span := settlementRepoTracer.Start(ctx, "repository.settlement.delete_orphaned_adjustments")
+func (r *settlementRepoImpl) DeleteSettlementOwnedTransactions(ctx context.Context, accountID, settlementID string) *apierror.APIError {
+	ctx, span := settlementRepoTracer.Start(ctx, "repository.settlement.delete_owned_transactions")
 	defer span.End()
 
-	err := r.queries.DeleteOrphanedAdjustmentTransactions(ctx, sqlc.DeleteOrphanedAdjustmentTransactionsParams{
+	err := r.queries.DeleteSettlementOwnedTransactions(ctx, sqlc.DeleteSettlementOwnedTransactionsParams{
+		AccountID:    accountID,
 		SettlementID: gosql.NullString{String: settlementID, Valid: true},
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -532,7 +307,25 @@ func (r *settlementRepoImpl) DeleteOrphanedAdjustmentTransactions(ctx context.Co
 	return nil
 }
 
-func (r *settlementRepoImpl) UpdateTransactionsFullyAllocated(ctx context.Context, transactionIDs []string, isFullyAllocated bool) *apierror.APIError {
+func (r *settlementRepoImpl) MarkTransactionsCreatedBySettlement(ctx context.Context, accountID, settlementID string, transactionIDs []string) *apierror.APIError {
+	ctx, span := settlementRepoTracer.Start(ctx, "repository.settlement.mark_transactions_created_by_settlement")
+	defer span.End()
+
+	if len(transactionIDs) == 0 {
+		return nil
+	}
+	err := r.queries.MarkTransactionsCreatedBySettlement(ctx, sqlc.MarkTransactionsCreatedBySettlementParams{
+		SettlementID:   gosql.NullString{String: settlementID, Valid: true},
+		AccountID:      accountID,
+		TransactionIds: transactionIDs,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return nil
+}
+
+func (r *settlementRepoImpl) UpdateTransactionsFullyAllocated(ctx context.Context, accountID string, transactionIDs []string, isFullyAllocated bool) *apierror.APIError {
 	ctx, span := settlementRepoTracer.Start(ctx, "repository.settlement.update_transactions_fully_allocated")
 	defer span.End()
 
@@ -541,6 +334,7 @@ func (r *settlementRepoImpl) UpdateTransactionsFullyAllocated(ctx context.Contex
 	}
 
 	err := r.queries.UpdateTransactionsFullyAllocated(ctx, sqlc.UpdateTransactionsFullyAllocatedParams{
+		AccountID:        accountID,
 		IsFullyAllocated: isFullyAllocated,
 		TransactionIds:   transactionIDs,
 	})
@@ -550,11 +344,12 @@ func (r *settlementRepoImpl) UpdateTransactionsFullyAllocated(ctx context.Contex
 	return nil
 }
 
-func (r *settlementRepoImpl) UpdateInvoicePaymentStatus(ctx context.Context, invoiceID string, isPaidInFull, isOverPaid bool) *apierror.APIError {
+func (r *settlementRepoImpl) UpdateInvoicePaymentStatus(ctx context.Context, accountID, invoiceID string, isPaidInFull, isOverPaid bool) *apierror.APIError {
 	ctx, span := settlementRepoTracer.Start(ctx, "repository.settlement.update_invoice_payment_status")
 	defer span.End()
 
 	err := r.queries.UpdateInvoicePaymentStatus(ctx, sqlc.UpdateInvoicePaymentStatusParams{
+		AccountID:    accountID,
 		ID:           invoiceID,
 		IsPaidInFull: isPaidInFull,
 		IsOverPaid:   isOverPaid,
@@ -565,27 +360,52 @@ func (r *settlementRepoImpl) UpdateInvoicePaymentStatus(ctx context.Context, inv
 	return nil
 }
 
-// GetInvoicePaymentFlags recomputes, for each given invoice, whether it is paid in full / over paid from its allocations vs. its invoiced total.
-func (r *settlementRepoImpl) GetInvoicePaymentFlags(ctx context.Context, invoiceIDs []string) ([]domain.InvoicePaymentFlags, *apierror.APIError) {
-	ctx, span := settlementRepoTracer.Start(ctx, "repository.settlement.get_invoice_payment_flags")
+// GetInvoicePaymentTotals returns each invoice's invoiced total and the sum of its allocations, from which its payment flags are decided.
+func (r *settlementRepoImpl) GetInvoicePaymentTotals(ctx context.Context, accountID string, invoiceIDs []string) ([]domain.PaymentTotals, *apierror.APIError) {
+	ctx, span := settlementRepoTracer.Start(ctx, "repository.settlement.get_invoice_payment_totals")
 	defer span.End()
 
 	if len(invoiceIDs) == 0 {
 		return nil, nil
 	}
 
-	rows, err := r.queries.GetInvoicePaymentFlags(ctx, invoiceIDs)
+	rows, err := r.queries.GetInvoicePaymentTotals(ctx, sqlc.GetInvoicePaymentTotalsParams{AccountID: accountID, InvoiceIds: invoiceIDs})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	flags := make([]domain.InvoicePaymentFlags, len(rows))
+	totals := make([]domain.PaymentTotals, len(rows))
 	for i, row := range rows {
-		flags[i] = domain.InvoicePaymentFlags{
-			InvoiceID:    row.InvoiceID,
-			IsPaidInFull: row.IsPaidInFull.Valid && row.IsPaidInFull.Bool,
-			IsOverPaid:   row.IsOverPaid.Valid && row.IsOverPaid.Bool,
-		}
+		totals[i] = domain.PaymentTotals{ID: row.InvoiceID, Total: decimalOrZero(row.InvoicedTotal), Allocated: decimalOrZero(row.AllocatedTotal)}
 	}
-	return flags, nil
+	return totals, nil
+}
+
+// GetTransactionAllocationTotals returns each transaction's amount and the sum of its allocations, from which its fully-allocated flag is decided.
+func (r *settlementRepoImpl) GetTransactionAllocationTotals(ctx context.Context, accountID string, transactionIDs []string) ([]domain.PaymentTotals, *apierror.APIError) {
+	ctx, span := settlementRepoTracer.Start(ctx, "repository.settlement.get_transaction_allocation_totals")
+	defer span.End()
+
+	if len(transactionIDs) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.queries.GetTransactionAllocationTotals(ctx, sqlc.GetTransactionAllocationTotalsParams{AccountID: accountID, TransactionIds: transactionIDs})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	totals := make([]domain.PaymentTotals, len(rows))
+	for i, row := range rows {
+		totals[i] = domain.PaymentTotals{ID: row.TransactionID, Total: decimalOrZero(row.Amount), Allocated: decimalOrZero(row.AllocatedTotal)}
+	}
+	return totals, nil
+}
+
+// decimalOrZero reads a DECIMAL expression sqlc could only type as any, as text; NULL reads as zero.
+func decimalOrZero(v any) string {
+	if s := decimalStringPtr(v); s != nil {
+		return *s
+	}
+	return "0"
 }

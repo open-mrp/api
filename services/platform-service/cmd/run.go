@@ -52,7 +52,7 @@ func Run(
 	}
 	defer workerTracer.DeferClose()()
 
-	dbpool, err := db.NewDbPool(&db.Config{DBURI: cfg.DBURL})
+	dbpool, err := db.NewDbPool(&db.Config{DBURI: cfg.DBURL, Application: domain.ServiceName})
 	if err != nil {
 		return err
 	}

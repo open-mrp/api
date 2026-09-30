@@ -104,6 +104,16 @@ func (*SettlementSummary) SchemaExample() any {
 }
 
 // A portion of a transaction's amount applied to a specific invoice.
+// The settlement an allocation was recorded in.
+type AllocationSettlement struct {
+	// Settlement ID.
+	ID string `json:"id" validate:"required"`
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=settlement"`
+	// Settlement number.
+	Number string `json:"number" validate:"required"`
+}
+
 type TransactionAllocation struct {
 	// Allocation ID.
 	ID string `json:"id" validate:"required"`
@@ -117,6 +127,8 @@ type TransactionAllocation struct {
 	Transaction *TransactionDetail `json:"transaction" expandable:"true"`
 	// The invoice the amount was applied to.
 	Invoice *AllocationInvoice `json:"invoice"`
+	// The settlement that recorded the allocation.
+	Settlement *AllocationSettlement `json:"settlement"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.
@@ -148,4 +160,24 @@ var SampleTransactionAllocation2 = &TransactionAllocation{
 
 func (*TransactionAllocation) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleTransactionAllocation2)
+}
+
+// AllocationReferences builds the invoice and settlement an allocation names, from the ids and numbers
+// carried on it. Either is nil when the allocation has none.
+func AllocationReferences(invoiceID, invoiceNumber, settlementID, settlementNumber *string) (*AllocationInvoice, *AllocationSettlement) {
+	var invoice *AllocationInvoice
+	if invoiceID != nil && *invoiceID != "" {
+		invoice = &AllocationInvoice{ID: *invoiceID, Object: constants.ObjectTypeInvoiceSummary}
+		if invoiceNumber != nil {
+			invoice.Number = *invoiceNumber
+		}
+	}
+	var settlement *AllocationSettlement
+	if settlementID != nil && *settlementID != "" {
+		settlement = &AllocationSettlement{ID: *settlementID, Object: constants.ObjectTypeSettlement}
+		if settlementNumber != nil {
+			settlement.Number = *settlementNumber
+		}
+	}
+	return invoice, settlement
 }

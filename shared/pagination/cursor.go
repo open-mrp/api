@@ -39,6 +39,15 @@ type StringCursor struct {
 	MatchTier *int `json:"t,omitempty"`
 }
 
+// ValueCursor positions a page in rows ordered by a computed value and then a string key, such as groups
+// ranked by revenue. Value is the row's exact value as text (a decimal is compared as a decimal, never
+// as a float), and ID breaks ties.
+type ValueCursor struct {
+	Value     string    `json:"v"`
+	ID        string    `json:"s"`
+	Direction Direction `json:"d"`
+}
+
 func encodeCursorPayload(v any) string {
 	return signCursorPayload(cursorKey, v)
 }
@@ -107,6 +116,28 @@ func DecodeStringCursor(s string) (StringCursor, error) {
 
 	if c.Direction != DirectionForward && c.Direction != DirectionBackward {
 		return StringCursor{}, fmt.Errorf("invalid cursor direction")
+	}
+
+	return c, nil
+}
+
+func EncodeValueCursor(c ValueCursor) string {
+	return encodeCursorPayload(c)
+}
+
+func DecodeValueCursor(s string) (ValueCursor, error) {
+	b, err := decodeCursorPayload(s)
+	if err != nil {
+		return ValueCursor{}, err
+	}
+
+	var c ValueCursor
+	if err := json.Unmarshal(b, &c); err != nil {
+		return ValueCursor{}, fmt.Errorf("invalid cursor format")
+	}
+
+	if c.Direction != DirectionForward && c.Direction != DirectionBackward {
+		return ValueCursor{}, fmt.Errorf("invalid cursor direction")
 	}
 
 	return c, nil

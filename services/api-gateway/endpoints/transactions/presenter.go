@@ -30,6 +30,7 @@ func TransactionDetailPresenter(ctx context.Context, d *pb.TransactionInfo) apir
 		Number:           d.Number,
 		IsFullyAllocated: d.IsFullyAllocated,
 		StripePaymentID:  d.StripePaymentId,
+		FundsReceivedAt:  grpcutil.TimestampToTimePtr(d.FundsReceivedAt),
 		AllocationCount:  d.AllocationCount,
 		Note:             d.Note,
 		CreatedAt:        createdAt,
@@ -90,14 +91,14 @@ func TransactionDetailPresenter(ctx context.Context, d *pb.TransactionInfo) apir
 		meta.Set(constants.ObjectTypeTransaction, tx.ID, "responsible_user_id", *d.ResponsibleUserId)
 	}
 
-	if d.Allocations != nil {
-		allocations := make([]apiresource.TransactionAllocation, len(d.Allocations))
-		for i, a := range d.Allocations {
-			allocations[i] = TransactionAllocationPresenter(meta, a)
-		}
-		meta.Set(constants.ObjectTypeTransaction, tx.ID, "allocations",
-			apiresource.NewList(allocations, apiresource.PageInfo{}))
+	// Proto cannot tell an empty list from an unloaded one; the stash is only read when
+	// `allocations` was requested, and then core loaded them, so none means an empty list.
+	allocations := make([]apiresource.TransactionAllocation, len(d.Allocations))
+	for i, a := range d.Allocations {
+		allocations[i] = TransactionAllocationPresenter(meta, a)
 	}
+	meta.Set(constants.ObjectTypeTransaction, tx.ID, "allocations",
+		apiresource.NewList(allocations, apiresource.PageInfo{}))
 
 	return tx
 }
@@ -114,6 +115,7 @@ func TransactionSummaryPresenter(d *pb.TransactionSummaryInfo) apiresource.Trans
 		ID:               d.Id,
 		Object:           constants.ObjectTypeTransactionSummary,
 		Number:           d.Number,
+		FundsReceivedAt:  grpcutil.TimestampToTimePtr(d.FundsReceivedAt),
 		IsFullyAllocated: d.IsFullyAllocated,
 		AllocationCount:  d.AllocationCount,
 		CreatedAt:        createdAt,
@@ -195,6 +197,7 @@ func TransactionAllocationPresenter(meta *resourcekit.LoadMeta, a *pb.Transactio
 		CreatedAt: grpcutil.TimestampToTime(a.CreatedAt),
 		UpdatedAt: grpcutil.TimestampToTime(a.UpdatedAt),
 	}
+	alloc.Invoice, alloc.Settlement = apiresource.AllocationReferences(a.InvoiceId, a.InvoiceNumber, a.SettlementId, a.SettlementNumber)
 
 	return alloc
 }

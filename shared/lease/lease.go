@@ -17,6 +17,8 @@ import (
 	"os"
 	"sync"
 	"time"
+
+	"github.com/open-mrp/api/shared/querytag"
 )
 
 // Repo abstracts the persistence backend for a task_leases table. MySQL and PostgreSQL each have per-service implementations wrapping sqlc-generated queries.
@@ -80,7 +82,7 @@ func (l *Lease) WithLease(ctx context.Context, name string, ttl time.Duration, f
 		return nil
 	}
 
-	workCtx, cancelWork := context.WithCancel(ctx)
+	workCtx, cancelWork := context.WithCancel(querytag.With(ctx, querytag.Job, name))
 	defer cancelWork()
 
 	renewInterval := ttl / 3

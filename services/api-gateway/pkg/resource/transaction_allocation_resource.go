@@ -138,6 +138,8 @@ type OpenCreditEntry struct {
 	StripePaymentID *string `json:"stripe_payment_id"`
 	// The invoices this transaction has already been applied to, and how much went to each.
 	InvoiceAllocations *List[InvoiceAllocationEntry] `json:"invoice_allocations"`
+	// When the money arrived; open credits are ordered and dated by it.
+	FundsReceivedAt time.Time `json:"funds_received_at" validate:"required"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 }
@@ -171,7 +173,8 @@ var SampleOpenCreditEntry = &OpenCreditEntry{
 	InvoiceAllocations: NewList([]InvoiceAllocationEntry{
 		{Object: constants.ObjectTypeInvoiceAllocationEntry, InvoiceNumber: "INV-001", Amount: "500.000000000000000000000000000000"},
 	}, PageInfo{}),
-	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	FundsReceivedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	CreatedAt:       timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 }
 
 func (*OpenCreditEntry) SchemaExample() any {

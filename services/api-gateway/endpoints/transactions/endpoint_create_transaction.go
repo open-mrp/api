@@ -3,6 +3,7 @@ package transactionep
 import (
 	"context"
 	"net/http"
+	"time"
 
 	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
@@ -40,6 +41,10 @@ type CreateTransactionRequest struct {
 	ResponsibleUserID field.Optional[string] `json:"responsible_user_id,omitzero" validate:"omitempty"`
 	// Free-form note attached to the transaction.
 	Note field.Optional[string] `json:"note,omitzero"`
+	// When the transaction took place, reported as its `created_at`; defaults to now. Set it to record a payment after the fact.
+	OccurredAt field.Optional[time.Time] `json:"occurred_at,omitzero"`
+	// When the money arrived. Only a transaction whose funds have arrived can be applied to invoices or counts as an open credit.
+	FundsReceivedAt field.Optional[time.Time] `json:"funds_received_at,omitzero"`
 }
 
 var sampleCreateTransactionMethodCode = constants.TransactionMethodCheck

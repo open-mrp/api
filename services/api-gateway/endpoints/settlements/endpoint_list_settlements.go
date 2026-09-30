@@ -18,9 +18,9 @@ type ListSettlementsRequest struct {
 	TransactionIDs []string `query:"transaction_ids"`
 	// Only return settlements that allocate to at least one of these invoices.
 	InvoiceIDs []string `query:"invoice_ids"`
-	// Only return settlements created on or after the start of this date (`YYYY-MM-DD`, UTC).
+	// Only return settlements created on or after the start of this date (`YYYY-MM-DD`, UTC). A full timestamp (RFC 3339) is also accepted, to bound the range at a local midnight.
 	StartDate *string `query:"starts_at"`
-	// Only return settlements created on or before this date (`YYYY-MM-DD`, UTC), covering that whole day.
+	// Only return settlements created on or before this date (`YYYY-MM-DD`, UTC), covering that whole day. A full timestamp (RFC 3339) is also accepted, to bound the range at a local midnight.
 	EndDate *string `query:"ends_at"`
 }
 
@@ -28,7 +28,7 @@ type ListSettlementsRequest struct {
 
 // Returns a paginated list of settlements, newest first.
 //
-// Each entry is a condensed view that summarizes the settlement's allocations as totals per transaction type instead of listing them; retrieve a settlement to see its individual allocations. Filtering by `transaction_ids` or `invoice_ids` also narrows each entry's aggregates to just the matching allocations, and when both are supplied a settlement matches only if one of its allocations satisfies both.
+// Each entry is a condensed view that summarizes the settlement's allocations as totals per transaction type instead of listing them; retrieve a settlement to see its individual allocations. Filtering by `transaction_ids` or `invoice_ids` selects settlements with a matching allocation (one allocation must satisfy both when both are given); each entry still summarizes all of the settlement's allocations. Totals that come to zero are null.
 type ListSettlementsEndpoint struct{}
 
 func (e *ListSettlementsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSettlementsRequest, *apiresource.List[apiresource.SettlementSummary]] {

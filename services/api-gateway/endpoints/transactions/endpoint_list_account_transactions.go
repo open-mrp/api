@@ -16,7 +16,7 @@ type ListAccountTransactionsRequest struct {
 	apiresource.PaginationRequest
 	// Customer account ID.
 	CustomerAccountID string `path:"account_id" validate:"required"`
-	// Filter by allocation status: `allocated` (marked fully applied to invoices) or `unallocated` (still counted as an open credit).
+	// Filter by allocation status: `allocated` (marked fully applied to invoices) or `unallocated` (funds received and not yet fully applied: the transactions available to settle).
 	Status *constants.TransactionAllocationStatus `query:"status"`
 	// Filter by transaction type code.
 	Type *constants.TransactionType `query:"type"`

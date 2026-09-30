@@ -4,7 +4,7 @@ import "time"
 
 // SalesLineFact is one invoice line priced for sales analytics, as stored in sales_line_fact.
 //
-// Amounts are exact DECIMAL(65,30) strings, nil where the legacy expression is NULL (e.g. an item whose category has no base unit has no base quantity). They stay strings end to end so a refresh can compare and rewrite them without rounding.
+// Amounts are exact DECIMAL(28,10) strings, nil where the legacy expression is NULL (e.g. an item whose category has no base unit has no base quantity). They stay strings end to end so a refresh can compare and rewrite them without rounding.
 type SalesLineFact struct {
 	AccountID          string
 	InvoicedAt         time.Time
@@ -31,6 +31,18 @@ const (
 	SalesFactScopeSalesOrder     SalesFactScope = "sales_order"
 	SalesFactScopeSalesOrderLine SalesFactScope = "sales_order_line"
 	SalesFactScopeProduct        SalesFactScope = "product"
+	// SalesFactScopeQuantity is an invoice line's own quantity row.
+	SalesFactScopeQuantity SalesFactScope = "quantity"
+	// SalesFactScopeRate is an order line's unit price or unit cost rate row.
+	SalesFactScopeRate SalesFactScope = "rate"
+	// SalesFactScopeItem is an item whose category (and so base unit) changed.
+	SalesFactScopeItem SalesFactScope = "item"
+	// SalesFactScopeBuyer is a customer whose orders moved to another (a merge): the invoices whose
+	// facts still name it as buyer.
+	SalesFactScopeBuyer SalesFactScope = "buyer"
+	// SalesFactScopeReconcile asks for the full reconcile pass to start again now. It covers changes that
+	// can reprice any line, such as a unit's ratio or a category's base unit; its scope id is unused.
+	SalesFactScopeReconcile SalesFactScope = "reconcile"
 )
 
 // SalesFactDirtyMark is a scope whose facts are waiting to be recomputed.
@@ -39,6 +51,13 @@ type SalesFactDirtyMark struct {
 	ScopeID   string
 	AccountID string
 	// MarkedAt is compared on clear, so a mark refreshed while the refresh ran is kept.
+	MarkedAt time.Time
+}
+
+// SalesRollupDirtyMark is an (account, UTC day) whose rollup buckets must be rebuilt from its facts.
+type SalesRollupDirtyMark struct {
+	Day SalesRollupDay
+	// MarkedAt is compared on clear, so a day re-marked while its rebuild ran is kept.
 	MarkedAt time.Time
 }
 
@@ -55,5 +74,22 @@ type SalesFactSync struct {
 	// PassStartedAt is when the pass in progress (or the last one) began.
 	PassStartedAt *time.Time
 	// LastCompletedAt is when a pass last reached the newest invoice; nil until the backfill finishes.
+	LastCompletedAt *time.Time
+}
+
+// SalesRollupDay is one account's UTC day, the unit the rollup sweep rebuilds.
+type SalesRollupDay struct {
+	AccountID string
+	// Day is midnight UTC.
+	Day time.Time
+}
+
+// SalesRollupSync is the rollup sweep's persisted progress.
+type SalesRollupSync struct {
+	// Cursor is the next day the pass in progress rebuilds; nil when no pass is running.
+	Cursor *SalesRollupDay
+	// PassStartedAt is when the pass in progress (or the last one) began.
+	PassStartedAt *time.Time
+	// LastCompletedAt is when a pass last finished; nil until the backfill finishes.
 	LastCompletedAt *time.Time
 }

@@ -346,12 +346,12 @@ INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
     ('qu_01seedtxal2_amount0', 315.50, 'dollar', NOW(), NOW());
 
 INSERT IGNORE INTO transaction (id, number, customer_account_id, amount_id, transaction_type_code, is_fully_allocated, account_id, created_at, updated_at) VALUES
-    ('tx_01seedtransaction01', 'TXN-002', 'ac_01k09wm2fgevdsc344gpbcj30f', 'qu_01seedtx2_amount000', 'credit_memo', 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
+    ('tx_01seedtransaction01', 'TXN-004', 'ac_01k09wm2fgevdsc344gpbcj30f', 'qu_01seedtx2_amount000', 'credit_memo', 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
 
 INSERT IGNORE INTO transaction_allocation (id, transaction_id, amount_id, invoice_id, settlement_id, created_at, updated_at) VALUES
     ('txal_01seedtxalloc0001', 'tx_01seedtransaction01', 'qu_01seedtxal2_amount0', 'iv_01seedsecondinvoice0', 'sl_01seedsettlement001', NOW(), NOW());
 
--- Mark INV-002 as paid (TXN-002 fully allocated to it)
+-- Mark INV-002 as paid (TXN-004 fully allocated to it)
 UPDATE invoice SET is_paid_in_full = 1 WHERE id = 'iv_01seedsecondinvoice0' AND is_paid_in_full = 0;
 
 -- ============================================================

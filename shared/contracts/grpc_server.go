@@ -65,6 +65,7 @@ func (c *GRPCServerConfig) WithDefaults(logger *slog.Logger) *GRPCServerConfig {
 			IdempotencyKeyUnaryServerInterceptor(),
 			RequestIDUnaryServerInterceptor(),
 			ClientIPUnaryServerInterceptor(),
+			QueryTagUnaryServerInterceptor(),
 			logging.CanonicalLogInterceptor(logger),
 		}
 	}

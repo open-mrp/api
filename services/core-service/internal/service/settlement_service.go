@@ -3,7 +3,9 @@ package service
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strconv"
+	"time"
 
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/services/core-service/internal/domain"
@@ -166,7 +168,7 @@ func (s *settlementSvcImpl) CreateSettlement(ctx context.Context, params domain.
 	}
 	params.ResponsibleUserID = resolvedID
 
-	if apiErr := validateSettlementAllocations(ctx, s.repos, params.AccountID, params.Allocations); apiErr != nil {
+	if apiErr := validateSettlementAllocations(ctx, s.repos, params.AccountID, params); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
@@ -215,6 +217,10 @@ func (s *settlementSvcImpl) CreateSettlement(ctx context.Context, params domain.
 				return apiErr
 			}
 
+			if apiErr := txSvc.createSettlementTransactions(txCtx, settlementID, &params, dollarUnitID); apiErr != nil {
+				return apiErr
+			}
+
 			// Create allocations
 			for _, alloc := range params.Allocations {
 				allocationID, apiErr := id.GenID(id.TransactionAllocationIDPrefix, nil)
@@ -229,6 +235,11 @@ func (s *settlementSvcImpl) CreateSettlement(ctx context.Context, params domain.
 				if apiErr := txRepo.CreateAllocation(txCtx, allocationID, quantityID, settlementID, dollarUnitID, alloc); apiErr != nil {
 					return apiErr
 				}
+			}
+
+			// The flags of what the settlement touched are re-derived off this request.
+			if apiErr := txSvc.mediators().PaymentFlags.Enqueue(txCtx, params.AccountID, allocationTransactionIDs(params.Allocations), allocationInvoiceIDs(params.Allocations)); apiErr != nil {
+				return apiErr
 			}
 
 			// Fetch the created settlement
@@ -265,9 +276,6 @@ func (s *settlementSvcImpl) CreateSettlement(ctx context.Context, params domain.
 			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
 		}
 
-		// After transaction: update payment statuses on affected invoices and transactions
-		s.updatePaymentStatuses(ctx, settlementID, params.AccountID)
-
 		return result, nil
 
 	default:
@@ -292,6 +300,18 @@ func (s *settlementSvcImpl) UpdateSettlement(ctx context.Context, params domain.
 	}
 
 	params.AccountID = identity.Target.AccountID
+
+	// Re-sending the current responsible user is not a change, even once that user has been
+	// deactivated: the dashboard saves a settlement whole.
+	if params.ResponsibleUserID != nil {
+		current, apiErr := s.repos.NewSettlementRepo().Get(ctx, params.AccountID, params.SettlementID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		if current.ResponsibleUserID != nil && *current.ResponsibleUserID == *params.ResponsibleUserID {
+			params.ResponsibleUserID = nil
+		}
+	}
 
 	// If the responsible user is being updated, validate existence and resolve to the account_user ID. The client may send either an account_user id or a user id.
 	if params.ResponsibleUserID != nil {
@@ -424,8 +444,9 @@ func (s *settlementSvcImpl) DeleteSettlement(ctx context.Context, params domain.
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *settlementSvcImpl) *apierror.APIError {
 		txRepo := txSvc.repos.NewSettlementRepo()
 
-		// Delete orphaned adjustment transactions
-		if apiErr := txRepo.DeleteOrphanedAdjustmentTransactions(txCtx, params.SettlementID); apiErr != nil {
+		// The transactions it recorded itself, and adjustments only it drew on, would otherwise
+		// outlive it with their funds received and reappear as open credits.
+		if apiErr := txRepo.DeleteSettlementOwnedTransactions(txCtx, params.AccountID, params.SettlementID); apiErr != nil {
 			return apiErr
 		}
 
@@ -443,16 +464,10 @@ func (s *settlementSvcImpl) DeleteSettlement(ctx context.Context, params domain.
 			return apiErr
 		}
 
-		// Update transactions: set is_fully_allocated = false
-		if apiErr := txRepo.UpdateTransactionsFullyAllocated(txCtx, transactionIDs, false); apiErr != nil {
+		// Other settlements may still draw on these transactions and pay these invoices, so their
+		// flags are recomputed from what remains rather than reset.
+		if apiErr := txSvc.mediators().PaymentFlags.Enqueue(txCtx, params.AccountID, transactionIDs, invoiceIDs); apiErr != nil {
 			return apiErr
-		}
-
-		// Update invoices: set is_paid_in_full = false, is_over_paid = false
-		for _, invoiceID := range invoiceIDs {
-			if apiErr := txRepo.UpdateInvoicePaymentStatus(txCtx, invoiceID, false, false); apiErr != nil {
-				return apiErr
-			}
 		}
 
 		changes := audit.ComputeChanges(settlement, (*domain.Settlement)(nil))
@@ -477,30 +492,69 @@ func (s *settlementSvcImpl) DeleteSettlement(ctx context.Context, params domain.
 	return settlement, nil
 }
 
-// updatePaymentStatuses recomputes payment-related flags on the invoices and transactions affected by a settlement. It runs best-effort after the settlement-creation transaction has committed: any failure is swallowed (no log today) rather than rolling back the settlement, so a missed update leaves stale paid-in-full / fully-allocated flags until the next recompute. Could be replaced with an outbox message for durability.
-func (s *settlementSvcImpl) updatePaymentStatuses(ctx context.Context, settlementID, _ string) {
-	repo := s.repos.NewSettlementRepo()
+func allocationTransactionIDs(allocs []domain.CreateSettlementAllocationParams) []string {
+	ids := make([]string, len(allocs))
+	for i, a := range allocs {
+		ids[i] = a.TransactionID
+	}
+	return ids
+}
 
-	transactionIDs, apiErr := repo.GetAllocationTransactionIDs(ctx, settlementID)
-	if apiErr != nil {
-		return
+func allocationInvoiceIDs(allocs []domain.CreateSettlementAllocationParams) []string {
+	ids := make([]string, len(allocs))
+	for i, a := range allocs {
+		ids[i] = a.InvoiceID
+	}
+	return ids
+}
+
+// createSettlementTransactions records the settlement's new transactions and points the allocations
+// that name them by key at their new IDs. As the dashboard recorded them, each is dated, and its funds
+// counted as received, at its first allocation, for the sum of its allocations, in dollars. Each is
+// marked as the settlement's own, so deleting the settlement removes it.
+func (s *settlementSvcImpl) createSettlementTransactions(ctx context.Context, settlementID string, params *domain.CreateSettlementParams, dollarUnitID string) *apierror.APIError {
+	if len(params.NewTransactions) == 0 {
+		return nil
+	}
+	txRepo := s.repos.NewTransactionRepo()
+	amounts, first := newSettlementTransactionAmounts(params.Allocations)
+	ids := make(map[string]string, len(params.NewTransactions))
+
+	for _, nt := range params.NewTransactions {
+		txID, apiErr := id.GenID(id.TransactionIDPrefix, nil)
+		if apiErr != nil {
+			return apiErr
+		}
+		number, apiErr := txRepo.FetchAndIncrementTransactionNumber(ctx, params.AccountID)
+		if apiErr != nil {
+			return apiErr
+		}
+		at := first[nt.Key].CreatedAt
+		if at == nil {
+			now := time.Now().UTC()
+			at = &now
+		}
+		responsible := params.ResponsibleUserID
+		if apiErr := txRepo.Create(ctx, txID, number, nt.TransactionTypeCode, params.AccountID, nt.CustomerID, nil,
+			nt.TransactionMethodCode, nt.AdjustmentTypeCode, &responsible, nil, amounts[nt.Key].String(), dollarUnitID, at, at); apiErr != nil {
+			return apiErr
+		}
+		ids[nt.Key] = txID
+	}
+	created := make([]string, 0, len(ids))
+	for _, txID := range ids {
+		created = append(created, txID)
+	}
+	sort.Strings(created)
+	if apiErr := s.repos.NewSettlementRepo().MarkTransactionsCreatedBySettlement(ctx, params.AccountID, settlementID, created); apiErr != nil {
+		return apiErr
 	}
 
-	invoiceIDs, apiErr := repo.GetAllocationInvoiceIDs(ctx, settlementID)
-	if apiErr != nil {
-		return
+	for i := range params.Allocations {
+		if key := params.Allocations[i].TransactionKey; key != "" {
+			params.Allocations[i].TransactionID = ids[key]
+			params.Allocations[i].TransactionKey = ""
+		}
 	}
-
-	// Mark transactions as fully allocated where balance <= 0
-	// For now, mark all as fully allocated since we just created allocations
-	_ = repo.UpdateTransactionsFullyAllocated(ctx, transactionIDs, true)
-
-	// Recompute each affected invoice's paid-in-full / over-paid flags from the full set of allocations against the invoice's invoiced total (allocations from any settlement count, not just this one).
-	flags, apiErr := repo.GetInvoicePaymentFlags(ctx, invoiceIDs)
-	if apiErr != nil {
-		return
-	}
-	for _, f := range flags {
-		_ = repo.UpdateInvoicePaymentStatus(ctx, f.InvoiceID, f.IsPaidInFull, f.IsOverPaid)
-	}
+	return nil
 }

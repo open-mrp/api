@@ -423,12 +423,6 @@ func assertErrorParam(t *testing.T, errObj map[string]any, expectedParam string)
 	assert.Equal(t, expectedParam, errObj["param"], "error.param mismatch")
 }
 
-// assertResponseHeader asserts a response header equals the expected value.
-func assertResponseHeader(t *testing.T, header http.Header, name, expected string) {
-	t.Helper()
-	assert.Equal(t, expected, header.Get(name), "header %s mismatch", name)
-}
-
 // assertResponseHeaderPresent asserts a response header is non-empty.
 func assertResponseHeaderPresent(t *testing.T, header http.Header, name string) {
 	t.Helper()
@@ -570,21 +564,6 @@ func createAndCleanup(t *testing.T, path string, body map[string]any) map[string
 	require.NotEmpty(t, id, "created resource should have an id")
 	t.Cleanup(func() { apiClient.Delete(path + "/" + id) })
 	return parsed
-}
-
-// createAndCleanupRaw creates a resource via POST, registers t.Cleanup, and returns
-// both the parsed body and the raw response bytes. Useful when you need the raw body
-// for schema validation.
-func createAndCleanupRaw(t *testing.T, path string, body map[string]any) (map[string]any, []byte) {
-	t.Helper()
-	status, respBody, err := apiClient.Post(path, body, newIdempotencyKey())
-	require.NoError(t, err, "POST %s failed", path)
-	requireStatus(t, 201, status, respBody)
-	parsed := parseJSON(respBody)
-	id := jsonField(parsed, "id")
-	require.NotEmpty(t, id, "created resource should have an id")
-	t.Cleanup(func() { apiClient.Delete(path + "/" + id) })
-	return parsed, respBody
 }
 
 // createAPIKeyAndCleanup creates an API key and registers cleanup. Returns the
@@ -749,14 +728,6 @@ func jobRowError(entry map[string]any) map[string]any {
 // reads the public message off a rejected result row.
 func jobRowErrorMessage(entry map[string]any) string {
 	msg, _ := jobRowError(entry)["message"].(string)
-	return msg
-}
-
-// reads the public message of the failure that sank the job as a whole, "" when the job
-// itself did not fail. A row rejected on its own merits does not set this.
-func jobErrorMessage(job map[string]any) string {
-	obj, _ := job["error"].(map[string]any)
-	msg, _ := obj["message"].(string)
 	return msg
 }
 

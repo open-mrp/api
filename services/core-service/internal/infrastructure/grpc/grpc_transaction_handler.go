@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/contracts"
@@ -102,6 +103,8 @@ func (h *gRPCHandler) CreateTransaction(ctx context.Context, req *pb.CreateTrans
 	if req.StripePaymentId != nil {
 		params.StripePaymentID = req.StripePaymentId
 	}
+	params.CreatedAt = timestampPtr(req.CreatedAt)
+	params.FundsReceivedAt = timestampPtr(req.FundsReceivedAt)
 
 	transaction, apiErr := h.transactionSvc.CreateTransaction(ctx, params)
 	if apiErr != nil {
@@ -148,6 +151,10 @@ func (h *gRPCHandler) UpdateTransaction(ctx context.Context, req *pb.UpdateTrans
 	if req.IsFullyAllocated != nil {
 		params.IsFullyAllocated = req.IsFullyAllocated
 	}
+	params.CreatedAt = timestampPtr(req.CreatedAt)
+	params.FundsReceivedAt = timestampPtr(req.FundsReceivedAt)
+	params.ClearFundsReceivedAt = req.ClearFundsReceivedAt
+	params.ClearNote = req.ClearNote
 	transaction, apiErr := h.transactionSvc.UpdateTransaction(ctx, params)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
@@ -268,6 +275,9 @@ func transactionToProto(t *domain.Transaction) *pb.TransactionInfo {
 		info.Allocations = allocations
 	}
 
+	if t.FundsReceivedAt != nil {
+		info.FundsReceivedAt = timestamppb.New(*t.FundsReceivedAt)
+	}
 	return info
 }
 
@@ -309,6 +319,18 @@ func transactionSummaryToProto(t *domain.TransactionSummary) *pb.TransactionSumm
 	if t.CustomerUpdatedAt != nil {
 		info.CustomerUpdatedAt = timestamppb.New(*t.CustomerUpdatedAt)
 	}
+	if t.FundsReceivedAt != nil {
+		info.FundsReceivedAt = timestamppb.New(*t.FundsReceivedAt)
+	}
 
 	return info
+}
+
+// timestampPtr reads an optional timestamp; unset reads as nil.
+func timestampPtr(ts *timestamppb.Timestamp) *time.Time {
+	if ts == nil {
+		return nil
+	}
+	t := ts.AsTime()
+	return &t
 }

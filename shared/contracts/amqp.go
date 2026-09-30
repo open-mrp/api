@@ -73,6 +73,9 @@ const (
 	// CoreCmdRecalcItemBurnRate is a command to recompute an item's burn rate from its recent consumption history, off the transaction that recorded the consumption so the shared rate row is not X-locked for the length of that long transaction.
 	CoreCmdRecalcItemBurnRate AmqpRoutingKey = "core.cmd.recalc_item_burn_rate"
 
+	// CoreCmdRecomputePaymentFlags is a command to re-derive the fully-allocated flag of transactions and the paid-in-full / over-paid flags of invoices from their allocations, after a settlement or allocation changed them. It runs off the request that changed the allocations, so recording a settlement does not wait on every affected invoice's totals.
+	CoreCmdRecomputePaymentFlags AmqpRoutingKey = "core.cmd.recompute_payment_flags"
+
 	// CoreCmdAllocateOpenIssues is a command to allocate one bounded page of an item's open inventory issues against available receipts, resuming after a cursor the command carries and re-enqueuing a continuation while more remain, so the walk does not run inline in the scan transaction that enqueued it.
 	CoreCmdAllocateOpenIssues AmqpRoutingKey = "core.cmd.allocate_open_issues"
 

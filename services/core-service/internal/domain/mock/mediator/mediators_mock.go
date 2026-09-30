@@ -258,6 +258,58 @@ func (mr *MockProductionFlowMedMockRecorder) LinkFlow(ctx, productionStepID, acc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LinkFlow", reflect.TypeOf((*MockProductionFlowMed)(nil).LinkFlow), ctx, productionStepID, accountID)
 }
 
+// MockPaymentFlagsMed is a mock of PaymentFlagsMed interface.
+type MockPaymentFlagsMed struct {
+	ctrl     *gomock.Controller
+	recorder *MockPaymentFlagsMedMockRecorder
+	isgomock struct{}
+}
+
+// MockPaymentFlagsMedMockRecorder is the mock recorder for MockPaymentFlagsMed.
+type MockPaymentFlagsMedMockRecorder struct {
+	mock *MockPaymentFlagsMed
+}
+
+// NewMockPaymentFlagsMed creates a new mock instance.
+func NewMockPaymentFlagsMed(ctrl *gomock.Controller) *MockPaymentFlagsMed {
+	mock := &MockPaymentFlagsMed{ctrl: ctrl}
+	mock.recorder = &MockPaymentFlagsMedMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockPaymentFlagsMed) EXPECT() *MockPaymentFlagsMedMockRecorder {
+	return m.recorder
+}
+
+// Enqueue mocks base method.
+func (m *MockPaymentFlagsMed) Enqueue(ctx context.Context, accountID string, transactionIDs, invoiceIDs []string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Enqueue", ctx, accountID, transactionIDs, invoiceIDs)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Enqueue indicates an expected call of Enqueue.
+func (mr *MockPaymentFlagsMedMockRecorder) Enqueue(ctx, accountID, transactionIDs, invoiceIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Enqueue", reflect.TypeOf((*MockPaymentFlagsMed)(nil).Enqueue), ctx, accountID, transactionIDs, invoiceIDs)
+}
+
+// Recompute mocks base method.
+func (m *MockPaymentFlagsMed) Recompute(ctx context.Context, accountID string, transactionIDs, invoiceIDs []string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Recompute", ctx, accountID, transactionIDs, invoiceIDs)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// Recompute indicates an expected call of Recompute.
+func (mr *MockPaymentFlagsMedMockRecorder) Recompute(ctx, accountID, transactionIDs, invoiceIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Recompute", reflect.TypeOf((*MockPaymentFlagsMed)(nil).Recompute), ctx, accountID, transactionIDs, invoiceIDs)
+}
+
 // MockBurnRateMed is a mock of BurnRateMed interface.
 type MockBurnRateMed struct {
 	ctrl     *gomock.Controller

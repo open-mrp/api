@@ -238,9 +238,10 @@ var noGETPatchBodies = map[string]map[string]any{
 	"update-pick-line": {"quantity_value": "1"},
 	// Sales-order line takes a nested `quantity` object (not a flat quantity_value
 	// like pick/receiving lines); use a scalar optional field for the no-op PATCH.
-	"update-sales-order-line":       {"product_description": "Schema validation update"},
-	"update-receiving-order-line":   {"quantity_value": "1"},
-	"update-transaction-allocation": {"amount": "1"},
+	"update-sales-order-line":     {"product_description": "Schema validation update"},
+	"update-receiving-order-line": {"quantity_value": "1"},
+	// The seed allocation's own amount: a different one would unpay the seeded paid invoice (INV-001) once its flags are recomputed.
+	"update-transaction-allocation": {"amount": "428.50"},
 	// A schedule line has no single-item GET — it is read through the schedule's line
 	// list — so the shape comes from a minimal PATCH. Sequence index is the safest
 	// field: it changes no quantity and so logs a resequence rather than a plan change.

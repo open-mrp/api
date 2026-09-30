@@ -57,6 +57,7 @@ func transactionReferenceFromProto(meta *resourcekit.LoadMeta, d *pb.Transaction
 		Note:             d.Note,
 		IsFullyAllocated: d.IsFullyAllocated,
 		StripePaymentID:  d.StripePaymentId,
+		FundsReceivedAt:  grpcutil.TimestampToTimePtr(d.FundsReceivedAt),
 		AllocationCount:  d.AllocationCount,
 		Amount: &apiresource.Quantity{
 			ID:           d.AmountId,

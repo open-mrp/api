@@ -6,6 +6,7 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
+	"github.com/open-mrp/api/services/api-gateway/pkg/resourcekit"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 	pb "github.com/open-mrp/api/shared/proto/core"
@@ -27,9 +28,18 @@ func LoadCustomers(ctx context.Context, ids []string) (map[string]any, *apierror
 	if apiErr != nil {
 		return nil, apiErr
 	}
+	meta := resourcekit.GetLoadMeta(ctx)
 	out := make(map[string]any, len(resp.Customers))
 	for _, c := range resp.Customers {
 		out[c.Id] = customerReferenceFromProto(c)
+		// The addresses come with the customer; stash them so a caller reaching the customer
+		// through an include (a transaction's `customer.bill_to_address`) gets them in full.
+		if c.BillToAddress != nil {
+			meta.Set(constants.ObjectTypeCustomer, c.Id, "bill_to_address", customerAddressFromProto(c.BillToAddress))
+		}
+		if c.ShipToAddress != nil {
+			meta.Set(constants.ObjectTypeCustomer, c.Id, "ship_to_address", customerAddressFromProto(c.ShipToAddress))
+		}
 	}
 	return out, nil
 }
@@ -93,5 +103,36 @@ func customerReferenceFromProto(c *pb.CustomerProto) *apiresource.Customer {
 		Note:             c.Note,
 		CreatedAt:        grpcutil.TimestampToTime(c.CreatedAt),
 		UpdatedAt:        grpcutil.TimestampToTime(c.UpdatedAt),
+	}
+}
+
+func customerAddressFromProto(a *pb.CustomerAddressProto) *apiresource.Address {
+	var geolocation *apiresource.Geolocation
+	if a.Geolocation != nil {
+		geolocation = &apiresource.Geolocation{
+			ID:          a.Geolocation.Id,
+			Object:      constants.ObjectTypeGeolocation,
+			StreetLine1: a.Geolocation.StreetLine_1,
+			StreetLine2: a.Geolocation.StreetLine_2,
+			Locality:    a.Geolocation.Locality,
+			State:       a.Geolocation.State,
+			PostalCode:  a.Geolocation.PostalCode,
+			Country:     a.Geolocation.Country,
+		}
+	}
+	addressType := constants.AddressTypeStandard
+	if a.IsDropShip {
+		addressType = constants.AddressTypeDropShip
+	}
+	return &apiresource.Address{
+		ID:          a.Id,
+		Object:      constants.ObjectTypeAddress,
+		Name:        a.Name,
+		Phone:       a.Phone,
+		Email:       a.Email,
+		Type:        addressType,
+		Geolocation: geolocation,
+		CreatedAt:   grpcutil.TimestampToTime(a.CreatedAt),
+		UpdatedAt:   grpcutil.TimestampToTime(a.UpdatedAt),
 	}
 }

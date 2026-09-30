@@ -16,6 +16,7 @@ func (f *mediatorFactoryImpl) Build(repoFactory domain.RepoFactory) domain.Media
 		EditAccess:            NewEditAccessMed(&EditAccessMedConfig{Repos: repoFactory}),
 		ProductionFlow:        NewProductionFlowMed(repoFactory),
 		BurnRate:              NewBurnRateMed(&BurnRateMedConfig{Repos: repoFactory}),
+		PaymentFlags:          NewPaymentFlagsMed(&PaymentFlagsMedConfig{Repos: repoFactory}),
 		ProductionRunActivity: NewProductionRunActivityMed(&ProductionRunActivityMedConfig{Repos: repoFactory}),
 	}
 }

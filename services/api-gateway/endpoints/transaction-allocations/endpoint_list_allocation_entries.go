@@ -16,15 +16,15 @@ type ListAllocationEntriesRequest struct {
 	apiresource.PaginationRequest
 	// Filter by the underlying transaction's type code.
 	TransactionType *constants.TransactionType `query:"transaction_type"`
-	// Only include allocations created on or after this date (`YYYY-MM-DD`).
+	// Only include allocations created on or after this date (`YYYY-MM-DD`, UTC). A full timestamp (RFC 3339) is also accepted, to bound the range at a local midnight.
 	StartDate *string `query:"starts_at"`
-	// Only include allocations created on or before this date (`YYYY-MM-DD`), covering that whole day.
+	// Only include allocations created on or before this date (`YYYY-MM-DD`, UTC), covering that whole day. A full timestamp (RFC 3339) is also accepted, to bound the range at a local midnight.
 	EndDate *string `query:"ends_at"`
 }
 
 // Returns a paginated list of the individual applications of transaction money to invoices, newest first.
 //
-// Each entry pairs one transaction with one invoice and the amount applied. Entries are created by recording a settlement; there is no endpoint that creates one directly. Free-text search matches the invoice number and the transaction number.
+// Each entry pairs one transaction with one invoice and the amount applied. Entries are created by recording a settlement; there is no endpoint that creates one directly. Free-text search matches an exact invoice number, transaction number or customer number, or part of the customer name.
 type ListAllocationEntriesEndpoint struct{}
 
 func (e *ListAllocationEntriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAllocationEntriesRequest, *apiresource.List[apiresource.AllocationEntry]] {

@@ -47,7 +47,7 @@ func Run(
 	}
 	defer tracing.DeferShutdown(tracerShutdown)()
 
-	db, err := db.NewDbPool(&db.Config{DBURI: cfg.DBURL})
+	db, err := db.NewDbPool(&db.Config{DBURI: cfg.DBURL, Application: domain.ServiceName})
 	if err != nil {
 		return err
 	}

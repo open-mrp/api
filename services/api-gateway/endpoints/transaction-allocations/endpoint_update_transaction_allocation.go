@@ -3,6 +3,7 @@ package transactionallocationep
 import (
 	"context"
 	"net/http"
+	"time"
 
 	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
@@ -21,6 +22,8 @@ type UpdateTransactionAllocationRequest struct {
 	//
 	// The new amount is not checked against the transaction's total or the invoice's balance.
 	Amount field.Optional[string] `json:"amount,omitzero"`
+	// When the amount was applied, reported as the allocation's `created_at`.
+	AppliedAt field.Optional[time.Time] `json:"applied_at,omitzero"`
 }
 
 var sampleUpdateTransactionAllocationAmount = "150.00"

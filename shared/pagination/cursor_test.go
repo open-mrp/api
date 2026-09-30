@@ -321,3 +321,24 @@ func TestBuildPage_Empty(t *testing.T) {
 		t.Error("expected nil cursors")
 	}
 }
+
+func TestValueCursor_RoundTrip(t *testing.T) {
+	in := ValueCursor{Value: "12345.678900000000000000000000000001", ID: "ac_group", Direction: DirectionBackward}
+	out, err := DecodeValueCursor(EncodeValueCursor(in))
+	if err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if out != in {
+		t.Fatalf("round trip = %+v, want %+v", out, in)
+	}
+}
+
+func TestValueCursor_RejectsTamperingAndOtherCursors(t *testing.T) {
+	good := EncodeValueCursor(ValueCursor{Value: "1", ID: "a", Direction: DirectionForward})
+	if _, err := DecodeValueCursor(good[:len(good)-2] + "xx"); err == nil {
+		t.Fatal("a tampered signature decoded")
+	}
+	if _, err := DecodeValueCursor(EncodeValueCursor(ValueCursor{Value: "1", ID: "a", Direction: "sideways"})); err == nil {
+		t.Fatal("an unknown direction decoded")
+	}
+}

@@ -62,6 +62,7 @@ func (h *gRPCHandler) UpdateTransactionAllocation(ctx context.Context, req *pb.U
 	params := domain.UpdateTransactionAllocationParams{
 		AllocationID: req.Id,
 		Amount:       req.Amount,
+		CreatedAt:    timestampPtr(req.CreatedAt),
 	}
 
 	allocation, apiErr := h.transactionAllocationSvc.UpdateTransactionAllocation(ctx, params)
@@ -153,6 +154,7 @@ func allocationEntryToProto(e *domain.AllocationEntry) *pb.AllocationEntryInfo {
 		InvoiceNumber:     e.InvoiceNumber,
 		Note:              e.Note,
 		CreatedAt:         timestamppb.New(e.CreatedAt),
+		CustomerId:        e.CustomerID,
 	}
 }
 
@@ -186,5 +188,6 @@ func openCreditEntryToProto(e *domain.OpenCreditEntry) *pb.OpenCreditEntryInfo {
 		StripePaymentId:     e.StripePaymentID,
 		InvoiceAllocations:  allocations,
 		CreatedAt:           timestamppb.New(e.CreatedAt),
+		FundsReceivedAt:     timestamppb.New(e.FundsReceivedAt),
 	}
 }

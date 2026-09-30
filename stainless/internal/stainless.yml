@@ -1598,6 +1598,7 @@ resources:
           update: patch /v1/finance/invoices/{id}
         models:
           allocation_invoice: '#/components/schemas/AllocationInvoice'
+          allocation_settlement: '#/components/schemas/AllocationSettlement'
           invoice: '#/components/schemas/Invoice'
           invoice_allocation: '#/components/schemas/InvoiceAllocation'
           invoice_line: '#/components/schemas/InvoiceLine'
@@ -1676,6 +1677,7 @@ resources:
           create_settlement_allocation_request: '#/components/schemas/CreateSettlementAllocationRequest'
           create_settlement_request: '#/components/schemas/CreateSettlementRequest'
           list_settlement_summary: '#/components/schemas/List_SettlementSummary'
+          new_settlement_transaction_request: '#/components/schemas/NewSettlementTransactionRequest'
           settlement: '#/components/schemas/Settlement'
           settlement_summary: '#/components/schemas/SettlementSummary'
           update_settlement_request: '#/components/schemas/UpdateSettlementRequest'

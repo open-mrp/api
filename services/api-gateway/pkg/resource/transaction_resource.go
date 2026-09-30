@@ -101,6 +101,8 @@ type TransactionDetail struct {
 	IsFullyAllocated bool `json:"is_fully_allocated" validate:"required"`
 	// Identifier of the Stripe payment that produced this transaction.
 	StripePaymentID *string `json:"stripe_payment_id"`
+	// When the money arrived; null until it has. Only a transaction whose funds have arrived can be applied to invoices or counts as an open credit.
+	FundsReceivedAt *time.Time `json:"funds_received_at"`
 	// Number of allocations against invoices for this transaction.
 	AllocationCount int32 `json:"allocation_count" validate:"required"`
 	// The portions of this transaction that have been applied to individual invoices.
@@ -189,7 +191,9 @@ type TransactionSummary struct {
 	// While it is `false`, the transaction is treated as an open credit and is returned by List Open Credits.
 	IsFullyAllocated bool `json:"is_fully_allocated" validate:"required"`
 	// Number of allocations against invoices for this transaction.
-	AllocationCount int32 `json:"allocation_count" validate:"required"`
+	// When the money arrived; null until it has.
+	FundsReceivedAt *time.Time `json:"funds_received_at"`
+	AllocationCount int32      `json:"allocation_count" validate:"required"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.

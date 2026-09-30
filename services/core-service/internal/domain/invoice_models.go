@@ -170,13 +170,6 @@ type ListCustomerInvoicesResult struct {
 	PageInfo pagination.PageInfo
 }
 
-// InvoicePaymentFlags holds the recomputed payment flags for a single invoice, derived from its transaction allocations vs. its invoiced total.
-type InvoicePaymentFlags struct {
-	InvoiceID    string
-	IsPaidInFull bool
-	IsOverPaid   bool
-}
-
 // Carries everything CreateFromShipment needs, resolved by the service inside the ship transaction.
 type CreateInvoiceFromShipmentParams struct {
 	AccountID    string

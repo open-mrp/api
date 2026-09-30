@@ -202,7 +202,7 @@ func (r *salesFactRepoImpl) FilterExistingInvoiceIDs(ctx context.Context, invoic
 	return ids, nil
 }
 
-func (r *salesFactRepoImpl) ResolveInvoiceIDs(ctx context.Context, scope domain.SalesFactScope, scopeIDs []string) ([]string, *apierror.APIError) {
+func (r *salesFactRepoImpl) ResolveInvoiceIDs(ctx context.Context, accountID string, scope domain.SalesFactScope, scopeIDs []string) ([]string, *apierror.APIError) {
 	ctx, span := salesFactRepoTracer.Start(ctx, "repository.sales_fact.resolve_invoice_ids")
 	defer span.End()
 	if len(scopeIDs) == 0 {
@@ -213,6 +213,8 @@ func (r *salesFactRepoImpl) ResolveInvoiceIDs(ctx context.Context, scope domain.
 		ids []string
 		err error
 	)
+	in := placeholders(len(scopeIDs))
+	args := stringArgs(scopeIDs)
 	switch scope {
 	case domain.SalesFactScopeInvoice:
 		return scopeIDs, nil
@@ -222,6 +224,21 @@ func (r *salesFactRepoImpl) ResolveInvoiceIDs(ctx context.Context, scope domain.
 		ids, err = r.queries.ListInvoiceIDsBySalesOrderLines(ctx, scopeIDs)
 	case domain.SalesFactScopeProduct:
 		ids, err = r.queries.ListInvoiceIDsByProducts(ctx, toNullStringSlice(scopeIDs))
+	case domain.SalesFactScopeQuantity:
+		ids, err = r.selectIDs(ctx, `SELECT DISTINCT invoice_id FROM invoice_line WHERE quantity_id IN (`+in+`)`, args...)
+	case domain.SalesFactScopeRate:
+		ids, err = r.selectIDs(ctx, `SELECT il.invoice_id FROM sales_order_line sol JOIN invoice_line il ON il.sales_order_line_id = sol.id WHERE sol.unit_price_id IN (`+in+`)
+UNION SELECT il.invoice_id FROM sales_order_line sol JOIN invoice_line il ON il.sales_order_line_id = sol.id WHERE sol.unit_cost_id IN (`+in+`)`, append(args, args...)...)
+	case domain.SalesFactScopeItem:
+		ids, err = r.selectIDs(ctx, `SELECT DISTINCT il.invoice_id FROM product p
+JOIN sales_order_line sol ON sol.product_id = p.id
+JOIN invoice_line il ON il.sales_order_line_id = sol.id
+WHERE p.item_id IN (`+in+`)`, args...)
+	case domain.SalesFactScopeBuyer:
+		// The buyer's orders now belong to another customer, so the invoices are found by the facts
+		// that still name it.
+		ids, err = r.selectIDs(ctx, `SELECT DISTINCT invoice_id FROM sales_line_fact WHERE account_id = ? AND buyer_account_id IN (`+in+`)`,
+			append([]any{accountID}, args...)...)
 	default:
 		return nil, tracing.Trace(span, apierror.NewInternalError(nil, fmt.Sprintf("Unknown sales fact scope %q.", scope)))
 	}
@@ -229,6 +246,104 @@ func (r *salesFactRepoImpl) ResolveInvoiceIDs(ctx context.Context, scope domain.
 		return nil, tracing.Trace(span, apiErr)
 	}
 	return ids, nil
+}
+
+func (r *salesFactRepoImpl) selectIDs(ctx context.Context, query string, args ...any) ([]string, error) {
+	rows, err := r.queries.DB().QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
+func (r *salesFactRepoImpl) MarkInvoicesDirty(ctx context.Context, accountID string, invoiceIDs []string) *apierror.APIError {
+	ctx, span := salesFactRepoTracer.Start(ctx, "repository.sales_fact.mark_invoices_dirty")
+	defer span.End()
+
+	for start := 0; start < len(invoiceIDs); start += 500 {
+		batch := invoiceIDs[start:min(start+500, len(invoiceIDs))]
+		values := strings.Repeat("(?, ?, ?, NOW(3)),", len(batch))
+		args := make([]any, 0, 3*len(batch))
+		for _, id := range batch {
+			args = append(args, string(domain.SalesFactScopeInvoice), id, accountID)
+		}
+		_, err := r.queries.DB().ExecContext(ctx, `INSERT INTO sales_fact_dirty (scope_type, scope_id, account_id, marked_at) VALUES `+
+			strings.TrimSuffix(values, ",")+` ON DUPLICATE KEY UPDATE marked_at = VALUES(marked_at)`, args...)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+	}
+	return nil
+}
+
+func (r *salesFactRepoImpl) RestartReconcile(ctx context.Context) *apierror.APIError {
+	ctx, span := salesFactRepoTracer.Start(ctx, "repository.sales_fact.restart_reconcile")
+	defer span.End()
+
+	// Until the backfill has run there is nothing to restart: the backfill is the first pass.
+	_, err := r.queries.DB().ExecContext(ctx, `UPDATE sales_fact_sync
+SET cursor_created_at = ?, cursor_invoice_id = '', pass_started_at = NOW(3), updated_at = NOW(3)
+WHERE name = ? AND last_completed_at IS NOT NULL`, time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC), salesFactSyncName)
+	return tracing.Trace(span, db.MapSQLError(err))
+}
+
+func (r *salesFactRepoImpl) MarkRollupDays(ctx context.Context, days []domain.SalesRollupDay) *apierror.APIError {
+	ctx, span := salesFactRepoTracer.Start(ctx, "repository.sales_fact.mark_rollup_days")
+	defer span.End()
+
+	for start := 0; start < len(days); start += 500 {
+		batch := days[start:min(start+500, len(days))]
+		values := strings.Repeat("(?, ?, NOW(3)),", len(batch))
+		args := make([]any, 0, 2*len(batch))
+		for _, d := range batch {
+			args = append(args, d.AccountID, truncateUTCDay(d.Day))
+		}
+		_, err := r.queries.DB().ExecContext(ctx, `INSERT INTO sales_rollup_dirty (account_id, day, marked_at) VALUES `+
+			strings.TrimSuffix(values, ",")+` ON DUPLICATE KEY UPDATE marked_at = VALUES(marked_at)`, args...)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+	}
+	return nil
+}
+
+func (r *salesFactRepoImpl) ListRollupDirty(ctx context.Context, limit int32) ([]domain.SalesRollupDirtyMark, *apierror.APIError) {
+	ctx, span := salesFactRepoTracer.Start(ctx, "repository.sales_fact.list_rollup_dirty")
+	defer span.End()
+
+	rows, err := r.queries.DB().QueryContext(ctx, `SELECT account_id, day, marked_at FROM sales_rollup_dirty ORDER BY marked_at LIMIT ?`, limit)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	defer func() { _ = rows.Close() }()
+	var marks []domain.SalesRollupDirtyMark
+	for rows.Next() {
+		var m domain.SalesRollupDirtyMark
+		if err := rows.Scan(&m.Day.AccountID, &m.Day.Day, &m.MarkedAt); err != nil {
+			return nil, tracing.Trace(span, db.MapSQLError(err))
+		}
+		m.Day.Day = truncateUTCDay(m.Day.Day)
+		marks = append(marks, m)
+	}
+	return marks, tracing.Trace(span, db.MapSQLError(rows.Err()))
+}
+
+func (r *salesFactRepoImpl) ClearRollupDirty(ctx context.Context, mark domain.SalesRollupDirtyMark) *apierror.APIError {
+	ctx, span := salesFactRepoTracer.Start(ctx, "repository.sales_fact.clear_rollup_dirty")
+	defer span.End()
+
+	_, err := r.queries.DB().ExecContext(ctx, `DELETE FROM sales_rollup_dirty WHERE account_id = ? AND day = ? AND marked_at = ?`,
+		mark.Day.AccountID, truncateUTCDay(mark.Day.Day), mark.MarkedAt)
+	return tracing.Trace(span, db.MapSQLError(err))
 }
 
 func (r *salesFactRepoImpl) MarkDirty(ctx context.Context, scope domain.SalesFactScope, scopeID, accountID string) *apierror.APIError {

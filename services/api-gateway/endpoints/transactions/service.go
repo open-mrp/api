@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
@@ -129,6 +130,8 @@ func (m *transactionSvcImpl) CreateTransaction(ctx context.Context, req *CreateT
 		AdjustmentTypeCode:    req.AdjustmentTypeCode.Ptr(),
 		ResponsibleUserId:     req.ResponsibleUserID.Ptr(),
 		Note:                  req.Note.Ptr(),
+		CreatedAt:             timestampOrNil(req.OccurredAt.Ptr()),
+		FundsReceivedAt:       timestampOrNil(req.FundsReceivedAt.Ptr()),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, transactionSvcTracer, "service.transactions.create", domain.ServiceName,
@@ -148,7 +151,8 @@ func (m *transactionSvcImpl) UpdateTransaction(ctx context.Context, req *UpdateT
 	pbReq := &pb.UpdateTransactionRequest{
 		Id:                     req.TransactionID,
 		Number:                 req.Number.Ptr(),
-		Note:                   req.Note.Ptr(),
+		Note:                   req.Note.ValuePtr(),
+		ClearNote:              req.Note.IsClear(),
 		Amount:                 req.Amount.Ptr(),
 		TransactionMethodCode:  req.TransactionMethodCode.Ptr().StringPtr(),
 		AdjustmentTypeCode:     req.AdjustmentTypeCode.Ptr(),
@@ -157,6 +161,9 @@ func (m *transactionSvcImpl) UpdateTransaction(ctx context.Context, req *UpdateT
 		ClearTransactionMethod: req.ClearTransactionMethod,
 		ClearAdjustmentType:    req.ClearAdjustmentType,
 		IsFullyAllocated:       req.IsFullyAllocated.Ptr(),
+		CreatedAt:              timestampOrNil(req.OccurredAt.Ptr()),
+		FundsReceivedAt:        timestampOrNil(req.FundsReceivedAt.ValuePtr()),
+		ClearFundsReceivedAt:   req.FundsReceivedAt.IsClear(),
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, transactionSvcTracer, "service.transactions.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateTransactionResponse, error) {
@@ -375,4 +382,11 @@ func (m *transactionSvcImpl) ListAdjustmentTypes(ctx context.Context, req *ListA
 	}
 
 	return apiresource.NewList(adjustmentTypes, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
+}
+
+func timestampOrNil(t *time.Time) *timestamppb.Timestamp {
+	if t == nil {
+		return nil
+	}
+	return timestamppb.New(*t)
 }

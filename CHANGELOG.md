@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.18.0](https://github.com/open-mrp/api/compare/v2.17.1...v2.18.0) (2026-10-01)
+
+
+### Features
+
+* **receiving-orders:** serve the dashboard's receiving screens from the Go API ([#230](https://github.com/open-mrp/api/issues/230)) ([74fec19](https://github.com/open-mrp/api/commit/74fec1938673a20f5f57cedf3569d769960af868))
+
 ## [2.17.1](https://github.com/open-mrp/api/compare/v2.17.0...v2.17.1) (2026-10-01)
 
 

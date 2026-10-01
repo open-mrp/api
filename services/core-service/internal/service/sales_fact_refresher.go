@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	_ "time/tzdata"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/audit"
@@ -23,6 +24,9 @@ var salesFactTracer = tracing.GetTracer("core-service.sales_fact_refresher")
 const (
 	salesFactLeaseName = "sales-fact-refresher"
 	salesFactLeaseTTL  = time.Minute
+
+	// salesFactPassTZ is where the daily passes' midnight falls: the least busy hour for the US accounts they serve.
+	salesFactPassTZ = "America/New_York"
 
 	// salesFactInvoiceBatch bounds one recompute: ~4 lines an invoice keeps the pricing join under ~1k rows.
 	salesFactInvoiceBatch = 200
@@ -74,8 +78,8 @@ type SalesFactRefresherConfig struct {
 	// RecentInterval (optional; default: 2m) is how often the rolling recompute runs. Zero or negative values are treated as unset.
 	RecentInterval time.Duration
 
-	// ReconcileEvery (optional; default: 24h) is how long after a full reconcile pass starts the next one does. Zero or negative values are treated as unset.
-	ReconcileEvery time.Duration
+	// PassLocation (optional; default: America/New_York) is the timezone whose midnight starts each daily pass (fact reconcile, rollup sweep, buyer summary sweep). A pass that has not started since the most recent midnight there starts on the next tick.
+	PassLocation *time.Location
 
 	// ReconcileBudget (optional; default: 2s) caps the reconcile work done in one tick, so a pass is spread across ticks instead of loading the database in one burst. Zero or negative values are treated as unset.
 	ReconcileBudget time.Duration
@@ -110,8 +114,13 @@ func (c *SalesFactRefresherConfig) WithDefaults() *SalesFactRefresherConfig {
 	if c.RecentInterval <= 0 {
 		c.RecentInterval = 2 * time.Minute
 	}
-	if c.ReconcileEvery <= 0 {
-		c.ReconcileEvery = 24 * time.Hour
+	if c.PassLocation == nil {
+		loc, err := time.LoadLocation(salesFactPassTZ)
+		if err != nil {
+			slog.Warn("Sales fact refresher: could not load pass timezone, falling back to UTC", "tz", salesFactPassTZ, "error", err)
+			loc = time.UTC
+		}
+		c.PassLocation = loc
 	}
 	if c.ReconcileBudget <= 0 {
 		c.ReconcileBudget = 2 * time.Second
@@ -135,7 +144,7 @@ func (c *SalesFactRefresherConfig) validate() error {
 // SalesFactRefresher keeps sales_line_fact, and the sales_fact_rollup buckets summed from it, in step with invoices. Three paths feed it, each covering what the one before misses:
 //   - dirty marks, written from audit events within seconds of an edit made through this API;
 //   - a rolling recompute of recent invoices, for writes that publish no audit event (the dashboard, generic rate and quantity edits);
-//   - a daily reconcile pass over every invoice, which corrects anything older that drifted. Its first pass is the backfill.
+//   - a reconcile pass over every invoice each night after midnight in PassLocation, which corrects anything older that drifted. Its first pass is the backfill.
 //
 // Dirty marks wake it (see Wake), so it runs within WakeDelay of an edit and otherwise only every IdleInterval.
 type SalesFactRefresher struct {
@@ -373,7 +382,17 @@ func (s *SalesFactRefresher) refreshRecent(ctx context.Context, now time.Time) *
 	return tracing.Trace(span, apiErr)
 }
 
-// reconcile advances the full pass by up to ReconcileBudget, starting a new pass once ReconcileEvery has passed since the last began.
+// passDue reports whether a daily pass last started at started should start again: never started, or not since the most recent midnight in PassLocation.
+func (s *SalesFactRefresher) passDue(started *time.Time, now time.Time) bool {
+	if started == nil {
+		return true
+	}
+	local := now.In(s.cfg.PassLocation)
+	midnight := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, s.cfg.PassLocation)
+	return started.Before(midnight)
+}
+
+// reconcile advances the full pass by up to ReconcileBudget, starting a new pass after each midnight in PassLocation.
 func (s *SalesFactRefresher) reconcile(ctx context.Context) *apierror.APIError {
 	ctx, span := salesFactTracer.Start(ctx, "service.sales_fact_refresher.reconcile")
 	defer span.End()
@@ -385,7 +404,7 @@ func (s *SalesFactRefresher) reconcile(ctx context.Context) *apierror.APIError {
 	}
 	now := s.cfg.Now().UTC()
 	if state.Cursor == nil {
-		if state.PassStartedAt != nil && now.Sub(*state.PassStartedAt) < s.cfg.ReconcileEvery {
+		if !s.passDue(state.PassStartedAt, now) {
 			return nil
 		}
 		state.Cursor = &domain.SalesFactInvoiceCursor{CreatedAt: salesFactSweepOrigin}
@@ -630,7 +649,7 @@ func (s *SalesFactRefresher) drainBuyerDirty(ctx context.Context) *apierror.APIE
 // facts left). Its first pass is the backfill. It needs every fact's order date and price flag, which
 // facts written before those columns lack, so before it the sweep restarts the fact reconcile (which
 // rewrites each fact that differs from what it computes) and waits for that pass to complete. Later
-// passes start ReconcileEvery apart and repair any summary a crash left behind its facts.
+// passes start after each midnight in PassLocation and repair any summary a crash left behind its facts.
 func (s *SalesFactRefresher) sweepBuyers(ctx context.Context) *apierror.APIError {
 	ctx, span := salesFactTracer.Start(ctx, "service.sales_fact_refresher.sweep_buyers")
 	defer span.End()
@@ -659,7 +678,7 @@ func (s *SalesFactRefresher) sweepBuyers(ctx context.Context) *apierror.APIError
 		}
 	}
 	if state.Cursor == nil {
-		if state.PassStartedAt != nil && now.Sub(*state.PassStartedAt) < s.cfg.ReconcileEvery {
+		if !s.passDue(state.PassStartedAt, now) {
 			return nil
 		}
 		state.Cursor = &domain.SalesBuyerKey{}
@@ -796,7 +815,7 @@ func (s *SalesFactRefresher) rebuildRollups(ctx context.Context, days map[domain
 	return nil
 }
 
-// sweepRollups advances the rollup pass by up to ReconcileBudget, rebuilding every (account, day) in order and each month it passes through. Its first pass is the backfill; later passes, started ReconcileEvery apart, repair any bucket a crash left behind its facts.
+// sweepRollups advances the rollup pass by up to ReconcileBudget, rebuilding every (account, day) in order and each month it passes through. Its first pass is the backfill; later passes, started after each midnight in PassLocation, repair any bucket a crash left behind its facts.
 func (s *SalesFactRefresher) sweepRollups(ctx context.Context) *apierror.APIError {
 	ctx, span := salesFactTracer.Start(ctx, "service.sales_fact_refresher.sweep_rollups")
 	defer span.End()
@@ -808,7 +827,7 @@ func (s *SalesFactRefresher) sweepRollups(ctx context.Context) *apierror.APIErro
 	}
 	now := s.cfg.Now().UTC()
 	if state.Cursor == nil {
-		if state.PassStartedAt != nil && now.Sub(*state.PassStartedAt) < s.cfg.ReconcileEvery {
+		if !s.passDue(state.PassStartedAt, now) {
 			return nil
 		}
 		state.Cursor = &domain.SalesRollupDay{Day: salesFactSweepOrigin}

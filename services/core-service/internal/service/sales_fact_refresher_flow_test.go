@@ -452,3 +452,30 @@ func TestABuyerSweepRebuildsEachAccountsBuyersAndDropsThoseItNeverReached(t *tes
 }
 
 func ptrTime(t time.Time) *time.Time { return &t }
+
+// The daily passes start after midnight Eastern rather than 24h after the last start, which drifted the rollup rebuild into business hours.
+func TestADailyPassStartsOnlyAfterMidnightEastern(t *testing.T) {
+	r, _, _ := newMockRefresher(t)
+	et, err := time.LoadLocation("America/New_York")
+	require.NoError(t, err)
+	at := func(y int, m time.Month, d, h, min int) time.Time { return time.Date(y, m, d, h, min, 0, 0, et) }
+
+	tests := []struct {
+		name    string
+		started *time.Time
+		now     time.Time
+		due     bool
+	}{
+		{"never started", nil, at(2026, 10, 1, 11, 0), true},
+		{"started this morning, now afternoon", ptrTime(at(2026, 10, 1, 11, 7)), at(2026, 10, 1, 13, 0), false},
+		{"started just after midnight, now just before the next", ptrTime(at(2026, 10, 1, 0, 1)), at(2026, 10, 1, 23, 59), false},
+		{"started before midnight, now just after", ptrTime(at(2026, 10, 1, 23, 30)), at(2026, 10, 2, 0, 1), true},
+		{"started yesterday afternoon, now afternoon", ptrTime(at(2026, 9, 30, 13, 32)), at(2026, 10, 1, 13, 0), true},
+		{"midnight follows the DST change", ptrTime(at(2026, 11, 1, 0, 30)), at(2026, 11, 1, 23, 30), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.due, r.passDue(tt.started, tt.now.UTC()))
+		})
+	}
+}

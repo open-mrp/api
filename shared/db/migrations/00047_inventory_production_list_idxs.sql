@@ -29,11 +29,22 @@ ALTER TABLE `machine_downtime_event`
   DROP KEY `machine_downtime_account_ended_started_idx`,
   ADD KEY `machine_downtime_account_ended_started_idx` (`account_id`, `ended_at`, `started_at`, `id`);
 
--- The run list's order: the account's runs newest first, read a page at a time instead of all sorted.
+-- The run lists' order without a filter: the account's runs newest first, read a page at a time
+-- instead of all sorted.
 ALTER TABLE `production_run`
   ADD KEY `production_run_account_created_idx` (`account_id`, `created_at`, `id`);
 
+ALTER TABLE `edi_run`
+  ADD KEY `edi_run_account_id_completed_at_id_idx` (`account_id`, `completed_at`, `id`),
+  DROP KEY `edi_run_account_id_has_succeeded_completed_at_id_idx`,
+  ADD KEY `edi_run_account_id_has_succeeded_completed_at_id_idx` (`account_id`, `has_succeeded`, `completed_at`, `id`);
+
 -- +goose Down
+ALTER TABLE `edi_run`
+  DROP KEY `edi_run_account_id_completed_at_id_idx`,
+  DROP KEY `edi_run_account_id_has_succeeded_completed_at_id_idx`,
+  ADD KEY `edi_run_account_id_has_succeeded_completed_at_id_idx` (`account_id`, `has_succeeded`, `completed_at` DESC, `id` DESC);
+
 ALTER TABLE `production_run`
   DROP KEY `production_run_account_created_idx`;
 

@@ -190,6 +190,7 @@ func transactionPlanDims() []planDim[domain.ListTransactionsParams] {
 			{"payment", func(p *domain.ListTransactionsParams) { p.TypeCodes = []string{"payment"} }},
 			{"rebate", func(p *domain.ListTransactionsParams) { p.TypeCodes = []string{"rebate"} }},
 			{"payment+rebate", func(p *domain.ListTransactionsParams) { p.TypeCodes = []string{"payment", "rebate"} }},
+			{"rebate+credit_memo", func(p *domain.ListTransactionsParams) { p.TypeCodes = []string{"rebate", "credit_memo"} }},
 		}},
 		{"method", []planValue[domain.ListTransactionsParams]{
 			{"check", func(p *domain.ListTransactionsParams) { p.MethodCodes = []string{"check"} }},
@@ -203,6 +204,9 @@ func transactionPlanDims() []planDim[domain.ListTransactionsParams] {
 			{"large", func(p *domain.ListTransactionsParams) { p.CustomerIDs = []string{planTxCustomerID(0)} }},
 			{"rare", func(p *domain.ListTransactionsParams) {
 				p.CustomerIDs = []string{planTxCustomerID(planTxCustomers - 1)}
+			}},
+			{"rare+tail", func(p *domain.ListTransactionsParams) {
+				p.CustomerIDs = []string{planTxCustomerID(planTxCustomers - 1), planTxCustomerID(500)}
 			}},
 		}},
 		{"group", []planValue[domain.ListTransactionsParams]{
@@ -246,9 +250,11 @@ func cursorAt(at time.Time, dir pagination.Direction) *string {
 }
 
 // transactionRangeFloor is how many transactions a request's unordered filter matches, or 0 when it
-// has none. A number search (FULLTEXT, answered in relevance order) and a funds-received range (a
-// column the list does not sort by) cannot stop at a page; the best any plan can do is read only the
-// rows the filter matches, so that, not a page, is the bar such a request is held to.
+// has none. A number search (FULLTEXT, answered in relevance order), a funds-received range (a column
+// the list does not sort by), and a multi-valued filter (no key yields several values in list order)
+// cannot stop at a page; the best any plan can do is read only the rows the filter matches, so that,
+// not a page, is the bar such a request is held to. Beside a multi-valued filter, that is the
+// narrowest active filter's matches.
 func transactionRangeFloor(t *testing.T, db *sql.DB, p domain.ListTransactionsParams) float64 {
 	t.Helper()
 	where, args := []string{"account_id = ?"}, []any{p.AccountID}
@@ -266,7 +272,7 @@ func transactionRangeFloor(t *testing.T, db *sql.DB, p domain.ListTransactionsPa
 			where, args = append(where, "funds_received_at <= ?"), append(args, *p.EndDate)
 		}
 	default:
-		return 0
+		return transactionMultiValueFloor(t, db, p)
 	}
 	var n float64
 	require.NoError(t, db.QueryRow("SELECT COUNT(*) FROM `transaction` WHERE "+strings.Join(where, " AND "), args...).Scan(&n))
@@ -290,4 +296,62 @@ func TestTransactionList_ReadsAboutAPage(t *testing.T) {
 		},
 		floor: transactionRangeFloor,
 	}.run(t)
+}
+
+func transactionMultiValueFloor(t *testing.T, db *sql.DB, p domain.ListTransactionsParams) float64 {
+	t.Helper()
+	customerIDs := p.CustomerIDs
+	if len(p.CustomerGroupIDs) > 0 {
+		rows, err := db.Query("SELECT counterparty_account_id FROM account_relation WHERE owner_account_id = ? AND account_relation_role_code = 'customer' AND account_group_id IN ("+
+			placeholders(len(p.CustomerGroupIDs))+")", append([]any{p.AccountID}, stringArgs(p.CustomerGroupIDs)...)...)
+		require.NoError(t, err)
+		var group []string
+		for rows.Next() {
+			var id string
+			require.NoError(t, rows.Scan(&id))
+			group = append(group, id)
+		}
+		require.NoError(t, rows.Close())
+		if len(customerIDs) > 0 {
+			group = intersectStrings(customerIDs, group)
+		}
+		customerIDs = group
+	}
+	filters := []struct {
+		column string
+		values []string
+	}{
+		{"transaction_type_code", p.TypeCodes},
+		{"transaction_method_code", p.MethodCodes},
+		{"adjustment_type_code", p.AdjustmentTypeCodes},
+		{"customer_account_id", customerIDs},
+	}
+	if p.Status != nil && (*p.Status == "allocated" || *p.Status == "unallocated") {
+		allocated := "0"
+		if *p.Status == "allocated" {
+			allocated = "1"
+		}
+		filters = append(filters, struct {
+			column string
+			values []string
+		}{"is_fully_allocated", []string{allocated}})
+	}
+	multiValued, floor := false, -1.0
+	for _, f := range filters {
+		if len(f.values) == 0 {
+			continue
+		}
+		multiValued = multiValued || len(f.values) > 1
+		args := append([]any{p.AccountID}, stringArgs(f.values)...)
+		var n float64
+		require.NoError(t, db.QueryRow("SELECT COUNT(*) FROM `transaction` WHERE account_id = ? AND "+f.column+
+			" IN ("+placeholders(len(f.values))+")", args...).Scan(&n))
+		if floor < 0 || n < floor {
+			floor = n
+		}
+	}
+	if !multiValued {
+		return 0
+	}
+	return floor
 }

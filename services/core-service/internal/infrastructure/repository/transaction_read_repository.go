@@ -223,26 +223,98 @@ func (f *transactionFilter) status(status *string) {
 	}
 }
 
+// transactionKeyFilter is an equality filter with a list-order key of its own.
+type transactionKeyFilter struct {
+	index, column string
+	values        []string
+}
+
 // transactionListIndexHint is the keys a list may be read from, or none to leave the choice to the
 // planner. Left to itself, the planner reaches for the number key, merges single-column keys, or
-// walks created_at past every row a filter rejects, and reads every match to sort it.
+// walks created_at past every row a filter rejects, and sorts every match.
 //   - A number search is answered by its FULLTEXT key, which no hint can name; it reads every match.
 //   - A funds-received range filters a column the list does not sort by, so no key can stop at a
 //     page. The funds key reads just the range (status included, which it leads with). The customer
 //     key is offered too, for a customer narrower than the range; a type, method, or adjustment key
 //     is not, because walking a common one in list order reads past every row outside the range.
-//   - Otherwise every list-order key is offered, and the planner picks the active filter's.
-func transactionListIndexHint(params domain.ListTransactionsParams) []string {
+//   - Otherwise each single-valued filter's key both narrows and orders, and the planner picks among
+//     them. The created_at key is offered only alone: forced beside another, the planner may swap to
+//     it for the order and walk it from the account's newest row, past a deep page's cursor.
+//   - A multi-valued filter has no key that yields its values in list order, and the planner cannot
+//     tell a rare one from a common one. Its presence returns every filter as counted, for
+//     transactionCountedHint to settle by counting; indexes is then the fallback for when all are common.
+func transactionListIndexHint(params domain.ListTransactionsParams, customerIDs []string) (indexes []string, counted []transactionKeyFilter) {
 	if db.AllWordsPrefixQuery(params.Query) != "" {
-		return nil
+		return nil, nil
 	}
-	if params.StartDate == nil && params.EndDate == nil {
-		return transactionListIndexes
+	if params.StartDate != nil || params.EndDate != nil {
+		if len(customerIDs) > 0 {
+			return []string{transactionFundsIndex, transactionCustomerIndex}, nil
+		}
+		return []string{transactionFundsIndex}, nil
 	}
-	if len(params.CustomerIDs) > 0 || len(params.CustomerGroupIDs) > 0 {
-		return []string{transactionFundsIndex, transactionCustomerIndex}
+	var filters []transactionKeyFilter
+	if params.Status != nil && (*params.Status == "allocated" || *params.Status == "unallocated") {
+		allocated := "0"
+		if *params.Status == "allocated" {
+			allocated = "1"
+		}
+		filters = append(filters, transactionKeyFilter{transactionStatusIndex, "is_fully_allocated", []string{allocated}})
 	}
-	return []string{transactionFundsIndex}
+	for _, f := range []transactionKeyFilter{
+		{transactionTypeIndex, "transaction_type_code", params.TypeCodes},
+		{transactionMethodIndex, "transaction_method_code", params.MethodCodes},
+		{transactionAdjustmentIndex, "adjustment_type_code", params.AdjustmentTypeCodes},
+		{transactionCustomerIndex, "customer_account_id", customerIDs},
+	} {
+		if len(f.values) > 0 {
+			filters = append(filters, f)
+		}
+	}
+	multiValued := false
+	for _, f := range filters {
+		if len(f.values) == 1 {
+			indexes = append(indexes, f.index)
+		} else {
+			multiValued = true
+		}
+	}
+	if len(indexes) == 0 {
+		indexes = []string{transactionCreatedIndex}
+	}
+	if multiValued {
+		return indexes, filters
+	}
+	return indexes, nil
+}
+
+// transactionCountedRatio sets how many matches, in pages, make a filter common.
+const transactionCountedRatio = 40
+
+// transactionCountedHint picks the key of the filter matching the fewest rows: a single-valued one's
+// key stops at the page, a multi-valued one's is read whole and sorted, and either reads no more than
+// the filter matches. When every filter matches many rows, they are common enough that fallback (the
+// single-valued keys, or created_at) finds a page quickly in list order. Each count is capped, reading
+// at most that many index entries.
+func (r *transactionRepoImpl) transactionCountedHint(ctx context.Context, accountID string, limit int32, filters []transactionKeyFilter, fallback []string) ([]string, error) {
+	capped := int64(transactionCountedRatio * (limit + 1))
+	best, bestCount := "", capped
+	for _, f := range filters {
+		args := append(append([]any{accountID}, stringArgs(f.values)...), capped)
+		var n int64
+		err := r.queries.DB().QueryRowContext(ctx, "SELECT COUNT(*) FROM (SELECT 1 FROM `transaction` FORCE INDEX ("+f.index+
+			") WHERE account_id = ? AND "+f.column+" IN ("+placeholders(len(f.values))+") LIMIT ?) matches", args...).Scan(&n)
+		if err != nil {
+			return nil, err
+		}
+		if n < bestCount {
+			best, bestCount = f.index, n
+		}
+	}
+	if best == "" {
+		return fallback, nil
+	}
+	return []string{best}, nil
 }
 
 // page applies the keyset for a cursor and returns the ORDER BY. Rows are read newest first; a
@@ -332,7 +404,7 @@ func (r *transactionRepoImpl) List(ctx context.Context, params domain.ListTransa
 	f.in("t.transaction_type_code", params.TypeCodes)
 	f.in("t.adjustment_type_code", params.AdjustmentTypeCodes)
 	f.in("t.transaction_method_code", params.MethodCodes)
-	f.in("t.customer_account_id", params.CustomerIDs)
+	customerIDs := params.CustomerIDs
 	if len(params.CustomerGroupIDs) > 0 {
 		// Resolved up front so the customer key serves it; filtering on the joined relation left the
 		// planner to drive from account_relation and read every transaction of the group's customers.
@@ -340,11 +412,15 @@ func (r *transactionRepoImpl) List(ctx context.Context, params domain.ListTransa
 		if apiErr := db.MapSQLError(err); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
+		if len(customerIDs) > 0 {
+			groupCustomerIDs = intersectStrings(customerIDs, groupCustomerIDs)
+		}
 		if len(groupCustomerIDs) == 0 {
 			return &domain.ListTransactionsResult{Transactions: []*domain.TransactionSummary{}, PageInfo: pagination.PageInfo{}}, nil
 		}
-		f.in("t.customer_account_id", groupCustomerIDs)
+		customerIDs = groupCustomerIDs
 	}
+	f.in("t.customer_account_id", customerIDs)
 	if params.StartDate != nil || params.EndDate != nil {
 		if params.Status == nil || (*params.Status != "allocated" && *params.Status != "unallocated") {
 			// Both statuses, spelled out so the funds key, which leads with status, can range the dates.
@@ -357,7 +433,14 @@ func (r *transactionRepoImpl) List(ctx context.Context, params domain.ListTransa
 			f.add("t.funds_received_at <= ?", *params.EndDate)
 		}
 	}
-	f.indexes = transactionListIndexHint(params)
+	indexes, counted := transactionListIndexHint(params, customerIDs)
+	if len(counted) > 0 {
+		var err error
+		if indexes, err = r.transactionCountedHint(ctx, params.AccountID, params.Limit, counted, indexes); err != nil {
+			return nil, tracing.Trace(span, db.MapSQLError(err))
+		}
+	}
+	f.indexes = indexes
 	orderBy := f.page(cur)
 
 	rows, err := r.queryTransactions(ctx, f, orderBy, params.Limit+1)

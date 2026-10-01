@@ -15,30 +15,61 @@ func TestTransactionListIndexHint(t *testing.T) {
 	str := func(s string) *string { return &s }
 	now := time.Now()
 	tests := []struct {
-		name   string
-		params domain.ListTransactionsParams
-		want   []string
+		name        string
+		params      domain.ListTransactionsParams
+		customerIDs []string
+		want        []string
+		wantCounted []string // indexes of the filters left to count
 	}{
-		{"unfiltered", domain.ListTransactionsParams{}, transactionListIndexes},
-		{"equality filters", domain.ListTransactionsParams{
-			Status: str("allocated"), TypeCodes: []string{"payment"}, CustomerGroupIDs: []string{"ag_1"},
-		}, transactionListIndexes},
-		{"blank search", domain.ListTransactionsParams{Query: str(" ")}, transactionListIndexes},
-		{"search", domain.ListTransactionsParams{Query: str("1001"), StartDate: &now}, nil},
-		{"funds range", domain.ListTransactionsParams{StartDate: &now}, []string{transactionFundsIndex}},
-		{"funds range with filters", domain.ListTransactionsParams{
-			EndDate: &now, Status: str("unallocated"), MethodCodes: []string{"check"}, CustomerGroupIDs: []string{"ag_1"},
-		}, []string{transactionFundsIndex, transactionCustomerIndex}},
-		{"funds range with a common filter", domain.ListTransactionsParams{
-			StartDate: &now, Status: str("allocated"), TypeCodes: []string{"payment"},
-		}, []string{transactionFundsIndex}},
-		{"funds range, unfiltering status", domain.ListTransactionsParams{StartDate: &now, Status: str("all")}, []string{transactionFundsIndex}},
+		{name: "unfiltered", want: []string{transactionCreatedIndex}},
+		{name: "unfiltering status", params: domain.ListTransactionsParams{Status: str("all")}, want: []string{transactionCreatedIndex}},
+		{name: "blank search", params: domain.ListTransactionsParams{Query: str(" ")}, want: []string{transactionCreatedIndex}},
+		{
+			name:   "single-valued filters, never beside created_at",
+			params: domain.ListTransactionsParams{Status: str("allocated"), TypeCodes: []string{"payment"}},
+			want:   []string{transactionStatusIndex, transactionTypeIndex},
+		},
+		{name: "one customer", customerIDs: []string{"ac_1"}, want: []string{transactionCustomerIndex}},
+		{
+			name:        "only multi-valued filters",
+			params:      domain.ListTransactionsParams{TypeCodes: []string{"payment", "rebate"}},
+			customerIDs: []string{"ac_1", "ac_2"},
+			want:        []string{transactionCreatedIndex},
+			wantCounted: []string{transactionTypeIndex, transactionCustomerIndex},
+		},
+		{
+			name:        "a multi-valued filter beside single-valued ones",
+			params:      domain.ListTransactionsParams{Status: str("unallocated"), TypeCodes: []string{"rebate", "credit_memo"}},
+			want:        []string{transactionStatusIndex},
+			wantCounted: []string{transactionStatusIndex, transactionTypeIndex},
+		},
+		{name: "search", params: domain.ListTransactionsParams{Query: str("1001"), StartDate: &now}},
+		{name: "funds range", params: domain.ListTransactionsParams{StartDate: &now}, want: []string{transactionFundsIndex}},
+		{
+			name:        "funds range with a customer",
+			params:      domain.ListTransactionsParams{EndDate: &now, Status: str("unallocated"), MethodCodes: []string{"check"}},
+			customerIDs: []string{"ac_1", "ac_2"},
+			want:        []string{transactionFundsIndex, transactionCustomerIndex},
+		},
+		{
+			name:   "funds range with a common filter",
+			params: domain.ListTransactionsParams{StartDate: &now, Status: str("allocated"), TypeCodes: []string{"payment"}},
+			want:   []string{transactionFundsIndex},
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			if got := transactionListIndexHint(tc.params); !reflect.DeepEqual(got, tc.want) {
-				t.Errorf("transactionListIndexHint = %v, want %v", got, tc.want)
+			got, counted := transactionListIndexHint(tc.params, tc.customerIDs)
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("transactionListIndexHint indexes = %v, want %v", got, tc.want)
+			}
+			var gotCounted []string
+			for _, f := range counted {
+				gotCounted = append(gotCounted, f.index)
+			}
+			if !reflect.DeepEqual(gotCounted, tc.wantCounted) {
+				t.Errorf("transactionListIndexHint counted = %v, want %v", gotCounted, tc.wantCounted)
 			}
 		})
 	}

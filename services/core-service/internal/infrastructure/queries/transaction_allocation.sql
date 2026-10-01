@@ -33,7 +33,7 @@ AND (sqlc.narg('search_query') IS NULL OR (
 ))
 AND (sqlc.narg('transaction_type') IS NULL OR t.transaction_type_code = sqlc.narg('transaction_type'))
 AND (sqlc.narg('start_date') IS NULL OR ta.created_at >= sqlc.narg('start_date'))
-AND (sqlc.narg('end_date') IS NULL OR ta.created_at < sqlc.narg('end_date'))
+AND (sqlc.narg('end_date') IS NULL OR ta.created_at <= sqlc.narg('end_date'))
 AND (
     sqlc.narg('cursor_created_at') IS NULL
     OR (ta.created_at < sqlc.narg('cursor_created_at'))
@@ -77,7 +77,7 @@ AND (sqlc.narg('search_query') IS NULL OR (
 ))
 AND (sqlc.narg('transaction_type') IS NULL OR t.transaction_type_code = sqlc.narg('transaction_type'))
 AND (sqlc.narg('start_date') IS NULL OR ta.created_at >= sqlc.narg('start_date'))
-AND (sqlc.narg('end_date') IS NULL OR ta.created_at < sqlc.narg('end_date'))
+AND (sqlc.narg('end_date') IS NULL OR ta.created_at <= sqlc.narg('end_date'))
 AND (
     sqlc.narg('cursor_created_at') IS NULL
     OR (ta.created_at > sqlc.narg('cursor_created_at'))

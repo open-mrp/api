@@ -21,9 +21,12 @@ const productListColumns = `
 // productListQuery is one ListProductsFull page: sale products p of items i in the account.
 type productListQuery struct {
 	catalogFilter
-	categories bool
-	// driven reports a filter on another table whose matches the page may be read from instead, by id.
-	driven bool
+	// categories and dates report the item-column filters the item keys pin or range.
+	categories, dates bool
+	// lines and portal report the product-column filters a product key can pin.
+	lines, portal bool
+	// attributes reports an attribute filter, whose matches the page may be read from by item id.
+	attributes bool
 }
 
 // newProductListQuery applies every filter but the page's cursor. lineIDs are the product lines the
@@ -37,6 +40,7 @@ func newProductListQuery(params domain.ListProductsFullParams, lineIDs []string)
 	q.add("p.product_type_code = 'sale'")
 	q.in("i.item_category_id", params.CategoryIDs)
 	q.categories = len(params.CategoryIDs) > 0
+	q.dates = params.StartDate != nil || params.EndDate != nil
 	if params.StartDate != nil {
 		q.add("i.created_at >= ?", *params.StartDate)
 	}
@@ -44,34 +48,56 @@ func newProductListQuery(params domain.ListProductsFullParams, lineIDs []string)
 		q.add("i.created_at <= ?", *params.EndDate)
 	}
 	if params.IsPortalReady != nil {
+		q.portal = true
 		q.add("p.is_portal_ready = ?", *params.IsPortalReady)
 	}
 	if q.search.Contains.Valid {
 		q.add("(i.sku LIKE ? OR i.description LIKE ?)", q.search.Contains.String, q.search.Contains.String)
 	}
 	if lineIDs != nil {
-		q.driven = true
+		q.lines = true
 		q.in("p.product_line_id", lineIDs)
 	}
 	if len(params.AttributeIDs) > 0 {
-		q.driven = true
+		q.attributes = true
 		q.add("i.id IN (SELECT ia.B FROM _item_attributes ia WHERE ia.A IN ("+placeholders(len(params.AttributeIDs))+"))",
 			stringArgs(params.AttributeIDs)...)
 	}
 	return q
 }
 
+// The product keys a list may drive from: a line's products (portal readiness pinned with it), and
+// portal readiness alone. Lines belong to one account; readiness spans every tenant, but its rare
+// value is far narrower than the account's product items.
+const (
+	productLinePortalIndex = "product_line_portal_created_idx"
+	productPortalIndex     = "product_portal_created_idx"
+)
+
 // itemIndexes are the keys item may be read through. Products carry no account, so none yields an
-// account's products in list order: the type key reads only the account's product items, the category
-// key a category's, and a filter on a product line or attribute adds the primary key so its matches
-// can be read by id instead.
+// account's products in list order: the type key reads the account's product items, the category key
+// a category's. A filter the page can be read from elsewhere adds the primary key, so the planner
+// can drive from that filter's matches and look each item up by id.
 func (q *productListQuery) itemIndexes() []string {
 	keys := []string{itemTypeIndex}
 	if q.categories {
 		keys = []string{itemCategoryIndex}
 	}
-	if q.driven {
+	if q.lines || q.portal || q.attributes {
 		keys = append(keys, "PRIMARY")
+	}
+	return keys
+}
+
+// productIndexes are the keys product may be read through: by item, always, and by a product-column
+// filter's key when one is set. product holds every tenant's rows, so it is never scanned.
+func (q *productListQuery) productIndexes() []string {
+	keys := []string{"product_item_id_key"}
+	if q.lines {
+		keys = append(keys, productLinePortalIndex)
+	}
+	if q.portal {
+		keys = append(keys, productPortalIndex)
 	}
 	return keys
 }
@@ -82,9 +108,16 @@ func (r *productRepoImpl) list(ctx context.Context, q *productListQuery, orderBy
 	var sb strings.Builder
 	sb.WriteString("SELECT")
 	sb.WriteString(productListColumns)
-	sb.WriteString("\nFROM (SELECT p.id FROM item i FORCE INDEX (" + strings.Join(q.itemIndexes(), ", ") + ")")
-	// product is not tenant-scoped: it is probed by item, or ranged by line, never scanned.
-	sb.WriteString("\nJOIN product p FORCE INDEX (product_item_id_key, product_product_line_id_idx) ON p.item_id = i.id")
+	if q.lines && !q.categories && !q.dates {
+		// The lines' products are a subset of the account's product items, so with no category or dates
+		// for the item keys to narrow by they lead; left to itself the planner walks every product item
+		// to find a few lines' worth.
+		sb.WriteString("\nFROM (SELECT p.id FROM product p FORCE INDEX (" + productLinePortalIndex + ")")
+		sb.WriteString("\nSTRAIGHT_JOIN item i FORCE INDEX (PRIMARY) ON i.id = p.item_id")
+	} else {
+		sb.WriteString("\nFROM (SELECT p.id FROM item i FORCE INDEX (" + strings.Join(q.itemIndexes(), ", ") + ")")
+		sb.WriteString("\nJOIN product p FORCE INDEX (" + strings.Join(q.productIndexes(), ", ") + ") ON p.item_id = i.id")
+	}
 	sb.WriteString("\nWHERE ")
 	sb.WriteString(strings.Join(q.where, "\nAND "))
 	sb.WriteString("\nORDER BY " + orderBy + "\nLIMIT ?")

@@ -79,34 +79,21 @@ func productPlanCases() []planCase[domain.ListProductsFullParams] {
 	return cases
 }
 
-// productPlanFloor is how many products a request matches before its search. Products carry no
-// account, so no key yields one account's products in list order: the bar for every request is reading
-// only the products it may return (and, searching, every one of those the substring must examine).
+// productPlanFloor is the fewest product items any one key can read a request's products from. Products
+// carry no account, so no key yields one account's products in list order, or pins filters on both
+// item and product: the best a plan can do is drive from its narrowest filter (the item key's
+// category and dates, a product line with its portal readiness, portal readiness alone, an
+// attribute) and check the rest per row. A search examines whatever that reads.
 func productPlanFloor(t *testing.T, sqlDB *sql.DB, p domain.ListProductsFullParams) float64 {
 	t.Helper()
-	where := []string{"i.account_id = ?", "i.deleted_at IS NULL", "p.product_type_code = 'sale'"}
-	args := []any{p.AccountID}
-	in := func(col string, vals []string) {
-		if len(vals) > 0 {
-			where = append(where, col+" IN ("+placeholders(len(vals))+")")
-			args = append(args, stringArgs(vals)...)
-		}
+	count := func(where string, args ...any) float64 {
+		return planCount(t, sqlDB, `SELECT COUNT(*) FROM product p JOIN item i ON i.id = p.item_id
+			WHERE i.account_id = ? AND i.item_type_code = 'product' AND `+where, append([]any{p.AccountID}, args...)...)
 	}
-	in("i.item_category_id", p.CategoryIDs)
-	in("p.product_line_id", p.ProductLineIDs)
-	if len(p.CustomerIDs) > 0 {
-		lines := planCustomerLines(t, sqlDB, p.AccountID, p.CustomerIDs)
-		if len(lines) == 0 {
-			return 0
-		}
-		in("p.product_line_id", lines)
-	}
-	if len(p.AttributeIDs) > 0 {
-		where = append(where, "EXISTS (SELECT 1 FROM _item_attributes ia WHERE ia.B = i.id AND ia.A IN ("+placeholders(len(p.AttributeIDs))+"))")
-		args = append(args, stringArgs(p.AttributeIDs)...)
-	}
-	if p.IsPortalReady != nil {
-		where, args = append(where, "p.is_portal_ready = ?"), append(args, *p.IsPortalReady)
+	// The item key: the account's product items, by category, ranged by creation.
+	where, args := []string{"1 = 1"}, []any{}
+	if len(p.CategoryIDs) > 0 {
+		where, args = append(where, "i.item_category_id IN ("+placeholders(len(p.CategoryIDs))+")"), append(args, stringArgs(p.CategoryIDs)...)
 	}
 	if p.StartDate != nil {
 		where, args = append(where, "i.created_at >= ?"), append(args, *p.StartDate)
@@ -114,7 +101,40 @@ func productPlanFloor(t *testing.T, sqlDB *sql.DB, p domain.ListProductsFullPara
 	if p.EndDate != nil {
 		where, args = append(where, "i.created_at <= ?"), append(args, *p.EndDate)
 	}
-	return planCount(t, sqlDB, "SELECT COUNT(*) FROM product p JOIN item i ON i.id = p.item_id WHERE "+strings.Join(where, " AND "), args...)
+	floor := count(strings.Join(where, " AND "), args...)
+	if n := productPlanProductReads(t, sqlDB, p); n >= 0 && n < floor {
+		floor = n
+	}
+	if len(p.AttributeIDs) > 0 {
+		n := count("i.id IN (SELECT ia.B FROM _item_attributes ia WHERE ia.A IN ("+placeholders(len(p.AttributeIDs))+"))", stringArgs(p.AttributeIDs)...)
+		if n < floor {
+			floor = n
+		}
+	}
+	return floor
+}
+
+// productPlanProductReads is how many products a product key reads for the request's product-column
+// filters (its lines with portal readiness, or readiness alone, across every tenant), or -1 when it
+// has none.
+func productPlanProductReads(t *testing.T, sqlDB *sql.DB, p domain.ListProductsFullParams) float64 {
+	t.Helper()
+	var where []string
+	var args []any
+	if len(p.ProductLineIDs) > 0 || len(p.CustomerIDs) > 0 {
+		lines := append(append([]string{}, p.ProductLineIDs...), planCustomerLines(t, sqlDB, p.AccountID, p.CustomerIDs)...)
+		if len(lines) == 0 {
+			return 0
+		}
+		where, args = append(where, "product_line_id IN ("+placeholders(len(lines))+")"), append(args, stringArgs(lines)...)
+	}
+	if p.IsPortalReady != nil {
+		where, args = append(where, "is_portal_ready = ?"), append(args, *p.IsPortalReady)
+	}
+	if len(where) == 0 {
+		return -1
+	}
+	return planCount(t, sqlDB, "SELECT COUNT(*) FROM product WHERE "+strings.Join(where, " AND "), args...)
 }
 
 // TestProductList_ReadsAboutAPage holds every filter combination ListProductsFull accepts to reading
@@ -125,8 +145,10 @@ func TestProductList_ReadsAboutAPage(t *testing.T) {
 		// The page is read through the account's items (product has no account) and product probed per item.
 		table: "item", scopeColumn: "account_id", joinScoped: true,
 		from: "FROM item i", alias: "i",
-		cases: productPlanCases(),
-		limit: func(p domain.ListProductsFullParams) int32 { return p.Limit },
+		// A line filter reads its products first and joins item after, so the page's shape is matched.
+		statement: func(query string) bool { return strings.Contains(query, "(SELECT p.id FROM") },
+		cases:     productPlanCases(),
+		limit:     func(p domain.ListProductsFullParams) int32 { return p.Limit },
 		list: func(ctx context.Context, q *sqlc.Queries, p domain.ListProductsFullParams) error {
 			if _, apiErr := NewProductRepo(q).List(ctx, p); apiErr != nil {
 				return apiErr
@@ -136,7 +158,10 @@ func TestProductList_ReadsAboutAPage(t *testing.T) {
 		floor:       productPlanFloor,
 		statsTables: []string{"product", "_item_attributes"},
 		reads: []planRead[domain.ListProductsFullParams]{
-			{alias: "p", fanout: 1}, {alias: "ia", fanout: 1},
+			{alias: "p", fanout: 1, matches: productPlanProductReads},
+			{alias: "ia", fanout: 1, matches: func(t *testing.T, sqlDB *sql.DB, p domain.ListProductsFullParams) float64 {
+				return planCount(t, sqlDB, "SELECT COUNT(*) FROM _item_attributes WHERE A IN ("+placeholders(len(p.AttributeIDs))+")", stringArgs(p.AttributeIDs)...)
+			}},
 		},
 	}.run(t)
 }
